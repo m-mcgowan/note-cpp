@@ -1,0 +1,26 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        compiler: [g++-13, clang++-17]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install compiler
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ${{ matrix.compiler }}
+
+      - name: Run CI checks
+        env:
+          CXX: ${{ matrix.compiler }}
+          CXXFLAGS: -std=c++23
+        run: ./ci.sh

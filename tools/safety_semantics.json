@@ -1,0 +1,124 @@
+{
+  "$comment": "Safety semantics for Notecard API endpoints. Maps each endpoint to HTTP method(s) encoding safety/idempotency. Polymorphic endpoints have multiple methods with 'requires'/'excludes' constraints on request properties.",
+
+  "card.attn": "PUT",
+  "card.aux": "PUT",
+  "card.aux.serial": "PUT",
+  "card.carrier": "PUT",
+  "card.dfu": "PUT",
+  "card.illumination": "GET",
+  "card.io": "PUT",
+  "card.led": "PUT",
+  "card.location": "GET",
+  "card.location.track": "PUT",
+  "card.monitor": "PUT",
+  "card.motion": "GET",
+  "card.motion.mode": "PUT",
+  "card.motion.sync": "PUT",
+  "card.motion.track": "PUT",
+  "card.random": "GET",
+  "card.restart": "POST",
+  "card.restore": "DELETE",
+  "card.sleep": "PUT",
+  "card.status": "GET",
+  "card.time": "GET",
+  "card.trace": "PUT",
+  "card.transport": "PUT",
+  "card.triangulate": "PUT",
+  "card.usage.get": "GET",
+  "card.usage.test": "GET",
+  "card.version": "GET",
+  "card.wifi": "PUT",
+  "card.wireless": "PUT",
+
+  "dfu.get": "GET",
+  "dfu.status": "PUT",
+
+  "env.get": "GET",
+  "env.modified": "GET",
+  "env.set": "PUT",
+  "env.template": "PUT",
+
+  "file.changes.pending": "GET",
+  "file.clear": "DELETE",
+  "file.delete": "DELETE",
+  "file.stats": "GET",
+
+  "hub.get": "GET",
+  "hub.log": "POST",
+  "hub.set": "PUT",
+  "hub.signal": "POST",
+  "hub.status": "GET",
+  "hub.sync": "POST",
+  "hub.sync.status": "GET",
+
+  "note.add": "POST",
+  "note.delete": "DELETE",
+  "note.update": "PUT",
+  "ntn.gps": "PUT",
+  "ntn.reset": "DELETE",
+  "ntn.status": "GET",
+
+  "var.delete": "DELETE",
+  "var.get": "GET",
+  "var.set": "PUT",
+
+  "web": "POST",
+  "web.delete": "DELETE",
+  "web.get": "GET",
+  "web.post": "POST",
+  "web.put": "PUT",
+
+  "card.binary.get": "POST",
+  "card.binary.put": "POST",
+
+  "card.binary": {
+    "GET": {},
+    "DELETE": { "requires": ["delete"] }
+  },
+  "card.contact": {
+    "GET": {},
+    "PUT": { "requires_any": ["name", "email", "org", "role"] }
+  },
+  "card.location.mode": {
+    "GET": {},
+    "PUT": { "requires_any": ["mode", "seconds", "lat", "lon"] },
+    "DELETE": { "requires": ["delete"] }
+  },
+  "card.power": {
+    "GET": {},
+    "PUT": { "requires": ["minutes"] },
+    "DELETE": { "requires": ["reset"] }
+  },
+  "card.temp": {
+    "GET": {},
+    "PUT": { "requires_any": ["minutes", "status", "sync"] },
+    "DELETE": { "requires": ["stop"] }
+  },
+  "card.voltage": {
+    "GET": {},
+    "PUT": { "requires_any": ["mode", "set", "usb", "alert", "sync", "on", "off", "calibration", "name"] }
+  },
+  "card.wireless.penalty": {
+    "GET": {},
+    "PUT": { "requires": ["set"] },
+    "DELETE": { "requires": ["reset"] }
+  },
+  "env.default": {
+    "PUT": { "requires": ["name", "text"] },
+    "DELETE": { "requires": ["name"], "excludes": ["text"] }
+  },
+  "file.changes": "GET",
+  "note.changes": {
+    "GET": { "excludes": ["delete"] },
+    "DELETE": { "requires": ["delete"] }
+  },
+  "note.get": {
+    "GET": { "excludes": ["delete"] },
+    "DELETE": { "requires": ["delete"] }
+  },
+  "note.template": {
+    "PUT": { "requires": ["body"] },
+    "DELETE": { "requires": ["delete"] }
+  }
+}

@@ -10,17 +10,23 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        compiler: [g++-13, clang++-17]
+        include:
+          - compiler: g++-13
+            packages: g++-13
+            cxxflags: -std=c++23
+          - compiler: clang++-18
+            packages: clang-18 libc++-18-dev libc++abi-18-dev
+            cxxflags: -std=c++23 -stdlib=libc++
     steps:
       - uses: actions/checkout@v4
 
       - name: Install compiler
         run: |
           sudo apt-get update
-          sudo apt-get install -y ${{ matrix.compiler }}
+          sudo apt-get install -y ${{ matrix.packages }}
 
       - name: Run CI checks
         env:
           CXX: ${{ matrix.compiler }}
-          CXXFLAGS: -std=c++23
+          CXXFLAGS: ${{ matrix.cxxflags }}
         run: ./ci.sh

@@ -1,0 +1,278 @@
+"""Parse an OpenAPI 3.1 spec into the code generator's intermediate model."""
+
+from __future__ import annotations
+
+import json
+from collections import defaultdict
+from pathlib import Path
+
+from .model import (
+    BinaryTransferDef,
+    EndpointGroup,
+    OperationDef,
+    PropertyDef,
+    ResponseDef,
+)
+from .naming import (
+    endpoint_to_header_filename,
+    endpoint_to_struct_name,
+    operation_suffix_to_struct_name,
+    property_to_cpp_name,
+    schema_key_to_wire_name,
+)
+
+SAFETY_MAP: dict[str, str] = {
+    "readonly": "ReadOnly",
+    "idempotent": "Idempotent",
+    "non-idempotent": "NonIdempotent",
+    "destructive": "Destructive",
+}
+
+# OpenAPI type -> C++ type
+TYPE_MAP: dict[str, str] = {
+    "boolean": "bool",
+    "integer": "int32_t",
+    "number": "double",
+    "string": "note::string_view",
+}
+
+
+def _map_type(schema: dict) -> str:
+    """Map an OpenAPI property schema to a C++ type string."""
+    t = schema.get("type")
+    if isinstance(t, list):
+        # Union type like ["string", "object"] — use string_view
+        return "note::string_view"
+    return TYPE_MAP.get(t, "note::string_view")
+
+
+def _format_default(value, cpp_type: str) -> str | None:
+    """Format a default value as a C++ literal, or None if no default."""
+    if value is None:
+        return None
+    if cpp_type == "bool":
+        return "true" if value else "false"
+    if cpp_type == "int32_t":
+        try:
+            return str(int(value))
+        except (ValueError, TypeError):
+            return None
+    if cpp_type == "double":
+        try:
+            return f"{float(value)}"
+        except (ValueError, TypeError):
+            return None
+    if cpp_type == "note::string_view":
+        return f'"{value}"'
+    return None
+
+
+def _parse_property(name: str, schema: dict, *,
+                    is_request: bool,
+                    is_required_by_dispatch: bool = False) -> PropertyDef:
+    """Parse a single property schema into a PropertyDef."""
+    wire_name = schema_key_to_wire_name(name)
+    cpp_type = _map_type(schema)
+    default = schema.get("default")
+
+    # Detect the "body" property with type:object — use BodyValue instead.
+    # Only the field named "body" gets this treatment; other object/union
+    # fields (like "version" with type:["string","object"]) stay as strings.
+    schema_type = schema.get("type")
+    is_body = wire_name == "body" and (
+        schema_type == "object" or (
+            isinstance(schema_type, list) and "object" in schema_type
+        )
+    )
+
+    # Only auto-emit dispatch-required fields if they're boolean.
+    # Non-boolean required fields need user-provided values.
+    auto_emit = is_required_by_dispatch and cpp_type == "bool"
+
+    return PropertyDef(
+        wire_name=wire_name,
+        cpp_name=property_to_cpp_name(wire_name),
+        cpp_type=cpp_type,
+        is_optional=is_request and not auto_emit,
+        default_value=_format_default(default, cpp_type),
+        description=schema.get("description", ""),
+        enum_values=schema.get("enum"),
+        min_api_version=schema.get("x-min-api-version"),
+        is_required_by_dispatch=auto_emit,
+        is_body=is_body,
+    )
+
+
+def _extract_request_props_from_parameters(
+    parameters: list[dict],
+    dispatch: dict | None,
+) -> list[PropertyDef]:
+    """Extract properties from GET-style query parameters."""
+    excludes = set(dispatch.get("excludes", [])) if dispatch else set()
+    requires = set(dispatch.get("requires", [])) if dispatch else set()
+
+    props = []
+    for param in parameters:
+        name = param["name"]
+        if name in excludes:
+            continue
+        schema = param.get("schema", {})
+        # Merge description from parameter level
+        if "description" not in schema and "description" in param:
+            schema = {**schema, "description": param["description"]}
+        props.append(_parse_property(
+            name, schema,
+            is_request=True,
+            is_required_by_dispatch=name in requires,
+        ))
+    return props
+
+
+def _extract_request_props_from_body(
+    request_body: dict,
+    dispatch: dict | None,
+) -> list[PropertyDef]:
+    """Extract properties from PUT/POST/DELETE requestBody."""
+    excludes = set(dispatch.get("excludes", [])) if dispatch else set()
+    requires = set(dispatch.get("requires", [])) if dispatch else set()
+
+    schema = (request_body
+              .get("content", {})
+              .get("application/json", {})
+              .get("schema", {}))
+    properties = schema.get("properties", {})
+
+    props = []
+    for name, prop_schema in properties.items():
+        if name in excludes:
+            continue
+        props.append(_parse_property(
+            name, prop_schema,
+            is_request=True,
+            is_required_by_dispatch=name in requires,
+        ))
+    return props
+
+
+def _extract_response_props(operation: dict) -> list[PropertyDef]:
+    """Extract response properties from the 200 response."""
+    resp_200 = operation.get("responses", {}).get("200", {})
+    schema = (resp_200
+              .get("content", {})
+              .get("application/json", {})
+              .get("schema", {}))
+    properties = schema.get("properties", {})
+
+    props = []
+    for name, prop_schema in properties.items():
+        # Skip nested objects and arrays for V1
+        t = prop_schema.get("type")
+        if t == "object" or t == "array":
+            continue
+        if isinstance(t, list):
+            continue
+        props.append(_parse_property(name, prop_schema, is_request=False))
+    return props
+
+
+def _parse_binary_transfer(bt: dict | None) -> BinaryTransferDef | None:
+    """Parse x-binary-transfer extension."""
+    if not bt:
+        return None
+    return BinaryTransferDef(
+        direction=bt["direction"],
+        encoding=bt["encoding"],
+        follows=bt["follows"],
+        when=bt.get("when"),
+    )
+
+
+def _parse_operation(op: dict, *, suffix: str | None = None) -> OperationDef:
+    """Parse a single OpenAPI operation into an OperationDef."""
+    notecard_request = op["x-notecard-request"]
+    safety = SAFETY_MAP[op["x-safety"]]
+    supports_cmd = op.get("x-supports-cmd", False)
+    dispatch = op.get("x-dispatch")
+
+    # Extract request properties
+    if "parameters" in op:
+        req_props = _extract_request_props_from_parameters(
+            op["parameters"], dispatch)
+    elif "requestBody" in op:
+        req_props = _extract_request_props_from_body(
+            op["requestBody"], dispatch)
+    else:
+        req_props = []
+
+    # Extract response properties
+    rsp_props = _extract_response_props(op)
+
+    # Determine struct name
+    if suffix:
+        struct_name = operation_suffix_to_struct_name(suffix)
+    else:
+        struct_name = endpoint_to_struct_name(notecard_request)
+
+    return OperationDef(
+        struct_name=struct_name,
+        notecard_request=notecard_request,
+        safety=safety,
+        supports_cmd=supports_cmd,
+        properties=req_props,
+        response=ResponseDef(properties=rsp_props),
+        dispatch=dispatch,
+        binary_transfer=_parse_binary_transfer(op.get("x-binary-transfer")),
+    )
+
+
+def _extract_suffix(operation_id: str, base_id: str) -> str | None:
+    """Extract the suffix from a polymorphic operationId.
+
+    e.g. 'note_get_query' with base 'note_get' -> 'query'
+         'card_binary_query' with base 'card_binary' -> 'query'
+    """
+    if operation_id == base_id:
+        return None
+    prefix = base_id + "_"
+    if operation_id.startswith(prefix):
+        return operation_id[len(prefix):]
+    return None
+
+
+def parse_spec(spec_path: str | Path) -> list[EndpointGroup]:
+    """Parse the OpenAPI spec and return a list of EndpointGroup objects."""
+    with open(spec_path) as f:
+        spec = json.load(f)
+
+    # Group operations by x-notecard-request
+    groups: dict[str, list[tuple[str, dict]]] = defaultdict(list)
+    for path, path_item in spec.get("paths", {}).items():
+        for method, operation in path_item.items():
+            if method in ("parameters", "summary", "description"):
+                continue
+            req_name = operation.get("x-notecard-request")
+            if req_name:
+                groups[req_name].append((method, operation))
+
+    endpoints = []
+    for wire_name, ops in sorted(groups.items()):
+        struct_name = endpoint_to_struct_name(wire_name)
+        header_filename = endpoint_to_header_filename(wire_name)
+        base_id = wire_name.replace(".", "_")
+        is_polymorphic = len(ops) > 1
+
+        operations = []
+        for method, op in ops:
+            op_id = op.get("operationId", "")
+            suffix = _extract_suffix(op_id, base_id) if is_polymorphic else None
+            operations.append(_parse_operation(op, suffix=suffix))
+
+        endpoints.append(EndpointGroup(
+            wire_name=wire_name,
+            struct_name=struct_name,
+            header_filename=header_filename,
+            is_polymorphic=is_polymorphic,
+            operations=operations,
+        ))
+
+    return endpoints

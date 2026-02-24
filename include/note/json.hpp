@@ -13,6 +13,11 @@ public:
     virtual JsonBuilder& add(string_view key, double value) = 0;
     virtual JsonBuilder& add(string_view key, string_view value) = 0;
 
+    // Prevent const char* from matching the bool overload.
+    JsonBuilder& add(string_view key, const char* value) {
+        return add(key, string_view(value));
+    }
+
     virtual JsonBuilder& begin_object(string_view key) = 0;
     virtual JsonBuilder& end_object() = 0;
 

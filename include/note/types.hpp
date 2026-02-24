@@ -8,6 +8,17 @@
 
 #include "error.hpp"
 
+// Notecard API version gating.
+// Define NOTE_API_VERSION before including any note headers to restrict
+// the generated API to properties available on that firmware version.
+// Defaults to the latest version if not defined.
+#define NOTE_VERSION(major, minor, patch) \
+    ((major) * 10000 + (minor) * 100 + (patch))
+
+#ifndef NOTE_API_VERSION
+#define NOTE_API_VERSION NOTE_VERSION(9, 1, 1)
+#endif
+
 namespace note {
 
 using string_view = std::string_view;

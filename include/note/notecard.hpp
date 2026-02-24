@@ -52,6 +52,15 @@ public:
         return reader;
     }
 
+    // Fire-and-forget typed command (generated request types).
+    template<typename RequestT>
+    Result<void> command_typed(const RequestT& req) {
+        auto builder = backend_.create_builder();
+        builder->add("cmd", RequestT::notecard_request);
+        req.build(*builder);
+        return io_.send(builder->release());
+    }
+
     // Fire-and-forget command.
     Result<void> command(string_view cmd_type,
                          std::function<void(JsonBuilder&)> build_fn = {}) {

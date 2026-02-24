@@ -7,6 +7,7 @@
 // Build: c++ -std=c++2b -I include examples/getting_started.cpp
 
 #include <note/api_context.hpp>
+#include <note/body.hpp>
 #include <note/api/hub_set.hpp>
 #include <note/api/hub_sync.hpp>
 #include <note/api/hub_status.hpp>
@@ -15,8 +16,19 @@
 #include <note/api/card_wireless.hpp>
 #include <note/api/note_add.hpp>
 #include <note/api/note_get.hpp>
+#include <note/api/note_template.hpp>
 #include <note/api/env_set.hpp>
 #include <note/api/env_get.hpp>
+
+// Schema structs — define once, use for send, receive, and templates.
+// C++20: plain aggregates work automatically via reflection.
+// C++17: use NOTE_BODY() macro for the same functionality.
+
+struct Readings {
+    float temperature;
+    int16_t humidity;
+    NOTE_BODY(temperature, humidity)
+};
 
 // Users provide their own JsonBackend and NotecardIO implementations.
 // See examples/smoke.cpp for mock implementations.
@@ -98,21 +110,46 @@ void examples(note::Notecard& nc) {
     }
 
     // -----------------------------------------------------------------------
-    // Adding Notes (outbound data)
+    // Adding Notes — three body tiers
     // https://dev.blues.io/api-reference/notecard-api/note-requests/#note-add
     // -----------------------------------------------------------------------
 
-    // {"req":"note.add","body":"{\"temp\":22.5}","file":"sensors.qo","sync":true}
+    // Tier 1: Raw JSON string body (works everywhere)
+    // {"req":"note.add","body":"{\"temp\":22.5}","file":"sensors.qo"}
+    api.noteAdd().set_file("sensors.qo").set_body(R"({"temp":22.5})").execute();
+
+    // Tier 2: Builder lambda (structured body, no schema)
+    // {"req":"note.add","body":{"temp":22.5,"humidity":60},"file":"sensors.qo"}
+    api.noteAdd()
+        .set_file("sensors.qo")
+        .set_body(note::body([](note::JsonBuilder& b) {
+            b.add("temp", 22.5);
+            b.add("humidity", int32_t{60});
+        }))
+        .execute();
+
+    // Tier 3: Schema struct — same Readings type for send, receive, and templates.
+    // NOTE_BODY macro works on C++17; on C++20 it's optional (reflection does it).
+    // {"req":"note.add","body":{"temperature":22.5,"humidity":60},"file":"sensors.qo"}
     {
-        auto req = api.noteAdd();
-        req.file = "sensors.qo";
-        req.body = R"({"temp":22.5})";  // V1: body is opaque JSON string
-        req.sync = true;
-        req.execute();
+        Readings r{.temperature = 22.5f, .humidity = 60};
+        api.noteAdd().set_file("sensors.qo").set_body(r).execute();
     }
 
     // -----------------------------------------------------------------------
-    // Reading Notes (inbound data)
+    // Note templates — register schemas with type hints
+    // https://dev.blues.io/api-reference/notecard-api/note-requests/#note-template
+    // -----------------------------------------------------------------------
+
+    // Auto-generate template from C++ struct
+    // {"req":"note.template","body":{"temperature":14.1,"humidity":11},"file":"sensors.qo"}
+    api.noteTemplate().set()
+        .set_file("sensors.qo")
+        .set_body(note::template_of<Readings>())
+        .execute();
+
+    // -----------------------------------------------------------------------
+    // Reading Notes — typed response body
     // https://dev.blues.io/api-reference/notecard-api/note-requests/#note-get
     // -----------------------------------------------------------------------
 
@@ -120,8 +157,22 @@ void examples(note::Notecard& nc) {
     {
         auto result = api.noteGet().query().set_file("data.qi").execute();
         if (result) {
+            // Access response scalar fields
             auto payload = result->payload;
+            auto time = result->time;
             (void)payload;
+            (void)time;
+
+            // Access body as raw reader (ad-hoc)
+            if (auto* body = result->body()) {
+                auto temp = body->get_double("temp");
+                (void)temp;
+            }
+
+            // Access body as typed struct (C++20 or NOTE_BODY)
+            auto r = result->body_as<Readings>();
+            (void)r.temperature;
+            (void)r.humidity;
         }
     }
 

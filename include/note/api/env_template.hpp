@@ -20,12 +20,10 @@ struct EnvTemplate {
     BodyValue body{};
 
 #if __cpp_explicit_this_parameter >= 202110L
-    auto&& set_body(this auto&& self, note::string_view v) { self.body = BodyValue(v); return std::forward<decltype(self)>(self); }
     auto&& set_body(this auto&& self, BodyValue v) { self.body = v; return std::forward<decltype(self)>(self); }
     template<typename T> requires detail::BodySchema<T>
     auto&& set_body(this auto&& self, const T& v) { self.body = make_schema_body(v); return std::forward<decltype(self)>(self); }
 #else
-    auto& set_body(note::string_view v) { body = BodyValue(v); return *this; }
     auto& set_body(BodyValue v) { body = v; return *this; }
     template<typename T> requires detail::BodySchema<T>
     auto& set_body(const T& v) { body = make_schema_body(v); return *this; }

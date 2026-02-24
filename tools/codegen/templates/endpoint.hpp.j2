@@ -70,12 +70,10 @@ namespace note::api {
 {% endif %}
 {% if prop.is_body %}
 #if __cpp_explicit_this_parameter >= 202110L
-{{ indent }}auto&& set_{{ prop.cpp_name }}(this auto&& self, note::string_view v) { self.{{ prop.cpp_name }} = BodyValue(v); return std::forward<decltype(self)>(self); }
 {{ indent }}auto&& set_{{ prop.cpp_name }}(this auto&& self, BodyValue v) { self.{{ prop.cpp_name }} = v; return std::forward<decltype(self)>(self); }
 {{ indent }}template<typename T> requires detail::BodySchema<T>
 {{ indent }}auto&& set_{{ prop.cpp_name }}(this auto&& self, const T& v) { self.{{ prop.cpp_name }} = make_schema_body(v); return std::forward<decltype(self)>(self); }
 #else
-{{ indent }}auto& set_{{ prop.cpp_name }}(note::string_view v) { {{ prop.cpp_name }} = BodyValue(v); return *this; }
 {{ indent }}auto& set_{{ prop.cpp_name }}(BodyValue v) { {{ prop.cpp_name }} = v; return *this; }
 {{ indent }}template<typename T> requires detail::BodySchema<T>
 {{ indent }}auto& set_{{ prop.cpp_name }}(const T& v) { {{ prop.cpp_name }} = make_schema_body(v); return *this; }

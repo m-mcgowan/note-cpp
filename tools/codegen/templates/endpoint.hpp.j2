@@ -145,12 +145,15 @@ namespace note::api {
 
 {{ indent }}    template<typename T>
 {{ indent }}    static T parse_body_(const JsonReader& r) {
-#if __cplusplus >= 202002L
-{{ indent }}        if constexpr (detail::ReflectableAggregate<T>) {
+{{ indent }}        if constexpr (detail::has_note_body_trait<T>::value) {
 {{ indent }}            return ::note::parse<T>(r);
-{{ indent }}        } else
+{{ indent }}        }
+#if __cplusplus >= 202002L
+{{ indent }}        else if constexpr (detail::ReflectableAggregate<T>) {
+{{ indent }}            return ::note::parse<T>(r);
+{{ indent }}        }
 #endif
-{{ indent }}        {
+{{ indent }}        else {
 {{ indent }}            (void)r;
 {{ indent }}            return T{};
 {{ indent }}        }

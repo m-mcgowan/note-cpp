@@ -72,12 +72,15 @@ struct NoteGet {
 
             template<typename T>
             static T parse_body_(const JsonReader& r) {
-#if __cplusplus >= 202002L
-                if constexpr (detail::ReflectableAggregate<T>) {
+                if constexpr (detail::has_note_body_trait<T>::value) {
                     return ::note::parse<T>(r);
-                } else
+                }
+#if __cplusplus >= 202002L
+                else if constexpr (detail::ReflectableAggregate<T>) {
+                    return ::note::parse<T>(r);
+                }
 #endif
-                {
+                else {
                     (void)r;
                     return T{};
                 }
@@ -158,12 +161,15 @@ struct NoteGet {
 
             template<typename T>
             static T parse_body_(const JsonReader& r) {
-#if __cplusplus >= 202002L
-                if constexpr (detail::ReflectableAggregate<T>) {
+                if constexpr (detail::has_note_body_trait<T>::value) {
                     return ::note::parse<T>(r);
-                } else
+                }
+#if __cplusplus >= 202002L
+                else if constexpr (detail::ReflectableAggregate<T>) {
+                    return ::note::parse<T>(r);
+                }
 #endif
-                {
+                else {
                     (void)r;
                     return T{};
                 }

@@ -283,3 +283,29 @@ TEST_CASE("note.get response body_as<T>() with mixed types") {
 }
 
 #endif // C++20
+
+// ── NOTE_BODY macro response parsing ────────────────────────────────────────
+
+TEST_CASE("note.get response body_as<T>() with NOTE_BODY macro type") {
+    auto body = std::make_unique<note::test::PopulatedJsonReader>();
+    body->set("temperature", 22.5);
+    body->set("humidity", int32_t{60});
+
+    auto reader = std::make_unique<note::test::PopulatedJsonReader>();
+    reader->set_object("body", std::move(body));
+
+    auto rsp = note::api::NoteGet::Query::Response::parse(std::move(reader));
+    auto r = rsp.body_as<MacroReadings>();
+    REQUIRE(r.temperature == 22.5f);
+    REQUIRE(r.humidity == 60);
+}
+
+TEST_CASE("parse<T>() with NOTE_BODY macro type") {
+    auto reader = std::make_unique<note::test::PopulatedJsonReader>();
+    reader->set("temperature", 22.5);
+    reader->set("humidity", int32_t{60});
+
+    auto r = note::parse<MacroReadings>(*reader);
+    REQUIRE(r.temperature == 22.5f);
+    REQUIRE(r.humidity == 60);
+}

@@ -37,13 +37,17 @@ struct CardPower {
             double temperature{};
             double voltage{};
 
-            static Response parse(const JsonReader& r) {
+            static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
-                rsp.milliamp_hours = r.get_double("milliamp_hours");
-                rsp.temperature = r.get_double("temperature");
-                rsp.voltage = r.get_double("voltage");
+                rsp.milliamp_hours = reader_->get_double("milliamp_hours");
+                rsp.temperature = reader_->get_double("temperature");
+                rsp.voltage = reader_->get_double("voltage");
+                rsp.reader_ = std::move(reader_);
                 return rsp;
             }
+
+        private:
+            std::unique_ptr<JsonReader> reader_;
         };
 
         void build(JsonBuilder& b) const {
@@ -84,13 +88,17 @@ struct CardPower {
             double temperature{};
             double voltage{};
 
-            static Response parse(const JsonReader& r) {
+            static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
-                rsp.milliamp_hours = r.get_double("milliamp_hours");
-                rsp.temperature = r.get_double("temperature");
-                rsp.voltage = r.get_double("voltage");
+                rsp.milliamp_hours = reader_->get_double("milliamp_hours");
+                rsp.temperature = reader_->get_double("temperature");
+                rsp.voltage = reader_->get_double("voltage");
+                rsp.reader_ = std::move(reader_);
                 return rsp;
             }
+
+        private:
+            std::unique_ptr<JsonReader> reader_;
         };
 
         void build(JsonBuilder& b) const {
@@ -125,13 +133,17 @@ struct CardPower {
             double temperature{};
             double voltage{};
 
-            static Response parse(const JsonReader& r) {
+            static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
-                rsp.milliamp_hours = r.get_double("milliamp_hours");
-                rsp.temperature = r.get_double("temperature");
-                rsp.voltage = r.get_double("voltage");
+                rsp.milliamp_hours = reader_->get_double("milliamp_hours");
+                rsp.temperature = reader_->get_double("temperature");
+                rsp.voltage = reader_->get_double("voltage");
+                rsp.reader_ = std::move(reader_);
                 return rsp;
             }
+
+        private:
+            std::unique_ptr<JsonReader> reader_;
         };
 
         void build(JsonBuilder& b) const {

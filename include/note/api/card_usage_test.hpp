@@ -49,21 +49,25 @@ struct CardUsageTest {
         int32_t sessions_standard{};
         int32_t time{};
 
-        static Response parse(const JsonReader& r) {
+        static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
-            rsp.bytes_per_day = r.get_int("bytes_per_day");
-            rsp.bytes_received = r.get_int("bytes_received");
-            rsp.bytes_sent = r.get_int("bytes_sent");
-            rsp.days = r.get_int("days");
-            rsp.max = r.get_int("max");
-            rsp.notes_received = r.get_int("notes_received");
-            rsp.notes_sent = r.get_int("notes_sent");
-            rsp.seconds = r.get_int("seconds");
-            rsp.sessions_secure = r.get_int("sessions_secure");
-            rsp.sessions_standard = r.get_int("sessions_standard");
-            rsp.time = r.get_int("time");
+            rsp.bytes_per_day = reader_->get_int("bytes_per_day");
+            rsp.bytes_received = reader_->get_int("bytes_received");
+            rsp.bytes_sent = reader_->get_int("bytes_sent");
+            rsp.days = reader_->get_int("days");
+            rsp.max = reader_->get_int("max");
+            rsp.notes_received = reader_->get_int("notes_received");
+            rsp.notes_sent = reader_->get_int("notes_sent");
+            rsp.seconds = reader_->get_int("seconds");
+            rsp.sessions_secure = reader_->get_int("sessions_secure");
+            rsp.sessions_standard = reader_->get_int("sessions_standard");
+            rsp.time = reader_->get_int("time");
+            rsp.reader_ = std::move(reader_);
             return rsp;
         }
+
+    private:
+        std::unique_ptr<JsonReader> reader_;
     };
 
     void build(JsonBuilder& b) const {

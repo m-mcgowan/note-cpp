@@ -122,13 +122,17 @@ struct NoteAdd {
         bool template_{};
         int32_t total{};
 
-        static Response parse(const JsonReader& r) {
+        static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
-            rsp.note_id = r.get_string("note");
-            rsp.template_ = r.get_bool("template");
-            rsp.total = r.get_int("total");
+            rsp.note_id = reader_->get_string("note");
+            rsp.template_ = reader_->get_bool("template");
+            rsp.total = reader_->get_int("total");
+            rsp.reader_ = std::move(reader_);
             return rsp;
         }
+
+    private:
+        std::unique_ptr<JsonReader> reader_;
     };
 
     void build(JsonBuilder& b) const {

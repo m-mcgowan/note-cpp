@@ -31,7 +31,7 @@ public:
         if (reader->has_error()) {
             return make_error(Error::Protocol, reader->get_error());
         }
-        return RequestT::Response::parse(*reader);
+        return RequestT::Response::parse(std::move(reader));
     }
 
     // Ad-hoc request with a builder callback.

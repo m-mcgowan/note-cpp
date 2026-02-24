@@ -128,23 +128,27 @@ struct CardVoltage {
             double vmin{};
             double weekly{};
 
-            static Response parse(const JsonReader& r) {
+            static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
-                rsp.daily = r.get_double("daily");
-                rsp.hours = r.get_int("hours");
-                rsp.minutes = r.get_int("minutes");
-                rsp.mode = r.get_string("mode");
-                rsp.monthly = r.get_double("monthly");
+                rsp.daily = reader_->get_double("daily");
+                rsp.hours = reader_->get_int("hours");
+                rsp.minutes = reader_->get_int("minutes");
+                rsp.mode = reader_->get_string("mode");
+                rsp.monthly = reader_->get_double("monthly");
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1)
-                rsp.usb = r.get_bool("usb");
+                rsp.usb = reader_->get_bool("usb");
 #endif
-                rsp.value = r.get_double("value");
-                rsp.vavg = r.get_double("vavg");
-                rsp.vmax = r.get_double("vmax");
-                rsp.vmin = r.get_double("vmin");
-                rsp.weekly = r.get_double("weekly");
+                rsp.value = reader_->get_double("value");
+                rsp.vavg = reader_->get_double("vavg");
+                rsp.vmax = reader_->get_double("vmax");
+                rsp.vmin = reader_->get_double("vmin");
+                rsp.weekly = reader_->get_double("weekly");
+                rsp.reader_ = std::move(reader_);
                 return rsp;
             }
+
+        private:
+            std::unique_ptr<JsonReader> reader_;
         };
 
         void build(JsonBuilder& b) const {
@@ -291,23 +295,27 @@ struct CardVoltage {
             double vmin{};
             double weekly{};
 
-            static Response parse(const JsonReader& r) {
+            static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
-                rsp.daily = r.get_double("daily");
-                rsp.hours = r.get_int("hours");
-                rsp.minutes = r.get_int("minutes");
-                rsp.mode = r.get_string("mode");
-                rsp.monthly = r.get_double("monthly");
+                rsp.daily = reader_->get_double("daily");
+                rsp.hours = reader_->get_int("hours");
+                rsp.minutes = reader_->get_int("minutes");
+                rsp.mode = reader_->get_string("mode");
+                rsp.monthly = reader_->get_double("monthly");
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1)
-                rsp.usb = r.get_bool("usb");
+                rsp.usb = reader_->get_bool("usb");
 #endif
-                rsp.value = r.get_double("value");
-                rsp.vavg = r.get_double("vavg");
-                rsp.vmax = r.get_double("vmax");
-                rsp.vmin = r.get_double("vmin");
-                rsp.weekly = r.get_double("weekly");
+                rsp.value = reader_->get_double("value");
+                rsp.vavg = reader_->get_double("vavg");
+                rsp.vmax = reader_->get_double("vmax");
+                rsp.vmin = reader_->get_double("vmin");
+                rsp.weekly = reader_->get_double("weekly");
+                rsp.reader_ = std::move(reader_);
                 return rsp;
             }
+
+        private:
+            std::unique_ptr<JsonReader> reader_;
         };
 
         void build(JsonBuilder& b) const {

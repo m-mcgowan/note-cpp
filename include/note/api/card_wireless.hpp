@@ -60,12 +60,16 @@ struct CardWireless {
         int32_t count{};
         note::string_view status{};
 
-        static Response parse(const JsonReader& r) {
+        static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
-            rsp.count = r.get_int("count");
-            rsp.status = r.get_string("status");
+            rsp.count = reader_->get_int("count");
+            rsp.status = reader_->get_string("status");
+            rsp.reader_ = std::move(reader_);
             return rsp;
         }
+
+    private:
+        std::unique_ptr<JsonReader> reader_;
     };
 
     void build(JsonBuilder& b) const {

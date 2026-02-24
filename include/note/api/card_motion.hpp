@@ -33,17 +33,21 @@ struct CardMotion {
         int32_t seconds{};
         note::string_view status{};
 
-        static Response parse(const JsonReader& r) {
+        static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
-            rsp.alert = r.get_bool("alert");
-            rsp.count = r.get_int("count");
-            rsp.mode = r.get_string("mode");
-            rsp.motion = r.get_int("motion");
-            rsp.movements = r.get_string("movements");
-            rsp.seconds = r.get_int("seconds");
-            rsp.status = r.get_string("status");
+            rsp.alert = reader_->get_bool("alert");
+            rsp.count = reader_->get_int("count");
+            rsp.mode = reader_->get_string("mode");
+            rsp.motion = reader_->get_int("motion");
+            rsp.movements = reader_->get_string("movements");
+            rsp.seconds = reader_->get_int("seconds");
+            rsp.status = reader_->get_string("status");
+            rsp.reader_ = std::move(reader_);
             return rsp;
         }
+
+    private:
+        std::unique_ptr<JsonReader> reader_;
     };
 
     void build(JsonBuilder& b) const {

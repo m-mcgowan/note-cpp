@@ -39,23 +39,27 @@ struct HubSyncStatus {
         bool sync{};
         int32_t time{};
 
-        static Response parse(const JsonReader& r) {
+        static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
-            rsp.alert = r.get_bool("alert");
-            rsp.completed = r.get_int("completed");
-            rsp.mode = r.get_string("mode");
-            rsp.requested = r.get_int("requested");
+            rsp.alert = reader_->get_bool("alert");
+            rsp.completed = reader_->get_int("completed");
+            rsp.mode = reader_->get_string("mode");
+            rsp.requested = reader_->get_int("requested");
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 1, 1)
-            rsp.scan = r.get_bool("scan");
+            rsp.scan = reader_->get_bool("scan");
 #endif
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1)
-            rsp.seconds = r.get_int("seconds");
+            rsp.seconds = reader_->get_int("seconds");
 #endif
-            rsp.status = r.get_string("status");
-            rsp.sync = r.get_bool("sync");
-            rsp.time = r.get_int("time");
+            rsp.status = reader_->get_string("status");
+            rsp.sync = reader_->get_bool("sync");
+            rsp.time = reader_->get_int("time");
+            rsp.reader_ = std::move(reader_);
             return rsp;
         }
+
+    private:
+        std::unique_ptr<JsonReader> reader_;
     };
 
     void build(JsonBuilder& b) const {

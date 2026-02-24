@@ -35,13 +35,17 @@ struct VarGet {
         note::string_view text{};
         double value{};
 
-        static Response parse(const JsonReader& r) {
+        static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
-            rsp.flag = r.get_bool("flag");
-            rsp.text = r.get_string("text");
-            rsp.value = r.get_double("value");
+            rsp.flag = reader_->get_bool("flag");
+            rsp.text = reader_->get_string("text");
+            rsp.value = reader_->get_double("value");
+            rsp.reader_ = std::move(reader_);
             return rsp;
         }
+
+    private:
+        std::unique_ptr<JsonReader> reader_;
     };
 
     void build(JsonBuilder& b) const {

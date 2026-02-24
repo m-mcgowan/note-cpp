@@ -68,16 +68,20 @@ struct CardTriangulate {
         int32_t time{};
         bool usb{};
 
-        static Response parse(const JsonReader& r) {
+        static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
-            rsp.length = r.get_int("length");
-            rsp.mode = r.get_string("mode");
-            rsp.motion = r.get_int("motion");
-            rsp.on = r.get_bool("on");
-            rsp.time = r.get_int("time");
-            rsp.usb = r.get_bool("usb");
+            rsp.length = reader_->get_int("length");
+            rsp.mode = reader_->get_string("mode");
+            rsp.motion = reader_->get_int("motion");
+            rsp.on = reader_->get_bool("on");
+            rsp.time = reader_->get_int("time");
+            rsp.usb = reader_->get_bool("usb");
+            rsp.reader_ = std::move(reader_);
             return rsp;
         }
+
+    private:
+        std::unique_ptr<JsonReader> reader_;
     };
 
     void build(JsonBuilder& b) const {

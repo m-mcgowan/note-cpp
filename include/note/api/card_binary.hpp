@@ -34,16 +34,20 @@ struct CardBinary {
             int32_t max{};
             note::string_view status{};
 
-            static Response parse(const JsonReader& r) {
+            static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
-                rsp.cobs = r.get_int("cobs");
-                rsp.connected = r.get_bool("connected");
-                rsp.err = r.get_string("err");
-                rsp.length = r.get_int("length");
-                rsp.max = r.get_int("max");
-                rsp.status = r.get_string("status");
+                rsp.cobs = reader_->get_int("cobs");
+                rsp.connected = reader_->get_bool("connected");
+                rsp.err = reader_->get_string("err");
+                rsp.length = reader_->get_int("length");
+                rsp.max = reader_->get_int("max");
+                rsp.status = reader_->get_string("status");
+                rsp.reader_ = std::move(reader_);
                 return rsp;
             }
+
+        private:
+            std::unique_ptr<JsonReader> reader_;
         };
 
         void build(JsonBuilder& b) const {
@@ -74,16 +78,20 @@ struct CardBinary {
             int32_t max{};
             note::string_view status{};
 
-            static Response parse(const JsonReader& r) {
+            static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
-                rsp.cobs = r.get_int("cobs");
-                rsp.connected = r.get_bool("connected");
-                rsp.err = r.get_string("err");
-                rsp.length = r.get_int("length");
-                rsp.max = r.get_int("max");
-                rsp.status = r.get_string("status");
+                rsp.cobs = reader_->get_int("cobs");
+                rsp.connected = reader_->get_bool("connected");
+                rsp.err = reader_->get_string("err");
+                rsp.length = reader_->get_int("length");
+                rsp.max = reader_->get_int("max");
+                rsp.status = reader_->get_string("status");
+                rsp.reader_ = std::move(reader_);
                 return rsp;
             }
+
+        private:
+            std::unique_ptr<JsonReader> reader_;
         };
 
         void build(JsonBuilder& b) const {

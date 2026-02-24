@@ -27,18 +27,22 @@ struct CardLocation {
         note::string_view status{};
         int32_t time{};
 
-        static Response parse(const JsonReader& r) {
+        static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
-            rsp.count = r.get_int("count");
-            rsp.dop = r.get_double("dop");
-            rsp.lat = r.get_double("lat");
-            rsp.lon = r.get_double("lon");
-            rsp.max = r.get_int("max");
-            rsp.mode = r.get_string("mode");
-            rsp.status = r.get_string("status");
-            rsp.time = r.get_int("time");
+            rsp.count = reader_->get_int("count");
+            rsp.dop = reader_->get_double("dop");
+            rsp.lat = reader_->get_double("lat");
+            rsp.lon = reader_->get_double("lon");
+            rsp.max = reader_->get_int("max");
+            rsp.mode = reader_->get_string("mode");
+            rsp.status = reader_->get_string("status");
+            rsp.time = reader_->get_int("time");
+            rsp.reader_ = std::move(reader_);
             return rsp;
         }
+
+    private:
+        std::unique_ptr<JsonReader> reader_;
     };
 
     void build(JsonBuilder& b) const {

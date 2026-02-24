@@ -64,16 +64,20 @@ struct CardWirelessPenalty {
 #endif
             note::string_view status{};
 
-            static Response parse(const JsonReader& r) {
+            static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
-                rsp.count = r.get_int("count");
-                rsp.minutes = r.get_int("minutes");
+                rsp.count = reader_->get_int("count");
+                rsp.minutes = reader_->get_int("minutes");
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1)
-                rsp.seconds = r.get_int("seconds");
+                rsp.seconds = reader_->get_int("seconds");
 #endif
-                rsp.status = r.get_string("status");
+                rsp.status = reader_->get_string("status");
+                rsp.reader_ = std::move(reader_);
                 return rsp;
             }
+
+        private:
+            std::unique_ptr<JsonReader> reader_;
         };
 
         void build(JsonBuilder& b) const {
@@ -139,16 +143,20 @@ struct CardWirelessPenalty {
 #endif
             note::string_view status{};
 
-            static Response parse(const JsonReader& r) {
+            static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
-                rsp.count = r.get_int("count");
-                rsp.minutes = r.get_int("minutes");
+                rsp.count = reader_->get_int("count");
+                rsp.minutes = reader_->get_int("minutes");
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1)
-                rsp.seconds = r.get_int("seconds");
+                rsp.seconds = reader_->get_int("seconds");
 #endif
-                rsp.status = r.get_string("status");
+                rsp.status = reader_->get_string("status");
+                rsp.reader_ = std::move(reader_);
                 return rsp;
             }
+
+        private:
+            std::unique_ptr<JsonReader> reader_;
         };
 
         void build(JsonBuilder& b) const {
@@ -214,16 +222,20 @@ struct CardWirelessPenalty {
 #endif
             note::string_view status{};
 
-            static Response parse(const JsonReader& r) {
+            static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
-                rsp.count = r.get_int("count");
-                rsp.minutes = r.get_int("minutes");
+                rsp.count = reader_->get_int("count");
+                rsp.minutes = reader_->get_int("minutes");
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1)
-                rsp.seconds = r.get_int("seconds");
+                rsp.seconds = reader_->get_int("seconds");
 #endif
-                rsp.status = r.get_string("status");
+                rsp.status = reader_->get_string("status");
+                rsp.reader_ = std::move(reader_);
                 return rsp;
             }
+
+        private:
+            std::unique_ptr<JsonReader> reader_;
         };
 
         void build(JsonBuilder& b) const {

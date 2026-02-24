@@ -64,14 +64,18 @@ struct CardWifi {
         note::string_view ssid{};
         note::string_view version{};
 
-        static Response parse(const JsonReader& r) {
+        static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
-            rsp.secure = r.get_bool("secure");
-            rsp.security = r.get_string("security");
-            rsp.ssid = r.get_string("ssid");
-            rsp.version = r.get_string("version");
+            rsp.secure = reader_->get_bool("secure");
+            rsp.security = reader_->get_string("security");
+            rsp.ssid = reader_->get_string("ssid");
+            rsp.version = reader_->get_string("version");
+            rsp.reader_ = std::move(reader_);
             return rsp;
         }
+
+    private:
+        std::unique_ptr<JsonReader> reader_;
     };
 
     void build(JsonBuilder& b) const {

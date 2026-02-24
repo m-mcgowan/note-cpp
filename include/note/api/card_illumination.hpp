@@ -20,11 +20,15 @@ struct CardIllumination {
     struct Response {
         double value{};
 
-        static Response parse(const JsonReader& r) {
+        static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
-            rsp.value = r.get_double("value");
+            rsp.value = reader_->get_double("value");
+            rsp.reader_ = std::move(reader_);
             return rsp;
         }
+
+    private:
+        std::unique_ptr<JsonReader> reader_;
     };
 
     void build(JsonBuilder& b) const {

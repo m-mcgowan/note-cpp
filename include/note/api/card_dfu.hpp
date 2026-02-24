@@ -77,11 +77,15 @@ struct CardDfu {
     struct Response {
         note::string_view name{};
 
-        static Response parse(const JsonReader& r) {
+        static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
-            rsp.name = r.get_string("name");
+            rsp.name = reader_->get_string("name");
+            rsp.reader_ = std::move(reader_);
             return rsp;
         }
+
+    private:
+        std::unique_ptr<JsonReader> reader_;
     };
 
     void build(JsonBuilder& b) const {

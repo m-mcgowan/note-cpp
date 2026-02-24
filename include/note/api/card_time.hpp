@@ -26,17 +26,21 @@ struct CardTime {
         int32_t time{};
         note::string_view zone{};
 
-        static Response parse(const JsonReader& r) {
+        static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
-            rsp.area = r.get_string("area");
-            rsp.country = r.get_string("country");
-            rsp.lat = r.get_double("lat");
-            rsp.lon = r.get_double("lon");
-            rsp.minutes = r.get_int("minutes");
-            rsp.time = r.get_int("time");
-            rsp.zone = r.get_string("zone");
+            rsp.area = reader_->get_string("area");
+            rsp.country = reader_->get_string("country");
+            rsp.lat = reader_->get_double("lat");
+            rsp.lon = reader_->get_double("lon");
+            rsp.minutes = reader_->get_int("minutes");
+            rsp.time = reader_->get_int("time");
+            rsp.zone = reader_->get_string("zone");
+            rsp.reader_ = std::move(reader_);
             return rsp;
         }
+
+    private:
+        std::unique_ptr<JsonReader> reader_;
     };
 
     void build(JsonBuilder& b) const {

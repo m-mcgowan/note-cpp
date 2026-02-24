@@ -60,8 +60,8 @@ struct VarSet {
 
     struct Response {
 
-        static Response parse(const JsonReader& r) {
-            (void)r;
+        static Response parse(std::unique_ptr<JsonReader> reader_) {
+            (void)reader_;
             return {};
         }
     };

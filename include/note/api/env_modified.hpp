@@ -33,13 +33,17 @@ struct EnvModified {
         int32_t time{};
 #endif
 
-        static Response parse(const JsonReader& r) {
+        static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1)
-            rsp.time = r.get_int("time");
+            rsp.time = reader_->get_int("time");
 #endif
+            rsp.reader_ = std::move(reader_);
             return rsp;
         }
+
+    private:
+        std::unique_ptr<JsonReader> reader_;
     };
 
     void build(JsonBuilder& b) const {

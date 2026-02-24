@@ -57,6 +57,7 @@ class BinaryTransferDef:
 class ResponseDef:
     """Response schema for an operation."""
     properties: list[PropertyDef] = field(default_factory=list)
+    has_body: bool = False  # True when response includes a body object
 
 
 _FACTORY_METHOD_RENAMES: dict[str, str] = {

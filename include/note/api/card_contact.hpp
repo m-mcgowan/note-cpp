@@ -50,14 +50,18 @@ struct CardContact {
             note::string_view org{};
             note::string_view role{};
 
-            static Response parse(const JsonReader& r) {
+            static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
-                rsp.email = r.get_string("email");
-                rsp.name = r.get_string("name");
-                rsp.org = r.get_string("org");
-                rsp.role = r.get_string("role");
+                rsp.email = reader_->get_string("email");
+                rsp.name = reader_->get_string("name");
+                rsp.org = reader_->get_string("org");
+                rsp.role = reader_->get_string("role");
+                rsp.reader_ = std::move(reader_);
                 return rsp;
             }
+
+        private:
+            std::unique_ptr<JsonReader> reader_;
         };
 
         void build(JsonBuilder& b) const {
@@ -113,14 +117,18 @@ struct CardContact {
             note::string_view org{};
             note::string_view role{};
 
-            static Response parse(const JsonReader& r) {
+            static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
-                rsp.email = r.get_string("email");
-                rsp.name = r.get_string("name");
-                rsp.org = r.get_string("org");
-                rsp.role = r.get_string("role");
+                rsp.email = reader_->get_string("email");
+                rsp.name = reader_->get_string("name");
+                rsp.org = reader_->get_string("org");
+                rsp.role = reader_->get_string("role");
+                rsp.reader_ = std::move(reader_);
                 return rsp;
             }
+
+        private:
+            std::unique_ptr<JsonReader> reader_;
         };
 
         void build(JsonBuilder& b) const {

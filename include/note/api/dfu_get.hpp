@@ -47,14 +47,18 @@ struct DfuGet {
         note::string_view payload{};
         note::string_view status{};
 
-        static Response parse(const JsonReader& r) {
+        static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
-            rsp.cobs = r.get_int("cobs");
-            rsp.length = r.get_int("length");
-            rsp.payload = r.get_string("payload");
-            rsp.status = r.get_string("status");
+            rsp.cobs = reader_->get_int("cobs");
+            rsp.length = reader_->get_int("length");
+            rsp.payload = reader_->get_string("payload");
+            rsp.status = reader_->get_string("status");
+            rsp.reader_ = std::move(reader_);
             return rsp;
         }
+
+    private:
+        std::unique_ptr<JsonReader> reader_;
     };
 
     void build(JsonBuilder& b) const {

@@ -45,12 +45,16 @@ struct CardBinaryGet {
         note::string_view err{};
         note::string_view status{};
 
-        static Response parse(const JsonReader& r) {
+        static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
-            rsp.err = r.get_string("err");
-            rsp.status = r.get_string("status");
+            rsp.err = reader_->get_string("err");
+            rsp.status = reader_->get_string("status");
+            rsp.reader_ = std::move(reader_);
             return rsp;
         }
+
+    private:
+        std::unique_ptr<JsonReader> reader_;
     };
 
     void build(JsonBuilder& b) const {

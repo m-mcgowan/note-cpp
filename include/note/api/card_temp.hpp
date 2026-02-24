@@ -53,17 +53,21 @@ struct CardTemp {
             double value{};
             double voltage{};
 
-            static Response parse(const JsonReader& r) {
+            static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
-                rsp.calibration = r.get_double("calibration");
-                rsp.humidity = r.get_double("humidity");
-                rsp.pressure = r.get_double("pressure");
-                rsp.temperature = r.get_double("temperature");
-                rsp.usb = r.get_bool("usb");
-                rsp.value = r.get_double("value");
-                rsp.voltage = r.get_double("voltage");
+                rsp.calibration = reader_->get_double("calibration");
+                rsp.humidity = reader_->get_double("humidity");
+                rsp.pressure = reader_->get_double("pressure");
+                rsp.temperature = reader_->get_double("temperature");
+                rsp.usb = reader_->get_bool("usb");
+                rsp.value = reader_->get_double("value");
+                rsp.voltage = reader_->get_double("voltage");
+                rsp.reader_ = std::move(reader_);
                 return rsp;
             }
+
+        private:
+            std::unique_ptr<JsonReader> reader_;
         };
 
         void build(JsonBuilder& b) const {
@@ -122,17 +126,21 @@ struct CardTemp {
             double value{};
             double voltage{};
 
-            static Response parse(const JsonReader& r) {
+            static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
-                rsp.calibration = r.get_double("calibration");
-                rsp.humidity = r.get_double("humidity");
-                rsp.pressure = r.get_double("pressure");
-                rsp.temperature = r.get_double("temperature");
-                rsp.usb = r.get_bool("usb");
-                rsp.value = r.get_double("value");
-                rsp.voltage = r.get_double("voltage");
+                rsp.calibration = reader_->get_double("calibration");
+                rsp.humidity = reader_->get_double("humidity");
+                rsp.pressure = reader_->get_double("pressure");
+                rsp.temperature = reader_->get_double("temperature");
+                rsp.usb = reader_->get_bool("usb");
+                rsp.value = reader_->get_double("value");
+                rsp.voltage = reader_->get_double("voltage");
+                rsp.reader_ = std::move(reader_);
                 return rsp;
             }
+
+        private:
+            std::unique_ptr<JsonReader> reader_;
         };
 
         void build(JsonBuilder& b) const {
@@ -185,17 +193,21 @@ struct CardTemp {
             double value{};
             double voltage{};
 
-            static Response parse(const JsonReader& r) {
+            static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
-                rsp.calibration = r.get_double("calibration");
-                rsp.humidity = r.get_double("humidity");
-                rsp.pressure = r.get_double("pressure");
-                rsp.temperature = r.get_double("temperature");
-                rsp.usb = r.get_bool("usb");
-                rsp.value = r.get_double("value");
-                rsp.voltage = r.get_double("voltage");
+                rsp.calibration = reader_->get_double("calibration");
+                rsp.humidity = reader_->get_double("humidity");
+                rsp.pressure = reader_->get_double("pressure");
+                rsp.temperature = reader_->get_double("temperature");
+                rsp.usb = reader_->get_bool("usb");
+                rsp.value = reader_->get_double("value");
+                rsp.voltage = reader_->get_double("voltage");
+                rsp.reader_ = std::move(reader_);
                 return rsp;
             }
+
+        private:
+            std::unique_ptr<JsonReader> reader_;
         };
 
         void build(JsonBuilder& b) const {

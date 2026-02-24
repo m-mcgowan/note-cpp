@@ -34,12 +34,16 @@ struct NtnGps {
         bool off{};
         bool on{};
 
-        static Response parse(const JsonReader& r) {
+        static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
-            rsp.off = r.get_bool("off");
-            rsp.on = r.get_bool("on");
+            rsp.off = reader_->get_bool("off");
+            rsp.on = reader_->get_bool("on");
+            rsp.reader_ = std::move(reader_);
             return rsp;
         }
+
+    private:
+        std::unique_ptr<JsonReader> reader_;
     };
 
     void build(JsonBuilder& b) const {

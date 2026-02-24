@@ -1,10 +1,14 @@
-// Tests for BodyValue: string, builder, and schema tiers.
+// Tests for BodyValue: string, builder, schema, and response body parsing.
 #include "catch.hpp"
 #include "test_json_backend.hpp"
 
 #include <note/body.hpp>
 #include <note/notecard.hpp>
 #include <note/api_context.hpp>
+#include <memory>
+#include <map>
+#include <string>
+#include <variant>
 
 namespace {
 
@@ -17,7 +21,7 @@ struct TestRequest {
     note::BodyValue body{};
 
     struct Response {
-        static Response parse(const note::JsonReader&) { return {}; }
+        static Response parse(std::unique_ptr<note::JsonReader>) { return {}; }
     };
 
     void build(note::JsonBuilder& b) const {
@@ -206,6 +210,76 @@ TEST_CASE("note.add with builder body") {
         .execute();
     REQUIRE(h.io.last_request ==
         R"({"req":"note.add","body":{"temp":22.5,"count":42},"file":"sensors.qo"})");
+}
+
+#endif // C++20
+
+// ── Response body parsing ───────────────────────────────────────────────────
+
+#include <note/api/note_get.hpp>
+
+TEST_CASE("note.get response body() returns null when no body") {
+    auto reader = std::make_unique<note::test::PopulatedJsonReader>();
+    reader->set("time", int32_t{1234567890});
+    auto rsp = note::api::NoteGet::Query::Response::parse(std::move(reader));
+    REQUIRE(rsp.time == 1234567890);
+    REQUIRE(rsp.body() == nullptr);
+}
+
+TEST_CASE("note.get response body() returns reader when body present") {
+    auto body = std::make_unique<note::test::PopulatedJsonReader>();
+    body->set("temperature", 22.5);
+    body->set("humidity", int32_t{60});
+
+    auto reader = std::make_unique<note::test::PopulatedJsonReader>();
+    reader->set("time", int32_t{1234567890});
+    reader->set_object("body", std::move(body));
+
+    auto rsp = note::api::NoteGet::Query::Response::parse(std::move(reader));
+    REQUIRE(rsp.time == 1234567890);
+    REQUIRE(rsp.body() != nullptr);
+    REQUIRE(rsp.body()->get_double("temperature") == 22.5);
+    REQUIRE(rsp.body()->get_int("humidity") == 60);
+}
+
+#if __cplusplus >= 202002L
+
+TEST_CASE("note.get response body_as<T>() with reflected struct") {
+    auto body = std::make_unique<note::test::PopulatedJsonReader>();
+    body->set("temperature", 22.5);
+    body->set("humidity", int32_t{60});
+
+    auto reader = std::make_unique<note::test::PopulatedJsonReader>();
+    reader->set_object("body", std::move(body));
+
+    auto rsp = note::api::NoteGet::Query::Response::parse(std::move(reader));
+    auto r = rsp.body_as<Readings>();
+    REQUIRE(r.temperature == 22.5f);
+    REQUIRE(r.humidity == 60);
+}
+
+TEST_CASE("note.get response body_as<T>() returns default when no body") {
+    auto reader = std::make_unique<note::test::PopulatedJsonReader>();
+    auto rsp = note::api::NoteGet::Query::Response::parse(std::move(reader));
+    auto r = rsp.body_as<Readings>();
+    REQUIRE(r.temperature == 0.0f);
+    REQUIRE(r.humidity == 0);
+}
+
+TEST_CASE("note.get response body_as<T>() with mixed types") {
+    auto body = std::make_unique<note::test::PopulatedJsonReader>();
+    body->set("voltage", 3.3);
+    body->set("active", true);
+    body->set("count", int32_t{42});
+
+    auto reader = std::make_unique<note::test::PopulatedJsonReader>();
+    reader->set_object("body", std::move(body));
+
+    auto rsp = note::api::NoteGet::Query::Response::parse(std::move(reader));
+    auto sd = rsp.body_as<SensorData>();
+    REQUIRE(sd.voltage == 3.3);
+    REQUIRE(sd.active == true);
+    REQUIRE(sd.count == 42);
 }
 
 #endif // C++20

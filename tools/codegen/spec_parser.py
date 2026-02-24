@@ -154,8 +154,12 @@ def _extract_request_props_from_body(
     return props
 
 
-def _extract_response_props(operation: dict) -> list[PropertyDef]:
-    """Extract response properties from the 200 response."""
+def _extract_response_props(operation: dict) -> tuple[list[PropertyDef], bool]:
+    """Extract response properties from the 200 response.
+
+    Returns (properties, has_body) where has_body is True if the response
+    includes a "body" object field.
+    """
     resp_200 = operation.get("responses", {}).get("200", {})
     schema = (resp_200
               .get("content", {})
@@ -164,15 +168,25 @@ def _extract_response_props(operation: dict) -> list[PropertyDef]:
     properties = schema.get("properties", {})
 
     props = []
+    has_body = False
     for name, prop_schema in properties.items():
-        # Skip nested objects and arrays for V1
         t = prop_schema.get("type")
+        wire_name = schema_key_to_wire_name(name)
+
+        # Include "body" object fields as response body accessors
+        if wire_name == "body" and (
+            t == "object" or (isinstance(t, list) and "object" in t)
+        ):
+            has_body = True
+            continue  # handled specially in template, not as a regular prop
+
+        # Skip other nested objects and arrays for now
         if t == "object" or t == "array":
             continue
         if isinstance(t, list):
             continue
         props.append(_parse_property(name, prop_schema, is_request=False))
-    return props
+    return props, has_body
 
 
 def _parse_binary_transfer(bt: dict | None) -> BinaryTransferDef | None:
@@ -205,7 +219,7 @@ def _parse_operation(op: dict, *, suffix: str | None = None) -> OperationDef:
         req_props = []
 
     # Extract response properties
-    rsp_props = _extract_response_props(op)
+    rsp_props, has_body_response = _extract_response_props(op)
 
     # Determine struct name
     if suffix:
@@ -219,7 +233,7 @@ def _parse_operation(op: dict, *, suffix: str | None = None) -> OperationDef:
         safety=safety,
         supports_cmd=supports_cmd,
         properties=req_props,
-        response=ResponseDef(properties=rsp_props),
+        response=ResponseDef(properties=rsp_props, has_body=has_body_response),
         dispatch=dispatch,
         binary_transfer=_parse_binary_transfer(op.get("x-binary-transfer")),
     )

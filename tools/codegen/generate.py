@@ -140,9 +140,14 @@ def main() -> None:
             for op in endpoint.operations
             for prop in op.properties
         )
+        has_body_response = any(
+            op.response.has_body
+            for op in endpoint.operations
+        )
         content = endpoint_template.render(
             endpoint=endpoint,
             has_body_field=has_body_field,
+            has_body_response=has_body_response,
         )
         out_path = output_dir / endpoint.header_filename
         out_path.write_text(content)

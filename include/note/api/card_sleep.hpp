@@ -55,14 +55,18 @@ struct CardSleep {
         bool on{};
         int32_t seconds{};
 
-        static Response parse(const JsonReader& r) {
+        static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
-            rsp.mode = r.get_string("mode");
-            rsp.off = r.get_bool("off");
-            rsp.on = r.get_bool("on");
-            rsp.seconds = r.get_int("seconds");
+            rsp.mode = reader_->get_string("mode");
+            rsp.off = reader_->get_bool("off");
+            rsp.on = reader_->get_bool("on");
+            rsp.seconds = reader_->get_int("seconds");
+            rsp.reader_ = std::move(reader_);
             return rsp;
         }
+
+    private:
+        std::unique_ptr<JsonReader> reader_;
     };
 
     void build(JsonBuilder& b) const {

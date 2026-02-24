@@ -105,13 +105,40 @@ struct WebGet {
         note::string_view payload{};
         int32_t result{};
 
-        static Response parse(const JsonReader& r) {
+        const JsonReader* body() const { return body_.get(); }
+
+        template<typename T>
+        T body_as() const {
+            if (body_) return parse_body_<T>(*body_);
+            return T{};
+        }
+
+        static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
-            rsp.cobs = r.get_int("cobs");
-            rsp.length = r.get_int("length");
-            rsp.payload = r.get_string("payload");
-            rsp.result = r.get_int("result");
+            rsp.cobs = reader_->get_int("cobs");
+            rsp.length = reader_->get_int("length");
+            rsp.payload = reader_->get_string("payload");
+            rsp.result = reader_->get_int("result");
+            rsp.body_ = reader_->get_object("body");
+            rsp.reader_ = std::move(reader_);
             return rsp;
+        }
+
+    private:
+        std::unique_ptr<JsonReader> reader_;
+        std::unique_ptr<JsonReader> body_;
+
+        template<typename T>
+        static T parse_body_(const JsonReader& r) {
+#if __cplusplus >= 202002L
+            if constexpr (detail::ReflectableAggregate<T>) {
+                return ::note::parse<T>(r);
+            } else
+#endif
+            {
+                (void)r;
+                return T{};
+            }
         }
     };
 

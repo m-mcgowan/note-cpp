@@ -29,20 +29,24 @@ struct HubGet {
         note::string_view vinbound{};
         note::string_view voutbound{};
 
-        static Response parse(const JsonReader& r) {
+        static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
-            rsp.device = r.get_string("device");
-            rsp.host = r.get_string("host");
-            rsp.inbound = r.get_int("inbound");
-            rsp.mode = r.get_string("mode");
-            rsp.outbound = r.get_int("outbound");
-            rsp.product = r.get_string("product");
-            rsp.sn = r.get_string("sn");
-            rsp.sync = r.get_bool("sync");
-            rsp.vinbound = r.get_string("vinbound");
-            rsp.voutbound = r.get_string("voutbound");
+            rsp.device = reader_->get_string("device");
+            rsp.host = reader_->get_string("host");
+            rsp.inbound = reader_->get_int("inbound");
+            rsp.mode = reader_->get_string("mode");
+            rsp.outbound = reader_->get_int("outbound");
+            rsp.product = reader_->get_string("product");
+            rsp.sn = reader_->get_string("sn");
+            rsp.sync = reader_->get_bool("sync");
+            rsp.vinbound = reader_->get_string("vinbound");
+            rsp.voutbound = reader_->get_string("voutbound");
+            rsp.reader_ = std::move(reader_);
             return rsp;
         }
+
+    private:
+        std::unique_ptr<JsonReader> reader_;
     };
 
     void build(JsonBuilder& b) const {

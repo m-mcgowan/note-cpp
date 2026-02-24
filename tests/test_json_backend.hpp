@@ -7,7 +7,10 @@
 #include <note/types.hpp>
 
 #include <cstdio>
+#include <map>
+#include <memory>
 #include <string>
+#include <variant>
 #include <vector>
 
 namespace note::test {
@@ -97,6 +100,77 @@ public:
     std::unique_ptr<JsonReader> get_object(string_view) const override { return nullptr; }
     bool has_error() const override { return false; }
     string_view get_error() const override { return {}; }
+};
+
+// ---------------------------------------------------------------------------
+// PopulatedJsonReader: a reader pre-populated with values for testing
+// response parsing, including nested body objects.
+// ---------------------------------------------------------------------------
+class PopulatedJsonReader : public JsonReader {
+public:
+    using Value = std::variant<bool, int32_t, double, std::string>;
+
+    void set(const std::string& key, bool v) { values_[key] = v; }
+    void set(const std::string& key, int32_t v) { values_[key] = v; }
+    void set(const std::string& key, double v) { values_[key] = v; }
+    void set(const std::string& key, const std::string& v) { values_[key] = v; }
+
+    void set_object(const std::string& key, std::unique_ptr<PopulatedJsonReader> obj) {
+        objects_[key] = std::move(obj);
+    }
+
+    bool has(string_view k) const override {
+        auto key = std::string(k);
+        return values_.count(key) || objects_.count(key);
+    }
+    bool get_bool(string_view k, bool def) const override {
+        auto it = values_.find(std::string(k));
+        if (it != values_.end() && std::holds_alternative<bool>(it->second))
+            return std::get<bool>(it->second);
+        return def;
+    }
+    int32_t get_int(string_view k, int32_t def) const override {
+        auto it = values_.find(std::string(k));
+        if (it != values_.end() && std::holds_alternative<int32_t>(it->second))
+            return std::get<int32_t>(it->second);
+        return def;
+    }
+    double get_double(string_view k, double def) const override {
+        auto it = values_.find(std::string(k));
+        if (it != values_.end() && std::holds_alternative<double>(it->second))
+            return std::get<double>(it->second);
+        return def;
+    }
+    string_view get_string(string_view k, string_view def) const override {
+        auto it = values_.find(std::string(k));
+        if (it != values_.end() && std::holds_alternative<std::string>(it->second))
+            return string_view(std::get<std::string>(it->second));
+        return def;
+    }
+    std::unique_ptr<JsonReader> get_object(string_view k) const override {
+        auto it = objects_.find(std::string(k));
+        if (it != objects_.end() && it->second) {
+            // Clone the populated reader for the caller
+            auto clone = std::make_unique<PopulatedJsonReader>();
+            clone->values_ = it->second->values_;
+            // Deep-clone nested objects
+            for (auto& [key, obj] : it->second->objects_) {
+                if (obj) {
+                    auto sub = std::make_unique<PopulatedJsonReader>();
+                    sub->values_ = obj->values_;
+                    clone->objects_[key] = std::move(sub);
+                }
+            }
+            return clone;
+        }
+        return nullptr;
+    }
+    bool has_error() const override { return false; }
+    string_view get_error() const override { return {}; }
+
+private:
+    std::map<std::string, Value> values_;
+    std::map<std::string, std::unique_ptr<PopulatedJsonReader>> objects_;
 };
 
 // ---------------------------------------------------------------------------

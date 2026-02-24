@@ -44,11 +44,15 @@ struct CardBinaryPut {
     struct Response {
         note::string_view err{};
 
-        static Response parse(const JsonReader& r) {
+        static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
-            rsp.err = r.get_string("err");
+            rsp.err = reader_->get_string("err");
+            rsp.reader_ = std::move(reader_);
             return rsp;
         }
+
+    private:
+        std::unique_ptr<JsonReader> reader_;
     };
 
     void build(JsonBuilder& b) const {

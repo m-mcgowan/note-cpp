@@ -34,11 +34,15 @@ struct EnvTemplate {
     struct Response {
         int32_t bytes{};
 
-        static Response parse(const JsonReader& r) {
+        static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
-            rsp.bytes = r.get_int("bytes");
+            rsp.bytes = reader_->get_int("bytes");
+            rsp.reader_ = std::move(reader_);
             return rsp;
         }
+
+    private:
+        std::unique_ptr<JsonReader> reader_;
     };
 
     void build(JsonBuilder& b) const {

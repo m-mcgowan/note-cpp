@@ -4,6 +4,7 @@
 // Build: clang++ -std=c++2b -fsyntax-only -I include examples/smoke.cpp
 
 #include <note/notecard.hpp>
+#include <memory>
 
 // Mock backend for compilation testing
 struct MockBuilder : note::JsonBuilder {
@@ -56,7 +57,7 @@ struct HubSetRequest {
     static constexpr note::Safety safety = note::Safety::Idempotent;
 
     struct Response {
-        static Response parse(const note::JsonReader&) { return {}; }
+        static Response parse(std::unique_ptr<note::JsonReader>) { return {}; }
     };
 
     void build(note::JsonBuilder& b) const {

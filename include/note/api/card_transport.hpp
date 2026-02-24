@@ -64,11 +64,15 @@ struct CardTransport {
     struct Response {
         note::string_view method{};
 
-        static Response parse(const JsonReader& r) {
+        static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
-            rsp.method = r.get_string("method");
+            rsp.method = reader_->get_string("method");
+            rsp.reader_ = std::move(reader_);
             return rsp;
         }
+
+    private:
+        std::unique_ptr<JsonReader> reader_;
     };
 
     void build(JsonBuilder& b) const {

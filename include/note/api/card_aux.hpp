@@ -173,16 +173,20 @@ struct CardAux {
         int32_t seconds{};
         int32_t time{};
 
-        static Response parse(const JsonReader& r) {
+        static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
-            rsp.mode = r.get_string("mode");
+            rsp.mode = reader_->get_string("mode");
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1)
-            rsp.power = r.get_bool("power");
+            rsp.power = reader_->get_bool("power");
 #endif
-            rsp.seconds = r.get_int("seconds");
-            rsp.time = r.get_int("time");
+            rsp.seconds = reader_->get_int("seconds");
+            rsp.time = reader_->get_int("time");
+            rsp.reader_ = std::move(reader_);
             return rsp;
         }
+
+    private:
+        std::unique_ptr<JsonReader> reader_;
     };
 
     void build(JsonBuilder& b) const {

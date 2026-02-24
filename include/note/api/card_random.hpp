@@ -34,12 +34,16 @@ struct CardRandom {
         int32_t count{};
         note::string_view payload{};
 
-        static Response parse(const JsonReader& r) {
+        static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
-            rsp.count = r.get_int("count");
-            rsp.payload = r.get_string("payload");
+            rsp.count = reader_->get_int("count");
+            rsp.payload = reader_->get_string("payload");
+            rsp.reader_ = std::move(reader_);
             return rsp;
         }
+
+    private:
+        std::unique_ptr<JsonReader> reader_;
     };
 
     void build(JsonBuilder& b) const {

@@ -34,25 +34,29 @@ struct CardStatus {
         bool usb{};
         bool wifi{};
 
-        static Response parse(const JsonReader& r) {
+        static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
-            rsp.cell = r.get_bool("cell");
-            rsp.connected = r.get_bool("connected");
+            rsp.cell = reader_->get_bool("cell");
+            rsp.connected = reader_->get_bool("connected");
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1)
-            rsp.gps = r.get_bool("gps");
+            rsp.gps = reader_->get_bool("gps");
 #endif
-            rsp.inbound = r.get_int("inbound");
-            rsp.outbound = r.get_int("outbound");
-            rsp.status = r.get_string("status");
-            rsp.storage = r.get_int("storage");
+            rsp.inbound = reader_->get_int("inbound");
+            rsp.outbound = reader_->get_int("outbound");
+            rsp.status = reader_->get_string("status");
+            rsp.storage = reader_->get_int("storage");
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 5, 1)
-            rsp.sync = r.get_bool("sync");
+            rsp.sync = reader_->get_bool("sync");
 #endif
-            rsp.time = r.get_int("time");
-            rsp.usb = r.get_bool("usb");
-            rsp.wifi = r.get_bool("wifi");
+            rsp.time = reader_->get_int("time");
+            rsp.usb = reader_->get_bool("usb");
+            rsp.wifi = reader_->get_bool("wifi");
+            rsp.reader_ = std::move(reader_);
             return rsp;
         }
+
+    private:
+        std::unique_ptr<JsonReader> reader_;
     };
 
     void build(JsonBuilder& b) const {

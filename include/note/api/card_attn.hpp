@@ -82,16 +82,20 @@ struct CardAttn {
         bool set{};
         int32_t time{};
 
-        static Response parse(const JsonReader& r) {
+        static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1)
-            rsp.off = r.get_bool("off");
+            rsp.off = reader_->get_bool("off");
 #endif
-            rsp.payload = r.get_string("payload");
-            rsp.set = r.get_bool("set");
-            rsp.time = r.get_int("time");
+            rsp.payload = reader_->get_string("payload");
+            rsp.set = reader_->get_bool("set");
+            rsp.time = reader_->get_int("time");
+            rsp.reader_ = std::move(reader_);
             return rsp;
         }
+
+    private:
+        std::unique_ptr<JsonReader> reader_;
     };
 
     void build(JsonBuilder& b) const {

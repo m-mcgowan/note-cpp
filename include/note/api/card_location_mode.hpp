@@ -97,20 +97,24 @@ struct CardLocationMode {
 #endif
             note::string_view vseconds{};
 
-            static Response parse(const JsonReader& r) {
+            static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
-                rsp.lat = r.get_double("lat");
-                rsp.lon = r.get_double("lon");
-                rsp.max = r.get_int("max");
-                rsp.minutes = r.get_int("minutes");
-                rsp.mode = r.get_string("mode");
-                rsp.seconds = r.get_int("seconds");
+                rsp.lat = reader_->get_double("lat");
+                rsp.lon = reader_->get_double("lon");
+                rsp.max = reader_->get_int("max");
+                rsp.minutes = reader_->get_int("minutes");
+                rsp.mode = reader_->get_string("mode");
+                rsp.seconds = reader_->get_int("seconds");
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1)
-                rsp.threshold = r.get_int("threshold");
+                rsp.threshold = reader_->get_int("threshold");
 #endif
-                rsp.vseconds = r.get_string("vseconds");
+                rsp.vseconds = reader_->get_string("vseconds");
+                rsp.reader_ = std::move(reader_);
                 return rsp;
             }
+
+        private:
+            std::unique_ptr<JsonReader> reader_;
         };
 
         void build(JsonBuilder& b) const {
@@ -220,20 +224,24 @@ struct CardLocationMode {
 #endif
             note::string_view vseconds{};
 
-            static Response parse(const JsonReader& r) {
+            static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
-                rsp.lat = r.get_double("lat");
-                rsp.lon = r.get_double("lon");
-                rsp.max = r.get_int("max");
-                rsp.minutes = r.get_int("minutes");
-                rsp.mode = r.get_string("mode");
-                rsp.seconds = r.get_int("seconds");
+                rsp.lat = reader_->get_double("lat");
+                rsp.lon = reader_->get_double("lon");
+                rsp.max = reader_->get_int("max");
+                rsp.minutes = reader_->get_int("minutes");
+                rsp.mode = reader_->get_string("mode");
+                rsp.seconds = reader_->get_int("seconds");
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1)
-                rsp.threshold = r.get_int("threshold");
+                rsp.threshold = reader_->get_int("threshold");
 #endif
-                rsp.vseconds = r.get_string("vseconds");
+                rsp.vseconds = reader_->get_string("vseconds");
+                rsp.reader_ = std::move(reader_);
                 return rsp;
             }
+
+        private:
+            std::unique_ptr<JsonReader> reader_;
         };
 
         void build(JsonBuilder& b) const {
@@ -337,20 +345,24 @@ struct CardLocationMode {
 #endif
             note::string_view vseconds{};
 
-            static Response parse(const JsonReader& r) {
+            static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
-                rsp.lat = r.get_double("lat");
-                rsp.lon = r.get_double("lon");
-                rsp.max = r.get_int("max");
-                rsp.minutes = r.get_int("minutes");
-                rsp.mode = r.get_string("mode");
-                rsp.seconds = r.get_int("seconds");
+                rsp.lat = reader_->get_double("lat");
+                rsp.lon = reader_->get_double("lon");
+                rsp.max = reader_->get_int("max");
+                rsp.minutes = reader_->get_int("minutes");
+                rsp.mode = reader_->get_string("mode");
+                rsp.seconds = reader_->get_int("seconds");
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1)
-                rsp.threshold = r.get_int("threshold");
+                rsp.threshold = reader_->get_int("threshold");
 #endif
-                rsp.vseconds = r.get_string("vseconds");
+                rsp.vseconds = reader_->get_string("vseconds");
+                rsp.reader_ = std::move(reader_);
                 return rsp;
             }
+
+        private:
+            std::unique_ptr<JsonReader> reader_;
         };
 
         void build(JsonBuilder& b) const {

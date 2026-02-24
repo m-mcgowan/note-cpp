@@ -74,14 +74,18 @@ struct CardAuxSerial {
         int32_t rate{};
 #endif
 
-        static Response parse(const JsonReader& r) {
+        static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
-            rsp.mode = r.get_string("mode");
+            rsp.mode = reader_->get_string("mode");
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1)
-            rsp.rate = r.get_int("rate");
+            rsp.rate = reader_->get_int("rate");
 #endif
+            rsp.reader_ = std::move(reader_);
             return rsp;
         }
+
+    private:
+        std::unique_ptr<JsonReader> reader_;
     };
 
     void build(JsonBuilder& b) const {

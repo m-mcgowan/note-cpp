@@ -87,17 +87,44 @@ struct NoteTemplate {
             bool template_{};
 #endif
 
-            static Response parse(const JsonReader& r) {
+            const JsonReader* body() const { return body_.get(); }
+
+            template<typename T>
+            T body_as() const {
+                if (body_) return parse_body_<T>(*body_);
+                return T{};
+            }
+
+            static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
-                rsp.bytes = r.get_int("bytes");
+                rsp.bytes = reader_->get_int("bytes");
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3)
-                rsp.format = r.get_string("format");
+                rsp.format = reader_->get_string("format");
 #endif
-                rsp.length = r.get_int("length");
+                rsp.length = reader_->get_int("length");
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1)
-                rsp.template_ = r.get_bool("template");
+                rsp.template_ = reader_->get_bool("template");
 #endif
+                rsp.body_ = reader_->get_object("body");
+                rsp.reader_ = std::move(reader_);
                 return rsp;
+            }
+
+        private:
+            std::unique_ptr<JsonReader> reader_;
+            std::unique_ptr<JsonReader> body_;
+
+            template<typename T>
+            static T parse_body_(const JsonReader& r) {
+#if __cplusplus >= 202002L
+                if constexpr (detail::ReflectableAggregate<T>) {
+                    return ::note::parse<T>(r);
+                } else
+#endif
+                {
+                    (void)r;
+                    return T{};
+                }
             }
         };
 
@@ -191,17 +218,44 @@ struct NoteTemplate {
             bool template_{};
 #endif
 
-            static Response parse(const JsonReader& r) {
+            const JsonReader* body() const { return body_.get(); }
+
+            template<typename T>
+            T body_as() const {
+                if (body_) return parse_body_<T>(*body_);
+                return T{};
+            }
+
+            static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
-                rsp.bytes = r.get_int("bytes");
+                rsp.bytes = reader_->get_int("bytes");
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3)
-                rsp.format = r.get_string("format");
+                rsp.format = reader_->get_string("format");
 #endif
-                rsp.length = r.get_int("length");
+                rsp.length = reader_->get_int("length");
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1)
-                rsp.template_ = r.get_bool("template");
+                rsp.template_ = reader_->get_bool("template");
 #endif
+                rsp.body_ = reader_->get_object("body");
+                rsp.reader_ = std::move(reader_);
                 return rsp;
+            }
+
+        private:
+            std::unique_ptr<JsonReader> reader_;
+            std::unique_ptr<JsonReader> body_;
+
+            template<typename T>
+            static T parse_body_(const JsonReader& r) {
+#if __cplusplus >= 202002L
+                if constexpr (detail::ReflectableAggregate<T>) {
+                    return ::note::parse<T>(r);
+                } else
+#endif
+                {
+                    (void)r;
+                    return T{};
+                }
             }
         };
 

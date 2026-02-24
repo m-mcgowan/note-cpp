@@ -72,16 +72,20 @@ struct CardLocationTrack {
         bool start{};
         bool stop{};
 
-        static Response parse(const JsonReader& r) {
+        static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
-            rsp.file = r.get_string("file");
-            rsp.heartbeat = r.get_bool("heartbeat");
-            rsp.minutes = r.get_int("minutes");
-            rsp.seconds = r.get_int("seconds");
-            rsp.start = r.get_bool("start");
-            rsp.stop = r.get_bool("stop");
+            rsp.file = reader_->get_string("file");
+            rsp.heartbeat = reader_->get_bool("heartbeat");
+            rsp.minutes = reader_->get_int("minutes");
+            rsp.seconds = reader_->get_int("seconds");
+            rsp.start = reader_->get_bool("start");
+            rsp.stop = reader_->get_bool("stop");
+            rsp.reader_ = std::move(reader_);
             return rsp;
         }
+
+    private:
+        std::unique_ptr<JsonReader> reader_;
     };
 
     void build(JsonBuilder& b) const {

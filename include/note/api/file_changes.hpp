@@ -35,13 +35,17 @@ struct FileChanges {
         bool pending{};
         int32_t total{};
 
-        static Response parse(const JsonReader& r) {
+        static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
-            rsp.changes = r.get_int("changes");
-            rsp.pending = r.get_bool("pending");
-            rsp.total = r.get_int("total");
+            rsp.changes = reader_->get_int("changes");
+            rsp.pending = reader_->get_bool("pending");
+            rsp.total = reader_->get_int("total");
+            rsp.reader_ = std::move(reader_);
             return rsp;
         }
+
+    private:
+        std::unique_ptr<JsonReader> reader_;
     };
 
     void build(JsonBuilder& b) const {

@@ -35,12 +35,16 @@ struct CardCarrier {
         bool charging{};
         note::string_view mode{};
 
-        static Response parse(const JsonReader& r) {
+        static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
-            rsp.charging = r.get_bool("charging");
-            rsp.mode = r.get_string("mode");
+            rsp.charging = reader_->get_bool("charging");
+            rsp.mode = reader_->get_string("mode");
+            rsp.reader_ = std::move(reader_);
             return rsp;
         }
+
+    private:
+        std::unique_ptr<JsonReader> reader_;
     };
 
     void build(JsonBuilder& b) const {

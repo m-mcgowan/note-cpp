@@ -24,10 +24,8 @@ public:
     virtual JsonBuilder& begin_array(string_view key) = 0;
     virtual JsonBuilder& end_array() = 0;
 
-    // Release ownership of the built JSON object.
-    // The returned handle is owned by the caller and must be passed
-    // to NotecardIO (which takes ownership) or freed via JsonBackend.
-    virtual json_handle release() = 0;
+    // Finalize and return the built JSON as a string.
+    virtual std::string to_string() = 0;
 };
 
 class JsonReader {
@@ -52,8 +50,9 @@ public:
     virtual ~JsonBackend() = default;
 
     virtual std::unique_ptr<JsonBuilder> create_builder() = 0;
-    virtual std::unique_ptr<JsonReader> wrap_response(json_handle raw) = 0;
-    virtual void free_response(json_handle raw) = 0;
+
+    // Parse a JSON response string and return a reader.
+    virtual std::unique_ptr<JsonReader> parse_response(string_view json) = 0;
 };
 
 } // namespace note

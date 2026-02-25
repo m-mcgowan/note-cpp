@@ -30,7 +30,7 @@ struct Readings {
     NOTE_BODY(temperature, humidity)
 };
 
-// Users provide their own JsonBackend and NotecardIO implementations.
+// Users provide their own JsonBackend and transport callable implementations.
 // See examples/smoke.cpp for mock implementations.
 void examples(note::Notecard& nc) {
     // Create an Api instance bound to this notecard.

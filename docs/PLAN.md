@@ -17,14 +17,14 @@ Type-safe C++23 API for the Blues Notecard. Header-only, zero dependencies beyon
 │    Binds Notecard to generated request types         │
 ├─────────────────────────────────────────────────────┤
 │  Notecard                   include/note/notecard.hpp│
-│    Coordinates JSON backend + transport IO           │
+│    Coordinates JSON backend + transport callable     │
 │    execute(), command(), request() entry points      │
 ├──────────────────────┬──────────────────────────────┤
-│  JsonBackend         │  NotecardIO                   │
-│  include/note/json.hpp  │  include/note/io.hpp       │
-│  Virtual JSON ops    │  Virtual transport ops        │
-│  (cJSON, nlohmann,   │  (I2C, serial, queued,       │
-│   RapidJSON, etc.)   │   note-c bridge, etc.)       │
+│  JsonBackend         │  Transport callable           │
+│  include/note/json.hpp│  std::function<Result<string>│
+│  Virtual JSON ops    │    (string_view, uint32_t)>   │
+│  (cJSON, nlohmann,   │  (provided by user/note-app)  │
+│   RapidJSON, etc.)   │                               │
 └──────────────────────┴──────────────────────────────┘
 ```
 
@@ -36,8 +36,7 @@ Type-safe C++23 API for the Blues Notecard. Header-only, zero dependencies beyon
 | `error.hpp` | `Error` enum, `ErrorInfo` struct |
 | `json.hpp` | `JsonBackend`, `JsonBuilder`, `JsonReader` — backend-agnostic JSON interfaces |
 | `json_buf.hpp` | `JsonBuf<N>` — constexpr JSON buffer builder, zero allocations |
-| `io.hpp` | `NotecardIO` — transport abstraction (request/response, binary transfer) |
-| `notecard.hpp` | `Notecard` — central coordinator |
+| `notecard.hpp` | `Notecard` — central coordinator, takes `JsonBackend` + transport callable |
 | `api_context.hpp` | `Api` factory — binds Notecard to fluent request builders |
 | `body.hpp` | `BodyValue`, `NOTE_BODY` macro, `template_of<T>()` — schema struct support |
 | `field.hpp` | `Field<T>` — optional-like field wrapper for generated types |
@@ -48,7 +47,7 @@ Type-safe C++23 API for the Blues Notecard. Header-only, zero dependencies beyon
 ### Design principles
 
 - **Header-only**: no .cpp files, no link step
-- **Backend-agnostic**: JSON library and transport are pluggable interfaces
+- **Transport-agnostic**: JSON library is pluggable, transport is a simple callable (string in, string out)
 - **Generated from spec**: 74 endpoint types auto-generated from OpenAPI schema
 - **Three body tiers**: raw JSON string, builder lambda, typed schema struct
 - **Compile-time where possible**: `JsonBuf<N>` is fully constexpr, `json_const` enforces consteval
@@ -93,7 +92,19 @@ Type-safe C++23 API for the Blues Notecard. Header-only, zero dependencies beyon
 - Overflow diagnostics: snprintf-style `size()` reporting
 - 14 compile-time static_assert tests + 11 runtime tests
 
-### Phase 6: OpenAPI tooling
+### Phase 6: Auto-sized JsonBuf
+- `note::json<lambda>()` — auto-sized consteval builder, no buffer size needed
+- `json_const()` overflow check — compile error if buffer too small
+
+### Phase 7: Transport simplification
+- Removed `NotecardIO` virtual interface and `json_handle` opaque type
+- Transport is now a simple callable: `(string_view request, uint32_t timeout) → Result<string>`
+- `JsonBuilder::release()` replaced with `JsonBuilder::to_string()`
+- `JsonBackend::wrap_response()/free_response()` replaced with `parse_response(string_view)`
+- `io.hpp` deleted — transport implementations belong in note-app
+- Tests simplified: `CapturingIO` replaced with inline lambdas
+
+### Phase 8: OpenAPI tooling
 - `tools/schema_to_openapi.py` — JSON Schema to OpenAPI 3.1 conversion
 - `tools/openapi_to_schema.py` — reverse conversion
 - `tools/verify_roundtrip.py` — 74/74 round-trip verification
@@ -104,51 +115,24 @@ Type-safe C++23 API for the Blues Notecard. Header-only, zero dependencies beyon
 - GitHub Actions CI (GCC 14, Clang 18)
 - Examples: `getting_started.cpp`, `attention_pin.cpp`, `location_tracking.cpp`
 
-## In Progress / Planned
+## Planned
 
-### JsonBuf: auto-sized compile-time buffers
-Eliminate the need to specify `JsonBuf<N>` size for compile-time-only usage.
-The lambda receives the builder instead of creating it, enabling two-pass
-measurement:
+### note-app — application layer
+Separate repo for transport implementations and application-level patterns:
+- Serial framing (newline-delimited JSON)
+- I2C protocol (chunked reads/writes, polling)
+- CRC handling (~20 lines of logic)
+- Retry/locking
+- Platform hooks (Arduino, Zephyr, ESP-IDF, Linux)
+- Application patterns (periodic sync, DFU orchestration, etc.)
 
-```cpp
-// No size parameter needed — auto-measured at compile time
-constexpr auto req = note::json<[](auto& b) {
-    b.add("req", "hub.set");
-    b.add("mode", "periodic");
-    b.close();
-}>();
-```
-
-Implementation: `consteval` function uses NTTP lambda, probes with large buffer
-to measure, then builds with exact-sized `JsonBuf<needed>`.
-
-### note-c string transaction API
-Repo: `~/e/note-c`, branch: `feature/string-transaction-api` (on fork)
-
-**Motivation**: `NoteRequestResponseJSON` in note-c wastefully parses
-string→J*→string. A string-based API avoids this round-trip, which is
-what note-cpp needs — it builds JSON strings via `JsonBuilder`/`JsonBuf`
-and doesn't need cJSON internally.
-
-**Three-layer design:**
-
-| Layer | Function | Status |
-|-------|----------|--------|
-| L0 | `NoteTransactionStreaming` — callback-based, handles CRC/retry/locking on raw strings | Done |
-| L1 | `NoteTransactionString` — caller-provided buffer wrapper around L0 | Done |
-| L2 | Refactor `NoteRequestResponseJSON` to use L1 internally | Not started |
-
-L0 and L1 are implemented and tested on the fork branch. L2 would make the
-existing allocating API a thin wrapper around the new string API, ensuring
-behavioral parity.
-
-**Related fixes on the fork:**
-- CRC memcmp bug fix (`fix/crc-memcmp-bug` branch, PR #1)
-- macOS build support for unit tests (`build/macos-test-support` branch, PR #2)
+### note-c string transaction API (on hold)
+Repo: `~/e/note-c`, branch: `feature/string-transaction-api` (on fork).
+L0 (`NoteTransactionStreaming`) and L1 (`NoteTransactionString`) are done.
+L2 (refactor `NoteRequestResponseJSON`) not started. May be superseded by
+native transport in note-app.
 
 ### Future considerations
 - **Code size metrics**: measure compiled binary size for representative examples
-- **note-c bridge**: `NotecardIO` implementation that uses note-c's string transaction API as transport
-- **OpenAPI Overlays**: standardized format for sideband metadata (replacing ad-hoc `safety_semantics.json` / `binary_transfer.json`)
+- **OpenAPI Overlays**: standardized format for sideband metadata
 - **C++20 reflection**: automatic struct binding without `NOTE_BODY` macro

@@ -17,8 +17,18 @@ namespace {
 // Helper to execute a request and capture the JSON
 struct TestHarness {
     note::test::TestJsonBackend backend;
-    note::test::CapturingIO io;
-    note::Notecard nc{backend, io};
+    std::string last_request;
+    note::Notecard nc;
+
+    TestHarness() : nc(backend,
+        [this](note::string_view req, uint32_t) -> note::Result<std::string> {
+            last_request = std::string(req);
+            return std::string("{}");
+        },
+        [this](note::string_view req) -> note::Result<void> {
+            last_request = std::string(req);
+            return {};
+        }) {}
 };
 
 } // namespace
@@ -31,7 +41,7 @@ TEST_CASE("CardVersion produces minimal request") {
     TestHarness h;
     note::api::CardVersion req;
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"({"req":"card.version"})");
+    REQUIRE(h.last_request == R"({"req":"card.version"})");
 }
 
 TEST_CASE("HubSet with product and mode") {
@@ -40,7 +50,7 @@ TEST_CASE("HubSet with product and mode") {
     req.set_product("com.example.test").set_mode("periodic");
     h.nc.execute(req);
     // Fields emitted in schema order (alphabetical): mode before product
-    REQUIRE(h.io.last_request ==
+    REQUIRE(h.last_request ==
         R"({"req":"hub.set","mode":"periodic","product":"com.example.test"})");
 }
 
@@ -48,7 +58,7 @@ TEST_CASE("HubSet with no fields emits only req") {
     TestHarness h;
     note::api::HubSet req;
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"({"req":"hub.set"})");
+    REQUIRE(h.last_request == R"({"req":"hub.set"})");
 }
 
 TEST_CASE("HubSet with integer field") {
@@ -56,7 +66,7 @@ TEST_CASE("HubSet with integer field") {
     note::api::HubSet req;
     req.set_outbound(60);
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"({"req":"hub.set","outbound":60})");
+    REQUIRE(h.last_request == R"({"req":"hub.set","outbound":60})");
 }
 
 TEST_CASE("EnvSet with string fields") {
@@ -64,7 +74,7 @@ TEST_CASE("EnvSet with string fields") {
     note::api::EnvSet req;
     req.set_name("temperature").set_text("22.5");
     h.nc.execute(req);
-    REQUIRE(h.io.last_request ==
+    REQUIRE(h.last_request ==
         R"({"req":"env.set","name":"temperature","text":"22.5"})");
 }
 
@@ -78,7 +88,7 @@ TEST_CASE("NoteGet::Query excludes delete property") {
     req.set_file("data.qi");
     h.nc.execute(req);
     // Should NOT contain "delete"
-    REQUIRE(h.io.last_request == R"({"req":"note.get","file":"data.qi"})");
+    REQUIRE(h.last_request == R"({"req":"note.get","file":"data.qi"})");
 }
 
 TEST_CASE("NoteGet::Delete includes delete:true") {
@@ -87,7 +97,7 @@ TEST_CASE("NoteGet::Delete includes delete:true") {
     req.set_file("requests.qi");
     h.nc.execute(req);
     // "delete":true should appear (required by dispatch)
-    REQUIRE(h.io.last_request ==
+    REQUIRE(h.last_request ==
         R"({"req":"note.get","delete":true,"file":"requests.qi"})");
 }
 
@@ -96,7 +106,7 @@ TEST_CASE("NoteGet::Query with note_id uses wire name 'note'") {
     note::api::NoteGet::Query req;
     req.set_file("settings.db").set_note_id("config");
     h.nc.execute(req);
-    REQUIRE(h.io.last_request ==
+    REQUIRE(h.last_request ==
         R"({"req":"note.get","file":"settings.db","note":"config"})");
 }
 
@@ -152,7 +162,7 @@ TEST_CASE("Command uses cmd key") {
         b.add("product", "com.example.test");
     });
     REQUIRE(result);
-    REQUIRE(h.io.last_request ==
+    REQUIRE(h.last_request ==
         R"({"cmd":"hub.set","product":"com.example.test"})");
 }
 
@@ -193,7 +203,7 @@ TEST_CASE("Direct field assignment produces correct wire format") {
     req.product = "com.example.test";
     req.mode = "periodic";
     h.nc.execute(req);
-    REQUIRE(h.io.last_request ==
+    REQUIRE(h.last_request ==
         R"({"req":"hub.set","mode":"periodic","product":"com.example.test"})");
 }
 
@@ -206,7 +216,7 @@ TEST_CASE("req.execute(nc) works like nc.execute(req)") {
     note::api::HubSet req;
     req.set_product("test");
     req.execute(h.nc);
-    REQUIRE(h.io.last_request == R"({"req":"hub.set","product":"test"})");
+    REQUIRE(h.last_request == R"({"req":"hub.set","product":"test"})");
 }
 
 TEST_CASE("Typed command_typed via req.command(nc)") {
@@ -214,7 +224,7 @@ TEST_CASE("Typed command_typed via req.command(nc)") {
     note::api::HubSet req;
     req.set_product("test");
     req.command(h.nc);
-    REQUIRE(h.io.last_request == R"({"cmd":"hub.set","product":"test"})");
+    REQUIRE(h.last_request == R"({"cmd":"hub.set","product":"test"})");
 }
 
 // ---------------------------------------------------------------------------
@@ -227,14 +237,14 @@ TEST_CASE("Api factory creates bound requests") {
     auto req = api.hubSet();
     req.set_product("factory-test");
     req.execute();
-    REQUIRE(h.io.last_request == R"({"req":"hub.set","product":"factory-test"})");
+    REQUIRE(h.last_request == R"({"req":"hub.set","product":"factory-test"})");
 }
 
 TEST_CASE("Api factory fluent chain") {
     TestHarness h;
     note::Api api(h.nc);
     api.hubSet().set_product("chain-test").set_mode("periodic").execute();
-    REQUIRE(h.io.last_request ==
+    REQUIRE(h.last_request ==
         R"({"req":"hub.set","mode":"periodic","product":"chain-test"})");
 }
 
@@ -242,10 +252,10 @@ TEST_CASE("Api factory polymorphic endpoints") {
     TestHarness h;
     note::Api api(h.nc);
     api.noteGet().query().set_file("data.qi").execute();
-    REQUIRE(h.io.last_request == R"({"req":"note.get","file":"data.qi"})");
+    REQUIRE(h.last_request == R"({"req":"note.get","file":"data.qi"})");
 
     api.noteGet().delete_().set_file("data.qi").execute();
-    REQUIRE(h.io.last_request ==
+    REQUIRE(h.last_request ==
         R"({"req":"note.get","delete":true,"file":"data.qi"})");
 }
 
@@ -253,7 +263,7 @@ TEST_CASE("Api.execute with designated initializers") {
     TestHarness h;
     note::Api api(h.nc);
     api.execute(note::api::EnvSet{.name = "temp", .text = "22.5"});
-    REQUIRE(h.io.last_request ==
+    REQUIRE(h.last_request ==
         R"({"req":"env.set","name":"temp","text":"22.5"})");
 }
 
@@ -263,7 +273,7 @@ TEST_CASE("Api.command sends cmd") {
     note::api::HubSet req;
     req.set_product("cmd-test");
     api.command(req);
-    REQUIRE(h.io.last_request == R"({"cmd":"hub.set","product":"cmd-test"})");
+    REQUIRE(h.last_request == R"({"cmd":"hub.set","product":"cmd-test"})");
 }
 
 // ---------------------------------------------------------------------------

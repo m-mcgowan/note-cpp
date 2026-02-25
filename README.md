@@ -259,17 +259,16 @@ if (!b) {
 
 ## Backend Interfaces
 
-note-cpp is backend-agnostic. You provide two implementations: one for JSON operations and one for transport.
+note-cpp is transport-agnostic. You provide a JSON backend and a transport callable.
 
-**JsonBackend** — wraps any JSON library (note-c/cJSON, nlohmann, RapidJSON, etc.):
+**JsonBackend** — wraps any JSON library (cJSON, nlohmann, RapidJSON, etc.):
 
 ```cpp
 #include <note/json.hpp>
 
 class MyJsonBackend : public note::JsonBackend {
     std::unique_ptr<note::JsonBuilder> create_builder() override;
-    std::unique_ptr<note::JsonReader> wrap_response(note::json_handle raw) override;
-    void free_response(note::json_handle raw) override;
+    std::unique_ptr<note::JsonReader> parse_response(note::string_view json) override;
 };
 ```
 
@@ -285,30 +284,21 @@ string_view get_string(string_view key, string_view def = {});
 std::unique_ptr<JsonReader> get_object(string_view key);
 ```
 
-**NotecardIO** — wraps the transport layer (I2C, serial, queued active-object):
-
-```cpp
-#include <note/io.hpp>
-
-class MyIO : public note::NotecardIO {
-    Result<json_handle> request_response(json_handle req, uint32_t timeout_ms) override;
-    Result<void> send(json_handle req) override;
-    // ... binary transfer methods
-};
-```
-
 ---
 
 ## Notecard and Requests
 
-`Notecard` is the central coordinator. It delegates JSON operations to `JsonBackend` and transport to `NotecardIO`.
+`Notecard` is the central coordinator. It delegates JSON building to `JsonBackend` and transport to a callable — any function that takes a JSON string and returns a JSON string:
 
 ```cpp
 #include <note/notecard.hpp>
 
 MyJsonBackend backend;
-MyIO io;
-note::Notecard nc(backend, io);
+note::Notecard nc(backend,
+    [](note::string_view request, uint32_t timeout_ms) -> note::Result<std::string> {
+        // Send request over serial/I2C, return response JSON string.
+        return my_transport(request, timeout_ms);
+    });
 ```
 
 **Ad-hoc requests** — for quick one-offs or endpoints not yet in the generated API:

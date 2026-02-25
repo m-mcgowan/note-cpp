@@ -14,8 +14,18 @@ namespace {
 
 struct TestHarness {
     note::test::TestJsonBackend backend;
-    note::test::CapturingIO io;
-    note::Notecard nc{backend, io};
+    std::string last_request;
+    note::Notecard nc;
+
+    TestHarness() : nc(backend,
+        [this](note::string_view req, uint32_t) -> note::Result<std::string> {
+            last_request = std::string(req);
+            return std::string("{}");
+        },
+        [this](note::string_view req) -> note::Result<void> {
+            last_request = std::string(req);
+            return {};
+        }) {}
 };
 
 } // namespace
@@ -45,7 +55,7 @@ TEST_CASE("{{ test.endpoint }} {{ test.title }}") {
 {% endfor %}
     h.nc.execute(req);
 {% endif %}
-    REQUIRE(h.io.last_request == R"json({{ test.wire }})json");
+    REQUIRE(h.last_request == R"json({{ test.wire }})json");
 }
 
 {% endfor %}

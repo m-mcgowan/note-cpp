@@ -1,15 +1,35 @@
 #pragma once
 
-#include "io.hpp"
 #include "json.hpp"
 #include "safety.hpp"
+
+#include <functional>
+#include <string>
 
 namespace note {
 
 class Notecard {
 public:
-    Notecard(JsonBackend& backend, NotecardIO& io)
-        : backend_(backend), io_(io) {}
+    // Transport callables:
+    //   RequestFn: send a JSON request string, receive a JSON response string.
+    //   SendFn:    send a JSON command string (fire-and-forget, no response).
+    using RequestFn = std::function<Result<std::string>(string_view request, uint32_t timeout_ms)>;
+    using SendFn    = std::function<Result<void>(string_view request)>;
+
+    Notecard(JsonBackend& backend, RequestFn request_fn, SendFn send_fn = {})
+        : backend_(backend)
+        , request_fn_(std::move(request_fn))
+        , send_fn_(std::move(send_fn))
+    {
+        // If no send function provided, derive one from request (discard response).
+        if (!send_fn_) {
+            send_fn_ = [this](string_view req) -> Result<void> {
+                auto r = request_fn_(req, default_timeout_ms_);
+                if (!r) return Unexpected(r.error());
+                return {};
+            };
+        }
+    }
 
     // Execute a typed, generated request.
     // RequestT must provide:
@@ -24,10 +44,10 @@ public:
         builder->add("req", RequestT::notecard_request);
         req.build(*builder);
 
-        auto raw_rsp = io_.request_response(builder->release(), default_timeout_ms_);
-        if (!raw_rsp) return Unexpected(raw_rsp.error());
+        auto rsp = request_fn_(builder->to_string(), default_timeout_ms_);
+        if (!rsp) return Unexpected(rsp.error());
 
-        auto reader = backend_.wrap_response(*raw_rsp);
+        auto reader = backend_.parse_response(*rsp);
         if (reader->has_error()) {
             return make_error(Error::Protocol, reader->get_error());
         }
@@ -42,10 +62,10 @@ public:
         builder->add("req", req_type);
         if (build_fn) build_fn(*builder);
 
-        auto raw_rsp = io_.request_response(builder->release(), default_timeout_ms_);
-        if (!raw_rsp) return Unexpected(raw_rsp.error());
+        auto rsp = request_fn_(builder->to_string(), default_timeout_ms_);
+        if (!rsp) return Unexpected(rsp.error());
 
-        auto reader = backend_.wrap_response(*raw_rsp);
+        auto reader = backend_.parse_response(*rsp);
         if (reader->has_error()) {
             return make_error(Error::Protocol, reader->get_error());
         }
@@ -58,7 +78,7 @@ public:
         auto builder = backend_.create_builder();
         builder->add("cmd", RequestT::notecard_request);
         req.build(*builder);
-        return io_.send(builder->release());
+        return send_fn_(builder->to_string());
     }
 
     // Fire-and-forget command.
@@ -67,18 +87,17 @@ public:
         auto builder = backend_.create_builder();
         builder->add("cmd", cmd_type);
         if (build_fn) build_fn(*builder);
-
-        return io_.send(builder->release());
+        return send_fn_(builder->to_string());
     }
 
     void set_default_timeout(uint32_t ms) { default_timeout_ms_ = ms; }
 
     JsonBackend& backend() { return backend_; }
-    NotecardIO& io() { return io_; }
 
 private:
     JsonBackend& backend_;
-    NotecardIO& io_;
+    RequestFn request_fn_;
+    SendFn send_fn_;
     uint32_t default_timeout_ms_ = 10000;
 };
 

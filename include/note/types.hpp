@@ -4,6 +4,7 @@
 #include <expected>    // C++23: std::expected
 #include <functional>
 #include <memory>
+#include <optional>
 #include <string_view>
 
 #include "error.hpp"
@@ -22,10 +23,6 @@
 namespace note {
 
 using string_view = std::string_view;
-
-// Opaque handle to a JSON object managed by a JsonBackend.
-// The concrete type depends on the backend (e.g. cJSON's J*, nlohmann::json*).
-using json_handle = void*;
 
 // C++23: std::expected — retrofit to tl::expected for C++17
 template<typename T>
@@ -50,16 +47,16 @@ inline Unexpected make_error(Error code, string_view message = {}) {
 // On error, response fields are default-initialized (zero/empty).
 template<typename Response>
 class ApiResult : public Response {
-    std::optional<ErrorInfo> error_;
+    std::optional<ErrorInfo> err_;
 public:
     ApiResult(Response r) : Response(std::move(r)) {}
-    ApiResult(ErrorInfo e) : error_(std::move(e)) {}
-    ApiResult(Unexpected e) : error_(std::move(e).error()) {}
+    ApiResult(ErrorInfo e) : err_(std::move(e)) {}
+    ApiResult(Unexpected e) : err_(std::move(e).error()) {}
 
-    explicit operator bool() const { return !error_.has_value(); }
-    bool has_value() const { return !error_.has_value(); }
+    explicit operator bool() const { return !err_.has_value(); }
+    bool has_value() const { return !err_.has_value(); }
 
-    const ErrorInfo& error() const { return *error_; }
+    const ErrorInfo& error() const { return *err_; }
 };
 
 } // namespace note

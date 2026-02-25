@@ -3,7 +3,6 @@
 #pragma once
 
 #include <note/json.hpp>
-#include <note/io.hpp>
 #include <note/types.hpp>
 
 #include <cstdio>
@@ -17,7 +16,6 @@ namespace note::test {
 
 // ---------------------------------------------------------------------------
 // TestJsonBuilder: builds a JSON string in insertion order, no whitespace.
-// json_handle is a heap-allocated std::string*.
 // ---------------------------------------------------------------------------
 class TestJsonBuilder : public JsonBuilder {
 public:
@@ -61,9 +59,9 @@ public:
     TestJsonBuilder& end_array() override {
         needs_comma_.pop_back(); buf_ += ']'; return *this;
     }
-    json_handle release() override {
+    std::string to_string() override {
         buf_ += '}';
-        return new std::string(std::move(buf_));
+        return std::move(buf_);
     }
 
 private:
@@ -181,47 +179,8 @@ public:
     std::unique_ptr<JsonBuilder> create_builder() override {
         return std::make_unique<TestJsonBuilder>();
     }
-    std::unique_ptr<JsonReader> wrap_response(json_handle h) override {
-        // We don't parse — just return a default reader.
-        // The captured JSON string is checked via CapturingIO.
-        auto* s = static_cast<std::string*>(h);
-        delete s;
+    std::unique_ptr<JsonReader> parse_response(string_view) override {
         return std::make_unique<TestJsonReader>();
-    }
-    void free_response(json_handle h) override {
-        delete static_cast<std::string*>(h);
-    }
-};
-
-// ---------------------------------------------------------------------------
-// CapturingIO: records the JSON string from each request for assertion.
-// Returns a canned empty-object response.
-// ---------------------------------------------------------------------------
-class CapturingIO : public NotecardIO {
-public:
-    std::string last_request;
-
-    Result<json_handle> request_response(json_handle req, uint32_t) override {
-        auto* s = static_cast<std::string*>(req);
-        last_request = *s;
-        delete s;
-        // Return an empty JSON object as response
-        return static_cast<json_handle>(new std::string("{}"));
-    }
-    Result<void> send(json_handle req) override {
-        auto* s = static_cast<std::string*>(req);
-        last_request = *s;
-        delete s;
-        return {};
-    }
-    Result<void> binary_transmit(const uint8_t*, uint32_t, uint32_t) override {
-        return {};
-    }
-    Result<uint32_t> binary_receive(uint8_t*, uint32_t) override {
-        return 0u;
-    }
-    Result<void> binary_reset() override {
-        return {};
     }
 };
 

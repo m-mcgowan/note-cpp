@@ -16,7 +16,7 @@ struct MockBuilder : note::JsonBuilder {
     MockBuilder& end_object() override { return *this; }
     MockBuilder& begin_array(note::string_view) override { return *this; }
     MockBuilder& end_array() override { return *this; }
-    note::json_handle release() override { return nullptr; }
+    std::string to_string() override { return "{}"; }
 };
 
 struct MockReader : note::JsonReader {
@@ -34,20 +34,9 @@ struct MockBackend : note::JsonBackend {
     std::unique_ptr<note::JsonBuilder> create_builder() override {
         return std::make_unique<MockBuilder>();
     }
-    std::unique_ptr<note::JsonReader> wrap_response(note::json_handle) override {
+    std::unique_ptr<note::JsonReader> parse_response(note::string_view) override {
         return std::make_unique<MockReader>();
     }
-    void free_response(note::json_handle) override {}
-};
-
-struct MockIO : note::NotecardIO {
-    note::Result<note::json_handle> request_response(note::json_handle, uint32_t) override {
-        return nullptr;
-    }
-    note::Result<void> send(note::json_handle) override { return {}; }
-    note::Result<void> binary_transmit(const uint8_t*, uint32_t, uint32_t) override { return {}; }
-    note::Result<uint32_t> binary_receive(uint8_t*, uint32_t) override { return 0u; }
-    note::Result<void> binary_reset() override { return {}; }
 };
 
 // Example generated request type (what the code generator would produce)
@@ -69,8 +58,10 @@ struct HubSetRequest {
 
 int main() {
     MockBackend backend;
-    MockIO io;
-    note::Notecard nc(backend, io);
+    note::Notecard nc(backend,
+        [](note::string_view, uint32_t) -> note::Result<std::string> {
+            return std::string("{}");
+        });
 
     // Type-safe generated request
     HubSetRequest req;

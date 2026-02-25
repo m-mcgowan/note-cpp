@@ -14,8 +14,18 @@ namespace {
 
 struct TestHarness {
     note::test::TestJsonBackend backend;
-    note::test::CapturingIO io;
-    note::Notecard nc{backend, io};
+    std::string last_request;
+    note::Notecard nc;
+
+    TestHarness() : nc(backend,
+        [this](note::string_view req, uint32_t) -> note::Result<std::string> {
+            last_request = std::string(req);
+            return std::string("{}");
+        },
+        [this](note::string_view req) -> note::Result<void> {
+            last_request = std::string(req);
+            return {};
+        }) {}
 };
 
 } // namespace
@@ -25,7 +35,7 @@ TEST_CASE("card.attn Connected") {
     note::api::CardAttn req;
     req.set_mode(note::string_view(R"sv(arm,connected)sv"));
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.attn","mode":"arm,connected"})json");
+    REQUIRE(h.last_request == R"json({"req":"card.attn","mode":"arm,connected"})json");
 }
 
 TEST_CASE("card.attn Location") {
@@ -33,7 +43,7 @@ TEST_CASE("card.attn Location") {
     note::api::CardAttn req;
     req.set_mode(note::string_view(R"sv(arm,location)sv"));
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.attn","mode":"arm,location"})json");
+    REQUIRE(h.last_request == R"json({"req":"card.attn","mode":"arm,location"})json");
 }
 
 TEST_CASE("card.attn Motion") {
@@ -41,7 +51,7 @@ TEST_CASE("card.attn Motion") {
     note::api::CardAttn req;
     req.set_mode(note::string_view(R"sv(arm,motion)sv"));
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.attn","mode":"arm,motion"})json");
+    REQUIRE(h.last_request == R"json({"req":"card.attn","mode":"arm,motion"})json");
 }
 
 TEST_CASE("card.attn Signal") {
@@ -49,7 +59,7 @@ TEST_CASE("card.attn Signal") {
     note::api::CardAttn req;
     req.set_mode(note::string_view(R"sv(arm,signal)sv"));
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.attn","mode":"arm,signal"})json");
+    REQUIRE(h.last_request == R"json({"req":"card.attn","mode":"arm,signal"})json");
 }
 
 TEST_CASE("card.attn Watchdog") {
@@ -58,7 +68,7 @@ TEST_CASE("card.attn Watchdog") {
     req.set_mode(note::string_view(R"sv(watchdog)sv"));
     req.set_seconds(int32_t{60});
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.attn","mode":"watchdog","seconds":60})json");
+    REQUIRE(h.last_request == R"json({"req":"card.attn","mode":"watchdog","seconds":60})json");
 }
 
 TEST_CASE("card.attn Sleep With Payload") {
@@ -68,7 +78,7 @@ TEST_CASE("card.attn Sleep With Payload") {
     req.set_seconds(int32_t{3600});
     req.set_payload(note::string_view(R"sv(ewogICJpbnRlcnZhbHMiOiI2MCwxMiwxNCIKfQ==)sv"));
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.attn","mode":"sleep","payload":"ewogICJpbnRlcnZhbHMiOiI2MCwxMiwxNCIKfQ==","seconds":3600})json");
+    REQUIRE(h.last_request == R"json({"req":"card.attn","mode":"sleep","payload":"ewogICJpbnRlcnZhbHMiOiI2MCwxMiwxNCIKfQ==","seconds":3600})json");
 }
 
 TEST_CASE("card.attn Retrieve Payload") {
@@ -76,7 +86,7 @@ TEST_CASE("card.attn Retrieve Payload") {
     note::api::CardAttn req;
     req.set_start(true);
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.attn","start":true})json");
+    REQUIRE(h.last_request == R"json({"req":"card.attn","start":true})json");
 }
 
 TEST_CASE("card.attn Disarm all Modes") {
@@ -84,7 +94,7 @@ TEST_CASE("card.attn Disarm all Modes") {
     note::api::CardAttn req;
     req.set_mode(note::string_view(R"sv(disarm,-all)sv"));
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.attn","mode":"disarm,-all"})json");
+    REQUIRE(h.last_request == R"json({"req":"card.attn","mode":"disarm,-all"})json");
 }
 
 TEST_CASE("card.aux DFU Mode") {
@@ -92,7 +102,7 @@ TEST_CASE("card.aux DFU Mode") {
     note::api::CardAux req;
     req.set_mode(note::string_view(R"sv(dfu)sv"));
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.aux","mode":"dfu"})json");
+    REQUIRE(h.last_request == R"json({"req":"card.aux","mode":"dfu"})json");
 }
 
 TEST_CASE("card.aux Monitor Mode") {
@@ -100,7 +110,7 @@ TEST_CASE("card.aux Monitor Mode") {
     note::api::CardAux req;
     req.set_mode(note::string_view(R"sv(monitor)sv"));
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.aux","mode":"monitor"})json");
+    REQUIRE(h.last_request == R"json({"req":"card.aux","mode":"monitor"})json");
 }
 
 TEST_CASE("card.aux Neo-Monitor Mode") {
@@ -108,7 +118,7 @@ TEST_CASE("card.aux Neo-Monitor Mode") {
     note::api::CardAux req;
     req.set_mode(note::string_view(R"sv(neo-monitor)sv"));
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.aux","mode":"neo-monitor"})json");
+    REQUIRE(h.last_request == R"json({"req":"card.aux","mode":"neo-monitor"})json");
 }
 
 TEST_CASE("card.aux Motion Mode") {
@@ -116,7 +126,7 @@ TEST_CASE("card.aux Motion Mode") {
     note::api::CardAux req;
     req.set_mode(note::string_view(R"sv(motion)sv"));
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.aux","mode":"motion"})json");
+    REQUIRE(h.last_request == R"json({"req":"card.aux","mode":"motion"})json");
 }
 
 TEST_CASE("card.aux Setting AUX UART Baud") {
@@ -124,7 +134,7 @@ TEST_CASE("card.aux Setting AUX UART Baud") {
     note::api::CardAux req;
     req.set_rate(int32_t{9600});
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.aux","rate":9600})json");
+    REQUIRE(h.last_request == R"json({"req":"card.aux","rate":9600})json");
 }
 
 TEST_CASE("card.aux Track Mode") {
@@ -132,7 +142,7 @@ TEST_CASE("card.aux Track Mode") {
     note::api::CardAux req;
     req.set_mode(note::string_view(R"sv(track)sv"));
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.aux","mode":"track"})json");
+    REQUIRE(h.last_request == R"json({"req":"card.aux","mode":"track"})json");
 }
 
 TEST_CASE("card.aux.serial Enable GPS Mode") {
@@ -140,7 +150,7 @@ TEST_CASE("card.aux.serial Enable GPS Mode") {
     note::api::CardAuxSerial req;
     req.set_mode(note::string_view(R"sv(gps)sv"));
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.aux.serial","mode":"gps"})json");
+    REQUIRE(h.last_request == R"json({"req":"card.aux.serial","mode":"gps"})json");
 }
 
 TEST_CASE("card.aux.serial Enable DFU Notifications") {
@@ -149,7 +159,7 @@ TEST_CASE("card.aux.serial Enable DFU Notifications") {
     req.set_mode(note::string_view(R"sv(notify,dfu)sv"));
     req.set_minutes(int32_t{5});
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.aux.serial","minutes":5,"mode":"notify,dfu"})json");
+    REQUIRE(h.last_request == R"json({"req":"card.aux.serial","minutes":5,"mode":"notify,dfu"})json");
 }
 
 TEST_CASE("card.aux.serial Enable Environment Notifications") {
@@ -157,7 +167,7 @@ TEST_CASE("card.aux.serial Enable Environment Notifications") {
     note::api::CardAuxSerial req;
     req.set_mode(note::string_view(R"sv(notify,env)sv"));
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.aux.serial","mode":"notify,env"})json");
+    REQUIRE(h.last_request == R"json({"req":"card.aux.serial","mode":"notify,env"})json");
 }
 
 TEST_CASE("card.aux.serial Request Mode") {
@@ -165,7 +175,7 @@ TEST_CASE("card.aux.serial Request Mode") {
     note::api::CardAuxSerial req;
     req.set_mode(note::string_view(R"sv(req)sv"));
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.aux.serial","mode":"req"})json");
+    REQUIRE(h.last_request == R"json({"req":"card.aux.serial","mode":"req"})json");
 }
 
 TEST_CASE("card.aux.serial Accelerometer Mode") {
@@ -174,7 +184,7 @@ TEST_CASE("card.aux.serial Accelerometer Mode") {
     req.set_mode(note::string_view(R"sv(notify,accel)sv"));
     req.set_duration(int32_t{500});
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.aux.serial","duration":500,"mode":"notify,accel"})json");
+    REQUIRE(h.last_request == R"json({"req":"card.aux.serial","duration":500,"mode":"notify,accel"})json");
 }
 
 TEST_CASE("card.aux.serial Signal Mode") {
@@ -182,7 +192,7 @@ TEST_CASE("card.aux.serial Signal Mode") {
     note::api::CardAuxSerial req;
     req.set_mode(note::string_view(R"sv(notify,signals)sv"));
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.aux.serial","mode":"notify,signals"})json");
+    REQUIRE(h.last_request == R"json({"req":"card.aux.serial","mode":"notify,signals"})json");
 }
 
 TEST_CASE("card.aux.serial Multiple Mode") {
@@ -191,28 +201,28 @@ TEST_CASE("card.aux.serial Multiple Mode") {
     req.set_mode(note::string_view(R"sv(notify,accel,env)sv"));
     req.set_duration(int32_t{500});
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.aux.serial","duration":500,"mode":"notify,accel,env"})json");
+    REQUIRE(h.last_request == R"json({"req":"card.aux.serial","duration":500,"mode":"notify,accel,env"})json");
 }
 
 TEST_CASE("card.binary View Binary Status") {
     TestHarness h;
     note::api::CardBinary::Query req;
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.binary"})json");
+    REQUIRE(h.last_request == R"json({"req":"card.binary"})json");
 }
 
 TEST_CASE("card.binary Reset Binary Data") {
     TestHarness h;
     note::api::CardBinary::Delete req;
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.binary","delete":true})json");
+    REQUIRE(h.last_request == R"json({"req":"card.binary","delete":true})json");
 }
 
 TEST_CASE("card.binary.get Get All Binary Data") {
     TestHarness h;
     note::api::CardBinaryGet req;
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.binary.get"})json");
+    REQUIRE(h.last_request == R"json({"req":"card.binary.get"})json");
 }
 
 TEST_CASE("card.binary.put Put Binary Data") {
@@ -221,7 +231,7 @@ TEST_CASE("card.binary.put Put Binary Data") {
     req.set_cobs(int32_t{5});
     req.set_status(note::string_view(R"sv(ce6fdef565eeecf14ab38d83643b922d)sv"));
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.binary.put","cobs":5,"status":"ce6fdef565eeecf14ab38d83643b922d"})json");
+    REQUIRE(h.last_request == R"json({"req":"card.binary.put","cobs":5,"status":"ce6fdef565eeecf14ab38d83643b922d"})json");
 }
 
 TEST_CASE("card.carrier Enable Charging Mode") {
@@ -229,7 +239,7 @@ TEST_CASE("card.carrier Enable Charging Mode") {
     note::api::CardCarrier req;
     req.set_mode(note::string_view(R"sv(charging)sv"));
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.carrier","mode":"charging"})json");
+    REQUIRE(h.last_request == R"json({"req":"card.carrier","mode":"charging"})json");
 }
 
 TEST_CASE("card.contact Set Contact Information") {
@@ -240,7 +250,7 @@ TEST_CASE("card.contact Set Contact Information") {
     req.set_role(note::string_view(R"sv(Head of Security)sv"));
     req.set_email(note::string_view(R"sv(tom@blues.com)sv"));
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.contact","email":"tom@blues.com","name":"Tom Turkey","org":"Blues","role":"Head of Security"})json");
+    REQUIRE(h.last_request == R"json({"req":"card.contact","email":"tom@blues.com","name":"Tom Turkey","org":"Blues","role":"Head of Security"})json");
 }
 
 TEST_CASE("card.dfu Configure STM32 DFU") {
@@ -249,7 +259,7 @@ TEST_CASE("card.dfu Configure STM32 DFU") {
     req.set_name(note::string_view(R"sv(stm32)sv"));
     req.set_on(true);
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.dfu","name":"stm32","on":true})json");
+    REQUIRE(h.last_request == R"json({"req":"card.dfu","name":"stm32","on":true})json");
 }
 
 TEST_CASE("card.dfu Configure ESP32 DFU") {
@@ -258,7 +268,7 @@ TEST_CASE("card.dfu Configure ESP32 DFU") {
         b.add("name", note::string_view(R"sv(esp32)sv"));
         b.add("on", true);
     });
-    REQUIRE(h.io.last_request == R"json({"cmd":"card.dfu","name":"esp32","on":true})json");
+    REQUIRE(h.last_request == R"json({"cmd":"card.dfu","name":"esp32","on":true})json");
 }
 
 TEST_CASE("card.dfu Enable Alternative DFU Pins") {
@@ -266,7 +276,7 @@ TEST_CASE("card.dfu Enable Alternative DFU Pins") {
     note::api::CardDfu req;
     req.set_mode(note::string_view(R"sv(altdfu)sv"));
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.dfu","mode":"altdfu"})json");
+    REQUIRE(h.last_request == R"json({"req":"card.dfu","mode":"altdfu"})json");
 }
 
 TEST_CASE("card.dfu Disable DFU Temporarily") {
@@ -275,14 +285,14 @@ TEST_CASE("card.dfu Disable DFU Temporarily") {
     req.set_off(true);
     req.set_seconds(int32_t{3600});
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.dfu","off":true,"seconds":3600})json");
+    REQUIRE(h.last_request == R"json({"req":"card.dfu","off":true,"seconds":3600})json");
 }
 
 TEST_CASE("card.illumination Get Illumination") {
     TestHarness h;
     note::api::CardIllumination req;
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.illumination"})json");
+    REQUIRE(h.last_request == R"json({"req":"card.illumination"})json");
 }
 
 TEST_CASE("card.io Change I2C Address") {
@@ -290,7 +300,7 @@ TEST_CASE("card.io Change I2C Address") {
     note::api::CardIo req;
     req.set_i2c(int32_t{24});
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.io","i2c":24})json");
+    REQUIRE(h.last_request == R"json({"req":"card.io","i2c":24})json");
 }
 
 TEST_CASE("card.io Keep LED On While Notecard Awake.") {
@@ -298,7 +308,7 @@ TEST_CASE("card.io Keep LED On While Notecard Awake.") {
     note::api::CardIo req;
     req.set_mode(note::string_view(R"sv(+busy)sv"));
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.io","mode":"+busy"})json");
+    REQUIRE(h.last_request == R"json({"req":"card.io","mode":"+busy"})json");
 }
 
 TEST_CASE("card.io Disable I2C Master.") {
@@ -306,7 +316,7 @@ TEST_CASE("card.io Disable I2C Master.") {
     note::api::CardIo req;
     req.set_mode(note::string_view(R"sv(i2c-master-disable)sv"));
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.io","mode":"i2c-master-disable"})json");
+    REQUIRE(h.last_request == R"json({"req":"card.io","mode":"i2c-master-disable"})json");
 }
 
 TEST_CASE("card.io Force Fallback Mode For Starnote.") {
@@ -314,14 +324,14 @@ TEST_CASE("card.io Force Fallback Mode For Starnote.") {
     note::api::CardIo req;
     req.set_mode(note::string_view(R"sv(+fallback)sv"));
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.io","mode":"+fallback"})json");
+    REQUIRE(h.last_request == R"json({"req":"card.io","mode":"+fallback"})json");
 }
 
 TEST_CASE("card.location Get Current Location") {
     TestHarness h;
     note::api::CardLocation req;
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.location"})json");
+    REQUIRE(h.last_request == R"json({"req":"card.location"})json");
 }
 
 TEST_CASE("card.location.mode Continuous Mode") {
@@ -329,7 +339,7 @@ TEST_CASE("card.location.mode Continuous Mode") {
     note::api::CardLocationMode::Set req;
     req.set_mode(note::string_view(R"sv(continuous)sv"));
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.location.mode","mode":"continuous"})json");
+    REQUIRE(h.last_request == R"json({"req":"card.location.mode","mode":"continuous"})json");
 }
 
 TEST_CASE("card.location.mode Periodic Mode") {
@@ -338,7 +348,7 @@ TEST_CASE("card.location.mode Periodic Mode") {
     req.set_mode(note::string_view(R"sv(periodic)sv"));
     req.set_seconds(int32_t{3600});
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.location.mode","mode":"periodic","seconds":3600})json");
+    REQUIRE(h.last_request == R"json({"req":"card.location.mode","mode":"periodic","seconds":3600})json");
 }
 
 TEST_CASE("card.location.mode Geofence Mode") {
@@ -350,7 +360,7 @@ TEST_CASE("card.location.mode Geofence Mode") {
     req.set_max(int32_t{100});
     req.set_minutes(int32_t{2});
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.location.mode","lat":42.5776,"lon":-70.87134,"max":100,"minutes":2,"mode":"periodic"})json");
+    REQUIRE(h.last_request == R"json({"req":"card.location.mode","lat":42.5776,"lon":-70.87134,"max":100,"minutes":2,"mode":"periodic"})json");
 }
 
 TEST_CASE("card.location.mode Fixed Mode") {
@@ -360,7 +370,7 @@ TEST_CASE("card.location.mode Fixed Mode") {
     req.set_lat(42.5776);
     req.set_lon(-70.87134);
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.location.mode","lat":42.5776,"lon":-70.87134,"mode":"fixed"})json");
+    REQUIRE(h.last_request == R"json({"req":"card.location.mode","lat":42.5776,"lon":-70.87134,"mode":"fixed"})json");
 }
 
 TEST_CASE("card.location.track Start") {
@@ -368,7 +378,7 @@ TEST_CASE("card.location.track Start") {
     note::api::CardLocationTrack req;
     req.set_start(true);
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.location.track","start":true})json");
+    REQUIRE(h.last_request == R"json({"req":"card.location.track","start":true})json");
 }
 
 TEST_CASE("card.location.track Stop") {
@@ -376,7 +386,7 @@ TEST_CASE("card.location.track Stop") {
     note::api::CardLocationTrack req;
     req.set_stop(true);
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.location.track","stop":true})json");
+    REQUIRE(h.last_request == R"json({"req":"card.location.track","stop":true})json");
 }
 
 TEST_CASE("card.location.track Heartbeat") {
@@ -387,7 +397,7 @@ TEST_CASE("card.location.track Heartbeat") {
     req.set_heartbeat(true);
     req.set_hours(int32_t{2});
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.location.track","heartbeat":true,"hours":2,"start":true,"sync":true})json");
+    REQUIRE(h.last_request == R"json({"req":"card.location.track","heartbeat":true,"hours":2,"start":true,"sync":true})json");
 }
 
 TEST_CASE("card.monitor Override LED Behavior") {
@@ -396,7 +406,7 @@ TEST_CASE("card.monitor Override LED Behavior") {
     req.set_mode(note::string_view(R"sv(green)sv"));
     req.set_count(int32_t{5});
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.monitor","count":5,"mode":"green"})json");
+    REQUIRE(h.last_request == R"json({"req":"card.monitor","count":5,"mode":"green"})json");
 }
 
 TEST_CASE("card.motion Motion with Minutes Sampling") {
@@ -404,7 +414,7 @@ TEST_CASE("card.motion Motion with Minutes Sampling") {
     note::api::CardMotion req;
     req.set_minutes(int32_t{2});
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.motion","minutes":2})json");
+    REQUIRE(h.last_request == R"json({"req":"card.motion","minutes":2})json");
 }
 
 TEST_CASE("card.motion.mode Start Motion Tracking") {
@@ -412,7 +422,7 @@ TEST_CASE("card.motion.mode Start Motion Tracking") {
     note::api::CardMotionMode req;
     req.set_start(true);
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.motion.mode","start":true})json");
+    REQUIRE(h.last_request == R"json({"req":"card.motion.mode","start":true})json");
 }
 
 TEST_CASE("card.motion.mode Configure Motion Tracking with Parameters") {
@@ -422,7 +432,7 @@ TEST_CASE("card.motion.mode Configure Motion Tracking with Parameters") {
     req.set_seconds(int32_t{10});
     req.set_sensitivity(int32_t{2});
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.motion.mode","seconds":10,"sensitivity":2,"start":true})json");
+    REQUIRE(h.last_request == R"json({"req":"card.motion.mode","seconds":10,"sensitivity":2,"start":true})json");
 }
 
 TEST_CASE("card.motion.mode Stop Motion Tracking") {
@@ -430,7 +440,7 @@ TEST_CASE("card.motion.mode Stop Motion Tracking") {
     note::api::CardMotionMode req;
     req.set_stop(true);
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.motion.mode","stop":true})json");
+    REQUIRE(h.last_request == R"json({"req":"card.motion.mode","stop":true})json");
 }
 
 TEST_CASE("card.motion.mode Configure Motion Status Change") {
@@ -439,7 +449,7 @@ TEST_CASE("card.motion.mode Configure Motion Status Change") {
     req.set_motion(int32_t{5});
     req.set_seconds(int32_t{60});
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.motion.mode","motion":5,"seconds":60})json");
+    REQUIRE(h.last_request == R"json({"req":"card.motion.mode","motion":5,"seconds":60})json");
 }
 
 TEST_CASE("card.motion.sync Start Motion-Triggered Sync") {
@@ -447,7 +457,7 @@ TEST_CASE("card.motion.sync Start Motion-Triggered Sync") {
     note::api::CardMotionSync req;
     req.set_start(true);
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.motion.sync","start":true})json");
+    REQUIRE(h.last_request == R"json({"req":"card.motion.sync","start":true})json");
 }
 
 TEST_CASE("card.motion.sync Configure Motion Sync Parameters") {
@@ -458,7 +468,7 @@ TEST_CASE("card.motion.sync Configure Motion Sync Parameters") {
     req.set_count(int32_t{20});
     req.set_threshold(int32_t{5});
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.motion.sync","count":20,"minutes":20,"start":true,"threshold":5})json");
+    REQUIRE(h.last_request == R"json({"req":"card.motion.sync","count":20,"minutes":20,"start":true,"threshold":5})json");
 }
 
 TEST_CASE("card.motion.sync Stop Motion-Triggered Sync") {
@@ -466,7 +476,7 @@ TEST_CASE("card.motion.sync Stop Motion-Triggered Sync") {
     note::api::CardMotionSync req;
     req.set_stop(true);
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.motion.sync","stop":true})json");
+    REQUIRE(h.last_request == R"json({"req":"card.motion.sync","stop":true})json");
 }
 
 TEST_CASE("card.motion.sync Orientation Change Only") {
@@ -476,7 +486,7 @@ TEST_CASE("card.motion.sync Orientation Change Only") {
     req.set_threshold(int32_t{0});
     req.set_minutes(int32_t{10});
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.motion.sync","minutes":10,"start":true,"threshold":0})json");
+    REQUIRE(h.last_request == R"json({"req":"card.motion.sync","minutes":10,"start":true,"threshold":0})json");
 }
 
 TEST_CASE("card.motion.track Start Motion Tracking") {
@@ -484,7 +494,7 @@ TEST_CASE("card.motion.track Start Motion Tracking") {
     note::api::CardMotionTrack req;
     req.set_start(true);
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.motion.track","start":true})json");
+    REQUIRE(h.last_request == R"json({"req":"card.motion.track","start":true})json");
 }
 
 TEST_CASE("card.motion.track Configure Motion Tracking with Custom File") {
@@ -496,7 +506,7 @@ TEST_CASE("card.motion.track Configure Motion Tracking with Custom File") {
     req.set_threshold(int32_t{5});
     req.set_file(note::string_view(R"sv(movements.qo)sv"));
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.motion.track","count":20,"file":"movements.qo","minutes":20,"start":true,"threshold":5})json");
+    REQUIRE(h.last_request == R"json({"req":"card.motion.track","count":20,"file":"movements.qo","minutes":20,"start":true,"threshold":5})json");
 }
 
 TEST_CASE("card.motion.track Stop Motion Tracking") {
@@ -504,7 +514,7 @@ TEST_CASE("card.motion.track Stop Motion Tracking") {
     note::api::CardMotionTrack req;
     req.set_stop(true);
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.motion.track","stop":true})json");
+    REQUIRE(h.last_request == R"json({"req":"card.motion.track","stop":true})json");
 }
 
 TEST_CASE("card.motion.track Enable Immediate Orientation Changes") {
@@ -514,14 +524,14 @@ TEST_CASE("card.motion.track Enable Immediate Orientation Changes") {
     req.set_now(true);
     req.set_minutes(int32_t{15});
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.motion.track","minutes":15,"now":true,"start":true})json");
+    REQUIRE(h.last_request == R"json({"req":"card.motion.track","minutes":15,"now":true,"start":true})json");
 }
 
 TEST_CASE("card.power Get Latest Power Consumption Reading") {
     TestHarness h;
     note::api::CardPower::Query req;
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.power"})json");
+    REQUIRE(h.last_request == R"json({"req":"card.power"})json");
 }
 
 TEST_CASE("card.power Set Cadence of Readings") {
@@ -529,7 +539,7 @@ TEST_CASE("card.power Set Cadence of Readings") {
     note::api::CardPower::Set req;
     req.set_minutes(int32_t{60});
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.power","minutes":60})json");
+    REQUIRE(h.last_request == R"json({"req":"card.power","minutes":60})json");
 }
 
 TEST_CASE("card.power Reset Counters") {
@@ -537,7 +547,7 @@ TEST_CASE("card.power Reset Counters") {
     h.nc.command("card.power", [](note::JsonBuilder& b) {
         b.add("reset", true);
     });
-    REQUIRE(h.io.last_request == R"json({"cmd":"card.power","reset":true})json");
+    REQUIRE(h.last_request == R"json({"cmd":"card.power","reset":true})json");
 }
 
 TEST_CASE("card.random Get a Random Number") {
@@ -545,7 +555,7 @@ TEST_CASE("card.random Get a Random Number") {
     note::api::CardRandom req;
     req.set_count(int32_t{100});
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.random","count":100})json");
+    REQUIRE(h.last_request == R"json({"req":"card.random","count":100})json");
 }
 
 TEST_CASE("card.random Get a Buffer of Random Numbers") {
@@ -554,7 +564,7 @@ TEST_CASE("card.random Get a Buffer of Random Numbers") {
     req.set_mode(note::string_view(R"sv(payload)sv"));
     req.set_count(int32_t{100});
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.random","count":100,"mode":"payload"})json");
+    REQUIRE(h.last_request == R"json({"req":"card.random","count":100,"mode":"payload"})json");
 }
 
 TEST_CASE("card.restart Restart Notecard") {
@@ -562,7 +572,7 @@ TEST_CASE("card.restart Restart Notecard") {
     h.nc.command("card.restart", [](note::JsonBuilder& b) {
         (void)b;
     });
-    REQUIRE(h.io.last_request == R"json({"cmd":"card.restart"})json");
+    REQUIRE(h.last_request == R"json({"cmd":"card.restart"})json");
 }
 
 TEST_CASE("card.restore Complete Factory Reset") {
@@ -571,14 +581,14 @@ TEST_CASE("card.restore Complete Factory Reset") {
     req.set_delete_(true);
     req.set_connected(true);
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.restore","connected":true,"delete":true})json");
+    REQUIRE(h.last_request == R"json({"req":"card.restore","connected":true,"delete":true})json");
 }
 
 TEST_CASE("card.restore File System Reset Only") {
     TestHarness h;
     note::api::CardRestore req;
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.restore"})json");
+    REQUIRE(h.last_request == R"json({"req":"card.restore"})json");
 }
 
 TEST_CASE("card.sleep Enable Sleep Mode") {
@@ -586,7 +596,7 @@ TEST_CASE("card.sleep Enable Sleep Mode") {
     note::api::CardSleep req;
     req.set_on(true);
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.sleep","on":true})json");
+    REQUIRE(h.last_request == R"json({"req":"card.sleep","on":true})json");
 }
 
 TEST_CASE("card.sleep Configure Sleep with Accelerometer Wake") {
@@ -595,7 +605,7 @@ TEST_CASE("card.sleep Configure Sleep with Accelerometer Wake") {
     req.set_on(true);
     req.set_mode(note::string_view(R"sv(accel)sv"));
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.sleep","mode":"accel","on":true})json");
+    REQUIRE(h.last_request == R"json({"req":"card.sleep","mode":"accel","on":true})json");
 }
 
 TEST_CASE("card.sleep Custom Sleep Timer") {
@@ -603,7 +613,7 @@ TEST_CASE("card.sleep Custom Sleep Timer") {
     note::api::CardSleep req;
     req.set_seconds(int32_t{60});
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.sleep","seconds":60})json");
+    REQUIRE(h.last_request == R"json({"req":"card.sleep","seconds":60})json");
 }
 
 TEST_CASE("card.sleep Disable Sleep Mode") {
@@ -611,21 +621,21 @@ TEST_CASE("card.sleep Disable Sleep Mode") {
     h.nc.command("card.sleep", [](note::JsonBuilder& b) {
         b.add("off", true);
     });
-    REQUIRE(h.io.last_request == R"json({"cmd":"card.sleep","off":true})json");
+    REQUIRE(h.last_request == R"json({"cmd":"card.sleep","off":true})json");
 }
 
 TEST_CASE("card.status Get Notecard Status") {
     TestHarness h;
     note::api::CardStatus req;
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.status"})json");
+    REQUIRE(h.last_request == R"json({"req":"card.status"})json");
 }
 
 TEST_CASE("card.temp Get Card Temperature") {
     TestHarness h;
     note::api::CardTemp::Query req;
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.temp"})json");
+    REQUIRE(h.last_request == R"json({"req":"card.temp"})json");
 }
 
 TEST_CASE("card.temp Configure Temperature Tracking") {
@@ -633,7 +643,7 @@ TEST_CASE("card.temp Configure Temperature Tracking") {
     note::api::CardTemp::Set req;
     req.set_minutes(int32_t{30});
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.temp","minutes":30})json");
+    REQUIRE(h.last_request == R"json({"req":"card.temp","minutes":30})json");
 }
 
 TEST_CASE("card.temp Stop Temperature Tracking") {
@@ -641,7 +651,7 @@ TEST_CASE("card.temp Stop Temperature Tracking") {
     h.nc.command("card.temp", [](note::JsonBuilder& b) {
         b.add("stop", true);
     });
-    REQUIRE(h.io.last_request == R"json({"cmd":"card.temp","stop":true})json");
+    REQUIRE(h.last_request == R"json({"cmd":"card.temp","stop":true})json");
 }
 
 TEST_CASE("card.temp Sync Temperature Notes") {
@@ -649,14 +659,14 @@ TEST_CASE("card.temp Sync Temperature Notes") {
     h.nc.command("card.temp", [](note::JsonBuilder& b) {
         b.add("sync", true);
     });
-    REQUIRE(h.io.last_request == R"json({"cmd":"card.temp","sync":true})json");
+    REQUIRE(h.last_request == R"json({"cmd":"card.temp","sync":true})json");
 }
 
 TEST_CASE("card.time Get Current Time and Date") {
     TestHarness h;
     note::api::CardTime req;
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.time"})json");
+    REQUIRE(h.last_request == R"json({"req":"card.time"})json");
 }
 
 TEST_CASE("card.trace Enable Trace Mode") {
@@ -664,7 +674,7 @@ TEST_CASE("card.trace Enable Trace Mode") {
     note::api::CardTrace req;
     req.set_mode(note::string_view(R"sv(on)sv"));
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.trace","mode":"on"})json");
+    REQUIRE(h.last_request == R"json({"req":"card.trace","mode":"on"})json");
 }
 
 TEST_CASE("card.trace Disable Trace Mode") {
@@ -672,7 +682,7 @@ TEST_CASE("card.trace Disable Trace Mode") {
     h.nc.command("card.trace", [](note::JsonBuilder& b) {
         b.add("mode", note::string_view(R"sv(off)sv"));
     });
-    REQUIRE(h.io.last_request == R"json({"cmd":"card.trace","mode":"off"})json");
+    REQUIRE(h.last_request == R"json({"cmd":"card.trace","mode":"off"})json");
 }
 
 TEST_CASE("card.transport Set WiFi-Cell Priority") {
@@ -680,7 +690,7 @@ TEST_CASE("card.transport Set WiFi-Cell Priority") {
     note::api::CardTransport req;
     req.set_method(note::string_view(R"sv(wifi-cell)sv"));
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.transport","method":"wifi-cell"})json");
+    REQUIRE(h.last_request == R"json({"req":"card.transport","method":"wifi-cell"})json");
 }
 
 TEST_CASE("card.transport Enable WiFi Only Mode") {
@@ -688,7 +698,7 @@ TEST_CASE("card.transport Enable WiFi Only Mode") {
     note::api::CardTransport req;
     req.set_method(note::string_view(R"sv(wifi)sv"));
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.transport","method":"wifi"})json");
+    REQUIRE(h.last_request == R"json({"req":"card.transport","method":"wifi"})json");
 }
 
 TEST_CASE("card.transport Enable Cellular Only Mode") {
@@ -696,7 +706,7 @@ TEST_CASE("card.transport Enable Cellular Only Mode") {
     note::api::CardTransport req;
     req.set_method(note::string_view(R"sv(cell)sv"));
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.transport","method":"cell"})json");
+    REQUIRE(h.last_request == R"json({"req":"card.transport","method":"cell"})json");
 }
 
 TEST_CASE("card.transport Reset to Default Transport") {
@@ -704,7 +714,7 @@ TEST_CASE("card.transport Reset to Default Transport") {
     h.nc.command("card.transport", [](note::JsonBuilder& b) {
         b.add("method", note::string_view(R"sv(-)sv"));
     });
-    REQUIRE(h.io.last_request == R"json({"cmd":"card.transport","method":"-"})json");
+    REQUIRE(h.last_request == R"json({"cmd":"card.transport","method":"-"})json");
 }
 
 TEST_CASE("card.transport Configure NTN Mode") {
@@ -712,7 +722,7 @@ TEST_CASE("card.transport Configure NTN Mode") {
     note::api::CardTransport req;
     req.set_method(note::string_view(R"sv(ntn)sv"));
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.transport","method":"ntn"})json");
+    REQUIRE(h.last_request == R"json({"req":"card.transport","method":"ntn"})json");
 }
 
 TEST_CASE("card.transport WiFi-Cell-NTN Priority") {
@@ -721,7 +731,7 @@ TEST_CASE("card.transport WiFi-Cell-NTN Priority") {
     req.set_method(note::string_view(R"sv(wifi-cell-ntn)sv"));
     req.set_seconds(int32_t{1800});
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.transport","method":"wifi-cell-ntn","seconds":1800})json");
+    REQUIRE(h.last_request == R"json({"req":"card.transport","method":"wifi-cell-ntn","seconds":1800})json");
 }
 
 TEST_CASE("card.triangulate Single Mode") {
@@ -731,7 +741,7 @@ TEST_CASE("card.triangulate Single Mode") {
     req.set_on(true);
     req.set_set(true);
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.triangulate","mode":"cell","on":true,"set":true})json");
+    REQUIRE(h.last_request == R"json({"req":"card.triangulate","mode":"cell","on":true,"set":true})json");
 }
 
 TEST_CASE("card.triangulate Dual Mode") {
@@ -742,7 +752,7 @@ TEST_CASE("card.triangulate Dual Mode") {
     req.set_usb(true);
     req.set_set(true);
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.triangulate","mode":"wifi,cell","on":true,"set":true,"usb":true})json");
+    REQUIRE(h.last_request == R"json({"req":"card.triangulate","mode":"wifi,cell","on":true,"set":true,"usb":true})json");
 }
 
 TEST_CASE("card.triangulate Send WiFi AP Data") {
@@ -760,7 +770,7 @@ TEST_CASE("card.triangulate Send WiFi AP Data") {
 
 )sv"));
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.triangulate","text":"+CWLAP:(4,\"Blues\",-51,\"74:ac:b9:12:12:f8\",1)\n+CWLAP:(3,\"AAAA-62DD\",-70,\"6c:55:e8:91:62:e1\",11)\n+CWLAP:(4,\"Blues\",-81,\"74:ac:b9:11:12:23\",1)\n+CWLAP:(4,\"Blues\",-82,\"74:ac:a9:12:19:48\",11)\n+CWLAP:(4,\"Free Parking\",-83,\"02:18:4a:11:60:31\",6)\n+CWLAP:(5,\"GO\",-84,\"01:13:6a:13:90:30\",6)\n+CWLAP:(4,\"AAAA-5C62-2.4\",-85,\"d8:97:ba:7b:fd:60\",1)\n+CWLAP:(3,\"DIRECT-a5-HP MLP50\",-86,\"fa:da:0c:1b:16:a5\",6)\n+CWLAP:(3,\"DIRECT-c6-HP M182 LaserJet\",-88,\"da:12:65:44:31:c6\",6)\n\n"})json");
+    REQUIRE(h.last_request == R"json({"req":"card.triangulate","text":"+CWLAP:(4,\"Blues\",-51,\"74:ac:b9:12:12:f8\",1)\n+CWLAP:(3,\"AAAA-62DD\",-70,\"6c:55:e8:91:62:e1\",11)\n+CWLAP:(4,\"Blues\",-81,\"74:ac:b9:11:12:23\",1)\n+CWLAP:(4,\"Blues\",-82,\"74:ac:a9:12:19:48\",11)\n+CWLAP:(4,\"Free Parking\",-83,\"02:18:4a:11:60:31\",6)\n+CWLAP:(5,\"GO\",-84,\"01:13:6a:13:90:30\",6)\n+CWLAP:(4,\"AAAA-5C62-2.4\",-85,\"d8:97:ba:7b:fd:60\",1)\n+CWLAP:(3,\"DIRECT-a5-HP MLP50\",-86,\"fa:da:0c:1b:16:a5\",6)\n+CWLAP:(3,\"DIRECT-c6-HP M182 LaserJet\",-88,\"da:12:65:44:31:c6\",6)\n\n"})json");
 }
 
 TEST_CASE("card.triangulate Disable Triangulation") {
@@ -768,14 +778,14 @@ TEST_CASE("card.triangulate Disable Triangulation") {
     note::api::CardTriangulate req;
     req.set_mode(note::string_view(R"sv(-)sv"));
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.triangulate","mode":"-"})json");
+    REQUIRE(h.last_request == R"json({"req":"card.triangulate","mode":"-"})json");
 }
 
 TEST_CASE("card.usage.get Get Total Usage") {
     TestHarness h;
     note::api::CardUsageGet req;
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.usage.get"})json");
+    REQUIRE(h.last_request == R"json({"req":"card.usage.get"})json");
 }
 
 TEST_CASE("card.usage.get Get Daily Usage with Offset") {
@@ -784,7 +794,7 @@ TEST_CASE("card.usage.get Get Daily Usage with Offset") {
     req.set_mode(note::string_view(R"sv(1day)sv"));
     req.set_offset(int32_t{5});
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.usage.get","mode":"1day","offset":5})json");
+    REQUIRE(h.last_request == R"json({"req":"card.usage.get","mode":"1day","offset":5})json");
 }
 
 TEST_CASE("card.usage.get Get Hourly Usage") {
@@ -792,7 +802,7 @@ TEST_CASE("card.usage.get Get Hourly Usage") {
     note::api::CardUsageGet req;
     req.set_mode(note::string_view(R"sv(1hour)sv"));
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.usage.get","mode":"1hour"})json");
+    REQUIRE(h.last_request == R"json({"req":"card.usage.get","mode":"1hour"})json");
 }
 
 TEST_CASE("card.usage.get Get 30-Day Usage") {
@@ -800,7 +810,7 @@ TEST_CASE("card.usage.get Get 30-Day Usage") {
     note::api::CardUsageGet req;
     req.set_mode(note::string_view(R"sv(30day)sv"));
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.usage.get","mode":"30day"})json");
+    REQUIRE(h.last_request == R"json({"req":"card.usage.get","mode":"30day"})json");
 }
 
 TEST_CASE("card.usage.test Test 7-Day Usage Projection") {
@@ -809,7 +819,7 @@ TEST_CASE("card.usage.test Test 7-Day Usage Projection") {
     req.set_days(int32_t{7});
     req.set_megabytes(int32_t{500});
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.usage.test","days":7,"megabytes":500})json");
+    REQUIRE(h.last_request == R"json({"req":"card.usage.test","days":7,"megabytes":500})json");
 }
 
 TEST_CASE("card.usage.test Test 12-Hour Usage Projection") {
@@ -817,7 +827,7 @@ TEST_CASE("card.usage.test Test 12-Hour Usage Projection") {
     note::api::CardUsageTest req;
     req.set_hours(int32_t{12});
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.usage.test","hours":12})json");
+    REQUIRE(h.last_request == R"json({"req":"card.usage.test","hours":12})json");
 }
 
 TEST_CASE("card.usage.test Default Quota Test") {
@@ -825,14 +835,14 @@ TEST_CASE("card.usage.test Default Quota Test") {
     note::api::CardUsageTest req;
     req.set_days(int32_t{30});
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.usage.test","days":30})json");
+    REQUIRE(h.last_request == R"json({"req":"card.usage.test","days":30})json");
 }
 
 TEST_CASE("card.version Get Version Information") {
     TestHarness h;
     note::api::CardVersion req;
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.version"})json");
+    REQUIRE(h.last_request == R"json({"req":"card.version"})json");
 }
 
 TEST_CASE("card.voltage Get Voltage Trends") {
@@ -842,7 +852,7 @@ TEST_CASE("card.voltage Get Voltage Trends") {
     req.set_vmax(int32_t{4});
     req.set_vmin(2.2);
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.voltage","hours":300,"vmax":4,"vmin":2.2})json");
+    REQUIRE(h.last_request == R"json({"req":"card.voltage","hours":300,"vmax":4,"vmin":2.2})json");
 }
 
 TEST_CASE("card.voltage Set LiPo Voltage Thresholds") {
@@ -850,7 +860,7 @@ TEST_CASE("card.voltage Set LiPo Voltage Thresholds") {
     note::api::CardVoltage::Set req;
     req.set_mode(note::string_view(R"sv(lipo)sv"));
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.voltage","mode":"lipo"})json");
+    REQUIRE(h.last_request == R"json({"req":"card.voltage","mode":"lipo"})json");
 }
 
 TEST_CASE("card.voltage Query Current Thresholds") {
@@ -858,7 +868,7 @@ TEST_CASE("card.voltage Query Current Thresholds") {
     note::api::CardVoltage::Set req;
     req.set_mode(note::string_view(R"sv(?)sv"));
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.voltage","mode":"?"})json");
+    REQUIRE(h.last_request == R"json({"req":"card.voltage","mode":"?"})json");
 }
 
 TEST_CASE("card.voltage Enable USB Power Monitoring") {
@@ -868,7 +878,7 @@ TEST_CASE("card.voltage Enable USB Power Monitoring") {
     req.set_alert(true);
     req.set_sync(true);
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.voltage","alert":true,"sync":true,"usb":true})json");
+    REQUIRE(h.last_request == R"json({"req":"card.voltage","alert":true,"sync":true,"usb":true})json");
 }
 
 TEST_CASE("card.voltage Enable Historic Voltage Trends") {
@@ -876,7 +886,7 @@ TEST_CASE("card.voltage Enable Historic Voltage Trends") {
     note::api::CardVoltage::Set req;
     req.set_on(true);
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.voltage","on":true})json");
+    REQUIRE(h.last_request == R"json({"req":"card.voltage","on":true})json");
 }
 
 TEST_CASE("card.wifi Create a Connection") {
@@ -885,7 +895,7 @@ TEST_CASE("card.wifi Create a Connection") {
     req.set_ssid(note::string_view(R"sv(<ssid name>)sv"));
     req.set_password(note::string_view(R"sv(<password>)sv"));
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.wifi","password":"<password>","ssid":"<ssid name>"})json");
+    REQUIRE(h.last_request == R"json({"req":"card.wifi","password":"<password>","ssid":"<ssid name>"})json");
 }
 
 TEST_CASE("card.wifi Clear a Connection") {
@@ -894,7 +904,7 @@ TEST_CASE("card.wifi Clear a Connection") {
     req.set_ssid(note::string_view(R"sv(-)sv"));
     req.set_password(note::string_view(R"sv(-)sv"));
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.wifi","password":"-","ssid":"-"})json");
+    REQUIRE(h.last_request == R"json({"req":"card.wifi","password":"-","ssid":"-"})json");
 }
 
 TEST_CASE("card.wifi Customize the SoftAP") {
@@ -903,7 +913,7 @@ TEST_CASE("card.wifi Customize the SoftAP") {
     req.set_name(note::string_view(R"sv(ACME Inc)sv"));
     req.set_org(note::string_view(R"sv(ACME Inc)sv"));
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.wifi","name":"ACME Inc","org":"ACME Inc"})json");
+    REQUIRE(h.last_request == R"json({"req":"card.wifi","name":"ACME Inc","org":"ACME Inc"})json");
 }
 
 TEST_CASE("card.wifi Customize the SoftAP w/MAC Address") {
@@ -912,7 +922,7 @@ TEST_CASE("card.wifi Customize the SoftAP w/MAC Address") {
     req.set_name(note::string_view(R"sv(acme-)sv"));
     req.set_org(note::string_view(R"sv(ACME Inc)sv"));
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.wifi","name":"acme-","org":"ACME Inc"})json");
+    REQUIRE(h.last_request == R"json({"req":"card.wifi","name":"acme-","org":"ACME Inc"})json");
 }
 
 TEST_CASE("card.wifi Configure Multiple Access Points") {
@@ -920,14 +930,14 @@ TEST_CASE("card.wifi Configure Multiple Access Points") {
     note::api::CardWifi req;
     req.set_text(note::string_view(R"sv(["FIRST-SSID","FIRST-PASSWORD"],["SECOND-SSID","SECOND-PASSWORD"])sv"));
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.wifi","text":"[\"FIRST-SSID\",\"FIRST-PASSWORD\"],[\"SECOND-SSID\",\"SECOND-PASSWORD\"]"})json");
+    REQUIRE(h.last_request == R"json({"req":"card.wifi","text":"[\"FIRST-SSID\",\"FIRST-PASSWORD\"],[\"SECOND-SSID\",\"SECOND-PASSWORD\"]"})json");
 }
 
 TEST_CASE("card.wireless Current Network State") {
     TestHarness h;
     note::api::CardWireless req;
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.wireless"})json");
+    REQUIRE(h.last_request == R"json({"req":"card.wireless"})json");
 }
 
 TEST_CASE("card.wireless Change Scan Mode") {
@@ -935,7 +945,7 @@ TEST_CASE("card.wireless Change Scan Mode") {
     note::api::CardWireless req;
     req.set_mode(note::string_view(R"sv(nb)sv"));
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.wireless","mode":"nb"})json");
+    REQUIRE(h.last_request == R"json({"req":"card.wireless","mode":"nb"})json");
 }
 
 TEST_CASE("card.wireless Reset Scan Mode") {
@@ -943,7 +953,7 @@ TEST_CASE("card.wireless Reset Scan Mode") {
     note::api::CardWireless req;
     req.set_mode(note::string_view(R"sv(-)sv"));
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.wireless","mode":"-"})json");
+    REQUIRE(h.last_request == R"json({"req":"card.wireless","mode":"-"})json");
 }
 
 TEST_CASE("card.wireless Set External SIM APN") {
@@ -951,7 +961,7 @@ TEST_CASE("card.wireless Set External SIM APN") {
     note::api::CardWireless req;
     req.set_apn(note::string_view(R"sv(myapn.nb)sv"));
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.wireless","apn":"myapn.nb"})json");
+    REQUIRE(h.last_request == R"json({"req":"card.wireless","apn":"myapn.nb"})json");
 }
 
 TEST_CASE("card.wireless Failover to External SIM") {
@@ -960,21 +970,21 @@ TEST_CASE("card.wireless Failover to External SIM") {
     req.set_apn(note::string_view(R"sv(myapn.nb)sv"));
     req.set_method(note::string_view(R"sv(dual-primary-secondary)sv"));
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.wireless","apn":"myapn.nb","method":"dual-primary-secondary"})json");
+    REQUIRE(h.last_request == R"json({"req":"card.wireless","apn":"myapn.nb","method":"dual-primary-secondary"})json");
 }
 
 TEST_CASE("card.wireless.penalty Check Penalty Box State") {
     TestHarness h;
     note::api::CardWirelessPenalty::Query req;
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.wireless.penalty"})json");
+    REQUIRE(h.last_request == R"json({"req":"card.wireless.penalty"})json");
 }
 
 TEST_CASE("card.wireless.penalty Remove from Penalty Box") {
     TestHarness h;
     note::api::CardWirelessPenalty::Delete req;
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.wireless.penalty","reset":true})json");
+    REQUIRE(h.last_request == R"json({"req":"card.wireless.penalty","reset":true})json");
 }
 
 TEST_CASE("card.wireless.penalty Override Default Penalty Box Settings") {
@@ -985,7 +995,7 @@ TEST_CASE("card.wireless.penalty Override Default Penalty Box Settings") {
     req.set_max(int32_t{720});
     req.set_min(int32_t{5});
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"card.wireless.penalty","add":10,"max":720,"min":5,"rate":2,"set":true})json");
+    REQUIRE(h.last_request == R"json({"req":"card.wireless.penalty","add":10,"max":720,"min":5,"rate":2,"set":true})json");
 }
 
 TEST_CASE("dfu.get Retrieve Firmware Data") {
@@ -994,7 +1004,7 @@ TEST_CASE("dfu.get Retrieve Firmware Data") {
     req.set_length(int32_t{32});
     req.set_offset(int32_t{32});
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"dfu.get","length":32,"offset":32})json");
+    REQUIRE(h.last_request == R"json({"req":"dfu.get","length":32,"offset":32})json");
 }
 
 TEST_CASE("dfu.get Verify DFU Mode") {
@@ -1002,7 +1012,7 @@ TEST_CASE("dfu.get Verify DFU Mode") {
     note::api::DfuGet req;
     req.set_length(int32_t{0});
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"dfu.get","length":0})json");
+    REQUIRE(h.last_request == R"json({"req":"dfu.get","length":0})json");
 }
 
 TEST_CASE("dfu.get Read First Block") {
@@ -1011,7 +1021,7 @@ TEST_CASE("dfu.get Read First Block") {
     req.set_length(int32_t{1024});
     req.set_offset(int32_t{0});
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"dfu.get","length":1024,"offset":0})json");
+    REQUIRE(h.last_request == R"json({"req":"dfu.get","length":1024,"offset":0})json");
 }
 
 TEST_CASE("dfu.get Retrieve Large Firmware Data with Binary Buffer") {
@@ -1021,7 +1031,7 @@ TEST_CASE("dfu.get Retrieve Large Firmware Data with Binary Buffer") {
     req.set_offset(int32_t{0});
     req.set_binary(true);
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"dfu.get","binary":true,"length":8192,"offset":0})json");
+    REQUIRE(h.last_request == R"json({"req":"dfu.get","binary":true,"length":8192,"offset":0})json");
 }
 
 TEST_CASE("dfu.status Enable DFU Downloads") {
@@ -1029,7 +1039,7 @@ TEST_CASE("dfu.status Enable DFU Downloads") {
     note::api::DfuStatus req;
     req.set_on(true);
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"dfu.status","on":true})json");
+    REQUIRE(h.last_request == R"json({"req":"dfu.status","on":true})json");
 }
 
 TEST_CASE("dfu.status Disable DFU Downloads") {
@@ -1037,7 +1047,7 @@ TEST_CASE("dfu.status Disable DFU Downloads") {
     note::api::DfuStatus req;
     req.set_off(true);
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"dfu.status","off":true})json");
+    REQUIRE(h.last_request == R"json({"req":"dfu.status","off":true})json");
 }
 
 TEST_CASE("dfu.status Voltage-Variable Enable") {
@@ -1045,7 +1055,7 @@ TEST_CASE("dfu.status Voltage-Variable Enable") {
     note::api::DfuStatus req;
     req.set_vvalue(note::string_view(R"sv(usb:1;high:1;normal:0;low:0;dead:0)sv"));
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"dfu.status","vvalue":"usb:1;high:1;normal:0;low:0;dead:0"})json");
+    REQUIRE(h.last_request == R"json({"req":"dfu.status","vvalue":"usb:1;high:1;normal:0;low:0;dead:0"})json");
 }
 
 TEST_CASE("dfu.status Check Notecard DFU Status") {
@@ -1053,7 +1063,7 @@ TEST_CASE("dfu.status Check Notecard DFU Status") {
     note::api::DfuStatus req;
     req.set_name(note::string_view(R"sv(card)sv"));
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"dfu.status","name":"card"})json");
+    REQUIRE(h.last_request == R"json({"req":"dfu.status","name":"card"})json");
 }
 
 TEST_CASE("dfu.status Stop DFU with Status") {
@@ -1062,7 +1072,7 @@ TEST_CASE("dfu.status Stop DFU with Status") {
     req.set_stop(true);
     req.set_status(note::string_view(R"sv(Update cancelled by user)sv"));
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"dfu.status","status":"Update cancelled by user","stop":true})json");
+    REQUIRE(h.last_request == R"json({"req":"dfu.status","status":"Update cancelled by user","stop":true})json");
 }
 
 TEST_CASE("dfu.status Set Version Information") {
@@ -1070,7 +1080,7 @@ TEST_CASE("dfu.status Set Version Information") {
     note::api::DfuStatus req;
     req.set_version(note::string_view(R"sv(1.2.4)sv"));
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"dfu.status","version":"1.2.4"})json");
+    REQUIRE(h.last_request == R"json({"req":"dfu.status","version":"1.2.4"})json");
 }
 
 TEST_CASE("env.default Set Default Environment Variable") {
@@ -1079,7 +1089,7 @@ TEST_CASE("env.default Set Default Environment Variable") {
     req.set_name(note::string_view(R"sv(monitor-pump)sv"));
     req.set_text(note::string_view(R"sv(on)sv"));
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"env.default","name":"monitor-pump","text":"on"})json");
+    REQUIRE(h.last_request == R"json({"req":"env.default","name":"monitor-pump","text":"on"})json");
 }
 
 TEST_CASE("env.default Clear Default Environment Variable") {
@@ -1087,7 +1097,7 @@ TEST_CASE("env.default Clear Default Environment Variable") {
     note::api::EnvDefault::Delete req;
     req.set_name(note::string_view(R"sv(monitor-pump)sv"));
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"env.default","name":"monitor-pump"})json");
+    REQUIRE(h.last_request == R"json({"req":"env.default","name":"monitor-pump"})json");
 }
 
 TEST_CASE("env.default Set Empty String Default") {
@@ -1096,7 +1106,7 @@ TEST_CASE("env.default Set Empty String Default") {
     req.set_name(note::string_view(R"sv(debug-mode)sv"));
     req.set_text(note::string_view(R"sv()sv"));
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"env.default","name":"debug-mode","text":""})json");
+    REQUIRE(h.last_request == R"json({"req":"env.default","name":"debug-mode","text":""})json");
 }
 
 TEST_CASE("env.default Set Numeric Default") {
@@ -1105,7 +1115,7 @@ TEST_CASE("env.default Set Numeric Default") {
     req.set_name(note::string_view(R"sv(sample-rate)sv"));
     req.set_text(note::string_view(R"sv(60)sv"));
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"env.default","name":"sample-rate","text":"60"})json");
+    REQUIRE(h.last_request == R"json({"req":"env.default","name":"sample-rate","text":"60"})json");
 }
 
 TEST_CASE("env.default Set Default and Sync") {
@@ -1115,7 +1125,7 @@ TEST_CASE("env.default Set Default and Sync") {
     req.set_text(note::string_view(R"sv(on)sv"));
     req.set_sync(true);
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"env.default","name":"monitor-pump","sync":true,"text":"on"})json");
+    REQUIRE(h.last_request == R"json({"req":"env.default","name":"monitor-pump","sync":true,"text":"on"})json");
 }
 
 TEST_CASE("env.get Get Single Variable") {
@@ -1123,7 +1133,7 @@ TEST_CASE("env.get Get Single Variable") {
     note::api::EnvGet req;
     req.set_name(note::string_view(R"sv(monitor-pump-one)sv"));
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"env.get","name":"monitor-pump-one"})json");
+    REQUIRE(h.last_request == R"json({"req":"env.get","name":"monitor-pump-one"})json");
 }
 
 TEST_CASE("env.get Get Single Variable With Modified Time") {
@@ -1132,21 +1142,21 @@ TEST_CASE("env.get Get Single Variable With Modified Time") {
     req.set_name(note::string_view(R"sv(monitor-pump-one)sv"));
     req.set_time(int32_t{1656315835});
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"env.get","name":"monitor-pump-one","time":1656315835})json");
+    REQUIRE(h.last_request == R"json({"req":"env.get","name":"monitor-pump-one","time":1656315835})json");
 }
 
 TEST_CASE("env.get Get All Variables") {
     TestHarness h;
     note::api::EnvGet req;
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"env.get"})json");
+    REQUIRE(h.last_request == R"json({"req":"env.get"})json");
 }
 
 TEST_CASE("env.modified Get Environment Modified Time") {
     TestHarness h;
     note::api::EnvModified req;
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"env.modified"})json");
+    REQUIRE(h.last_request == R"json({"req":"env.modified"})json");
 }
 
 TEST_CASE("env.modified Check Changes Since Time") {
@@ -1154,7 +1164,7 @@ TEST_CASE("env.modified Check Changes Since Time") {
     note::api::EnvModified req;
     req.set_time(int32_t{1605814400});
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"env.modified","time":1605814400})json");
+    REQUIRE(h.last_request == R"json({"req":"env.modified","time":1605814400})json");
 }
 
 TEST_CASE("env.set Set Environment Variable") {
@@ -1163,7 +1173,7 @@ TEST_CASE("env.set Set Environment Variable") {
     req.set_name(note::string_view(R"sv(monitor-pump)sv"));
     req.set_text(note::string_view(R"sv(on)sv"));
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"env.set","name":"monitor-pump","text":"on"})json");
+    REQUIRE(h.last_request == R"json({"req":"env.set","name":"monitor-pump","text":"on"})json");
 }
 
 TEST_CASE("env.set Clear Environment Variable") {
@@ -1171,7 +1181,7 @@ TEST_CASE("env.set Clear Environment Variable") {
     note::api::EnvSet req;
     req.set_name(note::string_view(R"sv(monitor-pump)sv"));
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"env.set","name":"monitor-pump"})json");
+    REQUIRE(h.last_request == R"json({"req":"env.set","name":"monitor-pump"})json");
 }
 
 TEST_CASE("env.set Set Empty String") {
@@ -1180,21 +1190,21 @@ TEST_CASE("env.set Set Empty String") {
     req.set_name(note::string_view(R"sv(debug-mode)sv"));
     req.set_text(note::string_view(R"sv()sv"));
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"env.set","name":"debug-mode","text":""})json");
+    REQUIRE(h.last_request == R"json({"req":"env.set","name":"debug-mode","text":""})json");
 }
 
 TEST_CASE("env.template Clear Template") {
     TestHarness h;
     note::api::EnvTemplate req;
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"env.template"})json");
+    REQUIRE(h.last_request == R"json({"req":"env.template"})json");
 }
 
 TEST_CASE("file.changes Check All Files") {
     TestHarness h;
     note::api::FileChanges req;
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"file.changes"})json");
+    REQUIRE(h.last_request == R"json({"req":"file.changes"})json");
 }
 
 TEST_CASE("file.changes Use Change Tracker") {
@@ -1202,14 +1212,14 @@ TEST_CASE("file.changes Use Change Tracker") {
     note::api::FileChanges req;
     req.set_tracker(note::string_view(R"sv(my-tracker)sv"));
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"file.changes","tracker":"my-tracker"})json");
+    REQUIRE(h.last_request == R"json({"req":"file.changes","tracker":"my-tracker"})json");
 }
 
 TEST_CASE("file.changes.pending Check Pending Changes") {
     TestHarness h;
     note::api::FileChangesPending req;
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"file.changes.pending"})json");
+    REQUIRE(h.last_request == R"json({"req":"file.changes.pending"})json");
 }
 
 TEST_CASE("file.clear Clear Outbound Notefile") {
@@ -1217,7 +1227,7 @@ TEST_CASE("file.clear Clear Outbound Notefile") {
     note::api::FileClear req;
     req.set_file(note::string_view(R"sv(data.qo)sv"));
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"file.clear","file":"data.qo"})json");
+    REQUIRE(h.last_request == R"json({"req":"file.clear","file":"data.qo"})json");
 }
 
 TEST_CASE("file.clear Clear Encrypted Outbound Notefile") {
@@ -1225,14 +1235,14 @@ TEST_CASE("file.clear Clear Encrypted Outbound Notefile") {
     note::api::FileClear req;
     req.set_file(note::string_view(R"sv(sensors.qos)sv"));
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"file.clear","file":"sensors.qos"})json");
+    REQUIRE(h.last_request == R"json({"req":"file.clear","file":"sensors.qos"})json");
 }
 
 TEST_CASE("file.stats Get All File Stats") {
     TestHarness h;
     note::api::FileStats req;
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"file.stats"})json");
+    REQUIRE(h.last_request == R"json({"req":"file.stats"})json");
 }
 
 TEST_CASE("file.stats Get Specific File Stats") {
@@ -1240,14 +1250,14 @@ TEST_CASE("file.stats Get Specific File Stats") {
     note::api::FileStats req;
     req.set_file(note::string_view(R"sv(sensors.qo)sv"));
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"file.stats","file":"sensors.qo"})json");
+    REQUIRE(h.last_request == R"json({"req":"file.stats","file":"sensors.qo"})json");
 }
 
 TEST_CASE("hub.get Get Notehub Configuration") {
     TestHarness h;
     note::api::HubGet req;
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"hub.get"})json");
+    REQUIRE(h.last_request == R"json({"req":"hub.get"})json");
 }
 
 TEST_CASE("hub.log Log Health Alert with Immediate Sync") {
@@ -1257,7 +1267,7 @@ TEST_CASE("hub.log Log Health Alert with Immediate Sync") {
     req.set_alert(true);
     req.set_sync(true);
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"hub.log","alert":true,"sync":true,"text":"something is wrong!"})json");
+    REQUIRE(h.last_request == R"json({"req":"hub.log","alert":true,"sync":true,"text":"something is wrong!"})json");
 }
 
 TEST_CASE("hub.log Log Simple Message") {
@@ -1265,7 +1275,7 @@ TEST_CASE("hub.log Log Simple Message") {
     note::api::HubLog req;
     req.set_text(note::string_view(R"sv(System status: normal)sv"));
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"hub.log","text":"System status: normal"})json");
+    REQUIRE(h.last_request == R"json({"req":"hub.log","text":"System status: normal"})json");
 }
 
 TEST_CASE("hub.set Set ProductUID") {
@@ -1274,7 +1284,7 @@ TEST_CASE("hub.set Set ProductUID") {
     req.set_product(note::string_view(R"sv(com.your-company.your-name:your_product)sv"));
     req.set_sn(note::string_view(R"sv(my-device)sv"));
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"hub.set","product":"com.your-company.your-name:your_product","sn":"my-device"})json");
+    REQUIRE(h.last_request == R"json({"req":"hub.set","product":"com.your-company.your-name:your_product","sn":"my-device"})json");
 }
 
 TEST_CASE("hub.set Periodic Mode") {
@@ -1285,7 +1295,7 @@ TEST_CASE("hub.set Periodic Mode") {
     req.set_outbound(int32_t{90});
     req.set_inbound(int32_t{240});
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"hub.set","inbound":240,"mode":"periodic","outbound":90,"product":"com.your-company.your-name:your_product"})json");
+    REQUIRE(h.last_request == R"json({"req":"hub.set","inbound":240,"mode":"periodic","outbound":90,"product":"com.your-company.your-name:your_product"})json");
 }
 
 TEST_CASE("hub.set Continuous Mode") {
@@ -1298,7 +1308,7 @@ TEST_CASE("hub.set Continuous Mode") {
     req.set_duration(int32_t{240});
     req.set_sync(true);
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"hub.set","duration":240,"inbound":60,"mode":"continuous","outbound":30,"product":"com.your-company.your-name:your_product","sync":true})json");
+    REQUIRE(h.last_request == R"json({"req":"hub.set","duration":240,"inbound":60,"mode":"continuous","outbound":30,"product":"com.your-company.your-name:your_product","sync":true})json");
 }
 
 TEST_CASE("hub.set Voltage-Variable Sync") {
@@ -1308,7 +1318,7 @@ TEST_CASE("hub.set Voltage-Variable Sync") {
     req.set_voutbound(note::string_view(R"sv(usb:30;high:60;normal:90;low:120;dead:0)sv"));
     req.set_vinbound(note::string_view(R"sv(usb:60;high:120;normal:240;low:480;dead:0)sv"));
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"hub.set","mode":"periodic","vinbound":"usb:60;high:120;normal:240;low:480;dead:0","voutbound":"usb:30;high:60;normal:90;low:120;dead:0"})json");
+    REQUIRE(h.last_request == R"json({"req":"hub.set","mode":"periodic","vinbound":"usb:60;high:120;normal:240;low:480;dead:0","voutbound":"usb:30;high:60;normal:90;low:120;dead:0"})json");
 }
 
 TEST_CASE("hub.set Set Host Firmware Version String") {
@@ -1316,7 +1326,7 @@ TEST_CASE("hub.set Set Host Firmware Version String") {
     note::api::HubSet req;
     req.set_version(note::string_view(R"sv(1.2.3)sv"));
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"hub.set","version":"1.2.3"})json");
+    REQUIRE(h.last_request == R"json({"req":"hub.set","version":"1.2.3"})json");
 }
 
 TEST_CASE("hub.set Reset LoRaWAN Details") {
@@ -1324,7 +1334,7 @@ TEST_CASE("hub.set Reset LoRaWAN Details") {
     note::api::HubSet req;
     req.set_details(note::string_view(R"sv(-)sv"));
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"hub.set","details":"-"})json");
+    REQUIRE(h.last_request == R"json({"req":"hub.set","details":"-"})json");
 }
 
 TEST_CASE("hub.set USB Power Variable Sync") {
@@ -1332,7 +1342,7 @@ TEST_CASE("hub.set USB Power Variable Sync") {
     note::api::HubSet req;
     req.set_umin(true);
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"hub.set","umin":true})json");
+    REQUIRE(h.last_request == R"json({"req":"hub.set","umin":true})json");
 }
 
 TEST_CASE("hub.set Web Transaction Control") {
@@ -1341,14 +1351,14 @@ TEST_CASE("hub.set Web Transaction Control") {
     req.set_on(true);
     req.set_seconds(int32_t{300});
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"hub.set","on":true,"seconds":300})json");
+    REQUIRE(h.last_request == R"json({"req":"hub.set","on":true,"seconds":300})json");
 }
 
 TEST_CASE("hub.signal Receive a Signal") {
     TestHarness h;
     note::api::HubSignal req;
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"hub.signal"})json");
+    REQUIRE(h.last_request == R"json({"req":"hub.signal"})json");
 }
 
 TEST_CASE("hub.signal Receive Signal with Timeout") {
@@ -1356,21 +1366,21 @@ TEST_CASE("hub.signal Receive Signal with Timeout") {
     note::api::HubSignal req;
     req.set_seconds(int32_t{30});
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"hub.signal","seconds":30})json");
+    REQUIRE(h.last_request == R"json({"req":"hub.signal","seconds":30})json");
 }
 
 TEST_CASE("hub.status Get Hub Connection Status") {
     TestHarness h;
     note::api::HubStatus req;
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"hub.status"})json");
+    REQUIRE(h.last_request == R"json({"req":"hub.status"})json");
 }
 
 TEST_CASE("hub.sync Manual Sync") {
     TestHarness h;
     note::api::HubSync req;
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"hub.sync"})json");
+    REQUIRE(h.last_request == R"json({"req":"hub.sync"})json");
 }
 
 TEST_CASE("hub.sync Sync with Penalty Box Removal") {
@@ -1378,7 +1388,7 @@ TEST_CASE("hub.sync Sync with Penalty Box Removal") {
     note::api::HubSync req;
     req.set_allow(true);
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"hub.sync","allow":true})json");
+    REQUIRE(h.last_request == R"json({"req":"hub.sync","allow":true})json");
 }
 
 TEST_CASE("hub.sync Outbound Only Sync") {
@@ -1386,7 +1396,7 @@ TEST_CASE("hub.sync Outbound Only Sync") {
     note::api::HubSync req;
     req.set_out(true);
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"hub.sync","out":true})json");
+    REQUIRE(h.last_request == R"json({"req":"hub.sync","out":true})json");
 }
 
 TEST_CASE("hub.sync Inbound Only Sync") {
@@ -1394,14 +1404,14 @@ TEST_CASE("hub.sync Inbound Only Sync") {
     note::api::HubSync req;
     req.set_in(true);
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"hub.sync","in":true})json");
+    REQUIRE(h.last_request == R"json({"req":"hub.sync","in":true})json");
 }
 
 TEST_CASE("hub.sync.status Check Sync Status") {
     TestHarness h;
     note::api::HubSyncStatus req;
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"hub.sync.status"})json");
+    REQUIRE(h.last_request == R"json({"req":"hub.sync.status"})json");
 }
 
 TEST_CASE("hub.sync.status Check Status and Auto-Initiate Sync") {
@@ -1409,7 +1419,7 @@ TEST_CASE("hub.sync.status Check Status and Auto-Initiate Sync") {
     note::api::HubSyncStatus req;
     req.set_sync(true);
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"hub.sync.status","sync":true})json");
+    REQUIRE(h.last_request == R"json({"req":"hub.sync.status","sync":true})json");
 }
 
 TEST_CASE("note.changes Peek at Changes") {
@@ -1419,7 +1429,7 @@ TEST_CASE("note.changes Peek at Changes") {
     req.set_tracker(note::string_view(R"sv(inbound-tracker)sv"));
     req.set_start(true);
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"note.changes","file":"my-settings.db","start":true,"tracker":"inbound-tracker"})json");
+    REQUIRE(h.last_request == R"json({"req":"note.changes","file":"my-settings.db","start":true,"tracker":"inbound-tracker"})json");
 }
 
 TEST_CASE("note.changes Pop Changes with Limit") {
@@ -1430,7 +1440,7 @@ TEST_CASE("note.changes Pop Changes with Limit") {
     req.set_start(true);
     req.set_max(int32_t{2});
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"note.changes","delete":true,"file":"my-settings.db","max":2,"start":true,"tracker":"inbound-tracker"})json");
+    REQUIRE(h.last_request == R"json({"req":"note.changes","delete":true,"file":"my-settings.db","max":2,"start":true,"tracker":"inbound-tracker"})json");
 }
 
 TEST_CASE("note.changes Basic File Changes") {
@@ -1438,7 +1448,7 @@ TEST_CASE("note.changes Basic File Changes") {
     note::api::NoteChanges::Query req;
     req.set_file(note::string_view(R"sv(data.db)sv"));
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"note.changes","file":"data.db"})json");
+    REQUIRE(h.last_request == R"json({"req":"note.changes","file":"data.db"})json");
 }
 
 TEST_CASE("note.changes Reset Tracker") {
@@ -1448,7 +1458,7 @@ TEST_CASE("note.changes Reset Tracker") {
     req.set_tracker(note::string_view(R"sv(event-tracker)sv"));
     req.set_reset(true);
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"note.changes","file":"events.db","reset":true,"tracker":"event-tracker"})json");
+    REQUIRE(h.last_request == R"json({"req":"note.changes","file":"events.db","reset":true,"tracker":"event-tracker"})json");
 }
 
 TEST_CASE("note.changes Include Deleted Notes") {
@@ -1458,7 +1468,7 @@ TEST_CASE("note.changes Include Deleted Notes") {
     req.set_tracker(note::string_view(R"sv(config-tracker)sv"));
     req.set_deleted(true);
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"note.changes","deleted":true,"file":"config.db","tracker":"config-tracker"})json");
+    REQUIRE(h.last_request == R"json({"req":"note.changes","deleted":true,"file":"config.db","tracker":"config-tracker"})json");
 }
 
 TEST_CASE("note.changes Stop Tracker") {
@@ -1468,7 +1478,7 @@ TEST_CASE("note.changes Stop Tracker") {
     req.set_tracker(note::string_view(R"sv(log-tracker)sv"));
     req.set_stop(true);
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"note.changes","file":"logs.db","stop":true,"tracker":"log-tracker"})json");
+    REQUIRE(h.last_request == R"json({"req":"note.changes","file":"logs.db","stop":true,"tracker":"log-tracker"})json");
 }
 
 TEST_CASE("note.delete Delete Note from DB Notefile") {
@@ -1477,7 +1487,7 @@ TEST_CASE("note.delete Delete Note from DB Notefile") {
     req.set_file(note::string_view(R"sv(my-settings.db)sv"));
     req.set_note_id(note::string_view(R"sv(measurements)sv"));
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"note.delete","file":"my-settings.db","note":"measurements"})json");
+    REQUIRE(h.last_request == R"json({"req":"note.delete","file":"my-settings.db","note":"measurements"})json");
 }
 
 TEST_CASE("note.delete Delete Note with Verification") {
@@ -1487,7 +1497,7 @@ TEST_CASE("note.delete Delete Note with Verification") {
     req.set_note_id(note::string_view(R"sv(display-settings)sv"));
     req.set_verify(true);
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"note.delete","file":"config.db","note":"display-settings","verify":true})json");
+    REQUIRE(h.last_request == R"json({"req":"note.delete","file":"config.db","note":"display-settings","verify":true})json");
 }
 
 TEST_CASE("note.delete Delete Note with Command") {
@@ -1496,7 +1506,7 @@ TEST_CASE("note.delete Delete Note with Command") {
         b.add("file", note::string_view(R"sv(temp-data.db)sv"));
         b.add("note", note::string_view(R"sv(sensor-reading)sv"));
     });
-    REQUIRE(h.io.last_request == R"json({"cmd":"note.delete","file":"temp-data.db","note":"sensor-reading"})json");
+    REQUIRE(h.last_request == R"json({"cmd":"note.delete","file":"temp-data.db","note":"sensor-reading"})json");
 }
 
 TEST_CASE("note.get Pop from `.qi` Notefile") {
@@ -1504,7 +1514,7 @@ TEST_CASE("note.get Pop from `.qi` Notefile") {
     note::api::NoteGet::Delete req;
     req.set_file(note::string_view(R"sv(requests.qi)sv"));
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"note.get","delete":true,"file":"requests.qi"})json");
+    REQUIRE(h.last_request == R"json({"req":"note.get","delete":true,"file":"requests.qi"})json");
 }
 
 TEST_CASE("note.get Read from `.db` Notefile") {
@@ -1513,14 +1523,14 @@ TEST_CASE("note.get Read from `.db` Notefile") {
     req.set_file(note::string_view(R"sv(my-settings.db)sv"));
     req.set_note_id(note::string_view(R"sv(measurements)sv"));
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"note.get","file":"my-settings.db","note":"measurements"})json");
+    REQUIRE(h.last_request == R"json({"req":"note.get","file":"my-settings.db","note":"measurements"})json");
 }
 
 TEST_CASE("note.get Get with Default File") {
     TestHarness h;
     note::api::NoteGet::Query req;
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"note.get"})json");
+    REQUIRE(h.last_request == R"json({"req":"note.get"})json");
 }
 
 TEST_CASE("note.get Get Deleted Note") {
@@ -1530,7 +1540,7 @@ TEST_CASE("note.get Get Deleted Note") {
     req.set_note_id(note::string_view(R"sv(old-setting)sv"));
     req.set_deleted(true);
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"note.get","deleted":true,"file":"config.db","note":"old-setting"})json");
+    REQUIRE(h.last_request == R"json({"req":"note.get","deleted":true,"file":"config.db","note":"old-setting"})json");
 }
 
 TEST_CASE("note.get Decrypt Encrypted Note") {
@@ -1539,7 +1549,7 @@ TEST_CASE("note.get Decrypt Encrypted Note") {
     req.set_file(note::string_view(R"sv(secure.qis)sv"));
     req.set_decrypt(true);
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"note.get","decrypt":true,"file":"secure.qis"})json");
+    REQUIRE(h.last_request == R"json({"req":"note.get","decrypt":true,"file":"secure.qis"})json");
 }
 
 TEST_CASE("note.update Update Note Payload") {
@@ -1549,7 +1559,7 @@ TEST_CASE("note.update Update Note Payload") {
     req.set_note_id(note::string_view(R"sv(sensor-1)sv"));
     req.set_payload(note::string_view(R"sv(SGVsbG8gV29ybGQ=)sv"));
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"note.update","file":"data.db","note":"sensor-1","payload":"SGVsbG8gV29ybGQ="})json");
+    REQUIRE(h.last_request == R"json({"req":"note.update","file":"data.db","note":"sensor-1","payload":"SGVsbG8gV29ybGQ="})json");
 }
 
 TEST_CASE("ntn.gps Enable Notecard GPS Override") {
@@ -1557,7 +1567,7 @@ TEST_CASE("ntn.gps Enable Notecard GPS Override") {
     note::api::NtnGps req;
     req.set_on(true);
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"ntn.gps","on":true})json");
+    REQUIRE(h.last_request == R"json({"req":"ntn.gps","on":true})json");
 }
 
 TEST_CASE("ntn.gps Use Starnote's Own GPS") {
@@ -1565,28 +1575,28 @@ TEST_CASE("ntn.gps Use Starnote's Own GPS") {
     note::api::NtnGps req;
     req.set_off(true);
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"ntn.gps","off":true})json");
+    REQUIRE(h.last_request == R"json({"req":"ntn.gps","off":true})json");
 }
 
 TEST_CASE("ntn.gps Query Current GPS Configuration") {
     TestHarness h;
     note::api::NtnGps req;
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"ntn.gps"})json");
+    REQUIRE(h.last_request == R"json({"req":"ntn.gps"})json");
 }
 
 TEST_CASE("ntn.reset Reset Starnote Configuration") {
     TestHarness h;
     note::api::NtnReset req;
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"ntn.reset"})json");
+    REQUIRE(h.last_request == R"json({"req":"ntn.reset"})json");
 }
 
 TEST_CASE("ntn.status Get Starnote Connection Status") {
     TestHarness h;
     note::api::NtnStatus req;
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"ntn.status"})json");
+    REQUIRE(h.last_request == R"json({"req":"ntn.status"})json");
 }
 
 TEST_CASE("var.delete Delete Variable with Default File") {
@@ -1594,7 +1604,7 @@ TEST_CASE("var.delete Delete Variable with Default File") {
     note::api::VarDelete req;
     req.set_name(note::string_view(R"sv(status)sv"));
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"var.delete","name":"status"})json");
+    REQUIRE(h.last_request == R"json({"req":"var.delete","name":"status"})json");
 }
 
 TEST_CASE("var.delete Delete Variable with Specific File") {
@@ -1603,7 +1613,7 @@ TEST_CASE("var.delete Delete Variable with Specific File") {
     req.set_name(note::string_view(R"sv(temperature)sv"));
     req.set_file(note::string_view(R"sv(sensors.db)sv"));
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"var.delete","file":"sensors.db","name":"temperature"})json");
+    REQUIRE(h.last_request == R"json({"req":"var.delete","file":"sensors.db","name":"temperature"})json");
 }
 
 TEST_CASE("var.get Retrieve Variable with Default File") {
@@ -1611,7 +1621,7 @@ TEST_CASE("var.get Retrieve Variable with Default File") {
     note::api::VarGet req;
     req.set_name(note::string_view(R"sv(status)sv"));
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"var.get","name":"status"})json");
+    REQUIRE(h.last_request == R"json({"req":"var.get","name":"status"})json");
 }
 
 TEST_CASE("var.get Retrieve Variable with Specific File") {
@@ -1620,7 +1630,7 @@ TEST_CASE("var.get Retrieve Variable with Specific File") {
     req.set_name(note::string_view(R"sv(temperature)sv"));
     req.set_file(note::string_view(R"sv(sensors.db)sv"));
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"var.get","file":"sensors.db","name":"temperature"})json");
+    REQUIRE(h.last_request == R"json({"req":"var.get","file":"sensors.db","name":"temperature"})json");
 }
 
 TEST_CASE("var.set Set Text Variable") {
@@ -1629,7 +1639,7 @@ TEST_CASE("var.set Set Text Variable") {
     req.set_name(note::string_view(R"sv(status)sv"));
     req.set_text(note::string_view(R"sv(open)sv"));
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"var.set","name":"status","text":"open"})json");
+    REQUIRE(h.last_request == R"json({"req":"var.set","name":"status","text":"open"})json");
 }
 
 TEST_CASE("var.set Set Numeric Variable") {
@@ -1639,7 +1649,7 @@ TEST_CASE("var.set Set Numeric Variable") {
     req.set_value(23.5);
     req.set_file(note::string_view(R"sv(sensors.db)sv"));
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"var.set","file":"sensors.db","name":"temperature","value":23.5})json");
+    REQUIRE(h.last_request == R"json({"req":"var.set","file":"sensors.db","name":"temperature","value":23.5})json");
 }
 
 TEST_CASE("var.set Set Boolean Variable with Sync") {
@@ -1649,7 +1659,7 @@ TEST_CASE("var.set Set Boolean Variable with Sync") {
     req.set_flag(true);
     req.set_sync(true);
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"var.set","flag":true,"name":"active","sync":true})json");
+    REQUIRE(h.last_request == R"json({"req":"var.set","flag":true,"name":"active","sync":true})json");
 }
 
 TEST_CASE("web Web Transaction") {
@@ -1659,7 +1669,7 @@ TEST_CASE("web Web Transaction") {
     req.set_route(note::string_view(R"sv(weatherInfo)sv"));
     req.set_name(note::string_view(R"sv(/getLatest)sv"));
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"web","method":"GET","name":"/getLatest","route":"weatherInfo"})json");
+    REQUIRE(h.last_request == R"json({"req":"web","method":"GET","name":"/getLatest","route":"weatherInfo"})json");
 }
 
 TEST_CASE("web.delete Web DELETE Transaction") {
@@ -1668,7 +1678,7 @@ TEST_CASE("web.delete Web DELETE Transaction") {
     req.set_route(note::string_view(R"sv(SensorService)sv"));
     req.set_name(note::string_view(R"sv(/deleteReading?id=1)sv"));
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"web.delete","name":"/deleteReading?id=1","route":"SensorService"})json");
+    REQUIRE(h.last_request == R"json({"req":"web.delete","name":"/deleteReading?id=1","route":"SensorService"})json");
 }
 
 TEST_CASE("web.get Web GET Transaction") {
@@ -1677,6 +1687,6 @@ TEST_CASE("web.get Web GET Transaction") {
     req.set_route(note::string_view(R"sv(weatherInfo)sv"));
     req.set_name(note::string_view(R"sv(/getLatest)sv"));
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"json({"req":"web.get","name":"/getLatest","route":"weatherInfo"})json");
+    REQUIRE(h.last_request == R"json({"req":"web.get","name":"/getLatest","route":"weatherInfo"})json");
 }
 

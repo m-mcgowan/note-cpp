@@ -31,8 +31,18 @@ struct TestRequest {
 
 struct TestHarness {
     note::test::TestJsonBackend backend;
-    note::test::CapturingIO io;
-    note::Notecard nc{backend, io};
+    std::string last_request;
+    note::Notecard nc;
+
+    TestHarness() : nc(backend,
+        [this](note::string_view req, uint32_t) -> note::Result<std::string> {
+            last_request = std::string(req);
+            return std::string("{}");
+        },
+        [this](note::string_view req) -> note::Result<void> {
+            last_request = std::string(req);
+            return {};
+        }) {}
 };
 
 // ── Schema test types ───────────────────────────────────────────────────────
@@ -64,7 +74,7 @@ TEST_CASE("BodyValue from raw JSON string") {
     TestRequest req;
     req.body = R"({"temp":22.5,"humidity":60})";
     h.nc.execute(req);
-    REQUIRE(h.io.last_request ==
+    REQUIRE(h.last_request ==
         R"({"req":"test.req","body":"{\"temp\":22.5,\"humidity\":60}"})");
 }
 
@@ -72,7 +82,7 @@ TEST_CASE("BodyValue default is empty") {
     TestHarness h;
     TestRequest req;
     h.nc.execute(req);
-    REQUIRE(h.io.last_request == R"({"req":"test.req"})");
+    REQUIRE(h.last_request == R"({"req":"test.req"})");
 }
 
 // ── Tier 2: Builder (lambda) ────────────────────────────────────────────────
@@ -85,7 +95,7 @@ TEST_CASE("BodyValue from builder lambda") {
         b.add("humidity", int32_t{60});
     });
     h.nc.execute(req);
-    REQUIRE(h.io.last_request ==
+    REQUIRE(h.last_request ==
         R"({"req":"test.req","body":{"temp":22.5,"humidity":60}})");
 }
 
@@ -100,7 +110,7 @@ TEST_CASE("BodyValue from builder with nested objects") {
         b.end_object();
     });
     h.nc.execute(req);
-    REQUIRE(h.io.last_request ==
+    REQUIRE(h.last_request ==
         R"({"req":"test.req","body":{"temp":22.5,"location":{"lat":42.36,"lon":-71.06}}})");
 }
 
@@ -114,7 +124,7 @@ TEST_CASE("BodyValue from reflected aggregate") {
     Readings r{.temperature = 22.5f, .humidity = 60};
     req.body = note::make_schema_body(r);
     h.nc.execute(req);
-    REQUIRE(h.io.last_request ==
+    REQUIRE(h.last_request ==
         R"({"req":"test.req","body":{"temperature":22.5,"humidity":60}})");
 }
 
@@ -124,7 +134,7 @@ TEST_CASE("BodyValue from reflected aggregate with mixed types") {
     SensorData sd{.voltage = 3.3, .active = true, .count = 42};
     req.body = note::make_schema_body(sd);
     h.nc.execute(req);
-    REQUIRE(h.io.last_request ==
+    REQUIRE(h.last_request ==
         R"({"req":"test.req","body":{"voltage":3.3,"active":true,"count":42}})");
 }
 
@@ -133,7 +143,7 @@ TEST_CASE("template_of generates type hints") {
     TestRequest req;
     req.body = note::template_of<Readings>();
     h.nc.execute(req);
-    REQUIRE(h.io.last_request ==
+    REQUIRE(h.last_request ==
         R"({"req":"test.req","body":{"temperature":14.1,"humidity":11}})");
 }
 
@@ -142,7 +152,7 @@ TEST_CASE("template_of with mixed types") {
     TestRequest req;
     req.body = note::template_of<SensorData>();
     h.nc.execute(req);
-    REQUIRE(h.io.last_request ==
+    REQUIRE(h.last_request ==
         R"({"req":"test.req","body":{"voltage":14.1,"active":true,"count":12}})");
 }
 
@@ -156,7 +166,7 @@ TEST_CASE("BodyValue from NOTE_BODY macro schema") {
     MacroReadings r{.temperature = 22.5f, .humidity = 60};
     req.body = note::make_schema_body(r);
     h.nc.execute(req);
-    REQUIRE(h.io.last_request ==
+    REQUIRE(h.last_request ==
         R"({"req":"test.req","body":{"temperature":22.5,"humidity":60}})");
 }
 
@@ -172,7 +182,7 @@ TEST_CASE("note.add with string body") {
     req.file = "sensors.qo";
     req.body = R"({"temp":22.5})";
     req.execute();
-    REQUIRE(h.io.last_request ==
+    REQUIRE(h.last_request ==
         R"({"req":"note.add","body":"{\"temp\":22.5}","file":"sensors.qo"})");
 }
 
@@ -183,7 +193,7 @@ TEST_CASE("note.add with reflected schema body") {
     note::Api api(h.nc);
     Readings r{.temperature = 22.5f, .humidity = 60};
     api.noteAdd().set_file("sensors.qo").set_body(r).execute();
-    REQUIRE(h.io.last_request ==
+    REQUIRE(h.last_request ==
         R"({"req":"note.add","body":{"temperature":22.5,"humidity":60},"file":"sensors.qo"})");
 }
 
@@ -194,7 +204,7 @@ TEST_CASE("note.template with template_of") {
         .set_file("sensors.qo")
         .set_body(note::template_of<Readings>())
         .execute();
-    REQUIRE(h.io.last_request ==
+    REQUIRE(h.last_request ==
         R"({"req":"note.template","body":{"temperature":14.1,"humidity":11},"file":"sensors.qo"})");
 }
 
@@ -208,7 +218,7 @@ TEST_CASE("note.add with builder body") {
             b.add("count", int32_t{42});
         }))
         .execute();
-    REQUIRE(h.io.last_request ==
+    REQUIRE(h.last_request ==
         R"({"req":"note.add","body":{"temp":22.5,"count":42},"file":"sensors.qo"})");
 }
 

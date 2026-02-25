@@ -14,16 +14,31 @@ jobs:
           - compiler: g++-13
             packages: g++-13
             cxxflags: -std=c++23
+          - compiler: g++-14
+            packages: g++-14
+            cxxflags: -std=c++23
           - compiler: clang++-18
-            packages: clang-18 libc++-18-dev libc++abi-18-dev
+            packages: clang-18 libc++-18-dev libc++abi-18-dev libstdc++-13-dev
             cxxflags: -std=c++23 -stdlib=libc++
     steps:
       - uses: actions/checkout@v4
 
+      - name: Cache apt packages
+        uses: actions/cache@v4
+        id: apt-cache
+        with:
+          path: ~/apt-cache
+          key: apt-${{ matrix.compiler }}-${{ hashFiles('.github/workflows/ci.yml') }}
+
       - name: Install compiler
         run: |
+          if [ -d ~/apt-cache ]; then
+            sudo cp -r ~/apt-cache/*.deb /var/cache/apt/archives/ 2>/dev/null || true
+          fi
           sudo apt-get update
           sudo apt-get install -y ${{ matrix.packages }}
+          mkdir -p ~/apt-cache
+          cp /var/cache/apt/archives/*.deb ~/apt-cache/ 2>/dev/null || true
 
       - name: Install Python dependencies
         run: pip install jinja2

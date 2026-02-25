@@ -39,4 +39,27 @@ inline Unexpected make_error(Error code, string_view message = {}) {
     return Unexpected(ErrorInfo{code, message});
 }
 
+// Result type for typed API responses. Inherits from Response so fields
+// are accessible with dot notation instead of arrow:
+//
+//   auto r = api.cardVersion().execute();
+//   if (r) {
+//       auto ver = r.version;   // dot, not r->version
+//   }
+//
+// On error, response fields are default-initialized (zero/empty).
+template<typename Response>
+class ApiResult : public Response {
+    std::optional<ErrorInfo> error_;
+public:
+    ApiResult(Response r) : Response(std::move(r)) {}
+    ApiResult(ErrorInfo e) : error_(std::move(e)) {}
+    ApiResult(Unexpected e) : error_(std::move(e).error()) {}
+
+    explicit operator bool() const { return !error_.has_value(); }
+    bool has_value() const { return !error_.has_value(); }
+
+    const ErrorInfo& error() const { return *error_; }
+};
+
 } // namespace note

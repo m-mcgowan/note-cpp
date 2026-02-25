@@ -86,8 +86,8 @@ void examples(note::Notecard& nc) {
     {
         auto result = api.cardVersion().execute();
         if (result) {
-            note::string_view version = result->version;
-            note::string_view device = result->device;
+            note::string_view version = result.version;
+            note::string_view device = result.device;
             (void)version;
             (void)device;
         }
@@ -102,8 +102,8 @@ void examples(note::Notecard& nc) {
     {
         auto result = api.cardStatus().execute();
         if (result) {
-            auto usb = result->usb;
-            auto storage = result->storage;
+            auto usb = result.usb;
+            auto storage = result.storage;
             (void)usb;
             (void)storage;
         }
@@ -158,19 +158,19 @@ void examples(note::Notecard& nc) {
         auto result = api.noteGet().query().set_file("data.qi").execute();
         if (result) {
             // Access response scalar fields
-            auto payload = result->payload;
-            auto time = result->time;
+            auto payload = result.payload;
+            auto time = result.time;
             (void)payload;
             (void)time;
 
             // Access body as raw reader (ad-hoc)
-            if (auto* body = result->body()) {
+            if (auto* body = result.body()) {
                 auto temp = body->get_double("temp");
                 (void)temp;
             }
 
             // Access body as typed struct (C++20 or NOTE_BODY)
-            auto r = result->body_as<Readings>();
+            auto r = result.body_as<Readings>();
             (void)r.temperature;
             (void)r.humidity;
         }

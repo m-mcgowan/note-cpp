@@ -19,7 +19,7 @@ public:
     //   using Response = ...;
     //   void build(JsonBuilder&) const;
     template<typename RequestT>
-    Result<typename RequestT::Response> execute(const RequestT& req) {
+    ApiResult<typename RequestT::Response> execute(const RequestT& req) {
         auto builder = backend_.create_builder();
         builder->add("req", RequestT::notecard_request);
         req.build(*builder);

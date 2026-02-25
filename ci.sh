@@ -50,7 +50,8 @@ $CXX $CXXFLAGS $INCLUDE -I "$ROOT/tests" -o /tmp/note-cpp-tests \
     "$ROOT/tests/test_main.cpp" \
     "$ROOT/tests/test_wire_format.cpp" \
     "$ROOT/tests/test_samples.cpp" \
-    "$ROOT/tests/test_body.cpp"
+    "$ROOT/tests/test_body.cpp" \
+    "$ROOT/tests/test_json_buf.cpp"
 /tmp/note-cpp-tests
 echo "  tests: OK"
 

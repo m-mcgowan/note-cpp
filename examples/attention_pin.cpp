@@ -80,7 +80,7 @@ void examples(note::Notecard& nc) {
     {
         auto result = nc.execute(note::api::CardAttn{});
         if (result) {
-            auto set = result->set;
+            auto set = result.set;
             (void)set;
         }
     }

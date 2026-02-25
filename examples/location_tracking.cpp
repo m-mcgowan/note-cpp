@@ -23,9 +23,9 @@ void examples(note::Notecard& nc) {
     {
         auto result = nc.execute(note::api::CardLocation{});
         if (result) {
-            auto lat = result->lat;
-            auto lon = result->lon;
-            auto time = result->time;
+            auto lat = result.lat;
+            auto lon = result.lon;
+            auto time = result.time;
             (void)lat; (void)lon; (void)time;
         }
     }
@@ -53,7 +53,7 @@ void examples(note::Notecard& nc) {
     {
         auto result = nc.execute(note::api::CardLocationMode::Query{});
         if (result) {
-            auto mode = result->mode;
+            auto mode = result.mode;
             (void)mode;
         }
     }

@@ -57,7 +57,6 @@ Type-safe C++23 API for the Blues Notecard. Header-only, zero dependencies beyon
 
 ### Phase 1: Core abstractions
 - `JsonBackend`, `JsonBuilder`, `JsonReader` interfaces
-- `NotecardIO` transport interface
 - `Notecard` coordinator with `execute()`, `command()`, `request()`
 - `Result<T>` / `Unexpected` error handling
 - `Safety` enum and per-request safety classification
@@ -110,9 +109,21 @@ Type-safe C++23 API for the Blues Notecard. Header-only, zero dependencies beyon
 - `tools/verify_roundtrip.py` — 74/74 round-trip verification
 - PR #272 on blues/notecard-schema (open)
 
+### Phase 9: Code size metrics
+- `tools/size_report.sh` — reproducible binary size and call-site comparison
+- Benchmarks: minimal, 5-api, all-74-api, body-tiers scenarios
+- Side-by-side comparison with note-c (same operations, mock transport)
+- Per-function call-site analysis isolating caller overhead
+- Results (-Os, Apple Clang 15):
+  - Binary: note-cpp 25-28 KB vs note-c 67 KB (-58% to -62%)
+  - Call-site: ~50 bytes/function average overhead for type safety
+  - `card_version` caller is smaller in note-cpp (typed response vs manual JGetString)
+
 ### Infrastructure
 - `ci.sh` — runs codegen, header compilation checks, unit tests, smoke test
-- GitHub Actions CI (GCC 14, Clang 18)
+- `ci.sh --all-compilers` — discovers and tests all locally installed compilers
+- GitHub Actions CI: GCC 13, GCC 14, Clang 18 (with apt package caching)
+- `tools/size_report.sh` — code size comparison (note-cpp vs note-c)
 - Examples: `getting_started.cpp`, `attention_pin.cpp`, `location_tracking.cpp`
 
 ## Planned
@@ -133,6 +144,5 @@ L2 (refactor `NoteRequestResponseJSON`) not started. May be superseded by
 native transport in note-app.
 
 ### Future considerations
-- **Code size metrics**: measure compiled binary size for representative examples
 - **OpenAPI Overlays**: standardized format for sideband metadata
 - **C++20 reflection**: automatic struct binding without `NOTE_BODY` macro

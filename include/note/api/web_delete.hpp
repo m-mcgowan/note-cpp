@@ -2,6 +2,7 @@
 #pragma once
 
 #include <note/body.hpp>
+#include <note/dyn_field.hpp>
 #include <note/field.hpp>
 #include <note/json.hpp>
 #include <note/notecard.hpp>
@@ -10,6 +11,12 @@
 
 namespace note::api {
 
+
+
+
+
+
+
 struct WebDelete {
     static constexpr string_view notecard_request = "web.delete";
     static constexpr bool supports_cmd = true;
@@ -17,63 +24,114 @@ struct WebDelete {
 
     Notecard* nc_ = nullptr;
 
-#if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1)
-    Field<bool> async{};
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
+    /// If `true`, the Notecard performs the web request asynchronously, and
+    /// returns control to the host without waiting for a response from Notehub.
+    ///
+    /// @since firmware 5.1.1
+#if NOTE_API_VERSION < NOTE_VERSION(5, 1, 1)
+    [[deprecated("requires firmware >= 5.1.1")]]
 #endif
-    Field<note::string_view> content{};
-    Field<note::string_view> file{};
-    Field<note::string_view> name{};
-    Field<note::string_view> note_id{};
-    Field<note::string_view> route{};
-    Field<int32_t> seconds{};
+    struct async_t : Field<bool> {
+        using Field<bool>::Field;
+        using Field<bool>::operator=;
+        WebDelete& operator()(bool v);
+    } async{};
+#endif
+    /// The MIME type of the body or payload of the response. Default is
+    /// `application/json`.
+    struct content_t : Field<note::string_view> {
+        using Field<note::string_view>::Field;
+        using Field<note::string_view>::operator=;
+        WebDelete& operator()(note::string_view v);
+    } content{};
+    /// The name of the [local-only Database
+    /// Notefile](https://dev.blues.io/notecard/notecard-walkthrough/inbound-
+    /// requests-and-shared-data/#using-database-notefiles-for-local-only-state)
+    /// (`.dbx`) to be used if the web request is issued
+    /// [asynchronously](https://dev.blues.io/notecard/notecard-walkthrough/web-
+    /// transactions/#using-web-transactions-asynchronously) and you wish to
+    /// store the response.
+    struct file_t : Field<note::string_view> {
+        using Field<note::string_view>::Field;
+        using Field<note::string_view>::operator=;
+        WebDelete& operator()(note::string_view v);
+    } file{};
+    /// A web URL endpoint relative to the host configured in the Proxy Route.
+    /// URL parameters may be added to this argument as well (e.g.
+    /// `/deleteReading?id=1`).
+    struct name_t : Field<note::string_view> {
+        using Field<note::string_view>::Field;
+        using Field<note::string_view>::operator=;
+        WebDelete& operator()(note::string_view v);
+    } name{};
+    /// The unique Note ID for the local-only Database Notefile (`.dbx`). Only
+    /// used with asynchronous web requests (see `file` argument above).
+    struct noteId_t : Field<note::string_view> {
+        using Field<note::string_view>::Field;
+        using Field<note::string_view>::operator=;
+        WebDelete& operator()(note::string_view v);
+    } noteId{};
+    /// Alias for a Proxy Route in Notehub.
+    struct route_t : Field<note::string_view> {
+        using Field<note::string_view>::Field;
+        using Field<note::string_view>::operator=;
+        WebDelete& operator()(note::string_view v);
+    } route{};
+    /// If specified, overrides the default 90 second timeout.
+    struct seconds_t : Field<int32_t> {
+        using Field<int32_t>::Field;
+        using Field<int32_t>::operator=;
+        WebDelete& operator()(int32_t v);
+    } seconds{};
 
-#if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1)
-#if __cpp_explicit_this_parameter >= 202110L
-    auto&& set_async(this auto&& self, bool v) { self.async = v; return std::forward<decltype(self)>(self); }
-#else
-    auto& set_async(bool v) { async = v; return *this; }
+
+    template<typename T>
+    auto& extra(note::string_view key, T value) {
+        if (extras_count_ < NOTE_EXTRAS_MAX)
+            extras_[extras_count_++] = {key, note::DynValue{value}};
+        return *this;
+    }
+    auto& extra(note::string_view key, const char* value) {
+        return extra(key, note::string_view{value});
+    }
+
+    note::DynField operator[](note::string_view k_) {
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
+        if (k_ == "async") return note::dyn_field_for(async);
 #endif
-#endif
-#if __cpp_explicit_this_parameter >= 202110L
-    auto&& set_content(this auto&& self, note::string_view v) { self.content = v; return std::forward<decltype(self)>(self); }
-#else
-    auto& set_content(note::string_view v) { content = v; return *this; }
-#endif
-#if __cpp_explicit_this_parameter >= 202110L
-    auto&& set_file(this auto&& self, note::string_view v) { self.file = v; return std::forward<decltype(self)>(self); }
-#else
-    auto& set_file(note::string_view v) { file = v; return *this; }
-#endif
-#if __cpp_explicit_this_parameter >= 202110L
-    auto&& set_name(this auto&& self, note::string_view v) { self.name = v; return std::forward<decltype(self)>(self); }
-#else
-    auto& set_name(note::string_view v) { name = v; return *this; }
-#endif
-#if __cpp_explicit_this_parameter >= 202110L
-    auto&& set_note_id(this auto&& self, note::string_view v) { self.note_id = v; return std::forward<decltype(self)>(self); }
-#else
-    auto& set_note_id(note::string_view v) { note_id = v; return *this; }
-#endif
-#if __cpp_explicit_this_parameter >= 202110L
-    auto&& set_route(this auto&& self, note::string_view v) { self.route = v; return std::forward<decltype(self)>(self); }
-#else
-    auto& set_route(note::string_view v) { route = v; return *this; }
-#endif
-#if __cpp_explicit_this_parameter >= 202110L
-    auto&& set_seconds(this auto&& self, int32_t v) { self.seconds = v; return std::forward<decltype(self)>(self); }
-#else
-    auto& set_seconds(int32_t v) { seconds = v; return *this; }
-#endif
+        if (k_ == "content") return note::dyn_field_for(content);
+        if (k_ == "file") return note::dyn_field_for(file);
+        if (k_ == "name") return note::dyn_field_for(name);
+        if (k_ == "note") return note::dyn_field_for(noteId);
+        if (k_ == "route") return note::dyn_field_for(route);
+        if (k_ == "seconds") return note::dyn_field_for(seconds);
+        if (extras_count_ < NOTE_EXTRAS_MAX) {
+            auto& slot = extras_[extras_count_++];
+            slot.key = k_;
+            return note::dyn_field_for(slot.value);
+        }
+        return {};
+    }
+
+    std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
+    uint8_t extras_count_ = 0;
 
     struct Response {
+        /// A base64-encoded binary payload from the external service, if any.
+        /// The maximum response size from the service is 8192 bytes.
         note::string_view payload{};
+        /// The HTTP Status Code
         int32_t result{};
+        /// If a `payload` is returned in the response, this is a 32-character
+        /// hex-encoded MD5 sum of the payload or payload fragment. Useful for
+        /// the host to check for any I2C/UART corruption.
         note::string_view status{};
 
         const JsonReader* body() const { return body_.get(); }
 
         template<typename T>
-        T body_as() const {
+        T bodyAs() const {
             if (body_) return parse_body_<T>(*body_);
             return T{};
         }
@@ -109,17 +167,25 @@ struct WebDelete {
         }
     };
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
     void build(JsonBuilder& b) const {
-#if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1)
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
         if (async) b.add("async", *async);
 #endif
         if (content) b.add("content", *content);
         if (file) b.add("file", *file);
         if (name) b.add("name", *name);
-        if (note_id) b.add("note", *note_id);
+        if (noteId) b.add("note", *noteId);
         if (route) b.add("route", *route);
         if (seconds) b.add("seconds", *seconds);
+        for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
+            std::visit([&](auto&& v_) {
+                if constexpr (!std::is_same_v<std::decay_t<decltype(v_)>, std::monostate>)
+                    b.add(extras_[i_].key, v_);
+            }, extras_[i_].value);
     }
+#pragma GCC diagnostic pop
 
     auto execute() const { return nc_->execute(*this); }
     auto execute(Notecard& nc) const { return nc.execute(*this); }
@@ -127,5 +193,48 @@ struct WebDelete {
     Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
 
 };
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
+inline WebDelete& WebDelete::async_t::operator()(bool v) {
+    Field<bool>::operator=(v);
+    return *reinterpret_cast<WebDelete*>(
+        reinterpret_cast<char*>(this) - offsetof(WebDelete, async));
+}
+#endif
+inline WebDelete& WebDelete::content_t::operator()(note::string_view v) {
+    Field<note::string_view>::operator=(v);
+    return *reinterpret_cast<WebDelete*>(
+        reinterpret_cast<char*>(this) - offsetof(WebDelete, content));
+}
+inline WebDelete& WebDelete::file_t::operator()(note::string_view v) {
+    Field<note::string_view>::operator=(v);
+    return *reinterpret_cast<WebDelete*>(
+        reinterpret_cast<char*>(this) - offsetof(WebDelete, file));
+}
+inline WebDelete& WebDelete::name_t::operator()(note::string_view v) {
+    Field<note::string_view>::operator=(v);
+    return *reinterpret_cast<WebDelete*>(
+        reinterpret_cast<char*>(this) - offsetof(WebDelete, name));
+}
+inline WebDelete& WebDelete::noteId_t::operator()(note::string_view v) {
+    Field<note::string_view>::operator=(v);
+    return *reinterpret_cast<WebDelete*>(
+        reinterpret_cast<char*>(this) - offsetof(WebDelete, noteId));
+}
+inline WebDelete& WebDelete::route_t::operator()(note::string_view v) {
+    Field<note::string_view>::operator=(v);
+    return *reinterpret_cast<WebDelete*>(
+        reinterpret_cast<char*>(this) - offsetof(WebDelete, route));
+}
+inline WebDelete& WebDelete::seconds_t::operator()(int32_t v) {
+    Field<int32_t>::operator=(v);
+    return *reinterpret_cast<WebDelete*>(
+        reinterpret_cast<char*>(this) - offsetof(WebDelete, seconds));
+}
+#pragma GCC diagnostic pop
+
 
 } // namespace note::api

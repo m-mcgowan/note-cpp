@@ -10,9 +10,17 @@
 #include "error.hpp"
 
 // Notecard API version gating.
+//
 // Define NOTE_API_VERSION before including any note headers to restrict
-// the generated API to properties available on that firmware version.
+// the generated API to fields available on that firmware version.
 // Defaults to the latest version if not defined.
+//
+// Version gating modes:
+//   Default (NOTE_API_VERSION not defined): all fields available.
+//   Warn (NOTE_API_VERSION defined): fields newer than your target produce
+//     a [[deprecated]] compiler warning but remain visible in IDE autocomplete.
+//   Strict (NOTE_API_STRICT also defined): newer fields are compiled out
+//     entirely via #if guards.
 #define NOTE_VERSION(major, minor, patch) \
     ((major) * 10000 + (minor) * 100 + (patch))
 

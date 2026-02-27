@@ -2,6 +2,7 @@
 #pragma once
 
 #include <note/body.hpp>
+#include <note/dyn_field.hpp>
 #include <note/field.hpp>
 #include <note/json.hpp>
 #include <note/notecard.hpp>
@@ -10,6 +11,12 @@
 
 namespace note::api {
 
+
+
+
+
+
+
 struct DfuStatus {
     static constexpr string_view notecard_request = "dfu.status";
     static constexpr bool supports_cmd = true;
@@ -17,74 +24,132 @@ struct DfuStatus {
 
     Notecard* nc_ = nullptr;
 
-    Field<note::string_view> err{};
+    /// If `err` text is provided along with `"stop":true`, this sets the host
+    /// DFU to an error state with the specified string.
+    struct err_t : Field<note::string_view> {
+        using Field<note::string_view>::Field;
+        using Field<note::string_view>::operator=;
+        DfuStatus& operator()(note::string_view v);
+    } err{};
+    /// Determines which type of firmware update status to view. The value can
+    /// be `"user"` (default), which gets the status of MCU host firmware
+    /// updates, or `"card"`, which gets the status of Notecard firmware
+    /// updates.
     // name: user | card
-    Field<note::string_view> name{};
-    Field<bool> off{};
-    Field<bool> on{};
-    Field<note::string_view> status{};
-    Field<bool> stop{};
-    Field<note::string_view> version{};
-    Field<note::string_view> vvalue{};
+    struct name_t : Field<note::string_view> {
+        using Field<note::string_view>::Field;
+        using Field<note::string_view>::operator=;
+        DfuStatus& operator()(note::string_view v);
+    } name{};
+    /// `true` to disable firmware downloads from Notehub.
+    struct off_t : Field<bool> {
+        using Field<bool>::Field;
+        using Field<bool>::operator=;
+        DfuStatus& operator()(bool v);
+    } off{};
+    /// `true` to allow firmware downloads from Notehub.
+    struct on_t : Field<bool> {
+        using Field<bool>::Field;
+        using Field<bool>::operator=;
+        DfuStatus& operator()(bool v);
+    } on{};
+    /// When setting `stop` to `true`, an optional string synchronized to
+    /// Notehub, which can be used for informational or diagnostic purposes.
+    struct status_t : Field<note::string_view> {
+        using Field<note::string_view>::Field;
+        using Field<note::string_view>::operator=;
+        DfuStatus& operator()(note::string_view v);
+    } status{};
+    /// `true` to clear DFU state and delete the local firmware image from the
+    /// Notecard.
+    struct stop_t : Field<bool> {
+        using Field<bool>::Field;
+        using Field<bool>::operator=;
+        DfuStatus& operator()(bool v);
+    } stop{};
+    /// Version information on the host firmware to pass to Notehub. You may
+    /// pass a simple version number string (e.g. `"1.0.0.0"`), or an object
+    /// with detailed information about the firmware image (recommended).
+    ///
+    /// If you provide an object it must take the following form.
+    ///
+    /// `{"org":"my-organization","product":"My Product","description":"A
+    /// description of the image","version":"1.2.4","built":"Jan 01 2025
+    /// 01:02:03","ver_major":1,"ver_minor":2,"ver_patch":4,"ver_build":
+    /// 5,"builder":"The Builder"}`
+    ///
+    /// Code to help you generate a version with the correct formatting is
+    /// available in [Enabling Notecard Outboard Firmware Update](/notehub/host-
+    /// firmware-updates/notecard-outboard-firmware-update/#enabling-notecard-
+    /// outboard-firmware-update).
+    struct version_t : Field<note::string_view> {
+        using Field<note::string_view>::Field;
+        using Field<note::string_view>::operator=;
+        DfuStatus& operator()(note::string_view v);
+    } version{};
+    /// A voltage-variable string that controls, by Notecard voltage, whether or
+    /// not DFU is enabled. Use a boolean `1` (on) or `0` (off) for each
+    /// source/voltage level:
+    /// `usb:<1/0>;high:<1/0>;normal:<1/0>;low:<1/0>;dead:0`.
+    struct vvalue_t : Field<note::string_view> {
+        using Field<note::string_view>::Field;
+        using Field<note::string_view>::operator=;
+        DfuStatus& operator()(note::string_view v);
+    } vvalue{};
 
-    static consteval note::string_view validated_name(const char* v) {
+    static consteval note::string_view validatedName(const char* v) {
         note::string_view sv{v};
         if (sv != "user" && sv != "card")
             throw "dfu.status: invalid value for 'name'";
         return sv;
     }
-#if __cpp_explicit_this_parameter >= 202110L
-    auto&& set_err(this auto&& self, note::string_view v) { self.err = v; return std::forward<decltype(self)>(self); }
-#else
-    auto& set_err(note::string_view v) { err = v; return *this; }
-#endif
-#if __cpp_explicit_this_parameter >= 202110L
-    auto&& set_name(this auto&& self, note::string_view v) { self.name = v; return std::forward<decltype(self)>(self); }
-#else
-    auto& set_name(note::string_view v) { name = v; return *this; }
-#endif
-#if __cpp_explicit_this_parameter >= 202110L
-    auto&& set_off(this auto&& self, bool v) { self.off = v; return std::forward<decltype(self)>(self); }
-#else
-    auto& set_off(bool v) { off = v; return *this; }
-#endif
-#if __cpp_explicit_this_parameter >= 202110L
-    auto&& set_on(this auto&& self, bool v) { self.on = v; return std::forward<decltype(self)>(self); }
-#else
-    auto& set_on(bool v) { on = v; return *this; }
-#endif
-#if __cpp_explicit_this_parameter >= 202110L
-    auto&& set_status(this auto&& self, note::string_view v) { self.status = v; return std::forward<decltype(self)>(self); }
-#else
-    auto& set_status(note::string_view v) { status = v; return *this; }
-#endif
-#if __cpp_explicit_this_parameter >= 202110L
-    auto&& set_stop(this auto&& self, bool v) { self.stop = v; return std::forward<decltype(self)>(self); }
-#else
-    auto& set_stop(bool v) { stop = v; return *this; }
-#endif
-#if __cpp_explicit_this_parameter >= 202110L
-    auto&& set_version(this auto&& self, note::string_view v) { self.version = v; return std::forward<decltype(self)>(self); }
-#else
-    auto& set_version(note::string_view v) { version = v; return *this; }
-#endif
-#if __cpp_explicit_this_parameter >= 202110L
-    auto&& set_vvalue(this auto&& self, note::string_view v) { self.vvalue = v; return std::forward<decltype(self)>(self); }
-#else
-    auto& set_vvalue(note::string_view v) { vvalue = v; return *this; }
-#endif
+
+    template<typename T>
+    auto& extra(note::string_view key, T value) {
+        if (extras_count_ < NOTE_EXTRAS_MAX)
+            extras_[extras_count_++] = {key, note::DynValue{value}};
+        return *this;
+    }
+    auto& extra(note::string_view key, const char* value) {
+        return extra(key, note::string_view{value});
+    }
+
+    note::DynField operator[](note::string_view k_) {
+        if (k_ == "err") return note::dyn_field_for(err);
+        if (k_ == "name") return note::dyn_field_for(name);
+        if (k_ == "off") return note::dyn_field_for(off);
+        if (k_ == "on") return note::dyn_field_for(on);
+        if (k_ == "status") return note::dyn_field_for(status);
+        if (k_ == "stop") return note::dyn_field_for(stop);
+        if (k_ == "version") return note::dyn_field_for(version);
+        if (k_ == "vvalue") return note::dyn_field_for(vvalue);
+        if (extras_count_ < NOTE_EXTRAS_MAX) {
+            auto& slot = extras_[extras_count_++];
+            slot.key = k_;
+            return note::dyn_field_for(slot.value);
+        }
+        return {};
+    }
+
+    std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
+    uint8_t extras_count_ = 0;
 
     struct Response {
+        /// The current DFU mode. Will be one of:
         note::string_view mode{};
+        /// `true` when firmware downloads are disabled.
         bool off{};
+        /// `true` when firmware downloads are enabled.
         bool on{};
+        /// `true` when Notecard DFU is currently in-progress.
         bool pending{};
+        /// The current status of the firmware download.
         note::string_view status{};
 
         const JsonReader* body() const { return body_.get(); }
 
         template<typename T>
-        T body_as() const {
+        T bodyAs() const {
             if (body_) return parse_body_<T>(*body_);
             return T{};
         }
@@ -131,6 +196,11 @@ struct DfuStatus {
         if (stop) b.add("stop", *stop);
         if (version) b.add("version", *version);
         if (vvalue) b.add("vvalue", *vvalue);
+        for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
+            std::visit([&](auto&& v_) {
+                if constexpr (!std::is_same_v<std::decay_t<decltype(v_)>, std::monostate>)
+                    b.add(extras_[i_].key, v_);
+            }, extras_[i_].value);
     }
 
     auto execute() const { return nc_->execute(*this); }
@@ -139,5 +209,50 @@ struct DfuStatus {
     Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
 
 };
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+inline DfuStatus& DfuStatus::err_t::operator()(note::string_view v) {
+    Field<note::string_view>::operator=(v);
+    return *reinterpret_cast<DfuStatus*>(
+        reinterpret_cast<char*>(this) - offsetof(DfuStatus, err));
+}
+inline DfuStatus& DfuStatus::name_t::operator()(note::string_view v) {
+    Field<note::string_view>::operator=(v);
+    return *reinterpret_cast<DfuStatus*>(
+        reinterpret_cast<char*>(this) - offsetof(DfuStatus, name));
+}
+inline DfuStatus& DfuStatus::off_t::operator()(bool v) {
+    Field<bool>::operator=(v);
+    return *reinterpret_cast<DfuStatus*>(
+        reinterpret_cast<char*>(this) - offsetof(DfuStatus, off));
+}
+inline DfuStatus& DfuStatus::on_t::operator()(bool v) {
+    Field<bool>::operator=(v);
+    return *reinterpret_cast<DfuStatus*>(
+        reinterpret_cast<char*>(this) - offsetof(DfuStatus, on));
+}
+inline DfuStatus& DfuStatus::status_t::operator()(note::string_view v) {
+    Field<note::string_view>::operator=(v);
+    return *reinterpret_cast<DfuStatus*>(
+        reinterpret_cast<char*>(this) - offsetof(DfuStatus, status));
+}
+inline DfuStatus& DfuStatus::stop_t::operator()(bool v) {
+    Field<bool>::operator=(v);
+    return *reinterpret_cast<DfuStatus*>(
+        reinterpret_cast<char*>(this) - offsetof(DfuStatus, stop));
+}
+inline DfuStatus& DfuStatus::version_t::operator()(note::string_view v) {
+    Field<note::string_view>::operator=(v);
+    return *reinterpret_cast<DfuStatus*>(
+        reinterpret_cast<char*>(this) - offsetof(DfuStatus, version));
+}
+inline DfuStatus& DfuStatus::vvalue_t::operator()(note::string_view v) {
+    Field<note::string_view>::operator=(v);
+    return *reinterpret_cast<DfuStatus*>(
+        reinterpret_cast<char*>(this) - offsetof(DfuStatus, vvalue));
+}
+#pragma GCC diagnostic pop
+
 
 } // namespace note::api

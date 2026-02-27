@@ -2,6 +2,7 @@
 #pragma once
 
 #include <note/body.hpp>
+#include <note/dyn_field.hpp>
 #include <note/field.hpp>
 #include <note/json.hpp>
 #include <note/notecard.hpp>
@@ -10,6 +11,12 @@
 
 namespace note::api {
 
+
+
+
+
+
+
 struct NoteAdd {
     static constexpr string_view notecard_request = "note.add";
     static constexpr bool supports_cmd = true;
@@ -17,112 +24,223 @@ struct NoteAdd {
 
     Notecard* nc_ = nullptr;
 
-#if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1)
-    Field<bool> binary{};
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
+    /// If `true`, the Notecard will send all the data in the binary buffer to
+    /// Notehub.
+    ///
+    /// Learn more in this guide on [Sending and Receiving Large Binary
+    /// Objects](/guides-and-tutorials/notecard-guides/sending-and-receiving-
+    /// large-binary-objects).
+    ///
+    /// @since firmware 5.3.1
+#if NOTE_API_VERSION < NOTE_VERSION(5, 3, 1)
+    [[deprecated("requires firmware >= 5.3.1")]]
 #endif
-    BodyValue body{};
-    Field<note::string_view> file{};
-#if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1)
-    Field<bool> full{};
+    struct binary_t : Field<bool> {
+        using Field<bool>::Field;
+        using Field<bool>::operator=;
+        NoteAdd& operator()(bool v);
+    } binary{};
 #endif
-    Field<note::string_view> key{};
-#if NOTE_API_VERSION >= NOTE_VERSION(9, 1, 1)
-    Field<bool> limit{};
+    /// A JSON object to be enqueued. A Note must have either a `body` or a
+    /// `payload`, and can have both.
+    struct body_t : BodyValue {
+        using BodyValue::BodyValue;
+        NoteAdd& operator()(BodyValue v);
+#if __cplusplus >= 202002L
+        template<typename T> requires detail::BodySchema<T>
+        NoteAdd& operator()(const T& v);
 #endif
-#if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1)
-    Field<bool> live{};
+    } body{};
+    /// The name of the Notefile.
+    ///
+    /// On Notecard LoRa this argument is required. On all other Notecards this
+    /// field is optional and defaults to `data.qo` if not provided.
+    ///
+    /// When using this request on the Notecard the Notefile name must end in
+    /// one of:
+    ///
+    /// `.qo` for a queue outgoing (Notecard to Notehub) with plaintext
+    /// transport
+    ///
+    /// `.qos` for a queue outgoing with encrypted transport
+    ///
+    /// `.db` for a bidirectionally synchronized database with plaintext
+    /// transport
+    ///
+    /// `.dbs` for a bidirectionally synchronized database with encrypted
+    /// transport
+    ///
+    /// `.dbx` for a local-only database
+    struct file_t : Field<note::string_view> {
+        using Field<note::string_view>::Field;
+        using Field<note::string_view>::operator=;
+        NoteAdd& operator()(note::string_view v);
+    } file{};
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
+    /// If set to `true`, and the Note is using a [Notefile
+    /// Template](/notecard/notecard-walkthrough/low-bandwidth-design/#working-
+    /// with-note-templates), the Note will bypass usage of
+    /// [omitempty](/notecard/notecard-walkthrough/low-bandwidth-design/#use-of-
+    /// in-templates) and retain `null`, `0`, `false`, and empty string `""`
+    /// values.
+    ///
+    /// @since firmware 5.1.1
+#if NOTE_API_VERSION < NOTE_VERSION(5, 1, 1)
+    [[deprecated("requires firmware >= 5.1.1")]]
 #endif
-#if NOTE_API_VERSION >= NOTE_VERSION(8, 2, 1)
-    Field<int32_t> max{};
+    struct full_t : Field<bool> {
+        using Field<bool>::Field;
+        using Field<bool>::operator=;
+        NoteAdd& operator()(bool v);
+    } full{};
 #endif
-    Field<note::string_view> note_id{};
-    Field<note::string_view> payload{};
-    Field<bool> sync{};
-    Field<bool> verify{};
+    /// The name of an environment variable in your Notehub.io project that
+    /// contains the contents of a public key. Used when [encrypting the Note
+    /// body for transport](/guides-and-tutorials/notecard-guides/encrypting-
+    /// and-decrypting-data-with-the-notecard).
+    struct key_t : Field<note::string_view> {
+        using Field<note::string_view>::Field;
+        using Field<note::string_view>::operator=;
+        NoteAdd& operator()(note::string_view v);
+    } key{};
+#if NOTE_API_VERSION >= NOTE_VERSION(9, 1, 1) || !defined(NOTE_API_STRICT)
+    /// If set to `true`, the Note will not be created if Notecard is in a
+    /// [penalty box](/support/understanding-notecard-penalty-boxes/).
+    ///
+    /// @since firmware 9.1.1
+#if NOTE_API_VERSION < NOTE_VERSION(9, 1, 1)
+    [[deprecated("requires firmware >= 9.1.1")]]
+#endif
+    struct limit_t : Field<bool> {
+        using Field<bool>::Field;
+        using Field<bool>::operator=;
+        NoteAdd& operator()(bool v);
+    } limit{};
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
+    /// If `true`, bypasses saving the Note to flash on the Notecard. Required
+    /// to be set to `true` if also using `"binary":true`.
+    ///
+    /// @since firmware 5.3.1
+#if NOTE_API_VERSION < NOTE_VERSION(5, 3, 1)
+    [[deprecated("requires firmware >= 5.3.1")]]
+#endif
+    struct live_t : Field<bool> {
+        using Field<bool>::Field;
+        using Field<bool>::operator=;
+        NoteAdd& operator()(bool v);
+    } live{};
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(8, 2, 1) || !defined(NOTE_API_STRICT)
+    /// Defines the maximum number of queued Notes permitted in the specified
+    /// Notefile (`"file"`). Any Notes added after this value will be rejected.
+    /// When used with `"sync":true`, a sync will be triggered when the number
+    /// of pending Notes matches the `max` value.
+    ///
+    /// @since firmware 8.2.1
+#if NOTE_API_VERSION < NOTE_VERSION(8, 2, 1)
+    [[deprecated("requires firmware >= 8.2.1")]]
+#endif
+    struct max_t : Field<int32_t> {
+        using Field<int32_t>::Field;
+        using Field<int32_t>::operator=;
+        NoteAdd& operator()(int32_t v);
+    } max{};
+#endif
+    /// If the Notefile has a `.db/.dbs/.dbx` extension, specifies a unique Note
+    /// ID.
+    ///
+    /// If `note` string is `"?"`, then a random unique Note ID is generated and
+    /// returned as `{"note":"xxx"}`.
+    ///
+    /// _If this argument is provided for a `.qo` Notefile, an error is
+    /// returned._
+    struct noteId_t : Field<note::string_view> {
+        using Field<note::string_view>::Field;
+        using Field<note::string_view>::operator=;
+        NoteAdd& operator()(note::string_view v);
+    } noteId{};
+    /// A base64-encoded binary payload. A Note must have either a `body` or a
+    /// `payload`, and can have both. Payloads are limited to 256 bytes.
+    struct payload_t : Field<note::string_view> {
+        using Field<note::string_view>::Field;
+        using Field<note::string_view>::operator=;
+        NoteAdd& operator()(note::string_view v);
+    } payload{};
+    /// Set to `true` to sync immediately. Only applies to **outgoing** Notecard
+    /// requests, and only guarantees syncing the specified Notefile. Auto-
+    /// syncing **incoming** Notes from Notehub is set on the Notecard with
+    /// `{"req": "hub.set", "mode":"continuous", "sync": true}`.
+    struct sync_t : Field<bool> {
+        using Field<bool>::Field;
+        using Field<bool>::operator=;
+        NoteAdd& operator()(bool v);
+    } sync{};
+    /// If set to `true` and using a templated Notefile, the Notefile will be
+    /// written to flash immediately, rather than being cached in RAM and
+    /// written to flash later.
+    struct verify_t : Field<bool> {
+        using Field<bool>::Field;
+        using Field<bool>::operator=;
+        NoteAdd& operator()(bool v);
+    } verify{};
 
-#if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1)
-#if __cpp_explicit_this_parameter >= 202110L
-    auto&& set_binary(this auto&& self, bool v) { self.binary = v; return std::forward<decltype(self)>(self); }
-#else
-    auto& set_binary(bool v) { binary = v; return *this; }
+
+    template<typename T>
+    auto& extra(note::string_view key, T value) {
+        if (extras_count_ < NOTE_EXTRAS_MAX)
+            extras_[extras_count_++] = {key, note::DynValue{value}};
+        return *this;
+    }
+    auto& extra(note::string_view key, const char* value) {
+        return extra(key, note::string_view{value});
+    }
+
+    note::DynField operator[](note::string_view k_) {
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
+        if (k_ == "binary") return note::dyn_field_for(binary);
 #endif
+        if (k_ == "file") return note::dyn_field_for(file);
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
+        if (k_ == "full") return note::dyn_field_for(full);
 #endif
-#if __cpp_explicit_this_parameter >= 202110L
-    auto&& set_body(this auto&& self, BodyValue v) { self.body = v; return std::forward<decltype(self)>(self); }
-    template<typename T> requires detail::BodySchema<T>
-    auto&& set_body(this auto&& self, const T& v) { self.body = make_schema_body(v); return std::forward<decltype(self)>(self); }
-#else
-    auto& set_body(BodyValue v) { body = v; return *this; }
-    template<typename T> requires detail::BodySchema<T>
-    auto& set_body(const T& v) { body = make_schema_body(v); return *this; }
+        if (k_ == "key") return note::dyn_field_for(key);
+#if NOTE_API_VERSION >= NOTE_VERSION(9, 1, 1) || !defined(NOTE_API_STRICT)
+        if (k_ == "limit") return note::dyn_field_for(limit);
 #endif
-#if __cpp_explicit_this_parameter >= 202110L
-    auto&& set_file(this auto&& self, note::string_view v) { self.file = v; return std::forward<decltype(self)>(self); }
-#else
-    auto& set_file(note::string_view v) { file = v; return *this; }
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
+        if (k_ == "live") return note::dyn_field_for(live);
 #endif
-#if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1)
-#if __cpp_explicit_this_parameter >= 202110L
-    auto&& set_full(this auto&& self, bool v) { self.full = v; return std::forward<decltype(self)>(self); }
-#else
-    auto& set_full(bool v) { full = v; return *this; }
+#if NOTE_API_VERSION >= NOTE_VERSION(8, 2, 1) || !defined(NOTE_API_STRICT)
+        if (k_ == "max") return note::dyn_field_for(max);
 #endif
-#endif
-#if __cpp_explicit_this_parameter >= 202110L
-    auto&& set_key(this auto&& self, note::string_view v) { self.key = v; return std::forward<decltype(self)>(self); }
-#else
-    auto& set_key(note::string_view v) { key = v; return *this; }
-#endif
-#if NOTE_API_VERSION >= NOTE_VERSION(9, 1, 1)
-#if __cpp_explicit_this_parameter >= 202110L
-    auto&& set_limit(this auto&& self, bool v) { self.limit = v; return std::forward<decltype(self)>(self); }
-#else
-    auto& set_limit(bool v) { limit = v; return *this; }
-#endif
-#endif
-#if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1)
-#if __cpp_explicit_this_parameter >= 202110L
-    auto&& set_live(this auto&& self, bool v) { self.live = v; return std::forward<decltype(self)>(self); }
-#else
-    auto& set_live(bool v) { live = v; return *this; }
-#endif
-#endif
-#if NOTE_API_VERSION >= NOTE_VERSION(8, 2, 1)
-#if __cpp_explicit_this_parameter >= 202110L
-    auto&& set_max(this auto&& self, int32_t v) { self.max = v; return std::forward<decltype(self)>(self); }
-#else
-    auto& set_max(int32_t v) { max = v; return *this; }
-#endif
-#endif
-#if __cpp_explicit_this_parameter >= 202110L
-    auto&& set_note_id(this auto&& self, note::string_view v) { self.note_id = v; return std::forward<decltype(self)>(self); }
-#else
-    auto& set_note_id(note::string_view v) { note_id = v; return *this; }
-#endif
-#if __cpp_explicit_this_parameter >= 202110L
-    auto&& set_payload(this auto&& self, note::string_view v) { self.payload = v; return std::forward<decltype(self)>(self); }
-#else
-    auto& set_payload(note::string_view v) { payload = v; return *this; }
-#endif
-#if __cpp_explicit_this_parameter >= 202110L
-    auto&& set_sync(this auto&& self, bool v) { self.sync = v; return std::forward<decltype(self)>(self); }
-#else
-    auto& set_sync(bool v) { sync = v; return *this; }
-#endif
-#if __cpp_explicit_this_parameter >= 202110L
-    auto&& set_verify(this auto&& self, bool v) { self.verify = v; return std::forward<decltype(self)>(self); }
-#else
-    auto& set_verify(bool v) { verify = v; return *this; }
-#endif
+        if (k_ == "note") return note::dyn_field_for(noteId);
+        if (k_ == "payload") return note::dyn_field_for(payload);
+        if (k_ == "sync") return note::dyn_field_for(sync);
+        if (k_ == "verify") return note::dyn_field_for(verify);
+        if (extras_count_ < NOTE_EXTRAS_MAX) {
+            auto& slot = extras_[extras_count_++];
+            slot.key = k_;
+            return note::dyn_field_for(slot.value);
+        }
+        return {};
+    }
+
+    std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
+    uint8_t extras_count_ = 0;
 
     struct Response {
-        note::string_view note_id{};
+        /// The generated unique Note ID when `note` parameter was set to "?".
+        note::string_view noteId{};
+        /// `true` when a template is active on the Notefile.
         bool template_{};
+        /// The total number of Notes in the Notefile.
         int32_t total{};
 
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
-            rsp.note_id = reader_->get_string("note");
+            rsp.noteId = reader_->get_string("note");
             rsp.template_ = reader_->get_bool("template");
             rsp.total = reader_->get_int("total");
             rsp.reader_ = std::move(reader_);
@@ -133,30 +251,38 @@ struct NoteAdd {
         std::unique_ptr<JsonReader> reader_;
     };
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
     void build(JsonBuilder& b) const {
-#if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1)
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
         if (binary) b.add("binary", *binary);
 #endif
         body.write_to(b);
         if (file) b.add("file", *file);
-#if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1)
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
         if (full) b.add("full", *full);
 #endif
         if (key) b.add("key", *key);
-#if NOTE_API_VERSION >= NOTE_VERSION(9, 1, 1)
+#if NOTE_API_VERSION >= NOTE_VERSION(9, 1, 1) || !defined(NOTE_API_STRICT)
         if (limit) b.add("limit", *limit);
 #endif
-#if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1)
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
         if (live) b.add("live", *live);
 #endif
-#if NOTE_API_VERSION >= NOTE_VERSION(8, 2, 1)
+#if NOTE_API_VERSION >= NOTE_VERSION(8, 2, 1) || !defined(NOTE_API_STRICT)
         if (max) b.add("max", *max);
 #endif
-        if (note_id) b.add("note", *note_id);
+        if (noteId) b.add("note", *noteId);
         if (payload) b.add("payload", *payload);
         if (sync) b.add("sync", *sync);
         if (verify) b.add("verify", *verify);
+        for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
+            std::visit([&](auto&& v_) {
+                if constexpr (!std::is_same_v<std::decay_t<decltype(v_)>, std::monostate>)
+                    b.add(extras_[i_].key, v_);
+            }, extras_[i_].value);
     }
+#pragma GCC diagnostic pop
 
     auto execute() const { return nc_->execute(*this); }
     auto execute(Notecard& nc) const { return nc.execute(*this); }
@@ -164,5 +290,89 @@ struct NoteAdd {
     Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
 
 };
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
+inline NoteAdd& NoteAdd::binary_t::operator()(bool v) {
+    Field<bool>::operator=(v);
+    return *reinterpret_cast<NoteAdd*>(
+        reinterpret_cast<char*>(this) - offsetof(NoteAdd, binary));
+}
+#endif
+inline NoteAdd& NoteAdd::body_t::operator()(BodyValue v) {
+    BodyValue::operator=(std::move(v));
+    return *reinterpret_cast<NoteAdd*>(
+        reinterpret_cast<char*>(this) - offsetof(NoteAdd, body));
+}
+#if __cplusplus >= 202002L
+template<typename T> requires detail::BodySchema<T>
+inline NoteAdd& NoteAdd::body_t::operator()(const T& v) {
+    BodyValue::operator=(make_schema_body(v));
+    return *reinterpret_cast<NoteAdd*>(
+        reinterpret_cast<char*>(this) - offsetof(NoteAdd, body));
+}
+#endif
+inline NoteAdd& NoteAdd::file_t::operator()(note::string_view v) {
+    Field<note::string_view>::operator=(v);
+    return *reinterpret_cast<NoteAdd*>(
+        reinterpret_cast<char*>(this) - offsetof(NoteAdd, file));
+}
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
+inline NoteAdd& NoteAdd::full_t::operator()(bool v) {
+    Field<bool>::operator=(v);
+    return *reinterpret_cast<NoteAdd*>(
+        reinterpret_cast<char*>(this) - offsetof(NoteAdd, full));
+}
+#endif
+inline NoteAdd& NoteAdd::key_t::operator()(note::string_view v) {
+    Field<note::string_view>::operator=(v);
+    return *reinterpret_cast<NoteAdd*>(
+        reinterpret_cast<char*>(this) - offsetof(NoteAdd, key));
+}
+#if NOTE_API_VERSION >= NOTE_VERSION(9, 1, 1) || !defined(NOTE_API_STRICT)
+inline NoteAdd& NoteAdd::limit_t::operator()(bool v) {
+    Field<bool>::operator=(v);
+    return *reinterpret_cast<NoteAdd*>(
+        reinterpret_cast<char*>(this) - offsetof(NoteAdd, limit));
+}
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
+inline NoteAdd& NoteAdd::live_t::operator()(bool v) {
+    Field<bool>::operator=(v);
+    return *reinterpret_cast<NoteAdd*>(
+        reinterpret_cast<char*>(this) - offsetof(NoteAdd, live));
+}
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(8, 2, 1) || !defined(NOTE_API_STRICT)
+inline NoteAdd& NoteAdd::max_t::operator()(int32_t v) {
+    Field<int32_t>::operator=(v);
+    return *reinterpret_cast<NoteAdd*>(
+        reinterpret_cast<char*>(this) - offsetof(NoteAdd, max));
+}
+#endif
+inline NoteAdd& NoteAdd::noteId_t::operator()(note::string_view v) {
+    Field<note::string_view>::operator=(v);
+    return *reinterpret_cast<NoteAdd*>(
+        reinterpret_cast<char*>(this) - offsetof(NoteAdd, noteId));
+}
+inline NoteAdd& NoteAdd::payload_t::operator()(note::string_view v) {
+    Field<note::string_view>::operator=(v);
+    return *reinterpret_cast<NoteAdd*>(
+        reinterpret_cast<char*>(this) - offsetof(NoteAdd, payload));
+}
+inline NoteAdd& NoteAdd::sync_t::operator()(bool v) {
+    Field<bool>::operator=(v);
+    return *reinterpret_cast<NoteAdd*>(
+        reinterpret_cast<char*>(this) - offsetof(NoteAdd, sync));
+}
+inline NoteAdd& NoteAdd::verify_t::operator()(bool v) {
+    Field<bool>::operator=(v);
+    return *reinterpret_cast<NoteAdd*>(
+        reinterpret_cast<char*>(this) - offsetof(NoteAdd, verify));
+}
+#pragma GCC diagnostic pop
+
 
 } // namespace note::api

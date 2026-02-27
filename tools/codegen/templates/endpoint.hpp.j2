@@ -4,6 +4,7 @@
 {% if has_body_field or has_body_response %}
 #include <note/body.hpp>
 {% endif %}
+#include <note/dyn_field.hpp>
 #include <note/field.hpp>
 #include <note/json.hpp>
 #include <note/notecard.hpp>
@@ -12,7 +13,44 @@
 
 namespace note::api {
 
-{% macro render_operation(op, indent) %}
+{# ===== Helper macros ===================================================== #}
+
+{% macro version_guard_begin(guard) -%}
+{% if guard %}
+#if NOTE_API_VERSION >= {{ guard }} || !defined(NOTE_API_STRICT)
+{% endif -%}
+{% endmacro -%}
+
+{% macro version_guard_end(guard) -%}
+{% if guard %}
+#endif
+{% endif -%}
+{% endmacro -%}
+
+{% macro deprecated_attr(guard, min_ver, indent) -%}
+{% if guard %}
+#if NOTE_API_VERSION < {{ guard }}
+{{ indent }}[[deprecated("requires firmware >= {{ min_ver }}")]]
+#endif
+{% endif -%}
+{% endmacro -%}
+
+{% macro doc_for_prop(prop, indent) -%}
+{% if prop.description and prop.min_api_version -%}
+{{ (prop.description + "\n\n@since firmware " + prop.min_api_version) | doc_comment(indent) }}
+{% elif prop.description -%}
+{{ prop.description | doc_comment(indent) }}
+{% elif prop.min_api_version -%}
+{{ ("@since firmware " + prop.min_api_version) | doc_comment(indent) }}
+{% endif -%}
+{% endmacro -%}
+
+{# ===== render_operation: emit struct body for one operation ============= #}
+{# parent_type: the C++ type name used in nested operator() declarations   #}
+{#   simple:      "HubSet"                                                  #}
+{#   polymorphic: "CardTemp::Get"                                           #}
+
+{% macro render_operation(op, parent_type, indent) %}
 {{ indent }}static constexpr string_view notecard_request = "{{ op.notecard_request }}";
 {{ indent }}static constexpr bool supports_cmd = {{ "true" if op.supports_cmd else "false" }};
 {{ indent }}static constexpr Safety safety = Safety::{{ op.safety }};
@@ -29,100 +67,105 @@ namespace note::api {
 
 {% for prop in op.properties %}
 {% if not prop.is_required_by_dispatch %}
-{% if prop.version_guard %}
-#if NOTE_API_VERSION >= {{ prop.version_guard }}
-{% endif %}
+{{ version_guard_begin(prop.version_guard) -}}
+{{ doc_for_prop(prop, indent) -}}
 {% if prop.enum_values %}
 {{ indent }}// {{ prop.wire_name }}: {{ prop.enum_values | join(' | ') }}
 {% endif %}
+{{ deprecated_attr(prop.version_guard, prop.min_api_version, indent) -}}
 {% if prop.is_body %}
-{{ indent }}BodyValue {{ prop.cpp_name }}{};
-{% else %}
-{{ indent }}Field<{{ prop.cpp_type }}> {{ prop.cpp_name }}{};
-{% endif %}
-{% if prop.version_guard %}
+{{ indent }}struct {{ prop.nested_type_name }} : BodyValue {
+{{ indent }}    using BodyValue::BodyValue;
+{{ indent }}    {{ parent_type }}& operator()(BodyValue v);
+#if __cplusplus >= 202002L
+{{ indent }}    template<typename T> requires detail::BodySchema<T>
+{{ indent }}    {{ parent_type }}& operator()(const T& v);
 #endif
+{{ indent }}} {{ prop.accessor_name }}{};
+{% else %}
+{{ indent }}struct {{ prop.nested_type_name }} : Field<{{ prop.cpp_type }}> {
+{{ indent }}    using Field<{{ prop.cpp_type }}>::Field;
+{{ indent }}    using Field<{{ prop.cpp_type }}>::operator=;
+{{ indent }}    {{ parent_type }}& operator()({{ prop.cpp_type }} v);
+{{ indent }}} {{ prop.accessor_name }}{};
 {% endif %}
+{{ version_guard_end(prop.version_guard) -}}
 {% endif %}
 {% endfor %}
 {% endif %}
 
 {% for prop in op.properties %}
 {% if not prop.is_required_by_dispatch and prop.enum_values %}
-{% if prop.version_guard %}
-#if NOTE_API_VERSION >= {{ prop.version_guard }}
-{% endif %}
-{{ indent }}static consteval note::string_view validated_{{ prop.cpp_name }}(const char* v) {
+{{ version_guard_begin(prop.version_guard) -}}
+{{ indent }}static consteval note::string_view validated{{ prop.accessor_name | first_upper }}(const char* v) {
 {{ indent }}    note::string_view sv{v};
 {{ indent }}    if ({% for ev in prop.enum_values %}sv != "{{ ev }}"{{ " && " if not loop.last }}{% endfor %})
 {{ indent }}        throw "{{ op.notecard_request }}: invalid value for '{{ prop.wire_name }}'";
 {{ indent }}    return sv;
 {{ indent }}}
-{% if prop.version_guard %}
-#endif
-{% endif %}
-{% endif %}
-{% endfor %}
-{% for prop in op.properties %}
-{% if not prop.is_required_by_dispatch %}
-{% if prop.version_guard %}
-#if NOTE_API_VERSION >= {{ prop.version_guard }}
-{% endif %}
-{% if prop.is_body %}
-#if __cpp_explicit_this_parameter >= 202110L
-{{ indent }}auto&& set_{{ prop.cpp_name }}(this auto&& self, BodyValue v) { self.{{ prop.cpp_name }} = v; return std::forward<decltype(self)>(self); }
-{{ indent }}template<typename T> requires detail::BodySchema<T>
-{{ indent }}auto&& set_{{ prop.cpp_name }}(this auto&& self, const T& v) { self.{{ prop.cpp_name }} = make_schema_body(v); return std::forward<decltype(self)>(self); }
-#else
-{{ indent }}auto& set_{{ prop.cpp_name }}(BodyValue v) { {{ prop.cpp_name }} = v; return *this; }
-{{ indent }}template<typename T> requires detail::BodySchema<T>
-{{ indent }}auto& set_{{ prop.cpp_name }}(const T& v) { {{ prop.cpp_name }} = make_schema_body(v); return *this; }
-#endif
-{% else %}
-#if __cpp_explicit_this_parameter >= 202110L
-{{ indent }}auto&& set_{{ prop.cpp_name }}(this auto&& self, {{ prop.cpp_type }} v) { self.{{ prop.cpp_name }} = v; return std::forward<decltype(self)>(self); }
-#else
-{{ indent }}auto& set_{{ prop.cpp_name }}({{ prop.cpp_type }} v) { {{ prop.cpp_name }} = v; return *this; }
-#endif
-{% endif %}
-{% if prop.version_guard %}
-#endif
-{% endif %}
+{{ version_guard_end(prop.version_guard) -}}
 {% endif %}
 {% endfor %}
 
+{{ indent }}template<typename T>
+{{ indent }}auto& extra(note::string_view key, T value) {
+{{ indent }}    if (extras_count_ < NOTE_EXTRAS_MAX)
+{{ indent }}        extras_[extras_count_++] = {key, note::DynValue{value}};
+{{ indent }}    return *this;
+{{ indent }}}
+{{ indent }}auto& extra(note::string_view key, const char* value) {
+{{ indent }}    return extra(key, note::string_view{value});
+{{ indent }}}
+
+{{ indent }}note::DynField operator[](note::string_view k_) {
+{% for prop in op.properties %}
+{% if not prop.is_required_by_dispatch and not prop.is_body %}
+{{ version_guard_begin(prop.version_guard) -}}
+{{ indent }}    if (k_ == "{{ prop.wire_name }}") return note::dyn_field_for({{ prop.accessor_name }});
+{{ version_guard_end(prop.version_guard) -}}
+{% endif %}
+{% endfor %}
+{{ indent }}    if (extras_count_ < NOTE_EXTRAS_MAX) {
+{{ indent }}        auto& slot = extras_[extras_count_++];
+{{ indent }}        slot.key = k_;
+{{ indent }}        return note::dyn_field_for(slot.value);
+{{ indent }}    }
+{{ indent }}    return {};
+{{ indent }}}
+
+{{ indent }}std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
+{{ indent }}uint8_t extras_count_ = 0;
+
 {{ indent }}struct Response {
 {% for prop in op.response.properties %}
-{% if prop.version_guard %}
-#if NOTE_API_VERSION >= {{ prop.version_guard }}
-{% endif %}
-{{ indent }}    {{ prop.cpp_type }} {{ prop.cpp_name }}{};
-{% if prop.version_guard %}
-#endif
-{% endif %}
+{{ version_guard_begin(prop.version_guard) -}}
+{{ doc_for_prop(prop, indent + "    ") -}}
+{{ deprecated_attr(prop.version_guard, prop.min_api_version, indent + "    ") -}}
+{{ indent }}    {{ prop.cpp_type }} {{ prop.accessor_name }}{};
+{{ version_guard_end(prop.version_guard) -}}
 {% endfor %}
 {% if op.response.has_body %}
 
 {{ indent }}    const JsonReader* body() const { return body_.get(); }
 
 {{ indent }}    template<typename T>
-{{ indent }}    T body_as() const {
+{{ indent }}    T bodyAs() const {
 {{ indent }}        if (body_) return parse_body_<T>(*body_);
 {{ indent }}        return T{};
 {{ indent }}    }
 {% endif %}
 
+{% if op.has_version_gated_response_props %}
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+{% endif %}
 {{ indent }}    static Response parse(std::unique_ptr<JsonReader> reader_) {
 {% if op.response.properties or op.response.has_body %}
 {{ indent }}        Response rsp;
 {% for prop in op.response.properties %}
-{% if prop.version_guard %}
-#if NOTE_API_VERSION >= {{ prop.version_guard }}
-{% endif %}
-{{ indent }}        rsp.{{ prop.cpp_name }} = reader_->get_{{ prop.getter }}("{{ prop.wire_name }}"{{ prop.default_arg }});
-{% if prop.version_guard %}
-#endif
-{% endif %}
+{{ version_guard_begin(prop.version_guard) -}}
+{{ indent }}        rsp.{{ prop.accessor_name }} = reader_->get_{{ prop.getter }}("{{ prop.wire_name }}"{{ prop.default_arg }});
+{{ version_guard_end(prop.version_guard) -}}
 {% endfor %}
 {% if op.response.has_body %}
 {{ indent }}        rsp.body_ = reader_->get_object("body");
@@ -134,6 +177,9 @@ namespace note::api {
 {{ indent }}        return {};
 {% endif %}
 {{ indent }}    }
+{% if op.has_version_gated_response_props %}
+#pragma GCC diagnostic pop
+{% endif %}
 {% if op.response.properties or op.response.has_body %}
 
 {{ indent }}private:
@@ -160,32 +206,36 @@ namespace note::api {
 {% endif %}
 {{ indent }}};
 
+{% if op.has_version_gated_props %}
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+{% endif %}
 {{ indent }}void build(JsonBuilder& b) const {
 {% for prop in op.properties %}
 {% if prop.is_required_by_dispatch %}
 {{ indent }}    b.add("{{ prop.wire_name }}", true);
 {% elif prop.is_body %}
-{% if prop.version_guard %}
-#if NOTE_API_VERSION >= {{ prop.version_guard }}
-{% endif %}
-{{ indent }}    {{ prop.cpp_name }}.write_to(b);
-{% if prop.version_guard %}
-#endif
-{% endif %}
+{{ version_guard_begin(prop.version_guard) -}}
+{{ indent }}    {{ prop.accessor_name }}.write_to(b);
+{{ version_guard_end(prop.version_guard) -}}
 {% else %}
-{% if prop.version_guard %}
-#if NOTE_API_VERSION >= {{ prop.version_guard }}
-{% endif %}
-{{ indent }}    if ({{ prop.cpp_name }}) b.add("{{ prop.wire_name }}", *{{ prop.cpp_name }});
-{% if prop.version_guard %}
-#endif
-{% endif %}
+{{ version_guard_begin(prop.version_guard) -}}
+{{ indent }}    if ({{ prop.accessor_name }}) b.add("{{ prop.wire_name }}", *{{ prop.accessor_name }});
+{{ version_guard_end(prop.version_guard) -}}
 {% endif %}
 {% endfor %}
+{{ indent }}    for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
+{{ indent }}        std::visit([&](auto&& v_) {
+{{ indent }}            if constexpr (!std::is_same_v<std::decay_t<decltype(v_)>, std::monostate>)
+{{ indent }}                b.add(extras_[i_].key, v_);
+{{ indent }}        }, extras_[i_].value);
 {% if not op.properties %}
 {{ indent }}    (void)b;
 {% endif %}
 {{ indent }}}
+{% if op.has_version_gated_props %}
+#pragma GCC diagnostic pop
+{% endif %}
 
 {{ indent }}auto execute() const { return nc_->execute(*this); }
 {{ indent }}auto execute(Notecard& nc) const { return nc.execute(*this); }
@@ -194,20 +244,73 @@ namespace note::api {
 {{ indent }}Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
 {% endif %}
 {% endmacro %}
+
+{# ===== prop_impls: out-of-line operator() definitions =================== #}
+{# Emitted AFTER struct closing brace, struct is now complete so            #}
+{# offsetof() is valid.                                                     #}
+
+{% macro prop_impls(op, parent_qual) %}
+{% set ns = namespace(has_impls=false) %}
+{% for prop in op.properties %}{% if not prop.is_required_by_dispatch %}{% set ns.has_impls = true %}{% endif %}{% endfor %}
+{% if ns.has_impls %}
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+{% if op.has_version_gated_props %}
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+{% endif %}
+{% for prop in op.properties %}
+{% if not prop.is_required_by_dispatch %}
+{{ version_guard_begin(prop.version_guard) -}}
+{% if prop.is_body %}
+inline {{ parent_qual }}& {{ parent_qual }}::{{ prop.nested_type_name }}::operator()(BodyValue v) {
+    BodyValue::operator=(std::move(v));
+    return *reinterpret_cast<{{ parent_qual }}*>(
+        reinterpret_cast<char*>(this) - offsetof({{ parent_qual }}, {{ prop.accessor_name }}));
+}
+#if __cplusplus >= 202002L
+template<typename T> requires detail::BodySchema<T>
+inline {{ parent_qual }}& {{ parent_qual }}::{{ prop.nested_type_name }}::operator()(const T& v) {
+    BodyValue::operator=(make_schema_body(v));
+    return *reinterpret_cast<{{ parent_qual }}*>(
+        reinterpret_cast<char*>(this) - offsetof({{ parent_qual }}, {{ prop.accessor_name }}));
+}
+#endif
+{% else %}
+inline {{ parent_qual }}& {{ parent_qual }}::{{ prop.nested_type_name }}::operator()({{ prop.cpp_type }} v) {
+    Field<{{ prop.cpp_type }}>::operator=(v);
+    return *reinterpret_cast<{{ parent_qual }}*>(
+        reinterpret_cast<char*>(this) - offsetof({{ parent_qual }}, {{ prop.accessor_name }}));
+}
+{% endif %}
+{{ version_guard_end(prop.version_guard) -}}
+{% endif %}
+{% endfor %}
+#pragma GCC diagnostic pop
+{% endif %}
+{% endmacro %}
+
+{# ===== Main output ======================================================= #}
+
 {% if endpoint.is_polymorphic %}
 struct {{ endpoint.struct_name }} {
 {% for op in endpoint.operations %}
 
     struct {{ op.struct_name }} {
-{{ render_operation(op, "        ") }}
+{{ render_operation(op, endpoint.struct_name + "::" + op.struct_name, "        ") }}
     };
 {% endfor %}
 };
+
+{% for op in endpoint.operations %}
+{{ prop_impls(op, endpoint.struct_name + "::" + op.struct_name) }}
+{% endfor %}
 {% else %}
 {% set op = endpoint.operations[0] %}
 struct {{ endpoint.struct_name }} {
-{{ render_operation(op, "    ") }}
+{{ render_operation(op, endpoint.struct_name, "    ") }}
 };
+
+{{ prop_impls(op, endpoint.struct_name) }}
 {% endif %}
 
 } // namespace note::api

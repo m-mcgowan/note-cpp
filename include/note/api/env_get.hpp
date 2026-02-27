@@ -2,6 +2,7 @@
 #pragma once
 
 #include <note/body.hpp>
+#include <note/dyn_field.hpp>
 #include <note/field.hpp>
 #include <note/json.hpp>
 #include <note/notecard.hpp>
@@ -10,6 +11,12 @@
 
 namespace note::api {
 
+
+
+
+
+
+
 struct EnvGet {
     static constexpr string_view notecard_request = "env.get";
     static constexpr bool supports_cmd = true;
@@ -17,58 +24,105 @@ struct EnvGet {
 
     Notecard* nc_ = nullptr;
 
-    Field<note::string_view> name{};
-#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1)
-    Field<note::string_view> names{};
+    /// The name of the environment variable (case-insensitive). Omit to return
+    /// all environment variables known to the Notecard.
+    struct name_t : Field<note::string_view> {
+        using Field<note::string_view>::Field;
+        using Field<note::string_view>::operator=;
+        EnvGet& operator()(note::string_view v);
+    } name{};
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+    /// A list of one or more variables to retrieve, by name (case-insensitive).
+    ///
+    /// @since firmware 3.4.1
+#if NOTE_API_VERSION < NOTE_VERSION(3, 4, 1)
+    [[deprecated("requires firmware >= 3.4.1")]]
 #endif
-#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1)
-    Field<int32_t> time{};
+    struct names_t : Field<note::string_view> {
+        using Field<note::string_view>::Field;
+        using Field<note::string_view>::operator=;
+        EnvGet& operator()(note::string_view v);
+    } names{};
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+    /// Request a modified environment variable or variables from the Notecard,
+    /// but only if modified after the time provided.
+    ///
+    /// @since firmware 3.4.1
+#if NOTE_API_VERSION < NOTE_VERSION(3, 4, 1)
+    [[deprecated("requires firmware >= 3.4.1")]]
+#endif
+    struct time_t : Field<int32_t> {
+        using Field<int32_t>::Field;
+        using Field<int32_t>::operator=;
+        EnvGet& operator()(int32_t v);
+    } time{};
 #endif
 
-#if __cpp_explicit_this_parameter >= 202110L
-    auto&& set_name(this auto&& self, note::string_view v) { self.name = v; return std::forward<decltype(self)>(self); }
-#else
-    auto& set_name(note::string_view v) { name = v; return *this; }
+
+    template<typename T>
+    auto& extra(note::string_view key, T value) {
+        if (extras_count_ < NOTE_EXTRAS_MAX)
+            extras_[extras_count_++] = {key, note::DynValue{value}};
+        return *this;
+    }
+    auto& extra(note::string_view key, const char* value) {
+        return extra(key, note::string_view{value});
+    }
+
+    note::DynField operator[](note::string_view k_) {
+        if (k_ == "name") return note::dyn_field_for(name);
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+        if (k_ == "names") return note::dyn_field_for(names);
 #endif
-#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1)
-#if __cpp_explicit_this_parameter >= 202110L
-    auto&& set_names(this auto&& self, note::string_view v) { self.names = v; return std::forward<decltype(self)>(self); }
-#else
-    auto& set_names(note::string_view v) { names = v; return *this; }
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+        if (k_ == "time") return note::dyn_field_for(time);
 #endif
-#endif
-#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1)
-#if __cpp_explicit_this_parameter >= 202110L
-    auto&& set_time(this auto&& self, int32_t v) { self.time = v; return std::forward<decltype(self)>(self); }
-#else
-    auto& set_time(int32_t v) { time = v; return *this; }
-#endif
-#endif
+        if (extras_count_ < NOTE_EXTRAS_MAX) {
+            auto& slot = extras_[extras_count_++];
+            slot.key = k_;
+            return note::dyn_field_for(slot.value);
+        }
+        return {};
+    }
+
+    std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
+    uint8_t extras_count_ = 0;
 
     struct Response {
+        /// If a `name` was specified, the value of the environment variable.
         note::string_view text{};
-#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1)
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+        /// The time of the Notecard variable or variables change.
+        ///
+        /// @since firmware 3.4.1
+#if NOTE_API_VERSION < NOTE_VERSION(3, 4, 1)
+        [[deprecated("requires firmware >= 3.4.1")]]
+#endif
         int32_t time{};
 #endif
 
         const JsonReader* body() const { return body_.get(); }
 
         template<typename T>
-        T body_as() const {
+        T bodyAs() const {
             if (body_) return parse_body_<T>(*body_);
             return T{};
         }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
             rsp.text = reader_->get_string("text");
-#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1)
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
             rsp.time = reader_->get_int("time");
 #endif
             rsp.body_ = reader_->get_object("body");
             rsp.reader_ = std::move(reader_);
             return rsp;
         }
+#pragma GCC diagnostic pop
 
     private:
         std::unique_ptr<JsonReader> reader_;
@@ -91,15 +145,23 @@ struct EnvGet {
         }
     };
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
     void build(JsonBuilder& b) const {
         if (name) b.add("name", *name);
-#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1)
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
         if (names) b.add("names", *names);
 #endif
-#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1)
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
         if (time) b.add("time", *time);
 #endif
+        for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
+            std::visit([&](auto&& v_) {
+                if constexpr (!std::is_same_v<std::decay_t<decltype(v_)>, std::monostate>)
+                    b.add(extras_[i_].key, v_);
+            }, extras_[i_].value);
     }
+#pragma GCC diagnostic pop
 
     auto execute() const { return nc_->execute(*this); }
     auto execute(Notecard& nc) const { return nc.execute(*this); }
@@ -107,5 +169,30 @@ struct EnvGet {
     Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
 
 };
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+inline EnvGet& EnvGet::name_t::operator()(note::string_view v) {
+    Field<note::string_view>::operator=(v);
+    return *reinterpret_cast<EnvGet*>(
+        reinterpret_cast<char*>(this) - offsetof(EnvGet, name));
+}
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+inline EnvGet& EnvGet::names_t::operator()(note::string_view v) {
+    Field<note::string_view>::operator=(v);
+    return *reinterpret_cast<EnvGet*>(
+        reinterpret_cast<char*>(this) - offsetof(EnvGet, names));
+}
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+inline EnvGet& EnvGet::time_t::operator()(int32_t v) {
+    Field<int32_t>::operator=(v);
+    return *reinterpret_cast<EnvGet*>(
+        reinterpret_cast<char*>(this) - offsetof(EnvGet, time));
+}
+#endif
+#pragma GCC diagnostic pop
+
 
 } // namespace note::api

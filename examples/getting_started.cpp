@@ -1,236 +1,293 @@
-// Getting started with note-cpp: common Notecard operations.
+// Getting started with note-cpp
 //
-// Each example shows the type-safe C++ equivalent of the JSON requests
-// from the Blues Notecard API documentation:
-//   https://dev.blues.io/api-reference/notecard-api/introduction/
+// This walks through the library from simplest to most advanced:
+//   1. Ad-hoc requests — JSON strings, no types needed
+//   2. Compile-time JSON — zero-allocation constexpr buffers
+//   3. Typed requests and responses — IDE autocomplete, compile-time checks
+//   4. Body schemas — one struct for send, receive, and template registration
 //
-// Build: c++ -std=c++2b -I include examples/getting_started.cpp
+// Build & run:
+//   c++ -std=c++2b -I include examples/getting_started.cpp && ./a.out
 
+#include <note/notecard.hpp>
+#include <note/json_buf.hpp>
 #include <note/api_context.hpp>
 #include <note/body.hpp>
-#include <note/api/hub_set.hpp>
-#include <note/api/hub_sync.hpp>
-#include <note/api/hub_status.hpp>
-#include <note/api/card_version.hpp>
-#include <note/api/card_status.hpp>
-#include <note/api/card_wireless.hpp>
-#include <note/api/note_add.hpp>
-#include <note/api/note_get.hpp>
-#include <note/api/note_template.hpp>
-#include <note/api/env_set.hpp>
-#include <note/api/env_get.hpp>
 
-// Schema structs — define once, use for send, receive, and templates.
-// C++20: plain aggregates work automatically via reflection.
-// C++17: use NOTE_BODY() macro for the same functionality.
+#include <cstdio>
+#include <memory>
+#include <string>
 
+// ═══════════════════════════════════════════════════════════════════════
+// Mock backend — replace with a real JSON library on your platform.
+// A production backend wraps cJSON, nlohmann-json, RapidJSON, etc.
+// ═══════════════════════════════════════════════════════════════════════
+
+struct MockBuilder : note::JsonBuilder {
+    std::string buf_ = "{";
+    bool first_ = true;
+    void sep() { if (!first_) buf_ += ','; first_ = false; }
+
+    MockBuilder& add(note::string_view k, bool v) override {
+        sep(); buf_ += '"'; buf_ += k; buf_ += "\":"; buf_ += v ? "true" : "false"; return *this;
+    }
+    MockBuilder& add(note::string_view k, int32_t v) override {
+        sep(); buf_ += '"'; buf_ += k; buf_ += "\":"; buf_ += std::to_string(v); return *this;
+    }
+    MockBuilder& add(note::string_view k, double v) override {
+        sep(); buf_ += '"'; buf_ += k; buf_ += "\":"; buf_ += std::to_string(v); return *this;
+    }
+    MockBuilder& add(note::string_view k, note::string_view v) override {
+        sep(); buf_ += '"'; buf_ += k; buf_ += "\":\""; buf_ += v; buf_ += '"'; return *this;
+    }
+    MockBuilder& begin_object(note::string_view k) override {
+        sep(); buf_ += '"'; buf_ += k; buf_ += "\":{"; first_ = true; return *this;
+    }
+    MockBuilder& end_object() override { buf_ += '}'; first_ = false; return *this; }
+    MockBuilder& begin_array(note::string_view k) override {
+        sep(); buf_ += '"'; buf_ += k; buf_ += "\":["; first_ = true; return *this;
+    }
+    MockBuilder& end_array() override { buf_ += ']'; first_ = false; return *this; }
+    std::string to_string() override { buf_ += '}'; return std::move(buf_); }
+};
+
+struct MockReader : note::JsonReader {
+    bool has(note::string_view) const override { return false; }
+    bool get_bool(note::string_view, bool d) const override { return d; }
+    int32_t get_int(note::string_view, int32_t d) const override { return d; }
+    double get_double(note::string_view, double d) const override { return d; }
+    note::string_view get_string(note::string_view, note::string_view d) const override { return d; }
+    std::unique_ptr<note::JsonReader> get_object(note::string_view) const override { return nullptr; }
+    bool has_error() const override { return false; }
+    note::string_view get_error() const override { return {}; }
+};
+
+struct MockBackend : note::JsonBackend {
+    std::unique_ptr<note::JsonBuilder> create_builder() override {
+        return std::make_unique<MockBuilder>();
+    }
+    std::unique_ptr<note::JsonReader> parse_response(note::string_view) override {
+        return std::make_unique<MockReader>();
+    }
+};
+
+// Body struct — define once, use to send, receive, and register templates.
 struct Readings {
     float temperature;
     int16_t humidity;
     NOTE_BODY(temperature, humidity)
 };
 
-// Users provide their own JsonBackend and transport callable implementations.
-// See examples/smoke.cpp for mock implementations.
-void examples(note::Notecard& nc) {
-    // Create an Api instance bound to this notecard.
+int main() {
+    // Create a backend and Notecard instance.
+    // The transport lambda sends JSON over serial/I2C and returns the response.
+    MockBackend backend;
+    note::Notecard nc(backend,
+        [](note::string_view request, uint32_t) -> note::Result<std::string> {
+            std::printf("  >> %.*s\n", (int)request.size(), request.data());
+            return std::string("{}");
+        });
+
+
+    // ═══════════════════════════════════════════════════════════════════
+    // 1. AD-HOC REQUESTS
+    //    The simplest way to talk to a Notecard. Build JSON fields with
+    //    a lambda, read responses with string keys. No generated types
+    //    needed — just notecard.hpp.
+    // ═══════════════════════════════════════════════════════════════════
+
+    std::puts("\n=== 1. Ad-hoc requests ===\n");
+
+    // Configure the product
+    std::puts("--- hub.set ---");
+    nc.request("hub.set", [](note::JsonBuilder& b) {
+        b.add("product", "com.example.app");
+        b.add("mode", "periodic");
+        b.add("outbound", 60);
+    });
+
+    // Read device info
+    std::puts("--- card.version ---");
+    {
+        auto result = nc.request("card.version");
+        if (result) {
+            auto version = (*result)->get_string("version");
+            auto device  = (*result)->get_string("device");
+            (void)version; (void)device;
+            std::puts("  (version and device read from response)");
+        }
+    }
+
+    // Fire-and-forget command (no response expected)
+    std::puts("--- hub.sync (command) ---");
+    nc.command("hub.sync");
+
+    // Error handling — all operations return a result
+    std::puts("--- error handling ---");
+    {
+        auto r = nc.request("card.version");
+        if (!r) {
+            std::printf("  error: %.*s\n",
+                (int)r.error().message.size(), r.error().message.data());
+        } else {
+            std::puts("  ok");
+        }
+    }
+
+
+    // ═══════════════════════════════════════════════════════════════════
+    // 2. COMPILE-TIME JSON
+    //    For static requests that never change, JsonBuf builds the JSON
+    //    at compile time. Zero allocation, zero runtime cost. The
+    //    compiler verifies the JSON is well-formed.
+    // ═══════════════════════════════════════════════════════════════════
+
+    std::puts("\n=== 2. Compile-time JSON ===\n");
+
+    // Auto-sized: compiler measures the output and picks the buffer size.
+    constexpr auto hub_set_json = note::json<[](auto& b) {
+        b.add("req", "hub.set");
+        b.add("product", "com.example.app");
+        b.add("mode", "periodic");
+        b.add("outbound", 60);
+        b.close();
+    }>();
+
+    // The string is computed entirely at compile time:
+    static_assert(hub_set_json.view() ==
+        R"({"req":"hub.set","product":"com.example.app","mode":"periodic","outbound":60})");
+
+    std::printf("--- constexpr hub.set ---\n  >> %.*s\n",
+        (int)hub_set_json.size(), hub_set_json.data());
+
+    // Fixed-size buffer for explicit control:
+    constexpr note::JsonBuf<128> note_add_json = [] {
+        note::JsonBuf<128> b;
+        b.add("req", "note.add");
+        b.add("file", "sensors.qo");
+        b.begin_object("body");
+            b.add("temp", 22.5);
+        b.end_object();
+        b.close();
+        return b;
+    }();
+
+    static_assert(note_add_json);  // overflow check
+    std::printf("--- constexpr note.add ---\n  >> %.*s\n",
+        (int)note_add_json.size(), note_add_json.data());
+
+
+    // ═══════════════════════════════════════════════════════════════════
+    // 3. TYPED API — REQUESTS AND RESPONSES
+    //    Generated types give you named fields, IDE autocomplete, and
+    //    compile-time checking. Misspell a field → compile error.
+    // ═══════════════════════════════════════════════════════════════════
+
+    std::puts("\n=== 3. Typed API ===\n");
+
+    // Api is the entry point for all typed requests.
     note::Api api(nc);
 
-    // -----------------------------------------------------------------------
-    // Product configuration
-    // https://dev.blues.io/api-reference/notecard-api/hub-requests/#hub-set
-    // -----------------------------------------------------------------------
-
-    // Fluent factory chain:
-    // {"req":"hub.set","mode":"periodic","outbound":60,"product":"com.example.app"}
+    // Fluent chain — IDE auto-completes every setter
+    std::puts("--- hub.set (fluent) ---");
     api.hubSet()
-       .set_product("com.example.app")
-       .set_mode("periodic")
-       .set_outbound(60)
+       .product("com.example.app")
+       .mode("periodic")
+       .outbound(60)
        .execute();
 
-    // Direct field assignment:
-    // {"req":"hub.set","mode":"continuous"}
+    // Direct field assignment
+    std::puts("--- hub.set (direct) ---");
     {
         auto req = api.hubSet();
         req.mode = "continuous";
         req.execute();
     }
 
-    // Designated initializers (fields in declaration order):
-    // {"req":"hub.set","mode":"minimum","product":"com.example.app"}
-    api.execute(note::api::HubSet{.mode = "minimum", .product = "com.example.app"});
-
-    // Compile-time validated enum values:
+    // Typed response — fields are named members, not strings
+    std::puts("--- card.version (typed response) ---");
     {
-        auto req = api.hubSet();
-        req.mode = note::api::HubSet::validated_mode("periodic");  // OK
-        // req.mode = note::api::HubSet::validated_mode("typo");   // COMPILE ERROR
-        req.execute();
-    }
-
-    // -----------------------------------------------------------------------
-    // Syncing
-    // https://dev.blues.io/api-reference/notecard-api/hub-requests/#hub-sync
-    // -----------------------------------------------------------------------
-
-    // {"req":"hub.sync"}
-    api.hubSync().execute();
-
-    // -----------------------------------------------------------------------
-    // Device info
-    // https://dev.blues.io/api-reference/notecard-api/card-requests/#card-version
-    // -----------------------------------------------------------------------
-
-    // {"req":"card.version"}
-    {
-        auto result = api.cardVersion().execute();
-        if (result) {
-            note::string_view version = result.version;
-            note::string_view device = result.device;
-            (void)version;
-            (void)device;
+        auto ver = api.cardVersion().execute();
+        if (ver) {
+            // ver.version, ver.device, ver.board — typed, with autocomplete
+            std::puts("  (response fields via dot access)");
         }
     }
 
-    // -----------------------------------------------------------------------
-    // Device status
-    // https://dev.blues.io/api-reference/notecard-api/card-requests/#card-status
-    // -----------------------------------------------------------------------
+    // Polymorphic endpoints — two access styles:
+    //   Endpoint-first: api.noteGet().get()  — Notecard API as landing page
+    //   Action-first:   api.getNoteGet()     — verb first, easy to discover
+    std::puts("--- note.get (endpoint-first) ---");
+    api.noteGet().get().file("data.qi").execute();
 
-    // {"req":"card.status"}
+    std::puts("--- note.get (action-first) ---");
+    api.getNoteGet().file("data.qi").execute();
+
+    // note.get has two variants: get (read-only) and delete_ (pop from queue)
+    std::puts("--- note.get delete (pop) ---");
+    api.noteGet().delete_().file("requests.qi").execute();
+
+    // Fire-and-forget command — sends "cmd" instead of "req"
+    std::puts("--- hub.set (command) ---");
+    api.hubSet().product("com.example.app").command();
+
+
+    // ═══════════════════════════════════════════════════════════════════
+    // 4. BODY SCHEMAS
+    //    Define a struct once. Use it to send data, receive data, and
+    //    register Notecard templates. The same type does all three.
+    // ═══════════════════════════════════════════════════════════════════
+
+    std::puts("\n=== 4. Body schemas ===\n");
+
+    // Send a note with a typed body
+    std::puts("--- note.add (typed body) ---");
     {
-        auto result = api.cardStatus().execute();
+        Readings r{.temperature = 22.5f, .humidity = 60};
+        api.noteAdd().file("sensors.qo").body(r).execute();
+    }
+
+    // Register a Notecard template — auto-generates type hints
+    // (14.1 = TFLOAT32, 11 = TINT16)
+    std::puts("--- note.template ---");
+    api.noteTemplate().set()
+        .file("sensors.qo")
+        .body(note::template_of<Readings>())
+        .execute();
+
+    // Parse a response body back into the struct
+    std::puts("--- note.get (parse body) ---");
+    {
+        auto result = api.noteGet().get().file("data.qi").execute();
         if (result) {
-            auto usb = result.usb;
-            auto storage = result.storage;
-            (void)usb;
-            (void)storage;
+            auto data = result.bodyAs<Readings>();
+            (void)data.temperature;
+            (void)data.humidity;
+            std::puts("  (body parsed into Readings struct)");
         }
     }
 
-    // -----------------------------------------------------------------------
-    // Adding Notes — three body tiers
-    // https://dev.blues.io/api-reference/notecard-api/note-requests/#note-add
-    // -----------------------------------------------------------------------
-
-    // Tier 1: Raw JSON string body (works everywhere)
-    // {"req":"note.add","body":"{\"temp\":22.5}","file":"sensors.qo"}
-    api.noteAdd().set_file("sensors.qo").set_body(R"({"temp":22.5})").execute();
-
-    // Tier 2: Builder lambda (structured body, no schema)
-    // {"req":"note.add","body":{"temp":22.5,"humidity":60},"file":"sensors.qo"}
+    // Bodies also work without a struct — three tiers:
+    //   Tier 1: Raw JSON string
+    std::puts("--- note.add (raw JSON body) ---");
     api.noteAdd()
-        .set_file("sensors.qo")
-        .set_body(note::body([](note::JsonBuilder& b) {
+        .file("sensors.qo")
+        .body(R"({"temp":22.5})")
+        .execute();
+
+    //   Tier 2: Builder lambda
+    std::puts("--- note.add (builder body) ---");
+    api.noteAdd()
+        .file("sensors.qo")
+        .body(note::body([](note::JsonBuilder& b) {
             b.add("temp", 22.5);
             b.add("humidity", int32_t{60});
         }))
         .execute();
 
-    // Tier 3: Schema struct — same Readings type for send, receive, and templates.
-    // NOTE_BODY macro works on C++17; on C++20 it's optional (reflection does it).
-    // {"req":"note.add","body":{"temperature":22.5,"humidity":60},"file":"sensors.qo"}
-    {
-        Readings r{.temperature = 22.5f, .humidity = 60};
-        api.noteAdd().set_file("sensors.qo").set_body(r).execute();
-    }
+    //   Tier 3: Schema struct (shown above with Readings)
 
-    // -----------------------------------------------------------------------
-    // Note templates — register schemas with type hints
-    // https://dev.blues.io/api-reference/notecard-api/note-requests/#note-template
-    // -----------------------------------------------------------------------
 
-    // Auto-generate template from C++ struct
-    // {"req":"note.template","body":{"temperature":14.1,"humidity":11},"file":"sensors.qo"}
-    api.noteTemplate().set()
-        .set_file("sensors.qo")
-        .set_body(note::template_of<Readings>())
-        .execute();
-
-    // -----------------------------------------------------------------------
-    // Reading Notes — typed response body
-    // https://dev.blues.io/api-reference/notecard-api/note-requests/#note-get
-    // -----------------------------------------------------------------------
-
-    // {"req":"note.get","file":"data.qi"} — query without deleting
-    {
-        auto result = api.noteGet().query().set_file("data.qi").execute();
-        if (result) {
-            // Access response scalar fields
-            auto payload = result.payload;
-            auto time = result.time;
-            (void)payload;
-            (void)time;
-
-            // Access body as raw reader (ad-hoc)
-            if (auto* body = result.body()) {
-                auto temp = body->get_double("temp");
-                (void)temp;
-            }
-
-            // Access body as typed struct (C++20 or NOTE_BODY)
-            auto r = result.body_as<Readings>();
-            (void)r.temperature;
-            (void)r.humidity;
-        }
-    }
-
-    // {"req":"note.get","delete":true,"file":"requests.qi"} — pop from queue
-    api.noteGet().delete_().set_file("requests.qi").execute();
-
-    // -----------------------------------------------------------------------
-    // Environment variables
-    // https://dev.blues.io/api-reference/notecard-api/env-requests/#env-set
-    // -----------------------------------------------------------------------
-
-    // Designated initializers:
-    // {"req":"env.set","name":"interval","text":"300"}
-    api.execute(note::api::EnvSet{.name = "interval", .text = "300"});
-
-    // -----------------------------------------------------------------------
-    // Fire-and-forget commands
-    // https://dev.blues.io/api-reference/notecard-api/hub-requests/#hub-set
-    // -----------------------------------------------------------------------
-
-    // {"cmd":"hub.set","product":"com.example.app"}
-    {
-        auto req = api.hubSet();
-        req.product = "com.example.app";
-        req.command();
-    }
-
-    // -----------------------------------------------------------------------
-    // Standalone usage (without Api factory)
-    // -----------------------------------------------------------------------
-
-    // req.execute(nc) — pass notecard explicitly:
-    {
-        note::api::CardVersion req;
-        auto result = req.execute(nc);
-        (void)result;
-    }
-
-    // nc.execute(req) — original style:
-    {
-        note::api::HubSet req;
-        req.set_product("test");
-        nc.execute(req);
-    }
-
-    // Ad-hoc request (for anything not yet generated):
-    {
-        auto result = nc.request("card.version");
-        if (result) {
-            auto version = (*result)->get_string("version");
-            (void)version;
-        }
-    }
-}
-
-int main() {
-    // This file is for illustration only — requires real backend and IO
-    // implementations to compile and link. See examples/smoke.cpp for
-    // a compilable mock example.
+    std::puts("\nAll examples completed.");
     return 0;
 }

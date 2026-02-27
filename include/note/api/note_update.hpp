@@ -2,6 +2,7 @@
 #pragma once
 
 #include <note/body.hpp>
+#include <note/dyn_field.hpp>
 #include <note/field.hpp>
 #include <note/json.hpp>
 #include <note/notecard.hpp>
@@ -10,6 +11,12 @@
 
 namespace note::api {
 
+
+
+
+
+
+
 struct NoteUpdate {
     static constexpr string_view notecard_request = "note.update";
     static constexpr bool supports_cmd = true;
@@ -17,41 +24,70 @@ struct NoteUpdate {
 
     Notecard* nc_ = nullptr;
 
-    BodyValue body{};
-    Field<note::string_view> file{};
-    Field<note::string_view> note_id{};
-    Field<note::string_view> payload{};
-    Field<bool> verify{};
+    /// A JSON object to add to the Note. A Note must have either a `body` or
+    /// `payload`, and can have both.
+    struct body_t : BodyValue {
+        using BodyValue::BodyValue;
+        NoteUpdate& operator()(BodyValue v);
+#if __cplusplus >= 202002L
+        template<typename T> requires detail::BodySchema<T>
+        NoteUpdate& operator()(const T& v);
+#endif
+    } body{};
+    /// The name of the DB Notefile that contains the Note to update.
+    struct file_t : Field<note::string_view> {
+        using Field<note::string_view>::Field;
+        using Field<note::string_view>::operator=;
+        NoteUpdate& operator()(note::string_view v);
+    } file{};
+    /// The unique Note ID.
+    struct noteId_t : Field<note::string_view> {
+        using Field<note::string_view>::Field;
+        using Field<note::string_view>::operator=;
+        NoteUpdate& operator()(note::string_view v);
+    } noteId{};
+    /// A base64-encoded binary payload. A Note must have either a `body` or
+    /// `payload`, and can have both.
+    struct payload_t : Field<note::string_view> {
+        using Field<note::string_view>::Field;
+        using Field<note::string_view>::operator=;
+        NoteUpdate& operator()(note::string_view v);
+    } payload{};
+    /// If set to `true` and using a templated Notefile, the Notefile will be
+    /// written to flash immediately, rather than being cached in RAM and
+    /// written to flash later.
+    struct verify_t : Field<bool> {
+        using Field<bool>::Field;
+        using Field<bool>::operator=;
+        NoteUpdate& operator()(bool v);
+    } verify{};
 
-#if __cpp_explicit_this_parameter >= 202110L
-    auto&& set_body(this auto&& self, BodyValue v) { self.body = v; return std::forward<decltype(self)>(self); }
-    template<typename T> requires detail::BodySchema<T>
-    auto&& set_body(this auto&& self, const T& v) { self.body = make_schema_body(v); return std::forward<decltype(self)>(self); }
-#else
-    auto& set_body(BodyValue v) { body = v; return *this; }
-    template<typename T> requires detail::BodySchema<T>
-    auto& set_body(const T& v) { body = make_schema_body(v); return *this; }
-#endif
-#if __cpp_explicit_this_parameter >= 202110L
-    auto&& set_file(this auto&& self, note::string_view v) { self.file = v; return std::forward<decltype(self)>(self); }
-#else
-    auto& set_file(note::string_view v) { file = v; return *this; }
-#endif
-#if __cpp_explicit_this_parameter >= 202110L
-    auto&& set_note_id(this auto&& self, note::string_view v) { self.note_id = v; return std::forward<decltype(self)>(self); }
-#else
-    auto& set_note_id(note::string_view v) { note_id = v; return *this; }
-#endif
-#if __cpp_explicit_this_parameter >= 202110L
-    auto&& set_payload(this auto&& self, note::string_view v) { self.payload = v; return std::forward<decltype(self)>(self); }
-#else
-    auto& set_payload(note::string_view v) { payload = v; return *this; }
-#endif
-#if __cpp_explicit_this_parameter >= 202110L
-    auto&& set_verify(this auto&& self, bool v) { self.verify = v; return std::forward<decltype(self)>(self); }
-#else
-    auto& set_verify(bool v) { verify = v; return *this; }
-#endif
+
+    template<typename T>
+    auto& extra(note::string_view key, T value) {
+        if (extras_count_ < NOTE_EXTRAS_MAX)
+            extras_[extras_count_++] = {key, note::DynValue{value}};
+        return *this;
+    }
+    auto& extra(note::string_view key, const char* value) {
+        return extra(key, note::string_view{value});
+    }
+
+    note::DynField operator[](note::string_view k_) {
+        if (k_ == "file") return note::dyn_field_for(file);
+        if (k_ == "note") return note::dyn_field_for(noteId);
+        if (k_ == "payload") return note::dyn_field_for(payload);
+        if (k_ == "verify") return note::dyn_field_for(verify);
+        if (extras_count_ < NOTE_EXTRAS_MAX) {
+            auto& slot = extras_[extras_count_++];
+            slot.key = k_;
+            return note::dyn_field_for(slot.value);
+        }
+        return {};
+    }
+
+    std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
+    uint8_t extras_count_ = 0;
 
     struct Response {
 
@@ -64,9 +100,14 @@ struct NoteUpdate {
     void build(JsonBuilder& b) const {
         body.write_to(b);
         if (file) b.add("file", *file);
-        if (note_id) b.add("note", *note_id);
+        if (noteId) b.add("note", *noteId);
         if (payload) b.add("payload", *payload);
         if (verify) b.add("verify", *verify);
+        for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
+            std::visit([&](auto&& v_) {
+                if constexpr (!std::is_same_v<std::decay_t<decltype(v_)>, std::monostate>)
+                    b.add(extras_[i_].key, v_);
+            }, extras_[i_].value);
     }
 
     auto execute() const { return nc_->execute(*this); }
@@ -75,5 +116,43 @@ struct NoteUpdate {
     Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
 
 };
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+inline NoteUpdate& NoteUpdate::body_t::operator()(BodyValue v) {
+    BodyValue::operator=(std::move(v));
+    return *reinterpret_cast<NoteUpdate*>(
+        reinterpret_cast<char*>(this) - offsetof(NoteUpdate, body));
+}
+#if __cplusplus >= 202002L
+template<typename T> requires detail::BodySchema<T>
+inline NoteUpdate& NoteUpdate::body_t::operator()(const T& v) {
+    BodyValue::operator=(make_schema_body(v));
+    return *reinterpret_cast<NoteUpdate*>(
+        reinterpret_cast<char*>(this) - offsetof(NoteUpdate, body));
+}
+#endif
+inline NoteUpdate& NoteUpdate::file_t::operator()(note::string_view v) {
+    Field<note::string_view>::operator=(v);
+    return *reinterpret_cast<NoteUpdate*>(
+        reinterpret_cast<char*>(this) - offsetof(NoteUpdate, file));
+}
+inline NoteUpdate& NoteUpdate::noteId_t::operator()(note::string_view v) {
+    Field<note::string_view>::operator=(v);
+    return *reinterpret_cast<NoteUpdate*>(
+        reinterpret_cast<char*>(this) - offsetof(NoteUpdate, noteId));
+}
+inline NoteUpdate& NoteUpdate::payload_t::operator()(note::string_view v) {
+    Field<note::string_view>::operator=(v);
+    return *reinterpret_cast<NoteUpdate*>(
+        reinterpret_cast<char*>(this) - offsetof(NoteUpdate, payload));
+}
+inline NoteUpdate& NoteUpdate::verify_t::operator()(bool v) {
+    Field<bool>::operator=(v);
+    return *reinterpret_cast<NoteUpdate*>(
+        reinterpret_cast<char*>(this) - offsetof(NoteUpdate, verify));
+}
+#pragma GCC diagnostic pop
+
 
 } // namespace note::api

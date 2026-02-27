@@ -2,6 +2,7 @@
 #pragma once
 
 #include <note/body.hpp>
+#include <note/dyn_field.hpp>
 #include <note/field.hpp>
 #include <note/json.hpp>
 #include <note/notecard.hpp>
@@ -10,49 +11,88 @@
 
 namespace note::api {
 
+
+
+
+
+
+
 struct NoteGet {
 
-    struct Query {
+    struct Get {
         static constexpr string_view notecard_request = "note.get";
         static constexpr bool supports_cmd = true;
         static constexpr Safety safety = Safety::ReadOnly;
 
         Notecard* nc_ = nullptr;
 
-        Field<bool> decrypt{};
-        Field<bool> deleted{};
-        Field<note::string_view> file{};
-        Field<note::string_view> note_id{};
+        /// `true` to decrypt [encrypted inbound Notefiles](/guides-and-
+        /// tutorials/notecard-guides/encrypting-and-decrypting-data-with-the-
+        /// notecard).
+        struct decrypt_t : Field<bool> {
+            using Field<bool>::Field;
+            using Field<bool>::operator=;
+            NoteGet::Get& operator()(bool v);
+        } decrypt{};
+        /// `true` to allow retrieval of a deleted Note.
+        struct deleted_t : Field<bool> {
+            using Field<bool>::Field;
+            using Field<bool>::operator=;
+            NoteGet::Get& operator()(bool v);
+        } deleted{};
+        /// The Notefile name must end in `.qi` (for plaintext transport),
+        /// `.qis` (for encrypted transport), `.db` or `.dbx` (for local-only DB
+        /// Notefiles).
+        struct file_t : Field<note::string_view> {
+            using Field<note::string_view>::Field;
+            using Field<note::string_view>::operator=;
+            NoteGet::Get& operator()(note::string_view v);
+        } file{};
+        /// If the Notefile has a `.db` or `.dbx` extension, specifies a unique
+        /// Note ID. Not applicable to `.qi` Notefiles.
+        struct noteId_t : Field<note::string_view> {
+            using Field<note::string_view>::Field;
+            using Field<note::string_view>::operator=;
+            NoteGet::Get& operator()(note::string_view v);
+        } noteId{};
 
-#if __cpp_explicit_this_parameter >= 202110L
-        auto&& set_decrypt(this auto&& self, bool v) { self.decrypt = v; return std::forward<decltype(self)>(self); }
-#else
-        auto& set_decrypt(bool v) { decrypt = v; return *this; }
-#endif
-#if __cpp_explicit_this_parameter >= 202110L
-        auto&& set_deleted(this auto&& self, bool v) { self.deleted = v; return std::forward<decltype(self)>(self); }
-#else
-        auto& set_deleted(bool v) { deleted = v; return *this; }
-#endif
-#if __cpp_explicit_this_parameter >= 202110L
-        auto&& set_file(this auto&& self, note::string_view v) { self.file = v; return std::forward<decltype(self)>(self); }
-#else
-        auto& set_file(note::string_view v) { file = v; return *this; }
-#endif
-#if __cpp_explicit_this_parameter >= 202110L
-        auto&& set_note_id(this auto&& self, note::string_view v) { self.note_id = v; return std::forward<decltype(self)>(self); }
-#else
-        auto& set_note_id(note::string_view v) { note_id = v; return *this; }
-#endif
+
+        template<typename T>
+        auto& extra(note::string_view key, T value) {
+            if (extras_count_ < NOTE_EXTRAS_MAX)
+                extras_[extras_count_++] = {key, note::DynValue{value}};
+            return *this;
+        }
+        auto& extra(note::string_view key, const char* value) {
+            return extra(key, note::string_view{value});
+        }
+
+        note::DynField operator[](note::string_view k_) {
+            if (k_ == "decrypt") return note::dyn_field_for(decrypt);
+            if (k_ == "deleted") return note::dyn_field_for(deleted);
+            if (k_ == "file") return note::dyn_field_for(file);
+            if (k_ == "note") return note::dyn_field_for(noteId);
+            if (extras_count_ < NOTE_EXTRAS_MAX) {
+                auto& slot = extras_[extras_count_++];
+                slot.key = k_;
+                return note::dyn_field_for(slot.value);
+            }
+            return {};
+        }
+
+        std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
+        uint8_t extras_count_ = 0;
 
         struct Response {
+            /// The payload, if contained in the Note.
             note::string_view payload{};
+            /// The time the Note was added to the Notecard or Notehub.
             int32_t time{};
 
             const JsonReader* body() const { return body_.get(); }
 
             template<typename T>
-            T body_as() const {
+            T bodyAs() const {
                 if (body_) return parse_body_<T>(*body_);
                 return T{};
             }
@@ -91,7 +131,12 @@ struct NoteGet {
             if (decrypt) b.add("decrypt", *decrypt);
             if (deleted) b.add("deleted", *deleted);
             if (file) b.add("file", *file);
-            if (note_id) b.add("note", *note_id);
+            if (noteId) b.add("note", *noteId);
+            for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
+                std::visit([&](auto&& v_) {
+                    if constexpr (!std::is_same_v<std::decay_t<decltype(v_)>, std::monostate>)
+                        b.add(extras_[i_].key, v_);
+                }, extras_[i_].value);
         }
 
         auto execute() const { return nc_->execute(*this); }
@@ -108,40 +153,73 @@ struct NoteGet {
 
         Notecard* nc_ = nullptr;
 
-        Field<bool> decrypt{};
-        Field<bool> deleted{};
-        Field<note::string_view> file{};
-        Field<note::string_view> note_id{};
+        /// `true` to decrypt [encrypted inbound Notefiles](/guides-and-
+        /// tutorials/notecard-guides/encrypting-and-decrypting-data-with-the-
+        /// notecard).
+        struct decrypt_t : Field<bool> {
+            using Field<bool>::Field;
+            using Field<bool>::operator=;
+            NoteGet::Delete& operator()(bool v);
+        } decrypt{};
+        /// `true` to allow retrieval of a deleted Note.
+        struct deleted_t : Field<bool> {
+            using Field<bool>::Field;
+            using Field<bool>::operator=;
+            NoteGet::Delete& operator()(bool v);
+        } deleted{};
+        /// The Notefile name must end in `.qi` (for plaintext transport),
+        /// `.qis` (for encrypted transport), `.db` or `.dbx` (for local-only DB
+        /// Notefiles).
+        struct file_t : Field<note::string_view> {
+            using Field<note::string_view>::Field;
+            using Field<note::string_view>::operator=;
+            NoteGet::Delete& operator()(note::string_view v);
+        } file{};
+        /// If the Notefile has a `.db` or `.dbx` extension, specifies a unique
+        /// Note ID. Not applicable to `.qi` Notefiles.
+        struct noteId_t : Field<note::string_view> {
+            using Field<note::string_view>::Field;
+            using Field<note::string_view>::operator=;
+            NoteGet::Delete& operator()(note::string_view v);
+        } noteId{};
 
-#if __cpp_explicit_this_parameter >= 202110L
-        auto&& set_decrypt(this auto&& self, bool v) { self.decrypt = v; return std::forward<decltype(self)>(self); }
-#else
-        auto& set_decrypt(bool v) { decrypt = v; return *this; }
-#endif
-#if __cpp_explicit_this_parameter >= 202110L
-        auto&& set_deleted(this auto&& self, bool v) { self.deleted = v; return std::forward<decltype(self)>(self); }
-#else
-        auto& set_deleted(bool v) { deleted = v; return *this; }
-#endif
-#if __cpp_explicit_this_parameter >= 202110L
-        auto&& set_file(this auto&& self, note::string_view v) { self.file = v; return std::forward<decltype(self)>(self); }
-#else
-        auto& set_file(note::string_view v) { file = v; return *this; }
-#endif
-#if __cpp_explicit_this_parameter >= 202110L
-        auto&& set_note_id(this auto&& self, note::string_view v) { self.note_id = v; return std::forward<decltype(self)>(self); }
-#else
-        auto& set_note_id(note::string_view v) { note_id = v; return *this; }
-#endif
+
+        template<typename T>
+        auto& extra(note::string_view key, T value) {
+            if (extras_count_ < NOTE_EXTRAS_MAX)
+                extras_[extras_count_++] = {key, note::DynValue{value}};
+            return *this;
+        }
+        auto& extra(note::string_view key, const char* value) {
+            return extra(key, note::string_view{value});
+        }
+
+        note::DynField operator[](note::string_view k_) {
+            if (k_ == "decrypt") return note::dyn_field_for(decrypt);
+            if (k_ == "deleted") return note::dyn_field_for(deleted);
+            if (k_ == "file") return note::dyn_field_for(file);
+            if (k_ == "note") return note::dyn_field_for(noteId);
+            if (extras_count_ < NOTE_EXTRAS_MAX) {
+                auto& slot = extras_[extras_count_++];
+                slot.key = k_;
+                return note::dyn_field_for(slot.value);
+            }
+            return {};
+        }
+
+        std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
+        uint8_t extras_count_ = 0;
 
         struct Response {
+            /// The payload, if contained in the Note.
             note::string_view payload{};
+            /// The time the Note was added to the Notecard or Notehub.
             int32_t time{};
 
             const JsonReader* body() const { return body_.get(); }
 
             template<typename T>
-            T body_as() const {
+            T bodyAs() const {
                 if (body_) return parse_body_<T>(*body_);
                 return T{};
             }
@@ -181,7 +259,12 @@ struct NoteGet {
             b.add("delete", true);
             if (deleted) b.add("deleted", *deleted);
             if (file) b.add("file", *file);
-            if (note_id) b.add("note", *note_id);
+            if (noteId) b.add("note", *noteId);
+            for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
+                std::visit([&](auto&& v_) {
+                    if constexpr (!std::is_same_v<std::decay_t<decltype(v_)>, std::monostate>)
+                        b.add(extras_[i_].key, v_);
+                }, extras_[i_].value);
         }
 
         auto execute() const { return nc_->execute(*this); }
@@ -191,5 +274,54 @@ struct NoteGet {
 
     };
 };
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+inline NoteGet::Get& NoteGet::Get::decrypt_t::operator()(bool v) {
+    Field<bool>::operator=(v);
+    return *reinterpret_cast<NoteGet::Get*>(
+        reinterpret_cast<char*>(this) - offsetof(NoteGet::Get, decrypt));
+}
+inline NoteGet::Get& NoteGet::Get::deleted_t::operator()(bool v) {
+    Field<bool>::operator=(v);
+    return *reinterpret_cast<NoteGet::Get*>(
+        reinterpret_cast<char*>(this) - offsetof(NoteGet::Get, deleted));
+}
+inline NoteGet::Get& NoteGet::Get::file_t::operator()(note::string_view v) {
+    Field<note::string_view>::operator=(v);
+    return *reinterpret_cast<NoteGet::Get*>(
+        reinterpret_cast<char*>(this) - offsetof(NoteGet::Get, file));
+}
+inline NoteGet::Get& NoteGet::Get::noteId_t::operator()(note::string_view v) {
+    Field<note::string_view>::operator=(v);
+    return *reinterpret_cast<NoteGet::Get*>(
+        reinterpret_cast<char*>(this) - offsetof(NoteGet::Get, noteId));
+}
+#pragma GCC diagnostic pop
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+inline NoteGet::Delete& NoteGet::Delete::decrypt_t::operator()(bool v) {
+    Field<bool>::operator=(v);
+    return *reinterpret_cast<NoteGet::Delete*>(
+        reinterpret_cast<char*>(this) - offsetof(NoteGet::Delete, decrypt));
+}
+inline NoteGet::Delete& NoteGet::Delete::deleted_t::operator()(bool v) {
+    Field<bool>::operator=(v);
+    return *reinterpret_cast<NoteGet::Delete*>(
+        reinterpret_cast<char*>(this) - offsetof(NoteGet::Delete, deleted));
+}
+inline NoteGet::Delete& NoteGet::Delete::file_t::operator()(note::string_view v) {
+    Field<note::string_view>::operator=(v);
+    return *reinterpret_cast<NoteGet::Delete*>(
+        reinterpret_cast<char*>(this) - offsetof(NoteGet::Delete, file));
+}
+inline NoteGet::Delete& NoteGet::Delete::noteId_t::operator()(note::string_view v) {
+    Field<note::string_view>::operator=(v);
+    return *reinterpret_cast<NoteGet::Delete*>(
+        reinterpret_cast<char*>(this) - offsetof(NoteGet::Delete, noteId));
+}
+#pragma GCC diagnostic pop
+
 
 } // namespace note::api

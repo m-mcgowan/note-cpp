@@ -45,13 +45,13 @@ TEST_CASE("{{ test.endpoint }} {{ test.title }}") {
 {% elif test.sub_type %}
     note::api::{{ test.struct_name }}::{{ test.sub_type }} req;
 {% for field in test.fields %}
-    req.set_{{ field.cpp_name }}({{ field.literal }});
+    req.{{ field.accessor_name }}({{ field.literal }});
 {% endfor %}
     h.nc.execute(req);
 {% else %}
     note::api::{{ test.struct_name }} req;
 {% for field in test.fields %}
-    req.set_{{ field.cpp_name }}({{ field.literal }});
+    req.{{ field.accessor_name }}({{ field.literal }});
 {% endfor %}
     h.nc.execute(req);
 {% endif %}

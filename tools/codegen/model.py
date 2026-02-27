@@ -19,6 +19,18 @@ class PropertyDef:
     is_body: bool = False  # True for type:object fields (use BodyValue)
 
     @property
+    def accessor_name(self) -> str:
+        """camelCase field/accessor name (e.g. 'note_id' -> 'noteId')."""
+        from codegen.naming import accessor_name
+        return accessor_name(self.cpp_name)
+
+    @property
+    def nested_type_name(self) -> str:
+        """Name of the generated per-field functor nested struct (e.g. 'mode_t')."""
+        from codegen.naming import nested_type_name
+        return nested_type_name(self.cpp_name)
+
+    @property
     def version_guard(self) -> str | None:
         """C preprocessor guard for this property, or None if ungated."""
         if not self.min_api_version:
@@ -64,6 +76,14 @@ _FACTORY_METHOD_RENAMES: dict[str, str] = {
     "delete": "delete_",
 }
 
+# Action verbs for polymorphic operations (used in action-first methods)
+_ACTION_VERBS: dict[str, str] = {
+    "Get": "get",
+    "Set": "set",
+    "Delete": "delete",
+    "Create": "create",
+}
+
 
 @dataclass
 class OperationDef:
@@ -78,10 +98,28 @@ class OperationDef:
     binary_transfer: BinaryTransferDef | None = None
 
     @property
+    def has_version_gated_props(self) -> bool:
+        """True if any property has a version guard (needs deprecation pragma)."""
+        return any(p.version_guard for p in self.properties)
+
+    @property
+    def has_version_gated_response_props(self) -> bool:
+        """True if any response property has a version guard."""
+        return any(p.version_guard for p in self.response.properties)
+
+    @property
     def factory_method(self) -> str:
-        """camelCase factory method name for polymorphic sub-type."""
+        """camelCase factory method name for polymorphic sub-type.
+
+        e.g. 'Get' -> 'get', 'Set' -> 'set', 'Delete' -> 'delete_'
+        """
         name = self.struct_name[0].lower() + self.struct_name[1:]
         return _FACTORY_METHOD_RENAMES.get(name, name)
+
+    @property
+    def action_verb(self) -> str:
+        """Action verb for this operation: 'get', 'set', 'delete', etc."""
+        return _ACTION_VERBS.get(self.struct_name, self.struct_name[0].lower() + self.struct_name[1:])
 
 
 @dataclass
@@ -98,3 +136,12 @@ class EndpointGroup:
         """camelCase factory method name: 'NoteGet' -> 'noteGet'."""
         name = self.struct_name
         return name[0].lower() + name[1:]
+
+    def action_first_method(self, op: OperationDef) -> str:
+        """Action-first method name: verb + endpoint struct.
+
+        e.g. CardTemp + Get -> 'getCardTemp'
+             NoteGet + Delete -> 'deleteNoteGet'  (unusual, but consistent)
+        """
+        verb = op.action_verb
+        return verb + self.struct_name

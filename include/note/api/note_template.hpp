@@ -2,6 +2,7 @@
 #pragma once
 
 #include <note/body.hpp>
+#include <note/dyn_field.hpp>
 #include <note/field.hpp>
 #include <note/json.hpp>
 #include <note/notecard.hpp>
@@ -9,6 +10,12 @@
 #include <note/types.hpp>
 
 namespace note::api {
+
+
+
+
+
+
 
 struct NoteTemplate {
 
@@ -19,94 +26,195 @@ struct NoteTemplate {
 
         Notecard* nc_ = nullptr;
 
-        BodyValue body{};
-        Field<bool> delete_{};
-        Field<note::string_view> file{};
-#if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3)
-        Field<note::string_view> format{};
+        /// A sample JSON body that specifies field names and values as "hints"
+        /// for the data type. Possible data types are: boolean, integer, float,
+        /// and string. See [Understanding Template Data
+        /// Types](https://dev.blues.io/notecard/notecard-walkthrough/low-
+        /// bandwidth-design/#understanding-template-data-types) for an
+        /// explanation of type hints and explanations.
+        struct body_t : BodyValue {
+            using BodyValue::BodyValue;
+            NoteTemplate::Set& operator()(BodyValue v);
+#if __cplusplus >= 202002L
+            template<typename T> requires detail::BodySchema<T>
+            NoteTemplate::Set& operator()(const T& v);
 #endif
-        Field<int32_t> length{};
-        Field<int32_t> port{};
-#if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1)
-        Field<bool> verify{};
+        } body{};
+        /// Set to `true` to delete all pending Notes using the template if one
+        /// of the following scenarios is also true:
+        ///
+        /// Connecting via non-NTN (e.g. cellular or WiFi) communications, but
+        /// attempting to sync NTN-compatible Notefiles.
+        ///
+        /// or
+        ///
+        /// Connecting via NTN (e.g. satellite) communications, but attempting
+        /// to sync non-NTN-compatible Notefiles.
+        ///
+        /// Read more about this feature in [Starnote Best
+        /// Practices](https://dev.blues.io/starnote/starnote-best-
+        /// practices/#define-ntn-vs-non-ntn-templates).
+        struct delete_t : Field<bool> {
+            using Field<bool>::Field;
+            using Field<bool>::operator=;
+            NoteTemplate::Set& operator()(bool v);
+        } delete_{};
+        /// The name of the Notefile to which the template will be applied.
+        struct file_t : Field<note::string_view> {
+            using Field<note::string_view>::Field;
+            using Field<note::string_view>::operator=;
+            NoteTemplate::Set& operator()(note::string_view v);
+        } file{};
+#if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
+        /// By default all Note templates automatically include metadata,
+        /// including a timestamp for when the Note was created, various fields
+        /// about a device's location, as well as a timestamp for when the
+        /// device's location was determined.
+        ///
+        /// By providing a `format` of `"compact"` you tell the Notecard to omit
+        /// this additional metadata to save on storage and bandwidth. The use
+        /// of `format: "compact"` is required for Notecard LoRa and a Notecard
+        /// paired with Starnote.
+        ///
+        /// When using `"compact"` templates, you may include the following
+        /// keywords in your template to add in fields that would otherwise be
+        /// omitted: `_lat`, `_lon`, `_ltime`, `_time`. See [Creating Compact
+        /// Templates](https://dev.blues.io/notecard/notecard-walkthrough/low-
+        /// bandwidth-design/#creating-compact-templates) to learn more.
+        ///
+        /// @since firmware 6.2.3
+#if NOTE_API_VERSION < NOTE_VERSION(6, 2, 3)
+        [[deprecated("requires firmware >= 6.2.3")]]
+#endif
+        struct format_t : Field<note::string_view> {
+            using Field<note::string_view>::Field;
+            using Field<note::string_view>::operator=;
+            NoteTemplate::Set& operator()(note::string_view v);
+        } format{};
+#endif
+        /// The maximum length of a `payload` (in bytes) that can be sent in
+        /// Notes for the template Notefile. As of v3.2.1 `length` is not
+        /// required, and payloads can be added to any template-based Note
+        /// without specifying the payload length.
+        struct length_t : Field<int32_t> {
+            using Field<int32_t>::Field;
+            using Field<int32_t>::operator=;
+            NoteTemplate::Set& operator()(int32_t v);
+        } length{};
+        /// This argument is required on Notecard LoRa and a Notecard paired
+        /// with Starnote, but ignored on all other Notecards.
+        ///
+        /// A port is a unique integer in the range 1–100, where each unique
+        /// number represents one Notefile. This argument allows the Notecard to
+        /// send a numerical reference to the Notefile over the air, rather than
+        /// the full Notefile name.
+        ///
+        /// The port you provide is also used in the "frame port" field on
+        /// LoRaWAN gateways.
+        struct port_t : Field<int32_t> {
+            using Field<int32_t>::Field;
+            using Field<int32_t>::operator=;
+            NoteTemplate::Set& operator()(int32_t v);
+        } port{};
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
+        /// If `true`, returns the current template set on a given Notefile.
+        ///
+        /// @since firmware 3.2.1
+#if NOTE_API_VERSION < NOTE_VERSION(3, 2, 1)
+        [[deprecated("requires firmware >= 3.2.1")]]
+#endif
+        struct verify_t : Field<bool> {
+            using Field<bool>::Field;
+            using Field<bool>::operator=;
+            NoteTemplate::Set& operator()(bool v);
+        } verify{};
 #endif
 
-#if __cpp_explicit_this_parameter >= 202110L
-        auto&& set_body(this auto&& self, BodyValue v) { self.body = v; return std::forward<decltype(self)>(self); }
-        template<typename T> requires detail::BodySchema<T>
-        auto&& set_body(this auto&& self, const T& v) { self.body = make_schema_body(v); return std::forward<decltype(self)>(self); }
-#else
-        auto& set_body(BodyValue v) { body = v; return *this; }
-        template<typename T> requires detail::BodySchema<T>
-        auto& set_body(const T& v) { body = make_schema_body(v); return *this; }
+
+        template<typename T>
+        auto& extra(note::string_view key, T value) {
+            if (extras_count_ < NOTE_EXTRAS_MAX)
+                extras_[extras_count_++] = {key, note::DynValue{value}};
+            return *this;
+        }
+        auto& extra(note::string_view key, const char* value) {
+            return extra(key, note::string_view{value});
+        }
+
+        note::DynField operator[](note::string_view k_) {
+            if (k_ == "delete") return note::dyn_field_for(delete_);
+            if (k_ == "file") return note::dyn_field_for(file);
+#if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
+            if (k_ == "format") return note::dyn_field_for(format);
 #endif
-#if __cpp_explicit_this_parameter >= 202110L
-        auto&& set_delete_(this auto&& self, bool v) { self.delete_ = v; return std::forward<decltype(self)>(self); }
-#else
-        auto& set_delete_(bool v) { delete_ = v; return *this; }
+            if (k_ == "length") return note::dyn_field_for(length);
+            if (k_ == "port") return note::dyn_field_for(port);
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
+            if (k_ == "verify") return note::dyn_field_for(verify);
 #endif
-#if __cpp_explicit_this_parameter >= 202110L
-        auto&& set_file(this auto&& self, note::string_view v) { self.file = v; return std::forward<decltype(self)>(self); }
-#else
-        auto& set_file(note::string_view v) { file = v; return *this; }
-#endif
-#if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3)
-#if __cpp_explicit_this_parameter >= 202110L
-        auto&& set_format(this auto&& self, note::string_view v) { self.format = v; return std::forward<decltype(self)>(self); }
-#else
-        auto& set_format(note::string_view v) { format = v; return *this; }
-#endif
-#endif
-#if __cpp_explicit_this_parameter >= 202110L
-        auto&& set_length(this auto&& self, int32_t v) { self.length = v; return std::forward<decltype(self)>(self); }
-#else
-        auto& set_length(int32_t v) { length = v; return *this; }
-#endif
-#if __cpp_explicit_this_parameter >= 202110L
-        auto&& set_port(this auto&& self, int32_t v) { self.port = v; return std::forward<decltype(self)>(self); }
-#else
-        auto& set_port(int32_t v) { port = v; return *this; }
-#endif
-#if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1)
-#if __cpp_explicit_this_parameter >= 202110L
-        auto&& set_verify(this auto&& self, bool v) { self.verify = v; return std::forward<decltype(self)>(self); }
-#else
-        auto& set_verify(bool v) { verify = v; return *this; }
-#endif
-#endif
+            if (extras_count_ < NOTE_EXTRAS_MAX) {
+                auto& slot = extras_[extras_count_++];
+                slot.key = k_;
+                return note::dyn_field_for(slot.value);
+            }
+            return {};
+        }
+
+        std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
+        uint8_t extras_count_ = 0;
 
         struct Response {
+            /// The number of bytes that will be transmitted to Notehub, per
+            /// Note, before compression.
             int32_t bytes{};
-#if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3)
+#if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
+            /// If the `format` argument is provided, this represents the format
+            /// applied to the template.
+            ///
+            /// @since firmware 6.2.3
+#if NOTE_API_VERSION < NOTE_VERSION(6, 2, 3)
+            [[deprecated("requires firmware >= 6.2.3")]]
+#endif
             note::string_view format{};
 #endif
+            /// If the `verify` argument is provided and the Notefile has an
+            /// active template with a payload, the payload length.
             int32_t length{};
-#if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1)
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
+            /// `true` if an active template exists on the Notefile.
+            ///
+            /// @since firmware 3.2.1
+#if NOTE_API_VERSION < NOTE_VERSION(3, 2, 1)
+            [[deprecated("requires firmware >= 3.2.1")]]
+#endif
             bool template_{};
 #endif
 
             const JsonReader* body() const { return body_.get(); }
 
             template<typename T>
-            T body_as() const {
+            T bodyAs() const {
                 if (body_) return parse_body_<T>(*body_);
                 return T{};
             }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
                 rsp.bytes = reader_->get_int("bytes");
-#if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3)
+#if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
                 rsp.format = reader_->get_string("format");
 #endif
                 rsp.length = reader_->get_int("length");
-#if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1)
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
                 rsp.template_ = reader_->get_bool("template");
 #endif
                 rsp.body_ = reader_->get_object("body");
                 rsp.reader_ = std::move(reader_);
                 return rsp;
             }
+#pragma GCC diagnostic pop
 
         private:
             std::unique_ptr<JsonReader> reader_;
@@ -129,19 +237,27 @@ struct NoteTemplate {
             }
         };
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
         void build(JsonBuilder& b) const {
             body.write_to(b);
             if (delete_) b.add("delete", *delete_);
             if (file) b.add("file", *file);
-#if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3)
+#if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
             if (format) b.add("format", *format);
 #endif
             if (length) b.add("length", *length);
             if (port) b.add("port", *port);
-#if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1)
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
             if (verify) b.add("verify", *verify);
 #endif
+            for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
+                std::visit([&](auto&& v_) {
+                    if constexpr (!std::is_same_v<std::decay_t<decltype(v_)>, std::monostate>)
+                        b.add(extras_[i_].key, v_);
+                }, extras_[i_].value);
         }
+#pragma GCC diagnostic pop
 
         auto execute() const { return nc_->execute(*this); }
         auto execute(Notecard& nc) const { return nc.execute(*this); }
@@ -157,88 +273,175 @@ struct NoteTemplate {
 
         Notecard* nc_ = nullptr;
 
-        BodyValue body{};
-        Field<note::string_view> file{};
-#if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3)
-        Field<note::string_view> format{};
+        /// A sample JSON body that specifies field names and values as "hints"
+        /// for the data type. Possible data types are: boolean, integer, float,
+        /// and string. See [Understanding Template Data
+        /// Types](https://dev.blues.io/notecard/notecard-walkthrough/low-
+        /// bandwidth-design/#understanding-template-data-types) for an
+        /// explanation of type hints and explanations.
+        struct body_t : BodyValue {
+            using BodyValue::BodyValue;
+            NoteTemplate::Delete& operator()(BodyValue v);
+#if __cplusplus >= 202002L
+            template<typename T> requires detail::BodySchema<T>
+            NoteTemplate::Delete& operator()(const T& v);
 #endif
-        Field<int32_t> length{};
-        Field<int32_t> port{};
-#if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1)
-        Field<bool> verify{};
+        } body{};
+        /// The name of the Notefile to which the template will be applied.
+        struct file_t : Field<note::string_view> {
+            using Field<note::string_view>::Field;
+            using Field<note::string_view>::operator=;
+            NoteTemplate::Delete& operator()(note::string_view v);
+        } file{};
+#if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
+        /// By default all Note templates automatically include metadata,
+        /// including a timestamp for when the Note was created, various fields
+        /// about a device's location, as well as a timestamp for when the
+        /// device's location was determined.
+        ///
+        /// By providing a `format` of `"compact"` you tell the Notecard to omit
+        /// this additional metadata to save on storage and bandwidth. The use
+        /// of `format: "compact"` is required for Notecard LoRa and a Notecard
+        /// paired with Starnote.
+        ///
+        /// When using `"compact"` templates, you may include the following
+        /// keywords in your template to add in fields that would otherwise be
+        /// omitted: `_lat`, `_lon`, `_ltime`, `_time`. See [Creating Compact
+        /// Templates](https://dev.blues.io/notecard/notecard-walkthrough/low-
+        /// bandwidth-design/#creating-compact-templates) to learn more.
+        ///
+        /// @since firmware 6.2.3
+#if NOTE_API_VERSION < NOTE_VERSION(6, 2, 3)
+        [[deprecated("requires firmware >= 6.2.3")]]
+#endif
+        struct format_t : Field<note::string_view> {
+            using Field<note::string_view>::Field;
+            using Field<note::string_view>::operator=;
+            NoteTemplate::Delete& operator()(note::string_view v);
+        } format{};
+#endif
+        /// The maximum length of a `payload` (in bytes) that can be sent in
+        /// Notes for the template Notefile. As of v3.2.1 `length` is not
+        /// required, and payloads can be added to any template-based Note
+        /// without specifying the payload length.
+        struct length_t : Field<int32_t> {
+            using Field<int32_t>::Field;
+            using Field<int32_t>::operator=;
+            NoteTemplate::Delete& operator()(int32_t v);
+        } length{};
+        /// This argument is required on Notecard LoRa and a Notecard paired
+        /// with Starnote, but ignored on all other Notecards.
+        ///
+        /// A port is a unique integer in the range 1–100, where each unique
+        /// number represents one Notefile. This argument allows the Notecard to
+        /// send a numerical reference to the Notefile over the air, rather than
+        /// the full Notefile name.
+        ///
+        /// The port you provide is also used in the "frame port" field on
+        /// LoRaWAN gateways.
+        struct port_t : Field<int32_t> {
+            using Field<int32_t>::Field;
+            using Field<int32_t>::operator=;
+            NoteTemplate::Delete& operator()(int32_t v);
+        } port{};
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
+        /// If `true`, returns the current template set on a given Notefile.
+        ///
+        /// @since firmware 3.2.1
+#if NOTE_API_VERSION < NOTE_VERSION(3, 2, 1)
+        [[deprecated("requires firmware >= 3.2.1")]]
+#endif
+        struct verify_t : Field<bool> {
+            using Field<bool>::Field;
+            using Field<bool>::operator=;
+            NoteTemplate::Delete& operator()(bool v);
+        } verify{};
 #endif
 
-#if __cpp_explicit_this_parameter >= 202110L
-        auto&& set_body(this auto&& self, BodyValue v) { self.body = v; return std::forward<decltype(self)>(self); }
-        template<typename T> requires detail::BodySchema<T>
-        auto&& set_body(this auto&& self, const T& v) { self.body = make_schema_body(v); return std::forward<decltype(self)>(self); }
-#else
-        auto& set_body(BodyValue v) { body = v; return *this; }
-        template<typename T> requires detail::BodySchema<T>
-        auto& set_body(const T& v) { body = make_schema_body(v); return *this; }
+
+        template<typename T>
+        auto& extra(note::string_view key, T value) {
+            if (extras_count_ < NOTE_EXTRAS_MAX)
+                extras_[extras_count_++] = {key, note::DynValue{value}};
+            return *this;
+        }
+        auto& extra(note::string_view key, const char* value) {
+            return extra(key, note::string_view{value});
+        }
+
+        note::DynField operator[](note::string_view k_) {
+            if (k_ == "file") return note::dyn_field_for(file);
+#if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
+            if (k_ == "format") return note::dyn_field_for(format);
 #endif
-#if __cpp_explicit_this_parameter >= 202110L
-        auto&& set_file(this auto&& self, note::string_view v) { self.file = v; return std::forward<decltype(self)>(self); }
-#else
-        auto& set_file(note::string_view v) { file = v; return *this; }
+            if (k_ == "length") return note::dyn_field_for(length);
+            if (k_ == "port") return note::dyn_field_for(port);
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
+            if (k_ == "verify") return note::dyn_field_for(verify);
 #endif
-#if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3)
-#if __cpp_explicit_this_parameter >= 202110L
-        auto&& set_format(this auto&& self, note::string_view v) { self.format = v; return std::forward<decltype(self)>(self); }
-#else
-        auto& set_format(note::string_view v) { format = v; return *this; }
-#endif
-#endif
-#if __cpp_explicit_this_parameter >= 202110L
-        auto&& set_length(this auto&& self, int32_t v) { self.length = v; return std::forward<decltype(self)>(self); }
-#else
-        auto& set_length(int32_t v) { length = v; return *this; }
-#endif
-#if __cpp_explicit_this_parameter >= 202110L
-        auto&& set_port(this auto&& self, int32_t v) { self.port = v; return std::forward<decltype(self)>(self); }
-#else
-        auto& set_port(int32_t v) { port = v; return *this; }
-#endif
-#if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1)
-#if __cpp_explicit_this_parameter >= 202110L
-        auto&& set_verify(this auto&& self, bool v) { self.verify = v; return std::forward<decltype(self)>(self); }
-#else
-        auto& set_verify(bool v) { verify = v; return *this; }
-#endif
-#endif
+            if (extras_count_ < NOTE_EXTRAS_MAX) {
+                auto& slot = extras_[extras_count_++];
+                slot.key = k_;
+                return note::dyn_field_for(slot.value);
+            }
+            return {};
+        }
+
+        std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
+        uint8_t extras_count_ = 0;
 
         struct Response {
+            /// The number of bytes that will be transmitted to Notehub, per
+            /// Note, before compression.
             int32_t bytes{};
-#if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3)
+#if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
+            /// If the `format` argument is provided, this represents the format
+            /// applied to the template.
+            ///
+            /// @since firmware 6.2.3
+#if NOTE_API_VERSION < NOTE_VERSION(6, 2, 3)
+            [[deprecated("requires firmware >= 6.2.3")]]
+#endif
             note::string_view format{};
 #endif
+            /// If the `verify` argument is provided and the Notefile has an
+            /// active template with a payload, the payload length.
             int32_t length{};
-#if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1)
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
+            /// `true` if an active template exists on the Notefile.
+            ///
+            /// @since firmware 3.2.1
+#if NOTE_API_VERSION < NOTE_VERSION(3, 2, 1)
+            [[deprecated("requires firmware >= 3.2.1")]]
+#endif
             bool template_{};
 #endif
 
             const JsonReader* body() const { return body_.get(); }
 
             template<typename T>
-            T body_as() const {
+            T bodyAs() const {
                 if (body_) return parse_body_<T>(*body_);
                 return T{};
             }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
                 rsp.bytes = reader_->get_int("bytes");
-#if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3)
+#if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
                 rsp.format = reader_->get_string("format");
 #endif
                 rsp.length = reader_->get_int("length");
-#if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1)
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
                 rsp.template_ = reader_->get_bool("template");
 #endif
                 rsp.body_ = reader_->get_object("body");
                 rsp.reader_ = std::move(reader_);
                 return rsp;
             }
+#pragma GCC diagnostic pop
 
         private:
             std::unique_ptr<JsonReader> reader_;
@@ -261,19 +464,27 @@ struct NoteTemplate {
             }
         };
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
         void build(JsonBuilder& b) const {
             body.write_to(b);
             b.add("delete", true);
             if (file) b.add("file", *file);
-#if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3)
+#if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
             if (format) b.add("format", *format);
 #endif
             if (length) b.add("length", *length);
             if (port) b.add("port", *port);
-#if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1)
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
             if (verify) b.add("verify", *verify);
 #endif
+            for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
+                std::visit([&](auto&& v_) {
+                    if constexpr (!std::is_same_v<std::decay_t<decltype(v_)>, std::monostate>)
+                        b.add(extras_[i_].key, v_);
+                }, extras_[i_].value);
         }
+#pragma GCC diagnostic pop
 
         auto execute() const { return nc_->execute(*this); }
         auto execute(Notecard& nc) const { return nc.execute(*this); }
@@ -282,5 +493,105 @@ struct NoteTemplate {
 
     };
 };
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+inline NoteTemplate::Set& NoteTemplate::Set::body_t::operator()(BodyValue v) {
+    BodyValue::operator=(std::move(v));
+    return *reinterpret_cast<NoteTemplate::Set*>(
+        reinterpret_cast<char*>(this) - offsetof(NoteTemplate::Set, body));
+}
+#if __cplusplus >= 202002L
+template<typename T> requires detail::BodySchema<T>
+inline NoteTemplate::Set& NoteTemplate::Set::body_t::operator()(const T& v) {
+    BodyValue::operator=(make_schema_body(v));
+    return *reinterpret_cast<NoteTemplate::Set*>(
+        reinterpret_cast<char*>(this) - offsetof(NoteTemplate::Set, body));
+}
+#endif
+inline NoteTemplate::Set& NoteTemplate::Set::delete_t::operator()(bool v) {
+    Field<bool>::operator=(v);
+    return *reinterpret_cast<NoteTemplate::Set*>(
+        reinterpret_cast<char*>(this) - offsetof(NoteTemplate::Set, delete_));
+}
+inline NoteTemplate::Set& NoteTemplate::Set::file_t::operator()(note::string_view v) {
+    Field<note::string_view>::operator=(v);
+    return *reinterpret_cast<NoteTemplate::Set*>(
+        reinterpret_cast<char*>(this) - offsetof(NoteTemplate::Set, file));
+}
+#if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
+inline NoteTemplate::Set& NoteTemplate::Set::format_t::operator()(note::string_view v) {
+    Field<note::string_view>::operator=(v);
+    return *reinterpret_cast<NoteTemplate::Set*>(
+        reinterpret_cast<char*>(this) - offsetof(NoteTemplate::Set, format));
+}
+#endif
+inline NoteTemplate::Set& NoteTemplate::Set::length_t::operator()(int32_t v) {
+    Field<int32_t>::operator=(v);
+    return *reinterpret_cast<NoteTemplate::Set*>(
+        reinterpret_cast<char*>(this) - offsetof(NoteTemplate::Set, length));
+}
+inline NoteTemplate::Set& NoteTemplate::Set::port_t::operator()(int32_t v) {
+    Field<int32_t>::operator=(v);
+    return *reinterpret_cast<NoteTemplate::Set*>(
+        reinterpret_cast<char*>(this) - offsetof(NoteTemplate::Set, port));
+}
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
+inline NoteTemplate::Set& NoteTemplate::Set::verify_t::operator()(bool v) {
+    Field<bool>::operator=(v);
+    return *reinterpret_cast<NoteTemplate::Set*>(
+        reinterpret_cast<char*>(this) - offsetof(NoteTemplate::Set, verify));
+}
+#endif
+#pragma GCC diagnostic pop
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+inline NoteTemplate::Delete& NoteTemplate::Delete::body_t::operator()(BodyValue v) {
+    BodyValue::operator=(std::move(v));
+    return *reinterpret_cast<NoteTemplate::Delete*>(
+        reinterpret_cast<char*>(this) - offsetof(NoteTemplate::Delete, body));
+}
+#if __cplusplus >= 202002L
+template<typename T> requires detail::BodySchema<T>
+inline NoteTemplate::Delete& NoteTemplate::Delete::body_t::operator()(const T& v) {
+    BodyValue::operator=(make_schema_body(v));
+    return *reinterpret_cast<NoteTemplate::Delete*>(
+        reinterpret_cast<char*>(this) - offsetof(NoteTemplate::Delete, body));
+}
+#endif
+inline NoteTemplate::Delete& NoteTemplate::Delete::file_t::operator()(note::string_view v) {
+    Field<note::string_view>::operator=(v);
+    return *reinterpret_cast<NoteTemplate::Delete*>(
+        reinterpret_cast<char*>(this) - offsetof(NoteTemplate::Delete, file));
+}
+#if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
+inline NoteTemplate::Delete& NoteTemplate::Delete::format_t::operator()(note::string_view v) {
+    Field<note::string_view>::operator=(v);
+    return *reinterpret_cast<NoteTemplate::Delete*>(
+        reinterpret_cast<char*>(this) - offsetof(NoteTemplate::Delete, format));
+}
+#endif
+inline NoteTemplate::Delete& NoteTemplate::Delete::length_t::operator()(int32_t v) {
+    Field<int32_t>::operator=(v);
+    return *reinterpret_cast<NoteTemplate::Delete*>(
+        reinterpret_cast<char*>(this) - offsetof(NoteTemplate::Delete, length));
+}
+inline NoteTemplate::Delete& NoteTemplate::Delete::port_t::operator()(int32_t v) {
+    Field<int32_t>::operator=(v);
+    return *reinterpret_cast<NoteTemplate::Delete*>(
+        reinterpret_cast<char*>(this) - offsetof(NoteTemplate::Delete, port));
+}
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
+inline NoteTemplate::Delete& NoteTemplate::Delete::verify_t::operator()(bool v) {
+    Field<bool>::operator=(v);
+    return *reinterpret_cast<NoteTemplate::Delete*>(
+        reinterpret_cast<char*>(this) - offsetof(NoteTemplate::Delete, verify));
+}
+#endif
+#pragma GCC diagnostic pop
+
 
 } // namespace note::api

@@ -104,13 +104,17 @@ public:
 
     auto cardAuxSerial() { return create<api::CardAuxSerial>(); }
 
+    // card.binary — access via endpoint-first or action-first:
+    //   cardBinary().get()  or  getCardBinary()
     struct CardBinaryFactory {
         Notecard* nc_;
         template<typename T> T create() { T r; r.nc_ = nc_; return r; }
-        auto query() { return create<api::CardBinary::Query>(); }
+        auto get() { return create<api::CardBinary::Get>(); }
         auto delete_() { return create<api::CardBinary::Delete>(); }
     };
     CardBinaryFactory cardBinary() { return {&nc_}; }
+    auto getCardBinary() { return create<api::CardBinary::Get>(); }
+    auto deleteCardBinary() { return create<api::CardBinary::Delete>(); }
 
     auto cardBinaryGet() { return create<api::CardBinaryGet>(); }
 
@@ -118,13 +122,17 @@ public:
 
     auto cardCarrier() { return create<api::CardCarrier>(); }
 
+    // card.contact — access via endpoint-first or action-first:
+    //   cardContact().get()  or  getCardContact()
     struct CardContactFactory {
         Notecard* nc_;
         template<typename T> T create() { T r; r.nc_ = nc_; return r; }
-        auto query() { return create<api::CardContact::Query>(); }
+        auto get() { return create<api::CardContact::Get>(); }
         auto set() { return create<api::CardContact::Set>(); }
     };
     CardContactFactory cardContact() { return {&nc_}; }
+    auto getCardContact() { return create<api::CardContact::Get>(); }
+    auto setCardContact() { return create<api::CardContact::Set>(); }
 
     auto cardDfu() { return create<api::CardDfu>(); }
 
@@ -136,14 +144,19 @@ public:
 
     auto cardLocation() { return create<api::CardLocation>(); }
 
+    // card.location.mode — access via endpoint-first or action-first:
+    //   cardLocationMode().get()  or  getCardLocationMode()
     struct CardLocationModeFactory {
         Notecard* nc_;
         template<typename T> T create() { T r; r.nc_ = nc_; return r; }
-        auto query() { return create<api::CardLocationMode::Query>(); }
+        auto get() { return create<api::CardLocationMode::Get>(); }
         auto set() { return create<api::CardLocationMode::Set>(); }
         auto delete_() { return create<api::CardLocationMode::Delete>(); }
     };
     CardLocationModeFactory cardLocationMode() { return {&nc_}; }
+    auto getCardLocationMode() { return create<api::CardLocationMode::Get>(); }
+    auto setCardLocationMode() { return create<api::CardLocationMode::Set>(); }
+    auto deleteCardLocationMode() { return create<api::CardLocationMode::Delete>(); }
 
     auto cardLocationTrack() { return create<api::CardLocationTrack>(); }
 
@@ -157,14 +170,19 @@ public:
 
     auto cardMotionTrack() { return create<api::CardMotionTrack>(); }
 
+    // card.power — access via endpoint-first or action-first:
+    //   cardPower().get()  or  getCardPower()
     struct CardPowerFactory {
         Notecard* nc_;
         template<typename T> T create() { T r; r.nc_ = nc_; return r; }
-        auto query() { return create<api::CardPower::Query>(); }
+        auto get() { return create<api::CardPower::Get>(); }
         auto set() { return create<api::CardPower::Set>(); }
         auto delete_() { return create<api::CardPower::Delete>(); }
     };
     CardPowerFactory cardPower() { return {&nc_}; }
+    auto getCardPower() { return create<api::CardPower::Get>(); }
+    auto setCardPower() { return create<api::CardPower::Set>(); }
+    auto deleteCardPower() { return create<api::CardPower::Delete>(); }
 
     auto cardRandom() { return create<api::CardRandom>(); }
 
@@ -176,14 +194,19 @@ public:
 
     auto cardStatus() { return create<api::CardStatus>(); }
 
+    // card.temp — access via endpoint-first or action-first:
+    //   cardTemp().get()  or  getCardTemp()
     struct CardTempFactory {
         Notecard* nc_;
         template<typename T> T create() { T r; r.nc_ = nc_; return r; }
-        auto query() { return create<api::CardTemp::Query>(); }
+        auto get() { return create<api::CardTemp::Get>(); }
         auto set() { return create<api::CardTemp::Set>(); }
         auto delete_() { return create<api::CardTemp::Delete>(); }
     };
     CardTempFactory cardTemp() { return {&nc_}; }
+    auto getCardTemp() { return create<api::CardTemp::Get>(); }
+    auto setCardTemp() { return create<api::CardTemp::Set>(); }
+    auto deleteCardTemp() { return create<api::CardTemp::Delete>(); }
 
     auto cardTime() { return create<api::CardTime>(); }
 
@@ -199,31 +222,42 @@ public:
 
     auto cardVersion() { return create<api::CardVersion>(); }
 
+    // card.voltage — access via endpoint-first or action-first:
+    //   cardVoltage().get()  or  getCardVoltage()
     struct CardVoltageFactory {
         Notecard* nc_;
         template<typename T> T create() { T r; r.nc_ = nc_; return r; }
-        auto query() { return create<api::CardVoltage::Query>(); }
+        auto get() { return create<api::CardVoltage::Get>(); }
         auto set() { return create<api::CardVoltage::Set>(); }
     };
     CardVoltageFactory cardVoltage() { return {&nc_}; }
+    auto getCardVoltage() { return create<api::CardVoltage::Get>(); }
+    auto setCardVoltage() { return create<api::CardVoltage::Set>(); }
 
     auto cardWifi() { return create<api::CardWifi>(); }
 
     auto cardWireless() { return create<api::CardWireless>(); }
 
+    // card.wireless.penalty — access via endpoint-first or action-first:
+    //   cardWirelessPenalty().get()  or  getCardWirelessPenalty()
     struct CardWirelessPenaltyFactory {
         Notecard* nc_;
         template<typename T> T create() { T r; r.nc_ = nc_; return r; }
-        auto query() { return create<api::CardWirelessPenalty::Query>(); }
+        auto get() { return create<api::CardWirelessPenalty::Get>(); }
         auto set() { return create<api::CardWirelessPenalty::Set>(); }
         auto delete_() { return create<api::CardWirelessPenalty::Delete>(); }
     };
     CardWirelessPenaltyFactory cardWirelessPenalty() { return {&nc_}; }
+    auto getCardWirelessPenalty() { return create<api::CardWirelessPenalty::Get>(); }
+    auto setCardWirelessPenalty() { return create<api::CardWirelessPenalty::Set>(); }
+    auto deleteCardWirelessPenalty() { return create<api::CardWirelessPenalty::Delete>(); }
 
     auto dfuGet() { return create<api::DfuGet>(); }
 
     auto dfuStatus() { return create<api::DfuStatus>(); }
 
+    // env.default — access via endpoint-first or action-first:
+    //   envDefault().set()  or  setEnvDefault()
     struct EnvDefaultFactory {
         Notecard* nc_;
         template<typename T> T create() { T r; r.nc_ = nc_; return r; }
@@ -231,6 +265,8 @@ public:
         auto delete_() { return create<api::EnvDefault::Delete>(); }
     };
     EnvDefaultFactory envDefault() { return {&nc_}; }
+    auto setEnvDefault() { return create<api::EnvDefault::Set>(); }
+    auto deleteEnvDefault() { return create<api::EnvDefault::Delete>(); }
 
     auto envGet() { return create<api::EnvGet>(); }
 
@@ -266,24 +302,34 @@ public:
 
     auto noteAdd() { return create<api::NoteAdd>(); }
 
+    // note.changes — access via endpoint-first or action-first:
+    //   noteChanges().get()  or  getNoteChanges()
     struct NoteChangesFactory {
         Notecard* nc_;
         template<typename T> T create() { T r; r.nc_ = nc_; return r; }
-        auto query() { return create<api::NoteChanges::Query>(); }
+        auto get() { return create<api::NoteChanges::Get>(); }
         auto delete_() { return create<api::NoteChanges::Delete>(); }
     };
     NoteChangesFactory noteChanges() { return {&nc_}; }
+    auto getNoteChanges() { return create<api::NoteChanges::Get>(); }
+    auto deleteNoteChanges() { return create<api::NoteChanges::Delete>(); }
 
     auto noteDelete() { return create<api::NoteDelete>(); }
 
+    // note.get — access via endpoint-first or action-first:
+    //   noteGet().get()  or  getNoteGet()
     struct NoteGetFactory {
         Notecard* nc_;
         template<typename T> T create() { T r; r.nc_ = nc_; return r; }
-        auto query() { return create<api::NoteGet::Query>(); }
+        auto get() { return create<api::NoteGet::Get>(); }
         auto delete_() { return create<api::NoteGet::Delete>(); }
     };
     NoteGetFactory noteGet() { return {&nc_}; }
+    auto getNoteGet() { return create<api::NoteGet::Get>(); }
+    auto deleteNoteGet() { return create<api::NoteGet::Delete>(); }
 
+    // note.template — access via endpoint-first or action-first:
+    //   noteTemplate().set()  or  setNoteTemplate()
     struct NoteTemplateFactory {
         Notecard* nc_;
         template<typename T> T create() { T r; r.nc_ = nc_; return r; }
@@ -291,6 +337,8 @@ public:
         auto delete_() { return create<api::NoteTemplate::Delete>(); }
     };
     NoteTemplateFactory noteTemplate() { return {&nc_}; }
+    auto setNoteTemplate() { return create<api::NoteTemplate::Set>(); }
+    auto deleteNoteTemplate() { return create<api::NoteTemplate::Delete>(); }
 
     auto noteUpdate() { return create<api::NoteUpdate>(); }
 

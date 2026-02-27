@@ -29,6 +29,8 @@ public:
 
 {% for endpoint in endpoints %}
 {% if endpoint.is_polymorphic %}
+    // {{ endpoint.wire_name }} — access via endpoint-first or action-first:
+    //   {{ endpoint.factory_method }}().{{ endpoint.operations[0].factory_method }}()  or  {{ endpoint.action_first_method(endpoint.operations[0]) }}()
     struct {{ endpoint.struct_name }}Factory {
         Notecard* nc_;
         template<typename T> T create() { T r; r.nc_ = nc_; return r; }
@@ -37,6 +39,9 @@ public:
 {% endfor %}
     };
     {{ endpoint.struct_name }}Factory {{ endpoint.factory_method }}() { return {&nc_}; }
+{% for op in endpoint.operations %}
+    auto {{ endpoint.action_first_method(op) }}() { return create<api::{{ endpoint.struct_name }}::{{ op.struct_name }}>(); }
+{% endfor %}
 {% else %}
     auto {{ endpoint.factory_method }}() { return create<api::{{ endpoint.struct_name }}>(); }
 {% endif %}

@@ -192,7 +192,7 @@ TEST_CASE("note.add with reflected schema body") {
     TestHarness h;
     note::Api api(h.nc);
     Readings r{.temperature = 22.5f, .humidity = 60};
-    api.noteAdd().set_file("sensors.qo").set_body(r).execute();
+    api.noteAdd().file("sensors.qo").body(r).execute();
     REQUIRE(h.last_request ==
         R"({"req":"note.add","body":{"temperature":22.5,"humidity":60},"file":"sensors.qo"})");
 }
@@ -201,8 +201,8 @@ TEST_CASE("note.template with template_of") {
     TestHarness h;
     note::Api api(h.nc);
     api.noteTemplate().set()
-        .set_file("sensors.qo")
-        .set_body(note::template_of<Readings>())
+        .file("sensors.qo")
+        .body(note::template_of<Readings>())
         .execute();
     REQUIRE(h.last_request ==
         R"({"req":"note.template","body":{"temperature":14.1,"humidity":11},"file":"sensors.qo"})");
@@ -212,8 +212,8 @@ TEST_CASE("note.add with builder body") {
     TestHarness h;
     note::Api api(h.nc);
     api.noteAdd()
-        .set_file("sensors.qo")
-        .set_body(note::body([](note::JsonBuilder& b) {
+        .file("sensors.qo")
+        .body(note::body([](note::JsonBuilder& b) {
             b.add("temp", 22.5);
             b.add("count", int32_t{42});
         }))
@@ -231,7 +231,7 @@ TEST_CASE("note.add with builder body") {
 TEST_CASE("note.get response body() returns null when no body") {
     auto reader = std::make_unique<note::test::PopulatedJsonReader>();
     reader->set("time", int32_t{1234567890});
-    auto rsp = note::api::NoteGet::Query::Response::parse(std::move(reader));
+    auto rsp = note::api::NoteGet::Get::Response::parse(std::move(reader));
     REQUIRE(rsp.time == 1234567890);
     REQUIRE(rsp.body() == nullptr);
 }
@@ -245,7 +245,7 @@ TEST_CASE("note.get response body() returns reader when body present") {
     reader->set("time", int32_t{1234567890});
     reader->set_object("body", std::move(body));
 
-    auto rsp = note::api::NoteGet::Query::Response::parse(std::move(reader));
+    auto rsp = note::api::NoteGet::Get::Response::parse(std::move(reader));
     REQUIRE(rsp.time == 1234567890);
     REQUIRE(rsp.body() != nullptr);
     REQUIRE(rsp.body()->get_double("temperature") == 22.5);
@@ -262,16 +262,16 @@ TEST_CASE("note.get response body_as<T>() with reflected struct") {
     auto reader = std::make_unique<note::test::PopulatedJsonReader>();
     reader->set_object("body", std::move(body));
 
-    auto rsp = note::api::NoteGet::Query::Response::parse(std::move(reader));
-    auto r = rsp.body_as<Readings>();
+    auto rsp = note::api::NoteGet::Get::Response::parse(std::move(reader));
+    auto r = rsp.bodyAs<Readings>();
     REQUIRE(r.temperature == 22.5f);
     REQUIRE(r.humidity == 60);
 }
 
 TEST_CASE("note.get response body_as<T>() returns default when no body") {
     auto reader = std::make_unique<note::test::PopulatedJsonReader>();
-    auto rsp = note::api::NoteGet::Query::Response::parse(std::move(reader));
-    auto r = rsp.body_as<Readings>();
+    auto rsp = note::api::NoteGet::Get::Response::parse(std::move(reader));
+    auto r = rsp.bodyAs<Readings>();
     REQUIRE(r.temperature == 0.0f);
     REQUIRE(r.humidity == 0);
 }
@@ -285,8 +285,8 @@ TEST_CASE("note.get response body_as<T>() with mixed types") {
     auto reader = std::make_unique<note::test::PopulatedJsonReader>();
     reader->set_object("body", std::move(body));
 
-    auto rsp = note::api::NoteGet::Query::Response::parse(std::move(reader));
-    auto sd = rsp.body_as<SensorData>();
+    auto rsp = note::api::NoteGet::Get::Response::parse(std::move(reader));
+    auto sd = rsp.bodyAs<SensorData>();
     REQUIRE(sd.voltage == 3.3);
     REQUIRE(sd.active == true);
     REQUIRE(sd.count == 42);
@@ -304,8 +304,8 @@ TEST_CASE("note.get response body_as<T>() with NOTE_BODY macro type") {
     auto reader = std::make_unique<note::test::PopulatedJsonReader>();
     reader->set_object("body", std::move(body));
 
-    auto rsp = note::api::NoteGet::Query::Response::parse(std::move(reader));
-    auto r = rsp.body_as<MacroReadings>();
+    auto rsp = note::api::NoteGet::Get::Response::parse(std::move(reader));
+    auto r = rsp.bodyAs<MacroReadings>();
     REQUIRE(r.temperature == 22.5f);
     REQUIRE(r.humidity == 60);
 }

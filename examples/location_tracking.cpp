@@ -38,20 +38,20 @@ void examples(note::Notecard& nc) {
     // {"req":"card.location.mode","mode":"periodic","seconds":300}
     {
         note::api::CardLocationMode::Set req;
-        req.set_mode("periodic").set_seconds(300);
+        req.mode("periodic").seconds(300);
         nc.execute(req);
     }
 
     // {"req":"card.location.mode","mode":"continuous"}
     {
         note::api::CardLocationMode::Set req;
-        req.set_mode("continuous");
+        req.mode("continuous");
         nc.execute(req);
     }
 
     // {"req":"card.location.mode"} — query current mode
     {
-        auto result = nc.execute(note::api::CardLocationMode::Query{});
+        auto result = nc.execute(note::api::CardLocationMode::Get{});
         if (result) {
             auto mode = result.mode;
             (void)mode;
@@ -71,14 +71,14 @@ void examples(note::Notecard& nc) {
     // {"req":"card.location.track","start":true,"heartbeat":true,"hours":12}
     {
         note::api::CardLocationTrack req;
-        req.set_start(true).set_heartbeat(true).set_hours(12);
+        req.start(true).heartbeat(true).hours(12);
         nc.execute(req);
     }
 
     // {"req":"card.location.track","stop":true}
     {
         note::api::CardLocationTrack req;
-        req.set_stop(true);
+        req.stop(true);
         nc.execute(req);
     }
 }

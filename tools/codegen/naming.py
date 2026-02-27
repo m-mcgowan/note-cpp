@@ -42,13 +42,57 @@ def property_to_cpp_name(wire_name: str) -> str:
     return PROPERTY_RENAMES.get(wire_name, wire_name)
 
 
+# Map operationId suffixes to user-friendly struct/method names.
+# "query" -> "Get" because the action is "get", not "query".
+_OPERATION_SUFFIX_MAP: dict[str, str] = {
+    "query": "Get",
+}
+
+
 def operation_suffix_to_struct_name(suffix: str) -> str:
     """Convert operationId suffix to a PascalCase sub-struct name.
 
-    e.g. 'query' -> 'Query', 'set' -> 'Set', 'delete' -> 'Delete',
+    e.g. 'query' -> 'Get', 'set' -> 'Set', 'delete' -> 'Delete',
          'create' -> 'Create'
     """
-    return suffix.capitalize()
+    return _OPERATION_SUFFIX_MAP.get(suffix, suffix.capitalize())
+
+
+def snake_to_camel(name: str) -> str:
+    """Convert snake_case to camelCase: 'note_id' -> 'noteId', 'mode' -> 'mode'."""
+    parts = [p for p in name.split("_") if p]
+    if not parts:
+        return name
+    return parts[0] + "".join(p.capitalize() for p in parts[1:])
+
+
+def accessor_name(cpp_name: str) -> str:
+    """camelCase name for the field member and functor accessor.
+
+    Trailing-underscore names (keyword escapes like 'delete_', 'template_')
+    are kept as-is.  All other snake_case names are camelCased.
+
+    Examples:
+        'mode'      -> 'mode'
+        'note_id'   -> 'noteId'
+        'delete_'   -> 'delete_'
+        'template_' -> 'template_'
+    """
+    if cpp_name.endswith("_"):
+        return cpp_name  # keyword escape — preserve the trailing underscore
+    return snake_to_camel(cpp_name)
+
+
+def nested_type_name(cpp_name: str) -> str:
+    """Name of the generated nested functor struct for a property.
+
+    Examples:
+        'mode'      -> 'mode_t'
+        'note_id'   -> 'noteId_t'
+        'delete_'   -> 'delete_t'   (strip trailing _ before appending _t)
+    """
+    acc = accessor_name(cpp_name)
+    return acc.rstrip("_") + "_t"
 
 
 def schema_key_to_wire_name(key: str) -> str:

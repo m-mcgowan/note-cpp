@@ -2,6 +2,7 @@
 #pragma once
 
 #include <note/body.hpp>
+#include <note/dyn_field.hpp>
 #include <note/field.hpp>
 #include <note/json.hpp>
 #include <note/notecard.hpp>
@@ -10,6 +11,12 @@
 
 namespace note::api {
 
+
+
+
+
+
+
 struct EnvTemplate {
     static constexpr string_view notecard_request = "env.template";
     static constexpr bool supports_cmd = true;
@@ -17,19 +24,48 @@ struct EnvTemplate {
 
     Notecard* nc_ = nullptr;
 
-    BodyValue body{};
-
-#if __cpp_explicit_this_parameter >= 202110L
-    auto&& set_body(this auto&& self, BodyValue v) { self.body = v; return std::forward<decltype(self)>(self); }
-    template<typename T> requires detail::BodySchema<T>
-    auto&& set_body(this auto&& self, const T& v) { self.body = make_schema_body(v); return std::forward<decltype(self)>(self); }
-#else
-    auto& set_body(BodyValue v) { body = v; return *this; }
-    template<typename T> requires detail::BodySchema<T>
-    auto& set_body(const T& v) { body = make_schema_body(v); return *this; }
+    /// A sample JSON body that specifies environment variables names and values
+    /// as "hints" for the data type. Possible data types are: boolean, integer,
+    /// float, and string. See [Understanding Template Data
+    /// Types](/notecard/notecard-walkthrough/low-bandwidth-
+    /// design#understanding-template-data-types) for a full explanation of type
+    /// hints.
+    struct body_t : BodyValue {
+        using BodyValue::BodyValue;
+        EnvTemplate& operator()(BodyValue v);
+#if __cplusplus >= 202002L
+        template<typename T> requires detail::BodySchema<T>
+        EnvTemplate& operator()(const T& v);
 #endif
+    } body{};
+
+
+    template<typename T>
+    auto& extra(note::string_view key, T value) {
+        if (extras_count_ < NOTE_EXTRAS_MAX)
+            extras_[extras_count_++] = {key, note::DynValue{value}};
+        return *this;
+    }
+    auto& extra(note::string_view key, const char* value) {
+        return extra(key, note::string_view{value});
+    }
+
+    note::DynField operator[](note::string_view k_) {
+        if (extras_count_ < NOTE_EXTRAS_MAX) {
+            auto& slot = extras_[extras_count_++];
+            slot.key = k_;
+            return note::dyn_field_for(slot.value);
+        }
+        return {};
+    }
+
+    std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
+    uint8_t extras_count_ = 0;
 
     struct Response {
+        /// The maximum number of bytes that will be used when environment
+        /// variables are communicated or stored, so long as the variables do
+        /// not include variable-length strings.
         int32_t bytes{};
 
         static Response parse(std::unique_ptr<JsonReader> reader_) {
@@ -45,6 +81,11 @@ struct EnvTemplate {
 
     void build(JsonBuilder& b) const {
         body.write_to(b);
+        for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
+            std::visit([&](auto&& v_) {
+                if constexpr (!std::is_same_v<std::decay_t<decltype(v_)>, std::monostate>)
+                    b.add(extras_[i_].key, v_);
+            }, extras_[i_].value);
     }
 
     auto execute() const { return nc_->execute(*this); }
@@ -53,5 +94,23 @@ struct EnvTemplate {
     Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
 
 };
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+inline EnvTemplate& EnvTemplate::body_t::operator()(BodyValue v) {
+    BodyValue::operator=(std::move(v));
+    return *reinterpret_cast<EnvTemplate*>(
+        reinterpret_cast<char*>(this) - offsetof(EnvTemplate, body));
+}
+#if __cplusplus >= 202002L
+template<typename T> requires detail::BodySchema<T>
+inline EnvTemplate& EnvTemplate::body_t::operator()(const T& v) {
+    BodyValue::operator=(make_schema_body(v));
+    return *reinterpret_cast<EnvTemplate*>(
+        reinterpret_cast<char*>(this) - offsetof(EnvTemplate, body));
+}
+#endif
+#pragma GCC diagnostic pop
+
 
 } // namespace note::api

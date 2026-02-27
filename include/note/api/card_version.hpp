@@ -2,6 +2,7 @@
 #pragma once
 
 #include <note/body.hpp>
+#include <note/dyn_field.hpp>
 #include <note/field.hpp>
 #include <note/json.hpp>
 #include <note/notecard.hpp>
@@ -9,6 +10,12 @@
 #include <note/types.hpp>
 
 namespace note::api {
+
+
+
+
+
+
 
 struct CardVersion {
     static constexpr string_view notecard_request = "card.version";
@@ -18,26 +25,63 @@ struct CardVersion {
     Notecard* nc_ = nullptr;
 
 
+    template<typename T>
+    auto& extra(note::string_view key, T value) {
+        if (extras_count_ < NOTE_EXTRAS_MAX)
+            extras_[extras_count_++] = {key, note::DynValue{value}};
+        return *this;
+    }
+    auto& extra(note::string_view key, const char* value) {
+        return extra(key, note::string_view{value});
+    }
+
+    note::DynField operator[](note::string_view k_) {
+        if (extras_count_ < NOTE_EXTRAS_MAX) {
+            auto& slot = extras_[extras_count_++];
+            slot.key = k_;
+            return note::dyn_field_for(slot.value);
+        }
+        return {};
+    }
+
+    std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
+    uint8_t extras_count_ = 0;
+
     struct Response {
+        /// The Notecard board version number.
         note::string_view board{};
+        /// If `true`, indicates the Notecard supports cellular connectivity.
         bool cell{};
+        /// The DeviceUID of the Notecard.
         note::string_view device{};
+        /// If `true`, indicates the Notecard has an onboard GPS module.
         bool gps{};
+        /// The official name of the device.
         note::string_view name{};
+        /// The Notecard SKU.
         note::string_view sku{};
+        /// The full version number of the Notecard firmware.
         note::string_view version{};
-#if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1)
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
+        /// If `true`, indicates the Notecard supports WiFi connectivity.
+        ///
+        /// @since firmware 5.3.1
+#if NOTE_API_VERSION < NOTE_VERSION(5, 3, 1)
+        [[deprecated("requires firmware >= 5.3.1")]]
+#endif
         bool wifi{};
 #endif
 
         const JsonReader* body() const { return body_.get(); }
 
         template<typename T>
-        T body_as() const {
+        T bodyAs() const {
             if (body_) return parse_body_<T>(*body_);
             return T{};
         }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
             rsp.board = reader_->get_string("board");
@@ -47,13 +91,14 @@ struct CardVersion {
             rsp.name = reader_->get_string("name");
             rsp.sku = reader_->get_string("sku");
             rsp.version = reader_->get_string("version");
-#if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1)
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
             rsp.wifi = reader_->get_bool("wifi");
 #endif
             rsp.body_ = reader_->get_object("body");
             rsp.reader_ = std::move(reader_);
             return rsp;
         }
+#pragma GCC diagnostic pop
 
     private:
         std::unique_ptr<JsonReader> reader_;
@@ -77,6 +122,11 @@ struct CardVersion {
     };
 
     void build(JsonBuilder& b) const {
+        for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
+            std::visit([&](auto&& v_) {
+                if constexpr (!std::is_same_v<std::decay_t<decltype(v_)>, std::monostate>)
+                    b.add(extras_[i_].key, v_);
+            }, extras_[i_].value);
         (void)b;
     }
 
@@ -86,5 +136,7 @@ struct CardVersion {
     Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
 
 };
+
+
 
 } // namespace note::api

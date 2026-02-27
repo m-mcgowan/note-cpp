@@ -2,6 +2,7 @@
 #pragma once
 
 #include <note/body.hpp>
+#include <note/dyn_field.hpp>
 #include <note/field.hpp>
 #include <note/json.hpp>
 #include <note/notecard.hpp>
@@ -10,6 +11,12 @@
 
 namespace note::api {
 
+
+
+
+
+
+
 struct Web {
     static constexpr string_view notecard_request = "web";
     static constexpr bool supports_cmd = true;
@@ -17,49 +24,84 @@ struct Web {
 
     Notecard* nc_ = nullptr;
 
-    Field<note::string_view> content{};
+    /// The MIME type of the body or payload of the response. Default is
+    /// `application/json`.
+    struct content_t : Field<note::string_view> {
+        using Field<note::string_view>::Field;
+        using Field<note::string_view>::operator=;
+        Web& operator()(note::string_view v);
+    } content{};
+    /// The HTTP method of the request. Must be one of GET, PUT, POST, DELETE,
+    /// PATCH, HEAD, OPTIONS, TRACE, or CONNECT.
     // method: CONNECT | DELETE | GET | HEAD | OPTIONS | PATCH | POST | PUT | TRACE
-    Field<note::string_view> method{};
-    Field<note::string_view> name{};
-    Field<note::string_view> route{};
+    struct method_t : Field<note::string_view> {
+        using Field<note::string_view>::Field;
+        using Field<note::string_view>::operator=;
+        Web& operator()(note::string_view v);
+    } method{};
+    /// A web URL endpoint relative to the host configured in the Proxy Route.
+    /// URL parameters may be added to this argument as well (e.g.
+    /// `/getLatest?id=1`).
+    struct name_t : Field<note::string_view> {
+        using Field<note::string_view>::Field;
+        using Field<note::string_view>::operator=;
+        Web& operator()(note::string_view v);
+    } name{};
+    /// Alias for a Proxy Route in Notehub.
+    struct route_t : Field<note::string_view> {
+        using Field<note::string_view>::Field;
+        using Field<note::string_view>::operator=;
+        Web& operator()(note::string_view v);
+    } route{};
 
-    static consteval note::string_view validated_method(const char* v) {
+    static consteval note::string_view validatedMethod(const char* v) {
         note::string_view sv{v};
         if (sv != "CONNECT" && sv != "DELETE" && sv != "GET" && sv != "HEAD" && sv != "OPTIONS" && sv != "PATCH" && sv != "POST" && sv != "PUT" && sv != "TRACE")
             throw "web: invalid value for 'method'";
         return sv;
     }
-#if __cpp_explicit_this_parameter >= 202110L
-    auto&& set_content(this auto&& self, note::string_view v) { self.content = v; return std::forward<decltype(self)>(self); }
-#else
-    auto& set_content(note::string_view v) { content = v; return *this; }
-#endif
-#if __cpp_explicit_this_parameter >= 202110L
-    auto&& set_method(this auto&& self, note::string_view v) { self.method = v; return std::forward<decltype(self)>(self); }
-#else
-    auto& set_method(note::string_view v) { method = v; return *this; }
-#endif
-#if __cpp_explicit_this_parameter >= 202110L
-    auto&& set_name(this auto&& self, note::string_view v) { self.name = v; return std::forward<decltype(self)>(self); }
-#else
-    auto& set_name(note::string_view v) { name = v; return *this; }
-#endif
-#if __cpp_explicit_this_parameter >= 202110L
-    auto&& set_route(this auto&& self, note::string_view v) { self.route = v; return std::forward<decltype(self)>(self); }
-#else
-    auto& set_route(note::string_view v) { route = v; return *this; }
-#endif
+
+    template<typename T>
+    auto& extra(note::string_view key, T value) {
+        if (extras_count_ < NOTE_EXTRAS_MAX)
+            extras_[extras_count_++] = {key, note::DynValue{value}};
+        return *this;
+    }
+    auto& extra(note::string_view key, const char* value) {
+        return extra(key, note::string_view{value});
+    }
+
+    note::DynField operator[](note::string_view k_) {
+        if (k_ == "content") return note::dyn_field_for(content);
+        if (k_ == "method") return note::dyn_field_for(method);
+        if (k_ == "name") return note::dyn_field_for(name);
+        if (k_ == "route") return note::dyn_field_for(route);
+        if (extras_count_ < NOTE_EXTRAS_MAX) {
+            auto& slot = extras_[extras_count_++];
+            slot.key = k_;
+            return note::dyn_field_for(slot.value);
+        }
+        return {};
+    }
+
+    std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
+    uint8_t extras_count_ = 0;
 
     struct Response {
+        /// The size of the COBS-encoded data (in bytes).
         int32_t cobs{};
+        /// The length of the returned binary payload (in bytes).
         int32_t length{};
+        /// A base64-encoded binary payload from the external service, if any.
+        /// The maximum response size from the service is 8192 bytes.
         note::string_view payload{};
+        /// The HTTP Status Code
         int32_t result{};
 
         const JsonReader* body() const { return body_.get(); }
 
         template<typename T>
-        T body_as() const {
+        T bodyAs() const {
             if (body_) return parse_body_<T>(*body_);
             return T{};
         }
@@ -101,6 +143,11 @@ struct Web {
         if (method) b.add("method", *method);
         if (name) b.add("name", *name);
         if (route) b.add("route", *route);
+        for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
+            std::visit([&](auto&& v_) {
+                if constexpr (!std::is_same_v<std::decay_t<decltype(v_)>, std::monostate>)
+                    b.add(extras_[i_].key, v_);
+            }, extras_[i_].value);
     }
 
     auto execute() const { return nc_->execute(*this); }
@@ -109,5 +156,30 @@ struct Web {
     Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
 
 };
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+inline Web& Web::content_t::operator()(note::string_view v) {
+    Field<note::string_view>::operator=(v);
+    return *reinterpret_cast<Web*>(
+        reinterpret_cast<char*>(this) - offsetof(Web, content));
+}
+inline Web& Web::method_t::operator()(note::string_view v) {
+    Field<note::string_view>::operator=(v);
+    return *reinterpret_cast<Web*>(
+        reinterpret_cast<char*>(this) - offsetof(Web, method));
+}
+inline Web& Web::name_t::operator()(note::string_view v) {
+    Field<note::string_view>::operator=(v);
+    return *reinterpret_cast<Web*>(
+        reinterpret_cast<char*>(this) - offsetof(Web, name));
+}
+inline Web& Web::route_t::operator()(note::string_view v) {
+    Field<note::string_view>::operator=(v);
+    return *reinterpret_cast<Web*>(
+        reinterpret_cast<char*>(this) - offsetof(Web, route));
+}
+#pragma GCC diagnostic pop
+
 
 } // namespace note::api

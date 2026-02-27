@@ -16,9 +16,42 @@ if __name__ == "__main__":
 
 from codegen.spec_parser import parse_spec
 from codegen.naming import (
+    accessor_name as property_to_accessor_name,
     endpoint_to_struct_name,
+    operation_suffix_to_struct_name,
     property_to_cpp_name,
 )
+
+
+import textwrap
+
+
+def _doc_comment_filter(text: str, indent: str = "    ") -> str:
+    """Format a description string as wrapped /// doc comment lines.
+
+    Returns a string with NO trailing newline (Jinja2 template handles that).
+    """
+    if not text:
+        return ""
+    # Normalize literal \n sequences (some OpenAPI descriptions use escaped
+    # newlines instead of real ones)
+    text = text.replace("\\n", "\n")
+    # Collapse markdown-style paragraphs into single lines per paragraph,
+    # then wrap each paragraph to ~80 columns accounting for indent + "/// "
+    prefix = f"{indent}/// "
+    blank = f"{indent}///"
+    width = 80
+    paragraphs = text.strip().split("\n\n")
+    lines = []
+    for para in paragraphs:
+        if lines:
+            lines.append(blank)  # blank comment line between paragraphs
+        # Collapse internal newlines within a paragraph
+        flat = " ".join(para.split())
+        wrapped = textwrap.wrap(flat, width=width - len(prefix))
+        for w in wrapped:
+            lines.append(f"{prefix}{w}")
+    return "\n".join(lines)
 
 
 def _cpp_literal(value) -> str:
@@ -65,15 +98,18 @@ def _collect_sample_tests(spec_path: Path) -> list[dict]:
                 seen.add(dedup_key)
 
                 title = sample.get("title", "untitled")
-                sub_type = validation.get("sub_type")
+                raw_sub_type = validation.get("sub_type")
+                sub_type = operation_suffix_to_struct_name(raw_sub_type.lower()) if raw_sub_type else None
                 is_command = validation.get("command", False)
 
                 # Build field list
                 fields = []
                 for field_name, value in (validation.get("fields") or {}).items():
+                    cpp_name = property_to_cpp_name(field_name)
                     fields.append({
                         "wire_name": field_name,
-                        "cpp_name": property_to_cpp_name(field_name),
+                        "cpp_name": cpp_name,
+                        "accessor_name": property_to_accessor_name(cpp_name),
                         "literal": _cpp_literal(value),
                     })
 
@@ -128,6 +164,8 @@ def main() -> None:
         trim_blocks=True,
         lstrip_blocks=True,
     )
+    env.filters["doc_comment"] = _doc_comment_filter
+    env.filters["first_upper"] = lambda s: (s[0].upper() + s[1:]) if s else s
 
     endpoint_template = env.get_template("endpoint.hpp.j2")
     umbrella_template = env.get_template("api.hpp.j2")

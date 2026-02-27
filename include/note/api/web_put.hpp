@@ -2,6 +2,7 @@
 #pragma once
 
 #include <note/body.hpp>
+#include <note/dyn_field.hpp>
 #include <note/field.hpp>
 #include <note/json.hpp>
 #include <note/notecard.hpp>
@@ -10,6 +11,12 @@
 
 namespace note::api {
 
+
+
+
+
+
+
 struct WebPut {
     static constexpr string_view notecard_request = "web.put";
     static constexpr bool supports_cmd = true;
@@ -17,123 +24,213 @@ struct WebPut {
 
     Notecard* nc_ = nullptr;
 
-#if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1)
-    Field<bool> async{};
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
+    /// If `true`, the Notecard performs the web request asynchronously, and
+    /// returns control to the host without waiting for a response from Notehub.
+    ///
+    /// @since firmware 5.1.1
+#if NOTE_API_VERSION < NOTE_VERSION(5, 1, 1)
+    [[deprecated("requires firmware >= 5.1.1")]]
 #endif
-#if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1)
-    Field<bool> binary{};
+    struct async_t : Field<bool> {
+        using Field<bool>::Field;
+        using Field<bool>::operator=;
+        WebPut& operator()(bool v);
+    } async{};
 #endif
-    BodyValue body{};
-    Field<note::string_view> content{};
-    Field<note::string_view> file{};
-    Field<int32_t> max{};
-    Field<note::string_view> name{};
-    Field<note::string_view> note_id{};
-    Field<int32_t> offset{};
-    Field<note::string_view> payload{};
-    Field<note::string_view> route{};
-    Field<int32_t> seconds{};
-    Field<note::string_view> status{};
-#if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1)
-    Field<int32_t> total{};
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
+    /// If `true`, the Notecard will send all the data in the binary buffer to
+    /// the specified proxy route in Notehub.
+    ///
+    /// Learn more in this guide on [Sending and Receiving Large Binary
+    /// Objects](https://dev.blues.io/guides-and-tutorials/notecard-
+    /// guides/sending-and-receiving-large-binary-objects/).
+    ///
+    /// @since firmware 5.3.1
+#if NOTE_API_VERSION < NOTE_VERSION(5, 3, 1)
+    [[deprecated("requires firmware >= 5.3.1")]]
 #endif
-    Field<bool> verify{};
+    struct binary_t : Field<bool> {
+        using Field<bool>::Field;
+        using Field<bool>::operator=;
+        WebPut& operator()(bool v);
+    } binary{};
+#endif
+    /// The JSON body to send with the request.
+    struct body_t : BodyValue {
+        using BodyValue::BodyValue;
+        WebPut& operator()(BodyValue v);
+#if __cplusplus >= 202002L
+        template<typename T> requires detail::BodySchema<T>
+        WebPut& operator()(const T& v);
+#endif
+    } body{};
+    /// The MIME type of the body or payload of the response. Default is
+    /// `application/json`.
+    struct content_t : Field<note::string_view> {
+        using Field<note::string_view>::Field;
+        using Field<note::string_view>::operator=;
+        WebPut& operator()(note::string_view v);
+    } content{};
+    /// The name of the [local-only Database
+    /// Notefile](https://dev.blues.io/notecard/notecard-walkthrough/inbound-
+    /// requests-and-shared-data/#using-database-notefiles-for-local-only-state)
+    /// (`.dbx`) to be used if the web request is issued
+    /// [asynchronously](https://dev.blues.io/notecard/notecard-walkthrough/web-
+    /// transactions/#using-web-transactions-asynchronously) and you wish to
+    /// store the response.
+    struct file_t : Field<note::string_view> {
+        using Field<note::string_view>::Field;
+        using Field<note::string_view>::operator=;
+        WebPut& operator()(note::string_view v);
+    } file{};
+    /// The maximum size of the response from the remote server, in bytes.
+    /// Useful if a memory-constrained host wants to limit the response size.
+    /// Default (and maximum value) is 8192.
+    struct max_t : Field<int32_t> {
+        using Field<int32_t>::Field;
+        using Field<int32_t>::operator=;
+        WebPut& operator()(int32_t v);
+    } max{};
+    /// A web URL endpoint relative to the host configured in the Proxy Route.
+    /// URL parameters may be added to this argument as well (e.g.
+    /// `/updateReading?id=1`).
+    struct name_t : Field<note::string_view> {
+        using Field<note::string_view>::Field;
+        using Field<note::string_view>::operator=;
+        WebPut& operator()(note::string_view v);
+    } name{};
+    /// The unique Note ID for the local-only Database Notefile (`.dbx`). Only
+    /// used with asynchronous web requests (see `file` argument above).
+    struct noteId_t : Field<note::string_view> {
+        using Field<note::string_view>::Field;
+        using Field<note::string_view>::operator=;
+        WebPut& operator()(note::string_view v);
+    } noteId{};
+    /// When sending payload fragments, the number of bytes of the binary
+    /// payload to offset from 0 when reassembling on the Notehub once all
+    /// fragments have been received.
+    struct offset_t : Field<int32_t> {
+        using Field<int32_t>::Field;
+        using Field<int32_t>::operator=;
+        WebPut& operator()(int32_t v);
+    } offset{};
+    /// A base64-encoded binary payload. A `web.put` may have either a `body` or
+    /// a `payload`, but may NOT have both. Be aware that Notehub will decode
+    /// the payload as it is delivered to the endpoint.
+    ///
+    /// Learn more about [sending large binary
+    /// objects](https://dev.blues.io/guides-and-tutorials/notecard-
+    /// guides/sending-and-receiving-large-binary-objects/#binary-uploads-with-
+    /// web-apis) with the Notecard.
+    struct payload_t : Field<note::string_view> {
+        using Field<note::string_view>::Field;
+        using Field<note::string_view>::operator=;
+        WebPut& operator()(note::string_view v);
+    } payload{};
+    /// Alias for a Proxy Route in Notehub.
+    struct route_t : Field<note::string_view> {
+        using Field<note::string_view>::Field;
+        using Field<note::string_view>::operator=;
+        WebPut& operator()(note::string_view v);
+    } route{};
+    /// If specified, overrides the default 90 second timeout.
+    struct seconds_t : Field<int32_t> {
+        using Field<int32_t>::Field;
+        using Field<int32_t>::operator=;
+        WebPut& operator()(int32_t v);
+    } seconds{};
+    /// A 32-character hex-encoded MD5 sum of the payload or payload fragment.
+    /// Used by Notehub to perform verification upon receipt.
+    struct status_t : Field<note::string_view> {
+        using Field<note::string_view>::Field;
+        using Field<note::string_view>::operator=;
+        WebPut& operator()(note::string_view v);
+    } status{};
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
+    /// When using the `application/octet-stream` content type, you may send
+    /// large payloads to Notehub in fragments spanning several `web.put`
+    /// requests by using `offset` (see above) and `total`. The `total` field
+    /// indicates the total size, in bytes (10MB max), of the payload across all
+    /// fragments.
+    ///
+    /// @since firmware 3.2.1
+#if NOTE_API_VERSION < NOTE_VERSION(3, 2, 1)
+    [[deprecated("requires firmware >= 3.2.1")]]
+#endif
+    struct total_t : Field<int32_t> {
+        using Field<int32_t>::Field;
+        using Field<int32_t>::operator=;
+        WebPut& operator()(int32_t v);
+    } total{};
+#endif
+    /// `true` to request verification from Notehub once the payload or payload
+    /// fragment is received. Automatically set to `true` when `status` is
+    /// supplied.
+    struct verify_t : Field<bool> {
+        using Field<bool>::Field;
+        using Field<bool>::operator=;
+        WebPut& operator()(bool v);
+    } verify{};
 
-#if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1)
-#if __cpp_explicit_this_parameter >= 202110L
-    auto&& set_async(this auto&& self, bool v) { self.async = v; return std::forward<decltype(self)>(self); }
-#else
-    auto& set_async(bool v) { async = v; return *this; }
+
+    template<typename T>
+    auto& extra(note::string_view key, T value) {
+        if (extras_count_ < NOTE_EXTRAS_MAX)
+            extras_[extras_count_++] = {key, note::DynValue{value}};
+        return *this;
+    }
+    auto& extra(note::string_view key, const char* value) {
+        return extra(key, note::string_view{value});
+    }
+
+    note::DynField operator[](note::string_view k_) {
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
+        if (k_ == "async") return note::dyn_field_for(async);
 #endif
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
+        if (k_ == "binary") return note::dyn_field_for(binary);
 #endif
-#if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1)
-#if __cpp_explicit_this_parameter >= 202110L
-    auto&& set_binary(this auto&& self, bool v) { self.binary = v; return std::forward<decltype(self)>(self); }
-#else
-    auto& set_binary(bool v) { binary = v; return *this; }
+        if (k_ == "content") return note::dyn_field_for(content);
+        if (k_ == "file") return note::dyn_field_for(file);
+        if (k_ == "max") return note::dyn_field_for(max);
+        if (k_ == "name") return note::dyn_field_for(name);
+        if (k_ == "note") return note::dyn_field_for(noteId);
+        if (k_ == "offset") return note::dyn_field_for(offset);
+        if (k_ == "payload") return note::dyn_field_for(payload);
+        if (k_ == "route") return note::dyn_field_for(route);
+        if (k_ == "seconds") return note::dyn_field_for(seconds);
+        if (k_ == "status") return note::dyn_field_for(status);
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
+        if (k_ == "total") return note::dyn_field_for(total);
 #endif
-#endif
-#if __cpp_explicit_this_parameter >= 202110L
-    auto&& set_body(this auto&& self, BodyValue v) { self.body = v; return std::forward<decltype(self)>(self); }
-    template<typename T> requires detail::BodySchema<T>
-    auto&& set_body(this auto&& self, const T& v) { self.body = make_schema_body(v); return std::forward<decltype(self)>(self); }
-#else
-    auto& set_body(BodyValue v) { body = v; return *this; }
-    template<typename T> requires detail::BodySchema<T>
-    auto& set_body(const T& v) { body = make_schema_body(v); return *this; }
-#endif
-#if __cpp_explicit_this_parameter >= 202110L
-    auto&& set_content(this auto&& self, note::string_view v) { self.content = v; return std::forward<decltype(self)>(self); }
-#else
-    auto& set_content(note::string_view v) { content = v; return *this; }
-#endif
-#if __cpp_explicit_this_parameter >= 202110L
-    auto&& set_file(this auto&& self, note::string_view v) { self.file = v; return std::forward<decltype(self)>(self); }
-#else
-    auto& set_file(note::string_view v) { file = v; return *this; }
-#endif
-#if __cpp_explicit_this_parameter >= 202110L
-    auto&& set_max(this auto&& self, int32_t v) { self.max = v; return std::forward<decltype(self)>(self); }
-#else
-    auto& set_max(int32_t v) { max = v; return *this; }
-#endif
-#if __cpp_explicit_this_parameter >= 202110L
-    auto&& set_name(this auto&& self, note::string_view v) { self.name = v; return std::forward<decltype(self)>(self); }
-#else
-    auto& set_name(note::string_view v) { name = v; return *this; }
-#endif
-#if __cpp_explicit_this_parameter >= 202110L
-    auto&& set_note_id(this auto&& self, note::string_view v) { self.note_id = v; return std::forward<decltype(self)>(self); }
-#else
-    auto& set_note_id(note::string_view v) { note_id = v; return *this; }
-#endif
-#if __cpp_explicit_this_parameter >= 202110L
-    auto&& set_offset(this auto&& self, int32_t v) { self.offset = v; return std::forward<decltype(self)>(self); }
-#else
-    auto& set_offset(int32_t v) { offset = v; return *this; }
-#endif
-#if __cpp_explicit_this_parameter >= 202110L
-    auto&& set_payload(this auto&& self, note::string_view v) { self.payload = v; return std::forward<decltype(self)>(self); }
-#else
-    auto& set_payload(note::string_view v) { payload = v; return *this; }
-#endif
-#if __cpp_explicit_this_parameter >= 202110L
-    auto&& set_route(this auto&& self, note::string_view v) { self.route = v; return std::forward<decltype(self)>(self); }
-#else
-    auto& set_route(note::string_view v) { route = v; return *this; }
-#endif
-#if __cpp_explicit_this_parameter >= 202110L
-    auto&& set_seconds(this auto&& self, int32_t v) { self.seconds = v; return std::forward<decltype(self)>(self); }
-#else
-    auto& set_seconds(int32_t v) { seconds = v; return *this; }
-#endif
-#if __cpp_explicit_this_parameter >= 202110L
-    auto&& set_status(this auto&& self, note::string_view v) { self.status = v; return std::forward<decltype(self)>(self); }
-#else
-    auto& set_status(note::string_view v) { status = v; return *this; }
-#endif
-#if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1)
-#if __cpp_explicit_this_parameter >= 202110L
-    auto&& set_total(this auto&& self, int32_t v) { self.total = v; return std::forward<decltype(self)>(self); }
-#else
-    auto& set_total(int32_t v) { total = v; return *this; }
-#endif
-#endif
-#if __cpp_explicit_this_parameter >= 202110L
-    auto&& set_verify(this auto&& self, bool v) { self.verify = v; return std::forward<decltype(self)>(self); }
-#else
-    auto& set_verify(bool v) { verify = v; return *this; }
-#endif
+        if (k_ == "verify") return note::dyn_field_for(verify);
+        if (extras_count_ < NOTE_EXTRAS_MAX) {
+            auto& slot = extras_[extras_count_++];
+            slot.key = k_;
+            return note::dyn_field_for(slot.value);
+        }
+        return {};
+    }
+
+    std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
+    uint8_t extras_count_ = 0;
 
     struct Response {
+        /// A base64-encoded binary payload from the external service, if any.
+        /// The maximum response size from the service is 8192 bytes.
         note::string_view payload{};
+        /// The HTTP Status Code.
         int32_t result{};
+        /// If a `payload` is returned in the response, this is a 32-character
+        /// hex-encoded MD5 sum of the payload or payload fragment. Useful for
+        /// the host to check for any I2C/UART corruption.
         note::string_view status{};
 
         const JsonReader* body() const { return body_.get(); }
 
         template<typename T>
-        T body_as() const {
+        T bodyAs() const {
             if (body_) return parse_body_<T>(*body_);
             return T{};
         }
@@ -169,11 +266,13 @@ struct WebPut {
         }
     };
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
     void build(JsonBuilder& b) const {
-#if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1)
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
         if (async) b.add("async", *async);
 #endif
-#if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1)
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
         if (binary) b.add("binary", *binary);
 #endif
         body.write_to(b);
@@ -181,17 +280,23 @@ struct WebPut {
         if (file) b.add("file", *file);
         if (max) b.add("max", *max);
         if (name) b.add("name", *name);
-        if (note_id) b.add("note", *note_id);
+        if (noteId) b.add("note", *noteId);
         if (offset) b.add("offset", *offset);
         if (payload) b.add("payload", *payload);
         if (route) b.add("route", *route);
         if (seconds) b.add("seconds", *seconds);
         if (status) b.add("status", *status);
-#if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1)
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
         if (total) b.add("total", *total);
 #endif
         if (verify) b.add("verify", *verify);
+        for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
+            std::visit([&](auto&& v_) {
+                if constexpr (!std::is_same_v<std::decay_t<decltype(v_)>, std::monostate>)
+                    b.add(extras_[i_].key, v_);
+            }, extras_[i_].value);
     }
+#pragma GCC diagnostic pop
 
     auto execute() const { return nc_->execute(*this); }
     auto execute(Notecard& nc) const { return nc.execute(*this); }
@@ -199,5 +304,100 @@ struct WebPut {
     Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
 
 };
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
+inline WebPut& WebPut::async_t::operator()(bool v) {
+    Field<bool>::operator=(v);
+    return *reinterpret_cast<WebPut*>(
+        reinterpret_cast<char*>(this) - offsetof(WebPut, async));
+}
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
+inline WebPut& WebPut::binary_t::operator()(bool v) {
+    Field<bool>::operator=(v);
+    return *reinterpret_cast<WebPut*>(
+        reinterpret_cast<char*>(this) - offsetof(WebPut, binary));
+}
+#endif
+inline WebPut& WebPut::body_t::operator()(BodyValue v) {
+    BodyValue::operator=(std::move(v));
+    return *reinterpret_cast<WebPut*>(
+        reinterpret_cast<char*>(this) - offsetof(WebPut, body));
+}
+#if __cplusplus >= 202002L
+template<typename T> requires detail::BodySchema<T>
+inline WebPut& WebPut::body_t::operator()(const T& v) {
+    BodyValue::operator=(make_schema_body(v));
+    return *reinterpret_cast<WebPut*>(
+        reinterpret_cast<char*>(this) - offsetof(WebPut, body));
+}
+#endif
+inline WebPut& WebPut::content_t::operator()(note::string_view v) {
+    Field<note::string_view>::operator=(v);
+    return *reinterpret_cast<WebPut*>(
+        reinterpret_cast<char*>(this) - offsetof(WebPut, content));
+}
+inline WebPut& WebPut::file_t::operator()(note::string_view v) {
+    Field<note::string_view>::operator=(v);
+    return *reinterpret_cast<WebPut*>(
+        reinterpret_cast<char*>(this) - offsetof(WebPut, file));
+}
+inline WebPut& WebPut::max_t::operator()(int32_t v) {
+    Field<int32_t>::operator=(v);
+    return *reinterpret_cast<WebPut*>(
+        reinterpret_cast<char*>(this) - offsetof(WebPut, max));
+}
+inline WebPut& WebPut::name_t::operator()(note::string_view v) {
+    Field<note::string_view>::operator=(v);
+    return *reinterpret_cast<WebPut*>(
+        reinterpret_cast<char*>(this) - offsetof(WebPut, name));
+}
+inline WebPut& WebPut::noteId_t::operator()(note::string_view v) {
+    Field<note::string_view>::operator=(v);
+    return *reinterpret_cast<WebPut*>(
+        reinterpret_cast<char*>(this) - offsetof(WebPut, noteId));
+}
+inline WebPut& WebPut::offset_t::operator()(int32_t v) {
+    Field<int32_t>::operator=(v);
+    return *reinterpret_cast<WebPut*>(
+        reinterpret_cast<char*>(this) - offsetof(WebPut, offset));
+}
+inline WebPut& WebPut::payload_t::operator()(note::string_view v) {
+    Field<note::string_view>::operator=(v);
+    return *reinterpret_cast<WebPut*>(
+        reinterpret_cast<char*>(this) - offsetof(WebPut, payload));
+}
+inline WebPut& WebPut::route_t::operator()(note::string_view v) {
+    Field<note::string_view>::operator=(v);
+    return *reinterpret_cast<WebPut*>(
+        reinterpret_cast<char*>(this) - offsetof(WebPut, route));
+}
+inline WebPut& WebPut::seconds_t::operator()(int32_t v) {
+    Field<int32_t>::operator=(v);
+    return *reinterpret_cast<WebPut*>(
+        reinterpret_cast<char*>(this) - offsetof(WebPut, seconds));
+}
+inline WebPut& WebPut::status_t::operator()(note::string_view v) {
+    Field<note::string_view>::operator=(v);
+    return *reinterpret_cast<WebPut*>(
+        reinterpret_cast<char*>(this) - offsetof(WebPut, status));
+}
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
+inline WebPut& WebPut::total_t::operator()(int32_t v) {
+    Field<int32_t>::operator=(v);
+    return *reinterpret_cast<WebPut*>(
+        reinterpret_cast<char*>(this) - offsetof(WebPut, total));
+}
+#endif
+inline WebPut& WebPut::verify_t::operator()(bool v) {
+    Field<bool>::operator=(v);
+    return *reinterpret_cast<WebPut*>(
+        reinterpret_cast<char*>(this) - offsetof(WebPut, verify));
+}
+#pragma GCC diagnostic pop
+
 
 } // namespace note::api

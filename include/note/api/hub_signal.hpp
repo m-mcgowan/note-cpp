@@ -2,6 +2,7 @@
 #pragma once
 
 #include <note/body.hpp>
+#include <note/dyn_field.hpp>
 #include <note/field.hpp>
 #include <note/json.hpp>
 #include <note/notecard.hpp>
@@ -10,6 +11,12 @@
 
 namespace note::api {
 
+
+
+
+
+
+
 struct HubSignal {
     static constexpr string_view notecard_request = "hub.signal";
     static constexpr bool supports_cmd = true;
@@ -17,26 +24,56 @@ struct HubSignal {
 
     Notecard* nc_ = nullptr;
 
-#if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1)
-    Field<int32_t> seconds{};
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
+    /// The number of seconds to wait before timing out the request.
+    ///
+    /// @since firmware 5.1.1
+#if NOTE_API_VERSION < NOTE_VERSION(5, 1, 1)
+    [[deprecated("requires firmware >= 5.1.1")]]
+#endif
+    struct seconds_t : Field<int32_t> {
+        using Field<int32_t>::Field;
+        using Field<int32_t>::operator=;
+        HubSignal& operator()(int32_t v);
+    } seconds{};
 #endif
 
-#if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1)
-#if __cpp_explicit_this_parameter >= 202110L
-    auto&& set_seconds(this auto&& self, int32_t v) { self.seconds = v; return std::forward<decltype(self)>(self); }
-#else
-    auto& set_seconds(int32_t v) { seconds = v; return *this; }
+
+    template<typename T>
+    auto& extra(note::string_view key, T value) {
+        if (extras_count_ < NOTE_EXTRAS_MAX)
+            extras_[extras_count_++] = {key, note::DynValue{value}};
+        return *this;
+    }
+    auto& extra(note::string_view key, const char* value) {
+        return extra(key, note::string_view{value});
+    }
+
+    note::DynField operator[](note::string_view k_) {
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
+        if (k_ == "seconds") return note::dyn_field_for(seconds);
 #endif
-#endif
+        if (extras_count_ < NOTE_EXTRAS_MAX) {
+            auto& slot = extras_[extras_count_++];
+            slot.key = k_;
+            return note::dyn_field_for(slot.value);
+        }
+        return {};
+    }
+
+    std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
+    uint8_t extras_count_ = 0;
 
     struct Response {
+        /// `true` if the Notecard is connected to Notehub.
         bool connected{};
+        /// The number of queued signals remaining.
         int32_t signals{};
 
         const JsonReader* body() const { return body_.get(); }
 
         template<typename T>
-        T body_as() const {
+        T bodyAs() const {
             if (body_) return parse_body_<T>(*body_);
             return T{};
         }
@@ -71,11 +108,19 @@ struct HubSignal {
         }
     };
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
     void build(JsonBuilder& b) const {
-#if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1)
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
         if (seconds) b.add("seconds", *seconds);
 #endif
+        for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
+            std::visit([&](auto&& v_) {
+                if constexpr (!std::is_same_v<std::decay_t<decltype(v_)>, std::monostate>)
+                    b.add(extras_[i_].key, v_);
+            }, extras_[i_].value);
     }
+#pragma GCC diagnostic pop
 
     auto execute() const { return nc_->execute(*this); }
     auto execute(Notecard& nc) const { return nc.execute(*this); }
@@ -83,5 +128,18 @@ struct HubSignal {
     Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
 
 };
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
+inline HubSignal& HubSignal::seconds_t::operator()(int32_t v) {
+    Field<int32_t>::operator=(v);
+    return *reinterpret_cast<HubSignal*>(
+        reinterpret_cast<char*>(this) - offsetof(HubSignal, seconds));
+}
+#endif
+#pragma GCC diagnostic pop
+
 
 } // namespace note::api

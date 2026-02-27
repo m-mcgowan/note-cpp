@@ -7,7 +7,7 @@ Type-safe C++23 API for the Blues Notecard. Header-only, zero dependencies beyon
 ```
 ┌─────────────────────────────────────────────────────┐
 │  User code                                          │
-│    api.hubSet().set_product("x").execute();          │
+│    api.hubSet().product("x").execute();              │
 ├─────────────────────────────────────────────────────┤
 │  Generated API layer        include/note/api/*.hpp  │
 │    74 request/response types from OpenAPI spec       │
@@ -72,12 +72,12 @@ Type-safe C++23 API for the Blues Notecard. Header-only, zero dependencies beyon
 
 ### Phase 3: Body values and schemas
 - `BodyValue` type supporting three tiers:
-  - Tier 1: Raw JSON string (`set_body("...")`)
-  - Tier 2: Builder lambda (`set_body(note::body([](auto& b) { ... }))`)
-  - Tier 3: Schema struct (`set_body(readings)`)
+  - Tier 1: Raw JSON string (`body("...")`)
+  - Tier 2: Builder lambda (`body(note::body([](auto& b) { ... }))`)
+  - Tier 3: Schema struct (`body(readings)`)
 - `NOTE_BODY` macro for C++17 struct binding
 - `template_of<T>()` for Notecard template registration
-- Response body parsing with `body()` and `body_as<T>()`
+- Response body parsing with `body()` and `bodyAs<T>()`
 
 ### Phase 4: ApiResult
 - `ApiResult<Response>` — inherits from Response for dot-access
@@ -119,6 +119,16 @@ Type-safe C++23 API for the Blues Notecard. Header-only, zero dependencies beyon
   - Call-site: ~50 bytes/function average overhead for type safety
   - `card_version` caller is smaller in note-cpp (typed response vs manual JGetString)
 
+### Phase 10: Qt-style property accessors
+- Per-field functor types (container_of pattern) — each field is callable, returns parent for chaining
+- Direct field assignment and designated initializers preserved (aggregate stays public)
+- `extra(key, value)` for undocumented properties; `operator[]` as syntactic sugar
+- `DynField` proxy type with type-erased setter; `ExtraSlot` fixed-size buffer (default 4)
+- camelCase accessor names: `note_id` → `noteId`, `body_as<T>()` → `bodyAs<T>()`
+- `validatedMode()` etc. renamed from `validated_mode()`
+- `dyn_field.hpp` new header; `endpoint.hpp.j2` template fully rewritten
+- 33 new tests in `test_property_functor.cpp`
+
 ### Infrastructure
 - `ci.sh` — runs codegen, header compilation checks, unit tests, smoke test
 - `ci.sh --all-compilers` — discovers and tests all locally installed compilers
@@ -128,21 +138,32 @@ Type-safe C++23 API for the Blues Notecard. Header-only, zero dependencies beyon
 
 ## Planned
 
-### note-app — application layer
-Separate repo for transport implementations and application-level patterns:
-- Serial framing (newline-delimited JSON)
-- I2C protocol (chunked reads/writes, polling)
-- CRC handling (~20 lines of logic)
-- Retry/locking
-- Platform hooks (Arduino, Zephyr, ESP-IDF, Linux)
-- Application patterns (periodic sync, DFU orchestration, etc.)
+### Platform HAL repos
+note-cpp is platform-neutral: it owns the full wire protocol (CRC, retry,
+segmented TX/RX, reset sync) via injectable `SerialHal` / `I2cHal` interfaces,
+matching the scope of note-c's `n_serial.c` / `n_i2c.c`. Concrete platform
+glue — thin `SerialHal` / `I2cHal` subclasses — belongs in separate repos:
 
-### note-c string transaction API (on hold)
+- `note-arduino-cpp` — Arduino `HardwareSerial` + `Wire` implementations
+- `note-zephyr-cpp` — Zephyr UART + I2C driver bindings
+- `note-espidf-cpp` — ESP-IDF UART + I2C bindings
+- `note-linux-cpp` — `/dev/ttyACM0` serial, `/dev/i2c-N` I2C
+
+Each of these depends on note-cpp and provides only the HAL glue.
+Application-level patterns (periodic sync, DFU orchestration) can live in
+whichever repo is most appropriate.
+
+### note-c string transaction API (superseded)
 Repo: `~/e/note-c`, branch: `feature/string-transaction-api` (on fork).
-L0 (`NoteTransactionStreaming`) and L1 (`NoteTransactionString`) are done.
-L2 (refactor `NoteRequestResponseJSON`) not started. May be superseded by
-native transport in note-app.
+L0/L1 are done; L2 not started. The note-cpp transport layer covers the same
+ground at the C++ level, so L2 work on note-c is no longer a priority.
 
 ### Future considerations
 - **OpenAPI Overlays**: standardized format for sideband metadata
 - **C++20 reflection**: automatic struct binding without `NOTE_BODY` macro
+- **C++20 compatibility**: current minimum is C++23 due to `std::expected`. Dropping to C++20
+  requires swapping `std::expected`/`std::unexpected` in `types.hpp` for `tl::expected` (or a
+  vendored polyfill) behind a `#if __cplusplus >= 202302L` guard. Concepts and `consteval` are
+  already C++20. C++17 would additionally require removing concepts and replacing `consteval`
+  with `constexpr`, losing some compile-time safety. C++20 is the realistic target for embedded
+  toolchains (Arduino/ESP32/STM32 ship GCC 10–12).

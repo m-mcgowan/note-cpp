@@ -66,9 +66,61 @@ run_ci() {
         "$ROOT/tests/test_wire_format.cpp" \
         "$ROOT/tests/test_samples.cpp" \
         "$ROOT/tests/test_body.cpp" \
-        "$ROOT/tests/test_json_buf.cpp"
+        "$ROOT/tests/test_json_buf.cpp" \
+        "$ROOT/tests/test_property_functor.cpp" \
+        "$ROOT/tests/test_transport_crc32.cpp" \
+        "$ROOT/tests/test_transport_serial.cpp" \
+        "$ROOT/tests/test_transport_i2c.cpp"
     /tmp/note-cpp-tests
     echo "  tests: OK"
+
+    # Version gating tests
+    echo
+    echo "=== Version gating ==="
+    # Warn mode: version-gated fields produce deprecation warnings
+    printf "  %-40s " "warn mode"
+    WARN_OUT=$($CXX $CXXFLAGS $INCLUDE -fsyntax-only -x c++ - <<'VEOF' 2>&1 || true
+#define NOTE_API_VERSION NOTE_VERSION(3, 0, 0)
+#include <note/api/hub_set.hpp>
+void test() { note::api::HubSet req; req.off = true; }
+VEOF
+    )
+    if echo "$WARN_OUT" | grep -q 'deprecated.*requires firmware'; then
+        echo "OK"
+    else
+        echo "FAIL (expected deprecation warning)"
+        echo "$WARN_OUT"
+        exit 1
+    fi
+
+    # Strict mode: version-gated fields are compiled out
+    printf "  %-40s " "strict mode"
+    STRICT_OUT=$($CXX $CXXFLAGS $INCLUDE -fsyntax-only -x c++ - <<'VEOF' 2>&1 || true
+#define NOTE_API_VERSION NOTE_VERSION(3, 0, 0)
+#define NOTE_API_STRICT
+#include <note/api/hub_set.hpp>
+void test() { note::api::HubSet req; req.off = true; }
+VEOF
+    )
+    if echo "$STRICT_OUT" | grep -q "no member named 'off'"; then
+        echo "OK"
+    else
+        echo "FAIL (expected compile error for gated field)"
+        echo "$STRICT_OUT"
+        exit 1
+    fi
+
+    # Latest version: no warnings
+    printf "  %-40s " "latest (no warnings)"
+    if $CXX $CXXFLAGS $INCLUDE -Werror -fsyntax-only -x c++ - <<'VEOF' 2>&1; then
+#include <note/api/hub_set.hpp>
+void test() { note::api::HubSet req; req.off = true; }
+VEOF
+        echo "OK"
+    else
+        echo "FAIL (unexpected warnings at latest version)"
+        exit 1
+    fi
 
     # Build and run the smoke test
     echo

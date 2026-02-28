@@ -48,3 +48,39 @@ jobs:
           CXX: ${{ matrix.compiler }}
           CXXFLAGS: ${{ matrix.cxxflags }}
         run: ./ci.sh
+
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            clang-18 libc++-18-dev libc++abi-18-dev libstdc++-13-dev \
+            lcov
+
+      - name: Install Python dependencies
+        run: pip install jinja2
+
+      - name: Run CI (runs codegen)
+        env:
+          CXX: clang++-18
+          CXXFLAGS: -std=c++23 -stdlib=libc++
+        run: ./ci.sh
+
+      - name: Generate coverage report
+        env:
+          CXX: clang++-18
+          CXXFLAGS: -std=c++23 -stdlib=libc++
+          LLVM_COV: llvm-cov-18
+          LLVM_PROFDATA: llvm-profdata-18
+        run: ./ci.sh --coverage
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/html/
+          retention-days: 30

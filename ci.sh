@@ -7,10 +7,14 @@ ROOT="$(dirname "$0")"
 # Usage:
 #   ./ci.sh                  Run with default compiler (c++ -std=c++2b)
 #   ./ci.sh --all-compilers  Run with all available compilers
+#   ./ci.sh --coverage       Build with coverage instrumentation and generate report
 #   CXX=g++-13 ./ci.sh       Run with a specific compiler
 #
 # --all-compilers discovers compilers matching the CI matrix (g++-13, clang++-18) plus
 # any GCC/Clang versions installed via Homebrew on macOS.
+
+LLVM_COV="${LLVM_COV:-$(xcrun --find llvm-cov 2>/dev/null || echo llvm-cov)}"
+LLVM_PROFDATA="${LLVM_PROFDATA:-$(xcrun --find llvm-profdata 2>/dev/null || echo llvm-profdata)}"
 
 run_ci() {
     local CXX="$1"
@@ -172,20 +176,78 @@ discover_compilers() {
     done
 }
 
-if [ "${1:-}" = "--all-compilers" ]; then
-    echo "Discovering compilers..."
-    FAILED=0
-    while IFS= read -r entry; do
-        cxx="${entry%%:*}"
-        flags="${entry#*:}"
-        run_ci "$cxx" "$flags" || FAILED=1
-    done < <(discover_compilers)
+run_coverage() {
+    local CXX="${CXX:-c++}"
+    local CXXFLAGS="${CXXFLAGS:--std=c++2b}"
+    local INCLUDE="-I $ROOT/include"
+    local OUT_DIR="${ROOT}/coverage"
+    local BINARY="/tmp/note-cpp-tests-cov"
+    local PROFRAW="/tmp/note-cpp-tests.profraw"
+    local PROFDATA="/tmp/note-cpp-tests.profdata"
 
-    if [ "$FAILED" -ne 0 ]; then
-        echo "SOME COMPILERS FAILED"
-        exit 1
-    fi
-    echo "All compilers passed."
-else
-    run_ci "${CXX:-c++}" "${CXXFLAGS:--std=c++2b}"
-fi
+    echo "=== Coverage build ==="
+    LLVM_PROFILE_FILE="$PROFRAW" \
+        $CXX $CXXFLAGS -fprofile-instr-generate -fcoverage-mapping \
+        $INCLUDE -I "$ROOT/tests" -o "$BINARY" \
+        "$ROOT/tests/test_main.cpp" \
+        "$ROOT/tests/test_wire_format.cpp" \
+        "$ROOT/tests/test_samples.cpp" \
+        "$ROOT/tests/test_body.cpp" \
+        "$ROOT/tests/test_json_buf.cpp" \
+        "$ROOT/tests/test_property_functor.cpp" \
+        "$ROOT/tests/test_transport_crc32.cpp" \
+        "$ROOT/tests/test_transport_serial.cpp" \
+        "$ROOT/tests/test_transport_i2c.cpp"
+    LLVM_PROFILE_FILE="$PROFRAW" "$BINARY"
+
+    echo "=== Merging profile data ==="
+    "$LLVM_PROFDATA" merge -sparse "$PROFRAW" -o "$PROFDATA"
+
+    echo
+    echo "=== Coverage report ==="
+    "$LLVM_COV" report "$BINARY" \
+        --instr-profile="$PROFDATA" \
+        --ignore-filename-regex="tests/" \
+        "${ROOT}/include/note"
+
+    mkdir -p "$OUT_DIR"
+    echo
+    echo "=== Generating HTML report → ${OUT_DIR} ==="
+    "$LLVM_COV" export "$BINARY" \
+        --instr-profile="$PROFDATA" \
+        --format=lcov \
+        --ignore-filename-regex="tests/" \
+        "${ROOT}/include/note" \
+        > "$OUT_DIR/coverage.lcov"
+
+    genhtml "$OUT_DIR/coverage.lcov" \
+        --output-directory "$OUT_DIR/html" \
+        --title "note-cpp coverage" \
+        --quiet
+
+    echo "  HTML report: ${OUT_DIR}/html/index.html"
+    echo
+}
+
+case "${1:-}" in
+    --coverage)
+        run_coverage
+        ;;
+    --all-compilers)
+        echo "Discovering compilers..."
+        FAILED=0
+        while IFS= read -r entry; do
+            cxx="${entry%%:*}"
+            flags="${entry#*:}"
+            run_ci "$cxx" "$flags" || FAILED=1
+        done < <(discover_compilers)
+        if [ "$FAILED" -ne 0 ]; then
+            echo "SOME COMPILERS FAILED"
+            exit 1
+        fi
+        echo "All compilers passed."
+        ;;
+    *)
+        run_ci "${CXX:-c++}" "${CXXFLAGS:--std=c++2b}"
+        ;;
+esac

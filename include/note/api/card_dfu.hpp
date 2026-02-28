@@ -86,18 +86,22 @@ struct CardDfu {
         CardDfu& operator()(bool v);
     } stop{};
 
+    // LCOV_EXCL_START — consteval: only callable at compile time
     static consteval note::string_view validatedMode(const char* v) {
         note::string_view sv{v};
         if (sv != "altdfu" && sv != "aux")
             throw "card.dfu: invalid value for 'mode'";
         return sv;
     }
+    // LCOV_EXCL_STOP
+    // LCOV_EXCL_START — consteval: only callable at compile time
     static consteval note::string_view validatedName(const char* v) {
         note::string_view sv{v};
         if (sv != "esp32" && sv != "stm32" && sv != "stm32-bi" && sv != "mcuboot" && sv != "-")
             throw "card.dfu: invalid value for 'name'";
         return sv;
     }
+    // LCOV_EXCL_STOP
 
     template<typename T>
     auto& extra(note::string_view key, T value) {

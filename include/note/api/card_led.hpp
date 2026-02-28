@@ -46,12 +46,14 @@ struct CardLed {
         CardLed& operator()(bool v);
     } on{};
 
+    // LCOV_EXCL_START — consteval: only callable at compile time
     static consteval note::string_view validatedMode(const char* v) {
         note::string_view sv{v};
         if (sv != "red" && sv != "green" && sv != "yellow" && sv != "blue" && sv != "cyan" && sv != "magenta" && sv != "orange" && sv != "white" && sv != "gray")
             throw "card.led: invalid value for 'mode'";
         return sv;
     }
+    // LCOV_EXCL_STOP
 
     template<typename T>
     auto& extra(note::string_view key, T value) {

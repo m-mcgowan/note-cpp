@@ -40,12 +40,14 @@ struct CardIo {
         CardIo& operator()(note::string_view v);
     } mode{};
 
+    // LCOV_EXCL_START — consteval: only callable at compile time
     static consteval note::string_view validatedMode(const char* v) {
         note::string_view sv{v};
         if (sv != "-usb" && sv != "usb" && sv != "+usb" && sv != "+busy" && sv != "-busy" && sv != "i2c-master-disable" && sv != "i2c-master-enable" && sv != "+fallback" && sv != "-fallback")
             throw "card.io: invalid value for 'mode'";
         return sv;
     }
+    // LCOV_EXCL_STOP
 
     template<typename T>
     auto& extra(note::string_view key, T value) {

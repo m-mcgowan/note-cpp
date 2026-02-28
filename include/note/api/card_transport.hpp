@@ -78,12 +78,14 @@ struct CardTransport {
     } umin{};
 #endif
 
+    // LCOV_EXCL_START — consteval: only callable at compile time
     static consteval note::string_view validatedMethod(const char* v) {
         note::string_view sv{v};
         if (sv != "-" && sv != "cell" && sv != "cell-ntn" && sv != "dual-wifi-cell" && sv != "ntn" && sv != "wifi" && sv != "wifi-cell" && sv != "wifi-cell-ntn" && sv != "wifi-ntn")
             throw "card.transport: invalid value for 'method'";
         return sv;
     }
+    // LCOV_EXCL_STOP
 
     template<typename T>
     auto& extra(note::string_view key, T value) {

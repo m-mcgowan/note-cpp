@@ -77,7 +77,7 @@ TEST_CASE("note::api::CardAttn request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -192,7 +192,7 @@ TEST_CASE("note::api::CardAux request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -286,7 +286,7 @@ TEST_CASE("note::api::CardAuxSerial request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -336,7 +336,7 @@ TEST_CASE("note::api::CardBinary::Get request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -378,7 +378,7 @@ TEST_CASE("note::api::CardBinary::Delete request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -424,7 +424,7 @@ TEST_CASE("note::api::CardBinaryGet request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -466,7 +466,7 @@ TEST_CASE("note::api::CardBinaryPut request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -502,7 +502,7 @@ TEST_CASE("note::api::CardCarrier request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -544,7 +544,7 @@ TEST_CASE("note::api::CardContact::Get request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -593,7 +593,7 @@ TEST_CASE("note::api::CardContact::Set request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -648,7 +648,7 @@ TEST_CASE("note::api::CardDfu request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -686,7 +686,7 @@ TEST_CASE("note::api::CardIllumination request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -720,7 +720,7 @@ TEST_CASE("note::api::CardIo request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -751,7 +751,7 @@ TEST_CASE("note::api::CardLed request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -777,7 +777,7 @@ TEST_CASE("note::api::CardLocation request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -843,7 +843,7 @@ TEST_CASE("note::api::CardLocationMode::Get request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -925,7 +925,7 @@ TEST_CASE("note::api::CardLocationMode::Set request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -1005,7 +1005,7 @@ TEST_CASE("note::api::CardLocationMode::Delete request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -1082,7 +1082,7 @@ TEST_CASE("note::api::CardLocationTrack request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -1138,7 +1138,7 @@ TEST_CASE("note::api::CardMonitor request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -1166,7 +1166,7 @@ TEST_CASE("note::api::CardMotion request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -1224,7 +1224,7 @@ TEST_CASE("note::api::CardMotionMode request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -1264,7 +1264,7 @@ TEST_CASE("note::api::CardMotionSync request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -1306,7 +1306,7 @@ TEST_CASE("note::api::CardMotionTrack request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -1340,7 +1340,7 @@ TEST_CASE("note::api::CardPower::Get request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -1381,7 +1381,7 @@ TEST_CASE("note::api::CardPower::Set request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -1420,7 +1420,7 @@ TEST_CASE("note::api::CardPower::Delete request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -1460,7 +1460,7 @@ TEST_CASE("note::api::CardRandom request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -1495,7 +1495,7 @@ TEST_CASE("note::api::CardRestart request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -1521,7 +1521,7 @@ TEST_CASE("note::api::CardRestore request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -1554,7 +1554,7 @@ TEST_CASE("note::api::CardSleep request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -1595,7 +1595,7 @@ TEST_CASE("note::api::CardStatus request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -1661,7 +1661,7 @@ TEST_CASE("note::api::CardTemp::Get request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -1716,7 +1716,7 @@ TEST_CASE("note::api::CardTemp::Set request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -1769,7 +1769,7 @@ TEST_CASE("note::api::CardTemp::Delete request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -1815,7 +1815,7 @@ TEST_CASE("note::api::CardTime request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -1859,7 +1859,7 @@ TEST_CASE("note::api::CardTrace request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -1903,7 +1903,7 @@ TEST_CASE("note::api::CardTransport request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -1958,7 +1958,7 @@ TEST_CASE("note::api::CardTriangulate request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -2010,7 +2010,7 @@ TEST_CASE("note::api::CardUsageGet request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -2063,7 +2063,7 @@ TEST_CASE("note::api::CardUsageTest request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -2117,7 +2117,7 @@ TEST_CASE("note::api::CardVersion request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -2199,7 +2199,7 @@ TEST_CASE("note::api::CardVoltage::Get request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -2305,7 +2305,7 @@ TEST_CASE("note::api::CardVoltage::Set request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -2393,7 +2393,7 @@ TEST_CASE("note::api::CardWifi request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -2446,7 +2446,7 @@ TEST_CASE("note::api::CardWireless request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -2495,7 +2495,7 @@ TEST_CASE("note::api::CardWirelessPenalty::Get request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -2552,7 +2552,7 @@ TEST_CASE("note::api::CardWirelessPenalty::Set request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -2608,7 +2608,7 @@ TEST_CASE("note::api::CardWirelessPenalty::Delete request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -2660,7 +2660,7 @@ TEST_CASE("note::api::DfuGet request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -2716,7 +2716,7 @@ TEST_CASE("note::api::DfuStatus request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -2769,7 +2769,7 @@ TEST_CASE("note::api::EnvDefault::Set request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -2799,7 +2799,7 @@ TEST_CASE("note::api::EnvDefault::Delete request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -2838,7 +2838,7 @@ TEST_CASE("note::api::EnvGet request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -2888,7 +2888,7 @@ TEST_CASE("note::api::EnvModified request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -2930,7 +2930,7 @@ TEST_CASE("note::api::EnvSet request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -2967,7 +2967,7 @@ TEST_CASE("note::api::EnvTemplate request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -3001,7 +3001,7 @@ TEST_CASE("note::api::FileChanges request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -3038,7 +3038,7 @@ TEST_CASE("note::api::FileChangesPending request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -3074,7 +3074,7 @@ TEST_CASE("note::api::FileClear request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -3100,7 +3100,7 @@ TEST_CASE("note::api::FileDelete request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -3126,7 +3126,7 @@ TEST_CASE("note::api::FileStats request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -3162,7 +3162,7 @@ TEST_CASE("note::api::HubGet request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -3216,7 +3216,7 @@ TEST_CASE("note::api::HubLog request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -3312,7 +3312,7 @@ TEST_CASE("note::api::HubSet request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -3376,7 +3376,7 @@ TEST_CASE("note::api::HubSignal request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -3412,7 +3412,7 @@ TEST_CASE("note::api::HubStatus request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -3454,7 +3454,7 @@ TEST_CASE("note::api::HubSync request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -3484,7 +3484,7 @@ TEST_CASE("note::api::HubSyncStatus request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -3582,7 +3582,7 @@ TEST_CASE("note::api::NoteAdd request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -3652,7 +3652,7 @@ TEST_CASE("note::api::NoteChanges::Get request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -3706,7 +3706,7 @@ TEST_CASE("note::api::NoteChanges::Delete request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -3752,7 +3752,7 @@ TEST_CASE("note::api::NoteDelete request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -3786,7 +3786,7 @@ TEST_CASE("note::api::NoteGet::Get request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -3831,7 +3831,7 @@ TEST_CASE("note::api::NoteGet::Delete request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -3888,7 +3888,7 @@ TEST_CASE("note::api::NoteTemplate::Set request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -3961,7 +3961,7 @@ TEST_CASE("note::api::NoteTemplate::Delete request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -4023,7 +4023,7 @@ TEST_CASE("note::api::NoteUpdate request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -4054,7 +4054,7 @@ TEST_CASE("note::api::NtnGps request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -4089,7 +4089,7 @@ TEST_CASE("note::api::NtnReset request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -4111,7 +4111,7 @@ TEST_CASE("note::api::NtnStatus request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -4147,7 +4147,7 @@ TEST_CASE("note::api::VarDelete request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -4176,7 +4176,7 @@ TEST_CASE("note::api::VarGet request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -4229,7 +4229,7 @@ TEST_CASE("note::api::VarSet request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -4268,7 +4268,7 @@ TEST_CASE("note::api::Web request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -4327,7 +4327,7 @@ TEST_CASE("note::api::WebDelete request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -4399,7 +4399,7 @@ TEST_CASE("note::api::WebGet request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -4490,7 +4490,7 @@ TEST_CASE("note::api::WebPost request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
@@ -4593,7 +4593,7 @@ TEST_CASE("note::api::WebPut request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]

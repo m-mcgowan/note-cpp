@@ -75,12 +75,14 @@ struct CardMotionMode {
     } stop{};
 
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1) || !defined(NOTE_API_STRICT)
+    // LCOV_EXCL_START — consteval: only callable at compile time
     static consteval note::string_view validatedSensitivity(const char* v) {
         note::string_view sv{v};
         if (sv != "-1" && sv != "0" && sv != "1" && sv != "2" && sv != "3" && sv != "4" && sv != "5")
             throw "card.motion.mode: invalid value for 'sensitivity'";
         return sv;
     }
+    // LCOV_EXCL_STOP
 #endif
 
     template<typename T>

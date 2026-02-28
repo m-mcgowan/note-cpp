@@ -80,7 +80,7 @@ TEST_CASE("note::api::{{ type_qual }} request builder") {
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
-    req.extra("_str", note::string_view("v"));
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]

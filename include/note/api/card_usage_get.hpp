@@ -43,12 +43,14 @@ struct CardUsageGet {
         CardUsageGet& operator()(int32_t v);
     } offset{};
 
+    // LCOV_EXCL_START — consteval: only callable at compile time
     static consteval note::string_view validatedMode(const char* v) {
         note::string_view sv{v};
         if (sv != "total" && sv != "1hour" && sv != "1day" && sv != "30day")
             throw "card.usage.get: invalid value for 'mode'";
         return sv;
     }
+    // LCOV_EXCL_STOP
 
     template<typename T>
     auto& extra(note::string_view key, T value) {

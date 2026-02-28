@@ -54,12 +54,14 @@ struct Web {
         Web& operator()(note::string_view v);
     } route{};
 
+    // LCOV_EXCL_START — consteval: only callable at compile time
     static consteval note::string_view validatedMethod(const char* v) {
         note::string_view sv{v};
         if (sv != "CONNECT" && sv != "DELETE" && sv != "GET" && sv != "HEAD" && sv != "OPTIONS" && sv != "PATCH" && sv != "POST" && sv != "PUT" && sv != "TRACE")
             throw "web: invalid value for 'method'";
         return sv;
     }
+    // LCOV_EXCL_STOP
 
     template<typename T>
     auto& extra(note::string_view key, T value) {

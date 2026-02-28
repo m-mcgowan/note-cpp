@@ -277,12 +277,14 @@ struct HubSet {
         HubSet& operator()(note::string_view v);
     } voutbound{};
 
+    // LCOV_EXCL_START — consteval: only callable at compile time
     static consteval note::string_view validatedMode(const char* v) {
         note::string_view sv{v};
         if (sv != "periodic" && sv != "continuous" && sv != "minimum" && sv != "off" && sv != "dfu")
             throw "hub.set: invalid value for 'mode'";
         return sv;
     }
+    // LCOV_EXCL_STOP
 
     template<typename T>
     auto& extra(note::string_view key, T value) {

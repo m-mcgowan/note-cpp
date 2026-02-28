@@ -32,12 +32,14 @@ struct CardTrace {
         CardTrace& operator()(note::string_view v);
     } mode{};
 
+    // LCOV_EXCL_START — consteval: only callable at compile time
     static consteval note::string_view validatedMode(const char* v) {
         note::string_view sv{v};
         if (sv != "on" && sv != "off")
             throw "card.trace: invalid value for 'mode'";
         return sv;
     }
+    // LCOV_EXCL_STOP
 
     template<typename T>
     auto& extra(note::string_view key, T value) {

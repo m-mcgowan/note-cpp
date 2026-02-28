@@ -368,12 +368,14 @@ public:
 //       return b;
 //   });
 
+// LCOV_EXCL_START — consteval: only callable at compile time
 template<typename Fn>
 consteval auto json_const(Fn fn) {
     auto result = fn();
     if (result.overflow()) throw "JsonBuf overflow: increase buffer size";
     return result;
 }
+// LCOV_EXCL_STOP
 
 
 // ── json ────────────────────────────────────────────────────────────────────
@@ -390,6 +392,7 @@ consteval auto json_const(Fn fn) {
 //
 //   static_assert(req.view() == R"({"req":"hub.set","mode":"periodic"})");
 
+// LCOV_EXCL_START — consteval: only callable at compile time
 template<auto fn>
 consteval auto json() {
     // Pass 1: measure with a large probe buffer.
@@ -404,5 +407,6 @@ consteval auto json() {
     fn(b);
     return b;
 }
+// LCOV_EXCL_STOP
 
 } // namespace note

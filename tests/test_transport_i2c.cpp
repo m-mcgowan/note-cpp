@@ -527,3 +527,27 @@ TEST_CASE("i2c round-trip: second request after success") {
     CHECK(*r1 == "{\"first\":true}");
     CHECK(*r2 == "{\"second\":true}");
 }
+
+// ---------------------------------------------------------------------------
+// I2cCallbackHal — verify all five delegate methods are called through
+// ---------------------------------------------------------------------------
+
+TEST_CASE("I2cCallbackHal delegates to callbacks") {
+    // Wire an I2cCallbackHal to a ScriptedI2cHal via lambdas.
+    // A successful round-trip exercises reset, transmit, receive, millis, delay.
+    ScriptedI2cHal real;
+    real.responses.push_back("{}\n");
+
+    I2cCallbackHal cb{
+        [&]()                                      -> bool     { return real.reset(); },
+        [&](const uint8_t* d, size_t n)            -> bool     { return real.transmit(d, n); },
+        [&](uint8_t* b, size_t n, uint32_t& avail) -> bool     { return real.receive(b, n, avail); },
+        [&]()                                      -> uint32_t { return real.millis(); },
+        [&](uint32_t ms)                                       { real.delay(ms); }
+    };
+
+    NotecardI2c transport(cb);
+    auto r = transport({"{\"req\":\"hub.status\"}"}, 5000);
+    REQUIRE(r.has_value());
+    CHECK(*r == "{}");
+}

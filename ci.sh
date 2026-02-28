@@ -42,9 +42,9 @@ run_ci() {
                 --test-dir "$ROOT/tests"
 
             if [ "${CI:-}" = "true" ]; then
-                if ! git diff --quiet -- "$ROOT/include/note/api/" "$ROOT/include/note/api.hpp" "$ROOT/include/note/api_context.hpp" "$ROOT/tests/test_samples.cpp"; then
+                if ! git diff --quiet -- "$ROOT/include/note/api/" "$ROOT/include/note/api.hpp" "$ROOT/include/note/api_context.hpp" "$ROOT/tests/test_samples.cpp" "$ROOT/tests/test_api_context.cpp" "$ROOT/tests/test_endpoint_coverage.cpp"; then
                     echo "ERROR: Generated files are out of date. Run the generator and commit."
-                    git diff --stat -- "$ROOT/include/note/api/" "$ROOT/include/note/api.hpp" "$ROOT/include/note/api_context.hpp" "$ROOT/tests/test_samples.cpp"
+                    git diff --stat -- "$ROOT/include/note/api/" "$ROOT/include/note/api.hpp" "$ROOT/include/note/api_context.hpp" "$ROOT/tests/test_samples.cpp" "$ROOT/tests/test_api_context.cpp" "$ROOT/tests/test_endpoint_coverage.cpp"
                     exit 1
                 fi
                 echo "  Generated files are up to date."
@@ -74,7 +74,10 @@ run_ci() {
         "$ROOT/tests/test_property_functor.cpp" \
         "$ROOT/tests/test_transport_crc32.cpp" \
         "$ROOT/tests/test_transport_serial.cpp" \
-        "$ROOT/tests/test_transport_i2c.cpp"
+        "$ROOT/tests/test_transport_i2c.cpp" \
+        "$ROOT/tests/test_notecard.cpp" \
+        "$ROOT/tests/test_api_context.cpp" \
+        "$ROOT/tests/test_endpoint_coverage.cpp"
     /tmp/note-cpp-tests
     echo "  tests: OK"
 
@@ -197,7 +200,10 @@ run_coverage() {
         "$ROOT/tests/test_property_functor.cpp" \
         "$ROOT/tests/test_transport_crc32.cpp" \
         "$ROOT/tests/test_transport_serial.cpp" \
-        "$ROOT/tests/test_transport_i2c.cpp"
+        "$ROOT/tests/test_transport_i2c.cpp" \
+        "$ROOT/tests/test_notecard.cpp" \
+        "$ROOT/tests/test_api_context.cpp" \
+        "$ROOT/tests/test_endpoint_coverage.cpp"
     LLVM_PROFILE_FILE="$PROFRAW" "$BINARY"
 
     echo "=== Merging profile data ==="

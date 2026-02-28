@@ -193,3 +193,29 @@ TEST_CASE("operator[] reserved word as string key") {
     req["delete"] = note::string_view("yes");    // 'delete' as string — no conflict
     REQUIRE(req.extras_count_ == 1);
 }
+
+// ---------------------------------------------------------------------------
+// DynField operator=(double) — stores floating-point value in extras
+// ---------------------------------------------------------------------------
+
+TEST_CASE("DynField operator=(double) stores double value") {
+    note::api::HubSet req;
+    req["threshold"] = 3.14;
+    REQUIRE(req.extras_count_ == 1);
+}
+
+TEST_CASE("DynField operator=(double) value is preserved") {
+    note::api::HubSet req;
+    req["ratio"] = 1.5;
+    REQUIRE(req.extras_count_ == 1);
+    // Verify the stored value is a double (not some other variant alternative)
+    REQUIRE(std::holds_alternative<double>(req.extras_[0].value));
+    REQUIRE(std::get<double>(req.extras_[0].value) == 1.5);
+}
+
+TEST_CASE("DynField operator=(const char*) stores string value") {
+    note::api::HubSet req;
+    req["label"] = "sensor-a";   // const char* literal → operator=(const char*)
+    REQUIRE(req.extras_count_ == 1);
+    REQUIRE(std::holds_alternative<note::string_view>(req.extras_[0].value));
+}

@@ -3,6 +3,8 @@
 #include <cstdint>
 #include <string_view>
 
+#include "compiler.hpp"
+
 namespace note {
 
 enum class Safety : uint8_t {
@@ -19,7 +21,7 @@ constexpr std::string_view to_string(Safety s) {
     case Safety::NonIdempotent:  return "non-idempotent";
     case Safety::Destructive:    return "destructive";
     }
-    return "unknown"; // C++23: std::unreachable()
+    NOTE_UNREACHABLE();
 }
 
 constexpr bool is_safe_to_retry(Safety s) {

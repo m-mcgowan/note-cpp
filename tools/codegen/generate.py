@@ -54,6 +54,44 @@ def _doc_comment_filter(text: str, indent: str = "    ") -> str:
     return "\n".join(lines)
 
 
+def _cpp_request_test_value(prop) -> str:
+    """C++ expression for setting a request field setter in generated tests."""
+    if prop.cpp_type == "bool":
+        return "true"
+    if prop.cpp_type == "int32_t":
+        return "int32_t{42}"
+    if prop.cpp_type == "double":
+        return "1.5"
+    # note::string_view — prefer the first enum value when available
+    if prop.enum_values:
+        return f'note::string_view("{prop.enum_values[0]}")'
+    return f'note::string_view("x-{prop.wire_name}")'
+
+
+def _reader_test_value(prop) -> str:
+    """C++ expression for PopulatedJsonReader::set() in generated response tests."""
+    if prop.cpp_type == "bool":
+        return "true"
+    if prop.cpp_type == "int32_t":
+        return "int32_t{42}"
+    if prop.cpp_type == "double":
+        return "1.5"
+    # note::string_view — reader stores std::string
+    return f'std::string("x-{prop.wire_name}")'
+
+
+def _response_match_value(prop) -> str:
+    """C++ expression for REQUIRE comparison in generated response tests."""
+    if prop.cpp_type == "bool":
+        return "true"
+    if prop.cpp_type == "int32_t":
+        return "42"
+    if prop.cpp_type == "double":
+        return "1.5"
+    # note::string_view — compare against a const char* literal
+    return f'"x-{prop.wire_name}"'
+
+
 def _cpp_literal(value) -> str:
     """Convert a JSON value to a C++ literal string."""
     if isinstance(value, bool):
@@ -166,6 +204,9 @@ def main() -> None:
     )
     env.filters["doc_comment"] = _doc_comment_filter
     env.filters["first_upper"] = lambda s: (s[0].upper() + s[1:]) if s else s
+    env.filters["request_test_value"] = _cpp_request_test_value
+    env.filters["reader_test_value"] = _reader_test_value
+    env.filters["response_match_value"] = _response_match_value
 
     endpoint_template = env.get_template("endpoint.hpp.j2")
     umbrella_template = env.get_template("api.hpp.j2")
@@ -214,6 +255,21 @@ def main() -> None:
         test_path = test_dir / "test_samples.cpp"
         test_path.write_text(test_content)
         print(f"Generated {len(tests)} sample tests in {test_path}")
+
+    # Generate Api factory coverage test
+    api_context_test_template = env.get_template("test_api_context.cpp.j2")
+    api_context_test_content = api_context_test_template.render(endpoints=endpoints)
+    test_dir.mkdir(parents=True, exist_ok=True)
+    api_context_test_path = test_dir / "test_api_context.cpp"
+    api_context_test_path.write_text(api_context_test_content)
+    print(f"Generated Api factory coverage test in {api_context_test_path}")
+
+    # Generate endpoint request-builder and response-parser coverage tests
+    endpoint_cov_template = env.get_template("test_endpoint_coverage.cpp.j2")
+    endpoint_cov_content = endpoint_cov_template.render(endpoints=endpoints)
+    endpoint_cov_path = test_dir / "test_endpoint_coverage.cpp"
+    endpoint_cov_path.write_text(endpoint_cov_content)
+    print(f"Generated endpoint coverage tests in {endpoint_cov_path}")
 
 
 if __name__ == "__main__":

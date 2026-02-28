@@ -3,6 +3,8 @@
 #include <cstdint>
 #include <string_view>
 
+#include "compiler.hpp"
+
 namespace note {
 
 enum class Error : uint8_t {
@@ -30,7 +32,7 @@ constexpr std::string_view to_string(Error e) {
     case Error::Overflow:   return "overflow";
     case Error::InvalidArg: return "invalid argument";
     }
-    return "unknown"; // C++23: std::unreachable()
+    NOTE_UNREACHABLE();
 }
 
 } // namespace note

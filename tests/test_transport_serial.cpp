@@ -497,3 +497,26 @@ TEST_CASE("max retries exceeded returns Error::Transport or Error::NotReady") {
     REQUIRE((r.error().code == note::Error::NotReady ||
              r.error().code == note::Error::Transport));
 }
+
+// ---------------------------------------------------------------------------
+// SerialCallbackHal — verify all four delegate methods are called through
+// ---------------------------------------------------------------------------
+
+TEST_CASE("SerialCallbackHal delegates to callbacks") {
+    // Wire a SerialCallbackHal to a ScriptedHal via lambdas.
+    // A successful round-trip exercises transmit, receive, millis, and delay.
+    ScriptedHal real;
+    real.queue_response("{}\r\n");
+
+    SerialCallbackHal cb{
+        [&](const uint8_t* d, size_t n)  -> bool     { return real.transmit(d, n); },
+        [&](uint8_t* b,       size_t n)  -> size_t   { return real.receive(b, n); },
+        [&]()                            -> uint32_t  { return real.millis(); },
+        [&](uint32_t ms)                             { real.delay(ms); }
+    };
+
+    NotecardSerial transport(cb);
+    auto r = transport("{\"req\":\"hub.status\"}", 5000);
+    REQUIRE(r.has_value());
+    CHECK(*r == "{}");
+}

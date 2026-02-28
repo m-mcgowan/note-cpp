@@ -138,6 +138,18 @@ Type-safe C++23 API for the Blues Notecard. Header-only, zero dependencies beyon
 
 ## Planned
 
+### note-app
+
+Higher-level app-centric library above note-cpp. Full design: `docs/note-app.md`.
+
+Key abstractions:
+- `INoteChannel` — the interface all app components depend on (not note-cpp directly)
+- `DirectChannel`, `QueuedChannel`, `TickChannel` — implementations
+- Composites — named types for fixed, non-conditional request sequences
+- Procedures — closures for conditional multi-step operations (no rollback)
+- Re-entrancy handling — composites/procedures run to completion in one tick
+- `AttentionManager`, `ConfigManager<T>`, `SyncManager` — planned components
+
 ### Platform HAL repos
 note-cpp is platform-neutral: it owns the full wire protocol (CRC, retry,
 segmented TX/RX, reset sync) via injectable `SerialHal` / `I2cHal` interfaces,

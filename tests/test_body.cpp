@@ -65,6 +65,20 @@ struct MacroReadings {
     NOTE_BODY(temperature, humidity)
 };
 
+// Type hint coverage: one field per supported integer size
+struct AllIntSizes {
+    int8_t  tiny;
+    int16_t small_field;
+    int32_t medium;
+    int64_t large;
+};
+
+// Type hint coverage: string field
+struct WithStringField {
+    float       value;
+    std::string label;
+};
+
 } // namespace
 
 // ── Tier 1: Raw JSON string ─────────────────────────────────────────────────
@@ -154,6 +168,36 @@ TEST_CASE("template_of with mixed types") {
     h.nc.execute(req);
     REQUIRE(h.last_request ==
         R"({"req":"test.req","body":{"voltage":14.1,"active":true,"count":12}})");
+}
+
+TEST_CASE("template_of integer size hints: int8→1, int16→11, int32→12, int64→12") {
+    TestHarness h;
+    TestRequest req;
+    req.body = note::template_of<AllIntSizes>();
+    h.nc.execute(req);
+    REQUIRE(h.last_request ==
+        R"({"req":"test.req","body":{"tiny":1,"small_field":11,"medium":12,"large":12}})");
+}
+
+TEST_CASE("template_of string field hint → \"1\"") {
+    TestHarness h;
+    TestRequest req;
+    req.body = note::template_of<WithStringField>();
+    h.nc.execute(req);
+    REQUIRE(h.last_request ==
+        R"({"req":"test.req","body":{"value":14.1,"label":"1"}})");
+}
+
+TEST_CASE("note.template verify:true includes verify field in request") {
+    TestHarness h;
+    note::Api api(h.nc);
+    api.noteTemplate().set()
+        .file("sensors.qo")
+        .body(note::template_of<Readings>())
+        .verify(true)
+        .execute();
+    REQUIRE(h.last_request ==
+        R"({"req":"note.template","body":{"temperature":14.1,"humidity":11},"file":"sensors.qo","verify":true})");
 }
 
 #endif // C++20
@@ -319,3 +363,65 @@ TEST_CASE("parse<T>() with NOTE_BODY macro type") {
     REQUIRE(r.temperature == 22.5f);
     REQUIRE(r.humidity == 60);
 }
+
+// ── NoteTemplate::Set::Response parsing ─────────────────────────────────────
+
+TEST_CASE("note.template response: template_:true and bytes") {
+    auto reader = std::make_unique<note::test::PopulatedJsonReader>();
+    reader->set("bytes", int32_t{26});
+    reader->set("template", true);
+    auto rsp = note::api::NoteTemplate::Set::Response::parse(std::move(reader));
+    REQUIRE(rsp.template_ == true);
+    REQUIRE(rsp.bytes == 26);
+}
+
+TEST_CASE("note.template response: template_:false when no existing template") {
+    auto reader = std::make_unique<note::test::PopulatedJsonReader>();
+    reader->set("template", false);
+    auto rsp = note::api::NoteTemplate::Set::Response::parse(std::move(reader));
+    REQUIRE(rsp.template_ == false);
+    REQUIRE(rsp.bytes == 0);
+}
+
+TEST_CASE("note.template response: body() returns existing template body") {
+    auto body = std::make_unique<note::test::PopulatedJsonReader>();
+    body->set("temperature", 14.1);
+    body->set("humidity", int32_t{11});
+
+    auto reader = std::make_unique<note::test::PopulatedJsonReader>();
+    reader->set("bytes", int32_t{26});
+    reader->set("template", true);
+    reader->set_object("body", std::move(body));
+
+    auto rsp = note::api::NoteTemplate::Set::Response::parse(std::move(reader));
+    REQUIRE(rsp.template_ == true);
+    REQUIRE(rsp.body() != nullptr);
+    REQUIRE(rsp.body()->get_double("temperature") == 14.1);
+    REQUIRE(rsp.body()->get_int("humidity") == 11);
+}
+
+TEST_CASE("note.template response: body() is null when no body in response") {
+    auto reader = std::make_unique<note::test::PopulatedJsonReader>();
+    reader->set("bytes", int32_t{14});
+    auto rsp = note::api::NoteTemplate::Set::Response::parse(std::move(reader));
+    REQUIRE(rsp.body() == nullptr);
+}
+
+#if __cplusplus >= 202002L
+
+TEST_CASE("note.template response: bodyAs<T>() parses existing template body") {
+    auto body = std::make_unique<note::test::PopulatedJsonReader>();
+    body->set("temperature", 22.5);
+    body->set("humidity", int32_t{60});
+
+    auto reader = std::make_unique<note::test::PopulatedJsonReader>();
+    reader->set("template", true);
+    reader->set_object("body", std::move(body));
+
+    auto rsp = note::api::NoteTemplate::Set::Response::parse(std::move(reader));
+    auto r = rsp.bodyAs<Readings>();
+    REQUIRE(r.temperature == 22.5f);
+    REQUIRE(r.humidity == 60);
+}
+
+#endif // C++20

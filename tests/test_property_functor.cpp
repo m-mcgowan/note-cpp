@@ -219,3 +219,24 @@ TEST_CASE("DynField operator=(const char*) stores string value") {
     REQUIRE(req.extras_count_ == 1);
     REQUIRE(std::holds_alternative<note::string_view>(req.extras_[0].value));
 }
+
+// ---------------------------------------------------------------------------
+// operator[] known key — typed field assignment via DynField
+// Covers set_typed_field<bool> and set_typed_field<int32_t> instantiations.
+// ---------------------------------------------------------------------------
+
+TEST_CASE("operator[] bool known key routes to typed Field<bool>") {
+    note::api::HubSet req;
+    req["align"] = true;
+    REQUIRE(req.align.has_value());
+    REQUIRE(*req.align == true);
+    REQUIRE(req.extras_count_ == 0);
+}
+
+TEST_CASE("operator[] int32_t known key routes to typed Field<int32_t>") {
+    note::api::HubSet req;
+    req["outbound"] = int32_t{60};
+    REQUIRE(req.outbound.has_value());
+    REQUIRE(*req.outbound == 60);
+    REQUIRE(req.extras_count_ == 0);
+}

@@ -53,6 +53,8 @@ TEST_CASE("note::api::{{ type_qual }} request builder") {
 {% else %}
     auto req = h.api.{{ endpoint.factory_method }}();
 {% endif %}
+    // Execute with no fields set — covers all !has_value() (false) branches.
+    req.execute();
 {% for prop in settable %}
 {% if prop.version_guard %}
 #if NOTE_API_VERSION >= {{ prop.version_guard }} || !defined(NOTE_API_STRICT)
@@ -72,11 +74,28 @@ TEST_CASE("note::api::{{ type_qual }} request builder") {
 #endif
 {% endif %}
 {% endfor %}
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+{% if settable %}
+    // Cover known-key routing in operator[] (true branch for each settable field)
+{% for prop in settable %}
+{% if prop.version_guard %}
+#if NOTE_API_VERSION >= {{ prop.version_guard }} || !defined(NOTE_API_STRICT)
+{% endif %}
+    req["{{ prop.wire_name }}"] = {{ prop | request_test_value }};
+{% if prop.version_guard %}
+#endif
+{% endif %}
+{% endfor %}
+{% endif %}
 {% if op.supports_cmd %}
     // Cover command() overloads
     req.command();

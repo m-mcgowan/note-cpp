@@ -110,6 +110,10 @@ concept ReflectableAggregate = std::is_aggregate_v<std::remove_cvref_t<T>>
     && !std::is_empty_v<std::remove_cvref_t<T>>
     && (reflect::size<std::remove_cvref_t<T>>() > 0);
 
+// Forward declaration (write_field and write_aggregate are mutually recursive).
+template<typename T>
+void write_aggregate(const T& obj, JsonBuilder& b);
+
 // Write a single field value to the builder.
 template<typename V>
 void write_field(JsonBuilder& b, string_view name, const V& value) {

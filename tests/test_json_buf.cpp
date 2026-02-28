@@ -350,3 +350,55 @@ TEST_CASE("JsonBuf standalone array") {
     REQUIRE(a);
     REQUIRE(a.view() == R"(["x","y"])");
 }
+
+TEST_CASE("JsonBuf array with bool elements") {
+    auto a = note::JsonBuf<32>::array();
+    a.add(true);
+    a.add(false);
+    a.close();
+    REQUIRE(a);
+    REQUIRE(a.view() == "[true,false]");
+}
+
+TEST_CASE("JsonBuf unkeyed int32_t array elements") {
+    auto a = note::JsonBuf<32>::array();
+    a.add(int32_t{7});
+    a.add(int32_t{-3});
+    a.close();
+    REQUIRE(a.view() == "[7,-3]");
+}
+
+TEST_CASE("JsonBuf keyed bool add") {
+    note::JsonBuf<32> b;
+    b.add("flag", true);
+    b.add("done", false);
+    b.close();
+    REQUIRE(b.view() == R"({"flag":true,"done":false})");
+}
+
+TEST_CASE("JsonBuf begin_array and end_array at runtime") {
+    note::JsonBuf<64> b;
+    b.begin_array("ids");
+    b.add("a");
+    b.add("b");
+    b.end_array();
+    b.close();
+    REQUIRE(b.view() == R"({"ids":["a","b"]})");
+}
+
+TEST_CASE("JsonBuf escape sequences \\r and \\t") {
+    note::JsonBuf<64> b;
+    b.add("msg", "col1\tcol2\rend");
+    b.close();
+    REQUIRE(b);
+    REQUIRE(b.view() == R"({"msg":"col1\tcol2\rend"})");
+}
+
+TEST_CASE("JsonBuf escape sequences quote, backslash, newline") {
+    note::JsonBuf<64> b;
+    b.add("a", "say \"hi\"");
+    b.add("b", "c:\\path");
+    b.add("c", "line1\nline2");
+    b.close();
+    REQUIRE(b.view() == R"({"a":"say \"hi\"","b":"c:\\path","c":"line1\nline2"})");
+}

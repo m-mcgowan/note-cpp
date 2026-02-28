@@ -313,3 +313,22 @@ TEST_CASE("crc round-trip works across multiple sequential sequence numbers") {
         REQUIRE(with_crc == original);
     }
 }
+
+TEST_CASE("crc_check_and_strip: lowercase hex digits in CRC field — no error") {
+    // read_hex() supports a-f in addition to A-F.  crc_add always emits uppercase,
+    // so we manufacture a lowercase CRC by lowercasing the value portion after
+    // crc_add, then verify crc_check_and_strip still accepts it.
+    bool flag = true;
+    const std::string original = R"({"req":"hub.set"})";
+    std::string response = crc_add(original, 3);
+    // Lowercase every hex letter in the SSSS:CCCCCCCC value (positions after "crc":"").
+    auto pos = response.find("\"crc\":\"");
+    REQUIRE(pos != std::string::npos);
+    for (size_t i = pos + 7; i < response.size() - 1; ++i) {
+        char& c = response[i];
+        if (c >= 'A' && c <= 'F') c = static_cast<char>(c - 'A' + 'a');
+    }
+    bool error = crc_check_and_strip(response, 3, flag);
+    CHECK(!error);
+    CHECK(response == original);  // CRC field stripped
+}

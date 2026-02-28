@@ -44,6 +44,8 @@ struct Harness {
 TEST_CASE("note::api::CardAttn request builder") {
     Harness h;
     auto req = h.api.cardAttn();
+    // Execute with no fields set — covers all !has_value() (false) branches.
+    req.execute();
     req.files(note::string_view("x-files"));
     req.mode(note::string_view("x-mode"));
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
@@ -69,11 +71,29 @@ TEST_CASE("note::api::CardAttn request builder") {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
     REQUIRE(h.last_req.find("\"verify\"") != std::string::npos);
 #endif
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+    req["files"] = note::string_view("x-files");
+    req["mode"] = note::string_view("x-mode");
+#if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
+    req["off"] = true;
+#endif
+    req["on"] = true;
+    req["payload"] = note::string_view("x-payload");
+    req["seconds"] = int32_t{42};
+    req["start"] = true;
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
+    req["verify"] = true;
+#endif
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -101,6 +121,8 @@ TEST_CASE("note::api::CardAttn response parsing") {
 TEST_CASE("note::api::CardAux request builder") {
     Harness h;
     auto req = h.api.cardAux();
+    // Execute with no fields set — covers all !has_value() (false) branches.
+    req.execute();
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1) || !defined(NOTE_API_STRICT)
     req.connected(true);
 #endif
@@ -164,11 +186,48 @@ TEST_CASE("note::api::CardAux request builder") {
     REQUIRE(h.last_req.find("\"sync\"") != std::string::npos);
 #endif
     REQUIRE(h.last_req.find("\"usage\"") != std::string::npos);
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1) || !defined(NOTE_API_STRICT)
+    req["connected"] = true;
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
+    req["count"] = int32_t{42};
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1) || !defined(NOTE_API_STRICT)
+    req["file"] = note::string_view("x-file");
+#endif
+    req["gps"] = true;
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+    req["limit"] = true;
+#endif
+    req["max"] = int32_t{42};
+    req["mode"] = note::string_view("dfu");
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
+    req["ms"] = int32_t{42};
+#endif
+    req["offset"] = int32_t{42};
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
+    req["rate"] = int32_t{42};
+#endif
+    req["seconds"] = int32_t{42};
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
+    req["sensitivity"] = int32_t{42};
+#endif
+    req["start"] = true;
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+    req["sync"] = true;
+#endif
+    req["usage"] = note::string_view("x-usage");
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -196,6 +255,8 @@ TEST_CASE("note::api::CardAux response parsing") {
 TEST_CASE("note::api::CardAuxSerial request builder") {
     Harness h;
     auto req = h.api.cardAuxSerial();
+    // Execute with no fields set — covers all !has_value() (false) branches.
+    req.execute();
     req.duration(int32_t{42});
     req.limit(true);
     req.max(int32_t{42});
@@ -219,11 +280,28 @@ TEST_CASE("note::api::CardAuxSerial request builder") {
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
     REQUIRE(h.last_req.find("\"rate\"") != std::string::npos);
 #endif
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+    req["duration"] = int32_t{42};
+    req["limit"] = true;
+    req["max"] = int32_t{42};
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
+    req["minutes"] = int32_t{42};
+#endif
+    req["mode"] = note::string_view("x-mode");
+    req["ms"] = int32_t{42};
+#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
+    req["rate"] = int32_t{42};
+#endif
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -247,14 +325,23 @@ TEST_CASE("note::api::CardAuxSerial response parsing") {
 TEST_CASE("note::api::CardBinary::Get request builder") {
     Harness h;
     auto req = h.api.cardBinary().get();
+    // Execute with no fields set — covers all !has_value() (false) branches.
+    req.execute();
     req.delete_(true);
     req.execute();
     REQUIRE(h.last_req.find("\"delete\"") != std::string::npos);
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+    req["delete"] = true;
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -282,12 +369,19 @@ TEST_CASE("note::api::CardBinary::Get response parsing") {
 TEST_CASE("note::api::CardBinary::Delete request builder") {
     Harness h;
     auto req = h.api.cardBinary().delete_();
+    // Execute with no fields set — covers all !has_value() (false) branches.
     req.execute();
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    req.execute();
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -315,6 +409,8 @@ TEST_CASE("note::api::CardBinary::Delete response parsing") {
 TEST_CASE("note::api::CardBinaryGet request builder") {
     Harness h;
     auto req = h.api.cardBinaryGet();
+    // Execute with no fields set — covers all !has_value() (false) branches.
+    req.execute();
     req.cobs(int32_t{42});
     req.length(int32_t{42});
     req.offset(int32_t{42});
@@ -322,11 +418,20 @@ TEST_CASE("note::api::CardBinaryGet request builder") {
     REQUIRE(h.last_req.find("\"cobs\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"length\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"offset\"") != std::string::npos);
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+    req["cobs"] = int32_t{42};
+    req["length"] = int32_t{42};
+    req["offset"] = int32_t{42};
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -346,6 +451,8 @@ TEST_CASE("note::api::CardBinaryGet response parsing") {
 TEST_CASE("note::api::CardBinaryPut request builder") {
     Harness h;
     auto req = h.api.cardBinaryPut();
+    // Execute with no fields set — covers all !has_value() (false) branches.
+    req.execute();
     req.cobs(int32_t{42});
     req.offset(int32_t{42});
     req.status(note::string_view("x-status"));
@@ -353,11 +460,20 @@ TEST_CASE("note::api::CardBinaryPut request builder") {
     REQUIRE(h.last_req.find("\"cobs\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"offset\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"status\"") != std::string::npos);
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+    req["cobs"] = int32_t{42};
+    req["offset"] = int32_t{42};
+    req["status"] = note::string_view("x-status");
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -375,14 +491,23 @@ TEST_CASE("note::api::CardBinaryPut response parsing") {
 TEST_CASE("note::api::CardCarrier request builder") {
     Harness h;
     auto req = h.api.cardCarrier();
+    // Execute with no fields set — covers all !has_value() (false) branches.
+    req.execute();
     req.mode(note::string_view("charging"));
     req.execute();
     REQUIRE(h.last_req.find("\"mode\"") != std::string::npos);
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+    req["mode"] = note::string_view("charging");
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -402,6 +527,8 @@ TEST_CASE("note::api::CardCarrier response parsing") {
 TEST_CASE("note::api::CardContact::Get request builder") {
     Harness h;
     auto req = h.api.cardContact().get();
+    // Execute with no fields set — covers all !has_value() (false) branches.
+    req.execute();
     req.email(note::string_view("x-email"));
     req.name(note::string_view("x-name"));
     req.org(note::string_view("x-org"));
@@ -411,11 +538,21 @@ TEST_CASE("note::api::CardContact::Get request builder") {
     REQUIRE(h.last_req.find("\"name\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"org\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"role\"") != std::string::npos);
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+    req["email"] = note::string_view("x-email");
+    req["name"] = note::string_view("x-name");
+    req["org"] = note::string_view("x-org");
+    req["role"] = note::string_view("x-role");
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -439,6 +576,8 @@ TEST_CASE("note::api::CardContact::Get response parsing") {
 TEST_CASE("note::api::CardContact::Set request builder") {
     Harness h;
     auto req = h.api.cardContact().set();
+    // Execute with no fields set — covers all !has_value() (false) branches.
+    req.execute();
     req.email(note::string_view("x-email"));
     req.name(note::string_view("x-name"));
     req.org(note::string_view("x-org"));
@@ -448,11 +587,21 @@ TEST_CASE("note::api::CardContact::Set request builder") {
     REQUIRE(h.last_req.find("\"name\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"org\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"role\"") != std::string::npos);
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+    req["email"] = note::string_view("x-email");
+    req["name"] = note::string_view("x-name");
+    req["org"] = note::string_view("x-org");
+    req["role"] = note::string_view("x-role");
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -476,6 +625,8 @@ TEST_CASE("note::api::CardContact::Set response parsing") {
 TEST_CASE("note::api::CardDfu request builder") {
     Harness h;
     auto req = h.api.cardDfu();
+    // Execute with no fields set — covers all !has_value() (false) branches.
+    req.execute();
     req.mode(note::string_view("altdfu"));
     req.name(note::string_view("esp32"));
     req.off(true);
@@ -491,11 +642,24 @@ TEST_CASE("note::api::CardDfu request builder") {
     REQUIRE(h.last_req.find("\"seconds\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"start\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"stop\"") != std::string::npos);
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+    req["mode"] = note::string_view("altdfu");
+    req["name"] = note::string_view("esp32");
+    req["off"] = true;
+    req["on"] = true;
+    req["seconds"] = int32_t{42};
+    req["start"] = true;
+    req["stop"] = true;
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -513,12 +677,19 @@ TEST_CASE("note::api::CardDfu response parsing") {
 TEST_CASE("note::api::CardIllumination request builder") {
     Harness h;
     auto req = h.api.cardIllumination();
+    // Execute with no fields set — covers all !has_value() (false) branches.
     req.execute();
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    req.execute();
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -536,16 +707,26 @@ TEST_CASE("note::api::CardIllumination response parsing") {
 TEST_CASE("note::api::CardIo request builder") {
     Harness h;
     auto req = h.api.cardIo();
+    // Execute with no fields set — covers all !has_value() (false) branches.
+    req.execute();
     req.i2c(int32_t{42});
     req.mode(note::string_view("-usb"));
     req.execute();
     REQUIRE(h.last_req.find("\"i2c\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"mode\"") != std::string::npos);
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+    req["i2c"] = int32_t{42};
+    req["mode"] = note::string_view("-usb");
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -555,6 +736,8 @@ TEST_CASE("note::api::CardIo request builder") {
 TEST_CASE("note::api::CardLed request builder") {
     Harness h;
     auto req = h.api.cardLed();
+    // Execute with no fields set — covers all !has_value() (false) branches.
+    req.execute();
     req.mode(note::string_view("red"));
     req.off(true);
     req.on(true);
@@ -562,11 +745,20 @@ TEST_CASE("note::api::CardLed request builder") {
     REQUIRE(h.last_req.find("\"mode\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"off\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"on\"") != std::string::npos);
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+    req["mode"] = note::string_view("red");
+    req["off"] = true;
+    req["on"] = true;
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -576,12 +768,19 @@ TEST_CASE("note::api::CardLed request builder") {
 TEST_CASE("note::api::CardLocation request builder") {
     Harness h;
     auto req = h.api.cardLocation();
+    // Execute with no fields set — covers all !has_value() (false) branches.
     req.execute();
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    req.execute();
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -613,6 +812,8 @@ TEST_CASE("note::api::CardLocation response parsing") {
 TEST_CASE("note::api::CardLocationMode::Get request builder") {
     Harness h;
     auto req = h.api.cardLocationMode().get();
+    // Execute with no fields set — covers all !has_value() (false) branches.
+    req.execute();
     req.delete_(true);
     req.lat(1.5);
     req.lon(1.5);
@@ -636,11 +837,28 @@ TEST_CASE("note::api::CardLocationMode::Get request builder") {
     REQUIRE(h.last_req.find("\"threshold\"") != std::string::npos);
 #endif
     REQUIRE(h.last_req.find("\"vseconds\"") != std::string::npos);
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+    req["delete"] = true;
+    req["lat"] = 1.5;
+    req["lon"] = 1.5;
+    req["max"] = int32_t{42};
+    req["minutes"] = int32_t{42};
+    req["mode"] = note::string_view("");
+    req["seconds"] = int32_t{42};
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+    req["threshold"] = int32_t{42};
+#endif
+    req["vseconds"] = note::string_view("x-vseconds");
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -676,6 +894,8 @@ TEST_CASE("note::api::CardLocationMode::Get response parsing") {
 TEST_CASE("note::api::CardLocationMode::Set request builder") {
     Harness h;
     auto req = h.api.cardLocationMode().set();
+    // Execute with no fields set — covers all !has_value() (false) branches.
+    req.execute();
     req.delete_(true);
     req.lat(1.5);
     req.lon(1.5);
@@ -699,11 +919,28 @@ TEST_CASE("note::api::CardLocationMode::Set request builder") {
     REQUIRE(h.last_req.find("\"threshold\"") != std::string::npos);
 #endif
     REQUIRE(h.last_req.find("\"vseconds\"") != std::string::npos);
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+    req["delete"] = true;
+    req["lat"] = 1.5;
+    req["lon"] = 1.5;
+    req["max"] = int32_t{42};
+    req["minutes"] = int32_t{42};
+    req["mode"] = note::string_view("");
+    req["seconds"] = int32_t{42};
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+    req["threshold"] = int32_t{42};
+#endif
+    req["vseconds"] = note::string_view("x-vseconds");
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -739,6 +976,8 @@ TEST_CASE("note::api::CardLocationMode::Set response parsing") {
 TEST_CASE("note::api::CardLocationMode::Delete request builder") {
     Harness h;
     auto req = h.api.cardLocationMode().delete_();
+    // Execute with no fields set — covers all !has_value() (false) branches.
+    req.execute();
     req.lat(1.5);
     req.lon(1.5);
     req.max(int32_t{42});
@@ -760,11 +999,27 @@ TEST_CASE("note::api::CardLocationMode::Delete request builder") {
     REQUIRE(h.last_req.find("\"threshold\"") != std::string::npos);
 #endif
     REQUIRE(h.last_req.find("\"vseconds\"") != std::string::npos);
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+    req["lat"] = 1.5;
+    req["lon"] = 1.5;
+    req["max"] = int32_t{42};
+    req["minutes"] = int32_t{42};
+    req["mode"] = note::string_view("");
+    req["seconds"] = int32_t{42};
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+    req["threshold"] = int32_t{42};
+#endif
+    req["vseconds"] = note::string_view("x-vseconds");
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -800,6 +1055,8 @@ TEST_CASE("note::api::CardLocationMode::Delete response parsing") {
 TEST_CASE("note::api::CardLocationTrack request builder") {
     Harness h;
     auto req = h.api.cardLocationTrack();
+    // Execute with no fields set — covers all !has_value() (false) branches.
+    req.execute();
     req.file(note::string_view("x-file"));
     req.heartbeat(true);
     req.hours(int32_t{42});
@@ -819,11 +1076,26 @@ TEST_CASE("note::api::CardLocationTrack request builder") {
     REQUIRE(h.last_req.find("\"start\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"stop\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"sync\"") != std::string::npos);
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+    req["file"] = note::string_view("x-file");
+    req["heartbeat"] = true;
+    req["hours"] = int32_t{42};
+#if NOTE_API_VERSION >= NOTE_VERSION(7, 5, 2) || !defined(NOTE_API_STRICT)
+    req["payload"] = note::string_view("x-payload");
+#endif
+    req["start"] = true;
+    req["stop"] = true;
+    req["sync"] = true;
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -851,6 +1123,8 @@ TEST_CASE("note::api::CardLocationTrack response parsing") {
 TEST_CASE("note::api::CardMonitor request builder") {
     Harness h;
     auto req = h.api.cardMonitor();
+    // Execute with no fields set — covers all !has_value() (false) branches.
+    req.execute();
     req.count(int32_t{42});
     req.mode(note::string_view("green"));
     req.usb(true);
@@ -858,11 +1132,20 @@ TEST_CASE("note::api::CardMonitor request builder") {
     REQUIRE(h.last_req.find("\"count\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"mode\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"usb\"") != std::string::npos);
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+    req["count"] = int32_t{42};
+    req["mode"] = note::string_view("green");
+    req["usb"] = true;
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -872,14 +1155,23 @@ TEST_CASE("note::api::CardMonitor request builder") {
 TEST_CASE("note::api::CardMotion request builder") {
     Harness h;
     auto req = h.api.cardMotion();
+    // Execute with no fields set — covers all !has_value() (false) branches.
+    req.execute();
     req.minutes(int32_t{42});
     req.execute();
     REQUIRE(h.last_req.find("\"minutes\"") != std::string::npos);
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+    req["minutes"] = int32_t{42};
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -909,6 +1201,8 @@ TEST_CASE("note::api::CardMotion response parsing") {
 TEST_CASE("note::api::CardMotionMode request builder") {
     Harness h;
     auto req = h.api.cardMotionMode();
+    // Execute with no fields set — covers all !has_value() (false) branches.
+    req.execute();
     req.motion(int32_t{42});
     req.seconds(int32_t{42});
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1) || !defined(NOTE_API_STRICT)
@@ -924,11 +1218,24 @@ TEST_CASE("note::api::CardMotionMode request builder") {
 #endif
     REQUIRE(h.last_req.find("\"start\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"stop\"") != std::string::npos);
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+    req["motion"] = int32_t{42};
+    req["seconds"] = int32_t{42};
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1) || !defined(NOTE_API_STRICT)
+    req["sensitivity"] = int32_t{42};
+#endif
+    req["start"] = true;
+    req["stop"] = true;
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -938,6 +1245,8 @@ TEST_CASE("note::api::CardMotionMode request builder") {
 TEST_CASE("note::api::CardMotionSync request builder") {
     Harness h;
     auto req = h.api.cardMotionSync();
+    // Execute with no fields set — covers all !has_value() (false) branches.
+    req.execute();
     req.count(int32_t{42});
     req.minutes(int32_t{42});
     req.start(true);
@@ -949,11 +1258,22 @@ TEST_CASE("note::api::CardMotionSync request builder") {
     REQUIRE(h.last_req.find("\"start\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"stop\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"threshold\"") != std::string::npos);
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+    req["count"] = int32_t{42};
+    req["minutes"] = int32_t{42};
+    req["start"] = true;
+    req["stop"] = true;
+    req["threshold"] = int32_t{42};
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -963,6 +1283,8 @@ TEST_CASE("note::api::CardMotionSync request builder") {
 TEST_CASE("note::api::CardMotionTrack request builder") {
     Harness h;
     auto req = h.api.cardMotionTrack();
+    // Execute with no fields set — covers all !has_value() (false) branches.
+    req.execute();
     req.count(int32_t{42});
     req.file(note::string_view("x-file"));
     req.minutes(int32_t{42});
@@ -978,11 +1300,24 @@ TEST_CASE("note::api::CardMotionTrack request builder") {
     REQUIRE(h.last_req.find("\"start\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"stop\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"threshold\"") != std::string::npos);
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+    req["count"] = int32_t{42};
+    req["file"] = note::string_view("x-file");
+    req["minutes"] = int32_t{42};
+    req["now"] = true;
+    req["start"] = true;
+    req["stop"] = true;
+    req["threshold"] = int32_t{42};
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -992,16 +1327,26 @@ TEST_CASE("note::api::CardMotionTrack request builder") {
 TEST_CASE("note::api::CardPower::Get request builder") {
     Harness h;
     auto req = h.api.cardPower().get();
+    // Execute with no fields set — covers all !has_value() (false) branches.
+    req.execute();
     req.minutes(int32_t{42});
     req.reset(true);
     req.execute();
     REQUIRE(h.last_req.find("\"minutes\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"reset\"") != std::string::npos);
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+    req["minutes"] = int32_t{42};
+    req["reset"] = true;
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -1023,16 +1368,26 @@ TEST_CASE("note::api::CardPower::Get response parsing") {
 TEST_CASE("note::api::CardPower::Set request builder") {
     Harness h;
     auto req = h.api.cardPower().set();
+    // Execute with no fields set — covers all !has_value() (false) branches.
+    req.execute();
     req.minutes(int32_t{42});
     req.reset(true);
     req.execute();
     REQUIRE(h.last_req.find("\"minutes\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"reset\"") != std::string::npos);
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+    req["minutes"] = int32_t{42};
+    req["reset"] = true;
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -1054,14 +1409,23 @@ TEST_CASE("note::api::CardPower::Set response parsing") {
 TEST_CASE("note::api::CardPower::Delete request builder") {
     Harness h;
     auto req = h.api.cardPower().delete_();
+    // Execute with no fields set — covers all !has_value() (false) branches.
+    req.execute();
     req.minutes(int32_t{42});
     req.execute();
     REQUIRE(h.last_req.find("\"minutes\"") != std::string::npos);
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+    req["minutes"] = int32_t{42};
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -1083,16 +1447,26 @@ TEST_CASE("note::api::CardPower::Delete response parsing") {
 TEST_CASE("note::api::CardRandom request builder") {
     Harness h;
     auto req = h.api.cardRandom();
+    // Execute with no fields set — covers all !has_value() (false) branches.
+    req.execute();
     req.count(int32_t{42});
     req.mode(note::string_view("x-mode"));
     req.execute();
     REQUIRE(h.last_req.find("\"count\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"mode\"") != std::string::npos);
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+    req["count"] = int32_t{42};
+    req["mode"] = note::string_view("x-mode");
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -1112,12 +1486,19 @@ TEST_CASE("note::api::CardRandom response parsing") {
 TEST_CASE("note::api::CardRestart request builder") {
     Harness h;
     auto req = h.api.cardRestart();
+    // Execute with no fields set — covers all !has_value() (false) branches.
     req.execute();
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    req.execute();
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -1127,16 +1508,26 @@ TEST_CASE("note::api::CardRestart request builder") {
 TEST_CASE("note::api::CardRestore request builder") {
     Harness h;
     auto req = h.api.cardRestore();
+    // Execute with no fields set — covers all !has_value() (false) branches.
+    req.execute();
     req.connected(true);
     req.delete_(true);
     req.execute();
     REQUIRE(h.last_req.find("\"connected\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"delete\"") != std::string::npos);
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+    req["connected"] = true;
+    req["delete"] = true;
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -1146,6 +1537,8 @@ TEST_CASE("note::api::CardRestore request builder") {
 TEST_CASE("note::api::CardSleep request builder") {
     Harness h;
     auto req = h.api.cardSleep();
+    // Execute with no fields set — covers all !has_value() (false) branches.
+    req.execute();
     req.mode(note::string_view("accel"));
     req.off(true);
     req.on(true);
@@ -1155,11 +1548,21 @@ TEST_CASE("note::api::CardSleep request builder") {
     REQUIRE(h.last_req.find("\"off\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"on\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"seconds\"") != std::string::npos);
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+    req["mode"] = note::string_view("accel");
+    req["off"] = true;
+    req["on"] = true;
+    req["seconds"] = int32_t{42};
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -1183,12 +1586,19 @@ TEST_CASE("note::api::CardSleep response parsing") {
 TEST_CASE("note::api::CardStatus request builder") {
     Harness h;
     auto req = h.api.cardStatus();
+    // Execute with no fields set — covers all !has_value() (false) branches.
     req.execute();
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    req.execute();
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -1234,6 +1644,8 @@ TEST_CASE("note::api::CardStatus response parsing") {
 TEST_CASE("note::api::CardTemp::Get request builder") {
     Harness h;
     auto req = h.api.cardTemp().get();
+    // Execute with no fields set — covers all !has_value() (false) branches.
+    req.execute();
     req.minutes(int32_t{42});
     req.status(note::string_view("x-status"));
     req.stop(true);
@@ -1243,11 +1655,21 @@ TEST_CASE("note::api::CardTemp::Get request builder") {
     REQUIRE(h.last_req.find("\"status\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"stop\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"sync\"") != std::string::npos);
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+    req["minutes"] = int32_t{42};
+    req["status"] = note::string_view("x-status");
+    req["stop"] = true;
+    req["sync"] = true;
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -1277,6 +1699,8 @@ TEST_CASE("note::api::CardTemp::Get response parsing") {
 TEST_CASE("note::api::CardTemp::Set request builder") {
     Harness h;
     auto req = h.api.cardTemp().set();
+    // Execute with no fields set — covers all !has_value() (false) branches.
+    req.execute();
     req.minutes(int32_t{42});
     req.status(note::string_view("x-status"));
     req.stop(true);
@@ -1286,11 +1710,21 @@ TEST_CASE("note::api::CardTemp::Set request builder") {
     REQUIRE(h.last_req.find("\"status\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"stop\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"sync\"") != std::string::npos);
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+    req["minutes"] = int32_t{42};
+    req["status"] = note::string_view("x-status");
+    req["stop"] = true;
+    req["sync"] = true;
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -1320,6 +1754,8 @@ TEST_CASE("note::api::CardTemp::Set response parsing") {
 TEST_CASE("note::api::CardTemp::Delete request builder") {
     Harness h;
     auto req = h.api.cardTemp().delete_();
+    // Execute with no fields set — covers all !has_value() (false) branches.
+    req.execute();
     req.minutes(int32_t{42});
     req.status(note::string_view("x-status"));
     req.sync(true);
@@ -1327,11 +1763,20 @@ TEST_CASE("note::api::CardTemp::Delete request builder") {
     REQUIRE(h.last_req.find("\"minutes\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"status\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"sync\"") != std::string::npos);
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+    req["minutes"] = int32_t{42};
+    req["status"] = note::string_view("x-status");
+    req["sync"] = true;
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -1361,12 +1806,19 @@ TEST_CASE("note::api::CardTemp::Delete response parsing") {
 TEST_CASE("note::api::CardTime request builder") {
     Harness h;
     auto req = h.api.cardTime();
+    // Execute with no fields set — covers all !has_value() (false) branches.
     req.execute();
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    req.execute();
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -1396,14 +1848,23 @@ TEST_CASE("note::api::CardTime response parsing") {
 TEST_CASE("note::api::CardTrace request builder") {
     Harness h;
     auto req = h.api.cardTrace();
+    // Execute with no fields set — covers all !has_value() (false) branches.
+    req.execute();
     req.mode(note::string_view("on"));
     req.execute();
     REQUIRE(h.last_req.find("\"mode\"") != std::string::npos);
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+    req["mode"] = note::string_view("on");
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -1413,6 +1874,8 @@ TEST_CASE("note::api::CardTrace request builder") {
 TEST_CASE("note::api::CardTransport request builder") {
     Harness h;
     auto req = h.api.cardTransport();
+    // Execute with no fields set — covers all !has_value() (false) branches.
+    req.execute();
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
     req.allow(true);
 #endif
@@ -1434,11 +1897,27 @@ TEST_CASE("note::api::CardTransport request builder") {
 #if NOTE_API_VERSION >= NOTE_VERSION(9, 1, 1) || !defined(NOTE_API_STRICT)
     REQUIRE(h.last_req.find("\"umin\"") != std::string::npos);
 #endif
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+#if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
+    req["allow"] = true;
+#endif
+    req["method"] = note::string_view("-");
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
+    req["seconds"] = int32_t{42};
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(9, 1, 1) || !defined(NOTE_API_STRICT)
+    req["umin"] = true;
+#endif
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -1456,6 +1935,8 @@ TEST_CASE("note::api::CardTransport response parsing") {
 TEST_CASE("note::api::CardTriangulate request builder") {
     Harness h;
     auto req = h.api.cardTriangulate();
+    // Execute with no fields set — covers all !has_value() (false) branches.
+    req.execute();
     req.minutes(int32_t{42});
     req.mode(note::string_view("x-mode"));
     req.on(true);
@@ -1471,11 +1952,24 @@ TEST_CASE("note::api::CardTriangulate request builder") {
     REQUIRE(h.last_req.find("\"text\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"time\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"usb\"") != std::string::npos);
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+    req["minutes"] = int32_t{42};
+    req["mode"] = note::string_view("x-mode");
+    req["on"] = true;
+    req["set"] = true;
+    req["text"] = note::string_view("x-text");
+    req["time"] = int32_t{42};
+    req["usb"] = true;
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -1503,16 +1997,26 @@ TEST_CASE("note::api::CardTriangulate response parsing") {
 TEST_CASE("note::api::CardUsageGet request builder") {
     Harness h;
     auto req = h.api.cardUsageGet();
+    // Execute with no fields set — covers all !has_value() (false) branches.
+    req.execute();
     req.mode(note::string_view("total"));
     req.offset(int32_t{42});
     req.execute();
     REQUIRE(h.last_req.find("\"mode\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"offset\"") != std::string::npos);
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+    req["mode"] = note::string_view("total");
+    req["offset"] = int32_t{42};
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -1544,6 +2048,8 @@ TEST_CASE("note::api::CardUsageGet response parsing") {
 TEST_CASE("note::api::CardUsageTest request builder") {
     Harness h;
     auto req = h.api.cardUsageTest();
+    // Execute with no fields set — covers all !has_value() (false) branches.
+    req.execute();
     req.days(int32_t{42});
     req.hours(int32_t{42});
     req.megabytes(int32_t{42});
@@ -1551,11 +2057,20 @@ TEST_CASE("note::api::CardUsageTest request builder") {
     REQUIRE(h.last_req.find("\"days\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"hours\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"megabytes\"") != std::string::npos);
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+    req["days"] = int32_t{42};
+    req["hours"] = int32_t{42};
+    req["megabytes"] = int32_t{42};
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -1593,12 +2108,19 @@ TEST_CASE("note::api::CardUsageTest response parsing") {
 TEST_CASE("note::api::CardVersion request builder") {
     Harness h;
     auto req = h.api.cardVersion();
+    // Execute with no fields set — covers all !has_value() (false) branches.
     req.execute();
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    req.execute();
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -1634,6 +2156,8 @@ TEST_CASE("note::api::CardVersion response parsing") {
 TEST_CASE("note::api::CardVoltage::Get request builder") {
     Harness h;
     auto req = h.api.cardVoltage().get();
+    // Execute with no fields set — covers all !has_value() (false) branches.
+    req.execute();
     req.alert(true);
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 2) || !defined(NOTE_API_STRICT)
     req.calibration(1.5);
@@ -1669,11 +2193,34 @@ TEST_CASE("note::api::CardVoltage::Get request builder") {
 #endif
     REQUIRE(h.last_req.find("\"vmax\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"vmin\"") != std::string::npos);
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+    req["alert"] = true;
+#if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 2) || !defined(NOTE_API_STRICT)
+    req["calibration"] = 1.5;
+#endif
+    req["hours"] = int32_t{42};
+    req["mode"] = note::string_view("default");
+    req["name"] = note::string_view("x-name");
+    req["off"] = true;
+    req["offset"] = int32_t{42};
+    req["on"] = true;
+    req["set"] = true;
+    req["sync"] = true;
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
+    req["usb"] = true;
+#endif
+    req["vmax"] = 1.5;
+    req["vmin"] = 1.5;
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -1715,6 +2262,8 @@ TEST_CASE("note::api::CardVoltage::Get response parsing") {
 TEST_CASE("note::api::CardVoltage::Set request builder") {
     Harness h;
     auto req = h.api.cardVoltage().set();
+    // Execute with no fields set — covers all !has_value() (false) branches.
+    req.execute();
     req.alert(true);
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 2) || !defined(NOTE_API_STRICT)
     req.calibration(1.5);
@@ -1750,11 +2299,34 @@ TEST_CASE("note::api::CardVoltage::Set request builder") {
 #endif
     REQUIRE(h.last_req.find("\"vmax\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"vmin\"") != std::string::npos);
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+    req["alert"] = true;
+#if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 2) || !defined(NOTE_API_STRICT)
+    req["calibration"] = 1.5;
+#endif
+    req["hours"] = int32_t{42};
+    req["mode"] = note::string_view("default");
+    req["name"] = note::string_view("x-name");
+    req["off"] = true;
+    req["offset"] = int32_t{42};
+    req["on"] = true;
+    req["set"] = true;
+    req["sync"] = true;
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
+    req["usb"] = true;
+#endif
+    req["vmax"] = 1.5;
+    req["vmin"] = 1.5;
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -1796,6 +2368,8 @@ TEST_CASE("note::api::CardVoltage::Set response parsing") {
 TEST_CASE("note::api::CardWifi request builder") {
     Harness h;
     auto req = h.api.cardWifi();
+    // Execute with no fields set — covers all !has_value() (false) branches.
+    req.execute();
     req.name(note::string_view("x-name"));
     req.org(note::string_view("x-org"));
     req.password(note::string_view("x-password"));
@@ -1813,11 +2387,25 @@ TEST_CASE("note::api::CardWifi request builder") {
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 5, 1) || !defined(NOTE_API_STRICT)
     REQUIRE(h.last_req.find("\"text\"") != std::string::npos);
 #endif
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+    req["name"] = note::string_view("x-name");
+    req["org"] = note::string_view("x-org");
+    req["password"] = note::string_view("x-password");
+    req["ssid"] = note::string_view("x-ssid");
+    req["start"] = true;
+#if NOTE_API_VERSION >= NOTE_VERSION(7, 5, 1) || !defined(NOTE_API_STRICT)
+    req["text"] = note::string_view("x-text");
+#endif
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -1841,6 +2429,8 @@ TEST_CASE("note::api::CardWifi response parsing") {
 TEST_CASE("note::api::CardWireless request builder") {
     Harness h;
     auto req = h.api.cardWireless();
+    // Execute with no fields set — covers all !has_value() (false) branches.
+    req.execute();
     req.apn(note::string_view("x-apn"));
     req.hours(int32_t{42});
     req.method(note::string_view("-"));
@@ -1850,11 +2440,21 @@ TEST_CASE("note::api::CardWireless request builder") {
     REQUIRE(h.last_req.find("\"hours\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"method\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"mode\"") != std::string::npos);
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+    req["apn"] = note::string_view("x-apn");
+    req["hours"] = int32_t{42};
+    req["method"] = note::string_view("-");
+    req["mode"] = note::string_view("-");
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -1874,6 +2474,8 @@ TEST_CASE("note::api::CardWireless response parsing") {
 TEST_CASE("note::api::CardWirelessPenalty::Get request builder") {
     Harness h;
     auto req = h.api.cardWirelessPenalty().get();
+    // Execute with no fields set — covers all !has_value() (false) branches.
+    req.execute();
     req.add(int32_t{42});
     req.max(int32_t{42});
     req.min(int32_t{42});
@@ -1887,11 +2489,23 @@ TEST_CASE("note::api::CardWirelessPenalty::Get request builder") {
     REQUIRE(h.last_req.find("\"rate\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"reset\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"set\"") != std::string::npos);
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+    req["add"] = int32_t{42};
+    req["max"] = int32_t{42};
+    req["min"] = int32_t{42};
+    req["rate"] = 1.5;
+    req["reset"] = true;
+    req["set"] = true;
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -1919,6 +2533,8 @@ TEST_CASE("note::api::CardWirelessPenalty::Get response parsing") {
 TEST_CASE("note::api::CardWirelessPenalty::Set request builder") {
     Harness h;
     auto req = h.api.cardWirelessPenalty().set();
+    // Execute with no fields set — covers all !has_value() (false) branches.
+    req.execute();
     req.add(int32_t{42});
     req.max(int32_t{42});
     req.min(int32_t{42});
@@ -1930,11 +2546,22 @@ TEST_CASE("note::api::CardWirelessPenalty::Set request builder") {
     REQUIRE(h.last_req.find("\"min\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"rate\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"reset\"") != std::string::npos);
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+    req["add"] = int32_t{42};
+    req["max"] = int32_t{42};
+    req["min"] = int32_t{42};
+    req["rate"] = 1.5;
+    req["reset"] = true;
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -1962,6 +2589,8 @@ TEST_CASE("note::api::CardWirelessPenalty::Set response parsing") {
 TEST_CASE("note::api::CardWirelessPenalty::Delete request builder") {
     Harness h;
     auto req = h.api.cardWirelessPenalty().delete_();
+    // Execute with no fields set — covers all !has_value() (false) branches.
+    req.execute();
     req.add(int32_t{42});
     req.max(int32_t{42});
     req.min(int32_t{42});
@@ -1973,11 +2602,22 @@ TEST_CASE("note::api::CardWirelessPenalty::Delete request builder") {
     REQUIRE(h.last_req.find("\"min\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"rate\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"set\"") != std::string::npos);
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+    req["add"] = int32_t{42};
+    req["max"] = int32_t{42};
+    req["min"] = int32_t{42};
+    req["rate"] = 1.5;
+    req["set"] = true;
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -2005,6 +2645,8 @@ TEST_CASE("note::api::CardWirelessPenalty::Delete response parsing") {
 TEST_CASE("note::api::DfuGet request builder") {
     Harness h;
     auto req = h.api.dfuGet();
+    // Execute with no fields set — covers all !has_value() (false) branches.
+    req.execute();
     req.binary(true);
     req.length(int32_t{42});
     req.offset(int32_t{42});
@@ -2012,11 +2654,20 @@ TEST_CASE("note::api::DfuGet request builder") {
     REQUIRE(h.last_req.find("\"binary\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"length\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"offset\"") != std::string::npos);
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+    req["binary"] = true;
+    req["length"] = int32_t{42};
+    req["offset"] = int32_t{42};
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -2040,6 +2691,8 @@ TEST_CASE("note::api::DfuGet response parsing") {
 TEST_CASE("note::api::DfuStatus request builder") {
     Harness h;
     auto req = h.api.dfuStatus();
+    // Execute with no fields set — covers all !has_value() (false) branches.
+    req.execute();
     req.err(note::string_view("x-err"));
     req.name(note::string_view("user"));
     req.off(true);
@@ -2057,11 +2710,25 @@ TEST_CASE("note::api::DfuStatus request builder") {
     REQUIRE(h.last_req.find("\"stop\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"version\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"vvalue\"") != std::string::npos);
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+    req["err"] = note::string_view("x-err");
+    req["name"] = note::string_view("user");
+    req["off"] = true;
+    req["on"] = true;
+    req["status"] = note::string_view("x-status");
+    req["stop"] = true;
+    req["version"] = note::string_view("x-version");
+    req["vvalue"] = note::string_view("x-vvalue");
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -2087,6 +2754,8 @@ TEST_CASE("note::api::DfuStatus response parsing") {
 TEST_CASE("note::api::EnvDefault::Set request builder") {
     Harness h;
     auto req = h.api.envDefault().set();
+    // Execute with no fields set — covers all !has_value() (false) branches.
+    req.execute();
     req.name(note::string_view("x-name"));
     req.sync(true);
     req.text(note::string_view("x-text"));
@@ -2094,11 +2763,20 @@ TEST_CASE("note::api::EnvDefault::Set request builder") {
     REQUIRE(h.last_req.find("\"name\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"sync\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"text\"") != std::string::npos);
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+    req["name"] = note::string_view("x-name");
+    req["sync"] = true;
+    req["text"] = note::string_view("x-text");
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -2108,16 +2786,26 @@ TEST_CASE("note::api::EnvDefault::Set request builder") {
 TEST_CASE("note::api::EnvDefault::Delete request builder") {
     Harness h;
     auto req = h.api.envDefault().delete_();
+    // Execute with no fields set — covers all !has_value() (false) branches.
+    req.execute();
     req.name(note::string_view("x-name"));
     req.sync(true);
     req.execute();
     REQUIRE(h.last_req.find("\"name\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"sync\"") != std::string::npos);
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+    req["name"] = note::string_view("x-name");
+    req["sync"] = true;
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -2127,6 +2815,8 @@ TEST_CASE("note::api::EnvDefault::Delete request builder") {
 TEST_CASE("note::api::EnvGet request builder") {
     Harness h;
     auto req = h.api.envGet();
+    // Execute with no fields set — covers all !has_value() (false) branches.
+    req.execute();
     req.name(note::string_view("x-name"));
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
     req.names(note::string_view("x-names"));
@@ -2142,11 +2832,24 @@ TEST_CASE("note::api::EnvGet request builder") {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
     REQUIRE(h.last_req.find("\"time\"") != std::string::npos);
 #endif
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+    req["name"] = note::string_view("x-name");
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+    req["names"] = note::string_view("x-names");
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+    req["time"] = int32_t{42};
+#endif
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -2170,6 +2873,8 @@ TEST_CASE("note::api::EnvGet response parsing") {
 TEST_CASE("note::api::EnvModified request builder") {
     Harness h;
     auto req = h.api.envModified();
+    // Execute with no fields set — covers all !has_value() (false) branches.
+    req.execute();
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
     req.time(int32_t{42});
 #endif
@@ -2177,11 +2882,20 @@ TEST_CASE("note::api::EnvModified request builder") {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
     REQUIRE(h.last_req.find("\"time\"") != std::string::npos);
 #endif
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+    req["time"] = int32_t{42};
+#endif
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -2203,16 +2917,26 @@ TEST_CASE("note::api::EnvModified response parsing") {
 TEST_CASE("note::api::EnvSet request builder") {
     Harness h;
     auto req = h.api.envSet();
+    // Execute with no fields set — covers all !has_value() (false) branches.
+    req.execute();
     req.name(note::string_view("x-name"));
     req.text(note::string_view("x-text"));
     req.execute();
     REQUIRE(h.last_req.find("\"name\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"text\"") != std::string::npos);
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+    req["name"] = note::string_view("x-name");
+    req["text"] = note::string_view("x-text");
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -2234,12 +2958,19 @@ TEST_CASE("note::api::EnvSet response parsing") {
 TEST_CASE("note::api::EnvTemplate request builder") {
     Harness h;
     auto req = h.api.envTemplate();
+    // Execute with no fields set — covers all !has_value() (false) branches.
     req.execute();
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    req.execute();
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -2257,16 +2988,26 @@ TEST_CASE("note::api::EnvTemplate response parsing") {
 TEST_CASE("note::api::FileChanges request builder") {
     Harness h;
     auto req = h.api.fileChanges();
+    // Execute with no fields set — covers all !has_value() (false) branches.
+    req.execute();
     req.files(note::string_view("x-files"));
     req.tracker(note::string_view("x-tracker"));
     req.execute();
     REQUIRE(h.last_req.find("\"files\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"tracker\"") != std::string::npos);
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+    req["files"] = note::string_view("x-files");
+    req["tracker"] = note::string_view("x-tracker");
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -2288,12 +3029,19 @@ TEST_CASE("note::api::FileChanges response parsing") {
 TEST_CASE("note::api::FileChangesPending request builder") {
     Harness h;
     auto req = h.api.fileChangesPending();
+    // Execute with no fields set — covers all !has_value() (false) branches.
     req.execute();
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    req.execute();
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -2315,14 +3063,23 @@ TEST_CASE("note::api::FileChangesPending response parsing") {
 TEST_CASE("note::api::FileClear request builder") {
     Harness h;
     auto req = h.api.fileClear();
+    // Execute with no fields set — covers all !has_value() (false) branches.
+    req.execute();
     req.file(note::string_view("x-file"));
     req.execute();
     REQUIRE(h.last_req.find("\"file\"") != std::string::npos);
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+    req["file"] = note::string_view("x-file");
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -2332,14 +3089,23 @@ TEST_CASE("note::api::FileClear request builder") {
 TEST_CASE("note::api::FileDelete request builder") {
     Harness h;
     auto req = h.api.fileDelete();
+    // Execute with no fields set — covers all !has_value() (false) branches.
+    req.execute();
     req.files(note::string_view("x-files"));
     req.execute();
     REQUIRE(h.last_req.find("\"files\"") != std::string::npos);
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+    req["files"] = note::string_view("x-files");
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -2349,14 +3115,23 @@ TEST_CASE("note::api::FileDelete request builder") {
 TEST_CASE("note::api::FileStats request builder") {
     Harness h;
     auto req = h.api.fileStats();
+    // Execute with no fields set — covers all !has_value() (false) branches.
+    req.execute();
     req.file(note::string_view("x-file"));
     req.execute();
     REQUIRE(h.last_req.find("\"file\"") != std::string::npos);
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+    req["file"] = note::string_view("x-file");
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -2378,12 +3153,19 @@ TEST_CASE("note::api::FileStats response parsing") {
 TEST_CASE("note::api::HubGet request builder") {
     Harness h;
     auto req = h.api.hubGet();
+    // Execute with no fields set — covers all !has_value() (false) branches.
     req.execute();
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    req.execute();
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -2419,6 +3201,8 @@ TEST_CASE("note::api::HubGet response parsing") {
 TEST_CASE("note::api::HubLog request builder") {
     Harness h;
     auto req = h.api.hubLog();
+    // Execute with no fields set — covers all !has_value() (false) branches.
+    req.execute();
     req.alert(true);
     req.sync(true);
     req.text(note::string_view("x-text"));
@@ -2426,11 +3210,20 @@ TEST_CASE("note::api::HubLog request builder") {
     REQUIRE(h.last_req.find("\"alert\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"sync\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"text\"") != std::string::npos);
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+    req["alert"] = true;
+    req["sync"] = true;
+    req["text"] = note::string_view("x-text");
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -2440,6 +3233,8 @@ TEST_CASE("note::api::HubLog request builder") {
 TEST_CASE("note::api::HubSet request builder") {
     Harness h;
     auto req = h.api.hubSet();
+    // Execute with no fields set — covers all !has_value() (false) branches.
+    req.execute();
     req.align(true);
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
     req.details(note::string_view("x-details"));
@@ -2511,11 +3306,52 @@ TEST_CASE("note::api::HubSet request builder") {
 #endif
     REQUIRE(h.last_req.find("\"vinbound\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"voutbound\"") != std::string::npos);
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+    req["align"] = true;
+#if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
+    req["details"] = note::string_view("x-details");
+#endif
+    req["duration"] = int32_t{42};
+    req["host"] = note::string_view("x-host");
+    req["inbound"] = int32_t{42};
+    req["mode"] = note::string_view("periodic");
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+    req["off"] = true;
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+    req["on"] = true;
+#endif
+    req["outbound"] = int32_t{42};
+    req["product"] = note::string_view("x-product");
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+    req["seconds"] = int32_t{42};
+#endif
+    req["sn"] = note::string_view("x-sn");
+    req["sync"] = true;
+#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
+    req["umin"] = true;
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
+    req["uoff"] = true;
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
+    req["uperiodic"] = true;
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(7, 3, 1) || !defined(NOTE_API_STRICT)
+    req["version"] = note::string_view("x-version");
+#endif
+    req["vinbound"] = note::string_view("x-vinbound");
+    req["voutbound"] = note::string_view("x-voutbound");
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -2525,6 +3361,8 @@ TEST_CASE("note::api::HubSet request builder") {
 TEST_CASE("note::api::HubSignal request builder") {
     Harness h;
     auto req = h.api.hubSignal();
+    // Execute with no fields set — covers all !has_value() (false) branches.
+    req.execute();
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
     req.seconds(int32_t{42});
 #endif
@@ -2532,11 +3370,20 @@ TEST_CASE("note::api::HubSignal request builder") {
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
     REQUIRE(h.last_req.find("\"seconds\"") != std::string::npos);
 #endif
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
+    req["seconds"] = int32_t{42};
+#endif
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -2556,12 +3403,19 @@ TEST_CASE("note::api::HubSignal response parsing") {
 TEST_CASE("note::api::HubStatus request builder") {
     Harness h;
     auto req = h.api.hubStatus();
+    // Execute with no fields set — covers all !has_value() (false) branches.
     req.execute();
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    req.execute();
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -2581,6 +3435,8 @@ TEST_CASE("note::api::HubStatus response parsing") {
 TEST_CASE("note::api::HubSync request builder") {
     Harness h;
     auto req = h.api.hubSync();
+    // Execute with no fields set — covers all !has_value() (false) branches.
+    req.execute();
     req.allow(true);
     req.in(true);
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
@@ -2592,11 +3448,22 @@ TEST_CASE("note::api::HubSync request builder") {
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
     REQUIRE(h.last_req.find("\"out\"") != std::string::npos);
 #endif
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+    req["allow"] = true;
+    req["in"] = true;
+#if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
+    req["out"] = true;
+#endif
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -2606,14 +3473,23 @@ TEST_CASE("note::api::HubSync request builder") {
 TEST_CASE("note::api::HubSyncStatus request builder") {
     Harness h;
     auto req = h.api.hubSyncStatus();
+    // Execute with no fields set — covers all !has_value() (false) branches.
+    req.execute();
     req.sync(true);
     req.execute();
     REQUIRE(h.last_req.find("\"sync\"") != std::string::npos);
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+    req["sync"] = true;
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -2655,6 +3531,8 @@ TEST_CASE("note::api::HubSyncStatus response parsing") {
 TEST_CASE("note::api::NoteAdd request builder") {
     Harness h;
     auto req = h.api.noteAdd();
+    // Execute with no fields set — covers all !has_value() (false) branches.
+    req.execute();
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
     req.binary(true);
 #endif
@@ -2698,11 +3576,38 @@ TEST_CASE("note::api::NoteAdd request builder") {
     REQUIRE(h.last_req.find("\"payload\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"sync\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"verify\"") != std::string::npos);
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
+    req["binary"] = true;
+#endif
+    req["file"] = note::string_view("x-file");
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
+    req["full"] = true;
+#endif
+    req["key"] = note::string_view("x-key");
+#if NOTE_API_VERSION >= NOTE_VERSION(9, 1, 1) || !defined(NOTE_API_STRICT)
+    req["limit"] = true;
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
+    req["live"] = true;
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(8, 2, 1) || !defined(NOTE_API_STRICT)
+    req["max"] = int32_t{42};
+#endif
+    req["note"] = note::string_view("x-note");
+    req["payload"] = note::string_view("x-payload");
+    req["sync"] = true;
+    req["verify"] = true;
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -2724,6 +3629,8 @@ TEST_CASE("note::api::NoteAdd response parsing") {
 TEST_CASE("note::api::NoteChanges::Get request builder") {
     Harness h;
     auto req = h.api.noteChanges().get();
+    // Execute with no fields set — covers all !has_value() (false) branches.
+    req.execute();
     req.deleted(true);
     req.file(note::string_view("x-file"));
     req.max(int32_t{42});
@@ -2739,11 +3646,24 @@ TEST_CASE("note::api::NoteChanges::Get request builder") {
     REQUIRE(h.last_req.find("\"start\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"stop\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"tracker\"") != std::string::npos);
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+    req["deleted"] = true;
+    req["file"] = note::string_view("x-file");
+    req["max"] = int32_t{42};
+    req["reset"] = true;
+    req["start"] = true;
+    req["stop"] = true;
+    req["tracker"] = note::string_view("x-tracker");
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -2763,6 +3683,8 @@ TEST_CASE("note::api::NoteChanges::Get response parsing") {
 TEST_CASE("note::api::NoteChanges::Delete request builder") {
     Harness h;
     auto req = h.api.noteChanges().delete_();
+    // Execute with no fields set — covers all !has_value() (false) branches.
+    req.execute();
     req.deleted(true);
     req.file(note::string_view("x-file"));
     req.max(int32_t{42});
@@ -2778,11 +3700,24 @@ TEST_CASE("note::api::NoteChanges::Delete request builder") {
     REQUIRE(h.last_req.find("\"start\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"stop\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"tracker\"") != std::string::npos);
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+    req["deleted"] = true;
+    req["file"] = note::string_view("x-file");
+    req["max"] = int32_t{42};
+    req["reset"] = true;
+    req["start"] = true;
+    req["stop"] = true;
+    req["tracker"] = note::string_view("x-tracker");
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -2802,6 +3737,8 @@ TEST_CASE("note::api::NoteChanges::Delete response parsing") {
 TEST_CASE("note::api::NoteDelete request builder") {
     Harness h;
     auto req = h.api.noteDelete();
+    // Execute with no fields set — covers all !has_value() (false) branches.
+    req.execute();
     req.file(note::string_view("x-file"));
     req.noteId(note::string_view("x-note"));
     req.verify(true);
@@ -2809,11 +3746,20 @@ TEST_CASE("note::api::NoteDelete request builder") {
     REQUIRE(h.last_req.find("\"file\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"note\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"verify\"") != std::string::npos);
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+    req["file"] = note::string_view("x-file");
+    req["note"] = note::string_view("x-note");
+    req["verify"] = true;
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -2823,6 +3769,8 @@ TEST_CASE("note::api::NoteDelete request builder") {
 TEST_CASE("note::api::NoteGet::Get request builder") {
     Harness h;
     auto req = h.api.noteGet().get();
+    // Execute with no fields set — covers all !has_value() (false) branches.
+    req.execute();
     req.decrypt(true);
     req.deleted(true);
     req.file(note::string_view("x-file"));
@@ -2832,11 +3780,21 @@ TEST_CASE("note::api::NoteGet::Get request builder") {
     REQUIRE(h.last_req.find("\"deleted\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"file\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"note\"") != std::string::npos);
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+    req["decrypt"] = true;
+    req["deleted"] = true;
+    req["file"] = note::string_view("x-file");
+    req["note"] = note::string_view("x-note");
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -2856,6 +3814,8 @@ TEST_CASE("note::api::NoteGet::Get response parsing") {
 TEST_CASE("note::api::NoteGet::Delete request builder") {
     Harness h;
     auto req = h.api.noteGet().delete_();
+    // Execute with no fields set — covers all !has_value() (false) branches.
+    req.execute();
     req.decrypt(true);
     req.deleted(true);
     req.file(note::string_view("x-file"));
@@ -2865,11 +3825,21 @@ TEST_CASE("note::api::NoteGet::Delete request builder") {
     REQUIRE(h.last_req.find("\"deleted\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"file\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"note\"") != std::string::npos);
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+    req["decrypt"] = true;
+    req["deleted"] = true;
+    req["file"] = note::string_view("x-file");
+    req["note"] = note::string_view("x-note");
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -2889,6 +3859,8 @@ TEST_CASE("note::api::NoteGet::Delete response parsing") {
 TEST_CASE("note::api::NoteTemplate::Set request builder") {
     Harness h;
     auto req = h.api.noteTemplate().set();
+    // Execute with no fields set — covers all !has_value() (false) branches.
+    req.execute();
     req.delete_(true);
     req.file(note::string_view("x-file"));
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
@@ -2910,11 +3882,27 @@ TEST_CASE("note::api::NoteTemplate::Set request builder") {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
     REQUIRE(h.last_req.find("\"verify\"") != std::string::npos);
 #endif
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+    req["delete"] = true;
+    req["file"] = note::string_view("x-file");
+#if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
+    req["format"] = note::string_view("x-format");
+#endif
+    req["length"] = int32_t{42};
+    req["port"] = int32_t{42};
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
+    req["verify"] = true;
+#endif
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -2946,6 +3934,8 @@ TEST_CASE("note::api::NoteTemplate::Set response parsing") {
 TEST_CASE("note::api::NoteTemplate::Delete request builder") {
     Harness h;
     auto req = h.api.noteTemplate().delete_();
+    // Execute with no fields set — covers all !has_value() (false) branches.
+    req.execute();
     req.file(note::string_view("x-file"));
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
     req.format(note::string_view("x-format"));
@@ -2965,11 +3955,26 @@ TEST_CASE("note::api::NoteTemplate::Delete request builder") {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
     REQUIRE(h.last_req.find("\"verify\"") != std::string::npos);
 #endif
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+    req["file"] = note::string_view("x-file");
+#if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
+    req["format"] = note::string_view("x-format");
+#endif
+    req["length"] = int32_t{42};
+    req["port"] = int32_t{42};
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
+    req["verify"] = true;
+#endif
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -3001,6 +4006,8 @@ TEST_CASE("note::api::NoteTemplate::Delete response parsing") {
 TEST_CASE("note::api::NoteUpdate request builder") {
     Harness h;
     auto req = h.api.noteUpdate();
+    // Execute with no fields set — covers all !has_value() (false) branches.
+    req.execute();
     req.file(note::string_view("x-file"));
     req.noteId(note::string_view("x-note"));
     req.payload(note::string_view("x-payload"));
@@ -3010,11 +4017,21 @@ TEST_CASE("note::api::NoteUpdate request builder") {
     REQUIRE(h.last_req.find("\"note\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"payload\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"verify\"") != std::string::npos);
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+    req["file"] = note::string_view("x-file");
+    req["note"] = note::string_view("x-note");
+    req["payload"] = note::string_view("x-payload");
+    req["verify"] = true;
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -3024,16 +4041,26 @@ TEST_CASE("note::api::NoteUpdate request builder") {
 TEST_CASE("note::api::NtnGps request builder") {
     Harness h;
     auto req = h.api.ntnGps();
+    // Execute with no fields set — covers all !has_value() (false) branches.
+    req.execute();
     req.off(true);
     req.on(true);
     req.execute();
     REQUIRE(h.last_req.find("\"off\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"on\"") != std::string::npos);
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+    req["off"] = true;
+    req["on"] = true;
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -3053,12 +4080,19 @@ TEST_CASE("note::api::NtnGps response parsing") {
 TEST_CASE("note::api::NtnReset request builder") {
     Harness h;
     auto req = h.api.ntnReset();
+    // Execute with no fields set — covers all !has_value() (false) branches.
     req.execute();
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    req.execute();
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -3068,12 +4102,19 @@ TEST_CASE("note::api::NtnReset request builder") {
 TEST_CASE("note::api::NtnStatus request builder") {
     Harness h;
     auto req = h.api.ntnStatus();
+    // Execute with no fields set — covers all !has_value() (false) branches.
     req.execute();
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    req.execute();
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -3093,16 +4134,26 @@ TEST_CASE("note::api::NtnStatus response parsing") {
 TEST_CASE("note::api::VarDelete request builder") {
     Harness h;
     auto req = h.api.varDelete();
+    // Execute with no fields set — covers all !has_value() (false) branches.
+    req.execute();
     req.file(note::string_view("x-file"));
     req.name(note::string_view("x-name"));
     req.execute();
     REQUIRE(h.last_req.find("\"file\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"name\"") != std::string::npos);
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+    req["file"] = note::string_view("x-file");
+    req["name"] = note::string_view("x-name");
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -3112,16 +4163,26 @@ TEST_CASE("note::api::VarDelete request builder") {
 TEST_CASE("note::api::VarGet request builder") {
     Harness h;
     auto req = h.api.varGet();
+    // Execute with no fields set — covers all !has_value() (false) branches.
+    req.execute();
     req.file(note::string_view("x-file"));
     req.name(note::string_view("x-name"));
     req.execute();
     REQUIRE(h.last_req.find("\"file\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"name\"") != std::string::npos);
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+    req["file"] = note::string_view("x-file");
+    req["name"] = note::string_view("x-name");
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -3143,6 +4204,8 @@ TEST_CASE("note::api::VarGet response parsing") {
 TEST_CASE("note::api::VarSet request builder") {
     Harness h;
     auto req = h.api.varSet();
+    // Execute with no fields set — covers all !has_value() (false) branches.
+    req.execute();
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 3, 1) || !defined(NOTE_API_STRICT)
     req.file(note::string_view("x-file"));
 #endif
@@ -3160,11 +4223,25 @@ TEST_CASE("note::api::VarSet request builder") {
     REQUIRE(h.last_req.find("\"sync\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"text\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"value\"") != std::string::npos);
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+#if NOTE_API_VERSION >= NOTE_VERSION(7, 3, 1) || !defined(NOTE_API_STRICT)
+    req["file"] = note::string_view("x-file");
+#endif
+    req["flag"] = true;
+    req["name"] = note::string_view("x-name");
+    req["sync"] = true;
+    req["text"] = note::string_view("x-text");
+    req["value"] = 1.5;
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -3174,6 +4251,8 @@ TEST_CASE("note::api::VarSet request builder") {
 TEST_CASE("note::api::Web request builder") {
     Harness h;
     auto req = h.api.web();
+    // Execute with no fields set — covers all !has_value() (false) branches.
+    req.execute();
     req.content(note::string_view("x-content"));
     req.method(note::string_view("CONNECT"));
     req.name(note::string_view("x-name"));
@@ -3183,11 +4262,21 @@ TEST_CASE("note::api::Web request builder") {
     REQUIRE(h.last_req.find("\"method\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"name\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"route\"") != std::string::npos);
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+    req["content"] = note::string_view("x-content");
+    req["method"] = note::string_view("CONNECT");
+    req["name"] = note::string_view("x-name");
+    req["route"] = note::string_view("x-route");
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -3211,6 +4300,8 @@ TEST_CASE("note::api::Web response parsing") {
 TEST_CASE("note::api::WebDelete request builder") {
     Harness h;
     auto req = h.api.webDelete();
+    // Execute with no fields set — covers all !has_value() (false) branches.
+    req.execute();
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
     req.async(true);
 #endif
@@ -3230,11 +4321,26 @@ TEST_CASE("note::api::WebDelete request builder") {
     REQUIRE(h.last_req.find("\"note\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"route\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"seconds\"") != std::string::npos);
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
+    req["async"] = true;
+#endif
+    req["content"] = note::string_view("x-content");
+    req["file"] = note::string_view("x-file");
+    req["name"] = note::string_view("x-name");
+    req["note"] = note::string_view("x-note");
+    req["route"] = note::string_view("x-route");
+    req["seconds"] = int32_t{42};
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -3256,6 +4362,8 @@ TEST_CASE("note::api::WebDelete response parsing") {
 TEST_CASE("note::api::WebGet request builder") {
     Harness h;
     auto req = h.api.webGet();
+    // Execute with no fields set — covers all !has_value() (false) branches.
+    req.execute();
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
     req.async(true);
 #endif
@@ -3285,11 +4393,31 @@ TEST_CASE("note::api::WebGet request builder") {
     REQUIRE(h.last_req.find("\"offset\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"route\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"seconds\"") != std::string::npos);
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
+    req["async"] = true;
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
+    req["binary"] = true;
+#endif
+    req["content"] = note::string_view("x-content");
+    req["file"] = note::string_view("x-file");
+    req["max"] = int32_t{42};
+    req["name"] = note::string_view("x-name");
+    req["note"] = note::string_view("x-note");
+    req["offset"] = int32_t{42};
+    req["route"] = note::string_view("x-route");
+    req["seconds"] = int32_t{42};
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -3313,6 +4441,8 @@ TEST_CASE("note::api::WebGet response parsing") {
 TEST_CASE("note::api::WebPost request builder") {
     Harness h;
     auto req = h.api.webPost();
+    // Execute with no fields set — covers all !has_value() (false) branches.
+    req.execute();
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
     req.async(true);
 #endif
@@ -3354,11 +4484,37 @@ TEST_CASE("note::api::WebPost request builder") {
     REQUIRE(h.last_req.find("\"total\"") != std::string::npos);
 #endif
     REQUIRE(h.last_req.find("\"verify\"") != std::string::npos);
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
+    req["async"] = true;
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
+    req["binary"] = true;
+#endif
+    req["content"] = note::string_view("x-content");
+    req["file"] = note::string_view("x-file");
+    req["max"] = int32_t{42};
+    req["name"] = note::string_view("x-name");
+    req["note"] = note::string_view("x-note");
+    req["offset"] = int32_t{42};
+    req["payload"] = note::string_view("x-payload");
+    req["route"] = note::string_view("x-route");
+    req["seconds"] = int32_t{42};
+    req["status"] = note::string_view("x-status");
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
+    req["total"] = int32_t{42};
+#endif
+    req["verify"] = true;
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -3388,6 +4544,8 @@ TEST_CASE("note::api::WebPost response parsing") {
 TEST_CASE("note::api::WebPut request builder") {
     Harness h;
     auto req = h.api.webPut();
+    // Execute with no fields set — covers all !has_value() (false) branches.
+    req.execute();
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
     req.async(true);
 #endif
@@ -3429,11 +4587,37 @@ TEST_CASE("note::api::WebPut request builder") {
     REQUIRE(h.last_req.find("\"total\"") != std::string::npos);
 #endif
     REQUIRE(h.last_req.find("\"verify\"") != std::string::npos);
-    // Cover execute(Notecard&), extra(), operator[] plumbing
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
-    req.extra("_x", note::string_view("v"));
-    req.extra("_x2", "v2");
-    req["_x3"] = "v3";
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req.extra("_str", note::string_view("v"));
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
+    req["async"] = true;
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
+    req["binary"] = true;
+#endif
+    req["content"] = note::string_view("x-content");
+    req["file"] = note::string_view("x-file");
+    req["max"] = int32_t{42};
+    req["name"] = note::string_view("x-name");
+    req["note"] = note::string_view("x-note");
+    req["offset"] = int32_t{42};
+    req["payload"] = note::string_view("x-payload");
+    req["route"] = note::string_view("x-route");
+    req["seconds"] = int32_t{42};
+    req["status"] = note::string_view("x-status");
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
+    req["total"] = int32_t{42};
+#endif
+    req["verify"] = true;
     // Cover command() overloads
     req.command();
     req.command(h.nc);

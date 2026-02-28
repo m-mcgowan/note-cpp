@@ -79,6 +79,10 @@ struct WithStringField {
     std::string label;
 };
 
+// Nested aggregate: exercises write_field<V> ReflectableAggregate branch.
+struct GpsPos { double lat; double lon; };
+struct SensorWithLocation { float temp; GpsPos pos; };
+
 } // namespace
 
 // ── Tier 1: Raw JSON string ─────────────────────────────────────────────────
@@ -186,6 +190,16 @@ TEST_CASE("template_of string field hint → \"1\"") {
     h.nc.execute(req);
     REQUIRE(h.last_request ==
         R"({"req":"test.req","body":{"value":14.1,"label":"1"}})");
+}
+
+TEST_CASE("BodyValue from reflected aggregate with nested aggregate field") {
+    TestHarness h;
+    TestRequest req;
+    SensorWithLocation s{.temp = 21.0f, .pos = {.lat = 42.36, .lon = -71.06}};
+    req.body = note::make_schema_body(s);
+    h.nc.execute(req);
+    REQUIRE(h.last_request ==
+        R"({"req":"test.req","body":{"temp":21,"pos":{"lat":42.36,"lon":-71.06}}})");
 }
 
 TEST_CASE("note.template verify:true includes verify field in request") {

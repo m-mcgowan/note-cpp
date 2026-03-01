@@ -38,6 +38,24 @@ struct Harness {
     {}
 };
 
+// Transport that always fails — used to exercise ApiResult error constructors.
+struct FailHarness {
+    note::test::TestJsonBackend backend;
+    note::Notecard nc;
+    note::Api api;
+
+    FailHarness()
+        : nc(backend,
+            [](note::string_view, uint32_t) -> note::Result<std::string> {
+                return note::make_error(note::Error::Transport, "test");
+            },
+            [](note::string_view) -> note::Result<void> {
+                return note::make_error(note::Error::Transport, "test");
+            })
+        , api(nc)
+    {}
+};
+
 } // namespace
 
 // ---------------------------------------------------------------------------
@@ -71,6 +89,8 @@ TEST_CASE("note::api::CardAttn request builder") {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
     REQUIRE(h.last_req.find("\"verify\"") != std::string::npos);
 #endif
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -186,6 +206,8 @@ TEST_CASE("note::api::CardAux request builder") {
     REQUIRE(h.last_req.find("\"sync\"") != std::string::npos);
 #endif
     REQUIRE(h.last_req.find("\"usage\"") != std::string::npos);
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -280,6 +302,8 @@ TEST_CASE("note::api::CardAuxSerial request builder") {
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
     REQUIRE(h.last_req.find("\"rate\"") != std::string::npos);
 #endif
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -330,6 +354,8 @@ TEST_CASE("note::api::CardBinary::Get request builder") {
     req.delete_(true);
     req.execute();
     REQUIRE(h.last_req.find("\"delete\"") != std::string::npos);
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -372,6 +398,8 @@ TEST_CASE("note::api::CardBinary::Delete request builder") {
     // Execute with no fields set — covers all !has_value() (false) branches.
     req.execute();
     req.execute();
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -418,6 +446,8 @@ TEST_CASE("note::api::CardBinaryGet request builder") {
     REQUIRE(h.last_req.find("\"cobs\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"length\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"offset\"") != std::string::npos);
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -460,6 +490,8 @@ TEST_CASE("note::api::CardBinaryPut request builder") {
     REQUIRE(h.last_req.find("\"cobs\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"offset\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"status\"") != std::string::npos);
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -496,6 +528,8 @@ TEST_CASE("note::api::CardCarrier request builder") {
     req.mode(note::string_view("charging"));
     req.execute();
     REQUIRE(h.last_req.find("\"mode\"") != std::string::npos);
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -538,6 +572,8 @@ TEST_CASE("note::api::CardContact::Get request builder") {
     REQUIRE(h.last_req.find("\"name\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"org\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"role\"") != std::string::npos);
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -587,6 +623,8 @@ TEST_CASE("note::api::CardContact::Set request builder") {
     REQUIRE(h.last_req.find("\"name\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"org\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"role\"") != std::string::npos);
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -642,6 +680,8 @@ TEST_CASE("note::api::CardDfu request builder") {
     REQUIRE(h.last_req.find("\"seconds\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"start\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"stop\"") != std::string::npos);
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -680,6 +720,8 @@ TEST_CASE("note::api::CardIllumination request builder") {
     // Execute with no fields set — covers all !has_value() (false) branches.
     req.execute();
     req.execute();
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -714,6 +756,8 @@ TEST_CASE("note::api::CardIo request builder") {
     req.execute();
     REQUIRE(h.last_req.find("\"i2c\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"mode\"") != std::string::npos);
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -745,6 +789,8 @@ TEST_CASE("note::api::CardLed request builder") {
     REQUIRE(h.last_req.find("\"mode\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"off\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"on\"") != std::string::npos);
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -771,6 +817,8 @@ TEST_CASE("note::api::CardLocation request builder") {
     // Execute with no fields set — covers all !has_value() (false) branches.
     req.execute();
     req.execute();
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -837,6 +885,8 @@ TEST_CASE("note::api::CardLocationMode::Get request builder") {
     REQUIRE(h.last_req.find("\"threshold\"") != std::string::npos);
 #endif
     REQUIRE(h.last_req.find("\"vseconds\"") != std::string::npos);
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -919,6 +969,8 @@ TEST_CASE("note::api::CardLocationMode::Set request builder") {
     REQUIRE(h.last_req.find("\"threshold\"") != std::string::npos);
 #endif
     REQUIRE(h.last_req.find("\"vseconds\"") != std::string::npos);
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -999,6 +1051,8 @@ TEST_CASE("note::api::CardLocationMode::Delete request builder") {
     REQUIRE(h.last_req.find("\"threshold\"") != std::string::npos);
 #endif
     REQUIRE(h.last_req.find("\"vseconds\"") != std::string::npos);
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -1076,6 +1130,8 @@ TEST_CASE("note::api::CardLocationTrack request builder") {
     REQUIRE(h.last_req.find("\"start\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"stop\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"sync\"") != std::string::npos);
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -1132,6 +1188,8 @@ TEST_CASE("note::api::CardMonitor request builder") {
     REQUIRE(h.last_req.find("\"count\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"mode\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"usb\"") != std::string::npos);
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -1160,6 +1218,8 @@ TEST_CASE("note::api::CardMotion request builder") {
     req.minutes(int32_t{42});
     req.execute();
     REQUIRE(h.last_req.find("\"minutes\"") != std::string::npos);
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -1218,6 +1278,8 @@ TEST_CASE("note::api::CardMotionMode request builder") {
 #endif
     REQUIRE(h.last_req.find("\"start\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"stop\"") != std::string::npos);
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -1258,6 +1320,8 @@ TEST_CASE("note::api::CardMotionSync request builder") {
     REQUIRE(h.last_req.find("\"start\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"stop\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"threshold\"") != std::string::npos);
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -1300,6 +1364,8 @@ TEST_CASE("note::api::CardMotionTrack request builder") {
     REQUIRE(h.last_req.find("\"start\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"stop\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"threshold\"") != std::string::npos);
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -1334,6 +1400,8 @@ TEST_CASE("note::api::CardPower::Get request builder") {
     req.execute();
     REQUIRE(h.last_req.find("\"minutes\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"reset\"") != std::string::npos);
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -1375,6 +1443,8 @@ TEST_CASE("note::api::CardPower::Set request builder") {
     req.execute();
     REQUIRE(h.last_req.find("\"minutes\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"reset\"") != std::string::npos);
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -1414,6 +1484,8 @@ TEST_CASE("note::api::CardPower::Delete request builder") {
     req.minutes(int32_t{42});
     req.execute();
     REQUIRE(h.last_req.find("\"minutes\"") != std::string::npos);
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -1454,6 +1526,8 @@ TEST_CASE("note::api::CardRandom request builder") {
     req.execute();
     REQUIRE(h.last_req.find("\"count\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"mode\"") != std::string::npos);
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -1489,6 +1563,8 @@ TEST_CASE("note::api::CardRestart request builder") {
     // Execute with no fields set — covers all !has_value() (false) branches.
     req.execute();
     req.execute();
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -1515,6 +1591,8 @@ TEST_CASE("note::api::CardRestore request builder") {
     req.execute();
     REQUIRE(h.last_req.find("\"connected\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"delete\"") != std::string::npos);
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -1548,6 +1626,8 @@ TEST_CASE("note::api::CardSleep request builder") {
     REQUIRE(h.last_req.find("\"off\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"on\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"seconds\"") != std::string::npos);
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -1589,6 +1669,8 @@ TEST_CASE("note::api::CardStatus request builder") {
     // Execute with no fields set — covers all !has_value() (false) branches.
     req.execute();
     req.execute();
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -1655,6 +1737,8 @@ TEST_CASE("note::api::CardTemp::Get request builder") {
     REQUIRE(h.last_req.find("\"status\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"stop\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"sync\"") != std::string::npos);
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -1710,6 +1794,8 @@ TEST_CASE("note::api::CardTemp::Set request builder") {
     REQUIRE(h.last_req.find("\"status\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"stop\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"sync\"") != std::string::npos);
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -1763,6 +1849,8 @@ TEST_CASE("note::api::CardTemp::Delete request builder") {
     REQUIRE(h.last_req.find("\"minutes\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"status\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"sync\"") != std::string::npos);
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -1809,6 +1897,8 @@ TEST_CASE("note::api::CardTime request builder") {
     // Execute with no fields set — covers all !has_value() (false) branches.
     req.execute();
     req.execute();
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -1853,6 +1943,8 @@ TEST_CASE("note::api::CardTrace request builder") {
     req.mode(note::string_view("on"));
     req.execute();
     REQUIRE(h.last_req.find("\"mode\"") != std::string::npos);
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -1897,6 +1989,8 @@ TEST_CASE("note::api::CardTransport request builder") {
 #if NOTE_API_VERSION >= NOTE_VERSION(9, 1, 1) || !defined(NOTE_API_STRICT)
     REQUIRE(h.last_req.find("\"umin\"") != std::string::npos);
 #endif
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -1952,6 +2046,8 @@ TEST_CASE("note::api::CardTriangulate request builder") {
     REQUIRE(h.last_req.find("\"text\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"time\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"usb\"") != std::string::npos);
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -2004,6 +2100,8 @@ TEST_CASE("note::api::CardUsageGet request builder") {
     req.execute();
     REQUIRE(h.last_req.find("\"mode\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"offset\"") != std::string::npos);
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -2057,6 +2155,8 @@ TEST_CASE("note::api::CardUsageTest request builder") {
     REQUIRE(h.last_req.find("\"days\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"hours\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"megabytes\"") != std::string::npos);
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -2111,6 +2211,8 @@ TEST_CASE("note::api::CardVersion request builder") {
     // Execute with no fields set — covers all !has_value() (false) branches.
     req.execute();
     req.execute();
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -2193,6 +2295,8 @@ TEST_CASE("note::api::CardVoltage::Get request builder") {
 #endif
     REQUIRE(h.last_req.find("\"vmax\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"vmin\"") != std::string::npos);
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -2299,6 +2403,8 @@ TEST_CASE("note::api::CardVoltage::Set request builder") {
 #endif
     REQUIRE(h.last_req.find("\"vmax\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"vmin\"") != std::string::npos);
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -2387,6 +2493,8 @@ TEST_CASE("note::api::CardWifi request builder") {
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 5, 1) || !defined(NOTE_API_STRICT)
     REQUIRE(h.last_req.find("\"text\"") != std::string::npos);
 #endif
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -2440,6 +2548,8 @@ TEST_CASE("note::api::CardWireless request builder") {
     REQUIRE(h.last_req.find("\"hours\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"method\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"mode\"") != std::string::npos);
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -2489,6 +2599,8 @@ TEST_CASE("note::api::CardWirelessPenalty::Get request builder") {
     REQUIRE(h.last_req.find("\"rate\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"reset\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"set\"") != std::string::npos);
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -2546,6 +2658,8 @@ TEST_CASE("note::api::CardWirelessPenalty::Set request builder") {
     REQUIRE(h.last_req.find("\"min\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"rate\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"reset\"") != std::string::npos);
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -2602,6 +2716,8 @@ TEST_CASE("note::api::CardWirelessPenalty::Delete request builder") {
     REQUIRE(h.last_req.find("\"min\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"rate\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"set\"") != std::string::npos);
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -2654,6 +2770,8 @@ TEST_CASE("note::api::DfuGet request builder") {
     REQUIRE(h.last_req.find("\"binary\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"length\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"offset\"") != std::string::npos);
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -2710,6 +2828,8 @@ TEST_CASE("note::api::DfuStatus request builder") {
     REQUIRE(h.last_req.find("\"stop\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"version\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"vvalue\"") != std::string::npos);
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -2763,6 +2883,8 @@ TEST_CASE("note::api::EnvDefault::Set request builder") {
     REQUIRE(h.last_req.find("\"name\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"sync\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"text\"") != std::string::npos);
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -2793,6 +2915,8 @@ TEST_CASE("note::api::EnvDefault::Delete request builder") {
     req.execute();
     REQUIRE(h.last_req.find("\"name\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"sync\"") != std::string::npos);
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -2832,6 +2956,8 @@ TEST_CASE("note::api::EnvGet request builder") {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
     REQUIRE(h.last_req.find("\"time\"") != std::string::npos);
 #endif
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -2882,6 +3008,8 @@ TEST_CASE("note::api::EnvModified request builder") {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
     REQUIRE(h.last_req.find("\"time\"") != std::string::npos);
 #endif
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -2924,6 +3052,8 @@ TEST_CASE("note::api::EnvSet request builder") {
     req.execute();
     REQUIRE(h.last_req.find("\"name\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"text\"") != std::string::npos);
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -2961,6 +3091,8 @@ TEST_CASE("note::api::EnvTemplate request builder") {
     // Execute with no fields set — covers all !has_value() (false) branches.
     req.execute();
     req.execute();
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -2995,6 +3127,8 @@ TEST_CASE("note::api::FileChanges request builder") {
     req.execute();
     REQUIRE(h.last_req.find("\"files\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"tracker\"") != std::string::npos);
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -3032,6 +3166,8 @@ TEST_CASE("note::api::FileChangesPending request builder") {
     // Execute with no fields set — covers all !has_value() (false) branches.
     req.execute();
     req.execute();
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -3068,6 +3204,8 @@ TEST_CASE("note::api::FileClear request builder") {
     req.file(note::string_view("x-file"));
     req.execute();
     REQUIRE(h.last_req.find("\"file\"") != std::string::npos);
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -3094,6 +3232,8 @@ TEST_CASE("note::api::FileDelete request builder") {
     req.files(note::string_view("x-files"));
     req.execute();
     REQUIRE(h.last_req.find("\"files\"") != std::string::npos);
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -3120,6 +3260,8 @@ TEST_CASE("note::api::FileStats request builder") {
     req.file(note::string_view("x-file"));
     req.execute();
     REQUIRE(h.last_req.find("\"file\"") != std::string::npos);
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -3156,6 +3298,8 @@ TEST_CASE("note::api::HubGet request builder") {
     // Execute with no fields set — covers all !has_value() (false) branches.
     req.execute();
     req.execute();
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -3210,6 +3354,8 @@ TEST_CASE("note::api::HubLog request builder") {
     REQUIRE(h.last_req.find("\"alert\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"sync\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"text\"") != std::string::npos);
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -3306,6 +3452,8 @@ TEST_CASE("note::api::HubSet request builder") {
 #endif
     REQUIRE(h.last_req.find("\"vinbound\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"voutbound\"") != std::string::npos);
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -3370,6 +3518,8 @@ TEST_CASE("note::api::HubSignal request builder") {
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
     REQUIRE(h.last_req.find("\"seconds\"") != std::string::npos);
 #endif
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -3406,6 +3556,8 @@ TEST_CASE("note::api::HubStatus request builder") {
     // Execute with no fields set — covers all !has_value() (false) branches.
     req.execute();
     req.execute();
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -3448,6 +3600,8 @@ TEST_CASE("note::api::HubSync request builder") {
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
     REQUIRE(h.last_req.find("\"out\"") != std::string::npos);
 #endif
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -3478,6 +3632,8 @@ TEST_CASE("note::api::HubSyncStatus request builder") {
     req.sync(true);
     req.execute();
     REQUIRE(h.last_req.find("\"sync\"") != std::string::npos);
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -3576,6 +3732,8 @@ TEST_CASE("note::api::NoteAdd request builder") {
     REQUIRE(h.last_req.find("\"payload\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"sync\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"verify\"") != std::string::npos);
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -3646,6 +3804,8 @@ TEST_CASE("note::api::NoteChanges::Get request builder") {
     REQUIRE(h.last_req.find("\"start\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"stop\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"tracker\"") != std::string::npos);
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -3700,6 +3860,8 @@ TEST_CASE("note::api::NoteChanges::Delete request builder") {
     REQUIRE(h.last_req.find("\"start\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"stop\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"tracker\"") != std::string::npos);
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -3746,6 +3908,8 @@ TEST_CASE("note::api::NoteDelete request builder") {
     REQUIRE(h.last_req.find("\"file\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"note\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"verify\"") != std::string::npos);
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -3780,6 +3944,8 @@ TEST_CASE("note::api::NoteGet::Get request builder") {
     REQUIRE(h.last_req.find("\"deleted\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"file\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"note\"") != std::string::npos);
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -3825,6 +3991,8 @@ TEST_CASE("note::api::NoteGet::Delete request builder") {
     REQUIRE(h.last_req.find("\"deleted\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"file\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"note\"") != std::string::npos);
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -3882,6 +4050,8 @@ TEST_CASE("note::api::NoteTemplate::Set request builder") {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
     REQUIRE(h.last_req.find("\"verify\"") != std::string::npos);
 #endif
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -3955,6 +4125,8 @@ TEST_CASE("note::api::NoteTemplate::Delete request builder") {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
     REQUIRE(h.last_req.find("\"verify\"") != std::string::npos);
 #endif
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -4017,6 +4189,8 @@ TEST_CASE("note::api::NoteUpdate request builder") {
     REQUIRE(h.last_req.find("\"note\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"payload\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"verify\"") != std::string::npos);
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -4048,6 +4222,8 @@ TEST_CASE("note::api::NtnGps request builder") {
     req.execute();
     REQUIRE(h.last_req.find("\"off\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"on\"") != std::string::npos);
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -4083,6 +4259,8 @@ TEST_CASE("note::api::NtnReset request builder") {
     // Execute with no fields set — covers all !has_value() (false) branches.
     req.execute();
     req.execute();
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -4105,6 +4283,8 @@ TEST_CASE("note::api::NtnStatus request builder") {
     // Execute with no fields set — covers all !has_value() (false) branches.
     req.execute();
     req.execute();
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -4141,6 +4321,8 @@ TEST_CASE("note::api::VarDelete request builder") {
     req.execute();
     REQUIRE(h.last_req.find("\"file\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"name\"") != std::string::npos);
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -4170,6 +4352,8 @@ TEST_CASE("note::api::VarGet request builder") {
     req.execute();
     REQUIRE(h.last_req.find("\"file\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"name\"") != std::string::npos);
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -4223,6 +4407,8 @@ TEST_CASE("note::api::VarSet request builder") {
     REQUIRE(h.last_req.find("\"sync\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"text\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"value\"") != std::string::npos);
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -4262,6 +4448,8 @@ TEST_CASE("note::api::Web request builder") {
     REQUIRE(h.last_req.find("\"method\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"name\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"route\"") != std::string::npos);
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -4321,6 +4509,8 @@ TEST_CASE("note::api::WebDelete request builder") {
     REQUIRE(h.last_req.find("\"note\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"route\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"seconds\"") != std::string::npos);
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -4393,6 +4583,8 @@ TEST_CASE("note::api::WebGet request builder") {
     REQUIRE(h.last_req.find("\"offset\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"route\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"seconds\"") != std::string::npos);
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -4484,6 +4676,8 @@ TEST_CASE("note::api::WebPost request builder") {
     REQUIRE(h.last_req.find("\"total\"") != std::string::npos);
 #endif
     REQUIRE(h.last_req.find("\"verify\"") != std::string::npos);
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -4587,6 +4781,8 @@ TEST_CASE("note::api::WebPut request builder") {
     REQUIRE(h.last_req.find("\"total\"") != std::string::npos);
 #endif
     REQUIRE(h.last_req.find("\"verify\"") != std::string::npos);
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);

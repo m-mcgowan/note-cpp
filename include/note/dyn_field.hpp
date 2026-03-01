@@ -15,7 +15,10 @@
 namespace note {
 
 /// Type-erased value for extra() fields and operator[] routing.
-using DynValue = std::variant<std::monostate, bool, int32_t, double, note::string_view>;
+/// std::monostate is intentionally excluded: extras slots are only accessed
+/// up to extras_count_, so uninitialized slots are never visited. Excluding
+/// monostate avoids a no-op lambda instantiation per-endpoint in build().
+using DynValue = std::variant<bool, int32_t, double, note::string_view>;
 
 namespace detail {
 

@@ -137,14 +137,13 @@ struct CardVoltage {
             CardVoltage::Get& operator()(double v);
         } vmin{};
 
-        // LCOV_EXCL_START — consteval: only callable at compile time
+        // consteval: only callable at compile time
         static consteval note::string_view validatedMode(const char* v) {
             note::string_view sv{v};
             if (sv != "default" && sv != "lipo" && sv != "l91" && sv != "alkaline" && sv != "tad" && sv != "lic" && sv != "?")
                 throw "card.voltage: invalid value for 'mode'";
             return sv;
         }
-        // LCOV_EXCL_STOP
 
         template<typename T>
         auto& extra(note::string_view key, T value) {
@@ -273,10 +272,8 @@ struct CardVoltage {
             if (vmax) b.add("vmax", *vmax);
             if (vmin) b.add("vmin", *vmin);
             for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
-                std::visit([&](auto&& v_) {
-                    if constexpr (!std::is_same_v<std::decay_t<decltype(v_)>, std::monostate>)
-                        b.add(extras_[i_].key, v_);
-                }, extras_[i_].value);
+                std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
+                           extras_[i_].value);
         }
 #pragma GCC diagnostic pop
 
@@ -406,14 +403,13 @@ struct CardVoltage {
             CardVoltage::Set& operator()(double v);
         } vmin{};
 
-        // LCOV_EXCL_START — consteval: only callable at compile time
+        // consteval: only callable at compile time
         static consteval note::string_view validatedMode(const char* v) {
             note::string_view sv{v};
             if (sv != "default" && sv != "lipo" && sv != "l91" && sv != "alkaline" && sv != "tad" && sv != "lic" && sv != "?")
                 throw "card.voltage: invalid value for 'mode'";
             return sv;
         }
-        // LCOV_EXCL_STOP
 
         template<typename T>
         auto& extra(note::string_view key, T value) {
@@ -542,10 +538,8 @@ struct CardVoltage {
             if (vmax) b.add("vmax", *vmax);
             if (vmin) b.add("vmin", *vmin);
             for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
-                std::visit([&](auto&& v_) {
-                    if constexpr (!std::is_same_v<std::decay_t<decltype(v_)>, std::monostate>)
-                        b.add(extras_[i_].key, v_);
-                }, extras_[i_].value);
+                std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
+                           extras_[i_].value);
         }
 #pragma GCC diagnostic pop
 

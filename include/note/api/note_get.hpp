@@ -133,10 +133,8 @@ struct NoteGet {
             if (file) b.add("file", *file);
             if (noteId) b.add("note", *noteId);
             for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
-                std::visit([&](auto&& v_) {
-                    if constexpr (!std::is_same_v<std::decay_t<decltype(v_)>, std::monostate>)
-                        b.add(extras_[i_].key, v_);
-                }, extras_[i_].value);
+                std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
+                           extras_[i_].value);
         }
 
         auto execute() const { return nc_->execute(*this); }
@@ -261,10 +259,8 @@ struct NoteGet {
             if (file) b.add("file", *file);
             if (noteId) b.add("note", *noteId);
             for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
-                std::visit([&](auto&& v_) {
-                    if constexpr (!std::is_same_v<std::decay_t<decltype(v_)>, std::monostate>)
-                        b.add(extras_[i_].key, v_);
-                }, extras_[i_].value);
+                std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
+                           extras_[i_].value);
         }
 
         auto execute() const { return nc_->execute(*this); }

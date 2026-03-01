@@ -38,6 +38,24 @@ struct Harness {
     {}
 };
 
+// Transport that always fails — used to exercise ApiResult error constructors.
+struct FailHarness {
+    note::test::TestJsonBackend backend;
+    note::Notecard nc;
+    note::Api api;
+
+    FailHarness()
+        : nc(backend,
+            [](note::string_view, uint32_t) -> note::Result<std::string> {
+                return note::make_error(note::Error::Transport, "test");
+            },
+            [](note::string_view) -> note::Result<void> {
+                return note::make_error(note::Error::Transport, "test");
+            })
+        , api(nc)
+    {}
+};
+
 } // namespace
 
 {% for endpoint in endpoints %}
@@ -74,6 +92,8 @@ TEST_CASE("note::api::{{ type_qual }} request builder") {
 #endif
 {% endif %}
 {% endfor %}
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);

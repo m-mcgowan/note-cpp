@@ -32,14 +32,13 @@ struct CardTrace {
         CardTrace& operator()(note::string_view v);
     } mode{};
 
-    // LCOV_EXCL_START — consteval: only callable at compile time
+    // consteval: only callable at compile time
     static consteval note::string_view validatedMode(const char* v) {
         note::string_view sv{v};
         if (sv != "on" && sv != "off")
             throw "card.trace: invalid value for 'mode'";
         return sv;
     }
-    // LCOV_EXCL_STOP
 
     template<typename T>
     auto& extra(note::string_view key, T value) {
@@ -75,10 +74,8 @@ struct CardTrace {
     void build(JsonBuilder& b) const {
         if (mode) b.add("mode", *mode);
         for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
-            std::visit([&](auto&& v_) {
-                if constexpr (!std::is_same_v<std::decay_t<decltype(v_)>, std::monostate>)
-                    b.add(extras_[i_].key, v_);
-            }, extras_[i_].value);
+            std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
+                       extras_[i_].value);
     }
 
     auto execute() const { return nc_->execute(*this); }

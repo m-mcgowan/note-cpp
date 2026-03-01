@@ -202,32 +202,29 @@ struct CardAux {
     } usage{};
 
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
-    // LCOV_EXCL_START — consteval: only callable at compile time
+    // consteval: only callable at compile time
     static consteval note::string_view validatedCount(const char* v) {
         note::string_view sv{v};
         if (sv != "-1" && sv != "1" && sv != "2" && sv != "5")
             throw "card.aux: invalid value for 'count'";
         return sv;
     }
-    // LCOV_EXCL_STOP
 #endif
-    // LCOV_EXCL_START — consteval: only callable at compile time
+    // consteval: only callable at compile time
     static consteval note::string_view validatedMode(const char* v) {
         note::string_view sv{v};
         if (sv != "dfu" && sv != "gpio" && sv != "led" && sv != "monitor" && sv != "motion" && sv != "neo" && sv != "neo-monitor" && sv != "off" && sv != "rgb" && sv != "rgb-monitor" && sv != "track" && sv != "track-monitor" && sv != "track-neo-monitor" && sv != "track-rgb-monitor" && sv != "-")
             throw "card.aux: invalid value for 'mode'";
         return sv;
     }
-    // LCOV_EXCL_STOP
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
-    // LCOV_EXCL_START — consteval: only callable at compile time
+    // consteval: only callable at compile time
     static consteval note::string_view validatedRate(const char* v) {
         note::string_view sv{v};
         if (sv != "-1" && sv != "300" && sv != "600" && sv != "1200" && sv != "2400" && sv != "4800" && sv != "9600" && sv != "19200" && sv != "38400" && sv != "57600" && sv != "115200" && sv != "230400" && sv != "460800" && sv != "921600")
             throw "card.aux: invalid value for 'rate'";
         return sv;
     }
-    // LCOV_EXCL_STOP
 #endif
 
     template<typename T>
@@ -358,10 +355,8 @@ struct CardAux {
 #endif
         if (usage) b.add("usage", *usage);
         for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
-            std::visit([&](auto&& v_) {
-                if constexpr (!std::is_same_v<std::decay_t<decltype(v_)>, std::monostate>)
-                    b.add(extras_[i_].key, v_);
-            }, extras_[i_].value);
+            std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
+                       extras_[i_].value);
     }
 #pragma GCC diagnostic pop
 

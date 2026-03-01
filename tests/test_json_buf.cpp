@@ -402,3 +402,63 @@ TEST_CASE("JsonBuf escape sequences quote, backslash, newline") {
     b.close();
     REQUIRE(b.view() == R"({"a":"say \"hi\"","b":"c:\\path","c":"line1\nline2"})");
 }
+
+// ── Comprehensive method coverage ───────────────────────────────────────────
+// Each distinct JsonBuf<N> generates its own function instantiations. This
+// test exercises every public method on a single canonical size (256) so all
+// branches are covered without spreading across multiple instantiations.
+
+TEST_CASE("JsonBuf covers all methods on canonical size") {
+    using B = note::JsonBuf<256>;
+
+    // Fragment used to exercise the templated add(key, fragment) and add(fragment) overloads.
+    auto frag = note::JsonBuf<32>::object();
+    frag.add("x", int32_t{1});
+    frag.close();
+
+    // ── Object mode (default constructor) ────────────────────────────────
+    B b;
+    b.add("sv",  std::string_view("hello"));   // add(key, string_view)
+    b.add("cs",  "world");                     // add(key, const char*)
+    b.add("i32", int32_t{42});                 // add(key, int32_t)
+    b.add("i16", int16_t{10});                 // add(key, T) template
+    b.add("dbl", 1.5);                         // add(key, double)
+    b.add("flt", 2.5f);                        // add(key, float)
+    b.add("bl",  true);                        // add(key, bool)
+    b.add("frg", frag);                        // add(key, JsonBuf<M>&)
+    b.begin_object("obj");
+        b.add("inner", "val");
+    b.end_object();
+    b.begin_array("arr");
+        b.add(std::string_view("sv_elem"));    // add(string_view) — unkeyed
+        b.add("cs_elem");                      // add(const char*) — unkeyed
+        b.add(int32_t{7});                     // add(int32_t) — unkeyed
+        b.add(false);                          // add(bool) — unkeyed
+        b.add(frag);                           // add(JsonBuf<M>&) — unkeyed
+    b.end_array();
+    b.close();
+
+    REQUIRE(b);
+    REQUIRE_FALSE(b.overflow());
+    REQUIRE(b.data() != nullptr);
+    REQUIRE(b.size() > 0);
+    REQUIRE(b.capacity() == 256);
+    REQUIRE(!b.view().empty());
+
+    // ── object() factory ─────────────────────────────────────────────────
+    auto obj = B::object();
+    obj.add("k", "v");
+    obj.close();
+    REQUIRE(obj.view() == R"({"k":"v"})");
+
+    // ── array() factory ──────────────────────────────────────────────────
+    auto arr = B::array();
+    arr.add(std::string_view("a"));
+    arr.add("b");
+    arr.add(int32_t{1});
+    arr.add(true);
+    arr.add(frag);
+    arr.close();
+    REQUIRE(arr);
+    REQUIRE(!arr.view().empty());
+}

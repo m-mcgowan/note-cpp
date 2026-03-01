@@ -109,6 +109,18 @@ constexpr size_t dtoa(char* buf, size_t cap, double value) {
 //     JSON string is computed at compile time
 //   - At runtime, writes are simple memcpy-like buffer fills
 //
+// N is the total buffer size including the null terminator. Typical values:
+//   JsonBuf<64>  — small body fragments
+//   JsonBuf<256> — single request
+//   JsonBuf<512> — request with body
+//
+// Design note: JsonBuf<N> intentionally keeps all method bodies inside the
+// template class rather than in a non-template base. A pointer-based base
+// would break constexpr copy semantics (clang's constexpr evaluator rejects
+// pointers whose provenance traces back to temporaries). For embedded targets
+// where binary size matters, typical usage is 1-2 distinct N values, so the
+// per-N instantiation cost is bounded and acceptable.
+//
 // Usage:
 //   // Compile-time — guaranteed via json_const:
 //   constexpr auto j = note::json_const([] {
@@ -368,14 +380,16 @@ public:
 //       return b;
 //   });
 
-// LCOV_EXCL_START — consteval: only callable at compile time
+// consteval: only callable at compile time.
+// GCC (--coverage) correctly excludes these from coverage metrics.
+// Clang source-based coverage shows false-positive misses for consteval
+// functions — use GCC for coverage reports on this codebase.
 template<typename Fn>
 consteval auto json_const(Fn fn) {
     auto result = fn();
     if (result.overflow()) throw "JsonBuf overflow: increase buffer size";
     return result;
 }
-// LCOV_EXCL_STOP
 
 
 // ── json ────────────────────────────────────────────────────────────────────
@@ -392,7 +406,10 @@ consteval auto json_const(Fn fn) {
 //
 //   static_assert(req.view() == R"({"req":"hub.set","mode":"periodic"})");
 
-// LCOV_EXCL_START — consteval: only callable at compile time
+// consteval: only callable at compile time.
+// GCC (--coverage) correctly excludes these from coverage metrics.
+// Clang source-based coverage shows false-positive misses for consteval
+// functions — use GCC for coverage reports on this codebase.
 template<auto fn>
 consteval auto json() {
     // Pass 1: measure with a large probe buffer.
@@ -407,6 +424,5 @@ consteval auto json() {
     fn(b);
     return b;
 }
-// LCOV_EXCL_STOP
 
 } // namespace note

@@ -310,10 +310,8 @@ struct WebPost {
 #endif
         if (verify) b.add("verify", *verify);
         for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
-            std::visit([&](auto&& v_) {
-                if constexpr (!std::is_same_v<std::decay_t<decltype(v_)>, std::monostate>)
-                    b.add(extras_[i_].key, v_);
-            }, extras_[i_].value);
+            std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
+                       extras_[i_].value);
     }
 #pragma GCC diagnostic pop
 

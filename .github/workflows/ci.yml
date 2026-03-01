@@ -57,25 +57,18 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y \
-            clang-18 libc++-18-dev libc++abi-18-dev libstdc++-13-dev \
-            lcov
+          # lcov 2.x required: lcov 1.x cannot parse GCC 13+ .gcno format (see docs/coverage.md).
+          # ubuntu-latest (24.04) ships lcov 2.0; ubuntu-22.04 ships 1.14 and will fail.
+          # GCC required for accurate consteval coverage (see docs/coverage.md).
+          sudo apt-get install -y g++-13 lcov
 
       - name: Install Python dependencies
         run: pip install jinja2
 
-      - name: Run CI (runs codegen)
-        env:
-          CXX: clang++-18
-          CXXFLAGS: -std=c++23 -stdlib=libc++
+      - name: Run CI (runs codegen, uses default compiler)
         run: ./ci.sh
 
       - name: Generate coverage report
-        env:
-          CXX: clang++-18
-          CXXFLAGS: -std=c++23 -stdlib=libc++
-          LLVM_COV: llvm-cov-18
-          LLVM_PROFDATA: llvm-profdata-18
         run: ./ci.sh --coverage
 
       - name: Upload coverage report

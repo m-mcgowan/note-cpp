@@ -9,6 +9,7 @@
 #include <note/api/card_attn.hpp>
 
 void examples(note::Notecard& nc) {
+    using namespace note::literals;
 
     // -----------------------------------------------------------------------
     // Arm ATTN for file changes
@@ -17,7 +18,7 @@ void examples(note::Notecard& nc) {
     // {"req":"card.attn","mode":"arm,files","files":["data.qi","my-settings.db"]}
     {
         note::api::CardAttn req;
-        req.set_mode("arm,files");
+        req.mode("arm,files");
         // Note: array properties like 'files' are not yet supported in V1.
         // Use ad-hoc request for array fields:
         nc.request("card.attn", [](note::JsonBuilder& b) {
@@ -35,7 +36,7 @@ void examples(note::Notecard& nc) {
     // {"req":"card.attn","mode":"arm,connected"}
     {
         note::api::CardAttn req;
-        req.set_mode("arm,connected");
+        req.mode("arm,connected");
         nc.execute(req);
     }
 
@@ -46,7 +47,7 @@ void examples(note::Notecard& nc) {
     // {"req":"card.attn","mode":"watchdog","seconds":60}
     {
         note::api::CardAttn req;
-        req.set_mode("watchdog").set_seconds(60);
+        req.mode("watchdog").seconds(60_s);
         nc.execute(req);
     }
 
@@ -57,7 +58,7 @@ void examples(note::Notecard& nc) {
     // {"req":"card.attn","mode":"sleep","seconds":3600}
     {
         note::api::CardAttn req;
-        req.set_mode("sleep").set_seconds(3600);
+        req.mode("sleep").seconds(3600_s);
         nc.execute(req);
     }
 
@@ -68,7 +69,7 @@ void examples(note::Notecard& nc) {
     // {"req":"card.attn","mode":"disarm,-all"}
     {
         note::api::CardAttn req;
-        req.set_mode("disarm,-all");
+        req.mode("disarm,-all");
         nc.execute(req);
     }
 

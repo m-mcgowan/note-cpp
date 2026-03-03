@@ -40,6 +40,10 @@ jobs:
           mkdir -p ~/apt-cache
           cp /var/cache/apt/archives/*.deb ~/apt-cache/ 2>/dev/null || true
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
       - name: Install Python dependencies
         run: pip install jinja2
 

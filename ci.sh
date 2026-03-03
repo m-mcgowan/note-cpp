@@ -77,7 +77,8 @@ run_ci() {
         "$ROOT/tests/test_transport_i2c.cpp" \
         "$ROOT/tests/test_notecard.cpp" \
         "$ROOT/tests/test_api_context.cpp" \
-        "$ROOT/tests/test_endpoint_coverage.cpp"
+        "$ROOT/tests/test_endpoint_coverage.cpp" \
+        "$ROOT/tests/test_voltage_variable.cpp"
     /tmp/note-cpp-tests
     echo "  tests: OK"
 
@@ -129,12 +130,27 @@ VEOF
         exit 1
     fi
 
-    # Build and run the smoke test
+    # Build all examples
     echo
-    echo "=== Smoke test ==="
-    $CXX $CXXFLAGS $INCLUDE -o /tmp/note-cpp-smoke "$ROOT/examples/smoke.cpp"
-    /tmp/note-cpp-smoke
-    echo "  smoke.cpp: OK"
+    echo "=== Examples ==="
+    for ex in $(find "$ROOT/examples" -name '*.cpp' | sort); do
+        name=${ex#$ROOT/examples/}
+        printf "  %-40s " "$name"
+        $CXX $CXXFLAGS $INCLUDE -o /tmp/note-cpp-ex "$ex" && echo "OK" || { echo "FAIL"; exit 1; }
+    done
+
+    # Verify embedded docs (first compiler only)
+    if [ "${EMBEDME_DONE:-}" != "1" ]; then
+        READMES=$(find "$ROOT/examples" -name 'README.md' 2>/dev/null)
+        if [ -n "$READMES" ] && command -v npx >/dev/null 2>&1; then
+            echo
+            echo "=== Example docs ==="
+            # shellcheck disable=SC2086
+            npx -y embedme --verify $READMES
+            echo "  docs: OK"
+        fi
+        export EMBEDME_DONE=1
+    fi
 
     echo
     echo "All checks passed for $CXX."
@@ -203,7 +219,8 @@ run_coverage_clang() {
         "$ROOT/tests/test_transport_i2c.cpp" \
         "$ROOT/tests/test_notecard.cpp" \
         "$ROOT/tests/test_api_context.cpp" \
-        "$ROOT/tests/test_endpoint_coverage.cpp"
+        "$ROOT/tests/test_endpoint_coverage.cpp" \
+        "$ROOT/tests/test_voltage_variable.cpp"
     LLVM_PROFILE_FILE="$PROFRAW" "$BINARY"
 
     "$LLVM_PROFDATA" merge -sparse "$PROFRAW" -o "$PROFDATA"
@@ -326,6 +343,7 @@ run_coverage() {
         test_json_buf test_property_functor
         test_transport_crc32 test_transport_serial test_transport_i2c
         test_notecard test_api_context test_endpoint_coverage
+        test_voltage_variable
     )
     for name in "${SRCS[@]}"; do
         "$GCC" $CXXFLAGS --coverage -fprofile-arcs $INCLUDE -I "$ROOT/tests" \

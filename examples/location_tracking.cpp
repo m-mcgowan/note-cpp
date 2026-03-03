@@ -13,6 +13,7 @@
 #include <note/api/card_location_track.hpp>
 
 void examples(note::Notecard& nc) {
+    using namespace note::literals;
 
     // -----------------------------------------------------------------------
     // Get current location
@@ -38,7 +39,7 @@ void examples(note::Notecard& nc) {
     // {"req":"card.location.mode","mode":"periodic","seconds":300}
     {
         note::api::CardLocationMode::Set req;
-        req.mode("periodic").seconds(300);
+        req.mode("periodic").seconds(300_s);
         nc.execute(req);
     }
 

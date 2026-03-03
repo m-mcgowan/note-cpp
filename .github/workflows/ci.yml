@@ -11,12 +11,18 @@ jobs:
     strategy:
       matrix:
         include:
+          - compiler: g++-12
+            packages: g++-12
+            cxxflags: -std=c++20
           - compiler: g++-13
             packages: g++-13
             cxxflags: -std=c++23
           - compiler: g++-14
             packages: g++-14
             cxxflags: -std=c++23
+          - compiler: clang++-17
+            packages: clang-17 libc++-17-dev libc++abi-17-dev
+            cxxflags: -std=c++20 -stdlib=libc++
           - compiler: clang++-18
             packages: clang-18 libc++-18-dev libc++abi-18-dev libstdc++-13-dev
             cxxflags: -std=c++23 -stdlib=libc++

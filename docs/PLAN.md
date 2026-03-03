@@ -171,7 +171,9 @@ L0/L1 are done; L2 not started. The note-cpp transport layer covers the same
 ground at the C++ level, so L2 work on note-c is no longer a priority.
 
 ### Future considerations
-- **OpenAPI Overlays**: standardized format for sideband metadata
+- ~~**OpenAPI Overlays**~~: done — sideband metadata lives as `x-*` extensions
+  (`x-unit`, `x-format`, `x-constants`, `x-safety`, `x-dispatch`, etc.) directly
+  in `notecard-api.openapi.json`
 - **C++20 reflection**: automatic struct binding without `NOTE_BODY` macro
 - **C++20 compatibility**: current minimum is C++23 due to `std::expected`. Dropping to C++20
   requires swapping `std::expected`/`std::unexpected` in `types.hpp` for `tl::expected` (or a

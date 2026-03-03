@@ -164,21 +164,28 @@ discover_compilers() {
     compilers+=("c++:-std=c++2b")
 
     # Look for GCC versions (Homebrew on macOS, system on Linux)
-    for gxx in /usr/local/bin/g++-* /opt/homebrew/bin/g++-* /usr/bin/g++-13 /usr/bin/g++-14; do
+    for gxx in /usr/local/bin/g++-* /opt/homebrew/bin/g++-* /usr/bin/g++-12 /usr/bin/g++-13 /usr/bin/g++-14; do
         if [ -x "$gxx" ]; then
-            # GCC 13+ required for C++23
             local ver
             ver=$("$gxx" -dumpversion 2>/dev/null | cut -d. -f1)
             if [ "${ver:-0}" -ge 13 ] 2>/dev/null; then
                 compilers+=("$gxx:-std=c++23")
+            elif [ "${ver:-0}" -ge 12 ] 2>/dev/null; then
+                compilers+=("$gxx:-std=c++20")
             fi
         fi
     done
 
     # Look for Clang versions with libc++ (Linux CI style)
-    for clangxx in /usr/bin/clang++-18 /usr/bin/clang++-19; do
+    for clangxx in /usr/bin/clang++-17 /usr/bin/clang++-18 /usr/bin/clang++-19; do
         if [ -x "$clangxx" ]; then
-            compilers+=("$clangxx:-std=c++23 -stdlib=libc++")
+            local cver
+            cver=$("$clangxx" --version 2>/dev/null | grep -oE '[0-9]+' | head -1)
+            if [ "${cver:-0}" -ge 18 ] 2>/dev/null; then
+                compilers+=("$clangxx:-std=c++23 -stdlib=libc++")
+            else
+                compilers+=("$clangxx:-std=c++20 -stdlib=libc++")
+            fi
         fi
     done
 

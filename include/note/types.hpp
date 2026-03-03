@@ -1,11 +1,22 @@
 #pragma once
 
 #include <cstdint>
-#include <expected>    // C++23: std::expected
 #include <functional>
 #include <memory>
 #include <optional>
 #include <string_view>
+
+// C++23 std::expected — use the standard library when available, otherwise
+// fall back to tl::expected (a single-header backport, CC0 public domain).
+#if __has_include(<version>)
+#   include <version>
+#endif
+
+#if defined(__cpp_lib_expected) && __cpp_lib_expected >= 202202L
+#   include <expected>
+#else
+#   include "third_party/expected.hpp"
+#endif
 
 #include "error.hpp"
 
@@ -32,12 +43,20 @@ namespace note {
 
 using string_view = std::string_view;
 
-// C++23: std::expected — retrofit to tl::expected for C++17
-template<typename T>
-using Result = std::expected<T, ErrorInfo>;
+namespace detail {
+#if defined(__cpp_lib_expected) && __cpp_lib_expected >= 202202L
+    template<typename T, typename E> using expected = std::expected<T, E>;
+    template<typename E> using unexpected = std::unexpected<E>;
+#else
+    template<typename T, typename E> using expected = tl::expected<T, E>;
+    template<typename E> using unexpected = tl::unexpected<E>;
+#endif
+} // namespace detail
 
-// C++23: std::unexpected — retrofit to tl::unexpected for C++17
-using Unexpected = std::unexpected<ErrorInfo>;
+template<typename T>
+using Result = detail::expected<T, ErrorInfo>;
+
+using Unexpected = detail::unexpected<ErrorInfo>;
 
 inline Unexpected make_error(Error code, string_view message = {}) {
     if (message.empty()) message = to_string(code);
@@ -59,7 +78,11 @@ class ApiResult : public Response {
 public:
     ApiResult(Response r) : Response(std::move(r)) {}
     ApiResult(ErrorInfo e) : err_(std::move(e)) {}
+#if defined(__cpp_lib_expected) && __cpp_lib_expected >= 202202L
     ApiResult(Unexpected e) : err_(std::move(e).error()) {}
+#else
+    ApiResult(Unexpected e) : err_(std::move(e).value()) {}
+#endif
 
     explicit operator bool() const { return !err_.has_value(); }
     bool has_value() const { return !err_.has_value(); }

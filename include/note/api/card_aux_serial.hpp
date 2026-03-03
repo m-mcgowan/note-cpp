@@ -7,6 +7,7 @@
 #include <note/notecard.hpp>
 #include <note/safety.hpp>
 #include <note/types.hpp>
+#include <note/units.hpp>
 
 namespace note::api {
 
@@ -57,10 +58,10 @@ struct CardAuxSerial {
 #if NOTE_API_VERSION < NOTE_VERSION(5, 1, 1)
     [[deprecated("requires firmware >= 5.1.1")]]
 #endif
-    struct minutes_t : Field<int32_t> {
-        using Field<int32_t>::Field;
-        using Field<int32_t>::operator=;
-        CardAuxSerial& operator()(int32_t v);
+    struct minutes_t : Field<note::Minutes> {
+        using Field<note::Minutes>::Field;
+        using Field<note::Minutes>::operator=;
+        CardAuxSerial& operator()(note::Minutes v);
     } minutes{};
 #endif
     /// The AUX mode. Must be one of the following:
@@ -70,10 +71,10 @@ struct CardAuxSerial {
         CardAuxSerial& operator()(note::string_view v);
     } mode{};
     /// The delay in milliseconds before sending a buffer of `max` size.
-    struct ms_t : Field<int32_t> {
-        using Field<int32_t>::Field;
-        using Field<int32_t>::operator=;
-        CardAuxSerial& operator()(int32_t v);
+    struct ms_t : Field<note::Milliseconds> {
+        using Field<note::Milliseconds>::Field;
+        using Field<note::Milliseconds>::operator=;
+        CardAuxSerial& operator()(note::Milliseconds v);
     } ms{};
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
     /// The baud rate or speed at which information is transmitted over AUX
@@ -202,8 +203,8 @@ inline CardAuxSerial& CardAuxSerial::max_t::operator()(int32_t v) {
         reinterpret_cast<char*>(this) - offsetof(CardAuxSerial, max));
 }
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
-inline CardAuxSerial& CardAuxSerial::minutes_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardAuxSerial& CardAuxSerial::minutes_t::operator()(note::Minutes v) {
+    Field<note::Minutes>::operator=(v);
     return *reinterpret_cast<CardAuxSerial*>(
         reinterpret_cast<char*>(this) - offsetof(CardAuxSerial, minutes));
 }
@@ -213,8 +214,8 @@ inline CardAuxSerial& CardAuxSerial::mode_t::operator()(note::string_view v) {
     return *reinterpret_cast<CardAuxSerial*>(
         reinterpret_cast<char*>(this) - offsetof(CardAuxSerial, mode));
 }
-inline CardAuxSerial& CardAuxSerial::ms_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardAuxSerial& CardAuxSerial::ms_t::operator()(note::Milliseconds v) {
+    Field<note::Milliseconds>::operator=(v);
     return *reinterpret_cast<CardAuxSerial*>(
         reinterpret_cast<char*>(this) - offsetof(CardAuxSerial, ms));
 }

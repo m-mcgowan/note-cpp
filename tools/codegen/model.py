@@ -4,6 +4,13 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 
+_UNIT_TYPES: dict[str, str] = {
+    "minutes": "note::Minutes",
+    "seconds": "note::Seconds",
+    "milliseconds": "note::Milliseconds",
+}
+
+
 @dataclass
 class PropertyDef:
     """A single property in a request or response schema."""
@@ -17,6 +24,18 @@ class PropertyDef:
     min_api_version: str | None = None
     is_required_by_dispatch: bool = False  # True if x-dispatch requires this prop
     is_body: bool = False  # True for type:object fields (use BodyValue)
+    unit: str | None = None  # "minutes", "seconds", "milliseconds"
+    constants: dict | None = None  # {"reset": {"value": -1, "description": "..."}}
+
+    @property
+    def field_type(self) -> str:
+        """C++ type for Field<T> — unit-wrapped if applicable."""
+        return _UNIT_TYPES.get(self.unit, self.cpp_type) if self.unit else self.cpp_type
+
+    @property
+    def has_unit(self) -> bool:
+        """True if this property uses a unit type wrapper."""
+        return self.unit is not None and self.unit in _UNIT_TYPES
 
     @property
     def accessor_name(self) -> str:

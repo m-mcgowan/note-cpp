@@ -7,6 +7,7 @@
 #include <note/notecard.hpp>
 #include <note/safety.hpp>
 #include <note/types.hpp>
+#include <note/units.hpp>
 
 namespace note::api {
 
@@ -38,10 +39,10 @@ struct CardMotionMode {
     } motion{};
     /// Period for each bucket of movements to be accumulated when `minutes` is
     /// used with `card.motion`.
-    struct seconds_t : Field<int32_t> {
-        using Field<int32_t>::Field;
-        using Field<int32_t>::operator=;
-        CardMotionMode& operator()(int32_t v);
+    struct seconds_t : Field<note::Seconds> {
+        using Field<note::Seconds>::Field;
+        using Field<note::Seconds>::operator=;
+        CardMotionMode& operator()(note::Seconds v);
     } seconds{};
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1) || !defined(NOTE_API_STRICT)
     /// Used to set the accelerometer sample rate. The default sample rate of
@@ -152,8 +153,8 @@ inline CardMotionMode& CardMotionMode::motion_t::operator()(int32_t v) {
     return *reinterpret_cast<CardMotionMode*>(
         reinterpret_cast<char*>(this) - offsetof(CardMotionMode, motion));
 }
-inline CardMotionMode& CardMotionMode::seconds_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardMotionMode& CardMotionMode::seconds_t::operator()(note::Seconds v) {
+    Field<note::Seconds>::operator=(v);
     return *reinterpret_cast<CardMotionMode*>(
         reinterpret_cast<char*>(this) - offsetof(CardMotionMode, seconds));
 }

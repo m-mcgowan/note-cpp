@@ -100,6 +100,8 @@ def _parse_property(name: str, schema: dict, *,
         min_api_version=schema.get("x-min-api-version"),
         is_required_by_dispatch=auto_emit,
         is_body=is_body,
+        unit=schema.get("x-unit"),
+        constants=schema.get("x-constants"),
     )
 
 

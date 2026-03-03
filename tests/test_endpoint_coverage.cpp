@@ -71,7 +71,7 @@ TEST_CASE("note::api::CardAttn request builder") {
 #endif
     req.on(true);
     req.payload(note::string_view("x-payload"));
-    req.seconds(int32_t{42});
+    req.seconds(note::Seconds{42});
     req.start(true);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
     req.verify(true);
@@ -109,7 +109,7 @@ TEST_CASE("note::api::CardAttn request builder") {
 #endif
     req["on"] = true;
     req["payload"] = note::string_view("x-payload");
-    req["seconds"] = int32_t{42};
+    req["seconds"] = note::Seconds{42};
     req["start"] = true;
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
     req["verify"] = true;
@@ -159,13 +159,13 @@ TEST_CASE("note::api::CardAux request builder") {
     req.max(int32_t{42});
     req.mode(note::string_view("dfu"));
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
-    req.ms(int32_t{42});
+    req.ms(note::Milliseconds{42});
 #endif
     req.offset(int32_t{42});
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
     req.rate(int32_t{42});
 #endif
-    req.seconds(int32_t{42});
+    req.seconds(note::Seconds{42});
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
     req.sensitivity(int32_t{42});
 #endif
@@ -235,13 +235,13 @@ TEST_CASE("note::api::CardAux request builder") {
     req["max"] = int32_t{42};
     req["mode"] = note::string_view("dfu");
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
-    req["ms"] = int32_t{42};
+    req["ms"] = note::Milliseconds{42};
 #endif
     req["offset"] = int32_t{42};
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
     req["rate"] = int32_t{42};
 #endif
-    req["seconds"] = int32_t{42};
+    req["seconds"] = note::Seconds{42};
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
     req["sensitivity"] = int32_t{42};
 #endif
@@ -283,10 +283,10 @@ TEST_CASE("note::api::CardAuxSerial request builder") {
     req.limit(true);
     req.max(int32_t{42});
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
-    req.minutes(int32_t{42});
+    req.minutes(note::Minutes{42});
 #endif
     req.mode(note::string_view("x-mode"));
-    req.ms(int32_t{42});
+    req.ms(note::Milliseconds{42});
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
     req.rate(int32_t{42});
 #endif
@@ -319,10 +319,10 @@ TEST_CASE("note::api::CardAuxSerial request builder") {
     req["limit"] = true;
     req["max"] = int32_t{42};
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
-    req["minutes"] = int32_t{42};
+    req["minutes"] = note::Minutes{42};
 #endif
     req["mode"] = note::string_view("x-mode");
-    req["ms"] = int32_t{42};
+    req["ms"] = note::Milliseconds{42};
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
     req["rate"] = int32_t{42};
 #endif
@@ -866,9 +866,9 @@ TEST_CASE("note::api::CardLocationMode::Get request builder") {
     req.lat(1.5);
     req.lon(1.5);
     req.max(int32_t{42});
-    req.minutes(int32_t{42});
+    req.minutes(note::Minutes{42});
     req.mode(note::string_view(""));
-    req.seconds(int32_t{42});
+    req.seconds(note::Seconds{42});
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
     req.threshold(int32_t{42});
 #endif
@@ -902,9 +902,9 @@ TEST_CASE("note::api::CardLocationMode::Get request builder") {
     req["lat"] = 1.5;
     req["lon"] = 1.5;
     req["max"] = int32_t{42};
-    req["minutes"] = int32_t{42};
+    req["minutes"] = note::Minutes{42};
     req["mode"] = note::string_view("");
-    req["seconds"] = int32_t{42};
+    req["seconds"] = note::Seconds{42};
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
     req["threshold"] = int32_t{42};
 #endif
@@ -950,9 +950,9 @@ TEST_CASE("note::api::CardLocationMode::Set request builder") {
     req.lat(1.5);
     req.lon(1.5);
     req.max(int32_t{42});
-    req.minutes(int32_t{42});
+    req.minutes(note::Minutes{42});
     req.mode(note::string_view(""));
-    req.seconds(int32_t{42});
+    req.seconds(note::Seconds{42});
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
     req.threshold(int32_t{42});
 #endif
@@ -986,9 +986,9 @@ TEST_CASE("note::api::CardLocationMode::Set request builder") {
     req["lat"] = 1.5;
     req["lon"] = 1.5;
     req["max"] = int32_t{42};
-    req["minutes"] = int32_t{42};
+    req["minutes"] = note::Minutes{42};
     req["mode"] = note::string_view("");
-    req["seconds"] = int32_t{42};
+    req["seconds"] = note::Seconds{42};
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
     req["threshold"] = int32_t{42};
 #endif
@@ -1033,9 +1033,9 @@ TEST_CASE("note::api::CardLocationMode::Delete request builder") {
     req.lat(1.5);
     req.lon(1.5);
     req.max(int32_t{42});
-    req.minutes(int32_t{42});
+    req.minutes(note::Minutes{42});
     req.mode(note::string_view(""));
-    req.seconds(int32_t{42});
+    req.seconds(note::Seconds{42});
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
     req.threshold(int32_t{42});
 #endif
@@ -1067,9 +1067,9 @@ TEST_CASE("note::api::CardLocationMode::Delete request builder") {
     req["lat"] = 1.5;
     req["lon"] = 1.5;
     req["max"] = int32_t{42};
-    req["minutes"] = int32_t{42};
+    req["minutes"] = note::Minutes{42};
     req["mode"] = note::string_view("");
-    req["seconds"] = int32_t{42};
+    req["seconds"] = note::Seconds{42};
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
     req["threshold"] = int32_t{42};
 #endif
@@ -1264,7 +1264,7 @@ TEST_CASE("note::api::CardMotionMode request builder") {
     // Execute with no fields set — covers all !has_value() (false) branches.
     req.execute();
     req.motion(int32_t{42});
-    req.seconds(int32_t{42});
+    req.seconds(note::Seconds{42});
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1) || !defined(NOTE_API_STRICT)
     req.sensitivity(int32_t{42});
 #endif
@@ -1292,7 +1292,7 @@ TEST_CASE("note::api::CardMotionMode request builder") {
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover known-key routing in operator[] (true branch for each settable field)
     req["motion"] = int32_t{42};
-    req["seconds"] = int32_t{42};
+    req["seconds"] = note::Seconds{42};
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1) || !defined(NOTE_API_STRICT)
     req["sensitivity"] = int32_t{42};
 #endif
@@ -1310,7 +1310,7 @@ TEST_CASE("note::api::CardMotionSync request builder") {
     // Execute with no fields set — covers all !has_value() (false) branches.
     req.execute();
     req.count(int32_t{42});
-    req.minutes(int32_t{42});
+    req.minutes(note::Minutes{42});
     req.start(true);
     req.stop(true);
     req.threshold(int32_t{42});
@@ -1334,7 +1334,7 @@ TEST_CASE("note::api::CardMotionSync request builder") {
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover known-key routing in operator[] (true branch for each settable field)
     req["count"] = int32_t{42};
-    req["minutes"] = int32_t{42};
+    req["minutes"] = note::Minutes{42};
     req["start"] = true;
     req["stop"] = true;
     req["threshold"] = int32_t{42};
@@ -1351,7 +1351,7 @@ TEST_CASE("note::api::CardMotionTrack request builder") {
     req.execute();
     req.count(int32_t{42});
     req.file(note::string_view("x-file"));
-    req.minutes(int32_t{42});
+    req.minutes(note::Minutes{42});
     req.now(true);
     req.start(true);
     req.stop(true);
@@ -1379,7 +1379,7 @@ TEST_CASE("note::api::CardMotionTrack request builder") {
     // Cover known-key routing in operator[] (true branch for each settable field)
     req["count"] = int32_t{42};
     req["file"] = note::string_view("x-file");
-    req["minutes"] = int32_t{42};
+    req["minutes"] = note::Minutes{42};
     req["now"] = true;
     req["start"] = true;
     req["stop"] = true;
@@ -1395,7 +1395,7 @@ TEST_CASE("note::api::CardPower::Get request builder") {
     auto req = h.api.cardPower().get();
     // Execute with no fields set — covers all !has_value() (false) branches.
     req.execute();
-    req.minutes(int32_t{42});
+    req.minutes(note::Minutes{42});
     req.reset(true);
     req.execute();
     REQUIRE(h.last_req.find("\"minutes\"") != std::string::npos);
@@ -1413,7 +1413,7 @@ TEST_CASE("note::api::CardPower::Get request builder") {
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover known-key routing in operator[] (true branch for each settable field)
-    req["minutes"] = int32_t{42};
+    req["minutes"] = note::Minutes{42};
     req["reset"] = true;
     // Cover command() overloads
     req.command();
@@ -1438,7 +1438,7 @@ TEST_CASE("note::api::CardPower::Set request builder") {
     auto req = h.api.cardPower().set();
     // Execute with no fields set — covers all !has_value() (false) branches.
     req.execute();
-    req.minutes(int32_t{42});
+    req.minutes(note::Minutes{42});
     req.reset(true);
     req.execute();
     REQUIRE(h.last_req.find("\"minutes\"") != std::string::npos);
@@ -1456,7 +1456,7 @@ TEST_CASE("note::api::CardPower::Set request builder") {
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover known-key routing in operator[] (true branch for each settable field)
-    req["minutes"] = int32_t{42};
+    req["minutes"] = note::Minutes{42};
     req["reset"] = true;
     // Cover command() overloads
     req.command();
@@ -1481,7 +1481,7 @@ TEST_CASE("note::api::CardPower::Delete request builder") {
     auto req = h.api.cardPower().delete_();
     // Execute with no fields set — covers all !has_value() (false) branches.
     req.execute();
-    req.minutes(int32_t{42});
+    req.minutes(note::Minutes{42});
     req.execute();
     REQUIRE(h.last_req.find("\"minutes\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
@@ -1497,7 +1497,7 @@ TEST_CASE("note::api::CardPower::Delete request builder") {
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover known-key routing in operator[] (true branch for each settable field)
-    req["minutes"] = int32_t{42};
+    req["minutes"] = note::Minutes{42};
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -1620,7 +1620,7 @@ TEST_CASE("note::api::CardSleep request builder") {
     req.mode(note::string_view("accel"));
     req.off(true);
     req.on(true);
-    req.seconds(int32_t{42});
+    req.seconds(note::Seconds{42});
     req.execute();
     REQUIRE(h.last_req.find("\"mode\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"off\"") != std::string::npos);
@@ -1642,7 +1642,7 @@ TEST_CASE("note::api::CardSleep request builder") {
     req["mode"] = note::string_view("accel");
     req["off"] = true;
     req["on"] = true;
-    req["seconds"] = int32_t{42};
+    req["seconds"] = note::Seconds{42};
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -1728,7 +1728,7 @@ TEST_CASE("note::api::CardTemp::Get request builder") {
     auto req = h.api.cardTemp().get();
     // Execute with no fields set — covers all !has_value() (false) branches.
     req.execute();
-    req.minutes(int32_t{42});
+    req.minutes(note::Minutes{42});
     req.status(note::string_view("x-status"));
     req.stop(true);
     req.sync(true);
@@ -1750,7 +1750,7 @@ TEST_CASE("note::api::CardTemp::Get request builder") {
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover known-key routing in operator[] (true branch for each settable field)
-    req["minutes"] = int32_t{42};
+    req["minutes"] = note::Minutes{42};
     req["status"] = note::string_view("x-status");
     req["stop"] = true;
     req["sync"] = true;
@@ -1785,7 +1785,7 @@ TEST_CASE("note::api::CardTemp::Set request builder") {
     auto req = h.api.cardTemp().set();
     // Execute with no fields set — covers all !has_value() (false) branches.
     req.execute();
-    req.minutes(int32_t{42});
+    req.minutes(note::Minutes{42});
     req.status(note::string_view("x-status"));
     req.stop(true);
     req.sync(true);
@@ -1807,7 +1807,7 @@ TEST_CASE("note::api::CardTemp::Set request builder") {
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover known-key routing in operator[] (true branch for each settable field)
-    req["minutes"] = int32_t{42};
+    req["minutes"] = note::Minutes{42};
     req["status"] = note::string_view("x-status");
     req["stop"] = true;
     req["sync"] = true;
@@ -1842,7 +1842,7 @@ TEST_CASE("note::api::CardTemp::Delete request builder") {
     auto req = h.api.cardTemp().delete_();
     // Execute with no fields set — covers all !has_value() (false) branches.
     req.execute();
-    req.minutes(int32_t{42});
+    req.minutes(note::Minutes{42});
     req.status(note::string_view("x-status"));
     req.sync(true);
     req.execute();
@@ -1862,7 +1862,7 @@ TEST_CASE("note::api::CardTemp::Delete request builder") {
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover known-key routing in operator[] (true branch for each settable field)
-    req["minutes"] = int32_t{42};
+    req["minutes"] = note::Minutes{42};
     req["status"] = note::string_view("x-status");
     req["sync"] = true;
     // Cover command() overloads
@@ -1973,7 +1973,7 @@ TEST_CASE("note::api::CardTransport request builder") {
 #endif
     req.method(note::string_view("-"));
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
-    req.seconds(int32_t{42});
+    req.seconds(note::Seconds{42});
 #endif
 #if NOTE_API_VERSION >= NOTE_VERSION(9, 1, 1) || !defined(NOTE_API_STRICT)
     req.umin(true);
@@ -2007,7 +2007,7 @@ TEST_CASE("note::api::CardTransport request builder") {
 #endif
     req["method"] = note::string_view("-");
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
-    req["seconds"] = int32_t{42};
+    req["seconds"] = note::Seconds{42};
 #endif
 #if NOTE_API_VERSION >= NOTE_VERSION(9, 1, 1) || !defined(NOTE_API_STRICT)
     req["umin"] = true;
@@ -2586,9 +2586,9 @@ TEST_CASE("note::api::CardWirelessPenalty::Get request builder") {
     auto req = h.api.cardWirelessPenalty().get();
     // Execute with no fields set — covers all !has_value() (false) branches.
     req.execute();
-    req.add(int32_t{42});
-    req.max(int32_t{42});
-    req.min(int32_t{42});
+    req.add(note::Minutes{42});
+    req.max(note::Minutes{42});
+    req.min(note::Minutes{42});
     req.rate(1.5);
     req.reset(true);
     req.set(true);
@@ -2612,9 +2612,9 @@ TEST_CASE("note::api::CardWirelessPenalty::Get request builder") {
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover known-key routing in operator[] (true branch for each settable field)
-    req["add"] = int32_t{42};
-    req["max"] = int32_t{42};
-    req["min"] = int32_t{42};
+    req["add"] = note::Minutes{42};
+    req["max"] = note::Minutes{42};
+    req["min"] = note::Minutes{42};
     req["rate"] = 1.5;
     req["reset"] = true;
     req["set"] = true;
@@ -2647,9 +2647,9 @@ TEST_CASE("note::api::CardWirelessPenalty::Set request builder") {
     auto req = h.api.cardWirelessPenalty().set();
     // Execute with no fields set — covers all !has_value() (false) branches.
     req.execute();
-    req.add(int32_t{42});
-    req.max(int32_t{42});
-    req.min(int32_t{42});
+    req.add(note::Minutes{42});
+    req.max(note::Minutes{42});
+    req.min(note::Minutes{42});
     req.rate(1.5);
     req.reset(true);
     req.execute();
@@ -2671,9 +2671,9 @@ TEST_CASE("note::api::CardWirelessPenalty::Set request builder") {
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover known-key routing in operator[] (true branch for each settable field)
-    req["add"] = int32_t{42};
-    req["max"] = int32_t{42};
-    req["min"] = int32_t{42};
+    req["add"] = note::Minutes{42};
+    req["max"] = note::Minutes{42};
+    req["min"] = note::Minutes{42};
     req["rate"] = 1.5;
     req["reset"] = true;
     // Cover command() overloads
@@ -2705,9 +2705,9 @@ TEST_CASE("note::api::CardWirelessPenalty::Delete request builder") {
     auto req = h.api.cardWirelessPenalty().delete_();
     // Execute with no fields set — covers all !has_value() (false) branches.
     req.execute();
-    req.add(int32_t{42});
-    req.max(int32_t{42});
-    req.min(int32_t{42});
+    req.add(note::Minutes{42});
+    req.max(note::Minutes{42});
+    req.min(note::Minutes{42});
     req.rate(1.5);
     req.set(true);
     req.execute();
@@ -2729,9 +2729,9 @@ TEST_CASE("note::api::CardWirelessPenalty::Delete request builder") {
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover known-key routing in operator[] (true branch for each settable field)
-    req["add"] = int32_t{42};
-    req["max"] = int32_t{42};
-    req["min"] = int32_t{42};
+    req["add"] = note::Minutes{42};
+    req["max"] = note::Minutes{42};
+    req["min"] = note::Minutes{42};
     req["rate"] = 1.5;
     req["set"] = true;
     // Cover command() overloads
@@ -3385,9 +3385,9 @@ TEST_CASE("note::api::HubSet request builder") {
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
     req.details(note::string_view("x-details"));
 #endif
-    req.duration(int32_t{42});
+    req.duration(note::Minutes{42});
     req.host(note::string_view("x-host"));
-    req.inbound(int32_t{42});
+    req.inbound(note::Minutes{42});
     req.mode(note::string_view("periodic"));
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
     req.off(true);
@@ -3395,10 +3395,10 @@ TEST_CASE("note::api::HubSet request builder") {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
     req.on(true);
 #endif
-    req.outbound(int32_t{42});
+    req.outbound(note::Minutes{42});
     req.product(note::string_view("x-product"));
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-    req.seconds(int32_t{42});
+    req.seconds(note::Seconds{42});
 #endif
     req.sn(note::string_view("x-sn"));
     req.sync(true);
@@ -3469,9 +3469,9 @@ TEST_CASE("note::api::HubSet request builder") {
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
     req["details"] = note::string_view("x-details");
 #endif
-    req["duration"] = int32_t{42};
+    req["duration"] = note::Minutes{42};
     req["host"] = note::string_view("x-host");
-    req["inbound"] = int32_t{42};
+    req["inbound"] = note::Minutes{42};
     req["mode"] = note::string_view("periodic");
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
     req["off"] = true;
@@ -3479,10 +3479,10 @@ TEST_CASE("note::api::HubSet request builder") {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
     req["on"] = true;
 #endif
-    req["outbound"] = int32_t{42};
+    req["outbound"] = note::Minutes{42};
     req["product"] = note::string_view("x-product");
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-    req["seconds"] = int32_t{42};
+    req["seconds"] = note::Seconds{42};
 #endif
     req["sn"] = note::string_view("x-sn");
     req["sync"] = true;
@@ -3512,7 +3512,7 @@ TEST_CASE("note::api::HubSignal request builder") {
     // Execute with no fields set — covers all !has_value() (false) branches.
     req.execute();
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
-    req.seconds(int32_t{42});
+    req.seconds(note::Seconds{42});
 #endif
     req.execute();
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
@@ -3532,7 +3532,7 @@ TEST_CASE("note::api::HubSignal request builder") {
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover known-key routing in operator[] (true branch for each settable field)
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
-    req["seconds"] = int32_t{42};
+    req["seconds"] = note::Seconds{42};
 #endif
     // Cover command() overloads
     req.command();

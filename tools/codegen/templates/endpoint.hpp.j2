@@ -10,6 +10,9 @@
 #include <note/notecard.hpp>
 #include <note/safety.hpp>
 #include <note/types.hpp>
+{% if has_unit_fields %}
+#include <note/units.hpp>
+{% endif %}
 
 namespace note::api {
 
@@ -83,10 +86,15 @@ namespace note::api {
 #endif
 {{ indent }}} {{ prop.accessor_name }}{};
 {% else %}
-{{ indent }}struct {{ prop.nested_type_name }} : Field<{{ prop.cpp_type }}> {
-{{ indent }}    using Field<{{ prop.cpp_type }}>::Field;
-{{ indent }}    using Field<{{ prop.cpp_type }}>::operator=;
-{{ indent }}    {{ parent_type }}& operator()({{ prop.cpp_type }} v);
+{{ indent }}struct {{ prop.nested_type_name }} : Field<{{ prop.field_type }}> {
+{% if prop.constants %}
+{% for cname, cinfo in prop.constants.items() %}
+{{ indent }}    static constexpr {{ prop.field_type }} {{ cname }}{ {{ cinfo.value }} };
+{% endfor %}
+{% endif %}
+{{ indent }}    using Field<{{ prop.field_type }}>::Field;
+{{ indent }}    using Field<{{ prop.field_type }}>::operator=;
+{{ indent }}    {{ parent_type }}& operator()({{ prop.field_type }} v);
 {{ indent }}} {{ prop.accessor_name }}{};
 {% endif %}
 {{ version_guard_end(prop.version_guard) -}}
@@ -142,7 +150,7 @@ namespace note::api {
 {{ version_guard_begin(prop.version_guard) -}}
 {{ doc_for_prop(prop, indent + "    ") -}}
 {{ deprecated_attr(prop.version_guard, prop.min_api_version, indent + "    ") -}}
-{{ indent }}    {{ prop.cpp_type }} {{ prop.accessor_name }}{};
+{{ indent }}    {{ prop.field_type }} {{ prop.accessor_name }}{};
 {{ version_guard_end(prop.version_guard) -}}
 {% endfor %}
 {% if op.response.has_body %}
@@ -275,8 +283,8 @@ inline {{ parent_qual }}& {{ parent_qual }}::{{ prop.nested_type_name }}::operat
 }
 #endif
 {% else %}
-inline {{ parent_qual }}& {{ parent_qual }}::{{ prop.nested_type_name }}::operator()({{ prop.cpp_type }} v) {
-    Field<{{ prop.cpp_type }}>::operator=(v);
+inline {{ parent_qual }}& {{ parent_qual }}::{{ prop.nested_type_name }}::operator()({{ prop.field_type }} v) {
+    Field<{{ prop.field_type }}>::operator=(v);
     return *reinterpret_cast<{{ parent_qual }}*>(
         reinterpret_cast<char*>(this) - offsetof({{ parent_qual }}, {{ prop.accessor_name }}));
 }

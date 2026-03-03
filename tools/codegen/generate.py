@@ -56,6 +56,8 @@ def _doc_comment_filter(text: str, indent: str = "    ") -> str:
 
 def _cpp_request_test_value(prop) -> str:
     """C++ expression for setting a request field setter in generated tests."""
+    if prop.has_unit:
+        return f'{prop.field_type}{{42}}'
     if prop.cpp_type == "bool":
         return "true"
     if prop.cpp_type == "int32_t":
@@ -82,6 +84,8 @@ def _reader_test_value(prop) -> str:
 
 def _response_match_value(prop) -> str:
     """C++ expression for REQUIRE comparison in generated response tests."""
+    if prop.has_unit:
+        return f'{prop.field_type}{{42}}'
     if prop.cpp_type == "bool":
         return "true"
     if prop.cpp_type == "int32_t":
@@ -223,10 +227,16 @@ def main() -> None:
             op.response.has_body
             for op in endpoint.operations
         )
+        has_unit_fields = any(
+            prop.has_unit
+            for op in endpoint.operations
+            for prop in op.properties + op.response.properties
+        )
         content = endpoint_template.render(
             endpoint=endpoint,
             has_body_field=has_body_field,
             has_body_response=has_body_response,
+            has_unit_fields=has_unit_fields,
         )
         out_path = output_dir / endpoint.header_filename
         out_path.write_text(content)

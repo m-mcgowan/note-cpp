@@ -24,6 +24,8 @@ CUSTOM_KEYS = {
     "annotations": "x-annotations",
     "version": "x-schema-version",
     "apiVersion": "x-api-version",
+    "unit": "x-unit",
+    "constants": "x-constants",
 }
 
 REVERSE_CUSTOM_KEYS = {v: k for k, v in CUSTOM_KEYS.items()}

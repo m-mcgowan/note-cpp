@@ -7,6 +7,7 @@
 #include <note/notecard.hpp>
 #include <note/safety.hpp>
 #include <note/types.hpp>
+#include <note/units.hpp>
 
 namespace note::api {
 
@@ -71,10 +72,10 @@ struct CardAttn {
     /// timeout is serviced by a routine that wakes every 15 seconds. You can
     /// predict when the device will wake, by rounding up to the nearest 15
     /// second interval._
-    struct seconds_t : Field<int32_t> {
-        using Field<int32_t>::Field;
-        using Field<int32_t>::operator=;
-        CardAttn& operator()(int32_t v);
+    struct seconds_t : Field<note::Seconds> {
+        using Field<note::Seconds>::Field;
+        using Field<note::Seconds>::operator=;
+        CardAttn& operator()(note::Seconds v);
     } seconds{};
     /// When using `sleep` mode and the host has reawakened, request the
     /// Notecard to return the stored `payload`.
@@ -231,8 +232,8 @@ inline CardAttn& CardAttn::payload_t::operator()(note::string_view v) {
     return *reinterpret_cast<CardAttn*>(
         reinterpret_cast<char*>(this) - offsetof(CardAttn, payload));
 }
-inline CardAttn& CardAttn::seconds_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardAttn& CardAttn::seconds_t::operator()(note::Seconds v) {
+    Field<note::Seconds>::operator=(v);
     return *reinterpret_cast<CardAttn*>(
         reinterpret_cast<char*>(this) - offsetof(CardAttn, seconds));
 }

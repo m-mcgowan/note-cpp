@@ -24,11 +24,19 @@ namespace detail {
 
 /// Setter that writes a DynValue into a typed Field<T>.
 /// Type mismatch silently no-ops — wrong type for a known key.
+/// For unit types (Minutes, Seconds, Milliseconds) that are constructible
+/// from int32_t, extracts the int32_t from the variant and wraps it.
 template<typename T>
 void set_typed_field(void* ptr, DynValue val) {
     auto* f = static_cast<Field<T>*>(ptr);
-    if (auto* v = std::get_if<T>(&val))
-        *f = *v;
+    if constexpr (std::is_same_v<T, bool> || std::is_same_v<T, int32_t>
+               || std::is_same_v<T, double> || std::is_same_v<T, note::string_view>) {
+        if (auto* v = std::get_if<T>(&val))
+            *f = *v;
+    } else if constexpr (std::is_constructible_v<T, int32_t>) {
+        if (auto* v = std::get_if<int32_t>(&val))
+            *f = T{*v};
+    }
 }
 
 /// Setter that stores a DynValue directly into an extras slot.

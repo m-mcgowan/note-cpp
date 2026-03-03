@@ -7,6 +7,7 @@
 #include <note/notecard.hpp>
 #include <note/safety.hpp>
 #include <note/types.hpp>
+#include <note/units.hpp>
 
 namespace note::api {
 
@@ -31,10 +32,10 @@ struct CardTemp {
         /// with-the-notecard-aux-pins#using-aux-track-mode), the sensor
         /// temperature, pressure, and humidity is also included with each
         /// Note._
-        struct minutes_t : Field<int32_t> {
-            using Field<int32_t>::Field;
-            using Field<int32_t>::operator=;
-            CardTemp::Get& operator()(int32_t v);
+        struct minutes_t : Field<note::Minutes> {
+            using Field<note::Minutes>::Field;
+            using Field<note::Minutes>::operator=;
+            CardTemp::Get& operator()(note::Minutes v);
         } minutes{};
         /// Overrides `minutes` with a voltage-variable value. For example:
         /// `"usb:15;high:30;normal:60;720"`. See [Voltage-Variable Sync
@@ -159,10 +160,10 @@ struct CardTemp {
         /// with-the-notecard-aux-pins#using-aux-track-mode), the sensor
         /// temperature, pressure, and humidity is also included with each
         /// Note._
-        struct minutes_t : Field<int32_t> {
-            using Field<int32_t>::Field;
-            using Field<int32_t>::operator=;
-            CardTemp::Set& operator()(int32_t v);
+        struct minutes_t : Field<note::Minutes> {
+            using Field<note::Minutes>::Field;
+            using Field<note::Minutes>::operator=;
+            CardTemp::Set& operator()(note::Minutes v);
         } minutes{};
         /// Overrides `minutes` with a voltage-variable value. For example:
         /// `"usb:15;high:30;normal:60;720"`. See [Voltage-Variable Sync
@@ -287,10 +288,10 @@ struct CardTemp {
         /// with-the-notecard-aux-pins#using-aux-track-mode), the sensor
         /// temperature, pressure, and humidity is also included with each
         /// Note._
-        struct minutes_t : Field<int32_t> {
-            using Field<int32_t>::Field;
-            using Field<int32_t>::operator=;
-            CardTemp::Delete& operator()(int32_t v);
+        struct minutes_t : Field<note::Minutes> {
+            using Field<note::Minutes>::Field;
+            using Field<note::Minutes>::operator=;
+            CardTemp::Delete& operator()(note::Minutes v);
         } minutes{};
         /// Overrides `minutes` with a voltage-variable value. For example:
         /// `"usb:15;high:30;normal:60;720"`. See [Voltage-Variable Sync
@@ -396,8 +397,8 @@ struct CardTemp {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-inline CardTemp::Get& CardTemp::Get::minutes_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardTemp::Get& CardTemp::Get::minutes_t::operator()(note::Minutes v) {
+    Field<note::Minutes>::operator=(v);
     return *reinterpret_cast<CardTemp::Get*>(
         reinterpret_cast<char*>(this) - offsetof(CardTemp::Get, minutes));
 }
@@ -420,8 +421,8 @@ inline CardTemp::Get& CardTemp::Get::sync_t::operator()(bool v) {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-inline CardTemp::Set& CardTemp::Set::minutes_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardTemp::Set& CardTemp::Set::minutes_t::operator()(note::Minutes v) {
+    Field<note::Minutes>::operator=(v);
     return *reinterpret_cast<CardTemp::Set*>(
         reinterpret_cast<char*>(this) - offsetof(CardTemp::Set, minutes));
 }
@@ -444,8 +445,8 @@ inline CardTemp::Set& CardTemp::Set::sync_t::operator()(bool v) {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-inline CardTemp::Delete& CardTemp::Delete::minutes_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardTemp::Delete& CardTemp::Delete::minutes_t::operator()(note::Minutes v) {
+    Field<note::Minutes>::operator=(v);
     return *reinterpret_cast<CardTemp::Delete*>(
         reinterpret_cast<char*>(this) - offsetof(CardTemp::Delete, minutes));
 }

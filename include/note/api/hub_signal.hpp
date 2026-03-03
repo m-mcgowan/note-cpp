@@ -8,6 +8,7 @@
 #include <note/notecard.hpp>
 #include <note/safety.hpp>
 #include <note/types.hpp>
+#include <note/units.hpp>
 
 namespace note::api {
 
@@ -31,10 +32,10 @@ struct HubSignal {
 #if NOTE_API_VERSION < NOTE_VERSION(5, 1, 1)
     [[deprecated("requires firmware >= 5.1.1")]]
 #endif
-    struct seconds_t : Field<int32_t> {
-        using Field<int32_t>::Field;
-        using Field<int32_t>::operator=;
-        HubSignal& operator()(int32_t v);
+    struct seconds_t : Field<note::Seconds> {
+        using Field<note::Seconds>::Field;
+        using Field<note::Seconds>::operator=;
+        HubSignal& operator()(note::Seconds v);
     } seconds{};
 #endif
 
@@ -131,8 +132,8 @@ struct HubSignal {
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
-inline HubSignal& HubSignal::seconds_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline HubSignal& HubSignal::seconds_t::operator()(note::Seconds v) {
+    Field<note::Seconds>::operator=(v);
     return *reinterpret_cast<HubSignal*>(
         reinterpret_cast<char*>(this) - offsetof(HubSignal, seconds));
 }

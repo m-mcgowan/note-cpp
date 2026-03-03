@@ -7,6 +7,7 @@
 #include <note/notecard.hpp>
 #include <note/safety.hpp>
 #include <note/types.hpp>
+#include <note/units.hpp>
 
 namespace note::api {
 
@@ -118,10 +119,10 @@ struct CardAux {
 #if NOTE_API_VERSION < NOTE_VERSION(5, 1, 1)
     [[deprecated("requires firmware >= 5.1.1")]]
 #endif
-    struct ms_t : Field<int32_t> {
-        using Field<int32_t>::Field;
-        using Field<int32_t>::operator=;
-        CardAux& operator()(int32_t v);
+    struct ms_t : Field<note::Milliseconds> {
+        using Field<note::Milliseconds>::Field;
+        using Field<note::Milliseconds>::operator=;
+        CardAux& operator()(note::Milliseconds v);
     } ms{};
 #endif
     /// When used with `"mode":"neo-monitor"` or `"mode":"track-neo-monitor"`,
@@ -150,10 +151,10 @@ struct CardAux {
     /// When in `gpio` mode, if an `AUX` pin is configured as a `count` type,
     /// the count of rising edges can be broken into samples of this duration.
     /// Passing `0` or omitting this field will total into a single sample.
-    struct seconds_t : Field<int32_t> {
-        using Field<int32_t>::Field;
-        using Field<int32_t>::operator=;
-        CardAux& operator()(int32_t v);
+    struct seconds_t : Field<note::Seconds> {
+        using Field<note::Seconds>::Field;
+        using Field<note::Seconds>::operator=;
+        CardAux& operator()(note::Seconds v);
     } seconds{};
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
     /// When used with `"mode":"neo-monitor"` or `"mode":"track-neo-monitor"`,
@@ -414,8 +415,8 @@ inline CardAux& CardAux::mode_t::operator()(note::string_view v) {
         reinterpret_cast<char*>(this) - offsetof(CardAux, mode));
 }
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
-inline CardAux& CardAux::ms_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardAux& CardAux::ms_t::operator()(note::Milliseconds v) {
+    Field<note::Milliseconds>::operator=(v);
     return *reinterpret_cast<CardAux*>(
         reinterpret_cast<char*>(this) - offsetof(CardAux, ms));
 }
@@ -432,8 +433,8 @@ inline CardAux& CardAux::rate_t::operator()(int32_t v) {
         reinterpret_cast<char*>(this) - offsetof(CardAux, rate));
 }
 #endif
-inline CardAux& CardAux::seconds_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardAux& CardAux::seconds_t::operator()(note::Seconds v) {
+    Field<note::Seconds>::operator=(v);
     return *reinterpret_cast<CardAux*>(
         reinterpret_cast<char*>(this) - offsetof(CardAux, seconds));
 }

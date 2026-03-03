@@ -111,7 +111,8 @@ struct ScriptedI2cHal : public I2cHal {
     size_t max_transfer() override { return mtu; }
 
     // Helper: pre-initialize transport so the first operator() call skips reset.
-    void prime(NotecardI2c& t) {
+    template <typename T>
+    void prime(T& t) {
         responses.push_back("{}\n");
         auto r = t(note::string_view{"{}"}, 5000);
         (void)r;

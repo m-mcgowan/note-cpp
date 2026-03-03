@@ -2,6 +2,7 @@
 
 #include <note/error.hpp>
 #include <note/transport/detail/crc32.hpp>
+#include <note/transport/protocol_policy.hpp>
 #include <note/types.hpp>
 
 #include <algorithm>
@@ -16,33 +17,23 @@
 // alternative to the note-c serial transport. Faithful port of note-c
 // n_serial.c + n_request.c (retry, CRC) with a platform-injectable HAL.
 //
-// Usage — platform subclass:
+// The PolicyType template parameter controls retry counts, segment pacing,
+// and timeouts. See protocol_policy.hpp for details.
 //
-//   class MySerial : public note::transport::SerialHal { ... };
-//   MySerial hal;
-//   note::transport::NotecardSerial transport(hal);
-//   note::Notecard nc(backend, [&transport](note::string_view req, uint32_t t) {
-//       return transport(req, t);
-//   });
+// Usage — compile-time default policy (zero overhead, most common):
 //
-// Usage — lambda/callback (tests, host tooling):
+//   NotecardSerial transport(hal);
 //
-//   note::transport::SerialCallbackHal hal{tx_fn, rx_fn, millis_fn, delay_fn};
-//   note::transport::NotecardSerial transport(hal);
+// Usage — compile-time custom policy (zero overhead):
+//
+//   NotecardSerial<StaticSerialPolicy<SerialPolicy::fast()>> transport(hal);
+//
+// Usage — runtime mutable policy (28 bytes overhead):
+//
+//   NotecardSerial<SerialPolicy> transport(hal);
+//   transport.policy.max_retries = 1;  // adjust before a destructive request
 
 namespace note::transport {
-
-// ---------------------------------------------------------------------------
-// Protocol timing constants (matching note-c n_lib.h / n_request.c)
-// ---------------------------------------------------------------------------
-
-inline constexpr uint32_t kSerialSegmentMaxLen       = 250;   // bytes per TX segment
-inline constexpr uint32_t kSerialSegmentDelayMs      = 250;   // inter-segment delay
-inline constexpr uint32_t kIntraTransactionTimeoutMs = 1000;  // timeout after first byte
-inline constexpr uint32_t kResetDrainMs              = 500;   // drain window per reset attempt
-inline constexpr uint32_t kResetSyncRetries          = 10;    // max reset attempts
-inline constexpr uint32_t kMaxRetries                = 5;     // max transaction retries
-inline constexpr uint32_t kRetryDelayMs              = 500;   // delay between retries
 
 // ---------------------------------------------------------------------------
 // SerialHal — pure virtual platform interface
@@ -97,15 +88,22 @@ private:
 // NotecardSerial — Notecard serial protocol implementation
 // ---------------------------------------------------------------------------
 
+template <typename PolicyType = StaticSerialPolicy<SerialPolicy{}>>
 class NotecardSerial {
 public:
-    explicit NotecardSerial(SerialHal& hal) : hal_(hal) {}
+    // policy is public so callers can read or mutate it between requests.
+    // For StaticSerialPolicy (the default), [[no_unique_address]] gives it
+    // zero bytes — all fields are static constexpr, folded by the compiler.
+    [[no_unique_address]] PolicyType policy;
+
+    explicit NotecardSerial(SerialHal& hal, PolicyType pol = {})
+        : policy(pol), hal_(hal) {}
 
     // Satisfies note::Notecard's RequestFn signature:
     //   std::function<Result<std::string>(string_view, uint32_t)>
     //
     // Auto-resets on first call. Handles CRC (auto-detected), segmented TX,
-    // greedy RX, and up to kMaxRetries retries on failure.
+    // greedy RX, and up to policy.max_retries retries on failure.
     Result<std::string> operator()(string_view request, uint32_t timeout_ms) {
         if (!initialized_) {
             if (!do_reset())
@@ -123,8 +121,8 @@ public:
             wire = detail::crc_add(std::move(wire), crc_seq_);
         }
 
-        for (uint32_t attempt = 0; attempt <= kMaxRetries; ++attempt) {
-            if (attempt > 0) hal_.delay(kRetryDelayMs);
+        for (uint32_t attempt = 0; attempt <= policy.max_retries; ++attempt) {
+            if (attempt > 0) hal_.delay(policy.retry_delay_ms);
 
             // Segmented transmit.
             if (!send_segmented(wire.data(), wire.size())) {
@@ -153,27 +151,28 @@ private:
 
     // -----------------------------------------------------------------------
     // reset — matches note-c _serialNoteReset()
-    // Send \n and drain until only \r/\n received for kResetDrainMs.
+    // Send \n and drain until only \r/\n received for policy.reset_drain_ms.
+    // A clean window (only control characters) means the Notecard is ready.
     // -----------------------------------------------------------------------
     bool do_reset() {
-        hal_.delay(kSerialSegmentDelayMs);  // 250 ms pre-delay
+        hal_.delay(policy.segment_delay_ms);  // 250 ms pre-delay
 
-        for (uint32_t retry = 0; retry < kResetSyncRetries; ++retry) {
+        for (uint32_t retry = 0; retry < policy.reset_sync_retries; ++retry) {
             const uint8_t nl = '\n';
             hal_.transmit(&nl, 1);
 
-            uint8_t buf[32];
-            bool found_something    = false;
-            bool found_non_control  = false;
-            uint32_t drain_start    = hal_.millis();
+            uint8_t  buf[32];
+            bool     found_something   = false;
+            bool     found_non_control = false;
+            uint32_t drain_start       = hal_.millis();
 
-            while (hal_.millis() - drain_start < kResetDrainMs) {
+            while (hal_.millis() - drain_start < policy.reset_drain_ms) {
                 size_t n = hal_.receive(buf, sizeof(buf));
                 for (size_t i = 0; i < n; ++i) {
                     found_something = true;
                     if (buf[i] != '\n' && buf[i] != '\r') {
                         found_non_control = true;
-                        drain_start = hal_.millis();  // extend window
+                        drain_start = hal_.millis();  // extend window on non-control char
                     }
                 }
                 if (n == 0) hal_.delay(1);
@@ -181,26 +180,27 @@ private:
 
             if (found_something && !found_non_control) return true;
 
-            hal_.delay(kResetDrainMs);
+            hal_.delay(policy.reset_drain_ms);
         }
         return false;
     }
 
     // -----------------------------------------------------------------------
     // send_segmented — matches note-c _serialChunkedTransmit()
-    // Transmit in kSerialSegmentMaxLen chunks, delay between them.
+    // Transmit in policy.segment_max_len chunks with an inter-segment delay.
     // Appends \r\n terminator (matches note-c c_newline).
     // -----------------------------------------------------------------------
     bool send_segmented(const char* data, size_t len) {
         size_t offset = 0;
         size_t rem    = len;
         while (rem > 0) {
-            const size_t chunk = std::min(rem, size_t(kSerialSegmentMaxLen));
+            const size_t chunk = std::min(rem, size_t(policy.segment_max_len));
             if (!hal_.transmit(reinterpret_cast<const uint8_t*>(data + offset), chunk))
                 return false;
             offset += chunk;
             rem    -= chunk;
-            if (rem > 0) hal_.delay(kSerialSegmentDelayMs);
+            if (rem > 0 && policy.segment_delay_ms > 0)
+                hal_.delay(policy.segment_delay_ms);
         }
         const uint8_t crlf[2] = {'\r', '\n'};
         return hal_.transmit(crlf, 2);
@@ -209,7 +209,7 @@ private:
     // -----------------------------------------------------------------------
     // receive_line — matches note-c _serialChunkedReceive()
     // Poll until \n received. Initial timeout = timeout_ms; after first byte
-    // switches to kIntraTransactionTimeoutMs (1 s).
+    // switches to policy.intra_timeout_ms (1 s intra-transaction timeout).
     // Returns JSON stripped of trailing \r\n.
     // -----------------------------------------------------------------------
     Result<std::string> receive_line(uint32_t timeout_ms) {
@@ -239,12 +239,36 @@ private:
                     if (timeout_ms && (now - start >= timeout_ms))
                         return make_error(Error::Timeout, "Notecard: no response");
                 } else {
-                    if (now - intra_start >= kIntraTransactionTimeoutMs)
+                    if (now - intra_start >= policy.intra_timeout_ms)
                         return make_error(Error::Timeout, "Notecard: response incomplete");
                 }
             }
         }
     }
 };
+
+// Deduction guides — allow construction without explicit template arguments.
+//
+//   NotecardSerial transport(hal)          → StaticSerialPolicy<SerialPolicy{}>
+//                                            (zero overhead, compile-time defaults)
+//   NotecardSerial transport(hal, policy)  → SerialPolicy
+//                                            (runtime mutable, 28 bytes)
+NotecardSerial(SerialHal&) -> NotecardSerial<StaticSerialPolicy<SerialPolicy{}>>;
+NotecardSerial(SerialHal&, SerialPolicy) -> NotecardSerial<SerialPolicy>;
+
+template <SerialPolicy P>
+NotecardSerial(SerialHal&, StaticSerialPolicy<P>) -> NotecardSerial<StaticSerialPolicy<P>>;
+
+// ---------------------------------------------------------------------------
+// Backward-compatible constants (derived from default policy values).
+// ---------------------------------------------------------------------------
+
+inline constexpr uint32_t kSerialSegmentMaxLen       = SerialPolicy{}.segment_max_len;
+inline constexpr uint32_t kSerialSegmentDelayMs      = SerialPolicy{}.segment_delay_ms;
+inline constexpr uint32_t kIntraTransactionTimeoutMs = SerialPolicy{}.intra_timeout_ms;
+inline constexpr uint32_t kResetDrainMs              = SerialPolicy{}.reset_drain_ms;
+inline constexpr uint32_t kResetSyncRetries          = SerialPolicy{}.reset_sync_retries;
+inline constexpr uint32_t kMaxRetries                = SerialPolicy{}.max_retries;
+inline constexpr uint32_t kRetryDelayMs              = SerialPolicy{}.retry_delay_ms;
 
 }  // namespace note::transport

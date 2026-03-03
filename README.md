@@ -1,5 +1,7 @@
 # note-cpp
 
+[![CI](https://github.com/m-mcgowan/note-cpp/actions/workflows/ci.yml/badge.svg)](https://github.com/m-mcgowan/note-cpp/actions/workflows/ci.yml)
+
 Type-safe C++23 API for the [Blues Notecard](https://blues.com/notecard). Header-only, zero dependencies beyond the standard library.
 
 > **Community project.** Not affiliated with or supported by Blues Inc. Notecard is a trademark of Blues Inc.
@@ -600,6 +602,9 @@ This produces per-endpoint headers in `include/note/api/`, umbrella headers, the
 ```bash
 ./ci.sh                  # default compiler
 ./ci.sh --all-compilers  # all locally installed compilers
+./ci.sh --coverage       # coverage report (requires GCC 13+ and lcov 2.x)
 ```
 
 Runs code generation, checks every header compiles independently, runs unit tests, and builds the examples. Requires a C++23 compiler (GCC 13+, Clang 18+, Apple Clang 15+).
+
+Coverage generates `coverage/html/index.html`. Current results: ~98.5% lines, ~99.9% functions, ~98.9% branches. See [docs/coverage.md](docs/coverage.md) for toolchain requirements and details.

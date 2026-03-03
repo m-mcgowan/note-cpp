@@ -2,6 +2,7 @@
 
 #include <note/error.hpp>
 #include <note/transport/detail/crc32.hpp>
+#include <note/transport/protocol_policy.hpp>
 #include <note/types.hpp>
 
 #include <algorithm>
@@ -17,40 +18,30 @@
 // n_i2c.c (reset, chunked TX/RX with segment pacing, CRC) with a
 // platform-injectable HAL.
 //
-// Usage — platform subclass:
+// The PolicyType template parameter controls retry counts, segment pacing,
+// and timeouts. See protocol_policy.hpp for details.
 //
-//   class MyI2c : public note::transport::I2cHal { ... };
-//   MyI2c hal;
-//   note::transport::NotecardI2c transport(hal);
-//   note::Notecard nc(backend, [&transport](note::string_view req, uint32_t t) {
-//       return transport(req, t);
-//   });
+// Usage — compile-time default policy (zero overhead, most common):
 //
-// Usage — lambda/callback (tests, host tooling):
+//   NotecardI2c transport(hal);
 //
-//   note::transport::I2cCallbackHal hal{reset_fn, tx_fn, rx_fn, millis_fn, delay_fn};
-//   note::transport::NotecardI2c transport(hal);
+// Usage — compile-time custom policy (zero overhead):
+//
+//   NotecardI2c<StaticI2cPolicy<I2cPolicy::fast()>> transport(hal);
+//
+// Usage — runtime mutable policy:
+//
+//   NotecardI2c<I2cPolicy> transport(hal);
+//   transport.policy.max_retries = 1;  // adjust before a destructive request
 
 namespace note::transport {
 
-// ---------------------------------------------------------------------------
-// Protocol timing constants (matching note-c n_lib.h)
-// ---------------------------------------------------------------------------
+// Notecard default I2C address (NOTE_I2C_ADDR_DEFAULT).
+inline constexpr uint16_t kI2cDefaultAddress = 0x17;
 
-inline constexpr uint16_t kI2cDefaultAddress  = 0x17;  // NOTE_I2C_ADDR_DEFAULT
-inline constexpr size_t   kI2cDefaultMtu       = 30;    // NOTE_I2C_MTU_DEFAULT (safe for all Arduino)
-inline constexpr size_t   kI2cMaxMtu           = 253;   // NOTE_I2C_MTU_MAX (UCHAR_MAX - header size)
-inline constexpr uint32_t kI2cIoDelayMs        = 6;     // empirical stability delay (_delayIO)
-inline constexpr uint32_t kI2cSegmentMaxLen    = 250;   // CARD_REQUEST_I2C_SEGMENT_MAX_LEN
-inline constexpr uint32_t kI2cSegmentDelayMs   = 250;   // CARD_REQUEST_I2C_SEGMENT_DELAY_MS
-inline constexpr uint32_t kI2cChunkDelayMs     = 20;    // CARD_REQUEST_I2C_CHUNK_DELAY_MS
-inline constexpr uint32_t kI2cNackWaitMs       = 1000;  // CARD_REQUEST_I2C_NACK_WAIT_MS
-inline constexpr uint32_t kI2cResetDrainMs     = 500;   // CARD_RESET_DRAIN_MS
-inline constexpr uint32_t kI2cResetSyncRetries = 10;    // CARD_RESET_SYNC_RETRIES
-inline constexpr uint32_t kI2cResponsePollMs   = 50;    // polling interval waiting for data
-inline constexpr uint32_t kI2cIntraTimeoutMs   = 1000;  // CARD_INTRA_TRANSACTION_TIMEOUT_SEC * 1000
-inline constexpr uint32_t kI2cMaxRetries       = 5;     // max transaction retries
-inline constexpr uint32_t kI2cRetryDelayMs     = 500;   // delay between retries
+// I2C MTU constants — hardware transfer size limits, not protocol policy.
+inline constexpr size_t kI2cDefaultMtu = 30;   // safe for all Arduino Wire implementations
+inline constexpr size_t kI2cMaxMtu     = 253;  // UCHAR_MAX - 2 byte header
 
 // ---------------------------------------------------------------------------
 // I2cHal — pure virtual platform interface
@@ -67,8 +58,8 @@ public:
     virtual bool     transmit(const uint8_t* data, size_t len) = 0;
 
     // Receive from the Notecard.
-    //   len == 0: priming query — no bytes consumed; available is set to
-    //             the number of bytes the Notecard has pending.
+    //   len == 0: priming query — no bytes consumed; available is set to the
+    //             number of bytes the Notecard has pending.
     //   len  > 0: read exactly len bytes into buf; available is set to the
     //             number of bytes still pending after this read.
     // Returns false on error.
@@ -124,15 +115,22 @@ private:
 // NotecardI2c — Notecard I2C protocol implementation
 // ---------------------------------------------------------------------------
 
+template <typename PolicyType = StaticI2cPolicy<I2cPolicy{}>>
 class NotecardI2c {
 public:
-    explicit NotecardI2c(I2cHal& hal) : hal_(hal) {}
+    // policy is public so callers can read or mutate it between requests.
+    // For StaticI2cPolicy (the default), [[no_unique_address]] gives it
+    // zero bytes — all fields are static constexpr, folded by the compiler.
+    [[no_unique_address]] PolicyType policy;
+
+    explicit NotecardI2c(I2cHal& hal, PolicyType pol = {})
+        : policy(pol), hal_(hal) {}
 
     // Satisfies note::Notecard's RequestFn signature:
     //   std::function<Result<std::string>(string_view, uint32_t)>
     //
     // Auto-resets on first call. Handles CRC (auto-detected), chunked TX
-    // with IO + segment pacing, priming-query RX, and up to kI2cMaxRetries
+    // with IO + segment pacing, priming-query RX, and up to policy.max_retries
     // retries on failure.
     Result<std::string> operator()(string_view request, uint32_t timeout_ms) {
         if (!initialized_) {
@@ -151,8 +149,8 @@ public:
         }
         wire += '\n';  // I2C uses bare \n terminator (not \r\n like serial)
 
-        for (uint32_t attempt = 0; attempt <= kI2cMaxRetries; ++attempt) {
-            if (attempt > 0) hal_.delay(kI2cRetryDelayMs);
+        for (uint32_t attempt = 0; attempt <= policy.max_retries; ++attempt) {
+            if (attempt > 0) hal_.delay(policy.retry_delay_ms);
 
             if (!send_chunked(wire.data(), wire.size())) {
                 do_reset();
@@ -178,40 +176,42 @@ private:
 
     // -----------------------------------------------------------------------
     // delay_io — matches note-c _delayIO()
-    // Empirical 6 ms stability delay before each I2C operation.
+    // Empirical stability delay before each I2C operation.
     // -----------------------------------------------------------------------
-    void delay_io() { hal_.delay(kI2cIoDelayMs); }
+    void delay_io() {
+        if (policy.io_delay_ms > 0) hal_.delay(policy.io_delay_ms);
+    }
 
     // -----------------------------------------------------------------------
     // do_reset — matches note-c _i2cNoteReset()
     // Hardware reset + sync: send \n and drain until only \r/\n received
-    // for kI2cResetDrainMs, then declare ready.
+    // for policy.reset_drain_ms (clean window), then declare ready.
     // -----------------------------------------------------------------------
     bool do_reset() {
-        hal_.delay(kI2cSegmentDelayMs);  // 250 ms pre-delay
+        hal_.delay(policy.segment_delay_ms);  // 250 ms pre-delay
         if (!hal_.reset()) return false;
-        delay_io();  // 6 ms after hardware reset
+        delay_io();  // stability delay after hardware reset
 
-        for (uint32_t retry = 0; retry < kI2cResetSyncRetries; ++retry) {
+        for (uint32_t retry = 0; retry < policy.reset_sync_retries; ++retry) {
             // Send \n to sync. On NACK (transmit failure): wait and retry.
             const uint8_t nl = '\n';
             if (!hal_.transmit(&nl, 1)) {
-                hal_.delay(kI2cNackWaitMs);  // 1000 ms after NACK
+                hal_.delay(policy.nack_wait_ms);  // 1000 ms after NACK
                 continue;
             }
 
-            hal_.delay(kI2cSegmentDelayMs);  // 250 ms after transmit
+            hal_.delay(policy.segment_delay_ms);  // 250 ms after transmit
 
-            // Drain loop for kI2cResetDrainMs (500 ms).
+            // Drain loop for policy.reset_drain_ms (500 ms).
             // chunk_len starts at 0 (priming query) and is updated to the
             // number of bytes the Notecard has pending after each receive.
-            uint32_t drain_start     = hal_.millis();
-            size_t   chunk_len       = 0;
+            uint32_t drain_start       = hal_.millis();
+            size_t   chunk_len         = 0;
             bool     found_something   = false;
             bool     found_non_control = false;
             uint8_t  buf[64];
 
-            while (hal_.millis() - drain_start < kI2cResetDrainMs) {
+            while (hal_.millis() - drain_start < policy.reset_drain_ms) {
                 uint32_t available = 0;
 
                 // Clamp requested bytes to buffer and HAL max_transfer.
@@ -220,7 +220,7 @@ private:
 
                 if (!hal_.receive(buf, req, available)) {
                     // I2C bus error — delay and keep draining.
-                    hal_.delay(kI2cSegmentDelayMs);
+                    hal_.delay(policy.segment_delay_ms);
                     continue;
                 }
 
@@ -237,7 +237,7 @@ private:
                 // Update chunk_len from available count (clamped).
                 chunk_len = std::min({size_t(available), sizeof(buf),
                                       hal_.max_transfer()});
-                hal_.delay(kI2cChunkDelayMs);  // 20 ms between drain polls
+                hal_.delay(policy.chunk_delay_ms);  // 20 ms between drain polls
             }
 
             if (found_something && !found_non_control) return true;
@@ -255,8 +255,8 @@ private:
     // -----------------------------------------------------------------------
     // send_chunked — matches note-c _i2cChunkedTransmit()
     // Transmit in max_transfer() chunks with IO delay before each chunk,
-    // 20 ms inter-chunk delay, and 250 ms segment delay after every
-    // kI2cSegmentMaxLen (250) bytes.
+    // policy.chunk_delay_ms inter-chunk delay, and policy.segment_delay_ms
+    // after every policy.segment_max_len (250) bytes.
     // -----------------------------------------------------------------------
     bool send_chunked(const char* data, size_t len) {
         size_t offset        = 0;
@@ -265,7 +265,7 @@ private:
         while (offset < len) {
             const size_t chunk = std::min(len - offset, hal_.max_transfer());
 
-            delay_io();  // 6 ms before each chunk (matches note-c _delayIO)
+            delay_io();  // stability delay before each chunk
             if (!hal_.transmit(reinterpret_cast<const uint8_t*>(data + offset), chunk)) {
                 hal_.reset();
                 return false;
@@ -274,13 +274,13 @@ private:
             offset        += chunk;
             sentInSegment += chunk;
 
-            // Segment pacing: after more than kI2cSegmentMaxLen consecutive
-            // bytes, pause 250 ms to avoid overwhelming the Notecard.
-            if (sentInSegment > kI2cSegmentMaxLen) {
+            // Segment pacing: after more than policy.segment_max_len consecutive
+            // bytes, pause to avoid overwhelming the Notecard.
+            if (sentInSegment > policy.segment_max_len) {
                 sentInSegment = 0;
-                hal_.delay(kI2cSegmentDelayMs);  // 250 ms inter-segment
+                hal_.delay(policy.segment_delay_ms);
             }
-            hal_.delay(kI2cChunkDelayMs);  // 20 ms inter-chunk
+            if (policy.chunk_delay_ms > 0) hal_.delay(policy.chunk_delay_ms);
         }
 
         return true;
@@ -293,7 +293,7 @@ private:
     // Returns JSON stripped of trailing \r\n.
     // -----------------------------------------------------------------------
     Result<std::string> receive_response(uint32_t timeout_ms) {
-        delay_io();  // 6 ms after final transmit chunk
+        delay_io();  // stability delay after final transmit chunk
 
         // Priming query loop: wait until Notecard has data available.
         uint32_t available = 0;
@@ -306,7 +306,7 @@ private:
                 if (available == 0) {
                     if (timeout_ms && hal_.millis() - start >= timeout_ms)
                         return make_error(Error::Timeout, "Notecard: no response");
-                    hal_.delay(kI2cResponsePollMs);  // 50 ms poll interval
+                    hal_.delay(policy.response_poll_ms);  // 50 ms poll interval
                 }
             }
         }
@@ -338,9 +338,9 @@ private:
             if (eop) break;               // EOP with no more data — done
 
             // Nothing available yet and no EOP — wait for more.
-            if (hal_.millis() - intra_start >= kI2cIntraTimeoutMs)
+            if (hal_.millis() - intra_start >= policy.intra_timeout_ms)
                 return make_error(Error::Timeout, "Notecard: response incomplete");
-            hal_.delay(kI2cResponsePollMs);  // 50 ms poll
+            hal_.delay(policy.response_poll_ms);  // 50 ms poll
         }
 
         // Strip trailing \r\n.
@@ -350,5 +350,33 @@ private:
         return buf;
     }
 };
+
+// Deduction guides — allow construction without explicit template arguments.
+//
+//   NotecardI2c transport(hal)          → StaticI2cPolicy<I2cPolicy{}>
+//                                         (zero overhead, compile-time defaults)
+//   NotecardI2c transport(hal, policy)  → I2cPolicy
+//                                         (runtime mutable)
+NotecardI2c(I2cHal&) -> NotecardI2c<StaticI2cPolicy<I2cPolicy{}>>;
+NotecardI2c(I2cHal&, I2cPolicy) -> NotecardI2c<I2cPolicy>;
+
+template <I2cPolicy P>
+NotecardI2c(I2cHal&, StaticI2cPolicy<P>) -> NotecardI2c<StaticI2cPolicy<P>>;
+
+// ---------------------------------------------------------------------------
+// Backward-compatible constants (derived from default policy values).
+// ---------------------------------------------------------------------------
+
+inline constexpr uint32_t kI2cIoDelayMs        = I2cPolicy{}.io_delay_ms;
+inline constexpr uint32_t kI2cSegmentMaxLen    = I2cPolicy{}.segment_max_len;
+inline constexpr uint32_t kI2cSegmentDelayMs   = I2cPolicy{}.segment_delay_ms;
+inline constexpr uint32_t kI2cChunkDelayMs     = I2cPolicy{}.chunk_delay_ms;
+inline constexpr uint32_t kI2cNackWaitMs       = I2cPolicy{}.nack_wait_ms;
+inline constexpr uint32_t kI2cResetDrainMs     = I2cPolicy{}.reset_drain_ms;
+inline constexpr uint32_t kI2cResetSyncRetries = I2cPolicy{}.reset_sync_retries;
+inline constexpr uint32_t kI2cResponsePollMs   = I2cPolicy{}.response_poll_ms;
+inline constexpr uint32_t kI2cIntraTimeoutMs   = I2cPolicy{}.intra_timeout_ms;
+inline constexpr uint32_t kI2cMaxRetries       = I2cPolicy{}.max_retries;
+inline constexpr uint32_t kI2cRetryDelayMs     = I2cPolicy{}.retry_delay_ms;
 
 }  // namespace note::transport

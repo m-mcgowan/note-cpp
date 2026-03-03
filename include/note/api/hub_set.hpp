@@ -8,6 +8,7 @@
 #include <note/safety.hpp>
 #include <note/types.hpp>
 #include <note/units.hpp>
+#include <note/voltage_variable.hpp>
 
 namespace note::api {
 
@@ -271,6 +272,13 @@ struct HubSet {
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
         HubSet& operator()(note::string_view v);
+        HubSet& operator()(const note::VoltageVariable& v);
+        vinbound_t& usb(int32_t minutes);
+        vinbound_t& high(int32_t minutes);
+        vinbound_t& normal(int32_t minutes);
+        vinbound_t& low(int32_t minutes);
+        vinbound_t& dead(int32_t minutes);
+        note::VoltageVariable vv_{};
     } vinbound{};
     /// Overrides `outbound` with a voltage-variable value. Use `"-"` to clear
     /// this value.
@@ -281,6 +289,13 @@ struct HubSet {
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
         HubSet& operator()(note::string_view v);
+        HubSet& operator()(const note::VoltageVariable& v);
+        voutbound_t& usb(int32_t minutes);
+        voutbound_t& high(int32_t minutes);
+        voutbound_t& normal(int32_t minutes);
+        voutbound_t& low(int32_t minutes);
+        voutbound_t& dead(int32_t minutes);
+        note::VoltageVariable vv_{};
     } voutbound{};
 
     // consteval: only callable at compile time
@@ -516,10 +531,72 @@ inline HubSet& HubSet::vinbound_t::operator()(note::string_view v) {
     return *reinterpret_cast<HubSet*>(
         reinterpret_cast<char*>(this) - offsetof(HubSet, vinbound));
 }
+inline HubSet& HubSet::vinbound_t::operator()(const note::VoltageVariable& v) {
+    vv_ = v;
+    Field<note::string_view>::operator=(vv_.str());
+    return *reinterpret_cast<HubSet*>(
+        reinterpret_cast<char*>(this) - offsetof(HubSet, vinbound));
+}
+inline HubSet::vinbound_t& HubSet::vinbound_t::usb(int32_t minutes) {
+    vv_.usb(minutes);
+    Field<note::string_view>::operator=(vv_.str());
+    return *this;
+}
+inline HubSet::vinbound_t& HubSet::vinbound_t::high(int32_t minutes) {
+    vv_.high(minutes);
+    Field<note::string_view>::operator=(vv_.str());
+    return *this;
+}
+inline HubSet::vinbound_t& HubSet::vinbound_t::normal(int32_t minutes) {
+    vv_.normal(minutes);
+    Field<note::string_view>::operator=(vv_.str());
+    return *this;
+}
+inline HubSet::vinbound_t& HubSet::vinbound_t::low(int32_t minutes) {
+    vv_.low(minutes);
+    Field<note::string_view>::operator=(vv_.str());
+    return *this;
+}
+inline HubSet::vinbound_t& HubSet::vinbound_t::dead(int32_t minutes) {
+    vv_.dead(minutes);
+    Field<note::string_view>::operator=(vv_.str());
+    return *this;
+}
 inline HubSet& HubSet::voutbound_t::operator()(note::string_view v) {
     Field<note::string_view>::operator=(v);
     return *reinterpret_cast<HubSet*>(
         reinterpret_cast<char*>(this) - offsetof(HubSet, voutbound));
+}
+inline HubSet& HubSet::voutbound_t::operator()(const note::VoltageVariable& v) {
+    vv_ = v;
+    Field<note::string_view>::operator=(vv_.str());
+    return *reinterpret_cast<HubSet*>(
+        reinterpret_cast<char*>(this) - offsetof(HubSet, voutbound));
+}
+inline HubSet::voutbound_t& HubSet::voutbound_t::usb(int32_t minutes) {
+    vv_.usb(minutes);
+    Field<note::string_view>::operator=(vv_.str());
+    return *this;
+}
+inline HubSet::voutbound_t& HubSet::voutbound_t::high(int32_t minutes) {
+    vv_.high(minutes);
+    Field<note::string_view>::operator=(vv_.str());
+    return *this;
+}
+inline HubSet::voutbound_t& HubSet::voutbound_t::normal(int32_t minutes) {
+    vv_.normal(minutes);
+    Field<note::string_view>::operator=(vv_.str());
+    return *this;
+}
+inline HubSet::voutbound_t& HubSet::voutbound_t::low(int32_t minutes) {
+    vv_.low(minutes);
+    Field<note::string_view>::operator=(vv_.str());
+    return *this;
+}
+inline HubSet::voutbound_t& HubSet::voutbound_t::dead(int32_t minutes) {
+    vv_.dead(minutes);
+    Field<note::string_view>::operator=(vv_.str());
+    return *this;
 }
 #pragma GCC diagnostic pop
 

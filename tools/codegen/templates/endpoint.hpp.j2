@@ -13,6 +13,9 @@
 {% if has_unit_fields %}
 #include <note/units.hpp>
 {% endif %}
+{% if has_format_fields %}
+#include <note/voltage_variable.hpp>
+{% endif %}
 
 namespace note::api {
 
@@ -95,6 +98,15 @@ namespace note::api {
 {{ indent }}    using Field<{{ prop.field_type }}>::Field;
 {{ indent }}    using Field<{{ prop.field_type }}>::operator=;
 {{ indent }}    {{ parent_type }}& operator()({{ prop.field_type }} v);
+{% if prop.has_format %}
+{{ indent }}    {{ parent_type }}& operator()(const note::VoltageVariable& v);
+{{ indent }}    {{ prop.nested_type_name }}& usb(int32_t minutes);
+{{ indent }}    {{ prop.nested_type_name }}& high(int32_t minutes);
+{{ indent }}    {{ prop.nested_type_name }}& normal(int32_t minutes);
+{{ indent }}    {{ prop.nested_type_name }}& low(int32_t minutes);
+{{ indent }}    {{ prop.nested_type_name }}& dead(int32_t minutes);
+{{ indent }}    note::VoltageVariable vv_{};
+{% endif %}
 {{ indent }}} {{ prop.accessor_name }}{};
 {% endif %}
 {{ version_guard_end(prop.version_guard) -}}
@@ -288,6 +300,21 @@ inline {{ parent_qual }}& {{ parent_qual }}::{{ prop.nested_type_name }}::operat
     return *reinterpret_cast<{{ parent_qual }}*>(
         reinterpret_cast<char*>(this) - offsetof({{ parent_qual }}, {{ prop.accessor_name }}));
 }
+{% if prop.has_format %}
+inline {{ parent_qual }}& {{ parent_qual }}::{{ prop.nested_type_name }}::operator()(const note::VoltageVariable& v) {
+    vv_ = v;
+    Field<{{ prop.field_type }}>::operator=(vv_.str());
+    return *reinterpret_cast<{{ parent_qual }}*>(
+        reinterpret_cast<char*>(this) - offsetof({{ parent_qual }}, {{ prop.accessor_name }}));
+}
+{% for level in ["usb", "high", "normal", "low", "dead"] %}
+inline {{ parent_qual }}::{{ prop.nested_type_name }}& {{ parent_qual }}::{{ prop.nested_type_name }}::{{ level }}(int32_t minutes) {
+    vv_.{{ level }}(minutes);
+    Field<{{ prop.field_type }}>::operator=(vv_.str());
+    return *this;
+}
+{% endfor %}
+{% endif %}
 {% endif %}
 {{ version_guard_end(prop.version_guard) -}}
 {% endif %}

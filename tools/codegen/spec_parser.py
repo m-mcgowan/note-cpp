@@ -102,6 +102,7 @@ def _parse_property(name: str, schema: dict, *,
         is_body=is_body,
         unit=schema.get("x-unit"),
         constants=schema.get("x-constants"),
+        format=schema.get("x-format"),
     )
 
 

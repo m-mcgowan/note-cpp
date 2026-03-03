@@ -232,11 +232,17 @@ def main() -> None:
             for op in endpoint.operations
             for prop in op.properties + op.response.properties
         )
+        has_format_fields = any(
+            prop.has_format
+            for op in endpoint.operations
+            for prop in op.properties
+        )
         content = endpoint_template.render(
             endpoint=endpoint,
             has_body_field=has_body_field,
             has_body_response=has_body_response,
             has_unit_fields=has_unit_fields,
+            has_format_fields=has_format_fields,
         )
         out_path = output_dir / endpoint.header_filename
         out_path.write_text(content)

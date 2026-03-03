@@ -26,11 +26,17 @@ class PropertyDef:
     is_body: bool = False  # True for type:object fields (use BodyValue)
     unit: str | None = None  # "minutes", "seconds", "milliseconds"
     constants: dict | None = None  # {"reset": {"value": -1, "description": "..."}}
+    format: str | None = None  # "voltage-variable"
 
     @property
     def field_type(self) -> str:
         """C++ type for Field<T> — unit-wrapped if applicable."""
         return _UNIT_TYPES.get(self.unit, self.cpp_type) if self.unit else self.cpp_type
+
+    @property
+    def has_format(self) -> bool:
+        """True if this property has a custom format (e.g. voltage-variable)."""
+        return self.format is not None
 
     @property
     def has_unit(self) -> bool:

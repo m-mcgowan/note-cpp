@@ -9233,7 +9233,8 @@
                       "CELL+WIFI",
                       "WIFI"
                     ],
-                    "type": "string"
+                    "type": "string",
+                    "x-format": "voltage-variable"
                   },
                   "voutbound": {
                     "description": "Overrides `outbound` with a voltage-variable value. Use `\"-\"` to clear this value.\n\n**NOTE:** Setting voltage-variable values is not supported on Notecard XP.",
@@ -9242,7 +9243,8 @@
                       "CELL+WIFI",
                       "WIFI"
                     ],
-                    "type": "string"
+                    "type": "string",
+                    "x-format": "voltage-variable"
                   }
                 },
                 "additionalProperties": false

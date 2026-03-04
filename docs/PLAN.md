@@ -129,28 +129,93 @@ Type-safe C++23 API for the Blues Notecard. Header-only, zero dependencies beyon
 - `dyn_field.hpp` new header; `endpoint.hpp.j2` template fully rewritten
 - 33 new tests in `test_property_functor.cpp`
 
+### Phase 11: C++20 compatibility
+- `tl::expected` polyfill behind `#if __cplusplus >= 202302L` guard
+- Vendored `tl/expected.hpp` in `include/note/tl/`
+- CI tests C++20 path with GCC 12 and Clang 17
+
+### Phase 12: Required field enforcement
+- Required fields (from upstream `notecard-schema` `required` arrays) become plain `T` members
+- Factory methods take required fields as parameters — compile-time enforcement
+- `api.create<T>()` bypass for incorrect annotations
+- Upstream notecard-schema rebased onto v1.2.7
+
+### Phase 13: Property extensions + schema source tracking
+- `tools/property_extensions.json` sideband file for per-property `x-format` extensions
+- `schema_to_openapi.py` loads and merges extensions during conversion
+- `x-schema-source` embeds upstream tag + commit in OpenAPI info block
+
 ### Infrastructure
 - `ci.sh` — runs codegen, header compilation checks, unit tests, smoke test
 - `ci.sh --all-compilers` — discovers and tests all locally installed compilers
+- `ci.sh --coverage` — lcov coverage with threshold checks (95%/95%/95%)
 - GitHub Actions CI: GCC 13, GCC 14, Clang 18 (with apt package caching)
+- GitHub Actions coverage: `zgosalvez/github-actions-report-lcov@v4` for PR summaries
 - `tools/size_report.sh` — code size comparison (note-cpp vs note-c)
-- Examples: `getting_started.cpp`, `attention_pin.cpp`, `location_tracking.cpp`
+- Examples: `getting_started.cpp`, `attention_pin.cpp`, `location_tracking.cpp`,
+  `sending-notes/`, `hub-configuration/`
 
-## Planned
-
-### note-app
+## note-app
 
 Higher-level app-centric library above note-cpp. Full design: `docs/note-app.md`.
 
-Key abstractions:
-- `INoteChannel` — the interface all app components depend on (not note-cpp directly)
-- `DirectChannel`, `QueuedChannel`, `TickChannel` — implementations
-- Composites — named types for fixed, non-conditional request sequences
-- Procedures — closures for conditional multi-step operations (no rollback)
-- Re-entrancy handling — composites/procedures run to completion in one tick
-- `AttentionManager`, `ConfigManager<T>`, `SyncManager` — planned components
+### Completed
 
-### Platform HAL repos
+#### Phase 1: Channel + TemplateManager
+- `DirectChannel` — synchronous single-threaded wrapper
+- `NoteChannel` concept (C++20) — duck-typed channel interface
+- `TemplateManager` — session-scoped template registration cache (FNV-1a, no heap)
+
+#### Phase 2: StateStore + SyncManager
+- `StaticStateStore<Types...>` — type-indexed, observable state cache
+- `NullStateStore` — no-op store
+- `SyncManager` — hub.sync orchestration with polling, timeout, max_age
+
+#### Phase 3: AttentionManager
+- `AttentionManager` — ATTN pin lifecycle with typed `AttnSource` bitfield
+- Default checkers for 7 sources (Env, Files, Connected, Motion, etc.)
+- Push (handlers) and pull (check_sources) models
+- Shared state types: `AttentionState`, `SyncStatus`, `ConnectionState`, `DfuState`
+
+#### Phase 4a: ConnectionManager
+- `ConnectionManager` — hub.set/get/status lifecycle
+- State-aware mode switching, connectivity verification
+- Type-safe duration units (`note::Minutes`, `note::Seconds`)
+
+#### Phase 4b: NotePublisher
+- `NotePublisher` — transparent template registration + note.add
+- Typed + untyped bodies, PublishOptions, sync/cmd shortcuts
+
+#### Phase 5: ConfigManager Phase 1
+- `ConfigManager<T, Channel>` — typed env var resolution
+- Three-layer resolution: Default ← Environment ← Override
+- `EnvSchema<T>` specialisation trait with `derive()` hook
+- `SourceMap<T>` per-field source tracking
+- `on_change`, `on_update`, `on_error` handlers
+- `poll_modified()` for change detection
+- Override management (`set_override`, `clear_override`, `clear_overrides`)
+
+### Planned
+
+#### ConfigManager Phase 2
+- Composable validators: `range()`, `one_of()`, `divisible_by()`, custom lambdas
+- `env.template` + `env.default` auto-registration on first load
+- Sub-schemas: `sub_schema<SubT>(&T::member)` nested config groups (Phase 2b)
+
+#### Channel variants
+- `QueuedChannel` — active-object pattern (deque + worker thread, RTOS)
+- `TickChannel` — cooperative (one entry per `tick()`, bare-metal Arduino)
+- Composites — named types for fixed request sequences
+- Procedures — closures for conditional multi-step operations
+
+#### Future managers
+- `DfuManager` — firmware download orchestration (IDFU + ODFU)
+- Hub connectivity monitor
+- Note queue (batch adds, flush on sync)
+- Binary transfers (`card.binary.get/put` chunking)
+
+## Platform HAL repos
+
 note-cpp is platform-neutral: it owns the full wire protocol (CRC, retry,
 segmented TX/RX, reset sync) via injectable `SerialHal` / `I2cHal` interfaces,
 matching the scope of note-c's `n_serial.c` / `n_i2c.c`. Concrete platform
@@ -161,23 +226,14 @@ glue — thin `SerialHal` / `I2cHal` subclasses — belongs in separate repos:
 - `note-espidf-cpp` — ESP-IDF UART + I2C bindings
 - `note-linux-cpp` — `/dev/ttyACM0` serial, `/dev/i2c-N` I2C
 
-Each of these depends on note-cpp and provides only the HAL glue.
-Application-level patterns (periodic sync, DFU orchestration) can live in
-whichever repo is most appropriate.
+## note-c string transaction API (superseded)
 
-### note-c string transaction API (superseded)
 Repo: `~/e/note-c`, branch: `feature/string-transaction-api` (on fork).
 L0/L1 are done; L2 not started. The note-cpp transport layer covers the same
 ground at the C++ level, so L2 work on note-c is no longer a priority.
 
-### Future considerations
-- ~~**OpenAPI Overlays**~~: done — sideband metadata lives as `x-*` extensions
-  (`x-unit`, `x-format`, `x-constants`, `x-safety`, `x-dispatch`, etc.) directly
-  in `notecard-api.openapi.json`
+## Future considerations
+
+- ~~**OpenAPI Overlays**~~: done — sideband metadata as `x-*` extensions
+- ~~**C++20 compatibility**~~: done — `tl::expected` polyfill
 - **C++20 reflection**: automatic struct binding without `NOTE_BODY` macro
-- **C++20 compatibility**: current minimum is C++23 due to `std::expected`. Dropping to C++20
-  requires swapping `std::expected`/`std::unexpected` in `types.hpp` for `tl::expected` (or a
-  vendored polyfill) behind a `#if __cplusplus >= 202302L` guard. Concepts and `consteval` are
-  already C++20. C++17 would additionally require removing concepts and replacing `consteval`
-  with `constexpr`, losing some compile-time safety. C++20 is the realistic target for embedded
-  toolchains (Arduino/ESP32/STM32 ship GCC 10–12).

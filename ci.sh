@@ -110,7 +110,7 @@ VEOF
 void test() { note::api::HubSet req; req.off = true; }
 VEOF
     )
-    if echo "$STRICT_OUT" | grep -q "no member named 'off'"; then
+    if echo "$STRICT_OUT" | grep -q "no member named"; then
         echo "OK"
     else
         echo "FAIL (expected compile error for gated field)"

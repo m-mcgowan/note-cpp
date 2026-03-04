@@ -27,6 +27,8 @@ struct WebPost {
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
     /// If `true`, the Notecard performs the web request asynchronously, and
     /// returns control to the host without waiting for a response from Notehub.
+    /// This argument only applies when the Notecard is in `continuous` mode and
+    /// currently online.
     ///
     /// @since firmware 5.1.1
 #if NOTE_API_VERSION < NOTE_VERSION(5, 1, 1)
@@ -72,13 +74,13 @@ struct WebPost {
         using Field<note::string_view>::operator=;
         WebPost& operator()(note::string_view v);
     } content{};
-    /// The name of the [local-only Database
-    /// Notefile](https://dev.blues.io/notecard/notecard-walkthrough/inbound-
-    /// requests-and-shared-data/#using-database-notefiles-for-local-only-state)
-    /// (`.dbx`) to be used if the web request is issued
-    /// [asynchronously](https://dev.blues.io/notecard/notecard-walkthrough/web-
-    /// transactions/#using-web-transactions-asynchronously) and you wish to
-    /// store the response.
+    /// The name of a local-only Database Notefile (.dbx) where the response
+    /// will be stored when the web request is executed as a queued web
+    /// transaction (e.g. if the request is made when Notecard is not in
+    /// continuous mode and not online). If `file` is not specified, queued web
+    /// transaction responses are discarded. This argument is not used when the
+    /// Notecard is in `continuous` mode and online, as responses in that case
+    /// are returned directly to the host.
     struct file_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
@@ -99,8 +101,10 @@ struct WebPost {
         using Field<note::string_view>::operator=;
         WebPost& operator()(note::string_view v);
     } name{};
-    /// The unique Note ID for the local-only Database Notefile (`.dbx`). Only
-    /// used with asynchronous web requests (see `file` argument above).
+    /// The unique Note ID within the local-only Database Notefile (.dbx)
+    /// specified by the `file` argument (see above). Used with queued web
+    /// transactions to identify a specific Note where the response will be
+    /// stored.
     struct noteId_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;

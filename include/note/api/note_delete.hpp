@@ -25,17 +25,9 @@ struct NoteDelete {
 
     /// The Notefile from which to delete a Note. Must be a Notefile with a
     /// `.db` or `.dbx` extension.
-    struct file_t : Field<note::string_view> {
-        using Field<note::string_view>::Field;
-        using Field<note::string_view>::operator=;
-        NoteDelete& operator()(note::string_view v);
-    } file{};
+    note::string_view file{};
     /// The Note ID of the Note to delete.
-    struct noteId_t : Field<note::string_view> {
-        using Field<note::string_view>::Field;
-        using Field<note::string_view>::operator=;
-        NoteDelete& operator()(note::string_view v);
-    } noteId{};
+    note::string_view noteId{};
     /// If set to `true` and using a templated Notefile, the Notefile will be
     /// written to flash immediately, rather than being cached in RAM and
     /// written to flash later.
@@ -80,8 +72,8 @@ struct NoteDelete {
     };
 
     void build(JsonBuilder& b) const {
-        if (file) b.add("file", *file);
-        if (noteId) b.add("note", *noteId);
+        b.add("file", file);
+        b.add("note", noteId);
         if (verify) b.add("verify", *verify);
         for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
             std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
@@ -97,16 +89,6 @@ struct NoteDelete {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-inline NoteDelete& NoteDelete::file_t::operator()(note::string_view v) {
-    Field<note::string_view>::operator=(v);
-    return *reinterpret_cast<NoteDelete*>(
-        reinterpret_cast<char*>(this) - offsetof(NoteDelete, file));
-}
-inline NoteDelete& NoteDelete::noteId_t::operator()(note::string_view v) {
-    Field<note::string_view>::operator=(v);
-    return *reinterpret_cast<NoteDelete*>(
-        reinterpret_cast<char*>(this) - offsetof(NoteDelete, noteId));
-}
 inline NoteDelete& NoteDelete::verify_t::operator()(bool v) {
     Field<bool>::operator=(v);
     return *reinterpret_cast<NoteDelete*>(

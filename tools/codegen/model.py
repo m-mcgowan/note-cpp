@@ -23,6 +23,7 @@ class PropertyDef:
     enum_values: list[str] | None = None
     min_api_version: str | None = None
     is_required_by_dispatch: bool = False  # True if x-dispatch requires this prop
+    is_required: bool = False  # True if in schema-level "required" array
     is_body: bool = False  # True for type:object fields (use BodyValue)
     unit: str | None = None  # "minutes", "seconds", "milliseconds"
     constants: dict | None = None  # {"reset": {"value": -1, "description": "..."}}
@@ -121,6 +122,17 @@ class OperationDef:
     response: ResponseDef = field(default_factory=ResponseDef)
     dispatch: dict | None = None
     binary_transfer: BinaryTransferDef | None = None
+
+    @property
+    def required_properties(self) -> list[PropertyDef]:
+        """Properties in the schema's required array (not dispatch-required)."""
+        return [p for p in self.properties if p.is_required and not p.is_required_by_dispatch]
+
+    @property
+    def optional_properties(self) -> list[PropertyDef]:
+        """Non-required, non-dispatch, non-body properties."""
+        return [p for p in self.properties
+                if not p.is_required and not p.is_required_by_dispatch]
 
     @property
     def has_version_gated_props(self) -> bool:

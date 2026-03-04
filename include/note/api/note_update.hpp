@@ -35,17 +35,9 @@ struct NoteUpdate {
 #endif
     } body{};
     /// The name of the DB Notefile that contains the Note to update.
-    struct file_t : Field<note::string_view> {
-        using Field<note::string_view>::Field;
-        using Field<note::string_view>::operator=;
-        NoteUpdate& operator()(note::string_view v);
-    } file{};
+    note::string_view file{};
     /// The unique Note ID.
-    struct noteId_t : Field<note::string_view> {
-        using Field<note::string_view>::Field;
-        using Field<note::string_view>::operator=;
-        NoteUpdate& operator()(note::string_view v);
-    } noteId{};
+    note::string_view noteId{};
     /// A base64-encoded binary payload. A Note must have either a `body` or
     /// `payload`, and can have both.
     struct payload_t : Field<note::string_view> {
@@ -99,8 +91,8 @@ struct NoteUpdate {
 
     void build(JsonBuilder& b) const {
         body.write_to(b);
-        if (file) b.add("file", *file);
-        if (noteId) b.add("note", *noteId);
+        b.add("file", file);
+        b.add("note", noteId);
         if (payload) b.add("payload", *payload);
         if (verify) b.add("verify", *verify);
         for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
@@ -130,16 +122,6 @@ inline NoteUpdate& NoteUpdate::body_t::operator()(const T& v) {
         reinterpret_cast<char*>(this) - offsetof(NoteUpdate, body));
 }
 #endif
-inline NoteUpdate& NoteUpdate::file_t::operator()(note::string_view v) {
-    Field<note::string_view>::operator=(v);
-    return *reinterpret_cast<NoteUpdate*>(
-        reinterpret_cast<char*>(this) - offsetof(NoteUpdate, file));
-}
-inline NoteUpdate& NoteUpdate::noteId_t::operator()(note::string_view v) {
-    Field<note::string_view>::operator=(v);
-    return *reinterpret_cast<NoteUpdate*>(
-        reinterpret_cast<char*>(this) - offsetof(NoteUpdate, noteId));
-}
 inline NoteUpdate& NoteUpdate::payload_t::operator()(note::string_view v) {
     Field<note::string_view>::operator=(v);
     return *reinterpret_cast<NoteUpdate*>(

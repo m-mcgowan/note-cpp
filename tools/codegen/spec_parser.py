@@ -144,16 +144,24 @@ def _extract_request_props_from_body(
               .get("application/json", {})
               .get("schema", {}))
     properties = schema.get("properties", {})
+    required_set = set(schema.get("required") or [])
 
     props = []
     for name, prop_schema in properties.items():
         if name in excludes:
             continue
-        props.append(_parse_property(
+        prop = _parse_property(
             name, prop_schema,
             is_request=True,
             is_required_by_dispatch=name in requires,
-        ))
+        )
+        # Mark schema-level required fields (not dispatch-required, which are
+        # handled separately as auto-emitted booleans).
+        wire = schema_key_to_wire_name(name)
+        if wire in required_set and not prop.is_required_by_dispatch:
+            prop.is_required = True
+            prop.is_optional = False
+        props.append(prop)
     return props
 
 

@@ -24,20 +24,6 @@ struct WebGet {
 
     Notecard* nc_ = nullptr;
 
-#if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
-    /// If `true`, the Notecard performs the web request asynchronously, and
-    /// returns control to the host without waiting for a response from Notehub.
-    ///
-    /// @since firmware 5.1.1
-#if NOTE_API_VERSION < NOTE_VERSION(5, 1, 1)
-    [[deprecated("requires firmware >= 5.1.1")]]
-#endif
-    struct async_t : Field<bool> {
-        using Field<bool>::Field;
-        using Field<bool>::operator=;
-        WebGet& operator()(bool v);
-    } async{};
-#endif
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
     /// If `true`, the Notecard will return the response stored in its binary
     /// buffer.
@@ -72,8 +58,13 @@ struct WebGet {
         using Field<note::string_view>::operator=;
         WebGet& operator()(note::string_view v);
     } content{};
-    /// The name of the local-only Database Notefile (`.dbx`) to be used if the
-    /// web request is issued asynchronously and you wish to store the response.
+    /// The name of a local-only Database Notefile (.dbx) where the response
+    /// will be stored when the web request is executed as a queued web
+    /// transaction (e.g. if the request is made when Notecard is not in
+    /// continuous mode and not online). If `file` is not specified, queued web
+    /// transaction responses are discarded. This argument is not used when the
+    /// Notecard is in `continuous` mode and online, as responses in that case
+    /// are returned directly to the host.
     struct file_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
@@ -95,8 +86,10 @@ struct WebGet {
         using Field<note::string_view>::operator=;
         WebGet& operator()(note::string_view v);
     } name{};
-    /// The unique Note ID for the local-only Database Notefile (`.dbx`). Only
-    /// used with asynchronous web requests (see `file` argument above).
+    /// The unique Note ID within the local-only Database Notefile (.dbx)
+    /// specified by the `file` argument (see above). Used with queued web
+    /// transactions to identify a specific Note where the response will be
+    /// stored.
     struct noteId_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
@@ -135,9 +128,6 @@ struct WebGet {
     }
 
     note::DynField operator[](note::string_view k_) {
-#if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
-        if (k_ == "async") return note::dyn_field_for(async);
-#endif
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
         if (k_ == "binary") return note::dyn_field_for(binary);
 #endif
@@ -214,9 +204,6 @@ struct WebGet {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
     void build(JsonBuilder& b) const {
-#if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
-        if (async) b.add("async", *async);
-#endif
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
         if (binary) b.add("binary", *binary);
 #endif
@@ -245,13 +232,6 @@ struct WebGet {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
-inline WebGet& WebGet::async_t::operator()(bool v) {
-    Field<bool>::operator=(v);
-    return *reinterpret_cast<WebGet*>(
-        reinterpret_cast<char*>(this) - offsetof(WebGet, async));
-}
-#endif
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
 inline WebGet& WebGet::binary_t::operator()(bool v) {
     Field<bool>::operator=(v);

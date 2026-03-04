@@ -205,8 +205,7 @@ TEST_CASE("BodyValue from reflected aggregate with nested aggregate field") {
 TEST_CASE("note.template verify:true includes verify field in request") {
     TestHarness h;
     note::Api api(h.nc);
-    api.noteTemplate().set()
-        .file("sensors.qo")
+    api.noteTemplate().set("sensors.qo")
         .body(note::template_of<Readings>())
         .verify(true)
         .execute();
@@ -258,8 +257,7 @@ TEST_CASE("note.add with reflected schema body") {
 TEST_CASE("note.template with template_of") {
     TestHarness h;
     note::Api api(h.nc);
-    api.noteTemplate().set()
-        .file("sensors.qo")
+    api.noteTemplate().set("sensors.qo")
         .body(note::template_of<Readings>())
         .execute();
     REQUIRE(h.last_request ==

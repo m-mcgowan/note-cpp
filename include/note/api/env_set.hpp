@@ -24,11 +24,7 @@ struct EnvSet {
     Notecard* nc_ = nullptr;
 
     /// The name of the environment variable (case-insensitive).
-    struct name_t : Field<note::string_view> {
-        using Field<note::string_view>::Field;
-        using Field<note::string_view>::operator=;
-        EnvSet& operator()(note::string_view v);
-    } name{};
+    note::string_view name{};
     /// The value of the variable. Pass `""` or omit from the request to delete
     /// it.
     struct text_t : Field<note::string_view> {
@@ -90,7 +86,7 @@ struct EnvSet {
     };
 
     void build(JsonBuilder& b) const {
-        if (name) b.add("name", *name);
+        b.add("name", name);
         if (text) b.add("text", *text);
         for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
             std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
@@ -106,11 +102,6 @@ struct EnvSet {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-inline EnvSet& EnvSet::name_t::operator()(note::string_view v) {
-    Field<note::string_view>::operator=(v);
-    return *reinterpret_cast<EnvSet*>(
-        reinterpret_cast<char*>(this) - offsetof(EnvSet, name));
-}
 inline EnvSet& EnvSet::text_t::operator()(note::string_view v) {
     Field<note::string_view>::operator=(v);
     return *reinterpret_cast<EnvSet*>(

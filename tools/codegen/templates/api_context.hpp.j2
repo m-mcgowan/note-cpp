@@ -35,15 +35,46 @@ public:
         Notecard* nc_;
         template<typename T> T create() { T r; r.nc_ = nc_; return r; }
 {% for op in endpoint.operations %}
+{% if op.required_properties %}
+        auto {{ op.factory_method }}({% for p in op.required_properties %}{{ p.field_type }} {{ p.accessor_name }}{{ ", " if not loop.last }}{% endfor %}) {
+            auto r = create<api::{{ endpoint.struct_name }}::{{ op.struct_name }}>();
+{% for prop in op.required_properties %}
+            r.{{ prop.accessor_name }} = {{ prop.accessor_name }};
+{% endfor %}
+            return r;
+        }
+{% else %}
         auto {{ op.factory_method }}() { return create<api::{{ endpoint.struct_name }}::{{ op.struct_name }}>(); }
+{% endif %}
 {% endfor %}
     };
     {{ endpoint.struct_name }}Factory {{ endpoint.factory_method }}() { return {&nc_}; }
 {% for op in endpoint.operations %}
+{% if op.required_properties %}
+    auto {{ endpoint.action_first_method(op) }}({% for p in op.required_properties %}{{ p.field_type }} {{ p.accessor_name }}{{ ", " if not loop.last }}{% endfor %}) {
+        auto r = create<api::{{ endpoint.struct_name }}::{{ op.struct_name }}>();
+{% for prop in op.required_properties %}
+        r.{{ prop.accessor_name }} = {{ prop.accessor_name }};
+{% endfor %}
+        return r;
+    }
+{% else %}
     auto {{ endpoint.action_first_method(op) }}() { return create<api::{{ endpoint.struct_name }}::{{ op.struct_name }}>(); }
+{% endif %}
 {% endfor %}
 {% else %}
+{% set op = endpoint.operations[0] %}
+{% if op.required_properties %}
+    auto {{ endpoint.factory_method }}({% for p in op.required_properties %}{{ p.field_type }} {{ p.accessor_name }}{{ ", " if not loop.last }}{% endfor %}) {
+        auto r = create<api::{{ endpoint.struct_name }}>();
+{% for prop in op.required_properties %}
+        r.{{ prop.accessor_name }} = {{ prop.accessor_name }};
+{% endfor %}
+        return r;
+    }
+{% else %}
     auto {{ endpoint.factory_method }}() { return create<api::{{ endpoint.struct_name }}>(); }
+{% endif %}
 {% endif %}
 
 {% endfor %}

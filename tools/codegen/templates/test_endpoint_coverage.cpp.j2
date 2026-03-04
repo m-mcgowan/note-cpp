@@ -61,17 +61,26 @@ struct FailHarness {
 {% for endpoint in endpoints %}
 {% for op in endpoint.operations %}
 {% set type_qual = (endpoint.struct_name ~ "::" ~ op.struct_name) if endpoint.is_polymorphic else endpoint.struct_name %}
-{% set settable = op.properties | rejectattr("is_required_by_dispatch") | rejectattr("is_body") | list %}
+{% set required = op.required_properties %}
+{% set settable = op.properties | rejectattr("is_required_by_dispatch") | rejectattr("is_body") | rejectattr("is_required") | list %}
 {% set rsp_props = op.response.properties | list %}
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::{{ type_qual }} request builder") {
     Harness h;
 {% if endpoint.is_polymorphic %}
+{% if required %}
+    auto req = h.api.{{ endpoint.factory_method }}().{{ op.factory_method }}({% for p in required %}{{ p | request_test_value }}{{ ", " if not loop.last }}{% endfor %});
+{% else %}
     auto req = h.api.{{ endpoint.factory_method }}().{{ op.factory_method }}();
+{% endif %}
+{% else %}
+{% if required %}
+    auto req = h.api.{{ endpoint.factory_method }}({% for p in required %}{{ p | request_test_value }}{{ ", " if not loop.last }}{% endfor %});
 {% else %}
     auto req = h.api.{{ endpoint.factory_method }}();
 {% endif %}
-    // Execute with no fields set — covers all !has_value() (false) branches.
+{% endif %}
+    // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
 {% for prop in settable %}
 {% if prop.version_guard %}
@@ -83,6 +92,9 @@ TEST_CASE("note::api::{{ type_qual }} request builder") {
 {% endif %}
 {% endfor %}
     req.execute();
+{% for prop in required %}
+    REQUIRE(h.last_req.find("\"{{ prop.wire_name }}\"") != std::string::npos);
+{% endfor %}
 {% for prop in settable %}
 {% if prop.version_guard %}
 #if NOTE_API_VERSION >= {{ prop.version_guard }} || !defined(NOTE_API_STRICT)

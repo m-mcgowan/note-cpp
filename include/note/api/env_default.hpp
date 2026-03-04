@@ -26,11 +26,7 @@ struct EnvDefault {
         Notecard* nc_ = nullptr;
 
         /// The name of the environment variable (case-insensitive).
-        struct name_t : Field<note::string_view> {
-            using Field<note::string_view>::Field;
-            using Field<note::string_view>::operator=;
-            EnvDefault::Set& operator()(note::string_view v);
-        } name{};
+        note::string_view name{};
         /// Set to `true` to trigger an immediate sync.
         struct sync_t : Field<bool> {
             using Field<bool>::Field;
@@ -80,7 +76,7 @@ struct EnvDefault {
         };
 
         void build(JsonBuilder& b) const {
-            if (name) b.add("name", *name);
+            b.add("name", name);
             if (sync) b.add("sync", *sync);
             if (text) b.add("text", *text);
             for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
@@ -103,11 +99,7 @@ struct EnvDefault {
         Notecard* nc_ = nullptr;
 
         /// The name of the environment variable (case-insensitive).
-        struct name_t : Field<note::string_view> {
-            using Field<note::string_view>::Field;
-            using Field<note::string_view>::operator=;
-            EnvDefault::Delete& operator()(note::string_view v);
-        } name{};
+        note::string_view name{};
         /// Set to `true` to trigger an immediate sync.
         struct sync_t : Field<bool> {
             using Field<bool>::Field;
@@ -149,7 +141,7 @@ struct EnvDefault {
         };
 
         void build(JsonBuilder& b) const {
-            if (name) b.add("name", *name);
+            b.add("name", name);
             if (sync) b.add("sync", *sync);
             for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
                 std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
@@ -166,11 +158,6 @@ struct EnvDefault {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-inline EnvDefault::Set& EnvDefault::Set::name_t::operator()(note::string_view v) {
-    Field<note::string_view>::operator=(v);
-    return *reinterpret_cast<EnvDefault::Set*>(
-        reinterpret_cast<char*>(this) - offsetof(EnvDefault::Set, name));
-}
 inline EnvDefault::Set& EnvDefault::Set::sync_t::operator()(bool v) {
     Field<bool>::operator=(v);
     return *reinterpret_cast<EnvDefault::Set*>(
@@ -185,11 +172,6 @@ inline EnvDefault::Set& EnvDefault::Set::text_t::operator()(note::string_view v)
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-inline EnvDefault::Delete& EnvDefault::Delete::name_t::operator()(note::string_view v) {
-    Field<note::string_view>::operator=(v);
-    return *reinterpret_cast<EnvDefault::Delete*>(
-        reinterpret_cast<char*>(this) - offsetof(EnvDefault::Delete, name));
-}
 inline EnvDefault::Delete& EnvDefault::Delete::sync_t::operator()(bool v) {
     Field<bool>::operator=(v);
     return *reinterpret_cast<EnvDefault::Delete*>(

@@ -23,8 +23,6 @@ struct CardTrace {
 
     Notecard* nc_ = nullptr;
 
-    /// Set to `"on"` to enable trace mode on a Notecard, or `"off"` to disable
-    /// it.
     // mode: on | off
     struct mode_t : Field<note::string_view> {
         using Field<note::string_view>::Field;

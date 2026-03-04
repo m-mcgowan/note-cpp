@@ -60,11 +60,7 @@ struct NoteTemplate {
             NoteTemplate::Set& operator()(bool v);
         } delete_{};
         /// The name of the Notefile to which the template will be applied.
-        struct file_t : Field<note::string_view> {
-            using Field<note::string_view>::Field;
-            using Field<note::string_view>::operator=;
-            NoteTemplate::Set& operator()(note::string_view v);
-        } file{};
+        note::string_view file{};
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
         /// By default all Note templates automatically include metadata,
         /// including a timestamp for when the Note was created, various fields
@@ -242,7 +238,7 @@ struct NoteTemplate {
         void build(JsonBuilder& b) const {
             body.write_to(b);
             if (delete_) b.add("delete", *delete_);
-            if (file) b.add("file", *file);
+            b.add("file", file);
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
             if (format) b.add("format", *format);
 #endif
@@ -286,11 +282,7 @@ struct NoteTemplate {
 #endif
         } body{};
         /// The name of the Notefile to which the template will be applied.
-        struct file_t : Field<note::string_view> {
-            using Field<note::string_view>::Field;
-            using Field<note::string_view>::operator=;
-            NoteTemplate::Delete& operator()(note::string_view v);
-        } file{};
+        note::string_view file{};
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
         /// By default all Note templates automatically include metadata,
         /// including a timestamp for when the Note was created, various fields
@@ -467,7 +459,7 @@ struct NoteTemplate {
         void build(JsonBuilder& b) const {
             body.write_to(b);
             b.add("delete", true);
-            if (file) b.add("file", *file);
+            b.add("file", file);
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
             if (format) b.add("format", *format);
 #endif
@@ -511,11 +503,6 @@ inline NoteTemplate::Set& NoteTemplate::Set::delete_t::operator()(bool v) {
     return *reinterpret_cast<NoteTemplate::Set*>(
         reinterpret_cast<char*>(this) - offsetof(NoteTemplate::Set, delete_));
 }
-inline NoteTemplate::Set& NoteTemplate::Set::file_t::operator()(note::string_view v) {
-    Field<note::string_view>::operator=(v);
-    return *reinterpret_cast<NoteTemplate::Set*>(
-        reinterpret_cast<char*>(this) - offsetof(NoteTemplate::Set, file));
-}
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
 inline NoteTemplate::Set& NoteTemplate::Set::format_t::operator()(note::string_view v) {
     Field<note::string_view>::operator=(v);
@@ -558,11 +545,6 @@ inline NoteTemplate::Delete& NoteTemplate::Delete::body_t::operator()(const T& v
         reinterpret_cast<char*>(this) - offsetof(NoteTemplate::Delete, body));
 }
 #endif
-inline NoteTemplate::Delete& NoteTemplate::Delete::file_t::operator()(note::string_view v) {
-    Field<note::string_view>::operator=(v);
-    return *reinterpret_cast<NoteTemplate::Delete*>(
-        reinterpret_cast<char*>(this) - offsetof(NoteTemplate::Delete, file));
-}
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
 inline NoteTemplate::Delete& NoteTemplate::Delete::format_t::operator()(note::string_view v) {
     Field<note::string_view>::operator=(v);

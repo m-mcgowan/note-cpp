@@ -250,8 +250,7 @@ int main() {
     // Register a Notecard template — auto-generates type hints
     // (14.1 = TFLOAT32, 11 = TINT16)
     std::puts("--- note.template ---");
-    api.noteTemplate().set()
-        .file("sensors.qo")
+    api.noteTemplate().set("sensors.qo")
         .body(note::template_of<Readings>())
         .execute();
 

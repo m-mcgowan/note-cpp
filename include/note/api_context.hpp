@@ -261,18 +261,38 @@ public:
     struct EnvDefaultFactory {
         Notecard* nc_;
         template<typename T> T create() { T r; r.nc_ = nc_; return r; }
-        auto set() { return create<api::EnvDefault::Set>(); }
-        auto delete_() { return create<api::EnvDefault::Delete>(); }
+        auto set(note::string_view name) {
+            auto r = create<api::EnvDefault::Set>();
+            r.name = name;
+            return r;
+        }
+        auto delete_(note::string_view name) {
+            auto r = create<api::EnvDefault::Delete>();
+            r.name = name;
+            return r;
+        }
     };
     EnvDefaultFactory envDefault() { return {&nc_}; }
-    auto setEnvDefault() { return create<api::EnvDefault::Set>(); }
-    auto deleteEnvDefault() { return create<api::EnvDefault::Delete>(); }
+    auto setEnvDefault(note::string_view name) {
+        auto r = create<api::EnvDefault::Set>();
+        r.name = name;
+        return r;
+    }
+    auto deleteEnvDefault(note::string_view name) {
+        auto r = create<api::EnvDefault::Delete>();
+        r.name = name;
+        return r;
+    }
 
     auto envGet() { return create<api::EnvGet>(); }
 
     auto envModified() { return create<api::EnvModified>(); }
 
-    auto envSet() { return create<api::EnvSet>(); }
+    auto envSet(note::string_view name) {
+        auto r = create<api::EnvSet>();
+        r.name = name;
+        return r;
+    }
 
     auto envTemplate() { return create<api::EnvTemplate>(); }
 
@@ -308,13 +328,26 @@ public:
         Notecard* nc_;
         template<typename T> T create() { T r; r.nc_ = nc_; return r; }
         auto get() { return create<api::NoteChanges::Get>(); }
-        auto delete_() { return create<api::NoteChanges::Delete>(); }
+        auto delete_(note::string_view file) {
+            auto r = create<api::NoteChanges::Delete>();
+            r.file = file;
+            return r;
+        }
     };
     NoteChangesFactory noteChanges() { return {&nc_}; }
     auto getNoteChanges() { return create<api::NoteChanges::Get>(); }
-    auto deleteNoteChanges() { return create<api::NoteChanges::Delete>(); }
+    auto deleteNoteChanges(note::string_view file) {
+        auto r = create<api::NoteChanges::Delete>();
+        r.file = file;
+        return r;
+    }
 
-    auto noteDelete() { return create<api::NoteDelete>(); }
+    auto noteDelete(note::string_view file, note::string_view noteId) {
+        auto r = create<api::NoteDelete>();
+        r.file = file;
+        r.noteId = noteId;
+        return r;
+    }
 
     // note.get — access via endpoint-first or action-first:
     //   noteGet().get()  or  getNoteGet()
@@ -333,14 +366,35 @@ public:
     struct NoteTemplateFactory {
         Notecard* nc_;
         template<typename T> T create() { T r; r.nc_ = nc_; return r; }
-        auto set() { return create<api::NoteTemplate::Set>(); }
-        auto delete_() { return create<api::NoteTemplate::Delete>(); }
+        auto set(note::string_view file) {
+            auto r = create<api::NoteTemplate::Set>();
+            r.file = file;
+            return r;
+        }
+        auto delete_(note::string_view file) {
+            auto r = create<api::NoteTemplate::Delete>();
+            r.file = file;
+            return r;
+        }
     };
     NoteTemplateFactory noteTemplate() { return {&nc_}; }
-    auto setNoteTemplate() { return create<api::NoteTemplate::Set>(); }
-    auto deleteNoteTemplate() { return create<api::NoteTemplate::Delete>(); }
+    auto setNoteTemplate(note::string_view file) {
+        auto r = create<api::NoteTemplate::Set>();
+        r.file = file;
+        return r;
+    }
+    auto deleteNoteTemplate(note::string_view file) {
+        auto r = create<api::NoteTemplate::Delete>();
+        r.file = file;
+        return r;
+    }
 
-    auto noteUpdate() { return create<api::NoteUpdate>(); }
+    auto noteUpdate(note::string_view file, note::string_view noteId) {
+        auto r = create<api::NoteUpdate>();
+        r.file = file;
+        r.noteId = noteId;
+        return r;
+    }
 
     auto ntnGps() { return create<api::NtnGps>(); }
 

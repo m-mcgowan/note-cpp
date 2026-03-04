@@ -72,7 +72,8 @@ TEST_CASE("HubSet with integer field") {
 TEST_CASE("EnvSet with string fields") {
     TestHarness h;
     note::api::EnvSet req;
-    req.name("temperature").text("22.5");
+    req.name = "temperature";
+    req.text("22.5");
     h.nc.execute(req);
     REQUIRE(h.last_request ==
         R"({"req":"env.set","name":"temperature","text":"22.5"})");

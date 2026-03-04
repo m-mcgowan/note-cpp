@@ -326,10 +326,10 @@ TEST_CASE("Api::dfuStatus()") {
 
 TEST_CASE("Api::envDefault() compound factory") {
     Harness h;
-    h.api.execute(h.api.envDefault().set());
-    h.api.execute(h.api.setEnvDefault());
-    h.api.execute(h.api.envDefault().delete_());
-    h.api.execute(h.api.deleteEnvDefault());
+    h.api.execute(h.api.envDefault().set(note::string_view("x-name")));
+    h.api.execute(h.api.setEnvDefault(note::string_view("x-name")));
+    h.api.execute(h.api.envDefault().delete_(note::string_view("x-name")));
+    h.api.execute(h.api.deleteEnvDefault(note::string_view("x-name")));
 }
 
 TEST_CASE("Api::envGet()") {
@@ -346,7 +346,7 @@ TEST_CASE("Api::envModified()") {
 
 TEST_CASE("Api::envSet()") {
     Harness h;
-    h.api.execute(h.api.envSet());
+    h.api.execute(h.api.envSet(note::string_view("x-name")));
     REQUIRE(h.last_req.find("env.set") != std::string::npos);
 }
 
@@ -438,13 +438,13 @@ TEST_CASE("Api::noteChanges() compound factory") {
     Harness h;
     h.api.execute(h.api.noteChanges().get());
     h.api.execute(h.api.getNoteChanges());
-    h.api.execute(h.api.noteChanges().delete_());
-    h.api.execute(h.api.deleteNoteChanges());
+    h.api.execute(h.api.noteChanges().delete_(note::string_view("x-file")));
+    h.api.execute(h.api.deleteNoteChanges(note::string_view("x-file")));
 }
 
 TEST_CASE("Api::noteDelete()") {
     Harness h;
-    h.api.execute(h.api.noteDelete());
+    h.api.execute(h.api.noteDelete(note::string_view("x-file"), note::string_view("x-note")));
     REQUIRE(h.last_req.find("note.delete") != std::string::npos);
 }
 
@@ -458,15 +458,15 @@ TEST_CASE("Api::noteGet() compound factory") {
 
 TEST_CASE("Api::noteTemplate() compound factory") {
     Harness h;
-    h.api.execute(h.api.noteTemplate().set());
-    h.api.execute(h.api.setNoteTemplate());
-    h.api.execute(h.api.noteTemplate().delete_());
-    h.api.execute(h.api.deleteNoteTemplate());
+    h.api.execute(h.api.noteTemplate().set(note::string_view("x-file")));
+    h.api.execute(h.api.setNoteTemplate(note::string_view("x-file")));
+    h.api.execute(h.api.noteTemplate().delete_(note::string_view("x-file")));
+    h.api.execute(h.api.deleteNoteTemplate(note::string_view("x-file")));
 }
 
 TEST_CASE("Api::noteUpdate()") {
     Harness h;
-    h.api.execute(h.api.noteUpdate());
+    h.api.execute(h.api.noteUpdate(note::string_view("x-file"), note::string_view("x-note")));
     REQUIRE(h.last_req.find("note.update") != std::string::npos);
 }
 

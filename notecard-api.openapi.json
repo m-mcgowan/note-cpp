@@ -1713,7 +1713,7 @@
                 "type": "object",
                 "properties": {
                   "mode": {
-                    "description": "The `AUX_CHARGING` mode. Set to `\"charging\"` to tell the Notecard that `AUX_CHARGING` is connected to a Notecarrier that supports charging on `AUX_CHARGING`. Set to `\"-\"` or `\"off\"` to turn off the `AUX_CHARGING` detection.",
+                    "description": "The `AUX_CHARGING` mode.",
                     "type": "string",
                     "enum": [
                       "charging",
@@ -1768,7 +1768,10 @@
                         "off"
                       ]
                     }
-                  }
+                  },
+                  "required": [
+                    "mode"
+                  ]
                 }
               }
             },
@@ -2240,13 +2243,14 @@
                 "type": "object",
                 "properties": {
                   "i2c": {
-                    "description": "The alternate address to use for I2C communication. Pass `-1` to [reset](https://dev.blues.io/notecard/notecard-walkthrough/essential-requests/#resetting-request-argument-values) to the default address",
+                    "description": "The alternate address to use for I2C communication.",
                     "type": "integer"
                   },
                   "mode": {
                     "description": "Used to control the Notecard's IO behavior, including USB port, LED, I2C master, NTN fallback.",
                     "type": "string",
                     "enum": [
+                      "-1",
                       "-usb",
                       "usb",
                       "+usb",
@@ -2258,6 +2262,10 @@
                       "-fallback"
                     ],
                     "x-sub-descriptions": [
+                      {
+                        "const": "-1",
+                        "description": "Send `-1` to [reset](https://dev.blues.io/notecard/notecard-walkthrough/essential-requests/#resetting-request-argument-values) to the default I2C address."
+                      },
                       {
                         "const": "-usb",
                         "description": "Set to `\"-usb\"` to disable the Notecard's USB port. Re-enable the USB port with `\"usb\"` or `\"+usb\"`."
@@ -2551,6 +2559,9 @@
                       "type": "integer"
                     }
                   },
+                  "required": [
+                    "mode"
+                  ],
                   "additionalProperties": false
                 }
               }
@@ -4611,6 +4622,10 @@
                       "type": "boolean"
                     }
                   },
+                  "required": [
+                    "status",
+                    "usb"
+                  ],
                   "additionalProperties": false
                 }
               }
@@ -4620,7 +4635,7 @@
               {
                 "title": "Notecard Status Response",
                 "description": "Example response showing Notecard operating status information.",
-                "json": "{\"status\": \"{normal}\", \"usb\": true, \"storage\": 8, \"time\": 1599684765, \"connected\": true, \"cell\": true, \"sync\": true, \"inbound\": 60, \"outbound\": 360}"
+                "json": "{\"status\": \"{normal}\", \"usb\": true, \"storage\": 8, \"time\": 1599684765, \"connected\": true, \"cell\": true, \"gps\": true, \"sync\": true, \"inbound\": 60, \"outbound\": 360}"
               }
             ],
             "x-skus": [
@@ -5108,6 +5123,9 @@
                       "type": "string"
                     }
                   },
+                  "required": [
+                    "zone"
+                  ],
                   "additionalProperties": false
                 }
               }
@@ -5160,7 +5178,6 @@
                 "type": "object",
                 "properties": {
                   "mode": {
-                    "description": "Set to `\"on\"` to enable trace mode on a Notecard, or `\"off\"` to disable it.",
                     "type": "string",
                     "enum": [
                       "on",
@@ -5483,6 +5500,9 @@
                       ]
                     }
                   },
+                  "required": [
+                    "method"
+                  ],
                   "additionalProperties": false
                 }
               }
@@ -6370,7 +6390,7 @@
               {
                 "title": "Battery-Powered with Trends",
                 "description": "Example response showing battery voltage with trend analysis.",
-                "json": "{\"mode\": \"normal\", \"usb\": false, \"value\": 3.85, \"hours\": 720, \"vmin\": 3.2, \"vmax\": 4.1, \"vavg\": 3.75, \"daily\": -0.05, \"weekly\": -0.3, \"monthly\": -0.8, \"minutes\": 43200}"
+                "json": "{\"mode\": \"normal\", \"value\": 3.85, \"hours\": 720, \"vmin\": 3.2, \"vmax\": 4.1, \"vavg\": 3.75, \"daily\": -0.05, \"weekly\": -0.3, \"monthly\": -0.8, \"minutes\": 43200}"
               }
             ],
             "x-skus": [
@@ -6623,7 +6643,7 @@
               {
                 "title": "Battery-Powered with Trends",
                 "description": "Example response showing battery voltage with trend analysis.",
-                "json": "{\"mode\": \"normal\", \"usb\": false, \"value\": 3.85, \"hours\": 720, \"vmin\": 3.2, \"vmax\": 4.1, \"vavg\": 3.75, \"daily\": -0.05, \"weekly\": -0.3, \"monthly\": -0.8, \"minutes\": 43200}"
+                "json": "{\"mode\": \"normal\", \"value\": 3.85, \"hours\": 720, \"vmin\": 3.2, \"vmax\": 4.1, \"vavg\": 3.75, \"daily\": -0.05, \"weekly\": -0.3, \"monthly\": -0.8, \"minutes\": 43200}"
               }
             ],
             "x-skus": [
@@ -7753,6 +7773,10 @@
                       "type": "string"
                     }
                   },
+                  "required": [
+                    "mode",
+                    "on"
+                  ],
                   "additionalProperties": false
                 }
               }
@@ -7832,6 +7856,9 @@
                     "type": "string"
                   }
                 },
+                "required": [
+                  "name"
+                ],
                 "additionalProperties": false
               }
             }
@@ -7921,6 +7948,9 @@
                     "type": "string"
                   }
                 },
+                "required": [
+                  "name"
+                ],
                 "additionalProperties": false
               }
             }
@@ -8150,6 +8180,9 @@
                       "x-min-api-version": "3.4.1"
                     }
                   },
+                  "required": [
+                    "time"
+                  ],
                   "additionalProperties": false
                 }
               }
@@ -8204,6 +8237,9 @@
                     "type": "string"
                   }
                 },
+                "required": [
+                  "name"
+                ],
                 "additionalProperties": false
               }
             }
@@ -8240,6 +8276,9 @@
                       "x-min-api-version": "3.4.1"
                     }
                   },
+                  "required": [
+                    "time"
+                  ],
                   "additionalProperties": false
                 }
               }
@@ -8325,6 +8364,9 @@
                       "type": "integer"
                     }
                   },
+                  "required": [
+                    "bytes"
+                  ],
                   "additionalProperties": false
                 }
               }
@@ -8552,7 +8594,7 @@
               {
                 "title": "No Pending Changes",
                 "description": "Response when no changes are pending upload.",
-                "json": "{\"total\": 0, \"changes\": 0, \"pending\": false}"
+                "json": "{}"
               },
               {
                 "title": "Multiple Files with Changes",
@@ -8768,7 +8810,7 @@
               {
                 "title": "No Pending Changes",
                 "description": "Response when no changes are pending sync.",
-                "json": "{\"total\": 25, \"changes\": 0, \"sync\": false}"
+                "json": "{\"total\": 25}"
               }
             ],
             "x-skus": [
@@ -8884,6 +8926,9 @@
                       "type": "string"
                     }
                   },
+                  "required": [
+                    "mode"
+                  ],
                   "additionalProperties": false
                 }
               }
@@ -9400,7 +9445,7 @@
               {
                 "title": "No Signals Available",
                 "description": "Response when no signals are available.",
-                "json": "{\"connected\": true, \"signals\": 0}"
+                "json": "{\"connected\": true}"
               },
               {
                 "title": "Multiple Signals Queued",
@@ -9459,6 +9504,9 @@
                       "type": "string"
                     }
                   },
+                  "required": [
+                    "status"
+                  ],
                   "additionalProperties": false
                 }
               }
@@ -9473,7 +9521,7 @@
               {
                 "title": "Disconnected Status",
                 "description": "Response when Notecard is not connected to Notehub.",
-                "json": "{\"status\": \"disconnected\", \"connected\": false}"
+                "json": "{\"status\": \"disconnected\"}"
               }
             ],
             "x-skus": [
@@ -9652,6 +9700,9 @@
                       "type": "integer"
                     }
                   },
+                  "required": [
+                    "status"
+                  ],
                   "additionalProperties": false
                 }
               }
@@ -9666,12 +9717,12 @@
               {
                 "title": "Sync Status with Penalty Box",
                 "description": "Response when Notecard is in penalty box.",
-                "json": "{\"status\": \"waiting {network-down}\", \"mode\": \"{modem-off}\", \"sync\": false, \"seconds\": 300}"
+                "json": "{\"status\": \"waiting {network-down}\", \"mode\": \"{modem-off}\", \"seconds\": 300}"
               },
               {
                 "title": "Recent Sync with Triangulation",
                 "description": "Response showing recent sync with scan data.",
-                "json": "{\"status\": \"completed {sync-end}\", \"mode\": \"{modem-off}\", \"time\": 1598367163, \"sync\": false, \"completed\": 45, \"scan\": true}"
+                "json": "{\"status\": \"completed {sync-end}\", \"mode\": \"{modem-off}\", \"time\": 1598367163, \"completed\": 45, \"scan\": true}"
               }
             ],
             "x-skus": [
@@ -11725,15 +11776,6 @@
         "x-title": "web.get Request Application Programming Interface (API) Schema",
         "parameters": [
           {
-            "name": "async",
-            "in": "query",
-            "schema": {
-              "type": "boolean",
-              "x-min-api-version": "5.1.1"
-            },
-            "description": "If `true`, the Notecard performs the web request asynchronously, and returns control to the host without waiting for a response from Notehub."
-          },
-          {
             "name": "binary",
             "in": "query",
             "schema": {
@@ -11764,7 +11806,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "The name of the local-only Database Notefile (`.dbx`) to be used if the web request is issued asynchronously and you wish to store the response."
+            "description": "The name of a local-only Database Notefile (.dbx) where the response will be stored when the web request is executed as a queued web transaction (e.g. if the request is made when Notecard is not in continuous mode and not online). If `file` is not specified, queued web transaction responses are discarded. This argument is not used when the Notecard is in `continuous` mode and online, as responses in that case are returned directly to the host."
           },
           {
             "name": "max",
@@ -11788,7 +11830,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "The unique Note ID for the local-only Database Notefile (`.dbx`). Only used with asynchronous web requests (see `file` argument above)."
+            "description": "The unique Note ID within the local-only Database Notefile (.dbx) specified by the `file` argument (see above). Used with queued web transactions to identify a specific Note where the response will be stored."
           },
           {
             "name": "offset",
@@ -11895,7 +11937,7 @@
                 "type": "object",
                 "properties": {
                   "async": {
-                    "description": "If `true`, the Notecard performs the web request asynchronously, and returns control to the host without waiting for a response from Notehub.",
+                    "description": "If `true`, the Notecard performs the web request asynchronously, and returns control to the host without waiting for a response from Notehub. This argument only applies when the Notecard is in `continuous` mode and currently online.",
                     "type": "boolean",
                     "x-min-api-version": "5.1.1"
                   },
@@ -11914,7 +11956,7 @@
                     "type": "string"
                   },
                   "file": {
-                    "description": "The name of the [local-only Database Notefile](https://dev.blues.io/notecard/notecard-walkthrough/inbound-requests-and-shared-data/#using-database-notefiles-for-local-only-state) (`.dbx`) to be used if the web request is issued [asynchronously](https://dev.blues.io/notecard/notecard-walkthrough/web-transactions/#using-web-transactions-asynchronously) and you wish to store the response.",
+                    "description": "The name of a local-only Database Notefile (.dbx) where the response will be stored when the web request is executed as a queued web transaction (e.g. if the request is made when Notecard is not in continuous mode and not online). If `file` is not specified, queued web transaction responses are discarded. This argument is not used when the Notecard is in `continuous` mode and online, as responses in that case are returned directly to the host.",
                     "type": "string"
                   },
                   "max": {
@@ -11926,7 +11968,7 @@
                     "type": "string"
                   },
                   "note": {
-                    "description": "The unique Note ID for the local-only Database Notefile (`.dbx`). Only used with asynchronous web requests (see `file` argument above).",
+                    "description": "The unique Note ID within the local-only Database Notefile (.dbx) specified by the `file` argument (see above). Used with queued web transactions to identify a specific Note where the response will be stored.",
                     "type": "string"
                   },
                   "offset": {
@@ -12051,7 +12093,7 @@
                 "type": "object",
                 "properties": {
                   "async": {
-                    "description": "If `true`, the Notecard performs the web request asynchronously, and returns control to the host without waiting for a response from Notehub.",
+                    "description": "If `true`, the Notecard performs the web request asynchronously, and returns control to the host without waiting for a response from Notehub. This argument only applies when the Notecard is in `continuous` mode and currently online.",
                     "type": "boolean",
                     "x-min-api-version": "5.1.1"
                   },
@@ -12070,7 +12112,7 @@
                     "type": "string"
                   },
                   "file": {
-                    "description": "The name of the [local-only Database Notefile](https://dev.blues.io/notecard/notecard-walkthrough/inbound-requests-and-shared-data/#using-database-notefiles-for-local-only-state) (`.dbx`) to be used if the web request is issued [asynchronously](https://dev.blues.io/notecard/notecard-walkthrough/web-transactions/#using-web-transactions-asynchronously) and you wish to store the response.",
+                    "description": "The name of a local-only Database Notefile (.dbx) where the response will be stored when the web request is executed as a queued web transaction (e.g. if the request is made when Notecard is not in continuous mode and not online). If `file` is not specified, queued web transaction responses are discarded. This argument is not used when the Notecard is in `continuous` mode and online, as responses in that case are returned directly to the host.",
                     "type": "string"
                   },
                   "max": {
@@ -12083,7 +12125,7 @@
                     "type": "string"
                   },
                   "note": {
-                    "description": "The unique Note ID for the local-only Database Notefile (`.dbx`). Only used with asynchronous web requests (see `file` argument above).",
+                    "description": "The unique Note ID within the local-only Database Notefile (.dbx) specified by the `file` argument (see above). Used with queued web transactions to identify a specific Note where the response will be stored.",
                     "type": "string"
                   },
                   "offset": {

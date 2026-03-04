@@ -23,9 +23,7 @@ struct CardIo {
 
     Notecard* nc_ = nullptr;
 
-    /// The alternate address to use for I2C communication. Pass `-1` to
-    /// [reset](https://dev.blues.io/notecard/notecard-walkthrough/essential-
-    /// requests/#resetting-request-argument-values) to the default address
+    /// The alternate address to use for I2C communication.
     struct i2c_t : Field<int32_t> {
         using Field<int32_t>::Field;
         using Field<int32_t>::operator=;
@@ -33,7 +31,7 @@ struct CardIo {
     } i2c{};
     /// Used to control the Notecard's IO behavior, including USB port, LED, I2C
     /// master, NTN fallback.
-    // mode: -usb | usb | +usb | +busy | -busy | i2c-master-disable | i2c-master-enable | +fallback | -fallback
+    // mode: -1 | -usb | usb | +usb | +busy | -busy | i2c-master-disable | i2c-master-enable | +fallback | -fallback
     struct mode_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
@@ -43,7 +41,7 @@ struct CardIo {
     // consteval: only callable at compile time
     static consteval note::string_view validatedMode(const char* v) {
         note::string_view sv{v};
-        if (sv != "-usb" && sv != "usb" && sv != "+usb" && sv != "+busy" && sv != "-busy" && sv != "i2c-master-disable" && sv != "i2c-master-enable" && sv != "+fallback" && sv != "-fallback")
+        if (sv != "-1" && sv != "-usb" && sv != "usb" && sv != "+usb" && sv != "+busy" && sv != "-busy" && sv != "i2c-master-disable" && sv != "i2c-master-enable" && sv != "+fallback" && sv != "-fallback")
             throw "card.io: invalid value for 'mode'";
         return sv;
     }

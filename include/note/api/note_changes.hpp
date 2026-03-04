@@ -159,11 +159,7 @@ struct NoteChanges {
             NoteChanges::Delete& operator()(bool v);
         } deleted{};
         /// The Notefile ID.
-        struct file_t : Field<note::string_view> {
-            using Field<note::string_view>::Field;
-            using Field<note::string_view>::operator=;
-            NoteChanges::Delete& operator()(note::string_view v);
-        } file{};
+        note::string_view file{};
         /// The maximum number of Notes to return in the request.
         struct max_t : Field<int32_t> {
             using Field<int32_t>::Field;
@@ -247,7 +243,7 @@ struct NoteChanges {
         void build(JsonBuilder& b) const {
             b.add("delete", true);
             if (deleted) b.add("deleted", *deleted);
-            if (file) b.add("file", *file);
+            b.add("file", file);
             if (max) b.add("max", *max);
             if (reset) b.add("reset", *reset);
             if (start) b.add("start", *start);
@@ -311,11 +307,6 @@ inline NoteChanges::Delete& NoteChanges::Delete::deleted_t::operator()(bool v) {
     Field<bool>::operator=(v);
     return *reinterpret_cast<NoteChanges::Delete*>(
         reinterpret_cast<char*>(this) - offsetof(NoteChanges::Delete, deleted));
-}
-inline NoteChanges::Delete& NoteChanges::Delete::file_t::operator()(note::string_view v) {
-    Field<note::string_view>::operator=(v);
-    return *reinterpret_cast<NoteChanges::Delete*>(
-        reinterpret_cast<char*>(this) - offsetof(NoteChanges::Delete, file));
 }
 inline NoteChanges::Delete& NoteChanges::Delete::max_t::operator()(int32_t v) {
     Field<int32_t>::operator=(v);

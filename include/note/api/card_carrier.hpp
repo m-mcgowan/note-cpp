@@ -23,10 +23,7 @@ struct CardCarrier {
 
     Notecard* nc_ = nullptr;
 
-    /// The `AUX_CHARGING` mode. Set to `"charging"` to tell the Notecard that
-    /// `AUX_CHARGING` is connected to a Notecarrier that supports charging on
-    /// `AUX_CHARGING`. Set to `"-"` or `"off"` to turn off the `AUX_CHARGING`
-    /// detection.
+    /// The `AUX_CHARGING` mode.
     // mode: charging | - | off
     struct mode_t : Field<note::string_view> {
         using Field<note::string_view>::Field;

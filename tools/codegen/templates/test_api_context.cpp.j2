@@ -67,15 +67,25 @@ TEST_CASE("Api::command() overload") {
 TEST_CASE("Api::{{ endpoint.factory_method }}() compound factory") {
     Harness h;
 {% for op in endpoint.operations %}
+{% if op.required_properties %}
+    h.api.execute(h.api.{{ endpoint.factory_method }}().{{ op.factory_method }}({% for p in op.required_properties %}{{ p | request_test_value }}{{ ", " if not loop.last }}{% endfor %}));
+    h.api.execute(h.api.{{ endpoint.action_first_method(op) }}({% for p in op.required_properties %}{{ p | request_test_value }}{{ ", " if not loop.last }}{% endfor %}));
+{% else %}
     h.api.execute(h.api.{{ endpoint.factory_method }}().{{ op.factory_method }}());
     h.api.execute(h.api.{{ endpoint.action_first_method(op) }}());
+{% endif %}
 {% endfor %}
 }
 
 {% else %}
+{% set op = endpoint.operations[0] %}
 TEST_CASE("Api::{{ endpoint.factory_method }}()") {
     Harness h;
+{% if op.required_properties %}
+    h.api.execute(h.api.{{ endpoint.factory_method }}({% for p in op.required_properties %}{{ p | request_test_value }}{{ ", " if not loop.last }}{% endfor %}));
+{% else %}
     h.api.execute(h.api.{{ endpoint.factory_method }}());
+{% endif %}
     REQUIRE(h.last_req.find("{{ endpoint.wire_name }}") != std::string::npos);
 }
 

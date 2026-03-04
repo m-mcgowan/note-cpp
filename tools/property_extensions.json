@@ -1,0 +1,7 @@
+{
+  "$comment": "Per-property extensions not in upstream notecard-schema. Merged into the OpenAPI spec by schema_to_openapi.py during conversion. Keys are endpoint names, values map property wire-names to extension objects.",
+  "hub.set": {
+    "vinbound":  { "x-format": "voltage-variable" },
+    "voutbound": { "x-format": "voltage-variable" }
+  }
+}

@@ -6,12 +6,13 @@ notecard-schema repo, combines them with safety_semantics.json, and emits a
 single notecard-api.openapi.json.
 
 Usage:
-    python3 schema_to_openapi.py <schema_dir> [--safety safety_semantics.json] [--binary binary_transfer.json] [-o output.json]
+    python3 schema_to_openapi.py <schema_dir> [--safety safety_semantics.json] [--binary binary_transfer.json] [--extensions property_extensions.json] [-o output.json]
 """
 
 import argparse
 import copy
 import json
+import subprocess
 import sys
 from pathlib import Path
 
@@ -292,29 +293,98 @@ def load_binary_transfer(binary_path: Path) -> dict:
     return data
 
 
+def load_property_extensions(extensions_path: Path) -> dict:
+    """Load per-property extension overrides JSON.
+
+    Returns {endpoint: {property_name: {ext_key: ext_value, ...}, ...}, ...}.
+    """
+    if not extensions_path.exists():
+        return {}
+    with open(extensions_path) as f:
+        data = json.load(f)
+    data.pop("$comment", None)
+    return data
+
+
+def detect_schema_commit(schema_dir: Path) -> str | None:
+    """Auto-detect the current git commit of the schema directory."""
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(schema_dir), "rev-parse", "--short", "HEAD"],
+            capture_output=True, text=True, timeout=5,
+        )
+        if result.returncode == 0:
+            return result.stdout.strip()
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        pass
+    return None
+
+
+def _apply_property_extensions(op: dict, ep_extensions: dict) -> None:
+    """Merge per-property extensions into an operation's request schema.
+
+    Works for both GET (parameters) and POST/PUT/DELETE (requestBody).
+    ep_extensions maps property wire-names to dicts of extension keys/values.
+    """
+    # POST/PUT/DELETE: requestBody → content → application/json → schema → properties
+    body = (op.get("requestBody", {})
+              .get("content", {})
+              .get("application/json", {})
+              .get("schema", {}))
+    props = body.get("properties", {})
+    for prop_name, ext_obj in ep_extensions.items():
+        if prop_name in props:
+            props[prop_name].update(ext_obj)
+
+    # GET: parameters list
+    for param in op.get("parameters", []):
+        name = param.get("name")
+        if name in ep_extensions:
+            param.get("schema", {}).update(ep_extensions[name])
+
+
 def convert(schema_dir: Path, safety_path: Path,
-            binary_path: Path | None = None) -> dict:
+            binary_path: Path | None = None,
+            extensions_path: Path | None = None,
+            schema_tag: str | None = None,
+            schema_commit: str | None = None) -> dict:
     """Main conversion: JSON Schema files + safety semantics -> OpenAPI 3.1."""
     requests, responses = load_schemas(schema_dir)
     safety = load_safety(safety_path)
     binary = load_binary_transfer(binary_path) if binary_path else {}
+    extensions = load_property_extensions(extensions_path) if extensions_path else {}
+
+    # Auto-detect schema commit if not provided
+    if schema_commit is None:
+        schema_commit = detect_schema_commit(schema_dir)
+
+    info = {
+        "title": "Notecard API",
+        "description": (
+            "Machine-generated OpenAPI 3.1 specification for the Blues "
+            "Notecard API, derived from the notecard-schema JSON Schema "
+            "files with safety semantics annotations."
+        ),
+        "version": requests.get("card.version", {}).get("apiVersion", "0.0.0"),
+        "contact": {"name": "Blues Inc.", "url": "https://blues.com"},
+        "license": {
+            "name": "Apache-2.0",
+            "url": "https://www.apache.org/licenses/LICENSE-2.0",
+        },
+    }
+
+    # Schema source tracking
+    source = {}
+    if schema_tag:
+        source["tag"] = schema_tag
+    if schema_commit:
+        source["commit"] = schema_commit
+    if source:
+        info["x-schema-source"] = source
 
     openapi = {
         "openapi": "3.1.0",
-        "info": {
-            "title": "Notecard API",
-            "description": (
-                "Machine-generated OpenAPI 3.1 specification for the Blues "
-                "Notecard API, derived from the notecard-schema JSON Schema "
-                "files with safety semantics annotations."
-            ),
-            "version": requests.get("card.version", {}).get("apiVersion", "0.0.0"),
-            "contact": {"name": "Blues Inc.", "url": "https://blues.com"},
-            "license": {
-                "name": "Apache-2.0",
-                "url": "https://www.apache.org/licenses/LICENSE-2.0",
-            },
-        },
+        "info": info,
         "paths": {},
     }
 
@@ -333,6 +403,8 @@ def convert(schema_dir: Path, safety_path: Path,
         path = endpoint_to_path(endpoint)
         path_item = {}
 
+        ep_extensions = extensions.get(endpoint, {})
+
         if isinstance(semantics, str):
             method = semantics.lower()
             op = build_operation(
@@ -341,6 +413,8 @@ def convert(schema_dir: Path, safety_path: Path,
             )
             if endpoint in binary:
                 op["x-binary-transfer"] = binary[endpoint]
+            if ep_extensions:
+                _apply_property_extensions(op, ep_extensions)
             path_item[method] = op
 
         elif isinstance(semantics, dict):
@@ -355,6 +429,8 @@ def convert(schema_dir: Path, safety_path: Path,
                 op["operationId"] = f"{endpoint.replace('.', '_')}_{suffix}"
                 if endpoint in binary:
                     op["x-binary-transfer"] = binary[endpoint]
+                if ep_extensions:
+                    _apply_property_extensions(op, ep_extensions)
                 path_item[method] = op
 
         openapi["paths"][path] = path_item
@@ -378,12 +454,20 @@ def main():
     parser.add_argument("--binary", type=Path,
                         default=Path(__file__).parent / "binary_transfer.json",
                         help="Path to binary_transfer.json")
+    parser.add_argument("--extensions", type=Path,
+                        default=Path(__file__).parent / "property_extensions.json",
+                        help="Path to property_extensions.json")
+    parser.add_argument("--schema-tag", type=str, default=None,
+                        help="Upstream schema version tag (e.g. v1.2.7)")
+    parser.add_argument("--schema-commit", type=str, default=None,
+                        help="Schema repo commit (auto-detected if omitted)")
     parser.add_argument("-o", "--output", type=Path,
                         default=None,
                         help="Output file (default: stdout)")
     args = parser.parse_args()
 
-    openapi = convert(args.schema_dir, args.safety, args.binary)
+    openapi = convert(args.schema_dir, args.safety, args.binary,
+                      args.extensions, args.schema_tag, args.schema_commit)
 
     output = json.dumps(openapi, indent=2)
     if args.output:

@@ -11,6 +11,10 @@
     "license": {
       "name": "Apache-2.0",
       "url": "https://www.apache.org/licenses/LICENSE-2.0"
+    },
+    "x-schema-source": {
+      "tag": "v1.2.7",
+      "commit": "3a8d729"
     }
   },
   "paths": {

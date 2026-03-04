@@ -106,8 +106,7 @@ NoteRequest(req);
 ```cpp
 // Same Readings struct auto-generates
 // the correct Notecard type hints.
-api.noteTemplate().set()
-   .file("sensors.qo")
+api.noteTemplate().set("sensors.qo")
    .body(note::template_of<Readings>())
    .execute();
 ```
@@ -299,12 +298,12 @@ api.deleteCardLocationMode().execute();
 #include <note/api/note_template.hpp>
 
 // Register a template
-api.noteTemplate().set().file("sensors.qo").body(note::template_of<Readings>()).execute();
+api.noteTemplate().set("sensors.qo").body(note::template_of<Readings>()).execute();
 //                — or —
-api.setNoteTemplate().file("sensors.qo").body(note::template_of<Readings>()).execute();
+api.setNoteTemplate("sensors.qo").body(note::template_of<Readings>()).execute();
 
 // Delete a template
-api.noteTemplate().delete_().file("sensors.qo").execute();
+api.noteTemplate().delete_("sensors.qo").execute();
 ```
 
 ### Other polymorphic endpoints
@@ -367,8 +366,7 @@ api.noteAdd().file("sensors.qo").body(r).execute();
 **Template registration** — auto-generate Notecard type hints from the struct:
 
 ```cpp
-api.noteTemplate().set()
-    .file("sensors.qo")
+api.noteTemplate().set("sensors.qo")
     .body(note::template_of<Readings>())
     .execute();
 // -> {"req":"note.template","file":"sensors.qo","body":{"temperature":14.1,"humidity":11}}

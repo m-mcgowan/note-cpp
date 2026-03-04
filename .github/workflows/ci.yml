@@ -5,6 +5,9 @@ on:
     branches: [main]
   pull_request:
 
+permissions:
+  pull-requests: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -81,9 +84,11 @@ jobs:
       - name: Generate coverage report
         run: ./ci.sh --coverage
 
-      - name: Upload coverage report
-        uses: actions/upload-artifact@v4
+      - name: Report coverage
+        uses: zgosalvez/github-actions-report-lcov@v4
         with:
-          name: coverage-report
-          path: coverage/html/
-          retention-days: 30
+          coverage-files: coverage/coverage.lcov
+          minimum-coverage: 95
+          artifact-name: coverage-report
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          update-comment: true

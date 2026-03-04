@@ -202,6 +202,53 @@ discover_compilers() {
     done
 }
 
+# ── Coverage thresholds ─────────────────────────────────────────────────────
+# Minimum acceptable coverage percentages. These match our current baselines
+# (98.5% / 99.9% / 98.9%) with a small margin so that minor fluctuations
+# from adding new code don't break the build before tests catch up.
+MIN_LINE_COV=95
+MIN_FUNC_COV=95
+MIN_BRANCH_COV=95
+
+check_coverage_thresholds() {
+    local lcov_file="$1"
+    local summary
+    summary=$(lcov --summary "$lcov_file" --rc branch_coverage=1 2>&1)
+
+    # Parse "  lines.......: 98.5% (5127 of 5206 lines)" etc.
+    local lines funcs branches
+    lines=$(echo "$summary" | awk '/lines/{gsub(/%/,""); print $2}')
+    funcs=$(echo "$summary" | awk '/functions/{gsub(/%/,""); print $2}')
+    branches=$(echo "$summary" | awk '/branches/{gsub(/%/,""); print $2}')
+
+    echo
+    local FAILED=0
+    printf "  %-20s %6s%%  (minimum: %s%%)\n" "Lines:" "$lines" "$MIN_LINE_COV"
+    printf "  %-20s %6s%%  (minimum: %s%%)\n" "Functions:" "$funcs" "$MIN_FUNC_COV"
+    printf "  %-20s %6s%%  (minimum: %s%%)\n" "Branches:" "$branches" "$MIN_BRANCH_COV"
+    echo
+
+    # awk comparison handles decimals (bash can't do floating-point)
+    if echo "$lines $MIN_LINE_COV" | awk '{exit !($1 < $2)}'; then
+        echo "FAIL: line coverage ${lines}% < ${MIN_LINE_COV}%"
+        FAILED=1
+    fi
+    if echo "$funcs $MIN_FUNC_COV" | awk '{exit !($1 < $2)}'; then
+        echo "FAIL: function coverage ${funcs}% < ${MIN_FUNC_COV}%"
+        FAILED=1
+    fi
+    if echo "$branches $MIN_BRANCH_COV" | awk '{exit !($1 < $2)}'; then
+        echo "FAIL: branch coverage ${branches}% < ${MIN_BRANCH_COV}%"
+        FAILED=1
+    fi
+    if [ "$FAILED" -ne 0 ]; then
+        echo
+        echo "Coverage below minimum thresholds. See coverage/html/index.html for details."
+        exit 1
+    fi
+    echo "  All coverage thresholds met."
+}
+
 run_coverage_clang() {
     local CXX="${CXX:-c++}"
     local CXXFLAGS="${CXXFLAGS:--std=c++2b}"
@@ -246,6 +293,8 @@ run_coverage_clang() {
         --ignore-filename-regex="tests/" \
         "${ROOT}/include/note"
 
+    check_coverage_thresholds "$OUT_DIR/coverage.lcov"
+
     genhtml "$OUT_DIR/coverage.lcov" \
         --output-directory "$OUT_DIR/html" \
         --title "note-cpp coverage (clang)" \
@@ -266,33 +315,18 @@ run_coverage() {
     # Install GCC: 'brew install gcc' (macOS) or 'apt-get install g++-13' (Ubuntu).
     # If you use clang for coverage, expect ~12% inflated function miss counts.
 
-    # lcov 2.x required: version 1.x has an internal .gcno format parser that does
-    # not support the format produced by GCC 13+, causing "Overlong record" errors.
+    # lcov 2.x required: version 1.x cannot parse GCC 13+ .gcno format files,
+    # causing "Overlong record" errors or silently empty reports.
     # Install: 'brew install lcov' (macOS) or 'apt-get install lcov' (Ubuntu 24.04+).
-    if command -v lcov >/dev/null 2>&1; then
-        local lcov_major
-        lcov_major=$(lcov --version 2>&1 | grep -oE '[0-9]+' | head -1)
-        if [ "${lcov_major:-0}" -lt 2 ] 2>/dev/null; then
-            echo "ERROR: lcov 2.x or newer is required (found: $(lcov --version 2>&1 | head -1))."
-            echo "       lcov 1.x cannot parse GCC 13+ .gcno format files."
-            echo "       Upgrade: 'brew upgrade lcov' (macOS) or 'apt-get install lcov' (Ubuntu 24.04+)."
-            exit 1
-        fi
-    fi
-
-    # lcov 2.0+ is required: lcov 1.x cannot parse GCC 13's .gcno format (produces
-    # empty reports silently). Check version before proceeding.
-    if command -v lcov >/dev/null 2>&1; then
-        local lcov_ver
-        lcov_ver=$(lcov --version 2>&1 | grep -oE '[0-9]+\.[0-9]+' | head -1)
-        local lcov_major="${lcov_ver%%.*}"
-        if [ "${lcov_major:-0}" -lt 2 ] 2>/dev/null; then
-            echo "ERROR: lcov ${lcov_ver} is too old. lcov 2.0+ is required for GCC 13 .gcno support."
-            echo "       Install: 'brew upgrade lcov' (macOS) or 'apt-get install lcov' (Ubuntu 24.04+)."
-            exit 1
-        fi
-    else
+    if ! command -v lcov >/dev/null 2>&1; then
         echo "ERROR: lcov not found. Install: 'brew install lcov' (macOS) or 'apt-get install lcov' (Ubuntu)."
+        exit 1
+    fi
+    local lcov_major
+    lcov_major=$(lcov --version 2>&1 | grep -oE '[0-9]+' | head -1)
+    if [ "${lcov_major:-0}" -lt 2 ] 2>/dev/null; then
+        echo "ERROR: lcov 2.x or newer is required (found: $(lcov --version 2>&1 | head -1))."
+        echo "       Upgrade: 'brew upgrade lcov' (macOS) or 'apt-get install lcov' (Ubuntu 24.04+)."
         exit 1
     fi
 
@@ -385,6 +419,8 @@ run_coverage() {
     echo
     echo "=== Coverage summary ==="
     lcov --summary "$OUT_DIR/coverage.lcov" --rc branch_coverage=1
+
+    check_coverage_thresholds "$OUT_DIR/coverage.lcov"
 
     echo
     echo "=== Generating HTML report → ${OUT_DIR}/html ==="

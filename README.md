@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/m-mcgowan/note-cpp/actions/workflows/ci.yml/badge.svg)](https://github.com/m-mcgowan/note-cpp/actions/workflows/ci.yml)
 
-Type-safe C++23 API for the [Blues Notecard](https://blues.com/notecard). Header-only, zero dependencies beyond the standard library.
+Type-safe C++ API for the [Blues Notecard](https://blues.com/notecard). Requires C++20 or later (C++23 recommended for full feature set). Header-only, zero dependencies beyond the standard library.
 
 > **Community project.** Not affiliated with or supported by Blues Inc. Notecard is a trademark of Blues Inc.
 

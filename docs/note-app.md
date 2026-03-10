@@ -5,21 +5,20 @@ abstractions for common Notecard usage patterns.
 
 ## Implementation Status
 
-| Component | Status |
-|-----------|--------|
-| `DirectChannel` | Done |
-| `NoteChannel` concept | Done |
-| `StaticStateStore` / `NullStateStore` | Done |
-| `TemplateManager` | Done |
-| `SyncManager` | Done |
-| `AttentionManager` | Done |
-| `ConnectionManager` | Done |
-| `NotePublisher` | Done |
-| `ConfigManager` Phase 1 (resolution, overrides, handlers) | Done |
-| `ConfigManager` Phase 2 (validators, env.template) | In progress |
-| `QueuedChannel` / `TickChannel` | Planned |
-| Composites / Procedures | Planned |
-| `DfuManager` | Planned |
+| Component | Design | Impl | Tests |
+|-----------|--------|------|-------|
+| `DirectChannel` | Done | Done | Done |
+| `StaticStateStore` / `NullStateStore` | Done | Done | Done |
+| `TemplateManager` | Done | - | - |
+| `SyncManager` | Done | - | - |
+| `AttentionManager` | Done | - | - |
+| `ConnectionManager` | Done | - | - |
+| `NotePublisher` | Done | - | - |
+| `ConfigManager` Phase 1 | Done | - | - |
+| `ConfigManager` Phase 2 | Partial | - | - |
+| `QueuedChannel` / `TickChannel` | Done | - | - |
+| Composites / Procedures | Done | - | - |
+| `DfuManager` | Outline | - | - |
 
 The sections below describe the full vision. See the table above for current
 state.

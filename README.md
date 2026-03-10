@@ -606,3 +606,24 @@ This produces per-endpoint headers in `include/note/api/`, umbrella headers, the
 Runs code generation, checks every header compiles independently, runs unit tests, and builds the examples. Requires a C++23 compiler (GCC 13+, Clang 18+, Apple Clang 15+).
 
 Coverage generates `coverage/html/index.html`. Current results: ~98.5% lines, ~99.9% functions, ~98.9% branches. See [docs/coverage.md](docs/coverage.md) for toolchain requirements and details.
+
+---
+
+## Status
+
+| Feature | Design | Docs | Impl | Tests | Examples | Since | Updated |
+|---------|--------|------|------|-------|----------|-------|---------|
+| **Core types (Result, Error, Field)** | [types.hpp](include/note/types.hpp), [error.hpp](include/note/error.hpp), [field.hpp](include/note/field.hpp) | [PLAN.md](docs/PLAN.md) | same | [test_types](tests/test_types.cpp), [test_field](tests/test_property_functor.cpp) | | | |
+| **JSON abstraction** | [json.hpp](include/note/json.hpp) | [PLAN.md](docs/PLAN.md) | [json.hpp](include/note/json.hpp) | [test_json_buf](tests/test_json_buf.cpp), [test_wire_format](tests/test_wire_format.cpp) | | | |
+| **Notecard coordinator** | [notecard.hpp](include/note/notecard.hpp) | [PLAN.md](docs/PLAN.md) | [notecard.hpp](include/note/notecard.hpp) | [test_notecard](tests/test_notecard.cpp) | | | |
+| **74 generated API endpoints** | [api/](include/note/api/) | [PLAN.md](docs/PLAN.md) | [api/](include/note/api/) | [test_endpoint_coverage](tests/test_endpoint_coverage.cpp), [test_samples](tests/test_samples.cpp) | | | |
+| **Body schema (NOTE_FIELDS)** | [body.hpp](include/note/body.hpp) | [PLAN.md](docs/PLAN.md) | [body.hpp](include/note/body.hpp) | [test_body](tests/test_body.cpp) | [sending-notes](examples/sending-notes/) | | |
+| **Serial transport** | [serial.hpp](include/note/transport/serial.hpp) | [transport.md](docs/transport.md) | [serial.hpp](include/note/transport/serial.hpp) | [test_transport_serial](tests/test_transport_serial.cpp) | | | |
+| **I2C transport** | [i2c.hpp](include/note/transport/i2c.hpp) | [transport.md](docs/transport.md) | [i2c.hpp](include/note/transport/i2c.hpp) | [test_transport_i2c](tests/test_transport_i2c.cpp) | | | |
+| **constexpr JSON (JsonBuf)** | [json_buf.hpp](include/note/json_buf.hpp) | [PLAN.md](docs/PLAN.md) | [json_buf.hpp](include/note/json_buf.hpp) | [test_json_buf](tests/test_json_buf.cpp) | | | |
+| **Protocol policy** | [protocol_policy.hpp](include/note/transport/protocol_policy.hpp) | [PLAN.md](docs/PLAN.md) | same | [test_samples](tests/test_samples.cpp) | | | |
+| **Duration units** | [units.hpp](include/note/units.hpp) | | [units.hpp](include/note/units.hpp) | [test_samples](tests/test_samples.cpp) | | | |
+| **VoltageVariable** | [voltage_variable.hpp](include/note/voltage_variable.hpp) | | same | [test_voltage_variable](tests/test_voltage_variable.cpp) | | | |
+| **Code generation tooling** | [codegen/](tools/codegen/) | [PLAN.md](docs/PLAN.md) | [generate.py](tools/codegen/generate.py) | | | | |
+| **DirectChannel** | [channel.hpp](include/note/app/channel.hpp) | [note-app.md](docs/note-app.md) | same | [test_channel](tests/test_channel.cpp) | | | |
+| **StaticStateStore** | [state_store.hpp](include/note/app/state_store.hpp) | [note-app.md](docs/note-app.md) | same | [test_state_store](tests/test_state_store.cpp) | | | |

@@ -159,56 +159,50 @@ Type-safe C++23 API for the Blues Notecard. Header-only, zero dependencies beyon
 
 Higher-level app-centric library above note-cpp. Full design: `docs/note-app.md`.
 
-### Completed
+### Progress
 
-#### Phase 1: Channel + TemplateManager
-- `DirectChannel` — synchronous single-threaded wrapper
-- `NoteChannel` concept (C++20) — duck-typed channel interface
-- `TemplateManager` — session-scoped template registration cache (FNV-1a, no heap)
+| Component          | Design  | Impl | Tests | Examples | Docs |
+|--------------------|---------|------|-------|----------|------|
+| DirectChannel      | done    | done | done  |    -     |  -   |
+| StaticStateStore   | done    | done | done  |    -     |  -   |
+| NullStateStore     | done    | done | done  |    -     |  -   |
+| TemplateManager    | done    |  -   |   -   |    -     |  -   |
+| SyncManager        | done    |  -   |   -   |    -     |  -   |
+| AttentionManager   | done    |  -   |   -   |    -     |  -   |
+| ConnectionManager  | done    |  -   |   -   |    -     |  -   |
+| NotePublisher      | done    |  -   |   -   |    -     |  -   |
+| ConfigManager Ph1  | done    |  -   |   -   |    -     |  -   |
+| ConfigManager Ph2  | partial |  -   |   -   |    -     |  -   |
+| QueuedChannel      | done    |  -   |   -   |    -     |  -   |
+| TickChannel        | done    |  -   |   -   |    -     |  -   |
+| Composites         | done    |  -   |   -   |    -     |  -   |
+| Procedures         | done    |  -   |   -   |    -     |  -   |
+| DfuManager         | outline |  -   |   -   |    -     |  -   |
 
-#### Phase 2: StateStore + SyncManager
-- `StaticStateStore<Types...>` — type-indexed, observable state cache
+### Design details
+
+Full design: `docs/note-app.md`.
+
+#### Foundation (implemented)
+- `DirectChannel` — synchronous single-threaded wrapper (`include/note/app/channel.hpp`)
+- `StaticStateStore<Types...>` — type-indexed, observable state cache (`include/note/app/state_store.hpp`)
 - `NullStateStore` — no-op store
+
+#### Managers (designed, not yet implemented)
+- `TemplateManager` — session-scoped template registration cache (FNV-1a, no heap)
 - `SyncManager` — hub.sync orchestration with polling, timeout, max_age
-
-#### Phase 3: AttentionManager
 - `AttentionManager` — ATTN pin lifecycle with typed `AttnSource` bitfield
-- Default checkers for 7 sources (Env, Files, Connected, Motion, etc.)
-- Push (handlers) and pull (check_sources) models
-- Shared state types: `AttentionState`, `SyncStatus`, `ConnectionState`, `DfuState`
-
-#### Phase 4a: ConnectionManager
 - `ConnectionManager` — hub.set/get/status lifecycle
-- State-aware mode switching, connectivity verification
-- Type-safe duration units (`note::Minutes`, `note::Seconds`)
-
-#### Phase 4b: NotePublisher
 - `NotePublisher` — transparent template registration + note.add
-- Typed + untyped bodies, PublishOptions, sync/cmd shortcuts
+- `ConfigManager` — typed env var resolution, three-layer priority, validators
 
-#### Phase 5: ConfigManager Phase 1
-- `ConfigManager<T, Channel>` — typed env var resolution
-- Three-layer resolution: Default ← Environment ← Override
-- `EnvSchema<T>` specialisation trait with `derive()` hook
-- `SourceMap<T>` per-field source tracking
-- `on_change`, `on_update`, `on_error` handlers
-- `poll_modified()` for change detection
-- Override management (`set_override`, `clear_override`, `clear_overrides`)
-
-### Planned
-
-#### ConfigManager Phase 2
-- Composable validators: `range()`, `one_of()`, `divisible_by()`, custom lambdas
-- `env.template` + `env.default` auto-registration on first load
-- Sub-schemas: `sub_schema<SubT>(&T::member)` nested config groups (Phase 2b)
-
-#### Channel variants
+#### Channel variants (designed, not yet implemented)
 - `QueuedChannel` — active-object pattern (deque + worker thread, RTOS)
 - `TickChannel` — cooperative (one entry per `tick()`, bare-metal Arduino)
 - Composites — named types for fixed request sequences
 - Procedures — closures for conditional multi-step operations
 
-#### Future managers
+#### Future
 - `DfuManager` — firmware download orchestration (IDFU + ODFU)
 - Hub connectivity monitor
 - Note queue (batch adds, flush on sync)

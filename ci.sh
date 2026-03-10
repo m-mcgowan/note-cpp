@@ -78,7 +78,9 @@ run_ci() {
         "$ROOT/tests/test_notecard.cpp" \
         "$ROOT/tests/test_api_context.cpp" \
         "$ROOT/tests/test_endpoint_coverage.cpp" \
-        "$ROOT/tests/test_voltage_variable.cpp"
+        "$ROOT/tests/test_voltage_variable.cpp" \
+        "$ROOT/tests/test_channel.cpp" \
+        "$ROOT/tests/test_state_store.cpp"
     /tmp/note-cpp-tests
     echo "  tests: OK"
 
@@ -385,6 +387,7 @@ run_coverage() {
         test_transport_crc32 test_transport_serial test_transport_i2c
         test_notecard test_api_context test_endpoint_coverage
         test_voltage_variable
+        test_channel test_state_store
     )
     for name in "${SRCS[@]}"; do
         "$GCC" $CXXFLAGS --coverage -fprofile-arcs $INCLUDE -I "$ROOT/tests" \

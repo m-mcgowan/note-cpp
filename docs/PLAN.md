@@ -234,6 +234,26 @@ Repo: `~/e/note-c`, branch: `feature/string-transaction-api` (on fork).
 L0/L1 are done; L2 not started. The note-cpp transport layer covers the same
 ground at the C++ level, so L2 work on note-c is no longer a priority.
 
+## Component status
+
+| Feature | Design | Docs | Impl | Tests | Examples |
+|---------|--------|------|------|-------|----------|
+| **Core types (Result, Error, Field)** | [types.hpp](../include/note/types.hpp), [error.hpp](../include/note/error.hpp), [field.hpp](../include/note/field.hpp) | PLAN.md | same | [test_types](../tests/test_types.cpp), [test_field](../tests/test_property_functor.cpp) | |
+| **JSON abstraction** | [json.hpp](../include/note/json.hpp) | PLAN.md | same | [test_json_buf](../tests/test_json_buf.cpp), [test_wire_format](../tests/test_wire_format.cpp) | |
+| **Notecard coordinator** | [notecard.hpp](../include/note/notecard.hpp) | PLAN.md | same | [test_notecard](../tests/test_notecard.cpp) | |
+| **74 generated API endpoints** | [api/](../include/note/api/) | PLAN.md | same | [test_endpoint_coverage](../tests/test_endpoint_coverage.cpp), [test_samples](../tests/test_samples.cpp) | |
+| **Body schema (NOTE_FIELDS)** | [body.hpp](../include/note/body.hpp) | PLAN.md | same | [test_body](../tests/test_body.cpp) | [sending-notes](../examples/sending-notes/) |
+| **Serial transport** | [serial.hpp](../include/note/transport/serial.hpp) | [transport.md](transport.md) | same | [test_transport_serial](../tests/test_transport_serial.cpp) | |
+| **I2C transport** | [i2c.hpp](../include/note/transport/i2c.hpp) | [transport.md](transport.md) | same | [test_transport_i2c](../tests/test_transport_i2c.cpp) | |
+| **constexpr JSON (JsonBuf)** | [json_buf.hpp](../include/note/json_buf.hpp) | PLAN.md | same | [test_json_buf](../tests/test_json_buf.cpp) | |
+| **Protocol policy** | [protocol_policy.hpp](../include/note/transport/protocol_policy.hpp) | PLAN.md | same | [test_samples](../tests/test_samples.cpp) | |
+| **Duration units** | [units.hpp](../include/note/units.hpp) | | same | [test_samples](../tests/test_samples.cpp) | |
+| **VoltageVariable** | [voltage_variable.hpp](../include/note/voltage_variable.hpp) | | same | [test_voltage_variable](../tests/test_voltage_variable.cpp) | |
+| **Target filtering** | [target.hpp](../include/note/target.hpp) | PLAN.md | same | [test_target](../tests/test_target.cpp), [test_make_api](../tests/test_make_api.cpp) | [target_filtering](../examples/target_filtering.cpp) |
+| **Code generation tooling** | [codegen/](../tools/codegen/) | PLAN.md | [generate.py](../tools/codegen/generate.py) | | |
+| **DirectChannel** | [channel.hpp](../include/note/app/channel.hpp) | [note-app.md](note-app.md) | same | [test_channel](../tests/test_channel.cpp) | |
+| **StaticStateStore** | [state_store.hpp](../include/note/app/state_store.hpp) | [note-app.md](note-app.md) | same | [test_state_store](../tests/test_state_store.cpp) | |
+
 ## Future considerations
 
 - ~~**OpenAPI Overlays**~~: done — sideband metadata as `x-*` extensions

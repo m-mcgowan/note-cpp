@@ -10,7 +10,7 @@
 // When C++20 is available, plain aggregate structs can be used as body values
 // with zero boilerplate. Field names are extracted automatically.
 //
-// For C++17, use the NOTE_BODY() macro inside the struct definition.
+// For C++17, use the NOTE_FIELDS() macro inside the struct definition.
 
 #if __cplusplus >= 202002L
 #define NTEST  // disable qlibs/reflect self-tests
@@ -87,17 +87,17 @@ BodyValue body(const Fn& fn) {
 
 
 // ── Schema infrastructure ───────────────────────────────────────────────────
-// Detect whether T has schema support (either via reflection or NOTE_BODY).
+// Detect whether T has schema support (either via reflection or NOTE_FIELDS).
 
 namespace detail {
 
-// ── C++17 fallback: NOTE_BODY macro support ─────────────────────────────────
+// ── C++17 fallback: NOTE_FIELDS macro support ────────────────────────────────
 // Trait for macro-registered schemas.
 template<typename T, typename = void>
-struct has_note_body_trait : std::false_type {};
+struct has_note_fields_trait : std::false_type {};
 
 template<typename T>
-struct has_note_body_trait<T, std::void_t<decltype(T::_note_body_write(
+struct has_note_fields_trait<T, std::void_t<decltype(T::_note_fields_write(
     std::declval<const T&>(), std::declval<JsonBuilder&>()))>>
     : std::true_type {};
 
@@ -145,12 +145,12 @@ void write_aggregate(const T& obj, JsonBuilder& b) {
 
 // Concept: type that can be used as a body value.
 template<typename T>
-concept BodySchema = ReflectableAggregate<T> || has_note_body_trait<T>::value;
+concept BodySchema = ReflectableAggregate<T> || has_note_fields_trait<T>::value;
 
 #else // C++17
 
 template<typename T, typename = void>
-struct is_body_schema : has_note_body_trait<T> {};
+struct is_body_schema : has_note_fields_trait<T> {};
 
 #endif
 
@@ -205,13 +205,13 @@ void write_template_hints(JsonBuilder& b) {
 template<typename T>
     requires detail::BodySchema<T>
 BodyValue make_schema_body(const T& obj) {
-    if constexpr (detail::has_note_body_trait<T>::value) {
-        // Use the NOTE_BODY macro-generated writer.
+    if constexpr (detail::has_note_fields_trait<T>::value) {
+        // Use the NOTE_FIELDS macro-generated writer.
         return BodyValue(
             static_cast<const void*>(&obj),
             static_cast<BodyValue::WriteFn>([](const void* ctx, string_view, JsonBuilder& b) {
                 b.begin_object("body");
-                T::_note_body_write(*static_cast<const T*>(ctx), b);
+                T::_note_fields_write(*static_cast<const T*>(ctx), b);
                 b.end_object();
             })
         );
@@ -231,14 +231,14 @@ BodyValue make_schema_body(const T& obj) {
 #else // C++17
 
 template<typename T,
-    typename = std::enable_if_t<detail::has_note_body_trait<T>::value>>
+    typename = std::enable_if_t<detail::has_note_fields_trait<T>::value>>
 BodyValue make_schema_body(const T& obj) {
     return BodyValue(
         static_cast<const void*>(&obj),
         string_view{},
         [](const void* ctx, string_view, JsonBuilder& b) {
             b.begin_object("body");
-            T::_note_body_write(*static_cast<const T*>(ctx), b);
+            T::_note_fields_write(*static_cast<const T*>(ctx), b);
             b.end_object();
         }
     );
@@ -274,121 +274,127 @@ BodyValue template_of() {
 #endif
 
 
-// ── NOTE_BODY macro (C++17 fallback) ────────────────────────────────────────
+// ── NOTE_FIELDS macro (C++17 fallback) ───────────────────────────────────────
 // Usage:
 //   struct Readings {
 //       float temperature;
 //       int16_t humidity;
-//       NOTE_BODY(temperature, humidity)
+//       NOTE_FIELDS(temperature, humidity)
 //   };
 //
-// Generates a static _note_body_write() method that the BodyValue machinery
-// detects and uses for serialization.
+// On C++20 and later, plain aggregates work automatically via reflection —
+// this macro is only needed for C++17 compatibility.
+//
+// Generates static _note_fields_write() and _note_fields_read() methods
+// that the BodyValue machinery detects and uses for serialization.
 
-#define _NOTE_BODY_WRITE_FIELD(obj, b, field) \
+#define _NOTE_FIELDS_WRITE_FIELD(obj, b, field) \
     ::note::detail::_note_write_field(b, #field, (obj).field);
 
-#define _NOTE_BODY_READ_FIELD(obj, r, field) \
+#define _NOTE_FIELDS_READ_FIELD(obj, r, field) \
     ::note::detail::_note_read_field(r, #field, (obj).field);
 
-#define NOTE_BODY(...) \
-    static void _note_body_write(const auto& _self, ::note::JsonBuilder& _b) { \
-        _NOTE_BODY_EXPAND(_NOTE_BODY_WRITE_EACH(_self, _b, __VA_ARGS__)) \
+#define NOTE_FIELDS(...) \
+    static void _note_fields_write(const auto& _self, ::note::JsonBuilder& _b) { \
+        _NOTE_FIELDS_EXPAND(_NOTE_FIELDS_WRITE_EACH(_self, _b, __VA_ARGS__)) \
     } \
-    static void _note_body_read(auto& _self, const ::note::JsonReader& _r) { \
-        _NOTE_BODY_EXPAND(_NOTE_BODY_READ_EACH(_self, _r, __VA_ARGS__)) \
+    static void _note_fields_read(auto& _self, const ::note::JsonReader& _r) { \
+        _NOTE_FIELDS_EXPAND(_NOTE_FIELDS_READ_EACH(_self, _r, __VA_ARGS__)) \
     }
 
+// Deprecated compatibility alias.
+#define NOTE_BODY(...) NOTE_FIELDS(__VA_ARGS__)
+
 // Macro helpers for field iteration (write path).
-#define _NOTE_BODY_EXPAND(...) __VA_ARGS__
-#define _NOTE_BODY_WRITE_EACH(obj, b, ...) \
-    _NOTE_BODY_WRITE_MAP(obj, b, __VA_ARGS__)
-#define _NOTE_BODY_WRITE_MAP(obj, b, ...) \
-    _NOTE_BODY_WRITE_MAP_N(obj, b, __VA_ARGS__, \
+#define _NOTE_FIELDS_EXPAND(...) __VA_ARGS__
+#define _NOTE_FIELDS_WRITE_EACH(obj, b, ...) \
+    _NOTE_FIELDS_WRITE_MAP(obj, b, __VA_ARGS__)
+#define _NOTE_FIELDS_WRITE_MAP(obj, b, ...) \
+    _NOTE_FIELDS_WRITE_MAP_N(obj, b, __VA_ARGS__, \
         16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1)
-#define _NOTE_BODY_WRITE_MAP_N(obj, b, \
+#define _NOTE_FIELDS_WRITE_MAP_N(obj, b, \
     f1,f2,f3,f4,f5,f6,f7,f8,f9,f10,f11,f12,f13,f14,f15,f16, N, ...) \
-    _NOTE_BODY_WRITE_MAP_##N(obj, b, \
+    _NOTE_FIELDS_WRITE_MAP_##N(obj, b, \
         f1,f2,f3,f4,f5,f6,f7,f8,f9,f10,f11,f12,f13,f14,f15,f16)
-#define _NOTE_BODY_WRITE_MAP_1(obj, b, f1, ...) \
-    _NOTE_BODY_WRITE_FIELD(obj, b, f1)
-#define _NOTE_BODY_WRITE_MAP_2(obj, b, f1, f2, ...) \
-    _NOTE_BODY_WRITE_FIELD(obj, b, f1) _NOTE_BODY_WRITE_FIELD(obj, b, f2)
-#define _NOTE_BODY_WRITE_MAP_3(obj, b, f1, f2, f3, ...) \
-    _NOTE_BODY_WRITE_MAP_2(obj, b, f1, f2) _NOTE_BODY_WRITE_FIELD(obj, b, f3)
-#define _NOTE_BODY_WRITE_MAP_4(obj, b, f1, f2, f3, f4, ...) \
-    _NOTE_BODY_WRITE_MAP_3(obj, b, f1, f2, f3) _NOTE_BODY_WRITE_FIELD(obj, b, f4)
-#define _NOTE_BODY_WRITE_MAP_5(obj, b, f1, f2, f3, f4, f5, ...) \
-    _NOTE_BODY_WRITE_MAP_4(obj, b, f1, f2, f3, f4) _NOTE_BODY_WRITE_FIELD(obj, b, f5)
-#define _NOTE_BODY_WRITE_MAP_6(obj, b, f1, f2, f3, f4, f5, f6, ...) \
-    _NOTE_BODY_WRITE_MAP_5(obj, b, f1, f2, f3, f4, f5) _NOTE_BODY_WRITE_FIELD(obj, b, f6)
-#define _NOTE_BODY_WRITE_MAP_7(obj, b, f1, f2, f3, f4, f5, f6, f7, ...) \
-    _NOTE_BODY_WRITE_MAP_6(obj, b, f1, f2, f3, f4, f5, f6) _NOTE_BODY_WRITE_FIELD(obj, b, f7)
-#define _NOTE_BODY_WRITE_MAP_8(obj, b, f1, f2, f3, f4, f5, f6, f7, f8, ...) \
-    _NOTE_BODY_WRITE_MAP_7(obj, b, f1, f2, f3, f4, f5, f6, f7) _NOTE_BODY_WRITE_FIELD(obj, b, f8)
-#define _NOTE_BODY_WRITE_MAP_9(obj, b, f1, f2, f3, f4, f5, f6, f7, f8, f9, ...) \
-    _NOTE_BODY_WRITE_MAP_8(obj, b, f1, f2, f3, f4, f5, f6, f7, f8) _NOTE_BODY_WRITE_FIELD(obj, b, f9)
-#define _NOTE_BODY_WRITE_MAP_10(obj, b, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, ...) \
-    _NOTE_BODY_WRITE_MAP_9(obj, b, f1, f2, f3, f4, f5, f6, f7, f8, f9) _NOTE_BODY_WRITE_FIELD(obj, b, f10)
-#define _NOTE_BODY_WRITE_MAP_11(obj, b, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, ...) \
-    _NOTE_BODY_WRITE_MAP_10(obj, b, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10) _NOTE_BODY_WRITE_FIELD(obj, b, f11)
-#define _NOTE_BODY_WRITE_MAP_12(obj, b, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, ...) \
-    _NOTE_BODY_WRITE_MAP_11(obj, b, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11) _NOTE_BODY_WRITE_FIELD(obj, b, f12)
-#define _NOTE_BODY_WRITE_MAP_13(obj, b, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, ...) \
-    _NOTE_BODY_WRITE_MAP_12(obj, b, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12) _NOTE_BODY_WRITE_FIELD(obj, b, f13)
-#define _NOTE_BODY_WRITE_MAP_14(obj, b, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, ...) \
-    _NOTE_BODY_WRITE_MAP_13(obj, b, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13) _NOTE_BODY_WRITE_FIELD(obj, b, f14)
-#define _NOTE_BODY_WRITE_MAP_15(obj, b, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, f15, ...) \
-    _NOTE_BODY_WRITE_MAP_14(obj, b, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14) _NOTE_BODY_WRITE_FIELD(obj, b, f15)
-#define _NOTE_BODY_WRITE_MAP_16(obj, b, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, f15, f16, ...) \
-    _NOTE_BODY_WRITE_MAP_15(obj, b, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, f15) _NOTE_BODY_WRITE_FIELD(obj, b, f16)
+#define _NOTE_FIELDS_WRITE_MAP_1(obj, b, f1, ...) \
+    _NOTE_FIELDS_WRITE_FIELD(obj, b, f1)
+#define _NOTE_FIELDS_WRITE_MAP_2(obj, b, f1, f2, ...) \
+    _NOTE_FIELDS_WRITE_FIELD(obj, b, f1) _NOTE_FIELDS_WRITE_FIELD(obj, b, f2)
+#define _NOTE_FIELDS_WRITE_MAP_3(obj, b, f1, f2, f3, ...) \
+    _NOTE_FIELDS_WRITE_MAP_2(obj, b, f1, f2) _NOTE_FIELDS_WRITE_FIELD(obj, b, f3)
+#define _NOTE_FIELDS_WRITE_MAP_4(obj, b, f1, f2, f3, f4, ...) \
+    _NOTE_FIELDS_WRITE_MAP_3(obj, b, f1, f2, f3) _NOTE_FIELDS_WRITE_FIELD(obj, b, f4)
+#define _NOTE_FIELDS_WRITE_MAP_5(obj, b, f1, f2, f3, f4, f5, ...) \
+    _NOTE_FIELDS_WRITE_MAP_4(obj, b, f1, f2, f3, f4) _NOTE_FIELDS_WRITE_FIELD(obj, b, f5)
+#define _NOTE_FIELDS_WRITE_MAP_6(obj, b, f1, f2, f3, f4, f5, f6, ...) \
+    _NOTE_FIELDS_WRITE_MAP_5(obj, b, f1, f2, f3, f4, f5) _NOTE_FIELDS_WRITE_FIELD(obj, b, f6)
+#define _NOTE_FIELDS_WRITE_MAP_7(obj, b, f1, f2, f3, f4, f5, f6, f7, ...) \
+    _NOTE_FIELDS_WRITE_MAP_6(obj, b, f1, f2, f3, f4, f5, f6) _NOTE_FIELDS_WRITE_FIELD(obj, b, f7)
+#define _NOTE_FIELDS_WRITE_MAP_8(obj, b, f1, f2, f3, f4, f5, f6, f7, f8, ...) \
+    _NOTE_FIELDS_WRITE_MAP_7(obj, b, f1, f2, f3, f4, f5, f6, f7) _NOTE_FIELDS_WRITE_FIELD(obj, b, f8)
+#define _NOTE_FIELDS_WRITE_MAP_9(obj, b, f1, f2, f3, f4, f5, f6, f7, f8, f9, ...) \
+    _NOTE_FIELDS_WRITE_MAP_8(obj, b, f1, f2, f3, f4, f5, f6, f7, f8) _NOTE_FIELDS_WRITE_FIELD(obj, b, f9)
+#define _NOTE_FIELDS_WRITE_MAP_10(obj, b, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, ...) \
+    _NOTE_FIELDS_WRITE_MAP_9(obj, b, f1, f2, f3, f4, f5, f6, f7, f8, f9) _NOTE_FIELDS_WRITE_FIELD(obj, b, f10)
+#define _NOTE_FIELDS_WRITE_MAP_11(obj, b, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, ...) \
+    _NOTE_FIELDS_WRITE_MAP_10(obj, b, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10) _NOTE_FIELDS_WRITE_FIELD(obj, b, f11)
+#define _NOTE_FIELDS_WRITE_MAP_12(obj, b, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, ...) \
+    _NOTE_FIELDS_WRITE_MAP_11(obj, b, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11) _NOTE_FIELDS_WRITE_FIELD(obj, b, f12)
+#define _NOTE_FIELDS_WRITE_MAP_13(obj, b, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, ...) \
+    _NOTE_FIELDS_WRITE_MAP_12(obj, b, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12) _NOTE_FIELDS_WRITE_FIELD(obj, b, f13)
+#define _NOTE_FIELDS_WRITE_MAP_14(obj, b, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, ...) \
+    _NOTE_FIELDS_WRITE_MAP_13(obj, b, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13) _NOTE_FIELDS_WRITE_FIELD(obj, b, f14)
+#define _NOTE_FIELDS_WRITE_MAP_15(obj, b, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, f15, ...) \
+    _NOTE_FIELDS_WRITE_MAP_14(obj, b, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14) _NOTE_FIELDS_WRITE_FIELD(obj, b, f15)
+#define _NOTE_FIELDS_WRITE_MAP_16(obj, b, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, f15, f16, ...) \
+    _NOTE_FIELDS_WRITE_MAP_15(obj, b, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, f15) _NOTE_FIELDS_WRITE_FIELD(obj, b, f16)
 
 // Macro helpers for field iteration (read path).
-#define _NOTE_BODY_READ_EACH(obj, r, ...) \
-    _NOTE_BODY_READ_MAP(obj, r, __VA_ARGS__)
-#define _NOTE_BODY_READ_MAP(obj, r, ...) \
-    _NOTE_BODY_READ_MAP_N(obj, r, __VA_ARGS__, \
+#define _NOTE_FIELDS_READ_EACH(obj, r, ...) \
+    _NOTE_FIELDS_READ_MAP(obj, r, __VA_ARGS__)
+#define _NOTE_FIELDS_READ_MAP(obj, r, ...) \
+    _NOTE_FIELDS_READ_MAP_N(obj, r, __VA_ARGS__, \
         16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1)
-#define _NOTE_BODY_READ_MAP_N(obj, r, \
+#define _NOTE_FIELDS_READ_MAP_N(obj, r, \
     f1,f2,f3,f4,f5,f6,f7,f8,f9,f10,f11,f12,f13,f14,f15,f16, N, ...) \
-    _NOTE_BODY_READ_MAP_##N(obj, r, \
+    _NOTE_FIELDS_READ_MAP_##N(obj, r, \
         f1,f2,f3,f4,f5,f6,f7,f8,f9,f10,f11,f12,f13,f14,f15,f16)
-#define _NOTE_BODY_READ_MAP_1(obj, r, f1, ...) \
-    _NOTE_BODY_READ_FIELD(obj, r, f1)
-#define _NOTE_BODY_READ_MAP_2(obj, r, f1, f2, ...) \
-    _NOTE_BODY_READ_FIELD(obj, r, f1) _NOTE_BODY_READ_FIELD(obj, r, f2)
-#define _NOTE_BODY_READ_MAP_3(obj, r, f1, f2, f3, ...) \
-    _NOTE_BODY_READ_MAP_2(obj, r, f1, f2) _NOTE_BODY_READ_FIELD(obj, r, f3)
-#define _NOTE_BODY_READ_MAP_4(obj, r, f1, f2, f3, f4, ...) \
-    _NOTE_BODY_READ_MAP_3(obj, r, f1, f2, f3) _NOTE_BODY_READ_FIELD(obj, r, f4)
-#define _NOTE_BODY_READ_MAP_5(obj, r, f1, f2, f3, f4, f5, ...) \
-    _NOTE_BODY_READ_MAP_4(obj, r, f1, f2, f3, f4) _NOTE_BODY_READ_FIELD(obj, r, f5)
-#define _NOTE_BODY_READ_MAP_6(obj, r, f1, f2, f3, f4, f5, f6, ...) \
-    _NOTE_BODY_READ_MAP_5(obj, r, f1, f2, f3, f4, f5) _NOTE_BODY_READ_FIELD(obj, r, f6)
-#define _NOTE_BODY_READ_MAP_7(obj, r, f1, f2, f3, f4, f5, f6, f7, ...) \
-    _NOTE_BODY_READ_MAP_6(obj, r, f1, f2, f3, f4, f5, f6) _NOTE_BODY_READ_FIELD(obj, r, f7)
-#define _NOTE_BODY_READ_MAP_8(obj, r, f1, f2, f3, f4, f5, f6, f7, f8, ...) \
-    _NOTE_BODY_READ_MAP_7(obj, r, f1, f2, f3, f4, f5, f6, f7) _NOTE_BODY_READ_FIELD(obj, r, f8)
-#define _NOTE_BODY_READ_MAP_9(obj, r, f1, f2, f3, f4, f5, f6, f7, f8, f9, ...) \
-    _NOTE_BODY_READ_MAP_8(obj, r, f1, f2, f3, f4, f5, f6, f7, f8) _NOTE_BODY_READ_FIELD(obj, r, f9)
-#define _NOTE_BODY_READ_MAP_10(obj, r, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, ...) \
-    _NOTE_BODY_READ_MAP_9(obj, r, f1, f2, f3, f4, f5, f6, f7, f8, f9) _NOTE_BODY_READ_FIELD(obj, r, f10)
-#define _NOTE_BODY_READ_MAP_11(obj, r, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, ...) \
-    _NOTE_BODY_READ_MAP_10(obj, r, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10) _NOTE_BODY_READ_FIELD(obj, r, f11)
-#define _NOTE_BODY_READ_MAP_12(obj, r, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, ...) \
-    _NOTE_BODY_READ_MAP_11(obj, r, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11) _NOTE_BODY_READ_FIELD(obj, r, f12)
-#define _NOTE_BODY_READ_MAP_13(obj, r, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, ...) \
-    _NOTE_BODY_READ_MAP_12(obj, r, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12) _NOTE_BODY_READ_FIELD(obj, r, f13)
-#define _NOTE_BODY_READ_MAP_14(obj, r, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, ...) \
-    _NOTE_BODY_READ_MAP_13(obj, r, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13) _NOTE_BODY_READ_FIELD(obj, r, f14)
-#define _NOTE_BODY_READ_MAP_15(obj, r, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, f15, ...) \
-    _NOTE_BODY_READ_MAP_14(obj, r, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14) _NOTE_BODY_READ_FIELD(obj, r, f15)
-#define _NOTE_BODY_READ_MAP_16(obj, r, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, f15, f16, ...) \
-    _NOTE_BODY_READ_MAP_15(obj, r, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, f15) _NOTE_BODY_READ_FIELD(obj, r, f16)
+#define _NOTE_FIELDS_READ_MAP_1(obj, r, f1, ...) \
+    _NOTE_FIELDS_READ_FIELD(obj, r, f1)
+#define _NOTE_FIELDS_READ_MAP_2(obj, r, f1, f2, ...) \
+    _NOTE_FIELDS_READ_FIELD(obj, r, f1) _NOTE_FIELDS_READ_FIELD(obj, r, f2)
+#define _NOTE_FIELDS_READ_MAP_3(obj, r, f1, f2, f3, ...) \
+    _NOTE_FIELDS_READ_MAP_2(obj, r, f1, f2) _NOTE_FIELDS_READ_FIELD(obj, r, f3)
+#define _NOTE_FIELDS_READ_MAP_4(obj, r, f1, f2, f3, f4, ...) \
+    _NOTE_FIELDS_READ_MAP_3(obj, r, f1, f2, f3) _NOTE_FIELDS_READ_FIELD(obj, r, f4)
+#define _NOTE_FIELDS_READ_MAP_5(obj, r, f1, f2, f3, f4, f5, ...) \
+    _NOTE_FIELDS_READ_MAP_4(obj, r, f1, f2, f3, f4) _NOTE_FIELDS_READ_FIELD(obj, r, f5)
+#define _NOTE_FIELDS_READ_MAP_6(obj, r, f1, f2, f3, f4, f5, f6, ...) \
+    _NOTE_FIELDS_READ_MAP_5(obj, r, f1, f2, f3, f4, f5) _NOTE_FIELDS_READ_FIELD(obj, r, f6)
+#define _NOTE_FIELDS_READ_MAP_7(obj, r, f1, f2, f3, f4, f5, f6, f7, ...) \
+    _NOTE_FIELDS_READ_MAP_6(obj, r, f1, f2, f3, f4, f5, f6) _NOTE_FIELDS_READ_FIELD(obj, r, f7)
+#define _NOTE_FIELDS_READ_MAP_8(obj, r, f1, f2, f3, f4, f5, f6, f7, f8, ...) \
+    _NOTE_FIELDS_READ_MAP_7(obj, r, f1, f2, f3, f4, f5, f6, f7) _NOTE_FIELDS_READ_FIELD(obj, r, f8)
+#define _NOTE_FIELDS_READ_MAP_9(obj, r, f1, f2, f3, f4, f5, f6, f7, f8, f9, ...) \
+    _NOTE_FIELDS_READ_MAP_8(obj, r, f1, f2, f3, f4, f5, f6, f7, f8) _NOTE_FIELDS_READ_FIELD(obj, r, f9)
+#define _NOTE_FIELDS_READ_MAP_10(obj, r, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, ...) \
+    _NOTE_FIELDS_READ_MAP_9(obj, r, f1, f2, f3, f4, f5, f6, f7, f8, f9) _NOTE_FIELDS_READ_FIELD(obj, r, f10)
+#define _NOTE_FIELDS_READ_MAP_11(obj, r, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, ...) \
+    _NOTE_FIELDS_READ_MAP_10(obj, r, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10) _NOTE_FIELDS_READ_FIELD(obj, r, f11)
+#define _NOTE_FIELDS_READ_MAP_12(obj, r, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, ...) \
+    _NOTE_FIELDS_READ_MAP_11(obj, r, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11) _NOTE_FIELDS_READ_FIELD(obj, r, f12)
+#define _NOTE_FIELDS_READ_MAP_13(obj, r, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, ...) \
+    _NOTE_FIELDS_READ_MAP_12(obj, r, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12) _NOTE_FIELDS_READ_FIELD(obj, r, f13)
+#define _NOTE_FIELDS_READ_MAP_14(obj, r, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, ...) \
+    _NOTE_FIELDS_READ_MAP_13(obj, r, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13) _NOTE_FIELDS_READ_FIELD(obj, r, f14)
+#define _NOTE_FIELDS_READ_MAP_15(obj, r, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, f15, ...) \
+    _NOTE_FIELDS_READ_MAP_14(obj, r, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14) _NOTE_FIELDS_READ_FIELD(obj, r, f15)
+#define _NOTE_FIELDS_READ_MAP_16(obj, r, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, f15, f16, ...) \
+    _NOTE_FIELDS_READ_MAP_15(obj, r, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, f15) _NOTE_FIELDS_READ_FIELD(obj, r, f16)
 
 namespace detail {
 
-// Helper used by NOTE_BODY macro — dispatches to the correct JsonBuilder::add overload.
+// Helper used by NOTE_FIELDS macro — dispatches to the correct JsonBuilder::add overload.
 template<typename V>
 void _note_write_field(JsonBuilder& b, string_view name, const V& value) {
     if constexpr (std::is_same_v<V, bool>) {
@@ -402,7 +408,7 @@ void _note_write_field(JsonBuilder& b, string_view name, const V& value) {
     }
 }
 
-// Helper used by NOTE_BODY macro — reads a field from JsonReader into the target.
+// Helper used by NOTE_FIELDS macro — reads a field from JsonReader into the target.
 template<typename V>
 void _note_read_field(const JsonReader& r, string_view name, V& out) {
     if constexpr (std::is_same_v<V, bool>) {
@@ -426,12 +432,12 @@ void _note_read_field(const JsonReader& r, string_view name, V& out) {
 //   auto reader = result->body();  // get body JsonReader
 //   auto readings = note::parse<Readings>(*reader);
 
-// C++17: parse types registered with NOTE_BODY macro.
+// C++17: parse types registered with NOTE_FIELDS macro.
 template<typename T,
-    typename = std::enable_if_t<detail::has_note_body_trait<T>::value>>
+    typename = std::enable_if_t<detail::has_note_fields_trait<T>::value>>
 T parse(const JsonReader& r) {
     T obj{};
-    T::_note_body_read(obj, r);
+    T::_note_fields_read(obj, r);
     return obj;
 }
 
@@ -458,7 +464,7 @@ V read_field(const JsonReader& r, string_view name) {
 
 // C++20: parse reflected aggregates (takes priority over macro version).
 template<typename T>
-    requires (detail::ReflectableAggregate<T> && !detail::has_note_body_trait<T>::value)
+    requires (detail::ReflectableAggregate<T> && !detail::has_note_fields_trait<T>::value)
 T parse(const JsonReader& r) {
     T obj{};
     using R = std::remove_cvref_t<T>;

@@ -62,7 +62,7 @@ struct SensorData {
 struct MacroReadings {
     float temperature;
     int16_t humidity;
-    NOTE_BODY(temperature, humidity)
+    NOTE_FIELDS(temperature, humidity)
 };
 
 // Type hint coverage: one field per supported integer size
@@ -215,9 +215,9 @@ TEST_CASE("note.template verify:true includes verify field in request") {
 
 #endif // C++20
 
-// ── NOTE_BODY macro ─────────────────────────────────────────────────────────
+// ── NOTE_FIELDS macro ────────────────────────────────────────────────────────
 
-TEST_CASE("BodyValue from NOTE_BODY macro schema") {
+TEST_CASE("BodyValue from NOTE_FIELDS macro schema") {
     TestHarness h;
     TestRequest req;
     MacroReadings r{.temperature = 22.5f, .humidity = 60};
@@ -350,9 +350,9 @@ TEST_CASE("note.get response body_as<T>() with mixed types") {
 
 #endif // C++20
 
-// ── NOTE_BODY macro response parsing ────────────────────────────────────────
+// ── NOTE_FIELDS macro response parsing ───────────────────────────────────────
 
-TEST_CASE("note.get response body_as<T>() with NOTE_BODY macro type") {
+TEST_CASE("note.get response body_as<T>() with NOTE_FIELDS macro type") {
     auto body = std::make_unique<note::test::PopulatedJsonReader>();
     body->set("temperature", 22.5);
     body->set("humidity", int32_t{60});
@@ -366,7 +366,7 @@ TEST_CASE("note.get response body_as<T>() with NOTE_BODY macro type") {
     REQUIRE(r.humidity == 60);
 }
 
-TEST_CASE("parse<T>() with NOTE_BODY macro type") {
+TEST_CASE("parse<T>() with NOTE_FIELDS macro type") {
     auto reader = std::make_unique<note::test::PopulatedJsonReader>();
     reader->set("temperature", 22.5);
     reader->set("humidity", int32_t{60});

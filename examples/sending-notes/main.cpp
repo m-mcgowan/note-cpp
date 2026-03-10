@@ -74,7 +74,7 @@ struct MockBackend : note::JsonBackend {
 struct Readings {
     float temperature;
     int16_t humidity;
-    NOTE_BODY(temperature, humidity)
+    NOTE_FIELDS(temperature, humidity)
 };
 
 

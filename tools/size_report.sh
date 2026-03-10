@@ -140,7 +140,7 @@ cat > "$TMPDIR/cpp_body.cpp" << 'EOF'
 struct Readings {
     float temperature;
     int16_t humidity;
-    NOTE_BODY(temperature, humidity)
+    NOTE_FIELDS(temperature, humidity)
 };
 int main() {
     MockBackend backend;
@@ -231,7 +231,7 @@ cat > "$TMPDIR/cpp_callers.cpp" << 'EOF'
 struct Readings {
     float temperature;
     int16_t humidity;
-    NOTE_BODY(temperature, humidity)
+    NOTE_FIELDS(temperature, humidity)
 };
 
 MockBackend backend;

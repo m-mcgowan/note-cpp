@@ -9,7 +9,7 @@ Every way to send data to (and receive data from) the Notecard using note-cpp.
 
 Define a struct once — use it to send data, receive data, and register
 Notecard templates. On C++20, plain aggregates work automatically. On C++17,
-add the `NOTE_BODY` macro.
+add the `NOTE_FIELDS` macro.
 
 ```cpp
 // main.cpp#L74-L78
@@ -17,7 +17,7 @@ add the `NOTE_BODY` macro.
 struct Readings {
     float temperature;
     int16_t humidity;
-    NOTE_BODY(temperature, humidity)
+    NOTE_FIELDS(temperature, humidity)
 };
 ```
 

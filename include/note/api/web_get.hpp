@@ -186,7 +186,7 @@ struct WebGet {
 
         template<typename T>
         static T parse_body_(const JsonReader& r) {
-            if constexpr (detail::has_note_body_trait<T>::value) {
+            if constexpr (detail::has_note_fields_trait<T>::value) {
                 return ::note::parse<T>(r);
             }
 #if __cplusplus >= 202002L

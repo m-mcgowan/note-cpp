@@ -38,7 +38,7 @@ Type-safe C++23 API for the Blues Notecard. Header-only, zero dependencies beyon
 | `json_buf.hpp` | `JsonBuf<N>` — constexpr JSON buffer builder, zero allocations |
 | `notecard.hpp` | `Notecard` — central coordinator, takes `JsonBackend` + transport callable |
 | `api_context.hpp` | `Api` factory — binds Notecard to fluent request builders |
-| `body.hpp` | `BodyValue`, `NOTE_BODY` macro, `template_of<T>()` — schema struct support |
+| `body.hpp` | `BodyValue`, `NOTE_FIELDS` macro, `template_of<T>()` — schema struct support |
 | `field.hpp` | `Field<T>` — optional-like field wrapper for generated types |
 | `safety.hpp` | `Safety` enum (ReadOnly, Idempotent, NonIdempotent, Destructive) |
 | `api.hpp` | Umbrella header for all 74 generated endpoint types |
@@ -75,7 +75,7 @@ Type-safe C++23 API for the Blues Notecard. Header-only, zero dependencies beyon
   - Tier 1: Raw JSON string (`body("...")`)
   - Tier 2: Builder lambda (`body(note::body([](auto& b) { ... }))`)
   - Tier 3: Schema struct (`body(readings)`)
-- `NOTE_BODY` macro for C++17 struct binding
+- `NOTE_FIELDS` macro for C++17 struct binding
 - `template_of<T>()` for Notecard template registration
 - Response body parsing with `body()` and `bodyAs<T>()`
 
@@ -236,4 +236,4 @@ ground at the C++ level, so L2 work on note-c is no longer a priority.
 
 - ~~**OpenAPI Overlays**~~: done — sideband metadata as `x-*` extensions
 - ~~**C++20 compatibility**~~: done — `tl::expected` polyfill
-- **C++20 reflection**: automatic struct binding without `NOTE_BODY` macro
+- **C++20 reflection**: automatic struct binding without `NOTE_FIELDS` macro

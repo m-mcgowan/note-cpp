@@ -212,7 +212,7 @@ namespace note::api {
 
 {{ indent }}    template<typename T>
 {{ indent }}    static T parse_body_(const JsonReader& r) {
-{{ indent }}        if constexpr (detail::has_note_body_trait<T>::value) {
+{{ indent }}        if constexpr (detail::has_note_fields_trait<T>::value) {
 {{ indent }}            return ::note::parse<T>(r);
 {{ indent }}        }
 #if __cplusplus >= 202002L

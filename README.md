@@ -343,7 +343,7 @@ api.noteAdd()
 
 ## Schemas and Templates
 
-Define a struct once, use it to send data, receive data, and register Notecard templates. Add the `NOTE_BODY` macro listing the fields:
+Define a struct once, use it to send data, receive data, and register Notecard templates. On C++20 and later, plain aggregates work automatically. On C++17, add the `NOTE_FIELDS` macro listing the fields:
 
 ```cpp
 #include <note/body.hpp>
@@ -351,7 +351,7 @@ Define a struct once, use it to send data, receive data, and register Notecard t
 struct Readings {
     float temperature;
     int16_t humidity;
-    NOTE_BODY(temperature, humidity)
+    NOTE_FIELDS(temperature, humidity)  // not needed on C++20+
 };
 ```
 
@@ -378,7 +378,7 @@ api.noteTemplate().set("sensors.qo")
 ```cpp
 auto result = api.noteGet().get().file("data.qi").execute();
 if (result) {
-    // Typed struct — NOTE_BODY or plain aggregate (C++20)
+    // Typed struct — plain aggregate (C++20+) or NOTE_FIELDS macro (C++17)
     auto r = result.bodyAs<Readings>();
     use(r.temperature, r.humidity);
 

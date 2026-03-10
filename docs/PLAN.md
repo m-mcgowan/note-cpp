@@ -223,10 +223,10 @@ segmented TX/RX, reset sync) via injectable `SerialHal` / `I2cHal` interfaces,
 matching the scope of note-c's `n_serial.c` / `n_i2c.c`. Concrete platform
 glue — thin `SerialHal` / `I2cHal` subclasses — belongs in separate repos:
 
-- `note-arduino-cpp` — Arduino `HardwareSerial` + `Wire` implementations
-- `note-zephyr-cpp` — Zephyr UART + I2C driver bindings
-- `note-espidf-cpp` — ESP-IDF UART + I2C bindings
-- `note-linux-cpp` — `/dev/ttyACM0` serial, `/dev/i2c-N` I2C
+- `note-cpp-arduino` — Arduino `HardwareSerial` + `Wire` implementations
+- `note-cpp-zephyr` — Zephyr UART + I2C driver bindings
+- `note-cpp-espidf` — ESP-IDF UART + I2C bindings
+- `note-cpp-linux` — `/dev/ttyACM0` serial, `/dev/i2c-N` I2C
 
 ## note-c string transaction API (superseded)
 

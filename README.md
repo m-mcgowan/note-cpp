@@ -11,38 +11,49 @@ Type-safe C++ API for the [Blues Notecard](https://blues.com/notecard). Requires
 The Notecard C API is stringly-typed — field names are strings, types are manual, typos compile fine and fail at runtime. note-cpp gives every request typed fields, IDE auto-completion, and compile-time safety. [See the full comparison with note-c.](docs/comparison.md)
 
 ```cpp
+// Fluent chaining
 api.hubSet()
    .product("com.example.app")
    .mode("periodic")
    .outbound(60)
    .execute();
+
+// Direct assignment
+auto req = api.hubSet();
+req.product = "com.example.app";
+req.mode = "periodic";
+req.outbound = 60;
+req.execute();
+
+// Typed body structs
+Readings r{.temperature = 22.5f, .humidity = 60};
+api.noteAdd().file("sensors.qo").body(r).execute();
 ```
 
 ## Quick Start
 
-note-cpp has two integration points: a **JSON backend** (wraps your JSON library) and a **transport** (sends/receives strings over serial or I2C). Both are simple to implement — see the [full getting started example](examples/getting_started.cpp) which compiles and runs with a mock backend.
+Platform libraries provide the backend and transport — pick the one for your platform:
+
+- **note-cpp-arduino** — Arduino (`HardwareSerial` + `Wire`)
+- **note-cpp-zephyr** — Zephyr RTOS (UART + I2C)
+- **note-cpp-espidf** — ESP-IDF (UART + I2C)
+- **note-cpp-linux** — Linux (`/dev/ttyACM0`, `/dev/i2c-N`)
+
+Once you have a `Notecard` instance, the typed API is the same everywhere:
 
 ```cpp
 #include <note/api_context.hpp>
 
-// 1. Create a Notecard with your backend and transport.
-MyJsonBackend backend;
-note::Notecard nc(backend,
-    [](note::string_view request, uint32_t timeout_ms) -> note::Result<std::string> {
-        return my_serial_send(request, timeout_ms);  // your transport
-    });
-
-// 2. Create an Api instance — the entry point for all typed requests.
 auto api = note::make_api(nc);
 
-// 3. Make requests. Fields are typed, IDE auto-completes everything.
+// Make requests. Fields are typed, IDE auto-completes everything.
 api.hubSet()
    .product("com.example.app")
    .mode("periodic")
    .outbound(60)
    .execute();
 
-// 4. Read responses. Fields are named members, not strings.
+// Read responses. Fields are named members, not strings.
 auto result = api.cardVersion().execute();
 if (result) {
     auto version = result.version;   // string_view
@@ -52,27 +63,25 @@ if (result) {
 }
 ```
 
-```bash
-c++ -std=c++2b -I include examples/getting_started.cpp && ./a.out
-```
+You can also wire up a custom backend and transport directly — see [Backend Interfaces](#backend-interfaces) and the [getting started example](examples/getting_started.cpp).
 
 ## Features
 
-- [Generated API Types](#generated-api-types) — 74 typed endpoints from the OpenAPI spec
-- [Target Filtering](#target-filtering) — compile-time SKU/product compatibility (C++20)
-- [Polymorphic Endpoints](#polymorphic-endpoints) — named sub-operations for multi-mode endpoints
-- [Body Values](#body-values) — raw JSON, builder lambdas, or typed schema structs
-- [Schemas and Templates](#schemas-and-templates) — one struct for send, receive, and template registration
-- [Error Handling](#error-handling) — `Result<T>` with safety classification and version gating
+- [Generated API Types](#generated-api-types) — typed requests for every Notecard API
+- [Target Filtering](#target-filtering) — APIs not relevant to your Notecard are deprecated or rejected at compile time (C++20)
+- [Polymorphic APIs](#polymorphic-apis) — Notecard APIs with overloaded behavior depending on the request
+- [Body Values](#body-values) — raw JSON, builder lambdas, or typed structs
+- [Body Structs and Note Templates](#body-structs-and-note-templates) — one struct for send, receive, and template registration
+- [Error Handling](#error-handling) — `Result<T>` with structured errors and retry guidance
 - [Backend Interfaces](#backend-interfaces) — plug in any JSON library and transport
 - [Transport Layer](#transport-layer) — serial and I2C with CRC, retry, and chunking
-- [JSON Buffer Builder](#json-buffer-builder) — `constexpr` stack-allocated JSON construction
+- [JSON Buffer Builder](#json-buffer-builder) — compile-time or runtime JSON, same API, no allocations
 
 ---
 
 ## Generated API Types
 
-74 request/response types are auto-generated from the [Notecard OpenAPI spec](notecard-api.openapi.json). Each has typed fields, chainable setters, and an `execute()` method. Fields support fluent chaining, direct assignment, and designated initializers.
+Request/response types covering all 74 Notecard APIs are auto-generated from the [Notecard OpenAPI spec](notecard-api.openapi.json). Each has typed fields, chainable setters, and an `execute()` method. Fields support fluent chaining, direct assignment, and designated initializers.
 
 ```cpp
 api.hubSet().product("com.example.app").mode("periodic").outbound(60).execute();
@@ -84,7 +93,7 @@ Extras for undocumented properties (`extra(key, value)`), string key access (`re
 
 ## Target Filtering
 
-When targeting a specific Notecard product, `make_api()` provides compile-time feedback on endpoint compatibility (C++20). Unsupported endpoints produce deprecation warnings, or compile errors in strict mode.
+When targeting a specific Notecard product, `make_api()` provides compile-time feedback on API compatibility (C++20). Unsupported APIs produce deprecation warnings, or compile errors in strict mode.
 
 ```cpp
 auto wifi = note::make_api(nc, note::target<note::Product::WiFi>());
@@ -92,13 +101,13 @@ wifi.cardSleep();  // OK: card.sleep supports WiFi
 wifi.hubSet();     // OK: universal endpoint
 ```
 
-Each endpoint carries `static constexpr Skus skus` for introspection. See [examples/target_filtering.cpp](examples/target_filtering.cpp).
+Each API type carries `static constexpr Skus skus` for introspection. See [examples/target_filtering.cpp](examples/target_filtering.cpp).
 
 ---
 
-## Polymorphic Endpoints
+## Polymorphic APIs
 
-Some endpoints behave differently depending on which fields you send. note-cpp models these as named sub-operations with two equivalent access styles:
+Some Notecard APIs have overloaded behavior — the response depends on which fields you send. note-cpp models each behavior as a named sub-operation with two equivalent access styles:
 
 ```cpp
 api.noteGet().get().file("data.qi").execute();   // endpoint-first
@@ -111,7 +120,7 @@ The same pattern applies to `card.binary`, `card.contact`, `card.location.mode`,
 
 ## Body Values
 
-Note bodies support three tiers: **raw JSON strings**, **builder lambdas**, and **typed schema structs**. The schema struct approach is the most powerful — a single struct serves as builder, parser, and template registration. See [Schemas and Templates](#schemas-and-templates).
+Note bodies support three tiers: **raw JSON strings**, **builder lambdas**, and **typed structs**. The struct approach is the most powerful — a single struct serves as builder, parser, and Note template registration. See [Body Structs and Note Templates](#body-structs-and-note-templates).
 
 ```cpp
 api.noteAdd().file("sensors.qo").body(readings).execute();
@@ -119,9 +128,9 @@ api.noteAdd().file("sensors.qo").body(readings).execute();
 
 ---
 
-## Schemas and Templates
+## Body Structs and Note Templates
 
-Define a struct once, use it to send data, receive data, and register Notecard templates. On C++20+, plain aggregates work automatically. On C++17, add `NOTE_FIELDS(...)`.
+Define a struct once, use it to send data, receive data, and register [Notecard templates](https://dev.blues.io/notecard/notecard-walkthrough/low-bandwidth-design/#notecard-templates). On C++20+, plain aggregates work automatically. On C++17, add `NOTE_FIELDS(...)`.
 
 ```cpp
 struct Readings {
@@ -185,7 +194,7 @@ See [docs/transport.md](docs/transport.md) for the full HAL interface and implem
 
 ## JSON Buffer Builder
 
-`JsonBuf<N>` writes JSON into a fixed-size buffer with no allocations. Fully `constexpr` — when all values are compile-time constants, the JSON string is computed at build time. Auto-sizing via `note::json<>()` lets the compiler pick the buffer size.
+`JsonBuf<N>` builds JSON into a fixed-size buffer with no allocations. When all values are constants, the JSON is computed entirely at compile time. Replace `constexpr` with a runtime variable and the same code works at runtime — no API change needed.
 
 ```cpp
 constexpr auto req = note::json<[](auto& b) {
@@ -200,7 +209,7 @@ static_assert(req.view() == R"({"req":"hub.set","mode":"periodic"})");
 
 ## Code Generation
 
-The 74 endpoint types are generated from the OpenAPI spec:
+The API types are generated from the Notecard OpenAPI spec:
 
 ```bash
 pip install jinja2

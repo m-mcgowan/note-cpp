@@ -29,7 +29,7 @@ struct CardTransport {
     /// connected over a non-terrestrial network.
     ///
     /// See [Define NTN vs non-NTN
-    /// Templates](https://dev.blues.io/starnote/starnote-best-
+    /// Templates](https://dev.blues.io/starnote/satellite-best-
     /// practices/#define-ntn-vs-non-ntn-templates).
     ///
     /// @since firmware 7.2.1

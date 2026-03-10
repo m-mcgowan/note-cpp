@@ -52,7 +52,7 @@ struct NoteTemplate {
         /// to sync non-NTN-compatible Notefiles.
         ///
         /// Read more about this feature in [Starnote Best
-        /// Practices](https://dev.blues.io/starnote/starnote-best-
+        /// Practices](https://dev.blues.io/starnote/satellite-best-
         /// practices/#define-ntn-vs-non-ntn-templates).
         struct delete_t : Field<bool> {
             using Field<bool>::Field;
@@ -218,7 +218,7 @@ struct NoteTemplate {
 
             template<typename T>
             static T parse_body_(const JsonReader& r) {
-                if constexpr (detail::has_note_body_trait<T>::value) {
+                if constexpr (detail::has_note_fields_trait<T>::value) {
                     return ::note::parse<T>(r);
                 }
 #if __cplusplus >= 202002L
@@ -439,7 +439,7 @@ struct NoteTemplate {
 
             template<typename T>
             static T parse_body_(const JsonReader& r) {
-                if constexpr (detail::has_note_body_trait<T>::value) {
+                if constexpr (detail::has_note_fields_trait<T>::value) {
                     return ::note::parse<T>(r);
                 }
 #if __cplusplus >= 202002L

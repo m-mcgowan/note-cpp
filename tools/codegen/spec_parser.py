@@ -247,6 +247,7 @@ def _parse_operation(op: dict, *, suffix: str | None = None) -> OperationDef:
         response=ResponseDef(properties=rsp_props, has_body=has_body_response),
         dispatch=dispatch,
         binary_transfer=_parse_binary_transfer(op.get("x-binary-transfer")),
+        skus=op.get("x-skus", []),
     )
 
 

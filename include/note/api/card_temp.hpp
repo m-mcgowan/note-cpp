@@ -8,6 +8,7 @@
 #include <note/safety.hpp>
 #include <note/types.hpp>
 #include <note/units.hpp>
+#include <note/target.hpp>
 
 namespace note::api {
 
@@ -23,6 +24,7 @@ struct CardTemp {
         static constexpr string_view notecard_request = "card.temp";
         static constexpr bool supports_cmd = true;
         static constexpr Safety safety = Safety::ReadOnly;
+        static constexpr Skus skus{};
 
         Notecard* nc_ = nullptr;
 
@@ -151,6 +153,7 @@ struct CardTemp {
         static constexpr string_view notecard_request = "card.temp";
         static constexpr bool supports_cmd = true;
         static constexpr Safety safety = Safety::Idempotent;
+        static constexpr Skus skus{};
 
         Notecard* nc_ = nullptr;
 
@@ -279,6 +282,7 @@ struct CardTemp {
         static constexpr string_view notecard_request = "card.temp";
         static constexpr bool supports_cmd = true;
         static constexpr Safety safety = Safety::Destructive;
+        static constexpr Skus skus{};
 
         Notecard* nc_ = nullptr;
 

@@ -111,6 +111,15 @@ _ACTION_VERBS: dict[str, str] = {
 }
 
 
+_SKU_RAT_MAP: dict[str, str] = {
+    "CELL": "Rat::Cell",
+    "WIFI": "Rat::WiFi",
+    "LORA": "Rat::LoRa",
+    "CELL+WIFI": "Rat::Cell | Rat::WiFi",
+    "SKYLO": "Rat::Cell | Rat::WiFi | Rat::Ntn",
+}
+
+
 @dataclass
 class OperationDef:
     """A single operation (sub-struct for polymorphic, or top-level for simple)."""
@@ -122,6 +131,7 @@ class OperationDef:
     response: ResponseDef = field(default_factory=ResponseDef)
     dispatch: dict | None = None
     binary_transfer: BinaryTransferDef | None = None
+    skus: list[str] = field(default_factory=list)
 
     @property
     def required_properties(self) -> list[PropertyDef]:
@@ -158,6 +168,30 @@ class OperationDef:
         """Action verb for this operation: 'get', 'set', 'delete', etc."""
         return _ACTION_VERBS.get(self.struct_name, self.struct_name[0].lower() + self.struct_name[1:])
 
+    @property
+    def skus_rats_expr(self) -> str:
+        """C++ expression for the union of all SKU RATs, e.g. 'Rat::Cell | Rat::WiFi'.
+
+        Returns empty string if universal (no SKUs, or all RATs covered).
+        """
+        if not self.skus:
+            return ""
+        # Collect individual Rat bits from each SKU
+        bits: set[str] = set()
+        for sku in self.skus:
+            expr = _SKU_RAT_MAP.get(sku)
+            if expr:
+                for part in expr.split(" | "):
+                    bits.add(part)
+        if not bits:
+            return ""
+        # Stable ordering: Cell, WiFi, Ntn, LoRa
+        order = ["Rat::Cell", "Rat::WiFi", "Rat::Ntn", "Rat::LoRa"]
+        # If all RATs are covered, treat as universal
+        if all(b in bits for b in order):
+            return ""
+        return " | ".join(b for b in order if b in bits)
+
 
 @dataclass
 class EndpointGroup:
@@ -182,3 +216,17 @@ class EndpointGroup:
         """
         verb = op.action_verb
         return verb + self.struct_name
+
+    @property
+    def skus_rats_expr(self) -> str:
+        """Union of all operation SKU RATs for this endpoint group."""
+        bits: set[str] = set()
+        for op in self.operations:
+            expr = op.skus_rats_expr
+            if expr:
+                for part in expr.split(" | "):
+                    bits.add(part)
+        if not bits:
+            return ""
+        order = ["Rat::Cell", "Rat::WiFi", "Rat::Ntn", "Rat::LoRa"]
+        return " | ".join(b for b in order if b in bits)

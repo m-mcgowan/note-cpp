@@ -7,6 +7,7 @@
 #include <note/notecard.hpp>
 #include <note/safety.hpp>
 #include <note/types.hpp>
+#include <note/target.hpp>
 
 namespace note::api {
 
@@ -22,6 +23,7 @@ struct EnvDefault {
         static constexpr string_view notecard_request = "env.default";
         static constexpr bool supports_cmd = true;
         static constexpr Safety safety = Safety::Idempotent;
+        static constexpr Skus skus{};
 
         Notecard* nc_ = nullptr;
 
@@ -95,6 +97,7 @@ struct EnvDefault {
         static constexpr string_view notecard_request = "env.default";
         static constexpr bool supports_cmd = true;
         static constexpr Safety safety = Safety::Destructive;
+        static constexpr Skus skus{};
 
         Notecard* nc_ = nullptr;
 

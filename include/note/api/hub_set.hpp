@@ -9,6 +9,7 @@
 #include <note/types.hpp>
 #include <note/units.hpp>
 #include <note/voltage_variable.hpp>
+#include <note/target.hpp>
 
 namespace note::api {
 
@@ -22,6 +23,7 @@ struct HubSet {
     static constexpr string_view notecard_request = "hub.set";
     static constexpr bool supports_cmd = true;
     static constexpr Safety safety = Safety::Idempotent;
+    static constexpr Skus skus{};
 
     Notecard* nc_ = nullptr;
 

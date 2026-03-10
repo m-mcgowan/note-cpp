@@ -145,6 +145,14 @@ Type-safe C++23 API for the Blues Notecard. Header-only, zero dependencies beyon
 - `schema_to_openapi.py` loads and merges extensions during conversion
 - `x-schema-source` embeds upstream tag + commit in OpenAPI info block
 
+### Phase 14: Target-based RAT/firmware filtering
+- `include/note/target.hpp` — `Rat`, `Product`, `Skus`, `Target<Rat, Strict>`, `Unconstrained`
+- `make_api(nc)` unconstrained, `make_api(nc, target<Product>())` constrained
+- Per-endpoint `static constexpr Skus skus` from `x-skus` spec metadata
+- Non-strict: `[[deprecated]]` on unsupported endpoints; strict: `requires` removal
+- Compile-fail CI tests for strict-mode endpoint rejection
+- C++17 fallback: unconstrained only (no target support)
+
 ### Infrastructure
 - `ci.sh` — runs codegen, header compilation checks, unit tests, smoke test
 - `ci.sh --all-compilers` — discovers and tests all locally installed compilers

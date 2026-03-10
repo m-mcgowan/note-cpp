@@ -80,7 +80,9 @@ run_ci() {
         "$ROOT/tests/test_endpoint_coverage.cpp" \
         "$ROOT/tests/test_voltage_variable.cpp" \
         "$ROOT/tests/test_channel.cpp" \
-        "$ROOT/tests/test_state_store.cpp"
+        "$ROOT/tests/test_state_store.cpp" \
+        "$ROOT/tests/test_target.cpp" \
+        "$ROOT/tests/test_make_api.cpp"
     /tmp/note-cpp-tests
     echo "  tests: OK"
 
@@ -129,6 +131,54 @@ VEOF
         echo "OK"
     else
         echo "FAIL (unexpected warnings at latest version)"
+        exit 1
+    fi
+
+    # Target filtering tests (C++20 only)
+    echo
+    echo "=== Target filtering ==="
+    # Strict mode: unsupported endpoints should fail to compile
+    printf "  %-40s " "strict rejects unsupported"
+    STRICT_TARGET_OUT=$($CXX $CXXFLAGS $INCLUDE -fsyntax-only -x c++ - <<'TEOF' 2>&1 || true
+#include <note/api_context.hpp>
+using LoRaStrict = note::Target<note::Rat::LoRa, true>;
+void test(note::Api<LoRaStrict>& api) { api.cardSleep(); }
+TEOF
+    )
+    if echo "$STRICT_TARGET_OUT" | grep -qE "constraint|no matching"; then
+        echo "OK"
+    else
+        echo "FAIL (expected compile error for unsupported endpoint on strict target)"
+        echo "$STRICT_TARGET_OUT"
+        exit 1
+    fi
+
+    # Non-strict mode: unsupported endpoints produce deprecation warnings
+    printf "  %-40s " "warn for unsupported"
+    WARN_TARGET_OUT=$($CXX $CXXFLAGS $INCLUDE -fsyntax-only -x c++ - <<'TEOF' 2>&1 || true
+#include <note/api_context.hpp>
+using LoRaWarn = note::Target<note::Rat::LoRa, false>;
+void test(note::Api<LoRaWarn>& api) { api.cardSleep(); }
+TEOF
+    )
+    if echo "$WARN_TARGET_OUT" | grep -q "deprecated.*not available on this target"; then
+        echo "OK"
+    else
+        echo "FAIL (expected deprecation warning for unsupported endpoint)"
+        echo "$WARN_TARGET_OUT"
+        exit 1
+    fi
+
+    # Supported target: no warnings
+    printf "  %-40s " "supported (no warnings)"
+    if $CXX $CXXFLAGS $INCLUDE -Werror -fsyntax-only -x c++ - <<'TEOF' 2>&1; then
+#include <note/api_context.hpp>
+using WifiTarget = note::Target<note::Rat::WiFi>;
+void test(note::Api<WifiTarget>& api) { api.cardSleep(); api.hubSet(); }
+TEOF
+        echo "OK"
+    else
+        echo "FAIL (unexpected warnings for supported target)"
         exit 1
     fi
 
@@ -276,7 +326,9 @@ run_coverage_clang() {
         "$ROOT/tests/test_notecard.cpp" \
         "$ROOT/tests/test_api_context.cpp" \
         "$ROOT/tests/test_endpoint_coverage.cpp" \
-        "$ROOT/tests/test_voltage_variable.cpp"
+        "$ROOT/tests/test_voltage_variable.cpp" \
+        "$ROOT/tests/test_target.cpp" \
+        "$ROOT/tests/test_make_api.cpp"
     LLVM_PROFILE_FILE="$PROFRAW" "$BINARY"
 
     "$LLVM_PROFDATA" merge -sparse "$PROFRAW" -o "$PROFDATA"
@@ -388,6 +440,7 @@ run_coverage() {
         test_notecard test_api_context test_endpoint_coverage
         test_voltage_variable
         test_channel test_state_store
+        test_target test_make_api
     )
     for name in "${SRCS[@]}"; do
         "$GCC" $CXXFLAGS --coverage -fprofile-arcs $INCLUDE -I "$ROOT/tests" \

@@ -16,6 +16,7 @@
 {% if has_format_fields %}
 #include <note/voltage_variable.hpp>
 {% endif %}
+#include <note/target.hpp>
 
 namespace note::api {
 
@@ -60,6 +61,11 @@ namespace note::api {
 {{ indent }}static constexpr string_view notecard_request = "{{ op.notecard_request }}";
 {{ indent }}static constexpr bool supports_cmd = {{ "true" if op.supports_cmd else "false" }};
 {{ indent }}static constexpr Safety safety = Safety::{{ op.safety }};
+{% if op.skus_rats_expr %}
+{{ indent }}static constexpr Skus skus{ {{ op.skus_rats_expr }} };
+{% else %}
+{{ indent }}static constexpr Skus skus{};
+{% endif %}
 {% if op.binary_transfer %}
 
 {{ indent }}struct BinaryTransfer {

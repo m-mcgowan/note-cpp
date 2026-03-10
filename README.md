@@ -161,6 +161,7 @@ c++ -std=c++2b -I include examples/getting_started.cpp && ./a.out
 ## Table of Contents
 
 - [Generated API Types](#generated-api-types)
+- [Target Filtering](#target-filtering)
 - [Polymorphic Endpoints](#polymorphic-endpoints)
 - [Body Values](#body-values)
 - [Schemas and Templates](#schemas-and-templates)
@@ -237,6 +238,41 @@ req.mode = note::api::HubSet::validatedMode("periodic");  // OK
 ```cpp
 #include <note/api_context.hpp>
 ```
+
+---
+
+## Target Filtering
+
+When targeting a specific Notecard product (Cell, WiFi, LoRa, Skylo), `make_api()` provides compile-time feedback on endpoint compatibility (C++20):
+
+```cpp
+#include <note/api_context.hpp>
+using namespace note;
+
+auto api = make_api(nc);                          // unconstrained — all endpoints
+auto wifi = make_api(nc, target<Product::WiFi>()); // WiFi target
+
+wifi.cardSleep();  // OK: card.sleep supports WiFi
+wifi.hubSet();     // OK: universal endpoint
+wifi.cardSleep();  // deprecated warning on LoRa target (non-strict)
+```
+
+**Strict mode** removes unsupported endpoints entirely:
+
+```cpp
+auto strict = make_api(nc, Target<Rat::LoRa, true>{});
+strict.hubSet();     // OK: universal
+// strict.cardSleep(); // compile error: no matching function
+```
+
+Each endpoint type carries its SKU support for introspection:
+
+```cpp
+static_assert(api::CardSleep::skus.supports(Rat::WiFi));
+static_assert(!api::CardSleep::skus.supports(Rat::LoRa));
+```
+
+Products can be composed with additional RATs: `Product::Cell + Rat::Ntn`.
 
 ---
 

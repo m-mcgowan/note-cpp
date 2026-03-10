@@ -2,12 +2,32 @@
 #pragma once
 
 #include <note/notecard.hpp>
+#include <note/target.hpp>
 {% for endpoint in endpoints %}
 #include <note/api/{{ endpoint.header_filename }}>
 {% endfor %}
 
 namespace note {
 
+{# ===== Helper macros for method body generation ========================== #}
+
+{% macro simple_body(endpoint_struct) %}
+        return create<api::{{ endpoint_struct }}>();
+{% endmacro %}
+
+{% macro required_body(endpoint_struct, op) %}
+        auto r = create<api::{{ endpoint_struct }}>();
+{% for prop in op.required_properties %}
+        r.{{ prop.accessor_name }} = {{ prop.accessor_name }};
+{% endfor %}
+        return r;
+{% endmacro %}
+
+{% macro required_params(op) %}{% for p in op.required_properties %}{{ p.field_type }} {{ p.accessor_name }}{{ ", " if not loop.last }}{% endfor %}{% endmacro %}
+
+#if __cplusplus >= 202002L
+template<typename TargetT = Unconstrained>
+#endif
 class Api {
     Notecard& nc_;
 public:
@@ -28,15 +48,15 @@ public:
     Result<void> command(const RequestT& req) { return nc_.command_typed(req); }
 
 {% for endpoint in endpoints %}
+{% set has_skus = endpoint.skus_rats_expr != "" %}
 {% if endpoint.is_polymorphic %}
-    // {{ endpoint.wire_name }} — access via endpoint-first or action-first:
-    //   {{ endpoint.factory_method }}().{{ endpoint.operations[0].factory_method }}()  or  {{ endpoint.action_first_method(endpoint.operations[0]) }}()
+    // {{ endpoint.wire_name }}
     struct {{ endpoint.struct_name }}Factory {
         Notecard* nc_;
         template<typename T> T create() { T r; r.nc_ = nc_; return r; }
 {% for op in endpoint.operations %}
 {% if op.required_properties %}
-        auto {{ op.factory_method }}({% for p in op.required_properties %}{{ p.field_type }} {{ p.accessor_name }}{{ ", " if not loop.last }}{% endfor %}) {
+        auto {{ op.factory_method }}({{ required_params(op) }}) {
             auto r = create<api::{{ endpoint.struct_name }}::{{ op.struct_name }}>();
 {% for prop in op.required_properties %}
             r.{{ prop.accessor_name }} = {{ prop.accessor_name }};
@@ -48,36 +68,116 @@ public:
 {% endif %}
 {% endfor %}
     };
+
+{% set guard_type = "api::" + endpoint.struct_name + "::" + endpoint.operations[0].struct_name %}
+{% if has_skus %}
+#if __cplusplus >= 202002L
+    template<typename T_ = TargetT>
+    requires (IsUnconstrained<T_> || T_::supports({{ guard_type }}::skus))
     {{ endpoint.struct_name }}Factory {{ endpoint.factory_method }}() { return {&nc_}; }
-{% for op in endpoint.operations %}
-{% if op.required_properties %}
-    auto {{ endpoint.action_first_method(op) }}({% for p in op.required_properties %}{{ p.field_type }} {{ p.accessor_name }}{{ ", " if not loop.last }}{% endfor %}) {
-        auto r = create<api::{{ endpoint.struct_name }}::{{ op.struct_name }}>();
-{% for prop in op.required_properties %}
-        r.{{ prop.accessor_name }} = {{ prop.accessor_name }};
-{% endfor %}
-        return r;
-    }
+
+    template<typename T_ = TargetT>
+    requires (!IsUnconstrained<T_> && !T_::supports({{ guard_type }}::skus) && !T_::strict)
+    [[deprecated("{{ endpoint.wire_name }} is not available on this target")]]
+    {{ endpoint.struct_name }}Factory {{ endpoint.factory_method }}() { return {&nc_}; }
+#else
+    {{ endpoint.struct_name }}Factory {{ endpoint.factory_method }}() { return {&nc_}; }
+#endif
 {% else %}
-    auto {{ endpoint.action_first_method(op) }}() { return create<api::{{ endpoint.struct_name }}::{{ op.struct_name }}>(); }
+    {{ endpoint.struct_name }}Factory {{ endpoint.factory_method }}() { return {&nc_}; }
+{% endif %}
+{% for op in endpoint.operations %}
+{% set op_type = "api::" + endpoint.struct_name + "::" + op.struct_name %}
+{% set op_qual = endpoint.struct_name + "::" + op.struct_name %}
+{% if has_skus %}
+#if __cplusplus >= 202002L
+    template<typename T_ = TargetT>
+    requires (IsUnconstrained<T_> || T_::supports({{ op_type }}::skus))
+{% if op.required_properties %}
+    auto {{ endpoint.action_first_method(op) }}({{ required_params(op) }}) {
+{{ required_body(op_qual, op) }}    }
+{% else %}
+    auto {{ endpoint.action_first_method(op) }}() { return create<api::{{ op_qual }}>(); }
+{% endif %}
+
+    template<typename T_ = TargetT>
+    requires (!IsUnconstrained<T_> && !T_::supports({{ op_type }}::skus) && !T_::strict)
+    [[deprecated("{{ endpoint.wire_name }} is not available on this target")]]
+{% if op.required_properties %}
+    auto {{ endpoint.action_first_method(op) }}({{ required_params(op) }}) {
+{{ required_body(op_qual, op) }}    }
+{% else %}
+    auto {{ endpoint.action_first_method(op) }}() { return create<api::{{ op_qual }}>(); }
+{% endif %}
+#else
+{% if op.required_properties %}
+    auto {{ endpoint.action_first_method(op) }}({{ required_params(op) }}) {
+{{ required_body(op_qual, op) }}    }
+{% else %}
+    auto {{ endpoint.action_first_method(op) }}() { return create<api::{{ op_qual }}>(); }
+{% endif %}
+#endif
+{% else %}
+{% if op.required_properties %}
+    auto {{ endpoint.action_first_method(op) }}({{ required_params(op) }}) {
+{{ required_body(op_qual, op) }}    }
+{% else %}
+    auto {{ endpoint.action_first_method(op) }}() { return create<api::{{ op_qual }}>(); }
+{% endif %}
 {% endif %}
 {% endfor %}
 {% else %}
+{# ===== Simple (non-polymorphic) endpoint ===== #}
 {% set op = endpoint.operations[0] %}
+{% set skus_type = "api::" + endpoint.struct_name %}
+{% if has_skus %}
+#if __cplusplus >= 202002L
+    template<typename T_ = TargetT>
+    requires (IsUnconstrained<T_> || T_::supports({{ skus_type }}::skus))
 {% if op.required_properties %}
-    auto {{ endpoint.factory_method }}({% for p in op.required_properties %}{{ p.field_type }} {{ p.accessor_name }}{{ ", " if not loop.last }}{% endfor %}) {
-        auto r = create<api::{{ endpoint.struct_name }}>();
-{% for prop in op.required_properties %}
-        r.{{ prop.accessor_name }} = {{ prop.accessor_name }};
-{% endfor %}
-        return r;
-    }
+    auto {{ endpoint.factory_method }}({{ required_params(op) }}) {
+{{ required_body(endpoint.struct_name, op) }}    }
 {% else %}
     auto {{ endpoint.factory_method }}() { return create<api::{{ endpoint.struct_name }}>(); }
+{% endif %}
+
+    template<typename T_ = TargetT>
+    requires (!IsUnconstrained<T_> && !T_::supports({{ skus_type }}::skus) && !T_::strict)
+    [[deprecated("{{ endpoint.wire_name }} is not available on this target")]]
+{% if op.required_properties %}
+    auto {{ endpoint.factory_method }}({{ required_params(op) }}) {
+{{ required_body(endpoint.struct_name, op) }}    }
+{% else %}
+    auto {{ endpoint.factory_method }}() { return create<api::{{ endpoint.struct_name }}>(); }
+{% endif %}
+#else
+{% if op.required_properties %}
+    auto {{ endpoint.factory_method }}({{ required_params(op) }}) {
+{{ required_body(endpoint.struct_name, op) }}    }
+{% else %}
+    auto {{ endpoint.factory_method }}() { return create<api::{{ endpoint.struct_name }}>(); }
+{% endif %}
+#endif
+{% else %}
+{% if op.required_properties %}
+    auto {{ endpoint.factory_method }}({{ required_params(op) }}) {
+{{ required_body(endpoint.struct_name, op) }}    }
+{% else %}
+    auto {{ endpoint.factory_method }}() { return create<api::{{ endpoint.struct_name }}>(); }
+{% endif %}
 {% endif %}
 {% endif %}
 
 {% endfor %}
 };
+
+#if __cplusplus >= 202002L
+Api(Notecard&) -> Api<Unconstrained>;
+
+template<typename T = Unconstrained>
+auto make_api(Notecard& nc, T = {}) { return Api<T>(nc); }
+#else
+inline Api make_api(Notecard& nc) { return Api(nc); }
+#endif
 
 } // namespace note

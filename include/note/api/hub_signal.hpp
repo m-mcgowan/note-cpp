@@ -9,6 +9,7 @@
 #include <note/safety.hpp>
 #include <note/types.hpp>
 #include <note/units.hpp>
+#include <note/target.hpp>
 
 namespace note::api {
 
@@ -22,6 +23,7 @@ struct HubSignal {
     static constexpr string_view notecard_request = "hub.signal";
     static constexpr bool supports_cmd = true;
     static constexpr Safety safety = Safety::NonIdempotent;
+    static constexpr Skus skus{ Rat::Cell | Rat::WiFi | Rat::Ntn };
 
     Notecard* nc_ = nullptr;
 

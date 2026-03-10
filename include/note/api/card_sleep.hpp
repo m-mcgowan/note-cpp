@@ -8,6 +8,7 @@
 #include <note/safety.hpp>
 #include <note/types.hpp>
 #include <note/units.hpp>
+#include <note/target.hpp>
 
 namespace note::api {
 
@@ -21,6 +22,7 @@ struct CardSleep {
     static constexpr string_view notecard_request = "card.sleep";
     static constexpr bool supports_cmd = true;
     static constexpr Safety safety = Safety::Idempotent;
+    static constexpr Skus skus{ Rat::WiFi };
 
     Notecard* nc_ = nullptr;
 

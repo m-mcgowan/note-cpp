@@ -8,6 +8,7 @@
 #include <note/safety.hpp>
 #include <note/types.hpp>
 #include <note/units.hpp>
+#include <note/target.hpp>
 
 namespace note::api {
 
@@ -23,6 +24,7 @@ struct CardWirelessPenalty {
         static constexpr string_view notecard_request = "card.wireless.penalty";
         static constexpr bool supports_cmd = true;
         static constexpr Safety safety = Safety::ReadOnly;
+        static constexpr Skus skus{ Rat::Cell | Rat::WiFi | Rat::Ntn };
 
         Notecard* nc_ = nullptr;
 
@@ -167,6 +169,7 @@ struct CardWirelessPenalty {
         static constexpr string_view notecard_request = "card.wireless.penalty";
         static constexpr bool supports_cmd = true;
         static constexpr Safety safety = Safety::Idempotent;
+        static constexpr Skus skus{ Rat::Cell | Rat::WiFi | Rat::Ntn };
 
         Notecard* nc_ = nullptr;
 
@@ -302,6 +305,7 @@ struct CardWirelessPenalty {
         static constexpr string_view notecard_request = "card.wireless.penalty";
         static constexpr bool supports_cmd = true;
         static constexpr Safety safety = Safety::Destructive;
+        static constexpr Skus skus{ Rat::Cell | Rat::WiFi | Rat::Ntn };
 
         Notecard* nc_ = nullptr;
 

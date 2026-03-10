@@ -16,13 +16,19 @@
 
 #include <note/api_context.hpp>
 
+#if __cplusplus >= 202002L
+using UnconstrainedApi = note::Api<>;
+#else
+using UnconstrainedApi = note::Api;
+#endif
+
 namespace {
 
 struct Harness {
     note::test::TestJsonBackend backend;
     std::string last_req;
     note::Notecard nc;
-    note::Api api;
+    UnconstrainedApi api;
 
     Harness()
         : nc(backend,
@@ -42,7 +48,7 @@ struct Harness {
 struct FailHarness {
     note::test::TestJsonBackend backend;
     note::Notecard nc;
-    note::Api api;
+    UnconstrainedApi api;
 
     FailHarness()
         : nc(backend,

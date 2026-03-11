@@ -93,6 +93,38 @@ TEST_CASE("Strict mode — supported endpoints work at runtime") {
     REQUIRE(last_req.find("hub.set") != std::string::npos);
 }
 
+// ---------------------------------------------------------------------------
+// Constructor with target (CTAD)
+// ---------------------------------------------------------------------------
+
+TEST_CASE("Api(nc, target) — constrained via constructor") {
+    note::test::TestJsonBackend backend;
+    std::string last_req;
+    auto nc = make_nc(backend, last_req);
+    note::Api api(nc, note::target<note::Product::WiFi>());
+
+    // card.wifi needs WiFi — available
+    api.execute(api.cardWifi());
+    REQUIRE(last_req.find("card.wifi") != std::string::npos);
+
+    // Universal endpoints always work
+    api.execute(api.cardVersion());
+    REQUIRE(last_req.find("card.version") != std::string::npos);
+}
+
+TEST_CASE("Api(nc, target) — strict mode via constructor") {
+    note::test::TestJsonBackend backend;
+    std::string last_req;
+    auto nc = make_nc(backend, last_req);
+    note::Api api(nc, note::Target<note::Rat::WiFi, true>{});
+
+    api.execute(api.cardSleep());
+    REQUIRE(last_req.find("card.sleep") != std::string::npos);
+
+    api.execute(api.hubSet());
+    REQUIRE(last_req.find("hub.set") != std::string::npos);
+}
+
 // Note: strict mode compile-time rejection of unsupported endpoints
 // (e.g. api.cardSleep() on a LoRa strict target) cannot be tested via
 // static_assert(requires(...)) due to CWG 2908 — no major compiler

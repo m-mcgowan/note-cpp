@@ -1,4 +1,4 @@
-// Target filtering: shows how make_api() with constrained targets provides
+// Target filtering: shows how constrained Api targets provide
 // compile-time feedback when using endpoints unsupported by your hardware.
 //
 // Build: clang++ -std=c++2b -fsyntax-only -I include examples/target_filtering.cpp
@@ -46,13 +46,13 @@ int main() {
         });
 
     // --- 1. Unconstrained API: all endpoints available ---
-    auto api = note::make_api(nc);
+    note::Api api(nc);
     api.execute(api.cardSleep());    // OK: WiFi-only, but unconstrained
     api.execute(api.hubSet());       // OK: universal
 
 #if __cplusplus >= 202002L
     // --- 2. WiFi target: WiFi-specific endpoints allowed ---
-    auto wifi_api = note::make_api(nc, note::target<note::Product::WiFi>());
+    note::Api wifi_api(nc, note::target<note::Product::WiFi>());
     wifi_api.execute(wifi_api.cardSleep());   // OK: WiFi supports card.sleep
     wifi_api.execute(wifi_api.cardWifi());    // OK: WiFi supports card.wifi
     wifi_api.execute(wifi_api.hubSet());      // OK: universal
@@ -60,7 +60,7 @@ int main() {
     // --- 3. Skylo target with custom RAT composition ---
     // Product::Cell + Rat::Ntn gives Cell|Ntn — same RATs as a custom combo
     constexpr auto skylo_rats = note::Product::Cell + note::Rat::Ntn;
-    auto skylo_api = note::make_api(nc, note::target<note::Product::Skylo>());
+    note::Api skylo_api(nc, note::target<note::Product::Skylo>());
     skylo_api.execute(skylo_api.cardWifi());  // OK: Skylo has WiFi RAT
     skylo_api.execute(skylo_api.hubSet());    // OK: universal
 

@@ -200,17 +200,25 @@ int main() {
     std::puts("--- hub.set (direct) ---");
     {
         auto req = api.hubSet();
-        req.mode = "continuous";
+        req.product = "com.example.app";
+        req.mode = "periodic";
+        req.outbound = 60;
         req.execute();
     }
 
     // Typed response — fields are named members, not strings
     std::puts("--- card.version (typed response) ---");
     {
-        auto ver = api.cardVersion().execute();
-        if (ver) {
-            // ver.version, ver.device, ver.board — typed, with autocomplete
-            std::puts("  (response fields via dot access)");
+        auto result = api.cardVersion().execute();
+        if (result) {
+            auto version = result.version;
+            auto device  = result.device;
+            (void)version; (void)device;
+        } else {
+            auto err = result.error();
+            // err.code    — Error enum (Transport, Protocol, Notecard, ...)
+            // err.message — human-readable description
+            (void)err;
         }
     }
 
@@ -247,6 +255,25 @@ int main() {
         api.noteAdd().file("sensors.qo").body(r).execute();
     }
 
+    // Inline initialization
+    std::puts("--- note.add (inline body) ---");
+    api.noteAdd()
+       .file("sensors.qo")
+       .body(Readings{.temperature = 22.5f, .humidity = 60})
+       .execute();
+
+    // Direct assignment — request fields and body
+    std::puts("--- note.add (assigned body) ---");
+    {
+        Readings r;
+        r.temperature = 22.5f;
+        r.humidity = 60;
+        auto req = api.noteAdd();
+        req.file = "sensors.qo";
+        req.body(r);
+        req.execute();
+    }
+
     // Register a Notecard template — auto-generates type hints
     // (14.1 = TFLOAT32, 11 = TINT16)
     std::puts("--- note.template ---");
@@ -257,9 +284,9 @@ int main() {
     // Parse a response body back into the struct
     std::puts("--- note.get (parse body) ---");
     {
-        auto result = api.noteGet().get().file("data.qi").execute();
-        if (result) {
-            auto data = result.bodyAs<Readings>();
+        auto r = api.noteGet().get().file("data.qi").execute();
+        if (r) {
+            Readings data = r.bodyAs<Readings>();
             (void)data.temperature;
             (void)data.humidity;
             std::puts("  (body parsed into Readings struct)");

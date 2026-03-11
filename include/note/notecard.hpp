@@ -93,7 +93,7 @@ public:
     void set_default_timeout(uint32_t ms) { default_timeout_ms_ = ms; }
     uint32_t default_timeout() const { return default_timeout_ms_; }
 
-    // Raw transport access — used by note-app channel variants.
+    // Raw transport access — used by note-cpp-app channel variants.
     Result<std::string> transact(string_view json, uint32_t timeout_ms) {
         return request_fn_(json, timeout_ms);
     }

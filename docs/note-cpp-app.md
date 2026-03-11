@@ -1,4 +1,4 @@
-# note-app Design
+# note-cpp-app Design
 
 A higher-level library sitting above note-cpp. Provides stateful, app-centric
 abstractions for common Notecard usage patterns.
@@ -42,7 +42,7 @@ state.
 │  Generated API, Notecard coordinator        │
 │  Transport: CRC, retry, segmentation        │
 ├──────────────────┬──────────────────────────┤
-│  note-arduino-cpp│  (other platform HALs)   │
+│  note-cpp-arduino│  (other platform HALs)   │
 └──────────────────┴──────────────────────────┘
 ```
 
@@ -553,7 +553,7 @@ Writes `HubSyncStatus` to the store after each sync.
 elert-notecard (a prior implementation using note-c / J* pointers) informed
 this design. Key differences:
 
-| | elert-notecard | note-app |
+| | elert-notecard | note-cpp-app |
 |---|---|---|
 | Request representation | `J*` (cJSON, type-erased at enqueue) | Typed object (type-erased at execution) |
 | JSON generation | At enqueue time | At execution time (lazy) |

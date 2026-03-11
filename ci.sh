@@ -8,6 +8,7 @@ ROOT="$(cd "$(dirname "$0")" && pwd)"
 #   ./ci.sh                  Run with default compiler (c++ -std=c++2b)
 #   ./ci.sh --all-compilers  Run with all available compilers
 #   ./ci.sh --coverage       Build with coverage instrumentation and generate report
+#   ./ci.sh --integrations   Build and run JSON backend integration tests
 #   CXX=g++-13 ./ci.sh       Run with a specific compiler
 #
 # --all-compilers discovers compilers matching the CI matrix (g++-13, clang++-18) plus
@@ -490,9 +491,30 @@ run_coverage() {
     echo
 }
 
+run_integrations() {
+    echo "=== JSON backend integration tests ==="
+    local CMAKE_POLICY="-DCMAKE_POLICY_VERSION_MINIMUM=3.5"
+
+    for backend in cjson nlohmann; do
+        local src="$ROOT/tests/integration/$backend"
+        local build="/tmp/note-cpp-integration-$backend"
+        echo
+        echo "--- $backend backend ---"
+        cmake -B "$build" "$src" $CMAKE_POLICY -DCMAKE_CXX_STANDARD=20 2>&1 | tail -3
+        cmake --build "$build" 2>&1
+        ctest --test-dir "$build" --output-on-failure
+    done
+
+    echo
+    echo "All integration tests passed."
+}
+
 case "${1:-}" in
     --coverage)
         run_coverage
+        ;;
+    --integrations)
+        run_integrations
         ;;
     --all-compilers)
         echo "Discovering compilers..."

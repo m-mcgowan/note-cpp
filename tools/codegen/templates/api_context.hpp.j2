@@ -32,6 +32,9 @@ class Api {
     Notecard& nc_;
 public:
     explicit Api(Notecard& nc) : nc_(nc) {}
+#if __cplusplus >= 202002L
+    explicit Api(Notecard& nc, TargetT) : nc_(nc) {}
+#endif
 
     Notecard& notecard() { return nc_; }
 
@@ -173,6 +176,8 @@ public:
 
 #if __cplusplus >= 202002L
 Api(Notecard&) -> Api<Unconstrained>;
+template<typename T>
+Api(Notecard&, T) -> Api<T>;
 
 template<typename T = Unconstrained>
 auto make_api(Notecard& nc, T = {}) { return Api<T>(nc); }

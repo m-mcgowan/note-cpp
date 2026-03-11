@@ -23,7 +23,7 @@ Type-safe C++23 API for the Blues Notecard. Header-only, zero dependencies beyon
 │  JsonBackend         │  Transport callable           │
 │  include/note/json.hpp│  std::function<Result<string>│
 │  Virtual JSON ops    │    (string_view, uint32_t)>   │
-│  (cJSON, nlohmann,   │  (provided by user/note-app)  │
+│  (cJSON, nlohmann,   │  (provided by user/note-cpp-app)  │
 │   RapidJSON, etc.)   │                               │
 └──────────────────────┴──────────────────────────────┘
 ```
@@ -100,7 +100,7 @@ Type-safe C++23 API for the Blues Notecard. Header-only, zero dependencies beyon
 - Transport is now a simple callable: `(string_view request, uint32_t timeout) → Result<string>`
 - `JsonBuilder::release()` replaced with `JsonBuilder::to_string()`
 - `JsonBackend::wrap_response()/free_response()` replaced with `parse_response(string_view)`
-- `io.hpp` deleted — transport implementations belong in note-app
+- `io.hpp` deleted — transport implementations belong in note-cpp-app
 - Tests simplified: `CapturingIO` replaced with inline lambdas
 
 ### Phase 8: OpenAPI tooling
@@ -163,9 +163,9 @@ Type-safe C++23 API for the Blues Notecard. Header-only, zero dependencies beyon
 - Examples: `getting_started.cpp`, `attention_pin.cpp`, `location_tracking.cpp`,
   `sending-notes/`, `hub-configuration/`
 
-## note-app
+## note-cpp-app
 
-Higher-level app-centric library above note-cpp. Full design: `docs/note-app.md`.
+Higher-level app-centric library above note-cpp. Full design: `docs/note-cpp-app.md`.
 
 ### Progress
 
@@ -189,7 +189,7 @@ Higher-level app-centric library above note-cpp. Full design: `docs/note-app.md`
 
 ### Design details
 
-Full design: `docs/note-app.md`.
+Full design: `docs/note-cpp-app.md`.
 
 #### Foundation (implemented)
 - `DirectChannel` — synchronous single-threaded wrapper (`include/note/app/channel.hpp`)
@@ -251,8 +251,8 @@ ground at the C++ level, so L2 work on note-c is no longer a priority.
 | **VoltageVariable** | [voltage_variable.hpp](../include/note/voltage_variable.hpp) | | same | [test_voltage_variable](../tests/test_voltage_variable.cpp) | |
 | **Target filtering** | [target.hpp](../include/note/target.hpp) | PLAN.md | same | [test_target](../tests/test_target.cpp), [test_make_api](../tests/test_make_api.cpp) | [target_filtering](../examples/target_filtering.cpp) |
 | **Code generation tooling** | [codegen/](../tools/codegen/) | PLAN.md | [generate.py](../tools/codegen/generate.py) | | |
-| **DirectChannel** | [channel.hpp](../include/note/app/channel.hpp) | [note-app.md](note-app.md) | same | [test_channel](../tests/test_channel.cpp) | |
-| **StaticStateStore** | [state_store.hpp](../include/note/app/state_store.hpp) | [note-app.md](note-app.md) | same | [test_state_store](../tests/test_state_store.cpp) | |
+| **DirectChannel** | [channel.hpp](../include/note/app/channel.hpp) | [note-cpp-app.md](note-cpp-app.md) | same | [test_channel](../tests/test_channel.cpp) | |
+| **StaticStateStore** | [state_store.hpp](../include/note/app/state_store.hpp) | [note-cpp-app.md](note-cpp-app.md) | same | [test_state_store](../tests/test_state_store.cpp) | |
 
 ## Future considerations
 

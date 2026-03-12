@@ -3,4 +3,5 @@ __pycache__/
 .claude/
 a.out
 coverage/
+tests/integration/firmware/boards.sh
 

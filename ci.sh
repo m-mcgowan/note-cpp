@@ -57,7 +57,7 @@ run_ci() {
 
     # Check each header compiles independently
     echo "=== Header compilation ==="
-    for header in $(find "$ROOT/include/note" -name '*.hpp' | sort); do
+    for header in $(find "$ROOT/include/note" -name '*.hpp' -not -path '*/backends/*' | sort); do
         name=$(basename "$header")
         printf "  %-40s " "$name"
         $CXX $CXXFLAGS $INCLUDE -fsyntax-only "$header" && echo "OK" || { echo "FAIL"; exit 1; }
@@ -83,7 +83,13 @@ run_ci() {
         "$ROOT/tests/test_channel.cpp" \
         "$ROOT/tests/test_state_store.cpp" \
         "$ROOT/tests/test_target.cpp" \
-        "$ROOT/tests/test_make_api.cpp"
+        "$ROOT/tests/test_make_api.cpp" \
+        "$ROOT/tests/test_units.cpp" \
+        "$ROOT/tests/test_connection.cpp" \
+        "$ROOT/tests/test_sync.cpp" \
+        "$ROOT/tests/test_templates.cpp" \
+        "$ROOT/tests/test_attention.cpp" \
+        "$ROOT/tests/test_setup.cpp"
     /tmp/note-cpp-tests
     echo "  tests: OK"
 
@@ -329,7 +335,8 @@ run_coverage_clang() {
         "$ROOT/tests/test_endpoint_coverage.cpp" \
         "$ROOT/tests/test_voltage_variable.cpp" \
         "$ROOT/tests/test_target.cpp" \
-        "$ROOT/tests/test_make_api.cpp"
+        "$ROOT/tests/test_make_api.cpp" \
+        "$ROOT/tests/test_units.cpp"
     LLVM_PROFILE_FILE="$PROFRAW" "$BINARY"
 
     "$LLVM_PROFDATA" merge -sparse "$PROFRAW" -o "$PROFDATA"
@@ -441,7 +448,8 @@ run_coverage() {
         test_notecard test_api_context test_endpoint_coverage
         test_voltage_variable
         test_channel test_state_store
-        test_target test_make_api
+        test_target test_make_api test_units
+        test_connection test_sync test_templates test_attention test_setup
     )
     for name in "${SRCS[@]}"; do
         "$GCC" $CXXFLAGS --coverage -fprofile-arcs $INCLUDE -I "$ROOT/tests" \

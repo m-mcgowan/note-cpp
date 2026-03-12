@@ -302,7 +302,7 @@ TEST_CASE("receive_line returns JSON stripped of bare LF") {
     REQUIRE(*r == "{\"ok\":true}");
 }
 
-TEST_CASE("receive_line timeout before first byte returns Error::Timeout") {
+TEST_CASE("receive_line timeout before first byte returns ResponseLost") {
     // note-c: _noteSerialAvailable always false → timeout → error
     // Uses a custom HAL whose delay() fast-forwards the clock.
     struct NoDataHal : public SerialHal {
@@ -329,10 +329,9 @@ TEST_CASE("receive_line timeout before first byte returns Error::Timeout") {
     NotecardSerial transport(hal);
     auto r = transport("{\"req\":\"hub.set\"}", 500);
     REQUIRE(!r.has_value());
-    // After kMaxRetries timeouts, the transport layer returns Error::Transport.
-    // (note-c similarly returns an {io} transport error after all retries.)
-    REQUIRE((r.error().code == note::Error::Timeout ||
-             r.error().code == note::Error::Transport));
+    // After kMaxRetries timeouts, the last error is propagated.
+    REQUIRE(r.error().code == note::Error::ResponseLost);
+    REQUIRE(r.error().cause == note::Cause::Timeout);
 }
 
 TEST_CASE("receive_line intra-transaction timeout after first byte") {
@@ -366,8 +365,9 @@ TEST_CASE("receive_line intra-transaction timeout after first byte") {
     auto r = transport("{\"req\":\"hub.set\"}", 10000);
     REQUIRE(!r.has_value());
     // After retrying with partial responses that never complete, exhausts retries.
-    REQUIRE((r.error().code == note::Error::Timeout ||
-             r.error().code == note::Error::Transport));
+    REQUIRE(r.error().code == note::Error::ResponseLost);
+    REQUIRE((r.error().cause == note::Cause::Timeout ||
+             r.error().cause == note::Cause::TimeoutIntra));
 }
 
 // ---------------------------------------------------------------------------
@@ -487,15 +487,13 @@ TEST_CASE("I/O error on transmit triggers retry, succeeds on recovery") {
     REQUIRE(r.has_value());
 }
 
-TEST_CASE("max retries exceeded returns Error::Transport or Error::NotReady") {
-    // note-c: all retries fail → Error::Transport (or NotReady if reset fails)
+TEST_CASE("reset failure returns Error::NotReady") {
     ScriptedHal hal;
     hal.reset_drain_response = "BAD\r\n";  // reset always fails
     NotecardSerial transport(hal);
     auto r = transport("{\"req\":\"hub.set\"}", 5000);
     REQUIRE(!r.has_value());
-    REQUIRE((r.error().code == note::Error::NotReady ||
-             r.error().code == note::Error::Transport));
+    REQUIRE(r.error().code == note::Error::NotReady);
 }
 
 // ---------------------------------------------------------------------------

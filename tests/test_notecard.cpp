@@ -11,13 +11,13 @@
 #include <note/api/hub_set.hpp>
 
 // ---------------------------------------------------------------------------
-// A JsonReader that always reports an error — for protocol error path tests.
+// A JsonReader that always reports a parse error (has_error() == true).
 // ---------------------------------------------------------------------------
 namespace {
 
-class ErrorJsonReader : public note::JsonReader {
+class ParseErrorJsonReader : public note::JsonReader {
 public:
-    explicit ErrorJsonReader(std::string msg) : msg_(std::move(msg)) {}
+    explicit ParseErrorJsonReader(std::string msg) : msg_(std::move(msg)) {}
     bool has(note::string_view) const override { return false; }
     bool get_bool(note::string_view, bool d) const override { return d; }
     int32_t get_int(note::string_view, int32_t d) const override { return d; }
@@ -30,14 +30,47 @@ private:
     std::string msg_;
 };
 
-class ErrorJsonBackend : public note::JsonBackend {
+class ParseErrorJsonBackend : public note::JsonBackend {
 public:
-    explicit ErrorJsonBackend(std::string error_msg) : error_msg_(std::move(error_msg)) {}
+    explicit ParseErrorJsonBackend(std::string error_msg) : error_msg_(std::move(error_msg)) {}
     std::unique_ptr<note::JsonBuilder> create_builder() override {
         return std::make_unique<note::test::TestJsonBuilder>();
     }
     std::unique_ptr<note::JsonReader> parse_response(note::string_view) override {
-        return std::make_unique<ErrorJsonReader>(error_msg_);
+        return std::make_unique<ParseErrorJsonReader>(error_msg_);
+    }
+private:
+    std::string error_msg_;
+};
+
+// ---------------------------------------------------------------------------
+// A JsonReader that has a Notecard "err" field (has_error()==false but
+// get_error() returns the error string).
+// ---------------------------------------------------------------------------
+
+class NotecardErrorJsonReader : public note::JsonReader {
+public:
+    explicit NotecardErrorJsonReader(std::string msg) : msg_(std::move(msg)) {}
+    bool has(note::string_view key) const override { return key == "err"; }
+    bool get_bool(note::string_view, bool d) const override { return d; }
+    int32_t get_int(note::string_view, int32_t d) const override { return d; }
+    double get_double(note::string_view, double d) const override { return d; }
+    note::string_view get_string(note::string_view, note::string_view d) const override { return d; }
+    std::unique_ptr<note::JsonReader> get_object(note::string_view) const override { return nullptr; }
+    bool has_error() const override { return false; }
+    note::string_view get_error() const override { return note::string_view(msg_); }
+private:
+    std::string msg_;
+};
+
+class NotecardErrorJsonBackend : public note::JsonBackend {
+public:
+    explicit NotecardErrorJsonBackend(std::string error_msg) : error_msg_(std::move(error_msg)) {}
+    std::unique_ptr<note::JsonBuilder> create_builder() override {
+        return std::make_unique<note::test::TestJsonBuilder>();
+    }
+    std::unique_ptr<note::JsonReader> parse_response(note::string_view) override {
+        return std::make_unique<NotecardErrorJsonReader>(error_msg_);
     }
 private:
     std::string error_msg_;
@@ -109,11 +142,11 @@ TEST_CASE("Notecard derived send_fn propagates transport error from request_fn")
     note::test::TestJsonBackend backend;
     note::Notecard nc(backend,
         [](note::string_view, uint32_t) -> note::Result<std::string> {
-            return note::Unexpected(note::ErrorInfo{note::Error::Transport, "wire error"});
+            return note::Unexpected(note::ErrorInfo{note::Error::SendFailed, {}, "wire error"});
         });
     auto r = nc.command("card.restart");
     REQUIRE_FALSE(r.has_value());
-    REQUIRE(r.error().code == note::Error::Transport);
+    REQUIRE(r.error().code == note::Error::SendFailed);
 }
 
 // ---------------------------------------------------------------------------
@@ -161,44 +194,65 @@ TEST_CASE("Notecard::request() propagates transport error") {
     note::test::TestJsonBackend backend;
     note::Notecard nc(backend,
         [](note::string_view, uint32_t) -> note::Result<std::string> {
-            return note::Unexpected(note::ErrorInfo{note::Error::Transport, "lost"});
+            return note::Unexpected(note::ErrorInfo{note::Error::SendFailed, {}, "lost"});
         });
     auto r = nc.request("card.version");
     REQUIRE_FALSE(r.has_value());
-    REQUIRE(r.error().code == note::Error::Transport);
+    REQUIRE(r.error().code == note::Error::SendFailed);
 }
 
-TEST_CASE("Notecard::request() returns protocol error when response has err field") {
-    ErrorJsonBackend backend("notecard not ready");
+TEST_CASE("Notecard::request() returns Json error on parse failure") {
+    ParseErrorJsonBackend backend("invalid json");
+    note::Notecard nc(backend,
+        [](note::string_view, uint32_t) -> note::Result<std::string> {
+            return R"(not json)";
+        });
+    auto r = nc.request("card.version");
+    REQUIRE_FALSE(r.has_value());
+    REQUIRE(r.error().code == note::Error::Json);
+}
+
+TEST_CASE("Notecard::request() returns reader even when response has err field") {
+    NotecardErrorJsonBackend backend("notecard not ready");
     note::Notecard nc(backend,
         [](note::string_view, uint32_t) -> note::Result<std::string> {
             return R"({"err":"notecard not ready"})";
         });
     auto r = nc.request("card.version");
-    REQUIRE_FALSE(r.has_value());
-    REQUIRE(r.error().code == note::Error::Protocol);
-    // Note: error message is a string_view into the (now-destroyed) reader;
-    // checking the code is sufficient for the protocol error path.
+    REQUIRE(r.has_value());
+    REQUIRE((*r)->get_error() == "notecard not ready");
 }
 
 // ---------------------------------------------------------------------------
-// execute() error paths (transport + protocol)
+// execute() error paths
 // ---------------------------------------------------------------------------
 
 TEST_CASE("Notecard::execute() propagates transport error") {
     note::test::TestJsonBackend backend;
     note::Notecard nc(backend,
         [](note::string_view, uint32_t) -> note::Result<std::string> {
-            return note::Unexpected(note::ErrorInfo{note::Error::Transport, "io error"});
+            return note::Unexpected(note::ErrorInfo{note::Error::SendFailed, {}, "io error"});
         });
     note::api::CardVersion req;
     auto r = nc.execute(req);
     REQUIRE_FALSE(r.has_value());
-    REQUIRE(r.error().code == note::Error::Transport);
+    REQUIRE(r.error().code == note::Error::SendFailed);
 }
 
-TEST_CASE("Notecard::execute() returns protocol error when response has err field") {
-    ErrorJsonBackend backend("bad firmware");
+TEST_CASE("Notecard::execute() returns Json error on parse failure") {
+    ParseErrorJsonBackend backend("bad json");
+    note::Notecard nc(backend,
+        [](note::string_view, uint32_t) -> note::Result<std::string> {
+            return R"(not json)";
+        });
+    note::api::CardVersion req;
+    auto r = nc.execute(req);
+    REQUIRE_FALSE(r.has_value());
+    REQUIRE(r.error().code == note::Error::Json);
+}
+
+TEST_CASE("Notecard::execute() returns Notecard error when response has err field") {
+    NotecardErrorJsonBackend backend("bad firmware");
     note::Notecard nc(backend,
         [](note::string_view, uint32_t) -> note::Result<std::string> {
             return R"({"err":"bad firmware"})";
@@ -206,9 +260,8 @@ TEST_CASE("Notecard::execute() returns protocol error when response has err fiel
     note::api::CardVersion req;
     auto r = nc.execute(req);
     REQUIRE_FALSE(r.has_value());
-    REQUIRE(r.error().code == note::Error::Protocol);
-    // Note: error message is a string_view into the (now-destroyed) reader;
-    // checking the code is sufficient for the protocol error path.
+    REQUIRE(r.error().code == note::Error::Notecard);
+    REQUIRE(r.error().message == "bad firmware");
 }
 
 // ---------------------------------------------------------------------------
@@ -250,11 +303,11 @@ TEST_CASE("Notecard::command() propagates send error") {
     note::Notecard nc(backend,
         [](note::string_view, uint32_t) -> note::Result<std::string> { return "{}"; },
         [](note::string_view) -> note::Result<void> {
-            return note::Unexpected(note::ErrorInfo{note::Error::Transport, "send failed"});
+            return note::Unexpected(note::ErrorInfo{note::Error::SendFailed, {}, "send failed"});
         });
     auto r = nc.command("card.restart");
     REQUIRE_FALSE(r.has_value());
-    REQUIRE(r.error().code == note::Error::Transport);
+    REQUIRE(r.error().code == note::Error::SendFailed);
 }
 
 // ---------------------------------------------------------------------------
@@ -297,15 +350,33 @@ TEST_CASE("Safety::is_safe_to_retry() is true for ReadOnly and Idempotent") {
 }
 
 // ---------------------------------------------------------------------------
-// Error enum utilities
+// Error + Cause enum utilities
 // ---------------------------------------------------------------------------
 
 TEST_CASE("Error::to_string() returns correct strings") {
-    REQUIRE(note::to_string(note::Error::Timeout)    == "timeout");
-    REQUIRE(note::to_string(note::Error::Transport)  == "transport");
-    REQUIRE(note::to_string(note::Error::Json)       == "json");
-    REQUIRE(note::to_string(note::Error::Protocol)   == "protocol");
-    REQUIRE(note::to_string(note::Error::NotReady)   == "not ready");
-    REQUIRE(note::to_string(note::Error::Overflow)   == "overflow");
-    REQUIRE(note::to_string(note::Error::InvalidArg) == "invalid argument");
+    REQUIRE(note::to_string(note::Error::SendFailed)   == "send_failed");
+    REQUIRE(note::to_string(note::Error::ResponseLost) == "response_lost");
+    REQUIRE(note::to_string(note::Error::Notecard)     == "notecard");
+    REQUIRE(note::to_string(note::Error::Json)         == "json");
+    REQUIRE(note::to_string(note::Error::NotReady)     == "not_ready");
+    REQUIRE(note::to_string(note::Error::Overflow)     == "overflow");
+    REQUIRE(note::to_string(note::Error::InvalidArg)   == "invalid_argument");
+}
+
+TEST_CASE("Cause::to_string() returns correct strings") {
+    REQUIRE(note::to_string(note::Cause::Unspecified)  == "unspecified");
+    REQUIRE(note::to_string(note::Cause::Timeout)      == "timeout");
+    REQUIRE(note::to_string(note::Cause::TimeoutIntra) == "timeout_intra");
+    REQUIRE(note::to_string(note::Cause::HalError)     == "hal_error");
+    REQUIRE(note::to_string(note::Cause::CrcMismatch)  == "crc_mismatch");
+}
+
+TEST_CASE("to_string(ErrorInfo) without cause omits brackets") {
+    note::ErrorInfo e{note::Error::Notecard, note::Cause::Unspecified, "not ready"};
+    REQUIRE(note::to_string(e) == "notecard: not ready");
+}
+
+TEST_CASE("to_string(ErrorInfo) with cause includes brackets") {
+    note::ErrorInfo e{note::Error::ResponseLost, note::Cause::Timeout, "no response"};
+    REQUIRE(note::to_string(e) == "response_lost[timeout]: no response");
 }

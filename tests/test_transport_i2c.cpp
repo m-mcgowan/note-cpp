@@ -361,7 +361,7 @@ TEST_CASE("i2c receive: response stripped of trailing CR+LF") {
     CHECK(*result == "{\"ok\":true}");
 }
 
-TEST_CASE("i2c receive: priming timeout → Error::Timeout") {
+TEST_CASE("i2c receive: priming timeout → ResponseLost") {
     // note-c: _i2cNoteQueryLength times out → timeout error.
     ScriptedI2cHal hal;
     NotecardI2c transport(hal);
@@ -370,11 +370,11 @@ TEST_CASE("i2c receive: priming timeout → Error::Timeout") {
     // No response queued → rx_buf stays empty → priming query always 0.
     auto result = transport({"{\"req\":\"hub.sync\"}"}, 100);
     REQUIRE(!result);
-    CHECK((result.error().code == Error::Timeout ||
-           result.error().code == Error::Transport));
+    CHECK(result.error().code == Error::ResponseLost);
+    CHECK(result.error().cause == note::Cause::Timeout);
 }
 
-TEST_CASE("i2c receive: intra-timeout (partial response, no newline) → Timeout") {
+TEST_CASE("i2c receive: intra-timeout (partial response, no newline) → ResponseLost") {
     // note-c: timeout while waiting for complete response → error.
     ScriptedI2cHal hal;
     NotecardI2c transport(hal);
@@ -384,8 +384,9 @@ TEST_CASE("i2c receive: intra-timeout (partial response, no newline) → Timeout
     hal.responses.push_back("{\"partial\":");  // deliberately no \n
     auto result = transport({"{}"}, 5000);
     REQUIRE(!result);
-    CHECK((result.error().code == Error::Timeout ||
-           result.error().code == Error::Transport));
+    CHECK(result.error().code == Error::ResponseLost);
+    CHECK((result.error().cause == note::Cause::Timeout ||
+           result.error().cause == note::Cause::TimeoutIntra));
 }
 
 TEST_CASE("i2c receive: multi-chunk response (> max_transfer) assembled correctly") {
@@ -487,7 +488,7 @@ TEST_CASE("i2c round-trip: CRC mismatch triggers retry") {
     CHECK(*result == json);
 }
 
-TEST_CASE("i2c round-trip: transmit failure all retries → Error::Transport") {
+TEST_CASE("i2c round-trip: transmit failure all retries → SendFailed") {
     // After initialization, make all transmits fail. Set reset_ok=false so
     // the internal do_reset() calls inside the retry loop return quickly
     // (fail fast on reset() rather than waiting through NACK retries).
@@ -499,10 +500,11 @@ TEST_CASE("i2c round-trip: transmit failure all retries → Error::Transport") {
     hal.reset_ok    = false;  // fast-fail do_reset() in retry loop
     auto result = transport({"{\"req\":\"hub.sync\"}"}, 5000);
     REQUIRE(!result);
-    CHECK(result.error().code == Error::Transport);
+    CHECK(result.error().code == Error::SendFailed);
+    CHECK(result.error().cause == note::Cause::HalError);
 }
 
-TEST_CASE("i2c round-trip: max retries exceeded → Error::Transport") {
+TEST_CASE("i2c round-trip: max retries exceeded → ResponseLost") {
     // note-c equivalent: all retries fail → return error.
     ScriptedI2cHal hal;
     NotecardI2c transport(hal);
@@ -512,7 +514,8 @@ TEST_CASE("i2c round-trip: max retries exceeded → Error::Transport") {
     // All subsequent receive calls return no data → timeout every time.
     auto result = transport({"{\"req\":\"hub.sync\"}"}, 10);
     REQUIRE(!result);
-    CHECK(result.error().code == Error::Transport);
+    CHECK(result.error().code == Error::ResponseLost);
+    CHECK(result.error().cause == note::Cause::Timeout);
 }
 
 TEST_CASE("i2c round-trip: second request after success") {

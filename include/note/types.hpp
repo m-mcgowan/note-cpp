@@ -41,6 +41,8 @@
 
 namespace note {
 
+class JsonReader;  // Forward declaration — ApiResult holds reader to extend lifetime.
+
 using string_view = std::string_view;
 
 namespace detail {
@@ -60,7 +62,12 @@ using Unexpected = detail::unexpected<ErrorInfo>;
 
 inline Unexpected make_error(Error code, string_view message = {}) {
     if (message.empty()) message = to_string(code);
-    return Unexpected(ErrorInfo{code, message});
+    return Unexpected(ErrorInfo{code, Cause::Unspecified, message});
+}
+
+inline Unexpected make_error(Error code, Cause cause, string_view message = {}) {
+    if (message.empty()) message = to_string(code);
+    return Unexpected(ErrorInfo{code, cause, message});
 }
 
 // Result type for typed API responses. Inherits from Response so fields
@@ -75,9 +82,12 @@ inline Unexpected make_error(Error code, string_view message = {}) {
 template<typename Response>
 class ApiResult : public Response {
     std::optional<ErrorInfo> err_;
+    std::unique_ptr<JsonReader> reader_;  // keeps error message string_views alive
 public:
     ApiResult(Response r) : Response(std::move(r)) {}
     ApiResult(ErrorInfo e) : err_(std::move(e)) {}
+    ApiResult(ErrorInfo e, std::unique_ptr<JsonReader> reader)
+        : err_(std::move(e)), reader_(std::move(reader)) {}
 #if defined(__cpp_lib_expected) && __cpp_lib_expected >= 202202L
     ApiResult(Unexpected e) : err_(std::move(e).error()) {}
 #else

@@ -121,26 +121,35 @@ public:
             wire = detail::crc_add(std::move(wire), crc_seq_);
         }
 
+        ErrorInfo last_error{Error::SendFailed, Cause::HalError, "transmit failed"};
+
         for (uint32_t attempt = 0; attempt <= policy.max_retries; ++attempt) {
             if (attempt > 0) hal_.delay(policy.retry_delay_ms);
 
             // Segmented transmit.
             if (!send_segmented(wire.data(), wire.size())) {
+                last_error = {Error::SendFailed, Cause::HalError, "transmit failed"};
                 do_reset();
                 continue;
             }
 
             // Receive until newline.
             auto result = receive_line(timeout_ms);
-            if (!result) continue;
+            if (!result) {
+                last_error = result.error();
+                continue;
+            }
 
             // CRC validation + auto-detection (mutates *result, sets crc_enabled_).
-            if (detail::crc_check_and_strip(*result, crc_seq_, crc_enabled_)) continue;
+            if (detail::crc_check_and_strip(*result, crc_seq_, crc_enabled_)) {
+                last_error = {Error::ResponseLost, Cause::CrcMismatch, "CRC mismatch"};
+                continue;
+            }
 
             return result;
         }
 
-        return make_error(Error::Transport, "Notecard: max retries exceeded");
+        return Unexpected(last_error);
     }
 
 private:
@@ -237,10 +246,10 @@ private:
                 const uint32_t now = hal_.millis();
                 if (!first_byte_seen) {
                     if (timeout_ms && (now - start >= timeout_ms))
-                        return make_error(Error::Timeout, "Notecard: no response");
+                        return make_error(Error::ResponseLost, Cause::Timeout, "no response");
                 } else {
                     if (now - intra_start >= policy.intra_timeout_ms)
-                        return make_error(Error::Timeout, "Notecard: response incomplete");
+                        return make_error(Error::ResponseLost, Cause::TimeoutIntra, "response incomplete");
                 }
             }
         }

@@ -53,10 +53,10 @@ struct FailHarness {
     FailHarness()
         : nc(backend,
             [](note::string_view, uint32_t) -> note::Result<std::string> {
-                return note::make_error(note::Error::Transport, "test");
+                return note::make_error(note::Error::SendFailed, "test");
             },
             [](note::string_view) -> note::Result<void> {
-                return note::make_error(note::Error::Transport, "test");
+                return note::make_error(note::Error::SendFailed, "test");
             })
         , api(nc)
     {}

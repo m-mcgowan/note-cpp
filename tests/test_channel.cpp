@@ -68,13 +68,13 @@ TEST_CASE("DirectChannel::execute() propagates transport errors") {
     note::test::TestJsonBackend backend;
     note::Notecard nc(backend,
         [](note::string_view, uint32_t) -> note::Result<std::string> {
-            return note::make_error(note::Error::Timeout, "timed out");
+            return note::make_error(note::Error::ResponseLost, note::Cause::Timeout, "timed out");
         });
 
     note::app::DirectChannel ch(nc);
     auto r = ch.execute(note::api::CardVersion{});
     REQUIRE(!r);
-    REQUIRE(r.error().code == note::Error::Timeout);
+    REQUIRE(r.error().code == note::Error::ResponseLost);
 }
 
 // ---------------------------------------------------------------------------
@@ -91,7 +91,7 @@ TEST_CASE("DirectChannel::execute() propagates protocol errors") {
     note::app::DirectChannel ch(nc);
     auto r = ch.execute(note::api::CardVersion{});
     REQUIRE(!r);
-    REQUIRE(r.error().code == note::Error::Protocol);
+    REQUIRE(r.error().code == note::Error::Json);
 }
 
 // ---------------------------------------------------------------------------

@@ -84,7 +84,7 @@ int main() {
     (void)cmd_result;
 
     // Error handling
-    auto err = note::make_error(note::Error::Timeout, "request timed out");
+    auto err = note::make_error(note::Error::ResponseLost, note::Cause::Timeout, "request timed out");
     (void)err;
 
     // Safety introspection

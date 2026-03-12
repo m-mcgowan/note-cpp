@@ -49,7 +49,12 @@ public:
 
         auto reader = backend_.parse_response(*rsp);
         if (reader->has_error()) {
-            return make_error(Error::Protocol, reader->get_error());
+            return make_error(Error::Json, reader->get_error());
+        }
+        auto err = reader->get_error();
+        if (!err.empty()) {
+            ErrorInfo ei{Error::Notecard, Cause::Unspecified, err};
+            return ApiResult<typename RequestT::Response>(std::move(ei), std::move(reader));
         }
         return RequestT::Response::parse(std::move(reader));
     }
@@ -67,8 +72,10 @@ public:
 
         auto reader = backend_.parse_response(*rsp);
         if (reader->has_error()) {
-            return make_error(Error::Protocol, reader->get_error());
+            return make_error(Error::Json, reader->get_error());
         }
+        // Note: we don't check get_error() here — the caller receives the
+        // reader directly and can inspect {"err":"..."} themselves.
         return reader;
     }
 

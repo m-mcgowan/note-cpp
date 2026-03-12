@@ -149,23 +149,32 @@ public:
         }
         wire += '\n';  // I2C uses bare \n terminator (not \r\n like serial)
 
+        ErrorInfo last_error{Error::SendFailed, Cause::HalError, "I2C transmit failed"};
+
         for (uint32_t attempt = 0; attempt <= policy.max_retries; ++attempt) {
             if (attempt > 0) hal_.delay(policy.retry_delay_ms);
 
             if (!send_chunked(wire.data(), wire.size())) {
+                last_error = {Error::SendFailed, Cause::HalError, "I2C transmit failed"};
                 do_reset();
                 continue;
             }
 
             auto result = receive_response(timeout_ms);
-            if (!result) continue;
+            if (!result) {
+                last_error = result.error();
+                continue;
+            }
 
-            if (detail::crc_check_and_strip(*result, crc_seq_, crc_enabled_)) continue;
+            if (detail::crc_check_and_strip(*result, crc_seq_, crc_enabled_)) {
+                last_error = {Error::ResponseLost, Cause::CrcMismatch, "CRC mismatch"};
+                continue;
+            }
 
             return result;
         }
 
-        return make_error(Error::Transport, "Notecard: max retries exceeded");
+        return Unexpected(last_error);
     }
 
 private:
@@ -302,10 +311,10 @@ private:
             const uint32_t start = hal_.millis();
             while (available == 0) {
                 if (!hal_.receive(&dummy, 0, available))
-                    return make_error(Error::Transport, "Notecard: I2C receive failed");
+                    return make_error(Error::ResponseLost, Cause::HalError, "I2C receive failed");
                 if (available == 0) {
                     if (timeout_ms && hal_.millis() - start >= timeout_ms)
-                        return make_error(Error::Timeout, "Notecard: no response");
+                        return make_error(Error::ResponseLost, Cause::Timeout, "no response");
                     hal_.delay(policy.response_poll_ms);  // 50 ms poll interval
                 }
             }
@@ -326,7 +335,7 @@ private:
                                          sizeof(chunk)});
 
             if (!hal_.receive(chunk, req, available))
-                return make_error(Error::Transport, "Notecard: I2C receive failed");
+                return make_error(Error::ResponseLost, Cause::HalError, "I2C receive failed");
 
             if (req > 0) {
                 buf.append(reinterpret_cast<const char*>(chunk), req);
@@ -339,7 +348,7 @@ private:
 
             // Nothing available yet and no EOP — wait for more.
             if (hal_.millis() - intra_start >= policy.intra_timeout_ms)
-                return make_error(Error::Timeout, "Notecard: response incomplete");
+                return make_error(Error::ResponseLost, Cause::TimeoutIntra, "response incomplete");
             hal_.delay(policy.response_poll_ms);  // 50 ms poll
         }
 

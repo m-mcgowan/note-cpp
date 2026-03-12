@@ -120,6 +120,25 @@ int main() {
     // But you can't mix them up — this would be a compile error:
     //   api.hubSet().outbound(60_s);  // error: Seconds ≠ Minutes
 
+    // Hours and Days convert implicitly to smaller units:
+    std::puts("\n--- Hours and Days ---");
+    api.hubSet()
+        .product("com.example.app")
+        .mode("periodic")
+        .outbound(2_hours)       // Hours → Minutes (= 120 on the wire)
+        .inbound(7_days)         // Days → Minutes (= 10080 on the wire)
+        .execute();
+
+    // Works across the API — anywhere a Seconds field is expected:
+    api.cardSleep()
+        .seconds(12_hours)       // Hours → Seconds (= 43200 on the wire)
+        .execute();
+
+    api.cardAttn()
+        .mode("arm")
+        .seconds(5_mins)         // Minutes → Seconds (= 300 on the wire)
+        .execute();
+
 
     // ═════════════════════════════════════════════════════════════════════════
     // 3. Named constants — self-documenting special values

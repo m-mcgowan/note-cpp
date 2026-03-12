@@ -77,18 +77,18 @@ constants on the field type. No need to remember magic numbers.
 ```cpp
 // main.cpp#L129-L140
 
+    .inbound(7_days)         // Days → Minutes (= 10080 on the wire)
+    .execute();
 
-using outbound_t = note::api::HubSet::outbound_t;
-using inbound_t  = note::api::HubSet::inbound_t;
+// Works across the API — anywhere a Seconds field is expected:
+api.cardSleep()
+    .seconds(12_hours)       // Hours → Seconds (= 43200 on the wire)
+    .execute();
 
-// Reset outbound to default (sends -1 on the wire)
-api.hubSet().outbound(outbound_t::reset).execute();
-
-// Manual sync only — no automatic outbound (sends 0)
-api.hubSet().outbound(outbound_t::manual).execute();
-
-// Same constants exist for inbound
-api.hubSet().inbound(inbound_t::reset).execute();
+api.cardAttn()
+    .mode("arm")
+    .seconds(5_mins)         // Minutes → Seconds (= 300 on the wire)
+    .execute();
 ```
 
 ## 4. Consteval validation
@@ -99,10 +99,10 @@ trigger a compile error.
 ```cpp
 // main.cpp#L149-L152
 
-api.hubSet()
-    .product("com.example.app")
-    .mode(note::api::HubSet::validatedMode("periodic"))
-    .execute();
+using outbound_t = note::api::HubSet::outbound_t;
+using inbound_t  = note::api::HubSet::inbound_t;
+
+// Reset outbound to default (sends -1 on the wire)
 ```
 
 ## 5. Voltage-variable sync
@@ -115,10 +115,10 @@ picks the interval matching its current voltage level.
 ```cpp
 // main.cpp#L165-L168
 
+// ═════════════════════════════════════════════════════════════════════════
+
+std::puts("\n--- Consteval validation ---");
 api.hubSet()
-    .mode("periodic")
-    .voutbound("usb:5;high:15;normal:60;low:240;dead:0")
-    .execute();
 ```
 
 **Builder** — type-safe, built directly on the field:
@@ -126,11 +126,11 @@ api.hubSet()
 ```cpp
 // main.cpp#L173-L177
 
-auto req = api.hubSet();
-req.mode = "periodic";
-req.voutbound.usb(5).high(15).normal(60).low(240).dead(0);
-req.vinbound.usb(5).high(30).normal(120).low(1440).dead(0);
-req.execute();
+
+
+
+
+
 ```
 
 Only levels you set are emitted — partial configurations are valid (e.g. just
@@ -144,22 +144,22 @@ mode on battery.
 ```cpp
 // main.cpp#L187-L204
 
-api.hubSet()
-    .product("com.example.app")
-    .mode("periodic")
-    .outbound(60_mins)
-    .uperiodic(true)
     .execute();
 
-// Stay continuous on USB, fall back to minimum on battery
-api.hubSet()
-    .mode("minimum")
-    .umin(true)
-    .execute();
+// Builder — type-safe, built directly on the field:
+std::puts("\n--- Voltage-variable sync (builder) ---");
+{
+    auto req = api.hubSet();
+    req.mode = "periodic";
+    req.voutbound.usb(5).high(15).normal(60).low(240).dead(0);
+    req.vinbound.usb(5).high(30).normal(120).low(1440).dead(0);
+    req.execute();
+}
 
-// Stay continuous on USB, fall back to off on battery
-api.hubSet()
-    .mode("off")
-    .uoff(true)
-    .execute();
+
+// ═════════════════════════════════════════════════════════════════════════
+// 6. USB-variable booleans — automatic mode switching on USB power
+// ═════════════════════════════════════════════════════════════════════════
+
+std::puts("\n--- USB-variable sync ---");
 ```

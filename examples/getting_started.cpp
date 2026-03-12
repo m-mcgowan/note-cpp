@@ -215,10 +215,7 @@ int main() {
             auto device  = result.device;
             (void)version; (void)device;
         } else {
-            auto err = result.error();
-            // err.code    — Error enum (Transport, Protocol, Notecard, ...)
-            // err.message — human-readable description
-            (void)err;
+            printf("error: %s\n", to_string(result.error()).c_str());
         }
     }
 

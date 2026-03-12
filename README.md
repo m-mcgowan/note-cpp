@@ -37,16 +37,18 @@ req.execute();
 Your custom types can also be included, such as when creating notes
 
 ```cpp
-// examples/getting_started.cpp#L254-L255
+// examples/getting_started.cpp#L250-L253
 
-Readings r{.temperature = 22.5f, .humidity = 60};
-api.noteAdd().file("sensors.qo").body(r).execute();
+{
+    Readings r{.temperature = 22.5f, .humidity = 60};
+    api.noteAdd().file("sensors.qo").body(r).execute();
+}
 ```
 
 Inline is fine too
 
 ```cpp
-// examples/getting_started.cpp#L260-L263
+// examples/getting_started.cpp#L257-L260
 
 api.noteAdd()
    .file("sensors.qo")
@@ -57,15 +59,17 @@ api.noteAdd()
 and property assignment
 
 ```cpp
-// examples/getting_started.cpp#L268-L274
+// examples/getting_started.cpp#L264-L272
 
-Readings r;
-r.temperature = 22.5f;
-r.humidity = 60;
-auto req = api.noteAdd();
-req.file = "sensors.qo";
-req.body(r);
-req.execute();
+{
+    Readings r;
+    r.temperature = 22.5f;
+    r.humidity = 60;
+    auto req = api.noteAdd();
+    req.file = "sensors.qo";
+    req.body(r);
+    req.execute();
+}
 ```
 
 ## Architecture
@@ -103,6 +107,7 @@ Once you have a `Notecard` instance, the typed API is the same everywhere:
 
 ```cpp
 #include <note/api_context.hpp>
+using namespace note::literals;
 auto nc = ....;                     // we'll get to this later.
 note::Api api(nc);
 
@@ -110,7 +115,7 @@ note::Api api(nc);
 api.hubSet()
    .product("com.example.app")
    .mode("periodic")
-   .outbound(60)
+   .outbound(60_mins)
    .execute();
 
 // Read responses. Fields are named members, not strings.
@@ -119,7 +124,7 @@ if (result) {
     auto version = result.version;   // string_view
     auto device  = result.device;    // string_view
 } else {
-    auto err = result.error();       // ErrorInfo{code, message}
+    auto err = to_string(result.error());  // "transport: I2C NACK"
 }
 ```
 
@@ -132,6 +137,7 @@ See the [getting started example](examples/getting_started.cpp) for a complete w
 - [Polymorphic APIs](#polymorphic-apis) — handles Notecard APIs with overloaded behavior depending on the request
 - [Body Values](#body-values) — raw JSON, builder lambdas, or typed structs
 - [Body Structs and Note Templates](#body-structs-and-note-templates) — one struct for send, receive, and template registration
+- [Type-Safe Duration Units](#type-safe-duration-units) — `Minutes`, `Seconds`, `Hours`, `Days` with implicit conversion and compile-time safety
 - [Error Handling](#error-handling) — `Result<T>` with structured errors and retry guidance
 - [Protocol Layer](#protocol-layer) — Notecard serial and I2C protocol implementations with CRC, retry, and chunking
 - [JSON Backend](#json-backend) — plug in any JSON library
@@ -178,14 +184,26 @@ Each API type carries `static constexpr Skus skus` for introspection. See [examp
 
 ## Polymorphic APIs
 
-Some Notecard APIs have overloaded behavior — the behavior and response depends on which fields you send. `note-cpp` models each behavior as a named sub-operation with two equivalent access styles:
+Some Notecard APIs behave differently depending on which fields you send. In `note-c` these share a single function — you pass the right combination of fields and hope you didn't set one that's irrelevant or wrong. In `note-cpp`, each behavior is a **distinct type** with only the fields that apply, its own response type, and a compile-time safety level:
 
 ```cpp
-api.noteGet().get().file("data.qi").execute();   // start from the API name
-api.getNoteGet().file("data.qi").execute();       // start from the action
+// Read a Note (ReadOnly — safe to retry on failure)
+auto r = api.noteGet().get().file("data.qi").execute();
+
+// Pop from queue (Destructive — not safe to retry blindly)
+auto r = api.noteGet().delete_().file("requests.qi").execute();
+
+// card.location.mode — Set accepts lat/lon, Get and Delete don't
+api.cardLocationMode().set()
+    .mode("fixed").lat(42.565).lon(-70.783)   // lat/lon only exist on Set
+    .execute();
+
+api.cardLocationMode().get().execute();       // no lat/lon fields to misuse
 ```
 
-The same pattern applies to `card.binary`, `card.contact`, `card.location.mode`, `card.power`, `card.temp`, `note.template`, and others.
+Each variant exposes only the fields the Notecard expects for that operation — setting a field that doesn't apply is a compile error, not a silent wire-level mistake.
+
+The same pattern applies to `card.binary`, `card.contact`, `card.location.mode`, `card.temp`, `note.template`, and others. See [docs/polymorphic-apis.md](docs/polymorphic-apis.md) for the full list.
 
 ---
 
@@ -194,8 +212,6 @@ The same pattern applies to `card.binary`, `card.contact`, `card.location.mode`,
 Note bodies support three tiers: **raw JSON strings**, **builder lambdas**, and **typed structs**. The struct approach is the most powerful — a single struct serves as builder, parser, and definition for Note template registration. See [Body Structs and Note Templates](#body-structs-and-note-templates).
 
 ```cpp
-// examples/getting_started.cpp#L254-L255
-
 Readings r{.temperature = 22.5f, .humidity = 60};
 api.noteAdd().file("sensors.qo").body(r).execute();
 ```
@@ -216,54 +232,123 @@ struct Readings {
 };
 ```
 
+Send typed data:
+
 ```cpp
-// examples/getting_started.cpp#L280-L282
+// examples/getting_started.cpp#L250-L253
+
+{
+    Readings r{.temperature = 22.5f, .humidity = 60};
+    api.noteAdd().file("sensors.qo").body(r).execute();
+}
+```
+
+Register a template (auto-generates type hints `14.1` = TFLOAT32, `11` = TINT16):
+
+```cpp
+// examples/getting_started.cpp#L277-L279
 
 api.noteTemplate().set("sensors.qo")
     .body(note::template_of<Readings>())
     .execute();
 ```
 
-```cpp
-// examples/getting_started.cpp#L287-L290
+Parse response body back into the struct:
 
-auto r = api.noteGet().get().file("data.qi").execute();
-if (r) {
-    Readings data = r.bodyAs<Readings>();
-    (void)data.temperature;
+```cpp
+// examples/getting_started.cpp#L283-L291
+
+{
+    auto r = api.noteGet().get().file("data.qi").execute();
+    if (r) {
+        Readings data = r.bodyAs<Readings>();
+        (void)data.temperature;
+        (void)data.humidity;
+        std::puts("  (body parsed into Readings struct)");
+    }
+}
 ```
 
 See [examples/sending-notes/](examples/sending-notes/) for a complete walkthrough.
 
 ---
 
-## Error Handling
+## Type-Safe Duration Units
 
-All operations return a result that is truthy on success. On failure, `error()` provides a structured `ErrorInfo` with an error code and message.
+Duration fields across the Notecard API use distinct types (`Minutes`, `Seconds`, `Hours`, `Days`) that prevent accidental unit mixing at compile time. Larger units implicitly convert to smaller ones — write `7_days` where a `Minutes` field is expected and the library does the math.
 
 ```cpp
-// examples/getting_started.cpp#L212-L222
+using namespace note::literals;
 
+// hub.set outbound/inbound are Minutes on the wire
+api.hubSet()
+    .outbound(15_mins)           // Minutes literal
+    .inbound(7_days)             // Days → Minutes (10080 on the wire)
+    .execute();
+
+// card.attn seconds field accepts Minutes/Hours too
+api.cardAttn()
+    .seconds(5_mins)             // Minutes → Seconds (300 on the wire)
+    .execute();
+
+// card.sleep — long sleep expressed naturally
+api.cardSleep()
+    .seconds(12_hours)           // Hours → Seconds (43200 on the wire)
+    .execute();
+
+// Compile-time safety — wrong direction is a type error:
+// api.hubSet().outbound(300_s);    // error: Seconds ≠ Minutes
+```
+
+**Voltage-variable sync** — adapt sync frequency to the Notecard's supply voltage. A builder constructs the semicolon-delimited string safely:
+
+```cpp
+auto req = api.hubSet();
+req.mode = "periodic";
+req.voutbound.usb(5).high(15).normal(60).low(240).dead(0);
+req.vinbound.usb(5).high(30).normal(120).low(1440).dead(0);
+req.execute();
+// produces: "voutbound":"usb:5;high:15;normal:60;low:240;dead:0"
+```
+
+Only levels you set are emitted — `.voutbound.usb(5).normal(60)` produces `"usb:5;normal:60"`.
+
+See [examples/hub-configuration/](examples/hub-configuration/) for more.
+
+---
+
+## Error Handling
+
+All operations return a result that is truthy on success. On failure, `error()` provides a structured `ErrorInfo` with an error code and message. `to_string()` formats it for logging.
+
+```cpp
 auto result = api.cardVersion().execute();
 if (result) {
-    auto version = result.version;
-    auto device  = result.device;
-    (void)version; (void)device;
+    auto version = result.version;   // string_view
+    auto device  = result.device;    // string_view
 } else {
-    auto err = result.error();
-    // err.code    — Error enum (Transport, Protocol, Notecard, ...)
-    // err.message — human-readable description
-    (void)err;
+    // Structured error with code, cause, and message:
+    ErrorInfo err = result.error();
+    err.code;     // Error::ResponseLost, Error::Notecard, etc.
+    err.cause;    // Cause::Timeout, Cause::HalError, etc.
+    err.message;  // "no response within deadline"
+
+    // Formatted for logging:
+    printf("error: %s\n", to_string(err).c_str());
+    // → "response_lost[timeout]: no response within deadline"
+    // → "notecard: {some device has no ProductUID configured}"
 }
 ```
+
+`Error` tells you *what* happened (and whether retrying is safe), `Cause` tells you *why*. See [docs/error-handling.md](docs/error-handling.md) for the full taxonomy.
 
 Each request also carries a compile-time safety level (`ReadOnly`, `Idempotent`, `NonIdempotent`, `Destructive`) that your transport or retry logic can inspect to decide whether it's safe to retry a failed request.
 
 ---
 
-## Protocol Layer
+## Wire Protocols
 
-Header-only implementations of the Notecard serial and I2C protocols: `NotecardSerial` and `NotecardI2c`. These implement the same wire protocols as note-c's `n_serial.c` and `n_i2c.c` — CRC auto-detection, segmented TX/RX, retry logic, and auto-reset — so your application talks to the Notecard using the standard framing it expects.
+Header-only implementations of the Notecard serial and I2C protocols: `NotecardSerial` and `NotecardI2c`. These implement the same wire protocols as note-c's `n_serial.c` and `n_i2c.c` — CRC auto-detection, segmented TX/RX, retry logic, and auto-reset — so your application communicates using the standard framing Notecard expects.
 
 Each protocol takes a thin platform HAL - a lightweight virtual interface for UART or I2C hardware access. Platform libraries like `note-cpp-arduino` and `note-cpp-zephyr` provide ready-made HAL implementations.
 
@@ -320,8 +405,14 @@ Runs code generation, header compilation checks, unit tests, and examples. See [
 
 ## Documentation
 
+See [docs/](docs/README.md) for the full documentation index. Key pages:
+
 - [Why note-cpp? (comparison with note-c)](docs/comparison.md)
+- [Error handling](docs/error-handling.md)
+- [Polymorphic APIs](docs/polymorphic-apis.md)
+- [Duration units](docs/duration-units.md)
+- [Body values and Note templates](docs/body-values.md)
+- [JSON buffer builder](docs/json-builder.md)
 - [Transport layer](docs/transport.md)
-- [Coverage](docs/coverage.md)
+- [App orchestration (NTN, templates, sync)](docs/app-orchestration.md)
 - [Project plan and status](docs/PLAN.md)
-- [note-cpp-app design](docs/note-cpp-app.md)

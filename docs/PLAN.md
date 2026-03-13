@@ -35,7 +35,10 @@ Type-safe C++23 API for the Blues Notecard. Header-only, zero dependencies beyon
 | `types.hpp` | `Result<T>` (std::expected), `ApiResult<Response>`, `Unexpected`, version macros |
 | `error.hpp` | `Error` enum, `ErrorInfo` struct |
 | `json.hpp` | `JsonBackend`, `JsonBuilder`, `JsonReader` — backend-agnostic JSON interfaces |
+| `json_sax.hpp` | `JsonSink`, `sax_parse()` — zero-alloc streaming JSON parser with SAX callbacks |
 | `json_buf.hpp` | `JsonBuf<N>` — constexpr JSON buffer builder, zero allocations |
+| `allocator.hpp` | `Allocator` — function-pointer allocator with arena/pmr adapters |
+| `arena.hpp` | `MonotonicArena` — bump allocator for bounded memory use |
 | `notecard.hpp` | `Notecard` — central coordinator, takes `JsonBackend` + transport callable |
 | `api_context.hpp` | `Api` factory — binds Notecard to fluent request builders |
 | `body.hpp` | `BodyValue`, `NOTE_FIELDS` macro, `template_of<T>()` — schema struct support |
@@ -153,6 +156,65 @@ Type-safe C++23 API for the Blues Notecard. Header-only, zero dependencies beyon
 - Compile-fail CI tests for strict-mode endpoint rejection
 - C++17 fallback: unconstrained only (no target support)
 
+### Phase 15: Streaming architecture + memory control
+
+Goal: data flows through the pipeline without unnecessary intermediate trees or
+copies. The user controls where all significant memory is allocated (heap, arena,
+custom allocator). The JSON wire format is an internal detail — backends are
+customizable for resource tradeoffs, not because users care about JSON.
+
+#### Completed
+
+- **`note::Allocator`** (`include/note/allocator.hpp`) — function-pointer-based
+  allocator (alloc/free/ctx). Adapters for `MonotonicArena` and
+  `std::pmr::memory_resource` (when available via `__has_include`).
+- **`MonotonicArena`** (`include/note/arena.hpp`) — bump allocator over a
+  user-provided buffer. Reset between requests.
+- **`get_builder()`** on `JsonBackend` — returns a reference to a reusable member
+  builder, eliminating one `unique_ptr` allocation per request. Overridden in
+  `CjsonBackend`, `CjsonArenaBackend`, `NlohmannBackend`, `BufferJsonBackend`.
+- **`BufferJsonBackend`** (`include/note/backends/buffer.hpp`) — zero-heap JSON
+  backend. `BufferJsonBuilder` writes directly into a fixed member buffer.
+  `JsmnJsonReader` parses using vendored jsmn tokens (also member arrays). Template
+  parameters control buffer and token sizes.
+- **Vendored jsmn** (`include/note/backends/detail/jsmn.h`) — ~460 LOC, MIT,
+  zero-alloc JSON tokenizer. Used by `JsmnJsonReader` for tree-style random access.
+- **SAX JSON parser** (`include/note/json_sax.hpp`) — ~280 LOC, zero-allocation,
+  single-pass streaming parser. Fires callbacks on a `JsonSink` interface. Strict
+  RFC 8259 validation (100% reject rate on JSONTestSuite invalid inputs). No token
+  buffer, no intermediate tree. For memory-constrained embedded targets.
+- **`JsonSink`** interface — backend-agnostic callback API: `on_string`, `on_bool`,
+  `on_number`, `on_null`, `on_object_begin/end`, `on_array_begin/end`. Generated
+  Response types will implement thin key→field dispatch tables over this.
+- **Backend documentation** (`docs/json-backend.md`) — explains that JSON is a wire
+  format implementation detail, frames backend choice as resource tradeoffs.
+
+#### Remaining
+
+- **Response string pool** — codegen changes to `endpoint.hpp.j2` and `generate.py`.
+  Generated Response types get a `JsonSink` dispatch table. String fields interned
+  into a single pool allocated via `Allocator`. Primitives copied by value.
+- **Transport `string_view` return** — change `RequestFn` from `Result<std::string>`
+  to `Result<string_view>` into transport's member buffer. Eliminates one string copy
+  per response. Response string pool copies what it needs before transport is reused.
+- **`parse_into()` on `JsonBackend`** — backend-driven parse path that pushes values
+  into a `JsonSink` directly. Tree backends (cJSON, nlohmann) walk their tree into
+  the sink. SAX backend drives the sink from character stream. Backend choice
+  determines parse strategy; generated code provides both interfaces.
+- **Allocation profiling** — verify alloc counts with all backend combinations.
+- **Memory guide** (`docs/memory-guide.md`) — allocator usage, backend comparison,
+  arena patterns.
+
+#### Parse strategy by backend
+
+| Backend | Build | Parse | Tradeoff |
+|---------|-------|-------|----------|
+| `CjsonBackend` | cJSON tree | tree walk → sink | Debuggable, multiple small allocs |
+| `CjsonArenaBackend` | cJSON tree (arena) | tree walk → sink | Debuggable, bounded memory |
+| `NlohmannBackend` | nlohmann tree | tree walk → sink | Convenient if already linked |
+| `BufferJsonBackend` (jsmn) | fixed buffer | token walk → sink | Zero heap, needs token array |
+| SAX backend (future) | fixed buffer | streaming → sink | Zero heap, zero token buffer |
+
 ### Infrastructure
 - `ci.sh` — runs codegen, header compilation checks, unit tests, smoke test
 - `ci.sh --all-compilers` — discovers and tests all locally installed compilers
@@ -253,6 +315,10 @@ ground at the C++ level, so L2 work on note-c is no longer a priority.
 | **Code generation tooling** | [codegen/](../tools/codegen/) | PLAN.md | [generate.py](../tools/codegen/generate.py) | | |
 | **DirectChannel** | [channel.hpp](../include/note/app/channel.hpp) | [note-cpp-app.md](note-cpp-app.md) | same | [test_channel](../tests/test_channel.cpp) | |
 | **StaticStateStore** | [state_store.hpp](../include/note/app/state_store.hpp) | [note-cpp-app.md](note-cpp-app.md) | same | [test_state_store](../tests/test_state_store.cpp) | |
+| **Allocator** | [allocator.hpp](../include/note/allocator.hpp) | [json-backend.md](json-backend.md) | same | | |
+| **MonotonicArena** | [arena.hpp](../include/note/arena.hpp) | [json-backend.md](json-backend.md) | same | [test_alloc_profile](../tests/integration/cjson/test_alloc_profile.cpp) | |
+| **BufferJsonBackend** | [buffer.hpp](../include/note/backends/buffer.hpp) | [json-backend.md](json-backend.md) | same | [test_buffer_backend](../tests/integration/buffer/test_buffer_backend.cpp) | |
+| **SAX parser + JsonSink** | [json_sax.hpp](../include/note/json_sax.hpp) | PLAN.md | same | [test_sax_parser](../tests/integration/buffer/test_sax_parser.cpp) | |
 
 ## Future considerations
 

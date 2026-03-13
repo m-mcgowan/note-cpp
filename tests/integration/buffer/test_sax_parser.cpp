@@ -266,6 +266,177 @@ static void test_empty_input() {
     std::puts("  PASS: empty_input");
 }
 
+static void test_all_escape_types() {
+    RecordingSink sink;
+    // Test \/, \b, \f, \r which weren't covered by test_escape_sequences
+    auto err = sax_parse(R"({"a":"slash\/here","b":"back\bspace","c":"form\ffeed","d":"cr\rret"})", sink);
+    assert(err.empty());
+    assert(sink.events[1].value == "slash/here");
+    assert(sink.events[2].value == "back\bspace");
+    assert(sink.events[3].value == "form\ffeed");
+    assert(sink.events[4].value == "cr\rret");
+    std::puts("  PASS: all_escape_types");
+}
+
+static void test_unicode_3byte() {
+    RecordingSink sink;
+    // \u4E16 = '世' (3-byte UTF-8: E4 B8 96)
+    auto err = sax_parse(R"({"c":"\u4E16"})", sink);
+    assert(err.empty());
+    assert(sink.events[1].value.size() == 3);
+    assert(sink.events[1].value == "\xE4\xB8\x96");
+    std::puts("  PASS: unicode_3byte");
+}
+
+static void test_unicode_surrogate() {
+    RecordingSink sink;
+    // Lone surrogate \uD800 — should produce '?'
+    auto err = sax_parse(R"({"c":"\uD800"})", sink);
+    assert(err.empty());
+    assert(sink.events[1].value == "?");
+    std::puts("  PASS: unicode_surrogate");
+}
+
+static void test_empty_array() {
+    RecordingSink sink;
+    auto err = sax_parse(R"({"tags":[]})", sink);
+    assert(err.empty());
+    assert(sink.events[1].type == "array_begin");
+    assert(sink.events[1].key == "tags");
+    assert(sink.events[2].type == "array_end");
+    assert(sink.events[2].key == "tags");
+    std::puts("  PASS: empty_array");
+}
+
+static void test_array_mixed_types() {
+    RecordingSink sink;
+    auto err = sax_parse(R"({"a":[1,true,null,"hi"]})", sink);
+    assert(err.empty());
+    // array_begin, number(1), bool(true), null, string(hi), array_end
+    assert(sink.events[1].type == "array_begin");
+    assert(sink.events[2].type == "number" && sink.events[2].value == "1");
+    assert(sink.events[3].type == "bool" && sink.events[3].value == "true");
+    assert(sink.events[4].type == "null");
+    assert(sink.events[5].type == "string" && sink.events[5].value == "hi");
+    assert(sink.events[6].type == "array_end");
+    std::puts("  PASS: array_mixed_types");
+}
+
+// ---------------------------------------------------------------------------
+// Error path tests — ensure every parser error is reachable.
+// ---------------------------------------------------------------------------
+static void test_error_unterminated_string() {
+    RecordingSink sink;
+    auto err = sax_parse(R"({"a":"no close)", sink);
+    assert(!err.empty());
+    std::puts("  PASS: error_unterminated_string");
+}
+
+static void test_error_unexpected_end_in_escape() {
+    RecordingSink sink;
+    std::string json = R"({"a":"trail\)";
+    auto err = sax_parse(json.data(), json.size(), sink);
+    assert(!err.empty());
+    std::puts("  PASS: error_unexpected_end_in_escape");
+}
+
+static void test_error_invalid_hex_escape() {
+    RecordingSink sink;
+    auto err = sax_parse(R"({"a":"\uZZZZ"})", sink);
+    assert(!err.empty());
+    std::puts("  PASS: error_invalid_hex_escape");
+}
+
+static void test_error_unescaped_control_char() {
+    RecordingSink sink;
+    // String with raw 0x01 byte
+    std::string json = "{\"a\":\"x\x01y\"}";
+    auto err = sax_parse(json.data(), json.size(), sink);
+    assert(!err.empty());
+    std::puts("  PASS: error_unescaped_control_char");
+}
+
+static void test_error_missing_colon() {
+    RecordingSink sink;
+    auto err = sax_parse(R"({"a" "b"})", sink);
+    assert(!err.empty());
+    std::puts("  PASS: error_missing_colon");
+}
+
+static void test_error_missing_comma_object() {
+    RecordingSink sink;
+    auto err = sax_parse(R"({"a":1 "b":2})", sink);
+    assert(!err.empty());
+    std::puts("  PASS: error_missing_comma_object");
+}
+
+static void test_error_missing_comma_array() {
+    RecordingSink sink;
+    auto err = sax_parse(R"({"a":[1 2]})", sink);
+    assert(!err.empty());
+    std::puts("  PASS: error_missing_comma_array");
+}
+
+static void test_error_truncated_true() {
+    RecordingSink sink;
+    auto err = sax_parse(R"({"a":tru})", sink);
+    assert(!err.empty());
+    std::puts("  PASS: error_truncated_true");
+}
+
+static void test_error_invalid_literal() {
+    RecordingSink sink;
+    auto err = sax_parse(R"({"a":tRue})", sink);
+    assert(!err.empty());
+    std::puts("  PASS: error_invalid_literal");
+}
+
+static void test_error_truncated_null() {
+    RecordingSink sink;
+    auto err = sax_parse(R"({"a":nul})", sink);
+    assert(!err.empty());
+    std::puts("  PASS: error_truncated_null");
+}
+
+static void test_error_bare_minus() {
+    RecordingSink sink;
+    auto err = sax_parse(R"({"a":-})", sink);
+    assert(!err.empty());
+    std::puts("  PASS: error_bare_minus");
+}
+
+static void test_error_trailing_dot() {
+    RecordingSink sink;
+    auto err = sax_parse(R"({"a":1.})", sink);
+    assert(!err.empty());
+    std::puts("  PASS: error_trailing_dot");
+}
+
+static void test_error_bare_exponent() {
+    RecordingSink sink;
+    auto err = sax_parse(R"({"a":1e})", sink);
+    assert(!err.empty());
+    std::puts("  PASS: error_bare_exponent");
+}
+
+static void test_error_truncated_false() {
+    RecordingSink sink;
+    // "fals" at end of input — triggers unexpected end in literal
+    std::string json = R"({"a":fals)";
+    auto err = sax_parse(json.data(), json.size(), sink);
+    assert(!err.empty());
+    std::puts("  PASS: error_truncated_false");
+}
+
+static void test_error_number_end_of_input() {
+    RecordingSink sink;
+    // Negative sign at end of input
+    std::string json = R"({"a":-)";
+    auto err = sax_parse(json.data(), json.size(), sink);
+    assert(!err.empty());
+    std::puts("  PASS: error_number_end_of_input");
+}
+
 // ---------------------------------------------------------------------------
 int main() {
     std::puts("=== SAX parser integration tests ===");
@@ -285,6 +456,26 @@ int main() {
     test_empty_string_value();
     test_deeply_nested();
     test_empty_input();
+    test_all_escape_types();
+    test_unicode_3byte();
+    test_unicode_surrogate();
+    test_empty_array();
+    test_array_mixed_types();
+    test_error_unterminated_string();
+    test_error_unexpected_end_in_escape();
+    test_error_invalid_hex_escape();
+    test_error_unescaped_control_char();
+    test_error_missing_colon();
+    test_error_missing_comma_object();
+    test_error_missing_comma_array();
+    test_error_truncated_true();
+    test_error_invalid_literal();
+    test_error_truncated_null();
+    test_error_bare_minus();
+    test_error_trailing_dot();
+    test_error_bare_exponent();
+    test_error_truncated_false();
+    test_error_number_end_of_input();
     std::puts("\nAll SAX parser tests passed.");
     return 0;
 }

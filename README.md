@@ -358,9 +358,9 @@ See [docs/transport.md](docs/transport.md) for the full HAL interface and implem
 
 ## JSON Backend
 
-The Notecard speaks JSON, but your application code doesn't have to — `note-cpp` handles serialization and parsing behind the scenes through a `JsonBackend` interface, so you work with typed fields, not raw JSON.
+The Notecard uses JSON as its wire format — an implementation detail that `note-cpp` handles internally. Your application works with typed structs, not JSON strings. A default backend is provided that works out of the box.
 
-A default backend is provided that works out of the box. Most applications never need to think about this. If you have specific constraints — memory budget, existing JSON library already linked, or debugging needs — you can choose an alternative. See [docs/json-backend.md](docs/json-backend.md) for details on when and why you might customize this.
+If you have specific constraints (memory budget, existing JSON library, debugging needs), the backend is customizable. See [docs/json-backend.md](docs/json-backend.md) for when and why you might change it.
 
 ---
 

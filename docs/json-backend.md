@@ -1,14 +1,16 @@
 # JSON Backend
 
-The Notecard communicates using JSON, but `note-cpp` handles this internally — your application works with typed request and response structs, not JSON strings. The JSON backend controls how that internal serialization and parsing happens.
+The Notecard uses JSON as its wire format. From your application's perspective this is an implementation detail — you work with typed request and response structs, and `note-cpp` handles the serialization internally. It could just as well be a binary format; your code wouldn't change.
+
+The JSON backend controls the mechanics of that internal serialization and parsing — how memory is allocated, what library does the work.
 
 ## Do I need to choose a backend?
 
 **Usually not.** A default backend is provided that works out of the box. You only need to think about this if one of these applies:
 
 - **You already have a JSON library linked** and want to avoid pulling in a second one
-- **You're on a memory-constrained embedded target** and need control over where and how memory is allocated during JSON processing
-- **You want to inspect the JSON** on the wire for debugging (tree-based backends make this easier)
+- **You're on a memory-constrained embedded target** and need control over where and how memory is allocated during serialization
+- **You need to inspect the wire traffic** for debugging (tree-based backends make this easier since the intermediate representation is human-readable)
 
 If none of these apply, use the default and move on.
 

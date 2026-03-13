@@ -142,19 +142,19 @@ public:
         // Build wire request once (CRC same seq for all retries — matches
         // note-c, where _crcAdd() is called once before the retry loop and
         // seqNo is only incremented after a successful transaction).
-        std::string wire(request);
+        wire_.assign(request.data(), request.size());
         if (crc_enabled_) {
             ++crc_seq_;
-            wire = detail::crc_add(std::move(wire), crc_seq_);
+            wire_ = detail::crc_add(std::move(wire_), crc_seq_);
         }
-        wire += '\n';  // I2C uses bare \n terminator (not \r\n like serial)
+        wire_ += '\n';  // I2C uses bare \n terminator (not \r\n like serial)
 
         ErrorInfo last_error{Error::SendFailed, Cause::HalError, "I2C transmit failed"};
 
         for (uint32_t attempt = 0; attempt <= policy.max_retries; ++attempt) {
             if (attempt > 0) hal_.delay(policy.retry_delay_ms);
 
-            if (!send_chunked(wire.data(), wire.size())) {
+            if (!send_chunked(wire_.data(), wire_.size())) {
                 last_error = {Error::SendFailed, Cause::HalError, "I2C transmit failed"};
                 do_reset();
                 continue;
@@ -182,6 +182,7 @@ private:
     bool     initialized_ = false;
     bool     crc_enabled_ = false;
     uint16_t crc_seq_     = 0;
+    std::string wire_;         // reused across requests to avoid re-allocation
 
     // -----------------------------------------------------------------------
     // delay_io — matches note-c _delayIO()

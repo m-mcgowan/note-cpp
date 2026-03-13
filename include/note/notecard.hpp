@@ -40,11 +40,11 @@ public:
     //   void build(JsonBuilder&) const;
     template<typename RequestT>
     ApiResult<typename RequestT::Response> execute(const RequestT& req) {
-        auto builder = backend_.create_builder();
-        builder->add("req", RequestT::notecard_request);
-        req.build(*builder);
+        auto& builder = backend_.get_builder();
+        builder.add("req", RequestT::notecard_request);
+        req.build(builder);
 
-        auto rsp = request_fn_(builder->to_string(), default_timeout_ms_);
+        auto rsp = request_fn_(builder.to_view(), default_timeout_ms_);
         if (!rsp) return Unexpected(rsp.error());
 
         auto reader = backend_.parse_response(*rsp);
@@ -63,11 +63,11 @@ public:
     Result<std::unique_ptr<JsonReader>> request(
             string_view req_type,
             std::function<void(JsonBuilder&)> build_fn = {}) {
-        auto builder = backend_.create_builder();
-        builder->add("req", req_type);
-        if (build_fn) build_fn(*builder);
+        auto& builder = backend_.get_builder();
+        builder.add("req", req_type);
+        if (build_fn) build_fn(builder);
 
-        auto rsp = request_fn_(builder->to_string(), default_timeout_ms_);
+        auto rsp = request_fn_(builder.to_view(), default_timeout_ms_);
         if (!rsp) return Unexpected(rsp.error());
 
         auto reader = backend_.parse_response(*rsp);
@@ -82,19 +82,19 @@ public:
     // Fire-and-forget typed command (generated request types).
     template<typename RequestT>
     Result<void> command_typed(const RequestT& req) {
-        auto builder = backend_.create_builder();
-        builder->add("cmd", RequestT::notecard_request);
-        req.build(*builder);
-        return send_fn_(builder->to_string());
+        auto& builder = backend_.get_builder();
+        builder.add("cmd", RequestT::notecard_request);
+        req.build(builder);
+        return send_fn_(builder.to_view());
     }
 
     // Fire-and-forget command.
     Result<void> command(string_view cmd_type,
                          std::function<void(JsonBuilder&)> build_fn = {}) {
-        auto builder = backend_.create_builder();
-        builder->add("cmd", cmd_type);
-        if (build_fn) build_fn(*builder);
-        return send_fn_(builder->to_string());
+        auto& builder = backend_.get_builder();
+        builder.add("cmd", cmd_type);
+        if (build_fn) build_fn(builder);
+        return send_fn_(builder.to_view());
     }
 
     void set_default_timeout(uint32_t ms) { default_timeout_ms_ = ms; }

@@ -503,7 +503,7 @@ run_integrations() {
     echo "=== JSON backend integration tests ==="
     local CMAKE_POLICY="-DCMAKE_POLICY_VERSION_MINIMUM=3.5"
 
-    for backend in cjson nlohmann; do
+    for backend in cjson nlohmann buffer; do
         local src="$ROOT/tests/integration/$backend"
         local build="/tmp/note-cpp-integration-$backend"
         echo

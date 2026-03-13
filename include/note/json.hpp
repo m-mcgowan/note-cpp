@@ -26,6 +26,22 @@ public:
 
     // Finalize and return the built JSON as a string.
     virtual std::string to_string() = 0;
+
+    // Finalize and return a view into an internal buffer.
+    // The view is valid until the next call to reset(), to_string(), or to_view().
+    // Default implementation calls to_string() and caches in a member.
+    // Backends may override to serialize into a pre-allocated buffer (zero-alloc).
+    virtual string_view to_view() {
+        view_buf_ = to_string();
+        return view_buf_;
+    }
+
+    // Reset builder state for reuse (avoid re-allocating the builder object).
+    // Default implementation is a no-op; backends override to clear internal state.
+    virtual void reset() {}
+
+private:
+    std::string view_buf_;
 };
 
 class JsonReader {
@@ -53,6 +69,17 @@ public:
 
     // Parse a JSON response string and return a reader.
     virtual std::unique_ptr<JsonReader> parse_response(string_view json) = 0;
+
+    // Return a reference to a reusable builder owned by the backend.
+    // Avoids the unique_ptr allocation of create_builder() in steady state.
+    // Default implementation wraps create_builder() for backward compatibility.
+    virtual JsonBuilder& get_builder() {
+        owned_builder_ = create_builder();
+        return *owned_builder_;
+    }
+
+private:
+    std::unique_ptr<JsonBuilder> owned_builder_;
 };
 
 } // namespace note

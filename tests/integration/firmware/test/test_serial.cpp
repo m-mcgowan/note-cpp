@@ -173,33 +173,43 @@ TEST_CASE("env.default set + get round-trip") {
 }
 
 // ─── Binary data transfer ───────────────────────────────────────────────────
+//
+// The card.binary protocol differs from normal JSON request/response:
+//   1. JSON handshake (card.binary.put or card.binary.get)
+//   2. Raw COBS-encoded bytes sent/received directly on the wire
+//
+// For serial, raw bytes are streamed with a newline terminator.
+// These tests exercise the full binary lifecycle with various payload types.
 
-TEST_CASE("card.binary put + get round-trip") {
-    Fixture f;
+namespace {
 
-    // 1. Clear any existing binary data
+/// Put binary data to the Notecard over serial and verify the round-trip.
+/// Handles: clear → put JSON → raw transmit → verify → get JSON → raw receive → decode → verify
+void binary_round_trip(Fixture& f, const uint8_t* data, size_t data_len, const char* label) {
+    INFO("payload: ", label, " (", data_len, " bytes)");
+
+    // Clear any existing binary data
     f.api.cardBinary().delete_().execute();
 
-    // 2. Check available space
+    // Check available space
     auto status_r = f.api.cardBinary().get().execute();
     if (!status_r) { INFO(to_string(status_r.error())); }
     REQUIRE(status_r);
     REQUIRE(status_r.max > 0);
-    MESSAGE("binary max: ", status_r.max, " bytes");
-
-    // 3. Prepare test data
-    const uint8_t test_data[] = "Hello from note-cpp binary test!";
-    const size_t data_len = sizeof(test_data) - 1;  // exclude null terminator
     REQUIRE(static_cast<int32_t>(data_len) <= status_r.max);
+    MESSAGE(label, ": binary max=", status_r.max, " bytes, payload=", data_len, " bytes");
 
     // COBS-encode the data
     std::vector<uint8_t> cobs_buf(cobs_encoded_size(data_len));
-    size_t cobs_len = cobs_encode(test_data, data_len, cobs_buf.data());
+    size_t cobs_len = cobs_encode(data, data_len, cobs_buf.data());
 
     // Compute MD5 of unencoded data
-    std::string md5 = md5_hex(test_data, data_len);
+    std::string md5 = md5_hex(data, data_len);
+    MESSAGE(label, ": cobs_len=", cobs_len, " md5=", md5.c_str());
 
-    // 4. Send card.binary.put JSON request
+    // ── PUT phase ──────────────────────────────────────────────────
+
+    // JSON handshake: tell the Notecard how many COBS bytes are coming
     auto put_r = f.api.cardBinaryPut()
         .cobs(static_cast<int32_t>(cobs_len))
         .status(md5)
@@ -207,25 +217,29 @@ TEST_CASE("card.binary put + get round-trip") {
     if (!put_r) { INFO(to_string(put_r.error())); }
     REQUIRE(put_r);
 
-    // 5. Send the raw COBS-encoded binary data via the transport
-    // After card.binary.put, the Notecard expects raw bytes on the wire.
-    // Add a newline terminator as the protocol requires.
+    // Send raw COBS-encoded bytes + newline terminator
     cobs_buf.push_back('\n');
     bool tx_ok = f.hal.transmit(cobs_buf.data(), cobs_buf.size());
     REQUIRE(tx_ok);
 
-    // Small delay for Notecard to process
+    // Delay for Notecard to process the binary data
     f.hal.delay(250);
 
-    // 6. Verify data was stored
+    // ── Verify stored data ─────────────────────────────────────────
+
     auto verify_r = f.api.cardBinary().get().execute();
     if (!verify_r) { INFO(to_string(verify_r.error())); }
     REQUIRE(verify_r);
     CHECK(verify_r.length == static_cast<int32_t>(data_len));
     CHECK(verify_r.cobs == static_cast<int32_t>(cobs_len));
-    MESSAGE("stored: length=", verify_r.length, " cobs=", verify_r.cobs);
+    // Verify the Notecard computed the same MD5 for the stored data
+    if (note::string_view(verify_r.status).size() > 0) {
+        CHECK(note::string_view(verify_r.status) == note::string_view(md5));
+    }
 
-    // 7. Retrieve the data back with card.binary.get
+    // ── GET phase ──────────────────────────────────────────────────
+
+    // JSON handshake: request the binary data back
     auto get_r = f.api.cardBinaryGet()
         .cobs(verify_r.cobs)
         .length(verify_r.length)
@@ -233,7 +247,12 @@ TEST_CASE("card.binary put + get round-trip") {
     if (!get_r) { INFO(to_string(get_r.error())); }
     REQUIRE(get_r);
 
-    // 8. Read the raw COBS bytes from the transport
+    // Verify MD5 in get response
+    if (note::string_view(get_r.status).size() > 0) {
+        CHECK(note::string_view(get_r.status) == note::string_view(md5));
+    }
+
+    // Read raw COBS bytes from the wire
     std::vector<uint8_t> rx_buf(cobs_len + 16);
     size_t total_rx = 0;
     uint32_t deadline = f.hal.millis() + 5000;
@@ -244,14 +263,44 @@ TEST_CASE("card.binary put + get round-trip") {
     }
     REQUIRE(total_rx >= cobs_len);
 
-    // 9. COBS-decode and verify
+    // ── Decode and verify ──────────────────────────────────────────
+
     std::vector<uint8_t> decoded(data_len + 1);
     size_t decoded_len = cobs_decode(rx_buf.data(), cobs_len, decoded.data());
     REQUIRE(decoded_len == data_len);
-    CHECK(memcmp(decoded.data(), test_data, data_len) == 0);
+    CHECK(memcmp(decoded.data(), data, data_len) == 0);
 
-    // 10. Clean up
+    // Clean up
     f.api.cardBinary().delete_().execute();
+}
+
+} // namespace
+
+TEST_CASE("card.binary put + get — text payload") {
+    Fixture f;
+    const uint8_t data[] = "Hello from note-cpp binary test!";
+    binary_round_trip(f, data, sizeof(data) - 1, "text");
+}
+
+TEST_CASE("card.binary put + get — data with zero bytes") {
+    // COBS encoding exists specifically to handle zero bytes in data.
+    // This test ensures the encoder/decoder and Notecard handle them correctly.
+    Fixture f;
+    uint8_t data[64];
+    for (size_t i = 0; i < sizeof(data); i++) {
+        data[i] = static_cast<uint8_t>(i % 5 == 0 ? 0 : i);  // zeros every 5th byte
+    }
+    binary_round_trip(f, data, sizeof(data), "zeros");
+}
+
+TEST_CASE("card.binary put + get — 512-byte payload") {
+    // Larger payload to exercise streaming on the serial transport.
+    Fixture f;
+    uint8_t data[512];
+    for (size_t i = 0; i < sizeof(data); i++) {
+        data[i] = static_cast<uint8_t>((i * 7 + 13) & 0xFF);
+    }
+    binary_round_trip(f, data, sizeof(data), "512B");
 }
 
 // ─── Error handling ─────────────────────────────────────────────────────────

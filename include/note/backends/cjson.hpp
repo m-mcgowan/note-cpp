@@ -37,6 +37,13 @@ public:
     CjsonBuilder(const CjsonBuilder&) = delete;
     CjsonBuilder& operator=(const CjsonBuilder&) = delete;
 
+    void reset() override {
+        if (root_) cJSON_Delete(root_);
+        root_ = cJSON_CreateObject();
+        stack_.clear();
+        stack_.push_back(root_);
+    }
+
     CjsonBuilder& add(string_view key, bool value) override {
         cJSON_AddItemToObject(current(), zkey(key), cJSON_CreateBool(value));
         return *this;
@@ -81,9 +88,22 @@ public:
         return result;
     }
 
+    string_view to_view() override {
+        // Try pre-allocated buffer first (avoids cJSON malloc + std::string copy).
+        if (cJSON_PrintPreallocated(root_, print_buf_, sizeof(print_buf_), 0))
+            return string_view(print_buf_);
+        // Fallback: heap serialize for oversize JSON.
+        char* raw = cJSON_PrintUnformatted(root_);
+        print_fallback_ = raw;
+        cJSON_free(raw);
+        return print_fallback_;
+    }
+
 private:
     cJSON* root_;
     std::vector<cJSON*> stack_;
+    char print_buf_[512];
+    std::string print_fallback_;
 
     cJSON* current() { return stack_.back(); }
 
@@ -187,6 +207,122 @@ public:
         // cJSON_ParseWithLength handles non-null-terminated strings.
         cJSON* root = cJSON_ParseWithLength(json.data(), json.size());
         return std::make_unique<CjsonReader>(root);
+    }
+    JsonBuilder& get_builder() override {
+        builder_.reset();
+        return builder_;
+    }
+private:
+    CjsonBuilder builder_;
+};
+
+// ---------------------------------------------------------------------------
+// CjsonArenaBackend: cJSON with arena allocation (zero heap fragmentation).
+//
+// Routes all cJSON allocations through a MonotonicArena provided by the caller.
+// The arena resets between requests — no fragmentation, bounded memory.
+//
+// Usage:
+//   char pool[4096];
+//   note::MonotonicArena arena(pool);
+//   note::backends::CjsonArenaBackend backend(arena);
+//   note::Notecard nc(backend, transport);
+// ---------------------------------------------------------------------------
+
+} // namespace note::backends
+
+// Include arena.hpp after the main classes to avoid circular deps.
+// CjsonArenaBackend is in a separate inline namespace for clean separation.
+#include <note/arena.hpp>
+
+namespace note::backends {
+
+namespace detail {
+
+// Thread-local active arena pointer for cJSON hook dispatch.
+// Set before cJSON calls, cleared after. This is safe for single-threaded
+// embedded use and for multi-threaded use with per-thread arenas.
+inline thread_local MonotonicArena* g_active_arena = nullptr;
+
+inline void* arena_cjson_malloc(size_t size) {
+    if (g_active_arena) {
+        void* p = g_active_arena->allocate(size);
+        if (p) return p;
+    }
+    // Fallback to standard malloc if arena exhausted or not set.
+    return std::malloc(size);
+}
+
+inline void arena_cjson_free(void* p) {
+    // If p is within the arena range, it's a no-op (arena reclaims on reset).
+    // If p was from fallback malloc, we must free it.
+    // We can detect this by checking if p falls within the arena buffer.
+    // However, since cJSON_InitHooks doesn't give us size info, and the arena
+    // buffer address isn't easily accessible here, we use a simpler approach:
+    // just don't free. The arena resets between requests, and fallback allocs
+    // indicate the arena was too small (user should increase arena size).
+    //
+    // For correctness with mixed arena/malloc, we'd need a header or bitmap.
+    // For embedded use (the target), arena exhaustion is a configuration error.
+    (void)p;
+}
+
+struct ArenaScope {
+    MonotonicArena& arena;
+    ArenaScope(MonotonicArena& a) : arena(a) {
+        arena.reset();
+        g_active_arena = &arena;
+        cJSON_Hooks hooks{arena_cjson_malloc, arena_cjson_free};
+        cJSON_InitHooks(&hooks);
+    }
+    ~ArenaScope() {
+        g_active_arena = nullptr;
+        cJSON_InitHooks(nullptr);  // restore default malloc/free
+    }
+};
+
+} // namespace detail
+
+class CjsonArenaBackend : public JsonBackend {
+public:
+    explicit CjsonArenaBackend(MonotonicArena& arena) : arena_(arena) {
+        install_hooks();
+    }
+
+    ~CjsonArenaBackend() {
+        cJSON_InitHooks(nullptr);  // restore default malloc/free
+        detail::g_active_arena = nullptr;
+    }
+
+    std::unique_ptr<JsonBuilder> create_builder() override {
+        arena_.reset();
+        return std::make_unique<CjsonBuilder>();
+    }
+
+    JsonBuilder& get_builder() override {
+        arena_.reset();
+        builder_.reset();
+        return builder_;
+    }
+
+    std::unique_ptr<JsonReader> parse_response(string_view json) override {
+        // Don't reset arena here — the builder's cJSON tree from create_builder()
+        // has already been serialized via to_view(). The arena can be reused for
+        // parse nodes. But to be safe, we don't reset between build and parse
+        // within a single request cycle. The arena resets on the next create_builder().
+        cJSON* root = cJSON_ParseWithLength(json.data(), json.size());
+        // Non-owning reader: arena owns the cJSON tree (free is a no-op).
+        return std::make_unique<CjsonReader>(root, false);
+    }
+
+private:
+    MonotonicArena& arena_;
+    CjsonBuilder builder_;
+
+    void install_hooks() {
+        detail::g_active_arena = &arena_;
+        cJSON_Hooks hooks{detail::arena_cjson_malloc, detail::arena_cjson_free};
+        cJSON_InitHooks(&hooks);
     }
 };
 

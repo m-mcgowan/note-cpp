@@ -87,7 +87,7 @@ and property assignment
 │    CRC · retry · segmented TX/RX               │
 ├───────────────────────┬────────────────────────┤
 │  JSON backend         │  Platform HAL          │
-│  Default or custom    │  note-cpp-arduino      │
+│  (customizable)       │  note-cpp-arduino      │
 │                       │  note-cpp-zephyr       │
 └───────────────────────┴────────────────────────┘
 ```
@@ -99,7 +99,7 @@ note-cpp owns everything above the bottom row. Platform libraries provide the HA
 - **note-cpp-espidf** — ESP-IDF (UART + I2C)
 - **note-cpp-linux** — Linux (`/dev/ttyACM0`, `/dev/i2c-N`)
 
-The JSON backend is pluggable — a default is provided, or you can use your own (cJSON, nlohmann-json, etc.).
+The JSON backend works out of the box. It's customizable if you have specific resource or tooling constraints — see [docs/json-backend.md](docs/json-backend.md).
 
 ## Quick Start
 
@@ -358,14 +358,9 @@ See [docs/transport.md](docs/transport.md) for the full HAL interface and implem
 
 ## JSON Backend
 
-The Notecard speaks JSON — every request is serialized to a JSON string, and every response is parsed from one. `note-cpp` handles this behind the scenes through a `JsonBackend` interface, so your application code works with typed fields, not raw JSON. You just need to tell `note-cpp` which JSON library to use.
+The Notecard speaks JSON, but your application code doesn't have to — `note-cpp` handles serialization and parsing behind the scenes through a `JsonBackend` interface, so you work with typed fields, not raw JSON.
 
-Ready-made backends are provided for:
-
-- **cJSON** — `#include <note/backends/cjson.hpp>` (bundled with note-c and ESP-IDF)
-- **nlohmann-json** — `#include <note/backends/nlohmann.hpp>`
-
-Each is a single header, auto-detected via `__has_include`. To use a different JSON library, implement the `JsonBackend` interface — see [examples/getting_started.cpp](examples/getting_started.cpp).
+A default backend is provided that works out of the box. Most applications never need to think about this. If you have specific constraints — memory budget, existing JSON library already linked, or debugging needs — you can choose an alternative. See [docs/json-backend.md](docs/json-backend.md) for details on when and why you might customize this.
 
 ---
 

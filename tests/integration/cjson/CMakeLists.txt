@@ -24,5 +24,13 @@ target_include_directories(test_cjson_backend PRIVATE
 )
 target_link_libraries(test_cjson_backend PRIVATE cjson)
 
+add_executable(test_alloc_profile test_alloc_profile.cpp)
+target_include_directories(test_alloc_profile PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../include
+    ${cjson_SOURCE_DIR}
+)
+target_link_libraries(test_alloc_profile PRIVATE cjson)
+
 enable_testing()
 add_test(NAME cjson_backend COMMAND test_cjson_backend)
+add_test(NAME alloc_profile COMMAND test_alloc_profile)

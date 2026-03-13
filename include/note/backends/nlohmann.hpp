@@ -66,6 +66,11 @@ public:
     std::string to_string() override {
         return root_.dump();
     }
+    void reset() override {
+        root_ = nlohmann::json::object();
+        stack_.clear();
+        stack_.push_back(&root_);
+    }
 
 private:
     nlohmann::json root_ = nlohmann::json::object();
@@ -141,6 +146,12 @@ public:
         auto parsed = nlohmann::json::parse(json, nullptr, false);
         return std::make_unique<NlohmannReader>(std::move(parsed));
     }
+    JsonBuilder& get_builder() override {
+        builder_.reset();
+        return builder_;
+    }
+private:
+    NlohmannBuilder builder_;
 };
 
 } // namespace note::backends

@@ -41,21 +41,39 @@ Each transport (serial and I2C) runs the same test suite:
 | **note.add + note.get body** | Typed body struct round-trip (cJSON serialization) |
 | **note.changes** | Change tracker with reset/add/query cycle |
 | **env.default set + get** | Environment variable round-trip |
-| **card.binary put + get** | Binary data round-trip with COBS encoding and MD5 verification |
+| **card.binary — text** | Binary round-trip with plain text payload |
+| **card.binary — zeros** | Binary round-trip with data containing zero bytes (COBS edge case) |
+| **card.binary — 512B** | Binary round-trip with large payload (forces I2C multi-chunk transfer) |
 | **Bad request** | Notecard error surfacing (`Error::Notecard`) |
 
-### Binary data test
+### Binary data tests
 
 The `card.binary` tests exercise the binary data transfer protocol, which differs from
-the standard JSON request/response cycle:
+the standard JSON request/response cycle. After `card.binary.put` / `card.binary.get`,
+raw COBS-encoded bytes are sent/received directly on the wire — outside the normal JSON
+transport layer.
+
+Three payload variants test different aspects:
+
+- **Text** — basic round-trip with no special bytes
+- **Zeros** — data containing zero bytes every 5th position; COBS encoding exists
+  specifically to handle zeros, so this verifies the encoder/decoder
+- **512B** — exceeds the I2C `max_transfer()` size (253 bytes), forcing multiple
+  chunked I2C transactions for both transmit and receive
+
+Each variant follows the same lifecycle:
 
 1. `card.binary` — query available space
-2. `card.binary.put` — JSON handshake (cobs size + MD5)
-3. Raw COBS-encoded bytes sent via transport HAL
-4. `card.binary` — verify stored data (length, cobs size)
-5. `card.binary.get` — JSON handshake (request retrieval)
-6. Raw COBS-encoded bytes received via transport HAL
+2. `card.binary.put` — JSON handshake (COBS size + MD5)
+3. Raw COBS-encoded bytes sent via transport HAL (chunked for I2C)
+4. `card.binary` — verify stored data (length, COBS size, MD5)
+5. `card.binary.get` — JSON handshake (request retrieval, verify MD5)
+6. Raw COBS-encoded bytes received via transport HAL (chunked for I2C)
 7. Decode and verify data matches original
+
+The I2C tests use dedicated `i2c_binary_transmit()` / `i2c_binary_receive()` helpers
+that chunk data into `max_transfer()`-sized I2C transactions with IO pacing delays —
+matching the chunking that `NotecardI2c` uses for JSON.
 
 ## Stack
 

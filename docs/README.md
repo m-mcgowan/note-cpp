@@ -15,17 +15,18 @@
 
 ## Infrastructure
 
-8. **[Transport layer](transport.md)** — serial and I2C protocol implementations, HAL interfaces, CRC, segmented TX/RX
-9. **[Coverage](coverage.md)** — test coverage methodology, GCC + lcov 2.x requirements
+8. **[JSON backend](json-backend.md)** — how `note-cpp` handles JSON internally, when and why to customize it, available backends
+9. **[Transport layer](transport.md)** — serial and I2C protocol implementations, HAL interfaces, CRC, segmented TX/RX
+10. **[Coverage](coverage.md)** — test coverage methodology, GCC + lcov 2.x requirements
 
 ## App layer
 
-10. **[App design](note-cpp-app.md)** — higher-level app abstractions: channels, state stores, managers
-11. **[App orchestration](app-orchestration.md)** — NTN/satellite handling, template lifecycle, sync direction management, composed setup procedures
+11. **[App design](note-cpp-app.md)** — higher-level app abstractions: channels, state stores, managers
+12. **[App orchestration](app-orchestration.md)** — NTN/satellite handling, template lifecycle, sync direction management, composed setup procedures
 
 ## Project
 
-12. **[Project plan](PLAN.md)** — architecture, completed phases, component status, roadmap
+13. **[Project plan](PLAN.md)** — architecture, completed phases, component status, roadmap
 
 ## Examples
 

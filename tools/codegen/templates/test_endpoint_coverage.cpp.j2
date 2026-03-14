@@ -73,6 +73,22 @@ struct FailHarness {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::{{ type_qual }} request builder") {
     Harness h;
+{% if endpoint.factory_method in group_names %}
+{# Flat method conflicts with group member — use group-based access #}
+{% if endpoint.is_polymorphic %}
+{% if required %}
+    auto req = h.api.{{ endpoint.group_name }}.{{ endpoint.group_method }}().{{ op.factory_method }}({% for p in required %}{{ p | request_test_value }}{{ ", " if not loop.last }}{% endfor %});
+{% else %}
+    auto req = h.api.{{ endpoint.group_name }}.{{ endpoint.group_method }}().{{ op.factory_method }}();
+{% endif %}
+{% else %}
+{% if required %}
+    auto req = h.api.{{ endpoint.group_name }}.{{ endpoint.group_method }}({% for p in required %}{{ p | request_test_value }}{{ ", " if not loop.last }}{% endfor %});
+{% else %}
+    auto req = h.api.{{ endpoint.group_name }}.{{ endpoint.group_method }}();
+{% endif %}
+{% endif %}
+{% else %}
 {% if endpoint.is_polymorphic %}
 {% if required %}
     auto req = h.api.{{ endpoint.factory_method }}().{{ op.factory_method }}({% for p in required %}{{ p | request_test_value }}{{ ", " if not loop.last }}{% endfor %});
@@ -84,6 +100,7 @@ TEST_CASE("note::api::{{ type_qual }} request builder") {
     auto req = h.api.{{ endpoint.factory_method }}({% for p in required %}{{ p | request_test_value }}{{ ", " if not loop.last }}{% endfor %});
 {% else %}
     auto req = h.api.{{ endpoint.factory_method }}();
+{% endif %}
 {% endif %}
 {% endif %}
     // Execute with no optional fields set — covers all !has_value() (false) branches.

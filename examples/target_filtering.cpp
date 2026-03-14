@@ -41,28 +41,28 @@ struct MockBackend : note::JsonBackend {
 int main() {
     MockBackend backend;
     note::Notecard nc(backend,
-        [](note::string_view, uint32_t) -> note::Result<std::string> {
-            return std::string("{}");
+        [](note::string_view, uint32_t) -> note::Result<note::string_view> {
+            return note::string_view("{}");
         });
 
     // --- 1. Unconstrained API: all endpoints available ---
     note::Api api(nc);
-    api.execute(api.cardSleep());    // OK: WiFi-only, but unconstrained
-    api.execute(api.hubSet());       // OK: universal
+    api.execute(api.card.sleep());    // OK: WiFi-only, but unconstrained
+    api.execute(api.hub.set());       // OK: universal
 
 #if __cplusplus >= 202002L
     // --- 2. WiFi target: WiFi-specific endpoints allowed ---
     note::Api wifi_api(nc, note::target<note::Product::WiFi>());
-    wifi_api.execute(wifi_api.cardSleep());   // OK: WiFi supports card.sleep
-    wifi_api.execute(wifi_api.cardWifi());    // OK: WiFi supports card.wifi
-    wifi_api.execute(wifi_api.hubSet());      // OK: universal
+    wifi_api.execute(wifi_api.card.sleep());   // OK: WiFi supports card.sleep
+    wifi_api.execute(wifi_api.card.wifi());    // OK: WiFi supports card.wifi
+    wifi_api.execute(wifi_api.hub.set());      // OK: universal
 
     // --- 3. Skylo target with custom RAT composition ---
     // Product::Cell + Rat::Ntn gives Cell|Ntn — same RATs as a custom combo
     constexpr auto skylo_rats = note::Product::Cell + note::Rat::Ntn;
     note::Api skylo_api(nc, note::target<note::Product::Skylo>());
-    skylo_api.execute(skylo_api.cardWifi());  // OK: Skylo has WiFi RAT
-    skylo_api.execute(skylo_api.hubSet());    // OK: universal
+    skylo_api.execute(skylo_api.card.wifi());  // OK: Skylo has WiFi RAT
+    skylo_api.execute(skylo_api.hub.set());    // OK: universal
 
     // --- 4. Endpoint SKU introspection ---
     static_assert(note::api::CardSleep::skus.supports(note::Rat::WiFi));

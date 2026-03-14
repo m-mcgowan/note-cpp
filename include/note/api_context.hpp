@@ -84,15 +84,37 @@ namespace note {
 
 
 
+
+
 #if __cplusplus >= 202002L
 template<typename TargetT = Unconstrained>
 #endif
 class Api {
     Notecard& nc_;
 public:
-    explicit Api(Notecard& nc) : nc_(nc) {}
+    explicit Api(Notecard& nc) : nc_(nc)
+        , card{&nc_}
+        , dfu{&nc_}
+        , env{&nc_}
+        , file{&nc_}
+        , hub{&nc_}
+        , note{&nc_}
+        , ntn{&nc_}
+        , var{&nc_}
+        , web{&nc_}
+    {}
 #if __cplusplus >= 202002L
-    explicit Api(Notecard& nc, TargetT) : nc_(nc) {}
+    explicit Api(Notecard& nc, TargetT) : nc_(nc)
+        , card{&nc_}
+        , dfu{&nc_}
+        , env{&nc_}
+        , file{&nc_}
+        , hub{&nc_}
+        , note{&nc_}
+        , ntn{&nc_}
+        , var{&nc_}
+        , web{&nc_}
+    {}
 #endif
 
     Notecard& notecard() { return nc_; }
@@ -108,6 +130,338 @@ public:
 
     template<typename RequestT>
     Result<void> command(const RequestT& req) { return nc_.command_typed(req); }
+
+    // =====================================================================
+    // Polymorphic factory structs (shared by flat methods and resource groups)
+    // =====================================================================
+
+    struct CardBinaryFactory {
+        Notecard* nc_;
+        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
+        auto get() { return create<api::CardBinary::Get>(); }
+        auto delete_() { return create<api::CardBinary::Delete>(); }
+    };
+
+    struct CardContactFactory {
+        Notecard* nc_;
+        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
+        auto get() { return create<api::CardContact::Get>(); }
+        auto set() { return create<api::CardContact::Set>(); }
+    };
+
+    struct CardLocationModeFactory {
+        Notecard* nc_;
+        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
+        auto get() { return create<api::CardLocationMode::Get>(); }
+        auto set() { return create<api::CardLocationMode::Set>(); }
+        auto delete_() { return create<api::CardLocationMode::Delete>(); }
+    };
+
+    struct CardPowerFactory {
+        Notecard* nc_;
+        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
+        auto get() { return create<api::CardPower::Get>(); }
+        auto set() { return create<api::CardPower::Set>(); }
+        auto delete_() { return create<api::CardPower::Delete>(); }
+    };
+
+    struct CardTempFactory {
+        Notecard* nc_;
+        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
+        auto get() { return create<api::CardTemp::Get>(); }
+        auto set() { return create<api::CardTemp::Set>(); }
+        auto delete_() { return create<api::CardTemp::Delete>(); }
+    };
+
+    struct CardVoltageFactory {
+        Notecard* nc_;
+        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
+        auto get() { return create<api::CardVoltage::Get>(); }
+        auto set() { return create<api::CardVoltage::Set>(); }
+    };
+
+    struct CardWirelessPenaltyFactory {
+        Notecard* nc_;
+        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
+        auto get() { return create<api::CardWirelessPenalty::Get>(); }
+        auto set() { return create<api::CardWirelessPenalty::Set>(); }
+        auto delete_() { return create<api::CardWirelessPenalty::Delete>(); }
+    };
+
+    struct EnvDefaultFactory {
+        Notecard* nc_;
+        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
+        auto set(note::string_view name) {
+            auto r = create<api::EnvDefault::Set>();
+            r.name = name;
+            return r;
+        }
+        auto delete_(note::string_view name) {
+            auto r = create<api::EnvDefault::Delete>();
+            r.name = name;
+            return r;
+        }
+    };
+
+    struct NoteChangesFactory {
+        Notecard* nc_;
+        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
+        auto get() { return create<api::NoteChanges::Get>(); }
+        auto delete_(note::string_view file) {
+            auto r = create<api::NoteChanges::Delete>();
+            r.file = file;
+            return r;
+        }
+    };
+
+    struct NoteGetFactory {
+        Notecard* nc_;
+        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
+        auto get() { return create<api::NoteGet::Get>(); }
+        auto delete_() { return create<api::NoteGet::Delete>(); }
+    };
+
+    struct NoteTemplateFactory {
+        Notecard* nc_;
+        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
+        auto set(note::string_view file) {
+            auto r = create<api::NoteTemplate::Set>();
+            r.file = file;
+            return r;
+        }
+        auto delete_(note::string_view file) {
+            auto r = create<api::NoteTemplate::Delete>();
+            r.file = file;
+            return r;
+        }
+    };
+
+    // =====================================================================
+    // Resource groups (api.card, api.hub, api.note, etc.)
+    //
+    // Naming matches note-python: first segment -> group, rest -> camelCase.
+    // See docs/api-design.md for the full design.
+    // =====================================================================
+
+    struct CardGroup {
+        Notecard* nc_;
+        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
+
+        /// card.attn
+        auto attn() { return create<api::CardAttn>(); }
+        /// card.aux
+        auto aux() { return create<api::CardAux>(); }
+        /// card.aux.serial
+        auto auxSerial() { return create<api::CardAuxSerial>(); }
+        /// card.binary (polymorphic — use .get(), .set(), .delete_())
+        CardBinaryFactory binary() { return {nc_}; }
+        /// card.binary.get
+        auto binaryGet() { return create<api::CardBinaryGet>(); }
+        /// card.binary.put
+        auto binaryPut() { return create<api::CardBinaryPut>(); }
+        /// card.carrier
+        auto carrier() { return create<api::CardCarrier>(); }
+        /// card.contact (polymorphic — use .get(), .set(), .delete_())
+        CardContactFactory contact() { return {nc_}; }
+        /// card.dfu
+        auto dfu() { return create<api::CardDfu>(); }
+        /// card.illumination
+        auto illumination() { return create<api::CardIllumination>(); }
+        /// card.io
+        auto io() { return create<api::CardIo>(); }
+        /// card.led
+        auto led() { return create<api::CardLed>(); }
+        /// card.location
+        auto location() { return create<api::CardLocation>(); }
+        /// card.location.mode (polymorphic — use .get(), .set(), .delete_())
+        CardLocationModeFactory locationMode() { return {nc_}; }
+        /// card.location.track
+        auto locationTrack() { return create<api::CardLocationTrack>(); }
+        /// card.monitor
+        auto monitor() { return create<api::CardMonitor>(); }
+        /// card.motion
+        auto motion() { return create<api::CardMotion>(); }
+        /// card.motion.mode
+        auto motionMode() { return create<api::CardMotionMode>(); }
+        /// card.motion.sync
+        auto motionSync() { return create<api::CardMotionSync>(); }
+        /// card.motion.track
+        auto motionTrack() { return create<api::CardMotionTrack>(); }
+        /// card.power (polymorphic — use .get(), .set(), .delete_())
+        CardPowerFactory power() { return {nc_}; }
+        /// card.random
+        auto random() { return create<api::CardRandom>(); }
+        /// card.restart
+        auto restart() { return create<api::CardRestart>(); }
+        /// card.restore
+        auto restore() { return create<api::CardRestore>(); }
+        /// card.sleep
+        auto sleep() { return create<api::CardSleep>(); }
+        /// card.status
+        auto status() { return create<api::CardStatus>(); }
+        /// card.temp (polymorphic — use .get(), .set(), .delete_())
+        CardTempFactory temp() { return {nc_}; }
+        /// card.time
+        auto time() { return create<api::CardTime>(); }
+        /// card.trace
+        auto trace() { return create<api::CardTrace>(); }
+        /// card.transport
+        auto transport() { return create<api::CardTransport>(); }
+        /// card.triangulate
+        auto triangulate() { return create<api::CardTriangulate>(); }
+        /// card.usage.get
+        auto usageGet() { return create<api::CardUsageGet>(); }
+        /// card.usage.test
+        auto usageTest() { return create<api::CardUsageTest>(); }
+        /// card.version
+        auto version() { return create<api::CardVersion>(); }
+        /// card.voltage (polymorphic — use .get(), .set(), .delete_())
+        CardVoltageFactory voltage() { return {nc_}; }
+        /// card.wifi
+        auto wifi() { return create<api::CardWifi>(); }
+        /// card.wireless
+        auto wireless() { return create<api::CardWireless>(); }
+        /// card.wireless.penalty (polymorphic — use .get(), .set(), .delete_())
+        CardWirelessPenaltyFactory wirelessPenalty() { return {nc_}; }
+    } card;
+
+    struct DfuGroup {
+        Notecard* nc_;
+        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
+
+        /// dfu.get
+        auto get() { return create<api::DfuGet>(); }
+        /// dfu.status
+        auto status() { return create<api::DfuStatus>(); }
+    } dfu;
+
+    struct EnvGroup {
+        Notecard* nc_;
+        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
+
+        /// env.default (polymorphic — use .get(), .set(), .delete_())
+        EnvDefaultFactory default_() { return {nc_}; }
+        /// env.get
+        auto get() { return create<api::EnvGet>(); }
+        /// env.modified
+        auto modified() { return create<api::EnvModified>(); }
+        /// env.set
+        auto set(note::string_view name) {
+            auto r = create<api::EnvSet>();
+            r.name = name;
+            return r;
+        }
+        /// env.template
+        auto template_() { return create<api::EnvTemplate>(); }
+    } env;
+
+    struct FileGroup {
+        Notecard* nc_;
+        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
+
+        /// file.changes
+        auto changes() { return create<api::FileChanges>(); }
+        /// file.changes.pending
+        auto changesPending() { return create<api::FileChangesPending>(); }
+        /// file.clear
+        auto clear() { return create<api::FileClear>(); }
+        /// file.delete
+        auto delete_() { return create<api::FileDelete>(); }
+        /// file.stats
+        auto stats() { return create<api::FileStats>(); }
+    } file;
+
+    struct HubGroup {
+        Notecard* nc_;
+        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
+
+        /// hub.get
+        auto get() { return create<api::HubGet>(); }
+        /// hub.log
+        auto log() { return create<api::HubLog>(); }
+        /// hub.set
+        auto set() { return create<api::HubSet>(); }
+        /// hub.signal
+        auto signal() { return create<api::HubSignal>(); }
+        /// hub.status
+        auto status() { return create<api::HubStatus>(); }
+        /// hub.sync
+        auto sync() { return create<api::HubSync>(); }
+        /// hub.sync.status
+        auto syncStatus() { return create<api::HubSyncStatus>(); }
+    } hub;
+
+    struct NoteGroup {
+        Notecard* nc_;
+        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
+
+        /// note.add
+        auto add() { return create<api::NoteAdd>(); }
+        /// note.changes (polymorphic — use .get(), .set(), .delete_())
+        NoteChangesFactory changes() { return {nc_}; }
+        /// note.delete
+        auto delete_(note::string_view file, note::string_view noteId) {
+            auto r = create<api::NoteDelete>();
+            r.file = file;
+            r.noteId = noteId;
+            return r;
+        }
+        /// note.get (polymorphic — use .get(), .set(), .delete_())
+        NoteGetFactory get() { return {nc_}; }
+        /// note.template (polymorphic — use .get(), .set(), .delete_())
+        NoteTemplateFactory template_() { return {nc_}; }
+        /// note.update
+        auto update(note::string_view file, note::string_view noteId) {
+            auto r = create<api::NoteUpdate>();
+            r.file = file;
+            r.noteId = noteId;
+            return r;
+        }
+    } note;
+
+    struct NtnGroup {
+        Notecard* nc_;
+        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
+
+        /// ntn.gps
+        auto gps() { return create<api::NtnGps>(); }
+        /// ntn.reset
+        auto reset() { return create<api::NtnReset>(); }
+        /// ntn.status
+        auto status() { return create<api::NtnStatus>(); }
+    } ntn;
+
+    struct VarGroup {
+        Notecard* nc_;
+        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
+
+        /// var.delete
+        auto delete_() { return create<api::VarDelete>(); }
+        /// var.get
+        auto get() { return create<api::VarGet>(); }
+        /// var.set
+        auto set() { return create<api::VarSet>(); }
+    } var;
+
+    struct WebGroup {
+        Notecard* nc_;
+        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
+
+        /// web
+        auto request() { return create<api::Web>(); }
+        /// web.delete
+        auto delete_() { return create<api::WebDelete>(); }
+        /// web.get
+        auto get() { return create<api::WebGet>(); }
+        /// web.post
+        auto post() { return create<api::WebPost>(); }
+        /// web.put
+        auto put() { return create<api::WebPut>(); }
+    } web;
+
+    // =====================================================================
+    // Flat methods (original API — retained for backward compatibility)
+    // =====================================================================
 
     auto cardAttn() { return create<api::CardAttn>(); }
 
@@ -125,14 +479,6 @@ public:
 #else
     auto cardAuxSerial() { return create<api::CardAuxSerial>(); }
 #endif
-
-    // card.binary
-    struct CardBinaryFactory {
-        Notecard* nc_;
-        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
-        auto get() { return create<api::CardBinary::Get>(); }
-        auto delete_() { return create<api::CardBinary::Delete>(); }
-    };
 
 #if __cplusplus >= 202002L
     template<typename T_ = TargetT>
@@ -210,14 +556,6 @@ public:
     auto cardCarrier() { return create<api::CardCarrier>(); }
 #endif
 
-    // card.contact
-    struct CardContactFactory {
-        Notecard* nc_;
-        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
-        auto get() { return create<api::CardContact::Get>(); }
-        auto set() { return create<api::CardContact::Set>(); }
-    };
-
 #if __cplusplus >= 202002L
     template<typename T_ = TargetT>
     requires (IsUnconstrained<T_> || T_::supports(api::CardContact::Get::skus))
@@ -286,15 +624,6 @@ public:
     auto cardLed() { return create<api::CardLed>(); }
 
     auto cardLocation() { return create<api::CardLocation>(); }
-
-    // card.location.mode
-    struct CardLocationModeFactory {
-        Notecard* nc_;
-        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
-        auto get() { return create<api::CardLocationMode::Get>(); }
-        auto set() { return create<api::CardLocationMode::Set>(); }
-        auto delete_() { return create<api::CardLocationMode::Delete>(); }
-    };
 
     CardLocationModeFactory cardLocationMode() { return {&nc_}; }
     auto getCardLocationMode() { return create<api::CardLocationMode::Get>(); }
@@ -379,15 +708,6 @@ public:
     auto cardMotionTrack() { return create<api::CardMotionTrack>(); }
 #endif
 
-    // card.power
-    struct CardPowerFactory {
-        Notecard* nc_;
-        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
-        auto get() { return create<api::CardPower::Get>(); }
-        auto set() { return create<api::CardPower::Set>(); }
-        auto delete_() { return create<api::CardPower::Delete>(); }
-    };
-
 #if __cplusplus >= 202002L
     template<typename T_ = TargetT>
     requires (IsUnconstrained<T_> || T_::supports(api::CardPower::Get::skus))
@@ -469,15 +789,6 @@ public:
 
     auto cardStatus() { return create<api::CardStatus>(); }
 
-    // card.temp
-    struct CardTempFactory {
-        Notecard* nc_;
-        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
-        auto get() { return create<api::CardTemp::Get>(); }
-        auto set() { return create<api::CardTemp::Set>(); }
-        auto delete_() { return create<api::CardTemp::Delete>(); }
-    };
-
     CardTempFactory cardTemp() { return {&nc_}; }
     auto getCardTemp() { return create<api::CardTemp::Get>(); }
     auto setCardTemp() { return create<api::CardTemp::Set>(); }
@@ -541,14 +852,6 @@ public:
 
     auto cardVersion() { return create<api::CardVersion>(); }
 
-    // card.voltage
-    struct CardVoltageFactory {
-        Notecard* nc_;
-        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
-        auto get() { return create<api::CardVoltage::Get>(); }
-        auto set() { return create<api::CardVoltage::Set>(); }
-    };
-
     CardVoltageFactory cardVoltage() { return {&nc_}; }
     auto getCardVoltage() { return create<api::CardVoltage::Get>(); }
     auto setCardVoltage() { return create<api::CardVoltage::Set>(); }
@@ -578,15 +881,6 @@ public:
 #else
     auto cardWireless() { return create<api::CardWireless>(); }
 #endif
-
-    // card.wireless.penalty
-    struct CardWirelessPenaltyFactory {
-        Notecard* nc_;
-        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
-        auto get() { return create<api::CardWirelessPenalty::Get>(); }
-        auto set() { return create<api::CardWirelessPenalty::Set>(); }
-        auto delete_() { return create<api::CardWirelessPenalty::Delete>(); }
-    };
 
 #if __cplusplus >= 202002L
     template<typename T_ = TargetT>
@@ -662,22 +956,6 @@ public:
 #else
     auto dfuStatus() { return create<api::DfuStatus>(); }
 #endif
-
-    // env.default
-    struct EnvDefaultFactory {
-        Notecard* nc_;
-        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
-        auto set(note::string_view name) {
-            auto r = create<api::EnvDefault::Set>();
-            r.name = name;
-            return r;
-        }
-        auto delete_(note::string_view name) {
-            auto r = create<api::EnvDefault::Delete>();
-            r.name = name;
-            return r;
-        }
-    };
 
     EnvDefaultFactory envDefault() { return {&nc_}; }
     auto setEnvDefault(note::string_view name) {
@@ -781,18 +1059,6 @@ public:
 
     auto noteAdd() { return create<api::NoteAdd>(); }
 
-    // note.changes
-    struct NoteChangesFactory {
-        Notecard* nc_;
-        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
-        auto get() { return create<api::NoteChanges::Get>(); }
-        auto delete_(note::string_view file) {
-            auto r = create<api::NoteChanges::Delete>();
-            r.file = file;
-            return r;
-        }
-    };
-
 #if __cplusplus >= 202002L
     template<typename T_ = TargetT>
     requires (IsUnconstrained<T_> || T_::supports(api::NoteChanges::Get::skus))
@@ -849,33 +1115,9 @@ public:
         return r;
     }
 
-    // note.get
-    struct NoteGetFactory {
-        Notecard* nc_;
-        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
-        auto get() { return create<api::NoteGet::Get>(); }
-        auto delete_() { return create<api::NoteGet::Delete>(); }
-    };
-
     NoteGetFactory noteGet() { return {&nc_}; }
     auto getNoteGet() { return create<api::NoteGet::Get>(); }
     auto deleteNoteGet() { return create<api::NoteGet::Delete>(); }
-
-    // note.template
-    struct NoteTemplateFactory {
-        Notecard* nc_;
-        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
-        auto set(note::string_view file) {
-            auto r = create<api::NoteTemplate::Set>();
-            r.file = file;
-            return r;
-        }
-        auto delete_(note::string_view file) {
-            auto r = create<api::NoteTemplate::Delete>();
-            r.file = file;
-            return r;
-        }
-    };
 
     NoteTemplateFactory noteTemplate() { return {&nc_}; }
     auto setNoteTemplate(note::string_view file) {
@@ -941,18 +1183,7 @@ public:
 
     auto varSet() { return create<api::VarSet>(); }
 
-#if __cplusplus >= 202002L
-    template<typename T_ = TargetT>
-    requires (IsUnconstrained<T_> || T_::supports(api::Web::skus))
-    auto web() { return create<api::Web>(); }
-
-    template<typename T_ = TargetT>
-    requires (!IsUnconstrained<T_> && !T_::supports(api::Web::skus) && !T_::strict)
-    [[deprecated("web is not available on this target")]]
-    auto web() { return create<api::Web>(); }
-#else
-    auto web() { return create<api::Web>(); }
-#endif
+    // web: flat method skipped (conflicts with web group member)
 
 #if __cplusplus >= 202002L
     template<typename T_ = TargetT>

@@ -68,9 +68,9 @@ struct MockBackend : note::JsonBackend {
 int main() {
     MockBackend backend;
     note::Notecard nc(backend,
-        [](note::string_view request, uint32_t) -> note::Result<std::string> {
+        [](note::string_view request, uint32_t) -> note::Result<note::string_view> {
             std::printf("  >> %.*s\n", (int)request.size(), request.data());
-            return std::string("{}");
+            return note::string_view("{}");
         });
 
     note::Api api(nc);
@@ -82,7 +82,7 @@ int main() {
     // ═════════════════════════════════════════════════════════════════════════
 
     std::puts("\n--- Fluent style ---");
-    api.hubSet()
+    api.hub.set()
         .product("com.example.app")
         .mode("periodic")
         .outbound(60)
@@ -91,7 +91,7 @@ int main() {
 
     std::puts("\n--- Direct assignment ---");
     {
-        auto req = api.hubSet();
+        auto req = api.hub.set();
         req.product = "com.example.app";
         req.mode = "continuous";
         req.execute();
@@ -103,7 +103,7 @@ int main() {
     // ═════════════════════════════════════════════════════════════════════════
 
     std::puts("\n--- Type-safe units ---");
-    api.hubSet()
+    api.hub.set()
         .product("com.example.app")
         .mode("periodic")
         .outbound(60_mins)       // Minutes literal
@@ -112,7 +112,7 @@ int main() {
         .execute();
 
     // Raw integers still work — they implicitly convert to the correct unit:
-    api.hubSet()
+    api.hub.set()
         .outbound(60)            // int → Minutes (outbound is in minutes)
         .seconds(300)            // int → Seconds (seconds is in seconds)
         .execute();
@@ -122,7 +122,7 @@ int main() {
 
     // Hours and Days convert implicitly to smaller units:
     std::puts("\n--- Hours and Days ---");
-    api.hubSet()
+    api.hub.set()
         .product("com.example.app")
         .mode("periodic")
         .outbound(2_hours)       // Hours → Minutes (= 120 on the wire)
@@ -130,11 +130,11 @@ int main() {
         .execute();
 
     // Works across the API — anywhere a Seconds field is expected:
-    api.cardSleep()
+    api.card.sleep()
         .seconds(12_hours)       // Hours → Seconds (= 43200 on the wire)
         .execute();
 
-    api.cardAttn()
+    api.card.attn()
         .mode("arm")
         .seconds(5_mins)         // Minutes → Seconds (= 300 on the wire)
         .execute();
@@ -150,13 +150,13 @@ int main() {
         using inbound_t  = note::api::HubSet::inbound_t;
 
         // Reset outbound to default (sends -1 on the wire)
-        api.hubSet().outbound(outbound_t::reset).execute();
+        api.hub.set().outbound(outbound_t::reset).execute();
 
         // Manual sync only — no automatic outbound (sends 0)
-        api.hubSet().outbound(outbound_t::manual).execute();
+        api.hub.set().outbound(outbound_t::manual).execute();
 
         // Same constants exist for inbound
-        api.hubSet().inbound(inbound_t::reset).execute();
+        api.hub.set().inbound(inbound_t::reset).execute();
     }
 
 
@@ -165,7 +165,7 @@ int main() {
     // ═════════════════════════════════════════════════════════════════════════
 
     std::puts("\n--- Consteval validation ---");
-    api.hubSet()
+    api.hub.set()
         .product("com.example.app")
         .mode(note::api::HubSet::validatedMode("periodic"))
         .execute();
@@ -181,7 +181,7 @@ int main() {
 
     // Raw string — works but easy to get the format wrong:
     std::puts("\n--- Voltage-variable sync (raw string) ---");
-    api.hubSet()
+    api.hub.set()
         .mode("periodic")
         .voutbound("usb:5;high:15;normal:60;low:240;dead:0")
         .execute();
@@ -189,7 +189,7 @@ int main() {
     // Builder — type-safe, built directly on the field:
     std::puts("\n--- Voltage-variable sync (builder) ---");
     {
-        auto req = api.hubSet();
+        auto req = api.hub.set();
         req.mode = "periodic";
         req.voutbound.usb(5).high(15).normal(60).low(240).dead(0);
         req.vinbound.usb(5).high(30).normal(120).low(1440).dead(0);
@@ -203,7 +203,7 @@ int main() {
 
     std::puts("\n--- USB-variable sync ---");
     // Stay continuous on USB, fall back to periodic on battery
-    api.hubSet()
+    api.hub.set()
         .product("com.example.app")
         .mode("periodic")
         .outbound(60_mins)
@@ -211,13 +211,13 @@ int main() {
         .execute();
 
     // Stay continuous on USB, fall back to minimum on battery
-    api.hubSet()
+    api.hub.set()
         .mode("minimum")
         .umin(true)
         .execute();
 
     // Stay continuous on USB, fall back to off on battery
-    api.hubSet()
+    api.hub.set()
         .mode("off")
         .uoff(true)
         .execute();

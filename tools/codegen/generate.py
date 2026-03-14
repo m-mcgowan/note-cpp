@@ -15,11 +15,13 @@ if __name__ == "__main__":
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from codegen.spec_parser import parse_spec
+from codegen.model import ResourceGroup
 from codegen.naming import (
     accessor_name as property_to_accessor_name,
     endpoint_to_struct_name,
     operation_suffix_to_struct_name,
     property_to_cpp_name,
+    wire_name_to_group,
 )
 
 
@@ -255,10 +257,30 @@ def main() -> None:
     umbrella_path.write_text(content)
     print(f"Generated umbrella header: {umbrella_path}")
 
+    # Build resource groups (card, hub, note, etc.)
+    from collections import OrderedDict
+    group_map: OrderedDict[str, ResourceGroup] = OrderedDict()
+    for ep in endpoints:
+        gname = ep.group_name
+        if gname not in group_map:
+            group_map[gname] = ResourceGroup(
+                name=gname,
+                struct_name=gname.capitalize() + "Group",
+            )
+        group_map[gname].endpoints.append(ep)
+    resource_groups = list(group_map.values())
+    print(f"Grouped into {len(resource_groups)} resource groups: "
+          f"{', '.join(g.name for g in resource_groups)}")
+
     # Generate Api factory header
     api_context_template = env.get_template("api_context.hpp.j2")
     api_context_path.parent.mkdir(parents=True, exist_ok=True)
-    content = api_context_template.render(endpoints=endpoints)
+    group_names = {g.name for g in resource_groups}
+    content = api_context_template.render(
+        endpoints=endpoints,
+        resource_groups=resource_groups,
+        group_names=group_names,
+    )
     api_context_path.write_text(content)
     print(f"Generated Api factory: {api_context_path}")
 
@@ -274,7 +296,11 @@ def main() -> None:
 
     # Generate Api factory coverage test
     api_context_test_template = env.get_template("test_api_context.cpp.j2")
-    api_context_test_content = api_context_test_template.render(endpoints=endpoints)
+    api_context_test_content = api_context_test_template.render(
+        endpoints=endpoints,
+        resource_groups=resource_groups,
+        group_names=group_names,
+    )
     test_dir.mkdir(parents=True, exist_ok=True)
     api_context_test_path = test_dir / "test_api_context.cpp"
     api_context_test_path.write_text(api_context_test_content)
@@ -282,7 +308,10 @@ def main() -> None:
 
     # Generate endpoint request-builder and response-parser coverage tests
     endpoint_cov_template = env.get_template("test_endpoint_coverage.cpp.j2")
-    endpoint_cov_content = endpoint_cov_template.render(endpoints=endpoints)
+    endpoint_cov_content = endpoint_cov_template.render(
+        endpoints=endpoints,
+        group_names=group_names,
+    )
     endpoint_cov_path = test_dir / "test_endpoint_coverage.cpp"
     endpoint_cov_path.write_text(endpoint_cov_content)
     print(f"Generated endpoint coverage tests in {endpoint_cov_path}")

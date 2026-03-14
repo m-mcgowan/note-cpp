@@ -20,16 +20,16 @@ Conversion is one-directional: larger units implicitly convert to smaller ones (
 using namespace note::literals;
 
 // Each field knows its unit type — IDE autocomplete tells you
-api.hubSet()
+api.hub.set()
     .outbound(15_mins)       // Minutes literal
     .inbound(7_days)         // Days → Minutes (= 10080 on the wire)
     .execute();
 
-api.cardAttn()
+api.card.attn()
     .seconds(5_mins)         // Minutes → Seconds (= 300 on the wire)
     .execute();
 
-api.cardSleep()
+api.card.sleep()
     .seconds(12_hours)       // Hours → Seconds (= 43200 on the wire)
     .execute();
 ```
@@ -39,8 +39,8 @@ api.cardSleep()
 Raw `int32_t` values implicitly convert to the correct unit type, so existing code doesn't break:
 
 ```cpp
-api.hubSet().outbound(60);      // int → Minutes
-api.hubSet().seconds(300);      // int → Seconds
+api.hub.set().outbound(60);      // int → Minutes
+api.hub.set().seconds(300);      // int → Seconds
 ```
 
 ## Compile-time safety
@@ -48,8 +48,8 @@ api.hubSet().seconds(300);      // int → Seconds
 Wrong-direction conversions are compile errors:
 
 ```cpp
-api.hubSet().outbound(300_s);   // error: Seconds cannot convert to Minutes
-api.cardAttn().seconds(5_mins); // OK: Minutes → Seconds (implicit)
+api.hub.set().outbound(300_s);   // error: Seconds cannot convert to Minutes
+api.card.attn().seconds(5_mins); // OK: Minutes → Seconds (implicit)
 ```
 
 ## Named constants
@@ -59,8 +59,8 @@ Special values are named constants on the field type, replacing magic numbers:
 ```cpp
 using outbound_t = note::api::HubSet::outbound_t;
 
-api.hubSet().outbound(outbound_t::reset).execute();   // sends -1 (reset to default)
-api.hubSet().outbound(outbound_t::manual).execute();   // sends 0 (manual sync only)
+api.hub.set().outbound(outbound_t::reset).execute();   // sends -1 (reset to default)
+api.hub.set().outbound(outbound_t::manual).execute();   // sends 0 (manual sync only)
 ```
 
 ## Voltage-variable sync
@@ -68,7 +68,7 @@ api.hubSet().outbound(outbound_t::manual).execute();   // sends 0 (manual sync o
 The Notecard's `voutbound`/`vinbound` fields adapt sync frequency to supply voltage. A type-safe builder constructs the semicolon-delimited string:
 
 ```cpp
-auto req = api.hubSet();
+auto req = api.hub.set();
 req.mode = "periodic";
 req.voutbound.usb(5).high(15).normal(60).low(240).dead(0);
 req.vinbound.usb(5).high(30).normal(120).low(1440).dead(0);

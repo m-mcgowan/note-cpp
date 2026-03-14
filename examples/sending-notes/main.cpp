@@ -81,9 +81,9 @@ struct Readings {
 int main() {
     MockBackend backend;
     note::Notecard nc(backend,
-        [](note::string_view request, uint32_t) -> note::Result<std::string> {
+        [](note::string_view request, uint32_t) -> note::Result<note::string_view> {
             std::printf("  >> %.*s\n", (int)request.size(), request.data());
-            return std::string("{}");
+            return note::string_view("{}");
         });
 
     note::Api api(nc);
@@ -105,7 +105,7 @@ int main() {
     // ═════════════════════════════════════════════════════════════════════════
 
     std::puts("\n--- Builder body ---");
-    api.noteAdd()
+    api.note.add()
         .file("sensors.qo")
         .body(note::body([](note::JsonBuilder& b) {
             b.add("temp", 22.5);
@@ -121,7 +121,7 @@ int main() {
     std::puts("\n--- Typed body struct ---");
     {
         Readings r{.temperature = 22.5f, .humidity = 60};
-        api.noteAdd().file("sensors.qo").body(r).execute();
+        api.note.add().file("sensors.qo").body(r).execute();
     }
 
 
@@ -130,7 +130,7 @@ int main() {
     // ═════════════════════════════════════════════════════════════════════════
 
     std::puts("\n--- Template registration ---");
-    api.noteTemplate().set("sensors.qo")
+    api.note.template_().set("sensors.qo")
         .body(note::template_of<Readings>())
         .execute();
 
@@ -142,13 +142,13 @@ int main() {
     std::puts("\n--- Template + send ---");
     {
         // Register the template once at startup
-        api.noteTemplate().set("sensors.qo")
+        api.note.template_().set("sensors.qo")
             .body(note::template_of<Readings>())
             .execute();
 
         // Then send notes — the Notecard stores them compactly
         Readings r{.temperature = 22.5f, .humidity = 60};
-        api.noteAdd().file("sensors.qo").body(r).execute();
+        api.note.add().file("sensors.qo").body(r).execute();
     }
 
 
@@ -158,7 +158,7 @@ int main() {
 
     std::puts("\n--- Receive and parse ---");
     {
-        auto result = api.noteGet().get().file("data.qi").execute();
+        auto result = api.note.get().get().file("data.qi").execute();
         if (result) {
             auto data = result.bodyAs<Readings>();
             (void)data.temperature;
@@ -174,7 +174,7 @@ int main() {
     std::puts("\n--- Fire-and-forget command ---");
     {
         Readings r{.temperature = 22.5f, .humidity = 60};
-        api.noteAdd().file("sensors.qo").body(r).command();
+        api.note.add().file("sensors.qo").body(r).command();
     }
 
 

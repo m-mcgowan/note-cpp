@@ -25,15 +25,40 @@ namespace note {
 
 {% macro required_params(op) %}{% for p in op.required_properties %}{{ p.field_type }} {{ p.accessor_name }}{{ ", " if not loop.last }}{% endfor %}{% endmacro %}
 
+{# ===== Resource group method body (same logic, different indent) ========= #}
+
+{% macro group_method_body(endpoint, op, indent) %}
+{% if endpoint.is_polymorphic %}
+{# Polymorphic: return the factory struct #}
+{{ indent }}return {{ endpoint.struct_name }}Factory{&nc_};
+{% elif op.required_properties %}
+{{ indent }}auto r = create<api::{{ endpoint.struct_name }}>();
+{% for prop in op.required_properties %}
+{{ indent }}r.{{ prop.accessor_name }} = {{ prop.accessor_name }};
+{% endfor %}
+{{ indent }}return r;
+{% else %}
+{{ indent }}return create<api::{{ endpoint.struct_name }}>();
+{% endif %}
+{% endmacro %}
+
 #if __cplusplus >= 202002L
 template<typename TargetT = Unconstrained>
 #endif
 class Api {
     Notecard& nc_;
 public:
-    explicit Api(Notecard& nc) : nc_(nc) {}
+    explicit Api(Notecard& nc) : nc_(nc)
+{% for group in resource_groups %}
+        , {{ group.name }}{&nc_}
+{% endfor %}
+    {}
 #if __cplusplus >= 202002L
-    explicit Api(Notecard& nc, TargetT) : nc_(nc) {}
+    explicit Api(Notecard& nc, TargetT) : nc_(nc)
+{% for group in resource_groups %}
+        , {{ group.name }}{&nc_}
+{% endfor %}
+    {}
 #endif
 
     Notecard& notecard() { return nc_; }
@@ -50,10 +75,12 @@ public:
     template<typename RequestT>
     Result<void> command(const RequestT& req) { return nc_.command_typed(req); }
 
+    // =====================================================================
+    // Polymorphic factory structs (shared by flat methods and resource groups)
+    // =====================================================================
+
 {% for endpoint in endpoints %}
-{% set has_skus = endpoint.skus_rats_expr != "" %}
 {% if endpoint.is_polymorphic %}
-    // {{ endpoint.wire_name }}
     struct {{ endpoint.struct_name }}Factory {
         Notecard* nc_;
         template<typename T> T create() { T r; r.nc_ = nc_; return r; }
@@ -72,6 +99,52 @@ public:
 {% endfor %}
     };
 
+{% endif %}
+{% endfor %}
+    // =====================================================================
+    // Resource groups (api.card, api.hub, api.note, etc.)
+    //
+    // Naming matches note-python: first segment -> group, rest -> camelCase.
+    // See docs/api-design.md for the full design.
+    // =====================================================================
+
+{% for group in resource_groups %}
+    struct {{ group.struct_name }} {
+        Notecard* nc_;
+        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
+
+{% for endpoint in group.endpoints %}
+{% set op = endpoint.operations[0] %}
+{% if endpoint.is_polymorphic %}
+        /// {{ endpoint.wire_name }} (polymorphic — use .get(), .set(), .delete_())
+        {{ endpoint.struct_name }}Factory {{ endpoint.group_method }}() { return {nc_}; }
+{% elif op.required_properties %}
+        /// {{ endpoint.wire_name }}
+        auto {{ endpoint.group_method }}({{ required_params(op) }}) {
+            auto r = create<api::{{ endpoint.struct_name }}>();
+{% for prop in op.required_properties %}
+            r.{{ prop.accessor_name }} = {{ prop.accessor_name }};
+{% endfor %}
+            return r;
+        }
+{% else %}
+        /// {{ endpoint.wire_name }}
+        auto {{ endpoint.group_method }}() { return create<api::{{ endpoint.struct_name }}>(); }
+{% endif %}
+{% endfor %}
+    } {{ group.name }};
+
+{% endfor %}
+    // =====================================================================
+    // Flat methods (original API — retained for backward compatibility)
+    // =====================================================================
+
+{% for endpoint in endpoints %}
+{% if endpoint.factory_method in group_names %}
+    // {{ endpoint.wire_name }}: flat method skipped (conflicts with {{ endpoint.factory_method }} group member)
+{% else %}
+{% set has_skus = endpoint.skus_rats_expr != "" %}
+{% if endpoint.is_polymorphic %}
 {% set guard_type = "api::" + endpoint.struct_name + "::" + endpoint.operations[0].struct_name %}
 {% if has_skus %}
 #if __cplusplus >= 202002L
@@ -170,6 +243,7 @@ public:
 {% endif %}
 {% endif %}
 {% endif %}
+{% endif %}{# end group_names conflict check #}
 
 {% endfor %}
 };

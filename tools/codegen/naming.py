@@ -95,6 +95,45 @@ def nested_type_name(cpp_name: str) -> str:
     return acc.rstrip("_") + "_t"
 
 
+# C++ keywords and common clashes that need a trailing underscore
+# when used as method names on resource groups.
+_GROUP_METHOD_RENAMES: dict[str, str] = {
+    "delete": "delete_",
+    "template": "template_",
+    "default": "default_",
+    "class": "class_",
+    "new": "new_",
+}
+
+
+def wire_name_to_group(wire_name: str) -> str:
+    """Extract the group name (first segment) from a wire name.
+
+    e.g. 'card.version' -> 'card', 'hub.sync.status' -> 'hub'
+    """
+    return wire_name.split(".")[0]
+
+
+def wire_name_to_group_method(wire_name: str) -> str:
+    """Convert wire name to the method name within its resource group.
+
+    Strip the first segment, camelCase the rest, rename keywords.
+
+    e.g. 'card.version' -> 'version'
+         'card.location.mode' -> 'locationMode'
+         'card.binary.get' -> 'binaryGet'
+         'note.delete' -> 'delete_'
+         'note.template' -> 'template_'
+         'web' -> 'request'  (bare endpoint, no sub-name)
+    """
+    parts = wire_name.split(".")
+    if len(parts) <= 1:
+        return "request"  # bare endpoint like "web"
+    rest = parts[1:]
+    name = rest[0] + "".join(p.capitalize() for p in rest[1:])
+    return _GROUP_METHOD_RENAMES.get(name, name)
+
+
 def schema_key_to_wire_name(key: str) -> str:
     """Reverse x-prefix mapping to recover the original wire name.
 

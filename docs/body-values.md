@@ -9,7 +9,7 @@ Notecard Notes carry a JSON body — sensor readings, configuration, user data. 
 Pass a JSON string directly. No type checking, but convenient for one-off cases:
 
 ```cpp
-api.noteAdd()
+api.note.add()
     .file("sensors.qo")
     .body(R"({"temp":22.5,"humidity":60})")
     .execute();
@@ -20,7 +20,7 @@ api.noteAdd()
 Use `note::body()` with a lambda for type-safe building without defining a struct:
 
 ```cpp
-api.noteAdd()
+api.note.add()
     .file("sensors.qo")
     .body(note::body([](note::JsonBuilder& b) {
         b.add("temp", 22.5);
@@ -47,7 +47,7 @@ Both fluent and assignment styles work:
 
 ```cpp
 // Fluent — inline
-api.noteAdd()
+api.note.add()
    .file("sensors.qo")
    .body(Readings{.temperature = 22.5f, .humidity = 60})
    .execute();
@@ -56,7 +56,7 @@ api.noteAdd()
 Readings r;
 r.temperature = 22.5f;
 r.humidity = 60;
-auto req = api.noteAdd();
+auto req = api.note.add();
 req.file = "sensors.qo";
 req.body(r);
 req.execute();
@@ -67,7 +67,7 @@ req.execute();
 Parse a response body back into your struct with `bodyAs<T>()`:
 
 ```cpp
-auto r = api.noteGet().get().file("data.qi").execute();
+auto r = api.note.get().get().file("data.qi").execute();
 if (r) {
     Readings data = r.bodyAs<Readings>();
     printf("temp=%.1f humidity=%d\n", data.temperature, data.humidity);
@@ -79,7 +79,7 @@ if (r) {
 Notecard [templates](https://dev.blues.io/notecard/notecard-walkthrough/low-bandwidth-design/#notecard-templates) optimize bandwidth by sending only values, not field names. `note-cpp` auto-generates the template definition from your struct:
 
 ```cpp
-api.noteTemplate().set("sensors.qo")
+api.note.template_().set("sensors.qo")
     .body(note::template_of<Readings>())
     .execute();
 ```

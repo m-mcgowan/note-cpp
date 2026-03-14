@@ -43,7 +43,7 @@ the `"req"` and `"file"` fields; you just provide the body content.
 ```cpp
 // main.cpp#L108-L114
 
-api.noteAdd()
+api.note.add()
     .file("sensors.qo")
     .body(note::body([](note::JsonBuilder& b) {
         b.add("temp", 22.5);
@@ -61,7 +61,7 @@ reflection.
 // main.cpp#L123-L124
 
 Readings r{.temperature = 22.5f, .humidity = 60};
-api.noteAdd().file("sensors.qo").body(r).execute();
+api.note.add().file("sensors.qo").body(r).execute();
 ```
 
 ## 4. Template registration

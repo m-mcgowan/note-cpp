@@ -15,7 +15,7 @@ The API supports fluent setters
 ```cpp
 // examples/getting_started.cpp#L193-L197
 
-api.hubSet()
+api.hub.set()
    .product("com.example.app")
    .mode("periodic")
    .outbound(60)
@@ -27,7 +27,7 @@ as well as property assignment
 ```cpp
 // examples/getting_started.cpp#L202-L206
 
-auto req = api.hubSet();
+auto req = api.hub.set();
 req.product = "com.example.app";
 req.mode = "periodic";
 req.outbound = 60;
@@ -41,7 +41,7 @@ Your custom types can also be included, such as when creating notes
 
 {
     Readings r{.temperature = 22.5f, .humidity = 60};
-    api.noteAdd().file("sensors.qo").body(r).execute();
+    api.note.add().file("sensors.qo").body(r).execute();
 }
 ```
 
@@ -50,7 +50,7 @@ Inline is fine too
 ```cpp
 // examples/getting_started.cpp#L257-L260
 
-api.noteAdd()
+api.note.add()
    .file("sensors.qo")
    .body(Readings{.temperature = 22.5f, .humidity = 60})
    .execute();
@@ -65,7 +65,7 @@ and property assignment
     Readings r;
     r.temperature = 22.5f;
     r.humidity = 60;
-    auto req = api.noteAdd();
+    auto req = api.note.add();
     req.file = "sensors.qo";
     req.body(r);
     req.execute();
@@ -112,14 +112,14 @@ auto nc = ....;                     // we'll get to this later.
 note::Api api(nc);
 
 // Make requests. Fields are typed, IDE auto-completes everything.
-api.hubSet()
+api.hub.set()
    .product("com.example.app")
    .mode("periodic")
    .outbound(60_mins)
    .execute();
 
 // Read responses. Fields are named members, not strings.
-auto result = api.cardVersion().execute();
+auto result = api.card.version().execute();
 if (result) {
     auto version = result.version;   // string_view
     auto device  = result.device;    // string_view
@@ -150,7 +150,7 @@ See the [getting started example](examples/getting_started.cpp) for a complete w
 Request and response types covering all Notecard APIs (74 of them!) are auto-generated from the [Notecard OpenAPI spec](notecard-api.openapi.json). Each has typed fields, chainable setters, and an `execute()` method. Fields support fluent chaining, direct assignment, and designated initializers.
 
 ```cpp
-api.hubSet()
+api.hub.set()
     .product("com.example.app")
     .mode("periodic")
     .outbound(60)
@@ -174,8 +174,8 @@ When targeting a specific Notecard product, the `Api` constructor accepts a targ
 
 ```cpp
 note::Api wifi(nc, note::target<note::Product::WiFi>());
-wifi.cardSleep();  // OK: card.sleep supports WiFi
-wifi.hubSet();     // OK: universal
+wifi.card.sleep();  // OK: card.sleep supports WiFi
+wifi.hub.set();     // OK: universal
 ```
 
 Each API type carries `static constexpr Skus skus` for introspection. See [examples/target_filtering.cpp](examples/target_filtering.cpp).
@@ -188,17 +188,17 @@ Some Notecard APIs behave differently depending on which fields you send. In `no
 
 ```cpp
 // Read a Note (ReadOnly — safe to retry on failure)
-auto r = api.noteGet().get().file("data.qi").execute();
+auto r = api.note.get().get().file("data.qi").execute();
 
 // Pop from queue (Destructive — not safe to retry blindly)
-auto r = api.noteGet().delete_().file("requests.qi").execute();
+auto r = api.note.get().delete_().file("requests.qi").execute();
 
 // card.location.mode — Set accepts lat/lon, Get and Delete don't
-api.cardLocationMode().set()
+api.card.locationMode().set()
     .mode("fixed").lat(42.565).lon(-70.783)   // lat/lon only exist on Set
     .execute();
 
-api.cardLocationMode().get().execute();       // no lat/lon fields to misuse
+api.card.locationMode().get().execute();       // no lat/lon fields to misuse
 ```
 
 Each variant exposes only the fields the Notecard expects for that operation — setting a field that doesn't apply is a compile error, not a silent wire-level mistake.
@@ -213,7 +213,7 @@ Note bodies support three tiers: **raw JSON strings**, **builder lambdas**, and 
 
 ```cpp
 Readings r{.temperature = 22.5f, .humidity = 60};
-api.noteAdd().file("sensors.qo").body(r).execute();
+api.note.add().file("sensors.qo").body(r).execute();
 ```
 
 ---
@@ -239,7 +239,7 @@ Send typed data:
 
 {
     Readings r{.temperature = 22.5f, .humidity = 60};
-    api.noteAdd().file("sensors.qo").body(r).execute();
+    api.note.add().file("sensors.qo").body(r).execute();
 }
 ```
 
@@ -248,7 +248,7 @@ Register a template (auto-generates type hints `14.1` = TFLOAT32, `11` = TINT16)
 ```cpp
 // examples/getting_started.cpp#L277-L279
 
-api.noteTemplate().set("sensors.qo")
+api.note.template_().set("sensors.qo")
     .body(note::template_of<Readings>())
     .execute();
 ```
@@ -259,7 +259,7 @@ Parse response body back into the struct:
 // examples/getting_started.cpp#L283-L291
 
 {
-    auto r = api.noteGet().get().file("data.qi").execute();
+    auto r = api.note.get().get().file("data.qi").execute();
     if (r) {
         Readings data = r.bodyAs<Readings>();
         (void)data.temperature;
@@ -281,29 +281,29 @@ Duration fields across the Notecard API use distinct types (`Minutes`, `Seconds`
 using namespace note::literals;
 
 // hub.set outbound/inbound are Minutes on the wire
-api.hubSet()
+api.hub.set()
     .outbound(15_mins)           // Minutes literal
     .inbound(7_days)             // Days → Minutes (10080 on the wire)
     .execute();
 
 // card.attn seconds field accepts Minutes/Hours too
-api.cardAttn()
+api.card.attn()
     .seconds(5_mins)             // Minutes → Seconds (300 on the wire)
     .execute();
 
 // card.sleep — long sleep expressed naturally
-api.cardSleep()
+api.card.sleep()
     .seconds(12_hours)           // Hours → Seconds (43200 on the wire)
     .execute();
 
 // Compile-time safety — wrong direction is a type error:
-// api.hubSet().outbound(300_s);    // error: Seconds ≠ Minutes
+// api.hub.set().outbound(300_s);    // error: Seconds ≠ Minutes
 ```
 
 **Voltage-variable sync** — adapt sync frequency to the Notecard's supply voltage. A builder constructs the semicolon-delimited string safely:
 
 ```cpp
-auto req = api.hubSet();
+auto req = api.hub.set();
 req.mode = "periodic";
 req.voutbound.usb(5).high(15).normal(60).low(240).dead(0);
 req.vinbound.usb(5).high(30).normal(120).low(1440).dead(0);
@@ -322,7 +322,7 @@ See [examples/hub-configuration/](examples/hub-configuration/) for more.
 All operations return a result that is truthy on success. On failure, `error()` provides a structured `ErrorInfo` with an error code and message. `to_string()` formats it for logging.
 
 ```cpp
-auto result = api.cardVersion().execute();
+auto result = api.card.version().execute();
 if (result) {
     auto version = result.version;   // string_view
     auto device  = result.device;    // string_view

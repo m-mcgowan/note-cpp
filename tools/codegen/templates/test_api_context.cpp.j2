@@ -65,10 +65,11 @@ TEST_CASE("Api::command() overload") {
 }
 
 // ---------------------------------------------------------------------------
-// Per-endpoint factory methods
+// Per-endpoint flat factory methods (backward compatibility)
 // ---------------------------------------------------------------------------
 
 {% for endpoint in endpoints %}
+{% if endpoint.factory_method not in group_names %}
 {% if endpoint.is_polymorphic %}
 TEST_CASE("Api::{{ endpoint.factory_method }}() compound factory") {
     Harness h;
@@ -96,4 +97,35 @@ TEST_CASE("Api::{{ endpoint.factory_method }}()") {
 }
 
 {% endif %}
+{% endif %}
+{% endfor %}
+// ---------------------------------------------------------------------------
+// Resource group methods (api.card, api.hub, api.note, etc.)
+// ---------------------------------------------------------------------------
+
+{% for group in resource_groups %}
+TEST_CASE("Api::{{ group.name }} resource group") {
+    Harness h;
+{% for endpoint in group.endpoints %}
+{% set op = endpoint.operations[0] %}
+{% if endpoint.is_polymorphic %}
+    // {{ endpoint.wire_name }} (polymorphic)
+{% for op in endpoint.operations %}
+{% if op.required_properties %}
+    h.api.execute(h.api.{{ group.name }}.{{ endpoint.group_method }}().{{ op.factory_method }}({% for p in op.required_properties %}{{ p | request_test_value }}{{ ", " if not loop.last }}{% endfor %}));
+{% else %}
+    h.api.execute(h.api.{{ group.name }}.{{ endpoint.group_method }}().{{ op.factory_method }}());
+{% endif %}
+{% endfor %}
+{% elif op.required_properties %}
+    // {{ endpoint.wire_name }}
+    h.api.execute(h.api.{{ group.name }}.{{ endpoint.group_method }}({% for p in op.required_properties %}{{ p | request_test_value }}{{ ", " if not loop.last }}{% endfor %}));
+{% else %}
+    // {{ endpoint.wire_name }}
+    h.api.execute(h.api.{{ group.name }}.{{ endpoint.group_method }}());
+{% endif %}
+    REQUIRE(h.last_req.find("{{ endpoint.wire_name }}") != std::string::npos);
+{% endfor %}
+}
+
 {% endfor %}

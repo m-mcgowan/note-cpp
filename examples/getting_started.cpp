@@ -83,9 +83,9 @@ int main() {
     // The transport lambda sends JSON over serial/I2C and returns the response.
     MockBackend backend;
     note::Notecard nc(backend,
-        [](note::string_view request, uint32_t) -> note::Result<std::string> {
+        [](note::string_view request, uint32_t) -> note::Result<note::string_view> {
             std::printf("  >> %.*s\n", (int)request.size(), request.data());
-            return std::string("{}");
+            return note::string_view("{}");
         });
 
 
@@ -190,7 +190,7 @@ int main() {
 
     // Fluent chain — IDE auto-completes every setter
     std::puts("--- hub.set (fluent) ---");
-    api.hubSet()
+    api.hub.set()
        .product("com.example.app")
        .mode("periodic")
        .outbound(60)
@@ -199,7 +199,7 @@ int main() {
     // Direct field assignment
     std::puts("--- hub.set (direct) ---");
     {
-        auto req = api.hubSet();
+        auto req = api.hub.set();
         req.product = "com.example.app";
         req.mode = "periodic";
         req.outbound = 60;
@@ -209,7 +209,7 @@ int main() {
     // Typed response — fields are named members, not strings
     std::puts("--- card.version (typed response) ---");
     {
-        auto result = api.cardVersion().execute();
+        auto result = api.card.version().execute();
         if (result) {
             auto version = result.version;
             auto device  = result.device;
@@ -219,22 +219,19 @@ int main() {
         }
     }
 
-    // Polymorphic endpoints — two access styles:
-    //   Endpoint-first: api.noteGet().get()  — Notecard API as landing page
-    //   Action-first:   api.getNoteGet()     — verb first, easy to discover
-    std::puts("--- note.get (endpoint-first) ---");
-    api.noteGet().get().file("data.qi").execute();
+    // Polymorphic endpoints — note.get has two variants:
+    //   .get()     — read-only
+    //   .delete_() — pop from queue
+    std::puts("--- note.get ---");
+    api.note.get().get().file("data.qi").execute();
 
-    std::puts("--- note.get (action-first) ---");
-    api.getNoteGet().file("data.qi").execute();
-
-    // note.get has two variants: get (read-only) and delete_ (pop from queue)
+    // note.get delete (pop)
     std::puts("--- note.get delete (pop) ---");
-    api.noteGet().delete_().file("requests.qi").execute();
+    api.note.get().delete_().file("requests.qi").execute();
 
     // Fire-and-forget command — sends "cmd" instead of "req"
     std::puts("--- hub.set (command) ---");
-    api.hubSet().product("com.example.app").command();
+    api.hub.set().product("com.example.app").command();
 
 
     // ═══════════════════════════════════════════════════════════════════
@@ -249,12 +246,12 @@ int main() {
     std::puts("--- note.add (typed body) ---");
     {
         Readings r{.temperature = 22.5f, .humidity = 60};
-        api.noteAdd().file("sensors.qo").body(r).execute();
+        api.note.add().file("sensors.qo").body(r).execute();
     }
 
     // Inline initialization
     std::puts("--- note.add (inline body) ---");
-    api.noteAdd()
+    api.note.add()
        .file("sensors.qo")
        .body(Readings{.temperature = 22.5f, .humidity = 60})
        .execute();
@@ -265,7 +262,7 @@ int main() {
         Readings r;
         r.temperature = 22.5f;
         r.humidity = 60;
-        auto req = api.noteAdd();
+        auto req = api.note.add();
         req.file = "sensors.qo";
         req.body(r);
         req.execute();
@@ -274,14 +271,14 @@ int main() {
     // Register a Notecard template — auto-generates type hints
     // (14.1 = TFLOAT32, 11 = TINT16)
     std::puts("--- note.template ---");
-    api.noteTemplate().set("sensors.qo")
+    api.note.template_().set("sensors.qo")
         .body(note::template_of<Readings>())
         .execute();
 
     // Parse a response body back into the struct
     std::puts("--- note.get (parse body) ---");
     {
-        auto r = api.noteGet().get().file("data.qi").execute();
+        auto r = api.note.get().get().file("data.qi").execute();
         if (r) {
             Readings data = r.bodyAs<Readings>();
             (void)data.temperature;
@@ -293,14 +290,14 @@ int main() {
     // Bodies also work without a struct — three tiers:
     //   Tier 1: Raw JSON string
     std::puts("--- note.add (raw JSON body) ---");
-    api.noteAdd()
+    api.note.add()
         .file("sensors.qo")
         .body(R"({"temp":22.5})")
         .execute();
 
     //   Tier 2: Builder lambda
     std::puts("--- note.add (builder body) ---");
-    api.noteAdd()
+    api.note.add()
         .file("sensors.qo")
         .body(note::body([](note::JsonBuilder& b) {
             b.add("temp", 22.5);

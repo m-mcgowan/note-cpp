@@ -22,7 +22,7 @@ NoteRequest(req);
 ```cpp
 // Every field is a named member.
 // IDE auto-completes after the dot.
-api.hubSet()
+api.hub.set()
    .product("com.example.app")
    .mode("periodic")
    .outbound(60)
@@ -48,7 +48,7 @@ NoteRequest(req);
 // Body from a typed struct — same type
 // registers templates and parses responses.
 Readings r{.temperature = 22.5f, .humidity = 60};
-api.noteAdd()
+api.note.add()
    .file("sensors.qo")
    .body(r)
    .execute();
@@ -72,7 +72,7 @@ NoteDeleteResponse(rsp);
 ```cpp
 // Response is a typed struct — misspelled
 // fields won't compile. Dot access, not arrow.
-auto r = api.cardVersion().execute();
+auto r = api.card.version().execute();
 if (r) {
     auto ver = r.version; // typo = compile error
     auto dev = r.device;
@@ -98,7 +98,7 @@ NoteRequest(req);
 ```cpp
 // Same Readings struct auto-generates
 // the correct Notecard type hints.
-api.noteTemplate().set("sensors.qo")
+api.note.template_().set("sensors.qo")
    .body(note::template_of<Readings>())
    .execute();
 ```

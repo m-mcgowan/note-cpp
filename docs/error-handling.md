@@ -11,7 +11,7 @@ Every `note-cpp` operation returns a result type that is truthy on success. On f
 
 ```cpp
 // ApiResult — fields are accessed directly (no dereferencing)
-auto result = api.cardVersion().execute();
+auto result = api.card.version().execute();
 if (result) {
     auto version = result.version;   // string_view
     auto device  = result.device;    // string_view

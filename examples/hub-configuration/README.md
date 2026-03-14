@@ -16,7 +16,7 @@ JSON.
 ```cpp
 // main.cpp#L85-L90
 
-api.hubSet()
+api.hub.set()
     .product("com.example.app")
     .mode("periodic")
     .outbound(60)
@@ -29,7 +29,7 @@ api.hubSet()
 ```cpp
 // main.cpp#L94-L97
 
-auto req = api.hubSet();
+auto req = api.hub.set();
 req.product = "com.example.app";
 req.mode = "continuous";
 req.execute();
@@ -43,7 +43,7 @@ can't accidentally pass seconds where minutes are expected.
 ```cpp
 // main.cpp#L106-L111
 
-api.hubSet()
+api.hub.set()
     .product("com.example.app")
     .mode("periodic")
     .outbound(60_mins)       // Minutes literal
@@ -57,7 +57,7 @@ Raw integers still work — they implicitly convert to the correct unit type:
 // main.cpp#L114-L117
 
 // Raw integers still work — they implicitly convert to the correct unit:
-api.hubSet()
+api.hub.set()
     .outbound(60)            // int → Minutes (outbound is in minutes)
     .seconds(300)            // int → Seconds (seconds is in seconds)
 ```
@@ -66,7 +66,7 @@ Mixing units is a compile error:
 
 ```cpp
 // This would fail to compile:
-//   api.hubSet().outbound(60_s);  // error: Seconds ≠ Minutes
+//   api.hub.set().outbound(60_s);  // error: Seconds ≠ Minutes
 ```
 
 ## 3. Named constants
@@ -81,11 +81,11 @@ constants on the field type. No need to remember magic numbers.
     .execute();
 
 // Works across the API — anywhere a Seconds field is expected:
-api.cardSleep()
+api.card.sleep()
     .seconds(12_hours)       // Hours → Seconds (= 43200 on the wire)
     .execute();
 
-api.cardAttn()
+api.card.attn()
     .mode("arm")
     .seconds(5_mins)         // Minutes → Seconds (= 300 on the wire)
     .execute();
@@ -118,7 +118,7 @@ picks the interval matching its current voltage level.
 // ═════════════════════════════════════════════════════════════════════════
 
 std::puts("\n--- Consteval validation ---");
-api.hubSet()
+api.hub.set()
 ```
 
 **Builder** — type-safe, built directly on the field:
@@ -149,7 +149,7 @@ mode on battery.
 // Builder — type-safe, built directly on the field:
 std::puts("\n--- Voltage-variable sync (builder) ---");
 {
-    auto req = api.hubSet();
+    auto req = api.hub.set();
     req.mode = "periodic";
     req.voutbound.usb(5).high(15).normal(60).low(240).dead(0);
     req.vinbound.usb(5).high(30).normal(120).low(1440).dead(0);

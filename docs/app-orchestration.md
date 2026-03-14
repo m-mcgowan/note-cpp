@@ -82,7 +82,7 @@ conversion:
 ```cpp
 using namespace note::literals;
 
-api.hubSet()
+api.hub.set()
     .mode("periodic")
     .outbound(15_mins)       // 15 minutes
     .inbound(7_days)         // 10080 minutes on the wire
@@ -116,7 +116,7 @@ For stationary deployments (common with NTN), setting a fixed location skips
 GPS satellite acquisition:
 
 ```cpp
-api.cardLocationMode()
+api.card.locationMode()
     .mode("fixed")
     .lat(42.565)
     .lon(-70.783)
@@ -182,19 +182,19 @@ int main() {
     // ... transport setup ...
     note::Api api(nc);
 
-    api.hubSet()
+    api.hub.set()
         .product("com.example.weather")
         .mode("periodic")
         .outbound(15_mins)
         .inbound(4_hours)
         .execute();
 
-    api.noteTemplate().set("readings.qo")
+    api.note.template_().set("readings.qo")
         .body(note::template_of<Readings>())
         .execute();
 
     // Send data
-    api.noteAdd()
+    api.note.add()
         .file("readings.qo")
         .body(Readings{.temp = 22.5f, .humidity = 65.0f})
         .execute();
@@ -222,7 +222,7 @@ int main() {
     note::Api api(nc);
 
     // Step 1: Configure hub
-    api.hubSet()
+    api.hub.set()
         .product("com.example.weather")
         .mode("periodic")
         .outbound(15_mins)
@@ -232,34 +232,34 @@ int main() {
     // Step 2: Register compact template with port
     // NTN requires "format":"compact" and "port":1-100.
     // Without this, notes are silently dropped.
-    api.noteTemplate().set("readings.qo")
+    api.note.template_().set("readings.qo")
         .body(note::template_of<Readings>())
         .extra("format", "compact")
         .extra("port", 55)
         .execute();
 
     // Step 3: Fix location (skip slow GPS acquisition)
-    api.cardLocationMode().set()
+    api.card.locationMode().set()
         .mode("fixed")
         .lat(42.565)
         .lon(-70.783)
         .execute();
 
     // Step 4: Initial cellular sync (required before NTN works)
-    api.hubSync().execute();
+    api.hub.sync().execute();
     // Must poll hub.sync.status until "completed" ...
 
     // Step 5: Send data
-    api.noteAdd()
+    api.note.add()
         .file("readings.qo")
         .body(Readings{.temp = 22.5f, .humidity = 65.0f})
         .execute();
 
     // Step 6: Trigger outbound sync (NTN needs explicit direction)
-    api.hubSync().out(true).execute();
+    api.hub.sync().out(true).execute();
 
     // Step 7: Later, check for inbound (costs ~50 bytes!)
-    api.hubSync().in(true).execute();
+    api.hub.sync().in(true).execute();
 }
 ```
 
@@ -302,7 +302,7 @@ int main() {
     }
 
     // Send data — same API regardless of NTN or cellular
-    api.noteAdd()
+    api.note.add()
         .file("readings.qo")
         .body(Readings{.temp = 22.5f, .humidity = 65.0f})
         .execute();
@@ -320,31 +320,31 @@ Duration conversions work everywhere, not just `hub.set`:
 using namespace note::literals;
 
 // hub.set — outbound/inbound are Minutes fields
-api.hubSet()
+api.hub.set()
     .outbound(15_mins)        // Minutes literal
     .inbound(7_days)          // Days → Minutes (10080)
     .execute();
 
 // card.attn — seconds field accepts Minutes/Hours
-api.cardAttn()
+api.card.attn()
     .mode("arm")
     .seconds(5_mins)          // Minutes → Seconds (300)
     .execute();
 
 // card.sleep — express naturally
-api.cardSleep()
+api.card.sleep()
     .seconds(12_hours)        // Hours → Seconds (43200)
     .execute();
 
 // Voltage-variable sync cadence with mixed units
-auto req = api.hubSet();
+auto req = api.hub.set();
 req.mode = "periodic";
 req.voutbound.usb(5_mins).high(15_mins).normal(1_hours).low(4_hours).dead(0);
 req.vinbound.usb(30_mins).high(2_hours).normal(12_hours).low(7_days).dead(0);
 req.execute();
 
 // Compile-time safety:
-// api.hubSet().outbound(300_s);  // error: Seconds cannot implicitly convert to Minutes
+// api.hub.set().outbound(300_s);  // error: Seconds cannot implicitly convert to Minutes
 ```
 
 ### 5. Environment config with intervals

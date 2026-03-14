@@ -218,6 +218,24 @@ class EndpointGroup:
         return verb + self.struct_name
 
     @property
+    def group_name(self) -> str:
+        """Resource group name: first segment of wire_name.
+
+        e.g. 'card.version' -> 'card', 'hub.set' -> 'hub'
+        """
+        from codegen.naming import wire_name_to_group
+        return wire_name_to_group(self.wire_name)
+
+    @property
+    def group_method(self) -> str:
+        """Method name within the resource group.
+
+        e.g. 'card.version' -> 'version', 'card.location.mode' -> 'locationMode'
+        """
+        from codegen.naming import wire_name_to_group_method
+        return wire_name_to_group_method(self.wire_name)
+
+    @property
     def skus_rats_expr(self) -> str:
         """Union of all operation SKU RATs for this endpoint group."""
         bits: set[str] = set()
@@ -230,3 +248,20 @@ class EndpointGroup:
             return ""
         order = ["Rat::Cell", "Rat::WiFi", "Rat::Ntn", "Rat::LoRa"]
         return " | ".join(b for b in order if b in bits)
+
+
+@dataclass
+class ResourceGroup:
+    """A resource group (card, hub, note, etc.) containing related endpoints."""
+    name: str                        # "card", "hub", "note", etc.
+    struct_name: str                 # "CardGroup", "HubGroup", etc.
+    endpoints: list[EndpointGroup] = field(default_factory=list)
+
+    @property
+    def conflicts_with_flat(self) -> bool:
+        """True if this group name clashes with a flat factory method.
+
+        This happens when a bare endpoint has the same name as its group
+        (e.g. 'web' is both a group name and a flat method).
+        """
+        return any(ep.factory_method == self.name for ep in self.endpoints)

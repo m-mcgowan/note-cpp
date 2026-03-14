@@ -4422,7 +4422,7 @@ TEST_CASE("note::api::VarSet request builder") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::Web request builder") {
     Harness h;
-    auto req = h.api.web();
+    auto req = h.api.web.request();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.content(note::string_view("x-content"));

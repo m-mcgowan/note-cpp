@@ -134,7 +134,7 @@ int main() {
         .seconds(12_hours)       // Hours → Seconds (= 43200 on the wire)
         .execute();
 
-    api.card.attn()
+    api.card.attn().arm()
         .mode("arm")
         .seconds(5_mins)         // Minutes → Seconds (= 300 on the wire)
         .execute();

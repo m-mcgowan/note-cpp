@@ -9,6 +9,7 @@ from pathlib import Path
 from .model import (
     BinaryTransferDef,
     EndpointGroup,
+    ImplicitFieldDef,
     OperationDef,
     PropertyDef,
     ResponseDef,
@@ -251,6 +252,85 @@ def _parse_operation(op: dict, *, suffix: str | None = None) -> OperationDef:
     )
 
 
+def _make_implicit_field(wire_name: str, value: object) -> ImplicitFieldDef:
+    """Create an ImplicitFieldDef from a JSON value."""
+    if isinstance(value, bool):
+        return ImplicitFieldDef(wire_name, value, "true" if value else "false")
+    if isinstance(value, int):
+        return ImplicitFieldDef(wire_name, value, str(value))
+    if isinstance(value, float):
+        return ImplicitFieldDef(wire_name, value, str(value))
+    # String
+    return ImplicitFieldDef(wire_name, str(value), f'"{value}"')
+
+
+def _expand_intents(
+    base_op: OperationDef,
+    intents: list[dict],
+    all_req_props: list[PropertyDef],
+    all_rsp_props: list[PropertyDef],
+    rsp_has_body: bool,
+) -> list[OperationDef]:
+    """Expand x-intents into per-intent OperationDef objects.
+
+    Each intent selects a subset of request fields, defines implicit field
+    values, and selects a subset of response fields.
+    """
+    operations = []
+    # Index properties by wire_name for fast lookup
+    req_by_wire = {p.wire_name: p for p in all_req_props}
+    rsp_by_wire = {p.wire_name: p for p in all_rsp_props}
+
+    for intent in intents:
+        name = intent["name"]
+        struct_name = name[0].upper() + name[1:]
+
+        # Implicit fields — auto-emitted in build()
+        implicit = intent.get("implicit", {})
+        implicit_fields = [
+            _make_implicit_field(k, v)
+            for k, v in implicit.items()
+        ]
+        implicit_wire_names = set(implicit.keys())
+
+        # Request fields — subset of base operation's properties
+        intent_field_names = set(intent.get("fields", []))
+        req_props = [
+            p for p in all_req_props
+            if p.wire_name in intent_field_names
+            and p.wire_name not in implicit_wire_names
+        ]
+
+        # Response fields — subset of base response properties
+        intent_rsp_names = set(intent.get("response", []))
+        rsp_props = [
+            p for p in all_rsp_props
+            if p.wire_name in intent_rsp_names
+        ]
+
+        # Safety: map from spec-style lowercase to codegen PascalCase
+        raw_safety = intent.get("safety")
+        safety = SAFETY_MAP[raw_safety] if raw_safety else base_op.safety
+
+        operations.append(OperationDef(
+            struct_name=struct_name,
+            notecard_request=base_op.notecard_request,
+            safety=safety,
+            supports_cmd=intent.get("supports_cmd", base_op.supports_cmd),
+            properties=req_props,
+            response=ResponseDef(
+                properties=rsp_props,
+                has_body="body" in intent_rsp_names if intent_rsp_names else rsp_has_body,
+            ),
+            dispatch=base_op.dispatch,
+            binary_transfer=base_op.binary_transfer,
+            skus=base_op.skus,
+            implicit_fields=implicit_fields,
+        ))
+
+    return operations
+
+
 def _extract_suffix(operation_id: str, base_id: str) -> str | None:
     """Extract the suffix from a polymorphic operationId.
 
@@ -291,7 +371,26 @@ def parse_spec(spec_path: str | Path) -> list[EndpointGroup]:
         for method, op in ops:
             op_id = op.get("operationId", "")
             suffix = _extract_suffix(op_id, base_id) if is_polymorphic else None
-            operations.append(_parse_operation(op, suffix=suffix))
+            parsed_op = _parse_operation(op, suffix=suffix)
+
+            # Check for x-intents — expand one operation into many.
+            intents = op.get("x-intents")
+            if intents:
+                rsp_props, rsp_has_body = _extract_response_props(op)
+                intent_ops = _expand_intents(
+                    parsed_op, intents,
+                    all_req_props=parsed_op.properties,
+                    all_rsp_props=rsp_props,
+                    rsp_has_body=rsp_has_body,
+                )
+                # Keep the base operation (full field set, full response)
+                # as "Request" — the raw, unscoped variant.
+                parsed_op.struct_name = "Request"
+                operations.append(parsed_op)
+                operations.extend(intent_ops)
+                is_polymorphic = True
+            else:
+                operations.append(parsed_op)
 
         endpoints.append(EndpointGroup(
             wire_name=wire_name,

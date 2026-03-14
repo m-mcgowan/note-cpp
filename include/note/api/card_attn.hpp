@@ -20,276 +20,859 @@ namespace note::api {
 
 
 struct CardAttn {
-    static constexpr string_view notecard_request = "card.attn";
-    static constexpr bool supports_cmd = true;
-    static constexpr Safety safety = Safety::Idempotent;
-    static constexpr Skus skus{};
 
-    Notecard* nc_ = nullptr;
+    struct Request {
+        static constexpr string_view notecard_request = "card.attn";
+        static constexpr bool supports_cmd = true;
+        static constexpr Safety safety = Safety::Idempotent;
+        static constexpr Skus skus{};
 
-    /// A list of [Notefiles](https://dev.blues.io/api-
-    /// reference/glossary/#notefile) to watch for file-based interrupts.
-    struct files_t : Field<note::string_view> {
-        using Field<note::string_view>::Field;
-        using Field<note::string_view>::operator=;
-        CardAttn& operator()(note::string_view v);
-    } files{};
-    /// A comma-separated list of one or more of the following keywords. Some
-    /// keywords are only supported on certain types of Notecards.
-    struct mode_t : Field<note::string_view> {
-        using Field<note::string_view>::Field;
-        using Field<note::string_view>::operator=;
-        CardAttn& operator()(note::string_view v);
-    } mode{};
+        Notecard* nc_ = nullptr;
+
+        /// A list of [Notefiles](https://dev.blues.io/api-
+        /// reference/glossary/#notefile) to watch for file-based interrupts.
+        struct files_t : Field<note::string_view> {
+            using Field<note::string_view>::Field;
+            using Field<note::string_view>::operator=;
+            CardAttn::Request& operator()(note::string_view v);
+        } files{};
+        /// A comma-separated list of one or more of the following keywords.
+        /// Some keywords are only supported on certain types of Notecards.
+        struct mode_t : Field<note::string_view> {
+            using Field<note::string_view>::Field;
+            using Field<note::string_view>::operator=;
+            CardAttn::Request& operator()(note::string_view v);
+        } mode{};
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
-    /// When `true`, completely disables ATTN processing and sets the pin OFF.
-    /// This setting is retained across device restarts.
-    ///
-    /// @since firmware 7.2.1
-#if NOTE_API_VERSION < NOTE_VERSION(7, 2, 1)
-    [[deprecated("requires firmware >= 7.2.1")]]
-#endif
-    struct off_t : Field<bool> {
-        using Field<bool>::Field;
-        using Field<bool>::operator=;
-        CardAttn& operator()(bool v);
-    } off{};
-#endif
-    /// When `true`, enables ATTN processing. This setting is retained across
-    /// device restarts.
-    struct on_t : Field<bool> {
-        using Field<bool>::Field;
-        using Field<bool>::operator=;
-        CardAttn& operator()(bool v);
-    } on{};
-    /// When using `sleep` mode, a payload of data from the host that the
-    /// Notecard should hold in memory until retrieved by the host.
-    struct payload_t : Field<note::string_view> {
-        using Field<note::string_view>::Field;
-        using Field<note::string_view>::operator=;
-        CardAttn& operator()(note::string_view v);
-    } payload{};
-    /// To set an ATTN timeout when arming, or when using `sleep`.
-    ///
-    /// _**NOTE:** When the Notecard is in `continuous` mode, the `seconds`
-    /// timeout is serviced by a routine that wakes every 15 seconds. You can
-    /// predict when the device will wake, by rounding up to the nearest 15
-    /// second interval._
-    struct seconds_t : Field<note::Seconds> {
-        using Field<note::Seconds>::Field;
-        using Field<note::Seconds>::operator=;
-        CardAttn& operator()(note::Seconds v);
-    } seconds{};
-    /// When using `sleep` mode and the host has reawakened, request the
-    /// Notecard to return the stored `payload`.
-    struct start_t : Field<bool> {
-        using Field<bool>::Field;
-        using Field<bool>::operator=;
-        CardAttn& operator()(bool v);
-    } start{};
-#if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
-    /// When `true`, returns the current attention mode configuration, if any.
-    ///
-    /// @since firmware 3.2.1
-#if NOTE_API_VERSION < NOTE_VERSION(3, 2, 1)
-    [[deprecated("requires firmware >= 3.2.1")]]
-#endif
-    struct verify_t : Field<bool> {
-        using Field<bool>::Field;
-        using Field<bool>::operator=;
-        CardAttn& operator()(bool v);
-    } verify{};
-#endif
-
-
-    template<typename T>
-    auto& extra(note::string_view key, T value) {
-        if (extras_count_ < NOTE_EXTRAS_MAX)
-            extras_[extras_count_++] = {key, note::DynValue{value}};
-        return *this;
-    }
-    auto& extra(note::string_view key, const char* value) {
-        return extra(key, note::string_view{value});
-    }
-
-    note::DynField operator[](note::string_view k_) {
-        if (k_ == "files") return note::dyn_field_for(files);
-        if (k_ == "mode") return note::dyn_field_for(mode);
-#if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
-        if (k_ == "off") return note::dyn_field_for(off);
-#endif
-        if (k_ == "on") return note::dyn_field_for(on);
-        if (k_ == "payload") return note::dyn_field_for(payload);
-        if (k_ == "seconds") return note::dyn_field_for(seconds);
-        if (k_ == "start") return note::dyn_field_for(start);
-#if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
-        if (k_ == "verify") return note::dyn_field_for(verify);
-#endif
-        if (extras_count_ < NOTE_EXTRAS_MAX) {
-            auto& slot = extras_[extras_count_++];
-            slot.key = k_;
-            return note::dyn_field_for(slot.value);
-        }
-        return {};
-    }
-
-    std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
-    uint8_t extras_count_ = 0;
-
-    struct Response {
-#if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
-        /// This field is present and set to `true` if ATTN processing has been
-        /// disabled with the `off` argument.
+        /// When `true`, completely disables ATTN processing and sets the pin
+        /// OFF. This setting is retained across device restarts.
         ///
         /// @since firmware 7.2.1
 #if NOTE_API_VERSION < NOTE_VERSION(7, 2, 1)
         [[deprecated("requires firmware >= 7.2.1")]]
 #endif
-        bool off{};
+        struct off_t : Field<bool> {
+            using Field<bool>::Field;
+            using Field<bool>::operator=;
+            CardAttn::Request& operator()(bool v);
+        } off{};
 #endif
-        /// When using `sleep` mode with a `payload`, the payload provided by
-        /// the host to the Notecard.
-        note::string_view payload{};
-        /// Reflects the state of the attention pin. The `set` field is `true`
-        /// when the attention pin is `HIGH`, otherwise the `set` field will not
-        /// be present when the attention pin is `LOW`.
-        bool set{};
-        /// When using `sleep` mode with a `payload`, the time (UNIX Epoch time)
-        /// that the payload was stored by the Notecard.
-        int32_t time{};
+        /// When `true`, enables ATTN processing. This setting is retained
+        /// across device restarts.
+        struct on_t : Field<bool> {
+            using Field<bool>::Field;
+            using Field<bool>::operator=;
+            CardAttn::Request& operator()(bool v);
+        } on{};
+        /// When using `sleep` mode, a payload of data from the host that the
+        /// Notecard should hold in memory until retrieved by the host.
+        struct payload_t : Field<note::string_view> {
+            using Field<note::string_view>::Field;
+            using Field<note::string_view>::operator=;
+            CardAttn::Request& operator()(note::string_view v);
+        } payload{};
+        /// To set an ATTN timeout when arming, or when using `sleep`.
+        ///
+        /// _**NOTE:** When the Notecard is in `continuous` mode, the `seconds`
+        /// timeout is serviced by a routine that wakes every 15 seconds. You
+        /// can predict when the device will wake, by rounding up to the nearest
+        /// 15 second interval._
+        struct seconds_t : Field<note::Seconds> {
+            using Field<note::Seconds>::Field;
+            using Field<note::Seconds>::operator=;
+            CardAttn::Request& operator()(note::Seconds v);
+        } seconds{};
+        /// When using `sleep` mode and the host has reawakened, request the
+        /// Notecard to return the stored `payload`.
+        struct start_t : Field<bool> {
+            using Field<bool>::Field;
+            using Field<bool>::operator=;
+            CardAttn::Request& operator()(bool v);
+        } start{};
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
+        /// When `true`, returns the current attention mode configuration, if
+        /// any.
+        ///
+        /// @since firmware 3.2.1
+#if NOTE_API_VERSION < NOTE_VERSION(3, 2, 1)
+        [[deprecated("requires firmware >= 3.2.1")]]
+#endif
+        struct verify_t : Field<bool> {
+            using Field<bool>::Field;
+            using Field<bool>::operator=;
+            CardAttn::Request& operator()(bool v);
+        } verify{};
+#endif
+
+
+        template<typename T>
+        auto& extra(note::string_view key, T value) {
+            if (extras_count_ < NOTE_EXTRAS_MAX)
+                extras_[extras_count_++] = {key, note::DynValue{value}};
+            return *this;
+        }
+        auto& extra(note::string_view key, const char* value) {
+            return extra(key, note::string_view{value});
+        }
+
+        note::DynField operator[](note::string_view k_) {
+            if (k_ == "files") return note::dyn_field_for(files);
+            if (k_ == "mode") return note::dyn_field_for(mode);
+#if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
+            if (k_ == "off") return note::dyn_field_for(off);
+#endif
+            if (k_ == "on") return note::dyn_field_for(on);
+            if (k_ == "payload") return note::dyn_field_for(payload);
+            if (k_ == "seconds") return note::dyn_field_for(seconds);
+            if (k_ == "start") return note::dyn_field_for(start);
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
+            if (k_ == "verify") return note::dyn_field_for(verify);
+#endif
+            if (extras_count_ < NOTE_EXTRAS_MAX) {
+                auto& slot = extras_[extras_count_++];
+                slot.key = k_;
+                return note::dyn_field_for(slot.value);
+            }
+            return {};
+        }
+
+        std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
+        uint8_t extras_count_ = 0;
+
+        struct Response {
+#if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
+            /// This field is present and set to `true` if ATTN processing has
+            /// been disabled with the `off` argument.
+            ///
+            /// @since firmware 7.2.1
+#if NOTE_API_VERSION < NOTE_VERSION(7, 2, 1)
+            [[deprecated("requires firmware >= 7.2.1")]]
+#endif
+            bool off{};
+#endif
+            /// When using `sleep` mode with a `payload`, the payload provided
+            /// by the host to the Notecard.
+            note::string_view payload{};
+            /// Reflects the state of the attention pin. The `set` field is
+            /// `true` when the attention pin is `HIGH`, otherwise the `set`
+            /// field will not be present when the attention pin is `LOW`.
+            bool set{};
+            /// When using `sleep` mode with a `payload`, the time (UNIX Epoch
+            /// time) that the payload was stored by the Notecard.
+            int32_t time{};
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-        static Response parse(std::unique_ptr<JsonReader> reader_) {
-            Response rsp;
+            static Response parse(std::unique_ptr<JsonReader> reader_) {
+                Response rsp;
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
-            rsp.off = reader_->get_bool("off");
+                rsp.off = reader_->get_bool("off");
 #endif
-            rsp.payload = reader_->get_string("payload");
-            rsp.set = reader_->get_bool("set");
-            rsp.time = reader_->get_int("time");
-            rsp.reader_ = std::move(reader_);
-            return rsp;
-        }
+                rsp.payload = reader_->get_string("payload");
+                rsp.set = reader_->get_bool("set");
+                rsp.time = reader_->get_int("time");
+                rsp.reader_ = std::move(reader_);
+                return rsp;
+            }
 #pragma GCC diagnostic pop
 
-        // Non-owning parse: string_views point into the reader's data.
-        // The reader (and its underlying JSON buffer) must outlive the Response,
-        // or the caller must consume all string fields before the reader is reused.
+            // Non-owning parse: string_views point into the reader's data.
+            // The reader (and its underlying JSON buffer) must outlive the Response,
+            // or the caller must consume all string fields before the reader is reused.
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-        static Response parse(const JsonReader& reader_) {
-            Response rsp;
+            static Response parse(const JsonReader& reader_) {
+                Response rsp;
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
-            rsp.off = reader_.get_bool("off");
+                rsp.off = reader_.get_bool("off");
 #endif
-            rsp.payload = reader_.get_string("payload");
-            rsp.set = reader_.get_bool("set");
-            rsp.time = reader_.get_int("time");
-            return rsp;
-        }
+                rsp.payload = reader_.get_string("payload");
+                rsp.set = reader_.get_bool("set");
+                rsp.time = reader_.get_int("time");
+                return rsp;
+            }
 #pragma GCC diagnostic pop
 
-        // SAX sink — zero-allocation streaming parse into Response fields.
-        // String fields are string_views into the JSON buffer; caller must
-        // ensure the buffer outlives the Response (or intern strings after).
+            // SAX sink — zero-allocation streaming parse into Response fields.
+            // String fields are string_views into the JSON buffer; caller must
+            // ensure the buffer outlives the Response (or intern strings after).
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-        struct Sink : ::note::JsonSink {
-            Response& rsp;
-            explicit Sink(Response& r) : rsp(r) {}
-            void on_string(::note::string_view key, ::note::string_view val) override {
-                if (key == "payload") { rsp.payload = val; return; }
-            }
-            void on_bool(::note::string_view key, bool val) override {
+            struct Sink : ::note::JsonSink {
+                Response& rsp;
+                explicit Sink(Response& r) : rsp(r) {}
+                void on_string(::note::string_view key, ::note::string_view val) override {
+                    if (key == "payload") { rsp.payload = val; return; }
+                }
+                void on_bool(::note::string_view key, bool val) override {
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
-                if (key == "off") { rsp.off = val; return; }
+                    if (key == "off") { rsp.off = val; return; }
 #endif
-                if (key == "set") { rsp.set = val; return; }
-            }
-            void on_number(::note::string_view key, ::note::string_view raw) override {
-                if (key == "time") { rsp.time = ::note::parse_int(raw); return; }
-            }
+                    if (key == "set") { rsp.set = val; return; }
+                }
+                void on_number(::note::string_view key, ::note::string_view raw) override {
+                    if (key == "time") { rsp.time = ::note::parse_int(raw); return; }
+                }
+            };
+#pragma GCC diagnostic pop
+
+        private:
+            std::unique_ptr<JsonReader> reader_;
         };
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+        void build(JsonBuilder& b) const {
+            if (files) b.add("files", *files);
+            if (mode) b.add("mode", *mode);
+#if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
+            if (off) b.add("off", *off);
+#endif
+            if (on) b.add("on", *on);
+            if (payload) b.add("payload", *payload);
+            if (seconds) b.add("seconds", *seconds);
+            if (start) b.add("start", *start);
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
+            if (verify) b.add("verify", *verify);
+#endif
+            for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
+                std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
+                           extras_[i_].value);
+        }
 #pragma GCC diagnostic pop
 
-    private:
-        std::unique_ptr<JsonReader> reader_;
+        auto execute() const { return nc_->execute(*this); }
+        auto execute(Notecard& nc) const { return nc.execute(*this); }
+        Result<void> command() const { return nc_->command_typed(*this); }
+        Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
+
     };
 
+    struct Arm {
+        static constexpr string_view notecard_request = "card.attn";
+        static constexpr bool supports_cmd = true;
+        static constexpr Safety safety = Safety::Idempotent;
+        static constexpr Skus skus{};
+
+        Notecard* nc_ = nullptr;
+
+        /// A list of [Notefiles](https://dev.blues.io/api-
+        /// reference/glossary/#notefile) to watch for file-based interrupts.
+        struct files_t : Field<note::string_view> {
+            using Field<note::string_view>::Field;
+            using Field<note::string_view>::operator=;
+            CardAttn::Arm& operator()(note::string_view v);
+        } files{};
+        /// A comma-separated list of one or more of the following keywords.
+        /// Some keywords are only supported on certain types of Notecards.
+        struct mode_t : Field<note::string_view> {
+            using Field<note::string_view>::Field;
+            using Field<note::string_view>::operator=;
+            CardAttn::Arm& operator()(note::string_view v);
+        } mode{};
+        /// When `true`, enables ATTN processing. This setting is retained
+        /// across device restarts.
+        struct on_t : Field<bool> {
+            using Field<bool>::Field;
+            using Field<bool>::operator=;
+            CardAttn::Arm& operator()(bool v);
+        } on{};
+        /// To set an ATTN timeout when arming, or when using `sleep`.
+        ///
+        /// _**NOTE:** When the Notecard is in `continuous` mode, the `seconds`
+        /// timeout is serviced by a routine that wakes every 15 seconds. You
+        /// can predict when the device will wake, by rounding up to the nearest
+        /// 15 second interval._
+        struct seconds_t : Field<note::Seconds> {
+            using Field<note::Seconds>::Field;
+            using Field<note::Seconds>::operator=;
+            CardAttn::Arm& operator()(note::Seconds v);
+        } seconds{};
+
+
+        template<typename T>
+        auto& extra(note::string_view key, T value) {
+            if (extras_count_ < NOTE_EXTRAS_MAX)
+                extras_[extras_count_++] = {key, note::DynValue{value}};
+            return *this;
+        }
+        auto& extra(note::string_view key, const char* value) {
+            return extra(key, note::string_view{value});
+        }
+
+        note::DynField operator[](note::string_view k_) {
+            if (k_ == "files") return note::dyn_field_for(files);
+            if (k_ == "mode") return note::dyn_field_for(mode);
+            if (k_ == "on") return note::dyn_field_for(on);
+            if (k_ == "seconds") return note::dyn_field_for(seconds);
+            if (extras_count_ < NOTE_EXTRAS_MAX) {
+                auto& slot = extras_[extras_count_++];
+                slot.key = k_;
+                return note::dyn_field_for(slot.value);
+            }
+            return {};
+        }
+
+        std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
+        uint8_t extras_count_ = 0;
+
+        struct Response {
+            /// Reflects the state of the attention pin. The `set` field is
+            /// `true` when the attention pin is `HIGH`, otherwise the `set`
+            /// field will not be present when the attention pin is `LOW`.
+            bool set{};
+
+            static Response parse(std::unique_ptr<JsonReader> reader_) {
+                Response rsp;
+                rsp.set = reader_->get_bool("set");
+                rsp.reader_ = std::move(reader_);
+                return rsp;
+            }
+
+            // Non-owning parse: string_views point into the reader's data.
+            // The reader (and its underlying JSON buffer) must outlive the Response,
+            // or the caller must consume all string fields before the reader is reused.
+            static Response parse(const JsonReader& reader_) {
+                Response rsp;
+                rsp.set = reader_.get_bool("set");
+                return rsp;
+            }
+
+            // SAX sink — zero-allocation streaming parse into Response fields.
+            // String fields are string_views into the JSON buffer; caller must
+            // ensure the buffer outlives the Response (or intern strings after).
+            struct Sink : ::note::JsonSink {
+                Response& rsp;
+                explicit Sink(Response& r) : rsp(r) {}
+                void on_bool(::note::string_view key, bool val) override {
+                    if (key == "set") { rsp.set = val; return; }
+                }
+            };
+
+        private:
+            std::unique_ptr<JsonReader> reader_;
+        };
+
+        void build(JsonBuilder& b) const {
+            if (files) b.add("files", *files);
+            if (mode) b.add("mode", *mode);
+            if (on) b.add("on", *on);
+            if (seconds) b.add("seconds", *seconds);
+            for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
+                std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
+                           extras_[i_].value);
+        }
+
+        auto execute() const { return nc_->execute(*this); }
+        auto execute(Notecard& nc) const { return nc.execute(*this); }
+        Result<void> command() const { return nc_->command_typed(*this); }
+        Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
+
+    };
+
+    struct Watchdog {
+        static constexpr string_view notecard_request = "card.attn";
+        static constexpr bool supports_cmd = true;
+        static constexpr Safety safety = Safety::Idempotent;
+        static constexpr Skus skus{};
+
+        Notecard* nc_ = nullptr;
+
+        /// To set an ATTN timeout when arming, or when using `sleep`.
+        ///
+        /// _**NOTE:** When the Notecard is in `continuous` mode, the `seconds`
+        /// timeout is serviced by a routine that wakes every 15 seconds. You
+        /// can predict when the device will wake, by rounding up to the nearest
+        /// 15 second interval._
+        struct seconds_t : Field<note::Seconds> {
+            using Field<note::Seconds>::Field;
+            using Field<note::Seconds>::operator=;
+            CardAttn::Watchdog& operator()(note::Seconds v);
+        } seconds{};
+
+
+        template<typename T>
+        auto& extra(note::string_view key, T value) {
+            if (extras_count_ < NOTE_EXTRAS_MAX)
+                extras_[extras_count_++] = {key, note::DynValue{value}};
+            return *this;
+        }
+        auto& extra(note::string_view key, const char* value) {
+            return extra(key, note::string_view{value});
+        }
+
+        note::DynField operator[](note::string_view k_) {
+            if (k_ == "seconds") return note::dyn_field_for(seconds);
+            if (extras_count_ < NOTE_EXTRAS_MAX) {
+                auto& slot = extras_[extras_count_++];
+                slot.key = k_;
+                return note::dyn_field_for(slot.value);
+            }
+            return {};
+        }
+
+        std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
+        uint8_t extras_count_ = 0;
+
+        using Response = void;
+
+        void build(JsonBuilder& b) const {
+            b.add("mode", "watchdog");
+            if (seconds) b.add("seconds", *seconds);
+            for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
+                std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
+                           extras_[i_].value);
+        }
+
+        auto execute() const { return nc_->execute(*this); }
+        auto execute(Notecard& nc) const { return nc.execute(*this); }
+        Result<void> command() const { return nc_->command_typed(*this); }
+        Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
+
+    };
+
+    struct Sleep {
+        static constexpr string_view notecard_request = "card.attn";
+        static constexpr bool supports_cmd = true;
+        static constexpr Safety safety = Safety::Idempotent;
+        static constexpr Skus skus{};
+
+        Notecard* nc_ = nullptr;
+
+        /// When using `sleep` mode, a payload of data from the host that the
+        /// Notecard should hold in memory until retrieved by the host.
+        struct payload_t : Field<note::string_view> {
+            using Field<note::string_view>::Field;
+            using Field<note::string_view>::operator=;
+            CardAttn::Sleep& operator()(note::string_view v);
+        } payload{};
+        /// To set an ATTN timeout when arming, or when using `sleep`.
+        ///
+        /// _**NOTE:** When the Notecard is in `continuous` mode, the `seconds`
+        /// timeout is serviced by a routine that wakes every 15 seconds. You
+        /// can predict when the device will wake, by rounding up to the nearest
+        /// 15 second interval._
+        struct seconds_t : Field<note::Seconds> {
+            using Field<note::Seconds>::Field;
+            using Field<note::Seconds>::operator=;
+            CardAttn::Sleep& operator()(note::Seconds v);
+        } seconds{};
+
+
+        template<typename T>
+        auto& extra(note::string_view key, T value) {
+            if (extras_count_ < NOTE_EXTRAS_MAX)
+                extras_[extras_count_++] = {key, note::DynValue{value}};
+            return *this;
+        }
+        auto& extra(note::string_view key, const char* value) {
+            return extra(key, note::string_view{value});
+        }
+
+        note::DynField operator[](note::string_view k_) {
+            if (k_ == "payload") return note::dyn_field_for(payload);
+            if (k_ == "seconds") return note::dyn_field_for(seconds);
+            if (extras_count_ < NOTE_EXTRAS_MAX) {
+                auto& slot = extras_[extras_count_++];
+                slot.key = k_;
+                return note::dyn_field_for(slot.value);
+            }
+            return {};
+        }
+
+        std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
+        uint8_t extras_count_ = 0;
+
+        using Response = void;
+
+        void build(JsonBuilder& b) const {
+            b.add("mode", "sleep");
+            if (payload) b.add("payload", *payload);
+            if (seconds) b.add("seconds", *seconds);
+            for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
+                std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
+                           extras_[i_].value);
+        }
+
+        auto execute() const { return nc_->execute(*this); }
+        auto execute(Notecard& nc) const { return nc.execute(*this); }
+        Result<void> command() const { return nc_->command_typed(*this); }
+        Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
+
+    };
+
+    struct Retrieve {
+        static constexpr string_view notecard_request = "card.attn";
+        static constexpr bool supports_cmd = false;
+        static constexpr Safety safety = Safety::Idempotent;
+        static constexpr Skus skus{};
+
+        Notecard* nc_ = nullptr;
+
+
+        template<typename T>
+        auto& extra(note::string_view key, T value) {
+            if (extras_count_ < NOTE_EXTRAS_MAX)
+                extras_[extras_count_++] = {key, note::DynValue{value}};
+            return *this;
+        }
+        auto& extra(note::string_view key, const char* value) {
+            return extra(key, note::string_view{value});
+        }
+
+        note::DynField operator[](note::string_view k_) {
+            if (extras_count_ < NOTE_EXTRAS_MAX) {
+                auto& slot = extras_[extras_count_++];
+                slot.key = k_;
+                return note::dyn_field_for(slot.value);
+            }
+            return {};
+        }
+
+        std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
+        uint8_t extras_count_ = 0;
+
+        struct Response {
+            /// When using `sleep` mode with a `payload`, the payload provided
+            /// by the host to the Notecard.
+            note::string_view payload{};
+            /// When using `sleep` mode with a `payload`, the time (UNIX Epoch
+            /// time) that the payload was stored by the Notecard.
+            int32_t time{};
+
+            static Response parse(std::unique_ptr<JsonReader> reader_) {
+                Response rsp;
+                rsp.payload = reader_->get_string("payload");
+                rsp.time = reader_->get_int("time");
+                rsp.reader_ = std::move(reader_);
+                return rsp;
+            }
+
+            // Non-owning parse: string_views point into the reader's data.
+            // The reader (and its underlying JSON buffer) must outlive the Response,
+            // or the caller must consume all string fields before the reader is reused.
+            static Response parse(const JsonReader& reader_) {
+                Response rsp;
+                rsp.payload = reader_.get_string("payload");
+                rsp.time = reader_.get_int("time");
+                return rsp;
+            }
+
+            // SAX sink — zero-allocation streaming parse into Response fields.
+            // String fields are string_views into the JSON buffer; caller must
+            // ensure the buffer outlives the Response (or intern strings after).
+            struct Sink : ::note::JsonSink {
+                Response& rsp;
+                explicit Sink(Response& r) : rsp(r) {}
+                void on_string(::note::string_view key, ::note::string_view val) override {
+                    if (key == "payload") { rsp.payload = val; return; }
+                }
+                void on_number(::note::string_view key, ::note::string_view raw) override {
+                    if (key == "time") { rsp.time = ::note::parse_int(raw); return; }
+                }
+            };
+
+        private:
+            std::unique_ptr<JsonReader> reader_;
+        };
+
+        void build(JsonBuilder& b) const {
+            b.add("start", true);
+            for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
+                std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
+                           extras_[i_].value);
+        }
+
+        auto execute() const { return nc_->execute(*this); }
+        auto execute(Notecard& nc) const { return nc.execute(*this); }
+
+    };
+
+    struct Disarm {
+        static constexpr string_view notecard_request = "card.attn";
+        static constexpr bool supports_cmd = true;
+        static constexpr Safety safety = Safety::Idempotent;
+        static constexpr Skus skus{};
+
+        Notecard* nc_ = nullptr;
+
+
+        template<typename T>
+        auto& extra(note::string_view key, T value) {
+            if (extras_count_ < NOTE_EXTRAS_MAX)
+                extras_[extras_count_++] = {key, note::DynValue{value}};
+            return *this;
+        }
+        auto& extra(note::string_view key, const char* value) {
+            return extra(key, note::string_view{value});
+        }
+
+        note::DynField operator[](note::string_view k_) {
+            if (extras_count_ < NOTE_EXTRAS_MAX) {
+                auto& slot = extras_[extras_count_++];
+                slot.key = k_;
+                return note::dyn_field_for(slot.value);
+            }
+            return {};
+        }
+
+        std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
+        uint8_t extras_count_ = 0;
+
+        using Response = void;
+
+        void build(JsonBuilder& b) const {
+            b.add("mode", "disarm,-all");
+            for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
+                std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
+                           extras_[i_].value);
+        }
+
+        auto execute() const { return nc_->execute(*this); }
+        auto execute(Notecard& nc) const { return nc.execute(*this); }
+        Result<void> command() const { return nc_->command_typed(*this); }
+        Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
+
+    };
+
+    struct Query {
+        static constexpr string_view notecard_request = "card.attn";
+        static constexpr bool supports_cmd = false;
+        static constexpr Safety safety = Safety::ReadOnly;
+        static constexpr Skus skus{};
+
+        Notecard* nc_ = nullptr;
+
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
+        /// When `true`, returns the current attention mode configuration, if
+        /// any.
+        ///
+        /// @since firmware 3.2.1
+#if NOTE_API_VERSION < NOTE_VERSION(3, 2, 1)
+        [[deprecated("requires firmware >= 3.2.1")]]
+#endif
+        struct verify_t : Field<bool> {
+            using Field<bool>::Field;
+            using Field<bool>::operator=;
+            CardAttn::Query& operator()(bool v);
+        } verify{};
+#endif
+
+
+        template<typename T>
+        auto& extra(note::string_view key, T value) {
+            if (extras_count_ < NOTE_EXTRAS_MAX)
+                extras_[extras_count_++] = {key, note::DynValue{value}};
+            return *this;
+        }
+        auto& extra(note::string_view key, const char* value) {
+            return extra(key, note::string_view{value});
+        }
+
+        note::DynField operator[](note::string_view k_) {
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
+            if (k_ == "verify") return note::dyn_field_for(verify);
+#endif
+            if (extras_count_ < NOTE_EXTRAS_MAX) {
+                auto& slot = extras_[extras_count_++];
+                slot.key = k_;
+                return note::dyn_field_for(slot.value);
+            }
+            return {};
+        }
+
+        std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
+        uint8_t extras_count_ = 0;
+
+        struct Response {
+#if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
+            /// This field is present and set to `true` if ATTN processing has
+            /// been disabled with the `off` argument.
+            ///
+            /// @since firmware 7.2.1
+#if NOTE_API_VERSION < NOTE_VERSION(7, 2, 1)
+            [[deprecated("requires firmware >= 7.2.1")]]
+#endif
+            bool off{};
+#endif
+            /// Reflects the state of the attention pin. The `set` field is
+            /// `true` when the attention pin is `HIGH`, otherwise the `set`
+            /// field will not be present when the attention pin is `LOW`.
+            bool set{};
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-    void build(JsonBuilder& b) const {
-        if (files) b.add("files", *files);
-        if (mode) b.add("mode", *mode);
+            static Response parse(std::unique_ptr<JsonReader> reader_) {
+                Response rsp;
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
-        if (off) b.add("off", *off);
+                rsp.off = reader_->get_bool("off");
 #endif
-        if (on) b.add("on", *on);
-        if (payload) b.add("payload", *payload);
-        if (seconds) b.add("seconds", *seconds);
-        if (start) b.add("start", *start);
-#if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
-        if (verify) b.add("verify", *verify);
-#endif
-        for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
-            std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
-                       extras_[i_].value);
-    }
+                rsp.set = reader_->get_bool("set");
+                rsp.reader_ = std::move(reader_);
+                return rsp;
+            }
 #pragma GCC diagnostic pop
 
-    auto execute() const { return nc_->execute(*this); }
-    auto execute(Notecard& nc) const { return nc.execute(*this); }
-    Result<void> command() const { return nc_->command_typed(*this); }
-    Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
+            // Non-owning parse: string_views point into the reader's data.
+            // The reader (and its underlying JSON buffer) must outlive the Response,
+            // or the caller must consume all string fields before the reader is reused.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+            static Response parse(const JsonReader& reader_) {
+                Response rsp;
+#if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
+                rsp.off = reader_.get_bool("off");
+#endif
+                rsp.set = reader_.get_bool("set");
+                return rsp;
+            }
+#pragma GCC diagnostic pop
 
+            // SAX sink — zero-allocation streaming parse into Response fields.
+            // String fields are string_views into the JSON buffer; caller must
+            // ensure the buffer outlives the Response (or intern strings after).
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+            struct Sink : ::note::JsonSink {
+                Response& rsp;
+                explicit Sink(Response& r) : rsp(r) {}
+                void on_bool(::note::string_view key, bool val) override {
+#if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
+                    if (key == "off") { rsp.off = val; return; }
+#endif
+                    if (key == "set") { rsp.set = val; return; }
+                }
+            };
+#pragma GCC diagnostic pop
+
+        private:
+            std::unique_ptr<JsonReader> reader_;
+        };
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+        void build(JsonBuilder& b) const {
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
+            if (verify) b.add("verify", *verify);
+#endif
+            for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
+                std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
+                           extras_[i_].value);
+        }
+#pragma GCC diagnostic pop
+
+        auto execute() const { return nc_->execute(*this); }
+        auto execute(Notecard& nc) const { return nc.execute(*this); }
+
+    };
 };
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-inline CardAttn& CardAttn::files_t::operator()(note::string_view v) {
+inline CardAttn::Request& CardAttn::Request::files_t::operator()(note::string_view v) {
     Field<note::string_view>::operator=(v);
-    return *reinterpret_cast<CardAttn*>(
-        reinterpret_cast<char*>(this) - offsetof(CardAttn, files));
+    return *reinterpret_cast<CardAttn::Request*>(
+        reinterpret_cast<char*>(this) - offsetof(CardAttn::Request, files));
 }
-inline CardAttn& CardAttn::mode_t::operator()(note::string_view v) {
+inline CardAttn::Request& CardAttn::Request::mode_t::operator()(note::string_view v) {
     Field<note::string_view>::operator=(v);
-    return *reinterpret_cast<CardAttn*>(
-        reinterpret_cast<char*>(this) - offsetof(CardAttn, mode));
+    return *reinterpret_cast<CardAttn::Request*>(
+        reinterpret_cast<char*>(this) - offsetof(CardAttn::Request, mode));
 }
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
-inline CardAttn& CardAttn::off_t::operator()(bool v) {
+inline CardAttn::Request& CardAttn::Request::off_t::operator()(bool v) {
     Field<bool>::operator=(v);
-    return *reinterpret_cast<CardAttn*>(
-        reinterpret_cast<char*>(this) - offsetof(CardAttn, off));
+    return *reinterpret_cast<CardAttn::Request*>(
+        reinterpret_cast<char*>(this) - offsetof(CardAttn::Request, off));
 }
 #endif
-inline CardAttn& CardAttn::on_t::operator()(bool v) {
+inline CardAttn::Request& CardAttn::Request::on_t::operator()(bool v) {
     Field<bool>::operator=(v);
-    return *reinterpret_cast<CardAttn*>(
-        reinterpret_cast<char*>(this) - offsetof(CardAttn, on));
+    return *reinterpret_cast<CardAttn::Request*>(
+        reinterpret_cast<char*>(this) - offsetof(CardAttn::Request, on));
 }
-inline CardAttn& CardAttn::payload_t::operator()(note::string_view v) {
+inline CardAttn::Request& CardAttn::Request::payload_t::operator()(note::string_view v) {
     Field<note::string_view>::operator=(v);
-    return *reinterpret_cast<CardAttn*>(
-        reinterpret_cast<char*>(this) - offsetof(CardAttn, payload));
+    return *reinterpret_cast<CardAttn::Request*>(
+        reinterpret_cast<char*>(this) - offsetof(CardAttn::Request, payload));
 }
-inline CardAttn& CardAttn::seconds_t::operator()(note::Seconds v) {
+inline CardAttn::Request& CardAttn::Request::seconds_t::operator()(note::Seconds v) {
     Field<note::Seconds>::operator=(v);
-    return *reinterpret_cast<CardAttn*>(
-        reinterpret_cast<char*>(this) - offsetof(CardAttn, seconds));
+    return *reinterpret_cast<CardAttn::Request*>(
+        reinterpret_cast<char*>(this) - offsetof(CardAttn::Request, seconds));
 }
-inline CardAttn& CardAttn::start_t::operator()(bool v) {
+inline CardAttn::Request& CardAttn::Request::start_t::operator()(bool v) {
     Field<bool>::operator=(v);
-    return *reinterpret_cast<CardAttn*>(
-        reinterpret_cast<char*>(this) - offsetof(CardAttn, start));
+    return *reinterpret_cast<CardAttn::Request*>(
+        reinterpret_cast<char*>(this) - offsetof(CardAttn::Request, start));
 }
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
-inline CardAttn& CardAttn::verify_t::operator()(bool v) {
+inline CardAttn::Request& CardAttn::Request::verify_t::operator()(bool v) {
     Field<bool>::operator=(v);
-    return *reinterpret_cast<CardAttn*>(
-        reinterpret_cast<char*>(this) - offsetof(CardAttn, verify));
+    return *reinterpret_cast<CardAttn::Request*>(
+        reinterpret_cast<char*>(this) - offsetof(CardAttn::Request, verify));
+}
+#endif
+#pragma GCC diagnostic pop
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+inline CardAttn::Arm& CardAttn::Arm::files_t::operator()(note::string_view v) {
+    Field<note::string_view>::operator=(v);
+    return *reinterpret_cast<CardAttn::Arm*>(
+        reinterpret_cast<char*>(this) - offsetof(CardAttn::Arm, files));
+}
+inline CardAttn::Arm& CardAttn::Arm::mode_t::operator()(note::string_view v) {
+    Field<note::string_view>::operator=(v);
+    return *reinterpret_cast<CardAttn::Arm*>(
+        reinterpret_cast<char*>(this) - offsetof(CardAttn::Arm, mode));
+}
+inline CardAttn::Arm& CardAttn::Arm::on_t::operator()(bool v) {
+    Field<bool>::operator=(v);
+    return *reinterpret_cast<CardAttn::Arm*>(
+        reinterpret_cast<char*>(this) - offsetof(CardAttn::Arm, on));
+}
+inline CardAttn::Arm& CardAttn::Arm::seconds_t::operator()(note::Seconds v) {
+    Field<note::Seconds>::operator=(v);
+    return *reinterpret_cast<CardAttn::Arm*>(
+        reinterpret_cast<char*>(this) - offsetof(CardAttn::Arm, seconds));
+}
+#pragma GCC diagnostic pop
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+inline CardAttn::Watchdog& CardAttn::Watchdog::seconds_t::operator()(note::Seconds v) {
+    Field<note::Seconds>::operator=(v);
+    return *reinterpret_cast<CardAttn::Watchdog*>(
+        reinterpret_cast<char*>(this) - offsetof(CardAttn::Watchdog, seconds));
+}
+#pragma GCC diagnostic pop
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+inline CardAttn::Sleep& CardAttn::Sleep::payload_t::operator()(note::string_view v) {
+    Field<note::string_view>::operator=(v);
+    return *reinterpret_cast<CardAttn::Sleep*>(
+        reinterpret_cast<char*>(this) - offsetof(CardAttn::Sleep, payload));
+}
+inline CardAttn::Sleep& CardAttn::Sleep::seconds_t::operator()(note::Seconds v) {
+    Field<note::Seconds>::operator=(v);
+    return *reinterpret_cast<CardAttn::Sleep*>(
+        reinterpret_cast<char*>(this) - offsetof(CardAttn::Sleep, seconds));
+}
+#pragma GCC diagnostic pop
+
+
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
+inline CardAttn::Query& CardAttn::Query::verify_t::operator()(bool v) {
+    Field<bool>::operator=(v);
+    return *reinterpret_cast<CardAttn::Query*>(
+        reinterpret_cast<char*>(this) - offsetof(CardAttn::Query, verify));
 }
 #endif
 #pragma GCC diagnostic pop

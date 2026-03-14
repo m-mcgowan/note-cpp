@@ -25,6 +25,83 @@
         "x-safety": "idempotent",
         "x-notecard-request": "card.attn",
         "x-supports-cmd": true,
+        "x-intents": [
+          {
+            "name": "arm",
+            "description": "Arm ATTN pin for interrupt on an event trigger.",
+            "fields": [
+              "mode",
+              "files",
+              "seconds",
+              "on"
+            ],
+            "response": [
+              "set"
+            ],
+            "supports_cmd": true
+          },
+          {
+            "name": "watchdog",
+            "description": "Configure ATTN as a watchdog timer.",
+            "implicit": {
+              "mode": "watchdog"
+            },
+            "fields": [
+              "seconds"
+            ],
+            "response": [],
+            "supports_cmd": true
+          },
+          {
+            "name": "sleep",
+            "description": "Instruct host MCU to sleep with optional payload.",
+            "implicit": {
+              "mode": "sleep"
+            },
+            "fields": [
+              "seconds",
+              "payload"
+            ],
+            "response": [],
+            "supports_cmd": true
+          },
+          {
+            "name": "retrieve",
+            "description": "Retrieve stored payload after sleep.",
+            "implicit": {
+              "start": true
+            },
+            "fields": [],
+            "response": [
+              "payload",
+              "time"
+            ],
+            "supports_cmd": false
+          },
+          {
+            "name": "disarm",
+            "description": "Disarm all attention interrupts.",
+            "implicit": {
+              "mode": "disarm,-all"
+            },
+            "fields": [],
+            "response": [],
+            "supports_cmd": true
+          },
+          {
+            "name": "query",
+            "description": "Query current ATTN state and configuration.",
+            "fields": [
+              "verify"
+            ],
+            "response": [
+              "set",
+              "off"
+            ],
+            "safety": "readonly",
+            "supports_cmd": false
+          }
+        ],
         "x-skus": [
           "CELL",
           "CELL+WIFI",
@@ -347,47 +424,101 @@
           {
             "title": "Connected",
             "description": "Configure the Notecard to perform an interrupt on a successful connection to Notehub.",
-            "json": "{\"req\":\"card.attn\",\"mode\":\"arm,connected\"}"
+            "json": "{\"req\":\"card.attn\",\"mode\":\"arm,connected\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.attn\",\"mode\":\"arm,connected\"}",
+              "fields": {
+                "mode": "arm,connected"
+              },
+              "sub_type": "Arm"
+            }
           },
           {
             "title": "Files",
             "description": "Configure the Notecard to perform an interrupt on the `data.qi` and `my-settings.db` Notefiles.",
-            "json": "{\"req\":\"card.attn\",\"mode\":\"arm,files\",\"files\":[\"data.qi\",\"my-settings.db\"]}"
+            "json": "{\"req\":\"card.attn\",\"mode\":\"arm,files\",\"files\":[\"data.qi\",\"my-settings.db\"]}",
+            "x-validation": {
+              "skip": "contains unsettable fields: ['files']"
+            }
           },
           {
             "title": "Location",
             "description": "Configure the Notecard to perform an interrupt when the Notecard makes a position fix.",
-            "json": "{\"req\":\"card.attn\",\"mode\":\"arm,location\"}"
+            "json": "{\"req\":\"card.attn\",\"mode\":\"arm,location\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.attn\",\"mode\":\"arm,location\"}",
+              "fields": {
+                "mode": "arm,location"
+              },
+              "sub_type": "Arm"
+            }
           },
           {
             "title": "Motion",
             "description": "Configure the Notecard to perform an interrupt when the Notecard detects motion.",
-            "json": "{\"req\":\"card.attn\",\"mode\":\"arm,motion\"}"
+            "json": "{\"req\":\"card.attn\",\"mode\":\"arm,motion\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.attn\",\"mode\":\"arm,motion\"}",
+              "fields": {
+                "mode": "arm,motion"
+              },
+              "sub_type": "Arm"
+            }
           },
           {
             "title": "Signal",
             "description": "Configure the Notecard to perform an interrupt when the Notecard receives a signal.",
-            "json": "{\"req\":\"card.attn\",\"mode\":\"arm,signal\"}"
+            "json": "{\"req\":\"card.attn\",\"mode\":\"arm,signal\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.attn\",\"mode\":\"arm,signal\"}",
+              "fields": {
+                "mode": "arm,signal"
+              },
+              "sub_type": "Arm"
+            }
           },
           {
             "title": "Watchdog",
             "description": "Configure the Notecard to function as a watchdog timer with a 60 second timeout.",
-            "json": "{\"req\":\"card.attn\",\"mode\":\"watchdog\",\"seconds\":60}"
+            "json": "{\"req\":\"card.attn\",\"mode\":\"watchdog\",\"seconds\":60}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.attn\",\"mode\":\"watchdog\",\"seconds\":60}",
+              "fields": {
+                "seconds": 60
+              },
+              "sub_type": "Watchdog"
+            }
           },
           {
             "title": "Sleep With Payload",
             "description": "Configure the Notecard to instruct the host MCU to sleep for a period of time.",
-            "json": "{\"req\":\"card.attn\",\"mode\":\"sleep\",\"seconds\":3600,\"payload\":\"ewogICJpbnRlcnZhbHMiOiI2MCwxMiwxNCIKfQ==\"}"
+            "json": "{\"req\":\"card.attn\",\"mode\":\"sleep\",\"seconds\":3600,\"payload\":\"ewogICJpbnRlcnZhbHMiOiI2MCwxMiwxNCIKfQ==\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.attn\",\"mode\":\"sleep\",\"payload\":\"ewogICJpbnRlcnZhbHMiOiI2MCwxMiwxNCIKfQ==\",\"seconds\":3600}",
+              "fields": {
+                "seconds": 3600,
+                "payload": "ewogICJpbnRlcnZhbHMiOiI2MCwxMiwxNCIKfQ=="
+              },
+              "sub_type": "Sleep"
+            }
           },
           {
             "title": "Retrieve Payload",
             "description": "Retrieve a payload from the Notecard after sleep.",
-            "json": "{\"req\":\"card.attn\",\"start\":true}"
+            "json": "{\"req\":\"card.attn\",\"start\":true}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.attn\",\"start\":true}",
+              "sub_type": "Retrieve"
+            }
           },
           {
             "title": "Disarm all Modes",
             "description": "Disarm all interrupts.",
-            "json": "{\"req\":\"card.attn\",\"mode\":\"disarm,-all\"}"
+            "json": "{\"req\":\"card.attn\",\"mode\":\"disarm,-all\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.attn\",\"mode\":\"disarm,-all\"}",
+              "sub_type": "Disarm"
+            }
           }
         ],
         "responses": {
@@ -1015,47 +1146,92 @@
           {
             "title": "DFU Mode",
             "description": "Enable the Notecard's `AUX1` pin for [Outboard Firmware Updates](/notehub/host-firmware-updates/notecard-outboard-firmware-update). When enabled, `AUX1` is active `LOW` when a DFU is in progress, and `HIGH` otherwise.",
-            "json": "{\"req\": \"card.aux\", \"mode\": \"dfu\"}"
+            "json": "{\"req\": \"card.aux\", \"mode\": \"dfu\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.aux\",\"mode\":\"dfu\"}",
+              "fields": {
+                "mode": "dfu"
+              }
+            }
           },
           {
             "title": "GPIO Mode",
             "description": "Configure the Notecard for GPIO mode with `AUX1` OFF, `AUX2` as an output `LOW`, `AUX3` as an output `HIGH`, and `AUX4` as an input.",
-            "json": "{\"req\": \"card.aux\", \"mode\": \"gpio\", \"usage\": [\"off\", \"low\", \"high\", \"input\"]}"
+            "json": "{\"req\": \"card.aux\", \"mode\": \"gpio\", \"usage\": [\"off\", \"low\", \"high\", \"input\"]}",
+            "x-validation": {
+              "skip": "contains unsettable fields: ['usage']"
+            }
           },
           {
             "title": "GPIO Mode With Count",
             "description": "Configure the Notecard for GPIO mode with `AUX1` OFF, `AUX2` as an output `LOW`, `AUX3` as an output `HIGH`, and `AUX4` as a count.",
-            "json": "{\"req\": \"card.aux\", \"mode\": \"gpio\", \"usage\": [\"off\", \"low\", \"high\", \"count\"], \"seconds\": 2, \"max\": 5, \"start\": true}"
+            "json": "{\"req\": \"card.aux\", \"mode\": \"gpio\", \"usage\": [\"off\", \"low\", \"high\", \"count\"], \"seconds\": 2, \"max\": 5, \"start\": true}",
+            "x-validation": {
+              "skip": "contains unsettable fields: ['usage']"
+            }
           },
           {
             "title": "GPIO Mode With Notefile",
             "description": "Configure GPIO mode with automatic state change reporting to a Notefile.",
-            "json": "{\"req\": \"card.aux\", \"mode\": \"gpio\", \"usage\": [\"off\", \"low\", \"high\", \"input\"], \"sync\": true, \"file\": \"statechange.qo\"}"
+            "json": "{\"req\": \"card.aux\", \"mode\": \"gpio\", \"usage\": [\"off\", \"low\", \"high\", \"input\"], \"sync\": true, \"file\": \"statechange.qo\"}",
+            "x-validation": {
+              "skip": "contains unsettable fields: ['usage']"
+            }
           },
           {
             "title": "Monitor Mode",
             "description": "Configure inputs and outputs typically placed on the faceplate of a device for technicians to test and monitor Notecard activity.",
-            "json": "{\"req\": \"card.aux\", \"mode\": \"monitor\"}"
+            "json": "{\"req\": \"card.aux\", \"mode\": \"monitor\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.aux\",\"mode\":\"monitor\"}",
+              "fields": {
+                "mode": "monitor"
+              }
+            }
           },
           {
             "title": "Neo-Monitor Mode",
             "description": "Enable neo-monitor mode which supports NeoPixel LEDs for monitoring Notecard activity.",
-            "json": "{\"req\": \"card.aux\", \"mode\": \"neo-monitor\"}"
+            "json": "{\"req\": \"card.aux\", \"mode\": \"neo-monitor\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.aux\",\"mode\":\"neo-monitor\"}",
+              "fields": {
+                "mode": "neo-monitor"
+              }
+            }
           },
           {
             "title": "Motion Mode",
             "description": "Supplement autonomous tracking with digital inputs and a status output.",
-            "json": "{\"req\": \"card.aux\", \"mode\": \"motion\"}"
+            "json": "{\"req\": \"card.aux\", \"mode\": \"motion\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.aux\",\"mode\":\"motion\"}",
+              "fields": {
+                "mode": "motion"
+              }
+            }
           },
           {
             "title": "Setting AUX UART Baud",
             "description": "Configure the AUX UART baud rate for debug communication.",
-            "json": "{\"req\": \"card.aux\", \"rate\": 9600}"
+            "json": "{\"req\": \"card.aux\", \"rate\": 9600}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.aux\",\"rate\":9600}",
+              "fields": {
+                "rate": 9600
+              }
+            }
           },
           {
             "title": "Track Mode",
             "description": "Enhance Notes with temperature, pressure, and humidity readings from a connected BME280 sensor.",
-            "json": "{\"req\": \"card.aux\", \"mode\": \"track\"}"
+            "json": "{\"req\": \"card.aux\", \"mode\": \"track\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.aux\",\"mode\":\"track\"}",
+              "fields": {
+                "mode": "track"
+              }
+            }
           }
         ],
         "responses": {
@@ -1297,37 +1473,82 @@
           {
             "title": "Enable GPS Mode",
             "description": "Configure AUX serial for external GPS communication. Using an external GPS/GNSS module allows you to acquire GPS/GNSS location while Notecard is connected to Notehub in `continuous` mode. Learn more at [Using AUX Serial GPS Mode](/notecard/notecard-walkthrough/working-with-the-notecard-aux-pins#using-aux-serial-gps-mode).",
-            "json": "{\"req\": \"card.aux.serial\", \"mode\": \"gps\"}"
+            "json": "{\"req\": \"card.aux.serial\", \"mode\": \"gps\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.aux.serial\",\"mode\":\"gps\"}",
+              "fields": {
+                "mode": "gps"
+              }
+            }
           },
           {
             "title": "Enable DFU Notifications",
             "description": "Configure AUX serial for DFU notifications with timeout.",
-            "json": "{\"req\": \"card.aux.serial\", \"mode\": \"notify,dfu\", \"minutes\": 5}"
+            "json": "{\"req\": \"card.aux.serial\", \"mode\": \"notify,dfu\", \"minutes\": 5}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.aux.serial\",\"minutes\":5,\"mode\":\"notify,dfu\"}",
+              "fields": {
+                "mode": "notify,dfu",
+                "minutes": 5
+              }
+            }
           },
           {
             "title": "Enable Environment Notifications",
             "description": "Configure AUX serial for environment variable change notifications.",
-            "json": "{\"req\": \"card.aux.serial\", \"mode\": \"notify,env\"}"
+            "json": "{\"req\": \"card.aux.serial\", \"mode\": \"notify,env\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.aux.serial\",\"mode\":\"notify,env\"}",
+              "fields": {
+                "mode": "notify,env"
+              }
+            }
           },
           {
             "title": "Request Mode",
             "description": "Set AUX serial to request mode for command/response communication.",
-            "json": "{\"req\": \"card.aux.serial\", \"mode\": \"req\"}"
+            "json": "{\"req\": \"card.aux.serial\", \"mode\": \"req\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.aux.serial\",\"mode\":\"req\"}",
+              "fields": {
+                "mode": "req"
+              }
+            }
           },
           {
             "title": "Accelerometer Mode",
             "description": "Send raw readings from the onboard accelerometer over AUX every 500 ms.",
-            "json": "{\"req\": \"card.aux.serial\", \"mode\": \"notify,accel\", \"duration\": 500}"
+            "json": "{\"req\": \"card.aux.serial\", \"mode\": \"notify,accel\", \"duration\": 500}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.aux.serial\",\"duration\":500,\"mode\":\"notify,accel\"}",
+              "fields": {
+                "mode": "notify,accel",
+                "duration": 500
+              }
+            }
           },
           {
             "title": "Signal Mode",
             "description": "Turn on Inbound Signals from Notehub for low-latency communication.",
-            "json": "{\"req\": \"card.aux.serial\", \"mode\": \"notify,signals\"}"
+            "json": "{\"req\": \"card.aux.serial\", \"mode\": \"notify,signals\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.aux.serial\",\"mode\":\"notify,signals\"}",
+              "fields": {
+                "mode": "notify,signals"
+              }
+            }
           },
           {
             "title": "Multiple Mode",
             "description": "Subscribe to multiple notifications at once.",
-            "json": "{\"req\": \"card.aux.serial\", \"mode\": \"notify,accel,env\", \"duration\": 500}"
+            "json": "{\"req\": \"card.aux.serial\", \"mode\": \"notify,accel,env\", \"duration\": 500}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.aux.serial\",\"duration\":500,\"mode\":\"notify,accel,env\"}",
+              "fields": {
+                "mode": "notify,accel,env",
+                "duration": 500
+              }
+            }
           }
         ],
         "responses": {
@@ -1402,12 +1623,20 @@
           {
             "title": "View Binary Status",
             "description": "Check the status of binary storage area.",
-            "json": "{\"req\": \"card.binary\"}"
+            "json": "{\"req\": \"card.binary\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.binary\"}",
+              "sub_type": "Query"
+            }
           },
           {
             "title": "Reset Binary Data",
             "description": "Clear the COBS area and reset binary variables.",
-            "json": "{\"req\": \"card.binary\", \"delete\": true}"
+            "json": "{\"req\": \"card.binary\", \"delete\": true}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.binary\",\"delete\":true}",
+              "sub_type": "Delete"
+            }
           }
         ],
         "responses": {
@@ -1506,12 +1735,20 @@
           {
             "title": "View Binary Status",
             "description": "Check the status of binary storage area.",
-            "json": "{\"req\": \"card.binary\"}"
+            "json": "{\"req\": \"card.binary\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.binary\"}",
+              "sub_type": "Query"
+            }
           },
           {
             "title": "Reset Binary Data",
             "description": "Clear the COBS area and reset binary variables.",
-            "json": "{\"req\": \"card.binary\", \"delete\": true}"
+            "json": "{\"req\": \"card.binary\", \"delete\": true}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.binary\",\"delete\":true}",
+              "sub_type": "Delete"
+            }
           }
         ],
         "responses": {
@@ -1618,7 +1855,10 @@
           {
             "title": "Get All Binary Data",
             "description": "Retrieve all binary data from storage area.",
-            "json": "{\"req\": \"card.binary.get\"}"
+            "json": "{\"req\": \"card.binary.get\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.binary.get\"}"
+            }
           }
         ],
         "responses": {
@@ -1713,7 +1953,14 @@
           {
             "title": "Put Binary Data",
             "description": "Send binary data with MD5 checksum.",
-            "json": "{\"req\": \"card.binary.put\", \"cobs\": 5, \"status\": \"ce6fdef565eeecf14ab38d83643b922d\"}"
+            "json": "{\"req\": \"card.binary.put\", \"cobs\": 5, \"status\": \"ce6fdef565eeecf14ab38d83643b922d\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.binary.put\",\"cobs\":5,\"status\":\"ce6fdef565eeecf14ab38d83643b922d\"}",
+              "fields": {
+                "cobs": 5,
+                "status": "ce6fdef565eeecf14ab38d83643b922d"
+              }
+            }
           }
         ],
         "responses": {
@@ -1805,7 +2052,13 @@
           {
             "title": "Enable Charging Mode",
             "description": "Set the `AUX_CHARGING` mode to charging.",
-            "json": "{\"req\": \"card.carrier\", \"mode\": \"charging\"}"
+            "json": "{\"req\": \"card.carrier\", \"mode\": \"charging\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.carrier\",\"mode\":\"charging\"}",
+              "fields": {
+                "mode": "charging"
+              }
+            }
           }
         ],
         "responses": {
@@ -1909,7 +2162,17 @@
           {
             "title": "Set Contact Information",
             "description": "Set contact information for the Notecard maintainer.",
-            "json": "{\"req\": \"card.contact\", \"name\": \"Tom Turkey\", \"org\": \"Blues\", \"role\": \"Head of Security\", \"email\": \"tom@blues.com\"}"
+            "json": "{\"req\": \"card.contact\", \"name\": \"Tom Turkey\", \"org\": \"Blues\", \"role\": \"Head of Security\", \"email\": \"tom@blues.com\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.contact\",\"email\":\"tom@blues.com\",\"name\":\"Tom Turkey\",\"org\":\"Blues\",\"role\":\"Head of Security\"}",
+              "fields": {
+                "name": "Tom Turkey",
+                "org": "Blues",
+                "role": "Head of Security",
+                "email": "tom@blues.com"
+              },
+              "sub_type": "Set"
+            }
           }
         ],
         "responses": {
@@ -2015,7 +2278,17 @@
           {
             "title": "Set Contact Information",
             "description": "Set contact information for the Notecard maintainer.",
-            "json": "{\"req\": \"card.contact\", \"name\": \"Tom Turkey\", \"org\": \"Blues\", \"role\": \"Head of Security\", \"email\": \"tom@blues.com\"}"
+            "json": "{\"req\": \"card.contact\", \"name\": \"Tom Turkey\", \"org\": \"Blues\", \"role\": \"Head of Security\", \"email\": \"tom@blues.com\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.contact\",\"email\":\"tom@blues.com\",\"name\":\"Tom Turkey\",\"org\":\"Blues\",\"role\":\"Head of Security\"}",
+              "fields": {
+                "name": "Tom Turkey",
+                "org": "Blues",
+                "role": "Head of Security",
+                "email": "tom@blues.com"
+              },
+              "sub_type": "Set"
+            }
           }
         ],
         "responses": {
@@ -2169,22 +2442,50 @@
           {
             "title": "Configure STM32 DFU",
             "description": "Enable DFU for STM32 microcontroller.",
-            "json": "{\"req\": \"card.dfu\", \"name\": \"stm32\", \"on\": true}"
+            "json": "{\"req\": \"card.dfu\", \"name\": \"stm32\", \"on\": true}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.dfu\",\"name\":\"stm32\",\"on\":true}",
+              "fields": {
+                "name": "stm32",
+                "on": true
+              }
+            }
           },
           {
             "title": "Configure ESP32 DFU",
             "description": "Enable DFU for ESP32 microcontroller.",
-            "json": "{\"cmd\": \"card.dfu\", \"name\": \"esp32\", \"on\": true}"
+            "json": "{\"cmd\": \"card.dfu\", \"name\": \"esp32\", \"on\": true}",
+            "x-validation": {
+              "wire": "{\"cmd\":\"card.dfu\",\"name\":\"esp32\",\"on\":true}",
+              "fields": {
+                "name": "esp32",
+                "on": true
+              },
+              "command": true
+            }
           },
           {
             "title": "Enable Alternative DFU Pins",
             "description": "Use ALT_DFU pins instead of AUX pins on Cell+WiFi.",
-            "json": "{\"req\": \"card.dfu\", \"mode\": \"altdfu\"}"
+            "json": "{\"req\": \"card.dfu\", \"mode\": \"altdfu\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.dfu\",\"mode\":\"altdfu\"}",
+              "fields": {
+                "mode": "altdfu"
+              }
+            }
           },
           {
             "title": "Disable DFU Temporarily",
             "description": "Disable DFU for 3600 seconds.",
-            "json": "{\"req\": \"card.dfu\", \"off\": true, \"seconds\": 3600}"
+            "json": "{\"req\": \"card.dfu\", \"off\": true, \"seconds\": 3600}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.dfu\",\"off\":true,\"seconds\":3600}",
+              "fields": {
+                "off": true,
+                "seconds": 3600
+              }
+            }
           }
         ],
         "responses": {
@@ -2250,7 +2551,10 @@
           {
             "title": "Get Illumination",
             "description": "Read current Lux value from the attached OPT3001 sensor.",
-            "json": "{\"req\": \"card.illumination\"}"
+            "json": "{\"req\": \"card.illumination\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.illumination\"}"
+            }
           }
         ],
         "responses": {
@@ -2383,22 +2687,46 @@
           {
             "title": "Change I2C Address",
             "description": "Change the Notecard's I2C address from its default of `0x17` to `0x18`.",
-            "json": "{\"req\": \"card.io\", \"i2c\": 24}"
+            "json": "{\"req\": \"card.io\", \"i2c\": 24}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.io\",\"i2c\":24}",
+              "fields": {
+                "i2c": 24
+              }
+            }
           },
           {
             "title": "Keep LED On While Notecard Awake.",
             "description": "Keep the onboard LED on while the Notecard is awake.",
-            "json": "{\"req\": \"card.io\", \"mode\": \"+busy\"}"
+            "json": "{\"req\": \"card.io\", \"mode\": \"+busy\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.io\",\"mode\":\"+busy\"}",
+              "fields": {
+                "mode": "+busy"
+              }
+            }
           },
           {
             "title": "Disable I2C Master.",
             "description": "Disable the Notecard from acting as an I2C master. Re-enable by using `\"i2c-master-enable\"`.",
-            "json": "{\"req\": \"card.io\", \"mode\": \"i2c-master-disable\"}"
+            "json": "{\"req\": \"card.io\", \"mode\": \"i2c-master-disable\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.io\",\"mode\":\"i2c-master-disable\"}",
+              "fields": {
+                "mode": "i2c-master-disable"
+              }
+            }
           },
           {
             "title": "Force Fallback Mode For Starnote.",
             "description": "Force the Notecard to enter fallback mode (cellular/WiFi automatically failed over to NTN).",
-            "json": "{\"req\": \"card.io\", \"mode\": \"+fallback\"}"
+            "json": "{\"req\": \"card.io\", \"mode\": \"+fallback\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.io\",\"mode\":\"+fallback\"}",
+              "fields": {
+                "mode": "+fallback"
+              }
+            }
           }
         ],
         "responses": {
@@ -2512,17 +2840,26 @@
           {
             "title": "Turn Red LED On",
             "description": "As shown above, the Notecard must also be in `led` mode and the LED(s) wired according to the instructions provided in the guide on [Using Monitor Mode](/notecard/notecard-walkthrough/working-with-the-notecard-aux-pins#using-monitor-mode).",
-            "json": "[{\"req\": \"card.aux\", \"mode\": \"led\"},{\"req\": \"card.led\", \"mode\": \"red\", \"on\": true}]"
+            "json": "[{\"req\": \"card.aux\", \"mode\": \"led\"},{\"req\": \"card.led\", \"mode\": \"red\", \"on\": true}]",
+            "x-validation": {
+              "skip": "multi-request sample"
+            }
           },
           {
             "title": "Turn Blue NeoPixel On",
             "description": "As shown above, the Notecard must also be in `neo`, `neo-monitor`, or `track-neo-monitor` mode and the NeoPixel(s) wired according to the instructions provided in the guide on [Using Neo-Monitor Mode](/notecard/notecard-walkthrough/working-with-the-notecard-aux-pins#using-neo-monitor-mode).",
-            "json": "[{\"req\": \"card.aux\", \"mode\": \"neo\"},{\"req\": \"card.led\", \"mode\": \"blue\", \"on\": true}]"
+            "json": "[{\"req\": \"card.aux\", \"mode\": \"neo\"},{\"req\": \"card.led\", \"mode\": \"blue\", \"on\": true}]",
+            "x-validation": {
+              "skip": "multi-request sample"
+            }
           },
           {
             "title": "Turn Green RGB LED On",
             "description": "As shown above, the Notecard must also be in `rgb`, `rgb-monitor`, or `track-rgb-monitor` mode and the RGB LED wired according to the instructions provided in the guide on [Using RGB-Monitor Mode](/notecard/notecard-walkthrough/working-with-the-notecard-aux-pins#using-rgb-monitor-mode).",
-            "json": "[{\"req\": \"card.aux\", \"mode\": \"rgb\"},{\"req\": \"card.led\", \"mode\": \"green\", \"on\": true}]"
+            "json": "[{\"req\": \"card.aux\", \"mode\": \"rgb\"},{\"req\": \"card.led\", \"mode\": \"green\", \"on\": true}]",
+            "x-validation": {
+              "skip": "multi-request sample"
+            }
           }
         ],
         "responses": {
@@ -2563,7 +2900,10 @@
           {
             "title": "Get Current Location",
             "description": "Retrieve the last known location of the Notecard.",
-            "json": "{\"req\": \"card.location\"}"
+            "json": "{\"req\": \"card.location\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.location\"}"
+            }
           }
         ],
         "responses": {
@@ -2798,22 +3138,57 @@
           {
             "title": "Continuous Mode",
             "description": "Enable continuous GPS/GNSS sampling.",
-            "json": "{\"req\": \"card.location.mode\", \"mode\": \"continuous\"}"
+            "json": "{\"req\": \"card.location.mode\", \"mode\": \"continuous\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.location.mode\",\"mode\":\"continuous\"}",
+              "fields": {
+                "mode": "continuous"
+              },
+              "sub_type": "Set"
+            }
           },
           {
             "title": "Periodic Mode",
             "description": "Enable periodic location sampling at 1-hour intervals.",
-            "json": "{\"req\": \"card.location.mode\", \"mode\": \"periodic\", \"seconds\": 3600}"
+            "json": "{\"req\": \"card.location.mode\", \"mode\": \"periodic\", \"seconds\": 3600}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.location.mode\",\"mode\":\"periodic\",\"seconds\":3600}",
+              "fields": {
+                "mode": "periodic",
+                "seconds": 3600
+              },
+              "sub_type": "Set"
+            }
           },
           {
             "title": "Geofence Mode",
             "description": "Enable geofencing with specific location and radius.",
-            "json": "{\"req\": \"card.location.mode\", \"mode\": \"periodic\", \"lat\": 42.5776, \"lon\": -70.87134, \"max\": 100, \"minutes\": 2}"
+            "json": "{\"req\": \"card.location.mode\", \"mode\": \"periodic\", \"lat\": 42.5776, \"lon\": -70.87134, \"max\": 100, \"minutes\": 2}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.location.mode\",\"lat\":42.5776,\"lon\":-70.87134,\"max\":100,\"minutes\":2,\"mode\":\"periodic\"}",
+              "fields": {
+                "mode": "periodic",
+                "lat": 42.5776,
+                "lon": -70.87134,
+                "max": 100,
+                "minutes": 2
+              },
+              "sub_type": "Set"
+            }
           },
           {
             "title": "Fixed Mode",
             "description": "Set a fixed location for the device.",
-            "json": "{\"req\": \"card.location.mode\", \"mode\": \"fixed\", \"lat\": 42.5776, \"lon\": -70.87134}"
+            "json": "{\"req\": \"card.location.mode\", \"mode\": \"fixed\", \"lat\": 42.5776, \"lon\": -70.87134}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.location.mode\",\"lat\":42.5776,\"lon\":-70.87134,\"mode\":\"fixed\"}",
+              "fields": {
+                "mode": "fixed",
+                "lat": 42.5776,
+                "lon": -70.87134
+              },
+              "sub_type": "Set"
+            }
           }
         ],
         "responses": {
@@ -3031,22 +3406,57 @@
           {
             "title": "Continuous Mode",
             "description": "Enable continuous GPS/GNSS sampling.",
-            "json": "{\"req\": \"card.location.mode\", \"mode\": \"continuous\"}"
+            "json": "{\"req\": \"card.location.mode\", \"mode\": \"continuous\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.location.mode\",\"mode\":\"continuous\"}",
+              "fields": {
+                "mode": "continuous"
+              },
+              "sub_type": "Set"
+            }
           },
           {
             "title": "Periodic Mode",
             "description": "Enable periodic location sampling at 1-hour intervals.",
-            "json": "{\"req\": \"card.location.mode\", \"mode\": \"periodic\", \"seconds\": 3600}"
+            "json": "{\"req\": \"card.location.mode\", \"mode\": \"periodic\", \"seconds\": 3600}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.location.mode\",\"mode\":\"periodic\",\"seconds\":3600}",
+              "fields": {
+                "mode": "periodic",
+                "seconds": 3600
+              },
+              "sub_type": "Set"
+            }
           },
           {
             "title": "Geofence Mode",
             "description": "Enable geofencing with specific location and radius.",
-            "json": "{\"req\": \"card.location.mode\", \"mode\": \"periodic\", \"lat\": 42.5776, \"lon\": -70.87134, \"max\": 100, \"minutes\": 2}"
+            "json": "{\"req\": \"card.location.mode\", \"mode\": \"periodic\", \"lat\": 42.5776, \"lon\": -70.87134, \"max\": 100, \"minutes\": 2}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.location.mode\",\"lat\":42.5776,\"lon\":-70.87134,\"max\":100,\"minutes\":2,\"mode\":\"periodic\"}",
+              "fields": {
+                "mode": "periodic",
+                "lat": 42.5776,
+                "lon": -70.87134,
+                "max": 100,
+                "minutes": 2
+              },
+              "sub_type": "Set"
+            }
           },
           {
             "title": "Fixed Mode",
             "description": "Set a fixed location for the device.",
-            "json": "{\"req\": \"card.location.mode\", \"mode\": \"fixed\", \"lat\": 42.5776, \"lon\": -70.87134}"
+            "json": "{\"req\": \"card.location.mode\", \"mode\": \"fixed\", \"lat\": 42.5776, \"lon\": -70.87134}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.location.mode\",\"lat\":42.5776,\"lon\":-70.87134,\"mode\":\"fixed\"}",
+              "fields": {
+                "mode": "fixed",
+                "lat": 42.5776,
+                "lon": -70.87134
+              },
+              "sub_type": "Set"
+            }
           }
         ],
         "responses": {
@@ -3261,22 +3671,57 @@
           {
             "title": "Continuous Mode",
             "description": "Enable continuous GPS/GNSS sampling.",
-            "json": "{\"req\": \"card.location.mode\", \"mode\": \"continuous\"}"
+            "json": "{\"req\": \"card.location.mode\", \"mode\": \"continuous\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.location.mode\",\"mode\":\"continuous\"}",
+              "fields": {
+                "mode": "continuous"
+              },
+              "sub_type": "Set"
+            }
           },
           {
             "title": "Periodic Mode",
             "description": "Enable periodic location sampling at 1-hour intervals.",
-            "json": "{\"req\": \"card.location.mode\", \"mode\": \"periodic\", \"seconds\": 3600}"
+            "json": "{\"req\": \"card.location.mode\", \"mode\": \"periodic\", \"seconds\": 3600}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.location.mode\",\"mode\":\"periodic\",\"seconds\":3600}",
+              "fields": {
+                "mode": "periodic",
+                "seconds": 3600
+              },
+              "sub_type": "Set"
+            }
           },
           {
             "title": "Geofence Mode",
             "description": "Enable geofencing with specific location and radius.",
-            "json": "{\"req\": \"card.location.mode\", \"mode\": \"periodic\", \"lat\": 42.5776, \"lon\": -70.87134, \"max\": 100, \"minutes\": 2}"
+            "json": "{\"req\": \"card.location.mode\", \"mode\": \"periodic\", \"lat\": 42.5776, \"lon\": -70.87134, \"max\": 100, \"minutes\": 2}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.location.mode\",\"lat\":42.5776,\"lon\":-70.87134,\"max\":100,\"minutes\":2,\"mode\":\"periodic\"}",
+              "fields": {
+                "mode": "periodic",
+                "lat": 42.5776,
+                "lon": -70.87134,
+                "max": 100,
+                "minutes": 2
+              },
+              "sub_type": "Set"
+            }
           },
           {
             "title": "Fixed Mode",
             "description": "Set a fixed location for the device.",
-            "json": "{\"req\": \"card.location.mode\", \"mode\": \"fixed\", \"lat\": 42.5776, \"lon\": -70.87134}"
+            "json": "{\"req\": \"card.location.mode\", \"mode\": \"fixed\", \"lat\": 42.5776, \"lon\": -70.87134}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.location.mode\",\"lat\":42.5776,\"lon\":-70.87134,\"mode\":\"fixed\"}",
+              "fields": {
+                "mode": "fixed",
+                "lat": 42.5776,
+                "lon": -70.87134
+              },
+              "sub_type": "Set"
+            }
           }
         ],
         "responses": {
@@ -3432,17 +3877,38 @@
           {
             "title": "Start",
             "description": "Start location tracking.",
-            "json": "{\"req\": \"card.location.track\", \"start\": true}"
+            "json": "{\"req\": \"card.location.track\", \"start\": true}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.location.track\",\"start\":true}",
+              "fields": {
+                "start": true
+              }
+            }
           },
           {
             "title": "Stop",
             "description": "Stop location tracking.",
-            "json": "{\"req\": \"card.location.track\", \"stop\": true}"
+            "json": "{\"req\": \"card.location.track\", \"stop\": true}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.location.track\",\"stop\":true}",
+              "fields": {
+                "stop": true
+              }
+            }
           },
           {
             "title": "Heartbeat",
             "description": "Start tracking with heartbeat mode and immediate sync.",
-            "json": "{\"req\": \"card.location.track\", \"start\": true, \"sync\": true, \"heartbeat\": true, \"hours\": 2}"
+            "json": "{\"req\": \"card.location.track\", \"start\": true, \"sync\": true, \"heartbeat\": true, \"hours\": 2}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.location.track\",\"heartbeat\":true,\"hours\":2,\"start\":true,\"sync\":true}",
+              "fields": {
+                "start": true,
+                "sync": true,
+                "heartbeat": true,
+                "hours": 2
+              }
+            }
           }
         ],
         "responses": {
@@ -3565,7 +4031,14 @@
           {
             "title": "Override LED Behavior",
             "description": "Configure the green LED to pulse 5 times.",
-            "json": "{\"req\":\"card.monitor\", \"mode\":\"green\", \"count\":5}"
+            "json": "{\"req\":\"card.monitor\", \"mode\":\"green\", \"count\":5}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.monitor\",\"count\":5,\"mode\":\"green\"}",
+              "fields": {
+                "mode": "green",
+                "count": 5
+              }
+            }
           }
         ],
         "responses": {
@@ -3613,7 +4086,13 @@
           {
             "title": "Motion with Minutes Sampling",
             "description": "Request motion information with 2-minute sampling buckets.",
-            "json": "{\"req\": \"card.motion\", \"minutes\": 2}"
+            "json": "{\"req\": \"card.motion\", \"minutes\": 2}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.motion\",\"minutes\":2}",
+              "fields": {
+                "minutes": 2
+              }
+            }
           }
         ],
         "responses": {
@@ -3769,22 +4248,49 @@
           {
             "title": "Start Motion Tracking",
             "description": "Enable motion tracking with default settings.",
-            "json": "{\"req\": \"card.motion.mode\", \"start\": true}"
+            "json": "{\"req\": \"card.motion.mode\", \"start\": true}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.motion.mode\",\"start\":true}",
+              "fields": {
+                "start": true
+              }
+            }
           },
           {
             "title": "Configure Motion Tracking with Parameters",
             "description": "Enable motion tracking with custom sensitivity and bucket duration.",
-            "json": "{\"req\": \"card.motion.mode\", \"start\": true, \"seconds\": 10, \"sensitivity\": 2}"
+            "json": "{\"req\": \"card.motion.mode\", \"start\": true, \"seconds\": 10, \"sensitivity\": 2}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.motion.mode\",\"seconds\":10,\"sensitivity\":2,\"start\":true}",
+              "fields": {
+                "start": true,
+                "seconds": 10,
+                "sensitivity": 2
+              }
+            }
           },
           {
             "title": "Stop Motion Tracking",
             "description": "Disable motion tracking.",
-            "json": "{\"req\": \"card.motion.mode\", \"stop\": true}"
+            "json": "{\"req\": \"card.motion.mode\", \"stop\": true}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.motion.mode\",\"stop\":true}",
+              "fields": {
+                "stop": true
+              }
+            }
           },
           {
             "title": "Configure Motion Status Change",
             "description": "Set motion threshold for status change detection.",
-            "json": "{\"req\": \"card.motion.mode\", \"motion\": 5, \"seconds\": 60}"
+            "json": "{\"req\": \"card.motion.mode\", \"motion\": 5, \"seconds\": 60}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.motion.mode\",\"motion\":5,\"seconds\":60}",
+              "fields": {
+                "motion": 5,
+                "seconds": 60
+              }
+            }
           }
         ],
         "responses": {
@@ -3855,22 +4361,51 @@
           {
             "title": "Start Motion-Triggered Sync",
             "description": "Enable motion-triggered syncing with default settings.",
-            "json": "{\"req\": \"card.motion.sync\", \"start\": true}"
+            "json": "{\"req\": \"card.motion.sync\", \"start\": true}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.motion.sync\",\"start\":true}",
+              "fields": {
+                "start": true
+              }
+            }
           },
           {
             "title": "Configure Motion Sync Parameters",
             "description": "Set motion sync with specific timing and threshold parameters.",
-            "json": "{\"req\": \"card.motion.sync\", \"start\": true, \"minutes\": 20, \"count\": 20, \"threshold\": 5}"
+            "json": "{\"req\": \"card.motion.sync\", \"start\": true, \"minutes\": 20, \"count\": 20, \"threshold\": 5}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.motion.sync\",\"count\":20,\"minutes\":20,\"start\":true,\"threshold\":5}",
+              "fields": {
+                "start": true,
+                "minutes": 20,
+                "count": 20,
+                "threshold": 5
+              }
+            }
           },
           {
             "title": "Stop Motion-Triggered Sync",
             "description": "Disable motion-triggered syncing.",
-            "json": "{\"req\": \"card.motion.sync\", \"stop\": true}"
+            "json": "{\"req\": \"card.motion.sync\", \"stop\": true}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.motion.sync\",\"stop\":true}",
+              "fields": {
+                "stop": true
+              }
+            }
           },
           {
             "title": "Orientation Change Only",
             "description": "Configure sync to trigger only on orientation changes.",
-            "json": "{\"req\": \"card.motion.sync\", \"start\": true, \"threshold\": 0, \"minutes\": 10}"
+            "json": "{\"req\": \"card.motion.sync\", \"start\": true, \"threshold\": 0, \"minutes\": 10}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.motion.sync\",\"minutes\":10,\"start\":true,\"threshold\":0}",
+              "fields": {
+                "start": true,
+                "threshold": 0,
+                "minutes": 10
+              }
+            }
           }
         ],
         "responses": {
@@ -3950,22 +4485,52 @@
           {
             "title": "Start Motion Tracking",
             "description": "Enable motion tracking with default settings.",
-            "json": "{\"req\": \"card.motion.track\", \"start\": true}"
+            "json": "{\"req\": \"card.motion.track\", \"start\": true}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.motion.track\",\"start\":true}",
+              "fields": {
+                "start": true
+              }
+            }
           },
           {
             "title": "Configure Motion Tracking with Custom File",
             "description": "Set motion tracking with custom parameters and Notefile.",
-            "json": "{\"req\": \"card.motion.track\", \"start\": true, \"minutes\": 20, \"count\": 20, \"threshold\": 5, \"file\": \"movements.qo\"}"
+            "json": "{\"req\": \"card.motion.track\", \"start\": true, \"minutes\": 20, \"count\": 20, \"threshold\": 5, \"file\": \"movements.qo\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.motion.track\",\"count\":20,\"file\":\"movements.qo\",\"minutes\":20,\"start\":true,\"threshold\":5}",
+              "fields": {
+                "start": true,
+                "minutes": 20,
+                "count": 20,
+                "threshold": 5,
+                "file": "movements.qo"
+              }
+            }
           },
           {
             "title": "Stop Motion Tracking",
             "description": "Disable motion tracking.",
-            "json": "{\"req\": \"card.motion.track\", \"stop\": true}"
+            "json": "{\"req\": \"card.motion.track\", \"stop\": true}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.motion.track\",\"stop\":true}",
+              "fields": {
+                "stop": true
+              }
+            }
           },
           {
             "title": "Enable Immediate Orientation Changes",
             "description": "Configure motion tracking with immediate orientation change capture.",
-            "json": "{\"req\": \"card.motion.track\", \"start\": true, \"now\": true, \"minutes\": 15}"
+            "json": "{\"req\": \"card.motion.track\", \"start\": true, \"now\": true, \"minutes\": 15}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.motion.track\",\"minutes\":15,\"now\":true,\"start\":true}",
+              "fields": {
+                "start": true,
+                "now": true,
+                "minutes": 15
+              }
+            }
           }
         ],
         "responses": {
@@ -4024,17 +4589,36 @@
           {
             "title": "Get Latest Power Consumption Reading",
             "description": "Request current power consumption data.",
-            "json": "{\"req\": \"card.power\"}"
+            "json": "{\"req\": \"card.power\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.power\"}",
+              "sub_type": "Query"
+            }
           },
           {
             "title": "Set Cadence of Readings",
             "description": "Configure how often power consumption is logged.",
-            "json": "{\"req\": \"card.power\", \"minutes\": 60}"
+            "json": "{\"req\": \"card.power\", \"minutes\": 60}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.power\",\"minutes\":60}",
+              "fields": {
+                "minutes": 60
+              },
+              "sub_type": "Set"
+            }
           },
           {
             "title": "Reset Counters",
             "description": "Reset power consumption counters back to 0.",
-            "json": "{\"cmd\": \"card.power\", \"reset\": true}"
+            "json": "{\"cmd\": \"card.power\", \"reset\": true}",
+            "x-validation": {
+              "wire": "{\"cmd\":\"card.power\",\"reset\":true}",
+              "fields": {
+                "reset": true
+              },
+              "sub_type": "Delete",
+              "command": true
+            }
           }
         ],
         "responses": {
@@ -4128,17 +4712,36 @@
           {
             "title": "Get Latest Power Consumption Reading",
             "description": "Request current power consumption data.",
-            "json": "{\"req\": \"card.power\"}"
+            "json": "{\"req\": \"card.power\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.power\"}",
+              "sub_type": "Query"
+            }
           },
           {
             "title": "Set Cadence of Readings",
             "description": "Configure how often power consumption is logged.",
-            "json": "{\"req\": \"card.power\", \"minutes\": 60}"
+            "json": "{\"req\": \"card.power\", \"minutes\": 60}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.power\",\"minutes\":60}",
+              "fields": {
+                "minutes": 60
+              },
+              "sub_type": "Set"
+            }
           },
           {
             "title": "Reset Counters",
             "description": "Reset power consumption counters back to 0.",
-            "json": "{\"cmd\": \"card.power\", \"reset\": true}"
+            "json": "{\"cmd\": \"card.power\", \"reset\": true}",
+            "x-validation": {
+              "wire": "{\"cmd\":\"card.power\",\"reset\":true}",
+              "fields": {
+                "reset": true
+              },
+              "sub_type": "Delete",
+              "command": true
+            }
           }
         ],
         "responses": {
@@ -4232,17 +4835,36 @@
           {
             "title": "Get Latest Power Consumption Reading",
             "description": "Request current power consumption data.",
-            "json": "{\"req\": \"card.power\"}"
+            "json": "{\"req\": \"card.power\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.power\"}",
+              "sub_type": "Query"
+            }
           },
           {
             "title": "Set Cadence of Readings",
             "description": "Configure how often power consumption is logged.",
-            "json": "{\"req\": \"card.power\", \"minutes\": 60}"
+            "json": "{\"req\": \"card.power\", \"minutes\": 60}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.power\",\"minutes\":60}",
+              "fields": {
+                "minutes": 60
+              },
+              "sub_type": "Set"
+            }
           },
           {
             "title": "Reset Counters",
             "description": "Reset power consumption counters back to 0.",
-            "json": "{\"cmd\": \"card.power\", \"reset\": true}"
+            "json": "{\"cmd\": \"card.power\", \"reset\": true}",
+            "x-validation": {
+              "wire": "{\"cmd\":\"card.power\",\"reset\":true}",
+              "fields": {
+                "reset": true
+              },
+              "sub_type": "Delete",
+              "command": true
+            }
           }
         ],
         "responses": {
@@ -4329,12 +4951,25 @@
           {
             "title": "Get a Random Number",
             "description": "Request a random integer between 0 and count-1.",
-            "json": "{\"req\": \"card.random\", \"count\": 100}"
+            "json": "{\"req\": \"card.random\", \"count\": 100}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.random\",\"count\":100}",
+              "fields": {
+                "count": 100
+              }
+            }
           },
           {
             "title": "Get a Buffer of Random Numbers",
             "description": "Request random bytes returned as base64-encoded payload.",
-            "json": "{\"req\": \"card.random\", \"mode\": \"payload\", \"count\": 100}"
+            "json": "{\"req\": \"card.random\", \"mode\": \"payload\", \"count\": 100}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.random\",\"count\":100,\"mode\":\"payload\"}",
+              "fields": {
+                "mode": "payload",
+                "count": 100
+              }
+            }
           }
         ],
         "responses": {
@@ -4404,7 +5039,11 @@
           {
             "title": "Restart Notecard",
             "description": "Perform a firmware restart of the Notecard.",
-            "json": "{\"cmd\": \"card.restart\"}"
+            "json": "{\"cmd\": \"card.restart\"}",
+            "x-validation": {
+              "wire": "{\"cmd\":\"card.restart\"}",
+              "command": true
+            }
           }
         ],
         "responses": {
@@ -4464,12 +5103,22 @@
           {
             "title": "Complete Factory Reset",
             "description": "Reset Notecard configuration and deprovision from Notehub.",
-            "json": "{\"req\": \"card.restore\", \"delete\": true, \"connected\": true}"
+            "json": "{\"req\": \"card.restore\", \"delete\": true, \"connected\": true}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.restore\",\"connected\":true,\"delete\":true}",
+              "fields": {
+                "delete": true,
+                "connected": true
+              }
+            }
           },
           {
             "title": "File System Reset Only",
             "description": "Reset only the file system, forcing re-sync from Notehub.",
-            "json": "{\"req\": \"card.restore\"}"
+            "json": "{\"req\": \"card.restore\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.restore\"}"
+            }
           }
         ],
         "responses": {
@@ -4562,22 +5211,48 @@
           {
             "title": "Enable Sleep Mode",
             "description": "Enable sleep mode with default settings.",
-            "json": "{\"req\": \"card.sleep\", \"on\": true}"
+            "json": "{\"req\": \"card.sleep\", \"on\": true}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.sleep\",\"on\":true}",
+              "fields": {
+                "on": true
+              }
+            }
           },
           {
             "title": "Configure Sleep with Accelerometer Wake",
             "description": "Enable sleep mode with accelerometer wake functionality.",
-            "json": "{\"req\": \"card.sleep\", \"on\": true, \"mode\": \"accel\"}"
+            "json": "{\"req\": \"card.sleep\", \"on\": true, \"mode\": \"accel\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.sleep\",\"mode\":\"accel\",\"on\":true}",
+              "fields": {
+                "on": true,
+                "mode": "accel"
+              }
+            }
           },
           {
             "title": "Custom Sleep Timer",
             "description": "Set custom wait time before entering sleep mode.",
-            "json": "{\"req\": \"card.sleep\", \"seconds\": 60}"
+            "json": "{\"req\": \"card.sleep\", \"seconds\": 60}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.sleep\",\"seconds\":60}",
+              "fields": {
+                "seconds": 60
+              }
+            }
           },
           {
             "title": "Disable Sleep Mode",
             "description": "Disable sleep mode functionality.",
-            "json": "{\"cmd\": \"card.sleep\", \"off\": true}"
+            "json": "{\"cmd\": \"card.sleep\", \"off\": true}",
+            "x-validation": {
+              "wire": "{\"cmd\":\"card.sleep\",\"off\":true}",
+              "fields": {
+                "off": true
+              },
+              "command": true
+            }
           }
         ],
         "responses": {
@@ -4647,7 +5322,10 @@
           {
             "title": "Get Notecard Status",
             "description": "Request general information about the Notecard's operating status.",
-            "json": "{\"req\": \"card.status\"}"
+            "json": "{\"req\": \"card.status\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.status\"}"
+            }
           }
         ],
         "responses": {
@@ -4789,22 +5467,49 @@
           {
             "title": "Get Card Temperature",
             "description": "Get current temperature from Notecard's onboard sensor.",
-            "json": "{\"req\": \"card.temp\"}"
+            "json": "{\"req\": \"card.temp\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.temp\"}",
+              "sub_type": "Query"
+            }
           },
           {
             "title": "Configure Temperature Tracking",
             "description": "Set up automatic temperature logging at 30-minute intervals.",
-            "json": "{\"req\": \"card.temp\", \"minutes\": 30}"
+            "json": "{\"req\": \"card.temp\", \"minutes\": 30}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.temp\",\"minutes\":30}",
+              "fields": {
+                "minutes": 30
+              },
+              "sub_type": "Set"
+            }
           },
           {
             "title": "Stop Temperature Tracking",
             "description": "Stop automatic temperature logging.",
-            "json": "{\"cmd\": \"card.temp\", \"stop\": true}"
+            "json": "{\"cmd\": \"card.temp\", \"stop\": true}",
+            "x-validation": {
+              "wire": "{\"cmd\":\"card.temp\",\"stop\":true}",
+              "fields": {
+                "stop": true
+              },
+              "sub_type": "Delete",
+              "command": true
+            }
           },
           {
             "title": "Sync Temperature Notes",
             "description": "Immediately sync pending temperature notes.",
-            "json": "{\"cmd\": \"card.temp\", \"sync\": true}"
+            "json": "{\"cmd\": \"card.temp\", \"sync\": true}",
+            "x-validation": {
+              "wire": "{\"cmd\":\"card.temp\",\"sync\":true}",
+              "fields": {
+                "sync": true
+              },
+              "sub_type": "Set",
+              "command": true
+            }
           }
         ],
         "responses": {
@@ -4928,22 +5633,49 @@
           {
             "title": "Get Card Temperature",
             "description": "Get current temperature from Notecard's onboard sensor.",
-            "json": "{\"req\": \"card.temp\"}"
+            "json": "{\"req\": \"card.temp\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.temp\"}",
+              "sub_type": "Query"
+            }
           },
           {
             "title": "Configure Temperature Tracking",
             "description": "Set up automatic temperature logging at 30-minute intervals.",
-            "json": "{\"req\": \"card.temp\", \"minutes\": 30}"
+            "json": "{\"req\": \"card.temp\", \"minutes\": 30}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.temp\",\"minutes\":30}",
+              "fields": {
+                "minutes": 30
+              },
+              "sub_type": "Set"
+            }
           },
           {
             "title": "Stop Temperature Tracking",
             "description": "Stop automatic temperature logging.",
-            "json": "{\"cmd\": \"card.temp\", \"stop\": true}"
+            "json": "{\"cmd\": \"card.temp\", \"stop\": true}",
+            "x-validation": {
+              "wire": "{\"cmd\":\"card.temp\",\"stop\":true}",
+              "fields": {
+                "stop": true
+              },
+              "sub_type": "Delete",
+              "command": true
+            }
           },
           {
             "title": "Sync Temperature Notes",
             "description": "Immediately sync pending temperature notes.",
-            "json": "{\"cmd\": \"card.temp\", \"sync\": true}"
+            "json": "{\"cmd\": \"card.temp\", \"sync\": true}",
+            "x-validation": {
+              "wire": "{\"cmd\":\"card.temp\",\"sync\":true}",
+              "fields": {
+                "sync": true
+              },
+              "sub_type": "Set",
+              "command": true
+            }
           }
         ],
         "responses": {
@@ -5065,22 +5797,49 @@
           {
             "title": "Get Card Temperature",
             "description": "Get current temperature from Notecard's onboard sensor.",
-            "json": "{\"req\": \"card.temp\"}"
+            "json": "{\"req\": \"card.temp\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.temp\"}",
+              "sub_type": "Query"
+            }
           },
           {
             "title": "Configure Temperature Tracking",
             "description": "Set up automatic temperature logging at 30-minute intervals.",
-            "json": "{\"req\": \"card.temp\", \"minutes\": 30}"
+            "json": "{\"req\": \"card.temp\", \"minutes\": 30}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.temp\",\"minutes\":30}",
+              "fields": {
+                "minutes": 30
+              },
+              "sub_type": "Set"
+            }
           },
           {
             "title": "Stop Temperature Tracking",
             "description": "Stop automatic temperature logging.",
-            "json": "{\"cmd\": \"card.temp\", \"stop\": true}"
+            "json": "{\"cmd\": \"card.temp\", \"stop\": true}",
+            "x-validation": {
+              "wire": "{\"cmd\":\"card.temp\",\"stop\":true}",
+              "fields": {
+                "stop": true
+              },
+              "sub_type": "Delete",
+              "command": true
+            }
           },
           {
             "title": "Sync Temperature Notes",
             "description": "Immediately sync pending temperature notes.",
-            "json": "{\"cmd\": \"card.temp\", \"sync\": true}"
+            "json": "{\"cmd\": \"card.temp\", \"sync\": true}",
+            "x-validation": {
+              "wire": "{\"cmd\":\"card.temp\",\"sync\":true}",
+              "fields": {
+                "sync": true
+              },
+              "sub_type": "Set",
+              "command": true
+            }
           }
         ],
         "responses": {
@@ -5170,7 +5929,10 @@
           {
             "title": "Get Current Time and Date",
             "description": "Retrieve current date and time information in UTC with location data if available.",
-            "json": "{\"req\": \"card.time\"}"
+            "json": "{\"req\": \"card.time\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.time\"}"
+            }
           }
         ],
         "responses": {
@@ -5292,12 +6054,25 @@
           {
             "title": "Enable Trace Mode",
             "description": "Enable trace mode for debugging the Notecard.",
-            "json": "{\"req\": \"card.trace\", \"mode\": \"on\"}"
+            "json": "{\"req\": \"card.trace\", \"mode\": \"on\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.trace\",\"mode\":\"on\"}",
+              "fields": {
+                "mode": "on"
+              }
+            }
           },
           {
             "title": "Disable Trace Mode",
             "description": "Disable trace mode on the Notecard.",
-            "json": "{\"cmd\": \"card.trace\", \"mode\": \"off\"}"
+            "json": "{\"cmd\": \"card.trace\", \"mode\": \"off\"}",
+            "x-validation": {
+              "wire": "{\"cmd\":\"card.trace\",\"mode\":\"off\"}",
+              "fields": {
+                "mode": "off"
+              },
+              "command": true
+            }
           }
         ],
         "responses": {
@@ -5472,32 +6247,70 @@
           {
             "title": "Set WiFi-Cell Priority",
             "description": "Configure Notecard Cell+WiFi to prioritize WiFi while falling back to cellular.",
-            "json": "{\"req\": \"card.transport\", \"method\": \"wifi-cell\"}"
+            "json": "{\"req\": \"card.transport\", \"method\": \"wifi-cell\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.transport\",\"method\":\"wifi-cell\"}",
+              "fields": {
+                "method": "wifi-cell"
+              }
+            }
           },
           {
             "title": "Enable WiFi Only Mode",
             "description": "Configure device to use WiFi connectivity only.",
-            "json": "{\"req\": \"card.transport\", \"method\": \"wifi\"}"
+            "json": "{\"req\": \"card.transport\", \"method\": \"wifi\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.transport\",\"method\":\"wifi\"}",
+              "fields": {
+                "method": "wifi"
+              }
+            }
           },
           {
             "title": "Enable Cellular Only Mode",
             "description": "Configure device to use cellular connectivity only.",
-            "json": "{\"req\": \"card.transport\", \"method\": \"cell\"}"
+            "json": "{\"req\": \"card.transport\", \"method\": \"cell\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.transport\",\"method\":\"cell\"}",
+              "fields": {
+                "method": "cell"
+              }
+            }
           },
           {
             "title": "Reset to Default Transport",
             "description": "Reset the transport mode to device default settings.",
-            "json": "{\"cmd\": \"card.transport\", \"method\": \"-\"}"
+            "json": "{\"cmd\": \"card.transport\", \"method\": \"-\"}",
+            "x-validation": {
+              "wire": "{\"cmd\":\"card.transport\",\"method\":\"-\"}",
+              "fields": {
+                "method": "-"
+              },
+              "command": true
+            }
           },
           {
             "title": "Configure NTN Mode",
             "description": "Enable NTN (Non-Terrestrial Network) mode for Starnote connectivity.",
-            "json": "{\"req\": \"card.transport\", \"method\": \"ntn\"}"
+            "json": "{\"req\": \"card.transport\", \"method\": \"ntn\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.transport\",\"method\":\"ntn\"}",
+              "fields": {
+                "method": "ntn"
+              }
+            }
           },
           {
             "title": "WiFi-Cell-NTN Priority",
             "description": "Configure triple fallback: WiFi \u2192 cellular \u2192 NTN with custom timeout.",
-            "json": "{\"req\": \"card.transport\", \"method\": \"wifi-cell-ntn\", \"seconds\": 1800}"
+            "json": "{\"req\": \"card.transport\", \"method\": \"wifi-cell-ntn\", \"seconds\": 1800}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.transport\",\"method\":\"wifi-cell-ntn\",\"seconds\":1800}",
+              "fields": {
+                "method": "wifi-cell-ntn",
+                "seconds": 1800
+              }
+            }
           }
         ],
         "responses": {
@@ -5714,22 +6527,51 @@
           {
             "title": "Single Mode",
             "description": "Enable triangulation using cell towers only.",
-            "json": "{\"req\":\"card.triangulate\",\"mode\":\"cell\",\"on\":true,\"set\":true}"
+            "json": "{\"req\":\"card.triangulate\",\"mode\":\"cell\",\"on\":true,\"set\":true}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.triangulate\",\"mode\":\"cell\",\"on\":true,\"set\":true}",
+              "fields": {
+                "mode": "cell",
+                "on": true,
+                "set": true
+              }
+            }
           },
           {
             "title": "Dual Mode",
             "description": "Enable triangulation using both WiFi and cell towers when connected to USB power.",
-            "json": "{\"req\":\"card.triangulate\",\"mode\":\"wifi,cell\",\"on\":true,\"usb\":true,\"set\":true}"
+            "json": "{\"req\":\"card.triangulate\",\"mode\":\"wifi,cell\",\"on\":true,\"usb\":true,\"set\":true}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.triangulate\",\"mode\":\"wifi,cell\",\"on\":true,\"set\":true,\"usb\":true}",
+              "fields": {
+                "mode": "wifi,cell",
+                "on": true,
+                "usb": true,
+                "set": true
+              }
+            }
           },
           {
             "title": "Send WiFi AP Data",
             "description": "Send a newline-terminated list of WiFi access points to the Notecard for triangulation.",
-            "json": "{\"req\":\"card.triangulate\",\"text\":\"+CWLAP:(4,\\\"Blues\\\",-51,\\\"74:ac:b9:12:12:f8\\\",1)\\n+CWLAP:(3,\\\"AAAA-62DD\\\",-70,\\\"6c:55:e8:91:62:e1\\\",11)\\n+CWLAP:(4,\\\"Blues\\\",-81,\\\"74:ac:b9:11:12:23\\\",1)\\n+CWLAP:(4,\\\"Blues\\\",-82,\\\"74:ac:a9:12:19:48\\\",11)\\n+CWLAP:(4,\\\"Free Parking\\\",-83,\\\"02:18:4a:11:60:31\\\",6)\\n+CWLAP:(5,\\\"GO\\\",-84,\\\"01:13:6a:13:90:30\\\",6)\\n+CWLAP:(4,\\\"AAAA-5C62-2.4\\\",-85,\\\"d8:97:ba:7b:fd:60\\\",1)\\n+CWLAP:(3,\\\"DIRECT-a5-HP MLP50\\\",-86,\\\"fa:da:0c:1b:16:a5\\\",6)\\n+CWLAP:(3,\\\"DIRECT-c6-HP M182 LaserJet\\\",-88,\\\"da:12:65:44:31:c6\\\",6)\\n\\n\"}"
+            "json": "{\"req\":\"card.triangulate\",\"text\":\"+CWLAP:(4,\\\"Blues\\\",-51,\\\"74:ac:b9:12:12:f8\\\",1)\\n+CWLAP:(3,\\\"AAAA-62DD\\\",-70,\\\"6c:55:e8:91:62:e1\\\",11)\\n+CWLAP:(4,\\\"Blues\\\",-81,\\\"74:ac:b9:11:12:23\\\",1)\\n+CWLAP:(4,\\\"Blues\\\",-82,\\\"74:ac:a9:12:19:48\\\",11)\\n+CWLAP:(4,\\\"Free Parking\\\",-83,\\\"02:18:4a:11:60:31\\\",6)\\n+CWLAP:(5,\\\"GO\\\",-84,\\\"01:13:6a:13:90:30\\\",6)\\n+CWLAP:(4,\\\"AAAA-5C62-2.4\\\",-85,\\\"d8:97:ba:7b:fd:60\\\",1)\\n+CWLAP:(3,\\\"DIRECT-a5-HP MLP50\\\",-86,\\\"fa:da:0c:1b:16:a5\\\",6)\\n+CWLAP:(3,\\\"DIRECT-c6-HP M182 LaserJet\\\",-88,\\\"da:12:65:44:31:c6\\\",6)\\n\\n\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.triangulate\",\"text\":\"+CWLAP:(4,\\\"Blues\\\",-51,\\\"74:ac:b9:12:12:f8\\\",1)\\n+CWLAP:(3,\\\"AAAA-62DD\\\",-70,\\\"6c:55:e8:91:62:e1\\\",11)\\n+CWLAP:(4,\\\"Blues\\\",-81,\\\"74:ac:b9:11:12:23\\\",1)\\n+CWLAP:(4,\\\"Blues\\\",-82,\\\"74:ac:a9:12:19:48\\\",11)\\n+CWLAP:(4,\\\"Free Parking\\\",-83,\\\"02:18:4a:11:60:31\\\",6)\\n+CWLAP:(5,\\\"GO\\\",-84,\\\"01:13:6a:13:90:30\\\",6)\\n+CWLAP:(4,\\\"AAAA-5C62-2.4\\\",-85,\\\"d8:97:ba:7b:fd:60\\\",1)\\n+CWLAP:(3,\\\"DIRECT-a5-HP MLP50\\\",-86,\\\"fa:da:0c:1b:16:a5\\\",6)\\n+CWLAP:(3,\\\"DIRECT-c6-HP M182 LaserJet\\\",-88,\\\"da:12:65:44:31:c6\\\",6)\\n\\n\"}",
+              "fields": {
+                "text": "+CWLAP:(4,\"Blues\",-51,\"74:ac:b9:12:12:f8\",1)\n+CWLAP:(3,\"AAAA-62DD\",-70,\"6c:55:e8:91:62:e1\",11)\n+CWLAP:(4,\"Blues\",-81,\"74:ac:b9:11:12:23\",1)\n+CWLAP:(4,\"Blues\",-82,\"74:ac:a9:12:19:48\",11)\n+CWLAP:(4,\"Free Parking\",-83,\"02:18:4a:11:60:31\",6)\n+CWLAP:(5,\"GO\",-84,\"01:13:6a:13:90:30\",6)\n+CWLAP:(4,\"AAAA-5C62-2.4\",-85,\"d8:97:ba:7b:fd:60\",1)\n+CWLAP:(3,\"DIRECT-a5-HP MLP50\",-86,\"fa:da:0c:1b:16:a5\",6)\n+CWLAP:(3,\"DIRECT-c6-HP M182 LaserJet\",-88,\"da:12:65:44:31:c6\",6)\n\n"
+              }
+            }
           },
           {
             "title": "Disable Triangulation",
             "description": "Disable triangulation mode.",
-            "json": "{\"req\":\"card.triangulate\",\"mode\":\"-\"}"
+            "json": "{\"req\":\"card.triangulate\",\"mode\":\"-\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.triangulate\",\"mode\":\"-\"}",
+              "fields": {
+                "mode": "-"
+              }
+            }
           }
         ],
         "responses": {
@@ -5859,22 +6701,44 @@
           {
             "title": "Get Total Usage",
             "description": "Retrieve all cellular and WiFi usage statistics since Notecard activation.",
-            "json": "{\"req\": \"card.usage.get\"}"
+            "json": "{\"req\": \"card.usage.get\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.usage.get\"}"
+            }
           },
           {
             "title": "Get Daily Usage with Offset",
             "description": "Get usage statistics for a specific day, 5 days ago.",
-            "json": "{\"req\": \"card.usage.get\", \"mode\": \"1day\", \"offset\": 5}"
+            "json": "{\"req\": \"card.usage.get\", \"mode\": \"1day\", \"offset\": 5}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.usage.get\",\"mode\":\"1day\",\"offset\":5}",
+              "fields": {
+                "mode": "1day",
+                "offset": 5
+              }
+            }
           },
           {
             "title": "Get Hourly Usage",
             "description": "Get usage statistics for the current hour period.",
-            "json": "{\"req\": \"card.usage.get\", \"mode\": \"1hour\"}"
+            "json": "{\"req\": \"card.usage.get\", \"mode\": \"1hour\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.usage.get\",\"mode\":\"1hour\"}",
+              "fields": {
+                "mode": "1hour"
+              }
+            }
           },
           {
             "title": "Get 30-Day Usage",
             "description": "Get usage statistics for the last 30 days.",
-            "json": "{\"req\": \"card.usage.get\", \"mode\": \"30day\"}"
+            "json": "{\"req\": \"card.usage.get\", \"mode\": \"30day\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.usage.get\",\"mode\":\"30day\"}",
+              "fields": {
+                "mode": "30day"
+              }
+            }
           }
         ],
         "responses": {
@@ -5993,17 +6857,36 @@
           {
             "title": "Test 7-Day Usage Projection",
             "description": "Calculate data quota projection based on the last 7 days with 500MB quota.",
-            "json": "{\"req\": \"card.usage.test\", \"days\": 7, \"megabytes\": 500}"
+            "json": "{\"req\": \"card.usage.test\", \"days\": 7, \"megabytes\": 500}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.usage.test\",\"days\":7,\"megabytes\":500}",
+              "fields": {
+                "days": 7,
+                "megabytes": 500
+              }
+            }
           },
           {
             "title": "Test 12-Hour Usage Projection",
             "description": "Calculate data quota projection based on the last 12 hours.",
-            "json": "{\"req\": \"card.usage.test\", \"hours\": 12}"
+            "json": "{\"req\": \"card.usage.test\", \"hours\": 12}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.usage.test\",\"hours\":12}",
+              "fields": {
+                "hours": 12
+              }
+            }
           },
           {
             "title": "Default Quota Test",
             "description": "Test with default 1024MB quota using 30 days of data.",
-            "json": "{\"req\": \"card.usage.test\", \"days\": 30}"
+            "json": "{\"req\": \"card.usage.test\", \"days\": 30}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.usage.test\",\"days\":30}",
+              "fields": {
+                "days": 30
+              }
+            }
           }
         ],
         "responses": {
@@ -6108,7 +6991,10 @@
           {
             "title": "Get Version Information",
             "description": "Retrieve firmware version and device information.",
-            "json": "{\"req\": \"card.version\"}"
+            "json": "{\"req\": \"card.version\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.version\"}"
+            }
           }
         ],
         "responses": {
@@ -6402,27 +7288,66 @@
           {
             "title": "Get Voltage Trends",
             "description": "Retrieve voltage information with trend analysis for 300 hours.",
-            "json": "{\"req\": \"card.voltage\", \"hours\": 300, \"vmax\": 4, \"vmin\": 2.2}"
+            "json": "{\"req\": \"card.voltage\", \"hours\": 300, \"vmax\": 4, \"vmin\": 2.2}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.voltage\",\"hours\":300,\"vmax\":4,\"vmin\":2.2}",
+              "fields": {
+                "hours": 300,
+                "vmax": 4,
+                "vmin": 2.2
+              },
+              "sub_type": "Query"
+            }
           },
           {
             "title": "Set LiPo Voltage Thresholds",
             "description": "Configure voltage thresholds for LiPo battery operation.",
-            "json": "{\"req\": \"card.voltage\", \"mode\": \"lipo\"}"
+            "json": "{\"req\": \"card.voltage\", \"mode\": \"lipo\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.voltage\",\"mode\":\"lipo\"}",
+              "fields": {
+                "mode": "lipo"
+              },
+              "sub_type": "Set"
+            }
           },
           {
             "title": "Query Current Thresholds",
             "description": "Query the Notecard for its currently-set voltage thresholds.",
-            "json": "{\"req\": \"card.voltage\", \"mode\": \"?\"}"
+            "json": "{\"req\": \"card.voltage\", \"mode\": \"?\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.voltage\",\"mode\":\"?\"}",
+              "fields": {
+                "mode": "?"
+              },
+              "sub_type": "Set"
+            }
           },
           {
             "title": "Enable USB Power Monitoring",
             "description": "Enable USB power state monitoring with alerts and sync.",
-            "json": "{\"req\": \"card.voltage\", \"usb\": true, \"alert\": true, \"sync\": true}"
+            "json": "{\"req\": \"card.voltage\", \"usb\": true, \"alert\": true, \"sync\": true}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.voltage\",\"alert\":true,\"sync\":true,\"usb\":true}",
+              "fields": {
+                "usb": true,
+                "alert": true,
+                "sync": true
+              },
+              "sub_type": "Set"
+            }
           },
           {
             "title": "Enable Historic Voltage Trends",
             "description": "Enable historic voltage trends tracking.",
-            "json": "{\"req\": \"card.voltage\", \"on\": true}"
+            "json": "{\"req\": \"card.voltage\", \"on\": true}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.voltage\",\"on\":true}",
+              "fields": {
+                "on": true
+              },
+              "sub_type": "Set"
+            }
           }
         ],
         "responses": {
@@ -6656,27 +7581,66 @@
           {
             "title": "Get Voltage Trends",
             "description": "Retrieve voltage information with trend analysis for 300 hours.",
-            "json": "{\"req\": \"card.voltage\", \"hours\": 300, \"vmax\": 4, \"vmin\": 2.2}"
+            "json": "{\"req\": \"card.voltage\", \"hours\": 300, \"vmax\": 4, \"vmin\": 2.2}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.voltage\",\"hours\":300,\"vmax\":4,\"vmin\":2.2}",
+              "fields": {
+                "hours": 300,
+                "vmax": 4,
+                "vmin": 2.2
+              },
+              "sub_type": "Query"
+            }
           },
           {
             "title": "Set LiPo Voltage Thresholds",
             "description": "Configure voltage thresholds for LiPo battery operation.",
-            "json": "{\"req\": \"card.voltage\", \"mode\": \"lipo\"}"
+            "json": "{\"req\": \"card.voltage\", \"mode\": \"lipo\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.voltage\",\"mode\":\"lipo\"}",
+              "fields": {
+                "mode": "lipo"
+              },
+              "sub_type": "Set"
+            }
           },
           {
             "title": "Query Current Thresholds",
             "description": "Query the Notecard for its currently-set voltage thresholds.",
-            "json": "{\"req\": \"card.voltage\", \"mode\": \"?\"}"
+            "json": "{\"req\": \"card.voltage\", \"mode\": \"?\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.voltage\",\"mode\":\"?\"}",
+              "fields": {
+                "mode": "?"
+              },
+              "sub_type": "Set"
+            }
           },
           {
             "title": "Enable USB Power Monitoring",
             "description": "Enable USB power state monitoring with alerts and sync.",
-            "json": "{\"req\": \"card.voltage\", \"usb\": true, \"alert\": true, \"sync\": true}"
+            "json": "{\"req\": \"card.voltage\", \"usb\": true, \"alert\": true, \"sync\": true}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.voltage\",\"alert\":true,\"sync\":true,\"usb\":true}",
+              "fields": {
+                "usb": true,
+                "alert": true,
+                "sync": true
+              },
+              "sub_type": "Set"
+            }
           },
           {
             "title": "Enable Historic Voltage Trends",
             "description": "Enable historic voltage trends tracking.",
-            "json": "{\"req\": \"card.voltage\", \"on\": true}"
+            "json": "{\"req\": \"card.voltage\", \"on\": true}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.voltage\",\"on\":true}",
+              "fields": {
+                "on": true
+              },
+              "sub_type": "Set"
+            }
           }
         ],
         "responses": {
@@ -6818,27 +7782,61 @@
           {
             "title": "Create a Connection",
             "description": "Set WiFi SSID and password to connect to an access point.",
-            "json": "{\"req\":\"card.wifi\",\"ssid\":\"<ssid name>\",\"password\":\"<password>\"}"
+            "json": "{\"req\":\"card.wifi\",\"ssid\":\"<ssid name>\",\"password\":\"<password>\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.wifi\",\"password\":\"<password>\",\"ssid\":\"<ssid name>\"}",
+              "fields": {
+                "ssid": "<ssid name>",
+                "password": "<password>"
+              }
+            }
           },
           {
             "title": "Clear a Connection",
             "description": "Clear existing WiFi credentials to disconnect.",
-            "json": "{\"req\":\"card.wifi\",\"ssid\":\"-\",\"password\":\"-\"}"
+            "json": "{\"req\":\"card.wifi\",\"ssid\":\"-\",\"password\":\"-\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.wifi\",\"password\":\"-\",\"ssid\":\"-\"}",
+              "fields": {
+                "ssid": "-",
+                "password": "-"
+              }
+            }
           },
           {
             "title": "Customize the SoftAP",
             "description": "Configure SoftAP with custom name and organization branding.",
-            "json": "{\"req\":\"card.wifi\",\"name\":\"ACME Inc\",\"org\":\"ACME Inc\"}"
+            "json": "{\"req\":\"card.wifi\",\"name\":\"ACME Inc\",\"org\":\"ACME Inc\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.wifi\",\"name\":\"ACME Inc\",\"org\":\"ACME Inc\"}",
+              "fields": {
+                "name": "ACME Inc",
+                "org": "ACME Inc"
+              }
+            }
           },
           {
             "title": "Customize the SoftAP w/MAC Address",
             "description": "Configure SoftAP name with MAC address suffix for unique identification.",
-            "json": "{\"req\":\"card.wifi\",\"name\":\"acme-\",\"org\":\"ACME Inc\"}"
+            "json": "{\"req\":\"card.wifi\",\"name\":\"acme-\",\"org\":\"ACME Inc\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.wifi\",\"name\":\"acme-\",\"org\":\"ACME Inc\"}",
+              "fields": {
+                "name": "acme-",
+                "org": "ACME Inc"
+              }
+            }
           },
           {
             "title": "Configure Multiple Access Points",
             "description": "Set up multiple WiFi access points for fallback connectivity.",
-            "json": "{\"req\":\"card.wifi\",\"text\":\"[\\\"FIRST-SSID\\\",\\\"FIRST-PASSWORD\\\"],[\\\"SECOND-SSID\\\",\\\"SECOND-PASSWORD\\\"]\"}"
+            "json": "{\"req\":\"card.wifi\",\"text\":\"[\\\"FIRST-SSID\\\",\\\"FIRST-PASSWORD\\\"],[\\\"SECOND-SSID\\\",\\\"SECOND-PASSWORD\\\"]\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.wifi\",\"text\":\"[\\\"FIRST-SSID\\\",\\\"FIRST-PASSWORD\\\"],[\\\"SECOND-SSID\\\",\\\"SECOND-PASSWORD\\\"]\"}",
+              "fields": {
+                "text": "[\"FIRST-SSID\",\"FIRST-PASSWORD\"],[\"SECOND-SSID\",\"SECOND-PASSWORD\"]"
+              }
+            }
           }
         ],
         "responses": {
@@ -7005,27 +8003,55 @@
           {
             "title": "Current Network State",
             "description": "Request current network state without any modifications.",
-            "json": "{\"req\":\"card.wireless\"}"
+            "json": "{\"req\":\"card.wireless\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.wireless\"}"
+            }
           },
           {
             "title": "Change Scan Mode",
             "description": "Restrict the modem to Cat-NB1 for narrowband connectivity.",
-            "json": "{\"req\":\"card.wireless\",\"mode\":\"nb\"}"
+            "json": "{\"req\":\"card.wireless\",\"mode\":\"nb\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.wireless\",\"mode\":\"nb\"}",
+              "fields": {
+                "mode": "nb"
+              }
+            }
           },
           {
             "title": "Reset Scan Mode",
             "description": "Reset network scan mode to default behavior.",
-            "json": "{\"req\":\"card.wireless\",\"mode\":\"-\"}"
+            "json": "{\"req\":\"card.wireless\",\"mode\":\"-\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.wireless\",\"mode\":\"-\"}",
+              "fields": {
+                "mode": "-"
+              }
+            }
           },
           {
             "title": "Set External SIM APN",
             "description": "Configure APN for external SIM card usage.",
-            "json": "{\"req\":\"card.wireless\",\"apn\":\"myapn.nb\"}"
+            "json": "{\"req\":\"card.wireless\",\"apn\":\"myapn.nb\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.wireless\",\"apn\":\"myapn.nb\"}",
+              "fields": {
+                "apn": "myapn.nb"
+              }
+            }
           },
           {
             "title": "Failover to External SIM",
             "description": "Configure dual SIM failover with external SIM priority.",
-            "json": "{\"req\":\"card.wireless\",\"apn\":\"myapn.nb\",\"method\":\"dual-primary-secondary\"}"
+            "json": "{\"req\":\"card.wireless\",\"apn\":\"myapn.nb\",\"method\":\"dual-primary-secondary\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.wireless\",\"apn\":\"myapn.nb\",\"method\":\"dual-primary-secondary\"}",
+              "fields": {
+                "apn": "myapn.nb",
+                "method": "dual-primary-secondary"
+              }
+            }
           }
         ],
         "responses": {
@@ -7230,17 +8256,35 @@
           {
             "title": "Check Penalty Box State",
             "description": "Request current penalty box status and information.",
-            "json": "{\"req\":\"card.wireless.penalty\"}"
+            "json": "{\"req\":\"card.wireless.penalty\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.wireless.penalty\"}",
+              "sub_type": "Query"
+            }
           },
           {
             "title": "Remove from Penalty Box",
             "description": "Reset and remove the Notecard from penalty box conditions.",
-            "json": "{\"req\":\"card.wireless.penalty\",\"reset\":true}"
+            "json": "{\"req\":\"card.wireless.penalty\",\"reset\":true}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.wireless.penalty\",\"reset\":true}",
+              "sub_type": "Delete"
+            }
           },
           {
             "title": "Override Default Penalty Box Settings",
             "description": "Configure custom penalty box parameters with modified defaults.",
-            "json": "{\"req\":\"card.wireless.penalty\",\"set\":true,\"rate\":2.0,\"add\":10,\"max\":720,\"min\":5}"
+            "json": "{\"req\":\"card.wireless.penalty\",\"set\":true,\"rate\":2.0,\"add\":10,\"max\":720,\"min\":5}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.wireless.penalty\",\"add\":10,\"max\":720,\"min\":5,\"rate\":2,\"set\":true}",
+              "fields": {
+                "rate": 2.0,
+                "add": 10,
+                "max": 720,
+                "min": 5
+              },
+              "sub_type": "Set"
+            }
           }
         ],
         "responses": {
@@ -7368,17 +8412,35 @@
           {
             "title": "Check Penalty Box State",
             "description": "Request current penalty box status and information.",
-            "json": "{\"req\":\"card.wireless.penalty\"}"
+            "json": "{\"req\":\"card.wireless.penalty\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.wireless.penalty\"}",
+              "sub_type": "Query"
+            }
           },
           {
             "title": "Remove from Penalty Box",
             "description": "Reset and remove the Notecard from penalty box conditions.",
-            "json": "{\"req\":\"card.wireless.penalty\",\"reset\":true}"
+            "json": "{\"req\":\"card.wireless.penalty\",\"reset\":true}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.wireless.penalty\",\"reset\":true}",
+              "sub_type": "Delete"
+            }
           },
           {
             "title": "Override Default Penalty Box Settings",
             "description": "Configure custom penalty box parameters with modified defaults.",
-            "json": "{\"req\":\"card.wireless.penalty\",\"set\":true,\"rate\":2.0,\"add\":10,\"max\":720,\"min\":5}"
+            "json": "{\"req\":\"card.wireless.penalty\",\"set\":true,\"rate\":2.0,\"add\":10,\"max\":720,\"min\":5}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.wireless.penalty\",\"add\":10,\"max\":720,\"min\":5,\"rate\":2,\"set\":true}",
+              "fields": {
+                "rate": 2.0,
+                "add": 10,
+                "max": 720,
+                "min": 5
+              },
+              "sub_type": "Set"
+            }
           }
         ],
         "responses": {
@@ -7506,17 +8568,35 @@
           {
             "title": "Check Penalty Box State",
             "description": "Request current penalty box status and information.",
-            "json": "{\"req\":\"card.wireless.penalty\"}"
+            "json": "{\"req\":\"card.wireless.penalty\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.wireless.penalty\"}",
+              "sub_type": "Query"
+            }
           },
           {
             "title": "Remove from Penalty Box",
             "description": "Reset and remove the Notecard from penalty box conditions.",
-            "json": "{\"req\":\"card.wireless.penalty\",\"reset\":true}"
+            "json": "{\"req\":\"card.wireless.penalty\",\"reset\":true}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.wireless.penalty\",\"reset\":true}",
+              "sub_type": "Delete"
+            }
           },
           {
             "title": "Override Default Penalty Box Settings",
             "description": "Configure custom penalty box parameters with modified defaults.",
-            "json": "{\"req\":\"card.wireless.penalty\",\"set\":true,\"rate\":2.0,\"add\":10,\"max\":720,\"min\":5}"
+            "json": "{\"req\":\"card.wireless.penalty\",\"set\":true,\"rate\":2.0,\"add\":10,\"max\":720,\"min\":5}",
+            "x-validation": {
+              "wire": "{\"req\":\"card.wireless.penalty\",\"add\":10,\"max\":720,\"min\":5,\"rate\":2,\"set\":true}",
+              "fields": {
+                "rate": 2.0,
+                "add": 10,
+                "max": 720,
+                "min": 5
+              },
+              "sub_type": "Set"
+            }
           }
         ],
         "responses": {
@@ -7624,22 +8704,50 @@
           {
             "title": "Retrieve Firmware Data",
             "description": "Retrieve 32 bytes of firmware data from the Notecard with an offset of 32 bytes.",
-            "json": "{\"req\": \"dfu.get\", \"length\": 32, \"offset\": 32}"
+            "json": "{\"req\": \"dfu.get\", \"length\": 32, \"offset\": 32}",
+            "x-validation": {
+              "wire": "{\"req\":\"dfu.get\",\"length\":32,\"offset\":32}",
+              "fields": {
+                "length": 32,
+                "offset": 32
+              }
+            }
           },
           {
             "title": "Verify DFU Mode",
             "description": "Verify that the Notecard is in DFU mode without retrieving data.",
-            "json": "{\"req\": \"dfu.get\", \"length\": 0}"
+            "json": "{\"req\": \"dfu.get\", \"length\": 0}",
+            "x-validation": {
+              "wire": "{\"req\":\"dfu.get\",\"length\":0}",
+              "fields": {
+                "length": 0
+              }
+            }
           },
           {
             "title": "Read First Block",
             "description": "Read the first 1024 bytes of firmware data from the beginning.",
-            "json": "{\"req\": \"dfu.get\", \"length\": 1024, \"offset\": 0}"
+            "json": "{\"req\": \"dfu.get\", \"length\": 1024, \"offset\": 0}",
+            "x-validation": {
+              "wire": "{\"req\":\"dfu.get\",\"length\":1024,\"offset\":0}",
+              "fields": {
+                "length": 1024,
+                "offset": 0
+              }
+            }
           },
           {
             "title": "Retrieve Large Firmware Data with Binary Buffer",
             "description": "Retrieve 8192 bytes of firmware data using the binary I/O buffer for efficient large data transfers.",
-            "json": "{\"req\": \"dfu.get\", \"length\": 8192, \"offset\": 0, \"binary\": true}"
+            "json": "{\"req\": \"dfu.get\", \"length\": 8192, \"offset\": 0, \"binary\": true}",
+            "x-validation": {
+              "wire": "{\"req\":\"dfu.get\",\"binary\":true,\"length\":8192,\"offset\":0}",
+              "fields": {
+                "length": 8192,
+                "offset": 0,
+                "binary": true
+              }
+            }
           }
         ],
         "responses": {
@@ -7794,32 +8902,69 @@
           {
             "title": "Enable DFU Downloads",
             "description": "Enable firmware downloads from Notehub.",
-            "json": "{\"req\": \"dfu.status\", \"on\": true}"
+            "json": "{\"req\": \"dfu.status\", \"on\": true}",
+            "x-validation": {
+              "wire": "{\"req\":\"dfu.status\",\"on\":true}",
+              "fields": {
+                "on": true
+              }
+            }
           },
           {
             "title": "Disable DFU Downloads",
             "description": "Disable firmware downloads from Notehub.",
-            "json": "{\"req\": \"dfu.status\", \"off\": true}"
+            "json": "{\"req\": \"dfu.status\", \"off\": true}",
+            "x-validation": {
+              "wire": "{\"req\":\"dfu.status\",\"off\":true}",
+              "fields": {
+                "off": true
+              }
+            }
           },
           {
             "title": "Voltage-Variable Enable",
             "description": "Enable DFU downloads only when USB-powered or high voltage.",
-            "json": "{\"req\": \"dfu.status\", \"vvalue\": \"usb:1;high:1;normal:0;low:0;dead:0\"}"
+            "json": "{\"req\": \"dfu.status\", \"vvalue\": \"usb:1;high:1;normal:0;low:0;dead:0\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"dfu.status\",\"vvalue\":\"usb:1;high:1;normal:0;low:0;dead:0\"}",
+              "fields": {
+                "vvalue": "usb:1;high:1;normal:0;low:0;dead:0"
+              }
+            }
           },
           {
             "title": "Check Notecard DFU Status",
             "description": "Get the status of Notecard firmware updates.",
-            "json": "{\"req\": \"dfu.status\", \"name\": \"card\"}"
+            "json": "{\"req\": \"dfu.status\", \"name\": \"card\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"dfu.status\",\"name\":\"card\"}",
+              "fields": {
+                "name": "card"
+              }
+            }
           },
           {
             "title": "Stop DFU with Status",
             "description": "Clear DFU state and provide status information.",
-            "json": "{\"req\": \"dfu.status\", \"stop\": true, \"status\": \"Update cancelled by user\"}"
+            "json": "{\"req\": \"dfu.status\", \"stop\": true, \"status\": \"Update cancelled by user\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"dfu.status\",\"status\":\"Update cancelled by user\",\"stop\":true}",
+              "fields": {
+                "stop": true,
+                "status": "Update cancelled by user"
+              }
+            }
           },
           {
             "title": "Set Version Information",
             "description": "Provide version information for host firmware.",
-            "json": "{\"req\": \"dfu.status\", \"version\": \"1.2.4\"}"
+            "json": "{\"req\": \"dfu.status\", \"version\": \"1.2.4\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"dfu.status\",\"version\":\"1.2.4\"}",
+              "fields": {
+                "version": "1.2.4"
+              }
+            }
           }
         ],
         "responses": {
@@ -7980,27 +9125,67 @@
           {
             "title": "Set Default Environment Variable",
             "description": "Set a default value for an environment variable.",
-            "json": "{\"req\": \"env.default\", \"name\": \"monitor-pump\", \"text\": \"on\"}"
+            "json": "{\"req\": \"env.default\", \"name\": \"monitor-pump\", \"text\": \"on\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"env.default\",\"name\":\"monitor-pump\",\"text\":\"on\"}",
+              "fields": {
+                "name": "monitor-pump",
+                "text": "on"
+              },
+              "sub_type": "Set"
+            }
           },
           {
             "title": "Clear Default Environment Variable",
             "description": "Clear the default value for an environment variable by omitting text.",
-            "json": "{\"req\": \"env.default\", \"name\": \"monitor-pump\"}"
+            "json": "{\"req\": \"env.default\", \"name\": \"monitor-pump\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"env.default\",\"name\":\"monitor-pump\"}",
+              "fields": {
+                "name": "monitor-pump"
+              },
+              "sub_type": "Delete"
+            }
           },
           {
             "title": "Set Empty String Default",
             "description": "Set an environment variable default to an empty string.",
-            "json": "{\"req\": \"env.default\", \"name\": \"debug-mode\", \"text\": \"\"}"
+            "json": "{\"req\": \"env.default\", \"name\": \"debug-mode\", \"text\": \"\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"env.default\",\"name\":\"debug-mode\",\"text\":\"\"}",
+              "fields": {
+                "name": "debug-mode",
+                "text": ""
+              },
+              "sub_type": "Set"
+            }
           },
           {
             "title": "Set Numeric Default",
             "description": "Set a default value for a numeric environment variable.",
-            "json": "{\"req\": \"env.default\", \"name\": \"sample-rate\", \"text\": \"60\"}"
+            "json": "{\"req\": \"env.default\", \"name\": \"sample-rate\", \"text\": \"60\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"env.default\",\"name\":\"sample-rate\",\"text\":\"60\"}",
+              "fields": {
+                "name": "sample-rate",
+                "text": "60"
+              },
+              "sub_type": "Set"
+            }
           },
           {
             "title": "Set Default and Sync",
             "description": "Set a default environment variable and trigger an immediate sync.",
-            "json": "{\"req\": \"env.default\", \"name\": \"monitor-pump\", \"text\": \"on\", \"sync\": true}"
+            "json": "{\"req\": \"env.default\", \"name\": \"monitor-pump\", \"text\": \"on\", \"sync\": true}",
+            "x-validation": {
+              "wire": "{\"req\":\"env.default\",\"name\":\"monitor-pump\",\"sync\":true,\"text\":\"on\"}",
+              "fields": {
+                "name": "monitor-pump",
+                "text": "on",
+                "sync": true
+              },
+              "sub_type": "Set"
+            }
           }
         ],
         "responses": {
@@ -8073,27 +9258,67 @@
           {
             "title": "Set Default Environment Variable",
             "description": "Set a default value for an environment variable.",
-            "json": "{\"req\": \"env.default\", \"name\": \"monitor-pump\", \"text\": \"on\"}"
+            "json": "{\"req\": \"env.default\", \"name\": \"monitor-pump\", \"text\": \"on\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"env.default\",\"name\":\"monitor-pump\",\"text\":\"on\"}",
+              "fields": {
+                "name": "monitor-pump",
+                "text": "on"
+              },
+              "sub_type": "Set"
+            }
           },
           {
             "title": "Clear Default Environment Variable",
             "description": "Clear the default value for an environment variable by omitting text.",
-            "json": "{\"req\": \"env.default\", \"name\": \"monitor-pump\"}"
+            "json": "{\"req\": \"env.default\", \"name\": \"monitor-pump\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"env.default\",\"name\":\"monitor-pump\"}",
+              "fields": {
+                "name": "monitor-pump"
+              },
+              "sub_type": "Delete"
+            }
           },
           {
             "title": "Set Empty String Default",
             "description": "Set an environment variable default to an empty string.",
-            "json": "{\"req\": \"env.default\", \"name\": \"debug-mode\", \"text\": \"\"}"
+            "json": "{\"req\": \"env.default\", \"name\": \"debug-mode\", \"text\": \"\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"env.default\",\"name\":\"debug-mode\",\"text\":\"\"}",
+              "fields": {
+                "name": "debug-mode",
+                "text": ""
+              },
+              "sub_type": "Set"
+            }
           },
           {
             "title": "Set Numeric Default",
             "description": "Set a default value for a numeric environment variable.",
-            "json": "{\"req\": \"env.default\", \"name\": \"sample-rate\", \"text\": \"60\"}"
+            "json": "{\"req\": \"env.default\", \"name\": \"sample-rate\", \"text\": \"60\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"env.default\",\"name\":\"sample-rate\",\"text\":\"60\"}",
+              "fields": {
+                "name": "sample-rate",
+                "text": "60"
+              },
+              "sub_type": "Set"
+            }
           },
           {
             "title": "Set Default and Sync",
             "description": "Set a default environment variable and trigger an immediate sync.",
-            "json": "{\"req\": \"env.default\", \"name\": \"monitor-pump\", \"text\": \"on\", \"sync\": true}"
+            "json": "{\"req\": \"env.default\", \"name\": \"monitor-pump\", \"text\": \"on\", \"sync\": true}",
+            "x-validation": {
+              "wire": "{\"req\":\"env.default\",\"name\":\"monitor-pump\",\"sync\":true,\"text\":\"on\"}",
+              "fields": {
+                "name": "monitor-pump",
+                "text": "on",
+                "sync": true
+              },
+              "sub_type": "Set"
+            }
           }
         ],
         "responses": {
@@ -8165,22 +9390,41 @@
           {
             "title": "Get Single Variable",
             "description": "Retrieve a specific environment variable by name.",
-            "json": "{\"req\": \"env.get\", \"name\": \"monitor-pump-one\"}"
+            "json": "{\"req\": \"env.get\", \"name\": \"monitor-pump-one\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"env.get\",\"name\":\"monitor-pump-one\"}",
+              "fields": {
+                "name": "monitor-pump-one"
+              }
+            }
           },
           {
             "title": "Get Single Variable With Modified Time",
             "description": "Retrieve a variable only if modified after the specified time.",
-            "json": "{\"req\": \"env.get\", \"name\": \"monitor-pump-one\", \"time\": 1656315835}"
+            "json": "{\"req\": \"env.get\", \"name\": \"monitor-pump-one\", \"time\": 1656315835}",
+            "x-validation": {
+              "wire": "{\"req\":\"env.get\",\"name\":\"monitor-pump-one\",\"time\":1656315835}",
+              "fields": {
+                "name": "monitor-pump-one",
+                "time": 1656315835
+              }
+            }
           },
           {
             "title": "Get Multiple Variables",
             "description": "Retrieve multiple environment variables by name.",
-            "json": "{\"req\": \"env.get\", \"names\": [\"monitor-pump-one\", \"monitor-pump-two\"]}"
+            "json": "{\"req\": \"env.get\", \"names\": [\"monitor-pump-one\", \"monitor-pump-two\"]}",
+            "x-validation": {
+              "skip": "contains unsettable fields: ['names']"
+            }
           },
           {
             "title": "Get All Variables",
             "description": "Retrieve all environment variables known to the Notecard.",
-            "json": "{\"req\": \"env.get\"}"
+            "json": "{\"req\": \"env.get\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"env.get\"}"
+            }
           }
         ],
         "responses": {
@@ -8273,12 +9517,21 @@
           {
             "title": "Get Environment Modified Time",
             "description": "Get the timestamp of the last environment variable change.",
-            "json": "{\"req\": \"env.modified\"}"
+            "json": "{\"req\": \"env.modified\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"env.modified\"}"
+            }
           },
           {
             "title": "Check Changes Since Time",
             "description": "Check if environment variables have been modified since a specific time.",
-            "json": "{\"req\": \"env.modified\", \"time\": 1605814400}"
+            "json": "{\"req\": \"env.modified\", \"time\": 1605814400}",
+            "x-validation": {
+              "wire": "{\"req\":\"env.modified\",\"time\":1605814400}",
+              "fields": {
+                "time": 1605814400
+              }
+            }
           }
         ],
         "responses": {
@@ -8365,17 +9618,37 @@
           {
             "title": "Set Environment Variable",
             "description": "Set a local environment variable on the Notecard.",
-            "json": "{\"req\": \"env.set\", \"name\": \"monitor-pump\", \"text\": \"on\"}"
+            "json": "{\"req\": \"env.set\", \"name\": \"monitor-pump\", \"text\": \"on\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"env.set\",\"name\":\"monitor-pump\",\"text\":\"on\"}",
+              "fields": {
+                "name": "monitor-pump",
+                "text": "on"
+              }
+            }
           },
           {
             "title": "Clear Environment Variable",
             "description": "Clear a local environment variable by omitting text.",
-            "json": "{\"req\": \"env.set\", \"name\": \"monitor-pump\"}"
+            "json": "{\"req\": \"env.set\", \"name\": \"monitor-pump\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"env.set\",\"name\":\"monitor-pump\"}",
+              "fields": {
+                "name": "monitor-pump"
+              }
+            }
           },
           {
             "title": "Set Empty String",
             "description": "Set an environment variable to an empty string.",
-            "json": "{\"req\": \"env.set\", \"name\": \"debug-mode\", \"text\": \"\"}"
+            "json": "{\"req\": \"env.set\", \"name\": \"debug-mode\", \"text\": \"\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"env.set\",\"name\":\"debug-mode\",\"text\":\"\"}",
+              "fields": {
+                "name": "debug-mode",
+                "text": ""
+              }
+            }
           }
         ],
         "responses": {
@@ -8455,17 +9728,26 @@
           {
             "title": "Define Environment Variable Template",
             "description": "Provide a schema with data type hints for environment variables.",
-            "json": "{\"req\": \"env.template\", \"body\": {\"env_var_int\": 11, \"env_var_string\": \"10\"}}"
+            "json": "{\"req\": \"env.template\", \"body\": {\"env_var_int\": 11, \"env_var_string\": \"10\"}}",
+            "x-validation": {
+              "skip": "contains unsettable fields: ['body']"
+            }
           },
           {
             "title": "Complex Template Example",
             "description": "Template with multiple data types including boolean and float.",
-            "json": "{\"req\": \"env.template\", \"body\": {\"enabled\": true, \"temperature\": 23.5, \"count\": 42, \"name\": \"sensor\"}}"
+            "json": "{\"req\": \"env.template\", \"body\": {\"enabled\": true, \"temperature\": 23.5, \"count\": 42, \"name\": \"sensor\"}}",
+            "x-validation": {
+              "skip": "contains unsettable fields: ['body']"
+            }
           },
           {
             "title": "Clear Template",
             "description": "Clear the environment variable template by omitting the body.",
-            "json": "{\"req\": \"env.template\"}"
+            "json": "{\"req\": \"env.template\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"env.template\"}"
+            }
           }
         ],
         "responses": {
@@ -8556,22 +9838,37 @@
           {
             "title": "Check All Files",
             "description": "Check all Notefiles for changes without specifying files or tracker.",
-            "json": "{\"req\": \"file.changes\"}"
+            "json": "{\"req\": \"file.changes\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"file.changes\"}"
+            }
           },
           {
             "title": "Check Specific Files",
             "description": "Check specific Notefiles for changes.",
-            "json": "{\"req\": \"file.changes\", \"files\": [\"sensors.qo\", \"data.qo\"]}"
+            "json": "{\"req\": \"file.changes\", \"files\": [\"sensors.qo\", \"data.qo\"]}",
+            "x-validation": {
+              "skip": "contains unsettable fields: ['files']"
+            }
           },
           {
             "title": "Use Change Tracker",
             "description": "Use a change tracker to monitor file changes over time.",
-            "json": "{\"req\": \"file.changes\", \"tracker\": \"my-tracker\"}"
+            "json": "{\"req\": \"file.changes\", \"tracker\": \"my-tracker\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"file.changes\",\"tracker\":\"my-tracker\"}",
+              "fields": {
+                "tracker": "my-tracker"
+              }
+            }
           },
           {
             "title": "Tracker with Specific Files",
             "description": "Combine change tracker with specific file monitoring.",
-            "json": "{\"req\": \"file.changes\", \"files\": [\"sensors.qo\"], \"tracker\": \"sensor-tracker\"}"
+            "json": "{\"req\": \"file.changes\", \"files\": [\"sensors.qo\"], \"tracker\": \"sensor-tracker\"}",
+            "x-validation": {
+              "skip": "contains unsettable fields: ['files']"
+            }
           }
         ],
         "responses": {
@@ -8658,7 +9955,10 @@
           {
             "title": "Check Pending Changes",
             "description": "Query for pending file changes awaiting upload to Notehub.",
-            "json": "{\"req\": \"file.changes.pending\"}"
+            "json": "{\"req\": \"file.changes.pending\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"file.changes.pending\"}"
+            }
           }
         ],
         "responses": {
@@ -8771,12 +10071,24 @@
           {
             "title": "Clear Outbound Notefile",
             "description": "Clear all pending Notes from an outbound Notefile.",
-            "json": "{\"req\": \"file.clear\", \"file\": \"data.qo\"}"
+            "json": "{\"req\": \"file.clear\", \"file\": \"data.qo\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"file.clear\",\"file\":\"data.qo\"}",
+              "fields": {
+                "file": "data.qo"
+              }
+            }
           },
           {
             "title": "Clear Encrypted Outbound Notefile",
             "description": "Clear all pending Notes from an encrypted outbound Notefile.",
-            "json": "{\"req\": \"file.clear\", \"file\": \"sensors.qos\"}"
+            "json": "{\"req\": \"file.clear\", \"file\": \"sensors.qos\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"file.clear\",\"file\":\"sensors.qos\"}",
+              "fields": {
+                "file": "sensors.qos"
+              }
+            }
           }
         ],
         "responses": {
@@ -8835,12 +10147,18 @@
           {
             "title": "Delete Multiple Files",
             "description": "Delete multiple Notefiles and their contents.",
-            "json": "{\"req\": \"file.delete\", \"files\": [\"my-settings.db\", \"other-settings.db\"]}"
+            "json": "{\"req\": \"file.delete\", \"files\": [\"my-settings.db\", \"other-settings.db\"]}",
+            "x-validation": {
+              "skip": "contains unsettable fields: ['files']"
+            }
           },
           {
             "title": "Delete Single File",
             "description": "Delete a single Notefile and its contents.",
-            "json": "{\"req\": \"file.delete\", \"files\": [\"data.qo\"]}"
+            "json": "{\"req\": \"file.delete\", \"files\": [\"data.qo\"]}",
+            "x-validation": {
+              "skip": "contains unsettable fields: ['files']"
+            }
           }
         ],
         "responses": {
@@ -8890,12 +10208,21 @@
           {
             "title": "Get All File Stats",
             "description": "Get resource statistics for all Notefiles.",
-            "json": "{\"req\": \"file.stats\"}"
+            "json": "{\"req\": \"file.stats\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"file.stats\"}"
+            }
           },
           {
             "title": "Get Specific File Stats",
             "description": "Get resource statistics for a specific Notefile.",
-            "json": "{\"req\": \"file.stats\", \"file\": \"sensors.qo\"}"
+            "json": "{\"req\": \"file.stats\", \"file\": \"sensors.qo\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"file.stats\",\"file\":\"sensors.qo\"}",
+              "fields": {
+                "file": "sensors.qo"
+              }
+            }
           }
         ],
         "responses": {
@@ -8969,7 +10296,10 @@
           {
             "title": "Get Notehub Configuration",
             "description": "Retrieve the current Notehub configuration for the Notecard.",
-            "json": "{\"req\": \"hub.get\"}"
+            "json": "{\"req\": \"hub.get\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"hub.get\"}"
+            }
           }
         ],
         "responses": {
@@ -9121,12 +10451,26 @@
           {
             "title": "Log Health Alert with Immediate Sync",
             "description": "Log an urgent health alert and sync immediately.",
-            "json": "{\"req\": \"hub.log\", \"text\": \"something is wrong!\", \"alert\": true, \"sync\": true}"
+            "json": "{\"req\": \"hub.log\", \"text\": \"something is wrong!\", \"alert\": true, \"sync\": true}",
+            "x-validation": {
+              "wire": "{\"req\":\"hub.log\",\"alert\":true,\"sync\":true,\"text\":\"something is wrong!\"}",
+              "fields": {
+                "text": "something is wrong!",
+                "alert": true,
+                "sync": true
+              }
+            }
           },
           {
             "title": "Log Simple Message",
             "description": "Log a simple text message.",
-            "json": "{\"req\": \"hub.log\", \"text\": \"System status: normal\"}"
+            "json": "{\"req\": \"hub.log\", \"text\": \"System status: normal\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"hub.log\",\"text\":\"System status: normal\"}",
+              "fields": {
+                "text": "System status: normal"
+              }
+            }
           }
         ],
         "responses": {
@@ -9430,52 +10774,118 @@
           {
             "title": "Set ProductUID",
             "description": "Change device ProductUID and serial number.",
-            "json": "{\"req\": \"hub.set\", \"product\": \"com.your-company.your-name:your_product\", \"sn\": \"my-device\"}"
+            "json": "{\"req\": \"hub.set\", \"product\": \"com.your-company.your-name:your_product\", \"sn\": \"my-device\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"hub.set\",\"product\":\"com.your-company.your-name:your_product\",\"sn\":\"my-device\"}",
+              "fields": {
+                "product": "com.your-company.your-name:your_product",
+                "sn": "my-device"
+              }
+            }
           },
           {
             "title": "Periodic Mode",
             "description": "Configure periodic mode with outbound and inbound sync timing.",
-            "json": "{\"req\": \"hub.set\", \"mode\": \"periodic\", \"product\": \"com.your-company.your-name:your_product\", \"outbound\": 90, \"inbound\": 240}"
+            "json": "{\"req\": \"hub.set\", \"mode\": \"periodic\", \"product\": \"com.your-company.your-name:your_product\", \"outbound\": 90, \"inbound\": 240}",
+            "x-validation": {
+              "wire": "{\"req\":\"hub.set\",\"inbound\":240,\"mode\":\"periodic\",\"outbound\":90,\"product\":\"com.your-company.your-name:your_product\"}",
+              "fields": {
+                "mode": "periodic",
+                "product": "com.your-company.your-name:your_product",
+                "outbound": 90,
+                "inbound": 240
+              }
+            }
           },
           {
             "title": "Continuous Mode",
             "description": "Configure continuous mode with session duration and automatic sync.",
-            "json": "{\"req\": \"hub.set\", \"mode\": \"continuous\", \"product\": \"com.your-company.your-name:your_product\", \"outbound\": 30, \"inbound\": 60, \"duration\": 240, \"sync\": true}"
+            "json": "{\"req\": \"hub.set\", \"mode\": \"continuous\", \"product\": \"com.your-company.your-name:your_product\", \"outbound\": 30, \"inbound\": 60, \"duration\": 240, \"sync\": true}",
+            "x-validation": {
+              "wire": "{\"req\":\"hub.set\",\"duration\":240,\"inbound\":60,\"mode\":\"continuous\",\"outbound\":30,\"product\":\"com.your-company.your-name:your_product\",\"sync\":true}",
+              "fields": {
+                "mode": "continuous",
+                "product": "com.your-company.your-name:your_product",
+                "outbound": 30,
+                "inbound": 60,
+                "duration": 240,
+                "sync": true
+              }
+            }
           },
           {
             "title": "Voltage-Variable Sync",
             "description": "Configure voltage-dependent synchronization periods.",
-            "json": "{\"req\": \"hub.set\", \"mode\": \"periodic\", \"voutbound\": \"usb:30;high:60;normal:90;low:120;dead:0\", \"vinbound\": \"usb:60;high:120;normal:240;low:480;dead:0\"}"
+            "json": "{\"req\": \"hub.set\", \"mode\": \"periodic\", \"voutbound\": \"usb:30;high:60;normal:90;low:120;dead:0\", \"vinbound\": \"usb:60;high:120;normal:240;low:480;dead:0\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"hub.set\",\"mode\":\"periodic\",\"vinbound\":\"usb:60;high:120;normal:240;low:480;dead:0\",\"voutbound\":\"usb:30;high:60;normal:90;low:120;dead:0\"}",
+              "fields": {
+                "mode": "periodic",
+                "voutbound": "usb:30;high:60;normal:90;low:120;dead:0",
+                "vinbound": "usb:60;high:120;normal:240;low:480;dead:0"
+              }
+            }
           },
           {
             "title": "Set Host Firmware Version String",
             "description": "Set host firmware version using a simple string.",
-            "json": "{\"req\": \"hub.set\", \"version\": \"1.2.3\"}"
+            "json": "{\"req\": \"hub.set\", \"version\": \"1.2.3\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"hub.set\",\"version\":\"1.2.3\"}",
+              "fields": {
+                "version": "1.2.3"
+              }
+            }
           },
           {
             "title": "Set Host Firmware Version Object",
             "description": "Set host firmware version using detailed object information.",
-            "json": "{\"req\": \"hub.set\", \"version\": {\"org\": \"my-organization\", \"product\": \"My Product\", \"description\": \"A description of the image\", \"version\": \"1.2.4\", \"built\": \"Jan 01 2025 01:02:03\", \"ver_major\": 1, \"ver_minor\": 2, \"ver_patch\": 4, \"ver_build\": 5, \"builder\": \"The Builder\"}}"
+            "json": "{\"req\": \"hub.set\", \"version\": {\"org\": \"my-organization\", \"product\": \"My Product\", \"description\": \"A description of the image\", \"version\": \"1.2.4\", \"built\": \"Jan 01 2025 01:02:03\", \"ver_major\": 1, \"ver_minor\": 2, \"ver_patch\": 4, \"ver_build\": 5, \"builder\": \"The Builder\"}}",
+            "x-validation": {
+              "skip": "contains unsettable fields: ['version']"
+            }
           },
           {
             "title": "Configure LoRaWAN Details",
             "description": "Set alternative LoRaWAN server details for Notecard LoRa.",
-            "json": "{\"req\": \"hub.set\", \"details\": {\"deveui\": \"0080E11500088B37\", \"appeui\": \"6E6F746563617264\", \"appkey\": \"00088B3700112233445566778899AABB\"}}"
+            "json": "{\"req\": \"hub.set\", \"details\": {\"deveui\": \"0080E11500088B37\", \"appeui\": \"6E6F746563617264\", \"appkey\": \"00088B3700112233445566778899AABB\"}}",
+            "x-validation": {
+              "skip": "contains unsettable fields: ['details']"
+            }
           },
           {
             "title": "Reset LoRaWAN Details",
             "description": "Reset LoRaWAN details to default values using dash.",
-            "json": "{\"req\": \"hub.set\", \"details\": \"-\"}"
+            "json": "{\"req\": \"hub.set\", \"details\": \"-\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"hub.set\",\"details\":\"-\"}",
+              "fields": {
+                "details": "-"
+              }
+            }
           },
           {
             "title": "USB Power Variable Sync",
             "description": "Configure USB/line power variable sync to minimum mode.",
-            "json": "{\"req\": \"hub.set\", \"umin\": true}"
+            "json": "{\"req\": \"hub.set\", \"umin\": true}",
+            "x-validation": {
+              "wire": "{\"req\":\"hub.set\",\"umin\":true}",
+              "fields": {
+                "umin": true
+              }
+            }
           },
           {
             "title": "Web Transaction Control",
             "description": "Temporarily switch to continuous mode for web transactions.",
-            "json": "{\"req\": \"hub.set\", \"on\": true, \"seconds\": 300}"
+            "json": "{\"req\": \"hub.set\", \"on\": true, \"seconds\": 300}",
+            "x-validation": {
+              "wire": "{\"req\":\"hub.set\",\"on\":true,\"seconds\":300}",
+              "fields": {
+                "on": true,
+                "seconds": 300
+              }
+            }
           }
         ],
         "responses": {
@@ -9532,12 +10942,21 @@
           {
             "title": "Receive a Signal",
             "description": "Check for an inbound signal from Notehub.",
-            "json": "{\"req\": \"hub.signal\"}"
+            "json": "{\"req\": \"hub.signal\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"hub.signal\"}"
+            }
           },
           {
             "title": "Receive Signal with Timeout",
             "description": "Check for an inbound signal with custom timeout.",
-            "json": "{\"req\": \"hub.signal\", \"seconds\": 30}"
+            "json": "{\"req\": \"hub.signal\", \"seconds\": 30}",
+            "x-validation": {
+              "wire": "{\"req\":\"hub.signal\",\"seconds\":30}",
+              "fields": {
+                "seconds": 30
+              }
+            }
           }
         ],
         "responses": {
@@ -9615,7 +11034,10 @@
           {
             "title": "Get Hub Connection Status",
             "description": "Check the current status of the Notecard's connection to Notehub.",
-            "json": "{\"req\": \"hub.status\"}"
+            "json": "{\"req\": \"hub.status\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"hub.status\"}"
+            }
           }
         ],
         "responses": {
@@ -9713,22 +11135,43 @@
           {
             "title": "Manual Sync",
             "description": "Initiate a manual sync with Notehub.",
-            "json": "{\"req\": \"hub.sync\"}"
+            "json": "{\"req\": \"hub.sync\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"hub.sync\"}"
+            }
           },
           {
             "title": "Sync with Penalty Box Removal",
             "description": "Sync and remove Notecard from penalty boxes.",
-            "json": "{\"req\": \"hub.sync\", \"allow\": true}"
+            "json": "{\"req\": \"hub.sync\", \"allow\": true}",
+            "x-validation": {
+              "wire": "{\"req\":\"hub.sync\",\"allow\":true}",
+              "fields": {
+                "allow": true
+              }
+            }
           },
           {
             "title": "Outbound Only Sync",
             "description": "Sync only pending outbound Notefiles.",
-            "json": "{\"req\": \"hub.sync\", \"out\": true}"
+            "json": "{\"req\": \"hub.sync\", \"out\": true}",
+            "x-validation": {
+              "wire": "{\"req\":\"hub.sync\",\"out\":true}",
+              "fields": {
+                "out": true
+              }
+            }
           },
           {
             "title": "Inbound Only Sync",
             "description": "Sync only pending inbound Notefiles (required for NTN mode).",
-            "json": "{\"req\": \"hub.sync\", \"in\": true}"
+            "json": "{\"req\": \"hub.sync\", \"in\": true}",
+            "x-validation": {
+              "wire": "{\"req\":\"hub.sync\",\"in\":true}",
+              "fields": {
+                "in": true
+              }
+            }
           }
         ],
         "responses": {
@@ -9778,12 +11221,21 @@
           {
             "title": "Check Sync Status",
             "description": "Check the status of a recent or previous sync.",
-            "json": "{\"req\": \"hub.sync.status\"}"
+            "json": "{\"req\": \"hub.sync.status\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"hub.sync.status\"}"
+            }
           },
           {
             "title": "Check Status and Auto-Initiate Sync",
             "description": "Check sync status and auto-initiate sync if there is pending outbound data.",
-            "json": "{\"req\": \"hub.sync.status\", \"sync\": true}"
+            "json": "{\"req\": \"hub.sync.status\", \"sync\": true}",
+            "x-validation": {
+              "wire": "{\"req\":\"hub.sync.status\",\"sync\":true}",
+              "fields": {
+                "sync": true
+              }
+            }
           }
         ],
         "responses": {
@@ -9981,7 +11433,10 @@
           {
             "title": "Basic Note Add",
             "description": "Add a Note with JSON body data and trigger immediate sync.",
-            "json": "{\"req\": \"note.add\", \"file\": \"sensors.qo\", \"body\": {\"temp\": 72.22}, \"sync\": true}"
+            "json": "{\"req\": \"note.add\", \"file\": \"sensors.qo\", \"body\": {\"temp\": 72.22}, \"sync\": true}",
+            "x-validation": {
+              "skip": "contains unsettable fields: ['body']"
+            }
           }
         ],
         "responses": {
@@ -10131,32 +11586,85 @@
           {
             "title": "Peek at Changes",
             "description": "Check changes in a Notefile with a tracker starting from the beginning.",
-            "json": "{\"req\": \"note.changes\", \"file\": \"my-settings.db\", \"tracker\": \"inbound-tracker\", \"start\": true}"
+            "json": "{\"req\": \"note.changes\", \"file\": \"my-settings.db\", \"tracker\": \"inbound-tracker\", \"start\": true}",
+            "x-validation": {
+              "wire": "{\"req\":\"note.changes\",\"file\":\"my-settings.db\",\"start\":true,\"tracker\":\"inbound-tracker\"}",
+              "fields": {
+                "file": "my-settings.db",
+                "tracker": "inbound-tracker",
+                "start": true
+              },
+              "sub_type": "Query"
+            }
           },
           {
             "title": "Pop Changes with Limit",
             "description": "Retrieve and delete up to 2 changes from a Notefile.",
-            "json": "{\"req\": \"note.changes\", \"file\": \"my-settings.db\", \"tracker\": \"inbound-tracker\", \"start\": true, \"delete\": true, \"max\": 2}"
+            "json": "{\"req\": \"note.changes\", \"file\": \"my-settings.db\", \"tracker\": \"inbound-tracker\", \"start\": true, \"delete\": true, \"max\": 2}",
+            "x-validation": {
+              "wire": "{\"req\":\"note.changes\",\"delete\":true,\"file\":\"my-settings.db\",\"max\":2,\"start\":true,\"tracker\":\"inbound-tracker\"}",
+              "fields": {
+                "file": "my-settings.db",
+                "tracker": "inbound-tracker",
+                "start": true,
+                "max": 2
+              },
+              "sub_type": "Delete"
+            }
           },
           {
             "title": "Basic File Changes",
             "description": "Get changes from a Notefile without a tracker.",
-            "json": "{\"req\": \"note.changes\", \"file\": \"data.db\"}"
+            "json": "{\"req\": \"note.changes\", \"file\": \"data.db\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"note.changes\",\"file\":\"data.db\"}",
+              "fields": {
+                "file": "data.db"
+              },
+              "sub_type": "Query"
+            }
           },
           {
             "title": "Reset Tracker",
             "description": "Reset a change tracker to start from the beginning.",
-            "json": "{\"req\": \"note.changes\", \"file\": \"events.db\", \"tracker\": \"event-tracker\", \"reset\": true}"
+            "json": "{\"req\": \"note.changes\", \"file\": \"events.db\", \"tracker\": \"event-tracker\", \"reset\": true}",
+            "x-validation": {
+              "wire": "{\"req\":\"note.changes\",\"file\":\"events.db\",\"reset\":true,\"tracker\":\"event-tracker\"}",
+              "fields": {
+                "file": "events.db",
+                "tracker": "event-tracker",
+                "reset": true
+              },
+              "sub_type": "Query"
+            }
           },
           {
             "title": "Include Deleted Notes",
             "description": "Retrieve changes including deleted notes from database.",
-            "json": "{\"req\": \"note.changes\", \"file\": \"config.db\", \"tracker\": \"config-tracker\", \"deleted\": true}"
+            "json": "{\"req\": \"note.changes\", \"file\": \"config.db\", \"tracker\": \"config-tracker\", \"deleted\": true}",
+            "x-validation": {
+              "wire": "{\"req\":\"note.changes\",\"deleted\":true,\"file\":\"config.db\",\"tracker\":\"config-tracker\"}",
+              "fields": {
+                "file": "config.db",
+                "tracker": "config-tracker",
+                "deleted": true
+              },
+              "sub_type": "Query"
+            }
           },
           {
             "title": "Stop Tracker",
             "description": "Delete a change tracker when finished.",
-            "json": "{\"req\": \"note.changes\", \"file\": \"logs.db\", \"tracker\": \"log-tracker\", \"stop\": true}"
+            "json": "{\"req\": \"note.changes\", \"file\": \"logs.db\", \"tracker\": \"log-tracker\", \"stop\": true}",
+            "x-validation": {
+              "wire": "{\"req\":\"note.changes\",\"file\":\"logs.db\",\"stop\":true,\"tracker\":\"log-tracker\"}",
+              "fields": {
+                "file": "logs.db",
+                "tracker": "log-tracker",
+                "stop": true
+              },
+              "sub_type": "Query"
+            }
           }
         ],
         "responses": {
@@ -10309,32 +11817,85 @@
           {
             "title": "Peek at Changes",
             "description": "Check changes in a Notefile with a tracker starting from the beginning.",
-            "json": "{\"req\": \"note.changes\", \"file\": \"my-settings.db\", \"tracker\": \"inbound-tracker\", \"start\": true}"
+            "json": "{\"req\": \"note.changes\", \"file\": \"my-settings.db\", \"tracker\": \"inbound-tracker\", \"start\": true}",
+            "x-validation": {
+              "wire": "{\"req\":\"note.changes\",\"file\":\"my-settings.db\",\"start\":true,\"tracker\":\"inbound-tracker\"}",
+              "fields": {
+                "file": "my-settings.db",
+                "tracker": "inbound-tracker",
+                "start": true
+              },
+              "sub_type": "Query"
+            }
           },
           {
             "title": "Pop Changes with Limit",
             "description": "Retrieve and delete up to 2 changes from a Notefile.",
-            "json": "{\"req\": \"note.changes\", \"file\": \"my-settings.db\", \"tracker\": \"inbound-tracker\", \"start\": true, \"delete\": true, \"max\": 2}"
+            "json": "{\"req\": \"note.changes\", \"file\": \"my-settings.db\", \"tracker\": \"inbound-tracker\", \"start\": true, \"delete\": true, \"max\": 2}",
+            "x-validation": {
+              "wire": "{\"req\":\"note.changes\",\"delete\":true,\"file\":\"my-settings.db\",\"max\":2,\"start\":true,\"tracker\":\"inbound-tracker\"}",
+              "fields": {
+                "file": "my-settings.db",
+                "tracker": "inbound-tracker",
+                "start": true,
+                "max": 2
+              },
+              "sub_type": "Delete"
+            }
           },
           {
             "title": "Basic File Changes",
             "description": "Get changes from a Notefile without a tracker.",
-            "json": "{\"req\": \"note.changes\", \"file\": \"data.db\"}"
+            "json": "{\"req\": \"note.changes\", \"file\": \"data.db\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"note.changes\",\"file\":\"data.db\"}",
+              "fields": {
+                "file": "data.db"
+              },
+              "sub_type": "Query"
+            }
           },
           {
             "title": "Reset Tracker",
             "description": "Reset a change tracker to start from the beginning.",
-            "json": "{\"req\": \"note.changes\", \"file\": \"events.db\", \"tracker\": \"event-tracker\", \"reset\": true}"
+            "json": "{\"req\": \"note.changes\", \"file\": \"events.db\", \"tracker\": \"event-tracker\", \"reset\": true}",
+            "x-validation": {
+              "wire": "{\"req\":\"note.changes\",\"file\":\"events.db\",\"reset\":true,\"tracker\":\"event-tracker\"}",
+              "fields": {
+                "file": "events.db",
+                "tracker": "event-tracker",
+                "reset": true
+              },
+              "sub_type": "Query"
+            }
           },
           {
             "title": "Include Deleted Notes",
             "description": "Retrieve changes including deleted notes from database.",
-            "json": "{\"req\": \"note.changes\", \"file\": \"config.db\", \"tracker\": \"config-tracker\", \"deleted\": true}"
+            "json": "{\"req\": \"note.changes\", \"file\": \"config.db\", \"tracker\": \"config-tracker\", \"deleted\": true}",
+            "x-validation": {
+              "wire": "{\"req\":\"note.changes\",\"deleted\":true,\"file\":\"config.db\",\"tracker\":\"config-tracker\"}",
+              "fields": {
+                "file": "config.db",
+                "tracker": "config-tracker",
+                "deleted": true
+              },
+              "sub_type": "Query"
+            }
           },
           {
             "title": "Stop Tracker",
             "description": "Delete a change tracker when finished.",
-            "json": "{\"req\": \"note.changes\", \"file\": \"logs.db\", \"tracker\": \"log-tracker\", \"stop\": true}"
+            "json": "{\"req\": \"note.changes\", \"file\": \"logs.db\", \"tracker\": \"log-tracker\", \"stop\": true}",
+            "x-validation": {
+              "wire": "{\"req\":\"note.changes\",\"file\":\"logs.db\",\"stop\":true,\"tracker\":\"log-tracker\"}",
+              "fields": {
+                "file": "logs.db",
+                "tracker": "log-tracker",
+                "stop": true
+              },
+              "sub_type": "Query"
+            }
           }
         ],
         "responses": {
@@ -10458,17 +12019,40 @@
           {
             "title": "Delete Note from DB Notefile",
             "description": "Delete a specific Note by ID from a database Notefile.",
-            "json": "{\"req\": \"note.delete\", \"file\": \"my-settings.db\", \"note\": \"measurements\"}"
+            "json": "{\"req\": \"note.delete\", \"file\": \"my-settings.db\", \"note\": \"measurements\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"note.delete\",\"file\":\"my-settings.db\",\"note\":\"measurements\"}",
+              "fields": {
+                "file": "my-settings.db",
+                "note": "measurements"
+              }
+            }
           },
           {
             "title": "Delete Note with Verification",
             "description": "Delete a Note and write to flash immediately for a templated Notefile.",
-            "json": "{\"req\": \"note.delete\", \"file\": \"config.db\", \"note\": \"display-settings\", \"verify\": true}"
+            "json": "{\"req\": \"note.delete\", \"file\": \"config.db\", \"note\": \"display-settings\", \"verify\": true}",
+            "x-validation": {
+              "wire": "{\"req\":\"note.delete\",\"file\":\"config.db\",\"note\":\"display-settings\",\"verify\":true}",
+              "fields": {
+                "file": "config.db",
+                "note": "display-settings",
+                "verify": true
+              }
+            }
           },
           {
             "title": "Delete Note with Command",
             "description": "Delete a Note using command syntax (no response expected).",
-            "json": "{\"cmd\": \"note.delete\", \"file\": \"temp-data.db\", \"note\": \"sensor-reading\"}"
+            "json": "{\"cmd\": \"note.delete\", \"file\": \"temp-data.db\", \"note\": \"sensor-reading\"}",
+            "x-validation": {
+              "wire": "{\"cmd\":\"note.delete\",\"file\":\"temp-data.db\",\"note\":\"sensor-reading\"}",
+              "fields": {
+                "file": "temp-data.db",
+                "note": "sensor-reading"
+              },
+              "command": true
+            }
           }
         ],
         "responses": {
@@ -10556,27 +12140,63 @@
           {
             "title": "Pop from `.qi` Notefile",
             "description": "Retrieve and delete a Note from an inbound queue file.",
-            "json": "{\"req\": \"note.get\", \"file\": \"requests.qi\", \"delete\": true}"
+            "json": "{\"req\": \"note.get\", \"file\": \"requests.qi\", \"delete\": true}",
+            "x-validation": {
+              "wire": "{\"req\":\"note.get\",\"delete\":true,\"file\":\"requests.qi\"}",
+              "fields": {
+                "file": "requests.qi"
+              },
+              "sub_type": "Delete"
+            }
           },
           {
             "title": "Read from `.db` Notefile",
             "description": "Read a specific Note from a database Notefile.",
-            "json": "{\"req\": \"note.get\", \"file\": \"my-settings.db\", \"note\": \"measurements\"}"
+            "json": "{\"req\": \"note.get\", \"file\": \"my-settings.db\", \"note\": \"measurements\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"note.get\",\"file\":\"my-settings.db\",\"note\":\"measurements\"}",
+              "fields": {
+                "file": "my-settings.db",
+                "note": "measurements"
+              },
+              "sub_type": "Query"
+            }
           },
           {
             "title": "Get with Default File",
             "description": "Retrieve from the default `data.qi` Notefile.",
-            "json": "{\"req\": \"note.get\"}"
+            "json": "{\"req\": \"note.get\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"note.get\"}",
+              "sub_type": "Query"
+            }
           },
           {
             "title": "Get Deleted Note",
             "description": "Retrieve a deleted Note from a `.db` Notefile.",
-            "json": "{\"req\": \"note.get\", \"file\": \"config.db\", \"note\": \"old-setting\", \"deleted\": true}"
+            "json": "{\"req\": \"note.get\", \"file\": \"config.db\", \"note\": \"old-setting\", \"deleted\": true}",
+            "x-validation": {
+              "wire": "{\"req\":\"note.get\",\"deleted\":true,\"file\":\"config.db\",\"note\":\"old-setting\"}",
+              "fields": {
+                "file": "config.db",
+                "note": "old-setting",
+                "deleted": true
+              },
+              "sub_type": "Query"
+            }
           },
           {
             "title": "Decrypt Encrypted Note",
             "description": "Retrieve and decrypt an encrypted inbound Note.",
-            "json": "{\"req\": \"note.get\", \"file\": \"secure.qis\", \"decrypt\": true}"
+            "json": "{\"req\": \"note.get\", \"file\": \"secure.qis\", \"decrypt\": true}",
+            "x-validation": {
+              "wire": "{\"req\":\"note.get\",\"decrypt\":true,\"file\":\"secure.qis\"}",
+              "fields": {
+                "file": "secure.qis",
+                "decrypt": true
+              },
+              "sub_type": "Query"
+            }
           }
         ],
         "responses": {
@@ -10681,27 +12301,63 @@
           {
             "title": "Pop from `.qi` Notefile",
             "description": "Retrieve and delete a Note from an inbound queue file.",
-            "json": "{\"req\": \"note.get\", \"file\": \"requests.qi\", \"delete\": true}"
+            "json": "{\"req\": \"note.get\", \"file\": \"requests.qi\", \"delete\": true}",
+            "x-validation": {
+              "wire": "{\"req\":\"note.get\",\"delete\":true,\"file\":\"requests.qi\"}",
+              "fields": {
+                "file": "requests.qi"
+              },
+              "sub_type": "Delete"
+            }
           },
           {
             "title": "Read from `.db` Notefile",
             "description": "Read a specific Note from a database Notefile.",
-            "json": "{\"req\": \"note.get\", \"file\": \"my-settings.db\", \"note\": \"measurements\"}"
+            "json": "{\"req\": \"note.get\", \"file\": \"my-settings.db\", \"note\": \"measurements\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"note.get\",\"file\":\"my-settings.db\",\"note\":\"measurements\"}",
+              "fields": {
+                "file": "my-settings.db",
+                "note": "measurements"
+              },
+              "sub_type": "Query"
+            }
           },
           {
             "title": "Get with Default File",
             "description": "Retrieve from the default `data.qi` Notefile.",
-            "json": "{\"req\": \"note.get\"}"
+            "json": "{\"req\": \"note.get\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"note.get\"}",
+              "sub_type": "Query"
+            }
           },
           {
             "title": "Get Deleted Note",
             "description": "Retrieve a deleted Note from a `.db` Notefile.",
-            "json": "{\"req\": \"note.get\", \"file\": \"config.db\", \"note\": \"old-setting\", \"deleted\": true}"
+            "json": "{\"req\": \"note.get\", \"file\": \"config.db\", \"note\": \"old-setting\", \"deleted\": true}",
+            "x-validation": {
+              "wire": "{\"req\":\"note.get\",\"deleted\":true,\"file\":\"config.db\",\"note\":\"old-setting\"}",
+              "fields": {
+                "file": "config.db",
+                "note": "old-setting",
+                "deleted": true
+              },
+              "sub_type": "Query"
+            }
           },
           {
             "title": "Decrypt Encrypted Note",
             "description": "Retrieve and decrypt an encrypted inbound Note.",
-            "json": "{\"req\": \"note.get\", \"file\": \"secure.qis\", \"decrypt\": true}"
+            "json": "{\"req\": \"note.get\", \"file\": \"secure.qis\", \"decrypt\": true}",
+            "x-validation": {
+              "wire": "{\"req\":\"note.get\",\"decrypt\":true,\"file\":\"secure.qis\"}",
+              "fields": {
+                "file": "secure.qis",
+                "decrypt": true
+              },
+              "sub_type": "Query"
+            }
           }
         ],
         "responses": {
@@ -10830,22 +12486,34 @@
           {
             "title": "Provide Schema",
             "description": "Provide a template schema for the readings.qo Notefile with sample data.",
-            "json": "{\"req\":\"note.template\",\"file\":\"readings.qo\",\"body\":{\"new_vals\":true,\"temperature\":14.1,\"humidity\":11,\"pump_state\":\"4\"}}"
+            "json": "{\"req\":\"note.template\",\"file\":\"readings.qo\",\"body\":{\"new_vals\":true,\"temperature\":14.1,\"humidity\":11,\"pump_state\":\"4\"}}",
+            "x-validation": {
+              "skip": "contains unsettable fields: ['body']"
+            }
           },
           {
             "title": "Compact Schema for LoRa",
             "description": "Set up a compact template for LoRa transmission on port 50 to reduce bandwidth usage.",
-            "json": "{\"req\":\"note.template\",\"file\":\"readings.qo\",\"body\":{\"new_vals\":true,\"temperature\":14.1,\"humidity\":11,\"pump_state\":\"4\"},\"format\":\"compact\",\"port\":50}"
+            "json": "{\"req\":\"note.template\",\"file\":\"readings.qo\",\"body\":{\"new_vals\":true,\"temperature\":14.1,\"humidity\":11,\"pump_state\":\"4\"},\"format\":\"compact\",\"port\":50}",
+            "x-validation": {
+              "skip": "contains unsettable fields: ['body']"
+            }
           },
           {
             "title": "Compact Schema with Additional Fields",
             "description": "Set up a compact template including location and timestamp fields for comprehensive sensor data.",
-            "json": "{\"req\":\"note.template\",\"file\":\"readings.qo\",\"body\":{\"temperature\":14.1,\"_lat\":14.1,\"_lon\":14.1,\"_ltime\":14,\"_time\":14},\"format\":\"compact\",\"port\":50}"
+            "json": "{\"req\":\"note.template\",\"file\":\"readings.qo\",\"body\":{\"temperature\":14.1,\"_lat\":14.1,\"_lon\":14.1,\"_ltime\":14,\"_time\":14},\"format\":\"compact\",\"port\":50}",
+            "x-validation": {
+              "skip": "contains unsettable fields: ['body']"
+            }
           },
           {
             "title": "Request Current Template",
             "description": "Retrieve the current template configuration for the readings.qo Notefile.",
-            "json": "{\"req\":\"note.template\",\"file\":\"readings.qo\",\"verify\":true}"
+            "json": "{\"req\":\"note.template\",\"file\":\"readings.qo\",\"verify\":true}",
+            "x-validation": {
+              "skip": "no dispatch match"
+            }
           }
         ],
         "responses": {
@@ -10992,22 +12660,34 @@
           {
             "title": "Provide Schema",
             "description": "Provide a template schema for the readings.qo Notefile with sample data.",
-            "json": "{\"req\":\"note.template\",\"file\":\"readings.qo\",\"body\":{\"new_vals\":true,\"temperature\":14.1,\"humidity\":11,\"pump_state\":\"4\"}}"
+            "json": "{\"req\":\"note.template\",\"file\":\"readings.qo\",\"body\":{\"new_vals\":true,\"temperature\":14.1,\"humidity\":11,\"pump_state\":\"4\"}}",
+            "x-validation": {
+              "skip": "contains unsettable fields: ['body']"
+            }
           },
           {
             "title": "Compact Schema for LoRa",
             "description": "Set up a compact template for LoRa transmission on port 50 to reduce bandwidth usage.",
-            "json": "{\"req\":\"note.template\",\"file\":\"readings.qo\",\"body\":{\"new_vals\":true,\"temperature\":14.1,\"humidity\":11,\"pump_state\":\"4\"},\"format\":\"compact\",\"port\":50}"
+            "json": "{\"req\":\"note.template\",\"file\":\"readings.qo\",\"body\":{\"new_vals\":true,\"temperature\":14.1,\"humidity\":11,\"pump_state\":\"4\"},\"format\":\"compact\",\"port\":50}",
+            "x-validation": {
+              "skip": "contains unsettable fields: ['body']"
+            }
           },
           {
             "title": "Compact Schema with Additional Fields",
             "description": "Set up a compact template including location and timestamp fields for comprehensive sensor data.",
-            "json": "{\"req\":\"note.template\",\"file\":\"readings.qo\",\"body\":{\"temperature\":14.1,\"_lat\":14.1,\"_lon\":14.1,\"_ltime\":14,\"_time\":14},\"format\":\"compact\",\"port\":50}"
+            "json": "{\"req\":\"note.template\",\"file\":\"readings.qo\",\"body\":{\"temperature\":14.1,\"_lat\":14.1,\"_lon\":14.1,\"_ltime\":14,\"_time\":14},\"format\":\"compact\",\"port\":50}",
+            "x-validation": {
+              "skip": "contains unsettable fields: ['body']"
+            }
           },
           {
             "title": "Request Current Template",
             "description": "Retrieve the current template configuration for the readings.qo Notefile.",
-            "json": "{\"req\":\"note.template\",\"file\":\"readings.qo\",\"verify\":true}"
+            "json": "{\"req\":\"note.template\",\"file\":\"readings.qo\",\"verify\":true}",
+            "x-validation": {
+              "skip": "no dispatch match"
+            }
           }
         ],
         "responses": {
@@ -11132,27 +12812,47 @@
           {
             "title": "Update Note Body",
             "description": "Update a Note with new JSON body content.",
-            "json": "{\"req\": \"note.update\", \"file\": \"my-settings.db\", \"note\": \"measurements\", \"body\": {\"interval\": 60}}"
+            "json": "{\"req\": \"note.update\", \"file\": \"my-settings.db\", \"note\": \"measurements\", \"body\": {\"interval\": 60}}",
+            "x-validation": {
+              "skip": "contains unsettable fields: ['body']"
+            }
           },
           {
             "title": "Update Note Payload",
             "description": "Update a Note with new base64 payload data.",
-            "json": "{\"req\": \"note.update\", \"file\": \"data.db\", \"note\": \"sensor-1\", \"payload\": \"SGVsbG8gV29ybGQ=\"}"
+            "json": "{\"req\": \"note.update\", \"file\": \"data.db\", \"note\": \"sensor-1\", \"payload\": \"SGVsbG8gV29ybGQ=\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"note.update\",\"file\":\"data.db\",\"note\":\"sensor-1\",\"payload\":\"SGVsbG8gV29ybGQ=\"}",
+              "fields": {
+                "file": "data.db",
+                "note": "sensor-1",
+                "payload": "SGVsbG8gV29ybGQ="
+              }
+            }
           },
           {
             "title": "Update with Body and Payload",
             "description": "Update a Note with both body and payload.",
-            "json": "{\"req\": \"note.update\", \"file\": \"config.db\", \"note\": \"device-config\", \"body\": {\"enabled\": true}, \"payload\": \"YWRkaXRpb25hbERhdGE=\"}"
+            "json": "{\"req\": \"note.update\", \"file\": \"config.db\", \"note\": \"device-config\", \"body\": {\"enabled\": true}, \"payload\": \"YWRkaXRpb25hbERhdGE=\"}",
+            "x-validation": {
+              "skip": "contains unsettable fields: ['body']"
+            }
           },
           {
             "title": "Update with Verification",
             "description": "Update a Note in a templated Notefile with immediate flash write.",
-            "json": "{\"req\": \"note.update\", \"file\": \"template.db\", \"note\": \"user-setting\", \"body\": {\"theme\": \"dark\"}, \"verify\": true}"
+            "json": "{\"req\": \"note.update\", \"file\": \"template.db\", \"note\": \"user-setting\", \"body\": {\"theme\": \"dark\"}, \"verify\": true}",
+            "x-validation": {
+              "skip": "contains unsettable fields: ['body']"
+            }
           },
           {
             "title": "Update with Command",
             "description": "Update a Note using command syntax (no response expected).",
-            "json": "{\"cmd\": \"note.update\", \"file\": \"cache.db\", \"note\": \"temp-data\", \"body\": {\"status\": \"updated\"}}"
+            "json": "{\"cmd\": \"note.update\", \"file\": \"cache.db\", \"note\": \"temp-data\", \"body\": {\"status\": \"updated\"}}",
+            "x-validation": {
+              "skip": "contains unsettable fields: ['body']"
+            }
           }
         ],
         "responses": {
@@ -11212,17 +12912,32 @@
           {
             "title": "Enable Notecard GPS Override",
             "description": "Configure Starnote to use the paired Notecard's GPS/GNSS location.",
-            "json": "{\"req\": \"ntn.gps\", \"on\": true}"
+            "json": "{\"req\": \"ntn.gps\", \"on\": true}",
+            "x-validation": {
+              "wire": "{\"req\":\"ntn.gps\",\"on\":true}",
+              "fields": {
+                "on": true
+              }
+            }
           },
           {
             "title": "Use Starnote's Own GPS",
             "description": "Configure Starnote to use its own GPS/GNSS location (default).",
-            "json": "{\"req\": \"ntn.gps\", \"off\": true}"
+            "json": "{\"req\": \"ntn.gps\", \"off\": true}",
+            "x-validation": {
+              "wire": "{\"req\":\"ntn.gps\",\"off\":true}",
+              "fields": {
+                "off": true
+              }
+            }
           },
           {
             "title": "Query Current GPS Configuration",
             "description": "Request current GPS/GNSS location configuration.",
-            "json": "{\"req\": \"ntn.gps\"}"
+            "json": "{\"req\": \"ntn.gps\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"ntn.gps\"}"
+            }
           }
         ],
         "responses": {
@@ -11292,7 +13007,10 @@
           {
             "title": "Reset Starnote Configuration",
             "description": "Clear Starnote configuration to return to testing NTN mode over cellular or WiFi.",
-            "json": "{\"req\": \"ntn.reset\"}"
+            "json": "{\"req\": \"ntn.reset\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"ntn.reset\"}"
+            }
           }
         ],
         "responses": {
@@ -11331,7 +13049,10 @@
           {
             "title": "Get Starnote Connection Status",
             "description": "Request current status of Notecard's connection to paired Starnote.",
-            "json": "{\"req\": \"ntn.status\"}"
+            "json": "{\"req\": \"ntn.status\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"ntn.status\"}"
+            }
           }
         ],
         "responses": {
@@ -11427,12 +13148,25 @@
           {
             "title": "Delete Variable with Default File",
             "description": "Delete a variable named `\"status\"` from the default `vars.db` DB Notefile.",
-            "json": "{\"req\": \"var.delete\", \"name\": \"status\"}"
+            "json": "{\"req\": \"var.delete\", \"name\": \"status\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"var.delete\",\"name\":\"status\"}",
+              "fields": {
+                "name": "status"
+              }
+            }
           },
           {
             "title": "Delete Variable with Specific File",
             "description": "Delete a variable named `\"temperature\"` from the `\"sensors.db\"` DB Notefile.",
-            "json": "{\"req\": \"var.delete\", \"name\": \"temperature\", \"file\": \"sensors.db\"}"
+            "json": "{\"req\": \"var.delete\", \"name\": \"temperature\", \"file\": \"sensors.db\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"var.delete\",\"file\":\"sensors.db\",\"name\":\"temperature\"}",
+              "fields": {
+                "name": "temperature",
+                "file": "sensors.db"
+              }
+            }
           }
         ],
         "responses": {
@@ -11491,12 +13225,25 @@
           {
             "title": "Retrieve Variable with Default File",
             "description": "Retrieve a variable named `\"status\"` from the default `vars.db` DB Notefile.",
-            "json": "{\"req\": \"var.get\", \"name\": \"status\"}"
+            "json": "{\"req\": \"var.get\", \"name\": \"status\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"var.get\",\"name\":\"status\"}",
+              "fields": {
+                "name": "status"
+              }
+            }
           },
           {
             "title": "Retrieve Variable with Specific File",
             "description": "Retrieve a variable named `\"temperature\"` from the `sensors.db` DB Notefile.",
-            "json": "{\"req\": \"var.get\", \"name\": \"temperature\", \"file\": \"sensors.db\"}"
+            "json": "{\"req\": \"var.get\", \"name\": \"temperature\", \"file\": \"sensors.db\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"var.get\",\"file\":\"sensors.db\",\"name\":\"temperature\"}",
+              "fields": {
+                "name": "temperature",
+                "file": "sensors.db"
+              }
+            }
           }
         ],
         "responses": {
@@ -11613,17 +13360,40 @@
           {
             "title": "Set Text Variable",
             "description": "Set a text variable named `\"status\"` to `\"open\"` in the default `vars.db` DB Notefile.",
-            "json": "{\"req\": \"var.set\", \"name\": \"status\", \"text\": \"open\"}"
+            "json": "{\"req\": \"var.set\", \"name\": \"status\", \"text\": \"open\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"var.set\",\"name\":\"status\",\"text\":\"open\"}",
+              "fields": {
+                "name": "status",
+                "text": "open"
+              }
+            }
           },
           {
             "title": "Set Numeric Variable",
             "description": "Set a numeric variable named `\"temperature\"` to `23` in a specific DB Notefile.",
-            "json": "{\"req\": \"var.set\", \"name\": \"temperature\", \"value\": 23.5, \"file\": \"sensors.db\"}"
+            "json": "{\"req\": \"var.set\", \"name\": \"temperature\", \"value\": 23.5, \"file\": \"sensors.db\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"var.set\",\"file\":\"sensors.db\",\"name\":\"temperature\",\"value\":23.5}",
+              "fields": {
+                "name": "temperature",
+                "value": 23.5,
+                "file": "sensors.db"
+              }
+            }
           },
           {
             "title": "Set Boolean Variable with Sync",
             "description": "Set a boolean variable named `\"active\"` to `true` and immediately sync changes.",
-            "json": "{\"req\": \"var.set\", \"name\": \"active\", \"flag\": true, \"sync\": true}"
+            "json": "{\"req\": \"var.set\", \"name\": \"active\", \"flag\": true, \"sync\": true}",
+            "x-validation": {
+              "wire": "{\"req\":\"var.set\",\"flag\":true,\"name\":\"active\",\"sync\":true}",
+              "fields": {
+                "name": "active",
+                "flag": true,
+                "sync": true
+              }
+            }
           }
         ],
         "responses": {
@@ -11739,7 +13509,15 @@
           {
             "title": "Web Transaction",
             "description": "Performs a simple HTTP or HTTPS request and returns the response.",
-            "json": "{\"req\": \"web\", \"method\": \"GET\", \"route\": \"weatherInfo\", \"name\": \"/getLatest\"}"
+            "json": "{\"req\": \"web\", \"method\": \"GET\", \"route\": \"weatherInfo\", \"name\": \"/getLatest\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"web\",\"method\":\"GET\",\"name\":\"/getLatest\",\"route\":\"weatherInfo\"}",
+              "fields": {
+                "method": "GET",
+                "route": "weatherInfo",
+                "name": "/getLatest"
+              }
+            }
           }
         ],
         "responses": {
@@ -11857,7 +13635,14 @@
           {
             "title": "Web DELETE Transaction",
             "description": "Performs a simple HTTP or HTTPS DELETE request and returns the response.",
-            "json": "{\"req\": \"web.delete\", \"route\": \"SensorService\", \"name\": \"/deleteReading?id=1\"}"
+            "json": "{\"req\": \"web.delete\", \"route\": \"SensorService\", \"name\": \"/deleteReading?id=1\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"web.delete\",\"name\":\"/deleteReading?id=1\",\"route\":\"SensorService\"}",
+              "fields": {
+                "route": "SensorService",
+                "name": "/deleteReading?id=1"
+              }
+            }
           }
         ],
         "responses": {
@@ -12011,7 +13796,14 @@
           {
             "title": "Web GET Transaction",
             "description": "Performs a simple HTTP or HTTPS GET request and returns the response.",
-            "json": "{\"req\": \"web.get\", \"route\": \"weatherInfo\", \"name\": \"/getLatest\"}"
+            "json": "{\"req\": \"web.get\", \"route\": \"weatherInfo\", \"name\": \"/getLatest\"}",
+            "x-validation": {
+              "wire": "{\"req\":\"web.get\",\"name\":\"/getLatest\",\"route\":\"weatherInfo\"}",
+              "fields": {
+                "route": "weatherInfo",
+                "name": "/getLatest"
+              }
+            }
           }
         ],
         "responses": {
@@ -12162,7 +13954,10 @@
         "x-samples": [
           {
             "description": "Performs a simple HTTP or HTTPS POST request and returns the response.",
-            "json": "{\"req\": \"web.post\", \"route\": \"SensorService\", \"name\": \"/addReading\", \"body\": {\"temp\": 72.32, \"humidity\": 32.2 }}"
+            "json": "{\"req\": \"web.post\", \"route\": \"SensorService\", \"name\": \"/addReading\", \"body\": {\"temp\": 72.32, \"humidity\": 32.2 }}",
+            "x-validation": {
+              "skip": "contains unsettable fields: ['body']"
+            }
           }
         ],
         "responses": {
@@ -12321,7 +14116,10 @@
           {
             "title": "Web PUT Transaction",
             "description": "Performs a simple HTTP or HTTPS PUT request and returns the response.",
-            "json": "{\"req\": \"web.put\", \"route\": \"SensorService\", \"name\": \"/updateReading\", \"body\": {\"id\": 1234, \"temp\": 72.32, \"humidity\": 32.2 }}"
+            "json": "{\"req\": \"web.put\", \"route\": \"SensorService\", \"name\": \"/updateReading\", \"body\": {\"id\": 1234, \"temp\": 72.32, \"humidity\": 32.2 }}",
+            "x-validation": {
+              "skip": "contains unsettable fields: ['body']"
+            }
           }
         ],
         "responses": {

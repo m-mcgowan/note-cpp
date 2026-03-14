@@ -65,9 +65,9 @@ struct FailHarness {
 } // namespace
 
 // ---------------------------------------------------------------------------
-TEST_CASE("note::api::CardAttn request builder") {
+TEST_CASE("note::api::CardAttn::Request request builder") {
     Harness h;
-    auto req = h.api.card.attn();
+    auto req = h.api.card.attn().request();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.files(note::string_view("x-files"));
@@ -126,7 +126,7 @@ TEST_CASE("note::api::CardAttn request builder") {
 }
 
 // ---------------------------------------------------------------------------
-TEST_CASE("note::api::CardAttn response parsing") {
+TEST_CASE("note::api::CardAttn::Request response parsing") {
     auto reader = std::make_unique<note::test::PopulatedJsonReader>();
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
     reader->set("off", true);
@@ -134,13 +134,217 @@ TEST_CASE("note::api::CardAttn response parsing") {
     reader->set("payload", std::string("x-payload"));
     reader->set("set", true);
     reader->set("time", int32_t{42});
-    auto rsp = note::api::CardAttn::Response::parse(std::move(reader));
+    auto rsp = note::api::CardAttn::Request::Response::parse(std::move(reader));
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
     REQUIRE(rsp.off == true);
 #endif
     REQUIRE(rsp.payload == "x-payload");
     REQUIRE(rsp.set == true);
     REQUIRE(rsp.time == 42);
+}
+
+// ---------------------------------------------------------------------------
+TEST_CASE("note::api::CardAttn::Arm request builder") {
+    Harness h;
+    auto req = h.api.card.attn().arm();
+    // Execute with no optional fields set — covers all !has_value() (false) branches.
+    req.execute();
+    req.files(note::string_view("x-files"));
+    req.mode(note::string_view("x-mode"));
+    req.on(true);
+    req.seconds(note::Seconds{42});
+    req.execute();
+    REQUIRE(h.last_req.find("\"files\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"mode\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"on\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"seconds\"") != std::string::npos);
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
+    req.execute(h.nc);
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+    req["files"] = note::string_view("x-files");
+    req["mode"] = note::string_view("x-mode");
+    req["on"] = true;
+    req["seconds"] = note::Seconds{42};
+    // Cover command() overloads
+    req.command();
+    req.command(h.nc);
+}
+
+// ---------------------------------------------------------------------------
+TEST_CASE("note::api::CardAttn::Arm response parsing") {
+    auto reader = std::make_unique<note::test::PopulatedJsonReader>();
+    reader->set("set", true);
+    auto rsp = note::api::CardAttn::Arm::Response::parse(std::move(reader));
+    REQUIRE(rsp.set == true);
+}
+
+// ---------------------------------------------------------------------------
+TEST_CASE("note::api::CardAttn::Watchdog request builder") {
+    Harness h;
+    auto req = h.api.card.attn().watchdog();
+    // Execute with no optional fields set — covers all !has_value() (false) branches.
+    req.execute();
+    req.seconds(note::Seconds{42});
+    req.execute();
+    REQUIRE(h.last_req.find("\"seconds\"") != std::string::npos);
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
+    req.execute(h.nc);
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+    req["seconds"] = note::Seconds{42};
+    // Cover command() overloads
+    req.command();
+    req.command(h.nc);
+}
+
+// ---------------------------------------------------------------------------
+TEST_CASE("note::api::CardAttn::Sleep request builder") {
+    Harness h;
+    auto req = h.api.card.attn().sleep();
+    // Execute with no optional fields set — covers all !has_value() (false) branches.
+    req.execute();
+    req.payload(note::string_view("x-payload"));
+    req.seconds(note::Seconds{42});
+    req.execute();
+    REQUIRE(h.last_req.find("\"payload\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"seconds\"") != std::string::npos);
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
+    req.execute(h.nc);
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+    req["payload"] = note::string_view("x-payload");
+    req["seconds"] = note::Seconds{42};
+    // Cover command() overloads
+    req.command();
+    req.command(h.nc);
+}
+
+// ---------------------------------------------------------------------------
+TEST_CASE("note::api::CardAttn::Retrieve request builder") {
+    Harness h;
+    auto req = h.api.card.attn().retrieve();
+    // Execute with no optional fields set — covers all !has_value() (false) branches.
+    req.execute();
+    req.execute();
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
+    req.execute(h.nc);
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+}
+
+// ---------------------------------------------------------------------------
+TEST_CASE("note::api::CardAttn::Retrieve response parsing") {
+    auto reader = std::make_unique<note::test::PopulatedJsonReader>();
+    reader->set("payload", std::string("x-payload"));
+    reader->set("time", int32_t{42});
+    auto rsp = note::api::CardAttn::Retrieve::Response::parse(std::move(reader));
+    REQUIRE(rsp.payload == "x-payload");
+    REQUIRE(rsp.time == 42);
+}
+
+// ---------------------------------------------------------------------------
+TEST_CASE("note::api::CardAttn::Disarm request builder") {
+    Harness h;
+    auto req = h.api.card.attn().disarm();
+    // Execute with no optional fields set — covers all !has_value() (false) branches.
+    req.execute();
+    req.execute();
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
+    req.execute(h.nc);
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover command() overloads
+    req.command();
+    req.command(h.nc);
+}
+
+// ---------------------------------------------------------------------------
+TEST_CASE("note::api::CardAttn::Query request builder") {
+    Harness h;
+    auto req = h.api.card.attn().query();
+    // Execute with no optional fields set — covers all !has_value() (false) branches.
+    req.execute();
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
+    req.verify(true);
+#endif
+    req.execute();
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
+    REQUIRE(h.last_req.find("\"verify\"") != std::string::npos);
+#endif
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
+    req.execute(h.nc);
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
+    req["verify"] = true;
+#endif
+}
+
+// ---------------------------------------------------------------------------
+TEST_CASE("note::api::CardAttn::Query response parsing") {
+    auto reader = std::make_unique<note::test::PopulatedJsonReader>();
+#if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
+    reader->set("off", true);
+#endif
+    reader->set("set", true);
+    auto rsp = note::api::CardAttn::Query::Response::parse(std::move(reader));
+#if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
+    REQUIRE(rsp.off == true);
+#endif
+    REQUIRE(rsp.set == true);
 }
 
 // ---------------------------------------------------------------------------

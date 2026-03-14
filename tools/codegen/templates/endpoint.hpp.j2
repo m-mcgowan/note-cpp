@@ -321,6 +321,9 @@ namespace note::api {
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 {% endif %}
 {{ indent }}void build(JsonBuilder& b) const {
+{% for imp in op.implicit_fields %}
+{{ indent }}    b.add("{{ imp.wire_name }}", {{ imp.cpp_literal }});
+{% endfor %}
 {% for prop in op.properties %}
 {% if prop.is_required_by_dispatch %}
 {{ indent }}    b.add("{{ prop.wire_name }}", true);
@@ -341,7 +344,7 @@ namespace note::api {
 {{ indent }}    for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
 {{ indent }}        std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
 {{ indent }}                   extras_[i_].value);
-{% if not op.properties %}
+{% if not op.properties and not op.implicit_fields %}
 {{ indent }}    (void)b;
 {% endif %}
 {{ indent }}}

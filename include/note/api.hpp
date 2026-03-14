@@ -130,6 +130,18 @@ public:
     // Polymorphic factory structs (used by resource group methods)
     // =====================================================================
 
+    struct CardAttnFactory {
+        Notecard* nc_;
+        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
+        auto request() { return create<api::CardAttn::Request>(); }
+        auto arm() { return create<api::CardAttn::Arm>(); }
+        auto watchdog() { return create<api::CardAttn::Watchdog>(); }
+        auto sleep() { return create<api::CardAttn::Sleep>(); }
+        auto retrieve() { return create<api::CardAttn::Retrieve>(); }
+        auto disarm() { return create<api::CardAttn::Disarm>(); }
+        auto query() { return create<api::CardAttn::Query>(); }
+    };
+
     struct CardBinaryFactory {
         Notecard* nc_;
         template<typename T> T create() { T r; r.nc_ = nc_; return r; }
@@ -249,7 +261,7 @@ public:
         template<typename T> T create() { T r; r.nc_ = nc_; return r; }
 
         /// card.attn
-        auto attn() { return create<api::CardAttn>(); }
+        CardAttnFactory attn() { return {nc_}; }
 
         /// card.aux
         auto aux() { return create<api::CardAux>(); }

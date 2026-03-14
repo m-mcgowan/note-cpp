@@ -8,82 +8,109 @@
 #include <note/notecard.hpp>
 #include <note/api/card_attn.hpp>
 
-void examples(note::Notecard& nc) {
+// ═══════════════════════════════════════════════════════════════════════════
+// Intent-based API — each intent exposes only relevant fields and returns
+// a response shaped to that specific operation.
+// ═══════════════════════════════════════════════════════════════════════════
+
+void intent_examples(note::Notecard& nc) {
     using namespace note::literals;
 
-    // -----------------------------------------------------------------------
-    // Arm ATTN for file changes
-    // -----------------------------------------------------------------------
-
-    // {"req":"card.attn","mode":"arm,files","files":["data.qi","my-settings.db"]}
-    {
-        note::api::CardAttn req;
-        req.mode("arm,files");
-        // Note: array properties like 'files' are not yet supported in V1.
-        // Use ad-hoc request for array fields:
-        nc.request("card.attn", [](note::JsonBuilder& b) {
-            b.add("mode", "arm,files");
-            b.begin_array("files");
-            // Array item support would go here
-            b.end_array();
-        });
-    }
-
-    // -----------------------------------------------------------------------
     // Arm ATTN for connectivity changes
-    // -----------------------------------------------------------------------
-
     // {"req":"card.attn","mode":"arm,connected"}
     {
-        note::api::CardAttn req;
+        note::api::CardAttn::Arm req;
         req.mode("arm,connected");
         nc.execute(req);
+        // Returns ApiResult<CardAttn::Arm::Response> with just .set
     }
 
-    // -----------------------------------------------------------------------
-    // Watchdog timer
-    // -----------------------------------------------------------------------
-
+    // Watchdog timer — mode:"watchdog" is emitted automatically
     // {"req":"card.attn","mode":"watchdog","seconds":60}
     {
-        note::api::CardAttn req;
-        req.mode("watchdog").seconds(60_s);
+        note::api::CardAttn::Watchdog req;
+        req.seconds(60_s);
         nc.execute(req);
+        // Returns ApiResult<void> — just check success/error
     }
 
-    // -----------------------------------------------------------------------
-    // Sleep with payload
-    // -----------------------------------------------------------------------
-
+    // Sleep with payload — mode:"sleep" is emitted automatically
     // {"req":"card.attn","mode":"sleep","seconds":3600}
     {
-        note::api::CardAttn req;
-        req.mode("sleep").seconds(3600_s);
+        note::api::CardAttn::Sleep req;
+        req.seconds(3600_s);
         nc.execute(req);
+        // Returns ApiResult<void>
     }
 
-    // -----------------------------------------------------------------------
-    // Disarm
-    // -----------------------------------------------------------------------
+    // Retrieve payload after sleep — start:true is emitted automatically
+    // {"req":"card.attn","start":true}
+    {
+        auto result = nc.execute(note::api::CardAttn::Retrieve{});
+        if (result) {
+            auto payload = result.payload;
+            auto time = result.time;
+            (void)payload; (void)time;
+        }
+        // Returns ApiResult<CardAttn::Retrieve::Response> with .payload, .time
+    }
 
+    // Disarm — mode:"disarm,-all" is emitted automatically
     // {"req":"card.attn","mode":"disarm,-all"}
     {
-        note::api::CardAttn req;
-        req.mode("disarm,-all");
-        nc.execute(req);
+        nc.execute(note::api::CardAttn::Disarm{});
+        // Returns ApiResult<void>
     }
 
-    // -----------------------------------------------------------------------
     // Query ATTN state
-    // -----------------------------------------------------------------------
-
-    // {"req":"card.attn"}
+    // {"req":"card.attn","verify":true}
     {
-        auto result = nc.execute(note::api::CardAttn{});
+        note::api::CardAttn::Query req;
+        req.verify(true);
+        auto result = nc.execute(req);
         if (result) {
             auto set = result.set;
             (void)set;
         }
+        // Returns ApiResult<CardAttn::Query::Response> with .set, .off
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Base API — CardAttn::Request exposes all fields and returns the full
+// response. Use this when the intent variants don't fit your use case.
+// ═══════════════════════════════════════════════════════════════════════════
+
+void base_examples(note::Notecard& nc) {
+    using namespace note::literals;
+
+    // Arm ATTN for connectivity changes (same wire format as intent version)
+    // {"req":"card.attn","mode":"arm,connected"}
+    {
+        note::api::CardAttn::Request req;
+        req.mode("arm,connected");
+        auto result = nc.execute(req);
+        if (result) {
+            // Full response available: .set, .off, .payload, .time
+            auto set = result.set;
+            (void)set;
+        }
+    }
+
+    // Watchdog timer (must set mode explicitly)
+    // {"req":"card.attn","mode":"watchdog","seconds":60}
+    {
+        note::api::CardAttn::Request req;
+        req.mode("watchdog").seconds(60_s);
+        nc.execute(req);
+    }
+
+    // Disarm
+    // {"req":"card.attn","mode":"disarm,-all"}
+    {
+        note::api::CardAttn::Request req;
+        req.mode("disarm,-all");
+        nc.execute(req);
     }
 }
 

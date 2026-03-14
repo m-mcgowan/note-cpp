@@ -18,7 +18,7 @@ struct TestHarness {
     note::Notecard nc;
 
     TestHarness() : nc(backend,
-        [this](note::string_view req, uint32_t) -> note::Result<note::string_view> {
+        [this](note::string_view req, uint32_t) -> note::Result<std::string> {
             last_request = std::string(req);
             return std::string("{}");
         },
@@ -32,7 +32,7 @@ struct TestHarness {
 
 TEST_CASE("card.attn Connected") {
     TestHarness h;
-    note::api::CardAttn req;
+    note::api::CardAttn::Arm req;
     req.mode = note::string_view(R"sv(arm,connected)sv");
     h.nc.execute(req);
     REQUIRE(h.last_request == R"json({"req":"card.attn","mode":"arm,connected"})json");
@@ -40,7 +40,7 @@ TEST_CASE("card.attn Connected") {
 
 TEST_CASE("card.attn Location") {
     TestHarness h;
-    note::api::CardAttn req;
+    note::api::CardAttn::Arm req;
     req.mode = note::string_view(R"sv(arm,location)sv");
     h.nc.execute(req);
     REQUIRE(h.last_request == R"json({"req":"card.attn","mode":"arm,location"})json");
@@ -48,7 +48,7 @@ TEST_CASE("card.attn Location") {
 
 TEST_CASE("card.attn Motion") {
     TestHarness h;
-    note::api::CardAttn req;
+    note::api::CardAttn::Arm req;
     req.mode = note::string_view(R"sv(arm,motion)sv");
     h.nc.execute(req);
     REQUIRE(h.last_request == R"json({"req":"card.attn","mode":"arm,motion"})json");
@@ -56,7 +56,7 @@ TEST_CASE("card.attn Motion") {
 
 TEST_CASE("card.attn Signal") {
     TestHarness h;
-    note::api::CardAttn req;
+    note::api::CardAttn::Arm req;
     req.mode = note::string_view(R"sv(arm,signal)sv");
     h.nc.execute(req);
     REQUIRE(h.last_request == R"json({"req":"card.attn","mode":"arm,signal"})json");
@@ -64,8 +64,7 @@ TEST_CASE("card.attn Signal") {
 
 TEST_CASE("card.attn Watchdog") {
     TestHarness h;
-    note::api::CardAttn req;
-    req.mode = note::string_view(R"sv(watchdog)sv");
+    note::api::CardAttn::Watchdog req;
     req.seconds = int32_t{60};
     h.nc.execute(req);
     REQUIRE(h.last_request == R"json({"req":"card.attn","mode":"watchdog","seconds":60})json");
@@ -73,8 +72,7 @@ TEST_CASE("card.attn Watchdog") {
 
 TEST_CASE("card.attn Sleep With Payload") {
     TestHarness h;
-    note::api::CardAttn req;
-    req.mode = note::string_view(R"sv(sleep)sv");
+    note::api::CardAttn::Sleep req;
     req.seconds = int32_t{3600};
     req.payload = note::string_view(R"sv(ewogICJpbnRlcnZhbHMiOiI2MCwxMiwxNCIKfQ==)sv");
     h.nc.execute(req);
@@ -83,16 +81,14 @@ TEST_CASE("card.attn Sleep With Payload") {
 
 TEST_CASE("card.attn Retrieve Payload") {
     TestHarness h;
-    note::api::CardAttn req;
-    req.start = true;
+    note::api::CardAttn::Retrieve req;
     h.nc.execute(req);
     REQUIRE(h.last_request == R"json({"req":"card.attn","start":true})json");
 }
 
 TEST_CASE("card.attn Disarm all Modes") {
     TestHarness h;
-    note::api::CardAttn req;
-    req.mode = note::string_view(R"sv(disarm,-all)sv");
+    note::api::CardAttn::Disarm req;
     h.nc.execute(req);
     REQUIRE(h.last_request == R"json({"req":"card.attn","mode":"disarm,-all"})json");
 }
@@ -758,7 +754,7 @@ TEST_CASE("card.triangulate Dual Mode") {
 TEST_CASE("card.triangulate Send WiFi AP Data") {
     TestHarness h;
     note::api::CardTriangulate req;
-    req.text(note::string_view(R"sv(+CWLAP:(4,"Blues",-51,"74:ac:b9:12:12:f8",1)
+    req.text = note::string_view(R"sv(+CWLAP:(4,"Blues",-51,"74:ac:b9:12:12:f8",1)
 +CWLAP:(3,"AAAA-62DD",-70,"6c:55:e8:91:62:e1",11)
 +CWLAP:(4,"Blues",-81,"74:ac:b9:11:12:23",1)
 +CWLAP:(4,"Blues",-82,"74:ac:a9:12:19:48",11)
@@ -768,7 +764,7 @@ TEST_CASE("card.triangulate Send WiFi AP Data") {
 +CWLAP:(3,"DIRECT-a5-HP MLP50",-86,"fa:da:0c:1b:16:a5",6)
 +CWLAP:(3,"DIRECT-c6-HP M182 LaserJet",-88,"da:12:65:44:31:c6",6)
 
-)sv"));
+)sv");
     h.nc.execute(req);
     REQUIRE(h.last_request == R"json({"req":"card.triangulate","text":"+CWLAP:(4,\"Blues\",-51,\"74:ac:b9:12:12:f8\",1)\n+CWLAP:(3,\"AAAA-62DD\",-70,\"6c:55:e8:91:62:e1\",11)\n+CWLAP:(4,\"Blues\",-81,\"74:ac:b9:11:12:23\",1)\n+CWLAP:(4,\"Blues\",-82,\"74:ac:a9:12:19:48\",11)\n+CWLAP:(4,\"Free Parking\",-83,\"02:18:4a:11:60:31\",6)\n+CWLAP:(5,\"GO\",-84,\"01:13:6a:13:90:30\",6)\n+CWLAP:(4,\"AAAA-5C62-2.4\",-85,\"d8:97:ba:7b:fd:60\",1)\n+CWLAP:(3,\"DIRECT-a5-HP MLP50\",-86,\"fa:da:0c:1b:16:a5\",6)\n+CWLAP:(3,\"DIRECT-c6-HP M182 LaserJet\",-88,\"da:12:65:44:31:c6\",6)\n\n"})json");
 }

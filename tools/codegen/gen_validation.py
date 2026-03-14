@@ -60,6 +60,50 @@ def determine_dispatch_variant(
     return fallback
 
 
+def determine_intent_variant(
+    fields: dict,
+    intents: list[dict],
+) -> dict | None:
+    """Match sample fields to an intent based on implicit field values.
+
+    Returns the matching intent dict, or None.  Tries most-specific
+    intents first (most implicit fields).
+    """
+    # Sort by number of implicit fields descending (most specific first)
+    ranked = sorted(intents, key=lambda i: len(i.get("implicit", {})), reverse=True)
+    for intent in ranked:
+        implicit = intent.get("implicit", {})
+        if not implicit:
+            continue
+        # All implicit field values must match (or be a prefix for strings)
+        match = True
+        for k, v in implicit.items():
+            if k not in fields:
+                match = False
+                break
+            sample_val = fields[k]
+            if isinstance(v, str) and isinstance(sample_val, str):
+                # String prefix match: "arm" matches "arm,connected"
+                if not (sample_val == v or sample_val.startswith(v + ",")):
+                    match = False
+                    break
+            elif sample_val != v:
+                match = False
+                break
+        if match:
+            return intent
+
+    # Fallback: intent with no implicit fields (e.g. "arm" for card.attn)
+    for intent in intents:
+        if not intent.get("implicit"):
+            # Check if all sample fields are in this intent's field list
+            intent_fields = set(intent.get("fields", []))
+            if fields.keys() <= intent_fields:
+                return intent
+
+    return None
+
+
 def get_operation_properties(op: dict) -> dict[str, dict]:
     """Extract the property schemas from an operation."""
     if "parameters" in op:
@@ -232,24 +276,41 @@ def gen_validation(spec_path: str, output_path: str | None = None) -> dict:
                 dispatch = matched_op.get("x-dispatch")
                 prop_schemas = get_operation_properties(matched_op)
 
-                # Determine the sub-type name for polymorphic endpoints
-                op_id = matched_op.get("operationId", "")
-                base_id = notecard_request.replace(".", "_")
-                if is_polymorphic and op_id.startswith(base_id + "_"):
-                    sub_type = op_id[len(base_id) + 1:].capitalize()
-                else:
-                    sub_type = None
+                # Check for intent-based polymorphism
+                intents = matched_op.get("x-intents")
+                matched_intent = None
+                if intents:
+                    matched_intent = determine_intent_variant(fields, intents)
+                    if matched_intent is None:
+                        stats["skipped_complex"] += 1
+                        sample["x-validation"] = {"skip": "no intent match"}
+                        continue
 
-                # Build settable fields
+                # Determine the sub-type name for polymorphic endpoints
+                if matched_intent:
+                    intent_name = matched_intent["name"]
+                    sub_type = intent_name[0].upper() + intent_name[1:]
+                else:
+                    op_id = matched_op.get("operationId", "")
+                    base_id = notecard_request.replace(".", "_")
+                    if is_polymorphic and op_id.startswith(base_id + "_"):
+                        sub_type = op_id[len(base_id) + 1:].capitalize()
+                    else:
+                        sub_type = None
+
+                # Build settable fields — exclude implicit values
+                implicit = matched_intent.get("implicit", {}) if matched_intent else {}
                 requires = set(dispatch.get("requires", []) if dispatch else [])
                 is_command = req_or_cmd == "cmd"
                 settable_fields = OrderedDict()
                 for k, v in fields.items():
                     if not is_command and k in requires and isinstance(v, bool):
                         continue  # dispatch-required boolean, auto-emitted by build()
+                    if k in implicit:
+                        continue  # implicit field, auto-emitted by build()
                     settable_fields[k] = v
 
-                # Compute expected wire JSON
+                # Compute expected wire JSON (includes implicit fields)
                 wire = compute_wire_json(
                     fields, prop_schemas, req_or_cmd,
                     notecard_request, dispatch)

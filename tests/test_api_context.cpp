@@ -70,8 +70,14 @@ TEST_CASE("Api::command() overload") {
 
 TEST_CASE("Api::card resource group") {
     Harness h;
-    // card.attn
-    h.api.execute(h.api.card.attn());
+    // card.attn (polymorphic)
+    h.api.execute(h.api.card.attn().request());
+    h.api.execute(h.api.card.attn().arm());
+    h.api.execute(h.api.card.attn().watchdog());
+    h.api.execute(h.api.card.attn().sleep());
+    h.api.execute(h.api.card.attn().retrieve());
+    h.api.execute(h.api.card.attn().disarm());
+    h.api.execute(h.api.card.attn().query());
     REQUIRE(h.last_req.find("card.attn") != std::string::npos);
     // card.aux
     h.api.execute(h.api.card.aux());

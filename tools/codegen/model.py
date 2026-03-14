@@ -83,6 +83,14 @@ class PropertyDef:
 
 
 @dataclass
+class ImplicitFieldDef:
+    """A field auto-emitted in build() with a fixed value (from x-intents)."""
+    wire_name: str        # JSON key: "mode", "start"
+    value: object         # Python value: "watchdog", True, 42
+    cpp_literal: str      # C++ literal: '"watchdog"', 'true', '42'
+
+
+@dataclass
 class BinaryTransferDef:
     """Binary transfer annotation for endpoints with COBS data."""
     direction: str   # "send" or "receive"
@@ -132,6 +140,7 @@ class OperationDef:
     dispatch: dict | None = None
     binary_transfer: BinaryTransferDef | None = None
     skus: list[str] = field(default_factory=list)
+    implicit_fields: list[ImplicitFieldDef] = field(default_factory=list)
 
     @property
     def required_properties(self) -> list[PropertyDef]:

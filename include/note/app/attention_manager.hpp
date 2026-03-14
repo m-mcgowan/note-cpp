@@ -48,7 +48,7 @@ public:
 
     // Arm attention with the current desired mode set.
     auto arm(Seconds timeout = {}) -> Result<void> {
-        api::CardAttn req;
+        api::CardAttn::Arm req;
         if (!desired_mode_.empty()) req.mode(desired_mode_);
         if (timeout.count > 0) req.seconds(timeout);
         auto r = ch_.execute(req);
@@ -61,8 +61,8 @@ public:
     }
 
     // Query current attention state.
-    auto query() -> ApiResult<api::CardAttn::Response> {
-        api::CardAttn req;
+    auto query() -> ApiResult<api::CardAttn::Query::Response> {
+        api::CardAttn::Query req;
         req.verify(true);
         auto r = ch_.execute(req);
         if (r) {
@@ -76,7 +76,8 @@ public:
 
     // Check if the attention pin is set (HIGH).
     auto triggered() -> Result<bool> {
-        auto r = ch_.execute(api::CardAttn{});
+        api::CardAttn::Query req;
+        auto r = ch_.execute(req);
         if (!r) return Unexpected(r.error());
         return r.set;
     }

@@ -275,11 +275,9 @@ def main() -> None:
     # Generate Api factory header
     api_context_template = env.get_template("api_context.hpp.j2")
     api_context_path.parent.mkdir(parents=True, exist_ok=True)
-    group_names = {g.name for g in resource_groups}
     content = api_context_template.render(
         endpoints=endpoints,
         resource_groups=resource_groups,
-        group_names=group_names,
     )
     api_context_path.write_text(content)
     print(f"Generated Api factory: {api_context_path}")
@@ -299,7 +297,6 @@ def main() -> None:
     api_context_test_content = api_context_test_template.render(
         endpoints=endpoints,
         resource_groups=resource_groups,
-        group_names=group_names,
     )
     test_dir.mkdir(parents=True, exist_ok=True)
     api_context_test_path = test_dir / "test_api_context.cpp"
@@ -310,7 +307,6 @@ def main() -> None:
     endpoint_cov_template = env.get_template("test_endpoint_coverage.cpp.j2")
     endpoint_cov_content = endpoint_cov_template.render(
         endpoints=endpoints,
-        group_names=group_names,
     )
     endpoint_cov_path = test_dir / "test_endpoint_coverage.cpp"
     endpoint_cov_path.write_text(endpoint_cov_content)

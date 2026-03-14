@@ -65,51 +65,6 @@ TEST_CASE("Api::command() overload") {
 }
 
 // ---------------------------------------------------------------------------
-// Per-endpoint flat factory methods (backward compatibility)
-// Deprecation warnings suppressed — these tests verify the flat API still works.
-// ---------------------------------------------------------------------------
-
-#if defined(__clang__) || defined(__GNUC__)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#endif
-
-{% for endpoint in endpoints %}
-{% if endpoint.factory_method not in group_names %}
-{% if endpoint.is_polymorphic %}
-TEST_CASE("Api::{{ endpoint.factory_method }}() compound factory") {
-    Harness h;
-{% for op in endpoint.operations %}
-{% if op.required_properties %}
-    h.api.execute(h.api.{{ endpoint.factory_method }}().{{ op.factory_method }}({% for p in op.required_properties %}{{ p | request_test_value }}{{ ", " if not loop.last }}{% endfor %}));
-    h.api.execute(h.api.{{ endpoint.action_first_method(op) }}({% for p in op.required_properties %}{{ p | request_test_value }}{{ ", " if not loop.last }}{% endfor %}));
-{% else %}
-    h.api.execute(h.api.{{ endpoint.factory_method }}().{{ op.factory_method }}());
-    h.api.execute(h.api.{{ endpoint.action_first_method(op) }}());
-{% endif %}
-{% endfor %}
-}
-
-{% else %}
-{% set op = endpoint.operations[0] %}
-TEST_CASE("Api::{{ endpoint.factory_method }}()") {
-    Harness h;
-{% if op.required_properties %}
-    h.api.execute(h.api.{{ endpoint.factory_method }}({% for p in op.required_properties %}{{ p | request_test_value }}{{ ", " if not loop.last }}{% endfor %}));
-{% else %}
-    h.api.execute(h.api.{{ endpoint.factory_method }}());
-{% endif %}
-    REQUIRE(h.last_req.find("{{ endpoint.wire_name }}") != std::string::npos);
-}
-
-{% endif %}
-{% endif %}
-{% endfor %}
-#if defined(__clang__) || defined(__GNUC__)
-#pragma GCC diagnostic pop
-#endif
-
-// ---------------------------------------------------------------------------
 // Resource group methods (api.card, api.hub, api.note, etc.)
 // ---------------------------------------------------------------------------
 

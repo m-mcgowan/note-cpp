@@ -149,7 +149,7 @@ VEOF
     STRICT_TARGET_OUT=$($CXX $CXXFLAGS $INCLUDE -fsyntax-only -x c++ - <<'TEOF' 2>&1 || true
 #include <note/api_context.hpp>
 using LoRaStrict = note::Target<note::Rat::LoRa, true>;
-void test(note::Api<LoRaStrict>& api) { api.cardSleep(); }
+void test(note::Api<LoRaStrict>& api) { api.card.sleep(); }
 TEOF
     )
     if echo "$STRICT_TARGET_OUT" | grep -qE "constraint|no matching"; then
@@ -165,7 +165,7 @@ TEOF
     WARN_TARGET_OUT=$($CXX $CXXFLAGS $INCLUDE -fsyntax-only -x c++ - <<'TEOF' 2>&1 || true
 #include <note/api_context.hpp>
 using LoRaWarn = note::Target<note::Rat::LoRa, false>;
-void test(note::Api<LoRaWarn>& api) { api.cardSleep(); }
+void test(note::Api<LoRaWarn>& api) { api.card.sleep(); }
 TEOF
     )
     if echo "$WARN_TARGET_OUT" | grep -q "deprecated.*not available on this target"; then

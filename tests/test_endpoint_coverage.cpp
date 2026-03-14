@@ -14,12 +14,6 @@
 #include "catch.hpp"
 #include "test_json_backend.hpp"
 
-// Suppress deprecation warnings — flat methods are tested for backward compat.
-#if defined(__clang__) || defined(__GNUC__)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#endif
-
 #include <note/api_context.hpp>
 
 #if __cplusplus >= 202002L
@@ -73,7 +67,7 @@ struct FailHarness {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardAttn request builder") {
     Harness h;
-    auto req = h.api.cardAttn();
+    auto req = h.api.card.attn();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.files(note::string_view("x-files"));
@@ -152,7 +146,7 @@ TEST_CASE("note::api::CardAttn response parsing") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardAux request builder") {
     Harness h;
-    auto req = h.api.cardAux();
+    auto req = h.api.card.aux();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1) || !defined(NOTE_API_STRICT)
@@ -288,7 +282,7 @@ TEST_CASE("note::api::CardAux response parsing") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardAuxSerial request builder") {
     Harness h;
-    auto req = h.api.cardAuxSerial();
+    auto req = h.api.card.auxSerial();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.duration(int32_t{42});
@@ -360,7 +354,7 @@ TEST_CASE("note::api::CardAuxSerial response parsing") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardBinary::Get request builder") {
     Harness h;
-    auto req = h.api.cardBinary().get();
+    auto req = h.api.card.binary().get();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.delete_(true);
@@ -406,7 +400,7 @@ TEST_CASE("note::api::CardBinary::Get response parsing") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardBinary::Delete request builder") {
     Harness h;
-    auto req = h.api.cardBinary().delete_();
+    auto req = h.api.card.binary().delete_();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.execute();
@@ -448,7 +442,7 @@ TEST_CASE("note::api::CardBinary::Delete response parsing") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardBinaryGet request builder") {
     Harness h;
-    auto req = h.api.cardBinaryGet();
+    auto req = h.api.card.binaryGet();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.cobs(int32_t{42});
@@ -492,7 +486,7 @@ TEST_CASE("note::api::CardBinaryGet response parsing") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardBinaryPut request builder") {
     Harness h;
-    auto req = h.api.cardBinaryPut();
+    auto req = h.api.card.binaryPut();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.cobs(int32_t{42});
@@ -534,7 +528,7 @@ TEST_CASE("note::api::CardBinaryPut response parsing") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardCarrier request builder") {
     Harness h;
-    auto req = h.api.cardCarrier();
+    auto req = h.api.card.carrier();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.mode(note::string_view("charging"));
@@ -572,7 +566,7 @@ TEST_CASE("note::api::CardCarrier response parsing") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardContact::Get request builder") {
     Harness h;
-    auto req = h.api.cardContact().get();
+    auto req = h.api.card.contact().get();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.email(note::string_view("x-email"));
@@ -623,7 +617,7 @@ TEST_CASE("note::api::CardContact::Get response parsing") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardContact::Set request builder") {
     Harness h;
-    auto req = h.api.cardContact().set();
+    auto req = h.api.card.contact().set();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.email(note::string_view("x-email"));
@@ -674,7 +668,7 @@ TEST_CASE("note::api::CardContact::Set response parsing") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardDfu request builder") {
     Harness h;
-    auto req = h.api.cardDfu();
+    auto req = h.api.card.dfu();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.mode(note::string_view("altdfu"));
@@ -728,7 +722,7 @@ TEST_CASE("note::api::CardDfu response parsing") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardIllumination request builder") {
     Harness h;
-    auto req = h.api.cardIllumination();
+    auto req = h.api.card.illumination();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.execute();
@@ -760,7 +754,7 @@ TEST_CASE("note::api::CardIllumination response parsing") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardIo request builder") {
     Harness h;
-    auto req = h.api.cardIo();
+    auto req = h.api.card.io();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.i2c(int32_t{42});
@@ -791,7 +785,7 @@ TEST_CASE("note::api::CardIo request builder") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardLed request builder") {
     Harness h;
-    auto req = h.api.cardLed();
+    auto req = h.api.card.led();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.mode(note::string_view("red"));
@@ -825,7 +819,7 @@ TEST_CASE("note::api::CardLed request builder") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardLocation request builder") {
     Harness h;
-    auto req = h.api.cardLocation();
+    auto req = h.api.card.location();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.execute();
@@ -871,7 +865,7 @@ TEST_CASE("note::api::CardLocation response parsing") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardLocationMode::Get request builder") {
     Harness h;
-    auto req = h.api.cardLocationMode().get();
+    auto req = h.api.card.locationMode().get();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.delete_(true);
@@ -955,7 +949,7 @@ TEST_CASE("note::api::CardLocationMode::Get response parsing") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardLocationMode::Set request builder") {
     Harness h;
-    auto req = h.api.cardLocationMode().set();
+    auto req = h.api.card.locationMode().set();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.delete_(true);
@@ -1039,7 +1033,7 @@ TEST_CASE("note::api::CardLocationMode::Set response parsing") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardLocationMode::Delete request builder") {
     Harness h;
-    auto req = h.api.cardLocationMode().delete_();
+    auto req = h.api.card.locationMode().delete_();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.lat(1.5);
@@ -1120,7 +1114,7 @@ TEST_CASE("note::api::CardLocationMode::Delete response parsing") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardLocationTrack request builder") {
     Harness h;
-    auto req = h.api.cardLocationTrack();
+    auto req = h.api.card.locationTrack();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.file(note::string_view("x-file"));
@@ -1190,7 +1184,7 @@ TEST_CASE("note::api::CardLocationTrack response parsing") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardMonitor request builder") {
     Harness h;
-    auto req = h.api.cardMonitor();
+    auto req = h.api.card.monitor();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.count(int32_t{42});
@@ -1224,7 +1218,7 @@ TEST_CASE("note::api::CardMonitor request builder") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardMotion request builder") {
     Harness h;
-    auto req = h.api.cardMotion();
+    auto req = h.api.card.motion();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.minutes(int32_t{42});
@@ -1272,7 +1266,7 @@ TEST_CASE("note::api::CardMotion response parsing") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardMotionMode request builder") {
     Harness h;
-    auto req = h.api.cardMotionMode();
+    auto req = h.api.card.motionMode();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.motion(int32_t{42});
@@ -1318,7 +1312,7 @@ TEST_CASE("note::api::CardMotionMode request builder") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardMotionSync request builder") {
     Harness h;
-    auto req = h.api.cardMotionSync();
+    auto req = h.api.card.motionSync();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.count(int32_t{42});
@@ -1358,7 +1352,7 @@ TEST_CASE("note::api::CardMotionSync request builder") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardMotionTrack request builder") {
     Harness h;
-    auto req = h.api.cardMotionTrack();
+    auto req = h.api.card.motionTrack();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.count(int32_t{42});
@@ -1404,7 +1398,7 @@ TEST_CASE("note::api::CardMotionTrack request builder") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardPower::Get request builder") {
     Harness h;
-    auto req = h.api.cardPower().get();
+    auto req = h.api.card.power().get();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.minutes(note::Minutes{42});
@@ -1447,7 +1441,7 @@ TEST_CASE("note::api::CardPower::Get response parsing") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardPower::Set request builder") {
     Harness h;
-    auto req = h.api.cardPower().set();
+    auto req = h.api.card.power().set();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.minutes(note::Minutes{42});
@@ -1490,7 +1484,7 @@ TEST_CASE("note::api::CardPower::Set response parsing") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardPower::Delete request builder") {
     Harness h;
-    auto req = h.api.cardPower().delete_();
+    auto req = h.api.card.power().delete_();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.minutes(note::Minutes{42});
@@ -1530,7 +1524,7 @@ TEST_CASE("note::api::CardPower::Delete response parsing") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardRandom request builder") {
     Harness h;
-    auto req = h.api.cardRandom();
+    auto req = h.api.card.random();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.count(int32_t{42});
@@ -1571,7 +1565,7 @@ TEST_CASE("note::api::CardRandom response parsing") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardRestart request builder") {
     Harness h;
-    auto req = h.api.cardRestart();
+    auto req = h.api.card.restart();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.execute();
@@ -1595,7 +1589,7 @@ TEST_CASE("note::api::CardRestart request builder") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardRestore request builder") {
     Harness h;
-    auto req = h.api.cardRestore();
+    auto req = h.api.card.restore();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.connected(true);
@@ -1626,7 +1620,7 @@ TEST_CASE("note::api::CardRestore request builder") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardSleep request builder") {
     Harness h;
-    auto req = h.api.cardSleep();
+    auto req = h.api.card.sleep();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.mode(note::string_view("accel"));
@@ -1677,7 +1671,7 @@ TEST_CASE("note::api::CardSleep response parsing") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardStatus request builder") {
     Harness h;
-    auto req = h.api.cardStatus();
+    auto req = h.api.card.status();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.execute();
@@ -1737,7 +1731,7 @@ TEST_CASE("note::api::CardStatus response parsing") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardTemp::Get request builder") {
     Harness h;
-    auto req = h.api.cardTemp().get();
+    auto req = h.api.card.temp().get();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.minutes(note::Minutes{42});
@@ -1794,7 +1788,7 @@ TEST_CASE("note::api::CardTemp::Get response parsing") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardTemp::Set request builder") {
     Harness h;
-    auto req = h.api.cardTemp().set();
+    auto req = h.api.card.temp().set();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.minutes(note::Minutes{42});
@@ -1851,7 +1845,7 @@ TEST_CASE("note::api::CardTemp::Set response parsing") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardTemp::Delete request builder") {
     Harness h;
-    auto req = h.api.cardTemp().delete_();
+    auto req = h.api.card.temp().delete_();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.minutes(note::Minutes{42});
@@ -1905,7 +1899,7 @@ TEST_CASE("note::api::CardTemp::Delete response parsing") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardTime request builder") {
     Harness h;
-    auto req = h.api.cardTime();
+    auto req = h.api.card.time();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.execute();
@@ -1949,7 +1943,7 @@ TEST_CASE("note::api::CardTime response parsing") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardTrace request builder") {
     Harness h;
-    auto req = h.api.cardTrace();
+    auto req = h.api.card.trace();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.mode(note::string_view("on"));
@@ -1977,7 +1971,7 @@ TEST_CASE("note::api::CardTrace request builder") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardTransport request builder") {
     Harness h;
-    auto req = h.api.cardTransport();
+    auto req = h.api.card.transport();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
@@ -2040,7 +2034,7 @@ TEST_CASE("note::api::CardTransport response parsing") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardTriangulate request builder") {
     Harness h;
-    auto req = h.api.cardTriangulate();
+    auto req = h.api.card.triangulate();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.minutes(int32_t{42});
@@ -2104,7 +2098,7 @@ TEST_CASE("note::api::CardTriangulate response parsing") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardUsageGet request builder") {
     Harness h;
-    auto req = h.api.cardUsageGet();
+    auto req = h.api.card.usageGet();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.mode(note::string_view("total"));
@@ -2157,7 +2151,7 @@ TEST_CASE("note::api::CardUsageGet response parsing") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardUsageTest request builder") {
     Harness h;
-    auto req = h.api.cardUsageTest();
+    auto req = h.api.card.usageTest();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.days(int32_t{42});
@@ -2219,7 +2213,7 @@ TEST_CASE("note::api::CardUsageTest response parsing") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardVersion request builder") {
     Harness h;
-    auto req = h.api.cardVersion();
+    auto req = h.api.card.version();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.execute();
@@ -2269,7 +2263,7 @@ TEST_CASE("note::api::CardVersion response parsing") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardVoltage::Get request builder") {
     Harness h;
-    auto req = h.api.cardVoltage().get();
+    auto req = h.api.card.voltage().get();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.alert(true);
@@ -2377,7 +2371,7 @@ TEST_CASE("note::api::CardVoltage::Get response parsing") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardVoltage::Set request builder") {
     Harness h;
-    auto req = h.api.cardVoltage().set();
+    auto req = h.api.card.voltage().set();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.alert(true);
@@ -2485,7 +2479,7 @@ TEST_CASE("note::api::CardVoltage::Set response parsing") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardWifi request builder") {
     Harness h;
-    auto req = h.api.cardWifi();
+    auto req = h.api.card.wifi();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.name(note::string_view("x-name"));
@@ -2548,7 +2542,7 @@ TEST_CASE("note::api::CardWifi response parsing") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardWireless request builder") {
     Harness h;
-    auto req = h.api.cardWireless();
+    auto req = h.api.card.wireless();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.apn(note::string_view("x-apn"));
@@ -2595,7 +2589,7 @@ TEST_CASE("note::api::CardWireless response parsing") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardWirelessPenalty::Get request builder") {
     Harness h;
-    auto req = h.api.cardWirelessPenalty().get();
+    auto req = h.api.card.wirelessPenalty().get();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.add(note::Minutes{42});
@@ -2656,7 +2650,7 @@ TEST_CASE("note::api::CardWirelessPenalty::Get response parsing") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardWirelessPenalty::Set request builder") {
     Harness h;
-    auto req = h.api.cardWirelessPenalty().set();
+    auto req = h.api.card.wirelessPenalty().set();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.add(note::Minutes{42});
@@ -2714,7 +2708,7 @@ TEST_CASE("note::api::CardWirelessPenalty::Set response parsing") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardWirelessPenalty::Delete request builder") {
     Harness h;
-    auto req = h.api.cardWirelessPenalty().delete_();
+    auto req = h.api.card.wirelessPenalty().delete_();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.add(note::Minutes{42});
@@ -2772,7 +2766,7 @@ TEST_CASE("note::api::CardWirelessPenalty::Delete response parsing") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::DfuGet request builder") {
     Harness h;
-    auto req = h.api.dfuGet();
+    auto req = h.api.dfu.get();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.binary(true);
@@ -2820,7 +2814,7 @@ TEST_CASE("note::api::DfuGet response parsing") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::DfuStatus request builder") {
     Harness h;
-    auto req = h.api.dfuStatus();
+    auto req = h.api.dfu.status();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.err(note::string_view("x-err"));
@@ -2885,7 +2879,7 @@ TEST_CASE("note::api::DfuStatus response parsing") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::EnvDefault::Set request builder") {
     Harness h;
-    auto req = h.api.envDefault().set(note::string_view("x-name"));
+    auto req = h.api.env.default_().set(note::string_view("x-name"));
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.sync(true);
@@ -2917,7 +2911,7 @@ TEST_CASE("note::api::EnvDefault::Set request builder") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::EnvDefault::Delete request builder") {
     Harness h;
-    auto req = h.api.envDefault().delete_(note::string_view("x-name"));
+    auto req = h.api.env.default_().delete_(note::string_view("x-name"));
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.sync(true);
@@ -2946,7 +2940,7 @@ TEST_CASE("note::api::EnvDefault::Delete request builder") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::EnvGet request builder") {
     Harness h;
-    auto req = h.api.envGet();
+    auto req = h.api.env.get();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.name(note::string_view("x-name"));
@@ -3006,7 +3000,7 @@ TEST_CASE("note::api::EnvGet response parsing") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::EnvModified request builder") {
     Harness h;
-    auto req = h.api.envModified();
+    auto req = h.api.env.modified();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
@@ -3052,7 +3046,7 @@ TEST_CASE("note::api::EnvModified response parsing") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::EnvSet request builder") {
     Harness h;
-    auto req = h.api.envSet(note::string_view("x-name"));
+    auto req = h.api.env.set(note::string_view("x-name"));
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.text(note::string_view("x-text"));
@@ -3093,7 +3087,7 @@ TEST_CASE("note::api::EnvSet response parsing") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::EnvTemplate request builder") {
     Harness h;
-    auto req = h.api.envTemplate();
+    auto req = h.api.env.template_();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.execute();
@@ -3125,7 +3119,7 @@ TEST_CASE("note::api::EnvTemplate response parsing") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::FileChanges request builder") {
     Harness h;
-    auto req = h.api.fileChanges();
+    auto req = h.api.file.changes();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.files(note::string_view("x-files"));
@@ -3168,7 +3162,7 @@ TEST_CASE("note::api::FileChanges response parsing") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::FileChangesPending request builder") {
     Harness h;
-    auto req = h.api.fileChangesPending();
+    auto req = h.api.file.changesPending();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.execute();
@@ -3204,7 +3198,7 @@ TEST_CASE("note::api::FileChangesPending response parsing") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::FileClear request builder") {
     Harness h;
-    auto req = h.api.fileClear();
+    auto req = h.api.file.clear();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.file(note::string_view("x-file"));
@@ -3232,7 +3226,7 @@ TEST_CASE("note::api::FileClear request builder") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::FileDelete request builder") {
     Harness h;
-    auto req = h.api.fileDelete();
+    auto req = h.api.file.delete_();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.files(note::string_view("x-files"));
@@ -3260,7 +3254,7 @@ TEST_CASE("note::api::FileDelete request builder") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::FileStats request builder") {
     Harness h;
-    auto req = h.api.fileStats();
+    auto req = h.api.file.stats();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.file(note::string_view("x-file"));
@@ -3300,7 +3294,7 @@ TEST_CASE("note::api::FileStats response parsing") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::HubGet request builder") {
     Harness h;
-    auto req = h.api.hubGet();
+    auto req = h.api.hub.get();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.execute();
@@ -3350,7 +3344,7 @@ TEST_CASE("note::api::HubGet response parsing") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::HubLog request builder") {
     Harness h;
-    auto req = h.api.hubLog();
+    auto req = h.api.hub.log();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.alert(true);
@@ -3384,7 +3378,7 @@ TEST_CASE("note::api::HubLog request builder") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::HubSet request builder") {
     Harness h;
-    auto req = h.api.hubSet();
+    auto req = h.api.hub.set();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.align(true);
@@ -3514,7 +3508,7 @@ TEST_CASE("note::api::HubSet request builder") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::HubSignal request builder") {
     Harness h;
-    auto req = h.api.hubSignal();
+    auto req = h.api.hub.signal();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
@@ -3558,7 +3552,7 @@ TEST_CASE("note::api::HubSignal response parsing") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::HubStatus request builder") {
     Harness h;
-    auto req = h.api.hubStatus();
+    auto req = h.api.hub.status();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.execute();
@@ -3592,7 +3586,7 @@ TEST_CASE("note::api::HubStatus response parsing") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::HubSync request builder") {
     Harness h;
-    auto req = h.api.hubSync();
+    auto req = h.api.hub.sync();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.allow(true);
@@ -3632,7 +3626,7 @@ TEST_CASE("note::api::HubSync request builder") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::HubSyncStatus request builder") {
     Harness h;
-    auto req = h.api.hubSyncStatus();
+    auto req = h.api.hub.syncStatus();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.sync(true);
@@ -3692,7 +3686,7 @@ TEST_CASE("note::api::HubSyncStatus response parsing") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::NoteAdd request builder") {
     Harness h;
-    auto req = h.api.noteAdd();
+    auto req = h.api.note.add();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
@@ -3792,7 +3786,7 @@ TEST_CASE("note::api::NoteAdd response parsing") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::NoteChanges::Get request builder") {
     Harness h;
-    auto req = h.api.noteChanges().get();
+    auto req = h.api.note.changes().get();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.deleted(true);
@@ -3848,7 +3842,7 @@ TEST_CASE("note::api::NoteChanges::Get response parsing") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::NoteChanges::Delete request builder") {
     Harness h;
-    auto req = h.api.noteChanges().delete_(note::string_view("x-file"));
+    auto req = h.api.note.changes().delete_(note::string_view("x-file"));
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.deleted(true);
@@ -3902,7 +3896,7 @@ TEST_CASE("note::api::NoteChanges::Delete response parsing") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::NoteDelete request builder") {
     Harness h;
-    auto req = h.api.noteDelete(note::string_view("x-file"), note::string_view("x-note"));
+    auto req = h.api.note.delete_(note::string_view("x-file"), note::string_view("x-note"));
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.verify(true);
@@ -3932,7 +3926,7 @@ TEST_CASE("note::api::NoteDelete request builder") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::NoteGet::Get request builder") {
     Harness h;
-    auto req = h.api.noteGet().get();
+    auto req = h.api.note.get().get();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.decrypt(true);
@@ -3979,7 +3973,7 @@ TEST_CASE("note::api::NoteGet::Get response parsing") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::NoteGet::Delete request builder") {
     Harness h;
-    auto req = h.api.noteGet().delete_();
+    auto req = h.api.note.get().delete_();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.decrypt(true);
@@ -4026,7 +4020,7 @@ TEST_CASE("note::api::NoteGet::Delete response parsing") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::NoteTemplate::Set request builder") {
     Harness h;
-    auto req = h.api.noteTemplate().set(note::string_view("x-file"));
+    auto req = h.api.note.template_().set(note::string_view("x-file"));
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.delete_(true);
@@ -4101,7 +4095,7 @@ TEST_CASE("note::api::NoteTemplate::Set response parsing") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::NoteTemplate::Delete request builder") {
     Harness h;
-    auto req = h.api.noteTemplate().delete_(note::string_view("x-file"));
+    auto req = h.api.note.template_().delete_(note::string_view("x-file"));
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
@@ -4173,7 +4167,7 @@ TEST_CASE("note::api::NoteTemplate::Delete response parsing") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::NoteUpdate request builder") {
     Harness h;
-    auto req = h.api.noteUpdate(note::string_view("x-file"), note::string_view("x-note"));
+    auto req = h.api.note.update(note::string_view("x-file"), note::string_view("x-note"));
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.payload(note::string_view("x-payload"));
@@ -4206,7 +4200,7 @@ TEST_CASE("note::api::NoteUpdate request builder") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::NtnGps request builder") {
     Harness h;
-    auto req = h.api.ntnGps();
+    auto req = h.api.ntn.gps();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.off(true);
@@ -4247,7 +4241,7 @@ TEST_CASE("note::api::NtnGps response parsing") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::NtnReset request builder") {
     Harness h;
-    auto req = h.api.ntnReset();
+    auto req = h.api.ntn.reset();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.execute();
@@ -4271,7 +4265,7 @@ TEST_CASE("note::api::NtnReset request builder") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::NtnStatus request builder") {
     Harness h;
-    auto req = h.api.ntnStatus();
+    auto req = h.api.ntn.status();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.execute();
@@ -4305,7 +4299,7 @@ TEST_CASE("note::api::NtnStatus response parsing") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::VarDelete request builder") {
     Harness h;
-    auto req = h.api.varDelete();
+    auto req = h.api.var.delete_();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.file(note::string_view("x-file"));
@@ -4336,7 +4330,7 @@ TEST_CASE("note::api::VarDelete request builder") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::VarGet request builder") {
     Harness h;
-    auto req = h.api.varGet();
+    auto req = h.api.var.get();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.file(note::string_view("x-file"));
@@ -4379,7 +4373,7 @@ TEST_CASE("note::api::VarGet response parsing") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::VarSet request builder") {
     Harness h;
-    auto req = h.api.varSet();
+    auto req = h.api.var.set();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 3, 1) || !defined(NOTE_API_STRICT)
@@ -4479,7 +4473,7 @@ TEST_CASE("note::api::Web response parsing") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::WebDelete request builder") {
     Harness h;
-    auto req = h.api.webDelete();
+    auto req = h.api.web.delete_();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
@@ -4543,7 +4537,7 @@ TEST_CASE("note::api::WebDelete response parsing") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::WebGet request builder") {
     Harness h;
-    auto req = h.api.webGet();
+    auto req = h.api.web.get();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
@@ -4615,7 +4609,7 @@ TEST_CASE("note::api::WebGet response parsing") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::WebPost request builder") {
     Harness h;
-    auto req = h.api.webPost();
+    auto req = h.api.web.post();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
@@ -4720,7 +4714,7 @@ TEST_CASE("note::api::WebPost response parsing") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::WebPut request builder") {
     Harness h;
-    auto req = h.api.webPut();
+    auto req = h.api.web.put();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)

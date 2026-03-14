@@ -93,7 +93,7 @@ EOF
 
 cat > "$TMPDIR/cpp_5api.cpp" << 'EOF'
 #include "mock_backend.hpp"
-#include <note/api_context.hpp>
+#include <note/api.hpp>
 #include <note/api/hub_set.hpp>
 #include <note/api/hub_sync.hpp>
 #include <note/api/card_version.hpp>
@@ -116,7 +116,7 @@ EOF
 
 cat > "$TMPDIR/cpp_allapi.cpp" << 'EOF'
 #include "mock_backend.hpp"
-#include <note/api_context.hpp>
+#include <note/api.hpp>
 #include <note/api.hpp>
 int main() {
     MockBackend backend;
@@ -132,7 +132,7 @@ EOF
 
 cat > "$TMPDIR/cpp_body.cpp" << 'EOF'
 #include "mock_backend.hpp"
-#include <note/api_context.hpp>
+#include <note/api.hpp>
 #include <note/body.hpp>
 #include <note/api/note_add.hpp>
 #include <note/api/note_get.hpp>
@@ -220,7 +220,7 @@ EOF
 # ── Benchmark: caller function sizes ──────────────────────────────────────────
 cat > "$TMPDIR/cpp_callers.cpp" << 'EOF'
 #include "mock_backend.hpp"
-#include <note/api_context.hpp>
+#include <note/api.hpp>
 #include <note/body.hpp>
 #include <note/api/hub_set.hpp>
 #include <note/api/card_version.hpp>

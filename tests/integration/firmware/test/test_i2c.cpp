@@ -8,7 +8,7 @@
 #include <doctest.h>
 #include <note/notecard.hpp>
 #include <note/error.hpp>
-#include <note/api_context.hpp>
+#include <note/api.hpp>
 #include <note/body.hpp>
 #include <note/backends/cjson.hpp>
 #include <note/transport/i2c.hpp>

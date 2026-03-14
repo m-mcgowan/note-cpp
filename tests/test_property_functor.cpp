@@ -7,7 +7,7 @@
 #include "test_json_backend.hpp"
 
 #include <note/notecard.hpp>
-#include <note/api_context.hpp>
+#include <note/api.hpp>
 #include <note/api/hub_set.hpp>
 #include <note/api/note_get.hpp>
 #include <note/api/note_add.hpp>

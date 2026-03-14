@@ -3,7 +3,7 @@
 //
 // Build: clang++ -std=c++2b -fsyntax-only -I include examples/target_filtering.cpp
 
-#include <note/api_context.hpp>
+#include <note/api.hpp>
 
 // Mock backend for compilation testing (same as smoke.cpp)
 struct MockBuilder : note::JsonBuilder {

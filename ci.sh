@@ -38,14 +38,13 @@ run_ci() {
             echo "=== Code generation ==="
             "$PYTHON" "$ROOT/tools/codegen/generate.py" "$ROOT/notecard-api.openapi.json" \
                 -o "$ROOT/include/note/api" \
-                --umbrella "$ROOT/include/note/api.hpp" \
-                --api-context "$ROOT/include/note/api_context.hpp" \
+                --api "$ROOT/include/note/api.hpp" \
                 --test-dir "$ROOT/tests"
 
             if [ "${CI:-}" = "true" ]; then
-                if ! git diff --quiet -- "$ROOT/include/note/api/" "$ROOT/include/note/api.hpp" "$ROOT/include/note/api_context.hpp" "$ROOT/tests/test_samples.cpp" "$ROOT/tests/test_api_context.cpp" "$ROOT/tests/test_endpoint_coverage.cpp"; then
+                if ! git diff --quiet -- "$ROOT/include/note/api/" "$ROOT/include/note/api.hpp" "$ROOT/tests/test_samples.cpp" "$ROOT/tests/test_api_context.cpp" "$ROOT/tests/test_endpoint_coverage.cpp"; then
                     echo "ERROR: Generated files are out of date. Run the generator and commit."
-                    git diff --stat -- "$ROOT/include/note/api/" "$ROOT/include/note/api.hpp" "$ROOT/include/note/api_context.hpp" "$ROOT/tests/test_samples.cpp" "$ROOT/tests/test_api_context.cpp" "$ROOT/tests/test_endpoint_coverage.cpp"
+                    git diff --stat -- "$ROOT/include/note/api/" "$ROOT/include/note/api.hpp" "$ROOT/tests/test_samples.cpp" "$ROOT/tests/test_api_context.cpp" "$ROOT/tests/test_endpoint_coverage.cpp"
                     exit 1
                 fi
                 echo "  Generated files are up to date."
@@ -147,7 +146,7 @@ VEOF
     # Strict mode: unsupported endpoints should fail to compile
     printf "  %-40s " "strict rejects unsupported"
     STRICT_TARGET_OUT=$($CXX $CXXFLAGS $INCLUDE -fsyntax-only -x c++ - <<'TEOF' 2>&1 || true
-#include <note/api_context.hpp>
+#include <note/api.hpp>
 using LoRaStrict = note::Target<note::Rat::LoRa, true>;
 void test(note::Api<LoRaStrict>& api) { api.card.sleep(); }
 TEOF
@@ -163,7 +162,7 @@ TEOF
     # Non-strict mode: unsupported endpoints produce deprecation warnings
     printf "  %-40s " "warn for unsupported"
     WARN_TARGET_OUT=$($CXX $CXXFLAGS $INCLUDE -fsyntax-only -x c++ - <<'TEOF' 2>&1 || true
-#include <note/api_context.hpp>
+#include <note/api.hpp>
 using LoRaWarn = note::Target<note::Rat::LoRa, false>;
 void test(note::Api<LoRaWarn>& api) { api.card.sleep(); }
 TEOF
@@ -179,7 +178,7 @@ TEOF
     # Supported target: no warnings
     printf "  %-40s " "supported (no warnings)"
     if $CXX $CXXFLAGS $INCLUDE -Werror -fsyntax-only -x c++ - <<'TEOF' 2>&1; then
-#include <note/api_context.hpp>
+#include <note/api.hpp>
 using WifiTarget = note::Target<note::Rat::WiFi>;
 void test(note::Api<WifiTarget>& api) { api.card.sleep(); api.hub.set(); }
 TEOF

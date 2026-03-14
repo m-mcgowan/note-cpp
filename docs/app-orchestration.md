@@ -168,7 +168,7 @@ The simplest case — periodic sync with a typed template:
 
 ```cpp
 #include <note/notecard.hpp>
-#include <note/api_context.hpp>
+#include <note/api.hpp>
 
 using namespace note::literals;
 
@@ -207,7 +207,7 @@ What a developer writes today without the app layer:
 
 ```cpp
 #include <note/notecard.hpp>
-#include <note/api_context.hpp>
+#include <note/api.hpp>
 
 using namespace note::literals;
 

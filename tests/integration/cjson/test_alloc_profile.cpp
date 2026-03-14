@@ -15,7 +15,7 @@
 #include <note/api/card_version.hpp>
 #include <note/api/hub_set.hpp>
 #include <note/api/note_add.hpp>
-#include <note/api_context.hpp>
+#include <note/api.hpp>
 
 #include <cassert>
 #include <cstdio>

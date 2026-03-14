@@ -1,7 +1,7 @@
 #include "catch.hpp"
 #include "test_json_backend.hpp"
 
-#include <note/api_context.hpp>
+#include <note/api.hpp>
 
 namespace {
 

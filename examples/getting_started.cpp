@@ -11,7 +11,7 @@
 
 #include <note/notecard.hpp>
 #include <note/json_buf.hpp>
-#include <note/api_context.hpp>
+#include <note/api.hpp>
 #include <note/body.hpp>
 
 #include <cstdio>

@@ -13,7 +13,7 @@ Type-safe C++23 API for the Blues Notecard. Header-only, zero dependencies beyon
 │    74 request/response types from OpenAPI spec       │
 │    Typed fields, chainable setters, enum validation  │
 ├─────────────────────────────────────────────────────┤
-│  Api factory                include/note/api_context.hpp │
+│  Api factory                include/note/api.hpp │
 │    Binds Notecard to generated request types         │
 ├─────────────────────────────────────────────────────┤
 │  Notecard                   include/note/notecard.hpp│
@@ -40,7 +40,7 @@ Type-safe C++23 API for the Blues Notecard. Header-only, zero dependencies beyon
 | `allocator.hpp` | `Allocator` — function-pointer allocator with arena/pmr adapters |
 | `arena.hpp` | `MonotonicArena` — bump allocator for bounded memory use |
 | `notecard.hpp` | `Notecard` — central coordinator, takes `JsonBackend` + transport callable |
-| `api_context.hpp` | `Api` factory — binds Notecard to fluent request builders |
+| `api.hpp` | `Api` factory — binds Notecard to fluent request builders |
 | `body.hpp` | `BodyValue`, `NOTE_FIELDS` macro, `template_of<T>()` — schema struct support |
 | `field.hpp` | `Field<T>` — optional-like field wrapper for generated types |
 | `safety.hpp` | `Safety` enum (ReadOnly, Idempotent, NonIdempotent, Destructive) |

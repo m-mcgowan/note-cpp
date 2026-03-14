@@ -14,7 +14,7 @@
 #include "catch.hpp"
 #include "test_json_backend.hpp"
 
-#include <note/api_context.hpp>
+#include <note/api.hpp>
 
 #if __cplusplus >= 202002L
 using UnconstrainedApi = note::Api<>;

@@ -178,12 +178,9 @@ def main() -> None:
     parser.add_argument("-o", "--output-dir",
                         default="include/note/api",
                         help="Output directory for generated headers")
-    parser.add_argument("--umbrella",
+    parser.add_argument("--api",
                         default="include/note/api.hpp",
-                        help="Path for the umbrella header")
-    parser.add_argument("--api-context",
-                        default="include/note/api_context.hpp",
-                        help="Path for the Api factory header")
+                        help="Path for the Api class header")
     parser.add_argument("--test-dir",
                         default="tests",
                         help="Directory for generated test files")
@@ -191,8 +188,7 @@ def main() -> None:
 
     spec_path = Path(args.spec)
     output_dir = Path(args.output_dir)
-    umbrella_path = Path(args.umbrella)
-    api_context_path = Path(args.api_context)
+    api_path = Path(args.api)
     test_dir = Path(args.test_dir)
 
     # Parse spec
@@ -215,7 +211,6 @@ def main() -> None:
     env.filters["response_match_value"] = _response_match_value
 
     endpoint_template = env.get_template("endpoint.hpp.j2")
-    umbrella_template = env.get_template("api.hpp.j2")
 
     # Generate per-endpoint headers
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -251,12 +246,6 @@ def main() -> None:
 
     print(f"Generated {len(endpoints)} headers in {output_dir}/")
 
-    # Generate umbrella header
-    umbrella_path.parent.mkdir(parents=True, exist_ok=True)
-    content = umbrella_template.render(endpoints=endpoints)
-    umbrella_path.write_text(content)
-    print(f"Generated umbrella header: {umbrella_path}")
-
     # Build resource groups (card, hub, note, etc.)
     from collections import OrderedDict
     group_map: OrderedDict[str, ResourceGroup] = OrderedDict()
@@ -272,15 +261,15 @@ def main() -> None:
     print(f"Grouped into {len(resource_groups)} resource groups: "
           f"{', '.join(g.name for g in resource_groups)}")
 
-    # Generate Api factory header
-    api_context_template = env.get_template("api_context.hpp.j2")
-    api_context_path.parent.mkdir(parents=True, exist_ok=True)
-    content = api_context_template.render(
+    # Generate Api class header
+    api_template = env.get_template("api.hpp.j2")
+    api_path.parent.mkdir(parents=True, exist_ok=True)
+    content = api_template.render(
         endpoints=endpoints,
         resource_groups=resource_groups,
     )
-    api_context_path.write_text(content)
-    print(f"Generated Api factory: {api_context_path}")
+    api_path.write_text(content)
+    print(f"Generated Api class header: {api_path}")
 
     # Generate sample tests
     tests = _collect_sample_tests(spec_path)

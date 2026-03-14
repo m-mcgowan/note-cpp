@@ -106,7 +106,7 @@ The JSON backend works out of the box. It's customizable if you have specific re
 Once you have a `Notecard` instance, the typed API is the same everywhere:
 
 ```cpp
-#include <note/api_context.hpp>
+#include <note/api.hpp>
 using namespace note::literals;
 auto nc = ....;                     // we'll get to this later.
 note::Api api(nc);
@@ -164,7 +164,7 @@ Requests and responses also support
 - fire-and-forget commands (`.command()`)
 - compile-time enum validation (`validatedMode("periodic")`)
 
-Include everything with `#include <note/api_context.hpp>`.
+Include everything with `#include <note/api.hpp>`.
 
 ---
 

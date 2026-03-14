@@ -47,7 +47,7 @@ TEST_SUITE("serial") {
 
 TEST_CASE("card.version returns valid device info") {
     Fixture f;
-    auto r = f.api.cardVersion().execute();
+    auto r = f.api.card.version().execute();
     if (!r) { INFO(to_string(r.error())); }
     REQUIRE(r);
     CHECK(!note::string_view(r.device).empty());
@@ -58,7 +58,7 @@ TEST_CASE("card.version returns valid device info") {
 
 TEST_CASE("card.status returns operational state") {
     Fixture f;
-    auto r = f.api.cardStatus().execute();
+    auto r = f.api.card.status().execute();
     if (!r) { INFO(to_string(r.error())); }
     REQUIRE(r);
     CHECK(!note::string_view(r.status).empty());
@@ -70,13 +70,13 @@ TEST_CASE("card.status returns operational state") {
 
 TEST_CASE("hub.set + hub.get round-trip") {
     Fixture f;
-    auto set_r = f.api.hubSet()
+    auto set_r = f.api.hub.set()
         .product("com.example.integration-test")
         .execute();
     if (!set_r) { INFO(to_string(set_r.error())); }
     REQUIRE(set_r);
 
-    auto get_r = f.api.hubGet().execute();
+    auto get_r = f.api.hub.get().execute();
     if (!get_r) { INFO(to_string(get_r.error())); }
     REQUIRE(get_r);
     CHECK(note::string_view(get_r.product) == "com.example.integration-test");
@@ -86,7 +86,7 @@ TEST_CASE("hub.set + hub.get round-trip") {
 
 TEST_CASE("note.add sends a note") {
     Fixture f;
-    auto r = f.api.noteAdd()
+    auto r = f.api.note.add()
         .file("integration-test.qo")
         .execute();
     if (!r) { INFO(to_string(r.error())); }
@@ -98,14 +98,14 @@ TEST_CASE("note.add + note.get body round-trip") {
     const char* file = "integration-body.qi";
 
     SensorData sent{.temperature = 23.5f, .humidity = 65};
-    auto add_r = f.api.noteAdd()
+    auto add_r = f.api.note.add()
         .file(file)
         .body(sent)
         .execute();
     if (!add_r) { INFO(to_string(add_r.error())); }
     REQUIRE(add_r);
 
-    auto get_r = f.api.noteGet().delete_()
+    auto get_r = f.api.note.get().delete_()
         .file(file)
         .execute();
     if (!get_r) { INFO(to_string(get_r.error())); }
@@ -122,17 +122,17 @@ TEST_CASE("note.changes tracks additions") {
     const char* tracker = "integration-test";
 
     // Reset tracker
-    f.api.noteChanges().get()
+    f.api.note.changes().get()
         .file(file)
         .tracker(tracker)
         .start(true)
         .execute();
 
     // Add a note
-    f.api.noteAdd().file(file).execute();
+    f.api.note.add().file(file).execute();
 
     // Check for changes
-    auto r = f.api.noteChanges().get()
+    auto r = f.api.note.changes().get()
         .file(file)
         .tracker(tracker)
         .execute();
@@ -142,7 +142,7 @@ TEST_CASE("note.changes tracks additions") {
     MESSAGE("changes: ", r.changes, " total: ", r.total);
 
     // Clean up — pop the note we added
-    f.api.noteGet().delete_().file(file).execute();
+    f.api.note.get().delete_().file(file).execute();
 }
 
 // ─── Environment variables ──────────────────────────────────────────────────
@@ -151,7 +151,7 @@ TEST_CASE("env.default set + get round-trip") {
     Fixture f;
 
     // Set an env var
-    auto set_r = f.api.envDefault().set()
+    auto set_r = f.api.env.default_().set()
         .name("_integration_test_var")
         .text("hello-from-note-cpp")
         .execute();
@@ -167,7 +167,7 @@ TEST_CASE("env.default set + get round-trip") {
     CHECK(note::string_view(text) == "hello-from-note-cpp");
 
     // Clean up
-    f.api.envDefault().delete_()
+    f.api.env.default_().delete_()
         .name("_integration_test_var")
         .execute();
 }
@@ -189,10 +189,10 @@ void binary_round_trip(Fixture& f, const uint8_t* data, size_t data_len, const c
     INFO("payload: ", label, " (", data_len, " bytes)");
 
     // Clear any existing binary data
-    f.api.cardBinary().delete_().execute();
+    f.api.card.binary().delete_().execute();
 
     // Check available space
-    auto status_r = f.api.cardBinary().get().execute();
+    auto status_r = f.api.card.binary().get().execute();
     if (!status_r) { INFO(to_string(status_r.error())); }
     REQUIRE(status_r);
     REQUIRE(status_r.max > 0);
@@ -210,7 +210,7 @@ void binary_round_trip(Fixture& f, const uint8_t* data, size_t data_len, const c
     // ── PUT phase ──────────────────────────────────────────────────
 
     // JSON handshake: tell the Notecard how many COBS bytes are coming
-    auto put_r = f.api.cardBinaryPut()
+    auto put_r = f.api.card.binary_put()
         .cobs(static_cast<int32_t>(cobs_len))
         .status(md5)
         .execute();
@@ -227,7 +227,7 @@ void binary_round_trip(Fixture& f, const uint8_t* data, size_t data_len, const c
 
     // ── Verify stored data ─────────────────────────────────────────
 
-    auto verify_r = f.api.cardBinary().get().execute();
+    auto verify_r = f.api.card.binary().get().execute();
     if (!verify_r) { INFO(to_string(verify_r.error())); }
     REQUIRE(verify_r);
     CHECK(verify_r.length == static_cast<int32_t>(data_len));
@@ -240,7 +240,7 @@ void binary_round_trip(Fixture& f, const uint8_t* data, size_t data_len, const c
     // ── GET phase ──────────────────────────────────────────────────
 
     // JSON handshake: request the binary data back
-    auto get_r = f.api.cardBinaryGet()
+    auto get_r = f.api.card.binary_get()
         .cobs(verify_r.cobs)
         .length(verify_r.length)
         .execute();
@@ -271,7 +271,7 @@ void binary_round_trip(Fixture& f, const uint8_t* data, size_t data_len, const c
     CHECK(memcmp(decoded.data(), data, data_len) == 0);
 
     // Clean up
-    f.api.cardBinary().delete_().execute();
+    f.api.card.binary().delete_().execute();
 }
 
 } // namespace
@@ -307,7 +307,7 @@ TEST_CASE("card.binary put + get — 512-byte payload") {
 
 TEST_CASE("bad request returns Notecard error") {
     Fixture f;
-    auto r = f.api.noteGet().delete_()
+    auto r = f.api.note.get().delete_()
         .file("nonexistent-file.qi")
         .execute();
     CHECK(!r);

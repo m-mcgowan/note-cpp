@@ -136,7 +136,10 @@ public:
 
 {% endfor %}
     // =====================================================================
-    // Flat methods (original API — retained for backward compatibility)
+    // Flat methods (deprecated — use resource groups instead)
+    //
+    // e.g. api.hubSet() → api.hub.set()
+    //      api.cardVersion() → api.card.version()
     // =====================================================================
 
 {% for endpoint in endpoints %}
@@ -144,12 +147,14 @@ public:
     // {{ endpoint.wire_name }}: flat method skipped (conflicts with {{ endpoint.factory_method }} group member)
 {% else %}
 {% set has_skus = endpoint.skus_rats_expr != "" %}
+{% set dep_msg = "use api." + endpoint.group_name + "." + endpoint.group_method + "() instead" %}
 {% if endpoint.is_polymorphic %}
 {% set guard_type = "api::" + endpoint.struct_name + "::" + endpoint.operations[0].struct_name %}
 {% if has_skus %}
 #if __cplusplus >= 202002L
     template<typename T_ = TargetT>
     requires (IsUnconstrained<T_> || T_::supports({{ guard_type }}::skus))
+    [[deprecated("{{ dep_msg }}")]]
     {{ endpoint.struct_name }}Factory {{ endpoint.factory_method }}() { return {&nc_}; }
 
     template<typename T_ = TargetT>
@@ -160,6 +165,7 @@ public:
     {{ endpoint.struct_name }}Factory {{ endpoint.factory_method }}() { return {&nc_}; }
 #endif
 {% else %}
+    [[deprecated("{{ dep_msg }}")]]
     {{ endpoint.struct_name }}Factory {{ endpoint.factory_method }}() { return {&nc_}; }
 {% endif %}
 {% for op in endpoint.operations %}
@@ -169,6 +175,7 @@ public:
 #if __cplusplus >= 202002L
     template<typename T_ = TargetT>
     requires (IsUnconstrained<T_> || T_::supports({{ op_type }}::skus))
+    [[deprecated("{{ dep_msg }}")]]
 {% if op.required_properties %}
     auto {{ endpoint.action_first_method(op) }}({{ required_params(op) }}) {
 {{ required_body(op_qual, op) }}    }
@@ -194,6 +201,7 @@ public:
 {% endif %}
 #endif
 {% else %}
+    [[deprecated("{{ dep_msg }}")]]
 {% if op.required_properties %}
     auto {{ endpoint.action_first_method(op) }}({{ required_params(op) }}) {
 {{ required_body(op_qual, op) }}    }
@@ -210,6 +218,7 @@ public:
 #if __cplusplus >= 202002L
     template<typename T_ = TargetT>
     requires (IsUnconstrained<T_> || T_::supports({{ skus_type }}::skus))
+    [[deprecated("{{ dep_msg }}")]]
 {% if op.required_properties %}
     auto {{ endpoint.factory_method }}({{ required_params(op) }}) {
 {{ required_body(endpoint.struct_name, op) }}    }
@@ -235,6 +244,7 @@ public:
 {% endif %}
 #endif
 {% else %}
+    [[deprecated("{{ dep_msg }}")]]
 {% if op.required_properties %}
     auto {{ endpoint.factory_method }}({{ required_params(op) }}) {
 {{ required_body(endpoint.struct_name, op) }}    }

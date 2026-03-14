@@ -362,7 +362,7 @@ static void test_full_execute_alloc_profile() {
                        "\"target\":\"r\"},\"api\":5}\r\n");
 
     TrackingScope scope;
-    auto r = api.cardVersion().execute();
+    auto r = api.card.version().execute();
     auto stats = scope.finish();
 
     assert(r.has_value());
@@ -390,7 +390,7 @@ static void test_execute_with_body_alloc_profile() {
     hal.queue_response("{\"total\":1}\r\n");
 
     TrackingScope scope;
-    auto r = api.noteAdd()
+    auto r = api.note.add()
         .file("sensors.qo")
         .execute();
     auto stats = scope.finish();
@@ -420,7 +420,7 @@ static void test_leak_detection() {
 
     TrackingScope scope;
     {
-        auto r = api.cardVersion().execute();
+        auto r = api.card.version().execute();
         assert(r.has_value());
         // r goes out of scope here — all request-scoped memory should be freed
     }
@@ -454,18 +454,18 @@ static void test_multiple_requests_no_growth() {
     // Measure first request
     hal.queue_response("{\"version\":\"v1\"}\r\n");
     TrackingScope scope1;
-    { auto r = api.cardVersion().execute(); }
+    { auto r = api.card.version().execute(); }
     auto stats1 = scope1.finish();
 
     // Measure tenth request
     for (int i = 0; i < 8; ++i) {
         hal.queue_response("{\"version\":\"v1\"}\r\n");
-        auto r = api.cardVersion().execute();
+        auto r = api.card.version().execute();
     }
 
     hal.queue_response("{\"version\":\"v1\"}\r\n");
     TrackingScope scope10;
-    { auto r = api.cardVersion().execute(); }
+    { auto r = api.card.version().execute(); }
     auto stats10 = scope10.finish();
 
     stats1.print("request #1");
@@ -505,13 +505,13 @@ static void test_arena_zero_heap_execute() {
 
     // First execute warms up backend's owned_reader_
     hal.queue_response("{\"version\":\"notecard-7.2.1\",\"device\":\"dev:12345\",\"board\":\"1.0\"}\r\n");
-    { auto warm = api.cardVersion().execute(); }
+    { auto warm = api.card.version().execute(); }
 
     // Steady-state: all cJSON nodes route through arena, C++ wrapper is reused
     hal.queue_response("{\"version\":\"notecard-7.2.1\",\"device\":\"dev:12345\",\"board\":\"1.0\"}\r\n");
 
     TrackingScope scope;
-    auto r = api.cardVersion().execute();
+    auto r = api.card.version().execute();
     auto stats = scope.finish();
 
     assert(r.has_value());
@@ -548,7 +548,7 @@ static void test_arena_multiple_requests_bounded() {
     size_t max_arena_used = 0;
     for (int i = 0; i < 10; ++i) {
         hal.queue_response("{\"version\":\"v1\",\"device\":\"dev:1\"}\r\n");
-        auto r = api.cardVersion().execute();
+        auto r = api.card.version().execute();
         assert(r.has_value());
         if (arena.used() > max_arena_used) max_arena_used = arena.used();
     }

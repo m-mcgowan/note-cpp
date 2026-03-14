@@ -51,22 +51,28 @@ TEST_CASE("Api::notecard() returns Notecard reference") {
 
 TEST_CASE("Api::execute() lvalue and rvalue overloads") {
     Harness h;
-    auto req = h.api.cardVersion();
+    auto req = h.api.card.version();
     h.api.execute(req);
     REQUIRE(h.last_req.find("card.version") != std::string::npos);
-    h.api.execute(h.api.cardVersion());
+    h.api.execute(h.api.card.version());
     REQUIRE(h.last_req.find("card.version") != std::string::npos);
 }
 
 TEST_CASE("Api::command() overload") {
     Harness h;
-    h.api.command(h.api.cardRestart());
+    h.api.command(h.api.card.restart());
     REQUIRE(h.last_req.find("card.restart") != std::string::npos);
 }
 
 // ---------------------------------------------------------------------------
 // Per-endpoint flat factory methods (backward compatibility)
+// Deprecation warnings suppressed — these tests verify the flat API still works.
 // ---------------------------------------------------------------------------
+
+#if defined(__clang__) || defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
 
 TEST_CASE("Api::cardAttn()") {
     Harness h;
@@ -535,6 +541,10 @@ TEST_CASE("Api::webPut()") {
     h.api.execute(h.api.webPut());
     REQUIRE(h.last_req.find("web.put") != std::string::npos);
 }
+
+#if defined(__clang__) || defined(__GNUC__)
+#pragma GCC diagnostic pop
+#endif
 
 // ---------------------------------------------------------------------------
 // Resource group methods (api.card, api.hub, api.note, etc.)

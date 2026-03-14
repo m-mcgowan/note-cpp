@@ -235,7 +235,7 @@ TEST_CASE("Typed command_typed via req.command(nc)") {
 TEST_CASE("Api factory creates bound requests") {
     TestHarness h;
     note::Api api(h.nc);
-    auto req = api.hubSet();
+    auto req = api.hub.set();
     req.product("factory-test");
     req.execute();
     REQUIRE(h.last_request == R"({"req":"hub.set","product":"factory-test"})");
@@ -244,7 +244,7 @@ TEST_CASE("Api factory creates bound requests") {
 TEST_CASE("Api factory fluent chain") {
     TestHarness h;
     note::Api api(h.nc);
-    api.hubSet().product("chain-test").mode("periodic").execute();
+    api.hub.set().product("chain-test").mode("periodic").execute();
     REQUIRE(h.last_request ==
         R"({"req":"hub.set","mode":"periodic","product":"chain-test"})");
 }
@@ -252,10 +252,10 @@ TEST_CASE("Api factory fluent chain") {
 TEST_CASE("Api factory polymorphic endpoints") {
     TestHarness h;
     note::Api api(h.nc);
-    api.noteGet().get().file("data.qi").execute();
+    api.note.get().get().file("data.qi").execute();
     REQUIRE(h.last_request == R"({"req":"note.get","file":"data.qi"})");
 
-    api.noteGet().delete_().file("data.qi").execute();
+    api.note.get().delete_().file("data.qi").execute();
     REQUIRE(h.last_request ==
         R"({"req":"note.get","delete":true,"file":"data.qi"})");
 }

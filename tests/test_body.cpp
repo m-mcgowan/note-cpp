@@ -208,7 +208,7 @@ TEST_CASE("BodyValue from reflected aggregate with nested aggregate field") {
 TEST_CASE("note.template verify:true includes verify field in request") {
     TestHarness h;
     note::Api api(h.nc);
-    api.noteTemplate().set("sensors.qo")
+    api.note.template_().set("sensors.qo")
         .body(note::template_of<Readings>())
         .verify(true)
         .execute();
@@ -238,7 +238,7 @@ TEST_CASE("BodyValue from NOTE_FIELDS macro schema") {
 TEST_CASE("note.add with string body") {
     TestHarness h;
     note::Api api(h.nc);
-    auto req = api.noteAdd();
+    auto req = api.note.add();
     req.file = "sensors.qo";
     req.body = R"({"temp":22.5})";
     req.execute();
@@ -252,7 +252,7 @@ TEST_CASE("note.add with reflected schema body") {
     TestHarness h;
     note::Api api(h.nc);
     Readings r{.temperature = 22.5f, .humidity = 60};
-    api.noteAdd().file("sensors.qo").body(r).execute();
+    api.note.add().file("sensors.qo").body(r).execute();
     REQUIRE(h.last_request ==
         R"({"req":"note.add","body":{"temperature":22.5,"humidity":60},"file":"sensors.qo"})");
 }
@@ -260,7 +260,7 @@ TEST_CASE("note.add with reflected schema body") {
 TEST_CASE("note.template with template_of") {
     TestHarness h;
     note::Api api(h.nc);
-    api.noteTemplate().set("sensors.qo")
+    api.note.template_().set("sensors.qo")
         .body(note::template_of<Readings>())
         .execute();
     REQUIRE(h.last_request ==
@@ -270,7 +270,7 @@ TEST_CASE("note.template with template_of") {
 TEST_CASE("note.add with builder body") {
     TestHarness h;
     note::Api api(h.nc);
-    api.noteAdd()
+    api.note.add()
         .file("sensors.qo")
         .body(note::body([](note::JsonBuilder& b) {
             b.add("temp", 22.5);

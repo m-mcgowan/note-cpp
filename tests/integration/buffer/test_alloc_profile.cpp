@@ -128,11 +128,11 @@ static void test_zero_alloc_card_version() {
     note::Api api(nc);
 
     // Warm up: first call may allocate for std::function internals
-    { auto r = api.cardVersion().execute(); }
+    { auto r = api.card.version().execute(); }
 
     // Steady-state: ZERO allocations expected
     TrackingScope scope;
-    auto r = api.cardVersion().execute();
+    auto r = api.card.version().execute();
     auto stats = scope.finish();
 
     assert(r.has_value());
@@ -154,10 +154,10 @@ static void test_zero_alloc_hub_set() {
     note::Api api(nc);
 
     // Warm up
-    { api.hubSet().mode("periodic").outbound(int32_t{60}).execute(); }
+    { api.hub.set().mode("periodic").outbound(int32_t{60}).execute(); }
 
     TrackingScope scope;
-    auto r = api.hubSet().mode("periodic").outbound(int32_t{60}).execute();
+    auto r = api.hub.set().mode("periodic").outbound(int32_t{60}).execute();
     auto stats = scope.finish();
 
     assert(r.has_value());
@@ -178,20 +178,20 @@ static void test_zero_alloc_multiple_requests() {
 
     // Warm up with different request types
     transport.response = version_rsp;
-    { api.cardVersion().execute(); }
+    { api.card.version().execute(); }
     transport.response = empty_rsp;
-    { api.hubSet().mode("periodic").execute(); }
+    { api.hub.set().mode("periodic").execute(); }
 
     // Now measure 10 consecutive requests of mixed types.
     // Transport response is a const char* — zero allocation on assignment.
     TrackingScope scope;
     for (int i = 0; i < 5; ++i) {
         transport.response = version_rsp;
-        auto r1 = api.cardVersion().execute();
+        auto r1 = api.card.version().execute();
         assert(r1.has_value());
 
         transport.response = empty_rsp;
-        auto r2 = api.hubSet().mode("continuous").execute();
+        auto r2 = api.hub.set().mode("continuous").execute();
         assert(r2.has_value());
     }
     auto stats = scope.finish();
@@ -212,10 +212,10 @@ static void test_zero_alloc_with_body_response() {
     note::Api api(nc);
 
     // Warm up
-    { api.cardVersion().execute(); }
+    { api.card.version().execute(); }
 
     TrackingScope scope;
-    auto r = api.cardVersion().execute();
+    auto r = api.card.version().execute();
     auto stats = scope.finish();
 
     assert(r.has_value());
@@ -238,11 +238,11 @@ static void test_zero_alloc_no_leaks() {
     note::Api api(nc);
 
     // Warm up
-    { api.cardVersion().execute(); }
+    { api.card.version().execute(); }
 
     TrackingScope scope;
     {
-        auto r = api.cardVersion().execute();
+        auto r = api.card.version().execute();
         assert(r.has_value());
         // r goes out of scope here
     }
@@ -265,12 +265,12 @@ static void test_zero_alloc_error_response() {
 
     // Warm up
     transport.response = R"({})";
-    { api.cardVersion().execute(); }
+    { api.card.version().execute(); }
 
     // Error path: allocates for owned reader
     transport.response = R"({"err":"file not found"})";
     TrackingScope scope;
-    auto r = api.cardVersion().execute();
+    auto r = api.card.version().execute();
     auto stats = scope.finish();
 
     assert(!r.has_value());

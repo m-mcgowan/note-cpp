@@ -30,13 +30,13 @@ TEST_CASE("make_api(nc) returns unconstrained Api") {
     auto api = note::make_api(nc);
 
     // All methods available
-    api.execute(api.cardVersion());
+    api.execute(api.card.version());
     REQUIRE(last_req.find("card.version") != std::string::npos);
 
-    api.execute(api.cardSleep());
+    api.execute(api.card.sleep());
     REQUIRE(last_req.find("card.sleep") != std::string::npos);
 
-    api.execute(api.hubSet());
+    api.execute(api.hub.set());
     REQUIRE(last_req.find("hub.set") != std::string::npos);
 }
 
@@ -53,15 +53,15 @@ TEST_CASE("make_api with constrained target — supported endpoints work") {
     auto api = note::make_api(nc, note::target<note::Product::WiFi>());
 
     // card.sleep is WiFi-only — should work on WiFi target
-    api.execute(api.cardSleep());
+    api.execute(api.card.sleep());
     REQUIRE(last_req.find("card.sleep") != std::string::npos);
 
     // card.wifi needs WiFi — available
-    api.execute(api.cardWifi());
+    api.execute(api.card.wifi());
     REQUIRE(last_req.find("card.wifi") != std::string::npos);
 
     // Universal endpoints always work
-    api.execute(api.cardVersion());
+    api.execute(api.card.version());
     REQUIRE(last_req.find("card.version") != std::string::npos);
 }
 
@@ -71,10 +71,10 @@ TEST_CASE("make_api with Product::Cell target — universal endpoints work") {
     auto nc = make_nc(backend, last_req);
     auto api = note::make_api(nc, note::target<note::Product::Cell>());
 
-    api.execute(api.hubSet());
+    api.execute(api.hub.set());
     REQUIRE(last_req.find("hub.set") != std::string::npos);
 
-    api.execute(api.cardVersion());
+    api.execute(api.card.version());
     REQUIRE(last_req.find("card.version") != std::string::npos);
 }
 
@@ -85,11 +85,11 @@ TEST_CASE("Strict mode — supported endpoints work at runtime") {
     auto api = note::make_api(nc, note::Target<note::Rat::WiFi, true>{});
 
     // card.sleep is WiFi-only — available on WiFi strict target
-    api.execute(api.cardSleep());
+    api.execute(api.card.sleep());
     REQUIRE(last_req.find("card.sleep") != std::string::npos);
 
     // Universal endpoints work
-    api.execute(api.hubSet());
+    api.execute(api.hub.set());
     REQUIRE(last_req.find("hub.set") != std::string::npos);
 }
 
@@ -104,11 +104,11 @@ TEST_CASE("Api(nc, target) — constrained via constructor") {
     note::Api api(nc, note::target<note::Product::WiFi>());
 
     // card.wifi needs WiFi — available
-    api.execute(api.cardWifi());
+    api.execute(api.card.wifi());
     REQUIRE(last_req.find("card.wifi") != std::string::npos);
 
     // Universal endpoints always work
-    api.execute(api.cardVersion());
+    api.execute(api.card.version());
     REQUIRE(last_req.find("card.version") != std::string::npos);
 }
 
@@ -118,10 +118,10 @@ TEST_CASE("Api(nc, target) — strict mode via constructor") {
     auto nc = make_nc(backend, last_req);
     note::Api api(nc, note::Target<note::Rat::WiFi, true>{});
 
-    api.execute(api.cardSleep());
+    api.execute(api.card.sleep());
     REQUIRE(last_req.find("card.sleep") != std::string::npos);
 
-    api.execute(api.hubSet());
+    api.execute(api.hub.set());
     REQUIRE(last_req.find("hub.set") != std::string::npos);
 }
 

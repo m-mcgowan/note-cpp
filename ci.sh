@@ -181,7 +181,7 @@ TEOF
     if $CXX $CXXFLAGS $INCLUDE -Werror -fsyntax-only -x c++ - <<'TEOF' 2>&1; then
 #include <note/api_context.hpp>
 using WifiTarget = note::Target<note::Rat::WiFi>;
-void test(note::Api<WifiTarget>& api) { api.cardSleep(); api.hubSet(); }
+void test(note::Api<WifiTarget>& api) { api.card.sleep(); api.hub.set(); }
 TEOF
         echo "OK"
     else

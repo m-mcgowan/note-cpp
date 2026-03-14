@@ -14,6 +14,12 @@
 #include "catch.hpp"
 #include "test_json_backend.hpp"
 
+// Suppress deprecation warnings — flat methods are tested for backward compat.
+#if defined(__clang__) || defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+
 #include <note/api_context.hpp>
 
 #if __cplusplus >= 202002L

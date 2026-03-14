@@ -71,7 +71,7 @@ TEST_CASE("functor chaining terminates with execute() on bound request") {
     } h;
 
     note::Api api(h.nc);
-    api.hubSet()
+    api.hub.set()
        .mode("periodic")
        .product("com.example.app")
        .outbound(60)

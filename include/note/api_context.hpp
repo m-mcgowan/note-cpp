@@ -460,16 +460,22 @@ public:
     } web;
 
     // =====================================================================
-    // Flat methods (original API — retained for backward compatibility)
+    // Flat methods (deprecated — use resource groups instead)
+    //
+    // e.g. api.hubSet() → api.hub.set()
+    //      api.cardVersion() → api.card.version()
     // =====================================================================
 
+    [[deprecated("use api.card.attn() instead")]]
     auto cardAttn() { return create<api::CardAttn>(); }
 
+    [[deprecated("use api.card.aux() instead")]]
     auto cardAux() { return create<api::CardAux>(); }
 
 #if __cplusplus >= 202002L
     template<typename T_ = TargetT>
     requires (IsUnconstrained<T_> || T_::supports(api::CardAuxSerial::skus))
+    [[deprecated("use api.card.auxSerial() instead")]]
     auto cardAuxSerial() { return create<api::CardAuxSerial>(); }
 
     template<typename T_ = TargetT>
@@ -483,6 +489,7 @@ public:
 #if __cplusplus >= 202002L
     template<typename T_ = TargetT>
     requires (IsUnconstrained<T_> || T_::supports(api::CardBinary::Get::skus))
+    [[deprecated("use api.card.binary() instead")]]
     CardBinaryFactory cardBinary() { return {&nc_}; }
 
     template<typename T_ = TargetT>
@@ -495,6 +502,7 @@ public:
 #if __cplusplus >= 202002L
     template<typename T_ = TargetT>
     requires (IsUnconstrained<T_> || T_::supports(api::CardBinary::Get::skus))
+    [[deprecated("use api.card.binary() instead")]]
     auto getCardBinary() { return create<api::CardBinary::Get>(); }
 
     template<typename T_ = TargetT>
@@ -507,6 +515,7 @@ public:
 #if __cplusplus >= 202002L
     template<typename T_ = TargetT>
     requires (IsUnconstrained<T_> || T_::supports(api::CardBinary::Delete::skus))
+    [[deprecated("use api.card.binary() instead")]]
     auto deleteCardBinary() { return create<api::CardBinary::Delete>(); }
 
     template<typename T_ = TargetT>
@@ -520,6 +529,7 @@ public:
 #if __cplusplus >= 202002L
     template<typename T_ = TargetT>
     requires (IsUnconstrained<T_> || T_::supports(api::CardBinaryGet::skus))
+    [[deprecated("use api.card.binaryGet() instead")]]
     auto cardBinaryGet() { return create<api::CardBinaryGet>(); }
 
     template<typename T_ = TargetT>
@@ -533,6 +543,7 @@ public:
 #if __cplusplus >= 202002L
     template<typename T_ = TargetT>
     requires (IsUnconstrained<T_> || T_::supports(api::CardBinaryPut::skus))
+    [[deprecated("use api.card.binaryPut() instead")]]
     auto cardBinaryPut() { return create<api::CardBinaryPut>(); }
 
     template<typename T_ = TargetT>
@@ -546,6 +557,7 @@ public:
 #if __cplusplus >= 202002L
     template<typename T_ = TargetT>
     requires (IsUnconstrained<T_> || T_::supports(api::CardCarrier::skus))
+    [[deprecated("use api.card.carrier() instead")]]
     auto cardCarrier() { return create<api::CardCarrier>(); }
 
     template<typename T_ = TargetT>
@@ -559,6 +571,7 @@ public:
 #if __cplusplus >= 202002L
     template<typename T_ = TargetT>
     requires (IsUnconstrained<T_> || T_::supports(api::CardContact::Get::skus))
+    [[deprecated("use api.card.contact() instead")]]
     CardContactFactory cardContact() { return {&nc_}; }
 
     template<typename T_ = TargetT>
@@ -571,6 +584,7 @@ public:
 #if __cplusplus >= 202002L
     template<typename T_ = TargetT>
     requires (IsUnconstrained<T_> || T_::supports(api::CardContact::Get::skus))
+    [[deprecated("use api.card.contact() instead")]]
     auto getCardContact() { return create<api::CardContact::Get>(); }
 
     template<typename T_ = TargetT>
@@ -583,6 +597,7 @@ public:
 #if __cplusplus >= 202002L
     template<typename T_ = TargetT>
     requires (IsUnconstrained<T_> || T_::supports(api::CardContact::Set::skus))
+    [[deprecated("use api.card.contact() instead")]]
     auto setCardContact() { return create<api::CardContact::Set>(); }
 
     template<typename T_ = TargetT>
@@ -596,6 +611,7 @@ public:
 #if __cplusplus >= 202002L
     template<typename T_ = TargetT>
     requires (IsUnconstrained<T_> || T_::supports(api::CardDfu::skus))
+    [[deprecated("use api.card.dfu() instead")]]
     auto cardDfu() { return create<api::CardDfu>(); }
 
     template<typename T_ = TargetT>
@@ -609,6 +625,7 @@ public:
 #if __cplusplus >= 202002L
     template<typename T_ = TargetT>
     requires (IsUnconstrained<T_> || T_::supports(api::CardIllumination::skus))
+    [[deprecated("use api.card.illumination() instead")]]
     auto cardIllumination() { return create<api::CardIllumination>(); }
 
     template<typename T_ = TargetT>
@@ -619,20 +636,28 @@ public:
     auto cardIllumination() { return create<api::CardIllumination>(); }
 #endif
 
+    [[deprecated("use api.card.io() instead")]]
     auto cardIo() { return create<api::CardIo>(); }
 
+    [[deprecated("use api.card.led() instead")]]
     auto cardLed() { return create<api::CardLed>(); }
 
+    [[deprecated("use api.card.location() instead")]]
     auto cardLocation() { return create<api::CardLocation>(); }
 
+    [[deprecated("use api.card.locationMode() instead")]]
     CardLocationModeFactory cardLocationMode() { return {&nc_}; }
+    [[deprecated("use api.card.locationMode() instead")]]
     auto getCardLocationMode() { return create<api::CardLocationMode::Get>(); }
+    [[deprecated("use api.card.locationMode() instead")]]
     auto setCardLocationMode() { return create<api::CardLocationMode::Set>(); }
+    [[deprecated("use api.card.locationMode() instead")]]
     auto deleteCardLocationMode() { return create<api::CardLocationMode::Delete>(); }
 
 #if __cplusplus >= 202002L
     template<typename T_ = TargetT>
     requires (IsUnconstrained<T_> || T_::supports(api::CardLocationTrack::skus))
+    [[deprecated("use api.card.locationTrack() instead")]]
     auto cardLocationTrack() { return create<api::CardLocationTrack>(); }
 
     template<typename T_ = TargetT>
@@ -646,6 +671,7 @@ public:
 #if __cplusplus >= 202002L
     template<typename T_ = TargetT>
     requires (IsUnconstrained<T_> || T_::supports(api::CardMonitor::skus))
+    [[deprecated("use api.card.monitor() instead")]]
     auto cardMonitor() { return create<api::CardMonitor>(); }
 
     template<typename T_ = TargetT>
@@ -659,6 +685,7 @@ public:
 #if __cplusplus >= 202002L
     template<typename T_ = TargetT>
     requires (IsUnconstrained<T_> || T_::supports(api::CardMotion::skus))
+    [[deprecated("use api.card.motion() instead")]]
     auto cardMotion() { return create<api::CardMotion>(); }
 
     template<typename T_ = TargetT>
@@ -672,6 +699,7 @@ public:
 #if __cplusplus >= 202002L
     template<typename T_ = TargetT>
     requires (IsUnconstrained<T_> || T_::supports(api::CardMotionMode::skus))
+    [[deprecated("use api.card.motionMode() instead")]]
     auto cardMotionMode() { return create<api::CardMotionMode>(); }
 
     template<typename T_ = TargetT>
@@ -685,6 +713,7 @@ public:
 #if __cplusplus >= 202002L
     template<typename T_ = TargetT>
     requires (IsUnconstrained<T_> || T_::supports(api::CardMotionSync::skus))
+    [[deprecated("use api.card.motionSync() instead")]]
     auto cardMotionSync() { return create<api::CardMotionSync>(); }
 
     template<typename T_ = TargetT>
@@ -698,6 +727,7 @@ public:
 #if __cplusplus >= 202002L
     template<typename T_ = TargetT>
     requires (IsUnconstrained<T_> || T_::supports(api::CardMotionTrack::skus))
+    [[deprecated("use api.card.motionTrack() instead")]]
     auto cardMotionTrack() { return create<api::CardMotionTrack>(); }
 
     template<typename T_ = TargetT>
@@ -711,6 +741,7 @@ public:
 #if __cplusplus >= 202002L
     template<typename T_ = TargetT>
     requires (IsUnconstrained<T_> || T_::supports(api::CardPower::Get::skus))
+    [[deprecated("use api.card.power() instead")]]
     CardPowerFactory cardPower() { return {&nc_}; }
 
     template<typename T_ = TargetT>
@@ -723,6 +754,7 @@ public:
 #if __cplusplus >= 202002L
     template<typename T_ = TargetT>
     requires (IsUnconstrained<T_> || T_::supports(api::CardPower::Get::skus))
+    [[deprecated("use api.card.power() instead")]]
     auto getCardPower() { return create<api::CardPower::Get>(); }
 
     template<typename T_ = TargetT>
@@ -735,6 +767,7 @@ public:
 #if __cplusplus >= 202002L
     template<typename T_ = TargetT>
     requires (IsUnconstrained<T_> || T_::supports(api::CardPower::Set::skus))
+    [[deprecated("use api.card.power() instead")]]
     auto setCardPower() { return create<api::CardPower::Set>(); }
 
     template<typename T_ = TargetT>
@@ -747,6 +780,7 @@ public:
 #if __cplusplus >= 202002L
     template<typename T_ = TargetT>
     requires (IsUnconstrained<T_> || T_::supports(api::CardPower::Delete::skus))
+    [[deprecated("use api.card.power() instead")]]
     auto deleteCardPower() { return create<api::CardPower::Delete>(); }
 
     template<typename T_ = TargetT>
@@ -760,6 +794,7 @@ public:
 #if __cplusplus >= 202002L
     template<typename T_ = TargetT>
     requires (IsUnconstrained<T_> || T_::supports(api::CardRandom::skus))
+    [[deprecated("use api.card.random() instead")]]
     auto cardRandom() { return create<api::CardRandom>(); }
 
     template<typename T_ = TargetT>
@@ -770,13 +805,16 @@ public:
     auto cardRandom() { return create<api::CardRandom>(); }
 #endif
 
+    [[deprecated("use api.card.restart() instead")]]
     auto cardRestart() { return create<api::CardRestart>(); }
 
+    [[deprecated("use api.card.restore() instead")]]
     auto cardRestore() { return create<api::CardRestore>(); }
 
 #if __cplusplus >= 202002L
     template<typename T_ = TargetT>
     requires (IsUnconstrained<T_> || T_::supports(api::CardSleep::skus))
+    [[deprecated("use api.card.sleep() instead")]]
     auto cardSleep() { return create<api::CardSleep>(); }
 
     template<typename T_ = TargetT>
@@ -787,20 +825,28 @@ public:
     auto cardSleep() { return create<api::CardSleep>(); }
 #endif
 
+    [[deprecated("use api.card.status() instead")]]
     auto cardStatus() { return create<api::CardStatus>(); }
 
+    [[deprecated("use api.card.temp() instead")]]
     CardTempFactory cardTemp() { return {&nc_}; }
+    [[deprecated("use api.card.temp() instead")]]
     auto getCardTemp() { return create<api::CardTemp::Get>(); }
+    [[deprecated("use api.card.temp() instead")]]
     auto setCardTemp() { return create<api::CardTemp::Set>(); }
+    [[deprecated("use api.card.temp() instead")]]
     auto deleteCardTemp() { return create<api::CardTemp::Delete>(); }
 
+    [[deprecated("use api.card.time() instead")]]
     auto cardTime() { return create<api::CardTime>(); }
 
+    [[deprecated("use api.card.trace() instead")]]
     auto cardTrace() { return create<api::CardTrace>(); }
 
 #if __cplusplus >= 202002L
     template<typename T_ = TargetT>
     requires (IsUnconstrained<T_> || T_::supports(api::CardTransport::skus))
+    [[deprecated("use api.card.transport() instead")]]
     auto cardTransport() { return create<api::CardTransport>(); }
 
     template<typename T_ = TargetT>
@@ -814,6 +860,7 @@ public:
 #if __cplusplus >= 202002L
     template<typename T_ = TargetT>
     requires (IsUnconstrained<T_> || T_::supports(api::CardTriangulate::skus))
+    [[deprecated("use api.card.triangulate() instead")]]
     auto cardTriangulate() { return create<api::CardTriangulate>(); }
 
     template<typename T_ = TargetT>
@@ -827,6 +874,7 @@ public:
 #if __cplusplus >= 202002L
     template<typename T_ = TargetT>
     requires (IsUnconstrained<T_> || T_::supports(api::CardUsageGet::skus))
+    [[deprecated("use api.card.usageGet() instead")]]
     auto cardUsageGet() { return create<api::CardUsageGet>(); }
 
     template<typename T_ = TargetT>
@@ -840,6 +888,7 @@ public:
 #if __cplusplus >= 202002L
     template<typename T_ = TargetT>
     requires (IsUnconstrained<T_> || T_::supports(api::CardUsageTest::skus))
+    [[deprecated("use api.card.usageTest() instead")]]
     auto cardUsageTest() { return create<api::CardUsageTest>(); }
 
     template<typename T_ = TargetT>
@@ -850,15 +899,20 @@ public:
     auto cardUsageTest() { return create<api::CardUsageTest>(); }
 #endif
 
+    [[deprecated("use api.card.version() instead")]]
     auto cardVersion() { return create<api::CardVersion>(); }
 
+    [[deprecated("use api.card.voltage() instead")]]
     CardVoltageFactory cardVoltage() { return {&nc_}; }
+    [[deprecated("use api.card.voltage() instead")]]
     auto getCardVoltage() { return create<api::CardVoltage::Get>(); }
+    [[deprecated("use api.card.voltage() instead")]]
     auto setCardVoltage() { return create<api::CardVoltage::Set>(); }
 
 #if __cplusplus >= 202002L
     template<typename T_ = TargetT>
     requires (IsUnconstrained<T_> || T_::supports(api::CardWifi::skus))
+    [[deprecated("use api.card.wifi() instead")]]
     auto cardWifi() { return create<api::CardWifi>(); }
 
     template<typename T_ = TargetT>
@@ -872,6 +926,7 @@ public:
 #if __cplusplus >= 202002L
     template<typename T_ = TargetT>
     requires (IsUnconstrained<T_> || T_::supports(api::CardWireless::skus))
+    [[deprecated("use api.card.wireless() instead")]]
     auto cardWireless() { return create<api::CardWireless>(); }
 
     template<typename T_ = TargetT>
@@ -885,6 +940,7 @@ public:
 #if __cplusplus >= 202002L
     template<typename T_ = TargetT>
     requires (IsUnconstrained<T_> || T_::supports(api::CardWirelessPenalty::Get::skus))
+    [[deprecated("use api.card.wirelessPenalty() instead")]]
     CardWirelessPenaltyFactory cardWirelessPenalty() { return {&nc_}; }
 
     template<typename T_ = TargetT>
@@ -897,6 +953,7 @@ public:
 #if __cplusplus >= 202002L
     template<typename T_ = TargetT>
     requires (IsUnconstrained<T_> || T_::supports(api::CardWirelessPenalty::Get::skus))
+    [[deprecated("use api.card.wirelessPenalty() instead")]]
     auto getCardWirelessPenalty() { return create<api::CardWirelessPenalty::Get>(); }
 
     template<typename T_ = TargetT>
@@ -909,6 +966,7 @@ public:
 #if __cplusplus >= 202002L
     template<typename T_ = TargetT>
     requires (IsUnconstrained<T_> || T_::supports(api::CardWirelessPenalty::Set::skus))
+    [[deprecated("use api.card.wirelessPenalty() instead")]]
     auto setCardWirelessPenalty() { return create<api::CardWirelessPenalty::Set>(); }
 
     template<typename T_ = TargetT>
@@ -921,6 +979,7 @@ public:
 #if __cplusplus >= 202002L
     template<typename T_ = TargetT>
     requires (IsUnconstrained<T_> || T_::supports(api::CardWirelessPenalty::Delete::skus))
+    [[deprecated("use api.card.wirelessPenalty() instead")]]
     auto deleteCardWirelessPenalty() { return create<api::CardWirelessPenalty::Delete>(); }
 
     template<typename T_ = TargetT>
@@ -934,6 +993,7 @@ public:
 #if __cplusplus >= 202002L
     template<typename T_ = TargetT>
     requires (IsUnconstrained<T_> || T_::supports(api::DfuGet::skus))
+    [[deprecated("use api.dfu.get() instead")]]
     auto dfuGet() { return create<api::DfuGet>(); }
 
     template<typename T_ = TargetT>
@@ -947,6 +1007,7 @@ public:
 #if __cplusplus >= 202002L
     template<typename T_ = TargetT>
     requires (IsUnconstrained<T_> || T_::supports(api::DfuStatus::skus))
+    [[deprecated("use api.dfu.status() instead")]]
     auto dfuStatus() { return create<api::DfuStatus>(); }
 
     template<typename T_ = TargetT>
@@ -957,25 +1018,31 @@ public:
     auto dfuStatus() { return create<api::DfuStatus>(); }
 #endif
 
+    [[deprecated("use api.env.default_() instead")]]
     EnvDefaultFactory envDefault() { return {&nc_}; }
+    [[deprecated("use api.env.default_() instead")]]
     auto setEnvDefault(note::string_view name) {
         auto r = create<api::EnvDefault::Set>();
         r.name = name;
         return r;
     }
+    [[deprecated("use api.env.default_() instead")]]
     auto deleteEnvDefault(note::string_view name) {
         auto r = create<api::EnvDefault::Delete>();
         r.name = name;
         return r;
     }
 
+    [[deprecated("use api.env.get() instead")]]
     auto envGet() { return create<api::EnvGet>(); }
 
+    [[deprecated("use api.env.modified() instead")]]
     auto envModified() { return create<api::EnvModified>(); }
 
 #if __cplusplus >= 202002L
     template<typename T_ = TargetT>
     requires (IsUnconstrained<T_> || T_::supports(api::EnvSet::skus))
+    [[deprecated("use api.env.set() instead")]]
     auto envSet(note::string_view name) {
         auto r = create<api::EnvSet>();
         r.name = name;
@@ -998,15 +1065,19 @@ public:
     }
 #endif
 
+    [[deprecated("use api.env.template_() instead")]]
     auto envTemplate() { return create<api::EnvTemplate>(); }
 
+    [[deprecated("use api.file.changes() instead")]]
     auto fileChanges() { return create<api::FileChanges>(); }
 
+    [[deprecated("use api.file.changesPending() instead")]]
     auto fileChangesPending() { return create<api::FileChangesPending>(); }
 
 #if __cplusplus >= 202002L
     template<typename T_ = TargetT>
     requires (IsUnconstrained<T_> || T_::supports(api::FileClear::skus))
+    [[deprecated("use api.file.clear() instead")]]
     auto fileClear() { return create<api::FileClear>(); }
 
     template<typename T_ = TargetT>
@@ -1017,15 +1088,19 @@ public:
     auto fileClear() { return create<api::FileClear>(); }
 #endif
 
+    [[deprecated("use api.file.delete_() instead")]]
     auto fileDelete() { return create<api::FileDelete>(); }
 
+    [[deprecated("use api.file.stats() instead")]]
     auto fileStats() { return create<api::FileStats>(); }
 
+    [[deprecated("use api.hub.get() instead")]]
     auto hubGet() { return create<api::HubGet>(); }
 
 #if __cplusplus >= 202002L
     template<typename T_ = TargetT>
     requires (IsUnconstrained<T_> || T_::supports(api::HubLog::skus))
+    [[deprecated("use api.hub.log() instead")]]
     auto hubLog() { return create<api::HubLog>(); }
 
     template<typename T_ = TargetT>
@@ -1036,11 +1111,13 @@ public:
     auto hubLog() { return create<api::HubLog>(); }
 #endif
 
+    [[deprecated("use api.hub.set() instead")]]
     auto hubSet() { return create<api::HubSet>(); }
 
 #if __cplusplus >= 202002L
     template<typename T_ = TargetT>
     requires (IsUnconstrained<T_> || T_::supports(api::HubSignal::skus))
+    [[deprecated("use api.hub.signal() instead")]]
     auto hubSignal() { return create<api::HubSignal>(); }
 
     template<typename T_ = TargetT>
@@ -1051,17 +1128,22 @@ public:
     auto hubSignal() { return create<api::HubSignal>(); }
 #endif
 
+    [[deprecated("use api.hub.status() instead")]]
     auto hubStatus() { return create<api::HubStatus>(); }
 
+    [[deprecated("use api.hub.sync() instead")]]
     auto hubSync() { return create<api::HubSync>(); }
 
+    [[deprecated("use api.hub.syncStatus() instead")]]
     auto hubSyncStatus() { return create<api::HubSyncStatus>(); }
 
+    [[deprecated("use api.note.add() instead")]]
     auto noteAdd() { return create<api::NoteAdd>(); }
 
 #if __cplusplus >= 202002L
     template<typename T_ = TargetT>
     requires (IsUnconstrained<T_> || T_::supports(api::NoteChanges::Get::skus))
+    [[deprecated("use api.note.changes() instead")]]
     NoteChangesFactory noteChanges() { return {&nc_}; }
 
     template<typename T_ = TargetT>
@@ -1074,6 +1156,7 @@ public:
 #if __cplusplus >= 202002L
     template<typename T_ = TargetT>
     requires (IsUnconstrained<T_> || T_::supports(api::NoteChanges::Get::skus))
+    [[deprecated("use api.note.changes() instead")]]
     auto getNoteChanges() { return create<api::NoteChanges::Get>(); }
 
     template<typename T_ = TargetT>
@@ -1086,6 +1169,7 @@ public:
 #if __cplusplus >= 202002L
     template<typename T_ = TargetT>
     requires (IsUnconstrained<T_> || T_::supports(api::NoteChanges::Delete::skus))
+    [[deprecated("use api.note.changes() instead")]]
     auto deleteNoteChanges(note::string_view file) {
         auto r = create<api::NoteChanges::Delete>();
         r.file = file;
@@ -1108,6 +1192,7 @@ public:
     }
 #endif
 
+    [[deprecated("use api.note.delete_() instead")]]
     auto noteDelete(note::string_view file, note::string_view noteId) {
         auto r = create<api::NoteDelete>();
         r.file = file;
@@ -1115,22 +1200,29 @@ public:
         return r;
     }
 
+    [[deprecated("use api.note.get() instead")]]
     NoteGetFactory noteGet() { return {&nc_}; }
+    [[deprecated("use api.note.get() instead")]]
     auto getNoteGet() { return create<api::NoteGet::Get>(); }
+    [[deprecated("use api.note.get() instead")]]
     auto deleteNoteGet() { return create<api::NoteGet::Delete>(); }
 
+    [[deprecated("use api.note.template_() instead")]]
     NoteTemplateFactory noteTemplate() { return {&nc_}; }
+    [[deprecated("use api.note.template_() instead")]]
     auto setNoteTemplate(note::string_view file) {
         auto r = create<api::NoteTemplate::Set>();
         r.file = file;
         return r;
     }
+    [[deprecated("use api.note.template_() instead")]]
     auto deleteNoteTemplate(note::string_view file) {
         auto r = create<api::NoteTemplate::Delete>();
         r.file = file;
         return r;
     }
 
+    [[deprecated("use api.note.update() instead")]]
     auto noteUpdate(note::string_view file, note::string_view noteId) {
         auto r = create<api::NoteUpdate>();
         r.file = file;
@@ -1141,6 +1233,7 @@ public:
 #if __cplusplus >= 202002L
     template<typename T_ = TargetT>
     requires (IsUnconstrained<T_> || T_::supports(api::NtnGps::skus))
+    [[deprecated("use api.ntn.gps() instead")]]
     auto ntnGps() { return create<api::NtnGps>(); }
 
     template<typename T_ = TargetT>
@@ -1154,6 +1247,7 @@ public:
 #if __cplusplus >= 202002L
     template<typename T_ = TargetT>
     requires (IsUnconstrained<T_> || T_::supports(api::NtnReset::skus))
+    [[deprecated("use api.ntn.reset() instead")]]
     auto ntnReset() { return create<api::NtnReset>(); }
 
     template<typename T_ = TargetT>
@@ -1167,6 +1261,7 @@ public:
 #if __cplusplus >= 202002L
     template<typename T_ = TargetT>
     requires (IsUnconstrained<T_> || T_::supports(api::NtnStatus::skus))
+    [[deprecated("use api.ntn.status() instead")]]
     auto ntnStatus() { return create<api::NtnStatus>(); }
 
     template<typename T_ = TargetT>
@@ -1177,10 +1272,13 @@ public:
     auto ntnStatus() { return create<api::NtnStatus>(); }
 #endif
 
+    [[deprecated("use api.var.delete_() instead")]]
     auto varDelete() { return create<api::VarDelete>(); }
 
+    [[deprecated("use api.var.get() instead")]]
     auto varGet() { return create<api::VarGet>(); }
 
+    [[deprecated("use api.var.set() instead")]]
     auto varSet() { return create<api::VarSet>(); }
 
     // web: flat method skipped (conflicts with web group member)
@@ -1188,6 +1286,7 @@ public:
 #if __cplusplus >= 202002L
     template<typename T_ = TargetT>
     requires (IsUnconstrained<T_> || T_::supports(api::WebDelete::skus))
+    [[deprecated("use api.web.delete_() instead")]]
     auto webDelete() { return create<api::WebDelete>(); }
 
     template<typename T_ = TargetT>
@@ -1201,6 +1300,7 @@ public:
 #if __cplusplus >= 202002L
     template<typename T_ = TargetT>
     requires (IsUnconstrained<T_> || T_::supports(api::WebGet::skus))
+    [[deprecated("use api.web.get() instead")]]
     auto webGet() { return create<api::WebGet>(); }
 
     template<typename T_ = TargetT>
@@ -1214,6 +1314,7 @@ public:
 #if __cplusplus >= 202002L
     template<typename T_ = TargetT>
     requires (IsUnconstrained<T_> || T_::supports(api::WebPost::skus))
+    [[deprecated("use api.web.post() instead")]]
     auto webPost() { return create<api::WebPost>(); }
 
     template<typename T_ = TargetT>
@@ -1227,6 +1328,7 @@ public:
 #if __cplusplus >= 202002L
     template<typename T_ = TargetT>
     requires (IsUnconstrained<T_> || T_::supports(api::WebPut::skus))
+    [[deprecated("use api.web.put() instead")]]
     auto webPut() { return create<api::WebPut>(); }
 
     template<typename T_ = TargetT>

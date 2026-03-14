@@ -166,6 +166,7 @@ namespace note::api {
 {{ indent }}std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
 {{ indent }}uint8_t extras_count_ = 0;
 
+{% if op.response.properties or op.response.has_body %}
 {{ indent }}struct Response {
 {% for prop in op.response.properties %}
 {{ version_guard_begin(prop.version_guard) -}}
@@ -190,7 +191,6 @@ namespace note::api {
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 {% endif %}
 {{ indent }}    static Response parse(std::unique_ptr<JsonReader> reader_) {
-{% if op.response.properties or op.response.has_body %}
 {{ indent }}        Response rsp;
 {% for prop in op.response.properties %}
 {{ version_guard_begin(prop.version_guard) -}}
@@ -202,10 +202,6 @@ namespace note::api {
 {% endif %}
 {{ indent }}        rsp.reader_ = std::move(reader_);
 {{ indent }}        return rsp;
-{% else %}
-{{ indent }}        (void)reader_;
-{{ indent }}        return {};
-{% endif %}
 {{ indent }}    }
 {% if op.has_version_gated_response_props %}
 #pragma GCC diagnostic pop
@@ -219,7 +215,6 @@ namespace note::api {
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 {% endif %}
 {{ indent }}    static Response parse(const JsonReader& reader_) {
-{% if op.response.properties or op.response.has_body %}
 {{ indent }}        Response rsp;
 {% for prop in op.response.properties %}
 {{ version_guard_begin(prop.version_guard) -}}
@@ -230,10 +225,6 @@ namespace note::api {
 {{ indent }}        rsp.body_ = reader_.get_object("body");
 {% endif %}
 {{ indent }}        return rsp;
-{% else %}
-{{ indent }}        (void)reader_;
-{{ indent }}        return {};
-{% endif %}
 {{ indent }}    }
 {% if op.has_version_gated_response_props %}
 #pragma GCC diagnostic pop
@@ -298,7 +289,6 @@ namespace note::api {
 #pragma GCC diagnostic pop
 {% endif %}
 {% endif %}
-{% if op.response.properties or op.response.has_body %}
 
 {{ indent }}private:
 {{ indent }}    std::unique_ptr<JsonReader> reader_;
@@ -321,8 +311,10 @@ namespace note::api {
 {{ indent }}        }
 {{ indent }}    }
 {% endif %}
-{% endif %}
 {{ indent }}};
+{% else %}
+{{ indent }}using Response = void;
+{% endif %}
 
 {% if op.has_version_gated_props %}
 #pragma GCC diagnostic push

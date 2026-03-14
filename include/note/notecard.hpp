@@ -5,8 +5,32 @@
 
 #include <functional>
 #include <string>
+#include <type_traits>
 
 namespace note {
+
+// Specialization for void responses (endpoints that return empty {} on success).
+// Still holds a reader to keep notecard error message string_views alive.
+template<>
+class ApiResult<void> {
+    std::optional<ErrorInfo> err_;
+    std::unique_ptr<JsonReader> reader_;
+public:
+    ApiResult() = default;
+    ApiResult(ErrorInfo e) : err_(std::move(e)) {}
+    ApiResult(ErrorInfo e, std::unique_ptr<JsonReader> reader)
+        : err_(std::move(e)), reader_(std::move(reader)) {}
+#if defined(__cpp_lib_expected) && __cpp_lib_expected >= 202202L
+    ApiResult(Unexpected e) : err_(std::move(e).error()) {}
+#else
+    ApiResult(Unexpected e) : err_(std::move(e).value()) {}
+#endif
+
+    explicit operator bool() const { return !err_.has_value(); }
+    bool has_value() const { return !err_.has_value(); }
+
+    const ErrorInfo& error() const { return *err_; }
+};
 
 class Notecard {
 public:
@@ -41,6 +65,7 @@ public:
     //   void build(JsonBuilder&) const;
     template<typename RequestT>
     ApiResult<typename RequestT::Response> execute(const RequestT& req) {
+        using Rsp = typename RequestT::Response;
         auto& builder = backend_.get_builder();
         builder.add("req", RequestT::notecard_request);
         req.build(builder);
@@ -58,9 +83,13 @@ public:
             // keeps the error message string_view alive in ApiResult.
             auto owned = backend_.parse_response(*rsp);
             ErrorInfo ei{Error::Notecard, Cause::Unspecified, owned->get_error()};
-            return ApiResult<typename RequestT::Response>(std::move(ei), std::move(owned));
+            return ApiResult<Rsp>(std::move(ei), std::move(owned));
         }
-        return RequestT::Response::parse(reader);
+        if constexpr (std::is_void_v<Rsp>) {
+            return ApiResult<void>{};
+        } else {
+            return Rsp::parse(reader);
+        }
     }
 
     // Ad-hoc request with a builder callback.

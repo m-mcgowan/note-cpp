@@ -73,21 +73,7 @@ struct CardIo {
     std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
     uint8_t extras_count_ = 0;
 
-    struct Response {
-
-        static Response parse(std::unique_ptr<JsonReader> reader_) {
-            (void)reader_;
-            return {};
-        }
-
-        // Non-owning parse: string_views point into the reader's data.
-        // The reader (and its underlying JSON buffer) must outlive the Response,
-        // or the caller must consume all string fields before the reader is reused.
-        static Response parse(const JsonReader& reader_) {
-            (void)reader_;
-            return {};
-        }
-    };
+    using Response = void;
 
     void build(JsonBuilder& b) const {
         if (i2c) b.add("i2c", *i2c);

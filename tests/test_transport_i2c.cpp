@@ -524,11 +524,13 @@ TEST_CASE("i2c round-trip: second request after success") {
     hal.responses.push_back("{\"first\":true}\n");
     hal.responses.push_back("{\"second\":true}\n");
 
+    // string_view return: must consume each response before the next call
     auto r1 = transport({"{\"req\":\"first\"}"}, 5000);
-    auto r2 = transport({"{\"req\":\"second\"}"}, 5000);
     REQUIRE(r1);
-    REQUIRE(r2);
     CHECK(*r1 == "{\"first\":true}");
+
+    auto r2 = transport({"{\"req\":\"second\"}"}, 5000);
+    REQUIRE(r2);
     CHECK(*r2 == "{\"second\":true}");
 }
 

@@ -37,6 +37,13 @@ public:
     CjsonBuilder(const CjsonBuilder&) = delete;
     CjsonBuilder& operator=(const CjsonBuilder&) = delete;
 
+    // Destroy the cJSON tree without creating a new one.
+    // Used by CjsonArenaBackend to clean up before changing cJSON hooks.
+    void destroy() {
+        if (root_) { cJSON_Delete(root_); root_ = nullptr; }
+        stack_.clear();
+    }
+
     void reset() override {
         if (root_) cJSON_Delete(root_);
         root_ = cJSON_CreateObject();
@@ -290,6 +297,10 @@ public:
     }
 
     ~CjsonArenaBackend() {
+        // Destroy cJSON tree BEFORE clearing arena hooks — cJSON_Delete calls
+        // the current free hook, which must still be arena_cjson_free (no-op)
+        // for arena-allocated nodes. Standard free() on arena pointers crashes.
+        builder_.destroy();
         cJSON_InitHooks(nullptr);  // restore default malloc/free
         detail::g_active_arena = nullptr;
     }

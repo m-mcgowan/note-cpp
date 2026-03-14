@@ -7,6 +7,7 @@
 #include <note/dyn_field.hpp>
 #include <note/field.hpp>
 #include <note/json.hpp>
+#include <note/json_sax.hpp>
 #include <note/notecard.hpp>
 #include <note/safety.hpp>
 #include <note/types.hpp>
@@ -208,6 +209,94 @@ namespace note::api {
 {{ indent }}    }
 {% if op.has_version_gated_response_props %}
 #pragma GCC diagnostic pop
+{% endif %}
+
+{{ indent }}    // Non-owning parse: string_views point into the reader's data.
+{{ indent }}    // The reader (and its underlying JSON buffer) must outlive the Response,
+{{ indent }}    // or the caller must consume all string fields before the reader is reused.
+{% if op.has_version_gated_response_props %}
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+{% endif %}
+{{ indent }}    static Response parse(const JsonReader& reader_) {
+{% if op.response.properties or op.response.has_body %}
+{{ indent }}        Response rsp;
+{% for prop in op.response.properties %}
+{{ version_guard_begin(prop.version_guard) -}}
+{{ indent }}        rsp.{{ prop.accessor_name }} = reader_.get_{{ prop.getter }}("{{ prop.wire_name }}"{{ prop.default_arg }});
+{{ version_guard_end(prop.version_guard) -}}
+{% endfor %}
+{% if op.response.has_body %}
+{{ indent }}        rsp.body_ = reader_.get_object("body");
+{% endif %}
+{{ indent }}        return rsp;
+{% else %}
+{{ indent }}        (void)reader_;
+{{ indent }}        return {};
+{% endif %}
+{{ indent }}    }
+{% if op.has_version_gated_response_props %}
+#pragma GCC diagnostic pop
+{% endif %}
+{% if op.response.properties %}
+
+{{ indent }}    // SAX sink — zero-allocation streaming parse into Response fields.
+{{ indent }}    // String fields are string_views into the JSON buffer; caller must
+{{ indent }}    // ensure the buffer outlives the Response (or intern strings after).
+{% if op.has_version_gated_response_props %}
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+{% endif %}
+{{ indent }}    struct Sink : ::note::JsonSink {
+{{ indent }}        Response& rsp;
+{{ indent }}        explicit Sink(Response& r) : rsp(r) {}
+{% set string_props = [] %}
+{% set bool_props = [] %}
+{% set int_props = [] %}
+{% set double_props = [] %}
+{% for prop in op.response.properties %}
+{% if prop.cpp_type == "note::string_view" %}{% if string_props.append(prop) %}{% endif %}
+{% elif prop.cpp_type == "bool" %}{% if bool_props.append(prop) %}{% endif %}
+{% elif prop.cpp_type == "int32_t" %}{% if int_props.append(prop) %}{% endif %}
+{% elif prop.cpp_type == "double" %}{% if double_props.append(prop) %}{% endif %}
+{% endif %}
+{% endfor %}
+{% if string_props %}
+{{ indent }}        void on_string(::note::string_view key, ::note::string_view val) override {
+{% for prop in string_props %}
+{{ version_guard_begin(prop.version_guard) -}}
+{{ indent }}            if (key == "{{ prop.wire_name }}") { rsp.{{ prop.accessor_name }} = val; return; }
+{{ version_guard_end(prop.version_guard) -}}
+{% endfor %}
+{{ indent }}        }
+{% endif %}
+{% if bool_props %}
+{{ indent }}        void on_bool(::note::string_view key, bool val) override {
+{% for prop in bool_props %}
+{{ version_guard_begin(prop.version_guard) -}}
+{{ indent }}            if (key == "{{ prop.wire_name }}") { rsp.{{ prop.accessor_name }} = val; return; }
+{{ version_guard_end(prop.version_guard) -}}
+{% endfor %}
+{{ indent }}        }
+{% endif %}
+{% if int_props or double_props %}
+{{ indent }}        void on_number(::note::string_view key, ::note::string_view raw) override {
+{% for prop in int_props %}
+{{ version_guard_begin(prop.version_guard) -}}
+{{ indent }}            if (key == "{{ prop.wire_name }}") { rsp.{{ prop.accessor_name }} = ::note::parse_int(raw{{ prop.default_arg }}); return; }
+{{ version_guard_end(prop.version_guard) -}}
+{% endfor %}
+{% for prop in double_props %}
+{{ version_guard_begin(prop.version_guard) -}}
+{{ indent }}            if (key == "{{ prop.wire_name }}") { rsp.{{ prop.accessor_name }} = ::note::parse_double(raw{{ prop.default_arg }}); return; }
+{{ version_guard_end(prop.version_guard) -}}
+{% endfor %}
+{{ indent }}        }
+{% endif %}
+{{ indent }}    };
+{% if op.has_version_gated_response_props %}
+#pragma GCC diagnostic pop
+{% endif %}
 {% endif %}
 {% if op.response.properties or op.response.has_body %}
 

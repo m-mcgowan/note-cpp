@@ -60,7 +60,7 @@ TEST_CASE("functor chaining terminates with execute() on bound request") {
         std::string last_request;
         note::Notecard nc;
         TestHarness() : nc(backend,
-            [this](note::string_view req, uint32_t) -> note::Result<std::string> {
+            [this](note::string_view req, uint32_t) -> note::Result<note::string_view> {
                 last_request = std::string(req);
                 return std::string("{}");
             },
@@ -139,7 +139,7 @@ TEST_CASE("extra() adds undocumented bool property to wire format") {
         std::string last_request;
         note::Notecard nc;
         TestHarness() : nc(backend,
-            [this](note::string_view req, uint32_t) -> note::Result<std::string> {
+            [this](note::string_view req, uint32_t) -> note::Result<note::string_view> {
                 last_request = std::string(req);
                 return std::string("{}");
             },

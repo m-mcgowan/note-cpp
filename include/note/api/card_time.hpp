@@ -4,6 +4,7 @@
 #include <note/dyn_field.hpp>
 #include <note/field.hpp>
 #include <note/json.hpp>
+#include <note/json_sax.hpp>
 #include <note/notecard.hpp>
 #include <note/safety.hpp>
 #include <note/types.hpp>
@@ -79,6 +80,40 @@ struct CardTime {
             rsp.reader_ = std::move(reader_);
             return rsp;
         }
+
+        // Non-owning parse: string_views point into the reader's data.
+        // The reader (and its underlying JSON buffer) must outlive the Response,
+        // or the caller must consume all string fields before the reader is reused.
+        static Response parse(const JsonReader& reader_) {
+            Response rsp;
+            rsp.area = reader_.get_string("area");
+            rsp.country = reader_.get_string("country");
+            rsp.lat = reader_.get_double("lat");
+            rsp.lon = reader_.get_double("lon");
+            rsp.minutes = reader_.get_int("minutes");
+            rsp.time = reader_.get_int("time");
+            rsp.zone = reader_.get_string("zone");
+            return rsp;
+        }
+
+        // SAX sink — zero-allocation streaming parse into Response fields.
+        // String fields are string_views into the JSON buffer; caller must
+        // ensure the buffer outlives the Response (or intern strings after).
+        struct Sink : ::note::JsonSink {
+            Response& rsp;
+            explicit Sink(Response& r) : rsp(r) {}
+            void on_string(::note::string_view key, ::note::string_view val) override {
+                if (key == "area") { rsp.area = val; return; }
+                if (key == "country") { rsp.country = val; return; }
+                if (key == "zone") { rsp.zone = val; return; }
+            }
+            void on_number(::note::string_view key, ::note::string_view raw) override {
+                if (key == "minutes") { rsp.minutes = ::note::parse_int(raw); return; }
+                if (key == "time") { rsp.time = ::note::parse_int(raw); return; }
+                if (key == "lat") { rsp.lat = ::note::parse_double(raw); return; }
+                if (key == "lon") { rsp.lon = ::note::parse_double(raw); return; }
+            }
+        };
 
     private:
         std::unique_ptr<JsonReader> reader_;

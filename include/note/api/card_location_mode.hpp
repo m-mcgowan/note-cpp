@@ -4,6 +4,7 @@
 #include <note/dyn_field.hpp>
 #include <note/field.hpp>
 #include <note/json.hpp>
+#include <note/json_sax.hpp>
 #include <note/notecard.hpp>
 #include <note/safety.hpp>
 #include <note/types.hpp>
@@ -199,6 +200,52 @@ struct CardLocationMode {
                 rsp.reader_ = std::move(reader_);
                 return rsp;
             }
+#pragma GCC diagnostic pop
+
+            // Non-owning parse: string_views point into the reader's data.
+            // The reader (and its underlying JSON buffer) must outlive the Response,
+            // or the caller must consume all string fields before the reader is reused.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+            static Response parse(const JsonReader& reader_) {
+                Response rsp;
+                rsp.lat = reader_.get_double("lat");
+                rsp.lon = reader_.get_double("lon");
+                rsp.max = reader_.get_int("max");
+                rsp.minutes = reader_.get_int("minutes");
+                rsp.mode = reader_.get_string("mode");
+                rsp.seconds = reader_.get_int("seconds");
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+                rsp.threshold = reader_.get_int("threshold");
+#endif
+                rsp.vseconds = reader_.get_string("vseconds");
+                return rsp;
+            }
+#pragma GCC diagnostic pop
+
+            // SAX sink — zero-allocation streaming parse into Response fields.
+            // String fields are string_views into the JSON buffer; caller must
+            // ensure the buffer outlives the Response (or intern strings after).
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+            struct Sink : ::note::JsonSink {
+                Response& rsp;
+                explicit Sink(Response& r) : rsp(r) {}
+                void on_string(::note::string_view key, ::note::string_view val) override {
+                    if (key == "mode") { rsp.mode = val; return; }
+                    if (key == "vseconds") { rsp.vseconds = val; return; }
+                }
+                void on_number(::note::string_view key, ::note::string_view raw) override {
+                    if (key == "max") { rsp.max = ::note::parse_int(raw); return; }
+                    if (key == "minutes") { rsp.minutes = ::note::parse_int(raw); return; }
+                    if (key == "seconds") { rsp.seconds = ::note::parse_int(raw); return; }
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+                    if (key == "threshold") { rsp.threshold = ::note::parse_int(raw); return; }
+#endif
+                    if (key == "lat") { rsp.lat = ::note::parse_double(raw); return; }
+                    if (key == "lon") { rsp.lon = ::note::parse_double(raw); return; }
+                }
+            };
 #pragma GCC diagnostic pop
 
         private:
@@ -413,6 +460,52 @@ struct CardLocationMode {
             }
 #pragma GCC diagnostic pop
 
+            // Non-owning parse: string_views point into the reader's data.
+            // The reader (and its underlying JSON buffer) must outlive the Response,
+            // or the caller must consume all string fields before the reader is reused.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+            static Response parse(const JsonReader& reader_) {
+                Response rsp;
+                rsp.lat = reader_.get_double("lat");
+                rsp.lon = reader_.get_double("lon");
+                rsp.max = reader_.get_int("max");
+                rsp.minutes = reader_.get_int("minutes");
+                rsp.mode = reader_.get_string("mode");
+                rsp.seconds = reader_.get_int("seconds");
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+                rsp.threshold = reader_.get_int("threshold");
+#endif
+                rsp.vseconds = reader_.get_string("vseconds");
+                return rsp;
+            }
+#pragma GCC diagnostic pop
+
+            // SAX sink — zero-allocation streaming parse into Response fields.
+            // String fields are string_views into the JSON buffer; caller must
+            // ensure the buffer outlives the Response (or intern strings after).
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+            struct Sink : ::note::JsonSink {
+                Response& rsp;
+                explicit Sink(Response& r) : rsp(r) {}
+                void on_string(::note::string_view key, ::note::string_view val) override {
+                    if (key == "mode") { rsp.mode = val; return; }
+                    if (key == "vseconds") { rsp.vseconds = val; return; }
+                }
+                void on_number(::note::string_view key, ::note::string_view raw) override {
+                    if (key == "max") { rsp.max = ::note::parse_int(raw); return; }
+                    if (key == "minutes") { rsp.minutes = ::note::parse_int(raw); return; }
+                    if (key == "seconds") { rsp.seconds = ::note::parse_int(raw); return; }
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+                    if (key == "threshold") { rsp.threshold = ::note::parse_int(raw); return; }
+#endif
+                    if (key == "lat") { rsp.lat = ::note::parse_double(raw); return; }
+                    if (key == "lon") { rsp.lon = ::note::parse_double(raw); return; }
+                }
+            };
+#pragma GCC diagnostic pop
+
         private:
             std::unique_ptr<JsonReader> reader_;
         };
@@ -615,6 +708,52 @@ struct CardLocationMode {
                 rsp.reader_ = std::move(reader_);
                 return rsp;
             }
+#pragma GCC diagnostic pop
+
+            // Non-owning parse: string_views point into the reader's data.
+            // The reader (and its underlying JSON buffer) must outlive the Response,
+            // or the caller must consume all string fields before the reader is reused.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+            static Response parse(const JsonReader& reader_) {
+                Response rsp;
+                rsp.lat = reader_.get_double("lat");
+                rsp.lon = reader_.get_double("lon");
+                rsp.max = reader_.get_int("max");
+                rsp.minutes = reader_.get_int("minutes");
+                rsp.mode = reader_.get_string("mode");
+                rsp.seconds = reader_.get_int("seconds");
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+                rsp.threshold = reader_.get_int("threshold");
+#endif
+                rsp.vseconds = reader_.get_string("vseconds");
+                return rsp;
+            }
+#pragma GCC diagnostic pop
+
+            // SAX sink — zero-allocation streaming parse into Response fields.
+            // String fields are string_views into the JSON buffer; caller must
+            // ensure the buffer outlives the Response (or intern strings after).
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+            struct Sink : ::note::JsonSink {
+                Response& rsp;
+                explicit Sink(Response& r) : rsp(r) {}
+                void on_string(::note::string_view key, ::note::string_view val) override {
+                    if (key == "mode") { rsp.mode = val; return; }
+                    if (key == "vseconds") { rsp.vseconds = val; return; }
+                }
+                void on_number(::note::string_view key, ::note::string_view raw) override {
+                    if (key == "max") { rsp.max = ::note::parse_int(raw); return; }
+                    if (key == "minutes") { rsp.minutes = ::note::parse_int(raw); return; }
+                    if (key == "seconds") { rsp.seconds = ::note::parse_int(raw); return; }
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+                    if (key == "threshold") { rsp.threshold = ::note::parse_int(raw); return; }
+#endif
+                    if (key == "lat") { rsp.lat = ::note::parse_double(raw); return; }
+                    if (key == "lon") { rsp.lon = ::note::parse_double(raw); return; }
+                }
+            };
 #pragma GCC diagnostic pop
 
         private:

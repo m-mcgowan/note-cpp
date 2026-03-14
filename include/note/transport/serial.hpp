@@ -100,11 +100,14 @@ public:
         : policy(pol), hal_(hal) {}
 
     // Satisfies note::Notecard's RequestFn signature:
-    //   std::function<Result<std::string>(string_view, uint32_t)>
+    //   std::function<Result<string_view>(string_view, uint32_t)>
+    //
+    // Returns a string_view into a member buffer. The view is valid until the
+    // next operator() call — callers must consume the response before reuse.
     //
     // Auto-resets on first call. Handles CRC (auto-detected), segmented TX,
     // greedy RX, and up to policy.max_retries retries on failure.
-    Result<std::string> operator()(string_view request, uint32_t timeout_ms) {
+    Result<string_view> operator()(string_view request, uint32_t timeout_ms) {
         if (!initialized_) {
             if (!do_reset())
                 return make_error(Error::NotReady, "Notecard not ready after reset");
@@ -133,20 +136,20 @@ public:
                 continue;
             }
 
-            // Receive until newline.
+            // Receive until newline (writes into response_buf_).
             auto result = receive_line(timeout_ms);
             if (!result) {
                 last_error = result.error();
                 continue;
             }
 
-            // CRC validation + auto-detection (mutates *result, sets crc_enabled_).
-            if (detail::crc_check_and_strip(*result, crc_seq_, crc_enabled_)) {
+            // CRC validation + auto-detection (mutates response_buf_, sets crc_enabled_).
+            if (detail::crc_check_and_strip(response_buf_, crc_seq_, crc_enabled_)) {
                 last_error = {Error::ResponseLost, Cause::CrcMismatch, "CRC mismatch"};
                 continue;
             }
 
-            return result;
+            return string_view(response_buf_);
         }
 
         return Unexpected(last_error);
@@ -158,6 +161,7 @@ private:
     bool       crc_enabled_ = false;
     uint16_t   crc_seq_     = 0;
     std::string wire_;         // reused across requests to avoid re-allocation
+    std::string response_buf_; // reused across requests — string_view return points here
 
     // -----------------------------------------------------------------------
     // reset — matches note-c _serialNoteReset()
@@ -220,10 +224,10 @@ private:
     // receive_line — matches note-c _serialChunkedReceive()
     // Poll until \n received. Initial timeout = timeout_ms; after first byte
     // switches to policy.intra_timeout_ms (1 s intra-transaction timeout).
-    // Returns JSON stripped of trailing \r\n.
+    // Writes into response_buf_ (cleared first, capacity reused).
     // -----------------------------------------------------------------------
-    Result<std::string> receive_line(uint32_t timeout_ms) {
-        std::string  buf;
+    Result<void> receive_line(uint32_t timeout_ms) {
+        response_buf_.clear();  // reuse capacity — zero alloc in steady state
         uint8_t      chunk[64];
         bool         first_byte_seen = false;
         uint32_t     start           = hal_.millis();
@@ -236,11 +240,12 @@ private:
                     first_byte_seen = true;
                     intra_start     = hal_.millis();
                 }
-                buf.append(reinterpret_cast<const char*>(chunk), n);
-                if (buf.back() == '\n') {
-                    while (!buf.empty() && (buf.back() == '\n' || buf.back() == '\r'))
-                        buf.pop_back();
-                    return buf;
+                response_buf_.append(reinterpret_cast<const char*>(chunk), n);
+                if (response_buf_.back() == '\n') {
+                    while (!response_buf_.empty() &&
+                           (response_buf_.back() == '\n' || response_buf_.back() == '\r'))
+                        response_buf_.pop_back();
+                    return {};
                 }
             } else {
                 hal_.delay(1);

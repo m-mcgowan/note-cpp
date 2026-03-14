@@ -21,7 +21,7 @@ struct TestFixture {
 
     TestFixture()
         : nc(backend,
-            [this](note::string_view req, uint32_t) -> note::Result<std::string> {
+            [this](note::string_view req, uint32_t) -> note::Result<note::string_view> {
                 captured.emplace_back(req);
                 return std::string("{}");
             })
@@ -156,7 +156,7 @@ TEST_CASE("Setup::run() fails at hub.set step") {
     int call_count = 0;
     note::test::TestJsonBackend backend;
     note::Notecard nc(backend,
-        [&](note::string_view, uint32_t) -> note::Result<std::string> {
+        [&](note::string_view, uint32_t) -> note::Result<note::string_view> {
             if (call_count++ == 0)
                 return note::make_error(note::Error::SendFailed, "write failed");
             return std::string("{}");
@@ -179,7 +179,7 @@ TEST_CASE("Setup::run() fails at template step") {
     int call_count = 0;
     note::test::TestJsonBackend backend;
     note::Notecard nc(backend,
-        [&](note::string_view, uint32_t) -> note::Result<std::string> {
+        [&](note::string_view, uint32_t) -> note::Result<note::string_view> {
             if (call_count++ == 1)  // second call = note.template
                 return note::make_error(note::Error::SendFailed, "write failed");
             return std::string("{}");

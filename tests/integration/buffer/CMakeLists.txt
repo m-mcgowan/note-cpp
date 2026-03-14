@@ -14,6 +14,12 @@ target_include_directories(test_sax_parser PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../../../include
 )
 
+add_executable(test_alloc_profile test_alloc_profile.cpp)
+target_include_directories(test_alloc_profile PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../include
+)
+
 enable_testing()
 add_test(NAME buffer_backend COMMAND test_buffer_backend)
 add_test(NAME sax_parser COMMAND test_sax_parser)
+add_test(NAME alloc_profile COMMAND test_alloc_profile)

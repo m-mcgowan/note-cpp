@@ -127,12 +127,15 @@ public:
         : policy(pol), hal_(hal) {}
 
     // Satisfies note::Notecard's RequestFn signature:
-    //   std::function<Result<std::string>(string_view, uint32_t)>
+    //   std::function<Result<string_view>(string_view, uint32_t)>
+    //
+    // Returns a string_view into a member buffer. The view is valid until the
+    // next operator() call — callers must consume the response before reuse.
     //
     // Auto-resets on first call. Handles CRC (auto-detected), chunked TX
     // with IO + segment pacing, priming-query RX, and up to policy.max_retries
     // retries on failure.
-    Result<std::string> operator()(string_view request, uint32_t timeout_ms) {
+    Result<string_view> operator()(string_view request, uint32_t timeout_ms) {
         if (!initialized_) {
             if (!do_reset())
                 return make_error(Error::NotReady, "Notecard not ready after reset");
@@ -166,12 +169,12 @@ public:
                 continue;
             }
 
-            if (detail::crc_check_and_strip(*result, crc_seq_, crc_enabled_)) {
+            if (detail::crc_check_and_strip(response_buf_, crc_seq_, crc_enabled_)) {
                 last_error = {Error::ResponseLost, Cause::CrcMismatch, "CRC mismatch"};
                 continue;
             }
 
-            return result;
+            return string_view(response_buf_);
         }
 
         return Unexpected(last_error);
@@ -183,6 +186,7 @@ private:
     bool     crc_enabled_ = false;
     uint16_t crc_seq_     = 0;
     std::string wire_;         // reused across requests to avoid re-allocation
+    std::string response_buf_; // reused across requests — string_view return points here
 
     // -----------------------------------------------------------------------
     // delay_io — matches note-c _delayIO()
@@ -302,7 +306,8 @@ private:
     // 2. Chunked receive: read until \n is received AND available == 0.
     // Returns JSON stripped of trailing \r\n.
     // -----------------------------------------------------------------------
-    Result<std::string> receive_response(uint32_t timeout_ms) {
+    Result<void> receive_response(uint32_t timeout_ms) {
+        response_buf_.clear();  // reuse capacity — zero alloc in steady state
         delay_io();  // stability delay after final transmit chunk
 
         // Priming query loop: wait until Notecard has data available.
@@ -325,7 +330,6 @@ private:
         // bytes pending. When available drops to 0 without EOP, a subsequent
         // receive(len=0) acts as a priming query to check for more data —
         // matching note-c _i2cChunkedReceive() behavior.
-        std::string  buf;
         uint8_t      chunk[64];
         uint32_t     intra_start = hal_.millis();
         bool         eop = false;
@@ -339,9 +343,9 @@ private:
                 return make_error(Error::ResponseLost, Cause::HalError, "I2C receive failed");
 
             if (req > 0) {
-                buf.append(reinterpret_cast<const char*>(chunk), req);
+                response_buf_.append(reinterpret_cast<const char*>(chunk), req);
                 intra_start = hal_.millis();  // reset intra-timeout on data
-                eop = eop || (buf.back() == '\n');
+                eop = eop || (response_buf_.back() == '\n');
             }
 
             if (available > 0) continue;  // more pending (drain even if EOP)
@@ -354,10 +358,11 @@ private:
         }
 
         // Strip trailing \r\n.
-        while (!buf.empty() && (buf.back() == '\n' || buf.back() == '\r'))
-            buf.pop_back();
+        while (!response_buf_.empty() &&
+               (response_buf_.back() == '\n' || response_buf_.back() == '\r'))
+            response_buf_.pop_back();
 
-        return buf;
+        return {};
     }
 };
 

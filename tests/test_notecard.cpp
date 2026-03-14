@@ -85,7 +85,7 @@ private:
 TEST_CASE("Notecard::backend() returns the JsonBackend reference") {
     note::test::TestJsonBackend backend;
     note::Notecard nc(backend,
-        [](note::string_view, uint32_t) -> note::Result<std::string> { return "{}"; });
+        [](note::string_view, uint32_t) -> note::Result<note::string_view> { return "{}"; });
     REQUIRE(&nc.backend() == &backend);
 }
 
@@ -97,7 +97,7 @@ TEST_CASE("Notecard default timeout is 10000 ms") {
     note::test::TestJsonBackend backend;
     uint32_t captured_timeout = 0;
     note::Notecard nc(backend,
-        [&](note::string_view, uint32_t t) -> note::Result<std::string> {
+        [&](note::string_view, uint32_t t) -> note::Result<note::string_view> {
             captured_timeout = t;
             return "{}";
         });
@@ -110,7 +110,7 @@ TEST_CASE("Notecard::set_default_timeout() changes timeout passed to request_fn"
     note::test::TestJsonBackend backend;
     uint32_t captured_timeout = 0;
     note::Notecard nc(backend,
-        [&](note::string_view, uint32_t t) -> note::Result<std::string> {
+        [&](note::string_view, uint32_t t) -> note::Result<note::string_view> {
             captured_timeout = t;
             return "{}";
         });
@@ -128,7 +128,7 @@ TEST_CASE("Notecard derives send_fn from request_fn when not provided") {
     note::test::TestJsonBackend backend;
     bool request_fn_called = false;
     note::Notecard nc(backend,
-        [&](note::string_view, uint32_t) -> note::Result<std::string> {
+        [&](note::string_view, uint32_t) -> note::Result<note::string_view> {
             request_fn_called = true;
             return "{}";
         });
@@ -141,7 +141,7 @@ TEST_CASE("Notecard derives send_fn from request_fn when not provided") {
 TEST_CASE("Notecard derived send_fn propagates transport error from request_fn") {
     note::test::TestJsonBackend backend;
     note::Notecard nc(backend,
-        [](note::string_view, uint32_t) -> note::Result<std::string> {
+        [](note::string_view, uint32_t) -> note::Result<note::string_view> {
             return note::Unexpected(note::ErrorInfo{note::Error::SendFailed, {}, "wire error"});
         });
     auto r = nc.command("card.restart");
@@ -157,7 +157,7 @@ TEST_CASE("Notecard::request() sends req type with no extra fields") {
     note::test::TestJsonBackend backend;
     std::string captured;
     note::Notecard nc(backend,
-        [&](note::string_view req, uint32_t) -> note::Result<std::string> {
+        [&](note::string_view req, uint32_t) -> note::Result<note::string_view> {
             captured = std::string(req);
             return "{}";
         });
@@ -170,7 +170,7 @@ TEST_CASE("Notecard::request() with build_fn adds fields to the request") {
     note::test::TestJsonBackend backend;
     std::string captured;
     note::Notecard nc(backend,
-        [&](note::string_view req, uint32_t) -> note::Result<std::string> {
+        [&](note::string_view req, uint32_t) -> note::Result<note::string_view> {
             captured = std::string(req);
             return "{}";
         });
@@ -184,7 +184,7 @@ TEST_CASE("Notecard::request() with build_fn adds fields to the request") {
 TEST_CASE("Notecard::request() returns a non-null JsonReader on success") {
     note::test::TestJsonBackend backend;
     note::Notecard nc(backend,
-        [](note::string_view, uint32_t) -> note::Result<std::string> { return "{}"; });
+        [](note::string_view, uint32_t) -> note::Result<note::string_view> { return "{}"; });
     auto r = nc.request("card.version");
     REQUIRE(r.has_value());
     REQUIRE(r.value() != nullptr);
@@ -193,7 +193,7 @@ TEST_CASE("Notecard::request() returns a non-null JsonReader on success") {
 TEST_CASE("Notecard::request() propagates transport error") {
     note::test::TestJsonBackend backend;
     note::Notecard nc(backend,
-        [](note::string_view, uint32_t) -> note::Result<std::string> {
+        [](note::string_view, uint32_t) -> note::Result<note::string_view> {
             return note::Unexpected(note::ErrorInfo{note::Error::SendFailed, {}, "lost"});
         });
     auto r = nc.request("card.version");
@@ -204,7 +204,7 @@ TEST_CASE("Notecard::request() propagates transport error") {
 TEST_CASE("Notecard::request() returns Json error on parse failure") {
     ParseErrorJsonBackend backend("invalid json");
     note::Notecard nc(backend,
-        [](note::string_view, uint32_t) -> note::Result<std::string> {
+        [](note::string_view, uint32_t) -> note::Result<note::string_view> {
             return R"(not json)";
         });
     auto r = nc.request("card.version");
@@ -215,7 +215,7 @@ TEST_CASE("Notecard::request() returns Json error on parse failure") {
 TEST_CASE("Notecard::request() returns reader even when response has err field") {
     NotecardErrorJsonBackend backend("notecard not ready");
     note::Notecard nc(backend,
-        [](note::string_view, uint32_t) -> note::Result<std::string> {
+        [](note::string_view, uint32_t) -> note::Result<note::string_view> {
             return R"({"err":"notecard not ready"})";
         });
     auto r = nc.request("card.version");
@@ -230,7 +230,7 @@ TEST_CASE("Notecard::request() returns reader even when response has err field")
 TEST_CASE("Notecard::execute() propagates transport error") {
     note::test::TestJsonBackend backend;
     note::Notecard nc(backend,
-        [](note::string_view, uint32_t) -> note::Result<std::string> {
+        [](note::string_view, uint32_t) -> note::Result<note::string_view> {
             return note::Unexpected(note::ErrorInfo{note::Error::SendFailed, {}, "io error"});
         });
     note::api::CardVersion req;
@@ -242,7 +242,7 @@ TEST_CASE("Notecard::execute() propagates transport error") {
 TEST_CASE("Notecard::execute() returns Json error on parse failure") {
     ParseErrorJsonBackend backend("bad json");
     note::Notecard nc(backend,
-        [](note::string_view, uint32_t) -> note::Result<std::string> {
+        [](note::string_view, uint32_t) -> note::Result<note::string_view> {
             return R"(not json)";
         });
     note::api::CardVersion req;
@@ -254,7 +254,7 @@ TEST_CASE("Notecard::execute() returns Json error on parse failure") {
 TEST_CASE("Notecard::execute() returns Notecard error when response has err field") {
     NotecardErrorJsonBackend backend("bad firmware");
     note::Notecard nc(backend,
-        [](note::string_view, uint32_t) -> note::Result<std::string> {
+        [](note::string_view, uint32_t) -> note::Result<note::string_view> {
             return R"({"err":"bad firmware"})";
         });
     note::api::CardVersion req;
@@ -272,7 +272,7 @@ TEST_CASE("Notecard::command() sends cmd type with no extra fields") {
     note::test::TestJsonBackend backend;
     std::string captured;
     note::Notecard nc(backend,
-        [](note::string_view, uint32_t) -> note::Result<std::string> { return "{}"; },
+        [](note::string_view, uint32_t) -> note::Result<note::string_view> { return "{}"; },
         [&](note::string_view req) -> note::Result<void> {
             captured = std::string(req);
             return {};
@@ -286,7 +286,7 @@ TEST_CASE("Notecard::command() with build_fn adds fields") {
     note::test::TestJsonBackend backend;
     std::string captured;
     note::Notecard nc(backend,
-        [](note::string_view, uint32_t) -> note::Result<std::string> { return "{}"; },
+        [](note::string_view, uint32_t) -> note::Result<note::string_view> { return "{}"; },
         [&](note::string_view req) -> note::Result<void> {
             captured = std::string(req);
             return {};
@@ -301,7 +301,7 @@ TEST_CASE("Notecard::command() with build_fn adds fields") {
 TEST_CASE("Notecard::command() propagates send error") {
     note::test::TestJsonBackend backend;
     note::Notecard nc(backend,
-        [](note::string_view, uint32_t) -> note::Result<std::string> { return "{}"; },
+        [](note::string_view, uint32_t) -> note::Result<note::string_view> { return "{}"; },
         [](note::string_view) -> note::Result<void> {
             return note::Unexpected(note::ErrorInfo{note::Error::SendFailed, {}, "send failed"});
         });
@@ -318,7 +318,7 @@ TEST_CASE("Notecard::command_typed() sends typed request as cmd") {
     note::test::TestJsonBackend backend;
     std::string captured;
     note::Notecard nc(backend,
-        [](note::string_view, uint32_t) -> note::Result<std::string> { return "{}"; },
+        [](note::string_view, uint32_t) -> note::Result<note::string_view> { return "{}"; },
         [&](note::string_view req) -> note::Result<void> {
             captured = std::string(req);
             return {};

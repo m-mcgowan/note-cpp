@@ -4,6 +4,7 @@
 #include <note/dyn_field.hpp>
 #include <note/field.hpp>
 #include <note/json.hpp>
+#include <note/json_sax.hpp>
 #include <note/notecard.hpp>
 #include <note/safety.hpp>
 #include <note/types.hpp>
@@ -85,6 +86,30 @@ struct CardPower {
                 rsp.reader_ = std::move(reader_);
                 return rsp;
             }
+
+            // Non-owning parse: string_views point into the reader's data.
+            // The reader (and its underlying JSON buffer) must outlive the Response,
+            // or the caller must consume all string fields before the reader is reused.
+            static Response parse(const JsonReader& reader_) {
+                Response rsp;
+                rsp.milliampHours = reader_.get_double("milliamp_hours");
+                rsp.temperature = reader_.get_double("temperature");
+                rsp.voltage = reader_.get_double("voltage");
+                return rsp;
+            }
+
+            // SAX sink — zero-allocation streaming parse into Response fields.
+            // String fields are string_views into the JSON buffer; caller must
+            // ensure the buffer outlives the Response (or intern strings after).
+            struct Sink : ::note::JsonSink {
+                Response& rsp;
+                explicit Sink(Response& r) : rsp(r) {}
+                void on_number(::note::string_view key, ::note::string_view raw) override {
+                    if (key == "milliamp_hours") { rsp.milliampHours = ::note::parse_double(raw); return; }
+                    if (key == "temperature") { rsp.temperature = ::note::parse_double(raw); return; }
+                    if (key == "voltage") { rsp.voltage = ::note::parse_double(raw); return; }
+                }
+            };
 
         private:
             std::unique_ptr<JsonReader> reader_;
@@ -171,6 +196,30 @@ struct CardPower {
                 return rsp;
             }
 
+            // Non-owning parse: string_views point into the reader's data.
+            // The reader (and its underlying JSON buffer) must outlive the Response,
+            // or the caller must consume all string fields before the reader is reused.
+            static Response parse(const JsonReader& reader_) {
+                Response rsp;
+                rsp.milliampHours = reader_.get_double("milliamp_hours");
+                rsp.temperature = reader_.get_double("temperature");
+                rsp.voltage = reader_.get_double("voltage");
+                return rsp;
+            }
+
+            // SAX sink — zero-allocation streaming parse into Response fields.
+            // String fields are string_views into the JSON buffer; caller must
+            // ensure the buffer outlives the Response (or intern strings after).
+            struct Sink : ::note::JsonSink {
+                Response& rsp;
+                explicit Sink(Response& r) : rsp(r) {}
+                void on_number(::note::string_view key, ::note::string_view raw) override {
+                    if (key == "milliamp_hours") { rsp.milliampHours = ::note::parse_double(raw); return; }
+                    if (key == "temperature") { rsp.temperature = ::note::parse_double(raw); return; }
+                    if (key == "voltage") { rsp.voltage = ::note::parse_double(raw); return; }
+                }
+            };
+
         private:
             std::unique_ptr<JsonReader> reader_;
         };
@@ -248,6 +297,30 @@ struct CardPower {
                 rsp.reader_ = std::move(reader_);
                 return rsp;
             }
+
+            // Non-owning parse: string_views point into the reader's data.
+            // The reader (and its underlying JSON buffer) must outlive the Response,
+            // or the caller must consume all string fields before the reader is reused.
+            static Response parse(const JsonReader& reader_) {
+                Response rsp;
+                rsp.milliampHours = reader_.get_double("milliamp_hours");
+                rsp.temperature = reader_.get_double("temperature");
+                rsp.voltage = reader_.get_double("voltage");
+                return rsp;
+            }
+
+            // SAX sink — zero-allocation streaming parse into Response fields.
+            // String fields are string_views into the JSON buffer; caller must
+            // ensure the buffer outlives the Response (or intern strings after).
+            struct Sink : ::note::JsonSink {
+                Response& rsp;
+                explicit Sink(Response& r) : rsp(r) {}
+                void on_number(::note::string_view key, ::note::string_view raw) override {
+                    if (key == "milliamp_hours") { rsp.milliampHours = ::note::parse_double(raw); return; }
+                    if (key == "temperature") { rsp.temperature = ::note::parse_double(raw); return; }
+                    if (key == "voltage") { rsp.voltage = ::note::parse_double(raw); return; }
+                }
+            };
 
         private:
             std::unique_ptr<JsonReader> reader_;

@@ -22,6 +22,7 @@ struct TestRequest {
 
     struct Response {
         static Response parse(std::unique_ptr<note::JsonReader>) { return {}; }
+        static Response parse(const note::JsonReader&) { return {}; }
     };
 
     void build(note::JsonBuilder& b) const {
@@ -32,12 +33,14 @@ struct TestRequest {
 struct TestHarness {
     note::test::TestJsonBackend backend;
     std::string last_request;
+    std::string last_response{"{}"}; // persists for string_view return
     note::Notecard nc;
 
     TestHarness() : nc(backend,
-        [this](note::string_view req, uint32_t) -> note::Result<std::string> {
+        [this](note::string_view req, uint32_t) -> note::Result<note::string_view> {
             last_request = std::string(req);
-            return std::string("{}");
+            last_response = "{}";
+            return note::string_view(last_response);
         },
         [this](note::string_view req) -> note::Result<void> {
             last_request = std::string(req);

@@ -47,6 +47,7 @@ struct HubSetRequest {
 
     struct Response {
         static Response parse(std::unique_ptr<note::JsonReader>) { return {}; }
+        static Response parse(const note::JsonReader&) { return {}; }
     };
 
     void build(note::JsonBuilder& b) const {
@@ -59,8 +60,8 @@ struct HubSetRequest {
 int main() {
     MockBackend backend;
     note::Notecard nc(backend,
-        [](note::string_view, uint32_t) -> note::Result<std::string> {
-            return std::string("{}");
+        [](note::string_view, uint32_t) -> note::Result<note::string_view> {
+            return note::string_view("{}");
         });
 
     // Type-safe generated request

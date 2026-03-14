@@ -4,6 +4,7 @@
 #include <note/dyn_field.hpp>
 #include <note/field.hpp>
 #include <note/json.hpp>
+#include <note/json_sax.hpp>
 #include <note/notecard.hpp>
 #include <note/safety.hpp>
 #include <note/types.hpp>
@@ -118,6 +119,60 @@ struct HubSyncStatus {
             rsp.reader_ = std::move(reader_);
             return rsp;
         }
+#pragma GCC diagnostic pop
+
+        // Non-owning parse: string_views point into the reader's data.
+        // The reader (and its underlying JSON buffer) must outlive the Response,
+        // or the caller must consume all string fields before the reader is reused.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+        static Response parse(const JsonReader& reader_) {
+            Response rsp;
+            rsp.alert = reader_.get_bool("alert");
+            rsp.completed = reader_.get_int("completed");
+            rsp.mode = reader_.get_string("mode");
+            rsp.requested = reader_.get_int("requested");
+#if NOTE_API_VERSION >= NOTE_VERSION(6, 1, 1) || !defined(NOTE_API_STRICT)
+            rsp.scan = reader_.get_bool("scan");
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
+            rsp.seconds = reader_.get_int("seconds");
+#endif
+            rsp.status = reader_.get_string("status");
+            rsp.sync = reader_.get_bool("sync");
+            rsp.time = reader_.get_int("time");
+            return rsp;
+        }
+#pragma GCC diagnostic pop
+
+        // SAX sink — zero-allocation streaming parse into Response fields.
+        // String fields are string_views into the JSON buffer; caller must
+        // ensure the buffer outlives the Response (or intern strings after).
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+        struct Sink : ::note::JsonSink {
+            Response& rsp;
+            explicit Sink(Response& r) : rsp(r) {}
+            void on_string(::note::string_view key, ::note::string_view val) override {
+                if (key == "mode") { rsp.mode = val; return; }
+                if (key == "status") { rsp.status = val; return; }
+            }
+            void on_bool(::note::string_view key, bool val) override {
+                if (key == "alert") { rsp.alert = val; return; }
+#if NOTE_API_VERSION >= NOTE_VERSION(6, 1, 1) || !defined(NOTE_API_STRICT)
+                if (key == "scan") { rsp.scan = val; return; }
+#endif
+                if (key == "sync") { rsp.sync = val; return; }
+            }
+            void on_number(::note::string_view key, ::note::string_view raw) override {
+                if (key == "completed") { rsp.completed = ::note::parse_int(raw); return; }
+                if (key == "requested") { rsp.requested = ::note::parse_int(raw); return; }
+#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
+                if (key == "seconds") { rsp.seconds = ::note::parse_int(raw); return; }
+#endif
+                if (key == "time") { rsp.time = ::note::parse_int(raw); return; }
+            }
+        };
 #pragma GCC diagnostic pop
 
     private:

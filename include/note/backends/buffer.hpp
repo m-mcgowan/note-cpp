@@ -342,10 +342,17 @@ public:
             json.data(), json.size(), tokens_, MaxTokens);
     }
 
+    // Zero-allocation reader reuse — re-parses into member tokens + reader.
+    JsonReader& get_reader(string_view json) override {
+        reader_ = JsmnJsonReader(json.data(), json.size(), tokens_, MaxTokens);
+        return reader_;
+    }
+
 private:
     char build_buf_[BuildBufSize]{};
     BufferJsonBuilder builder_{build_buf_, BuildBufSize};
     jsmntok_t tokens_[MaxTokens]{};
+    JsmnJsonReader reader_{nullptr, 0, tokens_, 0};
 };
 
 } // namespace note::backends

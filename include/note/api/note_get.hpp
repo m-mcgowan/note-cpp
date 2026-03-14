@@ -5,6 +5,7 @@
 #include <note/dyn_field.hpp>
 #include <note/field.hpp>
 #include <note/json.hpp>
+#include <note/json_sax.hpp>
 #include <note/notecard.hpp>
 #include <note/safety.hpp>
 #include <note/types.hpp>
@@ -107,6 +108,31 @@ struct NoteGet {
                 rsp.reader_ = std::move(reader_);
                 return rsp;
             }
+
+            // Non-owning parse: string_views point into the reader's data.
+            // The reader (and its underlying JSON buffer) must outlive the Response,
+            // or the caller must consume all string fields before the reader is reused.
+            static Response parse(const JsonReader& reader_) {
+                Response rsp;
+                rsp.payload = reader_.get_string("payload");
+                rsp.time = reader_.get_int("time");
+                rsp.body_ = reader_.get_object("body");
+                return rsp;
+            }
+
+            // SAX sink — zero-allocation streaming parse into Response fields.
+            // String fields are string_views into the JSON buffer; caller must
+            // ensure the buffer outlives the Response (or intern strings after).
+            struct Sink : ::note::JsonSink {
+                Response& rsp;
+                explicit Sink(Response& r) : rsp(r) {}
+                void on_string(::note::string_view key, ::note::string_view val) override {
+                    if (key == "payload") { rsp.payload = val; return; }
+                }
+                void on_number(::note::string_view key, ::note::string_view raw) override {
+                    if (key == "time") { rsp.time = ::note::parse_int(raw); return; }
+                }
+            };
 
         private:
             std::unique_ptr<JsonReader> reader_;
@@ -233,6 +259,31 @@ struct NoteGet {
                 rsp.reader_ = std::move(reader_);
                 return rsp;
             }
+
+            // Non-owning parse: string_views point into the reader's data.
+            // The reader (and its underlying JSON buffer) must outlive the Response,
+            // or the caller must consume all string fields before the reader is reused.
+            static Response parse(const JsonReader& reader_) {
+                Response rsp;
+                rsp.payload = reader_.get_string("payload");
+                rsp.time = reader_.get_int("time");
+                rsp.body_ = reader_.get_object("body");
+                return rsp;
+            }
+
+            // SAX sink — zero-allocation streaming parse into Response fields.
+            // String fields are string_views into the JSON buffer; caller must
+            // ensure the buffer outlives the Response (or intern strings after).
+            struct Sink : ::note::JsonSink {
+                Response& rsp;
+                explicit Sink(Response& r) : rsp(r) {}
+                void on_string(::note::string_view key, ::note::string_view val) override {
+                    if (key == "payload") { rsp.payload = val; return; }
+                }
+                void on_number(::note::string_view key, ::note::string_view raw) override {
+                    if (key == "time") { rsp.time = ::note::parse_int(raw); return; }
+                }
+            };
 
         private:
             std::unique_ptr<JsonReader> reader_;

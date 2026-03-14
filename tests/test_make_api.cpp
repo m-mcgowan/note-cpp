@@ -7,7 +7,7 @@ namespace {
 
 note::Notecard make_nc(note::test::TestJsonBackend& backend, std::string& last_req) {
     return note::Notecard(backend,
-        [&last_req](note::string_view r, uint32_t) -> note::Result<std::string> {
+        [&last_req](note::string_view r, uint32_t) -> note::Result<note::string_view> {
             last_req = std::string(r);
             return "{}";
         },

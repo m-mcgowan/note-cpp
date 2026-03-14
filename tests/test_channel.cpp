@@ -49,7 +49,7 @@ TEST_CASE("DirectChannel::execute() forwards to Notecard::execute()") {
     note::test::TestJsonBackend backend;
     std::string captured;
     note::Notecard nc(backend,
-        [&](note::string_view req, uint32_t) -> note::Result<std::string> {
+        [&](note::string_view req, uint32_t) -> note::Result<note::string_view> {
             captured = std::string(req);
             return std::string("{}");
         });
@@ -67,7 +67,7 @@ TEST_CASE("DirectChannel::execute() forwards to Notecard::execute()") {
 TEST_CASE("DirectChannel::execute() propagates transport errors") {
     note::test::TestJsonBackend backend;
     note::Notecard nc(backend,
-        [](note::string_view, uint32_t) -> note::Result<std::string> {
+        [](note::string_view, uint32_t) -> note::Result<note::string_view> {
             return note::make_error(note::Error::ResponseLost, note::Cause::Timeout, "timed out");
         });
 
@@ -84,7 +84,7 @@ TEST_CASE("DirectChannel::execute() propagates transport errors") {
 TEST_CASE("DirectChannel::execute() propagates protocol errors") {
     ErrorJsonBackend backend("bad response");
     note::Notecard nc(backend,
-        [](note::string_view, uint32_t) -> note::Result<std::string> {
+        [](note::string_view, uint32_t) -> note::Result<note::string_view> {
             return std::string("{}");
         });
 
@@ -102,7 +102,7 @@ TEST_CASE("DirectChannel::command() forwards to Notecard::command_typed()") {
     note::test::TestJsonBackend backend;
     std::string captured;
     note::Notecard nc(backend,
-        [&](note::string_view req, uint32_t) -> note::Result<std::string> {
+        [&](note::string_view req, uint32_t) -> note::Result<note::string_view> {
             captured = std::string(req);
             return std::string("{}");
         });
@@ -120,7 +120,7 @@ TEST_CASE("DirectChannel::command() forwards to Notecard::command_typed()") {
 TEST_CASE("DirectChannel::tick() is a no-op") {
     note::test::TestJsonBackend backend;
     note::Notecard nc(backend,
-        [](note::string_view, uint32_t) -> note::Result<std::string> {
+        [](note::string_view, uint32_t) -> note::Result<note::string_view> {
             return std::string("{}");
         });
 
@@ -135,7 +135,7 @@ TEST_CASE("DirectChannel::tick() is a no-op") {
 TEST_CASE("DirectChannel::notecard() returns the wrapped Notecard") {
     note::test::TestJsonBackend backend;
     note::Notecard nc(backend,
-        [](note::string_view, uint32_t) -> note::Result<std::string> {
+        [](note::string_view, uint32_t) -> note::Result<note::string_view> {
             return std::string("{}");
         });
 

@@ -21,7 +21,7 @@ struct TestFixture {
 
     TestFixture()
         : nc(backend,
-            [this](note::string_view req, uint32_t) -> note::Result<std::string> {
+            [this](note::string_view req, uint32_t) -> note::Result<note::string_view> {
                 captured.emplace_back(req);
                 return std::string("{}");
             })
@@ -153,7 +153,7 @@ TEST_CASE("Sync::wait_for_sync() returns immediately when already complete") {
     } status_backend(reader_ptr);
 
     note::Notecard nc(status_backend,
-        [](note::string_view, uint32_t) -> note::Result<std::string> {
+        [](note::string_view, uint32_t) -> note::Result<note::string_view> {
             return std::string("{}");
         });
     note::app::DirectChannel ch(nc);
@@ -189,7 +189,7 @@ TEST_CASE("Sync::wait_for_sync() times out after max_polls") {
 TEST_CASE("Sync::sync() propagates transport errors") {
     note::test::TestJsonBackend backend;
     note::Notecard nc(backend,
-        [](note::string_view, uint32_t) -> note::Result<std::string> {
+        [](note::string_view, uint32_t) -> note::Result<note::string_view> {
             return note::make_error(note::Error::SendFailed, "write failed");
         });
     note::app::DirectChannel ch(nc);

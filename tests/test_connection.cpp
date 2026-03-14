@@ -22,7 +22,7 @@ struct TestFixture {
 
     TestFixture()
         : nc(backend,
-            [this](note::string_view req, uint32_t) -> note::Result<std::string> {
+            [this](note::string_view req, uint32_t) -> note::Result<note::string_view> {
                 captured.emplace_back(req);
                 return std::string("{}");
             })
@@ -56,7 +56,7 @@ TEST_CASE("Connection::configure() sends hub.set") {
 TEST_CASE("Connection::configure() propagates transport errors") {
     note::test::TestJsonBackend backend;
     note::Notecard nc(backend,
-        [](note::string_view, uint32_t) -> note::Result<std::string> {
+        [](note::string_view, uint32_t) -> note::Result<note::string_view> {
             return note::make_error(note::Error::SendFailed, "write failed");
         });
     note::app::DirectChannel ch(nc);
@@ -76,7 +76,7 @@ TEST_CASE("Connection::status() queries hub.status") {
     note::test::TestJsonBackend backend;
     std::string captured;
     note::Notecard nc(backend,
-        [&](note::string_view req, uint32_t) -> note::Result<std::string> {
+        [&](note::string_view req, uint32_t) -> note::Result<note::string_view> {
             captured = std::string(req);
             return std::string("{}");
         });

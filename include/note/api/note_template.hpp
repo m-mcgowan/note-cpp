@@ -5,6 +5,7 @@
 #include <note/dyn_field.hpp>
 #include <note/field.hpp>
 #include <note/json.hpp>
+#include <note/json_sax.hpp>
 #include <note/notecard.hpp>
 #include <note/safety.hpp>
 #include <note/types.hpp>
@@ -212,6 +213,51 @@ struct NoteTemplate {
                 rsp.reader_ = std::move(reader_);
                 return rsp;
             }
+#pragma GCC diagnostic pop
+
+            // Non-owning parse: string_views point into the reader's data.
+            // The reader (and its underlying JSON buffer) must outlive the Response,
+            // or the caller must consume all string fields before the reader is reused.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+            static Response parse(const JsonReader& reader_) {
+                Response rsp;
+                rsp.bytes = reader_.get_int("bytes");
+#if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
+                rsp.format = reader_.get_string("format");
+#endif
+                rsp.length = reader_.get_int("length");
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
+                rsp.template_ = reader_.get_bool("template");
+#endif
+                rsp.body_ = reader_.get_object("body");
+                return rsp;
+            }
+#pragma GCC diagnostic pop
+
+            // SAX sink — zero-allocation streaming parse into Response fields.
+            // String fields are string_views into the JSON buffer; caller must
+            // ensure the buffer outlives the Response (or intern strings after).
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+            struct Sink : ::note::JsonSink {
+                Response& rsp;
+                explicit Sink(Response& r) : rsp(r) {}
+                void on_string(::note::string_view key, ::note::string_view val) override {
+#if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
+                    if (key == "format") { rsp.format = val; return; }
+#endif
+                }
+                void on_bool(::note::string_view key, bool val) override {
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
+                    if (key == "template") { rsp.template_ = val; return; }
+#endif
+                }
+                void on_number(::note::string_view key, ::note::string_view raw) override {
+                    if (key == "bytes") { rsp.bytes = ::note::parse_int(raw); return; }
+                    if (key == "length") { rsp.length = ::note::parse_int(raw); return; }
+                }
+            };
 #pragma GCC diagnostic pop
 
         private:
@@ -434,6 +480,51 @@ struct NoteTemplate {
                 rsp.reader_ = std::move(reader_);
                 return rsp;
             }
+#pragma GCC diagnostic pop
+
+            // Non-owning parse: string_views point into the reader's data.
+            // The reader (and its underlying JSON buffer) must outlive the Response,
+            // or the caller must consume all string fields before the reader is reused.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+            static Response parse(const JsonReader& reader_) {
+                Response rsp;
+                rsp.bytes = reader_.get_int("bytes");
+#if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
+                rsp.format = reader_.get_string("format");
+#endif
+                rsp.length = reader_.get_int("length");
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
+                rsp.template_ = reader_.get_bool("template");
+#endif
+                rsp.body_ = reader_.get_object("body");
+                return rsp;
+            }
+#pragma GCC diagnostic pop
+
+            // SAX sink — zero-allocation streaming parse into Response fields.
+            // String fields are string_views into the JSON buffer; caller must
+            // ensure the buffer outlives the Response (or intern strings after).
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+            struct Sink : ::note::JsonSink {
+                Response& rsp;
+                explicit Sink(Response& r) : rsp(r) {}
+                void on_string(::note::string_view key, ::note::string_view val) override {
+#if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
+                    if (key == "format") { rsp.format = val; return; }
+#endif
+                }
+                void on_bool(::note::string_view key, bool val) override {
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
+                    if (key == "template") { rsp.template_ = val; return; }
+#endif
+                }
+                void on_number(::note::string_view key, ::note::string_view raw) override {
+                    if (key == "bytes") { rsp.bytes = ::note::parse_int(raw); return; }
+                    if (key == "length") { rsp.length = ::note::parse_int(raw); return; }
+                }
+            };
 #pragma GCC diagnostic pop
 
         private:

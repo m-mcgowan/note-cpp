@@ -18,7 +18,7 @@ struct TestHarness {
     note::Notecard nc;
 
     TestHarness() : nc(backend,
-        [this](note::string_view req, uint32_t) -> note::Result<std::string> {
+        [this](note::string_view req, uint32_t) -> note::Result<note::string_view> {
             last_request = std::string(req);
             return std::string("{}");
         },

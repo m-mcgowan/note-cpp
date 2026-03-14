@@ -4,6 +4,7 @@
 #include <note/dyn_field.hpp>
 #include <note/field.hpp>
 #include <note/json.hpp>
+#include <note/json_sax.hpp>
 #include <note/notecard.hpp>
 #include <note/safety.hpp>
 #include <note/types.hpp>
@@ -88,6 +89,48 @@ struct HubGet {
             rsp.reader_ = std::move(reader_);
             return rsp;
         }
+
+        // Non-owning parse: string_views point into the reader's data.
+        // The reader (and its underlying JSON buffer) must outlive the Response,
+        // or the caller must consume all string fields before the reader is reused.
+        static Response parse(const JsonReader& reader_) {
+            Response rsp;
+            rsp.device = reader_.get_string("device");
+            rsp.host = reader_.get_string("host");
+            rsp.inbound = reader_.get_int("inbound");
+            rsp.mode = reader_.get_string("mode");
+            rsp.outbound = reader_.get_int("outbound");
+            rsp.product = reader_.get_string("product");
+            rsp.sn = reader_.get_string("sn");
+            rsp.sync = reader_.get_bool("sync");
+            rsp.vinbound = reader_.get_string("vinbound");
+            rsp.voutbound = reader_.get_string("voutbound");
+            return rsp;
+        }
+
+        // SAX sink — zero-allocation streaming parse into Response fields.
+        // String fields are string_views into the JSON buffer; caller must
+        // ensure the buffer outlives the Response (or intern strings after).
+        struct Sink : ::note::JsonSink {
+            Response& rsp;
+            explicit Sink(Response& r) : rsp(r) {}
+            void on_string(::note::string_view key, ::note::string_view val) override {
+                if (key == "device") { rsp.device = val; return; }
+                if (key == "host") { rsp.host = val; return; }
+                if (key == "mode") { rsp.mode = val; return; }
+                if (key == "product") { rsp.product = val; return; }
+                if (key == "sn") { rsp.sn = val; return; }
+                if (key == "vinbound") { rsp.vinbound = val; return; }
+                if (key == "voutbound") { rsp.voutbound = val; return; }
+            }
+            void on_bool(::note::string_view key, bool val) override {
+                if (key == "sync") { rsp.sync = val; return; }
+            }
+            void on_number(::note::string_view key, ::note::string_view raw) override {
+                if (key == "inbound") { rsp.inbound = ::note::parse_int(raw); return; }
+                if (key == "outbound") { rsp.outbound = ::note::parse_int(raw); return; }
+            }
+        };
 
     private:
         std::unique_ptr<JsonReader> reader_;

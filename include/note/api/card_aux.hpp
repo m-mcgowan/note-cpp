@@ -4,6 +4,7 @@
 #include <note/dyn_field.hpp>
 #include <note/field.hpp>
 #include <note/json.hpp>
+#include <note/json_sax.hpp>
 #include <note/notecard.hpp>
 #include <note/safety.hpp>
 #include <note/types.hpp>
@@ -317,6 +318,46 @@ struct CardAux {
             rsp.reader_ = std::move(reader_);
             return rsp;
         }
+#pragma GCC diagnostic pop
+
+        // Non-owning parse: string_views point into the reader's data.
+        // The reader (and its underlying JSON buffer) must outlive the Response,
+        // or the caller must consume all string fields before the reader is reused.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+        static Response parse(const JsonReader& reader_) {
+            Response rsp;
+            rsp.mode = reader_.get_string("mode");
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1) || !defined(NOTE_API_STRICT)
+            rsp.power = reader_.get_bool("power");
+#endif
+            rsp.seconds = reader_.get_int("seconds");
+            rsp.time = reader_.get_int("time");
+            return rsp;
+        }
+#pragma GCC diagnostic pop
+
+        // SAX sink — zero-allocation streaming parse into Response fields.
+        // String fields are string_views into the JSON buffer; caller must
+        // ensure the buffer outlives the Response (or intern strings after).
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+        struct Sink : ::note::JsonSink {
+            Response& rsp;
+            explicit Sink(Response& r) : rsp(r) {}
+            void on_string(::note::string_view key, ::note::string_view val) override {
+                if (key == "mode") { rsp.mode = val; return; }
+            }
+            void on_bool(::note::string_view key, bool val) override {
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1) || !defined(NOTE_API_STRICT)
+                if (key == "power") { rsp.power = val; return; }
+#endif
+            }
+            void on_number(::note::string_view key, ::note::string_view raw) override {
+                if (key == "seconds") { rsp.seconds = ::note::parse_int(raw); return; }
+                if (key == "time") { rsp.time = ::note::parse_int(raw); return; }
+            }
+        };
 #pragma GCC diagnostic pop
 
     private:

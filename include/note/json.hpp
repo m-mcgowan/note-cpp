@@ -78,8 +78,17 @@ public:
         return *owned_builder_;
     }
 
+    // Return a reference to a reusable reader owned by the backend.
+    // The reader is valid until the next get_reader() call.
+    // Default implementation wraps parse_response() for backward compatibility.
+    virtual JsonReader& get_reader(string_view json) {
+        owned_reader_ = parse_response(json);
+        return *owned_reader_;
+    }
+
 private:
     std::unique_ptr<JsonBuilder> owned_builder_;
+    std::unique_ptr<JsonReader> owned_reader_;
 };
 
 } // namespace note

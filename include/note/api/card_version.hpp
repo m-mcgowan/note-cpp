@@ -5,6 +5,7 @@
 #include <note/dyn_field.hpp>
 #include <note/field.hpp>
 #include <note/json.hpp>
+#include <note/json_sax.hpp>
 #include <note/notecard.hpp>
 #include <note/safety.hpp>
 #include <note/types.hpp>
@@ -100,6 +101,53 @@ struct CardVersion {
             rsp.reader_ = std::move(reader_);
             return rsp;
         }
+#pragma GCC diagnostic pop
+
+        // Non-owning parse: string_views point into the reader's data.
+        // The reader (and its underlying JSON buffer) must outlive the Response,
+        // or the caller must consume all string fields before the reader is reused.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+        static Response parse(const JsonReader& reader_) {
+            Response rsp;
+            rsp.board = reader_.get_string("board");
+            rsp.cell = reader_.get_bool("cell");
+            rsp.device = reader_.get_string("device");
+            rsp.gps = reader_.get_bool("gps");
+            rsp.name = reader_.get_string("name");
+            rsp.sku = reader_.get_string("sku");
+            rsp.version = reader_.get_string("version");
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
+            rsp.wifi = reader_.get_bool("wifi");
+#endif
+            rsp.body_ = reader_.get_object("body");
+            return rsp;
+        }
+#pragma GCC diagnostic pop
+
+        // SAX sink — zero-allocation streaming parse into Response fields.
+        // String fields are string_views into the JSON buffer; caller must
+        // ensure the buffer outlives the Response (or intern strings after).
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+        struct Sink : ::note::JsonSink {
+            Response& rsp;
+            explicit Sink(Response& r) : rsp(r) {}
+            void on_string(::note::string_view key, ::note::string_view val) override {
+                if (key == "board") { rsp.board = val; return; }
+                if (key == "device") { rsp.device = val; return; }
+                if (key == "name") { rsp.name = val; return; }
+                if (key == "sku") { rsp.sku = val; return; }
+                if (key == "version") { rsp.version = val; return; }
+            }
+            void on_bool(::note::string_view key, bool val) override {
+                if (key == "cell") { rsp.cell = val; return; }
+                if (key == "gps") { rsp.gps = val; return; }
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
+                if (key == "wifi") { rsp.wifi = val; return; }
+#endif
+            }
+        };
 #pragma GCC diagnostic pop
 
     private:

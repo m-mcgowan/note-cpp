@@ -4,6 +4,7 @@
 #include <note/dyn_field.hpp>
 #include <note/field.hpp>
 #include <note/json.hpp>
+#include <note/json_sax.hpp>
 #include <note/notecard.hpp>
 #include <note/safety.hpp>
 #include <note/types.hpp>
@@ -141,6 +142,34 @@ struct CardWifi {
             rsp.reader_ = std::move(reader_);
             return rsp;
         }
+
+        // Non-owning parse: string_views point into the reader's data.
+        // The reader (and its underlying JSON buffer) must outlive the Response,
+        // or the caller must consume all string fields before the reader is reused.
+        static Response parse(const JsonReader& reader_) {
+            Response rsp;
+            rsp.secure = reader_.get_bool("secure");
+            rsp.security = reader_.get_string("security");
+            rsp.ssid = reader_.get_string("ssid");
+            rsp.version = reader_.get_string("version");
+            return rsp;
+        }
+
+        // SAX sink — zero-allocation streaming parse into Response fields.
+        // String fields are string_views into the JSON buffer; caller must
+        // ensure the buffer outlives the Response (or intern strings after).
+        struct Sink : ::note::JsonSink {
+            Response& rsp;
+            explicit Sink(Response& r) : rsp(r) {}
+            void on_string(::note::string_view key, ::note::string_view val) override {
+                if (key == "security") { rsp.security = val; return; }
+                if (key == "ssid") { rsp.ssid = val; return; }
+                if (key == "version") { rsp.version = val; return; }
+            }
+            void on_bool(::note::string_view key, bool val) override {
+                if (key == "secure") { rsp.secure = val; return; }
+            }
+        };
 
     private:
         std::unique_ptr<JsonReader> reader_;

@@ -4,6 +4,7 @@
 #include <note/dyn_field.hpp>
 #include <note/field.hpp>
 #include <note/json.hpp>
+#include <note/json_sax.hpp>
 #include <note/notecard.hpp>
 #include <note/safety.hpp>
 #include <note/types.hpp>
@@ -109,6 +110,40 @@ struct CardUsageGet {
             rsp.reader_ = std::move(reader_);
             return rsp;
         }
+
+        // Non-owning parse: string_views point into the reader's data.
+        // The reader (and its underlying JSON buffer) must outlive the Response,
+        // or the caller must consume all string fields before the reader is reused.
+        static Response parse(const JsonReader& reader_) {
+            Response rsp;
+            rsp.bytesReceived = reader_.get_int("bytes_received");
+            rsp.bytesSent = reader_.get_int("bytes_sent");
+            rsp.notesReceived = reader_.get_int("notes_received");
+            rsp.notesSent = reader_.get_int("notes_sent");
+            rsp.seconds = reader_.get_int("seconds");
+            rsp.sessionsSecure = reader_.get_int("sessions_secure");
+            rsp.sessionsStandard = reader_.get_int("sessions_standard");
+            rsp.time = reader_.get_int("time");
+            return rsp;
+        }
+
+        // SAX sink — zero-allocation streaming parse into Response fields.
+        // String fields are string_views into the JSON buffer; caller must
+        // ensure the buffer outlives the Response (or intern strings after).
+        struct Sink : ::note::JsonSink {
+            Response& rsp;
+            explicit Sink(Response& r) : rsp(r) {}
+            void on_number(::note::string_view key, ::note::string_view raw) override {
+                if (key == "bytes_received") { rsp.bytesReceived = ::note::parse_int(raw); return; }
+                if (key == "bytes_sent") { rsp.bytesSent = ::note::parse_int(raw); return; }
+                if (key == "notes_received") { rsp.notesReceived = ::note::parse_int(raw); return; }
+                if (key == "notes_sent") { rsp.notesSent = ::note::parse_int(raw); return; }
+                if (key == "seconds") { rsp.seconds = ::note::parse_int(raw); return; }
+                if (key == "sessions_secure") { rsp.sessionsSecure = ::note::parse_int(raw); return; }
+                if (key == "sessions_standard") { rsp.sessionsStandard = ::note::parse_int(raw); return; }
+                if (key == "time") { rsp.time = ::note::parse_int(raw); return; }
+            }
+        };
 
     private:
         std::unique_ptr<JsonReader> reader_;

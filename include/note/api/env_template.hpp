@@ -5,6 +5,7 @@
 #include <note/dyn_field.hpp>
 #include <note/field.hpp>
 #include <note/json.hpp>
+#include <note/json_sax.hpp>
 #include <note/notecard.hpp>
 #include <note/safety.hpp>
 #include <note/types.hpp>
@@ -76,6 +77,26 @@ struct EnvTemplate {
             rsp.reader_ = std::move(reader_);
             return rsp;
         }
+
+        // Non-owning parse: string_views point into the reader's data.
+        // The reader (and its underlying JSON buffer) must outlive the Response,
+        // or the caller must consume all string fields before the reader is reused.
+        static Response parse(const JsonReader& reader_) {
+            Response rsp;
+            rsp.bytes = reader_.get_int("bytes");
+            return rsp;
+        }
+
+        // SAX sink — zero-allocation streaming parse into Response fields.
+        // String fields are string_views into the JSON buffer; caller must
+        // ensure the buffer outlives the Response (or intern strings after).
+        struct Sink : ::note::JsonSink {
+            Response& rsp;
+            explicit Sink(Response& r) : rsp(r) {}
+            void on_number(::note::string_view key, ::note::string_view raw) override {
+                if (key == "bytes") { rsp.bytes = ::note::parse_int(raw); return; }
+            }
+        };
 
     private:
         std::unique_ptr<JsonReader> reader_;

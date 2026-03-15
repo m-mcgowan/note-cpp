@@ -383,9 +383,11 @@ def parse_spec(spec_path: str | Path) -> list[EndpointGroup]:
                     all_rsp_props=rsp_props,
                     rsp_has_body=rsp_has_body,
                 )
-                # Keep the base operation (full field set, full response)
-                # as "Request" — the raw, unscoped variant.
-                parsed_op.struct_name = "Request"
+                # Keep the base operation (full field set, full response).
+                # If the operation already has a dispatch suffix (e.g. "Set"),
+                # keep it; otherwise rename to "Request" for the unscoped variant.
+                if not suffix:
+                    parsed_op.struct_name = "Request"
                 operations.append(parsed_op)
                 operations.extend(intent_ops)
                 is_polymorphic = True

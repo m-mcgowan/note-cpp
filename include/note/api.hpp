@@ -161,6 +161,9 @@ public:
         template<typename T> T create() { T r; r.nc_ = nc_; return r; }
         auto get() { return create<api::CardLocationMode::Get>(); }
         auto set() { return create<api::CardLocationMode::Set>(); }
+        auto continuous() { return create<api::CardLocationMode::Continuous>(); }
+        auto periodic() { return create<api::CardLocationMode::Periodic>(); }
+        auto fixed() { return create<api::CardLocationMode::Fixed>(); }
         auto delete_() { return create<api::CardLocationMode::Delete>(); }
     };
 

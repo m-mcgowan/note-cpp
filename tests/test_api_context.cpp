@@ -120,6 +120,9 @@ TEST_CASE("Api::card resource group") {
     // card.location.mode (polymorphic)
     h.api.execute(h.api.card.locationMode().get());
     h.api.execute(h.api.card.locationMode().set());
+    h.api.execute(h.api.card.locationMode().continuous());
+    h.api.execute(h.api.card.locationMode().periodic());
+    h.api.execute(h.api.card.locationMode().fixed());
     h.api.execute(h.api.card.locationMode().delete_());
     REQUIRE(h.last_req.find("card.location.mode") != std::string::npos);
     // card.location.track

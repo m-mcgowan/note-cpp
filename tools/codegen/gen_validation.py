@@ -166,24 +166,37 @@ def compute_wire_json(
     req_or_cmd: str,
     notecard_request: str,
     dispatch: dict | None,
+    implicit: dict | None = None,
 ) -> str:
-    """Compute the expected wire JSON in schema property order."""
+    """Compute the expected wire JSON matching C++ build() output order.
+
+    Order: req/cmd, implicit fields, dispatch-required, user fields (schema order).
+    """
     wire = OrderedDict()
 
     # First: req or cmd
     wire[req_or_cmd] = notecard_request
 
-    # Dispatch-required fields come next (in order they appear in dispatch.requires)
+    # Implicit fields come next (emitted before user fields in build())
+    for k in (implicit or {}):
+        if k in fields:
+            wire[k] = fields[k]
+        else:
+            wire[k] = implicit[k]
+
+    # Dispatch-required fields
     requires = dispatch.get("requires", []) if dispatch else []
 
-    # Then: all fields in schema property order
+    # Remaining fields in schema property order
     for prop_name in prop_schemas:
+        if prop_name in wire:
+            continue  # already emitted as implicit
         if prop_name in fields:
             wire[prop_name] = fields[prop_name]
         elif prop_name in requires:
             wire[prop_name] = True  # dispatch-required, always true
 
-    # Also add any fields not in schema (shouldn't happen, but be safe)
+    # Extra fields not in schema (shouldn't happen, but be safe)
     for k, v in fields.items():
         if k not in wire:
             wire[k] = v
@@ -313,7 +326,7 @@ def gen_validation(spec_path: str, output_path: str | None = None) -> dict:
                 # Compute expected wire JSON (includes implicit fields)
                 wire = compute_wire_json(
                     fields, prop_schemas, req_or_cmd,
-                    notecard_request, dispatch)
+                    notecard_request, dispatch, implicit)
 
                 validation = {
                     "wire": wire,

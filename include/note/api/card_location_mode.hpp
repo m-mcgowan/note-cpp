@@ -537,6 +537,511 @@ struct CardLocationMode {
 
     };
 
+    struct Continuous {
+        static constexpr string_view notecard_request = "card.location.mode";
+        static constexpr bool supports_cmd = true;
+        static constexpr Safety safety = Safety::Idempotent;
+        static constexpr Skus skus{};
+
+        Notecard* nc_ = nullptr;
+
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+        /// When in `periodic` mode, the number of motion events (registered by
+        /// the built-in accelerometer) required to trigger GPS to turn on.
+        ///
+        /// @since firmware 3.4.1
+#if NOTE_API_VERSION < NOTE_VERSION(3, 4, 1)
+        [[deprecated("requires firmware >= 3.4.1")]]
+#endif
+        struct threshold_t : Field<int32_t> {
+            using Field<int32_t>::Field;
+            using Field<int32_t>::operator=;
+            CardLocationMode::Continuous& operator()(int32_t v);
+        } threshold{};
+#endif
+        /// In `periodic` mode, overrides `seconds` with a voltage-variable
+        /// value.
+        struct vseconds_t : Field<note::string_view> {
+            using Field<note::string_view>::Field;
+            using Field<note::string_view>::operator=;
+            CardLocationMode::Continuous& operator()(note::string_view v);
+        } vseconds{};
+
+
+        template<typename T>
+        auto& extra(note::string_view key, T value) {
+            if (extras_count_ < NOTE_EXTRAS_MAX)
+                extras_[extras_count_++] = {key, note::DynValue{value}};
+            return *this;
+        }
+        auto& extra(note::string_view key, const char* value) {
+            return extra(key, note::string_view{value});
+        }
+
+        note::DynField operator[](note::string_view k_) {
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+            if (k_ == "threshold") return note::dyn_field_for(threshold);
+#endif
+            if (k_ == "vseconds") return note::dyn_field_for(vseconds);
+            if (extras_count_ < NOTE_EXTRAS_MAX) {
+                auto& slot = extras_[extras_count_++];
+                slot.key = k_;
+                return note::dyn_field_for(slot.value);
+            }
+            return {};
+        }
+
+        std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
+        uint8_t extras_count_ = 0;
+
+        struct Response {
+            /// The current location mode.
+            note::string_view mode{};
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+            /// When in periodic mode, the number of motion events (registered
+            /// by the built-in accelerometer) required to trigger GPS to turn
+            /// on.
+            ///
+            /// @since firmware 3.4.1
+#if NOTE_API_VERSION < NOTE_VERSION(3, 4, 1)
+            [[deprecated("requires firmware >= 3.4.1")]]
+#endif
+            int32_t threshold{};
+#endif
+            /// If specified, the voltage-variable period.
+            note::string_view vseconds{};
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+            static Response parse(std::unique_ptr<JsonReader> reader_) {
+                Response rsp;
+                rsp.mode = reader_->get_string("mode");
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+                rsp.threshold = reader_->get_int("threshold");
+#endif
+                rsp.vseconds = reader_->get_string("vseconds");
+                rsp.reader_ = std::move(reader_);
+                return rsp;
+            }
+#pragma GCC diagnostic pop
+
+            // Non-owning parse: string_views point into the reader's data.
+            // The reader (and its underlying JSON buffer) must outlive the Response,
+            // or the caller must consume all string fields before the reader is reused.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+            static Response parse(const JsonReader& reader_) {
+                Response rsp;
+                rsp.mode = reader_.get_string("mode");
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+                rsp.threshold = reader_.get_int("threshold");
+#endif
+                rsp.vseconds = reader_.get_string("vseconds");
+                return rsp;
+            }
+#pragma GCC diagnostic pop
+
+            // SAX sink — zero-allocation streaming parse into Response fields.
+            // String fields are string_views into the JSON buffer; caller must
+            // ensure the buffer outlives the Response (or intern strings after).
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+            struct Sink : ::note::JsonSink {
+                Response& rsp;
+                explicit Sink(Response& r) : rsp(r) {}
+                void on_string(::note::string_view key, ::note::string_view val) override {
+                    if (key == "mode") { rsp.mode = val; return; }
+                    if (key == "vseconds") { rsp.vseconds = val; return; }
+                }
+                void on_number(::note::string_view key, ::note::string_view raw) override {
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+                    if (key == "threshold") { rsp.threshold = ::note::parse_int(raw); return; }
+#endif
+                }
+            };
+#pragma GCC diagnostic pop
+
+        private:
+            std::unique_ptr<JsonReader> reader_;
+        };
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+        void build(JsonBuilder& b) const {
+            b.add("mode", "continuous");
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+            if (threshold) b.add("threshold", *threshold);
+#endif
+            if (vseconds) b.add("vseconds", *vseconds);
+            for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
+                std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
+                           extras_[i_].value);
+        }
+#pragma GCC diagnostic pop
+
+        auto execute() const { return nc_->execute(*this); }
+        auto execute(Notecard& nc) const { return nc.execute(*this); }
+        Result<void> command() const { return nc_->command_typed(*this); }
+        Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
+
+    };
+
+    struct Periodic {
+        static constexpr string_view notecard_request = "card.location.mode";
+        static constexpr bool supports_cmd = true;
+        static constexpr Safety safety = Safety::Idempotent;
+        static constexpr Skus skus{};
+
+        Notecard* nc_ = nullptr;
+
+        /// When in periodic or continuous mode, providing this value enables
+        /// [geofencing](/notecard/notecard-walkthrough/time-and-location-
+        /// requests#geofencing-with-the-notecard). The value you provide for
+        /// this argument should be the latitude of the center of the geofence,
+        /// in degrees. When in fixed mode, the value you provide for this
+        /// argument should be the latitude location of the device itself, in
+        /// degrees.
+        struct lat_t : Field<double> {
+            using Field<double>::Field;
+            using Field<double>::operator=;
+            CardLocationMode::Periodic& operator()(double v);
+        } lat{};
+        /// When in periodic or continuous mode, providing this value enables
+        /// [geofencing](/notecard/notecard-walkthrough/time-and-location-
+        /// requests#geofencing-with-the-notecard). The value you provide for
+        /// this argument should be the longitude of the center of the geofence,
+        /// in degrees. When in fixed mode, the value you provide for this
+        /// argument should be the longitude location of the device itself, in
+        /// degrees.
+        struct lon_t : Field<double> {
+            using Field<double>::Field;
+            using Field<double>::operator=;
+            CardLocationMode::Periodic& operator()(double v);
+        } lon{};
+        /// Meters from a geofence center. Used to enable geofence location
+        /// tracking.
+        struct max_t : Field<int32_t> {
+            using Field<int32_t>::Field;
+            using Field<int32_t>::operator=;
+            CardLocationMode::Periodic& operator()(int32_t v);
+        } max{};
+        /// When geofence is enabled, the number of minutes the device should be
+        /// outside the geofence before the Notecard location is tracked.
+        struct minutes_t : Field<note::Minutes> {
+            using Field<note::Minutes>::Field;
+            using Field<note::Minutes>::operator=;
+            CardLocationMode::Periodic& operator()(note::Minutes v);
+        } minutes{};
+        /// When in `periodic` mode, location will be sampled at this interval,
+        /// if the Notecard detects motion. If seconds is < 300, during periods
+        /// of sustained movement the Notecard will leave its onboard GPS/GNSS
+        /// on continuously to avoid powering the module on and off repeatedly.
+        struct seconds_t : Field<note::Seconds> {
+            static constexpr note::Seconds reset{ -1 };
+            using Field<note::Seconds>::Field;
+            using Field<note::Seconds>::operator=;
+            CardLocationMode::Periodic& operator()(note::Seconds v);
+        } seconds{};
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+        /// When in `periodic` mode, the number of motion events (registered by
+        /// the built-in accelerometer) required to trigger GPS to turn on.
+        ///
+        /// @since firmware 3.4.1
+#if NOTE_API_VERSION < NOTE_VERSION(3, 4, 1)
+        [[deprecated("requires firmware >= 3.4.1")]]
+#endif
+        struct threshold_t : Field<int32_t> {
+            using Field<int32_t>::Field;
+            using Field<int32_t>::operator=;
+            CardLocationMode::Periodic& operator()(int32_t v);
+        } threshold{};
+#endif
+        /// In `periodic` mode, overrides `seconds` with a voltage-variable
+        /// value.
+        struct vseconds_t : Field<note::string_view> {
+            using Field<note::string_view>::Field;
+            using Field<note::string_view>::operator=;
+            CardLocationMode::Periodic& operator()(note::string_view v);
+        } vseconds{};
+
+
+        template<typename T>
+        auto& extra(note::string_view key, T value) {
+            if (extras_count_ < NOTE_EXTRAS_MAX)
+                extras_[extras_count_++] = {key, note::DynValue{value}};
+            return *this;
+        }
+        auto& extra(note::string_view key, const char* value) {
+            return extra(key, note::string_view{value});
+        }
+
+        note::DynField operator[](note::string_view k_) {
+            if (k_ == "lat") return note::dyn_field_for(lat);
+            if (k_ == "lon") return note::dyn_field_for(lon);
+            if (k_ == "max") return note::dyn_field_for(max);
+            if (k_ == "minutes") return note::dyn_field_for(minutes);
+            if (k_ == "seconds") return note::dyn_field_for(seconds);
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+            if (k_ == "threshold") return note::dyn_field_for(threshold);
+#endif
+            if (k_ == "vseconds") return note::dyn_field_for(vseconds);
+            if (extras_count_ < NOTE_EXTRAS_MAX) {
+                auto& slot = extras_[extras_count_++];
+                slot.key = k_;
+                return note::dyn_field_for(slot.value);
+            }
+            return {};
+        }
+
+        std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
+        uint8_t extras_count_ = 0;
+
+        struct Response {
+            /// If geofence is enabled, the geofence center latitude in degrees.
+            double lat{};
+            /// If geofence is enabled, the geofence center longitude in
+            /// degrees.
+            double lon{};
+            /// If geofence is enabled, the meters from geofence center.
+            int32_t max{};
+            /// If geofence is enabled, the currently configured geofence
+            /// debounce period.
+            int32_t minutes{};
+            /// The current location mode.
+            note::string_view mode{};
+            /// If specified, the periodic sample interval.
+            int32_t seconds{};
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+            /// When in periodic mode, the number of motion events (registered
+            /// by the built-in accelerometer) required to trigger GPS to turn
+            /// on.
+            ///
+            /// @since firmware 3.4.1
+#if NOTE_API_VERSION < NOTE_VERSION(3, 4, 1)
+            [[deprecated("requires firmware >= 3.4.1")]]
+#endif
+            int32_t threshold{};
+#endif
+            /// If specified, the voltage-variable period.
+            note::string_view vseconds{};
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+            static Response parse(std::unique_ptr<JsonReader> reader_) {
+                Response rsp;
+                rsp.lat = reader_->get_double("lat");
+                rsp.lon = reader_->get_double("lon");
+                rsp.max = reader_->get_int("max");
+                rsp.minutes = reader_->get_int("minutes");
+                rsp.mode = reader_->get_string("mode");
+                rsp.seconds = reader_->get_int("seconds");
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+                rsp.threshold = reader_->get_int("threshold");
+#endif
+                rsp.vseconds = reader_->get_string("vseconds");
+                rsp.reader_ = std::move(reader_);
+                return rsp;
+            }
+#pragma GCC diagnostic pop
+
+            // Non-owning parse: string_views point into the reader's data.
+            // The reader (and its underlying JSON buffer) must outlive the Response,
+            // or the caller must consume all string fields before the reader is reused.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+            static Response parse(const JsonReader& reader_) {
+                Response rsp;
+                rsp.lat = reader_.get_double("lat");
+                rsp.lon = reader_.get_double("lon");
+                rsp.max = reader_.get_int("max");
+                rsp.minutes = reader_.get_int("minutes");
+                rsp.mode = reader_.get_string("mode");
+                rsp.seconds = reader_.get_int("seconds");
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+                rsp.threshold = reader_.get_int("threshold");
+#endif
+                rsp.vseconds = reader_.get_string("vseconds");
+                return rsp;
+            }
+#pragma GCC diagnostic pop
+
+            // SAX sink — zero-allocation streaming parse into Response fields.
+            // String fields are string_views into the JSON buffer; caller must
+            // ensure the buffer outlives the Response (or intern strings after).
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+            struct Sink : ::note::JsonSink {
+                Response& rsp;
+                explicit Sink(Response& r) : rsp(r) {}
+                void on_string(::note::string_view key, ::note::string_view val) override {
+                    if (key == "mode") { rsp.mode = val; return; }
+                    if (key == "vseconds") { rsp.vseconds = val; return; }
+                }
+                void on_number(::note::string_view key, ::note::string_view raw) override {
+                    if (key == "max") { rsp.max = ::note::parse_int(raw); return; }
+                    if (key == "minutes") { rsp.minutes = ::note::parse_int(raw); return; }
+                    if (key == "seconds") { rsp.seconds = ::note::parse_int(raw); return; }
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+                    if (key == "threshold") { rsp.threshold = ::note::parse_int(raw); return; }
+#endif
+                    if (key == "lat") { rsp.lat = ::note::parse_double(raw); return; }
+                    if (key == "lon") { rsp.lon = ::note::parse_double(raw); return; }
+                }
+            };
+#pragma GCC diagnostic pop
+
+        private:
+            std::unique_ptr<JsonReader> reader_;
+        };
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+        void build(JsonBuilder& b) const {
+            b.add("mode", "periodic");
+            if (lat) b.add("lat", *lat);
+            if (lon) b.add("lon", *lon);
+            if (max) b.add("max", *max);
+            if (minutes) b.add("minutes", *minutes);
+            if (seconds) b.add("seconds", *seconds);
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+            if (threshold) b.add("threshold", *threshold);
+#endif
+            if (vseconds) b.add("vseconds", *vseconds);
+            for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
+                std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
+                           extras_[i_].value);
+        }
+#pragma GCC diagnostic pop
+
+        auto execute() const { return nc_->execute(*this); }
+        auto execute(Notecard& nc) const { return nc.execute(*this); }
+        Result<void> command() const { return nc_->command_typed(*this); }
+        Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
+
+    };
+
+    struct Fixed {
+        static constexpr string_view notecard_request = "card.location.mode";
+        static constexpr bool supports_cmd = true;
+        static constexpr Safety safety = Safety::Idempotent;
+        static constexpr Skus skus{};
+
+        Notecard* nc_ = nullptr;
+
+        /// When in periodic or continuous mode, providing this value enables
+        /// [geofencing](/notecard/notecard-walkthrough/time-and-location-
+        /// requests#geofencing-with-the-notecard). The value you provide for
+        /// this argument should be the latitude of the center of the geofence,
+        /// in degrees. When in fixed mode, the value you provide for this
+        /// argument should be the latitude location of the device itself, in
+        /// degrees.
+        struct lat_t : Field<double> {
+            using Field<double>::Field;
+            using Field<double>::operator=;
+            CardLocationMode::Fixed& operator()(double v);
+        } lat{};
+        /// When in periodic or continuous mode, providing this value enables
+        /// [geofencing](/notecard/notecard-walkthrough/time-and-location-
+        /// requests#geofencing-with-the-notecard). The value you provide for
+        /// this argument should be the longitude of the center of the geofence,
+        /// in degrees. When in fixed mode, the value you provide for this
+        /// argument should be the longitude location of the device itself, in
+        /// degrees.
+        struct lon_t : Field<double> {
+            using Field<double>::Field;
+            using Field<double>::operator=;
+            CardLocationMode::Fixed& operator()(double v);
+        } lon{};
+
+
+        template<typename T>
+        auto& extra(note::string_view key, T value) {
+            if (extras_count_ < NOTE_EXTRAS_MAX)
+                extras_[extras_count_++] = {key, note::DynValue{value}};
+            return *this;
+        }
+        auto& extra(note::string_view key, const char* value) {
+            return extra(key, note::string_view{value});
+        }
+
+        note::DynField operator[](note::string_view k_) {
+            if (k_ == "lat") return note::dyn_field_for(lat);
+            if (k_ == "lon") return note::dyn_field_for(lon);
+            if (extras_count_ < NOTE_EXTRAS_MAX) {
+                auto& slot = extras_[extras_count_++];
+                slot.key = k_;
+                return note::dyn_field_for(slot.value);
+            }
+            return {};
+        }
+
+        std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
+        uint8_t extras_count_ = 0;
+
+        struct Response {
+            /// If geofence is enabled, the geofence center latitude in degrees.
+            double lat{};
+            /// If geofence is enabled, the geofence center longitude in
+            /// degrees.
+            double lon{};
+            /// The current location mode.
+            note::string_view mode{};
+
+            static Response parse(std::unique_ptr<JsonReader> reader_) {
+                Response rsp;
+                rsp.lat = reader_->get_double("lat");
+                rsp.lon = reader_->get_double("lon");
+                rsp.mode = reader_->get_string("mode");
+                rsp.reader_ = std::move(reader_);
+                return rsp;
+            }
+
+            // Non-owning parse: string_views point into the reader's data.
+            // The reader (and its underlying JSON buffer) must outlive the Response,
+            // or the caller must consume all string fields before the reader is reused.
+            static Response parse(const JsonReader& reader_) {
+                Response rsp;
+                rsp.lat = reader_.get_double("lat");
+                rsp.lon = reader_.get_double("lon");
+                rsp.mode = reader_.get_string("mode");
+                return rsp;
+            }
+
+            // SAX sink — zero-allocation streaming parse into Response fields.
+            // String fields are string_views into the JSON buffer; caller must
+            // ensure the buffer outlives the Response (or intern strings after).
+            struct Sink : ::note::JsonSink {
+                Response& rsp;
+                explicit Sink(Response& r) : rsp(r) {}
+                void on_string(::note::string_view key, ::note::string_view val) override {
+                    if (key == "mode") { rsp.mode = val; return; }
+                }
+                void on_number(::note::string_view key, ::note::string_view raw) override {
+                    if (key == "lat") { rsp.lat = ::note::parse_double(raw); return; }
+                    if (key == "lon") { rsp.lon = ::note::parse_double(raw); return; }
+                }
+            };
+
+        private:
+            std::unique_ptr<JsonReader> reader_;
+        };
+
+        void build(JsonBuilder& b) const {
+            b.add("mode", "fixed");
+            if (lat) b.add("lat", *lat);
+            if (lon) b.add("lon", *lon);
+            for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
+                std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
+                           extras_[i_].value);
+        }
+
+        auto execute() const { return nc_->execute(*this); }
+        auto execute(Notecard& nc) const { return nc.execute(*this); }
+        Result<void> command() const { return nc_->command_typed(*this); }
+        Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
+
+    };
+
     struct Delete {
         static constexpr string_view notecard_request = "card.location.mode";
         static constexpr bool supports_cmd = true;
@@ -889,6 +1394,79 @@ inline CardLocationMode::Set& CardLocationMode::Set::vseconds_t::operator()(note
     Field<note::string_view>::operator=(v);
     return *reinterpret_cast<CardLocationMode::Set*>(
         reinterpret_cast<char*>(this) - offsetof(CardLocationMode::Set, vseconds));
+}
+#pragma GCC diagnostic pop
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+inline CardLocationMode::Continuous& CardLocationMode::Continuous::threshold_t::operator()(int32_t v) {
+    Field<int32_t>::operator=(v);
+    return *reinterpret_cast<CardLocationMode::Continuous*>(
+        reinterpret_cast<char*>(this) - offsetof(CardLocationMode::Continuous, threshold));
+}
+#endif
+inline CardLocationMode::Continuous& CardLocationMode::Continuous::vseconds_t::operator()(note::string_view v) {
+    Field<note::string_view>::operator=(v);
+    return *reinterpret_cast<CardLocationMode::Continuous*>(
+        reinterpret_cast<char*>(this) - offsetof(CardLocationMode::Continuous, vseconds));
+}
+#pragma GCC diagnostic pop
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+inline CardLocationMode::Periodic& CardLocationMode::Periodic::lat_t::operator()(double v) {
+    Field<double>::operator=(v);
+    return *reinterpret_cast<CardLocationMode::Periodic*>(
+        reinterpret_cast<char*>(this) - offsetof(CardLocationMode::Periodic, lat));
+}
+inline CardLocationMode::Periodic& CardLocationMode::Periodic::lon_t::operator()(double v) {
+    Field<double>::operator=(v);
+    return *reinterpret_cast<CardLocationMode::Periodic*>(
+        reinterpret_cast<char*>(this) - offsetof(CardLocationMode::Periodic, lon));
+}
+inline CardLocationMode::Periodic& CardLocationMode::Periodic::max_t::operator()(int32_t v) {
+    Field<int32_t>::operator=(v);
+    return *reinterpret_cast<CardLocationMode::Periodic*>(
+        reinterpret_cast<char*>(this) - offsetof(CardLocationMode::Periodic, max));
+}
+inline CardLocationMode::Periodic& CardLocationMode::Periodic::minutes_t::operator()(note::Minutes v) {
+    Field<note::Minutes>::operator=(v);
+    return *reinterpret_cast<CardLocationMode::Periodic*>(
+        reinterpret_cast<char*>(this) - offsetof(CardLocationMode::Periodic, minutes));
+}
+inline CardLocationMode::Periodic& CardLocationMode::Periodic::seconds_t::operator()(note::Seconds v) {
+    Field<note::Seconds>::operator=(v);
+    return *reinterpret_cast<CardLocationMode::Periodic*>(
+        reinterpret_cast<char*>(this) - offsetof(CardLocationMode::Periodic, seconds));
+}
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+inline CardLocationMode::Periodic& CardLocationMode::Periodic::threshold_t::operator()(int32_t v) {
+    Field<int32_t>::operator=(v);
+    return *reinterpret_cast<CardLocationMode::Periodic*>(
+        reinterpret_cast<char*>(this) - offsetof(CardLocationMode::Periodic, threshold));
+}
+#endif
+inline CardLocationMode::Periodic& CardLocationMode::Periodic::vseconds_t::operator()(note::string_view v) {
+    Field<note::string_view>::operator=(v);
+    return *reinterpret_cast<CardLocationMode::Periodic*>(
+        reinterpret_cast<char*>(this) - offsetof(CardLocationMode::Periodic, vseconds));
+}
+#pragma GCC diagnostic pop
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+inline CardLocationMode::Fixed& CardLocationMode::Fixed::lat_t::operator()(double v) {
+    Field<double>::operator=(v);
+    return *reinterpret_cast<CardLocationMode::Fixed*>(
+        reinterpret_cast<char*>(this) - offsetof(CardLocationMode::Fixed, lat));
+}
+inline CardLocationMode::Fixed& CardLocationMode::Fixed::lon_t::operator()(double v) {
+    Field<double>::operator=(v);
+    return *reinterpret_cast<CardLocationMode::Fixed*>(
+        reinterpret_cast<char*>(this) - offsetof(CardLocationMode::Fixed, lon));
 }
 #pragma GCC diagnostic pop
 

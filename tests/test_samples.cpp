@@ -332,16 +332,14 @@ TEST_CASE("card.location Get Current Location") {
 
 TEST_CASE("card.location.mode Continuous Mode") {
     TestHarness h;
-    note::api::CardLocationMode::Set req;
-    req.mode = note::string_view(R"sv(continuous)sv");
+    note::api::CardLocationMode::Continuous req;
     h.nc.execute(req);
     REQUIRE(h.last_request == R"json({"req":"card.location.mode","mode":"continuous"})json");
 }
 
 TEST_CASE("card.location.mode Periodic Mode") {
     TestHarness h;
-    note::api::CardLocationMode::Set req;
-    req.mode = note::string_view(R"sv(periodic)sv");
+    note::api::CardLocationMode::Periodic req;
     req.seconds = int32_t{3600};
     h.nc.execute(req);
     REQUIRE(h.last_request == R"json({"req":"card.location.mode","mode":"periodic","seconds":3600})json");
@@ -349,24 +347,22 @@ TEST_CASE("card.location.mode Periodic Mode") {
 
 TEST_CASE("card.location.mode Geofence Mode") {
     TestHarness h;
-    note::api::CardLocationMode::Set req;
-    req.mode = note::string_view(R"sv(periodic)sv");
+    note::api::CardLocationMode::Periodic req;
     req.lat = 42.5776;
     req.lon = -70.87134;
     req.max = int32_t{100};
     req.minutes = int32_t{2};
     h.nc.execute(req);
-    REQUIRE(h.last_request == R"json({"req":"card.location.mode","lat":42.5776,"lon":-70.87134,"max":100,"minutes":2,"mode":"periodic"})json");
+    REQUIRE(h.last_request == R"json({"req":"card.location.mode","mode":"periodic","lat":42.5776,"lon":-70.87134,"max":100,"minutes":2})json");
 }
 
 TEST_CASE("card.location.mode Fixed Mode") {
     TestHarness h;
-    note::api::CardLocationMode::Set req;
-    req.mode = note::string_view(R"sv(fixed)sv");
+    note::api::CardLocationMode::Fixed req;
     req.lat = 42.5776;
     req.lon = -70.87134;
     h.nc.execute(req);
-    REQUIRE(h.last_request == R"json({"req":"card.location.mode","lat":42.5776,"lon":-70.87134,"mode":"fixed"})json");
+    REQUIRE(h.last_request == R"json({"req":"card.location.mode","mode":"fixed","lat":42.5776,"lon":-70.87134})json");
 }
 
 TEST_CASE("card.location.track Start") {

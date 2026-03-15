@@ -3141,10 +3141,7 @@
             "json": "{\"req\": \"card.location.mode\", \"mode\": \"continuous\"}",
             "x-validation": {
               "wire": "{\"req\":\"card.location.mode\",\"mode\":\"continuous\"}",
-              "fields": {
-                "mode": "continuous"
-              },
-              "sub_type": "Set"
+              "sub_type": "Continuous"
             }
           },
           {
@@ -3154,10 +3151,9 @@
             "x-validation": {
               "wire": "{\"req\":\"card.location.mode\",\"mode\":\"periodic\",\"seconds\":3600}",
               "fields": {
-                "mode": "periodic",
                 "seconds": 3600
               },
-              "sub_type": "Set"
+              "sub_type": "Periodic"
             }
           },
           {
@@ -3165,15 +3161,14 @@
             "description": "Enable geofencing with specific location and radius.",
             "json": "{\"req\": \"card.location.mode\", \"mode\": \"periodic\", \"lat\": 42.5776, \"lon\": -70.87134, \"max\": 100, \"minutes\": 2}",
             "x-validation": {
-              "wire": "{\"req\":\"card.location.mode\",\"lat\":42.5776,\"lon\":-70.87134,\"max\":100,\"minutes\":2,\"mode\":\"periodic\"}",
+              "wire": "{\"req\":\"card.location.mode\",\"mode\":\"periodic\",\"lat\":42.5776,\"lon\":-70.87134,\"max\":100,\"minutes\":2}",
               "fields": {
-                "mode": "periodic",
                 "lat": 42.5776,
                 "lon": -70.87134,
                 "max": 100,
                 "minutes": 2
               },
-              "sub_type": "Set"
+              "sub_type": "Periodic"
             }
           },
           {
@@ -3181,13 +3176,12 @@
             "description": "Set a fixed location for the device.",
             "json": "{\"req\": \"card.location.mode\", \"mode\": \"fixed\", \"lat\": 42.5776, \"lon\": -70.87134}",
             "x-validation": {
-              "wire": "{\"req\":\"card.location.mode\",\"lat\":42.5776,\"lon\":-70.87134,\"mode\":\"fixed\"}",
+              "wire": "{\"req\":\"card.location.mode\",\"mode\":\"fixed\",\"lat\":42.5776,\"lon\":-70.87134}",
               "fields": {
-                "mode": "fixed",
                 "lat": 42.5776,
                 "lon": -70.87134
               },
-              "sub_type": "Set"
+              "sub_type": "Fixed"
             }
           }
         ],
@@ -3409,10 +3403,7 @@
             "json": "{\"req\": \"card.location.mode\", \"mode\": \"continuous\"}",
             "x-validation": {
               "wire": "{\"req\":\"card.location.mode\",\"mode\":\"continuous\"}",
-              "fields": {
-                "mode": "continuous"
-              },
-              "sub_type": "Set"
+              "sub_type": "Continuous"
             }
           },
           {
@@ -3422,10 +3413,9 @@
             "x-validation": {
               "wire": "{\"req\":\"card.location.mode\",\"mode\":\"periodic\",\"seconds\":3600}",
               "fields": {
-                "mode": "periodic",
                 "seconds": 3600
               },
-              "sub_type": "Set"
+              "sub_type": "Periodic"
             }
           },
           {
@@ -3433,15 +3423,14 @@
             "description": "Enable geofencing with specific location and radius.",
             "json": "{\"req\": \"card.location.mode\", \"mode\": \"periodic\", \"lat\": 42.5776, \"lon\": -70.87134, \"max\": 100, \"minutes\": 2}",
             "x-validation": {
-              "wire": "{\"req\":\"card.location.mode\",\"lat\":42.5776,\"lon\":-70.87134,\"max\":100,\"minutes\":2,\"mode\":\"periodic\"}",
+              "wire": "{\"req\":\"card.location.mode\",\"mode\":\"periodic\",\"lat\":42.5776,\"lon\":-70.87134,\"max\":100,\"minutes\":2}",
               "fields": {
-                "mode": "periodic",
                 "lat": 42.5776,
                 "lon": -70.87134,
                 "max": 100,
                 "minutes": 2
               },
-              "sub_type": "Set"
+              "sub_type": "Periodic"
             }
           },
           {
@@ -3449,13 +3438,12 @@
             "description": "Set a fixed location for the device.",
             "json": "{\"req\": \"card.location.mode\", \"mode\": \"fixed\", \"lat\": 42.5776, \"lon\": -70.87134}",
             "x-validation": {
-              "wire": "{\"req\":\"card.location.mode\",\"lat\":42.5776,\"lon\":-70.87134,\"mode\":\"fixed\"}",
+              "wire": "{\"req\":\"card.location.mode\",\"mode\":\"fixed\",\"lat\":42.5776,\"lon\":-70.87134}",
               "fields": {
-                "mode": "fixed",
                 "lat": 42.5776,
                 "lon": -70.87134
               },
-              "sub_type": "Set"
+              "sub_type": "Fixed"
             }
           }
         ],
@@ -3546,7 +3534,67 @@
             "x-schema-version": "1.1.2",
             "x-api-version": "9.1.1"
           }
-        }
+        },
+        "x-intents": [
+          {
+            "name": "continuous",
+            "description": "Enable continuous GPS/GNSS sampling.",
+            "implicit": {
+              "mode": "continuous"
+            },
+            "fields": [
+              "threshold",
+              "vseconds"
+            ],
+            "response": [
+              "mode",
+              "threshold",
+              "vseconds"
+            ]
+          },
+          {
+            "name": "periodic",
+            "description": "Enable periodic location sampling, optionally with geofencing.",
+            "implicit": {
+              "mode": "periodic"
+            },
+            "fields": [
+              "seconds",
+              "lat",
+              "lon",
+              "max",
+              "minutes",
+              "threshold",
+              "vseconds"
+            ],
+            "response": [
+              "mode",
+              "seconds",
+              "lat",
+              "lon",
+              "max",
+              "minutes",
+              "threshold",
+              "vseconds"
+            ]
+          },
+          {
+            "name": "fixed",
+            "description": "Set a fixed location for the device.",
+            "implicit": {
+              "mode": "fixed"
+            },
+            "fields": [
+              "lat",
+              "lon"
+            ],
+            "response": [
+              "mode",
+              "lat",
+              "lon"
+            ]
+          }
+        ]
       },
       "delete": {
         "operationId": "card_location_mode_delete",
@@ -3674,10 +3722,7 @@
             "json": "{\"req\": \"card.location.mode\", \"mode\": \"continuous\"}",
             "x-validation": {
               "wire": "{\"req\":\"card.location.mode\",\"mode\":\"continuous\"}",
-              "fields": {
-                "mode": "continuous"
-              },
-              "sub_type": "Set"
+              "sub_type": "Continuous"
             }
           },
           {
@@ -3687,10 +3732,9 @@
             "x-validation": {
               "wire": "{\"req\":\"card.location.mode\",\"mode\":\"periodic\",\"seconds\":3600}",
               "fields": {
-                "mode": "periodic",
                 "seconds": 3600
               },
-              "sub_type": "Set"
+              "sub_type": "Periodic"
             }
           },
           {
@@ -3698,15 +3742,14 @@
             "description": "Enable geofencing with specific location and radius.",
             "json": "{\"req\": \"card.location.mode\", \"mode\": \"periodic\", \"lat\": 42.5776, \"lon\": -70.87134, \"max\": 100, \"minutes\": 2}",
             "x-validation": {
-              "wire": "{\"req\":\"card.location.mode\",\"lat\":42.5776,\"lon\":-70.87134,\"max\":100,\"minutes\":2,\"mode\":\"periodic\"}",
+              "wire": "{\"req\":\"card.location.mode\",\"mode\":\"periodic\",\"lat\":42.5776,\"lon\":-70.87134,\"max\":100,\"minutes\":2}",
               "fields": {
-                "mode": "periodic",
                 "lat": 42.5776,
                 "lon": -70.87134,
                 "max": 100,
                 "minutes": 2
               },
-              "sub_type": "Set"
+              "sub_type": "Periodic"
             }
           },
           {
@@ -3714,13 +3757,12 @@
             "description": "Set a fixed location for the device.",
             "json": "{\"req\": \"card.location.mode\", \"mode\": \"fixed\", \"lat\": 42.5776, \"lon\": -70.87134}",
             "x-validation": {
-              "wire": "{\"req\":\"card.location.mode\",\"lat\":42.5776,\"lon\":-70.87134,\"mode\":\"fixed\"}",
+              "wire": "{\"req\":\"card.location.mode\",\"mode\":\"fixed\",\"lat\":42.5776,\"lon\":-70.87134}",
               "fields": {
-                "mode": "fixed",
                 "lat": 42.5776,
                 "lon": -70.87134
               },
-              "sub_type": "Set"
+              "sub_type": "Fixed"
             }
           }
         ],

@@ -1235,6 +1235,180 @@ TEST_CASE("note::api::CardLocationMode::Set response parsing") {
 }
 
 // ---------------------------------------------------------------------------
+TEST_CASE("note::api::CardLocationMode::Continuous request builder") {
+    Harness h;
+    auto req = h.api.card.locationMode().continuous();
+    // Execute with no optional fields set — covers all !has_value() (false) branches.
+    req.execute();
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+    req.threshold(int32_t{42});
+#endif
+    req.vseconds(note::string_view("x-vseconds"));
+    req.execute();
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+    REQUIRE(h.last_req.find("\"threshold\"") != std::string::npos);
+#endif
+    REQUIRE(h.last_req.find("\"vseconds\"") != std::string::npos);
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
+    req.execute(h.nc);
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+    req["threshold"] = int32_t{42};
+#endif
+    req["vseconds"] = note::string_view("x-vseconds");
+    // Cover command() overloads
+    req.command();
+    req.command(h.nc);
+}
+
+// ---------------------------------------------------------------------------
+TEST_CASE("note::api::CardLocationMode::Continuous response parsing") {
+    auto reader = std::make_unique<note::test::PopulatedJsonReader>();
+    reader->set("mode", std::string("x-mode"));
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+    reader->set("threshold", int32_t{42});
+#endif
+    reader->set("vseconds", std::string("x-vseconds"));
+    auto rsp = note::api::CardLocationMode::Continuous::Response::parse(std::move(reader));
+    REQUIRE(rsp.mode == "x-mode");
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+    REQUIRE(rsp.threshold == 42);
+#endif
+    REQUIRE(rsp.vseconds == "x-vseconds");
+}
+
+// ---------------------------------------------------------------------------
+TEST_CASE("note::api::CardLocationMode::Periodic request builder") {
+    Harness h;
+    auto req = h.api.card.locationMode().periodic();
+    // Execute with no optional fields set — covers all !has_value() (false) branches.
+    req.execute();
+    req.lat(1.5);
+    req.lon(1.5);
+    req.max(int32_t{42});
+    req.minutes(note::Minutes{42});
+    req.seconds(note::Seconds{42});
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+    req.threshold(int32_t{42});
+#endif
+    req.vseconds(note::string_view("x-vseconds"));
+    req.execute();
+    REQUIRE(h.last_req.find("\"lat\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"lon\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"max\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"minutes\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"seconds\"") != std::string::npos);
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+    REQUIRE(h.last_req.find("\"threshold\"") != std::string::npos);
+#endif
+    REQUIRE(h.last_req.find("\"vseconds\"") != std::string::npos);
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
+    req.execute(h.nc);
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+    req["lat"] = 1.5;
+    req["lon"] = 1.5;
+    req["max"] = int32_t{42};
+    req["minutes"] = note::Minutes{42};
+    req["seconds"] = note::Seconds{42};
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+    req["threshold"] = int32_t{42};
+#endif
+    req["vseconds"] = note::string_view("x-vseconds");
+    // Cover command() overloads
+    req.command();
+    req.command(h.nc);
+}
+
+// ---------------------------------------------------------------------------
+TEST_CASE("note::api::CardLocationMode::Periodic response parsing") {
+    auto reader = std::make_unique<note::test::PopulatedJsonReader>();
+    reader->set("lat", 1.5);
+    reader->set("lon", 1.5);
+    reader->set("max", int32_t{42});
+    reader->set("minutes", int32_t{42});
+    reader->set("mode", std::string("x-mode"));
+    reader->set("seconds", int32_t{42});
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+    reader->set("threshold", int32_t{42});
+#endif
+    reader->set("vseconds", std::string("x-vseconds"));
+    auto rsp = note::api::CardLocationMode::Periodic::Response::parse(std::move(reader));
+    REQUIRE(rsp.lat == 1.5);
+    REQUIRE(rsp.lon == 1.5);
+    REQUIRE(rsp.max == 42);
+    REQUIRE(rsp.minutes == 42);
+    REQUIRE(rsp.mode == "x-mode");
+    REQUIRE(rsp.seconds == 42);
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+    REQUIRE(rsp.threshold == 42);
+#endif
+    REQUIRE(rsp.vseconds == "x-vseconds");
+}
+
+// ---------------------------------------------------------------------------
+TEST_CASE("note::api::CardLocationMode::Fixed request builder") {
+    Harness h;
+    auto req = h.api.card.locationMode().fixed();
+    // Execute with no optional fields set — covers all !has_value() (false) branches.
+    req.execute();
+    req.lat(1.5);
+    req.lon(1.5);
+    req.execute();
+    REQUIRE(h.last_req.find("\"lat\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"lon\"") != std::string::npos);
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
+    req.execute(h.nc);
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+    req["lat"] = 1.5;
+    req["lon"] = 1.5;
+    // Cover command() overloads
+    req.command();
+    req.command(h.nc);
+}
+
+// ---------------------------------------------------------------------------
+TEST_CASE("note::api::CardLocationMode::Fixed response parsing") {
+    auto reader = std::make_unique<note::test::PopulatedJsonReader>();
+    reader->set("lat", 1.5);
+    reader->set("lon", 1.5);
+    reader->set("mode", std::string("x-mode"));
+    auto rsp = note::api::CardLocationMode::Fixed::Response::parse(std::move(reader));
+    REQUIRE(rsp.lat == 1.5);
+    REQUIRE(rsp.lon == 1.5);
+    REQUIRE(rsp.mode == "x-mode");
+}
+
+// ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardLocationMode::Delete request builder") {
     Harness h;
     auto req = h.api.card.locationMode().delete_();

@@ -83,13 +83,15 @@ struct CardTransport {
     } umin{};
 #endif
 
-    // consteval: only callable at compile time
+    // consteval: only callable at compile time (C++20)
+#if __cplusplus >= 202002L
     static consteval note::string_view validatedMethod(const char* v) {
         note::string_view sv{v};
         if (sv != "-" && sv != "cell" && sv != "cell-ntn" && sv != "dual-wifi-cell" && sv != "ntn" && sv != "wifi" && sv != "wifi-cell" && sv != "wifi-cell-ntn" && sv != "wifi-ntn")
             throw "card.transport: invalid value for 'method'";
         return sv;
     }
+#endif
 
     template<typename T>
     auto& extra(note::string_view key, T value) {

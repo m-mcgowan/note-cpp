@@ -1,6 +1,6 @@
 # note-cpp Project Plan
 
-Type-safe C++23 API for the Blues Notecard. Header-only, zero dependencies beyond the standard library.
+Type-safe C++ API for the Blues Notecard (C++17/20/23). Header-only, zero dependencies beyond the standard library.
 
 ## Architecture
 

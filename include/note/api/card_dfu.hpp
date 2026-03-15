@@ -89,20 +89,24 @@ struct CardDfu {
         CardDfu& operator()(bool v);
     } stop{};
 
-    // consteval: only callable at compile time
+    // consteval: only callable at compile time (C++20)
+#if __cplusplus >= 202002L
     static consteval note::string_view validatedMode(const char* v) {
         note::string_view sv{v};
         if (sv != "altdfu" && sv != "aux")
             throw "card.dfu: invalid value for 'mode'";
         return sv;
     }
-    // consteval: only callable at compile time
+#endif
+    // consteval: only callable at compile time (C++20)
+#if __cplusplus >= 202002L
     static consteval note::string_view validatedName(const char* v) {
         note::string_view sv{v};
         if (sv != "esp32" && sv != "stm32" && sv != "stm32-bi" && sv != "mcuboot" && sv != "-")
             throw "card.dfu: invalid value for 'name'";
         return sv;
     }
+#endif
 
     template<typename T>
     auto& extra(note::string_view key, T value) {

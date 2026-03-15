@@ -16,7 +16,7 @@ constexpr size_t itoa(char* buf, size_t cap, int32_t value) {
     if (cap == 0) return 0;
 
     size_t pos = 0;
-    uint32_t uv;
+    uint32_t uv{};
     if (value < 0) {
         buf[pos++] = '-';
         uv = static_cast<uint32_t>(-(value + 1)) + 1;
@@ -230,23 +230,23 @@ public:
 
     constexpr JsonBuf& add(std::string_view k, int32_t value) {
         key(k);
-        char tmp[12];
+        char tmp[12]{};
         size_t len = detail::itoa(tmp, sizeof(tmp), value);
         for (size_t i = 0; i < len; ++i) put(tmp[i]);
         return *this;
     }
 
     // Accept any integer type, widen to int32_t.
-    template<typename T>
-        requires (std::is_integral_v<T> && !std::is_same_v<T, bool> &&
-                  !std::is_same_v<T, int32_t> && !std::is_same_v<T, char>)
+    template<typename T, std::enable_if_t<
+        std::is_integral_v<T> && !std::is_same_v<T, bool> &&
+        !std::is_same_v<T, int32_t> && !std::is_same_v<T, char>, int> = 0>
     constexpr JsonBuf& add(std::string_view k, T value) {
         return add(k, static_cast<int32_t>(value));
     }
 
     constexpr JsonBuf& add(std::string_view k, double value) {
         key(k);
-        char tmp[32];
+        char tmp[32]{};
         size_t len = detail::dtoa(tmp, sizeof(tmp), value);
         for (size_t i = 0; i < len; ++i) put(tmp[i]);
         return *this;
@@ -316,7 +316,7 @@ public:
 
     constexpr JsonBuf& add(int32_t value) {
         comma();
-        char tmp[12];
+        char tmp[12]{};
         size_t len = detail::itoa(tmp, sizeof(tmp), value);
         for (size_t i = 0; i < len; ++i) put(tmp[i]);
         return *this;
@@ -380,7 +380,9 @@ public:
 //       return b;
 //   });
 
-// consteval: only callable at compile time.
+#if __cplusplus >= 202002L
+
+// consteval: only callable at compile time (C++20).
 // GCC (--coverage) correctly excludes these from coverage metrics.
 // Clang source-based coverage shows false-positive misses for consteval
 // functions — use GCC for coverage reports on this codebase.
@@ -406,7 +408,7 @@ consteval auto json_const(Fn fn) {
 //
 //   static_assert(req.view() == R"({"req":"hub.set","mode":"periodic"})");
 
-// consteval: only callable at compile time.
+// consteval: only callable at compile time (C++20).
 // GCC (--coverage) correctly excludes these from coverage metrics.
 // Clang source-based coverage shows false-positive misses for consteval
 // functions — use GCC for coverage reports on this codebase.
@@ -424,5 +426,7 @@ consteval auto json() {
     fn(b);
     return b;
 }
+
+#endif // C++20
 
 } // namespace note

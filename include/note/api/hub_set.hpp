@@ -301,13 +301,15 @@ struct HubSet {
         note::VoltageVariable vv_{};
     } voutbound{};
 
-    // consteval: only callable at compile time
+    // consteval: only callable at compile time (C++20)
+#if __cplusplus >= 202002L
     static consteval note::string_view validatedMode(const char* v) {
         note::string_view sv{v};
         if (sv != "periodic" && sv != "continuous" && sv != "minimum" && sv != "off" && sv != "dfu")
             throw "hub.set: invalid value for 'mode'";
         return sv;
     }
+#endif
 
     template<typename T>
     auto& extra(note::string_view key, T value) {

@@ -100,13 +100,15 @@ struct DfuStatus {
         DfuStatus& operator()(note::string_view v);
     } vvalue{};
 
-    // consteval: only callable at compile time
+    // consteval: only callable at compile time (C++20)
+#if __cplusplus >= 202002L
     static consteval note::string_view validatedName(const char* v) {
         note::string_view sv{v};
         if (sv != "user" && sv != "card")
             throw "dfu.status: invalid value for 'name'";
         return sv;
     }
+#endif
 
     template<typename T>
     auto& extra(note::string_view key, T value) {

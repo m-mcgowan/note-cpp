@@ -113,13 +113,15 @@ struct CardLocationMode {
             CardLocationMode::Get& operator()(note::string_view v);
         } vseconds{};
 
-        // consteval: only callable at compile time
+        // consteval: only callable at compile time (C++20)
+#if __cplusplus >= 202002L
         static consteval note::string_view validatedMode(const char* v) {
             note::string_view sv{v};
             if (sv != "" && sv != "off" && sv != "periodic" && sv != "continuous" && sv != "fixed")
                 throw "card.location.mode: invalid value for 'mode'";
             return sv;
         }
+#endif
 
         template<typename T>
         auto& extra(note::string_view key, T value) {
@@ -371,13 +373,15 @@ struct CardLocationMode {
             CardLocationMode::Set& operator()(note::string_view v);
         } vseconds{};
 
-        // consteval: only callable at compile time
+        // consteval: only callable at compile time (C++20)
+#if __cplusplus >= 202002L
         static consteval note::string_view validatedMode(const char* v) {
             note::string_view sv{v};
             if (sv != "" && sv != "off" && sv != "periodic" && sv != "continuous" && sv != "fixed")
                 throw "card.location.mode: invalid value for 'mode'";
             return sv;
         }
+#endif
 
         template<typename T>
         auto& extra(note::string_view key, T value) {
@@ -1127,13 +1131,15 @@ struct CardLocationMode {
             CardLocationMode::Delete& operator()(note::string_view v);
         } vseconds{};
 
-        // consteval: only callable at compile time
+        // consteval: only callable at compile time (C++20)
+#if __cplusplus >= 202002L
         static consteval note::string_view validatedMode(const char* v) {
             note::string_view sv{v};
             if (sv != "" && sv != "off" && sv != "periodic" && sv != "continuous" && sv != "fixed")
                 throw "card.location.mode: invalid value for 'mode'";
             return sv;
         }
+#endif
 
         template<typename T>
         auto& extra(note::string_view key, T value) {

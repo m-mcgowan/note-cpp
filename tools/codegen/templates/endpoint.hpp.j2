@@ -126,13 +126,15 @@ namespace note::api {
 {% for prop in op.properties %}
 {% if not prop.is_required_by_dispatch and prop.enum_values %}
 {{ version_guard_begin(prop.version_guard) -}}
-{{ indent }}// consteval: only callable at compile time
+{{ indent }}// consteval: only callable at compile time (C++20)
+#if __cplusplus >= 202002L
 {{ indent }}static consteval note::string_view validated{{ prop.accessor_name | first_upper }}(const char* v) {
 {{ indent }}    note::string_view sv{v};
 {{ indent }}    if ({% for ev in prop.enum_values %}sv != "{{ ev }}"{{ " && " if not loop.last }}{% endfor %})
 {{ indent }}        throw "{{ op.notecard_request }}: invalid value for '{{ prop.wire_name }}'";
 {{ indent }}    return sv;
 {{ indent }}}
+#endif
 {{ version_guard_end(prop.version_guard) -}}
 {% endif %}
 {% endfor %}

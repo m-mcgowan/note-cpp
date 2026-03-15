@@ -1,15 +1,15 @@
 {
     "name": "note-cpp",
     "version": "0.1.0",
-    "description": "Type-safe C++23 API for the Blues Notecard",
-    "keywords": "notecard, blues, iot, c++23",
+    "description": "Type-safe C++20 API for the Blues Notecard",
+    "keywords": "notecard, blues, iot, c++20, c++23",
     "authors": {
         "name": "Mat McGowan"
     },
     "frameworks": "*",
     "platforms": "*",
     "build": {
-        "flags": ["-std=gnu++23"],
+        "flags": ["-std=gnu++20"],
         "includeDir": "include",
         "srcFilter": ["+<*>", "-<tests/>", "-<tools/>", "-<examples/>"]
     }

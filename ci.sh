@@ -62,6 +62,18 @@ run_ci() {
         $CXX $CXXFLAGS $INCLUDE -fsyntax-only "$header" && echo "OK" || { echo "FAIL"; exit 1; }
     done
 
+    # Verify C++17 header compatibility (transport and third_party headers are C++20-only)
+    if [ "${CPP17_DONE:-}" != "1" ]; then
+        echo
+        echo "=== C++17 header compatibility ==="
+        for header in $(find "$ROOT/include/note" -name '*.hpp' -not -path '*/backends/*' -not -path '*/transport/*' -not -path '*/third_party/*' | sort); do
+            name=$(basename "$header")
+            printf "  %-40s " "$name"
+            $CXX -std=c++17 $INCLUDE -fsyntax-only "$header" && echo "OK" || { echo "FAIL"; exit 1; }
+        done
+        export CPP17_DONE=1
+    fi
+
     # Build and run unit tests
     echo
     echo "=== Unit tests ==="

@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/m-mcgowan/note-cpp/actions/workflows/ci.yml/badge.svg)](https://github.com/m-mcgowan/note-cpp/actions/workflows/ci.yml)
 
-Type-safe C++ API for the [Blues Notecard](https://blues.com/notecard). Requires C++20 or later (C++23 recommended for full feature set). Header-only, zero dependencies beyond the standard library.
+Type-safe C++ API for the [Blues Notecard](https://blues.com/notecard). Works with C++17, C++20, and C++23 — each version unlocks additional features. Header-only, zero dependencies beyond the standard library.
 
 > **Community project.** Not affiliated with or supported by Blues Inc. Notecard is a trademark of Blues Inc.
 
@@ -142,6 +142,48 @@ See the [getting started example](examples/getting_started.cpp) for a complete w
 - [Protocol Layer](#protocol-layer) — Notecard serial and I2C protocol implementations with CRC, retry, and chunking
 - [JSON Backend](#json-backend) — plug in any JSON library
 - [JSON Buffer Builder](#json-buffer-builder) — compile-time or runtime JSON building, same API, no allocations
+
+### C++ Version Compatibility
+
+The core library works with C++17. Each successive standard unlocks additional features:
+
+| Feature | C++17 | C++20 | C++23 |
+|---------|:-----:|:-----:|:-----:|
+| **Core** | | | |
+| Typed API (request builders, responses, fluent setters) | yes | yes | yes |
+| Ad-hoc requests (`nc.request("hub.set", lambda)`) | yes | yes | yes |
+| Error handling (`Result<T>`, structured errors) | yes | yes | yes |
+| Type-safe duration units (`Seconds`, `Minutes`, `Hours`, `Days`) | yes | yes | yes |
+| **JSON** | | | |
+| JSON backends (cJSON, nlohmann, buffer/jsmn) | yes | yes | yes |
+| SAX streaming parser (`JsonSink`) | yes | yes | yes |
+| `JsonBuf` runtime builder (no allocations) | yes | yes | yes |
+| `consteval` JSON (`note::json<>()`) | — | yes | yes |
+| **Body structs** | | | |
+| Body structs with `NOTE_FIELDS` macro | yes | yes | yes |
+| Body structs without macro (plain aggregates via reflection) | — | yes | yes |
+| **Compile-time checks** | | | |
+| `consteval` enum validation (`validatedMode()`) | — | yes | yes |
+| Target filtering (compile-time SKU/RAT checks) | — | yes | yes |
+| Version gating (firmware-version field availability) | yes | yes | yes |
+| **Transport** | | | |
+| Transport via lambda (provide `RequestFn` directly) | yes | yes | yes |
+| Transport HAL wrappers (`serial.hpp`, `i2c.hpp`) | — | yes | yes |
+| **Memory** | | | |
+| `MonotonicArena` + arena allocator | yes | yes | yes |
+| Zero-alloc `BufferJsonBackend` (jsmn) | yes | yes | yes |
+| **Standard library** | | | |
+| `std::expected` (native, vs `tl::expected` fallback) | — | — | yes |
+| `std::unreachable` (native, vs compiler builtins) | — | — | yes |
+
+On C++17, provide the transport function directly as a lambda:
+
+```cpp
+note::Notecard nc(backend, [](note::string_view req, uint32_t timeout)
+    -> note::Result<note::string_view> { /* your serial/I2C code */ });
+```
+
+On C++20+, the transport HAL wrappers in `serial.hpp` and `i2c.hpp` build this for you from platform callbacks.
 
 ---
 

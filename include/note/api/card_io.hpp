@@ -41,13 +41,15 @@ struct CardIo {
         CardIo& operator()(note::string_view v);
     } mode{};
 
-    // consteval: only callable at compile time
+    // consteval: only callable at compile time (C++20)
+#if __cplusplus >= 202002L
     static consteval note::string_view validatedMode(const char* v) {
         note::string_view sv{v};
         if (sv != "-1" && sv != "-usb" && sv != "usb" && sv != "+usb" && sv != "+busy" && sv != "-busy" && sv != "i2c-master-disable" && sv != "i2c-master-enable" && sv != "+fallback" && sv != "-fallback")
             throw "card.io: invalid value for 'mode'";
         return sv;
     }
+#endif
 
     template<typename T>
     auto& extra(note::string_view key, T value) {

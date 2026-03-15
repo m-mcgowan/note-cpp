@@ -3,7 +3,7 @@
 // C++ equivalents of the attention API requests from:
 //   https://dev.blues.io/api-reference/notecard-api/card-requests/#card-attn
 //
-// Build: c++ -std=c++2b -I include -fsyntax-only examples/attention_pin.cpp
+// Build: c++ -std=c++20 -I include -fsyntax-only examples/attention_pin.cpp
 
 #include <note/notecard.hpp>
 #include <note/api/card_attn.hpp>

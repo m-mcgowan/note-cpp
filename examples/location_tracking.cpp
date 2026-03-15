@@ -5,7 +5,7 @@
 //   https://dev.blues.io/api-reference/notecard-api/card-requests/#card-location-mode
 //   https://dev.blues.io/api-reference/notecard-api/card-requests/#card-location-track
 //
-// Build: c++ -std=c++2b -I include -fsyntax-only examples/location_tracking.cpp
+// Build: c++ -std=c++20 -I include -fsyntax-only examples/location_tracking.cpp
 
 #include <note/notecard.hpp>
 #include <note/api/card_location.hpp>

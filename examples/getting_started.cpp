@@ -7,7 +7,7 @@
 //   4. Body schemas — one struct for send, receive, and template registration
 //
 // Build & run:
-//   c++ -std=c++2b -I include examples/getting_started.cpp && ./a.out
+//   c++ -std=c++20 -I include examples/getting_started.cpp && ./a.out
 
 #include <note/notecard.hpp>
 #include <note/json_buf.hpp>

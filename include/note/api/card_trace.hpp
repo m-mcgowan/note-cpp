@@ -33,13 +33,15 @@ struct CardTrace {
         CardTrace& operator()(note::string_view v);
     } mode{};
 
-    // consteval: only callable at compile time
+    // consteval: only callable at compile time (C++20)
+#if __cplusplus >= 202002L
     static consteval note::string_view validatedMode(const char* v) {
         note::string_view sv{v};
         if (sv != "on" && sv != "off")
             throw "card.trace: invalid value for 'mode'";
         return sv;
     }
+#endif
 
     template<typename T>
     auto& extra(note::string_view key, T value) {

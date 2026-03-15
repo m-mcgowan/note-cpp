@@ -1,7 +1,7 @@
 // Smoke test: verifies the note-cpp API types compile and compose correctly.
 // This won't link (no backend implementation), but proves the abstractions work.
 //
-// Build: clang++ -std=c++2b -fsyntax-only -I include examples/smoke.cpp
+// Build: clang++ -std=c++20 -fsyntax-only -I include examples/smoke.cpp
 
 #include <note/notecard.hpp>
 #include <memory>

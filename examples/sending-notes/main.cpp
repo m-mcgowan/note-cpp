@@ -4,7 +4,7 @@
 // compiled as part of CI to verify correctness.
 //
 // Build & run:
-//   c++ -std=c++2b -I ../../include main.cpp && ./a.out
+//   c++ -std=c++20 -I ../../include main.cpp && ./a.out
 
 #include <note/notecard.hpp>
 #include <note/json_buf.hpp>

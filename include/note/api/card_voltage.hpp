@@ -140,13 +140,15 @@ struct CardVoltage {
             CardVoltage::Get& operator()(double v);
         } vmin{};
 
-        // consteval: only callable at compile time
+        // consteval: only callable at compile time (C++20)
+#if __cplusplus >= 202002L
         static consteval note::string_view validatedMode(const char* v) {
             note::string_view sv{v};
             if (sv != "default" && sv != "lipo" && sv != "l91" && sv != "alkaline" && sv != "tad" && sv != "lic" && sv != "?")
                 throw "card.voltage: invalid value for 'mode'";
             return sv;
         }
+#endif
 
         template<typename T>
         auto& extra(note::string_view key, T value) {
@@ -461,13 +463,15 @@ struct CardVoltage {
             CardVoltage::Set& operator()(double v);
         } vmin{};
 
-        // consteval: only callable at compile time
+        // consteval: only callable at compile time (C++20)
+#if __cplusplus >= 202002L
         static consteval note::string_view validatedMode(const char* v) {
             note::string_view sv{v};
             if (sv != "default" && sv != "lipo" && sv != "l91" && sv != "alkaline" && sv != "tad" && sv != "lic" && sv != "?")
                 throw "card.voltage: invalid value for 'mode'";
             return sv;
         }
+#endif
 
         template<typename T>
         auto& extra(note::string_view key, T value) {

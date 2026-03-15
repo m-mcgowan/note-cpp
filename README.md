@@ -171,6 +171,7 @@ The core library works with C++17. Each successive standard unlocks additional f
 | Transport HAL wrappers (`serial.hpp`, `i2c.hpp`) | — | yes | yes |
 | **Memory** | | | |
 | `MonotonicArena` + arena allocator | yes | yes | yes |
+| `StringPool` response string interning | yes | yes | yes |
 | Zero-alloc `BufferJsonBackend` (jsmn) | yes | yes | yes |
 | **Standard library** | | | |
 | `std::expected` (native, vs `tl::expected` fallback) | — | — | yes |

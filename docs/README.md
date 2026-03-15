@@ -15,18 +15,19 @@
 
 ## Infrastructure
 
-8. **[JSON backend](json-backend.md)** — how `note-cpp` handles JSON internally, when and why to customize it, available backends
-9. **[Transport layer](transport.md)** — serial and I2C protocol implementations, HAL interfaces, CRC, segmented TX/RX
-10. **[Coverage](coverage.md)** — test coverage methodology, GCC + lcov 2.x requirements
+8. **[Memory management](memory.md)** — zero-allocation patterns, StringPool for response string lifetime, arena sizing, allocation profiling
+9. **[JSON backend](json-backend.md)** — how `note-cpp` handles JSON internally, when and why to customize it, available backends
+10. **[Transport layer](transport.md)** — serial and I2C protocol implementations, HAL interfaces, CRC, segmented TX/RX
+11. **[Coverage](coverage.md)** — test coverage methodology, GCC + lcov 2.x requirements
 
 ## App layer
 
-11. **[App design](note-cpp-app.md)** — higher-level app abstractions: channels, state stores, managers
-12. **[App orchestration](app-orchestration.md)** — NTN/satellite handling, template lifecycle, sync direction management, composed setup procedures
+12. **[App design](note-cpp-app.md)** — higher-level app abstractions: channels, state stores, managers
+13. **[App orchestration](app-orchestration.md)** — NTN/satellite handling, template lifecycle, sync direction management, composed setup procedures
 
 ## Project
 
-13. **[Project plan](PLAN.md)** — architecture, completed phases, component status, roadmap
+14. **[Project plan](PLAN.md)** — architecture, completed phases, component status, roadmap
 
 ## Examples
 
@@ -36,3 +37,4 @@
 | [hub-configuration/](../examples/hub-configuration/) | Units, named constants, consteval validation, voltage-variable sync |
 | [sending-notes/](../examples/sending-notes/) | All body patterns: raw, lambda, struct, template, receive, command |
 | [target_filtering.cpp](../examples/target_filtering.cpp) | Product targeting with compile-time warnings/errors |
+| [zero_alloc.cpp](../examples/zero_alloc.cpp) | Zero-allocation patterns: BufferJsonBackend, StringPool, CjsonArena |

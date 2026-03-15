@@ -7,6 +7,7 @@
 #include <note/json_sax.hpp>
 #include <note/notecard.hpp>
 #include <note/safety.hpp>
+#include <note/string_pool.hpp>
 #include <note/types.hpp>
 #include <note/units.hpp>
 #include <note/target.hpp>
@@ -248,6 +249,14 @@ struct CardLocationMode {
                     if (key == "lon") { rsp.lon = ::note::parse_double(raw); return; }
                 }
             };
+#pragma GCC diagnostic pop
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+            void intern_strings(::note::StringPool& pool) {
+                if (!mode.empty()) mode = pool.intern(mode);
+                if (!vseconds.empty()) vseconds = pool.intern(vseconds);
+            }
 #pragma GCC diagnostic pop
 
         private:
@@ -510,6 +519,14 @@ struct CardLocationMode {
             };
 #pragma GCC diagnostic pop
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+            void intern_strings(::note::StringPool& pool) {
+                if (!mode.empty()) mode = pool.intern(mode);
+                if (!vseconds.empty()) vseconds = pool.intern(vseconds);
+            }
+#pragma GCC diagnostic pop
+
         private:
             std::unique_ptr<JsonReader> reader_;
         };
@@ -663,6 +680,14 @@ struct CardLocationMode {
 #endif
                 }
             };
+#pragma GCC diagnostic pop
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+            void intern_strings(::note::StringPool& pool) {
+                if (!mode.empty()) mode = pool.intern(mode);
+                if (!vseconds.empty()) vseconds = pool.intern(vseconds);
+            }
 #pragma GCC diagnostic pop
 
         private:
@@ -894,6 +919,14 @@ struct CardLocationMode {
             };
 #pragma GCC diagnostic pop
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+            void intern_strings(::note::StringPool& pool) {
+                if (!mode.empty()) mode = pool.intern(mode);
+                if (!vseconds.empty()) vseconds = pool.intern(vseconds);
+            }
+#pragma GCC diagnostic pop
+
         private:
             std::unique_ptr<JsonReader> reader_;
         };
@@ -1025,6 +1058,10 @@ struct CardLocationMode {
                     if (key == "lon") { rsp.lon = ::note::parse_double(raw); return; }
                 }
             };
+
+            void intern_strings(::note::StringPool& pool) {
+                if (!mode.empty()) mode = pool.intern(mode);
+            }
 
         private:
             std::unique_ptr<JsonReader> reader_;
@@ -1265,6 +1302,14 @@ struct CardLocationMode {
                     if (key == "lon") { rsp.lon = ::note::parse_double(raw); return; }
                 }
             };
+#pragma GCC diagnostic pop
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+            void intern_strings(::note::StringPool& pool) {
+                if (!mode.empty()) mode = pool.intern(mode);
+                if (!vseconds.empty()) vseconds = pool.intern(vseconds);
+            }
 #pragma GCC diagnostic pop
 
         private:

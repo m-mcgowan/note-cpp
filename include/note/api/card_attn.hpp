@@ -7,6 +7,7 @@
 #include <note/json_sax.hpp>
 #include <note/notecard.hpp>
 #include <note/safety.hpp>
+#include <note/string_pool.hpp>
 #include <note/types.hpp>
 #include <note/units.hpp>
 #include <note/target.hpp>
@@ -216,6 +217,13 @@ struct CardAttn {
             };
 #pragma GCC diagnostic pop
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+            void intern_strings(::note::StringPool& pool) {
+                if (!payload.empty()) payload = pool.intern(payload);
+            }
+#pragma GCC diagnostic pop
+
         private:
             std::unique_ptr<JsonReader> reader_;
         };
@@ -348,6 +356,8 @@ struct CardAttn {
                     if (key == "set") { rsp.set = val; return; }
                 }
             };
+
+            void intern_strings(::note::StringPool&) {}
 
         private:
             std::unique_ptr<JsonReader> reader_;
@@ -572,6 +582,10 @@ struct CardAttn {
                 }
             };
 
+            void intern_strings(::note::StringPool& pool) {
+                if (!payload.empty()) payload = pool.intern(payload);
+            }
+
         private:
             std::unique_ptr<JsonReader> reader_;
         };
@@ -744,6 +758,8 @@ struct CardAttn {
                 }
             };
 #pragma GCC diagnostic pop
+
+            void intern_strings(::note::StringPool&) {}
 
         private:
             std::unique_ptr<JsonReader> reader_;

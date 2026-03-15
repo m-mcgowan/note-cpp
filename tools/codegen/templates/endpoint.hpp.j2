@@ -10,6 +10,7 @@
 #include <note/json_sax.hpp>
 #include <note/notecard.hpp>
 #include <note/safety.hpp>
+#include <note/string_pool.hpp>
 #include <note/types.hpp>
 {% if has_unit_fields %}
 #include <note/units.hpp>
@@ -290,6 +291,31 @@ namespace note::api {
 {% if op.has_version_gated_response_props %}
 #pragma GCC diagnostic pop
 {% endif %}
+{% endif %}
+
+{# intern_strings: always present for non-void Response types #}
+{% set rsp_string_props = [] %}
+{% for prop in op.response.properties %}
+{% if prop.cpp_type == "note::string_view" %}{% if rsp_string_props.append(prop) %}{% endif %}
+{% endif %}
+{% endfor %}
+{% if rsp_string_props %}
+{% if op.has_version_gated_response_props %}
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+{% endif %}
+{{ indent }}    void intern_strings(::note::StringPool& pool) {
+{% for prop in rsp_string_props %}
+{{ version_guard_begin(prop.version_guard) -}}
+{{ indent }}        if (!{{ prop.accessor_name }}.empty()) {{ prop.accessor_name }} = pool.intern({{ prop.accessor_name }});
+{{ version_guard_end(prop.version_guard) -}}
+{% endfor %}
+{{ indent }}    }
+{% if op.has_version_gated_response_props %}
+#pragma GCC diagnostic pop
+{% endif %}
+{% else %}
+{{ indent }}    void intern_strings(::note::StringPool&) {}
 {% endif %}
 
 {{ indent }}private:

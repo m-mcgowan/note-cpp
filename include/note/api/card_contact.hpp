@@ -7,6 +7,7 @@
 #include <note/json_sax.hpp>
 #include <note/notecard.hpp>
 #include <note/safety.hpp>
+#include <note/string_pool.hpp>
 #include <note/types.hpp>
 #include <note/target.hpp>
 
@@ -125,6 +126,13 @@ struct CardContact {
                     if (key == "role") { rsp.role = val; return; }
                 }
             };
+
+            void intern_strings(::note::StringPool& pool) {
+                if (!email.empty()) email = pool.intern(email);
+                if (!name.empty()) name = pool.intern(name);
+                if (!org.empty()) org = pool.intern(org);
+                if (!role.empty()) role = pool.intern(role);
+            }
 
         private:
             std::unique_ptr<JsonReader> reader_;
@@ -252,6 +260,13 @@ struct CardContact {
                     if (key == "role") { rsp.role = val; return; }
                 }
             };
+
+            void intern_strings(::note::StringPool& pool) {
+                if (!email.empty()) email = pool.intern(email);
+                if (!name.empty()) name = pool.intern(name);
+                if (!org.empty()) org = pool.intern(org);
+                if (!role.empty()) role = pool.intern(role);
+            }
 
         private:
             std::unique_ptr<JsonReader> reader_;

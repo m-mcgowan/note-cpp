@@ -7,6 +7,7 @@
 #include <note/json_sax.hpp>
 #include <note/notecard.hpp>
 #include <note/safety.hpp>
+#include <note/string_pool.hpp>
 #include <note/types.hpp>
 #include <note/target.hpp>
 
@@ -121,6 +122,11 @@ struct CardLocation {
                 if (key == "lon") { rsp.lon = ::note::parse_double(raw); return; }
             }
         };
+
+        void intern_strings(::note::StringPool& pool) {
+            if (!mode.empty()) mode = pool.intern(mode);
+            if (!status.empty()) status = pool.intern(status);
+        }
 
     private:
         std::unique_ptr<JsonReader> reader_;

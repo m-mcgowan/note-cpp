@@ -7,6 +7,7 @@
 #include <note/json_sax.hpp>
 #include <note/notecard.hpp>
 #include <note/safety.hpp>
+#include <note/string_pool.hpp>
 #include <note/types.hpp>
 #include <note/target.hpp>
 
@@ -110,6 +111,10 @@ struct CardBinaryPut {
                 if (key == "err") { rsp.err = val; return; }
             }
         };
+
+        void intern_strings(::note::StringPool& pool) {
+            if (!err.empty()) err = pool.intern(err);
+        }
 
     private:
         std::unique_ptr<JsonReader> reader_;

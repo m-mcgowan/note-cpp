@@ -1,5 +1,6 @@
 #pragma once
 
+#include "json_sax.hpp"
 #include "types.hpp"
 
 namespace note {
@@ -84,6 +85,14 @@ public:
     virtual JsonReader& get_reader(string_view json) {
         owned_reader_ = parse_response(json);
         return *owned_reader_;
+    }
+
+    // SAX-parse a JSON string and deliver events to a sink.
+    // Returns empty string_view on success, error message on failure.
+    // Default implementation uses the built-in SAX parser. Tree-based backends
+    // (cJSON, nlohmann) can override to walk their tree instead.
+    virtual string_view parse_into(string_view json, JsonSink& sink) {
+        return sax_parse(json, sink);
     }
 
 private:

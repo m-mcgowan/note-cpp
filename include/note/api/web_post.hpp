@@ -8,6 +8,7 @@
 #include <note/json_sax.hpp>
 #include <note/notecard.hpp>
 #include <note/safety.hpp>
+#include <note/string_pool.hpp>
 #include <note/types.hpp>
 #include <note/target.hpp>
 
@@ -310,6 +311,14 @@ struct WebPost {
                 if (key == "result") { rsp.result = ::note::parse_int(raw); return; }
             }
         };
+#pragma GCC diagnostic pop
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+        void intern_strings(::note::StringPool& pool) {
+            if (!payload.empty()) payload = pool.intern(payload);
+            if (!status.empty()) status = pool.intern(status);
+        }
 #pragma GCC diagnostic pop
 
     private:

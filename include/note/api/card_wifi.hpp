@@ -7,6 +7,7 @@
 #include <note/json_sax.hpp>
 #include <note/notecard.hpp>
 #include <note/safety.hpp>
+#include <note/string_pool.hpp>
 #include <note/types.hpp>
 #include <note/target.hpp>
 
@@ -170,6 +171,12 @@ struct CardWifi {
                 if (key == "secure") { rsp.secure = val; return; }
             }
         };
+
+        void intern_strings(::note::StringPool& pool) {
+            if (!security.empty()) security = pool.intern(security);
+            if (!ssid.empty()) ssid = pool.intern(ssid);
+            if (!version.empty()) version = pool.intern(version);
+        }
 
     private:
         std::unique_ptr<JsonReader> reader_;

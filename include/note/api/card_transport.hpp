@@ -7,6 +7,7 @@
 #include <note/json_sax.hpp>
 #include <note/notecard.hpp>
 #include <note/safety.hpp>
+#include <note/string_pool.hpp>
 #include <note/types.hpp>
 #include <note/units.hpp>
 #include <note/target.hpp>
@@ -155,6 +156,10 @@ struct CardTransport {
                 if (key == "method") { rsp.method = val; return; }
             }
         };
+
+        void intern_strings(::note::StringPool& pool) {
+            if (!method.empty()) method = pool.intern(method);
+        }
 
     private:
         std::unique_ptr<JsonReader> reader_;

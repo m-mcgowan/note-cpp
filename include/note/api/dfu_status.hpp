@@ -8,6 +8,7 @@
 #include <note/json_sax.hpp>
 #include <note/notecard.hpp>
 #include <note/safety.hpp>
+#include <note/string_pool.hpp>
 #include <note/types.hpp>
 #include <note/target.hpp>
 
@@ -202,6 +203,11 @@ struct DfuStatus {
                 if (key == "pending") { rsp.pending = val; return; }
             }
         };
+
+        void intern_strings(::note::StringPool& pool) {
+            if (!mode.empty()) mode = pool.intern(mode);
+            if (!status.empty()) status = pool.intern(status);
+        }
 
     private:
         std::unique_ptr<JsonReader> reader_;

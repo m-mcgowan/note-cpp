@@ -7,6 +7,7 @@
 #include <note/json_sax.hpp>
 #include <note/notecard.hpp>
 #include <note/safety.hpp>
+#include <note/string_pool.hpp>
 #include <note/types.hpp>
 #include <note/target.hpp>
 
@@ -140,6 +141,10 @@ struct CardWireless {
                 if (key == "count") { rsp.count = ::note::parse_int(raw); return; }
             }
         };
+
+        void intern_strings(::note::StringPool& pool) {
+            if (!status.empty()) status = pool.intern(status);
+        }
 
     private:
         std::unique_ptr<JsonReader> reader_;

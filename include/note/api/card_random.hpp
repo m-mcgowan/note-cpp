@@ -7,6 +7,7 @@
 #include <note/json_sax.hpp>
 #include <note/notecard.hpp>
 #include <note/safety.hpp>
+#include <note/string_pool.hpp>
 #include <note/types.hpp>
 #include <note/target.hpp>
 
@@ -110,6 +111,10 @@ struct CardRandom {
                 if (key == "count") { rsp.count = ::note::parse_int(raw); return; }
             }
         };
+
+        void intern_strings(::note::StringPool& pool) {
+            if (!payload.empty()) payload = pool.intern(payload);
+        }
 
     private:
         std::unique_ptr<JsonReader> reader_;

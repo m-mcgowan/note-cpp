@@ -8,6 +8,7 @@
 #include <note/json_sax.hpp>
 #include <note/notecard.hpp>
 #include <note/safety.hpp>
+#include <note/string_pool.hpp>
 #include <note/types.hpp>
 #include <note/target.hpp>
 
@@ -258,6 +259,15 @@ struct NoteTemplate {
                     if (key == "length") { rsp.length = ::note::parse_int(raw); return; }
                 }
             };
+#pragma GCC diagnostic pop
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+            void intern_strings(::note::StringPool& pool) {
+#if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
+                if (!format.empty()) format = pool.intern(format);
+#endif
+            }
 #pragma GCC diagnostic pop
 
         private:
@@ -525,6 +535,15 @@ struct NoteTemplate {
                     if (key == "length") { rsp.length = ::note::parse_int(raw); return; }
                 }
             };
+#pragma GCC diagnostic pop
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+            void intern_strings(::note::StringPool& pool) {
+#if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
+                if (!format.empty()) format = pool.intern(format);
+#endif
+            }
 #pragma GCC diagnostic pop
 
         private:

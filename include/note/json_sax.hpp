@@ -417,4 +417,31 @@ inline string_view sax_parse(string_view json, JsonSink& sink) {
     return sax_parse(json.data(), json.size(), sink);
 }
 
+// ---------------------------------------------------------------------------
+// ErrorCaptureSink — wraps any JsonSink, intercepts the "err" key.
+//
+// Used by the SAX execute path to detect Notecard errors without a separate
+// get_reader() pre-pass. All non-error events are forwarded to the inner sink.
+// ---------------------------------------------------------------------------
+class ErrorCaptureSink : public JsonSink {
+    JsonSink& inner_;
+    string_view err_;
+public:
+    explicit ErrorCaptureSink(JsonSink& inner) : inner_(inner) {}
+
+    string_view captured_error() const { return err_; }
+
+    void on_null(string_view key) override { inner_.on_null(key); }
+    void on_bool(string_view key, bool value) override { inner_.on_bool(key, value); }
+    void on_number(string_view key, string_view raw) override { inner_.on_number(key, raw); }
+    void on_string(string_view key, string_view value) override {
+        if (key == "err") { err_ = value; return; }
+        inner_.on_string(key, value);
+    }
+    void on_object_begin(string_view key) override { inner_.on_object_begin(key); }
+    void on_object_end(string_view key) override { inner_.on_object_end(key); }
+    void on_array_begin(string_view key) override { inner_.on_array_begin(key); }
+    void on_array_end(string_view key) override { inner_.on_array_end(key); }
+};
+
 }  // namespace note

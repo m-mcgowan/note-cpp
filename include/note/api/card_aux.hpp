@@ -7,6 +7,7 @@
 #include <note/json_sax.hpp>
 #include <note/notecard.hpp>
 #include <note/safety.hpp>
+#include <note/string_pool.hpp>
 #include <note/types.hpp>
 #include <note/units.hpp>
 #include <note/target.hpp>
@@ -364,6 +365,13 @@ struct CardAux {
                 if (key == "time") { rsp.time = ::note::parse_int(raw); return; }
             }
         };
+#pragma GCC diagnostic pop
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+        void intern_strings(::note::StringPool& pool) {
+            if (!mode.empty()) mode = pool.intern(mode);
+        }
 #pragma GCC diagnostic pop
 
     private:

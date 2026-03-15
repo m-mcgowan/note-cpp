@@ -7,6 +7,7 @@
 #include <note/json_sax.hpp>
 #include <note/notecard.hpp>
 #include <note/safety.hpp>
+#include <note/string_pool.hpp>
 #include <note/types.hpp>
 #include <note/target.hpp>
 
@@ -168,6 +169,10 @@ struct CardDfu {
                 if (key == "name") { rsp.name = val; return; }
             }
         };
+
+        void intern_strings(::note::StringPool& pool) {
+            if (!name.empty()) name = pool.intern(name);
+        }
 
     private:
         std::unique_ptr<JsonReader> reader_;

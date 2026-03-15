@@ -7,6 +7,7 @@
 #include <note/json_sax.hpp>
 #include <note/notecard.hpp>
 #include <note/safety.hpp>
+#include <note/string_pool.hpp>
 #include <note/types.hpp>
 #include <note/target.hpp>
 
@@ -131,6 +132,16 @@ struct HubGet {
                 if (key == "outbound") { rsp.outbound = ::note::parse_int(raw); return; }
             }
         };
+
+        void intern_strings(::note::StringPool& pool) {
+            if (!device.empty()) device = pool.intern(device);
+            if (!host.empty()) host = pool.intern(host);
+            if (!mode.empty()) mode = pool.intern(mode);
+            if (!product.empty()) product = pool.intern(product);
+            if (!sn.empty()) sn = pool.intern(sn);
+            if (!vinbound.empty()) vinbound = pool.intern(vinbound);
+            if (!voutbound.empty()) voutbound = pool.intern(voutbound);
+        }
 
     private:
         std::unique_ptr<JsonReader> reader_;

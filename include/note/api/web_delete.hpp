@@ -8,6 +8,7 @@
 #include <note/json_sax.hpp>
 #include <note/notecard.hpp>
 #include <note/safety.hpp>
+#include <note/string_pool.hpp>
 #include <note/types.hpp>
 #include <note/target.hpp>
 
@@ -175,6 +176,11 @@ struct WebDelete {
                 if (key == "result") { rsp.result = ::note::parse_int(raw); return; }
             }
         };
+
+        void intern_strings(::note::StringPool& pool) {
+            if (!payload.empty()) payload = pool.intern(payload);
+            if (!status.empty()) status = pool.intern(status);
+        }
 
     private:
         std::unique_ptr<JsonReader> reader_;

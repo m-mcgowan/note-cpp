@@ -8,6 +8,7 @@
 #include <note/json_sax.hpp>
 #include <note/notecard.hpp>
 #include <note/safety.hpp>
+#include <note/string_pool.hpp>
 #include <note/types.hpp>
 #include <note/target.hpp>
 
@@ -160,6 +161,13 @@ struct EnvGet {
 #endif
             }
         };
+#pragma GCC diagnostic pop
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+        void intern_strings(::note::StringPool& pool) {
+            if (!text.empty()) text = pool.intern(text);
+        }
 #pragma GCC diagnostic pop
 
     private:

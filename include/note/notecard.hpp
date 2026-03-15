@@ -1,13 +1,24 @@
 #pragma once
 
+#include "allocator.hpp"
 #include "json.hpp"
 #include "safety.hpp"
+#include "string_pool.hpp"
 
 #include <functional>
+#include <optional>
 #include <string>
 #include <type_traits>
 
 namespace note {
+
+namespace detail {
+    template<typename T, typename = void>
+    struct has_intern_strings : std::false_type {};
+    template<typename T>
+    struct has_intern_strings<T, std::void_t<decltype(std::declval<T>().intern_strings(std::declval<StringPool&>()))>> : std::true_type {};
+}
+
 
 // Specialization for void responses (endpoints that return empty {} on success).
 // Still holds a reader to keep notecard error message string_views alive.
@@ -56,6 +67,14 @@ public:
         }
     }
 
+    // Configure an allocator for response string interning.
+    // When set, execute() copies response string_view fields into the
+    // allocator's backing store (e.g. a MonotonicArena) so they survive
+    // transport buffer reuse. The parsing strategy is still dictated by
+    // the backend (tree-parse or SAX).
+    void set_allocator(Allocator alloc) { alloc_ = alloc; }
+    void clear_allocator() { alloc_.reset(); }
+
     // Execute a typed, generated request.
     // RequestT must provide:
     //   static constexpr string_view notecard_request;
@@ -66,6 +85,7 @@ public:
     template<typename RequestT>
     ApiResult<typename RequestT::Response> execute(const RequestT& req) {
         using Rsp = typename RequestT::Response;
+
         auto& builder = backend_.get_builder();
         builder.add("req", RequestT::notecard_request);
         req.build(builder);
@@ -79,7 +99,13 @@ public:
         }
         auto err = reader.get_error();
         if (!err.empty()) {
-            // Error path: use parse_response() to get an owned reader that
+            if (alloc_.has_value()) {
+                // Intern error message into allocator-backed storage
+                StringPool pool(*alloc_);
+                ErrorInfo ei{Error::Notecard, Cause::Unspecified, pool.intern(err)};
+                return ApiResult<Rsp>(std::move(ei));
+            }
+            // Fallback: use parse_response() to get an owned reader that
             // keeps the error message string_view alive in ApiResult.
             auto owned = backend_.parse_response(*rsp);
             ErrorInfo ei{Error::Notecard, Cause::Unspecified, owned->get_error()};
@@ -88,8 +114,25 @@ public:
         if constexpr (std::is_void_v<Rsp>) {
             return ApiResult<void>{};
         } else {
-            return Rsp::parse(reader);
+            auto result = Rsp::parse(reader);
+            if constexpr (detail::has_intern_strings<Rsp>::value) {
+                if (alloc_.has_value()) {
+                    StringPool pool(*alloc_);
+                    result.intern_strings(pool);
+                }
+            }
+            return result;
         }
+    }
+
+    // Execute with an explicit allocator (one-off string interning).
+    template<typename RequestT>
+    ApiResult<typename RequestT::Response> execute(const RequestT& req, Allocator alloc) {
+        auto saved = alloc_;
+        alloc_ = alloc;
+        auto result = execute(req);
+        alloc_ = saved;
+        return result;
     }
 
     // Ad-hoc request with a builder callback.
@@ -151,6 +194,7 @@ private:
     RequestFn request_fn_;
     SendFn send_fn_;
     uint32_t default_timeout_ms_ = 10000;
+    std::optional<Allocator> alloc_;
 };
 
 } // namespace note

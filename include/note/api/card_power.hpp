@@ -7,6 +7,7 @@
 #include <note/json_sax.hpp>
 #include <note/notecard.hpp>
 #include <note/safety.hpp>
+#include <note/string_pool.hpp>
 #include <note/types.hpp>
 #include <note/units.hpp>
 #include <note/target.hpp>
@@ -110,6 +111,8 @@ struct CardPower {
                     if (key == "voltage") { rsp.voltage = ::note::parse_double(raw); return; }
                 }
             };
+
+            void intern_strings(::note::StringPool&) {}
 
         private:
             std::unique_ptr<JsonReader> reader_;
@@ -220,6 +223,8 @@ struct CardPower {
                 }
             };
 
+            void intern_strings(::note::StringPool&) {}
+
         private:
             std::unique_ptr<JsonReader> reader_;
         };
@@ -321,6 +326,8 @@ struct CardPower {
                     if (key == "voltage") { rsp.voltage = ::note::parse_double(raw); return; }
                 }
             };
+
+            void intern_strings(::note::StringPool&) {}
 
         private:
             std::unique_ptr<JsonReader> reader_;

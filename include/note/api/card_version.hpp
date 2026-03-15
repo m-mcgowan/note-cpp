@@ -8,6 +8,7 @@
 #include <note/json_sax.hpp>
 #include <note/notecard.hpp>
 #include <note/safety.hpp>
+#include <note/string_pool.hpp>
 #include <note/types.hpp>
 #include <note/target.hpp>
 
@@ -148,6 +149,17 @@ struct CardVersion {
 #endif
             }
         };
+#pragma GCC diagnostic pop
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+        void intern_strings(::note::StringPool& pool) {
+            if (!board.empty()) board = pool.intern(board);
+            if (!device.empty()) device = pool.intern(device);
+            if (!name.empty()) name = pool.intern(name);
+            if (!sku.empty()) sku = pool.intern(sku);
+            if (!version.empty()) version = pool.intern(version);
+        }
 #pragma GCC diagnostic pop
 
     private:

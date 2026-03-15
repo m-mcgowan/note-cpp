@@ -1805,7 +1805,17 @@
             "x-min-api-version": "5.3.1"
           }
         }
-      }
+      },
+      "x-aliases": [
+        {
+          "method": "binaryStatus",
+          "variant": "Get"
+        },
+        {
+          "method": "binaryClear",
+          "variant": "Delete"
+        }
+      ]
     },
     "/card/binary/get": {
       "post": {
@@ -2337,7 +2347,13 @@
             "x-api-version": "9.1.1"
           }
         }
-      }
+      },
+      "x-aliases": [
+        {
+          "method": "readContact",
+          "variant": "Get"
+        }
+      ]
     },
     "/card/dfu": {
       "put": {
@@ -3854,7 +3870,17 @@
             "x-api-version": "9.1.1"
           }
         }
-      }
+      },
+      "x-aliases": [
+        {
+          "method": "readLocationMode",
+          "variant": "Get"
+        },
+        {
+          "method": "resetLocationMode",
+          "variant": "Delete"
+        }
+      ]
     },
     "/card/location/track": {
       "put": {
@@ -4952,7 +4978,17 @@
             "x-min-api-version": "8.1.3"
           }
         }
-      }
+      },
+      "x-aliases": [
+        {
+          "method": "readPower",
+          "variant": "Get"
+        },
+        {
+          "method": "resetPower",
+          "variant": "Delete"
+        }
+      ]
     },
     "/card/random": {
       "get": {
@@ -5948,7 +5984,17 @@
             "x-api-version": "9.1.1"
           }
         }
-      }
+      },
+      "x-aliases": [
+        {
+          "method": "readTemp",
+          "variant": "Get"
+        },
+        {
+          "method": "stopTemp",
+          "variant": "Delete"
+        }
+      ]
     },
     "/card/time": {
       "get": {
@@ -7766,7 +7812,13 @@
             "x-api-version": "9.1.1"
           }
         }
-      }
+      },
+      "x-aliases": [
+        {
+          "method": "readVoltage",
+          "variant": "Get"
+        }
+      ]
     },
     "/card/wifi": {
       "put": {
@@ -8698,7 +8750,17 @@
             "x-api-version": "9.1.1"
           }
         }
-      }
+      },
+      "x-aliases": [
+        {
+          "method": "readWirelessPenalty",
+          "variant": "Get"
+        },
+        {
+          "method": "resetWirelessPenalty",
+          "variant": "Delete"
+        }
+      ]
     },
     "/dfu/get": {
       "get": {
@@ -9377,7 +9439,24 @@
             "x-api-version": "9.1.1"
           }
         }
-      }
+      },
+      "x-aliases": [
+        {
+          "method": "setDefault",
+          "variant": "Set",
+          "params": [
+            "name",
+            "text"
+          ]
+        },
+        {
+          "method": "clearDefault",
+          "variant": "Delete",
+          "params": [
+            "name"
+          ]
+        }
+      ]
     },
     "/env/get": {
       "get": {
@@ -12010,7 +12089,16 @@
             "x-api-version": "9.1.1"
           }
         }
-      }
+      },
+      "x-aliases": [
+        {
+          "method": "popChanges",
+          "variant": "Delete",
+          "params": [
+            "file"
+          ]
+        }
+      ]
     },
     "/note/delete": {
       "delete": {
@@ -12445,7 +12533,23 @@
             "x-api-version": "9.1.1"
           }
         }
-      }
+      },
+      "x-aliases": [
+        {
+          "method": "read",
+          "variant": "Get",
+          "params": [
+            "file"
+          ]
+        },
+        {
+          "method": "pop",
+          "variant": "Delete",
+          "params": [
+            "file"
+          ]
+        }
+      ]
     },
     "/note/template": {
       "put": {
@@ -12795,7 +12899,16 @@
             "x-api-version": "9.1.1"
           }
         }
-      }
+      },
+      "x-aliases": [
+        {
+          "method": "clearTemplate",
+          "variant": "Delete",
+          "params": [
+            "file"
+          ]
+        }
+      ]
     },
     "/note/update": {
       "put": {

@@ -94,3 +94,30 @@ TEST_CASE("Api::{{ group.name }} resource group") {
 }
 
 {% endfor %}
+// ---------------------------------------------------------------------------
+// Layer 2 convenience aliases
+// ---------------------------------------------------------------------------
+
+{% for group in resource_groups %}
+{% set ns = namespace(has_aliases=false) %}
+{% for endpoint in group.endpoints %}
+{% if endpoint.aliases %}{% set ns.has_aliases = true %}{% endif %}
+{% endfor %}
+{% if ns.has_aliases %}
+TEST_CASE("Api::{{ group.name }} Layer 2 aliases") {
+    Harness h;
+{% for endpoint in group.endpoints %}
+{% for alias in endpoint.aliases %}
+{% set resolved = alias.resolve_params(endpoint) %}
+{% if resolved %}
+    h.api.execute(h.api.{{ group.name }}.{{ alias.method_name }}({% for p in resolved %}{{ p | request_test_value }}{{ ", " if not loop.last }}{% endfor %}));
+{% else %}
+    h.api.execute(h.api.{{ group.name }}.{{ alias.method_name }}());
+{% endif %}
+    REQUIRE(h.last_req.find("{{ endpoint.wire_name }}") != std::string::npos);
+{% endfor %}
+{% endfor %}
+}
+
+{% endif %}
+{% endfor %}

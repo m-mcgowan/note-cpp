@@ -123,7 +123,7 @@ def _collect_sample_tests(spec_path: Path) -> list[dict]:
 
     for path, path_item in spec.get("paths", {}).items():
         for method, op in path_item.items():
-            if method in ("parameters", "summary", "description"):
+            if method in ("parameters", "summary", "description", "x-aliases"):
                 continue
 
             notecard_request = op.get("x-notecard-request", "")

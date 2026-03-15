@@ -91,6 +91,60 @@ class ImplicitFieldDef:
 
 
 @dataclass
+class AliasDef:
+    """A Layer 2 convenience method on a resource group.
+
+    Pre-sets fields on a Layer 1 builder and returns it.
+    """
+    method_name: str         # "pop", "readTemp"
+    endpoint_struct: str     # "NoteGet", "CardTemp"
+    variant: str | None      # "Delete", "Get", None (for monomorphic)
+    params: list[str]        # ["file"] — wire names of fields to parameterize
+    description: str = ""
+
+    @property
+    def qualified_type(self) -> str:
+        """Fully qualified C++ type name, e.g. 'api::NoteGet::Delete'."""
+        if self.variant:
+            return f"api::{self.endpoint_struct}::{self.variant}"
+        return f"api::{self.endpoint_struct}"
+
+    def resolve_params(self, endpoint: 'EndpointGroup') -> list['PropertyDef']:
+        """Resolve param wire names to PropertyDef objects from the endpoint's operations.
+
+        Returns PropertyDef objects for each param, preserving type info for
+        test value generation and template rendering.
+        """
+        from codegen.naming import accessor_name, property_to_cpp_name
+
+        # Find the operation matching our variant
+        op = None
+        for o in endpoint.operations:
+            if self.variant and o.struct_name == self.variant:
+                op = o
+                break
+        if op is None:
+            op = endpoint.operations[0]
+
+        prop_by_wire = {p.wire_name: p for p in op.properties}
+        resolved = []
+        for wire in self.params:
+            prop = prop_by_wire.get(wire)
+            if prop:
+                resolved.append(prop)
+            else:
+                # Fallback: create a minimal PropertyDef
+                cpp_name = property_to_cpp_name(wire)
+                resolved.append(PropertyDef(
+                    wire_name=wire,
+                    cpp_name=cpp_name,
+                    cpp_type="note::string_view",
+                    is_optional=True,
+                ))
+        return resolved
+
+
+@dataclass
 class BinaryTransferDef:
     """Binary transfer annotation for endpoints with COBS data."""
     direction: str   # "send" or "receive"
@@ -210,6 +264,7 @@ class EndpointGroup:
     header_filename: str     # "note_get.hpp"
     is_polymorphic: bool
     operations: list[OperationDef] = field(default_factory=list)
+    aliases: list[AliasDef] = field(default_factory=list)
 
     @property
     def factory_method(self) -> str:

@@ -350,3 +350,55 @@ TEST_CASE("Api::web resource group") {
     REQUIRE(h.last_req.find("web.put") != std::string::npos);
 }
 
+// ---------------------------------------------------------------------------
+// Layer 2 convenience aliases
+// ---------------------------------------------------------------------------
+
+TEST_CASE("Api::card Layer 2 aliases") {
+    Harness h;
+    h.api.execute(h.api.card.binaryStatus());
+    REQUIRE(h.last_req.find("card.binary") != std::string::npos);
+    h.api.execute(h.api.card.binaryClear());
+    REQUIRE(h.last_req.find("card.binary") != std::string::npos);
+    h.api.execute(h.api.card.readContact());
+    REQUIRE(h.last_req.find("card.contact") != std::string::npos);
+    h.api.execute(h.api.card.readLocationMode());
+    REQUIRE(h.last_req.find("card.location.mode") != std::string::npos);
+    h.api.execute(h.api.card.resetLocationMode());
+    REQUIRE(h.last_req.find("card.location.mode") != std::string::npos);
+    h.api.execute(h.api.card.readPower());
+    REQUIRE(h.last_req.find("card.power") != std::string::npos);
+    h.api.execute(h.api.card.resetPower());
+    REQUIRE(h.last_req.find("card.power") != std::string::npos);
+    h.api.execute(h.api.card.readTemp());
+    REQUIRE(h.last_req.find("card.temp") != std::string::npos);
+    h.api.execute(h.api.card.stopTemp());
+    REQUIRE(h.last_req.find("card.temp") != std::string::npos);
+    h.api.execute(h.api.card.readVoltage());
+    REQUIRE(h.last_req.find("card.voltage") != std::string::npos);
+    h.api.execute(h.api.card.readWirelessPenalty());
+    REQUIRE(h.last_req.find("card.wireless.penalty") != std::string::npos);
+    h.api.execute(h.api.card.resetWirelessPenalty());
+    REQUIRE(h.last_req.find("card.wireless.penalty") != std::string::npos);
+}
+
+TEST_CASE("Api::env Layer 2 aliases") {
+    Harness h;
+    h.api.execute(h.api.env.setDefault(note::string_view("x-name"), note::string_view("x-text")));
+    REQUIRE(h.last_req.find("env.default") != std::string::npos);
+    h.api.execute(h.api.env.clearDefault(note::string_view("x-name")));
+    REQUIRE(h.last_req.find("env.default") != std::string::npos);
+}
+
+TEST_CASE("Api::note Layer 2 aliases") {
+    Harness h;
+    h.api.execute(h.api.note.popChanges(note::string_view("x-file")));
+    REQUIRE(h.last_req.find("note.changes") != std::string::npos);
+    h.api.execute(h.api.note.read(note::string_view("x-file")));
+    REQUIRE(h.last_req.find("note.get") != std::string::npos);
+    h.api.execute(h.api.note.pop(note::string_view("x-file")));
+    REQUIRE(h.last_req.find("note.get") != std::string::npos);
+    h.api.execute(h.api.note.clearTemplate(note::string_view("x-file")));
+    REQUIRE(h.last_req.find("note.template") != std::string::npos);
+}
+

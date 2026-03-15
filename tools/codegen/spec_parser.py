@@ -7,6 +7,7 @@ from collections import defaultdict
 from pathlib import Path
 
 from .model import (
+    AliasDef,
     BinaryTransferDef,
     EndpointGroup,
     ImplicitFieldDef,
@@ -352,13 +353,19 @@ def parse_spec(spec_path: str | Path) -> list[EndpointGroup]:
 
     # Group operations by x-notecard-request
     groups: dict[str, list[tuple[str, dict]]] = defaultdict(list)
+    alias_specs: dict[str, list[dict]] = {}  # req_name -> x-aliases list
     for path, path_item in spec.get("paths", {}).items():
+        # Collect x-aliases at the path item level
+        path_aliases = path_item.get("x-aliases", [])
+
         for method, operation in path_item.items():
-            if method in ("parameters", "summary", "description"):
+            if method in ("parameters", "summary", "description", "x-aliases"):
                 continue
             req_name = operation.get("x-notecard-request")
             if req_name:
                 groups[req_name].append((method, operation))
+                if path_aliases and req_name not in alias_specs:
+                    alias_specs[req_name] = path_aliases
 
     endpoints = []
     for wire_name, ops in sorted(groups.items()):
@@ -394,12 +401,24 @@ def parse_spec(spec_path: str | Path) -> list[EndpointGroup]:
             else:
                 operations.append(parsed_op)
 
+        # Parse x-aliases for this endpoint
+        aliases = []
+        for alias_spec in alias_specs.get(wire_name, []):
+            aliases.append(AliasDef(
+                method_name=alias_spec["method"],
+                endpoint_struct=struct_name,
+                variant=alias_spec.get("variant"),
+                params=alias_spec.get("params", []),
+                description=alias_spec.get("description", ""),
+            ))
+
         endpoints.append(EndpointGroup(
             wire_name=wire_name,
             struct_name=struct_name,
             header_filename=header_filename,
             is_polymorphic=is_polymorphic,
             operations=operations,
+            aliases=aliases,
         ))
 
     return endpoints

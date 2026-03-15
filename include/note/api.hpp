@@ -641,6 +641,20 @@ public:
         CardWirelessPenaltyFactory wirelessPenalty() { return {nc_}; }
 #endif
 
+
+        // Layer 2 convenience aliases
+        auto binaryStatus() { return create<api::CardBinary::Get>(); }
+        auto binaryClear() { return create<api::CardBinary::Delete>(); }
+        auto readContact() { return create<api::CardContact::Get>(); }
+        auto readLocationMode() { return create<api::CardLocationMode::Get>(); }
+        auto resetLocationMode() { return create<api::CardLocationMode::Delete>(); }
+        auto readPower() { return create<api::CardPower::Get>(); }
+        auto resetPower() { return create<api::CardPower::Delete>(); }
+        auto readTemp() { return create<api::CardTemp::Get>(); }
+        auto stopTemp() { return create<api::CardTemp::Delete>(); }
+        auto readVoltage() { return create<api::CardVoltage::Get>(); }
+        auto readWirelessPenalty() { return create<api::CardWirelessPenalty::Get>(); }
+        auto resetWirelessPenalty() { return create<api::CardWirelessPenalty::Delete>(); }
     };
 #if __cplusplus >= 202002L
     CardGroup<TargetT> card;
@@ -739,6 +753,19 @@ public:
         /// env.template
         auto template_() { return create<api::EnvTemplate>(); }
 
+
+        // Layer 2 convenience aliases
+        auto setDefault(note::string_view name, note::string_view text) {
+            auto r = create<api::EnvDefault::Set>();
+            r.name = name;
+            r.text = text;
+            return r;
+        }
+        auto clearDefault(note::string_view name) {
+            auto r = create<api::EnvDefault::Delete>();
+            r.name = name;
+            return r;
+        }
     };
 #if __cplusplus >= 202002L
     EnvGroup<TargetT> env;
@@ -895,6 +922,28 @@ public:
             return r;
         }
 
+
+        // Layer 2 convenience aliases
+        auto popChanges(note::string_view file) {
+            auto r = create<api::NoteChanges::Delete>();
+            r.file = file;
+            return r;
+        }
+        auto read(note::string_view file) {
+            auto r = create<api::NoteGet::Get>();
+            r.file = file;
+            return r;
+        }
+        auto pop(note::string_view file) {
+            auto r = create<api::NoteGet::Delete>();
+            r.file = file;
+            return r;
+        }
+        auto clearTemplate(note::string_view file) {
+            auto r = create<api::NoteTemplate::Delete>();
+            r.file = file;
+            return r;
+        }
     };
 #if __cplusplus >= 202002L
     NoteGroup<TargetT> note;

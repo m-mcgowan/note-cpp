@@ -219,15 +219,16 @@ int main() {
         }
     }
 
-    // Polymorphic endpoints — note.get has two variants:
-    //   .get()     — read-only
-    //   .delete_() — pop from queue
-    std::puts("--- note.get ---");
-    api.note.get().get().file("data.qi").execute();
+    // Layer 2 aliases — intent-based shortcuts for polymorphic endpoints
+    std::puts("--- note.read (alias for note.get Get) ---");
+    api.note.read("data.qi").execute();
 
-    // note.get delete (pop)
-    std::puts("--- note.get delete (pop) ---");
-    api.note.get().delete_().file("requests.qi").execute();
+    std::puts("--- note.pop (alias for note.get Delete) ---");
+    api.note.pop("requests.qi").execute();
+
+    // The full polymorphic factory is still available when you need it:
+    //   api.note.get().get().file("data.qi").execute();
+    //   api.note.get().delete_().file("requests.qi").execute();
 
     // Fire-and-forget command — sends "cmd" instead of "req"
     std::puts("--- hub.set (command) ---");
@@ -276,9 +277,9 @@ int main() {
         .execute();
 
     // Parse a response body back into the struct
-    std::puts("--- note.get (parse body) ---");
+    std::puts("--- note.read (parse body) ---");
     {
-        auto r = api.note.get().get().file("data.qi").execute();
+        auto r = api.note.read("data.qi").execute();
         if (r) {
             Readings data = r.bodyAs<Readings>();
             (void)data.temperature;

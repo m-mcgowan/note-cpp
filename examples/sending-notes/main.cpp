@@ -158,7 +158,7 @@ int main() {
 
     std::puts("\n--- Receive and parse ---");
     {
-        auto result = api.note.get().get().file("data.qi").execute();
+        auto result = api.note.read("data.qi").execute();
         if (result) {
             auto data = result.bodyAs<Readings>();
             (void)data.temperature;

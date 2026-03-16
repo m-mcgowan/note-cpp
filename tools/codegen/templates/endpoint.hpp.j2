@@ -30,6 +30,13 @@
 {% if prop.has_flags %}
 namespace note::{{ fns }} {
 {% for flag in prop.flags %}
+{% if prop.sub_descriptions %}
+{% for sd in prop.sub_descriptions %}
+{% if sd.const_value == flag and sd.description %}
+{{ sd.description | doc_comment("    ") }}
+{% endif %}
+{% endfor %}
+{% endif %}
     inline constexpr uint32_t {{ flag | flag_cpp_name }} = 1u << {{ loop.index0 }};
 {% endfor %}
 } // namespace note::{{ fns }}
@@ -119,6 +126,9 @@ namespace note::api {
 {{ indent }}struct {{ prop.nested_type_name }} : Field<{{ prop.field_type }}> {
 {% if prop.constants %}
 {% for cname, cinfo in prop.constants.items() %}
+{% if cinfo.description is defined and cinfo.description %}
+{{ cinfo.description | doc_comment(indent + "    ") }}
+{% endif %}
 {{ indent }}    static constexpr {{ prop.field_type }} {{ cname }}{ {{ cinfo.value }} };
 {% endfor %}
 {% endif %}
@@ -141,6 +151,13 @@ namespace note::api {
 {{ indent }}    {{ prop.nested_type_name }}& add(uint32_t flag);
 {{ indent }}    {{ prop.nested_type_name }}& operator|=(uint32_t flag);
 {% for flag in prop.flags %}
+{% if prop.sub_descriptions %}
+{% for sd in prop.sub_descriptions %}
+{% if sd.const_value == flag and sd.description %}
+{{ sd.description | doc_comment(indent + "    ") }}
+{% endif %}
+{% endfor %}
+{% endif %}
 {{ indent }}    {{ prop.nested_type_name }}& {{ flag | flag_cpp_name }}();
 {% endfor %}
 {{ indent }}    static constexpr note::FlagDef flag_defs_[] = {
@@ -160,6 +177,12 @@ namespace note::api {
 {% for prop in op.properties %}
 {% if not prop.is_required_by_dispatch and prop.enum_values %}
 {{ version_guard_begin(prop.version_guard) -}}
+{% if prop.sub_descriptions %}
+{{ indent }}// Valid values for '{{ prop.wire_name }}':
+{% for sd in prop.sub_descriptions %}
+{{ indent }}//   "{{ sd.const_value }}" — {{ sd.description | truncate(72, True) }}
+{% endfor %}
+{% endif %}
 {{ indent }}// consteval: only callable at compile time (C++20)
 #if __cplusplus >= 202002L
 {{ indent }}static consteval note::string_view validated{{ prop.accessor_name | first_upper }}(const char* v) {
@@ -203,6 +226,9 @@ namespace note::api {
 {{ indent }}uint8_t extras_count_ = 0;
 
 {% if op.response.properties or op.response.has_body %}
+{% if op.response.description %}
+{{ op.response.description | doc_comment(indent) }}
+{% endif %}
 {{ indent }}struct Response {
 {% for prop in op.response.properties %}
 {{ version_guard_begin(prop.version_guard) -}}
@@ -512,9 +538,15 @@ inline {{ parent_qual }}::{{ prop.nested_type_name }}& {{ parent_qual }}::{{ pro
 {# ===== Main output ======================================================= #}
 
 {% if endpoint.is_polymorphic %}
+{% if endpoint.operations[0].description %}
+{{ endpoint.operations[0].description | doc_comment("") }}
+{% endif %}
 struct {{ endpoint.struct_name }} {
 {% for op in endpoint.operations %}
 
+{% if op.description and loop.index0 > 0 %}
+{{ op.description | doc_comment("    ") }}
+{% endif %}
     struct {{ op.struct_name }} {
 {{ render_operation(op, endpoint.struct_name + "::" + op.struct_name, "        ") }}
     };
@@ -526,6 +558,9 @@ struct {{ endpoint.struct_name }} {
 {% endfor %}
 {% else %}
 {% set op = endpoint.operations[0] %}
+{% if op.description %}
+{{ op.description | doc_comment("") }}
+{% endif %}
 struct {{ endpoint.struct_name }} {
 {{ render_operation(op, endpoint.struct_name, "    ") }}
 };

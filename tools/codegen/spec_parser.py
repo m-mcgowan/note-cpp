@@ -14,6 +14,7 @@ from .model import (
     OperationDef,
     PropertyDef,
     ResponseDef,
+    SubDescription,
 )
 from .naming import (
     endpoint_to_header_filename,
@@ -91,6 +92,19 @@ def _parse_property(name: str, schema: dict, *,
     # Non-boolean required fields need user-provided values.
     auto_emit = is_required_by_dispatch and cpp_type == "bool"
 
+    # Parse x-sub-descriptions (per-value docs for enums/flags)
+    raw_subs = schema.get("x-sub-descriptions")
+    sub_descriptions = None
+    if raw_subs:
+        sub_descriptions = [
+            SubDescription(
+                const_value=s["const"],
+                description=s.get("description", ""),
+            )
+            for s in raw_subs
+            if s.get("const")  # skip empty-string entries
+        ]
+
     return PropertyDef(
         wire_name=wire_name,
         cpp_name=property_to_cpp_name(wire_name),
@@ -106,6 +120,7 @@ def _parse_property(name: str, schema: dict, *,
         constants=schema.get("x-constants"),
         format=schema.get("x-format"),
         flags=schema.get("x-flags"),
+        sub_descriptions=sub_descriptions,
     )
 
 
@@ -166,6 +181,12 @@ def _extract_request_props_from_body(
             prop.is_optional = False
         props.append(prop)
     return props
+
+
+def _extract_response_description(operation: dict) -> str:
+    """Extract the 200 response description."""
+    resp_200 = operation.get("responses", {}).get("200", {})
+    return resp_200.get("description", "")
 
 
 def _extract_response_props(operation: dict) -> tuple[list[PropertyDef], bool]:
@@ -247,10 +268,15 @@ def _parse_operation(op: dict, *, suffix: str | None = None) -> OperationDef:
         safety=safety,
         supports_cmd=supports_cmd,
         properties=req_props,
-        response=ResponseDef(properties=rsp_props, has_body=has_body_response),
+        response=ResponseDef(
+            properties=rsp_props,
+            has_body=has_body_response,
+            description=_extract_response_description(op),
+        ),
         dispatch=dispatch,
         binary_transfer=_parse_binary_transfer(op.get("x-binary-transfer")),
         skus=op.get("x-skus", []),
+        description=op.get("summary", ""),
     )
 
 
@@ -323,11 +349,13 @@ def _expand_intents(
             response=ResponseDef(
                 properties=rsp_props,
                 has_body="body" in intent_rsp_names if intent_rsp_names else rsp_has_body,
+                description=intent.get("description", ""),
             ),
             dispatch=base_op.dispatch,
             binary_transfer=base_op.binary_transfer,
             skus=base_op.skus,
             implicit_fields=implicit_fields,
+            description=intent.get("description", base_op.description),
         ))
 
     return operations

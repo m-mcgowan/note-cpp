@@ -19,6 +19,7 @@ namespace note::api {
 
 
 
+/// Manually initiates a sync with Notehub.
 struct HubSync {
     static constexpr string_view notecard_request = "hub.sync";
     static constexpr bool supports_cmd = true;
@@ -27,15 +28,14 @@ struct HubSync {
 
     Notecard* nc_ = nullptr;
 
-    /// Set to `true` to remove the Notecard from certain types of [penalty
-    /// boxes](/support/understanding-notecard-penalty-boxes/) (the default is
-    /// `false`).
+    /// Set to `true` to remove the Notecard from certain types of penalty boxes
+    /// (the default is `false`).
     struct allow_t : Field<bool> {
         using Field<bool>::Field;
         using Field<bool>::operator=;
         HubSync& operator()(bool v);
     } allow{};
-    /// Set to `true` to only sync pending inbound Notefiles. **Required** when
+    /// Set to `true` to only sync pending inbound Notefiles. Required when
     /// using NTN mode with Starnote to check for inbound Notefiles.
     struct in_t : Field<bool> {
         using Field<bool>::Field;

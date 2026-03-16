@@ -21,6 +21,12 @@ namespace note::api {
 
 
 
+/// Receive a Signal (a near-real-time Note) from Notehub.
+///
+/// This request checks for an inbound signal from Notehub. If it finds a
+/// signal, this request returns the signal's body and deletes the signal. If
+/// there are multiple signals to receive, this request reads and deletes
+/// signals in FIFO (first in first out) order.
 struct HubSignal {
     static constexpr string_view notecard_request = "hub.signal";
     static constexpr bool supports_cmd = true;
@@ -69,6 +75,7 @@ struct HubSignal {
     std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
     uint8_t extras_count_ = 0;
 
+    /// Response containing a received signal from Notehub.
     struct Response {
         /// `true` if the Notecard is connected to Notehub.
         bool connected{};

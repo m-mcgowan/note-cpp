@@ -19,6 +19,7 @@ namespace note::api {
 
 
 
+/// Used to configure a Notecard for Notecard Outboard Firmware Update.
 struct CardDfu {
     static constexpr string_view notecard_request = "card.dfu";
     static constexpr bool supports_cmd = true;
@@ -28,11 +29,10 @@ struct CardDfu {
     Notecard* nc_ = nullptr;
 
     /// The `mode` argument allows you to control whether a Notecard's `AUX`
-    /// pins (default) or `ALT_DFU` pins are used for [Notecard Outboard
-    /// Firmware Update](/notehub/host-firmware-updates/notecard-outboard-
-    /// firmware-update). This argument is only supported on Notecards that have
-    /// `ALT_DFU` pins, which includes all versions of Notecard Cell+WiFi, non-
-    /// legacy versions of Notecard Cellular, and Notecard WiFi v2.
+    /// pins (default) or `ALTDFU` pins are used for Notecard Outboard Firmware
+    /// Update. This argument is only supported on Notecards that have `ALTDFU`
+    /// pins, which includes all versions of Notecard Cell+WiFi, non-legacy
+    /// versions of Notecard Cellular, and Notecard WiFi v2.
     // mode: altdfu | aux
     struct mode_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
@@ -44,8 +44,8 @@ struct CardDfu {
     /// `"-"`, which resets the configuration. The "bi" in `"stm32-bi"` stands
     /// for "boot inverted", and the `"stm32-bi"` option should be used on STM32
     /// family boards where the hardware boot pin is assumed to be active low,
-    /// instead of active high. Supported MCUs can be found on the [Notecarrier
-    /// F datasheet](/datasheets/notecarrier-datasheet/notecarrier-f-v1-3).
+    /// instead of active high. Supported MCUs can be found on the Notecarrier F
+    /// datasheet.
     // name: esp32 | stm32 | stm32-bi | mcuboot | -
     struct name_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
@@ -90,6 +90,9 @@ struct CardDfu {
         CardDfu& operator()(bool v);
     } stop{};
 
+    // Valid values for 'mode':
+    //   "altdfu" — Enable the Notecard's `ALT_DFU` pins (instead of the `AUX` pins) for ...
+    //   "aux" — Return the Notecard's `ALT_DFU` pins to their default state of `AUX`.
     // consteval: only callable at compile time (C++20)
 #if __cplusplus >= 202002L
     static consteval note::string_view validatedMode(const char* v) {
@@ -99,6 +102,12 @@ struct CardDfu {
         return sv;
     }
 #endif
+    // Valid values for 'name':
+    //   "esp32" — ESP32 microcontroller family.
+    //   "stm32" — STM32 microcontroller family.
+    //   "stm32-bi" — STM32 microcontroller family with boot inverted (boot pin active low).
+    //   "mcuboot" — MCUboot compatible microcontroller (added in v5.3.1).
+    //   "-" — Resets the configuration.
     // consteval: only callable at compile time (C++20)
 #if __cplusplus >= 202002L
     static consteval note::string_view validatedName(const char* v) {
@@ -138,6 +147,7 @@ struct CardDfu {
     std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
     uint8_t extras_count_ = 0;
 
+    /// Successful response
     struct Response {
         /// The class of MCU that the Notecard is currently configured to
         /// support for Outboard DFU.

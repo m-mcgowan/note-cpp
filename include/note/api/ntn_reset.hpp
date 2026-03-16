@@ -19,6 +19,12 @@ namespace note::api {
 
 
 
+/// Once a Notecard is connected to a Starnote device, the presence of a
+/// physical Starnote is stored in a permanent configuration that is not
+/// affected by a `card.restore` request. This request clears the existing NTN
+/// configuration, allowing you to return to testing NTN mode over cellular or
+/// WiFi, and enables the Starnote to be paired with a different Notecard
+/// device.
 struct NtnReset {
     static constexpr string_view notecard_request = "ntn.reset";
     static constexpr bool supports_cmd = true;

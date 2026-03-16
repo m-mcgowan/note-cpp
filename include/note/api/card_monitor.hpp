@@ -19,6 +19,8 @@ namespace note::api {
 
 
 
+/// When a Notecard is in monitor mode, this API is used to configure the
+/// general-purpose `AUX1`-`AUX4` pins to test and monitor Notecard activity.
 struct CardMonitor {
     static constexpr string_view notecard_request = "card.monitor";
     static constexpr bool supports_cmd = true;
@@ -37,9 +39,7 @@ struct CardMonitor {
     /// Can be set to one of `green`, `red` or `yellow` to temporarily override
     /// the behavior of an AUX pin LED.
     ///
-    /// See [Using Monitor Mode](https://dev.blues.io/notecard/notecard-
-    /// walkthrough/working-with-the-notecard-aux-pins/#using-monitor-mode) for
-    /// additional details.
+    /// See Using Monitor Mode for additional details.
     // mode: green | red | yellow
     struct mode_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
@@ -54,6 +54,10 @@ struct CardMonitor {
         CardMonitor& operator()(bool v);
     } usb{};
 
+    // Valid values for 'mode':
+    //   "green" — Temporarily override the behavior of the green AUX pin LED.
+    //   "red" — Temporarily override the behavior of the red AUX pin LED.
+    //   "yellow" — Temporarily override the behavior of the yellow AUX pin LED.
     // consteval: only callable at compile time (C++20)
 #if __cplusplus >= 202002L
     static consteval note::string_view validatedMode(const char* v) {

@@ -19,6 +19,7 @@ namespace note::api {
 
 
 
+/// Enable and disable trace mode on a Notecard for debugging.
 struct CardTrace {
     static constexpr string_view notecard_request = "card.trace";
     static constexpr bool supports_cmd = true;
@@ -34,6 +35,9 @@ struct CardTrace {
         CardTrace& operator()(note::string_view v);
     } mode{};
 
+    // Valid values for 'mode':
+    //   "on" — Enable trace mode on the Notecard for debugging.
+    //   "off" — Disable trace mode on the Notecard.
     // consteval: only callable at compile time (C++20)
 #if __cplusplus >= 202002L
     static consteval note::string_view validatedMode(const char* v) {

@@ -20,6 +20,8 @@ namespace note::api {
 
 
 
+/// Performs a simple HTTP or HTTPS `GET` request against an external endpoint,
+/// and returns the response to the Notecard.
 struct WebGet {
     static constexpr string_view notecard_request = "web.get";
     static constexpr bool supports_cmd = true;
@@ -32,9 +34,7 @@ struct WebGet {
     /// If `true`, the Notecard will return the response stored in its binary
     /// buffer.
     ///
-    /// Learn more in this guide on [Sending and Receiving Large Binary
-    /// Objects](/guides-and-tutorials/notecard-guides/sending-and-receiving-
-    /// large-binary-objects).
+    /// Learn more in this guide on Sending and Receiving Large Binary Objects.
     ///
     /// @since firmware 5.3.1
 #if NOTE_API_VERSION < NOTE_VERSION(5, 3, 1)
@@ -154,6 +154,8 @@ struct WebGet {
     std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
     uint8_t extras_count_ = 0;
 
+    /// Response containing the result of an HTTP or HTTPS GET request to an
+    /// external endpoint.
     struct Response {
         /// The size of the COBS-encoded data (in bytes).
         int32_t cobs{};

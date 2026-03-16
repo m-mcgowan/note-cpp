@@ -19,6 +19,7 @@ namespace note::api {
 
 
 
+/// Returns info about file changes that are pending upload to Notehub.
 struct FileChangesPending {
     static constexpr string_view notecard_request = "file.changes.pending";
     static constexpr bool supports_cmd = true;
@@ -50,6 +51,8 @@ struct FileChangesPending {
     std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
     uint8_t extras_count_ = 0;
 
+    /// Response containing information about file changes pending upload to
+    /// Notehub.
     struct Response {
         /// The number of changes across all files.
         int32_t changes{};

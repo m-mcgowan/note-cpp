@@ -19,6 +19,7 @@ namespace note::api {
 
 
 
+/// Retrieves the current Notehub configuration for the Notecard.
 struct HubGet {
     static constexpr string_view notecard_request = "hub.get";
     static constexpr bool supports_cmd = true;
@@ -50,8 +51,9 @@ struct HubGet {
     std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
     uint8_t extras_count_ = 0;
 
+    /// Response containing the current Notehub configuration for the Notecard.
     struct Response {
-        /// The [DeviceUID](/api-reference/glossary#deviceuid) for the Notecard.
+        /// The DeviceUID for the Notecard.
         note::string_view device{};
         /// The URL of the Notehub host.
         note::string_view host{};

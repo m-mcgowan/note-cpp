@@ -13,7 +13,12 @@
 #include <note/target.hpp>
 
 namespace note::triangulate {
+    /// Enables cell tower scanning to determine the position of the Device.
     inline constexpr uint32_t cell = 1u << 0;
+    /// Enables the use of nearby WiFi access points to determine the position
+    /// of the Device. To leverage this feature, the host will need to provide
+    /// access point information to the Notecard via the `text` argument in
+    /// subsequent requests.
     inline constexpr uint32_t wifi = 1u << 1;
 } // namespace note::triangulate
 
@@ -25,6 +30,9 @@ namespace note::api {
 
 
 
+/// Enables or disables a behavior by which the Notecard gathers information
+/// about surrounding cell towers and/or WiFi access points with each new
+/// Notehub session.
 struct CardTriangulate {
     static constexpr string_view notecard_request = "card.triangulate";
     static constexpr bool supports_cmd = true;
@@ -42,9 +50,8 @@ struct CardTriangulate {
     } minutes{};
     /// The triangulation approach to use for determining the Notecard location.
     /// The following keywords can be used separately or together in a comma-
-    /// delimited list, in any order. See [Using Cell Tower & WiFi
-    /// Triangulation](/notecard/notecard-walkthrough/time-and-location-
-    /// requests/#using-cell-tower-and-wifi-triangulation) for more information.
+    /// delimited list, in any order. See Using Cell Tower & WiFi Triangulation
+    /// for more information.
     struct mode_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
@@ -53,7 +60,12 @@ struct CardTriangulate {
         CardTriangulate& operator()(uint32_t flags);
         mode_t& add(uint32_t flag);
         mode_t& operator|=(uint32_t flag);
+        /// Enables cell tower scanning to determine the position of the Device.
         mode_t& cell();
+        /// Enables the use of nearby WiFi access points to determine the
+        /// position of the Device. To leverage this feature, the host will need
+        /// to provide access point information to the Notecard via the `text`
+        /// argument in subsequent requests.
         mode_t& wifi();
         static constexpr note::FlagDef flag_defs_[] = {
             { note::triangulate::cell, "cell" },
@@ -77,15 +89,14 @@ struct CardTriangulate {
     } set{};
     /// When using WiFi triangulation, a newline-terminated list of WiFi access
     /// points obtained by the external module. Format should follow the ESP32's
-    /// [AT+CWLAP command output](https://docs.espressif.com/projects/esp-
-    /// at/en/latest/AT_Command_Set/Wi-Fi_AT_Commands.html#cmd-lap).
+    /// AT+CWLAP command output.
     struct text_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
         CardTriangulate& operator()(note::string_view v);
     } text{};
     /// When passed with `text`, records the time that the WiFi access point
-    /// scan was performed. _If not provided, Notecard time is used._
+    /// scan was performed. If not provided, Notecard time is used.
     struct time_t : Field<int32_t> {
         using Field<int32_t>::Field;
         using Field<int32_t>::operator=;
@@ -129,6 +140,8 @@ struct CardTriangulate {
     std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
     uint8_t extras_count_ = 0;
 
+    /// Response containing triangulated location information and triangulation
+    /// settings.
     struct Response {
         /// The length of the `text` buffer provided in the current or a
         /// previous request.

@@ -25,7 +25,19 @@ from codegen.naming import (
 )
 
 
+import re
 import textwrap
+
+
+def _strip_markdown(text: str) -> str:
+    """Strip markdown formatting for clean doc comments."""
+    # Convert markdown links [text](url) to just text
+    text = re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', text)
+    # Strip bold/italic markers
+    text = re.sub(r'_\*\*([^*]+)\*\*_', r'\1', text)
+    text = re.sub(r'\*\*([^*]+)\*\*', r'\1', text)
+    text = re.sub(r'_([^_]+)_', r'\1', text)
+    return text
 
 
 def _doc_comment_filter(text: str, indent: str = "    ") -> str:
@@ -38,6 +50,8 @@ def _doc_comment_filter(text: str, indent: str = "    ") -> str:
     # Normalize literal \n sequences (some OpenAPI descriptions use escaped
     # newlines instead of real ones)
     text = text.replace("\\n", "\n")
+    # Strip markdown formatting for cleaner C++ doc comments
+    text = _strip_markdown(text)
     # Collapse markdown-style paragraphs into single lines per paragraph,
     # then wrap each paragraph to ~80 columns accounting for indent + "/// "
     prefix = f"{indent}/// "

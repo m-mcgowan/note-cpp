@@ -19,6 +19,9 @@ namespace note::api {
 
 
 
+/// Determines whether a Notecard should override a paired Starnote's GPS/GNSS
+/// location with its own GPS/GNSS location. The paired Starnote uses its own
+/// GPS/GNSS location by default.
 struct NtnGps {
     static constexpr string_view notecard_request = "ntn.gps";
     static constexpr bool supports_cmd = true;
@@ -67,6 +70,7 @@ struct NtnGps {
     std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
     uint8_t extras_count_ = 0;
 
+    /// Response indicating current Starnote GPS/GNSS location configuration.
     struct Response {
         /// Returned and `true` if a paired Starnote will use its own GPS/GNSS
         /// location.

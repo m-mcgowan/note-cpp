@@ -20,6 +20,7 @@ namespace note::api {
 
 
 
+/// Adds a Note to a Notefile, creating the Notefile if it doesn't yet exist.
 struct NoteAdd {
     static constexpr string_view notecard_request = "note.add";
     static constexpr bool supports_cmd = true;
@@ -32,9 +33,7 @@ struct NoteAdd {
     /// If `true`, the Notecard will send all the data in the binary buffer to
     /// Notehub.
     ///
-    /// Learn more in this guide on [Sending and Receiving Large Binary
-    /// Objects](/guides-and-tutorials/notecard-guides/sending-and-receiving-
-    /// large-binary-objects).
+    /// Learn more in this guide on Sending and Receiving Large Binary Objects.
     ///
     /// @since firmware 5.3.1
 #if NOTE_API_VERSION < NOTE_VERSION(5, 3, 1)
@@ -82,12 +81,9 @@ struct NoteAdd {
         NoteAdd& operator()(note::string_view v);
     } file{};
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
-    /// If set to `true`, and the Note is using a [Notefile
-    /// Template](/notecard/notecard-walkthrough/low-bandwidth-design/#working-
-    /// with-note-templates), the Note will bypass usage of
-    /// [omitempty](/notecard/notecard-walkthrough/low-bandwidth-design/#use-of-
-    /// in-templates) and retain `null`, `0`, `false`, and empty string `""`
-    /// values.
+    /// If set to `true`, and the Note is using a Notefile Template, the Note
+    /// will bypass usage of omitempty and retain `null`, `0`, `false`, and
+    /// empty string `""` values.
     ///
     /// @since firmware 5.1.1
 #if NOTE_API_VERSION < NOTE_VERSION(5, 1, 1)
@@ -100,9 +96,8 @@ struct NoteAdd {
     } full{};
 #endif
     /// The name of an environment variable in your Notehub.io project that
-    /// contains the contents of a public key. Used when [encrypting the Note
-    /// body for transport](/guides-and-tutorials/notecard-guides/encrypting-
-    /// and-decrypting-data-with-the-notecard).
+    /// contains the contents of a public key. Used when encrypting the Note
+    /// body for transport.
     struct key_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
@@ -110,7 +105,7 @@ struct NoteAdd {
     } key{};
 #if NOTE_API_VERSION >= NOTE_VERSION(9, 1, 1) || !defined(NOTE_API_STRICT)
     /// If set to `true`, the Note will not be created if Notecard is in a
-    /// [penalty box](/support/understanding-notecard-penalty-boxes/).
+    /// penalty box.
     ///
     /// @since firmware 9.1.1
 #if NOTE_API_VERSION < NOTE_VERSION(9, 1, 1)
@@ -158,8 +153,7 @@ struct NoteAdd {
     /// If `note` string is `"?"`, then a random unique Note ID is generated and
     /// returned as `{"note":"xxx"}`.
     ///
-    /// _If this argument is provided for a `.qo` Notefile, an error is
-    /// returned._
+    /// If this argument is provided for a `.qo` Notefile, an error is returned.
     struct noteId_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
@@ -172,10 +166,10 @@ struct NoteAdd {
         using Field<note::string_view>::operator=;
         NoteAdd& operator()(note::string_view v);
     } payload{};
-    /// Set to `true` to sync immediately. Only applies to **outgoing** Notecard
+    /// Set to `true` to sync immediately. Only applies to outgoing Notecard
     /// requests, and only guarantees syncing the specified Notefile. Auto-
-    /// syncing **incoming** Notes from Notehub is set on the Notecard with
-    /// `{"req": "hub.set", "mode":"continuous", "sync": true}`.
+    /// syncing incoming Notes from Notehub is set on the Notecard with `{"req":
+    /// "hub.set", "mode":"continuous", "sync": true}`.
     struct sync_t : Field<bool> {
         using Field<bool>::Field;
         using Field<bool>::operator=;
@@ -234,6 +228,7 @@ struct NoteAdd {
     std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
     uint8_t extras_count_ = 0;
 
+    /// Response containing information about the added Note.
     struct Response {
         /// The generated unique Note ID when `note` parameter was set to "?".
         note::string_view noteId{};

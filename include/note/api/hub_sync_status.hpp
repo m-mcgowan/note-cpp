@@ -19,6 +19,7 @@ namespace note::api {
 
 
 
+/// Check on the status of a recently triggered or previous sync.
 struct HubSyncStatus {
     static constexpr string_view notecard_request = "hub.sync.status";
     static constexpr bool supports_cmd = true;
@@ -59,6 +60,7 @@ struct HubSyncStatus {
     std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
     uint8_t extras_count_ = 0;
 
+    /// Response containing the status of a recently triggered or previous sync.
     struct Response {
         /// `true` if an error occurred during the most recent sync.
         bool alert{};
@@ -79,9 +81,8 @@ struct HubSyncStatus {
         bool scan{};
 #endif
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-        /// If the Notecard is in a [Penalty Box](/support/understanding-
-        /// notecard-penalty-boxes/), the number of seconds until the penalty
-        /// condition ends.
+        /// If the Notecard is in a Penalty Box, the number of seconds until the
+        /// penalty condition ends.
         ///
         /// @since firmware 4.1.1
 #if NOTE_API_VERSION < NOTE_VERSION(4, 1, 1)
@@ -89,9 +90,9 @@ struct HubSyncStatus {
 #endif
         int32_t seconds{};
 #endif
-        /// The status of the current or previous sync. Refer to [this
-        /// listing](/support/notecard-error-and-status-codes/) for the meaning
-        /// of the various status codes returned (e.g. `{sync-end}`).
+        /// The status of the current or previous sync. Refer to this listing
+        /// for the meaning of the various status codes returned (e.g. `{sync-
+        /// end}`).
         note::string_view status{};
         /// `true` if the notecard has unsynchronized notes, or requires a sync
         /// to set its internal clock.

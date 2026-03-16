@@ -19,6 +19,8 @@ namespace note::api {
 
 
 
+/// Can be used to override the Notecard's I2C address from its default of
+/// `0x17` and change behaviors of the onboard LED and USB port.
 struct CardIo {
     static constexpr string_view notecard_request = "card.io";
     static constexpr bool supports_cmd = true;
@@ -42,6 +44,17 @@ struct CardIo {
         CardIo& operator()(note::string_view v);
     } mode{};
 
+    // Valid values for 'mode':
+    //   "-1" — Send `-1` to [reset](https://dev.blues.io/notecard/notecard-walkthrou...
+    //   "-usb" — Set to `"-usb"` to disable the Notecard's USB port. Re-enable the USB...
+    //   "usb" — Re-enable the Notecard's USB port after it has been disabled with `"-usb"`.
+    //   "+usb" — Re-enable the Notecard's USB port after it has been disabled with `"-usb"`.
+    //   "+busy" — If set to `"+busy"`, the Notecard's LED will be on when the Notecard ...
+    //   "-busy" — Resets `"+busy"` to its default, making the onboard LED blink only du...
+    //   "i2c-master-disable" — Disables Notecard acting as an I2C master. Re-enable by using `"i2c-m...
+    //   "i2c-master-enable" — Re-enables the Notecard to act as an I2C master after it has been dis...
+    //   "+fallback" — Setting `"+fallback"` while Notecard is paired with a Starnote device...
+    //   "-fallback" — Resets `"+fallback"` to its default state, ensuring fallback mode is ...
     // consteval: only callable at compile time (C++20)
 #if __cplusplus >= 202002L
     static consteval note::string_view validatedMode(const char* v) {

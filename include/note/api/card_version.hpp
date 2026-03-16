@@ -20,6 +20,7 @@ namespace note::api {
 
 
 
+/// Returns firmware version information for the Notecard.
 struct CardVersion {
     static constexpr string_view notecard_request = "card.version";
     static constexpr bool supports_cmd = true;
@@ -51,6 +52,7 @@ struct CardVersion {
     std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
     uint8_t extras_count_ = 0;
 
+    /// Response containing firmware version information and device details.
     struct Response {
         /// The Notecard board version number.
         note::string_view board{};

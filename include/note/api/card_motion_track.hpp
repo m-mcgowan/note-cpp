@@ -20,6 +20,7 @@ namespace note::api {
 
 
 
+/// Configures automatic capture of Notecard accelerometer motion in a Notefile.
 struct CardMotionTrack {
     static constexpr string_view notecard_request = "card.motion.track";
     static constexpr bool supports_cmd = true;
@@ -34,9 +35,8 @@ struct CardMotionTrack {
         using Field<int32_t>::operator=;
         CardMotionTrack& operator()(int32_t v);
     } count{};
-    /// The Notefile to use for motion capture Notes. See the [`_motion.qo`
-    /// Notefile's documentation](/api-reference/system-notefiles#motion-qo) for
-    /// details on the format of the data captured.
+    /// The Notefile to use for motion capture Notes. See the `_motion.qo`
+    /// Notefile's documentation for details on the format of the data captured.
     struct file_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;

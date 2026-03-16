@@ -19,6 +19,8 @@ namespace note::api {
 
 
 
+/// Retrieves a Note from a DB Notefile. Provides a simpler interface to the
+/// note.get API.
 struct VarGet {
     static constexpr string_view notecard_request = "var.get";
     static constexpr bool supports_cmd = true;
@@ -66,6 +68,7 @@ struct VarGet {
     std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
     uint8_t extras_count_ = 0;
 
+    /// Response containing a Note value from a DB Notefile.
     struct Response {
         /// The boolean value stored in the DB Notefile.
         bool flag{};

@@ -20,6 +20,11 @@ namespace note::api {
 
 
 
+/// Retrieves a Note from a Notefile. The file must either be a DB Notefile or
+/// inbound queue file (see `file` argument below).
+///
+/// `.qo`/`.qos` Notes must be read from the Notehub event table using the
+/// Notehub Event API.
 struct NoteGet {
 
     struct Get {
@@ -30,9 +35,7 @@ struct NoteGet {
 
         Notecard* nc_ = nullptr;
 
-        /// `true` to decrypt [encrypted inbound Notefiles](/guides-and-
-        /// tutorials/notecard-guides/encrypting-and-decrypting-data-with-the-
-        /// notecard).
+        /// `true` to decrypt encrypted inbound Notefiles.
         struct decrypt_t : Field<bool> {
             using Field<bool>::Field;
             using Field<bool>::operator=;
@@ -87,6 +90,7 @@ struct NoteGet {
         std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
         uint8_t extras_count_ = 0;
 
+        /// Response containing a Note retrieved from a Notefile.
         struct Response {
             /// The payload, if contained in the Note.
             note::string_view payload{};
@@ -177,6 +181,11 @@ struct NoteGet {
 
     };
 
+    /// Retrieves a Note from a Notefile. The file must either be a DB Notefile
+    /// or inbound queue file (see `file` argument below).
+    ///
+    /// `.qo`/`.qos` Notes must be read from the Notehub event table using the
+    /// Notehub Event API.
     struct Delete {
         static constexpr string_view notecard_request = "note.get";
         static constexpr bool supports_cmd = true;
@@ -185,9 +194,7 @@ struct NoteGet {
 
         Notecard* nc_ = nullptr;
 
-        /// `true` to decrypt [encrypted inbound Notefiles](/guides-and-
-        /// tutorials/notecard-guides/encrypting-and-decrypting-data-with-the-
-        /// notecard).
+        /// `true` to decrypt encrypted inbound Notefiles.
         struct decrypt_t : Field<bool> {
             using Field<bool>::Field;
             using Field<bool>::operator=;
@@ -242,6 +249,7 @@ struct NoteGet {
         std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
         uint8_t extras_count_ = 0;
 
+        /// Response containing a Note retrieved from a Notefile.
         struct Response {
             /// The payload, if contained in the Note.
             note::string_view payload{};

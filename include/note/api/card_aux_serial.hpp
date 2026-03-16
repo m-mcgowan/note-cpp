@@ -20,6 +20,8 @@ namespace note::api {
 
 
 
+/// Configure various uses of the AUXTX and AUXRX pins on the Notecard's edge
+/// connector.
 struct CardAuxSerial {
     static constexpr string_view notecard_request = "card.aux.serial";
     static constexpr bool supports_cmd = true;
@@ -48,7 +50,7 @@ struct CardAuxSerial {
     /// receive buffer minus `1`, which represents the number of bytes the host
     /// can absorb before the sender must delay due to the absence of flow
     /// control. For example, `note-arduino`` uses a buffer size of
-    /// `(SERIAL_RX_BUFFER_SIZE - 1)`.
+    /// `(SERIALRXBUFFER_SIZE - 1)`.
     struct max_t : Field<int32_t> {
         using Field<int32_t>::Field;
         using Field<int32_t>::operator=;
@@ -130,6 +132,7 @@ struct CardAuxSerial {
     std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
     uint8_t extras_count_ = 0;
 
+    /// Successful response
     struct Response {
         /// The current AUX `mode`.
         note::string_view mode{};

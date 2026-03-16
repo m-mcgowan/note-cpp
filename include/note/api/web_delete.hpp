@@ -20,6 +20,8 @@ namespace note::api {
 
 
 
+/// Performs a simple HTTP or HTTPS `DELETE` request against an external
+/// endpoint, and returns the response to the Notecard.
 struct WebDelete {
     static constexpr string_view notecard_request = "web.delete";
     static constexpr bool supports_cmd = true;
@@ -49,13 +51,8 @@ struct WebDelete {
         using Field<note::string_view>::operator=;
         WebDelete& operator()(note::string_view v);
     } content{};
-    /// The name of the [local-only Database
-    /// Notefile](https://dev.blues.io/notecard/notecard-walkthrough/inbound-
-    /// requests-and-shared-data/#using-database-notefiles-for-local-only-state)
-    /// (`.dbx`) to be used if the web request is issued
-    /// [asynchronously](https://dev.blues.io/notecard/notecard-walkthrough/web-
-    /// transactions/#using-web-transactions-asynchronously) and you wish to
-    /// store the response.
+    /// The name of the local-only Database Notefile (`.dbx`) to be used if the
+    /// web request is issued asynchronously and you wish to store the response.
     struct file_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
@@ -121,6 +118,8 @@ struct WebDelete {
     std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
     uint8_t extras_count_ = 0;
 
+    /// Response containing the result of an HTTP or HTTPS DELETE request to an
+    /// external endpoint.
     struct Response {
         /// A base64-encoded binary payload from the external service, if any.
         /// The maximum response size from the service is 8192 bytes.

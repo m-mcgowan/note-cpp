@@ -20,6 +20,8 @@ namespace note::api {
 
 
 
+/// The `card.power` API is used to configure a connected Mojo device or to
+/// manually request power consumption readings in firmware.
 struct CardPower {
 
     struct Get {
@@ -69,6 +71,8 @@ struct CardPower {
         std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
         uint8_t extras_count_ = 0;
 
+        /// Response containing power consumption readings and environmental
+        /// data from the Notecard.
         struct Response {
             /// The cumulative number of milliamp hours (mAh) consumed. You can
             /// reset this number with this request's `reset` argument.
@@ -133,6 +137,8 @@ struct CardPower {
 
     };
 
+    /// The `card.power` API is used to configure a connected Mojo device or to
+    /// manually request power consumption readings in firmware.
     struct Set {
         static constexpr string_view notecard_request = "card.power";
         static constexpr bool supports_cmd = true;
@@ -180,6 +186,8 @@ struct CardPower {
         std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
         uint8_t extras_count_ = 0;
 
+        /// Response containing power consumption readings and environmental
+        /// data from the Notecard.
         struct Response {
             /// The cumulative number of milliamp hours (mAh) consumed. You can
             /// reset this number with this request's `reset` argument.
@@ -244,6 +252,8 @@ struct CardPower {
 
     };
 
+    /// The `card.power` API is used to configure a connected Mojo device or to
+    /// manually request power consumption readings in firmware.
     struct Delete {
         static constexpr string_view notecard_request = "card.power";
         static constexpr bool supports_cmd = true;
@@ -284,6 +294,8 @@ struct CardPower {
         std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
         uint8_t extras_count_ = 0;
 
+        /// Response containing power consumption readings and environmental
+        /// data from the Notecard.
         struct Response {
             /// The cumulative number of milliamp hours (mAh) consumed. You can
             /// reset this number with this request's `reset` argument.

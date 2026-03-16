@@ -20,6 +20,8 @@ namespace note::api {
 
 
 
+/// Specifies the connectivity protocol to prioritize on the Notecard Cell+WiFi,
+/// or when using NTN mode with Starnote and a compatible Notecard.
 struct CardTransport {
     static constexpr string_view notecard_request = "card.transport";
     static constexpr bool supports_cmd = true;
@@ -32,9 +34,7 @@ struct CardTransport {
     /// Set to `true` to allow adding Notes to non-compact Notefiles while
     /// connected over a non-terrestrial network.
     ///
-    /// See [Define NTN vs non-NTN
-    /// Templates](https://dev.blues.io/starnote/satellite-best-
-    /// practices/#define-ntn-vs-non-ntn-templates).
+    /// See Define NTN vs non-NTN Templates.
     ///
     /// @since firmware 7.2.1
 #if NOTE_API_VERSION < NOTE_VERSION(7, 2, 1)
@@ -63,6 +63,7 @@ struct CardTransport {
     [[deprecated("requires firmware >= 5.3.1")]]
 #endif
     struct seconds_t : Field<note::Seconds> {
+        /// Reset to default
         static constexpr note::Seconds reset{ -1 };
         using Field<note::Seconds>::Field;
         using Field<note::Seconds>::operator=;
@@ -84,6 +85,16 @@ struct CardTransport {
     } umin{};
 #endif
 
+    // Valid values for 'method':
+    //   "-" — Resets the transport mode to the device default.
+    //   "cell" — Enables **cellular only** on the device.
+    //   "cell-ntn" — Prioritizes cellular connectivity while falling back to NTN if a cell...
+    //   "dual-wifi-cell" — Deprecated form of `"wifi-cell"`
+    //   "ntn" — Enables **NTN (Non-Terrestrial Network)** mode on the device for use ...
+    //   "wifi" — Enables **WiFi only** on the device.
+    //   "wifi-cell" — Prioritizes WiFi connectivity while falling back to cellular if a WiF...
+    //   "wifi-cell-ntn" — Prioritizes WiFi connectivity while falling back to cellular, and las...
+    //   "wifi-ntn" — Prioritizes WiFi connectivity while falling back to NTN if a WiFi con...
     // consteval: only callable at compile time (C++20)
 #if __cplusplus >= 202002L
     static consteval note::string_view validatedMethod(const char* v) {
@@ -126,6 +137,8 @@ struct CardTransport {
     std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
     uint8_t extras_count_ = 0;
 
+    /// Response containing the current connectivity method configuration of the
+    /// Notecard.
     struct Response {
         /// The connectivity method currently enabled on the device.
         note::string_view method{};

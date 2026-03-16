@@ -19,6 +19,9 @@ namespace note::api {
 
 
 
+/// Provides the current VMODEM_P voltage level on the Notecard, and provides
+/// information about historical voltage trends. When used with the mode
+/// argument, configures voltage thresholds based on how the device is powered.
 struct CardVoltage {
 
     struct Get {
@@ -59,14 +62,13 @@ struct CardVoltage {
             CardVoltage::Get& operator()(int32_t v);
         } hours{};
         /// Used to set voltage thresholds based on how the Notecard will be
-        /// powered, and which can be used to [configure voltage-variable
-        /// Notecard behavior](/notecard/notecard-walkthrough/low-power-
-        /// design#low-power-design). Each value is shorthand that assigns a
-        /// battery voltage reading to a given device state like `high`,
-        /// `normal`, `low`, and `dead`.
+        /// powered, and which can be used to configure voltage-variable
+        /// Notecard behavior. Each value is shorthand that assigns a battery
+        /// voltage reading to a given device state like `high`, `normal`,
+        /// `low`, and `dead`.
         ///
-        /// **NOTE:** Setting voltage thresholds is not supported on the
-        /// Notecard XP.
+        /// NOTE: Setting voltage thresholds is not supported on the Notecard
+        /// XP.
         // mode: default | lipo | l91 | alkaline | tad | lic | ?
         struct mode_t : Field<note::string_view> {
             using Field<note::string_view>::Field;
@@ -141,6 +143,14 @@ struct CardVoltage {
             CardVoltage::Get& operator()(double v);
         } vmin{};
 
+        // Valid values for 'mode':
+        //   "default" — Default behavior. Equivalent to `normal:2.5;dead:0`.
+        //   "lipo" — LiPo batteries. Equivalent to `usb:4.6;high:4.0;normal:3.5;low:3.2;dead:0`.
+        //   "l91" — L91 batteries. Equivalent to `high:5.0;normal:4.5;low:0`.
+        //   "alkaline" — Alkaline batteries. Equivalent to `usb:4.6;high:4.2;normal:3.6;low:0`.
+        //   "tad" — Tadiran HLC batteries. Equivalent to `usb:4.6;normal:3.2;low:0`.
+        //   "lic" — Lithium-ion capacitors. Equivalent to `usb:4.6;high:3.8;normal:3.1;low:0`.
+        //   "?" — Query the Notecard for its currently-set thresholds.
         // consteval: only callable at compile time (C++20)
 #if __cplusplus >= 202002L
         static consteval note::string_view validatedMode(const char* v) {
@@ -190,6 +200,8 @@ struct CardVoltage {
         std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
         uint8_t extras_count_ = 0;
 
+        /// Response containing current voltage information and historical trend
+        /// analysis.
         struct Response {
             /// Change of moving average in the last 24 hours, if relevant to
             /// the time period analyzed.
@@ -351,6 +363,10 @@ struct CardVoltage {
 
     };
 
+    /// Provides the current VMODEM_P voltage level on the Notecard, and
+    /// provides information about historical voltage trends. When used with the
+    /// mode argument, configures voltage thresholds based on how the device is
+    /// powered.
     struct Set {
         static constexpr string_view notecard_request = "card.voltage";
         static constexpr bool supports_cmd = true;
@@ -389,14 +405,13 @@ struct CardVoltage {
             CardVoltage::Set& operator()(int32_t v);
         } hours{};
         /// Used to set voltage thresholds based on how the Notecard will be
-        /// powered, and which can be used to [configure voltage-variable
-        /// Notecard behavior](/notecard/notecard-walkthrough/low-power-
-        /// design#low-power-design). Each value is shorthand that assigns a
-        /// battery voltage reading to a given device state like `high`,
-        /// `normal`, `low`, and `dead`.
+        /// powered, and which can be used to configure voltage-variable
+        /// Notecard behavior. Each value is shorthand that assigns a battery
+        /// voltage reading to a given device state like `high`, `normal`,
+        /// `low`, and `dead`.
         ///
-        /// **NOTE:** Setting voltage thresholds is not supported on the
-        /// Notecard XP.
+        /// NOTE: Setting voltage thresholds is not supported on the Notecard
+        /// XP.
         // mode: default | lipo | l91 | alkaline | tad | lic | ?
         struct mode_t : Field<note::string_view> {
             using Field<note::string_view>::Field;
@@ -471,6 +486,14 @@ struct CardVoltage {
             CardVoltage::Set& operator()(double v);
         } vmin{};
 
+        // Valid values for 'mode':
+        //   "default" — Default behavior. Equivalent to `normal:2.5;dead:0`.
+        //   "lipo" — LiPo batteries. Equivalent to `usb:4.6;high:4.0;normal:3.5;low:3.2;dead:0`.
+        //   "l91" — L91 batteries. Equivalent to `high:5.0;normal:4.5;low:0`.
+        //   "alkaline" — Alkaline batteries. Equivalent to `usb:4.6;high:4.2;normal:3.6;low:0`.
+        //   "tad" — Tadiran HLC batteries. Equivalent to `usb:4.6;normal:3.2;low:0`.
+        //   "lic" — Lithium-ion capacitors. Equivalent to `usb:4.6;high:3.8;normal:3.1;low:0`.
+        //   "?" — Query the Notecard for its currently-set thresholds.
         // consteval: only callable at compile time (C++20)
 #if __cplusplus >= 202002L
         static consteval note::string_view validatedMode(const char* v) {
@@ -520,6 +543,8 @@ struct CardVoltage {
         std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
         uint8_t extras_count_ = 0;
 
+        /// Response containing current voltage information and historical trend
+        /// analysis.
         struct Response {
             /// Change of moving average in the last 24 hours, if relevant to
             /// the time period analyzed.

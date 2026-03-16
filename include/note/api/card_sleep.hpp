@@ -20,6 +20,12 @@ namespace note::api {
 
 
 
+/// Allows the ESP32-based Notecard WiFi v2 to fall back to a low current draw
+/// when idle (this behavior differs from the STM32-based Notecards that have a
+/// `STOP` mode where UART and I2C may still operate). Note that this power
+/// state is not available if the Notecard is plugged in via USB.
+///
+/// Read more in the guide on using Deep Sleep Mode on Notecard WiFi v2.
 struct CardSleep {
     static constexpr string_view notecard_request = "card.sleep";
     static constexpr bool supports_cmd = true;
@@ -53,12 +59,16 @@ struct CardSleep {
     /// The number of seconds the Notecard will wait before entering sleep mode
     /// (minimum value is 30).
     struct seconds_t : Field<note::Seconds> {
+        /// Reset to default behavior
         static constexpr note::Seconds reset{ -1 };
         using Field<note::Seconds>::Field;
         using Field<note::Seconds>::operator=;
         CardSleep& operator()(note::Seconds v);
     } seconds{};
 
+    // Valid values for 'mode':
+    //   "accel" — Wake from deep sleep on any movement detected by the onboard accelerometer.
+    //   "-accel" — Reset to the default setting.
     // consteval: only callable at compile time (C++20)
 #if __cplusplus >= 202002L
     static consteval note::string_view validatedMode(const char* v) {
@@ -95,6 +105,8 @@ struct CardSleep {
     std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
     uint8_t extras_count_ = 0;
 
+    /// Response containing current sleep mode configuration for Notecard WiFi
+    /// v2.
     struct Response {
         /// Returns `"accel"` if the Notecard is configured to wake from deep
         /// sleep on any movement detected by the onboard accelerometer.

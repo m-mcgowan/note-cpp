@@ -14,20 +14,59 @@
 #include <note/target.hpp>
 
 namespace note::attn {
+    /// Clear "files" events and cause the ATTN pin to go LOW. After an event
+    /// occurs or "seconds" has elapsed, the ATTN pin will then go HIGH (a.k.a.
+    /// "fires"). If "seconds" is 0, no timeout will be scheduled. If ATTN is
+    /// armed, calling `arm` again will disarm (briefly pulling ATTN HIGH), then
+    /// arm (non-idempotent).
     inline constexpr uint32_t arm = 1u << 0;
+    /// When armed, causes ATTN to fire if an AUX GPIO input changes. Disable by
+    /// using `-auxgpio`.
     inline constexpr uint32_t auxgpio = 1u << 1;
+    /// When armed, will cause ATTN to fire whenever the module connects to
+    /// cellular. Disable with `-connected`.
     inline constexpr uint32_t connected = 1u << 2;
+    /// Causes ATTN pin to go HIGH if it had been LOW.
+    ///
+    /// Passing both `"disarm"` and `"-all"` clears all ATTN monitors currently
+    /// set.
     inline constexpr uint32_t disarm = 1u << 3;
+    /// When armed, causes ATTN to fire if an environment variable changes on
+    /// the Notecard. Disable by using `-env`.
     inline constexpr uint32_t env = 1u << 4;
+    /// When armed, will cause ATTN to fire if any of the "files" are modified.
+    /// Disable by using `-files`.
     inline constexpr uint32_t files = 1u << 5;
+    /// When armed, will cause ATTN to fire whenever the Notecard GPS module
+    /// makes a position fix. Disable by using `-location`.
     inline constexpr uint32_t location = 1u << 6;
+    /// When armed, will cause ATTN to fire whenever the accelerometer detects
+    /// module motion. Disable with `-motion`.
     inline constexpr uint32_t motion = 1u << 7;
+    /// When armed, will cause ATTN to fire whenever the `card.motion.mode`
+    /// changes from "moving" to "stopped" (or vice versa). Learn how to
+    /// configure this feature in this guide.
     inline constexpr uint32_t motionchange = 1u << 8;
+    /// Will arm ATTN if not already armed. Otherwise, resets the values of
+    /// `mode`, `files`, and `seconds` specified in the initial `arm` or `rearm`
+    /// request (idempotent).
     inline constexpr uint32_t rearm = 1u << 9;
+    /// When armed, will cause ATTN to fire whenever the Notecard receives a
+    /// signal.
     inline constexpr uint32_t signal = 1u << 10;
+    /// Instruct the Notecard to pull the ATTN pin low for a period of time, and
+    /// optionally keep a payload in memory. Can be used by the host to sleep
+    /// the host MCU.
     inline constexpr uint32_t sleep = 1u << 11;
+    /// When armed, will enable USB power events firing the ATTN pin. Disable
+    /// with `-usb`.
     inline constexpr uint32_t usb = 1u << 12;
+    /// Not an "arm" mode, rather will cause the ATTN pin to go from HIGH to
+    /// LOW, then HIGH if the notecard fails to receive any JSON requests for
+    /// "seconds." In this mode, "seconds" must be >= 60.
     inline constexpr uint32_t watchdog = 1u << 13;
+    /// Instruct the Notecard to fire the ATTN pin whenever the `card.wireless`
+    /// status changes.
     inline constexpr uint32_t wireless = 1u << 14;
 } // namespace note::attn
 
@@ -39,6 +78,10 @@ namespace note::api {
 
 
 
+/// Configure hardware notifications from a Notecard to a host MCU.
+///
+/// NOTE: Requires a connection between the Notecard ATTN pin and a GPIO pin on
+/// the host MCU.
 struct CardAttn {
 
     struct Request {
@@ -49,8 +92,7 @@ struct CardAttn {
 
         Notecard* nc_ = nullptr;
 
-        /// A list of [Notefiles](https://dev.blues.io/api-
-        /// reference/glossary/#notefile) to watch for file-based interrupts.
+        /// A list of Notefiles to watch for file-based interrupts.
         struct files_t : Field<note::string_view> {
             using Field<note::string_view>::Field;
             using Field<note::string_view>::operator=;
@@ -66,20 +108,59 @@ struct CardAttn {
             CardAttn::Request& operator()(uint32_t flags);
             mode_t& add(uint32_t flag);
             mode_t& operator|=(uint32_t flag);
+            /// Clear "files" events and cause the ATTN pin to go LOW. After an
+            /// event occurs or "seconds" has elapsed, the ATTN pin will then go
+            /// HIGH (a.k.a. "fires"). If "seconds" is 0, no timeout will be
+            /// scheduled. If ATTN is armed, calling `arm` again will disarm
+            /// (briefly pulling ATTN HIGH), then arm (non-idempotent).
             mode_t& arm();
+            /// When armed, causes ATTN to fire if an AUX GPIO input changes.
+            /// Disable by using `-auxgpio`.
             mode_t& auxgpio();
+            /// When armed, will cause ATTN to fire whenever the module connects
+            /// to cellular. Disable with `-connected`.
             mode_t& connected();
+            /// Causes ATTN pin to go HIGH if it had been LOW.
+            ///
+            /// Passing both `"disarm"` and `"-all"` clears all ATTN monitors
+            /// currently set.
             mode_t& disarm();
+            /// When armed, causes ATTN to fire if an environment variable
+            /// changes on the Notecard. Disable by using `-env`.
             mode_t& env();
+            /// When armed, will cause ATTN to fire if any of the "files" are
+            /// modified. Disable by using `-files`.
             mode_t& files();
+            /// When armed, will cause ATTN to fire whenever the Notecard GPS
+            /// module makes a position fix. Disable by using `-location`.
             mode_t& location();
+            /// When armed, will cause ATTN to fire whenever the accelerometer
+            /// detects module motion. Disable with `-motion`.
             mode_t& motion();
+            /// When armed, will cause ATTN to fire whenever the
+            /// `card.motion.mode` changes from "moving" to "stopped" (or vice
+            /// versa). Learn how to configure this feature in this guide.
             mode_t& motionchange();
+            /// Will arm ATTN if not already armed. Otherwise, resets the values
+            /// of `mode`, `files`, and `seconds` specified in the initial `arm`
+            /// or `rearm` request (idempotent).
             mode_t& rearm();
+            /// When armed, will cause ATTN to fire whenever the Notecard
+            /// receives a signal.
             mode_t& signal();
+            /// Instruct the Notecard to pull the ATTN pin low for a period of
+            /// time, and optionally keep a payload in memory. Can be used by
+            /// the host to sleep the host MCU.
             mode_t& sleep();
+            /// When armed, will enable USB power events firing the ATTN pin.
+            /// Disable with `-usb`.
             mode_t& usb();
+            /// Not an "arm" mode, rather will cause the ATTN pin to go from
+            /// HIGH to LOW, then HIGH if the notecard fails to receive any JSON
+            /// requests for "seconds." In this mode, "seconds" must be >= 60.
             mode_t& watchdog();
+            /// Instruct the Notecard to fire the ATTN pin whenever the
+            /// `card.wireless` status changes.
             mode_t& wireless();
             static constexpr note::FlagDef flag_defs_[] = {
                 { note::attn::arm, "arm" },
@@ -130,10 +211,10 @@ struct CardAttn {
         } payload{};
         /// To set an ATTN timeout when arming, or when using `sleep`.
         ///
-        /// _**NOTE:** When the Notecard is in `continuous` mode, the `seconds`
+        /// NOTE: When the Notecard is in `continuous` mode, the `seconds`
         /// timeout is serviced by a routine that wakes every 15 seconds. You
         /// can predict when the device will wake, by rounding up to the nearest
-        /// 15 second interval._
+        /// 15 second interval.
         struct seconds_t : Field<note::Seconds> {
             using Field<note::Seconds>::Field;
             using Field<note::Seconds>::operator=;
@@ -196,6 +277,7 @@ struct CardAttn {
         std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
         uint8_t extras_count_ = 0;
 
+        /// Successful response
         struct Response {
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
             /// This field is present and set to `true` if ATTN processing has
@@ -312,6 +394,7 @@ struct CardAttn {
 
     };
 
+    /// Arm ATTN pin for interrupt on an event trigger.
     struct Arm {
         static constexpr string_view notecard_request = "card.attn";
         static constexpr bool supports_cmd = true;
@@ -320,8 +403,7 @@ struct CardAttn {
 
         Notecard* nc_ = nullptr;
 
-        /// A list of [Notefiles](https://dev.blues.io/api-
-        /// reference/glossary/#notefile) to watch for file-based interrupts.
+        /// A list of Notefiles to watch for file-based interrupts.
         struct files_t : Field<note::string_view> {
             using Field<note::string_view>::Field;
             using Field<note::string_view>::operator=;
@@ -337,20 +419,59 @@ struct CardAttn {
             CardAttn::Arm& operator()(uint32_t flags);
             mode_t& add(uint32_t flag);
             mode_t& operator|=(uint32_t flag);
+            /// Clear "files" events and cause the ATTN pin to go LOW. After an
+            /// event occurs or "seconds" has elapsed, the ATTN pin will then go
+            /// HIGH (a.k.a. "fires"). If "seconds" is 0, no timeout will be
+            /// scheduled. If ATTN is armed, calling `arm` again will disarm
+            /// (briefly pulling ATTN HIGH), then arm (non-idempotent).
             mode_t& arm();
+            /// When armed, causes ATTN to fire if an AUX GPIO input changes.
+            /// Disable by using `-auxgpio`.
             mode_t& auxgpio();
+            /// When armed, will cause ATTN to fire whenever the module connects
+            /// to cellular. Disable with `-connected`.
             mode_t& connected();
+            /// Causes ATTN pin to go HIGH if it had been LOW.
+            ///
+            /// Passing both `"disarm"` and `"-all"` clears all ATTN monitors
+            /// currently set.
             mode_t& disarm();
+            /// When armed, causes ATTN to fire if an environment variable
+            /// changes on the Notecard. Disable by using `-env`.
             mode_t& env();
+            /// When armed, will cause ATTN to fire if any of the "files" are
+            /// modified. Disable by using `-files`.
             mode_t& files();
+            /// When armed, will cause ATTN to fire whenever the Notecard GPS
+            /// module makes a position fix. Disable by using `-location`.
             mode_t& location();
+            /// When armed, will cause ATTN to fire whenever the accelerometer
+            /// detects module motion. Disable with `-motion`.
             mode_t& motion();
+            /// When armed, will cause ATTN to fire whenever the
+            /// `card.motion.mode` changes from "moving" to "stopped" (or vice
+            /// versa). Learn how to configure this feature in this guide.
             mode_t& motionchange();
+            /// Will arm ATTN if not already armed. Otherwise, resets the values
+            /// of `mode`, `files`, and `seconds` specified in the initial `arm`
+            /// or `rearm` request (idempotent).
             mode_t& rearm();
+            /// When armed, will cause ATTN to fire whenever the Notecard
+            /// receives a signal.
             mode_t& signal();
+            /// Instruct the Notecard to pull the ATTN pin low for a period of
+            /// time, and optionally keep a payload in memory. Can be used by
+            /// the host to sleep the host MCU.
             mode_t& sleep();
+            /// When armed, will enable USB power events firing the ATTN pin.
+            /// Disable with `-usb`.
             mode_t& usb();
+            /// Not an "arm" mode, rather will cause the ATTN pin to go from
+            /// HIGH to LOW, then HIGH if the notecard fails to receive any JSON
+            /// requests for "seconds." In this mode, "seconds" must be >= 60.
             mode_t& watchdog();
+            /// Instruct the Notecard to fire the ATTN pin whenever the
+            /// `card.wireless` status changes.
             mode_t& wireless();
             static constexpr note::FlagDef flag_defs_[] = {
                 { note::attn::arm, "arm" },
@@ -380,10 +501,10 @@ struct CardAttn {
         } on{};
         /// To set an ATTN timeout when arming, or when using `sleep`.
         ///
-        /// _**NOTE:** When the Notecard is in `continuous` mode, the `seconds`
+        /// NOTE: When the Notecard is in `continuous` mode, the `seconds`
         /// timeout is serviced by a routine that wakes every 15 seconds. You
         /// can predict when the device will wake, by rounding up to the nearest
-        /// 15 second interval._
+        /// 15 second interval.
         struct seconds_t : Field<note::Seconds> {
             using Field<note::Seconds>::Field;
             using Field<note::Seconds>::operator=;
@@ -417,6 +538,7 @@ struct CardAttn {
         std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
         uint8_t extras_count_ = 0;
 
+        /// Arm ATTN pin for interrupt on an event trigger.
         struct Response {
             /// Reflects the state of the attention pin. The `set` field is
             /// `true` when the attention pin is `HIGH`, otherwise the `set`
@@ -473,6 +595,7 @@ struct CardAttn {
 
     };
 
+    /// Configure ATTN as a watchdog timer.
     struct Watchdog {
         static constexpr string_view notecard_request = "card.attn";
         static constexpr bool supports_cmd = true;
@@ -483,10 +606,10 @@ struct CardAttn {
 
         /// To set an ATTN timeout when arming, or when using `sleep`.
         ///
-        /// _**NOTE:** When the Notecard is in `continuous` mode, the `seconds`
+        /// NOTE: When the Notecard is in `continuous` mode, the `seconds`
         /// timeout is serviced by a routine that wakes every 15 seconds. You
         /// can predict when the device will wake, by rounding up to the nearest
-        /// 15 second interval._
+        /// 15 second interval.
         struct seconds_t : Field<note::Seconds> {
             using Field<note::Seconds>::Field;
             using Field<note::Seconds>::operator=;
@@ -534,6 +657,7 @@ struct CardAttn {
 
     };
 
+    /// Instruct host MCU to sleep with optional payload.
     struct Sleep {
         static constexpr string_view notecard_request = "card.attn";
         static constexpr bool supports_cmd = true;
@@ -551,10 +675,10 @@ struct CardAttn {
         } payload{};
         /// To set an ATTN timeout when arming, or when using `sleep`.
         ///
-        /// _**NOTE:** When the Notecard is in `continuous` mode, the `seconds`
+        /// NOTE: When the Notecard is in `continuous` mode, the `seconds`
         /// timeout is serviced by a routine that wakes every 15 seconds. You
         /// can predict when the device will wake, by rounding up to the nearest
-        /// 15 second interval._
+        /// 15 second interval.
         struct seconds_t : Field<note::Seconds> {
             using Field<note::Seconds>::Field;
             using Field<note::Seconds>::operator=;
@@ -604,6 +728,7 @@ struct CardAttn {
 
     };
 
+    /// Retrieve stored payload after sleep.
     struct Retrieve {
         static constexpr string_view notecard_request = "card.attn";
         static constexpr bool supports_cmd = false;
@@ -635,6 +760,7 @@ struct CardAttn {
         std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
         uint8_t extras_count_ = 0;
 
+        /// Retrieve stored payload after sleep.
         struct Response {
             /// When using `sleep` mode with a `payload`, the payload provided
             /// by the host to the Notecard.
@@ -695,6 +821,7 @@ struct CardAttn {
 
     };
 
+    /// Disarm all attention interrupts.
     struct Disarm {
         static constexpr string_view notecard_request = "card.attn";
         static constexpr bool supports_cmd = true;
@@ -742,6 +869,7 @@ struct CardAttn {
 
     };
 
+    /// Query current ATTN state and configuration.
     struct Query {
         static constexpr string_view notecard_request = "card.attn";
         static constexpr bool supports_cmd = false;
@@ -791,6 +919,7 @@ struct CardAttn {
         std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
         uint8_t extras_count_ = 0;
 
+        /// Query current ATTN state and configuration.
         struct Response {
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
             /// This field is present and set to `true` if ATTN processing has

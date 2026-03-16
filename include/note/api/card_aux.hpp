@@ -20,6 +20,9 @@ namespace note::api {
 
 
 
+/// Configure various uses of the general-purpose I/O (GPIO) pins `AUX1`-`AUX4`
+/// on the Notecard edge connector for tracking applications and simple GPIO
+/// sensing and counting tasks.
 struct CardAux {
     static constexpr string_view notecard_request = "card.aux";
     static constexpr bool supports_cmd = true;
@@ -217,6 +220,22 @@ struct CardAux {
     }
 #endif
 #endif
+    // Valid values for 'mode':
+    //   "dfu" — Enable the Notecard's `AUX1` pin for [Outboard Firmware Updates](/not...
+    //   "gpio" — Configure the Notecard for GPIO mode with `AUX1` OFF, `AUX2` as an ou...
+    //   "led" — When wiring LEDs to the Notecard's AUX pins (as is done when using mo...
+    //   "monitor" — If you plan to place your Notecard in an enclosure, monitor mode can ...
+    //   "motion" — Supplement autonomous tracking with digital inputs and a status output.
+    //   "neo" — When wiring a NeoPixel or NeoPixel strip to the Notecard's AUX2 pin (...
+    //   "neo-monitor" — Similar to monitor mode, neo-monitor mode supports NeoPixel LEDs that...
+    //   "off" — Disable AUX mode.
+    //   "rgb" — When wiring an RGB LED to the Notecard's AUX2-4 pins, you may use thi...
+    //   "rgb-monitor" — Similar to monitor mode, `rgb-monitor` mode supports a single RGB LED...
+    //   "track" — Enhance Notes in the `_track.qo` Notefile with temperature, pressure,...
+    //   "track-monitor" — Combines the functionality of the `track` and `monitor` AUX modes.
+    //   "track-neo-monitor" — Combines `track` and `monitor` modes while also supporting NeoPixel L...
+    //   "track-rgb-monitor" — Combines `track` and `monitor` modes while also supporting a single R...
+    //   "-" — Resets the AUX mode to its default value (`off`).
     // consteval: only callable at compile time (C++20)
 #if __cplusplus >= 202002L
     static consteval note::string_view validatedMode(const char* v) {
@@ -291,6 +310,7 @@ struct CardAux {
     std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
     uint8_t extras_count_ = 0;
 
+    /// Successful response
     struct Response {
         /// The current AUX `mode`, or `off` if not set.
         note::string_view mode{};

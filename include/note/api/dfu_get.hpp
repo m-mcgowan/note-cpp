@@ -19,6 +19,8 @@ namespace note::api {
 
 
 
+/// Retrieves downloaded firmware data from the Notecard for use with IAP host
+/// MCU firmware updates.
 struct DfuGet {
     static constexpr string_view notecard_request = "dfu.get";
     static constexpr bool supports_cmd = true;
@@ -38,9 +40,7 @@ struct DfuGet {
     /// will include `cobs`, `length`, and `status` (MD5 hash) fields instead of
     /// `payload`.
     ///
-    /// Learn more in this guide on [Sending and Receiving Large Binary
-    /// Objects](https://dev.blues.io/guides-and-tutorials/notecard-
-    /// guides/sending-and-receiving-large-binary-objects/).
+    /// Learn more in this guide on Sending and Receiving Large Binary Objects.
     struct binary_t : Field<bool> {
         using Field<bool>::Field;
         using Field<bool>::operator=;
@@ -87,6 +87,8 @@ struct DfuGet {
     std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
     uint8_t extras_count_ = 0;
 
+    /// Response containing base64-encoded firmware data retrieved from the
+    /// Notecard for use with host MCU firmware updates.
     struct Response {
         /// When `binary` is `true` in the request, this field contains the COBS
         /// encoded length of the firmware data in the binary I/O buffer.

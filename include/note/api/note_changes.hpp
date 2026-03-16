@@ -19,6 +19,7 @@ namespace note::api {
 
 
 
+/// Used to incrementally retrieve changes within a specific Notefile.
 struct NoteChanges {
 
     struct Get {
@@ -107,6 +108,7 @@ struct NoteChanges {
         std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
         uint8_t extras_count_ = 0;
 
+        /// Response containing incremental changes from a specific Notefile.
         struct Response {
             /// The number of pending changes in the Notefile.
             int32_t changes{};
@@ -169,6 +171,7 @@ struct NoteChanges {
 
     };
 
+    /// Used to incrementally retrieve changes within a specific Notefile.
     struct Delete {
         static constexpr string_view notecard_request = "note.changes";
         static constexpr bool supports_cmd = true;
@@ -251,6 +254,7 @@ struct NoteChanges {
         std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
         uint8_t extras_count_ = 0;
 
+        /// Response containing incremental changes from a specific Notefile.
         struct Response {
             /// The number of pending changes in the Notefile.
             int32_t changes{};

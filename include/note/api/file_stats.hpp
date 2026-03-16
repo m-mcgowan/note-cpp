@@ -19,6 +19,7 @@ namespace note::api {
 
 
 
+/// Gets resource statistics about local Notefiles.
 struct FileStats {
     static constexpr string_view notecard_request = "file.stats";
     static constexpr bool supports_cmd = true;
@@ -58,6 +59,7 @@ struct FileStats {
     std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
     uint8_t extras_count_ = 0;
 
+    /// Response containing resource statistics about local Notefiles.
     struct Response {
         /// The number of Notes across all Notefiles pending sync.
         int32_t changes{};

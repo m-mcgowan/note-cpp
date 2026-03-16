@@ -19,6 +19,10 @@ namespace note::api {
 
 
 
+/// View the status of the binary storage area of the Notecard and optionally
+/// clear any data and related `card.binary` variables. See the guide on Sending
+/// and Receiving Large Binary Objects for best practices when using
+/// `card.binary`.
 struct CardBinary {
 
     struct Get {
@@ -61,6 +65,7 @@ struct CardBinary {
         std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
         uint8_t extras_count_ = 0;
 
+        /// Successful response
         struct Response {
             /// The size of COBS-encoded data stored in the reserved area
             /// (without the trailing ).
@@ -147,6 +152,10 @@ struct CardBinary {
 
     };
 
+    /// View the status of the binary storage area of the Notecard and
+    /// optionally clear any data and related `card.binary` variables. See the
+    /// guide on Sending and Receiving Large Binary Objects for best practices
+    /// when using `card.binary`.
     struct Delete {
         static constexpr string_view notecard_request = "card.binary";
         static constexpr bool supports_cmd = true;
@@ -179,6 +188,7 @@ struct CardBinary {
         std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
         uint8_t extras_count_ = 0;
 
+        /// Successful response
         struct Response {
             /// The size of COBS-encoded data stored in the reserved area
             /// (without the trailing ).

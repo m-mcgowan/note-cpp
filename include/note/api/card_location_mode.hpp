@@ -20,6 +20,8 @@ namespace note::api {
 
 
 
+/// Sets location-related configuration settings. Retrieves the current location
+/// mode when passed with no argument.
 struct CardLocationMode {
 
     struct Get {
@@ -38,24 +40,20 @@ struct CardLocationMode {
             CardLocationMode::Get& operator()(bool v);
         } delete_{};
         /// When in periodic or continuous mode, providing this value enables
-        /// [geofencing](/notecard/notecard-walkthrough/time-and-location-
-        /// requests#geofencing-with-the-notecard). The value you provide for
-        /// this argument should be the latitude of the center of the geofence,
-        /// in degrees. When in fixed mode, the value you provide for this
-        /// argument should be the latitude location of the device itself, in
-        /// degrees.
+        /// geofencing. The value you provide for this argument should be the
+        /// latitude of the center of the geofence, in degrees. When in fixed
+        /// mode, the value you provide for this argument should be the latitude
+        /// location of the device itself, in degrees.
         struct lat_t : Field<double> {
             using Field<double>::Field;
             using Field<double>::operator=;
             CardLocationMode::Get& operator()(double v);
         } lat{};
         /// When in periodic or continuous mode, providing this value enables
-        /// [geofencing](/notecard/notecard-walkthrough/time-and-location-
-        /// requests#geofencing-with-the-notecard). The value you provide for
-        /// this argument should be the longitude of the center of the geofence,
-        /// in degrees. When in fixed mode, the value you provide for this
-        /// argument should be the longitude location of the device itself, in
-        /// degrees.
+        /// geofencing. The value you provide for this argument should be the
+        /// longitude of the center of the geofence, in degrees. When in fixed
+        /// mode, the value you provide for this argument should be the
+        /// longitude location of the device itself, in degrees.
         struct lon_t : Field<double> {
             using Field<double>::Field;
             using Field<double>::operator=;
@@ -87,6 +85,7 @@ struct CardLocationMode {
         /// of sustained movement the Notecard will leave its onboard GPS/GNSS
         /// on continuously to avoid powering the module on and off repeatedly.
         struct seconds_t : Field<note::Seconds> {
+            /// Reset to default
             static constexpr note::Seconds reset{ -1 };
             using Field<note::Seconds>::Field;
             using Field<note::Seconds>::operator=;
@@ -114,6 +113,11 @@ struct CardLocationMode {
             CardLocationMode::Get& operator()(note::string_view v);
         } vseconds{};
 
+        // Valid values for 'mode':
+        //   "off" — Turns location mode off. Approximate location may still be [ascertain...
+        //   "periodic" — Samples location at a specified interval, if the device has moved.
+        //   "continuous" — Enables the Notecard's onboard GPS/GNSS module for continuous samplin...
+        //   "fixed" — Reports the location as a fixed location using the specified `lat` an...
         // consteval: only callable at compile time (C++20)
 #if __cplusplus >= 202002L
         static consteval note::string_view validatedMode(const char* v) {
@@ -157,6 +161,7 @@ struct CardLocationMode {
         std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
         uint8_t extras_count_ = 0;
 
+        /// Successful response
         struct Response {
             /// If geofence is enabled, the geofence center latitude in degrees.
             double lat{};
@@ -290,6 +295,8 @@ struct CardLocationMode {
 
     };
 
+    /// Sets location-related configuration settings. Retrieves the current
+    /// location mode when passed with no argument.
     struct Set {
         static constexpr string_view notecard_request = "card.location.mode";
         static constexpr bool supports_cmd = true;
@@ -306,24 +313,20 @@ struct CardLocationMode {
             CardLocationMode::Set& operator()(bool v);
         } delete_{};
         /// When in periodic or continuous mode, providing this value enables
-        /// [geofencing](/notecard/notecard-walkthrough/time-and-location-
-        /// requests#geofencing-with-the-notecard). The value you provide for
-        /// this argument should be the latitude of the center of the geofence,
-        /// in degrees. When in fixed mode, the value you provide for this
-        /// argument should be the latitude location of the device itself, in
-        /// degrees.
+        /// geofencing. The value you provide for this argument should be the
+        /// latitude of the center of the geofence, in degrees. When in fixed
+        /// mode, the value you provide for this argument should be the latitude
+        /// location of the device itself, in degrees.
         struct lat_t : Field<double> {
             using Field<double>::Field;
             using Field<double>::operator=;
             CardLocationMode::Set& operator()(double v);
         } lat{};
         /// When in periodic or continuous mode, providing this value enables
-        /// [geofencing](/notecard/notecard-walkthrough/time-and-location-
-        /// requests#geofencing-with-the-notecard). The value you provide for
-        /// this argument should be the longitude of the center of the geofence,
-        /// in degrees. When in fixed mode, the value you provide for this
-        /// argument should be the longitude location of the device itself, in
-        /// degrees.
+        /// geofencing. The value you provide for this argument should be the
+        /// longitude of the center of the geofence, in degrees. When in fixed
+        /// mode, the value you provide for this argument should be the
+        /// longitude location of the device itself, in degrees.
         struct lon_t : Field<double> {
             using Field<double>::Field;
             using Field<double>::operator=;
@@ -355,6 +358,7 @@ struct CardLocationMode {
         /// of sustained movement the Notecard will leave its onboard GPS/GNSS
         /// on continuously to avoid powering the module on and off repeatedly.
         struct seconds_t : Field<note::Seconds> {
+            /// Reset to default
             static constexpr note::Seconds reset{ -1 };
             using Field<note::Seconds>::Field;
             using Field<note::Seconds>::operator=;
@@ -382,6 +386,11 @@ struct CardLocationMode {
             CardLocationMode::Set& operator()(note::string_view v);
         } vseconds{};
 
+        // Valid values for 'mode':
+        //   "off" — Turns location mode off. Approximate location may still be [ascertain...
+        //   "periodic" — Samples location at a specified interval, if the device has moved.
+        //   "continuous" — Enables the Notecard's onboard GPS/GNSS module for continuous samplin...
+        //   "fixed" — Reports the location as a fixed location using the specified `lat` an...
         // consteval: only callable at compile time (C++20)
 #if __cplusplus >= 202002L
         static consteval note::string_view validatedMode(const char* v) {
@@ -425,6 +434,7 @@ struct CardLocationMode {
         std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
         uint8_t extras_count_ = 0;
 
+        /// Successful response
         struct Response {
             /// If geofence is enabled, the geofence center latitude in degrees.
             double lat{};
@@ -558,6 +568,7 @@ struct CardLocationMode {
 
     };
 
+    /// Enable continuous GPS/GNSS sampling.
     struct Continuous {
         static constexpr string_view notecard_request = "card.location.mode";
         static constexpr bool supports_cmd = true;
@@ -615,6 +626,7 @@ struct CardLocationMode {
         std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
         uint8_t extras_count_ = 0;
 
+        /// Enable continuous GPS/GNSS sampling.
         struct Response {
             /// The current location mode.
             note::string_view mode{};
@@ -715,6 +727,7 @@ struct CardLocationMode {
 
     };
 
+    /// Enable periodic location sampling, optionally with geofencing.
     struct Periodic {
         static constexpr string_view notecard_request = "card.location.mode";
         static constexpr bool supports_cmd = true;
@@ -724,24 +737,20 @@ struct CardLocationMode {
         Notecard* nc_ = nullptr;
 
         /// When in periodic or continuous mode, providing this value enables
-        /// [geofencing](/notecard/notecard-walkthrough/time-and-location-
-        /// requests#geofencing-with-the-notecard). The value you provide for
-        /// this argument should be the latitude of the center of the geofence,
-        /// in degrees. When in fixed mode, the value you provide for this
-        /// argument should be the latitude location of the device itself, in
-        /// degrees.
+        /// geofencing. The value you provide for this argument should be the
+        /// latitude of the center of the geofence, in degrees. When in fixed
+        /// mode, the value you provide for this argument should be the latitude
+        /// location of the device itself, in degrees.
         struct lat_t : Field<double> {
             using Field<double>::Field;
             using Field<double>::operator=;
             CardLocationMode::Periodic& operator()(double v);
         } lat{};
         /// When in periodic or continuous mode, providing this value enables
-        /// [geofencing](/notecard/notecard-walkthrough/time-and-location-
-        /// requests#geofencing-with-the-notecard). The value you provide for
-        /// this argument should be the longitude of the center of the geofence,
-        /// in degrees. When in fixed mode, the value you provide for this
-        /// argument should be the longitude location of the device itself, in
-        /// degrees.
+        /// geofencing. The value you provide for this argument should be the
+        /// longitude of the center of the geofence, in degrees. When in fixed
+        /// mode, the value you provide for this argument should be the
+        /// longitude location of the device itself, in degrees.
         struct lon_t : Field<double> {
             using Field<double>::Field;
             using Field<double>::operator=;
@@ -766,6 +775,7 @@ struct CardLocationMode {
         /// of sustained movement the Notecard will leave its onboard GPS/GNSS
         /// on continuously to avoid powering the module on and off repeatedly.
         struct seconds_t : Field<note::Seconds> {
+            /// Reset to default
             static constexpr note::Seconds reset{ -1 };
             using Field<note::Seconds>::Field;
             using Field<note::Seconds>::operator=;
@@ -825,6 +835,7 @@ struct CardLocationMode {
         std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
         uint8_t extras_count_ = 0;
 
+        /// Enable periodic location sampling, optionally with geofencing.
         struct Response {
             /// If geofence is enabled, the geofence center latitude in degrees.
             double lat{};
@@ -957,6 +968,7 @@ struct CardLocationMode {
 
     };
 
+    /// Set a fixed location for the device.
     struct Fixed {
         static constexpr string_view notecard_request = "card.location.mode";
         static constexpr bool supports_cmd = true;
@@ -966,24 +978,20 @@ struct CardLocationMode {
         Notecard* nc_ = nullptr;
 
         /// When in periodic or continuous mode, providing this value enables
-        /// [geofencing](/notecard/notecard-walkthrough/time-and-location-
-        /// requests#geofencing-with-the-notecard). The value you provide for
-        /// this argument should be the latitude of the center of the geofence,
-        /// in degrees. When in fixed mode, the value you provide for this
-        /// argument should be the latitude location of the device itself, in
-        /// degrees.
+        /// geofencing. The value you provide for this argument should be the
+        /// latitude of the center of the geofence, in degrees. When in fixed
+        /// mode, the value you provide for this argument should be the latitude
+        /// location of the device itself, in degrees.
         struct lat_t : Field<double> {
             using Field<double>::Field;
             using Field<double>::operator=;
             CardLocationMode::Fixed& operator()(double v);
         } lat{};
         /// When in periodic or continuous mode, providing this value enables
-        /// [geofencing](/notecard/notecard-walkthrough/time-and-location-
-        /// requests#geofencing-with-the-notecard). The value you provide for
-        /// this argument should be the longitude of the center of the geofence,
-        /// in degrees. When in fixed mode, the value you provide for this
-        /// argument should be the longitude location of the device itself, in
-        /// degrees.
+        /// geofencing. The value you provide for this argument should be the
+        /// longitude of the center of the geofence, in degrees. When in fixed
+        /// mode, the value you provide for this argument should be the
+        /// longitude location of the device itself, in degrees.
         struct lon_t : Field<double> {
             using Field<double>::Field;
             using Field<double>::operator=;
@@ -1015,6 +1023,7 @@ struct CardLocationMode {
         std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
         uint8_t extras_count_ = 0;
 
+        /// Set a fixed location for the device.
         struct Response {
             /// If geofence is enabled, the geofence center latitude in degrees.
             double lat{};
@@ -1083,6 +1092,8 @@ struct CardLocationMode {
 
     };
 
+    /// Sets location-related configuration settings. Retrieves the current
+    /// location mode when passed with no argument.
     struct Delete {
         static constexpr string_view notecard_request = "card.location.mode";
         static constexpr bool supports_cmd = true;
@@ -1092,24 +1103,20 @@ struct CardLocationMode {
         Notecard* nc_ = nullptr;
 
         /// When in periodic or continuous mode, providing this value enables
-        /// [geofencing](/notecard/notecard-walkthrough/time-and-location-
-        /// requests#geofencing-with-the-notecard). The value you provide for
-        /// this argument should be the latitude of the center of the geofence,
-        /// in degrees. When in fixed mode, the value you provide for this
-        /// argument should be the latitude location of the device itself, in
-        /// degrees.
+        /// geofencing. The value you provide for this argument should be the
+        /// latitude of the center of the geofence, in degrees. When in fixed
+        /// mode, the value you provide for this argument should be the latitude
+        /// location of the device itself, in degrees.
         struct lat_t : Field<double> {
             using Field<double>::Field;
             using Field<double>::operator=;
             CardLocationMode::Delete& operator()(double v);
         } lat{};
         /// When in periodic or continuous mode, providing this value enables
-        /// [geofencing](/notecard/notecard-walkthrough/time-and-location-
-        /// requests#geofencing-with-the-notecard). The value you provide for
-        /// this argument should be the longitude of the center of the geofence,
-        /// in degrees. When in fixed mode, the value you provide for this
-        /// argument should be the longitude location of the device itself, in
-        /// degrees.
+        /// geofencing. The value you provide for this argument should be the
+        /// longitude of the center of the geofence, in degrees. When in fixed
+        /// mode, the value you provide for this argument should be the
+        /// longitude location of the device itself, in degrees.
         struct lon_t : Field<double> {
             using Field<double>::Field;
             using Field<double>::operator=;
@@ -1141,6 +1148,7 @@ struct CardLocationMode {
         /// of sustained movement the Notecard will leave its onboard GPS/GNSS
         /// on continuously to avoid powering the module on and off repeatedly.
         struct seconds_t : Field<note::Seconds> {
+            /// Reset to default
             static constexpr note::Seconds reset{ -1 };
             using Field<note::Seconds>::Field;
             using Field<note::Seconds>::operator=;
@@ -1168,6 +1176,11 @@ struct CardLocationMode {
             CardLocationMode::Delete& operator()(note::string_view v);
         } vseconds{};
 
+        // Valid values for 'mode':
+        //   "off" — Turns location mode off. Approximate location may still be [ascertain...
+        //   "periodic" — Samples location at a specified interval, if the device has moved.
+        //   "continuous" — Enables the Notecard's onboard GPS/GNSS module for continuous samplin...
+        //   "fixed" — Reports the location as a fixed location using the specified `lat` an...
         // consteval: only callable at compile time (C++20)
 #if __cplusplus >= 202002L
         static consteval note::string_view validatedMode(const char* v) {
@@ -1210,6 +1223,7 @@ struct CardLocationMode {
         std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
         uint8_t extras_count_ = 0;
 
+        /// Successful response
         struct Response {
             /// If geofence is enabled, the geofence center latitude in degrees.
             double lat{};

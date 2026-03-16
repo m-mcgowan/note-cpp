@@ -19,6 +19,12 @@ namespace note::api {
 
 
 
+/// Returns binary data stored in the binary storage area of the Notecard. The
+/// response to this API command first returns the JSON-formatted response
+/// object, then the binary data.
+///
+/// See the guide on Sending and Receiving Large Binary Objects for best
+/// practices when using `card.binary`.
 struct CardBinaryGet {
     static constexpr string_view notecard_request = "card.binary.get";
     static constexpr bool supports_cmd = true;
@@ -82,6 +88,7 @@ struct CardBinaryGet {
     std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
     uint8_t extras_count_ = 0;
 
+    /// Successful response
     struct Response {
         /// If present, a string describing the error that occurred during
         /// transmission

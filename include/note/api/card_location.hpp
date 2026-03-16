@@ -19,6 +19,14 @@ namespace note::api {
 
 
 
+/// Retrieves the last known location of the Notecard and the time at which it
+/// was acquired. Use card.location.mode to configure location settings.
+///
+/// This request will return the cell tower location or triangulated location of
+/// the most recent session if a GPS/GNSS location is not available.
+///
+/// On Notecard LoRa this request can only return a location set through the
+/// card.location.mode request's `"fixed"` mode.
 struct CardLocation {
     static constexpr string_view notecard_request = "card.location";
     static constexpr bool supports_cmd = true;
@@ -50,13 +58,13 @@ struct CardLocation {
     std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
     uint8_t extras_count_ = 0;
 
+    /// Successful response
     struct Response {
         /// The number of consecutive recorded GPS/GNSS failures.
         int32_t count{};
         /// The "Dilution of Precision" value from the latest GPS/GNSS reading.
         /// The lower the value, the higher the confidence level of the reading.
-        /// Values can be interpreted in [this Wikipedia table](https://en.wikip
-        /// edia.org/wiki/Dilution_of_precision_(navigation)#Interpretation).
+        /// Values can be interpreted in this Wikipedia table#Interpretation).
         double dop{};
         /// The latitude in degrees of the last known location.
         double lat{};

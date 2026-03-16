@@ -19,6 +19,8 @@ namespace note::api {
 
 
 
+/// Get the time of the update to any environment variable managed by the
+/// Notecard.
 struct EnvModified {
     static constexpr string_view notecard_request = "env.modified";
     static constexpr bool supports_cmd = true;
@@ -68,6 +70,8 @@ struct EnvModified {
     std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
     uint8_t extras_count_ = 0;
 
+    /// Response containing the timestamp of the last environment variable
+    /// change.
     struct Response {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
         /// Timestamp indicating the last time any environment variable was

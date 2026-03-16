@@ -19,6 +19,9 @@ namespace note::api {
 
 
 
+/// Adds or updates a Note in a DB Notefile, replacing the existing body with
+/// the specified key-value pair where text, value, or flag is the key. Provides
+/// a simpler interface to the note.update API.
 struct VarSet {
     static constexpr string_view notecard_request = "var.set";
     static constexpr bool supports_cmd = true;

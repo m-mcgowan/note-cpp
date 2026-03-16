@@ -20,6 +20,8 @@ namespace note::api {
 
 
 
+/// Configures accelerometer motion monitoring parameters used when providing
+/// results to `card.motion`.
 struct CardMotionMode {
     static constexpr string_view notecard_request = "card.motion.mode";
     static constexpr bool supports_cmd = true;
@@ -28,14 +30,12 @@ struct CardMotionMode {
 
     Notecard* nc_ = nullptr;
 
-    /// If `motion` is > 0, a [card.motion](/api-reference/notecard-api/card-
-    /// requests#card-motion) request will return a `"mode"` of `"moving"` or
-    /// `"stopped"`. The `motion` value is the threshold for how many motion
-    /// events in a single bucket will trigger a motion status change.
+    /// If `motion` is > 0, a card.motion request will return a `"mode"` of
+    /// `"moving"` or `"stopped"`. The `motion` value is the threshold for how
+    /// many motion events in a single bucket will trigger a motion status
+    /// change.
     ///
-    /// Learn how to configure this feature [in this guide](/guides-and-
-    /// tutorials/notecard-guides/asset-tracking-with-gps/#wake-host-or-send-
-    /// note-on-motion-status-change).
+    /// Learn how to configure this feature in this guide.
     struct motion_t : Field<int32_t> {
         using Field<int32_t>::Field;
         using Field<int32_t>::operator=;
@@ -80,6 +80,13 @@ struct CardMotionMode {
     } stop{};
 
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1) || !defined(NOTE_API_STRICT)
+    // Valid values for 'sensitivity':
+    //   "-1" — 1.6Hz, +/-2G range, 1 milli-G sensitivity
+    //   "1" — 25Hz, +/- 16G range, 7.8 milli-G sensitivity
+    //   "2" — 25Hz, +/- 8G range, 3.9 milli-G sensitivity
+    //   "3" — 25Hz, +/- 4G range, 1.95 milli-G sensitivity
+    //   "4" — 25Hz, +/- 2G range, 1 milli-G sensitivity
+    //   "5" — 25Hz, +/- 2G range, 0.25 milli-G sensitivity
     // consteval: only callable at compile time (C++20)
 #if __cplusplus >= 202002L
     static consteval note::string_view validatedSensitivity(const char* v) {

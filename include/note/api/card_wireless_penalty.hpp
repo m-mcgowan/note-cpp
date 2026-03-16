@@ -20,6 +20,8 @@ namespace note::api {
 
 
 
+/// View the current state of a Notecard Penalty Box, manually remove the
+/// Notecard from a penalty box, or override penalty box defaults.
 struct CardWirelessPenalty {
 
     struct Get {
@@ -69,9 +71,8 @@ struct CardWirelessPenalty {
             using Field<bool>::operator=;
             CardWirelessPenalty::Get& operator()(bool v);
         } reset{};
-        /// Set to `true` to override the default settings of the [Network
-        /// Registration Failure Penalty Box](/support/understanding-notecard-
-        /// penalty-boxes/#network-registration-failure).
+        /// Set to `true` to override the default settings of the Network
+        /// Registration Failure Penalty Box.
         struct set_t : Field<bool> {
             using Field<bool>::Field;
             using Field<bool>::operator=;
@@ -107,15 +108,17 @@ struct CardWirelessPenalty {
         std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
         uint8_t extras_count_ = 0;
 
+        /// Response containing penalty box status information, including
+        /// failure counts, duration, and current penalty conditions from the
+        /// Notecard.
         struct Response {
             /// The number of consecutive network registration failures.
             int32_t count{};
             /// The time since the first network registration failure.
             int32_t minutes{};
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-            /// If the Notecard is in a [Penalty Box](/support/understanding-
-            /// notecard-penalty-boxes/), the number of seconds until the
-            /// penalty condition ends.
+            /// If the Notecard is in a Penalty Box, the number of seconds until
+            /// the penalty condition ends.
             ///
             /// @since firmware 4.1.1
 #if NOTE_API_VERSION < NOTE_VERSION(4, 1, 1)
@@ -123,10 +126,8 @@ struct CardWirelessPenalty {
 #endif
             int32_t seconds{};
 #endif
-            /// If the Notecard is in a [Penalty Box](/support/understanding-
-            /// notecard-penalty-boxes/), this field provides the associated
-            /// [Error and Status Codes](/support/notecard-error-and-status-
-            /// codes/).
+            /// If the Notecard is in a Penalty Box, this field provides the
+            /// associated Error and Status Codes.
             note::string_view status{};
 
 #pragma GCC diagnostic push
@@ -212,6 +213,8 @@ struct CardWirelessPenalty {
 
     };
 
+    /// View the current state of a Notecard Penalty Box, manually remove the
+    /// Notecard from a penalty box, or override penalty box defaults.
     struct Set {
         static constexpr string_view notecard_request = "card.wireless.penalty";
         static constexpr bool supports_cmd = true;
@@ -288,15 +291,17 @@ struct CardWirelessPenalty {
         std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
         uint8_t extras_count_ = 0;
 
+        /// Response containing penalty box status information, including
+        /// failure counts, duration, and current penalty conditions from the
+        /// Notecard.
         struct Response {
             /// The number of consecutive network registration failures.
             int32_t count{};
             /// The time since the first network registration failure.
             int32_t minutes{};
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-            /// If the Notecard is in a [Penalty Box](/support/understanding-
-            /// notecard-penalty-boxes/), the number of seconds until the
-            /// penalty condition ends.
+            /// If the Notecard is in a Penalty Box, the number of seconds until
+            /// the penalty condition ends.
             ///
             /// @since firmware 4.1.1
 #if NOTE_API_VERSION < NOTE_VERSION(4, 1, 1)
@@ -304,10 +309,8 @@ struct CardWirelessPenalty {
 #endif
             int32_t seconds{};
 #endif
-            /// If the Notecard is in a [Penalty Box](/support/understanding-
-            /// notecard-penalty-boxes/), this field provides the associated
-            /// [Error and Status Codes](/support/notecard-error-and-status-
-            /// codes/).
+            /// If the Notecard is in a Penalty Box, this field provides the
+            /// associated Error and Status Codes.
             note::string_view status{};
 
 #pragma GCC diagnostic push
@@ -393,6 +396,8 @@ struct CardWirelessPenalty {
 
     };
 
+    /// View the current state of a Notecard Penalty Box, manually remove the
+    /// Notecard from a penalty box, or override penalty box defaults.
     struct Delete {
         static constexpr string_view notecard_request = "card.wireless.penalty";
         static constexpr bool supports_cmd = true;
@@ -433,9 +438,8 @@ struct CardWirelessPenalty {
             using Field<double>::operator=;
             CardWirelessPenalty::Delete& operator()(double v);
         } rate{};
-        /// Set to `true` to override the default settings of the [Network
-        /// Registration Failure Penalty Box](/support/understanding-notecard-
-        /// penalty-boxes/#network-registration-failure).
+        /// Set to `true` to override the default settings of the Network
+        /// Registration Failure Penalty Box.
         struct set_t : Field<bool> {
             using Field<bool>::Field;
             using Field<bool>::operator=;
@@ -470,15 +474,17 @@ struct CardWirelessPenalty {
         std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
         uint8_t extras_count_ = 0;
 
+        /// Response containing penalty box status information, including
+        /// failure counts, duration, and current penalty conditions from the
+        /// Notecard.
         struct Response {
             /// The number of consecutive network registration failures.
             int32_t count{};
             /// The time since the first network registration failure.
             int32_t minutes{};
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-            /// If the Notecard is in a [Penalty Box](/support/understanding-
-            /// notecard-penalty-boxes/), the number of seconds until the
-            /// penalty condition ends.
+            /// If the Notecard is in a Penalty Box, the number of seconds until
+            /// the penalty condition ends.
             ///
             /// @since firmware 4.1.1
 #if NOTE_API_VERSION < NOTE_VERSION(4, 1, 1)
@@ -486,10 +492,8 @@ struct CardWirelessPenalty {
 #endif
             int32_t seconds{};
 #endif
-            /// If the Notecard is in a [Penalty Box](/support/understanding-
-            /// notecard-penalty-boxes/), this field provides the associated
-            /// [Error and Status Codes](/support/notecard-error-and-status-
-            /// codes/).
+            /// If the Notecard is in a Penalty Box, this field provides the
+            /// associated Error and Status Codes.
             note::string_view status{};
 
 #pragma GCC diagnostic push

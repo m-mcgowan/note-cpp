@@ -19,6 +19,8 @@ namespace note::api {
 
 
 
+/// Used to clear the contents of a specified outbound (`.qo`/`.qos`) Notefile,
+/// deleting all pending Notes.
 struct FileClear {
     static constexpr string_view notecard_request = "file.clear";
     static constexpr bool supports_cmd = true;

@@ -20,6 +20,8 @@ namespace note::api {
 
 
 
+/// Gets and sets the background download status of MCU host or Notecard
+/// firmware updates.
 struct DfuStatus {
     static constexpr string_view notecard_request = "dfu.status";
     static constexpr bool supports_cmd = true;
@@ -79,13 +81,11 @@ struct DfuStatus {
     ///
     /// `{"org":"my-organization","product":"My Product","description":"A
     /// description of the image","version":"1.2.4","built":"Jan 01 2025
-    /// 01:02:03","ver_major":1,"ver_minor":2,"ver_patch":4,"ver_build":
+    /// 01:02:03","vermajor":1,"verminor":2,"verpatch":4,"verbuild":
     /// 5,"builder":"The Builder"}`
     ///
     /// Code to help you generate a version with the correct formatting is
-    /// available in [Enabling Notecard Outboard Firmware Update](/notehub/host-
-    /// firmware-updates/notecard-outboard-firmware-update/#enabling-notecard-
-    /// outboard-firmware-update).
+    /// available in Enabling Notecard Outboard Firmware Update.
     struct version_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
@@ -101,6 +101,9 @@ struct DfuStatus {
         DfuStatus& operator()(note::string_view v);
     } vvalue{};
 
+    // Valid values for 'name':
+    //   "user" — Gets the status of MCU host firmware updates (default).
+    //   "card" — Gets the status of Notecard firmware updates.
     // consteval: only callable at compile time (C++20)
 #if __cplusplus >= 202002L
     static consteval note::string_view validatedName(const char* v) {
@@ -141,6 +144,8 @@ struct DfuStatus {
     std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
     uint8_t extras_count_ = 0;
 
+    /// Response containing the current DFU mode and status information for
+    /// firmware downloads.
     struct Response {
         /// The current DFU mode. Will be one of:
         note::string_view mode{};

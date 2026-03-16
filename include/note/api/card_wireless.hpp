@@ -19,6 +19,9 @@ namespace note::api {
 
 
 
+/// View the last known network state, or customize the behavior of the modem.
+/// Note: Be careful when using this mode with hardware not on hand as a mistake
+/// may cause loss of network and Notehub access.
 struct CardWireless {
     static constexpr string_view notecard_request = "card.wireless";
     static constexpr bool supports_cmd = true;
@@ -42,9 +45,7 @@ struct CardWireless {
         using Field<int32_t>::operator=;
         CardWireless& operator()(int32_t v);
     } hours{};
-    /// Used when configuring a [Notecard to failover to a different
-    /// SIM](/guides-and-tutorials/notecard-guides/using-external-sim-
-    /// cards/#failing-over-to-a-different-sim).
+    /// Used when configuring a Notecard to failover to a different SIM.
     // method: - | dual-primary-secondary | dual-secondary-primary | primary | secondary
     struct method_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
@@ -59,6 +60,12 @@ struct CardWireless {
         CardWireless& operator()(note::string_view v);
     } mode{};
 
+    // Valid values for 'method':
+    //   "-" — Resets the Notecard to the default method.
+    //   "dual-primary-secondary" — Will attempt to register with the internal SIM first, then failover t...
+    //   "dual-secondary-primary" — Will attempt to register with the external SIM first, then failover t...
+    //   "primary" — Will exclusively use the internal SIM.
+    //   "secondary" — Will exclusively use the external SIM.
     // consteval: only callable at compile time (C++20)
 #if __cplusplus >= 202002L
     static consteval note::string_view validatedMethod(const char* v) {
@@ -68,6 +75,12 @@ struct CardWireless {
         return sv;
     }
 #endif
+    // Valid values for 'mode':
+    //   "-" — Reset to the default mode.
+    //   "auto" — Perform automatic band scan mode (this is the default mode).
+    //   "m" — Restrict the modem to Cat-M1 (applies exclusively to Narrowband Notec...
+    //   "nb" — Restrict the modem to Cat-NB1 (applies exclusively to Narrowband Note...
+    //   "gprs" — Restrict the modem to EGPRS (applies exclusively to Narrowband Noteca...
     // consteval: only callable at compile time (C++20)
 #if __cplusplus >= 202002L
     static consteval note::string_view validatedMode(const char* v) {
@@ -104,6 +117,8 @@ struct CardWireless {
     std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
     uint8_t extras_count_ = 0;
 
+    /// Response containing wireless connection status, signal quality
+    /// information, and detailed modem/network data from the Notecard.
     struct Response {
         /// Number of bars of signal quality.
         int32_t count{};

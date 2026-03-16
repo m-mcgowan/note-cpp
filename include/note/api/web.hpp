@@ -20,6 +20,8 @@ namespace note::api {
 
 
 
+/// Performs an HTTP or HTTPS request against an external endpoint, with the
+/// ability to specify any valid HTTP method.
 struct Web {
     static constexpr string_view notecard_request = "web";
     static constexpr bool supports_cmd = true;
@@ -58,6 +60,16 @@ struct Web {
         Web& operator()(note::string_view v);
     } route{};
 
+    // Valid values for 'method':
+    //   "CONNECT" — Establishes a tunnel to the server identified by the target resource.
+    //   "DELETE" — Performs a simple HTTP or HTTPS `DELETE` request against an external ...
+    //   "GET" — Performs a simple HTTP or HTTPS `GET` request against an external end...
+    //   "HEAD" — Requests the headers that would be returned if the URL was requested ...
+    //   "OPTIONS" — Requests the communication options available for the target resource.
+    //   "PATCH" — Applies partial modifications to a resource at the target endpoint.
+    //   "POST" — Performs a simple HTTP or HTTPS `POST` request against an external en...
+    //   "PUT" — Performs a simple HTTP or HTTPS `PUT` request against an external end...
+    //   "TRACE" — Performs a message loop-back test along the path to the target resource.
     // consteval: only callable at compile time (C++20)
 #if __cplusplus >= 202002L
     static consteval note::string_view validatedMethod(const char* v) {
@@ -94,6 +106,8 @@ struct Web {
     std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
     uint8_t extras_count_ = 0;
 
+    /// Response containing the result of an HTTP or HTTPS request to an
+    /// external endpoint.
     struct Response {
         /// The size of the COBS-encoded data (in bytes).
         int32_t cobs{};

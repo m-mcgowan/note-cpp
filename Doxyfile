@@ -1,0 +1,59 @@
+# Doxyfile for note-cpp
+# Generate with: doxygen Doxyfile  (or ./ci.sh --docs)
+
+PROJECT_NAME           = "note-cpp"
+PROJECT_BRIEF          = "Modern C++ SDK for the Blues Notecard"
+OUTPUT_DIRECTORY       = docs
+INPUT                  = include/note docs/mainpage.md
+RECURSIVE              = YES
+FILE_PATTERNS          = *.hpp *.md
+EXCLUDE_PATTERNS       = */third_party/* */backends/*
+USE_MDFILE_AS_MAINPAGE = docs/mainpage.md
+
+# Extract only documented symbols (our doc comments are comprehensive)
+EXTRACT_ALL            = NO
+EXTRACT_PRIVATE        = NO
+EXTRACT_STATIC         = YES
+
+# Brief descriptions from first sentence
+JAVADOC_AUTOBRIEF      = YES
+QT_AUTOBRIEF           = YES
+MULTILINE_CPP_IS_BRIEF = NO
+
+# Warnings
+WARN_IF_UNDOCUMENTED   = NO
+WARN_NO_PARAMDOC       = NO
+
+# HTML output with doxygen-awesome theme
+GENERATE_HTML          = YES
+HTML_OUTPUT            = html
+HTML_EXTRA_STYLESHEET  = docs/doxygen-awesome-css/doxygen-awesome.css
+HTML_COLORSTYLE        = LIGHT
+GENERATE_TREEVIEW      = YES
+DISABLE_INDEX          = NO
+FULL_SIDEBAR           = NO
+
+# No LaTeX/RTF/XML
+GENERATE_LATEX         = NO
+GENERATE_RTF           = NO
+GENERATE_XML           = NO
+GENERATE_MAN           = NO
+
+# Preprocessing — resolve NOTE_VERSION macros
+ENABLE_PREPROCESSING   = YES
+MACRO_EXPANSION        = YES
+PREDEFINED             = __cplusplus=202302L \
+                         NOTE_API_VERSION=NOTE_VERSION(99,99,99) \
+                         NOTE_EXTRAS_MAX=8
+
+# Source browsing (header-only lib — source IS the header)
+SOURCE_BROWSER         = NO
+INLINE_SOURCES         = NO
+
+# Namespace/class display
+SHOW_NAMESPACES        = YES
+SORT_BRIEF_DOCS        = YES
+SORT_MEMBERS_CTORS_1ST = YES
+
+# Graphs (disabled — keep build fast, no graphviz dependency)
+HAVE_DOT               = NO

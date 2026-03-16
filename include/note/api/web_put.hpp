@@ -20,6 +20,8 @@ namespace note::api {
 
 
 
+/// Performs a simple HTTP or HTTPS `PUT` request against an external endpoint,
+/// and returns the response to the Notecard.
 struct WebPut {
     static constexpr string_view notecard_request = "web.put";
     static constexpr bool supports_cmd = true;
@@ -48,9 +50,7 @@ struct WebPut {
     /// If `true`, the Notecard will send all the data in the binary buffer to
     /// the specified proxy route in Notehub.
     ///
-    /// Learn more in this guide on [Sending and Receiving Large Binary
-    /// Objects](https://dev.blues.io/guides-and-tutorials/notecard-
-    /// guides/sending-and-receiving-large-binary-objects/).
+    /// Learn more in this guide on Sending and Receiving Large Binary Objects.
     ///
     /// @since firmware 5.3.1
 #if NOTE_API_VERSION < NOTE_VERSION(5, 3, 1)
@@ -127,10 +127,7 @@ struct WebPut {
     /// a `payload`, but may NOT have both. Be aware that Notehub will decode
     /// the payload as it is delivered to the endpoint.
     ///
-    /// Learn more about [sending large binary
-    /// objects](https://dev.blues.io/guides-and-tutorials/notecard-
-    /// guides/sending-and-receiving-large-binary-objects/#binary-uploads-with-
-    /// web-apis) with the Notecard.
+    /// Learn more about sending large binary objects with the Notecard.
     struct payload_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
@@ -224,6 +221,8 @@ struct WebPut {
     std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
     uint8_t extras_count_ = 0;
 
+    /// Response containing the result of an HTTP or HTTPS PUT request to an
+    /// external endpoint.
     struct Response {
         /// A base64-encoded binary payload from the external service, if any.
         /// The maximum response size from the service is 8192 bytes.

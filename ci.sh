@@ -512,6 +512,19 @@ run_coverage() {
     echo
 }
 
+run_docs() {
+    echo "=== Doxygen documentation ==="
+    if ! command -v doxygen >/dev/null 2>&1; then
+        echo "ERROR: doxygen not found. Install: 'brew install doxygen' (macOS) or 'apt-get install doxygen' (Ubuntu)."
+        exit 1
+    fi
+    echo "  Doxygen $(doxygen --version)"
+    doxygen "$ROOT/Doxyfile"
+    echo
+    echo "  Documentation: ${ROOT}/docs/html/index.html"
+    echo
+}
+
 run_integrations() {
     echo "=== JSON backend integration tests ==="
     local CMAKE_POLICY="-DCMAKE_POLICY_VERSION_MINIMUM=3.5"
@@ -533,6 +546,9 @@ run_integrations() {
 case "${1:-}" in
     --coverage)
         run_coverage
+        ;;
+    --docs)
+        run_docs
         ;;
     --integrations)
         run_integrations

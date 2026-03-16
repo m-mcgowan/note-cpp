@@ -19,6 +19,7 @@ namespace note::api {
 
 
 
+/// Sets up a Notecard WiFi to connect to a WiFi access point.
 struct CardWifi {
     static constexpr string_view notecard_request = "card.wifi";
     static constexpr bool supports_cmd = true;
@@ -76,8 +77,7 @@ struct CardWifi {
     ///
     /// You may need to escape any quotes used in this argument before passing
     /// it to the Notecard. For example, the following is a valid request to
-    /// pass to a Notecard through the [In-Browser
-    /// Terminal](https://dev.blues.io/terminal/).
+    /// pass to a Notecard through the In-Browser Terminal.
     ///
     /// `{"req":"card.wifi", "text":"[\"FIRST-SSID\",\"FIRST-PASSWORD\"]"}`
     ///
@@ -123,6 +123,8 @@ struct CardWifi {
     std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
     uint8_t extras_count_ = 0;
 
+    /// Response containing WiFi connection status and configuration information
+    /// from the Notecard.
     struct Response {
         /// `true` means that the WiFi access point is using Management Frame
         /// Protection.

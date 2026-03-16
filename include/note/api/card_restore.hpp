@@ -19,6 +19,15 @@ namespace note::api {
 
 
 
+/// Performs a factory reset on the Notecard and restarts.
+///
+/// *Sending this request without either of the optional arguments below will
+/// only reset the Notecard's file system, thus forcing a re-sync of all
+/// Notefiles from Notehub.*
+///
+/// On Notecard LoRa there is no option to retain configuration settings, and
+/// providing `"delete": true` is required. The Notecard LoRa retains LoRaWAN
+/// configuration after factory resets.
 struct CardRestore {
     static constexpr string_view notecard_request = "card.restore";
     static constexpr bool supports_cmd = true;
@@ -40,10 +49,9 @@ struct CardRestore {
         CardRestore& operator()(bool v);
     } connected{};
     /// Set to `true` to reset most Notecard configuration settings. Note that
-    /// this does not reset stored WiFi credentials or the [alternate I2C
-    /// address](/notecard/notecard-walkthrough/advanced-notecard-
-    /// configuration/#change-the-notecard-i2c-address) (if previously set) so
-    /// the Notecard can still contact the network after a reset.
+    /// this does not reset stored WiFi credentials or the alternate I2C address
+    /// (if previously set) so the Notecard can still contact the network after
+    /// a reset.
     ///
     /// *The Notecard will be unable to sync with Notehub until the `ProductUID`
     /// is set again.*

@@ -20,6 +20,8 @@ namespace note::api {
 
 
 
+/// Returns a single environment variable, or all variables according to
+/// precedence rules.
 struct EnvGet {
     static constexpr string_view notecard_request = "env.get";
     static constexpr bool supports_cmd = true;
@@ -93,6 +95,8 @@ struct EnvGet {
     std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
     uint8_t extras_count_ = 0;
 
+    /// Response containing environment variable values and metadata based on
+    /// the request parameters.
     struct Response {
         /// If a `name` was specified, the value of the environment variable.
         note::string_view text{};

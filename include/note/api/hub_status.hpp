@@ -19,6 +19,7 @@ namespace note::api {
 
 
 
+/// Displays the current status of the Notecard's connection to Notehub.
 struct HubStatus {
     static constexpr string_view notecard_request = "hub.status";
     static constexpr bool supports_cmd = true;
@@ -50,6 +51,8 @@ struct HubStatus {
     std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
     uint8_t extras_count_ = 0;
 
+    /// Response containing the current status of the Notecard's connection to
+    /// Notehub.
     struct Response {
         /// `true` if the Notecard is connected to Notehub.
         bool connected{};

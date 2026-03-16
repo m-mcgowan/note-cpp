@@ -19,6 +19,8 @@ namespace note::api {
 
 
 
+/// Calculates a projection of how long the available cellular data quota will
+/// last based on the observed usage patterns.
 struct CardUsageTest {
     static constexpr string_view notecard_request = "card.usage.test";
     static constexpr bool supports_cmd = true;
@@ -74,6 +76,7 @@ struct CardUsageTest {
     std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
     uint8_t extras_count_ = 0;
 
+    /// Response containing cellular data usage projection and analysis results.
     struct Response {
         /// Average bytes per day used during the test period.
         int32_t bytesPerDay{};

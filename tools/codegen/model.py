@@ -12,6 +12,13 @@ _UNIT_TYPES: dict[str, str] = {
 
 
 @dataclass
+class SubDescription:
+    """A value-specific description for an enum or flag field."""
+    const_value: str        # e.g. "periodic", "arm"
+    description: str        # Human-readable description
+
+
+@dataclass
 class PropertyDef:
     """A single property in a request or response schema."""
     wire_name: str          # Original JSON key: "delete", "note", "mode"
@@ -29,6 +36,7 @@ class PropertyDef:
     constants: dict | None = None  # {"reset": {"value": -1, "description": "..."}}
     format: str | None = None  # "voltage-variable" or "flags"
     flags: list[str] | None = None  # ["arm", "connected", ...] for x-flags fields
+    sub_descriptions: list[SubDescription] | None = None  # per-value docs
 
     @property
     def field_type(self) -> str:
@@ -164,6 +172,7 @@ class ResponseDef:
     """Response schema for an operation."""
     properties: list[PropertyDef] = field(default_factory=list)
     has_body: bool = False  # True when response includes a body object
+    description: str = ""  # From 200 response description
 
 
 _FACTORY_METHOD_RENAMES: dict[str, str] = {
@@ -201,6 +210,7 @@ class OperationDef:
     binary_transfer: BinaryTransferDef | None = None
     skus: list[str] = field(default_factory=list)
     implicit_fields: list[ImplicitFieldDef] = field(default_factory=list)
+    description: str = ""  # From operation summary
 
     @property
     def required_properties(self) -> list[PropertyDef]:

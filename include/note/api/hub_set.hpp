@@ -21,6 +21,8 @@ namespace note::api {
 
 
 
+/// The hub.set request is the primary method for controlling the Notecard's
+/// Notehub connection and sync behavior.
 struct HubSet {
     static constexpr string_view notecard_request = "hub.set";
     static constexpr bool supports_cmd = true;
@@ -65,6 +67,7 @@ struct HubSet {
     /// Notecard gracefully ends the current session and starts a new one in
     /// order to sync session-specific data to Notehub.
     struct duration_t : Field<note::Minutes> {
+        /// Reset to default
         static constexpr note::Minutes reset{ -1 };
         using Field<note::Minutes>::Field;
         using Field<note::Minutes>::operator=;
@@ -88,7 +91,9 @@ struct HubSet {
     /// A value of `0` means that the Notecard will never sync inbound data
     /// unless explicitly told to do so (e.g. using `hub.sync`).
     struct inbound_t : Field<note::Minutes> {
+        /// Reset to default
         static constexpr note::Minutes reset{ -1 };
+        /// Sync only when explicitly requested
         static constexpr note::Minutes manual{ 0 };
         using Field<note::Minutes>::Field;
         using Field<note::Minutes>::operator=;
@@ -96,8 +101,8 @@ struct HubSet {
     } inbound{};
     /// The Notecard's synchronization mode.
     ///
-    /// **NOTE:** The Notecard must be in `periodic` or `continuous` mode to use
-    /// the onboard GPS module.
+    /// NOTE: The Notecard must be in `periodic` or `continuous` mode to use the
+    /// onboard GPS module.
     // mode: periodic | continuous | minimum | off | dfu
     struct mode_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
@@ -147,7 +152,9 @@ struct HubSet {
     /// A value of `0` means that the Notecard will never sync outbound data
     /// unless explicitly told to do so (e.g. using `hub.sync`).
     struct outbound_t : Field<note::Minutes> {
+        /// Reset to default
         static constexpr note::Minutes reset{ -1 };
+        /// Sync only when explicitly requested
         static constexpr note::Minutes manual{ 0 };
         using Field<note::Minutes>::Field;
         using Field<note::Minutes>::operator=;
@@ -187,7 +194,7 @@ struct HubSet {
     /// If in `continuous` mode, automatically and immediately sync each time an
     /// inbound Notefile change is detected on Notehub.
     ///
-    /// **NOTE:** The `sync` argument is not supported when a Notecard is in NTN
+    /// NOTE: The `sync` argument is not supported when a Notecard is in NTN
     /// mode.
     struct sync_t : Field<bool> {
         using Field<bool>::Field;
@@ -249,13 +256,12 @@ struct HubSet {
     ///
     /// `{"org":"my-organization","product":"My Product","description":"A
     /// description of the image","version":"1.2.4","built":"Jan 01 2025
-    /// 01:02:03","ver_major":1,"ver_minor":2,"ver_patch":4,"ver_build":
+    /// 01:02:03","vermajor":1,"verminor":2,"verpatch":4,"verbuild":
     /// 5,"builder":"The Builder"}`
     ///
-    /// If your project uses [Notecard Outboard Firmware Update](/notehub/host-
-    /// firmware-updates/notecard-outboard-firmware-update), you can
-    /// alternatively use the [`dfu.status` request](/api-reference/notecard-
-    /// api/dfu-requests/latest/#dfu-status) to set your host firmware version.
+    /// If your project uses Notecard Outboard Firmware Update, you can
+    /// alternatively use the `dfu.status` request to set your host firmware
+    /// version.
     ///
     /// @since firmware 7.3.1
 #if NOTE_API_VERSION < NOTE_VERSION(7, 3, 1)
@@ -270,8 +276,7 @@ struct HubSet {
     /// Overrides `inbound` with a voltage-variable value. Use `"-"` to clear
     /// this value.
     ///
-    /// **NOTE:** Setting voltage-variable values is not supported on Notecard
-    /// XP.
+    /// NOTE: Setting voltage-variable values is not supported on Notecard XP.
     struct vinbound_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
@@ -287,8 +292,7 @@ struct HubSet {
     /// Overrides `outbound` with a voltage-variable value. Use `"-"` to clear
     /// this value.
     ///
-    /// **NOTE:** Setting voltage-variable values is not supported on Notecard
-    /// XP.
+    /// NOTE: Setting voltage-variable values is not supported on Notecard XP.
     struct voutbound_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
@@ -302,6 +306,12 @@ struct HubSet {
         note::VoltageVariable vv_{};
     } voutbound{};
 
+    // Valid values for 'mode':
+    //   "periodic" — Periodically connect to the Notehub. This is the default value set on...
+    //   "continuous" — Enables an always-on network connection, for high power devices. Outb...
+    //   "minimum" — Disables periodic connection. The Notecard will not sync until it rec...
+    //   "off" — Disables automatic and manual syncs. `hub.sync` requests will be igno...
+    //   "dfu" — Puts the Notecard in DFU mode for IAP host MCU firmware updates. This...
     // consteval: only callable at compile time (C++20)
 #if __cplusplus >= 202002L
     static consteval note::string_view validatedMode(const char* v) {

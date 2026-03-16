@@ -19,6 +19,8 @@ namespace note::api {
 
 
 
+/// Returns the Notecard's network usage statistics for cellular and WiFi
+/// transmissions.
 struct CardUsageGet {
     static constexpr string_view notecard_request = "card.usage.get";
     static constexpr bool supports_cmd = true;
@@ -47,6 +49,11 @@ struct CardUsageGet {
         CardUsageGet& operator()(int32_t v);
     } offset{};
 
+    // Valid values for 'mode':
+    //   "total" — All stats since the Notecard was activated.
+    //   "1hour" — Statistics for the last hour period.
+    //   "1day" — Statistics for the last day period.
+    //   "30day" — Statistics for the last 30 days period.
     // consteval: only callable at compile time (C++20)
 #if __cplusplus >= 202002L
     static consteval note::string_view validatedMode(const char* v) {
@@ -81,6 +88,8 @@ struct CardUsageGet {
     std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
     uint8_t extras_count_ = 0;
 
+    /// Response containing cellular and WiFi network usage statistics for the
+    /// specified time period.
     struct Response {
         /// Number of bytes received by the Notecard from Notehub.
         int32_t bytesReceived{};

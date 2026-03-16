@@ -19,6 +19,7 @@ namespace note::api {
 
 
 
+/// Deletes Notefiles and the Notes they contain.
 struct FileDelete {
     static constexpr string_view notecard_request = "file.delete";
     static constexpr bool supports_cmd = true;

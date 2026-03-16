@@ -19,6 +19,19 @@ namespace note::api {
 
 
 
+/// Store location data in a Notefile at the `periodic` interval, or using a
+/// specified `heartbeat`.
+///
+/// This request is only available when the `card.location.mode` request has
+/// been set to `periodic`—e.g.
+/// `{"req":"card.location.mode","mode":"periodic","seconds":300}`. If you want
+/// to track and transmit data simultaneously consider using an external
+/// GPS/GNSS module with the Notecard.
+///
+/// If you connect a BME280 sensor on the I2C bus, Notecard will include a
+/// temperature, humidity, and pressure reading with each captured Note. If you
+/// connect an ENS210 sensor on the I2C bus, Notecard will include a temperature
+/// and pressure reading with each captured Note. Learn more in _track.qo.
 struct CardLocationTrack {
     static constexpr string_view notecard_request = "card.location.track";
     static constexpr bool supports_cmd = true;
@@ -28,8 +41,8 @@ struct CardLocationTrack {
     Notecard* nc_ = nullptr;
 
     /// The Notefile in which to store tracked location data. See the
-    /// `_track.qo` Notefile's [documentation](/api-reference/system-
-    /// notefiles/#track-qo) for details on the format of the data captured.
+    /// `_track.qo` Notefile's documentation for details on the format of the
+    /// data captured.
     struct file_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
@@ -53,9 +66,8 @@ struct CardLocationTrack {
     } hours{};
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 5, 2) || !defined(NOTE_API_STRICT)
     /// A base64-encoded binary payload to be included in the next `_track.qo`
-    /// Note. See the guide on [Sampling at Predefined
-    /// Intervals](/notecard/notecard-walkthrough/time-and-location-
-    /// requests/#sampling-at-predefined-intervals) for more details.
+    /// Note. See the guide on Sampling at Predefined Intervals for more
+    /// details.
     ///
     /// @since firmware 7.5.2
 #if NOTE_API_VERSION < NOTE_VERSION(7, 5, 2)
@@ -119,6 +131,7 @@ struct CardLocationTrack {
     std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
     uint8_t extras_count_ = 0;
 
+    /// Successful response
     struct Response {
         /// The tracking Notefile, if provided.
         note::string_view file{};

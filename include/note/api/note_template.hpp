@@ -20,6 +20,15 @@ namespace note::api {
 
 
 
+/// By using the `note.template` request with any `.qo`/`.qos` Notefile,
+/// developers can provide the Notecard with a schema of sorts to apply to
+/// future Notes added to the Notefile. This template acts as a hint to the
+/// Notecard that allows it to internally store data as fixed-length binary
+/// records rather than as flexible JSON objects which require much more memory.
+/// Using templated Notes in place of regular Notes increases the storage and
+/// sync capability of the Notecard by an order of magnitude.
+///
+/// Read about Working with Note Templates for additional information.
 struct NoteTemplate {
 
     struct Set {
@@ -32,10 +41,8 @@ struct NoteTemplate {
 
         /// A sample JSON body that specifies field names and values as "hints"
         /// for the data type. Possible data types are: boolean, integer, float,
-        /// and string. See [Understanding Template Data
-        /// Types](https://dev.blues.io/notecard/notecard-walkthrough/low-
-        /// bandwidth-design/#understanding-template-data-types) for an
-        /// explanation of type hints and explanations.
+        /// and string. See Understanding Template Data Types for an explanation
+        /// of type hints and explanations.
         struct body_t : BodyValue {
             using BodyValue::BodyValue;
             NoteTemplate::Set& operator()(BodyValue v);
@@ -55,9 +62,7 @@ struct NoteTemplate {
         /// Connecting via NTN (e.g. satellite) communications, but attempting
         /// to sync non-NTN-compatible Notefiles.
         ///
-        /// Read more about this feature in [Starnote Best
-        /// Practices](https://dev.blues.io/starnote/satellite-best-
-        /// practices/#define-ntn-vs-non-ntn-templates).
+        /// Read more about this feature in Starnote Best Practices.
         struct delete_t : Field<bool> {
             using Field<bool>::Field;
             using Field<bool>::operator=;
@@ -78,9 +83,8 @@ struct NoteTemplate {
         ///
         /// When using `"compact"` templates, you may include the following
         /// keywords in your template to add in fields that would otherwise be
-        /// omitted: `_lat`, `_lon`, `_ltime`, `_time`. See [Creating Compact
-        /// Templates](https://dev.blues.io/notecard/notecard-walkthrough/low-
-        /// bandwidth-design/#creating-compact-templates) to learn more.
+        /// omitted: `lat`, `lon`, `ltime`, `time`. See Creating Compact
+        /// Templates to learn more.
         ///
         /// @since firmware 6.2.3
 #if NOTE_API_VERSION < NOTE_VERSION(6, 2, 3)
@@ -163,6 +167,7 @@ struct NoteTemplate {
         std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
         uint8_t extras_count_ = 0;
 
+        /// Successful response
         struct Response {
             /// The number of bytes that will be transmitted to Notehub, per
             /// Note, before compression.
@@ -318,6 +323,15 @@ struct NoteTemplate {
 
     };
 
+    /// By using the `note.template` request with any `.qo`/`.qos` Notefile,
+    /// developers can provide the Notecard with a schema of sorts to apply to
+    /// future Notes added to the Notefile. This template acts as a hint to the
+    /// Notecard that allows it to internally store data as fixed-length binary
+    /// records rather than as flexible JSON objects which require much more
+    /// memory. Using templated Notes in place of regular Notes increases the
+    /// storage and sync capability of the Notecard by an order of magnitude.
+    ///
+    /// Read about Working with Note Templates for additional information.
     struct Delete {
         static constexpr string_view notecard_request = "note.template";
         static constexpr bool supports_cmd = true;
@@ -328,10 +342,8 @@ struct NoteTemplate {
 
         /// A sample JSON body that specifies field names and values as "hints"
         /// for the data type. Possible data types are: boolean, integer, float,
-        /// and string. See [Understanding Template Data
-        /// Types](https://dev.blues.io/notecard/notecard-walkthrough/low-
-        /// bandwidth-design/#understanding-template-data-types) for an
-        /// explanation of type hints and explanations.
+        /// and string. See Understanding Template Data Types for an explanation
+        /// of type hints and explanations.
         struct body_t : BodyValue {
             using BodyValue::BodyValue;
             NoteTemplate::Delete& operator()(BodyValue v);
@@ -355,9 +367,8 @@ struct NoteTemplate {
         ///
         /// When using `"compact"` templates, you may include the following
         /// keywords in your template to add in fields that would otherwise be
-        /// omitted: `_lat`, `_lon`, `_ltime`, `_time`. See [Creating Compact
-        /// Templates](https://dev.blues.io/notecard/notecard-walkthrough/low-
-        /// bandwidth-design/#creating-compact-templates) to learn more.
+        /// omitted: `lat`, `lon`, `ltime`, `time`. See Creating Compact
+        /// Templates to learn more.
         ///
         /// @since firmware 6.2.3
 #if NOTE_API_VERSION < NOTE_VERSION(6, 2, 3)
@@ -439,6 +450,7 @@ struct NoteTemplate {
         std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
         uint8_t extras_count_ = 0;
 
+        /// Successful response
         struct Response {
             /// The number of bytes that will be transmitted to Notehub, per
             /// Note, before compression.

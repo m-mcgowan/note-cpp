@@ -20,6 +20,14 @@ namespace note::api {
 
 
 
+/// Get the current temperature from the Notecard's onboard calibrated
+/// temperature sensor.
+///
+/// When using a Notecard Cellular or Notecard Cell+WiFi, if you connect a
+/// BME280 sensor on the I2C bus the Notecard will add `temperature`,
+/// `pressure`, and `humidity` fields to the response. If you connect an ENS210
+/// sensor on the I2C bus the Notecard will add `temperature` and `pressure`
+/// fields to the response.
 struct CardTemp {
 
     struct Get {
@@ -30,22 +38,18 @@ struct CardTemp {
 
         Notecard* nc_ = nullptr;
 
-        /// If specified, creates a templated `_temp.qo` file that gathers
-        /// Notecard temperature value at the specified minutes interval. _When
-        /// using [card.aux track mode](/notecard/notecard-walkthrough/working-
-        /// with-the-notecard-aux-pins#using-aux-track-mode), the sensor
-        /// temperature, pressure, and humidity is also included with each
-        /// Note._
+        /// If specified, creates a templated `temp.qo` file that gathers
+        /// Notecard temperature value at the specified minutes interval. When
+        /// using card.aux track mode, the sensor temperature, pressure, and
+        /// humidity is also included with each Note._
         struct minutes_t : Field<note::Minutes> {
             using Field<note::Minutes>::Field;
             using Field<note::Minutes>::operator=;
             CardTemp::Get& operator()(note::Minutes v);
         } minutes{};
         /// Overrides `minutes` with a voltage-variable value. For example:
-        /// `"usb:15;high:30;normal:60;720"`. See [Voltage-Variable Sync
-        /// Behavior](/notecard/notecard-walkthrough/low-power-design#voltage-
-        /// variable-sync-behavior) for more information on configuring these
-        /// values.
+        /// `"usb:15;high:30;normal:60;720"`. See Voltage-Variable Sync Behavior
+        /// for more information on configuring these values.
         struct status_t : Field<note::string_view> {
             using Field<note::string_view>::Field;
             using Field<note::string_view>::operator=;
@@ -94,6 +98,8 @@ struct CardTemp {
         std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
         uint8_t extras_count_ = 0;
 
+        /// Response containing temperature readings from the Notecard's onboard
+        /// sensor and any connected I2C sensors.
         struct Response {
             /// The calibration differential of the Notecard's onboard sensor.
             double calibration{};
@@ -187,6 +193,14 @@ struct CardTemp {
 
     };
 
+    /// Get the current temperature from the Notecard's onboard calibrated
+    /// temperature sensor.
+    ///
+    /// When using a Notecard Cellular or Notecard Cell+WiFi, if you connect a
+    /// BME280 sensor on the I2C bus the Notecard will add `temperature`,
+    /// `pressure`, and `humidity` fields to the response. If you connect an
+    /// ENS210 sensor on the I2C bus the Notecard will add `temperature` and
+    /// `pressure` fields to the response.
     struct Set {
         static constexpr string_view notecard_request = "card.temp";
         static constexpr bool supports_cmd = true;
@@ -195,22 +209,18 @@ struct CardTemp {
 
         Notecard* nc_ = nullptr;
 
-        /// If specified, creates a templated `_temp.qo` file that gathers
-        /// Notecard temperature value at the specified minutes interval. _When
-        /// using [card.aux track mode](/notecard/notecard-walkthrough/working-
-        /// with-the-notecard-aux-pins#using-aux-track-mode), the sensor
-        /// temperature, pressure, and humidity is also included with each
-        /// Note._
+        /// If specified, creates a templated `temp.qo` file that gathers
+        /// Notecard temperature value at the specified minutes interval. When
+        /// using card.aux track mode, the sensor temperature, pressure, and
+        /// humidity is also included with each Note._
         struct minutes_t : Field<note::Minutes> {
             using Field<note::Minutes>::Field;
             using Field<note::Minutes>::operator=;
             CardTemp::Set& operator()(note::Minutes v);
         } minutes{};
         /// Overrides `minutes` with a voltage-variable value. For example:
-        /// `"usb:15;high:30;normal:60;720"`. See [Voltage-Variable Sync
-        /// Behavior](/notecard/notecard-walkthrough/low-power-design#voltage-
-        /// variable-sync-behavior) for more information on configuring these
-        /// values.
+        /// `"usb:15;high:30;normal:60;720"`. See Voltage-Variable Sync Behavior
+        /// for more information on configuring these values.
         struct status_t : Field<note::string_view> {
             using Field<note::string_view>::Field;
             using Field<note::string_view>::operator=;
@@ -259,6 +269,8 @@ struct CardTemp {
         std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
         uint8_t extras_count_ = 0;
 
+        /// Response containing temperature readings from the Notecard's onboard
+        /// sensor and any connected I2C sensors.
         struct Response {
             /// The calibration differential of the Notecard's onboard sensor.
             double calibration{};
@@ -352,6 +364,14 @@ struct CardTemp {
 
     };
 
+    /// Get the current temperature from the Notecard's onboard calibrated
+    /// temperature sensor.
+    ///
+    /// When using a Notecard Cellular or Notecard Cell+WiFi, if you connect a
+    /// BME280 sensor on the I2C bus the Notecard will add `temperature`,
+    /// `pressure`, and `humidity` fields to the response. If you connect an
+    /// ENS210 sensor on the I2C bus the Notecard will add `temperature` and
+    /// `pressure` fields to the response.
     struct Delete {
         static constexpr string_view notecard_request = "card.temp";
         static constexpr bool supports_cmd = true;
@@ -360,22 +380,18 @@ struct CardTemp {
 
         Notecard* nc_ = nullptr;
 
-        /// If specified, creates a templated `_temp.qo` file that gathers
-        /// Notecard temperature value at the specified minutes interval. _When
-        /// using [card.aux track mode](/notecard/notecard-walkthrough/working-
-        /// with-the-notecard-aux-pins#using-aux-track-mode), the sensor
-        /// temperature, pressure, and humidity is also included with each
-        /// Note._
+        /// If specified, creates a templated `temp.qo` file that gathers
+        /// Notecard temperature value at the specified minutes interval. When
+        /// using card.aux track mode, the sensor temperature, pressure, and
+        /// humidity is also included with each Note._
         struct minutes_t : Field<note::Minutes> {
             using Field<note::Minutes>::Field;
             using Field<note::Minutes>::operator=;
             CardTemp::Delete& operator()(note::Minutes v);
         } minutes{};
         /// Overrides `minutes` with a voltage-variable value. For example:
-        /// `"usb:15;high:30;normal:60;720"`. See [Voltage-Variable Sync
-        /// Behavior](/notecard/notecard-walkthrough/low-power-design#voltage-
-        /// variable-sync-behavior) for more information on configuring these
-        /// values.
+        /// `"usb:15;high:30;normal:60;720"`. See Voltage-Variable Sync Behavior
+        /// for more information on configuring these values.
         struct status_t : Field<note::string_view> {
             using Field<note::string_view>::Field;
             using Field<note::string_view>::operator=;
@@ -415,6 +431,8 @@ struct CardTemp {
         std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
         uint8_t extras_count_ = 0;
 
+        /// Response containing temperature readings from the Notecard's onboard
+        /// sensor and any connected I2C sensors.
         struct Response {
             /// The calibration differential of the Notecard's onboard sensor.
             double calibration{};

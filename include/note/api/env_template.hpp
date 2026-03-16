@@ -20,6 +20,14 @@ namespace note::api {
 
 
 
+/// The `env.template` request allows developers to provide a schema for the
+/// environment variables the Notecard uses. The provided template allows the
+/// Notecard to store environment variables as fixed-length binary records
+/// rather than as flexible JSON objects that require much more memory.
+///
+/// Using templated environment variables also allows the Notecard to optimize
+/// the network traffic related to sending and receiving environment variable
+/// updates.
 struct EnvTemplate {
     static constexpr string_view notecard_request = "env.template";
     static constexpr bool supports_cmd = true;
@@ -30,10 +38,8 @@ struct EnvTemplate {
 
     /// A sample JSON body that specifies environment variables names and values
     /// as "hints" for the data type. Possible data types are: boolean, integer,
-    /// float, and string. See [Understanding Template Data
-    /// Types](/notecard/notecard-walkthrough/low-bandwidth-
-    /// design#understanding-template-data-types) for a full explanation of type
-    /// hints.
+    /// float, and string. See Understanding Template Data Types for a full
+    /// explanation of type hints.
     struct body_t : BodyValue {
         using BodyValue::BodyValue;
         EnvTemplate& operator()(BodyValue v);
@@ -66,6 +72,8 @@ struct EnvTemplate {
     std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
     uint8_t extras_count_ = 0;
 
+    /// Response containing the maximum number of bytes for the environment
+    /// variable template.
     struct Response {
         /// The maximum number of bytes that will be used when environment
         /// variables are communicated or stored, so long as the variables do

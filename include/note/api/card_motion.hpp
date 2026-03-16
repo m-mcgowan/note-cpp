@@ -19,6 +19,9 @@ namespace note::api {
 
 
 
+/// Returns information about the Notecard accelerometer's motion and
+/// orientation. Motion tracking must be enabled first with `card.motion.mode`.
+/// Otherwise, this request will return `{}`.
 struct CardMotion {
     static constexpr string_view notecard_request = "card.motion";
     static constexpr bool supports_cmd = true;
@@ -61,6 +64,7 @@ struct CardMotion {
     std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
     uint8_t extras_count_ = 0;
 
+    /// Successful response
     struct Response {
         /// `true` if the Notecard's accelerometer detected a free-fall since
         /// the last request to `card.motion`.
@@ -69,9 +73,7 @@ struct CardMotion {
         /// request was last made.
         int32_t count{};
         /// Returns the current motion status of the Notecard (e.g. `"stopped"`
-        /// or `"moving"`). Learn how to configure this feature [in this
-        /// guide](/guides-and-tutorials/notecard-guides/asset-tracking-with-
-        /// gps#wake-host-or-send-note-on-motion-status-change).
+        /// or `"moving"`). Learn how to configure this feature in this guide.
         note::string_view mode{};
         /// Time of the last accelerometer motion event.
         int32_t motion{};

@@ -19,6 +19,7 @@ namespace note::api {
 
 
 
+/// Returns general information about the Notecard's operating status.
 struct CardStatus {
     static constexpr string_view notecard_request = "card.status";
     static constexpr bool supports_cmd = true;
@@ -50,6 +51,8 @@ struct CardStatus {
     std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
     uint8_t extras_count_ = 0;
 
+    /// Response containing general information about the Notecard's operating
+    /// status.
     struct Response {
         /// `true` if the modem is currently powered on.
         bool cell{};
@@ -65,14 +68,12 @@ struct CardStatus {
         bool gps{};
 #endif
         /// The effective inbound synchronization period being used by the
-        /// device. See [Configuring Synchronization Modes](/notecard/notecard-
-        /// walkthrough/essential-requests/#configuring-synchronization-modes)
-        /// for details on how Notecard synchronization modes work.
+        /// device. See Configuring Synchronization Modes for details on how
+        /// Notecard synchronization modes work.
         int32_t inbound{};
         /// The effective outbound synchronization period being used by the
-        /// device. See [Configuring Synchronization Modes](/notecard/notecard-
-        /// walkthrough/essential-requests/#configuring-synchronization-modes)
-        /// for details on how Notecard synchronization modes work.
+        /// device. See Configuring Synchronization Modes for details on how
+        /// Notecard synchronization modes work.
         int32_t outbound{};
         /// General status information.
         note::string_view status{};

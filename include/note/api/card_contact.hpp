@@ -19,6 +19,8 @@ namespace note::api {
 
 
 
+/// Used to set or retrieve information about the Notecard maintainer. Once set,
+/// this information is synced to Notehub.
 struct CardContact {
 
     struct Get {
@@ -81,6 +83,7 @@ struct CardContact {
         std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
         uint8_t extras_count_ = 0;
 
+        /// Successful response
         struct Response {
             /// Email address of the Notecard maintainer.
             note::string_view email{};
@@ -155,6 +158,8 @@ struct CardContact {
 
     };
 
+    /// Used to set or retrieve information about the Notecard maintainer. Once
+    /// set, this information is synced to Notehub.
     struct Set {
         static constexpr string_view notecard_request = "card.contact";
         static constexpr bool supports_cmd = true;
@@ -215,6 +220,7 @@ struct CardContact {
         std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
         uint8_t extras_count_ = 0;
 
+        /// Successful response
         struct Response {
             /// Email address of the Notecard maintainer.
             note::string_view email{};

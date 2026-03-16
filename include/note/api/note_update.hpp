@@ -20,6 +20,8 @@ namespace note::api {
 
 
 
+/// Updates a Note in a DB Notefile by its ID, replacing the existing `body`
+/// and/or `payload`.
 struct NoteUpdate {
     static constexpr string_view notecard_request = "note.update";
     static constexpr bool supports_cmd = true;

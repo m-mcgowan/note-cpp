@@ -19,6 +19,12 @@ namespace note::api {
 
 
 
+/// Used to perform queries on a single or multiple files to determine if new
+/// Notes are available to read, or if there are unsynced Notes in local
+/// Notefiles.
+///
+/// *Note: This request is a Notefile API request, only. `.qo` Notes in Notehub
+/// are automatically ingested and stored, or sent to applicable Routes.*
 struct FileChanges {
     static constexpr string_view notecard_request = "file.changes";
     static constexpr bool supports_cmd = true;
@@ -34,9 +40,7 @@ struct FileChanges {
         using Field<note::string_view>::operator=;
         FileChanges& operator()(note::string_view v);
     } files{};
-    /// ID of a [change tracker](/notecard/notecard-walkthrough/inbound-
-    /// requests-and-shared-data/#using-change-trackers-with-inbound-data) to
-    /// use to determine changes to Notefiles.
+    /// ID of a change tracker to use to determine changes to Notefiles.
     struct tracker_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
@@ -68,6 +72,7 @@ struct FileChanges {
     std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
     uint8_t extras_count_ = 0;
 
+    /// Response containing information about file changes and their status.
     struct Response {
         /// If a change tracker is used, the number of changes across all files.
         int32_t changes{};

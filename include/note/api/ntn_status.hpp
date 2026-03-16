@@ -19,6 +19,7 @@ namespace note::api {
 
 
 
+/// Displays the current status of a Notecard's connection to a paired Starnote.
 struct NtnStatus {
     static constexpr string_view notecard_request = "ntn.status";
     static constexpr bool supports_cmd = true;
@@ -50,6 +51,8 @@ struct NtnStatus {
     std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
     uint8_t extras_count_ = 0;
 
+    /// Response showing current status of Notecard's connection to paired
+    /// Starnote.
     struct Response {
         /// This member is present if any errors have occurred while connecting
         /// to a paired Starnote, for example: `{"err":"no NTN module is

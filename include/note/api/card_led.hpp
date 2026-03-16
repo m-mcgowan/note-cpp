@@ -19,6 +19,19 @@ namespace note::api {
 
 
 
+/// Used along with the card.aux API to turn connected LEDs on/off, to enable a
+/// specific color on an RGB LED, or to manage a single connected NeoPixel.
+///
+/// Monochromatic LEDs must be wired according to the instructions provided in
+/// the guide on Using Monitor Mode. Please note that the use of monochromatic
+/// LEDs is not supported by Notecard for LoRa.
+///
+/// RGB LEDs must be wired according to the instructions provided in the guide
+/// on Using RGB-Monitor Mode. Please note that the use of RGB LEDs is not
+/// supported by Notecard for LoRa.
+///
+/// NeoPixels must be wired according to the instructions provided in the guide
+/// on Using Neo-Monitor Mode.
 struct CardLed {
     static constexpr string_view notecard_request = "card.led";
     static constexpr bool supports_cmd = true;
@@ -29,8 +42,8 @@ struct CardLed {
 
     /// Used to specify the color of the LED to turn on or off.
     ///
-    /// **Note:** Notecard LoRa does not support monochromatic **LED** or
-    /// **RGB** modes, only **NeoPixels**.
+    /// Note: Notecard LoRa does not support monochromatic LED or RGB modes,
+    /// only NeoPixels.
     // mode: red | green | yellow | blue | cyan | magenta | orange | white | gray
     struct mode_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
@@ -50,6 +63,16 @@ struct CardLed {
         CardLed& operator()(bool v);
     } on{};
 
+    // Valid values for 'mode':
+    //   "red" — Supports **LED**, **RGB**, & **NeoPixel**
+    //   "green" — Supports **LED**, **RGB**, & **NeoPixel**
+    //   "yellow" — Supports **LED**, **RGB**, & **NeoPixel**
+    //   "blue" — Supports **RGB** & **NeoPixel**
+    //   "cyan" — Supports **RGB** & **NeoPixel**
+    //   "magenta" — Supports **RGB** & **NeoPixel**
+    //   "orange" — Supports **NeoPixel**
+    //   "white" — Supports **RGB** & **NeoPixel**
+    //   "gray" — Supports **NeoPixel**
     // consteval: only callable at compile time (C++20)
 #if __cplusplus >= 202002L
     static consteval note::string_view validatedMode(const char* v) {

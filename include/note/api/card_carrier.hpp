@@ -19,6 +19,12 @@ namespace note::api {
 
 
 
+/// Uses the `AUX_CHARGING` pin on the Notecard edge connector to notify the
+/// Notecard that the pin is connected to a Notecarrier that supports charging,
+/// using open-drain.
+///
+/// Once set, `{"charging":true}` will appear in a response if the Notecarrier
+/// is currently indicating that charging is in progress.
 struct CardCarrier {
     static constexpr string_view notecard_request = "card.carrier";
     static constexpr bool supports_cmd = true;
@@ -35,6 +41,10 @@ struct CardCarrier {
         CardCarrier& operator()(note::string_view v);
     } mode{};
 
+    // Valid values for 'mode':
+    //   "charging" — Tell the Notecard that `AUX_CHARGING` is connected to a Notecarrier t...
+    //   "-" — Turn off `AUX_CHARGING` detection.
+    //   "off" — Turn off `AUX_CHARGING` detection.
     // consteval: only callable at compile time (C++20)
 #if __cplusplus >= 202002L
     static consteval note::string_view validatedMode(const char* v) {
@@ -68,6 +78,7 @@ struct CardCarrier {
     std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
     uint8_t extras_count_ = 0;
 
+    /// Successful response
     struct Response {
         /// Will display `true` when in `AUX_CHARGING` `"charging"` mode.
         bool charging{};

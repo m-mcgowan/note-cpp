@@ -19,6 +19,10 @@ namespace note::api {
 
 
 
+/// This request returns an illumination reading (in lux) from an OPT3001
+/// ambient light sensor connected to Notecard's I2C bus. If no OPT3001 sensor
+/// is detected, this request returns an “illumination sensor is not available”
+/// error.
 struct CardIllumination {
     static constexpr string_view notecard_request = "card.illumination";
     static constexpr bool supports_cmd = true;
@@ -50,6 +54,7 @@ struct CardIllumination {
     std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
     uint8_t extras_count_ = 0;
 
+    /// Successful response
     struct Response {
         /// An illumination reading (in lux) from the attached OPT3001 sensor.
         double value{};

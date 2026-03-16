@@ -27,7 +27,8 @@ class PropertyDef:
     is_body: bool = False  # True for type:object fields (use BodyValue)
     unit: str | None = None  # "minutes", "seconds", "milliseconds"
     constants: dict | None = None  # {"reset": {"value": -1, "description": "..."}}
-    format: str | None = None  # "voltage-variable"
+    format: str | None = None  # "voltage-variable" or "flags"
+    flags: list[str] | None = None  # ["arm", "connected", ...] for x-flags fields
 
     @property
     def field_type(self) -> str:
@@ -36,8 +37,13 @@ class PropertyDef:
 
     @property
     def has_format(self) -> bool:
-        """True if this property has a custom format (e.g. voltage-variable)."""
-        return self.format is not None
+        """True if this property has a voltage-variable format."""
+        return self.format == "voltage-variable"
+
+    @property
+    def has_flags(self) -> bool:
+        """True if this property is a comma-separated flag field."""
+        return self.flags is not None and len(self.flags) > 0
 
     @property
     def has_unit(self) -> bool:

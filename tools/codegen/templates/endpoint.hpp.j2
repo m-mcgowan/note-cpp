@@ -18,8 +18,25 @@
 {% if has_format_fields %}
 #include <note/voltage_variable.hpp>
 {% endif %}
+{% if has_flags_fields %}
+#include <note/flag_set.hpp>
+{% endif %}
 #include <note/target.hpp>
 
+{% if has_flags_fields %}
+{# Emit flag constants — use first operation only (intents share properties) #}
+{% set fns = (endpoint.operations[0].notecard_request) | flag_namespace %}
+{% for prop in endpoint.operations[0].properties %}
+{% if prop.has_flags %}
+namespace note::{{ fns }} {
+{% for flag in prop.flags %}
+    inline constexpr uint32_t {{ flag | flag_cpp_name }} = 1u << {{ loop.index0 }};
+{% endfor %}
+} // namespace note::{{ fns }}
+{% endif %}
+{% endfor %}
+
+{% endif %}
 namespace note::api {
 
 {# ===== Helper macros ===================================================== #}
@@ -116,6 +133,22 @@ namespace note::api {
 {{ indent }}    {{ prop.nested_type_name }}& low(int32_t minutes);
 {{ indent }}    {{ prop.nested_type_name }}& dead(int32_t minutes);
 {{ indent }}    note::VoltageVariable vv_{};
+{% endif %}
+{% if prop.has_flags %}
+{% set fns = (op.notecard_request) | flag_namespace %}
+{{ indent }}    {{ parent_type }}& operator=(uint32_t flags);
+{{ indent }}    {{ parent_type }}& operator()(uint32_t flags);
+{{ indent }}    {{ prop.nested_type_name }}& add(uint32_t flag);
+{{ indent }}    {{ prop.nested_type_name }}& operator|=(uint32_t flag);
+{% for flag in prop.flags %}
+{{ indent }}    {{ prop.nested_type_name }}& {{ flag | flag_cpp_name }}();
+{% endfor %}
+{{ indent }}    static constexpr note::FlagDef flag_defs_[] = {
+{% for flag in prop.flags %}
+{{ indent }}        { note::{{ fns }}::{{ flag | flag_cpp_name }}, "{{ flag }}" },
+{% endfor %}
+{{ indent }}    };
+{{ indent }}    note::FlagSet<{{ prop.flags | length }}, {{ prop.flags | map('length') | sum + prop.flags | length }}> flags_{flag_defs_};
 {% endif %}
 {{ indent }}} {{ prop.accessor_name }}{};
 {% endif %}
@@ -435,6 +468,35 @@ inline {{ parent_qual }}& {{ parent_qual }}::{{ prop.nested_type_name }}::operat
 inline {{ parent_qual }}::{{ prop.nested_type_name }}& {{ parent_qual }}::{{ prop.nested_type_name }}::{{ level }}(int32_t minutes) {
     vv_.{{ level }}(minutes);
     Field<{{ prop.field_type }}>::operator=(vv_.str());
+    return *this;
+}
+{% endfor %}
+{% endif %}
+{% if prop.has_flags %}
+{% set fns = (op.notecard_request) | flag_namespace %}
+inline {{ parent_qual }}& {{ parent_qual }}::{{ prop.nested_type_name }}::operator=(uint32_t flags) {
+    flags_.set(flags);
+    Field<{{ prop.field_type }}>::operator=(flags_.str());
+    return *reinterpret_cast<{{ parent_qual }}*>(
+        reinterpret_cast<char*>(this) - offsetof({{ parent_qual }}, {{ prop.accessor_name }}));
+}
+inline {{ parent_qual }}& {{ parent_qual }}::{{ prop.nested_type_name }}::operator()(uint32_t flags) {
+    return operator=(flags);
+}
+inline {{ parent_qual }}::{{ prop.nested_type_name }}& {{ parent_qual }}::{{ prop.nested_type_name }}::add(uint32_t flag) {
+    flags_.add(flag);
+    Field<{{ prop.field_type }}>::operator=(flags_.str());
+    return *this;
+}
+inline {{ parent_qual }}::{{ prop.nested_type_name }}& {{ parent_qual }}::{{ prop.nested_type_name }}::operator|=(uint32_t flag) {
+    flags_ |= flag;
+    Field<{{ prop.field_type }}>::operator=(flags_.str());
+    return *this;
+}
+{% for flag in prop.flags %}
+inline {{ parent_qual }}::{{ prop.nested_type_name }}& {{ parent_qual }}::{{ prop.nested_type_name }}::{{ flag | flag_cpp_name }}() {
+    flags_.add(note::{{ fns }}::{{ flag | flag_cpp_name }});
+    Field<{{ prop.field_type }}>::operator=(flags_.str());
     return *this;
 }
 {% endfor %}

@@ -105,6 +105,7 @@ def _parse_property(name: str, schema: dict, *,
         unit=schema.get("x-unit"),
         constants=schema.get("x-constants"),
         format=schema.get("x-format"),
+        flags=schema.get("x-flags"),
     )
 
 

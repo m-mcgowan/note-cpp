@@ -10,7 +10,26 @@
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
 #include <note/units.hpp>
+#include <note/flag_set.hpp>
 #include <note/target.hpp>
+
+namespace note::attn {
+    inline constexpr uint32_t arm = 1u << 0;
+    inline constexpr uint32_t auxgpio = 1u << 1;
+    inline constexpr uint32_t connected = 1u << 2;
+    inline constexpr uint32_t disarm = 1u << 3;
+    inline constexpr uint32_t env = 1u << 4;
+    inline constexpr uint32_t files = 1u << 5;
+    inline constexpr uint32_t location = 1u << 6;
+    inline constexpr uint32_t motion = 1u << 7;
+    inline constexpr uint32_t motionchange = 1u << 8;
+    inline constexpr uint32_t rearm = 1u << 9;
+    inline constexpr uint32_t signal = 1u << 10;
+    inline constexpr uint32_t sleep = 1u << 11;
+    inline constexpr uint32_t usb = 1u << 12;
+    inline constexpr uint32_t watchdog = 1u << 13;
+    inline constexpr uint32_t wireless = 1u << 14;
+} // namespace note::attn
 
 namespace note::api {
 
@@ -43,6 +62,43 @@ struct CardAttn {
             using Field<note::string_view>::Field;
             using Field<note::string_view>::operator=;
             CardAttn::Request& operator()(note::string_view v);
+            CardAttn::Request& operator=(uint32_t flags);
+            CardAttn::Request& operator()(uint32_t flags);
+            mode_t& add(uint32_t flag);
+            mode_t& operator|=(uint32_t flag);
+            mode_t& arm();
+            mode_t& auxgpio();
+            mode_t& connected();
+            mode_t& disarm();
+            mode_t& env();
+            mode_t& files();
+            mode_t& location();
+            mode_t& motion();
+            mode_t& motionchange();
+            mode_t& rearm();
+            mode_t& signal();
+            mode_t& sleep();
+            mode_t& usb();
+            mode_t& watchdog();
+            mode_t& wireless();
+            static constexpr note::FlagDef flag_defs_[] = {
+                { note::attn::arm, "arm" },
+                { note::attn::auxgpio, "auxgpio" },
+                { note::attn::connected, "connected" },
+                { note::attn::disarm, "disarm" },
+                { note::attn::env, "env" },
+                { note::attn::files, "files" },
+                { note::attn::location, "location" },
+                { note::attn::motion, "motion" },
+                { note::attn::motionchange, "motionchange" },
+                { note::attn::rearm, "rearm" },
+                { note::attn::signal, "signal" },
+                { note::attn::sleep, "sleep" },
+                { note::attn::usb, "usb" },
+                { note::attn::watchdog, "watchdog" },
+                { note::attn::wireless, "wireless" },
+            };
+            note::FlagSet<15, 109> flags_{flag_defs_};
         } mode{};
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
         /// When `true`, completely disables ATTN processing and sets the pin
@@ -277,6 +333,43 @@ struct CardAttn {
             using Field<note::string_view>::Field;
             using Field<note::string_view>::operator=;
             CardAttn::Arm& operator()(note::string_view v);
+            CardAttn::Arm& operator=(uint32_t flags);
+            CardAttn::Arm& operator()(uint32_t flags);
+            mode_t& add(uint32_t flag);
+            mode_t& operator|=(uint32_t flag);
+            mode_t& arm();
+            mode_t& auxgpio();
+            mode_t& connected();
+            mode_t& disarm();
+            mode_t& env();
+            mode_t& files();
+            mode_t& location();
+            mode_t& motion();
+            mode_t& motionchange();
+            mode_t& rearm();
+            mode_t& signal();
+            mode_t& sleep();
+            mode_t& usb();
+            mode_t& watchdog();
+            mode_t& wireless();
+            static constexpr note::FlagDef flag_defs_[] = {
+                { note::attn::arm, "arm" },
+                { note::attn::auxgpio, "auxgpio" },
+                { note::attn::connected, "connected" },
+                { note::attn::disarm, "disarm" },
+                { note::attn::env, "env" },
+                { note::attn::files, "files" },
+                { note::attn::location, "location" },
+                { note::attn::motion, "motion" },
+                { note::attn::motionchange, "motionchange" },
+                { note::attn::rearm, "rearm" },
+                { note::attn::signal, "signal" },
+                { note::attn::sleep, "sleep" },
+                { note::attn::usb, "usb" },
+                { note::attn::watchdog, "watchdog" },
+                { note::attn::wireless, "wireless" },
+            };
+            note::FlagSet<15, 109> flags_{flag_defs_};
         } mode{};
         /// When `true`, enables ATTN processing. This setting is retained
         /// across device restarts.
@@ -796,6 +889,100 @@ inline CardAttn::Request& CardAttn::Request::mode_t::operator()(note::string_vie
     return *reinterpret_cast<CardAttn::Request*>(
         reinterpret_cast<char*>(this) - offsetof(CardAttn::Request, mode));
 }
+inline CardAttn::Request& CardAttn::Request::mode_t::operator=(uint32_t flags) {
+    flags_.set(flags);
+    Field<note::string_view>::operator=(flags_.str());
+    return *reinterpret_cast<CardAttn::Request*>(
+        reinterpret_cast<char*>(this) - offsetof(CardAttn::Request, mode));
+}
+inline CardAttn::Request& CardAttn::Request::mode_t::operator()(uint32_t flags) {
+    return operator=(flags);
+}
+inline CardAttn::Request::mode_t& CardAttn::Request::mode_t::add(uint32_t flag) {
+    flags_.add(flag);
+    Field<note::string_view>::operator=(flags_.str());
+    return *this;
+}
+inline CardAttn::Request::mode_t& CardAttn::Request::mode_t::operator|=(uint32_t flag) {
+    flags_ |= flag;
+    Field<note::string_view>::operator=(flags_.str());
+    return *this;
+}
+inline CardAttn::Request::mode_t& CardAttn::Request::mode_t::arm() {
+    flags_.add(note::attn::arm);
+    Field<note::string_view>::operator=(flags_.str());
+    return *this;
+}
+inline CardAttn::Request::mode_t& CardAttn::Request::mode_t::auxgpio() {
+    flags_.add(note::attn::auxgpio);
+    Field<note::string_view>::operator=(flags_.str());
+    return *this;
+}
+inline CardAttn::Request::mode_t& CardAttn::Request::mode_t::connected() {
+    flags_.add(note::attn::connected);
+    Field<note::string_view>::operator=(flags_.str());
+    return *this;
+}
+inline CardAttn::Request::mode_t& CardAttn::Request::mode_t::disarm() {
+    flags_.add(note::attn::disarm);
+    Field<note::string_view>::operator=(flags_.str());
+    return *this;
+}
+inline CardAttn::Request::mode_t& CardAttn::Request::mode_t::env() {
+    flags_.add(note::attn::env);
+    Field<note::string_view>::operator=(flags_.str());
+    return *this;
+}
+inline CardAttn::Request::mode_t& CardAttn::Request::mode_t::files() {
+    flags_.add(note::attn::files);
+    Field<note::string_view>::operator=(flags_.str());
+    return *this;
+}
+inline CardAttn::Request::mode_t& CardAttn::Request::mode_t::location() {
+    flags_.add(note::attn::location);
+    Field<note::string_view>::operator=(flags_.str());
+    return *this;
+}
+inline CardAttn::Request::mode_t& CardAttn::Request::mode_t::motion() {
+    flags_.add(note::attn::motion);
+    Field<note::string_view>::operator=(flags_.str());
+    return *this;
+}
+inline CardAttn::Request::mode_t& CardAttn::Request::mode_t::motionchange() {
+    flags_.add(note::attn::motionchange);
+    Field<note::string_view>::operator=(flags_.str());
+    return *this;
+}
+inline CardAttn::Request::mode_t& CardAttn::Request::mode_t::rearm() {
+    flags_.add(note::attn::rearm);
+    Field<note::string_view>::operator=(flags_.str());
+    return *this;
+}
+inline CardAttn::Request::mode_t& CardAttn::Request::mode_t::signal() {
+    flags_.add(note::attn::signal);
+    Field<note::string_view>::operator=(flags_.str());
+    return *this;
+}
+inline CardAttn::Request::mode_t& CardAttn::Request::mode_t::sleep() {
+    flags_.add(note::attn::sleep);
+    Field<note::string_view>::operator=(flags_.str());
+    return *this;
+}
+inline CardAttn::Request::mode_t& CardAttn::Request::mode_t::usb() {
+    flags_.add(note::attn::usb);
+    Field<note::string_view>::operator=(flags_.str());
+    return *this;
+}
+inline CardAttn::Request::mode_t& CardAttn::Request::mode_t::watchdog() {
+    flags_.add(note::attn::watchdog);
+    Field<note::string_view>::operator=(flags_.str());
+    return *this;
+}
+inline CardAttn::Request::mode_t& CardAttn::Request::mode_t::wireless() {
+    flags_.add(note::attn::wireless);
+    Field<note::string_view>::operator=(flags_.str());
+    return *this;
+}
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
 inline CardAttn::Request& CardAttn::Request::off_t::operator()(bool v) {
     Field<bool>::operator=(v);
@@ -843,6 +1030,100 @@ inline CardAttn::Arm& CardAttn::Arm::mode_t::operator()(note::string_view v) {
     Field<note::string_view>::operator=(v);
     return *reinterpret_cast<CardAttn::Arm*>(
         reinterpret_cast<char*>(this) - offsetof(CardAttn::Arm, mode));
+}
+inline CardAttn::Arm& CardAttn::Arm::mode_t::operator=(uint32_t flags) {
+    flags_.set(flags);
+    Field<note::string_view>::operator=(flags_.str());
+    return *reinterpret_cast<CardAttn::Arm*>(
+        reinterpret_cast<char*>(this) - offsetof(CardAttn::Arm, mode));
+}
+inline CardAttn::Arm& CardAttn::Arm::mode_t::operator()(uint32_t flags) {
+    return operator=(flags);
+}
+inline CardAttn::Arm::mode_t& CardAttn::Arm::mode_t::add(uint32_t flag) {
+    flags_.add(flag);
+    Field<note::string_view>::operator=(flags_.str());
+    return *this;
+}
+inline CardAttn::Arm::mode_t& CardAttn::Arm::mode_t::operator|=(uint32_t flag) {
+    flags_ |= flag;
+    Field<note::string_view>::operator=(flags_.str());
+    return *this;
+}
+inline CardAttn::Arm::mode_t& CardAttn::Arm::mode_t::arm() {
+    flags_.add(note::attn::arm);
+    Field<note::string_view>::operator=(flags_.str());
+    return *this;
+}
+inline CardAttn::Arm::mode_t& CardAttn::Arm::mode_t::auxgpio() {
+    flags_.add(note::attn::auxgpio);
+    Field<note::string_view>::operator=(flags_.str());
+    return *this;
+}
+inline CardAttn::Arm::mode_t& CardAttn::Arm::mode_t::connected() {
+    flags_.add(note::attn::connected);
+    Field<note::string_view>::operator=(flags_.str());
+    return *this;
+}
+inline CardAttn::Arm::mode_t& CardAttn::Arm::mode_t::disarm() {
+    flags_.add(note::attn::disarm);
+    Field<note::string_view>::operator=(flags_.str());
+    return *this;
+}
+inline CardAttn::Arm::mode_t& CardAttn::Arm::mode_t::env() {
+    flags_.add(note::attn::env);
+    Field<note::string_view>::operator=(flags_.str());
+    return *this;
+}
+inline CardAttn::Arm::mode_t& CardAttn::Arm::mode_t::files() {
+    flags_.add(note::attn::files);
+    Field<note::string_view>::operator=(flags_.str());
+    return *this;
+}
+inline CardAttn::Arm::mode_t& CardAttn::Arm::mode_t::location() {
+    flags_.add(note::attn::location);
+    Field<note::string_view>::operator=(flags_.str());
+    return *this;
+}
+inline CardAttn::Arm::mode_t& CardAttn::Arm::mode_t::motion() {
+    flags_.add(note::attn::motion);
+    Field<note::string_view>::operator=(flags_.str());
+    return *this;
+}
+inline CardAttn::Arm::mode_t& CardAttn::Arm::mode_t::motionchange() {
+    flags_.add(note::attn::motionchange);
+    Field<note::string_view>::operator=(flags_.str());
+    return *this;
+}
+inline CardAttn::Arm::mode_t& CardAttn::Arm::mode_t::rearm() {
+    flags_.add(note::attn::rearm);
+    Field<note::string_view>::operator=(flags_.str());
+    return *this;
+}
+inline CardAttn::Arm::mode_t& CardAttn::Arm::mode_t::signal() {
+    flags_.add(note::attn::signal);
+    Field<note::string_view>::operator=(flags_.str());
+    return *this;
+}
+inline CardAttn::Arm::mode_t& CardAttn::Arm::mode_t::sleep() {
+    flags_.add(note::attn::sleep);
+    Field<note::string_view>::operator=(flags_.str());
+    return *this;
+}
+inline CardAttn::Arm::mode_t& CardAttn::Arm::mode_t::usb() {
+    flags_.add(note::attn::usb);
+    Field<note::string_view>::operator=(flags_.str());
+    return *this;
+}
+inline CardAttn::Arm::mode_t& CardAttn::Arm::mode_t::watchdog() {
+    flags_.add(note::attn::watchdog);
+    Field<note::string_view>::operator=(flags_.str());
+    return *this;
+}
+inline CardAttn::Arm::mode_t& CardAttn::Arm::mode_t::wireless() {
+    flags_.add(note::attn::wireless);
+    Field<note::string_view>::operator=(flags_.str());
+    return *this;
 }
 inline CardAttn::Arm& CardAttn::Arm::on_t::operator()(bool v) {
     Field<bool>::operator=(v);

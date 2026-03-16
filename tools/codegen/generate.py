@@ -60,6 +60,9 @@ def _cpp_request_test_value(prop) -> str:
     """C++ expression for setting a request field setter in generated tests."""
     if prop.has_unit:
         return f'{prop.field_type}{{42}}'
+    if prop.has_flags:
+        # Use raw string assignment (tests that Field<string_view> still works)
+        return f'note::string_view("{prop.flags[0]}")'
     if prop.cpp_type == "bool":
         return "true"
     if prop.cpp_type == "int32_t":
@@ -209,6 +212,8 @@ def main() -> None:
     env.filters["request_test_value"] = _cpp_request_test_value
     env.filters["reader_test_value"] = _reader_test_value
     env.filters["response_match_value"] = _response_match_value
+    env.filters["flag_namespace"] = lambda wire: wire.rsplit(".", 1)[-1]
+    env.filters["flag_cpp_name"] = lambda s: s.replace("-", "_")
 
     endpoint_template = env.get_template("endpoint.hpp.j2")
 
@@ -234,12 +239,18 @@ def main() -> None:
             for op in endpoint.operations
             for prop in op.properties
         )
+        has_flags_fields = any(
+            prop.has_flags
+            for op in endpoint.operations
+            for prop in op.properties
+        )
         content = endpoint_template.render(
             endpoint=endpoint,
             has_body_field=has_body_field,
             has_body_response=has_body_response,
             has_unit_fields=has_unit_fields,
             has_format_fields=has_format_fields,
+            has_flags_fields=has_flags_fields,
         )
         out_path = output_dir / endpoint.header_filename
         out_path.write_text(content)

@@ -356,6 +356,24 @@ req.execute();
 
 Only levels you set are emitted — `.voutbound.usb(5).normal(60)` produces `"usb:5;normal:60"`.
 
+**Comma-separated flags** — fields like `card.attn` mode accept a comma-delimited set of flags. Named methods provide compile-time safety:
+
+```cpp
+auto req = api.card.attn();
+req.mode.arm().connected().files();       // chainable named methods
+req.execute();
+// produces: "mode":"arm,connected,files"
+
+// Or use flag constants with operator|
+using namespace note::attn;
+req.mode = arm | connected | files;
+
+// Raw strings still work for dynamic values
+req.mode = "arm,connected";
+```
+
+Flag constants live in `note::attn`, `note::triangulate`, etc.
+
 See [examples/hub-configuration/](examples/hub-configuration/) for more.
 
 ---

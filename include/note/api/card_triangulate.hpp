@@ -9,7 +9,13 @@
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
+#include <note/flag_set.hpp>
 #include <note/target.hpp>
+
+namespace note::triangulate {
+    inline constexpr uint32_t cell = 1u << 0;
+    inline constexpr uint32_t wifi = 1u << 1;
+} // namespace note::triangulate
 
 namespace note::api {
 
@@ -43,6 +49,17 @@ struct CardTriangulate {
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
         CardTriangulate& operator()(note::string_view v);
+        CardTriangulate& operator=(uint32_t flags);
+        CardTriangulate& operator()(uint32_t flags);
+        mode_t& add(uint32_t flag);
+        mode_t& operator|=(uint32_t flag);
+        mode_t& cell();
+        mode_t& wifi();
+        static constexpr note::FlagDef flag_defs_[] = {
+            { note::triangulate::cell, "cell" },
+            { note::triangulate::wifi, "wifi" },
+        };
+        note::FlagSet<2, 10> flags_{flag_defs_};
     } mode{};
     /// `true` to instruct the Notecard to triangulate even if the module has
     /// not moved. Only takes effect when `set` is `true`.
@@ -214,6 +231,35 @@ inline CardTriangulate& CardTriangulate::mode_t::operator()(note::string_view v)
     Field<note::string_view>::operator=(v);
     return *reinterpret_cast<CardTriangulate*>(
         reinterpret_cast<char*>(this) - offsetof(CardTriangulate, mode));
+}
+inline CardTriangulate& CardTriangulate::mode_t::operator=(uint32_t flags) {
+    flags_.set(flags);
+    Field<note::string_view>::operator=(flags_.str());
+    return *reinterpret_cast<CardTriangulate*>(
+        reinterpret_cast<char*>(this) - offsetof(CardTriangulate, mode));
+}
+inline CardTriangulate& CardTriangulate::mode_t::operator()(uint32_t flags) {
+    return operator=(flags);
+}
+inline CardTriangulate::mode_t& CardTriangulate::mode_t::add(uint32_t flag) {
+    flags_.add(flag);
+    Field<note::string_view>::operator=(flags_.str());
+    return *this;
+}
+inline CardTriangulate::mode_t& CardTriangulate::mode_t::operator|=(uint32_t flag) {
+    flags_ |= flag;
+    Field<note::string_view>::operator=(flags_.str());
+    return *this;
+}
+inline CardTriangulate::mode_t& CardTriangulate::mode_t::cell() {
+    flags_.add(note::triangulate::cell);
+    Field<note::string_view>::operator=(flags_.str());
+    return *this;
+}
+inline CardTriangulate::mode_t& CardTriangulate::mode_t::wifi() {
+    flags_.add(note::triangulate::wifi);
+    Field<note::string_view>::operator=(flags_.str());
+    return *this;
 }
 inline CardTriangulate& CardTriangulate::on_t::operator()(bool v) {
     Field<bool>::operator=(v);

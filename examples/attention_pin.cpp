@@ -20,7 +20,7 @@ void intent_examples(note::Notecard& nc) {
     // {"req":"card.attn","mode":"arm,connected"}
     {
         note::api::CardAttn::Arm req;
-        req.mode("arm,connected");
+        req.mode.arm().connected();
         nc.execute(req);
         // Returns ApiResult<CardAttn::Arm::Response> with just .set
     }
@@ -84,11 +84,11 @@ void intent_examples(note::Notecard& nc) {
 void base_examples(note::Notecard& nc) {
     using namespace note::literals;
 
-    // Arm ATTN for connectivity changes (same wire format as intent version)
+    // Arm ATTN for connectivity changes — named flag methods
     // {"req":"card.attn","mode":"arm,connected"}
     {
         note::api::CardAttn::Request req;
-        req.mode("arm,connected");
+        req.mode.arm().connected();
         auto result = nc.execute(req);
         if (result) {
             // Full response available: .set, .off, .payload, .time
@@ -97,15 +97,25 @@ void base_examples(note::Notecard& nc) {
         }
     }
 
+    // Arm with multiple sources — flag constants and operator|
+    // {"req":"card.attn","mode":"arm,connected,files,motion"}
+    {
+        using namespace note::attn;
+        note::api::CardAttn::Request req;
+        req.mode = arm | connected | files | motion;
+        nc.execute(req);
+    }
+
     // Watchdog timer (must set mode explicitly)
     // {"req":"card.attn","mode":"watchdog","seconds":60}
     {
         note::api::CardAttn::Request req;
-        req.mode("watchdog").seconds(60_s);
+        req.mode.watchdog();
+        req.seconds(60_s);
         nc.execute(req);
     }
 
-    // Disarm
+    // Disarm — raw string still works for any mode combination
     // {"req":"card.attn","mode":"disarm,-all"}
     {
         note::api::CardAttn::Request req;

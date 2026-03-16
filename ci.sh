@@ -91,6 +91,7 @@ run_ci() {
         "$ROOT/tests/test_api_context.cpp" \
         "$ROOT/tests/test_endpoint_coverage.cpp" \
         "$ROOT/tests/test_voltage_variable.cpp" \
+        "$ROOT/tests/test_flag_set.cpp" \
         "$ROOT/tests/test_channel.cpp" \
         "$ROOT/tests/test_state_store.cpp" \
         "$ROOT/tests/test_target.cpp" \
@@ -345,6 +346,7 @@ run_coverage_clang() {
         "$ROOT/tests/test_api_context.cpp" \
         "$ROOT/tests/test_endpoint_coverage.cpp" \
         "$ROOT/tests/test_voltage_variable.cpp" \
+        "$ROOT/tests/test_flag_set.cpp" \
         "$ROOT/tests/test_target.cpp" \
         "$ROOT/tests/test_make_api.cpp" \
         "$ROOT/tests/test_units.cpp"
@@ -457,7 +459,7 @@ run_coverage() {
         test_json_buf test_property_functor
         test_transport_crc32 test_transport_serial test_transport_i2c
         test_notecard test_api_context test_endpoint_coverage
-        test_voltage_variable
+        test_voltage_variable test_flag_set
         test_channel test_state_store
         test_target test_make_api test_units
         test_connection test_sync test_templates test_attention test_setup

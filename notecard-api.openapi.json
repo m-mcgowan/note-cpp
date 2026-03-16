@@ -131,6 +131,8 @@
                     "description": "A comma-separated list of one or more of the following keywords. Some keywords are only supported on certain types of Notecards.",
                     "type": "string",
                     "pattern": "^(?:-all|-env|-files|-location|-motion|-usb|arm|auxgpio|connected|disarm|env|files|location|motion|motionchange|rearm|signal|sleep|usb|watchdog|wireless)(?:,\\s*(?:-all|-env|-files|-location|-motion|-usb|arm|auxgpio|connected|disarm|env|files|location|motion|motionchange|rearm|signal|sleep|usb|watchdog|wireless))*\\s*$",
+                    "x-format": "flags",
+                    "x-flags": ["arm", "auxgpio", "connected", "disarm", "env", "files", "location", "motion", "motionchange", "rearm", "signal", "sleep", "usb", "watchdog", "wireless"],
                     "x-sub-descriptions": [
                       {
                         "const": "",
@@ -6567,6 +6569,8 @@
                     "description": "The triangulation approach to use for determining the Notecard location. The following keywords can be used separately or together in a comma-delimited list, in any order. See [Using Cell Tower & WiFi Triangulation](/notecard/notecard-walkthrough/time-and-location-requests/#using-cell-tower-and-wifi-triangulation) for more information.",
                     "type": "string",
                     "pattern": "^(cell(,wifi)?|wifi(,cell)?|-)$",
+                    "x-format": "flags",
+                    "x-flags": ["cell", "wifi"],
                     "x-sub-descriptions": [
                       {
                         "const": "cell",

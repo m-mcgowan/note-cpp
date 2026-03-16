@@ -71,7 +71,7 @@ TEST_CASE("note::api::CardAttn::Request request builder") {
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.files(note::string_view("x-files"));
-    req.mode(note::string_view("x-mode"));
+    req.mode(note::string_view("arm"));
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
     req.off(true);
 #endif
@@ -109,7 +109,7 @@ TEST_CASE("note::api::CardAttn::Request request builder") {
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover known-key routing in operator[] (true branch for each settable field)
     req["files"] = note::string_view("x-files");
-    req["mode"] = note::string_view("x-mode");
+    req["mode"] = note::string_view("arm");
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
     req["off"] = true;
 #endif
@@ -150,7 +150,7 @@ TEST_CASE("note::api::CardAttn::Arm request builder") {
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.files(note::string_view("x-files"));
-    req.mode(note::string_view("x-mode"));
+    req.mode(note::string_view("arm"));
     req.on(true);
     req.seconds(note::Seconds{42});
     req.execute();
@@ -172,7 +172,7 @@ TEST_CASE("note::api::CardAttn::Arm request builder") {
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover known-key routing in operator[] (true branch for each settable field)
     req["files"] = note::string_view("x-files");
-    req["mode"] = note::string_view("x-mode");
+    req["mode"] = note::string_view("arm");
     req["on"] = true;
     req["seconds"] = note::Seconds{42};
     // Cover command() overloads
@@ -2416,7 +2416,7 @@ TEST_CASE("note::api::CardTriangulate request builder") {
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.minutes(int32_t{42});
-    req.mode(note::string_view("x-mode"));
+    req.mode(note::string_view("cell"));
     req.on(true);
     req.set(true);
     req.text(note::string_view("x-text"));
@@ -2444,7 +2444,7 @@ TEST_CASE("note::api::CardTriangulate request builder") {
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover known-key routing in operator[] (true branch for each settable field)
     req["minutes"] = int32_t{42};
-    req["mode"] = note::string_view("x-mode");
+    req["mode"] = note::string_view("cell");
     req["on"] = true;
     req["set"] = true;
     req["text"] = note::string_view("x-text");

@@ -184,4 +184,38 @@ public:
     }
 };
 
+// ---------------------------------------------------------------------------
+// ErrorJsonReader: a reader that reports a Notecard error ("err" field).
+// Used to exercise the ApiResult<Rsp>(ErrorInfo) error constructors.
+// ---------------------------------------------------------------------------
+class ErrorJsonReader : public JsonReader {
+public:
+    explicit ErrorJsonReader(std::string err) : err_(std::move(err)) {}
+
+    bool has(string_view) const override { return false; }
+    bool get_bool(string_view, bool def) const override { return def; }
+    int32_t get_int(string_view, int32_t def) const override { return def; }
+    double get_double(string_view, double def) const override { return def; }
+    string_view get_string(string_view, string_view def) const override { return def; }
+    std::unique_ptr<JsonReader> get_object(string_view) const override { return nullptr; }
+    bool has_error() const override { return false; }
+    string_view get_error() const override { return err_; }
+
+private:
+    std::string err_;
+};
+
+// ---------------------------------------------------------------------------
+// ErrorJsonBackend: backend whose reader always reports a Notecard error.
+// ---------------------------------------------------------------------------
+class ErrorJsonBackend : public JsonBackend {
+public:
+    std::unique_ptr<JsonBuilder> create_builder() override {
+        return std::make_unique<TestJsonBuilder>();
+    }
+    std::unique_ptr<JsonReader> parse_response(string_view) override {
+        return std::make_unique<ErrorJsonReader>("test error");
+    }
+};
+
 } // namespace note::test

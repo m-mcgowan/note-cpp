@@ -21,5 +21,5 @@ OpenAPI specification.
 
 ## Getting started
 
-See the [README](https://github.com/blues/note-cpp) and `examples/` directory
+See the [README](https://github.com/m-mcgowan/note-cpp) and `examples/` directory
 for usage patterns.

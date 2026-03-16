@@ -92,6 +92,7 @@ run_ci() {
         "$ROOT/tests/test_endpoint_coverage.cpp" \
         "$ROOT/tests/test_voltage_variable.cpp" \
         "$ROOT/tests/test_flag_set.cpp" \
+        "$ROOT/tests/test_json_sax.cpp" \
         "$ROOT/tests/test_channel.cpp" \
         "$ROOT/tests/test_state_store.cpp" \
         "$ROOT/tests/test_target.cpp" \
@@ -223,6 +224,19 @@ TEOF
         export EMBEDME_DONE=1
     fi
 
+    # Run coverage check (first compiler only) to catch regressions locally.
+    if [ "${COVERAGE_DONE:-}" != "1" ]; then
+        if command -v lcov >/dev/null 2>&1; then
+            local lcov_major
+            lcov_major=$(lcov --version 2>&1 | grep -oE '[0-9]+' | head -1)
+            if [ "${lcov_major:-0}" -ge 2 ] 2>/dev/null; then
+                echo
+                run_coverage
+                export COVERAGE_DONE=1
+            fi
+        fi
+    fi
+
     echo
     echo "All checks passed for $CXX."
     echo
@@ -347,6 +361,7 @@ run_coverage_clang() {
         "$ROOT/tests/test_endpoint_coverage.cpp" \
         "$ROOT/tests/test_voltage_variable.cpp" \
         "$ROOT/tests/test_flag_set.cpp" \
+        "$ROOT/tests/test_json_sax.cpp" \
         "$ROOT/tests/test_target.cpp" \
         "$ROOT/tests/test_make_api.cpp" \
         "$ROOT/tests/test_units.cpp"
@@ -459,7 +474,7 @@ run_coverage() {
         test_json_buf test_property_functor
         test_transport_crc32 test_transport_serial test_transport_i2c
         test_notecard test_api_context test_endpoint_coverage
-        test_voltage_variable test_flag_set
+        test_voltage_variable test_flag_set test_json_sax
         test_channel test_state_store
         test_target test_make_api test_units
         test_connection test_sync test_templates test_attention test_setup

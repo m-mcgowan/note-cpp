@@ -15,6 +15,7 @@
 #include "test_json_backend.hpp"
 
 #include <note/api.hpp>
+#include <note/string_pool.hpp>
 
 #if __cplusplus >= 202002L
 using UnconstrainedApi = note::Api<>;
@@ -62,6 +63,24 @@ struct FailHarness {
     {}
 };
 
+// Backend that returns a Notecard error — exercises ApiResult(ErrorInfo) constructors.
+struct NcErrorHarness {
+    note::test::ErrorJsonBackend backend;
+    note::Notecard nc;
+    UnconstrainedApi api;
+
+    NcErrorHarness()
+        : nc(backend,
+            [](note::string_view, uint32_t) -> note::Result<std::string> {
+                return std::string("{}");
+            },
+            [](note::string_view) -> note::Result<void> {
+                return {};
+            })
+        , api(nc)
+    {}
+};
+
 } // namespace
 
 // ---------------------------------------------------------------------------
@@ -97,6 +116,8 @@ TEST_CASE("note::api::CardAttn::Request request builder") {
 #endif
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -141,6 +162,20 @@ TEST_CASE("note::api::CardAttn::Request response parsing") {
     REQUIRE(rsp.payload == "x-payload");
     REQUIRE(rsp.set == true);
     REQUIRE(rsp.time == 42);
+    // Cover intern_strings() — copies string_view fields into pool storage.
+    {
+        note::Allocator alloc;  // default: uses operator new/delete
+        note::StringPool pool(alloc);
+        rsp.intern_strings(pool);
+    }
+    // Cover intern_strings() empty-field branches (field.empty() == true).
+    {
+        auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
+        auto empty_rsp = note::api::CardAttn::Request::Response::parse(std::move(empty_rdr));
+        note::Allocator alloc;
+        note::StringPool pool(alloc);
+        empty_rsp.intern_strings(pool);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -160,6 +195,8 @@ TEST_CASE("note::api::CardAttn::Arm request builder") {
     REQUIRE(h.last_req.find("\"seconds\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -186,6 +223,20 @@ TEST_CASE("note::api::CardAttn::Arm response parsing") {
     reader->set("set", true);
     auto rsp = note::api::CardAttn::Arm::Response::parse(std::move(reader));
     REQUIRE(rsp.set == true);
+    // Cover intern_strings() — copies string_view fields into pool storage.
+    {
+        note::Allocator alloc;  // default: uses operator new/delete
+        note::StringPool pool(alloc);
+        rsp.intern_strings(pool);
+    }
+    // Cover intern_strings() empty-field branches (field.empty() == true).
+    {
+        auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
+        auto empty_rsp = note::api::CardAttn::Arm::Response::parse(std::move(empty_rdr));
+        note::Allocator alloc;
+        note::StringPool pool(alloc);
+        empty_rsp.intern_strings(pool);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -199,6 +250,8 @@ TEST_CASE("note::api::CardAttn::Watchdog request builder") {
     REQUIRE(h.last_req.find("\"seconds\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -229,6 +282,8 @@ TEST_CASE("note::api::CardAttn::Sleep request builder") {
     REQUIRE(h.last_req.find("\"seconds\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -256,6 +311,8 @@ TEST_CASE("note::api::CardAttn::Retrieve request builder") {
     req.execute();
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -276,6 +333,20 @@ TEST_CASE("note::api::CardAttn::Retrieve response parsing") {
     auto rsp = note::api::CardAttn::Retrieve::Response::parse(std::move(reader));
     REQUIRE(rsp.payload == "x-payload");
     REQUIRE(rsp.time == 42);
+    // Cover intern_strings() — copies string_view fields into pool storage.
+    {
+        note::Allocator alloc;  // default: uses operator new/delete
+        note::StringPool pool(alloc);
+        rsp.intern_strings(pool);
+    }
+    // Cover intern_strings() empty-field branches (field.empty() == true).
+    {
+        auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
+        auto empty_rsp = note::api::CardAttn::Retrieve::Response::parse(std::move(empty_rdr));
+        note::Allocator alloc;
+        note::StringPool pool(alloc);
+        empty_rsp.intern_strings(pool);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -287,6 +358,8 @@ TEST_CASE("note::api::CardAttn::Disarm request builder") {
     req.execute();
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -317,6 +390,8 @@ TEST_CASE("note::api::CardAttn::Query request builder") {
 #endif
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -345,6 +420,20 @@ TEST_CASE("note::api::CardAttn::Query response parsing") {
     REQUIRE(rsp.off == true);
 #endif
     REQUIRE(rsp.set == true);
+    // Cover intern_strings() — copies string_view fields into pool storage.
+    {
+        note::Allocator alloc;  // default: uses operator new/delete
+        note::StringPool pool(alloc);
+        rsp.intern_strings(pool);
+    }
+    // Cover intern_strings() empty-field branches (field.empty() == true).
+    {
+        auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
+        auto empty_rsp = note::api::CardAttn::Query::Response::parse(std::move(empty_rdr));
+        note::Allocator alloc;
+        note::StringPool pool(alloc);
+        empty_rsp.intern_strings(pool);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -418,6 +507,8 @@ TEST_CASE("note::api::CardAux request builder") {
     REQUIRE(h.last_req.find("\"usage\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -481,6 +572,20 @@ TEST_CASE("note::api::CardAux response parsing") {
 #endif
     REQUIRE(rsp.seconds == 42);
     REQUIRE(rsp.time == 42);
+    // Cover intern_strings() — copies string_view fields into pool storage.
+    {
+        note::Allocator alloc;  // default: uses operator new/delete
+        note::StringPool pool(alloc);
+        rsp.intern_strings(pool);
+    }
+    // Cover intern_strings() empty-field branches (field.empty() == true).
+    {
+        auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
+        auto empty_rsp = note::api::CardAux::Response::parse(std::move(empty_rdr));
+        note::Allocator alloc;
+        note::StringPool pool(alloc);
+        empty_rsp.intern_strings(pool);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -514,6 +619,8 @@ TEST_CASE("note::api::CardAuxSerial request builder") {
 #endif
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -553,6 +660,20 @@ TEST_CASE("note::api::CardAuxSerial response parsing") {
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
     REQUIRE(rsp.rate == 42);
 #endif
+    // Cover intern_strings() — copies string_view fields into pool storage.
+    {
+        note::Allocator alloc;  // default: uses operator new/delete
+        note::StringPool pool(alloc);
+        rsp.intern_strings(pool);
+    }
+    // Cover intern_strings() empty-field branches (field.empty() == true).
+    {
+        auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
+        auto empty_rsp = note::api::CardAuxSerial::Response::parse(std::move(empty_rdr));
+        note::Allocator alloc;
+        note::StringPool pool(alloc);
+        empty_rsp.intern_strings(pool);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -566,6 +687,8 @@ TEST_CASE("note::api::CardBinary::Get request builder") {
     REQUIRE(h.last_req.find("\"delete\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -599,6 +722,20 @@ TEST_CASE("note::api::CardBinary::Get response parsing") {
     REQUIRE(rsp.length == 42);
     REQUIRE(rsp.max == 42);
     REQUIRE(rsp.status == "x-status");
+    // Cover intern_strings() — copies string_view fields into pool storage.
+    {
+        note::Allocator alloc;  // default: uses operator new/delete
+        note::StringPool pool(alloc);
+        rsp.intern_strings(pool);
+    }
+    // Cover intern_strings() empty-field branches (field.empty() == true).
+    {
+        auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
+        auto empty_rsp = note::api::CardBinary::Get::Response::parse(std::move(empty_rdr));
+        note::Allocator alloc;
+        note::StringPool pool(alloc);
+        empty_rsp.intern_strings(pool);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -610,6 +747,8 @@ TEST_CASE("note::api::CardBinary::Delete request builder") {
     req.execute();
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -641,6 +780,20 @@ TEST_CASE("note::api::CardBinary::Delete response parsing") {
     REQUIRE(rsp.length == 42);
     REQUIRE(rsp.max == 42);
     REQUIRE(rsp.status == "x-status");
+    // Cover intern_strings() — copies string_view fields into pool storage.
+    {
+        note::Allocator alloc;  // default: uses operator new/delete
+        note::StringPool pool(alloc);
+        rsp.intern_strings(pool);
+    }
+    // Cover intern_strings() empty-field branches (field.empty() == true).
+    {
+        auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
+        auto empty_rsp = note::api::CardBinary::Delete::Response::parse(std::move(empty_rdr));
+        note::Allocator alloc;
+        note::StringPool pool(alloc);
+        empty_rsp.intern_strings(pool);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -658,6 +811,8 @@ TEST_CASE("note::api::CardBinaryGet request builder") {
     REQUIRE(h.last_req.find("\"offset\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -685,6 +840,20 @@ TEST_CASE("note::api::CardBinaryGet response parsing") {
     auto rsp = note::api::CardBinaryGet::Response::parse(std::move(reader));
     REQUIRE(rsp.err == "x-err");
     REQUIRE(rsp.status == "x-status");
+    // Cover intern_strings() — copies string_view fields into pool storage.
+    {
+        note::Allocator alloc;  // default: uses operator new/delete
+        note::StringPool pool(alloc);
+        rsp.intern_strings(pool);
+    }
+    // Cover intern_strings() empty-field branches (field.empty() == true).
+    {
+        auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
+        auto empty_rsp = note::api::CardBinaryGet::Response::parse(std::move(empty_rdr));
+        note::Allocator alloc;
+        note::StringPool pool(alloc);
+        empty_rsp.intern_strings(pool);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -702,6 +871,8 @@ TEST_CASE("note::api::CardBinaryPut request builder") {
     REQUIRE(h.last_req.find("\"status\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -727,6 +898,20 @@ TEST_CASE("note::api::CardBinaryPut response parsing") {
     reader->set("err", std::string("x-err"));
     auto rsp = note::api::CardBinaryPut::Response::parse(std::move(reader));
     REQUIRE(rsp.err == "x-err");
+    // Cover intern_strings() — copies string_view fields into pool storage.
+    {
+        note::Allocator alloc;  // default: uses operator new/delete
+        note::StringPool pool(alloc);
+        rsp.intern_strings(pool);
+    }
+    // Cover intern_strings() empty-field branches (field.empty() == true).
+    {
+        auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
+        auto empty_rsp = note::api::CardBinaryPut::Response::parse(std::move(empty_rdr));
+        note::Allocator alloc;
+        note::StringPool pool(alloc);
+        empty_rsp.intern_strings(pool);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -740,6 +925,8 @@ TEST_CASE("note::api::CardCarrier request builder") {
     REQUIRE(h.last_req.find("\"mode\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -765,6 +952,20 @@ TEST_CASE("note::api::CardCarrier response parsing") {
     auto rsp = note::api::CardCarrier::Response::parse(std::move(reader));
     REQUIRE(rsp.charging == true);
     REQUIRE(rsp.mode == "x-mode");
+    // Cover intern_strings() — copies string_view fields into pool storage.
+    {
+        note::Allocator alloc;  // default: uses operator new/delete
+        note::StringPool pool(alloc);
+        rsp.intern_strings(pool);
+    }
+    // Cover intern_strings() empty-field branches (field.empty() == true).
+    {
+        auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
+        auto empty_rsp = note::api::CardCarrier::Response::parse(std::move(empty_rdr));
+        note::Allocator alloc;
+        note::StringPool pool(alloc);
+        empty_rsp.intern_strings(pool);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -784,6 +985,8 @@ TEST_CASE("note::api::CardContact::Get request builder") {
     REQUIRE(h.last_req.find("\"role\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -816,6 +1019,20 @@ TEST_CASE("note::api::CardContact::Get response parsing") {
     REQUIRE(rsp.name == "x-name");
     REQUIRE(rsp.org == "x-org");
     REQUIRE(rsp.role == "x-role");
+    // Cover intern_strings() — copies string_view fields into pool storage.
+    {
+        note::Allocator alloc;  // default: uses operator new/delete
+        note::StringPool pool(alloc);
+        rsp.intern_strings(pool);
+    }
+    // Cover intern_strings() empty-field branches (field.empty() == true).
+    {
+        auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
+        auto empty_rsp = note::api::CardContact::Get::Response::parse(std::move(empty_rdr));
+        note::Allocator alloc;
+        note::StringPool pool(alloc);
+        empty_rsp.intern_strings(pool);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -835,6 +1052,8 @@ TEST_CASE("note::api::CardContact::Set request builder") {
     REQUIRE(h.last_req.find("\"role\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -867,6 +1086,20 @@ TEST_CASE("note::api::CardContact::Set response parsing") {
     REQUIRE(rsp.name == "x-name");
     REQUIRE(rsp.org == "x-org");
     REQUIRE(rsp.role == "x-role");
+    // Cover intern_strings() — copies string_view fields into pool storage.
+    {
+        note::Allocator alloc;  // default: uses operator new/delete
+        note::StringPool pool(alloc);
+        rsp.intern_strings(pool);
+    }
+    // Cover intern_strings() empty-field branches (field.empty() == true).
+    {
+        auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
+        auto empty_rsp = note::api::CardContact::Set::Response::parse(std::move(empty_rdr));
+        note::Allocator alloc;
+        note::StringPool pool(alloc);
+        empty_rsp.intern_strings(pool);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -892,6 +1125,8 @@ TEST_CASE("note::api::CardDfu request builder") {
     REQUIRE(h.last_req.find("\"stop\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -921,6 +1156,20 @@ TEST_CASE("note::api::CardDfu response parsing") {
     reader->set("name", std::string("x-name"));
     auto rsp = note::api::CardDfu::Response::parse(std::move(reader));
     REQUIRE(rsp.name == "x-name");
+    // Cover intern_strings() — copies string_view fields into pool storage.
+    {
+        note::Allocator alloc;  // default: uses operator new/delete
+        note::StringPool pool(alloc);
+        rsp.intern_strings(pool);
+    }
+    // Cover intern_strings() empty-field branches (field.empty() == true).
+    {
+        auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
+        auto empty_rsp = note::api::CardDfu::Response::parse(std::move(empty_rdr));
+        note::Allocator alloc;
+        note::StringPool pool(alloc);
+        empty_rsp.intern_strings(pool);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -932,6 +1181,8 @@ TEST_CASE("note::api::CardIllumination request builder") {
     req.execute();
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -953,6 +1204,20 @@ TEST_CASE("note::api::CardIllumination response parsing") {
     reader->set("value", 1.5);
     auto rsp = note::api::CardIllumination::Response::parse(std::move(reader));
     REQUIRE(rsp.value == 1.5);
+    // Cover intern_strings() — copies string_view fields into pool storage.
+    {
+        note::Allocator alloc;  // default: uses operator new/delete
+        note::StringPool pool(alloc);
+        rsp.intern_strings(pool);
+    }
+    // Cover intern_strings() empty-field branches (field.empty() == true).
+    {
+        auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
+        auto empty_rsp = note::api::CardIllumination::Response::parse(std::move(empty_rdr));
+        note::Allocator alloc;
+        note::StringPool pool(alloc);
+        empty_rsp.intern_strings(pool);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -968,6 +1233,8 @@ TEST_CASE("note::api::CardIo request builder") {
     REQUIRE(h.last_req.find("\"mode\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -1001,6 +1268,8 @@ TEST_CASE("note::api::CardLed request builder") {
     REQUIRE(h.last_req.find("\"on\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -1029,6 +1298,8 @@ TEST_CASE("note::api::CardLocation request builder") {
     req.execute();
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -1064,6 +1335,20 @@ TEST_CASE("note::api::CardLocation response parsing") {
     REQUIRE(rsp.mode == "x-mode");
     REQUIRE(rsp.status == "x-status");
     REQUIRE(rsp.time == 42);
+    // Cover intern_strings() — copies string_view fields into pool storage.
+    {
+        note::Allocator alloc;  // default: uses operator new/delete
+        note::StringPool pool(alloc);
+        rsp.intern_strings(pool);
+    }
+    // Cover intern_strings() empty-field branches (field.empty() == true).
+    {
+        auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
+        auto empty_rsp = note::api::CardLocation::Response::parse(std::move(empty_rdr));
+        note::Allocator alloc;
+        note::StringPool pool(alloc);
+        empty_rsp.intern_strings(pool);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -1097,6 +1382,8 @@ TEST_CASE("note::api::CardLocationMode::Get request builder") {
     REQUIRE(h.last_req.find("\"vseconds\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -1148,6 +1435,20 @@ TEST_CASE("note::api::CardLocationMode::Get response parsing") {
     REQUIRE(rsp.threshold == 42);
 #endif
     REQUIRE(rsp.vseconds == "x-vseconds");
+    // Cover intern_strings() — copies string_view fields into pool storage.
+    {
+        note::Allocator alloc;  // default: uses operator new/delete
+        note::StringPool pool(alloc);
+        rsp.intern_strings(pool);
+    }
+    // Cover intern_strings() empty-field branches (field.empty() == true).
+    {
+        auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
+        auto empty_rsp = note::api::CardLocationMode::Get::Response::parse(std::move(empty_rdr));
+        note::Allocator alloc;
+        note::StringPool pool(alloc);
+        empty_rsp.intern_strings(pool);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -1181,6 +1482,8 @@ TEST_CASE("note::api::CardLocationMode::Set request builder") {
     REQUIRE(h.last_req.find("\"vseconds\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -1232,6 +1535,20 @@ TEST_CASE("note::api::CardLocationMode::Set response parsing") {
     REQUIRE(rsp.threshold == 42);
 #endif
     REQUIRE(rsp.vseconds == "x-vseconds");
+    // Cover intern_strings() — copies string_view fields into pool storage.
+    {
+        note::Allocator alloc;  // default: uses operator new/delete
+        note::StringPool pool(alloc);
+        rsp.intern_strings(pool);
+    }
+    // Cover intern_strings() empty-field branches (field.empty() == true).
+    {
+        auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
+        auto empty_rsp = note::api::CardLocationMode::Set::Response::parse(std::move(empty_rdr));
+        note::Allocator alloc;
+        note::StringPool pool(alloc);
+        empty_rsp.intern_strings(pool);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -1251,6 +1568,8 @@ TEST_CASE("note::api::CardLocationMode::Continuous request builder") {
     REQUIRE(h.last_req.find("\"vseconds\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -1285,6 +1604,20 @@ TEST_CASE("note::api::CardLocationMode::Continuous response parsing") {
     REQUIRE(rsp.threshold == 42);
 #endif
     REQUIRE(rsp.vseconds == "x-vseconds");
+    // Cover intern_strings() — copies string_view fields into pool storage.
+    {
+        note::Allocator alloc;  // default: uses operator new/delete
+        note::StringPool pool(alloc);
+        rsp.intern_strings(pool);
+    }
+    // Cover intern_strings() empty-field branches (field.empty() == true).
+    {
+        auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
+        auto empty_rsp = note::api::CardLocationMode::Continuous::Response::parse(std::move(empty_rdr));
+        note::Allocator alloc;
+        note::StringPool pool(alloc);
+        empty_rsp.intern_strings(pool);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -1314,6 +1647,8 @@ TEST_CASE("note::api::CardLocationMode::Periodic request builder") {
     REQUIRE(h.last_req.find("\"vseconds\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -1363,6 +1698,20 @@ TEST_CASE("note::api::CardLocationMode::Periodic response parsing") {
     REQUIRE(rsp.threshold == 42);
 #endif
     REQUIRE(rsp.vseconds == "x-vseconds");
+    // Cover intern_strings() — copies string_view fields into pool storage.
+    {
+        note::Allocator alloc;  // default: uses operator new/delete
+        note::StringPool pool(alloc);
+        rsp.intern_strings(pool);
+    }
+    // Cover intern_strings() empty-field branches (field.empty() == true).
+    {
+        auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
+        auto empty_rsp = note::api::CardLocationMode::Periodic::Response::parse(std::move(empty_rdr));
+        note::Allocator alloc;
+        note::StringPool pool(alloc);
+        empty_rsp.intern_strings(pool);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -1378,6 +1727,8 @@ TEST_CASE("note::api::CardLocationMode::Fixed request builder") {
     REQUIRE(h.last_req.find("\"lon\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -1406,6 +1757,20 @@ TEST_CASE("note::api::CardLocationMode::Fixed response parsing") {
     REQUIRE(rsp.lat == 1.5);
     REQUIRE(rsp.lon == 1.5);
     REQUIRE(rsp.mode == "x-mode");
+    // Cover intern_strings() — copies string_view fields into pool storage.
+    {
+        note::Allocator alloc;  // default: uses operator new/delete
+        note::StringPool pool(alloc);
+        rsp.intern_strings(pool);
+    }
+    // Cover intern_strings() empty-field branches (field.empty() == true).
+    {
+        auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
+        auto empty_rsp = note::api::CardLocationMode::Fixed::Response::parse(std::move(empty_rdr));
+        note::Allocator alloc;
+        note::StringPool pool(alloc);
+        empty_rsp.intern_strings(pool);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -1437,6 +1802,8 @@ TEST_CASE("note::api::CardLocationMode::Delete request builder") {
     REQUIRE(h.last_req.find("\"vseconds\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -1487,6 +1854,20 @@ TEST_CASE("note::api::CardLocationMode::Delete response parsing") {
     REQUIRE(rsp.threshold == 42);
 #endif
     REQUIRE(rsp.vseconds == "x-vseconds");
+    // Cover intern_strings() — copies string_view fields into pool storage.
+    {
+        note::Allocator alloc;  // default: uses operator new/delete
+        note::StringPool pool(alloc);
+        rsp.intern_strings(pool);
+    }
+    // Cover intern_strings() empty-field branches (field.empty() == true).
+    {
+        auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
+        auto empty_rsp = note::api::CardLocationMode::Delete::Response::parse(std::move(empty_rdr));
+        note::Allocator alloc;
+        note::StringPool pool(alloc);
+        empty_rsp.intern_strings(pool);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -1516,6 +1897,8 @@ TEST_CASE("note::api::CardLocationTrack request builder") {
     REQUIRE(h.last_req.find("\"sync\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -1557,6 +1940,20 @@ TEST_CASE("note::api::CardLocationTrack response parsing") {
     REQUIRE(rsp.seconds == 42);
     REQUIRE(rsp.start == true);
     REQUIRE(rsp.stop == true);
+    // Cover intern_strings() — copies string_view fields into pool storage.
+    {
+        note::Allocator alloc;  // default: uses operator new/delete
+        note::StringPool pool(alloc);
+        rsp.intern_strings(pool);
+    }
+    // Cover intern_strings() empty-field branches (field.empty() == true).
+    {
+        auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
+        auto empty_rsp = note::api::CardLocationTrack::Response::parse(std::move(empty_rdr));
+        note::Allocator alloc;
+        note::StringPool pool(alloc);
+        empty_rsp.intern_strings(pool);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -1574,6 +1971,8 @@ TEST_CASE("note::api::CardMonitor request builder") {
     REQUIRE(h.last_req.find("\"usb\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -1604,6 +2003,8 @@ TEST_CASE("note::api::CardMotion request builder") {
     REQUIRE(h.last_req.find("\"minutes\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -1639,6 +2040,20 @@ TEST_CASE("note::api::CardMotion response parsing") {
     REQUIRE(rsp.movements == "x-movements");
     REQUIRE(rsp.seconds == 42);
     REQUIRE(rsp.status == "x-status");
+    // Cover intern_strings() — copies string_view fields into pool storage.
+    {
+        note::Allocator alloc;  // default: uses operator new/delete
+        note::StringPool pool(alloc);
+        rsp.intern_strings(pool);
+    }
+    // Cover intern_strings() empty-field branches (field.empty() == true).
+    {
+        auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
+        auto empty_rsp = note::api::CardMotion::Response::parse(std::move(empty_rdr));
+        note::Allocator alloc;
+        note::StringPool pool(alloc);
+        empty_rsp.intern_strings(pool);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -1664,6 +2079,8 @@ TEST_CASE("note::api::CardMotionMode request builder") {
     REQUIRE(h.last_req.find("\"stop\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -1706,6 +2123,8 @@ TEST_CASE("note::api::CardMotionSync request builder") {
     REQUIRE(h.last_req.find("\"threshold\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -1750,6 +2169,8 @@ TEST_CASE("note::api::CardMotionTrack request builder") {
     REQUIRE(h.last_req.find("\"threshold\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -1786,6 +2207,8 @@ TEST_CASE("note::api::CardPower::Get request builder") {
     REQUIRE(h.last_req.find("\"reset\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -1814,6 +2237,20 @@ TEST_CASE("note::api::CardPower::Get response parsing") {
     REQUIRE(rsp.milliampHours == 1.5);
     REQUIRE(rsp.temperature == 1.5);
     REQUIRE(rsp.voltage == 1.5);
+    // Cover intern_strings() — copies string_view fields into pool storage.
+    {
+        note::Allocator alloc;  // default: uses operator new/delete
+        note::StringPool pool(alloc);
+        rsp.intern_strings(pool);
+    }
+    // Cover intern_strings() empty-field branches (field.empty() == true).
+    {
+        auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
+        auto empty_rsp = note::api::CardPower::Get::Response::parse(std::move(empty_rdr));
+        note::Allocator alloc;
+        note::StringPool pool(alloc);
+        empty_rsp.intern_strings(pool);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -1829,6 +2266,8 @@ TEST_CASE("note::api::CardPower::Set request builder") {
     REQUIRE(h.last_req.find("\"reset\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -1857,6 +2296,20 @@ TEST_CASE("note::api::CardPower::Set response parsing") {
     REQUIRE(rsp.milliampHours == 1.5);
     REQUIRE(rsp.temperature == 1.5);
     REQUIRE(rsp.voltage == 1.5);
+    // Cover intern_strings() — copies string_view fields into pool storage.
+    {
+        note::Allocator alloc;  // default: uses operator new/delete
+        note::StringPool pool(alloc);
+        rsp.intern_strings(pool);
+    }
+    // Cover intern_strings() empty-field branches (field.empty() == true).
+    {
+        auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
+        auto empty_rsp = note::api::CardPower::Set::Response::parse(std::move(empty_rdr));
+        note::Allocator alloc;
+        note::StringPool pool(alloc);
+        empty_rsp.intern_strings(pool);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -1870,6 +2323,8 @@ TEST_CASE("note::api::CardPower::Delete request builder") {
     REQUIRE(h.last_req.find("\"minutes\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -1897,6 +2352,20 @@ TEST_CASE("note::api::CardPower::Delete response parsing") {
     REQUIRE(rsp.milliampHours == 1.5);
     REQUIRE(rsp.temperature == 1.5);
     REQUIRE(rsp.voltage == 1.5);
+    // Cover intern_strings() — copies string_view fields into pool storage.
+    {
+        note::Allocator alloc;  // default: uses operator new/delete
+        note::StringPool pool(alloc);
+        rsp.intern_strings(pool);
+    }
+    // Cover intern_strings() empty-field branches (field.empty() == true).
+    {
+        auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
+        auto empty_rsp = note::api::CardPower::Delete::Response::parse(std::move(empty_rdr));
+        note::Allocator alloc;
+        note::StringPool pool(alloc);
+        empty_rsp.intern_strings(pool);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -1912,6 +2381,8 @@ TEST_CASE("note::api::CardRandom request builder") {
     REQUIRE(h.last_req.find("\"mode\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -1938,6 +2409,20 @@ TEST_CASE("note::api::CardRandom response parsing") {
     auto rsp = note::api::CardRandom::Response::parse(std::move(reader));
     REQUIRE(rsp.count == 42);
     REQUIRE(rsp.payload == "x-payload");
+    // Cover intern_strings() — copies string_view fields into pool storage.
+    {
+        note::Allocator alloc;  // default: uses operator new/delete
+        note::StringPool pool(alloc);
+        rsp.intern_strings(pool);
+    }
+    // Cover intern_strings() empty-field branches (field.empty() == true).
+    {
+        auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
+        auto empty_rsp = note::api::CardRandom::Response::parse(std::move(empty_rdr));
+        note::Allocator alloc;
+        note::StringPool pool(alloc);
+        empty_rsp.intern_strings(pool);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -1949,6 +2434,8 @@ TEST_CASE("note::api::CardRestart request builder") {
     req.execute();
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -1977,6 +2464,8 @@ TEST_CASE("note::api::CardRestore request builder") {
     REQUIRE(h.last_req.find("\"delete\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -2012,6 +2501,8 @@ TEST_CASE("note::api::CardSleep request builder") {
     REQUIRE(h.last_req.find("\"seconds\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -2044,6 +2535,20 @@ TEST_CASE("note::api::CardSleep response parsing") {
     REQUIRE(rsp.off == true);
     REQUIRE(rsp.on == true);
     REQUIRE(rsp.seconds == 42);
+    // Cover intern_strings() — copies string_view fields into pool storage.
+    {
+        note::Allocator alloc;  // default: uses operator new/delete
+        note::StringPool pool(alloc);
+        rsp.intern_strings(pool);
+    }
+    // Cover intern_strings() empty-field branches (field.empty() == true).
+    {
+        auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
+        auto empty_rsp = note::api::CardSleep::Response::parse(std::move(empty_rdr));
+        note::Allocator alloc;
+        note::StringPool pool(alloc);
+        empty_rsp.intern_strings(pool);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -2055,6 +2560,8 @@ TEST_CASE("note::api::CardStatus request builder") {
     req.execute();
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -2104,6 +2611,20 @@ TEST_CASE("note::api::CardStatus response parsing") {
     REQUIRE(rsp.time == 42);
     REQUIRE(rsp.usb == true);
     REQUIRE(rsp.wifi == true);
+    // Cover intern_strings() — copies string_view fields into pool storage.
+    {
+        note::Allocator alloc;  // default: uses operator new/delete
+        note::StringPool pool(alloc);
+        rsp.intern_strings(pool);
+    }
+    // Cover intern_strings() empty-field branches (field.empty() == true).
+    {
+        auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
+        auto empty_rsp = note::api::CardStatus::Response::parse(std::move(empty_rdr));
+        note::Allocator alloc;
+        note::StringPool pool(alloc);
+        empty_rsp.intern_strings(pool);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -2123,6 +2644,8 @@ TEST_CASE("note::api::CardTemp::Get request builder") {
     REQUIRE(h.last_req.find("\"sync\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -2161,6 +2684,20 @@ TEST_CASE("note::api::CardTemp::Get response parsing") {
     REQUIRE(rsp.usb == true);
     REQUIRE(rsp.value == 1.5);
     REQUIRE(rsp.voltage == 1.5);
+    // Cover intern_strings() — copies string_view fields into pool storage.
+    {
+        note::Allocator alloc;  // default: uses operator new/delete
+        note::StringPool pool(alloc);
+        rsp.intern_strings(pool);
+    }
+    // Cover intern_strings() empty-field branches (field.empty() == true).
+    {
+        auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
+        auto empty_rsp = note::api::CardTemp::Get::Response::parse(std::move(empty_rdr));
+        note::Allocator alloc;
+        note::StringPool pool(alloc);
+        empty_rsp.intern_strings(pool);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -2180,6 +2717,8 @@ TEST_CASE("note::api::CardTemp::Set request builder") {
     REQUIRE(h.last_req.find("\"sync\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -2218,6 +2757,20 @@ TEST_CASE("note::api::CardTemp::Set response parsing") {
     REQUIRE(rsp.usb == true);
     REQUIRE(rsp.value == 1.5);
     REQUIRE(rsp.voltage == 1.5);
+    // Cover intern_strings() — copies string_view fields into pool storage.
+    {
+        note::Allocator alloc;  // default: uses operator new/delete
+        note::StringPool pool(alloc);
+        rsp.intern_strings(pool);
+    }
+    // Cover intern_strings() empty-field branches (field.empty() == true).
+    {
+        auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
+        auto empty_rsp = note::api::CardTemp::Set::Response::parse(std::move(empty_rdr));
+        note::Allocator alloc;
+        note::StringPool pool(alloc);
+        empty_rsp.intern_strings(pool);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -2235,6 +2788,8 @@ TEST_CASE("note::api::CardTemp::Delete request builder") {
     REQUIRE(h.last_req.find("\"sync\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -2272,6 +2827,20 @@ TEST_CASE("note::api::CardTemp::Delete response parsing") {
     REQUIRE(rsp.usb == true);
     REQUIRE(rsp.value == 1.5);
     REQUIRE(rsp.voltage == 1.5);
+    // Cover intern_strings() — copies string_view fields into pool storage.
+    {
+        note::Allocator alloc;  // default: uses operator new/delete
+        note::StringPool pool(alloc);
+        rsp.intern_strings(pool);
+    }
+    // Cover intern_strings() empty-field branches (field.empty() == true).
+    {
+        auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
+        auto empty_rsp = note::api::CardTemp::Delete::Response::parse(std::move(empty_rdr));
+        note::Allocator alloc;
+        note::StringPool pool(alloc);
+        empty_rsp.intern_strings(pool);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -2283,6 +2852,8 @@ TEST_CASE("note::api::CardTime request builder") {
     req.execute();
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -2316,6 +2887,20 @@ TEST_CASE("note::api::CardTime response parsing") {
     REQUIRE(rsp.minutes == 42);
     REQUIRE(rsp.time == 42);
     REQUIRE(rsp.zone == "x-zone");
+    // Cover intern_strings() — copies string_view fields into pool storage.
+    {
+        note::Allocator alloc;  // default: uses operator new/delete
+        note::StringPool pool(alloc);
+        rsp.intern_strings(pool);
+    }
+    // Cover intern_strings() empty-field branches (field.empty() == true).
+    {
+        auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
+        auto empty_rsp = note::api::CardTime::Response::parse(std::move(empty_rdr));
+        note::Allocator alloc;
+        note::StringPool pool(alloc);
+        empty_rsp.intern_strings(pool);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -2329,6 +2914,8 @@ TEST_CASE("note::api::CardTrace request builder") {
     REQUIRE(h.last_req.find("\"mode\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -2375,6 +2962,8 @@ TEST_CASE("note::api::CardTransport request builder") {
 #endif
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -2407,6 +2996,20 @@ TEST_CASE("note::api::CardTransport response parsing") {
     reader->set("method", std::string("x-method"));
     auto rsp = note::api::CardTransport::Response::parse(std::move(reader));
     REQUIRE(rsp.method == "x-method");
+    // Cover intern_strings() — copies string_view fields into pool storage.
+    {
+        note::Allocator alloc;  // default: uses operator new/delete
+        note::StringPool pool(alloc);
+        rsp.intern_strings(pool);
+    }
+    // Cover intern_strings() empty-field branches (field.empty() == true).
+    {
+        auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
+        auto empty_rsp = note::api::CardTransport::Response::parse(std::move(empty_rdr));
+        note::Allocator alloc;
+        note::StringPool pool(alloc);
+        empty_rsp.intern_strings(pool);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -2432,6 +3035,8 @@ TEST_CASE("note::api::CardTriangulate request builder") {
     REQUIRE(h.last_req.find("\"usb\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -2471,6 +3076,20 @@ TEST_CASE("note::api::CardTriangulate response parsing") {
     REQUIRE(rsp.on == true);
     REQUIRE(rsp.time == 42);
     REQUIRE(rsp.usb == true);
+    // Cover intern_strings() — copies string_view fields into pool storage.
+    {
+        note::Allocator alloc;  // default: uses operator new/delete
+        note::StringPool pool(alloc);
+        rsp.intern_strings(pool);
+    }
+    // Cover intern_strings() empty-field branches (field.empty() == true).
+    {
+        auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
+        auto empty_rsp = note::api::CardTriangulate::Response::parse(std::move(empty_rdr));
+        note::Allocator alloc;
+        note::StringPool pool(alloc);
+        empty_rsp.intern_strings(pool);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -2486,6 +3105,8 @@ TEST_CASE("note::api::CardUsageGet request builder") {
     REQUIRE(h.last_req.find("\"offset\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -2524,6 +3145,20 @@ TEST_CASE("note::api::CardUsageGet response parsing") {
     REQUIRE(rsp.sessionsSecure == 42);
     REQUIRE(rsp.sessionsStandard == 42);
     REQUIRE(rsp.time == 42);
+    // Cover intern_strings() — copies string_view fields into pool storage.
+    {
+        note::Allocator alloc;  // default: uses operator new/delete
+        note::StringPool pool(alloc);
+        rsp.intern_strings(pool);
+    }
+    // Cover intern_strings() empty-field branches (field.empty() == true).
+    {
+        auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
+        auto empty_rsp = note::api::CardUsageGet::Response::parse(std::move(empty_rdr));
+        note::Allocator alloc;
+        note::StringPool pool(alloc);
+        empty_rsp.intern_strings(pool);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -2541,6 +3176,8 @@ TEST_CASE("note::api::CardUsageTest request builder") {
     REQUIRE(h.last_req.find("\"megabytes\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -2586,6 +3223,20 @@ TEST_CASE("note::api::CardUsageTest response parsing") {
     REQUIRE(rsp.sessionsSecure == 42);
     REQUIRE(rsp.sessionsStandard == 42);
     REQUIRE(rsp.time == 42);
+    // Cover intern_strings() — copies string_view fields into pool storage.
+    {
+        note::Allocator alloc;  // default: uses operator new/delete
+        note::StringPool pool(alloc);
+        rsp.intern_strings(pool);
+    }
+    // Cover intern_strings() empty-field branches (field.empty() == true).
+    {
+        auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
+        auto empty_rsp = note::api::CardUsageTest::Response::parse(std::move(empty_rdr));
+        note::Allocator alloc;
+        note::StringPool pool(alloc);
+        empty_rsp.intern_strings(pool);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -2597,6 +3248,8 @@ TEST_CASE("note::api::CardVersion request builder") {
     req.execute();
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -2636,6 +3289,20 @@ TEST_CASE("note::api::CardVersion response parsing") {
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
     REQUIRE(rsp.wifi == true);
 #endif
+    // Cover intern_strings() — copies string_view fields into pool storage.
+    {
+        note::Allocator alloc;  // default: uses operator new/delete
+        note::StringPool pool(alloc);
+        rsp.intern_strings(pool);
+    }
+    // Cover intern_strings() empty-field branches (field.empty() == true).
+    {
+        auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
+        auto empty_rsp = note::api::CardVersion::Response::parse(std::move(empty_rdr));
+        note::Allocator alloc;
+        note::StringPool pool(alloc);
+        empty_rsp.intern_strings(pool);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -2681,6 +3348,8 @@ TEST_CASE("note::api::CardVoltage::Get request builder") {
     REQUIRE(h.last_req.find("\"vmin\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -2744,6 +3413,20 @@ TEST_CASE("note::api::CardVoltage::Get response parsing") {
     REQUIRE(rsp.vmax == 1.5);
     REQUIRE(rsp.vmin == 1.5);
     REQUIRE(rsp.weekly == 1.5);
+    // Cover intern_strings() — copies string_view fields into pool storage.
+    {
+        note::Allocator alloc;  // default: uses operator new/delete
+        note::StringPool pool(alloc);
+        rsp.intern_strings(pool);
+    }
+    // Cover intern_strings() empty-field branches (field.empty() == true).
+    {
+        auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
+        auto empty_rsp = note::api::CardVoltage::Get::Response::parse(std::move(empty_rdr));
+        note::Allocator alloc;
+        note::StringPool pool(alloc);
+        empty_rsp.intern_strings(pool);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -2789,6 +3472,8 @@ TEST_CASE("note::api::CardVoltage::Set request builder") {
     REQUIRE(h.last_req.find("\"vmin\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -2852,6 +3537,20 @@ TEST_CASE("note::api::CardVoltage::Set response parsing") {
     REQUIRE(rsp.vmax == 1.5);
     REQUIRE(rsp.vmin == 1.5);
     REQUIRE(rsp.weekly == 1.5);
+    // Cover intern_strings() — copies string_view fields into pool storage.
+    {
+        note::Allocator alloc;  // default: uses operator new/delete
+        note::StringPool pool(alloc);
+        rsp.intern_strings(pool);
+    }
+    // Cover intern_strings() empty-field branches (field.empty() == true).
+    {
+        auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
+        auto empty_rsp = note::api::CardVoltage::Set::Response::parse(std::move(empty_rdr));
+        note::Allocator alloc;
+        note::StringPool pool(alloc);
+        empty_rsp.intern_strings(pool);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -2879,6 +3578,8 @@ TEST_CASE("note::api::CardWifi request builder") {
 #endif
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -2915,6 +3616,20 @@ TEST_CASE("note::api::CardWifi response parsing") {
     REQUIRE(rsp.security == "x-security");
     REQUIRE(rsp.ssid == "x-ssid");
     REQUIRE(rsp.version == "x-version");
+    // Cover intern_strings() — copies string_view fields into pool storage.
+    {
+        note::Allocator alloc;  // default: uses operator new/delete
+        note::StringPool pool(alloc);
+        rsp.intern_strings(pool);
+    }
+    // Cover intern_strings() empty-field branches (field.empty() == true).
+    {
+        auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
+        auto empty_rsp = note::api::CardWifi::Response::parse(std::move(empty_rdr));
+        note::Allocator alloc;
+        note::StringPool pool(alloc);
+        empty_rsp.intern_strings(pool);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -2934,6 +3649,8 @@ TEST_CASE("note::api::CardWireless request builder") {
     REQUIRE(h.last_req.find("\"mode\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -2962,6 +3679,20 @@ TEST_CASE("note::api::CardWireless response parsing") {
     auto rsp = note::api::CardWireless::Response::parse(std::move(reader));
     REQUIRE(rsp.count == 42);
     REQUIRE(rsp.status == "x-status");
+    // Cover intern_strings() — copies string_view fields into pool storage.
+    {
+        note::Allocator alloc;  // default: uses operator new/delete
+        note::StringPool pool(alloc);
+        rsp.intern_strings(pool);
+    }
+    // Cover intern_strings() empty-field branches (field.empty() == true).
+    {
+        auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
+        auto empty_rsp = note::api::CardWireless::Response::parse(std::move(empty_rdr));
+        note::Allocator alloc;
+        note::StringPool pool(alloc);
+        empty_rsp.intern_strings(pool);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -2985,6 +3716,8 @@ TEST_CASE("note::api::CardWirelessPenalty::Get request builder") {
     REQUIRE(h.last_req.find("\"set\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -3023,6 +3756,20 @@ TEST_CASE("note::api::CardWirelessPenalty::Get response parsing") {
     REQUIRE(rsp.seconds == 42);
 #endif
     REQUIRE(rsp.status == "x-status");
+    // Cover intern_strings() — copies string_view fields into pool storage.
+    {
+        note::Allocator alloc;  // default: uses operator new/delete
+        note::StringPool pool(alloc);
+        rsp.intern_strings(pool);
+    }
+    // Cover intern_strings() empty-field branches (field.empty() == true).
+    {
+        auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
+        auto empty_rsp = note::api::CardWirelessPenalty::Get::Response::parse(std::move(empty_rdr));
+        note::Allocator alloc;
+        note::StringPool pool(alloc);
+        empty_rsp.intern_strings(pool);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -3044,6 +3791,8 @@ TEST_CASE("note::api::CardWirelessPenalty::Set request builder") {
     REQUIRE(h.last_req.find("\"reset\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -3081,6 +3830,20 @@ TEST_CASE("note::api::CardWirelessPenalty::Set response parsing") {
     REQUIRE(rsp.seconds == 42);
 #endif
     REQUIRE(rsp.status == "x-status");
+    // Cover intern_strings() — copies string_view fields into pool storage.
+    {
+        note::Allocator alloc;  // default: uses operator new/delete
+        note::StringPool pool(alloc);
+        rsp.intern_strings(pool);
+    }
+    // Cover intern_strings() empty-field branches (field.empty() == true).
+    {
+        auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
+        auto empty_rsp = note::api::CardWirelessPenalty::Set::Response::parse(std::move(empty_rdr));
+        note::Allocator alloc;
+        note::StringPool pool(alloc);
+        empty_rsp.intern_strings(pool);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -3102,6 +3865,8 @@ TEST_CASE("note::api::CardWirelessPenalty::Delete request builder") {
     REQUIRE(h.last_req.find("\"set\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -3139,6 +3904,20 @@ TEST_CASE("note::api::CardWirelessPenalty::Delete response parsing") {
     REQUIRE(rsp.seconds == 42);
 #endif
     REQUIRE(rsp.status == "x-status");
+    // Cover intern_strings() — copies string_view fields into pool storage.
+    {
+        note::Allocator alloc;  // default: uses operator new/delete
+        note::StringPool pool(alloc);
+        rsp.intern_strings(pool);
+    }
+    // Cover intern_strings() empty-field branches (field.empty() == true).
+    {
+        auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
+        auto empty_rsp = note::api::CardWirelessPenalty::Delete::Response::parse(std::move(empty_rdr));
+        note::Allocator alloc;
+        note::StringPool pool(alloc);
+        empty_rsp.intern_strings(pool);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -3156,6 +3935,8 @@ TEST_CASE("note::api::DfuGet request builder") {
     REQUIRE(h.last_req.find("\"offset\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -3187,6 +3968,20 @@ TEST_CASE("note::api::DfuGet response parsing") {
     REQUIRE(rsp.length == 42);
     REQUIRE(rsp.payload == "x-payload");
     REQUIRE(rsp.status == "x-status");
+    // Cover intern_strings() — copies string_view fields into pool storage.
+    {
+        note::Allocator alloc;  // default: uses operator new/delete
+        note::StringPool pool(alloc);
+        rsp.intern_strings(pool);
+    }
+    // Cover intern_strings() empty-field branches (field.empty() == true).
+    {
+        auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
+        auto empty_rsp = note::api::DfuGet::Response::parse(std::move(empty_rdr));
+        note::Allocator alloc;
+        note::StringPool pool(alloc);
+        empty_rsp.intern_strings(pool);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -3214,6 +4009,8 @@ TEST_CASE("note::api::DfuStatus request builder") {
     REQUIRE(h.last_req.find("\"vvalue\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -3252,6 +4049,20 @@ TEST_CASE("note::api::DfuStatus response parsing") {
     REQUIRE(rsp.on == true);
     REQUIRE(rsp.pending == true);
     REQUIRE(rsp.status == "x-status");
+    // Cover intern_strings() — copies string_view fields into pool storage.
+    {
+        note::Allocator alloc;  // default: uses operator new/delete
+        note::StringPool pool(alloc);
+        rsp.intern_strings(pool);
+    }
+    // Cover intern_strings() empty-field branches (field.empty() == true).
+    {
+        auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
+        auto empty_rsp = note::api::DfuStatus::Response::parse(std::move(empty_rdr));
+        note::Allocator alloc;
+        note::StringPool pool(alloc);
+        empty_rsp.intern_strings(pool);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -3268,6 +4079,8 @@ TEST_CASE("note::api::EnvDefault::Set request builder") {
     REQUIRE(h.last_req.find("\"text\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -3298,6 +4111,8 @@ TEST_CASE("note::api::EnvDefault::Delete request builder") {
     REQUIRE(h.last_req.find("\"sync\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -3338,6 +4153,8 @@ TEST_CASE("note::api::EnvGet request builder") {
 #endif
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -3373,6 +4190,20 @@ TEST_CASE("note::api::EnvGet response parsing") {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
     REQUIRE(rsp.time == 42);
 #endif
+    // Cover intern_strings() — copies string_view fields into pool storage.
+    {
+        note::Allocator alloc;  // default: uses operator new/delete
+        note::StringPool pool(alloc);
+        rsp.intern_strings(pool);
+    }
+    // Cover intern_strings() empty-field branches (field.empty() == true).
+    {
+        auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
+        auto empty_rsp = note::api::EnvGet::Response::parse(std::move(empty_rdr));
+        note::Allocator alloc;
+        note::StringPool pool(alloc);
+        empty_rsp.intern_strings(pool);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -3390,6 +4221,8 @@ TEST_CASE("note::api::EnvModified request builder") {
 #endif
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -3419,6 +4252,20 @@ TEST_CASE("note::api::EnvModified response parsing") {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
     REQUIRE(rsp.time == 42);
 #endif
+    // Cover intern_strings() — copies string_view fields into pool storage.
+    {
+        note::Allocator alloc;  // default: uses operator new/delete
+        note::StringPool pool(alloc);
+        rsp.intern_strings(pool);
+    }
+    // Cover intern_strings() empty-field branches (field.empty() == true).
+    {
+        auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
+        auto empty_rsp = note::api::EnvModified::Response::parse(std::move(empty_rdr));
+        note::Allocator alloc;
+        note::StringPool pool(alloc);
+        empty_rsp.intern_strings(pool);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -3433,6 +4280,8 @@ TEST_CASE("note::api::EnvSet request builder") {
     REQUIRE(h.last_req.find("\"text\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -3460,6 +4309,20 @@ TEST_CASE("note::api::EnvSet response parsing") {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
     REQUIRE(rsp.time == 42);
 #endif
+    // Cover intern_strings() — copies string_view fields into pool storage.
+    {
+        note::Allocator alloc;  // default: uses operator new/delete
+        note::StringPool pool(alloc);
+        rsp.intern_strings(pool);
+    }
+    // Cover intern_strings() empty-field branches (field.empty() == true).
+    {
+        auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
+        auto empty_rsp = note::api::EnvSet::Response::parse(std::move(empty_rdr));
+        note::Allocator alloc;
+        note::StringPool pool(alloc);
+        empty_rsp.intern_strings(pool);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -3471,6 +4334,8 @@ TEST_CASE("note::api::EnvTemplate request builder") {
     req.execute();
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -3492,6 +4357,20 @@ TEST_CASE("note::api::EnvTemplate response parsing") {
     reader->set("bytes", int32_t{42});
     auto rsp = note::api::EnvTemplate::Response::parse(std::move(reader));
     REQUIRE(rsp.bytes == 42);
+    // Cover intern_strings() — copies string_view fields into pool storage.
+    {
+        note::Allocator alloc;  // default: uses operator new/delete
+        note::StringPool pool(alloc);
+        rsp.intern_strings(pool);
+    }
+    // Cover intern_strings() empty-field branches (field.empty() == true).
+    {
+        auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
+        auto empty_rsp = note::api::EnvTemplate::Response::parse(std::move(empty_rdr));
+        note::Allocator alloc;
+        note::StringPool pool(alloc);
+        empty_rsp.intern_strings(pool);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -3507,6 +4386,8 @@ TEST_CASE("note::api::FileChanges request builder") {
     REQUIRE(h.last_req.find("\"tracker\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -3535,6 +4416,20 @@ TEST_CASE("note::api::FileChanges response parsing") {
     REQUIRE(rsp.changes == 42);
     REQUIRE(rsp.pending == true);
     REQUIRE(rsp.total == 42);
+    // Cover intern_strings() — copies string_view fields into pool storage.
+    {
+        note::Allocator alloc;  // default: uses operator new/delete
+        note::StringPool pool(alloc);
+        rsp.intern_strings(pool);
+    }
+    // Cover intern_strings() empty-field branches (field.empty() == true).
+    {
+        auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
+        auto empty_rsp = note::api::FileChanges::Response::parse(std::move(empty_rdr));
+        note::Allocator alloc;
+        note::StringPool pool(alloc);
+        empty_rsp.intern_strings(pool);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -3546,6 +4441,8 @@ TEST_CASE("note::api::FileChangesPending request builder") {
     req.execute();
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -3571,6 +4468,20 @@ TEST_CASE("note::api::FileChangesPending response parsing") {
     REQUIRE(rsp.changes == 42);
     REQUIRE(rsp.pending == true);
     REQUIRE(rsp.total == 42);
+    // Cover intern_strings() — copies string_view fields into pool storage.
+    {
+        note::Allocator alloc;  // default: uses operator new/delete
+        note::StringPool pool(alloc);
+        rsp.intern_strings(pool);
+    }
+    // Cover intern_strings() empty-field branches (field.empty() == true).
+    {
+        auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
+        auto empty_rsp = note::api::FileChangesPending::Response::parse(std::move(empty_rdr));
+        note::Allocator alloc;
+        note::StringPool pool(alloc);
+        empty_rsp.intern_strings(pool);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -3584,6 +4495,8 @@ TEST_CASE("note::api::FileClear request builder") {
     REQUIRE(h.last_req.find("\"file\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -3612,6 +4525,8 @@ TEST_CASE("note::api::FileDelete request builder") {
     REQUIRE(h.last_req.find("\"files\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -3640,6 +4555,8 @@ TEST_CASE("note::api::FileStats request builder") {
     REQUIRE(h.last_req.find("\"file\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -3667,6 +4584,20 @@ TEST_CASE("note::api::FileStats response parsing") {
     REQUIRE(rsp.changes == 42);
     REQUIRE(rsp.sync == true);
     REQUIRE(rsp.total == 42);
+    // Cover intern_strings() — copies string_view fields into pool storage.
+    {
+        note::Allocator alloc;  // default: uses operator new/delete
+        note::StringPool pool(alloc);
+        rsp.intern_strings(pool);
+    }
+    // Cover intern_strings() empty-field branches (field.empty() == true).
+    {
+        auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
+        auto empty_rsp = note::api::FileStats::Response::parse(std::move(empty_rdr));
+        note::Allocator alloc;
+        note::StringPool pool(alloc);
+        empty_rsp.intern_strings(pool);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -3678,6 +4609,8 @@ TEST_CASE("note::api::HubGet request builder") {
     req.execute();
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -3717,6 +4650,20 @@ TEST_CASE("note::api::HubGet response parsing") {
     REQUIRE(rsp.sync == true);
     REQUIRE(rsp.vinbound == "x-vinbound");
     REQUIRE(rsp.voutbound == "x-voutbound");
+    // Cover intern_strings() — copies string_view fields into pool storage.
+    {
+        note::Allocator alloc;  // default: uses operator new/delete
+        note::StringPool pool(alloc);
+        rsp.intern_strings(pool);
+    }
+    // Cover intern_strings() empty-field branches (field.empty() == true).
+    {
+        auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
+        auto empty_rsp = note::api::HubGet::Response::parse(std::move(empty_rdr));
+        note::Allocator alloc;
+        note::StringPool pool(alloc);
+        empty_rsp.intern_strings(pool);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -3734,6 +4681,8 @@ TEST_CASE("note::api::HubLog request builder") {
     REQUIRE(h.last_req.find("\"text\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -3832,6 +4781,8 @@ TEST_CASE("note::api::HubSet request builder") {
     REQUIRE(h.last_req.find("\"voutbound\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -3898,6 +4849,8 @@ TEST_CASE("note::api::HubSignal request builder") {
 #endif
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -3925,6 +4878,20 @@ TEST_CASE("note::api::HubSignal response parsing") {
     auto rsp = note::api::HubSignal::Response::parse(std::move(reader));
     REQUIRE(rsp.connected == true);
     REQUIRE(rsp.signals == 42);
+    // Cover intern_strings() — copies string_view fields into pool storage.
+    {
+        note::Allocator alloc;  // default: uses operator new/delete
+        note::StringPool pool(alloc);
+        rsp.intern_strings(pool);
+    }
+    // Cover intern_strings() empty-field branches (field.empty() == true).
+    {
+        auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
+        auto empty_rsp = note::api::HubSignal::Response::parse(std::move(empty_rdr));
+        note::Allocator alloc;
+        note::StringPool pool(alloc);
+        empty_rsp.intern_strings(pool);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -3936,6 +4903,8 @@ TEST_CASE("note::api::HubStatus request builder") {
     req.execute();
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -3959,6 +4928,20 @@ TEST_CASE("note::api::HubStatus response parsing") {
     auto rsp = note::api::HubStatus::Response::parse(std::move(reader));
     REQUIRE(rsp.connected == true);
     REQUIRE(rsp.status == "x-status");
+    // Cover intern_strings() — copies string_view fields into pool storage.
+    {
+        note::Allocator alloc;  // default: uses operator new/delete
+        note::StringPool pool(alloc);
+        rsp.intern_strings(pool);
+    }
+    // Cover intern_strings() empty-field branches (field.empty() == true).
+    {
+        auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
+        auto empty_rsp = note::api::HubStatus::Response::parse(std::move(empty_rdr));
+        note::Allocator alloc;
+        note::StringPool pool(alloc);
+        empty_rsp.intern_strings(pool);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -3980,6 +4963,8 @@ TEST_CASE("note::api::HubSync request builder") {
 #endif
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -4012,6 +4997,8 @@ TEST_CASE("note::api::HubSyncStatus request builder") {
     REQUIRE(h.last_req.find("\"sync\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -4059,6 +5046,20 @@ TEST_CASE("note::api::HubSyncStatus response parsing") {
     REQUIRE(rsp.status == "x-status");
     REQUIRE(rsp.sync == true);
     REQUIRE(rsp.time == 42);
+    // Cover intern_strings() — copies string_view fields into pool storage.
+    {
+        note::Allocator alloc;  // default: uses operator new/delete
+        note::StringPool pool(alloc);
+        rsp.intern_strings(pool);
+    }
+    // Cover intern_strings() empty-field branches (field.empty() == true).
+    {
+        auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
+        auto empty_rsp = note::api::HubSyncStatus::Response::parse(std::move(empty_rdr));
+        note::Allocator alloc;
+        note::StringPool pool(alloc);
+        empty_rsp.intern_strings(pool);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -4112,6 +5113,8 @@ TEST_CASE("note::api::NoteAdd request builder") {
     REQUIRE(h.last_req.find("\"verify\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -4159,6 +5162,20 @@ TEST_CASE("note::api::NoteAdd response parsing") {
     REQUIRE(rsp.noteId == "x-note");
     REQUIRE(rsp.template_ == true);
     REQUIRE(rsp.total == 42);
+    // Cover intern_strings() — copies string_view fields into pool storage.
+    {
+        note::Allocator alloc;  // default: uses operator new/delete
+        note::StringPool pool(alloc);
+        rsp.intern_strings(pool);
+    }
+    // Cover intern_strings() empty-field branches (field.empty() == true).
+    {
+        auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
+        auto empty_rsp = note::api::NoteAdd::Response::parse(std::move(empty_rdr));
+        note::Allocator alloc;
+        note::StringPool pool(alloc);
+        empty_rsp.intern_strings(pool);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -4184,6 +5201,8 @@ TEST_CASE("note::api::NoteChanges::Get request builder") {
     REQUIRE(h.last_req.find("\"tracker\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -4215,6 +5234,20 @@ TEST_CASE("note::api::NoteChanges::Get response parsing") {
     auto rsp = note::api::NoteChanges::Get::Response::parse(std::move(reader));
     REQUIRE(rsp.changes == 42);
     REQUIRE(rsp.total == 42);
+    // Cover intern_strings() — copies string_view fields into pool storage.
+    {
+        note::Allocator alloc;  // default: uses operator new/delete
+        note::StringPool pool(alloc);
+        rsp.intern_strings(pool);
+    }
+    // Cover intern_strings() empty-field branches (field.empty() == true).
+    {
+        auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
+        auto empty_rsp = note::api::NoteChanges::Get::Response::parse(std::move(empty_rdr));
+        note::Allocator alloc;
+        note::StringPool pool(alloc);
+        empty_rsp.intern_strings(pool);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -4239,6 +5272,8 @@ TEST_CASE("note::api::NoteChanges::Delete request builder") {
     REQUIRE(h.last_req.find("\"tracker\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -4269,6 +5304,20 @@ TEST_CASE("note::api::NoteChanges::Delete response parsing") {
     auto rsp = note::api::NoteChanges::Delete::Response::parse(std::move(reader));
     REQUIRE(rsp.changes == 42);
     REQUIRE(rsp.total == 42);
+    // Cover intern_strings() — copies string_view fields into pool storage.
+    {
+        note::Allocator alloc;  // default: uses operator new/delete
+        note::StringPool pool(alloc);
+        rsp.intern_strings(pool);
+    }
+    // Cover intern_strings() empty-field branches (field.empty() == true).
+    {
+        auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
+        auto empty_rsp = note::api::NoteChanges::Delete::Response::parse(std::move(empty_rdr));
+        note::Allocator alloc;
+        note::StringPool pool(alloc);
+        empty_rsp.intern_strings(pool);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -4284,6 +5333,8 @@ TEST_CASE("note::api::NoteDelete request builder") {
     REQUIRE(h.last_req.find("\"verify\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -4318,6 +5369,8 @@ TEST_CASE("note::api::NoteGet::Get request builder") {
     REQUIRE(h.last_req.find("\"note\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -4346,6 +5399,20 @@ TEST_CASE("note::api::NoteGet::Get response parsing") {
     auto rsp = note::api::NoteGet::Get::Response::parse(std::move(reader));
     REQUIRE(rsp.payload == "x-payload");
     REQUIRE(rsp.time == 42);
+    // Cover intern_strings() — copies string_view fields into pool storage.
+    {
+        note::Allocator alloc;  // default: uses operator new/delete
+        note::StringPool pool(alloc);
+        rsp.intern_strings(pool);
+    }
+    // Cover intern_strings() empty-field branches (field.empty() == true).
+    {
+        auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
+        auto empty_rsp = note::api::NoteGet::Get::Response::parse(std::move(empty_rdr));
+        note::Allocator alloc;
+        note::StringPool pool(alloc);
+        empty_rsp.intern_strings(pool);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -4365,6 +5432,8 @@ TEST_CASE("note::api::NoteGet::Delete request builder") {
     REQUIRE(h.last_req.find("\"note\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -4393,6 +5462,20 @@ TEST_CASE("note::api::NoteGet::Delete response parsing") {
     auto rsp = note::api::NoteGet::Delete::Response::parse(std::move(reader));
     REQUIRE(rsp.payload == "x-payload");
     REQUIRE(rsp.time == 42);
+    // Cover intern_strings() — copies string_view fields into pool storage.
+    {
+        note::Allocator alloc;  // default: uses operator new/delete
+        note::StringPool pool(alloc);
+        rsp.intern_strings(pool);
+    }
+    // Cover intern_strings() empty-field branches (field.empty() == true).
+    {
+        auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
+        auto empty_rsp = note::api::NoteGet::Delete::Response::parse(std::move(empty_rdr));
+        note::Allocator alloc;
+        note::StringPool pool(alloc);
+        empty_rsp.intern_strings(pool);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -4423,6 +5506,8 @@ TEST_CASE("note::api::NoteTemplate::Set request builder") {
 #endif
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -4468,6 +5553,20 @@ TEST_CASE("note::api::NoteTemplate::Set response parsing") {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
     REQUIRE(rsp.template_ == true);
 #endif
+    // Cover intern_strings() — copies string_view fields into pool storage.
+    {
+        note::Allocator alloc;  // default: uses operator new/delete
+        note::StringPool pool(alloc);
+        rsp.intern_strings(pool);
+    }
+    // Cover intern_strings() empty-field branches (field.empty() == true).
+    {
+        auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
+        auto empty_rsp = note::api::NoteTemplate::Set::Response::parse(std::move(empty_rdr));
+        note::Allocator alloc;
+        note::StringPool pool(alloc);
+        empty_rsp.intern_strings(pool);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -4496,6 +5595,8 @@ TEST_CASE("note::api::NoteTemplate::Delete request builder") {
 #endif
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -4540,6 +5641,20 @@ TEST_CASE("note::api::NoteTemplate::Delete response parsing") {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
     REQUIRE(rsp.template_ == true);
 #endif
+    // Cover intern_strings() — copies string_view fields into pool storage.
+    {
+        note::Allocator alloc;  // default: uses operator new/delete
+        note::StringPool pool(alloc);
+        rsp.intern_strings(pool);
+    }
+    // Cover intern_strings() empty-field branches (field.empty() == true).
+    {
+        auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
+        auto empty_rsp = note::api::NoteTemplate::Delete::Response::parse(std::move(empty_rdr));
+        note::Allocator alloc;
+        note::StringPool pool(alloc);
+        empty_rsp.intern_strings(pool);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -4557,6 +5672,8 @@ TEST_CASE("note::api::NoteUpdate request builder") {
     REQUIRE(h.last_req.find("\"verify\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -4588,6 +5705,8 @@ TEST_CASE("note::api::NtnGps request builder") {
     REQUIRE(h.last_req.find("\"on\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -4614,6 +5733,20 @@ TEST_CASE("note::api::NtnGps response parsing") {
     auto rsp = note::api::NtnGps::Response::parse(std::move(reader));
     REQUIRE(rsp.off == true);
     REQUIRE(rsp.on == true);
+    // Cover intern_strings() — copies string_view fields into pool storage.
+    {
+        note::Allocator alloc;  // default: uses operator new/delete
+        note::StringPool pool(alloc);
+        rsp.intern_strings(pool);
+    }
+    // Cover intern_strings() empty-field branches (field.empty() == true).
+    {
+        auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
+        auto empty_rsp = note::api::NtnGps::Response::parse(std::move(empty_rdr));
+        note::Allocator alloc;
+        note::StringPool pool(alloc);
+        empty_rsp.intern_strings(pool);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -4625,6 +5758,8 @@ TEST_CASE("note::api::NtnReset request builder") {
     req.execute();
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -4649,6 +5784,8 @@ TEST_CASE("note::api::NtnStatus request builder") {
     req.execute();
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -4672,6 +5809,20 @@ TEST_CASE("note::api::NtnStatus response parsing") {
     auto rsp = note::api::NtnStatus::Response::parse(std::move(reader));
     REQUIRE(rsp.err == "x-err");
     REQUIRE(rsp.status == "x-status");
+    // Cover intern_strings() — copies string_view fields into pool storage.
+    {
+        note::Allocator alloc;  // default: uses operator new/delete
+        note::StringPool pool(alloc);
+        rsp.intern_strings(pool);
+    }
+    // Cover intern_strings() empty-field branches (field.empty() == true).
+    {
+        auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
+        auto empty_rsp = note::api::NtnStatus::Response::parse(std::move(empty_rdr));
+        note::Allocator alloc;
+        note::StringPool pool(alloc);
+        empty_rsp.intern_strings(pool);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -4687,6 +5838,8 @@ TEST_CASE("note::api::VarDelete request builder") {
     REQUIRE(h.last_req.find("\"name\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -4718,6 +5871,8 @@ TEST_CASE("note::api::VarGet request builder") {
     REQUIRE(h.last_req.find("\"name\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -4746,6 +5901,20 @@ TEST_CASE("note::api::VarGet response parsing") {
     REQUIRE(rsp.flag == true);
     REQUIRE(rsp.text == "x-text");
     REQUIRE(rsp.value == 1.5);
+    // Cover intern_strings() — copies string_view fields into pool storage.
+    {
+        note::Allocator alloc;  // default: uses operator new/delete
+        note::StringPool pool(alloc);
+        rsp.intern_strings(pool);
+    }
+    // Cover intern_strings() empty-field branches (field.empty() == true).
+    {
+        auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
+        auto empty_rsp = note::api::VarGet::Response::parse(std::move(empty_rdr));
+        note::Allocator alloc;
+        note::StringPool pool(alloc);
+        empty_rsp.intern_strings(pool);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -4773,6 +5942,8 @@ TEST_CASE("note::api::VarSet request builder") {
     REQUIRE(h.last_req.find("\"value\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -4814,6 +5985,8 @@ TEST_CASE("note::api::Web request builder") {
     REQUIRE(h.last_req.find("\"route\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -4846,6 +6019,20 @@ TEST_CASE("note::api::Web response parsing") {
     REQUIRE(rsp.length == 42);
     REQUIRE(rsp.payload == "x-payload");
     REQUIRE(rsp.result == 42);
+    // Cover intern_strings() — copies string_view fields into pool storage.
+    {
+        note::Allocator alloc;  // default: uses operator new/delete
+        note::StringPool pool(alloc);
+        rsp.intern_strings(pool);
+    }
+    // Cover intern_strings() empty-field branches (field.empty() == true).
+    {
+        auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
+        auto empty_rsp = note::api::Web::Response::parse(std::move(empty_rdr));
+        note::Allocator alloc;
+        note::StringPool pool(alloc);
+        empty_rsp.intern_strings(pool);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -4875,6 +6062,8 @@ TEST_CASE("note::api::WebDelete request builder") {
     REQUIRE(h.last_req.find("\"seconds\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -4910,6 +6099,20 @@ TEST_CASE("note::api::WebDelete response parsing") {
     REQUIRE(rsp.payload == "x-payload");
     REQUIRE(rsp.result == 42);
     REQUIRE(rsp.status == "x-status");
+    // Cover intern_strings() — copies string_view fields into pool storage.
+    {
+        note::Allocator alloc;  // default: uses operator new/delete
+        note::StringPool pool(alloc);
+        rsp.intern_strings(pool);
+    }
+    // Cover intern_strings() empty-field branches (field.empty() == true).
+    {
+        auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
+        auto empty_rsp = note::api::WebDelete::Response::parse(std::move(empty_rdr));
+        note::Allocator alloc;
+        note::StringPool pool(alloc);
+        empty_rsp.intern_strings(pool);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -4943,6 +6146,8 @@ TEST_CASE("note::api::WebGet request builder") {
     REQUIRE(h.last_req.find("\"seconds\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -4982,6 +6187,20 @@ TEST_CASE("note::api::WebGet response parsing") {
     REQUIRE(rsp.length == 42);
     REQUIRE(rsp.payload == "x-payload");
     REQUIRE(rsp.result == 42);
+    // Cover intern_strings() — copies string_view fields into pool storage.
+    {
+        note::Allocator alloc;  // default: uses operator new/delete
+        note::StringPool pool(alloc);
+        rsp.intern_strings(pool);
+    }
+    // Cover intern_strings() empty-field branches (field.empty() == true).
+    {
+        auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
+        auto empty_rsp = note::api::WebGet::Response::parse(std::move(empty_rdr));
+        note::Allocator alloc;
+        note::StringPool pool(alloc);
+        empty_rsp.intern_strings(pool);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -5033,6 +6252,8 @@ TEST_CASE("note::api::WebPost request builder") {
     REQUIRE(h.last_req.find("\"verify\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -5087,6 +6308,20 @@ TEST_CASE("note::api::WebPost response parsing") {
     REQUIRE(rsp.payload == "x-payload");
     REQUIRE(rsp.result == 42);
     REQUIRE(rsp.status == "x-status");
+    // Cover intern_strings() — copies string_view fields into pool storage.
+    {
+        note::Allocator alloc;  // default: uses operator new/delete
+        note::StringPool pool(alloc);
+        rsp.intern_strings(pool);
+    }
+    // Cover intern_strings() empty-field branches (field.empty() == true).
+    {
+        auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
+        auto empty_rsp = note::api::WebPost::Response::parse(std::move(empty_rdr));
+        note::Allocator alloc;
+        note::StringPool pool(alloc);
+        empty_rsp.intern_strings(pool);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -5138,6 +6373,8 @@ TEST_CASE("note::api::WebPut request builder") {
     REQUIRE(h.last_req.find("\"verify\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -5184,5 +6421,19 @@ TEST_CASE("note::api::WebPut response parsing") {
     REQUIRE(rsp.payload == "x-payload");
     REQUIRE(rsp.result == 42);
     REQUIRE(rsp.status == "x-status");
+    // Cover intern_strings() — copies string_view fields into pool storage.
+    {
+        note::Allocator alloc;  // default: uses operator new/delete
+        note::StringPool pool(alloc);
+        rsp.intern_strings(pool);
+    }
+    // Cover intern_strings() empty-field branches (field.empty() == true).
+    {
+        auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
+        auto empty_rsp = note::api::WebPut::Response::parse(std::move(empty_rdr));
+        note::Allocator alloc;
+        note::StringPool pool(alloc);
+        empty_rsp.intern_strings(pool);
+    }
 }
 

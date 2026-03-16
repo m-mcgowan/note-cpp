@@ -15,6 +15,7 @@
 #include "test_json_backend.hpp"
 
 #include <note/api.hpp>
+#include <note/string_pool.hpp>
 
 #if __cplusplus >= 202002L
 using UnconstrainedApi = note::Api<>;
@@ -57,6 +58,24 @@ struct FailHarness {
             },
             [](note::string_view) -> note::Result<void> {
                 return note::make_error(note::Error::SendFailed, "test");
+            })
+        , api(nc)
+    {}
+};
+
+// Backend that returns a Notecard error — exercises ApiResult(ErrorInfo) constructors.
+struct NcErrorHarness {
+    note::test::ErrorJsonBackend backend;
+    note::Notecard nc;
+    UnconstrainedApi api;
+
+    NcErrorHarness()
+        : nc(backend,
+            [](note::string_view, uint32_t) -> note::Result<std::string> {
+                return std::string("{}");
+            },
+            [](note::string_view) -> note::Result<void> {
+                return {};
             })
         , api(nc)
     {}
@@ -112,6 +131,8 @@ TEST_CASE("note::api::{{ type_qual }} request builder") {
 {% endfor %}
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
     // Cover execute(Notecard&) and extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
     req.execute(h.nc);
@@ -164,6 +185,20 @@ TEST_CASE("note::api::{{ type_qual }} response parsing") {
 #endif
 {% endif %}
 {% endfor %}
+    // Cover intern_strings() — copies string_view fields into pool storage.
+    {
+        note::Allocator alloc;  // default: uses operator new/delete
+        note::StringPool pool(alloc);
+        rsp.intern_strings(pool);
+    }
+    // Cover intern_strings() empty-field branches (field.empty() == true).
+    {
+        auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
+        auto empty_rsp = note::api::{{ type_qual }}::Response::parse(std::move(empty_rdr));
+        note::Allocator alloc;
+        note::StringPool pool(alloc);
+        empty_rsp.intern_strings(pool);
+    }
 }
 
 {% endif %}

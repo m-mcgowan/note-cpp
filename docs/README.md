@@ -25,6 +25,10 @@
 12. **[App design](note-cpp-app.md)** — higher-level app abstractions: channels, state stores, managers
 13. **[App orchestration](app-orchestration.md)** — NTN/satellite handling, template lifecycle, sync direction management, composed setup procedures
 
+## Documentation site
+
+15. **[Documentation generation](documentation.md)** — how the Doxygen API reference site is generated, firmware/SKU filtering, and link validation
+
 ## Project
 
 14. **[Project plan](PLAN.md)** — architecture, completed phases, component status, roadmap

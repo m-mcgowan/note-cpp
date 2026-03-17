@@ -19,7 +19,10 @@ namespace note::api {
 
 
 
+
 /// Manually initiates a sync with Notehub.
+///
+/// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
 struct HubSync {
     static constexpr string_view notecard_request = "hub.sync";
     static constexpr bool supports_cmd = true;
@@ -45,7 +48,7 @@ struct HubSync {
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
     /// Set to `true` to only sync pending outbound Notefiles.
     ///
-    /// @since firmware 7.2.1
+    /// @since{7.2.1}
 #if NOTE_API_VERSION < NOTE_VERSION(7, 2, 1)
     [[deprecated("requires firmware >= 7.2.1")]]
 #endif

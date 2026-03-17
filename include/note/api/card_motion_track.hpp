@@ -20,7 +20,10 @@ namespace note::api {
 
 
 
+
 /// Configures automatic capture of Notecard accelerometer motion in a Notefile.
+///
+/// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
 struct CardMotionTrack {
     static constexpr string_view notecard_request = "card.motion.track";
     static constexpr bool supports_cmd = true;

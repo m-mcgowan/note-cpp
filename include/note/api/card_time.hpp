@@ -19,10 +19,13 @@ namespace note::api {
 
 
 
+
 /// Retrieves current date and time information in UTC. Upon power-up, the
 /// Notecard must complete a sync to Notehub in order to obtain time and
 /// location data. Before the time is obtained, this request will return
 /// `{"zone":"UTC,Unknown"}`.
+///
+/// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
 struct CardTime {
     static constexpr string_view notecard_request = "card.time";
     static constexpr bool supports_cmd = true;

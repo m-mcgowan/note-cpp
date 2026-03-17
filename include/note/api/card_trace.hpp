@@ -19,7 +19,10 @@ namespace note::api {
 
 
 
+
 /// Enable and disable trace mode on a Notecard for debugging.
+///
+/// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
 struct CardTrace {
     static constexpr string_view notecard_request = "card.trace";
     static constexpr bool supports_cmd = true;

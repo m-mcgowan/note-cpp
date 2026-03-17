@@ -19,7 +19,10 @@ namespace note::api {
 
 
 
+
 /// Displays the current status of a Notecard's connection to a paired Starnote.
+///
+/// @skus{CELL,CELL+WIFI,WIFI}
 struct NtnStatus {
     static constexpr string_view notecard_request = "ntn.status";
     static constexpr bool supports_cmd = true;

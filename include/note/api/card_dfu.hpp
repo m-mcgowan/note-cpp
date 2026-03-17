@@ -19,7 +19,10 @@ namespace note::api {
 
 
 
+
 /// Used to configure a Notecard for Notecard Outboard Firmware Update.
+///
+/// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
 struct CardDfu {
     static constexpr string_view notecard_request = "card.dfu";
     static constexpr bool supports_cmd = true;

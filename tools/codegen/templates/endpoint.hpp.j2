@@ -70,11 +70,11 @@ namespace note::api {
 
 {% macro doc_for_prop(prop, indent) -%}
 {% if prop.description and prop.min_api_version -%}
-{{ (prop.description + "\n\n@since firmware " + prop.min_api_version) | doc_comment(indent) }}
+{{ (prop.description + "\n\n@since{" + prop.min_api_version + "}") | doc_comment(indent) }}
 {% elif prop.description -%}
 {{ prop.description | doc_comment(indent) }}
 {% elif prop.min_api_version -%}
-{{ ("@since firmware " + prop.min_api_version) | doc_comment(indent) }}
+{{ ("@since{" + prop.min_api_version + "}") | doc_comment(indent) }}
 {% endif -%}
 {% endmacro -%}
 
@@ -535,17 +535,26 @@ inline {{ parent_qual }}::{{ prop.nested_type_name }}& {{ parent_qual }}::{{ pro
 {% endif %}
 {% endmacro %}
 
+{# Build doc string for an operation struct, appending @skus if restricted #}
+{% macro op_doc(op) -%}
+{% if op.skus -%}
+{{ op.description + "\n\n@skus{" + op.skus | join(",") + "}" if op.description else "@skus{" + op.skus | join(",") + "}" }}
+{%- else -%}
+{{ op.description }}
+{%- endif %}
+{%- endmacro %}
+
 {# ===== Main output ======================================================= #}
 
 {% if endpoint.is_polymorphic %}
-{% if endpoint.operations[0].description %}
-{{ endpoint.operations[0].description | doc_comment("") }}
+{% if endpoint.operations[0].description or endpoint.operations[0].skus %}
+{{ op_doc(endpoint.operations[0]) | doc_comment("") }}
 {% endif %}
 struct {{ endpoint.struct_name }} {
 {% for op in endpoint.operations %}
 
-{% if op.description and loop.index0 > 0 %}
-{{ op.description | doc_comment("    ") }}
+{% if (op.description or op.skus) and loop.index0 > 0 %}
+{{ op_doc(op) | doc_comment("    ") }}
 {% endif %}
     struct {{ op.struct_name }} {
 {{ render_operation(op, endpoint.struct_name + "::" + op.struct_name, "        ") }}
@@ -558,8 +567,8 @@ struct {{ endpoint.struct_name }} {
 {% endfor %}
 {% else %}
 {% set op = endpoint.operations[0] %}
-{% if op.description %}
-{{ op.description | doc_comment("") }}
+{% if op.description or op.skus %}
+{{ op_doc(op) | doc_comment("") }}
 {% endif %}
 struct {{ endpoint.struct_name }} {
 {{ render_operation(op, endpoint.struct_name, "    ") }}

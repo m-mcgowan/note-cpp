@@ -19,6 +19,7 @@ namespace note::api {
 
 
 
+
 /// Retrieves the last known location of the Notecard and the time at which it
 /// was acquired. Use card.location.mode to configure location settings.
 ///
@@ -27,6 +28,8 @@ namespace note::api {
 ///
 /// On Notecard LoRa this request can only return a location set through the
 /// card.location.mode request's `"fixed"` mode.
+///
+/// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
 struct CardLocation {
     static constexpr string_view notecard_request = "card.location";
     static constexpr bool supports_cmd = true;

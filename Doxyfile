@@ -4,7 +4,7 @@
 PROJECT_NAME           = "note-cpp"
 PROJECT_BRIEF          = "Modern C++ SDK for the Blues Notecard"
 OUTPUT_DIRECTORY       = docs
-INPUT                  = include/note docs/mainpage.md
+INPUT                  = include/note docs/mainpage.md docs/groups.dox
 RECURSIVE              = YES
 FILE_PATTERNS          = *.hpp *.md
 EXCLUDE_PATTERNS       = */third_party/* */backends/*
@@ -24,14 +24,24 @@ MULTILINE_CPP_IS_BRIEF = NO
 WARN_IF_UNDOCUMENTED   = NO
 WARN_NO_PARAMDOC       = NO
 
+# Hide truly private implementation details that have no user value.
+EXCLUDE_SYMBOLS        = note::detail::*
+
 # HTML output with doxygen-awesome theme
 GENERATE_HTML          = YES
 HTML_OUTPUT            = html
+HTML_HEADER            = docs/doxygen-header.html
 HTML_EXTRA_STYLESHEET  = docs/doxygen-awesome-css/doxygen-awesome.css
+HTML_EXTRA_FILES       = docs/doxygen-filter.js docs/doxygen-filter.css
 HTML_COLORSTYLE        = LIGHT
 GENERATE_TREEVIEW      = YES
 DISABLE_INDEX          = NO
 FULL_SIDEBAR           = NO
+
+# Custom doc comment tags for firmware version and SKU filtering.
+# These emit HTML data-attributes that the filter JS uses for interactive filtering.
+ALIASES  = "since{1}=@htmlonly<dl class=\"section since\" data-min-api-version=\"\1\"><dt>Since</dt><dd>firmware \1</dd></dl>@endhtmlonly"
+ALIASES += "skus{1}=@htmlonly<dl class=\"section note\" data-skus=\"\1\"><dt>Supported SKUs</dt><dd>\1</dd></dl>@endhtmlonly"
 
 # No LaTeX/RTF/XML
 GENERATE_LATEX         = NO

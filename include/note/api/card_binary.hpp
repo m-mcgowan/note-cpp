@@ -19,10 +19,13 @@ namespace note::api {
 
 
 
+
 /// View the status of the binary storage area of the Notecard and optionally
 /// clear any data and related `card.binary` variables. See the guide on Sending
 /// and Receiving Large Binary Objects for best practices when using
 /// `card.binary`.
+///
+/// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
 struct CardBinary {
 
     struct Get {
@@ -156,6 +159,8 @@ struct CardBinary {
     /// optionally clear any data and related `card.binary` variables. See the
     /// guide on Sending and Receiving Large Binary Objects for best practices
     /// when using `card.binary`.
+    ///
+    /// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
     struct Delete {
         static constexpr string_view notecard_request = "card.binary";
         static constexpr bool supports_cmd = true;

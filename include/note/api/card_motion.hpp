@@ -19,9 +19,12 @@ namespace note::api {
 
 
 
+
 /// Returns information about the Notecard accelerometer's motion and
 /// orientation. Motion tracking must be enabled first with `card.motion.mode`.
 /// Otherwise, this request will return `{}`.
+///
+/// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
 struct CardMotion {
     static constexpr string_view notecard_request = "card.motion";
     static constexpr bool supports_cmd = true;

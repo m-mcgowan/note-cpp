@@ -19,7 +19,10 @@ namespace note::api {
 
 
 
+
 /// Retrieves the current Notehub configuration for the Notecard.
+///
+/// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
 struct HubGet {
     static constexpr string_view notecard_request = "hub.get";
     static constexpr bool supports_cmd = true;

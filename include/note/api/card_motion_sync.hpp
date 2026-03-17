@@ -20,7 +20,10 @@ namespace note::api {
 
 
 
+
 /// Configures automatic sync triggered by Notecard movement.
+///
+/// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
 struct CardMotionSync {
     static constexpr string_view notecard_request = "card.motion.sync";
     static constexpr bool supports_cmd = true;

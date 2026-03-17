@@ -20,8 +20,11 @@ namespace note::api {
 
 
 
+
 /// Configure various uses of the AUXTX and AUXRX pins on the Notecard's edge
 /// connector.
+///
+/// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
 struct CardAuxSerial {
     static constexpr string_view notecard_request = "card.aux.serial";
     static constexpr bool supports_cmd = true;
@@ -60,7 +63,7 @@ struct CardAuxSerial {
     /// When using `"mode": "notify,dfu"`, specify an interval for notifying the
     /// host.
     ///
-    /// @since firmware 5.1.1
+    /// @since{5.1.1}
 #if NOTE_API_VERSION < NOTE_VERSION(5, 1, 1)
     [[deprecated("requires firmware >= 5.1.1")]]
 #endif
@@ -87,7 +90,7 @@ struct CardAuxSerial {
     /// serial. The default is `115200` unless using GPS, in which case the
     /// default is `9600`.
     ///
-    /// @since firmware 4.1.1
+    /// @since{4.1.1}
 #if NOTE_API_VERSION < NOTE_VERSION(4, 1, 1)
     [[deprecated("requires firmware >= 4.1.1")]]
 #endif
@@ -140,7 +143,7 @@ struct CardAuxSerial {
         /// The baud rate or speed at which information is transmitted over AUX
         /// serial.
         ///
-        /// @since firmware 4.1.1
+        /// @since{4.1.1}
 #if NOTE_API_VERSION < NOTE_VERSION(4, 1, 1)
         [[deprecated("requires firmware >= 4.1.1")]]
 #endif

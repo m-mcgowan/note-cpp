@@ -19,8 +19,11 @@ namespace note::api {
 
 
 
+
 /// Delete a Note from a DB Notefile by its `name`. Provides a simpler interface
 /// to the note.delete API.
+///
+/// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
 struct VarDelete {
     static constexpr string_view notecard_request = "var.delete";
     static constexpr bool supports_cmd = true;

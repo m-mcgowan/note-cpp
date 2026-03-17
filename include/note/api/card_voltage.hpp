@@ -19,9 +19,12 @@ namespace note::api {
 
 
 
+
 /// Provides the current VMODEM_P voltage level on the Notecard, and provides
 /// information about historical voltage trends. When used with the mode
 /// argument, configures voltage thresholds based on how the device is powered.
+///
+/// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
 struct CardVoltage {
 
     struct Get {
@@ -45,7 +48,7 @@ struct CardVoltage {
         /// diode used between the battery and Notecard in either Blues- or
         /// customer-designed Notecarriers.
         ///
-        /// @since firmware 7.2.2
+        /// @since{7.2.2}
 #if NOTE_API_VERSION < NOTE_VERSION(7, 2, 2)
         [[deprecated("requires firmware >= 7.2.2")]]
 #endif
@@ -118,7 +121,7 @@ struct CardVoltage {
         /// When enabled, the Notecard will monitor for changes to USB power
         /// state.
         ///
-        /// @since firmware 3.5.1
+        /// @since{3.5.1}
 #if NOTE_API_VERSION < NOTE_VERSION(3, 5, 1)
         [[deprecated("requires firmware >= 3.5.1")]]
 #endif
@@ -224,7 +227,7 @@ struct CardVoltage {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
             /// `true` if the Notecard is connected to USB power.
             ///
-            /// @since firmware 3.5.1
+            /// @since{3.5.1}
 #if NOTE_API_VERSION < NOTE_VERSION(3, 5, 1)
             [[deprecated("requires firmware >= 3.5.1")]]
 #endif
@@ -367,6 +370,8 @@ struct CardVoltage {
     /// provides information about historical voltage trends. When used with the
     /// mode argument, configures voltage thresholds based on how the device is
     /// powered.
+    ///
+    /// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
     struct Set {
         static constexpr string_view notecard_request = "card.voltage";
         static constexpr bool supports_cmd = true;
@@ -388,7 +393,7 @@ struct CardVoltage {
         /// diode used between the battery and Notecard in either Blues- or
         /// customer-designed Notecarriers.
         ///
-        /// @since firmware 7.2.2
+        /// @since{7.2.2}
 #if NOTE_API_VERSION < NOTE_VERSION(7, 2, 2)
         [[deprecated("requires firmware >= 7.2.2")]]
 #endif
@@ -461,7 +466,7 @@ struct CardVoltage {
         /// When enabled, the Notecard will monitor for changes to USB power
         /// state.
         ///
-        /// @since firmware 3.5.1
+        /// @since{3.5.1}
 #if NOTE_API_VERSION < NOTE_VERSION(3, 5, 1)
         [[deprecated("requires firmware >= 3.5.1")]]
 #endif
@@ -567,7 +572,7 @@ struct CardVoltage {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
             /// `true` if the Notecard is connected to USB power.
             ///
-            /// @since firmware 3.5.1
+            /// @since{3.5.1}
 #if NOTE_API_VERSION < NOTE_VERSION(3, 5, 1)
             [[deprecated("requires firmware >= 3.5.1")]]
 #endif

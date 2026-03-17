@@ -20,8 +20,11 @@ namespace note::api {
 
 
 
+
 /// Returns a single environment variable, or all variables according to
 /// precedence rules.
+///
+/// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
 struct EnvGet {
     static constexpr string_view notecard_request = "env.get";
     static constexpr bool supports_cmd = true;
@@ -40,7 +43,7 @@ struct EnvGet {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
     /// A list of one or more variables to retrieve, by name (case-insensitive).
     ///
-    /// @since firmware 3.4.1
+    /// @since{3.4.1}
 #if NOTE_API_VERSION < NOTE_VERSION(3, 4, 1)
     [[deprecated("requires firmware >= 3.4.1")]]
 #endif
@@ -54,7 +57,7 @@ struct EnvGet {
     /// Request a modified environment variable or variables from the Notecard,
     /// but only if modified after the time provided.
     ///
-    /// @since firmware 3.4.1
+    /// @since{3.4.1}
 #if NOTE_API_VERSION < NOTE_VERSION(3, 4, 1)
     [[deprecated("requires firmware >= 3.4.1")]]
 #endif
@@ -103,7 +106,7 @@ struct EnvGet {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
         /// The time of the Notecard variable or variables change.
         ///
-        /// @since firmware 3.4.1
+        /// @since{3.4.1}
 #if NOTE_API_VERSION < NOTE_VERSION(3, 4, 1)
         [[deprecated("requires firmware >= 3.4.1")]]
 #endif

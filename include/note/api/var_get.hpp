@@ -19,8 +19,11 @@ namespace note::api {
 
 
 
+
 /// Retrieves a Note from a DB Notefile. Provides a simpler interface to the
 /// note.get API.
+///
+/// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
 struct VarGet {
     static constexpr string_view notecard_request = "var.get";
     static constexpr bool supports_cmd = true;

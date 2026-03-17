@@ -19,7 +19,10 @@ namespace note::api {
 
 
 
+
 /// Returns info about file changes that are pending upload to Notehub.
+///
+/// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
 struct FileChangesPending {
     static constexpr string_view notecard_request = "file.changes.pending";
     static constexpr bool supports_cmd = true;

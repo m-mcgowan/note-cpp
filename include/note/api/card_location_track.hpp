@@ -19,6 +19,7 @@ namespace note::api {
 
 
 
+
 /// Store location data in a Notefile at the `periodic` interval, or using a
 /// specified `heartbeat`.
 ///
@@ -32,6 +33,8 @@ namespace note::api {
 /// temperature, humidity, and pressure reading with each captured Note. If you
 /// connect an ENS210 sensor on the I2C bus, Notecard will include a temperature
 /// and pressure reading with each captured Note. Learn more in _track.qo.
+///
+/// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
 struct CardLocationTrack {
     static constexpr string_view notecard_request = "card.location.track";
     static constexpr bool supports_cmd = true;
@@ -69,7 +72,7 @@ struct CardLocationTrack {
     /// Note. See the guide on Sampling at Predefined Intervals for more
     /// details.
     ///
-    /// @since firmware 7.5.2
+    /// @since{7.5.2}
 #if NOTE_API_VERSION < NOTE_VERSION(7, 5, 2)
     [[deprecated("requires firmware >= 7.5.2")]]
 #endif

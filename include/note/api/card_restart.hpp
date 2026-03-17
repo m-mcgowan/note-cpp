@@ -19,7 +19,10 @@ namespace note::api {
 
 
 
+
 /// Performs a firmware restart of the Notecard.
+///
+/// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
 struct CardRestart {
     static constexpr string_view notecard_request = "card.restart";
     static constexpr bool supports_cmd = true;

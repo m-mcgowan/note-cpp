@@ -20,6 +20,7 @@ namespace note::api {
 
 
 
+
 /// The `env.template` request allows developers to provide a schema for the
 /// environment variables the Notecard uses. The provided template allows the
 /// Notecard to store environment variables as fixed-length binary records
@@ -28,6 +29,8 @@ namespace note::api {
 /// Using templated environment variables also allows the Notecard to optimize
 /// the network traffic related to sending and receiving environment variable
 /// updates.
+///
+/// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
 struct EnvTemplate {
     static constexpr string_view notecard_request = "env.template";
     static constexpr bool supports_cmd = true;

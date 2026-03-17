@@ -20,8 +20,11 @@ namespace note::api {
 
 
 
+
 /// Specifies the connectivity protocol to prioritize on the Notecard Cell+WiFi,
 /// or when using NTN mode with Starnote and a compatible Notecard.
+///
+/// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
 struct CardTransport {
     static constexpr string_view notecard_request = "card.transport";
     static constexpr bool supports_cmd = true;
@@ -36,7 +39,7 @@ struct CardTransport {
     ///
     /// See Define NTN vs non-NTN Templates.
     ///
-    /// @since firmware 7.2.1
+    /// @since{7.2.1}
 #if NOTE_API_VERSION < NOTE_VERSION(7, 2, 1)
     [[deprecated("requires firmware >= 7.2.1")]]
 #endif
@@ -58,7 +61,7 @@ struct CardTransport {
     /// before retrying the first transport specified in the `method`. The
     /// default is `3600` or 60 minutes.
     ///
-    /// @since firmware 5.3.1
+    /// @since{5.3.1}
 #if NOTE_API_VERSION < NOTE_VERSION(5, 3, 1)
     [[deprecated("requires firmware >= 5.3.1")]]
 #endif
@@ -74,7 +77,7 @@ struct CardTransport {
     /// Set to `true` to force a longer network transport timeout when using
     /// Wideband Notecards.
     ///
-    /// @since firmware 9.1.1
+    /// @since{9.1.1}
 #if NOTE_API_VERSION < NOTE_VERSION(9, 1, 1)
     [[deprecated("requires firmware >= 9.1.1")]]
 #endif

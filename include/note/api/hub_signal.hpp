@@ -21,12 +21,15 @@ namespace note::api {
 
 
 
+
 /// Receive a Signal (a near-real-time Note) from Notehub.
 ///
 /// This request checks for an inbound signal from Notehub. If it finds a
 /// signal, this request returns the signal's body and deletes the signal. If
 /// there are multiple signals to receive, this request reads and deletes
 /// signals in FIFO (first in first out) order.
+///
+/// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
 struct HubSignal {
     static constexpr string_view notecard_request = "hub.signal";
     static constexpr bool supports_cmd = true;
@@ -38,7 +41,7 @@ struct HubSignal {
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
     /// The number of seconds to wait before timing out the request.
     ///
-    /// @since firmware 5.1.1
+    /// @since{5.1.1}
 #if NOTE_API_VERSION < NOTE_VERSION(5, 1, 1)
     [[deprecated("requires firmware >= 5.1.1")]]
 #endif

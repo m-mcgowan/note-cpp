@@ -20,8 +20,11 @@ namespace note::api {
 
 
 
+
 /// The `card.power` API is used to configure a connected Mojo device or to
 /// manually request power consumption readings in firmware.
+///
+/// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
 struct CardPower {
 
     struct Get {
@@ -139,6 +142,8 @@ struct CardPower {
 
     /// The `card.power` API is used to configure a connected Mojo device or to
     /// manually request power consumption readings in firmware.
+    ///
+    /// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
     struct Set {
         static constexpr string_view notecard_request = "card.power";
         static constexpr bool supports_cmd = true;
@@ -254,6 +259,8 @@ struct CardPower {
 
     /// The `card.power` API is used to configure a connected Mojo device or to
     /// manually request power consumption readings in firmware.
+    ///
+    /// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
     struct Delete {
         static constexpr string_view notecard_request = "card.power";
         static constexpr bool supports_cmd = true;

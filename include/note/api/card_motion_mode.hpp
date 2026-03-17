@@ -20,8 +20,11 @@ namespace note::api {
 
 
 
+
 /// Configures accelerometer motion monitoring parameters used when providing
 /// results to `card.motion`.
+///
+/// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
 struct CardMotionMode {
     static constexpr string_view notecard_request = "card.motion.mode";
     static constexpr bool supports_cmd = true;
@@ -55,7 +58,7 @@ struct CardMotionMode {
     /// penalty for increasing the sample rate to 25Hz is increased current
     /// consumption by ~1.5uA relative to the default `-1` setting.
     ///
-    /// @since firmware 3.3.1
+    /// @since{3.3.1}
     // sensitivity: -1 | 0 | 1 | 2 | 3 | 4 | 5
 #if NOTE_API_VERSION < NOTE_VERSION(3, 3, 1)
     [[deprecated("requires firmware >= 3.3.1")]]

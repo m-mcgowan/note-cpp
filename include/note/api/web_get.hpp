@@ -20,8 +20,11 @@ namespace note::api {
 
 
 
+
 /// Performs a simple HTTP or HTTPS `GET` request against an external endpoint,
 /// and returns the response to the Notecard.
+///
+/// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
 struct WebGet {
     static constexpr string_view notecard_request = "web.get";
     static constexpr bool supports_cmd = true;
@@ -36,7 +39,7 @@ struct WebGet {
     ///
     /// Learn more in this guide on Sending and Receiving Large Binary Objects.
     ///
-    /// @since firmware 5.3.1
+    /// @since{5.3.1}
 #if NOTE_API_VERSION < NOTE_VERSION(5, 3, 1)
     [[deprecated("requires firmware >= 5.3.1")]]
 #endif

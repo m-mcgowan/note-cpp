@@ -20,8 +20,11 @@ namespace note::api {
 
 
 
+
 /// View the current state of a Notecard Penalty Box, manually remove the
 /// Notecard from a penalty box, or override penalty box defaults.
+///
+/// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
 struct CardWirelessPenalty {
 
     struct Get {
@@ -120,7 +123,7 @@ struct CardWirelessPenalty {
             /// If the Notecard is in a Penalty Box, the number of seconds until
             /// the penalty condition ends.
             ///
-            /// @since firmware 4.1.1
+            /// @since{4.1.1}
 #if NOTE_API_VERSION < NOTE_VERSION(4, 1, 1)
             [[deprecated("requires firmware >= 4.1.1")]]
 #endif
@@ -215,6 +218,8 @@ struct CardWirelessPenalty {
 
     /// View the current state of a Notecard Penalty Box, manually remove the
     /// Notecard from a penalty box, or override penalty box defaults.
+    ///
+    /// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
     struct Set {
         static constexpr string_view notecard_request = "card.wireless.penalty";
         static constexpr bool supports_cmd = true;
@@ -303,7 +308,7 @@ struct CardWirelessPenalty {
             /// If the Notecard is in a Penalty Box, the number of seconds until
             /// the penalty condition ends.
             ///
-            /// @since firmware 4.1.1
+            /// @since{4.1.1}
 #if NOTE_API_VERSION < NOTE_VERSION(4, 1, 1)
             [[deprecated("requires firmware >= 4.1.1")]]
 #endif
@@ -398,6 +403,8 @@ struct CardWirelessPenalty {
 
     /// View the current state of a Notecard Penalty Box, manually remove the
     /// Notecard from a penalty box, or override penalty box defaults.
+    ///
+    /// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
     struct Delete {
         static constexpr string_view notecard_request = "card.wireless.penalty";
         static constexpr bool supports_cmd = true;
@@ -486,7 +493,7 @@ struct CardWirelessPenalty {
             /// If the Notecard is in a Penalty Box, the number of seconds until
             /// the penalty condition ends.
             ///
-            /// @since firmware 4.1.1
+            /// @since{4.1.1}
 #if NOTE_API_VERSION < NOTE_VERSION(4, 1, 1)
             [[deprecated("requires firmware >= 4.1.1")]]
 #endif

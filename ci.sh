@@ -536,6 +536,43 @@ run_docs() {
     echo "  Doxygen $(doxygen --version)"
     doxygen "$ROOT/Doxyfile"
     echo
+
+    # Validate internal links in generated HTML
+    echo "=== Link validation ==="
+    local html_dir="$ROOT/docs/html"
+    local broken_file
+    broken_file=$(mktemp)
+    echo "0" > "$broken_file"
+    local checked_file
+    checked_file=$(mktemp)
+    echo "0" > "$checked_file"
+
+    find "$html_dir" -name '*.html' -type f | while IFS= read -r file; do
+        dir=$(dirname "$file")
+        grep -oE 'href="[^"#]+"' "$file" 2>/dev/null | sed 's/href="//;s/"$//' | while IFS= read -r href; do
+            case "$href" in
+                http://*|https://*|javascript:*) continue ;;
+            esac
+            target="${href%%#*}"
+            [ -z "$target" ] && continue
+            echo $(( $(cat "$checked_file") + 1 )) > "$checked_file"
+            if [ ! -f "$dir/$target" ]; then
+                echo "  BROKEN: $(basename "$file") -> $href"
+                echo $(( $(cat "$broken_file") + 1 )) > "$broken_file"
+            fi
+        done
+    done
+    local broken checked
+    broken=$(cat "$broken_file")
+    checked=$(cat "$checked_file")
+    rm -f "$broken_file" "$checked_file"
+    if [ "$broken" -gt 0 ]; then
+        echo "  ERROR: $broken broken link(s) found out of $checked"
+        exit 1
+    fi
+    echo "  All links valid ($checked checked)"
+    echo
+
     echo "  Documentation: ${ROOT}/docs/html/index.html"
     echo
 }

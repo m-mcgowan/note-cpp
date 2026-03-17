@@ -20,7 +20,10 @@ namespace note::api {
 
 
 
+
 /// Returns firmware version information for the Notecard.
+///
+/// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
 struct CardVersion {
     static constexpr string_view notecard_request = "card.version";
     static constexpr bool supports_cmd = true;
@@ -71,7 +74,7 @@ struct CardVersion {
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
         /// If `true`, indicates the Notecard supports WiFi connectivity.
         ///
-        /// @since firmware 5.3.1
+        /// @since{5.3.1}
 #if NOTE_API_VERSION < NOTE_VERSION(5, 3, 1)
         [[deprecated("requires firmware >= 5.3.1")]]
 #endif

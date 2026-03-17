@@ -30,9 +30,12 @@ namespace note::api {
 
 
 
+
 /// Enables or disables a behavior by which the Notecard gathers information
 /// about surrounding cell towers and/or WiFi access points with each new
 /// Notehub session.
+///
+/// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
 struct CardTriangulate {
     static constexpr string_view notecard_request = "card.triangulate";
     static constexpr bool supports_cmd = true;

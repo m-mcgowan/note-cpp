@@ -20,8 +20,11 @@ namespace note::api {
 
 
 
+
 /// Gets and sets the background download status of MCU host or Notecard
 /// firmware updates.
+///
+/// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
 struct DfuStatus {
     static constexpr string_view notecard_request = "dfu.status";
     static constexpr bool supports_cmd = true;

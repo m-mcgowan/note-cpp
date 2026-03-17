@@ -19,7 +19,10 @@ namespace note::api {
 
 
 
+
 /// Returns general information about the Notecard's operating status.
+///
+/// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
 struct CardStatus {
     static constexpr string_view notecard_request = "card.status";
     static constexpr bool supports_cmd = true;
@@ -61,7 +64,7 @@ struct CardStatus {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1) || !defined(NOTE_API_STRICT)
         /// `true` if Notecard's GPS module is currently powered on.
         ///
-        /// @since firmware 3.3.1
+        /// @since{3.3.1}
 #if NOTE_API_VERSION < NOTE_VERSION(3, 3, 1)
         [[deprecated("requires firmware >= 3.3.1")]]
 #endif
@@ -83,7 +86,7 @@ struct CardStatus {
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 5, 1) || !defined(NOTE_API_STRICT)
         /// `true` if the Notecard has ever connected to Notehub.
         ///
-        /// @since firmware 7.5.1
+        /// @since{7.5.1}
 #if NOTE_API_VERSION < NOTE_VERSION(7, 5, 1)
         [[deprecated("requires firmware >= 7.5.1")]]
 #endif

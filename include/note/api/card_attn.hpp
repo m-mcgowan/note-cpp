@@ -78,10 +78,13 @@ namespace note::api {
 
 
 
+
 /// Configure hardware notifications from a Notecard to a host MCU.
 ///
 /// NOTE: Requires a connection between the Notecard ATTN pin and a GPIO pin on
 /// the host MCU.
+///
+/// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
 struct CardAttn {
 
     struct Request {
@@ -185,7 +188,7 @@ struct CardAttn {
         /// When `true`, completely disables ATTN processing and sets the pin
         /// OFF. This setting is retained across device restarts.
         ///
-        /// @since firmware 7.2.1
+        /// @since{7.2.1}
 #if NOTE_API_VERSION < NOTE_VERSION(7, 2, 1)
         [[deprecated("requires firmware >= 7.2.1")]]
 #endif
@@ -231,7 +234,7 @@ struct CardAttn {
         /// When `true`, returns the current attention mode configuration, if
         /// any.
         ///
-        /// @since firmware 3.2.1
+        /// @since{3.2.1}
 #if NOTE_API_VERSION < NOTE_VERSION(3, 2, 1)
         [[deprecated("requires firmware >= 3.2.1")]]
 #endif
@@ -283,7 +286,7 @@ struct CardAttn {
             /// This field is present and set to `true` if ATTN processing has
             /// been disabled with the `off` argument.
             ///
-            /// @since firmware 7.2.1
+            /// @since{7.2.1}
 #if NOTE_API_VERSION < NOTE_VERSION(7, 2, 1)
             [[deprecated("requires firmware >= 7.2.1")]]
 #endif
@@ -395,6 +398,8 @@ struct CardAttn {
     };
 
     /// Arm ATTN pin for interrupt on an event trigger.
+    ///
+    /// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
     struct Arm {
         static constexpr string_view notecard_request = "card.attn";
         static constexpr bool supports_cmd = true;
@@ -596,6 +601,8 @@ struct CardAttn {
     };
 
     /// Configure ATTN as a watchdog timer.
+    ///
+    /// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
     struct Watchdog {
         static constexpr string_view notecard_request = "card.attn";
         static constexpr bool supports_cmd = true;
@@ -658,6 +665,8 @@ struct CardAttn {
     };
 
     /// Instruct host MCU to sleep with optional payload.
+    ///
+    /// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
     struct Sleep {
         static constexpr string_view notecard_request = "card.attn";
         static constexpr bool supports_cmd = true;
@@ -729,6 +738,8 @@ struct CardAttn {
     };
 
     /// Retrieve stored payload after sleep.
+    ///
+    /// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
     struct Retrieve {
         static constexpr string_view notecard_request = "card.attn";
         static constexpr bool supports_cmd = false;
@@ -822,6 +833,8 @@ struct CardAttn {
     };
 
     /// Disarm all attention interrupts.
+    ///
+    /// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
     struct Disarm {
         static constexpr string_view notecard_request = "card.attn";
         static constexpr bool supports_cmd = true;
@@ -870,6 +883,8 @@ struct CardAttn {
     };
 
     /// Query current ATTN state and configuration.
+    ///
+    /// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
     struct Query {
         static constexpr string_view notecard_request = "card.attn";
         static constexpr bool supports_cmd = false;
@@ -882,7 +897,7 @@ struct CardAttn {
         /// When `true`, returns the current attention mode configuration, if
         /// any.
         ///
-        /// @since firmware 3.2.1
+        /// @since{3.2.1}
 #if NOTE_API_VERSION < NOTE_VERSION(3, 2, 1)
         [[deprecated("requires firmware >= 3.2.1")]]
 #endif
@@ -925,7 +940,7 @@ struct CardAttn {
             /// This field is present and set to `true` if ATTN processing has
             /// been disabled with the `off` argument.
             ///
-            /// @since firmware 7.2.1
+            /// @since{7.2.1}
 #if NOTE_API_VERSION < NOTE_VERSION(7, 2, 1)
             [[deprecated("requires firmware >= 7.2.1")]]
 #endif

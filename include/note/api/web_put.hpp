@@ -20,8 +20,11 @@ namespace note::api {
 
 
 
+
 /// Performs a simple HTTP or HTTPS `PUT` request against an external endpoint,
 /// and returns the response to the Notecard.
+///
+/// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
 struct WebPut {
     static constexpr string_view notecard_request = "web.put";
     static constexpr bool supports_cmd = true;
@@ -36,7 +39,7 @@ struct WebPut {
     /// This argument only applies when the Notecard is in `continuous` mode and
     /// currently online.
     ///
-    /// @since firmware 5.1.1
+    /// @since{5.1.1}
 #if NOTE_API_VERSION < NOTE_VERSION(5, 1, 1)
     [[deprecated("requires firmware >= 5.1.1")]]
 #endif
@@ -52,7 +55,7 @@ struct WebPut {
     ///
     /// Learn more in this guide on Sending and Receiving Large Binary Objects.
     ///
-    /// @since firmware 5.3.1
+    /// @since{5.3.1}
 #if NOTE_API_VERSION < NOTE_VERSION(5, 3, 1)
     [[deprecated("requires firmware >= 5.3.1")]]
 #endif
@@ -159,7 +162,7 @@ struct WebPut {
     /// indicates the total size, in bytes (10MB max), of the payload across all
     /// fragments.
     ///
-    /// @since firmware 3.2.1
+    /// @since{3.2.1}
 #if NOTE_API_VERSION < NOTE_VERSION(3, 2, 1)
     [[deprecated("requires firmware >= 3.2.1")]]
 #endif

@@ -19,12 +19,15 @@ namespace note::api {
 
 
 
+
 /// Used to perform queries on a single or multiple files to determine if new
 /// Notes are available to read, or if there are unsynced Notes in local
 /// Notefiles.
 ///
 /// *Note: This request is a Notefile API request, only. `.qo` Notes in Notehub
 /// are automatically ingested and stored, or sent to applicable Routes.*
+///
+/// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
 struct FileChanges {
     static constexpr string_view notecard_request = "file.changes";
     static constexpr bool supports_cmd = true;

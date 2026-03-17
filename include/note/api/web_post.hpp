@@ -20,8 +20,11 @@ namespace note::api {
 
 
 
+
 /// Performs a simple HTTP or HTTPS `POST` request against an external endpoint,
 /// and returns the response to the Notecard.
+///
+/// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
 struct WebPost {
     static constexpr string_view notecard_request = "web.post";
     static constexpr bool supports_cmd = true;
@@ -36,7 +39,7 @@ struct WebPost {
     /// This argument only applies when the Notecard is in `continuous` mode and
     /// currently online.
     ///
-    /// @since firmware 5.1.1
+    /// @since{5.1.1}
 #if NOTE_API_VERSION < NOTE_VERSION(5, 1, 1)
     [[deprecated("requires firmware >= 5.1.1")]]
 #endif
@@ -52,7 +55,7 @@ struct WebPost {
     ///
     /// Learn more in this guide on Sending and Receiving Large Binary Objects.
     ///
-    /// @since firmware 5.3.1
+    /// @since{5.3.1}
 #if NOTE_API_VERSION < NOTE_VERSION(5, 3, 1)
     [[deprecated("requires firmware >= 5.3.1")]]
 #endif
@@ -158,7 +161,7 @@ struct WebPost {
     /// indicates the total size, in bytes (10MB max), of the payload across all
     /// fragments.
     ///
-    /// @since firmware 3.2.1
+    /// @since{3.2.1}
 #if NOTE_API_VERSION < NOTE_VERSION(3, 2, 1)
     [[deprecated("requires firmware >= 3.2.1")]]
 #endif
@@ -227,7 +230,7 @@ struct WebPost {
         /// If the web transaction returns a binary payload, `cobs` is the size
         /// of the COBS-encoded payload (in bytes).
         ///
-        /// @since firmware 5.3.1
+        /// @since{5.3.1}
 #if NOTE_API_VERSION < NOTE_VERSION(5, 3, 1)
         [[deprecated("requires firmware >= 5.3.1")]]
 #endif

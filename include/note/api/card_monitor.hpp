@@ -19,8 +19,11 @@ namespace note::api {
 
 
 
+
 /// When a Notecard is in monitor mode, this API is used to configure the
 /// general-purpose `AUX1`-`AUX4` pins to test and monitor Notecard activity.
+///
+/// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
 struct CardMonitor {
     static constexpr string_view notecard_request = "card.monitor";
     static constexpr bool supports_cmd = true;

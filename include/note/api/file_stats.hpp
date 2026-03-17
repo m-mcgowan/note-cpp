@@ -19,7 +19,10 @@ namespace note::api {
 
 
 
+
 /// Gets resource statistics about local Notefiles.
+///
+/// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
 struct FileStats {
     static constexpr string_view notecard_request = "file.stats";
     static constexpr bool supports_cmd = true;

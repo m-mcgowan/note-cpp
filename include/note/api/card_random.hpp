@@ -19,8 +19,11 @@ namespace note::api {
 
 
 
+
 /// Obtain a single random 32 bit unsigned integer modulo or `count` number of
 /// bytes of random data from the Notecard hardware random number generator.
+///
+/// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
 struct CardRandom {
     static constexpr string_view notecard_request = "card.random";
     static constexpr bool supports_cmd = true;

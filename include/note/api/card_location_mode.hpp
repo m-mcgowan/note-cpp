@@ -20,8 +20,11 @@ namespace note::api {
 
 
 
+
 /// Sets location-related configuration settings. Retrieves the current location
 /// mode when passed with no argument.
+///
+/// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
 struct CardLocationMode {
 
     struct Get {
@@ -95,7 +98,7 @@ struct CardLocationMode {
         /// When in `periodic` mode, the number of motion events (registered by
         /// the built-in accelerometer) required to trigger GPS to turn on.
         ///
-        /// @since firmware 3.4.1
+        /// @since{3.4.1}
 #if NOTE_API_VERSION < NOTE_VERSION(3, 4, 1)
         [[deprecated("requires firmware >= 3.4.1")]]
 #endif
@@ -182,7 +185,7 @@ struct CardLocationMode {
             /// by the built-in accelerometer) required to trigger GPS to turn
             /// on.
             ///
-            /// @since firmware 3.4.1
+            /// @since{3.4.1}
 #if NOTE_API_VERSION < NOTE_VERSION(3, 4, 1)
             [[deprecated("requires firmware >= 3.4.1")]]
 #endif
@@ -297,6 +300,8 @@ struct CardLocationMode {
 
     /// Sets location-related configuration settings. Retrieves the current
     /// location mode when passed with no argument.
+    ///
+    /// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
     struct Set {
         static constexpr string_view notecard_request = "card.location.mode";
         static constexpr bool supports_cmd = true;
@@ -368,7 +373,7 @@ struct CardLocationMode {
         /// When in `periodic` mode, the number of motion events (registered by
         /// the built-in accelerometer) required to trigger GPS to turn on.
         ///
-        /// @since firmware 3.4.1
+        /// @since{3.4.1}
 #if NOTE_API_VERSION < NOTE_VERSION(3, 4, 1)
         [[deprecated("requires firmware >= 3.4.1")]]
 #endif
@@ -455,7 +460,7 @@ struct CardLocationMode {
             /// by the built-in accelerometer) required to trigger GPS to turn
             /// on.
             ///
-            /// @since firmware 3.4.1
+            /// @since{3.4.1}
 #if NOTE_API_VERSION < NOTE_VERSION(3, 4, 1)
             [[deprecated("requires firmware >= 3.4.1")]]
 #endif
@@ -569,6 +574,8 @@ struct CardLocationMode {
     };
 
     /// Enable continuous GPS/GNSS sampling.
+    ///
+    /// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
     struct Continuous {
         static constexpr string_view notecard_request = "card.location.mode";
         static constexpr bool supports_cmd = true;
@@ -581,7 +588,7 @@ struct CardLocationMode {
         /// When in `periodic` mode, the number of motion events (registered by
         /// the built-in accelerometer) required to trigger GPS to turn on.
         ///
-        /// @since firmware 3.4.1
+        /// @since{3.4.1}
 #if NOTE_API_VERSION < NOTE_VERSION(3, 4, 1)
         [[deprecated("requires firmware >= 3.4.1")]]
 #endif
@@ -635,7 +642,7 @@ struct CardLocationMode {
             /// by the built-in accelerometer) required to trigger GPS to turn
             /// on.
             ///
-            /// @since firmware 3.4.1
+            /// @since{3.4.1}
 #if NOTE_API_VERSION < NOTE_VERSION(3, 4, 1)
             [[deprecated("requires firmware >= 3.4.1")]]
 #endif
@@ -728,6 +735,8 @@ struct CardLocationMode {
     };
 
     /// Enable periodic location sampling, optionally with geofencing.
+    ///
+    /// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
     struct Periodic {
         static constexpr string_view notecard_request = "card.location.mode";
         static constexpr bool supports_cmd = true;
@@ -785,7 +794,7 @@ struct CardLocationMode {
         /// When in `periodic` mode, the number of motion events (registered by
         /// the built-in accelerometer) required to trigger GPS to turn on.
         ///
-        /// @since firmware 3.4.1
+        /// @since{3.4.1}
 #if NOTE_API_VERSION < NOTE_VERSION(3, 4, 1)
         [[deprecated("requires firmware >= 3.4.1")]]
 #endif
@@ -856,7 +865,7 @@ struct CardLocationMode {
             /// by the built-in accelerometer) required to trigger GPS to turn
             /// on.
             ///
-            /// @since firmware 3.4.1
+            /// @since{3.4.1}
 #if NOTE_API_VERSION < NOTE_VERSION(3, 4, 1)
             [[deprecated("requires firmware >= 3.4.1")]]
 #endif
@@ -969,6 +978,8 @@ struct CardLocationMode {
     };
 
     /// Set a fixed location for the device.
+    ///
+    /// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
     struct Fixed {
         static constexpr string_view notecard_request = "card.location.mode";
         static constexpr bool supports_cmd = true;
@@ -1094,6 +1105,8 @@ struct CardLocationMode {
 
     /// Sets location-related configuration settings. Retrieves the current
     /// location mode when passed with no argument.
+    ///
+    /// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
     struct Delete {
         static constexpr string_view notecard_request = "card.location.mode";
         static constexpr bool supports_cmd = true;
@@ -1158,7 +1171,7 @@ struct CardLocationMode {
         /// When in `periodic` mode, the number of motion events (registered by
         /// the built-in accelerometer) required to trigger GPS to turn on.
         ///
-        /// @since firmware 3.4.1
+        /// @since{3.4.1}
 #if NOTE_API_VERSION < NOTE_VERSION(3, 4, 1)
         [[deprecated("requires firmware >= 3.4.1")]]
 #endif
@@ -1244,7 +1257,7 @@ struct CardLocationMode {
             /// by the built-in accelerometer) required to trigger GPS to turn
             /// on.
             ///
-            /// @since firmware 3.4.1
+            /// @since{3.4.1}
 #if NOTE_API_VERSION < NOTE_VERSION(3, 4, 1)
             [[deprecated("requires firmware >= 3.4.1")]]
 #endif

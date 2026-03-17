@@ -19,8 +19,11 @@ namespace note::api {
 
 
 
+
 /// Calculates a projection of how long the available cellular data quota will
 /// last based on the observed usage patterns.
+///
+/// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
 struct CardUsageTest {
     static constexpr string_view notecard_request = "card.usage.test";
     static constexpr bool supports_cmd = true;

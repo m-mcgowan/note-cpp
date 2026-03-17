@@ -19,7 +19,10 @@ namespace note::api {
 
 
 
+
 /// Sets up a Notecard WiFi to connect to a WiFi access point.
+///
+/// @skus{CELL+WIFI,SKYLO,WIFI}
 struct CardWifi {
     static constexpr string_view notecard_request = "card.wifi";
     static constexpr bool supports_cmd = true;
@@ -81,7 +84,7 @@ struct CardWifi {
     ///
     /// `{"req":"card.wifi", "text":"[\"FIRST-SSID\",\"FIRST-PASSWORD\"]"}`
     ///
-    /// @since firmware 7.5.1
+    /// @since{7.5.1}
 #if NOTE_API_VERSION < NOTE_VERSION(7, 5, 1)
     [[deprecated("requires firmware >= 7.5.1")]]
 #endif

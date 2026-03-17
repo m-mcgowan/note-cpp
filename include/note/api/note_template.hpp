@@ -20,6 +20,7 @@ namespace note::api {
 
 
 
+
 /// By using the `note.template` request with any `.qo`/`.qos` Notefile,
 /// developers can provide the Notecard with a schema of sorts to apply to
 /// future Notes added to the Notefile. This template acts as a hint to the
@@ -29,6 +30,8 @@ namespace note::api {
 /// sync capability of the Notecard by an order of magnitude.
 ///
 /// Read about Working with Note Templates for additional information.
+///
+/// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
 struct NoteTemplate {
 
     struct Set {
@@ -86,7 +89,7 @@ struct NoteTemplate {
         /// omitted: `lat`, `lon`, `ltime`, `time`. See Creating Compact
         /// Templates to learn more.
         ///
-        /// @since firmware 6.2.3
+        /// @since{6.2.3}
 #if NOTE_API_VERSION < NOTE_VERSION(6, 2, 3)
         [[deprecated("requires firmware >= 6.2.3")]]
 #endif
@@ -123,7 +126,7 @@ struct NoteTemplate {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
         /// If `true`, returns the current template set on a given Notefile.
         ///
-        /// @since firmware 3.2.1
+        /// @since{3.2.1}
 #if NOTE_API_VERSION < NOTE_VERSION(3, 2, 1)
         [[deprecated("requires firmware >= 3.2.1")]]
 #endif
@@ -176,7 +179,7 @@ struct NoteTemplate {
             /// If the `format` argument is provided, this represents the format
             /// applied to the template.
             ///
-            /// @since firmware 6.2.3
+            /// @since{6.2.3}
 #if NOTE_API_VERSION < NOTE_VERSION(6, 2, 3)
             [[deprecated("requires firmware >= 6.2.3")]]
 #endif
@@ -188,7 +191,7 @@ struct NoteTemplate {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
             /// `true` if an active template exists on the Notefile.
             ///
-            /// @since firmware 3.2.1
+            /// @since{3.2.1}
 #if NOTE_API_VERSION < NOTE_VERSION(3, 2, 1)
             [[deprecated("requires firmware >= 3.2.1")]]
 #endif
@@ -332,6 +335,8 @@ struct NoteTemplate {
     /// storage and sync capability of the Notecard by an order of magnitude.
     ///
     /// Read about Working with Note Templates for additional information.
+    ///
+    /// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
     struct Delete {
         static constexpr string_view notecard_request = "note.template";
         static constexpr bool supports_cmd = true;
@@ -370,7 +375,7 @@ struct NoteTemplate {
         /// omitted: `lat`, `lon`, `ltime`, `time`. See Creating Compact
         /// Templates to learn more.
         ///
-        /// @since firmware 6.2.3
+        /// @since{6.2.3}
 #if NOTE_API_VERSION < NOTE_VERSION(6, 2, 3)
         [[deprecated("requires firmware >= 6.2.3")]]
 #endif
@@ -407,7 +412,7 @@ struct NoteTemplate {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
         /// If `true`, returns the current template set on a given Notefile.
         ///
-        /// @since firmware 3.2.1
+        /// @since{3.2.1}
 #if NOTE_API_VERSION < NOTE_VERSION(3, 2, 1)
         [[deprecated("requires firmware >= 3.2.1")]]
 #endif
@@ -459,7 +464,7 @@ struct NoteTemplate {
             /// If the `format` argument is provided, this represents the format
             /// applied to the template.
             ///
-            /// @since firmware 6.2.3
+            /// @since{6.2.3}
 #if NOTE_API_VERSION < NOTE_VERSION(6, 2, 3)
             [[deprecated("requires firmware >= 6.2.3")]]
 #endif
@@ -471,7 +476,7 @@ struct NoteTemplate {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
             /// `true` if an active template exists on the Notefile.
             ///
-            /// @since firmware 3.2.1
+            /// @since{3.2.1}
 #if NOTE_API_VERSION < NOTE_VERSION(3, 2, 1)
             [[deprecated("requires firmware >= 3.2.1")]]
 #endif

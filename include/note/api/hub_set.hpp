@@ -21,8 +21,11 @@ namespace note::api {
 
 
 
+
 /// The hub.set request is the primary method for controlling the Notecard's
 /// Notehub connection and sync behavior.
+///
+/// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
 struct HubSet {
     static constexpr string_view notecard_request = "hub.set";
     static constexpr bool supports_cmd = true;
@@ -52,7 +55,7 @@ struct HubSet {
     /// LoRaWAN details to its default values by providing a `"-"` for the
     /// details argument.
     ///
-    /// @since firmware 6.2.3
+    /// @since{6.2.3}
 #if NOTE_API_VERSION < NOTE_VERSION(6, 2, 3)
     [[deprecated("requires firmware >= 6.2.3")]]
 #endif
@@ -113,7 +116,7 @@ struct HubSet {
     /// Set to `true` to manually instruct the Notecard to resume periodic mode
     /// after a web transaction has completed.
     ///
-    /// @since firmware 3.4.1
+    /// @since{3.4.1}
 #if NOTE_API_VERSION < NOTE_VERSION(3, 4, 1)
     [[deprecated("requires firmware >= 3.4.1")]]
 #endif
@@ -130,7 +133,7 @@ struct HubSet {
     /// Ignored if the Notecard is already in `continuous` mode or if the
     /// Notecard is NOT performing a web transaction.
     ///
-    /// @since firmware 3.4.1
+    /// @since{3.4.1}
 #if NOTE_API_VERSION < NOTE_VERSION(3, 4, 1)
     [[deprecated("requires firmware >= 3.4.1")]]
 #endif
@@ -175,7 +178,7 @@ struct HubSet {
     /// default of 300 seconds is used. Ignored if the Notecard is already in
     /// continuous mode.
     ///
-    /// @since firmware 3.4.1
+    /// @since{3.4.1}
 #if NOTE_API_VERSION < NOTE_VERSION(3, 4, 1)
     [[deprecated("requires firmware >= 3.4.1")]]
 #endif
@@ -206,7 +209,7 @@ struct HubSet {
     /// Notecard to stay in `continuous` mode when connected to USB/line power
     /// and fallback to `minimum` mode when disconnected.
     ///
-    /// @since firmware 4.1.1
+    /// @since{4.1.1}
 #if NOTE_API_VERSION < NOTE_VERSION(4, 1, 1)
     [[deprecated("requires firmware >= 4.1.1")]]
 #endif
@@ -221,7 +224,7 @@ struct HubSet {
     /// Notecard to stay in `continuous` mode when connected to USB/line power
     /// and fallback to `off` mode when disconnected.
     ///
-    /// @since firmware 4.1.1
+    /// @since{4.1.1}
 #if NOTE_API_VERSION < NOTE_VERSION(4, 1, 1)
     [[deprecated("requires firmware >= 4.1.1")]]
 #endif
@@ -236,7 +239,7 @@ struct HubSet {
     /// Notecard to stay in `continuous` mode when connected to USB/line power
     /// and fallback to `periodic` mode when disconnected.
     ///
-    /// @since firmware 4.1.1
+    /// @since{4.1.1}
 #if NOTE_API_VERSION < NOTE_VERSION(4, 1, 1)
     [[deprecated("requires firmware >= 4.1.1")]]
 #endif
@@ -263,7 +266,7 @@ struct HubSet {
     /// alternatively use the `dfu.status` request to set your host firmware
     /// version.
     ///
-    /// @since firmware 7.3.1
+    /// @since{7.3.1}
 #if NOTE_API_VERSION < NOTE_VERSION(7, 3, 1)
     [[deprecated("requires firmware >= 7.3.1")]]
 #endif

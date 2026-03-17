@@ -19,8 +19,11 @@ namespace note::api {
 
 
 
+
 /// Deletes a Note from a DB Notefile by its Note ID. To delete Notes from a
 /// `.qi` Notefile, use `note.get` or `note.changes` with `delete:true`.
+///
+/// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
 struct NoteDelete {
     static constexpr string_view notecard_request = "note.delete";
     static constexpr bool supports_cmd = true;

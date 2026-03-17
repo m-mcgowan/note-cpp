@@ -19,8 +19,11 @@ namespace note::api {
 
 
 
+
 /// Retrieves downloaded firmware data from the Notecard for use with IAP host
 /// MCU firmware updates.
+///
+/// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
 struct DfuGet {
     static constexpr string_view notecard_request = "dfu.get";
     static constexpr bool supports_cmd = true;

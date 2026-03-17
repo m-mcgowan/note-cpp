@@ -19,12 +19,15 @@ namespace note::api {
 
 
 
+
 /// Uses the `AUX_CHARGING` pin on the Notecard edge connector to notify the
 /// Notecard that the pin is connected to a Notecarrier that supports charging,
 /// using open-drain.
 ///
 /// Once set, `{"charging":true}` will appear in a response if the Notecarrier
 /// is currently indicating that charging is in progress.
+///
+/// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
 struct CardCarrier {
     static constexpr string_view notecard_request = "card.carrier";
     static constexpr bool supports_cmd = true;

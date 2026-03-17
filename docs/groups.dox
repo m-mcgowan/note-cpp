@@ -1,0 +1,54 @@
+// Doxygen module groupings for note-cpp.
+// Assigns types to "User API" and "Internals" topics without
+// modifying the source headers.
+
+/// @defgroup userapi User API
+/// The types and functions you use directly when building with note-cpp.
+///
+/// Most interaction uses `auto` variables and IDE completion.
+/// These are the types you explicitly name in your code.
+/// @{
+
+/// @class note::Notecard
+/// @class note::Api
+/// @class note::ApiResult
+/// @class note::BodyValue
+/// @class note::JsonBuilder
+/// @class note::JsonReader
+/// @class note::JsonBackend
+/// @class note::JsonBuf
+/// @struct note::ErrorInfo
+/// @struct note::Seconds
+/// @struct note::Minutes
+/// @struct note::Hours
+/// @struct note::Days
+/// @struct note::Milliseconds
+/// @struct note::Firmware
+/// @class note::VoltageVariable
+/// @struct note::Result
+
+/// @}
+
+/// @defgroup internals Internals
+/// Implementation details. You rarely need to use these directly —
+/// they are accessed implicitly through `auto` variables, operator
+/// overloads, and default conversions.
+/// @{
+
+/// @struct note::Field
+/// @class note::FlagSet
+/// @struct note::FlagDef
+/// @struct note::DynField
+/// @struct note::Skus
+/// @struct note::Target
+/// @struct note::Unconstrained
+/// @class note::StringPool
+/// @class note::MonotonicArena
+/// @class note::Allocator
+/// @struct note::HeapStats
+/// @struct note::HeapSnapshot
+/// @class note::JsonSink
+/// @class note::ErrorCaptureSink
+/// @class note::SaxParser
+
+/// @}

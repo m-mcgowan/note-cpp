@@ -19,6 +19,7 @@ namespace note::api {
 
 
 
+
 /// Used along with the card.aux API to turn connected LEDs on/off, to enable a
 /// specific color on an RGB LED, or to manage a single connected NeoPixel.
 ///
@@ -32,6 +33,8 @@ namespace note::api {
 ///
 /// NeoPixels must be wired according to the instructions provided in the guide
 /// on Using Neo-Monitor Mode.
+///
+/// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
 struct CardLed {
     static constexpr string_view notecard_request = "card.led";
     static constexpr bool supports_cmd = true;

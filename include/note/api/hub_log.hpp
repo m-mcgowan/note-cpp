@@ -19,8 +19,11 @@ namespace note::api {
 
 
 
+
 /// Add a "device health" log message to send to Notehub on the next sync via
 /// the healthhost.qo Notefile.
+///
+/// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
 struct HubLog {
     static constexpr string_view notecard_request = "hub.log";
     static constexpr bool supports_cmd = true;

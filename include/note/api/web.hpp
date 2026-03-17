@@ -20,8 +20,11 @@ namespace note::api {
 
 
 
+
 /// Performs an HTTP or HTTPS request against an external endpoint, with the
 /// ability to specify any valid HTTP method.
+///
+/// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
 struct Web {
     static constexpr string_view notecard_request = "web";
     static constexpr bool supports_cmd = true;

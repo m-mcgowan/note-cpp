@@ -19,7 +19,10 @@ namespace note::api {
 
 
 
+
 /// Check on the status of a recently triggered or previous sync.
+///
+/// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
 struct HubSyncStatus {
     static constexpr string_view notecard_request = "hub.sync.status";
     static constexpr bool supports_cmd = true;
@@ -74,7 +77,7 @@ struct HubSyncStatus {
         /// Returns `true` if triangulation data was sent to Notehub in the most
         /// recent sync.
         ///
-        /// @since firmware 6.1.1
+        /// @since{6.1.1}
 #if NOTE_API_VERSION < NOTE_VERSION(6, 1, 1)
         [[deprecated("requires firmware >= 6.1.1")]]
 #endif
@@ -84,7 +87,7 @@ struct HubSyncStatus {
         /// If the Notecard is in a Penalty Box, the number of seconds until the
         /// penalty condition ends.
         ///
-        /// @since firmware 4.1.1
+        /// @since{4.1.1}
 #if NOTE_API_VERSION < NOTE_VERSION(4, 1, 1)
         [[deprecated("requires firmware >= 4.1.1")]]
 #endif

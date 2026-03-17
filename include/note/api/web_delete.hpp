@@ -20,8 +20,11 @@ namespace note::api {
 
 
 
+
 /// Performs a simple HTTP or HTTPS `DELETE` request against an external
 /// endpoint, and returns the response to the Notecard.
+///
+/// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
 struct WebDelete {
     static constexpr string_view notecard_request = "web.delete";
     static constexpr bool supports_cmd = true;
@@ -34,7 +37,7 @@ struct WebDelete {
     /// If `true`, the Notecard performs the web request asynchronously, and
     /// returns control to the host without waiting for a response from Notehub.
     ///
-    /// @since firmware 5.1.1
+    /// @since{5.1.1}
 #if NOTE_API_VERSION < NOTE_VERSION(5, 1, 1)
     [[deprecated("requires firmware >= 5.1.1")]]
 #endif

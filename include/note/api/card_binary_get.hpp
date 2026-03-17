@@ -19,12 +19,15 @@ namespace note::api {
 
 
 
+
 /// Returns binary data stored in the binary storage area of the Notecard. The
 /// response to this API command first returns the JSON-formatted response
 /// object, then the binary data.
 ///
 /// See the guide on Sending and Receiving Large Binary Objects for best
 /// practices when using `card.binary`.
+///
+/// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
 struct CardBinaryGet {
     static constexpr string_view notecard_request = "card.binary.get";
     static constexpr bool supports_cmd = true;

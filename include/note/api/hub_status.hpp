@@ -19,7 +19,10 @@ namespace note::api {
 
 
 
+
 /// Displays the current status of the Notecard's connection to Notehub.
+///
+/// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
 struct HubStatus {
     static constexpr string_view notecard_request = "hub.status";
     static constexpr bool supports_cmd = true;

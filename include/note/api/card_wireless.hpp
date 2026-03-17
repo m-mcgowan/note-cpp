@@ -19,9 +19,12 @@ namespace note::api {
 
 
 
+
 /// View the last known network state, or customize the behavior of the modem.
 /// Note: Be careful when using this mode with hardware not on hand as a mistake
 /// may cause loss of network and Notehub access.
+///
+/// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
 struct CardWireless {
     static constexpr string_view notecard_request = "card.wireless";
     static constexpr bool supports_cmd = true;

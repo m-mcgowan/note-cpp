@@ -19,8 +19,11 @@ namespace note::api {
 
 
 
+
 /// Returns the Notecard's network usage statistics for cellular and WiFi
 /// transmissions.
+///
+/// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
 struct CardUsageGet {
     static constexpr string_view notecard_request = "card.usage.get";
     static constexpr bool supports_cmd = true;

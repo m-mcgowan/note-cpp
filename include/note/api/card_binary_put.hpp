@@ -19,12 +19,15 @@ namespace note::api {
 
 
 
+
 /// Adds binary data to the binary storage area of the Notecard. The Notecard
 /// expects to receive binary data immediately following the usage of this API
 /// command.
 ///
 /// See the guide on Sending and Receiving Large Binary Objects for best
 /// practices when using `card.binary`.
+///
+/// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
 struct CardBinaryPut {
     static constexpr string_view notecard_request = "card.binary.put";
     static constexpr bool supports_cmd = true;

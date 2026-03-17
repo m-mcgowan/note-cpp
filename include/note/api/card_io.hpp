@@ -19,8 +19,11 @@ namespace note::api {
 
 
 
+
 /// Can be used to override the Notecard's I2C address from its default of
 /// `0x17` and change behaviors of the onboard LED and USB port.
+///
+/// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
 struct CardIo {
     static constexpr string_view notecard_request = "card.io";
     static constexpr bool supports_cmd = true;

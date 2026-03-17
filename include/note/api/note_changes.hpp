@@ -19,7 +19,10 @@ namespace note::api {
 
 
 
+
 /// Used to incrementally retrieve changes within a specific Notefile.
+///
+/// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
 struct NoteChanges {
 
     struct Get {
@@ -172,6 +175,8 @@ struct NoteChanges {
     };
 
     /// Used to incrementally retrieve changes within a specific Notefile.
+    ///
+    /// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
     struct Delete {
         static constexpr string_view notecard_request = "note.changes";
         static constexpr bool supports_cmd = true;

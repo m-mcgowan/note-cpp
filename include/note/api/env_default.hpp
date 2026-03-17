@@ -19,9 +19,12 @@ namespace note::api {
 
 
 
+
 /// Used by the Notecard host to specify a default value for an environment
 /// variable until that variable is overridden by a device, project or fleet-
 /// wide setting at Notehub.
+///
+/// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
 struct EnvDefault {
 
     struct Set {
@@ -95,6 +98,8 @@ struct EnvDefault {
     /// Used by the Notecard host to specify a default value for an environment
     /// variable until that variable is overridden by a device, project or
     /// fleet-wide setting at Notehub.
+    ///
+    /// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
     struct Delete {
         static constexpr string_view notecard_request = "env.default";
         static constexpr bool supports_cmd = true;

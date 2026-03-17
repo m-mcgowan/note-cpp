@@ -20,11 +20,14 @@ namespace note::api {
 
 
 
+
 /// Retrieves a Note from a Notefile. The file must either be a DB Notefile or
 /// inbound queue file (see `file` argument below).
 ///
 /// `.qo`/`.qos` Notes must be read from the Notehub event table using the
 /// Notehub Event API.
+///
+/// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
 struct NoteGet {
 
     struct Get {
@@ -186,6 +189,8 @@ struct NoteGet {
     ///
     /// `.qo`/`.qos` Notes must be read from the Notehub event table using the
     /// Notehub Event API.
+    ///
+    /// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
     struct Delete {
         static constexpr string_view notecard_request = "note.get";
         static constexpr bool supports_cmd = true;

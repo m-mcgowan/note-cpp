@@ -19,8 +19,11 @@ namespace note::api {
 
 
 
+
 /// Used to set or retrieve information about the Notecard maintainer. Once set,
 /// this information is synced to Notehub.
+///
+/// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
 struct CardContact {
 
     struct Get {
@@ -160,6 +163,8 @@ struct CardContact {
 
     /// Used to set or retrieve information about the Notecard maintainer. Once
     /// set, this information is synced to Notehub.
+    ///
+    /// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
     struct Set {
         static constexpr string_view notecard_request = "card.contact";
         static constexpr bool supports_cmd = true;

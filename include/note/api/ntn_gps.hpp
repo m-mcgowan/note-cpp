@@ -19,9 +19,12 @@ namespace note::api {
 
 
 
+
 /// Determines whether a Notecard should override a paired Starnote's GPS/GNSS
 /// location with its own GPS/GNSS location. The paired Starnote uses its own
 /// GPS/GNSS location by default.
+///
+/// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
 struct NtnGps {
     static constexpr string_view notecard_request = "ntn.gps";
     static constexpr bool supports_cmd = true;

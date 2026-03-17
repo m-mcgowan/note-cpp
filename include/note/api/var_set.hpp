@@ -19,9 +19,12 @@ namespace note::api {
 
 
 
+
 /// Adds or updates a Note in a DB Notefile, replacing the existing body with
 /// the specified key-value pair where text, value, or flag is the key. Provides
 /// a simpler interface to the note.update API.
+///
+/// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
 struct VarSet {
     static constexpr string_view notecard_request = "var.set";
     static constexpr bool supports_cmd = true;
@@ -34,7 +37,7 @@ struct VarSet {
     /// The name of the DB Notefile that contains the Note to add or update.
     /// Default value is `vars.db`.
     ///
-    /// @since firmware 7.3.1
+    /// @since{7.3.1}
 #if NOTE_API_VERSION < NOTE_VERSION(7, 3, 1)
     [[deprecated("requires firmware >= 7.3.1")]]
 #endif

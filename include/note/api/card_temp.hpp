@@ -20,6 +20,7 @@ namespace note::api {
 
 
 
+
 /// Get the current temperature from the Notecard's onboard calibrated
 /// temperature sensor.
 ///
@@ -28,6 +29,8 @@ namespace note::api {
 /// `pressure`, and `humidity` fields to the response. If you connect an ENS210
 /// sensor on the I2C bus the Notecard will add `temperature` and `pressure`
 /// fields to the response.
+///
+/// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
 struct CardTemp {
 
     struct Get {
@@ -201,6 +204,8 @@ struct CardTemp {
     /// `pressure`, and `humidity` fields to the response. If you connect an
     /// ENS210 sensor on the I2C bus the Notecard will add `temperature` and
     /// `pressure` fields to the response.
+    ///
+    /// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
     struct Set {
         static constexpr string_view notecard_request = "card.temp";
         static constexpr bool supports_cmd = true;
@@ -372,6 +377,8 @@ struct CardTemp {
     /// `pressure`, and `humidity` fields to the response. If you connect an
     /// ENS210 sensor on the I2C bus the Notecard will add `temperature` and
     /// `pressure` fields to the response.
+    ///
+    /// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
     struct Delete {
         static constexpr string_view notecard_request = "card.temp";
         static constexpr bool supports_cmd = true;

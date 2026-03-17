@@ -20,9 +20,12 @@ namespace note::api {
 
 
 
+
 /// Configure various uses of the general-purpose I/O (GPIO) pins `AUX1`-`AUX4`
 /// on the Notecard edge connector for tracking applications and simple GPIO
 /// sensing and counting tasks.
+///
+/// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
 struct CardAux {
     static constexpr string_view notecard_request = "card.aux";
     static constexpr bool supports_cmd = true;
@@ -35,7 +38,7 @@ struct CardAux {
     /// If `true`, defers the sync of the state change Notefile to the next sync
     /// as configured by the `hub.set` request.
     ///
-    /// @since firmware 3.3.1
+    /// @since{3.3.1}
 #if NOTE_API_VERSION < NOTE_VERSION(3, 3, 1)
     [[deprecated("requires firmware >= 3.3.1")]]
 #endif
@@ -50,7 +53,7 @@ struct CardAux {
     /// this controls the number of NeoPixels to use in a strip. Possible values
     /// are `1`, `2`, or `5`.
     ///
-    /// @since firmware 3.5.1
+    /// @since{3.5.1}
     // count: -1 | 1 | 2 | 5
 #if NOTE_API_VERSION < NOTE_VERSION(3, 5, 1)
     [[deprecated("requires firmware >= 3.5.1")]]
@@ -65,7 +68,7 @@ struct CardAux {
     /// The name of the Notefile used to report state changes when used in
     /// conjunction with `"sync": true`. Default Notefile name is `_button.qo`.
     ///
-    /// @since firmware 3.3.1
+    /// @since{3.3.1}
 #if NOTE_API_VERSION < NOTE_VERSION(3, 3, 1)
     [[deprecated("requires firmware >= 3.3.1")]]
 #endif
@@ -87,7 +90,7 @@ struct CardAux {
     /// If `true`, along with `"mode":"track"` and `gps:true` the Notecard will
     /// disable concurrent modem use during GPS tracking.
     ///
-    /// @since firmware 3.4.1
+    /// @since{3.4.1}
 #if NOTE_API_VERSION < NOTE_VERSION(3, 4, 1)
     [[deprecated("requires firmware >= 3.4.1")]]
 #endif
@@ -122,7 +125,7 @@ struct CardAux {
     /// milliseconds. This interval only applies to GPIOs configured with a
     /// `usage` of `count`, `count-pulldown`, or `count-pullup`.
     ///
-    /// @since firmware 5.1.1
+    /// @since{5.1.1}
 #if NOTE_API_VERSION < NOTE_VERSION(5, 1, 1)
     [[deprecated("requires firmware >= 5.1.1")]]
 #endif
@@ -144,7 +147,7 @@ struct CardAux {
     /// The AUX UART baud rate for debug communication over the AUXRX and AUXTX
     /// pins.
     ///
-    /// @since firmware 3.2.1
+    /// @since{3.2.1}
     // rate: -1 | 300 | 600 | 1200 | 2400 | 4800 | 9600 | 19200 | 38400 | 57600 | 115200 | 230400 | 460800 | 921600
 #if NOTE_API_VERSION < NOTE_VERSION(3, 2, 1)
     [[deprecated("requires firmware >= 3.2.1")]]
@@ -168,7 +171,7 @@ struct CardAux {
     /// this controls the brightness of NeoPixel lights, where `100` is the
     /// maximum brightness and `1` is the minimum.
     ///
-    /// @since firmware 3.5.1
+    /// @since{3.5.1}
 #if NOTE_API_VERSION < NOTE_VERSION(3, 5, 1)
     [[deprecated("requires firmware >= 3.5.1")]]
 #endif
@@ -192,7 +195,7 @@ struct CardAux {
     /// and will report the total in a new note in `file` unless it has been
     /// noted in the previous second.
     ///
-    /// @since firmware 3.4.1
+    /// @since{3.4.1}
 #if NOTE_API_VERSION < NOTE_VERSION(3, 4, 1)
     [[deprecated("requires firmware >= 3.4.1")]]
 #endif
@@ -319,7 +322,7 @@ struct CardAux {
         /// parameter only appears in the body of the Note in Notehub if using
         /// `"sync":true`.
         ///
-        /// @since firmware 3.3.1
+        /// @since{3.3.1}
 #if NOTE_API_VERSION < NOTE_VERSION(3, 3, 1)
         [[deprecated("requires firmware >= 3.3.1")]]
 #endif

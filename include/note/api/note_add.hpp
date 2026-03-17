@@ -20,7 +20,10 @@ namespace note::api {
 
 
 
+
 /// Adds a Note to a Notefile, creating the Notefile if it doesn't yet exist.
+///
+/// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
 struct NoteAdd {
     static constexpr string_view notecard_request = "note.add";
     static constexpr bool supports_cmd = true;
@@ -35,7 +38,7 @@ struct NoteAdd {
     ///
     /// Learn more in this guide on Sending and Receiving Large Binary Objects.
     ///
-    /// @since firmware 5.3.1
+    /// @since{5.3.1}
 #if NOTE_API_VERSION < NOTE_VERSION(5, 3, 1)
     [[deprecated("requires firmware >= 5.3.1")]]
 #endif
@@ -85,7 +88,7 @@ struct NoteAdd {
     /// will bypass usage of omitempty and retain `null`, `0`, `false`, and
     /// empty string `""` values.
     ///
-    /// @since firmware 5.1.1
+    /// @since{5.1.1}
 #if NOTE_API_VERSION < NOTE_VERSION(5, 1, 1)
     [[deprecated("requires firmware >= 5.1.1")]]
 #endif
@@ -107,7 +110,7 @@ struct NoteAdd {
     /// If set to `true`, the Note will not be created if Notecard is in a
     /// penalty box.
     ///
-    /// @since firmware 9.1.1
+    /// @since{9.1.1}
 #if NOTE_API_VERSION < NOTE_VERSION(9, 1, 1)
     [[deprecated("requires firmware >= 9.1.1")]]
 #endif
@@ -121,7 +124,7 @@ struct NoteAdd {
     /// If `true`, bypasses saving the Note to flash on the Notecard. Required
     /// to be set to `true` if also using `"binary":true`.
     ///
-    /// @since firmware 5.3.1
+    /// @since{5.3.1}
 #if NOTE_API_VERSION < NOTE_VERSION(5, 3, 1)
     [[deprecated("requires firmware >= 5.3.1")]]
 #endif
@@ -137,7 +140,7 @@ struct NoteAdd {
     /// When used with `"sync":true`, a sync will be triggered when the number
     /// of pending Notes matches the `max` value.
     ///
-    /// @since firmware 8.2.1
+    /// @since{8.2.1}
 #if NOTE_API_VERSION < NOTE_VERSION(8, 2, 1)
     [[deprecated("requires firmware >= 8.2.1")]]
 #endif

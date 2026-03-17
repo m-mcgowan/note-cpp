@@ -19,6 +19,7 @@ namespace note::api {
 
 
 
+
 /// Performs a factory reset on the Notecard and restarts.
 ///
 /// *Sending this request without either of the optional arguments below will
@@ -28,6 +29,8 @@ namespace note::api {
 /// On Notecard LoRa there is no option to retain configuration settings, and
 /// providing `"delete": true` is required. The Notecard LoRa retains LoRaWAN
 /// configuration after factory resets.
+///
+/// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
 struct CardRestore {
     static constexpr string_view notecard_request = "card.restore";
     static constexpr bool supports_cmd = true;

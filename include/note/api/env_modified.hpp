@@ -19,8 +19,11 @@ namespace note::api {
 
 
 
+
 /// Get the time of the update to any environment variable managed by the
 /// Notecard.
+///
+/// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
 struct EnvModified {
     static constexpr string_view notecard_request = "env.modified";
     static constexpr bool supports_cmd = true;
@@ -33,7 +36,7 @@ struct EnvModified {
     /// Request whether the Notecard has detected an environment variable change
     /// since a known epoch time.
     ///
-    /// @since firmware 3.4.1
+    /// @since{3.4.1}
 #if NOTE_API_VERSION < NOTE_VERSION(3, 4, 1)
     [[deprecated("requires firmware >= 3.4.1")]]
 #endif
@@ -77,7 +80,7 @@ struct EnvModified {
         /// Timestamp indicating the last time any environment variable was
         /// changed on the device.
         ///
-        /// @since firmware 3.4.1
+        /// @since{3.4.1}
 #if NOTE_API_VERSION < NOTE_VERSION(3, 4, 1)
         [[deprecated("requires firmware >= 3.4.1")]]
 #endif

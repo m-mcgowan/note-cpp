@@ -24,6 +24,18 @@
 #include <memory>
 #include <string>
 
+// On embedded targets (FreeRTOS/ESP-IDF), thread_local adds TLS overhead to
+// every task stack (~4.6 KB per task for the buffers below). Since Notecard
+// operations are single-threaded in practice, we omit thread_local on
+// embedded platforms. Define NOTE_THREAD_LOCAL=thread_local to force TLS.
+#ifndef NOTE_THREAD_LOCAL
+#   if defined(ESP_PLATFORM) || defined(ARDUINO)
+#       define NOTE_THREAD_LOCAL
+#   else
+#       define NOTE_THREAD_LOCAL thread_local
+#   endif
+#endif
+
 namespace note::backends {
 
 // ---------------------------------------------------------------------------
@@ -116,8 +128,8 @@ private:
 
     // cJSON requires null-terminated strings. Since string_view may not be
     // null-terminated, we copy into a small buffer.
-    thread_local static inline char key_buf_[256];
-    thread_local static inline char str_buf_[4096];
+    NOTE_THREAD_LOCAL static inline char key_buf_[256];
+    NOTE_THREAD_LOCAL static inline char str_buf_[4096];
 
     static const char* zkey(string_view sv) {
         auto n = sv.size() < sizeof(key_buf_) ? sv.size() : sizeof(key_buf_) - 1;
@@ -192,7 +204,7 @@ private:
     cJSON* root_;
     bool owned_;
 
-    thread_local static inline char key_buf_[256];
+    NOTE_THREAD_LOCAL static inline char key_buf_[256];
 
     static const char* zkey(string_view sv) {
         auto n = sv.size() < sizeof(key_buf_) ? sv.size() : sizeof(key_buf_) - 1;
@@ -249,7 +261,7 @@ namespace detail {
 // Thread-local active arena pointer for cJSON hook dispatch.
 // Set before cJSON calls, cleared after. This is safe for single-threaded
 // embedded use and for multi-threaded use with per-thread arenas.
-inline thread_local MonotonicArena* g_active_arena = nullptr;
+inline NOTE_THREAD_LOCAL MonotonicArena* g_active_arena = nullptr;
 
 inline void* arena_cjson_malloc(size_t size) {
     if (g_active_arena) {

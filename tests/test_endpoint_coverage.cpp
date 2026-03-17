@@ -677,9 +677,9 @@ TEST_CASE("note::api::CardAuxSerial response parsing") {
 }
 
 // ---------------------------------------------------------------------------
-TEST_CASE("note::api::CardBinary::Get request builder") {
+TEST_CASE("note::api::CardBinary::Status request builder") {
     Harness h;
-    auto req = h.api.card.binary().get();
+    auto req = h.api.card.binary().status();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.delete_(true);
@@ -707,7 +707,7 @@ TEST_CASE("note::api::CardBinary::Get request builder") {
 }
 
 // ---------------------------------------------------------------------------
-TEST_CASE("note::api::CardBinary::Get response parsing") {
+TEST_CASE("note::api::CardBinary::Status response parsing") {
     auto reader = std::make_unique<note::test::PopulatedJsonReader>();
     reader->set("cobs", int32_t{42});
     reader->set("connected", true);
@@ -715,7 +715,7 @@ TEST_CASE("note::api::CardBinary::Get response parsing") {
     reader->set("length", int32_t{42});
     reader->set("max", int32_t{42});
     reader->set("status", std::string("x-status"));
-    auto rsp = note::api::CardBinary::Get::Response::parse(std::move(reader));
+    auto rsp = note::api::CardBinary::Status::Response::parse(std::move(reader));
     REQUIRE(rsp.cobs == 42);
     REQUIRE(rsp.connected == true);
     REQUIRE(rsp.err == "x-err");
@@ -731,7 +731,7 @@ TEST_CASE("note::api::CardBinary::Get response parsing") {
     // Cover intern_strings() empty-field branches (field.empty() == true).
     {
         auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
-        auto empty_rsp = note::api::CardBinary::Get::Response::parse(std::move(empty_rdr));
+        auto empty_rsp = note::api::CardBinary::Status::Response::parse(std::move(empty_rdr));
         note::Allocator alloc;
         note::StringPool pool(alloc);
         empty_rsp.intern_strings(pool);
@@ -739,9 +739,9 @@ TEST_CASE("note::api::CardBinary::Get response parsing") {
 }
 
 // ---------------------------------------------------------------------------
-TEST_CASE("note::api::CardBinary::Delete request builder") {
+TEST_CASE("note::api::CardBinary::Clear request builder") {
     Harness h;
-    auto req = h.api.card.binary().delete_();
+    auto req = h.api.card.binary().clear();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.execute();
@@ -765,7 +765,7 @@ TEST_CASE("note::api::CardBinary::Delete request builder") {
 }
 
 // ---------------------------------------------------------------------------
-TEST_CASE("note::api::CardBinary::Delete response parsing") {
+TEST_CASE("note::api::CardBinary::Clear response parsing") {
     auto reader = std::make_unique<note::test::PopulatedJsonReader>();
     reader->set("cobs", int32_t{42});
     reader->set("connected", true);
@@ -773,7 +773,7 @@ TEST_CASE("note::api::CardBinary::Delete response parsing") {
     reader->set("length", int32_t{42});
     reader->set("max", int32_t{42});
     reader->set("status", std::string("x-status"));
-    auto rsp = note::api::CardBinary::Delete::Response::parse(std::move(reader));
+    auto rsp = note::api::CardBinary::Clear::Response::parse(std::move(reader));
     REQUIRE(rsp.cobs == 42);
     REQUIRE(rsp.connected == true);
     REQUIRE(rsp.err == "x-err");
@@ -789,7 +789,7 @@ TEST_CASE("note::api::CardBinary::Delete response parsing") {
     // Cover intern_strings() empty-field branches (field.empty() == true).
     {
         auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
-        auto empty_rsp = note::api::CardBinary::Delete::Response::parse(std::move(empty_rdr));
+        auto empty_rsp = note::api::CardBinary::Clear::Response::parse(std::move(empty_rdr));
         note::Allocator alloc;
         note::StringPool pool(alloc);
         empty_rsp.intern_strings(pool);
@@ -1774,9 +1774,9 @@ TEST_CASE("note::api::CardLocationMode::Fixed response parsing") {
 }
 
 // ---------------------------------------------------------------------------
-TEST_CASE("note::api::CardLocationMode::Delete request builder") {
+TEST_CASE("note::api::CardLocationMode::Remove request builder") {
     Harness h;
-    auto req = h.api.card.locationMode().delete_();
+    auto req = h.api.card.locationMode().remove();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.lat(1.5);
@@ -1831,7 +1831,7 @@ TEST_CASE("note::api::CardLocationMode::Delete request builder") {
 }
 
 // ---------------------------------------------------------------------------
-TEST_CASE("note::api::CardLocationMode::Delete response parsing") {
+TEST_CASE("note::api::CardLocationMode::Remove response parsing") {
     auto reader = std::make_unique<note::test::PopulatedJsonReader>();
     reader->set("lat", 1.5);
     reader->set("lon", 1.5);
@@ -1843,7 +1843,7 @@ TEST_CASE("note::api::CardLocationMode::Delete response parsing") {
     reader->set("threshold", int32_t{42});
 #endif
     reader->set("vseconds", std::string("x-vseconds"));
-    auto rsp = note::api::CardLocationMode::Delete::Response::parse(std::move(reader));
+    auto rsp = note::api::CardLocationMode::Remove::Response::parse(std::move(reader));
     REQUIRE(rsp.lat == 1.5);
     REQUIRE(rsp.lon == 1.5);
     REQUIRE(rsp.max == 42);
@@ -1863,7 +1863,7 @@ TEST_CASE("note::api::CardLocationMode::Delete response parsing") {
     // Cover intern_strings() empty-field branches (field.empty() == true).
     {
         auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
-        auto empty_rsp = note::api::CardLocationMode::Delete::Response::parse(std::move(empty_rdr));
+        auto empty_rsp = note::api::CardLocationMode::Remove::Response::parse(std::move(empty_rdr));
         note::Allocator alloc;
         note::StringPool pool(alloc);
         empty_rsp.intern_strings(pool);
@@ -2195,9 +2195,9 @@ TEST_CASE("note::api::CardMotionTrack request builder") {
 }
 
 // ---------------------------------------------------------------------------
-TEST_CASE("note::api::CardPower::Get request builder") {
+TEST_CASE("note::api::CardPower::Read request builder") {
     Harness h;
-    auto req = h.api.card.power().get();
+    auto req = h.api.card.power().read();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.minutes(note::Minutes{42});
@@ -2228,12 +2228,12 @@ TEST_CASE("note::api::CardPower::Get request builder") {
 }
 
 // ---------------------------------------------------------------------------
-TEST_CASE("note::api::CardPower::Get response parsing") {
+TEST_CASE("note::api::CardPower::Read response parsing") {
     auto reader = std::make_unique<note::test::PopulatedJsonReader>();
     reader->set("milliamp_hours", 1.5);
     reader->set("temperature", 1.5);
     reader->set("voltage", 1.5);
-    auto rsp = note::api::CardPower::Get::Response::parse(std::move(reader));
+    auto rsp = note::api::CardPower::Read::Response::parse(std::move(reader));
     REQUIRE(rsp.milliampHours == 1.5);
     REQUIRE(rsp.temperature == 1.5);
     REQUIRE(rsp.voltage == 1.5);
@@ -2246,7 +2246,7 @@ TEST_CASE("note::api::CardPower::Get response parsing") {
     // Cover intern_strings() empty-field branches (field.empty() == true).
     {
         auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
-        auto empty_rsp = note::api::CardPower::Get::Response::parse(std::move(empty_rdr));
+        auto empty_rsp = note::api::CardPower::Read::Response::parse(std::move(empty_rdr));
         note::Allocator alloc;
         note::StringPool pool(alloc);
         empty_rsp.intern_strings(pool);
@@ -2254,9 +2254,9 @@ TEST_CASE("note::api::CardPower::Get response parsing") {
 }
 
 // ---------------------------------------------------------------------------
-TEST_CASE("note::api::CardPower::Set request builder") {
+TEST_CASE("note::api::CardPower::Configure request builder") {
     Harness h;
-    auto req = h.api.card.power().set();
+    auto req = h.api.card.power().configure();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.minutes(note::Minutes{42});
@@ -2287,12 +2287,12 @@ TEST_CASE("note::api::CardPower::Set request builder") {
 }
 
 // ---------------------------------------------------------------------------
-TEST_CASE("note::api::CardPower::Set response parsing") {
+TEST_CASE("note::api::CardPower::Configure response parsing") {
     auto reader = std::make_unique<note::test::PopulatedJsonReader>();
     reader->set("milliamp_hours", 1.5);
     reader->set("temperature", 1.5);
     reader->set("voltage", 1.5);
-    auto rsp = note::api::CardPower::Set::Response::parse(std::move(reader));
+    auto rsp = note::api::CardPower::Configure::Response::parse(std::move(reader));
     REQUIRE(rsp.milliampHours == 1.5);
     REQUIRE(rsp.temperature == 1.5);
     REQUIRE(rsp.voltage == 1.5);
@@ -2305,7 +2305,7 @@ TEST_CASE("note::api::CardPower::Set response parsing") {
     // Cover intern_strings() empty-field branches (field.empty() == true).
     {
         auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
-        auto empty_rsp = note::api::CardPower::Set::Response::parse(std::move(empty_rdr));
+        auto empty_rsp = note::api::CardPower::Configure::Response::parse(std::move(empty_rdr));
         note::Allocator alloc;
         note::StringPool pool(alloc);
         empty_rsp.intern_strings(pool);
@@ -2313,9 +2313,9 @@ TEST_CASE("note::api::CardPower::Set response parsing") {
 }
 
 // ---------------------------------------------------------------------------
-TEST_CASE("note::api::CardPower::Delete request builder") {
+TEST_CASE("note::api::CardPower::Reset request builder") {
     Harness h;
-    auto req = h.api.card.power().delete_();
+    auto req = h.api.card.power().reset();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.minutes(note::Minutes{42});
@@ -2343,12 +2343,12 @@ TEST_CASE("note::api::CardPower::Delete request builder") {
 }
 
 // ---------------------------------------------------------------------------
-TEST_CASE("note::api::CardPower::Delete response parsing") {
+TEST_CASE("note::api::CardPower::Reset response parsing") {
     auto reader = std::make_unique<note::test::PopulatedJsonReader>();
     reader->set("milliamp_hours", 1.5);
     reader->set("temperature", 1.5);
     reader->set("voltage", 1.5);
-    auto rsp = note::api::CardPower::Delete::Response::parse(std::move(reader));
+    auto rsp = note::api::CardPower::Reset::Response::parse(std::move(reader));
     REQUIRE(rsp.milliampHours == 1.5);
     REQUIRE(rsp.temperature == 1.5);
     REQUIRE(rsp.voltage == 1.5);
@@ -2361,7 +2361,7 @@ TEST_CASE("note::api::CardPower::Delete response parsing") {
     // Cover intern_strings() empty-field branches (field.empty() == true).
     {
         auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
-        auto empty_rsp = note::api::CardPower::Delete::Response::parse(std::move(empty_rdr));
+        auto empty_rsp = note::api::CardPower::Reset::Response::parse(std::move(empty_rdr));
         note::Allocator alloc;
         note::StringPool pool(alloc);
         empty_rsp.intern_strings(pool);
@@ -2628,9 +2628,9 @@ TEST_CASE("note::api::CardStatus response parsing") {
 }
 
 // ---------------------------------------------------------------------------
-TEST_CASE("note::api::CardTemp::Get request builder") {
+TEST_CASE("note::api::CardTemp::Read request builder") {
     Harness h;
-    auto req = h.api.card.temp().get();
+    auto req = h.api.card.temp().read();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.minutes(note::Minutes{42});
@@ -2667,7 +2667,7 @@ TEST_CASE("note::api::CardTemp::Get request builder") {
 }
 
 // ---------------------------------------------------------------------------
-TEST_CASE("note::api::CardTemp::Get response parsing") {
+TEST_CASE("note::api::CardTemp::Read response parsing") {
     auto reader = std::make_unique<note::test::PopulatedJsonReader>();
     reader->set("calibration", 1.5);
     reader->set("humidity", 1.5);
@@ -2676,7 +2676,7 @@ TEST_CASE("note::api::CardTemp::Get response parsing") {
     reader->set("usb", true);
     reader->set("value", 1.5);
     reader->set("voltage", 1.5);
-    auto rsp = note::api::CardTemp::Get::Response::parse(std::move(reader));
+    auto rsp = note::api::CardTemp::Read::Response::parse(std::move(reader));
     REQUIRE(rsp.calibration == 1.5);
     REQUIRE(rsp.humidity == 1.5);
     REQUIRE(rsp.pressure == 1.5);
@@ -2693,7 +2693,7 @@ TEST_CASE("note::api::CardTemp::Get response parsing") {
     // Cover intern_strings() empty-field branches (field.empty() == true).
     {
         auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
-        auto empty_rsp = note::api::CardTemp::Get::Response::parse(std::move(empty_rdr));
+        auto empty_rsp = note::api::CardTemp::Read::Response::parse(std::move(empty_rdr));
         note::Allocator alloc;
         note::StringPool pool(alloc);
         empty_rsp.intern_strings(pool);
@@ -2701,9 +2701,9 @@ TEST_CASE("note::api::CardTemp::Get response parsing") {
 }
 
 // ---------------------------------------------------------------------------
-TEST_CASE("note::api::CardTemp::Set request builder") {
+TEST_CASE("note::api::CardTemp::Configure request builder") {
     Harness h;
-    auto req = h.api.card.temp().set();
+    auto req = h.api.card.temp().configure();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.minutes(note::Minutes{42});
@@ -2740,7 +2740,7 @@ TEST_CASE("note::api::CardTemp::Set request builder") {
 }
 
 // ---------------------------------------------------------------------------
-TEST_CASE("note::api::CardTemp::Set response parsing") {
+TEST_CASE("note::api::CardTemp::Configure response parsing") {
     auto reader = std::make_unique<note::test::PopulatedJsonReader>();
     reader->set("calibration", 1.5);
     reader->set("humidity", 1.5);
@@ -2749,7 +2749,7 @@ TEST_CASE("note::api::CardTemp::Set response parsing") {
     reader->set("usb", true);
     reader->set("value", 1.5);
     reader->set("voltage", 1.5);
-    auto rsp = note::api::CardTemp::Set::Response::parse(std::move(reader));
+    auto rsp = note::api::CardTemp::Configure::Response::parse(std::move(reader));
     REQUIRE(rsp.calibration == 1.5);
     REQUIRE(rsp.humidity == 1.5);
     REQUIRE(rsp.pressure == 1.5);
@@ -2766,7 +2766,7 @@ TEST_CASE("note::api::CardTemp::Set response parsing") {
     // Cover intern_strings() empty-field branches (field.empty() == true).
     {
         auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
-        auto empty_rsp = note::api::CardTemp::Set::Response::parse(std::move(empty_rdr));
+        auto empty_rsp = note::api::CardTemp::Configure::Response::parse(std::move(empty_rdr));
         note::Allocator alloc;
         note::StringPool pool(alloc);
         empty_rsp.intern_strings(pool);
@@ -2774,9 +2774,9 @@ TEST_CASE("note::api::CardTemp::Set response parsing") {
 }
 
 // ---------------------------------------------------------------------------
-TEST_CASE("note::api::CardTemp::Delete request builder") {
+TEST_CASE("note::api::CardTemp::Stop request builder") {
     Harness h;
-    auto req = h.api.card.temp().delete_();
+    auto req = h.api.card.temp().stop();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.minutes(note::Minutes{42});
@@ -2810,7 +2810,7 @@ TEST_CASE("note::api::CardTemp::Delete request builder") {
 }
 
 // ---------------------------------------------------------------------------
-TEST_CASE("note::api::CardTemp::Delete response parsing") {
+TEST_CASE("note::api::CardTemp::Stop response parsing") {
     auto reader = std::make_unique<note::test::PopulatedJsonReader>();
     reader->set("calibration", 1.5);
     reader->set("humidity", 1.5);
@@ -2819,7 +2819,7 @@ TEST_CASE("note::api::CardTemp::Delete response parsing") {
     reader->set("usb", true);
     reader->set("value", 1.5);
     reader->set("voltage", 1.5);
-    auto rsp = note::api::CardTemp::Delete::Response::parse(std::move(reader));
+    auto rsp = note::api::CardTemp::Stop::Response::parse(std::move(reader));
     REQUIRE(rsp.calibration == 1.5);
     REQUIRE(rsp.humidity == 1.5);
     REQUIRE(rsp.pressure == 1.5);
@@ -2836,7 +2836,7 @@ TEST_CASE("note::api::CardTemp::Delete response parsing") {
     // Cover intern_strings() empty-field branches (field.empty() == true).
     {
         auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
-        auto empty_rsp = note::api::CardTemp::Delete::Response::parse(std::move(empty_rdr));
+        auto empty_rsp = note::api::CardTemp::Stop::Response::parse(std::move(empty_rdr));
         note::Allocator alloc;
         note::StringPool pool(alloc);
         empty_rsp.intern_strings(pool);
@@ -3306,9 +3306,9 @@ TEST_CASE("note::api::CardVersion response parsing") {
 }
 
 // ---------------------------------------------------------------------------
-TEST_CASE("note::api::CardVoltage::Get request builder") {
+TEST_CASE("note::api::CardVoltage::Read request builder") {
     Harness h;
-    auto req = h.api.card.voltage().get();
+    auto req = h.api.card.voltage().read();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.alert(true);
@@ -3384,7 +3384,7 @@ TEST_CASE("note::api::CardVoltage::Get request builder") {
 }
 
 // ---------------------------------------------------------------------------
-TEST_CASE("note::api::CardVoltage::Get response parsing") {
+TEST_CASE("note::api::CardVoltage::Read response parsing") {
     auto reader = std::make_unique<note::test::PopulatedJsonReader>();
     reader->set("daily", 1.5);
     reader->set("hours", int32_t{42});
@@ -3399,7 +3399,7 @@ TEST_CASE("note::api::CardVoltage::Get response parsing") {
     reader->set("vmax", 1.5);
     reader->set("vmin", 1.5);
     reader->set("weekly", 1.5);
-    auto rsp = note::api::CardVoltage::Get::Response::parse(std::move(reader));
+    auto rsp = note::api::CardVoltage::Read::Response::parse(std::move(reader));
     REQUIRE(rsp.daily == 1.5);
     REQUIRE(rsp.hours == 42);
     REQUIRE(rsp.minutes == 42);
@@ -3422,7 +3422,7 @@ TEST_CASE("note::api::CardVoltage::Get response parsing") {
     // Cover intern_strings() empty-field branches (field.empty() == true).
     {
         auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
-        auto empty_rsp = note::api::CardVoltage::Get::Response::parse(std::move(empty_rdr));
+        auto empty_rsp = note::api::CardVoltage::Read::Response::parse(std::move(empty_rdr));
         note::Allocator alloc;
         note::StringPool pool(alloc);
         empty_rsp.intern_strings(pool);
@@ -3430,9 +3430,9 @@ TEST_CASE("note::api::CardVoltage::Get response parsing") {
 }
 
 // ---------------------------------------------------------------------------
-TEST_CASE("note::api::CardVoltage::Set request builder") {
+TEST_CASE("note::api::CardVoltage::Configure request builder") {
     Harness h;
-    auto req = h.api.card.voltage().set();
+    auto req = h.api.card.voltage().configure();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.alert(true);
@@ -3508,7 +3508,7 @@ TEST_CASE("note::api::CardVoltage::Set request builder") {
 }
 
 // ---------------------------------------------------------------------------
-TEST_CASE("note::api::CardVoltage::Set response parsing") {
+TEST_CASE("note::api::CardVoltage::Configure response parsing") {
     auto reader = std::make_unique<note::test::PopulatedJsonReader>();
     reader->set("daily", 1.5);
     reader->set("hours", int32_t{42});
@@ -3523,7 +3523,7 @@ TEST_CASE("note::api::CardVoltage::Set response parsing") {
     reader->set("vmax", 1.5);
     reader->set("vmin", 1.5);
     reader->set("weekly", 1.5);
-    auto rsp = note::api::CardVoltage::Set::Response::parse(std::move(reader));
+    auto rsp = note::api::CardVoltage::Configure::Response::parse(std::move(reader));
     REQUIRE(rsp.daily == 1.5);
     REQUIRE(rsp.hours == 42);
     REQUIRE(rsp.minutes == 42);
@@ -3546,7 +3546,7 @@ TEST_CASE("note::api::CardVoltage::Set response parsing") {
     // Cover intern_strings() empty-field branches (field.empty() == true).
     {
         auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
-        auto empty_rsp = note::api::CardVoltage::Set::Response::parse(std::move(empty_rdr));
+        auto empty_rsp = note::api::CardVoltage::Configure::Response::parse(std::move(empty_rdr));
         note::Allocator alloc;
         note::StringPool pool(alloc);
         empty_rsp.intern_strings(pool);
@@ -3696,9 +3696,9 @@ TEST_CASE("note::api::CardWireless response parsing") {
 }
 
 // ---------------------------------------------------------------------------
-TEST_CASE("note::api::CardWirelessPenalty::Get request builder") {
+TEST_CASE("note::api::CardWirelessPenalty::Check request builder") {
     Harness h;
-    auto req = h.api.card.wirelessPenalty().get();
+    auto req = h.api.card.wirelessPenalty().check();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.add(note::Minutes{42});
@@ -3741,7 +3741,7 @@ TEST_CASE("note::api::CardWirelessPenalty::Get request builder") {
 }
 
 // ---------------------------------------------------------------------------
-TEST_CASE("note::api::CardWirelessPenalty::Get response parsing") {
+TEST_CASE("note::api::CardWirelessPenalty::Check response parsing") {
     auto reader = std::make_unique<note::test::PopulatedJsonReader>();
     reader->set("count", int32_t{42});
     reader->set("minutes", int32_t{42});
@@ -3749,7 +3749,7 @@ TEST_CASE("note::api::CardWirelessPenalty::Get response parsing") {
     reader->set("seconds", int32_t{42});
 #endif
     reader->set("status", std::string("x-status"));
-    auto rsp = note::api::CardWirelessPenalty::Get::Response::parse(std::move(reader));
+    auto rsp = note::api::CardWirelessPenalty::Check::Response::parse(std::move(reader));
     REQUIRE(rsp.count == 42);
     REQUIRE(rsp.minutes == 42);
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
@@ -3765,7 +3765,7 @@ TEST_CASE("note::api::CardWirelessPenalty::Get response parsing") {
     // Cover intern_strings() empty-field branches (field.empty() == true).
     {
         auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
-        auto empty_rsp = note::api::CardWirelessPenalty::Get::Response::parse(std::move(empty_rdr));
+        auto empty_rsp = note::api::CardWirelessPenalty::Check::Response::parse(std::move(empty_rdr));
         note::Allocator alloc;
         note::StringPool pool(alloc);
         empty_rsp.intern_strings(pool);
@@ -3847,9 +3847,9 @@ TEST_CASE("note::api::CardWirelessPenalty::Set response parsing") {
 }
 
 // ---------------------------------------------------------------------------
-TEST_CASE("note::api::CardWirelessPenalty::Delete request builder") {
+TEST_CASE("note::api::CardWirelessPenalty::Clear request builder") {
     Harness h;
-    auto req = h.api.card.wirelessPenalty().delete_();
+    auto req = h.api.card.wirelessPenalty().clear();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.add(note::Minutes{42});
@@ -3889,7 +3889,7 @@ TEST_CASE("note::api::CardWirelessPenalty::Delete request builder") {
 }
 
 // ---------------------------------------------------------------------------
-TEST_CASE("note::api::CardWirelessPenalty::Delete response parsing") {
+TEST_CASE("note::api::CardWirelessPenalty::Clear response parsing") {
     auto reader = std::make_unique<note::test::PopulatedJsonReader>();
     reader->set("count", int32_t{42});
     reader->set("minutes", int32_t{42});
@@ -3897,7 +3897,7 @@ TEST_CASE("note::api::CardWirelessPenalty::Delete response parsing") {
     reader->set("seconds", int32_t{42});
 #endif
     reader->set("status", std::string("x-status"));
-    auto rsp = note::api::CardWirelessPenalty::Delete::Response::parse(std::move(reader));
+    auto rsp = note::api::CardWirelessPenalty::Clear::Response::parse(std::move(reader));
     REQUIRE(rsp.count == 42);
     REQUIRE(rsp.minutes == 42);
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
@@ -3913,7 +3913,7 @@ TEST_CASE("note::api::CardWirelessPenalty::Delete response parsing") {
     // Cover intern_strings() empty-field branches (field.empty() == true).
     {
         auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
-        auto empty_rsp = note::api::CardWirelessPenalty::Delete::Response::parse(std::move(empty_rdr));
+        auto empty_rsp = note::api::CardWirelessPenalty::Clear::Response::parse(std::move(empty_rdr));
         note::Allocator alloc;
         note::StringPool pool(alloc);
         empty_rsp.intern_strings(pool);
@@ -4100,9 +4100,9 @@ TEST_CASE("note::api::EnvDefault::Set request builder") {
 }
 
 // ---------------------------------------------------------------------------
-TEST_CASE("note::api::EnvDefault::Delete request builder") {
+TEST_CASE("note::api::EnvDefault::Remove request builder") {
     Harness h;
-    auto req = h.api.env.default_().delete_(note::string_view("x-name"));
+    auto req = h.api.env.default_().remove(note::string_view("x-name"));
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.sync(true);
@@ -5179,9 +5179,9 @@ TEST_CASE("note::api::NoteAdd response parsing") {
 }
 
 // ---------------------------------------------------------------------------
-TEST_CASE("note::api::NoteChanges::Get request builder") {
+TEST_CASE("note::api::NoteChanges::Peek request builder") {
     Harness h;
-    auto req = h.api.note.changes().get();
+    auto req = h.api.note.changes().peek();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.deleted(true);
@@ -5227,11 +5227,11 @@ TEST_CASE("note::api::NoteChanges::Get request builder") {
 }
 
 // ---------------------------------------------------------------------------
-TEST_CASE("note::api::NoteChanges::Get response parsing") {
+TEST_CASE("note::api::NoteChanges::Peek response parsing") {
     auto reader = std::make_unique<note::test::PopulatedJsonReader>();
     reader->set("changes", int32_t{42});
     reader->set("total", int32_t{42});
-    auto rsp = note::api::NoteChanges::Get::Response::parse(std::move(reader));
+    auto rsp = note::api::NoteChanges::Peek::Response::parse(std::move(reader));
     REQUIRE(rsp.changes == 42);
     REQUIRE(rsp.total == 42);
     // Cover intern_strings() — copies string_view fields into pool storage.
@@ -5243,7 +5243,7 @@ TEST_CASE("note::api::NoteChanges::Get response parsing") {
     // Cover intern_strings() empty-field branches (field.empty() == true).
     {
         auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
-        auto empty_rsp = note::api::NoteChanges::Get::Response::parse(std::move(empty_rdr));
+        auto empty_rsp = note::api::NoteChanges::Peek::Response::parse(std::move(empty_rdr));
         note::Allocator alloc;
         note::StringPool pool(alloc);
         empty_rsp.intern_strings(pool);
@@ -5251,9 +5251,9 @@ TEST_CASE("note::api::NoteChanges::Get response parsing") {
 }
 
 // ---------------------------------------------------------------------------
-TEST_CASE("note::api::NoteChanges::Delete request builder") {
+TEST_CASE("note::api::NoteChanges::Pop request builder") {
     Harness h;
-    auto req = h.api.note.changes().delete_(note::string_view("x-file"));
+    auto req = h.api.note.changes().pop(note::string_view("x-file"));
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.deleted(true);
@@ -5297,11 +5297,11 @@ TEST_CASE("note::api::NoteChanges::Delete request builder") {
 }
 
 // ---------------------------------------------------------------------------
-TEST_CASE("note::api::NoteChanges::Delete response parsing") {
+TEST_CASE("note::api::NoteChanges::Pop response parsing") {
     auto reader = std::make_unique<note::test::PopulatedJsonReader>();
     reader->set("changes", int32_t{42});
     reader->set("total", int32_t{42});
-    auto rsp = note::api::NoteChanges::Delete::Response::parse(std::move(reader));
+    auto rsp = note::api::NoteChanges::Pop::Response::parse(std::move(reader));
     REQUIRE(rsp.changes == 42);
     REQUIRE(rsp.total == 42);
     // Cover intern_strings() — copies string_view fields into pool storage.
@@ -5313,7 +5313,7 @@ TEST_CASE("note::api::NoteChanges::Delete response parsing") {
     // Cover intern_strings() empty-field branches (field.empty() == true).
     {
         auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
-        auto empty_rsp = note::api::NoteChanges::Delete::Response::parse(std::move(empty_rdr));
+        auto empty_rsp = note::api::NoteChanges::Pop::Response::parse(std::move(empty_rdr));
         note::Allocator alloc;
         note::StringPool pool(alloc);
         empty_rsp.intern_strings(pool);
@@ -5353,9 +5353,9 @@ TEST_CASE("note::api::NoteDelete request builder") {
 }
 
 // ---------------------------------------------------------------------------
-TEST_CASE("note::api::NoteGet::Get request builder") {
+TEST_CASE("note::api::NoteGet::Read request builder") {
     Harness h;
-    auto req = h.api.note.get().get();
+    auto req = h.api.note.get().read();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.decrypt(true);
@@ -5392,11 +5392,11 @@ TEST_CASE("note::api::NoteGet::Get request builder") {
 }
 
 // ---------------------------------------------------------------------------
-TEST_CASE("note::api::NoteGet::Get response parsing") {
+TEST_CASE("note::api::NoteGet::Read response parsing") {
     auto reader = std::make_unique<note::test::PopulatedJsonReader>();
     reader->set("payload", std::string("x-payload"));
     reader->set("time", int32_t{42});
-    auto rsp = note::api::NoteGet::Get::Response::parse(std::move(reader));
+    auto rsp = note::api::NoteGet::Read::Response::parse(std::move(reader));
     REQUIRE(rsp.payload == "x-payload");
     REQUIRE(rsp.time == 42);
     // Cover intern_strings() — copies string_view fields into pool storage.
@@ -5408,7 +5408,7 @@ TEST_CASE("note::api::NoteGet::Get response parsing") {
     // Cover intern_strings() empty-field branches (field.empty() == true).
     {
         auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
-        auto empty_rsp = note::api::NoteGet::Get::Response::parse(std::move(empty_rdr));
+        auto empty_rsp = note::api::NoteGet::Read::Response::parse(std::move(empty_rdr));
         note::Allocator alloc;
         note::StringPool pool(alloc);
         empty_rsp.intern_strings(pool);
@@ -5416,9 +5416,9 @@ TEST_CASE("note::api::NoteGet::Get response parsing") {
 }
 
 // ---------------------------------------------------------------------------
-TEST_CASE("note::api::NoteGet::Delete request builder") {
+TEST_CASE("note::api::NoteGet::Pop request builder") {
     Harness h;
-    auto req = h.api.note.get().delete_();
+    auto req = h.api.note.get().pop();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.decrypt(true);
@@ -5455,11 +5455,11 @@ TEST_CASE("note::api::NoteGet::Delete request builder") {
 }
 
 // ---------------------------------------------------------------------------
-TEST_CASE("note::api::NoteGet::Delete response parsing") {
+TEST_CASE("note::api::NoteGet::Pop response parsing") {
     auto reader = std::make_unique<note::test::PopulatedJsonReader>();
     reader->set("payload", std::string("x-payload"));
     reader->set("time", int32_t{42});
-    auto rsp = note::api::NoteGet::Delete::Response::parse(std::move(reader));
+    auto rsp = note::api::NoteGet::Pop::Response::parse(std::move(reader));
     REQUIRE(rsp.payload == "x-payload");
     REQUIRE(rsp.time == 42);
     // Cover intern_strings() — copies string_view fields into pool storage.
@@ -5471,7 +5471,7 @@ TEST_CASE("note::api::NoteGet::Delete response parsing") {
     // Cover intern_strings() empty-field branches (field.empty() == true).
     {
         auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
-        auto empty_rsp = note::api::NoteGet::Delete::Response::parse(std::move(empty_rdr));
+        auto empty_rsp = note::api::NoteGet::Pop::Response::parse(std::move(empty_rdr));
         note::Allocator alloc;
         note::StringPool pool(alloc);
         empty_rsp.intern_strings(pool);
@@ -5479,9 +5479,9 @@ TEST_CASE("note::api::NoteGet::Delete response parsing") {
 }
 
 // ---------------------------------------------------------------------------
-TEST_CASE("note::api::NoteTemplate::Set request builder") {
+TEST_CASE("note::api::NoteTemplate::Define request builder") {
     Harness h;
-    auto req = h.api.note.template_().set(note::string_view("x-file"));
+    auto req = h.api.note.template_().define(note::string_view("x-file"));
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.delete_(true);
@@ -5534,7 +5534,7 @@ TEST_CASE("note::api::NoteTemplate::Set request builder") {
 }
 
 // ---------------------------------------------------------------------------
-TEST_CASE("note::api::NoteTemplate::Set response parsing") {
+TEST_CASE("note::api::NoteTemplate::Define response parsing") {
     auto reader = std::make_unique<note::test::PopulatedJsonReader>();
     reader->set("bytes", int32_t{42});
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
@@ -5544,7 +5544,7 @@ TEST_CASE("note::api::NoteTemplate::Set response parsing") {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
     reader->set("template", true);
 #endif
-    auto rsp = note::api::NoteTemplate::Set::Response::parse(std::move(reader));
+    auto rsp = note::api::NoteTemplate::Define::Response::parse(std::move(reader));
     REQUIRE(rsp.bytes == 42);
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
     REQUIRE(rsp.format == "x-format");
@@ -5562,7 +5562,7 @@ TEST_CASE("note::api::NoteTemplate::Set response parsing") {
     // Cover intern_strings() empty-field branches (field.empty() == true).
     {
         auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
-        auto empty_rsp = note::api::NoteTemplate::Set::Response::parse(std::move(empty_rdr));
+        auto empty_rsp = note::api::NoteTemplate::Define::Response::parse(std::move(empty_rdr));
         note::Allocator alloc;
         note::StringPool pool(alloc);
         empty_rsp.intern_strings(pool);
@@ -5570,9 +5570,9 @@ TEST_CASE("note::api::NoteTemplate::Set response parsing") {
 }
 
 // ---------------------------------------------------------------------------
-TEST_CASE("note::api::NoteTemplate::Delete request builder") {
+TEST_CASE("note::api::NoteTemplate::Remove request builder") {
     Harness h;
-    auto req = h.api.note.template_().delete_(note::string_view("x-file"));
+    auto req = h.api.note.template_().remove(note::string_view("x-file"));
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
@@ -5622,7 +5622,7 @@ TEST_CASE("note::api::NoteTemplate::Delete request builder") {
 }
 
 // ---------------------------------------------------------------------------
-TEST_CASE("note::api::NoteTemplate::Delete response parsing") {
+TEST_CASE("note::api::NoteTemplate::Remove response parsing") {
     auto reader = std::make_unique<note::test::PopulatedJsonReader>();
     reader->set("bytes", int32_t{42});
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
@@ -5632,7 +5632,7 @@ TEST_CASE("note::api::NoteTemplate::Delete response parsing") {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
     reader->set("template", true);
 #endif
-    auto rsp = note::api::NoteTemplate::Delete::Response::parse(std::move(reader));
+    auto rsp = note::api::NoteTemplate::Remove::Response::parse(std::move(reader));
     REQUIRE(rsp.bytes == 42);
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
     REQUIRE(rsp.format == "x-format");
@@ -5650,7 +5650,7 @@ TEST_CASE("note::api::NoteTemplate::Delete response parsing") {
     // Cover intern_strings() empty-field branches (field.empty() == true).
     {
         auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
-        auto empty_rsp = note::api::NoteTemplate::Delete::Response::parse(std::move(empty_rdr));
+        auto empty_rsp = note::api::NoteTemplate::Remove::Response::parse(std::move(empty_rdr));
         note::Allocator alloc;
         note::StringPool pool(alloc);
         empty_rsp.intern_strings(pool);

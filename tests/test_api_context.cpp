@@ -86,8 +86,8 @@ TEST_CASE("Api::card resource group") {
     h.api.execute(h.api.card.auxSerial());
     REQUIRE(h.last_req.find("card.aux.serial") != std::string::npos);
     // card.binary (polymorphic)
-    h.api.execute(h.api.card.binary().get());
-    h.api.execute(h.api.card.binary().delete_());
+    h.api.execute(h.api.card.binary().status());
+    h.api.execute(h.api.card.binary().clear());
     REQUIRE(h.last_req.find("card.binary") != std::string::npos);
     // card.binary.get
     h.api.execute(h.api.card.binaryGet());
@@ -123,7 +123,7 @@ TEST_CASE("Api::card resource group") {
     h.api.execute(h.api.card.locationMode().continuous());
     h.api.execute(h.api.card.locationMode().periodic());
     h.api.execute(h.api.card.locationMode().fixed());
-    h.api.execute(h.api.card.locationMode().delete_());
+    h.api.execute(h.api.card.locationMode().remove());
     REQUIRE(h.last_req.find("card.location.mode") != std::string::npos);
     // card.location.track
     h.api.execute(h.api.card.locationTrack());
@@ -144,9 +144,9 @@ TEST_CASE("Api::card resource group") {
     h.api.execute(h.api.card.motionTrack());
     REQUIRE(h.last_req.find("card.motion.track") != std::string::npos);
     // card.power (polymorphic)
-    h.api.execute(h.api.card.power().get());
-    h.api.execute(h.api.card.power().set());
-    h.api.execute(h.api.card.power().delete_());
+    h.api.execute(h.api.card.power().read());
+    h.api.execute(h.api.card.power().configure());
+    h.api.execute(h.api.card.power().reset());
     REQUIRE(h.last_req.find("card.power") != std::string::npos);
     // card.random
     h.api.execute(h.api.card.random());
@@ -164,9 +164,9 @@ TEST_CASE("Api::card resource group") {
     h.api.execute(h.api.card.status());
     REQUIRE(h.last_req.find("card.status") != std::string::npos);
     // card.temp (polymorphic)
-    h.api.execute(h.api.card.temp().get());
-    h.api.execute(h.api.card.temp().set());
-    h.api.execute(h.api.card.temp().delete_());
+    h.api.execute(h.api.card.temp().read());
+    h.api.execute(h.api.card.temp().configure());
+    h.api.execute(h.api.card.temp().stop());
     REQUIRE(h.last_req.find("card.temp") != std::string::npos);
     // card.time
     h.api.execute(h.api.card.time());
@@ -190,8 +190,8 @@ TEST_CASE("Api::card resource group") {
     h.api.execute(h.api.card.version());
     REQUIRE(h.last_req.find("card.version") != std::string::npos);
     // card.voltage (polymorphic)
-    h.api.execute(h.api.card.voltage().get());
-    h.api.execute(h.api.card.voltage().set());
+    h.api.execute(h.api.card.voltage().read());
+    h.api.execute(h.api.card.voltage().configure());
     REQUIRE(h.last_req.find("card.voltage") != std::string::npos);
     // card.wifi
     h.api.execute(h.api.card.wifi());
@@ -200,9 +200,9 @@ TEST_CASE("Api::card resource group") {
     h.api.execute(h.api.card.wireless());
     REQUIRE(h.last_req.find("card.wireless") != std::string::npos);
     // card.wireless.penalty (polymorphic)
-    h.api.execute(h.api.card.wirelessPenalty().get());
+    h.api.execute(h.api.card.wirelessPenalty().check());
     h.api.execute(h.api.card.wirelessPenalty().set());
-    h.api.execute(h.api.card.wirelessPenalty().delete_());
+    h.api.execute(h.api.card.wirelessPenalty().clear());
     REQUIRE(h.last_req.find("card.wireless.penalty") != std::string::npos);
 }
 
@@ -220,7 +220,7 @@ TEST_CASE("Api::env resource group") {
     Harness h;
     // env.default (polymorphic)
     h.api.execute(h.api.env.default_().set(note::string_view("x-name")));
-    h.api.execute(h.api.env.default_().delete_(note::string_view("x-name")));
+    h.api.execute(h.api.env.default_().remove(note::string_view("x-name")));
     REQUIRE(h.last_req.find("env.default") != std::string::npos);
     // env.get
     h.api.execute(h.api.env.get());
@@ -286,19 +286,19 @@ TEST_CASE("Api::note resource group") {
     h.api.execute(h.api.note.add());
     REQUIRE(h.last_req.find("note.add") != std::string::npos);
     // note.changes (polymorphic)
-    h.api.execute(h.api.note.changes().get());
-    h.api.execute(h.api.note.changes().delete_(note::string_view("x-file")));
+    h.api.execute(h.api.note.changes().peek());
+    h.api.execute(h.api.note.changes().pop(note::string_view("x-file")));
     REQUIRE(h.last_req.find("note.changes") != std::string::npos);
     // note.delete
     h.api.execute(h.api.note.delete_(note::string_view("x-file"), note::string_view("x-note")));
     REQUIRE(h.last_req.find("note.delete") != std::string::npos);
     // note.get (polymorphic)
-    h.api.execute(h.api.note.get().get());
-    h.api.execute(h.api.note.get().delete_());
+    h.api.execute(h.api.note.get().read());
+    h.api.execute(h.api.note.get().pop());
     REQUIRE(h.last_req.find("note.get") != std::string::npos);
     // note.template (polymorphic)
-    h.api.execute(h.api.note.template_().set(note::string_view("x-file")));
-    h.api.execute(h.api.note.template_().delete_(note::string_view("x-file")));
+    h.api.execute(h.api.note.template_().define(note::string_view("x-file")));
+    h.api.execute(h.api.note.template_().remove(note::string_view("x-file")));
     REQUIRE(h.last_req.find("note.template") != std::string::npos);
     // note.update
     h.api.execute(h.api.note.update(note::string_view("x-file"), note::string_view("x-note")));
@@ -390,15 +390,35 @@ TEST_CASE("Api::env Layer 2 aliases") {
     REQUIRE(h.last_req.find("env.default") != std::string::npos);
 }
 
+TEST_CASE("Api::file Layer 2 aliases") {
+    Harness h;
+    h.api.execute(h.api.file.remove());
+    REQUIRE(h.last_req.find("file.delete") != std::string::npos);
+}
+
 TEST_CASE("Api::note Layer 2 aliases") {
     Harness h;
     h.api.execute(h.api.note.popChanges(note::string_view("x-file")));
     REQUIRE(h.last_req.find("note.changes") != std::string::npos);
+    h.api.execute(h.api.note.remove());
+    REQUIRE(h.last_req.find("note.delete") != std::string::npos);
     h.api.execute(h.api.note.read(note::string_view("x-file")));
     REQUIRE(h.last_req.find("note.get") != std::string::npos);
     h.api.execute(h.api.note.pop(note::string_view("x-file")));
     REQUIRE(h.last_req.find("note.get") != std::string::npos);
     h.api.execute(h.api.note.clearTemplate(note::string_view("x-file")));
     REQUIRE(h.last_req.find("note.template") != std::string::npos);
+}
+
+TEST_CASE("Api::var Layer 2 aliases") {
+    Harness h;
+    h.api.execute(h.api.var.remove());
+    REQUIRE(h.last_req.find("var.delete") != std::string::npos);
+}
+
+TEST_CASE("Api::web Layer 2 aliases") {
+    Harness h;
+    h.api.execute(h.api.web.remove());
+    REQUIRE(h.last_req.find("web.delete") != std::string::npos);
 }
 

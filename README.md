@@ -230,15 +230,15 @@ Each API type carries `static constexpr Skus skus` for introspection. See [examp
 Some Notecard APIs behave differently depending on which fields you send. In `note-c` these share a single function — you pass the right combination of fields and hope you didn't set one that's irrelevant or wrong. In `note-cpp`, each behavior is a **distinct type** with only the fields that apply, its own response type, and a compile-time safety level:
 
 ```cpp
-// Read a Note (ReadOnly — safe to retry on failure)
-auto r = api.note.get().get().file("data.qi").execute();
+// Read a Note by ID (ReadOnly — safe to retry on failure)
+auto r = api.note.get().read().file("data.db").noteId("my-note").execute();
 
 // Pop from queue (Destructive — not safe to retry blindly)
-auto r = api.note.get().delete_().file("requests.qi").execute();
+auto r = api.note.get().pop().file("requests.qi").execute();
 
-// card.location.mode — Set accepts lat/lon, Get and Delete don't
-api.card.locationMode().set()
-    .mode("fixed").lat(42.565).lon(-70.783)   // lat/lon only exist on Set
+// card.location.mode — fixed() accepts lat/lon, get() doesn't
+api.card.locationMode().fixed()
+    .lat(42.565).lon(-70.783)   // lat/lon only exist on fixed()
     .execute();
 
 api.card.locationMode().get().execute();       // no lat/lon fields to misuse
@@ -247,6 +247,64 @@ api.card.locationMode().get().execute();       // no lat/lon fields to misuse
 Each variant exposes only the fields the Notecard expects for that operation — setting a field that doesn't apply is a compile error, not a silent wire-level mistake.
 
 The same pattern applies to `card.binary`, `card.contact`, `card.location.mode`, `card.temp`, `note.template`, and others. See [docs/polymorphic-apis.md](docs/polymorphic-apis.md) for the full list.
+
+---
+
+## API Name Mapping
+
+Notecard request names map to C++ as follows:
+
+- The **first segment** of the request name becomes a **resource group** property on `Api` — `api.card`, `api.hub`, `api.note`, etc.
+- The **remaining segments** become the group method in camelCase — `card.location.mode` → `api.card.locationMode()`, `hub.sync.status` → `api.hub.syncStatus()`.
+- For single-segment requests (`web`, `file`), the request name is the group: `web.get` → `api.web.get()`.
+
+### Intent method names
+
+For polymorphic APIs, the method names on the factory struct are **intent-based** rather than HTTP-verb-based. The intent name describes what the operation *does*, not the underlying HTTP method:
+
+| Notecard request | C++ method | Notes |
+|-----------------|------------|-------|
+| `card.binary` (query status) | `.status()` | |
+| `card.binary` (clear) | `.clear()` | |
+| `card.power` (read) | `.read()` | |
+| `card.power` (configure) | `.configure()` | |
+| `card.power` (reset) | `.reset()` | |
+| `card.temp` (read sensor) | `.read()` | |
+| `card.temp` (configure) | `.configure()` | |
+| `card.temp` (stop sampling) | `.stop()` | |
+| `card.voltage` (read) | `.read()` | |
+| `card.voltage` (configure) | `.configure()` | |
+| `card.wireless.penalty` (check) | `.check()` | |
+| `card.wireless.penalty` (configure) | `.set()` | |
+| `card.wireless.penalty` (clear) | `.clear()` | |
+| `env.default` (set) | `.set()` | |
+| `env.default` (remove) | `.remove(name)` | |
+| `note.changes` (peek) | `.peek()` | |
+| `note.changes` (pop) | `.pop(file)` | |
+| `note.get` (read by ID) | `.read()` | |
+| `note.get` (pop from queue) | `.pop()` | |
+| `note.template` (define) | `.define(file)` | |
+| `note.template` (remove) | `.remove(file)` | |
+| `card.location.mode` (remove) | `.remove()` | |
+
+### Renamed properties
+
+Some properties are renamed in C++ to avoid keyword conflicts or improve clarity:
+
+| Endpoint | Wire name | C++ name | Reason |
+|----------|-----------|----------|--------|
+| `note.add`, `note.get`, `note.update`, `note.delete` | `note` | `noteId` | `note` is a C++ keyword in some contexts; clarifies meaning |
+| `web.get`, `web.post`, `web.put`, `web.delete` | `note` | `noteId` | Same |
+| `card.binary`, `note.get`, etc. | `delete` | `delete_` | `delete` is a reserved C++ keyword |
+
+### Monomorphic delete aliases
+
+Simple delete endpoints expose both the direct method and a `remove()` alias:
+
+```cpp
+api.file.delete_().execute();  // direct
+api.file.remove().execute();   // alias
+```
 
 ---
 

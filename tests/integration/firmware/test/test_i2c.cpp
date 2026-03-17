@@ -1,9 +1,11 @@
 /// @file test_i2c.cpp
 /// Integration tests exercising the Notecard over I2C.
 ///
-/// Tests cover the same suite as test_serial.cpp — basic request/response,
-/// configuration round-trip, note lifecycle, environment variables, binary
-/// data transfer, and error handling — but over the I2C transport.
+/// Compiled only when NOTECARD_I2C_SDA and NOTECARD_I2C_SCL are defined
+/// (i.e. when building with the `i2c` or `both` PlatformIO environment).
+
+#include "../include/hal_i2c.hpp"
+#ifdef NOTECARD_TEST_I2C
 
 #include <doctest.h>
 #include <note/notecard.hpp>
@@ -12,23 +14,30 @@
 #include <note/body.hpp>
 #include <note/backends/cjson.hpp>
 #include <note/transport/i2c.hpp>
-#include "hal_i2c.hpp"
 #include "../include/cobs.hpp"
 #include "../include/md5.hpp"
 
 #include <algorithm>
 
-// Use Wire1 (I2C bus 1) for Notecard — Wire0 may be used by other peripherals.
-static TwoWire NotecardWire(1);
+// I2C bus for Notecard. Wire(0) is the default I2C peripheral.
+// Must NOT be a file-scope static: TwoWire's constructor creates FreeRTOS
+// primitives, but global constructors run before the scheduler is ready.
+static TwoWire& notecardWire() {
+    static TwoWire wire(0);
+    return wire;
+}
 
 namespace {
 
+using I2cTransport = note::transport::NotecardI2c<>;
+using Api = note::Api<>;
+
 struct Fixture {
-    Esp32I2cHal hal{NotecardWire};
-    note::transport::NotecardI2c transport{hal};
+    Esp32I2cHal hal{notecardWire()};
+    I2cTransport transport{hal};
     note::backends::CjsonBackend backend;
     note::Notecard nc{backend, transport};
-    note::Api api{nc};
+    Api api{nc};
 };
 
 struct SensorData {
@@ -41,12 +50,14 @@ struct SensorData {
 
 TEST_SUITE("i2c") {
 
+// ─── Diagnostic: raw I2C check ──────────────────────────────────────────────
+
 // ─── Basic request/response ─────────────────────────────────────────────────
 
 TEST_CASE("card.version returns valid device info") {
     Fixture f;
     auto r = f.api.card.version().execute();
-    if (!r) { INFO(to_string(r.error())); }
+    if (!r) { INFO(note::to_string(r.error())); }
     REQUIRE(r);
     CHECK(!note::string_view(r.device).empty());
     CHECK(!note::string_view(r.version).empty());
@@ -57,7 +68,8 @@ TEST_CASE("card.version returns valid device info") {
 TEST_CASE("card.status returns operational state") {
     Fixture f;
     auto r = f.api.card.status().execute();
-    if (!r) { INFO(to_string(r.error())); }
+    
+    if (!r) { INFO(note::to_string(r.error())); }
     REQUIRE(r);
     CHECK(!note::string_view(r.status).empty());
     MESSAGE("status: ", r.status);
@@ -71,11 +83,11 @@ TEST_CASE("hub.set + hub.get round-trip") {
     auto set_r = f.api.hub.set()
         .product("com.example.integration-test")
         .execute();
-    if (!set_r) { INFO(to_string(set_r.error())); }
+    if (!set_r) { INFO(note::to_string(set_r.error())); }
     REQUIRE(set_r);
 
     auto get_r = f.api.hub.get().execute();
-    if (!get_r) { INFO(to_string(get_r.error())); }
+    if (!get_r) { INFO(note::to_string(get_r.error())); }
     REQUIRE(get_r);
     CHECK(note::string_view(get_r.product) == "com.example.integration-test");
 }
@@ -87,26 +99,28 @@ TEST_CASE("note.add sends a note") {
     auto r = f.api.note.add()
         .file("integration-test.qo")
         .execute();
-    if (!r) { INFO(to_string(r.error())); }
+    if (!r) { INFO(note::to_string(r.error())); }
     REQUIRE(r);
 }
 
-TEST_CASE("note.add + note.get body round-trip") {
+TEST_CASE("note.update + note.get body round-trip") {
     Fixture f;
-    const char* file = "integration-body.qi";
+    const char* file = "integration-body.db";
+    const char* noteId = "test-sensor";
 
+    // note.update creates or replaces — idempotent across test runs
     SensorData sent{.temperature = 23.5f, .humidity = 65};
-    auto add_r = f.api.note.add()
-        .file(file)
+    auto update_r = f.api.note.update(file, noteId)
         .body(sent)
         .execute();
-    if (!add_r) { INFO(to_string(add_r.error())); }
-    REQUIRE(add_r);
+    if (!update_r) { MESSAGE("update error: ", note::to_string(update_r.error())); }
+    REQUIRE(update_r);
 
-    auto get_r = f.api.note.get().delete_()
+    auto get_r = f.api.note.get().get()
         .file(file)
+        .noteId(noteId)
         .execute();
-    if (!get_r) { INFO(to_string(get_r.error())); }
+    if (!get_r) { MESSAGE("get error: ", note::to_string(get_r.error())); }
     REQUIRE(get_r);
 
     SensorData received = get_r.bodyAs<SensorData>();
@@ -116,31 +130,35 @@ TEST_CASE("note.add + note.get body round-trip") {
 
 TEST_CASE("note.changes tracks additions") {
     Fixture f;
-    const char* file = "integration-changes.qi";
+    const char* file = "integration-changes.db";
     const char* tracker = "integration-test";
 
     // Reset tracker
-    f.api.note.changes().get()
+    auto reset_r = f.api.note.changes().get()
         .file(file)
         .tracker(tracker)
         .start(true)
         .execute();
+    if (!reset_r) { MESSAGE("reset error: ", note::to_string(reset_r.error())); }
 
-    // Add a note
-    f.api.note.add().file(file).execute();
+    // Delete any leftover note, then add
+    f.api.note.delete_(file, "test-change").execute();
+    auto add_r = f.api.note.add().file(file).noteId("test-change").execute();
+    if (!add_r) { MESSAGE("add error: ", note::to_string(add_r.error())); }
+    REQUIRE(add_r);
 
     // Check for changes
     auto r = f.api.note.changes().get()
         .file(file)
         .tracker(tracker)
         .execute();
-    if (!r) { INFO(to_string(r.error())); }
+    if (!r) { MESSAGE("changes error: ", note::to_string(r.error())); }
     REQUIRE(r);
     CHECK(r.changes > 0);
     MESSAGE("changes: ", r.changes, " total: ", r.total);
 
-    // Clean up
-    f.api.note.get().delete_().file(file).execute();
+    // Clean up (.db needs note.delete)
+    f.api.note.delete_(file, "test-change").execute();
 }
 
 // ─── Environment variables ──────────────────────────────────────────────────
@@ -148,11 +166,10 @@ TEST_CASE("note.changes tracks additions") {
 TEST_CASE("env.default set + get round-trip") {
     Fixture f;
 
-    auto set_r = f.api.env.default_().set()
-        .name("_integration_test_var")
+    auto set_r = f.api.env.default_().set("_integration_test_var")
         .text("hello-from-note-cpp")
         .execute();
-    if (!set_r) { INFO(to_string(set_r.error())); }
+    if (!set_r) { INFO(note::to_string(set_r.error())); }
     REQUIRE(set_r);
 
     auto get_r = f.nc.request("env.get", [](note::JsonBuilder& b) {
@@ -163,8 +180,7 @@ TEST_CASE("env.default set + get round-trip") {
     CHECK(note::string_view(text) == "hello-from-note-cpp");
 
     // Clean up
-    f.api.env.default_().delete_()
-        .name("_integration_test_var")
+    f.api.env.default_().delete_("_integration_test_var")
         .execute();
 }
 
@@ -184,7 +200,7 @@ TEST_CASE("env.default set + get round-trip") {
 namespace {
 
 /// Chunked I2C binary transmit: send COBS data in max_transfer() chunks.
-/// Mirrors the chunking that NotecardI2c::send_chunked() does for JSON.
+/// Matches note-c's _i2cChunkedTransmit with delay=false (no pacing for binary).
 bool i2c_binary_transmit(Esp32I2cHal& hal, const uint8_t* data, size_t len) {
     const size_t mtu = hal.max_transfer();
     size_t offset = 0;
@@ -192,28 +208,55 @@ bool i2c_binary_transmit(Esp32I2cHal& hal, const uint8_t* data, size_t len) {
         size_t chunk = std::min(len - offset, mtu);
         if (!hal.transmit(data + offset, chunk)) return false;
         offset += chunk;
-        if (offset < len) hal.delay(2);  // IO pacing between chunks
     }
     return true;
 }
 
-/// Chunked I2C binary receive: read COBS data in max_transfer() chunks.
-/// Uses the I2C protocol's available-bytes feedback to pace reads.
-size_t i2c_binary_receive(Esp32I2cHal& hal, uint8_t* buf, size_t expect, uint32_t timeout_ms) {
+/// Chunked I2C binary receive: read COBS data using available-bytes feedback.
+/// Matches note-c's _i2cChunkedReceive: polls available count, only requests
+/// what the Notecard has ready, exits when newline found and nothing left.
+size_t i2c_binary_receive(Esp32I2cHal& hal, uint8_t* buf, size_t buf_size, uint32_t timeout_ms) {
     const size_t mtu = hal.max_transfer();
-    size_t total = 0;
+    size_t received = 0;
+    uint32_t avail = 0;
     uint32_t deadline = hal.millis() + timeout_ms;
-    while (total < expect && hal.millis() < deadline) {
-        uint32_t avail = 0;
-        size_t want = std::min(expect - total, mtu);
-        bool ok = hal.receive(buf + total, want, avail);
-        if (ok) {
-            total += want;
-        } else {
-            hal.delay(10);
+    bool found_eop = false;
+
+    // First query: request 0 bytes to get initial available count
+    hal.receive(buf, 0, avail);
+
+    while (hal.millis() < deadline) {
+        // Request min(available, mtu) bytes
+        size_t want = avail;
+        if (want > mtu) want = mtu;
+        if (received + want > buf_size) want = buf_size - received;
+
+        if (want > 0) {
+            bool ok = hal.receive(buf + received, want, avail);
+            if (!ok) {
+                hal.delay(10);
+                continue;
+            }
+            received += want;
+
+            // Check for newline terminator
+            if (received > 0 && buf[received - 1] == '\n') {
+                found_eop = true;
+            }
+        }
+
+        // If we have the EOP and no more data available, we're done
+        if (found_eop && avail == 0) {
+            break;
+        }
+
+        // If nothing available, wait and poll again
+        if (avail == 0) {
+            hal.delay(50);
+            hal.receive(buf + received, 0, avail);
         }
     }
-    return total;
+    return received;
 }
 
 /// Put binary data to the Notecard over I2C and verify the round-trip.
@@ -226,7 +269,7 @@ void binary_round_trip(Fixture& f, const uint8_t* data, size_t data_len, const c
 
     // Check available space
     auto status_r = f.api.card.binary().get().execute();
-    if (!status_r) { INFO(to_string(status_r.error())); }
+    if (!status_r) { INFO(note::to_string(status_r.error())); }
     REQUIRE(status_r);
     REQUIRE(status_r.max > 0);
     REQUIRE(static_cast<int32_t>(data_len) <= status_r.max);
@@ -242,12 +285,13 @@ void binary_round_trip(Fixture& f, const uint8_t* data, size_t data_len, const c
 
     // ── PUT phase ──────────────────────────────────────────────────
 
-    // JSON handshake: tell the Notecard how many COBS bytes are coming
-    auto put_r = f.api.card.binary_put()
+    // JSON handshake: tell the Notecard how many COBS bytes are coming.
+    // The cobs field is the encoded length WITHOUT the EOP — matches note-c.
+    auto put_r = f.api.card.binaryPut()
         .cobs(static_cast<int32_t>(cobs_len))
         .status(md5)
         .execute();
-    if (!put_r) { INFO(to_string(put_r.error())); }
+    if (!put_r) { INFO(note::to_string(put_r.error())); }
     REQUIRE(put_r);
 
     // Send raw COBS-encoded bytes + newline via chunked I2C writes.
@@ -262,7 +306,7 @@ void binary_round_trip(Fixture& f, const uint8_t* data, size_t data_len, const c
     // ── Verify stored data ─────────────────────────────────────────
 
     auto verify_r = f.api.card.binary().get().execute();
-    if (!verify_r) { INFO(to_string(verify_r.error())); }
+    if (!verify_r) { MESSAGE("verify error: ", note::to_string(verify_r.error())); }
     REQUIRE(verify_r);
     CHECK(verify_r.length == static_cast<int32_t>(data_len));
     CHECK(verify_r.cobs == static_cast<int32_t>(cobs_len));
@@ -274,11 +318,11 @@ void binary_round_trip(Fixture& f, const uint8_t* data, size_t data_len, const c
     // ── GET phase ──────────────────────────────────────────────────
 
     // JSON handshake: request the binary data back
-    auto get_r = f.api.card.binary_get()
+    auto get_r = f.api.card.binaryGet()
         .cobs(verify_r.cobs)
         .length(verify_r.length)
         .execute();
-    if (!get_r) { INFO(to_string(get_r.error())); }
+    if (!get_r) { INFO(note::to_string(get_r.error())); }
     REQUIRE(get_r);
 
     // Verify MD5 in get response
@@ -286,15 +330,23 @@ void binary_round_trip(Fixture& f, const uint8_t* data, size_t data_len, const c
         CHECK(note::string_view(get_r.status) == note::string_view(md5));
     }
 
-    // Read raw COBS bytes via chunked I2C reads
+    // Read raw COBS bytes + newline via chunked I2C reads
     std::vector<uint8_t> rx_buf(cobs_len + 16);
-    size_t total_rx = i2c_binary_receive(f.hal, rx_buf.data(), cobs_len, 5000);
+    size_t total_rx = i2c_binary_receive(f.hal, rx_buf.data(), rx_buf.size(), 5000);
+    MESSAGE(label, ": received ", total_rx, " bytes (expected ~", cobs_len + 1, ")");
+    // Should receive at least cobs_len bytes (possibly +1 for the newline)
     REQUIRE(total_rx >= cobs_len);
 
     // ── Decode and verify ──────────────────────────────────────────
 
+    // Strip trailing newline if present before decoding
+    size_t decode_len = total_rx;
+    if (decode_len > 0 && rx_buf[decode_len - 1] == '\n') {
+        decode_len--;
+    }
+
     std::vector<uint8_t> decoded(data_len + 1);
-    size_t decoded_len = cobs_decode(rx_buf.data(), cobs_len, decoded.data());
+    size_t decoded_len = cobs_decode(rx_buf.data(), decode_len, decoded.data());
     REQUIRE(decoded_len == data_len);
     CHECK(memcmp(decoded.data(), data, data_len) == 0);
 
@@ -343,8 +395,10 @@ TEST_CASE("bad request returns Notecard error") {
     CHECK(!r);
     if (!r) {
         CHECK(r.error().code == note::Error::Notecard);
-        MESSAGE("error: ", to_string(r.error()));
+        MESSAGE("error: ", note::to_string(r.error()));
     }
 }
 
 } // TEST_SUITE
+
+#endif // NOTECARD_TEST_I2C

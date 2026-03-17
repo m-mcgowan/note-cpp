@@ -1,16 +1,16 @@
 #pragma once
 /// @file hal_serial.hpp
 /// ESP32 SerialHal implementation using Arduino HardwareSerial.
+///
+/// Guarded by NOTECARD_SERIAL_RX / NOTECARD_SERIAL_TX pin definitions.
+/// When both are defined, NOTECARD_TEST_SERIAL is set and the HAL class
+/// is available. When neither is defined, this header is a no-op.
+
+#if defined(NOTECARD_SERIAL_RX) && defined(NOTECARD_SERIAL_TX)
+#define NOTECARD_TEST_SERIAL 1
 
 #include <note/transport/serial.hpp>
 #include <HardwareSerial.h>
-
-#ifndef NOTECARD_SERIAL_RX
-#error "NOTECARD_SERIAL_RX must be defined (source env.sh before building)"
-#endif
-#ifndef NOTECARD_SERIAL_TX
-#error "NOTECARD_SERIAL_TX must be defined (source env.sh before building)"
-#endif
 
 class Esp32SerialHal : public note::transport::SerialHal {
     HardwareSerial& uart_;
@@ -41,3 +41,5 @@ public:
     uint32_t millis() override { return ::millis(); }
     void delay(uint32_t ms) override { ::delay(ms); }
 };
+
+#endif // NOTECARD_TEST_SERIAL

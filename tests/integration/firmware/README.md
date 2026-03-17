@@ -1,41 +1,82 @@
 # Integration Tests
 
-Hardware integration tests that exercise `note-cpp` against a real Notecard over serial UART and I2C. Built with PlatformIO targeting an ESP32-S3.
+Hardware integration tests that exercise `note-cpp` against a real Notecard over serial UART and/or I2C. Built with PlatformIO targeting an ESP32-S3.
 
 ## Requirements
 
-- **Notecard** connected to the ESP32-S3 via both serial and I2C
+- **Notecard** connected to the ESP32-S3 via serial and/or I2C
 - **PlatformIO** (`pip install platformio` or VS Code extension)
 - **ESP32-S3 DevKitC** (or compatible board — adjust pins as needed)
 
+## Interface selection
+
+Tests compile conditionally based on which pin macros are defined. Define serial pins (`NOTECARD_SERIAL_RX`/`TX`) to enable serial tests, I2C pins (`NOTECARD_I2C_SDA`/`SCL`) to enable I2C tests. If neither is defined, the build errors.
+
+Three PlatformIO environments are provided:
+
+| Environment | Interfaces | Command |
+|-------------|-----------|---------|
+| `serial` | Serial only | `pio test -e serial` |
+| `i2c` | I2C only | `pio test -e i2c` |
+| `both` | Serial + I2C | `pio test -e both` |
+
 ## Pin configuration
 
-Source `env.sh` before building. It injects pin definitions via `PLATFORMIO_BUILD_FLAGS`.
+### VS Code / PlatformIO IDE
 
-```bash
-# ESP32-S3 DevKitC defaults (TX=17, RX=18, SDA=1, SCL=2)
-source env.sh
+Edit the pin values in `platformio.ini` under `[pins:serial]` and `[pins:i2c]`:
 
-# Custom pins
-source env.sh --rx=21 --tx=47 --sda=39 --scl=38
+```ini
+[pins:serial]
+build_flags =
+    -DNOTECARD_SERIAL_RX=38
+    -DNOTECARD_SERIAL_TX=39
+
+[pins:i2c]
+build_flags =
+    -DNOTECARD_I2C_SDA=14
+    -DNOTECARD_I2C_SCL=21
 ```
 
-## Running
+Then select the desired environment (`serial`, `i2c`, or `both`) from the PlatformIO environment selector.
+
+### Command line
+
+Source `env.sh` or `boards.sh` before building. Environment variables override `platformio.ini` defaults via the `set_pins.py` pre-build script.
 
 ```bash
-source env.sh
-pio test -e esp32s3            # run all tests
-pio test -e esp32s3 -f serial  # serial tests only
-pio test -e esp32s3 -f i2c    # I2C tests only
+# Board presets
+source boards.sh 1.9                        # Both interfaces, v1.9 pins
+source boards.sh 1.9 --i2c-only             # I2C only, v1.9 pins
+
+# Custom pins
+source env.sh --rx=21 --tx=47 --sda=39 --scl=38   # Both, custom pins
+source env.sh --i2c-only --sda=14 --scl=21         # I2C only
+source env.sh --serial-only                         # Serial only, defaults
+
+# Run
+pio test -e i2c
+pio test -e both
+```
+
+## CI
+
+`ci.sh` verifies all environments build correctly and the no-interface guard fires:
+
+```bash
+./ci.sh              # build-only (no hardware needed)
+./ci.sh --test       # build + upload + run on hardware
+./ci.sh --test --upload-port /dev/cu.usbmodem...  # explicit port
 ```
 
 ## Test coverage
 
-Each transport (serial and I2C) runs the same test suite:
+Each transport runs the same test suite:
 
 | Test | What it exercises |
 |------|-------------------|
 | **card.version** | Basic request/response, device info fields |
+| **card.status** | Operational state query |
 | **hub.set + hub.get** | Configuration write then read-back |
 | **note.add** | Fire-and-forget note creation |
 | **note.add + note.get body** | Typed body struct round-trip (cJSON serialization) |
@@ -88,11 +129,22 @@ doctest runner
                  └─ Esp32SerialHal / Esp32I2cHal (Arduino HAL)
 ```
 
+## How conditional compilation works
+
+Pin definitions control compilation via a chain of `#ifdef` guards:
+
+1. `hal_serial.hpp` / `hal_i2c.hpp` — if pin macros are defined, sets `NOTECARD_TEST_SERIAL` / `NOTECARD_TEST_I2C` and provides the HAL class
+2. `test_serial.cpp` / `test_i2c.cpp` — wrapped in `#ifdef NOTECARD_TEST_SERIAL` / `#ifdef NOTECARD_TEST_I2C`
+3. `main.cpp` — includes both HAL headers and emits `#error` if neither interface is configured
+
+The `set_pins.py` PlatformIO pre-build script allows `env.sh` environment variables to override `platformio.ini` defaults without macro redefinition warnings.
+
 ## Helpers
 
 | File | Purpose |
 |------|---------|
 | `include/cobs.hpp` | COBS encoder/decoder for binary data tests |
 | `include/md5.hpp` | MD5 hex digest via mbedtls (for `card.binary.put` checksum) |
-| `include/hal_serial.hpp` | ESP32 serial HAL implementation |
-| `include/hal_i2c.hpp` | ESP32 I2C HAL implementation |
+| `include/hal_serial.hpp` | ESP32 serial HAL (guarded by `NOTECARD_SERIAL_RX`/`TX`) |
+| `include/hal_i2c.hpp` | ESP32 I2C HAL (guarded by `NOTECARD_I2C_SDA`/`SCL`) |
+| `set_pins.py` | PlatformIO pre-build script for env var pin overrides |

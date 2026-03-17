@@ -111,7 +111,7 @@ TEST_CASE("note.update + note.get body round-trip") {
     if (!update_r) { MESSAGE("update error: ", note::to_string(update_r.error())); }
     REQUIRE(update_r);
 
-    auto get_r = f.api.note.get().get()
+    auto get_r = f.api.note.get().read()
         .file(file)
         .noteId(noteId)
         .execute();
@@ -129,7 +129,7 @@ TEST_CASE("note.changes tracks additions") {
     const char* tracker = "integration-test";
 
     // Reset tracker
-    auto reset_r = f.api.note.changes().get()
+    auto reset_r = f.api.note.changes().peek()
         .file(file)
         .tracker(tracker)
         .start(true)
@@ -143,7 +143,7 @@ TEST_CASE("note.changes tracks additions") {
     REQUIRE(add_r);
 
     // Check for changes
-    auto r = f.api.note.changes().get()
+    auto r = f.api.note.changes().peek()
         .file(file)
         .tracker(tracker)
         .execute();
@@ -177,7 +177,7 @@ TEST_CASE("env.default set + get round-trip") {
     CHECK(note::string_view(text) == "hello-from-note-cpp");
 
     // Clean up
-    f.api.env.default_().delete_("_integration_test_var")
+    f.api.env.default_().remove("_integration_test_var")
         .execute();
 }
 
@@ -198,10 +198,10 @@ void binary_round_trip(Fixture& f, const uint8_t* data, size_t data_len, const c
     INFO("payload: ", label, " (", data_len, " bytes)");
 
     // Clear any existing binary data
-    f.api.card.binary().delete_().execute();
+    f.api.card.binary().clear().execute();
 
     // Check available space
-    auto status_r = f.api.card.binary().get().execute();
+    auto status_r = f.api.card.binary().status().execute();
     if (!status_r) { INFO(note::to_string(status_r.error())); }
     REQUIRE(status_r);
     REQUIRE(status_r.max > 0);
@@ -237,7 +237,7 @@ void binary_round_trip(Fixture& f, const uint8_t* data, size_t data_len, const c
 
     // ── Verify stored data ─────────────────────────────────────────
 
-    auto verify_r = f.api.card.binary().get().execute();
+    auto verify_r = f.api.card.binary().status().execute();
     if (!verify_r) { INFO(note::to_string(verify_r.error())); }
     REQUIRE(verify_r);
     CHECK(verify_r.length == static_cast<int32_t>(data_len));
@@ -287,7 +287,7 @@ void binary_round_trip(Fixture& f, const uint8_t* data, size_t data_len, const c
     CHECK(memcmp(decoded.data(), data, data_len) == 0);
 
     // Clean up
-    f.api.card.binary().delete_().execute();
+    f.api.card.binary().clear().execute();
 }
 
 } // namespace
@@ -323,7 +323,7 @@ TEST_CASE("card.binary put + get — 512-byte payload") {
 
 TEST_CASE("bad request returns Notecard error") {
     Fixture f;
-    auto r = f.api.note.get().delete_()
+    auto r = f.api.note.get().pop()
         .file("nonexistent-file.qi")
         .execute();
     CHECK(!r);

@@ -133,117 +133,290 @@ public:
     struct CardAttnFactory {
         Notecard* nc_;
         template<typename T> T create() { T r; r.nc_ = nc_; return r; }
+        /// Configure hardware notifications from a Notecard to a host MCU.
+        ///
+        /// NOTE: Requires a connection between the Notecard ATTN pin and a GPIO
+        /// pin on the host MCU.
         auto request() { return create<api::CardAttn::Request>(); }
+        /// Arm ATTN pin for interrupt on an event trigger.
         auto arm() { return create<api::CardAttn::Arm>(); }
+        /// Configure ATTN as a watchdog timer.
         auto watchdog() { return create<api::CardAttn::Watchdog>(); }
+        /// Instruct host MCU to sleep with optional payload.
         auto sleep() { return create<api::CardAttn::Sleep>(); }
+        /// Retrieve stored payload after sleep.
         auto retrieve() { return create<api::CardAttn::Retrieve>(); }
+        /// Disarm all attention interrupts.
         auto disarm() { return create<api::CardAttn::Disarm>(); }
+        /// Query current ATTN state and configuration.
         auto query() { return create<api::CardAttn::Query>(); }
     };
 
     struct CardBinaryFactory {
         Notecard* nc_;
         template<typename T> T create() { T r; r.nc_ = nc_; return r; }
-        auto get() { return create<api::CardBinary::Get>(); }
-        auto delete_() { return create<api::CardBinary::Delete>(); }
+        /// View the status of the binary storage area of the Notecard and
+        /// optionally clear any data and related `card.binary` variables. See
+        /// the guide on Sending and Receiving Large Binary Objects for best
+        /// practices when using `card.binary`.
+        auto status() { return create<api::CardBinary::Status>(); }
+        /// @deprecated Use status() instead.
+        [[deprecated("use status() instead")]]
+        auto get() { return status(); }
+        /// View the status of the binary storage area of the Notecard and
+        /// optionally clear any data and related `card.binary` variables. See
+        /// the guide on Sending and Receiving Large Binary Objects for best
+        /// practices when using `card.binary`.
+        auto clear() { return create<api::CardBinary::Clear>(); }
+        /// @deprecated Use clear() instead.
+        [[deprecated("use clear() instead")]]
+        auto delete_() { return clear(); }
     };
 
     struct CardContactFactory {
         Notecard* nc_;
         template<typename T> T create() { T r; r.nc_ = nc_; return r; }
+        /// Used to set or retrieve information about the Notecard maintainer.
+        /// Once set, this information is synced to Notehub.
         auto get() { return create<api::CardContact::Get>(); }
+        /// Used to set or retrieve information about the Notecard maintainer.
+        /// Once set, this information is synced to Notehub.
         auto set() { return create<api::CardContact::Set>(); }
     };
 
     struct CardLocationModeFactory {
         Notecard* nc_;
         template<typename T> T create() { T r; r.nc_ = nc_; return r; }
+        /// Sets location-related configuration settings. Retrieves the current
+        /// location mode when passed with no argument.
         auto get() { return create<api::CardLocationMode::Get>(); }
+        /// Sets location-related configuration settings. Retrieves the current
+        /// location mode when passed with no argument.
         auto set() { return create<api::CardLocationMode::Set>(); }
+        /// Enable continuous GPS/GNSS sampling.
         auto continuous() { return create<api::CardLocationMode::Continuous>(); }
+        /// Enable periodic location sampling, optionally with geofencing.
         auto periodic() { return create<api::CardLocationMode::Periodic>(); }
+        /// Set a fixed location for the device.
         auto fixed() { return create<api::CardLocationMode::Fixed>(); }
-        auto delete_() { return create<api::CardLocationMode::Delete>(); }
+        /// Sets location-related configuration settings. Retrieves the current
+        /// location mode when passed with no argument.
+        auto remove() { return create<api::CardLocationMode::Remove>(); }
+        /// @deprecated Use remove() instead.
+        [[deprecated("use remove() instead")]]
+        auto delete_() { return remove(); }
     };
 
     struct CardPowerFactory {
         Notecard* nc_;
         template<typename T> T create() { T r; r.nc_ = nc_; return r; }
-        auto get() { return create<api::CardPower::Get>(); }
-        auto set() { return create<api::CardPower::Set>(); }
-        auto delete_() { return create<api::CardPower::Delete>(); }
+        /// The `card.power` API is used to configure a connected Mojo device or
+        /// to manually request power consumption readings in firmware.
+        auto read() { return create<api::CardPower::Read>(); }
+        /// @deprecated Use read() instead.
+        [[deprecated("use read() instead")]]
+        auto get() { return read(); }
+        /// The `card.power` API is used to configure a connected Mojo device or
+        /// to manually request power consumption readings in firmware.
+        auto configure() { return create<api::CardPower::Configure>(); }
+        /// @deprecated Use configure() instead.
+        [[deprecated("use configure() instead")]]
+        auto set() { return configure(); }
+        /// The `card.power` API is used to configure a connected Mojo device or
+        /// to manually request power consumption readings in firmware.
+        auto reset() { return create<api::CardPower::Reset>(); }
+        /// @deprecated Use reset() instead.
+        [[deprecated("use reset() instead")]]
+        auto delete_() { return reset(); }
     };
 
     struct CardTempFactory {
         Notecard* nc_;
         template<typename T> T create() { T r; r.nc_ = nc_; return r; }
-        auto get() { return create<api::CardTemp::Get>(); }
-        auto set() { return create<api::CardTemp::Set>(); }
-        auto delete_() { return create<api::CardTemp::Delete>(); }
+        /// Get the current temperature from the Notecard's onboard calibrated
+        /// temperature sensor.
+        ///
+        /// When using a Notecard Cellular or Notecard Cell+WiFi, if you connect
+        /// a BME280 sensor on the I2C bus the Notecard will add `temperature`,
+        /// `pressure`, and `humidity` fields to the response. If you connect an
+        /// ENS210 sensor on the I2C bus the Notecard will add `temperature` and
+        /// `pressure` fields to the response.
+        auto read() { return create<api::CardTemp::Read>(); }
+        /// @deprecated Use read() instead.
+        [[deprecated("use read() instead")]]
+        auto get() { return read(); }
+        /// Get the current temperature from the Notecard's onboard calibrated
+        /// temperature sensor.
+        ///
+        /// When using a Notecard Cellular or Notecard Cell+WiFi, if you connect
+        /// a BME280 sensor on the I2C bus the Notecard will add `temperature`,
+        /// `pressure`, and `humidity` fields to the response. If you connect an
+        /// ENS210 sensor on the I2C bus the Notecard will add `temperature` and
+        /// `pressure` fields to the response.
+        auto configure() { return create<api::CardTemp::Configure>(); }
+        /// @deprecated Use configure() instead.
+        [[deprecated("use configure() instead")]]
+        auto set() { return configure(); }
+        /// Get the current temperature from the Notecard's onboard calibrated
+        /// temperature sensor.
+        ///
+        /// When using a Notecard Cellular or Notecard Cell+WiFi, if you connect
+        /// a BME280 sensor on the I2C bus the Notecard will add `temperature`,
+        /// `pressure`, and `humidity` fields to the response. If you connect an
+        /// ENS210 sensor on the I2C bus the Notecard will add `temperature` and
+        /// `pressure` fields to the response.
+        auto stop() { return create<api::CardTemp::Stop>(); }
+        /// @deprecated Use stop() instead.
+        [[deprecated("use stop() instead")]]
+        auto delete_() { return stop(); }
     };
 
     struct CardVoltageFactory {
         Notecard* nc_;
         template<typename T> T create() { T r; r.nc_ = nc_; return r; }
-        auto get() { return create<api::CardVoltage::Get>(); }
-        auto set() { return create<api::CardVoltage::Set>(); }
+        /// Provides the current VMODEM_P voltage level on the Notecard, and
+        /// provides information about historical voltage trends. When used with
+        /// the mode argument, configures voltage thresholds based on how the
+        /// device is powered.
+        auto read() { return create<api::CardVoltage::Read>(); }
+        /// @deprecated Use read() instead.
+        [[deprecated("use read() instead")]]
+        auto get() { return read(); }
+        /// Provides the current VMODEM_P voltage level on the Notecard, and
+        /// provides information about historical voltage trends. When used with
+        /// the mode argument, configures voltage thresholds based on how the
+        /// device is powered.
+        auto configure() { return create<api::CardVoltage::Configure>(); }
+        /// @deprecated Use configure() instead.
+        [[deprecated("use configure() instead")]]
+        auto set() { return configure(); }
     };
 
     struct CardWirelessPenaltyFactory {
         Notecard* nc_;
         template<typename T> T create() { T r; r.nc_ = nc_; return r; }
-        auto get() { return create<api::CardWirelessPenalty::Get>(); }
+        /// View the current state of a Notecard Penalty Box, manually remove
+        /// the Notecard from a penalty box, or override penalty box defaults.
+        auto check() { return create<api::CardWirelessPenalty::Check>(); }
+        /// @deprecated Use check() instead.
+        [[deprecated("use check() instead")]]
+        auto get() { return check(); }
+        /// View the current state of a Notecard Penalty Box, manually remove
+        /// the Notecard from a penalty box, or override penalty box defaults.
         auto set() { return create<api::CardWirelessPenalty::Set>(); }
-        auto delete_() { return create<api::CardWirelessPenalty::Delete>(); }
+        /// View the current state of a Notecard Penalty Box, manually remove
+        /// the Notecard from a penalty box, or override penalty box defaults.
+        auto clear() { return create<api::CardWirelessPenalty::Clear>(); }
+        /// @deprecated Use clear() instead.
+        [[deprecated("use clear() instead")]]
+        auto delete_() { return clear(); }
     };
 
     struct EnvDefaultFactory {
         Notecard* nc_;
         template<typename T> T create() { T r; r.nc_ = nc_; return r; }
+        /// Used by the Notecard host to specify a default value for an
+        /// environment variable until that variable is overridden by a device,
+        /// project or fleet-wide setting at Notehub.
         auto set(note::string_view name) {
             auto r = create<api::EnvDefault::Set>();
             r.name = name;
             return r;
         }
-        auto delete_(note::string_view name) {
-            auto r = create<api::EnvDefault::Delete>();
+        /// Used by the Notecard host to specify a default value for an
+        /// environment variable until that variable is overridden by a device,
+        /// project or fleet-wide setting at Notehub.
+        auto remove(note::string_view name) {
+            auto r = create<api::EnvDefault::Remove>();
             r.name = name;
             return r;
         }
+        /// @deprecated Use remove() instead.
+        [[deprecated("use remove() instead")]]
+        auto delete_(note::string_view name) { return remove(name); }
     };
 
     struct NoteChangesFactory {
         Notecard* nc_;
         template<typename T> T create() { T r; r.nc_ = nc_; return r; }
-        auto get() { return create<api::NoteChanges::Get>(); }
-        auto delete_(note::string_view file) {
-            auto r = create<api::NoteChanges::Delete>();
+        /// Used to incrementally retrieve changes within a specific Notefile.
+        auto peek() { return create<api::NoteChanges::Peek>(); }
+        /// @deprecated Use peek() instead.
+        [[deprecated("use peek() instead")]]
+        auto get() { return peek(); }
+        /// Used to incrementally retrieve changes within a specific Notefile.
+        auto pop(note::string_view file) {
+            auto r = create<api::NoteChanges::Pop>();
             r.file = file;
             return r;
         }
+        /// @deprecated Use pop() instead.
+        [[deprecated("use pop() instead")]]
+        auto delete_(note::string_view file) { return pop(file); }
     };
 
     struct NoteGetFactory {
         Notecard* nc_;
         template<typename T> T create() { T r; r.nc_ = nc_; return r; }
-        auto get() { return create<api::NoteGet::Get>(); }
-        auto delete_() { return create<api::NoteGet::Delete>(); }
+        /// Retrieves a Note from a Notefile. The file must either be a DB
+        /// Notefile or inbound queue file (see `file` argument below).
+        ///
+        /// `.qo`/`.qos` Notes must be read from the Notehub event table using
+        /// the Notehub Event API.
+        auto read() { return create<api::NoteGet::Read>(); }
+        /// @deprecated Use read() instead.
+        [[deprecated("use read() instead")]]
+        auto get() { return read(); }
+        /// Retrieves a Note from a Notefile. The file must either be a DB
+        /// Notefile or inbound queue file (see `file` argument below).
+        ///
+        /// `.qo`/`.qos` Notes must be read from the Notehub event table using
+        /// the Notehub Event API.
+        auto pop() { return create<api::NoteGet::Pop>(); }
+        /// @deprecated Use pop() instead.
+        [[deprecated("use pop() instead")]]
+        auto delete_() { return pop(); }
     };
 
     struct NoteTemplateFactory {
         Notecard* nc_;
         template<typename T> T create() { T r; r.nc_ = nc_; return r; }
-        auto set(note::string_view file) {
-            auto r = create<api::NoteTemplate::Set>();
+        /// By using the `note.template` request with any `.qo`/`.qos` Notefile,
+        /// developers can provide the Notecard with a schema of sorts to apply
+        /// to future Notes added to the Notefile. This template acts as a hint
+        /// to the Notecard that allows it to internally store data as fixed-
+        /// length binary records rather than as flexible JSON objects which
+        /// require much more memory. Using templated Notes in place of regular
+        /// Notes increases the storage and sync capability of the Notecard by
+        /// an order of magnitude.
+        ///
+        /// Read about Working with Note Templates for additional information.
+        auto define(note::string_view file) {
+            auto r = create<api::NoteTemplate::Define>();
             r.file = file;
             return r;
         }
-        auto delete_(note::string_view file) {
-            auto r = create<api::NoteTemplate::Delete>();
+        /// @deprecated Use define() instead.
+        [[deprecated("use define() instead")]]
+        auto set(note::string_view file) { return define(file); }
+        /// By using the `note.template` request with any `.qo`/`.qos` Notefile,
+        /// developers can provide the Notecard with a schema of sorts to apply
+        /// to future Notes added to the Notefile. This template acts as a hint
+        /// to the Notecard that allows it to internally store data as fixed-
+        /// length binary records rather than as flexible JSON objects which
+        /// require much more memory. Using templated Notes in place of regular
+        /// Notes increases the storage and sync capability of the Notecard by
+        /// an order of magnitude.
+        ///
+        /// Read about Working with Note Templates for additional information.
+        auto remove(note::string_view file) {
+            auto r = create<api::NoteTemplate::Remove>();
             r.file = file;
             return r;
         }
+        /// @deprecated Use remove() instead.
+        [[deprecated("use remove() instead")]]
+        auto delete_(note::string_view file) { return remove(file); }
     };
 
     // =====================================================================
@@ -286,11 +459,11 @@ public:
         /// card.binary
 #if __cplusplus >= 202002L
         template<typename T_ = TargetT_>
-        requires (IsUnconstrained<T_> || T_::supports(api::CardBinary::Get::skus))
+        requires (IsUnconstrained<T_> || T_::supports(api::CardBinary::Status::skus))
         CardBinaryFactory binary() { return {nc_}; }
 
         template<typename T_ = TargetT_>
-        requires (!IsUnconstrained<T_> && !T_::supports(api::CardBinary::Get::skus) && !T_::strict)
+        requires (!IsUnconstrained<T_> && !T_::supports(api::CardBinary::Status::skus) && !T_::strict)
         [[deprecated("card.binary is not available on this target")]]
         CardBinaryFactory binary() { return {nc_}; }
 #else
@@ -480,11 +653,11 @@ public:
         /// card.power
 #if __cplusplus >= 202002L
         template<typename T_ = TargetT_>
-        requires (IsUnconstrained<T_> || T_::supports(api::CardPower::Get::skus))
+        requires (IsUnconstrained<T_> || T_::supports(api::CardPower::Read::skus))
         CardPowerFactory power() { return {nc_}; }
 
         template<typename T_ = TargetT_>
-        requires (!IsUnconstrained<T_> && !T_::supports(api::CardPower::Get::skus) && !T_::strict)
+        requires (!IsUnconstrained<T_> && !T_::supports(api::CardPower::Read::skus) && !T_::strict)
         [[deprecated("card.power is not available on this target")]]
         CardPowerFactory power() { return {nc_}; }
 #else
@@ -630,11 +803,11 @@ public:
         /// card.wireless.penalty
 #if __cplusplus >= 202002L
         template<typename T_ = TargetT_>
-        requires (IsUnconstrained<T_> || T_::supports(api::CardWirelessPenalty::Get::skus))
+        requires (IsUnconstrained<T_> || T_::supports(api::CardWirelessPenalty::Check::skus))
         CardWirelessPenaltyFactory wirelessPenalty() { return {nc_}; }
 
         template<typename T_ = TargetT_>
-        requires (!IsUnconstrained<T_> && !T_::supports(api::CardWirelessPenalty::Get::skus) && !T_::strict)
+        requires (!IsUnconstrained<T_> && !T_::supports(api::CardWirelessPenalty::Check::skus) && !T_::strict)
         [[deprecated("card.wireless.penalty is not available on this target")]]
         CardWirelessPenaltyFactory wirelessPenalty() { return {nc_}; }
 #else
@@ -643,18 +816,60 @@ public:
 
 
         // Layer 2 convenience aliases
-        auto binaryStatus() { return create<api::CardBinary::Get>(); }
-        auto binaryClear() { return create<api::CardBinary::Delete>(); }
+        /// View the status of the binary storage area of the Notecard and
+        /// optionally clear any data and related `card.binary` variables. See
+        /// the guide on Sending and Receiving Large Binary Objects for best
+        /// practices when using `card.binary`.
+        auto binaryStatus() { return create<api::CardBinary::Status>(); }
+        /// View the status of the binary storage area of the Notecard and
+        /// optionally clear any data and related `card.binary` variables. See
+        /// the guide on Sending and Receiving Large Binary Objects for best
+        /// practices when using `card.binary`.
+        auto binaryClear() { return create<api::CardBinary::Clear>(); }
+        /// Used to set or retrieve information about the Notecard maintainer.
+        /// Once set, this information is synced to Notehub.
         auto readContact() { return create<api::CardContact::Get>(); }
+        /// Sets location-related configuration settings. Retrieves the current
+        /// location mode when passed with no argument.
         auto readLocationMode() { return create<api::CardLocationMode::Get>(); }
-        auto resetLocationMode() { return create<api::CardLocationMode::Delete>(); }
-        auto readPower() { return create<api::CardPower::Get>(); }
-        auto resetPower() { return create<api::CardPower::Delete>(); }
-        auto readTemp() { return create<api::CardTemp::Get>(); }
-        auto stopTemp() { return create<api::CardTemp::Delete>(); }
-        auto readVoltage() { return create<api::CardVoltage::Get>(); }
-        auto readWirelessPenalty() { return create<api::CardWirelessPenalty::Get>(); }
-        auto resetWirelessPenalty() { return create<api::CardWirelessPenalty::Delete>(); }
+        /// Sets location-related configuration settings. Retrieves the current
+        /// location mode when passed with no argument.
+        auto resetLocationMode() { return create<api::CardLocationMode::Remove>(); }
+        /// The `card.power` API is used to configure a connected Mojo device or
+        /// to manually request power consumption readings in firmware.
+        auto readPower() { return create<api::CardPower::Read>(); }
+        /// The `card.power` API is used to configure a connected Mojo device or
+        /// to manually request power consumption readings in firmware.
+        auto resetPower() { return create<api::CardPower::Reset>(); }
+        /// Get the current temperature from the Notecard's onboard calibrated
+        /// temperature sensor.
+        ///
+        /// When using a Notecard Cellular or Notecard Cell+WiFi, if you connect
+        /// a BME280 sensor on the I2C bus the Notecard will add `temperature`,
+        /// `pressure`, and `humidity` fields to the response. If you connect an
+        /// ENS210 sensor on the I2C bus the Notecard will add `temperature` and
+        /// `pressure` fields to the response.
+        auto readTemp() { return create<api::CardTemp::Read>(); }
+        /// Get the current temperature from the Notecard's onboard calibrated
+        /// temperature sensor.
+        ///
+        /// When using a Notecard Cellular or Notecard Cell+WiFi, if you connect
+        /// a BME280 sensor on the I2C bus the Notecard will add `temperature`,
+        /// `pressure`, and `humidity` fields to the response. If you connect an
+        /// ENS210 sensor on the I2C bus the Notecard will add `temperature` and
+        /// `pressure` fields to the response.
+        auto stopTemp() { return create<api::CardTemp::Stop>(); }
+        /// Provides the current VMODEM_P voltage level on the Notecard, and
+        /// provides information about historical voltage trends. When used with
+        /// the mode argument, configures voltage thresholds based on how the
+        /// device is powered.
+        auto readVoltage() { return create<api::CardVoltage::Read>(); }
+        /// View the current state of a Notecard Penalty Box, manually remove
+        /// the Notecard from a penalty box, or override penalty box defaults.
+        auto readWirelessPenalty() { return create<api::CardWirelessPenalty::Check>(); }
+        /// View the current state of a Notecard Penalty Box, manually remove
+        /// the Notecard from a penalty box, or override penalty box defaults.
+        auto resetWirelessPenalty() { return create<api::CardWirelessPenalty::Clear>(); }
     };
 #if __cplusplus >= 202002L
     CardGroup<TargetT> card;
@@ -755,14 +970,20 @@ public:
 
 
         // Layer 2 convenience aliases
+        /// Used by the Notecard host to specify a default value for an
+        /// environment variable until that variable is overridden by a device,
+        /// project or fleet-wide setting at Notehub.
         auto setDefault(note::string_view name, note::string_view text) {
             auto r = create<api::EnvDefault::Set>();
             r.name = name;
             r.text = text;
             return r;
         }
+        /// Used by the Notecard host to specify a default value for an
+        /// environment variable until that variable is overridden by a device,
+        /// project or fleet-wide setting at Notehub.
         auto clearDefault(note::string_view name) {
-            auto r = create<api::EnvDefault::Delete>();
+            auto r = create<api::EnvDefault::Remove>();
             r.name = name;
             return r;
         }
@@ -808,6 +1029,10 @@ public:
         /// file.stats
         auto stats() { return create<api::FileStats>(); }
 
+
+        // Layer 2 convenience aliases
+        /// Deletes Notefiles and the Notes they contain.
+        auto remove() { return create<api::FileDelete>(); }
     };
 #if __cplusplus >= 202002L
     FileGroup<TargetT> file;
@@ -889,11 +1114,11 @@ public:
         /// note.changes
 #if __cplusplus >= 202002L
         template<typename T_ = TargetT_>
-        requires (IsUnconstrained<T_> || T_::supports(api::NoteChanges::Get::skus))
+        requires (IsUnconstrained<T_> || T_::supports(api::NoteChanges::Peek::skus))
         NoteChangesFactory changes() { return {nc_}; }
 
         template<typename T_ = TargetT_>
-        requires (!IsUnconstrained<T_> && !T_::supports(api::NoteChanges::Get::skus) && !T_::strict)
+        requires (!IsUnconstrained<T_> && !T_::supports(api::NoteChanges::Peek::skus) && !T_::strict)
         [[deprecated("note.changes is not available on this target")]]
         NoteChangesFactory changes() { return {nc_}; }
 #else
@@ -924,23 +1149,48 @@ public:
 
 
         // Layer 2 convenience aliases
+        /// Used to incrementally retrieve changes within a specific Notefile.
         auto popChanges(note::string_view file) {
-            auto r = create<api::NoteChanges::Delete>();
+            auto r = create<api::NoteChanges::Pop>();
             r.file = file;
             return r;
         }
+        /// Deletes a Note from a DB Notefile by its Note ID. To delete Notes
+        /// from a `.qi` Notefile, use `note.get` or `note.changes` with
+        /// `delete:true`.
+        auto remove() { return create<api::NoteDelete>(); }
+        /// Retrieves a Note from a Notefile. The file must either be a DB
+        /// Notefile or inbound queue file (see `file` argument below).
+        ///
+        /// `.qo`/`.qos` Notes must be read from the Notehub event table using
+        /// the Notehub Event API.
         auto read(note::string_view file) {
-            auto r = create<api::NoteGet::Get>();
+            auto r = create<api::NoteGet::Read>();
             r.file = file;
             return r;
         }
+        /// Retrieves a Note from a Notefile. The file must either be a DB
+        /// Notefile or inbound queue file (see `file` argument below).
+        ///
+        /// `.qo`/`.qos` Notes must be read from the Notehub event table using
+        /// the Notehub Event API.
         auto pop(note::string_view file) {
-            auto r = create<api::NoteGet::Delete>();
+            auto r = create<api::NoteGet::Pop>();
             r.file = file;
             return r;
         }
+        /// By using the `note.template` request with any `.qo`/`.qos` Notefile,
+        /// developers can provide the Notecard with a schema of sorts to apply
+        /// to future Notes added to the Notefile. This template acts as a hint
+        /// to the Notecard that allows it to internally store data as fixed-
+        /// length binary records rather than as flexible JSON objects which
+        /// require much more memory. Using templated Notes in place of regular
+        /// Notes increases the storage and sync capability of the Notecard by
+        /// an order of magnitude.
+        ///
+        /// Read about Working with Note Templates for additional information.
         auto clearTemplate(note::string_view file) {
-            auto r = create<api::NoteTemplate::Delete>();
+            auto r = create<api::NoteTemplate::Remove>();
             r.file = file;
             return r;
         }
@@ -1027,6 +1277,11 @@ public:
         /// var.set
         auto set() { return create<api::VarSet>(); }
 
+
+        // Layer 2 convenience aliases
+        /// Delete a Note from a DB Notefile by its `name`. Provides a simpler
+        /// interface to the note.delete API.
+        auto remove() { return create<api::VarDelete>(); }
     };
 #if __cplusplus >= 202002L
     VarGroup<TargetT> var;
@@ -1113,6 +1368,11 @@ public:
         auto put() { return create<api::WebPut>(); }
 #endif
 
+
+        // Layer 2 convenience aliases
+        /// Performs a simple HTTP or HTTPS `DELETE` request against an external
+        /// endpoint, and returns the response to the Notecard.
+        auto remove() { return create<api::WebDelete>(); }
     };
 #if __cplusplus >= 202002L
     WebGroup<TargetT> web;

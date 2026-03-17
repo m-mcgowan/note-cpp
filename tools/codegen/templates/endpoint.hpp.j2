@@ -559,6 +559,9 @@ struct {{ endpoint.struct_name }} {
     struct {{ op.struct_name }} {
 {{ render_operation(op, endpoint.struct_name + "::" + op.struct_name, "        ") }}
     };
+{% if op.legacy_struct_name %}
+    using {{ op.legacy_struct_name }} = {{ op.struct_name }};  ///< @deprecated Use {{ op.struct_name }} instead.
+{% endif %}
 {% endfor %}
 };
 

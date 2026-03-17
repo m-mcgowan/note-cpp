@@ -30,7 +30,7 @@ namespace note::api {
 /// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
 struct NoteGet {
 
-    struct Get {
+    struct Read {
         static constexpr string_view notecard_request = "note.get";
         static constexpr bool supports_cmd = true;
         static constexpr Safety safety = Safety::ReadOnly;
@@ -42,13 +42,13 @@ struct NoteGet {
         struct decrypt_t : Field<bool> {
             using Field<bool>::Field;
             using Field<bool>::operator=;
-            NoteGet::Get& operator()(bool v);
+            NoteGet::Read& operator()(bool v);
         } decrypt{};
         /// `true` to allow retrieval of a deleted Note.
         struct deleted_t : Field<bool> {
             using Field<bool>::Field;
             using Field<bool>::operator=;
-            NoteGet::Get& operator()(bool v);
+            NoteGet::Read& operator()(bool v);
         } deleted{};
         /// The Notefile name must end in `.qi` (for plaintext transport),
         /// `.qis` (for encrypted transport), `.db` or `.dbx` (for local-only DB
@@ -56,14 +56,14 @@ struct NoteGet {
         struct file_t : Field<note::string_view> {
             using Field<note::string_view>::Field;
             using Field<note::string_view>::operator=;
-            NoteGet::Get& operator()(note::string_view v);
+            NoteGet::Read& operator()(note::string_view v);
         } file{};
         /// If the Notefile has a `.db` or `.dbx` extension, specifies a unique
         /// Note ID. Not applicable to `.qi` Notefiles.
         struct noteId_t : Field<note::string_view> {
             using Field<note::string_view>::Field;
             using Field<note::string_view>::operator=;
-            NoteGet::Get& operator()(note::string_view v);
+            NoteGet::Read& operator()(note::string_view v);
         } noteId{};
 
 
@@ -183,6 +183,7 @@ struct NoteGet {
         Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
 
     };
+    using Get = Read;  ///< @deprecated Use Read instead.
 
     /// Retrieves a Note from a Notefile. The file must either be a DB Notefile
     /// or inbound queue file (see `file` argument below).
@@ -191,7 +192,7 @@ struct NoteGet {
     /// Notehub Event API.
     ///
     /// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
-    struct Delete {
+    struct Pop {
         static constexpr string_view notecard_request = "note.get";
         static constexpr bool supports_cmd = true;
         static constexpr Safety safety = Safety::Destructive;
@@ -203,13 +204,13 @@ struct NoteGet {
         struct decrypt_t : Field<bool> {
             using Field<bool>::Field;
             using Field<bool>::operator=;
-            NoteGet::Delete& operator()(bool v);
+            NoteGet::Pop& operator()(bool v);
         } decrypt{};
         /// `true` to allow retrieval of a deleted Note.
         struct deleted_t : Field<bool> {
             using Field<bool>::Field;
             using Field<bool>::operator=;
-            NoteGet::Delete& operator()(bool v);
+            NoteGet::Pop& operator()(bool v);
         } deleted{};
         /// The Notefile name must end in `.qi` (for plaintext transport),
         /// `.qis` (for encrypted transport), `.db` or `.dbx` (for local-only DB
@@ -217,14 +218,14 @@ struct NoteGet {
         struct file_t : Field<note::string_view> {
             using Field<note::string_view>::Field;
             using Field<note::string_view>::operator=;
-            NoteGet::Delete& operator()(note::string_view v);
+            NoteGet::Pop& operator()(note::string_view v);
         } file{};
         /// If the Notefile has a `.db` or `.dbx` extension, specifies a unique
         /// Note ID. Not applicable to `.qi` Notefiles.
         struct noteId_t : Field<note::string_view> {
             using Field<note::string_view>::Field;
             using Field<note::string_view>::operator=;
-            NoteGet::Delete& operator()(note::string_view v);
+            NoteGet::Pop& operator()(note::string_view v);
         } noteId{};
 
 
@@ -345,53 +346,54 @@ struct NoteGet {
         Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
 
     };
+    using Delete = Pop;  ///< @deprecated Use Pop instead.
 };
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-inline NoteGet::Get& NoteGet::Get::decrypt_t::operator()(bool v) {
+inline NoteGet::Read& NoteGet::Read::decrypt_t::operator()(bool v) {
     Field<bool>::operator=(v);
-    return *reinterpret_cast<NoteGet::Get*>(
-        reinterpret_cast<char*>(this) - offsetof(NoteGet::Get, decrypt));
+    return *reinterpret_cast<NoteGet::Read*>(
+        reinterpret_cast<char*>(this) - offsetof(NoteGet::Read, decrypt));
 }
-inline NoteGet::Get& NoteGet::Get::deleted_t::operator()(bool v) {
+inline NoteGet::Read& NoteGet::Read::deleted_t::operator()(bool v) {
     Field<bool>::operator=(v);
-    return *reinterpret_cast<NoteGet::Get*>(
-        reinterpret_cast<char*>(this) - offsetof(NoteGet::Get, deleted));
+    return *reinterpret_cast<NoteGet::Read*>(
+        reinterpret_cast<char*>(this) - offsetof(NoteGet::Read, deleted));
 }
-inline NoteGet::Get& NoteGet::Get::file_t::operator()(note::string_view v) {
+inline NoteGet::Read& NoteGet::Read::file_t::operator()(note::string_view v) {
     Field<note::string_view>::operator=(v);
-    return *reinterpret_cast<NoteGet::Get*>(
-        reinterpret_cast<char*>(this) - offsetof(NoteGet::Get, file));
+    return *reinterpret_cast<NoteGet::Read*>(
+        reinterpret_cast<char*>(this) - offsetof(NoteGet::Read, file));
 }
-inline NoteGet::Get& NoteGet::Get::noteId_t::operator()(note::string_view v) {
+inline NoteGet::Read& NoteGet::Read::noteId_t::operator()(note::string_view v) {
     Field<note::string_view>::operator=(v);
-    return *reinterpret_cast<NoteGet::Get*>(
-        reinterpret_cast<char*>(this) - offsetof(NoteGet::Get, noteId));
+    return *reinterpret_cast<NoteGet::Read*>(
+        reinterpret_cast<char*>(this) - offsetof(NoteGet::Read, noteId));
 }
 #pragma GCC diagnostic pop
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-inline NoteGet::Delete& NoteGet::Delete::decrypt_t::operator()(bool v) {
+inline NoteGet::Pop& NoteGet::Pop::decrypt_t::operator()(bool v) {
     Field<bool>::operator=(v);
-    return *reinterpret_cast<NoteGet::Delete*>(
-        reinterpret_cast<char*>(this) - offsetof(NoteGet::Delete, decrypt));
+    return *reinterpret_cast<NoteGet::Pop*>(
+        reinterpret_cast<char*>(this) - offsetof(NoteGet::Pop, decrypt));
 }
-inline NoteGet::Delete& NoteGet::Delete::deleted_t::operator()(bool v) {
+inline NoteGet::Pop& NoteGet::Pop::deleted_t::operator()(bool v) {
     Field<bool>::operator=(v);
-    return *reinterpret_cast<NoteGet::Delete*>(
-        reinterpret_cast<char*>(this) - offsetof(NoteGet::Delete, deleted));
+    return *reinterpret_cast<NoteGet::Pop*>(
+        reinterpret_cast<char*>(this) - offsetof(NoteGet::Pop, deleted));
 }
-inline NoteGet::Delete& NoteGet::Delete::file_t::operator()(note::string_view v) {
+inline NoteGet::Pop& NoteGet::Pop::file_t::operator()(note::string_view v) {
     Field<note::string_view>::operator=(v);
-    return *reinterpret_cast<NoteGet::Delete*>(
-        reinterpret_cast<char*>(this) - offsetof(NoteGet::Delete, file));
+    return *reinterpret_cast<NoteGet::Pop*>(
+        reinterpret_cast<char*>(this) - offsetof(NoteGet::Pop, file));
 }
-inline NoteGet::Delete& NoteGet::Delete::noteId_t::operator()(note::string_view v) {
+inline NoteGet::Pop& NoteGet::Pop::noteId_t::operator()(note::string_view v) {
     Field<note::string_view>::operator=(v);
-    return *reinterpret_cast<NoteGet::Delete*>(
-        reinterpret_cast<char*>(this) - offsetof(NoteGet::Delete, noteId));
+    return *reinterpret_cast<NoteGet::Pop*>(
+        reinterpret_cast<char*>(this) - offsetof(NoteGet::Pop, noteId));
 }
 #pragma GCC diagnostic pop
 

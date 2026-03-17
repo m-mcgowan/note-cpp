@@ -33,7 +33,7 @@ namespace note::api {
 /// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
 struct CardTemp {
 
-    struct Get {
+    struct Read {
         static constexpr string_view notecard_request = "card.temp";
         static constexpr bool supports_cmd = true;
         static constexpr Safety safety = Safety::ReadOnly;
@@ -48,7 +48,7 @@ struct CardTemp {
         struct minutes_t : Field<note::Minutes> {
             using Field<note::Minutes>::Field;
             using Field<note::Minutes>::operator=;
-            CardTemp::Get& operator()(note::Minutes v);
+            CardTemp::Read& operator()(note::Minutes v);
         } minutes{};
         /// Overrides `minutes` with a voltage-variable value. For example:
         /// `"usb:15;high:30;normal:60;720"`. See Voltage-Variable Sync Behavior
@@ -56,7 +56,7 @@ struct CardTemp {
         struct status_t : Field<note::string_view> {
             using Field<note::string_view>::Field;
             using Field<note::string_view>::operator=;
-            CardTemp::Get& operator()(note::string_view v);
+            CardTemp::Read& operator()(note::string_view v);
         } status{};
         /// If set to `true`, the Notecard will stop logging the temperature
         /// value at the interval specified with the `minutes` parameter (see
@@ -64,14 +64,14 @@ struct CardTemp {
         struct stop_t : Field<bool> {
             using Field<bool>::Field;
             using Field<bool>::operator=;
-            CardTemp::Get& operator()(bool v);
+            CardTemp::Read& operator()(bool v);
         } stop{};
         /// If set to `true`, the Notecard will immediately sync any pending
         /// `_temp.qo` Notes created with the `minutes` parameter (see above).
         struct sync_t : Field<bool> {
             using Field<bool>::Field;
             using Field<bool>::operator=;
-            CardTemp::Get& operator()(bool v);
+            CardTemp::Read& operator()(bool v);
         } sync{};
 
 
@@ -195,6 +195,7 @@ struct CardTemp {
         Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
 
     };
+    using Get = Read;  ///< @deprecated Use Read instead.
 
     /// Get the current temperature from the Notecard's onboard calibrated
     /// temperature sensor.
@@ -206,7 +207,7 @@ struct CardTemp {
     /// `pressure` fields to the response.
     ///
     /// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
-    struct Set {
+    struct Configure {
         static constexpr string_view notecard_request = "card.temp";
         static constexpr bool supports_cmd = true;
         static constexpr Safety safety = Safety::Idempotent;
@@ -221,7 +222,7 @@ struct CardTemp {
         struct minutes_t : Field<note::Minutes> {
             using Field<note::Minutes>::Field;
             using Field<note::Minutes>::operator=;
-            CardTemp::Set& operator()(note::Minutes v);
+            CardTemp::Configure& operator()(note::Minutes v);
         } minutes{};
         /// Overrides `minutes` with a voltage-variable value. For example:
         /// `"usb:15;high:30;normal:60;720"`. See Voltage-Variable Sync Behavior
@@ -229,7 +230,7 @@ struct CardTemp {
         struct status_t : Field<note::string_view> {
             using Field<note::string_view>::Field;
             using Field<note::string_view>::operator=;
-            CardTemp::Set& operator()(note::string_view v);
+            CardTemp::Configure& operator()(note::string_view v);
         } status{};
         /// If set to `true`, the Notecard will stop logging the temperature
         /// value at the interval specified with the `minutes` parameter (see
@@ -237,14 +238,14 @@ struct CardTemp {
         struct stop_t : Field<bool> {
             using Field<bool>::Field;
             using Field<bool>::operator=;
-            CardTemp::Set& operator()(bool v);
+            CardTemp::Configure& operator()(bool v);
         } stop{};
         /// If set to `true`, the Notecard will immediately sync any pending
         /// `_temp.qo` Notes created with the `minutes` parameter (see above).
         struct sync_t : Field<bool> {
             using Field<bool>::Field;
             using Field<bool>::operator=;
-            CardTemp::Set& operator()(bool v);
+            CardTemp::Configure& operator()(bool v);
         } sync{};
 
 
@@ -368,6 +369,7 @@ struct CardTemp {
         Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
 
     };
+    using Set = Configure;  ///< @deprecated Use Configure instead.
 
     /// Get the current temperature from the Notecard's onboard calibrated
     /// temperature sensor.
@@ -379,7 +381,7 @@ struct CardTemp {
     /// `pressure` fields to the response.
     ///
     /// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
-    struct Delete {
+    struct Stop {
         static constexpr string_view notecard_request = "card.temp";
         static constexpr bool supports_cmd = true;
         static constexpr Safety safety = Safety::Destructive;
@@ -394,7 +396,7 @@ struct CardTemp {
         struct minutes_t : Field<note::Minutes> {
             using Field<note::Minutes>::Field;
             using Field<note::Minutes>::operator=;
-            CardTemp::Delete& operator()(note::Minutes v);
+            CardTemp::Stop& operator()(note::Minutes v);
         } minutes{};
         /// Overrides `minutes` with a voltage-variable value. For example:
         /// `"usb:15;high:30;normal:60;720"`. See Voltage-Variable Sync Behavior
@@ -402,14 +404,14 @@ struct CardTemp {
         struct status_t : Field<note::string_view> {
             using Field<note::string_view>::Field;
             using Field<note::string_view>::operator=;
-            CardTemp::Delete& operator()(note::string_view v);
+            CardTemp::Stop& operator()(note::string_view v);
         } status{};
         /// If set to `true`, the Notecard will immediately sync any pending
         /// `_temp.qo` Notes created with the `minutes` parameter (see above).
         struct sync_t : Field<bool> {
             using Field<bool>::Field;
             using Field<bool>::operator=;
-            CardTemp::Delete& operator()(bool v);
+            CardTemp::Stop& operator()(bool v);
         } sync{};
 
 
@@ -532,72 +534,73 @@ struct CardTemp {
         Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
 
     };
+    using Delete = Stop;  ///< @deprecated Use Stop instead.
 };
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-inline CardTemp::Get& CardTemp::Get::minutes_t::operator()(note::Minutes v) {
+inline CardTemp::Read& CardTemp::Read::minutes_t::operator()(note::Minutes v) {
     Field<note::Minutes>::operator=(v);
-    return *reinterpret_cast<CardTemp::Get*>(
-        reinterpret_cast<char*>(this) - offsetof(CardTemp::Get, minutes));
+    return *reinterpret_cast<CardTemp::Read*>(
+        reinterpret_cast<char*>(this) - offsetof(CardTemp::Read, minutes));
 }
-inline CardTemp::Get& CardTemp::Get::status_t::operator()(note::string_view v) {
+inline CardTemp::Read& CardTemp::Read::status_t::operator()(note::string_view v) {
     Field<note::string_view>::operator=(v);
-    return *reinterpret_cast<CardTemp::Get*>(
-        reinterpret_cast<char*>(this) - offsetof(CardTemp::Get, status));
+    return *reinterpret_cast<CardTemp::Read*>(
+        reinterpret_cast<char*>(this) - offsetof(CardTemp::Read, status));
 }
-inline CardTemp::Get& CardTemp::Get::stop_t::operator()(bool v) {
+inline CardTemp::Read& CardTemp::Read::stop_t::operator()(bool v) {
     Field<bool>::operator=(v);
-    return *reinterpret_cast<CardTemp::Get*>(
-        reinterpret_cast<char*>(this) - offsetof(CardTemp::Get, stop));
+    return *reinterpret_cast<CardTemp::Read*>(
+        reinterpret_cast<char*>(this) - offsetof(CardTemp::Read, stop));
 }
-inline CardTemp::Get& CardTemp::Get::sync_t::operator()(bool v) {
+inline CardTemp::Read& CardTemp::Read::sync_t::operator()(bool v) {
     Field<bool>::operator=(v);
-    return *reinterpret_cast<CardTemp::Get*>(
-        reinterpret_cast<char*>(this) - offsetof(CardTemp::Get, sync));
+    return *reinterpret_cast<CardTemp::Read*>(
+        reinterpret_cast<char*>(this) - offsetof(CardTemp::Read, sync));
 }
 #pragma GCC diagnostic pop
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-inline CardTemp::Set& CardTemp::Set::minutes_t::operator()(note::Minutes v) {
+inline CardTemp::Configure& CardTemp::Configure::minutes_t::operator()(note::Minutes v) {
     Field<note::Minutes>::operator=(v);
-    return *reinterpret_cast<CardTemp::Set*>(
-        reinterpret_cast<char*>(this) - offsetof(CardTemp::Set, minutes));
+    return *reinterpret_cast<CardTemp::Configure*>(
+        reinterpret_cast<char*>(this) - offsetof(CardTemp::Configure, minutes));
 }
-inline CardTemp::Set& CardTemp::Set::status_t::operator()(note::string_view v) {
+inline CardTemp::Configure& CardTemp::Configure::status_t::operator()(note::string_view v) {
     Field<note::string_view>::operator=(v);
-    return *reinterpret_cast<CardTemp::Set*>(
-        reinterpret_cast<char*>(this) - offsetof(CardTemp::Set, status));
+    return *reinterpret_cast<CardTemp::Configure*>(
+        reinterpret_cast<char*>(this) - offsetof(CardTemp::Configure, status));
 }
-inline CardTemp::Set& CardTemp::Set::stop_t::operator()(bool v) {
+inline CardTemp::Configure& CardTemp::Configure::stop_t::operator()(bool v) {
     Field<bool>::operator=(v);
-    return *reinterpret_cast<CardTemp::Set*>(
-        reinterpret_cast<char*>(this) - offsetof(CardTemp::Set, stop));
+    return *reinterpret_cast<CardTemp::Configure*>(
+        reinterpret_cast<char*>(this) - offsetof(CardTemp::Configure, stop));
 }
-inline CardTemp::Set& CardTemp::Set::sync_t::operator()(bool v) {
+inline CardTemp::Configure& CardTemp::Configure::sync_t::operator()(bool v) {
     Field<bool>::operator=(v);
-    return *reinterpret_cast<CardTemp::Set*>(
-        reinterpret_cast<char*>(this) - offsetof(CardTemp::Set, sync));
+    return *reinterpret_cast<CardTemp::Configure*>(
+        reinterpret_cast<char*>(this) - offsetof(CardTemp::Configure, sync));
 }
 #pragma GCC diagnostic pop
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-inline CardTemp::Delete& CardTemp::Delete::minutes_t::operator()(note::Minutes v) {
+inline CardTemp::Stop& CardTemp::Stop::minutes_t::operator()(note::Minutes v) {
     Field<note::Minutes>::operator=(v);
-    return *reinterpret_cast<CardTemp::Delete*>(
-        reinterpret_cast<char*>(this) - offsetof(CardTemp::Delete, minutes));
+    return *reinterpret_cast<CardTemp::Stop*>(
+        reinterpret_cast<char*>(this) - offsetof(CardTemp::Stop, minutes));
 }
-inline CardTemp::Delete& CardTemp::Delete::status_t::operator()(note::string_view v) {
+inline CardTemp::Stop& CardTemp::Stop::status_t::operator()(note::string_view v) {
     Field<note::string_view>::operator=(v);
-    return *reinterpret_cast<CardTemp::Delete*>(
-        reinterpret_cast<char*>(this) - offsetof(CardTemp::Delete, status));
+    return *reinterpret_cast<CardTemp::Stop*>(
+        reinterpret_cast<char*>(this) - offsetof(CardTemp::Stop, status));
 }
-inline CardTemp::Delete& CardTemp::Delete::sync_t::operator()(bool v) {
+inline CardTemp::Stop& CardTemp::Stop::sync_t::operator()(bool v) {
     Field<bool>::operator=(v);
-    return *reinterpret_cast<CardTemp::Delete*>(
-        reinterpret_cast<char*>(this) - offsetof(CardTemp::Delete, sync));
+    return *reinterpret_cast<CardTemp::Stop*>(
+        reinterpret_cast<char*>(this) - offsetof(CardTemp::Stop, sync));
 }
 #pragma GCC diagnostic pop
 

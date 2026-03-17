@@ -256,8 +256,16 @@ def _parse_operation(op: dict, *, suffix: str | None = None) -> OperationDef:
     # Extract response properties
     rsp_props, has_body_response = _extract_response_props(op)
 
-    # Determine struct name
-    if suffix:
+    # Determine struct name — x-intent-name overrides the suffix-derived name
+    intent_name = op.get("x-intent-name")
+    legacy_struct_name = None
+    if intent_name:
+        struct_name = intent_name[0].upper() + intent_name[1:]
+        if suffix:
+            old_name = operation_suffix_to_struct_name(suffix)
+            if old_name != struct_name:
+                legacy_struct_name = old_name
+    elif suffix:
         struct_name = operation_suffix_to_struct_name(suffix)
     else:
         struct_name = endpoint_to_struct_name(notecard_request)
@@ -277,6 +285,7 @@ def _parse_operation(op: dict, *, suffix: str | None = None) -> OperationDef:
         binary_transfer=_parse_binary_transfer(op.get("x-binary-transfer")),
         skus=op.get("x-skus", []),
         description=op.get("summary", ""),
+        legacy_struct_name=legacy_struct_name,
     )
 
 

@@ -54,6 +54,9 @@ public:
         Notecard* nc_;
         template<typename T> T create() { T r; r.nc_ = nc_; return r; }
 {% for op in endpoint.operations %}
+{% if op.description %}
+{{ op.description | doc_comment("        ") }}
+{% endif %}
 {% if op.required_properties %}
         auto {{ op.factory_method }}({{ required_params(op) }}) {
             auto r = create<api::{{ endpoint.struct_name }}::{{ op.struct_name }}>();
@@ -62,8 +65,18 @@ public:
 {% endfor %}
             return r;
         }
+{% if op.legacy_factory_method %}
+        /// @deprecated Use {{ op.factory_method }}() instead.
+        [[deprecated("use {{ op.factory_method }}() instead")]]
+        auto {{ op.legacy_factory_method }}({{ required_params(op) }}) { return {{ op.factory_method }}({{ op.required_properties | map(attribute='accessor_name') | join(', ') }}); }
+{% endif %}
 {% else %}
         auto {{ op.factory_method }}() { return create<api::{{ endpoint.struct_name }}::{{ op.struct_name }}>(); }
+{% if op.legacy_factory_method %}
+        /// @deprecated Use {{ op.factory_method }}() instead.
+        [[deprecated("use {{ op.factory_method }}() instead")]]
+        auto {{ op.legacy_factory_method }}() { return {{ op.factory_method }}(); }
+{% endif %}
 {% endif %}
 {% endfor %}
     };
@@ -184,6 +197,10 @@ public:
 {% for endpoint in group.endpoints %}
 {% for alias in endpoint.aliases %}
 {% set resolved = alias.resolve_params(endpoint) %}
+{% set alias_doc = alias.description if alias.description and alias.description != "Alias for delete()." else endpoint.operations[0].description %}
+{% if alias_doc %}
+{{ alias_doc | doc_comment("        ") }}
+{% endif %}
 {% if resolved %}
         auto {{ alias.method_name }}({% for p in resolved %}{{ p.field_type }} {{ p.accessor_name }}{{ ", " if not loop.last }}{% endfor %}) {
             auto r = create<{{ alias.qualified_type }}>();

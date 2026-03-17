@@ -211,6 +211,18 @@ class OperationDef:
     skus: list[str] = field(default_factory=list)
     implicit_fields: list[ImplicitFieldDef] = field(default_factory=list)
     description: str = ""  # From operation summary
+    legacy_struct_name: str | None = None  # Old verb-derived name for deprecation alias
+
+    @property
+    def legacy_factory_method(self) -> str | None:
+        """Deprecated factory method name from the old verb-derived struct name.
+
+        Returns None if no legacy name exists (i.e. no rename happened).
+        """
+        if not self.legacy_struct_name:
+            return None
+        name = self.legacy_struct_name[0].lower() + self.legacy_struct_name[1:]
+        return _FACTORY_METHOD_RENAMES.get(name, name)
 
     @property
     def required_properties(self) -> list[PropertyDef]:

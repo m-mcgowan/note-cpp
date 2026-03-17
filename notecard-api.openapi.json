@@ -132,7 +132,23 @@
                     "type": "string",
                     "pattern": "^(?:-all|-env|-files|-location|-motion|-usb|arm|auxgpio|connected|disarm|env|files|location|motion|motionchange|rearm|signal|sleep|usb|watchdog|wireless)(?:,\\s*(?:-all|-env|-files|-location|-motion|-usb|arm|auxgpio|connected|disarm|env|files|location|motion|motionchange|rearm|signal|sleep|usb|watchdog|wireless))*\\s*$",
                     "x-format": "flags",
-                    "x-flags": ["arm", "auxgpio", "connected", "disarm", "env", "files", "location", "motion", "motionchange", "rearm", "signal", "sleep", "usb", "watchdog", "wireless"],
+                    "x-flags": [
+                      "arm",
+                      "auxgpio",
+                      "connected",
+                      "disarm",
+                      "env",
+                      "files",
+                      "location",
+                      "motion",
+                      "motionchange",
+                      "rearm",
+                      "signal",
+                      "sleep",
+                      "usb",
+                      "watchdog",
+                      "wireless"
+                    ],
                     "x-sub-descriptions": [
                       {
                         "const": "",
@@ -1694,7 +1710,8 @@
             "x-api-version": "9.1.1",
             "x-min-api-version": "5.3.1"
           }
-        }
+        },
+        "x-intent-name": "status"
       },
       "delete": {
         "operationId": "card_binary_delete",
@@ -1806,16 +1823,17 @@
             "x-api-version": "9.1.1",
             "x-min-api-version": "5.3.1"
           }
-        }
+        },
+        "x-intent-name": "clear"
       },
       "x-aliases": [
         {
           "method": "binaryStatus",
-          "variant": "Get"
+          "variant": "Status"
         },
         {
           "method": "binaryClear",
-          "variant": "Delete"
+          "variant": "Clear"
         }
       ]
     },
@@ -3871,7 +3889,8 @@
             "x-schema-version": "1.1.2",
             "x-api-version": "9.1.1"
           }
-        }
+        },
+        "x-intent-name": "remove"
       },
       "x-aliases": [
         {
@@ -3880,7 +3899,7 @@
         },
         {
           "method": "resetLocationMode",
-          "variant": "Delete"
+          "variant": "Remove"
         }
       ]
     },
@@ -4733,7 +4752,8 @@
             "x-api-version": "9.1.1",
             "x-min-api-version": "8.1.3"
           }
-        }
+        },
+        "x-intent-name": "read"
       },
       "put": {
         "operationId": "card_power_set",
@@ -4856,7 +4876,8 @@
             "x-api-version": "9.1.1",
             "x-min-api-version": "8.1.3"
           }
-        }
+        },
+        "x-intent-name": "configure"
       },
       "delete": {
         "operationId": "card_power_delete",
@@ -4979,16 +5000,17 @@
             "x-api-version": "9.1.1",
             "x-min-api-version": "8.1.3"
           }
-        }
+        },
+        "x-intent-name": "reset"
       },
       "x-aliases": [
         {
           "method": "readPower",
-          "variant": "Get"
+          "variant": "Read"
         },
         {
           "method": "resetPower",
-          "variant": "Delete"
+          "variant": "Reset"
         }
       ]
     },
@@ -5655,7 +5677,8 @@
             "x-schema-version": "1.1.2",
             "x-api-version": "9.1.1"
           }
-        }
+        },
+        "x-intent-name": "read"
       },
       "put": {
         "operationId": "card_temp_set",
@@ -5821,7 +5844,8 @@
             "x-schema-version": "1.1.2",
             "x-api-version": "9.1.1"
           }
-        }
+        },
+        "x-intent-name": "configure"
       },
       "delete": {
         "operationId": "card_temp_delete",
@@ -5985,16 +6009,17 @@
             "x-schema-version": "1.1.2",
             "x-api-version": "9.1.1"
           }
-        }
+        },
+        "x-intent-name": "stop"
       },
       "x-aliases": [
         {
           "method": "readTemp",
-          "variant": "Get"
+          "variant": "Read"
         },
         {
           "method": "stopTemp",
-          "variant": "Delete"
+          "variant": "Stop"
         }
       ]
     },
@@ -6570,7 +6595,10 @@
                     "type": "string",
                     "pattern": "^(cell(,wifi)?|wifi(,cell)?|-)$",
                     "x-format": "flags",
-                    "x-flags": ["cell", "wifi"],
+                    "x-flags": [
+                      "cell",
+                      "wifi"
+                    ],
                     "x-sub-descriptions": [
                       {
                         "const": "cell",
@@ -7522,7 +7550,8 @@
             "x-schema-version": "1.1.2",
             "x-api-version": "9.1.1"
           }
-        }
+        },
+        "x-intent-name": "read"
       },
       "put": {
         "operationId": "card_voltage_set",
@@ -7815,12 +7844,13 @@
             "x-schema-version": "1.1.2",
             "x-api-version": "9.1.1"
           }
-        }
+        },
+        "x-intent-name": "configure"
       },
       "x-aliases": [
         {
           "method": "readVoltage",
-          "variant": "Get"
+          "variant": "Read"
         }
       ]
     },
@@ -8441,7 +8471,8 @@
             "x-schema-version": "1.1.2",
             "x-api-version": "9.1.1"
           }
-        }
+        },
+        "x-intent-name": "check"
       },
       "put": {
         "operationId": "card_wireless_penalty_set",
@@ -8597,7 +8628,8 @@
             "x-schema-version": "1.1.2",
             "x-api-version": "9.1.1"
           }
-        }
+        },
+        "x-intent-name": "set"
       },
       "delete": {
         "operationId": "card_wireless_penalty_delete",
@@ -8753,16 +8785,17 @@
             "x-schema-version": "1.1.2",
             "x-api-version": "9.1.1"
           }
-        }
+        },
+        "x-intent-name": "clear"
       },
       "x-aliases": [
         {
           "method": "readWirelessPenalty",
-          "variant": "Get"
+          "variant": "Check"
         },
         {
           "method": "resetWirelessPenalty",
-          "variant": "Delete"
+          "variant": "Clear"
         }
       ]
     },
@@ -9442,7 +9475,8 @@
             "x-schema-version": "1.1.2",
             "x-api-version": "9.1.1"
           }
-        }
+        },
+        "x-intent-name": "remove"
       },
       "x-aliases": [
         {
@@ -9455,7 +9489,7 @@
         },
         {
           "method": "clearDefault",
-          "variant": "Delete",
+          "variant": "Remove",
           "params": [
             "name"
           ]
@@ -10300,7 +10334,13 @@
             "x-api-version": "9.1.1"
           }
         }
-      }
+      },
+      "x-aliases": [
+        {
+          "method": "remove",
+          "description": "Alias for delete()."
+        }
+      ]
     },
     "/file/stats": {
       "get": {
@@ -11861,7 +11901,8 @@
             "x-schema-version": "1.1.2",
             "x-api-version": "9.1.1"
           }
-        }
+        },
+        "x-intent-name": "peek"
       },
       "delete": {
         "operationId": "note_changes_delete",
@@ -12092,12 +12133,13 @@
             "x-schema-version": "1.1.2",
             "x-api-version": "9.1.1"
           }
-        }
+        },
+        "x-intent-name": "pop"
       },
       "x-aliases": [
         {
           "method": "popChanges",
-          "variant": "Delete",
+          "variant": "Pop",
           "params": [
             "file"
           ]
@@ -12203,7 +12245,13 @@
             "x-api-version": "9.1.1"
           }
         }
-      }
+      },
+      "x-aliases": [
+        {
+          "method": "remove",
+          "description": "Alias for delete()."
+        }
+      ]
     },
     "/note/get": {
       "get": {
@@ -12375,7 +12423,8 @@
             "x-schema-version": "1.1.2",
             "x-api-version": "9.1.1"
           }
-        }
+        },
+        "x-intent-name": "read"
       },
       "delete": {
         "operationId": "note_get_delete",
@@ -12536,19 +12585,20 @@
             "x-schema-version": "1.1.2",
             "x-api-version": "9.1.1"
           }
-        }
+        },
+        "x-intent-name": "pop"
       },
       "x-aliases": [
         {
           "method": "read",
-          "variant": "Get",
+          "variant": "Read",
           "params": [
             "file"
           ]
         },
         {
           "method": "pop",
-          "variant": "Delete",
+          "variant": "Pop",
           "params": [
             "file"
           ]
@@ -12728,7 +12778,8 @@
             "x-schema-version": "1.1.2",
             "x-api-version": "9.1.1"
           }
-        }
+        },
+        "x-intent-name": "define"
       },
       "delete": {
         "operationId": "note_template_delete",
@@ -12902,12 +12953,13 @@
             "x-schema-version": "1.1.2",
             "x-api-version": "9.1.1"
           }
-        }
+        },
+        "x-intent-name": "remove"
       },
       "x-aliases": [
         {
           "method": "clearTemplate",
-          "variant": "Delete",
+          "variant": "Remove",
           "params": [
             "file"
           ]
@@ -13342,7 +13394,13 @@
             "x-api-version": "9.1.1"
           }
         }
-      }
+      },
+      "x-aliases": [
+        {
+          "method": "remove",
+          "description": "Alias for delete()."
+        }
+      ]
     },
     "/var/get": {
       "get": {
@@ -13850,7 +13908,13 @@
             "x-api-version": "9.1.1"
           }
         }
-      }
+      },
+      "x-aliases": [
+        {
+          "method": "remove",
+          "description": "Alias for delete()."
+        }
+      ]
     },
     "/web/get": {
       "get": {

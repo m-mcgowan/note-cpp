@@ -27,7 +27,7 @@ namespace note::api {
 /// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
 struct CardVoltage {
 
-    struct Get {
+    struct Read {
         static constexpr string_view notecard_request = "card.voltage";
         static constexpr bool supports_cmd = true;
         static constexpr Safety safety = Safety::ReadOnly;
@@ -41,7 +41,7 @@ struct CardVoltage {
         struct alert_t : Field<bool> {
             using Field<bool>::Field;
             using Field<bool>::operator=;
-            CardVoltage::Get& operator()(bool v);
+            CardVoltage::Read& operator()(bool v);
         } alert{};
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 2) || !defined(NOTE_API_STRICT)
         /// The offset, in volts, to account for the forward voltage drop of the
@@ -55,14 +55,14 @@ struct CardVoltage {
         struct calibration_t : Field<double> {
             using Field<double>::Field;
             using Field<double>::operator=;
-            CardVoltage::Get& operator()(double v);
+            CardVoltage::Read& operator()(double v);
         } calibration{};
 #endif
         /// The number of hours to analyze, up to 720 (30 days).
         struct hours_t : Field<int32_t> {
             using Field<int32_t>::Field;
             using Field<int32_t>::operator=;
-            CardVoltage::Get& operator()(int32_t v);
+            CardVoltage::Read& operator()(int32_t v);
         } hours{};
         /// Used to set voltage thresholds based on how the Notecard will be
         /// powered, and which can be used to configure voltage-variable
@@ -76,46 +76,46 @@ struct CardVoltage {
         struct mode_t : Field<note::string_view> {
             using Field<note::string_view>::Field;
             using Field<note::string_view>::operator=;
-            CardVoltage::Get& operator()(note::string_view v);
+            CardVoltage::Read& operator()(note::string_view v);
         } mode{};
         /// Specifies an environment variable to override application default
         /// timing values.
         struct name_t : Field<note::string_view> {
             using Field<note::string_view>::Field;
             using Field<note::string_view>::operator=;
-            CardVoltage::Get& operator()(note::string_view v);
+            CardVoltage::Read& operator()(note::string_view v);
         } name{};
         /// Disable historic voltage trend calculations.
         struct off_t : Field<bool> {
             using Field<bool>::Field;
             using Field<bool>::operator=;
-            CardVoltage::Get& operator()(bool v);
+            CardVoltage::Read& operator()(bool v);
         } off{};
         /// Number of hours to move into the past before starting analysis.
         struct offset_t : Field<int32_t> {
             using Field<int32_t>::Field;
             using Field<int32_t>::operator=;
-            CardVoltage::Get& operator()(int32_t v);
+            CardVoltage::Read& operator()(int32_t v);
         } offset{};
         /// Enable historic voltage trend calculations.
         struct on_t : Field<bool> {
             using Field<bool>::Field;
             using Field<bool>::operator=;
-            CardVoltage::Get& operator()(bool v);
+            CardVoltage::Read& operator()(bool v);
         } on{};
         /// Used along with `calibration`, set to `true` to specify a new
         /// calibration value.
         struct set_t : Field<bool> {
             using Field<bool>::Field;
             using Field<bool>::operator=;
-            CardVoltage::Get& operator()(bool v);
+            CardVoltage::Read& operator()(bool v);
         } set{};
         /// When enabled and the `usb` argument is set to `true`, the Notecard
         /// will perform a sync when USB power is connected or disconnected.
         struct sync_t : Field<bool> {
             using Field<bool>::Field;
             using Field<bool>::operator=;
-            CardVoltage::Get& operator()(bool v);
+            CardVoltage::Read& operator()(bool v);
         } sync{};
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
         /// When enabled, the Notecard will monitor for changes to USB power
@@ -128,7 +128,7 @@ struct CardVoltage {
         struct usb_t : Field<bool> {
             using Field<bool>::Field;
             using Field<bool>::operator=;
-            CardVoltage::Get& operator()(bool v);
+            CardVoltage::Read& operator()(bool v);
         } usb{};
 #endif
         /// Ignore voltage readings above this level when performing
@@ -136,14 +136,14 @@ struct CardVoltage {
         struct vmax_t : Field<double> {
             using Field<double>::Field;
             using Field<double>::operator=;
-            CardVoltage::Get& operator()(double v);
+            CardVoltage::Read& operator()(double v);
         } vmax{};
         /// Ignore voltage readings below this level when performing
         /// calculations.
         struct vmin_t : Field<double> {
             using Field<double>::Field;
             using Field<double>::operator=;
-            CardVoltage::Get& operator()(double v);
+            CardVoltage::Read& operator()(double v);
         } vmin{};
 
         // Valid values for 'mode':
@@ -365,6 +365,7 @@ struct CardVoltage {
         Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
 
     };
+    using Get = Read;  ///< @deprecated Use Read instead.
 
     /// Provides the current VMODEM_P voltage level on the Notecard, and
     /// provides information about historical voltage trends. When used with the
@@ -372,7 +373,7 @@ struct CardVoltage {
     /// powered.
     ///
     /// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
-    struct Set {
+    struct Configure {
         static constexpr string_view notecard_request = "card.voltage";
         static constexpr bool supports_cmd = true;
         static constexpr Safety safety = Safety::Idempotent;
@@ -386,7 +387,7 @@ struct CardVoltage {
         struct alert_t : Field<bool> {
             using Field<bool>::Field;
             using Field<bool>::operator=;
-            CardVoltage::Set& operator()(bool v);
+            CardVoltage::Configure& operator()(bool v);
         } alert{};
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 2) || !defined(NOTE_API_STRICT)
         /// The offset, in volts, to account for the forward voltage drop of the
@@ -400,14 +401,14 @@ struct CardVoltage {
         struct calibration_t : Field<double> {
             using Field<double>::Field;
             using Field<double>::operator=;
-            CardVoltage::Set& operator()(double v);
+            CardVoltage::Configure& operator()(double v);
         } calibration{};
 #endif
         /// The number of hours to analyze, up to 720 (30 days).
         struct hours_t : Field<int32_t> {
             using Field<int32_t>::Field;
             using Field<int32_t>::operator=;
-            CardVoltage::Set& operator()(int32_t v);
+            CardVoltage::Configure& operator()(int32_t v);
         } hours{};
         /// Used to set voltage thresholds based on how the Notecard will be
         /// powered, and which can be used to configure voltage-variable
@@ -421,46 +422,46 @@ struct CardVoltage {
         struct mode_t : Field<note::string_view> {
             using Field<note::string_view>::Field;
             using Field<note::string_view>::operator=;
-            CardVoltage::Set& operator()(note::string_view v);
+            CardVoltage::Configure& operator()(note::string_view v);
         } mode{};
         /// Specifies an environment variable to override application default
         /// timing values.
         struct name_t : Field<note::string_view> {
             using Field<note::string_view>::Field;
             using Field<note::string_view>::operator=;
-            CardVoltage::Set& operator()(note::string_view v);
+            CardVoltage::Configure& operator()(note::string_view v);
         } name{};
         /// Disable historic voltage trend calculations.
         struct off_t : Field<bool> {
             using Field<bool>::Field;
             using Field<bool>::operator=;
-            CardVoltage::Set& operator()(bool v);
+            CardVoltage::Configure& operator()(bool v);
         } off{};
         /// Number of hours to move into the past before starting analysis.
         struct offset_t : Field<int32_t> {
             using Field<int32_t>::Field;
             using Field<int32_t>::operator=;
-            CardVoltage::Set& operator()(int32_t v);
+            CardVoltage::Configure& operator()(int32_t v);
         } offset{};
         /// Enable historic voltage trend calculations.
         struct on_t : Field<bool> {
             using Field<bool>::Field;
             using Field<bool>::operator=;
-            CardVoltage::Set& operator()(bool v);
+            CardVoltage::Configure& operator()(bool v);
         } on{};
         /// Used along with `calibration`, set to `true` to specify a new
         /// calibration value.
         struct set_t : Field<bool> {
             using Field<bool>::Field;
             using Field<bool>::operator=;
-            CardVoltage::Set& operator()(bool v);
+            CardVoltage::Configure& operator()(bool v);
         } set{};
         /// When enabled and the `usb` argument is set to `true`, the Notecard
         /// will perform a sync when USB power is connected or disconnected.
         struct sync_t : Field<bool> {
             using Field<bool>::Field;
             using Field<bool>::operator=;
-            CardVoltage::Set& operator()(bool v);
+            CardVoltage::Configure& operator()(bool v);
         } sync{};
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
         /// When enabled, the Notecard will monitor for changes to USB power
@@ -473,7 +474,7 @@ struct CardVoltage {
         struct usb_t : Field<bool> {
             using Field<bool>::Field;
             using Field<bool>::operator=;
-            CardVoltage::Set& operator()(bool v);
+            CardVoltage::Configure& operator()(bool v);
         } usb{};
 #endif
         /// Ignore voltage readings above this level when performing
@@ -481,14 +482,14 @@ struct CardVoltage {
         struct vmax_t : Field<double> {
             using Field<double>::Field;
             using Field<double>::operator=;
-            CardVoltage::Set& operator()(double v);
+            CardVoltage::Configure& operator()(double v);
         } vmax{};
         /// Ignore voltage readings below this level when performing
         /// calculations.
         struct vmin_t : Field<double> {
             using Field<double>::Field;
             using Field<double>::operator=;
-            CardVoltage::Set& operator()(double v);
+            CardVoltage::Configure& operator()(double v);
         } vmin{};
 
         // Valid values for 'mode':
@@ -710,153 +711,154 @@ struct CardVoltage {
         Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
 
     };
+    using Set = Configure;  ///< @deprecated Use Configure instead.
 };
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-inline CardVoltage::Get& CardVoltage::Get::alert_t::operator()(bool v) {
+inline CardVoltage::Read& CardVoltage::Read::alert_t::operator()(bool v) {
     Field<bool>::operator=(v);
-    return *reinterpret_cast<CardVoltage::Get*>(
-        reinterpret_cast<char*>(this) - offsetof(CardVoltage::Get, alert));
+    return *reinterpret_cast<CardVoltage::Read*>(
+        reinterpret_cast<char*>(this) - offsetof(CardVoltage::Read, alert));
 }
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 2) || !defined(NOTE_API_STRICT)
-inline CardVoltage::Get& CardVoltage::Get::calibration_t::operator()(double v) {
+inline CardVoltage::Read& CardVoltage::Read::calibration_t::operator()(double v) {
     Field<double>::operator=(v);
-    return *reinterpret_cast<CardVoltage::Get*>(
-        reinterpret_cast<char*>(this) - offsetof(CardVoltage::Get, calibration));
+    return *reinterpret_cast<CardVoltage::Read*>(
+        reinterpret_cast<char*>(this) - offsetof(CardVoltage::Read, calibration));
 }
 #endif
-inline CardVoltage::Get& CardVoltage::Get::hours_t::operator()(int32_t v) {
+inline CardVoltage::Read& CardVoltage::Read::hours_t::operator()(int32_t v) {
     Field<int32_t>::operator=(v);
-    return *reinterpret_cast<CardVoltage::Get*>(
-        reinterpret_cast<char*>(this) - offsetof(CardVoltage::Get, hours));
+    return *reinterpret_cast<CardVoltage::Read*>(
+        reinterpret_cast<char*>(this) - offsetof(CardVoltage::Read, hours));
 }
-inline CardVoltage::Get& CardVoltage::Get::mode_t::operator()(note::string_view v) {
+inline CardVoltage::Read& CardVoltage::Read::mode_t::operator()(note::string_view v) {
     Field<note::string_view>::operator=(v);
-    return *reinterpret_cast<CardVoltage::Get*>(
-        reinterpret_cast<char*>(this) - offsetof(CardVoltage::Get, mode));
+    return *reinterpret_cast<CardVoltage::Read*>(
+        reinterpret_cast<char*>(this) - offsetof(CardVoltage::Read, mode));
 }
-inline CardVoltage::Get& CardVoltage::Get::name_t::operator()(note::string_view v) {
+inline CardVoltage::Read& CardVoltage::Read::name_t::operator()(note::string_view v) {
     Field<note::string_view>::operator=(v);
-    return *reinterpret_cast<CardVoltage::Get*>(
-        reinterpret_cast<char*>(this) - offsetof(CardVoltage::Get, name));
+    return *reinterpret_cast<CardVoltage::Read*>(
+        reinterpret_cast<char*>(this) - offsetof(CardVoltage::Read, name));
 }
-inline CardVoltage::Get& CardVoltage::Get::off_t::operator()(bool v) {
+inline CardVoltage::Read& CardVoltage::Read::off_t::operator()(bool v) {
     Field<bool>::operator=(v);
-    return *reinterpret_cast<CardVoltage::Get*>(
-        reinterpret_cast<char*>(this) - offsetof(CardVoltage::Get, off));
+    return *reinterpret_cast<CardVoltage::Read*>(
+        reinterpret_cast<char*>(this) - offsetof(CardVoltage::Read, off));
 }
-inline CardVoltage::Get& CardVoltage::Get::offset_t::operator()(int32_t v) {
+inline CardVoltage::Read& CardVoltage::Read::offset_t::operator()(int32_t v) {
     Field<int32_t>::operator=(v);
-    return *reinterpret_cast<CardVoltage::Get*>(
-        reinterpret_cast<char*>(this) - offsetof(CardVoltage::Get, offset));
+    return *reinterpret_cast<CardVoltage::Read*>(
+        reinterpret_cast<char*>(this) - offsetof(CardVoltage::Read, offset));
 }
-inline CardVoltage::Get& CardVoltage::Get::on_t::operator()(bool v) {
+inline CardVoltage::Read& CardVoltage::Read::on_t::operator()(bool v) {
     Field<bool>::operator=(v);
-    return *reinterpret_cast<CardVoltage::Get*>(
-        reinterpret_cast<char*>(this) - offsetof(CardVoltage::Get, on));
+    return *reinterpret_cast<CardVoltage::Read*>(
+        reinterpret_cast<char*>(this) - offsetof(CardVoltage::Read, on));
 }
-inline CardVoltage::Get& CardVoltage::Get::set_t::operator()(bool v) {
+inline CardVoltage::Read& CardVoltage::Read::set_t::operator()(bool v) {
     Field<bool>::operator=(v);
-    return *reinterpret_cast<CardVoltage::Get*>(
-        reinterpret_cast<char*>(this) - offsetof(CardVoltage::Get, set));
+    return *reinterpret_cast<CardVoltage::Read*>(
+        reinterpret_cast<char*>(this) - offsetof(CardVoltage::Read, set));
 }
-inline CardVoltage::Get& CardVoltage::Get::sync_t::operator()(bool v) {
+inline CardVoltage::Read& CardVoltage::Read::sync_t::operator()(bool v) {
     Field<bool>::operator=(v);
-    return *reinterpret_cast<CardVoltage::Get*>(
-        reinterpret_cast<char*>(this) - offsetof(CardVoltage::Get, sync));
+    return *reinterpret_cast<CardVoltage::Read*>(
+        reinterpret_cast<char*>(this) - offsetof(CardVoltage::Read, sync));
 }
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
-inline CardVoltage::Get& CardVoltage::Get::usb_t::operator()(bool v) {
+inline CardVoltage::Read& CardVoltage::Read::usb_t::operator()(bool v) {
     Field<bool>::operator=(v);
-    return *reinterpret_cast<CardVoltage::Get*>(
-        reinterpret_cast<char*>(this) - offsetof(CardVoltage::Get, usb));
+    return *reinterpret_cast<CardVoltage::Read*>(
+        reinterpret_cast<char*>(this) - offsetof(CardVoltage::Read, usb));
 }
 #endif
-inline CardVoltage::Get& CardVoltage::Get::vmax_t::operator()(double v) {
+inline CardVoltage::Read& CardVoltage::Read::vmax_t::operator()(double v) {
     Field<double>::operator=(v);
-    return *reinterpret_cast<CardVoltage::Get*>(
-        reinterpret_cast<char*>(this) - offsetof(CardVoltage::Get, vmax));
+    return *reinterpret_cast<CardVoltage::Read*>(
+        reinterpret_cast<char*>(this) - offsetof(CardVoltage::Read, vmax));
 }
-inline CardVoltage::Get& CardVoltage::Get::vmin_t::operator()(double v) {
+inline CardVoltage::Read& CardVoltage::Read::vmin_t::operator()(double v) {
     Field<double>::operator=(v);
-    return *reinterpret_cast<CardVoltage::Get*>(
-        reinterpret_cast<char*>(this) - offsetof(CardVoltage::Get, vmin));
+    return *reinterpret_cast<CardVoltage::Read*>(
+        reinterpret_cast<char*>(this) - offsetof(CardVoltage::Read, vmin));
 }
 #pragma GCC diagnostic pop
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-inline CardVoltage::Set& CardVoltage::Set::alert_t::operator()(bool v) {
+inline CardVoltage::Configure& CardVoltage::Configure::alert_t::operator()(bool v) {
     Field<bool>::operator=(v);
-    return *reinterpret_cast<CardVoltage::Set*>(
-        reinterpret_cast<char*>(this) - offsetof(CardVoltage::Set, alert));
+    return *reinterpret_cast<CardVoltage::Configure*>(
+        reinterpret_cast<char*>(this) - offsetof(CardVoltage::Configure, alert));
 }
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 2) || !defined(NOTE_API_STRICT)
-inline CardVoltage::Set& CardVoltage::Set::calibration_t::operator()(double v) {
+inline CardVoltage::Configure& CardVoltage::Configure::calibration_t::operator()(double v) {
     Field<double>::operator=(v);
-    return *reinterpret_cast<CardVoltage::Set*>(
-        reinterpret_cast<char*>(this) - offsetof(CardVoltage::Set, calibration));
+    return *reinterpret_cast<CardVoltage::Configure*>(
+        reinterpret_cast<char*>(this) - offsetof(CardVoltage::Configure, calibration));
 }
 #endif
-inline CardVoltage::Set& CardVoltage::Set::hours_t::operator()(int32_t v) {
+inline CardVoltage::Configure& CardVoltage::Configure::hours_t::operator()(int32_t v) {
     Field<int32_t>::operator=(v);
-    return *reinterpret_cast<CardVoltage::Set*>(
-        reinterpret_cast<char*>(this) - offsetof(CardVoltage::Set, hours));
+    return *reinterpret_cast<CardVoltage::Configure*>(
+        reinterpret_cast<char*>(this) - offsetof(CardVoltage::Configure, hours));
 }
-inline CardVoltage::Set& CardVoltage::Set::mode_t::operator()(note::string_view v) {
+inline CardVoltage::Configure& CardVoltage::Configure::mode_t::operator()(note::string_view v) {
     Field<note::string_view>::operator=(v);
-    return *reinterpret_cast<CardVoltage::Set*>(
-        reinterpret_cast<char*>(this) - offsetof(CardVoltage::Set, mode));
+    return *reinterpret_cast<CardVoltage::Configure*>(
+        reinterpret_cast<char*>(this) - offsetof(CardVoltage::Configure, mode));
 }
-inline CardVoltage::Set& CardVoltage::Set::name_t::operator()(note::string_view v) {
+inline CardVoltage::Configure& CardVoltage::Configure::name_t::operator()(note::string_view v) {
     Field<note::string_view>::operator=(v);
-    return *reinterpret_cast<CardVoltage::Set*>(
-        reinterpret_cast<char*>(this) - offsetof(CardVoltage::Set, name));
+    return *reinterpret_cast<CardVoltage::Configure*>(
+        reinterpret_cast<char*>(this) - offsetof(CardVoltage::Configure, name));
 }
-inline CardVoltage::Set& CardVoltage::Set::off_t::operator()(bool v) {
+inline CardVoltage::Configure& CardVoltage::Configure::off_t::operator()(bool v) {
     Field<bool>::operator=(v);
-    return *reinterpret_cast<CardVoltage::Set*>(
-        reinterpret_cast<char*>(this) - offsetof(CardVoltage::Set, off));
+    return *reinterpret_cast<CardVoltage::Configure*>(
+        reinterpret_cast<char*>(this) - offsetof(CardVoltage::Configure, off));
 }
-inline CardVoltage::Set& CardVoltage::Set::offset_t::operator()(int32_t v) {
+inline CardVoltage::Configure& CardVoltage::Configure::offset_t::operator()(int32_t v) {
     Field<int32_t>::operator=(v);
-    return *reinterpret_cast<CardVoltage::Set*>(
-        reinterpret_cast<char*>(this) - offsetof(CardVoltage::Set, offset));
+    return *reinterpret_cast<CardVoltage::Configure*>(
+        reinterpret_cast<char*>(this) - offsetof(CardVoltage::Configure, offset));
 }
-inline CardVoltage::Set& CardVoltage::Set::on_t::operator()(bool v) {
+inline CardVoltage::Configure& CardVoltage::Configure::on_t::operator()(bool v) {
     Field<bool>::operator=(v);
-    return *reinterpret_cast<CardVoltage::Set*>(
-        reinterpret_cast<char*>(this) - offsetof(CardVoltage::Set, on));
+    return *reinterpret_cast<CardVoltage::Configure*>(
+        reinterpret_cast<char*>(this) - offsetof(CardVoltage::Configure, on));
 }
-inline CardVoltage::Set& CardVoltage::Set::set_t::operator()(bool v) {
+inline CardVoltage::Configure& CardVoltage::Configure::set_t::operator()(bool v) {
     Field<bool>::operator=(v);
-    return *reinterpret_cast<CardVoltage::Set*>(
-        reinterpret_cast<char*>(this) - offsetof(CardVoltage::Set, set));
+    return *reinterpret_cast<CardVoltage::Configure*>(
+        reinterpret_cast<char*>(this) - offsetof(CardVoltage::Configure, set));
 }
-inline CardVoltage::Set& CardVoltage::Set::sync_t::operator()(bool v) {
+inline CardVoltage::Configure& CardVoltage::Configure::sync_t::operator()(bool v) {
     Field<bool>::operator=(v);
-    return *reinterpret_cast<CardVoltage::Set*>(
-        reinterpret_cast<char*>(this) - offsetof(CardVoltage::Set, sync));
+    return *reinterpret_cast<CardVoltage::Configure*>(
+        reinterpret_cast<char*>(this) - offsetof(CardVoltage::Configure, sync));
 }
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
-inline CardVoltage::Set& CardVoltage::Set::usb_t::operator()(bool v) {
+inline CardVoltage::Configure& CardVoltage::Configure::usb_t::operator()(bool v) {
     Field<bool>::operator=(v);
-    return *reinterpret_cast<CardVoltage::Set*>(
-        reinterpret_cast<char*>(this) - offsetof(CardVoltage::Set, usb));
+    return *reinterpret_cast<CardVoltage::Configure*>(
+        reinterpret_cast<char*>(this) - offsetof(CardVoltage::Configure, usb));
 }
 #endif
-inline CardVoltage::Set& CardVoltage::Set::vmax_t::operator()(double v) {
+inline CardVoltage::Configure& CardVoltage::Configure::vmax_t::operator()(double v) {
     Field<double>::operator=(v);
-    return *reinterpret_cast<CardVoltage::Set*>(
-        reinterpret_cast<char*>(this) - offsetof(CardVoltage::Set, vmax));
+    return *reinterpret_cast<CardVoltage::Configure*>(
+        reinterpret_cast<char*>(this) - offsetof(CardVoltage::Configure, vmax));
 }
-inline CardVoltage::Set& CardVoltage::Set::vmin_t::operator()(double v) {
+inline CardVoltage::Configure& CardVoltage::Configure::vmin_t::operator()(double v) {
     Field<double>::operator=(v);
-    return *reinterpret_cast<CardVoltage::Set*>(
-        reinterpret_cast<char*>(this) - offsetof(CardVoltage::Set, vmin));
+    return *reinterpret_cast<CardVoltage::Configure*>(
+        reinterpret_cast<char*>(this) - offsetof(CardVoltage::Configure, vmin));
 }
 #pragma GCC diagnostic pop
 

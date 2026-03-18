@@ -49,7 +49,7 @@ public:
     // Arm attention with the current desired mode set.
     auto arm(Seconds timeout = {}) -> Result<void> {
         api::CardAttn::Arm req;
-        if (!desired_mode_.empty()) req.mode(desired_mode_);
+        if (!desired_mode_.empty()) req.triggers(desired_mode_);
         if (timeout.count > 0) req.seconds(timeout);
         auto r = ch_.execute(req);
         if (!r) return Unexpected(r.error());

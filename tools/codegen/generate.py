@@ -130,10 +130,26 @@ def _cpp_literal(value) -> str:
     return f'"{value}"'
 
 
-def _collect_sample_tests(spec_path: Path) -> list[dict]:
+def _build_accessor_map(endpoints) -> dict[tuple, str]:
+    """Map (notecard_request, struct_name, wire_name) -> accessor_name.
+
+    Used to resolve C++ accessor names for x-validation fields, accounting
+    for renames like mode->triggers when mode_prefix is set.
+    """
+    result = {}
+    for ep in endpoints:
+        for op in ep.operations:
+            for prop in op.properties:
+                key = (ep.wire_name, op.struct_name, prop.wire_name)
+                result[key] = prop.accessor_name
+    return result
+
+
+def _collect_sample_tests(spec_path: Path, endpoints=None) -> list[dict]:
     """Read x-validation from spec samples and build test case objects."""
     with open(spec_path) as f:
         spec = json.load(f)
+    accessor_map = _build_accessor_map(endpoints) if endpoints else {}
 
     tests = []
     seen = set()  # deduplicate (samples appear on multiple operations)
@@ -167,10 +183,17 @@ def _collect_sample_tests(spec_path: Path) -> list[dict]:
                 fields = []
                 for field_name, value in (validation.get("fields") or {}).items():
                     cpp_name = property_to_cpp_name(field_name)
+                    default_accessor = property_to_accessor_name(cpp_name)
+                    # Look up actual accessor name from parsed model (handles
+                    # renames like mode->triggers when mode_prefix is set).
+                    accessor = accessor_map.get(
+                        (notecard_request, sub_type, field_name),
+                        default_accessor,
+                    )
                     fields.append({
                         "wire_name": field_name,
                         "cpp_name": cpp_name,
-                        "accessor_name": property_to_accessor_name(cpp_name),
+                        "accessor_name": accessor,
                         "literal": _cpp_literal(value),
                     })
 
@@ -297,7 +320,7 @@ def main() -> None:
     print(f"Generated Api class header: {api_path}")
 
     # Generate sample tests
-    tests = _collect_sample_tests(spec_path)
+    tests = _collect_sample_tests(spec_path, endpoints)
     if tests:
         test_template = env.get_template("test_samples.cpp.j2")
         test_content = test_template.render(tests=tests)

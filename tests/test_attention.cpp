@@ -205,7 +205,7 @@ TEST_CASE("CardAttn::Arm build() prepends arm, to trigger sources (string)") {
     TestFixture f;
     note::Api api(f.nc);
     auto req = api.card.attn().arm();
-    req.mode("files,env");  // string assignment for predictable ordering
+    req.triggers("files,env");  // string assignment for predictable ordering
     req.execute();
     REQUIRE(f.captured.size() == 1);
     REQUIRE(f.captured[0].find("\"mode\":\"arm,files,env\"") != std::string::npos);
@@ -215,7 +215,7 @@ TEST_CASE("CardAttn::Arm build() prepends arm, to trigger sources (flags)") {
     TestFixture f;
     note::Api api(f.nc);
     auto req = api.card.attn().arm();
-    req.mode = note::attn::files;  // single flag
+    req.triggers = note::attn::files;  // single flag
     req.execute();
     REQUIRE(f.captured.size() == 1);
     REQUIRE(f.captured[0].find("\"mode\":\"arm,files\"") != std::string::npos);

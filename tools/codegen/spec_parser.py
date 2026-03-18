@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from collections import defaultdict
+from dataclasses import replace
 from pathlib import Path
 
 from .model import (
@@ -332,8 +333,12 @@ def _expand_intents(
 
         # Request fields — subset of base operation's properties
         intent_field_names = set(intent.get("fields", []))
+        mode_prefix = intent.get("mode_prefix")
         req_props = [
-            p for p in all_req_props
+            # Rename mode->triggers (C++ name only) when mode_prefix is set,
+            # so users set trigger sources rather than the full wire mode string.
+            replace(p, cpp_name="triggers") if (mode_prefix and p.wire_name == "mode") else p
+            for p in all_req_props
             if p.wire_name in intent_field_names
             and p.wire_name not in implicit_wire_names
         ]

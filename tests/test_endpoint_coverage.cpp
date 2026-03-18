@@ -185,7 +185,7 @@ TEST_CASE("note::api::CardAttn::Arm request builder") {
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.files(note::string_view("x-files"));
-    req.mode(note::string_view("arm"));
+    req.triggers(note::string_view("arm"));
     req.on(true);
     req.seconds(note::Seconds{42});
     req.execute();

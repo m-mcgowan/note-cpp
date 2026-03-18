@@ -392,18 +392,22 @@ def parse_spec(spec_path: str | Path) -> list[EndpointGroup]:
     # Group operations by x-notecard-request
     groups: dict[str, list[tuple[str, dict]]] = defaultdict(list)
     alias_specs: dict[str, list[dict]] = {}  # req_name -> x-aliases list
+    flat_aliases: dict[str, str] = {}         # req_name -> flat alias name
     for path, path_item in spec.get("paths", {}).items():
-        # Collect x-aliases at the path item level
+        # Collect x-aliases and x-flat-alias at the path item level
         path_aliases = path_item.get("x-aliases", [])
+        path_flat_alias = path_item.get("x-flat-alias")
 
         for method, operation in path_item.items():
-            if method in ("parameters", "summary", "description", "x-aliases"):
+            if method in ("parameters", "summary", "description", "x-aliases", "x-flat-alias"):
                 continue
             req_name = operation.get("x-notecard-request")
             if req_name:
                 groups[req_name].append((method, operation))
                 if path_aliases and req_name not in alias_specs:
                     alias_specs[req_name] = path_aliases
+                if path_flat_alias and req_name not in flat_aliases:
+                    flat_aliases[req_name] = path_flat_alias
 
     endpoints = []
     for wire_name, ops in sorted(groups.items()):
@@ -457,6 +461,7 @@ def parse_spec(spec_path: str | Path) -> list[EndpointGroup]:
             is_polymorphic=is_polymorphic,
             operations=operations,
             aliases=aliases,
+            flat_alias=flat_aliases.get(wire_name),
         ))
 
     return endpoints

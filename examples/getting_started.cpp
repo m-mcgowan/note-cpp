@@ -227,8 +227,8 @@ int main() {
     api.note.pop("requests.qi").execute();
 
     // The full polymorphic factory is still available when you need it:
-    //   api.note.get().get().file("data.qi").execute();
-    //   api.note.get().delete_().file("requests.qi").execute();
+    //   api.note.get().read().file("data.qi").execute();
+    //   api.note.get().pop().file("requests.qi").execute();
 
     // Fire-and-forget command — sends "cmd" instead of "req"
     std::puts("--- hub.set (command) ---");
@@ -272,7 +272,7 @@ int main() {
     // Register a Notecard template — auto-generates type hints
     // (14.1 = TFLOAT32, 11 = TINT16)
     std::puts("--- note.template ---");
-    api.note.template_().set("sensors.qo")
+    api.note.templates().define("sensors.qo")
         .body(note::template_of<Readings>())
         .execute();
 

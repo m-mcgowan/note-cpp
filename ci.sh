@@ -6,6 +6,7 @@ ROOT="$(cd "$(dirname "$0")" && pwd)"
 # ── Multi-compiler support ──────────────────────────────────────────────────
 # Usage:
 #   ./ci.sh                  Run with default compiler (c++ -std=c++2b)
+#   ./ci.sh --quick          Fast check: codegen + unit tests only (good for iterating)
 #   ./ci.sh --all-compilers  Run with all available compilers
 #   ./ci.sh --coverage       Build with coverage instrumentation and generate report
 #   ./ci.sh --integrations   Build and run JSON backend integration tests
@@ -577,6 +578,66 @@ run_docs() {
     echo
 }
 
+run_quick() {
+    local CXX="${1:-${CXX:-c++}}"
+    local CXXFLAGS="${2:-${CXXFLAGS:--std=c++2b}}"
+    local INCLUDE="-I $ROOT/include"
+
+    echo "════════════════════════════════════════════════════════════════"
+    echo "Quick check: codegen + unit tests"
+    echo "Compiler: $($CXX --version | head -1)"
+    echo "════════════════════════════════════════════════════════════════"
+    echo
+
+    # Code generation
+    PYTHON=python3
+    if [ -f "$ROOT/.venv/bin/python3" ]; then
+        PYTHON="$ROOT/.venv/bin/python3"
+    fi
+    if command -v "$PYTHON" >/dev/null 2>&1; then
+        echo "=== Code generation ==="
+        "$PYTHON" "$ROOT/tools/codegen/generate.py" "$ROOT/notecard-api.openapi.json" \
+            -o "$ROOT/include/note/api" \
+            --api "$ROOT/include/note/api.hpp" \
+            --test-dir "$ROOT/tests"
+        echo
+    fi
+
+    # Build and run unit tests
+    echo "=== Unit tests ==="
+    $CXX $CXXFLAGS $INCLUDE -I "$ROOT/tests" -o /tmp/note-cpp-tests \
+        "$ROOT/tests/test_main.cpp" \
+        "$ROOT/tests/test_wire_format.cpp" \
+        "$ROOT/tests/test_samples.cpp" \
+        "$ROOT/tests/test_body.cpp" \
+        "$ROOT/tests/test_json_buf.cpp" \
+        "$ROOT/tests/test_property_functor.cpp" \
+        "$ROOT/tests/test_transport_crc32.cpp" \
+        "$ROOT/tests/test_transport_serial.cpp" \
+        "$ROOT/tests/test_transport_i2c.cpp" \
+        "$ROOT/tests/test_notecard.cpp" \
+        "$ROOT/tests/test_api_context.cpp" \
+        "$ROOT/tests/test_endpoint_coverage.cpp" \
+        "$ROOT/tests/test_voltage_variable.cpp" \
+        "$ROOT/tests/test_flag_set.cpp" \
+        "$ROOT/tests/test_json_sax.cpp" \
+        "$ROOT/tests/test_channel.cpp" \
+        "$ROOT/tests/test_state_store.cpp" \
+        "$ROOT/tests/test_target.cpp" \
+        "$ROOT/tests/test_make_api.cpp" \
+        "$ROOT/tests/test_units.cpp" \
+        "$ROOT/tests/test_connection.cpp" \
+        "$ROOT/tests/test_sync.cpp" \
+        "$ROOT/tests/test_templates.cpp" \
+        "$ROOT/tests/test_attention.cpp" \
+        "$ROOT/tests/test_setup.cpp"
+    /tmp/note-cpp-tests
+    echo "  tests: OK"
+    echo
+    echo "Quick check passed."
+    echo
+}
+
 run_integrations() {
     echo "=== JSON backend integration tests ==="
     local CMAKE_POLICY="-DCMAKE_POLICY_VERSION_MINIMUM=3.5"
@@ -596,6 +657,9 @@ run_integrations() {
 }
 
 case "${1:-}" in
+    --quick)
+        run_quick "${CXX:-c++}" "${CXXFLAGS:--std=c++2b}"
+        ;;
     --coverage)
         run_coverage
         ;;

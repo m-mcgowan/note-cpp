@@ -252,10 +252,10 @@ TEST_CASE("Api factory fluent chain") {
 TEST_CASE("Api factory polymorphic endpoints") {
     TestHarness h;
     note::Api api(h.nc);
-    api.note.get().get().file("data.qi").execute();
+    api.note.get().read().file("data.qi").execute();
     REQUIRE(h.last_request == R"({"req":"note.get","file":"data.qi"})");
 
-    api.note.get().delete_().file("data.qi").execute();
+    api.note.get().pop().file("data.qi").execute();
     REQUIRE(h.last_request ==
         R"({"req":"note.get","delete":true,"file":"data.qi"})");
 }

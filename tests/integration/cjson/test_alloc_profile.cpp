@@ -198,10 +198,10 @@ struct ScriptedSerialHal : public note::transport::SerialHal {
 };
 
 // ═══════════════════════════════════════════════════════════════════════════
-// ScriptedI2cHal — minimal reactive I2C HAL
+// ScriptedI2CHal — minimal reactive I2C HAL
 // ═══════════════════════════════════════════════════════════════════════════
 
-struct ScriptedI2cHal : public note::transport::I2cHal {
+struct ScriptedI2CHal : public note::transport::I2CHal {
     std::deque<uint8_t> rx;
     std::deque<std::string> json_responses;
     uint32_t now_ms = 0;
@@ -318,7 +318,7 @@ static void test_serial_transport_alloc_profile() {
 }
 
 static void test_i2c_transport_alloc_profile() {
-    ScriptedI2cHal hal;
+    ScriptedI2CHal hal;
     note::transport::NotecardI2c transport(hal);
 
     // Warm up

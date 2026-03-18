@@ -34,8 +34,8 @@ struct Fixture {
     Esp32SerialHal hal{notecardUart()};
     SerialTransport transport{hal};
     note::backends::CjsonBackend backend;
-    note::Notecard nc{backend, transport};
-    Api api{nc};
+    note::Notecard notecard{backend, transport};
+    Api nc{notecard};
 };
 
 struct SensorData {
@@ -52,133 +52,136 @@ TEST_SUITE("serial") {
 
 TEST_CASE("card.version returns valid device info") {
     Fixture f;
-    auto r = f.api.card.version().execute();
-    if (!r) { INFO(note::to_string(r.error())); }
-    REQUIRE(r);
-    CHECK(!note::string_view(r.device).empty());
-    CHECK(!note::string_view(r.version).empty());
-    MESSAGE("device: ", r.device);
-    MESSAGE("version: ", r.version);
+    auto& nc = f.nc;
+    auto rsp = nc.card.version().execute();
+    if (!rsp) { INFO(note::to_string(rsp.error())); }
+    REQUIRE(rsp);
+    CHECK(!note::string_view(rsp.device).empty());
+    CHECK(!note::string_view(rsp.version).empty());
+    MESSAGE("device: ", rsp.device);
+    MESSAGE("version: ", rsp.version);
 }
 
 TEST_CASE("card.status returns operational state") {
     Fixture f;
-    auto r = f.api.card.status().execute();
-    if (!r) { INFO(note::to_string(r.error())); }
-    REQUIRE(r);
-    CHECK(!note::string_view(r.status).empty());
-    MESSAGE("status: ", r.status);
-    MESSAGE("storage: ", r.storage, "%");
+    auto& nc = f.nc;
+    auto rsp = nc.card.status().execute();
+    if (!rsp) { INFO(note::to_string(rsp.error())); }
+    REQUIRE(rsp);
+    CHECK(!note::string_view(rsp.status).empty());
+    MESSAGE("status: ", rsp.status);
+    MESSAGE("storage: ", rsp.storage, "%");
 }
 
 // ─── Configuration round-trip ───────────────────────────────────────────────
 
 TEST_CASE("hub.set + hub.get round-trip") {
     Fixture f;
-    auto set_r = f.api.hub.set()
+    auto& nc = f.nc;
+    auto set_rsp = nc.hub.set()
         .product("com.example.integration-test")
         .execute();
-    if (!set_r) { INFO(note::to_string(set_r.error())); }
-    REQUIRE(set_r);
+    if (!set_rsp) { INFO(note::to_string(set_rsp.error())); }
+    REQUIRE(set_rsp);
 
-    auto get_r = f.api.hub.get().execute();
-    if (!get_r) { INFO(note::to_string(get_r.error())); }
-    REQUIRE(get_r);
-    CHECK(note::string_view(get_r.product) == "com.example.integration-test");
+    auto get_rsp = nc.hub.get().execute();
+    if (!get_rsp) { INFO(note::to_string(get_rsp.error())); }
+    REQUIRE(get_rsp);
+    CHECK(note::string_view(get_rsp.product) == "com.example.integration-test");
 }
 
 // ─── Note lifecycle ─────────────────────────────────────────────────────────
 
 TEST_CASE("note.add sends a note") {
     Fixture f;
-    auto r = f.api.note.add()
+    auto& nc = f.nc;
+    auto rsp = nc.note.add()
         .file("integration-test.qo")
         .execute();
-    if (!r) { INFO(note::to_string(r.error())); }
-    REQUIRE(r);
+    if (!rsp) { INFO(note::to_string(rsp.error())); }
+    REQUIRE(rsp);
 }
 
 TEST_CASE("note.update + note.get body round-trip") {
     Fixture f;
+    auto& nc = f.nc;
     const char* file = "integration-body.db";
     const char* noteId = "test-sensor";
 
     // note.update creates or replaces — idempotent across test runs
     SensorData sent{.temperature = 23.5f, .humidity = 65};
-    auto update_r = f.api.note.update(file, noteId)
+    auto update_rsp = nc.note.update(file, noteId)
         .body(sent)
         .execute();
-    if (!update_r) { MESSAGE("update error: ", note::to_string(update_r.error())); }
-    REQUIRE(update_r);
+    if (!update_rsp) { MESSAGE("update error: ", note::to_string(update_rsp.error())); }
+    REQUIRE(update_rsp);
 
-    auto get_r = f.api.note.get().read()
-        .file(file)
+    auto get_rsp = nc.note.read(file)
         .noteId(noteId)
         .execute();
-    if (!get_r) { MESSAGE("get error: ", note::to_string(get_r.error())); }
-    REQUIRE(get_r);
+    if (!get_rsp) { MESSAGE("get error: ", note::to_string(get_rsp.error())); }
+    REQUIRE(get_rsp);
 
-    SensorData received = get_r.bodyAs<SensorData>();
+    SensorData received = get_rsp.bodyAs<SensorData>();
     CHECK(received.temperature == doctest::Approx(sent.temperature));
     CHECK(received.humidity == sent.humidity);
 }
 
 TEST_CASE("note.changes tracks additions") {
     Fixture f;
+    auto& nc = f.nc;
     const char* file = "integration-changes.db";
     const char* tracker = "integration-test";
 
     // Reset tracker
-    auto reset_r = f.api.note.changes().peek()
+    auto reset_rsp = nc.note.changes().peek()
         .file(file)
         .tracker(tracker)
         .start(true)
         .execute();
-    if (!reset_r) { MESSAGE("reset error: ", note::to_string(reset_r.error())); }
+    if (!reset_rsp) { MESSAGE("reset error: ", note::to_string(reset_rsp.error())); }
 
     // Delete any leftover note, then add
-    f.api.note.delete_(file, "test-change").execute();
-    auto add_r = f.api.note.add().file(file).noteId("test-change").execute();
-    if (!add_r) { MESSAGE("add error: ", note::to_string(add_r.error())); }
-    REQUIRE(add_r);
+    nc.note.remove(file, "test-change").execute();
+    auto add_rsp = nc.note.add().file(file).noteId("test-change").execute();
+    if (!add_rsp) { MESSAGE("add error: ", note::to_string(add_rsp.error())); }
+    REQUIRE(add_rsp);
 
     // Check for changes
-    auto r = f.api.note.changes().peek()
+    auto rsp = nc.note.changes().peek()
         .file(file)
         .tracker(tracker)
         .execute();
-    if (!r) { MESSAGE("changes error: ", note::to_string(r.error())); }
-    REQUIRE(r);
-    CHECK(r.changes > 0);
-    MESSAGE("changes: ", r.changes, " total: ", r.total);
+    if (!rsp) { MESSAGE("changes error: ", note::to_string(rsp.error())); }
+    REQUIRE(rsp);
+    CHECK(rsp.changes > 0);
+    MESSAGE("changes: ", rsp.changes, " total: ", rsp.total);
 
     // Clean up (.db needs note.delete)
-    f.api.note.delete_(file, "test-change").execute();
+    nc.note.remove(file, "test-change").execute();
 }
 
 // ─── Environment variables ──────────────────────────────────────────────────
 
 TEST_CASE("env.default set + get round-trip") {
     Fixture f;
+    auto& nc = f.nc;
 
-    // Set an env var
-    auto set_r = f.api.env.default_().set("_integration_test_var")
-        .text("hello-from-note-cpp")
+    auto set_rsp = nc.env.setDefault("_integration_test_var", "hello-from-note-cpp")
         .execute();
-    if (!set_r) { INFO(note::to_string(set_r.error())); }
-    REQUIRE(set_r);
+    if (!set_rsp) { INFO(note::to_string(set_rsp.error())); }
+    REQUIRE(set_rsp);
 
     // Read it back via env.get
-    auto get_r = f.nc.request("env.get", [](note::JsonBuilder& b) {
+    auto get_rsp = f.notecard.request("env.get", [](note::JsonBuilder& b) {
         b.add("name", "_integration_test_var");
     });
-    REQUIRE(get_r);
-    auto text = (*get_r)->get_string("text");
+    REQUIRE(get_rsp);
+    auto text = (*get_rsp)->get_string("text");
     CHECK(note::string_view(text) == "hello-from-note-cpp");
 
     // Clean up
-    f.api.env.default_().remove("_integration_test_var")
-        .execute();
+    nc.env.clearDefault("_integration_test_var").execute();
 }
 
 // ─── Binary data transfer ───────────────────────────────────────────────────
@@ -195,18 +198,20 @@ namespace {
 /// Put binary data to the Notecard over serial and verify the round-trip.
 /// Handles: clear → put JSON → raw transmit → verify → get JSON → raw receive → decode → verify
 void binary_round_trip(Fixture& f, const uint8_t* data, size_t data_len, const char* label) {
+    auto& nc = f.nc;
+    auto& hal = f.hal;
     INFO("payload: ", label, " (", data_len, " bytes)");
 
     // Clear any existing binary data
-    f.api.card.binary().clear().execute();
+    nc.binary.clear().execute();
 
     // Check available space
-    auto status_r = f.api.card.binary().status().execute();
-    if (!status_r) { INFO(note::to_string(status_r.error())); }
-    REQUIRE(status_r);
-    REQUIRE(status_r.max > 0);
-    REQUIRE(static_cast<int32_t>(data_len) <= status_r.max);
-    MESSAGE(label, ": binary max=", status_r.max, " bytes, payload=", data_len, " bytes");
+    auto status_rsp = nc.binary.status().execute();
+    if (!status_rsp) { INFO(note::to_string(status_rsp.error())); }
+    REQUIRE(status_rsp);
+    REQUIRE(status_rsp.max > 0);
+    REQUIRE(static_cast<int32_t>(data_len) <= status_rsp.max);
+    MESSAGE(label, ": binary max=", status_rsp.max, " bytes, payload=", data_len, " bytes");
 
     // COBS-encode the data
     std::vector<uint8_t> cobs_buf(cobs_encoded_size(data_len));
@@ -220,56 +225,56 @@ void binary_round_trip(Fixture& f, const uint8_t* data, size_t data_len, const c
 
     // JSON handshake: tell the Notecard how many COBS bytes are coming.
     // The cobs field is the encoded length WITHOUT the EOP — matches note-c.
-    auto put_r = f.api.card.binaryPut()
+    auto put_rsp = nc.card.binaryPut()
         .cobs(static_cast<int32_t>(cobs_len))
         .status(md5)
         .execute();
-    if (!put_r) { INFO(note::to_string(put_r.error())); }
-    REQUIRE(put_r);
+    if (!put_rsp) { INFO(note::to_string(put_rsp.error())); }
+    REQUIRE(put_rsp);
 
     // Send raw COBS-encoded bytes + newline terminator
     cobs_buf.push_back('\n');
-    bool tx_ok = f.hal.transmit(cobs_buf.data(), cobs_buf.size());
+    bool tx_ok = hal.transmit(cobs_buf.data(), cobs_buf.size());
     REQUIRE(tx_ok);
 
     // Delay for Notecard to process the binary data
-    f.hal.delay(250);
+    hal.delay(250);
 
     // ── Verify stored data ─────────────────────────────────────────
 
-    auto verify_r = f.api.card.binary().status().execute();
-    if (!verify_r) { INFO(note::to_string(verify_r.error())); }
-    REQUIRE(verify_r);
-    CHECK(verify_r.length == static_cast<int32_t>(data_len));
-    CHECK(verify_r.cobs == static_cast<int32_t>(cobs_len));
+    auto verify_rsp = nc.binary.status().execute();
+    if (!verify_rsp) { INFO(note::to_string(verify_rsp.error())); }
+    REQUIRE(verify_rsp);
+    CHECK(verify_rsp.length == static_cast<int32_t>(data_len));
+    CHECK(verify_rsp.cobs == static_cast<int32_t>(cobs_len));
     // Verify the Notecard computed the same MD5 for the stored data
-    if (note::string_view(verify_r.status).size() > 0) {
-        CHECK(note::string_view(verify_r.status) == note::string_view(md5));
+    if (note::string_view(verify_rsp.status).size() > 0) {
+        CHECK(note::string_view(verify_rsp.status) == note::string_view(md5));
     }
 
     // ── GET phase ──────────────────────────────────────────────────
 
     // JSON handshake: request the binary data back
-    auto get_r = f.api.card.binaryGet()
-        .cobs(verify_r.cobs)
-        .length(verify_r.length)
+    auto get_rsp = nc.card.binaryGet()
+        .cobs(verify_rsp.cobs)
+        .length(verify_rsp.length)
         .execute();
-    if (!get_r) { INFO(note::to_string(get_r.error())); }
-    REQUIRE(get_r);
+    if (!get_rsp) { INFO(note::to_string(get_rsp.error())); }
+    REQUIRE(get_rsp);
 
     // Verify MD5 in get response
-    if (note::string_view(get_r.status).size() > 0) {
-        CHECK(note::string_view(get_r.status) == note::string_view(md5));
+    if (note::string_view(get_rsp.status).size() > 0) {
+        CHECK(note::string_view(get_rsp.status) == note::string_view(md5));
     }
 
     // Read raw COBS bytes + newline from the wire
     std::vector<uint8_t> rx_buf(cobs_len + 16);
     size_t total_rx = 0;
-    uint32_t deadline = f.hal.millis() + 5000;
-    while (total_rx < (cobs_len + 1) && f.hal.millis() < deadline) {
-        size_t n = f.hal.receive(rx_buf.data() + total_rx, rx_buf.size() - total_rx);
+    uint32_t deadline = hal.millis() + 5000;
+    while (total_rx < (cobs_len + 1) && hal.millis() < deadline) {
+        size_t n = hal.receive(rx_buf.data() + total_rx, rx_buf.size() - total_rx);
         total_rx += n;
-        if (n == 0) f.hal.delay(10);
+        if (n == 0) hal.delay(10);
     }
     REQUIRE(total_rx >= cobs_len);
 
@@ -287,7 +292,7 @@ void binary_round_trip(Fixture& f, const uint8_t* data, size_t data_len, const c
     CHECK(memcmp(decoded.data(), data, data_len) == 0);
 
     // Clean up
-    f.api.card.binary().clear().execute();
+    nc.binary.clear().execute();
 }
 
 } // namespace
@@ -323,13 +328,14 @@ TEST_CASE("card.binary put + get — 512-byte payload") {
 
 TEST_CASE("bad request returns Notecard error") {
     Fixture f;
-    auto r = f.api.note.get().pop()
+    auto& nc = f.nc;
+    auto rsp = nc.note.get().pop()
         .file("nonexistent-file.qi")
         .execute();
-    CHECK(!r);
-    if (!r) {
-        CHECK(r.error().code == note::Error::Notecard);
-        MESSAGE("error: ", note::to_string(r.error()));
+    CHECK(!rsp);
+    if (!rsp) {
+        CHECK(rsp.error().code == note::Error::Notecard);
+        MESSAGE("error: ", note::to_string(rsp.error()));
     }
 }
 

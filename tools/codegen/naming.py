@@ -99,8 +99,8 @@ def nested_type_name(cpp_name: str) -> str:
 # when used as method names on resource groups.
 _GROUP_METHOD_RENAMES: dict[str, str] = {
     "delete": "delete_",
-    "template": "template_",
-    "default": "default_",
+    "template": "templates",   # "template" is a C++ keyword — plural avoids trailing _
+    "default": "defaults",     # "default" is a C++ keyword — plural avoids trailing _
     "class": "class_",
     "new": "new_",
 }

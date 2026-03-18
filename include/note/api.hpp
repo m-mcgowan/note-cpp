@@ -97,6 +97,8 @@ public:
         , ntn{&nc_}
         , var{&nc_}
         , web{&nc_}
+        , attn{&nc_}
+        , binary{&nc_}
     {}
 #if __cplusplus >= 202002L
     explicit Api(Notecard& nc, TargetT) : nc_(nc)
@@ -109,6 +111,8 @@ public:
         , ntn{&nc_}
         , var{&nc_}
         , web{&nc_}
+        , attn{&nc_}
+        , binary{&nc_}
     {}
 #endif
 
@@ -931,7 +935,7 @@ public:
         template<typename T> T create() { T r; r.nc_ = nc_; return r; }
 
         /// env.default
-        EnvDefaultFactory default_() { return {nc_}; }
+        EnvDefaultFactory defaults() { return {nc_}; }
 
         /// env.get
         auto get() { return create<api::EnvGet>(); }
@@ -966,10 +970,15 @@ public:
 #endif
 
         /// env.template
-        auto template_() { return create<api::EnvTemplate>(); }
+        auto templates() { return create<api::EnvTemplate>(); }
 
 
         // Layer 2 convenience aliases
+        /// Argument struct for setDefault() — supports `{.field = value}` init.
+        struct SetDefaultArgs {
+            note::string_view name{};
+            note::string_view text{};
+        };
         /// Used by the Notecard host to specify a default value for an
         /// environment variable until that variable is overridden by a device,
         /// project or fleet-wide setting at Notehub.
@@ -979,6 +988,28 @@ public:
             r.text = text;
             return r;
         }
+#if __cplusplus >= 202002L
+        /// Accepts SetDefaultArgs, the full request type, or any struct with the required fields.
+        template<typename T>
+            requires requires(const T& _v) { { _v.name }; { _v.text }; }
+        auto setDefault(T args) {
+            auto r = create<api::EnvDefault::Set>();
+            r.name = args.name;
+            r.text = args.text;
+            return r;
+        }
+#else
+        auto setDefault(SetDefaultArgs args) {
+            auto r = create<api::EnvDefault::Set>();
+            r.name = args.name;
+            r.text = args.text;
+            return r;
+        }
+#endif
+        /// Argument struct for clearDefault() — supports `{.field = value}` init.
+        struct ClearDefaultArgs {
+            note::string_view name{};
+        };
         /// Used by the Notecard host to specify a default value for an
         /// environment variable until that variable is overridden by a device,
         /// project or fleet-wide setting at Notehub.
@@ -987,6 +1018,22 @@ public:
             r.name = name;
             return r;
         }
+#if __cplusplus >= 202002L
+        /// Accepts ClearDefaultArgs, the full request type, or any struct with the required fields.
+        template<typename T>
+            requires requires(const T& _v) { { _v.name }; }
+        auto clearDefault(T args) {
+            auto r = create<api::EnvDefault::Remove>();
+            r.name = args.name;
+            return r;
+        }
+#else
+        auto clearDefault(ClearDefaultArgs args) {
+            auto r = create<api::EnvDefault::Remove>();
+            r.name = args.name;
+            return r;
+        }
+#endif
     };
 #if __cplusplus >= 202002L
     EnvGroup<TargetT> env;
@@ -1137,7 +1184,7 @@ public:
         NoteGetFactory get() { return {nc_}; }
 
         /// note.template
-        NoteTemplateFactory template_() { return {nc_}; }
+        NoteTemplateFactory templates() { return {nc_}; }
 
         /// note.update
         auto update(note::string_view file, note::string_view noteId) {
@@ -1149,16 +1196,66 @@ public:
 
 
         // Layer 2 convenience aliases
+        /// Argument struct for popChanges() — supports `{.field = value}` init.
+        struct PopChangesArgs {
+            note::string_view file{};
+        };
         /// Used to incrementally retrieve changes within a specific Notefile.
         auto popChanges(note::string_view file) {
             auto r = create<api::NoteChanges::Pop>();
             r.file = file;
             return r;
         }
-        /// Deletes a Note from a DB Notefile by its Note ID. To delete Notes
-        /// from a `.qi` Notefile, use `note.get` or `note.changes` with
-        /// `delete:true`.
-        auto remove() { return create<api::NoteDelete>(); }
+#if __cplusplus >= 202002L
+        /// Accepts PopChangesArgs, the full request type, or any struct with the required fields.
+        template<typename T>
+            requires requires(const T& _v) { { _v.file }; }
+        auto popChanges(T args) {
+            auto r = create<api::NoteChanges::Pop>();
+            r.file = args.file;
+            return r;
+        }
+#else
+        auto popChanges(PopChangesArgs args) {
+            auto r = create<api::NoteChanges::Pop>();
+            r.file = args.file;
+            return r;
+        }
+#endif
+        /// Argument struct for remove() — supports `{.field = value}` init.
+        struct RemoveArgs {
+            note::string_view file{};
+            note::string_view noteId{};
+        };
+        /// Deletes a Note from a DB Notefile by its Note ID.
+        auto remove(note::string_view file, note::string_view noteId) {
+            auto r = create<api::NoteDelete>();
+            r.file = file;
+            r.noteId = noteId;
+            return r;
+        }
+#if __cplusplus >= 202002L
+        /// Accepts RemoveArgs, the full request type, or any struct with the required fields.
+        template<typename T>
+            requires requires(const T& _v) { { _v.file }; { _v.noteId }; }
+        auto remove(T args) {
+            auto r = create<api::NoteDelete>();
+            r.file = args.file;
+            r.noteId = args.noteId;
+            return r;
+        }
+#else
+        auto remove(RemoveArgs args) {
+            auto r = create<api::NoteDelete>();
+            r.file = args.file;
+            r.noteId = args.noteId;
+            return r;
+        }
+#endif
+        /// Argument struct for read() — supports `{.field = value}` init.
+        struct ReadArgs {
+            note::string_view file{};
+        };
         /// Retrieves a Note from a Notefile. The file must either be a DB
         /// Notefile or inbound queue file (see `file` argument below).
         ///
@@ -1169,6 +1266,26 @@ public:
             r.file = file;
             return r;
         }
+#if __cplusplus >= 202002L
+        /// Accepts ReadArgs, the full request type, or any struct with the required fields.
+        template<typename T>
+            requires requires(const T& _v) { { _v.file }; }
+        auto read(T args) {
+            auto r = create<api::NoteGet::Read>();
+            r.file = args.file;
+            return r;
+        }
+#else
+        auto read(ReadArgs args) {
+            auto r = create<api::NoteGet::Read>();
+            r.file = args.file;
+            return r;
+        }
+#endif
+        /// Argument struct for pop() — supports `{.field = value}` init.
+        struct PopArgs {
+            note::string_view file{};
+        };
         /// Retrieves a Note from a Notefile. The file must either be a DB
         /// Notefile or inbound queue file (see `file` argument below).
         ///
@@ -1179,6 +1296,26 @@ public:
             r.file = file;
             return r;
         }
+#if __cplusplus >= 202002L
+        /// Accepts PopArgs, the full request type, or any struct with the required fields.
+        template<typename T>
+            requires requires(const T& _v) { { _v.file }; }
+        auto pop(T args) {
+            auto r = create<api::NoteGet::Pop>();
+            r.file = args.file;
+            return r;
+        }
+#else
+        auto pop(PopArgs args) {
+            auto r = create<api::NoteGet::Pop>();
+            r.file = args.file;
+            return r;
+        }
+#endif
+        /// Argument struct for clearTemplate() — supports `{.field = value}` init.
+        struct ClearTemplateArgs {
+            note::string_view file{};
+        };
         /// By using the `note.template` request with any `.qo`/`.qos` Notefile,
         /// developers can provide the Notecard with a schema of sorts to apply
         /// to future Notes added to the Notefile. This template acts as a hint
@@ -1194,6 +1331,22 @@ public:
             r.file = file;
             return r;
         }
+#if __cplusplus >= 202002L
+        /// Accepts ClearTemplateArgs, the full request type, or any struct with the required fields.
+        template<typename T>
+            requires requires(const T& _v) { { _v.file }; }
+        auto clearTemplate(T args) {
+            auto r = create<api::NoteTemplate::Remove>();
+            r.file = args.file;
+            return r;
+        }
+#else
+        auto clearTemplate(ClearTemplateArgs args) {
+            auto r = create<api::NoteTemplate::Remove>();
+            r.file = args.file;
+            return r;
+        }
+#endif
     };
 #if __cplusplus >= 202002L
     NoteGroup<TargetT> note;
@@ -1380,6 +1533,14 @@ public:
     WebGroup<> web;
 #endif
 
+    // =====================================================================
+    // Flat endpoint shortcuts (e.g. nc.binary instead of nc.card.binary())
+    // =====================================================================
+
+    /// Shortcut for card.attn.
+    CardAttnFactory attn;
+    /// Shortcut for card.binary.
+    CardBinaryFactory binary;
 };
 
 #if __cplusplus >= 202002L

@@ -21,12 +21,18 @@ public:
 {% for group in resource_groups %}
         , {{ group.name }}{&nc_}
 {% endfor %}
+{% for endpoint in endpoints %}{% if endpoint.flat_alias %}
+        , {{ endpoint.flat_alias }}{&nc_}
+{% endif %}{% endfor %}
     {}
 #if __cplusplus >= 202002L
     explicit Api(Notecard& nc, TargetT) : nc_(nc)
 {% for group in resource_groups %}
         , {{ group.name }}{&nc_}
 {% endfor %}
+{% for endpoint in endpoints %}{% if endpoint.flat_alias %}
+        , {{ endpoint.flat_alias }}{&nc_}
+{% endif %}{% endfor %}
     {}
 #endif
 
@@ -198,10 +204,16 @@ public:
 {% for alias in endpoint.aliases %}
 {% set resolved = alias.resolve_params(endpoint) %}
 {% set alias_doc = alias.description if alias.description and alias.description != "Alias for delete()." else endpoint.operations[0].description %}
+{% if resolved %}
+        /// Argument struct for {{ alias.method_name }}() — supports `{.field = value}` init.
+        struct {{ alias.method_name | first_upper }}Args {
+{% for p in resolved %}
+            {{ p.field_type }} {{ p.accessor_name }}{};
+{% endfor %}
+        };
 {% if alias_doc %}
 {{ alias_doc | doc_comment("        ") }}
 {% endif %}
-{% if resolved %}
         auto {{ alias.method_name }}({% for p in resolved %}{{ p.field_type }} {{ p.accessor_name }}{{ ", " if not loop.last }}{% endfor %}) {
             auto r = create<{{ alias.qualified_type }}>();
 {% for p in resolved %}
@@ -209,7 +221,30 @@ public:
 {% endfor %}
             return r;
         }
+#if __cplusplus >= 202002L
+        /// Accepts {{ alias.method_name | first_upper }}Args, the full request type, or any struct with the required fields.
+        template<typename T>
+            requires requires(const T& _v) { {% for p in resolved %}{ _v.{{ p.accessor_name }} }{% if not loop.last %}; {% endif %}{% endfor %}; }
+        auto {{ alias.method_name }}(T args) {
+            auto r = create<{{ alias.qualified_type }}>();
+{% for p in resolved %}
+            r.{{ p.accessor_name }} = args.{{ p.accessor_name }};
+{% endfor %}
+            return r;
+        }
+#else
+        auto {{ alias.method_name }}({{ alias.method_name | first_upper }}Args args) {
+            auto r = create<{{ alias.qualified_type }}>();
+{% for p in resolved %}
+            r.{{ p.accessor_name }} = args.{{ p.accessor_name }};
+{% endfor %}
+            return r;
+        }
+#endif
 {% else %}
+{% if alias_doc %}
+{{ alias_doc | doc_comment("        ") }}
+{% endif %}
         auto {{ alias.method_name }}() { return create<{{ alias.qualified_type }}>(); }
 {% endif %}
 {% endfor %}
@@ -222,6 +257,16 @@ public:
     {{ group.struct_name }}<> {{ group.name }};
 #endif
 
+{% endfor %}
+    // =====================================================================
+    // Flat endpoint shortcuts (e.g. nc.binary instead of nc.card.binary())
+    // =====================================================================
+
+{% for endpoint in endpoints %}
+{% if endpoint.flat_alias %}
+    /// Shortcut for {{ endpoint.wire_name }}.
+    {{ endpoint.struct_name }}Factory {{ endpoint.flat_alias }};
+{% endif %}
 {% endfor %}
 };
 

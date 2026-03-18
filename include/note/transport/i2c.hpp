@@ -44,12 +44,12 @@ inline constexpr size_t kI2cDefaultMtu = 30;   // safe for all Arduino Wire impl
 inline constexpr size_t kI2cMaxMtu     = 253;  // UCHAR_MAX - 2 byte header
 
 // ---------------------------------------------------------------------------
-// I2cHal — pure virtual platform interface
+// I2CHal — pure virtual platform interface
 // ---------------------------------------------------------------------------
 
-class I2cHal {
+class I2CHal {
 public:
-    virtual ~I2cHal() = default;
+    virtual ~I2CHal() = default;
 
     // Hardware-level I2C reset. Returns false on failure.
     virtual bool     reset() = 0;
@@ -78,10 +78,10 @@ public:
 };
 
 // ---------------------------------------------------------------------------
-// I2cCallbackHal — wraps lambdas/function pointers as an I2cHal
+// I2cCallbackHal — wraps lambdas/function pointers as an I2CHal
 // ---------------------------------------------------------------------------
 
-class I2cCallbackHal : public I2cHal {
+class I2cCallbackHal : public I2CHal {
 public:
     using ResetFn    = std::function<bool()>;
     using TransmitFn = std::function<bool(const uint8_t*, size_t)>;
@@ -123,7 +123,7 @@ public:
     // zero bytes — all fields are static constexpr, folded by the compiler.
     [[no_unique_address]] PolicyType policy;
 
-    explicit NotecardI2c(I2cHal& hal, PolicyType pol = {})
+    explicit NotecardI2c(I2CHal& hal, PolicyType pol = {})
         : policy(pol), hal_(hal) {}
 
     // Satisfies note::Notecard's RequestFn signature:
@@ -181,7 +181,7 @@ public:
     }
 
 private:
-    I2cHal&  hal_;
+    I2CHal&  hal_;
     bool     initialized_ = false;
     bool     crc_enabled_ = false;
     uint16_t crc_seq_     = 0;
@@ -372,11 +372,11 @@ private:
 //                                         (zero overhead, compile-time defaults)
 //   NotecardI2c transport(hal, policy)  → I2cPolicy
 //                                         (runtime mutable)
-NotecardI2c(I2cHal&) -> NotecardI2c<StaticI2cPolicy<I2cPolicy{}>>;
-NotecardI2c(I2cHal&, I2cPolicy) -> NotecardI2c<I2cPolicy>;
+NotecardI2c(I2CHal&) -> NotecardI2c<StaticI2cPolicy<I2cPolicy{}>>;
+NotecardI2c(I2CHal&, I2cPolicy) -> NotecardI2c<I2cPolicy>;
 
 template <I2cPolicy P>
-NotecardI2c(I2cHal&, StaticI2cPolicy<P>) -> NotecardI2c<StaticI2cPolicy<P>>;
+NotecardI2c(I2CHal&, StaticI2cPolicy<P>) -> NotecardI2c<StaticI2cPolicy<P>>;
 
 // ---------------------------------------------------------------------------
 // Backward-compatible constants (derived from default policy values).

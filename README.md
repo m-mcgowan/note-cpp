@@ -15,7 +15,7 @@ The API supports fluent setters
 ```cpp
 // examples/getting_started.cpp#L193-L197
 
-api.hub.set()
+nc.hub.set()
    .product("com.example.app")
    .mode("periodic")
    .outbound(60)
@@ -27,7 +27,7 @@ as well as property assignment
 ```cpp
 // examples/getting_started.cpp#L202-L206
 
-auto req = api.hub.set();
+auto req = nc.hub.set();
 req.product = "com.example.app";
 req.mode = "periodic";
 req.outbound = 60;
@@ -41,7 +41,7 @@ Your custom types can also be included, such as when creating notes
 
 {
     Readings r{.temperature = 22.5f, .humidity = 60};
-    api.note.add().file("sensors.qo").body(r).execute();
+    nc.note.add().file("sensors.qo").body(r).execute();
 }
 ```
 
@@ -50,7 +50,7 @@ Inline is fine too
 ```cpp
 // examples/getting_started.cpp#L257-L260
 
-api.note.add()
+nc.note.add()
    .file("sensors.qo")
    .body(Readings{.temperature = 22.5f, .humidity = 60})
    .execute();
@@ -65,7 +65,7 @@ and property assignment
     Readings r;
     r.temperature = 22.5f;
     r.humidity = 60;
-    auto req = api.note.add();
+    auto req = nc.note.add();
     req.file = "sensors.qo";
     req.body(r);
     req.execute();
@@ -108,23 +108,23 @@ Once you have a `Notecard` instance, the typed API is the same everywhere:
 ```cpp
 #include <note/api.hpp>
 using namespace note::literals;
-auto nc = ....;                     // we'll get to this later.
-note::Api api(nc);
+auto notecard = ....;               // we'll get to this later.
+note::Api nc(notecard);
 
 // Make requests. Fields are typed, IDE auto-completes everything.
-api.hub.set()
+nc.hub.set()
    .product("com.example.app")
    .mode("periodic")
    .outbound(60_mins)
    .execute();
 
 // Read responses. Fields are named members, not strings.
-auto result = api.card.version().execute();
-if (result) {
-    auto version = result.version;   // string_view
-    auto device  = result.device;    // string_view
+auto rsp = nc.card.version().execute();
+if (rsp) {
+    auto version = rsp.version;   // string_view
+    auto device  = rsp.device;    // string_view
 } else {
-    auto err = to_string(result.error());  // "transport: I2C NACK"
+    auto err = to_string(rsp.error());  // "transport: I2C NACK"
 }
 ```
 
@@ -193,7 +193,7 @@ On C++20+, the transport HAL wrappers in `serial.hpp` and `i2c.hpp` build this f
 Request and response types covering all Notecard APIs (74 of them!) are auto-generated from the [Notecard OpenAPI spec](notecard-api.openapi.json). Each has typed fields, chainable setters, and an `execute()` method. Fields support fluent chaining, direct assignment, and designated initializers.
 
 ```cpp
-api.hub.set()
+nc.hub.set()
     .product("com.example.app")
     .mode("periodic")
     .outbound(60)
@@ -216,9 +216,9 @@ Include everything with `#include <note/api.hpp>`.
 When targeting a specific Notecard product, the `Api` constructor accepts a target that provides compile-time feedback on API compatibility (C++20). Unsupported APIs produce deprecation warnings, or compile errors in strict mode. Built-in targets include `Product::WiFi`, `Product::Cell`, `Product::LoRa`, and `Product::Skylo`, and you can compose custom targets with additional RATs (e.g. `Product::Cell + Rat::Ntn`).
 
 ```cpp
-note::Api wifi(nc, note::target<note::Product::WiFi>());
-wifi.card.sleep();  // OK: card.sleep supports WiFi
-wifi.hub.set();     // OK: universal
+note::Api<note::Product::WiFi> nc(notecard);
+nc.card.sleep();  // OK: card.sleep supports WiFi
+nc.hub.set();     // OK: universal
 ```
 
 Each API type carries `static constexpr Skus skus` for introspection. See [examples/target_filtering.cpp](examples/target_filtering.cpp).
@@ -231,17 +231,17 @@ Some Notecard APIs behave differently depending on which fields you send. In `no
 
 ```cpp
 // Read a Note by ID (ReadOnly — safe to retry on failure)
-auto r = api.note.get().read().file("data.db").noteId("my-note").execute();
+auto rsp = nc.note.read("data.db").noteId("my-note").execute();
 
 // Pop from queue (Destructive — not safe to retry blindly)
-auto r = api.note.get().pop().file("requests.qi").execute();
+auto rsp = nc.note.pop("requests.qi").execute();
 
 // card.location.mode — fixed() accepts lat/lon, get() doesn't
-api.card.locationMode().fixed()
+nc.card.locationMode().fixed()
     .lat(42.565).lon(-70.783)   // lat/lon only exist on fixed()
     .execute();
 
-api.card.locationMode().get().execute();       // no lat/lon fields to misuse
+nc.card.locationMode().get().execute();       // no lat/lon fields to misuse
 ```
 
 Each variant exposes only the fields the Notecard expects for that operation — setting a field that doesn't apply is a compile error, not a silent wire-level mistake.
@@ -254,56 +254,72 @@ The same pattern applies to `card.binary`, `card.contact`, `card.location.mode`,
 
 Notecard request names map to C++ as follows:
 
-- The **first segment** of the request name becomes a **resource group** property on `Api` — `api.card`, `api.hub`, `api.note`, etc.
-- The **remaining segments** become the group method in camelCase — `card.location.mode` → `api.card.locationMode()`, `hub.sync.status` → `api.hub.syncStatus()`.
-- For single-segment requests (`web`, `file`), the request name is the group: `web.get` → `api.web.get()`.
+- The **first segment** of the request name becomes a **resource group** property on `Api` — `nc.card`, `nc.hub`, `nc.note`, etc.
+- The **remaining segments** become the group method in camelCase — `card.location.mode` → `nc.card.locationMode()`, `hub.sync.status` → `nc.hub.syncStatus()`.
+- For single-segment requests (`web`, `file`), the request name is the group: `web.get` → `nc.web.get()`.
+
+Two endpoints use plural group method names to avoid C++ keywords:
+
+| Wire name | C++ group method | Reason |
+|-----------|-----------------|--------|
+| `env.default` | `nc.env.defaults()` | `default` is a C++ keyword |
+| `note.template` | `nc.note.templates()` | `template` is a C++ keyword |
 
 ### Intent method names
 
-For polymorphic APIs, the method names on the factory struct are **intent-based** rather than HTTP-verb-based. The intent name describes what the operation *does*, not the underlying HTTP method:
+For polymorphic APIs, the method names on the factory struct are **intent-based** — describing what the operation *does*, not the underlying HTTP verb. Old verb-based names (`get()`, `set()`, `delete_()`) are kept as `[[deprecated]]` aliases.
 
-| Notecard request | C++ method | Notes |
-|-----------------|------------|-------|
-| `card.binary` (query status) | `.status()` | |
-| `card.binary` (clear) | `.clear()` | |
-| `card.power` (read) | `.read()` | |
-| `card.power` (configure) | `.configure()` | |
-| `card.power` (reset) | `.reset()` | |
-| `card.temp` (read sensor) | `.read()` | |
-| `card.temp` (configure) | `.configure()` | |
-| `card.temp` (stop sampling) | `.stop()` | |
-| `card.voltage` (read) | `.read()` | |
-| `card.voltage` (configure) | `.configure()` | |
-| `card.wireless.penalty` (check) | `.check()` | |
-| `card.wireless.penalty` (configure) | `.set()` | |
-| `card.wireless.penalty` (clear) | `.clear()` | |
-| `env.default` (set) | `.set()` | |
-| `env.default` (remove) | `.remove(name)` | |
-| `note.changes` (peek) | `.peek()` | |
-| `note.changes` (pop) | `.pop(file)` | |
-| `note.get` (read by ID) | `.read()` | |
-| `note.get` (pop from queue) | `.pop()` | |
-| `note.template` (define) | `.define(file)` | |
-| `note.template` (remove) | `.remove(file)` | |
-| `card.location.mode` (remove) | `.remove()` | |
+| Notecard request | C++ method |
+|-----------------|------------|
+| `card.binary` | `.status()` · `.clear()` |
+| `card.power` | `.read()` · `.configure()` · `.reset()` |
+| `card.temp` | `.read()` · `.configure()` · `.stop()` |
+| `card.voltage` | `.read()` · `.configure()` |
+| `card.wireless.penalty` | `.check()` · `.override_()` · `.clear()` |
+| `env.default` | `.set(name, text)` · `.remove(name)` |
+| `note.changes` | `.peek()` · `.pop(file)` |
+| `note.get` | `.read()` · `.pop()` |
+| `note.template` | `.define(file)` · `.remove(file)` |
+| `card.location.mode` | `.get()` · `.fixed()` · `.remove()` |
+
+### Convenience shortcuts
+
+Frequently-used operations have shorthand methods that pre-fill required parameters, named for intent rather than the endpoint:
+
+```cpp
+nc.note.read("data.db").noteId("my-note").execute();   // note.get (read by ID)
+nc.note.pop("requests.qi").execute();                   // note.get (pop from queue)
+nc.note.remove("data.db", "my-note").execute();         // note.delete
+nc.env.setDefault("var", "value").execute();            // env.default set
+nc.env.clearDefault("var").execute();                   // env.default remove
+nc.binary.status().execute();                           // card.binary status (flat alias)
+nc.binary.clear().execute();                            // card.binary clear (flat alias)
+```
+
+On C++20, shorthand methods also accept a named-field struct:
+
+```cpp
+nc.note.remove({.file = "data.db", .noteId = "my-note"}).execute();
+nc.env.setDefault({.name = "var", .text = "value"}).execute();
+```
 
 ### Renamed properties
 
 Some properties are renamed in C++ to avoid keyword conflicts or improve clarity:
 
-| Endpoint | Wire name | C++ name | Reason |
-|----------|-----------|----------|--------|
-| `note.add`, `note.get`, `note.update`, `note.delete` | `note` | `noteId` | `note` is a C++ keyword in some contexts; clarifies meaning |
-| `web.get`, `web.post`, `web.put`, `web.delete` | `note` | `noteId` | Same |
-| `card.binary`, `note.get`, etc. | `delete` | `delete_` | `delete` is a reserved C++ keyword |
+| Wire name | C++ name | Reason |
+|-----------|----------|--------|
+| `note` (note ID field) | `noteId` | `note` clashes with the `note` namespace; clarifies meaning |
+| `delete` (boolean field) | `delete_` | `delete` is a reserved C++ keyword |
 
-### Monomorphic delete aliases
+### Delete aliases
 
-Simple delete endpoints expose both the direct method and a `remove()` alias:
+All `*.delete` endpoints expose a `remove()` alias. Where the endpoint has required parameters, both forms accept them:
 
 ```cpp
-api.file.delete_().execute();  // direct
-api.file.remove().execute();   // alias
+nc.note.remove("data.db", "my-note").execute();   // preferred
+nc.note.delete_("data.db", "my-note").execute();  // direct (deprecated)
+nc.file.remove().execute();                        // file.delete (no required params)
 ```
 
 ---
@@ -314,7 +330,7 @@ Note bodies support three tiers: **raw JSON strings**, **builder lambdas**, and 
 
 ```cpp
 Readings r{.temperature = 22.5f, .humidity = 60};
-api.note.add().file("sensors.qo").body(r).execute();
+nc.note.add().file("sensors.qo").body(r).execute();
 ```
 
 ---
@@ -340,7 +356,7 @@ Send typed data:
 
 {
     Readings r{.temperature = 22.5f, .humidity = 60};
-    api.note.add().file("sensors.qo").body(r).execute();
+    nc.note.add().file("sensors.qo").body(r).execute();
 }
 ```
 
@@ -349,7 +365,7 @@ Register a template (auto-generates type hints `14.1` = TFLOAT32, `11` = TINT16)
 ```cpp
 // examples/getting_started.cpp#L277-L279
 
-api.note.template_().set("sensors.qo")
+nc.note.templates().define("sensors.qo")
     .body(note::template_of<Readings>())
     .execute();
 ```
@@ -360,9 +376,9 @@ Parse response body back into the struct:
 // examples/getting_started.cpp#L283-L291
 
 {
-    auto r = api.note.get().get().file("data.qi").execute();
-    if (r) {
-        Readings data = r.bodyAs<Readings>();
+    auto rsp = nc.note.read("data.qi").execute();
+    if (rsp) {
+        Readings data = rsp.bodyAs<Readings>();
         (void)data.temperature;
         (void)data.humidity;
         std::puts("  (body parsed into Readings struct)");
@@ -382,29 +398,29 @@ Duration fields across the Notecard API use distinct types (`Minutes`, `Seconds`
 using namespace note::literals;
 
 // hub.set outbound/inbound are Minutes on the wire
-api.hub.set()
+nc.hub.set()
     .outbound(15_mins)           // Minutes literal
     .inbound(7_days)             // Days → Minutes (10080 on the wire)
     .execute();
 
 // card.attn seconds field accepts Minutes/Hours too
-api.card.attn()
+nc.card.attn()
     .seconds(5_mins)             // Minutes → Seconds (300 on the wire)
     .execute();
 
 // card.sleep — long sleep expressed naturally
-api.card.sleep()
+nc.card.sleep()
     .seconds(12_hours)           // Hours → Seconds (43200 on the wire)
     .execute();
 
 // Compile-time safety — wrong direction is a type error:
-// api.hub.set().outbound(300_s);    // error: Seconds ≠ Minutes
+// nc.hub.set().outbound(300_s);    // error: Seconds ≠ Minutes
 ```
 
 **Voltage-variable sync** — adapt sync frequency to the Notecard's supply voltage. A builder constructs the semicolon-delimited string safely:
 
 ```cpp
-auto req = api.hub.set();
+auto req = nc.hub.set();
 req.mode = "periodic";
 req.voutbound.usb(5).high(15).normal(60).low(240).dead(0);
 req.vinbound.usb(5).high(30).normal(120).low(1440).dead(0);
@@ -417,7 +433,7 @@ Only levels you set are emitted — `.voutbound.usb(5).normal(60)` produces `"us
 **Comma-separated flags** — fields like `card.attn` mode accept a comma-delimited set of flags. Named methods provide compile-time safety:
 
 ```cpp
-auto req = api.card.attn();
+auto req = nc.card.attn();
 req.mode.arm().connected().files();       // chainable named methods
 req.execute();
 // produces: "mode":"arm,connected,files"
@@ -441,7 +457,7 @@ See [examples/hub-configuration/](examples/hub-configuration/) for more.
 All operations return a result that is truthy on success. On failure, `error()` provides a structured `ErrorInfo` with an error code and message. `to_string()` formats it for logging.
 
 ```cpp
-auto result = api.card.version().execute();
+auto result = nc.card.version().execute();
 if (result) {
     auto version = result.version;   // string_view
     auto device  = result.device;    // string_view

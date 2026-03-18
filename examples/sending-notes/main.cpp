@@ -130,7 +130,7 @@ int main() {
     // ═════════════════════════════════════════════════════════════════════════
 
     std::puts("\n--- Template registration ---");
-    api.note.template_().set("sensors.qo")
+    api.note.templates().define("sensors.qo")
         .body(note::template_of<Readings>())
         .execute();
 
@@ -142,7 +142,7 @@ int main() {
     std::puts("\n--- Template + send ---");
     {
         // Register the template once at startup
-        api.note.template_().set("sensors.qo")
+        api.note.templates().define("sensors.qo")
             .body(note::template_of<Readings>())
             .execute();
 

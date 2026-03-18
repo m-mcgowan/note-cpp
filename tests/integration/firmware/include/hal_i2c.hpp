@@ -1,6 +1,6 @@
 #pragma once
 /// @file hal_i2c.hpp
-/// ESP32 I2cHal implementation using Arduino Wire.
+/// ESP32 I2CHal implementation using Arduino Wire.
 ///
 /// Guarded by NOTECARD_I2C_SDA / NOTECARD_I2C_SCL pin definitions.
 /// When both are defined, NOTECARD_TEST_I2C is set and the HAL class
@@ -12,13 +12,13 @@
 #include <note/transport/i2c.hpp>
 #include <Wire.h>
 
-class Esp32I2cHal : public note::transport::I2cHal {
+class Esp32I2CHal : public note::transport::I2CHal {
     TwoWire& wire_;
     uint8_t addr_;
     int sda_;
     int scl_;
 public:
-    explicit Esp32I2cHal(TwoWire& wire,
+    explicit Esp32I2CHal(TwoWire& wire,
                          int sda = NOTECARD_I2C_SDA,
                          int scl = NOTECARD_I2C_SCL,
                          uint8_t addr = note::transport::kI2cDefaultAddress)

@@ -673,7 +673,8 @@
             "x-api-version": "9.1.1"
           }
         }
-      }
+      },
+      "x-flat-alias": "attn"
     },
     "/card/aux": {
       "put": {
@@ -1835,7 +1836,8 @@
           "method": "binaryClear",
           "variant": "Clear"
         }
-      ]
+      ],
+      "x-flat-alias": "binary"
     },
     "/card/binary/get": {
       "post": {
@@ -12249,7 +12251,11 @@
       "x-aliases": [
         {
           "method": "remove",
-          "description": "Alias for delete()."
+          "description": "Deletes a Note from a DB Notefile by its Note ID.",
+          "params": [
+            "file",
+            "note"
+          ]
         }
       ]
     },

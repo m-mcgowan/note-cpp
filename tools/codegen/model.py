@@ -293,6 +293,7 @@ class EndpointGroup:
     is_polymorphic: bool
     operations: list[OperationDef] = field(default_factory=list)
     aliases: list[AliasDef] = field(default_factory=list)
+    flat_alias: str | None = None  # Top-level Api member name (e.g. "binary" for card.binary)
 
     @property
     def factory_method(self) -> str:

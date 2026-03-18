@@ -219,8 +219,8 @@ TEST_CASE("Api::dfu resource group") {
 TEST_CASE("Api::env resource group") {
     Harness h;
     // env.default (polymorphic)
-    h.api.execute(h.api.env.default_().set(note::string_view("x-name")));
-    h.api.execute(h.api.env.default_().remove(note::string_view("x-name")));
+    h.api.execute(h.api.env.defaults().set(note::string_view("x-name")));
+    h.api.execute(h.api.env.defaults().remove(note::string_view("x-name")));
     REQUIRE(h.last_req.find("env.default") != std::string::npos);
     // env.get
     h.api.execute(h.api.env.get());
@@ -232,7 +232,7 @@ TEST_CASE("Api::env resource group") {
     h.api.execute(h.api.env.set(note::string_view("x-name")));
     REQUIRE(h.last_req.find("env.set") != std::string::npos);
     // env.template
-    h.api.execute(h.api.env.template_());
+    h.api.execute(h.api.env.templates());
     REQUIRE(h.last_req.find("env.template") != std::string::npos);
 }
 
@@ -297,8 +297,8 @@ TEST_CASE("Api::note resource group") {
     h.api.execute(h.api.note.get().pop());
     REQUIRE(h.last_req.find("note.get") != std::string::npos);
     // note.template (polymorphic)
-    h.api.execute(h.api.note.template_().define(note::string_view("x-file")));
-    h.api.execute(h.api.note.template_().remove(note::string_view("x-file")));
+    h.api.execute(h.api.note.templates().define(note::string_view("x-file")));
+    h.api.execute(h.api.note.templates().remove(note::string_view("x-file")));
     REQUIRE(h.last_req.find("note.template") != std::string::npos);
     // note.update
     h.api.execute(h.api.note.update(note::string_view("x-file"), note::string_view("x-note")));
@@ -400,7 +400,7 @@ TEST_CASE("Api::note Layer 2 aliases") {
     Harness h;
     h.api.execute(h.api.note.popChanges(note::string_view("x-file")));
     REQUIRE(h.last_req.find("note.changes") != std::string::npos);
-    h.api.execute(h.api.note.remove());
+    h.api.execute(h.api.note.remove(note::string_view("x-file"), note::string_view("x-note")));
     REQUIRE(h.last_req.find("note.delete") != std::string::npos);
     h.api.execute(h.api.note.read(note::string_view("x-file")));
     REQUIRE(h.last_req.find("note.get") != std::string::npos);

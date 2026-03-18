@@ -4068,7 +4068,7 @@ TEST_CASE("note::api::DfuStatus response parsing") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::EnvDefault::Set request builder") {
     Harness h;
-    auto req = h.api.env.default_().set(note::string_view("x-name"));
+    auto req = h.api.env.defaults().set(note::string_view("x-name"));
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.sync(true);
@@ -4102,7 +4102,7 @@ TEST_CASE("note::api::EnvDefault::Set request builder") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::EnvDefault::Remove request builder") {
     Harness h;
-    auto req = h.api.env.default_().remove(note::string_view("x-name"));
+    auto req = h.api.env.defaults().remove(note::string_view("x-name"));
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.sync(true);
@@ -4328,7 +4328,7 @@ TEST_CASE("note::api::EnvSet response parsing") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::EnvTemplate request builder") {
     Harness h;
-    auto req = h.api.env.template_();
+    auto req = h.api.env.templates();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.execute();
@@ -5481,7 +5481,7 @@ TEST_CASE("note::api::NoteGet::Pop response parsing") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::NoteTemplate::Define request builder") {
     Harness h;
-    auto req = h.api.note.template_().define(note::string_view("x-file"));
+    auto req = h.api.note.templates().define(note::string_view("x-file"));
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.delete_(true);
@@ -5572,7 +5572,7 @@ TEST_CASE("note::api::NoteTemplate::Define response parsing") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::NoteTemplate::Remove request builder") {
     Harness h;
-    auto req = h.api.note.template_().remove(note::string_view("x-file"));
+    auto req = h.api.note.templates().remove(note::string_view("x-file"));
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)

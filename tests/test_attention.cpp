@@ -4,6 +4,7 @@
 #include "catch.hpp"
 #include "test_json_backend.hpp"
 
+#include <note/api.hpp>
 #include <note/app/channel.hpp>
 #include <note/app/attention_manager.hpp>
 #include <note/app/state_store.hpp>
@@ -95,8 +96,28 @@ TEST_CASE("Attention::arm() sends card.attn with mode") {
     auto r = attn.arm();
     REQUIRE(r.has_value());
     REQUIRE(f.captured.size() == 1);
-    REQUIRE(f.captured[0].find("card.attn") != std::string::npos);
-    REQUIRE(f.captured[0].find("files") != std::string::npos);
+    // Wire format must be "arm,<triggers>" — the "arm" prefix is mandatory
+    REQUIRE(f.captured[0].find("\"mode\":\"arm,files\"") != std::string::npos);
+}
+
+TEST_CASE("Attention::arm() with no triggers sends mode=arm") {
+    TestFixture f;
+    note::app::Attention<note::app::DirectChannel, Store> attn(f.ch, f.store);
+
+    auto r = attn.arm();
+    REQUIRE(r.has_value());
+    REQUIRE(f.captured[0].find("\"mode\":\"arm\"") != std::string::npos);
+}
+
+TEST_CASE("Attention::arm() with multiple triggers") {
+    TestFixture f;
+    note::app::Attention<note::app::DirectChannel, Store> attn(f.ch, f.store);
+
+    attn.enable("files");
+    attn.enable("env");
+    auto r = attn.arm();
+    REQUIRE(r.has_value());
+    REQUIRE(f.captured[0].find("\"mode\":\"arm,files,env\"") != std::string::npos);
 }
 
 TEST_CASE("Attention::arm() sends card.attn with timeout") {
@@ -106,6 +127,7 @@ TEST_CASE("Attention::arm() sends card.attn with timeout") {
     attn.enable("sleep");
     auto r = attn.arm(note::Seconds{300});
     REQUIRE(r.has_value());
+    REQUIRE(f.captured[0].find("\"mode\":\"arm,sleep\"") != std::string::npos);
     REQUIRE(f.captured[0].find("\"seconds\":300") != std::string::npos);
 }
 
@@ -165,4 +187,36 @@ TEST_CASE("Attention::arm() propagates transport errors") {
     auto r = attn.arm();
     REQUIRE(!r.has_value());
     REQUIRE(r.error().code == note::Error::SendFailed);
+}
+
+// ---------------------------------------------------------------------------
+// CardAttn::Arm raw API — mode prefix in build()
+// ---------------------------------------------------------------------------
+
+TEST_CASE("CardAttn::Arm build() emits mode=arm when no mode set") {
+    TestFixture f;
+    note::Api api(f.nc);
+    api.card.attn().arm().execute();
+    REQUIRE(f.captured.size() == 1);
+    REQUIRE(f.captured[0].find("\"mode\":\"arm\"") != std::string::npos);
+}
+
+TEST_CASE("CardAttn::Arm build() prepends arm, to trigger sources (string)") {
+    TestFixture f;
+    note::Api api(f.nc);
+    auto req = api.card.attn().arm();
+    req.mode("files,env");  // string assignment for predictable ordering
+    req.execute();
+    REQUIRE(f.captured.size() == 1);
+    REQUIRE(f.captured[0].find("\"mode\":\"arm,files,env\"") != std::string::npos);
+}
+
+TEST_CASE("CardAttn::Arm build() prepends arm, to trigger sources (flags)") {
+    TestFixture f;
+    note::Api api(f.nc);
+    auto req = api.card.attn().arm();
+    req.mode = note::attn::files;  // single flag
+    req.execute();
+    REQUIRE(f.captured.size() == 1);
+    REQUIRE(f.captured[0].find("\"mode\":\"arm,files\"") != std::string::npos);
 }

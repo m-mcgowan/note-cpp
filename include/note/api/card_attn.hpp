@@ -585,7 +585,14 @@ struct CardAttn {
 
         void build(JsonBuilder& b) const {
             if (files) b.add("files", *files);
-            if (mode) b.add("mode", *mode);
+            if (mode) {
+                char mp_[96];
+                std::snprintf(mp_, sizeof(mp_), "arm,%.*s",
+                             (int)(*mode).size(), (*mode).data());
+                b.add("mode", note::string_view{mp_});
+            } else {
+                b.add("mode", "arm");
+            }
             if (on) b.add("on", *on);
             if (seconds) b.add("seconds", *seconds);
             for (uint8_t i_ = 0; i_ < extras_count_; ++i_)

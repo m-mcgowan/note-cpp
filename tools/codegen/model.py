@@ -212,6 +212,7 @@ class OperationDef:
     implicit_fields: list[ImplicitFieldDef] = field(default_factory=list)
     description: str = ""  # From operation summary
     legacy_struct_name: str | None = None  # Old verb-derived name for deprecation alias
+    mode_prefix: str | None = None  # e.g. "arm" — prepended to mode field in build()
 
     @property
     def legacy_factory_method(self) -> str | None:

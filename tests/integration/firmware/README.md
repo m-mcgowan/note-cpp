@@ -126,7 +126,7 @@ doctest runner
        └─ note::Notecard (JSON backend + transport)
             ├─ CjsonBackend (cJSON, bundled with ESP-IDF)
             └─ NotecardSerial / NotecardI2c (wire protocol)
-                 └─ Esp32SerialHal / Esp32I2cHal (Arduino HAL)
+                 └─ Esp32SerialHal / Esp32I2CHal (Arduino HAL)
 ```
 
 ## How conditional compilation works

@@ -365,6 +365,7 @@ def _expand_intents(
             skus=base_op.skus,
             implicit_fields=implicit_fields,
             description=intent.get("description", base_op.description),
+            mode_prefix=intent.get("mode_prefix"),
         ))
 
     return operations

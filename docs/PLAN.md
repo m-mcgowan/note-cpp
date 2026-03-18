@@ -281,9 +281,9 @@ Full design: `docs/note-cpp-app.md`.
 ## Platform HAL repos
 
 note-cpp is platform-neutral: it owns the full wire protocol (CRC, retry,
-segmented TX/RX, reset sync) via injectable `SerialHal` / `I2cHal` interfaces,
+segmented TX/RX, reset sync) via injectable `SerialHal` / `I2CHal` interfaces,
 matching the scope of note-c's `n_serial.c` / `n_i2c.c`. Concrete platform
-glue — thin `SerialHal` / `I2cHal` subclasses — belongs in separate repos:
+glue — thin `SerialHal` / `I2CHal` subclasses — belongs in separate repos:
 
 - `note-cpp-arduino` — Arduino `HardwareSerial` + `Wire` implementations
 - `note-cpp-zephyr` — Zephyr UART + I2C driver bindings

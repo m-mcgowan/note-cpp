@@ -424,7 +424,18 @@ namespace note::api {
 {{ version_guard_end(prop.version_guard) -}}
 {% else %}
 {{ version_guard_begin(prop.version_guard) -}}
+{% if op.mode_prefix and prop.wire_name == "mode" %}
+{{ indent }}    if ({{ prop.accessor_name }}) {
+{{ indent }}        char mp_[96];
+{{ indent }}        std::snprintf(mp_, sizeof(mp_), "{{ op.mode_prefix }},%.*s",
+{{ indent }}                     (int)(*{{ prop.accessor_name }}).size(), (*{{ prop.accessor_name }}).data());
+{{ indent }}        b.add("{{ prop.wire_name }}", note::string_view{mp_});
+{{ indent }}    } else {
+{{ indent }}        b.add("{{ prop.wire_name }}", "{{ op.mode_prefix }}");
+{{ indent }}    }
+{% else %}
 {{ indent }}    if ({{ prop.accessor_name }}) b.add("{{ prop.wire_name }}", *{{ prop.accessor_name }});
+{% endif %}
 {{ version_guard_end(prop.version_guard) -}}
 {% endif %}
 {% endfor %}

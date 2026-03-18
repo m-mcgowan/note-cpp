@@ -5,7 +5,7 @@ note-cpp ships a complete, header-only implementation of both Notecard wire prot
 ```
 include/note/transport/
     serial.hpp          SerialHal, SerialCallbackHal, NotecardSerial
-    i2c.hpp             I2cHal,    I2cCallbackHal,    NotecardI2c
+    i2c.hpp             I2CHal,    I2cCallbackHal,    NotecardI2c
     detail/crc32.hpp    CRC32, crc_add, crc_check_and_strip  (internal)
 ```
 
@@ -95,12 +95,12 @@ All in `namespace note::transport`:
 **Header:** `note/transport/i2c.hpp`
 **Ported from:** note-c `n_i2c.c`
 
-### Implement `I2cHal`
+### Implement `I2CHal`
 
 ```cpp
 #include <note/transport/i2c.hpp>
 
-class MyI2c : public note::transport::I2cHal {
+class MyI2c : public note::transport::I2CHal {
 public:
     // Hardware-level I2C reset. Returns false on failure.
     bool     reset()                                          override { /* assert/deassert reset pin */ }
@@ -175,7 +175,7 @@ All in `namespace note::transport`:
 
 ### I2C MTU
 
-The default `max_transfer()` is 30 bytes — the limit imposed by the Arduino Wire library's static 32-byte buffer minus the 2-byte Notecard header. Platforms with a dynamically-allocated I2C buffer (STM32Duino, most ESP32 boards) can safely use 253. Override `max_transfer()` in your `I2cHal` subclass or pass the size as the 6th argument to `I2cCallbackHal`.
+The default `max_transfer()` is 30 bytes — the limit imposed by the Arduino Wire library's static 32-byte buffer minus the 2-byte Notecard header. Platforms with a dynamically-allocated I2C buffer (STM32Duino, most ESP32 boards) can safely use 253. Override `max_transfer()` in your `I2CHal` subclass or pass the size as the 6th argument to `I2cCallbackHal`.
 
 ---
 

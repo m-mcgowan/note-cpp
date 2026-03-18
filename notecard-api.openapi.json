@@ -38,7 +38,8 @@
             "response": [
               "set"
             ],
-            "supports_cmd": true
+            "supports_cmd": true,
+            "mode_prefix": "arm"
           },
           {
             "name": "watchdog",
@@ -446,7 +447,7 @@
             "x-validation": {
               "wire": "{\"req\":\"card.attn\",\"mode\":\"arm,connected\"}",
               "fields": {
-                "mode": "arm,connected"
+                "mode": "connected"
               },
               "sub_type": "Arm"
             }
@@ -466,7 +467,7 @@
             "x-validation": {
               "wire": "{\"req\":\"card.attn\",\"mode\":\"arm,location\"}",
               "fields": {
-                "mode": "arm,location"
+                "mode": "location"
               },
               "sub_type": "Arm"
             }
@@ -478,7 +479,7 @@
             "x-validation": {
               "wire": "{\"req\":\"card.attn\",\"mode\":\"arm,motion\"}",
               "fields": {
-                "mode": "arm,motion"
+                "mode": "motion"
               },
               "sub_type": "Arm"
             }
@@ -490,7 +491,7 @@
             "x-validation": {
               "wire": "{\"req\":\"card.attn\",\"mode\":\"arm,signal\"}",
               "fields": {
-                "mode": "arm,signal"
+                "mode": "signal"
               },
               "sub_type": "Arm"
             }

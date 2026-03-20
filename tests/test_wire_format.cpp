@@ -290,3 +290,42 @@ TEST_CASE("consteval validated_mode accepts valid values") {
 
 // Note: invalid values produce compile errors — tested by attempting to build
 // and verifying failure. Cannot test negative case at runtime.
+
+// ---------------------------------------------------------------------------
+// ArrayField wire format
+// ---------------------------------------------------------------------------
+
+TEST_CASE("ArrayField: add() serializes as JSON array") {
+    TestHarness h;
+    note::Api api(h.nc);
+    auto req = api.file.delete_();
+    req.files.add("data.qi").add("settings.db");
+    req.execute();
+    REQUIRE(h.last_request == R"({"req":"file.delete","files":["data.qi","settings.db"]})");
+}
+
+TEST_CASE("ArrayField: initializer-list assignment") {
+    TestHarness h;
+    note::Api api(h.nc);
+    auto req = api.file.delete_();
+    req.files = {"data.qi", "settings.db"};
+    req.execute();
+    REQUIRE(h.last_request == R"({"req":"file.delete","files":["data.qi","settings.db"]})");
+}
+
+TEST_CASE("ArrayField: operator() initializer-list") {
+    TestHarness h;
+    note::Api api(h.nc);
+    auto req = api.file.delete_();
+    req.files({"data.qi", "settings.db"});
+    req.execute();
+    REQUIRE(h.last_request == R"({"req":"file.delete","files":["data.qi","settings.db"]})");
+}
+
+TEST_CASE("ArrayField: empty field not serialized") {
+    TestHarness h;
+    note::Api api(h.nc);
+    auto req = api.file.delete_();
+    req.execute();
+    REQUIRE(h.last_request == R"({"req":"file.delete"})");
+}

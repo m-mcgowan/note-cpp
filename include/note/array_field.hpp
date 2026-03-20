@@ -5,12 +5,15 @@
 /// Stores up to N items and serializes them as a JSON array in build().
 ///
 ///   req.files.add("data.qi").add("my-settings.db");
+///   req.files = {"data.qi", "my-settings.db"};
+///   req.files({"data.qi", "my-settings.db"});
 ///   // → "files":["data.qi","my-settings.db"]
 ///
 /// @tparam T   Element type (typically note::string_view).
 /// @tparam N   Maximum number of elements (compile-time constant).
 
 #include <cstddef>
+#include <initializer_list>
 #include "json.hpp"
 #include "types.hpp"
 
@@ -19,6 +22,24 @@ namespace note {
 template<typename T, std::size_t N>
 class ArrayField {
 public:
+    ArrayField() = default;
+
+    ArrayField(std::initializer_list<T> items) {
+        for (auto& item : items)
+            add(item);
+    }
+
+    ArrayField& operator=(std::initializer_list<T> items) {
+        count_ = 0;
+        for (auto& item : items)
+            add(item);
+        return *this;
+    }
+
+    ArrayField& operator()(std::initializer_list<T> items) {
+        return operator=(items);
+    }
+
     ArrayField& add(T item) {
         if (count_ < N) items_[count_++] = item;
         return *this;

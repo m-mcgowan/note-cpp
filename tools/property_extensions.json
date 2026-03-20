@@ -17,20 +17,20 @@
     "off": { "x-toggle": { "group": "led", "method": "turnOff" } }
   },
   "card.location.track": {
-    "start": { "x-toggle": { "group": "tracking", "method": "start", "combined": "enable" } },
-    "stop":  { "x-toggle": { "group": "tracking", "method": "stop" } }
+    "start": { "x-toggle": { "group": "tracking", "method": "enable",  "combined": "enable" } },
+    "stop":  { "x-toggle": { "group": "tracking", "method": "disable" } }
   },
   "card.motion.mode": {
-    "start": { "x-toggle": { "group": "motion", "method": "start", "combined": "enable" } },
-    "stop":  { "x-toggle": { "group": "motion", "method": "stop" } }
+    "start": { "x-toggle": { "group": "motion", "method": "enable",  "combined": "enable" } },
+    "stop":  { "x-toggle": { "group": "motion", "method": "disable" } }
   },
   "card.motion.sync": {
-    "start": { "x-toggle": { "group": "sync", "method": "start", "combined": "enable" } },
-    "stop":  { "x-toggle": { "group": "sync", "method": "stop" } }
+    "start": { "x-toggle": { "group": "sync", "method": "enable",  "combined": "enable" } },
+    "stop":  { "x-toggle": { "group": "sync", "method": "disable" } }
   },
   "card.motion.track": {
-    "start": { "x-toggle": { "group": "capture", "method": "start", "combined": "enable" } },
-    "stop":  { "x-toggle": { "group": "capture", "method": "stop" } }
+    "start": { "x-toggle": { "group": "capture", "method": "enable",  "combined": "enable" } },
+    "stop":  { "x-toggle": { "group": "capture", "method": "disable" } }
   },
   "card.power": {
     "reset": { "x-action": "resetCounters" }

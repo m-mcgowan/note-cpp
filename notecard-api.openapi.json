@@ -3981,7 +3981,7 @@
                     "type": "boolean",
                     "x-toggle": {
                       "group": "tracking",
-                      "method": "start",
+                      "method": "enable",
                       "combined": "enable"
                     }
                   },
@@ -3990,7 +3990,7 @@
                     "type": "boolean",
                     "x-toggle": {
                       "group": "tracking",
-                      "method": "stop"
+                      "method": "disable"
                     }
                   },
                   "sync": {
@@ -4365,7 +4365,7 @@
                     "type": "boolean",
                     "x-toggle": {
                       "group": "motion",
-                      "method": "start",
+                      "method": "enable",
                       "combined": "enable"
                     }
                   },
@@ -4374,7 +4374,7 @@
                     "type": "boolean",
                     "x-toggle": {
                       "group": "motion",
-                      "method": "stop"
+                      "method": "disable"
                     }
                   }
                 },
@@ -4483,7 +4483,7 @@
                     "type": "boolean",
                     "x-toggle": {
                       "group": "sync",
-                      "method": "start",
+                      "method": "enable",
                       "combined": "enable"
                     }
                   },
@@ -4492,7 +4492,7 @@
                     "type": "boolean",
                     "x-toggle": {
                       "group": "sync",
-                      "method": "stop"
+                      "method": "disable"
                     }
                   },
                   "threshold": {
@@ -4616,7 +4616,7 @@
                     "type": "boolean",
                     "x-toggle": {
                       "group": "capture",
-                      "method": "start",
+                      "method": "enable",
                       "combined": "enable"
                     }
                   },
@@ -4625,7 +4625,7 @@
                     "type": "boolean",
                     "x-toggle": {
                       "group": "capture",
-                      "method": "stop"
+                      "method": "disable"
                     }
                   },
                   "threshold": {

@@ -202,6 +202,27 @@ namespace note::api {
 {% endif %}
 {% endfor %}
 
+{% if op.toggle_pairs or op.action_methods %}
+    // Semantic convenience methods — generated from x-toggle / x-action metadata
+    // (method names that match a field accessor are skipped to avoid redefinition)
+{% for tp in op.toggle_pairs %}
+{% if tp.true_method != tp.true_accessor %}
+{{ indent }}auto& {{ tp.true_method }}() { {{ tp.true_accessor }} = true; return *this; }
+{% endif %}
+{% if tp.false_method and tp.false_method != tp.false_accessor %}
+{{ indent }}auto& {{ tp.false_method }}() { {{ tp.false_accessor }} = true; return *this; }
+{% endif %}
+{% if tp.combined and tp.combined != tp.true_accessor and tp.combined != tp.false_accessor %}
+{{ indent }}auto& {{ tp.combined }}(bool v_) { if (v_) {{ tp.true_accessor }} = true; else {{ tp.false_accessor }} = true; return *this; }
+{% endif %}
+{% endfor %}
+{% for am in op.action_methods %}
+{% if am.method != am.accessor_name %}
+{{ indent }}auto& {{ am.method }}() { {{ am.accessor_name }} = true; return *this; }
+{{ indent }}auto& {{ am.method }}(bool v_) { {{ am.accessor_name }} = v_; return *this; }
+{% endif %}
+{% endfor %}
+{% endif %}
 {{ indent }}template<typename T>
 {{ indent }}auto& extra(note::string_view key, T value) {
 {{ indent }}    if (extras_count_ < NOTE_EXTRAS_MAX)

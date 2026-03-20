@@ -8,6 +8,7 @@ from dataclasses import replace
 from pathlib import Path
 
 from .model import (
+    ActionMethodDef,
     AliasDef,
     BinaryTransferDef,
     EndpointGroup,
@@ -16,6 +17,7 @@ from .model import (
     PropertyDef,
     ResponseDef,
     SubDescription,
+    TogglePairDef,
 )
 from .naming import (
     endpoint_to_header_filename,
@@ -126,6 +128,8 @@ def _parse_property(name: str, schema: dict, *,
         sub_descriptions=sub_descriptions,
         is_array=is_array,
         array_max_items=schema.get("x-max-items", 8),
+        toggle=schema.get("x-toggle"),
+        action=schema.get("x-action"),
     )
 
 
@@ -229,6 +233,56 @@ def _extract_response_props(operation: dict) -> tuple[list[PropertyDef], bool]:
     return props, has_body
 
 
+def _compute_semantic_methods(
+    properties: list[PropertyDef],
+) -> tuple[list[TogglePairDef], list[ActionMethodDef]]:
+    """Build TogglePairDef and ActionMethodDef lists from property x-toggle/x-action."""
+    by_group: dict[str, list[PropertyDef]] = defaultdict(list)
+    for prop in properties:
+        # Skip dispatch-required fields — auto-emitted in build(), not user-settable.
+        if prop.toggle and not prop.is_required_by_dispatch:
+            by_group[prop.toggle["group"]].append(prop)
+
+    pairs = []
+    for group_props in by_group.values():
+        if len(group_props) == 2:
+            # The side with "combined" is the "true" (enable) side
+            p_true = next(
+                (p for p in group_props if p.toggle.get("combined")),
+                group_props[0],
+            )
+            p_false = next(p for p in group_props if p is not p_true)
+            pairs.append(TogglePairDef(
+                true_method=p_true.toggle["method"],
+                false_method=p_false.toggle["method"],
+                true_accessor=p_true.accessor_name,
+                false_accessor=p_false.accessor_name,
+                combined=p_true.toggle.get("combined"),
+            ))
+        elif len(group_props) == 1:
+            # Single-sided toggle (e.g. ntn.gps) — just a no-arg setter
+            p = group_props[0]
+            pairs.append(TogglePairDef(
+                true_method=p.toggle["method"],
+                false_method="",
+                true_accessor=p.accessor_name,
+                false_accessor="",
+                combined=p.toggle.get("combined"),
+            ))
+
+    actions = []
+    for prop in properties:
+        # Skip dispatch-required fields — they are auto-emitted in build(), not
+        # declared as user-settable struct members, so a method can't reference them.
+        if prop.action and not prop.is_required_by_dispatch:
+            actions.append(ActionMethodDef(
+                method=prop.action,
+                accessor_name=prop.accessor_name,
+            ))
+
+    return pairs, actions
+
+
 def _parse_binary_transfer(bt: dict | None) -> BinaryTransferDef | None:
     """Parse x-binary-transfer extension."""
     if not bt:
@@ -275,6 +329,8 @@ def _parse_operation(op: dict, *, suffix: str | None = None) -> OperationDef:
     else:
         struct_name = endpoint_to_struct_name(notecard_request)
 
+    toggle_pairs, action_methods = _compute_semantic_methods(req_props)
+
     return OperationDef(
         struct_name=struct_name,
         notecard_request=notecard_request,
@@ -291,6 +347,8 @@ def _parse_operation(op: dict, *, suffix: str | None = None) -> OperationDef:
         skus=op.get("x-skus", []),
         description=op.get("summary", ""),
         legacy_struct_name=legacy_struct_name,
+        toggle_pairs=toggle_pairs,
+        action_methods=action_methods,
     )
 
 
@@ -358,6 +416,8 @@ def _expand_intents(
         raw_safety = intent.get("safety")
         safety = SAFETY_MAP[raw_safety] if raw_safety else base_op.safety
 
+        toggle_pairs, action_methods = _compute_semantic_methods(req_props)
+
         operations.append(OperationDef(
             struct_name=struct_name,
             notecard_request=base_op.notecard_request,
@@ -375,6 +435,8 @@ def _expand_intents(
             implicit_fields=implicit_fields,
             description=intent.get("description", base_op.description),
             mode_prefix=intent.get("mode_prefix"),
+            toggle_pairs=toggle_pairs,
+            action_methods=action_methods,
         ))
 
     return operations

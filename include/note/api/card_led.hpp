@@ -86,6 +86,11 @@ struct CardLed {
     }
 #endif
 
+    // Semantic convenience methods — generated from x-toggle / x-action metadata
+    // (method names that match a field accessor are skipped to avoid redefinition)
+    auto& turnOn() { on = true; return *this; }
+    auto& turnOff() { off = true; return *this; }
+    auto& turnOn(bool v_) { if (v_) on = true; else off = true; return *this; }
     template<typename T>
     auto& extra(note::string_view key, T value) {
         if (extras_count_ < NOTE_EXTRAS_MAX)

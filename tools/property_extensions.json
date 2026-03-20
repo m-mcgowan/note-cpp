@@ -1,7 +1,73 @@
 {
   "$comment": "Per-property extensions not in upstream notecard-schema. Merged into the OpenAPI spec by schema_to_openapi.py during conversion. Keys are endpoint names, values map property wire-names to extension objects.",
+  "card.attn": {
+    "on": { "x-action": "persist" }
+  },
+  "card.aux": {
+    "start": { "x-action": "resetCounters" }
+  },
+  "card.dfu": {
+    "on":    { "x-toggle": { "group": "update",    "method": "enableUpdate",      "combined": "enableUpdate" } },
+    "off":   { "x-toggle": { "group": "update",    "method": "disableUpdate" } },
+    "start": { "x-toggle": { "group": "hostReset", "method": "enableHostReset",   "combined": "enableHostReset" } },
+    "stop":  { "x-toggle": { "group": "hostReset", "method": "disableHostReset" } }
+  },
+  "card.led": {
+    "on":  { "x-toggle": { "group": "led", "method": "turnOn",  "combined": "turnOn" } },
+    "off": { "x-toggle": { "group": "led", "method": "turnOff" } }
+  },
+  "card.location.track": {
+    "start": { "x-toggle": { "group": "tracking", "method": "start", "combined": "enable" } },
+    "stop":  { "x-toggle": { "group": "tracking", "method": "stop" } }
+  },
+  "card.motion.mode": {
+    "start": { "x-toggle": { "group": "motion", "method": "start", "combined": "enable" } },
+    "stop":  { "x-toggle": { "group": "motion", "method": "stop" } }
+  },
+  "card.motion.sync": {
+    "start": { "x-toggle": { "group": "sync", "method": "start", "combined": "enable" } },
+    "stop":  { "x-toggle": { "group": "sync", "method": "stop" } }
+  },
+  "card.motion.track": {
+    "start": { "x-toggle": { "group": "capture", "method": "start", "combined": "enable" } },
+    "stop":  { "x-toggle": { "group": "capture", "method": "stop" } }
+  },
+  "card.power": {
+    "reset": { "x-action": "resetCounters" }
+  },
+  "card.sleep": {
+    "on":  { "x-toggle": { "group": "sleep", "method": "enable",  "combined": "enable" } },
+    "off": { "x-toggle": { "group": "sleep", "method": "disable" } }
+  },
+  "card.temp": {
+    "stop": { "x-action": "stopLogging" }
+  },
+  "card.voltage": {
+    "on":  { "x-toggle": { "group": "trend", "method": "enableTrend",  "combined": "enableTrend" } },
+    "off": { "x-toggle": { "group": "trend", "method": "disableTrend" } }
+  },
+  "card.wifi": {
+    "start": { "x-action": "activateSoftAP" }
+  },
+  "card.wireless.penalty": {
+    "reset": { "x-action": "clearAll" }
+  },
+  "dfu.status": {
+    "on":   { "x-toggle": { "group": "downloads", "method": "allow",           "combined": "allowDownloads" } },
+    "off":  { "x-toggle": { "group": "downloads", "method": "deny" } },
+    "stop": { "x-action": "clearDfu" }
+  },
   "hub.set": {
     "vinbound":  { "x-format": "voltage-variable" },
-    "voutbound": { "x-format": "voltage-variable" }
+    "voutbound": { "x-format": "voltage-variable" },
+    "on":  { "x-toggle": { "group": "continuous", "method": "allowContinuous",  "combined": "allowContinuous" } },
+    "off": { "x-toggle": { "group": "continuous", "method": "resumePeriodic" } }
+  },
+  "note.changes": {
+    "start": { "x-action": "resetTracker" }
+  },
+  "ntn.gps": {
+    "on":  { "x-toggle": { "group": "gps", "method": "useNotecardGps" } },
+    "off": { "x-toggle": { "group": "gps", "method": "useStarnoteGps" } }
   }
 }

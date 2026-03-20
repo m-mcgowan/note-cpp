@@ -121,6 +121,14 @@ struct CardDfu {
     }
 #endif
 
+    // Semantic convenience methods — generated from x-toggle / x-action metadata
+    // (method names that match a field accessor are skipped to avoid redefinition)
+    auto& enableUpdate() { on = true; return *this; }
+    auto& disableUpdate() { off = true; return *this; }
+    auto& enableUpdate(bool v_) { if (v_) on = true; else off = true; return *this; }
+    auto& enableHostReset() { start = true; return *this; }
+    auto& disableHostReset() { stop = true; return *this; }
+    auto& enableHostReset(bool v_) { if (v_) start = true; else stop = true; return *this; }
     template<typename T>
     auto& extra(note::string_view key, T value) {
         if (extras_count_ < NOTE_EXTRAS_MAX)

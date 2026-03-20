@@ -82,6 +82,10 @@ struct NoteChanges {
         } tracker{};
 
 
+    // Semantic convenience methods — generated from x-toggle / x-action metadata
+    // (method names that match a field accessor are skipped to avoid redefinition)
+        auto& resetTracker() { start = true; return *this; }
+        auto& resetTracker(bool v_) { start = v_; return *this; }
         template<typename T>
         auto& extra(note::string_view key, T value) {
             if (extras_count_ < NOTE_EXTRAS_MAX)
@@ -231,6 +235,10 @@ struct NoteChanges {
         } tracker{};
 
 
+    // Semantic convenience methods — generated from x-toggle / x-action metadata
+    // (method names that match a field accessor are skipped to avoid redefinition)
+        auto& resetTracker() { start = true; return *this; }
+        auto& resetTracker(bool v_) { start = v_; return *this; }
         template<typename T>
         auto& extra(note::string_view key, T value) {
             if (extras_count_ < NOTE_EXTRAS_MAX)

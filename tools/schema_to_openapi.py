@@ -444,29 +444,91 @@ def convert(schema_dir: Path, safety_path: Path,
     return openapi
 
 
+def apply_extensions_to_existing(spec_path: Path, extensions_path: Path,
+                                  output_path: Path | None = None) -> None:
+    """Patch property extensions into an existing OpenAPI spec in place.
+
+    Used to update property_extensions.json entries without doing a full
+    regeneration from Blues schema files (which would lose operation-level
+    extensions like x-intents, x-intent-name, x-aliases that are not yet
+    stored in a separate source file).
+    """
+    with open(spec_path) as f:
+        spec = json.load(f)
+
+    extensions = load_property_extensions(extensions_path)
+
+    for path, path_item in spec.get("paths", {}).items():
+        endpoint = path_to_endpoint(path)
+        ep_extensions = extensions.get(endpoint, {})
+        if not ep_extensions:
+            continue
+        for method, op in path_item.items():
+            if method in ("parameters", "summary", "description", "x-aliases",
+                          "x-flat-alias"):
+                continue
+            if isinstance(op, dict):
+                _apply_property_extensions(op, ep_extensions)
+
+    out_path = output_path or spec_path
+    out_path.write_text(json.dumps(spec, indent=2) + "\n")
+    print(f"Applied extensions to {out_path} ({len(spec['paths'])} paths)",
+          file=sys.stderr)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("schema_dir", type=Path,
-                        help="Path to notecard-schema repo")
+    sub = parser.add_subparsers(dest="command")
+
+    # Default: full conversion from Blues schema files
+    conv = sub.add_parser("convert", help="Full conversion from Blues schema files")
+    conv.add_argument("schema_dir", type=Path, help="Path to notecard-schema repo")
+    conv.add_argument("--safety", type=Path,
+                      default=Path(__file__).parent / "safety_semantics.json")
+    conv.add_argument("--binary", type=Path,
+                      default=Path(__file__).parent / "binary_transfer.json")
+    conv.add_argument("--extensions", type=Path,
+                      default=Path(__file__).parent / "property_extensions.json")
+    conv.add_argument("--schema-tag", type=str, default=None)
+    conv.add_argument("--schema-commit", type=str, default=None)
+    conv.add_argument("-o", "--output", type=Path, default=None)
+
+    # Update: patch property extensions into existing spec without full regen
+    upd = sub.add_parser(
+        "update-extensions",
+        help="Apply property_extensions.json to an existing spec (no full regen).",
+    )
+    upd.add_argument("spec", type=Path, help="Existing notecard-api.openapi.json")
+    upd.add_argument("--extensions", type=Path,
+                     default=Path(__file__).parent / "property_extensions.json")
+    upd.add_argument("-o", "--output", type=Path, default=None,
+                     help="Output path (default: overwrite spec in place)")
+
+    # Legacy positional-arg mode (schema_dir as first arg, no subcommand)
+    parser.add_argument("schema_dir", type=Path, nargs="?",
+                        help="Path to notecard-schema repo (legacy mode)")
     parser.add_argument("--safety", type=Path,
-                        default=Path(__file__).parent / "safety_semantics.json",
-                        help="Path to safety_semantics.json")
+                        default=Path(__file__).parent / "safety_semantics.json")
     parser.add_argument("--binary", type=Path,
-                        default=Path(__file__).parent / "binary_transfer.json",
-                        help="Path to binary_transfer.json")
+                        default=Path(__file__).parent / "binary_transfer.json")
     parser.add_argument("--extensions", type=Path,
-                        default=Path(__file__).parent / "property_extensions.json",
-                        help="Path to property_extensions.json")
-    parser.add_argument("--schema-tag", type=str, default=None,
-                        help="Upstream schema version tag (e.g. v1.2.7)")
-    parser.add_argument("--schema-commit", type=str, default=None,
-                        help="Schema repo commit (auto-detected if omitted)")
-    parser.add_argument("-o", "--output", type=Path,
-                        default=None,
-                        help="Output file (default: stdout)")
+                        default=Path(__file__).parent / "property_extensions.json")
+    parser.add_argument("--schema-tag", type=str, default=None)
+    parser.add_argument("--schema-commit", type=str, default=None)
+    parser.add_argument("-o", "--output", type=Path, default=None)
+
     args = parser.parse_args()
 
-    openapi = convert(args.schema_dir, args.safety, args.binary,
+    if args.command == "update-extensions":
+        apply_extensions_to_existing(args.spec, args.extensions, args.output)
+        return
+
+    # convert subcommand or legacy positional-arg mode
+    schema_dir = getattr(args, "schema_dir", None)
+    if schema_dir is None:
+        parser.error("schema_dir is required for full conversion")
+
+    openapi = convert(schema_dir, args.safety, args.binary,
                       args.extensions, args.schema_tag, args.schema_commit)
 
     output = json.dumps(openapi, indent=2)

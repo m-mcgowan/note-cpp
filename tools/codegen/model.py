@@ -39,6 +39,8 @@ class PropertyDef:
     sub_descriptions: list[SubDescription] | None = None  # per-value docs
     is_array: bool = False  # True for type:array fields (use ArrayField)
     array_max_items: int = 8  # Max elements for ArrayField (overridable via x-max-items)
+    toggle: dict | None = None   # x-toggle metadata for paired boolean semantic methods
+    action: str | None = None    # x-action method name for standalone boolean trigger
 
     @property
     def field_type(self) -> str:
@@ -96,6 +98,23 @@ class PropertyDef:
         if self.default_value is not None:
             return f", {self.default_value}"
         return ""
+
+
+@dataclass
+class TogglePairDef:
+    """Paired boolean fields with semantic no-arg factory methods."""
+    true_method: str        # method name for the "enable" side
+    false_method: str       # method name for the "disable" side (empty if no pair)
+    true_accessor: str      # C++ field accessor name (e.g. "on", "start")
+    false_accessor: str     # C++ field accessor name (e.g. "off", "stop")
+    combined: str | None    # combined bool method name, or None
+
+
+@dataclass
+class ActionMethodDef:
+    """A boolean field with a semantic no-arg method."""
+    method: str             # method name (e.g. "resetCounters")
+    accessor_name: str      # C++ field accessor name (e.g. "start")
 
 
 @dataclass
@@ -215,6 +234,8 @@ class OperationDef:
     description: str = ""  # From operation summary
     legacy_struct_name: str | None = None  # Old verb-derived name for deprecation alias
     mode_prefix: str | None = None  # e.g. "arm" — prepended to mode field in build()
+    toggle_pairs: list['TogglePairDef'] = field(default_factory=list)
+    action_methods: list['ActionMethodDef'] = field(default_factory=list)
 
     @property
     def legacy_factory_method(self) -> str | None:

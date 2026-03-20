@@ -330,7 +330,8 @@
                   },
                   "on": {
                     "description": "When `true`, enables ATTN processing. This setting is retained across device restarts.",
-                    "type": "boolean"
+                    "type": "boolean",
+                    "x-action": "persist"
                   },
                   "payload": {
                     "description": "When using `sleep` mode, a payload of data from the host that the Notecard should hold in memory until retrieved by the host.",
@@ -1013,7 +1014,8 @@
                   },
                   "start": {
                     "description": "When in `gpio` mode, if an `AUX` pin is configured as a `count` type, set to `true` to reset counters and start incrementing.",
-                    "type": "boolean"
+                    "type": "boolean",
+                    "x-action": "resetCounters"
                   },
                   "sync": {
                     "description": "If `true`, for pins set as `input` by `usage`, the Notecard will autonomously report any state changes as new notes in `file`. For pins used as `counter`, the Notecard will use an interrupt to count pulses and will report the total in a new note in `file` unless it has been noted in the previous second.",
@@ -2453,11 +2455,20 @@
                   },
                   "off": {
                     "description": "Set to `true` to disable Notecard Outboard Firmware Update from occurring.",
-                    "type": "boolean"
+                    "type": "boolean",
+                    "x-toggle": {
+                      "group": "update",
+                      "method": "disableUpdate"
+                    }
                   },
                   "on": {
                     "description": "Set to `true` to enable Notecard Outboard Firmware Update.",
-                    "type": "boolean"
+                    "type": "boolean",
+                    "x-toggle": {
+                      "group": "update",
+                      "method": "enableUpdate",
+                      "combined": "enableUpdate"
+                    }
                   },
                   "seconds": {
                     "description": "When used with `\"off\":true`, disable Notecard Outboard Firmware Update operations for the specified number of `seconds`.",
@@ -2465,11 +2476,20 @@
                   },
                   "start": {
                     "description": "Set to `true` to enable the host RESET if previously disabled with `\"stop\":true`.",
-                    "type": "boolean"
+                    "type": "boolean",
+                    "x-toggle": {
+                      "group": "hostReset",
+                      "method": "enableHostReset",
+                      "combined": "enableHostReset"
+                    }
                   },
                   "stop": {
                     "description": "Set to `true` to disable the host RESET that is normally performed on the host MCU when the Notecard starts up (in order to ensure a clean startup), and also when the Notecard wakes up the host MCU after the expiration of a `card.attn` \"sleep\" operation. If `true`, the host MCU will not be reset in these two conditions.",
-                    "type": "boolean"
+                    "type": "boolean",
+                    "x-toggle": {
+                      "group": "hostReset",
+                      "method": "disableHostReset"
+                    }
                   }
                 },
                 "additionalProperties": false
@@ -2863,11 +2883,20 @@
                   },
                   "off": {
                     "description": "Set to `true` to turn the specified LED or NeoPixel off.",
-                    "type": "boolean"
+                    "type": "boolean",
+                    "x-toggle": {
+                      "group": "led",
+                      "method": "turnOff"
+                    }
                   },
                   "on": {
                     "description": "Set to `true` to turn the specified LED or NeoPixel on.",
-                    "type": "boolean"
+                    "type": "boolean",
+                    "x-toggle": {
+                      "group": "led",
+                      "method": "turnOn",
+                      "combined": "turnOn"
+                    }
                   }
                 },
                 "additionalProperties": false
@@ -3949,11 +3978,20 @@
                   },
                   "start": {
                     "description": "Set to `true` to start Notefile tracking.",
-                    "type": "boolean"
+                    "type": "boolean",
+                    "x-toggle": {
+                      "group": "tracking",
+                      "method": "start",
+                      "combined": "enable"
+                    }
                   },
                   "stop": {
                     "description": "Set to `true` to stop Notefile tracking.",
-                    "type": "boolean"
+                    "type": "boolean",
+                    "x-toggle": {
+                      "group": "tracking",
+                      "method": "stop"
+                    }
                   },
                   "sync": {
                     "description": "Set to `true` to perform an immediate sync to the Notehub each time a new Note is added.",
@@ -4324,11 +4362,20 @@
                   },
                   "start": {
                     "description": "`true` to enable the Notecard accelerometer and start motion tracking.",
-                    "type": "boolean"
+                    "type": "boolean",
+                    "x-toggle": {
+                      "group": "motion",
+                      "method": "start",
+                      "combined": "enable"
+                    }
                   },
                   "stop": {
                     "description": "`true` to disable the Notecard accelerometer and stop motion tracking.",
-                    "type": "boolean"
+                    "type": "boolean",
+                    "x-toggle": {
+                      "group": "motion",
+                      "method": "stop"
+                    }
                   }
                 },
                 "additionalProperties": false
@@ -4433,11 +4480,20 @@
                   },
                   "start": {
                     "description": "`true` to start motion-triggered syncing.",
-                    "type": "boolean"
+                    "type": "boolean",
+                    "x-toggle": {
+                      "group": "sync",
+                      "method": "start",
+                      "combined": "enable"
+                    }
                   },
                   "stop": {
                     "description": "`true` to stop motion-triggered syncing.",
-                    "type": "boolean"
+                    "type": "boolean",
+                    "x-toggle": {
+                      "group": "sync",
+                      "method": "stop"
+                    }
                   },
                   "threshold": {
                     "description": "The number of buckets that must indicate motion in order to trigger a sync. If set to `0`, the Notecard will only perform a sync when its orientation changes.",
@@ -4557,11 +4613,20 @@
                   },
                   "start": {
                     "description": "`true` to start motion capture.",
-                    "type": "boolean"
+                    "type": "boolean",
+                    "x-toggle": {
+                      "group": "capture",
+                      "method": "start",
+                      "combined": "enable"
+                    }
                   },
                   "stop": {
                     "description": "`true` to stop motion capture.",
-                    "type": "boolean"
+                    "type": "boolean",
+                    "x-toggle": {
+                      "group": "capture",
+                      "method": "stop"
+                    }
                   },
                   "threshold": {
                     "description": "The number of buckets that must indicate motion in order to capture.",
@@ -4672,7 +4737,8 @@
             "name": "reset",
             "in": "query",
             "schema": {
-              "type": "boolean"
+              "type": "boolean",
+              "x-action": "resetCounters"
             },
             "description": "Set to `true` to reset the power consumption counters back to 0."
           }
@@ -4793,7 +4859,8 @@
                   },
                   "reset": {
                     "description": "Set to `true` to reset the power consumption counters back to 0.",
-                    "type": "boolean"
+                    "type": "boolean",
+                    "x-action": "resetCounters"
                   }
                 },
                 "additionalProperties": false
@@ -4917,7 +4984,8 @@
                   },
                   "reset": {
                     "description": "Set to `true` to reset the power consumption counters back to 0.",
-                    "type": "boolean"
+                    "type": "boolean",
+                    "x-action": "resetCounters"
                   }
                 },
                 "additionalProperties": false
@@ -5281,11 +5349,20 @@
                   },
                   "off": {
                     "description": "Set to `true` to disable the sleep mode on Notecard.",
-                    "type": "boolean"
+                    "type": "boolean",
+                    "x-toggle": {
+                      "group": "sleep",
+                      "method": "disable"
+                    }
                   },
                   "on": {
                     "description": "Set to `true` to enable Notecard to sleep once it is idle for >= 30 seconds.",
-                    "type": "boolean"
+                    "type": "boolean",
+                    "x-toggle": {
+                      "group": "sleep",
+                      "method": "enable",
+                      "combined": "enable"
+                    }
                   },
                   "seconds": {
                     "description": "The number of seconds the Notecard will wait before entering sleep mode (minimum value is 30).",
@@ -5555,7 +5632,8 @@
             "name": "stop",
             "in": "query",
             "schema": {
-              "type": "boolean"
+              "type": "boolean",
+              "x-action": "stopLogging"
             },
             "description": "If set to `true`, the Notecard will stop logging the temperature value at the interval specified with the `minutes` parameter (see above)."
           },
@@ -5723,7 +5801,8 @@
                   },
                   "stop": {
                     "description": "If set to `true`, the Notecard will stop logging the temperature value at the interval specified with the `minutes` parameter (see above).",
-                    "type": "boolean"
+                    "type": "boolean",
+                    "x-action": "stopLogging"
                   },
                   "sync": {
                     "description": "If set to `true`, the Notecard will immediately sync any pending `_temp.qo` Notes created with the `minutes` parameter (see above).",
@@ -5888,7 +5967,8 @@
                   },
                   "stop": {
                     "description": "If set to `true`, the Notecard will stop logging the temperature value at the interval specified with the `minutes` parameter (see above).",
-                    "type": "boolean"
+                    "type": "boolean",
+                    "x-action": "stopLogging"
                   },
                   "sync": {
                     "description": "If set to `true`, the Notecard will immediately sync any pending `_temp.qo` Notes created with the `minutes` parameter (see above).",
@@ -7339,7 +7419,11 @@
             "name": "off",
             "in": "query",
             "schema": {
-              "type": "boolean"
+              "type": "boolean",
+              "x-toggle": {
+                "group": "trend",
+                "method": "disableTrend"
+              }
             },
             "description": "Disable historic voltage trend calculations."
           },
@@ -7356,7 +7440,12 @@
             "name": "on",
             "in": "query",
             "schema": {
-              "type": "boolean"
+              "type": "boolean",
+              "x-toggle": {
+                "group": "trend",
+                "method": "enableTrend",
+                "combined": "enableTrend"
+              }
             },
             "description": "Enable historic voltage trend calculations."
           },
@@ -7658,7 +7747,11 @@
                   },
                   "off": {
                     "description": "Disable historic voltage trend calculations.",
-                    "type": "boolean"
+                    "type": "boolean",
+                    "x-toggle": {
+                      "group": "trend",
+                      "method": "disableTrend"
+                    }
                   },
                   "offset": {
                     "description": "Number of hours to move into the past before starting analysis.",
@@ -7667,7 +7760,12 @@
                   },
                   "on": {
                     "description": "Enable historic voltage trend calculations.",
-                    "type": "boolean"
+                    "type": "boolean",
+                    "x-toggle": {
+                      "group": "trend",
+                      "method": "enableTrend",
+                      "combined": "enableTrend"
+                    }
                   },
                   "set": {
                     "description": "Used along with `calibration`, set to `true` to specify a new calibration value.",
@@ -7896,7 +7994,8 @@
                   },
                   "start": {
                     "description": "Specify `true` to activate SoftAP mode on the Notecard programmatically.",
-                    "type": "boolean"
+                    "type": "boolean",
+                    "x-action": "activateSoftAP"
                   },
                   "text": {
                     "description": "A string containing an array of access points the Notecard should attempt to use. The access points should be provided in the following format:\n\n`[\"FIRST-SSID\",\"FIRST-PASSWORD\"],[\"SECOND-SSID\",\"SECOND-PASSWORD\"]`.\n\nYou may need to escape any quotes used in this argument before passing it to the Notecard. For example, the following is a valid request to pass to a Notecard through the [In-Browser Terminal](https://dev.blues.io/terminal/).\n\n`{\"req\":\"card.wifi\", \"text\":\"[\\\"FIRST-SSID\\\",\\\"FIRST-PASSWORD\\\"]\"}`",
@@ -8370,7 +8469,8 @@
             "name": "reset",
             "in": "query",
             "schema": {
-              "type": "boolean"
+              "type": "boolean",
+              "x-action": "clearAll"
             },
             "description": "Set to `true` to remove the Notecard from certain types of penalty boxes."
           },
@@ -8528,7 +8628,8 @@
                   },
                   "reset": {
                     "description": "Set to `true` to remove the Notecard from certain types of penalty boxes.",
-                    "type": "boolean"
+                    "type": "boolean",
+                    "x-action": "clearAll"
                   },
                   "set": {
                     "description": "Set to `true` to override the default settings of the [Network Registration Failure Penalty Box](/support/understanding-notecard-penalty-boxes/#network-registration-failure).",
@@ -8685,7 +8786,8 @@
                   },
                   "reset": {
                     "description": "Set to `true` to remove the Notecard from certain types of penalty boxes.",
-                    "type": "boolean"
+                    "type": "boolean",
+                    "x-action": "clearAll"
                   },
                   "set": {
                     "description": "Set to `true` to override the default settings of the [Network Registration Failure Penalty Box](/support/understanding-notecard-penalty-boxes/#network-registration-failure).",
@@ -9011,11 +9113,20 @@
                   },
                   "off": {
                     "description": "`true` to disable firmware downloads from Notehub.",
-                    "type": "boolean"
+                    "type": "boolean",
+                    "x-toggle": {
+                      "group": "downloads",
+                      "method": "deny"
+                    }
                   },
                   "on": {
                     "description": "`true` to allow firmware downloads from Notehub.",
-                    "type": "boolean"
+                    "type": "boolean",
+                    "x-toggle": {
+                      "group": "downloads",
+                      "method": "allow",
+                      "combined": "allowDownloads"
+                    }
                   },
                   "status": {
                     "description": "When setting `stop` to `true`, an optional string synchronized to Notehub, which can be used for informational or diagnostic purposes.",
@@ -9023,7 +9134,8 @@
                   },
                   "stop": {
                     "description": "`true` to clear DFU state and delete the local firmware image from the Notecard.",
-                    "type": "boolean"
+                    "type": "boolean",
+                    "x-action": "clearDfu"
                   },
                   "x-schema-version": {
                     "description": "Version information on the host firmware to pass to Notehub. You may pass a simple version number string (e.g. `\"1.0.0.0\"`), or an object with detailed information about the firmware image (recommended).\n\nIf you provide an object it must take the following form.\n\n`{\"org\":\"my-organization\",\"product\":\"My Product\",\"description\":\"A description of the image\",\"version\":\"1.2.4\",\"built\":\"Jan 01 2025 01:02:03\",\"ver_major\":1,\"ver_minor\":2,\"ver_patch\":4,\"ver_build\": 5,\"builder\":\"The Builder\"}`\n\nCode to help you generate a version with the correct formatting is available in [Enabling Notecard Outboard Firmware Update](/notehub/host-firmware-updates/notecard-outboard-firmware-update/#enabling-notecard-outboard-firmware-update).",
@@ -10798,12 +10910,21 @@
                   "off": {
                     "description": "Set to `true` to manually instruct the Notecard to resume periodic mode after a web transaction has completed.",
                     "type": "boolean",
-                    "x-min-api-version": "3.4.1"
+                    "x-min-api-version": "3.4.1",
+                    "x-toggle": {
+                      "group": "continuous",
+                      "method": "resumePeriodic"
+                    }
                   },
                   "on": {
                     "description": "If in `periodic` mode, used to temporarily switch the Notecard to `continuous` mode to perform a web transaction.\\n\\nIgnored if the Notecard is already in `continuous` mode or if the Notecard is NOT performing a web transaction.",
                     "type": "boolean",
-                    "x-min-api-version": "3.4.1"
+                    "x-min-api-version": "3.4.1",
+                    "x-toggle": {
+                      "group": "continuous",
+                      "method": "allowContinuous",
+                      "combined": "allowContinuous"
+                    }
                   },
                   "outbound": {
                     "description": "The max wait time, in minutes, to sync outbound data from the Notecard. Explicit syncs (e.g. using `hub.sync`) do not affect this cadence.\n\nWhen in `periodic` or `continuous` mode this argument is required, otherwise the Notecard will function as if it is in `minimum` mode as it pertains to syncing behavior.\n\nUse `-1` to reset the value back to its default of `0`.\n\nA value of `0` means that the Notecard will never sync outbound data unless explicitly told to do so (e.g. using `hub.sync`).",
@@ -11729,7 +11850,8 @@
             "name": "start",
             "in": "query",
             "schema": {
-              "type": "boolean"
+              "type": "boolean",
+              "x-action": "resetTracker"
             },
             "description": "`true` to reset the tracker to the beginning."
           },
@@ -11963,7 +12085,8 @@
                   },
                   "start": {
                     "description": "`true` to reset the tracker to the beginning.",
-                    "type": "boolean"
+                    "type": "boolean",
+                    "x-action": "resetTracker"
                   },
                   "stop": {
                     "description": "`true` to delete the tracker.",
@@ -13114,11 +13237,19 @@
                 "properties": {
                   "off": {
                     "description": "When `true`, a paired Starnote will use its own GPS/GNSS location. This is the default configuration.",
-                    "type": "boolean"
+                    "type": "boolean",
+                    "x-toggle": {
+                      "group": "gps",
+                      "method": "useStarnoteGps"
+                    }
                   },
                   "on": {
                     "description": "When `true`, a Starnote will use the GPS/GNSS location from its paired Notecard, instead of its own GPS/GNSS location.",
-                    "type": "boolean"
+                    "type": "boolean",
+                    "x-toggle": {
+                      "group": "gps",
+                      "method": "useNotecardGps"
+                    }
                   }
                 },
                 "additionalProperties": false

@@ -50,6 +50,10 @@ struct CardPower {
         } reset{};
 
 
+    // Semantic convenience methods — generated from x-toggle / x-action metadata
+    // (method names that match a field accessor are skipped to avoid redefinition)
+        auto& resetCounters() { reset = true; return *this; }
+        auto& resetCounters(bool v_) { reset = v_; return *this; }
         template<typename T>
         auto& extra(note::string_view key, T value) {
             if (extras_count_ < NOTE_EXTRAS_MAX)
@@ -168,6 +172,10 @@ struct CardPower {
         } reset{};
 
 
+    // Semantic convenience methods — generated from x-toggle / x-action metadata
+    // (method names that match a field accessor are skipped to avoid redefinition)
+        auto& resetCounters() { reset = true; return *this; }
+        auto& resetCounters(bool v_) { reset = v_; return *this; }
         template<typename T>
         auto& extra(note::string_view key, T value) {
             if (extras_count_ < NOTE_EXTRAS_MAX)

@@ -244,6 +244,10 @@ struct CardAttn {
 #endif
 
 
+    // Semantic convenience methods — generated from x-toggle / x-action metadata
+    // (method names that match a field accessor are skipped to avoid redefinition)
+        auto& persist() { on = true; return *this; }
+        auto& persist(bool v_) { on = v_; return *this; }
         template<typename T>
         auto& extra(note::string_view key, T value) {
             if (extras_count_ < NOTE_EXTRAS_MAX)
@@ -511,6 +515,10 @@ struct CardAttn {
         } seconds{};
 
 
+    // Semantic convenience methods — generated from x-toggle / x-action metadata
+    // (method names that match a field accessor are skipped to avoid redefinition)
+        auto& persist() { on = true; return *this; }
+        auto& persist(bool v_) { on = v_; return *this; }
         template<typename T>
         auto& extra(note::string_view key, T value) {
             if (extras_count_ < NOTE_EXTRAS_MAX)

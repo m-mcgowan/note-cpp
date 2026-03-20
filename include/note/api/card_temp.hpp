@@ -75,6 +75,10 @@ struct CardTemp {
         } sync{};
 
 
+    // Semantic convenience methods — generated from x-toggle / x-action metadata
+    // (method names that match a field accessor are skipped to avoid redefinition)
+        auto& stopLogging() { stop = true; return *this; }
+        auto& stopLogging(bool v_) { stop = v_; return *this; }
         template<typename T>
         auto& extra(note::string_view key, T value) {
             if (extras_count_ < NOTE_EXTRAS_MAX)
@@ -249,6 +253,10 @@ struct CardTemp {
         } sync{};
 
 
+    // Semantic convenience methods — generated from x-toggle / x-action metadata
+    // (method names that match a field accessor are skipped to avoid redefinition)
+        auto& stopLogging() { stop = true; return *this; }
+        auto& stopLogging(bool v_) { stop = v_; return *this; }
         template<typename T>
         auto& extra(note::string_view key, T value) {
             if (extras_count_ < NOTE_EXTRAS_MAX)

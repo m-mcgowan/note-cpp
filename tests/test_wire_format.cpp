@@ -329,3 +329,88 @@ TEST_CASE("ArrayField: empty field not serialized") {
     req.execute();
     REQUIRE(h.last_request == R"({"req":"file.delete"})");
 }
+
+// ---------------------------------------------------------------------------
+// README Developer Experience section — compilable verification
+// ---------------------------------------------------------------------------
+
+TEST_CASE("DX: intent-revealing aliases produce correct wire format") {
+    TestHarness h;
+    note::Api api(h.nc);
+
+    // read by ID
+    api.note.read("data.db").noteId("my-note").execute();
+    REQUIRE(h.last_request ==
+        R"({"req":"note.get","file":"data.db","note":"my-note"})");
+
+    // pop from queue
+    api.note.pop("requests.qi").execute();
+    REQUIRE(h.last_request ==
+        R"({"req":"note.get","delete":true,"file":"requests.qi"})");
+
+    // binary status and clear
+    api.binary.status().execute();
+    REQUIRE(h.last_request == R"({"req":"card.binary"})");
+
+    api.binary.clear().execute();
+    REQUIRE(h.last_request == R"({"req":"card.binary","delete":true})");
+}
+
+TEST_CASE("DX: direct assignment from application config") {
+    TestHarness h;
+    note::Api api(h.nc);
+
+    // Simulate application config
+    struct { const char* product_uid; const char* sync_mode; int sync_interval; }
+        app_config{"com.example.app", "periodic", 60};
+
+    auto req = api.hub.set();
+    req.product  = app_config.product_uid;
+    req.mode     = app_config.sync_mode;
+    req.outbound = app_config.sync_interval;
+    req.execute();
+
+    REQUIRE(h.last_request ==
+        R"({"req":"hub.set","mode":"periodic","outbound":60,"product":"com.example.app"})");
+}
+
+TEST_CASE("DX: conditional fields — unset fields omitted") {
+    TestHarness h;
+    note::Api api(h.nc);
+
+    // Simulate application config
+    struct { const char* product_uid; const char* sync_mode; }
+        app_config{"com.example.app", "continuous"};
+
+    auto req = api.hub.set();
+    req.product = app_config.product_uid;
+    req.mode    = app_config.sync_mode;
+    if (app_config.sync_mode == note::string_view("continuous")) {
+        req.sync = true;  // only sent in continuous mode
+    }
+    req.execute();
+
+    // sync:true is present because mode is "continuous"
+    REQUIRE(h.last_request ==
+        R"({"req":"hub.set","mode":"continuous","product":"com.example.app","sync":true})");
+}
+
+TEST_CASE("DX: conditional fields — sync omitted when not continuous") {
+    TestHarness h;
+    note::Api api(h.nc);
+
+    struct { const char* product_uid; const char* sync_mode; }
+        app_config{"com.example.app", "periodic"};
+
+    auto req = api.hub.set();
+    req.product = app_config.product_uid;
+    req.mode    = app_config.sync_mode;
+    if (app_config.sync_mode == note::string_view("continuous")) {
+        req.sync = true;
+    }
+    req.execute();
+
+    // sync field is absent because mode is "periodic"
+    REQUIRE(h.last_request ==
+        R"({"req":"hub.set","mode":"periodic","product":"com.example.app"})");
+}

@@ -63,6 +63,18 @@ public:
         if (stack_.size() > 1) stack_.pop_back();
         return *this;
     }
+    NlohmannBuilder& add_element(bool value) override {
+        current()->push_back(value); return *this;
+    }
+    NlohmannBuilder& add_element(int32_t value) override {
+        current()->push_back(value); return *this;
+    }
+    NlohmannBuilder& add_element(double value) override {
+        current()->push_back(value); return *this;
+    }
+    NlohmannBuilder& add_element(string_view value) override {
+        current()->push_back(std::string(value)); return *this;
+    }
     std::string to_string() override {
         return root_.dump();
     }

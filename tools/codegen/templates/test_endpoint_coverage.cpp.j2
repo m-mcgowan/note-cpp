@@ -111,7 +111,9 @@ TEST_CASE("note::api::{{ type_qual }} request builder") {
 {% if prop.version_guard %}
 #if NOTE_API_VERSION >= {{ prop.version_guard }} || !defined(NOTE_API_STRICT)
 {% endif %}
-    req.{{ prop.accessor_name }}({{ prop | request_test_value }});
+{% if prop.is_array %}    req.{{ prop.accessor_name }}.add({{ prop | request_test_value }});
+{% else %}    req.{{ prop.accessor_name }}({{ prop | request_test_value }});
+{% endif %}
 {% if prop.version_guard %}
 #endif
 {% endif %}
@@ -149,7 +151,8 @@ TEST_CASE("note::api::{{ type_qual }} request builder") {
 {% if prop.version_guard %}
 #if NOTE_API_VERSION >= {{ prop.version_guard }} || !defined(NOTE_API_STRICT)
 {% endif %}
-    req["{{ prop.wire_name }}"] = {{ prop | request_test_value }};
+{% if not prop.is_array %}    req["{{ prop.wire_name }}"] = {{ prop | request_test_value }};
+{% endif %}
 {% if prop.version_guard %}
 #endif
 {% endif %}

@@ -100,6 +100,22 @@ public:
         if (stack_.size() > 1) stack_.pop_back();
         return *this;
     }
+    CjsonBuilder& add_element(bool value) override {
+        cJSON_AddItemToArray(current(), cJSON_CreateBool(value));
+        return *this;
+    }
+    CjsonBuilder& add_element(int32_t value) override {
+        cJSON_AddItemToArray(current(), cJSON_CreateNumber(value));
+        return *this;
+    }
+    CjsonBuilder& add_element(double value) override {
+        cJSON_AddItemToArray(current(), cJSON_CreateNumber(value));
+        return *this;
+    }
+    CjsonBuilder& add_element(string_view value) override {
+        cJSON_AddItemToArray(current(), cJSON_CreateString(zstr(value)));
+        return *this;
+    }
     std::string to_string() override {
         char* raw = cJSON_PrintUnformatted(root_);
         std::string result(raw);

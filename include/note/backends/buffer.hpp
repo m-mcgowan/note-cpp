@@ -76,6 +76,26 @@ public:
         need_comma_ = true;
         return *this;
     }
+    BufferJsonBuilder& add_element(bool value) override {
+        comma(); put(value ? "true" : "false"); return *this;
+    }
+    BufferJsonBuilder& add_element(int32_t value) override {
+        comma();
+        char tmp[12];
+        size_t len = detail::itoa(tmp, sizeof(tmp), value);
+        for (size_t i = 0; i < len; ++i) put(tmp[i]);
+        return *this;
+    }
+    BufferJsonBuilder& add_element(double value) override {
+        comma();
+        char tmp[32];
+        size_t len = detail::dtoa(tmp, sizeof(tmp), value);
+        for (size_t i = 0; i < len; ++i) put(tmp[i]);
+        return *this;
+    }
+    BufferJsonBuilder& add_element(string_view value) override {
+        comma(); quoted(value); return *this;
+    }
 
     std::string to_string() override {
         close();

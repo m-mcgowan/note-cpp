@@ -59,6 +59,18 @@ public:
     TestJsonBuilder& end_array() override {
         needs_comma_.pop_back(); buf_ += ']'; return *this;
     }
+    TestJsonBuilder& add_element(bool v) override {
+        comma(); buf_ += v ? "true" : "false"; return *this;
+    }
+    TestJsonBuilder& add_element(int32_t v) override {
+        comma(); buf_ += std::to_string(v); return *this;
+    }
+    TestJsonBuilder& add_element(double v) override {
+        comma(); buf_ += std::to_string(v); return *this;
+    }
+    TestJsonBuilder& add_element(string_view v) override {
+        comma(); buf_ += '"'; escape_string(v); buf_ += '"'; return *this;
+    }
     std::string to_string() override {
         buf_ += '}';
         return std::move(buf_);

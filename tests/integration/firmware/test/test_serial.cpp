@@ -173,12 +173,10 @@ TEST_CASE("env.default set + get round-trip") {
     REQUIRE(set_rsp);
 
     // Read it back via env.get
-    auto get_rsp = f.notecard.request("env.get", [](note::JsonBuilder& b) {
-        b.add("name", "_integration_test_var");
-    });
+    auto get_rsp = nc.env.get().name("_integration_test_var").execute();
+    if (!get_rsp) { INFO(note::to_string(get_rsp.error())); }
     REQUIRE(get_rsp);
-    auto text = (*get_rsp)->get_string("text");
-    CHECK(note::string_view(text) == "hello-from-note-cpp");
+    CHECK(note::string_view(get_rsp.text) == "hello-from-note-cpp");
 
     // Clean up
     nc.env.clearDefault("_integration_test_var").execute();

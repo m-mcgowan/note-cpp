@@ -89,7 +89,7 @@ TEST_CASE("note::api::CardAttn::Request request builder") {
     auto req = h.api.card.attn().request();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
-    req.files(note::string_view("x-files"));
+    req.files.add(note::string_view("x-files-item"));
     req.mode(note::string_view("arm"));
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
     req.off(true);
@@ -129,7 +129,6 @@ TEST_CASE("note::api::CardAttn::Request request builder") {
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover known-key routing in operator[] (true branch for each settable field)
-    req["files"] = note::string_view("x-files");
     req["mode"] = note::string_view("arm");
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
     req["off"] = true;
@@ -184,7 +183,7 @@ TEST_CASE("note::api::CardAttn::Arm request builder") {
     auto req = h.api.card.attn().arm();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
-    req.files(note::string_view("x-files"));
+    req.files.add(note::string_view("x-files-item"));
     req.triggers(note::string_view("arm"));
     req.on(true);
     req.seconds(note::Seconds{42});
@@ -208,7 +207,6 @@ TEST_CASE("note::api::CardAttn::Arm request builder") {
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover known-key routing in operator[] (true branch for each settable field)
-    req["files"] = note::string_view("x-files");
     req["mode"] = note::string_view("arm");
     req["on"] = true;
     req["seconds"] = note::Seconds{42};
@@ -472,7 +470,7 @@ TEST_CASE("note::api::CardAux request builder") {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
     req.sync(true);
 #endif
-    req.usage(note::string_view("x-usage"));
+    req.usage.add(note::string_view("x-usage-item"));
     req.execute();
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1) || !defined(NOTE_API_STRICT)
     REQUIRE(h.last_req.find("\"connected\"") != std::string::npos);
@@ -550,7 +548,6 @@ TEST_CASE("note::api::CardAux request builder") {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
     req["sync"] = true;
 #endif
-    req["usage"] = note::string_view("x-usage");
     // Cover command() overloads
     req.command();
     req.command(h.nc);
@@ -4138,7 +4135,7 @@ TEST_CASE("note::api::EnvGet request builder") {
     req.execute();
     req.name(note::string_view("x-name"));
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-    req.names(note::string_view("x-names"));
+    req.names.add(note::string_view("x-names-item"));
 #endif
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
     req.time(int32_t{42});
@@ -4168,7 +4165,6 @@ TEST_CASE("note::api::EnvGet request builder") {
     // Cover known-key routing in operator[] (true branch for each settable field)
     req["name"] = note::string_view("x-name");
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-    req["names"] = note::string_view("x-names");
 #endif
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
     req["time"] = int32_t{42};
@@ -4379,7 +4375,7 @@ TEST_CASE("note::api::FileChanges request builder") {
     auto req = h.api.file.changes();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
-    req.files(note::string_view("x-files"));
+    req.files.add(note::string_view("x-files-item"));
     req.tracker(note::string_view("x-tracker"));
     req.execute();
     REQUIRE(h.last_req.find("\"files\"") != std::string::npos);
@@ -4399,7 +4395,6 @@ TEST_CASE("note::api::FileChanges request builder") {
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover known-key routing in operator[] (true branch for each settable field)
-    req["files"] = note::string_view("x-files");
     req["tracker"] = note::string_view("x-tracker");
     // Cover command() overloads
     req.command();
@@ -4520,7 +4515,7 @@ TEST_CASE("note::api::FileDelete request builder") {
     auto req = h.api.file.delete_();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
-    req.files(note::string_view("x-files"));
+    req.files.add(note::string_view("x-files-item"));
     req.execute();
     REQUIRE(h.last_req.find("\"files\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
@@ -4538,7 +4533,6 @@ TEST_CASE("note::api::FileDelete request builder") {
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover known-key routing in operator[] (true branch for each settable field)
-    req["files"] = note::string_view("x-files");
     // Cover command() overloads
     req.command();
     req.command(h.nc);

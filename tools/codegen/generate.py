@@ -74,6 +74,8 @@ def _cpp_request_test_value(prop) -> str:
     """C++ expression for setting a request field setter in generated tests."""
     if prop.has_unit:
         return f'{prop.field_type}{{42}}'
+    if prop.is_array:
+        return f'note::string_view("x-{prop.wire_name}-item")'
     if prop.has_flags:
         # Use raw string assignment (tests that Field<string_view> still works)
         return f'note::string_view("{prop.flags[0]}")'
@@ -281,6 +283,11 @@ def main() -> None:
             for op in endpoint.operations
             for prop in op.properties
         )
+        has_array_fields = any(
+            prop.is_array
+            for op in endpoint.operations
+            for prop in op.properties
+        )
         content = endpoint_template.render(
             endpoint=endpoint,
             has_body_field=has_body_field,
@@ -288,6 +295,7 @@ def main() -> None:
             has_unit_fields=has_unit_fields,
             has_format_fields=has_format_fields,
             has_flags_fields=has_flags_fields,
+            has_array_fields=has_array_fields,
         )
         out_path = output_dir / endpoint.header_filename
         out_path.write_text(content)

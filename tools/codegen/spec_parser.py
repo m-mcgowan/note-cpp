@@ -106,6 +106,8 @@ def _parse_property(name: str, schema: dict, *,
             if s.get("const")  # skip empty-string entries
         ]
 
+    is_array = schema_type == "array"
+
     return PropertyDef(
         wire_name=wire_name,
         cpp_name=property_to_cpp_name(wire_name),
@@ -122,6 +124,8 @@ def _parse_property(name: str, schema: dict, *,
         format=schema.get("x-format"),
         flags=schema.get("x-flags"),
         sub_descriptions=sub_descriptions,
+        is_array=is_array,
+        array_max_items=schema.get("x-max-items", 8),
     )
 
 

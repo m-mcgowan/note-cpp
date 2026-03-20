@@ -25,6 +25,16 @@ public:
     virtual JsonBuilder& begin_array(string_view key) = 0;
     virtual JsonBuilder& end_array() = 0;
 
+    // Add an element to the current array (no key — must be inside begin_array/end_array).
+    // Default: no-op. Override in backends that support array serialization.
+    virtual JsonBuilder& add_element(bool) { return *this; }
+    virtual JsonBuilder& add_element(int32_t) { return *this; }
+    virtual JsonBuilder& add_element(double) { return *this; }
+    virtual JsonBuilder& add_element(string_view) { return *this; }
+    JsonBuilder& add_element(const char* value) {
+        return add_element(string_view(value));
+    }
+
     // Finalize and return the built JSON as a string.
     virtual std::string to_string() = 0;
 

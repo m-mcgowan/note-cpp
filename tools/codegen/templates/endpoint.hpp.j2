@@ -21,6 +21,9 @@
 {% if has_flags_fields %}
 #include <note/flag_set.hpp>
 {% endif %}
+{% if has_array_fields %}
+#include <note/array_field.hpp>
+{% endif %}
 #include <note/target.hpp>
 
 {% if has_flags_fields %}
@@ -111,7 +114,10 @@ namespace note::api {
 {{ indent }}// {{ prop.wire_name }}: {{ prop.enum_values | join(' | ') }}
 {% endif %}
 {{ deprecated_attr(prop.version_guard, prop.min_api_version, indent) -}}
-{% if prop.is_required %}
+{% if prop.is_array %}
+{{ doc_for_prop(prop, indent) -}}
+{{ indent }}note::ArrayField<{{ prop.cpp_type }}, {{ prop.array_max_items }}> {{ prop.accessor_name }}{};
+{% elif prop.is_required %}
 {{ indent }}{{ prop.field_type }} {{ prop.accessor_name }}{};
 {% elif prop.is_body %}
 {{ indent }}struct {{ prop.nested_type_name }} : BodyValue {
@@ -208,7 +214,7 @@ namespace note::api {
 
 {{ indent }}note::DynField operator[](note::string_view k_) {
 {% for prop in op.properties %}
-{% if not prop.is_required_by_dispatch and not prop.is_body %}
+{% if not prop.is_required_by_dispatch and not prop.is_body and not prop.is_array %}
 {{ version_guard_begin(prop.version_guard) -}}
 {{ indent }}    if (k_ == "{{ prop.wire_name }}") return note::dyn_field_for({{ prop.accessor_name }});
 {{ version_guard_end(prop.version_guard) -}}
@@ -418,6 +424,10 @@ namespace note::api {
 {{ version_guard_begin(prop.version_guard) -}}
 {{ indent }}    b.add("{{ prop.wire_name }}", {{ prop.accessor_name }});
 {{ version_guard_end(prop.version_guard) -}}
+{% elif prop.is_array %}
+{{ version_guard_begin(prop.version_guard) -}}
+{{ indent }}    if ({{ prop.accessor_name }}) {{ prop.accessor_name }}.write_to(b, "{{ prop.wire_name }}");
+{{ version_guard_end(prop.version_guard) -}}
 {% elif prop.is_body %}
 {{ version_guard_begin(prop.version_guard) -}}
 {{ indent }}    {{ prop.accessor_name }}.write_to(b);
@@ -464,7 +474,7 @@ namespace note::api {
 
 {% macro prop_impls(op, parent_qual) %}
 {% set ns = namespace(has_impls=false) %}
-{% for prop in op.properties %}{% if not prop.is_required_by_dispatch and not prop.is_required %}{% set ns.has_impls = true %}{% endif %}{% endfor %}
+{% for prop in op.properties %}{% if not prop.is_required_by_dispatch and not prop.is_required and not prop.is_array %}{% set ns.has_impls = true %}{% endif %}{% endfor %}
 {% if ns.has_impls %}
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
@@ -472,7 +482,7 @@ namespace note::api {
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 {% endif %}
 {% for prop in op.properties %}
-{% if not prop.is_required_by_dispatch and not prop.is_required %}
+{% if not prop.is_required_by_dispatch and not prop.is_required and not prop.is_array %}
 {{ version_guard_begin(prop.version_guard) -}}
 {% if prop.is_body %}
 inline {{ parent_qual }}& {{ parent_qual }}::{{ prop.nested_type_name }}::operator()(BodyValue v) {

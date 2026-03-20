@@ -11,6 +11,7 @@
 #include <note/types.hpp>
 #include <note/units.hpp>
 #include <note/flag_set.hpp>
+#include <note/array_field.hpp>
 #include <note/target.hpp>
 
 namespace note::attn {
@@ -96,11 +97,8 @@ struct CardAttn {
         Notecard* nc_ = nullptr;
 
         /// A list of Notefiles to watch for file-based interrupts.
-        struct files_t : Field<note::string_view> {
-            using Field<note::string_view>::Field;
-            using Field<note::string_view>::operator=;
-            CardAttn::Request& operator()(note::string_view v);
-        } files{};
+        /// A list of Notefiles to watch for file-based interrupts.
+        note::ArrayField<note::string_view, 8> files{};
         /// A comma-separated list of one or more of the following keywords.
         /// Some keywords are only supported on certain types of Notecards.
         struct mode_t : Field<note::string_view> {
@@ -257,7 +255,6 @@ struct CardAttn {
         }
 
         note::DynField operator[](note::string_view k_) {
-            if (k_ == "files") return note::dyn_field_for(files);
             if (k_ == "mode") return note::dyn_field_for(mode);
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
             if (k_ == "off") return note::dyn_field_for(off);
@@ -372,7 +369,7 @@ struct CardAttn {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
         void build(JsonBuilder& b) const {
-            if (files) b.add("files", *files);
+            if (files) files.write_to(b, "files");
             if (mode) b.add("mode", *mode);
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
             if (off) b.add("off", *off);
@@ -409,11 +406,8 @@ struct CardAttn {
         Notecard* nc_ = nullptr;
 
         /// A list of Notefiles to watch for file-based interrupts.
-        struct files_t : Field<note::string_view> {
-            using Field<note::string_view>::Field;
-            using Field<note::string_view>::operator=;
-            CardAttn::Arm& operator()(note::string_view v);
-        } files{};
+        /// A list of Notefiles to watch for file-based interrupts.
+        note::ArrayField<note::string_view, 8> files{};
         /// A comma-separated list of one or more of the following keywords.
         /// Some keywords are only supported on certain types of Notecards.
         struct triggers_t : Field<note::string_view> {
@@ -528,7 +522,6 @@ struct CardAttn {
         }
 
         note::DynField operator[](note::string_view k_) {
-            if (k_ == "files") return note::dyn_field_for(files);
             if (k_ == "mode") return note::dyn_field_for(triggers);
             if (k_ == "on") return note::dyn_field_for(on);
             if (k_ == "seconds") return note::dyn_field_for(seconds);
@@ -584,7 +577,7 @@ struct CardAttn {
         };
 
         void build(JsonBuilder& b) const {
-            if (files) b.add("files", *files);
+            if (files) files.write_to(b, "files");
             if (triggers) {
                 char mp_[96];
                 std::snprintf(mp_, sizeof(mp_), "arm,%.*s",
@@ -1030,11 +1023,6 @@ struct CardAttn {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-inline CardAttn::Request& CardAttn::Request::files_t::operator()(note::string_view v) {
-    Field<note::string_view>::operator=(v);
-    return *reinterpret_cast<CardAttn::Request*>(
-        reinterpret_cast<char*>(this) - offsetof(CardAttn::Request, files));
-}
 inline CardAttn::Request& CardAttn::Request::mode_t::operator()(note::string_view v) {
     Field<note::string_view>::operator=(v);
     return *reinterpret_cast<CardAttn::Request*>(
@@ -1172,11 +1160,6 @@ inline CardAttn::Request& CardAttn::Request::verify_t::operator()(bool v) {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-inline CardAttn::Arm& CardAttn::Arm::files_t::operator()(note::string_view v) {
-    Field<note::string_view>::operator=(v);
-    return *reinterpret_cast<CardAttn::Arm*>(
-        reinterpret_cast<char*>(this) - offsetof(CardAttn::Arm, files));
-}
 inline CardAttn::Arm& CardAttn::Arm::triggers_t::operator()(note::string_view v) {
     Field<note::string_view>::operator=(v);
     return *reinterpret_cast<CardAttn::Arm*>(

@@ -51,6 +51,10 @@ public:
     bool empty() const { return count_ == 0; }
     std::size_t size() const { return count_; }
 
+    const T& operator[](std::size_t i) const { return items_[i]; }
+    const T* begin() const { return items_; }
+    const T* end()   const { return items_ + count_; }
+
     void write_to(JsonBuilder& b, string_view key) const {
         b.begin_array(key);
         for (std::size_t i = 0; i < count_; ++i)

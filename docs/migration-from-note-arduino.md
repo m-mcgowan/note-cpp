@@ -10,6 +10,10 @@ memory management. note-cpp gives you typed fields, IDE autocomplete, and
 compile-time error checking — the same requests on the wire, but the compiler
 catches mistakes before they reach the device.
 
+> All code examples in this guide are compiled as part of CI. The note-cpp
+> examples come from [examples/migration.cpp](../examples/migration.cpp) and
+> the note-c examples from [examples/migration_notec.cpp](../examples/migration_notec.cpp).
+
 ## Setup
 
 <table>

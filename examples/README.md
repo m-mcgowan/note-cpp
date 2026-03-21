@@ -27,6 +27,9 @@ Examples that use `-fsyntax-only` (attention_pin, location_tracking, target_filt
 verify compilation but don't produce a runnable binary — they demonstrate API usage
 patterns for code that would run on real hardware.
 
+All example code is compiled as part of CI — every snippet you see in the
+documentation is verified to be syntactically correct and up to date.
+
 ## Mock backend
 
 Examples use a shared [mock_backend.hpp](mock_backend.hpp) that builds valid JSON

@@ -324,6 +324,18 @@ def _apply_operation_extensions(op: dict, method_extensions: dict) -> None:
     op.update(method_extensions)
 
 
+def _apply_path_extensions(path_item: dict, path_extensions: dict) -> None:
+    """Merge path-item level extensions (x-aliases, x-flat-alias) into a path item.
+
+    TODO: Revisit whether x-aliases/x-flat-alias should live at path-item level or
+    on a specific operation. Currently stored under a "path" pseudo-method key in
+    operation_extensions.json and applied here to the path item, since they're
+    endpoint-scoped (not tied to one HTTP verb). If a better home is found, this
+    function and the "path" key convention can be updated.
+    """
+    path_item.update(path_extensions)
+
+
 def detect_schema_commit(schema_dir: Path) -> str | None:
     """Auto-detect the current git commit of the schema directory."""
     try:
@@ -459,6 +471,9 @@ def convert(schema_dir: Path, safety_path: Path,
                     _apply_operation_extensions(op, ep_op_extensions[method])
                 path_item[method] = op
 
+        if "path" in ep_op_extensions:
+            _apply_path_extensions(path_item, ep_op_extensions["path"])
+
         openapi["paths"][path] = path_item
 
     if missing:
@@ -488,13 +503,16 @@ def apply_extensions_to_existing(spec_path: Path,
         if not ep_prop_ext and not ep_op_ext:
             continue
         for method, op in path_item.items():
-            if method in ("parameters", "summary", "description"):
+            if method in ("parameters", "summary", "description", "x-aliases",
+                          "x-flat-alias"):
                 continue
             if isinstance(op, dict):
                 if ep_prop_ext:
                     _apply_property_extensions(op, ep_prop_ext)
                 if method in ep_op_ext:
                     _apply_operation_extensions(op, ep_op_ext[method])
+        if "path" in ep_op_ext:
+            _apply_path_extensions(path_item, ep_op_ext["path"])
 
     out_path = output_path or spec_path
     out_path.write_text(json.dumps(spec, indent=2) + "\n")

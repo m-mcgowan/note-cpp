@@ -1,5 +1,5 @@
 {
-  "$comment": "Per-operation extensions not in upstream notecard-schema. Merged into the OpenAPI spec by schema_to_openapi.py during conversion. Keys are endpoint names (dot-notation), values map HTTP method (lowercase) to extension objects merged into the operation.",
+  "$comment": "Per-operation extensions not in upstream notecard-schema. Merged into the OpenAPI spec by schema_to_openapi.py during conversion. Keys are endpoint names (dot-notation), values map HTTP method (lowercase) to extension objects merged into the operation. A special 'path' key applies extensions to the path item (e.g. x-aliases, x-flat-alias).",
   "card.attn": {
     "put": {
       "x-intents": [
@@ -52,11 +52,28 @@
           "supports_cmd": false
         }
       ]
+    },
+    "path": {
+      "x-flat-alias": "attn"
     }
   },
   "card.binary": {
     "get":    {"x-intent-name": "status"},
-    "delete": {"x-intent-name": "clear"}
+    "delete": {"x-intent-name": "clear"},
+    "path": {
+      "x-aliases": [
+        {"method": "binaryStatus", "variant": "Status"},
+        {"method": "binaryClear",  "variant": "Clear"}
+      ],
+      "x-flat-alias": "binary"
+    }
+  },
+  "card.contact": {
+    "path": {
+      "x-aliases": [
+        {"method": "readContact", "variant": "Get"}
+      ]
+    }
   },
   "card.location.mode": {
     "put": {
@@ -84,40 +101,119 @@
         }
       ]
     },
-    "delete": {"x-intent-name": "remove"}
+    "delete": {"x-intent-name": "remove"},
+    "path": {
+      "x-aliases": [
+        {"method": "readLocationMode",  "variant": "Get"},
+        {"method": "resetLocationMode", "variant": "Remove"}
+      ]
+    }
   },
   "card.power": {
     "get":    {"x-intent-name": "read"},
     "put":    {"x-intent-name": "configure"},
-    "delete": {"x-intent-name": "reset"}
+    "delete": {"x-intent-name": "reset"},
+    "path": {
+      "x-aliases": [
+        {"method": "readPower",  "variant": "Read"},
+        {"method": "resetPower", "variant": "Reset"}
+      ]
+    }
   },
   "card.temp": {
     "get":    {"x-intent-name": "read"},
     "put":    {"x-intent-name": "configure"},
-    "delete": {"x-intent-name": "stop"}
+    "delete": {"x-intent-name": "stop"},
+    "path": {
+      "x-aliases": [
+        {"method": "readTemp", "variant": "Read"},
+        {"method": "stopTemp", "variant": "Stop"}
+      ]
+    }
   },
   "card.voltage": {
     "get": {"x-intent-name": "read"},
-    "put": {"x-intent-name": "configure"}
+    "put": {"x-intent-name": "configure"},
+    "path": {
+      "x-aliases": [
+        {"method": "readVoltage", "variant": "Read"}
+      ]
+    }
   },
   "card.wireless.penalty": {
     "get":    {"x-intent-name": "check"},
     "put":    {"x-intent-name": "set"},
-    "delete": {"x-intent-name": "clear"}
+    "delete": {"x-intent-name": "clear"},
+    "path": {
+      "x-aliases": [
+        {"method": "readWirelessPenalty",  "variant": "Check"},
+        {"method": "resetWirelessPenalty", "variant": "Clear"}
+      ]
+    }
   },
   "env.default": {
-    "delete": {"x-intent-name": "remove"}
+    "delete": {"x-intent-name": "remove"},
+    "path": {
+      "x-aliases": [
+        {"method": "setDefault",   "variant": "Set",    "params": ["name", "text"]},
+        {"method": "clearDefault", "variant": "Remove", "params": ["name"]}
+      ]
+    }
+  },
+  "file.delete": {
+    "path": {
+      "x-aliases": [
+        {"method": "remove", "description": "Alias for delete()."}
+      ]
+    }
   },
   "note.changes": {
     "get":    {"x-intent-name": "peek"},
-    "delete": {"x-intent-name": "pop"}
+    "delete": {"x-intent-name": "pop"},
+    "path": {
+      "x-aliases": [
+        {"method": "popChanges", "variant": "Pop", "params": ["file"]}
+      ]
+    }
+  },
+  "note.delete": {
+    "path": {
+      "x-aliases": [
+        {"method": "remove", "description": "Deletes a Note from a DB Notefile by its Note ID.", "params": ["file", "note"]}
+      ]
+    }
   },
   "note.get": {
     "get":    {"x-intent-name": "read"},
-    "delete": {"x-intent-name": "pop"}
+    "delete": {"x-intent-name": "pop"},
+    "path": {
+      "x-aliases": [
+        {"method": "read", "variant": "Read", "params": ["file"]},
+        {"method": "pop",  "variant": "Pop",  "params": ["file"]}
+      ]
+    }
   },
   "note.template": {
     "put":    {"x-intent-name": "define"},
-    "delete": {"x-intent-name": "remove"}
+    "delete": {"x-intent-name": "remove"},
+    "path": {
+      "x-aliases": [
+        {"method": "clearTemplate", "variant": "Remove", "params": ["file"]}
+      ]
+    }
+  },
+  "var.delete": {
+    "path": {
+      "x-aliases": [
+        {"method": "remove", "description": "Alias for delete()."}
+      ]
+    }
+  },
+  "web.delete": {
+    "path": {
+      "x-aliases": [
+        {"method": "remove", "description": "Alias for delete()."}
+      ]
+    }
   }
 }

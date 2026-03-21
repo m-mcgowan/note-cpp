@@ -129,7 +129,45 @@ namespace note::api {
 #endif
 {{ indent }}} {{ prop.accessor_name }}{};
 {% else %}
+{% if prop.enum_values and prop.field_type == "note::string_view" %}
+#if __cplusplus >= 202002L
+{{ indent }}struct validate_{{ prop.accessor_name }}_ {
+{{ indent }}    consteval void operator()(note::string_view v) const {
+{{ indent }}        if ({% for ev in prop.enum_values %}v != "{{ ev }}"{{ " && " if not loop.last }}{% endfor %})
+{{ indent }}            throw "{{ op.notecard_request }}: invalid value for '{{ prop.wire_name }}'";
+{{ indent }}    }
+{{ indent }}};
 {{ indent }}struct {{ prop.nested_type_name }} : Field<{{ prop.field_type }}> {
+{{ indent }}    constexpr {{ prop.nested_type_name }}() = default;
+{{ indent }}    template<std::size_t N>
+{{ indent }}    consteval {{ prop.nested_type_name }}(const char (&s)[N])
+{{ indent }}        : Field<{{ prop.field_type }}>({{ prop.field_type }}(s, N - 1)) {
+{{ indent }}        validate_{{ prop.accessor_name }}_{}({{ prop.field_type }}(s, N - 1));
+{{ indent }}    }
+{{ indent }}    template<typename U>
+{{ indent }}        requires std::is_convertible_v<U, {{ prop.field_type }}>
+{{ indent }}              && (!std::is_array_v<std::remove_reference_t<U>>)
+{{ indent }}              && (!std::is_same_v<std::decay_t<U>, {{ prop.nested_type_name }}>)
+{{ indent }}    constexpr {{ prop.nested_type_name }}(U&& v) : Field<{{ prop.field_type }}>({{ prop.field_type }}(std::forward<U>(v))) {}
+{{ indent }}    template<typename U>
+{{ indent }}        requires std::is_convertible_v<U, {{ prop.field_type }}>
+{{ indent }}              && (!std::is_array_v<std::remove_reference_t<U>>)
+{{ indent }}              && (!std::is_same_v<std::decay_t<U>, {{ prop.nested_type_name }}>)
+{{ indent }}    {{ prop.nested_type_name }}& operator=(U&& v) {
+{{ indent }}        Field<{{ prop.field_type }}>::operator=({{ prop.field_type }}(std::forward<U>(v)));
+{{ indent }}        return *this;
+{{ indent }}    }
+{{ indent }}    {{ prop.nested_type_name }}& operator=(std::nullopt_t) { Field<{{ prop.field_type }}>::reset(); return *this; }
+#else
+{{ indent }}struct {{ prop.nested_type_name }} : Field<{{ prop.field_type }}> {
+{{ indent }}    using Field<{{ prop.field_type }}>::Field;
+{{ indent }}    using Field<{{ prop.field_type }}>::operator=;
+#endif
+{% else %}
+{{ indent }}struct {{ prop.nested_type_name }} : Field<{{ prop.field_type }}> {
+{{ indent }}    using Field<{{ prop.field_type }}>::Field;
+{{ indent }}    using Field<{{ prop.field_type }}>::operator=;
+{% endif %}
 {% if prop.constants %}
 {% for cname, cinfo in prop.constants.items() %}
 {% if cinfo.description is defined and cinfo.description %}
@@ -138,9 +176,30 @@ namespace note::api {
 {{ indent }}    static constexpr {{ prop.field_type }} {{ cname }}{ {{ cinfo.value }} };
 {% endfor %}
 {% endif %}
-{{ indent }}    using Field<{{ prop.field_type }}>::Field;
-{{ indent }}    using Field<{{ prop.field_type }}>::operator=;
+{% if prop.enum_values and prop.field_type == "note::string_view" %}
+{% for ev in prop.enum_values %}
+{% set cname = ev | enum_const_name %}
+{% if cname %}
+{{ indent }}    static constexpr note::string_view {{ cname }}{"{{ ev }}"};
+{% endif %}
+{% endfor %}
+#if __cplusplus >= 202002L
+{{ indent }}    {{ parent_type }}& operator()({{ prop.nested_type_name }} v);
+{{ indent }}    template<typename U>
+{{ indent }}        requires std::is_convertible_v<U, note::string_view>
+{{ indent }}              && (!std::is_array_v<std::remove_reference_t<U>>)
+{{ indent }}              && (!std::is_same_v<std::decay_t<U>, {{ prop.nested_type_name }}>)
+{{ indent }}    {{ parent_type }}& operator()(U&& v) {
+{{ indent }}        Field<{{ prop.field_type }}>::operator=(note::string_view(std::forward<U>(v)));
+{{ indent }}        return *reinterpret_cast<{{ parent_type }}*>(
+{{ indent }}            reinterpret_cast<char*>(this) - offsetof({{ parent_type }}, {{ prop.accessor_name }}));
+{{ indent }}    }
+#else
 {{ indent }}    {{ parent_type }}& operator()({{ prop.field_type }} v);
+#endif
+{% else %}
+{{ indent }}    {{ parent_type }}& operator()({{ prop.field_type }} v);
+{% endif %}
 {% if prop.has_format %}
 {{ indent }}    {{ parent_type }}& operator()(const note::VoltageVariable& v);
 {{ indent }}    {{ prop.nested_type_name }}& usb(int32_t minutes);
@@ -223,6 +282,26 @@ namespace note::api {
 {% endif %}
 {% endfor %}
 {% endif %}
+{% for prop in op.properties %}
+{% if not prop.is_required_by_dispatch and prop.has_flags %}
+{# Delegating flag methods — forward to the flags field, return *this for chaining. #}
+{# Skip any flag whose name clashes with an existing accessor or semantic method.   #}
+{% set ns_used = namespace(names=[]) %}
+{% for p in op.properties %}{% set ns_used.names = ns_used.names + [p.accessor_name] %}{% endfor %}
+{% for tp in op.toggle_pairs %}
+{% set ns_used.names = ns_used.names + [tp.true_method] %}
+{% if tp.false_method %}{% set ns_used.names = ns_used.names + [tp.false_method] %}{% endif %}
+{% if tp.combined %}{% set ns_used.names = ns_used.names + [tp.combined] %}{% endif %}
+{% endfor %}
+{% for am in op.action_methods %}{% set ns_used.names = ns_used.names + [am.method] %}{% endfor %}
+{% for flag in prop.flags %}
+{% set flag_name = flag | flag_cpp_name %}
+{% if flag_name not in ns_used.names %}
+{{ indent }}auto& {{ flag_name }}() { {{ prop.accessor_name }}.{{ flag_name }}(); return *this; }
+{% endif %}
+{% endfor %}
+{% endif %}
+{% endfor %}
 {{ indent }}template<typename T>
 {{ indent }}auto& extra(note::string_view key, T value) {
 {{ indent }}    if (extras_count_ < NOTE_EXTRAS_MAX)
@@ -520,11 +599,27 @@ inline {{ parent_qual }}& {{ parent_qual }}::{{ prop.nested_type_name }}::operat
 }
 #endif
 {% else %}
+{% if prop.enum_values and prop.field_type == "note::string_view" %}
+#if __cplusplus >= 202002L
+inline {{ parent_qual }}& {{ parent_qual }}::{{ prop.nested_type_name }}::operator()({{ parent_qual }}::{{ prop.nested_type_name }} v) {
+    if (v) Field<{{ prop.field_type }}>::operator=(*v);
+    return *reinterpret_cast<{{ parent_qual }}*>(
+        reinterpret_cast<char*>(this) - offsetof({{ parent_qual }}, {{ prop.accessor_name }}));
+}
+#else
 inline {{ parent_qual }}& {{ parent_qual }}::{{ prop.nested_type_name }}::operator()({{ prop.field_type }} v) {
     Field<{{ prop.field_type }}>::operator=(v);
     return *reinterpret_cast<{{ parent_qual }}*>(
         reinterpret_cast<char*>(this) - offsetof({{ parent_qual }}, {{ prop.accessor_name }}));
 }
+#endif
+{% else %}
+inline {{ parent_qual }}& {{ parent_qual }}::{{ prop.nested_type_name }}::operator()({{ prop.field_type }} v) {
+    Field<{{ prop.field_type }}>::operator=(v);
+    return *reinterpret_cast<{{ parent_qual }}*>(
+        reinterpret_cast<char*>(this) - offsetof({{ parent_qual }}, {{ prop.accessor_name }}));
+}
+{% endif %}
 {% if prop.has_format %}
 inline {{ parent_qual }}& {{ parent_qual }}::{{ prop.nested_type_name }}::operator()(const note::VoltageVariable& v) {
     vv_ = v;

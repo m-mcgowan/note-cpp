@@ -414,3 +414,79 @@ TEST_CASE("DX: conditional fields — sync omitted when not continuous") {
     REQUIRE(h.last_request ==
         R"({"req":"hub.set","mode":"periodic","product":"com.example.app"})");
 }
+
+// ---------------------------------------------------------------------------
+// Transparent compile-time validation and named constants (C++20)
+// ---------------------------------------------------------------------------
+
+TEST_CASE("DX: string literal assignment is validated at compile time") {
+    TestHarness h;
+    note::Api api(h.nc);
+
+    // Valid literals — compile and produce correct wire format
+    auto req = api.hub.set();
+    req.mode = "periodic";
+    req.execute();
+    REQUIRE(h.last_request == R"({"req":"hub.set","mode":"periodic"})");
+
+    // Invalid literals would fail at compile time:
+    //   req.mode = "perioidc";  // error: hub.set: invalid value for 'mode'
+}
+
+TEST_CASE("DX: runtime string_view bypasses validation") {
+    TestHarness h;
+    note::Api api(h.nc);
+
+    // Runtime values are not validated (may come from config, user input, etc.)
+    note::string_view runtime_mode = "periodic";
+    auto req = api.hub.set();
+    req.mode = runtime_mode;
+    req.execute();
+    REQUIRE(h.last_request == R"({"req":"hub.set","mode":"periodic"})");
+}
+
+TEST_CASE("DX: named constants on enum fields") {
+    TestHarness h;
+    note::Api api(h.nc);
+
+    // Constants are discoverable via IDE autocomplete on the field type
+    using mode = note::api::HubSet::mode_t;
+
+    auto req = api.hub.set();
+    req.mode = mode::periodic;
+    req.execute();
+    REQUIRE(h.last_request == R"({"req":"hub.set","mode":"periodic"})");
+
+    req.mode = mode::continuous;
+    req.execute();
+    REQUIRE(h.last_request == R"({"req":"hub.set","mode":"continuous"})");
+}
+
+#if __cplusplus >= 202002L
+TEST_CASE("DX: designated initializer with validated field") {
+    TestHarness h;
+
+    // Designated init — literal validated at compile time
+    note::api::HubSet req{.mode = "periodic"};
+    req.nc_ = &h.nc;
+    req.execute();
+    REQUIRE(h.last_request == R"({"req":"hub.set","mode":"periodic"})");
+
+    // Invalid would fail at compile time:
+    //   note::api::HubSet bad{.mode = "perioidc"};  // compile error
+}
+#endif
+
+TEST_CASE("DX: fluent setter validates literals") {
+    TestHarness h;
+    note::Api api(h.nc);
+
+    // Fluent with literal — validated
+    api.hub.set().mode("periodic").execute();
+    REQUIRE(h.last_request == R"({"req":"hub.set","mode":"periodic"})");
+
+    // Fluent with runtime value — no validation
+    note::string_view m = "continuous";
+    api.hub.set().mode(m).execute();
+    REQUIRE(h.last_request == R"({"req":"hub.set","mode":"continuous"})");
+}

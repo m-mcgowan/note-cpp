@@ -41,10 +41,63 @@ struct CardIo {
     /// Used to control the Notecard's IO behavior, including USB port, LED, I2C
     /// master, NTN fallback.
     // mode: -1 | -usb | usb | +usb | +busy | -busy | i2c-master-disable | i2c-master-enable | +fallback | -fallback
+#if __cplusplus >= 202002L
+    struct validate_mode_ {
+        consteval void operator()(note::string_view v) const {
+            if (v != "-1" && v != "-usb" && v != "usb" && v != "+usb" && v != "+busy" && v != "-busy" && v != "i2c-master-disable" && v != "i2c-master-enable" && v != "+fallback" && v != "-fallback")
+                throw "card.io: invalid value for 'mode'";
+        }
+    };
+    struct mode_t : Field<note::string_view> {
+        constexpr mode_t() = default;
+        template<std::size_t N>
+        consteval mode_t(const char (&s)[N])
+            : Field<note::string_view>(note::string_view(s, N - 1)) {
+            validate_mode_{}(note::string_view(s, N - 1));
+        }
+        template<typename U>
+            requires std::is_convertible_v<U, note::string_view>
+                  && (!std::is_array_v<std::remove_reference_t<U>>)
+                  && (!std::is_same_v<std::decay_t<U>, mode_t>)
+        constexpr mode_t(U&& v) : Field<note::string_view>(note::string_view(std::forward<U>(v))) {}
+        template<typename U>
+            requires std::is_convertible_v<U, note::string_view>
+                  && (!std::is_array_v<std::remove_reference_t<U>>)
+                  && (!std::is_same_v<std::decay_t<U>, mode_t>)
+        mode_t& operator=(U&& v) {
+            Field<note::string_view>::operator=(note::string_view(std::forward<U>(v)));
+            return *this;
+        }
+        mode_t& operator=(std::nullopt_t) { Field<note::string_view>::reset(); return *this; }
+#else
     struct mode_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
+#endif
+        static constexpr note::string_view _1{"-1"};
+        static constexpr note::string_view _usb{"-usb"};
+        static constexpr note::string_view usb{"usb"};
+        static constexpr note::string_view pusb{"+usb"};
+        static constexpr note::string_view pbusy{"+busy"};
+        static constexpr note::string_view _busy{"-busy"};
+        static constexpr note::string_view i2c_master_disable{"i2c-master-disable"};
+        static constexpr note::string_view i2c_master_enable{"i2c-master-enable"};
+        static constexpr note::string_view pfallback{"+fallback"};
+        static constexpr note::string_view _fallback{"-fallback"};
+#if __cplusplus >= 202002L
+        CardIo& operator()(mode_t v);
+        template<typename U>
+            requires std::is_convertible_v<U, note::string_view>
+                  && (!std::is_array_v<std::remove_reference_t<U>>)
+                  && (!std::is_same_v<std::decay_t<U>, mode_t>)
+        CardIo& operator()(U&& v) {
+            Field<note::string_view>::operator=(note::string_view(std::forward<U>(v)));
+            return *reinterpret_cast<CardIo*>(
+                reinterpret_cast<char*>(this) - offsetof(CardIo, mode));
+        }
+#else
         CardIo& operator()(note::string_view v);
+#endif
     } mode{};
 
     // Valid values for 'mode':
@@ -116,11 +169,19 @@ inline CardIo& CardIo::i2c_t::operator()(int32_t v) {
     return *reinterpret_cast<CardIo*>(
         reinterpret_cast<char*>(this) - offsetof(CardIo, i2c));
 }
+#if __cplusplus >= 202002L
+inline CardIo& CardIo::mode_t::operator()(CardIo::mode_t v) {
+    if (v) Field<note::string_view>::operator=(*v);
+    return *reinterpret_cast<CardIo*>(
+        reinterpret_cast<char*>(this) - offsetof(CardIo, mode));
+}
+#else
 inline CardIo& CardIo::mode_t::operator()(note::string_view v) {
     Field<note::string_view>::operator=(v);
     return *reinterpret_cast<CardIo*>(
         reinterpret_cast<char*>(this) - offsetof(CardIo, mode));
 }
+#endif
 #pragma GCC diagnostic pop
 
 

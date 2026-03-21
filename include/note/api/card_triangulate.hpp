@@ -114,6 +114,8 @@ struct CardTriangulate {
     } usb{};
 
 
+    auto& cell() { mode.cell(); return *this; }
+    auto& wifi() { mode.wifi(); return *this; }
     template<typename T>
     auto& extra(note::string_view key, T value) {
         if (extras_count_ < NOTE_EXTRAS_MAX)

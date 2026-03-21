@@ -43,10 +43,62 @@ struct Web {
     /// The HTTP method of the request. Must be one of GET, PUT, POST, DELETE,
     /// PATCH, HEAD, OPTIONS, TRACE, or CONNECT.
     // method: CONNECT | DELETE | GET | HEAD | OPTIONS | PATCH | POST | PUT | TRACE
+#if __cplusplus >= 202002L
+    struct validate_method_ {
+        consteval void operator()(note::string_view v) const {
+            if (v != "CONNECT" && v != "DELETE" && v != "GET" && v != "HEAD" && v != "OPTIONS" && v != "PATCH" && v != "POST" && v != "PUT" && v != "TRACE")
+                throw "web: invalid value for 'method'";
+        }
+    };
+    struct method_t : Field<note::string_view> {
+        constexpr method_t() = default;
+        template<std::size_t N>
+        consteval method_t(const char (&s)[N])
+            : Field<note::string_view>(note::string_view(s, N - 1)) {
+            validate_method_{}(note::string_view(s, N - 1));
+        }
+        template<typename U>
+            requires std::is_convertible_v<U, note::string_view>
+                  && (!std::is_array_v<std::remove_reference_t<U>>)
+                  && (!std::is_same_v<std::decay_t<U>, method_t>)
+        constexpr method_t(U&& v) : Field<note::string_view>(note::string_view(std::forward<U>(v))) {}
+        template<typename U>
+            requires std::is_convertible_v<U, note::string_view>
+                  && (!std::is_array_v<std::remove_reference_t<U>>)
+                  && (!std::is_same_v<std::decay_t<U>, method_t>)
+        method_t& operator=(U&& v) {
+            Field<note::string_view>::operator=(note::string_view(std::forward<U>(v)));
+            return *this;
+        }
+        method_t& operator=(std::nullopt_t) { Field<note::string_view>::reset(); return *this; }
+#else
     struct method_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
+#endif
+        static constexpr note::string_view CONNECT{"CONNECT"};
+        static constexpr note::string_view DELETE{"DELETE"};
+        static constexpr note::string_view GET{"GET"};
+        static constexpr note::string_view HEAD{"HEAD"};
+        static constexpr note::string_view OPTIONS{"OPTIONS"};
+        static constexpr note::string_view PATCH{"PATCH"};
+        static constexpr note::string_view POST{"POST"};
+        static constexpr note::string_view PUT{"PUT"};
+        static constexpr note::string_view TRACE{"TRACE"};
+#if __cplusplus >= 202002L
+        Web& operator()(method_t v);
+        template<typename U>
+            requires std::is_convertible_v<U, note::string_view>
+                  && (!std::is_array_v<std::remove_reference_t<U>>)
+                  && (!std::is_same_v<std::decay_t<U>, method_t>)
+        Web& operator()(U&& v) {
+            Field<note::string_view>::operator=(note::string_view(std::forward<U>(v)));
+            return *reinterpret_cast<Web*>(
+                reinterpret_cast<char*>(this) - offsetof(Web, method));
+        }
+#else
         Web& operator()(note::string_view v);
+#endif
     } method{};
     /// A web URL endpoint relative to the host configured in the Proxy Route.
     /// URL parameters may be added to this argument as well (e.g.
@@ -219,11 +271,19 @@ inline Web& Web::content_t::operator()(note::string_view v) {
     return *reinterpret_cast<Web*>(
         reinterpret_cast<char*>(this) - offsetof(Web, content));
 }
+#if __cplusplus >= 202002L
+inline Web& Web::method_t::operator()(Web::method_t v) {
+    if (v) Field<note::string_view>::operator=(*v);
+    return *reinterpret_cast<Web*>(
+        reinterpret_cast<char*>(this) - offsetof(Web, method));
+}
+#else
 inline Web& Web::method_t::operator()(note::string_view v) {
     Field<note::string_view>::operator=(v);
     return *reinterpret_cast<Web*>(
         reinterpret_cast<char*>(this) - offsetof(Web, method));
 }
+#endif
 inline Web& Web::name_t::operator()(note::string_view v) {
     Field<note::string_view>::operator=(v);
     return *reinterpret_cast<Web*>(

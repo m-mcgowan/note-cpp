@@ -40,6 +40,33 @@ def _strip_markdown(text: str) -> str:
     return text
 
 
+_CPP_KEYWORDS = frozenset({
+    "auto", "break", "case", "class", "const", "continue", "default",
+    "delete", "do", "double", "else", "enum", "extern", "float", "for",
+    "goto", "if", "int", "long", "mutable", "namespace", "new", "operator",
+    "private", "protected", "public", "register", "return", "short",
+    "signed", "sizeof", "static", "struct", "switch", "template", "this",
+    "throw", "try", "typedef", "union", "unsigned", "virtual", "void",
+    "volatile", "while",
+})
+
+
+def _enum_const_name(value: str) -> str:
+    """Sanitize an enum string value into a valid C++ identifier.
+
+    Returns empty string for values that can't be made into identifiers
+    (e.g. empty strings, lone punctuation).
+    """
+    name = value.replace("-", "_").replace("+", "p").replace("?", "unknown")
+    if not name:
+        return ""
+    if name[0].isdigit():
+        name = "_" + name
+    if name in _CPP_KEYWORDS:
+        name = name + "_"
+    return name
+
+
 def _doc_comment_filter(text: str, indent: str = "    ") -> str:
     """Format a description string as wrapped /// doc comment lines.
 
@@ -253,6 +280,7 @@ def main() -> None:
     env.filters["response_match_value"] = _response_match_value
     env.filters["flag_namespace"] = lambda wire: wire.rsplit(".", 1)[-1]
     env.filters["flag_cpp_name"] = lambda s: s.replace("-", "_")
+    env.filters["enum_const_name"] = _enum_const_name
 
     endpoint_template = env.get_template("endpoint.hpp.j2")
 
@@ -288,6 +316,11 @@ def main() -> None:
             for op in endpoint.operations
             for prop in op.properties
         )
+        has_enum_fields = any(
+            prop.enum_values and prop.field_type == "note::string_view"
+            for op in endpoint.operations
+            for prop in op.properties
+        )
         content = endpoint_template.render(
             endpoint=endpoint,
             has_body_field=has_body_field,
@@ -296,6 +329,7 @@ def main() -> None:
             has_format_fields=has_format_fields,
             has_flags_fields=has_flags_fields,
             has_array_fields=has_array_fields,
+            has_enum_fields=has_enum_fields,
         )
         out_path = output_dir / endpoint.header_filename
         out_path.write_text(content)

@@ -34,10 +34,57 @@ struct CardUsageGet {
 
     /// The time period to use for statistics. Must be one of:
     // mode: total | 1hour | 1day | 30day
+#if __cplusplus >= 202002L
+    struct validate_mode_ {
+        consteval void operator()(note::string_view v) const {
+            if (v != "total" && v != "1hour" && v != "1day" && v != "30day")
+                throw "card.usage.get: invalid value for 'mode'";
+        }
+    };
+    struct mode_t : Field<note::string_view> {
+        constexpr mode_t() = default;
+        template<std::size_t N>
+        consteval mode_t(const char (&s)[N])
+            : Field<note::string_view>(note::string_view(s, N - 1)) {
+            validate_mode_{}(note::string_view(s, N - 1));
+        }
+        template<typename U>
+            requires std::is_convertible_v<U, note::string_view>
+                  && (!std::is_array_v<std::remove_reference_t<U>>)
+                  && (!std::is_same_v<std::decay_t<U>, mode_t>)
+        constexpr mode_t(U&& v) : Field<note::string_view>(note::string_view(std::forward<U>(v))) {}
+        template<typename U>
+            requires std::is_convertible_v<U, note::string_view>
+                  && (!std::is_array_v<std::remove_reference_t<U>>)
+                  && (!std::is_same_v<std::decay_t<U>, mode_t>)
+        mode_t& operator=(U&& v) {
+            Field<note::string_view>::operator=(note::string_view(std::forward<U>(v)));
+            return *this;
+        }
+        mode_t& operator=(std::nullopt_t) { Field<note::string_view>::reset(); return *this; }
+#else
     struct mode_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
+#endif
+        static constexpr note::string_view total{"total"};
+        static constexpr note::string_view _1hour{"1hour"};
+        static constexpr note::string_view _1day{"1day"};
+        static constexpr note::string_view _30day{"30day"};
+#if __cplusplus >= 202002L
+        CardUsageGet& operator()(mode_t v);
+        template<typename U>
+            requires std::is_convertible_v<U, note::string_view>
+                  && (!std::is_array_v<std::remove_reference_t<U>>)
+                  && (!std::is_same_v<std::decay_t<U>, mode_t>)
+        CardUsageGet& operator()(U&& v) {
+            Field<note::string_view>::operator=(note::string_view(std::forward<U>(v)));
+            return *reinterpret_cast<CardUsageGet*>(
+                reinterpret_cast<char*>(this) - offsetof(CardUsageGet, mode));
+        }
+#else
         CardUsageGet& operator()(note::string_view v);
+#endif
     } mode{};
     /// The number of time periods to look backwards, based on the specified
     /// `mode`.
@@ -183,11 +230,19 @@ struct CardUsageGet {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
+#if __cplusplus >= 202002L
+inline CardUsageGet& CardUsageGet::mode_t::operator()(CardUsageGet::mode_t v) {
+    if (v) Field<note::string_view>::operator=(*v);
+    return *reinterpret_cast<CardUsageGet*>(
+        reinterpret_cast<char*>(this) - offsetof(CardUsageGet, mode));
+}
+#else
 inline CardUsageGet& CardUsageGet::mode_t::operator()(note::string_view v) {
     Field<note::string_view>::operator=(v);
     return *reinterpret_cast<CardUsageGet*>(
         reinterpret_cast<char*>(this) - offsetof(CardUsageGet, mode));
 }
+#endif
 inline CardUsageGet& CardUsageGet::offset_t::operator()(int32_t v) {
     Field<int32_t>::operator=(v);
     return *reinterpret_cast<CardUsageGet*>(

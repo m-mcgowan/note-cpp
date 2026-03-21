@@ -44,10 +44,56 @@ struct CardMonitor {
     ///
     /// See Using Monitor Mode for additional details.
     // mode: green | red | yellow
+#if __cplusplus >= 202002L
+    struct validate_mode_ {
+        consteval void operator()(note::string_view v) const {
+            if (v != "green" && v != "red" && v != "yellow")
+                throw "card.monitor: invalid value for 'mode'";
+        }
+    };
+    struct mode_t : Field<note::string_view> {
+        constexpr mode_t() = default;
+        template<std::size_t N>
+        consteval mode_t(const char (&s)[N])
+            : Field<note::string_view>(note::string_view(s, N - 1)) {
+            validate_mode_{}(note::string_view(s, N - 1));
+        }
+        template<typename U>
+            requires std::is_convertible_v<U, note::string_view>
+                  && (!std::is_array_v<std::remove_reference_t<U>>)
+                  && (!std::is_same_v<std::decay_t<U>, mode_t>)
+        constexpr mode_t(U&& v) : Field<note::string_view>(note::string_view(std::forward<U>(v))) {}
+        template<typename U>
+            requires std::is_convertible_v<U, note::string_view>
+                  && (!std::is_array_v<std::remove_reference_t<U>>)
+                  && (!std::is_same_v<std::decay_t<U>, mode_t>)
+        mode_t& operator=(U&& v) {
+            Field<note::string_view>::operator=(note::string_view(std::forward<U>(v)));
+            return *this;
+        }
+        mode_t& operator=(std::nullopt_t) { Field<note::string_view>::reset(); return *this; }
+#else
     struct mode_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
+#endif
+        static constexpr note::string_view green{"green"};
+        static constexpr note::string_view red{"red"};
+        static constexpr note::string_view yellow{"yellow"};
+#if __cplusplus >= 202002L
+        CardMonitor& operator()(mode_t v);
+        template<typename U>
+            requires std::is_convertible_v<U, note::string_view>
+                  && (!std::is_array_v<std::remove_reference_t<U>>)
+                  && (!std::is_same_v<std::decay_t<U>, mode_t>)
+        CardMonitor& operator()(U&& v) {
+            Field<note::string_view>::operator=(note::string_view(std::forward<U>(v)));
+            return *reinterpret_cast<CardMonitor*>(
+                reinterpret_cast<char*>(this) - offsetof(CardMonitor, mode));
+        }
+#else
         CardMonitor& operator()(note::string_view v);
+#endif
     } mode{};
     /// Set to `true` to configure LED behavior so that it is only active when
     /// the Notecard is connected to USB power.
@@ -121,11 +167,19 @@ inline CardMonitor& CardMonitor::count_t::operator()(int32_t v) {
     return *reinterpret_cast<CardMonitor*>(
         reinterpret_cast<char*>(this) - offsetof(CardMonitor, count));
 }
+#if __cplusplus >= 202002L
+inline CardMonitor& CardMonitor::mode_t::operator()(CardMonitor::mode_t v) {
+    if (v) Field<note::string_view>::operator=(*v);
+    return *reinterpret_cast<CardMonitor*>(
+        reinterpret_cast<char*>(this) - offsetof(CardMonitor, mode));
+}
+#else
 inline CardMonitor& CardMonitor::mode_t::operator()(note::string_view v) {
     Field<note::string_view>::operator=(v);
     return *reinterpret_cast<CardMonitor*>(
         reinterpret_cast<char*>(this) - offsetof(CardMonitor, mode));
 }
+#endif
 inline CardMonitor& CardMonitor::usb_t::operator()(bool v) {
     Field<bool>::operator=(v);
     return *reinterpret_cast<CardMonitor*>(

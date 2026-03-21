@@ -248,6 +248,20 @@ struct CardAttn {
     // (method names that match a field accessor are skipped to avoid redefinition)
         auto& persist() { on = true; return *this; }
         auto& persist(bool v_) { on = v_; return *this; }
+        auto& arm() { mode.arm(); return *this; }
+        auto& auxgpio() { mode.auxgpio(); return *this; }
+        auto& connected() { mode.connected(); return *this; }
+        auto& disarm() { mode.disarm(); return *this; }
+        auto& env() { mode.env(); return *this; }
+        auto& location() { mode.location(); return *this; }
+        auto& motion() { mode.motion(); return *this; }
+        auto& motionchange() { mode.motionchange(); return *this; }
+        auto& rearm() { mode.rearm(); return *this; }
+        auto& signal() { mode.signal(); return *this; }
+        auto& sleep() { mode.sleep(); return *this; }
+        auto& usb() { mode.usb(); return *this; }
+        auto& watchdog() { mode.watchdog(); return *this; }
+        auto& wireless() { mode.wireless(); return *this; }
         template<typename T>
         auto& extra(note::string_view key, T value) {
             if (extras_count_ < NOTE_EXTRAS_MAX)
@@ -519,6 +533,20 @@ struct CardAttn {
     // (method names that match a field accessor are skipped to avoid redefinition)
         auto& persist() { on = true; return *this; }
         auto& persist(bool v_) { on = v_; return *this; }
+        auto& arm() { triggers.arm(); return *this; }
+        auto& auxgpio() { triggers.auxgpio(); return *this; }
+        auto& connected() { triggers.connected(); return *this; }
+        auto& disarm() { triggers.disarm(); return *this; }
+        auto& env() { triggers.env(); return *this; }
+        auto& location() { triggers.location(); return *this; }
+        auto& motion() { triggers.motion(); return *this; }
+        auto& motionchange() { triggers.motionchange(); return *this; }
+        auto& rearm() { triggers.rearm(); return *this; }
+        auto& signal() { triggers.signal(); return *this; }
+        auto& sleep() { triggers.sleep(); return *this; }
+        auto& usb() { triggers.usb(); return *this; }
+        auto& watchdog() { triggers.watchdog(); return *this; }
+        auto& wireless() { triggers.wireless(); return *this; }
         template<typename T>
         auto& extra(note::string_view key, T value) {
             if (extras_count_ < NOTE_EXTRAS_MAX)

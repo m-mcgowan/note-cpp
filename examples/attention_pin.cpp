@@ -16,11 +16,11 @@
 void intent_examples(note::Notecard& nc) {
     using namespace note::literals;
 
-    // Arm ATTN for connectivity changes
+    // Arm ATTN for connectivity changes — "arm," prefix is added automatically
     // {"req":"card.attn","mode":"arm,connected"}
     {
         note::api::CardAttn::Arm req;
-        req.mode.arm().connected();
+        req.triggers.connected();
         nc.execute(req);
         // Returns ApiResult<CardAttn::Arm::Response> with just .set
     }
@@ -34,7 +34,7 @@ void intent_examples(note::Notecard& nc) {
         // Returns ApiResult<void> — just check success/error
     }
 
-    // Sleep with payload — mode:"sleep" is emitted automatically
+    // Sleep — put host MCU to sleep for 1 hour, no payload
     // {"req":"card.attn","mode":"sleep","seconds":3600}
     {
         note::api::CardAttn::Sleep req;
@@ -43,14 +43,31 @@ void intent_examples(note::Notecard& nc) {
         // Returns ApiResult<void>
     }
 
-    // Retrieve payload after sleep — start:true is emitted automatically
+    // Sleep with payload — Notecard holds a string across the host's sleep cycle.
+    // Use this to pass state (e.g. a resume token or checkpoint) across a reset.
+    // {"req":"card.attn","mode":"sleep","seconds":3600,"payload":"checkpoint-v1"}
+    {
+        note::api::CardAttn::Sleep req;
+        req.seconds(3600_s);
+        req.payload("checkpoint-v1");
+        nc.execute(req);
+        // Returns ApiResult<void> — MCU may now enter deep sleep
+    }
+
+    // On wakeup: retrieve stored payload to distinguish first boot from sleep resume.
+    // start:true is emitted automatically.
     // {"req":"card.attn","start":true}
+    // Response: {"payload":"checkpoint-v1","time":1700000000}  (sleep resume)
+    // Response: {}                                              (first boot — no prior sleep)
     {
         auto result = nc.execute(note::api::CardAttn::Retrieve{});
-        if (result) {
-            auto payload = result.payload;
-            auto time = result.time;
-            (void)payload; (void)time;
+        if (result && result.time != 0) {
+            // Woke from sleep — payload holds the state saved before sleeping
+            auto payload = result.payload;  // "checkpoint-v1"
+            auto stored_at = result.time;   // UNIX epoch when payload was written
+            (void)payload; (void)stored_at;
+        } else {
+            // First boot or no prior sleep — start fresh
         }
         // Returns ApiResult<CardAttn::Retrieve::Response> with .payload, .time
     }

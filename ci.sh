@@ -57,7 +57,7 @@ run_ci() {
 
     # Check each header compiles independently
     echo "=== Header compilation ==="
-    for header in $(find "$ROOT/include/note" -name '*.hpp' -not -path '*/backends/*' | sort); do
+    for header in $(find "$ROOT/include/note" -name '*.hpp' -not -path '*/backends/*' -not -path '*/arduino/*' | sort); do
         name=$(basename "$header")
         printf "  %-40s " "$name"
         $CXX $CXXFLAGS $INCLUDE -fsyntax-only "$header" && echo "OK" || { echo "FAIL"; exit 1; }
@@ -67,7 +67,7 @@ run_ci() {
     if [ "${CPP17_DONE:-}" != "1" ]; then
         echo
         echo "=== C++17 header compatibility ==="
-        for header in $(find "$ROOT/include/note" -name '*.hpp' -not -path '*/backends/*' -not -path '*/transport/*' -not -path '*/third_party/*' | sort); do
+        for header in $(find "$ROOT/include/note" -name '*.hpp' -not -path '*/backends/*' -not -path '*/arduino/*' -not -path '*/transport/*' -not -path '*/third_party/*' | sort); do
             name=$(basename "$header")
             printf "  %-40s " "$name"
             $CXX -std=c++17 $INCLUDE -fsyntax-only "$header" && echo "OK" || { echo "FAIL"; exit 1; }

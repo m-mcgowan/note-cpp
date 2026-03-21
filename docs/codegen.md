@@ -11,6 +11,7 @@ All changes belong in the source files described below.
 notecard-schema repo          Our extension metadata
   *.req.notecard.api.json  ┐  tools/safety_semantics.json
   *.rsp.notecard.api.json  ┤  tools/property_extensions.json
+                           ┤  tools/operation_extensions.json
                            ┘  tools/binary_transfer.json
               │
               ▼
@@ -56,6 +57,15 @@ Used for:
 - `x-toggle` — paired boolean fields with semantic method names
 - `x-action` — standalone boolean trigger with a semantic method name
 
+### `tools/operation_extensions.json`
+
+Per-operation extension overrides. Keys are endpoint names; values map
+HTTP method (lowercase) to extension objects merged into the operation.
+
+Used for:
+- `x-intents` — intent definitions (arm/sleep/retrieve etc.) that expand into per-intent C++ structs
+- `x-intent-name` — rename a dispatch operation's factory method and struct (e.g. `get` → `read`)
+
 ### `tools/binary_transfer.json`
 
 Annotates endpoints that follow JSON handshake with raw COBS binary data.
@@ -74,12 +84,12 @@ python3 tools/schema_to_openapi.py <notecard-schema-dir> \
     -o notecard-api.openapi.json
 ```
 
-**Apply property extensions only** (without full regeneration — preserves
-operation-level extensions like `x-intents`/`x-intent-name`/`x-aliases` that
-are not yet stored in a separate source file):
+**Apply extensions only** (without full regeneration — faster when only
+extension metadata has changed):
 ```bash
 python3 tools/schema_to_openapi.py update-extensions notecard-api.openapi.json \
-    --extensions tools/property_extensions.json
+    --extensions tools/property_extensions.json \
+    --op-extensions tools/operation_extensions.json
 ```
 
 ### `notecard-api.openapi.json`
@@ -88,10 +98,9 @@ python3 tools/schema_to_openapi.py update-extensions notecard-api.openapi.json \
 produced by `schema_to_openapi.py`. Any manual edits are overwritten on next
 regeneration. Add metadata to one of the extension files above instead.
 
-Operation-level extensions (`x-intents`, `x-intent-name`, `x-aliases`) do not
-yet have a source file — they need an `operation_extensions.json` mechanism in
-`schema_to_openapi.py`. Until that is added, re-apply them via
-`schema_to_openapi.py update-extensions` after each full regeneration (see below).
+Operation-level extensions (`x-intents`, `x-intent-name`) are sourced from
+`tools/operation_extensions.json` and applied during both full regeneration
+and `update-extensions`.
 
 ### `tools/codegen/generate.py`
 
@@ -137,8 +146,8 @@ Jinja2 templates:
 2. Regenerate the OpenAPI spec via `schema_to_openapi.py`
 3. Regenerate C++ via `generate.py`
 
-### New operation-level extension (x-intents, x-intent-name, x-aliases)
+### New operation-level extension (x-intents, x-intent-name)
 
-Currently these must be added directly to `notecard-api.openapi.json` because
-`schema_to_openapi.py` only supports property-level overrides. Future work:
-add an `operation_extensions.json` mechanism to `schema_to_openapi.py`.
+1. Add to `tools/operation_extensions.json` under the endpoint and HTTP method
+2. Run `python3 tools/schema_to_openapi.py update-extensions notecard-api.openapi.json`
+3. Run `python3 tools/codegen/generate.py notecard-api.openapi.json` to regenerate C++

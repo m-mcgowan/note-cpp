@@ -9,6 +9,7 @@
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
+#include <note/array_field.hpp>
 #include <note/target.hpp>
 
 namespace note::api {
@@ -38,11 +39,9 @@ struct FileChanges {
 
     /// One or more files to obtain change information from. Omit to return
     /// changes for all Notefiles.
-    struct files_t : Field<note::string_view> {
-        using Field<note::string_view>::Field;
-        using Field<note::string_view>::operator=;
-        FileChanges& operator()(note::string_view v);
-    } files{};
+    /// One or more files to obtain change information from. Omit to return
+    /// changes for all Notefiles.
+    note::ArrayField<note::string_view, 8> files{};
     /// ID of a change tracker to use to determine changes to Notefiles.
     struct tracker_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
@@ -62,7 +61,6 @@ struct FileChanges {
     }
 
     note::DynField operator[](note::string_view k_) {
-        if (k_ == "files") return note::dyn_field_for(files);
         if (k_ == "tracker") return note::dyn_field_for(tracker);
         if (extras_count_ < NOTE_EXTRAS_MAX) {
             auto& slot = extras_[extras_count_++];
@@ -129,7 +127,7 @@ struct FileChanges {
     };
 
     void build(JsonBuilder& b) const {
-        if (files) b.add("files", *files);
+        if (files) files.write_to(b, "files");
         if (tracker) b.add("tracker", *tracker);
         for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
             std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
@@ -145,11 +143,6 @@ struct FileChanges {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-inline FileChanges& FileChanges::files_t::operator()(note::string_view v) {
-    Field<note::string_view>::operator=(v);
-    return *reinterpret_cast<FileChanges*>(
-        reinterpret_cast<char*>(this) - offsetof(FileChanges, files));
-}
 inline FileChanges& FileChanges::tracker_t::operator()(note::string_view v) {
     Field<note::string_view>::operator=(v);
     return *reinterpret_cast<FileChanges*>(

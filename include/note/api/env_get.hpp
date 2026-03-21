@@ -10,6 +10,7 @@
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
+#include <note/array_field.hpp>
 #include <note/target.hpp>
 
 namespace note::api {
@@ -47,11 +48,10 @@ struct EnvGet {
 #if NOTE_API_VERSION < NOTE_VERSION(3, 4, 1)
     [[deprecated("requires firmware >= 3.4.1")]]
 #endif
-    struct names_t : Field<note::string_view> {
-        using Field<note::string_view>::Field;
-        using Field<note::string_view>::operator=;
-        EnvGet& operator()(note::string_view v);
-    } names{};
+    /// A list of one or more variables to retrieve, by name (case-insensitive).
+    ///
+    /// @since{3.4.1}
+    note::ArrayField<note::string_view, 8> names{};
 #endif
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
     /// Request a modified environment variable or variables from the Notecard,
@@ -81,9 +81,6 @@ struct EnvGet {
 
     note::DynField operator[](note::string_view k_) {
         if (k_ == "name") return note::dyn_field_for(name);
-#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-        if (k_ == "names") return note::dyn_field_for(names);
-#endif
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
         if (k_ == "time") return note::dyn_field_for(time);
 #endif
@@ -203,7 +200,7 @@ struct EnvGet {
     void build(JsonBuilder& b) const {
         if (name) b.add("name", *name);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-        if (names) b.add("names", *names);
+        if (names) names.write_to(b, "names");
 #endif
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
         if (time) b.add("time", *time);
@@ -229,13 +226,6 @@ inline EnvGet& EnvGet::name_t::operator()(note::string_view v) {
     return *reinterpret_cast<EnvGet*>(
         reinterpret_cast<char*>(this) - offsetof(EnvGet, name));
 }
-#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-inline EnvGet& EnvGet::names_t::operator()(note::string_view v) {
-    Field<note::string_view>::operator=(v);
-    return *reinterpret_cast<EnvGet*>(
-        reinterpret_cast<char*>(this) - offsetof(EnvGet, names));
-}
-#endif
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
 inline EnvGet& EnvGet::time_t::operator()(int32_t v) {
     Field<int32_t>::operator=(v);

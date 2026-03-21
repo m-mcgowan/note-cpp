@@ -306,6 +306,24 @@ def load_property_extensions(extensions_path: Path) -> dict:
     return data
 
 
+def load_operation_extensions(extensions_path: Path) -> dict:
+    """Load per-operation extension overrides JSON.
+
+    Returns {endpoint: {http_method: {ext_key: ext_value, ...}, ...}, ...}.
+    """
+    if not extensions_path.exists():
+        return {}
+    with open(extensions_path) as f:
+        data = json.load(f)
+    data.pop("$comment", None)
+    return data
+
+
+def _apply_operation_extensions(op: dict, method_extensions: dict) -> None:
+    """Merge operation-level extensions into an operation object."""
+    op.update(method_extensions)
+
+
 def detect_schema_commit(schema_dir: Path) -> str | None:
     """Auto-detect the current git commit of the schema directory."""
     try:
@@ -346,6 +364,7 @@ def _apply_property_extensions(op: dict, ep_extensions: dict) -> None:
 def convert(schema_dir: Path, safety_path: Path,
             binary_path: Path | None = None,
             extensions_path: Path | None = None,
+            op_extensions_path: Path | None = None,
             schema_tag: str | None = None,
             schema_commit: str | None = None) -> dict:
     """Main conversion: JSON Schema files + safety semantics -> OpenAPI 3.1."""
@@ -353,6 +372,7 @@ def convert(schema_dir: Path, safety_path: Path,
     safety = load_safety(safety_path)
     binary = load_binary_transfer(binary_path) if binary_path else {}
     extensions = load_property_extensions(extensions_path) if extensions_path else {}
+    op_extensions = load_operation_extensions(op_extensions_path) if op_extensions_path else {}
 
     # Auto-detect schema commit if not provided
     if schema_commit is None:
@@ -405,6 +425,8 @@ def convert(schema_dir: Path, safety_path: Path,
 
         ep_extensions = extensions.get(endpoint, {})
 
+        ep_op_extensions = op_extensions.get(endpoint, {})
+
         if isinstance(semantics, str):
             method = semantics.lower()
             op = build_operation(
@@ -415,6 +437,8 @@ def convert(schema_dir: Path, safety_path: Path,
                 op["x-binary-transfer"] = binary[endpoint]
             if ep_extensions:
                 _apply_property_extensions(op, ep_extensions)
+            if method in ep_op_extensions:
+                _apply_operation_extensions(op, ep_op_extensions[method])
             path_item[method] = op
 
         elif isinstance(semantics, dict):
@@ -431,6 +455,8 @@ def convert(schema_dir: Path, safety_path: Path,
                     op["x-binary-transfer"] = binary[endpoint]
                 if ep_extensions:
                     _apply_property_extensions(op, ep_extensions)
+                if method in ep_op_extensions:
+                    _apply_operation_extensions(op, ep_op_extensions[method])
                 path_item[method] = op
 
         openapi["paths"][path] = path_item
@@ -444,31 +470,31 @@ def convert(schema_dir: Path, safety_path: Path,
     return openapi
 
 
-def apply_extensions_to_existing(spec_path: Path, extensions_path: Path,
+def apply_extensions_to_existing(spec_path: Path,
+                                  prop_extensions_path: Path,
+                                  op_extensions_path: Path | None = None,
                                   output_path: Path | None = None) -> None:
-    """Patch property extensions into an existing OpenAPI spec in place.
-
-    Used to update property_extensions.json entries without doing a full
-    regeneration from Blues schema files (which would lose operation-level
-    extensions like x-intents, x-intent-name, x-aliases that are not yet
-    stored in a separate source file).
-    """
+    """Patch property and operation extensions into an existing OpenAPI spec in place."""
     with open(spec_path) as f:
         spec = json.load(f)
 
-    extensions = load_property_extensions(extensions_path)
+    prop_extensions = load_property_extensions(prop_extensions_path)
+    op_extensions = load_operation_extensions(op_extensions_path) if op_extensions_path else {}
 
     for path, path_item in spec.get("paths", {}).items():
         endpoint = path_to_endpoint(path)
-        ep_extensions = extensions.get(endpoint, {})
-        if not ep_extensions:
+        ep_prop_ext = prop_extensions.get(endpoint, {})
+        ep_op_ext = op_extensions.get(endpoint, {})
+        if not ep_prop_ext and not ep_op_ext:
             continue
         for method, op in path_item.items():
-            if method in ("parameters", "summary", "description", "x-aliases",
-                          "x-flat-alias"):
+            if method in ("parameters", "summary", "description"):
                 continue
             if isinstance(op, dict):
-                _apply_property_extensions(op, ep_extensions)
+                if ep_prop_ext:
+                    _apply_property_extensions(op, ep_prop_ext)
+                if method in ep_op_ext:
+                    _apply_operation_extensions(op, ep_op_ext[method])
 
     out_path = output_path or spec_path
     out_path.write_text(json.dumps(spec, indent=2) + "\n")
@@ -489,18 +515,22 @@ def main():
                       default=Path(__file__).parent / "binary_transfer.json")
     conv.add_argument("--extensions", type=Path,
                       default=Path(__file__).parent / "property_extensions.json")
+    conv.add_argument("--op-extensions", type=Path,
+                      default=Path(__file__).parent / "operation_extensions.json")
     conv.add_argument("--schema-tag", type=str, default=None)
     conv.add_argument("--schema-commit", type=str, default=None)
     conv.add_argument("-o", "--output", type=Path, default=None)
 
-    # Update: patch property extensions into existing spec without full regen
+    # Update: patch property and operation extensions into existing spec without full regen
     upd = sub.add_parser(
         "update-extensions",
-        help="Apply property_extensions.json to an existing spec (no full regen).",
+        help="Apply property_extensions.json and operation_extensions.json to an existing spec.",
     )
     upd.add_argument("spec", type=Path, help="Existing notecard-api.openapi.json")
     upd.add_argument("--extensions", type=Path,
                      default=Path(__file__).parent / "property_extensions.json")
+    upd.add_argument("--op-extensions", type=Path,
+                     default=Path(__file__).parent / "operation_extensions.json")
     upd.add_argument("-o", "--output", type=Path, default=None,
                      help="Output path (default: overwrite spec in place)")
 
@@ -513,6 +543,8 @@ def main():
                         default=Path(__file__).parent / "binary_transfer.json")
     parser.add_argument("--extensions", type=Path,
                         default=Path(__file__).parent / "property_extensions.json")
+    parser.add_argument("--op-extensions", type=Path,
+                        default=Path(__file__).parent / "operation_extensions.json")
     parser.add_argument("--schema-tag", type=str, default=None)
     parser.add_argument("--schema-commit", type=str, default=None)
     parser.add_argument("-o", "--output", type=Path, default=None)
@@ -520,7 +552,8 @@ def main():
     args = parser.parse_args()
 
     if args.command == "update-extensions":
-        apply_extensions_to_existing(args.spec, args.extensions, args.output)
+        apply_extensions_to_existing(args.spec, args.extensions,
+                                     args.op_extensions, args.output)
         return
 
     # convert subcommand or legacy positional-arg mode
@@ -529,7 +562,8 @@ def main():
         parser.error("schema_dir is required for full conversion")
 
     openapi = convert(schema_dir, args.safety, args.binary,
-                      args.extensions, args.schema_tag, args.schema_commit)
+                      args.extensions, args.op_extensions,
+                      args.schema_tag, args.schema_commit)
 
     output = json.dumps(openapi, indent=2)
     if args.output:

@@ -135,8 +135,8 @@ int main() {
         .execute();
 
     api.card.attn().arm()
-        .mode(note::attn::arm)   // flag constant via operator()
-        .seconds(5_mins)         // Minutes → Seconds (= 300 on the wire)
+        .triggers(note::attn::connected)  // flag constant via operator() — "arm," prepended automatically
+        .seconds(5_mins)                  // Minutes → Seconds (= 300 on the wire)
         .execute();
 
 

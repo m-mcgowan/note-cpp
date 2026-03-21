@@ -1,0 +1,123 @@
+{
+  "$comment": "Per-operation extensions not in upstream notecard-schema. Merged into the OpenAPI spec by schema_to_openapi.py during conversion. Keys are endpoint names (dot-notation), values map HTTP method (lowercase) to extension objects merged into the operation.",
+  "card.attn": {
+    "put": {
+      "x-intents": [
+        {
+          "name": "arm",
+          "description": "Arm ATTN pin for interrupt on an event trigger.",
+          "fields": ["mode", "files", "seconds", "on"],
+          "response": ["set"],
+          "supports_cmd": true,
+          "mode_prefix": "arm"
+        },
+        {
+          "name": "watchdog",
+          "description": "Configure ATTN as a watchdog timer.",
+          "implicit": {"mode": "watchdog"},
+          "fields": ["seconds"],
+          "response": [],
+          "supports_cmd": true
+        },
+        {
+          "name": "sleep",
+          "description": "Instruct host MCU to sleep with optional payload.",
+          "implicit": {"mode": "sleep"},
+          "fields": ["seconds", "payload"],
+          "response": [],
+          "supports_cmd": true
+        },
+        {
+          "name": "retrieve",
+          "description": "Retrieve stored payload after sleep.",
+          "implicit": {"start": true},
+          "fields": [],
+          "response": ["payload", "time"],
+          "supports_cmd": false
+        },
+        {
+          "name": "disarm",
+          "description": "Disarm all attention interrupts.",
+          "implicit": {"mode": "disarm,-all"},
+          "fields": [],
+          "response": [],
+          "supports_cmd": true
+        },
+        {
+          "name": "query",
+          "description": "Query current ATTN state and configuration.",
+          "fields": ["verify"],
+          "response": ["set", "off"],
+          "safety": "readonly",
+          "supports_cmd": false
+        }
+      ]
+    }
+  },
+  "card.binary": {
+    "get":    {"x-intent-name": "status"},
+    "delete": {"x-intent-name": "clear"}
+  },
+  "card.location.mode": {
+    "put": {
+      "x-intents": [
+        {
+          "name": "continuous",
+          "description": "Enable continuous GPS/GNSS sampling.",
+          "implicit": {"mode": "continuous"},
+          "fields": ["threshold", "vseconds"],
+          "response": ["mode", "threshold", "vseconds"]
+        },
+        {
+          "name": "periodic",
+          "description": "Enable periodic location sampling, optionally with geofencing.",
+          "implicit": {"mode": "periodic"},
+          "fields": ["seconds", "lat", "lon", "max", "minutes", "threshold", "vseconds"],
+          "response": ["mode", "seconds", "lat", "lon", "max", "minutes", "threshold", "vseconds"]
+        },
+        {
+          "name": "fixed",
+          "description": "Set a fixed location for the device.",
+          "implicit": {"mode": "fixed"},
+          "fields": ["lat", "lon"],
+          "response": ["mode", "lat", "lon"]
+        }
+      ]
+    },
+    "delete": {"x-intent-name": "remove"}
+  },
+  "card.power": {
+    "get":    {"x-intent-name": "read"},
+    "put":    {"x-intent-name": "configure"},
+    "delete": {"x-intent-name": "reset"}
+  },
+  "card.temp": {
+    "get":    {"x-intent-name": "read"},
+    "put":    {"x-intent-name": "configure"},
+    "delete": {"x-intent-name": "stop"}
+  },
+  "card.voltage": {
+    "get": {"x-intent-name": "read"},
+    "put": {"x-intent-name": "configure"}
+  },
+  "card.wireless.penalty": {
+    "get":    {"x-intent-name": "check"},
+    "put":    {"x-intent-name": "set"},
+    "delete": {"x-intent-name": "clear"}
+  },
+  "env.default": {
+    "delete": {"x-intent-name": "remove"}
+  },
+  "note.changes": {
+    "get":    {"x-intent-name": "peek"},
+    "delete": {"x-intent-name": "pop"}
+  },
+  "note.get": {
+    "get":    {"x-intent-name": "read"},
+    "delete": {"x-intent-name": "pop"}
+  },
+  "note.template": {
+    "put":    {"x-intent-name": "define"},
+    "delete": {"x-intent-name": "remove"}
+  }
+}

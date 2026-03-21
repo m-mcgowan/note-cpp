@@ -39,15 +39,41 @@ def find_table_pairs(content: str) -> list[tuple[int, int, int, int]]:
     return pairs
 
 
-def count_lines(text: str) -> int:
-    """Count content lines in a code block body (between ``` markers).
+def content_lines(text: str) -> int:
+    """Count real content lines, stripping trailing blank lines."""
+    lines = text.split('\n')
+    while lines and lines[-1].strip() == '':
+        lines.pop()
+    return len(lines)
 
-    Trailing newline before ``` is structural, not a content line.
-    But blank lines before that ARE content lines (for visual padding).
-    We count: strip one trailing newline (the one before ```), then
-    count what remains.
+
+# Public alias used by check()
+count_lines = content_lines
+
+
+def pad_to(text: str, target: int) -> str:
+    """Strip trailing blanks, then pad to exactly `target` content lines.
+
+    Returns text with `target` lines followed by one final newline
+    (the structural newline before the closing ```).
     """
-    # Remove the single trailing newline that separates content from ```
+    lines = text.split('\n')
+    # Strip trailing blanks
+    while lines and lines[-1].strip() == '':
+        lines.pop()
+    # Pad
+    while len(lines) < target:
+        lines.append('')
+    # Exactly target lines + one trailing newline for the ``` delimiter
+    return '\n'.join(lines) + '\n'
+
+
+def total_lines(text: str) -> int:
+    """Count all lines in the block including trailing blanks.
+
+    The text between ``` markers ends with \\n before ```.
+    We strip that one structural newline, then count.
+    """
     if text.endswith('\n'):
         text = text[:-1]
     if not text:
@@ -55,53 +81,60 @@ def count_lines(text: str) -> int:
     return text.count('\n') + 1
 
 
-def pad_to(text: str, target_lines: int) -> str:
-    """Pad a code block body with trailing blank lines to reach target_lines."""
-    # Normalize: strip to content lines only
-    stripped = text.rstrip('\n')
-    current = count_lines(stripped + '\n')
-    padding = max(0, target_lines - current)
-    # Each padding "line" is just a newline. Final newline closes the block.
-    return stripped + '\n' * padding + '\n'
-
-
 def check(content: str) -> list[str]:
-    """Return list of error messages for mismatched pairs."""
+    """Return list of error messages for mismatched pairs.
+
+    Checks two things:
+    1. Both sides have the same total line count (including padding).
+    2. The longer side (by content) has no unnecessary trailing blanks.
+    """
     errors = []
     for i, (ls, le, rs, re_) in enumerate(find_table_pairs(content)):
-        left_lines = count_lines(content[ls:le])
-        right_lines = count_lines(content[rs:re_])
-        if left_lines != right_lines:
+        left_text = content[ls:le]
+        right_text = content[rs:re_]
+        left_t = total_lines(left_text)
+        right_t = total_lines(right_text)
+        left_c = content_lines(left_text)
+        right_c = content_lines(right_text)
+        target = max(left_c, right_c)
+
+        if left_t != target or right_t != target:
             errors.append(
-                f"Table pair {i+1}: left={left_lines} right={right_lines}"
+                f"Table pair {i+1}: left={left_t}({left_c} content) "
+                f"right={right_t}({right_c} content) target={target}"
             )
     return errors
 
 
 def fix(content: str) -> str:
     """Fix all mismatched pairs by padding the shorter side."""
-    # Repeat until stable — each pass re-finds pairs with current offsets
-    for _ in range(10):
+    # Fix one pair at a time, re-finding all pairs each iteration.
+    # This avoids stale offsets after modifying content.
+    for _ in range(50):  # safety limit
         pairs = find_table_pairs(content)
-        changed = False
-        # Process in reverse so later offsets aren't affected
-        for ls, le, rs, re_ in reversed(pairs):
+        fixed_any = False
+        for ls, le, rs, re_ in pairs:
             left_text = content[ls:le]
             right_text = content[rs:re_]
-            left_lines = count_lines(left_text)
-            right_lines = count_lines(right_text)
-            if left_lines == right_lines:
-                continue
-            target = max(left_lines, right_lines)
-
-            new_right = pad_to(right_text, target)
-            content = content[:rs] + new_right + content[re_:]
+            left_n = content_lines(left_text)
+            right_n = content_lines(right_text)
+            target = max(left_n, right_n)
 
             new_left = pad_to(left_text, target)
-            content = content[:ls] + new_left + content[le:]
-            changed = True
+            new_right = pad_to(right_text, target)
 
-        if not changed:
+            # Skip if both already correct
+            if new_left == left_text and new_right == right_text:
+                continue
+
+            # Replace right first (later in file) so left offsets stay valid
+            content = content[:rs] + new_right + content[re_:]
+            content = content[:ls] + new_left + content[le:]
+
+            fixed_any = True
+            break  # restart — offsets are now stale for remaining pairs
+
+        if not fixed_any:
             break
     return content
 

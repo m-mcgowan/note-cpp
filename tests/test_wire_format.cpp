@@ -3,6 +3,7 @@
 #include "test_json_backend.hpp"
 
 #include <note/notecard.hpp>
+#include <note/notecard_api.hpp>
 #include <note/api.hpp>
 #include <note/api/card_version.hpp>
 #include <note/api/hub_set.hpp>
@@ -489,4 +490,38 @@ TEST_CASE("DX: fluent setter validates literals") {
     note::string_view m = "continuous";
     api.hub.set().mode(m).execute();
     REQUIRE(h.last_request == R"({"req":"hub.set","mode":"continuous"})");
+}
+
+// ---------------------------------------------------------------------------
+// NotecardApi — convenience wrapper
+// ---------------------------------------------------------------------------
+
+TEST_CASE("NotecardApi: single-object setup") {
+    note::test::TestJsonBackend backend;
+    std::string last_request;
+    note::NotecardApi nc(backend,
+        [&](note::string_view req, uint32_t) -> note::Result<note::string_view> {
+            last_request = std::string(req);
+            return note::string_view("{}");
+        });
+
+    // Use Api surface directly on nc — no separate Api object needed
+    nc.hub.set().product("com.example.app").mode("periodic").execute();
+    REQUIRE(last_request ==
+        R"({"req":"hub.set","mode":"periodic","product":"com.example.app"})");
+
+    nc.card.version().execute();
+    REQUIRE(last_request == R"({"req":"card.version"})");
+}
+
+TEST_CASE("NotecardApi: notecard() accessor") {
+    note::test::TestJsonBackend backend;
+    note::NotecardApi nc(backend,
+        [](note::string_view, uint32_t) -> note::Result<note::string_view> {
+            return note::string_view("{}");
+        });
+
+    // Can access underlying Notecard for transport-level operations
+    auto& notecard = nc.notecard();
+    (void)notecard;
 }

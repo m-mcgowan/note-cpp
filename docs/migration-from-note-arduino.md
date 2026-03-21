@@ -19,10 +19,10 @@ catches mistakes before they reach the device.
 ```c
 #include <Notecard.h>
 
-Notecard notecard;
+Notecard nc;
 
 void setup() {
-    notecard.begin(Serial1, 9600);
+    nc.begin(Serial1, 9600);
 }
 
 ```
@@ -31,9 +31,9 @@ void setup() {
 
 ```cpp
 #include <note/note.hpp>
+using namespace note::api;
 
-note::Notecard nc;
-note::Api api(nc);
+note::NotecardApi nc;
 
 void setup() {
     nc.begin(Serial1, 9600);
@@ -43,32 +43,32 @@ void setup() {
 </td></tr>
 </table>
 
-**What changed:** One include, same `begin()` call. The JSON backend and
-transport are handled internally — the only visible difference is
-`note::Api`, which gives you the typed request builders on top.
+> The `using namespace note::api` import is used throughout the remaining
+> examples for brevity. It brings in the request types (`HubSet`, `CardAttn`,
+> etc.) without affecting `nc` or other `note::` types.
 
-## Configuring the product (hub.set)
+## Configuring the Hub (hub.set)
 
 <table>
 <tr><th>note-arduino</th><th>note-cpp</th></tr>
 <tr><td>
 
 ```c
-J *req = notecard.newRequest("hub.set");
+J *req = nc.newRequest("hub.set");
 JAddStringToObject(req, "product",
     "com.example.app");
 JAddStringToObject(req, "mode", "periodic");
 JAddNumberToObject(req, "outbound", 60);
-notecard.sendRequest(req);
+nc.sendRequest(req);
 ```
 
 </td><td>
 
 ```cpp
-api.hub.set()
+nc.hub.set()
     .product("com.example.app")
     .mode("periodic")
-    .outbound(60)
+    .outbound(60_mins)
     .execute();
 
 ```
@@ -76,15 +76,114 @@ api.hub.set()
 </td></tr>
 </table>
 
-**What changed:**
+**Key differences from note-c:**
 - No `J*` pointers to manage — no risk of leaking a request object.
-- Field names are typed members. `JAddStringToObject(req, "prodcut", ...)` compiles
-  fine in note-c but fails silently; `req.prodcut` in note-cpp won't compile.
-- `outbound` is an integer in note-c — you have to remember it's in minutes.
-  note-cpp accepts `60_mins` or `1_hours` with type-safe duration units that
-  prevent accidental mixing of minutes and seconds.
-- On C++20, `"periodic"` is validated at compile time. A typo like `"perioidc"`
-  is a compile error.
+- Field names are typed members. Misspell a field name and the compiler
+  tells you — note-c compiles it silently.
+- `outbound` is a bare integer in note-c — you have to remember it's in
+  minutes. note-cpp accepts `60_mins` or `1_hours` with type-safe duration
+  units that prevent accidental mixing of minutes and seconds.
+- On C++20, `"periodic"` is validated at compile time. A typo like
+  `"perioidc"` is a compile error.
+
+
+The example above shows the fluent chain approach.  Note-c offers 3 primary API styles:
+
+1. fluent chain
+2. direct assignment
+3. designated initializers
+
+### Fluent chain
+
+Build and execute in one expression. Good when all fields are known upfront, or their values may be conditional (computed by a helper function).
+
+### Direct assignment
+
+Set fields individually. Good when fields come from different sources or are set with inline conditional code.
+
+<table>
+<tr><th>note-arduino</th><th>note-cpp</th></tr>
+<tr><td>
+
+```c
+J *req = nc.newRequest("hub.set");
+JAddStringToObject(req, "product",
+    "com.example.app");
+JAddNumberToObject(req, "outbound", 60);
+if (use_continuous) {
+    JAddStringToObject(req, "mode",
+        "continuous");
+    JAddBoolToObject(req, "sync", true);
+}
+else {
+    JAddStringToObject(req, "mode", "periodic");
+}
+nc.sendRequest(req);
+```
+
+</td><td>
+
+```cpp
+auto req = nc.hub.set();
+req.product  = "com.example.app";
+req.outbound = 60_mins;
+if (use_continuous) {
+    req.mode = "continuous";
+    req.sync = true;
+}
+else {
+    req.mode     = "periodic";
+}
+req.execute();
+
+
+```
+
+</td></tr>
+</table>
+
+### Designated initializers (C++20)
+
+Brief and declarative. A good default choice when conditional behaviour
+isn't needed.
+
+<table>
+<tr><th>note-arduino</th><th>note-cpp</th></tr>
+<tr><td>
+
+```c
+J *req = nc.newRequest("hub.set");
+JAddStringToObject(req, "product",
+    "com.example.app");
+JAddStringToObject(req, "mode", "periodic");
+JAddNumberToObject(req, "outbound", 60);
+nc.sendRequest(req);
+```
+
+</td><td>
+
+```cpp
+HubSet req{
+    .mode     = "periodic",
+    .outbound = 60_mins,
+    .product  = "com.example.app",
+};
+nc.execute(req);
+```
+
+</td></tr>
+</table>
+
+> **Note:** Designated initializers require the fields in alphabetical order. This is specific to
+> the designated initializer syntax — fluent chains and direct assignment
+> accept fields in any order.
+
+### Why three ways?
+
+They're different tools for different shapes of code. Fluent chains are concise when configuring and executing in
+one statement. Direct assignment is natural when fields come from variables
+or conditional logic. Designated initializers read like data, not procedure
+— brief and clear when the values are known at the call site.
 
 ## Sending sensor data (note.add)
 
@@ -93,51 +192,54 @@ api.hub.set()
 <tr><td>
 
 ```c
-J *req = notecard.newRequest("note.add");
+struct Readings {
+    float temperature;
+    int16_t humidity;
+};
+
+Readings r{.temperature = 22.5f, .humidity = 60};
+J *req = nc.newRequest("note.add");
 JAddStringToObject(req, "file", "sensors.qo");
 J *body = JAddObjectToObject(req, "body");
-JAddNumberToObject(body, "temp", temperature);
-JAddNumberToObject(body, "humidity", humidity);
-notecard.sendRequest(req);
-
-
-
-
-
-
-
+JAddNumberToObject(body, "temp", r.temperature);
+JAddNumberToObject(body, "humidity", r.humidity);
+if (!nc.sendRequest(req)) {
+    Serial.println("note.add failed");
+}
 ```
 
 </td><td>
 
 ```cpp
-// Define your data shape once:
 struct Readings {
     float temperature;
     int16_t humidity;
-    NOTE_FIELDS(temperature, humidity) // optional on C++20
 };
 
-// Then send it:
 Readings r{.temperature = 22.5f, .humidity = 60};
-api.note.add()
+auto result = nc.note.add()
     .file("sensors.qo")
     .body(r)
     .execute();
+if (!result) {
+    Serial.println(to_string(result.error()).c_str());
+}
+
 ```
 
 </td></tr>
 </table>
 
-**What changed:**
-- The body is a typed struct, not a hand-built JSON tree. The same struct is
-  used to send data, receive data, and register Notecard templates.
-- No two-level pointer management (`req` → `body` → fields). If you forget
-  to add the `body` object in note-c, the fields end up on the request itself
-  and are silently ignored. With note-cpp, `.body(r)` is explicit.
+**Key differences:**
+- Both sides define the same struct, but note-cpp uses it directly as the
+  body — no manual field-by-field JSON construction.
+- No two-level pointer management (`req` then `body`). If you forget
+  `JAddObjectToObject` in note-c, the fields end up on the request itself
+  and are silently ignored.
 - `JAddNumberToObject` sends everything as `double`. note-cpp preserves the
   original type (`float`, `int16_t`) so template registration generates the
   correct type hints automatically.
+
 
 ## Registering templates
 
@@ -148,12 +250,12 @@ api.note.add()
 ```c
 // Magic numbers: 14.1 = TFLOAT32, 11 = TINT16
 // Get one wrong and the Notecard stores garbage.
-J *req = notecard.newRequest("note.template");
+J *req = nc.newRequest("note.template");
 JAddStringToObject(req, "file", "sensors.qo");
 J *body = JAddObjectToObject(req, "body");
 JAddNumberToObject(body, "temp", 14.1);
 JAddNumberToObject(body, "humidity", 11);
-notecard.sendRequest(req);
+nc.sendRequest(req);
 ```
 
 </td><td>
@@ -161,7 +263,7 @@ notecard.sendRequest(req);
 ```cpp
 // Same Readings struct from above — type hints
 // are derived from C++ types automatically.
-api.note.templates().define("sensors.qo")
+nc.note.templates().define("sensors.qo")
     .body(note::template_of<Readings>())
     .execute();
 
@@ -172,7 +274,7 @@ api.note.templates().define("sensors.qo")
 </td></tr>
 </table>
 
-**What changed:**
+**Key differences:**
 - No magic numbers. `14.1` meaning "32-bit float" is a Notecard convention that
   note-c requires you to memorize. note-cpp derives the type hints from your
   struct: `float` → `14.1`, `int16_t` → `11`, `bool` → `1`, etc.
@@ -186,39 +288,48 @@ api.note.templates().define("sensors.qo")
 <tr><td>
 
 ```c
-J *rsp = notecard.requestAndResponse(
-    notecard.newRequest("card.temp"));
-if (rsp != NULL) {
+J *rsp = nc.requestAndResponse(
+    nc.newRequest("card.temp"));
+if (rsp == NULL) {
+    Serial.println("no response");
+} else if (nc.responseError(rsp)) {
+    Serial.println(JGetString(rsp, "err"));
+    nc.deleteResponse(rsp);
+} else {
     double temp = JGetNumber(rsp, "value");
     Serial.println(temp);
-    notecard.deleteResponse(rsp);
+    nc.deleteResponse(rsp);
 }
 ```
 
 </td><td>
 
 ```cpp
-auto r = api.card.temp().read().execute();
+auto r = nc.card.temp().read().execute();
 if (r) {
-    auto temp = r.value;
+    double temp = r.value;
     Serial.println(temp);
+} else {
+    Serial.println(
+        to_string(r.error()).c_str());
 }
-// no manual cleanup needed
+
+
+
 
 ```
 
 </td></tr>
 </table>
 
-**What changed:**
-- No manual response lifecycle (`deleteResponse`). The response is an
-  RAII value that cleans up automatically.
+**Key differences:**
+- Avoided manual response lifecycle (`deleteResponse`). The response is an
+  RAII value that cleans up automatically. If you need to keep the response for longer, you can 
 - `JGetNumber(rsp, "value")` returns 0.0 on misspelling with no error.
   `r.value` is a named member — misspelling won't compile.
-- `card.temp` is a polymorphic API in the Notecard: it can read the current
+- `card.temp` can do several things - it can read the current
   temperature or configure periodic monitoring depending on which fields you
-  send. note-c uses one function for both; note-cpp has `.read()` and
-  `.configure()` — each with only the fields that apply.
+  send. note-cpp has `.read()` and `.configure()` — each with only the fields that apply so the intent is clear.
 
 ## Reading device info (card.version)
 
@@ -227,24 +338,24 @@ if (r) {
 <tr><td>
 
 ```c
-J *rsp = notecard.requestAndResponse(
-    notecard.newRequest("card.version"));
+J *rsp = nc.requestAndResponse(
+    nc.newRequest("card.version"));
 if (rsp != NULL) {
     char *ver = JGetString(rsp, "version");
     char *dev = JGetString(rsp, "device");
     Serial.println(ver);
-    notecard.deleteResponse(rsp);
+    nc.deleteResponse(rsp);
 }
 ```
 
 </td><td>
 
 ```cpp
-auto r = api.card.version().execute();
+auto r = nc.card.version().execute();
 if (r) {
-    auto ver = r.version;
-    auto dev = r.device;
-    // string_views — valid until next execute()
+    note::string_view ver = r.version;
+    note::string_view dev = r.device;
+    Serial.println(ver.data());
 }
 
 
@@ -253,7 +364,7 @@ if (r) {
 </td></tr>
 </table>
 
-**What changed:**
+**Key differences:**
 - `JGetString` returns a `char*` that you must not use after `deleteResponse`.
   note-cpp returns `string_view` with the same lifetime constraint, but you
   never have to think about `deleteResponse` — it happens automatically.
@@ -267,23 +378,23 @@ if (r) {
 
 ```c
 // Set up ATTN to watch for file changes
-J *req = notecard.newRequest("card.attn");
+J *req = nc.newRequest("card.attn");
 const char *files[] = {"my-inbound.qi"};
 J *arr = JCreateStringArray(files, 1);
 JAddItemToObject(req, "files", arr);
 JAddStringToObject(req, "mode", "files");
-notecard.sendRequest(req);
+nc.sendRequest(req);
 
 // Later: arm with a timeout
-J *req = notecard.newRequest("card.attn");
+J *req = nc.newRequest("card.attn");
 JAddStringToObject(req, "mode", "reset");
 JAddNumberToObject(req, "seconds", 120);
-notecard.sendRequest(req);
+nc.sendRequest(req);
 
 // Disarm
-J *req = notecard.newRequest("card.attn");
+J *req = nc.newRequest("card.attn");
 JAddStringToObject(req, "mode", "disarm,-files");
-notecard.sendRequest(req);
+nc.sendRequest(req);
 ```
 
 </td><td>
@@ -291,14 +402,14 @@ notecard.sendRequest(req);
 ```cpp
 // Arm for specific triggers — the "arm,"
 // prefix and mode string are built for you.
-api.card.attn().arm()
+nc.card.attn().arm()
     .files()
     .connected()
     .seconds(120_s)
     .execute();
 
 // Disarm
-api.card.attn().disarm().execute();
+nc.card.attn().disarm().execute();
 
 
 
@@ -313,16 +424,16 @@ Or using the intent-based types:
 
 ```cpp
 nc.execute(
-    note::api::CardAttn::Arm{}
+    CardAttn::Arm{}
         .files().connected());
 
-nc.execute(note::api::CardAttn::Disarm{});
+nc.execute(CardAttn::Disarm{});
 ```
 
 </td></tr>
 </table>
 
-**What changed:**
+**Key differences:**
 - No manual string concatenation for mode flags. In note-c, you build
   `"arm,files,connected"` yourself — get the commas or names wrong and it
   fails silently. note-cpp has named methods (`.files()`, `.connected()`)
@@ -339,23 +450,23 @@ nc.execute(note::api::CardAttn::Disarm{});
 
 ```c
 // Sleep — save state across reset
-J *req = notecard.newCommand("card.attn");
+J *req = nc.newCommand("card.attn");
 JAddStringToObject(req, "mode", "sleep");
 JAddNumberToObject(req, "seconds", 3600);
 JAddStringToObject(req, "payload", "checkpoint-v1");
-notecard.sendRequest(req);
+nc.sendRequest(req);
 // Enter deep sleep...
 
 // On wake — retrieve saved state
-J *req = notecard.newRequest("card.attn");
+J *req = nc.newRequest("card.attn");
 JAddBoolToObject(req, "start", true);
-J *rsp = notecard.requestAndResponse(req);
+J *rsp = nc.requestAndResponse(req);
 if (rsp != NULL) {
     char *payload = JGetString(rsp, "payload");
     if (payload && payload[0]) {
         // Resume from saved state
     }
-    notecard.deleteResponse(rsp);
+    nc.deleteResponse(rsp);
 }
 ```
 
@@ -363,7 +474,7 @@ if (rsp != NULL) {
 
 ```cpp
 // Sleep — save state across reset
-note::api::CardAttn::Sleep req;
+CardAttn::Sleep req;
 req.seconds(1_hours);
 req.payload("checkpoint-v1");
 nc.execute(req);
@@ -371,7 +482,7 @@ nc.execute(req);
 
 // On wake — retrieve saved state
 auto r = nc.execute(
-    note::api::CardAttn::Retrieve{});
+    CardAttn::Retrieve{});
 if (r && r.time != 0) {
     auto payload = r.payload; // "checkpoint-v1"
     // Resume from saved state
@@ -386,7 +497,7 @@ if (r && r.time != 0) {
 </td></tr>
 </table>
 
-**What changed:**
+**Key differences:**
 - Sleep and retrieve are distinct types — the compiler ensures you don't
   mix their fields.
 - `1_hours` instead of `3600` — clear intent, impossible to confuse with
@@ -401,27 +512,27 @@ if (r && r.time != 0) {
 
 ```c
 // Read a single env var
-J *req = notecard.newRequest("env.get");
+J *req = nc.newRequest("env.get");
 JAddStringToObject(req, "name", "interval");
-J *rsp = notecard.requestAndResponse(req);
+J *rsp = nc.requestAndResponse(req);
 if (rsp != NULL) {
     char *text = JGetString(rsp, "text");
     int interval = atoi(text);
-    notecard.deleteResponse(rsp);
+    nc.deleteResponse(rsp);
 }
 
 // Set a default
-J *req = notecard.newRequest("env.default");
+J *req = nc.newRequest("env.default");
 JAddStringToObject(req, "name", "interval");
 JAddStringToObject(req, "text", "60");
-notecard.sendRequest(req);
+nc.sendRequest(req);
 ```
 
 </td><td>
 
 ```cpp
 // Read a single env var
-auto r = api.env.get()
+auto r = nc.env.get()
     .name("interval")
     .execute();
 if (r) {
@@ -429,7 +540,7 @@ if (r) {
 }
 
 // Set a default
-api.env.setDefault("interval", "60")
+nc.env.setDefault("interval", "60")
     .execute();
 
 
@@ -465,7 +576,7 @@ auto interval = config.config().sync_interval; // int, validated
 </td></tr>
 </table>
 
-**What changed:**
+**Key differences:**
 - No manual string-to-int conversion (`atoi`). With embedded-config-cpp,
   field types are declared in the schema — parsing, validation, and type
   conversion happen automatically.
@@ -479,24 +590,24 @@ auto interval = config.config().sync_interval; // int, validated
 <tr><td>
 
 ```c
-J *rsp = notecard.requestAndResponse(
-    notecard.newRequest("card.version"));
+J *rsp = nc.requestAndResponse(
+    nc.newRequest("card.version"));
 if (rsp == NULL) {
     Serial.println("no response");
-} else if (notecard.responseError(rsp)) {
+} else if (nc.responseError(rsp)) {
     char *err = JGetString(rsp, "err");
     Serial.println(err);
-    notecard.deleteResponse(rsp);
+    nc.deleteResponse(rsp);
 } else {
     // use response...
-    notecard.deleteResponse(rsp);
+    nc.deleteResponse(rsp);
 }
 ```
 
 </td><td>
 
 ```cpp
-auto r = api.card.version().execute();
+auto r = nc.card.version().execute();
 if (!r) {
     auto err = r.error();
     // err.code:    Error::Notecard, SendFailed, etc.
@@ -513,7 +624,7 @@ if (!r) {
 </td></tr>
 </table>
 
-**What changed:**
+**Key differences:**
 - Structured errors with code, cause, and message — not a bare string.
   `Error::SendFailed` tells you the request never left the host;
   `Error::Notecard` means the device returned an error. The code tells
@@ -531,15 +642,15 @@ if (!r) {
 ```c
 // newCommand sends "cmd" not "req" — Notecard
 // doesn't respond. Easy to confuse with newRequest.
-J *req = notecard.newCommand("hub.sync");
-notecard.sendRequest(req);
+J *req = nc.newCommand("hub.sync");
+nc.sendRequest(req);
 ```
 
 </td><td>
 
 ```cpp
 // .command() instead of .execute() — clear intent.
-api.hub.sync().command();
+nc.hub.sync().command();
 
 
 ```
@@ -549,11 +660,11 @@ api.hub.sync().command();
 
 ## Migration checklist
 
-1. **Replace `Notecard` with `note::Notecard` + `note::Api`.** Separate your
-   JSON backend and transport — see the setup section above.
+1. **Replace `Notecard` with `note::NotecardApi`.** One include, same `begin()`
+   call — see the setup section above.
 
 2. **Replace `J*` request building with typed API calls.** Every
-   `notecard.newRequest("...")` + `JAdd*` sequence becomes `api.xxx.yyy()` +
+   `nc.newRequest("...")` + `JAdd*` sequence becomes `api.xxx.yyy()` +
    fluent setters or direct assignment.
 
 3. **Replace `JGet*` response reading with typed members.** Every

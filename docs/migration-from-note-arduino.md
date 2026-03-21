@@ -656,11 +656,42 @@ if (!r) {
 **Key differences:**
 - Structured errors with code, cause, and message — not a bare string.
   `Error::SendFailed` tells you the request never left the host;
-  `Error::Notecard` means the device returned an error. The code tells
-  you whether retrying is safe.
+  `Error::Notecard` means the device returned an error.
 - No null pointer checks. The result type is truthy on success, falsy
   on failure — one path, not three.
 - No `deleteResponse` — cleanup is automatic.
+
+### Retry safety
+
+Every request type carries a compile-time safety classification that tells
+you whether retrying a failed request is safe:
+
+| Safety | Meaning | Retry? |
+|--------|---------|--------|
+| `ReadOnly` | No side effects (e.g. `card.version`) | Always safe |
+| `Idempotent` | Same result if repeated (e.g. `hub.set`) | Always safe |
+| `NonIdempotent` | May have different effect if repeated (e.g. `note.add`) | Only if `Error::SendFailed` |
+| `Destructive` | Consumes or deletes data (e.g. `note.get` pop) | Only if `Error::SendFailed` |
+
+```cpp
+auto result = nc.note.add().file("sensors.qo").body(r).execute();
+if (!result) {
+    // SendFailed means the request never reached the Notecard — safe to retry.
+    // ResponseLost means it may have been processed — check the safety level.
+    if (result.error().code == Error::SendFailed
+        || is_safe_to_retry(NoteAdd::safety)) {
+        // retry...
+    }
+}
+
+// Or check at compile time:
+static_assert(CardVersion::safety == Safety::ReadOnly);
+static_assert(is_safe_to_retry(HubSet::safety));
+static_assert(!is_safe_to_retry(NoteAdd::safety));
+```
+
+In note-c, there's no equivalent — you have to know from the docs which
+requests are safe to retry.
 
 ## Fire-and-forget commands
 

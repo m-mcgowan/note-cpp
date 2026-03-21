@@ -222,6 +222,11 @@ TEOF
             npx -y embedme --verify $READMES
             echo "  docs: OK"
         fi
+        if [ -f docs/migration-from-note-arduino.md ]; then
+            echo
+            echo "=== Migration guide table alignment ==="
+            python3 tools/pad_migration_tables.py --check
+        fi
         export EMBEDME_DONE=1
     fi
 

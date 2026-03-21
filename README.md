@@ -648,6 +648,22 @@ Each protocol takes a thin platform HAL - a lightweight virtual interface for UA
 
 See [docs/transport.md](docs/transport.md) for the full HAL interface and implementation notes.
 
+### Binary transfers
+
+Some Notecard APIs (`card.binary.get`, `card.binary.put`, `dfu.get`) transfer
+raw binary data over the same wire. The Notecard uses COBS (Consistent Overhead
+Byte Stuffing) to frame this data — an encoding detail that belongs to the
+transport, not the application.
+
+The intended API for these requests is buffer-based: you provide a source or
+destination buffer and a byte count; the library handles COBS encode/decode
+internally. The `cobs` fields visible on the request/response structs are
+exposed for diagnostics, but they are not part of the normal call pattern —
+you should not need to compute or pass encoded sizes.
+
+> **Note:** The buffer-based `execute()` overloads for binary requests are
+> planned but not yet implemented. See `notecard.hpp` for the design note.
+
 ---
 
 ## JSON Backend
@@ -696,6 +712,7 @@ Runs code generation, header compilation checks, unit tests, and examples. See [
 
 See [docs/](docs/README.md) for the full documentation index. Key pages:
 
+- [Migrating from note-arduino](docs/migration-from-note-arduino.md)
 - [Why note-cpp? (comparison with note-c)](docs/comparison.md)
 - [Error handling](docs/error-handling.md)
 - [Polymorphic APIs](docs/polymorphic-apis.md)

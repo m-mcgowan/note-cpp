@@ -687,6 +687,47 @@ nc.hub.sync().command();
 </td></tr>
 </table>
 
+## Firmware version and SKU safety
+
+note-c has no awareness of which Notecard firmware version you're targeting
+or which hardware variant you're running on. If you use a field that was
+added in firmware 6.2.3 on a device running 5.0, the Notecard silently
+ignores it. If you call `card.wifi` on a cellular Notecard, you get a
+runtime error.
+
+note-cpp catches both at compile time:
+
+**Firmware version gating** — fields added in newer firmware versions are
+marked with `[[deprecated]]` when you target an older version. Define
+`NOTE_API_VERSION` to your minimum supported firmware, and the compiler
+warns you about fields that won't work:
+
+```cpp
+#define NOTE_API_VERSION NOTE_VERSION(5, 0, 0)
+#include <note/api.hpp>
+
+nc.hub.set()
+    .product("com.example.app")
+    .details("...")     // warning: requires firmware >= 6.2.3
+    .execute();
+```
+
+With `NOTE_API_STRICT` defined, the warning becomes a compile error.
+
+**SKU targeting** (C++20) — constrain your `Api` to a specific Notecard
+product. Endpoints that don't support that hardware produce warnings (or
+errors in strict mode):
+
+```cpp
+note::Api<note::Product::WiFi> nc(notecard);
+nc.card.wifi();   // OK — WiFi endpoint on WiFi hardware
+nc.card.sleep();  // OK — universal endpoint
+// nc.card.lora(); // warning: not available on WiFi
+```
+
+Neither of these has an equivalent in note-c — there, incompatible requests
+compile silently and fail at runtime on the device.
+
 ## Migration checklist
 
 1. **Replace `Notecard` with `note::NotecardApi`.** One include, same `begin()`

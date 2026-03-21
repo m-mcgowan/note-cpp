@@ -9,37 +9,19 @@
 #if defined(NOTECARD_SERIAL_RX) && defined(NOTECARD_SERIAL_TX)
 #define NOTECARD_TEST_SERIAL 1
 
-#include <note/transport/serial.hpp>
-#include <HardwareSerial.h>
+#include <note/arduino/serial.hpp>
 
-class Esp32SerialHal : public note::transport::SerialHal {
-    HardwareSerial& uart_;
+class Esp32SerialHal : public note::arduino::SerialHal<HardwareSerial> {
 public:
     explicit Esp32SerialHal(HardwareSerial& uart,
                             int rx = NOTECARD_SERIAL_RX,
                             int tx = NOTECARD_SERIAL_TX,
                             unsigned long baud = 9600)
-        : uart_(uart)
+        : note::arduino::SerialHal<HardwareSerial>(uart, baud)
     {
-        uart_.begin(baud, SERIAL_8N1, rx, tx);
+        // Re-initialize with explicit RX/TX pins (overrides the base-class begin).
+        uart.begin(baud, SERIAL_8N1, rx, tx);
     }
-
-    bool transmit(const uint8_t* data, size_t len) override {
-        size_t written = uart_.write(data, len);
-        uart_.flush();
-        return written == len;
-    }
-
-    size_t receive(uint8_t* buf, size_t max_len) override {
-        size_t count = 0;
-        while (count < max_len && uart_.available()) {
-            buf[count++] = static_cast<uint8_t>(uart_.read());
-        }
-        return count;
-    }
-
-    uint32_t millis() override { return ::millis(); }
-    void delay(uint32_t ms) override { ::delay(ms); }
 };
 
 #endif // NOTECARD_TEST_SERIAL

@@ -15,7 +15,7 @@
 //
 // SoI2C wire format:
 //   transmit: [size_byte, data...]
-//   receive:  write [0x00, N] then read [available, N, data[0..N-1]]
+//   receive:  write [0x00, N] then read [available, good_bytes, data[0..good_bytes-1]]
 //             (priming query: write [0x00, 0x00] then read [available, 0x00])
 //
 // Usage:
@@ -32,7 +32,7 @@ namespace note::arduino {
 
 class I2CHal : public note::transport::I2CHal {
 public:
-    // SoI2C response header size: [available, echo_of_requested_count]
+    // SoI2C response header size: [available, good_bytes]
     static constexpr uint8_t kResponseHeaderSize = 2;
 
     explicit I2CHal(TwoWire& wire,
@@ -56,13 +56,13 @@ public:
     bool transmit(const uint8_t* data, size_t len) override {
         wire_.beginTransmission(address_);
         wire_.write(static_cast<uint8_t>(len));
-        wire_.write(data, static_cast<size_t>(len));
-        return wire_.endTransmission() == 0;
+        size_t written = wire_.write(data, static_cast<size_t>(len));
+        return wire_.endTransmission() == 0 && written == len;
     }
 
     // Receive from the Notecard.
     //   len == 0: priming query — write [0x00, 0x00], read [available, 0x00].
-    //   len == N: write [0x00, N], read [available, N, data[0..N-1]].
+    //   len == N: write [0x00, N], read [available, good_bytes, data[0..good_bytes-1]].
     // SoI2C RX format: write request header then requestFrom len+2 bytes.
     bool receive(uint8_t* buf, size_t len, uint32_t& available) override {
         // Step 1: write the request header to tell the Notecard how many
@@ -78,29 +78,35 @@ public:
         // Step 2: read len + 2 bytes (2-byte response header + payload).
         const int expected = static_cast<int>(len) + kResponseHeaderSize;
         const int got = wire_.requestFrom(static_cast<int>(address_), expected);
-        if (got != expected) return false;
+        if (got < kResponseHeaderSize) return false;
 
         // Response header byte 0: number of bytes still available after this read.
         available = static_cast<uint32_t>(wire_.read());
 
-        // Response header byte 1: echo of the requested byte count.
-        // Discard — could be validated against len for robustness.
-        wire_.read();
+        // Response header byte 1: number of valid payload bytes returned.
+        // May be less than len if the Notecard has fewer bytes ready.
+        const uint8_t good_bytes = static_cast<uint8_t>(wire_.read());
 
-        // Payload.
-        for (size_t i = 0; i < len; ++i) {
+        // Copy only the valid bytes.
+        for (uint8_t i = 0; i < good_bytes && wire_.available(); ++i) {
             buf[i] = static_cast<uint8_t>(wire_.read());
+        }
+        // Drain any leftover bytes from the Wire buffer.
+        while (wire_.available()) {
+            wire_.read();
         }
 
         return true;
     }
 
-    uint32_t millis()          override { return ::millis(); }
+    uint32_t millis()           override { return ::millis(); }
     void     delay(uint32_t ms) override { ::delay(ms); }
-    size_t   max_transfer()    override { return max_xfer_; }
+    size_t   max_transfer()     override { return max_xfer_; }
+
+protected:
+    TwoWire& wire_;
 
 private:
-    TwoWire& wire_;
     uint8_t  address_;
     size_t   max_xfer_;
 };

@@ -322,22 +322,22 @@ public:
         /// Used by the Notecard host to specify a default value for an
         /// environment variable until that variable is overridden by a device,
         /// project or fleet-wide setting at Notehub.
-        auto set(note::string_view name) {
+        auto set(note::string_view name_arg) {
             auto r = create<api::EnvDefault::Set>();
-            r.name = name;
+            r.name = name_arg;
             return r;
         }
         /// Used by the Notecard host to specify a default value for an
         /// environment variable until that variable is overridden by a device,
         /// project or fleet-wide setting at Notehub.
-        auto remove(note::string_view name) {
+        auto remove(note::string_view name_arg) {
             auto r = create<api::EnvDefault::Remove>();
-            r.name = name;
+            r.name = name_arg;
             return r;
         }
         /// @deprecated Use remove() instead.
         [[deprecated("use remove() instead")]]
-        auto delete_(note::string_view name) { return remove(name); }
+        auto delete_(note::string_view name_arg) { return remove(name_arg); }
     };
 
     struct NoteChangesFactory {
@@ -349,14 +349,14 @@ public:
         [[deprecated("use peek() instead")]]
         auto get() { return peek(); }
         /// Used to incrementally retrieve changes within a specific Notefile.
-        auto pop(note::string_view file) {
+        auto pop(note::string_view file_arg) {
             auto r = create<api::NoteChanges::Pop>();
-            r.file = file;
+            r.file = file_arg;
             return r;
         }
         /// @deprecated Use pop() instead.
         [[deprecated("use pop() instead")]]
-        auto delete_(note::string_view file) { return pop(file); }
+        auto delete_(note::string_view file_arg) { return pop(file_arg); }
     };
 
     struct NoteGetFactory {
@@ -395,14 +395,14 @@ public:
         /// an order of magnitude.
         ///
         /// Read about Working with Note Templates for additional information.
-        auto define(note::string_view file) {
+        auto define(note::string_view file_arg) {
             auto r = create<api::NoteTemplate::Define>();
-            r.file = file;
+            r.file = file_arg;
             return r;
         }
         /// @deprecated Use define() instead.
         [[deprecated("use define() instead")]]
-        auto set(note::string_view file) { return define(file); }
+        auto set(note::string_view file_arg) { return define(file_arg); }
         /// By using the `note.template` request with any `.qo`/`.qos` Notefile,
         /// developers can provide the Notecard with a schema of sorts to apply
         /// to future Notes added to the Notefile. This template acts as a hint
@@ -413,14 +413,14 @@ public:
         /// an order of magnitude.
         ///
         /// Read about Working with Note Templates for additional information.
-        auto remove(note::string_view file) {
+        auto remove(note::string_view file_arg) {
             auto r = create<api::NoteTemplate::Remove>();
-            r.file = file;
+            r.file = file_arg;
             return r;
         }
         /// @deprecated Use remove() instead.
         [[deprecated("use remove() instead")]]
-        auto delete_(note::string_view file) { return remove(file); }
+        auto delete_(note::string_view file_arg) { return remove(file_arg); }
     };
 
     // =====================================================================
@@ -947,24 +947,24 @@ public:
 #if __cplusplus >= 202002L
         template<typename T_ = TargetT_>
         requires (IsUnconstrained<T_> || T_::supports(api::EnvSet::skus))
-        auto set(note::string_view name) {
+        auto set(note::string_view name_arg) {
             auto r = create<api::EnvSet>();
-            r.name = name;
+            r.name = name_arg;
             return r;
         }
 
         template<typename T_ = TargetT_>
         requires (!IsUnconstrained<T_> && !T_::supports(api::EnvSet::skus) && !T_::strict)
         [[deprecated("env.set is not available on this target")]]
-        auto set(note::string_view name) {
+        auto set(note::string_view name_arg) {
             auto r = create<api::EnvSet>();
-            r.name = name;
+            r.name = name_arg;
             return r;
         }
 #else
-        auto set(note::string_view name) {
+        auto set(note::string_view name_arg) {
             auto r = create<api::EnvSet>();
-            r.name = name;
+            r.name = name_arg;
             return r;
         }
 #endif
@@ -982,10 +982,10 @@ public:
         /// Used by the Notecard host to specify a default value for an
         /// environment variable until that variable is overridden by a device,
         /// project or fleet-wide setting at Notehub.
-        auto setDefault(note::string_view name, note::string_view text) {
+        auto setDefault(note::string_view name_arg, note::string_view text_arg) {
             auto r = create<api::EnvDefault::Set>();
-            r.name = name;
-            r.text = text;
+            r.name = name_arg;
+            r.text = text_arg;
             return r;
         }
 #if __cplusplus >= 202002L
@@ -1013,9 +1013,9 @@ public:
         /// Used by the Notecard host to specify a default value for an
         /// environment variable until that variable is overridden by a device,
         /// project or fleet-wide setting at Notehub.
-        auto clearDefault(note::string_view name) {
+        auto clearDefault(note::string_view name_arg) {
             auto r = create<api::EnvDefault::Remove>();
-            r.name = name;
+            r.name = name_arg;
             return r;
         }
 #if __cplusplus >= 202002L
@@ -1173,10 +1173,10 @@ public:
 #endif
 
         /// note.delete
-        auto delete_(note::string_view file, note::string_view noteId) {
+        auto delete_(note::string_view file_arg, note::string_view noteId_arg) {
             auto r = create<api::NoteDelete>();
-            r.file = file;
-            r.noteId = noteId;
+            r.file = file_arg;
+            r.noteId = noteId_arg;
             return r;
         }
 
@@ -1187,10 +1187,10 @@ public:
         NoteTemplateFactory templates() { return {nc_}; }
 
         /// note.update
-        auto update(note::string_view file, note::string_view noteId) {
+        auto update(note::string_view file_arg, note::string_view noteId_arg) {
             auto r = create<api::NoteUpdate>();
-            r.file = file;
-            r.noteId = noteId;
+            r.file = file_arg;
+            r.noteId = noteId_arg;
             return r;
         }
 
@@ -1201,9 +1201,9 @@ public:
             note::string_view file{};
         };
         /// Used to incrementally retrieve changes within a specific Notefile.
-        auto popChanges(note::string_view file) {
+        auto popChanges(note::string_view file_arg) {
             auto r = create<api::NoteChanges::Pop>();
-            r.file = file;
+            r.file = file_arg;
             return r;
         }
 #if __cplusplus >= 202002L
@@ -1228,10 +1228,10 @@ public:
             note::string_view noteId{};
         };
         /// Deletes a Note from a DB Notefile by its Note ID.
-        auto remove(note::string_view file, note::string_view noteId) {
+        auto remove(note::string_view file_arg, note::string_view noteId_arg) {
             auto r = create<api::NoteDelete>();
-            r.file = file;
-            r.noteId = noteId;
+            r.file = file_arg;
+            r.noteId = noteId_arg;
             return r;
         }
 #if __cplusplus >= 202002L
@@ -1261,9 +1261,9 @@ public:
         ///
         /// `.qo`/`.qos` Notes must be read from the Notehub event table using
         /// the Notehub Event API.
-        auto read(note::string_view file) {
+        auto read(note::string_view file_arg) {
             auto r = create<api::NoteGet::Read>();
-            r.file = file;
+            r.file = file_arg;
             return r;
         }
 #if __cplusplus >= 202002L
@@ -1291,9 +1291,9 @@ public:
         ///
         /// `.qo`/`.qos` Notes must be read from the Notehub event table using
         /// the Notehub Event API.
-        auto pop(note::string_view file) {
+        auto pop(note::string_view file_arg) {
             auto r = create<api::NoteGet::Pop>();
-            r.file = file;
+            r.file = file_arg;
             return r;
         }
 #if __cplusplus >= 202002L
@@ -1326,9 +1326,9 @@ public:
         /// an order of magnitude.
         ///
         /// Read about Working with Note Templates for additional information.
-        auto clearTemplate(note::string_view file) {
+        auto clearTemplate(note::string_view file_arg) {
             auto r = create<api::NoteTemplate::Remove>();
-            r.file = file;
+            r.file = file_arg;
             return r;
         }
 #if __cplusplus >= 202002L

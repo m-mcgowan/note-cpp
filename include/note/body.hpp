@@ -14,7 +14,10 @@
 
 #if __cplusplus >= 202002L
 #define NTEST  // disable qlibs/reflect self-tests
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wshadow"
 #include "third_party/reflect.hpp"
+#pragma GCC diagnostic pop
 #endif
 
 namespace note {
@@ -269,6 +272,17 @@ BodyValue template_of() {
             b.end_object();
         })
     );
+}
+
+/// Deduce T from an instance — avoids explicit template parameter.
+///   Readings schema;
+///   nc.note.templates().define("sensors.qo")
+///       .body(note::template_of(schema))
+///       .execute();
+template<typename T>
+    requires detail::ReflectableAggregate<T>
+BodyValue template_of(const T&) {
+    return template_of<T>();
 }
 
 #endif

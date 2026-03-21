@@ -7,6 +7,7 @@
 #include <note/json.hpp>
 #include <note/json_sax.hpp>
 #include <note/notecard.hpp>
+#include <note/print.hpp>
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
@@ -70,13 +71,13 @@ struct EnvGet {
 
 
     template<typename T>
-    auto& extra(note::string_view key, T value) {
+    auto& extra(note::string_view k_, T v_) {
         if (extras_count_ < NOTE_EXTRAS_MAX)
-            extras_[extras_count_++] = {key, note::DynValue{value}};
+            extras_[extras_count_++] = {k_, note::DynValue{v_}};
         return *this;
     }
-    auto& extra(note::string_view key, const char* value) {
-        return extra(key, note::string_view{value});
+    auto& extra(note::string_view k_, const char* v_) {
+        return extra(k_, note::string_view{v_});
     }
 
     note::DynField operator[](note::string_view k_) {
@@ -156,12 +157,12 @@ struct EnvGet {
         struct Sink : ::note::JsonSink {
             Response& rsp;
             explicit Sink(Response& r) : rsp(r) {}
-            void on_string(::note::string_view key, ::note::string_view val) override {
-                if (key == "text") { rsp.text = val; return; }
+            void on_string(::note::string_view k_, ::note::string_view v_) override {
+                if (k_ == "text") { rsp.text = v_; return; }
             }
-            void on_number(::note::string_view key, ::note::string_view raw) override {
+            void on_number(::note::string_view k_, ::note::string_view raw_) override {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-                if (key == "time") { rsp.time = ::note::parse_int(raw); return; }
+                if (k_ == "time") { rsp.time = ::note::parse_int(raw_); return; }
 #endif
             }
         };
@@ -170,9 +171,29 @@ struct EnvGet {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
         void intern_strings(::note::StringPool& pool) {
-            if (text && !(*text).empty()) text = pool.intern(*text);
+            if (!text.empty()) text = pool.intern(text);
         }
 #pragma GCC diagnostic pop
+
+#ifdef ARDUINO
+        /// Arduino Printable: prints response fields to Serial or any Print stream.
+        size_t printTo(Print& p) const {
+            size_t n = p.print("{");
+            bool first_ = true;
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"text\":");
+            n += note::detail::print_json_value(p, text.value());
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"time\":");
+            n += note::detail::print_json_value(p, time.value());
+#endif
+            n += p.print("}");
+            return n;
+        }
+#endif
 
     private:
         std::unique_ptr<JsonReader> reader_;
@@ -215,6 +236,27 @@ struct EnvGet {
     auto execute(Notecard& nc) const { return nc.execute(*this); }
     Result<void> command() const { return nc_->command_typed(*this); }
     Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
+
+#ifdef ARDUINO
+    /// Arduino Printable: prints the JSON request to Serial or any Print stream.
+    size_t printTo(Print& p) const {
+        size_t n = p.print("{\"req\":\"");
+        n += p.print(notecard_request.data());
+        n += p.print("\"");
+        if (name) {
+            n += p.print(",\"name\":");
+            n += note::detail::print_json_value(p, *name);
+        }
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+        if (time) {
+            n += p.print(",\"time\":");
+            n += note::detail::print_json_value(p, *time);
+        }
+#endif
+        n += p.print("}");
+        return n;
+    }
+#endif
 
 };
 

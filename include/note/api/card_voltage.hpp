@@ -6,6 +6,7 @@
 #include <note/json.hpp>
 #include <note/json_sax.hpp>
 #include <note/notecard.hpp>
+#include <note/print.hpp>
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
@@ -177,13 +178,13 @@ struct CardVoltage {
         auto& disableTrend() { off = true; return *this; }
         auto& enableTrend(bool v_) { if (v_) on = true; else off = true; return *this; }
         template<typename T>
-        auto& extra(note::string_view key, T value) {
+        auto& extra(note::string_view k_, T v_) {
             if (extras_count_ < NOTE_EXTRAS_MAX)
-                extras_[extras_count_++] = {key, note::DynValue{value}};
+                extras_[extras_count_++] = {k_, note::DynValue{v_}};
             return *this;
         }
-        auto& extra(note::string_view key, const char* value) {
-            return extra(key, note::string_view{value});
+        auto& extra(note::string_view k_, const char* v_) {
+            return extra(k_, note::string_view{v_});
         }
 
         note::DynField operator[](note::string_view k_) {
@@ -312,24 +313,24 @@ struct CardVoltage {
             struct Sink : ::note::JsonSink {
                 Response& rsp;
                 explicit Sink(Response& r) : rsp(r) {}
-                void on_string(::note::string_view key, ::note::string_view val) override {
-                    if (key == "mode") { rsp.mode = val; return; }
+                void on_string(::note::string_view k_, ::note::string_view v_) override {
+                    if (k_ == "mode") { rsp.mode = v_; return; }
                 }
-                void on_bool(::note::string_view key, bool val) override {
+                void on_bool(::note::string_view k_, bool v_) override {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
-                    if (key == "usb") { rsp.usb = val; return; }
+                    if (k_ == "usb") { rsp.usb = v_; return; }
 #endif
                 }
-                void on_number(::note::string_view key, ::note::string_view raw) override {
-                    if (key == "hours") { rsp.hours = ::note::parse_int(raw); return; }
-                    if (key == "minutes") { rsp.minutes = ::note::parse_int(raw); return; }
-                    if (key == "daily") { rsp.daily = ::note::parse_double(raw); return; }
-                    if (key == "monthly") { rsp.monthly = ::note::parse_double(raw); return; }
-                    if (key == "value") { rsp.value = ::note::parse_double(raw); return; }
-                    if (key == "vavg") { rsp.vavg = ::note::parse_double(raw); return; }
-                    if (key == "vmax") { rsp.vmax = ::note::parse_double(raw); return; }
-                    if (key == "vmin") { rsp.vmin = ::note::parse_double(raw); return; }
-                    if (key == "weekly") { rsp.weekly = ::note::parse_double(raw); return; }
+                void on_number(::note::string_view k_, ::note::string_view raw_) override {
+                    if (k_ == "hours") { rsp.hours = ::note::parse_int(raw_); return; }
+                    if (k_ == "minutes") { rsp.minutes = ::note::parse_int(raw_); return; }
+                    if (k_ == "daily") { rsp.daily = ::note::parse_double(raw_); return; }
+                    if (k_ == "monthly") { rsp.monthly = ::note::parse_double(raw_); return; }
+                    if (k_ == "value") { rsp.value = ::note::parse_double(raw_); return; }
+                    if (k_ == "vavg") { rsp.vavg = ::note::parse_double(raw_); return; }
+                    if (k_ == "vmax") { rsp.vmax = ::note::parse_double(raw_); return; }
+                    if (k_ == "vmin") { rsp.vmin = ::note::parse_double(raw_); return; }
+                    if (k_ == "weekly") { rsp.weekly = ::note::parse_double(raw_); return; }
                 }
             };
 #pragma GCC diagnostic pop
@@ -337,9 +338,65 @@ struct CardVoltage {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
             void intern_strings(::note::StringPool& pool) {
-                if (mode && !(*mode).empty()) mode = pool.intern(*mode);
+                if (!mode.empty()) mode = pool.intern(mode);
             }
 #pragma GCC diagnostic pop
+
+#ifdef ARDUINO
+            /// Arduino Printable: prints response fields to Serial or any Print stream.
+            size_t printTo(Print& p) const {
+                size_t n = p.print("{");
+                bool first_ = true;
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"daily\":");
+                n += note::detail::print_json_value(p, daily.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"hours\":");
+                n += note::detail::print_json_value(p, hours.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"minutes\":");
+                n += note::detail::print_json_value(p, minutes.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"mode\":");
+                n += note::detail::print_json_value(p, mode.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"monthly\":");
+                n += note::detail::print_json_value(p, monthly.value());
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"usb\":");
+                n += note::detail::print_json_value(p, usb.value());
+#endif
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"value\":");
+                n += note::detail::print_json_value(p, value.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"vavg\":");
+                n += note::detail::print_json_value(p, vavg.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"vmax\":");
+                n += note::detail::print_json_value(p, vmax.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"vmin\":");
+                n += note::detail::print_json_value(p, vmin.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"weekly\":");
+                n += note::detail::print_json_value(p, weekly.value());
+                n += p.print("}");
+                return n;
+            }
+#endif
 
         private:
             std::unique_ptr<JsonReader> reader_;
@@ -375,6 +432,73 @@ struct CardVoltage {
         auto execute(Notecard& nc) const { return nc.execute(*this); }
         Result<void> command() const { return nc_->command_typed(*this); }
         Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
+
+#ifdef ARDUINO
+        /// Arduino Printable: prints the JSON request to Serial or any Print stream.
+        size_t printTo(Print& p) const {
+            size_t n = p.print("{\"req\":\"");
+            n += p.print(notecard_request.data());
+            n += p.print("\"");
+            if (alert) {
+                n += p.print(",\"alert\":");
+                n += note::detail::print_json_value(p, *alert);
+            }
+#if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 2) || !defined(NOTE_API_STRICT)
+            if (calibration) {
+                n += p.print(",\"calibration\":");
+                n += note::detail::print_json_value(p, *calibration);
+            }
+#endif
+            if (hours) {
+                n += p.print(",\"hours\":");
+                n += note::detail::print_json_value(p, *hours);
+            }
+            if (mode) {
+                n += p.print(",\"mode\":");
+                n += note::detail::print_json_value(p, *mode);
+            }
+            if (name) {
+                n += p.print(",\"name\":");
+                n += note::detail::print_json_value(p, *name);
+            }
+            if (off) {
+                n += p.print(",\"off\":");
+                n += note::detail::print_json_value(p, *off);
+            }
+            if (offset) {
+                n += p.print(",\"offset\":");
+                n += note::detail::print_json_value(p, *offset);
+            }
+            if (on) {
+                n += p.print(",\"on\":");
+                n += note::detail::print_json_value(p, *on);
+            }
+            if (set) {
+                n += p.print(",\"set\":");
+                n += note::detail::print_json_value(p, *set);
+            }
+            if (sync) {
+                n += p.print(",\"sync\":");
+                n += note::detail::print_json_value(p, *sync);
+            }
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
+            if (usb) {
+                n += p.print(",\"usb\":");
+                n += note::detail::print_json_value(p, *usb);
+            }
+#endif
+            if (vmax) {
+                n += p.print(",\"vmax\":");
+                n += note::detail::print_json_value(p, *vmax);
+            }
+            if (vmin) {
+                n += p.print(",\"vmin\":");
+                n += note::detail::print_json_value(p, *vmin);
+            }
+            n += p.print("}");
+            return n;
+        }
+#endif
 
     };
     using Get = Read;  ///< @deprecated Use Read instead.
@@ -535,13 +659,13 @@ struct CardVoltage {
         auto& disableTrend() { off = true; return *this; }
         auto& enableTrend(bool v_) { if (v_) on = true; else off = true; return *this; }
         template<typename T>
-        auto& extra(note::string_view key, T value) {
+        auto& extra(note::string_view k_, T v_) {
             if (extras_count_ < NOTE_EXTRAS_MAX)
-                extras_[extras_count_++] = {key, note::DynValue{value}};
+                extras_[extras_count_++] = {k_, note::DynValue{v_}};
             return *this;
         }
-        auto& extra(note::string_view key, const char* value) {
-            return extra(key, note::string_view{value});
+        auto& extra(note::string_view k_, const char* v_) {
+            return extra(k_, note::string_view{v_});
         }
 
         note::DynField operator[](note::string_view k_) {
@@ -670,24 +794,24 @@ struct CardVoltage {
             struct Sink : ::note::JsonSink {
                 Response& rsp;
                 explicit Sink(Response& r) : rsp(r) {}
-                void on_string(::note::string_view key, ::note::string_view val) override {
-                    if (key == "mode") { rsp.mode = val; return; }
+                void on_string(::note::string_view k_, ::note::string_view v_) override {
+                    if (k_ == "mode") { rsp.mode = v_; return; }
                 }
-                void on_bool(::note::string_view key, bool val) override {
+                void on_bool(::note::string_view k_, bool v_) override {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
-                    if (key == "usb") { rsp.usb = val; return; }
+                    if (k_ == "usb") { rsp.usb = v_; return; }
 #endif
                 }
-                void on_number(::note::string_view key, ::note::string_view raw) override {
-                    if (key == "hours") { rsp.hours = ::note::parse_int(raw); return; }
-                    if (key == "minutes") { rsp.minutes = ::note::parse_int(raw); return; }
-                    if (key == "daily") { rsp.daily = ::note::parse_double(raw); return; }
-                    if (key == "monthly") { rsp.monthly = ::note::parse_double(raw); return; }
-                    if (key == "value") { rsp.value = ::note::parse_double(raw); return; }
-                    if (key == "vavg") { rsp.vavg = ::note::parse_double(raw); return; }
-                    if (key == "vmax") { rsp.vmax = ::note::parse_double(raw); return; }
-                    if (key == "vmin") { rsp.vmin = ::note::parse_double(raw); return; }
-                    if (key == "weekly") { rsp.weekly = ::note::parse_double(raw); return; }
+                void on_number(::note::string_view k_, ::note::string_view raw_) override {
+                    if (k_ == "hours") { rsp.hours = ::note::parse_int(raw_); return; }
+                    if (k_ == "minutes") { rsp.minutes = ::note::parse_int(raw_); return; }
+                    if (k_ == "daily") { rsp.daily = ::note::parse_double(raw_); return; }
+                    if (k_ == "monthly") { rsp.monthly = ::note::parse_double(raw_); return; }
+                    if (k_ == "value") { rsp.value = ::note::parse_double(raw_); return; }
+                    if (k_ == "vavg") { rsp.vavg = ::note::parse_double(raw_); return; }
+                    if (k_ == "vmax") { rsp.vmax = ::note::parse_double(raw_); return; }
+                    if (k_ == "vmin") { rsp.vmin = ::note::parse_double(raw_); return; }
+                    if (k_ == "weekly") { rsp.weekly = ::note::parse_double(raw_); return; }
                 }
             };
 #pragma GCC diagnostic pop
@@ -695,9 +819,65 @@ struct CardVoltage {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
             void intern_strings(::note::StringPool& pool) {
-                if (mode && !(*mode).empty()) mode = pool.intern(*mode);
+                if (!mode.empty()) mode = pool.intern(mode);
             }
 #pragma GCC diagnostic pop
+
+#ifdef ARDUINO
+            /// Arduino Printable: prints response fields to Serial or any Print stream.
+            size_t printTo(Print& p) const {
+                size_t n = p.print("{");
+                bool first_ = true;
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"daily\":");
+                n += note::detail::print_json_value(p, daily.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"hours\":");
+                n += note::detail::print_json_value(p, hours.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"minutes\":");
+                n += note::detail::print_json_value(p, minutes.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"mode\":");
+                n += note::detail::print_json_value(p, mode.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"monthly\":");
+                n += note::detail::print_json_value(p, monthly.value());
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"usb\":");
+                n += note::detail::print_json_value(p, usb.value());
+#endif
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"value\":");
+                n += note::detail::print_json_value(p, value.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"vavg\":");
+                n += note::detail::print_json_value(p, vavg.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"vmax\":");
+                n += note::detail::print_json_value(p, vmax.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"vmin\":");
+                n += note::detail::print_json_value(p, vmin.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"weekly\":");
+                n += note::detail::print_json_value(p, weekly.value());
+                n += p.print("}");
+                return n;
+            }
+#endif
 
         private:
             std::unique_ptr<JsonReader> reader_;
@@ -733,6 +913,73 @@ struct CardVoltage {
         auto execute(Notecard& nc) const { return nc.execute(*this); }
         Result<void> command() const { return nc_->command_typed(*this); }
         Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
+
+#ifdef ARDUINO
+        /// Arduino Printable: prints the JSON request to Serial or any Print stream.
+        size_t printTo(Print& p) const {
+            size_t n = p.print("{\"req\":\"");
+            n += p.print(notecard_request.data());
+            n += p.print("\"");
+            if (alert) {
+                n += p.print(",\"alert\":");
+                n += note::detail::print_json_value(p, *alert);
+            }
+#if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 2) || !defined(NOTE_API_STRICT)
+            if (calibration) {
+                n += p.print(",\"calibration\":");
+                n += note::detail::print_json_value(p, *calibration);
+            }
+#endif
+            if (hours) {
+                n += p.print(",\"hours\":");
+                n += note::detail::print_json_value(p, *hours);
+            }
+            if (mode) {
+                n += p.print(",\"mode\":");
+                n += note::detail::print_json_value(p, *mode);
+            }
+            if (name) {
+                n += p.print(",\"name\":");
+                n += note::detail::print_json_value(p, *name);
+            }
+            if (off) {
+                n += p.print(",\"off\":");
+                n += note::detail::print_json_value(p, *off);
+            }
+            if (offset) {
+                n += p.print(",\"offset\":");
+                n += note::detail::print_json_value(p, *offset);
+            }
+            if (on) {
+                n += p.print(",\"on\":");
+                n += note::detail::print_json_value(p, *on);
+            }
+            if (set) {
+                n += p.print(",\"set\":");
+                n += note::detail::print_json_value(p, *set);
+            }
+            if (sync) {
+                n += p.print(",\"sync\":");
+                n += note::detail::print_json_value(p, *sync);
+            }
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
+            if (usb) {
+                n += p.print(",\"usb\":");
+                n += note::detail::print_json_value(p, *usb);
+            }
+#endif
+            if (vmax) {
+                n += p.print(",\"vmax\":");
+                n += note::detail::print_json_value(p, *vmax);
+            }
+            if (vmin) {
+                n += p.print(",\"vmin\":");
+                n += note::detail::print_json_value(p, *vmin);
+            }
+            n += p.print("}");
+            return n;
+        }
+#endif
 
     };
     using Set = Configure;  ///< @deprecated Use Configure instead.

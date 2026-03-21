@@ -41,6 +41,9 @@
 
 namespace note {
 
+/// Data flow direction for binary operations.
+enum class Direction { Send, Receive };
+
 class JsonReader;  // Forward declaration — ApiResult holds reader to extend lifetime.
 
 using string_view = std::string_view;

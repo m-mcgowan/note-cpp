@@ -1,5 +1,5 @@
 {
-  "$comment": "Endpoints that transfer binary data over the serial link using COBS encoding, separate from the JSON request/response. 'direction' is relative to the host: 'send' = host->notecard, 'receive' = notecard->host. 'when' specifies the condition under which the transfer occurs (omit for unconditional).",
+  "$comment": "Endpoints that transfer binary data directly over the serial link using COBS encoding, separate from the JSON request/response. Only card.binary.put and card.binary.get stream raw bytes. All other binary operations use the card.binary buffer as an intermediary and are listed in binary_buffer.json instead. 'direction' is relative to the host: 'send' = host->notecard, 'receive' = notecard->host.",
 
   "card.binary.put": {
     "direction": "send",
@@ -10,11 +10,5 @@
     "direction": "receive",
     "encoding": "cobs",
     "follows": "response"
-  },
-  "dfu.get": {
-    "direction": "receive",
-    "encoding": "cobs",
-    "follows": "response",
-    "when": { "binary": true }
   }
 }

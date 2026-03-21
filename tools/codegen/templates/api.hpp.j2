@@ -9,7 +9,7 @@
 
 namespace note {
 
-{% macro required_params(op) %}{% for p in op.required_properties %}{{ p.field_type }} {{ p.accessor_name }}{{ ", " if not loop.last }}{% endfor %}{% endmacro %}
+{% macro required_params(op) %}{% for p in op.required_properties %}{{ p.field_type }} {{ p.accessor_name }}_arg{{ ", " if not loop.last }}{% endfor %}{% endmacro %}
 
 #if __cplusplus >= 202002L
 template<typename TargetT = Unconstrained>
@@ -67,14 +67,14 @@ public:
         auto {{ op.factory_method }}({{ required_params(op) }}) {
             auto r = create<api::{{ endpoint.struct_name }}::{{ op.struct_name }}>();
 {% for prop in op.required_properties %}
-            r.{{ prop.accessor_name }} = {{ prop.accessor_name }};
+            r.{{ prop.accessor_name }} = {{ prop.accessor_name }}_arg;
 {% endfor %}
             return r;
         }
 {% if op.legacy_factory_method %}
         /// @deprecated Use {{ op.factory_method }}() instead.
         [[deprecated("use {{ op.factory_method }}() instead")]]
-        auto {{ op.legacy_factory_method }}({{ required_params(op) }}) { return {{ op.factory_method }}({{ op.required_properties | map(attribute='accessor_name') | join(', ') }}); }
+        auto {{ op.legacy_factory_method }}({{ required_params(op) }}) { return {{ op.factory_method }}({% for p in op.required_properties %}{{ p.accessor_name }}_arg{{ ", " if not loop.last }}{% endfor %}); }
 {% endif %}
 {% else %}
         auto {{ op.factory_method }}() { return create<api::{{ endpoint.struct_name }}::{{ op.struct_name }}>(); }
@@ -125,7 +125,7 @@ public:
         auto {{ endpoint.group_method }}({{ required_params(op) }}) {
             auto r = create<api::{{ endpoint.struct_name }}>();
 {% for prop in op.required_properties %}
-            r.{{ prop.accessor_name }} = {{ prop.accessor_name }};
+            r.{{ prop.accessor_name }} = {{ prop.accessor_name }}_arg;
 {% endfor %}
             return r;
         }
@@ -136,7 +136,7 @@ public:
         auto {{ endpoint.group_method }}({{ required_params(op) }}) {
             auto r = create<api::{{ endpoint.struct_name }}>();
 {% for prop in op.required_properties %}
-            r.{{ prop.accessor_name }} = {{ prop.accessor_name }};
+            r.{{ prop.accessor_name }} = {{ prop.accessor_name }}_arg;
 {% endfor %}
             return r;
         }
@@ -144,7 +144,7 @@ public:
         auto {{ endpoint.group_method }}({{ required_params(op) }}) {
             auto r = create<api::{{ endpoint.struct_name }}>();
 {% for prop in op.required_properties %}
-            r.{{ prop.accessor_name }} = {{ prop.accessor_name }};
+            r.{{ prop.accessor_name }} = {{ prop.accessor_name }}_arg;
 {% endfor %}
             return r;
         }
@@ -153,7 +153,7 @@ public:
         auto {{ endpoint.group_method }}({{ required_params(op) }}) {
             auto r = create<api::{{ endpoint.struct_name }}>();
 {% for prop in op.required_properties %}
-            r.{{ prop.accessor_name }} = {{ prop.accessor_name }};
+            r.{{ prop.accessor_name }} = {{ prop.accessor_name }}_arg;
 {% endfor %}
             return r;
         }
@@ -214,10 +214,10 @@ public:
 {% if alias_doc %}
 {{ alias_doc | doc_comment("        ") }}
 {% endif %}
-        auto {{ alias.method_name }}({% for p in resolved %}{{ p.field_type }} {{ p.accessor_name }}{{ ", " if not loop.last }}{% endfor %}) {
+        auto {{ alias.method_name }}({% for p in resolved %}{{ p.field_type }} {{ p.accessor_name }}_arg{{ ", " if not loop.last }}{% endfor %}) {
             auto r = create<{{ alias.qualified_type }}>();
 {% for p in resolved %}
-            r.{{ p.accessor_name }} = {{ p.accessor_name }};
+            r.{{ p.accessor_name }} = {{ p.accessor_name }}_arg;
 {% endfor %}
             return r;
         }

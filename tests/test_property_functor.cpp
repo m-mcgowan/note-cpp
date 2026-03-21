@@ -143,7 +143,7 @@ TEST_CASE("extra() adds undocumented bool property to wire format") {
                 last_request = std::string(req);
                 return std::string("{}");
             },
-            [this](note::string_view) -> note::Result<void> {
+            [](note::string_view) -> note::Result<void> {
                 return {};
             }) {}
     } h;

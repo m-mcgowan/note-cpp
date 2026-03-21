@@ -2,7 +2,9 @@
 
 #include "allocator.hpp"
 #include "json.hpp"
+#include "md5.hpp"
 #include "safety.hpp"
+#include "span.hpp"
 #include "string_pool.hpp"
 
 #include <functional>
@@ -52,8 +54,10 @@ public:
     using RequestFn = std::function<Result<string_view>(string_view request, uint32_t timeout_ms)>;
     using SendFn    = std::function<Result<void>(string_view request)>;
 
+    Notecard() = default;
+
     Notecard(JsonBackend& backend, RequestFn request_fn, SendFn send_fn = {})
-        : backend_(backend)
+        : backend_(&backend)
         , request_fn_(std::move(request_fn))
         , send_fn_(std::move(send_fn))
     {
@@ -74,6 +78,19 @@ public:
     // the backend (tree-parse or SAX).
     void set_allocator(Allocator alloc) { alloc_ = alloc; }
     void clear_allocator() { alloc_.reset(); }
+
+    // Configure the working buffer for COBS encode/decode in binary transfers.
+    // Set once at startup; all binary execute() calls use it automatically.
+    // If not set, a NOTE_COBS_BLOCK_SIZE stack buffer is used per call.
+    void set_cobs_buffer(byte_span buf) { cobs_buf_ = buf; }
+    void set_cobs_buffer(uint8_t* buf, size_t len) { cobs_buf_ = {buf, len}; }
+    template<size_t N>
+    void set_cobs_buffer(uint8_t (&buf)[N]) { cobs_buf_ = buf; }
+
+    // Configure the MD5 provider for binary transfer integrity checks.
+    // Defaults to PlatformMd5 (MbedTlsMd5 when available, else SoftwareMd5).
+    // Pass a custom implementation to use hardware-accelerated MD5.
+    void set_md5_provider(Md5Provider& provider) { md5_ = &provider; }
 
     // Execute a typed, generated request.
     // RequestT must provide:
@@ -98,14 +115,14 @@ public:
     ApiResult<typename RequestT::Response> execute(const RequestT& req) {
         using Rsp = typename RequestT::Response;
 
-        auto& builder = backend_.get_builder();
+        auto& builder = backend_->get_builder();
         builder.add("req", RequestT::notecard_request);
         req.build(builder);
 
         auto rsp = request_fn_(builder.to_view(), default_timeout_ms_);
         if (!rsp) return Unexpected(rsp.error());
 
-        auto& reader = backend_.get_reader(*rsp);
+        auto& reader = backend_->get_reader(*rsp);
         if (reader.has_error()) {
             return make_error(Error::Json, "JSON parse error");
         }
@@ -119,7 +136,7 @@ public:
             }
             // Fallback: use parse_response() to get an owned reader that
             // keeps the error message string_view alive in ApiResult.
-            auto owned = backend_.parse_response(*rsp);
+            auto owned = backend_->parse_response(*rsp);
             ErrorInfo ei{Error::Notecard, Cause::Unspecified, owned->get_error()};
             return ApiResult<Rsp>(std::move(ei), std::move(owned));
         }
@@ -153,14 +170,14 @@ public:
     Result<std::unique_ptr<JsonReader>> request(
             string_view req_type,
             std::function<void(JsonBuilder&)> build_fn = {}) {
-        auto& builder = backend_.get_builder();
+        auto& builder = backend_->get_builder();
         builder.add("req", req_type);
         if (build_fn) build_fn(builder);
 
         auto rsp = request_fn_(builder.to_view(), default_timeout_ms_);
         if (!rsp) return Unexpected(rsp.error());
 
-        auto reader = backend_.parse_response(*rsp);
+        auto reader = backend_->parse_response(*rsp);
         if (reader->has_error()) {
             return make_error(Error::Json, reader->get_error());
         }
@@ -172,7 +189,7 @@ public:
     // Fire-and-forget typed command (generated request types).
     template<typename RequestT>
     Result<void> command_typed(const RequestT& req) {
-        auto& builder = backend_.get_builder();
+        auto& builder = backend_->get_builder();
         builder.add("cmd", RequestT::notecard_request);
         req.build(builder);
         return send_fn_(builder.to_view());
@@ -181,7 +198,7 @@ public:
     // Fire-and-forget command.
     Result<void> command(string_view cmd_type,
                          std::function<void(JsonBuilder&)> build_fn = {}) {
-        auto& builder = backend_.get_builder();
+        auto& builder = backend_->get_builder();
         builder.add("cmd", cmd_type);
         if (build_fn) build_fn(builder);
         return send_fn_(builder.to_view());
@@ -199,14 +216,17 @@ public:
         return send_fn_(json);
     }
 
-    JsonBackend& backend() { return backend_; }
+    JsonBackend& backend() { return *backend_; }
 
 private:
-    JsonBackend& backend_;
+    JsonBackend* backend_ = nullptr;
     RequestFn request_fn_;
     SendFn send_fn_;
     uint32_t default_timeout_ms_ = 10000;
     std::optional<Allocator> alloc_;
+    byte_span cobs_buf_{};          // optional external COBS working buffer
+    PlatformMd5 platform_md5_{};    // default MD5 implementation
+    Md5Provider* md5_ = &platform_md5_;
 };
 
 } // namespace note

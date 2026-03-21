@@ -6,6 +6,7 @@
 #include <note/json.hpp>
 #include <note/json_sax.hpp>
 #include <note/notecard.hpp>
+#include <note/print.hpp>
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
@@ -33,13 +34,13 @@ struct CardStatus {
 
 
     template<typename T>
-    auto& extra(note::string_view key, T value) {
+    auto& extra(note::string_view k_, T v_) {
         if (extras_count_ < NOTE_EXTRAS_MAX)
-            extras_[extras_count_++] = {key, note::DynValue{value}};
+            extras_[extras_count_++] = {k_, note::DynValue{v_}};
         return *this;
     }
-    auto& extra(note::string_view key, const char* value) {
-        return extra(key, note::string_view{value});
+    auto& extra(note::string_view k_, const char* v_) {
+        return extra(k_, note::string_view{v_});
     }
 
     note::DynField operator[](note::string_view k_) {
@@ -158,26 +159,26 @@ struct CardStatus {
         struct Sink : ::note::JsonSink {
             Response& rsp;
             explicit Sink(Response& r) : rsp(r) {}
-            void on_string(::note::string_view key, ::note::string_view val) override {
-                if (key == "status") { rsp.status = val; return; }
+            void on_string(::note::string_view k_, ::note::string_view v_) override {
+                if (k_ == "status") { rsp.status = v_; return; }
             }
-            void on_bool(::note::string_view key, bool val) override {
-                if (key == "cell") { rsp.cell = val; return; }
-                if (key == "connected") { rsp.connected = val; return; }
+            void on_bool(::note::string_view k_, bool v_) override {
+                if (k_ == "cell") { rsp.cell = v_; return; }
+                if (k_ == "connected") { rsp.connected = v_; return; }
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1) || !defined(NOTE_API_STRICT)
-                if (key == "gps") { rsp.gps = val; return; }
+                if (k_ == "gps") { rsp.gps = v_; return; }
 #endif
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 5, 1) || !defined(NOTE_API_STRICT)
-                if (key == "sync") { rsp.sync = val; return; }
+                if (k_ == "sync") { rsp.sync = v_; return; }
 #endif
-                if (key == "usb") { rsp.usb = val; return; }
-                if (key == "wifi") { rsp.wifi = val; return; }
+                if (k_ == "usb") { rsp.usb = v_; return; }
+                if (k_ == "wifi") { rsp.wifi = v_; return; }
             }
-            void on_number(::note::string_view key, ::note::string_view raw) override {
-                if (key == "inbound") { rsp.inbound = ::note::parse_int(raw); return; }
-                if (key == "outbound") { rsp.outbound = ::note::parse_int(raw); return; }
-                if (key == "storage") { rsp.storage = ::note::parse_int(raw); return; }
-                if (key == "time") { rsp.time = ::note::parse_int(raw); return; }
+            void on_number(::note::string_view k_, ::note::string_view raw_) override {
+                if (k_ == "inbound") { rsp.inbound = ::note::parse_int(raw_); return; }
+                if (k_ == "outbound") { rsp.outbound = ::note::parse_int(raw_); return; }
+                if (k_ == "storage") { rsp.storage = ::note::parse_int(raw_); return; }
+                if (k_ == "time") { rsp.time = ::note::parse_int(raw_); return; }
             }
         };
 #pragma GCC diagnostic pop
@@ -185,9 +186,67 @@ struct CardStatus {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
         void intern_strings(::note::StringPool& pool) {
-            if (status && !(*status).empty()) status = pool.intern(*status);
+            if (!status.empty()) status = pool.intern(status);
         }
 #pragma GCC diagnostic pop
+
+#ifdef ARDUINO
+        /// Arduino Printable: prints response fields to Serial or any Print stream.
+        size_t printTo(Print& p) const {
+            size_t n = p.print("{");
+            bool first_ = true;
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"cell\":");
+            n += note::detail::print_json_value(p, cell.value());
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"connected\":");
+            n += note::detail::print_json_value(p, connected.value());
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1) || !defined(NOTE_API_STRICT)
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"gps\":");
+            n += note::detail::print_json_value(p, gps.value());
+#endif
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"inbound\":");
+            n += note::detail::print_json_value(p, inbound.value());
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"outbound\":");
+            n += note::detail::print_json_value(p, outbound.value());
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"status\":");
+            n += note::detail::print_json_value(p, status.value());
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"storage\":");
+            n += note::detail::print_json_value(p, storage.value());
+#if NOTE_API_VERSION >= NOTE_VERSION(7, 5, 1) || !defined(NOTE_API_STRICT)
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"sync\":");
+            n += note::detail::print_json_value(p, sync.value());
+#endif
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"time\":");
+            n += note::detail::print_json_value(p, time.value());
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"usb\":");
+            n += note::detail::print_json_value(p, usb.value());
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"wifi\":");
+            n += note::detail::print_json_value(p, wifi.value());
+            n += p.print("}");
+            return n;
+        }
+#endif
 
     private:
         std::unique_ptr<JsonReader> reader_;
@@ -204,6 +263,17 @@ struct CardStatus {
     auto execute(Notecard& nc) const { return nc.execute(*this); }
     Result<void> command() const { return nc_->command_typed(*this); }
     Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
+
+#ifdef ARDUINO
+    /// Arduino Printable: prints the JSON request to Serial or any Print stream.
+    size_t printTo(Print& p) const {
+        size_t n = p.print("{\"req\":\"");
+        n += p.print(notecard_request.data());
+        n += p.print("\"");
+        n += p.print("}");
+        return n;
+    }
+#endif
 
 };
 

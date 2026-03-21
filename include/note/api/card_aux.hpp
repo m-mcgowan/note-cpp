@@ -6,6 +6,7 @@
 #include <note/json.hpp>
 #include <note/json_sax.hpp>
 #include <note/notecard.hpp>
+#include <note/print.hpp>
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
@@ -278,13 +279,13 @@ struct CardAux {
     auto& resetCounters() { start = true; return *this; }
     auto& resetCounters(bool v_) { start = v_; return *this; }
     template<typename T>
-    auto& extra(note::string_view key, T value) {
+    auto& extra(note::string_view k_, T v_) {
         if (extras_count_ < NOTE_EXTRAS_MAX)
-            extras_[extras_count_++] = {key, note::DynValue{value}};
+            extras_[extras_count_++] = {k_, note::DynValue{v_}};
         return *this;
     }
-    auto& extra(note::string_view key, const char* value) {
-        return extra(key, note::string_view{value});
+    auto& extra(note::string_view k_, const char* v_) {
+        return extra(k_, note::string_view{v_});
     }
 
     note::DynField operator[](note::string_view k_) {
@@ -391,17 +392,17 @@ struct CardAux {
         struct Sink : ::note::JsonSink {
             Response& rsp;
             explicit Sink(Response& r) : rsp(r) {}
-            void on_string(::note::string_view key, ::note::string_view val) override {
-                if (key == "mode") { rsp.mode = val; return; }
+            void on_string(::note::string_view k_, ::note::string_view v_) override {
+                if (k_ == "mode") { rsp.mode = v_; return; }
             }
-            void on_bool(::note::string_view key, bool val) override {
+            void on_bool(::note::string_view k_, bool v_) override {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1) || !defined(NOTE_API_STRICT)
-                if (key == "power") { rsp.power = val; return; }
+                if (k_ == "power") { rsp.power = v_; return; }
 #endif
             }
-            void on_number(::note::string_view key, ::note::string_view raw) override {
-                if (key == "seconds") { rsp.seconds = ::note::parse_int(raw); return; }
-                if (key == "time") { rsp.time = ::note::parse_int(raw); return; }
+            void on_number(::note::string_view k_, ::note::string_view raw_) override {
+                if (k_ == "seconds") { rsp.seconds = ::note::parse_int(raw_); return; }
+                if (k_ == "time") { rsp.time = ::note::parse_int(raw_); return; }
             }
         };
 #pragma GCC diagnostic pop
@@ -409,9 +410,37 @@ struct CardAux {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
         void intern_strings(::note::StringPool& pool) {
-            if (mode && !(*mode).empty()) mode = pool.intern(*mode);
+            if (!mode.empty()) mode = pool.intern(mode);
         }
 #pragma GCC diagnostic pop
+
+#ifdef ARDUINO
+        /// Arduino Printable: prints response fields to Serial or any Print stream.
+        size_t printTo(Print& p) const {
+            size_t n = p.print("{");
+            bool first_ = true;
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"mode\":");
+            n += note::detail::print_json_value(p, mode.value());
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1) || !defined(NOTE_API_STRICT)
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"power\":");
+            n += note::detail::print_json_value(p, power.value());
+#endif
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"seconds\":");
+            n += note::detail::print_json_value(p, seconds.value());
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"time\":");
+            n += note::detail::print_json_value(p, time.value());
+            n += p.print("}");
+            return n;
+        }
+#endif
 
     private:
         std::unique_ptr<JsonReader> reader_;
@@ -461,6 +490,89 @@ struct CardAux {
     auto execute(Notecard& nc) const { return nc.execute(*this); }
     Result<void> command() const { return nc_->command_typed(*this); }
     Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
+
+#ifdef ARDUINO
+    /// Arduino Printable: prints the JSON request to Serial or any Print stream.
+    size_t printTo(Print& p) const {
+        size_t n = p.print("{\"req\":\"");
+        n += p.print(notecard_request.data());
+        n += p.print("\"");
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1) || !defined(NOTE_API_STRICT)
+        if (connected) {
+            n += p.print(",\"connected\":");
+            n += note::detail::print_json_value(p, *connected);
+        }
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
+        if (count) {
+            n += p.print(",\"count\":");
+            n += note::detail::print_json_value(p, *count);
+        }
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1) || !defined(NOTE_API_STRICT)
+        if (file) {
+            n += p.print(",\"file\":");
+            n += note::detail::print_json_value(p, *file);
+        }
+#endif
+        if (gps) {
+            n += p.print(",\"gps\":");
+            n += note::detail::print_json_value(p, *gps);
+        }
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+        if (limit) {
+            n += p.print(",\"limit\":");
+            n += note::detail::print_json_value(p, *limit);
+        }
+#endif
+        if (max) {
+            n += p.print(",\"max\":");
+            n += note::detail::print_json_value(p, *max);
+        }
+        if (mode) {
+            n += p.print(",\"mode\":");
+            n += note::detail::print_json_value(p, *mode);
+        }
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
+        if (ms) {
+            n += p.print(",\"ms\":");
+            n += note::detail::print_json_value(p, *ms);
+        }
+#endif
+        if (offset) {
+            n += p.print(",\"offset\":");
+            n += note::detail::print_json_value(p, *offset);
+        }
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
+        if (rate) {
+            n += p.print(",\"rate\":");
+            n += note::detail::print_json_value(p, *rate);
+        }
+#endif
+        if (seconds) {
+            n += p.print(",\"seconds\":");
+            n += note::detail::print_json_value(p, *seconds);
+        }
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
+        if (sensitivity) {
+            n += p.print(",\"sensitivity\":");
+            n += note::detail::print_json_value(p, *sensitivity);
+        }
+#endif
+        if (start) {
+            n += p.print(",\"start\":");
+            n += note::detail::print_json_value(p, *start);
+        }
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+        if (sync) {
+            n += p.print(",\"sync\":");
+            n += note::detail::print_json_value(p, *sync);
+        }
+#endif
+        n += p.print("}");
+        return n;
+    }
+#endif
 
 };
 

@@ -6,6 +6,7 @@
 #include <note/json.hpp>
 #include <note/json_sax.hpp>
 #include <note/notecard.hpp>
+#include <note/print.hpp>
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
@@ -136,13 +137,13 @@ struct CardLocationMode {
 #endif
 
         template<typename T>
-        auto& extra(note::string_view key, T value) {
+        auto& extra(note::string_view k_, T v_) {
             if (extras_count_ < NOTE_EXTRAS_MAX)
-                extras_[extras_count_++] = {key, note::DynValue{value}};
+                extras_[extras_count_++] = {k_, note::DynValue{v_}};
             return *this;
         }
-        auto& extra(note::string_view key, const char* value) {
-            return extra(key, note::string_view{value});
+        auto& extra(note::string_view k_, const char* v_) {
+            return extra(k_, note::string_view{v_});
         }
 
         note::DynField operator[](note::string_view k_) {
@@ -246,19 +247,19 @@ struct CardLocationMode {
             struct Sink : ::note::JsonSink {
                 Response& rsp;
                 explicit Sink(Response& r) : rsp(r) {}
-                void on_string(::note::string_view key, ::note::string_view val) override {
-                    if (key == "mode") { rsp.mode = val; return; }
-                    if (key == "vseconds") { rsp.vseconds = val; return; }
+                void on_string(::note::string_view k_, ::note::string_view v_) override {
+                    if (k_ == "mode") { rsp.mode = v_; return; }
+                    if (k_ == "vseconds") { rsp.vseconds = v_; return; }
                 }
-                void on_number(::note::string_view key, ::note::string_view raw) override {
-                    if (key == "max") { rsp.max = ::note::parse_int(raw); return; }
-                    if (key == "minutes") { rsp.minutes = ::note::parse_int(raw); return; }
-                    if (key == "seconds") { rsp.seconds = ::note::parse_int(raw); return; }
+                void on_number(::note::string_view k_, ::note::string_view raw_) override {
+                    if (k_ == "max") { rsp.max = ::note::parse_int(raw_); return; }
+                    if (k_ == "minutes") { rsp.minutes = ::note::parse_int(raw_); return; }
+                    if (k_ == "seconds") { rsp.seconds = ::note::parse_int(raw_); return; }
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-                    if (key == "threshold") { rsp.threshold = ::note::parse_int(raw); return; }
+                    if (k_ == "threshold") { rsp.threshold = ::note::parse_int(raw_); return; }
 #endif
-                    if (key == "lat") { rsp.lat = ::note::parse_double(raw); return; }
-                    if (key == "lon") { rsp.lon = ::note::parse_double(raw); return; }
+                    if (k_ == "lat") { rsp.lat = ::note::parse_double(raw_); return; }
+                    if (k_ == "lon") { rsp.lon = ::note::parse_double(raw_); return; }
                 }
             };
 #pragma GCC diagnostic pop
@@ -266,10 +267,54 @@ struct CardLocationMode {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
             void intern_strings(::note::StringPool& pool) {
-                if (mode && !(*mode).empty()) mode = pool.intern(*mode);
-                if (vseconds && !(*vseconds).empty()) vseconds = pool.intern(*vseconds);
+                if (!mode.empty()) mode = pool.intern(mode);
+                if (!vseconds.empty()) vseconds = pool.intern(vseconds);
             }
 #pragma GCC diagnostic pop
+
+#ifdef ARDUINO
+            /// Arduino Printable: prints response fields to Serial or any Print stream.
+            size_t printTo(Print& p) const {
+                size_t n = p.print("{");
+                bool first_ = true;
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"lat\":");
+                n += note::detail::print_json_value(p, lat.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"lon\":");
+                n += note::detail::print_json_value(p, lon.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"max\":");
+                n += note::detail::print_json_value(p, max.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"minutes\":");
+                n += note::detail::print_json_value(p, minutes.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"mode\":");
+                n += note::detail::print_json_value(p, mode.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"seconds\":");
+                n += note::detail::print_json_value(p, seconds.value());
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"threshold\":");
+                n += note::detail::print_json_value(p, threshold.value());
+#endif
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"vseconds\":");
+                n += note::detail::print_json_value(p, vseconds.value());
+                n += p.print("}");
+                return n;
+            }
+#endif
 
         private:
             std::unique_ptr<JsonReader> reader_;
@@ -299,6 +344,55 @@ struct CardLocationMode {
         auto execute(Notecard& nc) const { return nc.execute(*this); }
         Result<void> command() const { return nc_->command_typed(*this); }
         Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
+
+#ifdef ARDUINO
+        /// Arduino Printable: prints the JSON request to Serial or any Print stream.
+        size_t printTo(Print& p) const {
+            size_t n = p.print("{\"req\":\"");
+            n += p.print(notecard_request.data());
+            n += p.print("\"");
+            if (delete_) {
+                n += p.print(",\"delete\":");
+                n += note::detail::print_json_value(p, *delete_);
+            }
+            if (lat) {
+                n += p.print(",\"lat\":");
+                n += note::detail::print_json_value(p, *lat);
+            }
+            if (lon) {
+                n += p.print(",\"lon\":");
+                n += note::detail::print_json_value(p, *lon);
+            }
+            if (max) {
+                n += p.print(",\"max\":");
+                n += note::detail::print_json_value(p, *max);
+            }
+            if (minutes) {
+                n += p.print(",\"minutes\":");
+                n += note::detail::print_json_value(p, *minutes);
+            }
+            if (mode) {
+                n += p.print(",\"mode\":");
+                n += note::detail::print_json_value(p, *mode);
+            }
+            if (seconds) {
+                n += p.print(",\"seconds\":");
+                n += note::detail::print_json_value(p, *seconds);
+            }
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+            if (threshold) {
+                n += p.print(",\"threshold\":");
+                n += note::detail::print_json_value(p, *threshold);
+            }
+#endif
+            if (vseconds) {
+                n += p.print(",\"vseconds\":");
+                n += note::detail::print_json_value(p, *vseconds);
+            }
+            n += p.print("}");
+            return n;
+        }
+#endif
 
     };
 
@@ -415,13 +509,13 @@ struct CardLocationMode {
 #endif
 
         template<typename T>
-        auto& extra(note::string_view key, T value) {
+        auto& extra(note::string_view k_, T v_) {
             if (extras_count_ < NOTE_EXTRAS_MAX)
-                extras_[extras_count_++] = {key, note::DynValue{value}};
+                extras_[extras_count_++] = {k_, note::DynValue{v_}};
             return *this;
         }
-        auto& extra(note::string_view key, const char* value) {
-            return extra(key, note::string_view{value});
+        auto& extra(note::string_view k_, const char* v_) {
+            return extra(k_, note::string_view{v_});
         }
 
         note::DynField operator[](note::string_view k_) {
@@ -525,19 +619,19 @@ struct CardLocationMode {
             struct Sink : ::note::JsonSink {
                 Response& rsp;
                 explicit Sink(Response& r) : rsp(r) {}
-                void on_string(::note::string_view key, ::note::string_view val) override {
-                    if (key == "mode") { rsp.mode = val; return; }
-                    if (key == "vseconds") { rsp.vseconds = val; return; }
+                void on_string(::note::string_view k_, ::note::string_view v_) override {
+                    if (k_ == "mode") { rsp.mode = v_; return; }
+                    if (k_ == "vseconds") { rsp.vseconds = v_; return; }
                 }
-                void on_number(::note::string_view key, ::note::string_view raw) override {
-                    if (key == "max") { rsp.max = ::note::parse_int(raw); return; }
-                    if (key == "minutes") { rsp.minutes = ::note::parse_int(raw); return; }
-                    if (key == "seconds") { rsp.seconds = ::note::parse_int(raw); return; }
+                void on_number(::note::string_view k_, ::note::string_view raw_) override {
+                    if (k_ == "max") { rsp.max = ::note::parse_int(raw_); return; }
+                    if (k_ == "minutes") { rsp.minutes = ::note::parse_int(raw_); return; }
+                    if (k_ == "seconds") { rsp.seconds = ::note::parse_int(raw_); return; }
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-                    if (key == "threshold") { rsp.threshold = ::note::parse_int(raw); return; }
+                    if (k_ == "threshold") { rsp.threshold = ::note::parse_int(raw_); return; }
 #endif
-                    if (key == "lat") { rsp.lat = ::note::parse_double(raw); return; }
-                    if (key == "lon") { rsp.lon = ::note::parse_double(raw); return; }
+                    if (k_ == "lat") { rsp.lat = ::note::parse_double(raw_); return; }
+                    if (k_ == "lon") { rsp.lon = ::note::parse_double(raw_); return; }
                 }
             };
 #pragma GCC diagnostic pop
@@ -545,10 +639,54 @@ struct CardLocationMode {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
             void intern_strings(::note::StringPool& pool) {
-                if (mode && !(*mode).empty()) mode = pool.intern(*mode);
-                if (vseconds && !(*vseconds).empty()) vseconds = pool.intern(*vseconds);
+                if (!mode.empty()) mode = pool.intern(mode);
+                if (!vseconds.empty()) vseconds = pool.intern(vseconds);
             }
 #pragma GCC diagnostic pop
+
+#ifdef ARDUINO
+            /// Arduino Printable: prints response fields to Serial or any Print stream.
+            size_t printTo(Print& p) const {
+                size_t n = p.print("{");
+                bool first_ = true;
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"lat\":");
+                n += note::detail::print_json_value(p, lat.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"lon\":");
+                n += note::detail::print_json_value(p, lon.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"max\":");
+                n += note::detail::print_json_value(p, max.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"minutes\":");
+                n += note::detail::print_json_value(p, minutes.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"mode\":");
+                n += note::detail::print_json_value(p, mode.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"seconds\":");
+                n += note::detail::print_json_value(p, seconds.value());
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"threshold\":");
+                n += note::detail::print_json_value(p, threshold.value());
+#endif
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"vseconds\":");
+                n += note::detail::print_json_value(p, vseconds.value());
+                n += p.print("}");
+                return n;
+            }
+#endif
 
         private:
             std::unique_ptr<JsonReader> reader_;
@@ -578,6 +716,55 @@ struct CardLocationMode {
         auto execute(Notecard& nc) const { return nc.execute(*this); }
         Result<void> command() const { return nc_->command_typed(*this); }
         Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
+
+#ifdef ARDUINO
+        /// Arduino Printable: prints the JSON request to Serial or any Print stream.
+        size_t printTo(Print& p) const {
+            size_t n = p.print("{\"req\":\"");
+            n += p.print(notecard_request.data());
+            n += p.print("\"");
+            if (delete_) {
+                n += p.print(",\"delete\":");
+                n += note::detail::print_json_value(p, *delete_);
+            }
+            if (lat) {
+                n += p.print(",\"lat\":");
+                n += note::detail::print_json_value(p, *lat);
+            }
+            if (lon) {
+                n += p.print(",\"lon\":");
+                n += note::detail::print_json_value(p, *lon);
+            }
+            if (max) {
+                n += p.print(",\"max\":");
+                n += note::detail::print_json_value(p, *max);
+            }
+            if (minutes) {
+                n += p.print(",\"minutes\":");
+                n += note::detail::print_json_value(p, *minutes);
+            }
+            if (mode) {
+                n += p.print(",\"mode\":");
+                n += note::detail::print_json_value(p, *mode);
+            }
+            if (seconds) {
+                n += p.print(",\"seconds\":");
+                n += note::detail::print_json_value(p, *seconds);
+            }
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+            if (threshold) {
+                n += p.print(",\"threshold\":");
+                n += note::detail::print_json_value(p, *threshold);
+            }
+#endif
+            if (vseconds) {
+                n += p.print(",\"vseconds\":");
+                n += note::detail::print_json_value(p, *vseconds);
+            }
+            n += p.print("}");
+            return n;
+        }
+#endif
 
     };
 
@@ -616,13 +803,13 @@ struct CardLocationMode {
 
 
         template<typename T>
-        auto& extra(note::string_view key, T value) {
+        auto& extra(note::string_view k_, T v_) {
             if (extras_count_ < NOTE_EXTRAS_MAX)
-                extras_[extras_count_++] = {key, note::DynValue{value}};
+                extras_[extras_count_++] = {k_, note::DynValue{v_}};
             return *this;
         }
-        auto& extra(note::string_view key, const char* value) {
-            return extra(key, note::string_view{value});
+        auto& extra(note::string_view k_, const char* v_) {
+            return extra(k_, note::string_view{v_});
         }
 
         note::DynField operator[](note::string_view k_) {
@@ -697,13 +884,13 @@ struct CardLocationMode {
             struct Sink : ::note::JsonSink {
                 Response& rsp;
                 explicit Sink(Response& r) : rsp(r) {}
-                void on_string(::note::string_view key, ::note::string_view val) override {
-                    if (key == "mode") { rsp.mode = val; return; }
-                    if (key == "vseconds") { rsp.vseconds = val; return; }
+                void on_string(::note::string_view k_, ::note::string_view v_) override {
+                    if (k_ == "mode") { rsp.mode = v_; return; }
+                    if (k_ == "vseconds") { rsp.vseconds = v_; return; }
                 }
-                void on_number(::note::string_view key, ::note::string_view raw) override {
+                void on_number(::note::string_view k_, ::note::string_view raw_) override {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-                    if (key == "threshold") { rsp.threshold = ::note::parse_int(raw); return; }
+                    if (k_ == "threshold") { rsp.threshold = ::note::parse_int(raw_); return; }
 #endif
                 }
             };
@@ -712,10 +899,34 @@ struct CardLocationMode {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
             void intern_strings(::note::StringPool& pool) {
-                if (mode && !(*mode).empty()) mode = pool.intern(*mode);
-                if (vseconds && !(*vseconds).empty()) vseconds = pool.intern(*vseconds);
+                if (!mode.empty()) mode = pool.intern(mode);
+                if (!vseconds.empty()) vseconds = pool.intern(vseconds);
             }
 #pragma GCC diagnostic pop
+
+#ifdef ARDUINO
+            /// Arduino Printable: prints response fields to Serial or any Print stream.
+            size_t printTo(Print& p) const {
+                size_t n = p.print("{");
+                bool first_ = true;
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"mode\":");
+                n += note::detail::print_json_value(p, mode.value());
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"threshold\":");
+                n += note::detail::print_json_value(p, threshold.value());
+#endif
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"vseconds\":");
+                n += note::detail::print_json_value(p, vseconds.value());
+                n += p.print("}");
+                return n;
+            }
+#endif
 
         private:
             std::unique_ptr<JsonReader> reader_;
@@ -739,6 +950,27 @@ struct CardLocationMode {
         auto execute(Notecard& nc) const { return nc.execute(*this); }
         Result<void> command() const { return nc_->command_typed(*this); }
         Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
+
+#ifdef ARDUINO
+        /// Arduino Printable: prints the JSON request to Serial or any Print stream.
+        size_t printTo(Print& p) const {
+            size_t n = p.print("{\"req\":\"");
+            n += p.print(notecard_request.data());
+            n += p.print("\"");
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+            if (threshold) {
+                n += p.print(",\"threshold\":");
+                n += note::detail::print_json_value(p, *threshold);
+            }
+#endif
+            if (vseconds) {
+                n += p.print(",\"vseconds\":");
+                n += note::detail::print_json_value(p, *vseconds);
+            }
+            n += p.print("}");
+            return n;
+        }
+#endif
 
     };
 
@@ -822,13 +1054,13 @@ struct CardLocationMode {
 
 
         template<typename T>
-        auto& extra(note::string_view key, T value) {
+        auto& extra(note::string_view k_, T v_) {
             if (extras_count_ < NOTE_EXTRAS_MAX)
-                extras_[extras_count_++] = {key, note::DynValue{value}};
+                extras_[extras_count_++] = {k_, note::DynValue{v_}};
             return *this;
         }
-        auto& extra(note::string_view key, const char* value) {
-            return extra(key, note::string_view{value});
+        auto& extra(note::string_view k_, const char* v_) {
+            return extra(k_, note::string_view{v_});
         }
 
         note::DynField operator[](note::string_view k_) {
@@ -930,19 +1162,19 @@ struct CardLocationMode {
             struct Sink : ::note::JsonSink {
                 Response& rsp;
                 explicit Sink(Response& r) : rsp(r) {}
-                void on_string(::note::string_view key, ::note::string_view val) override {
-                    if (key == "mode") { rsp.mode = val; return; }
-                    if (key == "vseconds") { rsp.vseconds = val; return; }
+                void on_string(::note::string_view k_, ::note::string_view v_) override {
+                    if (k_ == "mode") { rsp.mode = v_; return; }
+                    if (k_ == "vseconds") { rsp.vseconds = v_; return; }
                 }
-                void on_number(::note::string_view key, ::note::string_view raw) override {
-                    if (key == "max") { rsp.max = ::note::parse_int(raw); return; }
-                    if (key == "minutes") { rsp.minutes = ::note::parse_int(raw); return; }
-                    if (key == "seconds") { rsp.seconds = ::note::parse_int(raw); return; }
+                void on_number(::note::string_view k_, ::note::string_view raw_) override {
+                    if (k_ == "max") { rsp.max = ::note::parse_int(raw_); return; }
+                    if (k_ == "minutes") { rsp.minutes = ::note::parse_int(raw_); return; }
+                    if (k_ == "seconds") { rsp.seconds = ::note::parse_int(raw_); return; }
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-                    if (key == "threshold") { rsp.threshold = ::note::parse_int(raw); return; }
+                    if (k_ == "threshold") { rsp.threshold = ::note::parse_int(raw_); return; }
 #endif
-                    if (key == "lat") { rsp.lat = ::note::parse_double(raw); return; }
-                    if (key == "lon") { rsp.lon = ::note::parse_double(raw); return; }
+                    if (k_ == "lat") { rsp.lat = ::note::parse_double(raw_); return; }
+                    if (k_ == "lon") { rsp.lon = ::note::parse_double(raw_); return; }
                 }
             };
 #pragma GCC diagnostic pop
@@ -950,10 +1182,54 @@ struct CardLocationMode {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
             void intern_strings(::note::StringPool& pool) {
-                if (mode && !(*mode).empty()) mode = pool.intern(*mode);
-                if (vseconds && !(*vseconds).empty()) vseconds = pool.intern(*vseconds);
+                if (!mode.empty()) mode = pool.intern(mode);
+                if (!vseconds.empty()) vseconds = pool.intern(vseconds);
             }
 #pragma GCC diagnostic pop
+
+#ifdef ARDUINO
+            /// Arduino Printable: prints response fields to Serial or any Print stream.
+            size_t printTo(Print& p) const {
+                size_t n = p.print("{");
+                bool first_ = true;
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"lat\":");
+                n += note::detail::print_json_value(p, lat.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"lon\":");
+                n += note::detail::print_json_value(p, lon.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"max\":");
+                n += note::detail::print_json_value(p, max.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"minutes\":");
+                n += note::detail::print_json_value(p, minutes.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"mode\":");
+                n += note::detail::print_json_value(p, mode.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"seconds\":");
+                n += note::detail::print_json_value(p, seconds.value());
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"threshold\":");
+                n += note::detail::print_json_value(p, threshold.value());
+#endif
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"vseconds\":");
+                n += note::detail::print_json_value(p, vseconds.value());
+                n += p.print("}");
+                return n;
+            }
+#endif
 
         private:
             std::unique_ptr<JsonReader> reader_;
@@ -982,6 +1258,47 @@ struct CardLocationMode {
         auto execute(Notecard& nc) const { return nc.execute(*this); }
         Result<void> command() const { return nc_->command_typed(*this); }
         Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
+
+#ifdef ARDUINO
+        /// Arduino Printable: prints the JSON request to Serial or any Print stream.
+        size_t printTo(Print& p) const {
+            size_t n = p.print("{\"req\":\"");
+            n += p.print(notecard_request.data());
+            n += p.print("\"");
+            if (lat) {
+                n += p.print(",\"lat\":");
+                n += note::detail::print_json_value(p, *lat);
+            }
+            if (lon) {
+                n += p.print(",\"lon\":");
+                n += note::detail::print_json_value(p, *lon);
+            }
+            if (max) {
+                n += p.print(",\"max\":");
+                n += note::detail::print_json_value(p, *max);
+            }
+            if (minutes) {
+                n += p.print(",\"minutes\":");
+                n += note::detail::print_json_value(p, *minutes);
+            }
+            if (seconds) {
+                n += p.print(",\"seconds\":");
+                n += note::detail::print_json_value(p, *seconds);
+            }
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+            if (threshold) {
+                n += p.print(",\"threshold\":");
+                n += note::detail::print_json_value(p, *threshold);
+            }
+#endif
+            if (vseconds) {
+                n += p.print(",\"vseconds\":");
+                n += note::detail::print_json_value(p, *vseconds);
+            }
+            n += p.print("}");
+            return n;
+        }
+#endif
 
     };
 
@@ -1019,13 +1336,13 @@ struct CardLocationMode {
 
 
         template<typename T>
-        auto& extra(note::string_view key, T value) {
+        auto& extra(note::string_view k_, T v_) {
             if (extras_count_ < NOTE_EXTRAS_MAX)
-                extras_[extras_count_++] = {key, note::DynValue{value}};
+                extras_[extras_count_++] = {k_, note::DynValue{v_}};
             return *this;
         }
-        auto& extra(note::string_view key, const char* value) {
-            return extra(key, note::string_view{value});
+        auto& extra(note::string_view k_, const char* v_) {
+            return extra(k_, note::string_view{v_});
         }
 
         note::DynField operator[](note::string_view k_) {
@@ -1078,18 +1395,40 @@ struct CardLocationMode {
             struct Sink : ::note::JsonSink {
                 Response& rsp;
                 explicit Sink(Response& r) : rsp(r) {}
-                void on_string(::note::string_view key, ::note::string_view val) override {
-                    if (key == "mode") { rsp.mode = val; return; }
+                void on_string(::note::string_view k_, ::note::string_view v_) override {
+                    if (k_ == "mode") { rsp.mode = v_; return; }
                 }
-                void on_number(::note::string_view key, ::note::string_view raw) override {
-                    if (key == "lat") { rsp.lat = ::note::parse_double(raw); return; }
-                    if (key == "lon") { rsp.lon = ::note::parse_double(raw); return; }
+                void on_number(::note::string_view k_, ::note::string_view raw_) override {
+                    if (k_ == "lat") { rsp.lat = ::note::parse_double(raw_); return; }
+                    if (k_ == "lon") { rsp.lon = ::note::parse_double(raw_); return; }
                 }
             };
 
             void intern_strings(::note::StringPool& pool) {
-                if (mode && !(*mode).empty()) mode = pool.intern(*mode);
+                if (!mode.empty()) mode = pool.intern(mode);
             }
+
+#ifdef ARDUINO
+            /// Arduino Printable: prints response fields to Serial or any Print stream.
+            size_t printTo(Print& p) const {
+                size_t n = p.print("{");
+                bool first_ = true;
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"lat\":");
+                n += note::detail::print_json_value(p, lat.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"lon\":");
+                n += note::detail::print_json_value(p, lon.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"mode\":");
+                n += note::detail::print_json_value(p, mode.value());
+                n += p.print("}");
+                return n;
+            }
+#endif
 
         private:
             std::unique_ptr<JsonReader> reader_;
@@ -1108,6 +1447,25 @@ struct CardLocationMode {
         auto execute(Notecard& nc) const { return nc.execute(*this); }
         Result<void> command() const { return nc_->command_typed(*this); }
         Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
+
+#ifdef ARDUINO
+        /// Arduino Printable: prints the JSON request to Serial or any Print stream.
+        size_t printTo(Print& p) const {
+            size_t n = p.print("{\"req\":\"");
+            n += p.print(notecard_request.data());
+            n += p.print("\"");
+            if (lat) {
+                n += p.print(",\"lat\":");
+                n += note::detail::print_json_value(p, *lat);
+            }
+            if (lon) {
+                n += p.print(",\"lon\":");
+                n += note::detail::print_json_value(p, *lon);
+            }
+            n += p.print("}");
+            return n;
+        }
+#endif
 
     };
 
@@ -1217,13 +1575,13 @@ struct CardLocationMode {
 #endif
 
         template<typename T>
-        auto& extra(note::string_view key, T value) {
+        auto& extra(note::string_view k_, T v_) {
             if (extras_count_ < NOTE_EXTRAS_MAX)
-                extras_[extras_count_++] = {key, note::DynValue{value}};
+                extras_[extras_count_++] = {k_, note::DynValue{v_}};
             return *this;
         }
-        auto& extra(note::string_view key, const char* value) {
-            return extra(key, note::string_view{value});
+        auto& extra(note::string_view k_, const char* v_) {
+            return extra(k_, note::string_view{v_});
         }
 
         note::DynField operator[](note::string_view k_) {
@@ -1326,19 +1684,19 @@ struct CardLocationMode {
             struct Sink : ::note::JsonSink {
                 Response& rsp;
                 explicit Sink(Response& r) : rsp(r) {}
-                void on_string(::note::string_view key, ::note::string_view val) override {
-                    if (key == "mode") { rsp.mode = val; return; }
-                    if (key == "vseconds") { rsp.vseconds = val; return; }
+                void on_string(::note::string_view k_, ::note::string_view v_) override {
+                    if (k_ == "mode") { rsp.mode = v_; return; }
+                    if (k_ == "vseconds") { rsp.vseconds = v_; return; }
                 }
-                void on_number(::note::string_view key, ::note::string_view raw) override {
-                    if (key == "max") { rsp.max = ::note::parse_int(raw); return; }
-                    if (key == "minutes") { rsp.minutes = ::note::parse_int(raw); return; }
-                    if (key == "seconds") { rsp.seconds = ::note::parse_int(raw); return; }
+                void on_number(::note::string_view k_, ::note::string_view raw_) override {
+                    if (k_ == "max") { rsp.max = ::note::parse_int(raw_); return; }
+                    if (k_ == "minutes") { rsp.minutes = ::note::parse_int(raw_); return; }
+                    if (k_ == "seconds") { rsp.seconds = ::note::parse_int(raw_); return; }
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-                    if (key == "threshold") { rsp.threshold = ::note::parse_int(raw); return; }
+                    if (k_ == "threshold") { rsp.threshold = ::note::parse_int(raw_); return; }
 #endif
-                    if (key == "lat") { rsp.lat = ::note::parse_double(raw); return; }
-                    if (key == "lon") { rsp.lon = ::note::parse_double(raw); return; }
+                    if (k_ == "lat") { rsp.lat = ::note::parse_double(raw_); return; }
+                    if (k_ == "lon") { rsp.lon = ::note::parse_double(raw_); return; }
                 }
             };
 #pragma GCC diagnostic pop
@@ -1346,10 +1704,54 @@ struct CardLocationMode {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
             void intern_strings(::note::StringPool& pool) {
-                if (mode && !(*mode).empty()) mode = pool.intern(*mode);
-                if (vseconds && !(*vseconds).empty()) vseconds = pool.intern(*vseconds);
+                if (!mode.empty()) mode = pool.intern(mode);
+                if (!vseconds.empty()) vseconds = pool.intern(vseconds);
             }
 #pragma GCC diagnostic pop
+
+#ifdef ARDUINO
+            /// Arduino Printable: prints response fields to Serial or any Print stream.
+            size_t printTo(Print& p) const {
+                size_t n = p.print("{");
+                bool first_ = true;
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"lat\":");
+                n += note::detail::print_json_value(p, lat.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"lon\":");
+                n += note::detail::print_json_value(p, lon.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"max\":");
+                n += note::detail::print_json_value(p, max.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"minutes\":");
+                n += note::detail::print_json_value(p, minutes.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"mode\":");
+                n += note::detail::print_json_value(p, mode.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"seconds\":");
+                n += note::detail::print_json_value(p, seconds.value());
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"threshold\":");
+                n += note::detail::print_json_value(p, threshold.value());
+#endif
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"vseconds\":");
+                n += note::detail::print_json_value(p, vseconds.value());
+                n += p.print("}");
+                return n;
+            }
+#endif
 
         private:
             std::unique_ptr<JsonReader> reader_;
@@ -1379,6 +1781,51 @@ struct CardLocationMode {
         auto execute(Notecard& nc) const { return nc.execute(*this); }
         Result<void> command() const { return nc_->command_typed(*this); }
         Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
+
+#ifdef ARDUINO
+        /// Arduino Printable: prints the JSON request to Serial or any Print stream.
+        size_t printTo(Print& p) const {
+            size_t n = p.print("{\"req\":\"");
+            n += p.print(notecard_request.data());
+            n += p.print("\"");
+            if (lat) {
+                n += p.print(",\"lat\":");
+                n += note::detail::print_json_value(p, *lat);
+            }
+            if (lon) {
+                n += p.print(",\"lon\":");
+                n += note::detail::print_json_value(p, *lon);
+            }
+            if (max) {
+                n += p.print(",\"max\":");
+                n += note::detail::print_json_value(p, *max);
+            }
+            if (minutes) {
+                n += p.print(",\"minutes\":");
+                n += note::detail::print_json_value(p, *minutes);
+            }
+            if (mode) {
+                n += p.print(",\"mode\":");
+                n += note::detail::print_json_value(p, *mode);
+            }
+            if (seconds) {
+                n += p.print(",\"seconds\":");
+                n += note::detail::print_json_value(p, *seconds);
+            }
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+            if (threshold) {
+                n += p.print(",\"threshold\":");
+                n += note::detail::print_json_value(p, *threshold);
+            }
+#endif
+            if (vseconds) {
+                n += p.print(",\"vseconds\":");
+                n += note::detail::print_json_value(p, *vseconds);
+            }
+            n += p.print("}");
+            return n;
+        }
+#endif
 
     };
     using Delete = Remove;  ///< @deprecated Use Remove instead.

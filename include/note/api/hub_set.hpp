@@ -6,6 +6,7 @@
 #include <note/json.hpp>
 #include <note/json_sax.hpp>
 #include <note/notecard.hpp>
+#include <note/print.hpp>
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
@@ -336,13 +337,13 @@ struct HubSet {
     auto& resumePeriodic() { off = true; return *this; }
     auto& allowContinuous(bool v_) { if (v_) on = true; else off = true; return *this; }
     template<typename T>
-    auto& extra(note::string_view key, T value) {
+    auto& extra(note::string_view k_, T v_) {
         if (extras_count_ < NOTE_EXTRAS_MAX)
-            extras_[extras_count_++] = {key, note::DynValue{value}};
+            extras_[extras_count_++] = {k_, note::DynValue{v_}};
         return *this;
     }
-    auto& extra(note::string_view key, const char* value) {
-        return extra(key, note::string_view{value});
+    auto& extra(note::string_view k_, const char* v_) {
+        return extra(k_, note::string_view{v_});
     }
 
     note::DynField operator[](note::string_view k_) {
@@ -442,6 +443,109 @@ struct HubSet {
     auto execute(Notecard& nc) const { return nc.execute(*this); }
     Result<void> command() const { return nc_->command_typed(*this); }
     Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
+
+#ifdef ARDUINO
+    /// Arduino Printable: prints the JSON request to Serial or any Print stream.
+    size_t printTo(Print& p) const {
+        size_t n = p.print("{\"req\":\"");
+        n += p.print(notecard_request.data());
+        n += p.print("\"");
+        if (align) {
+            n += p.print(",\"align\":");
+            n += note::detail::print_json_value(p, *align);
+        }
+#if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
+        if (details) {
+            n += p.print(",\"details\":");
+            n += note::detail::print_json_value(p, *details);
+        }
+#endif
+        if (duration) {
+            n += p.print(",\"duration\":");
+            n += note::detail::print_json_value(p, *duration);
+        }
+        if (host) {
+            n += p.print(",\"host\":");
+            n += note::detail::print_json_value(p, *host);
+        }
+        if (inbound) {
+            n += p.print(",\"inbound\":");
+            n += note::detail::print_json_value(p, *inbound);
+        }
+        if (mode) {
+            n += p.print(",\"mode\":");
+            n += note::detail::print_json_value(p, *mode);
+        }
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+        if (off) {
+            n += p.print(",\"off\":");
+            n += note::detail::print_json_value(p, *off);
+        }
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+        if (on) {
+            n += p.print(",\"on\":");
+            n += note::detail::print_json_value(p, *on);
+        }
+#endif
+        if (outbound) {
+            n += p.print(",\"outbound\":");
+            n += note::detail::print_json_value(p, *outbound);
+        }
+        if (product) {
+            n += p.print(",\"product\":");
+            n += note::detail::print_json_value(p, *product);
+        }
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+        if (seconds) {
+            n += p.print(",\"seconds\":");
+            n += note::detail::print_json_value(p, *seconds);
+        }
+#endif
+        if (sn) {
+            n += p.print(",\"sn\":");
+            n += note::detail::print_json_value(p, *sn);
+        }
+        if (sync) {
+            n += p.print(",\"sync\":");
+            n += note::detail::print_json_value(p, *sync);
+        }
+#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
+        if (umin) {
+            n += p.print(",\"umin\":");
+            n += note::detail::print_json_value(p, *umin);
+        }
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
+        if (uoff) {
+            n += p.print(",\"uoff\":");
+            n += note::detail::print_json_value(p, *uoff);
+        }
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
+        if (uperiodic) {
+            n += p.print(",\"uperiodic\":");
+            n += note::detail::print_json_value(p, *uperiodic);
+        }
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(7, 3, 1) || !defined(NOTE_API_STRICT)
+        if (version) {
+            n += p.print(",\"version\":");
+            n += note::detail::print_json_value(p, *version);
+        }
+#endif
+        if (vinbound) {
+            n += p.print(",\"vinbound\":");
+            n += note::detail::print_json_value(p, *vinbound);
+        }
+        if (voutbound) {
+            n += p.print(",\"voutbound\":");
+            n += note::detail::print_json_value(p, *voutbound);
+        }
+        n += p.print("}");
+        return n;
+    }
+#endif
 
 };
 

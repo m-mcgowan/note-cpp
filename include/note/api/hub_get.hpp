@@ -6,6 +6,7 @@
 #include <note/json.hpp>
 #include <note/json_sax.hpp>
 #include <note/notecard.hpp>
+#include <note/print.hpp>
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
@@ -33,13 +34,13 @@ struct HubGet {
 
 
     template<typename T>
-    auto& extra(note::string_view key, T value) {
+    auto& extra(note::string_view k_, T v_) {
         if (extras_count_ < NOTE_EXTRAS_MAX)
-            extras_[extras_count_++] = {key, note::DynValue{value}};
+            extras_[extras_count_++] = {k_, note::DynValue{v_}};
         return *this;
     }
-    auto& extra(note::string_view key, const char* value) {
-        return extra(key, note::string_view{value});
+    auto& extra(note::string_view k_, const char* v_) {
+        return extra(k_, note::string_view{v_});
     }
 
     note::DynField operator[](note::string_view k_) {
@@ -120,33 +121,83 @@ struct HubGet {
         struct Sink : ::note::JsonSink {
             Response& rsp;
             explicit Sink(Response& r) : rsp(r) {}
-            void on_string(::note::string_view key, ::note::string_view val) override {
-                if (key == "device") { rsp.device = val; return; }
-                if (key == "host") { rsp.host = val; return; }
-                if (key == "mode") { rsp.mode = val; return; }
-                if (key == "product") { rsp.product = val; return; }
-                if (key == "sn") { rsp.sn = val; return; }
-                if (key == "vinbound") { rsp.vinbound = val; return; }
-                if (key == "voutbound") { rsp.voutbound = val; return; }
+            void on_string(::note::string_view k_, ::note::string_view v_) override {
+                if (k_ == "device") { rsp.device = v_; return; }
+                if (k_ == "host") { rsp.host = v_; return; }
+                if (k_ == "mode") { rsp.mode = v_; return; }
+                if (k_ == "product") { rsp.product = v_; return; }
+                if (k_ == "sn") { rsp.sn = v_; return; }
+                if (k_ == "vinbound") { rsp.vinbound = v_; return; }
+                if (k_ == "voutbound") { rsp.voutbound = v_; return; }
             }
-            void on_bool(::note::string_view key, bool val) override {
-                if (key == "sync") { rsp.sync = val; return; }
+            void on_bool(::note::string_view k_, bool v_) override {
+                if (k_ == "sync") { rsp.sync = v_; return; }
             }
-            void on_number(::note::string_view key, ::note::string_view raw) override {
-                if (key == "inbound") { rsp.inbound = ::note::parse_int(raw); return; }
-                if (key == "outbound") { rsp.outbound = ::note::parse_int(raw); return; }
+            void on_number(::note::string_view k_, ::note::string_view raw_) override {
+                if (k_ == "inbound") { rsp.inbound = ::note::parse_int(raw_); return; }
+                if (k_ == "outbound") { rsp.outbound = ::note::parse_int(raw_); return; }
             }
         };
 
         void intern_strings(::note::StringPool& pool) {
-            if (device && !(*device).empty()) device = pool.intern(*device);
-            if (host && !(*host).empty()) host = pool.intern(*host);
-            if (mode && !(*mode).empty()) mode = pool.intern(*mode);
-            if (product && !(*product).empty()) product = pool.intern(*product);
-            if (sn && !(*sn).empty()) sn = pool.intern(*sn);
-            if (vinbound && !(*vinbound).empty()) vinbound = pool.intern(*vinbound);
-            if (voutbound && !(*voutbound).empty()) voutbound = pool.intern(*voutbound);
+            if (!device.empty()) device = pool.intern(device);
+            if (!host.empty()) host = pool.intern(host);
+            if (!mode.empty()) mode = pool.intern(mode);
+            if (!product.empty()) product = pool.intern(product);
+            if (!sn.empty()) sn = pool.intern(sn);
+            if (!vinbound.empty()) vinbound = pool.intern(vinbound);
+            if (!voutbound.empty()) voutbound = pool.intern(voutbound);
         }
+
+#ifdef ARDUINO
+        /// Arduino Printable: prints response fields to Serial or any Print stream.
+        size_t printTo(Print& p) const {
+            size_t n = p.print("{");
+            bool first_ = true;
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"device\":");
+            n += note::detail::print_json_value(p, device.value());
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"host\":");
+            n += note::detail::print_json_value(p, host.value());
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"inbound\":");
+            n += note::detail::print_json_value(p, inbound.value());
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"mode\":");
+            n += note::detail::print_json_value(p, mode.value());
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"outbound\":");
+            n += note::detail::print_json_value(p, outbound.value());
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"product\":");
+            n += note::detail::print_json_value(p, product.value());
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"sn\":");
+            n += note::detail::print_json_value(p, sn.value());
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"sync\":");
+            n += note::detail::print_json_value(p, sync.value());
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"vinbound\":");
+            n += note::detail::print_json_value(p, vinbound.value());
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"voutbound\":");
+            n += note::detail::print_json_value(p, voutbound.value());
+            n += p.print("}");
+            return n;
+        }
+#endif
 
     private:
         std::unique_ptr<JsonReader> reader_;
@@ -163,6 +214,17 @@ struct HubGet {
     auto execute(Notecard& nc) const { return nc.execute(*this); }
     Result<void> command() const { return nc_->command_typed(*this); }
     Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
+
+#ifdef ARDUINO
+    /// Arduino Printable: prints the JSON request to Serial or any Print stream.
+    size_t printTo(Print& p) const {
+        size_t n = p.print("{\"req\":\"");
+        n += p.print(notecard_request.data());
+        n += p.print("\"");
+        n += p.print("}");
+        return n;
+    }
+#endif
 
 };
 

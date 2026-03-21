@@ -187,6 +187,23 @@ class BinaryTransferDef:
     follows: str     # "response"
     when: dict | None = None  # e.g. {"binary": true}
 
+    @property
+    def direction_cpp(self) -> str:
+        """C++ Direction enum value."""
+        return "Direction::Send" if self.direction == "send" else "Direction::Receive"
+
+
+@dataclass
+class BinaryBufferDef:
+    """Binary buffer annotation for endpoints that use card.binary as intermediary."""
+    direction: str        # "send" (host fills buffer first) or "receive" (Notecard fills it)
+    when: dict | None = None  # e.g. {"binary": true} — condition under which buffer is used
+
+    @property
+    def direction_cpp(self) -> str:
+        """C++ Direction enum value."""
+        return "Direction::Send" if self.direction == "send" else "Direction::Receive"
+
 
 @dataclass
 class ResponseDef:
@@ -229,6 +246,7 @@ class OperationDef:
     response: ResponseDef = field(default_factory=ResponseDef)
     dispatch: dict | None = None
     binary_transfer: BinaryTransferDef | None = None
+    binary_buffer: BinaryBufferDef | None = None
     skus: list[str] = field(default_factory=list)
     implicit_fields: list[ImplicitFieldDef] = field(default_factory=list)
     description: str = ""  # From operation summary

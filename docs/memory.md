@@ -117,6 +117,43 @@ The integration tests in `tests/integration/buffer/` verify allocation counts:
 
 Both use global `operator new`/`operator delete` overrides to count every C++ heap allocation.
 
+## Binary Transfer Buffers
+
+Binary transfer (`binaryPut` / `binaryGet`) follows the same caller-owns-memory
+model as the rest of the library.
+
+**PUT** — the caller supplies the source data buffer. `CobsEncoder` is streaming:
+it reads from the source and flushes encoded blocks directly to the transport
+callback. No scratch buffer needed; the working block buffer defaults to stack
+but can be caller-provided for stack-constrained targets.
+
+**GET** — the caller supplies the destination buffer. COBS decoding writes
+decoded bytes into it in place as they arrive from the transport.
+
+```cpp
+// Stack-allocate the destination buffer; no heap involvement:
+uint8_t buf[1024];
+auto rsp = api.binary.get(buf, sizeof(buf)).execute();
+// rsp.buffer → span<const uint8_t> into buf, sized to decoded bytes received
+```
+
+On stack-constrained targets, pass a single `span<uint8_t>` to `execute()`.
+It is shared between encoder and decoder (they never run simultaneously) and
+no stack buffer is used:
+
+```cpp
+static uint8_t cobs_buf[NOTE_COBS_BLOCK_SIZE];
+api.binary.put(data, len).execute({cobs_buf, sizeof(cobs_buf)});
+api.binary.get(buf,  len).execute({cobs_buf, sizeof(cobs_buf)});
+```
+
+Use `note::cobs_encoded_size(n)` to check Notecard capacity upfront:
+
+```cpp
+constexpr size_t raw_len = 1024;
+static_assert(note::cobs_encoded_size(raw_len) <= MAX_NOTECARD_BINARY);
+```
+
 ## See Also
 
 - [examples/zero_alloc.cpp](../examples/zero_alloc.cpp) — working example of all three patterns
@@ -124,3 +161,5 @@ Both use global `operator new`/`operator delete` overrides to count every C++ he
 - `include/note/arena.hpp` — `MonotonicArena` implementation
 - `include/note/allocator.hpp` — `Allocator` type and adapters
 - `include/note/string_pool.hpp` — `StringPool` implementation
+- `include/note/transport/cobs.hpp` — `CobsEncoder`, `CobsDecoder`, `cobs_encoded_size()`
+- [docs/binary-transfer.md](binary-transfer.md) — binary transfer memory model

@@ -6,6 +6,7 @@
 #include <note/json.hpp>
 #include <note/json_sax.hpp>
 #include <note/notecard.hpp>
+#include <note/print.hpp>
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
@@ -109,13 +110,13 @@ struct CardLocationTrack {
     auto& disable() { stop = true; return *this; }
     auto& enable(bool v_) { if (v_) start = true; else stop = true; return *this; }
     template<typename T>
-    auto& extra(note::string_view key, T value) {
+    auto& extra(note::string_view k_, T v_) {
         if (extras_count_ < NOTE_EXTRAS_MAX)
-            extras_[extras_count_++] = {key, note::DynValue{value}};
+            extras_[extras_count_++] = {k_, note::DynValue{v_}};
         return *this;
     }
-    auto& extra(note::string_view key, const char* value) {
-        return extra(key, note::string_view{value});
+    auto& extra(note::string_view k_, const char* v_) {
+        return extra(k_, note::string_view{v_});
     }
 
     note::DynField operator[](note::string_view k_) {
@@ -187,23 +188,57 @@ struct CardLocationTrack {
         struct Sink : ::note::JsonSink {
             Response& rsp;
             explicit Sink(Response& r) : rsp(r) {}
-            void on_string(::note::string_view key, ::note::string_view val) override {
-                if (key == "file") { rsp.file = val; return; }
+            void on_string(::note::string_view k_, ::note::string_view v_) override {
+                if (k_ == "file") { rsp.file = v_; return; }
             }
-            void on_bool(::note::string_view key, bool val) override {
-                if (key == "heartbeat") { rsp.heartbeat = val; return; }
-                if (key == "start") { rsp.start = val; return; }
-                if (key == "stop") { rsp.stop = val; return; }
+            void on_bool(::note::string_view k_, bool v_) override {
+                if (k_ == "heartbeat") { rsp.heartbeat = v_; return; }
+                if (k_ == "start") { rsp.start = v_; return; }
+                if (k_ == "stop") { rsp.stop = v_; return; }
             }
-            void on_number(::note::string_view key, ::note::string_view raw) override {
-                if (key == "minutes") { rsp.minutes = ::note::parse_int(raw); return; }
-                if (key == "seconds") { rsp.seconds = ::note::parse_int(raw); return; }
+            void on_number(::note::string_view k_, ::note::string_view raw_) override {
+                if (k_ == "minutes") { rsp.minutes = ::note::parse_int(raw_); return; }
+                if (k_ == "seconds") { rsp.seconds = ::note::parse_int(raw_); return; }
             }
         };
 
         void intern_strings(::note::StringPool& pool) {
-            if (file && !(*file).empty()) file = pool.intern(*file);
+            if (!file.empty()) file = pool.intern(file);
         }
+
+#ifdef ARDUINO
+        /// Arduino Printable: prints response fields to Serial or any Print stream.
+        size_t printTo(Print& p) const {
+            size_t n = p.print("{");
+            bool first_ = true;
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"file\":");
+            n += note::detail::print_json_value(p, file.value());
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"heartbeat\":");
+            n += note::detail::print_json_value(p, heartbeat.value());
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"minutes\":");
+            n += note::detail::print_json_value(p, minutes.value());
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"seconds\":");
+            n += note::detail::print_json_value(p, seconds.value());
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"start\":");
+            n += note::detail::print_json_value(p, start.value());
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"stop\":");
+            n += note::detail::print_json_value(p, stop.value());
+            n += p.print("}");
+            return n;
+        }
+#endif
 
     private:
         std::unique_ptr<JsonReader> reader_;
@@ -231,6 +266,47 @@ struct CardLocationTrack {
     auto execute(Notecard& nc) const { return nc.execute(*this); }
     Result<void> command() const { return nc_->command_typed(*this); }
     Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
+
+#ifdef ARDUINO
+    /// Arduino Printable: prints the JSON request to Serial or any Print stream.
+    size_t printTo(Print& p) const {
+        size_t n = p.print("{\"req\":\"");
+        n += p.print(notecard_request.data());
+        n += p.print("\"");
+        if (file) {
+            n += p.print(",\"file\":");
+            n += note::detail::print_json_value(p, *file);
+        }
+        if (heartbeat) {
+            n += p.print(",\"heartbeat\":");
+            n += note::detail::print_json_value(p, *heartbeat);
+        }
+        if (hours) {
+            n += p.print(",\"hours\":");
+            n += note::detail::print_json_value(p, *hours);
+        }
+#if NOTE_API_VERSION >= NOTE_VERSION(7, 5, 2) || !defined(NOTE_API_STRICT)
+        if (payload) {
+            n += p.print(",\"payload\":");
+            n += note::detail::print_json_value(p, *payload);
+        }
+#endif
+        if (start) {
+            n += p.print(",\"start\":");
+            n += note::detail::print_json_value(p, *start);
+        }
+        if (stop) {
+            n += p.print(",\"stop\":");
+            n += note::detail::print_json_value(p, *stop);
+        }
+        if (sync) {
+            n += p.print(",\"sync\":");
+            n += note::detail::print_json_value(p, *sync);
+        }
+        n += p.print("}");
+        return n;
+    }
+#endif
 
 };
 

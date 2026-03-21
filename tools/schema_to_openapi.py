@@ -373,6 +373,16 @@ def _apply_property_extensions(op: dict, ep_extensions: dict) -> None:
             param.get("schema", {}).update(ep_extensions[name])
 
 
+def load_binary_buffer(buffer_path: Path) -> dict:
+    """Load binary buffer metadata JSON."""
+    if not buffer_path.exists():
+        return {}
+    with open(buffer_path) as f:
+        data = json.load(f)
+    data.pop("$comment", None)
+    return data
+
+
 def convert(schema_dir: Path, safety_path: Path,
             binary_path: Path | None = None,
             extensions_path: Path | None = None,
@@ -383,6 +393,8 @@ def convert(schema_dir: Path, safety_path: Path,
     requests, responses = load_schemas(schema_dir)
     safety = load_safety(safety_path)
     binary = load_binary_transfer(binary_path) if binary_path else {}
+    buffer_path = binary_path.parent / "binary_buffer.json" if binary_path else None
+    binary_buffer = load_binary_buffer(buffer_path) if buffer_path else {}
     extensions = load_property_extensions(extensions_path) if extensions_path else {}
     op_extensions = load_operation_extensions(op_extensions_path) if op_extensions_path else {}
 
@@ -447,6 +459,8 @@ def convert(schema_dir: Path, safety_path: Path,
             )
             if endpoint in binary:
                 op["x-binary-transfer"] = binary[endpoint]
+            if endpoint in binary_buffer:
+                op["x-binary-buffer"] = binary_buffer[endpoint]
             if ep_extensions:
                 _apply_property_extensions(op, ep_extensions)
             if method in ep_op_extensions:
@@ -465,6 +479,8 @@ def convert(schema_dir: Path, safety_path: Path,
                 op["operationId"] = f"{endpoint.replace('.', '_')}_{suffix}"
                 if endpoint in binary:
                     op["x-binary-transfer"] = binary[endpoint]
+                if endpoint in binary_buffer:
+                    op["x-binary-buffer"] = binary_buffer[endpoint]
                 if ep_extensions:
                     _apply_property_extensions(op, ep_extensions)
                 if method in ep_op_extensions:

@@ -253,22 +253,30 @@ auto result = nc.note.add()
 if (!result) {
     auto err = result.error();
     Serial.println(err);
-
-    // err.code tells you what layer failed:
-    //   Error::SendFailed  — never reached the Notecard (safe to retry)
-    //   Error::Notecard    — Notecard returned an error
-    //   Error::Json        — response couldn't be parsed
-    // err.cause tells you why:
-    //   Cause::Timeout, Cause::HalError, Cause::CrcMismatch, etc.
-    // err.message is the Notecard's error string:
-    //   "note.add: file not found"
-    //   "note.add: queue full"
-    //
-    // Printed output:
-    //   "notecard: note.add: queue full"
-    //   "send_failed[timeout]: no response within deadline"
 }
 ```
+
+Possible output (Notecard error):
+
+    notecard: note.add: queue full
+
+Possible output (transport failure):
+
+    send_failed[timeout]: no response within deadline
+
+Error details:
+- `err.code` tells you which layer failed:
+  - `Error::SendFailed` — never reached the Notecard (safe to retry)
+  - `Error::Notecard` — Notecard returned an error, available as `err.message`
+  - `Error::Json` — response couldn't be parsed
+- `err.cause` tells you why:
+  - `Cause::Timeout`, `Cause::HalError`, `Cause::CrcMismatch`, etc.
+- `err.message` is the Notecard's error string:
+  - `"note.add: file not found"`
+  - `"note.add: queue full"`
+
+See [Error Handling](error-handling.md) for the full reference including
+retry safety levels.
 
 **Key differences:**
 - Both sides define the same struct, but note-cpp uses it directly as the
@@ -301,11 +309,11 @@ nc.sendRequest(req);
 </td><td>
 
 ```cpp
-// Same Readings struct from above — type hints
-// are derived from C++ types automatically.
+// Same Readings struct — type hints are
+// derived from C++ types automatically.
 nc.note.templates().define("sensors.qo")
-    .body(note::template_of<Readings>())
-    .execute();
+    .body(note::template_of(Readings{}))
+    .execute()
 
 
 
@@ -322,6 +330,11 @@ nc.note.templates().define("sensors.qo")
   updates itself.
 - One struct for everything. Define `Readings` once, and the library uses it
   for sending, receiving, and template registration.
+
+If you are comfortable with C++ template syntax, you can also use a type-only format without requiring an instance:
+```
+   .body(note::template_of<Readings>())
+```
 
 ## Reading temperature (card.temp)
 
@@ -395,8 +408,8 @@ if (rsp != NULL) {
 ```cpp
 auto r = nc.card.version().execute();
 if (r) {
-    note::string_view ver = r.version;
-    note::string_view dev = r.device;
+    auto ver = r.version;
+    auto dev = r.device;
     Serial.println(ver.data());
 }
 

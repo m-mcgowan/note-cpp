@@ -140,7 +140,7 @@ TEST_CASE("notecard_request wire names are correct") {
 // ---------------------------------------------------------------------------
 
 TEST_CASE("CardBinaryGet has binary transfer annotation") {
-    STATIC_REQUIRE(note::api::CardBinaryGet::BinaryTransfer::direction == "receive");
+    STATIC_REQUIRE(note::api::CardBinaryGet::BinaryTransfer::direction == note::Direction::Receive);
     STATIC_REQUIRE(note::api::CardBinaryGet::BinaryTransfer::encoding == "cobs");
 }
 
@@ -493,13 +493,97 @@ TEST_CASE("DX: fluent setter validates literals") {
 }
 
 // ---------------------------------------------------------------------------
+// ErrorInfo construction (must work even when inheriting Printable on Arduino)
+// ---------------------------------------------------------------------------
+
+TEST_CASE("ErrorInfo: brace construction") {
+    // These mirror the construction patterns used throughout note-cpp.
+    // If ErrorInfo inherits from a non-aggregate base (e.g. Printable
+    // on Arduino), these must still compile.
+    note::ErrorInfo e1{note::Error::SendFailed, note::Cause::Timeout, "timeout"};
+    REQUIRE(e1.code == note::Error::SendFailed);
+    REQUIRE(e1.cause == note::Cause::Timeout);
+    REQUIRE(e1.message == "timeout");
+
+    note::ErrorInfo e2{note::Error::Notecard, "device error"};
+    REQUIRE(e2.code == note::Error::Notecard);
+    REQUIRE(e2.cause == note::Cause::Unspecified);
+    REQUIRE(e2.message == "device error");
+
+    note::ErrorInfo e3{};
+    (void)e3;
+}
+
+TEST_CASE("ResponseField<bool>: implicit conversion") {
+    note::ResponseField<bool> f;
+    f = true;
+    // Implicit conversion to bool — no ambiguity (no optional base)
+    bool v = f;
+    REQUIRE(v == true);
+    if (f) { /* works as a condition */ }
+    REQUIRE(f.value() == true);
+}
+
+TEST_CASE("ResponseField<string_view>: forwarded methods") {
+    note::ResponseField<note::string_view> f;
+    f = "hello";
+    REQUIRE(f.size() == 5);
+    REQUIRE(f.data() != nullptr);
+    REQUIRE(!f.empty());
+    REQUIRE(f.find("ell") != note::string_view::npos);
+    // Implicit conversion
+    note::string_view sv = f;
+    REQUIRE(sv == "hello");
+}
+
+TEST_CASE("ResponseField: default-initialized when absent") {
+    note::ResponseField<bool> b;
+    REQUIRE(b.value() == false);
+    note::ResponseField<int32_t> i;
+    REQUIRE(i.value() == 0);
+    note::ResponseField<note::string_view> s;
+    REQUIRE(s.empty());
+}
+
+TEST_CASE("ErrorInfo: used in Result/ApiResult") {
+    // Verify ErrorInfo works in the error paths used by Notecard::execute
+    note::Result<int> r1 = note::Unexpected(
+        note::ErrorInfo{note::Error::SendFailed, note::Cause::Timeout, "timeout"});
+    REQUIRE(!r1);
+    REQUIRE(r1.error().code == note::Error::SendFailed);
+    REQUIRE(r1.error().cause == note::Cause::Timeout);
+
+    note::ErrorInfo ei{note::Error::Notecard, "device error"};
+    note::ApiResult<void> r2(ei);
+    REQUIRE(!r2);
+    REQUIRE(r2.error().message == "device error");
+}
+
+// ---------------------------------------------------------------------------
 // NotecardApi — convenience wrapper
 // ---------------------------------------------------------------------------
 
-TEST_CASE("NotecardApi: single-object setup") {
-    note::test::TestJsonBackend backend;
+TEST_CASE("NotecardApi: default constructor + begin()") {
+    note::NotecardApi nc;
+
+    // Before begin(), requests return NotReady error
+    auto r = nc.hub.set().product("test").execute();
+    REQUIRE_FALSE(r);
+    REQUIRE(r.error().code == note::Error::NotReady);
+
+    // After begin(), requests work
     std::string last_request;
-    note::NotecardApi nc(backend,
+    nc.begin([&](note::string_view req, uint32_t) -> note::Result<note::string_view> {
+        last_request = std::string(req);
+        return note::string_view("{}");
+    });
+    nc.hub.set().product("test").execute();
+    REQUIRE(last_request.find("hub.set") != std::string::npos);
+}
+
+TEST_CASE("NotecardApi: construct with transport") {
+    std::string last_request;
+    note::NotecardApi nc(
         [&](note::string_view req, uint32_t) -> note::Result<note::string_view> {
             last_request = std::string(req);
             return note::string_view("{}");

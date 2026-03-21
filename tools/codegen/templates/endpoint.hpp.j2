@@ -9,6 +9,7 @@
 #include <note/json.hpp>
 #include <note/json_sax.hpp>
 #include <note/notecard.hpp>
+#include <note/print.hpp>
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
@@ -98,8 +99,14 @@ namespace note::api {
 {% if op.binary_transfer %}
 
 {{ indent }}struct BinaryTransfer {
-{{ indent }}    static constexpr string_view direction = "{{ op.binary_transfer.direction }}";
+{{ indent }}    static constexpr Direction direction = {{ op.binary_transfer.direction_cpp }};
 {{ indent }}    static constexpr string_view encoding = "{{ op.binary_transfer.encoding }}";
+{{ indent }}};
+{% endif %}
+{% if op.binary_buffer %}
+
+{{ indent }}struct BinaryBuffer {
+{{ indent }}    static constexpr Direction direction = {{ op.binary_buffer.direction_cpp }};
 {{ indent }}};
 {% endif %}
 
@@ -252,13 +259,13 @@ namespace note::api {
 {% endif %}
 {% endfor %}
 {{ indent }}template<typename T>
-{{ indent }}auto& extra(note::string_view key, T value) {
+{{ indent }}auto& extra(note::string_view k_, T v_) {
 {{ indent }}    if (extras_count_ < NOTE_EXTRAS_MAX)
-{{ indent }}        extras_[extras_count_++] = {key, note::DynValue{value}};
+{{ indent }}        extras_[extras_count_++] = {k_, note::DynValue{v_}};
 {{ indent }}    return *this;
 {{ indent }}}
-{{ indent }}auto& extra(note::string_view key, const char* value) {
-{{ indent }}    return extra(key, note::string_view{value});
+{{ indent }}auto& extra(note::string_view k_, const char* v_) {
+{{ indent }}    return extra(k_, note::string_view{v_});
 {{ indent }}}
 
 {{ indent }}note::DynField operator[](note::string_view k_) {
@@ -370,33 +377,33 @@ namespace note::api {
 {% endif %}
 {% endfor %}
 {% if string_props %}
-{{ indent }}        void on_string(::note::string_view key, ::note::string_view val) override {
+{{ indent }}        void on_string(::note::string_view k_, ::note::string_view v_) override {
 {% for prop in string_props %}
 {{ version_guard_begin(prop.version_guard) -}}
-{{ indent }}            if (key == "{{ prop.wire_name }}") { rsp.{{ prop.accessor_name }} = val; return; }
+{{ indent }}            if (k_ == "{{ prop.wire_name }}") { rsp.{{ prop.accessor_name }} = v_; return; }
 {{ version_guard_end(prop.version_guard) -}}
 {% endfor %}
 {{ indent }}        }
 {% endif %}
 {% if bool_props %}
-{{ indent }}        void on_bool(::note::string_view key, bool val) override {
+{{ indent }}        void on_bool(::note::string_view k_, bool v_) override {
 {% for prop in bool_props %}
 {{ version_guard_begin(prop.version_guard) -}}
-{{ indent }}            if (key == "{{ prop.wire_name }}") { rsp.{{ prop.accessor_name }} = val; return; }
+{{ indent }}            if (k_ == "{{ prop.wire_name }}") { rsp.{{ prop.accessor_name }} = v_; return; }
 {{ version_guard_end(prop.version_guard) -}}
 {% endfor %}
 {{ indent }}        }
 {% endif %}
 {% if int_props or double_props %}
-{{ indent }}        void on_number(::note::string_view key, ::note::string_view raw) override {
+{{ indent }}        void on_number(::note::string_view k_, ::note::string_view raw_) override {
 {% for prop in int_props %}
 {{ version_guard_begin(prop.version_guard) -}}
-{{ indent }}            if (key == "{{ prop.wire_name }}") { rsp.{{ prop.accessor_name }} = ::note::parse_int(raw{{ prop.default_arg }}); return; }
+{{ indent }}            if (k_ == "{{ prop.wire_name }}") { rsp.{{ prop.accessor_name }} = ::note::parse_int(raw_{{ prop.default_arg }}); return; }
 {{ version_guard_end(prop.version_guard) -}}
 {% endfor %}
 {% for prop in double_props %}
 {{ version_guard_begin(prop.version_guard) -}}
-{{ indent }}            if (key == "{{ prop.wire_name }}") { rsp.{{ prop.accessor_name }} = ::note::parse_double(raw{{ prop.default_arg }}); return; }
+{{ indent }}            if (k_ == "{{ prop.wire_name }}") { rsp.{{ prop.accessor_name }} = ::note::parse_double(raw_{{ prop.default_arg }}); return; }
 {{ version_guard_end(prop.version_guard) -}}
 {% endfor %}
 {{ indent }}        }
@@ -421,7 +428,7 @@ namespace note::api {
 {{ indent }}    void intern_strings(::note::StringPool& pool) {
 {% for prop in rsp_string_props %}
 {{ version_guard_begin(prop.version_guard) -}}
-{{ indent }}        if ({{ prop.accessor_name }} && !(*{{ prop.accessor_name }}).empty()) {{ prop.accessor_name }} = pool.intern(*{{ prop.accessor_name }});
+{{ indent }}        if (!{{ prop.accessor_name }}.empty()) {{ prop.accessor_name }} = pool.intern({{ prop.accessor_name }});
 {{ version_guard_end(prop.version_guard) -}}
 {% endfor %}
 {{ indent }}    }
@@ -431,6 +438,24 @@ namespace note::api {
 {% else %}
 {{ indent }}    void intern_strings(::note::StringPool&) {}
 {% endif %}
+
+#ifdef ARDUINO
+{{ indent }}    /// Arduino Printable: prints response fields to Serial or any Print stream.
+{{ indent }}    size_t printTo(Print& p) const {
+{{ indent }}        size_t n = p.print("{");
+{{ indent }}        bool first_ = true;
+{% for prop in op.response.properties %}
+{{ version_guard_begin(prop.version_guard) -}}
+{{ indent }}        if (!first_) n += p.print(",");
+{{ indent }}        first_ = false;
+{{ indent }}        n += p.print("\"{{ prop.wire_name }}\":");
+{{ indent }}        n += note::detail::print_json_value(p, {{ prop.accessor_name }}.value());
+{{ version_guard_end(prop.version_guard) -}}
+{% endfor %}
+{{ indent }}        n += p.print("}");
+{{ indent }}        return n;
+{{ indent }}    }
+#endif
 
 {{ indent }}private:
 {{ indent }}    std::unique_ptr<JsonReader> reader_;
@@ -515,6 +540,32 @@ namespace note::api {
 {{ indent }}Result<void> command() const { return nc_->command_typed(*this); }
 {{ indent }}Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
 {% endif %}
+
+#ifdef ARDUINO
+{{ indent }}/// Arduino Printable: prints the JSON request to Serial or any Print stream.
+{{ indent }}size_t printTo(Print& p) const {
+{{ indent }}    size_t n = p.print("{\"req\":\"");
+{{ indent }}    n += p.print(notecard_request.data());
+{{ indent }}    n += p.print("\"");
+{% for prop in op.properties %}
+{% if not prop.is_required_by_dispatch and not prop.is_body and not prop.is_array %}
+{{ version_guard_begin(prop.version_guard) -}}
+{% if prop.is_required %}
+{{ indent }}    n += p.print(",\"{{ prop.wire_name }}\":");
+{{ indent }}    n += note::detail::print_json_value(p, {{ prop.accessor_name }});
+{% else %}
+{{ indent }}    if ({{ prop.accessor_name }}) {
+{{ indent }}        n += p.print(",\"{{ prop.wire_name }}\":");
+{{ indent }}        n += note::detail::print_json_value(p, *{{ prop.accessor_name }});
+{{ indent }}    }
+{% endif %}
+{{ version_guard_end(prop.version_guard) -}}
+{% endif %}
+{% endfor %}
+{{ indent }}    n += p.print("}");
+{{ indent }}    return n;
+{{ indent }}}
+#endif
 {% endmacro %}
 
 {# ===== prop_impls: out-of-line operator() definitions =================== #}

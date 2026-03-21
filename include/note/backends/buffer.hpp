@@ -9,7 +9,10 @@
 #pragma once
 
 #define JSMN_STATIC
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wsign-conversion"
 #include <note/backends/detail/jsmn.h>
+#pragma GCC diagnostic pop
 
 #include <note/json.hpp>
 #include <note/json_buf.hpp>  // for detail::itoa, detail::dtoa

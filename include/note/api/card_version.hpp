@@ -7,6 +7,7 @@
 #include <note/json.hpp>
 #include <note/json_sax.hpp>
 #include <note/notecard.hpp>
+#include <note/print.hpp>
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
@@ -34,13 +35,13 @@ struct CardVersion {
 
 
     template<typename T>
-    auto& extra(note::string_view key, T value) {
+    auto& extra(note::string_view k_, T v_) {
         if (extras_count_ < NOTE_EXTRAS_MAX)
-            extras_[extras_count_++] = {key, note::DynValue{value}};
+            extras_[extras_count_++] = {k_, note::DynValue{v_}};
         return *this;
     }
-    auto& extra(note::string_view key, const char* value) {
-        return extra(key, note::string_view{value});
+    auto& extra(note::string_view k_, const char* v_) {
+        return extra(k_, note::string_view{v_});
     }
 
     note::DynField operator[](note::string_view k_) {
@@ -139,18 +140,18 @@ struct CardVersion {
         struct Sink : ::note::JsonSink {
             Response& rsp;
             explicit Sink(Response& r) : rsp(r) {}
-            void on_string(::note::string_view key, ::note::string_view val) override {
-                if (key == "board") { rsp.board = val; return; }
-                if (key == "device") { rsp.device = val; return; }
-                if (key == "name") { rsp.name = val; return; }
-                if (key == "sku") { rsp.sku = val; return; }
-                if (key == "version") { rsp.version = val; return; }
+            void on_string(::note::string_view k_, ::note::string_view v_) override {
+                if (k_ == "board") { rsp.board = v_; return; }
+                if (k_ == "device") { rsp.device = v_; return; }
+                if (k_ == "name") { rsp.name = v_; return; }
+                if (k_ == "sku") { rsp.sku = v_; return; }
+                if (k_ == "version") { rsp.version = v_; return; }
             }
-            void on_bool(::note::string_view key, bool val) override {
-                if (key == "cell") { rsp.cell = val; return; }
-                if (key == "gps") { rsp.gps = val; return; }
+            void on_bool(::note::string_view k_, bool v_) override {
+                if (k_ == "cell") { rsp.cell = v_; return; }
+                if (k_ == "gps") { rsp.gps = v_; return; }
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
-                if (key == "wifi") { rsp.wifi = val; return; }
+                if (k_ == "wifi") { rsp.wifi = v_; return; }
 #endif
             }
         };
@@ -159,13 +160,57 @@ struct CardVersion {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
         void intern_strings(::note::StringPool& pool) {
-            if (board && !(*board).empty()) board = pool.intern(*board);
-            if (device && !(*device).empty()) device = pool.intern(*device);
-            if (name && !(*name).empty()) name = pool.intern(*name);
-            if (sku && !(*sku).empty()) sku = pool.intern(*sku);
-            if (version && !(*version).empty()) version = pool.intern(*version);
+            if (!board.empty()) board = pool.intern(board);
+            if (!device.empty()) device = pool.intern(device);
+            if (!name.empty()) name = pool.intern(name);
+            if (!sku.empty()) sku = pool.intern(sku);
+            if (!version.empty()) version = pool.intern(version);
         }
 #pragma GCC diagnostic pop
+
+#ifdef ARDUINO
+        /// Arduino Printable: prints response fields to Serial or any Print stream.
+        size_t printTo(Print& p) const {
+            size_t n = p.print("{");
+            bool first_ = true;
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"board\":");
+            n += note::detail::print_json_value(p, board.value());
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"cell\":");
+            n += note::detail::print_json_value(p, cell.value());
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"device\":");
+            n += note::detail::print_json_value(p, device.value());
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"gps\":");
+            n += note::detail::print_json_value(p, gps.value());
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"name\":");
+            n += note::detail::print_json_value(p, name.value());
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"sku\":");
+            n += note::detail::print_json_value(p, sku.value());
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"version\":");
+            n += note::detail::print_json_value(p, version.value());
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"wifi\":");
+            n += note::detail::print_json_value(p, wifi.value());
+#endif
+            n += p.print("}");
+            return n;
+        }
+#endif
 
     private:
         std::unique_ptr<JsonReader> reader_;
@@ -199,6 +244,17 @@ struct CardVersion {
     auto execute(Notecard& nc) const { return nc.execute(*this); }
     Result<void> command() const { return nc_->command_typed(*this); }
     Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
+
+#ifdef ARDUINO
+    /// Arduino Printable: prints the JSON request to Serial or any Print stream.
+    size_t printTo(Print& p) const {
+        size_t n = p.print("{\"req\":\"");
+        n += p.print(notecard_request.data());
+        n += p.print("\"");
+        n += p.print("}");
+        return n;
+    }
+#endif
 
 };
 

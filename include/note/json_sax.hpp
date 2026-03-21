@@ -165,9 +165,9 @@ private:
                     for (int j = 0; j < 4 && i < src_len; ++j, ++i) {
                         cp <<= 4;
                         char h = src[i];
-                        if (h >= '0' && h <= '9') cp |= (h - '0');
-                        else if (h >= 'a' && h <= 'f') cp |= (h - 'a' + 10);
-                        else if (h >= 'A' && h <= 'F') cp |= (h - 'A' + 10);
+                        if (h >= '0' && h <= '9') cp = static_cast<uint16_t>(cp | (h - '0'));
+                        else if (h >= 'a' && h <= 'f') cp = static_cast<uint16_t>(cp | (h - 'a' + 10));
+                        else if (h >= 'A' && h <= 'F') cp = static_cast<uint16_t>(cp | (h - 'A' + 10));
                     }
                     if (cp < 0x80) {
                         scratch_[out++] = static_cast<char>(cp);

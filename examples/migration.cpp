@@ -119,7 +119,7 @@ int main() {
 
     std::puts("\n--- note.template ---");
     nc.note.templates().define("sensors.qo")
-        .body(note::template_of<Readings>())
+        .body(note::template_of(Readings{}))
         .execute();
 
 

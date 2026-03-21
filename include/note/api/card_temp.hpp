@@ -6,6 +6,7 @@
 #include <note/json.hpp>
 #include <note/json_sax.hpp>
 #include <note/notecard.hpp>
+#include <note/print.hpp>
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
@@ -80,13 +81,13 @@ struct CardTemp {
         auto& stopLogging() { stop = true; return *this; }
         auto& stopLogging(bool v_) { stop = v_; return *this; }
         template<typename T>
-        auto& extra(note::string_view key, T value) {
+        auto& extra(note::string_view k_, T v_) {
             if (extras_count_ < NOTE_EXTRAS_MAX)
-                extras_[extras_count_++] = {key, note::DynValue{value}};
+                extras_[extras_count_++] = {k_, note::DynValue{v_}};
             return *this;
         }
-        auto& extra(note::string_view key, const char* value) {
-            return extra(key, note::string_view{value});
+        auto& extra(note::string_view k_, const char* v_) {
+            return extra(k_, note::string_view{v_});
         }
 
         note::DynField operator[](note::string_view k_) {
@@ -164,20 +165,58 @@ struct CardTemp {
             struct Sink : ::note::JsonSink {
                 Response& rsp;
                 explicit Sink(Response& r) : rsp(r) {}
-                void on_bool(::note::string_view key, bool val) override {
-                    if (key == "usb") { rsp.usb = val; return; }
+                void on_bool(::note::string_view k_, bool v_) override {
+                    if (k_ == "usb") { rsp.usb = v_; return; }
                 }
-                void on_number(::note::string_view key, ::note::string_view raw) override {
-                    if (key == "calibration") { rsp.calibration = ::note::parse_double(raw); return; }
-                    if (key == "humidity") { rsp.humidity = ::note::parse_double(raw); return; }
-                    if (key == "pressure") { rsp.pressure = ::note::parse_double(raw); return; }
-                    if (key == "temperature") { rsp.temperature = ::note::parse_double(raw); return; }
-                    if (key == "value") { rsp.value = ::note::parse_double(raw); return; }
-                    if (key == "voltage") { rsp.voltage = ::note::parse_double(raw); return; }
+                void on_number(::note::string_view k_, ::note::string_view raw_) override {
+                    if (k_ == "calibration") { rsp.calibration = ::note::parse_double(raw_); return; }
+                    if (k_ == "humidity") { rsp.humidity = ::note::parse_double(raw_); return; }
+                    if (k_ == "pressure") { rsp.pressure = ::note::parse_double(raw_); return; }
+                    if (k_ == "temperature") { rsp.temperature = ::note::parse_double(raw_); return; }
+                    if (k_ == "value") { rsp.value = ::note::parse_double(raw_); return; }
+                    if (k_ == "voltage") { rsp.voltage = ::note::parse_double(raw_); return; }
                 }
             };
 
             void intern_strings(::note::StringPool&) {}
+
+#ifdef ARDUINO
+            /// Arduino Printable: prints response fields to Serial or any Print stream.
+            size_t printTo(Print& p) const {
+                size_t n = p.print("{");
+                bool first_ = true;
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"calibration\":");
+                n += note::detail::print_json_value(p, calibration.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"humidity\":");
+                n += note::detail::print_json_value(p, humidity.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"pressure\":");
+                n += note::detail::print_json_value(p, pressure.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"temperature\":");
+                n += note::detail::print_json_value(p, temperature.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"usb\":");
+                n += note::detail::print_json_value(p, usb.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"value\":");
+                n += note::detail::print_json_value(p, value.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"voltage\":");
+                n += note::detail::print_json_value(p, voltage.value());
+                n += p.print("}");
+                return n;
+            }
+#endif
 
         private:
             std::unique_ptr<JsonReader> reader_;
@@ -197,6 +236,33 @@ struct CardTemp {
         auto execute(Notecard& nc) const { return nc.execute(*this); }
         Result<void> command() const { return nc_->command_typed(*this); }
         Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
+
+#ifdef ARDUINO
+        /// Arduino Printable: prints the JSON request to Serial or any Print stream.
+        size_t printTo(Print& p) const {
+            size_t n = p.print("{\"req\":\"");
+            n += p.print(notecard_request.data());
+            n += p.print("\"");
+            if (minutes) {
+                n += p.print(",\"minutes\":");
+                n += note::detail::print_json_value(p, *minutes);
+            }
+            if (status) {
+                n += p.print(",\"status\":");
+                n += note::detail::print_json_value(p, *status);
+            }
+            if (stop) {
+                n += p.print(",\"stop\":");
+                n += note::detail::print_json_value(p, *stop);
+            }
+            if (sync) {
+                n += p.print(",\"sync\":");
+                n += note::detail::print_json_value(p, *sync);
+            }
+            n += p.print("}");
+            return n;
+        }
+#endif
 
     };
     using Get = Read;  ///< @deprecated Use Read instead.
@@ -258,13 +324,13 @@ struct CardTemp {
         auto& stopLogging() { stop = true; return *this; }
         auto& stopLogging(bool v_) { stop = v_; return *this; }
         template<typename T>
-        auto& extra(note::string_view key, T value) {
+        auto& extra(note::string_view k_, T v_) {
             if (extras_count_ < NOTE_EXTRAS_MAX)
-                extras_[extras_count_++] = {key, note::DynValue{value}};
+                extras_[extras_count_++] = {k_, note::DynValue{v_}};
             return *this;
         }
-        auto& extra(note::string_view key, const char* value) {
-            return extra(key, note::string_view{value});
+        auto& extra(note::string_view k_, const char* v_) {
+            return extra(k_, note::string_view{v_});
         }
 
         note::DynField operator[](note::string_view k_) {
@@ -342,20 +408,58 @@ struct CardTemp {
             struct Sink : ::note::JsonSink {
                 Response& rsp;
                 explicit Sink(Response& r) : rsp(r) {}
-                void on_bool(::note::string_view key, bool val) override {
-                    if (key == "usb") { rsp.usb = val; return; }
+                void on_bool(::note::string_view k_, bool v_) override {
+                    if (k_ == "usb") { rsp.usb = v_; return; }
                 }
-                void on_number(::note::string_view key, ::note::string_view raw) override {
-                    if (key == "calibration") { rsp.calibration = ::note::parse_double(raw); return; }
-                    if (key == "humidity") { rsp.humidity = ::note::parse_double(raw); return; }
-                    if (key == "pressure") { rsp.pressure = ::note::parse_double(raw); return; }
-                    if (key == "temperature") { rsp.temperature = ::note::parse_double(raw); return; }
-                    if (key == "value") { rsp.value = ::note::parse_double(raw); return; }
-                    if (key == "voltage") { rsp.voltage = ::note::parse_double(raw); return; }
+                void on_number(::note::string_view k_, ::note::string_view raw_) override {
+                    if (k_ == "calibration") { rsp.calibration = ::note::parse_double(raw_); return; }
+                    if (k_ == "humidity") { rsp.humidity = ::note::parse_double(raw_); return; }
+                    if (k_ == "pressure") { rsp.pressure = ::note::parse_double(raw_); return; }
+                    if (k_ == "temperature") { rsp.temperature = ::note::parse_double(raw_); return; }
+                    if (k_ == "value") { rsp.value = ::note::parse_double(raw_); return; }
+                    if (k_ == "voltage") { rsp.voltage = ::note::parse_double(raw_); return; }
                 }
             };
 
             void intern_strings(::note::StringPool&) {}
+
+#ifdef ARDUINO
+            /// Arduino Printable: prints response fields to Serial or any Print stream.
+            size_t printTo(Print& p) const {
+                size_t n = p.print("{");
+                bool first_ = true;
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"calibration\":");
+                n += note::detail::print_json_value(p, calibration.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"humidity\":");
+                n += note::detail::print_json_value(p, humidity.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"pressure\":");
+                n += note::detail::print_json_value(p, pressure.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"temperature\":");
+                n += note::detail::print_json_value(p, temperature.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"usb\":");
+                n += note::detail::print_json_value(p, usb.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"value\":");
+                n += note::detail::print_json_value(p, value.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"voltage\":");
+                n += note::detail::print_json_value(p, voltage.value());
+                n += p.print("}");
+                return n;
+            }
+#endif
 
         private:
             std::unique_ptr<JsonReader> reader_;
@@ -375,6 +479,33 @@ struct CardTemp {
         auto execute(Notecard& nc) const { return nc.execute(*this); }
         Result<void> command() const { return nc_->command_typed(*this); }
         Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
+
+#ifdef ARDUINO
+        /// Arduino Printable: prints the JSON request to Serial or any Print stream.
+        size_t printTo(Print& p) const {
+            size_t n = p.print("{\"req\":\"");
+            n += p.print(notecard_request.data());
+            n += p.print("\"");
+            if (minutes) {
+                n += p.print(",\"minutes\":");
+                n += note::detail::print_json_value(p, *minutes);
+            }
+            if (status) {
+                n += p.print(",\"status\":");
+                n += note::detail::print_json_value(p, *status);
+            }
+            if (stop) {
+                n += p.print(",\"stop\":");
+                n += note::detail::print_json_value(p, *stop);
+            }
+            if (sync) {
+                n += p.print(",\"sync\":");
+                n += note::detail::print_json_value(p, *sync);
+            }
+            n += p.print("}");
+            return n;
+        }
+#endif
 
     };
     using Set = Configure;  ///< @deprecated Use Configure instead.
@@ -424,13 +555,13 @@ struct CardTemp {
 
 
         template<typename T>
-        auto& extra(note::string_view key, T value) {
+        auto& extra(note::string_view k_, T v_) {
             if (extras_count_ < NOTE_EXTRAS_MAX)
-                extras_[extras_count_++] = {key, note::DynValue{value}};
+                extras_[extras_count_++] = {k_, note::DynValue{v_}};
             return *this;
         }
-        auto& extra(note::string_view key, const char* value) {
-            return extra(key, note::string_view{value});
+        auto& extra(note::string_view k_, const char* v_) {
+            return extra(k_, note::string_view{v_});
         }
 
         note::DynField operator[](note::string_view k_) {
@@ -507,20 +638,58 @@ struct CardTemp {
             struct Sink : ::note::JsonSink {
                 Response& rsp;
                 explicit Sink(Response& r) : rsp(r) {}
-                void on_bool(::note::string_view key, bool val) override {
-                    if (key == "usb") { rsp.usb = val; return; }
+                void on_bool(::note::string_view k_, bool v_) override {
+                    if (k_ == "usb") { rsp.usb = v_; return; }
                 }
-                void on_number(::note::string_view key, ::note::string_view raw) override {
-                    if (key == "calibration") { rsp.calibration = ::note::parse_double(raw); return; }
-                    if (key == "humidity") { rsp.humidity = ::note::parse_double(raw); return; }
-                    if (key == "pressure") { rsp.pressure = ::note::parse_double(raw); return; }
-                    if (key == "temperature") { rsp.temperature = ::note::parse_double(raw); return; }
-                    if (key == "value") { rsp.value = ::note::parse_double(raw); return; }
-                    if (key == "voltage") { rsp.voltage = ::note::parse_double(raw); return; }
+                void on_number(::note::string_view k_, ::note::string_view raw_) override {
+                    if (k_ == "calibration") { rsp.calibration = ::note::parse_double(raw_); return; }
+                    if (k_ == "humidity") { rsp.humidity = ::note::parse_double(raw_); return; }
+                    if (k_ == "pressure") { rsp.pressure = ::note::parse_double(raw_); return; }
+                    if (k_ == "temperature") { rsp.temperature = ::note::parse_double(raw_); return; }
+                    if (k_ == "value") { rsp.value = ::note::parse_double(raw_); return; }
+                    if (k_ == "voltage") { rsp.voltage = ::note::parse_double(raw_); return; }
                 }
             };
 
             void intern_strings(::note::StringPool&) {}
+
+#ifdef ARDUINO
+            /// Arduino Printable: prints response fields to Serial or any Print stream.
+            size_t printTo(Print& p) const {
+                size_t n = p.print("{");
+                bool first_ = true;
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"calibration\":");
+                n += note::detail::print_json_value(p, calibration.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"humidity\":");
+                n += note::detail::print_json_value(p, humidity.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"pressure\":");
+                n += note::detail::print_json_value(p, pressure.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"temperature\":");
+                n += note::detail::print_json_value(p, temperature.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"usb\":");
+                n += note::detail::print_json_value(p, usb.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"value\":");
+                n += note::detail::print_json_value(p, value.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"voltage\":");
+                n += note::detail::print_json_value(p, voltage.value());
+                n += p.print("}");
+                return n;
+            }
+#endif
 
         private:
             std::unique_ptr<JsonReader> reader_;
@@ -540,6 +709,29 @@ struct CardTemp {
         auto execute(Notecard& nc) const { return nc.execute(*this); }
         Result<void> command() const { return nc_->command_typed(*this); }
         Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
+
+#ifdef ARDUINO
+        /// Arduino Printable: prints the JSON request to Serial or any Print stream.
+        size_t printTo(Print& p) const {
+            size_t n = p.print("{\"req\":\"");
+            n += p.print(notecard_request.data());
+            n += p.print("\"");
+            if (minutes) {
+                n += p.print(",\"minutes\":");
+                n += note::detail::print_json_value(p, *minutes);
+            }
+            if (status) {
+                n += p.print(",\"status\":");
+                n += note::detail::print_json_value(p, *status);
+            }
+            if (sync) {
+                n += p.print(",\"sync\":");
+                n += note::detail::print_json_value(p, *sync);
+            }
+            n += p.print("}");
+            return n;
+        }
+#endif
 
     };
     using Delete = Stop;  ///< @deprecated Use Stop instead.

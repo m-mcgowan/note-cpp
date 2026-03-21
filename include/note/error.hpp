@@ -11,6 +11,8 @@ namespace note {
 /// Phase-based error category — tells the caller what happened and whether
 /// retrying is safe, not just what symptom was observed.
 enum class Error : uint8_t {
+    /// No error — default state.
+    NoError,
     /// Request never reached the Notecard — always safe to retry.
     SendFailed,
     /// Notecard may have processed the request but we couldn't read the
@@ -49,9 +51,15 @@ struct ErrorInfo
     : public Printable
 #endif
 {
-    Error code;
+    Error code{};
     Cause cause{};
     std::string_view message;
+
+    ErrorInfo() = default;
+    constexpr ErrorInfo(Error c, Cause ca, std::string_view m)
+        : code(c), cause(ca), message(m) {}
+    constexpr ErrorInfo(Error c, std::string_view m)
+        : code(c), message(m) {}
 
 #ifdef ARDUINO
     /// Arduino Printable support — allows Serial.println(result.error()).
@@ -61,6 +69,7 @@ struct ErrorInfo
 
 constexpr std::string_view to_string(Error e) {
     switch (e) {
+    case Error::NoError:      return "no_error";
     case Error::SendFailed:   return "send_failed";
     case Error::ResponseLost: return "response_lost";
     case Error::Notecard:     return "notecard";

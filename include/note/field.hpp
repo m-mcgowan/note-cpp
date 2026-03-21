@@ -81,12 +81,13 @@ struct RequestField : std::optional<T> {
 };
 
 
-/// Read-only optional field for parsed responses.
-/// Unset (has_value() == false) means the field was not present in the JSON response.
-/// Populated during parse, then immutable.
+/// Value wrapper for parsed response fields.
+/// Holds a T with implicit conversion, so `r.version` and `r.connected`
+/// work naturally. No optional overhead — default-initialized if absent
+/// from the JSON response.
 template<typename T>
-struct ResponseField : std::optional<T> {
-    using std::optional<T>::optional;
+struct ResponseField {
+    T value_{};
 
     constexpr ResponseField() = default;
     constexpr ResponseField(const ResponseField&) = default;
@@ -94,54 +95,59 @@ struct ResponseField : std::optional<T> {
     constexpr ResponseField& operator=(const ResponseField&) = default;
     constexpr ResponseField& operator=(ResponseField&&) = default;
 
-    // Construction/assignment from value — used by parse code.
-#if __cplusplus >= 202002L
-    template<typename U>
-        requires std::is_convertible_v<U, T> && (!std::is_same_v<std::decay_t<U>, ResponseField>)
-    ResponseField& operator=(U&& v) { std::optional<T>::operator=(T(std::forward<U>(v))); return *this; }
-#else
+    // Assignment from value — used by parse code.
     template<typename U, std::enable_if_t<
         std::is_convertible_v<U, T> && !std::is_same_v<std::decay_t<U>, ResponseField>, int> = 0>
-    ResponseField& operator=(U&& v) { std::optional<T>::operator=(T(std::forward<U>(v))); return *this; }
-#endif
+    ResponseField& operator=(U&& v) { value_ = T(std::forward<U>(v)); return *this; }
 
     /// Implicit conversion to const T& for ergonomic reads.
-    /// Unlike RequestField, this works for ALL types including bool —
-    /// ResponseField is always-populated in normal use, so the ambiguity
-    /// with optional's operator bool is less of a concern. Users check
-    /// has_value() explicitly when they need to know if the field was
-    /// present in the response.
-    operator const T&() const { return **this; }
+    operator const T&() const { return value_; }
 
     /// Arrow operator for calling methods on the underlying value.
-    /// Enables: rsp.version->find("foo") instead of (*rsp.version).find("foo")
-    const T* operator->() const { return &(**this); }
+    const T* operator->() const { return &value_; }
 
-    /// Explicit value access — useful when implicit conversion can't chain
-    /// (e.g. returning ResponseField<bool> where Result<bool> is expected).
-    const T& value() const { return **this; }
+    /// Explicit value access.
+    const T& value() const { return value_; }
 
-    // Forward common string_view methods so rsp.field.size() / .data() /
-    // .empty() / .find() work without dereferencing.
+    /// Comparison operators — compare the underlying value.
+    friend bool operator==(const ResponseField& lhs, const ResponseField& rhs) { return lhs.value_ == rhs.value_; }
+    friend bool operator!=(const ResponseField& lhs, const ResponseField& rhs) { return lhs.value_ != rhs.value_; }
+
+    template<typename U>
+    friend bool operator==(const ResponseField& lhs, const U& rhs) { return lhs.value_ == rhs; }
+    template<typename U>
+    friend bool operator!=(const ResponseField& lhs, const U& rhs) { return lhs.value_ != rhs; }
+    template<typename U>
+    friend bool operator==(const U& lhs, const ResponseField& rhs) { return lhs == rhs.value_; }
+    template<typename U>
+    friend bool operator!=(const U& lhs, const ResponseField& rhs) { return lhs != rhs.value_; }
+
+    // Forward common string_view methods.
     template<typename U = T>
-    auto size() const -> decltype(std::declval<const U&>().size()) {
-        return (**this).size();
-    }
+    auto size() const -> decltype(std::declval<const U&>().size()) { return value_.size(); }
     template<typename U = T>
-    auto data() const -> decltype(std::declval<const U&>().data()) {
-        return (**this).data();
-    }
+    auto data() const -> decltype(std::declval<const U&>().data()) { return value_.data(); }
     template<typename U = T>
-    auto empty() const -> decltype(std::declval<const U&>().empty()) {
-        return (**this).empty();
-    }
+    auto empty() const -> decltype(std::declval<const U&>().empty()) { return value_.empty(); }
     template<typename U = T, typename... Args>
     auto find(Args&&... args) const -> decltype(std::declval<const U&>().find(std::forward<Args>(args)...)) {
-        return (**this).find(std::forward<Args>(args)...);
+        return value_.find(std::forward<Args>(args)...);
     }
 
 #ifdef ARDUINO
-    size_t printTo(Print& p) const { return detail::print_field(p, *this); }
+    size_t printTo(Print& p) const {
+        if constexpr (std::is_same_v<T, bool>) {
+            return p.print(value_ ? "true" : "false");
+        } else if constexpr (std::is_same_v<T, std::string_view>) {
+            return p.write(reinterpret_cast<const uint8_t*>(value_.data()), value_.size());
+        } else if constexpr (std::is_integral_v<T>) {
+            return p.print(static_cast<long>(value_));
+        } else if constexpr (std::is_floating_point_v<T>) {
+            return p.print(static_cast<double>(value_));
+        } else {
+            return 0;
+        }
+    }
 #endif
 };
 

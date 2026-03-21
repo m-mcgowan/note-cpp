@@ -6,6 +6,7 @@
 #include <note/json.hpp>
 #include <note/json_sax.hpp>
 #include <note/notecard.hpp>
+#include <note/print.hpp>
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
@@ -30,9 +31,8 @@ struct DfuGet {
     static constexpr Safety safety = Safety::ReadOnly;
     static constexpr Skus skus{ Rat::Cell | Rat::WiFi | Rat::Ntn };
 
-    struct BinaryTransfer {
-        static constexpr string_view direction = "receive";
-        static constexpr string_view encoding = "cobs";
+    struct BinaryBuffer {
+        static constexpr Direction direction = Direction::Receive;
     };
 
     Notecard* nc_ = nullptr;
@@ -66,13 +66,13 @@ struct DfuGet {
 
 
     template<typename T>
-    auto& extra(note::string_view key, T value) {
+    auto& extra(note::string_view k_, T v_) {
         if (extras_count_ < NOTE_EXTRAS_MAX)
-            extras_[extras_count_++] = {key, note::DynValue{value}};
+            extras_[extras_count_++] = {k_, note::DynValue{v_}};
         return *this;
     }
-    auto& extra(note::string_view key, const char* value) {
-        return extra(key, note::string_view{value});
+    auto& extra(note::string_view k_, const char* v_) {
+        return extra(k_, note::string_view{v_});
     }
 
     note::DynField operator[](note::string_view k_) {
@@ -137,20 +137,46 @@ struct DfuGet {
         struct Sink : ::note::JsonSink {
             Response& rsp;
             explicit Sink(Response& r) : rsp(r) {}
-            void on_string(::note::string_view key, ::note::string_view val) override {
-                if (key == "payload") { rsp.payload = val; return; }
-                if (key == "status") { rsp.status = val; return; }
+            void on_string(::note::string_view k_, ::note::string_view v_) override {
+                if (k_ == "payload") { rsp.payload = v_; return; }
+                if (k_ == "status") { rsp.status = v_; return; }
             }
-            void on_number(::note::string_view key, ::note::string_view raw) override {
-                if (key == "cobs") { rsp.cobs = ::note::parse_int(raw); return; }
-                if (key == "length") { rsp.length = ::note::parse_int(raw); return; }
+            void on_number(::note::string_view k_, ::note::string_view raw_) override {
+                if (k_ == "cobs") { rsp.cobs = ::note::parse_int(raw_); return; }
+                if (k_ == "length") { rsp.length = ::note::parse_int(raw_); return; }
             }
         };
 
         void intern_strings(::note::StringPool& pool) {
-            if (payload && !(*payload).empty()) payload = pool.intern(*payload);
-            if (status && !(*status).empty()) status = pool.intern(*status);
+            if (!payload.empty()) payload = pool.intern(payload);
+            if (!status.empty()) status = pool.intern(status);
         }
+
+#ifdef ARDUINO
+        /// Arduino Printable: prints response fields to Serial or any Print stream.
+        size_t printTo(Print& p) const {
+            size_t n = p.print("{");
+            bool first_ = true;
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"cobs\":");
+            n += note::detail::print_json_value(p, cobs.value());
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"length\":");
+            n += note::detail::print_json_value(p, length.value());
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"payload\":");
+            n += note::detail::print_json_value(p, payload.value());
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"status\":");
+            n += note::detail::print_json_value(p, status.value());
+            n += p.print("}");
+            return n;
+        }
+#endif
 
     private:
         std::unique_ptr<JsonReader> reader_;
@@ -169,6 +195,29 @@ struct DfuGet {
     auto execute(Notecard& nc) const { return nc.execute(*this); }
     Result<void> command() const { return nc_->command_typed(*this); }
     Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
+
+#ifdef ARDUINO
+    /// Arduino Printable: prints the JSON request to Serial or any Print stream.
+    size_t printTo(Print& p) const {
+        size_t n = p.print("{\"req\":\"");
+        n += p.print(notecard_request.data());
+        n += p.print("\"");
+        if (binary) {
+            n += p.print(",\"binary\":");
+            n += note::detail::print_json_value(p, *binary);
+        }
+        if (length) {
+            n += p.print(",\"length\":");
+            n += note::detail::print_json_value(p, *length);
+        }
+        if (offset) {
+            n += p.print(",\"offset\":");
+            n += note::detail::print_json_value(p, *offset);
+        }
+        n += p.print("}");
+        return n;
+    }
+#endif
 
 };
 

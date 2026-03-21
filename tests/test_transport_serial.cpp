@@ -142,7 +142,7 @@ TEST_CASE("reset retries on non-control characters in drain") {
     // Second probe → inject clean "\r\n" (succeeds)
     ScriptedHal hal;
     int probe_count = 0;
-    hal.transmit_ok_fn = [&hal, &probe_count](int /*call*/) -> bool {
+    hal.transmit_ok_fn = [](int /*call*/) -> bool {
         // We intercept by watching what's in the tx queue via override
         return true;
     };
@@ -151,7 +151,7 @@ TEST_CASE("reset retries on non-control characters in drain") {
     // Simplest approach: use a stateful transmit that changes the response.
     int reset_probe = 0;
     ScriptedHal hal2;
-    hal2.transmit_ok_fn = [&hal2, &reset_probe](int /*call*/) -> bool {
+    hal2.transmit_ok_fn = [](int /*call*/) -> bool {
         // track in receive: handled by overriding transmit fully below
         return true;
     };
@@ -392,7 +392,6 @@ TEST_CASE("second call reuses existing connection without reset") {
     auto r1 = transport("{\"req\":\"hub.set\"}", 5000);
     REQUIRE(r1.has_value());
 
-    int probes_before = 0;
     for (auto b : hal.tx) if (b == '\n' && (&b == &hal.tx.back() || true)) { /* count */ }
     size_t tx_size_after_first = hal.tx.size();
 
@@ -402,7 +401,7 @@ TEST_CASE("second call reuses existing connection without reset") {
 
     // Second call should NOT have sent another reset probe ('\n' alone)
     // The tx from the second call should start directly with the JSON
-    std::string all_tx(hal.tx.begin() + tx_size_after_first, hal.tx.end());
+    std::string all_tx(hal.tx.begin() + static_cast<std::ptrdiff_t>(tx_size_after_first), hal.tx.end());
     REQUIRE(all_tx.front() == '{');  // starts with JSON, not reset probe
 }
 

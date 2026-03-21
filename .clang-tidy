@@ -1,0 +1,35 @@
+---
+# clang-tidy configuration for note-cpp
+#
+# Pragmatic subset — catches real bugs without excessive noise.
+# Run: clang-tidy include/note/*.hpp -- -std=c++20 -I include
+
+Checks: >
+  -*,
+  bugprone-*,
+  -bugprone-easily-swappable-parameters,
+  -bugprone-exception-escape,
+  cppcoreguidelines-init-variables,
+  cppcoreguidelines-pro-type-member-init,
+  cppcoreguidelines-slicing,
+  misc-redundant-expression,
+  misc-unused-parameters,
+  misc-unused-using-decls,
+  modernize-use-override,
+  modernize-use-nullptr,
+  modernize-use-using,
+  performance-*,
+  -performance-no-int-to-ptr,
+  readability-const-return-type,
+  readability-container-size-empty,
+  readability-implicit-bool-conversion,
+  readability-redundant-smartptr-get,
+  readability-simplify-boolean-expr,
+
+WarningsAsErrors: ''
+
+HeaderFilterRegex: 'include/note/.*'
+
+CheckOptions:
+  - key: bugprone-argument-comment.StrictMode
+    value: true

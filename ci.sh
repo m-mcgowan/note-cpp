@@ -20,7 +20,7 @@ LLVM_PROFDATA="${LLVM_PROFDATA:-$(xcrun --find llvm-profdata 2>/dev/null || echo
 
 run_ci() {
     local CXX="$1"
-    local CXXFLAGS="$2"
+    local CXXFLAGS="$2 -Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wnon-virtual-dtor -Werror"
     local INCLUDE="-I $ROOT/include"
 
     echo "════════════════════════════════════════════════════════════════"
@@ -103,7 +103,9 @@ run_ci() {
         "$ROOT/tests/test_sync.cpp" \
         "$ROOT/tests/test_templates.cpp" \
         "$ROOT/tests/test_attention.cpp" \
-        "$ROOT/tests/test_setup.cpp"
+        "$ROOT/tests/test_setup.cpp" \
+        "$ROOT/tests/test_cobs.cpp" \
+        "$ROOT/tests/test_arduino_printable.cpp"
     /tmp/note-cpp-tests
     echo "  tests: OK"
 
@@ -575,7 +577,7 @@ run_docs() {
 
 run_quick() {
     local CXX="${1:-${CXX:-c++}}"
-    local CXXFLAGS="${2:-${CXXFLAGS:--std=c++2b}}"
+    local CXXFLAGS="${2:-${CXXFLAGS:--std=c++2b}} -Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wnon-virtual-dtor -Werror"
     local INCLUDE="-I $ROOT/include"
 
     echo "════════════════════════════════════════════════════════════════"

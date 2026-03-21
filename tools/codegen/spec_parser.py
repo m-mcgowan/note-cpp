@@ -10,6 +10,7 @@ from pathlib import Path
 from .model import (
     ActionMethodDef,
     AliasDef,
+    BinaryBufferDef,
     BinaryTransferDef,
     EndpointGroup,
     ImplicitFieldDef,
@@ -295,6 +296,16 @@ def _parse_binary_transfer(bt: dict | None) -> BinaryTransferDef | None:
     )
 
 
+def _parse_binary_buffer(bb: dict | None) -> BinaryBufferDef | None:
+    """Parse x-binary-buffer extension."""
+    if not bb:
+        return None
+    return BinaryBufferDef(
+        direction=bb["direction"],
+        when=bb.get("when"),
+    )
+
+
 def _parse_operation(op: dict, *, suffix: str | None = None) -> OperationDef:
     """Parse a single OpenAPI operation into an OperationDef."""
     notecard_request = op["x-notecard-request"]
@@ -344,6 +355,7 @@ def _parse_operation(op: dict, *, suffix: str | None = None) -> OperationDef:
         ),
         dispatch=dispatch,
         binary_transfer=_parse_binary_transfer(op.get("x-binary-transfer")),
+        binary_buffer=_parse_binary_buffer(op.get("x-binary-buffer")),
         skus=op.get("x-skus", []),
         description=op.get("summary", ""),
         legacy_struct_name=legacy_struct_name,
@@ -431,6 +443,7 @@ def _expand_intents(
             ),
             dispatch=base_op.dispatch,
             binary_transfer=base_op.binary_transfer,
+            binary_buffer=base_op.binary_buffer,
             skus=base_op.skus,
             implicit_fields=implicit_fields,
             description=intent.get("description", base_op.description),

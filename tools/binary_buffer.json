@@ -1,0 +1,21 @@
+{
+  "$comment": "Endpoints that use the card.binary buffer as an intermediary for binary data. These requests are JSON-only — no raw bytes are streamed directly. The host manages the buffer via card.binary.put/get. 'direction' is relative to the host and the buffer: 'send' = host fills buffer before this request (Notecard reads from it), 'receive' = Notecard fills buffer after this request (host reads via card.binary.get). 'when' specifies the request field condition under which binary buffer involvement applies.",
+
+  "dfu.get": {
+    "direction": "receive",
+    "when": { "binary": true }
+  },
+  "note.add": {
+    "direction": "send",
+    "when": { "binary": true }
+  },
+  "web.get": {
+    "direction": "receive"
+  },
+  "web.put": {
+    "direction": "send"
+  },
+  "web.post": {
+    "direction": "send"
+  }
+}

@@ -7,6 +7,7 @@
 #include <note/json.hpp>
 #include <note/json_sax.hpp>
 #include <note/notecard.hpp>
+#include <note/print.hpp>
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
@@ -139,13 +140,13 @@ struct NoteTemplate {
 
 
         template<typename T>
-        auto& extra(note::string_view key, T value) {
+        auto& extra(note::string_view k_, T v_) {
             if (extras_count_ < NOTE_EXTRAS_MAX)
-                extras_[extras_count_++] = {key, note::DynValue{value}};
+                extras_[extras_count_++] = {k_, note::DynValue{v_}};
             return *this;
         }
-        auto& extra(note::string_view key, const char* value) {
-            return extra(key, note::string_view{value});
+        auto& extra(note::string_view k_, const char* v_) {
+            return extra(k_, note::string_view{v_});
         }
 
         note::DynField operator[](note::string_view k_) {
@@ -252,19 +253,19 @@ struct NoteTemplate {
             struct Sink : ::note::JsonSink {
                 Response& rsp;
                 explicit Sink(Response& r) : rsp(r) {}
-                void on_string(::note::string_view key, ::note::string_view val) override {
+                void on_string(::note::string_view k_, ::note::string_view v_) override {
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
-                    if (key == "format") { rsp.format = val; return; }
+                    if (k_ == "format") { rsp.format = v_; return; }
 #endif
                 }
-                void on_bool(::note::string_view key, bool val) override {
+                void on_bool(::note::string_view k_, bool v_) override {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
-                    if (key == "template") { rsp.template_ = val; return; }
+                    if (k_ == "template") { rsp.template_ = v_; return; }
 #endif
                 }
-                void on_number(::note::string_view key, ::note::string_view raw) override {
-                    if (key == "bytes") { rsp.bytes = ::note::parse_int(raw); return; }
-                    if (key == "length") { rsp.length = ::note::parse_int(raw); return; }
+                void on_number(::note::string_view k_, ::note::string_view raw_) override {
+                    if (k_ == "bytes") { rsp.bytes = ::note::parse_int(raw_); return; }
+                    if (k_ == "length") { rsp.length = ::note::parse_int(raw_); return; }
                 }
             };
 #pragma GCC diagnostic pop
@@ -273,10 +274,40 @@ struct NoteTemplate {
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
             void intern_strings(::note::StringPool& pool) {
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
-                if (format && !(*format).empty()) format = pool.intern(*format);
+                if (!format.empty()) format = pool.intern(format);
 #endif
             }
 #pragma GCC diagnostic pop
+
+#ifdef ARDUINO
+            /// Arduino Printable: prints response fields to Serial or any Print stream.
+            size_t printTo(Print& p) const {
+                size_t n = p.print("{");
+                bool first_ = true;
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"bytes\":");
+                n += note::detail::print_json_value(p, bytes.value());
+#if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"format\":");
+                n += note::detail::print_json_value(p, format.value());
+#endif
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"length\":");
+                n += note::detail::print_json_value(p, length.value());
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"template\":");
+                n += note::detail::print_json_value(p, template_.value());
+#endif
+                n += p.print("}");
+                return n;
+            }
+#endif
 
         private:
             std::unique_ptr<JsonReader> reader_;
@@ -323,6 +354,43 @@ struct NoteTemplate {
         auto execute(Notecard& nc) const { return nc.execute(*this); }
         Result<void> command() const { return nc_->command_typed(*this); }
         Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
+
+#ifdef ARDUINO
+        /// Arduino Printable: prints the JSON request to Serial or any Print stream.
+        size_t printTo(Print& p) const {
+            size_t n = p.print("{\"req\":\"");
+            n += p.print(notecard_request.data());
+            n += p.print("\"");
+            if (delete_) {
+                n += p.print(",\"delete\":");
+                n += note::detail::print_json_value(p, *delete_);
+            }
+            n += p.print(",\"file\":");
+            n += note::detail::print_json_value(p, file);
+#if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
+            if (format) {
+                n += p.print(",\"format\":");
+                n += note::detail::print_json_value(p, *format);
+            }
+#endif
+            if (length) {
+                n += p.print(",\"length\":");
+                n += note::detail::print_json_value(p, *length);
+            }
+            if (port) {
+                n += p.print(",\"port\":");
+                n += note::detail::print_json_value(p, *port);
+            }
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
+            if (verify) {
+                n += p.print(",\"verify\":");
+                n += note::detail::print_json_value(p, *verify);
+            }
+#endif
+            n += p.print("}");
+            return n;
+        }
+#endif
 
     };
     using Set = Define;  ///< @deprecated Use Define instead.
@@ -426,13 +494,13 @@ struct NoteTemplate {
 
 
         template<typename T>
-        auto& extra(note::string_view key, T value) {
+        auto& extra(note::string_view k_, T v_) {
             if (extras_count_ < NOTE_EXTRAS_MAX)
-                extras_[extras_count_++] = {key, note::DynValue{value}};
+                extras_[extras_count_++] = {k_, note::DynValue{v_}};
             return *this;
         }
-        auto& extra(note::string_view key, const char* value) {
-            return extra(key, note::string_view{value});
+        auto& extra(note::string_view k_, const char* v_) {
+            return extra(k_, note::string_view{v_});
         }
 
         note::DynField operator[](note::string_view k_) {
@@ -538,19 +606,19 @@ struct NoteTemplate {
             struct Sink : ::note::JsonSink {
                 Response& rsp;
                 explicit Sink(Response& r) : rsp(r) {}
-                void on_string(::note::string_view key, ::note::string_view val) override {
+                void on_string(::note::string_view k_, ::note::string_view v_) override {
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
-                    if (key == "format") { rsp.format = val; return; }
+                    if (k_ == "format") { rsp.format = v_; return; }
 #endif
                 }
-                void on_bool(::note::string_view key, bool val) override {
+                void on_bool(::note::string_view k_, bool v_) override {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
-                    if (key == "template") { rsp.template_ = val; return; }
+                    if (k_ == "template") { rsp.template_ = v_; return; }
 #endif
                 }
-                void on_number(::note::string_view key, ::note::string_view raw) override {
-                    if (key == "bytes") { rsp.bytes = ::note::parse_int(raw); return; }
-                    if (key == "length") { rsp.length = ::note::parse_int(raw); return; }
+                void on_number(::note::string_view k_, ::note::string_view raw_) override {
+                    if (k_ == "bytes") { rsp.bytes = ::note::parse_int(raw_); return; }
+                    if (k_ == "length") { rsp.length = ::note::parse_int(raw_); return; }
                 }
             };
 #pragma GCC diagnostic pop
@@ -559,10 +627,40 @@ struct NoteTemplate {
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
             void intern_strings(::note::StringPool& pool) {
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
-                if (format && !(*format).empty()) format = pool.intern(*format);
+                if (!format.empty()) format = pool.intern(format);
 #endif
             }
 #pragma GCC diagnostic pop
+
+#ifdef ARDUINO
+            /// Arduino Printable: prints response fields to Serial or any Print stream.
+            size_t printTo(Print& p) const {
+                size_t n = p.print("{");
+                bool first_ = true;
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"bytes\":");
+                n += note::detail::print_json_value(p, bytes.value());
+#if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"format\":");
+                n += note::detail::print_json_value(p, format.value());
+#endif
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"length\":");
+                n += note::detail::print_json_value(p, length.value());
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"template\":");
+                n += note::detail::print_json_value(p, template_.value());
+#endif
+                n += p.print("}");
+                return n;
+            }
+#endif
 
         private:
             std::unique_ptr<JsonReader> reader_;
@@ -609,6 +707,39 @@ struct NoteTemplate {
         auto execute(Notecard& nc) const { return nc.execute(*this); }
         Result<void> command() const { return nc_->command_typed(*this); }
         Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
+
+#ifdef ARDUINO
+        /// Arduino Printable: prints the JSON request to Serial or any Print stream.
+        size_t printTo(Print& p) const {
+            size_t n = p.print("{\"req\":\"");
+            n += p.print(notecard_request.data());
+            n += p.print("\"");
+            n += p.print(",\"file\":");
+            n += note::detail::print_json_value(p, file);
+#if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
+            if (format) {
+                n += p.print(",\"format\":");
+                n += note::detail::print_json_value(p, *format);
+            }
+#endif
+            if (length) {
+                n += p.print(",\"length\":");
+                n += note::detail::print_json_value(p, *length);
+            }
+            if (port) {
+                n += p.print(",\"port\":");
+                n += note::detail::print_json_value(p, *port);
+            }
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
+            if (verify) {
+                n += p.print(",\"verify\":");
+                n += note::detail::print_json_value(p, *verify);
+            }
+#endif
+            n += p.print("}");
+            return n;
+        }
+#endif
 
     };
     using Delete = Remove;  ///< @deprecated Use Remove instead.

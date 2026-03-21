@@ -327,9 +327,7 @@ TEST_CASE("card.binary put + get — 512-byte payload") {
 TEST_CASE("bad request returns Notecard error") {
     Fixture f;
     auto& nc = f.nc;
-    auto rsp = nc.note.get().pop()
-        .file("nonexistent-file.qi")
-        .execute();
+    auto rsp = nc.note.pop("nonexistent-file.qi").execute();
     CHECK(!rsp);
     if (!rsp) {
         CHECK(rsp.error().code == note::Error::Notecard);

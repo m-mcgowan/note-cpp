@@ -1,5 +1,7 @@
 # API Design
 
+> **Internal design document.** This is for contributors working on `note-cpp` itself. If you are using the library, see the [API reference](https://blues.github.io/note-cpp) and the examples in `docs/`.
+
 This document describes the two-layer API design for `note-cpp` and how it relates to the Notecard wire protocol and other SDKs like `note-python`.
 
 ## Background
@@ -125,40 +127,58 @@ Layer 2 adds semantic helper methods that map user intent to the correct wire-le
 
 ### Resource groups
 
-Layer 2 methods live on the same group objects as Layer 1. Naming uses intent verbs rather than wire-protocol field names:
+Layer 2 methods live on the same group objects as Layer 1. Polymorphic endpoints use an intermediate factory object; Layer 2 shortcuts are also available directly on the group.
 
 ```cpp
 // ── Notes ────────────────────────────────────────────────────────────────
-api.note.get()                      // Layer 1: full note.get builder
+api.note.get()                      // Layer 1: full note.get builder (all fields)
 api.note.read("data.qi")            // Layer 2: → note.get, file pre-set
-api.note.pop("data.qi")             // Layer 2: → note.get + delete:true
-api.note.delete_("x.db", "id")     // Layer 1: note.delete (separate req)
+api.note.pop("data.qi")             // Layer 2: → note.get + delete:true, file pre-set
+api.note.remove("x.db", "id")      // Layer 2: → note.delete, file+noteId pre-set
 api.note.add()                      // Layer 1: note.add
-api.note.changes()                  // Layer 1: full note.changes builder
-api.note.popChanges("data.qi")     // Layer 2: → note.changes + delete:true
+api.note.changes().peek()           // → note.changes (read-only via factory)
+api.note.popChanges("data.qi")      // Layer 2: → note.changes + delete:true, file pre-set
 
 // ── Binary ───────────────────────────────────────────────────────────────
-api.card.binary()                   // Layer 1: full card.binary builder
-api.card.binaryStatus()             // Layer 2: → card.binary (read-only, no delete)
-api.card.binaryClear()              // Layer 2: → card.binary + delete:true
+api.binary.status()                 // Layer 2: → card.binary (read-only)
+api.binary.clear()                  // Layer 2: → card.binary + delete:true
+api.card.binary().status()          // same, via card group factory
 api.card.binaryGet()                // Layer 1: card.binary.get (separate req)
 api.card.binaryPut()                // Layer 1: card.binary.put (separate req)
 
 // ── Temperature ──────────────────────────────────────────────────────────
-api.card.temp()                     // Layer 1: full card.temp builder
-api.card.readTemp()                 // Layer 2: → card.temp (read-only)
-api.card.stopTemp()                 // Layer 2: → card.temp + stop:true
+api.card.temp().read()              // → card.temp (read-only)
+api.card.temp().configure()         // → card.temp (start/configure periodic logging)
+api.card.temp().stop()              // → card.temp + stop:true
 
 // ── Location ─────────────────────────────────────────────────────────────
-api.card.locationMode()             // Layer 1: full card.location.mode builder
-api.card.readLocationMode()         // Layer 2: → card.location.mode (read-only)
-api.card.resetLocationMode()        // Layer 2: → card.location.mode + delete:true
+api.card.locationMode().get()       // → card.location.mode (read current mode)
+api.card.locationMode().configure() // → card.location.mode (set mode/seconds)
+api.card.locationMode().remove()    // → card.location.mode + delete:true
 
 // ── Environment variables ────────────────────────────────────────────────
-api.env.default_("name")            // Layer 1: full env.default builder
-api.env.setDefault("name", "text")  // Layer 2: → env.default + text pre-set
-api.env.clearDefault("name")        // Layer 2: → env.default, no text (= delete)
+api.env.defaults().set()            // Layer 1: full env.default builder (set)
+api.env.setDefault("name", "text")  // Layer 2: → env.default, name+text pre-set
+api.env.clearDefault("name")        // Layer 2: → env.default, name pre-set, no text (= delete)
 ```
+
+### Calling forms
+
+Layer 2 methods that take required args support three equivalent calling styles:
+
+```cpp
+// 1. Direct argument — most concise, good for literal strings
+api.note.pop("data.qi").execute();
+
+// 2. Designated initializer (C++20) — good for variables and multiple fields
+api.note.read({.file = filename}).execute();
+api.env.setDefault({.name = "var", .text = "value"}).execute();
+
+// 3. Builder chaining via factory — useful when adding further options
+api.note.get().pop().file("data.qi").noteId("my-note").execute();
+```
+
+The `Args` structs (`PopArgs`, `ReadArgs`, `RemoveArgs`, etc.) are also exported from the group for use with designated init. Under C++20 the overload is a duck-typed template accepting any struct with the right field names; under C++17 it accepts the concrete `Args` struct.
 
 ### Verb vocabulary
 
@@ -224,30 +244,30 @@ auto pop(string_view file) {
 | `card.attn()` | `card.attn` | |
 | `card.aux()` | `card.aux` | |
 | `card.auxSerial()` | `card.aux.serial` | |
-| `card.binary()` | `card.binary` | `binaryStatus()`, `binaryClear()` |
+| `card.binary()` | `card.binary` | `binary.status()`, `binary.clear()` |
 | `card.binaryGet()` | `card.binary.get` | |
 | `card.binaryPut()` | `card.binary.put` | |
 | `card.carrier()` | `card.carrier` | |
-| `card.contact()` | `card.contact` | `readContact()`, `setContact(...)` |
+| `card.contact()` | `card.contact` | `.get()`, `.set()` |
 | `card.dfu()` | `card.dfu` | |
 | `card.illumination()` | `card.illumination` | |
 | `card.io()` | `card.io` | |
 | `card.led()` | `card.led` | |
 | `card.location()` | `card.location` | |
-| `card.locationMode()` | `card.location.mode` | `readLocationMode()`, `resetLocationMode()` |
+| `card.locationMode()` | `card.location.mode` | `.get()`, `.configure()`, `.remove()` |
 | `card.locationTrack()` | `card.location.track` | |
 | `card.monitor()` | `card.monitor` | |
 | `card.motion()` | `card.motion` | |
 | `card.motionMode()` | `card.motion.mode` | |
 | `card.motionSync()` | `card.motion.sync` | |
 | `card.motionTrack()` | `card.motion.track` | |
-| `card.power()` | `card.power` | `readPower()`, `resetPower()` |
+| `card.power()` | `card.power` | `.read()`, `.configure()`, `.reset()` |
 | `card.random()` | `card.random` | |
 | `card.restart()` | `card.restart` | |
 | `card.restore()` | `card.restore` | |
 | `card.sleep()` | `card.sleep` | |
 | `card.status()` | `card.status` | |
-| `card.temp()` | `card.temp` | `readTemp()`, `stopTemp()` |
+| `card.temp()` | `card.temp` | `.read()`, `.configure()`, `.stop()` |
 | `card.time()` | `card.time` | |
 | `card.trace()` | `card.trace` | |
 | `card.transport()` | `card.transport` | |
@@ -255,10 +275,10 @@ auto pop(string_view file) {
 | `card.usageGet()` | `card.usage.get` | |
 | `card.usageTest()` | `card.usage.test` | |
 | `card.version()` | `card.version` | |
-| `card.voltage()` | `card.voltage` | `readVoltage()` |
+| `card.voltage()` | `card.voltage` | `.read()`, `.configure()` |
 | `card.wifi()` | `card.wifi` | |
 | `card.wireless()` | `card.wireless` | |
-| `card.wirelessPenalty()` | `card.wireless.penalty` | `readWirelessPenalty()`, `resetWirelessPenalty()` |
+| `card.wirelessPenalty()` | `card.wireless.penalty` | `.check()`, `.override_()`, `.clear()` |
 
 ### `hub` group
 
@@ -277,17 +297,17 @@ auto pop(string_view file) {
 | Layer 1 method | `req` string | Layer 2 aliases |
 |---|---|---|
 | `note.add()` | `note.add` | |
-| `note.changes()` | `note.changes` | `popChanges(file)` |
-| `note.delete_(file, id)` | `note.delete` | |
-| `note.get()` | `note.get` | `read(file)`, `pop(file)` |
-| `note.template_()` | `note.template` | `clearTemplate(file)` |
+| `note.changes()` | `note.changes` | `.peek()`, `.pop(file)` · `popChanges(file)` |
+| `note.remove(file, id)` | `note.delete` | |
+| `note.get()` | `note.get` | `.read()`, `.pop()` · `read(file)`, `pop(file)` |
+| `note.templates()` | `note.template` | `.define(file)`, `.remove(file)` |
 | `note.update()` | `note.update` | |
 
 ### `env` group
 
 | Layer 1 method | `req` string | Layer 2 aliases |
 |---|---|---|
-| `env.default_("name")` | `env.default` | `setDefault(name, text)`, `clearDefault(name)` |
+| `env.defaults()` | `env.default` | `.set()`, `.remove(name)` · `setDefault(name, text)`, `clearDefault(name)` |
 | `env.get()` | `env.get` | |
 | `env.modified()` | `env.modified` | |
 | `env.set("name")` | `env.set` | |
@@ -321,49 +341,3 @@ auto pop(string_view file) {
 | `web.post()` | `web.post` |
 | `web.put()` | `web.put` |
 
-## Migration from current API
-
-The current API uses flat methods on `Api`:
-
-```cpp
-// Current (Layer 0 — being replaced)
-api.cardVersion()                          // non-polymorphic
-api.cardLocationMode().get()               // polymorphic factory
-api.getCardLocationMode()                  // polymorphic flat shortcut
-api.noteGet().delete_().file("data.qi")    // polymorphic factory
-
-// New Layer 1 (matches note-python naming)
-api.card.version()
-api.card.locationMode()                    // full builder, all fields
-api.note.get()                             // full builder, all fields
-
-// New Layer 2 (intent-driven)
-api.card.readLocationMode()
-api.note.pop("data.qi")
-```
-
-The current flat methods (`cardVersion()`, `getNoteGet()`, etc.) will be retained as deprecated aliases during transition. The polymorphic factory pattern (`noteGet().get()`, `noteGet().delete_()`) is replaced by Layer 1 (full builder) + Layer 2 (intent aliases).
-
-## Implementation plan
-
-1. **Add `x-intents` metadata to the OpenAPI spec** for all polymorphic endpoints
-2. **Generate resource group classes** (`CardGroup`, `NoteGroup`, etc.) with Layer 1 methods
-3. **Generate Layer 2 intent methods** on the same group classes from `x-intents`
-4. **Add group member objects** to `Api` (`api.card`, `api.note`, etc.)
-5. **Deprecate current flat methods** with `[[deprecated]]` pointing to new names
-6. **Update `polymorphic-apis.md`** to reference this design
-7. **Update examples** to use new naming
-
-### What stays the same
-
-- Generated request/response types (`CardVersion`, `NoteGet::Get`, etc.) are unchanged
-- `Notecard::execute()` is unchanged
-- Wire protocol is unchanged
-- All current code continues to compile (deprecated, not removed)
-
-### What changes
-
-- `Api` gains group member objects: `card`, `hub`, `note`, `env`, `file`, `dfu`, `ntn`, `var`, `web`
-- Each group object has Layer 1 methods matching note-python naming
-- Polymorphic endpoints get Layer 2 intent methods
-- Current flat methods get `[[deprecated]]`

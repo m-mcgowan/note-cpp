@@ -183,6 +183,33 @@ TEST_CASE("env.default set + get round-trip") {
     nc.env.clearDefault("_integration_test_var").execute();
 }
 
+// ─── Error handling ─────────────────────────────────────────────────────────
+
+TEST_CASE("note.add max limit produces Notecard error") {
+    Fixture f;
+    auto& nc = f.nc;
+    const char* file = "integration-err.qo";
+
+    // Clean up from any prior run
+    nc.file.delete_().files({file}).execute();
+
+    // Add first note — should succeed
+    auto r1 = nc.note.add().file(file).body(R"({"a":1})").max(1).execute();
+    if (!r1) { INFO(note::to_string(r1.error())); }
+    REQUIRE(r1);
+
+    // Add second note — should fail with a Notecard error
+    auto r2 = nc.note.add().file(file).body(R"({"a":2})").max(1).execute();
+    REQUIRE_FALSE(r2);
+    REQUIRE(r2.error().code == note::Error::Notecard);
+
+    // Log the real error string from the Notecard
+    MESSAGE("Notecard error: ", r2.error().message);
+
+    // Clean up
+    nc.file.delete_().files({file}).execute();
+}
+
 // ─── Binary data transfer ───────────────────────────────────────────────────
 //
 // The card.binary protocol differs from normal JSON request/response:

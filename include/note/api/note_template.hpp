@@ -174,7 +174,7 @@ struct NoteTemplate {
         struct Response {
             /// The number of bytes that will be transmitted to Notehub, per
             /// Note, before compression.
-            int32_t bytes{};
+            note::ResponseField<int32_t> bytes{};
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
             /// If the `format` argument is provided, this represents the format
             /// applied to the template.
@@ -183,11 +183,11 @@ struct NoteTemplate {
 #if NOTE_API_VERSION < NOTE_VERSION(6, 2, 3)
             [[deprecated("requires firmware >= 6.2.3")]]
 #endif
-            note::string_view format{};
+            note::ResponseField<note::string_view> format{};
 #endif
             /// If the `verify` argument is provided and the Notefile has an
             /// active template with a payload, the payload length.
-            int32_t length{};
+            note::ResponseField<int32_t> length{};
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
             /// `true` if an active template exists on the Notefile.
             ///
@@ -195,7 +195,7 @@ struct NoteTemplate {
 #if NOTE_API_VERSION < NOTE_VERSION(3, 2, 1)
             [[deprecated("requires firmware >= 3.2.1")]]
 #endif
-            bool template_{};
+            note::ResponseField<bool> template_{};
 #endif
 
             const JsonReader* body() const { return body_.get(); }
@@ -273,7 +273,7 @@ struct NoteTemplate {
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
             void intern_strings(::note::StringPool& pool) {
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
-                if (!format.empty()) format = pool.intern(format);
+                if (format && !(*format).empty()) format = pool.intern(*format);
 #endif
             }
 #pragma GCC diagnostic pop
@@ -460,7 +460,7 @@ struct NoteTemplate {
         struct Response {
             /// The number of bytes that will be transmitted to Notehub, per
             /// Note, before compression.
-            int32_t bytes{};
+            note::ResponseField<int32_t> bytes{};
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
             /// If the `format` argument is provided, this represents the format
             /// applied to the template.
@@ -469,11 +469,11 @@ struct NoteTemplate {
 #if NOTE_API_VERSION < NOTE_VERSION(6, 2, 3)
             [[deprecated("requires firmware >= 6.2.3")]]
 #endif
-            note::string_view format{};
+            note::ResponseField<note::string_view> format{};
 #endif
             /// If the `verify` argument is provided and the Notefile has an
             /// active template with a payload, the payload length.
-            int32_t length{};
+            note::ResponseField<int32_t> length{};
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
             /// `true` if an active template exists on the Notefile.
             ///
@@ -481,7 +481,7 @@ struct NoteTemplate {
 #if NOTE_API_VERSION < NOTE_VERSION(3, 2, 1)
             [[deprecated("requires firmware >= 3.2.1")]]
 #endif
-            bool template_{};
+            note::ResponseField<bool> template_{};
 #endif
 
             const JsonReader* body() const { return body_.get(); }
@@ -559,7 +559,7 @@ struct NoteTemplate {
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
             void intern_strings(::note::StringPool& pool) {
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
-                if (!format.empty()) format = pool.intern(format);
+                if (format && !(*format).empty()) format = pool.intern(*format);
 #endif
             }
 #pragma GCC diagnostic pop

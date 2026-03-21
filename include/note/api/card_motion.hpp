@@ -71,29 +71,29 @@ struct CardMotion {
     struct Response {
         /// `true` if the Notecard's accelerometer detected a free-fall since
         /// the last request to `card.motion`.
-        bool alert{};
+        note::ResponseField<bool> alert{};
         /// The number of accelerometer motion events since the `card.motion`
         /// request was last made.
-        int32_t count{};
+        note::ResponseField<int32_t> count{};
         /// Returns the current motion status of the Notecard (e.g. `"stopped"`
         /// or `"moving"`). Learn how to configure this feature in this guide.
-        note::string_view mode{};
+        note::ResponseField<note::string_view> mode{};
         /// Time of the last accelerometer motion event.
-        int32_t motion{};
+        note::ResponseField<int32_t> motion{};
         /// If the `minutes` argument is provided, a string of base-36
         /// characters, where each character represents the number of
         /// accelerometer movements in each bucket during the sample duration.
         /// Each character will be a digit 0-9, A-Z to indicate a count of
         /// 10-35, or `*` to indicate a count greater than 35.
-        note::string_view movements{};
+        note::ResponseField<note::string_view> movements{};
         /// If the `minutes` argument is provided, the duration of each bucket
         /// of sample accelerometer movements.
-        int32_t seconds{};
+        note::ResponseField<int32_t> seconds{};
         /// Comma-separated list of accelerometer orientation events that
         /// ocurred since the last request to `card.motion`. One or more of the
         /// following: `"face-up"`, `"face-down"`, `"portrait-up"`, `"portrait-
         /// down"`, `"landscape-right"`, `"landscape-left"`, `"angled"`.
-        note::string_view status{};
+        note::ResponseField<note::string_view> status{};
 
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
@@ -145,9 +145,9 @@ struct CardMotion {
         };
 
         void intern_strings(::note::StringPool& pool) {
-            if (!mode.empty()) mode = pool.intern(mode);
-            if (!movements.empty()) movements = pool.intern(movements);
-            if (!status.empty()) status = pool.intern(status);
+            if (mode && !(*mode).empty()) mode = pool.intern(*mode);
+            if (movements && !(*movements).empty()) movements = pool.intern(*movements);
+            if (status && !(*status).empty()) status = pool.intern(*status);
         }
 
     private:

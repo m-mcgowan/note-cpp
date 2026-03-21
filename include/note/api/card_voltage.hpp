@@ -220,22 +220,22 @@ struct CardVoltage {
         struct Response {
             /// Change of moving average in the last 24 hours, if relevant to
             /// the time period analyzed.
-            double daily{};
+            note::ResponseField<double> daily{};
             /// The number of hours used for trend analysis.
-            int32_t hours{};
+            note::ResponseField<int32_t> hours{};
             /// Represents the Notecard's uptime in minutes. This field is not
             /// present when the device is powered via USB.
-            int32_t minutes{};
+            note::ResponseField<int32_t> minutes{};
             /// The current voltage-variable threshold value returned from
             /// Notecard.
             ///
             /// For example, if the voltage threshold is
             /// `"usb:4.6;normal:3.5;dead:0"` and the power source returns a
             /// voltage of `3.9`, the mode value would be `"normal"`.
-            note::string_view mode{};
+            note::ResponseField<note::string_view> mode{};
             /// Change of moving average in the last 30 days, if relevant to the
             /// time period analyzed.
-            double monthly{};
+            note::ResponseField<double> monthly{};
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
             /// `true` if the Notecard is connected to USB power.
             ///
@@ -243,20 +243,20 @@ struct CardVoltage {
 #if NOTE_API_VERSION < NOTE_VERSION(3, 5, 1)
             [[deprecated("requires firmware >= 3.5.1")]]
 #endif
-            bool usb{};
+            note::ResponseField<bool> usb{};
 #endif
             /// The current voltage.
-            double value{};
+            note::ResponseField<double> value{};
             /// The average voltage value during the measured period.
-            double vavg{};
+            note::ResponseField<double> vavg{};
             /// The highest voltage value captured during the measurement
             /// period.
-            double vmax{};
+            note::ResponseField<double> vmax{};
             /// The lowest voltage value captured during the measurement period.
-            double vmin{};
+            note::ResponseField<double> vmin{};
             /// Change of moving average in the last 7 days, if relevant to the
             /// time period analyzed.
-            double weekly{};
+            note::ResponseField<double> weekly{};
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
@@ -337,7 +337,7 @@ struct CardVoltage {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
             void intern_strings(::note::StringPool& pool) {
-                if (!mode.empty()) mode = pool.intern(mode);
+                if (mode && !(*mode).empty()) mode = pool.intern(*mode);
             }
 #pragma GCC diagnostic pop
 
@@ -578,22 +578,22 @@ struct CardVoltage {
         struct Response {
             /// Change of moving average in the last 24 hours, if relevant to
             /// the time period analyzed.
-            double daily{};
+            note::ResponseField<double> daily{};
             /// The number of hours used for trend analysis.
-            int32_t hours{};
+            note::ResponseField<int32_t> hours{};
             /// Represents the Notecard's uptime in minutes. This field is not
             /// present when the device is powered via USB.
-            int32_t minutes{};
+            note::ResponseField<int32_t> minutes{};
             /// The current voltage-variable threshold value returned from
             /// Notecard.
             ///
             /// For example, if the voltage threshold is
             /// `"usb:4.6;normal:3.5;dead:0"` and the power source returns a
             /// voltage of `3.9`, the mode value would be `"normal"`.
-            note::string_view mode{};
+            note::ResponseField<note::string_view> mode{};
             /// Change of moving average in the last 30 days, if relevant to the
             /// time period analyzed.
-            double monthly{};
+            note::ResponseField<double> monthly{};
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
             /// `true` if the Notecard is connected to USB power.
             ///
@@ -601,20 +601,20 @@ struct CardVoltage {
 #if NOTE_API_VERSION < NOTE_VERSION(3, 5, 1)
             [[deprecated("requires firmware >= 3.5.1")]]
 #endif
-            bool usb{};
+            note::ResponseField<bool> usb{};
 #endif
             /// The current voltage.
-            double value{};
+            note::ResponseField<double> value{};
             /// The average voltage value during the measured period.
-            double vavg{};
+            note::ResponseField<double> vavg{};
             /// The highest voltage value captured during the measurement
             /// period.
-            double vmax{};
+            note::ResponseField<double> vmax{};
             /// The lowest voltage value captured during the measurement period.
-            double vmin{};
+            note::ResponseField<double> vmin{};
             /// Change of moving average in the last 7 days, if relevant to the
             /// time period analyzed.
-            double weekly{};
+            note::ResponseField<double> weekly{};
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
@@ -695,7 +695,7 @@ struct CardVoltage {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
             void intern_strings(::note::StringPool& pool) {
-                if (!mode.empty()) mode = pool.intern(mode);
+                if (mode && !(*mode).empty()) mode = pool.intern(*mode);
             }
 #pragma GCC diagnostic pop
 

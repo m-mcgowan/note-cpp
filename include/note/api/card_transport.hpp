@@ -153,7 +153,7 @@ struct CardTransport {
     /// Notecard.
     struct Response {
         /// The connectivity method currently enabled on the device.
-        note::string_view method{};
+        note::ResponseField<note::string_view> method{};
 
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
@@ -183,7 +183,7 @@ struct CardTransport {
         };
 
         void intern_strings(::note::StringPool& pool) {
-            if (!method.empty()) method = pool.intern(method);
+            if (method && !(*method).empty()) method = pool.intern(*method);
         }
 
     private:

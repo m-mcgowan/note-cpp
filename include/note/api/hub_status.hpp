@@ -58,12 +58,12 @@ struct HubStatus {
     /// Notehub.
     struct Response {
         /// `true` if the Notecard is connected to Notehub.
-        bool connected{};
+        note::ResponseField<bool> connected{};
         /// Details about the Notecard's transport (e.g. cellular, WiFi, LoRa)
         /// connection status.
         ///
         /// Use `connected` to check if the Notecard is connected to Notehub.
-        note::string_view status{};
+        note::ResponseField<note::string_view> status{};
 
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
@@ -98,7 +98,7 @@ struct HubStatus {
         };
 
         void intern_strings(::note::StringPool& pool) {
-            if (!status.empty()) status = pool.intern(status);
+            if (status && !(*status).empty()) status = pool.intern(*status);
         }
 
     private:

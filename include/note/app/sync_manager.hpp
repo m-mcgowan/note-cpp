@@ -76,7 +76,7 @@ public:
         for (int i = 0; i < max_polls; ++i) {
             auto r = status();
             if (!r) return Unexpected(r.error());
-            auto s = r.status;
+            string_view s = r.status;
             if (s.find("{sync-end}") != string_view::npos ||
                 s.find("completed") != string_view::npos) {
                 return {};

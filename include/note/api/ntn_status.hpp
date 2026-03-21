@@ -60,10 +60,10 @@ struct NtnStatus {
         /// This member is present if any errors have occurred while connecting
         /// to a paired Starnote, for example: `{"err":"no NTN module is
         /// connected {no-ntn-module}"}`
-        note::string_view err{};
+        note::ResponseField<note::string_view> err{};
         /// Details about a Notecard's connection to a paired Starnote, for
         /// example: `{"status":"{ntn-idle}{ntn-unknown-location}"}`
-        note::string_view status{};
+        note::ResponseField<note::string_view> status{};
 
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
@@ -96,8 +96,8 @@ struct NtnStatus {
         };
 
         void intern_strings(::note::StringPool& pool) {
-            if (!err.empty()) err = pool.intern(err);
-            if (!status.empty()) status = pool.intern(status);
+            if (err && !(*err).empty()) err = pool.intern(*err);
+            if (status && !(*status).empty()) status = pool.intern(*status);
         }
 
     private:

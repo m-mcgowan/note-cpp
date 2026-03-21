@@ -81,9 +81,9 @@ struct HubSignal {
     /// Response containing a received signal from Notehub.
     struct Response {
         /// `true` if the Notecard is connected to Notehub.
-        bool connected{};
+        note::ResponseField<bool> connected{};
         /// The number of queued signals remaining.
-        int32_t signals{};
+        note::ResponseField<int32_t> signals{};
 
         const JsonReader* body() const { return body_.get(); }
 

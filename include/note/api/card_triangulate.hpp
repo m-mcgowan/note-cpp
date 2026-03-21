@@ -150,19 +150,19 @@ struct CardTriangulate {
     struct Response {
         /// The length of the `text` buffer provided in the current or a
         /// previous request.
-        int32_t length{};
+        note::ResponseField<int32_t> length{};
         /// A comma-separated list indicating the active triangulation modes.
-        note::string_view mode{};
+        note::ResponseField<note::string_view> mode{};
         /// Time of last detected Notecard movement.
-        int32_t motion{};
+        note::ResponseField<int32_t> motion{};
         /// `true` if triangulation scans will be performed even if the device
         /// has not moved.
-        bool on{};
+        note::ResponseField<bool> on{};
         /// Time of last triangulation scan.
-        int32_t time{};
+        note::ResponseField<int32_t> time{};
         /// `true` if triangulation scans will be performed only when the device
         /// is USB-powered.
-        bool usb{};
+        note::ResponseField<bool> usb{};
 
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
@@ -211,7 +211,7 @@ struct CardTriangulate {
         };
 
         void intern_strings(::note::StringPool& pool) {
-            if (!mode.empty()) mode = pool.intern(mode);
+            if (mode && !(*mode).empty()) mode = pool.intern(*mode);
         }
 
     private:

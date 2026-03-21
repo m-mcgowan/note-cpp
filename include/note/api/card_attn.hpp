@@ -305,18 +305,18 @@ struct CardAttn {
 #if NOTE_API_VERSION < NOTE_VERSION(7, 2, 1)
             [[deprecated("requires firmware >= 7.2.1")]]
 #endif
-            bool off{};
+            note::ResponseField<bool> off{};
 #endif
             /// When using `sleep` mode with a `payload`, the payload provided
             /// by the host to the Notecard.
-            note::string_view payload{};
+            note::ResponseField<note::string_view> payload{};
             /// Reflects the state of the attention pin. The `set` field is
             /// `true` when the attention pin is `HIGH`, otherwise the `set`
             /// field will not be present when the attention pin is `LOW`.
-            bool set{};
+            note::ResponseField<bool> set{};
             /// When using `sleep` mode with a `payload`, the time (UNIX Epoch
             /// time) that the payload was stored by the Notecard.
-            int32_t time{};
+            note::ResponseField<int32_t> time{};
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
@@ -376,7 +376,7 @@ struct CardAttn {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
             void intern_strings(::note::StringPool& pool) {
-                if (!payload.empty()) payload = pool.intern(payload);
+                if (payload && !(*payload).empty()) payload = pool.intern(*payload);
             }
 #pragma GCC diagnostic pop
 
@@ -577,7 +577,7 @@ struct CardAttn {
             /// Reflects the state of the attention pin. The `set` field is
             /// `true` when the attention pin is `HIGH`, otherwise the `set`
             /// field will not be present when the attention pin is `LOW`.
-            bool set{};
+            note::ResponseField<bool> set{};
 
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
@@ -811,10 +811,10 @@ struct CardAttn {
         struct Response {
             /// When using `sleep` mode with a `payload`, the payload provided
             /// by the host to the Notecard.
-            note::string_view payload{};
+            note::ResponseField<note::string_view> payload{};
             /// When using `sleep` mode with a `payload`, the time (UNIX Epoch
             /// time) that the payload was stored by the Notecard.
-            int32_t time{};
+            note::ResponseField<int32_t> time{};
 
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
@@ -849,7 +849,7 @@ struct CardAttn {
             };
 
             void intern_strings(::note::StringPool& pool) {
-                if (!payload.empty()) payload = pool.intern(payload);
+                if (payload && !(*payload).empty()) payload = pool.intern(*payload);
             }
 
         private:
@@ -980,12 +980,12 @@ struct CardAttn {
 #if NOTE_API_VERSION < NOTE_VERSION(7, 2, 1)
             [[deprecated("requires firmware >= 7.2.1")]]
 #endif
-            bool off{};
+            note::ResponseField<bool> off{};
 #endif
             /// Reflects the state of the attention pin. The `set` field is
             /// `true` when the attention pin is `HIGH`, otherwise the `set`
             /// field will not be present when the attention pin is `LOW`.
-            bool set{};
+            note::ResponseField<bool> set{};
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"

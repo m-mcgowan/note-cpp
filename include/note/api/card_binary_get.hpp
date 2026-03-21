@@ -95,9 +95,9 @@ struct CardBinaryGet {
     struct Response {
         /// If present, a string describing the error that occurred during
         /// transmission
-        note::string_view err{};
+        note::ResponseField<note::string_view> err{};
         /// The MD5 checksum of the data returned, after it has been decoded
-        note::string_view status{};
+        note::ResponseField<note::string_view> status{};
 
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
@@ -130,8 +130,8 @@ struct CardBinaryGet {
         };
 
         void intern_strings(::note::StringPool& pool) {
-            if (!err.empty()) err = pool.intern(err);
-            if (!status.empty()) status = pool.intern(status);
+            if (err && !(*err).empty()) err = pool.intern(*err);
+            if (status && !(*status).empty()) status = pool.intern(*status);
         }
 
     private:

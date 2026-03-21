@@ -43,7 +43,7 @@ public:
         }
         auto r = status();
         if (!r) return Unexpected(r.error());
-        return r.connected;
+        return r.connected.value();
     }
 
 private:

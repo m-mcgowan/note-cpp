@@ -58,19 +58,19 @@ struct CardVersion {
     /// Response containing firmware version information and device details.
     struct Response {
         /// The Notecard board version number.
-        note::string_view board{};
+        note::ResponseField<note::string_view> board{};
         /// If `true`, indicates the Notecard supports cellular connectivity.
-        bool cell{};
+        note::ResponseField<bool> cell{};
         /// The DeviceUID of the Notecard.
-        note::string_view device{};
+        note::ResponseField<note::string_view> device{};
         /// If `true`, indicates the Notecard has an onboard GPS module.
-        bool gps{};
+        note::ResponseField<bool> gps{};
         /// The official name of the device.
-        note::string_view name{};
+        note::ResponseField<note::string_view> name{};
         /// The Notecard SKU.
-        note::string_view sku{};
+        note::ResponseField<note::string_view> sku{};
         /// The full version number of the Notecard firmware.
-        note::string_view version{};
+        note::ResponseField<note::string_view> version{};
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
         /// If `true`, indicates the Notecard supports WiFi connectivity.
         ///
@@ -78,7 +78,7 @@ struct CardVersion {
 #if NOTE_API_VERSION < NOTE_VERSION(5, 3, 1)
         [[deprecated("requires firmware >= 5.3.1")]]
 #endif
-        bool wifi{};
+        note::ResponseField<bool> wifi{};
 #endif
 
         const JsonReader* body() const { return body_.get(); }
@@ -159,11 +159,11 @@ struct CardVersion {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
         void intern_strings(::note::StringPool& pool) {
-            if (!board.empty()) board = pool.intern(board);
-            if (!device.empty()) device = pool.intern(device);
-            if (!name.empty()) name = pool.intern(name);
-            if (!sku.empty()) sku = pool.intern(sku);
-            if (!version.empty()) version = pool.intern(version);
+            if (board && !(*board).empty()) board = pool.intern(*board);
+            if (device && !(*device).empty()) device = pool.intern(*device);
+            if (name && !(*name).empty()) name = pool.intern(*name);
+            if (sku && !(*sku).empty()) sku = pool.intern(*sku);
+            if (version && !(*version).empty()) version = pool.intern(*version);
         }
 #pragma GCC diagnostic pop
 

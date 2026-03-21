@@ -74,11 +74,11 @@ struct VarGet {
     /// Response containing a Note value from a DB Notefile.
     struct Response {
         /// The boolean value stored in the DB Notefile.
-        bool flag{};
+        note::ResponseField<bool> flag{};
         /// The string-based value stored in the DB Notefile.
-        note::string_view text{};
+        note::ResponseField<note::string_view> text{};
         /// The numeric value stored in the DB Notefile.
-        double value{};
+        note::ResponseField<double> value{};
 
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
@@ -118,7 +118,7 @@ struct VarGet {
         };
 
         void intern_strings(::note::StringPool& pool) {
-            if (!text.empty()) text = pool.intern(text);
+            if (text && !(*text).empty()) text = pool.intern(*text);
         }
 
     private:

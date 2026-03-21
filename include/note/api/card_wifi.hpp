@@ -135,13 +135,13 @@ struct CardWifi {
     struct Response {
         /// `true` means that the WiFi access point is using Management Frame
         /// Protection.
-        bool secure{};
+        note::ResponseField<bool> secure{};
         /// The security protocol the WiFi access point uses.
-        note::string_view security{};
+        note::ResponseField<note::string_view> security{};
         /// The SSID of the WiFi access point.
-        note::string_view ssid{};
+        note::ResponseField<note::string_view> ssid{};
         /// The Silicon Labs WF200 WiFi Transceiver binary version.
-        note::string_view version{};
+        note::ResponseField<note::string_view> version{};
 
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
@@ -182,9 +182,9 @@ struct CardWifi {
         };
 
         void intern_strings(::note::StringPool& pool) {
-            if (!security.empty()) security = pool.intern(security);
-            if (!ssid.empty()) ssid = pool.intern(ssid);
-            if (!version.empty()) version = pool.intern(version);
+            if (security && !(*security).empty()) security = pool.intern(*security);
+            if (ssid && !(*ssid).empty()) ssid = pool.intern(*ssid);
+            if (version && !(*version).empty()) version = pool.intern(*version);
         }
 
     private:

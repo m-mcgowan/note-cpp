@@ -62,21 +62,21 @@ struct CardTime {
     struct Response {
         /// The geographic area of the Notecard, if the cell tower is
         /// recognized.
-        note::string_view area{};
+        note::ResponseField<note::string_view> area{};
         /// The country where the Notecard is located, if the cell tower is
         /// recognized.
-        note::string_view country{};
+        note::ResponseField<note::string_view> country{};
         /// Latitude of the Notecard, if the cell tower is recognized.
-        double lat{};
+        note::ResponseField<double> lat{};
         /// Longitude of the Notecard, if the cell tower is recognized.
-        double lon{};
+        note::ResponseField<double> lon{};
         /// Number of minutes East of GMT, if the cell tower is recognized.
-        int32_t minutes{};
+        note::ResponseField<int32_t> minutes{};
         /// The current time in UTC. Will only populate if the Notecard has
         /// completed a sync to Notehub to obtain the time.
-        int32_t time{};
+        note::ResponseField<int32_t> time{};
         /// The time zone of the Notecard, if the cell tower is recognized.
-        note::string_view zone{};
+        note::ResponseField<note::string_view> zone{};
 
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
@@ -126,9 +126,9 @@ struct CardTime {
         };
 
         void intern_strings(::note::StringPool& pool) {
-            if (!area.empty()) area = pool.intern(area);
-            if (!country.empty()) country = pool.intern(country);
-            if (!zone.empty()) zone = pool.intern(zone);
+            if (area && !(*area).empty()) area = pool.intern(*area);
+            if (country && !(*country).empty()) country = pool.intern(*country);
+            if (zone && !(*zone).empty()) zone = pool.intern(*zone);
         }
 
     private:

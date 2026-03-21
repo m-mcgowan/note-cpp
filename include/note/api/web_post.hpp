@@ -234,20 +234,20 @@ struct WebPost {
 #if NOTE_API_VERSION < NOTE_VERSION(5, 3, 1)
         [[deprecated("requires firmware >= 5.3.1")]]
 #endif
-        int32_t cobs{};
+        note::ResponseField<int32_t> cobs{};
 #endif
         /// If the web transaction returns a binary payload, `length` is the
         /// size of the unencoded payload (in bytes).
-        int32_t length{};
+        note::ResponseField<int32_t> length{};
         /// A base64-encoded binary payload from the external service, if any.
         /// The maximum response size from the service is 8192 bytes.
-        note::string_view payload{};
+        note::ResponseField<note::string_view> payload{};
         /// The HTTP Status Code.
-        int32_t result{};
+        note::ResponseField<int32_t> result{};
         /// If a `payload` is returned in the response, this is a 32-character
         /// hex-encoded MD5 sum of the payload or payload fragment. Useful for
         /// the host to check for any I2C/UART corruption.
-        note::string_view status{};
+        note::ResponseField<note::string_view> status{};
 
         const JsonReader* body() const { return body_.get(); }
 
@@ -318,8 +318,8 @@ struct WebPost {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
         void intern_strings(::note::StringPool& pool) {
-            if (!payload.empty()) payload = pool.intern(payload);
-            if (!status.empty()) status = pool.intern(status);
+            if (payload && !(*payload).empty()) payload = pool.intern(*payload);
+            if (status && !(*status).empty()) status = pool.intern(*status);
         }
 #pragma GCC diagnostic pop
 

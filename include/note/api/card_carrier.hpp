@@ -87,9 +87,9 @@ struct CardCarrier {
     /// Successful response
     struct Response {
         /// Will display `true` when in `AUX_CHARGING` `"charging"` mode.
-        bool charging{};
+        note::ResponseField<bool> charging{};
         /// The current `AUX_CHARGING` `mode`, or `off` if not set.
-        note::string_view mode{};
+        note::ResponseField<note::string_view> mode{};
 
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
@@ -124,7 +124,7 @@ struct CardCarrier {
         };
 
         void intern_strings(::note::StringPool& pool) {
-            if (!mode.empty()) mode = pool.intern(mode);
+            if (mode && !(*mode).empty()) mode = pool.intern(*mode);
         }
 
     private:

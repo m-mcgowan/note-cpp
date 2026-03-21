@@ -84,7 +84,7 @@ struct EnvModified {
 #if NOTE_API_VERSION < NOTE_VERSION(3, 4, 1)
         [[deprecated("requires firmware >= 3.4.1")]]
 #endif
-        int32_t time{};
+        note::ResponseField<int32_t> time{};
 #endif
 
 #pragma GCC diagnostic push

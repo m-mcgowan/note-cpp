@@ -120,14 +120,14 @@ struct CardSleep {
     struct Response {
         /// Returns `"accel"` if the Notecard is configured to wake from deep
         /// sleep on any movement detected by the onboard accelerometer.
-        note::string_view mode{};
+        note::ResponseField<note::string_view> mode{};
         /// `true` if sleep mode is disabled.
-        bool off{};
+        note::ResponseField<bool> off{};
         /// `true` if sleep mode is enabled.
-        bool on{};
+        note::ResponseField<bool> on{};
         /// The number of seconds the Notecard will wait before entering sleep
         /// mode (only included if default settings are overridden).
-        int32_t seconds{};
+        note::ResponseField<int32_t> seconds{};
 
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
@@ -170,7 +170,7 @@ struct CardSleep {
         };
 
         void intern_strings(::note::StringPool& pool) {
-            if (!mode.empty()) mode = pool.intern(mode);
+            if (mode && !(*mode).empty()) mode = pool.intern(*mode);
         }
 
     private:

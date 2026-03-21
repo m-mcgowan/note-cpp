@@ -96,9 +96,9 @@ struct NoteGet {
         /// Response containing a Note retrieved from a Notefile.
         struct Response {
             /// The payload, if contained in the Note.
-            note::string_view payload{};
+            note::ResponseField<note::string_view> payload{};
             /// The time the Note was added to the Notecard or Notehub.
-            int32_t time{};
+            note::ResponseField<int32_t> time{};
 
             const JsonReader* body() const { return body_.get(); }
 
@@ -143,7 +143,7 @@ struct NoteGet {
             };
 
             void intern_strings(::note::StringPool& pool) {
-                if (!payload.empty()) payload = pool.intern(payload);
+                if (payload && !(*payload).empty()) payload = pool.intern(*payload);
             }
 
         private:
@@ -258,9 +258,9 @@ struct NoteGet {
         /// Response containing a Note retrieved from a Notefile.
         struct Response {
             /// The payload, if contained in the Note.
-            note::string_view payload{};
+            note::ResponseField<note::string_view> payload{};
             /// The time the Note was added to the Notecard or Notehub.
-            int32_t time{};
+            note::ResponseField<int32_t> time{};
 
             const JsonReader* body() const { return body_.get(); }
 
@@ -305,7 +305,7 @@ struct NoteGet {
             };
 
             void intern_strings(::note::StringPool& pool) {
-                if (!payload.empty()) payload = pool.intern(payload);
+                if (payload && !(*payload).empty()) payload = pool.intern(*payload);
             }
 
         private:

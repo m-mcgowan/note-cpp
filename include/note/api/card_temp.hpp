@@ -109,26 +109,26 @@ struct CardTemp {
         /// sensor and any connected I2C sensors.
         struct Response {
             /// The calibration differential of the Notecard's onboard sensor.
-            double calibration{};
+            note::ResponseField<double> calibration{};
             /// If the Notecard finds a BME280 sensor on the I2C bus, this field
             /// will be set to the humidity percentage value from the connected
             /// sensor.
-            double humidity{};
+            note::ResponseField<double> humidity{};
             /// If the Notecard finds a BME280 or ENS210 sensor on the I2C bus,
             /// this field will be set to the atmospheric pressure value from
             /// the connected sensor in Pascals.
-            double pressure{};
+            note::ResponseField<double> pressure{};
             /// If the Notecard finds a BME280 or ENS210 sensor on the I2C bus,
             /// this field will be set to the temperature value from the
             /// connected sensor in degrees centigrade.
-            double temperature{};
+            note::ResponseField<double> temperature{};
             /// `true` if the Notecard is connected to USB power.
-            bool usb{};
+            note::ResponseField<bool> usb{};
             /// The current temperature from the Notecard's onboard sensor in
             /// degrees centigrade, including the calibration offset.
-            double value{};
+            note::ResponseField<double> value{};
             /// The current voltage.
-            double voltage{};
+            note::ResponseField<double> voltage{};
 
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
@@ -287,26 +287,26 @@ struct CardTemp {
         /// sensor and any connected I2C sensors.
         struct Response {
             /// The calibration differential of the Notecard's onboard sensor.
-            double calibration{};
+            note::ResponseField<double> calibration{};
             /// If the Notecard finds a BME280 sensor on the I2C bus, this field
             /// will be set to the humidity percentage value from the connected
             /// sensor.
-            double humidity{};
+            note::ResponseField<double> humidity{};
             /// If the Notecard finds a BME280 or ENS210 sensor on the I2C bus,
             /// this field will be set to the atmospheric pressure value from
             /// the connected sensor in Pascals.
-            double pressure{};
+            note::ResponseField<double> pressure{};
             /// If the Notecard finds a BME280 or ENS210 sensor on the I2C bus,
             /// this field will be set to the temperature value from the
             /// connected sensor in degrees centigrade.
-            double temperature{};
+            note::ResponseField<double> temperature{};
             /// `true` if the Notecard is connected to USB power.
-            bool usb{};
+            note::ResponseField<bool> usb{};
             /// The current temperature from the Notecard's onboard sensor in
             /// degrees centigrade, including the calibration offset.
-            double value{};
+            note::ResponseField<double> value{};
             /// The current voltage.
-            double voltage{};
+            note::ResponseField<double> voltage{};
 
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
@@ -452,26 +452,26 @@ struct CardTemp {
         /// sensor and any connected I2C sensors.
         struct Response {
             /// The calibration differential of the Notecard's onboard sensor.
-            double calibration{};
+            note::ResponseField<double> calibration{};
             /// If the Notecard finds a BME280 sensor on the I2C bus, this field
             /// will be set to the humidity percentage value from the connected
             /// sensor.
-            double humidity{};
+            note::ResponseField<double> humidity{};
             /// If the Notecard finds a BME280 or ENS210 sensor on the I2C bus,
             /// this field will be set to the atmospheric pressure value from
             /// the connected sensor in Pascals.
-            double pressure{};
+            note::ResponseField<double> pressure{};
             /// If the Notecard finds a BME280 or ENS210 sensor on the I2C bus,
             /// this field will be set to the temperature value from the
             /// connected sensor in degrees centigrade.
-            double temperature{};
+            note::ResponseField<double> temperature{};
             /// `true` if the Notecard is connected to USB power.
-            bool usb{};
+            note::ResponseField<bool> usb{};
             /// The current temperature from the Notecard's onboard sensor in
             /// degrees centigrade, including the calibration offset.
-            double value{};
+            note::ResponseField<double> value{};
             /// The current voltage.
-            double voltage{};
+            note::ResponseField<double> voltage{};
 
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;

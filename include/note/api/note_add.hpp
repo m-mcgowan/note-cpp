@@ -234,11 +234,11 @@ struct NoteAdd {
     /// Response containing information about the added Note.
     struct Response {
         /// The generated unique Note ID when `note` parameter was set to "?".
-        note::string_view noteId{};
+        note::ResponseField<note::string_view> noteId{};
         /// `true` when a template is active on the Notefile.
-        bool template_{};
+        note::ResponseField<bool> template_{};
         /// The total number of Notes in the Notefile.
-        int32_t total{};
+        note::ResponseField<int32_t> total{};
 
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
@@ -278,7 +278,7 @@ struct NoteAdd {
         };
 
         void intern_strings(::note::StringPool& pool) {
-            if (!noteId.empty()) noteId = pool.intern(noteId);
+            if (noteId && !(*noteId).empty()) noteId = pool.intern(*noteId);
         }
 
     private:

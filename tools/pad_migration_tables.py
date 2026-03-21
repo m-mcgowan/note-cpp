@@ -39,69 +39,65 @@ def find_table_pairs(content: str) -> list[tuple[int, int, int, int]]:
     return pairs
 
 
-def content_lines(text: str) -> int:
-    """Count real content lines, stripping trailing blank lines."""
-    lines = text.split('\n')
+def visible_lines(text: str) -> list[str]:
+    """Split text between ``` markers into the lines a renderer shows.
+
+    The text always ends with \\n (before the closing ```).
+    A code block with content "a\\nb\\n" renders as 2 lines: ["a", "b"].
+    A code block with "a\\nb\\n\\n" renders as 3 lines: ["a", "b", ""].
+    """
+    # The final \n is structural (before ```), not a visible line.
+    if text.endswith('\n'):
+        text = text[:-1]
+    if not text:
+        return []
+    return text.split('\n')
+
+
+def content_line_count(text: str) -> int:
+    """Count non-trailing-blank visible lines."""
+    lines = visible_lines(text)
     while lines and lines[-1].strip() == '':
         lines.pop()
     return len(lines)
 
 
-# Public alias used by check()
-count_lines = content_lines
-
-
 def pad_to(text: str, target: int) -> str:
-    """Strip trailing blanks, then pad to exactly `target` content lines.
+    """Normalize a code block to exactly `target` visible lines.
 
-    Returns text with `target` lines followed by one final newline
-    (the structural newline before the closing ```).
+    Strips trailing blank lines, pads with blanks to reach target.
+    The longer side gets zero padding (no trailing blanks).
     """
-    lines = text.split('\n')
+    lines = visible_lines(text)
     # Strip trailing blanks
     while lines and lines[-1].strip() == '':
         lines.pop()
-    # Pad
+    # Pad to target
     while len(lines) < target:
         lines.append('')
-    # Exactly target lines + one trailing newline for the ``` delimiter
     return '\n'.join(lines) + '\n'
-
-
-def total_lines(text: str) -> int:
-    """Count all lines in the block including trailing blanks.
-
-    The text between ``` markers ends with \\n before ```.
-    We strip that one structural newline, then count.
-    """
-    if text.endswith('\n'):
-        text = text[:-1]
-    if not text:
-        return 0
-    return text.count('\n') + 1
 
 
 def check(content: str) -> list[str]:
     """Return list of error messages for mismatched pairs.
 
-    Checks two things:
-    1. Both sides have the same total line count (including padding).
-    2. The longer side (by content) has no unnecessary trailing blanks.
+    Both sides must have the same number of visible lines, and the
+    longer side (by content) must have no trailing blank lines.
     """
     errors = []
     for i, (ls, le, rs, re_) in enumerate(find_table_pairs(content)):
         left_text = content[ls:le]
         right_text = content[rs:re_]
-        left_t = total_lines(left_text)
-        right_t = total_lines(right_text)
-        left_c = content_lines(left_text)
-        right_c = content_lines(right_text)
+        left_vis = len(visible_lines(left_text))
+        right_vis = len(visible_lines(right_text))
+        left_c = content_line_count(left_text)
+        right_c = content_line_count(right_text)
         target = max(left_c, right_c)
 
-        if left_t != target or right_t != target:
+        if left_vis != target or right_vis != target:
             errors.append(
-                f"Table pair {i+1}: left={left_t}({left_c} content) "
-                f"right={right_t}({right_c} content) target={target}"
+                f"Table pair {i+1}: left={left_vis}({left_c} content) "
+                f"right={right_vis}({right_c} content) target={target}"
             )
     return errors
 
@@ -116,8 +112,8 @@ def fix(content: str) -> str:
         for ls, le, rs, re_ in pairs:
             left_text = content[ls:le]
             right_text = content[rs:re_]
-            left_n = content_lines(left_text)
-            right_n = content_lines(right_text)
+            left_n = content_line_count(left_text)
+            right_n = content_line_count(right_text)
             target = max(left_n, right_n)
 
             new_left = pad_to(left_text, target)

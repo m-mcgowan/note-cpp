@@ -161,14 +161,14 @@ struct WebGet {
     /// external endpoint.
     struct Response {
         /// The size of the COBS-encoded data (in bytes).
-        int32_t cobs{};
+        note::ResponseField<int32_t> cobs{};
         /// The length of the returned binary payload (in bytes).
-        int32_t length{};
+        note::ResponseField<int32_t> length{};
         /// A base64-encoded binary payload from the external service, if any.
         /// The maximum response size from the service is 8192 bytes.
-        note::string_view payload{};
+        note::ResponseField<note::string_view> payload{};
         /// The HTTP Status Code.
-        int32_t result{};
+        note::ResponseField<int32_t> result{};
 
         const JsonReader* body() const { return body_.get(); }
 
@@ -219,7 +219,7 @@ struct WebGet {
         };
 
         void intern_strings(::note::StringPool& pool) {
-            if (!payload.empty()) payload = pool.intern(payload);
+            if (payload && !(*payload).empty()) payload = pool.intern(*payload);
         }
 
     private:

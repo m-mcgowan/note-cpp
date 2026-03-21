@@ -44,10 +44,19 @@ enum class Cause : uint8_t {
     CrcMismatch,
 };
 
-struct ErrorInfo {
+struct ErrorInfo
+#ifdef ARDUINO
+    : public Printable
+#endif
+{
     Error code;
     Cause cause{};
     std::string_view message;
+
+#ifdef ARDUINO
+    /// Arduino Printable support — allows Serial.println(result.error()).
+    size_t printTo(Print& p) const override;
+#endif
 };
 
 constexpr std::string_view to_string(Error e) {
@@ -91,5 +100,12 @@ inline std::string to_string(const ErrorInfo& e) {
     s += e.message;
     return s;
 }
+
+#ifdef ARDUINO
+inline size_t ErrorInfo::printTo(Print& p) const {
+    std::string s = to_string(*this);
+    return p.print(s.c_str());
+}
+#endif
 
 } // namespace note

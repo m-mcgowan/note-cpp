@@ -169,7 +169,7 @@ struct CardDfu {
     struct Response {
         /// The class of MCU that the Notecard is currently configured to
         /// support for Outboard DFU.
-        note::string_view name{};
+        note::ResponseField<note::string_view> name{};
 
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
@@ -199,7 +199,7 @@ struct CardDfu {
         };
 
         void intern_strings(::note::StringPool& pool) {
-            if (!name.empty()) name = pool.intern(name);
+            if (name && !(*name).empty()) name = pool.intern(*name);
         }
 
     private:

@@ -64,25 +64,25 @@ struct CardLocation {
     /// Successful response
     struct Response {
         /// The number of consecutive recorded GPS/GNSS failures.
-        int32_t count{};
+        note::ResponseField<int32_t> count{};
         /// The "Dilution of Precision" value from the latest GPS/GNSS reading.
         /// The lower the value, the higher the confidence level of the reading.
         /// Values can be interpreted in this Wikipedia table#Interpretation).
-        double dop{};
+        note::ResponseField<double> dop{};
         /// The latitude in degrees of the last known location.
-        double lat{};
+        note::ResponseField<double> lat{};
         /// The longitude in degrees of the last known location.
-        double lon{};
+        note::ResponseField<double> lon{};
         /// If a geofence is enabled by `card.location.mode`, meters from the
         /// geofence center.
-        int32_t max{};
+        note::ResponseField<int32_t> max{};
         /// The GPS/GNSS connection mode. Will be `continuous`, `periodic`, or
         /// `off`.
-        note::string_view mode{};
+        note::ResponseField<note::string_view> mode{};
         /// The current status of the Notecard GPS/GNSS connection.
-        note::string_view status{};
+        note::ResponseField<note::string_view> status{};
         /// The time of the location capture.
-        int32_t time{};
+        note::ResponseField<int32_t> time{};
 
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
@@ -135,8 +135,8 @@ struct CardLocation {
         };
 
         void intern_strings(::note::StringPool& pool) {
-            if (!mode.empty()) mode = pool.intern(mode);
-            if (!status.empty()) status = pool.intern(status);
+            if (mode && !(*mode).empty()) mode = pool.intern(*mode);
+            if (status && !(*status).empty()) status = pool.intern(*status);
         }
 
     private:

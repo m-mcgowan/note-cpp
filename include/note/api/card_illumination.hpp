@@ -60,7 +60,7 @@ struct CardIllumination {
     /// Successful response
     struct Response {
         /// An illumination reading (in lux) from the attached OPT3001 sensor.
-        double value{};
+        note::ResponseField<double> value{};
 
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;

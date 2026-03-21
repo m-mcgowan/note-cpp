@@ -79,7 +79,7 @@ public:
         api::CardAttn::Query req;
         auto r = ch_.execute(req);
         if (!r) return Unexpected(r.error());
-        return r.set;
+        return r.set.value();
     }
 
     const std::string& mode() const { return desired_mode_; }

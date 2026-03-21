@@ -95,19 +95,19 @@ struct DfuGet {
     struct Response {
         /// When `binary` is `true` in the request, this field contains the COBS
         /// encoded length of the firmware data in the binary I/O buffer.
-        int32_t cobs{};
+        note::ResponseField<int32_t> cobs{};
         /// When `binary` is `true` in the request, this field contains the
         /// actual length of the firmware data in bytes in the binary I/O
         /// buffer.
-        int32_t length{};
+        note::ResponseField<int32_t> length{};
         /// A base64 string containing firmware data of the provided `length`.
         /// This field is only present when `binary` is not used or is `false`
         /// in the request.
-        note::string_view payload{};
+        note::ResponseField<note::string_view> payload{};
         /// When `binary` is `true` in the request, this field contains a
         /// 32-character hex-encoded MD5 hash of the firmware data. Useful for
         /// the host to verify data integrity.
-        note::string_view status{};
+        note::ResponseField<note::string_view> status{};
 
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
@@ -148,8 +148,8 @@ struct DfuGet {
         };
 
         void intern_strings(::note::StringPool& pool) {
-            if (!payload.empty()) payload = pool.intern(payload);
-            if (!status.empty()) status = pool.intern(status);
+            if (payload && !(*payload).empty()) payload = pool.intern(*payload);
+            if (status && !(*status).empty()) status = pool.intern(*status);
         }
 
     private:

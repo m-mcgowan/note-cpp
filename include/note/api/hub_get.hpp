@@ -57,28 +57,28 @@ struct HubGet {
     /// Response containing the current Notehub configuration for the Notecard.
     struct Response {
         /// The DeviceUID for the Notecard.
-        note::string_view device{};
+        note::ResponseField<note::string_view> device{};
         /// The URL of the Notehub host.
-        note::string_view host{};
+        note::ResponseField<note::string_view> host{};
         /// The max wait time, in minutes, to sync inbound data from Notehub.
-        int32_t inbound{};
+        note::ResponseField<int32_t> inbound{};
         /// The current operating `mode` of the Notecard, as defined in
         /// `hub.set`.
-        note::string_view mode{};
+        note::ResponseField<note::string_view> mode{};
         /// The max wait time, in minutes, to sync outbound data from the
         /// Notecard.
-        int32_t outbound{};
+        note::ResponseField<int32_t> outbound{};
         /// The ProductUID to which the Notecard is registered.
-        note::string_view product{};
+        note::ResponseField<note::string_view> product{};
         /// The serial number of the device, if set.
-        note::string_view sn{};
+        note::ResponseField<note::string_view> sn{};
         /// `true` if the device is in `continuous` mode and set to sync every
         /// time a change is detected.
-        bool sync{};
+        note::ResponseField<bool> sync{};
         /// If `inbound` has been overridden with a voltage-variable value.
-        note::string_view vinbound{};
+        note::ResponseField<note::string_view> vinbound{};
         /// If `outbound` is overridden with a voltage-variable value.
-        note::string_view voutbound{};
+        note::ResponseField<note::string_view> voutbound{};
 
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
@@ -139,13 +139,13 @@ struct HubGet {
         };
 
         void intern_strings(::note::StringPool& pool) {
-            if (!device.empty()) device = pool.intern(device);
-            if (!host.empty()) host = pool.intern(host);
-            if (!mode.empty()) mode = pool.intern(mode);
-            if (!product.empty()) product = pool.intern(product);
-            if (!sn.empty()) sn = pool.intern(sn);
-            if (!vinbound.empty()) vinbound = pool.intern(vinbound);
-            if (!voutbound.empty()) voutbound = pool.intern(voutbound);
+            if (device && !(*device).empty()) device = pool.intern(*device);
+            if (host && !(*host).empty()) host = pool.intern(*host);
+            if (mode && !(*mode).empty()) mode = pool.intern(*mode);
+            if (product && !(*product).empty()) product = pool.intern(*product);
+            if (sn && !(*sn).empty()) sn = pool.intern(*sn);
+            if (vinbound && !(*vinbound).empty()) vinbound = pool.intern(*vinbound);
+            if (voutbound && !(*voutbound).empty()) voutbound = pool.intern(*voutbound);
         }
 
     private:

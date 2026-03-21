@@ -58,9 +58,9 @@ struct CardStatus {
     /// status.
     struct Response {
         /// `true` if the modem is currently powered on.
-        bool cell{};
+        note::ResponseField<bool> cell{};
         /// `true` if connected to Notehub.
-        bool connected{};
+        note::ResponseField<bool> connected{};
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1) || !defined(NOTE_API_STRICT)
         /// `true` if Notecard's GPS module is currently powered on.
         ///
@@ -68,21 +68,21 @@ struct CardStatus {
 #if NOTE_API_VERSION < NOTE_VERSION(3, 3, 1)
         [[deprecated("requires firmware >= 3.3.1")]]
 #endif
-        bool gps{};
+        note::ResponseField<bool> gps{};
 #endif
         /// The effective inbound synchronization period being used by the
         /// device. See Configuring Synchronization Modes for details on how
         /// Notecard synchronization modes work.
-        int32_t inbound{};
+        note::ResponseField<int32_t> inbound{};
         /// The effective outbound synchronization period being used by the
         /// device. See Configuring Synchronization Modes for details on how
         /// Notecard synchronization modes work.
-        int32_t outbound{};
+        note::ResponseField<int32_t> outbound{};
         /// General status information.
-        note::string_view status{};
+        note::ResponseField<note::string_view> status{};
         /// Indicates the percentage of total Notecard storage in use. Note that
         /// users can utilize approximately 80% of this total capacity.
-        int32_t storage{};
+        note::ResponseField<int32_t> storage{};
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 5, 1) || !defined(NOTE_API_STRICT)
         /// `true` if the Notecard has ever connected to Notehub.
         ///
@@ -90,15 +90,15 @@ struct CardStatus {
 #if NOTE_API_VERSION < NOTE_VERSION(7, 5, 1)
         [[deprecated("requires firmware >= 7.5.1")]]
 #endif
-        bool sync{};
+        note::ResponseField<bool> sync{};
 #endif
         /// The UNIX Epoch Time of approximately when the Notecard was first
         /// powered up.
-        int32_t time{};
+        note::ResponseField<int32_t> time{};
         /// `true` if the Notecard is being powered by USB.
-        bool usb{};
+        note::ResponseField<bool> usb{};
         /// `true` if the Notecard's WiFi radio is currently powered on.
-        bool wifi{};
+        note::ResponseField<bool> wifi{};
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
@@ -185,7 +185,7 @@ struct CardStatus {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
         void intern_strings(::note::StringPool& pool) {
-            if (!status.empty()) status = pool.intern(status);
+            if (status && !(*status).empty()) status = pool.intern(*status);
         }
 #pragma GCC diagnostic pop
 

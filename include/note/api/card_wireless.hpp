@@ -134,9 +134,9 @@ struct CardWireless {
     /// information, and detailed modem/network data from the Notecard.
     struct Response {
         /// Number of bars of signal quality.
-        int32_t count{};
+        note::ResponseField<int32_t> count{};
         /// The current status of the wireless connection and modem.
-        note::string_view status{};
+        note::ResponseField<note::string_view> status{};
 
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
@@ -171,7 +171,7 @@ struct CardWireless {
         };
 
         void intern_strings(::note::StringPool& pool) {
-            if (!status.empty()) status = pool.intern(status);
+            if (status && !(*status).empty()) status = pool.intern(*status);
         }
 
     private:

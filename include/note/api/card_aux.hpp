@@ -332,7 +332,7 @@ struct CardAux {
     /// Successful response
     struct Response {
         /// The current AUX `mode`, or `off` if not set.
-        note::string_view mode{};
+        note::ResponseField<note::string_view> mode{};
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1) || !defined(NOTE_API_STRICT)
         /// If `true`, indicates the Notecard has USB (main) power. This
         /// parameter only appears in the body of the Note in Notehub if using
@@ -342,14 +342,14 @@ struct CardAux {
 #if NOTE_API_VERSION < NOTE_VERSION(3, 3, 1)
         [[deprecated("requires firmware >= 3.3.1")]]
 #endif
-        bool power{};
+        note::ResponseField<bool> power{};
 #endif
         /// When in AUX `gpio` mode, and if `count` is enabled on an AUX pin,
         /// the number of seconds per sample.
-        int32_t seconds{};
+        note::ResponseField<int32_t> seconds{};
         /// When in AUX `gpio` mode, and if `count` is enabled on an AUX pin,
         /// the time that counting started.
-        int32_t time{};
+        note::ResponseField<int32_t> time{};
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
@@ -409,7 +409,7 @@ struct CardAux {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
         void intern_strings(::note::StringPool& pool) {
-            if (!mode.empty()) mode = pool.intern(mode);
+            if (mode && !(*mode).empty()) mode = pool.intern(*mode);
         }
 #pragma GCC diagnostic pop
 

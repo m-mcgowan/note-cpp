@@ -58,11 +58,11 @@ struct FileChangesPending {
     /// Notehub.
     struct Response {
         /// The number of changes across all files.
-        int32_t changes{};
+        note::ResponseField<int32_t> changes{};
         /// `true` if there are pending changes.
-        bool pending{};
+        note::ResponseField<bool> pending{};
         /// The total of unsynced notes across all Notefiles.
-        int32_t total{};
+        note::ResponseField<int32_t> total{};
 
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;

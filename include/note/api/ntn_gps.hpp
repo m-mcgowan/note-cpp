@@ -81,10 +81,10 @@ struct NtnGps {
     struct Response {
         /// Returned and `true` if a paired Starnote will use its own GPS/GNSS
         /// location.
-        bool off{};
+        note::ResponseField<bool> off{};
         /// Returned and `true` if a Starnote will use the GPS/GNSS location
         /// from its paired Notecard.
-        bool on{};
+        note::ResponseField<bool> on{};
 
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;

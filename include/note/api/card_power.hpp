@@ -83,12 +83,12 @@ struct CardPower {
         struct Response {
             /// The cumulative number of milliamp hours (mAh) consumed. You can
             /// reset this number with this request's `reset` argument.
-            double milliampHours{};
+            note::ResponseField<double> milliampHours{};
             /// The temperature from Notecard's onboard sensor in degrees
             /// centigrade, including the calibration offset.
-            double temperature{};
+            note::ResponseField<double> temperature{};
             /// The current voltage.
-            double voltage{};
+            note::ResponseField<double> voltage{};
 
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
@@ -205,12 +205,12 @@ struct CardPower {
         struct Response {
             /// The cumulative number of milliamp hours (mAh) consumed. You can
             /// reset this number with this request's `reset` argument.
-            double milliampHours{};
+            note::ResponseField<double> milliampHours{};
             /// The temperature from Notecard's onboard sensor in degrees
             /// centigrade, including the calibration offset.
-            double temperature{};
+            note::ResponseField<double> temperature{};
             /// The current voltage.
-            double voltage{};
+            note::ResponseField<double> voltage{};
 
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
@@ -316,12 +316,12 @@ struct CardPower {
         struct Response {
             /// The cumulative number of milliamp hours (mAh) consumed. You can
             /// reset this number with this request's `reset` argument.
-            double milliampHours{};
+            note::ResponseField<double> milliampHours{};
             /// The temperature from Notecard's onboard sensor in degrees
             /// centigrade, including the calibration offset.
-            double temperature{};
+            note::ResponseField<double> temperature{};
             /// The current voltage.
-            double voltage{};
+            note::ResponseField<double> voltage{};
 
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;

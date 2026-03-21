@@ -66,13 +66,13 @@ struct HubSyncStatus {
     /// Response containing the status of a recently triggered or previous sync.
     struct Response {
         /// `true` if an error occurred during the most recent sync.
-        bool alert{};
+        note::ResponseField<bool> alert{};
         /// Number of seconds since the last sync completion.
-        int32_t completed{};
+        note::ResponseField<int32_t> completed{};
         /// The current state of the wireless connectivity module in use.
-        note::string_view mode{};
+        note::ResponseField<note::string_view> mode{};
         /// Number of seconds since the last explicit sync request.
-        int32_t requested{};
+        note::ResponseField<int32_t> requested{};
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 1, 1) || !defined(NOTE_API_STRICT)
         /// Returns `true` if triangulation data was sent to Notehub in the most
         /// recent sync.
@@ -81,7 +81,7 @@ struct HubSyncStatus {
 #if NOTE_API_VERSION < NOTE_VERSION(6, 1, 1)
         [[deprecated("requires firmware >= 6.1.1")]]
 #endif
-        bool scan{};
+        note::ResponseField<bool> scan{};
 #endif
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
         /// If the Notecard is in a Penalty Box, the number of seconds until the
@@ -91,18 +91,18 @@ struct HubSyncStatus {
 #if NOTE_API_VERSION < NOTE_VERSION(4, 1, 1)
         [[deprecated("requires firmware >= 4.1.1")]]
 #endif
-        int32_t seconds{};
+        note::ResponseField<int32_t> seconds{};
 #endif
         /// The status of the current or previous sync. Refer to this listing
         /// for the meaning of the various status codes returned (e.g. `{sync-
         /// end}`).
-        note::string_view status{};
+        note::ResponseField<note::string_view> status{};
         /// `true` if the notecard has unsynchronized notes, or requires a sync
         /// to set its internal clock.
-        bool sync{};
+        note::ResponseField<bool> sync{};
         /// Time of the last sync completion. Will only populate if the Notecard
         /// has completed a sync to Notehub to obtain the time.
-        int32_t time{};
+        note::ResponseField<int32_t> time{};
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
@@ -183,8 +183,8 @@ struct HubSyncStatus {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
         void intern_strings(::note::StringPool& pool) {
-            if (!mode.empty()) mode = pool.intern(mode);
-            if (!status.empty()) status = pool.intern(status);
+            if (mode && !(*mode).empty()) mode = pool.intern(*mode);
+            if (status && !(*status).empty()) status = pool.intern(*status);
         }
 #pragma GCC diagnostic pop
 

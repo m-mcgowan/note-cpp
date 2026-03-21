@@ -118,9 +118,9 @@ struct NoteChanges {
         /// Response containing incremental changes from a specific Notefile.
         struct Response {
             /// The number of pending changes in the Notefile.
-            int32_t changes{};
+            note::ResponseField<int32_t> changes{};
             /// The total number of Notes in the Notefile.
-            int32_t total{};
+            note::ResponseField<int32_t> total{};
 
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
@@ -271,9 +271,9 @@ struct NoteChanges {
         /// Response containing incremental changes from a specific Notefile.
         struct Response {
             /// The number of pending changes in the Notefile.
-            int32_t changes{};
+            note::ResponseField<int32_t> changes{};
             /// The total number of Notes in the Notefile.
-            int32_t total{};
+            note::ResponseField<int32_t> total{};
 
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;

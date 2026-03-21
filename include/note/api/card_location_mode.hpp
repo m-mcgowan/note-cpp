@@ -171,19 +171,19 @@ struct CardLocationMode {
         /// Successful response
         struct Response {
             /// If geofence is enabled, the geofence center latitude in degrees.
-            double lat{};
+            note::ResponseField<double> lat{};
             /// If geofence is enabled, the geofence center longitude in
             /// degrees.
-            double lon{};
+            note::ResponseField<double> lon{};
             /// If geofence is enabled, the meters from geofence center.
-            int32_t max{};
+            note::ResponseField<int32_t> max{};
             /// If geofence is enabled, the currently configured geofence
             /// debounce period.
-            int32_t minutes{};
+            note::ResponseField<int32_t> minutes{};
             /// The current location mode.
-            note::string_view mode{};
+            note::ResponseField<note::string_view> mode{};
             /// If specified, the periodic sample interval.
-            int32_t seconds{};
+            note::ResponseField<int32_t> seconds{};
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
             /// When in periodic mode, the number of motion events (registered
             /// by the built-in accelerometer) required to trigger GPS to turn
@@ -193,10 +193,10 @@ struct CardLocationMode {
 #if NOTE_API_VERSION < NOTE_VERSION(3, 4, 1)
             [[deprecated("requires firmware >= 3.4.1")]]
 #endif
-            int32_t threshold{};
+            note::ResponseField<int32_t> threshold{};
 #endif
             /// If specified, the voltage-variable period.
-            note::string_view vseconds{};
+            note::ResponseField<note::string_view> vseconds{};
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
@@ -266,8 +266,8 @@ struct CardLocationMode {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
             void intern_strings(::note::StringPool& pool) {
-                if (!mode.empty()) mode = pool.intern(mode);
-                if (!vseconds.empty()) vseconds = pool.intern(vseconds);
+                if (mode && !(*mode).empty()) mode = pool.intern(*mode);
+                if (vseconds && !(*vseconds).empty()) vseconds = pool.intern(*vseconds);
             }
 #pragma GCC diagnostic pop
 
@@ -450,19 +450,19 @@ struct CardLocationMode {
         /// Successful response
         struct Response {
             /// If geofence is enabled, the geofence center latitude in degrees.
-            double lat{};
+            note::ResponseField<double> lat{};
             /// If geofence is enabled, the geofence center longitude in
             /// degrees.
-            double lon{};
+            note::ResponseField<double> lon{};
             /// If geofence is enabled, the meters from geofence center.
-            int32_t max{};
+            note::ResponseField<int32_t> max{};
             /// If geofence is enabled, the currently configured geofence
             /// debounce period.
-            int32_t minutes{};
+            note::ResponseField<int32_t> minutes{};
             /// The current location mode.
-            note::string_view mode{};
+            note::ResponseField<note::string_view> mode{};
             /// If specified, the periodic sample interval.
-            int32_t seconds{};
+            note::ResponseField<int32_t> seconds{};
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
             /// When in periodic mode, the number of motion events (registered
             /// by the built-in accelerometer) required to trigger GPS to turn
@@ -472,10 +472,10 @@ struct CardLocationMode {
 #if NOTE_API_VERSION < NOTE_VERSION(3, 4, 1)
             [[deprecated("requires firmware >= 3.4.1")]]
 #endif
-            int32_t threshold{};
+            note::ResponseField<int32_t> threshold{};
 #endif
             /// If specified, the voltage-variable period.
-            note::string_view vseconds{};
+            note::ResponseField<note::string_view> vseconds{};
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
@@ -545,8 +545,8 @@ struct CardLocationMode {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
             void intern_strings(::note::StringPool& pool) {
-                if (!mode.empty()) mode = pool.intern(mode);
-                if (!vseconds.empty()) vseconds = pool.intern(vseconds);
+                if (mode && !(*mode).empty()) mode = pool.intern(*mode);
+                if (vseconds && !(*vseconds).empty()) vseconds = pool.intern(*vseconds);
             }
 #pragma GCC diagnostic pop
 
@@ -644,7 +644,7 @@ struct CardLocationMode {
         /// Enable continuous GPS/GNSS sampling.
         struct Response {
             /// The current location mode.
-            note::string_view mode{};
+            note::ResponseField<note::string_view> mode{};
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
             /// When in periodic mode, the number of motion events (registered
             /// by the built-in accelerometer) required to trigger GPS to turn
@@ -654,10 +654,10 @@ struct CardLocationMode {
 #if NOTE_API_VERSION < NOTE_VERSION(3, 4, 1)
             [[deprecated("requires firmware >= 3.4.1")]]
 #endif
-            int32_t threshold{};
+            note::ResponseField<int32_t> threshold{};
 #endif
             /// If specified, the voltage-variable period.
-            note::string_view vseconds{};
+            note::ResponseField<note::string_view> vseconds{};
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
@@ -712,8 +712,8 @@ struct CardLocationMode {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
             void intern_strings(::note::StringPool& pool) {
-                if (!mode.empty()) mode = pool.intern(mode);
-                if (!vseconds.empty()) vseconds = pool.intern(vseconds);
+                if (mode && !(*mode).empty()) mode = pool.intern(*mode);
+                if (vseconds && !(*vseconds).empty()) vseconds = pool.intern(*vseconds);
             }
 #pragma GCC diagnostic pop
 
@@ -855,19 +855,19 @@ struct CardLocationMode {
         /// Enable periodic location sampling, optionally with geofencing.
         struct Response {
             /// If geofence is enabled, the geofence center latitude in degrees.
-            double lat{};
+            note::ResponseField<double> lat{};
             /// If geofence is enabled, the geofence center longitude in
             /// degrees.
-            double lon{};
+            note::ResponseField<double> lon{};
             /// If geofence is enabled, the meters from geofence center.
-            int32_t max{};
+            note::ResponseField<int32_t> max{};
             /// If geofence is enabled, the currently configured geofence
             /// debounce period.
-            int32_t minutes{};
+            note::ResponseField<int32_t> minutes{};
             /// The current location mode.
-            note::string_view mode{};
+            note::ResponseField<note::string_view> mode{};
             /// If specified, the periodic sample interval.
-            int32_t seconds{};
+            note::ResponseField<int32_t> seconds{};
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
             /// When in periodic mode, the number of motion events (registered
             /// by the built-in accelerometer) required to trigger GPS to turn
@@ -877,10 +877,10 @@ struct CardLocationMode {
 #if NOTE_API_VERSION < NOTE_VERSION(3, 4, 1)
             [[deprecated("requires firmware >= 3.4.1")]]
 #endif
-            int32_t threshold{};
+            note::ResponseField<int32_t> threshold{};
 #endif
             /// If specified, the voltage-variable period.
-            note::string_view vseconds{};
+            note::ResponseField<note::string_view> vseconds{};
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
@@ -950,8 +950,8 @@ struct CardLocationMode {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
             void intern_strings(::note::StringPool& pool) {
-                if (!mode.empty()) mode = pool.intern(mode);
-                if (!vseconds.empty()) vseconds = pool.intern(vseconds);
+                if (mode && !(*mode).empty()) mode = pool.intern(*mode);
+                if (vseconds && !(*vseconds).empty()) vseconds = pool.intern(*vseconds);
             }
 #pragma GCC diagnostic pop
 
@@ -1045,12 +1045,12 @@ struct CardLocationMode {
         /// Set a fixed location for the device.
         struct Response {
             /// If geofence is enabled, the geofence center latitude in degrees.
-            double lat{};
+            note::ResponseField<double> lat{};
             /// If geofence is enabled, the geofence center longitude in
             /// degrees.
-            double lon{};
+            note::ResponseField<double> lon{};
             /// The current location mode.
-            note::string_view mode{};
+            note::ResponseField<note::string_view> mode{};
 
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
@@ -1088,7 +1088,7 @@ struct CardLocationMode {
             };
 
             void intern_strings(::note::StringPool& pool) {
-                if (!mode.empty()) mode = pool.intern(mode);
+                if (mode && !(*mode).empty()) mode = pool.intern(*mode);
             }
 
         private:
@@ -1251,19 +1251,19 @@ struct CardLocationMode {
         /// Successful response
         struct Response {
             /// If geofence is enabled, the geofence center latitude in degrees.
-            double lat{};
+            note::ResponseField<double> lat{};
             /// If geofence is enabled, the geofence center longitude in
             /// degrees.
-            double lon{};
+            note::ResponseField<double> lon{};
             /// If geofence is enabled, the meters from geofence center.
-            int32_t max{};
+            note::ResponseField<int32_t> max{};
             /// If geofence is enabled, the currently configured geofence
             /// debounce period.
-            int32_t minutes{};
+            note::ResponseField<int32_t> minutes{};
             /// The current location mode.
-            note::string_view mode{};
+            note::ResponseField<note::string_view> mode{};
             /// If specified, the periodic sample interval.
-            int32_t seconds{};
+            note::ResponseField<int32_t> seconds{};
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
             /// When in periodic mode, the number of motion events (registered
             /// by the built-in accelerometer) required to trigger GPS to turn
@@ -1273,10 +1273,10 @@ struct CardLocationMode {
 #if NOTE_API_VERSION < NOTE_VERSION(3, 4, 1)
             [[deprecated("requires firmware >= 3.4.1")]]
 #endif
-            int32_t threshold{};
+            note::ResponseField<int32_t> threshold{};
 #endif
             /// If specified, the voltage-variable period.
-            note::string_view vseconds{};
+            note::ResponseField<note::string_view> vseconds{};
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
@@ -1346,8 +1346,8 @@ struct CardLocationMode {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
             void intern_strings(::note::StringPool& pool) {
-                if (!mode.empty()) mode = pool.intern(mode);
-                if (!vseconds.empty()) vseconds = pool.intern(vseconds);
+                if (mode && !(*mode).empty()) mode = pool.intern(*mode);
+                if (vseconds && !(*vseconds).empty()) vseconds = pool.intern(*vseconds);
             }
 #pragma GCC diagnostic pop
 

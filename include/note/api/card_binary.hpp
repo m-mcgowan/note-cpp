@@ -72,19 +72,19 @@ struct CardBinary {
         struct Response {
             /// The size of COBS-encoded data stored in the reserved area
             /// (without the trailing ).
-            int32_t cobs{};
+            note::ResponseField<int32_t> cobs{};
             /// Returns true if the Notecard is connected to the network.
-            bool connected{};
+            note::ResponseField<bool> connected{};
             /// If present, a string describing the error that occurred during
             /// transmission.
-            note::string_view err{};
+            note::ResponseField<note::string_view> err{};
             /// The amount of unencoded data currently stored (in bytes).
-            int32_t length{};
+            note::ResponseField<int32_t> length{};
             /// The space available (in bytes) for storing unencoded data on the
             /// Notecard.
-            int32_t max{};
+            note::ResponseField<int32_t> max{};
             /// The MD5 checksum calculated for the entire unencoded buffer.
-            note::string_view status{};
+            note::ResponseField<note::string_view> status{};
 
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
@@ -133,8 +133,8 @@ struct CardBinary {
             };
 
             void intern_strings(::note::StringPool& pool) {
-                if (!err.empty()) err = pool.intern(err);
-                if (!status.empty()) status = pool.intern(status);
+                if (err && !(*err).empty()) err = pool.intern(*err);
+                if (status && !(*status).empty()) status = pool.intern(*status);
             }
 
         private:
@@ -198,19 +198,19 @@ struct CardBinary {
         struct Response {
             /// The size of COBS-encoded data stored in the reserved area
             /// (without the trailing ).
-            int32_t cobs{};
+            note::ResponseField<int32_t> cobs{};
             /// Returns true if the Notecard is connected to the network.
-            bool connected{};
+            note::ResponseField<bool> connected{};
             /// If present, a string describing the error that occurred during
             /// transmission.
-            note::string_view err{};
+            note::ResponseField<note::string_view> err{};
             /// The amount of unencoded data currently stored (in bytes).
-            int32_t length{};
+            note::ResponseField<int32_t> length{};
             /// The space available (in bytes) for storing unencoded data on the
             /// Notecard.
-            int32_t max{};
+            note::ResponseField<int32_t> max{};
             /// The MD5 checksum calculated for the entire unencoded buffer.
-            note::string_view status{};
+            note::ResponseField<note::string_view> status{};
 
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
@@ -259,8 +259,8 @@ struct CardBinary {
             };
 
             void intern_strings(::note::StringPool& pool) {
-                if (!err.empty()) err = pool.intern(err);
-                if (!status.empty()) status = pool.intern(status);
+                if (err && !(*err).empty()) err = pool.intern(*err);
+                if (status && !(*status).empty()) status = pool.intern(*status);
             }
 
         private:

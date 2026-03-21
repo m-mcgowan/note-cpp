@@ -99,7 +99,7 @@ struct EnvGet {
     /// the request parameters.
     struct Response {
         /// If a `name` was specified, the value of the environment variable.
-        note::string_view text{};
+        note::ResponseField<note::string_view> text{};
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
         /// The time of the Notecard variable or variables change.
         ///
@@ -107,7 +107,7 @@ struct EnvGet {
 #if NOTE_API_VERSION < NOTE_VERSION(3, 4, 1)
         [[deprecated("requires firmware >= 3.4.1")]]
 #endif
-        int32_t time{};
+        note::ResponseField<int32_t> time{};
 #endif
 
         const JsonReader* body() const { return body_.get(); }
@@ -170,7 +170,7 @@ struct EnvGet {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
         void intern_strings(::note::StringPool& pool) {
-            if (!text.empty()) text = pool.intern(text);
+            if (text && !(*text).empty()) text = pool.intern(*text);
         }
 #pragma GCC diagnostic pop
 

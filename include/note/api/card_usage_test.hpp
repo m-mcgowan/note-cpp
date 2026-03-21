@@ -82,27 +82,27 @@ struct CardUsageTest {
     /// Response containing cellular data usage projection and analysis results.
     struct Response {
         /// Average bytes per day used during the test period.
-        int32_t bytesPerDay{};
+        note::ResponseField<int32_t> bytesPerDay{};
         /// Number of bytes received by the Notecard from Notehub.
-        int32_t bytesReceived{};
+        note::ResponseField<int32_t> bytesReceived{};
         /// Number of bytes sent by the Notecard to Notehub.
-        int32_t bytesSent{};
+        note::ResponseField<int32_t> bytesSent{};
         /// The number of days used for the test.
-        int32_t days{};
+        note::ResponseField<int32_t> days{};
         /// The days of projected data available based on test.
-        int32_t max{};
+        note::ResponseField<int32_t> max{};
         /// Number of notes received by the Notecard from Notehub.
-        int32_t notesReceived{};
+        note::ResponseField<int32_t> notesReceived{};
         /// Number of notes sent by the Notecard to Notehub.
-        int32_t notesSent{};
+        note::ResponseField<int32_t> notesSent{};
         /// Number of seconds in the analyzed period.
-        int32_t seconds{};
+        note::ResponseField<int32_t> seconds{};
         /// Number of secure Notehub sessions.
-        int32_t sessionsSecure{};
+        note::ResponseField<int32_t> sessionsSecure{};
         /// Number of standard Notehub sessions.
-        int32_t sessionsStandard{};
+        note::ResponseField<int32_t> sessionsStandard{};
         /// Time of device activation.
-        int32_t time{};
+        note::ResponseField<int32_t> time{};
 
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;

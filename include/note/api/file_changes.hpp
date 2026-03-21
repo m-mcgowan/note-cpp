@@ -76,14 +76,14 @@ struct FileChanges {
     /// Response containing information about file changes and their status.
     struct Response {
         /// If a change tracker is used, the number of changes across all files.
-        int32_t changes{};
+        note::ResponseField<int32_t> changes{};
         /// Set to `true` if this was a pending changes request and there are
         /// changes
-        bool pending{};
+        note::ResponseField<bool> pending{};
         /// The total of local Notes across all Notefiles. This includes Inbound
         /// Notes that have not been deleted, as well as outbound Notes that
         /// have yet to sync.
-        int32_t total{};
+        note::ResponseField<int32_t> total{};
 
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;

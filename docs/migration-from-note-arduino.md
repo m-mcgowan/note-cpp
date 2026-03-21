@@ -187,9 +187,7 @@ or conditional logic. Designated initializers read like data, not procedure
 
 ## Sending sensor data (note.add)
 
-<table>
-<tr><th>note-arduino</th><th>note-cpp</th></tr>
-<tr><td>
+**note-arduino:**
 
 ```c
 struct Readings {
@@ -203,12 +201,10 @@ JAddStringToObject(req, "file", "sensors.qo");
 J *body = JAddObjectToObject(req, "body");
 JAddNumberToObject(body, "temp", r.temperature);
 JAddNumberToObject(body, "humidity", r.humidity);
-if (!nc.sendRequest(req)) {
-    Serial.println("note.add failed");
-}
+nc.sendRequest(req);
 ```
 
-</td><td>
+**note-cpp:**
 
 ```cpp
 struct Readings {
@@ -217,18 +213,58 @@ struct Readings {
 };
 
 Readings r{.temperature = 22.5f, .humidity = 60};
+nc.note.add()
+    .file("sensors.qo")
+    .body(r)
+    .execute();
+```
+
+**With error handling:**
+
+In note-c, you check for a null response, then check the `err` field — an
+unstructured string you have to parse yourself:
+
+```c
+J *rsp = nc.requestAndResponse(req);
+if (rsp == NULL) {
+    Serial.println("no response");
+} else if (nc.responseError(rsp)) {
+    // "note.add: queue full" — you parse this yourself
+    Serial.println(JGetString(rsp, "err"));
+    nc.deleteResponse(rsp);
+} else {
+    nc.deleteResponse(rsp);
+}
+```
+
+In note-cpp, the result carries structured error information. The error code
+tells you what layer failed, the cause tells you why, and you can decide
+whether retrying is safe without parsing strings:
+
+```cpp
 auto result = nc.note.add()
     .file("sensors.qo")
     .body(r)
     .execute();
 if (!result) {
-    Serial.println(to_string(result.error()).c_str());
+    auto err = result.error();
+    Serial.println(err);
+
+    // err.code tells you what layer failed:
+    //   Error::SendFailed  — never reached the Notecard (safe to retry)
+    //   Error::Notecard    — Notecard returned an error
+    //   Error::Json        — response couldn't be parsed
+    // err.cause tells you why:
+    //   Cause::Timeout, Cause::HalError, Cause::CrcMismatch, etc.
+    // err.message is the Notecard's error string:
+    //   "note.add: file not found"
+    //   "note.add: queue full"
+    //
+    // Printed output:
+    //   "notecard: note.add: queue full"
+    //   "send_failed[timeout]: no response within deadline"
 }
-
 ```
-
-</td></tr>
-</table>
 
 **Key differences:**
 - Both sides define the same struct, but note-cpp uses it directly as the
@@ -248,13 +284,13 @@ if (!result) {
 <tr><td>
 
 ```c
-// Magic numbers: 14.1 = TFLOAT32, 11 = TINT16
-// Get one wrong and the Notecard stores garbage.
+// Type constants from note.h — you pick the
+// right one for each field manually.
 J *req = nc.newRequest("note.template");
 JAddStringToObject(req, "file", "sensors.qo");
 J *body = JAddObjectToObject(req, "body");
-JAddNumberToObject(body, "temp", 14.1);
-JAddNumberToObject(body, "humidity", 11);
+JAddNumberToObject(body, "temp", TFLOAT32);
+JAddNumberToObject(body, "humidity", TINT16);
 nc.sendRequest(req);
 ```
 
@@ -275,9 +311,11 @@ nc.note.templates().define("sensors.qo")
 </table>
 
 **Key differences:**
-- No magic numbers. `14.1` meaning "32-bit float" is a Notecard convention that
-  note-c requires you to memorize. note-cpp derives the type hints from your
-  struct: `float` → `14.1`, `int16_t` → `11`, `bool` → `1`, etc.
+- note-c provides named constants (`TFLOAT32`, `TINT16`, etc.) but you still
+  have to pick the right one for each field and keep them in sync with your
+  struct. note-cpp derives the type hints from the struct's C++ types
+  automatically — change a field from `float` to `double` and the template
+  updates itself.
 - One struct for everything. Define `Readings` once, and the library uses it
   for sending, receiving, and template registration.
 
@@ -310,8 +348,7 @@ if (r) {
     double temp = r.value;
     Serial.println(temp);
 } else {
-    Serial.println(
-        to_string(r.error()).c_str());
+    Serial.println(r.error());
 }
 
 
@@ -613,7 +650,7 @@ if (!r) {
     // err.code:    Error::Notecard, SendFailed, etc.
     // err.cause:   Cause::Timeout, HalError, etc.
     // err.message: human-readable string
-    Serial.println(to_string(err).c_str());
+    Serial.println(err);
 } else {
     // use r.version, r.device, etc.
 }
@@ -673,8 +710,9 @@ nc.hub.sync().command();
 4. **Remove manual memory management.** Delete all `deleteResponse`,
    `JDelete`, null checks on `J*`. Responses are RAII values.
 
-5. **Replace magic numbers in templates.** Replace `JAddNumberToObject(body, "temp", 14.1)`
-   with `note::template_of<YourStruct>()`.
+5. **Replace manual template registration.** Replace per-field `TFLOAT32`/`TINT16`
+   constants with `note::template_of<YourStruct>()` — type hints derived
+   automatically from C++ types.
 
 6. **Replace string constants with type-safe alternatives.**
    - `"periodic"` → `mode_t::periodic` (named constant) or validated literal

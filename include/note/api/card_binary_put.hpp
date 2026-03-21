@@ -93,7 +93,7 @@ struct CardBinaryPut {
     struct Response {
         /// If present, a string describing the error that occurred during
         /// transmission
-        note::string_view err{};
+        note::ResponseField<note::string_view> err{};
 
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
@@ -123,7 +123,7 @@ struct CardBinaryPut {
         };
 
         void intern_strings(::note::StringPool& pool) {
-            if (!err.empty()) err = pool.intern(err);
+            if (err && !(*err).empty()) err = pool.intern(*err);
         }
 
     private:

@@ -120,9 +120,9 @@ struct CardWirelessPenalty {
         /// Notecard.
         struct Response {
             /// The number of consecutive network registration failures.
-            int32_t count{};
+            note::ResponseField<int32_t> count{};
             /// The time since the first network registration failure.
-            int32_t minutes{};
+            note::ResponseField<int32_t> minutes{};
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
             /// If the Notecard is in a Penalty Box, the number of seconds until
             /// the penalty condition ends.
@@ -131,11 +131,11 @@ struct CardWirelessPenalty {
 #if NOTE_API_VERSION < NOTE_VERSION(4, 1, 1)
             [[deprecated("requires firmware >= 4.1.1")]]
 #endif
-            int32_t seconds{};
+            note::ResponseField<int32_t> seconds{};
 #endif
             /// If the Notecard is in a Penalty Box, this field provides the
             /// associated Error and Status Codes.
-            note::string_view status{};
+            note::ResponseField<note::string_view> status{};
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
@@ -193,7 +193,7 @@ struct CardWirelessPenalty {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
             void intern_strings(::note::StringPool& pool) {
-                if (!status.empty()) status = pool.intern(status);
+                if (status && !(*status).empty()) status = pool.intern(*status);
             }
 #pragma GCC diagnostic pop
 
@@ -310,9 +310,9 @@ struct CardWirelessPenalty {
         /// Notecard.
         struct Response {
             /// The number of consecutive network registration failures.
-            int32_t count{};
+            note::ResponseField<int32_t> count{};
             /// The time since the first network registration failure.
-            int32_t minutes{};
+            note::ResponseField<int32_t> minutes{};
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
             /// If the Notecard is in a Penalty Box, the number of seconds until
             /// the penalty condition ends.
@@ -321,11 +321,11 @@ struct CardWirelessPenalty {
 #if NOTE_API_VERSION < NOTE_VERSION(4, 1, 1)
             [[deprecated("requires firmware >= 4.1.1")]]
 #endif
-            int32_t seconds{};
+            note::ResponseField<int32_t> seconds{};
 #endif
             /// If the Notecard is in a Penalty Box, this field provides the
             /// associated Error and Status Codes.
-            note::string_view status{};
+            note::ResponseField<note::string_view> status{};
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
@@ -383,7 +383,7 @@ struct CardWirelessPenalty {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
             void intern_strings(::note::StringPool& pool) {
-                if (!status.empty()) status = pool.intern(status);
+                if (status && !(*status).empty()) status = pool.intern(*status);
             }
 #pragma GCC diagnostic pop
 
@@ -495,9 +495,9 @@ struct CardWirelessPenalty {
         /// Notecard.
         struct Response {
             /// The number of consecutive network registration failures.
-            int32_t count{};
+            note::ResponseField<int32_t> count{};
             /// The time since the first network registration failure.
-            int32_t minutes{};
+            note::ResponseField<int32_t> minutes{};
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
             /// If the Notecard is in a Penalty Box, the number of seconds until
             /// the penalty condition ends.
@@ -506,11 +506,11 @@ struct CardWirelessPenalty {
 #if NOTE_API_VERSION < NOTE_VERSION(4, 1, 1)
             [[deprecated("requires firmware >= 4.1.1")]]
 #endif
-            int32_t seconds{};
+            note::ResponseField<int32_t> seconds{};
 #endif
             /// If the Notecard is in a Penalty Box, this field provides the
             /// associated Error and Status Codes.
-            note::string_view status{};
+            note::ResponseField<note::string_view> status{};
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
@@ -568,7 +568,7 @@ struct CardWirelessPenalty {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
             void intern_strings(::note::StringPool& pool) {
-                if (!status.empty()) status = pool.intern(status);
+                if (status && !(*status).empty()) status = pool.intern(*status);
             }
 #pragma GCC diagnostic pop
 

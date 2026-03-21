@@ -65,12 +65,12 @@ struct FileStats {
     /// Response containing resource statistics about local Notefiles.
     struct Response {
         /// The number of Notes across all Notefiles pending sync.
-        int32_t changes{};
+        note::ResponseField<int32_t> changes{};
         /// `true` if a sync is recommended based on the number of pending
         /// notes.
-        bool sync{};
+        note::ResponseField<bool> sync{};
         /// The total number of Notes across all Notefiles.
-        int32_t total{};
+        note::ResponseField<int32_t> total{};
 
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;

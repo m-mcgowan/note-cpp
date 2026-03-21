@@ -160,15 +160,15 @@ struct DfuStatus {
     /// firmware downloads.
     struct Response {
         /// The current DFU mode. Will be one of:
-        note::string_view mode{};
+        note::ResponseField<note::string_view> mode{};
         /// `true` when firmware downloads are disabled.
-        bool off{};
+        note::ResponseField<bool> off{};
         /// `true` when firmware downloads are enabled.
-        bool on{};
+        note::ResponseField<bool> on{};
         /// `true` when Notecard DFU is currently in-progress.
-        bool pending{};
+        note::ResponseField<bool> pending{};
         /// The current status of the firmware download.
-        note::string_view status{};
+        note::ResponseField<note::string_view> status{};
 
         const JsonReader* body() const { return body_.get(); }
 
@@ -222,8 +222,8 @@ struct DfuStatus {
         };
 
         void intern_strings(::note::StringPool& pool) {
-            if (!mode.empty()) mode = pool.intern(mode);
-            if (!status.empty()) status = pool.intern(status);
+            if (mode && !(*mode).empty()) mode = pool.intern(*mode);
+            if (status && !(*status).empty()) status = pool.intern(*status);
         }
 
     private:

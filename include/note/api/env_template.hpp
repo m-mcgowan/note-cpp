@@ -81,7 +81,7 @@ struct EnvTemplate {
         /// The maximum number of bytes that will be used when environment
         /// variables are communicated or stored, so long as the variables do
         /// not include variable-length strings.
-        int32_t bytes{};
+        note::ResponseField<int32_t> bytes{};
 
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;

@@ -289,7 +289,7 @@ namespace note::api {
 {{ version_guard_begin(prop.version_guard) -}}
 {{ doc_for_prop(prop, indent + "    ") -}}
 {{ deprecated_attr(prop.version_guard, prop.min_api_version, indent + "    ") -}}
-{{ indent }}    {{ prop.field_type }} {{ prop.accessor_name }}{};
+{{ indent }}    note::ResponseField<{{ prop.field_type }}> {{ prop.accessor_name }}{};
 {{ version_guard_end(prop.version_guard) -}}
 {% endfor %}
 {% if op.response.has_body %}
@@ -421,7 +421,7 @@ namespace note::api {
 {{ indent }}    void intern_strings(::note::StringPool& pool) {
 {% for prop in rsp_string_props %}
 {{ version_guard_begin(prop.version_guard) -}}
-{{ indent }}        if (!{{ prop.accessor_name }}.empty()) {{ prop.accessor_name }} = pool.intern({{ prop.accessor_name }});
+{{ indent }}        if ({{ prop.accessor_name }} && !(*{{ prop.accessor_name }}).empty()) {{ prop.accessor_name }} = pool.intern(*{{ prop.accessor_name }});
 {{ version_guard_end(prop.version_guard) -}}
 {% endfor %}
 {{ indent }}    }

@@ -138,7 +138,7 @@ struct CardAuxSerial {
     /// Successful response
     struct Response {
         /// The current AUX `mode`.
-        note::string_view mode{};
+        note::ResponseField<note::string_view> mode{};
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
         /// The baud rate or speed at which information is transmitted over AUX
         /// serial.
@@ -147,7 +147,7 @@ struct CardAuxSerial {
 #if NOTE_API_VERSION < NOTE_VERSION(4, 1, 1)
         [[deprecated("requires firmware >= 4.1.1")]]
 #endif
-        int32_t rate{};
+        note::ResponseField<int32_t> rate{};
 #endif
 
 #pragma GCC diagnostic push
@@ -200,7 +200,7 @@ struct CardAuxSerial {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
         void intern_strings(::note::StringPool& pool) {
-            if (!mode.empty()) mode = pool.intern(mode);
+            if (mode && !(*mode).empty()) mode = pool.intern(*mode);
         }
 #pragma GCC diagnostic pop
 

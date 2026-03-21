@@ -142,18 +142,18 @@ struct CardLocationTrack {
     /// Successful response
     struct Response {
         /// The tracking Notefile, if provided.
-        note::string_view file{};
+        note::ResponseField<note::string_view> file{};
         /// `true` if heartbeat is enabled.
-        bool heartbeat{};
+        note::ResponseField<bool> heartbeat{};
         /// The `heartbeat` interval in minutes, if provided.
-        int32_t minutes{};
+        note::ResponseField<int32_t> minutes{};
         /// If tracking is enabled and a heartbeat `hours` value is not set, the
         /// tracking interval set in `card.location.mode`.
-        int32_t seconds{};
+        note::ResponseField<int32_t> seconds{};
         /// `true` if tracking is enabled.
-        bool start{};
+        note::ResponseField<bool> start{};
         /// `true` if tracking is disabled.
-        bool stop{};
+        note::ResponseField<bool> stop{};
 
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
@@ -202,7 +202,7 @@ struct CardLocationTrack {
         };
 
         void intern_strings(::note::StringPool& pool) {
-            if (!file.empty()) file = pool.intern(file);
+            if (file && !(*file).empty()) file = pool.intern(*file);
         }
 
     private:

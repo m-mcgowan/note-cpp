@@ -89,13 +89,13 @@ struct CardContact {
         /// Successful response
         struct Response {
             /// Email address of the Notecard maintainer.
-            note::string_view email{};
+            note::ResponseField<note::string_view> email{};
             /// Name of the Notecard maintainer.
-            note::string_view name{};
+            note::ResponseField<note::string_view> name{};
             /// Organization name of the Notecard maintainer.
-            note::string_view org{};
+            note::ResponseField<note::string_view> org{};
             /// Role of the Notecard maintainer.
-            note::string_view role{};
+            note::ResponseField<note::string_view> role{};
 
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
@@ -134,10 +134,10 @@ struct CardContact {
             };
 
             void intern_strings(::note::StringPool& pool) {
-                if (!email.empty()) email = pool.intern(email);
-                if (!name.empty()) name = pool.intern(name);
-                if (!org.empty()) org = pool.intern(org);
-                if (!role.empty()) role = pool.intern(role);
+                if (email && !(*email).empty()) email = pool.intern(*email);
+                if (name && !(*name).empty()) name = pool.intern(*name);
+                if (org && !(*org).empty()) org = pool.intern(*org);
+                if (role && !(*role).empty()) role = pool.intern(*role);
             }
 
         private:
@@ -228,13 +228,13 @@ struct CardContact {
         /// Successful response
         struct Response {
             /// Email address of the Notecard maintainer.
-            note::string_view email{};
+            note::ResponseField<note::string_view> email{};
             /// Name of the Notecard maintainer.
-            note::string_view name{};
+            note::ResponseField<note::string_view> name{};
             /// Organization name of the Notecard maintainer.
-            note::string_view org{};
+            note::ResponseField<note::string_view> org{};
             /// Role of the Notecard maintainer.
-            note::string_view role{};
+            note::ResponseField<note::string_view> role{};
 
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
@@ -273,10 +273,10 @@ struct CardContact {
             };
 
             void intern_strings(::note::StringPool& pool) {
-                if (!email.empty()) email = pool.intern(email);
-                if (!name.empty()) name = pool.intern(name);
-                if (!org.empty()) org = pool.intern(org);
-                if (!role.empty()) role = pool.intern(role);
+                if (email && !(*email).empty()) email = pool.intern(*email);
+                if (name && !(*name).empty()) name = pool.intern(*name);
+                if (org && !(*org).empty()) org = pool.intern(*org);
+                if (role && !(*role).empty()) role = pool.intern(*role);
             }
 
         private:

@@ -99,22 +99,22 @@ struct CardUsageGet {
     /// specified time period.
     struct Response {
         /// Number of bytes received by the Notecard from Notehub.
-        int32_t bytesReceived{};
+        note::ResponseField<int32_t> bytesReceived{};
         /// Number of bytes sent by the Notecard to Notehub.
-        int32_t bytesSent{};
+        note::ResponseField<int32_t> bytesSent{};
         /// Approximate number of notes received by the Notecard from Notehub.
-        int32_t notesReceived{};
+        note::ResponseField<int32_t> notesReceived{};
         /// Approximate number of notes sent by the Notecard to Notehub.
-        int32_t notesSent{};
+        note::ResponseField<int32_t> notesSent{};
         /// Number of seconds in the analyzed period.
-        int32_t seconds{};
+        note::ResponseField<int32_t> seconds{};
         /// Number of secure Notehub sessions.
-        int32_t sessionsSecure{};
+        note::ResponseField<int32_t> sessionsSecure{};
         /// Number of standard Notehub sessions.
-        int32_t sessionsStandard{};
+        note::ResponseField<int32_t> sessionsStandard{};
         /// Start time of the analyzed period or, if `mode="total"`, the time of
         /// activation.
-        int32_t time{};
+        note::ResponseField<int32_t> time{};
 
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;

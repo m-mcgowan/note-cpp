@@ -174,11 +174,46 @@ def _build_accessor_map(endpoints) -> dict[tuple, str]:
     return result
 
 
+def _build_prop_map(endpoints) -> dict[tuple, object]:
+    """Map (notecard_request, struct_name_or_None, wire_name) -> PropertyDef.
+
+    Keyed both by struct_name (for polymorphic lookups) and None (as a
+    monomorphic fallback when sub_type is None in x-validation).
+    """
+    result = {}
+    for ep in endpoints:
+        for op in ep.operations:
+            for prop in op.properties:
+                result[(ep.wire_name, op.struct_name, prop.wire_name)] = prop
+                # None-keyed fallback: first-seen wins (monomorphic endpoints
+                # have one op; for polymorphic the fallback is not used).
+                fallback = (ep.wire_name, None, prop.wire_name)
+                if fallback not in result:
+                    result[fallback] = prop
+    return result
+
+
+def _flag_calls(value: str, flags: list[str]) -> list[str] | None:
+    """If value is a single recognized flag name, return it as a one-element list.
+
+    Multi-flag values (e.g. 'wifi,cell') are not split into calls because
+    FlagSet serializes in flag_defs order, which may differ from the x-validation
+    wire value — keeping a raw string assignment is the safe fallback there.
+
+    Returns None if value is not a single recognized flag.
+    """
+    parts = [p.strip() for p in value.split(",") if p.strip()]
+    if len(parts) == 1 and parts[0] in flags:
+        return parts
+    return None
+
+
 def _collect_sample_tests(spec_path: Path, endpoints=None) -> list[dict]:
     """Read x-validation from spec samples and build test case objects."""
     with open(spec_path) as f:
         spec = json.load(f)
     accessor_map = _build_accessor_map(endpoints) if endpoints else {}
+    prop_map = _build_prop_map(endpoints) if endpoints else {}
 
     tests = []
     seen = set()  # deduplicate (samples appear on multiple operations)
@@ -219,11 +254,23 @@ def _collect_sample_tests(spec_path: Path, endpoints=None) -> list[dict]:
                         (notecard_request, sub_type, field_name),
                         default_accessor,
                     )
+                    # For flag fields, generate method-call syntax instead of
+                    # raw string assignment (e.g. req.connected() not req.triggers="connected").
+                    calls = None
+                    if isinstance(value, str):
+                        prop = prop_map.get(
+                            (notecard_request, sub_type, field_name)
+                        ) or prop_map.get(
+                            (notecard_request, None, field_name)
+                        )
+                        if prop and prop.has_flags:
+                            calls = _flag_calls(value, prop.flags or [])
                     fields.append({
                         "wire_name": field_name,
                         "cpp_name": cpp_name,
                         "accessor_name": accessor,
                         "literal": _cpp_literal(value),
+                        "flag_calls": calls,
                     })
 
                 tests.append({

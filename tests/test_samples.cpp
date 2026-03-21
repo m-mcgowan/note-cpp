@@ -33,7 +33,7 @@ struct TestHarness {
 TEST_CASE("card.attn Connected") {
     TestHarness h;
     note::api::CardAttn::Arm req;
-    req.triggers = note::string_view(R"sv(connected)sv");
+    req.connected();
     h.nc.execute(req);
     REQUIRE(h.last_request == R"json({"req":"card.attn","mode":"arm,connected"})json");
 }
@@ -41,7 +41,7 @@ TEST_CASE("card.attn Connected") {
 TEST_CASE("card.attn Location") {
     TestHarness h;
     note::api::CardAttn::Arm req;
-    req.triggers = note::string_view(R"sv(location)sv");
+    req.location();
     h.nc.execute(req);
     REQUIRE(h.last_request == R"json({"req":"card.attn","mode":"arm,location"})json");
 }
@@ -49,7 +49,7 @@ TEST_CASE("card.attn Location") {
 TEST_CASE("card.attn Motion") {
     TestHarness h;
     note::api::CardAttn::Arm req;
-    req.triggers = note::string_view(R"sv(motion)sv");
+    req.motion();
     h.nc.execute(req);
     REQUIRE(h.last_request == R"json({"req":"card.attn","mode":"arm,motion"})json");
 }
@@ -57,7 +57,7 @@ TEST_CASE("card.attn Motion") {
 TEST_CASE("card.attn Signal") {
     TestHarness h;
     note::api::CardAttn::Arm req;
-    req.triggers = note::string_view(R"sv(signal)sv");
+    req.signal();
     h.nc.execute(req);
     REQUIRE(h.last_request == R"json({"req":"card.attn","mode":"arm,signal"})json");
 }
@@ -729,7 +729,7 @@ TEST_CASE("card.transport WiFi-Cell-NTN Priority") {
 TEST_CASE("card.triangulate Single Mode") {
     TestHarness h;
     note::api::CardTriangulate req;
-    req.mode = note::string_view(R"sv(cell)sv");
+    req.cell();
     req.on = true;
     req.set = true;
     h.nc.execute(req);

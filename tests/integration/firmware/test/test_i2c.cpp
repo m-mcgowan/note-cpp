@@ -14,7 +14,8 @@
 #include <note/body.hpp>
 #include <note/backends/cjson.hpp>
 #include <note/transport/i2c.hpp>
-#include "../include/cobs.hpp"
+#include <note/transport/cobs.hpp>
+#include "../include/cobs.hpp"  // cobs_encoded_size (legacy, used for verification)
 #include "../include/md5.hpp"
 
 #include <algorithm>
@@ -277,18 +278,15 @@ void binary_round_trip(Fixture& f, const uint8_t* data, size_t data_len, const c
     REQUIRE(static_cast<int32_t>(data_len) <= status_rsp.max);
     MESSAGE(label, ": binary max=", status_rsp.max, " bytes, payload=", data_len, " bytes");
 
-    // COBS-encode the data
-    std::vector<uint8_t> cobs_buf(cobs_encoded_size(data_len));
-    size_t cobs_len = cobs_encode(data, data_len, cobs_buf.data());
-
-    // Compute MD5 of unencoded data
+    // Compute COBS encoded size (deterministic from input length —
+    // no need to encode first) and MD5 of the unencoded data.
+    size_t cobs_len = note::cobs_encoded_size(data_len);
     std::string md5 = md5_hex(data, data_len);
     MESSAGE(label, ": cobs_len=", cobs_len, " md5=", md5.c_str());
 
     // ── PUT phase ──────────────────────────────────────────────────
 
     // JSON handshake: tell the Notecard how many COBS bytes are coming.
-    // The cobs field is the encoded length WITHOUT the EOP — matches note-c.
     auto put_rsp = nc.card.binaryPut()
         .cobs(static_cast<int32_t>(cobs_len))
         .status(md5)
@@ -296,10 +294,14 @@ void binary_round_trip(Fixture& f, const uint8_t* data, size_t data_len, const c
     if (!put_rsp) { INFO(note::to_string(put_rsp.error())); }
     REQUIRE(put_rsp);
 
-    // Send raw COBS-encoded bytes + newline via chunked I2C writes.
-    // Each chunk is at most max_transfer() bytes (253 on ESP32).
-    cobs_buf.push_back('\n');
-    bool tx_ok = i2c_binary_transmit(hal, cobs_buf.data(), cobs_buf.size());
+    // Streaming COBS encode — source stays const, no duplicate buffer.
+    // Each COBS block (~255 bytes) is chunked through I2C's max_transfer.
+    note::CobsEncoder encoder;
+    bool tx_ok = true;
+    encoder.encode(data, data_len, [&](const uint8_t* block, size_t n) {
+        if (tx_ok) tx_ok = i2c_binary_transmit(hal, block, n);
+    });
+    if (tx_ok) { uint8_t eop = '\n'; tx_ok = hal.transmit(&eop, 1); }
     REQUIRE(tx_ok);
 
     // Delay for Notecard to process the binary data
@@ -339,17 +341,25 @@ void binary_round_trip(Fixture& f, const uint8_t* data, size_t data_len, const c
     // Should receive at least cobs_len bytes (possibly +1 for the newline)
     REQUIRE(total_rx >= cobs_len);
 
-    // ── Decode and verify ──────────────────────────────────────────
+    // ── Streaming decode and verify ────────────────────────────────
 
-    // Strip trailing newline if present before decoding
+    // Strip trailing newline if present
     size_t decode_len = total_rx;
     if (decode_len > 0 && rx_buf[decode_len - 1] == '\n') {
         decode_len--;
     }
 
-    std::vector<uint8_t> decoded(data_len + 1);
-    size_t decoded_len = cobs_decode(rx_buf.data(), decode_len, decoded.data());
-    REQUIRE(decoded_len == data_len);
+    // Streaming COBS decode — feed received bytes, collect decoded output.
+    note::CobsDecoder decoder;
+    std::vector<uint8_t> decoded;
+    decoded.reserve(data_len);
+    auto sink = [&](const uint8_t* d, size_t n) {
+        decoded.insert(decoded.end(), d, d + n);
+    };
+    decoder.feed(rx_buf.data(), decode_len, sink);
+    decoder.flush(sink);
+
+    REQUIRE(decoded.size() == data_len);
     CHECK(memcmp(decoded.data(), data, data_len) == 0);
 
     // Clean up

@@ -46,6 +46,15 @@ struct Web {
     struct method_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
+        static constexpr note::string_view CONNECT{"CONNECT"};
+        static constexpr note::string_view DELETE{"DELETE"};
+        static constexpr note::string_view GET{"GET"};
+        static constexpr note::string_view HEAD{"HEAD"};
+        static constexpr note::string_view OPTIONS{"OPTIONS"};
+        static constexpr note::string_view PATCH{"PATCH"};
+        static constexpr note::string_view POST{"POST"};
+        static constexpr note::string_view PUT{"PUT"};
+        static constexpr note::string_view TRACE{"TRACE"};
         Web& operator()(note::string_view v);
     } method{};
     /// A web URL endpoint relative to the host configured in the Proxy Route.

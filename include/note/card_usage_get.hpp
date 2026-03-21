@@ -37,6 +37,10 @@ struct CardUsageGet {
     struct mode_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
+        static constexpr note::string_view total{"total"};
+        static constexpr note::string_view _1hour{"1hour"};
+        static constexpr note::string_view _1day{"1day"};
+        static constexpr note::string_view _30day{"30day"};
         CardUsageGet& operator()(note::string_view v);
     } mode{};
     /// The number of time periods to look backwards, based on the specified

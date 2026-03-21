@@ -53,6 +53,11 @@ struct CardWireless {
     struct method_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
+        static constexpr note::string_view _{"-"};
+        static constexpr note::string_view dual_primary_secondary{"dual-primary-secondary"};
+        static constexpr note::string_view dual_secondary_primary{"dual-secondary-primary"};
+        static constexpr note::string_view primary{"primary"};
+        static constexpr note::string_view secondary{"secondary"};
         CardWireless& operator()(note::string_view v);
     } method{};
     /// Network scan mode. Must be one of:
@@ -60,6 +65,11 @@ struct CardWireless {
     struct mode_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
+        static constexpr note::string_view _{"-"};
+        static constexpr note::string_view auto_{"auto"};
+        static constexpr note::string_view m{"m"};
+        static constexpr note::string_view nb{"nb"};
+        static constexpr note::string_view gprs{"gprs"};
         CardWireless& operator()(note::string_view v);
     } mode{};
 

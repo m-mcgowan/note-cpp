@@ -34,7 +34,7 @@ namespace note::api {
 /// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
 struct NoteTemplate {
 
-    struct Set {
+    struct Define {
         static constexpr string_view notecard_request = "note.template";
         static constexpr bool supports_cmd = true;
         static constexpr Safety safety = Safety::Idempotent;
@@ -48,10 +48,10 @@ struct NoteTemplate {
         /// of type hints and explanations.
         struct body_t : BodyValue {
             using BodyValue::BodyValue;
-            NoteTemplate::Set& operator()(BodyValue v);
+            NoteTemplate::Define& operator()(BodyValue v);
 #if __cplusplus >= 202002L
             template<typename T> requires detail::BodySchema<T>
-            NoteTemplate::Set& operator()(const T& v);
+            NoteTemplate::Define& operator()(const T& v);
 #endif
         } body{};
         /// Set to `true` to delete all pending Notes using the template if one
@@ -69,7 +69,7 @@ struct NoteTemplate {
         struct delete_t : Field<bool> {
             using Field<bool>::Field;
             using Field<bool>::operator=;
-            NoteTemplate::Set& operator()(bool v);
+            NoteTemplate::Define& operator()(bool v);
         } delete_{};
         /// The name of the Notefile to which the template will be applied.
         note::string_view file{};
@@ -96,7 +96,7 @@ struct NoteTemplate {
         struct format_t : Field<note::string_view> {
             using Field<note::string_view>::Field;
             using Field<note::string_view>::operator=;
-            NoteTemplate::Set& operator()(note::string_view v);
+            NoteTemplate::Define& operator()(note::string_view v);
         } format{};
 #endif
         /// The maximum length of a `payload` (in bytes) that can be sent in
@@ -106,7 +106,7 @@ struct NoteTemplate {
         struct length_t : Field<int32_t> {
             using Field<int32_t>::Field;
             using Field<int32_t>::operator=;
-            NoteTemplate::Set& operator()(int32_t v);
+            NoteTemplate::Define& operator()(int32_t v);
         } length{};
         /// This argument is required on Notecard LoRa and a Notecard paired
         /// with Starnote, but ignored on all other Notecards.
@@ -121,7 +121,7 @@ struct NoteTemplate {
         struct port_t : Field<int32_t> {
             using Field<int32_t>::Field;
             using Field<int32_t>::operator=;
-            NoteTemplate::Set& operator()(int32_t v);
+            NoteTemplate::Define& operator()(int32_t v);
         } port{};
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
         /// If `true`, returns the current template set on a given Notefile.
@@ -133,7 +133,7 @@ struct NoteTemplate {
         struct verify_t : Field<bool> {
             using Field<bool>::Field;
             using Field<bool>::operator=;
-            NoteTemplate::Set& operator()(bool v);
+            NoteTemplate::Define& operator()(bool v);
         } verify{};
 #endif
 
@@ -325,6 +325,7 @@ struct NoteTemplate {
         Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
 
     };
+    using Set = Define;  ///< @deprecated Use Define instead.
 
     /// By using the `note.template` request with any `.qo`/`.qos` Notefile,
     /// developers can provide the Notecard with a schema of sorts to apply to
@@ -337,7 +338,7 @@ struct NoteTemplate {
     /// Read about Working with Note Templates for additional information.
     ///
     /// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
-    struct Delete {
+    struct Remove {
         static constexpr string_view notecard_request = "note.template";
         static constexpr bool supports_cmd = true;
         static constexpr Safety safety = Safety::Destructive;
@@ -351,10 +352,10 @@ struct NoteTemplate {
         /// of type hints and explanations.
         struct body_t : BodyValue {
             using BodyValue::BodyValue;
-            NoteTemplate::Delete& operator()(BodyValue v);
+            NoteTemplate::Remove& operator()(BodyValue v);
 #if __cplusplus >= 202002L
             template<typename T> requires detail::BodySchema<T>
-            NoteTemplate::Delete& operator()(const T& v);
+            NoteTemplate::Remove& operator()(const T& v);
 #endif
         } body{};
         /// The name of the Notefile to which the template will be applied.
@@ -382,7 +383,7 @@ struct NoteTemplate {
         struct format_t : Field<note::string_view> {
             using Field<note::string_view>::Field;
             using Field<note::string_view>::operator=;
-            NoteTemplate::Delete& operator()(note::string_view v);
+            NoteTemplate::Remove& operator()(note::string_view v);
         } format{};
 #endif
         /// The maximum length of a `payload` (in bytes) that can be sent in
@@ -392,7 +393,7 @@ struct NoteTemplate {
         struct length_t : Field<int32_t> {
             using Field<int32_t>::Field;
             using Field<int32_t>::operator=;
-            NoteTemplate::Delete& operator()(int32_t v);
+            NoteTemplate::Remove& operator()(int32_t v);
         } length{};
         /// This argument is required on Notecard LoRa and a Notecard paired
         /// with Starnote, but ignored on all other Notecards.
@@ -407,7 +408,7 @@ struct NoteTemplate {
         struct port_t : Field<int32_t> {
             using Field<int32_t>::Field;
             using Field<int32_t>::operator=;
-            NoteTemplate::Delete& operator()(int32_t v);
+            NoteTemplate::Remove& operator()(int32_t v);
         } port{};
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
         /// If `true`, returns the current template set on a given Notefile.
@@ -419,7 +420,7 @@ struct NoteTemplate {
         struct verify_t : Field<bool> {
             using Field<bool>::Field;
             using Field<bool>::operator=;
-            NoteTemplate::Delete& operator()(bool v);
+            NoteTemplate::Remove& operator()(bool v);
         } verify{};
 #endif
 
@@ -610,51 +611,52 @@ struct NoteTemplate {
         Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
 
     };
+    using Delete = Remove;  ///< @deprecated Use Remove instead.
 };
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-inline NoteTemplate::Set& NoteTemplate::Set::body_t::operator()(BodyValue v) {
+inline NoteTemplate::Define& NoteTemplate::Define::body_t::operator()(BodyValue v) {
     BodyValue::operator=(std::move(v));
-    return *reinterpret_cast<NoteTemplate::Set*>(
-        reinterpret_cast<char*>(this) - offsetof(NoteTemplate::Set, body));
+    return *reinterpret_cast<NoteTemplate::Define*>(
+        reinterpret_cast<char*>(this) - offsetof(NoteTemplate::Define, body));
 }
 #if __cplusplus >= 202002L
 template<typename T> requires detail::BodySchema<T>
-inline NoteTemplate::Set& NoteTemplate::Set::body_t::operator()(const T& v) {
+inline NoteTemplate::Define& NoteTemplate::Define::body_t::operator()(const T& v) {
     BodyValue::operator=(make_schema_body(v));
-    return *reinterpret_cast<NoteTemplate::Set*>(
-        reinterpret_cast<char*>(this) - offsetof(NoteTemplate::Set, body));
+    return *reinterpret_cast<NoteTemplate::Define*>(
+        reinterpret_cast<char*>(this) - offsetof(NoteTemplate::Define, body));
 }
 #endif
-inline NoteTemplate::Set& NoteTemplate::Set::delete_t::operator()(bool v) {
+inline NoteTemplate::Define& NoteTemplate::Define::delete_t::operator()(bool v) {
     Field<bool>::operator=(v);
-    return *reinterpret_cast<NoteTemplate::Set*>(
-        reinterpret_cast<char*>(this) - offsetof(NoteTemplate::Set, delete_));
+    return *reinterpret_cast<NoteTemplate::Define*>(
+        reinterpret_cast<char*>(this) - offsetof(NoteTemplate::Define, delete_));
 }
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
-inline NoteTemplate::Set& NoteTemplate::Set::format_t::operator()(note::string_view v) {
+inline NoteTemplate::Define& NoteTemplate::Define::format_t::operator()(note::string_view v) {
     Field<note::string_view>::operator=(v);
-    return *reinterpret_cast<NoteTemplate::Set*>(
-        reinterpret_cast<char*>(this) - offsetof(NoteTemplate::Set, format));
+    return *reinterpret_cast<NoteTemplate::Define*>(
+        reinterpret_cast<char*>(this) - offsetof(NoteTemplate::Define, format));
 }
 #endif
-inline NoteTemplate::Set& NoteTemplate::Set::length_t::operator()(int32_t v) {
+inline NoteTemplate::Define& NoteTemplate::Define::length_t::operator()(int32_t v) {
     Field<int32_t>::operator=(v);
-    return *reinterpret_cast<NoteTemplate::Set*>(
-        reinterpret_cast<char*>(this) - offsetof(NoteTemplate::Set, length));
+    return *reinterpret_cast<NoteTemplate::Define*>(
+        reinterpret_cast<char*>(this) - offsetof(NoteTemplate::Define, length));
 }
-inline NoteTemplate::Set& NoteTemplate::Set::port_t::operator()(int32_t v) {
+inline NoteTemplate::Define& NoteTemplate::Define::port_t::operator()(int32_t v) {
     Field<int32_t>::operator=(v);
-    return *reinterpret_cast<NoteTemplate::Set*>(
-        reinterpret_cast<char*>(this) - offsetof(NoteTemplate::Set, port));
+    return *reinterpret_cast<NoteTemplate::Define*>(
+        reinterpret_cast<char*>(this) - offsetof(NoteTemplate::Define, port));
 }
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
-inline NoteTemplate::Set& NoteTemplate::Set::verify_t::operator()(bool v) {
+inline NoteTemplate::Define& NoteTemplate::Define::verify_t::operator()(bool v) {
     Field<bool>::operator=(v);
-    return *reinterpret_cast<NoteTemplate::Set*>(
-        reinterpret_cast<char*>(this) - offsetof(NoteTemplate::Set, verify));
+    return *reinterpret_cast<NoteTemplate::Define*>(
+        reinterpret_cast<char*>(this) - offsetof(NoteTemplate::Define, verify));
 }
 #endif
 #pragma GCC diagnostic pop
@@ -662,41 +664,41 @@ inline NoteTemplate::Set& NoteTemplate::Set::verify_t::operator()(bool v) {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-inline NoteTemplate::Delete& NoteTemplate::Delete::body_t::operator()(BodyValue v) {
+inline NoteTemplate::Remove& NoteTemplate::Remove::body_t::operator()(BodyValue v) {
     BodyValue::operator=(std::move(v));
-    return *reinterpret_cast<NoteTemplate::Delete*>(
-        reinterpret_cast<char*>(this) - offsetof(NoteTemplate::Delete, body));
+    return *reinterpret_cast<NoteTemplate::Remove*>(
+        reinterpret_cast<char*>(this) - offsetof(NoteTemplate::Remove, body));
 }
 #if __cplusplus >= 202002L
 template<typename T> requires detail::BodySchema<T>
-inline NoteTemplate::Delete& NoteTemplate::Delete::body_t::operator()(const T& v) {
+inline NoteTemplate::Remove& NoteTemplate::Remove::body_t::operator()(const T& v) {
     BodyValue::operator=(make_schema_body(v));
-    return *reinterpret_cast<NoteTemplate::Delete*>(
-        reinterpret_cast<char*>(this) - offsetof(NoteTemplate::Delete, body));
+    return *reinterpret_cast<NoteTemplate::Remove*>(
+        reinterpret_cast<char*>(this) - offsetof(NoteTemplate::Remove, body));
 }
 #endif
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
-inline NoteTemplate::Delete& NoteTemplate::Delete::format_t::operator()(note::string_view v) {
+inline NoteTemplate::Remove& NoteTemplate::Remove::format_t::operator()(note::string_view v) {
     Field<note::string_view>::operator=(v);
-    return *reinterpret_cast<NoteTemplate::Delete*>(
-        reinterpret_cast<char*>(this) - offsetof(NoteTemplate::Delete, format));
+    return *reinterpret_cast<NoteTemplate::Remove*>(
+        reinterpret_cast<char*>(this) - offsetof(NoteTemplate::Remove, format));
 }
 #endif
-inline NoteTemplate::Delete& NoteTemplate::Delete::length_t::operator()(int32_t v) {
+inline NoteTemplate::Remove& NoteTemplate::Remove::length_t::operator()(int32_t v) {
     Field<int32_t>::operator=(v);
-    return *reinterpret_cast<NoteTemplate::Delete*>(
-        reinterpret_cast<char*>(this) - offsetof(NoteTemplate::Delete, length));
+    return *reinterpret_cast<NoteTemplate::Remove*>(
+        reinterpret_cast<char*>(this) - offsetof(NoteTemplate::Remove, length));
 }
-inline NoteTemplate::Delete& NoteTemplate::Delete::port_t::operator()(int32_t v) {
+inline NoteTemplate::Remove& NoteTemplate::Remove::port_t::operator()(int32_t v) {
     Field<int32_t>::operator=(v);
-    return *reinterpret_cast<NoteTemplate::Delete*>(
-        reinterpret_cast<char*>(this) - offsetof(NoteTemplate::Delete, port));
+    return *reinterpret_cast<NoteTemplate::Remove*>(
+        reinterpret_cast<char*>(this) - offsetof(NoteTemplate::Remove, port));
 }
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
-inline NoteTemplate::Delete& NoteTemplate::Delete::verify_t::operator()(bool v) {
+inline NoteTemplate::Remove& NoteTemplate::Remove::verify_t::operator()(bool v) {
     Field<bool>::operator=(v);
-    return *reinterpret_cast<NoteTemplate::Delete*>(
-        reinterpret_cast<char*>(this) - offsetof(NoteTemplate::Delete, verify));
+    return *reinterpret_cast<NoteTemplate::Remove*>(
+        reinterpret_cast<char*>(this) - offsetof(NoteTemplate::Remove, verify));
 }
 #endif
 #pragma GCC diagnostic pop

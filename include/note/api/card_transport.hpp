@@ -51,39 +51,9 @@ struct CardTransport {
 #endif
     /// The connectivity method to enable on the Notecard.
     // method: - | cell | cell-ntn | dual-wifi-cell | ntn | wifi | wifi-cell | wifi-cell-ntn | wifi-ntn
-#if __cplusplus >= 202002L
-    struct validate_method_ {
-        consteval void operator()(note::string_view v) const {
-            if (v != "-" && v != "cell" && v != "cell-ntn" && v != "dual-wifi-cell" && v != "ntn" && v != "wifi" && v != "wifi-cell" && v != "wifi-cell-ntn" && v != "wifi-ntn")
-                throw "card.transport: invalid value for 'method'";
-        }
-    };
-    struct method_t : Field<note::string_view> {
-        constexpr method_t() = default;
-        template<std::size_t N>
-        consteval method_t(const char (&s)[N])
-            : Field<note::string_view>(note::string_view(s, N - 1)) {
-            validate_method_{}(note::string_view(s, N - 1));
-        }
-        template<typename U>
-            requires std::is_convertible_v<U, note::string_view>
-                  && (!std::is_array_v<std::remove_reference_t<U>>)
-                  && (!std::is_same_v<std::decay_t<U>, method_t>)
-        constexpr method_t(U&& v) : Field<note::string_view>(note::string_view(std::forward<U>(v))) {}
-        template<typename U>
-            requires std::is_convertible_v<U, note::string_view>
-                  && (!std::is_array_v<std::remove_reference_t<U>>)
-                  && (!std::is_same_v<std::decay_t<U>, method_t>)
-        method_t& operator=(U&& v) {
-            Field<note::string_view>::operator=(note::string_view(std::forward<U>(v)));
-            return *this;
-        }
-        method_t& operator=(std::nullopt_t) { Field<note::string_view>::reset(); return *this; }
-#else
     struct method_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
-#endif
         static constexpr note::string_view _{"-"};
         static constexpr note::string_view cell{"cell"};
         static constexpr note::string_view cell_ntn{"cell-ntn"};
@@ -93,20 +63,7 @@ struct CardTransport {
         static constexpr note::string_view wifi_cell{"wifi-cell"};
         static constexpr note::string_view wifi_cell_ntn{"wifi-cell-ntn"};
         static constexpr note::string_view wifi_ntn{"wifi-ntn"};
-#if __cplusplus >= 202002L
-        CardTransport& operator()(method_t v);
-        template<typename U>
-            requires std::is_convertible_v<U, note::string_view>
-                  && (!std::is_array_v<std::remove_reference_t<U>>)
-                  && (!std::is_same_v<std::decay_t<U>, method_t>)
-        CardTransport& operator()(U&& v) {
-            Field<note::string_view>::operator=(note::string_view(std::forward<U>(v)));
-            return *reinterpret_cast<CardTransport*>(
-                reinterpret_cast<char*>(this) - offsetof(CardTransport, method));
-        }
-#else
         CardTransport& operator()(note::string_view v);
-#endif
     } method{};
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
     /// The amount of time a Notecard will spend on any fallback transport
@@ -269,19 +226,11 @@ inline CardTransport& CardTransport::allow_t::operator()(bool v) {
         reinterpret_cast<char*>(this) - offsetof(CardTransport, allow));
 }
 #endif
-#if __cplusplus >= 202002L
-inline CardTransport& CardTransport::method_t::operator()(CardTransport::method_t v) {
-    if (v) Field<note::string_view>::operator=(*v);
-    return *reinterpret_cast<CardTransport*>(
-        reinterpret_cast<char*>(this) - offsetof(CardTransport, method));
-}
-#else
 inline CardTransport& CardTransport::method_t::operator()(note::string_view v) {
     Field<note::string_view>::operator=(v);
     return *reinterpret_cast<CardTransport*>(
         reinterpret_cast<char*>(this) - offsetof(CardTransport, method));
 }
-#endif
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
 inline CardTransport& CardTransport::seconds_t::operator()(note::Seconds v) {
     Field<note::Seconds>::operator=(v);

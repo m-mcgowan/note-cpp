@@ -44,6 +44,8 @@ struct CardSleep {
     struct mode_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
+        static constexpr note::string_view accel{"accel"};
+        static constexpr note::string_view _accel{"-accel"};
         CardSleep& operator()(note::string_view v);
     } mode{};
     /// Set to `true` to disable the sleep mode on Notecard.
@@ -62,10 +64,10 @@ struct CardSleep {
     /// The number of seconds the Notecard will wait before entering sleep mode
     /// (minimum value is 30).
     struct seconds_t : Field<note::Seconds> {
-        /// Reset to default behavior
-        static constexpr note::Seconds reset{ -1 };
         using Field<note::Seconds>::Field;
         using Field<note::Seconds>::operator=;
+        /// Reset to default behavior
+        static constexpr note::Seconds reset{ -1 };
         CardSleep& operator()(note::Seconds v);
     } seconds{};
 
@@ -82,6 +84,11 @@ struct CardSleep {
     }
 #endif
 
+    // Semantic convenience methods — generated from x-toggle / x-action metadata
+    // (method names that match a field accessor are skipped to avoid redefinition)
+    auto& enable() { on = true; return *this; }
+    auto& disable() { off = true; return *this; }
+    auto& enable(bool v_) { if (v_) on = true; else off = true; return *this; }
     template<typename T>
     auto& extra(note::string_view key, T value) {
         if (extras_count_ < NOTE_EXTRAS_MAX)

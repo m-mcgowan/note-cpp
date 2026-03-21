@@ -50,113 +50,27 @@ struct CardWireless {
     } hours{};
     /// Used when configuring a Notecard to failover to a different SIM.
     // method: - | dual-primary-secondary | dual-secondary-primary | primary | secondary
-#if __cplusplus >= 202002L
-    struct validate_method_ {
-        consteval void operator()(note::string_view v) const {
-            if (v != "-" && v != "dual-primary-secondary" && v != "dual-secondary-primary" && v != "primary" && v != "secondary")
-                throw "card.wireless: invalid value for 'method'";
-        }
-    };
-    struct method_t : Field<note::string_view> {
-        constexpr method_t() = default;
-        template<std::size_t N>
-        consteval method_t(const char (&s)[N])
-            : Field<note::string_view>(note::string_view(s, N - 1)) {
-            validate_method_{}(note::string_view(s, N - 1));
-        }
-        template<typename U>
-            requires std::is_convertible_v<U, note::string_view>
-                  && (!std::is_array_v<std::remove_reference_t<U>>)
-                  && (!std::is_same_v<std::decay_t<U>, method_t>)
-        constexpr method_t(U&& v) : Field<note::string_view>(note::string_view(std::forward<U>(v))) {}
-        template<typename U>
-            requires std::is_convertible_v<U, note::string_view>
-                  && (!std::is_array_v<std::remove_reference_t<U>>)
-                  && (!std::is_same_v<std::decay_t<U>, method_t>)
-        method_t& operator=(U&& v) {
-            Field<note::string_view>::operator=(note::string_view(std::forward<U>(v)));
-            return *this;
-        }
-        method_t& operator=(std::nullopt_t) { Field<note::string_view>::reset(); return *this; }
-#else
     struct method_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
-#endif
         static constexpr note::string_view _{"-"};
         static constexpr note::string_view dual_primary_secondary{"dual-primary-secondary"};
         static constexpr note::string_view dual_secondary_primary{"dual-secondary-primary"};
         static constexpr note::string_view primary{"primary"};
         static constexpr note::string_view secondary{"secondary"};
-#if __cplusplus >= 202002L
-        CardWireless& operator()(method_t v);
-        template<typename U>
-            requires std::is_convertible_v<U, note::string_view>
-                  && (!std::is_array_v<std::remove_reference_t<U>>)
-                  && (!std::is_same_v<std::decay_t<U>, method_t>)
-        CardWireless& operator()(U&& v) {
-            Field<note::string_view>::operator=(note::string_view(std::forward<U>(v)));
-            return *reinterpret_cast<CardWireless*>(
-                reinterpret_cast<char*>(this) - offsetof(CardWireless, method));
-        }
-#else
         CardWireless& operator()(note::string_view v);
-#endif
     } method{};
     /// Network scan mode. Must be one of:
     // mode: - | auto | m | nb | gprs
-#if __cplusplus >= 202002L
-    struct validate_mode_ {
-        consteval void operator()(note::string_view v) const {
-            if (v != "-" && v != "auto" && v != "m" && v != "nb" && v != "gprs")
-                throw "card.wireless: invalid value for 'mode'";
-        }
-    };
-    struct mode_t : Field<note::string_view> {
-        constexpr mode_t() = default;
-        template<std::size_t N>
-        consteval mode_t(const char (&s)[N])
-            : Field<note::string_view>(note::string_view(s, N - 1)) {
-            validate_mode_{}(note::string_view(s, N - 1));
-        }
-        template<typename U>
-            requires std::is_convertible_v<U, note::string_view>
-                  && (!std::is_array_v<std::remove_reference_t<U>>)
-                  && (!std::is_same_v<std::decay_t<U>, mode_t>)
-        constexpr mode_t(U&& v) : Field<note::string_view>(note::string_view(std::forward<U>(v))) {}
-        template<typename U>
-            requires std::is_convertible_v<U, note::string_view>
-                  && (!std::is_array_v<std::remove_reference_t<U>>)
-                  && (!std::is_same_v<std::decay_t<U>, mode_t>)
-        mode_t& operator=(U&& v) {
-            Field<note::string_view>::operator=(note::string_view(std::forward<U>(v)));
-            return *this;
-        }
-        mode_t& operator=(std::nullopt_t) { Field<note::string_view>::reset(); return *this; }
-#else
     struct mode_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
-#endif
         static constexpr note::string_view _{"-"};
         static constexpr note::string_view auto_{"auto"};
         static constexpr note::string_view m{"m"};
         static constexpr note::string_view nb{"nb"};
         static constexpr note::string_view gprs{"gprs"};
-#if __cplusplus >= 202002L
-        CardWireless& operator()(mode_t v);
-        template<typename U>
-            requires std::is_convertible_v<U, note::string_view>
-                  && (!std::is_array_v<std::remove_reference_t<U>>)
-                  && (!std::is_same_v<std::decay_t<U>, mode_t>)
-        CardWireless& operator()(U&& v) {
-            Field<note::string_view>::operator=(note::string_view(std::forward<U>(v)));
-            return *reinterpret_cast<CardWireless*>(
-                reinterpret_cast<char*>(this) - offsetof(CardWireless, mode));
-        }
-#else
         CardWireless& operator()(note::string_view v);
-#endif
     } mode{};
 
     // Valid values for 'method':
@@ -293,32 +207,16 @@ inline CardWireless& CardWireless::hours_t::operator()(int32_t v) {
     return *reinterpret_cast<CardWireless*>(
         reinterpret_cast<char*>(this) - offsetof(CardWireless, hours));
 }
-#if __cplusplus >= 202002L
-inline CardWireless& CardWireless::method_t::operator()(CardWireless::method_t v) {
-    if (v) Field<note::string_view>::operator=(*v);
-    return *reinterpret_cast<CardWireless*>(
-        reinterpret_cast<char*>(this) - offsetof(CardWireless, method));
-}
-#else
 inline CardWireless& CardWireless::method_t::operator()(note::string_view v) {
     Field<note::string_view>::operator=(v);
     return *reinterpret_cast<CardWireless*>(
         reinterpret_cast<char*>(this) - offsetof(CardWireless, method));
 }
-#endif
-#if __cplusplus >= 202002L
-inline CardWireless& CardWireless::mode_t::operator()(CardWireless::mode_t v) {
-    if (v) Field<note::string_view>::operator=(*v);
-    return *reinterpret_cast<CardWireless*>(
-        reinterpret_cast<char*>(this) - offsetof(CardWireless, mode));
-}
-#else
 inline CardWireless& CardWireless::mode_t::operator()(note::string_view v) {
     Field<note::string_view>::operator=(v);
     return *reinterpret_cast<CardWireless*>(
         reinterpret_cast<char*>(this) - offsetof(CardWireless, mode));
 }
-#endif
 #pragma GCC diagnostic pop
 
 

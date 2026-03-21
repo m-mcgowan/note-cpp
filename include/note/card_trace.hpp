@@ -35,6 +35,8 @@ struct CardTrace {
     struct mode_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
+        static constexpr note::string_view on{"on"};
+        static constexpr note::string_view off{"off"};
         CardTrace& operator()(note::string_view v);
     } mode{};
 

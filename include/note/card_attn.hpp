@@ -11,6 +11,7 @@
 #include <note/types.hpp>
 #include <note/units.hpp>
 #include <note/flag_set.hpp>
+#include <note/array_field.hpp>
 #include <note/target.hpp>
 
 namespace note::attn {
@@ -96,11 +97,8 @@ struct CardAttn {
         Notecard* nc_ = nullptr;
 
         /// A list of Notefiles to watch for file-based interrupts.
-        struct files_t : Field<note::string_view> {
-            using Field<note::string_view>::Field;
-            using Field<note::string_view>::operator=;
-            CardAttn::Request& operator()(note::string_view v);
-        } files{};
+        /// A list of Notefiles to watch for file-based interrupts.
+        note::ArrayField<note::string_view, 8> files{};
         /// A comma-separated list of one or more of the following keywords.
         /// Some keywords are only supported on certain types of Notecards.
         struct mode_t : Field<note::string_view> {
@@ -246,6 +244,24 @@ struct CardAttn {
 #endif
 
 
+    // Semantic convenience methods — generated from x-toggle / x-action metadata
+    // (method names that match a field accessor are skipped to avoid redefinition)
+        auto& persist() { on = true; return *this; }
+        auto& persist(bool v_) { on = v_; return *this; }
+        auto& arm() { mode.arm(); return *this; }
+        auto& auxgpio() { mode.auxgpio(); return *this; }
+        auto& connected() { mode.connected(); return *this; }
+        auto& disarm() { mode.disarm(); return *this; }
+        auto& env() { mode.env(); return *this; }
+        auto& location() { mode.location(); return *this; }
+        auto& motion() { mode.motion(); return *this; }
+        auto& motionchange() { mode.motionchange(); return *this; }
+        auto& rearm() { mode.rearm(); return *this; }
+        auto& signal() { mode.signal(); return *this; }
+        auto& sleep() { mode.sleep(); return *this; }
+        auto& usb() { mode.usb(); return *this; }
+        auto& watchdog() { mode.watchdog(); return *this; }
+        auto& wireless() { mode.wireless(); return *this; }
         template<typename T>
         auto& extra(note::string_view key, T value) {
             if (extras_count_ < NOTE_EXTRAS_MAX)
@@ -257,7 +273,6 @@ struct CardAttn {
         }
 
         note::DynField operator[](note::string_view k_) {
-            if (k_ == "files") return note::dyn_field_for(files);
             if (k_ == "mode") return note::dyn_field_for(mode);
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
             if (k_ == "off") return note::dyn_field_for(off);
@@ -372,7 +387,7 @@ struct CardAttn {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
         void build(JsonBuilder& b) const {
-            if (files) b.add("files", *files);
+            if (files) files.write_to(b, "files");
             if (mode) b.add("mode", *mode);
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
             if (off) b.add("off", *off);
@@ -409,75 +424,72 @@ struct CardAttn {
         Notecard* nc_ = nullptr;
 
         /// A list of Notefiles to watch for file-based interrupts.
-        struct files_t : Field<note::string_view> {
-            using Field<note::string_view>::Field;
-            using Field<note::string_view>::operator=;
-            CardAttn::Arm& operator()(note::string_view v);
-        } files{};
+        /// A list of Notefiles to watch for file-based interrupts.
+        note::ArrayField<note::string_view, 8> files{};
         /// A comma-separated list of one or more of the following keywords.
         /// Some keywords are only supported on certain types of Notecards.
-        struct mode_t : Field<note::string_view> {
+        struct triggers_t : Field<note::string_view> {
             using Field<note::string_view>::Field;
             using Field<note::string_view>::operator=;
             CardAttn::Arm& operator()(note::string_view v);
             CardAttn::Arm& operator=(uint32_t flags);
             CardAttn::Arm& operator()(uint32_t flags);
-            mode_t& add(uint32_t flag);
-            mode_t& operator|=(uint32_t flag);
+            triggers_t& add(uint32_t flag);
+            triggers_t& operator|=(uint32_t flag);
             /// Clear "files" events and cause the ATTN pin to go LOW. After an
             /// event occurs or "seconds" has elapsed, the ATTN pin will then go
             /// HIGH (a.k.a. "fires"). If "seconds" is 0, no timeout will be
             /// scheduled. If ATTN is armed, calling `arm` again will disarm
             /// (briefly pulling ATTN HIGH), then arm (non-idempotent).
-            mode_t& arm();
+            triggers_t& arm();
             /// When armed, causes ATTN to fire if an AUX GPIO input changes.
             /// Disable by using `-auxgpio`.
-            mode_t& auxgpio();
+            triggers_t& auxgpio();
             /// When armed, will cause ATTN to fire whenever the module connects
             /// to cellular. Disable with `-connected`.
-            mode_t& connected();
+            triggers_t& connected();
             /// Causes ATTN pin to go HIGH if it had been LOW.
             ///
             /// Passing both `"disarm"` and `"-all"` clears all ATTN monitors
             /// currently set.
-            mode_t& disarm();
+            triggers_t& disarm();
             /// When armed, causes ATTN to fire if an environment variable
             /// changes on the Notecard. Disable by using `-env`.
-            mode_t& env();
+            triggers_t& env();
             /// When armed, will cause ATTN to fire if any of the "files" are
             /// modified. Disable by using `-files`.
-            mode_t& files();
+            triggers_t& files();
             /// When armed, will cause ATTN to fire whenever the Notecard GPS
             /// module makes a position fix. Disable by using `-location`.
-            mode_t& location();
+            triggers_t& location();
             /// When armed, will cause ATTN to fire whenever the accelerometer
             /// detects module motion. Disable with `-motion`.
-            mode_t& motion();
+            triggers_t& motion();
             /// When armed, will cause ATTN to fire whenever the
             /// `card.motion.mode` changes from "moving" to "stopped" (or vice
             /// versa). Learn how to configure this feature in this guide.
-            mode_t& motionchange();
+            triggers_t& motionchange();
             /// Will arm ATTN if not already armed. Otherwise, resets the values
             /// of `mode`, `files`, and `seconds` specified in the initial `arm`
             /// or `rearm` request (idempotent).
-            mode_t& rearm();
+            triggers_t& rearm();
             /// When armed, will cause ATTN to fire whenever the Notecard
             /// receives a signal.
-            mode_t& signal();
+            triggers_t& signal();
             /// Instruct the Notecard to pull the ATTN pin low for a period of
             /// time, and optionally keep a payload in memory. Can be used by
             /// the host to sleep the host MCU.
-            mode_t& sleep();
+            triggers_t& sleep();
             /// When armed, will enable USB power events firing the ATTN pin.
             /// Disable with `-usb`.
-            mode_t& usb();
+            triggers_t& usb();
             /// Not an "arm" mode, rather will cause the ATTN pin to go from
             /// HIGH to LOW, then HIGH if the notecard fails to receive any JSON
             /// requests for "seconds." In this mode, "seconds" must be >= 60.
-            mode_t& watchdog();
+            triggers_t& watchdog();
             /// Instruct the Notecard to fire the ATTN pin whenever the
             /// `card.wireless` status changes.
-            mode_t& wireless();
+            triggers_t& wireless();
             static constexpr note::FlagDef flag_defs_[] = {
                 { note::attn::arm, "arm" },
                 { note::attn::auxgpio, "auxgpio" },
@@ -496,7 +508,7 @@ struct CardAttn {
                 { note::attn::wireless, "wireless" },
             };
             note::FlagSet<15, 109> flags_{flag_defs_};
-        } mode{};
+        } triggers{};
         /// When `true`, enables ATTN processing. This setting is retained
         /// across device restarts.
         struct on_t : Field<bool> {
@@ -517,6 +529,24 @@ struct CardAttn {
         } seconds{};
 
 
+    // Semantic convenience methods — generated from x-toggle / x-action metadata
+    // (method names that match a field accessor are skipped to avoid redefinition)
+        auto& persist() { on = true; return *this; }
+        auto& persist(bool v_) { on = v_; return *this; }
+        auto& arm() { triggers.arm(); return *this; }
+        auto& auxgpio() { triggers.auxgpio(); return *this; }
+        auto& connected() { triggers.connected(); return *this; }
+        auto& disarm() { triggers.disarm(); return *this; }
+        auto& env() { triggers.env(); return *this; }
+        auto& location() { triggers.location(); return *this; }
+        auto& motion() { triggers.motion(); return *this; }
+        auto& motionchange() { triggers.motionchange(); return *this; }
+        auto& rearm() { triggers.rearm(); return *this; }
+        auto& signal() { triggers.signal(); return *this; }
+        auto& sleep() { triggers.sleep(); return *this; }
+        auto& usb() { triggers.usb(); return *this; }
+        auto& watchdog() { triggers.watchdog(); return *this; }
+        auto& wireless() { triggers.wireless(); return *this; }
         template<typename T>
         auto& extra(note::string_view key, T value) {
             if (extras_count_ < NOTE_EXTRAS_MAX)
@@ -528,8 +558,7 @@ struct CardAttn {
         }
 
         note::DynField operator[](note::string_view k_) {
-            if (k_ == "files") return note::dyn_field_for(files);
-            if (k_ == "mode") return note::dyn_field_for(mode);
+            if (k_ == "mode") return note::dyn_field_for(triggers);
             if (k_ == "on") return note::dyn_field_for(on);
             if (k_ == "seconds") return note::dyn_field_for(seconds);
             if (extras_count_ < NOTE_EXTRAS_MAX) {
@@ -584,8 +613,15 @@ struct CardAttn {
         };
 
         void build(JsonBuilder& b) const {
-            if (files) b.add("files", *files);
-            if (mode) b.add("mode", *mode);
+            if (files) files.write_to(b, "files");
+            if (triggers) {
+                char mp_[96];
+                std::snprintf(mp_, sizeof(mp_), "arm,%.*s",
+                             (int)(*triggers).size(), (*triggers).data());
+                b.add("mode", note::string_view{mp_});
+            } else {
+                b.add("mode", "arm");
+            }
             if (on) b.add("on", *on);
             if (seconds) b.add("seconds", *seconds);
             for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
@@ -1023,11 +1059,6 @@ struct CardAttn {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-inline CardAttn::Request& CardAttn::Request::files_t::operator()(note::string_view v) {
-    Field<note::string_view>::operator=(v);
-    return *reinterpret_cast<CardAttn::Request*>(
-        reinterpret_cast<char*>(this) - offsetof(CardAttn::Request, files));
-}
 inline CardAttn::Request& CardAttn::Request::mode_t::operator()(note::string_view v) {
     Field<note::string_view>::operator=(v);
     return *reinterpret_cast<CardAttn::Request*>(
@@ -1165,106 +1196,101 @@ inline CardAttn::Request& CardAttn::Request::verify_t::operator()(bool v) {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-inline CardAttn::Arm& CardAttn::Arm::files_t::operator()(note::string_view v) {
+inline CardAttn::Arm& CardAttn::Arm::triggers_t::operator()(note::string_view v) {
     Field<note::string_view>::operator=(v);
     return *reinterpret_cast<CardAttn::Arm*>(
-        reinterpret_cast<char*>(this) - offsetof(CardAttn::Arm, files));
+        reinterpret_cast<char*>(this) - offsetof(CardAttn::Arm, triggers));
 }
-inline CardAttn::Arm& CardAttn::Arm::mode_t::operator()(note::string_view v) {
-    Field<note::string_view>::operator=(v);
-    return *reinterpret_cast<CardAttn::Arm*>(
-        reinterpret_cast<char*>(this) - offsetof(CardAttn::Arm, mode));
-}
-inline CardAttn::Arm& CardAttn::Arm::mode_t::operator=(uint32_t flags) {
+inline CardAttn::Arm& CardAttn::Arm::triggers_t::operator=(uint32_t flags) {
     flags_.set(flags);
     Field<note::string_view>::operator=(flags_.str());
     return *reinterpret_cast<CardAttn::Arm*>(
-        reinterpret_cast<char*>(this) - offsetof(CardAttn::Arm, mode));
+        reinterpret_cast<char*>(this) - offsetof(CardAttn::Arm, triggers));
 }
-inline CardAttn::Arm& CardAttn::Arm::mode_t::operator()(uint32_t flags) {
+inline CardAttn::Arm& CardAttn::Arm::triggers_t::operator()(uint32_t flags) {
     return operator=(flags);
 }
-inline CardAttn::Arm::mode_t& CardAttn::Arm::mode_t::add(uint32_t flag) {
+inline CardAttn::Arm::triggers_t& CardAttn::Arm::triggers_t::add(uint32_t flag) {
     flags_.add(flag);
     Field<note::string_view>::operator=(flags_.str());
     return *this;
 }
-inline CardAttn::Arm::mode_t& CardAttn::Arm::mode_t::operator|=(uint32_t flag) {
+inline CardAttn::Arm::triggers_t& CardAttn::Arm::triggers_t::operator|=(uint32_t flag) {
     flags_ |= flag;
     Field<note::string_view>::operator=(flags_.str());
     return *this;
 }
-inline CardAttn::Arm::mode_t& CardAttn::Arm::mode_t::arm() {
+inline CardAttn::Arm::triggers_t& CardAttn::Arm::triggers_t::arm() {
     flags_.add(note::attn::arm);
     Field<note::string_view>::operator=(flags_.str());
     return *this;
 }
-inline CardAttn::Arm::mode_t& CardAttn::Arm::mode_t::auxgpio() {
+inline CardAttn::Arm::triggers_t& CardAttn::Arm::triggers_t::auxgpio() {
     flags_.add(note::attn::auxgpio);
     Field<note::string_view>::operator=(flags_.str());
     return *this;
 }
-inline CardAttn::Arm::mode_t& CardAttn::Arm::mode_t::connected() {
+inline CardAttn::Arm::triggers_t& CardAttn::Arm::triggers_t::connected() {
     flags_.add(note::attn::connected);
     Field<note::string_view>::operator=(flags_.str());
     return *this;
 }
-inline CardAttn::Arm::mode_t& CardAttn::Arm::mode_t::disarm() {
+inline CardAttn::Arm::triggers_t& CardAttn::Arm::triggers_t::disarm() {
     flags_.add(note::attn::disarm);
     Field<note::string_view>::operator=(flags_.str());
     return *this;
 }
-inline CardAttn::Arm::mode_t& CardAttn::Arm::mode_t::env() {
+inline CardAttn::Arm::triggers_t& CardAttn::Arm::triggers_t::env() {
     flags_.add(note::attn::env);
     Field<note::string_view>::operator=(flags_.str());
     return *this;
 }
-inline CardAttn::Arm::mode_t& CardAttn::Arm::mode_t::files() {
+inline CardAttn::Arm::triggers_t& CardAttn::Arm::triggers_t::files() {
     flags_.add(note::attn::files);
     Field<note::string_view>::operator=(flags_.str());
     return *this;
 }
-inline CardAttn::Arm::mode_t& CardAttn::Arm::mode_t::location() {
+inline CardAttn::Arm::triggers_t& CardAttn::Arm::triggers_t::location() {
     flags_.add(note::attn::location);
     Field<note::string_view>::operator=(flags_.str());
     return *this;
 }
-inline CardAttn::Arm::mode_t& CardAttn::Arm::mode_t::motion() {
+inline CardAttn::Arm::triggers_t& CardAttn::Arm::triggers_t::motion() {
     flags_.add(note::attn::motion);
     Field<note::string_view>::operator=(flags_.str());
     return *this;
 }
-inline CardAttn::Arm::mode_t& CardAttn::Arm::mode_t::motionchange() {
+inline CardAttn::Arm::triggers_t& CardAttn::Arm::triggers_t::motionchange() {
     flags_.add(note::attn::motionchange);
     Field<note::string_view>::operator=(flags_.str());
     return *this;
 }
-inline CardAttn::Arm::mode_t& CardAttn::Arm::mode_t::rearm() {
+inline CardAttn::Arm::triggers_t& CardAttn::Arm::triggers_t::rearm() {
     flags_.add(note::attn::rearm);
     Field<note::string_view>::operator=(flags_.str());
     return *this;
 }
-inline CardAttn::Arm::mode_t& CardAttn::Arm::mode_t::signal() {
+inline CardAttn::Arm::triggers_t& CardAttn::Arm::triggers_t::signal() {
     flags_.add(note::attn::signal);
     Field<note::string_view>::operator=(flags_.str());
     return *this;
 }
-inline CardAttn::Arm::mode_t& CardAttn::Arm::mode_t::sleep() {
+inline CardAttn::Arm::triggers_t& CardAttn::Arm::triggers_t::sleep() {
     flags_.add(note::attn::sleep);
     Field<note::string_view>::operator=(flags_.str());
     return *this;
 }
-inline CardAttn::Arm::mode_t& CardAttn::Arm::mode_t::usb() {
+inline CardAttn::Arm::triggers_t& CardAttn::Arm::triggers_t::usb() {
     flags_.add(note::attn::usb);
     Field<note::string_view>::operator=(flags_.str());
     return *this;
 }
-inline CardAttn::Arm::mode_t& CardAttn::Arm::mode_t::watchdog() {
+inline CardAttn::Arm::triggers_t& CardAttn::Arm::triggers_t::watchdog() {
     flags_.add(note::attn::watchdog);
     Field<note::string_view>::operator=(flags_.str());
     return *this;
 }
-inline CardAttn::Arm::mode_t& CardAttn::Arm::mode_t::wireless() {
+inline CardAttn::Arm::triggers_t& CardAttn::Arm::triggers_t::wireless() {
     flags_.add(note::attn::wireless);
     Field<note::string_view>::operator=(flags_.str());
     return *this;

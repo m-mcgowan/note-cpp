@@ -27,7 +27,7 @@ namespace note::api {
 /// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
 struct CardWirelessPenalty {
 
-    struct Get {
+    struct Check {
         static constexpr string_view notecard_request = "card.wireless.penalty";
         static constexpr bool supports_cmd = true;
         static constexpr Safety safety = Safety::ReadOnly;
@@ -41,7 +41,7 @@ struct CardWirelessPenalty {
         struct add_t : Field<note::Minutes> {
             using Field<note::Minutes>::Field;
             using Field<note::Minutes>::operator=;
-            CardWirelessPenalty::Get& operator()(note::Minutes v);
+            CardWirelessPenalty::Check& operator()(note::Minutes v);
         } add{};
         /// The maximum number of minutes that a device can be in a Network
         /// Registration Failure Penalty Box. Used with the `set` argument to
@@ -49,7 +49,7 @@ struct CardWirelessPenalty {
         struct max_t : Field<note::Minutes> {
             using Field<note::Minutes>::Field;
             using Field<note::Minutes>::operator=;
-            CardWirelessPenalty::Get& operator()(note::Minutes v);
+            CardWirelessPenalty::Check& operator()(note::Minutes v);
         } max{};
         /// The number of minutes of the first retry interval of a Network
         /// Registration Failure Penalty Box. Used with the `set` argument to
@@ -57,7 +57,7 @@ struct CardWirelessPenalty {
         struct min_t : Field<note::Minutes> {
             using Field<note::Minutes>::Field;
             using Field<note::Minutes>::operator=;
-            CardWirelessPenalty::Get& operator()(note::Minutes v);
+            CardWirelessPenalty::Check& operator()(note::Minutes v);
         } min{};
         /// The rate at which the penalty box time multiplier is increased over
         /// successive retries. Used with the `set` argument to override the
@@ -65,24 +65,28 @@ struct CardWirelessPenalty {
         struct rate_t : Field<double> {
             using Field<double>::Field;
             using Field<double>::operator=;
-            CardWirelessPenalty::Get& operator()(double v);
+            CardWirelessPenalty::Check& operator()(double v);
         } rate{};
         /// Set to `true` to remove the Notecard from certain types of penalty
         /// boxes.
         struct reset_t : Field<bool> {
             using Field<bool>::Field;
             using Field<bool>::operator=;
-            CardWirelessPenalty::Get& operator()(bool v);
+            CardWirelessPenalty::Check& operator()(bool v);
         } reset{};
         /// Set to `true` to override the default settings of the Network
         /// Registration Failure Penalty Box.
         struct set_t : Field<bool> {
             using Field<bool>::Field;
             using Field<bool>::operator=;
-            CardWirelessPenalty::Get& operator()(bool v);
+            CardWirelessPenalty::Check& operator()(bool v);
         } set{};
 
 
+    // Semantic convenience methods — generated from x-toggle / x-action metadata
+    // (method names that match a field accessor are skipped to avoid redefinition)
+        auto& clearAll() { reset = true; return *this; }
+        auto& clearAll(bool v_) { reset = v_; return *this; }
         template<typename T>
         auto& extra(note::string_view key, T value) {
             if (extras_count_ < NOTE_EXTRAS_MAX)
@@ -215,6 +219,7 @@ struct CardWirelessPenalty {
         Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
 
     };
+    using Get = Check;  ///< @deprecated Use Check instead.
 
     /// View the current state of a Notecard Penalty Box, manually remove the
     /// Notecard from a penalty box, or override penalty box defaults.
@@ -269,6 +274,10 @@ struct CardWirelessPenalty {
         } reset{};
 
 
+    // Semantic convenience methods — generated from x-toggle / x-action metadata
+    // (method names that match a field accessor are skipped to avoid redefinition)
+        auto& clearAll() { reset = true; return *this; }
+        auto& clearAll(bool v_) { reset = v_; return *this; }
         template<typename T>
         auto& extra(note::string_view key, T value) {
             if (extras_count_ < NOTE_EXTRAS_MAX)
@@ -405,7 +414,7 @@ struct CardWirelessPenalty {
     /// Notecard from a penalty box, or override penalty box defaults.
     ///
     /// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
-    struct Delete {
+    struct Clear {
         static constexpr string_view notecard_request = "card.wireless.penalty";
         static constexpr bool supports_cmd = true;
         static constexpr Safety safety = Safety::Destructive;
@@ -419,7 +428,7 @@ struct CardWirelessPenalty {
         struct add_t : Field<note::Minutes> {
             using Field<note::Minutes>::Field;
             using Field<note::Minutes>::operator=;
-            CardWirelessPenalty::Delete& operator()(note::Minutes v);
+            CardWirelessPenalty::Clear& operator()(note::Minutes v);
         } add{};
         /// The maximum number of minutes that a device can be in a Network
         /// Registration Failure Penalty Box. Used with the `set` argument to
@@ -427,7 +436,7 @@ struct CardWirelessPenalty {
         struct max_t : Field<note::Minutes> {
             using Field<note::Minutes>::Field;
             using Field<note::Minutes>::operator=;
-            CardWirelessPenalty::Delete& operator()(note::Minutes v);
+            CardWirelessPenalty::Clear& operator()(note::Minutes v);
         } max{};
         /// The number of minutes of the first retry interval of a Network
         /// Registration Failure Penalty Box. Used with the `set` argument to
@@ -435,7 +444,7 @@ struct CardWirelessPenalty {
         struct min_t : Field<note::Minutes> {
             using Field<note::Minutes>::Field;
             using Field<note::Minutes>::operator=;
-            CardWirelessPenalty::Delete& operator()(note::Minutes v);
+            CardWirelessPenalty::Clear& operator()(note::Minutes v);
         } min{};
         /// The rate at which the penalty box time multiplier is increased over
         /// successive retries. Used with the `set` argument to override the
@@ -443,14 +452,14 @@ struct CardWirelessPenalty {
         struct rate_t : Field<double> {
             using Field<double>::Field;
             using Field<double>::operator=;
-            CardWirelessPenalty::Delete& operator()(double v);
+            CardWirelessPenalty::Clear& operator()(double v);
         } rate{};
         /// Set to `true` to override the default settings of the Network
         /// Registration Failure Penalty Box.
         struct set_t : Field<bool> {
             using Field<bool>::Field;
             using Field<bool>::operator=;
-            CardWirelessPenalty::Delete& operator()(bool v);
+            CardWirelessPenalty::Clear& operator()(bool v);
         } set{};
 
 
@@ -585,39 +594,40 @@ struct CardWirelessPenalty {
         Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
 
     };
+    using Delete = Clear;  ///< @deprecated Use Clear instead.
 };
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-inline CardWirelessPenalty::Get& CardWirelessPenalty::Get::add_t::operator()(note::Minutes v) {
+inline CardWirelessPenalty::Check& CardWirelessPenalty::Check::add_t::operator()(note::Minutes v) {
     Field<note::Minutes>::operator=(v);
-    return *reinterpret_cast<CardWirelessPenalty::Get*>(
-        reinterpret_cast<char*>(this) - offsetof(CardWirelessPenalty::Get, add));
+    return *reinterpret_cast<CardWirelessPenalty::Check*>(
+        reinterpret_cast<char*>(this) - offsetof(CardWirelessPenalty::Check, add));
 }
-inline CardWirelessPenalty::Get& CardWirelessPenalty::Get::max_t::operator()(note::Minutes v) {
+inline CardWirelessPenalty::Check& CardWirelessPenalty::Check::max_t::operator()(note::Minutes v) {
     Field<note::Minutes>::operator=(v);
-    return *reinterpret_cast<CardWirelessPenalty::Get*>(
-        reinterpret_cast<char*>(this) - offsetof(CardWirelessPenalty::Get, max));
+    return *reinterpret_cast<CardWirelessPenalty::Check*>(
+        reinterpret_cast<char*>(this) - offsetof(CardWirelessPenalty::Check, max));
 }
-inline CardWirelessPenalty::Get& CardWirelessPenalty::Get::min_t::operator()(note::Minutes v) {
+inline CardWirelessPenalty::Check& CardWirelessPenalty::Check::min_t::operator()(note::Minutes v) {
     Field<note::Minutes>::operator=(v);
-    return *reinterpret_cast<CardWirelessPenalty::Get*>(
-        reinterpret_cast<char*>(this) - offsetof(CardWirelessPenalty::Get, min));
+    return *reinterpret_cast<CardWirelessPenalty::Check*>(
+        reinterpret_cast<char*>(this) - offsetof(CardWirelessPenalty::Check, min));
 }
-inline CardWirelessPenalty::Get& CardWirelessPenalty::Get::rate_t::operator()(double v) {
+inline CardWirelessPenalty::Check& CardWirelessPenalty::Check::rate_t::operator()(double v) {
     Field<double>::operator=(v);
-    return *reinterpret_cast<CardWirelessPenalty::Get*>(
-        reinterpret_cast<char*>(this) - offsetof(CardWirelessPenalty::Get, rate));
+    return *reinterpret_cast<CardWirelessPenalty::Check*>(
+        reinterpret_cast<char*>(this) - offsetof(CardWirelessPenalty::Check, rate));
 }
-inline CardWirelessPenalty::Get& CardWirelessPenalty::Get::reset_t::operator()(bool v) {
+inline CardWirelessPenalty::Check& CardWirelessPenalty::Check::reset_t::operator()(bool v) {
     Field<bool>::operator=(v);
-    return *reinterpret_cast<CardWirelessPenalty::Get*>(
-        reinterpret_cast<char*>(this) - offsetof(CardWirelessPenalty::Get, reset));
+    return *reinterpret_cast<CardWirelessPenalty::Check*>(
+        reinterpret_cast<char*>(this) - offsetof(CardWirelessPenalty::Check, reset));
 }
-inline CardWirelessPenalty::Get& CardWirelessPenalty::Get::set_t::operator()(bool v) {
+inline CardWirelessPenalty::Check& CardWirelessPenalty::Check::set_t::operator()(bool v) {
     Field<bool>::operator=(v);
-    return *reinterpret_cast<CardWirelessPenalty::Get*>(
-        reinterpret_cast<char*>(this) - offsetof(CardWirelessPenalty::Get, set));
+    return *reinterpret_cast<CardWirelessPenalty::Check*>(
+        reinterpret_cast<char*>(this) - offsetof(CardWirelessPenalty::Check, set));
 }
 #pragma GCC diagnostic pop
 
@@ -652,30 +662,30 @@ inline CardWirelessPenalty::Set& CardWirelessPenalty::Set::reset_t::operator()(b
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-inline CardWirelessPenalty::Delete& CardWirelessPenalty::Delete::add_t::operator()(note::Minutes v) {
+inline CardWirelessPenalty::Clear& CardWirelessPenalty::Clear::add_t::operator()(note::Minutes v) {
     Field<note::Minutes>::operator=(v);
-    return *reinterpret_cast<CardWirelessPenalty::Delete*>(
-        reinterpret_cast<char*>(this) - offsetof(CardWirelessPenalty::Delete, add));
+    return *reinterpret_cast<CardWirelessPenalty::Clear*>(
+        reinterpret_cast<char*>(this) - offsetof(CardWirelessPenalty::Clear, add));
 }
-inline CardWirelessPenalty::Delete& CardWirelessPenalty::Delete::max_t::operator()(note::Minutes v) {
+inline CardWirelessPenalty::Clear& CardWirelessPenalty::Clear::max_t::operator()(note::Minutes v) {
     Field<note::Minutes>::operator=(v);
-    return *reinterpret_cast<CardWirelessPenalty::Delete*>(
-        reinterpret_cast<char*>(this) - offsetof(CardWirelessPenalty::Delete, max));
+    return *reinterpret_cast<CardWirelessPenalty::Clear*>(
+        reinterpret_cast<char*>(this) - offsetof(CardWirelessPenalty::Clear, max));
 }
-inline CardWirelessPenalty::Delete& CardWirelessPenalty::Delete::min_t::operator()(note::Minutes v) {
+inline CardWirelessPenalty::Clear& CardWirelessPenalty::Clear::min_t::operator()(note::Minutes v) {
     Field<note::Minutes>::operator=(v);
-    return *reinterpret_cast<CardWirelessPenalty::Delete*>(
-        reinterpret_cast<char*>(this) - offsetof(CardWirelessPenalty::Delete, min));
+    return *reinterpret_cast<CardWirelessPenalty::Clear*>(
+        reinterpret_cast<char*>(this) - offsetof(CardWirelessPenalty::Clear, min));
 }
-inline CardWirelessPenalty::Delete& CardWirelessPenalty::Delete::rate_t::operator()(double v) {
+inline CardWirelessPenalty::Clear& CardWirelessPenalty::Clear::rate_t::operator()(double v) {
     Field<double>::operator=(v);
-    return *reinterpret_cast<CardWirelessPenalty::Delete*>(
-        reinterpret_cast<char*>(this) - offsetof(CardWirelessPenalty::Delete, rate));
+    return *reinterpret_cast<CardWirelessPenalty::Clear*>(
+        reinterpret_cast<char*>(this) - offsetof(CardWirelessPenalty::Clear, rate));
 }
-inline CardWirelessPenalty::Delete& CardWirelessPenalty::Delete::set_t::operator()(bool v) {
+inline CardWirelessPenalty::Clear& CardWirelessPenalty::Clear::set_t::operator()(bool v) {
     Field<bool>::operator=(v);
-    return *reinterpret_cast<CardWirelessPenalty::Delete*>(
-        reinterpret_cast<char*>(this) - offsetof(CardWirelessPenalty::Delete, set));
+    return *reinterpret_cast<CardWirelessPenalty::Clear*>(
+        reinterpret_cast<char*>(this) - offsetof(CardWirelessPenalty::Clear, set));
 }
 #pragma GCC diagnostic pop
 

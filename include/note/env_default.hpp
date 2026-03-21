@@ -100,7 +100,7 @@ struct EnvDefault {
     /// fleet-wide setting at Notehub.
     ///
     /// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
-    struct Delete {
+    struct Remove {
         static constexpr string_view notecard_request = "env.default";
         static constexpr bool supports_cmd = true;
         static constexpr Safety safety = Safety::Destructive;
@@ -114,7 +114,7 @@ struct EnvDefault {
         struct sync_t : Field<bool> {
             using Field<bool>::Field;
             using Field<bool>::operator=;
-            EnvDefault::Delete& operator()(bool v);
+            EnvDefault::Remove& operator()(bool v);
         } sync{};
 
 
@@ -158,6 +158,7 @@ struct EnvDefault {
         Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
 
     };
+    using Delete = Remove;  ///< @deprecated Use Remove instead.
 };
 
 #pragma GCC diagnostic push
@@ -176,10 +177,10 @@ inline EnvDefault::Set& EnvDefault::Set::text_t::operator()(note::string_view v)
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-inline EnvDefault::Delete& EnvDefault::Delete::sync_t::operator()(bool v) {
+inline EnvDefault::Remove& EnvDefault::Remove::sync_t::operator()(bool v) {
     Field<bool>::operator=(v);
-    return *reinterpret_cast<EnvDefault::Delete*>(
-        reinterpret_cast<char*>(this) - offsetof(EnvDefault::Delete, sync));
+    return *reinterpret_cast<EnvDefault::Remove*>(
+        reinterpret_cast<char*>(this) - offsetof(EnvDefault::Remove, sync));
 }
 #pragma GCC diagnostic pop
 

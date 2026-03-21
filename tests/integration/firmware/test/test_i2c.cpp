@@ -139,7 +139,7 @@ TEST_CASE("note.changes tracks additions") {
     auto reset_rsp = nc.note.changes().peek()
         .file(file)
         .tracker(tracker)
-        .start(true)
+        .resetTracker()
         .execute();
     if (!reset_rsp) { MESSAGE("reset error: ", note::to_string(reset_rsp.error())); }
 

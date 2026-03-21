@@ -114,39 +114,9 @@ struct CardAux {
     /// The AUX mode. Must be one of the following keywords. Some keywords are
     /// only supported on certain types of Notecards.
     // mode: dfu | gpio | led | monitor | motion | neo | neo-monitor | off | rgb | rgb-monitor | track | track-monitor | track-neo-monitor | track-rgb-monitor | -
-#if __cplusplus >= 202002L
-    struct validate_mode_ {
-        consteval void operator()(note::string_view v) const {
-            if (v != "dfu" && v != "gpio" && v != "led" && v != "monitor" && v != "motion" && v != "neo" && v != "neo-monitor" && v != "off" && v != "rgb" && v != "rgb-monitor" && v != "track" && v != "track-monitor" && v != "track-neo-monitor" && v != "track-rgb-monitor" && v != "-")
-                throw "card.aux: invalid value for 'mode'";
-        }
-    };
-    struct mode_t : Field<note::string_view> {
-        constexpr mode_t() = default;
-        template<std::size_t N>
-        consteval mode_t(const char (&s)[N])
-            : Field<note::string_view>(note::string_view(s, N - 1)) {
-            validate_mode_{}(note::string_view(s, N - 1));
-        }
-        template<typename U>
-            requires std::is_convertible_v<U, note::string_view>
-                  && (!std::is_array_v<std::remove_reference_t<U>>)
-                  && (!std::is_same_v<std::decay_t<U>, mode_t>)
-        constexpr mode_t(U&& v) : Field<note::string_view>(note::string_view(std::forward<U>(v))) {}
-        template<typename U>
-            requires std::is_convertible_v<U, note::string_view>
-                  && (!std::is_array_v<std::remove_reference_t<U>>)
-                  && (!std::is_same_v<std::decay_t<U>, mode_t>)
-        mode_t& operator=(U&& v) {
-            Field<note::string_view>::operator=(note::string_view(std::forward<U>(v)));
-            return *this;
-        }
-        mode_t& operator=(std::nullopt_t) { Field<note::string_view>::reset(); return *this; }
-#else
     struct mode_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
-#endif
         static constexpr note::string_view dfu{"dfu"};
         static constexpr note::string_view gpio{"gpio"};
         static constexpr note::string_view led{"led"};
@@ -162,20 +132,7 @@ struct CardAux {
         static constexpr note::string_view track_neo_monitor{"track-neo-monitor"};
         static constexpr note::string_view track_rgb_monitor{"track-rgb-monitor"};
         static constexpr note::string_view _{"-"};
-#if __cplusplus >= 202002L
-        CardAux& operator()(mode_t v);
-        template<typename U>
-            requires std::is_convertible_v<U, note::string_view>
-                  && (!std::is_array_v<std::remove_reference_t<U>>)
-                  && (!std::is_same_v<std::decay_t<U>, mode_t>)
-        CardAux& operator()(U&& v) {
-            Field<note::string_view>::operator=(note::string_view(std::forward<U>(v)));
-            return *reinterpret_cast<CardAux*>(
-                reinterpret_cast<char*>(this) - offsetof(CardAux, mode));
-        }
-#else
         CardAux& operator()(note::string_view v);
-#endif
     } mode{};
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
     /// When in `gpio` mode, this argument configures a debouncing interval.
@@ -548,19 +505,11 @@ inline CardAux& CardAux::max_t::operator()(int32_t v) {
     return *reinterpret_cast<CardAux*>(
         reinterpret_cast<char*>(this) - offsetof(CardAux, max));
 }
-#if __cplusplus >= 202002L
-inline CardAux& CardAux::mode_t::operator()(CardAux::mode_t v) {
-    if (v) Field<note::string_view>::operator=(*v);
-    return *reinterpret_cast<CardAux*>(
-        reinterpret_cast<char*>(this) - offsetof(CardAux, mode));
-}
-#else
 inline CardAux& CardAux::mode_t::operator()(note::string_view v) {
     Field<note::string_view>::operator=(v);
     return *reinterpret_cast<CardAux*>(
         reinterpret_cast<char*>(this) - offsetof(CardAux, mode));
 }
-#endif
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
 inline CardAux& CardAux::ms_t::operator()(note::Milliseconds v) {
     Field<note::Milliseconds>::operator=(v);

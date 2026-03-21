@@ -28,7 +28,7 @@ namespace note::api {
 /// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
 struct CardBinary {
 
-    struct Get {
+    struct Status {
         static constexpr string_view notecard_request = "card.binary";
         static constexpr bool supports_cmd = true;
         static constexpr Safety safety = Safety::ReadOnly;
@@ -41,7 +41,7 @@ struct CardBinary {
         struct delete_t : Field<bool> {
             using Field<bool>::Field;
             using Field<bool>::operator=;
-            CardBinary::Get& operator()(bool v);
+            CardBinary::Status& operator()(bool v);
         } delete_{};
 
 
@@ -154,6 +154,7 @@ struct CardBinary {
         Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
 
     };
+    using Get = Status;  ///< @deprecated Use Status instead.
 
     /// View the status of the binary storage area of the Notecard and
     /// optionally clear any data and related `card.binary` variables. See the
@@ -161,7 +162,7 @@ struct CardBinary {
     /// when using `card.binary`.
     ///
     /// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
-    struct Delete {
+    struct Clear {
         static constexpr string_view notecard_request = "card.binary";
         static constexpr bool supports_cmd = true;
         static constexpr Safety safety = Safety::Destructive;
@@ -279,14 +280,15 @@ struct CardBinary {
         Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
 
     };
+    using Delete = Clear;  ///< @deprecated Use Clear instead.
 };
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-inline CardBinary::Get& CardBinary::Get::delete_t::operator()(bool v) {
+inline CardBinary::Status& CardBinary::Status::delete_t::operator()(bool v) {
     Field<bool>::operator=(v);
-    return *reinterpret_cast<CardBinary::Get*>(
-        reinterpret_cast<char*>(this) - offsetof(CardBinary::Get, delete_));
+    return *reinterpret_cast<CardBinary::Status*>(
+        reinterpret_cast<char*>(this) - offsetof(CardBinary::Status, delete_));
 }
 #pragma GCC diagnostic pop
 

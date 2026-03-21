@@ -45,55 +45,12 @@ struct DfuStatus {
     /// updates, or `"card"`, which gets the status of Notecard firmware
     /// updates.
     // name: user | card
-#if __cplusplus >= 202002L
-    struct validate_name_ {
-        consteval void operator()(note::string_view v) const {
-            if (v != "user" && v != "card")
-                throw "dfu.status: invalid value for 'name'";
-        }
-    };
-    struct name_t : Field<note::string_view> {
-        constexpr name_t() = default;
-        template<std::size_t N>
-        consteval name_t(const char (&s)[N])
-            : Field<note::string_view>(note::string_view(s, N - 1)) {
-            validate_name_{}(note::string_view(s, N - 1));
-        }
-        template<typename U>
-            requires std::is_convertible_v<U, note::string_view>
-                  && (!std::is_array_v<std::remove_reference_t<U>>)
-                  && (!std::is_same_v<std::decay_t<U>, name_t>)
-        constexpr name_t(U&& v) : Field<note::string_view>(note::string_view(std::forward<U>(v))) {}
-        template<typename U>
-            requires std::is_convertible_v<U, note::string_view>
-                  && (!std::is_array_v<std::remove_reference_t<U>>)
-                  && (!std::is_same_v<std::decay_t<U>, name_t>)
-        name_t& operator=(U&& v) {
-            Field<note::string_view>::operator=(note::string_view(std::forward<U>(v)));
-            return *this;
-        }
-        name_t& operator=(std::nullopt_t) { Field<note::string_view>::reset(); return *this; }
-#else
     struct name_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
-#endif
         static constexpr note::string_view user{"user"};
         static constexpr note::string_view card{"card"};
-#if __cplusplus >= 202002L
-        DfuStatus& operator()(name_t v);
-        template<typename U>
-            requires std::is_convertible_v<U, note::string_view>
-                  && (!std::is_array_v<std::remove_reference_t<U>>)
-                  && (!std::is_same_v<std::decay_t<U>, name_t>)
-        DfuStatus& operator()(U&& v) {
-            Field<note::string_view>::operator=(note::string_view(std::forward<U>(v)));
-            return *reinterpret_cast<DfuStatus*>(
-                reinterpret_cast<char*>(this) - offsetof(DfuStatus, name));
-        }
-#else
         DfuStatus& operator()(note::string_view v);
-#endif
     } name{};
     /// `true` to disable firmware downloads from Notehub.
     struct off_t : Field<bool> {
@@ -318,19 +275,11 @@ inline DfuStatus& DfuStatus::err_t::operator()(note::string_view v) {
     return *reinterpret_cast<DfuStatus*>(
         reinterpret_cast<char*>(this) - offsetof(DfuStatus, err));
 }
-#if __cplusplus >= 202002L
-inline DfuStatus& DfuStatus::name_t::operator()(DfuStatus::name_t v) {
-    if (v) Field<note::string_view>::operator=(*v);
-    return *reinterpret_cast<DfuStatus*>(
-        reinterpret_cast<char*>(this) - offsetof(DfuStatus, name));
-}
-#else
 inline DfuStatus& DfuStatus::name_t::operator()(note::string_view v) {
     Field<note::string_view>::operator=(v);
     return *reinterpret_cast<DfuStatus*>(
         reinterpret_cast<char*>(this) - offsetof(DfuStatus, name));
 }
-#endif
 inline DfuStatus& DfuStatus::off_t::operator()(bool v) {
     Field<bool>::operator=(v);
     return *reinterpret_cast<DfuStatus*>(

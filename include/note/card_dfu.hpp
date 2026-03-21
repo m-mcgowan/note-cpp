@@ -40,6 +40,8 @@ struct CardDfu {
     struct mode_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
+        static constexpr note::string_view altdfu{"altdfu"};
+        static constexpr note::string_view aux{"aux"};
         CardDfu& operator()(note::string_view v);
     } mode{};
     /// One of the supported classes of host MCU. Supported MCU classes are
@@ -53,6 +55,11 @@ struct CardDfu {
     struct name_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
+        static constexpr note::string_view esp32{"esp32"};
+        static constexpr note::string_view stm32{"stm32"};
+        static constexpr note::string_view stm32_bi{"stm32-bi"};
+        static constexpr note::string_view mcuboot{"mcuboot"};
+        static constexpr note::string_view _{"-"};
         CardDfu& operator()(note::string_view v);
     } name{};
     /// Set to `true` to disable Notecard Outboard Firmware Update from
@@ -121,6 +128,14 @@ struct CardDfu {
     }
 #endif
 
+    // Semantic convenience methods — generated from x-toggle / x-action metadata
+    // (method names that match a field accessor are skipped to avoid redefinition)
+    auto& enableUpdate() { on = true; return *this; }
+    auto& disableUpdate() { off = true; return *this; }
+    auto& enableUpdate(bool v_) { if (v_) on = true; else off = true; return *this; }
+    auto& enableHostReset() { start = true; return *this; }
+    auto& disableHostReset() { stop = true; return *this; }
+    auto& enableHostReset(bool v_) { if (v_) start = true; else stop = true; return *this; }
     template<typename T>
     auto& extra(note::string_view key, T value) {
         if (extras_count_ < NOTE_EXTRAS_MAX)

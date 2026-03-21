@@ -41,6 +41,9 @@ struct CardCarrier {
     struct mode_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
+        static constexpr note::string_view charging{"charging"};
+        static constexpr note::string_view _{"-"};
+        static constexpr note::string_view off{"off"};
         CardCarrier& operator()(note::string_view v);
     } mode{};
 

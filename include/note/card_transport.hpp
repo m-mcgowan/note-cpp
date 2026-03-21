@@ -54,6 +54,15 @@ struct CardTransport {
     struct method_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
+        static constexpr note::string_view _{"-"};
+        static constexpr note::string_view cell{"cell"};
+        static constexpr note::string_view cell_ntn{"cell-ntn"};
+        static constexpr note::string_view dual_wifi_cell{"dual-wifi-cell"};
+        static constexpr note::string_view ntn{"ntn"};
+        static constexpr note::string_view wifi{"wifi"};
+        static constexpr note::string_view wifi_cell{"wifi-cell"};
+        static constexpr note::string_view wifi_cell_ntn{"wifi-cell-ntn"};
+        static constexpr note::string_view wifi_ntn{"wifi-ntn"};
         CardTransport& operator()(note::string_view v);
     } method{};
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
@@ -66,10 +75,10 @@ struct CardTransport {
     [[deprecated("requires firmware >= 5.3.1")]]
 #endif
     struct seconds_t : Field<note::Seconds> {
-        /// Reset to default
-        static constexpr note::Seconds reset{ -1 };
         using Field<note::Seconds>::Field;
         using Field<note::Seconds>::operator=;
+        /// Reset to default
+        static constexpr note::Seconds reset{ -1 };
         CardTransport& operator()(note::Seconds v);
     } seconds{};
 #endif

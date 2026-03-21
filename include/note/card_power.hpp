@@ -27,7 +27,7 @@ namespace note::api {
 /// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
 struct CardPower {
 
-    struct Get {
+    struct Read {
         static constexpr string_view notecard_request = "card.power";
         static constexpr bool supports_cmd = true;
         static constexpr Safety safety = Safety::ReadOnly;
@@ -40,16 +40,20 @@ struct CardPower {
         struct minutes_t : Field<note::Minutes> {
             using Field<note::Minutes>::Field;
             using Field<note::Minutes>::operator=;
-            CardPower::Get& operator()(note::Minutes v);
+            CardPower::Read& operator()(note::Minutes v);
         } minutes{};
         /// Set to `true` to reset the power consumption counters back to 0.
         struct reset_t : Field<bool> {
             using Field<bool>::Field;
             using Field<bool>::operator=;
-            CardPower::Get& operator()(bool v);
+            CardPower::Read& operator()(bool v);
         } reset{};
 
 
+    // Semantic convenience methods — generated from x-toggle / x-action metadata
+    // (method names that match a field accessor are skipped to avoid redefinition)
+        auto& resetCounters() { reset = true; return *this; }
+        auto& resetCounters(bool v_) { reset = v_; return *this; }
         template<typename T>
         auto& extra(note::string_view key, T value) {
             if (extras_count_ < NOTE_EXTRAS_MAX)
@@ -139,12 +143,13 @@ struct CardPower {
         Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
 
     };
+    using Get = Read;  ///< @deprecated Use Read instead.
 
     /// The `card.power` API is used to configure a connected Mojo device or to
     /// manually request power consumption readings in firmware.
     ///
     /// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
-    struct Set {
+    struct Configure {
         static constexpr string_view notecard_request = "card.power";
         static constexpr bool supports_cmd = true;
         static constexpr Safety safety = Safety::Idempotent;
@@ -157,16 +162,20 @@ struct CardPower {
         struct minutes_t : Field<note::Minutes> {
             using Field<note::Minutes>::Field;
             using Field<note::Minutes>::operator=;
-            CardPower::Set& operator()(note::Minutes v);
+            CardPower::Configure& operator()(note::Minutes v);
         } minutes{};
         /// Set to `true` to reset the power consumption counters back to 0.
         struct reset_t : Field<bool> {
             using Field<bool>::Field;
             using Field<bool>::operator=;
-            CardPower::Set& operator()(bool v);
+            CardPower::Configure& operator()(bool v);
         } reset{};
 
 
+    // Semantic convenience methods — generated from x-toggle / x-action metadata
+    // (method names that match a field accessor are skipped to avoid redefinition)
+        auto& resetCounters() { reset = true; return *this; }
+        auto& resetCounters(bool v_) { reset = v_; return *this; }
         template<typename T>
         auto& extra(note::string_view key, T value) {
             if (extras_count_ < NOTE_EXTRAS_MAX)
@@ -256,12 +265,13 @@ struct CardPower {
         Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
 
     };
+    using Set = Configure;  ///< @deprecated Use Configure instead.
 
     /// The `card.power` API is used to configure a connected Mojo device or to
     /// manually request power consumption readings in firmware.
     ///
     /// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
-    struct Delete {
+    struct Reset {
         static constexpr string_view notecard_request = "card.power";
         static constexpr bool supports_cmd = true;
         static constexpr Safety safety = Safety::Destructive;
@@ -274,7 +284,7 @@ struct CardPower {
         struct minutes_t : Field<note::Minutes> {
             using Field<note::Minutes>::Field;
             using Field<note::Minutes>::operator=;
-            CardPower::Delete& operator()(note::Minutes v);
+            CardPower::Reset& operator()(note::Minutes v);
         } minutes{};
 
 
@@ -366,42 +376,43 @@ struct CardPower {
         Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
 
     };
+    using Delete = Reset;  ///< @deprecated Use Reset instead.
 };
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-inline CardPower::Get& CardPower::Get::minutes_t::operator()(note::Minutes v) {
+inline CardPower::Read& CardPower::Read::minutes_t::operator()(note::Minutes v) {
     Field<note::Minutes>::operator=(v);
-    return *reinterpret_cast<CardPower::Get*>(
-        reinterpret_cast<char*>(this) - offsetof(CardPower::Get, minutes));
+    return *reinterpret_cast<CardPower::Read*>(
+        reinterpret_cast<char*>(this) - offsetof(CardPower::Read, minutes));
 }
-inline CardPower::Get& CardPower::Get::reset_t::operator()(bool v) {
+inline CardPower::Read& CardPower::Read::reset_t::operator()(bool v) {
     Field<bool>::operator=(v);
-    return *reinterpret_cast<CardPower::Get*>(
-        reinterpret_cast<char*>(this) - offsetof(CardPower::Get, reset));
+    return *reinterpret_cast<CardPower::Read*>(
+        reinterpret_cast<char*>(this) - offsetof(CardPower::Read, reset));
 }
 #pragma GCC diagnostic pop
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-inline CardPower::Set& CardPower::Set::minutes_t::operator()(note::Minutes v) {
+inline CardPower::Configure& CardPower::Configure::minutes_t::operator()(note::Minutes v) {
     Field<note::Minutes>::operator=(v);
-    return *reinterpret_cast<CardPower::Set*>(
-        reinterpret_cast<char*>(this) - offsetof(CardPower::Set, minutes));
+    return *reinterpret_cast<CardPower::Configure*>(
+        reinterpret_cast<char*>(this) - offsetof(CardPower::Configure, minutes));
 }
-inline CardPower::Set& CardPower::Set::reset_t::operator()(bool v) {
+inline CardPower::Configure& CardPower::Configure::reset_t::operator()(bool v) {
     Field<bool>::operator=(v);
-    return *reinterpret_cast<CardPower::Set*>(
-        reinterpret_cast<char*>(this) - offsetof(CardPower::Set, reset));
+    return *reinterpret_cast<CardPower::Configure*>(
+        reinterpret_cast<char*>(this) - offsetof(CardPower::Configure, reset));
 }
 #pragma GCC diagnostic pop
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-inline CardPower::Delete& CardPower::Delete::minutes_t::operator()(note::Minutes v) {
+inline CardPower::Reset& CardPower::Reset::minutes_t::operator()(note::Minutes v) {
     Field<note::Minutes>::operator=(v);
-    return *reinterpret_cast<CardPower::Delete*>(
-        reinterpret_cast<char*>(this) - offsetof(CardPower::Delete, minutes));
+    return *reinterpret_cast<CardPower::Reset*>(
+        reinterpret_cast<char*>(this) - offsetof(CardPower::Reset, minutes));
 }
 #pragma GCC diagnostic pop
 

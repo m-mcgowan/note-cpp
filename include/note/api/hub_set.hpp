@@ -107,58 +107,15 @@ struct HubSet {
     /// NOTE: The Notecard must be in `periodic` or `continuous` mode to use the
     /// onboard GPS module.
     // mode: periodic | continuous | minimum | off | dfu
-#if __cplusplus >= 202002L
-    struct validate_mode_ {
-        consteval void operator()(note::string_view v) const {
-            if (v != "periodic" && v != "continuous" && v != "minimum" && v != "off" && v != "dfu")
-                throw "hub.set: invalid value for 'mode'";
-        }
-    };
-    struct mode_t : Field<note::string_view> {
-        constexpr mode_t() = default;
-        template<std::size_t N>
-        consteval mode_t(const char (&s)[N])
-            : Field<note::string_view>(note::string_view(s, N - 1)) {
-            validate_mode_{}(note::string_view(s, N - 1));
-        }
-        template<typename U>
-            requires std::is_convertible_v<U, note::string_view>
-                  && (!std::is_array_v<std::remove_reference_t<U>>)
-                  && (!std::is_same_v<std::decay_t<U>, mode_t>)
-        constexpr mode_t(U&& v) : Field<note::string_view>(note::string_view(std::forward<U>(v))) {}
-        template<typename U>
-            requires std::is_convertible_v<U, note::string_view>
-                  && (!std::is_array_v<std::remove_reference_t<U>>)
-                  && (!std::is_same_v<std::decay_t<U>, mode_t>)
-        mode_t& operator=(U&& v) {
-            Field<note::string_view>::operator=(note::string_view(std::forward<U>(v)));
-            return *this;
-        }
-        mode_t& operator=(std::nullopt_t) { Field<note::string_view>::reset(); return *this; }
-#else
     struct mode_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
-#endif
         static constexpr note::string_view periodic{"periodic"};
         static constexpr note::string_view continuous{"continuous"};
         static constexpr note::string_view minimum{"minimum"};
         static constexpr note::string_view off{"off"};
         static constexpr note::string_view dfu{"dfu"};
-#if __cplusplus >= 202002L
-        HubSet& operator()(mode_t v);
-        template<typename U>
-            requires std::is_convertible_v<U, note::string_view>
-                  && (!std::is_array_v<std::remove_reference_t<U>>)
-                  && (!std::is_same_v<std::decay_t<U>, mode_t>)
-        HubSet& operator()(U&& v) {
-            Field<note::string_view>::operator=(note::string_view(std::forward<U>(v)));
-            return *reinterpret_cast<HubSet*>(
-                reinterpret_cast<char*>(this) - offsetof(HubSet, mode));
-        }
-#else
         HubSet& operator()(note::string_view v);
-#endif
     } mode{};
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
     /// Set to `true` to manually instruct the Notecard to resume periodic mode
@@ -518,19 +475,11 @@ inline HubSet& HubSet::inbound_t::operator()(note::Minutes v) {
     return *reinterpret_cast<HubSet*>(
         reinterpret_cast<char*>(this) - offsetof(HubSet, inbound));
 }
-#if __cplusplus >= 202002L
-inline HubSet& HubSet::mode_t::operator()(HubSet::mode_t v) {
-    if (v) Field<note::string_view>::operator=(*v);
-    return *reinterpret_cast<HubSet*>(
-        reinterpret_cast<char*>(this) - offsetof(HubSet, mode));
-}
-#else
 inline HubSet& HubSet::mode_t::operator()(note::string_view v) {
     Field<note::string_view>::operator=(v);
     return *reinterpret_cast<HubSet*>(
         reinterpret_cast<char*>(this) - offsetof(HubSet, mode));
 }
-#endif
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
 inline HubSet& HubSet::off_t::operator()(bool v) {
     Field<bool>::operator=(v);

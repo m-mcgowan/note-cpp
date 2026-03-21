@@ -81,6 +81,10 @@ struct CardLocationMode {
         struct mode_t : Field<note::string_view> {
             using Field<note::string_view>::Field;
             using Field<note::string_view>::operator=;
+            static constexpr note::string_view off{"off"};
+            static constexpr note::string_view periodic{"periodic"};
+            static constexpr note::string_view continuous{"continuous"};
+            static constexpr note::string_view fixed{"fixed"};
             CardLocationMode::Get& operator()(note::string_view v);
         } mode{};
         /// When in `periodic` mode, location will be sampled at this interval,
@@ -88,10 +92,10 @@ struct CardLocationMode {
         /// of sustained movement the Notecard will leave its onboard GPS/GNSS
         /// on continuously to avoid powering the module on and off repeatedly.
         struct seconds_t : Field<note::Seconds> {
-            /// Reset to default
-            static constexpr note::Seconds reset{ -1 };
             using Field<note::Seconds>::Field;
             using Field<note::Seconds>::operator=;
+            /// Reset to default
+            static constexpr note::Seconds reset{ -1 };
             CardLocationMode::Get& operator()(note::Seconds v);
         } seconds{};
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
@@ -356,6 +360,10 @@ struct CardLocationMode {
         struct mode_t : Field<note::string_view> {
             using Field<note::string_view>::Field;
             using Field<note::string_view>::operator=;
+            static constexpr note::string_view off{"off"};
+            static constexpr note::string_view periodic{"periodic"};
+            static constexpr note::string_view continuous{"continuous"};
+            static constexpr note::string_view fixed{"fixed"};
             CardLocationMode::Set& operator()(note::string_view v);
         } mode{};
         /// When in `periodic` mode, location will be sampled at this interval,
@@ -363,10 +371,10 @@ struct CardLocationMode {
         /// of sustained movement the Notecard will leave its onboard GPS/GNSS
         /// on continuously to avoid powering the module on and off repeatedly.
         struct seconds_t : Field<note::Seconds> {
-            /// Reset to default
-            static constexpr note::Seconds reset{ -1 };
             using Field<note::Seconds>::Field;
             using Field<note::Seconds>::operator=;
+            /// Reset to default
+            static constexpr note::Seconds reset{ -1 };
             CardLocationMode::Set& operator()(note::Seconds v);
         } seconds{};
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
@@ -784,10 +792,10 @@ struct CardLocationMode {
         /// of sustained movement the Notecard will leave its onboard GPS/GNSS
         /// on continuously to avoid powering the module on and off repeatedly.
         struct seconds_t : Field<note::Seconds> {
-            /// Reset to default
-            static constexpr note::Seconds reset{ -1 };
             using Field<note::Seconds>::Field;
             using Field<note::Seconds>::operator=;
+            /// Reset to default
+            static constexpr note::Seconds reset{ -1 };
             CardLocationMode::Periodic& operator()(note::Seconds v);
         } seconds{};
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
@@ -1107,7 +1115,7 @@ struct CardLocationMode {
     /// location mode when passed with no argument.
     ///
     /// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
-    struct Delete {
+    struct Remove {
         static constexpr string_view notecard_request = "card.location.mode";
         static constexpr bool supports_cmd = true;
         static constexpr Safety safety = Safety::Destructive;
@@ -1123,7 +1131,7 @@ struct CardLocationMode {
         struct lat_t : Field<double> {
             using Field<double>::Field;
             using Field<double>::operator=;
-            CardLocationMode::Delete& operator()(double v);
+            CardLocationMode::Remove& operator()(double v);
         } lat{};
         /// When in periodic or continuous mode, providing this value enables
         /// geofencing. The value you provide for this argument should be the
@@ -1133,39 +1141,43 @@ struct CardLocationMode {
         struct lon_t : Field<double> {
             using Field<double>::Field;
             using Field<double>::operator=;
-            CardLocationMode::Delete& operator()(double v);
+            CardLocationMode::Remove& operator()(double v);
         } lon{};
         /// Meters from a geofence center. Used to enable geofence location
         /// tracking.
         struct max_t : Field<int32_t> {
             using Field<int32_t>::Field;
             using Field<int32_t>::operator=;
-            CardLocationMode::Delete& operator()(int32_t v);
+            CardLocationMode::Remove& operator()(int32_t v);
         } max{};
         /// When geofence is enabled, the number of minutes the device should be
         /// outside the geofence before the Notecard location is tracked.
         struct minutes_t : Field<note::Minutes> {
             using Field<note::Minutes>::Field;
             using Field<note::Minutes>::operator=;
-            CardLocationMode::Delete& operator()(note::Minutes v);
+            CardLocationMode::Remove& operator()(note::Minutes v);
         } minutes{};
         /// Sets the location mode.
         // mode:  | off | periodic | continuous | fixed
         struct mode_t : Field<note::string_view> {
             using Field<note::string_view>::Field;
             using Field<note::string_view>::operator=;
-            CardLocationMode::Delete& operator()(note::string_view v);
+            static constexpr note::string_view off{"off"};
+            static constexpr note::string_view periodic{"periodic"};
+            static constexpr note::string_view continuous{"continuous"};
+            static constexpr note::string_view fixed{"fixed"};
+            CardLocationMode::Remove& operator()(note::string_view v);
         } mode{};
         /// When in `periodic` mode, location will be sampled at this interval,
         /// if the Notecard detects motion. If seconds is < 300, during periods
         /// of sustained movement the Notecard will leave its onboard GPS/GNSS
         /// on continuously to avoid powering the module on and off repeatedly.
         struct seconds_t : Field<note::Seconds> {
-            /// Reset to default
-            static constexpr note::Seconds reset{ -1 };
             using Field<note::Seconds>::Field;
             using Field<note::Seconds>::operator=;
-            CardLocationMode::Delete& operator()(note::Seconds v);
+            /// Reset to default
+            static constexpr note::Seconds reset{ -1 };
+            CardLocationMode::Remove& operator()(note::Seconds v);
         } seconds{};
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
         /// When in `periodic` mode, the number of motion events (registered by
@@ -1178,7 +1190,7 @@ struct CardLocationMode {
         struct threshold_t : Field<int32_t> {
             using Field<int32_t>::Field;
             using Field<int32_t>::operator=;
-            CardLocationMode::Delete& operator()(int32_t v);
+            CardLocationMode::Remove& operator()(int32_t v);
         } threshold{};
 #endif
         /// In `periodic` mode, overrides `seconds` with a voltage-variable
@@ -1186,7 +1198,7 @@ struct CardLocationMode {
         struct vseconds_t : Field<note::string_view> {
             using Field<note::string_view>::Field;
             using Field<note::string_view>::operator=;
-            CardLocationMode::Delete& operator()(note::string_view v);
+            CardLocationMode::Remove& operator()(note::string_view v);
         } vseconds{};
 
         // Valid values for 'mode':
@@ -1369,6 +1381,7 @@ struct CardLocationMode {
         Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
 
     };
+    using Delete = Remove;  ///< @deprecated Use Remove instead.
 };
 
 #pragma GCC diagnostic push
@@ -1551,47 +1564,47 @@ inline CardLocationMode::Fixed& CardLocationMode::Fixed::lon_t::operator()(doubl
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-inline CardLocationMode::Delete& CardLocationMode::Delete::lat_t::operator()(double v) {
+inline CardLocationMode::Remove& CardLocationMode::Remove::lat_t::operator()(double v) {
     Field<double>::operator=(v);
-    return *reinterpret_cast<CardLocationMode::Delete*>(
-        reinterpret_cast<char*>(this) - offsetof(CardLocationMode::Delete, lat));
+    return *reinterpret_cast<CardLocationMode::Remove*>(
+        reinterpret_cast<char*>(this) - offsetof(CardLocationMode::Remove, lat));
 }
-inline CardLocationMode::Delete& CardLocationMode::Delete::lon_t::operator()(double v) {
+inline CardLocationMode::Remove& CardLocationMode::Remove::lon_t::operator()(double v) {
     Field<double>::operator=(v);
-    return *reinterpret_cast<CardLocationMode::Delete*>(
-        reinterpret_cast<char*>(this) - offsetof(CardLocationMode::Delete, lon));
+    return *reinterpret_cast<CardLocationMode::Remove*>(
+        reinterpret_cast<char*>(this) - offsetof(CardLocationMode::Remove, lon));
 }
-inline CardLocationMode::Delete& CardLocationMode::Delete::max_t::operator()(int32_t v) {
+inline CardLocationMode::Remove& CardLocationMode::Remove::max_t::operator()(int32_t v) {
     Field<int32_t>::operator=(v);
-    return *reinterpret_cast<CardLocationMode::Delete*>(
-        reinterpret_cast<char*>(this) - offsetof(CardLocationMode::Delete, max));
+    return *reinterpret_cast<CardLocationMode::Remove*>(
+        reinterpret_cast<char*>(this) - offsetof(CardLocationMode::Remove, max));
 }
-inline CardLocationMode::Delete& CardLocationMode::Delete::minutes_t::operator()(note::Minutes v) {
+inline CardLocationMode::Remove& CardLocationMode::Remove::minutes_t::operator()(note::Minutes v) {
     Field<note::Minutes>::operator=(v);
-    return *reinterpret_cast<CardLocationMode::Delete*>(
-        reinterpret_cast<char*>(this) - offsetof(CardLocationMode::Delete, minutes));
+    return *reinterpret_cast<CardLocationMode::Remove*>(
+        reinterpret_cast<char*>(this) - offsetof(CardLocationMode::Remove, minutes));
 }
-inline CardLocationMode::Delete& CardLocationMode::Delete::mode_t::operator()(note::string_view v) {
+inline CardLocationMode::Remove& CardLocationMode::Remove::mode_t::operator()(note::string_view v) {
     Field<note::string_view>::operator=(v);
-    return *reinterpret_cast<CardLocationMode::Delete*>(
-        reinterpret_cast<char*>(this) - offsetof(CardLocationMode::Delete, mode));
+    return *reinterpret_cast<CardLocationMode::Remove*>(
+        reinterpret_cast<char*>(this) - offsetof(CardLocationMode::Remove, mode));
 }
-inline CardLocationMode::Delete& CardLocationMode::Delete::seconds_t::operator()(note::Seconds v) {
+inline CardLocationMode::Remove& CardLocationMode::Remove::seconds_t::operator()(note::Seconds v) {
     Field<note::Seconds>::operator=(v);
-    return *reinterpret_cast<CardLocationMode::Delete*>(
-        reinterpret_cast<char*>(this) - offsetof(CardLocationMode::Delete, seconds));
+    return *reinterpret_cast<CardLocationMode::Remove*>(
+        reinterpret_cast<char*>(this) - offsetof(CardLocationMode::Remove, seconds));
 }
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-inline CardLocationMode::Delete& CardLocationMode::Delete::threshold_t::operator()(int32_t v) {
+inline CardLocationMode::Remove& CardLocationMode::Remove::threshold_t::operator()(int32_t v) {
     Field<int32_t>::operator=(v);
-    return *reinterpret_cast<CardLocationMode::Delete*>(
-        reinterpret_cast<char*>(this) - offsetof(CardLocationMode::Delete, threshold));
+    return *reinterpret_cast<CardLocationMode::Remove*>(
+        reinterpret_cast<char*>(this) - offsetof(CardLocationMode::Remove, threshold));
 }
 #endif
-inline CardLocationMode::Delete& CardLocationMode::Delete::vseconds_t::operator()(note::string_view v) {
+inline CardLocationMode::Remove& CardLocationMode::Remove::vseconds_t::operator()(note::string_view v) {
     Field<note::string_view>::operator=(v);
-    return *reinterpret_cast<CardLocationMode::Delete*>(
-        reinterpret_cast<char*>(this) - offsetof(CardLocationMode::Delete, vseconds));
+    return *reinterpret_cast<CardLocationMode::Remove*>(
+        reinterpret_cast<char*>(this) - offsetof(CardLocationMode::Remove, vseconds));
 }
 #pragma GCC diagnostic pop
 

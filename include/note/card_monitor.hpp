@@ -47,6 +47,9 @@ struct CardMonitor {
     struct mode_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
+        static constexpr note::string_view green{"green"};
+        static constexpr note::string_view red{"red"};
+        static constexpr note::string_view yellow{"yellow"};
         CardMonitor& operator()(note::string_view v);
     } mode{};
     /// Set to `true` to configure LED behavior so that it is only active when

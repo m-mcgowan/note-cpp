@@ -10,6 +10,7 @@
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
 #include <note/units.hpp>
+#include <note/array_field.hpp>
 #include <note/target.hpp>
 
 namespace note::api {
@@ -116,6 +117,21 @@ struct CardAux {
     struct mode_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
+        static constexpr note::string_view dfu{"dfu"};
+        static constexpr note::string_view gpio{"gpio"};
+        static constexpr note::string_view led{"led"};
+        static constexpr note::string_view monitor{"monitor"};
+        static constexpr note::string_view motion{"motion"};
+        static constexpr note::string_view neo{"neo"};
+        static constexpr note::string_view neo_monitor{"neo-monitor"};
+        static constexpr note::string_view off{"off"};
+        static constexpr note::string_view rgb{"rgb"};
+        static constexpr note::string_view rgb_monitor{"rgb-monitor"};
+        static constexpr note::string_view track{"track"};
+        static constexpr note::string_view track_monitor{"track-monitor"};
+        static constexpr note::string_view track_neo_monitor{"track-neo-monitor"};
+        static constexpr note::string_view track_rgb_monitor{"track-rgb-monitor"};
+        static constexpr note::string_view _{"-"};
         CardAux& operator()(note::string_view v);
     } mode{};
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
@@ -206,11 +222,8 @@ struct CardAux {
     } sync{};
 #endif
     /// An ordered list of pin modes for each AUX pin when in GPIO mode.
-    struct usage_t : Field<note::string_view> {
-        using Field<note::string_view>::Field;
-        using Field<note::string_view>::operator=;
-        CardAux& operator()(note::string_view v);
-    } usage{};
+    /// An ordered list of pin modes for each AUX pin when in GPIO mode.
+    note::ArrayField<note::string_view, 8> usage{};
 
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
     // consteval: only callable at compile time (C++20)
@@ -260,6 +273,10 @@ struct CardAux {
 #endif
 #endif
 
+    // Semantic convenience methods — generated from x-toggle / x-action metadata
+    // (method names that match a field accessor are skipped to avoid redefinition)
+    auto& resetCounters() { start = true; return *this; }
+    auto& resetCounters(bool v_) { start = v_; return *this; }
     template<typename T>
     auto& extra(note::string_view key, T value) {
         if (extras_count_ < NOTE_EXTRAS_MAX)
@@ -301,7 +318,6 @@ struct CardAux {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
         if (k_ == "sync") return note::dyn_field_for(sync);
 #endif
-        if (k_ == "usage") return note::dyn_field_for(usage);
         if (extras_count_ < NOTE_EXTRAS_MAX) {
             auto& slot = extras_[extras_count_++];
             slot.key = k_;
@@ -434,7 +450,7 @@ struct CardAux {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
         if (sync) b.add("sync", *sync);
 #endif
-        if (usage) b.add("usage", *usage);
+        if (usage) usage.write_to(b, "usage");
         for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
             std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
                        extras_[i_].value);
@@ -537,11 +553,6 @@ inline CardAux& CardAux::sync_t::operator()(bool v) {
         reinterpret_cast<char*>(this) - offsetof(CardAux, sync));
 }
 #endif
-inline CardAux& CardAux::usage_t::operator()(note::string_view v) {
-    Field<note::string_view>::operator=(v);
-    return *reinterpret_cast<CardAux*>(
-        reinterpret_cast<char*>(this) - offsetof(CardAux, usage));
-}
 #pragma GCC diagnostic pop
 
 

@@ -44,6 +44,16 @@ struct CardIo {
     struct mode_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
+        static constexpr note::string_view _1{"-1"};
+        static constexpr note::string_view _usb{"-usb"};
+        static constexpr note::string_view usb{"usb"};
+        static constexpr note::string_view pusb{"+usb"};
+        static constexpr note::string_view pbusy{"+busy"};
+        static constexpr note::string_view _busy{"-busy"};
+        static constexpr note::string_view i2c_master_disable{"i2c-master-disable"};
+        static constexpr note::string_view i2c_master_enable{"i2c-master-enable"};
+        static constexpr note::string_view pfallback{"+fallback"};
+        static constexpr note::string_view _fallback{"-fallback"};
         CardIo& operator()(note::string_view v);
     } mode{};
 

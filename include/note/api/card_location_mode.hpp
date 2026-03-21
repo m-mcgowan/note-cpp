@@ -78,57 +78,14 @@ struct CardLocationMode {
         } minutes{};
         /// Sets the location mode.
         // mode:  | off | periodic | continuous | fixed
-#if __cplusplus >= 202002L
-        struct validate_mode_ {
-            consteval void operator()(note::string_view v) const {
-                if (v != "" && v != "off" && v != "periodic" && v != "continuous" && v != "fixed")
-                    throw "card.location.mode: invalid value for 'mode'";
-            }
-        };
-        struct mode_t : Field<note::string_view> {
-            constexpr mode_t() = default;
-            template<std::size_t N>
-            consteval mode_t(const char (&s)[N])
-                : Field<note::string_view>(note::string_view(s, N - 1)) {
-                validate_mode_{}(note::string_view(s, N - 1));
-            }
-            template<typename U>
-                requires std::is_convertible_v<U, note::string_view>
-                      && (!std::is_array_v<std::remove_reference_t<U>>)
-                      && (!std::is_same_v<std::decay_t<U>, mode_t>)
-            constexpr mode_t(U&& v) : Field<note::string_view>(note::string_view(std::forward<U>(v))) {}
-            template<typename U>
-                requires std::is_convertible_v<U, note::string_view>
-                      && (!std::is_array_v<std::remove_reference_t<U>>)
-                      && (!std::is_same_v<std::decay_t<U>, mode_t>)
-            mode_t& operator=(U&& v) {
-                Field<note::string_view>::operator=(note::string_view(std::forward<U>(v)));
-                return *this;
-            }
-            mode_t& operator=(std::nullopt_t) { Field<note::string_view>::reset(); return *this; }
-#else
         struct mode_t : Field<note::string_view> {
             using Field<note::string_view>::Field;
             using Field<note::string_view>::operator=;
-#endif
             static constexpr note::string_view off{"off"};
             static constexpr note::string_view periodic{"periodic"};
             static constexpr note::string_view continuous{"continuous"};
             static constexpr note::string_view fixed{"fixed"};
-#if __cplusplus >= 202002L
-            CardLocationMode::Get& operator()(mode_t v);
-            template<typename U>
-                requires std::is_convertible_v<U, note::string_view>
-                      && (!std::is_array_v<std::remove_reference_t<U>>)
-                      && (!std::is_same_v<std::decay_t<U>, mode_t>)
-            CardLocationMode::Get& operator()(U&& v) {
-                Field<note::string_view>::operator=(note::string_view(std::forward<U>(v)));
-                return *reinterpret_cast<CardLocationMode::Get*>(
-                    reinterpret_cast<char*>(this) - offsetof(CardLocationMode::Get, mode));
-            }
-#else
             CardLocationMode::Get& operator()(note::string_view v);
-#endif
         } mode{};
         /// When in `periodic` mode, location will be sampled at this interval,
         /// if the Notecard detects motion. If seconds is < 300, during periods
@@ -400,57 +357,14 @@ struct CardLocationMode {
         } minutes{};
         /// Sets the location mode.
         // mode:  | off | periodic | continuous | fixed
-#if __cplusplus >= 202002L
-        struct validate_mode_ {
-            consteval void operator()(note::string_view v) const {
-                if (v != "" && v != "off" && v != "periodic" && v != "continuous" && v != "fixed")
-                    throw "card.location.mode: invalid value for 'mode'";
-            }
-        };
-        struct mode_t : Field<note::string_view> {
-            constexpr mode_t() = default;
-            template<std::size_t N>
-            consteval mode_t(const char (&s)[N])
-                : Field<note::string_view>(note::string_view(s, N - 1)) {
-                validate_mode_{}(note::string_view(s, N - 1));
-            }
-            template<typename U>
-                requires std::is_convertible_v<U, note::string_view>
-                      && (!std::is_array_v<std::remove_reference_t<U>>)
-                      && (!std::is_same_v<std::decay_t<U>, mode_t>)
-            constexpr mode_t(U&& v) : Field<note::string_view>(note::string_view(std::forward<U>(v))) {}
-            template<typename U>
-                requires std::is_convertible_v<U, note::string_view>
-                      && (!std::is_array_v<std::remove_reference_t<U>>)
-                      && (!std::is_same_v<std::decay_t<U>, mode_t>)
-            mode_t& operator=(U&& v) {
-                Field<note::string_view>::operator=(note::string_view(std::forward<U>(v)));
-                return *this;
-            }
-            mode_t& operator=(std::nullopt_t) { Field<note::string_view>::reset(); return *this; }
-#else
         struct mode_t : Field<note::string_view> {
             using Field<note::string_view>::Field;
             using Field<note::string_view>::operator=;
-#endif
             static constexpr note::string_view off{"off"};
             static constexpr note::string_view periodic{"periodic"};
             static constexpr note::string_view continuous{"continuous"};
             static constexpr note::string_view fixed{"fixed"};
-#if __cplusplus >= 202002L
-            CardLocationMode::Set& operator()(mode_t v);
-            template<typename U>
-                requires std::is_convertible_v<U, note::string_view>
-                      && (!std::is_array_v<std::remove_reference_t<U>>)
-                      && (!std::is_same_v<std::decay_t<U>, mode_t>)
-            CardLocationMode::Set& operator()(U&& v) {
-                Field<note::string_view>::operator=(note::string_view(std::forward<U>(v)));
-                return *reinterpret_cast<CardLocationMode::Set*>(
-                    reinterpret_cast<char*>(this) - offsetof(CardLocationMode::Set, mode));
-            }
-#else
             CardLocationMode::Set& operator()(note::string_view v);
-#endif
         } mode{};
         /// When in `periodic` mode, location will be sampled at this interval,
         /// if the Notecard detects motion. If seconds is < 300, during periods
@@ -1245,57 +1159,14 @@ struct CardLocationMode {
         } minutes{};
         /// Sets the location mode.
         // mode:  | off | periodic | continuous | fixed
-#if __cplusplus >= 202002L
-        struct validate_mode_ {
-            consteval void operator()(note::string_view v) const {
-                if (v != "" && v != "off" && v != "periodic" && v != "continuous" && v != "fixed")
-                    throw "card.location.mode: invalid value for 'mode'";
-            }
-        };
-        struct mode_t : Field<note::string_view> {
-            constexpr mode_t() = default;
-            template<std::size_t N>
-            consteval mode_t(const char (&s)[N])
-                : Field<note::string_view>(note::string_view(s, N - 1)) {
-                validate_mode_{}(note::string_view(s, N - 1));
-            }
-            template<typename U>
-                requires std::is_convertible_v<U, note::string_view>
-                      && (!std::is_array_v<std::remove_reference_t<U>>)
-                      && (!std::is_same_v<std::decay_t<U>, mode_t>)
-            constexpr mode_t(U&& v) : Field<note::string_view>(note::string_view(std::forward<U>(v))) {}
-            template<typename U>
-                requires std::is_convertible_v<U, note::string_view>
-                      && (!std::is_array_v<std::remove_reference_t<U>>)
-                      && (!std::is_same_v<std::decay_t<U>, mode_t>)
-            mode_t& operator=(U&& v) {
-                Field<note::string_view>::operator=(note::string_view(std::forward<U>(v)));
-                return *this;
-            }
-            mode_t& operator=(std::nullopt_t) { Field<note::string_view>::reset(); return *this; }
-#else
         struct mode_t : Field<note::string_view> {
             using Field<note::string_view>::Field;
             using Field<note::string_view>::operator=;
-#endif
             static constexpr note::string_view off{"off"};
             static constexpr note::string_view periodic{"periodic"};
             static constexpr note::string_view continuous{"continuous"};
             static constexpr note::string_view fixed{"fixed"};
-#if __cplusplus >= 202002L
-            CardLocationMode::Remove& operator()(mode_t v);
-            template<typename U>
-                requires std::is_convertible_v<U, note::string_view>
-                      && (!std::is_array_v<std::remove_reference_t<U>>)
-                      && (!std::is_same_v<std::decay_t<U>, mode_t>)
-            CardLocationMode::Remove& operator()(U&& v) {
-                Field<note::string_view>::operator=(note::string_view(std::forward<U>(v)));
-                return *reinterpret_cast<CardLocationMode::Remove*>(
-                    reinterpret_cast<char*>(this) - offsetof(CardLocationMode::Remove, mode));
-            }
-#else
             CardLocationMode::Remove& operator()(note::string_view v);
-#endif
         } mode{};
         /// When in `periodic` mode, location will be sampled at this interval,
         /// if the Notecard detects motion. If seconds is < 300, during periods
@@ -1541,19 +1412,11 @@ inline CardLocationMode::Get& CardLocationMode::Get::minutes_t::operator()(note:
     return *reinterpret_cast<CardLocationMode::Get*>(
         reinterpret_cast<char*>(this) - offsetof(CardLocationMode::Get, minutes));
 }
-#if __cplusplus >= 202002L
-inline CardLocationMode::Get& CardLocationMode::Get::mode_t::operator()(CardLocationMode::Get::mode_t v) {
-    if (v) Field<note::string_view>::operator=(*v);
-    return *reinterpret_cast<CardLocationMode::Get*>(
-        reinterpret_cast<char*>(this) - offsetof(CardLocationMode::Get, mode));
-}
-#else
 inline CardLocationMode::Get& CardLocationMode::Get::mode_t::operator()(note::string_view v) {
     Field<note::string_view>::operator=(v);
     return *reinterpret_cast<CardLocationMode::Get*>(
         reinterpret_cast<char*>(this) - offsetof(CardLocationMode::Get, mode));
 }
-#endif
 inline CardLocationMode::Get& CardLocationMode::Get::seconds_t::operator()(note::Seconds v) {
     Field<note::Seconds>::operator=(v);
     return *reinterpret_cast<CardLocationMode::Get*>(
@@ -1601,19 +1464,11 @@ inline CardLocationMode::Set& CardLocationMode::Set::minutes_t::operator()(note:
     return *reinterpret_cast<CardLocationMode::Set*>(
         reinterpret_cast<char*>(this) - offsetof(CardLocationMode::Set, minutes));
 }
-#if __cplusplus >= 202002L
-inline CardLocationMode::Set& CardLocationMode::Set::mode_t::operator()(CardLocationMode::Set::mode_t v) {
-    if (v) Field<note::string_view>::operator=(*v);
-    return *reinterpret_cast<CardLocationMode::Set*>(
-        reinterpret_cast<char*>(this) - offsetof(CardLocationMode::Set, mode));
-}
-#else
 inline CardLocationMode::Set& CardLocationMode::Set::mode_t::operator()(note::string_view v) {
     Field<note::string_view>::operator=(v);
     return *reinterpret_cast<CardLocationMode::Set*>(
         reinterpret_cast<char*>(this) - offsetof(CardLocationMode::Set, mode));
 }
-#endif
 inline CardLocationMode::Set& CardLocationMode::Set::seconds_t::operator()(note::Seconds v) {
     Field<note::Seconds>::operator=(v);
     return *reinterpret_cast<CardLocationMode::Set*>(
@@ -1729,19 +1584,11 @@ inline CardLocationMode::Remove& CardLocationMode::Remove::minutes_t::operator()
     return *reinterpret_cast<CardLocationMode::Remove*>(
         reinterpret_cast<char*>(this) - offsetof(CardLocationMode::Remove, minutes));
 }
-#if __cplusplus >= 202002L
-inline CardLocationMode::Remove& CardLocationMode::Remove::mode_t::operator()(CardLocationMode::Remove::mode_t v) {
-    if (v) Field<note::string_view>::operator=(*v);
-    return *reinterpret_cast<CardLocationMode::Remove*>(
-        reinterpret_cast<char*>(this) - offsetof(CardLocationMode::Remove, mode));
-}
-#else
 inline CardLocationMode::Remove& CardLocationMode::Remove::mode_t::operator()(note::string_view v) {
     Field<note::string_view>::operator=(v);
     return *reinterpret_cast<CardLocationMode::Remove*>(
         reinterpret_cast<char*>(this) - offsetof(CardLocationMode::Remove, mode));
 }
-#endif
 inline CardLocationMode::Remove& CardLocationMode::Remove::seconds_t::operator()(note::Seconds v) {
     Field<note::Seconds>::operator=(v);
     return *reinterpret_cast<CardLocationMode::Remove*>(

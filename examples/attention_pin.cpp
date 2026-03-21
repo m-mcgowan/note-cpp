@@ -19,10 +19,10 @@ void intent_examples(note::Notecard& nc) {
     // Arm ATTN for connectivity changes — "arm," prefix is added automatically
     // {"req":"card.attn","mode":"arm,connected"}
     {
-        note::api::CardAttn::Arm req;
-        req.triggers.connected();
-        nc.execute(req);
-        // Returns ApiResult<CardAttn::Arm::Response> with just .set
+        // Fluent chaining — trigger methods are on the struct directly
+        nc.execute(note::api::CardAttn::Arm{}.connected());
+        // Or: set multiple triggers
+        // nc.execute(note::api::CardAttn::Arm{}.connected().motion());
     }
 
     // Watchdog timer — mode:"watchdog" is emitted automatically

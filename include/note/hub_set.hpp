@@ -70,10 +70,10 @@ struct HubSet {
     /// Notecard gracefully ends the current session and starts a new one in
     /// order to sync session-specific data to Notehub.
     struct duration_t : Field<note::Minutes> {
-        /// Reset to default
-        static constexpr note::Minutes reset{ -1 };
         using Field<note::Minutes>::Field;
         using Field<note::Minutes>::operator=;
+        /// Reset to default
+        static constexpr note::Minutes reset{ -1 };
         HubSet& operator()(note::Minutes v);
     } duration{};
     /// The URL of the Notehub service. Use `"-"` to reset to the default value.
@@ -94,12 +94,12 @@ struct HubSet {
     /// A value of `0` means that the Notecard will never sync inbound data
     /// unless explicitly told to do so (e.g. using `hub.sync`).
     struct inbound_t : Field<note::Minutes> {
+        using Field<note::Minutes>::Field;
+        using Field<note::Minutes>::operator=;
         /// Reset to default
         static constexpr note::Minutes reset{ -1 };
         /// Sync only when explicitly requested
         static constexpr note::Minutes manual{ 0 };
-        using Field<note::Minutes>::Field;
-        using Field<note::Minutes>::operator=;
         HubSet& operator()(note::Minutes v);
     } inbound{};
     /// The Notecard's synchronization mode.
@@ -110,6 +110,11 @@ struct HubSet {
     struct mode_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
+        static constexpr note::string_view periodic{"periodic"};
+        static constexpr note::string_view continuous{"continuous"};
+        static constexpr note::string_view minimum{"minimum"};
+        static constexpr note::string_view off{"off"};
+        static constexpr note::string_view dfu{"dfu"};
         HubSet& operator()(note::string_view v);
     } mode{};
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
@@ -155,12 +160,12 @@ struct HubSet {
     /// A value of `0` means that the Notecard will never sync outbound data
     /// unless explicitly told to do so (e.g. using `hub.sync`).
     struct outbound_t : Field<note::Minutes> {
+        using Field<note::Minutes>::Field;
+        using Field<note::Minutes>::operator=;
         /// Reset to default
         static constexpr note::Minutes reset{ -1 };
         /// Sync only when explicitly requested
         static constexpr note::Minutes manual{ 0 };
-        using Field<note::Minutes>::Field;
-        using Field<note::Minutes>::operator=;
         HubSet& operator()(note::Minutes v);
     } outbound{};
     /// A Notehub-managed unique identifier that is used to match Devices with
@@ -325,6 +330,11 @@ struct HubSet {
     }
 #endif
 
+    // Semantic convenience methods — generated from x-toggle / x-action metadata
+    // (method names that match a field accessor are skipped to avoid redefinition)
+    auto& allowContinuous() { on = true; return *this; }
+    auto& resumePeriodic() { off = true; return *this; }
+    auto& allowContinuous(bool v_) { if (v_) on = true; else off = true; return *this; }
     template<typename T>
     auto& extra(note::string_view key, T value) {
         if (extras_count_ < NOTE_EXTRAS_MAX)

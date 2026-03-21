@@ -51,6 +51,15 @@ struct CardLed {
     struct mode_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
+        static constexpr note::string_view red{"red"};
+        static constexpr note::string_view green{"green"};
+        static constexpr note::string_view yellow{"yellow"};
+        static constexpr note::string_view blue{"blue"};
+        static constexpr note::string_view cyan{"cyan"};
+        static constexpr note::string_view magenta{"magenta"};
+        static constexpr note::string_view orange{"orange"};
+        static constexpr note::string_view white{"white"};
+        static constexpr note::string_view gray{"gray"};
         CardLed& operator()(note::string_view v);
     } mode{};
     /// Set to `true` to turn the specified LED or NeoPixel off.
@@ -86,6 +95,11 @@ struct CardLed {
     }
 #endif
 
+    // Semantic convenience methods — generated from x-toggle / x-action metadata
+    // (method names that match a field accessor are skipped to avoid redefinition)
+    auto& turnOn() { on = true; return *this; }
+    auto& turnOff() { off = true; return *this; }
+    auto& turnOn(bool v_) { if (v_) on = true; else off = true; return *this; }
     template<typename T>
     auto& extra(note::string_view key, T value) {
         if (extras_count_ < NOTE_EXTRAS_MAX)

@@ -32,55 +32,12 @@ struct CardTrace {
     Notecard* nc_ = nullptr;
 
     // mode: on | off
-#if __cplusplus >= 202002L
-    struct validate_mode_ {
-        consteval void operator()(note::string_view v) const {
-            if (v != "on" && v != "off")
-                throw "card.trace: invalid value for 'mode'";
-        }
-    };
-    struct mode_t : Field<note::string_view> {
-        constexpr mode_t() = default;
-        template<std::size_t N>
-        consteval mode_t(const char (&s)[N])
-            : Field<note::string_view>(note::string_view(s, N - 1)) {
-            validate_mode_{}(note::string_view(s, N - 1));
-        }
-        template<typename U>
-            requires std::is_convertible_v<U, note::string_view>
-                  && (!std::is_array_v<std::remove_reference_t<U>>)
-                  && (!std::is_same_v<std::decay_t<U>, mode_t>)
-        constexpr mode_t(U&& v) : Field<note::string_view>(note::string_view(std::forward<U>(v))) {}
-        template<typename U>
-            requires std::is_convertible_v<U, note::string_view>
-                  && (!std::is_array_v<std::remove_reference_t<U>>)
-                  && (!std::is_same_v<std::decay_t<U>, mode_t>)
-        mode_t& operator=(U&& v) {
-            Field<note::string_view>::operator=(note::string_view(std::forward<U>(v)));
-            return *this;
-        }
-        mode_t& operator=(std::nullopt_t) { Field<note::string_view>::reset(); return *this; }
-#else
     struct mode_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
-#endif
         static constexpr note::string_view on{"on"};
         static constexpr note::string_view off{"off"};
-#if __cplusplus >= 202002L
-        CardTrace& operator()(mode_t v);
-        template<typename U>
-            requires std::is_convertible_v<U, note::string_view>
-                  && (!std::is_array_v<std::remove_reference_t<U>>)
-                  && (!std::is_same_v<std::decay_t<U>, mode_t>)
-        CardTrace& operator()(U&& v) {
-            Field<note::string_view>::operator=(note::string_view(std::forward<U>(v)));
-            return *reinterpret_cast<CardTrace*>(
-                reinterpret_cast<char*>(this) - offsetof(CardTrace, mode));
-        }
-#else
         CardTrace& operator()(note::string_view v);
-#endif
     } mode{};
 
     // Valid values for 'mode':
@@ -137,19 +94,11 @@ struct CardTrace {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-#if __cplusplus >= 202002L
-inline CardTrace& CardTrace::mode_t::operator()(CardTrace::mode_t v) {
-    if (v) Field<note::string_view>::operator=(*v);
-    return *reinterpret_cast<CardTrace*>(
-        reinterpret_cast<char*>(this) - offsetof(CardTrace, mode));
-}
-#else
 inline CardTrace& CardTrace::mode_t::operator()(note::string_view v) {
     Field<note::string_view>::operator=(v);
     return *reinterpret_cast<CardTrace*>(
         reinterpret_cast<char*>(this) - offsetof(CardTrace, mode));
 }
-#endif
 #pragma GCC diagnostic pop
 
 

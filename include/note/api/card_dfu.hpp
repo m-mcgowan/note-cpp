@@ -37,55 +37,12 @@ struct CardDfu {
     /// pins, which includes all versions of Notecard Cell+WiFi, non-legacy
     /// versions of Notecard Cellular, and Notecard WiFi v2.
     // mode: altdfu | aux
-#if __cplusplus >= 202002L
-    struct validate_mode_ {
-        consteval void operator()(note::string_view v) const {
-            if (v != "altdfu" && v != "aux")
-                throw "card.dfu: invalid value for 'mode'";
-        }
-    };
-    struct mode_t : Field<note::string_view> {
-        constexpr mode_t() = default;
-        template<std::size_t N>
-        consteval mode_t(const char (&s)[N])
-            : Field<note::string_view>(note::string_view(s, N - 1)) {
-            validate_mode_{}(note::string_view(s, N - 1));
-        }
-        template<typename U>
-            requires std::is_convertible_v<U, note::string_view>
-                  && (!std::is_array_v<std::remove_reference_t<U>>)
-                  && (!std::is_same_v<std::decay_t<U>, mode_t>)
-        constexpr mode_t(U&& v) : Field<note::string_view>(note::string_view(std::forward<U>(v))) {}
-        template<typename U>
-            requires std::is_convertible_v<U, note::string_view>
-                  && (!std::is_array_v<std::remove_reference_t<U>>)
-                  && (!std::is_same_v<std::decay_t<U>, mode_t>)
-        mode_t& operator=(U&& v) {
-            Field<note::string_view>::operator=(note::string_view(std::forward<U>(v)));
-            return *this;
-        }
-        mode_t& operator=(std::nullopt_t) { Field<note::string_view>::reset(); return *this; }
-#else
     struct mode_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
-#endif
         static constexpr note::string_view altdfu{"altdfu"};
         static constexpr note::string_view aux{"aux"};
-#if __cplusplus >= 202002L
-        CardDfu& operator()(mode_t v);
-        template<typename U>
-            requires std::is_convertible_v<U, note::string_view>
-                  && (!std::is_array_v<std::remove_reference_t<U>>)
-                  && (!std::is_same_v<std::decay_t<U>, mode_t>)
-        CardDfu& operator()(U&& v) {
-            Field<note::string_view>::operator=(note::string_view(std::forward<U>(v)));
-            return *reinterpret_cast<CardDfu*>(
-                reinterpret_cast<char*>(this) - offsetof(CardDfu, mode));
-        }
-#else
         CardDfu& operator()(note::string_view v);
-#endif
     } mode{};
     /// One of the supported classes of host MCU. Supported MCU classes are
     /// `"esp32"`, `"stm32"`, `"stm32-bi"`, `"mcuboot"` (added in v5.3.1), and
@@ -95,58 +52,15 @@ struct CardDfu {
     /// instead of active high. Supported MCUs can be found on the Notecarrier F
     /// datasheet.
     // name: esp32 | stm32 | stm32-bi | mcuboot | -
-#if __cplusplus >= 202002L
-    struct validate_name_ {
-        consteval void operator()(note::string_view v) const {
-            if (v != "esp32" && v != "stm32" && v != "stm32-bi" && v != "mcuboot" && v != "-")
-                throw "card.dfu: invalid value for 'name'";
-        }
-    };
-    struct name_t : Field<note::string_view> {
-        constexpr name_t() = default;
-        template<std::size_t N>
-        consteval name_t(const char (&s)[N])
-            : Field<note::string_view>(note::string_view(s, N - 1)) {
-            validate_name_{}(note::string_view(s, N - 1));
-        }
-        template<typename U>
-            requires std::is_convertible_v<U, note::string_view>
-                  && (!std::is_array_v<std::remove_reference_t<U>>)
-                  && (!std::is_same_v<std::decay_t<U>, name_t>)
-        constexpr name_t(U&& v) : Field<note::string_view>(note::string_view(std::forward<U>(v))) {}
-        template<typename U>
-            requires std::is_convertible_v<U, note::string_view>
-                  && (!std::is_array_v<std::remove_reference_t<U>>)
-                  && (!std::is_same_v<std::decay_t<U>, name_t>)
-        name_t& operator=(U&& v) {
-            Field<note::string_view>::operator=(note::string_view(std::forward<U>(v)));
-            return *this;
-        }
-        name_t& operator=(std::nullopt_t) { Field<note::string_view>::reset(); return *this; }
-#else
     struct name_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
-#endif
         static constexpr note::string_view esp32{"esp32"};
         static constexpr note::string_view stm32{"stm32"};
         static constexpr note::string_view stm32_bi{"stm32-bi"};
         static constexpr note::string_view mcuboot{"mcuboot"};
         static constexpr note::string_view _{"-"};
-#if __cplusplus >= 202002L
-        CardDfu& operator()(name_t v);
-        template<typename U>
-            requires std::is_convertible_v<U, note::string_view>
-                  && (!std::is_array_v<std::remove_reference_t<U>>)
-                  && (!std::is_same_v<std::decay_t<U>, name_t>)
-        CardDfu& operator()(U&& v) {
-            Field<note::string_view>::operator=(note::string_view(std::forward<U>(v)));
-            return *reinterpret_cast<CardDfu*>(
-                reinterpret_cast<char*>(this) - offsetof(CardDfu, name));
-        }
-#else
         CardDfu& operator()(note::string_view v);
-#endif
     } name{};
     /// Set to `true` to disable Notecard Outboard Firmware Update from
     /// occurring.
@@ -314,32 +228,16 @@ struct CardDfu {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-#if __cplusplus >= 202002L
-inline CardDfu& CardDfu::mode_t::operator()(CardDfu::mode_t v) {
-    if (v) Field<note::string_view>::operator=(*v);
-    return *reinterpret_cast<CardDfu*>(
-        reinterpret_cast<char*>(this) - offsetof(CardDfu, mode));
-}
-#else
 inline CardDfu& CardDfu::mode_t::operator()(note::string_view v) {
     Field<note::string_view>::operator=(v);
     return *reinterpret_cast<CardDfu*>(
         reinterpret_cast<char*>(this) - offsetof(CardDfu, mode));
 }
-#endif
-#if __cplusplus >= 202002L
-inline CardDfu& CardDfu::name_t::operator()(CardDfu::name_t v) {
-    if (v) Field<note::string_view>::operator=(*v);
-    return *reinterpret_cast<CardDfu*>(
-        reinterpret_cast<char*>(this) - offsetof(CardDfu, name));
-}
-#else
 inline CardDfu& CardDfu::name_t::operator()(note::string_view v) {
     Field<note::string_view>::operator=(v);
     return *reinterpret_cast<CardDfu*>(
         reinterpret_cast<char*>(this) - offsetof(CardDfu, name));
 }
-#endif
 inline CardDfu& CardDfu::off_t::operator()(bool v) {
     Field<bool>::operator=(v);
     return *reinterpret_cast<CardDfu*>(

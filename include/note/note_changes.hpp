@@ -25,7 +25,7 @@ namespace note::api {
 /// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
 struct NoteChanges {
 
-    struct Get {
+    struct Peek {
         static constexpr string_view notecard_request = "note.changes";
         static constexpr bool supports_cmd = true;
         static constexpr Safety safety = Safety::ReadOnly;
@@ -41,47 +41,51 @@ struct NoteChanges {
         struct deleted_t : Field<bool> {
             using Field<bool>::Field;
             using Field<bool>::operator=;
-            NoteChanges::Get& operator()(bool v);
+            NoteChanges::Peek& operator()(bool v);
         } deleted{};
         /// The Notefile ID.
         struct file_t : Field<note::string_view> {
             using Field<note::string_view>::Field;
             using Field<note::string_view>::operator=;
-            NoteChanges::Get& operator()(note::string_view v);
+            NoteChanges::Peek& operator()(note::string_view v);
         } file{};
         /// The maximum number of Notes to return in the request.
         struct max_t : Field<int32_t> {
             using Field<int32_t>::Field;
             using Field<int32_t>::operator=;
-            NoteChanges::Get& operator()(int32_t v);
+            NoteChanges::Peek& operator()(int32_t v);
         } max{};
         /// `true` to reset a change tracker.
         struct reset_t : Field<bool> {
             using Field<bool>::Field;
             using Field<bool>::operator=;
-            NoteChanges::Get& operator()(bool v);
+            NoteChanges::Peek& operator()(bool v);
         } reset{};
         /// `true` to reset the tracker to the beginning.
         struct start_t : Field<bool> {
             using Field<bool>::Field;
             using Field<bool>::operator=;
-            NoteChanges::Get& operator()(bool v);
+            NoteChanges::Peek& operator()(bool v);
         } start{};
         /// `true` to delete the tracker.
         struct stop_t : Field<bool> {
             using Field<bool>::Field;
             using Field<bool>::operator=;
-            NoteChanges::Get& operator()(bool v);
+            NoteChanges::Peek& operator()(bool v);
         } stop{};
         /// The change tracker ID. This value is developer-defined and can be
         /// used across both the `note.changes` and `file.changes` requests.
         struct tracker_t : Field<note::string_view> {
             using Field<note::string_view>::Field;
             using Field<note::string_view>::operator=;
-            NoteChanges::Get& operator()(note::string_view v);
+            NoteChanges::Peek& operator()(note::string_view v);
         } tracker{};
 
 
+    // Semantic convenience methods — generated from x-toggle / x-action metadata
+    // (method names that match a field accessor are skipped to avoid redefinition)
+        auto& resetTracker() { start = true; return *this; }
+        auto& resetTracker(bool v_) { start = v_; return *this; }
         template<typename T>
         auto& extra(note::string_view key, T value) {
             if (extras_count_ < NOTE_EXTRAS_MAX)
@@ -173,11 +177,12 @@ struct NoteChanges {
         Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
 
     };
+    using Get = Peek;  ///< @deprecated Use Peek instead.
 
     /// Used to incrementally retrieve changes within a specific Notefile.
     ///
     /// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
-    struct Delete {
+    struct Pop {
         static constexpr string_view notecard_request = "note.changes";
         static constexpr bool supports_cmd = true;
         static constexpr Safety safety = Safety::Destructive;
@@ -193,7 +198,7 @@ struct NoteChanges {
         struct deleted_t : Field<bool> {
             using Field<bool>::Field;
             using Field<bool>::operator=;
-            NoteChanges::Delete& operator()(bool v);
+            NoteChanges::Pop& operator()(bool v);
         } deleted{};
         /// The Notefile ID.
         note::string_view file{};
@@ -201,35 +206,39 @@ struct NoteChanges {
         struct max_t : Field<int32_t> {
             using Field<int32_t>::Field;
             using Field<int32_t>::operator=;
-            NoteChanges::Delete& operator()(int32_t v);
+            NoteChanges::Pop& operator()(int32_t v);
         } max{};
         /// `true` to reset a change tracker.
         struct reset_t : Field<bool> {
             using Field<bool>::Field;
             using Field<bool>::operator=;
-            NoteChanges::Delete& operator()(bool v);
+            NoteChanges::Pop& operator()(bool v);
         } reset{};
         /// `true` to reset the tracker to the beginning.
         struct start_t : Field<bool> {
             using Field<bool>::Field;
             using Field<bool>::operator=;
-            NoteChanges::Delete& operator()(bool v);
+            NoteChanges::Pop& operator()(bool v);
         } start{};
         /// `true` to delete the tracker.
         struct stop_t : Field<bool> {
             using Field<bool>::Field;
             using Field<bool>::operator=;
-            NoteChanges::Delete& operator()(bool v);
+            NoteChanges::Pop& operator()(bool v);
         } stop{};
         /// The change tracker ID. This value is developer-defined and can be
         /// used across both the `note.changes` and `file.changes` requests.
         struct tracker_t : Field<note::string_view> {
             using Field<note::string_view>::Field;
             using Field<note::string_view>::operator=;
-            NoteChanges::Delete& operator()(note::string_view v);
+            NoteChanges::Pop& operator()(note::string_view v);
         } tracker{};
 
 
+    // Semantic convenience methods — generated from x-toggle / x-action metadata
+    // (method names that match a field accessor are skipped to avoid redefinition)
+        auto& resetTracker() { start = true; return *this; }
+        auto& resetTracker(bool v_) { start = v_; return *this; }
         template<typename T>
         auto& extra(note::string_view key, T value) {
             if (extras_count_ < NOTE_EXTRAS_MAX)
@@ -322,78 +331,79 @@ struct NoteChanges {
         Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
 
     };
+    using Delete = Pop;  ///< @deprecated Use Pop instead.
 };
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-inline NoteChanges::Get& NoteChanges::Get::deleted_t::operator()(bool v) {
+inline NoteChanges::Peek& NoteChanges::Peek::deleted_t::operator()(bool v) {
     Field<bool>::operator=(v);
-    return *reinterpret_cast<NoteChanges::Get*>(
-        reinterpret_cast<char*>(this) - offsetof(NoteChanges::Get, deleted));
+    return *reinterpret_cast<NoteChanges::Peek*>(
+        reinterpret_cast<char*>(this) - offsetof(NoteChanges::Peek, deleted));
 }
-inline NoteChanges::Get& NoteChanges::Get::file_t::operator()(note::string_view v) {
+inline NoteChanges::Peek& NoteChanges::Peek::file_t::operator()(note::string_view v) {
     Field<note::string_view>::operator=(v);
-    return *reinterpret_cast<NoteChanges::Get*>(
-        reinterpret_cast<char*>(this) - offsetof(NoteChanges::Get, file));
+    return *reinterpret_cast<NoteChanges::Peek*>(
+        reinterpret_cast<char*>(this) - offsetof(NoteChanges::Peek, file));
 }
-inline NoteChanges::Get& NoteChanges::Get::max_t::operator()(int32_t v) {
+inline NoteChanges::Peek& NoteChanges::Peek::max_t::operator()(int32_t v) {
     Field<int32_t>::operator=(v);
-    return *reinterpret_cast<NoteChanges::Get*>(
-        reinterpret_cast<char*>(this) - offsetof(NoteChanges::Get, max));
+    return *reinterpret_cast<NoteChanges::Peek*>(
+        reinterpret_cast<char*>(this) - offsetof(NoteChanges::Peek, max));
 }
-inline NoteChanges::Get& NoteChanges::Get::reset_t::operator()(bool v) {
+inline NoteChanges::Peek& NoteChanges::Peek::reset_t::operator()(bool v) {
     Field<bool>::operator=(v);
-    return *reinterpret_cast<NoteChanges::Get*>(
-        reinterpret_cast<char*>(this) - offsetof(NoteChanges::Get, reset));
+    return *reinterpret_cast<NoteChanges::Peek*>(
+        reinterpret_cast<char*>(this) - offsetof(NoteChanges::Peek, reset));
 }
-inline NoteChanges::Get& NoteChanges::Get::start_t::operator()(bool v) {
+inline NoteChanges::Peek& NoteChanges::Peek::start_t::operator()(bool v) {
     Field<bool>::operator=(v);
-    return *reinterpret_cast<NoteChanges::Get*>(
-        reinterpret_cast<char*>(this) - offsetof(NoteChanges::Get, start));
+    return *reinterpret_cast<NoteChanges::Peek*>(
+        reinterpret_cast<char*>(this) - offsetof(NoteChanges::Peek, start));
 }
-inline NoteChanges::Get& NoteChanges::Get::stop_t::operator()(bool v) {
+inline NoteChanges::Peek& NoteChanges::Peek::stop_t::operator()(bool v) {
     Field<bool>::operator=(v);
-    return *reinterpret_cast<NoteChanges::Get*>(
-        reinterpret_cast<char*>(this) - offsetof(NoteChanges::Get, stop));
+    return *reinterpret_cast<NoteChanges::Peek*>(
+        reinterpret_cast<char*>(this) - offsetof(NoteChanges::Peek, stop));
 }
-inline NoteChanges::Get& NoteChanges::Get::tracker_t::operator()(note::string_view v) {
+inline NoteChanges::Peek& NoteChanges::Peek::tracker_t::operator()(note::string_view v) {
     Field<note::string_view>::operator=(v);
-    return *reinterpret_cast<NoteChanges::Get*>(
-        reinterpret_cast<char*>(this) - offsetof(NoteChanges::Get, tracker));
+    return *reinterpret_cast<NoteChanges::Peek*>(
+        reinterpret_cast<char*>(this) - offsetof(NoteChanges::Peek, tracker));
 }
 #pragma GCC diagnostic pop
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-inline NoteChanges::Delete& NoteChanges::Delete::deleted_t::operator()(bool v) {
+inline NoteChanges::Pop& NoteChanges::Pop::deleted_t::operator()(bool v) {
     Field<bool>::operator=(v);
-    return *reinterpret_cast<NoteChanges::Delete*>(
-        reinterpret_cast<char*>(this) - offsetof(NoteChanges::Delete, deleted));
+    return *reinterpret_cast<NoteChanges::Pop*>(
+        reinterpret_cast<char*>(this) - offsetof(NoteChanges::Pop, deleted));
 }
-inline NoteChanges::Delete& NoteChanges::Delete::max_t::operator()(int32_t v) {
+inline NoteChanges::Pop& NoteChanges::Pop::max_t::operator()(int32_t v) {
     Field<int32_t>::operator=(v);
-    return *reinterpret_cast<NoteChanges::Delete*>(
-        reinterpret_cast<char*>(this) - offsetof(NoteChanges::Delete, max));
+    return *reinterpret_cast<NoteChanges::Pop*>(
+        reinterpret_cast<char*>(this) - offsetof(NoteChanges::Pop, max));
 }
-inline NoteChanges::Delete& NoteChanges::Delete::reset_t::operator()(bool v) {
+inline NoteChanges::Pop& NoteChanges::Pop::reset_t::operator()(bool v) {
     Field<bool>::operator=(v);
-    return *reinterpret_cast<NoteChanges::Delete*>(
-        reinterpret_cast<char*>(this) - offsetof(NoteChanges::Delete, reset));
+    return *reinterpret_cast<NoteChanges::Pop*>(
+        reinterpret_cast<char*>(this) - offsetof(NoteChanges::Pop, reset));
 }
-inline NoteChanges::Delete& NoteChanges::Delete::start_t::operator()(bool v) {
+inline NoteChanges::Pop& NoteChanges::Pop::start_t::operator()(bool v) {
     Field<bool>::operator=(v);
-    return *reinterpret_cast<NoteChanges::Delete*>(
-        reinterpret_cast<char*>(this) - offsetof(NoteChanges::Delete, start));
+    return *reinterpret_cast<NoteChanges::Pop*>(
+        reinterpret_cast<char*>(this) - offsetof(NoteChanges::Pop, start));
 }
-inline NoteChanges::Delete& NoteChanges::Delete::stop_t::operator()(bool v) {
+inline NoteChanges::Pop& NoteChanges::Pop::stop_t::operator()(bool v) {
     Field<bool>::operator=(v);
-    return *reinterpret_cast<NoteChanges::Delete*>(
-        reinterpret_cast<char*>(this) - offsetof(NoteChanges::Delete, stop));
+    return *reinterpret_cast<NoteChanges::Pop*>(
+        reinterpret_cast<char*>(this) - offsetof(NoteChanges::Pop, stop));
 }
-inline NoteChanges::Delete& NoteChanges::Delete::tracker_t::operator()(note::string_view v) {
+inline NoteChanges::Pop& NoteChanges::Pop::tracker_t::operator()(note::string_view v) {
     Field<note::string_view>::operator=(v);
-    return *reinterpret_cast<NoteChanges::Delete*>(
-        reinterpret_cast<char*>(this) - offsetof(NoteChanges::Delete, tracker));
+    return *reinterpret_cast<NoteChanges::Pop*>(
+        reinterpret_cast<char*>(this) - offsetof(NoteChanges::Pop, tracker));
 }
 #pragma GCC diagnostic pop
 

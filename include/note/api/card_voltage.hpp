@@ -73,39 +73,9 @@ struct CardVoltage {
         /// NOTE: Setting voltage thresholds is not supported on the Notecard
         /// XP.
         // mode: default | lipo | l91 | alkaline | tad | lic | ?
-#if __cplusplus >= 202002L
-        struct validate_mode_ {
-            consteval void operator()(note::string_view v) const {
-                if (v != "default" && v != "lipo" && v != "l91" && v != "alkaline" && v != "tad" && v != "lic" && v != "?")
-                    throw "card.voltage: invalid value for 'mode'";
-            }
-        };
-        struct mode_t : Field<note::string_view> {
-            constexpr mode_t() = default;
-            template<std::size_t N>
-            consteval mode_t(const char (&s)[N])
-                : Field<note::string_view>(note::string_view(s, N - 1)) {
-                validate_mode_{}(note::string_view(s, N - 1));
-            }
-            template<typename U>
-                requires std::is_convertible_v<U, note::string_view>
-                      && (!std::is_array_v<std::remove_reference_t<U>>)
-                      && (!std::is_same_v<std::decay_t<U>, mode_t>)
-            constexpr mode_t(U&& v) : Field<note::string_view>(note::string_view(std::forward<U>(v))) {}
-            template<typename U>
-                requires std::is_convertible_v<U, note::string_view>
-                      && (!std::is_array_v<std::remove_reference_t<U>>)
-                      && (!std::is_same_v<std::decay_t<U>, mode_t>)
-            mode_t& operator=(U&& v) {
-                Field<note::string_view>::operator=(note::string_view(std::forward<U>(v)));
-                return *this;
-            }
-            mode_t& operator=(std::nullopt_t) { Field<note::string_view>::reset(); return *this; }
-#else
         struct mode_t : Field<note::string_view> {
             using Field<note::string_view>::Field;
             using Field<note::string_view>::operator=;
-#endif
             static constexpr note::string_view default_{"default"};
             static constexpr note::string_view lipo{"lipo"};
             static constexpr note::string_view l91{"l91"};
@@ -113,20 +83,7 @@ struct CardVoltage {
             static constexpr note::string_view tad{"tad"};
             static constexpr note::string_view lic{"lic"};
             static constexpr note::string_view unknown{"?"};
-#if __cplusplus >= 202002L
-            CardVoltage::Read& operator()(mode_t v);
-            template<typename U>
-                requires std::is_convertible_v<U, note::string_view>
-                      && (!std::is_array_v<std::remove_reference_t<U>>)
-                      && (!std::is_same_v<std::decay_t<U>, mode_t>)
-            CardVoltage::Read& operator()(U&& v) {
-                Field<note::string_view>::operator=(note::string_view(std::forward<U>(v)));
-                return *reinterpret_cast<CardVoltage::Read*>(
-                    reinterpret_cast<char*>(this) - offsetof(CardVoltage::Read, mode));
-            }
-#else
             CardVoltage::Read& operator()(note::string_view v);
-#endif
         } mode{};
         /// Specifies an environment variable to override application default
         /// timing values.
@@ -474,39 +431,9 @@ struct CardVoltage {
         /// NOTE: Setting voltage thresholds is not supported on the Notecard
         /// XP.
         // mode: default | lipo | l91 | alkaline | tad | lic | ?
-#if __cplusplus >= 202002L
-        struct validate_mode_ {
-            consteval void operator()(note::string_view v) const {
-                if (v != "default" && v != "lipo" && v != "l91" && v != "alkaline" && v != "tad" && v != "lic" && v != "?")
-                    throw "card.voltage: invalid value for 'mode'";
-            }
-        };
-        struct mode_t : Field<note::string_view> {
-            constexpr mode_t() = default;
-            template<std::size_t N>
-            consteval mode_t(const char (&s)[N])
-                : Field<note::string_view>(note::string_view(s, N - 1)) {
-                validate_mode_{}(note::string_view(s, N - 1));
-            }
-            template<typename U>
-                requires std::is_convertible_v<U, note::string_view>
-                      && (!std::is_array_v<std::remove_reference_t<U>>)
-                      && (!std::is_same_v<std::decay_t<U>, mode_t>)
-            constexpr mode_t(U&& v) : Field<note::string_view>(note::string_view(std::forward<U>(v))) {}
-            template<typename U>
-                requires std::is_convertible_v<U, note::string_view>
-                      && (!std::is_array_v<std::remove_reference_t<U>>)
-                      && (!std::is_same_v<std::decay_t<U>, mode_t>)
-            mode_t& operator=(U&& v) {
-                Field<note::string_view>::operator=(note::string_view(std::forward<U>(v)));
-                return *this;
-            }
-            mode_t& operator=(std::nullopt_t) { Field<note::string_view>::reset(); return *this; }
-#else
         struct mode_t : Field<note::string_view> {
             using Field<note::string_view>::Field;
             using Field<note::string_view>::operator=;
-#endif
             static constexpr note::string_view default_{"default"};
             static constexpr note::string_view lipo{"lipo"};
             static constexpr note::string_view l91{"l91"};
@@ -514,20 +441,7 @@ struct CardVoltage {
             static constexpr note::string_view tad{"tad"};
             static constexpr note::string_view lic{"lic"};
             static constexpr note::string_view unknown{"?"};
-#if __cplusplus >= 202002L
-            CardVoltage::Configure& operator()(mode_t v);
-            template<typename U>
-                requires std::is_convertible_v<U, note::string_view>
-                      && (!std::is_array_v<std::remove_reference_t<U>>)
-                      && (!std::is_same_v<std::decay_t<U>, mode_t>)
-            CardVoltage::Configure& operator()(U&& v) {
-                Field<note::string_view>::operator=(note::string_view(std::forward<U>(v)));
-                return *reinterpret_cast<CardVoltage::Configure*>(
-                    reinterpret_cast<char*>(this) - offsetof(CardVoltage::Configure, mode));
-            }
-#else
             CardVoltage::Configure& operator()(note::string_view v);
-#endif
         } mode{};
         /// Specifies an environment variable to override application default
         /// timing values.
@@ -844,19 +758,11 @@ inline CardVoltage::Read& CardVoltage::Read::hours_t::operator()(int32_t v) {
     return *reinterpret_cast<CardVoltage::Read*>(
         reinterpret_cast<char*>(this) - offsetof(CardVoltage::Read, hours));
 }
-#if __cplusplus >= 202002L
-inline CardVoltage::Read& CardVoltage::Read::mode_t::operator()(CardVoltage::Read::mode_t v) {
-    if (v) Field<note::string_view>::operator=(*v);
-    return *reinterpret_cast<CardVoltage::Read*>(
-        reinterpret_cast<char*>(this) - offsetof(CardVoltage::Read, mode));
-}
-#else
 inline CardVoltage::Read& CardVoltage::Read::mode_t::operator()(note::string_view v) {
     Field<note::string_view>::operator=(v);
     return *reinterpret_cast<CardVoltage::Read*>(
         reinterpret_cast<char*>(this) - offsetof(CardVoltage::Read, mode));
 }
-#endif
 inline CardVoltage::Read& CardVoltage::Read::name_t::operator()(note::string_view v) {
     Field<note::string_view>::operator=(v);
     return *reinterpret_cast<CardVoltage::Read*>(
@@ -926,19 +832,11 @@ inline CardVoltage::Configure& CardVoltage::Configure::hours_t::operator()(int32
     return *reinterpret_cast<CardVoltage::Configure*>(
         reinterpret_cast<char*>(this) - offsetof(CardVoltage::Configure, hours));
 }
-#if __cplusplus >= 202002L
-inline CardVoltage::Configure& CardVoltage::Configure::mode_t::operator()(CardVoltage::Configure::mode_t v) {
-    if (v) Field<note::string_view>::operator=(*v);
-    return *reinterpret_cast<CardVoltage::Configure*>(
-        reinterpret_cast<char*>(this) - offsetof(CardVoltage::Configure, mode));
-}
-#else
 inline CardVoltage::Configure& CardVoltage::Configure::mode_t::operator()(note::string_view v) {
     Field<note::string_view>::operator=(v);
     return *reinterpret_cast<CardVoltage::Configure*>(
         reinterpret_cast<char*>(this) - offsetof(CardVoltage::Configure, mode));
 }
-#endif
 inline CardVoltage::Configure& CardVoltage::Configure::name_t::operator()(note::string_view v) {
     Field<note::string_view>::operator=(v);
     return *reinterpret_cast<CardVoltage::Configure*>(

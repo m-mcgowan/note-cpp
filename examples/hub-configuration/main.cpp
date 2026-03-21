@@ -1,4 +1,11 @@
-// Hub configuration — connection setup with type-safe units and named constants.
+// Hub configuration — setting up the Notecard's connection to Notehub.
+//
+// The first thing most applications do is configure how the Notecard syncs
+// with Notehub: which product it belongs to, how often it connects, and
+// whether to use continuous or periodic mode. This example shows how to
+// do that with type-safe units that prevent accidental mixing of minutes
+// and seconds, named constants that replace magic numbers, and compile-time
+// validation that catches typos before they reach the device.
 //
 // All example code in the accompanying README comes from this file, which is
 // compiled as part of CI to verify correctness.
@@ -10,59 +17,8 @@
 #include <note/api.hpp>
 #include <note/voltage_variable.hpp>
 
+#include "../mock_backend.hpp"
 #include <cstdio>
-#include <memory>
-#include <string>
-
-// ── Mock backend (see examples/getting_started.cpp for details) ─────────────
-
-struct MockBuilder : note::JsonBuilder {
-    std::string buf_ = "{";
-    bool first_ = true;
-    void sep() { if (!first_) buf_ += ','; first_ = false; }
-
-    MockBuilder& add(note::string_view k, bool v) override {
-        sep(); buf_ += '"'; buf_ += k; buf_ += "\":"; buf_ += v ? "true" : "false"; return *this;
-    }
-    MockBuilder& add(note::string_view k, int32_t v) override {
-        sep(); buf_ += '"'; buf_ += k; buf_ += "\":"; buf_ += std::to_string(v); return *this;
-    }
-    MockBuilder& add(note::string_view k, double v) override {
-        sep(); buf_ += '"'; buf_ += k; buf_ += "\":"; buf_ += std::to_string(v); return *this;
-    }
-    MockBuilder& add(note::string_view k, note::string_view v) override {
-        sep(); buf_ += '"'; buf_ += k; buf_ += "\":\""; buf_ += v; buf_ += '"'; return *this;
-    }
-    MockBuilder& begin_object(note::string_view k) override {
-        sep(); buf_ += '"'; buf_ += k; buf_ += "\":{"; first_ = true; return *this;
-    }
-    MockBuilder& end_object() override { buf_ += '}'; first_ = false; return *this; }
-    MockBuilder& begin_array(note::string_view k) override {
-        sep(); buf_ += '"'; buf_ += k; buf_ += "\":["; first_ = true; return *this;
-    }
-    MockBuilder& end_array() override { buf_ += ']'; first_ = false; return *this; }
-    std::string to_string() override { buf_ += '}'; return std::move(buf_); }
-};
-
-struct MockReader : note::JsonReader {
-    bool has(note::string_view) const override { return false; }
-    bool get_bool(note::string_view, bool d) const override { return d; }
-    int32_t get_int(note::string_view, int32_t d) const override { return d; }
-    double get_double(note::string_view, double d) const override { return d; }
-    note::string_view get_string(note::string_view, note::string_view d) const override { return d; }
-    std::unique_ptr<note::JsonReader> get_object(note::string_view) const override { return nullptr; }
-    bool has_error() const override { return false; }
-    note::string_view get_error() const override { return {}; }
-};
-
-struct MockBackend : note::JsonBackend {
-    std::unique_ptr<note::JsonBuilder> create_builder() override {
-        return std::make_unique<MockBuilder>();
-    }
-    std::unique_ptr<note::JsonReader> parse_response(note::string_view) override {
-        return std::make_unique<MockReader>();
-    }
-};
 
 
 int main() {

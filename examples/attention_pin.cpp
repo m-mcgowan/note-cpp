@@ -1,120 +1,137 @@
-// ATTN pin interrupt examples using note-cpp.
+// Attention pin — using the Notecard's ATTN pin to wake the host MCU.
 //
-// C++ equivalents of the attention API requests from:
-//   https://dev.blues.io/api-reference/notecard-api/card-requests/#card-attn
+// Many IoT devices spend most of their time in deep sleep to conserve
+// power. The Notecard's ATTN (attention) pin lets it wake the host MCU
+// when something needs attention — a connectivity change, new inbound
+// data, motion detected, or a timer expiring.
+//
+// This example shows how to:
+//   - Arm ATTN for specific events (connectivity, motion, file changes)
+//   - Set a watchdog timer that wakes the host periodically
+//   - Put the host to sleep and pass state across the sleep/wake cycle
+//   - Retrieve that state on wakeup to resume where you left off
+//   - Query and disarm the ATTN state
+//
+// There are two API levels:
+//   - Intent-based (recommended): each operation is a distinct type with
+//     only the fields that apply. Safer, clearer, better autocomplete.
+//   - Base API: one type with all fields. Use when the intent variants
+//     don't fit your use case, or when you need the full response.
+//
+// See: https://dev.blues.io/api-reference/notecard-api/card-requests/#card-attn
 //
 // Build: c++ -std=c++20 -I include -fsyntax-only examples/attention_pin.cpp
 
 #include <note/notecard.hpp>
 #include <note/api/card_attn.hpp>
 
-// ═══════════════════════════════════════════════════════════════════════════
-// Intent-based API — each intent exposes only relevant fields and returns
-// a response shaped to that specific operation.
-// ═══════════════════════════════════════════════════════════════════════════
+// ═════════════════════════════════════════════════════════════════════════
+// Intent-based API — each operation has its own type with only the
+// relevant fields. The "mode" prefix (e.g. "arm,", "sleep,") is added
+// automatically so you can't get it wrong.
+// ═════════════════════════════════════════════════════════════════════════
 
 void intent_examples(note::Notecard& nc) {
     using namespace note::literals;
 
-    // Arm ATTN for connectivity changes — "arm," prefix is added automatically
+    // Arm ATTN to fire when the Notecard gains or loses connectivity.
+    // The "arm," prefix is added automatically — you just pick triggers.
     // {"req":"card.attn","mode":"arm,connected"}
     {
-        // Fluent chaining — trigger methods are on the struct directly
         nc.execute(note::api::CardAttn::Arm{}.connected());
-        // Or: set multiple triggers
-        // nc.execute(note::api::CardAttn::Arm{}.connected().motion());
+
+        // Multiple triggers can be chained:
+        // nc.execute(note::api::CardAttn::Arm{}.connected().motion().files());
     }
 
-    // Watchdog timer — mode:"watchdog" is emitted automatically
+    // Watchdog timer — wake the host after 60 seconds of inactivity.
+    // Useful as a safety net: if the main loop hangs, ATTN fires.
     // {"req":"card.attn","mode":"watchdog","seconds":60}
     {
         note::api::CardAttn::Watchdog req;
         req.seconds(60_s);
         nc.execute(req);
-        // Returns ApiResult<void> — just check success/error
     }
 
-    // Sleep — put host MCU to sleep for 1 hour, no payload
+    // Sleep — tell the Notecard to pulse ATTN after 1 hour, then put
+    // the host MCU into deep sleep. The Notecard stays awake.
     // {"req":"card.attn","mode":"sleep","seconds":3600}
     {
         note::api::CardAttn::Sleep req;
-        req.seconds(3600_s);
+        req.seconds(1_hours);
         nc.execute(req);
-        // Returns ApiResult<void>
+        // After this call, enter deep sleep. The Notecard will wake you.
     }
 
-    // Sleep with payload — Notecard holds a string across the host's sleep cycle.
-    // Use this to pass state (e.g. a resume token or checkpoint) across a reset.
+    // Sleep with payload — pass state across the sleep/wake cycle.
+    // The Notecard holds a string for you while the host sleeps. On
+    // wakeup, retrieve it to decide whether to resume or reinitialize.
     // {"req":"card.attn","mode":"sleep","seconds":3600,"payload":"checkpoint-v1"}
     {
         note::api::CardAttn::Sleep req;
-        req.seconds(3600_s);
+        req.seconds(1_hours);
         req.payload("checkpoint-v1");
         nc.execute(req);
-        // Returns ApiResult<void> — MCU may now enter deep sleep
     }
 
-    // On wakeup: retrieve stored payload to distinguish first boot from sleep resume.
-    // start:true is emitted automatically.
+    // On wakeup: retrieve the stored payload.
+    // If there's a payload, this is a sleep resume — pick up where you
+    // left off. If not, it's a fresh boot — initialize from scratch.
     // {"req":"card.attn","start":true}
-    // Response: {"payload":"checkpoint-v1","time":1700000000}  (sleep resume)
-    // Response: {}                                              (first boot — no prior sleep)
     {
         auto result = nc.execute(note::api::CardAttn::Retrieve{});
         if (result && result.time != 0) {
-            // Woke from sleep — payload holds the state saved before sleeping
+            // Sleep resume — payload holds the state saved before sleeping
             auto payload = result.payload;  // "checkpoint-v1"
-            auto stored_at = result.time;   // UNIX epoch when payload was written
+            auto stored_at = result.time;   // UNIX epoch when saved
             (void)payload; (void)stored_at;
         } else {
-            // First boot or no prior sleep — start fresh
+            // Fresh boot — no prior sleep, start from scratch
         }
-        // Returns ApiResult<CardAttn::Retrieve::Response> with .payload, .time
     }
 
-    // Disarm — mode:"disarm,-all" is emitted automatically
+    // Disarm — clear all ATTN triggers.
     // {"req":"card.attn","mode":"disarm,-all"}
     {
         nc.execute(note::api::CardAttn::Disarm{});
-        // Returns ApiResult<void>
     }
 
-    // Query ATTN state
+    // Query — check what ATTN triggers are currently armed.
     // {"req":"card.attn","verify":true}
     {
         note::api::CardAttn::Query req;
         req.verify(true);
         auto result = nc.execute(req);
         if (result) {
-            auto set = result.set;
+            auto set = result.set;   // true if ATTN pin is currently asserted
             (void)set;
         }
-        // Returns ApiResult<CardAttn::Query::Response> with .set, .off
     }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// Base API — CardAttn::Request exposes all fields and returns the full
-// response. Use this when the intent variants don't fit your use case.
-// ═══════════════════════════════════════════════════════════════════════════
+
+// ═════════════════════════════════════════════════════════════════════════
+// Base API — one type (CardAttn::Request) with all fields and the full
+// response. Use this when the intent variants don't fit, or when you
+// need to combine modes in unusual ways.
+// ═════════════════════════════════════════════════════════════════════════
 
 void base_examples(note::Notecard& nc) {
     using namespace note::literals;
 
-    // Arm ATTN for connectivity changes — named flag methods
+    // Arm with named flag methods — type-safe, autocomplete-friendly.
     // {"req":"card.attn","mode":"arm,connected"}
     {
         note::api::CardAttn::Request req;
         req.mode.arm().connected();
         auto result = nc.execute(req);
         if (result) {
-            // Full response available: .set, .off, .payload, .time
-            auto set = result.set;
+            auto set = result.set;  // full response available
             (void)set;
         }
     }
 
-    // Arm with multiple sources — flag constants and operator|
+    // Arm with flag constants and operator| — concise for multiple flags.
     // {"req":"card.attn","mode":"arm,connected,files,motion"}
     {
         using namespace note::attn;
@@ -123,16 +140,7 @@ void base_examples(note::Notecard& nc) {
         nc.execute(req);
     }
 
-    // Watchdog timer (must set mode explicitly)
-    // {"req":"card.attn","mode":"watchdog","seconds":60}
-    {
-        note::api::CardAttn::Request req;
-        req.mode.watchdog();
-        req.seconds(60_s);
-        nc.execute(req);
-    }
-
-    // Disarm — raw string still works for any mode combination
+    // Raw string — for any mode combination the named API doesn't cover.
     // {"req":"card.attn","mode":"disarm,-all"}
     {
         note::api::CardAttn::Request req;
@@ -141,4 +149,10 @@ void base_examples(note::Notecard& nc) {
     }
 }
 
-int main() { return 0; }
+
+int main() {
+    // These examples use -fsyntax-only (compilation check, no linking).
+    // On real hardware, pass a real Notecard instance to these functions.
+    (void)intent_examples;
+    (void)base_examples;
+}

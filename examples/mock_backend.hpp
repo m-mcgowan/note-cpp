@@ -1,0 +1,63 @@
+// Mock JSON backend for examples.
+//
+// In production, you'd use a real JSON library (cJSON, nlohmann-json,
+// RapidJSON, etc.) wrapped in note-cpp's JsonBackend interface. This mock
+// builds valid JSON for requests and returns empty responses — enough to
+// demonstrate the API without any external dependencies.
+//
+// See tests/integration/ for real backend examples (cJSON, nlohmann, jsmn).
+
+#pragma once
+
+#include <note/notecard.hpp>
+#include <memory>
+#include <string>
+
+struct MockBuilder : note::JsonBuilder {
+    std::string buf_ = "{";
+    bool first_ = true;
+    void sep() { if (!first_) buf_ += ','; first_ = false; }
+
+    MockBuilder& add(note::string_view k, bool v) override {
+        sep(); buf_ += '"'; buf_ += k; buf_ += "\":"; buf_ += v ? "true" : "false"; return *this;
+    }
+    MockBuilder& add(note::string_view k, int32_t v) override {
+        sep(); buf_ += '"'; buf_ += k; buf_ += "\":"; buf_ += std::to_string(v); return *this;
+    }
+    MockBuilder& add(note::string_view k, double v) override {
+        sep(); buf_ += '"'; buf_ += k; buf_ += "\":"; buf_ += std::to_string(v); return *this;
+    }
+    MockBuilder& add(note::string_view k, note::string_view v) override {
+        sep(); buf_ += '"'; buf_ += k; buf_ += "\":\""; buf_ += v; buf_ += '"'; return *this;
+    }
+    MockBuilder& begin_object(note::string_view k) override {
+        sep(); buf_ += '"'; buf_ += k; buf_ += "\":{"; first_ = true; return *this;
+    }
+    MockBuilder& end_object() override { buf_ += '}'; first_ = false; return *this; }
+    MockBuilder& begin_array(note::string_view k) override {
+        sep(); buf_ += '"'; buf_ += k; buf_ += "\":["; first_ = true; return *this;
+    }
+    MockBuilder& end_array() override { buf_ += ']'; first_ = false; return *this; }
+    std::string to_string() override { buf_ += '}'; return std::move(buf_); }
+};
+
+struct MockReader : note::JsonReader {
+    bool has(note::string_view) const override { return false; }
+    bool get_bool(note::string_view, bool d) const override { return d; }
+    int32_t get_int(note::string_view, int32_t d) const override { return d; }
+    double get_double(note::string_view, double d) const override { return d; }
+    note::string_view get_string(note::string_view, note::string_view d) const override { return d; }
+    std::unique_ptr<note::JsonReader> get_object(note::string_view) const override { return nullptr; }
+    bool has_error() const override { return false; }
+    note::string_view get_error() const override { return {}; }
+};
+
+struct MockBackend : note::JsonBackend {
+    std::unique_ptr<note::JsonBuilder> create_builder() override {
+        return std::make_unique<MockBuilder>();
+    }
+    std::unique_ptr<note::JsonReader> parse_response(note::string_view) override {
+        return std::make_unique<MockReader>();
+    }
+};
+

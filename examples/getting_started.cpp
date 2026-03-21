@@ -1,10 +1,20 @@
 // Getting started with note-cpp
 //
-// This walks through the library from simplest to most advanced:
-//   1. Ad-hoc requests — JSON strings, no types needed
-//   2. Compile-time JSON — zero-allocation constexpr buffers
-//   3. Typed requests and responses — IDE autocomplete, compile-time checks
-//   4. Body schemas — one struct for send, receive, and template registration
+// The Notecard speaks JSON over serial or I2C. You can build requests at
+// different levels of abstraction depending on what you need — from raw
+// JSON strings (simplest, no type safety) to fully typed request builders
+// (IDE autocomplete, compile-time error checking).
+//
+// This example walks through each level so you can see what fits your
+// situation:
+//
+//   1. Ad-hoc requests   — raw JSON, no types needed, quickest path
+//   2. Compile-time JSON — same raw approach, but the compiler builds the
+//                          JSON at compile time — zero runtime cost
+//   3. Typed API         — named fields with autocomplete; misspellings
+//                          are compile errors, not runtime surprises
+//   4. Body schemas      — define your data struct once, use it to send,
+//                          receive, and register Notecard templates
 //
 // Build & run:
 //   c++ -std=c++20 -I include examples/getting_started.cpp && ./a.out
@@ -14,73 +24,36 @@
 #include <note/api.hpp>
 #include <note/body.hpp>
 
+#include "mock_backend.hpp"
 #include <cstdio>
-#include <memory>
-#include <string>
 
-// ═══════════════════════════════════════════════════════════════════════
-// Mock backend — replace with a real JSON library on your platform.
-// A production backend wraps cJSON, nlohmann-json, RapidJSON, etc.
-// ═══════════════════════════════════════════════════════════════════════
 
-struct MockBuilder : note::JsonBuilder {
-    std::string buf_ = "{";
-    bool first_ = true;
-    void sep() { if (!first_) buf_ += ','; first_ = false; }
+// ── Your application's sensor data ──────────────────────────────────────
+// Define once — use to send, receive, and register Notecard templates.
+// On C++20, the NOTE_FIELDS macro is optional (aggregate reflection works
+// automatically). On C++17, it tells the library your field names.
 
-    MockBuilder& add(note::string_view k, bool v) override {
-        sep(); buf_ += '"'; buf_ += k; buf_ += "\":"; buf_ += v ? "true" : "false"; return *this;
-    }
-    MockBuilder& add(note::string_view k, int32_t v) override {
-        sep(); buf_ += '"'; buf_ += k; buf_ += "\":"; buf_ += std::to_string(v); return *this;
-    }
-    MockBuilder& add(note::string_view k, double v) override {
-        sep(); buf_ += '"'; buf_ += k; buf_ += "\":"; buf_ += std::to_string(v); return *this;
-    }
-    MockBuilder& add(note::string_view k, note::string_view v) override {
-        sep(); buf_ += '"'; buf_ += k; buf_ += "\":\""; buf_ += v; buf_ += '"'; return *this;
-    }
-    MockBuilder& begin_object(note::string_view k) override {
-        sep(); buf_ += '"'; buf_ += k; buf_ += "\":{"; first_ = true; return *this;
-    }
-    MockBuilder& end_object() override { buf_ += '}'; first_ = false; return *this; }
-    MockBuilder& begin_array(note::string_view k) override {
-        sep(); buf_ += '"'; buf_ += k; buf_ += "\":["; first_ = true; return *this;
-    }
-    MockBuilder& end_array() override { buf_ += ']'; first_ = false; return *this; }
-    std::string to_string() override { buf_ += '}'; return std::move(buf_); }
-};
-
-struct MockReader : note::JsonReader {
-    bool has(note::string_view) const override { return false; }
-    bool get_bool(note::string_view, bool d) const override { return d; }
-    int32_t get_int(note::string_view, int32_t d) const override { return d; }
-    double get_double(note::string_view, double d) const override { return d; }
-    note::string_view get_string(note::string_view, note::string_view d) const override { return d; }
-    std::unique_ptr<note::JsonReader> get_object(note::string_view) const override { return nullptr; }
-    bool has_error() const override { return false; }
-    note::string_view get_error() const override { return {}; }
-};
-
-struct MockBackend : note::JsonBackend {
-    std::unique_ptr<note::JsonBuilder> create_builder() override {
-        return std::make_unique<MockBuilder>();
-    }
-    std::unique_ptr<note::JsonReader> parse_response(note::string_view) override {
-        return std::make_unique<MockReader>();
-    }
-};
-
-// Body struct — define once, use to send, receive, and register templates.
 struct Readings {
     float temperature;
     int16_t humidity;
     NOTE_FIELDS(temperature, humidity)
 };
 
+
 int main() {
-    // Create a backend and Notecard instance.
-    // The transport lambda sends JSON over serial/I2C and returns the response.
+    // Create a backend and a Notecard instance.
+    //
+    // On real hardware, you'd use a JSON backend (cJSON, nlohmann, etc.)
+    // and a transport (serial or I2C). For example, with Arduino:
+    //
+    //   #include <note/backends/cjson.hpp>
+    //   #include <note/transport/serial.hpp>
+    //   note::backends::CjsonBackend backend;
+    //   auto transport = note::NotecardSerial(note::arduino::serial_hal(Serial1));
+    //   note::Notecard nc(backend, transport);
+    //
+    // For this example, we use a mock that prints each request to stdout
+    // so you can run it on any machine without Notecard hardware.
     MockBackend backend;
     note::Notecard nc(backend,
         [](note::string_view request, uint32_t) -> note::Result<note::string_view> {
@@ -89,16 +62,18 @@ int main() {
         });
 
 
-    // ═══════════════════════════════════════════════════════════════════
+    // ═════════════════════════════════════════════════════════════════════
     // 1. AD-HOC REQUESTS
-    //    The simplest way to talk to a Notecard. Build JSON fields with
-    //    a lambda, read responses with string keys. No generated types
-    //    needed — just notecard.hpp.
-    // ═══════════════════════════════════════════════════════════════════
+    //
+    // The quickest way to talk to a Notecard. You provide the request
+    // name as a string and build fields with a lambda. Field names are
+    // unchecked strings — convenient for prototyping, but typos compile
+    // fine and fail silently at runtime.
+    // ═════════════════════════════════════════════════════════════════════
 
     std::puts("\n=== 1. Ad-hoc requests ===\n");
 
-    // Configure the product
+    // Configure the Notecard's connection to Notehub.
     std::puts("--- hub.set ---");
     nc.request("hub.set", [](note::JsonBuilder& b) {
         b.add("product", "com.example.app");
@@ -106,7 +81,8 @@ int main() {
         b.add("outbound", 60);
     });
 
-    // Read device info
+    // Read device info. The response is a JsonReader with string-keyed
+    // accessors — you need to know the field names from the docs.
     std::puts("--- card.version ---");
     {
         auto result = nc.request("card.version");
@@ -118,11 +94,12 @@ int main() {
         }
     }
 
-    // Fire-and-forget command (no response expected)
+    // Fire-and-forget command — sends "cmd" instead of "req", so the
+    // Notecard doesn't send a response. Useful for triggers like sync.
     std::puts("--- hub.sync (command) ---");
     nc.command("hub.sync");
 
-    // Error handling — all operations return a result
+    // Every operation returns a result. Check it to handle errors.
     std::puts("--- error handling ---");
     {
         auto r = nc.request("card.version");
@@ -135,16 +112,21 @@ int main() {
     }
 
 
-    // ═══════════════════════════════════════════════════════════════════
+    // ═════════════════════════════════════════════════════════════════════
     // 2. COMPILE-TIME JSON
-    //    For static requests that never change, JsonBuf builds the JSON
-    //    at compile time. Zero allocation, zero runtime cost. The
-    //    compiler verifies the JSON is well-formed.
-    // ═══════════════════════════════════════════════════════════════════
+    //
+    // If a request never changes (same fields, same values), the compiler
+    // can build the entire JSON string at compile time. The result is a
+    // fixed-size buffer with zero runtime allocation and zero runtime
+    // cost — the JSON is baked into your binary.
+    //
+    // This uses a C++20 feature (constexpr lambda in template argument).
+    // ═════════════════════════════════════════════════════════════════════
 
     std::puts("\n=== 2. Compile-time JSON ===\n");
 
-    // Auto-sized: compiler measures the output and picks the buffer size.
+    // Auto-sized: the compiler measures the JSON output and picks the
+    // smallest buffer that fits.
     constexpr auto hub_set_json = note::json<[](auto& b) {
         b.add("req", "hub.set");
         b.add("product", "com.example.app");
@@ -153,14 +135,15 @@ int main() {
         b.close();
     }>();
 
-    // The string is computed entirely at compile time:
+    // Proof that this happened at compile time — static_assert runs
+    // during compilation, not at runtime.
     static_assert(hub_set_json.view() ==
         R"({"req":"hub.set","product":"com.example.app","mode":"periodic","outbound":60})");
 
     std::printf("--- constexpr hub.set ---\n  >> %.*s\n",
         (int)hub_set_json.size(), hub_set_json.data());
 
-    // Fixed-size buffer for explicit control:
+    // You can also specify a fixed buffer size for explicit control:
     constexpr note::JsonBuf<128> note_add_json = [] {
         note::JsonBuf<128> b;
         b.add("req", "note.add");
@@ -172,23 +155,29 @@ int main() {
         return b;
     }();
 
-    static_assert(note_add_json);  // overflow check
+    static_assert(note_add_json);  // verifies the buffer didn't overflow
     std::printf("--- constexpr note.add ---\n  >> %.*s\n",
         (int)note_add_json.size(), note_add_json.data());
 
 
-    // ═══════════════════════════════════════════════════════════════════
+    // ═════════════════════════════════════════════════════════════════════
     // 3. TYPED API — REQUESTS AND RESPONSES
-    //    Generated types give you named fields, IDE autocomplete, and
-    //    compile-time checking. Misspell a field → compile error.
-    // ═══════════════════════════════════════════════════════════════════
+    //
+    // This is the recommended approach for most code. Request types are
+    // generated from the Notecard API spec — every field is a named
+    // member with the correct type. Your IDE auto-completes after the
+    // dot, and misspelled field names are compile errors.
+    //
+    // Responses are also typed: result.version is a string_view, not a
+    // string you look up by key.
+    // ═════════════════════════════════════════════════════════════════════
 
     std::puts("\n=== 3. Typed API ===\n");
 
-    // Api is the entry point for all typed requests.
+    // Api wraps a Notecard and provides typed accessors for every endpoint.
     note::Api api(nc);
 
-    // Fluent chain — IDE auto-completes every setter
+    // Fluent chain — build and execute in one expression.
     std::puts("--- hub.set (fluent) ---");
     api.hub.set()
        .product("com.example.app")
@@ -196,7 +185,8 @@ int main() {
        .outbound(60)
        .execute();
 
-    // Direct field assignment
+    // Direct field assignment — useful when fields come from different
+    // sources or are set conditionally.
     std::puts("--- hub.set (direct) ---");
     {
         auto req = api.hub.set();
@@ -206,58 +196,64 @@ int main() {
         req.execute();
     }
 
-    // Typed response — fields are named members, not strings
+    // Typed response — fields are named members, not string lookups.
     std::puts("--- card.version (typed response) ---");
     {
         auto result = api.card.version().execute();
         if (result) {
-            auto version = result.version;
+            auto version = result.version;   // string_view, not a map lookup
             auto device  = result.device;
             (void)version; (void)device;
         } else {
+            // Structured error with code, cause, and human-readable message.
             printf("error: %s\n", to_string(result.error()).c_str());
         }
     }
 
-    // Layer 2 aliases — intent-based shortcuts for polymorphic endpoints
-    std::puts("--- note.read (alias for note.get Get) ---");
-    api.note.read("data.qi").execute();
+    // Intent-based aliases for polymorphic endpoints. The Notecard's
+    // note.get can either read a note by ID or pop one from a queue
+    // depending on which fields you send. In note-cpp, these are
+    // separate methods with clear names:
+    std::puts("--- note.read (read by ID) ---");
+    api.note.read("data.db").noteId("my-note").execute();
 
-    std::puts("--- note.pop (alias for note.get Delete) ---");
+    std::puts("--- note.pop (pop from queue) ---");
     api.note.pop("requests.qi").execute();
 
-    // The full polymorphic factory is still available when you need it:
-    //   api.note.get().read().file("data.qi").execute();
-    //   api.note.get().pop().file("requests.qi").execute();
-
-    // Fire-and-forget command — sends "cmd" instead of "req"
+    // Fire-and-forget command — sends "cmd" instead of "req".
     std::puts("--- hub.set (command) ---");
     api.hub.set().product("com.example.app").command();
 
 
-    // ═══════════════════════════════════════════════════════════════════
+    // ═════════════════════════════════════════════════════════════════════
     // 4. BODY SCHEMAS
-    //    Define a struct once. Use it to send data, receive data, and
-    //    register Notecard templates. The same type does all three.
-    // ═══════════════════════════════════════════════════════════════════
+    //
+    // Notes carry a JSON body with your application's data. You can send
+    // bodies as raw JSON strings, builder lambdas, or typed structs.
+    //
+    // The struct approach is the most powerful: define your data shape
+    // once (see Readings at the top of this file), then use the same
+    // type to send data, receive data, and register Notecard templates
+    // (which enable compact on-device storage).
+    // ═════════════════════════════════════════════════════════════════════
 
     std::puts("\n=== 4. Body schemas ===\n");
 
-    // Send a note with a typed body
+    // Send a note with your struct as the body.
     std::puts("--- note.add (typed body) ---");
     {
         Readings r{.temperature = 22.5f, .humidity = 60};
         api.note.add().file("sensors.qo").body(r).execute();
     }
 
-    // Inline initialization
+    // Inline works too — no need to name a variable.
     std::puts("--- note.add (inline body) ---");
     api.note.add()
        .file("sensors.qo")
        .body(Readings{.temperature = 22.5f, .humidity = 60})
        .execute();
 
-    // Direct assignment — request fields and body
+    // Direct assignment — useful when building the body incrementally.
     std::puts("--- note.add (assigned body) ---");
     {
         Readings r;
@@ -269,14 +265,16 @@ int main() {
         req.execute();
     }
 
-    // Register a Notecard template — auto-generates type hints
-    // (14.1 = TFLOAT32, 11 = TINT16)
+    // Register a Notecard template. This tells the Notecard the shape of
+    // your data so it can store notes compactly (bit-packed binary instead
+    // of JSON text). The type hints are generated automatically from your
+    // struct's field types (e.g. float → 14.1, int16_t → 11).
     std::puts("--- note.template ---");
     api.note.templates().define("sensors.qo")
         .body(note::template_of<Readings>())
         .execute();
 
-    // Parse a response body back into the struct
+    // Parse a response body back into your struct.
     std::puts("--- note.read (parse body) ---");
     {
         auto r = api.note.read("data.qi").execute();
@@ -288,15 +286,14 @@ int main() {
         }
     }
 
-    // Bodies also work without a struct — three tiers:
-    //   Tier 1: Raw JSON string
+    // You don't have to use structs. Bodies also accept raw JSON strings
+    // or builder lambdas — useful when the shape varies at runtime.
     std::puts("--- note.add (raw JSON body) ---");
     api.note.add()
         .file("sensors.qo")
         .body(R"({"temp":22.5})")
         .execute();
 
-    //   Tier 2: Builder lambda
     std::puts("--- note.add (builder body) ---");
     api.note.add()
         .file("sensors.qo")
@@ -305,8 +302,6 @@ int main() {
             b.add("humidity", int32_t{60});
         }))
         .execute();
-
-    //   Tier 3: Schema struct (shown above with Readings)
 
 
     std::puts("\nAll examples completed.");

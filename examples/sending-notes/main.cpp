@@ -1,5 +1,18 @@
 // Sending notes — every way to send data to and receive data from the Notecard.
 //
+// Notes are how your application sends data through the Notecard to Notehub
+// (and receives data back). The body of a note is JSON — your sensor readings,
+// commands, status, or whatever your application needs to communicate.
+//
+// You can build note bodies at three levels:
+//   - Raw JSON strings (quick prototyping, no type safety)
+//   - Builder lambdas (runtime construction, field-by-field)
+//   - Typed structs (recommended — one struct for send, receive, and templates)
+//
+// This example shows all three, plus Notecard templates (which enable compact
+// on-device storage — the Notecard stores your data as bit-packed binary
+// instead of JSON text, reducing bandwidth and flash usage significantly).
+//
 // All example code in the accompanying README comes from this file, which is
 // compiled as part of CI to verify correctness.
 //
@@ -11,65 +24,18 @@
 #include <note/api.hpp>
 #include <note/body.hpp>
 
+#include "../mock_backend.hpp"
 #include <cstdio>
-#include <memory>
-#include <string>
-
-// ── Mock backend ────────────────────────────────────────────────────────────
-// Replace with a real JSON library (cJSON, nlohmann-json, RapidJSON, etc.)
-// on your platform. See examples/getting_started.cpp for a fuller mock.
-
-struct MockBuilder : note::JsonBuilder {
-    std::string buf_ = "{";
-    bool first_ = true;
-    void sep() { if (!first_) buf_ += ','; first_ = false; }
-
-    MockBuilder& add(note::string_view k, bool v) override {
-        sep(); buf_ += '"'; buf_ += k; buf_ += "\":"; buf_ += v ? "true" : "false"; return *this;
-    }
-    MockBuilder& add(note::string_view k, int32_t v) override {
-        sep(); buf_ += '"'; buf_ += k; buf_ += "\":"; buf_ += std::to_string(v); return *this;
-    }
-    MockBuilder& add(note::string_view k, double v) override {
-        sep(); buf_ += '"'; buf_ += k; buf_ += "\":"; buf_ += std::to_string(v); return *this;
-    }
-    MockBuilder& add(note::string_view k, note::string_view v) override {
-        sep(); buf_ += '"'; buf_ += k; buf_ += "\":\""; buf_ += v; buf_ += '"'; return *this;
-    }
-    MockBuilder& begin_object(note::string_view k) override {
-        sep(); buf_ += '"'; buf_ += k; buf_ += "\":{"; first_ = true; return *this;
-    }
-    MockBuilder& end_object() override { buf_ += '}'; first_ = false; return *this; }
-    MockBuilder& begin_array(note::string_view k) override {
-        sep(); buf_ += '"'; buf_ += k; buf_ += "\":["; first_ = true; return *this;
-    }
-    MockBuilder& end_array() override { buf_ += ']'; first_ = false; return *this; }
-    std::string to_string() override { buf_ += '}'; return std::move(buf_); }
-};
-
-struct MockReader : note::JsonReader {
-    bool has(note::string_view) const override { return false; }
-    bool get_bool(note::string_view, bool d) const override { return d; }
-    int32_t get_int(note::string_view, int32_t d) const override { return d; }
-    double get_double(note::string_view, double d) const override { return d; }
-    note::string_view get_string(note::string_view, note::string_view d) const override { return d; }
-    std::unique_ptr<note::JsonReader> get_object(note::string_view) const override { return nullptr; }
-    bool has_error() const override { return false; }
-    note::string_view get_error() const override { return {}; }
-};
-
-struct MockBackend : note::JsonBackend {
-    std::unique_ptr<note::JsonBuilder> create_builder() override {
-        return std::make_unique<MockBuilder>();
-    }
-    std::unique_ptr<note::JsonReader> parse_response(note::string_view) override {
-        return std::make_unique<MockReader>();
-    }
-};
 
 
-// ── Body struct ─────────────────────────────────────────────────────────────
-// Define once — use to send, receive, and register templates.
+// ── Your application's sensor data ──────────────────────────────────────
+// Define your data shape as a plain struct. On C++20, aggregate reflection
+// discovers the fields automatically. On C++17, NOTE_FIELDS lists them.
+//
+// This one struct is used to:
+//   - Send data (body of note.add)
+//   - Receive data (bodyAs<Readings>() on note.get response)
+//   - Register a template (note::template_of<Readings>() generates type hints)
 
 struct Readings {
     float temperature;
@@ -116,6 +82,11 @@ int main() {
 
     // ═════════════════════════════════════════════════════════════════════════
     // 3. Typed body struct — the recommended approach
+    //
+    // Define your data as a struct (see Readings above) and pass it directly.
+    // The library serializes it to JSON automatically. No manual field names,
+    // no risk of typos, and the same struct works for send, receive, and
+    // template registration.
     // ═════════════════════════════════════════════════════════════════════════
 
     std::puts("\n--- Typed body struct ---");
@@ -137,16 +108,25 @@ int main() {
 
     // ═════════════════════════════════════════════════════════════════════════
     // 5. Template + send — the production pattern
+    //
+    // Without a template, the Notecard stores each note as a JSON string.
+    // With a template, it knows the shape of your data upfront and stores
+    // notes as compact bit-packed binary — dramatically reducing flash usage
+    // and sync bandwidth. Register the template once at startup, then send
+    // notes normally.
     // ═════════════════════════════════════════════════════════════════════════
 
     std::puts("\n--- Template + send ---");
     {
-        // Register the template once at startup
+        // Register the template once at startup. template_of<Readings>()
+        // generates type hints from your struct's field types:
+        //   float    → 14.1 (TFLOAT32)
+        //   int16_t  → 11   (TINT16)
         api.note.templates().define("sensors.qo")
             .body(note::template_of<Readings>())
             .execute();
 
-        // Then send notes — the Notecard stores them compactly
+        // Then send notes as usual — the Notecard stores them compactly.
         Readings r{.temperature = 22.5f, .humidity = 60};
         api.note.add().file("sensors.qo").body(r).execute();
     }

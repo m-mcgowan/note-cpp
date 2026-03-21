@@ -82,6 +82,18 @@ public:
     //   static constexpr Safety safety;
     //   using Response = ...;
     //   void build(JsonBuilder&) const;
+    //
+    // Binary transfers (requests that carry a BinaryTransfer nested type, such
+    // as CardBinaryGet, CardBinaryPut, and DfuGet) require buffer-based
+    // overloads that are not yet implemented here. The intended API is:
+    //
+    //   execute(req, span<uint8_t> dst)       — receive: COBS-decode into dst
+    //   execute(req, span<const uint8_t> src) — send:    COBS-encode from src
+    //
+    // Callers work entirely in decoded bytes; COBS is a transport detail.
+    // The cobs fields present on those request/response structs are exposed for
+    // diagnostic purposes but are not part of the intended call pattern — the
+    // transport sets/reads them internally.
     template<typename RequestT>
     ApiResult<typename RequestT::Response> execute(const RequestT& req) {
         using Rsp = typename RequestT::Response;

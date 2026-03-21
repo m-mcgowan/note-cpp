@@ -215,18 +215,8 @@ TEOF
     # Verify embedded docs (first compiler only)
     if [ "${EMBEDME_DONE:-}" != "1" ]; then
         READMES=$(find "$ROOT/examples" -name 'README.md' 2>/dev/null)
-        if [ -n "$READMES" ] && command -v npx >/dev/null 2>&1; then
-            echo
-            echo "=== Example docs ==="
-            # shellcheck disable=SC2086
-            npx -y embedme --verify $READMES
-            echo "  docs: OK"
-        fi
-        if [ -f docs/migration-from-note-arduino.md ]; then
-            echo
-            echo "=== Migration guide table alignment ==="
-            python3 tools/pad_migration_tables.py --check
-        fi
+        echo
+        "$ROOT/tools/verify-docs.sh"
         export EMBEDME_DONE=1
     fi
 

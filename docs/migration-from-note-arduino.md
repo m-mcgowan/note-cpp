@@ -354,6 +354,7 @@ if (r) {
 
 
 
+
 ```
 
 </td></tr>
@@ -414,23 +415,17 @@ if (r) {
 <tr><td>
 
 ```c
-// Set up ATTN to watch for file changes
+// Arm for connectivity + motion triggers
 J *req = nc.newRequest("card.attn");
-const char *files[] = {"my-inbound.qi"};
-J *arr = JCreateStringArray(files, 1);
-JAddItemToObject(req, "files", arr);
-JAddStringToObject(req, "mode", "files");
-nc.sendRequest(req);
-
-// Later: arm with a timeout
-J *req = nc.newRequest("card.attn");
-JAddStringToObject(req, "mode", "reset");
+JAddStringToObject(req, "mode",
+    "arm,connected,motion");
 JAddNumberToObject(req, "seconds", 120);
 nc.sendRequest(req);
 
 // Disarm
-J *req = nc.newRequest("card.attn");
-JAddStringToObject(req, "mode", "disarm,-files");
+req = nc.newRequest("card.attn");
+JAddStringToObject(req, "mode",
+    "disarm,-all");
 nc.sendRequest(req);
 ```
 
@@ -440,19 +435,13 @@ nc.sendRequest(req);
 // Arm for specific triggers — the "arm,"
 // prefix and mode string are built for you.
 nc.card.attn().arm()
-    .files()
     .connected()
+    .motion()
     .seconds(120_s)
     .execute();
 
 // Disarm
 nc.card.attn().disarm().execute();
-
-
-
-
-
-
 
 
 ```
@@ -461,8 +450,7 @@ Or using the intent-based types:
 
 ```cpp
 nc.execute(
-    CardAttn::Arm{}
-        .files().connected());
+    CardAttn::Arm{}.connected());
 
 nc.execute(CardAttn::Disarm{});
 ```
@@ -472,9 +460,9 @@ nc.execute(CardAttn::Disarm{});
 
 **Key differences:**
 - No manual string concatenation for mode flags. In note-c, you build
-  `"arm,files,connected"` yourself — get the commas or names wrong and it
-  fails silently. note-cpp has named methods (`.files()`, `.connected()`)
-  and flag constants (`note::attn::arm | note::attn::files`).
+  `"arm,connected,motion"` yourself — get the commas or names wrong and it
+  fails silently. note-cpp has named methods (`.connected()`, `.motion()`)
+  and flag constants (`note::attn::arm | note::attn::connected`).
 - Intent-based types (`Arm`, `Disarm`, `Sleep`, `Watchdog`) expose only the
   fields relevant to that operation. You can't accidentally set a sleep
   timeout on a disarm request.

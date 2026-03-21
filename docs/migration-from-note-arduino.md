@@ -233,7 +233,7 @@ J *rsp = nc.requestAndResponse(req);
 if (rsp == NULL) {
     Serial.println("no response");
 } else if (nc.responseError(rsp)) {
-    // "note.add: queue full" — you parse this yourself. TODO: find the real error message
+    // "note.add: queue full" — you parse this yourself
     Serial.println(JGetString(rsp, "err"));
     nc.deleteResponse(rsp);
 } else {
@@ -253,19 +253,22 @@ auto result = nc.note.add()
 if (!result) {
     auto err = result.error();
     Serial.println(err);
+
+    // err.code tells you what layer failed:
+    //   Error::SendFailed  — never reached the Notecard (safe to retry)
+    //   Error::Notecard    — Notecard returned an error
+    //   Error::Json        — response couldn't be parsed
+    // err.cause tells you why:
+    //   Cause::Timeout, Cause::HalError, Cause::CrcMismatch, etc.
+    // err.message is the Notecard's error string:
+    //   "note.add: file not found"
+    //   "note.add: queue full"
+    //
+    // Printed output:
+    //   "notecard: note.add: queue full"
+    //   "send_failed[timeout]: no response within deadline"
 }
 ```
-
-Printed output:
-  "notecard: note.add: queue full"
-  "send_failed[timeout]: no response within deadline"
-
-`err.code` tells you which layer failed (`SendFailed`, `Notecard`, `Json`,
-etc.), `err.cause` tells you the transport-level reason (`Timeout`,
-`HalError`, `CrcMismatch`), and `err.message` carries the Notecard's own
-error string when applicable. See [Error Handling](error-handling.md) for
-the full reference including retry safety levels.
-
 
 **Key differences:**
 - Both sides define the same struct, but note-cpp uses it directly as the

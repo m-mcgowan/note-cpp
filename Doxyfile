@@ -10,6 +10,10 @@ FILE_PATTERNS          = *.hpp *.md
 EXCLUDE_PATTERNS       = */third_party/* */backends/*
 USE_MDFILE_AS_MAINPAGE = docs/mainpage.md
 
+# Examples — creates an "Examples" page with syntax-highlighted source
+EXAMPLE_PATH           = examples
+EXAMPLE_PATTERNS       = *.cpp
+
 # Extract only documented symbols (our doc comments are comprehensive)
 EXTRACT_ALL            = NO
 EXTRACT_PRIVATE        = NO

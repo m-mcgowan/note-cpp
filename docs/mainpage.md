@@ -33,7 +33,17 @@ API specification.
 - Each endpoint struct provides: a fluent request builder, `execute()` / `command()` methods, and a typed `Response` with parsed fields
 - Fields gated by firmware version emit deprecation warnings when targeting older firmware
 
+## Examples
+
+- @example getting_started.cpp Four tiers: ad-hoc, compile-time JSON, typed API, body schemas.
+- @example hub-configuration/main.cpp Type-safe units, named constants, voltage-variable sync.
+- @example sending-notes/main.cpp Every way to send and receive data.
+- @example zero_alloc.cpp Zero-allocation patterns for memory-constrained systems.
+- @example target_filtering.cpp Compile-time SKU and firmware version checks.
+- @example attention_pin.cpp ATTN pin interrupt handling.
+- @example location_tracking.cpp GPS location tracking with polymorphic APIs.
+
 ## Getting started
 
-See the [README](https://github.com/m-mcgowan/note-cpp) and `examples/` directory
+See the [README](https://github.com/m-mcgowan/note-cpp) and the examples above
 for usage patterns.

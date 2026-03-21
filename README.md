@@ -72,6 +72,165 @@ and property assignment
 }
 ```
 
+## Developer Experience
+
+note-cpp is designed for beginner to intermediate C++ developers. The API
+should feel natural and expressive — code that reads like intent, not like
+a fight with the type system. This isn't just a polish goal; it's a design
+constraint that has shaped the library's architecture.
+
+### Intent over protocol
+
+Some Notecard APIs do very different things depending on which fields you
+send. `note.get` can read a note by ID or pop one from a queue. `card.binary`
+can check status or clear the buffer. In the C API, you have to know the
+right field combination — the function name alone doesn't tell you what
+will happen.
+
+note-cpp gives these operations distinct, intent-revealing names:
+
+```cpp
+api.note.read("data.db").noteId("my-note").execute();  // read by ID
+api.note.pop("requests.qi").execute();                  // pop from queue
+
+api.binary.status().execute();                          // check binary state
+api.binary.clear().execute();                           // clear the buffer
+```
+
+Each variant exposes only the fields that apply to that operation. Setting a
+field that doesn't belong is a compile error, not a silent wire-level mistake.
+
+### No boilerplate
+
+Define a body struct once — use it to send data, receive data, and register
+Notecard templates. No separate serialization code, no manual field mapping:
+
+```cpp
+struct Readings {
+    float temperature;
+    int16_t humidity;
+    NOTE_FIELDS(temperature, humidity)  // optional on C++20
+};
+
+// Send
+api.note.add().file("sensors.qo").body(Readings{.temperature = 22.5f, .humidity = 60}).execute();
+
+// Receive
+Readings data = result.bodyAs<Readings>();
+
+// Register template (auto-generates type hints for compact storage)
+api.note.templates().define("sensors.qo").body(note::template_of<Readings>()).execute();
+```
+
+### Meet the developer where they are
+
+The API supports multiple idioms for the same operation — fluent chains,
+direct assignment, and designated initializers. These aren't interchangeable
+styles; they're different tools for different shapes of code:
+
+```cpp
+// Fluent — clear when configuring and executing in one statement
+api.hub.set().product("com.example.app").mode("periodic").outbound(60).execute();
+
+// Direct assignment — natural when fields come from your application's config
+auto req = api.hub.set();
+req.product  = app_config.product_uid;
+req.mode     = app_config.sync_mode;
+req.outbound = app_config.sync_interval;
+req.execute();
+
+// Conditional fields — set only what applies; unset fields are omitted from the request
+auto req = api.hub.set();
+req.product = app_config.product_uid;
+req.mode    = app_config.sync_mode;
+if (app_config.sync_mode == "continuous") {
+    req.sync = true;  // only sent in continuous mode
+}
+req.execute();
+```
+
+Examples set the recommended patterns — the API supports alternatives so
+developers can use what fits their context, while the examples guide best
+practice for clarity and brevity.
+
+### Natural syntax
+
+**Typed fields behave like values.** Assign with `=`, read without
+dereferencing. Under the hood they're thin optional wrappers, but the
+user-facing syntax is just struct members:
+
+```cpp
+auto result = api.card.version().execute();
+if (result) {
+    auto version = result.version;   // not result->version or *result.version
+}
+```
+
+**Errors are data, not exceptions.** Every operation returns a result. Check
+it with `if`, inspect it with `.error()`. No try/catch, no surprise stack
+unwinding, no hidden control flow — important on embedded where exceptions
+are often disabled entirely.
+
+**Units prevent mistakes, not just document them.** Duration fields use
+distinct types (`Minutes`, `Seconds`, `Hours`) that convert implicitly in the
+safe direction. Write `7_days` where `Minutes` is expected and the math
+happens at compile time. Pass `Seconds` where `Minutes` is expected and
+the compiler stops you.
+
+**The compiler catches what it can.** Misspelled field names are compile
+errors — there's no `"prodcut"` field on `hub.set`, so the compiler tells
+you. Polymorphic variants expose only their valid fields, so setting a field
+that doesn't apply to that operation won't compile.
+
+On C++20, fields with a fixed set of valid values are validated transparently
+at compile time. String literals are checked; runtime values pass through:
+
+```cpp
+req.mode = "periodic";     // ✓ validated at compile time
+req.mode = "perioidc";     // ✗ compile error: hub.set: invalid value for 'mode'
+req.mode = runtime_var;    // ✓ runtime value, no validation
+```
+
+Named constants are available for discoverability and IDE autocomplete:
+
+```cpp
+using mode = note::api::HubSet::mode_t;
+req.mode = mode::periodic;      // autocomplete-friendly, typo-proof
+req.mode = mode::continuous;
+```
+
+Target filtering warns (or errors in strict mode) when an API isn't available
+on your Notecard SKU. The goal: catch mistakes before they reach the device.
+
+### Where the complexity lives
+
+The surface API is simple because the complexity is pushed elsewhere:
+
+- **Code generation** — 74 request types are auto-generated from an OpenAPI
+  spec. The generated code handles fluent setters, version gating, polymorphic
+  dispatch, and JSON serialization. Users never edit or read it.
+- **Internals** — Template metaprogramming, SFINAE, and `constexpr` machinery
+  live in `detail` namespaces and implementation headers. They make the simple
+  API possible, but don't leak into it.
+- **Compile-time checks** — Target filtering, version gating, and enum
+  validation use C++20 concepts and `consteval` when available, falling back
+  gracefully on C++17. The user sees deprecation warnings or compile errors,
+  not the machinery that produces them.
+
+### Design principles
+
+- **Clear over clever.** CRTP, expression templates, tag dispatch — these are
+  tools for library internals, not for the API a developer types every day.
+  If the API requires a C++ book to understand, it's a bug.
+- **Templates only when they earn their place.** If a function takes
+  `template<typename T>`, it should be for a clear reason (like
+  `template_of<Readings>()` where the type itself is the input, not a value),
+  not because the implementation was easier that way.
+- **Namespaces, not macros.** `NOTE_FIELDS(...)` is the one macro, and it's
+  optional on C++20. Everything else lives in the `note` namespace — no
+  `#define`-driven configuration, no macro-based dispatch, no global
+  pollution.
+
 ## Architecture
 
 ```

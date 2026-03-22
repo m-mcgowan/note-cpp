@@ -59,13 +59,14 @@ void setup() {
 <tr><td>
 
 ```c
+// ../examples/migration_notec.cpp#L54-L59
+
 J *req = nc.newRequest("hub.set");
 JAddStringToObject(req, "product",
     "com.example.app");
 JAddStringToObject(req, "mode", "periodic");
 JAddNumberToObject(req, "outbound", 60);
 nc.sendRequest(req);
-
 ```
 
 </td><td>
@@ -78,6 +79,7 @@ nc.hub.set()
     .mode("periodic")
     .outbound(60_mins)
     .execute();
+
 ```
 
 </td></tr>
@@ -113,6 +115,8 @@ Set fields individually. Good when fields come from different sources or are set
 <tr><td>
 
 ```c
+// ../examples/migration_notec.cpp#L65-L77
+
 J *req = nc.newRequest("hub.set");
 JAddStringToObject(req, "product",
     "com.example.app");
@@ -144,6 +148,8 @@ else {
 req.execute();
 
 
+
+
 ```
 
 </td></tr>
@@ -159,14 +165,14 @@ isn't needed.
 <tr><td>
 
 ```c
+// ../examples/migration_notec.cpp#L54-L59
+
 J *req = nc.newRequest("hub.set");
 JAddStringToObject(req, "product",
     "com.example.app");
 JAddStringToObject(req, "mode", "periodic");
 JAddNumberToObject(req, "outbound", 60);
 nc.sendRequest(req);
-
-
 ```
 
 </td><td>
@@ -201,6 +207,8 @@ or conditional logic. Designated initializers read like data, not procedure
 **note-arduino:**
 
 ```c
+// ../examples/migration_notec.cpp#L82-L93
+
 struct Readings {
     float temperature;
     int16_t humidity;
@@ -236,6 +244,8 @@ In note-c, you check for a null response, then check the `err` field — an
 unstructured string you have to parse yourself:
 
 ```c
+// ../examples/migration_notec.cpp#L99-L108
+
 J *rsp = nc.requestAndResponse(req);
 if (rsp == NULL) {
     Serial.println("no response");
@@ -303,6 +313,8 @@ retry safety levels.
 <tr><td>
 
 ```c
+// ../examples/migration_notec.cpp#L113-L120
+
 // Type constants from note.h — you pick the
 // right one for each field manually.
 J *req = nc.newRequest("note.template");
@@ -321,6 +333,8 @@ nc.sendRequest(req);
 nc.note.templates().define("sensors.qo")
     .body(note::template_of(Readings{}))
     .execute();
+
+
 
 
 
@@ -350,6 +364,8 @@ If you are comfortable with C++ template syntax, you can also use a type-only fo
 <tr><td>
 
 ```c
+// ../examples/migration_notec.cpp#L125-L136
+
 J *rsp = nc.requestAndResponse(
     nc.newRequest("card.temp"));
 if (rsp == NULL) {
@@ -379,6 +395,8 @@ if (r) {
 
 
 
+
+
 ```
 
 </td></tr>
@@ -400,6 +418,8 @@ if (r) {
 <tr><td>
 
 ```c
+// ../examples/migration_notec.cpp#L141-L148
+
 J *rsp = nc.requestAndResponse(
     nc.newRequest("card.version"));
 if (rsp != NULL) {
@@ -421,6 +441,8 @@ if (r) {
 }
 
 
+
+
 ```
 
 </td></tr>
@@ -439,6 +461,8 @@ if (r) {
 <tr><td>
 
 ```c
+// ../examples/migration_notec.cpp#L153-L164
+
 // Arm for connectivity + motion triggers
 J *req = nc.newRequest("card.attn");
 JAddStringToObject(req, "mode",
@@ -466,6 +490,8 @@ nc.card.attn().arm()
 
 // Disarm
 nc.card.attn().disarm().execute();
+
+
 
 
 ```
@@ -639,6 +665,8 @@ auto interval = config.config().sync_interval; // int, validated
 <tr><td>
 
 ```c
+// ../examples/migration_notec.cpp#L212-L223
+
 J *rsp = nc.requestAndResponse(
     nc.newRequest("card.version"));
 if (rsp == NULL) {
@@ -666,6 +694,8 @@ if (!r) {
 } else {
     // use r.version, r.device, etc.
 }
+
+
 
 
 ```
@@ -720,6 +750,8 @@ requests are safe to retry.
 <tr><td>
 
 ```c
+// ../examples/migration_notec.cpp#L228-L231
+
 // newCommand sends "cmd" not "req" — Notecard
 // doesn't respond. Easy to confuse with newRequest.
 J *req = nc.newCommand("hub.sync");
@@ -732,6 +764,8 @@ nc.sendRequest(req);
 // ../examples/arduino-migration/src/main.cpp#L199
 
 nc.hub.sync().command();
+
+
 
 ```
 

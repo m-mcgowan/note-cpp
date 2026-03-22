@@ -142,25 +142,19 @@ void card_attn_disarm() {
     nc.card.attn().disarm().execute();
 }
 
-void card_attn_intent() {
-    nc.execute(CardAttn::Arm{}.connected());
-    nc.execute(CardAttn::Disarm{});
-}
-
-
 // ── card.attn: sleep with state ──────────────────────────────────────────
 
 void card_attn_sleep() {
-    CardAttn::Sleep req;
-    req.seconds(1_hours);
-    req.payload("checkpoint-v1");
-    nc.execute(req);
+    auto req = nc.card.attn().sleep();
+    req.seconds = 1_hours;
+    req.payload = "checkpoint-v1";
+    req.execute();
 }
 
 void card_attn_retrieve() {
-    auto r = nc.execute(CardAttn::Retrieve{});
+    auto r = nc.card.attn().retrieve().execute();
     if (r && r.time != 0) {
-        auto payload = r.payload;
+        auto payload = r.payload; // "checkpoint-v1"
         (void)payload;
     }
 }

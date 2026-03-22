@@ -9057,10 +9057,8 @@
             "x-api-version": "9.1.1"
           }
         },
-        "x-binary-transfer": {
+        "x-binary-buffer": {
           "direction": "receive",
-          "encoding": "cobs",
-          "follows": "response",
           "when": {
             "binary": true
           }
@@ -11773,6 +11771,12 @@
             "x-schema-version": "1.1.2",
             "x-api-version": "9.1.1"
           }
+        },
+        "x-binary-buffer": {
+          "direction": "send",
+          "when": {
+            "binary": true
+          }
         }
       }
     },
@@ -14215,6 +14219,9 @@
             "x-schema-version": "1.1.2",
             "x-api-version": "9.1.1"
           }
+        },
+        "x-binary-buffer": {
+          "direction": "receive"
         }
       }
     },
@@ -14375,6 +14382,9 @@
             "x-schema-version": "1.1.2",
             "x-api-version": "9.1.1"
           }
+        },
+        "x-binary-buffer": {
+          "direction": "send"
         }
       }
     },
@@ -14528,6 +14538,9 @@
             "x-schema-version": "1.1.2",
             "x-api-version": "9.1.1"
           }
+        },
+        "x-binary-buffer": {
+          "direction": "send"
         }
       }
     }

@@ -137,14 +137,13 @@ auto rsp = api.binary.get(buf, sizeof(buf)).execute();
 // rsp.buffer → span<const uint8_t> into buf, sized to decoded bytes received
 ```
 
-On stack-constrained targets, pass a single `span<uint8_t>` to `execute()`.
-It is shared between encoder and decoder (they never run simultaneously) and
-no stack buffer is used:
+On stack-constrained targets, register a static buffer on the `Notecard` once
+at startup. All binary operations then use it automatically:
 
 ```cpp
 static uint8_t cobs_buf[NOTE_COBS_BLOCK_SIZE];
-api.binary.put(data, len).execute({cobs_buf, sizeof(cobs_buf)});
-api.binary.get(buf,  len).execute({cobs_buf, sizeof(cobs_buf)});
+nc.set_cobs_buffer(cobs_buf, sizeof(cobs_buf));   // or pass a span
+// execute() calls need no changes
 ```
 
 Use `note::cobs_encoded_size(n)` to check Notecard capacity upfront:

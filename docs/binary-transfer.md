@@ -52,8 +52,10 @@ auto rsp = api.binary.get(buf, len, /*offset=*/N).execute();
 
 ### DFU
 
-`dfu.get` uses the same COBS pipeline as `card.binary.get` and the same buffer
-field mechanism.
+`dfu.get { binary: true }` tells the Notecard to stage a firmware chunk into
+the `card.binary` buffer. The host then retrieves it via a normal `card.binary.get`
+call. There is no direct COBS streaming from `dfu.get` — the binary receive
+always goes through `card.binary.get`.
 
 ### note.add with binary: true
 
@@ -163,20 +165,24 @@ principle — no hidden allocations, caller controls buffer placement.
 
 ### COBS codec buffer
 
-The encoder and decoder each use a ~256-byte working buffer. By default this is
-stack-allocated. For stack-constrained targets, pass a single `span<uint8_t>`
-to `execute()` — it is shared between encoder and decoder (they never run at
-the same time) and no stack buffer is used:
+The encoder and decoder share a ~256-byte working buffer. By default it is
+stack-allocated inside `execute()`. For stack-constrained targets, register a
+static buffer on the `Notecard` once at startup — all binary operations then
+use it automatically with no per-call parameters:
 
 ```cpp
-// Default — stack buffer, no extra code:
+// Default — stack buffer, nothing to configure:
+api.binary.put(data, len).execute();
+
+// Stack-constrained — set once at startup, then forget:
+static uint8_t cobs_buf[NOTE_COBS_BLOCK_SIZE];
+nc.set_cobs_buffer(cobs_buf);                     // array — size deduced
+nc.set_cobs_buffer(cobs_buf, sizeof(cobs_buf));   // pointer + length
+nc.set_cobs_buffer({cobs_buf, sizeof(cobs_buf)}); // explicit span
+
+// All subsequent binary operations use cobs_buf automatically:
 api.binary.put(data, len).execute();
 api.binary.get(buf, len).execute();
-
-// Stack-constrained — one static buffer shared by both directions:
-static uint8_t cobs_buf[NOTE_COBS_BLOCK_SIZE];
-api.binary.put(data, len).execute({cobs_buf, sizeof(cobs_buf)});
-api.binary.get(buf, len).execute({cobs_buf, sizeof(cobs_buf)});
 ```
 
 `NOTE_COBS_BLOCK_SIZE` is 255 by default and can be overridden at build time

@@ -2,11 +2,8 @@
 
 #include <note/transport/i2c.hpp>
 
-#include <Arduino.h>
+#include <note/arduino/compat.hpp>
 #include <Wire.h>
-// Arduino defines min/max as macros — undo to avoid collisions with std::min/max.
-#undef min
-#undef max
 
 // note::arduino::I2CHal
 //

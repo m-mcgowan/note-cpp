@@ -4,6 +4,8 @@
 #include <string>
 #include <string_view>
 
+#include "arduino/compat.hpp"
+
 #include "compiler.hpp"
 
 namespace note {

@@ -185,7 +185,7 @@ public:
     {
         jsmn_parser parser;
         jsmn_init(&parser);
-        token_count_ = jsmn_parse(&parser, json, len, tokens, max_tokens);
+        token_count_ = jsmn_parse(&parser, json, len, tokens, static_cast<unsigned int>(max_tokens));
         if (token_count_ < 0) token_count_ = 0;
     }
 

@@ -15,8 +15,8 @@ namespace {
 // Minimal request type that uses BodyValue for its body field.
 struct TestRequest {
     static constexpr note::string_view notecard_request = "test.req";
-    static constexpr bool supports_cmd = false;
-    static constexpr note::Safety safety = note::Safety::Idempotent;
+    [[maybe_unused]] static constexpr bool supports_cmd = false;
+    [[maybe_unused]] static constexpr note::Safety safety = note::Safety::Idempotent;
 
     note::BodyValue body{};
 

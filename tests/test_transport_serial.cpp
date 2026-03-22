@@ -141,7 +141,6 @@ TEST_CASE("reset retries on non-control characters in drain") {
     // First reset probe → inject non-control data (triggers retry)
     // Second probe → inject clean "\r\n" (succeeds)
     ScriptedHal hal;
-    int probe_count = 0;
     hal.transmit_ok_fn = [](int /*call*/) -> bool {
         // We intercept by watching what's in the tx queue via override
         return true;
@@ -149,7 +148,6 @@ TEST_CASE("reset retries on non-control characters in drain") {
     // Override: first reset probe gets garbage; subsequent ones get clean drain.
     // We achieve this by making reset_drain_response a queue.
     // Simplest approach: use a stateful transmit that changes the response.
-    int reset_probe = 0;
     ScriptedHal hal2;
     hal2.transmit_ok_fn = [](int /*call*/) -> bool {
         // track in receive: handled by overriding transmit fully below

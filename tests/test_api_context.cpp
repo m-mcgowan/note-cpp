@@ -79,21 +79,21 @@ TEST_CASE("Api::card resource group") {
     h.api.execute(h.api.card.attn().disarm());
     h.api.execute(h.api.card.attn().query());
     REQUIRE(h.last_req.find("card.attn") != std::string::npos);
-    // card.aux
+    // card.aux (factory member — callable)
     h.api.execute(h.api.card.aux());
     REQUIRE(h.last_req.find("card.aux") != std::string::npos);
     // card.aux.serial
-    h.api.execute(h.api.card.auxSerial());
+    h.api.execute(h.api.card.aux.serial());
     REQUIRE(h.last_req.find("card.aux.serial") != std::string::npos);
     // card.binary (polymorphic)
-    h.api.execute(h.api.card.binary().status());
-    h.api.execute(h.api.card.binary().clear());
+    h.api.execute(h.api.card.binary.status());
+    h.api.execute(h.api.card.binary.clear());
     REQUIRE(h.last_req.find("card.binary") != std::string::npos);
     // card.binary.get
-    h.api.execute(h.api.card.binaryGet());
+    h.api.execute(h.api.card.binary.get());
     REQUIRE(h.last_req.find("card.binary.get") != std::string::npos);
     // card.binary.put
-    h.api.execute(h.api.card.binaryPut());
+    h.api.execute(h.api.card.binary.put());
     REQUIRE(h.last_req.find("card.binary.put") != std::string::npos);
     // card.carrier
     h.api.execute(h.api.card.carrier());
@@ -114,34 +114,34 @@ TEST_CASE("Api::card resource group") {
     // card.led
     h.api.execute(h.api.card.led());
     REQUIRE(h.last_req.find("card.led") != std::string::npos);
-    // card.location
+    // card.location (factory member — callable)
     h.api.execute(h.api.card.location());
     REQUIRE(h.last_req.find("card.location") != std::string::npos);
     // card.location.mode (polymorphic)
-    h.api.execute(h.api.card.locationMode().get());
-    h.api.execute(h.api.card.locationMode().set());
-    h.api.execute(h.api.card.locationMode().continuous());
-    h.api.execute(h.api.card.locationMode().periodic());
-    h.api.execute(h.api.card.locationMode().fixed());
-    h.api.execute(h.api.card.locationMode().remove());
+    h.api.execute(h.api.card.location.mode.get());
+    h.api.execute(h.api.card.location.mode.set());
+    h.api.execute(h.api.card.location.mode.continuous());
+    h.api.execute(h.api.card.location.mode.periodic());
+    h.api.execute(h.api.card.location.mode.fixed());
+    h.api.execute(h.api.card.location.mode.remove());
     REQUIRE(h.last_req.find("card.location.mode") != std::string::npos);
     // card.location.track
-    h.api.execute(h.api.card.locationTrack());
+    h.api.execute(h.api.card.location.track());
     REQUIRE(h.last_req.find("card.location.track") != std::string::npos);
     // card.monitor
     h.api.execute(h.api.card.monitor());
     REQUIRE(h.last_req.find("card.monitor") != std::string::npos);
-    // card.motion
+    // card.motion (factory member — callable)
     h.api.execute(h.api.card.motion());
     REQUIRE(h.last_req.find("card.motion") != std::string::npos);
     // card.motion.mode
-    h.api.execute(h.api.card.motionMode());
+    h.api.execute(h.api.card.motion.mode());
     REQUIRE(h.last_req.find("card.motion.mode") != std::string::npos);
     // card.motion.sync
-    h.api.execute(h.api.card.motionSync());
+    h.api.execute(h.api.card.motion.sync());
     REQUIRE(h.last_req.find("card.motion.sync") != std::string::npos);
     // card.motion.track
-    h.api.execute(h.api.card.motionTrack());
+    h.api.execute(h.api.card.motion.track());
     REQUIRE(h.last_req.find("card.motion.track") != std::string::npos);
     // card.power (polymorphic)
     h.api.execute(h.api.card.power().read());
@@ -196,13 +196,13 @@ TEST_CASE("Api::card resource group") {
     // card.wifi
     h.api.execute(h.api.card.wifi());
     REQUIRE(h.last_req.find("card.wifi") != std::string::npos);
-    // card.wireless
+    // card.wireless (factory member — callable)
     h.api.execute(h.api.card.wireless());
     REQUIRE(h.last_req.find("card.wireless") != std::string::npos);
     // card.wireless.penalty (polymorphic)
-    h.api.execute(h.api.card.wirelessPenalty().check());
-    h.api.execute(h.api.card.wirelessPenalty().set());
-    h.api.execute(h.api.card.wirelessPenalty().clear());
+    h.api.execute(h.api.card.wireless.penalty.check());
+    h.api.execute(h.api.card.wireless.penalty.set());
+    h.api.execute(h.api.card.wireless.penalty.clear());
     REQUIRE(h.last_req.find("card.wireless.penalty") != std::string::npos);
 }
 
@@ -238,11 +238,11 @@ TEST_CASE("Api::env resource group") {
 
 TEST_CASE("Api::file resource group") {
     Harness h;
-    // file.changes
+    // file.changes (factory member — callable)
     h.api.execute(h.api.file.changes());
     REQUIRE(h.last_req.find("file.changes") != std::string::npos);
     // file.changes.pending
-    h.api.execute(h.api.file.changesPending());
+    h.api.execute(h.api.file.changes.pending());
     REQUIRE(h.last_req.find("file.changes.pending") != std::string::npos);
     // file.clear
     h.api.execute(h.api.file.clear());
@@ -272,11 +272,11 @@ TEST_CASE("Api::hub resource group") {
     // hub.status
     h.api.execute(h.api.hub.status());
     REQUIRE(h.last_req.find("hub.status") != std::string::npos);
-    // hub.sync
+    // hub.sync (factory member — callable)
     h.api.execute(h.api.hub.sync());
     REQUIRE(h.last_req.find("hub.sync") != std::string::npos);
     // hub.sync.status
-    h.api.execute(h.api.hub.syncStatus());
+    h.api.execute(h.api.hub.sync.status());
     REQUIRE(h.last_req.find("hub.sync.status") != std::string::npos);
 }
 

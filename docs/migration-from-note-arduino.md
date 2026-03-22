@@ -537,9 +537,10 @@ J *req = nc.newRequest("card.attn");
 JAddBoolToObject(req, "start", true);
 J *rsp = nc.requestAndResponse(req);
 if (rsp != NULL) {
-    char *payload = JGetString(rsp, "payload");
-    if (payload && payload[0]) {
-        // Resume from saved state
+    double time = JGetNumber(rsp, "time");
+    if (time != 0) {
+        char *payload = JGetString(rsp, "payload");
+        // payload is "checkpoint-v1"
     }
     nc.deleteResponse(rsp);
 }
@@ -549,19 +550,20 @@ if (rsp != NULL) {
 
 ```cpp
 // Sleep — save state across reset
-CardAttn::Sleep req;
-req.seconds(1_hours);
-req.payload("checkpoint-v1");
-nc.execute(req);
+auto req = nc.card.attn().sleep();
+req.seconds = 1_hours;
+req.payload = "checkpoint-v1";
+req.execute();
 // Enter deep sleep...
 
 // On wake — retrieve saved state
-auto r = nc.execute(
-    CardAttn::Retrieve{});
+auto r = nc.card.attn().retrieve()
+    .execute();
 if (r && r.time != 0) {
-    auto payload = r.payload; // "checkpoint-v1"
-    // Resume from saved state
+    // r.payload is "checkpoint-v1"
 }
+
+
 
 
 
@@ -623,40 +625,9 @@ nc.env.setDefault("interval", "60")
 
 ```
 
-Or with [embedded-config-cpp](https://github.com/m-mcgowan/embedded-config-cpp)
-for schema-based config:
-
-```cpp
-// Define once — loaded from Notehub env vars
-struct AppConfig {
-    int sync_interval = 60;
-};
-template<>
-struct ec::Schema<AppConfig> {
-    static inline auto fields = std::tuple{
-        ec::field("interval", &AppConfig::sync_interval)
-            .range(1, 3600),
-    };
-};
-
-// ConfigManager handles parsing, validation,
-// defaults, and change notifications.
-ec::NotecardProvider<AppConfig> prov(api);
-ec::ConfigManager<AppConfig> config;
-config.add_provider(prov);
-config.load();
-auto interval = config.config().sync_interval; // int, validated
-```
 
 </td></tr>
 </table>
-
-**Key differences:**
-- No manual string-to-int conversion (`atoi`). With embedded-config-cpp,
-  field types are declared in the schema — parsing, validation, and type
-  conversion happen automatically.
-- Change detection, defaults, and observer notifications are built in.
-  In note-c, you poll `env.modified` and re-parse everything yourself.
 
 ## Error handling
 
@@ -923,6 +894,3 @@ compile silently and fail at runtime on the device.
    - `60` (minutes) → `60_mins` or `1_hours` (duration types)
    - `"arm,connected"` → `.arm().connected()` (named flag methods)
 
-7. **Replace `env.get` + `atoi` with embedded-config-cpp** if you have more
-   than a couple of environment variables. Schema-based config handles parsing,
-   validation, defaults, and change detection in one place.

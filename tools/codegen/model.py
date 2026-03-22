@@ -371,14 +371,56 @@ class EndpointGroup:
         from codegen.naming import wire_name_to_group_method
         return wire_name_to_group_method(self.wire_name)
 
+    parent: EndpointGroup | None = None  # Set when this is a child of another endpoint
+
+    @property
+    def api_accessor(self) -> str:
+        """The accessor path from the group to this endpoint.
+
+        For use in tests: h.api.{{ group.name }}.{{ endpoint.api_accessor }}
+
+        e.g. 'card.version' → 'version'  (then caller appends () or (args))
+             'card.binary' → 'binary'  (member factory, no parens needed)
+             'card.binary.put' → 'binary.put'  (child method on parent factory)
+             'card.location.mode' → 'location.mode'  (polymorphic child factory)
+        """
+        if self.parent and self.parent.needs_factory:
+            parent_accessor = self.parent.group_method
+            return f"{parent_accessor}.{self.child_method}"
+        return self.group_method
+
+    @property
+    def is_factory_member(self) -> bool:
+        """True if this endpoint is a member object (not function) on its container.
+
+        An endpoint is a member (not function) when:
+        - It's a parent with children and needs a factory (nc.card.binary)
+        - It's a polymorphic child on a parent factory (nc.card.wireless.penalty)
+        This enables dot-chaining: nc.card.binary.put(), nc.card.location.mode.periodic()
+        """
+        if self.needs_factory and self.has_children:
+            return True
+        if self.parent and self.parent.needs_factory and self.is_polymorphic:
+            return True
+        return False
+
     @property
     def has_children(self) -> bool:
         return len(self.children) > 0
 
     @property
     def needs_factory(self) -> bool:
-        """True if this endpoint needs a factory struct (polymorphic or has children)."""
-        return self.is_polymorphic or self.has_children
+        """True if this endpoint needs a factory struct.
+
+        Polymorphic endpoints always need one. Endpoints with children need
+        one only if they're 2+ segments (nested under a group, like card.binary).
+        1-segment parents (like 'web') keep children as flat methods on the group.
+        """
+        if self.is_polymorphic:
+            return True
+        if self.has_children and self.wire_name.count(".") >= 1:
+            return True
+        return False
 
     _CPP_KEYWORDS = frozenset({
         "auto", "break", "case", "class", "const", "continue", "default",

@@ -390,6 +390,7 @@ def main() -> None:
         for other in endpoints:
             if other.wire_name.startswith(ep.wire_name + ".") and other != ep:
                 ep.children.append(other)
+                other.parent = ep
         if ep.children:
             ep.children.sort(key=lambda c: c.wire_name)
 

@@ -92,17 +92,24 @@ struct NcErrorHarness {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::{{ type_qual }} request builder") {
     Harness h;
+{% set acc = endpoint.api_accessor %}
 {% if endpoint.is_polymorphic %}
 {% if required %}
-    auto req = h.api.{{ endpoint.group_name }}.{{ endpoint.group_method }}().{{ op.factory_method }}({% for p in required %}{{ p | request_test_value }}{{ ", " if not loop.last }}{% endfor %});
+    auto req = h.api.{{ endpoint.group_name }}.{{ acc }}{% if not endpoint.is_factory_member %}(){% endif %}.{{ op.factory_method }}({% for p in required %}{{ p | request_test_value }}{{ ", " if not loop.last }}{% endfor %});
 {% else %}
-    auto req = h.api.{{ endpoint.group_name }}.{{ endpoint.group_method }}().{{ op.factory_method }}();
+    auto req = h.api.{{ endpoint.group_name }}.{{ acc }}{% if not endpoint.is_factory_member %}(){% endif %}.{{ op.factory_method }}();
+{% endif %}
+{% elif endpoint.is_factory_member %}
+{% if required %}
+    auto req = h.api.{{ endpoint.group_name }}.{{ acc }}({% for p in required %}{{ p | request_test_value }}{{ ", " if not loop.last }}{% endfor %});
+{% else %}
+    auto req = h.api.{{ endpoint.group_name }}.{{ acc }}();
 {% endif %}
 {% else %}
 {% if required %}
-    auto req = h.api.{{ endpoint.group_name }}.{{ endpoint.group_method }}({% for p in required %}{{ p | request_test_value }}{{ ", " if not loop.last }}{% endfor %});
+    auto req = h.api.{{ endpoint.group_name }}.{{ acc }}({% for p in required %}{{ p | request_test_value }}{{ ", " if not loop.last }}{% endfor %});
 {% else %}
-    auto req = h.api.{{ endpoint.group_name }}.{{ endpoint.group_method }}();
+    auto req = h.api.{{ endpoint.group_name }}.{{ acc }}();
 {% endif %}
 {% endif %}
     // Execute with no optional fields set — covers all !has_value() (false) branches.

@@ -90,8 +90,8 @@ public:
 {% endif %}
 {% for child in endpoint.children %}
 {% if child.is_polymorphic %}
-{# Child is polymorphic: nested sub-factory #}
-        {{ child.struct_name }}Factory {{ child.child_method }}() { return {nc_}; }
+{# Child is polymorphic: nested sub-factory as member #}
+        {{ child.struct_name }}Factory {{ child.child_method }}{nc_};
 {% else %}
         /// {{ child.wire_name }}
         auto {{ child.child_method }}() { return create<api::{{ child.struct_name }}>(); }
@@ -200,10 +200,34 @@ public:
         Notecard* nc_;
         template<typename T> T create() { T r; r.nc_ = nc_; return r; }
 
+{# Collect parent wire names (only parents with factories) so we can skip their children #}
+{% set parent_wires = [] %}
 {% for endpoint in group.endpoints %}
+{% if endpoint.needs_factory and endpoint.has_children %}{% if parent_wires.append(endpoint.wire_name) %}{% endif %}{% endif %}
+{% endfor %}
+
+{# Parent endpoints with factories: emit as members #}
+{% for endpoint in group.endpoints %}
+{% if endpoint.is_factory_member %}
+        /// {{ endpoint.wire_name }} (and nested: {% for c in endpoint.children %}{{ c.wire_name }}{{ ", " if not loop.last }}{% endfor %})
+        {{ endpoint.struct_name }}Factory {{ endpoint.group_method }}{nc_};
+{% endif %}
+{% endfor %}
+
+{% for endpoint in group.endpoints %}
+{# Skip children — they're on the parent factory #}
+{% set is_child = [] %}
+{% for pw in parent_wires %}
+{% if endpoint.wire_name.startswith(pw + ".") %}{% if is_child.append(true) %}{% endif %}{% endif %}
+{% endfor %}
+{% if not is_child %}
+{# Skip factory members — already emitted above #}
+{% if not endpoint.is_factory_member %}
 {% set op = endpoint.operations[0] %}
         /// {{ endpoint.wire_name }}
 {{ group_method(endpoint, op) }}
+{% endif %}
+{% endif %}
 {% endfor %}
 {% set ns = namespace(has_aliases=false) %}
 {% for endpoint in group.endpoints %}

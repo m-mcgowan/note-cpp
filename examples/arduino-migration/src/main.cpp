@@ -122,7 +122,8 @@ void card_version() {
     if (r) {
         auto ver = r.version;
         auto dev = r.device;
-        (void)ver; (void)dev;
+        Serial.println(ver);
+        Serial.println(dev);
     }
 }
 

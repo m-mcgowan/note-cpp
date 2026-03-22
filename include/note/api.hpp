@@ -152,7 +152,6 @@ public:
     struct NoteChangesFactory;
     struct NoteGetFactory;
     struct NoteTemplateFactory;
-    struct WebFactory;
 
     struct CardAttnFactory {
         Notecard* nc_;
@@ -220,7 +219,7 @@ public:
         template<typename T> T create() { T r; r.nc_ = nc_; return r; }
         /// card.location
         auto operator()() { return create<api::CardLocation>(); }
-        CardLocationModeFactory mode() { return {nc_}; }
+        CardLocationModeFactory mode{nc_};
         /// card.location.track
         auto track() { return create<api::CardLocationTrack>(); }
     };
@@ -324,7 +323,7 @@ public:
         template<typename T> T create() { T r; r.nc_ = nc_; return r; }
         /// card.wireless
         auto operator()() { return create<api::CardWireless>(); }
-        CardWirelessPenaltyFactory penalty() { return {nc_}; }
+        CardWirelessPenaltyFactory penalty{nc_};
     };
 
     struct CardWirelessPenaltyFactory {
@@ -445,21 +444,6 @@ public:
         }
     };
 
-    struct WebFactory {
-        Notecard* nc_;
-        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
-        /// web
-        auto operator()() { return create<api::Web>(); }
-        /// web.delete
-        auto delete_() { return create<api::WebDelete>(); }
-        /// web.get
-        auto get() { return create<api::WebGet>(); }
-        /// web.post
-        auto post() { return create<api::WebPost>(); }
-        /// web.put
-        auto put() { return create<api::WebPut>(); }
-    };
-
     // =====================================================================
     // Resource groups (api.card, api.hub, api.note, etc.)
     //
@@ -477,67 +461,24 @@ public:
         Notecard* nc_;
         template<typename T> T create() { T r; r.nc_ = nc_; return r; }
 
+
+        /// card.aux (and nested: card.aux.serial)
+        CardAuxFactory aux{nc_};
+        /// card.binary (and nested: card.binary.get, card.binary.put)
+        CardBinaryFactory binary{nc_};
+        /// card.location (and nested: card.location.mode, card.location.track)
+        CardLocationFactory location{nc_};
+        /// card.location.mode (and nested: )
+        CardLocationModeFactory locationMode{nc_};
+        /// card.motion (and nested: card.motion.mode, card.motion.sync, card.motion.track)
+        CardMotionFactory motion{nc_};
+        /// card.wireless (and nested: card.wireless.penalty)
+        CardWirelessFactory wireless{nc_};
+        /// card.wireless.penalty (and nested: )
+        CardWirelessPenaltyFactory wirelessPenalty{nc_};
+
         /// card.attn
         CardAttnFactory attn() { return {nc_}; }
-
-        /// card.aux
-        auto aux() { return create<api::CardAux>(); }
-
-        /// card.aux.serial
-#if __cplusplus >= 202002L
-        template<typename T_ = TargetT_>
-        requires (IsUnconstrained<T_> || T_::supports(api::CardAuxSerial::skus))
-        auto auxSerial() { return create<api::CardAuxSerial>(); }
-
-        template<typename T_ = TargetT_>
-        requires (!IsUnconstrained<T_> && !T_::supports(api::CardAuxSerial::skus) && !T_::strict)
-        [[deprecated("card.aux.serial is not available on this target")]]
-        auto auxSerial() { return create<api::CardAuxSerial>(); }
-#else
-        auto auxSerial() { return create<api::CardAuxSerial>(); }
-#endif
-
-        /// card.binary
-#if __cplusplus >= 202002L
-        template<typename T_ = TargetT_>
-        requires (IsUnconstrained<T_> || T_::supports(api::CardBinary::Status::skus))
-        CardBinaryFactory binary() { return {nc_}; }
-
-        template<typename T_ = TargetT_>
-        requires (!IsUnconstrained<T_> && !T_::supports(api::CardBinary::Status::skus) && !T_::strict)
-        [[deprecated("card.binary is not available on this target")]]
-        CardBinaryFactory binary() { return {nc_}; }
-#else
-        CardBinaryFactory binary() { return {nc_}; }
-#endif
-
-        /// card.binary.get
-#if __cplusplus >= 202002L
-        template<typename T_ = TargetT_>
-        requires (IsUnconstrained<T_> || T_::supports(api::CardBinaryGet::skus))
-        auto binaryGet() { return create<api::CardBinaryGet>(); }
-
-        template<typename T_ = TargetT_>
-        requires (!IsUnconstrained<T_> && !T_::supports(api::CardBinaryGet::skus) && !T_::strict)
-        [[deprecated("card.binary.get is not available on this target")]]
-        auto binaryGet() { return create<api::CardBinaryGet>(); }
-#else
-        auto binaryGet() { return create<api::CardBinaryGet>(); }
-#endif
-
-        /// card.binary.put
-#if __cplusplus >= 202002L
-        template<typename T_ = TargetT_>
-        requires (IsUnconstrained<T_> || T_::supports(api::CardBinaryPut::skus))
-        auto binaryPut() { return create<api::CardBinaryPut>(); }
-
-        template<typename T_ = TargetT_>
-        requires (!IsUnconstrained<T_> && !T_::supports(api::CardBinaryPut::skus) && !T_::strict)
-        [[deprecated("card.binary.put is not available on this target")]]
-        auto binaryPut() { return create<api::CardBinaryPut>(); }
-#else
-        auto binaryPut() { return create<api::CardBinaryPut>(); }
-#endif
 
         /// card.carrier
 #if __cplusplus >= 202002L
@@ -601,26 +542,6 @@ public:
         /// card.led
         auto led() { return create<api::CardLed>(); }
 
-        /// card.location
-        auto location() { return create<api::CardLocation>(); }
-
-        /// card.location.mode
-        CardLocationModeFactory locationMode() { return {nc_}; }
-
-        /// card.location.track
-#if __cplusplus >= 202002L
-        template<typename T_ = TargetT_>
-        requires (IsUnconstrained<T_> || T_::supports(api::CardLocationTrack::skus))
-        auto locationTrack() { return create<api::CardLocationTrack>(); }
-
-        template<typename T_ = TargetT_>
-        requires (!IsUnconstrained<T_> && !T_::supports(api::CardLocationTrack::skus) && !T_::strict)
-        [[deprecated("card.location.track is not available on this target")]]
-        auto locationTrack() { return create<api::CardLocationTrack>(); }
-#else
-        auto locationTrack() { return create<api::CardLocationTrack>(); }
-#endif
-
         /// card.monitor
 #if __cplusplus >= 202002L
         template<typename T_ = TargetT_>
@@ -633,62 +554,6 @@ public:
         auto monitor() { return create<api::CardMonitor>(); }
 #else
         auto monitor() { return create<api::CardMonitor>(); }
-#endif
-
-        /// card.motion
-#if __cplusplus >= 202002L
-        template<typename T_ = TargetT_>
-        requires (IsUnconstrained<T_> || T_::supports(api::CardMotion::skus))
-        auto motion() { return create<api::CardMotion>(); }
-
-        template<typename T_ = TargetT_>
-        requires (!IsUnconstrained<T_> && !T_::supports(api::CardMotion::skus) && !T_::strict)
-        [[deprecated("card.motion is not available on this target")]]
-        auto motion() { return create<api::CardMotion>(); }
-#else
-        auto motion() { return create<api::CardMotion>(); }
-#endif
-
-        /// card.motion.mode
-#if __cplusplus >= 202002L
-        template<typename T_ = TargetT_>
-        requires (IsUnconstrained<T_> || T_::supports(api::CardMotionMode::skus))
-        auto motionMode() { return create<api::CardMotionMode>(); }
-
-        template<typename T_ = TargetT_>
-        requires (!IsUnconstrained<T_> && !T_::supports(api::CardMotionMode::skus) && !T_::strict)
-        [[deprecated("card.motion.mode is not available on this target")]]
-        auto motionMode() { return create<api::CardMotionMode>(); }
-#else
-        auto motionMode() { return create<api::CardMotionMode>(); }
-#endif
-
-        /// card.motion.sync
-#if __cplusplus >= 202002L
-        template<typename T_ = TargetT_>
-        requires (IsUnconstrained<T_> || T_::supports(api::CardMotionSync::skus))
-        auto motionSync() { return create<api::CardMotionSync>(); }
-
-        template<typename T_ = TargetT_>
-        requires (!IsUnconstrained<T_> && !T_::supports(api::CardMotionSync::skus) && !T_::strict)
-        [[deprecated("card.motion.sync is not available on this target")]]
-        auto motionSync() { return create<api::CardMotionSync>(); }
-#else
-        auto motionSync() { return create<api::CardMotionSync>(); }
-#endif
-
-        /// card.motion.track
-#if __cplusplus >= 202002L
-        template<typename T_ = TargetT_>
-        requires (IsUnconstrained<T_> || T_::supports(api::CardMotionTrack::skus))
-        auto motionTrack() { return create<api::CardMotionTrack>(); }
-
-        template<typename T_ = TargetT_>
-        requires (!IsUnconstrained<T_> && !T_::supports(api::CardMotionTrack::skus) && !T_::strict)
-        [[deprecated("card.motion.track is not available on this target")]]
-        auto motionTrack() { return create<api::CardMotionTrack>(); }
-#else
-        auto motionTrack() { return create<api::CardMotionTrack>(); }
 #endif
 
         /// card.power
@@ -827,34 +692,6 @@ public:
         auto wifi() { return create<api::CardWifi>(); }
 #endif
 
-        /// card.wireless
-#if __cplusplus >= 202002L
-        template<typename T_ = TargetT_>
-        requires (IsUnconstrained<T_> || T_::supports(api::CardWireless::skus))
-        auto wireless() { return create<api::CardWireless>(); }
-
-        template<typename T_ = TargetT_>
-        requires (!IsUnconstrained<T_> && !T_::supports(api::CardWireless::skus) && !T_::strict)
-        [[deprecated("card.wireless is not available on this target")]]
-        auto wireless() { return create<api::CardWireless>(); }
-#else
-        auto wireless() { return create<api::CardWireless>(); }
-#endif
-
-        /// card.wireless.penalty
-#if __cplusplus >= 202002L
-        template<typename T_ = TargetT_>
-        requires (IsUnconstrained<T_> || T_::supports(api::CardWirelessPenalty::Check::skus))
-        CardWirelessPenaltyFactory wirelessPenalty() { return {nc_}; }
-
-        template<typename T_ = TargetT_>
-        requires (!IsUnconstrained<T_> && !T_::supports(api::CardWirelessPenalty::Check::skus) && !T_::strict)
-        [[deprecated("card.wireless.penalty is not available on this target")]]
-        CardWirelessPenaltyFactory wirelessPenalty() { return {nc_}; }
-#else
-        CardWirelessPenaltyFactory wirelessPenalty() { return {nc_}; }
-#endif
-
 
         // Layer 2 convenience aliases
         /// View the status of the binary storage area of the Notecard and
@@ -927,6 +764,8 @@ public:
         Notecard* nc_;
         template<typename T> T create() { T r; r.nc_ = nc_; return r; }
 
+
+
         /// dfu.get
 #if __cplusplus >= 202002L
         template<typename T_ = TargetT_>
@@ -970,6 +809,8 @@ public:
     struct EnvGroup {
         Notecard* nc_;
         template<typename T> T create() { T r; r.nc_ = nc_; return r; }
+
+
 
         /// env.default
         EnvDefaultFactory defaults() { return {nc_}; }
@@ -1087,11 +928,9 @@ public:
         Notecard* nc_;
         template<typename T> T create() { T r; r.nc_ = nc_; return r; }
 
-        /// file.changes
-        auto changes() { return create<api::FileChanges>(); }
 
-        /// file.changes.pending
-        auto changesPending() { return create<api::FileChangesPending>(); }
+        /// file.changes (and nested: file.changes.pending)
+        FileChangesFactory changes{nc_};
 
         /// file.clear
 #if __cplusplus >= 202002L
@@ -1133,6 +972,10 @@ public:
         Notecard* nc_;
         template<typename T> T create() { T r; r.nc_ = nc_; return r; }
 
+
+        /// hub.sync (and nested: hub.sync.status)
+        HubSyncFactory sync{nc_};
+
         /// hub.get
         auto get() { return create<api::HubGet>(); }
 
@@ -1170,12 +1013,6 @@ public:
         /// hub.status
         auto status() { return create<api::HubStatus>(); }
 
-        /// hub.sync
-        auto sync() { return create<api::HubSync>(); }
-
-        /// hub.sync.status
-        auto syncStatus() { return create<api::HubSyncStatus>(); }
-
     };
 #if __cplusplus >= 202002L
     HubGroup<TargetT> hub;
@@ -1191,6 +1028,8 @@ public:
     struct NoteGroup {
         Notecard* nc_;
         template<typename T> T create() { T r; r.nc_ = nc_; return r; }
+
+
 
         /// note.add
         auto add() { return create<api::NoteAdd>(); }
@@ -1400,6 +1239,8 @@ public:
         Notecard* nc_;
         template<typename T> T create() { T r; r.nc_ = nc_; return r; }
 
+
+
         /// ntn.gps
 #if __cplusplus >= 202002L
         template<typename T_ = TargetT_>
@@ -1458,6 +1299,8 @@ public:
         Notecard* nc_;
         template<typename T> T create() { T r; r.nc_ = nc_; return r; }
 
+
+
         /// var.delete
         auto delete_() { return create<api::VarDelete>(); }
 
@@ -1487,6 +1330,8 @@ public:
     struct WebGroup {
         Notecard* nc_;
         template<typename T> T create() { T r; r.nc_ = nc_; return r; }
+
+
 
         /// web
 #if __cplusplus >= 202002L

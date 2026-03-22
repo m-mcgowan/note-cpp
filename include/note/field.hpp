@@ -86,7 +86,11 @@ struct RequestField : std::optional<T> {
 /// work naturally. No optional overhead — default-initialized if absent
 /// from the JSON response.
 template<typename T>
-struct ResponseField {
+struct ResponseField
+#ifdef ARDUINO
+    : public Printable
+#endif
+{
     T value_{};
 
     constexpr ResponseField() = default;
@@ -135,7 +139,7 @@ struct ResponseField {
     }
 
 #ifdef ARDUINO
-    size_t printTo(Print& p) const {
+    size_t printTo(Print& p) const override {
         if constexpr (std::is_same_v<T, bool>) {
             return p.print(value_ ? "true" : "false");
         } else if constexpr (std::is_same_v<T, std::string_view>) {

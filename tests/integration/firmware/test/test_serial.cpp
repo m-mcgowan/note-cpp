@@ -183,6 +183,65 @@ TEST_CASE("env.default set + get round-trip") {
     nc.env.clearDefault("_integration_test_var").execute();
 }
 
+// ─── ATTN payload ───────────────────────────────────────────────────────────
+
+TEST_CASE("card.attn payload without sleep") {
+    Fixture f;
+    auto& nc = f.nc;
+
+    // Store a payload via card.attn without entering sleep mode.
+    // Question: does the payload persist without sleep?
+    auto arm = nc.card.attn().arm();
+    arm.payload("test-payload-no-sleep");
+    auto arm_rsp = arm.execute();
+    if (!arm_rsp) { INFO(note::to_string(arm_rsp.error())); }
+    REQUIRE(arm_rsp);
+
+    // Retrieve with start:true — does the payload come back?
+    auto retrieve = nc.card.attn().retrieve().execute();
+    if (!retrieve) { INFO(note::to_string(retrieve.error())); }
+    REQUIRE(retrieve);
+
+    MESSAGE("time: ", retrieve.time.value());
+    MESSAGE("payload: ", retrieve.payload.data());
+
+    // If payload works without sleep, this should match
+    CHECK(note::string_view(retrieve.payload) == "test-payload-no-sleep");
+
+    // Clean up
+    nc.card.attn().disarm().execute();
+}
+
+TEST_CASE("card.attn payload with sleep timer") {
+    Fixture f;
+    auto& nc = f.nc;
+
+    // Store payload via sleep with a very short timer (1 second)
+    auto sleep_req = nc.card.attn().sleep();
+    sleep_req.seconds(note::Seconds{1});
+    sleep_req.payload("test-payload-with-sleep");
+    auto sleep_rsp = sleep_req.execute();
+    if (!sleep_rsp) { INFO(note::to_string(sleep_rsp.error())); }
+    REQUIRE(sleep_rsp);
+
+    // Wait for the sleep timer to expire
+    f.hal.delay(2000);
+
+    // Retrieve — should get the payload back with a non-zero time
+    auto retrieve = nc.card.attn().retrieve().execute();
+    if (!retrieve) { INFO(note::to_string(retrieve.error())); }
+    REQUIRE(retrieve);
+
+    MESSAGE("time: ", retrieve.time.value());
+    MESSAGE("payload: ", retrieve.payload.data());
+
+    CHECK(retrieve.time.value() != 0);
+    CHECK(note::string_view(retrieve.payload) == "test-payload-with-sleep");
+
+    // Clean up
+    nc.card.attn().disarm().execute();
+}
+
 // ─── Error handling ─────────────────────────────────────────────────────────
 
 TEST_CASE("note.add max limit produces Notecard error") {

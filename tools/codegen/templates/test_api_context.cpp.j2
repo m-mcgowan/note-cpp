@@ -73,21 +73,25 @@ TEST_CASE("Api::{{ group.name }} resource group") {
     Harness h;
 {% for endpoint in group.endpoints %}
 {% set op = endpoint.operations[0] %}
+{% set accessor = endpoint.api_accessor %}
 {% if endpoint.is_polymorphic %}
     // {{ endpoint.wire_name }} (polymorphic)
 {% for op in endpoint.operations %}
 {% if op.required_properties %}
-    h.api.execute(h.api.{{ group.name }}.{{ endpoint.group_method }}().{{ op.factory_method }}({% for p in op.required_properties %}{{ p | request_test_value }}{{ ", " if not loop.last }}{% endfor %}));
+    h.api.execute(h.api.{{ group.name }}.{{ accessor }}{% if not endpoint.is_factory_member %}(){% endif %}.{{ op.factory_method }}({% for p in op.required_properties %}{{ p | request_test_value }}{{ ", " if not loop.last }}{% endfor %}));
 {% else %}
-    h.api.execute(h.api.{{ group.name }}.{{ endpoint.group_method }}().{{ op.factory_method }}());
+    h.api.execute(h.api.{{ group.name }}.{{ accessor }}{% if not endpoint.is_factory_member %}(){% endif %}.{{ op.factory_method }}());
 {% endif %}
 {% endfor %}
+{% elif endpoint.is_factory_member %}
+    // {{ endpoint.wire_name }} (factory member — callable)
+    h.api.execute(h.api.{{ group.name }}.{{ accessor }}());
 {% elif op.required_properties %}
     // {{ endpoint.wire_name }}
-    h.api.execute(h.api.{{ group.name }}.{{ endpoint.group_method }}({% for p in op.required_properties %}{{ p | request_test_value }}{{ ", " if not loop.last }}{% endfor %}));
+    h.api.execute(h.api.{{ group.name }}.{{ accessor }}({% for p in op.required_properties %}{{ p | request_test_value }}{{ ", " if not loop.last }}{% endfor %}));
 {% else %}
     // {{ endpoint.wire_name }}
-    h.api.execute(h.api.{{ group.name }}.{{ endpoint.group_method }}());
+    h.api.execute(h.api.{{ group.name }}.{{ accessor }}());
 {% endif %}
     REQUIRE(h.last_req.find("{{ endpoint.wire_name }}") != std::string::npos);
 {% endfor %}

@@ -5,6 +5,7 @@
 #include <note/field.hpp>
 #include <note/json.hpp>
 #include <note/json_sax.hpp>
+#include <note/binary_request.hpp>
 #include <note/notecard.hpp>
 #include <note/print.hpp>
 #include <note/safety.hpp>
@@ -29,7 +30,7 @@ namespace note::api {
 /// practices when using `card.binary`.
 ///
 /// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
-struct CardBinaryGet {
+struct CardBinaryGet : note::BinaryReceiveMixin {
     static constexpr string_view notecard_request = "card.binary.get";
     static constexpr bool supports_cmd = true;
     static constexpr Safety safety = Safety::NonIdempotent;
@@ -194,6 +195,9 @@ struct CardBinaryGet {
     }
 #endif
 
+    /// Attach destination buffer for binary transfer.
+    CardBinaryGet& into(uint8_t* buf, size_t len) { binary_dst_ = {buf, len}; return *this; }
+    CardBinaryGet& into(note::byte_span dst) { binary_dst_ = dst; return *this; }
 };
 
 #pragma GCC diagnostic push

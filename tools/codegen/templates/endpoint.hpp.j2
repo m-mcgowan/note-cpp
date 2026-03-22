@@ -8,6 +8,7 @@
 #include <note/field.hpp>
 #include <note/json.hpp>
 #include <note/json_sax.hpp>
+#include <note/binary_request.hpp>
 #include <note/notecard.hpp>
 #include <note/print.hpp>
 #include <note/safety.hpp>
@@ -677,8 +678,23 @@ struct {{ endpoint.struct_name }} {
 {% if (op.description or op.skus) and loop.index0 > 0 %}
 {{ op_doc(op) | doc_comment("    ") }}
 {% endif %}
+{% if op.binary_transfer and op.binary_transfer.direction_cpp == "Direction::Send" %}
+    struct {{ op.struct_name }} : note::BinarySendMixin {
+{% elif op.binary_transfer and op.binary_transfer.direction_cpp == "Direction::Receive" %}
+    struct {{ op.struct_name }} : note::BinaryReceiveMixin {
+{% else %}
     struct {{ op.struct_name }} {
+{% endif %}
 {{ render_operation(op, endpoint.struct_name + "::" + op.struct_name, "        ") }}
+{% if op.binary_transfer and op.binary_transfer.direction_cpp == "Direction::Send" %}
+        /// Attach source data for binary transfer.
+        {{ endpoint.struct_name }}::{{ op.struct_name }}& data(const uint8_t* buf, size_t len) { binary_src_ = {buf, len}; return *this; }
+        {{ endpoint.struct_name }}::{{ op.struct_name }}& data(note::const_byte_span src) { binary_src_ = src; return *this; }
+{% elif op.binary_transfer and op.binary_transfer.direction_cpp == "Direction::Receive" %}
+        /// Attach destination buffer for binary transfer.
+        {{ endpoint.struct_name }}::{{ op.struct_name }}& into(uint8_t* buf, size_t len) { binary_dst_ = {buf, len}; return *this; }
+        {{ endpoint.struct_name }}::{{ op.struct_name }}& into(note::byte_span dst) { binary_dst_ = dst; return *this; }
+{% endif %}
     };
 {% if op.legacy_struct_name %}
     using {{ op.legacy_struct_name }} = {{ op.struct_name }};  ///< @deprecated Use {{ op.struct_name }} instead.
@@ -694,8 +710,23 @@ struct {{ endpoint.struct_name }} {
 {% if op.description or op.skus %}
 {{ op_doc(op) | doc_comment("") }}
 {% endif %}
+{% if op.binary_transfer and op.binary_transfer.direction_cpp == "Direction::Send" %}
+struct {{ endpoint.struct_name }} : note::BinarySendMixin {
+{% elif op.binary_transfer and op.binary_transfer.direction_cpp == "Direction::Receive" %}
+struct {{ endpoint.struct_name }} : note::BinaryReceiveMixin {
+{% else %}
 struct {{ endpoint.struct_name }} {
+{% endif %}
 {{ render_operation(op, endpoint.struct_name, "    ") }}
+{% if op.binary_transfer and op.binary_transfer.direction_cpp == "Direction::Send" %}
+    /// Attach source data for binary transfer.
+    {{ endpoint.struct_name }}& data(const uint8_t* buf, size_t len) { binary_src_ = {buf, len}; return *this; }
+    {{ endpoint.struct_name }}& data(note::const_byte_span src) { binary_src_ = src; return *this; }
+{% elif op.binary_transfer and op.binary_transfer.direction_cpp == "Direction::Receive" %}
+    /// Attach destination buffer for binary transfer.
+    {{ endpoint.struct_name }}& into(uint8_t* buf, size_t len) { binary_dst_ = {buf, len}; return *this; }
+    {{ endpoint.struct_name }}& into(note::byte_span dst) { binary_dst_ = dst; return *this; }
+{% endif %}
 };
 
 {{ prop_impls(op, endpoint.struct_name) }}

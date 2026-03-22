@@ -6,6 +6,7 @@
 #include <note/field.hpp>
 #include <note/json.hpp>
 #include <note/json_sax.hpp>
+#include <note/binary_request.hpp>
 #include <note/notecard.hpp>
 #include <note/print.hpp>
 #include <note/safety.hpp>

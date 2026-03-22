@@ -16,6 +16,7 @@
 #include "api.hpp"
 #include "notecard.hpp"
 #include "backends/buffer.hpp"
+#include "binary_store.hpp"
 
 namespace note {
 
@@ -94,6 +95,27 @@ public:
     }
 
     Notecard& notecard() { return nc_; }
+
+    /// Store binary data on the Notecard. Handles reset, status, COBS, MD5.
+    Result<void> binaryStore(const uint8_t* data, size_t len, uint32_t offset = 0) {
+        return binary_store_transmit(nc_, data, len, offset);
+    }
+    Result<void> binaryStore(const_byte_span data, uint32_t offset = 0) {
+        return binary_store_transmit(nc_, data.data(), data.size(), offset);
+    }
+
+    /// Receive binary data from the Notecard. Handles status, COBS decode.
+    Result<void> binaryReceive(uint8_t* buf, size_t len, size_t* decoded = nullptr, uint32_t offset = 0) {
+        return binary_store_receive(nc_, buf, len, decoded, offset);
+    }
+    Result<void> binaryReceive(byte_span dst, size_t* decoded = nullptr, uint32_t offset = 0) {
+        return binary_store_receive(nc_, dst.data(), dst.size(), decoded, offset);
+    }
+
+    /// Clear the Notecard's binary store.
+    Result<void> binaryReset() {
+        return binary_store_reset(nc_);
+    }
 };
 #else
 class NotecardApi : private detail::NcOwner, public Api {
@@ -117,6 +139,22 @@ public:
     }
 
     Notecard& notecard() { return nc_; }
+
+    Result<void> binaryStore(const uint8_t* data, size_t len, uint32_t offset = 0) {
+        return binary_store_transmit(nc_, data, len, offset);
+    }
+    Result<void> binaryStore(const_byte_span data, uint32_t offset = 0) {
+        return binary_store_transmit(nc_, data.data(), data.size(), offset);
+    }
+    Result<void> binaryReceive(uint8_t* buf, size_t len, size_t* decoded = nullptr, uint32_t offset = 0) {
+        return binary_store_receive(nc_, buf, len, decoded, offset);
+    }
+    Result<void> binaryReceive(byte_span dst, size_t* decoded = nullptr, uint32_t offset = 0) {
+        return binary_store_receive(nc_, dst.data(), dst.size(), decoded, offset);
+    }
+    Result<void> binaryReset() {
+        return binary_store_reset(nc_);
+    }
 };
 #endif
 

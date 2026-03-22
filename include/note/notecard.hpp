@@ -1,11 +1,13 @@
 #pragma once
 
 #include "allocator.hpp"
+#include "binary_request.hpp"
 #include "json.hpp"
 #include "md5.hpp"
 #include "safety.hpp"
 #include "span.hpp"
 #include "string_pool.hpp"
+#include "transport/cobs.hpp"
 
 #include <functional>
 #include <optional>
@@ -154,6 +156,28 @@ public:
         }
     }
 
+    // ── Binary transfer support ────────────────────────────────────────────
+    //
+    // Requests with .data() or .into() carry binary buffers. execute()
+    // on a non-const request checks for attached buffers and handles
+    // COBS encode/decode transparently.
+
+    /// Execute a mutable request — checks for attached binary buffers.
+    template<typename RequestT>
+    ApiResult<typename RequestT::Response> execute(RequestT& req) {
+        if constexpr (detail::has_binary_src<RequestT>::value) {
+            if (req.has_binary_data()) {
+                return do_binary_send(req);
+            }
+        }
+        if constexpr (detail::has_binary_dst<RequestT>::value) {
+            if (req.has_binary_buffer()) {
+                return do_binary_receive(req);
+            }
+        }
+        return execute(static_cast<const RequestT&>(req));
+    }
+
     // Execute with an explicit allocator (one-off string interning).
     template<typename RequestT>
     ApiResult<typename RequestT::Response> execute(const RequestT& req, Allocator alloc) {
@@ -219,6 +243,68 @@ public:
     JsonBackend& backend() { return *backend_; }
 
 private:
+    template<typename RequestT>
+    ApiResult<typename RequestT::Response> do_binary_send(RequestT& req) {
+        auto src = req.binary_src_;
+        req.cobs = static_cast<int32_t>(cobs_encoded_size(src.size()));
+        if (md5_) req.status = md5_->compute(src.data(), src.size());
+
+        auto result = execute(static_cast<const RequestT&>(req));
+        if (!result) return result;
+
+        CobsEncoder encoder;
+        bool tx_ok = true;
+        encoder.encode(src.data(), src.size(), [&](const uint8_t* block, size_t n) {
+            if (tx_ok) {
+                auto r = request_fn_(string_view(reinterpret_cast<const char*>(block), n), 0);
+                if (!r) tx_ok = false;
+            }
+        });
+        if (tx_ok) {
+            uint8_t eop = cobs_eop;
+            tx_ok = !!request_fn_(string_view(reinterpret_cast<const char*>(&eop), 1), 0);
+        }
+        if (!tx_ok) {
+            return ApiResult<typename RequestT::Response>(
+                ErrorInfo{Error::SendFailed, Cause::HalError, "binary transmit failed"});
+        }
+        return result;
+    }
+
+    template<typename RequestT>
+    ApiResult<typename RequestT::Response> do_binary_receive(RequestT& req) {
+        auto dst = req.binary_dst_;
+        auto result = execute(static_cast<const RequestT&>(req));
+        if (!result) return result;
+
+        size_t expected_cobs = req.cobs ? static_cast<size_t>(*req.cobs) : 0;
+
+        CobsDecoder decoder;
+        size_t decoded = 0;
+        auto sink = [&](const uint8_t* data, size_t n) {
+            size_t copy = (decoded + n <= dst.size()) ? n : (dst.size() - decoded);
+            memcpy(dst.data() + decoded, data, copy);
+            decoded += copy;
+        };
+
+        size_t remaining = expected_cobs + 1;
+        while (remaining > 0) {
+            auto r = request_fn_(string_view{}, default_timeout_ms_);
+            if (!r) {
+                return ApiResult<typename RequestT::Response>(
+                    ErrorInfo{Error::ResponseLost, Cause::Timeout, "binary receive timeout"});
+            }
+            auto chunk = *r;
+            auto bytes = reinterpret_cast<const uint8_t*>(chunk.data());
+            size_t n = chunk.size();
+            if (n > remaining) n = remaining;
+            decoder.feed(bytes, n, sink);
+            remaining -= n;
+        }
+        decoder.flush(sink);
+        return result;
+    }
+
     JsonBackend* backend_ = nullptr;
     RequestFn request_fn_;
     SendFn send_fn_;

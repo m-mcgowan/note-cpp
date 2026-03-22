@@ -752,8 +752,7 @@ requests are safe to retry.
 ```c
 // ../examples/migration_notec.cpp#L228-L231
 
-// newCommand sends "cmd" not "req" — Notecard
-// doesn't respond. Easy to confuse with newRequest.
+// newCommand sends "cmd" not "req"
 J *req = nc.newCommand("hub.sync");
 nc.sendRequest(req);
 ```
@@ -766,11 +765,98 @@ nc.sendRequest(req);
 nc.hub.sync().command();
 
 
+```
+
+</td></tr>
+</table>
+
+## Binary data transfers (card.binary)
+
+Both libraries provide high-level convenience functions and low-level
+typed requests for binary data transfers.
+
+### High-level
+
+<table>
+<tr><th>note-arduino</th><th>note-cpp</th></tr>
+<tr><td>
+
+```c
+uint8_t buf[1024];
+// ... fill buf with data ...
+
+NoteBinaryStoreReset();
+NoteBinaryStoreTransmit(buf, data_len,
+    sizeof(buf), 0);
+NoteBinaryStoreReceive(buf,
+    sizeof(buf), 0, data_len);
+```
+
+</td><td>
+
+```cpp
+uint8_t buf[1024];
+// ... fill buf with data ...
+
+nc.binaryReset();
+nc.binaryStore(buf, data_len);
+
+nc.binaryReceive(buf, sizeof(buf));
 
 ```
 
 </td></tr>
 </table>
+
+### Low-level
+
+<table>
+<tr><th>note-arduino</th><th>note-cpp</th></tr>
+<tr><td>
+
+```c
+uint8_t buf[1024];
+
+J *req = nc.newRequest("card.binary");
+JAddBoolToObject(req, "delete", true);
+nc.sendRequest(req);
+
+req = nc.newRequest("card.binary.put");
+JAddNumberToObject(req, "cobs",
+    cobs_len);
+JAddStringToObject(req, "status",
+    md5_hex);
+nc.sendRequest(req);
+// ... send raw COBS bytes ...
+```
+
+</td><td>
+
+```cpp
+uint8_t buf[1024];
+
+nc.binary.clear().execute();
+nc.card.binaryPut()
+    .data(buf, data_len)
+    .execute();
+
+
+
+
+
+
+
+```
+
+</td></tr>
+</table>
+
+**Key differences:**
+- note-c's `NoteBinaryStoreTransmit` encodes COBS in-place, mutating
+  your buffer. note-cpp stream-encodes from a const source — your data
+  is untouched.
+- note-c requires a buffer large enough for the *encoded* data.
+  note-cpp works with raw-size buffers only.
 
 ## Firmware version and SKU safety
 

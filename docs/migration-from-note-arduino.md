@@ -34,10 +34,10 @@ void setup() {
 </td><td>
 
 ```cpp
-#include <note/note.hpp>
+#include <note/arduino.hpp>
 using namespace note::api;
 
-note::NotecardApi nc;
+note::arduino::Notecard nc;
 
 void setup() {
     nc.begin(Serial1, 9600);
@@ -774,7 +774,7 @@ compile silently and fail at runtime on the device.
 
 ## Migration checklist
 
-1. **Replace `Notecard` with `note::NotecardApi`.** One include, same `begin()`
+1. **Replace `Notecard` with `note::arduino::Notecard`.** One include, same `begin()`
    call — see the setup section above.
 
 2. **Replace `J*` request building with typed API calls.** Every

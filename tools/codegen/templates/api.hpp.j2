@@ -54,11 +54,19 @@ public:
     // Polymorphic factory structs (used by resource group methods)
     // =====================================================================
 
+{# Forward-declare all factory structs so parent factories can reference children #}
 {% for endpoint in endpoints %}
-{% if endpoint.is_polymorphic %}
+{% if endpoint.needs_factory %}
+    struct {{ endpoint.struct_name }}Factory;
+{% endif %}
+{% endfor %}
+
+{% for endpoint in endpoints %}
+{% if endpoint.needs_factory %}
     struct {{ endpoint.struct_name }}Factory {
         Notecard* nc_;
         template<typename T> T create() { T r; r.nc_ = nc_; return r; }
+{% if endpoint.is_polymorphic %}
 {% for op in endpoint.operations %}
 {% if op.description %}
 {{ op.description | doc_comment("        ") }}
@@ -71,18 +79,22 @@ public:
 {% endfor %}
             return r;
         }
-{% if op.legacy_factory_method %}
-        /// @deprecated Use {{ op.factory_method }}() instead.
-        [[deprecated("use {{ op.factory_method }}() instead")]]
-        auto {{ op.legacy_factory_method }}({{ required_params(op) }}) { return {{ op.factory_method }}({% for p in op.required_properties %}{{ p.accessor_name }}_arg{{ ", " if not loop.last }}{% endfor %}); }
-{% endif %}
 {% else %}
         auto {{ op.factory_method }}() { return create<api::{{ endpoint.struct_name }}::{{ op.struct_name }}>(); }
-{% if op.legacy_factory_method %}
-        /// @deprecated Use {{ op.factory_method }}() instead.
-        [[deprecated("use {{ op.factory_method }}() instead")]]
-        auto {{ op.legacy_factory_method }}() { return {{ op.factory_method }}(); }
 {% endif %}
+{% endfor %}
+{% elif not endpoint.is_polymorphic %}
+{# Non-polymorphic parent: callable to create its own request type #}
+        /// {{ endpoint.wire_name }}
+        auto operator()() { return create<api::{{ endpoint.struct_name }}>(); }
+{% endif %}
+{% for child in endpoint.children %}
+{% if child.is_polymorphic %}
+{# Child is polymorphic: nested sub-factory #}
+        {{ child.struct_name }}Factory {{ child.child_method }}() { return {nc_}; }
+{% else %}
+        /// {{ child.wire_name }}
+        auto {{ child.child_method }}() { return create<api::{{ child.struct_name }}>(); }
 {% endif %}
 {% endfor %}
     };

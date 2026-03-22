@@ -336,6 +336,7 @@ class EndpointGroup:
     operations: list[OperationDef] = field(default_factory=list)
     aliases: list[AliasDef] = field(default_factory=list)
     flat_alias: str | None = None  # Top-level Api member name (e.g. "binary" for card.binary)
+    children: list[EndpointGroup] = field(default_factory=list)  # Nested endpoints (e.g. card.binary -> card.binary.put, card.binary.get)
 
     @property
     def factory_method(self) -> str:
@@ -369,6 +370,38 @@ class EndpointGroup:
         """
         from codegen.naming import wire_name_to_group_method
         return wire_name_to_group_method(self.wire_name)
+
+    @property
+    def has_children(self) -> bool:
+        return len(self.children) > 0
+
+    @property
+    def needs_factory(self) -> bool:
+        """True if this endpoint needs a factory struct (polymorphic or has children)."""
+        return self.is_polymorphic or self.has_children
+
+    _CPP_KEYWORDS = frozenset({
+        "auto", "break", "case", "class", "const", "continue", "default",
+        "delete", "do", "double", "else", "enum", "extern", "float", "for",
+        "goto", "if", "int", "long", "mutable", "namespace", "new", "operator",
+        "private", "protected", "public", "register", "return", "short",
+        "signed", "sizeof", "static", "struct", "switch", "template", "this",
+        "throw", "try", "typedef", "union", "unsigned", "virtual", "void",
+        "volatile", "while",
+    })
+
+    @property
+    def child_method(self) -> str:
+        """Method name when used as a child of a parent factory.
+
+        e.g. 'card.binary.put' as child of 'card.binary' -> 'put'
+             'card.location.track' as child of 'card.location' -> 'track'
+             'web.delete' as child of 'web' -> 'delete_'
+        """
+        name = self.wire_name.rsplit(".", 1)[-1]
+        if name in self._CPP_KEYWORDS:
+            name += "_"
+        return name
 
     @property
     def skus_rats_expr(self) -> str:

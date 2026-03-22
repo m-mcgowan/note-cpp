@@ -134,6 +134,26 @@ public:
     // Polymorphic factory structs (used by resource group methods)
     // =====================================================================
 
+    struct CardAttnFactory;
+    struct CardAuxFactory;
+    struct CardBinaryFactory;
+    struct CardContactFactory;
+    struct CardLocationFactory;
+    struct CardLocationModeFactory;
+    struct CardMotionFactory;
+    struct CardPowerFactory;
+    struct CardTempFactory;
+    struct CardVoltageFactory;
+    struct CardWirelessFactory;
+    struct CardWirelessPenaltyFactory;
+    struct EnvDefaultFactory;
+    struct FileChangesFactory;
+    struct HubSyncFactory;
+    struct NoteChangesFactory;
+    struct NoteGetFactory;
+    struct NoteTemplateFactory;
+    struct WebFactory;
+
     struct CardAttnFactory {
         Notecard* nc_;
         template<typename T> T create() { T r; r.nc_ = nc_; return r; }
@@ -156,6 +176,15 @@ public:
         auto query() { return create<api::CardAttn::Query>(); }
     };
 
+    struct CardAuxFactory {
+        Notecard* nc_;
+        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
+        /// card.aux
+        auto operator()() { return create<api::CardAux>(); }
+        /// card.aux.serial
+        auto serial() { return create<api::CardAuxSerial>(); }
+    };
+
     struct CardBinaryFactory {
         Notecard* nc_;
         template<typename T> T create() { T r; r.nc_ = nc_; return r; }
@@ -164,17 +193,15 @@ public:
         /// the guide on Sending and Receiving Large Binary Objects for best
         /// practices when using `card.binary`.
         auto status() { return create<api::CardBinary::Status>(); }
-        /// @deprecated Use status() instead.
-        [[deprecated("use status() instead")]]
-        auto get() { return status(); }
         /// View the status of the binary storage area of the Notecard and
         /// optionally clear any data and related `card.binary` variables. See
         /// the guide on Sending and Receiving Large Binary Objects for best
         /// practices when using `card.binary`.
         auto clear() { return create<api::CardBinary::Clear>(); }
-        /// @deprecated Use clear() instead.
-        [[deprecated("use clear() instead")]]
-        auto delete_() { return clear(); }
+        /// card.binary.get
+        auto get() { return create<api::CardBinaryGet>(); }
+        /// card.binary.put
+        auto put() { return create<api::CardBinaryPut>(); }
     };
 
     struct CardContactFactory {
@@ -186,6 +213,16 @@ public:
         /// Used to set or retrieve information about the Notecard maintainer.
         /// Once set, this information is synced to Notehub.
         auto set() { return create<api::CardContact::Set>(); }
+    };
+
+    struct CardLocationFactory {
+        Notecard* nc_;
+        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
+        /// card.location
+        auto operator()() { return create<api::CardLocation>(); }
+        CardLocationModeFactory mode() { return {nc_}; }
+        /// card.location.track
+        auto track() { return create<api::CardLocationTrack>(); }
     };
 
     struct CardLocationModeFactory {
@@ -206,9 +243,19 @@ public:
         /// Sets location-related configuration settings. Retrieves the current
         /// location mode when passed with no argument.
         auto remove() { return create<api::CardLocationMode::Remove>(); }
-        /// @deprecated Use remove() instead.
-        [[deprecated("use remove() instead")]]
-        auto delete_() { return remove(); }
+    };
+
+    struct CardMotionFactory {
+        Notecard* nc_;
+        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
+        /// card.motion
+        auto operator()() { return create<api::CardMotion>(); }
+        /// card.motion.mode
+        auto mode() { return create<api::CardMotionMode>(); }
+        /// card.motion.sync
+        auto sync() { return create<api::CardMotionSync>(); }
+        /// card.motion.track
+        auto track() { return create<api::CardMotionTrack>(); }
     };
 
     struct CardPowerFactory {
@@ -217,21 +264,12 @@ public:
         /// The `card.power` API is used to configure a connected Mojo device or
         /// to manually request power consumption readings in firmware.
         auto read() { return create<api::CardPower::Read>(); }
-        /// @deprecated Use read() instead.
-        [[deprecated("use read() instead")]]
-        auto get() { return read(); }
         /// The `card.power` API is used to configure a connected Mojo device or
         /// to manually request power consumption readings in firmware.
         auto configure() { return create<api::CardPower::Configure>(); }
-        /// @deprecated Use configure() instead.
-        [[deprecated("use configure() instead")]]
-        auto set() { return configure(); }
         /// The `card.power` API is used to configure a connected Mojo device or
         /// to manually request power consumption readings in firmware.
         auto reset() { return create<api::CardPower::Reset>(); }
-        /// @deprecated Use reset() instead.
-        [[deprecated("use reset() instead")]]
-        auto delete_() { return reset(); }
     };
 
     struct CardTempFactory {
@@ -246,9 +284,6 @@ public:
         /// ENS210 sensor on the I2C bus the Notecard will add `temperature` and
         /// `pressure` fields to the response.
         auto read() { return create<api::CardTemp::Read>(); }
-        /// @deprecated Use read() instead.
-        [[deprecated("use read() instead")]]
-        auto get() { return read(); }
         /// Get the current temperature from the Notecard's onboard calibrated
         /// temperature sensor.
         ///
@@ -258,9 +293,6 @@ public:
         /// ENS210 sensor on the I2C bus the Notecard will add `temperature` and
         /// `pressure` fields to the response.
         auto configure() { return create<api::CardTemp::Configure>(); }
-        /// @deprecated Use configure() instead.
-        [[deprecated("use configure() instead")]]
-        auto set() { return configure(); }
         /// Get the current temperature from the Notecard's onboard calibrated
         /// temperature sensor.
         ///
@@ -270,9 +302,6 @@ public:
         /// ENS210 sensor on the I2C bus the Notecard will add `temperature` and
         /// `pressure` fields to the response.
         auto stop() { return create<api::CardTemp::Stop>(); }
-        /// @deprecated Use stop() instead.
-        [[deprecated("use stop() instead")]]
-        auto delete_() { return stop(); }
     };
 
     struct CardVoltageFactory {
@@ -283,17 +312,19 @@ public:
         /// the mode argument, configures voltage thresholds based on how the
         /// device is powered.
         auto read() { return create<api::CardVoltage::Read>(); }
-        /// @deprecated Use read() instead.
-        [[deprecated("use read() instead")]]
-        auto get() { return read(); }
         /// Provides the current VMODEM_P voltage level on the Notecard, and
         /// provides information about historical voltage trends. When used with
         /// the mode argument, configures voltage thresholds based on how the
         /// device is powered.
         auto configure() { return create<api::CardVoltage::Configure>(); }
-        /// @deprecated Use configure() instead.
-        [[deprecated("use configure() instead")]]
-        auto set() { return configure(); }
+    };
+
+    struct CardWirelessFactory {
+        Notecard* nc_;
+        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
+        /// card.wireless
+        auto operator()() { return create<api::CardWireless>(); }
+        CardWirelessPenaltyFactory penalty() { return {nc_}; }
     };
 
     struct CardWirelessPenaltyFactory {
@@ -302,18 +333,12 @@ public:
         /// View the current state of a Notecard Penalty Box, manually remove
         /// the Notecard from a penalty box, or override penalty box defaults.
         auto check() { return create<api::CardWirelessPenalty::Check>(); }
-        /// @deprecated Use check() instead.
-        [[deprecated("use check() instead")]]
-        auto get() { return check(); }
         /// View the current state of a Notecard Penalty Box, manually remove
         /// the Notecard from a penalty box, or override penalty box defaults.
         auto set() { return create<api::CardWirelessPenalty::Set>(); }
         /// View the current state of a Notecard Penalty Box, manually remove
         /// the Notecard from a penalty box, or override penalty box defaults.
         auto clear() { return create<api::CardWirelessPenalty::Clear>(); }
-        /// @deprecated Use clear() instead.
-        [[deprecated("use clear() instead")]]
-        auto delete_() { return clear(); }
     };
 
     struct EnvDefaultFactory {
@@ -335,9 +360,24 @@ public:
             r.name = name_arg;
             return r;
         }
-        /// @deprecated Use remove() instead.
-        [[deprecated("use remove() instead")]]
-        auto delete_(note::string_view name_arg) { return remove(name_arg); }
+    };
+
+    struct FileChangesFactory {
+        Notecard* nc_;
+        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
+        /// file.changes
+        auto operator()() { return create<api::FileChanges>(); }
+        /// file.changes.pending
+        auto pending() { return create<api::FileChangesPending>(); }
+    };
+
+    struct HubSyncFactory {
+        Notecard* nc_;
+        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
+        /// hub.sync
+        auto operator()() { return create<api::HubSync>(); }
+        /// hub.sync.status
+        auto status() { return create<api::HubSyncStatus>(); }
     };
 
     struct NoteChangesFactory {
@@ -345,18 +385,12 @@ public:
         template<typename T> T create() { T r; r.nc_ = nc_; return r; }
         /// Used to incrementally retrieve changes within a specific Notefile.
         auto peek() { return create<api::NoteChanges::Peek>(); }
-        /// @deprecated Use peek() instead.
-        [[deprecated("use peek() instead")]]
-        auto get() { return peek(); }
         /// Used to incrementally retrieve changes within a specific Notefile.
         auto pop(note::string_view file_arg) {
             auto r = create<api::NoteChanges::Pop>();
             r.file = file_arg;
             return r;
         }
-        /// @deprecated Use pop() instead.
-        [[deprecated("use pop() instead")]]
-        auto delete_(note::string_view file_arg) { return pop(file_arg); }
     };
 
     struct NoteGetFactory {
@@ -368,18 +402,12 @@ public:
         /// `.qo`/`.qos` Notes must be read from the Notehub event table using
         /// the Notehub Event API.
         auto read() { return create<api::NoteGet::Read>(); }
-        /// @deprecated Use read() instead.
-        [[deprecated("use read() instead")]]
-        auto get() { return read(); }
         /// Retrieves a Note from a Notefile. The file must either be a DB
         /// Notefile or inbound queue file (see `file` argument below).
         ///
         /// `.qo`/`.qos` Notes must be read from the Notehub event table using
         /// the Notehub Event API.
         auto pop() { return create<api::NoteGet::Pop>(); }
-        /// @deprecated Use pop() instead.
-        [[deprecated("use pop() instead")]]
-        auto delete_() { return pop(); }
     };
 
     struct NoteTemplateFactory {
@@ -400,9 +428,6 @@ public:
             r.file = file_arg;
             return r;
         }
-        /// @deprecated Use define() instead.
-        [[deprecated("use define() instead")]]
-        auto set(note::string_view file_arg) { return define(file_arg); }
         /// By using the `note.template` request with any `.qo`/`.qos` Notefile,
         /// developers can provide the Notecard with a schema of sorts to apply
         /// to future Notes added to the Notefile. This template acts as a hint
@@ -418,9 +443,21 @@ public:
             r.file = file_arg;
             return r;
         }
-        /// @deprecated Use remove() instead.
-        [[deprecated("use remove() instead")]]
-        auto delete_(note::string_view file_arg) { return remove(file_arg); }
+    };
+
+    struct WebFactory {
+        Notecard* nc_;
+        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
+        /// web
+        auto operator()() { return create<api::Web>(); }
+        /// web.delete
+        auto delete_() { return create<api::WebDelete>(); }
+        /// web.get
+        auto get() { return create<api::WebGet>(); }
+        /// web.post
+        auto post() { return create<api::WebPost>(); }
+        /// web.put
+        auto put() { return create<api::WebPut>(); }
     };
 
     // =====================================================================

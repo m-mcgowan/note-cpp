@@ -383,6 +383,16 @@ def main() -> None:
 
     print(f"Generated {len(endpoints)} headers in {output_dir}/")
 
+    # Detect parent-child endpoint relationships.
+    # e.g. card.binary -> card.binary.put, card.binary.get
+    ep_by_wire = {ep.wire_name: ep for ep in endpoints}
+    for ep in endpoints:
+        for other in endpoints:
+            if other.wire_name.startswith(ep.wire_name + ".") and other != ep:
+                ep.children.append(other)
+        if ep.children:
+            ep.children.sort(key=lambda c: c.wire_name)
+
     # Build resource groups (card, hub, note, etc.)
     from collections import OrderedDict
     group_map: OrderedDict[str, ResourceGroup] = OrderedDict()

@@ -629,6 +629,261 @@ nc.env.setDefault("interval", "60")
 </td></tr>
 </table>
 
+## Polymorphic APIs
+
+Some Notecard endpoints behave differently depending on which fields you
+send. In note-c, you use the same function and hope you set the right
+combination. In note-cpp, each behavior is a distinct method.
+
+The Notecard documentation describes these endpoints with their standard
+request names — those names still apply. note-cpp just makes the different
+behaviors explicit:
+
+### note.get — read vs pop
+
+<table>
+<tr><th>note-arduino</th><th>note-cpp</th></tr>
+<tr><td>
+
+```c
+// Read by ID (non-destructive)
+J *req = nc.newRequest("note.get");
+JAddStringToObject(req, "file", "data.db");
+JAddStringToObject(req, "note", "my-id");
+J *rsp = nc.requestAndResponse(req);
+
+// Pop from queue (destructive)
+J *req = nc.newRequest("note.get");
+JAddStringToObject(req, "file", "data.qi");
+JAddBoolToObject(req, "delete", true);
+J *rsp = nc.requestAndResponse(req);
+```
+
+</td><td>
+
+```cpp
+// Read by ID — note.get without delete
+auto r = nc.note.read("data.db")
+    .noteId("my-id")
+    .execute();
+
+// Pop from queue — note.get with delete
+auto r = nc.note.pop("data.qi")
+    .execute();
+
+
+
+```
+
+</td></tr>
+</table>
+
+Both produce `note.get` on the wire. The difference: `read()` can't
+accidentally include `delete:true`, and `pop()` always includes it.
+Each variant only exposes the fields that apply.
+See [Polymorphic APIs](polymorphic-apis.md) for the full list.
+
+### card.temp — read vs configure
+
+<table>
+<tr><th>note-arduino</th><th>note-cpp</th></tr>
+<tr><td>
+
+```c
+// Read current temperature
+J *req = nc.newRequest("card.temp");
+J *rsp = nc.requestAndResponse(req);
+double temp = JGetNumber(rsp, "value");
+
+// Configure periodic monitoring
+J *req = nc.newRequest("card.temp");
+JAddNumberToObject(req, "minutes", 5);
+nc.sendRequest(req);
+```
+
+</td><td>
+
+```cpp
+// Read current temperature
+auto r = nc.card.temp().read().execute();
+double temp = r.value;
+
+// Configure periodic monitoring
+nc.card.temp().configure()
+    .minutes(5)
+    .execute();
+
+```
+
+</td></tr>
+</table>
+
+### Non-polymorphic endpoints
+
+Most endpoints have a single behavior — these work exactly as the
+Notecard documentation describes. The request name maps directly to a
+method:
+
+```cpp
+nc.card.version().execute();     // card.version
+nc.card.status().execute();      // card.status
+nc.hub.sync().execute();         // hub.sync
+nc.hub.status().execute();       // hub.status
+```
+
+## Convenience shortcuts
+
+Frequently-used operations have shorthand methods that pre-fill required
+parameters:
+
+<table>
+<tr><th>note-arduino</th><th>note-cpp</th></tr>
+<tr><td>
+
+```c
+// Read a note by ID
+J *req = nc.newRequest("note.get");
+JAddStringToObject(req, "file", "data.db");
+JAddStringToObject(req, "note", "my-id");
+
+// Pop from queue
+J *req = nc.newRequest("note.get");
+JAddStringToObject(req, "file", "data.qi");
+JAddBoolToObject(req, "delete", true);
+
+// Set an env default
+J *req = nc.newRequest("env.default");
+JAddStringToObject(req, "name", "interval");
+JAddStringToObject(req, "text", "60");
+```
+
+</td><td>
+
+```cpp
+// Read a note by ID
+nc.note.read("data.db")
+    .noteId("my-id");
+
+// Pop from queue
+nc.note.pop("data.qi");
+
+// Set an env default
+nc.env.setDefault("interval", "60");
+
+
+
+
+
+```
+
+</td></tr>
+</table>
+
+The shorthand methods accept required parameters directly — no need to
+set them separately.
+
+## Receiving data (bodyAs)
+
+When reading notes with structured data, note-c returns raw JSON that
+you parse field by field. note-cpp parses directly into your struct:
+
+<table>
+<tr><th>note-arduino</th><th>note-cpp</th></tr>
+<tr><td>
+
+```c
+J *rsp = nc.requestAndResponse(
+    nc.newRequest("note.get"));
+if (rsp && !nc.responseError(rsp)) {
+    J *body = JGetObject(rsp, "body");
+    float temp = JGetNumber(body, "temp");
+    int hum = JGetInt(body, "humidity");
+    nc.deleteResponse(rsp);
+}
+```
+
+</td><td>
+
+```cpp
+auto r = nc.note.read("data.qi")
+    .execute();
+if (r) {
+    Readings data = r.bodyAs<Readings>();
+    // data.temperature, data.humidity
+    // populated from the JSON body
+}
+
+```
+
+</td></tr>
+</table>
+
+The same `Readings` struct used for sending and template registration
+also works for receiving. See [Body Values](body-values.md) for details.
+
+## Type-safe units
+
+Duration fields use distinct types that prevent accidental mixing.
+A value in the wrong unit is a compile error, not a silent bug:
+
+```cpp
+using namespace note::literals;
+
+nc.hub.set()
+    .outbound(60_mins)           // Minutes — matches the wire format
+    .execute();
+
+nc.hub.set()
+    .outbound(2_hours)           // Hours → Minutes (120 on the wire)
+    .execute();
+
+nc.card.sleep()
+    .seconds(12_hours)           // Hours → Seconds (43200 on the wire)
+    .execute();
+
+// nc.hub.set().outbound(60_s);  // Compile error: Seconds ≠ Minutes
+```
+
+In note-c, `outbound` is just an integer — you have to know from the
+docs that it's in minutes. See [Duration Units](duration-units.md) for
+the full type system.
+
+## Named constants
+
+Fields with a fixed set of valid values provide named constants for
+discoverability. You can still use strings — the constants are there
+for IDE autocomplete and to avoid typos:
+
+```cpp
+using mode = note::api::HubSet::mode_t;
+
+nc.hub.set().mode("periodic").execute();        // string — works fine
+nc.hub.set().mode(mode::periodic).execute();    // constant — autocomplete-friendly
+```
+
+On C++20, string literals are validated at compile time — a typo like
+`"perioidc"` is a compile error regardless of which form you use.
+
+## Nested endpoints
+
+Multi-segment endpoint names map to nested accessors:
+
+```cpp
+nc.card.binary.status();         // card.binary (status)
+nc.card.binary.put();            // card.binary.put
+nc.card.binary.get();            // card.binary.get
+
+nc.card.location();              // card.location
+nc.card.location.mode.periodic(); // card.location.mode (periodic variant)
+nc.card.location.track();        // card.location.track
+
+nc.hub.sync();                   // hub.sync
+nc.hub.sync.status();            // hub.sync.status
+```
+
+The dot-chain mirrors the Notecard API naming, so the documentation
+maps directly to code.
+
 ## Error handling
 
 <table>

@@ -1,7 +1,14 @@
 // Tests for JsonBuf — constexpr-capable JSON buffer builder.
+
+// Guard: ensure buffer.hpp compiles even when a competing detail namespace
+// exists (reproduces a bug where unqualified detail::itoa/dtoa resolved to
+// note::backends::detail instead of note::detail).
+namespace note::backends::detail { struct NamespacePollutionGuard {}; }
+
 #include "catch.hpp"
 
 #include <note/json_buf.hpp>
+#include <note/backends/buffer.hpp>
 
 #include <string_view>
 using namespace std::string_view_literals;

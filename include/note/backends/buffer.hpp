@@ -15,7 +15,7 @@
 #pragma GCC diagnostic pop
 
 #include <note/json.hpp>
-#include <note/json_buf.hpp>  // for detail::itoa, detail::dtoa
+#include <note/json_buf.hpp>  // for note::detail::itoa, note::detail::dtoa
 
 #include <cstring>
 #include <memory>
@@ -41,14 +41,14 @@ public:
     BufferJsonBuilder& add(string_view key, int32_t value) override {
         kv(key);
         char tmp[12];
-        size_t len = detail::itoa(tmp, sizeof(tmp), value);
+        size_t len = note::detail::itoa(tmp, sizeof(tmp), value);
         for (size_t i = 0; i < len; ++i) put(tmp[i]);
         return *this;
     }
     BufferJsonBuilder& add(string_view key, double value) override {
         kv(key);
         char tmp[32];
-        size_t len = detail::dtoa(tmp, sizeof(tmp), value);
+        size_t len = note::detail::dtoa(tmp, sizeof(tmp), value);
         for (size_t i = 0; i < len; ++i) put(tmp[i]);
         return *this;
     }
@@ -85,14 +85,14 @@ public:
     BufferJsonBuilder& add_element(int32_t value) override {
         comma();
         char tmp[12];
-        size_t len = detail::itoa(tmp, sizeof(tmp), value);
+        size_t len = note::detail::itoa(tmp, sizeof(tmp), value);
         for (size_t i = 0; i < len; ++i) put(tmp[i]);
         return *this;
     }
     BufferJsonBuilder& add_element(double value) override {
         comma();
         char tmp[32];
-        size_t len = detail::dtoa(tmp, sizeof(tmp), value);
+        size_t len = note::detail::dtoa(tmp, sizeof(tmp), value);
         for (size_t i = 0; i < len; ++i) put(tmp[i]);
         return *this;
     }

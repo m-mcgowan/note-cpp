@@ -10,9 +10,10 @@ memory management. note-cpp gives you typed fields, IDE autocomplete, and
 compile-time error checking — the same requests on the wire, but the compiler
 catches mistakes before they reach the device.
 
-> All code examples in this guide are compiled as part of CI. The note-cpp
-> examples come from [examples/migration.cpp](../examples/migration.cpp) and
-> the note-c examples from [examples/migration_notec.cpp](../examples/migration_notec.cpp).
+> All note-cpp code in this guide is compiled against the real Arduino SDK
+> via [examples/arduino-migration/](../examples/arduino-migration/). The
+> note-c examples are compiled via
+> [examples/migration_notec.cpp](../examples/migration_notec.cpp).
 
 ## Setup
 
@@ -64,17 +65,19 @@ JAddStringToObject(req, "product",
 JAddStringToObject(req, "mode", "periodic");
 JAddNumberToObject(req, "outbound", 60);
 nc.sendRequest(req);
+
 ```
 
 </td><td>
 
 ```cpp
+// ../examples/arduino-migration/src/main.cpp#L33-L37
+
 nc.hub.set()
     .product("com.example.app")
     .mode("periodic")
     .outbound(60_mins)
     .execute();
-
 ```
 
 </td></tr>
@@ -162,11 +165,15 @@ JAddStringToObject(req, "product",
 JAddStringToObject(req, "mode", "periodic");
 JAddNumberToObject(req, "outbound", 60);
 nc.sendRequest(req);
+
+
 ```
 
 </td><td>
 
 ```cpp
+// ../examples/arduino-migration/src/main.cpp#L61-L66
+
 HubSet req{
     .mode     = "periodic",
     .outbound = 60_mins,
@@ -309,11 +316,11 @@ nc.sendRequest(req);
 </td><td>
 
 ```cpp
-// Same Readings struct — type hints are
-// derived from C++ types automatically.
+// ../examples/arduino-migration/src/main.cpp#L99-L101
+
 nc.note.templates().define("sensors.qo")
     .body(note::template_of(Readings{}))
-    .execute()
+    .execute();
 
 
 
@@ -360,6 +367,8 @@ if (rsp == NULL) {
 </td><td>
 
 ```cpp
+// ../examples/arduino-migration/src/main.cpp#L108-L114
+
 auto r = nc.card.temp().read().execute();
 if (r) {
     double temp = r.value;
@@ -367,8 +376,6 @@ if (r) {
 } else {
     Serial.println(r.error());
 }
-
-
 
 
 
@@ -722,9 +729,9 @@ nc.sendRequest(req);
 </td><td>
 
 ```cpp
-// .command() instead of .execute() — clear intent.
-nc.hub.sync().command();
+// ../examples/arduino-migration/src/main.cpp#L199
 
+nc.hub.sync().command();
 
 ```
 

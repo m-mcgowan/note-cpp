@@ -124,7 +124,7 @@ public:
 };
 
 
-#if __has_include(<mbedtls/md5.h>)
+#if defined(NOTE_USE_MBEDTLS) || (defined(ESP_PLATFORM) && __has_include(<mbedtls/md5.h>))
 #include <mbedtls/md5.h>
 
 /// mbedtls-backed MD5 — available when <mbedtls/md5.h> is present.

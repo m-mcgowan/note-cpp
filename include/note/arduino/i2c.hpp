@@ -4,6 +4,9 @@
 
 #include <Arduino.h>
 #include <Wire.h>
+// Arduino defines min/max as macros — undo to avoid collisions with std::min/max.
+#undef min
+#undef max
 
 // note::arduino::I2CHal
 //

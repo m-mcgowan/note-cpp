@@ -3,6 +3,10 @@
 #include <note/transport/serial.hpp>
 
 #include <Arduino.h>
+// Arduino defines min/max as macros — undo to avoid collisions with std::min/max.
+#undef min
+#undef max
+#include <algorithm>
 
 // note::arduino::SerialHal
 //
@@ -41,7 +45,7 @@ public:
     size_t receive(uint8_t* buf, size_t max_len) override {
         const size_t avail = static_cast<size_t>(uart_.available());
         if (avail == 0) return 0;
-        return uart_.readBytes(buf, min(avail, max_len));
+        return uart_.readBytes(buf, std::min(avail, max_len));
     }
 
     uint32_t millis() override { return ::millis(); }

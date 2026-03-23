@@ -73,9 +73,9 @@ and property assignment
 ```
 
 > **Coming from note-arduino / note-c?** The
-> [migration guide](docs/migration-from-note-arduino.md) shows side-by-side
-> examples of every common pattern — setup, hub.set, note.add, templates,
-> error handling, binary transfers, and more.
+> [migration guide](docs/migration-from-note-arduino.md) has side-by-side
+> examples covering setup, hub.set, note.add, templates, error handling,
+> binary transfers, and more.
 
 ## Developer Experience
 

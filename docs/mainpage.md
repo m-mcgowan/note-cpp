@@ -43,13 +43,13 @@ API specification.
 
 ## Examples
 
-- @example getting_started.cpp Four tiers: ad-hoc, compile-time JSON, typed API, body schemas.
-- @example hub-configuration/main.cpp Type-safe units, named constants, voltage-variable sync.
-- @example sending-notes/main.cpp Every way to send and receive data.
-- @example zero_alloc.cpp Zero-allocation patterns for memory-constrained systems.
-- @example target_filtering.cpp Compile-time SKU and firmware version checks.
-- @example attention_pin.cpp ATTN pin interrupt handling.
-- @example location_tracking.cpp GPS location tracking with polymorphic APIs.
+@example getting_started.cpp Walks through four levels of abstraction: ad-hoc JSON requests, compile-time JSON, the fully typed API with autocomplete, and body schemas for structured data.
+@example hub-configuration/main.cpp Type-safe duration units, named constants, and voltage-variable sync intervals.
+@example sending-notes/main.cpp Every way to send and receive data: note.add, note.get, templates, body schemas.
+@example zero_alloc.cpp Zero-allocation patterns for memory-constrained embedded systems.
+@example target_filtering.cpp Compile-time product checks — ensure requests match the connected Notecard SKU.
+@example attention_pin.cpp ATTN pin interrupt handling with card.attn.
+@example location_tracking.cpp GPS location tracking with polymorphic card.location APIs.
 
 ## Getting started
 

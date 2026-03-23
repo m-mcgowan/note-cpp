@@ -87,7 +87,7 @@ int main() {
         .execute();
 
     // Works across the API — anywhere a Seconds field is expected:
-    api.card.sleep()
+    api.card.sleep()                 // WiFi Notecard only
         .seconds(12_hours)       // Hours → Seconds (= 43200 on the wire)
         .execute();
 

@@ -31,11 +31,11 @@ TEST_CASE("make_api(nc) returns unconstrained Api") {
     auto nc = make_nc(backend, transport);
     auto api = note::make_api(nc);
 
-    // All methods available
+    // Unconstrained: all endpoints accessible regardless of SKU
     api.execute(api.card.version());
     REQUIRE(last_req.find("card.version") != std::string::npos);
 
-    api.execute(api.card.sleep());
+    api.execute(api.card.sleep());  // WiFi-only, but unconstrained allows it
     REQUIRE(last_req.find("card.sleep") != std::string::npos);
 
     api.execute(api.hub.set());

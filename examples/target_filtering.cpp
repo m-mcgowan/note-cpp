@@ -28,7 +28,7 @@ int main() {
     // compile-time hardware checks.
 
     note::Api api(nc);
-    api.execute(api.card.sleep());    // OK: no constraints
+    api.execute(api.card.sleep());    // OK: unconstrained API skips SKU checks
     api.execute(api.hub.set());       // OK: universal endpoint
 
 #if __cplusplus >= 202002L

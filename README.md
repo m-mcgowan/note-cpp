@@ -338,25 +338,15 @@ The core library works with C++17. Each successive standard unlocks additional f
 | `std::expected` (native, vs `tl::expected` fallback) | — | — | yes |
 | `std::unreachable` (native, vs compiler builtins) | — | — | yes |
 
-### Memory vs note-c
+### Low-memory targets
 
-note-c uses `NOTE_C_LOW_MEM` to strip features on constrained platforms
-(AVR, ESP8266, Cortex-M0+) — shorter error strings, no CRC validation,
-no user-agent, smaller allocation chunks, `float` instead of `double`.
-
-note-cpp avoids most of these tradeoffs structurally:
-
-- **No heap allocation** — `BufferJsonBackend` uses stack buffers with
-  template-controlled sizes. No `malloc`/`free` in steady state.
-- **No error string variants** — `string_view` literals are short by
-  design; the linker deduplicates identical strings.
-- **No allocation chunk tuning** — transports reuse a member buffer
-  (`std::string`); no per-call allocation after warmup.
-- **Unused code eliminated** — `-ffunction-sections` + `--gc-sections`
-  (default on Arduino/PlatformIO) removes unreferenced endpoints.
-
-See the [migration guide](docs/migration-from-note-arduino.md#memory-and-binary-footprint)
-for the full comparison table.
+note-cpp is designed for zero heap allocation in steady state.
+`BufferJsonBackend<N, T>` keeps JSON build buffers and parse tokens on
+the stack with template-controlled sizes. Transports reuse a member
+buffer across calls. `StringPool` provides arena-backed string interning
+when response data must outlive the transport buffer. Unused endpoints
+are eliminated by the linker via `-ffunction-sections` + `--gc-sections`
+(enabled by default on Arduino/PlatformIO).
 
 ---
 

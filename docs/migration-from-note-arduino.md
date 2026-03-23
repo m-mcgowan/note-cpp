@@ -1136,6 +1136,32 @@ nc.card.sleep();  // OK — universal endpoint
 Neither of these has an equivalent in note-c — there, incompatible requests
 compile silently and fail at runtime on the device.
 
+## Memory and binary footprint
+
+note-c relies on compile-time `#define`s to reduce memory usage on small
+platforms:
+
+| Mechanism | Purpose |
+|-----------|---------|
+| `NOTE_C_LOW_MEM` | Shorter error strings, smaller allocation chunks (64 vs 128 bytes), disables user-agent and debug logging. Auto-detected on platforms where `float == double`. |
+| `PRODUCT_UID` | Compile-time `#define` convenience — passed to the Notecard at runtime via `hub.set`. |
+| [note-c-zero](https://github.com/blues/note-c-zero) | Separate variant that uses zero static read-write memory and no dynamic allocator. |
+
+note-cpp takes a different approach — memory control is structural rather than
+preprocessor-driven:
+
+| Mechanism | Purpose |
+|-----------|---------|
+| `BufferJsonBackend<N, T>` | Fixed-size JSON build buffer and token array on the stack. No heap allocation in steady state. Template parameters control the sizes. |
+| `Allocator` / `StringPool` | Arena-backed string interning — response `string_view` fields survive transport buffer reuse without heap allocation. |
+| `ITransport` / `AbstractTransport` | Transport owns its own response buffer (reused across calls). No transport-level allocation after warmup. |
+| No `#define` guards | All features are always available. Unused code is eliminated by the linker (LTO). Binary size is controlled by which headers you include and which endpoints you call, not by preprocessor flags. |
+
+The `zero_alloc.cpp` example demonstrates all three zero-allocation patterns.
+On a typical ESP32 build, note-cpp's typed API adds negligible flash overhead
+compared to the equivalent note-c `JAdd*` / `JGet*` calls — the generated
+request builders are thin wrappers around the same JSON operations.
+
 ## Migration checklist
 
 1. **Replace `Notecard` with `note::arduino::Notecard`.** One include, same `begin()`

@@ -5,7 +5,7 @@
 /// Simplest setup (with default backend):
 ///
 ///     note::NotecardApi nc;
-///     nc.begin(transport);  // transport is a callable or NotecardSerial/I2c
+///     nc.begin(transport);
 ///     nc.hub.set().product("com.example.app").execute();
 ///
 /// Or with an explicit backend:
@@ -26,25 +26,19 @@ namespace detail {
     /// 512-byte build buffer + 64 jsmn tokens covers typical Notecard requests.
     using DefaultBackend = backends::BufferJsonBackend<512, 64>;
 
-    /// Stub transport that returns NotReady — used before begin() is called.
-    inline Result<string_view> not_ready_fn(string_view, uint32_t) {
-        return Unexpected(ErrorInfo{Error::NotReady, "call begin() first"});
-    }
-
     /// Owns the backend + Notecard, ensuring construction order.
     struct NcOwner {
         DefaultBackend default_backend_;
         Notecard nc_;
 
         NcOwner()
-            : nc_(default_backend_, not_ready_fn) {}
+            : nc_() {}
 
-        NcOwner(Notecard::RequestFn request_fn, Notecard::SendFn send_fn = {})
-            : nc_(default_backend_, std::move(request_fn), std::move(send_fn)) {}
+        explicit NcOwner(ITransport& transport)
+            : nc_(default_backend_, transport) {}
 
-        NcOwner(JsonBackend& backend, Notecard::RequestFn request_fn,
-                Notecard::SendFn send_fn = {})
-            : nc_(backend, std::move(request_fn), std::move(send_fn)) {}
+        NcOwner(JsonBackend& backend, ITransport& transport)
+            : nc_(backend, transport) {}
     };
 
 } // namespace detail
@@ -75,23 +69,21 @@ public:
         : detail::NcOwner()
         , Api<TargetT>(nc_) {}
 
-    /// Construct with transport callable (uses default backend).
-    explicit NotecardApi(Notecard::RequestFn request_fn,
-                         Notecard::SendFn send_fn = {})
-        : detail::NcOwner(std::move(request_fn), std::move(send_fn))
+    /// Construct with transport (uses default backend).
+    explicit NotecardApi(ITransport& transport)
+        : detail::NcOwner(transport)
         , Api<TargetT>(nc_) {}
 
     /// Construct with explicit backend + transport.
-    NotecardApi(JsonBackend& backend, Notecard::RequestFn request_fn,
-                Notecard::SendFn send_fn = {})
-        : detail::NcOwner(backend, std::move(request_fn), std::move(send_fn))
+    NotecardApi(JsonBackend& backend, ITransport& transport)
+        : detail::NcOwner(backend, transport)
         , Api<TargetT>(nc_) {}
 
     /// Set the transport after construction.
     /// On Arduino, typically called from setup():
     ///   nc.begin(transport);
-    void begin(Notecard::RequestFn request_fn, Notecard::SendFn send_fn = {}) {
-        nc_ = Notecard(default_backend_, std::move(request_fn), std::move(send_fn));
+    void begin(ITransport& transport) {
+        nc_ = Notecard(default_backend_, transport);
     }
 
     Notecard& notecard() { return nc_; }
@@ -124,18 +116,16 @@ public:
         : detail::NcOwner()
         , Api(nc_) {}
 
-    explicit NotecardApi(Notecard::RequestFn request_fn,
-                         Notecard::SendFn send_fn = {})
-        : detail::NcOwner(std::move(request_fn), std::move(send_fn))
+    explicit NotecardApi(ITransport& transport)
+        : detail::NcOwner(transport)
         , Api(nc_) {}
 
-    NotecardApi(JsonBackend& backend, Notecard::RequestFn request_fn,
-                Notecard::SendFn send_fn = {})
-        : detail::NcOwner(backend, std::move(request_fn), std::move(send_fn))
+    NotecardApi(JsonBackend& backend, ITransport& transport)
+        : detail::NcOwner(backend, transport)
         , Api(nc_) {}
 
-    void begin(Notecard::RequestFn request_fn, Notecard::SendFn send_fn = {}) {
-        nc_ = Notecard(default_backend_, std::move(request_fn), std::move(send_fn));
+    void begin(ITransport& transport) {
+        nc_ = Notecard(default_backend_, transport);
     }
 
     Notecard& notecard() { return nc_; }

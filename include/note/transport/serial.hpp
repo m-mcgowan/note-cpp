@@ -1,21 +1,17 @@
 #pragma once
 
-#include <note/error.hpp>
-#include <note/transport/detail/crc32.hpp>
+#include <note/transport.hpp>
 #include <note/transport/protocol_policy.hpp>
-#include <note/types.hpp>
 
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
-#include <functional>
 #include <string>
 
 // note::transport::NotecardSerial
 //
-// Implements the Notecard serial wire protocol in C++, providing a complete
-// alternative to the note-c serial transport. Faithful port of note-c
-// n_serial.c + n_request.c (retry, CRC) with a platform-injectable HAL.
+// Implements the Notecard serial wire protocol. Extends AbstractTransport
+// with serial-specific byte I/O (segmented TX, greedy RX, \r\n framing).
 //
 // The PolicyType template parameter controls retry counts, segment pacing,
 // and timeouts. See protocol_policy.hpp for details.
@@ -89,7 +85,7 @@ private:
 // ---------------------------------------------------------------------------
 
 template <typename PolicyType = StaticSerialPolicy<SerialPolicy{}>>
-class NotecardSerial {
+class NotecardSerial : public note::AbstractTransport {
 public:
     // policy is public so callers can read or mutate it between requests.
     // For StaticSerialPolicy (the default), [[no_unique_address]] gives it
@@ -99,76 +95,64 @@ public:
     explicit NotecardSerial(SerialHal& hal, PolicyType pol = {})
         : policy(pol), hal_(hal) {}
 
-    // Satisfies note::Notecard's RequestFn signature:
-    //   std::function<Result<string_view>(string_view, uint32_t)>
-    //
-    // Returns a string_view into a member buffer. The view is valid until the
-    // next operator() call — callers must consume the response before reuse.
-    //
-    // Auto-resets on first call. Handles CRC (auto-detected), segmented TX,
-    // greedy RX, and up to policy.max_retries retries on failure.
-    Result<string_view> operator()(string_view request, uint32_t timeout_ms) {
-        if (!initialized_) {
-            if (!do_reset())
-                return make_error(Error::NotReady, "Notecard not ready after reset");
-            initialized_ = true;
+protected:
+    // ── AbstractTransport building blocks ──────────────────────────────────
+
+    // Segmented transmit with \r\n terminator.
+    bool do_transmit(const char* data, size_t len) override {
+        size_t offset = 0;
+        size_t rem    = len;
+        while (rem > 0) {
+            const size_t chunk = std::min(rem, size_t(policy.segment_max_len));
+            if (!hal_.transmit(reinterpret_cast<const uint8_t*>(data + offset), chunk))
+                return false;
+            offset += chunk;
+            rem    -= chunk;
+            if (rem > 0 && policy.segment_delay_ms > 0)
+                hal_.delay(policy.segment_delay_ms);
         }
-
-        // Build wire request once (add CRC if firmware has indicated support).
-        // The same seqno is used for all retries of this request — matches note-c,
-        // where _crcAdd() is called once before the retry loop and seqNo is only
-        // incremented after a successful transaction.
-        wire_.assign(request.data(), request.size());
-        if (crc_enabled_) {
-            ++crc_seq_;
-            wire_ = detail::crc_add(std::move(wire_), crc_seq_);
-        }
-
-        ErrorInfo last_error{Error::SendFailed, Cause::HalError, "transmit failed"};
-
-        for (uint32_t attempt = 0; attempt <= policy.max_retries; ++attempt) {
-            if (attempt > 0) hal_.delay(policy.retry_delay_ms);
-
-            // Segmented transmit.
-            if (!send_segmented(wire_.data(), wire_.size())) {
-                last_error = {Error::SendFailed, Cause::HalError, "transmit failed"};
-                do_reset();
-                continue;
-            }
-
-            // Receive until newline (writes into response_buf_).
-            auto result = receive_line(timeout_ms);
-            if (!result) {
-                last_error = result.error();
-                continue;
-            }
-
-            // CRC validation + auto-detection (mutates response_buf_, sets crc_enabled_).
-            if (detail::crc_check_and_strip(response_buf_, crc_seq_, crc_enabled_)) {
-                last_error = {Error::ResponseLost, Cause::CrcMismatch, "CRC mismatch"};
-                continue;
-            }
-
-            return string_view(response_buf_);
-        }
-
-        return Unexpected(last_error);
+        const uint8_t crlf[2] = {'\r', '\n'};
+        return hal_.transmit(crlf, 2);
     }
 
-private:
-    SerialHal& hal_;
-    bool       initialized_ = false;
-    bool       crc_enabled_ = false;
-    uint16_t   crc_seq_     = 0;
-    std::string wire_;         // reused across requests to avoid re-allocation
-    std::string response_buf_; // reused across requests — string_view return points here
+    // Receive until \n. Greedy: reads as much as available each poll.
+    Result<void> do_receive(std::string& buf, uint32_t timeout_ms) override {
+        uint8_t      chunk[64];
+        bool         first_byte_seen = false;
+        uint32_t     start           = hal_.millis();
+        uint32_t     intra_start     = 0;
 
-    // -----------------------------------------------------------------------
-    // reset — matches note-c _serialNoteReset()
+        while (true) {
+            const size_t n = hal_.receive(chunk, sizeof(chunk));
+            if (n > 0) {
+                if (!first_byte_seen) {
+                    first_byte_seen = true;
+                    intra_start     = hal_.millis();
+                }
+                buf.append(reinterpret_cast<const char*>(chunk), n);
+                if (buf.back() == '\n') {
+                    while (!buf.empty() &&
+                           (buf.back() == '\n' || buf.back() == '\r'))
+                        buf.pop_back();
+                    return {};
+                }
+            } else {
+                hal_.delay(1);
+                const uint32_t now = hal_.millis();
+                if (!first_byte_seen) {
+                    if (timeout_ms && (now - start >= timeout_ms))
+                        return make_error(Error::ResponseLost, Cause::Timeout, "no response");
+                } else {
+                    if (now - intra_start >= policy.intra_timeout_ms)
+                        return make_error(Error::ResponseLost, Cause::TimeoutIntra, "response incomplete");
+                }
+            }
+        }
+    }
+
+    // Reset — matches note-c _serialNoteReset().
     // Send \n and drain until only \r/\n received for policy.reset_drain_ms.
-    // A clean window (only control characters) means the Notecard is ready.
-    // -----------------------------------------------------------------------
-    bool do_reset() {
+    bool do_reset() override {
         hal_.delay(policy.segment_delay_ms);  // 250 ms pre-delay
 
         for (uint32_t retry = 0; retry < policy.reset_sync_retries; ++retry) {
@@ -186,7 +170,7 @@ private:
                     found_something = true;
                     if (buf[i] != '\n' && buf[i] != '\r') {
                         found_non_control = true;
-                        drain_start = hal_.millis();  // extend window on non-control char
+                        drain_start = hal_.millis();  // extend window
                     }
                 }
                 if (n == 0) hal_.delay(1);
@@ -199,67 +183,13 @@ private:
         return false;
     }
 
-    // -----------------------------------------------------------------------
-    // send_segmented — matches note-c _serialChunkedTransmit()
-    // Transmit in policy.segment_max_len chunks with an inter-segment delay.
-    // Appends \r\n terminator (matches note-c c_newline).
-    // -----------------------------------------------------------------------
-    bool send_segmented(const char* data, size_t len) {
-        size_t offset = 0;
-        size_t rem    = len;
-        while (rem > 0) {
-            const size_t chunk = std::min(rem, size_t(policy.segment_max_len));
-            if (!hal_.transmit(reinterpret_cast<const uint8_t*>(data + offset), chunk))
-                return false;
-            offset += chunk;
-            rem    -= chunk;
-            if (rem > 0 && policy.segment_delay_ms > 0)
-                hal_.delay(policy.segment_delay_ms);
-        }
-        const uint8_t crlf[2] = {'\r', '\n'};
-        return hal_.transmit(crlf, 2);
-    }
+    // Policy access for AbstractTransport.
+    uint32_t max_retries() const override { return policy.max_retries; }
+    uint32_t retry_delay_ms() const override { return policy.retry_delay_ms; }
+    void delay(uint32_t ms) override { hal_.delay(ms); }
 
-    // -----------------------------------------------------------------------
-    // receive_line — matches note-c _serialChunkedReceive()
-    // Poll until \n received. Initial timeout = timeout_ms; after first byte
-    // switches to policy.intra_timeout_ms (1 s intra-transaction timeout).
-    // Writes into response_buf_ (cleared first, capacity reused).
-    // -----------------------------------------------------------------------
-    Result<void> receive_line(uint32_t timeout_ms) {
-        response_buf_.clear();  // reuse capacity — zero alloc in steady state
-        uint8_t      chunk[64];
-        bool         first_byte_seen = false;
-        uint32_t     start           = hal_.millis();
-        uint32_t     intra_start     = 0;
-
-        while (true) {
-            const size_t n = hal_.receive(chunk, sizeof(chunk));
-            if (n > 0) {
-                if (!first_byte_seen) {
-                    first_byte_seen = true;
-                    intra_start     = hal_.millis();
-                }
-                response_buf_.append(reinterpret_cast<const char*>(chunk), n);
-                if (response_buf_.back() == '\n') {
-                    while (!response_buf_.empty() &&
-                           (response_buf_.back() == '\n' || response_buf_.back() == '\r'))
-                        response_buf_.pop_back();
-                    return {};
-                }
-            } else {
-                hal_.delay(1);
-                const uint32_t now = hal_.millis();
-                if (!first_byte_seen) {
-                    if (timeout_ms && (now - start >= timeout_ms))
-                        return make_error(Error::ResponseLost, Cause::Timeout, "no response");
-                } else {
-                    if (now - intra_start >= policy.intra_timeout_ms)
-                        return make_error(Error::ResponseLost, Cause::TimeoutIntra, "response incomplete");
-                }
-            }
-        }
-    }
+private:
+    SerialHal& hal_;
 };
 
 // Deduction guides — allow construction without explicit template arguments.

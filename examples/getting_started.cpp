@@ -55,11 +55,12 @@ int main() {
     // For this example, we use a mock that prints each request to stdout
     // so you can run it on any machine without Notecard hardware.
     MockBackend backend;
-    note::Notecard nc(backend,
+    note::CallbackTransport transport(
         [](note::string_view request, uint32_t) -> note::Result<note::string_view> {
             std::printf("  >> %.*s\n", (int)request.size(), request.data());
             return note::string_view("{}");
         });
+    note::Notecard nc(backend, transport);
 
 
     // ═════════════════════════════════════════════════════════════════════

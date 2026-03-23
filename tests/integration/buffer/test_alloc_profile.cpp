@@ -106,13 +106,16 @@ struct TrackingScope {
 // Scripted transport — returns string_view into member buffer
 // ═══════════════════════════════════════════════════════════════════════════
 
-struct ScriptedTransport {
+struct ScriptedTransport : note::ITransport {
     // Use const char* to avoid any std::string allocation during assignment.
     const char* response = "{}";
 
-    note::Result<note::string_view> operator()(note::string_view, uint32_t) {
+    note::Result<note::string_view> transact(note::string_view, uint32_t) override {
         return note::string_view(response);
     }
+    note::Result<void> send(note::string_view) override { return {}; }
+    void reset() override {}
+    void abort() override {}
 };
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -124,7 +127,7 @@ static void test_zero_alloc_card_version() {
     ScriptedTransport transport;
     transport.response = R"({"version":"notecard-7.2.1","device":"dev:12345","board":"1.0"})";
 
-    note::Notecard nc(backend, std::ref(transport));
+    note::Notecard nc(backend, transport);
     note::Api api(nc);
 
     // Warm up: first call may allocate for std::function internals
@@ -150,7 +153,7 @@ static void test_zero_alloc_hub_set() {
     ScriptedTransport transport;
     transport.response = R"({})";
 
-    note::Notecard nc(backend, std::ref(transport));
+    note::Notecard nc(backend, transport);
     note::Api api(nc);
 
     // Warm up
@@ -170,7 +173,7 @@ static void test_zero_alloc_multiple_requests() {
     note::backends::BufferJsonBackend<512, 64> backend;
     ScriptedTransport transport;
 
-    note::Notecard nc(backend, std::ref(transport));
+    note::Notecard nc(backend, transport);
     note::Api api(nc);
 
     static constexpr const char* version_rsp = R"({"version":"v1","device":"dev:1"})";
@@ -208,7 +211,7 @@ static void test_zero_alloc_with_body_response() {
     ScriptedTransport transport;
     transport.response = R"({"version":"v1","body":{"org":"blues","product":"app"}})";
 
-    note::Notecard nc(backend, std::ref(transport));
+    note::Notecard nc(backend, transport);
     note::Api api(nc);
 
     // Warm up
@@ -234,7 +237,7 @@ static void test_zero_alloc_no_leaks() {
     ScriptedTransport transport;
     transport.response = R"({"version":"v1"})";
 
-    note::Notecard nc(backend, std::ref(transport));
+    note::Notecard nc(backend, transport);
     note::Api api(nc);
 
     // Warm up
@@ -260,7 +263,7 @@ static void test_zero_alloc_error_response() {
     ScriptedTransport transport;
     transport.response = R"({"err":"file not found"})";
 
-    note::Notecard nc(backend, std::ref(transport));
+    note::Notecard nc(backend, transport);
     note::Api api(nc);
 
     // Warm up

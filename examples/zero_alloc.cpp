@@ -32,16 +32,19 @@
 
 // ── Mock transport (returns string_view into member buffer) ─────────────────
 
-struct MockTransport {
+struct MockTransport : note::ITransport {
     std::string response_buf;
 
-    note::Result<note::string_view> operator()(note::string_view request, uint32_t) {
+    note::Result<note::string_view> transact(note::string_view request, uint32_t) override {
         // In a real system, this would send `request` over serial/I2C and
         // receive the response into response_buf. The string_view is valid
         // until the next call.
         (void)request;
         return note::string_view(response_buf);
     }
+    note::Result<void> send(note::string_view) override { return {}; }
+    void reset() override {}
+    void abort() override {}
 };
 
 // ── Pattern 1: BufferJsonBackend — zero heap allocation ─────────────────────
@@ -57,7 +60,7 @@ static void demo_buffer_backend() {
     transport.response_buf = R"({"version":"notecard-7.2.1","device":"dev:12345","board":"1.0"})";
 
     // Notecard and Api — all state is on the stack or in members
-    note::Notecard nc(backend, std::ref(transport));
+    note::Notecard nc(backend, transport);
     note::Api api(nc);
 
     // Execute a request — ZERO heap allocations in steady state.
@@ -96,7 +99,7 @@ static void demo_string_pool() {
     note::backends::BufferJsonBackend<512, 64> backend;
 
     MockTransport transport;
-    note::Notecard nc(backend, std::ref(transport));
+    note::Notecard nc(backend, transport);
 
     // Configure a MonotonicArena for string interning.
     // When set, execute() copies response string_views into the arena
@@ -154,7 +157,7 @@ static void demo_string_pool() {
 //       MockTransport transport;
 //       transport.response_buf = R"({"version":"notecard-7.2.1"})";
 //
-//       note::Notecard nc(backend, std::ref(transport));
+//       note::Notecard nc(backend, transport);
 //       note::Api api(nc);
 //
 //       auto r = api.card.version().execute();

@@ -5,16 +5,9 @@
 
 namespace {
 
-note::Notecard make_nc(note::test::TestJsonBackend& backend, std::string& last_req) {
-    return note::Notecard(backend,
-        [&last_req](note::string_view r, uint32_t) -> note::Result<note::string_view> {
-            last_req = std::string(r);
-            return "{}";
-        },
-        [&last_req](note::string_view r) -> note::Result<void> {
-            last_req = std::string(r);
-            return {};
-        });
+note::Notecard make_nc(note::test::TestJsonBackend& backend,
+                       note::CallbackTransport& transport) {
+    return note::Notecard(backend, transport);
 }
 
 } // namespace
@@ -26,7 +19,16 @@ note::Notecard make_nc(note::test::TestJsonBackend& backend, std::string& last_r
 TEST_CASE("make_api(nc) returns unconstrained Api") {
     note::test::TestJsonBackend backend;
     std::string last_req;
-    auto nc = make_nc(backend, last_req);
+    note::CallbackTransport transport(
+        [&last_req](note::string_view r, uint32_t) -> note::Result<note::string_view> {
+            last_req = std::string(r);
+            return "{}";
+        },
+        [&last_req](note::string_view r) -> note::Result<void> {
+            last_req = std::string(r);
+            return {};
+        });
+    auto nc = make_nc(backend, transport);
     auto api = note::make_api(nc);
 
     // All methods available
@@ -49,7 +51,16 @@ TEST_CASE("make_api(nc) returns unconstrained Api") {
 TEST_CASE("make_api with constrained target — supported endpoints work") {
     note::test::TestJsonBackend backend;
     std::string last_req;
-    auto nc = make_nc(backend, last_req);
+    note::CallbackTransport transport(
+        [&last_req](note::string_view r, uint32_t) -> note::Result<note::string_view> {
+            last_req = std::string(r);
+            return "{}";
+        },
+        [&last_req](note::string_view r) -> note::Result<void> {
+            last_req = std::string(r);
+            return {};
+        });
+    auto nc = make_nc(backend, transport);
     auto api = note::make_api(nc, note::target<note::Product::WiFi>());
 
     // card.sleep is WiFi-only — should work on WiFi target
@@ -68,7 +79,16 @@ TEST_CASE("make_api with constrained target — supported endpoints work") {
 TEST_CASE("make_api with Product::Cell target — universal endpoints work") {
     note::test::TestJsonBackend backend;
     std::string last_req;
-    auto nc = make_nc(backend, last_req);
+    note::CallbackTransport transport(
+        [&last_req](note::string_view r, uint32_t) -> note::Result<note::string_view> {
+            last_req = std::string(r);
+            return "{}";
+        },
+        [&last_req](note::string_view r) -> note::Result<void> {
+            last_req = std::string(r);
+            return {};
+        });
+    auto nc = make_nc(backend, transport);
     auto api = note::make_api(nc, note::target<note::Product::Cell>());
 
     api.execute(api.hub.set());
@@ -81,7 +101,16 @@ TEST_CASE("make_api with Product::Cell target — universal endpoints work") {
 TEST_CASE("Strict mode — supported endpoints work at runtime") {
     note::test::TestJsonBackend backend;
     std::string last_req;
-    auto nc = make_nc(backend, last_req);
+    note::CallbackTransport transport(
+        [&last_req](note::string_view r, uint32_t) -> note::Result<note::string_view> {
+            last_req = std::string(r);
+            return "{}";
+        },
+        [&last_req](note::string_view r) -> note::Result<void> {
+            last_req = std::string(r);
+            return {};
+        });
+    auto nc = make_nc(backend, transport);
     auto api = note::make_api(nc, note::Target<note::Rat::WiFi, true>{});
 
     // card.sleep is WiFi-only — available on WiFi strict target
@@ -100,7 +129,16 @@ TEST_CASE("Strict mode — supported endpoints work at runtime") {
 TEST_CASE("Api(nc, target) — constrained via constructor") {
     note::test::TestJsonBackend backend;
     std::string last_req;
-    auto nc = make_nc(backend, last_req);
+    note::CallbackTransport transport(
+        [&last_req](note::string_view r, uint32_t) -> note::Result<note::string_view> {
+            last_req = std::string(r);
+            return "{}";
+        },
+        [&last_req](note::string_view r) -> note::Result<void> {
+            last_req = std::string(r);
+            return {};
+        });
+    auto nc = make_nc(backend, transport);
     note::Api api(nc, note::target<note::Product::WiFi>());
 
     // card.wifi needs WiFi — available
@@ -115,7 +153,16 @@ TEST_CASE("Api(nc, target) — constrained via constructor") {
 TEST_CASE("Api(nc, target) — strict mode via constructor") {
     note::test::TestJsonBackend backend;
     std::string last_req;
-    auto nc = make_nc(backend, last_req);
+    note::CallbackTransport transport(
+        [&last_req](note::string_view r, uint32_t) -> note::Result<note::string_view> {
+            last_req = std::string(r);
+            return "{}";
+        },
+        [&last_req](note::string_view r) -> note::Result<void> {
+            last_req = std::string(r);
+            return {};
+        });
+    auto nc = make_nc(backend, transport);
     note::Api api(nc, note::Target<note::Rat::WiFi, true>{});
 
     api.execute(api.card.sleep());

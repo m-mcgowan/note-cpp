@@ -21,19 +21,21 @@ using UnconstrainedApi = note::Api;
 struct Harness {
     note::test::TestJsonBackend backend;
     std::string last_req;
+    note::CallbackTransport transport;
     note::Notecard nc;
     UnconstrainedApi api;
 
     Harness()
-        : nc(backend,
-            [this](note::string_view r, uint32_t) -> note::Result<std::string> {
+        : transport(
+            [this](note::string_view r, uint32_t) -> note::Result<note::string_view> {
                 last_req = std::string(r);
-                return "{}";
+                return note::string_view("{}");
             },
             [this](note::string_view r) -> note::Result<void> {
                 last_req = std::string(r);
                 return {};
             })
+        , nc(backend, transport)
         , api(nc)
     {}
 };

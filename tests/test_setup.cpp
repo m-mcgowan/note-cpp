@@ -15,16 +15,18 @@ namespace {
 struct TestFixture {
     note::test::TestJsonBackend backend;
     std::vector<std::string> captured;
+    note::CallbackTransport transport;
     note::Notecard nc;
     note::app::DirectChannel ch;
     Store store;
 
     TestFixture()
-        : nc(backend,
+        : transport(
             [this](note::string_view req, uint32_t) -> note::Result<note::string_view> {
                 captured.emplace_back(req);
                 return std::string("{}");
             })
+        , nc(backend, transport)
         , ch(nc) {}
 };
 
@@ -155,12 +157,13 @@ TEST_CASE("Setup NTN mode auto-sets compact on templates") {
 TEST_CASE("Setup::run() fails at hub.set step") {
     int call_count = 0;
     note::test::TestJsonBackend backend;
-    note::Notecard nc(backend,
+    note::CallbackTransport transport(
         [&](note::string_view, uint32_t) -> note::Result<note::string_view> {
             if (call_count++ == 0)
                 return note::make_error(note::Error::SendFailed, "write failed");
             return std::string("{}");
         });
+    note::Notecard nc(backend, transport);
     note::app::DirectChannel ch(nc);
     Store store;
     note::app::Setup<note::app::DirectChannel, Store> setup(ch, store);
@@ -178,12 +181,13 @@ TEST_CASE("Setup::run() fails at hub.set step") {
 TEST_CASE("Setup::run() fails at template step") {
     int call_count = 0;
     note::test::TestJsonBackend backend;
-    note::Notecard nc(backend,
+    note::CallbackTransport transport(
         [&](note::string_view, uint32_t) -> note::Result<note::string_view> {
             if (call_count++ == 1)  // second call = note.template
                 return note::make_error(note::Error::SendFailed, "write failed");
             return std::string("{}");
         });
+    note::Notecard nc(backend, transport);
     note::app::DirectChannel ch(nc);
     Store store;
     note::app::Setup<note::app::DirectChannel, Store> setup(ch, store);

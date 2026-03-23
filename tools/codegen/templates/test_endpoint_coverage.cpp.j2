@@ -28,19 +28,21 @@ namespace {
 struct Harness {
     note::test::TestJsonBackend backend;
     std::string last_req;
+    note::CallbackTransport transport;
     note::Notecard nc;
     UnconstrainedApi api;
 
     Harness()
-        : nc(backend,
-            [this](note::string_view r, uint32_t) -> note::Result<std::string> {
+        : transport(
+            [this](note::string_view r, uint32_t) -> note::Result<note::string_view> {
                 last_req = std::string(r);
-                return "{}";
+                return note::string_view("{}");
             },
             [this](note::string_view r) -> note::Result<void> {
                 last_req = std::string(r);
                 return {};
             })
+        , nc(backend, transport)
         , api(nc)
     {}
 };
@@ -48,17 +50,19 @@ struct Harness {
 // Transport that always fails — used to exercise ApiResult error constructors.
 struct FailHarness {
     note::test::TestJsonBackend backend;
+    note::CallbackTransport transport;
     note::Notecard nc;
     UnconstrainedApi api;
 
     FailHarness()
-        : nc(backend,
-            [](note::string_view, uint32_t) -> note::Result<std::string> {
+        : transport(
+            [](note::string_view, uint32_t) -> note::Result<note::string_view> {
                 return note::make_error(note::Error::SendFailed, "test");
             },
             [](note::string_view) -> note::Result<void> {
                 return note::make_error(note::Error::SendFailed, "test");
             })
+        , nc(backend, transport)
         , api(nc)
     {}
 };
@@ -66,17 +70,19 @@ struct FailHarness {
 // Backend that returns a Notecard error — exercises ApiResult(ErrorInfo) constructors.
 struct NcErrorHarness {
     note::test::ErrorJsonBackend backend;
+    note::CallbackTransport transport;
     note::Notecard nc;
     UnconstrainedApi api;
 
     NcErrorHarness()
-        : nc(backend,
-            [](note::string_view, uint32_t) -> note::Result<std::string> {
-                return std::string("{}");
+        : transport(
+            [](note::string_view, uint32_t) -> note::Result<note::string_view> {
+                return note::string_view("{}");
             },
             [](note::string_view) -> note::Result<void> {
                 return {};
             })
+        , nc(backend, transport)
         , api(nc)
     {}
 };

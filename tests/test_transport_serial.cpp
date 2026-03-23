@@ -121,7 +121,7 @@ TEST_CASE("reset succeeds when drain sees only control characters") {
     ScriptedHal hal;  // default reset_drain_response = "\r\n"
     NotecardSerial transport(hal);
     hal.queue_response("{}\r\n");
-    auto r = transport("{\"req\":\"hub.set\"}", 5000);
+    auto r = transport.transact("{\"req\":\"hub.set\"}", 5000);
     REQUIRE(r.has_value());
 }
 
@@ -130,7 +130,7 @@ TEST_CASE("reset: first byte transmitted is bare newline") {
     ScriptedHal hal;
     NotecardSerial transport(hal);
     hal.queue_response("{}\r\n");
-    transport("{\"req\":\"hub.set\"}", 5000);
+    transport.transact("{\"req\":\"hub.set\"}", 5000);
     std::string all_tx(hal.tx.begin(), hal.tx.end());
     REQUIRE(!all_tx.empty());
     REQUIRE(all_tx.front() == '\n');
@@ -192,7 +192,7 @@ TEST_CASE("reset retries on non-control characters in drain") {
 
     retry_hal.json_responses.push_back("{}\r\n");
     NotecardSerial transport2(retry_hal);
-    auto r = transport2("{\"req\":\"hub.set\"}", 5000);
+    auto r = transport2.transact("{\"req\":\"hub.set\"}", 5000);
     REQUIRE(r.has_value());
     REQUIRE(retry_hal.probe_num >= 2);
 }
@@ -203,7 +203,7 @@ TEST_CASE("reset fails if all attempts see non-control chars") {
     ScriptedHal hal;
     hal.reset_drain_response = "BAD\r\n";  // always injects non-control data
     NotecardSerial transport(hal);
-    auto r = transport("{\"req\":\"hub.set\"}", 5000);
+    auto r = transport.transact("{\"req\":\"hub.set\"}", 5000);
     REQUIRE(!r.has_value());
     REQUIRE(r.error().code == note::Error::NotReady);
 }
@@ -217,7 +217,7 @@ TEST_CASE("short request is sent as single segment with CRLF") {
     ScriptedHal hal;
     NotecardSerial transport(hal);
     hal.queue_response("{}\r\n");
-    transport("{\"req\":\"hub.set\"}", 5000);
+    transport.transact("{\"req\":\"hub.set\"}", 5000);
 
     std::string tx = std::string(hal.tx.begin(), hal.tx.end());
     auto req_start = tx.find('{');
@@ -237,7 +237,7 @@ TEST_CASE("600-byte request splits into 3 segments with 2 inter-segment delays")
     big_req += "\"}";
 
     hal.queue_response("{}\r\n");
-    transport(big_req, 5000);
+    transport.transact(big_req, 5000);
 
     REQUIRE(hal.segment_delay_count == 2);
 }
@@ -258,7 +258,7 @@ TEST_CASE("request at exactly segment boundary sends in 1 segment") {
     exact_req[0] = '{'; exact_req[kSerialSegmentMaxLen-1] = '}';
 
     hal.queue_response("{}\r\n");
-    transport(exact_req, 5000);
+    transport.transact(exact_req, 5000);
     REQUIRE(hal.segment_delay_count == 0);  // no inter-segment delays
 }
 
@@ -266,7 +266,7 @@ TEST_CASE("send_segmented appends CRLF terminator") {
     ScriptedHal hal;
     NotecardSerial transport(hal);
     hal.queue_response("{}\r\n");
-    transport("{\"req\":\"hub.set\"}", 5000);
+    transport.transact("{\"req\":\"hub.set\"}", 5000);
 
     std::string tx = std::string(hal.tx.begin(), hal.tx.end());
     auto req_start = tx.find('{');
@@ -286,7 +286,7 @@ TEST_CASE("receive_line returns JSON stripped of CRLF") {
     ScriptedHal hal;
     NotecardSerial transport(hal);
     hal.queue_response("{\"connected\":true}\r\n");
-    auto r = transport("{\"req\":\"hub.set\"}", 5000);
+    auto r = transport.transact("{\"req\":\"hub.set\"}", 5000);
     REQUIRE(r.has_value());
     REQUIRE(*r == "{\"connected\":true}");
 }
@@ -295,7 +295,7 @@ TEST_CASE("receive_line returns JSON stripped of bare LF") {
     ScriptedHal hal;
     NotecardSerial transport(hal);
     hal.queue_response("{\"ok\":true}\n");
-    auto r = transport("{\"req\":\"hub.set\"}", 5000);
+    auto r = transport.transact("{\"req\":\"hub.set\"}", 5000);
     REQUIRE(r.has_value());
     REQUIRE(*r == "{\"ok\":true}");
 }
@@ -325,7 +325,7 @@ TEST_CASE("receive_line timeout before first byte returns ResponseLost") {
     } hal;
 
     NotecardSerial transport(hal);
-    auto r = transport("{\"req\":\"hub.set\"}", 500);
+    auto r = transport.transact("{\"req\":\"hub.set\"}", 500);
     REQUIRE(!r.has_value());
     // After kMaxRetries timeouts, the last error is propagated.
     REQUIRE(r.error().code == note::Error::ResponseLost);
@@ -360,7 +360,7 @@ TEST_CASE("receive_line intra-transaction timeout after first byte") {
     } hal;
 
     NotecardSerial transport(hal);
-    auto r = transport("{\"req\":\"hub.set\"}", 10000);
+    auto r = transport.transact("{\"req\":\"hub.set\"}", 10000);
     REQUIRE(!r.has_value());
     // After retrying with partial responses that never complete, exhausts retries.
     REQUIRE(r.error().code == note::Error::ResponseLost);
@@ -376,7 +376,7 @@ TEST_CASE("full round-trip: request transmitted, response returned") {
     ScriptedHal hal;
     NotecardSerial transport(hal);
     hal.queue_response("{\"version\":\"1.0\"}\r\n");
-    auto r = transport("{\"req\":\"card.version\"}", 5000);
+    auto r = transport.transact("{\"req\":\"card.version\"}", 5000);
     REQUIRE(r.has_value());
     REQUIRE(*r == "{\"version\":\"1.0\"}");
 }
@@ -387,14 +387,14 @@ TEST_CASE("second call reuses existing connection without reset") {
     NotecardSerial transport(hal);
 
     hal.queue_response("{\"ok\":true}\r\n");
-    auto r1 = transport("{\"req\":\"hub.set\"}", 5000);
+    auto r1 = transport.transact("{\"req\":\"hub.set\"}", 5000);
     REQUIRE(r1.has_value());
 
     for (auto b : hal.tx) if (b == '\n' && (&b == &hal.tx.back() || true)) { /* count */ }
     size_t tx_size_after_first = hal.tx.size();
 
     hal.queue_response("{\"ok\":true}\r\n");
-    auto r2 = transport("{\"req\":\"hub.sync\"}", 5000);
+    auto r2 = transport.transact("{\"req\":\"hub.sync\"}", 5000);
     REQUIRE(r2.has_value());
 
     // Second call should NOT have sent another reset probe ('\n' alone)
@@ -411,7 +411,7 @@ TEST_CASE("CRC auto-detection: no CRC in response, flag stays false") {
     ScriptedHal hal;
     NotecardSerial transport(hal);
     hal.queue_response("{\"connected\":true}\r\n");
-    auto r = transport("{\"req\":\"hub.set\"}", 5000);
+    auto r = transport.transact("{\"req\":\"hub.set\"}", 5000);
     REQUIRE(r.has_value());
     REQUIRE(*r == "{\"connected\":true}");
     // crc_enabled_ remains false — verified by checking next request has no CRC
@@ -425,7 +425,7 @@ TEST_CASE("CRC auto-detection: first response with CRC sets enabled flag") {
     // The response includes a CRC field matching seq=0.
     std::string resp = note::transport::detail::crc_add("{\"ok\":true}", 0) + "\r\n";
     hal.queue_response(resp);
-    auto r = transport("{\"req\":\"hub.set\"}", 5000);
+    auto r = transport.transact("{\"req\":\"hub.set\"}", 5000);
     REQUIRE(r.has_value());
     REQUIRE(*r == "{\"ok\":true}");
     // crc_enabled_ is now true
@@ -437,12 +437,12 @@ TEST_CASE("CRC: after detection, second request includes CRC field") {
 
     // First call: CRC auto-detected (seq=0 response)
     hal.queue_response(note::transport::detail::crc_add("{\"ok\":true}", 0) + "\r\n");
-    transport("{\"req\":\"hub.set\"}", 5000);
+    transport.transact("{\"req\":\"hub.set\"}", 5000);
 
     // Second call: seq becomes 1, request must include CRC
     hal.queue_response(note::transport::detail::crc_add("{\"ok\":true}", 1) + "\r\n");
     hal.tx.clear();
-    transport("{\"req\":\"hub.sync\"}", 5000);
+    transport.transact("{\"req\":\"hub.sync\"}", 5000);
 
     std::string tx(hal.tx.begin(), hal.tx.end());
     REQUIRE(tx.find("\"crc\":\"") != std::string::npos);
@@ -455,12 +455,12 @@ TEST_CASE("CRC mismatch triggers retry and succeeds on clean response") {
 
     // First call: CRC auto-detected
     hal.queue_response(note::transport::detail::crc_add("{\"ok\":true}", 0) + "\r\n");
-    transport("{\"req\":\"hub.set\"}", 5000);
+    transport.transact("{\"req\":\"hub.set\"}", 5000);
 
     // Second call: first response has wrong seq → retry; second response is correct
     hal.queue_response(note::transport::detail::crc_add("{\"ok\":true}", 99) + "\r\n");  // wrong seq
     hal.queue_response(note::transport::detail::crc_add("{\"ok\":true}", 1) + "\r\n");   // correct
-    auto r = transport("{\"req\":\"hub.sync\"}", 5000);
+    auto r = transport.transact("{\"req\":\"hub.sync\"}", 5000);
     REQUIRE(r.has_value());
     REQUIRE(*r == "{\"ok\":true}");
 }
@@ -480,7 +480,7 @@ TEST_CASE("I/O error on transmit triggers retry, succeeds on recovery") {
 
     NotecardSerial transport(hal);
     hal.queue_response("{\"ok\":true}\r\n");
-    auto r = transport("{\"req\":\"hub.set\"}", 5000);
+    auto r = transport.transact("{\"req\":\"hub.set\"}", 5000);
     REQUIRE(r.has_value());
 }
 
@@ -488,7 +488,7 @@ TEST_CASE("reset failure returns Error::NotReady") {
     ScriptedHal hal;
     hal.reset_drain_response = "BAD\r\n";  // reset always fails
     NotecardSerial transport(hal);
-    auto r = transport("{\"req\":\"hub.set\"}", 5000);
+    auto r = transport.transact("{\"req\":\"hub.set\"}", 5000);
     REQUIRE(!r.has_value());
     REQUIRE(r.error().code == note::Error::NotReady);
 }
@@ -511,7 +511,7 @@ TEST_CASE("SerialCallbackHal delegates to callbacks") {
     };
 
     NotecardSerial transport(cb);
-    auto r = transport("{\"req\":\"hub.status\"}", 5000);
+    auto r = transport.transact("{\"req\":\"hub.status\"}", 5000);
     REQUIRE(r.has_value());
     CHECK(*r == "{}");
 }

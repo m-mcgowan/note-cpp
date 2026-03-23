@@ -44,10 +44,7 @@ public:
     void begin(SerialT& uart, unsigned long baud = 9600) {
         serial_hal_ = std::make_unique<SerialHal<SerialT>>(uart, baud);
         serial_transport_ = std::make_unique<transport::NotecardSerial<>>(*serial_hal_);
-        auto& t = *serial_transport_;
-        Base::begin([&t](string_view req, uint32_t timeout) {
-            return t(req, timeout);
-        });
+        Base::begin(*serial_transport_);
     }
 
     /// Begin with I2C transport (default address).
@@ -66,10 +63,7 @@ private:
     void begin_i2c(TwoWire& wire, uint8_t address) {
         i2c_hal_ = std::make_unique<I2CHal>(wire, address);
         i2c_transport_ = std::make_unique<transport::NotecardI2c<>>(*i2c_hal_);
-        auto& t = *i2c_transport_;
-        Base::begin([&t](string_view req, uint32_t timeout) {
-            return t(req, timeout);
-        });
+        Base::begin(*i2c_transport_);
     }
 
     std::unique_ptr<transport::SerialHal> serial_hal_;

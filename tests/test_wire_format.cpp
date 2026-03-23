@@ -19,17 +19,20 @@ namespace {
 struct TestHarness {
     note::test::TestJsonBackend backend;
     std::string last_request;
+    note::CallbackTransport transport;
     note::Notecard nc;
 
-    TestHarness() : nc(backend,
-        [this](note::string_view req, uint32_t) -> note::Result<note::string_view> {
-            last_request = std::string(req);
-            return std::string("{}");
-        },
-        [this](note::string_view req) -> note::Result<void> {
-            last_request = std::string(req);
-            return {};
-        }) {}
+    TestHarness()
+        : transport(
+            [this](note::string_view req, uint32_t) -> note::Result<note::string_view> {
+                last_request = std::string(req);
+                return std::string("{}");
+            },
+            [this](note::string_view req) -> note::Result<void> {
+                last_request = std::string(req);
+                return {};
+            })
+        , nc(backend, transport) {}
 };
 
 } // namespace
@@ -573,21 +576,24 @@ TEST_CASE("NotecardApi: default constructor + begin()") {
 
     // After begin(), requests work
     std::string last_request;
-    nc.begin([&](note::string_view req, uint32_t) -> note::Result<note::string_view> {
-        last_request = std::string(req);
-        return note::string_view("{}");
-    });
+    note::CallbackTransport transport(
+        [&](note::string_view req, uint32_t) -> note::Result<note::string_view> {
+            last_request = std::string(req);
+            return note::string_view("{}");
+        });
+    nc.begin(transport);
     nc.hub.set().product("test").execute();
     REQUIRE(last_request.find("hub.set") != std::string::npos);
 }
 
 TEST_CASE("NotecardApi: construct with transport") {
     std::string last_request;
-    note::NotecardApi nc(
+    note::CallbackTransport transport(
         [&](note::string_view req, uint32_t) -> note::Result<note::string_view> {
             last_request = std::string(req);
             return note::string_view("{}");
         });
+    note::NotecardApi nc(transport);
 
     // Use Api surface directly on nc — no separate Api object needed
     nc.hub.set().product("com.example.app").mode("periodic").execute();
@@ -600,10 +606,11 @@ TEST_CASE("NotecardApi: construct with transport") {
 
 TEST_CASE("NotecardApi: notecard() accessor") {
     note::test::TestJsonBackend backend;
-    note::NotecardApi nc(backend,
+    note::CallbackTransport transport(
         [](note::string_view, uint32_t) -> note::Result<note::string_view> {
             return note::string_view("{}");
         });
+    note::NotecardApi nc(backend, transport);
 
     // Can access underlying Notecard for transport-level operations
     auto& notecard = nc.notecard();

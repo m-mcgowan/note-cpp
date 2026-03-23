@@ -103,12 +103,15 @@ struct TrackingScope {
 // Scripted transport — returns string_view into member buffer
 // ═══════════════════════════════════════════════════════════════════════════
 
-struct ScriptedTransport {
+struct ScriptedTransport : note::ITransport {
     const char* response = "{}";
 
-    note::Result<note::string_view> operator()(note::string_view, uint32_t) {
+    note::Result<note::string_view> transact(note::string_view, uint32_t) override {
         return note::string_view(response);
     }
+    note::Result<void> send(note::string_view) override { return {}; }
+    void reset() override {}
+    void abort() override {}
 };
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -123,7 +126,7 @@ static void test_sax_zero_alloc_card_version() {
     char arena_buf[1024];
     note::MonotonicArena arena(arena_buf, sizeof(arena_buf));
 
-    note::Notecard nc(backend, std::ref(transport));
+    note::Notecard nc(backend, transport);
     nc.set_allocator(note::arena_allocator(arena));
     note::Api api(nc);
 
@@ -153,7 +156,7 @@ static void test_sax_string_survives_reuse() {
     char arena_buf[2048];
     note::MonotonicArena arena(arena_buf, sizeof(arena_buf));
 
-    note::Notecard nc(backend, std::ref(transport));
+    note::Notecard nc(backend, transport);
     nc.set_allocator(note::arena_allocator(arena));
     note::Api api(nc);
 
@@ -195,7 +198,7 @@ static void test_sax_error_detection() {
     char arena_buf[1024];
     note::MonotonicArena arena(arena_buf, sizeof(arena_buf));
 
-    note::Notecard nc(backend, std::ref(transport));
+    note::Notecard nc(backend, transport);
     nc.set_allocator(note::arena_allocator(arena));
     note::Api api(nc);
 
@@ -225,7 +228,7 @@ static void test_sax_json_parse_error() {
     char arena_buf[1024];
     note::MonotonicArena arena(arena_buf, sizeof(arena_buf));
 
-    note::Notecard nc(backend, std::ref(transport));
+    note::Notecard nc(backend, transport);
     nc.set_allocator(note::arena_allocator(arena));
     note::Api api(nc);
 
@@ -251,7 +254,7 @@ static void test_sax_bounded_memory() {
     char arena_buf[4096];
     note::MonotonicArena arena(arena_buf, sizeof(arena_buf));
 
-    note::Notecard nc(backend, std::ref(transport));
+    note::Notecard nc(backend, transport);
     nc.set_allocator(note::arena_allocator(arena));
     note::Api api(nc);
 
@@ -289,7 +292,7 @@ static void test_sax_via_api() {
     char arena_buf[1024];
     note::MonotonicArena arena(arena_buf, sizeof(arena_buf));
 
-    note::Notecard nc(backend, std::ref(transport));
+    note::Notecard nc(backend, transport);
     nc.set_allocator(note::arena_allocator(arena));
 
     note::Api api(nc);
@@ -317,7 +320,7 @@ static void test_sax_explicit_allocator() {
     ScriptedTransport transport;
     transport.response = R"({"version":"v1.0","device":"dev:001"})";
 
-    note::Notecard nc(backend, std::ref(transport));
+    note::Notecard nc(backend, transport);
     // No set_allocator() — using explicit per-call overload
 
     char arena_buf[1024];

@@ -16,16 +16,18 @@ namespace {
 struct TestFixture {
     note::test::TestJsonBackend backend;
     std::vector<std::string> captured;
+    note::CallbackTransport transport;
     note::Notecard nc;
     note::app::DirectChannel ch;
     Store store;
 
     TestFixture()
-        : nc(backend,
+        : transport(
             [this](note::string_view req, uint32_t) -> note::Result<note::string_view> {
                 captured.emplace_back(req);
                 return std::string("{}");
             })
+        , nc(backend, transport)
         , ch(nc) {}
 };
 
@@ -176,10 +178,11 @@ TEST_CASE("Attention::query() sends card.attn with verify") {
 
 TEST_CASE("Attention::arm() propagates transport errors") {
     note::test::TestJsonBackend backend;
-    note::Notecard nc(backend,
+    note::CallbackTransport transport(
         [](note::string_view, uint32_t) -> note::Result<note::string_view> {
             return note::make_error(note::Error::SendFailed, "write failed");
         });
+    note::Notecard nc(backend, transport);
     note::app::DirectChannel ch(nc);
     Store store;
     note::app::Attention<note::app::DirectChannel, Store> attn(ch, store);

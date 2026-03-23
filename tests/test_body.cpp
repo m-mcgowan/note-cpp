@@ -34,18 +34,21 @@ struct TestHarness {
     note::test::TestJsonBackend backend;
     std::string last_request;
     std::string last_response{"{}"}; // persists for string_view return
+    note::CallbackTransport transport;
     note::Notecard nc;
 
-    TestHarness() : nc(backend,
-        [this](note::string_view req, uint32_t) -> note::Result<note::string_view> {
-            last_request = std::string(req);
-            last_response = "{}";
-            return note::string_view(last_response);
-        },
-        [this](note::string_view req) -> note::Result<void> {
-            last_request = std::string(req);
-            return {};
-        }) {}
+    TestHarness()
+        : transport(
+            [this](note::string_view req, uint32_t) -> note::Result<note::string_view> {
+                last_request = std::string(req);
+                last_response = "{}";
+                return note::string_view(last_response);
+            },
+            [this](note::string_view req) -> note::Result<void> {
+                last_request = std::string(req);
+                return {};
+            })
+        , nc(backend, transport) {}
 };
 
 // ── Schema test types ───────────────────────────────────────────────────────

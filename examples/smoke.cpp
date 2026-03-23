@@ -39,6 +39,13 @@ struct MockBackend : note::JsonBackend {
     }
 };
 
+struct MockTransport : note::ITransport {
+    note::Result<note::string_view> transact(note::string_view, uint32_t) override { return "{}"; }
+    note::Result<void> send(note::string_view) override { return {}; }
+    void reset() override {}
+    void abort() override {}
+};
+
 // Example generated request type (what the code generator would produce)
 struct HubSetRequest {
     static constexpr note::string_view notecard_request = "hub.set";
@@ -59,10 +66,8 @@ struct HubSetRequest {
 
 int main() {
     MockBackend backend;
-    note::Notecard nc(backend,
-        [](note::string_view, uint32_t) -> note::Result<note::string_view> {
-            return note::string_view("{}");
-        });
+    MockTransport transport;
+    note::Notecard nc(backend, transport);
 
     // Type-safe generated request
     HubSetRequest req;

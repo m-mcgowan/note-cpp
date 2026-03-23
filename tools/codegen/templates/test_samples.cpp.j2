@@ -15,17 +15,20 @@ namespace {
 struct TestHarness {
     note::test::TestJsonBackend backend;
     std::string last_request;
+    note::CallbackTransport transport;
     note::Notecard nc;
 
-    TestHarness() : nc(backend,
-        [this](note::string_view req, uint32_t) -> note::Result<std::string> {
-            last_request = std::string(req);
-            return std::string("{}");
-        },
-        [this](note::string_view req) -> note::Result<void> {
-            last_request = std::string(req);
-            return {};
-        }) {}
+    TestHarness()
+        : transport(
+            [this](note::string_view req, uint32_t) -> note::Result<note::string_view> {
+                last_request = std::string(req);
+                return note::string_view("{}");
+            },
+            [this](note::string_view req) -> note::Result<void> {
+                last_request = std::string(req);
+                return {};
+            })
+        , nc(backend, transport) {}
 };
 
 } // namespace

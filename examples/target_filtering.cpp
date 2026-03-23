@@ -19,10 +19,8 @@
 
 int main() {
     MockBackend backend;
-    note::Notecard nc(backend,
-        [](note::string_view, uint32_t) -> note::Result<note::string_view> {
-            return note::string_view("{}");
-        });
+    MockTransport transport;
+    note::Notecard nc(backend, transport);
 
     // ─── 1. Unconstrained API (default) ─────────────────────────────────
     // Without a target, all endpoints are available. This is fine when your

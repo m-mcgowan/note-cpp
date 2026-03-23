@@ -15,16 +15,18 @@ namespace {
 struct TestFixture {
     note::test::TestJsonBackend backend;
     std::vector<std::string> captured;
+    note::CallbackTransport transport;
     note::Notecard nc;
     note::app::DirectChannel ch;
     Store store;
 
     TestFixture()
-        : nc(backend,
+        : transport(
             [this](note::string_view req, uint32_t) -> note::Result<note::string_view> {
                 captured.emplace_back(req);
                 return std::string("{}");
             })
+        , nc(backend, transport)
         , ch(nc) {}
 };
 
@@ -152,10 +154,11 @@ TEST_CASE("Sync::wait_for_sync() returns immediately when already complete") {
         }
     } status_backend(reader_ptr);
 
-    note::Notecard nc(status_backend,
+    note::CallbackTransport status_transport(
         [](note::string_view, uint32_t) -> note::Result<note::string_view> {
             return std::string("{}");
         });
+    note::Notecard nc(status_backend, status_transport);
     note::app::DirectChannel ch(nc);
     Store store;
     note::app::Sync<note::app::DirectChannel, Store> sync(ch, store);
@@ -188,10 +191,11 @@ TEST_CASE("Sync::wait_for_sync() times out after max_polls") {
 
 TEST_CASE("Sync::sync() propagates transport errors") {
     note::test::TestJsonBackend backend;
-    note::Notecard nc(backend,
+    note::CallbackTransport transport(
         [](note::string_view, uint32_t) -> note::Result<note::string_view> {
             return note::make_error(note::Error::SendFailed, "write failed");
         });
+    note::Notecard nc(backend, transport);
     note::app::DirectChannel ch(nc);
     Store store;
     note::app::Sync<note::app::DirectChannel, Store> sync(ch, store);

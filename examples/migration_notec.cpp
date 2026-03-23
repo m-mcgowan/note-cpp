@@ -134,6 +134,11 @@ if (rsp == NULL) {
     Serial.println(temp);
     nc.deleteResponse(rsp);
 }
+
+// Configure periodic monitoring
+J *req = nc.newRequest("card.temp");
+JAddNumberToObject(req, "minutes", 5);
+nc.sendRequest(req);
 }
 
 // ── card.version ────────────────────────────────────────────────────────

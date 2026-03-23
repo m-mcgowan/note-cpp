@@ -112,6 +112,11 @@ void card_temp() {
     } else {
         Serial.println(r.error());
     }
+
+    // Configure periodic monitoring
+    nc.card.temp().configure()
+        .minutes(5)
+        .execute();
 }
 
 

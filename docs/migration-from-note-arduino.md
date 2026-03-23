@@ -364,7 +364,7 @@ If you are comfortable with C++ template syntax, you can also use a type-only fo
 <tr><td>
 
 ```c
-// ../examples/migration_notec.cpp#L125-L136
+// ../examples/migration_notec.cpp#L125-L141
 
 J *rsp = nc.requestAndResponse(
     nc.newRequest("card.temp"));
@@ -378,12 +378,17 @@ if (rsp == NULL) {
     Serial.println(temp);
     nc.deleteResponse(rsp);
 }
+
+// Configure periodic monitoring
+J *req = nc.newRequest("card.temp");
+JAddNumberToObject(req, "minutes", 5);
+nc.sendRequest(req);
 ```
 
 </td><td>
 
 ```cpp
-// ../examples/arduino-migration/src/main.cpp#L108-L114
+// ../examples/arduino-migration/src/main.cpp#L108-L119
 
 auto r = nc.card.temp().read().execute();
 if (r) {
@@ -392,6 +397,11 @@ if (r) {
 } else {
     Serial.println(r.error());
 }
+
+// Configure periodic monitoring
+nc.card.temp().configure()
+    .minutes(5)
+    .execute();
 
 
 
@@ -823,8 +833,8 @@ also works for receiving. See [Body Values](body-values.md) for details.
 
 ## Type-safe units
 
-Duration fields use distinct types that prevent accidental mixing.
-A value in the wrong unit is a compile error, not a silent bug:
+Duration fields use distinct types that allow time units to be expressed in larger units,
+while also preventing accidental mix-ups - a value in the wrong unit is a compile error, not a silent bug:
 
 ```cpp
 using namespace note::literals;
@@ -844,9 +854,10 @@ nc.card.sleep()
 // nc.hub.set().outbound(60_s);  // Compile error: Seconds ≠ Minutes
 ```
 
-In note-c, `outbound` is just an integer — you have to know from the
-docs that it's in minutes. See [Duration Units](duration-units.md) for
-the full type system.
+In note-c, `outbound` is a plain integer — you have to know from the
+docs that it's in minutes - sometimes the requests make the unit clear by the name
+(e.g. "seconds") but sometimes not. The duration type system avoids any ambiguity. 
+See [Duration Units](duration-units.md) for the full type system.
 
 ## Named constants
 
@@ -947,7 +958,7 @@ you whether retrying a failed request is safe:
 | `ReadOnly` | No side effects (e.g. `card.version`) | Always safe |
 | `Idempotent` | Same result if repeated (e.g. `hub.set`) | Always safe |
 | `NonIdempotent` | May have different effect if repeated (e.g. `note.add`) | Only if `Error::SendFailed` |
-| `Destructive` | Consumes or deletes data (e.g. `note.get` pop) | Only if `Error::SendFailed` |
+| `Destructive` | Consumes or deletes data (e.g. `note.get` delete) | Only if `Error::SendFailed` |
 
 ```cpp
 auto result = nc.note.add().file("sensors.qo").body(r).execute();
@@ -967,7 +978,7 @@ static_assert(!is_safe_to_retry(NoteAdd::safety));
 ```
 
 In note-c, there's no equivalent — you have to know from the docs which
-requests are safe to retry.
+requests are safe to retry, and currently note-c retries all requests.
 
 ## Fire-and-forget commands
 

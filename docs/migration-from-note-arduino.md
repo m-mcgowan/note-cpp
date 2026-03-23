@@ -1155,7 +1155,7 @@ preprocessor-driven:
 | `BufferJsonBackend<N, T>` | Fixed-size JSON build buffer and token array on the stack. No heap allocation in steady state. Template parameters control the sizes. |
 | `Allocator` / `StringPool` | Arena-backed string interning — response `string_view` fields survive transport buffer reuse without heap allocation. |
 | `ITransport` / `AbstractTransport` | Transport owns its own response buffer (reused across calls). No transport-level allocation after warmup. |
-| No `#define` guards | All features are always available. Unused code is eliminated by the linker (LTO). Binary size is controlled by which headers you include and which endpoints you call, not by preprocessor flags. |
+| No `#define` guards | All features are always available. Unused code is eliminated by the linker's `--gc-sections` (enabled by default on Arduino/PlatformIO). Binary size is controlled by which endpoints you call, not by preprocessor flags. |
 
 The `zero_alloc.cpp` example demonstrates all three zero-allocation patterns.
 On a typical ESP32 build, note-cpp's typed API adds negligible flash overhead

@@ -72,6 +72,11 @@ and property assignment
 }
 ```
 
+> **Coming from note-arduino / note-c?** The
+> [migration guide](docs/migration-from-note-arduino.md) shows side-by-side
+> examples of every common pattern — setup, hub.set, note.add, templates,
+> error handling, binary transfers, and more.
+
 ## Developer Experience
 
 note-cpp is designed for beginner to intermediate C++ developers. The API

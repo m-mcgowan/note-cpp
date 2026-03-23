@@ -6,7 +6,7 @@ API specification.
 
 ## Key types
 
-- note::Notecard — transport abstraction and request execution engine
+- note::Notecard — request execution engine (JSON build → transport → parse)
 - note::Api — typed accessors for all Notecard API endpoints (e.g. `api.hub.set()`)
 - note::ApiResult — result type returned by request execution (value or note::ErrorInfo)
 - note::JsonBuilder / note::JsonReader — JSON serialization interfaces
@@ -14,6 +14,14 @@ API specification.
 - note::StringPool — arena-backed string interning for response lifetimes
 - note::Allocator — pluggable memory allocator
 - note::BodyValue — type-safe `body` field accessor
+
+## Transport
+
+- note::ITransport — pure virtual transport interface (transact, send, reset, abort)
+- note::AbstractTransport — base class with shared retry/CRC logic; subclasses implement raw byte I/O
+- note::transport::NotecardSerial — serial wire protocol implementation
+- note::transport::NotecardI2c — I2C wire protocol implementation
+- note::CallbackTransport — adapter for wrapping lambdas as ITransport (testing)
 
 ## Duration and unit types
 
@@ -24,7 +32,7 @@ API specification.
 ## Filtering and validation
 
 - note::FlagSet — comma-separated bitfield with named methods and compile-time constants (e.g. `note::attn::arm`)
-- note::Target / note::Skus — compile-time SKU checks (ensures requests match the connected Notecard hardware)
+- note::Target / note::Skus / note::Product — compile-time product checks (ensures requests match the connected Notecard SKU)
 - `consteval` validators — catch invalid mode/enum strings at compile time
 
 ## Request/response types

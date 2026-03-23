@@ -1138,30 +1138,40 @@ compile silently and fail at runtime on the device.
 
 ## Memory and binary footprint
 
-note-c relies on compile-time `#define`s to reduce memory usage on small
-platforms:
+note-c uses `NOTE_C_LOW_MEM` to trade features for size on constrained
+devices (AVR, ESP8266, Cortex-M0+, NRF51 — platforms with 2–32 KB RAM).
+It's auto-detected when `float` and `double` are the same size, or set
+manually. Here's what it disables:
 
-| Mechanism | Purpose |
-|-----------|---------|
-| `NOTE_C_LOW_MEM` | Shorter error strings, smaller allocation chunks (64 vs 128 bytes), disables user-agent and debug logging. Auto-detected on platforms where `float == double`. |
-| `PRODUCT_UID` | Compile-time `#define` convenience — passed to the Notecard at runtime via `hub.set`. |
-| [note-c-zero](https://github.com/blues/note-c-zero) | Separate variant that uses zero static read-write memory and no dynamic allocator. |
+| note-c `NOTE_C_LOW_MEM` change | Impact |
+|---|---|
+| Shorter error strings (`ERRSTR` macro) | Verbose messages replaced with short codes (`c_mem`, `c_err`). Saves ~200–400 bytes of `.rodata`. |
+| Disable CRC validation | Entire CRC system compiled out — no corruption detection or automatic retry. Saves ~500 bytes + 22 bytes per request. |
+| Disable user-agent | No device/compiler metadata sent with `hub.set`. Saves ~200 bytes code + 200–400 bytes per request payload. |
+| Smaller allocation chunks | 64 bytes instead of 128 bytes — less wasted slack per `malloc`. |
+| `float` instead of `double` | `JNUMBER` typedef changes. Saves 4 bytes per JSON number. Loses precision beyond ~7 significant digits. |
+| Disable debug logging | `NOTE_C_LOG_DEBUG` becomes a no-op. |
 
-note-cpp takes a different approach — memory control is structural rather than
-preprocessor-driven:
+note-c also has [note-c-zero](https://github.com/blues/note-c-zero),
+a separate variant that uses zero static read-write memory and no
+dynamic allocator.
 
-| Mechanism | Purpose |
-|-----------|---------|
-| `BufferJsonBackend<N, T>` | Fixed-size JSON build buffer and token array on the stack. No heap allocation in steady state. Template parameters control the sizes. |
-| `Allocator` / `StringPool` | Arena-backed string interning — response `string_view` fields survive transport buffer reuse without heap allocation. |
-| `ITransport` / `AbstractTransport` | Transport owns its own response buffer (reused across calls). No transport-level allocation after warmup. |
-| No `#define` guards | All features are always available. Unused code is eliminated by the linker's `--gc-sections` (enabled by default on Arduino/PlatformIO). Binary size is controlled by which endpoints you call, not by preprocessor flags. |
-| `json_number_t` (planned) | Auto-detects `float` vs `double` via `std::conditional_t<sizeof(float) == sizeof(double), float, double>` — same behavior as note-c's `NOTE_C_SINGLE_PRECISION`, no preprocessor needed. |
+note-cpp avoids most of these tradeoffs structurally — C++ mechanisms
+replace preprocessor-driven feature stripping:
 
-The `zero_alloc.cpp` example demonstrates all three zero-allocation patterns.
-On a typical ESP32 build, note-cpp's typed API adds negligible flash overhead
-compared to the equivalent note-c `JAdd*` / `JGet*` calls — the generated
-request builders are thin wrappers around the same JSON operations.
+| Concern | note-c approach | note-cpp approach |
+|---|---|---|
+| **Heap allocation** | `malloc`/`free` with configurable chunk size | `BufferJsonBackend<N, T>` — stack-allocated build buffer and token array. No heap allocation in steady state. |
+| **Response lifetime** | Caller must `deleteResponse` (leak risk) | `Allocator` / `StringPool` — arena-backed string interning. Response `string_view` fields survive transport reuse without heap allocation. |
+| **Transport buffers** | `malloc`'d buffer, freed after each call | `ITransport` — transport owns a reused `std::string` buffer. No allocation after warmup. |
+| **Error strings** | `ERRSTR(long, short)` macro | `string_view` literals — short by design, linker deduplicates. No long/short variants. |
+| **Float precision** | `#define NOTE_C_SINGLE_PRECISION` | `json_number_t` (planned) — `std::conditional_t<sizeof(float)==sizeof(double), float, double>`. Same auto-detection, no preprocessor. |
+| **Unused code** | `#ifdef` guards compile features out | `-ffunction-sections` + `--gc-sections` (default on Arduino/PlatformIO). Linker eliminates unreferenced code. |
+| **CRC validation** | Disabled entirely under `NOTE_C_LOW_MEM` | Always present in `AbstractTransport`. Could be made optional via template parameter if size is critical. |
+| **User-agent** | Disabled under `NOTE_C_LOW_MEM` | Planned — enabled by default, opt-out for constrained devices. |
+
+The `zero_alloc.cpp` example demonstrates all three zero-allocation patterns
+(stack buffers, arena interning, transport reuse).
 
 ## Migration checklist
 

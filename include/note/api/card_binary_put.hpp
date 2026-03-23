@@ -34,7 +34,7 @@ struct CardBinaryPut : note::BinarySendMixin {
     static constexpr string_view notecard_request = "card.binary.put";
     static constexpr bool supports_cmd = true;
     static constexpr Safety safety = Safety::NonIdempotent;
-    static constexpr Skus skus{ Rat::Cell | Rat::WiFi | Rat::Ntn };
+    static constexpr Skus skus = Skus::from(Product::Cell, Product::CellWifi, Product::Skylo, Product::WiFi);
 
     struct BinaryTransfer {
         static constexpr Direction direction = Direction::Send;

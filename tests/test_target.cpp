@@ -29,46 +29,62 @@ TEST_CASE("has_rat") {
 // Product values
 // ---------------------------------------------------------------------------
 
-TEST_CASE("Product enum values") {
+TEST_CASE("Product enum values are unique power-of-two bits") {
     REQUIRE(static_cast<uint8_t>(Product::Cell) == 1);
-    REQUIRE(static_cast<uint8_t>(Product::CellWifi) == 3);
     REQUIRE(static_cast<uint8_t>(Product::WiFi) == 2);
+    REQUIRE(static_cast<uint8_t>(Product::CellWifi) == 4);
     REQUIRE(static_cast<uint8_t>(Product::LoRa) == 8);
-    REQUIRE(static_cast<uint8_t>(Product::Skylo) == 7);
+    REQUIRE(static_cast<uint8_t>(Product::Skylo) == 16);
+}
+
+TEST_CASE("rats_of extracts RAT bitmask from Product") {
+    using U = uint8_t;
+    REQUIRE(static_cast<U>(rats_of(Product::Cell)) == static_cast<U>(Rat::Cell));
+    REQUIRE(static_cast<U>(rats_of(Product::WiFi)) == static_cast<U>(Rat::WiFi));
+    REQUIRE(static_cast<U>(rats_of(Product::CellWifi)) == static_cast<U>(Rat::Cell | Rat::WiFi));
+    REQUIRE(static_cast<U>(rats_of(Product::LoRa)) == static_cast<U>(Rat::LoRa));
+    REQUIRE(static_cast<U>(rats_of(Product::Skylo)) == static_cast<U>(Rat::Cell | Rat::WiFi | Rat::Ntn));
 }
 
 // ---------------------------------------------------------------------------
-// Product + Rat composition
-// ---------------------------------------------------------------------------
-
-TEST_CASE("Product + Rat composition") {
-    constexpr auto r = Product::Cell + Rat::Ntn;
-    REQUIRE(static_cast<uint8_t>(r) == (1 | 4)); // Cell | Ntn = 5
-}
-
-// ---------------------------------------------------------------------------
-// Skus::supports
+// Skus::supports — product-based matching
 // ---------------------------------------------------------------------------
 
 TEST_CASE("Skus: empty is universal") {
     constexpr Skus s{};
-    REQUIRE(s.supports(Rat::Cell));
-    REQUIRE(s.supports(Rat::LoRa));
-    REQUIRE(s.supports(Rat::WiFi));
+    REQUIRE(s.supports(Product::Cell));
+    REQUIRE(s.supports(Product::WiFi));
+    REQUIRE(s.supports(Product::CellWifi));
+    REQUIRE(s.supports(Product::LoRa));
+    REQUIRE(s.supports(Product::Skylo));
 }
 
-TEST_CASE("Skus: overlap matching") {
-    constexpr Skus s{Rat::Cell | Rat::WiFi};
-    REQUIRE(s.supports(Rat::Cell));
-    REQUIRE(s.supports(Rat::WiFi));
-    REQUIRE_FALSE(s.supports(Rat::LoRa));
-    REQUIRE_FALSE(s.supports(Rat::Ntn));
+TEST_CASE("Skus: WiFi-only (card.sleep)") {
+    constexpr auto s = Skus::from(Product::WiFi);
+    REQUIRE(s.supports(Product::WiFi));
+    REQUIRE_FALSE(s.supports(Product::CellWifi));  // has WiFi RAT, but different product
+    REQUIRE_FALSE(s.supports(Product::Cell));
+    REQUIRE_FALSE(s.supports(Product::LoRa));
+    REQUIRE_FALSE(s.supports(Product::Skylo));
 }
 
-TEST_CASE("Skus: composite target overlaps") {
-    constexpr Skus s{Rat::Cell | Rat::WiFi};
-    constexpr auto target_rats = Rat::Cell | Rat::Ntn;
-    REQUIRE(s.supports(target_rats)); // Cell overlaps
+TEST_CASE("Skus: multiple products (card.wifi)") {
+    // card.wifi supports WiFi, CellWifi, and Skylo
+    constexpr auto s = Skus::from(Product::WiFi, Product::CellWifi, Product::Skylo);
+    REQUIRE(s.supports(Product::WiFi));
+    REQUIRE(s.supports(Product::CellWifi));
+    REQUIRE(s.supports(Product::Skylo));
+    REQUIRE_FALSE(s.supports(Product::Cell));
+    REQUIRE_FALSE(s.supports(Product::LoRa));
+}
+
+TEST_CASE("Skus: most endpoints (all except LoRa)") {
+    constexpr auto s = Skus::from(Product::Cell, Product::CellWifi, Product::Skylo, Product::WiFi);
+    REQUIRE(s.supports(Product::Cell));
+    REQUIRE(s.supports(Product::CellWifi));
+    REQUIRE(s.supports(Product::Skylo));
+    REQUIRE(s.supports(Product::WiFi));
+    REQUIRE_FALSE(s.supports(Product::LoRa));
 }
 
 // ---------------------------------------------------------------------------
@@ -86,48 +102,57 @@ TEST_CASE("Firmware::as_int") {
 
 #if __cplusplus >= 202002L
 
-TEST_CASE("Target::supports delegates to Skus") {
-    using CellTarget = Target<Rat::Cell>;
-    constexpr Skus cell_wifi{Rat::Cell | Rat::WiFi};
-    constexpr Skus wifi_only{Rat::WiFi};
+TEST_CASE("Target::supports delegates to Skus with product identity") {
+    using WiFiTarget = Target<Product::WiFi>;
+    constexpr auto wifi_only = Skus::from(Product::WiFi);
+    constexpr auto multi = Skus::from(Product::Cell, Product::WiFi);
     constexpr Skus universal{};
 
-    REQUIRE(CellTarget::supports(cell_wifi));
-    REQUIRE_FALSE(CellTarget::supports(wifi_only));
-    REQUIRE(CellTarget::supports(universal));
+    REQUIRE(WiFiTarget::supports(wifi_only));
+    REQUIRE(WiFiTarget::supports(multi));
+    REQUIRE(WiFiTarget::supports(universal));
+}
+
+TEST_CASE("Target: CellWifi does NOT match WiFi-only endpoints") {
+    using CellWifiTarget = Target<Product::CellWifi>;
+    constexpr auto wifi_only = Skus::from(Product::WiFi);
+
+    REQUIRE_FALSE(CellWifiTarget::supports(wifi_only));
 }
 
 TEST_CASE("Target::as_strict") {
-    using T = Target<Rat::Cell>;
+    using T = Target<Product::Cell>;
     using S = decltype(T::as_strict());
     REQUIRE(S::strict);
-    REQUIRE(static_cast<uint8_t>(S::rats) == static_cast<uint8_t>(Rat::Cell));
+    REQUIRE(S::product == Product::Cell);
 }
 
 TEST_CASE("target<Product>() factory") {
     auto t = target<Product::Skylo>();
-    REQUIRE(static_cast<uint8_t>(decltype(t)::rats) == 7); // Cell|WiFi|Ntn
-}
-
-TEST_CASE("target<Rat>() factory") {
-    auto t = target<Rat::LoRa>();
-    REQUIRE(static_cast<uint8_t>(decltype(t)::rats) == 8);
+    REQUIRE(decltype(t)::product == Product::Skylo);
+    // Skylo RATs: Cell|WiFi|Ntn = 1|2|4 = 7
+    REQUIRE(static_cast<uint8_t>(decltype(t)::rats) ==
+            static_cast<uint8_t>(Rat::Cell | Rat::WiFi | Rat::Ntn));
 }
 
 // ---------------------------------------------------------------------------
 // Static assertions (compile-time verification)
 // ---------------------------------------------------------------------------
 
-static_assert(Target<Rat::Cell>::supports(Skus{Rat::Cell | Rat::WiFi}));
-static_assert(!Target<Rat::Cell>::supports(Skus{Rat::WiFi}));
-static_assert(Target<Rat::Cell>::supports(Skus{})); // universal
-static_assert(!Target<Rat::LoRa>::supports(Skus{Rat::Cell | Rat::WiFi | Rat::Ntn}));
-static_assert(Target<Rat::Cell | Rat::WiFi>::supports(Skus{Rat::WiFi}));
+// WiFi target supports WiFi-only endpoints
+static_assert(Target<Product::WiFi>::supports(Skus::from(Product::WiFi)));
+// CellWifi does NOT match WiFi-only (different product)
+static_assert(!Target<Product::CellWifi>::supports(Skus::from(Product::WiFi)));
+// CellWifi matches endpoints that list CellWifi
+static_assert(Target<Product::CellWifi>::supports(Skus::from(Product::WiFi, Product::CellWifi)));
+// Universal always matches
+static_assert(Target<Product::Cell>::supports(Skus{}));
+static_assert(Target<Product::LoRa>::supports(Skus{}));
 
 // Concepts
-static_assert(IsTarget<Target<Rat::Cell>>);
+static_assert(IsTarget<Target<Product::Cell>>);
 static_assert(!IsTarget<Unconstrained>);
 static_assert(IsUnconstrained<Unconstrained>);
-static_assert(!IsUnconstrained<Target<Rat::Cell>>);
+static_assert(!IsUnconstrained<Target<Product::Cell>>);
 
 #endif // C++20

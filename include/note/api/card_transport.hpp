@@ -31,7 +31,7 @@ struct CardTransport {
     static constexpr string_view notecard_request = "card.transport";
     static constexpr bool supports_cmd = true;
     static constexpr Safety safety = Safety::Idempotent;
-    static constexpr Skus skus{ Rat::Cell | Rat::WiFi | Rat::Ntn };
+    static constexpr Skus skus = Skus::from(Product::Cell, Product::CellWifi, Product::Skylo, Product::WiFi);
 
     Notecard* nc_ = nullptr;
 

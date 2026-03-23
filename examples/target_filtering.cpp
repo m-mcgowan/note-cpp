@@ -42,24 +42,22 @@ int main() {
     wifi_api.execute(wifi_api.card.wifi());    // OK: WiFi-specific endpoint
     wifi_api.execute(wifi_api.hub.set());      // OK: universal
 
-    // ─── 3. Custom target with RAT composition ──────────────────────────
-    // Notecard SKUs are defined by their Radio Access Technologies (RATs).
-    // You can compose custom targets for specialized hardware. Skylo, for
-    // example, supports both satellite (NTN) and WiFi RATs.
+    // ─── 3. Product-specific targets ────────────────────────────────────
+    // Each Notecard SKU is a distinct product with its own API surface.
+    // Skylo supports card.wifi (it has WiFi) but NOT card.sleep (WiFi v2 only).
 
-    constexpr auto skylo_rats = note::Product::Cell + note::Rat::Ntn;
     note::Api skylo_api(nc, note::target<note::Product::Skylo>());
-    skylo_api.execute(skylo_api.card.wifi());  // OK: Skylo has WiFi RAT
+    skylo_api.execute(skylo_api.card.wifi());  // OK: Skylo has WiFi
     skylo_api.execute(skylo_api.hub.set());    // OK: universal
+    // skylo_api.card.sleep();  // Would warn: card.sleep is WiFi v2 only
 
     // ─── 4. Compile-time SKU introspection ──────────────────────────────
-    // Every request type carries a static `skus` field listing which RATs
-    // it supports. You can query this at compile time.
+    // Every request type carries a static `skus` field listing which
+    // products support it. You can query this at compile time.
 
-    static_assert(note::api::CardSleep::skus.supports(note::Rat::WiFi));
-    static_assert(!note::api::CardSleep::skus.supports(note::Rat::LoRa));
-    static_assert(note::api::HubSet::skus.supports(note::Rat::LoRa)); // universal
-
-    (void)skylo_rats;
+    static_assert(note::api::CardSleep::skus.supports(note::Product::WiFi));
+    static_assert(!note::api::CardSleep::skus.supports(note::Product::CellWifi));
+    static_assert(!note::api::CardSleep::skus.supports(note::Product::LoRa));
+    static_assert(note::api::HubSet::skus.supports(note::Product::LoRa)); // universal
 #endif
 }

@@ -111,7 +111,7 @@ TEST_CASE("Strict mode — supported endpoints work at runtime") {
             return {};
         });
     auto nc = make_nc(backend, transport);
-    auto api = note::make_api(nc, note::Target<note::Rat::WiFi, true>{});
+    auto api = note::make_api(nc, note::Target<note::Product::WiFi, true>{});
 
     // card.sleep is WiFi-only — available on WiFi strict target
     api.execute(api.card.sleep());
@@ -163,7 +163,7 @@ TEST_CASE("Api(nc, target) — strict mode via constructor") {
             return {};
         });
     auto nc = make_nc(backend, transport);
-    note::Api api(nc, note::Target<note::Rat::WiFi, true>{});
+    note::Api api(nc, note::Target<note::Product::WiFi, true>{});
 
     api.execute(api.card.sleep());
     REQUIRE(last_req.find("card.sleep") != std::string::npos);

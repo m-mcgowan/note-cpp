@@ -226,12 +226,12 @@ _ACTION_VERBS: dict[str, str] = {
 }
 
 
-_SKU_RAT_MAP: dict[str, str] = {
-    "CELL": "Rat::Cell",
-    "WIFI": "Rat::WiFi",
-    "LORA": "Rat::LoRa",
-    "CELL+WIFI": "Rat::Cell | Rat::WiFi",
-    "SKYLO": "Rat::Cell | Rat::WiFi | Rat::Ntn",
+_SKU_PRODUCT_MAP: dict[str, str] = {
+    "CELL": "Product::Cell",
+    "WIFI": "Product::WiFi",
+    "LORA": "Product::LoRa",
+    "CELL+WIFI": "Product::CellWifi",
+    "SKYLO": "Product::Skylo",
 }
 
 
@@ -303,27 +303,23 @@ class OperationDef:
 
     @property
     def skus_rats_expr(self) -> str:
-        """C++ expression for the union of all SKU RATs, e.g. 'Rat::Cell | Rat::WiFi'.
+        """C++ expression for Skus::from(Product::...), e.g. 'Skus::from(Product::Cell, Product::WiFi)'.
 
-        Returns empty string if universal (no SKUs, or all RATs covered).
+        Returns empty string if universal (no SKUs, or all products covered).
         """
         if not self.skus:
             return ""
-        # Collect individual Rat bits from each SKU
-        bits: set[str] = set()
+        products: list[str] = []
         for sku in self.skus:
-            expr = _SKU_RAT_MAP.get(sku)
+            expr = _SKU_PRODUCT_MAP.get(sku)
             if expr:
-                for part in expr.split(" | "):
-                    bits.add(part)
-        if not bits:
+                products.append(expr)
+        if not products:
             return ""
-        # Stable ordering: Cell, WiFi, Ntn, LoRa
-        order = ["Rat::Cell", "Rat::WiFi", "Rat::Ntn", "Rat::LoRa"]
-        # If all RATs are covered, treat as universal
-        if all(b in bits for b in order):
+        # If all products are covered, treat as universal
+        if len(products) == len(_SKU_PRODUCT_MAP):
             return ""
-        return " | ".join(b for b in order if b in bits)
+        return "Skus::from(" + ", ".join(products) + ")"
 
 
 @dataclass
@@ -447,17 +443,16 @@ class EndpointGroup:
 
     @property
     def skus_rats_expr(self) -> str:
-        """Union of all operation SKU RATs for this endpoint group."""
-        bits: set[str] = set()
+        """Product support expression for this endpoint group.
+
+        Returns the expression from the first operation that has one,
+        since all operations in a group share the same SKU constraints.
+        """
         for op in self.operations:
             expr = op.skus_rats_expr
             if expr:
-                for part in expr.split(" | "):
-                    bits.add(part)
-        if not bits:
-            return ""
-        order = ["Rat::Cell", "Rat::WiFi", "Rat::Ntn", "Rat::LoRa"]
-        return " | ".join(b for b in order if b in bits)
+                return expr
+        return ""
 
 
 @dataclass

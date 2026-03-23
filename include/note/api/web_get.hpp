@@ -31,7 +31,7 @@ struct WebGet {
     static constexpr string_view notecard_request = "web.get";
     static constexpr bool supports_cmd = true;
     static constexpr Safety safety = Safety::ReadOnly;
-    static constexpr Skus skus{ Rat::Cell | Rat::WiFi | Rat::Ntn };
+    static constexpr Skus skus = Skus::from(Product::Cell, Product::CellWifi, Product::Skylo, Product::WiFi);
 
     struct BinaryBuffer {
         static constexpr Direction direction = Direction::Receive;

@@ -35,7 +35,7 @@ struct CardSleep {
     static constexpr string_view notecard_request = "card.sleep";
     static constexpr bool supports_cmd = true;
     static constexpr Safety safety = Safety::Idempotent;
-    static constexpr Skus skus{ Rat::WiFi };
+    static constexpr Skus skus = Skus::from(Product::WiFi);
 
     Notecard* nc_ = nullptr;
 

@@ -502,7 +502,7 @@ struct CardVoltage {
 #endif
 
     };
-    using Get = Read;  ///< @deprecated Use Read instead.
+    using Get = Read;  // legacy alias
 
     /// Provides the current VMODEM_P voltage level on the Notecard, and
     /// provides information about historical voltage trends. When used with the
@@ -983,7 +983,7 @@ struct CardVoltage {
 #endif
 
     };
-    using Set = Configure;  ///< @deprecated Use Configure instead.
+    using Set = Configure;  // legacy alias
 };
 
 #pragma GCC diagnostic push

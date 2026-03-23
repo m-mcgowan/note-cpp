@@ -697,7 +697,7 @@ struct {{ endpoint.struct_name }} {
 {% endif %}
     };
 {% if op.legacy_struct_name %}
-    using {{ op.legacy_struct_name }} = {{ op.struct_name }};  ///< @deprecated Use {{ op.struct_name }} instead.
+    using {{ op.legacy_struct_name }} = {{ op.struct_name }};  // legacy alias
 {% endif %}
 {% endfor %}
 };

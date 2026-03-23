@@ -198,7 +198,7 @@ struct EnvDefault {
 #endif
 
     };
-    using Delete = Remove;  ///< @deprecated Use Remove instead.
+    using Delete = Remove;  // legacy alias
 };
 
 #pragma GCC diagnostic push

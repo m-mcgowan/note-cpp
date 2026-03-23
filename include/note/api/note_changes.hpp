@@ -236,7 +236,7 @@ struct NoteChanges {
 #endif
 
     };
-    using Get = Peek;  ///< @deprecated Use Peek instead.
+    using Get = Peek;  // legacy alias
 
     /// Used to incrementally retrieve changes within a specific Notefile.
     ///
@@ -445,7 +445,7 @@ struct NoteChanges {
 #endif
 
     };
-    using Delete = Pop;  ///< @deprecated Use Pop instead.
+    using Delete = Pop;  // legacy alias
 };
 
 #pragma GCC diagnostic push

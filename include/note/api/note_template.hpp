@@ -394,7 +394,7 @@ struct NoteTemplate {
 #endif
 
     };
-    using Set = Define;  ///< @deprecated Use Define instead.
+    using Set = Define;  // legacy alias
 
     /// By using the `note.template` request with any `.qo`/`.qos` Notefile,
     /// developers can provide the Notecard with a schema of sorts to apply to
@@ -743,7 +743,7 @@ struct NoteTemplate {
 #endif
 
     };
-    using Delete = Remove;  ///< @deprecated Use Remove instead.
+    using Delete = Remove;  // legacy alias
 };
 
 #pragma GCC diagnostic push

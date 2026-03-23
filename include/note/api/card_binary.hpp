@@ -205,7 +205,7 @@ struct CardBinary {
 #endif
 
     };
-    using Get = Status;  ///< @deprecated Use Status instead.
+    using Get = Status;  // legacy alias
 
     /// View the status of the binary storage area of the Notecard and
     /// optionally clear any data and related `card.binary` variables. See the
@@ -376,7 +376,7 @@ struct CardBinary {
 #endif
 
     };
-    using Delete = Clear;  ///< @deprecated Use Clear instead.
+    using Delete = Clear;  // legacy alias
 };
 
 #pragma GCC diagnostic push

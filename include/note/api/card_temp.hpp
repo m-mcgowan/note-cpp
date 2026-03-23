@@ -266,7 +266,7 @@ struct CardTemp {
 #endif
 
     };
-    using Get = Read;  ///< @deprecated Use Read instead.
+    using Get = Read;  // legacy alias
 
     /// Get the current temperature from the Notecard's onboard calibrated
     /// temperature sensor.
@@ -509,7 +509,7 @@ struct CardTemp {
 #endif
 
     };
-    using Set = Configure;  ///< @deprecated Use Configure instead.
+    using Set = Configure;  // legacy alias
 
     /// Get the current temperature from the Notecard's onboard calibrated
     /// temperature sensor.
@@ -735,7 +735,7 @@ struct CardTemp {
 #endif
 
     };
-    using Delete = Stop;  ///< @deprecated Use Stop instead.
+    using Delete = Stop;  // legacy alias
 };
 
 #pragma GCC diagnostic push

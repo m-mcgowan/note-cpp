@@ -284,7 +284,7 @@ struct CardWirelessPenalty {
 #endif
 
     };
-    using Get = Check;  ///< @deprecated Use Check instead.
+    using Get = Check;  // legacy alias
 
     /// View the current state of a Notecard Penalty Box, manually remove the
     /// Notecard from a penalty box, or override penalty box defaults.
@@ -777,7 +777,7 @@ struct CardWirelessPenalty {
 #endif
 
     };
-    using Delete = Clear;  ///< @deprecated Use Clear instead.
+    using Delete = Clear;  // legacy alias
 };
 
 #pragma GCC diagnostic push

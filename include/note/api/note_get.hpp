@@ -230,7 +230,7 @@ struct NoteGet {
 #endif
 
     };
-    using Get = Read;  ///< @deprecated Use Read instead.
+    using Get = Read;  // legacy alias
 
     /// Retrieves a Note from a Notefile. The file must either be a DB Notefile
     /// or inbound queue file (see `file` argument below).
@@ -438,7 +438,7 @@ struct NoteGet {
 #endif
 
     };
-    using Delete = Pop;  ///< @deprecated Use Pop instead.
+    using Delete = Pop;  // legacy alias
 };
 
 #pragma GCC diagnostic push

@@ -186,7 +186,7 @@ struct CardPower {
 #endif
 
     };
-    using Get = Read;  ///< @deprecated Use Read instead.
+    using Get = Read;  // legacy alias
 
     /// The `card.power` API is used to configure a connected Mojo device or to
     /// manually request power consumption readings in firmware.
@@ -349,7 +349,7 @@ struct CardPower {
 #endif
 
     };
-    using Set = Configure;  ///< @deprecated Use Configure instead.
+    using Set = Configure;  // legacy alias
 
     /// The `card.power` API is used to configure a connected Mojo device or to
     /// manually request power consumption readings in firmware.
@@ -497,7 +497,7 @@ struct CardPower {
 #endif
 
     };
-    using Delete = Reset;  ///< @deprecated Use Reset instead.
+    using Delete = Reset;  // legacy alias
 };
 
 #pragma GCC diagnostic push

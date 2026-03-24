@@ -54,6 +54,9 @@ struct NoteTemplate {
 #if __cplusplus >= 202002L
             template<typename T> requires detail::BodySchema<T>
             NoteTemplate::Define& operator()(const T& v);
+#else
+            template<typename T, typename = std::enable_if_t<detail::is_body_schema<T>::value>>
+            NoteTemplate::Define& operator()(const T& v);
 #endif
         } body{};
         /// Set to `true` to delete all pending Notes using the template if one
@@ -425,6 +428,9 @@ struct NoteTemplate {
 #if __cplusplus >= 202002L
             template<typename T> requires detail::BodySchema<T>
             NoteTemplate::Remove& operator()(const T& v);
+#else
+            template<typename T, typename = std::enable_if_t<detail::is_body_schema<T>::value>>
+            NoteTemplate::Remove& operator()(const T& v);
 #endif
         } body{};
         /// The name of the Notefile to which the template will be applied.
@@ -761,6 +767,13 @@ inline NoteTemplate::Define& NoteTemplate::Define::body_t::operator()(const T& v
     return *reinterpret_cast<NoteTemplate::Define*>(
         reinterpret_cast<char*>(this) - offsetof(NoteTemplate::Define, body));
 }
+#else
+template<typename T, typename>
+inline NoteTemplate::Define& NoteTemplate::Define::body_t::operator()(const T& v) {
+    BodyValue::operator=(make_schema_body(v));
+    return *reinterpret_cast<NoteTemplate::Define*>(
+        reinterpret_cast<char*>(this) - offsetof(NoteTemplate::Define, body));
+}
 #endif
 inline NoteTemplate::Define& NoteTemplate::Define::delete_t::operator()(bool v) {
     Field<bool>::operator=(v);
@@ -803,6 +816,13 @@ inline NoteTemplate::Remove& NoteTemplate::Remove::body_t::operator()(BodyValue 
 }
 #if __cplusplus >= 202002L
 template<typename T> requires detail::BodySchema<T>
+inline NoteTemplate::Remove& NoteTemplate::Remove::body_t::operator()(const T& v) {
+    BodyValue::operator=(make_schema_body(v));
+    return *reinterpret_cast<NoteTemplate::Remove*>(
+        reinterpret_cast<char*>(this) - offsetof(NoteTemplate::Remove, body));
+}
+#else
+template<typename T, typename>
 inline NoteTemplate::Remove& NoteTemplate::Remove::body_t::operator()(const T& v) {
     BodyValue::operator=(make_schema_body(v));
     return *reinterpret_cast<NoteTemplate::Remove*>(

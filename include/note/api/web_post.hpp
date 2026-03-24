@@ -78,6 +78,9 @@ struct WebPost {
 #if __cplusplus >= 202002L
         template<typename T> requires detail::BodySchema<T>
         WebPost& operator()(const T& v);
+#else
+        template<typename T, typename = std::enable_if_t<detail::is_body_schema<T>::value>>
+        WebPost& operator()(const T& v);
 #endif
     } body{};
     /// The MIME type of the body or payload of the response. Default is
@@ -516,6 +519,13 @@ inline WebPost& WebPost::body_t::operator()(BodyValue v) {
 }
 #if __cplusplus >= 202002L
 template<typename T> requires detail::BodySchema<T>
+inline WebPost& WebPost::body_t::operator()(const T& v) {
+    BodyValue::operator=(make_schema_body(v));
+    return *reinterpret_cast<WebPost*>(
+        reinterpret_cast<char*>(this) - offsetof(WebPost, body));
+}
+#else
+template<typename T, typename>
 inline WebPost& WebPost::body_t::operator()(const T& v) {
     BodyValue::operator=(make_schema_body(v));
     return *reinterpret_cast<WebPost*>(

@@ -62,6 +62,9 @@ struct WebGet {
 #if __cplusplus >= 202002L
         template<typename T> requires detail::BodySchema<T>
         WebGet& operator()(const T& v);
+#else
+        template<typename T, typename = std::enable_if_t<detail::is_body_schema<T>::value>>
+        WebGet& operator()(const T& v);
 #endif
     } body{};
     /// The MIME type of the body or payload of the response. Default is
@@ -369,6 +372,13 @@ inline WebGet& WebGet::body_t::operator()(BodyValue v) {
 }
 #if __cplusplus >= 202002L
 template<typename T> requires detail::BodySchema<T>
+inline WebGet& WebGet::body_t::operator()(const T& v) {
+    BodyValue::operator=(make_schema_body(v));
+    return *reinterpret_cast<WebGet*>(
+        reinterpret_cast<char*>(this) - offsetof(WebGet, body));
+}
+#else
+template<typename T, typename>
 inline WebGet& WebGet::body_t::operator()(const T& v) {
     BodyValue::operator=(make_schema_body(v));
     return *reinterpret_cast<WebGet*>(

@@ -78,6 +78,9 @@ struct WebPut {
 #if __cplusplus >= 202002L
         template<typename T> requires detail::BodySchema<T>
         WebPut& operator()(const T& v);
+#else
+        template<typename T, typename = std::enable_if_t<detail::is_body_schema<T>::value>>
+        WebPut& operator()(const T& v);
 #endif
     } body{};
     /// The MIME type of the body or payload of the response. Default is
@@ -470,6 +473,13 @@ inline WebPut& WebPut::body_t::operator()(BodyValue v) {
 }
 #if __cplusplus >= 202002L
 template<typename T> requires detail::BodySchema<T>
+inline WebPut& WebPut::body_t::operator()(const T& v) {
+    BodyValue::operator=(make_schema_body(v));
+    return *reinterpret_cast<WebPut*>(
+        reinterpret_cast<char*>(this) - offsetof(WebPut, body));
+}
+#else
+template<typename T, typename>
 inline WebPut& WebPut::body_t::operator()(const T& v) {
     BodyValue::operator=(make_schema_body(v));
     return *reinterpret_cast<WebPut*>(

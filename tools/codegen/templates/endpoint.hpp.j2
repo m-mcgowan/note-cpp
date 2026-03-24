@@ -134,6 +134,9 @@ namespace note::api {
 #if __cplusplus >= 202002L
 {{ indent }}    template<typename T> requires detail::BodySchema<T>
 {{ indent }}    {{ parent_type }}& operator()(const T& v);
+#else
+{{ indent }}    template<typename T, typename = std::enable_if_t<detail::is_body_schema<T>::value>>
+{{ indent }}    {{ parent_type }}& operator()(const T& v);
 #endif
 {{ indent }}} {{ prop.accessor_name }}{};
 {% else %}
@@ -593,6 +596,13 @@ inline {{ parent_qual }}& {{ parent_qual }}::{{ prop.nested_type_name }}::operat
 }
 #if __cplusplus >= 202002L
 template<typename T> requires detail::BodySchema<T>
+inline {{ parent_qual }}& {{ parent_qual }}::{{ prop.nested_type_name }}::operator()(const T& v) {
+    BodyValue::operator=(make_schema_body(v));
+    return *reinterpret_cast<{{ parent_qual }}*>(
+        reinterpret_cast<char*>(this) - offsetof({{ parent_qual }}, {{ prop.accessor_name }}));
+}
+#else
+template<typename T, typename>
 inline {{ parent_qual }}& {{ parent_qual }}::{{ prop.nested_type_name }}::operator()(const T& v) {
     BodyValue::operator=(make_schema_body(v));
     return *reinterpret_cast<{{ parent_qual }}*>(

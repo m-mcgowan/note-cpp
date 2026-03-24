@@ -62,6 +62,9 @@ struct NoteAdd {
 #if __cplusplus >= 202002L
         template<typename T> requires detail::BodySchema<T>
         NoteAdd& operator()(const T& v);
+#else
+        template<typename T, typename = std::enable_if_t<detail::is_body_schema<T>::value>>
+        NoteAdd& operator()(const T& v);
 #endif
     } body{};
     /// The name of the Notefile.
@@ -433,6 +436,13 @@ inline NoteAdd& NoteAdd::body_t::operator()(BodyValue v) {
 }
 #if __cplusplus >= 202002L
 template<typename T> requires detail::BodySchema<T>
+inline NoteAdd& NoteAdd::body_t::operator()(const T& v) {
+    BodyValue::operator=(make_schema_body(v));
+    return *reinterpret_cast<NoteAdd*>(
+        reinterpret_cast<char*>(this) - offsetof(NoteAdd, body));
+}
+#else
+template<typename T, typename>
 inline NoteAdd& NoteAdd::body_t::operator()(const T& v) {
     BodyValue::operator=(make_schema_body(v));
     return *reinterpret_cast<NoteAdd*>(

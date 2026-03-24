@@ -51,6 +51,9 @@ struct EnvTemplate {
 #if __cplusplus >= 202002L
         template<typename T> requires detail::BodySchema<T>
         EnvTemplate& operator()(const T& v);
+#else
+        template<typename T, typename = std::enable_if_t<detail::is_body_schema<T>::value>>
+        EnvTemplate& operator()(const T& v);
 #endif
     } body{};
 
@@ -166,6 +169,13 @@ inline EnvTemplate& EnvTemplate::body_t::operator()(BodyValue v) {
 }
 #if __cplusplus >= 202002L
 template<typename T> requires detail::BodySchema<T>
+inline EnvTemplate& EnvTemplate::body_t::operator()(const T& v) {
+    BodyValue::operator=(make_schema_body(v));
+    return *reinterpret_cast<EnvTemplate*>(
+        reinterpret_cast<char*>(this) - offsetof(EnvTemplate, body));
+}
+#else
+template<typename T, typename>
 inline EnvTemplate& EnvTemplate::body_t::operator()(const T& v) {
     BodyValue::operator=(make_schema_body(v));
     return *reinterpret_cast<EnvTemplate*>(

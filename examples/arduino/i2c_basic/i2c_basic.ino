@@ -28,6 +28,7 @@ using namespace note::literals;
 struct Sensor {
     float   temperature;
     int32_t humidity;
+    NOTE_FIELDS(temperature, humidity)
 };
 
 // ── Notecard stack ─────────────────────────────────────────────────────────────

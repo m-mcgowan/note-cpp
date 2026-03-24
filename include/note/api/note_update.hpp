@@ -43,6 +43,9 @@ struct NoteUpdate {
 #if __cplusplus >= 202002L
         template<typename T> requires detail::BodySchema<T>
         NoteUpdate& operator()(const T& v);
+#else
+        template<typename T, typename = std::enable_if_t<detail::is_body_schema<T>::value>>
+        NoteUpdate& operator()(const T& v);
 #endif
     } body{};
     /// The name of the DB Notefile that contains the Note to update.
@@ -144,6 +147,13 @@ inline NoteUpdate& NoteUpdate::body_t::operator()(BodyValue v) {
 }
 #if __cplusplus >= 202002L
 template<typename T> requires detail::BodySchema<T>
+inline NoteUpdate& NoteUpdate::body_t::operator()(const T& v) {
+    BodyValue::operator=(make_schema_body(v));
+    return *reinterpret_cast<NoteUpdate*>(
+        reinterpret_cast<char*>(this) - offsetof(NoteUpdate, body));
+}
+#else
+template<typename T, typename>
 inline NoteUpdate& NoteUpdate::body_t::operator()(const T& v) {
     BodyValue::operator=(make_schema_body(v));
     return *reinterpret_cast<NoteUpdate*>(

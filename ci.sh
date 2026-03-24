@@ -636,38 +636,22 @@ run_quick() {
             --test-dir "$ROOT/tests"
     fi
 
-    # Build and run unit tests
-    ci_stage "Unit tests"
-    $CXX $CXXFLAGS $INCLUDE -I "$ROOT/tests" -o /tmp/note-cpp-tests \
-        "$ROOT/tests/test_main.cpp" \
-        "$ROOT/tests/test_wire_format.cpp" \
-        "$ROOT/tests/test_samples.cpp" \
-        "$ROOT/tests/test_body.cpp" \
-        "$ROOT/tests/test_json_buf.cpp" \
-        "$ROOT/tests/test_property_functor.cpp" \
-        "$ROOT/tests/test_transport_crc32.cpp" \
-        "$ROOT/tests/test_transport_serial.cpp" \
-        "$ROOT/tests/test_transport_i2c.cpp" \
-        "$ROOT/tests/test_notecard.cpp" \
-        "$ROOT/tests/test_api_context.cpp" \
-        "$ROOT/tests/test_endpoint_coverage.cpp" \
-        "$ROOT/tests/test_voltage_variable.cpp" \
-        "$ROOT/tests/test_flag_set.cpp" \
-        "$ROOT/tests/test_json_sax.cpp" \
-        "$ROOT/tests/test_channel.cpp" \
-        "$ROOT/tests/test_state_store.cpp" \
-        "$ROOT/tests/test_target.cpp" \
-        "$ROOT/tests/test_make_api.cpp" \
-        "$ROOT/tests/test_units.cpp" \
-        "$ROOT/tests/test_connection.cpp" \
-        "$ROOT/tests/test_sync.cpp" \
-        "$ROOT/tests/test_templates.cpp" \
-        "$ROOT/tests/test_attention.cpp" \
-        "$ROOT/tests/test_setup.cpp" \
-        "$ROOT/tests/test_cobs.cpp" \
-        "$ROOT/tests/test_arduino_printable.cpp"
-    /tmp/note-cpp-tests
-    echo "  tests: OK"
+    # Build and run unit tests via CMake (parallel, proper TU separation)
+    ci_stage "Build tests"
+    local BUILD_DIR="/tmp/note-cpp-build"
+    local GENERATOR="Unix Makefiles"
+    command -v ninja >/dev/null 2>&1 && GENERATOR="Ninja"
+    cmake -G "$GENERATOR" -B "$BUILD_DIR" -S "$ROOT" \
+        -DCMAKE_CXX_COMPILER="$CXX" \
+        -DCMAKE_CXX_STANDARD=20 \
+        > /dev/null 2>&1
+    cmake --build "$BUILD_DIR" --parallel
+
+    ci_stage "Run tests"
+    "$BUILD_DIR/tests/note-cpp-tests"
+    echo "  host tests: OK"
+    "$BUILD_DIR/tests/note-cpp-tests-arduino"
+    echo "  arduino tests: OK"
 
     ci_stage "Done"
     printf "\nQuick check passed in %ds.\n\n" $(( $(date +%s) - _ci_run_start ))

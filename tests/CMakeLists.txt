@@ -9,20 +9,19 @@ add_compile_options(-Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wnon-virtual
 set(NOTE_CPP_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/..")
 include_directories(${NOTE_CPP_ROOT}/include ${CMAKE_CURRENT_SOURCE_DIR})
 
-# Curated source lists (filenames only — all in this directory)
+# Curated source lists
 include(${NOTE_CPP_ROOT}/cmake/note-cpp-sources.cmake)
 include(${NOTE_CPP_ROOT}/cmake/note-cpp-generated.cmake)
 
-# Remove arduino_printable from the main test list — it defines ARDUINO
-# globally which causes ODR violations when linked with non-ARDUINO TUs.
-list(REMOVE_ITEM NOTE_CPP_TEST_SOURCES test_arduino_printable.cpp)
+set(ALL_TEST_SOURCES ${NOTE_CPP_TEST_SOURCES} ${NOTE_CPP_GENERATED_TEST_SOURCES})
 
-add_executable(note-cpp-tests
-    ${NOTE_CPP_TEST_SOURCES}
-    ${NOTE_CPP_GENERATED_TEST_SOURCES}
-)
-
-# Arduino Printable tests run in a separate binary (defines ARDUINO)
-add_executable(note-cpp-tests-arduino test_main.cpp test_arduino_printable.cpp)
-add_test(NAME arduino-printable COMMAND note-cpp-tests-arduino)
+# Non-Arduino build (default host environment)
+add_executable(note-cpp-tests ${ALL_TEST_SOURCES})
 add_test(NAME unit-tests COMMAND note-cpp-tests)
+
+# Arduino build (same sources, ARDUINO defined globally like a real Arduino toolchain).
+# Force-include the stubs header so Print/Printable are defined before any note-cpp header.
+add_executable(note-cpp-tests-arduino ${ALL_TEST_SOURCES})
+target_compile_definitions(note-cpp-tests-arduino PRIVATE ARDUINO=10812 NOTE_ARDUINO_STUBS)
+target_compile_options(note-cpp-tests-arduino PRIVATE -include ${CMAKE_CURRENT_SOURCE_DIR}/arduino_stubs.hpp)
+add_test(NAME unit-tests-arduino COMMAND note-cpp-tests-arduino)

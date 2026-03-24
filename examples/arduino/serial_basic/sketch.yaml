@@ -1,0 +1,7 @@
+default_fqbn: esp32:esp32:esp32s3:CDCOnBoot=cdc
+default_port: ""
+profiles:
+  mpcb:
+    fqbn: esp32:esp32:esp32s3:CDCOnBoot=cdc
+    platforms:
+      - platform: esp32:esp32 (3.1.0-RC3)

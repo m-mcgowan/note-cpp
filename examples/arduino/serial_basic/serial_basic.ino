@@ -43,6 +43,8 @@ note::Api                     api(notecard);
 
 void setup() {
     Serial.begin(115200);
+    while (!Serial && millis() < 10000) delay(10);  // wait for USB CDC
+    Serial.println("[note-cpp] serial_basic starting");
 
     // hub.set is idempotent — safe to call on every boot.
     if (auto r = api.hub.set()
@@ -53,6 +55,8 @@ void setup() {
         !r) {
         Serial.print("[error] hub.set: ");
         Serial.println(r.error().message.data());
+    } else {
+        Serial.println("[ok] hub.set");
     }
 }
 
@@ -66,6 +70,8 @@ void loop() {
         !r) {
         Serial.print("[error] note.add: ");
         Serial.println(r.error().message.data());
+    } else {
+        Serial.println("[ok] note.add");
     }
 
     delay(60'000);

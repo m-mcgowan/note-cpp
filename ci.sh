@@ -613,26 +613,27 @@ run_docs() {
 run_quick() {
     local CXX="${1:-${CXX:-c++}}"
     local CXXFLAGS="${2:-${CXXFLAGS:--std=c++2b}} -Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wnon-virtual-dtor -Werror"
-    local INCLUDE="-I $ROOT/include"
+    local INCLUDE="-I $ROOT/include -I $ROOT/tests"
+    local _ci_run_start
+    _ci_run_start=$(date +%s)
+    _ci_stage_start=0
 
     echo "════════════════════════════════════════════════════════════════"
     echo "Quick check: codegen + unit tests"
     echo "Compiler: $($CXX --version | head -1)"
     echo "════════════════════════════════════════════════════════════════"
-    echo
 
     # Code generation
+    ci_stage "Code generation"
     PYTHON=python3
     if [ -f "$ROOT/.venv/bin/python3" ]; then
         PYTHON="$ROOT/.venv/bin/python3"
     fi
     if command -v "$PYTHON" >/dev/null 2>&1; then
-        echo "=== Code generation ==="
         "$PYTHON" "$ROOT/tools/codegen/generate.py" "$ROOT/notecard-api.openapi.json" \
             -o "$ROOT/include/note/api" \
             --api "$ROOT/include/note/api.hpp" \
             --test-dir "$ROOT/tests"
-        echo
     fi
 
     # Build and run unit tests
@@ -662,12 +663,14 @@ run_quick() {
         "$ROOT/tests/test_sync.cpp" \
         "$ROOT/tests/test_templates.cpp" \
         "$ROOT/tests/test_attention.cpp" \
-        "$ROOT/tests/test_setup.cpp"
+        "$ROOT/tests/test_setup.cpp" \
+        "$ROOT/tests/test_cobs.cpp" \
+        "$ROOT/tests/test_arduino_printable.cpp"
     /tmp/note-cpp-tests
     echo "  tests: OK"
-    echo
-    echo "Quick check passed."
-    echo
+
+    ci_stage "Done"
+    printf "\nQuick check passed in %ds.\n\n" $(( $(date +%s) - _ci_run_start ))
 }
 
 run_integrations() {
@@ -688,18 +691,28 @@ run_integrations() {
     echo "All integration tests passed."
 }
 
+# Log every run
+CI_LOG="$ROOT/ci.log"
+
+run_and_log() {
+    "$@" 2>&1 | tee "$CI_LOG"
+    local rc=${PIPESTATUS[0]}
+    echo "Log saved to $CI_LOG"
+    return $rc
+}
+
 case "${1:-}" in
     --full)
-        run_ci "${CXX:-c++}" "${CXXFLAGS:--std=c++2b}"
+        run_and_log run_ci "${CXX:-c++}" "${CXXFLAGS:--std=c++2b}"
         ;;
     --coverage)
-        run_coverage
+        run_and_log run_coverage
         ;;
     --docs)
-        run_docs
+        run_and_log run_docs
         ;;
     --integrations)
-        run_integrations
+        run_and_log run_integrations
         ;;
     --all-compilers)
         echo "Discovering compilers..."
@@ -708,7 +721,7 @@ case "${1:-}" in
             cxx="${entry%%:*}"
             flags="${entry#*:}"
             run_ci "$cxx" "$flags" || FAILED=1
-        done < <(discover_compilers)
+        done < <(discover_compilers) 2>&1 | tee "$CI_LOG"
         if [ "$FAILED" -ne 0 ]; then
             echo "SOME COMPILERS FAILED"
             exit 1
@@ -716,6 +729,6 @@ case "${1:-}" in
         echo "All compilers passed."
         ;;
     *)
-        run_quick "${CXX:-c++}" "${CXXFLAGS:--std=c++2b}"
+        run_and_log run_quick "${CXX:-c++}" "${CXXFLAGS:--std=c++2b}"
         ;;
 esac

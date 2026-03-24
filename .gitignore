@@ -6,3 +6,4 @@ coverage/
 docs/html/
 tests/integration/firmware/boards.sh
 
+ci.log

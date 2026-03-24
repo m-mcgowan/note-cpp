@@ -1,8 +1,8 @@
 /// @file test_serial.cpp
 /// Integration tests exercising the Notecard over serial UART.
 ///
-/// Compiled only when NOTECARD_SERIAL_RX and NOTECARD_SERIAL_TX are defined
-/// (i.e. when building with the `serial` or `both` PlatformIO environment).
+/// Compiled only when RX1 and TX1 are defined (i.e. when building
+/// with the `serial` or `both` PlatformIO environment).
 
 #include "../include/hal_serial.hpp"
 #ifdef NOTECARD_TEST_SERIAL
@@ -18,21 +18,13 @@
 #include "../include/cobs.hpp"  // cobs_encoded_size (legacy, used for verification)
 #include "../include/md5.hpp"
 
-// UART1 for Notecard (UART0 is the USB console).
-// Must NOT be a file-scope static: HardwareSerial's constructor creates FreeRTOS
-// primitives, but global constructors run before the scheduler is ready.
-static HardwareSerial& notecardUart() {
-    static HardwareSerial uart(1);
-    return uart;
-}
-
 namespace {
 
 using SerialTransport = note::transport::NotecardSerial<>;
 using Api = note::Api<>;
 
 struct Fixture {
-    Esp32SerialHal hal{notecardUart()};
+    SerialHal hal{notecardUart()};
     SerialTransport transport{hal};
     note::backends::CjsonBackend backend;
     note::Notecard notecard{backend, transport};

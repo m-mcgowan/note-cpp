@@ -6,15 +6,15 @@ current environment's build_flags are overridden — env vars do not add new pin
 This means `pio test -e i2c` stays I2C-only even if serial env vars are set.
 
 Recognized variables:
-    NOTECARD_SERIAL_RX, NOTECARD_SERIAL_TX
+    RX1, TX1                (Arduino serial pin defines)
     NOTECARD_I2C_SDA, NOTECARD_I2C_SCL
 """
 Import("env")
 import os
 
 PIN_VARS = [
-    "NOTECARD_SERIAL_RX",
-    "NOTECARD_SERIAL_TX",
+    "RX1",
+    "TX1",
     "NOTECARD_I2C_SDA",
     "NOTECARD_I2C_SCL",
 ]

@@ -7,7 +7,7 @@
 #include "../include/hal_i2c.hpp"
 
 #if !defined(NOTECARD_TEST_SERIAL) && !defined(NOTECARD_TEST_I2C)
-#error "No Notecard interface configured. Define NOTECARD_SERIAL_RX/TX for serial and/or NOTECARD_I2C_SDA/SCL for I2C."
+#error "No Notecard interface configured. Define RX1/TX1 for serial and/or NOTECARD_I2C_SDA/SCL for I2C."
 #endif
 
 void setup() {
@@ -17,7 +17,7 @@ void setup() {
 
     Serial.println("=== note-cpp integration tests ===");
 #ifdef NOTECARD_TEST_SERIAL
-    Serial.printf("  Serial: RX=%d TX=%d\n", NOTECARD_SERIAL_RX, NOTECARD_SERIAL_TX);
+    Serial.printf("  Serial: RX=%d TX=%d\n", (int)RX1, (int)TX1);
 #else
     Serial.println("  Serial: not configured");
 #endif

@@ -238,8 +238,7 @@ template<typename T,
 BodyValue make_schema_body(const T& obj) {
     return BodyValue(
         static_cast<const void*>(&obj),
-        string_view{},
-        [](const void* ctx, string_view, JsonBuilder& b) {
+        +[](const void* ctx, string_view, JsonBuilder& b) {
             b.begin_object("body");
             T::_note_fields_write(*static_cast<const T*>(ctx), b);
             b.end_object();

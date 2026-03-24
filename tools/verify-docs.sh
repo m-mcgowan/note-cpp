@@ -6,7 +6,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 
 # Verify embedded code snippets (embedme)
-READMES=$(find "$ROOT/examples" -name 'README.md' 2>/dev/null || true)
+READMES=$(find "$ROOT/examples" -name 'README.md' -not -path '*/.pio/*' 2>/dev/null || true)
 MIGRATION="$ROOT/docs/migration-from-note-arduino.md"
 if [ -f "$MIGRATION" ]; then
     READMES="$READMES $MIGRATION"

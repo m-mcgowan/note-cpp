@@ -8,6 +8,9 @@
 
 #include "span.hpp"
 
+#include <type_traits>
+#include <utility>
+
 namespace note {
 
 /// Mixin for binary send requests (card.binary.put).

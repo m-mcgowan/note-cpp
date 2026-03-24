@@ -14,11 +14,11 @@ add the `NOTE_FIELDS` macro.
 ```cpp
 // main.cpp#L74-L78
 
-struct Readings {
-    float temperature;
-    int16_t humidity;
-    NOTE_FIELDS(temperature, humidity)
-};
+std::puts("\n--- Builder body ---");
+api.note.add()
+    .file("sensors.qo")
+    .body(note::body([](note::JsonBuilder& b) {
+        b.add("temp", 22.5);
 ```
 
 ## 1. Ad-hoc note.add
@@ -29,10 +29,10 @@ needed, just `notecard.hpp`.
 ```cpp
 // main.cpp#L97-L100
 
-nc.request("note.add", [](note::JsonBuilder& b) {
-    b.add("file", "sensors.qo");
-    b.add("body", R"({"temp":22.5,"humidity":60})");
-});
+}
+
+
+// ═════════════════════════════════════════════════════════════════════════
 ```
 
 ## 2. Builder body
@@ -43,13 +43,13 @@ the `"req"` and `"file"` fields; you just provide the body content.
 ```cpp
 // main.cpp#L108-L114
 
-api.note.add()
-    .file("sensors.qo")
-    .body(note::body([](note::JsonBuilder& b) {
-        b.add("temp", 22.5);
-        b.add("humidity", int32_t{60});
-    }))
-    .execute();
+
+
+// ═════════════════════════════════════════════════════════════════════════
+// 5. Template + send — the production pattern
+//
+// Without a template, the Notecard stores each note as a JSON string.
+// With a template, it knows the shape of your data upfront and stores
 ```
 
 ## 3. Typed body struct (recommended)
@@ -60,8 +60,8 @@ reflection.
 ```cpp
 // main.cpp#L123-L124
 
-Readings r{.temperature = 22.5f, .humidity = 60};
-api.note.add().file("sensors.qo").body(r).execute();
+// generates type hints from your struct's field types:
+//   float    → 14.1 (TFLOAT32)
 ```
 
 ## 4. Template registration
@@ -72,10 +72,10 @@ auto-generates the type hints (`14.1` = TFLOAT32, `11` = TINT16).
 ```cpp
 // main.cpp#L133-L136
 
+}
 
 
-
-
+// ═════════════════════════════════════════════════════════════════════════
 ```
 
 ## 5. Template + send (the production pattern)
@@ -86,15 +86,15 @@ them at a fraction of the size.
 ```cpp
 // main.cpp#L145-L153
 
+        (void)data.temperature;
+        (void)data.humidity;
+    }
+}
 
 
-
-
-
-
-
-
-
+// ═════════════════════════════════════════════════════════════════════════
+// 7. Command (fire-and-forget) — sends "cmd" instead of "req"
+// ═════════════════════════════════════════════════════════════════════════
 ```
 
 ## 6. Receive and parse
@@ -104,12 +104,12 @@ Read a note and parse the body back into your struct with `bodyAs<T>()`.
 ```cpp
 // main.cpp#L163-L168
 
+// 8. Compile-time JSON — zero-allocation constexpr buffer
+// ═════════════════════════════════════════════════════════════════════════
 
-
-
-
-
-
+std::puts("\n--- Compile-time JSON ---");
+{
+    constexpr auto json = note::json<[](auto& b) {
 ```
 
 ## 7. Fire-and-forget command
@@ -120,8 +120,8 @@ a round-trip.
 ```cpp
 // main.cpp#L178-L179
 
-
-
+static_assert(json.view() ==
+    R"({"req":"note.add","file":"sensors.qo","body":{"temp":22.5,"humidity":60}})");
 ```
 
 ## 8. Compile-time JSON
@@ -133,16 +133,5 @@ well-formed.
 ```cpp
 // main.cpp#L189-L200
 
-    b.add("file", "sensors.qo");
-    b.begin_object("body");
-        b.add("temp", 22.5);
-        b.add("humidity", 60);
-    b.end_object();
-    b.close();
-}>();
 
-static_assert(json.view() ==
-    R"({"req":"note.add","file":"sensors.qo","body":{"temp":22.5,"humidity":60}})");
-
-std::printf("  >> %.*s\n", (int)json.size(), json.data());
 ```

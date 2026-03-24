@@ -111,39 +111,42 @@ public:
 };
 #else
 class NotecardApi : private detail::NcOwner, public Api {
+    // Resolve ambiguous nc_ (NcOwner::nc_ vs Api::nc_).
+    Notecard& nc() { return detail::NcOwner::nc_; }
+
 public:
     NotecardApi()
         : detail::NcOwner()
-        , Api(nc_) {}
+        , Api(detail::NcOwner::nc_) {}
 
     explicit NotecardApi(ITransport& transport)
         : detail::NcOwner(transport)
-        , Api(nc_) {}
+        , Api(detail::NcOwner::nc_) {}
 
     NotecardApi(JsonBackend& backend, ITransport& transport)
         : detail::NcOwner(backend, transport)
-        , Api(nc_) {}
+        , Api(detail::NcOwner::nc_) {}
 
     void begin(ITransport& transport) {
-        nc_ = Notecard(default_backend_, transport);
+        detail::NcOwner::nc_ = Notecard(default_backend_, transport);
     }
 
-    Notecard& notecard() { return nc_; }
+    Notecard& notecard() { return nc(); }
 
     Result<void> binaryStore(const uint8_t* data, size_t len, uint32_t offset = 0) {
-        return binary_store_transmit(nc_, data, len, offset);
+        return binary_store_transmit(nc(), data, len, offset);
     }
     Result<void> binaryStore(const_byte_span data, uint32_t offset = 0) {
-        return binary_store_transmit(nc_, data.data(), data.size(), offset);
+        return binary_store_transmit(nc(), data.data(), data.size(), offset);
     }
     Result<void> binaryReceive(uint8_t* buf, size_t len, size_t* decoded = nullptr, uint32_t offset = 0) {
-        return binary_store_receive(nc_, buf, len, decoded, offset);
+        return binary_store_receive(nc(), buf, len, decoded, offset);
     }
     Result<void> binaryReceive(byte_span dst, size_t* decoded = nullptr, uint32_t offset = 0) {
-        return binary_store_receive(nc_, dst.data(), dst.size(), decoded, offset);
+        return binary_store_receive(nc(), dst.data(), dst.size(), decoded, offset);
     }
     Result<void> binaryReset() {
-        return binary_store_reset(nc_);
+        return binary_store_reset(nc());
     }
 };
 #endif

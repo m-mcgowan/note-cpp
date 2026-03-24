@@ -430,14 +430,14 @@ nc.card.temp().configure()
 ```c
 // ../examples/migration_notec.cpp#L141-L148
 
+nc.sendRequest(req);
+}
+
+// ── card.version ────────────────────────────────────────────────────────
+void card_version() {
 J *rsp = nc.requestAndResponse(
     nc.newRequest("card.version"));
 if (rsp != NULL) {
-    char *ver = JGetString(rsp, "version");
-    char *dev = JGetString(rsp, "device");
-    Serial.println(ver);
-    nc.deleteResponse(rsp);
-}
 ```
 
 </td><td>
@@ -473,17 +473,17 @@ if (r) {
 ```c
 // ../examples/migration_notec.cpp#L153-L164
 
+    nc.deleteResponse(rsp);
+}
+}
+
+// ── card.attn ───────────────────────────────────────────────────────────
+void card_attn() {
 // Arm for connectivity + motion triggers
 J *req = nc.newRequest("card.attn");
 JAddStringToObject(req, "mode",
     "arm,connected,motion");
 JAddNumberToObject(req, "seconds", 120);
-nc.sendRequest(req);
-
-// Disarm
-req = nc.newRequest("card.attn");
-JAddStringToObject(req, "mode",
-    "disarm,-all");
 nc.sendRequest(req);
 ```
 
@@ -735,6 +735,7 @@ Notecard documentation describes. The request name maps directly to a
 method:
 
 ```cpp
+// Wire name shown in comment:
 nc.card.version().execute();     // card.version
 nc.card.status().execute();      // card.status
 nc.hub.sync().execute();         // hub.sync
@@ -904,18 +905,18 @@ maps directly to code.
 ```c
 // ../examples/migration_notec.cpp#L212-L223
 
+JAddStringToObject(req2, "text", "60");
+nc.sendRequest(req2);
+}
+
+// ── error handling ──────────────────────────────────────────────────────
+void error_handling() {
 J *rsp = nc.requestAndResponse(
     nc.newRequest("card.version"));
 if (rsp == NULL) {
     Serial.println("no response");
 } else if (nc.responseError(rsp)) {
     char *err = JGetString(rsp, "err");
-    Serial.println(err);
-    nc.deleteResponse(rsp);
-} else {
-    // use response...
-    nc.deleteResponse(rsp);
-}
 ```
 
 </td><td>
@@ -989,15 +990,15 @@ requests are safe to retry, and currently note-c retries all requests.
 ```c
 // ../examples/migration_notec.cpp#L228-L231
 
-// newCommand sends "cmd" not "req"
-J *req = nc.newCommand("hub.sync");
-nc.sendRequest(req);
+    nc.deleteResponse(rsp);
+}
+}
 ```
 
 </td><td>
 
 ```cpp
-// ../examples/arduino-migration/src/main.cpp#L199
+// ../examples/arduino-migration/src/main.cpp#L199-L199
 
 nc.hub.sync().command();
 

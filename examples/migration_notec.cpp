@@ -149,6 +149,7 @@ if (rsp != NULL) {
     char *ver = JGetString(rsp, "version");
     char *dev = JGetString(rsp, "device");
     Serial.println(ver);
+    Serial.println(dev);
     nc.deleteResponse(rsp);
 }
 }
@@ -180,9 +181,9 @@ nc.sendRequest(req);
 // Enter deep sleep...
 
 // On wake — retrieve saved state
-{ J *req = nc.newRequest("card.attn");
-JAddBoolToObject(req, "start", true);
-J *rsp = nc.requestAndResponse(req);
+{ J *wake = nc.newRequest("card.attn");
+JAddBoolToObject(wake, "start", true);
+J *rsp = nc.requestAndResponse(wake);
 if (rsp != NULL) {
     char *payload = JGetString(rsp, "payload");
     if (payload && payload[0]) {
@@ -201,7 +202,7 @@ JAddStringToObject(req, "name", "interval");
 J *rsp = nc.requestAndResponse(req);
 if (rsp != NULL) {
     char *text = JGetString(rsp, "text");
-    int interval = atoi(text);
+    (void)atoi(text);  // use the value
     nc.deleteResponse(rsp);
 }
 

@@ -11,7 +11,11 @@
 
 #ifdef ARDUINO
 
+// NOTE_ARDUINO_STUBS: test environments provide their own Print/Printable
+// stubs and define this before including note headers.
+#ifndef NOTE_ARDUINO_STUBS
 #include <Arduino.h>
+#endif
 
 // Arduino defines these as macros, breaking std::min, std::max, etc.
 #undef min

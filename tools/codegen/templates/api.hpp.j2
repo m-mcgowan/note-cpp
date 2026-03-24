@@ -54,15 +54,53 @@ public:
     // Polymorphic factory structs (used by resource group methods)
     // =====================================================================
 
-{# Forward-declare all factory structs so parent factories can reference children #}
+{# Emit child factories before parent factories so member types are complete. #}
+{# First pass: factories without children (leaf factories). #}
 {% for endpoint in endpoints %}
-{% if endpoint.needs_factory %}
-    struct {{ endpoint.struct_name }}Factory;
+{% if endpoint.needs_factory and not endpoint.has_children %}
+    struct {{ endpoint.struct_name }}Factory {
+        Notecard* nc_;
+        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
+{% if endpoint.is_polymorphic %}
+{% for op in endpoint.operations %}
+{% if op.description %}
+{{ op.description | doc_comment("        ") }}
+{% endif %}
+{% if op.required_properties %}
+        auto {{ op.factory_method }}({{ required_params(op) }}) {
+            auto r = create<api::{{ endpoint.struct_name }}::{{ op.struct_name }}>();
+{% for prop in op.required_properties %}
+            r.{{ prop.accessor_name }} = {{ prop.accessor_name }}_arg;
+{% endfor %}
+            return r;
+        }
+{% else %}
+        auto {{ op.factory_method }}() { return create<api::{{ endpoint.struct_name }}::{{ op.struct_name }}>(); }
+{% endif %}
+{% endfor %}
+{% elif not endpoint.is_polymorphic %}
+{# Non-polymorphic parent: callable to create its own request type #}
+        /// {{ endpoint.wire_name }}
+        auto operator()() { return create<api::{{ endpoint.struct_name }}>(); }
+{% endif %}
+{% for child in endpoint.children %}
+{% if child.is_polymorphic %}
+{# Child is polymorphic: nested sub-factory as member #}
+        {{ child.struct_name }}Factory {{ child.child_method }}{nc_};
+{% else %}
+        /// {{ child.wire_name }}
+        auto {{ child.child_method }}() { return create<api::{{ child.struct_name }}>(); }
+{% endif %}
+{% endfor %}
+    };
+
 {% endif %}
 {% endfor %}
 
+{# Second pass: factories with children (parent factories). #}
+{# Child factories are already defined above, so member types are complete. #}
 {% for endpoint in endpoints %}
-{% if endpoint.needs_factory %}
+{% if endpoint.needs_factory and endpoint.has_children %}
     struct {{ endpoint.struct_name }}Factory {
         Notecard* nc_;
         template<typename T> T create() { T r; r.nc_ = nc_; return r; }

@@ -134,25 +134,6 @@ public:
     // Polymorphic factory structs (used by resource group methods)
     // =====================================================================
 
-    struct CardAttnFactory;
-    struct CardAuxFactory;
-    struct CardBinaryFactory;
-    struct CardContactFactory;
-    struct CardLocationFactory;
-    struct CardLocationModeFactory;
-    struct CardMotionFactory;
-    struct CardPowerFactory;
-    struct CardTempFactory;
-    struct CardVoltageFactory;
-    struct CardWirelessFactory;
-    struct CardWirelessPenaltyFactory;
-    struct EnvDefaultFactory;
-    struct FileChangesFactory;
-    struct HubSyncFactory;
-    struct NoteChangesFactory;
-    struct NoteGetFactory;
-    struct NoteTemplateFactory;
-
     struct CardAttnFactory {
         Notecard* nc_;
         template<typename T> T create() { T r; r.nc_ = nc_; return r; }
@@ -175,34 +156,6 @@ public:
         auto query() { return create<api::CardAttn::Query>(); }
     };
 
-    struct CardAuxFactory {
-        Notecard* nc_;
-        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
-        /// card.aux
-        auto operator()() { return create<api::CardAux>(); }
-        /// card.aux.serial
-        auto serial() { return create<api::CardAuxSerial>(); }
-    };
-
-    struct CardBinaryFactory {
-        Notecard* nc_;
-        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
-        /// View the status of the binary storage area of the Notecard and
-        /// optionally clear any data and related `card.binary` variables. See
-        /// the guide on Sending and Receiving Large Binary Objects for best
-        /// practices when using `card.binary`.
-        auto status() { return create<api::CardBinary::Status>(); }
-        /// View the status of the binary storage area of the Notecard and
-        /// optionally clear any data and related `card.binary` variables. See
-        /// the guide on Sending and Receiving Large Binary Objects for best
-        /// practices when using `card.binary`.
-        auto clear() { return create<api::CardBinary::Clear>(); }
-        /// card.binary.get
-        auto get() { return create<api::CardBinaryGet>(); }
-        /// card.binary.put
-        auto put() { return create<api::CardBinaryPut>(); }
-    };
-
     struct CardContactFactory {
         Notecard* nc_;
         template<typename T> T create() { T r; r.nc_ = nc_; return r; }
@@ -212,16 +165,6 @@ public:
         /// Used to set or retrieve information about the Notecard maintainer.
         /// Once set, this information is synced to Notehub.
         auto set() { return create<api::CardContact::Set>(); }
-    };
-
-    struct CardLocationFactory {
-        Notecard* nc_;
-        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
-        /// card.location
-        auto operator()() { return create<api::CardLocation>(); }
-        CardLocationModeFactory mode{nc_};
-        /// card.location.track
-        auto track() { return create<api::CardLocationTrack>(); }
     };
 
     struct CardLocationModeFactory {
@@ -242,19 +185,6 @@ public:
         /// Sets location-related configuration settings. Retrieves the current
         /// location mode when passed with no argument.
         auto remove() { return create<api::CardLocationMode::Remove>(); }
-    };
-
-    struct CardMotionFactory {
-        Notecard* nc_;
-        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
-        /// card.motion
-        auto operator()() { return create<api::CardMotion>(); }
-        /// card.motion.mode
-        auto mode() { return create<api::CardMotionMode>(); }
-        /// card.motion.sync
-        auto sync() { return create<api::CardMotionSync>(); }
-        /// card.motion.track
-        auto track() { return create<api::CardMotionTrack>(); }
     };
 
     struct CardPowerFactory {
@@ -318,14 +248,6 @@ public:
         auto configure() { return create<api::CardVoltage::Configure>(); }
     };
 
-    struct CardWirelessFactory {
-        Notecard* nc_;
-        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
-        /// card.wireless
-        auto operator()() { return create<api::CardWireless>(); }
-        CardWirelessPenaltyFactory penalty{nc_};
-    };
-
     struct CardWirelessPenaltyFactory {
         Notecard* nc_;
         template<typename T> T create() { T r; r.nc_ = nc_; return r; }
@@ -359,24 +281,6 @@ public:
             r.name = name_arg;
             return r;
         }
-    };
-
-    struct FileChangesFactory {
-        Notecard* nc_;
-        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
-        /// file.changes
-        auto operator()() { return create<api::FileChanges>(); }
-        /// file.changes.pending
-        auto pending() { return create<api::FileChangesPending>(); }
-    };
-
-    struct HubSyncFactory {
-        Notecard* nc_;
-        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
-        /// hub.sync
-        auto operator()() { return create<api::HubSync>(); }
-        /// hub.sync.status
-        auto status() { return create<api::HubSyncStatus>(); }
     };
 
     struct NoteChangesFactory {
@@ -442,6 +346,84 @@ public:
             r.file = file_arg;
             return r;
         }
+    };
+
+
+    struct CardAuxFactory {
+        Notecard* nc_;
+        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
+        /// card.aux
+        auto operator()() { return create<api::CardAux>(); }
+        /// card.aux.serial
+        auto serial() { return create<api::CardAuxSerial>(); }
+    };
+
+    struct CardBinaryFactory {
+        Notecard* nc_;
+        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
+        /// View the status of the binary storage area of the Notecard and
+        /// optionally clear any data and related `card.binary` variables. See
+        /// the guide on Sending and Receiving Large Binary Objects for best
+        /// practices when using `card.binary`.
+        auto status() { return create<api::CardBinary::Status>(); }
+        /// View the status of the binary storage area of the Notecard and
+        /// optionally clear any data and related `card.binary` variables. See
+        /// the guide on Sending and Receiving Large Binary Objects for best
+        /// practices when using `card.binary`.
+        auto clear() { return create<api::CardBinary::Clear>(); }
+        /// card.binary.get
+        auto get() { return create<api::CardBinaryGet>(); }
+        /// card.binary.put
+        auto put() { return create<api::CardBinaryPut>(); }
+    };
+
+    struct CardLocationFactory {
+        Notecard* nc_;
+        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
+        /// card.location
+        auto operator()() { return create<api::CardLocation>(); }
+        CardLocationModeFactory mode{nc_};
+        /// card.location.track
+        auto track() { return create<api::CardLocationTrack>(); }
+    };
+
+    struct CardMotionFactory {
+        Notecard* nc_;
+        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
+        /// card.motion
+        auto operator()() { return create<api::CardMotion>(); }
+        /// card.motion.mode
+        auto mode() { return create<api::CardMotionMode>(); }
+        /// card.motion.sync
+        auto sync() { return create<api::CardMotionSync>(); }
+        /// card.motion.track
+        auto track() { return create<api::CardMotionTrack>(); }
+    };
+
+    struct CardWirelessFactory {
+        Notecard* nc_;
+        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
+        /// card.wireless
+        auto operator()() { return create<api::CardWireless>(); }
+        CardWirelessPenaltyFactory penalty{nc_};
+    };
+
+    struct FileChangesFactory {
+        Notecard* nc_;
+        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
+        /// file.changes
+        auto operator()() { return create<api::FileChanges>(); }
+        /// file.changes.pending
+        auto pending() { return create<api::FileChangesPending>(); }
+    };
+
+    struct HubSyncFactory {
+        Notecard* nc_;
+        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
+        /// hub.sync
+        auto operator()() { return create<api::HubSync>(); }
+        /// hub.sync.status
+        auto status() { return create<api::HubSyncStatus>(); }
     };
 
     // =====================================================================

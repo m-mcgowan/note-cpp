@@ -22,7 +22,8 @@ public:
     std::string buf;
     virtual ~Print() = default;
     virtual size_t write(const uint8_t* data, size_t len) {
-        buf.append(reinterpret_cast<const char*>(data), len);
+        if (data && len > 0)
+            buf.append(reinterpret_cast<const char*>(data), len);
         return len;
     }
     size_t print(const char* s) { buf += s; return strlen(s); }
@@ -37,10 +38,11 @@ public:
     virtual size_t printTo(Print& p) const = 0;
 };
 
-// Now enable Arduino code paths
+// Now enable Arduino code paths with stub implementations
 #ifndef ARDUINO
 #define ARDUINO
 #endif
+#define NOTE_ARDUINO_STUBS
 
 // Include ALL generated headers to verify printTo compiles for every endpoint
 #include <note/api.hpp>

@@ -91,12 +91,15 @@ run_ci() {
 HEOF
     echo "  C++20 public headers OK"
 
-    # C++17 compatibility (transport headers are C++20-only, so excluded)
+    # C++17 compatibility — all public headers including transport
     if [ "${CPP17_DONE:-}" != "1" ]; then
         $CXX -std=c++17 $INCLUDE -fsyntax-only -x c++ - <<'H17EOF'
 #include <note/notecard.hpp>
 #include <note/notecard_api.hpp>
 #include <note/api.hpp>
+#include <note/transport.hpp>
+#include <note/transport/serial.hpp>
+#include <note/transport/i2c.hpp>
 #include <note/body.hpp>
 #include <note/field.hpp>
 #include <note/target.hpp>

@@ -84,7 +84,11 @@ private:
 // NotecardSerial — Notecard serial protocol implementation
 // ---------------------------------------------------------------------------
 
+#if __cplusplus >= 202002L
 template <typename PolicyType = StaticSerialPolicy<SerialPolicy{}>>
+#else
+template <typename PolicyType = SerialPolicy>
+#endif
 class NotecardSerial : public note::AbstractTransport {
 public:
     // policy is public so callers can read or mutate it between requests.
@@ -193,16 +197,16 @@ private:
 };
 
 // Deduction guides — allow construction without explicit template arguments.
-//
-//   NotecardSerial transport(hal)          → StaticSerialPolicy<SerialPolicy{}>
-//                                            (zero overhead, compile-time defaults)
-//   NotecardSerial transport(hal, policy)  → SerialPolicy
-//                                            (runtime mutable, 28 bytes)
+#if __cplusplus >= 202002L
+//   NotecardSerial transport(hal)  → StaticSerialPolicy (zero overhead)
 NotecardSerial(SerialHal&) -> NotecardSerial<StaticSerialPolicy<SerialPolicy{}>>;
-NotecardSerial(SerialHal&, SerialPolicy) -> NotecardSerial<SerialPolicy>;
-
 template <SerialPolicy P>
 NotecardSerial(SerialHal&, StaticSerialPolicy<P>) -> NotecardSerial<StaticSerialPolicy<P>>;
+#else
+//   NotecardSerial transport(hal)  → SerialPolicy (runtime, 28 bytes)
+NotecardSerial(SerialHal&) -> NotecardSerial<SerialPolicy>;
+#endif
+NotecardSerial(SerialHal&, SerialPolicy) -> NotecardSerial<SerialPolicy>;
 
 // ---------------------------------------------------------------------------
 // Backward-compatible constants (derived from default policy values).

@@ -103,12 +103,14 @@ struct I2cPolicy : ProtocolPolicy {
 };
 
 // ---------------------------------------------------------------------------
-// StaticSerialPolicy<Policy> — zero-overhead compile-time serial policy
+// StaticSerialPolicy / StaticI2cPolicy — zero-overhead compile-time policies
 //
-// An empty struct: sizeof == 1, but [[no_unique_address]] in the transport
-// gives it zero bytes. All fields are static constexpr — the compiler folds
-// policy.field accesses to constants and eliminates unreachable branches.
+// C++20 only: uses non-type template parameters (NTTPs) of class type.
+// On C++17, the default policy is the runtime SerialPolicy/I2cPolicy struct
+// (28 bytes overhead — negligible on ESP32 and similar platforms).
 // ---------------------------------------------------------------------------
+
+#if __cplusplus >= 202002L
 
 template <SerialPolicy Policy>
 struct StaticSerialPolicy {
@@ -120,10 +122,6 @@ struct StaticSerialPolicy {
     static constexpr uint32_t max_retries        = Policy.max_retries;
     static constexpr uint32_t retry_delay_ms     = Policy.retry_delay_ms;
 };
-
-// ---------------------------------------------------------------------------
-// StaticI2cPolicy<Policy> — zero-overhead compile-time I2C policy
-// ---------------------------------------------------------------------------
 
 template <I2cPolicy Policy>
 struct StaticI2cPolicy {
@@ -139,5 +137,7 @@ struct StaticI2cPolicy {
     static constexpr uint32_t nack_wait_ms       = Policy.nack_wait_ms;
     static constexpr uint32_t response_poll_ms   = Policy.response_poll_ms;
 };
+
+#endif // C++20
 
 }  // namespace note::transport

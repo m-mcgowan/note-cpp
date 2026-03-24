@@ -110,7 +110,11 @@ private:
 // NotecardI2c — Notecard I2C protocol implementation
 // ---------------------------------------------------------------------------
 
+#if __cplusplus >= 202002L
 template <typename PolicyType = StaticI2cPolicy<I2cPolicy{}>>
+#else
+template <typename PolicyType = I2cPolicy>
+#endif
 class NotecardI2c : public note::AbstractTransport {
 public:
     // policy is public so callers can read or mutate it between requests.
@@ -282,11 +286,14 @@ private:
 };
 
 // Deduction guides — allow construction without explicit template arguments.
+#if __cplusplus >= 202002L
 NotecardI2c(I2CHal&) -> NotecardI2c<StaticI2cPolicy<I2cPolicy{}>>;
-NotecardI2c(I2CHal&, I2cPolicy) -> NotecardI2c<I2cPolicy>;
-
 template <I2cPolicy P>
 NotecardI2c(I2CHal&, StaticI2cPolicy<P>) -> NotecardI2c<StaticI2cPolicy<P>>;
+#else
+NotecardI2c(I2CHal&) -> NotecardI2c<I2cPolicy>;
+#endif
+NotecardI2c(I2CHal&, I2cPolicy) -> NotecardI2c<I2cPolicy>;
 
 // ---------------------------------------------------------------------------
 // Backward-compatible constants (derived from default policy values).

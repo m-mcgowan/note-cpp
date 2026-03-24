@@ -26,7 +26,7 @@ struct TestHarness {
         : transport(
             [this](note::string_view req, uint32_t) -> note::Result<note::string_view> {
                 last_request = std::string(req);
-                return std::string("{}");
+                return note::string_view("{}");
             },
             [this](note::string_view req) -> note::Result<void> {
                 last_request = std::string(req);

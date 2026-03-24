@@ -64,7 +64,7 @@ TEST_CASE("functor chaining terminates with execute() on bound request") {
             : transport(
                 [this](note::string_view req, uint32_t) -> note::Result<note::string_view> {
                     last_request = std::string(req);
-                    return std::string("{}");
+                    return note::string_view("{}");
                 },
                 [this](note::string_view req) -> note::Result<void> {
                     last_request = std::string(req);
@@ -146,7 +146,7 @@ TEST_CASE("extra() adds undocumented bool property to wire format") {
             : transport(
                 [this](note::string_view req, uint32_t) -> note::Result<note::string_view> {
                     last_request = std::string(req);
-                    return std::string("{}");
+                    return note::string_view("{}");
                 },
                 [](note::string_view) -> note::Result<void> {
                     return {};

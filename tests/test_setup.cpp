@@ -24,7 +24,7 @@ struct TestFixture {
         : transport(
             [this](note::string_view req, uint32_t) -> note::Result<note::string_view> {
                 captured.emplace_back(req);
-                return std::string("{}");
+                return note::string_view("{}");
             })
         , nc(backend, transport)
         , ch(nc) {}
@@ -161,7 +161,7 @@ TEST_CASE("Setup::run() fails at hub.set step") {
         [&](note::string_view, uint32_t) -> note::Result<note::string_view> {
             if (call_count++ == 0)
                 return note::make_error(note::Error::SendFailed, "write failed");
-            return std::string("{}");
+            return note::string_view("{}");
         });
     note::Notecard nc(backend, transport);
     note::app::DirectChannel ch(nc);
@@ -185,7 +185,7 @@ TEST_CASE("Setup::run() fails at template step") {
         [&](note::string_view, uint32_t) -> note::Result<note::string_view> {
             if (call_count++ == 1)  // second call = note.template
                 return note::make_error(note::Error::SendFailed, "write failed");
-            return std::string("{}");
+            return note::string_view("{}");
         });
     note::Notecard nc(backend, transport);
     note::app::DirectChannel ch(nc);

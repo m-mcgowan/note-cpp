@@ -24,7 +24,7 @@ struct TestFixture {
         : transport(
             [this](note::string_view req, uint32_t) -> note::Result<note::string_view> {
                 captured.emplace_back(req);
-                return std::string("{}");
+                return note::string_view("{}");
             })
         , nc(backend, transport)
         , ch(nc) {}
@@ -156,7 +156,7 @@ TEST_CASE("Sync::wait_for_sync() returns immediately when already complete") {
 
     note::CallbackTransport status_transport(
         [](note::string_view, uint32_t) -> note::Result<note::string_view> {
-            return std::string("{}");
+            return note::string_view("{}");
         });
     note::Notecard nc(status_backend, status_transport);
     note::app::DirectChannel ch(nc);

@@ -118,7 +118,7 @@ public:
         if constexpr (std::is_void_v<Rsp>) {
             return ApiResult<void>{};
         } else {
-            auto result = Rsp::parse(reader);
+            ApiResult<Rsp> result(Rsp::parse(reader));
             if constexpr (detail::has_intern_strings<Rsp>::value) {
                 if (alloc_.has_value()) {
                     StringPool pool(*alloc_);

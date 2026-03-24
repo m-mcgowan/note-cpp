@@ -51,7 +51,7 @@ TEST_CASE("DirectChannel::execute() forwards to Notecard::execute()") {
     note::CallbackTransport transport(
         [&](note::string_view req, uint32_t) -> note::Result<note::string_view> {
             captured = std::string(req);
-            return std::string("{}");
+            return note::string_view("{}");
         });
     note::Notecard nc(backend, transport);
 
@@ -87,7 +87,7 @@ TEST_CASE("DirectChannel::execute() propagates protocol errors") {
     ErrorJsonBackend backend("bad response");
     note::CallbackTransport transport(
         [](note::string_view, uint32_t) -> note::Result<note::string_view> {
-            return std::string("{}");
+            return note::string_view("{}");
         });
     note::Notecard nc(backend, transport);
 
@@ -107,7 +107,7 @@ TEST_CASE("DirectChannel::command() forwards to Notecard::command_typed()") {
     note::CallbackTransport transport(
         [&](note::string_view req, uint32_t) -> note::Result<note::string_view> {
             captured = std::string(req);
-            return std::string("{}");
+            return note::string_view("{}");
         });
     note::Notecard nc(backend, transport);
 
@@ -125,7 +125,7 @@ TEST_CASE("DirectChannel::tick() is a no-op") {
     note::test::TestJsonBackend backend;
     note::CallbackTransport transport(
         [](note::string_view, uint32_t) -> note::Result<note::string_view> {
-            return std::string("{}");
+            return note::string_view("{}");
         });
     note::Notecard nc(backend, transport);
 
@@ -141,7 +141,7 @@ TEST_CASE("DirectChannel::notecard() returns the wrapped Notecard") {
     note::test::TestJsonBackend backend;
     note::CallbackTransport transport(
         [](note::string_view, uint32_t) -> note::Result<note::string_view> {
-            return std::string("{}");
+            return note::string_view("{}");
         });
     note::Notecard nc(backend, transport);
 

@@ -24,7 +24,7 @@ struct TestFixture {
         : transport(
             [this](note::string_view req, uint32_t) -> note::Result<note::string_view> {
                 captured.emplace_back(req);
-                return std::string("{}");
+                return note::string_view("{}");
             })
         , nc(backend, transport)
         , ch(nc) {}

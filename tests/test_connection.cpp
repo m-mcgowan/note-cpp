@@ -25,7 +25,7 @@ struct TestFixture {
         : transport(
             [this](note::string_view req, uint32_t) -> note::Result<note::string_view> {
                 captured.emplace_back(req);
-                return std::string("{}");
+                return note::string_view("{}");
             })
         , nc(backend, transport)
         , ch(nc) {}
@@ -81,7 +81,7 @@ TEST_CASE("Connection::status() queries hub.status") {
     note::CallbackTransport transport(
         [&](note::string_view req, uint32_t) -> note::Result<note::string_view> {
             captured = std::string(req);
-            return std::string("{}");
+            return note::string_view("{}");
         });
     note::Notecard nc(backend, transport);
     note::app::DirectChannel ch(nc);

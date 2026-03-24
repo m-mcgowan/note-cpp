@@ -1,16 +1,24 @@
 {
     "name": "note-cpp",
     "version": "0.1.0",
-    "description": "Type-safe C++20 API for the Blues Notecard",
-    "keywords": "notecard, blues, iot, c++20, c++23",
-    "authors": {
-        "name": "Mat McGowan"
+    "description": "Typed C++ SDK for the Blues Notecard. Type-safe, compile-time checked API for all Notecard endpoints. Header-only.",
+    "keywords": "notecard, blues, iot, cellular, lora, satellite",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/m-mcgowan/note-cpp.git"
     },
-    "frameworks": "*",
+    "authors": [
+        {
+            "name": "Mat McGowan",
+            "maintainer": true
+        }
+    ],
+    "license": "MIT",
+    "homepage": "https://github.com/m-mcgowan/note-cpp",
+    "frameworks": ["arduino", "espidf"],
     "platforms": "*",
     "build": {
-        "flags": ["-std=gnu++20"],
-        "includeDir": "include",
-        "srcFilter": ["+<*>", "-<tests/>", "-<tools/>", "-<examples/>"]
-    }
+        "includeDir": "include"
+    },
+    "headers": "note/notecard.hpp"
 }

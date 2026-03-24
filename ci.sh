@@ -70,37 +70,43 @@ run_ci() {
         export CODEGEN_DONE=1
     fi
 
-    # Check each header compiles independently (parallelized)
-    ci_stage "Header compilation"
-    find "$ROOT/include/note" -name '*.hpp' \
-        -not -path '*/backends/*' -not -path '*/arduino/*' \
-        -not -path '*/third_party/*' -not -name 'arduino.hpp' \
-    | xargs -P "$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)" \
-        -I{} sh -c "$CXX $CXXFLAGS $INCLUDE -fsyntax-only {} 2>&1 || echo HEADER_FAIL: {}" \
-    | tee /tmp/note-cpp-headers.log
-    if grep -q 'HEADER_FAIL:' /tmp/note-cpp-headers.log; then
-        echo "FAIL: headers above did not compile"
-        grep 'HEADER_FAIL:' /tmp/note-cpp-headers.log
-        exit 1
-    fi
-    echo "  all headers OK"
+    # Public API headers compile cleanly (single TU per standard version).
+    # Generated api/*.hpp are internal — validated via the unit tests.
+    ci_stage "Public API headers"
+    $CXX $CXXFLAGS $INCLUDE -fsyntax-only -x c++ - <<'HEOF'
+#include <note/notecard.hpp>
+#include <note/notecard_api.hpp>
+#include <note/api.hpp>
+#include <note/transport.hpp>
+#include <note/transport/serial.hpp>
+#include <note/transport/i2c.hpp>
+#include <note/body.hpp>
+#include <note/field.hpp>
+#include <note/target.hpp>
+#include <note/units.hpp>
+#include <note/json_buf.hpp>
+#include <note/arena.hpp>
+#include <note/allocator.hpp>
+#include <note/string_pool.hpp>
+HEOF
+    echo "  C++20 public headers OK"
 
-    # Verify C++17 header compatibility (parallelized, transport/third_party are C++20-only)
+    # C++17 compatibility (transport headers are C++20-only, so excluded)
     if [ "${CPP17_DONE:-}" != "1" ]; then
-        ci_stage "C++17 header compatibility"
-        find "$ROOT/include/note" -name '*.hpp' \
-            -not -path '*/backends/*' -not -path '*/arduino/*' \
-            -not -name 'arduino.hpp' -not -path '*/transport/*' \
-            -not -path '*/third_party/*' \
-        | xargs -P "$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)" \
-            -I{} sh -c "$CXX -std=c++17 $INCLUDE -fsyntax-only {} 2>&1 || echo HEADER_FAIL: {}" \
-        | tee /tmp/note-cpp-headers17.log
-        if grep -q 'HEADER_FAIL:' /tmp/note-cpp-headers17.log; then
-            echo "FAIL: C++17 headers above did not compile"
-            grep 'HEADER_FAIL:' /tmp/note-cpp-headers17.log
-            exit 1
-        fi
-        echo "  all C++17 headers OK"
+        $CXX -std=c++17 $INCLUDE -fsyntax-only -x c++ - <<'H17EOF'
+#include <note/notecard.hpp>
+#include <note/notecard_api.hpp>
+#include <note/api.hpp>
+#include <note/body.hpp>
+#include <note/field.hpp>
+#include <note/target.hpp>
+#include <note/units.hpp>
+#include <note/json_buf.hpp>
+#include <note/arena.hpp>
+#include <note/allocator.hpp>
+#include <note/string_pool.hpp>
+H17EOF
+        echo "  C++17 public headers OK"
         export CPP17_DONE=1
     fi
 

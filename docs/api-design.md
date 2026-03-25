@@ -320,7 +320,7 @@ auto pop(string_view file) {
 | `file.changes()` | `file.changes` | |
 | `file.changesPending()` | `file.changes.pending` | |
 | `file.clear()` | `file.clear` | |
-| `file.delete_()` | `file.delete` | |
+| `file.delete_()` / `file.remove(file)` | `file.delete` | |
 | `file.stats()` | `file.stats` | |
 
 ### Other groups

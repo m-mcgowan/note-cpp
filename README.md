@@ -728,10 +728,8 @@ static_assert(req.view() == R"({"req":"hub.set","mode":"periodic"})");
 
 ## Documentation
 
-- [Migrating from note-arduino](docs/migration-from-note-arduino.md)
+- [Migrating from note-arduino](docs/migration-from-note-arduino.md) — side-by-side examples for common patterns
 - [API reference (Doxygen)](https://m-mcgowan.github.io/note-cpp/)
-- [Streaming transport design](docs/streaming-transport.md)
-- [Transport retry design](docs/retry-design.md)
 
 ## Contributing
 

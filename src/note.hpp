@@ -1,15 +1,21 @@
 #pragma once
-// Gateway header for Arduino Library Manager.
-//
-// Arduino adds only src/ to the include path. Including this header
-// activates the library, making all nested headers (note/api.hpp,
-// note/arduino.hpp, etc.) available via their full paths.
-//
-// Usage in Arduino sketches:
-//   #include <note.hpp>               // activate library
-//   #include <note/arduino.hpp>       // then include what you need
+/// @file note.hpp
+/// Single-include entry point for note-cpp.
+///
+/// On Arduino, this also serves as the gateway header that activates
+/// the library (Arduino only adds src/ to the include path).
+///
+/// Usage:
+///   #include <note.hpp>
+///
+/// This pulls in the typed API surface. On Arduino platforms, it also
+/// includes the Arduino convenience header (serial/I2C begin() etc.).
 
-// Pull in the core Notecard API so a single #include is enough
-// for simple sketches.
 #include "note/notecard.hpp"
+#include "note/notecard_api.hpp"
 #include "note/api.hpp"
+#include "note/body.hpp"
+
+#ifdef ARDUINO
+#include "note/arduino.hpp"
+#endif

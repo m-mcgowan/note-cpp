@@ -76,18 +76,9 @@ struct CardAuxSerial {
     } minutes{};
 #endif
     /// The AUX mode. Must be one of the following:
-    // mode: req | gps | notify | notify,accel | notify,dfu | notify,env | notify,signals | -
     struct mode_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
-        static constexpr note::string_view req{"req"};
-        static constexpr note::string_view gps{"gps"};
-        static constexpr note::string_view notify{"notify"};
-        static constexpr note::string_view notify_accel{"notify,accel"};
-        static constexpr note::string_view notify_dfu{"notify,dfu"};
-        static constexpr note::string_view notify_env{"notify,env"};
-        static constexpr note::string_view notify_signals{"notify,signals"};
-        static constexpr note::string_view _{"-"};
         CardAuxSerial& operator()(note::string_view v);
     } mode{};
     /// The delay in milliseconds before sending a buffer of `max` size.
@@ -112,23 +103,6 @@ struct CardAuxSerial {
     } rate{};
 #endif
 
-    // Valid values for 'mode':
-    //   "req" — (Default) for request/response monitoring on the AUX pins.
-    //   "gps" — Use an external GPS/GNSS module on the AUX pins. Using an external GP...
-    //   "notify" — Used along with one or more of the `notify` options to send streaming...
-    //   "notify,accel" — Used to stream readings from the onboard accelerometer over AUX.
-    //   "notify,signals" — Used to notify the host of any [Inbound Signals](/guides-and-tutorial...
-    //   "notify,env" — Used to notify the host of Environment Variable changes over AUX.
-    //   "notify,dfu" — Used to notify the host that the Notecard has downloaded updated host...
-    // consteval: only callable at compile time (C++20)
-#if __cplusplus >= 202002L
-    static consteval note::string_view validatedMode(const char* v) {
-        note::string_view sv{v};
-        if (sv != "req" && sv != "gps" && sv != "notify" && sv != "notify,accel" && sv != "notify,dfu" && sv != "notify,env" && sv != "notify,signals" && sv != "-")
-            throw "card.aux.serial: invalid value for 'mode'";
-        return sv;
-    }
-#endif
 
     template<typename T>
     auto& extra(note::string_view k_, T v_) {

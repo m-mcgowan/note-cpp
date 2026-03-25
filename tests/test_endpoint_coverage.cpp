@@ -603,7 +603,7 @@ TEST_CASE("note::api::CardAuxSerial request builder") {
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
     req.minutes(note::Minutes{42});
 #endif
-    req.mode(note::string_view("req"));
+    req.mode(note::string_view("x-mode"));
     req.ms(note::Milliseconds{42});
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
     req.rate(int32_t{42});
@@ -641,7 +641,7 @@ TEST_CASE("note::api::CardAuxSerial request builder") {
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
     req["minutes"] = note::Minutes{42};
 #endif
-    req["mode"] = note::string_view("req");
+    req["mode"] = note::string_view("x-mode");
     req["ms"] = note::Milliseconds{42};
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
     req["rate"] = int32_t{42};

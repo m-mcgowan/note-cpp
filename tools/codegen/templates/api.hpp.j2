@@ -77,6 +77,10 @@ public:
 {% else %}
         auto {{ op.factory_method }}() { return create<api::{{ endpoint.struct_name }}::{{ op.struct_name }}>(); }
 {% endif %}
+{% if op.mode_prefix %}
+        auto {{ op.factory_method }}(uint32_t flags) { auto r = create<api::{{ endpoint.struct_name }}::{{ op.struct_name }}>(); r.triggers = flags; return r; }
+        auto {{ op.factory_method }}(note::string_view flags) { auto r = create<api::{{ endpoint.struct_name }}::{{ op.struct_name }}>(); r.triggers = flags; return r; }
+{% endif %}
 {% endfor %}
 {% elif not endpoint.is_polymorphic %}
 {# Non-polymorphic parent: callable to create its own request type #}
@@ -119,6 +123,10 @@ public:
         }
 {% else %}
         auto {{ op.factory_method }}() { return create<api::{{ endpoint.struct_name }}::{{ op.struct_name }}>(); }
+{% endif %}
+{% if op.mode_prefix %}
+        auto {{ op.factory_method }}(uint32_t flags) { auto r = create<api::{{ endpoint.struct_name }}::{{ op.struct_name }}>(); r.triggers = flags; return r; }
+        auto {{ op.factory_method }}(note::string_view flags) { auto r = create<api::{{ endpoint.struct_name }}::{{ op.struct_name }}>(); r.triggers = flags; return r; }
 {% endif %}
 {% endfor %}
 {% elif not endpoint.is_polymorphic %}

@@ -11,12 +11,10 @@
 // these declarations into setup() or use the lazy-init pattern shown in
 // tests/integration/firmware/.
 
+#include <note.hpp>  // Arduino library gateway — must be first
 #include <note/arduino/i2c.hpp>
-
-#include <note/api.hpp>
 #include <note/backends/cjson.hpp>
 #include <note/body.hpp>
-#include <note/notecard.hpp>
 #include <note/transport/i2c.hpp>
 
 using namespace note::literals;

@@ -191,3 +191,90 @@ on both send and receive paths:
 The `CallbackTransport` with `set_write()`/`set_read()` enables unit-level
 fuzzing. Integration tests on real hardware should use `serial-monitor` capture
 to verify wire-level behavior matches expectations.
+
+## Backend dissolution
+
+With full streaming (Phase 3), the `JsonBackend` abstraction dissolves.
+There is no object that "owns" JSON parsing or building — JSON is just the
+wire format the Notecard chose. The architecture becomes:
+
+```
+Developer code
+  ↕  typed fields (C++ structs, ResponseField<T>)
+SAX stream
+  ↕  events (on_string, on_number, on_bool, begin_object, ...)
+Transport byte pipe
+  ↕  raw bytes (read/write)
+Notecard hardware
+```
+
+No intermediate buffer, no backend choice, no allocator configuration.
+The developer works with typed fields. The library handles serialization
+as a transport detail.
+
+### Implication for `NotecardApi` / `arduino::Notecard`
+
+Today these bundle a `BufferJsonBackend` as the default. With streaming,
+they bundle a SAX parser + small chunk buffer instead. The API surface
+doesn't change — `execute()` still returns typed `ApiResult<Response>`.
+The backend parameter disappears from constructors entirely.
+
+## Body content layering
+
+Response body content (`note.get`, inbound notes) may be freeform JSON
+whose schema isn't known at compile time. Streaming provides three tiers
+for handling body content, with allocation always under the developer's
+explicit control:
+
+### Tier 1: SAX stream (zero allocation)
+
+The developer provides a `JsonSink` that handles events directly. No
+intermediate representation. Useful for filtering, forwarding, or
+populating application state incrementally.
+
+```cpp
+struct MySink : note::JsonSink {
+    void on_string(string_view key, string_view value) override {
+        if (key == "target") display.show(value);
+    }
+};
+```
+
+### Tier 2: `bodyAs<T>()` (struct population, zero intermediate allocation)
+
+The SAX stream feeds directly into a C++ struct via `NOTE_FIELDS` or
+C++20 aggregate reflection. No JSON tree built — fields are assigned
+as the tokens arrive.
+
+```cpp
+auto r = nc.note.get().file("config.qi").execute();
+auto config = r.bodyAs<MyConfig>();
+```
+
+### Tier 3: JSON tree (explicit allocation)
+
+A convenience `JsonTreeSink` builds an in-memory JSON object from
+the SAX stream. The developer explicitly opts into this allocation.
+Useful for freeform content that needs inspection, iteration over
+unknown keys, or forwarding to another JSON consumer.
+
+```cpp
+auto r = nc.note.get().file("data.qi").execute();
+auto tree = r.bodyAsJson();  // developer pays for allocation here
+for (auto& [key, value] : tree) {
+    // iterate over unknown fields
+}
+```
+
+### Design principle
+
+The library never allocates on behalf of the developer without their
+knowledge. Tier 1 and 2 are zero-allocation. Tier 3 allocates because
+the developer asked for a tree — the cost is visible in their code,
+not hidden inside a backend.
+
+This means:
+- No backend configuration knob for users
+- No hidden buffer sizes to tune
+- Memory usage is proportional to what the developer explicitly requests
+- The "which backend?" question disappears entirely

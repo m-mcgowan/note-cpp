@@ -2,6 +2,9 @@
 
 Bug reports, feature requests, and pull requests are welcome.
 
+By submitting a contribution, you agree that your work is licensed
+under the project's [MIT License](LICENSE).
+
 ## Development setup
 
 note-cpp is header-only — no compilation step for the library itself.

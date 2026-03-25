@@ -726,51 +726,21 @@ static_assert(req.view() == R"({"req":"hub.set","mode":"periodic"})");
 
 ---
 
-## Code Generation
+## Documentation
 
-The API types are generated from the Notecard OpenAPI spec:
+- [Migrating from note-arduino](docs/migration-from-note-arduino.md)
+- [API reference (Doxygen)](https://m-mcgowan.github.io/note-cpp/)
+- [Streaming transport design](docs/streaming-transport.md)
+- [Transport retry design](docs/retry-design.md)
 
-```bash
-pip install jinja2
-python3 tools/codegen/generate.py notecard-api.openapi.json
-```
-
-## Building and Testing
-
-```bash
-./ci.sh              # quick: codegen + unit tests (~15s)
-./ci.sh --full       # release: headers, examples, version gating, docs, coverage
-./ci.sh --coverage   # coverage report (requires GCC 13+ and lcov 2.x)
-```
-
-CMake build (parallel compilation via Ninja):
-
-```bash
-cmake -G Ninja -B build -S .
-cmake --build build --parallel
-ctest --test-dir build
-```
-
-Arduino-cli:
-
-```bash
-arduino-cli compile --fqbn esp32:esp32:esp32s3:CDCOnBoot=cdc examples/arduino/serial_basic
-```
+## Contributing
 
 Requires C++17 minimum. C++20 enables zero-overhead transport policies
 and compile-time validation of enum string fields.
 
-## Documentation
+Bug reports, feature requests, and pull requests are welcome via
+[GitHub Issues](https://github.com/m-mcgowan/note-cpp/issues) and
+[Pull Requests](https://github.com/m-mcgowan/note-cpp/pulls).
 
-See [docs/](docs/README.md) for the full documentation index. Key pages:
-
-- [Migrating from note-arduino](docs/migration-from-note-arduino.md)
-- [Why note-cpp? (comparison with note-c)](docs/comparison.md)
-- [Error handling](docs/error-handling.md)
-- [Polymorphic APIs](docs/polymorphic-apis.md)
-- [Duration units](docs/duration-units.md)
-- [Body values and Note templates](docs/body-values.md)
-- [JSON buffer builder](docs/json-builder.md)
-- [Transport layer](docs/transport.md)
-- [App orchestration (NTN, templates, sync)](docs/app-orchestration.md)
-- [Project plan and status](docs/PLAN.md)
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, building,
+testing, and code generation details.

@@ -334,6 +334,74 @@ TEST_CASE("ArrayField: empty field not serialized") {
     REQUIRE(h.last_request == R"({"req":"file.delete"})");
 }
 
+TEST_CASE("ArrayField: single-value assignment") {
+    TestHarness h;
+    note::Api api(h.nc);
+    auto req = api.file.delete_();
+    req.files = "data.qi";
+    req.execute();
+    REQUIRE(h.last_request == R"({"req":"file.delete","files":["data.qi"]})");
+}
+
+TEST_CASE("ArrayField: single-value assignment replaces") {
+    note::ArrayField<note::string_view, 8> arr;
+    arr = "first";
+    REQUIRE(arr.size() == 1);
+    arr = "second";
+    REQUIRE(arr.size() == 1);
+    REQUIRE(arr[0] == "second");
+}
+
+// ---------------------------------------------------------------------------
+// Alias calling patterns
+// ---------------------------------------------------------------------------
+
+TEST_CASE("Alias: positional single arg") {
+    TestHarness h;
+    note::Api api(h.nc);
+    api.file.remove("data.db").execute();
+    REQUIRE(h.last_request == R"({"req":"file.delete","files":["data.db"]})");
+}
+
+TEST_CASE("Alias: args struct with array field") {
+    TestHarness h;
+    note::Api api(h.nc);
+    api.file.remove({{"a.db", "b.db"}}).execute();
+    REQUIRE(h.last_request == R"({"req":"file.delete","files":["a.db","b.db"]})");
+}
+
+TEST_CASE("Alias: no-arg builder") {
+    TestHarness h;
+    note::Api api(h.nc);
+    auto req = api.file.remove();
+    req.files = {"x.db", "y.db"};
+    req.execute();
+    REQUIRE(h.last_request == R"({"req":"file.delete","files":["x.db","y.db"]})");
+}
+
+TEST_CASE("Alias: multi-param positional (note.delete)") {
+    TestHarness h;
+    note::Api api(h.nc);
+    api.note.remove("data.db", "my-note").execute();
+    REQUIRE(h.last_request == R"({"req":"note.delete","file":"data.db","note":"my-note"})");
+}
+
+#if __cplusplus >= 202002L
+TEST_CASE("Alias: designated init with array field") {
+    TestHarness h;
+    note::Api api(h.nc);
+    api.file.remove({.files = {"a.db", "b.db"}}).execute();
+    REQUIRE(h.last_request == R"({"req":"file.delete","files":["a.db","b.db"]})");
+}
+
+TEST_CASE("Alias: designated init with single file") {
+    TestHarness h;
+    note::Api api(h.nc);
+    api.file.remove({.files = {"data.db"}}).execute();
+    REQUIRE(h.last_request == R"({"req":"file.delete","files":["data.db"]})");
+}
+#endif
+
 // ---------------------------------------------------------------------------
 // README Developer Experience section — compilable verification
 // ---------------------------------------------------------------------------

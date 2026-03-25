@@ -469,10 +469,16 @@ def _extract_suffix(operation_id: str, base_id: str) -> str | None:
     return None
 
 
-def parse_spec(spec_path: str | Path) -> list[EndpointGroup]:
-    """Parse the OpenAPI spec and return a list of EndpointGroup objects."""
-    with open(spec_path) as f:
-        spec = json.load(f)
+def parse_spec(spec_path: str | Path, spec_dict: dict | None = None) -> list[EndpointGroup]:
+    """Parse the OpenAPI spec and return a list of EndpointGroup objects.
+
+    If spec_dict is provided, it is used directly instead of reading from disk.
+    """
+    if spec_dict is not None:
+        spec = spec_dict
+    else:
+        with open(spec_path) as f:
+            spec = json.load(f)
 
     # Group operations by x-notecard-request
     groups: dict[str, list[tuple[str, dict]]] = defaultdict(list)

@@ -1,0 +1,46 @@
+{
+    "$comment": "Overlay for the Blues OpenAPI spec. Adds missing enum values and other metadata that the upstream spec doesn't include. Merged into the spec before code generation.",
+
+    "paths": {
+        "/card/aux/serial": {
+            "put": {
+                "properties": {
+                    "mode": {
+                        "enum": [
+                            "req",
+                            "gps",
+                            "notify",
+                            "notify,accel",
+                            "notify,dfu",
+                            "notify,env",
+                            "notify,signals",
+                            "-"
+                        ]
+                    }
+                }
+            }
+        },
+        "/note/template": {
+            "put": {
+                "properties": {
+                    "format": {
+                        "enum": [
+                            "compact",
+                            "-"
+                        ]
+                    }
+                }
+            },
+            "delete": {
+                "properties": {
+                    "format": {
+                        "enum": [
+                            "compact",
+                            "-"
+                        ]
+                    }
+                }
+            }
+        }
+    }
+}

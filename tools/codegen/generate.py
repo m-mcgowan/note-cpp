@@ -15,6 +15,43 @@ if __name__ == "__main__":
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from codegen.spec_parser import parse_spec
+
+
+def _load_spec_with_overlay(spec_path: Path, overlay_path: Path | None) -> dict:
+    """Load the OpenAPI spec and merge an overlay if it exists.
+
+    The overlay adds or overrides property-level fields (e.g. enum values)
+    without modifying the upstream spec file.
+    """
+    with open(spec_path) as f:
+        spec = json.load(f)
+
+    if overlay_path and overlay_path.exists():
+        with open(overlay_path) as f:
+            overlay = json.load(f)
+
+        for path_name, methods in overlay.get("paths", {}).items():
+            spec_path_obj = spec.get("paths", {}).get(path_name)
+            if not spec_path_obj:
+                continue
+            for method, patches in methods.items():
+                spec_method = spec_path_obj.get(method)
+                if not spec_method:
+                    continue
+                props_patches = patches.get("properties", {})
+                spec_props = (spec_method
+                              .get("requestBody", {})
+                              .get("content", {})
+                              .get("application/json", {})
+                              .get("schema", {})
+                              .get("properties", {}))
+                for prop_name, prop_patch in props_patches.items():
+                    if prop_name in spec_props:
+                        spec_props[prop_name].update(prop_patch)
+
+        print(f"Applied overlay: {overlay_path}")
+
+    return spec
 from codegen.model import ResourceGroup
 from codegen.naming import (
     accessor_name as property_to_accessor_name,
@@ -57,7 +94,7 @@ def _enum_const_name(value: str) -> str:
     Returns empty string for values that can't be made into identifiers
     (e.g. empty strings, lone punctuation).
     """
-    name = value.replace("-", "_").replace("+", "p").replace("?", "unknown")
+    name = value.replace(",", "_").replace("-", "_").replace("+", "p").replace("?", "unknown")
     if not name:
         return ""
     if name[0].isdigit():
@@ -303,6 +340,9 @@ def main() -> None:
     parser.add_argument("--cmake-out",
                         default="cmake/note-cpp-generated.cmake",
                         help="Path for generated CMake file listing")
+    parser.add_argument("--overlay",
+                        default=None,
+                        help="Path to overlay JSON (merged into spec before generation)")
     args = parser.parse_args()
 
     spec_path = Path(args.spec)
@@ -311,8 +351,14 @@ def main() -> None:
     test_dir = Path(args.test_dir)
     cmake_out = Path(args.cmake_out)
 
+    # Auto-discover overlay if not specified
+    overlay_path = Path(args.overlay) if args.overlay else spec_path.with_suffix(".overlay.json")
+
+    # Load spec with overlay merged in memory
+    spec_dict = _load_spec_with_overlay(spec_path, overlay_path)
+
     # Parse spec
-    endpoints = parse_spec(spec_path)
+    endpoints = parse_spec(spec_path, spec_dict=spec_dict)
     print(f"Parsed {len(endpoints)} endpoint groups "
           f"({sum(len(e.operations) for e in endpoints)} operations)")
 

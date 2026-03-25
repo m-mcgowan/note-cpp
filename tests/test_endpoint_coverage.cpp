@@ -603,7 +603,7 @@ TEST_CASE("note::api::CardAuxSerial request builder") {
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
     req.minutes(note::Minutes{42});
 #endif
-    req.mode(note::string_view("x-mode"));
+    req.mode(note::string_view("req"));
     req.ms(note::Milliseconds{42});
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
     req.rate(int32_t{42});
@@ -641,7 +641,7 @@ TEST_CASE("note::api::CardAuxSerial request builder") {
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
     req["minutes"] = note::Minutes{42};
 #endif
-    req["mode"] = note::string_view("x-mode");
+    req["mode"] = note::string_view("req");
     req["ms"] = note::Milliseconds{42};
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
     req["rate"] = int32_t{42};
@@ -5486,7 +5486,7 @@ TEST_CASE("note::api::NoteTemplate::Define request builder") {
     req.execute();
     req.delete_(true);
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
-    req.format(note::string_view("x-format"));
+    req.format(note::string_view("compact"));
 #endif
     req.length(int32_t{42});
     req.port(int32_t{42});
@@ -5521,7 +5521,7 @@ TEST_CASE("note::api::NoteTemplate::Define request builder") {
     // Cover known-key routing in operator[] (true branch for each settable field)
     req["delete"] = true;
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
-    req["format"] = note::string_view("x-format");
+    req["format"] = note::string_view("compact");
 #endif
     req["length"] = int32_t{42};
     req["port"] = int32_t{42};
@@ -5576,7 +5576,7 @@ TEST_CASE("note::api::NoteTemplate::Remove request builder") {
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
-    req.format(note::string_view("x-format"));
+    req.format(note::string_view("compact"));
 #endif
     req.length(int32_t{42});
     req.port(int32_t{42});
@@ -5609,7 +5609,7 @@ TEST_CASE("note::api::NoteTemplate::Remove request builder") {
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover known-key routing in operator[] (true branch for each settable field)
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
-    req["format"] = note::string_view("x-format");
+    req["format"] = note::string_view("compact");
 #endif
     req["length"] = int32_t{42};
     req["port"] = int32_t{42};

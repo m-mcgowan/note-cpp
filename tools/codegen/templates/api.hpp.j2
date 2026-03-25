@@ -282,7 +282,11 @@ public:
         /// Argument struct for {{ alias.method_name }}() — supports `{.field = value}` init.
         struct {{ alias.method_name | first_upper }}Args {
 {% for p in resolved %}
+{% if p.is_array %}
+            note::ArrayField<{{ p.cpp_type }}, {{ p.array_max_items }}> {{ p.accessor_name }}{};
+{% else %}
             {{ p.field_type }} {{ p.accessor_name }}{};
+{% endif %}
 {% endfor %}
         };
 {% if alias_doc %}
@@ -295,19 +299,20 @@ public:
 {% endfor %}
             return r;
         }
-#if __cplusplus >= 202002L
-        /// Accepts {{ alias.method_name | first_upper }}Args, the full request type, or any struct with the required fields.
-        template<typename T>
-            requires requires(const T& _v) { {% for p in resolved %}{ _v.{{ p.accessor_name }} }{% if not loop.last %}; {% endif %}{% endfor %}; }
-        auto {{ alias.method_name }}(T args) {
+        /// Accepts {{ alias.method_name | first_upper }}Args for aggregate/designated init.
+        auto {{ alias.method_name }}({{ alias.method_name | first_upper }}Args args) {
             auto r = create<{{ alias.qualified_type }}>();
 {% for p in resolved %}
             r.{{ p.accessor_name }} = args.{{ p.accessor_name }};
 {% endfor %}
             return r;
         }
-#else
-        auto {{ alias.method_name }}({{ alias.method_name | first_upper }}Args args) {
+#if __cplusplus >= 202002L
+        /// Accepts any struct with the required fields.
+        template<typename T>
+            requires (requires(const T& _v) { {% for p in resolved %}{ _v.{{ p.accessor_name }} }{% if not loop.last %}; {% endif %}{% endfor %}; }
+                      && !std::is_same_v<std::decay_t<T>, {{ alias.method_name | first_upper }}Args>)
+        auto {{ alias.method_name }}(T args) {
             auto r = create<{{ alias.qualified_type }}>();
 {% for p in resolved %}
             r.{{ p.accessor_name }} = args.{{ p.accessor_name }};

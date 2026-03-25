@@ -163,7 +163,8 @@
   "file.delete": {
     "path": {
       "x-aliases": [
-        {"method": "remove", "description": "Alias for delete()."}
+        {"method": "remove", "description": "Delete Notefiles."},
+        {"method": "remove", "description": "Delete a Notefile by name.", "params": ["files"]}
       ]
     }
   },

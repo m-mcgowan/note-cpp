@@ -134,7 +134,11 @@ TEST_CASE("note.changes tracks additions") {
     Fixture f;
     auto& nc = f.nc;
     const char* file = "integration-changes.db";
+    const char* note_id = "test-change";
     const char* tracker = "integration-test";
+
+    // Clean up any leftovers from a previous run — delete the entire Notefile.
+    nc.file.remove(file).execute();
 
     // Reset tracker
     auto reset_rsp = nc.note.changes().peek()
@@ -144,9 +148,8 @@ TEST_CASE("note.changes tracks additions") {
         .execute();
     if (!reset_rsp) { MESSAGE("reset error: ", note::to_string(reset_rsp.error())); }
 
-    // Delete any leftover note, then add
-    nc.note.remove(file, "test-change").execute();
-    auto add_rsp = nc.note.add().file(file).noteId("test-change").execute();
+    // Add a note
+    auto add_rsp = nc.note.add().file(file).noteId(note_id).execute();
     if (!add_rsp) { MESSAGE("add error: ", note::to_string(add_rsp.error())); }
     REQUIRE(add_rsp);
 
@@ -161,7 +164,7 @@ TEST_CASE("note.changes tracks additions") {
     MESSAGE("changes: ", rsp.changes, " total: ", rsp.total);
 
     // Clean up (.db needs note.delete)
-    nc.note.remove(file, "test-change").execute();
+    nc.note.remove(file, note_id).execute();
 }
 
 // ─── Environment variables ──────────────────────────────────────────────────
@@ -286,22 +289,29 @@ void binary_round_trip(Fixture& f, const uint8_t* data, size_t data_len, const c
 
     // ── PUT phase ──────────────────────────────────────────────────
 
-    // JSON handshake: tell the Notecard how many COBS bytes are coming.
-    auto put_rsp = nc.card.binaryPut()
-        .cobs(static_cast<int32_t>(cobs_len))
+    // COBS encode into a buffer first to get the actual encoded length.
+    // cobs_encoded_size() is a worst-case estimate; EOP bytes in the data
+    // can make the actual output shorter (XOR-variant COBS).
+    std::vector<uint8_t> encoded(cobs_len + 1);  // +1 for EOP
+    size_t actual_cobs_len = 0;
+    note::CobsEncoder encoder;
+    encoder.encode(data, data_len, [&](const uint8_t* block, size_t n) {
+        memcpy(encoded.data() + actual_cobs_len, block, n);
+        actual_cobs_len += n;
+    });
+    encoded[actual_cobs_len] = '\n';  // EOP
+    MESSAGE(label, ": actual_cobs_len=", actual_cobs_len, " (predicted ", cobs_len, ")");
+
+    // JSON handshake: tell the Notecard the actual COBS byte count.
+    auto put_rsp = nc.card.binary.put()
+        .cobs(static_cast<int32_t>(actual_cobs_len))
         .status(md5)
         .execute();
     if (!put_rsp) { INFO(note::to_string(put_rsp.error())); }
     REQUIRE(put_rsp);
 
-    // Streaming COBS encode — source stays const, no duplicate buffer.
-    // Each COBS block (~255 bytes) is chunked through I2C's max_transfer.
-    note::CobsEncoder encoder;
-    bool tx_ok = true;
-    encoder.encode(data, data_len, [&](const uint8_t* block, size_t n) {
-        if (tx_ok) tx_ok = i2c_binary_transmit(hal, block, n);
-    });
-    if (tx_ok) { uint8_t eop = '\n'; tx_ok = hal.transmit(&eop, 1); }
+    // Transmit the encoded data + EOP via chunked I2C.
+    bool tx_ok = i2c_binary_transmit(hal, encoded.data(), actual_cobs_len + 1);
     REQUIRE(tx_ok);
 
     // Delay for Notecard to process the binary data
@@ -313,7 +323,7 @@ void binary_round_trip(Fixture& f, const uint8_t* data, size_t data_len, const c
     if (!verify_rsp) { MESSAGE("verify error: ", note::to_string(verify_rsp.error())); }
     REQUIRE(verify_rsp);
     CHECK(verify_rsp.length == static_cast<int32_t>(data_len));
-    CHECK(verify_rsp.cobs == static_cast<int32_t>(cobs_len));
+    CHECK(verify_rsp.cobs == static_cast<int32_t>(actual_cobs_len));
     // Verify the Notecard computed the same MD5 for the stored data
     if (note::string_view(verify_rsp.status).size() > 0) {
         CHECK(note::string_view(verify_rsp.status) == note::string_view(md5));
@@ -322,7 +332,7 @@ void binary_round_trip(Fixture& f, const uint8_t* data, size_t data_len, const c
     // ── GET phase ──────────────────────────────────────────────────
 
     // JSON handshake: request the binary data back
-    auto get_rsp = nc.card.binaryGet()
+    auto get_rsp = nc.card.binary.get()
         .cobs(verify_rsp.cobs)
         .length(verify_rsp.length)
         .execute();
@@ -337,9 +347,9 @@ void binary_round_trip(Fixture& f, const uint8_t* data, size_t data_len, const c
     // Read raw COBS bytes + newline via chunked I2C reads
     std::vector<uint8_t> rx_buf(cobs_len + 16);
     size_t total_rx = i2c_binary_receive(hal, rx_buf.data(), rx_buf.size(), 5000);
-    MESSAGE(label, ": received ", total_rx, " bytes (expected ~", cobs_len + 1, ")");
-    // Should receive at least cobs_len bytes (possibly +1 for the newline)
-    REQUIRE(total_rx >= cobs_len);
+    MESSAGE(label, ": received ", total_rx, " bytes (expected ~", actual_cobs_len + 1, ")");
+    // Should receive at least actual_cobs_len bytes (possibly +1 for the newline)
+    REQUIRE(total_rx >= actual_cobs_len);
 
     // ── Streaming decode and verify ────────────────────────────────
 

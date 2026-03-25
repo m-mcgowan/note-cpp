@@ -396,6 +396,8 @@ TEST_CASE("Api::file Layer 2 aliases") {
     Harness h;
     h.api.execute(h.api.file.remove());
     REQUIRE(h.last_req.find("file.delete") != std::string::npos);
+    h.api.execute(h.api.file.remove(note::string_view("x-files-item")));
+    REQUIRE(h.last_req.find("file.delete") != std::string::npos);
 }
 
 TEST_CASE("Api::note Layer 2 aliases") {

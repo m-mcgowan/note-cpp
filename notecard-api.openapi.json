@@ -10451,7 +10451,14 @@
       "x-aliases": [
         {
           "method": "remove",
-          "description": "Alias for delete()."
+          "description": "Delete Notefiles."
+        },
+        {
+          "method": "remove",
+          "description": "Delete a Notefile by name.",
+          "params": [
+            "files"
+          ]
         }
       ]
     },

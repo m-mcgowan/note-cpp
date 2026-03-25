@@ -267,28 +267,57 @@ The JSON backend works out of the box. It's customizable if you have specific re
 
 ## Quick Start
 
-Once you have a `Notecard` instance, the typed API is the same everywhere:
+### Arduino (one include, zero dependencies)
 
 ```cpp
-#include <note/api.hpp>
-using namespace note::literals;
-auto notecard = ....;               // we'll get to this later.
-note::Api nc(notecard);
+#include <note.hpp>
 
-// Make requests. Fields are typed, IDE auto-completes everything.
+note::arduino::Notecard nc;
+
+void setup() {
+    nc.begin(Serial1, 9600);       // serial — or nc.begin(Wire) for I2C
+
+    nc.hub.set()
+        .product("com.example.app")
+        .mode("periodic")
+        .execute();
+}
+```
+
+Install via Arduino Library Manager or `arduino-cli lib install note-cpp`.
+
+### PlatformIO
+
+```ini
+lib_deps = note-cpp
+```
+
+### CMake
+
+```cmake
+add_subdirectory(note-cpp)
+target_link_libraries(my_app PRIVATE note-cpp)
+```
+
+### The API
+
+Once set up, the typed API is the same on every platform:
+
+```cpp
+using namespace note::literals;
+
 nc.hub.set()
    .product("com.example.app")
    .mode("periodic")
    .outbound(60_mins)
    .execute();
 
-// Read responses. Fields are named members, not strings.
 auto rsp = nc.card.version().execute();
 if (rsp) {
     auto version = rsp.version;   // string_view
     auto device  = rsp.device;    // string_view
 } else {
-    auto err = to_string(rsp.error());  // "transport: I2C NACK"
+    auto err = to_string(rsp.error());
 }
 ```
 
@@ -709,12 +738,27 @@ python3 tools/codegen/generate.py notecard-api.openapi.json
 ## Building and Testing
 
 ```bash
-./ci.sh                  # default compiler
-./ci.sh --all-compilers  # all locally installed compilers
-./ci.sh --coverage       # coverage report (requires GCC 13+ and lcov 2.x)
+./ci.sh              # quick: codegen + unit tests (~15s)
+./ci.sh --full       # release: headers, examples, version gating, docs, coverage
+./ci.sh --coverage   # coverage report (requires GCC 13+ and lcov 2.x)
 ```
 
-Runs code generation, header compilation checks, unit tests, and examples. See [docs/coverage.md](docs/coverage.md) for coverage details (~98.5% lines, ~99.9% functions).
+CMake build (parallel compilation via Ninja):
+
+```bash
+cmake -G Ninja -B build -S .
+cmake --build build --parallel
+ctest --test-dir build
+```
+
+Arduino-cli:
+
+```bash
+arduino-cli compile --fqbn esp32:esp32:esp32s3:CDCOnBoot=cdc examples/arduino/serial_basic
+```
+
+Requires C++17 minimum. C++20 enables zero-overhead transport policies
+and compile-time validation of enum string fields.
 
 ## Documentation
 

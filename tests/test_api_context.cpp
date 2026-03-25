@@ -84,8 +84,12 @@ TEST_CASE("Api::card resource group") {
     // card.aux (factory member — callable)
     h.api.execute(h.api.card.aux());
     REQUIRE(h.last_req.find("card.aux") != std::string::npos);
-    // card.aux.serial
-    h.api.execute(h.api.card.aux.serial());
+    // card.aux.serial (polymorphic)
+    h.api.execute(h.api.card.aux.serial.request());
+    h.api.execute(h.api.card.aux.serial.notify());
+    h.api.execute(h.api.card.aux.serial.gps());
+    h.api.execute(h.api.card.aux.serial.configure());
+    h.api.execute(h.api.card.aux.serial.off());
     REQUIRE(h.last_req.find("card.aux.serial") != std::string::npos);
     // card.binary (polymorphic)
     h.api.execute(h.api.card.binary.status());

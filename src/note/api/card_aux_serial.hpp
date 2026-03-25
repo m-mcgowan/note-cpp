@@ -12,7 +12,15 @@
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
 #include <note/units.hpp>
+#include <note/flag_set.hpp>
 #include <note/target.hpp>
+
+namespace note::serial {
+    inline constexpr uint32_t env = 1u << 0;
+    inline constexpr uint32_t dfu = 1u << 1;
+    inline constexpr uint32_t signals = 1u << 2;
+    inline constexpr uint32_t accel = 1u << 3;
+} // namespace note::serial
 
 namespace note::api {
 
@@ -28,321 +36,947 @@ namespace note::api {
 ///
 /// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
 struct CardAuxSerial {
-    static constexpr string_view notecard_request = "card.aux.serial";
-    static constexpr bool supports_cmd = true;
-    static constexpr Safety safety = Safety::Idempotent;
-    static constexpr Skus skus = Skus::from(Product::Cell, Product::CellWifi, Product::Skylo, Product::WiFi);
 
-    Notecard* nc_ = nullptr;
+    struct Request {
+        static constexpr string_view notecard_request = "card.aux.serial";
+        static constexpr bool supports_cmd = true;
+        static constexpr Safety safety = Safety::Idempotent;
+        static constexpr Skus skus = Skus::from(Product::Cell, Product::CellWifi, Product::Skylo, Product::WiFi);
 
-    /// If using `"mode": "accel"`, specify a sampling duration for the Notecard
-    /// accelerometer.
-    struct duration_t : Field<int32_t> {
-        using Field<int32_t>::Field;
-        using Field<int32_t>::operator=;
-        CardAuxSerial& operator()(int32_t v);
-    } duration{};
-    /// If `true`, along with `"mode":"gps"` the Notecard will disable
-    /// concurrent modem use during GPS tracking.
-    struct limit_t : Field<bool> {
-        using Field<bool>::Field;
-        using Field<bool>::operator=;
-        CardAuxSerial& operator()(bool v);
-    } limit{};
-    /// The maximum amount of data, in bytes, that can be sent in a single
-    /// transmission before the Notecard pauses to allow the host to process
-    /// incoming data. This value should be set to the size of the host's serial
-    /// receive buffer minus `1`, which represents the number of bytes the host
-    /// can absorb before the sender must delay due to the absence of flow
-    /// control. For example, `note-arduino`` uses a buffer size of
-    /// `(SERIALRXBUFFER_SIZE - 1)`.
-    struct max_t : Field<int32_t> {
-        using Field<int32_t>::Field;
-        using Field<int32_t>::operator=;
-        CardAuxSerial& operator()(int32_t v);
-    } max{};
+        Notecard* nc_ = nullptr;
+
+        /// If using `"mode": "accel"`, specify a sampling duration for the
+        /// Notecard accelerometer.
+        struct duration_t : Field<int32_t> {
+            using Field<int32_t>::Field;
+            using Field<int32_t>::operator=;
+            CardAuxSerial::Request& operator()(int32_t v);
+        } duration{};
+        /// If `true`, along with `"mode":"gps"` the Notecard will disable
+        /// concurrent modem use during GPS tracking.
+        struct limit_t : Field<bool> {
+            using Field<bool>::Field;
+            using Field<bool>::operator=;
+            CardAuxSerial::Request& operator()(bool v);
+        } limit{};
+        /// The maximum amount of data, in bytes, that can be sent in a single
+        /// transmission before the Notecard pauses to allow the host to process
+        /// incoming data. This value should be set to the size of the host's
+        /// serial receive buffer minus `1`, which represents the number of
+        /// bytes the host can absorb before the sender must delay due to the
+        /// absence of flow control. For example, `note-arduino`` uses a buffer
+        /// size of `(SERIALRXBUFFER_SIZE - 1)`.
+        struct max_t : Field<int32_t> {
+            using Field<int32_t>::Field;
+            using Field<int32_t>::operator=;
+            CardAuxSerial::Request& operator()(int32_t v);
+        } max{};
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
-    /// When using `"mode": "notify,dfu"`, specify an interval for notifying the
-    /// host.
-    ///
-    /// @since{5.1.1}
+        /// When using `"mode": "notify,dfu"`, specify an interval for notifying
+        /// the host.
+        ///
+        /// @since{5.1.1}
 #if NOTE_API_VERSION < NOTE_VERSION(5, 1, 1)
-    [[deprecated("requires firmware >= 5.1.1")]]
+        [[deprecated("requires firmware >= 5.1.1")]]
 #endif
-    struct minutes_t : Field<note::Minutes> {
-        using Field<note::Minutes>::Field;
-        using Field<note::Minutes>::operator=;
-        CardAuxSerial& operator()(note::Minutes v);
-    } minutes{};
+        struct minutes_t : Field<note::Minutes> {
+            using Field<note::Minutes>::Field;
+            using Field<note::Minutes>::operator=;
+            CardAuxSerial::Request& operator()(note::Minutes v);
+        } minutes{};
 #endif
-    /// The AUX mode. Must be one of the following:
-    struct mode_t : Field<note::string_view> {
-        using Field<note::string_view>::Field;
-        using Field<note::string_view>::operator=;
-        CardAuxSerial& operator()(note::string_view v);
-    } mode{};
-    /// The delay in milliseconds before sending a buffer of `max` size.
-    struct ms_t : Field<note::Milliseconds> {
-        using Field<note::Milliseconds>::Field;
-        using Field<note::Milliseconds>::operator=;
-        CardAuxSerial& operator()(note::Milliseconds v);
-    } ms{};
-#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-    /// The baud rate or speed at which information is transmitted over AUX
-    /// serial. The default is `115200` unless using GPS, in which case the
-    /// default is `9600`.
-    ///
-    /// @since{4.1.1}
-#if NOTE_API_VERSION < NOTE_VERSION(4, 1, 1)
-    [[deprecated("requires firmware >= 4.1.1")]]
-#endif
-    struct rate_t : Field<int32_t> {
-        using Field<int32_t>::Field;
-        using Field<int32_t>::operator=;
-        CardAuxSerial& operator()(int32_t v);
-    } rate{};
-#endif
-
-
-    template<typename T>
-    auto& extra(note::string_view k_, T v_) {
-        if (extras_count_ < NOTE_EXTRAS_MAX)
-            extras_[extras_count_++] = {k_, note::DynValue{v_}};
-        return *this;
-    }
-    auto& extra(note::string_view k_, const char* v_) {
-        return extra(k_, note::string_view{v_});
-    }
-
-    note::DynField operator[](note::string_view k_) {
-        if (k_ == "duration") return note::dyn_field_for(duration);
-        if (k_ == "limit") return note::dyn_field_for(limit);
-        if (k_ == "max") return note::dyn_field_for(max);
-#if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
-        if (k_ == "minutes") return note::dyn_field_for(minutes);
-#endif
-        if (k_ == "mode") return note::dyn_field_for(mode);
-        if (k_ == "ms") return note::dyn_field_for(ms);
-#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-        if (k_ == "rate") return note::dyn_field_for(rate);
-#endif
-        if (extras_count_ < NOTE_EXTRAS_MAX) {
-            auto& slot = extras_[extras_count_++];
-            slot.key = k_;
-            return note::dyn_field_for(slot.value);
-        }
-        return {};
-    }
-
-    std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
-    uint8_t extras_count_ = 0;
-
-    /// Successful response
-    struct Response {
-        /// The current AUX `mode`.
-        note::ResponseField<note::string_view> mode{};
+        /// The AUX mode. Must be one of the following:
+        struct mode_t : Field<note::string_view> {
+            using Field<note::string_view>::Field;
+            using Field<note::string_view>::operator=;
+            CardAuxSerial::Request& operator()(note::string_view v);
+            CardAuxSerial::Request& operator=(uint32_t flags);
+            CardAuxSerial::Request& operator()(uint32_t flags);
+            mode_t& add(uint32_t flag);
+            mode_t& operator|=(uint32_t flag);
+            mode_t& env();
+            mode_t& dfu();
+            mode_t& signals();
+            mode_t& accel();
+            static constexpr note::FlagDef flag_defs_[] = {
+                { note::serial::env, "env" },
+                { note::serial::dfu, "dfu" },
+                { note::serial::signals, "signals" },
+                { note::serial::accel, "accel" },
+            };
+            note::FlagSet<4, 22> flags_{flag_defs_};
+        } mode{};
+        /// The delay in milliseconds before sending a buffer of `max` size.
+        struct ms_t : Field<note::Milliseconds> {
+            using Field<note::Milliseconds>::Field;
+            using Field<note::Milliseconds>::operator=;
+            CardAuxSerial::Request& operator()(note::Milliseconds v);
+        } ms{};
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
         /// The baud rate or speed at which information is transmitted over AUX
-        /// serial.
+        /// serial. The default is `115200` unless using GPS, in which case the
+        /// default is `9600`.
         ///
         /// @since{4.1.1}
 #if NOTE_API_VERSION < NOTE_VERSION(4, 1, 1)
         [[deprecated("requires firmware >= 4.1.1")]]
 #endif
-        note::ResponseField<int32_t> rate{};
+        struct rate_t : Field<int32_t> {
+            using Field<int32_t>::Field;
+            using Field<int32_t>::operator=;
+            CardAuxSerial::Request& operator()(int32_t v);
+        } rate{};
 #endif
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-        static Response parse(std::unique_ptr<JsonReader> reader_) {
-            Response rsp;
-            rsp.mode = reader_->get_string("mode");
-#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-            rsp.rate = reader_->get_int("rate");
-#endif
-            rsp.reader_ = std::move(reader_);
-            return rsp;
+
+        auto& env() { mode.env(); return *this; }
+        auto& dfu() { mode.dfu(); return *this; }
+        auto& signals() { mode.signals(); return *this; }
+        auto& accel() { mode.accel(); return *this; }
+        template<typename T>
+        auto& extra(note::string_view k_, T v_) {
+            if (extras_count_ < NOTE_EXTRAS_MAX)
+                extras_[extras_count_++] = {k_, note::DynValue{v_}};
+            return *this;
         }
-#pragma GCC diagnostic pop
-
-        // Non-owning parse: string_views point into the reader's data.
-        // The reader (and its underlying JSON buffer) must outlive the Response,
-        // or the caller must consume all string fields before the reader is reused.
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-        static Response parse(const JsonReader& reader_) {
-            Response rsp;
-            rsp.mode = reader_.get_string("mode");
-#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-            rsp.rate = reader_.get_int("rate");
-#endif
-            return rsp;
+        auto& extra(note::string_view k_, const char* v_) {
+            return extra(k_, note::string_view{v_});
         }
-#pragma GCC diagnostic pop
 
-        // SAX sink — zero-allocation streaming parse into Response fields.
-        // String fields are string_views into the JSON buffer; caller must
-        // ensure the buffer outlives the Response (or intern strings after).
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-        struct Sink : ::note::JsonSink {
-            Response& rsp;
-            explicit Sink(Response& r) : rsp(r) {}
-            void on_string(::note::string_view k_, ::note::string_view v_) override {
-                if (k_ == "mode") { rsp.mode = v_; return; }
+        note::DynField operator[](note::string_view k_) {
+            if (k_ == "duration") return note::dyn_field_for(duration);
+            if (k_ == "limit") return note::dyn_field_for(limit);
+            if (k_ == "max") return note::dyn_field_for(max);
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
+            if (k_ == "minutes") return note::dyn_field_for(minutes);
+#endif
+            if (k_ == "mode") return note::dyn_field_for(mode);
+            if (k_ == "ms") return note::dyn_field_for(ms);
+#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
+            if (k_ == "rate") return note::dyn_field_for(rate);
+#endif
+            if (extras_count_ < NOTE_EXTRAS_MAX) {
+                auto& slot = extras_[extras_count_++];
+                slot.key = k_;
+                return note::dyn_field_for(slot.value);
             }
-            void on_number(::note::string_view k_, ::note::string_view raw_) override {
+            return {};
+        }
+
+        std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
+        uint8_t extras_count_ = 0;
+
+        /// Successful response
+        struct Response {
+            /// The current AUX `mode`.
+            note::ResponseField<note::string_view> mode{};
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-                if (k_ == "rate") { rsp.rate = ::note::parse_int(raw_); return; }
+            /// The baud rate or speed at which information is transmitted over
+            /// AUX serial.
+            ///
+            /// @since{4.1.1}
+#if NOTE_API_VERSION < NOTE_VERSION(4, 1, 1)
+            [[deprecated("requires firmware >= 4.1.1")]]
 #endif
+            note::ResponseField<int32_t> rate{};
+#endif
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+            static Response parse(std::unique_ptr<JsonReader> reader_) {
+                Response rsp;
+                rsp.mode = reader_->get_string("mode");
+#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
+                rsp.rate = reader_->get_int("rate");
+#endif
+                rsp.reader_ = std::move(reader_);
+                return rsp;
             }
-        };
+#pragma GCC diagnostic pop
+
+            // Non-owning parse: string_views point into the reader's data.
+            // The reader (and its underlying JSON buffer) must outlive the Response,
+            // or the caller must consume all string fields before the reader is reused.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+            static Response parse(const JsonReader& reader_) {
+                Response rsp;
+                rsp.mode = reader_.get_string("mode");
+#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
+                rsp.rate = reader_.get_int("rate");
+#endif
+                return rsp;
+            }
+#pragma GCC diagnostic pop
+
+            // SAX sink — zero-allocation streaming parse into Response fields.
+            // String fields are string_views into the JSON buffer; caller must
+            // ensure the buffer outlives the Response (or intern strings after).
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+            struct Sink : ::note::JsonSink {
+                Response& rsp;
+                explicit Sink(Response& r) : rsp(r) {}
+                void on_string(::note::string_view k_, ::note::string_view v_) override {
+                    if (k_ == "mode") { rsp.mode = v_; return; }
+                }
+                void on_number(::note::string_view k_, ::note::string_view raw_) override {
+#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
+                    if (k_ == "rate") { rsp.rate = ::note::parse_int(raw_); return; }
+#endif
+                }
+            };
 #pragma GCC diagnostic pop
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-        void intern_strings(::note::StringPool& pool) {
-            if (!mode.empty()) mode = pool.intern(mode);
-        }
+            void intern_strings(::note::StringPool& pool) {
+                if (!mode.empty()) mode = pool.intern(mode);
+            }
 #pragma GCC diagnostic pop
 
 #ifdef ARDUINO
-        /// Arduino Printable: prints response fields to Serial or any Print stream.
-        size_t printTo(Print& p) const {
-            size_t n = p.print("{");
-            bool first_ = true;
-            if (!first_) n += p.print(",");
-            first_ = false;
-            n += p.print("\"mode\":");
-            n += note::detail::print_json_value(p, mode.value());
+            /// Arduino Printable: prints response fields to Serial or any Print stream.
+            size_t printTo(Print& p) const {
+                size_t n = p.print("{");
+                bool first_ = true;
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"mode\":");
+                n += note::detail::print_json_value(p, mode.value());
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-            if (!first_) n += p.print(",");
-            first_ = false;
-            n += p.print("\"rate\":");
-            n += note::detail::print_json_value(p, rate.value());
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"rate\":");
+                n += note::detail::print_json_value(p, rate.value());
+#endif
+                n += p.print("}");
+                return n;
+            }
+#endif
+
+        private:
+            std::unique_ptr<JsonReader> reader_;
+        };
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+        void build(JsonBuilder& b) const {
+            if (duration) b.add("duration", *duration);
+            if (limit) b.add("limit", *limit);
+            if (max) b.add("max", *max);
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
+            if (minutes) b.add("minutes", *minutes);
+#endif
+            if (mode) b.add("mode", *mode);
+            if (ms) b.add("ms", *ms);
+#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
+            if (rate) b.add("rate", *rate);
+#endif
+            for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
+                std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
+                           extras_[i_].value);
+        }
+#pragma GCC diagnostic pop
+
+        auto execute() const { return nc_->execute(*this); }
+        auto execute(Notecard& nc) const { return nc.execute(*this); }
+        Result<void> command() const { return nc_->command_typed(*this); }
+        Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
+
+#ifdef ARDUINO
+        /// Arduino Printable: prints the JSON request to Serial or any Print stream.
+        size_t printTo(Print& p) const {
+            size_t n = p.print("{\"req\":\"");
+            n += p.print(notecard_request.data());
+            n += p.print("\"");
+            if (duration) {
+                n += p.print(",\"duration\":");
+                n += note::detail::print_json_value(p, *duration);
+            }
+            if (limit) {
+                n += p.print(",\"limit\":");
+                n += note::detail::print_json_value(p, *limit);
+            }
+            if (max) {
+                n += p.print(",\"max\":");
+                n += note::detail::print_json_value(p, *max);
+            }
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
+            if (minutes) {
+                n += p.print(",\"minutes\":");
+                n += note::detail::print_json_value(p, *minutes);
+            }
+#endif
+            if (mode) {
+                n += p.print(",\"mode\":");
+                n += note::detail::print_json_value(p, *mode);
+            }
+            if (ms) {
+                n += p.print(",\"ms\":");
+                n += note::detail::print_json_value(p, *ms);
+            }
+#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
+            if (rate) {
+                n += p.print(",\"rate\":");
+                n += note::detail::print_json_value(p, *rate);
+            }
 #endif
             n += p.print("}");
             return n;
         }
 #endif
 
-    private:
-        std::unique_ptr<JsonReader> reader_;
     };
+
+    /// Enable AUX serial notifications. Combine flags to select which
+    /// notifications are active (e.g. env + dfu).
+    ///
+    /// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
+    struct Notify {
+        static constexpr string_view notecard_request = "card.aux.serial";
+        static constexpr bool supports_cmd = true;
+        static constexpr Safety safety = Safety::Idempotent;
+        static constexpr Skus skus = Skus::from(Product::Cell, Product::CellWifi, Product::Skylo, Product::WiFi);
+
+        Notecard* nc_ = nullptr;
+
+        /// If using `"mode": "accel"`, specify a sampling duration for the
+        /// Notecard accelerometer.
+        struct duration_t : Field<int32_t> {
+            using Field<int32_t>::Field;
+            using Field<int32_t>::operator=;
+            CardAuxSerial::Notify& operator()(int32_t v);
+        } duration{};
+        /// The maximum amount of data, in bytes, that can be sent in a single
+        /// transmission before the Notecard pauses to allow the host to process
+        /// incoming data. This value should be set to the size of the host's
+        /// serial receive buffer minus `1`, which represents the number of
+        /// bytes the host can absorb before the sender must delay due to the
+        /// absence of flow control. For example, `note-arduino`` uses a buffer
+        /// size of `(SERIALRXBUFFER_SIZE - 1)`.
+        struct max_t : Field<int32_t> {
+            using Field<int32_t>::Field;
+            using Field<int32_t>::operator=;
+            CardAuxSerial::Notify& operator()(int32_t v);
+        } max{};
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
+        /// When using `"mode": "notify,dfu"`, specify an interval for notifying
+        /// the host.
+        ///
+        /// @since{5.1.1}
+#if NOTE_API_VERSION < NOTE_VERSION(5, 1, 1)
+        [[deprecated("requires firmware >= 5.1.1")]]
+#endif
+        struct minutes_t : Field<note::Minutes> {
+            using Field<note::Minutes>::Field;
+            using Field<note::Minutes>::operator=;
+            CardAuxSerial::Notify& operator()(note::Minutes v);
+        } minutes{};
+#endif
+        /// The AUX mode. Must be one of the following:
+        struct triggers_t : Field<note::string_view> {
+            using Field<note::string_view>::Field;
+            using Field<note::string_view>::operator=;
+            CardAuxSerial::Notify& operator()(note::string_view v);
+            CardAuxSerial::Notify& operator=(uint32_t flags);
+            CardAuxSerial::Notify& operator()(uint32_t flags);
+            triggers_t& add(uint32_t flag);
+            triggers_t& operator|=(uint32_t flag);
+            triggers_t& env();
+            triggers_t& dfu();
+            triggers_t& signals();
+            triggers_t& accel();
+            static constexpr note::FlagDef flag_defs_[] = {
+                { note::serial::env, "env" },
+                { note::serial::dfu, "dfu" },
+                { note::serial::signals, "signals" },
+                { note::serial::accel, "accel" },
+            };
+            note::FlagSet<4, 22> flags_{flag_defs_};
+        } triggers{};
+        /// The delay in milliseconds before sending a buffer of `max` size.
+        struct ms_t : Field<note::Milliseconds> {
+            using Field<note::Milliseconds>::Field;
+            using Field<note::Milliseconds>::operator=;
+            CardAuxSerial::Notify& operator()(note::Milliseconds v);
+        } ms{};
+#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
+        /// The baud rate or speed at which information is transmitted over AUX
+        /// serial. The default is `115200` unless using GPS, in which case the
+        /// default is `9600`.
+        ///
+        /// @since{4.1.1}
+#if NOTE_API_VERSION < NOTE_VERSION(4, 1, 1)
+        [[deprecated("requires firmware >= 4.1.1")]]
+#endif
+        struct rate_t : Field<int32_t> {
+            using Field<int32_t>::Field;
+            using Field<int32_t>::operator=;
+            CardAuxSerial::Notify& operator()(int32_t v);
+        } rate{};
+#endif
+
+
+        auto& env() { triggers.env(); return *this; }
+        auto& dfu() { triggers.dfu(); return *this; }
+        auto& signals() { triggers.signals(); return *this; }
+        auto& accel() { triggers.accel(); return *this; }
+        template<typename T>
+        auto& extra(note::string_view k_, T v_) {
+            if (extras_count_ < NOTE_EXTRAS_MAX)
+                extras_[extras_count_++] = {k_, note::DynValue{v_}};
+            return *this;
+        }
+        auto& extra(note::string_view k_, const char* v_) {
+            return extra(k_, note::string_view{v_});
+        }
+
+        note::DynField operator[](note::string_view k_) {
+            if (k_ == "duration") return note::dyn_field_for(duration);
+            if (k_ == "max") return note::dyn_field_for(max);
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
+            if (k_ == "minutes") return note::dyn_field_for(minutes);
+#endif
+            if (k_ == "mode") return note::dyn_field_for(triggers);
+            if (k_ == "ms") return note::dyn_field_for(ms);
+#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
+            if (k_ == "rate") return note::dyn_field_for(rate);
+#endif
+            if (extras_count_ < NOTE_EXTRAS_MAX) {
+                auto& slot = extras_[extras_count_++];
+                slot.key = k_;
+                return note::dyn_field_for(slot.value);
+            }
+            return {};
+        }
+
+        std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
+        uint8_t extras_count_ = 0;
+
+        using Response = void;
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-    void build(JsonBuilder& b) const {
-        if (duration) b.add("duration", *duration);
-        if (limit) b.add("limit", *limit);
-        if (max) b.add("max", *max);
+        void build(JsonBuilder& b) const {
+            if (duration) b.add("duration", *duration);
+            if (max) b.add("max", *max);
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
-        if (minutes) b.add("minutes", *minutes);
+            if (minutes) b.add("minutes", *minutes);
 #endif
-        if (mode) b.add("mode", *mode);
-        if (ms) b.add("ms", *ms);
+            if (triggers) {
+                char mp_[96];
+                std::snprintf(mp_, sizeof(mp_), "notify,%.*s",
+                             (int)(*triggers).size(), (*triggers).data());
+                b.add("mode", note::string_view{mp_});
+            } else {
+                b.add("mode", "notify");
+            }
+            if (ms) b.add("ms", *ms);
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-        if (rate) b.add("rate", *rate);
+            if (rate) b.add("rate", *rate);
 #endif
-        for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
-            std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
-                       extras_[i_].value);
-    }
+            for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
+                std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
+                           extras_[i_].value);
+        }
 #pragma GCC diagnostic pop
 
-    auto execute() const { return nc_->execute(*this); }
-    auto execute(Notecard& nc) const { return nc.execute(*this); }
-    Result<void> command() const { return nc_->command_typed(*this); }
-    Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
+        auto execute() const { return nc_->execute(*this); }
+        auto execute(Notecard& nc) const { return nc.execute(*this); }
+        Result<void> command() const { return nc_->command_typed(*this); }
+        Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
 
 #ifdef ARDUINO
-    /// Arduino Printable: prints the JSON request to Serial or any Print stream.
-    size_t printTo(Print& p) const {
-        size_t n = p.print("{\"req\":\"");
-        n += p.print(notecard_request.data());
-        n += p.print("\"");
-        if (duration) {
-            n += p.print(",\"duration\":");
-            n += note::detail::print_json_value(p, *duration);
-        }
-        if (limit) {
-            n += p.print(",\"limit\":");
-            n += note::detail::print_json_value(p, *limit);
-        }
-        if (max) {
-            n += p.print(",\"max\":");
-            n += note::detail::print_json_value(p, *max);
-        }
+        /// Arduino Printable: prints the JSON request to Serial or any Print stream.
+        size_t printTo(Print& p) const {
+            size_t n = p.print("{\"req\":\"");
+            n += p.print(notecard_request.data());
+            n += p.print("\"");
+            if (duration) {
+                n += p.print(",\"duration\":");
+                n += note::detail::print_json_value(p, *duration);
+            }
+            if (max) {
+                n += p.print(",\"max\":");
+                n += note::detail::print_json_value(p, *max);
+            }
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
-        if (minutes) {
-            n += p.print(",\"minutes\":");
-            n += note::detail::print_json_value(p, *minutes);
-        }
+            if (minutes) {
+                n += p.print(",\"minutes\":");
+                n += note::detail::print_json_value(p, *minutes);
+            }
 #endif
-        if (mode) {
-            n += p.print(",\"mode\":");
-            n += note::detail::print_json_value(p, *mode);
-        }
-        if (ms) {
-            n += p.print(",\"ms\":");
-            n += note::detail::print_json_value(p, *ms);
-        }
+            if (triggers) {
+                n += p.print(",\"mode\":");
+                n += note::detail::print_json_value(p, *triggers);
+            }
+            if (ms) {
+                n += p.print(",\"ms\":");
+                n += note::detail::print_json_value(p, *ms);
+            }
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-        if (rate) {
-            n += p.print(",\"rate\":");
-            n += note::detail::print_json_value(p, *rate);
-        }
+            if (rate) {
+                n += p.print(",\"rate\":");
+                n += note::detail::print_json_value(p, *rate);
+            }
 #endif
-        n += p.print("}");
-        return n;
-    }
+            n += p.print("}");
+            return n;
+        }
 #endif
 
+    };
+
+    /// Configure AUX serial for external GPS/GNSS module.
+    ///
+    /// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
+    struct Gps {
+        static constexpr string_view notecard_request = "card.aux.serial";
+        static constexpr bool supports_cmd = true;
+        static constexpr Safety safety = Safety::Idempotent;
+        static constexpr Skus skus = Skus::from(Product::Cell, Product::CellWifi, Product::Skylo, Product::WiFi);
+
+        Notecard* nc_ = nullptr;
+
+        /// If `true`, along with `"mode":"gps"` the Notecard will disable
+        /// concurrent modem use during GPS tracking.
+        struct limit_t : Field<bool> {
+            using Field<bool>::Field;
+            using Field<bool>::operator=;
+            CardAuxSerial::Gps& operator()(bool v);
+        } limit{};
+#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
+        /// The baud rate or speed at which information is transmitted over AUX
+        /// serial. The default is `115200` unless using GPS, in which case the
+        /// default is `9600`.
+        ///
+        /// @since{4.1.1}
+#if NOTE_API_VERSION < NOTE_VERSION(4, 1, 1)
+        [[deprecated("requires firmware >= 4.1.1")]]
+#endif
+        struct rate_t : Field<int32_t> {
+            using Field<int32_t>::Field;
+            using Field<int32_t>::operator=;
+            CardAuxSerial::Gps& operator()(int32_t v);
+        } rate{};
+#endif
+
+
+        template<typename T>
+        auto& extra(note::string_view k_, T v_) {
+            if (extras_count_ < NOTE_EXTRAS_MAX)
+                extras_[extras_count_++] = {k_, note::DynValue{v_}};
+            return *this;
+        }
+        auto& extra(note::string_view k_, const char* v_) {
+            return extra(k_, note::string_view{v_});
+        }
+
+        note::DynField operator[](note::string_view k_) {
+            if (k_ == "limit") return note::dyn_field_for(limit);
+#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
+            if (k_ == "rate") return note::dyn_field_for(rate);
+#endif
+            if (extras_count_ < NOTE_EXTRAS_MAX) {
+                auto& slot = extras_[extras_count_++];
+                slot.key = k_;
+                return note::dyn_field_for(slot.value);
+            }
+            return {};
+        }
+
+        std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
+        uint8_t extras_count_ = 0;
+
+        using Response = void;
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+        void build(JsonBuilder& b) const {
+            b.add("mode", "gps");
+            if (limit) b.add("limit", *limit);
+#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
+            if (rate) b.add("rate", *rate);
+#endif
+            for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
+                std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
+                           extras_[i_].value);
+        }
+#pragma GCC diagnostic pop
+
+        auto execute() const { return nc_->execute(*this); }
+        auto execute(Notecard& nc) const { return nc.execute(*this); }
+        Result<void> command() const { return nc_->command_typed(*this); }
+        Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
+
+#ifdef ARDUINO
+        /// Arduino Printable: prints the JSON request to Serial or any Print stream.
+        size_t printTo(Print& p) const {
+            size_t n = p.print("{\"req\":\"");
+            n += p.print(notecard_request.data());
+            n += p.print("\"");
+            if (limit) {
+                n += p.print(",\"limit\":");
+                n += note::detail::print_json_value(p, *limit);
+            }
+#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
+            if (rate) {
+                n += p.print(",\"rate\":");
+                n += note::detail::print_json_value(p, *rate);
+            }
+#endif
+            n += p.print("}");
+            return n;
+        }
+#endif
+
+    };
+
+    /// Configure AUX serial for request/response monitoring (default mode).
+    ///
+    /// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
+    struct Configure {
+        static constexpr string_view notecard_request = "card.aux.serial";
+        static constexpr bool supports_cmd = true;
+        static constexpr Safety safety = Safety::Idempotent;
+        static constexpr Skus skus = Skus::from(Product::Cell, Product::CellWifi, Product::Skylo, Product::WiFi);
+
+        Notecard* nc_ = nullptr;
+
+#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
+        /// The baud rate or speed at which information is transmitted over AUX
+        /// serial. The default is `115200` unless using GPS, in which case the
+        /// default is `9600`.
+        ///
+        /// @since{4.1.1}
+#if NOTE_API_VERSION < NOTE_VERSION(4, 1, 1)
+        [[deprecated("requires firmware >= 4.1.1")]]
+#endif
+        struct rate_t : Field<int32_t> {
+            using Field<int32_t>::Field;
+            using Field<int32_t>::operator=;
+            CardAuxSerial::Configure& operator()(int32_t v);
+        } rate{};
+#endif
+
+
+        template<typename T>
+        auto& extra(note::string_view k_, T v_) {
+            if (extras_count_ < NOTE_EXTRAS_MAX)
+                extras_[extras_count_++] = {k_, note::DynValue{v_}};
+            return *this;
+        }
+        auto& extra(note::string_view k_, const char* v_) {
+            return extra(k_, note::string_view{v_});
+        }
+
+        note::DynField operator[](note::string_view k_) {
+#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
+            if (k_ == "rate") return note::dyn_field_for(rate);
+#endif
+            if (extras_count_ < NOTE_EXTRAS_MAX) {
+                auto& slot = extras_[extras_count_++];
+                slot.key = k_;
+                return note::dyn_field_for(slot.value);
+            }
+            return {};
+        }
+
+        std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
+        uint8_t extras_count_ = 0;
+
+        using Response = void;
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+        void build(JsonBuilder& b) const {
+            b.add("mode", "req");
+#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
+            if (rate) b.add("rate", *rate);
+#endif
+            for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
+                std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
+                           extras_[i_].value);
+        }
+#pragma GCC diagnostic pop
+
+        auto execute() const { return nc_->execute(*this); }
+        auto execute(Notecard& nc) const { return nc.execute(*this); }
+        Result<void> command() const { return nc_->command_typed(*this); }
+        Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
+
+#ifdef ARDUINO
+        /// Arduino Printable: prints the JSON request to Serial or any Print stream.
+        size_t printTo(Print& p) const {
+            size_t n = p.print("{\"req\":\"");
+            n += p.print(notecard_request.data());
+            n += p.print("\"");
+#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
+            if (rate) {
+                n += p.print(",\"rate\":");
+                n += note::detail::print_json_value(p, *rate);
+            }
+#endif
+            n += p.print("}");
+            return n;
+        }
+#endif
+
+    };
+
+    /// Disable AUX serial.
+    ///
+    /// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
+    struct Off {
+        static constexpr string_view notecard_request = "card.aux.serial";
+        static constexpr bool supports_cmd = true;
+        static constexpr Safety safety = Safety::Idempotent;
+        static constexpr Skus skus = Skus::from(Product::Cell, Product::CellWifi, Product::Skylo, Product::WiFi);
+
+        Notecard* nc_ = nullptr;
+
+
+        template<typename T>
+        auto& extra(note::string_view k_, T v_) {
+            if (extras_count_ < NOTE_EXTRAS_MAX)
+                extras_[extras_count_++] = {k_, note::DynValue{v_}};
+            return *this;
+        }
+        auto& extra(note::string_view k_, const char* v_) {
+            return extra(k_, note::string_view{v_});
+        }
+
+        note::DynField operator[](note::string_view k_) {
+            if (extras_count_ < NOTE_EXTRAS_MAX) {
+                auto& slot = extras_[extras_count_++];
+                slot.key = k_;
+                return note::dyn_field_for(slot.value);
+            }
+            return {};
+        }
+
+        std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
+        uint8_t extras_count_ = 0;
+
+        using Response = void;
+
+        void build(JsonBuilder& b) const {
+            b.add("mode", "-");
+            for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
+                std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
+                           extras_[i_].value);
+        }
+
+        auto execute() const { return nc_->execute(*this); }
+        auto execute(Notecard& nc) const { return nc.execute(*this); }
+        Result<void> command() const { return nc_->command_typed(*this); }
+        Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
+
+#ifdef ARDUINO
+        /// Arduino Printable: prints the JSON request to Serial or any Print stream.
+        size_t printTo(Print& p) const {
+            size_t n = p.print("{\"req\":\"");
+            n += p.print(notecard_request.data());
+            n += p.print("\"");
+            n += p.print("}");
+            return n;
+        }
+#endif
+
+    };
 };
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-inline CardAuxSerial& CardAuxSerial::duration_t::operator()(int32_t v) {
+inline CardAuxSerial::Request& CardAuxSerial::Request::duration_t::operator()(int32_t v) {
     Field<int32_t>::operator=(v);
-    return *reinterpret_cast<CardAuxSerial*>(
-        reinterpret_cast<char*>(this) - offsetof(CardAuxSerial, duration));
+    return *reinterpret_cast<CardAuxSerial::Request*>(
+        reinterpret_cast<char*>(this) - offsetof(CardAuxSerial::Request, duration));
 }
-inline CardAuxSerial& CardAuxSerial::limit_t::operator()(bool v) {
+inline CardAuxSerial::Request& CardAuxSerial::Request::limit_t::operator()(bool v) {
     Field<bool>::operator=(v);
-    return *reinterpret_cast<CardAuxSerial*>(
-        reinterpret_cast<char*>(this) - offsetof(CardAuxSerial, limit));
+    return *reinterpret_cast<CardAuxSerial::Request*>(
+        reinterpret_cast<char*>(this) - offsetof(CardAuxSerial::Request, limit));
 }
-inline CardAuxSerial& CardAuxSerial::max_t::operator()(int32_t v) {
+inline CardAuxSerial::Request& CardAuxSerial::Request::max_t::operator()(int32_t v) {
     Field<int32_t>::operator=(v);
-    return *reinterpret_cast<CardAuxSerial*>(
-        reinterpret_cast<char*>(this) - offsetof(CardAuxSerial, max));
+    return *reinterpret_cast<CardAuxSerial::Request*>(
+        reinterpret_cast<char*>(this) - offsetof(CardAuxSerial::Request, max));
 }
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
-inline CardAuxSerial& CardAuxSerial::minutes_t::operator()(note::Minutes v) {
+inline CardAuxSerial::Request& CardAuxSerial::Request::minutes_t::operator()(note::Minutes v) {
     Field<note::Minutes>::operator=(v);
-    return *reinterpret_cast<CardAuxSerial*>(
-        reinterpret_cast<char*>(this) - offsetof(CardAuxSerial, minutes));
+    return *reinterpret_cast<CardAuxSerial::Request*>(
+        reinterpret_cast<char*>(this) - offsetof(CardAuxSerial::Request, minutes));
 }
 #endif
-inline CardAuxSerial& CardAuxSerial::mode_t::operator()(note::string_view v) {
+inline CardAuxSerial::Request& CardAuxSerial::Request::mode_t::operator()(note::string_view v) {
     Field<note::string_view>::operator=(v);
-    return *reinterpret_cast<CardAuxSerial*>(
-        reinterpret_cast<char*>(this) - offsetof(CardAuxSerial, mode));
+    return *reinterpret_cast<CardAuxSerial::Request*>(
+        reinterpret_cast<char*>(this) - offsetof(CardAuxSerial::Request, mode));
 }
-inline CardAuxSerial& CardAuxSerial::ms_t::operator()(note::Milliseconds v) {
+inline CardAuxSerial::Request& CardAuxSerial::Request::mode_t::operator=(uint32_t flags) {
+    flags_.set(flags);
+    Field<note::string_view>::operator=(flags_.str());
+    return *reinterpret_cast<CardAuxSerial::Request*>(
+        reinterpret_cast<char*>(this) - offsetof(CardAuxSerial::Request, mode));
+}
+inline CardAuxSerial::Request& CardAuxSerial::Request::mode_t::operator()(uint32_t flags) {
+    return operator=(flags);
+}
+inline CardAuxSerial::Request::mode_t& CardAuxSerial::Request::mode_t::add(uint32_t flag) {
+    flags_.add(flag);
+    Field<note::string_view>::operator=(flags_.str());
+    return *this;
+}
+inline CardAuxSerial::Request::mode_t& CardAuxSerial::Request::mode_t::operator|=(uint32_t flag) {
+    flags_ |= flag;
+    Field<note::string_view>::operator=(flags_.str());
+    return *this;
+}
+inline CardAuxSerial::Request::mode_t& CardAuxSerial::Request::mode_t::env() {
+    flags_.add(note::serial::env);
+    Field<note::string_view>::operator=(flags_.str());
+    return *this;
+}
+inline CardAuxSerial::Request::mode_t& CardAuxSerial::Request::mode_t::dfu() {
+    flags_.add(note::serial::dfu);
+    Field<note::string_view>::operator=(flags_.str());
+    return *this;
+}
+inline CardAuxSerial::Request::mode_t& CardAuxSerial::Request::mode_t::signals() {
+    flags_.add(note::serial::signals);
+    Field<note::string_view>::operator=(flags_.str());
+    return *this;
+}
+inline CardAuxSerial::Request::mode_t& CardAuxSerial::Request::mode_t::accel() {
+    flags_.add(note::serial::accel);
+    Field<note::string_view>::operator=(flags_.str());
+    return *this;
+}
+inline CardAuxSerial::Request& CardAuxSerial::Request::ms_t::operator()(note::Milliseconds v) {
     Field<note::Milliseconds>::operator=(v);
-    return *reinterpret_cast<CardAuxSerial*>(
-        reinterpret_cast<char*>(this) - offsetof(CardAuxSerial, ms));
+    return *reinterpret_cast<CardAuxSerial::Request*>(
+        reinterpret_cast<char*>(this) - offsetof(CardAuxSerial::Request, ms));
 }
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-inline CardAuxSerial& CardAuxSerial::rate_t::operator()(int32_t v) {
+inline CardAuxSerial::Request& CardAuxSerial::Request::rate_t::operator()(int32_t v) {
     Field<int32_t>::operator=(v);
-    return *reinterpret_cast<CardAuxSerial*>(
-        reinterpret_cast<char*>(this) - offsetof(CardAuxSerial, rate));
+    return *reinterpret_cast<CardAuxSerial::Request*>(
+        reinterpret_cast<char*>(this) - offsetof(CardAuxSerial::Request, rate));
 }
 #endif
 #pragma GCC diagnostic pop
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+inline CardAuxSerial::Notify& CardAuxSerial::Notify::duration_t::operator()(int32_t v) {
+    Field<int32_t>::operator=(v);
+    return *reinterpret_cast<CardAuxSerial::Notify*>(
+        reinterpret_cast<char*>(this) - offsetof(CardAuxSerial::Notify, duration));
+}
+inline CardAuxSerial::Notify& CardAuxSerial::Notify::max_t::operator()(int32_t v) {
+    Field<int32_t>::operator=(v);
+    return *reinterpret_cast<CardAuxSerial::Notify*>(
+        reinterpret_cast<char*>(this) - offsetof(CardAuxSerial::Notify, max));
+}
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
+inline CardAuxSerial::Notify& CardAuxSerial::Notify::minutes_t::operator()(note::Minutes v) {
+    Field<note::Minutes>::operator=(v);
+    return *reinterpret_cast<CardAuxSerial::Notify*>(
+        reinterpret_cast<char*>(this) - offsetof(CardAuxSerial::Notify, minutes));
+}
+#endif
+inline CardAuxSerial::Notify& CardAuxSerial::Notify::triggers_t::operator()(note::string_view v) {
+    Field<note::string_view>::operator=(v);
+    return *reinterpret_cast<CardAuxSerial::Notify*>(
+        reinterpret_cast<char*>(this) - offsetof(CardAuxSerial::Notify, triggers));
+}
+inline CardAuxSerial::Notify& CardAuxSerial::Notify::triggers_t::operator=(uint32_t flags) {
+    flags_.set(flags);
+    Field<note::string_view>::operator=(flags_.str());
+    return *reinterpret_cast<CardAuxSerial::Notify*>(
+        reinterpret_cast<char*>(this) - offsetof(CardAuxSerial::Notify, triggers));
+}
+inline CardAuxSerial::Notify& CardAuxSerial::Notify::triggers_t::operator()(uint32_t flags) {
+    return operator=(flags);
+}
+inline CardAuxSerial::Notify::triggers_t& CardAuxSerial::Notify::triggers_t::add(uint32_t flag) {
+    flags_.add(flag);
+    Field<note::string_view>::operator=(flags_.str());
+    return *this;
+}
+inline CardAuxSerial::Notify::triggers_t& CardAuxSerial::Notify::triggers_t::operator|=(uint32_t flag) {
+    flags_ |= flag;
+    Field<note::string_view>::operator=(flags_.str());
+    return *this;
+}
+inline CardAuxSerial::Notify::triggers_t& CardAuxSerial::Notify::triggers_t::env() {
+    flags_.add(note::serial::env);
+    Field<note::string_view>::operator=(flags_.str());
+    return *this;
+}
+inline CardAuxSerial::Notify::triggers_t& CardAuxSerial::Notify::triggers_t::dfu() {
+    flags_.add(note::serial::dfu);
+    Field<note::string_view>::operator=(flags_.str());
+    return *this;
+}
+inline CardAuxSerial::Notify::triggers_t& CardAuxSerial::Notify::triggers_t::signals() {
+    flags_.add(note::serial::signals);
+    Field<note::string_view>::operator=(flags_.str());
+    return *this;
+}
+inline CardAuxSerial::Notify::triggers_t& CardAuxSerial::Notify::triggers_t::accel() {
+    flags_.add(note::serial::accel);
+    Field<note::string_view>::operator=(flags_.str());
+    return *this;
+}
+inline CardAuxSerial::Notify& CardAuxSerial::Notify::ms_t::operator()(note::Milliseconds v) {
+    Field<note::Milliseconds>::operator=(v);
+    return *reinterpret_cast<CardAuxSerial::Notify*>(
+        reinterpret_cast<char*>(this) - offsetof(CardAuxSerial::Notify, ms));
+}
+#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
+inline CardAuxSerial::Notify& CardAuxSerial::Notify::rate_t::operator()(int32_t v) {
+    Field<int32_t>::operator=(v);
+    return *reinterpret_cast<CardAuxSerial::Notify*>(
+        reinterpret_cast<char*>(this) - offsetof(CardAuxSerial::Notify, rate));
+}
+#endif
+#pragma GCC diagnostic pop
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+inline CardAuxSerial::Gps& CardAuxSerial::Gps::limit_t::operator()(bool v) {
+    Field<bool>::operator=(v);
+    return *reinterpret_cast<CardAuxSerial::Gps*>(
+        reinterpret_cast<char*>(this) - offsetof(CardAuxSerial::Gps, limit));
+}
+#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
+inline CardAuxSerial::Gps& CardAuxSerial::Gps::rate_t::operator()(int32_t v) {
+    Field<int32_t>::operator=(v);
+    return *reinterpret_cast<CardAuxSerial::Gps*>(
+        reinterpret_cast<char*>(this) - offsetof(CardAuxSerial::Gps, rate));
+}
+#endif
+#pragma GCC diagnostic pop
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
+inline CardAuxSerial::Configure& CardAuxSerial::Configure::rate_t::operator()(int32_t v) {
+    Field<int32_t>::operator=(v);
+    return *reinterpret_cast<CardAuxSerial::Configure*>(
+        reinterpret_cast<char*>(this) - offsetof(CardAuxSerial::Configure, rate));
+}
+#endif
+#pragma GCC diagnostic pop
+
 
 
 } // namespace note::api

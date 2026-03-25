@@ -1,7 +1,86 @@
 {
-    "$comment": "Overlay for the Blues OpenAPI spec. Adds missing enum values and other metadata that the upstream spec doesn't include. Merged into the spec before code generation.",
+    "$comment": "Overlay for the Blues OpenAPI spec. Adds missing enum values, intents, and flags that the upstream spec doesn't include. Merged into the spec before code generation.",
 
     "paths": {
+        "/card/aux/serial": {
+            "put": {
+                "properties": {
+                    "mode": {
+                        "x-flags": ["env", "dfu", "signals", "accel"]
+                    }
+                },
+                "x-intents": [
+                    {
+                        "name": "notify",
+                        "description": "Enable AUX serial notifications. Combine flags to select which notifications are active (e.g. env + dfu).",
+                        "mode_prefix": "notify",
+                        "fields": ["mode", "rate", "max", "ms", "minutes", "duration"]
+                    },
+                    {
+                        "name": "gps",
+                        "description": "Configure AUX serial for external GPS/GNSS module.",
+                        "implicit": {"mode": "gps"},
+                        "fields": ["limit", "rate"]
+                    },
+                    {
+                        "name": "configure",
+                        "description": "Configure AUX serial for request/response monitoring (default mode).",
+                        "implicit": {"mode": "req"},
+                        "fields": ["rate"]
+                    },
+                    {
+                        "name": "off",
+                        "description": "Disable AUX serial.",
+                        "implicit": {"mode": "-"}
+                    }
+                ],
+                "x-samples": [
+                    {
+                        "title": "Enable GPS Mode",
+                        "json": "{\"req\": \"card.aux.serial\", \"mode\": \"gps\"}",
+                        "x-validation": {
+                            "wire": "{\"req\":\"card.aux.serial\",\"mode\":\"gps\"}",
+                            "sub_type": "gps"
+                        }
+                    },
+                    {
+                        "title": "Enable DFU Notifications",
+                        "json": "{\"req\": \"card.aux.serial\", \"mode\": \"notify,dfu\", \"minutes\": 5}",
+                        "x-validation": {
+                            "wire": "{\"req\":\"card.aux.serial\",\"minutes\":5,\"mode\":\"notify,dfu\"}",
+                            "sub_type": "notify",
+                            "fields": {"mode": "dfu", "minutes": 5}
+                        }
+                    },
+                    {
+                        "title": "Enable Environment Notifications",
+                        "json": "{\"req\": \"card.aux.serial\", \"mode\": \"notify,env\"}",
+                        "x-validation": {
+                            "wire": "{\"req\":\"card.aux.serial\",\"mode\":\"notify,env\"}",
+                            "sub_type": "notify",
+                            "fields": {"mode": "env"}
+                        }
+                    },
+                    {
+                        "title": "Multiple Notifications",
+                        "json": "{\"req\": \"card.aux.serial\", \"mode\": \"notify,accel,env\", \"duration\": 500}",
+                        "x-validation": {
+                            "wire": "{\"req\":\"card.aux.serial\",\"duration\":500,\"mode\":\"notify,accel,env\"}",
+                            "sub_type": "notify",
+                            "fields": {"mode": "accel,env", "duration": 500}
+                        }
+                    },
+                    {
+                        "title": "Disable AUX Serial",
+                        "json": "{\"req\": \"card.aux.serial\", \"mode\": \"-\"}",
+                        "x-validation": {
+                            "wire": "{\"req\":\"card.aux.serial\",\"mode\":\"-\"}",
+                            "sub_type": "off"
+                        }
+                    }
+                ]
+            }
+        },
         "/note/template": {
             "put": {
                 "properties": {

@@ -95,15 +95,12 @@ struct NoteTemplate {
         /// Templates to learn more.
         ///
         /// @since{6.2.3}
-        // format: compact | -
 #if NOTE_API_VERSION < NOTE_VERSION(6, 2, 3)
         [[deprecated("requires firmware >= 6.2.3")]]
 #endif
         struct format_t : Field<note::string_view> {
             using Field<note::string_view>::Field;
             using Field<note::string_view>::operator=;
-            static constexpr note::string_view compact{"compact"};
-            static constexpr note::string_view _{"-"};
             NoteTemplate::Define& operator()(note::string_view v);
         } format{};
 #endif
@@ -145,17 +142,6 @@ struct NoteTemplate {
         } verify{};
 #endif
 
-#if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
-        // consteval: only callable at compile time (C++20)
-#if __cplusplus >= 202002L
-        static consteval note::string_view validatedFormat(const char* v) {
-            note::string_view sv{v};
-            if (sv != "compact" && sv != "-")
-                throw "note.template: invalid value for 'format'";
-            return sv;
-        }
-#endif
-#endif
 
         template<typename T>
         auto& extra(note::string_view k_, T v_) {

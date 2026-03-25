@@ -38,16 +38,23 @@ def _load_spec_with_overlay(spec_path: Path, overlay_path: Path | None) -> dict:
                 spec_method = spec_path_obj.get(method)
                 if not spec_method:
                     continue
-                props_patches = patches.get("properties", {})
-                spec_props = (spec_method
-                              .get("requestBody", {})
-                              .get("content", {})
-                              .get("application/json", {})
-                              .get("schema", {})
-                              .get("properties", {}))
-                for prop_name, prop_patch in props_patches.items():
-                    if prop_name in spec_props:
-                        spec_props[prop_name].update(prop_patch)
+                # Merge property-level patches
+            props_patches = patches.get("properties", {})
+            spec_props = (spec_method
+                          .get("requestBody", {})
+                          .get("content", {})
+                          .get("application/json", {})
+                          .get("schema", {})
+                          .get("properties", {}))
+            for prop_name, prop_patch in props_patches.items():
+                if prop_name in spec_props:
+                    spec_props[prop_name].update(prop_patch)
+
+            # Replace operation-level extensions (x-intents, x-samples, etc.)
+            for key, value in patches.items():
+                if key == "properties":
+                    continue  # already handled above
+                spec_method[key] = value
 
         print(f"Applied overlay: {overlay_path}")
 
@@ -245,10 +252,13 @@ def _flag_calls(value: str, flags: list[str]) -> list[str] | None:
     return None
 
 
-def _collect_sample_tests(spec_path: Path, endpoints=None) -> list[dict]:
+def _collect_sample_tests(spec_path: Path, endpoints=None, spec_dict: dict | None = None) -> list[dict]:
     """Read x-validation from spec samples and build test case objects."""
-    with open(spec_path) as f:
-        spec = json.load(f)
+    if spec_dict is not None:
+        spec = spec_dict
+    else:
+        with open(spec_path) as f:
+            spec = json.load(f)
     accessor_map = _build_accessor_map(endpoints) if endpoints else {}
     prop_map = _build_prop_map(endpoints) if endpoints else {}
 
@@ -470,7 +480,7 @@ def main() -> None:
     print(f"Generated Api class header: {api_path}")
 
     # Generate sample tests
-    tests = _collect_sample_tests(spec_path, endpoints)
+    tests = _collect_sample_tests(spec_path, endpoints, spec_dict=spec_dict)
     if tests:
         test_template = env.get_template("test_samples.cpp.j2")
         test_content = test_template.render(tests=tests)

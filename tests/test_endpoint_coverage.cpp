@@ -592,9 +592,9 @@ TEST_CASE("note::api::CardAux response parsing") {
 }
 
 // ---------------------------------------------------------------------------
-TEST_CASE("note::api::CardAuxSerial request builder") {
+TEST_CASE("note::api::CardAuxSerial::Request request builder") {
     Harness h;
-    auto req = h.api.card.aux.serial();
+    auto req = h.api.card.aux.serial.request();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.duration(int32_t{42});
@@ -603,7 +603,7 @@ TEST_CASE("note::api::CardAuxSerial request builder") {
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
     req.minutes(note::Minutes{42});
 #endif
-    req.mode(note::string_view("x-mode"));
+    req.mode(note::string_view("env"));
     req.ms(note::Milliseconds{42});
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
     req.rate(int32_t{42});
@@ -641,7 +641,7 @@ TEST_CASE("note::api::CardAuxSerial request builder") {
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
     req["minutes"] = note::Minutes{42};
 #endif
-    req["mode"] = note::string_view("x-mode");
+    req["mode"] = note::string_view("env");
     req["ms"] = note::Milliseconds{42};
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
     req["rate"] = int32_t{42};
@@ -652,13 +652,13 @@ TEST_CASE("note::api::CardAuxSerial request builder") {
 }
 
 // ---------------------------------------------------------------------------
-TEST_CASE("note::api::CardAuxSerial response parsing") {
+TEST_CASE("note::api::CardAuxSerial::Request response parsing") {
     auto reader = std::make_unique<note::test::PopulatedJsonReader>();
     reader->set("mode", std::string("x-mode"));
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
     reader->set("rate", int32_t{42});
 #endif
-    auto rsp = note::api::CardAuxSerial::Response::parse(std::move(reader));
+    auto rsp = note::api::CardAuxSerial::Request::Response::parse(std::move(reader));
     REQUIRE(rsp.mode == "x-mode");
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
     REQUIRE(rsp.rate == 42);
@@ -672,11 +672,169 @@ TEST_CASE("note::api::CardAuxSerial response parsing") {
     // Cover intern_strings() empty-field branches (field.empty() == true).
     {
         auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
-        auto empty_rsp = note::api::CardAuxSerial::Response::parse(std::move(empty_rdr));
+        auto empty_rsp = note::api::CardAuxSerial::Request::Response::parse(std::move(empty_rdr));
         note::Allocator alloc;
         note::StringPool pool(alloc);
         empty_rsp.intern_strings(pool);
     }
+}
+
+// ---------------------------------------------------------------------------
+TEST_CASE("note::api::CardAuxSerial::Notify request builder") {
+    Harness h;
+    auto req = h.api.card.aux.serial.notify();
+    // Execute with no optional fields set — covers all !has_value() (false) branches.
+    req.execute();
+    req.duration(int32_t{42});
+    req.max(int32_t{42});
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
+    req.minutes(note::Minutes{42});
+#endif
+    req.triggers(note::string_view("env"));
+    req.ms(note::Milliseconds{42});
+#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
+    req.rate(int32_t{42});
+#endif
+    req.execute();
+    REQUIRE(h.last_req.find("\"duration\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"max\"") != std::string::npos);
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
+    REQUIRE(h.last_req.find("\"minutes\"") != std::string::npos);
+#endif
+    REQUIRE(h.last_req.find("\"mode\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"ms\"") != std::string::npos);
+#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
+    REQUIRE(h.last_req.find("\"rate\"") != std::string::npos);
+#endif
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
+    req.execute(h.nc);
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+    req["duration"] = int32_t{42};
+    req["max"] = int32_t{42};
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
+    req["minutes"] = note::Minutes{42};
+#endif
+    req["mode"] = note::string_view("env");
+    req["ms"] = note::Milliseconds{42};
+#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
+    req["rate"] = int32_t{42};
+#endif
+    // Cover command() overloads
+    req.command();
+    req.command(h.nc);
+}
+
+// ---------------------------------------------------------------------------
+TEST_CASE("note::api::CardAuxSerial::Gps request builder") {
+    Harness h;
+    auto req = h.api.card.aux.serial.gps();
+    // Execute with no optional fields set — covers all !has_value() (false) branches.
+    req.execute();
+    req.limit(true);
+#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
+    req.rate(int32_t{42});
+#endif
+    req.execute();
+    REQUIRE(h.last_req.find("\"limit\"") != std::string::npos);
+#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
+    REQUIRE(h.last_req.find("\"rate\"") != std::string::npos);
+#endif
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
+    req.execute(h.nc);
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+    req["limit"] = true;
+#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
+    req["rate"] = int32_t{42};
+#endif
+    // Cover command() overloads
+    req.command();
+    req.command(h.nc);
+}
+
+// ---------------------------------------------------------------------------
+TEST_CASE("note::api::CardAuxSerial::Configure request builder") {
+    Harness h;
+    auto req = h.api.card.aux.serial.configure();
+    // Execute with no optional fields set — covers all !has_value() (false) branches.
+    req.execute();
+#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
+    req.rate(int32_t{42});
+#endif
+    req.execute();
+#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
+    REQUIRE(h.last_req.find("\"rate\"") != std::string::npos);
+#endif
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
+    req.execute(h.nc);
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
+    req["rate"] = int32_t{42};
+#endif
+    // Cover command() overloads
+    req.command();
+    req.command(h.nc);
+}
+
+// ---------------------------------------------------------------------------
+TEST_CASE("note::api::CardAuxSerial::Off request builder") {
+    Harness h;
+    auto req = h.api.card.aux.serial.off();
+    // Execute with no optional fields set — covers all !has_value() (false) branches.
+    req.execute();
+    req.execute();
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; req.execute(fh.nc); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; req.execute(neh.nc); }
+    // Cover execute(Notecard&) and extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
+    req.execute(h.nc);
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover command() overloads
+    req.command();
+    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -5486,7 +5644,7 @@ TEST_CASE("note::api::NoteTemplate::Define request builder") {
     req.execute();
     req.delete_(true);
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
-    req.format(note::string_view("compact"));
+    req.format(note::string_view("x-format"));
 #endif
     req.length(int32_t{42});
     req.port(int32_t{42});
@@ -5521,7 +5679,7 @@ TEST_CASE("note::api::NoteTemplate::Define request builder") {
     // Cover known-key routing in operator[] (true branch for each settable field)
     req["delete"] = true;
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
-    req["format"] = note::string_view("compact");
+    req["format"] = note::string_view("x-format");
 #endif
     req["length"] = int32_t{42};
     req["port"] = int32_t{42};

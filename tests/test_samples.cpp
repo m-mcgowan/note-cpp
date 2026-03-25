@@ -146,16 +146,15 @@ TEST_CASE("card.aux Track Mode") {
 
 TEST_CASE("card.aux.serial Enable GPS Mode") {
     TestHarness h;
-    note::api::CardAuxSerial req;
-    req.mode = note::string_view(R"sv(gps)sv");
+    note::api::CardAuxSerial::Gps req;
     h.nc.execute(req);
     REQUIRE(h.last_request == R"json({"req":"card.aux.serial","mode":"gps"})json");
 }
 
 TEST_CASE("card.aux.serial Enable DFU Notifications") {
     TestHarness h;
-    note::api::CardAuxSerial req;
-    req.mode = note::string_view(R"sv(notify,dfu)sv");
+    note::api::CardAuxSerial::Notify req;
+    req.dfu();
     req.minutes = int32_t{5};
     h.nc.execute(req);
     REQUIRE(h.last_request == R"json({"req":"card.aux.serial","minutes":5,"mode":"notify,dfu"})json");
@@ -163,44 +162,26 @@ TEST_CASE("card.aux.serial Enable DFU Notifications") {
 
 TEST_CASE("card.aux.serial Enable Environment Notifications") {
     TestHarness h;
-    note::api::CardAuxSerial req;
-    req.mode = note::string_view(R"sv(notify,env)sv");
+    note::api::CardAuxSerial::Notify req;
+    req.env();
     h.nc.execute(req);
     REQUIRE(h.last_request == R"json({"req":"card.aux.serial","mode":"notify,env"})json");
 }
 
-TEST_CASE("card.aux.serial Request Mode") {
+TEST_CASE("card.aux.serial Multiple Notifications") {
     TestHarness h;
-    note::api::CardAuxSerial req;
-    req.mode = note::string_view(R"sv(req)sv");
-    h.nc.execute(req);
-    REQUIRE(h.last_request == R"json({"req":"card.aux.serial","mode":"req"})json");
-}
-
-TEST_CASE("card.aux.serial Accelerometer Mode") {
-    TestHarness h;
-    note::api::CardAuxSerial req;
-    req.mode = note::string_view(R"sv(notify,accel)sv");
-    req.duration = int32_t{500};
-    h.nc.execute(req);
-    REQUIRE(h.last_request == R"json({"req":"card.aux.serial","duration":500,"mode":"notify,accel"})json");
-}
-
-TEST_CASE("card.aux.serial Signal Mode") {
-    TestHarness h;
-    note::api::CardAuxSerial req;
-    req.mode = note::string_view(R"sv(notify,signals)sv");
-    h.nc.execute(req);
-    REQUIRE(h.last_request == R"json({"req":"card.aux.serial","mode":"notify,signals"})json");
-}
-
-TEST_CASE("card.aux.serial Multiple Mode") {
-    TestHarness h;
-    note::api::CardAuxSerial req;
-    req.mode = note::string_view(R"sv(notify,accel,env)sv");
+    note::api::CardAuxSerial::Notify req;
+    req.triggers = note::string_view(R"sv(accel,env)sv");
     req.duration = int32_t{500};
     h.nc.execute(req);
     REQUIRE(h.last_request == R"json({"req":"card.aux.serial","duration":500,"mode":"notify,accel,env"})json");
+}
+
+TEST_CASE("card.aux.serial Disable AUX Serial") {
+    TestHarness h;
+    note::api::CardAuxSerial::Off req;
+    h.nc.execute(req);
+    REQUIRE(h.last_request == R"json({"req":"card.aux.serial","mode":"-"})json");
 }
 
 TEST_CASE("card.binary View Binary Status") {

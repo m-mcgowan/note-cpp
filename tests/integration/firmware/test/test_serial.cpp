@@ -242,7 +242,7 @@ TEST_CASE("note.add max limit produces Notecard error") {
     const char* file = "integration-err.qo";
 
     // Clean up from any prior run
-    nc.file.delete_().files({file}).execute();
+    nc.file.remove(file).execute();
 
     // Add first note — should succeed
     auto r1 = nc.note.add().file(file).body(R"({"a":1})").max(1).execute();
@@ -258,7 +258,7 @@ TEST_CASE("note.add max limit produces Notecard error") {
     MESSAGE("Notecard error: ", r2.error().message);
 
     // Clean up
-    nc.file.delete_().files({file}).execute();
+    nc.file.remove(file).execute();
 }
 
 // ─── Binary data transfer ───────────────────────────────────────────────────
@@ -290,31 +290,33 @@ void binary_round_trip(Fixture& f, const uint8_t* data, size_t data_len, const c
     REQUIRE(static_cast<int32_t>(data_len) <= status_rsp.max);
     MESSAGE(label, ": binary max=", status_rsp.max, " bytes, payload=", data_len, " bytes");
 
-    // Compute COBS encoded size (deterministic from input length —
-    // no need to encode first) and MD5 of the unencoded data.
-    size_t cobs_len = note::cobs_encoded_size(data_len);
+    // Compute MD5 of the unencoded data.
+    size_t cobs_max = note::cobs_encoded_size(data_len);
     std::string md5 = md5_hex(data, data_len);
-    MESSAGE(label, ": cobs_len=", cobs_len, " md5=", md5.c_str());
 
     // ── PUT phase ──────────────────────────────────────────────────
 
-    // JSON handshake: tell the Notecard how many COBS bytes are coming.
-    auto put_rsp = nc.card.binaryPut()
-        .cobs(static_cast<int32_t>(cobs_len))
+    // COBS encode into a buffer to get the actual encoded length.
+    std::vector<uint8_t> encoded(cobs_max + 1);
+    size_t actual_cobs_len = 0;
+    note::CobsEncoder encoder;
+    encoder.encode(data, data_len, [&](const uint8_t* block, size_t n) {
+        memcpy(encoded.data() + actual_cobs_len, block, n);
+        actual_cobs_len += n;
+    });
+    encoded[actual_cobs_len] = '\n';
+    MESSAGE(label, ": actual_cobs_len=", actual_cobs_len, " md5=", md5.c_str());
+
+    // JSON handshake: tell the Notecard the actual COBS byte count.
+    auto put_rsp = nc.card.binary.put()
+        .cobs(static_cast<int32_t>(actual_cobs_len))
         .status(md5)
         .execute();
     if (!put_rsp) { INFO(note::to_string(put_rsp.error())); }
     REQUIRE(put_rsp);
 
-    // Streaming COBS encode — source stays const, no duplicate buffer.
-    // Each block is flushed directly to the serial transport.
-    note::CobsEncoder encoder;
-    bool tx_ok = true;
-    encoder.encode(data, data_len, [&](const uint8_t* block, size_t n) {
-        if (tx_ok) tx_ok = hal.transmit(block, n);
-    });
-    // Send newline terminator
-    if (tx_ok) { uint8_t eop = '\n'; tx_ok = hal.transmit(&eop, 1); }
+    // Transmit the encoded data + EOP.
+    bool tx_ok = hal.transmit(encoded.data(), actual_cobs_len + 1);
     REQUIRE(tx_ok);
 
     // Delay for Notecard to process the binary data
@@ -326,7 +328,7 @@ void binary_round_trip(Fixture& f, const uint8_t* data, size_t data_len, const c
     if (!verify_rsp) { INFO(note::to_string(verify_rsp.error())); }
     REQUIRE(verify_rsp);
     CHECK(verify_rsp.length == static_cast<int32_t>(data_len));
-    CHECK(verify_rsp.cobs == static_cast<int32_t>(cobs_len));
+    CHECK(verify_rsp.cobs == static_cast<int32_t>(actual_cobs_len));
     // Verify the Notecard computed the same MD5 for the stored data
     if (note::string_view(verify_rsp.status).size() > 0) {
         CHECK(note::string_view(verify_rsp.status) == note::string_view(md5));
@@ -335,7 +337,7 @@ void binary_round_trip(Fixture& f, const uint8_t* data, size_t data_len, const c
     // ── GET phase ──────────────────────────────────────────────────
 
     // JSON handshake: request the binary data back
-    auto get_rsp = nc.card.binaryGet()
+    auto get_rsp = nc.card.binary.get()
         .cobs(verify_rsp.cobs)
         .length(verify_rsp.length)
         .execute();
@@ -348,15 +350,15 @@ void binary_round_trip(Fixture& f, const uint8_t* data, size_t data_len, const c
     }
 
     // Read raw COBS bytes + newline from the wire
-    std::vector<uint8_t> rx_buf(cobs_len + 16);
+    std::vector<uint8_t> rx_buf(actual_cobs_len + 16);
     size_t total_rx = 0;
     uint32_t deadline = hal.millis() + 5000;
-    while (total_rx < (cobs_len + 1) && hal.millis() < deadline) {
+    while (total_rx < (actual_cobs_len + 1) && hal.millis() < deadline) {
         size_t n = hal.receive(rx_buf.data() + total_rx, rx_buf.size() - total_rx);
         total_rx += n;
         if (n == 0) hal.delay(10);
     }
-    REQUIRE(total_rx >= cobs_len);
+    REQUIRE(total_rx >= actual_cobs_len);
 
     // ── Streaming decode and verify ────────────────────────────────
 

@@ -43,6 +43,12 @@ public:
         (*current())[std::string(key)] = std::string(value);
         return *this;
     }
+    NlohmannBuilder& add_raw(string_view key, string_view json_fragment) override {
+        (*current())[std::string(key)] = nlohmann::json::parse(
+            json_fragment.data(), json_fragment.data() + json_fragment.size(),
+            nullptr, false);
+        return *this;
+    }
     NlohmannBuilder& begin_object(string_view key) override {
         auto k = std::string(key);
         (*current())[k] = nlohmann::json::object();

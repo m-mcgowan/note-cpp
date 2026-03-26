@@ -35,6 +35,10 @@ public:
         return add_element(string_view(value));
     }
 
+    // Embed a raw JSON fragment as a value (no quoting).
+    // Used for body content that's already valid JSON.
+    virtual JsonBuilder& add_raw(string_view key, string_view json_fragment) = 0;
+
     // Finalize and return the built JSON as a string.
     virtual std::string to_string() = 0;
 

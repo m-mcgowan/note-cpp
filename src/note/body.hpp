@@ -60,9 +60,9 @@ private:
     string_view str_{};
     WriteFn write_fn_ = nullptr;
 
-    // Tier 1: pass raw JSON string to builder.
+    // Tier 1: embed raw JSON string as body (no quoting).
     static void write_string(const void*, string_view s, JsonBuilder& b) {
-        b.add("body", s);
+        b.add_raw("body", s);
     }
 };
 

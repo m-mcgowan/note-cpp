@@ -80,6 +80,12 @@ public:
         cJSON_AddItemToObject(current(), zkey(key), s);
         return *this;
     }
+    CjsonBuilder& add_raw(string_view key, string_view json_fragment) override {
+        std::string s(json_fragment.data(), json_fragment.size());
+        auto* raw = cJSON_Parse(s.c_str());
+        if (raw) cJSON_AddItemToObject(current(), zkey(key), raw);
+        return *this;
+    }
     CjsonBuilder& begin_object(string_view key) override {
         auto* obj = cJSON_CreateObject();
         cJSON_AddItemToObject(current(), zkey(key), obj);

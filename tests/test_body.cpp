@@ -93,13 +93,45 @@ struct SensorWithLocation { float temp; GpsPos pos; };
 
 // ── Tier 1: Raw JSON string ─────────────────────────────────────────────────
 
-TEST_CASE("BodyValue from raw JSON string") {
+// ---------------------------------------------------------------------------
+// BodyValue from raw JSON string — must be embedded unquoted on the wire.
+// The body is a JSON object, not a string value.
+// ---------------------------------------------------------------------------
+
+TEST_CASE("BodyValue from raw JSON object string") {
     TestHarness h;
     TestRequest req;
     req.body = R"({"temp":22.5,"humidity":60})";
     h.nc.execute(req);
     REQUIRE(h.last_request ==
-        R"({"req":"test.req","body":"{\"temp\":22.5,\"humidity\":60}"})");
+        R"({"req":"test.req","body":{"temp":22.5,"humidity":60}})");
+}
+
+TEST_CASE("BodyValue from raw JSON with nested object") {
+    TestHarness h;
+    TestRequest req;
+    req.body = R"({"location":{"lat":42.36,"lon":-71.06}})";
+    h.nc.execute(req);
+    REQUIRE(h.last_request ==
+        R"({"req":"test.req","body":{"location":{"lat":42.36,"lon":-71.06}}})");
+}
+
+TEST_CASE("BodyValue from raw JSON with string values") {
+    TestHarness h;
+    TestRequest req;
+    req.body = R"({"name":"sensor-1","status":"active"})";
+    h.nc.execute(req);
+    REQUIRE(h.last_request ==
+        R"({"req":"test.req","body":{"name":"sensor-1","status":"active"}})");
+}
+
+TEST_CASE("BodyValue from empty object") {
+    TestHarness h;
+    TestRequest req;
+    req.body = "{}";
+    h.nc.execute(req);
+    REQUIRE(h.last_request ==
+        R"({"req":"test.req","body":{}})");
 }
 
 TEST_CASE("BodyValue default is empty") {
@@ -238,7 +270,7 @@ TEST_CASE("BodyValue from NOTE_FIELDS macro schema") {
 #include <note/api/note_add.hpp>
 #include <note/api/note_template.hpp>
 
-TEST_CASE("note.add with string body") {
+TEST_CASE("note.add with string body — embedded unquoted") {
     TestHarness h;
     note::Api api(h.nc);
     auto req = api.note.add();
@@ -246,7 +278,7 @@ TEST_CASE("note.add with string body") {
     req.body = R"({"temp":22.5})";
     req.execute();
     REQUIRE(h.last_request ==
-        R"({"req":"note.add","body":"{\"temp\":22.5}","file":"sensors.qo"})");
+        R"({"req":"note.add","body":{"temp":22.5},"file":"sensors.qo"})");
 }
 
 #if __cplusplus >= 202002L

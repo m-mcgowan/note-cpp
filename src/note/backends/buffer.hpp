@@ -57,6 +57,11 @@ public:
         quoted(value);
         return *this;
     }
+    BufferJsonBuilder& add_raw(string_view key, string_view json_fragment) override {
+        kv(key);
+        for (char c : json_fragment) put(c);
+        return *this;
+    }
     BufferJsonBuilder& begin_object(string_view key) override {
         kv(key);
         put('{');

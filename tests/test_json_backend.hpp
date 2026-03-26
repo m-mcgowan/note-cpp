@@ -47,6 +47,9 @@ public:
     TestJsonBuilder& add(string_view k, string_view v) override {
         key(k); buf_ += '"'; escape_string(v); buf_ += '"'; return *this;
     }
+    TestJsonBuilder& add_raw(string_view k, string_view json) override {
+        key(k); buf_.append(json.data(), json.size()); return *this;
+    }
     TestJsonBuilder& begin_object(string_view k) override {
         key(k); buf_ += '{'; needs_comma_.push_back(false); return *this;
     }

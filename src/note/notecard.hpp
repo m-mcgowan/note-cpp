@@ -220,7 +220,11 @@ private:
     ApiResult<typename RequestT::Response> do_binary_send(RequestT& req) {
         auto src = req.binary_src_;
         req.cobs = static_cast<int32_t>(cobs_encoded_length(src.data(), src.size()));
-        if (md5_) req.status = md5_->compute(src.data(), src.size());
+        std::string md5_hex;
+        if (md5_) {
+            md5_hex = md5_->compute(src.data(), src.size());
+            req.status = md5_hex;  // string_view into md5_hex — must outlive execute()
+        }
 
         auto result = execute(static_cast<const RequestT&>(req));
         if (!result) return result;

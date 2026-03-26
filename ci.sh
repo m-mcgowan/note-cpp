@@ -507,6 +507,7 @@ run_coverage() {
 
     local SRCS=(
         test_main test_wire_format test_samples test_body
+        test_binary_execute
         test_json_buf test_property_functor
         test_transport_crc32 test_transport_serial test_transport_i2c
         test_notecard test_api_context test_endpoint_coverage
@@ -514,6 +515,7 @@ run_coverage() {
         test_channel test_state_store
         test_target test_make_api test_units
         test_connection test_sync test_templates test_attention test_setup
+        test_arduino_printable test_intent_flags test_cobs
     )
     for name in "${SRCS[@]}"; do
         "$GCC" $CXXFLAGS --coverage -fprofile-arcs $INCLUDE -I "$ROOT/tests" \

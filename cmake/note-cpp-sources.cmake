@@ -80,6 +80,7 @@ set(NOTE_CPP_TEST_SOURCES
     test_main.cpp
     test_arduino_printable.cpp
     test_attention.cpp
+    test_binary_execute.cpp
     test_body.cpp
     test_channel.cpp
     test_cobs.cpp

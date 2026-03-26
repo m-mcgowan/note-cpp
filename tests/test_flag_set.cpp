@@ -86,30 +86,28 @@ TEST_CASE("FlagSet returns self from add") {
 
 // ── Generated card.attn API ──────────────────────────────────────────
 
-TEST_CASE("CardAttn mode named methods") {
-    note::api::CardAttn::Request req;
-    req.mode.arm().connected();
-    CHECK(std::string_view(*req.mode) == "arm,connected");
+TEST_CASE("CardAttn Arm triggers named methods") {
+    note::api::CardAttn::Arm req;
+    req.triggers.connected();
+    CHECK(std::string_view(*req.triggers) == "connected");
 }
 
-TEST_CASE("CardAttn mode operator|= with namespace constants") {
-    note::api::CardAttn::Request req;
-    req.mode.arm();
-    req.mode |= note::attn::files;
-    CHECK(std::string_view(*req.mode) == "arm,files");
+TEST_CASE("CardAttn Arm triggers operator|= with namespace constants") {
+    note::api::CardAttn::Arm req;
+    req.triggers |= note::attn::files;
+    CHECK(std::string_view(*req.triggers) == "files");
 }
 
-TEST_CASE("CardAttn mode operator() with combined flags") {
-    note::api::CardAttn::Request req;
-    req.mode(note::attn::sleep | note::attn::motion);
-    CHECK(std::string_view(*req.mode) == "motion,sleep");
+TEST_CASE("CardAttn Arm triggers combined flags") {
+    note::api::CardAttn::Arm req;
+    req.triggers(note::attn::connected | note::attn::motion);
+    CHECK(std::string_view(*req.triggers) == "connected,motion");
 }
 
-TEST_CASE("CardAttn mode raw string assignment still works") {
-    note::api::CardAttn::Request req;
-    req.mode.arm();
-    req.mode = "watchdog";
-    CHECK(std::string_view(*req.mode) == "watchdog");
+TEST_CASE("CardAttn triggers raw string assignment still works") {
+    note::api::CardAttn::Arm req;
+    req.triggers = "connected,env";
+    CHECK(std::string_view(*req.triggers) == "connected,env");
 }
 
 TEST_CASE("CardTriangulate mode named methods") {

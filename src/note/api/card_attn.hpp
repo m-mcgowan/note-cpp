@@ -17,60 +17,37 @@
 #include <note/target.hpp>
 
 namespace note::attn {
-    /// Clear "files" events and cause the ATTN pin to go LOW. After an event
-    /// occurs or "seconds" has elapsed, the ATTN pin will then go HIGH (a.k.a.
-    /// "fires"). If "seconds" is 0, no timeout will be scheduled. If ATTN is
-    /// armed, calling `arm` again will disarm (briefly pulling ATTN HIGH), then
-    /// arm (non-idempotent).
-    inline constexpr uint32_t arm = 1u << 0;
     /// When armed, causes ATTN to fire if an AUX GPIO input changes. Disable by
     /// using `-auxgpio`.
-    inline constexpr uint32_t auxgpio = 1u << 1;
+    inline constexpr uint32_t auxgpio = 1u << 0;
     /// When armed, will cause ATTN to fire whenever the module connects to
     /// cellular. Disable with `-connected`.
-    inline constexpr uint32_t connected = 1u << 2;
-    /// Causes ATTN pin to go HIGH if it had been LOW.
-    ///
-    /// Passing both `"disarm"` and `"-all"` clears all ATTN monitors currently
-    /// set.
-    inline constexpr uint32_t disarm = 1u << 3;
+    inline constexpr uint32_t connected = 1u << 1;
     /// When armed, causes ATTN to fire if an environment variable changes on
     /// the Notecard. Disable by using `-env`.
-    inline constexpr uint32_t env = 1u << 4;
+    inline constexpr uint32_t env = 1u << 2;
     /// When armed, will cause ATTN to fire if any of the "files" are modified.
     /// Disable by using `-files`.
-    inline constexpr uint32_t files = 1u << 5;
+    inline constexpr uint32_t files = 1u << 3;
     /// When armed, will cause ATTN to fire whenever the Notecard GPS module
     /// makes a position fix. Disable by using `-location`.
-    inline constexpr uint32_t location = 1u << 6;
+    inline constexpr uint32_t location = 1u << 4;
     /// When armed, will cause ATTN to fire whenever the accelerometer detects
     /// module motion. Disable with `-motion`.
-    inline constexpr uint32_t motion = 1u << 7;
+    inline constexpr uint32_t motion = 1u << 5;
     /// When armed, will cause ATTN to fire whenever the `card.motion.mode`
     /// changes from "moving" to "stopped" (or vice versa). Learn how to
     /// configure this feature in this guide.
-    inline constexpr uint32_t motionchange = 1u << 8;
-    /// Will arm ATTN if not already armed. Otherwise, resets the values of
-    /// `mode`, `files`, and `seconds` specified in the initial `arm` or `rearm`
-    /// request (idempotent).
-    inline constexpr uint32_t rearm = 1u << 9;
+    inline constexpr uint32_t motionchange = 1u << 6;
     /// When armed, will cause ATTN to fire whenever the Notecard receives a
     /// signal.
-    inline constexpr uint32_t signal = 1u << 10;
-    /// Instruct the Notecard to pull the ATTN pin low for a period of time, and
-    /// optionally keep a payload in memory. Can be used by the host to sleep
-    /// the host MCU.
-    inline constexpr uint32_t sleep = 1u << 11;
+    inline constexpr uint32_t signal = 1u << 7;
     /// When armed, will enable USB power events firing the ATTN pin. Disable
     /// with `-usb`.
-    inline constexpr uint32_t usb = 1u << 12;
-    /// Not an "arm" mode, rather will cause the ATTN pin to go from HIGH to
-    /// LOW, then HIGH if the notecard fails to receive any JSON requests for
-    /// "seconds." In this mode, "seconds" must be >= 60.
-    inline constexpr uint32_t watchdog = 1u << 13;
+    inline constexpr uint32_t usb = 1u << 8;
     /// Instruct the Notecard to fire the ATTN pin whenever the `card.wireless`
     /// status changes.
-    inline constexpr uint32_t wireless = 1u << 14;
+    inline constexpr uint32_t wireless = 1u << 9;
 } // namespace note::attn
 
 namespace note::api {
@@ -111,23 +88,12 @@ struct CardAttn {
             CardAttn::Request& operator()(uint32_t flags);
             mode_t& add(uint32_t flag);
             mode_t& operator|=(uint32_t flag);
-            /// Clear "files" events and cause the ATTN pin to go LOW. After an
-            /// event occurs or "seconds" has elapsed, the ATTN pin will then go
-            /// HIGH (a.k.a. "fires"). If "seconds" is 0, no timeout will be
-            /// scheduled. If ATTN is armed, calling `arm` again will disarm
-            /// (briefly pulling ATTN HIGH), then arm (non-idempotent).
-            mode_t& arm();
             /// When armed, causes ATTN to fire if an AUX GPIO input changes.
             /// Disable by using `-auxgpio`.
             mode_t& auxgpio();
             /// When armed, will cause ATTN to fire whenever the module connects
             /// to cellular. Disable with `-connected`.
             mode_t& connected();
-            /// Causes ATTN pin to go HIGH if it had been LOW.
-            ///
-            /// Passing both `"disarm"` and `"-all"` clears all ATTN monitors
-            /// currently set.
-            mode_t& disarm();
             /// When armed, causes ATTN to fire if an environment variable
             /// changes on the Notecard. Disable by using `-env`.
             mode_t& env();
@@ -144,52 +110,35 @@ struct CardAttn {
             /// `card.motion.mode` changes from "moving" to "stopped" (or vice
             /// versa). Learn how to configure this feature in this guide.
             mode_t& motionchange();
-            /// Will arm ATTN if not already armed. Otherwise, resets the values
-            /// of `mode`, `files`, and `seconds` specified in the initial `arm`
-            /// or `rearm` request (idempotent).
-            mode_t& rearm();
             /// When armed, will cause ATTN to fire whenever the Notecard
             /// receives a signal.
             mode_t& signal();
-            /// Instruct the Notecard to pull the ATTN pin low for a period of
-            /// time, and optionally keep a payload in memory. Can be used by
-            /// the host to sleep the host MCU.
-            mode_t& sleep();
             /// When armed, will enable USB power events firing the ATTN pin.
             /// Disable with `-usb`.
             mode_t& usb();
-            /// Not an "arm" mode, rather will cause the ATTN pin to go from
-            /// HIGH to LOW, then HIGH if the notecard fails to receive any JSON
-            /// requests for "seconds." In this mode, "seconds" must be >= 60.
-            mode_t& watchdog();
             /// Instruct the Notecard to fire the ATTN pin whenever the
             /// `card.wireless` status changes.
             mode_t& wireless();
             static constexpr note::FlagDef flag_defs_[] = {
-                { note::attn::arm, "arm" },
                 { note::attn::auxgpio, "auxgpio" },
                 { note::attn::connected, "connected" },
-                { note::attn::disarm, "disarm" },
                 { note::attn::env, "env" },
                 { note::attn::files, "files" },
                 { note::attn::location, "location" },
                 { note::attn::motion, "motion" },
                 { note::attn::motionchange, "motionchange" },
-                { note::attn::rearm, "rearm" },
                 { note::attn::signal, "signal" },
-                { note::attn::sleep, "sleep" },
                 { note::attn::usb, "usb" },
-                { note::attn::watchdog, "watchdog" },
                 { note::attn::wireless, "wireless" },
             };
-            note::FlagSet<15, 109> flags_{flag_defs_};
+            note::FlagSet<10, 77> flags_{flag_defs_};
 #if __cplusplus >= 202002L
             // consteval: validates that a string literal contains only known flags.
             static consteval bool validate_flags(note::string_view sv) {
                 while (!sv.empty()) {
                     auto comma = sv.find(',');
                     auto token = (comma == sv.npos) ? sv : sv.substr(0, comma);
-                    if (token != "arm" && token != "auxgpio" && token != "connected" && token != "disarm" && token != "env" && token != "files" && token != "location" && token != "motion" && token != "motionchange" && token != "rearm" && token != "signal" && token != "sleep" && token != "usb" && token != "watchdog" && token != "wireless")
+                    if (token != "auxgpio" && token != "connected" && token != "env" && token != "files" && token != "location" && token != "motion" && token != "motionchange" && token != "signal" && token != "usb" && token != "wireless")
                         throw "card.attn: invalid flag";
                     sv = (comma == sv.npos) ? note::string_view{} : sv.substr(comma + 1);
                 }
@@ -269,19 +218,14 @@ struct CardAttn {
     // (method names that match a field accessor are skipped to avoid redefinition)
         auto& persist() { on = true; return *this; }
         auto& persist(bool v_) { on = v_; return *this; }
-        auto& arm() { mode.arm(); return *this; }
         auto& auxgpio() { mode.auxgpio(); return *this; }
         auto& connected() { mode.connected(); return *this; }
-        auto& disarm() { mode.disarm(); return *this; }
         auto& env() { mode.env(); return *this; }
         auto& location() { mode.location(); return *this; }
         auto& motion() { mode.motion(); return *this; }
         auto& motionchange() { mode.motionchange(); return *this; }
-        auto& rearm() { mode.rearm(); return *this; }
         auto& signal() { mode.signal(); return *this; }
-        auto& sleep() { mode.sleep(); return *this; }
         auto& usb() { mode.usb(); return *this; }
-        auto& watchdog() { mode.watchdog(); return *this; }
         auto& wireless() { mode.wireless(); return *this; }
         template<typename T>
         auto& extra(note::string_view k_, T v_) {
@@ -1309,11 +1253,6 @@ inline CardAttn::Request::mode_t& CardAttn::Request::mode_t::operator|=(uint32_t
     Field<note::string_view>::operator=(flags_.str());
     return *this;
 }
-inline CardAttn::Request::mode_t& CardAttn::Request::mode_t::arm() {
-    flags_.add(note::attn::arm);
-    Field<note::string_view>::operator=(flags_.str());
-    return *this;
-}
 inline CardAttn::Request::mode_t& CardAttn::Request::mode_t::auxgpio() {
     flags_.add(note::attn::auxgpio);
     Field<note::string_view>::operator=(flags_.str());
@@ -1321,11 +1260,6 @@ inline CardAttn::Request::mode_t& CardAttn::Request::mode_t::auxgpio() {
 }
 inline CardAttn::Request::mode_t& CardAttn::Request::mode_t::connected() {
     flags_.add(note::attn::connected);
-    Field<note::string_view>::operator=(flags_.str());
-    return *this;
-}
-inline CardAttn::Request::mode_t& CardAttn::Request::mode_t::disarm() {
-    flags_.add(note::attn::disarm);
     Field<note::string_view>::operator=(flags_.str());
     return *this;
 }
@@ -1354,28 +1288,13 @@ inline CardAttn::Request::mode_t& CardAttn::Request::mode_t::motionchange() {
     Field<note::string_view>::operator=(flags_.str());
     return *this;
 }
-inline CardAttn::Request::mode_t& CardAttn::Request::mode_t::rearm() {
-    flags_.add(note::attn::rearm);
-    Field<note::string_view>::operator=(flags_.str());
-    return *this;
-}
 inline CardAttn::Request::mode_t& CardAttn::Request::mode_t::signal() {
     flags_.add(note::attn::signal);
     Field<note::string_view>::operator=(flags_.str());
     return *this;
 }
-inline CardAttn::Request::mode_t& CardAttn::Request::mode_t::sleep() {
-    flags_.add(note::attn::sleep);
-    Field<note::string_view>::operator=(flags_.str());
-    return *this;
-}
 inline CardAttn::Request::mode_t& CardAttn::Request::mode_t::usb() {
     flags_.add(note::attn::usb);
-    Field<note::string_view>::operator=(flags_.str());
-    return *this;
-}
-inline CardAttn::Request::mode_t& CardAttn::Request::mode_t::watchdog() {
-    flags_.add(note::attn::watchdog);
     Field<note::string_view>::operator=(flags_.str());
     return *this;
 }

@@ -4,6 +4,11 @@
     "paths": {
         "/card/attn": {
             "put": {
+                "properties": {
+                    "mode": {
+                        "x-flags": ["auxgpio", "connected", "env", "files", "location", "motion", "motionchange", "signal", "usb", "wireless"]
+                    }
+                },
                 "x-intent-patches": {
                     "arm": {
                         "flags": ["auxgpio", "connected", "env", "files", "location", "motion", "motionchange", "signal", "usb", "wireless"]

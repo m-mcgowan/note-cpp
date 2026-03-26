@@ -181,23 +181,21 @@ TEST_CASE("card.attn payload without sleep") {
     Fixture f;
     auto& nc = f.nc;
 
-    // Store a payload via card.attn without entering sleep mode.
-    // Question: does the payload persist without sleep?
-    auto arm = nc.card.attn().arm();
-    arm.payload("test-payload-no-sleep");
-    auto arm_rsp = arm.execute();
-    if (!arm_rsp) { INFO(note::to_string(arm_rsp.error())); }
-    REQUIRE(arm_rsp);
+    // Exploratory: does the Notecard accept a payload without entering sleep?
+    // The docs say payload is for sleep mode, but we want to know if it
+    // works as general-purpose host→Notecard data stash.
+    auto req = nc.card.attn().request();
+    req.payload = "test-payload-no-sleep";
+    auto rsp = req.execute();
+    if (!rsp) { INFO(note::to_string(rsp.error())); }
+    REQUIRE(rsp);
 
-    // Retrieve with start:true — does the payload come back?
+    // Retrieve — does the payload come back?
     auto retrieve = nc.card.attn().retrieve().execute();
     if (!retrieve) { INFO(note::to_string(retrieve.error())); }
     REQUIRE(retrieve);
 
-    MESSAGE("time: ", retrieve.time.value());
     MESSAGE("payload: ", retrieve.payload.data());
-
-    // If payload works without sleep, this should match
     CHECK(note::string_view(retrieve.payload) == "test-payload-no-sleep");
 
     // Clean up

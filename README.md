@@ -533,12 +533,31 @@ nc.file.remove().execute();                        // file.delete (no required p
 
 ## Body Values
 
-Note bodies support three tiers: **raw JSON strings**, **builder lambdas**, and **typed structs**. The struct approach is the most powerful — a single struct serves as builder, parser, and definition for Note template registration. See [Body Structs and Note Templates](#body-structs-and-note-templates).
+Note bodies can be set four ways, from most to least type-safe:
 
 ```cpp
+// 1. Typed struct (recommended) — send, receive, and template in one type
 Readings r{.temperature = 22.5f, .humidity = 60};
 nc.note.add().file("sensors.qo").body(r).execute();
+
+// 2. Compile-time JSON (C++20) — structure validated at compile time
+constexpr auto j = note::json<[](auto& b) {
+    b.add("temp", 22.5); b.add("humidity", 60); b.close();
+}>();
+nc.note.add().file("sensors.qo").body(j.view()).execute();
+
+// 3. Builder lambda — structured, runtime values, can't produce bad JSON
+nc.note.add().file("sensors.qo")
+    .body(note::body([&](auto& b) { b.add("temp", temp); }))
+    .execute();
+
+// 4. Raw JSON string — for forwarding external JSON
+nc.note.add().file("sensors.qo")
+    .body(R"({"temp":22.5})")
+    .execute();
 ```
+
+See [Body Values](docs/body-values.md) for full details and [Body Structs](#body-structs-and-note-templates) for the recommended struct approach.
 
 ---
 

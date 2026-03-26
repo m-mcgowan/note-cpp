@@ -157,6 +157,7 @@ class JsonBuf {
     size_t pos_ = 0;
     Kind kind_ = Kind::Object;
     bool need_comma_ = false;
+    bool closed_ = false;
 
     constexpr void put(char c) {
         if (pos_ < N - 1) buf_[pos_] = c;
@@ -341,8 +342,11 @@ public:
 
     // Close the object/array. Returns *this for chaining.
     constexpr JsonBuf& close() {
-        put(kind_ == Kind::Array ? ']' : '}');
-        if (pos_ < N) buf_[pos_] = '\0';
+        if (!closed_) {
+            put(kind_ == Kind::Array ? ']' : '}');
+            if (pos_ < N) buf_[pos_] = '\0';
+            closed_ = true;
+        }
         return *this;
     }
 
@@ -362,7 +366,15 @@ public:
     constexpr explicit operator bool() const { return !overflow(); }
 
     // View of valid content (clamped to actual buffer on overflow).
-    constexpr std::string_view view() const {
+    // Const: for consteval results where close() was called explicitly.
+    constexpr std::string_view view() const & {
+        return {buf_, pos_ < N ? pos_ : N - 1};
+    }
+
+    // Non-const: auto-closes before returning view.
+    // Allows omitting close() for simple runtime use.
+    constexpr std::string_view view() & {
+        close();
         return {buf_, pos_ < N ? pos_ : N - 1};
     }
 };

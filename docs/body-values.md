@@ -1,37 +1,15 @@
 # Body Values and Note Templates
 
-Notecard Notes carry a JSON body — sensor readings, configuration, user data. `note-cpp` supports three tiers of body handling, from simplest to most powerful.
+Notecard Notes carry a JSON body — sensor readings, configuration, user
+data. `note-cpp` provides several ways to set the body, ranked from most
+to least type-safe.
 
-## Three tiers
+## Setting a body
 
-### Tier 1: Raw JSON string
+### 1. Typed struct (recommended)
 
-Pass a JSON string directly. No type checking, but convenient for one-off cases:
-
-```cpp
-api.note.add()
-    .file("sensors.qo")
-    .body(R"({"temp":22.5,"humidity":60})")
-    .execute();
-```
-
-### Tier 2: Builder lambda
-
-Use `note::body()` with a lambda for type-safe building without defining a struct:
-
-```cpp
-api.note.add()
-    .file("sensors.qo")
-    .body(note::body([](note::JsonBuilder& b) {
-        b.add("temp", 22.5);
-        b.add("humidity", int32_t{60});
-    }))
-    .execute();
-```
-
-### Tier 3: Typed struct (recommended)
-
-Define a struct once. Use it to **send** data, **receive** data, and **register templates**. The same type does all three.
+Define a struct once. Use it to **send** data, **receive** data, and
+**register templates**. The same type does all three.
 
 ```cpp
 struct Readings {
@@ -40,6 +18,128 @@ struct Readings {
     NOTE_FIELDS(temperature, humidity)   // C++17; not needed on C++20+
 };
 ```
+
+### 2. Compile-time JSON (C++20)
+
+Use `note::json<>()` to build JSON at compile time. The structure is
+validated by the compiler — malformed JSON won't compile:
+
+```cpp
+constexpr auto body = note::json<[](auto& b) {
+    b.add("temp", 22.5);
+    b.add("humidity", 60);
+    b.close();
+}>();
+
+api.note.add()
+    .file("sensors.qo")
+    .body(body.view())
+    .execute();
+```
+
+This is useful for static body content or templates where all values
+are known at compile time.
+
+### 3. JsonBuf with runtime values
+
+`JsonBuf` works at runtime too — the builder methods guarantee valid
+JSON structure (balanced braces, quoted keys, proper commas). Only the
+buffer size needs specifying:
+
+```cpp
+float temp = read_sensor();
+note::JsonBuf<64> body;
+body.add("temp", temp);
+body.add("humidity", 60);
+body.close();
+
+api.note.add()
+    .file("sensors.qo")
+    .body(body.view())
+    .execute();
+```
+
+Unlike raw strings, `JsonBuf` can't produce malformed JSON. Keys are
+always quoted, objects always closed, commas always placed correctly.
+
+### 4. Builder lambda
+
+Use `note::body()` with a lambda for structured building with runtime
+values. The builder prevents malformed JSON (keys are always quoted,
+nesting is always balanced):
+
+```cpp
+float temp = read_sensor();
+api.note.add()
+    .file("sensors.qo")
+    .body(note::body([&](note::JsonBuilder& b) {
+        b.add("temp", temp);
+        b.add("humidity", int32_t{60});
+    }))
+    .execute();
+```
+
+### 5. Raw JSON string
+
+Pass a pre-formed JSON string. No compile-time validation — use this
+for forwarding JSON from external sources, not for authoring:
+
+```cpp
+api.note.add()
+    .file("sensors.qo")
+    .body(R"({"temp":22.5,"humidity":60})")
+    .execute();
+```
+
+The string is embedded as a raw JSON object on the wire (not quoted
+as a string value).
+
+## Conditional / schemaless bodies
+
+Not all bodies have a fixed structure. Sensor readings may include
+optional fields depending on what's available — GPS when locked,
+battery when low, etc. This is a key Notecard feature.
+
+### JsonBuf (recommended for conditional content)
+
+```cpp
+note::JsonBuf<128> body;
+body.add("temp", temp);
+if (have_gps) {
+    body.add("lat", lat);
+    body.add("lon", lon);
+}
+if (battery < 20) {
+    body.add("low_battery", true);
+}
+body.close();
+
+nc.note.add().file("sensors.qo").body(body.view()).execute();
+```
+
+### Builder lambda
+
+```cpp
+nc.note.add()
+    .file("sensors.qo")
+    .body(note::body([&](note::JsonBuilder& b) {
+        b.add("temp", temp);
+        if (have_gps) {
+            b.add("lat", lat);
+            b.add("lon", lon);
+        }
+        if (battery < 20) {
+            b.add("low_battery", true);
+        }
+    }))
+    .execute();
+```
+
+Both approaches guarantee valid JSON regardless of which branches
+execute. Keys are always quoted, commas always correct, objects always
+closed. The Notecard accepts any body shape — no schema registration
+needed (though [templates](#template-registration) optimize bandwidth
+when the shape is known).
 
 ## Sending typed bodies
 

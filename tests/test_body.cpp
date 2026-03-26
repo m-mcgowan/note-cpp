@@ -3,6 +3,7 @@
 #include "test_json_backend.hpp"
 
 #include <note/body.hpp>
+#include <note/json_buf.hpp>
 #include <note/notecard.hpp>
 #include <note/api.hpp>
 #include <memory>
@@ -110,10 +111,10 @@ TEST_CASE("BodyValue from raw JSON object string") {
 TEST_CASE("BodyValue from raw JSON with nested object") {
     TestHarness h;
     TestRequest req;
-    req.body = R"({"location":{"lat":42.36,"lon":-71.06}})";
+    req.body = R"({"location":{"lat":42.5,"lon":-71.5}})";
     h.nc.execute(req);
     REQUIRE(h.last_request ==
-        R"({"req":"test.req","body":{"location":{"lat":42.36,"lon":-71.06}}})");
+        R"({"req":"test.req","body":{"location":{"lat":42.5,"lon":-71.5}}})");
 }
 
 TEST_CASE("BodyValue from raw JSON with string values") {
@@ -132,6 +133,77 @@ TEST_CASE("BodyValue from empty object") {
     h.nc.execute(req);
     REQUIRE(h.last_request ==
         R"({"req":"test.req","body":{}})");
+}
+
+#if __cplusplus >= 202002L
+TEST_CASE("BodyValue from JsonBuf — compile-time verified") {
+    TestHarness h;
+    TestRequest req;
+    constexpr auto j = note::json<[](auto& b) {
+        b.add("temp", 22.5);
+        b.add("humidity", 60);
+        b.close();
+    }>();
+    req.body = j.view();
+    h.nc.execute(req);
+    REQUIRE(h.last_request ==
+        R"({"req":"test.req","body":{"temp":22.5,"humidity":60}})");
+}
+#endif
+
+TEST_CASE("JsonBuf auto-close on view() — no explicit close needed") {
+    note::JsonBuf<64> body;
+    body.add("temp", 22.5);
+    body.add("humidity", int32_t{60});
+    // No close() — view() auto-closes
+    REQUIRE(body.view() == R"({"temp":22.5,"humidity":60})");
+}
+
+TEST_CASE("JsonBuf explicit close is idempotent") {
+    note::JsonBuf<64> body;
+    body.add("temp", 22.5);
+    body.close();
+    body.close();  // second close is no-op
+    REQUIRE(body.view() == R"({"temp":22.5})");
+}
+
+TEST_CASE("JsonBuf nested object with auto-close") {
+    note::JsonBuf<128> body;
+    body.add("temp", 22.5);
+    body.begin_object("location");
+    body.add("lat", 42.5);
+    body.add("lon", -71.5);
+    body.end_object();
+    // Top-level auto-closed by view()
+    REQUIRE(body.view() == R"({"temp":22.5,"location":{"lat":42.5,"lon":-71.5}})");
+}
+
+TEST_CASE("JsonBuf as body — runtime values, auto-close") {
+    TestHarness h;
+    TestRequest req;
+    note::JsonBuf<64> body;
+    body.add("temp", 22.5);
+    body.add("humidity", int32_t{60});
+    req.body = body.view();
+    h.nc.execute(req);
+    REQUIRE(h.last_request ==
+        R"({"req":"test.req","body":{"temp":22.5,"humidity":60}})");
+}
+
+TEST_CASE("JsonBuf conditional fields — body shape varies") {
+    TestHarness h;
+    TestRequest req;
+    note::JsonBuf<128> body;
+    body.add("temp", 22.5);
+    bool have_gps = true;
+    if (have_gps) {
+        body.add("lat", 42.5);
+        body.add("lon", -71.5);
+    }
+    req.body = body.view();
+    h.nc.execute(req);
+    REQUIRE(h.last_request ==
+        R"({"req":"test.req","body":{"temp":22.5,"lat":42.5,"lon":-71.5}})");
 }
 
 TEST_CASE("BodyValue default is empty") {
@@ -161,13 +233,13 @@ TEST_CASE("BodyValue from builder with nested objects") {
     req.body = note::body([](note::JsonBuilder& b) {
         b.add("temp", 22.5);
         b.begin_object("location");
-            b.add("lat", 42.36);
-            b.add("lon", -71.06);
+            b.add("lat", 42.5);
+            b.add("lon", -71.5);
         b.end_object();
     });
     h.nc.execute(req);
     REQUIRE(h.last_request ==
-        R"({"req":"test.req","body":{"temp":22.5,"location":{"lat":42.36,"lon":-71.06}}})");
+        R"({"req":"test.req","body":{"temp":22.5,"location":{"lat":42.5,"lon":-71.5}}})");
 }
 
 // ── Tier 3: Schema (C++20 reflection) ───────────────────────────────────────
@@ -233,11 +305,11 @@ TEST_CASE("template_of string field hint → \"1\"") {
 TEST_CASE("BodyValue from reflected aggregate with nested aggregate field") {
     TestHarness h;
     TestRequest req;
-    SensorWithLocation s{.temp = 21.0f, .pos = {.lat = 42.36, .lon = -71.06}};
+    SensorWithLocation s{.temp = 21.0f, .pos = {.lat = 42.5, .lon = -71.5}};
     req.body = note::make_schema_body(s);
     h.nc.execute(req);
     REQUIRE(h.last_request ==
-        R"({"req":"test.req","body":{"temp":21,"pos":{"lat":42.36,"lon":-71.06}}})");
+        R"({"req":"test.req","body":{"temp":21,"pos":{"lat":42.5,"lon":-71.5}}})");
 }
 
 TEST_CASE("note.template verify:true includes verify field in request") {

@@ -191,6 +191,25 @@ namespace note::api {
 {% endfor %}
 {{ indent }}    };
 {{ indent }}    note::FlagSet<{{ prop.flags | length }}, {{ prop.flags | map('length') | sum + prop.flags | length }}> flags_{flag_defs_};
+#if __cplusplus >= 202002L
+{{ indent }}    // consteval: validates that a string literal contains only known flags.
+{{ indent }}    static consteval bool validate_flags(note::string_view sv) {
+{{ indent }}        while (!sv.empty()) {
+{{ indent }}            auto comma = sv.find(',');
+{{ indent }}            auto token = (comma == sv.npos) ? sv : sv.substr(0, comma);
+{{ indent }}            if ({% for flag in prop.flags %}token != "{{ flag }}"{{ " && " if not loop.last }}{% endfor %})
+{{ indent }}                throw "{{ op.notecard_request }}: invalid flag";
+{{ indent }}            sv = (comma == sv.npos) ? note::string_view{} : sv.substr(comma + 1);
+{{ indent }}        }
+{{ indent }}        return true;
+{{ indent }}    }
+{{ indent }}    // String literal constructor — validates at compile time.
+{{ indent }}    template<std::size_t N>
+{{ indent }}    consteval {{ prop.nested_type_name }}(const char (&s)[N])
+{{ indent }}        : Field<note::string_view>(note::string_view(s, N - 1)) {
+{{ indent }}        validate_flags(note::string_view(s, N - 1));
+{{ indent }}    }
+#endif
 {% endif %}
 {{ indent }}} {{ prop.accessor_name }}{};
 {% endif %}

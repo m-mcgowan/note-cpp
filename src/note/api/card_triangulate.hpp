@@ -77,6 +77,25 @@ struct CardTriangulate {
             { note::triangulate::wifi, "wifi" },
         };
         note::FlagSet<2, 10> flags_{flag_defs_};
+#if __cplusplus >= 202002L
+        // consteval: validates that a string literal contains only known flags.
+        static consteval bool validate_flags(note::string_view sv) {
+            while (!sv.empty()) {
+                auto comma = sv.find(',');
+                auto token = (comma == sv.npos) ? sv : sv.substr(0, comma);
+                if (token != "cell" && token != "wifi")
+                    throw "card.triangulate: invalid flag";
+                sv = (comma == sv.npos) ? note::string_view{} : sv.substr(comma + 1);
+            }
+            return true;
+        }
+        // String literal constructor — validates at compile time.
+        template<std::size_t N>
+        consteval mode_t(const char (&s)[N])
+            : Field<note::string_view>(note::string_view(s, N - 1)) {
+            validate_flags(note::string_view(s, N - 1));
+        }
+#endif
     } mode{};
     /// `true` to instruct the Notecard to triangulate even if the module has
     /// not moved. Only takes effect when `set` is `true`.

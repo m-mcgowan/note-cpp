@@ -183,6 +183,25 @@ struct CardAttn {
                 { note::attn::wireless, "wireless" },
             };
             note::FlagSet<15, 109> flags_{flag_defs_};
+#if __cplusplus >= 202002L
+            // consteval: validates that a string literal contains only known flags.
+            static consteval bool validate_flags(note::string_view sv) {
+                while (!sv.empty()) {
+                    auto comma = sv.find(',');
+                    auto token = (comma == sv.npos) ? sv : sv.substr(0, comma);
+                    if (token != "arm" && token != "auxgpio" && token != "connected" && token != "disarm" && token != "env" && token != "files" && token != "location" && token != "motion" && token != "motionchange" && token != "rearm" && token != "signal" && token != "sleep" && token != "usb" && token != "watchdog" && token != "wireless")
+                        throw "card.attn: invalid flag";
+                    sv = (comma == sv.npos) ? note::string_view{} : sv.substr(comma + 1);
+                }
+                return true;
+            }
+            // String literal constructor — validates at compile time.
+            template<std::size_t N>
+            consteval mode_t(const char (&s)[N])
+                : Field<note::string_view>(note::string_view(s, N - 1)) {
+                validate_flags(note::string_view(s, N - 1));
+            }
+#endif
         } mode{};
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
         /// When `true`, completely disables ATTN processing and sets the pin
@@ -553,6 +572,25 @@ struct CardAttn {
                 { note::attn::wireless, "wireless" },
             };
             note::FlagSet<10, 77> flags_{flag_defs_};
+#if __cplusplus >= 202002L
+            // consteval: validates that a string literal contains only known flags.
+            static consteval bool validate_flags(note::string_view sv) {
+                while (!sv.empty()) {
+                    auto comma = sv.find(',');
+                    auto token = (comma == sv.npos) ? sv : sv.substr(0, comma);
+                    if (token != "auxgpio" && token != "connected" && token != "env" && token != "files" && token != "location" && token != "motion" && token != "motionchange" && token != "signal" && token != "usb" && token != "wireless")
+                        throw "card.attn: invalid flag";
+                    sv = (comma == sv.npos) ? note::string_view{} : sv.substr(comma + 1);
+                }
+                return true;
+            }
+            // String literal constructor — validates at compile time.
+            template<std::size_t N>
+            consteval triggers_t(const char (&s)[N])
+                : Field<note::string_view>(note::string_view(s, N - 1)) {
+                validate_flags(note::string_view(s, N - 1));
+            }
+#endif
         } triggers{};
         /// When `true`, enables ATTN processing. This setting is retained
         /// across device restarts.

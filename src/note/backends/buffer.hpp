@@ -222,7 +222,7 @@ public:
         return parse_double(sv, def);
     }
 
-    string_view get_string(string_view key, string_view def) const override {
+    string_view get_string(string_view key, string_view def = {}) const override {
         int idx = find_value(key);
         if (idx < 0) return def;
         if (tokens_[idx].type != JSMN_STRING) return def;

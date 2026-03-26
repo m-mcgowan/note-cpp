@@ -1158,18 +1158,19 @@ compile silently and fail at runtime on the device.
 
 Moving from C to C++ brings benefits independent of note-cpp:
 
-- **RAII** — no manual `deleteResponse` / `JDelete`. Responses clean up
-  automatically when they go out of scope. No leak risk.
+- **Automatic cleanup** — no manual `deleteResponse` / `JDelete`.
+  Responses clean up when they go out of scope. No leak risk.
+  You can have responses outlive the current scope —
+  see [Response Lifetimes](response-lifetimes.md).
 - **Type safety** — field types are checked at compile time. No more
   `JGetNumber` returning 0.0 on a misspelled field name.
-- **Namespaces** — no global symbol pollution. `note::api::HubSet` vs
-  `JAddStringToObject`.
-- **Templates** — zero-cost abstractions. `BufferJsonBackend<512, 64>`
-  is fully stack-allocated with no heap overhead.
-- **`string_view`** — zero-copy string handling. Response fields are
-  views into the transport buffer, not heap-allocated copies.
-- **`constexpr` / `consteval`** — compile-time validation of enum values,
-  flag combinations, and JSON body structure (C++20).
+- **Namespaces** — no global symbol pollution. Your code and the
+  Notecard API don't compete for names.
+- **Zero-copy responses** — response fields are views into the
+  transport buffer, not heap-allocated copies.
+- **Compile-time validation** (C++20) — enum values, flag combinations,
+  and JSON body structure are checked by the compiler before the code
+  reaches the device.
 
 ### Binary size
 

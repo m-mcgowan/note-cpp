@@ -153,6 +153,57 @@ TEST_CASE("attn arm with string triggers via property") {
     REQUIRE(h.last_req.find("\"mode\":\"arm,connected,files\"") != std::string::npos);
 }
 
+// ---------------------------------------------------------------------------
+// card.attn — mode intents (watchdog, sleep, disarm)
+// ---------------------------------------------------------------------------
+
+TEST_CASE("attn watchdog sends mode watchdog with seconds") {
+    Harness h;
+    note::api::CardAttn::Watchdog req;
+    req.seconds = 120;
+    req.nc_ = &h.nc;
+    req.execute();
+    REQUIRE(h.last_req.find("\"mode\":\"watchdog\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"seconds\":120") != std::string::npos);
+}
+
+TEST_CASE("attn sleep sends mode sleep") {
+    Harness h;
+    note::api::CardAttn::Sleep req;
+    req.nc_ = &h.nc;
+    req.execute();
+    REQUIRE(h.last_req.find("\"mode\":\"sleep\"") != std::string::npos);
+}
+
+TEST_CASE("attn disarm sends mode disarm,-all") {
+    Harness h;
+    note::api::CardAttn::Disarm req;
+    req.nc_ = &h.nc;
+    req.execute();
+    REQUIRE(h.last_req.find("\"mode\":\"disarm,-all\"") != std::string::npos);
+}
+
+// ---------------------------------------------------------------------------
+// card.attn — all 10 trigger flag constants exist
+// ---------------------------------------------------------------------------
+
+TEST_CASE("attn all trigger flag constants are valid") {
+    // Compile-time proof that all 10 constants exist and are distinct
+    constexpr uint32_t all = note::attn::auxgpio | note::attn::connected
+        | note::attn::env | note::attn::files | note::attn::location
+        | note::attn::motion | note::attn::motionchange | note::attn::signal
+        | note::attn::usb | note::attn::wireless;
+    REQUIRE(all != 0);
+    // 10 distinct bits
+    uint32_t count = 0;
+    for (uint32_t v = all; v; v &= v - 1) ++count;
+    REQUIRE(count == 10);
+}
+
+// ---------------------------------------------------------------------------
+// card.attn arm(string) factory overload
+// ---------------------------------------------------------------------------
+
 TEST_CASE("attn arm(string) factory overload") {
     Harness h;
     note::api::CardAttn::Arm req;

@@ -79,6 +79,14 @@ struct ITransport {
 /// send() is fire-and-forget: prepare + transmit, no receive.
 class AbstractTransport : public ITransport {
 public:
+    /// Set an external receive buffer. When set, transact() reads into
+    /// this buffer instead of the internal response_buf_ (zero heap).
+    /// Pass nullptr to revert to the internal buffer.
+    void set_receive_buffer(char* buf, size_t len) {
+        ext_buf_ = buf;
+        ext_buf_size_ = len;
+    }
+
     // ── ITransport ────────────────────────────────────────────────────────
 
     Result<string_view> transact(string_view request, uint32_t timeout_ms) override {
@@ -101,19 +109,27 @@ public:
                 continue;
             }
 
-            response_buf_.clear();
-            auto result = do_receive(response_buf_, timeout_ms);
-            if (!result) {
-                last_error = result.error();
-                continue;
-            }
+            if (ext_buf_) {
+                // Phase 2: read into caller buffer via do_read()
+                auto rv = receive_into(ext_buf_, ext_buf_size_, timeout_ms);
+                if (!rv) { last_error = rv.error(); continue; }
+                return *rv;
+            } else {
+                // Original path: read into response_buf_ via do_receive()
+                response_buf_.clear();
+                auto result = do_receive(response_buf_, timeout_ms);
+                if (!result) {
+                    last_error = result.error();
+                    continue;
+                }
 
-            if (transport::detail::crc_check_and_strip(response_buf_, crc_seq_, crc_enabled_)) {
-                last_error = {Error::ResponseLost, Cause::CrcMismatch, "CRC mismatch"};
-                continue;
-            }
+                if (transport::detail::crc_check_and_strip(response_buf_, crc_seq_, crc_enabled_)) {
+                    last_error = {Error::ResponseLost, Cause::CrcMismatch, "CRC mismatch"};
+                    continue;
+                }
 
-            return string_view(response_buf_);
+                return string_view(response_buf_);
+            }
         }
 
         return Unexpected(last_error);
@@ -132,6 +148,78 @@ public:
             return make_error(Error::SendFailed, Cause::HalError, "transmit failed");
 
         return {};
+    }
+
+    /// Transact into a caller-provided buffer (Phase 2).
+    /// Returns a string_view into buf (not response_buf_).
+    /// The caller owns the buffer — no transport-level allocation.
+    Result<string_view> transact_into(string_view request, uint32_t timeout_ms,
+                                       char* buf, size_t buf_size) {
+        if (!initialized_) {
+            if (!do_reset())
+                return make_error(Error::NotReady, "Notecard not ready after reset");
+            initialized_ = true;
+        }
+
+        prepare_wire(request);
+
+        ErrorInfo last_error{Error::SendFailed, Cause::HalError, "transmit failed"};
+
+        for (uint32_t attempt = 0; attempt <= max_retries(); ++attempt) {
+            if (attempt > 0) delay(retry_delay_ms());
+
+            if (!do_transmit(wire_.data(), wire_.size())) {
+                last_error = {Error::SendFailed, Cause::HalError, "transmit failed"};
+                do_reset();
+                continue;
+            }
+
+            // Read into caller buffer via do_read(), stop at \n.
+            size_t pos = 0;
+            bool found_eol = false;
+            bool read_error = false;
+
+            while (!found_eol && pos < buf_size) {
+                auto r = do_read(reinterpret_cast<uint8_t*>(buf + pos),
+                                 buf_size - pos, timeout_ms);
+                if (!r) {
+                    last_error = r.error();
+                    read_error = true;
+                    break;
+                }
+                size_t n = *r;
+                for (size_t i = 0; i < n; ++i) {
+                    if (buf[pos + i] == '\n') {
+                        pos += i;  // don't include \n
+                        found_eol = true;
+                        break;
+                    }
+                }
+                if (!found_eol) pos += n;
+            }
+
+            if (read_error) continue;
+
+            // Strip trailing \r
+            while (pos > 0 && buf[pos - 1] == '\r') --pos;
+
+            // CRC check (operates on buf, not response_buf_)
+            std::string crc_buf(buf, pos);
+            if (transport::detail::crc_check_and_strip(crc_buf, crc_seq_, crc_enabled_)) {
+                last_error = {Error::ResponseLost, Cause::CrcMismatch, "CRC mismatch"};
+                continue;
+            }
+
+            // If CRC was stripped, copy the stripped version back
+            if (crc_enabled_) {
+                memcpy(buf, crc_buf.data(), crc_buf.size());
+                pos = crc_buf.size();
+            }
+
+            return string_view(buf, pos);
+        }
+
+        return Unexpected(last_error);
     }
 
     /// Streaming transact: send request, read response chunk-by-chunk.
@@ -272,6 +360,50 @@ protected:
     uint16_t crc_seq_ = 0;
     std::string wire_;          // reused across requests
     std::string response_buf_;  // reused — string_view return points here
+
+    // Phase 2: external receive buffer (set via set_receive_buffer)
+    char* ext_buf_ = nullptr;
+    size_t ext_buf_size_ = 0;
+
+private:
+    /// Read into a caller-provided buffer via do_read(), stopping at \n.
+    /// Strips trailing \r and checks CRC. Returns string_view into buf.
+    Result<string_view> receive_into(char* buf, size_t buf_size, uint32_t timeout_ms) {
+        size_t pos = 0;
+        bool found_eol = false;
+
+        while (!found_eol && pos < buf_size) {
+            auto r = do_read(reinterpret_cast<uint8_t*>(buf + pos),
+                             buf_size - pos, timeout_ms);
+            if (!r) return Unexpected(r.error());
+
+            size_t n = *r;
+            for (size_t i = 0; i < n; ++i) {
+                if (buf[pos + i] == '\n') {
+                    pos += i;  // don't include \n
+                    found_eol = true;
+                    break;
+                }
+            }
+            if (!found_eol) pos += n;
+        }
+
+        // Strip trailing \r
+        while (pos > 0 && buf[pos - 1] == '\r') --pos;
+
+        // CRC check (temporary std::string — acceptable for v0.1)
+        std::string crc_buf(buf, pos);
+        if (transport::detail::crc_check_and_strip(crc_buf, crc_seq_, crc_enabled_)) {
+            return make_error(Error::ResponseLost, Cause::CrcMismatch, "CRC mismatch");
+        }
+
+        if (crc_enabled_) {
+            memcpy(buf, crc_buf.data(), crc_buf.size());
+            pos = crc_buf.size();
+        }
+
+        return string_view(buf, pos);
+    }
 };
 
 

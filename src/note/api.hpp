@@ -167,8 +167,8 @@ public:
         /// Enable AUX serial notifications. Combine flags to select which
         /// notifications are active (e.g. env + dfu).
         auto notify() { return create<api::CardAuxSerial::Notify>(); }
-        auto notify(uint32_t flags) { auto r = create<api::CardAuxSerial::Notify>(); r.triggers = flags; return r; }
-        auto notify(note::string_view flags) { auto r = create<api::CardAuxSerial::Notify>(); r.triggers = flags; return r; }
+        auto notify(uint32_t flags) { auto r = create<api::CardAuxSerial::Notify>(); r.notifications = flags; return r; }
+        auto notify(note::string_view flags) { auto r = create<api::CardAuxSerial::Notify>(); r.notifications = flags; return r; }
         /// Configure AUX serial for external GPS/GNSS module.
         auto gps() { return create<api::CardAuxSerial::Gps>(); }
         /// Configure AUX serial for request/response monitoring (default mode).

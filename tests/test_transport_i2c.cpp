@@ -630,3 +630,98 @@ TEST_CASE("i2c: explicit reset()") {
     auto r = transport.transact("{\"req\":\"card.version\"}", 5000);
     REQUIRE(r.has_value());
 }
+
+TEST_CASE("i2c: read() HAL receive failure returns error") {
+    ScriptedI2CHal hal;
+    hal.responses.push_back("{}\n");
+    NotecardI2c transport(hal);
+    transport.transact("{}", 5000);  // init
+
+    // Inject some data so priming query returns available > 0,
+    // then fail the actual read
+    hal.rx_buf = "AB";
+    int receive_call = 0;
+    // Override receive to fail on the second call (first is priming query)
+    auto orig_receive = [&](uint8_t*, size_t, uint32_t& avail) -> bool {
+        ++receive_call;
+        if (receive_call == 1) {
+            avail = 2;
+            return true;
+        }
+        return false;
+    };
+    // Can't easily override receive on ScriptedI2CHal, so use the callback HAL
+    I2cCallbackHal cb{
+        []() -> bool { return true; },
+        [](const uint8_t*, size_t) -> bool { return true; },
+        orig_receive,
+        [&]() -> uint32_t { return hal.millis(); },
+        [&](uint32_t ms) { hal.delay(ms); }
+    };
+    NotecardI2c transport2(cb);
+    cb.reset();  // trigger init
+    transport2.transact("{}", 5000);
+
+    uint8_t buf[16];
+    auto r = transport2.read(buf, sizeof(buf), 5000);
+    REQUIRE_FALSE(r.has_value());
+    CHECK(r.error().code == note::Error::ResponseLost);
+}
+
+TEST_CASE("i2c: send() before first transact triggers reset") {
+    ScriptedI2CHal hal;
+    NotecardI2c transport(hal);
+    auto r = transport.send("{\"cmd\":\"hub.set\"}");
+    REQUIRE(r.has_value());
+}
+
+TEST_CASE("i2c: send() fails when transmit fails") {
+    ScriptedI2CHal hal;
+    hal.responses.push_back("{}\n");
+    NotecardI2c transport(hal);
+    transport.transact("{}", 5000);
+
+    hal.transmit_ok = false;
+    auto r = transport.send("{\"cmd\":\"hub.set\"}");
+    REQUIRE_FALSE(r.has_value());
+    CHECK(r.error().code == note::Error::SendFailed);
+}
+
+TEST_CASE("i2c: write() fails when HAL transmit fails") {
+    ScriptedI2CHal hal;
+    hal.responses.push_back("{}\n");
+    NotecardI2c transport(hal);
+    transport.transact("{}", 5000);
+
+    hal.transmit_ok = false;
+    uint8_t data[] = {1, 2, 3};
+    auto r = transport.write(data, sizeof(data));
+    REQUIRE_FALSE(r.has_value());
+    CHECK(r.error().code == note::Error::SendFailed);
+}
+
+TEST_CASE("i2c: reset fails when HAL reset fails") {
+    ScriptedI2CHal hal;
+    hal.reset_ok = false;
+    NotecardI2c transport(hal);
+    // First transact triggers reset which fails
+    auto r = transport.transact("{}", 5000);
+    REQUIRE_FALSE(r.has_value());
+    CHECK(r.error().code == note::Error::NotReady);
+}
+
+TEST_CASE("i2c: transact retries on transmit failure") {
+    ScriptedI2CHal hal;
+    hal.responses.push_back("{}\n");
+    hal.responses.push_back("{}\n");
+    NotecardI2c transport(hal);
+
+    hal.transmit_ok = true;
+    transport.transact("{}", 5000);
+
+    // Now set up a scenario where first attempt fails
+    hal.transmit_ok = false;
+    auto r = transport.transact("{\"req\":\"hub.status\"}", 5000);
+    // All retries fail → error
+    REQUIRE_FALSE(r.has_value());
+}

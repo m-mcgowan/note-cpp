@@ -81,8 +81,35 @@ struct CardAttn {
         /// A comma-separated list of one or more of the following keywords.
         /// Some keywords are only supported on certain types of Notecards.
         struct mode_t : Field<note::string_view> {
+#if __cplusplus >= 202002L && !defined(__clang__)
+            constexpr mode_t() = default;
+            template<std::size_t N_>
+            consteval mode_t(const char (&s)[N_])
+                : Field<note::string_view>(note::string_view(s, N_ - 1)) {
+                validate_flags(note::string_view(s, N_ - 1));
+            }
+            template<typename U>
+                requires std::is_convertible_v<U, note::string_view>
+                      && (!std::is_array_v<std::remove_reference_t<U>>)
+                      && (!std::is_same_v<std::decay_t<U>, mode_t>)
+            constexpr mode_t(U&& v) : Field<note::string_view>(note::string_view(std::forward<U>(v))) {}
+            template<typename U>
+                requires std::is_convertible_v<U, note::string_view>
+                      && (!std::is_array_v<std::remove_reference_t<U>>)
+                      && (!std::is_same_v<std::decay_t<U>, mode_t>)
+            mode_t& operator=(U&& v) {
+                Field<note::string_view>::operator=(note::string_view(std::forward<U>(v)));
+                return *this;
+            }
+            mode_t& operator=(std::nullopt_t) { Field<note::string_view>::reset(); return *this; }
+            mode_t(const mode_t&) = default;
+            mode_t& operator=(const mode_t&) = default;
+            mode_t(mode_t&&) = default;
+            mode_t& operator=(mode_t&&) = default;
+#else
             using Field<note::string_view>::Field;
             using Field<note::string_view>::operator=;
+#endif
             CardAttn::Request& operator()(note::string_view v);
             CardAttn::Request& operator=(uint32_t flags);
             CardAttn::Request& operator()(uint32_t flags);
@@ -143,12 +170,6 @@ struct CardAttn {
                     sv = (comma == sv.npos) ? note::string_view{} : sv.substr(comma + 1);
                 }
                 return true;
-            }
-            // String literal constructor — validates at compile time.
-            template<std::size_t N>
-            consteval mode_t(const char (&s)[N])
-                : Field<note::string_view>(note::string_view(s, N - 1)) {
-                validate_flags(note::string_view(s, N - 1));
             }
 #endif
         } mode{};
@@ -465,8 +486,35 @@ struct CardAttn {
         /// A comma-separated list of one or more of the following keywords.
         /// Some keywords are only supported on certain types of Notecards.
         struct triggers_t : Field<note::string_view> {
+#if __cplusplus >= 202002L && !defined(__clang__)
+            constexpr triggers_t() = default;
+            template<std::size_t N_>
+            consteval triggers_t(const char (&s)[N_])
+                : Field<note::string_view>(note::string_view(s, N_ - 1)) {
+                validate_flags(note::string_view(s, N_ - 1));
+            }
+            template<typename U>
+                requires std::is_convertible_v<U, note::string_view>
+                      && (!std::is_array_v<std::remove_reference_t<U>>)
+                      && (!std::is_same_v<std::decay_t<U>, triggers_t>)
+            constexpr triggers_t(U&& v) : Field<note::string_view>(note::string_view(std::forward<U>(v))) {}
+            template<typename U>
+                requires std::is_convertible_v<U, note::string_view>
+                      && (!std::is_array_v<std::remove_reference_t<U>>)
+                      && (!std::is_same_v<std::decay_t<U>, triggers_t>)
+            triggers_t& operator=(U&& v) {
+                Field<note::string_view>::operator=(note::string_view(std::forward<U>(v)));
+                return *this;
+            }
+            triggers_t& operator=(std::nullopt_t) { Field<note::string_view>::reset(); return *this; }
+            triggers_t(const triggers_t&) = default;
+            triggers_t& operator=(const triggers_t&) = default;
+            triggers_t(triggers_t&&) = default;
+            triggers_t& operator=(triggers_t&&) = default;
+#else
             using Field<note::string_view>::Field;
             using Field<note::string_view>::operator=;
+#endif
             CardAttn::Arm& operator()(note::string_view v);
             CardAttn::Arm& operator=(uint32_t flags);
             CardAttn::Arm& operator()(uint32_t flags);
@@ -527,12 +575,6 @@ struct CardAttn {
                     sv = (comma == sv.npos) ? note::string_view{} : sv.substr(comma + 1);
                 }
                 return true;
-            }
-            // String literal constructor — validates at compile time.
-            template<std::size_t N>
-            consteval triggers_t(const char (&s)[N])
-                : Field<note::string_view>(note::string_view(s, N - 1)) {
-                validate_flags(note::string_view(s, N - 1));
             }
 #endif
         } triggers{};

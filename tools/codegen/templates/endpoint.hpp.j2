@@ -173,6 +173,36 @@ namespace note::api {
 {{ indent }}    using Field<{{ prop.field_type }}>::Field;
 {{ indent }}    using Field<{{ prop.field_type }}>::operator=;
 #endif
+{% elif prop.has_flags and prop.field_type == "note::string_view" %}
+#if __cplusplus >= 202002L && !defined(__clang__)
+{{ indent }}    constexpr {{ prop.nested_type_name }}() = default;
+{{ indent }}    template<std::size_t N_>
+{{ indent }}    consteval {{ prop.nested_type_name }}(const char (&s)[N_])
+{{ indent }}        : Field<note::string_view>(note::string_view(s, N_ - 1)) {
+{{ indent }}        validate_flags(note::string_view(s, N_ - 1));
+{{ indent }}    }
+{{ indent }}    template<typename U>
+{{ indent }}        requires std::is_convertible_v<U, note::string_view>
+{{ indent }}              && (!std::is_array_v<std::remove_reference_t<U>>)
+{{ indent }}              && (!std::is_same_v<std::decay_t<U>, {{ prop.nested_type_name }}>)
+{{ indent }}    constexpr {{ prop.nested_type_name }}(U&& v) : Field<note::string_view>(note::string_view(std::forward<U>(v))) {}
+{{ indent }}    template<typename U>
+{{ indent }}        requires std::is_convertible_v<U, note::string_view>
+{{ indent }}              && (!std::is_array_v<std::remove_reference_t<U>>)
+{{ indent }}              && (!std::is_same_v<std::decay_t<U>, {{ prop.nested_type_name }}>)
+{{ indent }}    {{ prop.nested_type_name }}& operator=(U&& v) {
+{{ indent }}        Field<note::string_view>::operator=(note::string_view(std::forward<U>(v)));
+{{ indent }}        return *this;
+{{ indent }}    }
+{{ indent }}    {{ prop.nested_type_name }}& operator=(std::nullopt_t) { Field<note::string_view>::reset(); return *this; }
+{{ indent }}    {{ prop.nested_type_name }}(const {{ prop.nested_type_name }}&) = default;
+{{ indent }}    {{ prop.nested_type_name }}& operator=(const {{ prop.nested_type_name }}&) = default;
+{{ indent }}    {{ prop.nested_type_name }}({{ prop.nested_type_name }}&&) = default;
+{{ indent }}    {{ prop.nested_type_name }}& operator=({{ prop.nested_type_name }}&&) = default;
+#else
+{{ indent }}    using Field<{{ prop.field_type }}>::Field;
+{{ indent }}    using Field<{{ prop.field_type }}>::operator=;
+#endif
 {% else %}
 {{ indent }}    using Field<{{ prop.field_type }}>::Field;
 {{ indent }}    using Field<{{ prop.field_type }}>::operator=;
@@ -236,12 +266,6 @@ namespace note::api {
 {{ indent }}            sv = (comma == sv.npos) ? note::string_view{} : sv.substr(comma + 1);
 {{ indent }}        }
 {{ indent }}        return true;
-{{ indent }}    }
-{{ indent }}    // String literal constructor — validates at compile time.
-{{ indent }}    template<std::size_t N>
-{{ indent }}    consteval {{ prop.nested_type_name }}(const char (&s)[N])
-{{ indent }}        : Field<note::string_view>(note::string_view(s, N - 1)) {
-{{ indent }}        validate_flags(note::string_view(s, N - 1));
 {{ indent }}    }
 #endif
 {% endif %}

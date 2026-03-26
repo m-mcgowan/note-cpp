@@ -29,7 +29,7 @@ struct FlagDef {
 template<std::size_t N, std::size_t BufSize>
 class FlagSet {
 public:
-    constexpr FlagSet(const FlagDef (&defs)[N]) : defs_(defs) {}
+    constexpr FlagSet(const FlagDef (&defs)[N]) : defs_(&defs[0]) {}
 
     FlagSet& add(uint32_t bit) {
         bits_ |= bit;
@@ -73,7 +73,7 @@ private:
         }
     }
 
-    const FlagDef (&defs_)[N];
+    const FlagDef* defs_;
     uint32_t bits_{};
     char buf_[BufSize]{};
     std::size_t len_{};

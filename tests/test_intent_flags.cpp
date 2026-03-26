@@ -204,6 +204,42 @@ TEST_CASE("attn all trigger flag constants are valid") {
 // card.attn — raw Request with string mode (escape hatch)
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// card.aux.serial notify — validated assignment (C++20 GCC)
+// ---------------------------------------------------------------------------
+
+TEST_CASE("aux.serial notify assignment with valid string literal") {
+    Harness h;
+    note::api::CardAuxSerial::Notify req;
+    req.notifications = "env,dfu";
+    req.nc_ = &h.nc;
+    req.execute();
+    REQUIRE(h.last_req.find("\"mode\":\"notify,env,dfu\"") != std::string::npos);
+}
+
+TEST_CASE("aux.serial notify assignment with runtime string_view") {
+    Harness h;
+    note::api::CardAuxSerial::Notify req;
+    std::string_view dynamic = "signals,accel";
+    req.notifications = dynamic;
+    req.nc_ = &h.nc;
+    req.execute();
+    REQUIRE(h.last_req.find("\"mode\":\"notify,signals,accel\"") != std::string::npos);
+}
+
+TEST_CASE("attn arm triggers assignment with valid string literal") {
+    Harness h;
+    note::api::CardAttn::Arm req;
+    req.triggers = "connected,motion";
+    req.nc_ = &h.nc;
+    req.execute();
+    REQUIRE(h.last_req.find("\"mode\":\"arm,connected,motion\"") != std::string::npos);
+}
+
+// ---------------------------------------------------------------------------
+// card.attn — raw Request with string mode (escape hatch)
+// ---------------------------------------------------------------------------
+
 TEST_CASE("attn Request raw string mode — escape hatch, not validated") {
     // The base Request type accepts any string for mode. This is the escape
     // hatch for mode combinations the typed intent API doesn't cover.

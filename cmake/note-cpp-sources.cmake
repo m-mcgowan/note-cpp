@@ -85,6 +85,7 @@ set(NOTE_CPP_TEST_SOURCES
     test_cobs.cpp
     test_connection.cpp
     test_flag_set.cpp
+    test_intent_flags.cpp
     test_json_buf.cpp
     test_json_sax.cpp
     test_make_api.cpp

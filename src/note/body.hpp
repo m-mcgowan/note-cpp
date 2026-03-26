@@ -1,6 +1,7 @@
 #pragma once
 
 #include "json.hpp"
+#include "json_validate.hpp"
 #include "types.hpp"
 
 #include <type_traits>
@@ -36,13 +37,29 @@ public:
 
     constexpr BodyValue() = default;
 
-    // Tier 1: raw JSON string.
+#if __cplusplus >= 202002L && !defined(__clang__)
+    // String literal: validated at compile time as well-formed JSON object.
+    template<std::size_t N>
+    consteval BodyValue(const char (&s)[N])
+        : str_(string_view(s, N - 1)), write_fn_(&write_string) {
+        if (!json_valid(string_view(s, N - 1)))
+            throw "body: invalid JSON or not a top-level object";
+    }
+
+    // Runtime string_view (no validation — for dynamic/forwarded JSON).
+    template<typename U>
+        requires std::is_convertible_v<U, string_view>
+              && (!std::is_array_v<std::remove_reference_t<U>>)
+    constexpr BodyValue(U&& v)
+        : str_(string_view(std::forward<U>(v))), write_fn_(&write_string) {}
+#else
+    // Tier 1: raw JSON string (no compile-time validation on Clang/C++17).
     BodyValue(string_view json)
         : str_(json), write_fn_(&write_string) {}
 
-    // Prevent const char* from matching other constructors.
     BodyValue(const char* json)
         : str_(json), write_fn_(&write_string) {}
+#endif
 
     // Tier 2/3: type-erased writer (used by body() helper and schema path).
     BodyValue(const void* ctx, WriteFn fn)

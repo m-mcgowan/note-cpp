@@ -39,32 +39,27 @@ TEST_CASE("aux.serial notify().env() fluent") {
     REQUIRE(h.last_req.find("\"mode\":\"notify,env\"") != std::string::npos);
 }
 
-TEST_CASE("aux.serial notify().env().dfu() fluent chain") {
+TEST_CASE("aux.serial notify().env().dfu() fluent chain — exact wire format") {
     Harness h;
     note::api::CardAuxSerial::Notify req;
     req.env().dfu();
     req.nc_ = &h.nc;
     req.execute();
-    // Both flags present (order may vary within the comma-separated string)
-    REQUIRE(h.last_req.find("notify,") != std::string::npos);
-    REQUIRE(h.last_req.find("env") != std::string::npos);
-    REQUIRE(h.last_req.find("dfu") != std::string::npos);
+    // Flags appear in definition order (env=bit0, dfu=bit1)
+    REQUIRE(h.last_req == R"({"req":"card.aux.serial","mode":"notify,env,dfu"})");
 }
 
 // ---------------------------------------------------------------------------
 // card.aux.serial notify — flag constants
 // ---------------------------------------------------------------------------
 
-TEST_CASE("aux.serial notify with flag constants") {
-    using Notify = note::api::CardAuxSerial::Notify;
+TEST_CASE("aux.serial notify with flag constants — exact wire format") {
     Harness h;
-    Notify req;
+    note::api::CardAuxSerial::Notify req;
     req.notifications = (note::serial::env | note::serial::dfu);
     req.nc_ = &h.nc;
     req.execute();
-    REQUIRE(h.last_req.find("notify,") != std::string::npos);
-    REQUIRE(h.last_req.find("env") != std::string::npos);
-    REQUIRE(h.last_req.find("dfu") != std::string::npos);
+    REQUIRE(h.last_req == R"({"req":"card.aux.serial","mode":"notify,env,dfu"})");
 }
 
 // ---------------------------------------------------------------------------
@@ -122,26 +117,22 @@ TEST_CASE("aux.serial off() sends mode -") {
 // card.attn arm — trigger flags only (no mode flags)
 // ---------------------------------------------------------------------------
 
-TEST_CASE("attn arm().connected().motion() fluent") {
+TEST_CASE("attn arm().connected().motion() fluent — exact wire format") {
     Harness h;
     note::api::CardAttn::Arm req;
     req.connected().motion();
     req.nc_ = &h.nc;
     req.execute();
-    REQUIRE(h.last_req.find("arm,") != std::string::npos);
-    REQUIRE(h.last_req.find("connected") != std::string::npos);
-    REQUIRE(h.last_req.find("motion") != std::string::npos);
+    REQUIRE(h.last_req == R"({"req":"card.attn","mode":"arm,connected,motion"})");
 }
 
-TEST_CASE("attn arm with flag constants") {
+TEST_CASE("attn arm with flag constants — exact wire format") {
     Harness h;
     note::api::CardAttn::Arm req;
     req.triggers = (note::attn::connected | note::attn::env);
     req.nc_ = &h.nc;
     req.execute();
-    REQUIRE(h.last_req.find("arm,") != std::string::npos);
-    REQUIRE(h.last_req.find("connected") != std::string::npos);
-    REQUIRE(h.last_req.find("env") != std::string::npos);
+    REQUIRE(h.last_req == R"({"req":"card.attn","mode":"arm,connected,env"})");
 }
 
 TEST_CASE("attn arm with string triggers via property") {

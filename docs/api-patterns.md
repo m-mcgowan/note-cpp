@@ -112,7 +112,7 @@ of filenames). These use `ArrayField<T, N>` which supports several
 initialization styles:
 
 ```cpp
-auto req = api.file.delete_();
+auto req = api.file.remove();
 
 // Initializer list — most natural for literals:
 req.files = {"data.qi", "settings.db"};

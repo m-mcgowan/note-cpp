@@ -45,8 +45,8 @@ note::Api api(nc);
 api.card.version()           // → {"req": "card.version"}
 api.card.locationMode()      // → {"req": "card.location.mode"}
 api.card.binary()            // → {"req": "card.binary"}
-api.card.binaryGet()         // → {"req": "card.binary.get"}
-api.card.binaryPut()         // → {"req": "card.binary.put"}
+api.card.binary.get()         // → {"req": "card.binary.get"}
+api.card.binary.put()         // → {"req": "card.binary.put"}
 
 api.note.get()               // → {"req": "note.get"}
 api.note.delete_()           // → {"req": "note.delete"}
@@ -65,7 +65,7 @@ api.env.set("name")          // → {"req": "env.set", "name": "name"}
 api.env.default_("name")     // → {"req": "env.default", "name": "name"}
 
 api.file.changes()           // → {"req": "file.changes"}
-api.file.delete_()           // → {"req": "file.delete"}
+api.file.remove("data.db")   // → {"req": "file.delete", "files": ["data.db"]}
 api.file.stats()             // → {"req": "file.stats"}
 ```
 
@@ -143,8 +143,8 @@ api.note.popChanges("data.qi")      // Layer 2: → note.changes + delete:true, 
 api.binary.status()                 // Layer 2: → card.binary (read-only)
 api.binary.clear()                  // Layer 2: → card.binary + delete:true
 api.card.binary().status()          // same, via card group factory
-api.card.binaryGet()                // Layer 1: card.binary.get (separate req)
-api.card.binaryPut()                // Layer 1: card.binary.put (separate req)
+api.card.binary.get()                // Layer 1: card.binary.get (separate req)
+api.card.binary.put()                // Layer 1: card.binary.put (separate req)
 
 // ── Temperature ──────────────────────────────────────────────────────────
 api.card.temp().read()              // → card.temp (read-only)
@@ -245,8 +245,8 @@ auto pop(string_view file) {
 | `card.aux()` | `card.aux` | |
 | `card.auxSerial()` | `card.aux.serial` | |
 | `card.binary()` | `card.binary` | `binary.status()`, `binary.clear()` |
-| `card.binaryGet()` | `card.binary.get` | |
-| `card.binaryPut()` | `card.binary.put` | |
+| `card.binary.get()` | `card.binary.get` | |
+| `card.binary.put()` | `card.binary.put` | |
 | `card.carrier()` | `card.carrier` | |
 | `card.contact()` | `card.contact` | `.get()`, `.set()` |
 | `card.dfu()` | `card.dfu` | |

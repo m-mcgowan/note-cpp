@@ -119,7 +119,7 @@ Both use global `operator new`/`operator delete` overrides to count every C++ he
 
 ## Binary Transfer Buffers
 
-Binary transfer (`binaryPut` / `binaryGet`) follows the same caller-owns-memory
+Binary transfer (`.data()` / `.into()`) follows the same caller-owns-memory
 model as the rest of the library.
 
 **PUT** — the caller supplies the source data buffer. `CobsEncoder` is streaming:

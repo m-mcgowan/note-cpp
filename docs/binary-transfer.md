@@ -1,9 +1,9 @@
 # Binary Transfer
 
 The Notecard supports transferring raw binary data between the host MCU and the
-Notecard's binary store via a COBS-encoded channel. note-cpp handles one segment
+Notecard's binary store via a COBS-encoded channel. `note-cpp` handles one segment
 of this transfer at a time — COBS encoding/decoding, MD5 compute/verify, and the
-JSON handshake are all handled invisibly inside `execute()`.
+JSON handshake are all handled inside `execute()`.
 
 Multi-segment orchestration (reset → append loop → finalize) is the concern of
 [note-cpp-app](https://github.com/blues/note-cpp-app).
@@ -15,186 +15,144 @@ Multi-segment orchestration (reset → append loop → finalize) is the concern 
 ### PUT: host → Notecard binary store
 
 ```cpp
-// Layer 1 — explicit offset:
-auto rsp = api.card.binaryPut()
-    .offset(int32_t(0))    // must match card.binary.length on the Notecard (append-only)
-    .buffer(data, len)     // synthetic field: triggers binary pipeline
+// Attach data and execute — binary pipeline triggered automatically:
+auto rsp = api.card.binary.put()
+    .data(buf, len)             // attach source data
+    .offset(int32_t(0))        // append position in Notecard's store
+    .execute();                 // COBS encode + stream + verify
+
+// Skip post-transmit verification for performance:
+auto rsp = api.card.binary.put()
+    .data(buf, len)
+    .verify(false)
     .execute();
 
-// Layer 2 — offset optional (defaults to 0):
-auto rsp = api.binary.put(data, len).execute();
-auto rsp = api.binary.put(data, len, /*offset=*/N).execute();
+// Top-level alias:
+api.binary.put().data(buf, len).execute();
 ```
 
-`buffer` is a synthetic field — it is **not** serialized to JSON. Its presence
-tells `execute()` to run the binary pipeline instead of normal JSON dispatch.
-
-`offset` must match the Notecard's current `card.binary.length`. Data can only
-be appended to the binary store, never overwritten. The caller is responsible
-for tracking the offset across multiple calls.
+The `.data()` method attaches a source buffer. Its presence triggers the binary
+pipeline in `execute()` — COBS encoding, MD5 computation, streaming, and
+post-transmit verification all happen automatically. Without `.data()`,
+`execute()` sends a normal JSON request (useful for manual control).
 
 ### GET: Notecard binary store → host
 
 ```cpp
-// Layer 1 — explicit offset and length:
-note::byte_span rx_buf{buf, sizeof(buf)};
-auto rsp = api.card.binaryGet()
-    .offset(int32_t(0))
-    .length(int32_t(len))
-    .buffer(rx_buf)        // synthetic: destination for decoded bytes
-    .execute();
-// rsp.buffer → span<const uint8_t> into rx_buf, sized to bytes received
+auto rsp = api.card.binary.get()
+    .into(dst, sizeof(dst))     // attach destination buffer
+    .length(int32_t(N))         // bytes to retrieve
+    .execute();                 // stream + COBS decode + MD5 verify
 
-// Layer 2 — offset optional (defaults to 0):
-auto rsp = api.binary.get(buf, len).execute();
-auto rsp = api.binary.get(buf, len, /*offset=*/N).execute();
+// Top-level alias:
+api.binary.get().into(dst, sizeof(dst)).length(N).execute();
 ```
+
+The `.into()` method attaches a destination buffer. `execute()` streams COBS
+data from the transport, decodes it into the destination buffer, and verifies
+the MD5 against the Notecard's response.
+
+### Status and clear
+
+```cpp
+auto status = api.binary.status().execute();
+// status.max — maximum bytes the Notecard can store
+// status.length — bytes currently stored (unencoded)
+// status.cobs — COBS-encoded size of stored data
+// status.status — MD5 of stored data
+
+api.binary.clear().execute();
+```
+
+### Post-transmit verification
+
+PUT requests include post-transmit verification by default. After streaming the
+COBS data, `execute()` queries `card.binary` status and confirms the Notecard's
+stored MD5 matches what was sent. If the Notecard discarded the data (corruption
+on the wire), the MD5 won't match and `execute()` returns an error.
+
+This costs one extra JSON round-trip. Disable it for latency-sensitive paths:
+
+```cpp
+api.binary.put().data(buf, len).verify(false).execute();
+```
+
+GET requests verify MD5 locally (no extra round-trip) — the MD5 from the JSON
+response is compared against the decoded data. This is always on.
 
 ### DFU
 
 `dfu.get { binary: true }` tells the Notecard to stage a firmware chunk into
-the `card.binary` buffer. The host then retrieves it via a normal `card.binary.get`
-call. There is no direct COBS streaming from `dfu.get` — the binary receive
-always goes through `card.binary.get`.
+the `card.binary` buffer. The host then retrieves it via a normal
+`card.binary.get` call. There is no direct COBS streaming from `dfu.get`.
 
-### note.add with binary: true
+### note.add with binary
 
-`note.add { binary: true, live: true }` tells the Notecard to forward the
-contents of its binary store to Notehub. It is **not** a host→Notecard upload —
-no synthetic buffer field is needed. The data must already be in the binary store
-via `binaryPut()` before calling this.
-
-Routing between `payload` (base64, ≤256 bytes) and the binary store (larger
-payloads) is a policy decision that belongs in note-cpp-app, not here.
+`note.add { binary: true }` tells the Notecard to forward the contents of its
+binary store to Notehub. It is **not** a host→Notecard upload — no buffer
+attachment is needed. The data must already be in the binary store via
+`card.binary.put`.
 
 ---
 
 ## What execute() does (one segment)
 
-MD5 is computed on **raw (pre-COBS) bytes**, consistent with note-c. COBS
-encoding happens afterwards.
+MD5 is computed on **raw (pre-COBS) bytes**, consistent with note-c.
 
 ### PUT pipeline
 
 ```
-1. card.binary.get          JSON: verify max >= data.size()
-2. compute_md5(data)        raw bytes → md5_provider_.compute()
-3. COBS encode data         streaming encoder
-4. card.binary.put          JSON: cobs=encoded_len, offset=N, status=md5_hex
-5. raw COBS bytes + '\n'    transport chunked transmit
-6. card.binary.get          JSON: verify response.status matches md5_hex
+1. cobs_encoded_length(data)   exact encoded size (O(n) scan)
+2. md5_provider.compute(data)  MD5 of raw bytes
+3. card.binary.put             JSON handshake: cobs=N, status=md5_hex, offset=M
+4. COBS encode → write()       stream encoded blocks to transport
+5. write('\n')                  EOP byte
+6. card.binary                  verify: Notecard's stored MD5 matches (if verify=true)
 ```
 
 ### GET pipeline
 
 ```
-1. card.binary.get          JSON request: offset=N, length=L
-                             JSON response: status=md5_of_decoded  (no length in response)
-2. raw COBS bytes           transport chunked receive
-3. COBS decode into dst     streaming decoder
-4. verify decoded_len == L  mismatch → error
-5. compute_md5(dst[0..L])   raw decoded bytes → verify vs response.status
+1. card.binary.get             JSON request: length=L, offset=M
+                                JSON response: status=md5_of_data
+2. read() → CobsDecoder        stream + decode into destination buffer
+3. md5_provider.compute(dst)   verify decoded data matches response status
 ```
-
-`rsp.buffer` is a span into the caller's destination buffer, sized to the bytes
-actually decoded (normally equal to the requested `length`; may be smaller on
-partial receive).
-
-To know the data size before calling `binaryGet`, issue a `card.binary` status
-call first — its response has `length` (unencoded bytes in store), `cobs`
-(COBS-encoded size), and `status` (MD5 of the full buffer). The `card.binary.get`
-response itself only carries `status` (MD5) and `err`.
-
-A failed MD5 or length verification returns an error `ApiResult`. No retries at
-this level — retry policy is a broader deferred discussion.
 
 ---
 
 ## MD5 provider
 
-MD5 is not a transport concern. It is injected into `Notecard` as a separate
-`Md5Provider` interface, independent of the transport HAL:
+MD5 is injected into `Notecard` as a separate `Md5Provider` interface:
 
 ```cpp
 class Md5Provider {
 public:
-    /// Compute MD5 of raw bytes; return as lowercase hex string.
     virtual std::string compute(const uint8_t* data, size_t len) = 0;
     virtual ~Md5Provider() = default;
 };
 ```
 
-The library ships two implementations selected at compile time:
+Two implementations ship with the library:
 
-```cpp
-// Always available — pure C++ software implementation:
-class SoftwareMd5 : public Md5Provider { ... };
+- `SoftwareMd5` — pure C++ (always available)
+- `MbedTlsMd5` — hardware-accelerated (ESP32, detected via `__has_include`)
 
-// When mbedtls is present (detected via __has_include):
-#if __has_include(<mbedtls/md5.h>)
-class MbedTlsMd5 : public Md5Provider { ... };
-using PlatformMd5 = MbedTlsMd5;
-#else
-using PlatformMd5 = SoftwareMd5;
-#endif
-```
-
-`Notecard` defaults to `PlatformMd5`. Platforms can inject a custom
-implementation:
-
-```cpp
-note::Notecard nc(hal, transport_fn, command_fn);           // PlatformMd5
-note::Notecard nc(hal, transport_fn, command_fn, &my_md5);  // custom override
-```
+`PlatformMd5` aliases the best available. Custom implementations can be
+injected via `nc.set_md5_provider(my_md5)`.
 
 ---
 
-## Layer division
-
-| Layer | Responsibility |
-|-------|----------------|
-| **note-cpp** | One segment: COBS encode/decode, MD5 compute+verify, chunked streaming, JSON handshake |
-| **note-cpp-app** | Multi-segment: reset (offset=0), append loop, offset tracking, DFU orchestration |
-
----
-
-## Memory management
-
-note-cpp avoids heap allocations throughout. Binary transfer follows the same
-principle — no hidden allocations, caller controls buffer placement.
-
-### COBS codec buffer
-
-The encoder and decoder share a ~256-byte working buffer. By default it is
-stack-allocated inside `execute()`. For stack-constrained targets, register a
-static buffer on the `Notecard` once at startup — all binary operations then
-use it automatically with no per-call parameters:
+## Sizing helpers
 
 ```cpp
-// Default — stack buffer, nothing to configure:
-api.binary.put(data, len).execute();
+// Worst-case COBS encoded size (O(1), for buffer sizing):
+size_t max = note::cobs_encoded_size(raw_len);
 
-// Stack-constrained — set once at startup, then forget:
-static uint8_t cobs_buf[NOTE_COBS_BLOCK_SIZE];
-nc.set_cobs_buffer(cobs_buf);                     // array — size deduced
-nc.set_cobs_buffer(cobs_buf, sizeof(cobs_buf));   // pointer + length
-nc.set_cobs_buffer({cobs_buf, sizeof(cobs_buf)}); // explicit span
-
-// All subsequent binary operations use cobs_buf automatically:
-api.binary.put(data, len).execute();
-api.binary.get(buf, len).execute();
+// Exact COBS encoded size for specific data (O(n), for JSON handshake):
+size_t exact = note::cobs_encoded_length(data, raw_len);
 ```
 
-`NOTE_COBS_BLOCK_SIZE` is 255 by default and can be overridden at build time
-before including any note headers.
-
-### Sizing helpers
-
-```cpp
-// Maximum COBS-encoded size for a given raw payload length:
-size_t scratch = note::cobs_encoded_size(raw_len);  // raw_len + raw_len/254 + 1
-```
-
-Use `note::cobs_encoded_size()` when you need to know upfront how much space the
-Notecard will need to store a payload (e.g. to compare against `card.binary`
-response `max` field).
+`cobs_encoded_size()` is the worst case — use it for buffer allocation.
+`cobs_encoded_length()` scans the data for zeros and returns the exact size —
+use it for the `cobs` field in the JSON handshake (as `do_binary_send` does).

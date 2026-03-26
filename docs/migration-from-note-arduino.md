@@ -1074,7 +1074,7 @@ nc.sendRequest(req);
 uint8_t buf[1024];
 
 nc.binary.clear().execute();
-nc.card.binaryPut()
+nc.card.binary.put()
     .data(buf, data_len)
     .execute();
 

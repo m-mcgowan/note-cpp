@@ -81,8 +81,37 @@ struct CardLocationMode {
         /// Sets the location mode.
         // mode:  | off | periodic | continuous | fixed
         struct mode_t : Field<note::string_view> {
+#if __cplusplus >= 202002L && !defined(__clang__)
+            constexpr mode_t() = default;
+            template<std::size_t N>
+            consteval mode_t(const char (&s)[N])
+                : Field<note::string_view>(note::string_view(s, N - 1)) {
+                note::string_view sv(s, N - 1);
+                if (sv != "" && sv != "off" && sv != "periodic" && sv != "continuous" && sv != "fixed")
+                    throw "card.location.mode: invalid value for 'mode'";
+            }
+            template<typename U>
+                requires std::is_convertible_v<U, note::string_view>
+                      && (!std::is_array_v<std::remove_reference_t<U>>)
+                      && (!std::is_same_v<std::decay_t<U>, mode_t>)
+            constexpr mode_t(U&& v) : Field<note::string_view>(note::string_view(std::forward<U>(v))) {}
+            template<typename U>
+                requires std::is_convertible_v<U, note::string_view>
+                      && (!std::is_array_v<std::remove_reference_t<U>>)
+                      && (!std::is_same_v<std::decay_t<U>, mode_t>)
+            mode_t& operator=(U&& v) {
+                Field<note::string_view>::operator=(note::string_view(std::forward<U>(v)));
+                return *this;
+            }
+            mode_t& operator=(std::nullopt_t) { Field<note::string_view>::reset(); return *this; }
+            mode_t(const mode_t&) = default;
+            mode_t& operator=(const mode_t&) = default;
+            mode_t(mode_t&&) = default;
+            mode_t& operator=(mode_t&&) = default;
+#else
             using Field<note::string_view>::Field;
             using Field<note::string_view>::operator=;
+#endif
             static constexpr note::string_view off{"off"};
             static constexpr note::string_view periodic{"periodic"};
             static constexpr note::string_view continuous{"continuous"};
@@ -453,8 +482,37 @@ struct CardLocationMode {
         /// Sets the location mode.
         // mode:  | off | periodic | continuous | fixed
         struct mode_t : Field<note::string_view> {
+#if __cplusplus >= 202002L && !defined(__clang__)
+            constexpr mode_t() = default;
+            template<std::size_t N>
+            consteval mode_t(const char (&s)[N])
+                : Field<note::string_view>(note::string_view(s, N - 1)) {
+                note::string_view sv(s, N - 1);
+                if (sv != "" && sv != "off" && sv != "periodic" && sv != "continuous" && sv != "fixed")
+                    throw "card.location.mode: invalid value for 'mode'";
+            }
+            template<typename U>
+                requires std::is_convertible_v<U, note::string_view>
+                      && (!std::is_array_v<std::remove_reference_t<U>>)
+                      && (!std::is_same_v<std::decay_t<U>, mode_t>)
+            constexpr mode_t(U&& v) : Field<note::string_view>(note::string_view(std::forward<U>(v))) {}
+            template<typename U>
+                requires std::is_convertible_v<U, note::string_view>
+                      && (!std::is_array_v<std::remove_reference_t<U>>)
+                      && (!std::is_same_v<std::decay_t<U>, mode_t>)
+            mode_t& operator=(U&& v) {
+                Field<note::string_view>::operator=(note::string_view(std::forward<U>(v)));
+                return *this;
+            }
+            mode_t& operator=(std::nullopt_t) { Field<note::string_view>::reset(); return *this; }
+            mode_t(const mode_t&) = default;
+            mode_t& operator=(const mode_t&) = default;
+            mode_t(mode_t&&) = default;
+            mode_t& operator=(mode_t&&) = default;
+#else
             using Field<note::string_view>::Field;
             using Field<note::string_view>::operator=;
+#endif
             static constexpr note::string_view off{"off"};
             static constexpr note::string_view periodic{"periodic"};
             static constexpr note::string_view continuous{"continuous"};
@@ -1519,8 +1577,37 @@ struct CardLocationMode {
         /// Sets the location mode.
         // mode:  | off | periodic | continuous | fixed
         struct mode_t : Field<note::string_view> {
+#if __cplusplus >= 202002L && !defined(__clang__)
+            constexpr mode_t() = default;
+            template<std::size_t N>
+            consteval mode_t(const char (&s)[N])
+                : Field<note::string_view>(note::string_view(s, N - 1)) {
+                note::string_view sv(s, N - 1);
+                if (sv != "" && sv != "off" && sv != "periodic" && sv != "continuous" && sv != "fixed")
+                    throw "card.location.mode: invalid value for 'mode'";
+            }
+            template<typename U>
+                requires std::is_convertible_v<U, note::string_view>
+                      && (!std::is_array_v<std::remove_reference_t<U>>)
+                      && (!std::is_same_v<std::decay_t<U>, mode_t>)
+            constexpr mode_t(U&& v) : Field<note::string_view>(note::string_view(std::forward<U>(v))) {}
+            template<typename U>
+                requires std::is_convertible_v<U, note::string_view>
+                      && (!std::is_array_v<std::remove_reference_t<U>>)
+                      && (!std::is_same_v<std::decay_t<U>, mode_t>)
+            mode_t& operator=(U&& v) {
+                Field<note::string_view>::operator=(note::string_view(std::forward<U>(v)));
+                return *this;
+            }
+            mode_t& operator=(std::nullopt_t) { Field<note::string_view>::reset(); return *this; }
+            mode_t(const mode_t&) = default;
+            mode_t& operator=(const mode_t&) = default;
+            mode_t(mode_t&&) = default;
+            mode_t& operator=(mode_t&&) = default;
+#else
             using Field<note::string_view>::Field;
             using Field<note::string_view>::operator=;
+#endif
             static constexpr note::string_view off{"off"};
             static constexpr note::string_view periodic{"periodic"};
             static constexpr note::string_view continuous{"continuous"};

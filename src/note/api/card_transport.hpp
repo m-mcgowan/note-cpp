@@ -54,8 +54,37 @@ struct CardTransport {
     /// The connectivity method to enable on the Notecard.
     // method: - | cell | cell-ntn | dual-wifi-cell | ntn | wifi | wifi-cell | wifi-cell-ntn | wifi-ntn
     struct method_t : Field<note::string_view> {
+#if __cplusplus >= 202002L && !defined(__clang__)
+        constexpr method_t() = default;
+        template<std::size_t N>
+        consteval method_t(const char (&s)[N])
+            : Field<note::string_view>(note::string_view(s, N - 1)) {
+            note::string_view sv(s, N - 1);
+            if (sv != "-" && sv != "cell" && sv != "cell-ntn" && sv != "dual-wifi-cell" && sv != "ntn" && sv != "wifi" && sv != "wifi-cell" && sv != "wifi-cell-ntn" && sv != "wifi-ntn")
+                throw "card.transport: invalid value for 'method'";
+        }
+        template<typename U>
+            requires std::is_convertible_v<U, note::string_view>
+                  && (!std::is_array_v<std::remove_reference_t<U>>)
+                  && (!std::is_same_v<std::decay_t<U>, method_t>)
+        constexpr method_t(U&& v) : Field<note::string_view>(note::string_view(std::forward<U>(v))) {}
+        template<typename U>
+            requires std::is_convertible_v<U, note::string_view>
+                  && (!std::is_array_v<std::remove_reference_t<U>>)
+                  && (!std::is_same_v<std::decay_t<U>, method_t>)
+        method_t& operator=(U&& v) {
+            Field<note::string_view>::operator=(note::string_view(std::forward<U>(v)));
+            return *this;
+        }
+        method_t& operator=(std::nullopt_t) { Field<note::string_view>::reset(); return *this; }
+        method_t(const method_t&) = default;
+        method_t& operator=(const method_t&) = default;
+        method_t(method_t&&) = default;
+        method_t& operator=(method_t&&) = default;
+#else
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
+#endif
         static constexpr note::string_view _{"-"};
         static constexpr note::string_view cell{"cell"};
         static constexpr note::string_view cell_ntn{"cell-ntn"};

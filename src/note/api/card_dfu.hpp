@@ -40,8 +40,37 @@ struct CardDfu {
     /// versions of Notecard Cellular, and Notecard WiFi v2.
     // mode: altdfu | aux
     struct mode_t : Field<note::string_view> {
+#if __cplusplus >= 202002L && !defined(__clang__)
+        constexpr mode_t() = default;
+        template<std::size_t N>
+        consteval mode_t(const char (&s)[N])
+            : Field<note::string_view>(note::string_view(s, N - 1)) {
+            note::string_view sv(s, N - 1);
+            if (sv != "altdfu" && sv != "aux")
+                throw "card.dfu: invalid value for 'mode'";
+        }
+        template<typename U>
+            requires std::is_convertible_v<U, note::string_view>
+                  && (!std::is_array_v<std::remove_reference_t<U>>)
+                  && (!std::is_same_v<std::decay_t<U>, mode_t>)
+        constexpr mode_t(U&& v) : Field<note::string_view>(note::string_view(std::forward<U>(v))) {}
+        template<typename U>
+            requires std::is_convertible_v<U, note::string_view>
+                  && (!std::is_array_v<std::remove_reference_t<U>>)
+                  && (!std::is_same_v<std::decay_t<U>, mode_t>)
+        mode_t& operator=(U&& v) {
+            Field<note::string_view>::operator=(note::string_view(std::forward<U>(v)));
+            return *this;
+        }
+        mode_t& operator=(std::nullopt_t) { Field<note::string_view>::reset(); return *this; }
+        mode_t(const mode_t&) = default;
+        mode_t& operator=(const mode_t&) = default;
+        mode_t(mode_t&&) = default;
+        mode_t& operator=(mode_t&&) = default;
+#else
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
+#endif
         static constexpr note::string_view altdfu{"altdfu"};
         static constexpr note::string_view aux{"aux"};
         CardDfu& operator()(note::string_view v);
@@ -55,8 +84,37 @@ struct CardDfu {
     /// datasheet.
     // name: esp32 | stm32 | stm32-bi | mcuboot | -
     struct name_t : Field<note::string_view> {
+#if __cplusplus >= 202002L && !defined(__clang__)
+        constexpr name_t() = default;
+        template<std::size_t N>
+        consteval name_t(const char (&s)[N])
+            : Field<note::string_view>(note::string_view(s, N - 1)) {
+            note::string_view sv(s, N - 1);
+            if (sv != "esp32" && sv != "stm32" && sv != "stm32-bi" && sv != "mcuboot" && sv != "-")
+                throw "card.dfu: invalid value for 'name'";
+        }
+        template<typename U>
+            requires std::is_convertible_v<U, note::string_view>
+                  && (!std::is_array_v<std::remove_reference_t<U>>)
+                  && (!std::is_same_v<std::decay_t<U>, name_t>)
+        constexpr name_t(U&& v) : Field<note::string_view>(note::string_view(std::forward<U>(v))) {}
+        template<typename U>
+            requires std::is_convertible_v<U, note::string_view>
+                  && (!std::is_array_v<std::remove_reference_t<U>>)
+                  && (!std::is_same_v<std::decay_t<U>, name_t>)
+        name_t& operator=(U&& v) {
+            Field<note::string_view>::operator=(note::string_view(std::forward<U>(v)));
+            return *this;
+        }
+        name_t& operator=(std::nullopt_t) { Field<note::string_view>::reset(); return *this; }
+        name_t(const name_t&) = default;
+        name_t& operator=(const name_t&) = default;
+        name_t(name_t&&) = default;
+        name_t& operator=(name_t&&) = default;
+#else
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
+#endif
         static constexpr note::string_view esp32{"esp32"};
         static constexpr note::string_view stm32{"stm32"};
         static constexpr note::string_view stm32_bi{"stm32-bi"};

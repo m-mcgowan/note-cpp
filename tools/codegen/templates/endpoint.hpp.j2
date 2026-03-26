@@ -141,8 +141,42 @@ namespace note::api {
 {{ indent }}} {{ prop.accessor_name }}{};
 {% else %}
 {{ indent }}struct {{ prop.nested_type_name }} : Field<{{ prop.field_type }}> {
+{% if prop.enum_values and prop.field_type == "note::string_view" %}
+#if __cplusplus >= 202002L && !defined(__clang__)
+{{ indent }}    constexpr {{ prop.nested_type_name }}() = default;
+{{ indent }}    template<std::size_t N>
+{{ indent }}    consteval {{ prop.nested_type_name }}(const char (&s)[N])
+{{ indent }}        : Field<note::string_view>(note::string_view(s, N - 1)) {
+{{ indent }}        note::string_view sv(s, N - 1);
+{{ indent }}        if ({% for ev in prop.enum_values %}sv != "{{ ev }}"{{ " && " if not loop.last }}{% endfor %})
+{{ indent }}            throw "{{ op.notecard_request }}: invalid value for '{{ prop.wire_name }}'";
+{{ indent }}    }
+{{ indent }}    template<typename U>
+{{ indent }}        requires std::is_convertible_v<U, note::string_view>
+{{ indent }}              && (!std::is_array_v<std::remove_reference_t<U>>)
+{{ indent }}              && (!std::is_same_v<std::decay_t<U>, {{ prop.nested_type_name }}>)
+{{ indent }}    constexpr {{ prop.nested_type_name }}(U&& v) : Field<note::string_view>(note::string_view(std::forward<U>(v))) {}
+{{ indent }}    template<typename U>
+{{ indent }}        requires std::is_convertible_v<U, note::string_view>
+{{ indent }}              && (!std::is_array_v<std::remove_reference_t<U>>)
+{{ indent }}              && (!std::is_same_v<std::decay_t<U>, {{ prop.nested_type_name }}>)
+{{ indent }}    {{ prop.nested_type_name }}& operator=(U&& v) {
+{{ indent }}        Field<note::string_view>::operator=(note::string_view(std::forward<U>(v)));
+{{ indent }}        return *this;
+{{ indent }}    }
+{{ indent }}    {{ prop.nested_type_name }}& operator=(std::nullopt_t) { Field<note::string_view>::reset(); return *this; }
+{{ indent }}    {{ prop.nested_type_name }}(const {{ prop.nested_type_name }}&) = default;
+{{ indent }}    {{ prop.nested_type_name }}& operator=(const {{ prop.nested_type_name }}&) = default;
+{{ indent }}    {{ prop.nested_type_name }}({{ prop.nested_type_name }}&&) = default;
+{{ indent }}    {{ prop.nested_type_name }}& operator=({{ prop.nested_type_name }}&&) = default;
+#else
 {{ indent }}    using Field<{{ prop.field_type }}>::Field;
 {{ indent }}    using Field<{{ prop.field_type }}>::operator=;
+#endif
+{% else %}
+{{ indent }}    using Field<{{ prop.field_type }}>::Field;
+{{ indent }}    using Field<{{ prop.field_type }}>::operator=;
+{% endif %}
 {% if prop.constants %}
 {% for cname, cinfo in prop.constants.items() %}
 {% if cinfo.description is defined and cinfo.description %}

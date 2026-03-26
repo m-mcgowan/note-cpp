@@ -457,8 +457,37 @@ struct NoteTemplate {
         [[deprecated("requires firmware >= 6.2.3")]]
 #endif
         struct format_t : Field<note::string_view> {
+#if __cplusplus >= 202002L && !defined(__clang__)
+            constexpr format_t() = default;
+            template<std::size_t N>
+            consteval format_t(const char (&s)[N])
+                : Field<note::string_view>(note::string_view(s, N - 1)) {
+                note::string_view sv(s, N - 1);
+                if (sv != "compact" && sv != "-")
+                    throw "note.template: invalid value for 'format'";
+            }
+            template<typename U>
+                requires std::is_convertible_v<U, note::string_view>
+                      && (!std::is_array_v<std::remove_reference_t<U>>)
+                      && (!std::is_same_v<std::decay_t<U>, format_t>)
+            constexpr format_t(U&& v) : Field<note::string_view>(note::string_view(std::forward<U>(v))) {}
+            template<typename U>
+                requires std::is_convertible_v<U, note::string_view>
+                      && (!std::is_array_v<std::remove_reference_t<U>>)
+                      && (!std::is_same_v<std::decay_t<U>, format_t>)
+            format_t& operator=(U&& v) {
+                Field<note::string_view>::operator=(note::string_view(std::forward<U>(v)));
+                return *this;
+            }
+            format_t& operator=(std::nullopt_t) { Field<note::string_view>::reset(); return *this; }
+            format_t(const format_t&) = default;
+            format_t& operator=(const format_t&) = default;
+            format_t(format_t&&) = default;
+            format_t& operator=(format_t&&) = default;
+#else
             using Field<note::string_view>::Field;
             using Field<note::string_view>::operator=;
+#endif
             static constexpr note::string_view compact{"compact"};
             static constexpr note::string_view _{"-"};
             NoteTemplate::Remove& operator()(note::string_view v);

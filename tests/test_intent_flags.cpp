@@ -81,6 +81,20 @@ TEST_CASE("aux.serial notify with string assignment") {
 }
 
 // ---------------------------------------------------------------------------
+// card.aux.serial notify — factory with string parameter
+// ---------------------------------------------------------------------------
+
+TEST_CASE("aux.serial notify(string) factory") {
+    Harness h;
+    note::api::CardAuxSerial::Notify req;
+    req.nc_ = &h.nc;
+    // Simulate what the factory overload does
+    req.notifications = note::string_view("env,dfu");
+    req.execute();
+    REQUIRE(h.last_req.find("\"mode\":\"notify,env,dfu\"") != std::string::npos);
+}
+
+// ---------------------------------------------------------------------------
 // card.aux.serial gps — no notifications field
 // ---------------------------------------------------------------------------
 
@@ -130,11 +144,20 @@ TEST_CASE("attn arm with flag constants") {
     REQUIRE(h.last_req.find("env") != std::string::npos);
 }
 
-TEST_CASE("attn arm with string triggers") {
+TEST_CASE("attn arm with string triggers via property") {
     Harness h;
     note::api::CardAttn::Arm req;
     req.triggers = note::string_view("connected,files");
     req.nc_ = &h.nc;
     req.execute();
     REQUIRE(h.last_req.find("\"mode\":\"arm,connected,files\"") != std::string::npos);
+}
+
+TEST_CASE("attn arm(string) factory overload") {
+    Harness h;
+    note::api::CardAttn::Arm req;
+    req.nc_ = &h.nc;
+    req.triggers = note::string_view("connected,env");
+    req.execute();
+    REQUIRE(h.last_req.find("\"mode\":\"arm,connected,env\"") != std::string::npos);
 }

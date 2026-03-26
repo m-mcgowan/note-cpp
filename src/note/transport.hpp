@@ -134,6 +134,77 @@ public:
         return {};
     }
 
+    /// Streaming transact: send request, read response chunk-by-chunk.
+    /// Each chunk is passed to on_chunk(data, len). Reading stops at '\n'.
+    /// CRC is checked if enabled (uses response_buf_ internally for this).
+    template<typename ChunkFn>
+    Result<void> transact_streaming(string_view request, uint32_t timeout_ms,
+                                     uint8_t* chunk_buf, size_t chunk_size,
+                                     ChunkFn&& on_chunk) {
+        if (!initialized_) {
+            if (!do_reset())
+                return make_error(Error::NotReady, "Notecard not ready after reset");
+            initialized_ = true;
+        }
+
+        prepare_wire(request);
+
+        ErrorInfo last_error{Error::SendFailed, Cause::HalError, "transmit failed"};
+
+        for (uint32_t attempt = 0; attempt <= max_retries(); ++attempt) {
+            if (attempt > 0) delay(retry_delay_ms());
+
+            if (!do_transmit(wire_.data(), wire_.size())) {
+                last_error = {Error::SendFailed, Cause::HalError, "transmit failed"};
+                do_reset();
+                continue;
+            }
+
+            // Read response chunk-by-chunk until \n delimiter.
+            response_buf_.clear();
+            bool found_eol = false;
+            bool read_error = false;
+
+            while (!found_eol) {
+                auto r = do_read(chunk_buf, chunk_size, timeout_ms);
+                if (!r) {
+                    last_error = r.error();
+                    read_error = true;
+                    break;
+                }
+                size_t n = *r;
+                for (size_t i = 0; i < n; ++i) {
+                    if (chunk_buf[i] == '\n') {
+                        if (i > 0) {
+                            on_chunk(chunk_buf, i);
+                            response_buf_.append(reinterpret_cast<const char*>(chunk_buf), i);
+                        }
+                        found_eol = true;
+                        break;
+                    }
+                }
+                if (!found_eol) {
+                    on_chunk(chunk_buf, n);
+                    response_buf_.append(reinterpret_cast<const char*>(chunk_buf), n);
+                }
+            }
+
+            if (read_error) continue;
+
+            // Strip trailing \r and check CRC
+            while (!response_buf_.empty() && response_buf_.back() == '\r')
+                response_buf_.pop_back();
+            if (transport::detail::crc_check_and_strip(response_buf_, crc_seq_, crc_enabled_)) {
+                last_error = {Error::ResponseLost, Cause::CrcMismatch, "CRC mismatch"};
+                continue;
+            }
+
+            return {};
+        }
+
+        return Unexpected(last_error);
+    }
+
     void reset() override {
         do_reset();
         initialized_ = true;

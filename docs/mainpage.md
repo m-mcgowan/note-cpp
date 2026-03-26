@@ -31,9 +31,9 @@ API specification.
 
 ## Filtering and validation
 
-- note::FlagSet — comma-separated bitfield with named methods and compile-time constants (e.g. `note::attn::arm`)
+- note::FlagSet — comma-separated bitfield with named methods and compile-time constants (e.g. `note::attn::connected`)
 - note::Target / note::Skus / note::Product — compile-time product checks (ensures requests match the connected Notecard SKU)
-- `consteval` validators — catch invalid mode/enum strings at compile time
+- `consteval` validators — catch invalid enum strings and flag combinations at compile time (C++20)
 
 ## Request/response types
 

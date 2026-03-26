@@ -196,6 +196,15 @@ req.mode = "perioidc";     // ✗ compile error: hub.set: invalid value for 'mod
 req.mode = runtime_var;    // ✓ runtime value, no validation
 ```
 
+Flag fields (like `card.attn` triggers and `card.aux.serial` notifications)
+are validated the same way — each comma-separated token is checked:
+
+```cpp
+req.notifications = "env,dfu";     // ✓ valid flags
+req.notifications = "env,typo";    // ✗ compile error: invalid flag
+req.triggers = "disarm";           // ✗ compile error: disarm is a mode, not a trigger
+```
+
 Named constants are available for discoverability and IDE autocomplete:
 
 ```cpp

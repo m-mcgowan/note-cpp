@@ -1152,42 +1152,68 @@ nc.card.sleep();  // OK — universal endpoint
 Neither of these has an equivalent in note-c — there, incompatible requests
 compile silently and fail at runtime on the device.
 
-## Memory and binary footprint
+## What to expect
 
-note-c uses `NOTE_C_LOW_MEM` to trade features for size on constrained
-devices (AVR, ESP8266, Cortex-M0+, NRF51 — platforms with 2–32 KB RAM).
-It's auto-detected when `float` and `double` are the same size, or set
-manually. Here's what it disables:
+### What you gain from C++
 
-| note-c `NOTE_C_LOW_MEM` change | Impact |
-|---|---|
-| Shorter error strings (`ERRSTR` macro) | Verbose messages replaced with short codes (`c_mem`, `c_err`). Saves ~200–400 bytes of `.rodata`. |
-| Disable CRC validation | Entire CRC system compiled out — no corruption detection or automatic retry. Saves ~500 bytes + 22 bytes per request. |
-| Disable user-agent | No device/compiler metadata sent with `hub.set`. Saves ~200 bytes code + 200–400 bytes per request payload. |
-| Smaller allocation chunks | 64 bytes instead of 128 bytes — less wasted slack per `malloc`. |
-| `float` instead of `double` | `JNUMBER` typedef changes. Saves 4 bytes per JSON number. Loses precision beyond ~7 significant digits. |
-| Disable debug logging | `NOTE_C_LOG_DEBUG` becomes a no-op. |
+Moving from C to C++ brings benefits independent of note-cpp:
 
-note-c also has [note-c-zero](https://github.com/blues/note-c-zero),
-a separate variant that uses zero static read-write memory and no
-dynamic allocator.
+- **RAII** — no manual `deleteResponse` / `JDelete`. Responses clean up
+  automatically when they go out of scope. No leak risk.
+- **Type safety** — field types are checked at compile time. No more
+  `JGetNumber` returning 0.0 on a misspelled field name.
+- **Namespaces** — no global symbol pollution. `note::api::HubSet` vs
+  `JAddStringToObject`.
+- **Templates** — zero-cost abstractions. `BufferJsonBackend<512, 64>`
+  is fully stack-allocated with no heap overhead.
+- **`string_view`** — zero-copy string handling. Response fields are
+  views into the transport buffer, not heap-allocated copies.
+- **`constexpr` / `consteval`** — compile-time validation of enum values,
+  flag combinations, and JSON body structure (C++20).
 
-note-cpp avoids most of these tradeoffs structurally — C++ mechanisms
-replace preprocessor-driven feature stripping:
+### Binary size
 
-| Concern | note-c approach | note-cpp approach |
+On ESP32-S3 with the same cJSON backend and identical operations
+(hub.set, note.template, card.temp, note.add):
+
+| | note-c | note-cpp | Delta |
+|---|---|---|---|
+| Code (.flash.text) | 198,540 | 196,596 | **-1,944 (-1.0%)** |
+| Constants (.flash.rodata) | 97,260 | 91,464 | **-5,796 (-6.0%)** |
+
+note-cpp is slightly smaller because `dtoa` (409 bytes) replaces
+note-c's `JNtoA` (1,597 bytes), and `string_view` avoids string
+duplication.
+
+### Memory allocation
+
+| Concern | note-c | note-cpp |
 |---|---|---|
-| **Heap allocation** | `malloc`/`free` with configurable chunk size | `BufferJsonBackend<N, T>` — stack-allocated build buffer and token array. No heap allocation in steady state. |
-| **Response lifetime** | Caller must `deleteResponse` (leak risk) | `Allocator` / `StringPool` — arena-backed string interning. Response `string_view` fields survive transport reuse without heap allocation. |
-| **Transport buffers** | `malloc`'d buffer, freed after each call | `ITransport` — transport owns a reused `std::string` buffer. No allocation after warmup. |
-| **Error strings** | `ERRSTR(long, short)` macro | `string_view` literals — short by design, linker deduplicates. No long/short variants. |
-| **Float precision** | `#define NOTE_C_SINGLE_PRECISION` | `json_number_t` (planned) — `std::conditional_t<sizeof(float)==sizeof(double), float, double>`. Same auto-detection, no preprocessor. |
-| **Unused code** | `#ifdef` guards compile features out | `-ffunction-sections` + `--gc-sections` (default on Arduino/PlatformIO). Linker eliminates unreferenced code. |
-| **CRC validation** | Disabled entirely under `NOTE_C_LOW_MEM` | Always present in `AbstractTransport`. Could be made optional via template parameter if size is critical. |
-| **User-agent** | Disabled under `NOTE_C_LOW_MEM` | Planned — enabled by default, opt-out for constrained devices. |
+| **Heap per request** | cJSON `malloc`/`free` per request | `BufferJsonBackend` — stack-allocated, zero heap in steady state |
+| **Response lifetime** | Caller must `deleteResponse` | RAII — automatic cleanup, `string_view` into transport buffer |
+| **Transport buffers** | `malloc`'d, freed per call | Reused `std::string` member — no allocation after warmup |
+| **Error strings** | `ERRSTR(long, short)` macro | `string_view` literals — linker deduplicates |
 
-The `zero_alloc.cpp` example demonstrates all three zero-allocation patterns
-(stack buffers, arena interning, transport reuse).
+With the default `BufferJsonBackend`, note-cpp uses ~1.7 KB more static
+RAM (the stack-allocated JSON build buffer + token array) but performs
+zero heap allocations in steady state. This tradeoff avoids heap
+fragmentation — a common problem on long-running embedded devices.
+
+For a direct comparison using the same heap-allocated backend (cJSON),
+both libraries have similar per-request heap usage.
+
+### What note-cpp doesn't support (yet)
+
+- **AVR** — no hosted C++ standard library (no `std::string`, `std::optional`)
+- **ESP8266** — `tl::expected` polyfill incompatible with GCC 10.3
+- **Apple Clang consteval** — string literal validation disabled due to
+  a compiler bug (named constants and flag methods always work)
+- **`NOTE_C_LOW_MEM` equivalent** — note-cpp doesn't have a single
+  "reduce everything" flag. Features are controlled structurally
+  (template parameters, linker `--gc-sections`) rather than preprocessor
+  `#ifdef`. CRC validation is always present.
+
+See [Known Issues](known-issues.md) for details on the Clang limitation.
 
 ## Migration checklist
 

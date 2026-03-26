@@ -557,3 +557,76 @@ TEST_CASE("I2cCallbackHal delegates to callbacks") {
     REQUIRE(r.has_value());
     CHECK(*r == "{}");
 }
+
+// ---------------------------------------------------------------------------
+// Binary write/read — raw byte streaming, no JSON framing
+// ---------------------------------------------------------------------------
+
+TEST_CASE("i2c: write() sends raw bytes in MTU chunks") {
+    ScriptedI2CHal hal;
+    hal.mtu = 4;
+    hal.responses.push_back("{}\n");
+    NotecardI2c transport(hal);
+    transport.transact("{\"req\":\"card.binary.put\"}", 5000);  // init
+    hal.tx_accum.clear();
+    hal.transmit_call_count = 0;
+
+    uint8_t data[] = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07};
+    auto r = transport.write(data, sizeof(data));
+    REQUIRE(r.has_value());
+
+    // Should be 2 chunks: 4 + 3 (MTU=4)
+    CHECK(hal.transmit_call_count >= 2);
+}
+
+TEST_CASE("i2c: read() returns available bytes") {
+    ScriptedI2CHal hal;
+    hal.responses.push_back("{}\n");
+    NotecardI2c transport(hal);
+    transport.transact("{}", 5000);  // init
+
+    // Inject raw bytes to read
+    hal.rx_buf = std::string("\xAA\xBB\x0A", 3);
+
+    uint8_t buf[16];
+    auto r = transport.read(buf, sizeof(buf), 5000);
+    REQUIRE(r.has_value());
+    CHECK(*r <= 3);
+    CHECK(buf[0] == 0xAA);
+}
+
+TEST_CASE("i2c: read() times out when no data") {
+    ScriptedI2CHal hal;
+    hal.responses.push_back("{}\n");
+    NotecardI2c transport(hal);
+    transport.transact("{}", 5000);  // init
+
+    uint8_t buf[16];
+    auto r = transport.read(buf, sizeof(buf), 10);
+    REQUIRE_FALSE(r.has_value());
+    CHECK(r.error().code == note::Error::ResponseLost);
+}
+
+TEST_CASE("i2c: send() transmits without waiting for response") {
+    ScriptedI2CHal hal;
+    hal.responses.push_back("{}\n");
+    NotecardI2c transport(hal);
+    transport.transact("{}", 5000);  // init
+    hal.last_request.clear();
+
+    auto r = transport.send("{\"cmd\":\"hub.set\"}");
+    REQUIRE(r.has_value());
+    CHECK(hal.last_request.find("hub.set") != std::string::npos);
+}
+
+TEST_CASE("i2c: explicit reset()") {
+    ScriptedI2CHal hal;
+    hal.responses.push_back("{}\n");
+    NotecardI2c transport(hal);
+    transport.transact("{}", 5000);  // init
+
+    transport.reset();
+    hal.responses.push_back("{}\n");
+    auto r = transport.transact("{\"req\":\"card.version\"}", 5000);
+    REQUIRE(r.has_value());
+}

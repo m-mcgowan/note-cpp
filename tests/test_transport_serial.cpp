@@ -515,3 +515,87 @@ TEST_CASE("SerialCallbackHal delegates to callbacks") {
     REQUIRE(r.has_value());
     CHECK(*r == "{}");
 }
+
+// ---------------------------------------------------------------------------
+// Binary write/read — raw byte streaming, no JSON framing
+// ---------------------------------------------------------------------------
+
+TEST_CASE("serial: write() sends raw bytes without \\r\\n") {
+    ScriptedHal hal;
+    NotecardSerial transport(hal);
+    hal.queue_response("{}\r\n");
+    transport.transact("{\"req\":\"card.binary.put\"}", 5000);  // init
+    hal.tx.clear();
+
+    uint8_t data[] = {0x01, 0x02, 0x0A, 0x03};
+    auto r = transport.write(data, sizeof(data));
+    REQUIRE(r.has_value());
+
+    // Raw bytes — no \r\n appended
+    REQUIRE(hal.tx.size() == 4);
+    CHECK(hal.tx[0] == 0x01);
+    CHECK(hal.tx[2] == 0x0A);
+}
+
+TEST_CASE("serial: read() returns available bytes") {
+    ScriptedHal hal;
+    NotecardSerial transport(hal);
+    hal.queue_response("{}\r\n");
+    transport.transact("{\"req\":\"card.binary.get\"}", 5000);  // init
+
+    // Inject some bytes to read
+    hal.rx.push_back(0xAA);
+    hal.rx.push_back(0xBB);
+    hal.rx.push_back(0x0A);  // EOP
+
+    uint8_t buf[16];
+    auto r = transport.read(buf, sizeof(buf), 5000);
+    REQUIRE(r.has_value());
+    REQUIRE(*r == 3);
+    CHECK(buf[0] == 0xAA);
+    CHECK(buf[1] == 0xBB);
+    CHECK(buf[2] == 0x0A);
+}
+
+TEST_CASE("serial: read() times out when no data") {
+    ScriptedHal hal;
+    NotecardSerial transport(hal);
+    hal.queue_response("{}\r\n");
+    transport.transact("{}", 5000);  // init
+
+    // No bytes in rx — should timeout
+    uint8_t buf[16];
+    auto r = transport.read(buf, sizeof(buf), 10);
+    REQUIRE_FALSE(r.has_value());
+    CHECK(r.error().code == note::Error::ResponseLost);
+}
+
+// ---------------------------------------------------------------------------
+// send() — fire-and-forget via AbstractTransport
+// ---------------------------------------------------------------------------
+
+TEST_CASE("serial: send() transmits without waiting for response") {
+    ScriptedHal hal;
+    NotecardSerial transport(hal);
+    hal.queue_response("{}\r\n");
+    transport.transact("{}", 5000);  // init
+    hal.tx.clear();
+
+    auto r = transport.send("{\"cmd\":\"hub.set\"}");
+    REQUIRE(r.has_value());
+    auto sent = hal.take_tx();
+    CHECK(sent.find("hub.set") != std::string::npos);
+}
+
+TEST_CASE("serial: explicit reset()") {
+    ScriptedHal hal;
+    NotecardSerial transport(hal);
+    hal.queue_response("{}\r\n");
+    transport.transact("{}", 5000);  // init
+
+    transport.reset();
+    // Should not crash, transport should be usable after
+    hal.queue_response("{}\r\n");
+    auto r = transport.transact("{\"req\":\"card.version\"}", 5000);
+    REQUIRE(r.has_value());
+}

@@ -246,3 +246,11 @@ TEST_CASE("operator[] int32_t known key routes to typed Field<int32_t>") {
     REQUIRE(*req.outbound == 60);
     REQUIRE(req.extras_count_ == 0);
 }
+
+// operator[] for required (plain) fields — covers set_plain_field<string_view>
+TEST_CASE("operator[] string_view required field routes to plain member") {
+    note::api::EnvSet req;
+    req["name"] = note::string_view("test-var");
+    REQUIRE(req.name == "test-var");
+    REQUIRE(req.extras_count_ == 0);
+}

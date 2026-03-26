@@ -305,6 +305,21 @@ retry safety levels.
   original type (`float`, `int16_t`) so template registration generates the
   correct type hints automatically.
 
+For quick schemaless bodies without defining a struct, `json_fmt` (C++20)
+is the most concise option:
+
+```cpp
+nc.note.add()
+    .file("sensors.qo")
+    .body(note::json_fmt<R"({"temp":{},"humidity":{}})">(temp, humidity).view())
+    .execute();
+```
+
+The JSON structure is validated at compile time — malformed JSON or wrong
+argument count/types are compile errors. At runtime it's just string
+concatenation, no heap allocation. See [Body Values](body-values.md)
+for all approaches.
+
 
 ## Registering templates
 

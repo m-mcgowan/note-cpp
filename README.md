@@ -533,31 +533,31 @@ nc.file.remove().execute();                        // file.delete (no required p
 
 ## Body Values
 
-Note bodies can be set four ways, from most to least type-safe:
+Note bodies can be set several ways, from most to least type-safe:
 
 ```cpp
 // 1. Typed struct (recommended) — send, receive, and template in one type
 Readings r{.temperature = 22.5f, .humidity = 60};
 nc.note.add().file("sensors.qo").body(r).execute();
 
-// 2. Compile-time JSON (C++20) — structure validated at compile time
-constexpr auto j = note::json<[](auto& b) {
-    b.add("temp", 22.5); b.add("humidity", 60); b.close();
-}>();
-nc.note.add().file("sensors.qo").body(j.view()).execute();
+// 2. json_fmt (C++20) — concise, compile-time validated, runtime values
+nc.note.add().file("sensors.qo")
+    .body(note::json_fmt<R"({"temp":{},"humidity":{}})">(temp, hum).view())
+    .execute();
 
 // 3. Builder lambda — structured, runtime values, can't produce bad JSON
 nc.note.add().file("sensors.qo")
     .body(note::body([&](auto& b) { b.add("temp", temp); }))
     .execute();
-
-// 4. Raw JSON string — for forwarding external JSON
-nc.note.add().file("sensors.qo")
-    .body(R"({"temp":22.5})")
-    .execute();
 ```
 
-See [Body Values](docs/body-values.md) for full details and [Body Structs](#body-structs-and-note-templates) for the recommended struct approach.
+`json_fmt` validates the JSON structure at compile time — malformed
+JSON, wrong placeholder count, or type mismatches (`{i}` with a string)
+are all compile errors. At runtime it's just string concatenation with
+no intermediate buffer or heap allocation.
+
+See [Body Values](docs/body-values.md) for all approaches including
+compile-time `JsonBuf`, runtime `JsonBuf`, and raw strings.
 
 ---
 

@@ -40,7 +40,40 @@ api.note.add()
 This is useful for static body content or templates where all values
 are known at compile time.
 
-### 3. JsonBuf with runtime values
+### 3. json_fmt — compile-time validated template (C++20)
+
+A printf-like JSON builder where the structure is validated at compile
+time but values are inserted at runtime. No buffer size to choose, no
+builder boilerplate — just write the JSON with `{}` placeholders:
+
+```cpp
+float temp = read_sensor();
+nc.note.add()
+    .file("sensors.qo")
+    .body(note::json_fmt<R"({"temp":{},"humidity":{}})">(temp, 60).view())
+    .execute();
+```
+
+Typed placeholders catch type mismatches at compile time:
+
+```cpp
+// {i}=int, {f}=float, {s}=string, {b}=bool
+note::json_fmt<R"({"temp":{f},"name":{s},"active":{b}})">(22.5f, "sensor-1", true);
+
+// Wrong type → compile error:
+// note::json_fmt<R"({"count":{i}})">("not_an_int");
+```
+
+The format string itself is validated as JSON — malformed JSON, missing
+braces, trailing commas, and non-object top levels are all compile errors.
+
+At runtime, `json_fmt` is just string concatenation — no JSON parsing,
+no intermediate tree, no heap allocation. This makes it efficient for
+memory-constrained devices where even `JsonBuf`'s fixed buffer is a
+concern. With full streaming transport, the format could be written
+directly to the wire without any intermediate buffer.
+
+### 4. JsonBuf with runtime values
 
 `JsonBuf` works at runtime too — the builder methods guarantee valid
 JSON structure (balanced braces, quoted keys, proper commas). Only the
@@ -62,7 +95,7 @@ api.note.add()
 Unlike raw strings, `JsonBuf` can't produce malformed JSON. Keys are
 always quoted, objects always closed, commas always placed correctly.
 
-### 4. Builder lambda
+### 5. Builder lambda
 
 Use `note::body()` with a lambda for structured building with runtime
 values. The builder prevents malformed JSON (keys are always quoted,
@@ -79,7 +112,7 @@ api.note.add()
     .execute();
 ```
 
-### 5. Raw JSON string
+### 6. Raw JSON string
 
 Pass a pre-formed JSON string. No compile-time validation — use this
 for forwarding JSON from external sources, not for authoring:
@@ -135,9 +168,15 @@ nc.note.add()
     .execute();
 ```
 
-Both approaches guarantee valid JSON regardless of which branches
+All three approaches guarantee valid JSON regardless of which branches
 execute. Keys are always quoted, commas always correct, objects always
-closed. The Notecard accepts any body shape — no schema registration
+closed.
+
+Note: `json_fmt` doesn't support conditional fields — the format
+structure is fixed at compile time. For variable-shape bodies, use
+`JsonBuf` or the builder lambda.
+
+The Notecard accepts any body shape — no schema registration
 needed (though [templates](#template-registration) optimize bandwidth
 when the shape is known).
 

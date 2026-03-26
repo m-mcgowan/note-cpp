@@ -155,8 +155,14 @@ struct CardBinaryPut : note::BinarySendMixin {
                        extras_[i_].value);
     }
 
-    auto execute() const { return nc_->execute(*this); }
-    auto execute(Notecard& nc) const { return nc.execute(*this); }
+    auto execute() const {
+        if (has_binary_data()) { auto copy = *this; return nc_->execute(copy); }
+        return nc_->execute(*this);
+    }
+    auto execute(Notecard& nc) const {
+        if (has_binary_data()) { auto copy = *this; return nc.execute(copy); }
+        return nc.execute(*this);
+    }
     Result<void> command() const { return nc_->command_typed(*this); }
     Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
 
@@ -186,6 +192,8 @@ struct CardBinaryPut : note::BinarySendMixin {
     /// Attach source data for binary transfer.
     CardBinaryPut& data(const uint8_t* buf, size_t len) { binary_src_ = {buf, len}; return *this; }
     CardBinaryPut& data(note::const_byte_span src) { binary_src_ = src; return *this; }
+    /// Enable/disable post-transmit verification (default: true).
+    CardBinaryPut& verify(bool v = true) { binary_verify_ = v; return *this; }
 };
 
 #pragma GCC diagnostic push

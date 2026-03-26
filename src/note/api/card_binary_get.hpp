@@ -167,8 +167,14 @@ struct CardBinaryGet : note::BinaryReceiveMixin {
                        extras_[i_].value);
     }
 
-    auto execute() const { return nc_->execute(*this); }
-    auto execute(Notecard& nc) const { return nc.execute(*this); }
+    auto execute() const {
+        if (has_binary_buffer()) { auto copy = *this; return nc_->execute(copy); }
+        return nc_->execute(*this);
+    }
+    auto execute(Notecard& nc) const {
+        if (has_binary_buffer()) { auto copy = *this; return nc.execute(copy); }
+        return nc.execute(*this);
+    }
     Result<void> command() const { return nc_->command_typed(*this); }
     Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
 

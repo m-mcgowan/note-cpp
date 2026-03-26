@@ -244,6 +244,22 @@ private:
             return ApiResult<typename RequestT::Response>(
                 ErrorInfo{Error::SendFailed, Cause::HalError, "binary transmit failed"});
         }
+
+        // Post-transmit verification: query card.binary status and confirm
+        // the Notecard's stored MD5 matches what we sent.
+        if (req.binary_verify_ && !md5_hex.empty()) {
+            auto status = request("card.binary");
+            if (!status) {
+                return ApiResult<typename RequestT::Response>(
+                    ErrorInfo{Error::ResponseLost, Cause::Unspecified, "binary verify query failed"});
+            }
+            auto stored_md5 = (*status)->get_string("status");
+            if (!stored_md5.empty() && stored_md5 != string_view(md5_hex)) {
+                return ApiResult<typename RequestT::Response>(
+                    ErrorInfo{Error::ResponseLost, Cause::CrcMismatch, "binary verify: MD5 mismatch"});
+            }
+        }
+
         return result;
     }
 

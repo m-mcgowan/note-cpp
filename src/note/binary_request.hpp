@@ -15,8 +15,11 @@ namespace note {
 
 /// Mixin for binary send requests (card.binary.put).
 /// Attach source data with .data(), then call .execute() as usual.
+/// Post-transmit verification is on by default — the Notecard's stored
+/// MD5 is checked after streaming to confirm it accepted the data.
 struct BinarySendMixin {
     const_byte_span binary_src_{};
+    bool binary_verify_ = true;
 
     bool has_binary_data() const { return binary_src_.data() != nullptr; }
 };

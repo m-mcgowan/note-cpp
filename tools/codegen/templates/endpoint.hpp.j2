@@ -591,8 +591,28 @@ namespace note::api {
 #pragma GCC diagnostic pop
 {% endif %}
 
+{% if op.binary_transfer and op.binary_transfer.direction_cpp == "Direction::Send" %}
+{{ indent }}auto execute() const {
+{{ indent }}    if (has_binary_data()) { auto copy = *this; return nc_->execute(copy); }
+{{ indent }}    return nc_->execute(*this);
+{{ indent }}}
+{{ indent }}auto execute(Notecard& nc) const {
+{{ indent }}    if (has_binary_data()) { auto copy = *this; return nc.execute(copy); }
+{{ indent }}    return nc.execute(*this);
+{{ indent }}}
+{% elif op.binary_transfer and op.binary_transfer.direction_cpp == "Direction::Receive" %}
+{{ indent }}auto execute() const {
+{{ indent }}    if (has_binary_buffer()) { auto copy = *this; return nc_->execute(copy); }
+{{ indent }}    return nc_->execute(*this);
+{{ indent }}}
+{{ indent }}auto execute(Notecard& nc) const {
+{{ indent }}    if (has_binary_buffer()) { auto copy = *this; return nc.execute(copy); }
+{{ indent }}    return nc.execute(*this);
+{{ indent }}}
+{% else %}
 {{ indent }}auto execute() const { return nc_->execute(*this); }
 {{ indent }}auto execute(Notecard& nc) const { return nc.execute(*this); }
+{% endif %}
 {% if op.supports_cmd %}
 {{ indent }}Result<void> command() const { return nc_->command_typed(*this); }
 {{ indent }}Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
@@ -753,6 +773,10 @@ struct {{ endpoint.struct_name }} {
         /// Attach source data for binary transfer.
         {{ endpoint.struct_name }}::{{ op.struct_name }}& data(const uint8_t* buf, size_t len) { binary_src_ = {buf, len}; return *this; }
         {{ endpoint.struct_name }}::{{ op.struct_name }}& data(note::const_byte_span src) { binary_src_ = src; return *this; }
+        /// Enable/disable post-transmit verification (default: true).
+        /// When enabled, queries card.binary status after streaming to confirm
+        /// the Notecard accepted the data (MD5 match).
+        {{ endpoint.struct_name }}::{{ op.struct_name }}& verify(bool v = true) { binary_verify_ = v; return *this; }
 {% elif op.binary_transfer and op.binary_transfer.direction_cpp == "Direction::Receive" %}
         /// Attach destination buffer for binary transfer.
         {{ endpoint.struct_name }}::{{ op.struct_name }}& into(uint8_t* buf, size_t len) { binary_dst_ = {buf, len}; return *this; }
@@ -785,6 +809,8 @@ struct {{ endpoint.struct_name }} {
     /// Attach source data for binary transfer.
     {{ endpoint.struct_name }}& data(const uint8_t* buf, size_t len) { binary_src_ = {buf, len}; return *this; }
     {{ endpoint.struct_name }}& data(note::const_byte_span src) { binary_src_ = src; return *this; }
+    /// Enable/disable post-transmit verification (default: true).
+    {{ endpoint.struct_name }}& verify(bool v = true) { binary_verify_ = v; return *this; }
 {% elif op.binary_transfer and op.binary_transfer.direction_cpp == "Direction::Receive" %}
     /// Attach destination buffer for binary transfer.
     {{ endpoint.struct_name }}& into(uint8_t* buf, size_t len) { binary_dst_ = {buf, len}; return *this; }

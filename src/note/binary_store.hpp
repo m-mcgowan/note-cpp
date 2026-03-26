@@ -67,7 +67,7 @@ inline Result<void> binary_store_transmit(Notecard& nc,
         put.offset = static_cast<int32_t>(offset);
     }
     put.data(data, len);
-    auto r = put.execute();
+    auto r = nc.execute(put);  // mutable ref → triggers binary pipeline
     if (!r) return Unexpected(r.error());
     return {};
 }
@@ -112,7 +112,7 @@ inline Result<void> binary_store_receive(Notecard& nc,
         get.offset = static_cast<int32_t>(offset);
     }
     get.into(buf, buf_len);
-    auto r = get.execute();
+    auto r = nc.execute(get);  // mutable ref → triggers binary pipeline
     if (!r) return Unexpected(r.error());
 
     if (decoded_len) {

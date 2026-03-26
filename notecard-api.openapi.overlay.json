@@ -1,7 +1,16 @@
 {
-    "$comment": "Overlay for the Blues OpenAPI spec. Adds missing enum values, intents, and flags that the upstream spec doesn't include. Merged into the spec before code generation.",
+    "$comment": "Overlay for the Blues OpenAPI spec. Adds missing enum values, intents, flags, and per-intent flag filtering that the upstream spec doesn't include.",
 
     "paths": {
+        "/card/attn": {
+            "put": {
+                "x-intent-patches": {
+                    "arm": {
+                        "flags": ["auxgpio", "connected", "env", "files", "location", "motion", "motionchange", "signal", "usb", "wireless"]
+                    }
+                }
+            }
+        },
         "/card/aux/serial": {
             "put": {
                 "properties": {
@@ -15,6 +24,7 @@
                         "description": "Enable AUX serial notifications. Combine flags to select which notifications are active (e.g. env + dfu).",
                         "mode_prefix": "notify",
                         "mode_field_name": "notifications",
+                        "flags": ["env", "dfu", "signals", "accel"],
                         "fields": ["mode", "rate", "max", "ms", "minutes", "duration"]
                     },
                     {

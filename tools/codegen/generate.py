@@ -50,11 +50,19 @@ def _load_spec_with_overlay(spec_path: Path, overlay_path: Path | None) -> dict:
                 if prop_name in spec_props:
                     spec_props[prop_name].update(prop_patch)
 
-            # Replace operation-level extensions (x-intents, x-samples, etc.)
+            # Replace or patch operation-level extensions
             for key, value in patches.items():
                 if key == "properties":
                     continue  # already handled above
-                spec_method[key] = value
+                if key == "x-intent-patches":
+                    # Patch individual intents by name (merge, don't replace)
+                    existing_intents = spec_method.get("x-intents", [])
+                    for intent in existing_intents:
+                        patch = value.get(intent.get("name", ""))
+                        if patch:
+                            intent.update(patch)
+                else:
+                    spec_method[key] = value
 
         print(f"Applied overlay: {overlay_path}")
 

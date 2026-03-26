@@ -509,23 +509,12 @@ struct CardAttn {
             CardAttn::Arm& operator()(uint32_t flags);
             triggers_t& add(uint32_t flag);
             triggers_t& operator|=(uint32_t flag);
-            /// Clear "files" events and cause the ATTN pin to go LOW. After an
-            /// event occurs or "seconds" has elapsed, the ATTN pin will then go
-            /// HIGH (a.k.a. "fires"). If "seconds" is 0, no timeout will be
-            /// scheduled. If ATTN is armed, calling `arm` again will disarm
-            /// (briefly pulling ATTN HIGH), then arm (non-idempotent).
-            triggers_t& arm();
             /// When armed, causes ATTN to fire if an AUX GPIO input changes.
             /// Disable by using `-auxgpio`.
             triggers_t& auxgpio();
             /// When armed, will cause ATTN to fire whenever the module connects
             /// to cellular. Disable with `-connected`.
             triggers_t& connected();
-            /// Causes ATTN pin to go HIGH if it had been LOW.
-            ///
-            /// Passing both `"disarm"` and `"-all"` clears all ATTN monitors
-            /// currently set.
-            triggers_t& disarm();
             /// When armed, causes ATTN to fire if an environment variable
             /// changes on the Notecard. Disable by using `-env`.
             triggers_t& env();
@@ -542,45 +531,28 @@ struct CardAttn {
             /// `card.motion.mode` changes from "moving" to "stopped" (or vice
             /// versa). Learn how to configure this feature in this guide.
             triggers_t& motionchange();
-            /// Will arm ATTN if not already armed. Otherwise, resets the values
-            /// of `mode`, `files`, and `seconds` specified in the initial `arm`
-            /// or `rearm` request (idempotent).
-            triggers_t& rearm();
             /// When armed, will cause ATTN to fire whenever the Notecard
             /// receives a signal.
             triggers_t& signal();
-            /// Instruct the Notecard to pull the ATTN pin low for a period of
-            /// time, and optionally keep a payload in memory. Can be used by
-            /// the host to sleep the host MCU.
-            triggers_t& sleep();
             /// When armed, will enable USB power events firing the ATTN pin.
             /// Disable with `-usb`.
             triggers_t& usb();
-            /// Not an "arm" mode, rather will cause the ATTN pin to go from
-            /// HIGH to LOW, then HIGH if the notecard fails to receive any JSON
-            /// requests for "seconds." In this mode, "seconds" must be >= 60.
-            triggers_t& watchdog();
             /// Instruct the Notecard to fire the ATTN pin whenever the
             /// `card.wireless` status changes.
             triggers_t& wireless();
             static constexpr note::FlagDef flag_defs_[] = {
-                { note::attn::arm, "arm" },
                 { note::attn::auxgpio, "auxgpio" },
                 { note::attn::connected, "connected" },
-                { note::attn::disarm, "disarm" },
                 { note::attn::env, "env" },
                 { note::attn::files, "files" },
                 { note::attn::location, "location" },
                 { note::attn::motion, "motion" },
                 { note::attn::motionchange, "motionchange" },
-                { note::attn::rearm, "rearm" },
                 { note::attn::signal, "signal" },
-                { note::attn::sleep, "sleep" },
                 { note::attn::usb, "usb" },
-                { note::attn::watchdog, "watchdog" },
                 { note::attn::wireless, "wireless" },
             };
-            note::FlagSet<15, 109> flags_{flag_defs_};
+            note::FlagSet<10, 77> flags_{flag_defs_};
         } triggers{};
         /// When `true`, enables ATTN processing. This setting is retained
         /// across device restarts.
@@ -606,19 +578,14 @@ struct CardAttn {
     // (method names that match a field accessor are skipped to avoid redefinition)
         auto& persist() { on = true; return *this; }
         auto& persist(bool v_) { on = v_; return *this; }
-        auto& arm() { triggers.arm(); return *this; }
         auto& auxgpio() { triggers.auxgpio(); return *this; }
         auto& connected() { triggers.connected(); return *this; }
-        auto& disarm() { triggers.disarm(); return *this; }
         auto& env() { triggers.env(); return *this; }
         auto& location() { triggers.location(); return *this; }
         auto& motion() { triggers.motion(); return *this; }
         auto& motionchange() { triggers.motionchange(); return *this; }
-        auto& rearm() { triggers.rearm(); return *this; }
         auto& signal() { triggers.signal(); return *this; }
-        auto& sleep() { triggers.sleep(); return *this; }
         auto& usb() { triggers.usb(); return *this; }
-        auto& watchdog() { triggers.watchdog(); return *this; }
         auto& wireless() { triggers.wireless(); return *this; }
         template<typename T>
         auto& extra(note::string_view k_, T v_) {
@@ -1441,11 +1408,6 @@ inline CardAttn::Arm::triggers_t& CardAttn::Arm::triggers_t::operator|=(uint32_t
     Field<note::string_view>::operator=(flags_.str());
     return *this;
 }
-inline CardAttn::Arm::triggers_t& CardAttn::Arm::triggers_t::arm() {
-    flags_.add(note::attn::arm);
-    Field<note::string_view>::operator=(flags_.str());
-    return *this;
-}
 inline CardAttn::Arm::triggers_t& CardAttn::Arm::triggers_t::auxgpio() {
     flags_.add(note::attn::auxgpio);
     Field<note::string_view>::operator=(flags_.str());
@@ -1453,11 +1415,6 @@ inline CardAttn::Arm::triggers_t& CardAttn::Arm::triggers_t::auxgpio() {
 }
 inline CardAttn::Arm::triggers_t& CardAttn::Arm::triggers_t::connected() {
     flags_.add(note::attn::connected);
-    Field<note::string_view>::operator=(flags_.str());
-    return *this;
-}
-inline CardAttn::Arm::triggers_t& CardAttn::Arm::triggers_t::disarm() {
-    flags_.add(note::attn::disarm);
     Field<note::string_view>::operator=(flags_.str());
     return *this;
 }
@@ -1486,28 +1443,13 @@ inline CardAttn::Arm::triggers_t& CardAttn::Arm::triggers_t::motionchange() {
     Field<note::string_view>::operator=(flags_.str());
     return *this;
 }
-inline CardAttn::Arm::triggers_t& CardAttn::Arm::triggers_t::rearm() {
-    flags_.add(note::attn::rearm);
-    Field<note::string_view>::operator=(flags_.str());
-    return *this;
-}
 inline CardAttn::Arm::triggers_t& CardAttn::Arm::triggers_t::signal() {
     flags_.add(note::attn::signal);
     Field<note::string_view>::operator=(flags_.str());
     return *this;
 }
-inline CardAttn::Arm::triggers_t& CardAttn::Arm::triggers_t::sleep() {
-    flags_.add(note::attn::sleep);
-    Field<note::string_view>::operator=(flags_.str());
-    return *this;
-}
 inline CardAttn::Arm::triggers_t& CardAttn::Arm::triggers_t::usb() {
     flags_.add(note::attn::usb);
-    Field<note::string_view>::operator=(flags_.str());
-    return *this;
-}
-inline CardAttn::Arm::triggers_t& CardAttn::Arm::triggers_t::watchdog() {
-    flags_.add(note::attn::watchdog);
     Field<note::string_view>::operator=(flags_.str());
     return *this;
 }

@@ -412,8 +412,22 @@ def _expand_intents(
         # Defaults to "triggers" (card.attn), but can be overridden per intent
         # (e.g. "notifications" for card.aux.serial notify).
         mode_cpp_name = intent.get("mode_field_name", "triggers")
+        # Per-intent flag filtering: if the intent specifies "flags", only
+        # those flags are exposed on the renamed mode field. This prevents
+        # mode flags (arm, disarm) from appearing as trigger methods, and
+        # keeps notification flags scoped to the notify intent.
+        intent_flags = intent.get("flags")
+
+        def _maybe_replace_mode(p: PropertyDef) -> PropertyDef:
+            if not (mode_prefix and p.wire_name == "mode"):
+                return p
+            kwargs: dict = {"cpp_name": mode_cpp_name}
+            if intent_flags is not None:
+                kwargs["flags"] = intent_flags
+            return replace(p, **kwargs)
+
         req_props = [
-            replace(p, cpp_name=mode_cpp_name) if (mode_prefix and p.wire_name == "mode") else p
+            _maybe_replace_mode(p)
             for p in all_req_props
             if p.wire_name in intent_field_names
             and p.wire_name not in implicit_wire_names

@@ -190,7 +190,7 @@ TEST_CASE("note::api::CardAttn::Arm request builder") {
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.files.add(note::string_view("x-files-item"));
-    req.triggers(note::string_view("arm"));
+    req.triggers(note::string_view("auxgpio"));
     req.on(true);
     req.seconds(note::Seconds{42});
     req.execute();
@@ -213,7 +213,7 @@ TEST_CASE("note::api::CardAttn::Arm request builder") {
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover known-key routing in operator[] (true branch for each settable field)
-    req["mode"] = note::string_view("arm");
+    req["mode"] = note::string_view("auxgpio");
     req["on"] = true;
     req["seconds"] = note::Seconds{42};
     // Cover command() overloads

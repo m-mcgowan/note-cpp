@@ -182,12 +182,11 @@ TEST_CASE("card.attn payload without sleep") {
     auto& nc = f.nc;
 
     // Exploratory: does the Notecard accept a payload without entering sleep?
-    // The docs say payload is for sleep mode, but we want to know if it
-    // works as general-purpose host→Notecard data stash.
+    // Note: payload must be base64-encoded per the Notecard API.
     auto req = nc.card.attn().request();
-    req.payload = "test-payload-no-sleep";
+    req.payload = "dGVzdC1wYXlsb2FkLW5vLXNsZWVw";  // base64("test-payload-no-sleep")
     auto rsp = req.execute();
-    if (!rsp) { INFO(note::to_string(rsp.error())); }
+    if (!rsp) { MESSAGE("attn error: ", note::to_string(rsp.error())); }
     REQUIRE(rsp);
 
     // Retrieve — does the payload come back?
@@ -196,7 +195,7 @@ TEST_CASE("card.attn payload without sleep") {
     REQUIRE(retrieve);
 
     MESSAGE("payload: ", retrieve.payload.data());
-    CHECK(note::string_view(retrieve.payload) == "test-payload-no-sleep");
+    CHECK(note::string_view(retrieve.payload) == "dGVzdC1wYXlsb2FkLW5vLXNsZWVw");
 
     // Clean up
     nc.card.attn().disarm().execute();
@@ -209,9 +208,9 @@ TEST_CASE("card.attn payload with sleep timer") {
     // Store payload via sleep with a very short timer (1 second)
     auto sleep_req = nc.card.attn().sleep();
     sleep_req.seconds(note::Seconds{1});
-    sleep_req.payload("test-payload-with-sleep");
+    sleep_req.payload("dGVzdC1wYXlsb2FkLXdpdGgtc2xlZXA=");  // base64("test-payload-with-sleep")
     auto sleep_rsp = sleep_req.execute();
-    if (!sleep_rsp) { INFO(note::to_string(sleep_rsp.error())); }
+    if (!sleep_rsp) { MESSAGE("sleep error: ", note::to_string(sleep_rsp.error())); }
     REQUIRE(sleep_rsp);
 
     // Wait for the sleep timer to expire
@@ -219,20 +218,22 @@ TEST_CASE("card.attn payload with sleep timer") {
 
     // Retrieve — should get the payload back with a non-zero time
     auto retrieve = nc.card.attn().retrieve().execute();
-    if (!retrieve) { INFO(note::to_string(retrieve.error())); }
+    if (!retrieve) { MESSAGE("retrieve error: ", note::to_string(retrieve.error())); }
     REQUIRE(retrieve);
 
     MESSAGE("time: ", retrieve.time.value());
     MESSAGE("payload: ", retrieve.payload.data());
 
     CHECK(retrieve.time.value() != 0);
-    CHECK(note::string_view(retrieve.payload) == "test-payload-with-sleep");
+    CHECK(note::string_view(retrieve.payload) == "dGVzdC1wYXlsb2FkLXdpdGgtc2xlZXA=");
 
     // Clean up
     nc.card.attn().disarm().execute();
 }
 
 // ─── Error handling ─────────────────────────────────────────────────────────
+
+struct MaxTestPayload { int32_t a; NOTE_FIELDS(a) };
 
 TEST_CASE("note.add max limit produces Notecard error") {
     Fixture f;
@@ -243,12 +244,12 @@ TEST_CASE("note.add max limit produces Notecard error") {
     nc.file.remove(file).execute();
 
     // Add first note — should succeed
-    auto r1 = nc.note.add().file(file).body(R"({"a":1})").max(1).execute();
-    if (!r1) { INFO(note::to_string(r1.error())); }
+    auto r1 = nc.note.add().file(file).body(MaxTestPayload{1}).max(1).execute();
+    if (!r1) { MESSAGE("add error: ", note::to_string(r1.error())); }
     REQUIRE(r1);
 
     // Add second note — should fail with a Notecard error
-    auto r2 = nc.note.add().file(file).body(R"({"a":2})").max(1).execute();
+    auto r2 = nc.note.add().file(file).body(MaxTestPayload{2}).max(1).execute();
     REQUIRE_FALSE(r2);
     REQUIRE(r2.error().code == note::Error::Notecard);
 
@@ -271,116 +272,38 @@ TEST_CASE("note.add max limit produces Notecard error") {
 namespace {
 
 /// Put binary data to the Notecard over serial and verify the round-trip.
-/// Handles: clear → put JSON → raw transmit → verify → get JSON → raw receive → decode → verify
+/// Uses the library's binary pipeline: .data()/.into() + execute() handles
+/// COBS encode/decode, MD5, and streaming automatically.
 void binary_round_trip(Fixture& f, const uint8_t* data, size_t data_len, const char* label) {
     auto& nc = f.nc;
-    auto& hal = f.hal;
     INFO("payload: ", label, " (", data_len, " bytes)");
 
-    // Clear any existing binary data
-    nc.binary.clear().execute();
+    // ── PUT phase — library handles reset, COBS, MD5, verify ──────
 
-    // Check available space
-    auto status_rsp = nc.binary.status().execute();
-    if (!status_rsp) { INFO(note::to_string(status_rsp.error())); }
-    REQUIRE(status_rsp);
-    REQUIRE(status_rsp.max > 0);
-    REQUIRE(static_cast<int32_t>(data_len) <= status_rsp.max);
-    MESSAGE(label, ": binary max=", status_rsp.max, " bytes, payload=", data_len, " bytes");
-
-    // Compute MD5 of the unencoded data.
-    size_t cobs_max = note::cobs_encoded_size(data_len);
-    std::string md5 = md5_hex(data, data_len);
-
-    // ── PUT phase ──────────────────────────────────────────────────
-
-    // COBS encode into a buffer to get the actual encoded length.
-    std::vector<uint8_t> encoded(cobs_max + 1);
-    size_t actual_cobs_len = 0;
-    note::CobsEncoder encoder;
-    encoder.encode(data, data_len, [&](const uint8_t* block, size_t n) {
-        memcpy(encoded.data() + actual_cobs_len, block, n);
-        actual_cobs_len += n;
-    });
-    encoded[actual_cobs_len] = '\n';
-    MESSAGE(label, ": actual_cobs_len=", actual_cobs_len, " md5=", md5.c_str());
-
-    // JSON handshake: tell the Notecard the actual COBS byte count.
     auto put_rsp = nc.card.binary.put()
-        .cobs(static_cast<int32_t>(actual_cobs_len))
-        .status(md5)
-        .execute();
-    if (!put_rsp) { INFO(note::to_string(put_rsp.error())); }
+        .data(data, data_len)
+        .execute();  // verify=true: resets, checks space, streams, verifies MD5
+    if (!put_rsp) { MESSAGE("put error: ", note::to_string(put_rsp.error())); }
     REQUIRE(put_rsp);
 
-    // Transmit the encoded data + EOP.
-    bool tx_ok = hal.transmit(encoded.data(), actual_cobs_len + 1);
-    REQUIRE(tx_ok);
+    // ── GET phase — library handles COBS decode + MD5 verify ──────
 
-    // Delay for Notecard to process the binary data
-    hal.delay(250);
+    // Query status to get length for the GET request
+    auto status_rsp = nc.binary.status().execute();
+    REQUIRE(status_rsp);
+    REQUIRE(status_rsp.length > 0);
 
-    // ── Verify stored data ─────────────────────────────────────────
-
-    auto verify_rsp = nc.binary.status().execute();
-    if (!verify_rsp) { INFO(note::to_string(verify_rsp.error())); }
-    REQUIRE(verify_rsp);
-    CHECK(verify_rsp.length == static_cast<int32_t>(data_len));
-    CHECK(verify_rsp.cobs == static_cast<int32_t>(actual_cobs_len));
-    // Verify the Notecard computed the same MD5 for the stored data
-    if (note::string_view(verify_rsp.status).size() > 0) {
-        CHECK(note::string_view(verify_rsp.status) == note::string_view(md5));
-    }
-
-    // ── GET phase ──────────────────────────────────────────────────
-
-    // JSON handshake: request the binary data back
+    std::vector<uint8_t> dst(data_len);
     auto get_rsp = nc.card.binary.get()
-        .cobs(verify_rsp.cobs)
-        .length(verify_rsp.length)
-        .execute();
-    if (!get_rsp) { INFO(note::to_string(get_rsp.error())); }
+        .into(dst.data(), dst.size())
+        .length(status_rsp.length)
+        .execute();  // streams, decodes, verifies MD5
+    if (!get_rsp) { MESSAGE("get error: ", note::to_string(get_rsp.error())); }
     REQUIRE(get_rsp);
 
-    // Verify MD5 in get response
-    if (note::string_view(get_rsp.status).size() > 0) {
-        CHECK(note::string_view(get_rsp.status) == note::string_view(md5));
-    }
+    // ── Verify decoded data matches original ──────────────────────
 
-    // Read raw COBS bytes + newline from the wire
-    std::vector<uint8_t> rx_buf(actual_cobs_len + 16);
-    size_t total_rx = 0;
-    uint32_t deadline = hal.millis() + 5000;
-    while (total_rx < (actual_cobs_len + 1) && hal.millis() < deadline) {
-        size_t n = hal.receive(rx_buf.data() + total_rx, rx_buf.size() - total_rx);
-        total_rx += n;
-        if (n == 0) hal.delay(10);
-    }
-    REQUIRE(total_rx >= actual_cobs_len);
-
-    // ── Streaming decode and verify ────────────────────────────────
-
-    // Strip trailing newline if present
-    size_t decode_len = total_rx;
-    if (decode_len > 0 && rx_buf[decode_len - 1] == '\n') {
-        decode_len--;
-    }
-
-    // Streaming COBS decode — feed received bytes, collect decoded output.
-    note::CobsDecoder decoder;
-    std::vector<uint8_t> decoded;
-    decoded.reserve(data_len);
-    auto sink = [&](const uint8_t* d, size_t n) {
-        decoded.insert(decoded.end(), d, d + n);
-    };
-    decoder.feed(rx_buf.data(), decode_len, sink);
-    decoder.flush(sink);
-
-    REQUIRE(decoded.size() == data_len);
-    CHECK(memcmp(decoded.data(), data, data_len) == 0);
-
-    // Clean up
-    nc.binary.clear().execute();
+    CHECK(memcmp(dst.data(), data, data_len) == 0);
 }
 
 } // namespace

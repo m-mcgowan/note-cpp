@@ -201,6 +201,22 @@ TEST_CASE("attn all trigger flag constants are valid") {
 }
 
 // ---------------------------------------------------------------------------
+// card.attn — raw Request with string mode (escape hatch)
+// ---------------------------------------------------------------------------
+
+TEST_CASE("attn Request raw string mode — escape hatch, not validated") {
+    // The base Request type accepts any string for mode. This is the escape
+    // hatch for mode combinations the typed intent API doesn't cover.
+    // No compile-time or runtime validation — the Notecard validates.
+    Harness h;
+    note::api::CardAttn::Request req;
+    req.mode = "arm,connected,env";
+    req.nc_ = &h.nc;
+    req.execute();
+    REQUIRE(h.last_req.find("\"mode\":\"arm,connected,env\"") != std::string::npos);
+}
+
+// ---------------------------------------------------------------------------
 // card.attn arm(string) factory overload
 // ---------------------------------------------------------------------------
 

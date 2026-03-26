@@ -122,8 +122,8 @@ void base_examples(note::Notecard& nc) {
     // Arm with named flag methods — type-safe, autocomplete-friendly.
     // {"req":"card.attn","mode":"arm,connected"}
     {
-        note::api::CardAttn::Request req;
-        req.mode.arm().connected();
+        note::api::CardAttn::Arm req;
+        req.connected();
         auto result = nc.execute(req);
         if (result) {
             auto set = result.set;  // full response available
@@ -135,16 +135,15 @@ void base_examples(note::Notecard& nc) {
     // {"req":"card.attn","mode":"arm,connected,files,motion"}
     {
         using namespace note::attn;
-        note::api::CardAttn::Request req;
-        req.mode = arm | connected | files | motion;
+        note::api::CardAttn::Arm req;
+        req.triggers = connected | files | motion;
         nc.execute(req);
     }
 
-    // Raw string — for any mode combination the named API doesn't cover.
+    // Disarm — a separate intent, not a flag on arm.
     // {"req":"card.attn","mode":"disarm,-all"}
     {
-        note::api::CardAttn::Request req;
-        req.mode("disarm,-all");
+        note::api::CardAttn::Disarm req;
         nc.execute(req);
     }
 }

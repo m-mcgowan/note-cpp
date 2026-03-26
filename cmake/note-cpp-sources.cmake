@@ -82,6 +82,7 @@ set(NOTE_CPP_TEST_SOURCES
     test_attention.cpp
     test_binary_execute.cpp
     test_body.cpp
+    test_buffer_backend.cpp
     test_channel.cpp
     test_cobs.cpp
     test_connection.cpp

@@ -187,22 +187,24 @@ errors — there's no `"prodcut"` field on `hub.set`, so the compiler tells
 you. Polymorphic variants expose only their valid fields, so setting a field
 that doesn't apply to that operation won't compile.
 
-On C++20, fields with a fixed set of valid values are validated transparently
-at compile time. String literals are checked; runtime values pass through:
+On C++20, named constants and flag methods are the primary way to set
+validated values — typos are impossible because the names are checked
+by the compiler:
 
 ```cpp
-req.mode = "periodic";     // ✓ validated at compile time
-req.mode = "perioidc";     // ✗ compile error: hub.set: invalid value for 'mode'
-req.mode = runtime_var;    // ✓ runtime value, no validation
+req.mode = mode_t::periodic;         // ✓ named constant
+req.mode("periodic");                 // ✓ fluent setter
+nc.card.attn().arm().connected();     // ✓ flag method
+nc.card.aux.serial().notify().env();  // ✓ flag method
 ```
 
-Flag fields (like `card.attn` triggers and `card.aux.serial` notifications)
-are validated the same way — each comma-separated token is checked:
+Flag fields validate string literals at initialization time (C++20
+`consteval`). Each comma-separated token is checked:
 
 ```cpp
-req.notifications = "env,dfu";     // ✓ valid flags
-req.notifications = "env,typo";    // ✗ compile error: invalid flag
-req.triggers = "disarm";           // ✗ compile error: disarm is a mode, not a trigger
+Notify::notifications_t n = "env,dfu";   // ✓ valid flags
+Notify::notifications_t n = "env,typo";  // ✗ compile error
+Arm::triggers_t t = "disarm";            // ✗ compile error (mode, not trigger)
 ```
 
 Named constants are available for discoverability and IDE autocomplete:

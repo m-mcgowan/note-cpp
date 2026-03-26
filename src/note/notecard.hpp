@@ -219,6 +219,35 @@ private:
     template<typename RequestT>
     ApiResult<typename RequestT::Response> do_binary_send(RequestT& req) {
         auto src = req.binary_src_;
+
+        // Pre-flight: check space and auto-reset if offset==0.
+        if (req.binary_verify_) {
+            // Reset on first segment (offset not set or == 0)
+            if (!req.offset || *req.offset == 0) {
+                auto clear = request("card.binary", [](JsonBuilder& b) {
+                    b.add("delete", true);
+                });
+                if (!clear) {
+                    return ApiResult<typename RequestT::Response>(
+                        ErrorInfo{Error::SendFailed, Cause::Unspecified, "binary reset failed"});
+                }
+            }
+            auto status = request("card.binary");
+            if (!status) {
+                return ApiResult<typename RequestT::Response>(
+                    ErrorInfo{Error::SendFailed, Cause::Unspecified, "binary status query failed"});
+            }
+            auto max_bytes = (*status)->get_int("max", 0);
+            if (max_bytes <= 0) {
+                return ApiResult<typename RequestT::Response>(
+                    ErrorInfo{Error::Overflow, Cause::Unspecified, "binary store not available"});
+            }
+            if (static_cast<int32_t>(src.size()) > max_bytes) {
+                return ApiResult<typename RequestT::Response>(
+                    ErrorInfo{Error::Overflow, Cause::Unspecified, "data exceeds binary store capacity"});
+            }
+        }
+
         req.cobs = static_cast<int32_t>(cobs_encoded_length(src.data(), src.size()));
         std::string md5_hex;
         if (md5_) {

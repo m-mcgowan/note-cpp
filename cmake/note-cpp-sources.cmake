@@ -15,7 +15,6 @@ set(NOTE_CPP_PUBLIC_HEADERS
     include/note/arena.hpp
     include/note/array_field.hpp
     include/note/binary_request.hpp
-    include/note/binary_store.hpp
     include/note/body.hpp
     include/note/compiler.hpp
     include/note/dyn_field.hpp

@@ -171,7 +171,7 @@ TEST_CASE("card.aux.serial Enable Environment Notifications") {
 TEST_CASE("card.aux.serial Multiple Notifications") {
     TestHarness h;
     note::api::CardAuxSerial::Notify req;
-    req.triggers = note::string_view(R"sv(accel,env)sv");
+    req.notifications = note::string_view(R"sv(accel,env)sv");
     req.duration = int32_t{500};
     h.nc.execute(req);
     REQUIRE(h.last_request == R"json({"req":"card.aux.serial","duration":500,"mode":"notify,accel,env"})json");

@@ -408,10 +408,12 @@ def _expand_intents(
         # Request fields — subset of base operation's properties
         intent_field_names = set(intent.get("fields", []))
         mode_prefix = intent.get("mode_prefix")
+        # mode_field_name: C++ name for the mode field when mode_prefix is set.
+        # Defaults to "triggers" (card.attn), but can be overridden per intent
+        # (e.g. "notifications" for card.aux.serial notify).
+        mode_cpp_name = intent.get("mode_field_name", "triggers")
         req_props = [
-            # Rename mode->triggers (C++ name only) when mode_prefix is set,
-            # so users set trigger sources rather than the full wire mode string.
-            replace(p, cpp_name="triggers") if (mode_prefix and p.wire_name == "mode") else p
+            replace(p, cpp_name=mode_cpp_name) if (mode_prefix and p.wire_name == "mode") else p
             for p in all_req_props
             if p.wire_name in intent_field_names
             and p.wire_name not in implicit_wire_names
@@ -448,6 +450,7 @@ def _expand_intents(
             implicit_fields=implicit_fields,
             description=intent.get("description", base_op.description),
             mode_prefix=intent.get("mode_prefix"),
+            mode_field_name=intent.get("mode_field_name", "triggers"),
             toggle_pairs=toggle_pairs,
             action_methods=action_methods,
         ))

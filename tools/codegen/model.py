@@ -252,6 +252,7 @@ class OperationDef:
     description: str = ""  # From operation summary
     legacy_struct_name: str | None = None  # Old verb-derived name for deprecation alias
     mode_prefix: str | None = None  # e.g. "arm" — prepended to mode field in build()
+    mode_field_name: str = "triggers"  # C++ name for mode field when mode_prefix is set
     toggle_pairs: list['TogglePairDef'] = field(default_factory=list)
     action_methods: list['ActionMethodDef'] = field(default_factory=list)
 

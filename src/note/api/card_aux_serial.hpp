@@ -375,18 +375,18 @@ struct CardAuxSerial {
         } minutes{};
 #endif
         /// The AUX mode. Must be one of the following:
-        struct triggers_t : Field<note::string_view> {
+        struct notifications_t : Field<note::string_view> {
             using Field<note::string_view>::Field;
             using Field<note::string_view>::operator=;
             CardAuxSerial::Notify& operator()(note::string_view v);
             CardAuxSerial::Notify& operator=(uint32_t flags);
             CardAuxSerial::Notify& operator()(uint32_t flags);
-            triggers_t& add(uint32_t flag);
-            triggers_t& operator|=(uint32_t flag);
-            triggers_t& env();
-            triggers_t& dfu();
-            triggers_t& signals();
-            triggers_t& accel();
+            notifications_t& add(uint32_t flag);
+            notifications_t& operator|=(uint32_t flag);
+            notifications_t& env();
+            notifications_t& dfu();
+            notifications_t& signals();
+            notifications_t& accel();
             static constexpr note::FlagDef flag_defs_[] = {
                 { note::serial::env, "env" },
                 { note::serial::dfu, "dfu" },
@@ -394,7 +394,7 @@ struct CardAuxSerial {
                 { note::serial::accel, "accel" },
             };
             note::FlagSet<4, 22> flags_{flag_defs_};
-        } triggers{};
+        } notifications{};
         /// The delay in milliseconds before sending a buffer of `max` size.
         struct ms_t : Field<note::Milliseconds> {
             using Field<note::Milliseconds>::Field;
@@ -418,10 +418,10 @@ struct CardAuxSerial {
 #endif
 
 
-        auto& env() { triggers.env(); return *this; }
-        auto& dfu() { triggers.dfu(); return *this; }
-        auto& signals() { triggers.signals(); return *this; }
-        auto& accel() { triggers.accel(); return *this; }
+        auto& env() { notifications.env(); return *this; }
+        auto& dfu() { notifications.dfu(); return *this; }
+        auto& signals() { notifications.signals(); return *this; }
+        auto& accel() { notifications.accel(); return *this; }
         template<typename T>
         auto& extra(note::string_view k_, T v_) {
             if (extras_count_ < NOTE_EXTRAS_MAX)
@@ -438,7 +438,7 @@ struct CardAuxSerial {
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
             if (k_ == "minutes") return note::dyn_field_for(minutes);
 #endif
-            if (k_ == "mode") return note::dyn_field_for(triggers);
+            if (k_ == "mode") return note::dyn_field_for(notifications);
             if (k_ == "ms") return note::dyn_field_for(ms);
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
             if (k_ == "rate") return note::dyn_field_for(rate);
@@ -464,10 +464,10 @@ struct CardAuxSerial {
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
             if (minutes) b.add("minutes", *minutes);
 #endif
-            if (triggers) {
+            if (notifications) {
                 char mp_[96];
                 std::snprintf(mp_, sizeof(mp_), "notify,%.*s",
-                             (int)(*triggers).size(), (*triggers).data());
+                             (int)(*notifications).size(), (*notifications).data());
                 b.add("mode", note::string_view{mp_});
             } else {
                 b.add("mode", "notify");
@@ -507,9 +507,9 @@ struct CardAuxSerial {
                 n += note::detail::print_json_value(p, *minutes);
             }
 #endif
-            if (triggers) {
+            if (notifications) {
                 n += p.print(",\"mode\":");
-                n += note::detail::print_json_value(p, *triggers);
+                n += note::detail::print_json_value(p, *notifications);
             }
             if (ms) {
                 n += p.print(",\"ms\":");
@@ -890,46 +890,46 @@ inline CardAuxSerial::Notify& CardAuxSerial::Notify::minutes_t::operator()(note:
         reinterpret_cast<char*>(this) - offsetof(CardAuxSerial::Notify, minutes));
 }
 #endif
-inline CardAuxSerial::Notify& CardAuxSerial::Notify::triggers_t::operator()(note::string_view v) {
+inline CardAuxSerial::Notify& CardAuxSerial::Notify::notifications_t::operator()(note::string_view v) {
     Field<note::string_view>::operator=(v);
     return *reinterpret_cast<CardAuxSerial::Notify*>(
-        reinterpret_cast<char*>(this) - offsetof(CardAuxSerial::Notify, triggers));
+        reinterpret_cast<char*>(this) - offsetof(CardAuxSerial::Notify, notifications));
 }
-inline CardAuxSerial::Notify& CardAuxSerial::Notify::triggers_t::operator=(uint32_t flags) {
+inline CardAuxSerial::Notify& CardAuxSerial::Notify::notifications_t::operator=(uint32_t flags) {
     flags_.set(flags);
     Field<note::string_view>::operator=(flags_.str());
     return *reinterpret_cast<CardAuxSerial::Notify*>(
-        reinterpret_cast<char*>(this) - offsetof(CardAuxSerial::Notify, triggers));
+        reinterpret_cast<char*>(this) - offsetof(CardAuxSerial::Notify, notifications));
 }
-inline CardAuxSerial::Notify& CardAuxSerial::Notify::triggers_t::operator()(uint32_t flags) {
+inline CardAuxSerial::Notify& CardAuxSerial::Notify::notifications_t::operator()(uint32_t flags) {
     return operator=(flags);
 }
-inline CardAuxSerial::Notify::triggers_t& CardAuxSerial::Notify::triggers_t::add(uint32_t flag) {
+inline CardAuxSerial::Notify::notifications_t& CardAuxSerial::Notify::notifications_t::add(uint32_t flag) {
     flags_.add(flag);
     Field<note::string_view>::operator=(flags_.str());
     return *this;
 }
-inline CardAuxSerial::Notify::triggers_t& CardAuxSerial::Notify::triggers_t::operator|=(uint32_t flag) {
+inline CardAuxSerial::Notify::notifications_t& CardAuxSerial::Notify::notifications_t::operator|=(uint32_t flag) {
     flags_ |= flag;
     Field<note::string_view>::operator=(flags_.str());
     return *this;
 }
-inline CardAuxSerial::Notify::triggers_t& CardAuxSerial::Notify::triggers_t::env() {
+inline CardAuxSerial::Notify::notifications_t& CardAuxSerial::Notify::notifications_t::env() {
     flags_.add(note::serial::env);
     Field<note::string_view>::operator=(flags_.str());
     return *this;
 }
-inline CardAuxSerial::Notify::triggers_t& CardAuxSerial::Notify::triggers_t::dfu() {
+inline CardAuxSerial::Notify::notifications_t& CardAuxSerial::Notify::notifications_t::dfu() {
     flags_.add(note::serial::dfu);
     Field<note::string_view>::operator=(flags_.str());
     return *this;
 }
-inline CardAuxSerial::Notify::triggers_t& CardAuxSerial::Notify::triggers_t::signals() {
+inline CardAuxSerial::Notify::notifications_t& CardAuxSerial::Notify::notifications_t::signals() {
     flags_.add(note::serial::signals);
     Field<note::string_view>::operator=(flags_.str());
     return *this;
 }
-inline CardAuxSerial::Notify::triggers_t& CardAuxSerial::Notify::triggers_t::accel() {
+inline CardAuxSerial::Notify::notifications_t& CardAuxSerial::Notify::notifications_t::accel() {
     flags_.add(note::serial::accel);
     Field<note::string_view>::operator=(flags_.str());
     return *this;

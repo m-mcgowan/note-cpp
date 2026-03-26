@@ -78,8 +78,8 @@ public:
         auto {{ op.factory_method }}() { return create<api::{{ endpoint.struct_name }}::{{ op.struct_name }}>(); }
 {% endif %}
 {% if op.mode_prefix %}
-        auto {{ op.factory_method }}(uint32_t flags) { auto r = create<api::{{ endpoint.struct_name }}::{{ op.struct_name }}>(); r.triggers = flags; return r; }
-        auto {{ op.factory_method }}(note::string_view flags) { auto r = create<api::{{ endpoint.struct_name }}::{{ op.struct_name }}>(); r.triggers = flags; return r; }
+        auto {{ op.factory_method }}(uint32_t flags) { auto r = create<api::{{ endpoint.struct_name }}::{{ op.struct_name }}>(); r.{{ op.mode_field_name }} = flags; return r; }
+        auto {{ op.factory_method }}(note::string_view flags) { auto r = create<api::{{ endpoint.struct_name }}::{{ op.struct_name }}>(); r.{{ op.mode_field_name }} = flags; return r; }
 {% endif %}
 {% endfor %}
 {% elif not endpoint.is_polymorphic %}
@@ -125,8 +125,8 @@ public:
         auto {{ op.factory_method }}() { return create<api::{{ endpoint.struct_name }}::{{ op.struct_name }}>(); }
 {% endif %}
 {% if op.mode_prefix %}
-        auto {{ op.factory_method }}(uint32_t flags) { auto r = create<api::{{ endpoint.struct_name }}::{{ op.struct_name }}>(); r.triggers = flags; return r; }
-        auto {{ op.factory_method }}(note::string_view flags) { auto r = create<api::{{ endpoint.struct_name }}::{{ op.struct_name }}>(); r.triggers = flags; return r; }
+        auto {{ op.factory_method }}(uint32_t flags) { auto r = create<api::{{ endpoint.struct_name }}::{{ op.struct_name }}>(); r.{{ op.mode_field_name }} = flags; return r; }
+        auto {{ op.factory_method }}(note::string_view flags) { auto r = create<api::{{ endpoint.struct_name }}::{{ op.struct_name }}>(); r.{{ op.mode_field_name }} = flags; return r; }
 {% endif %}
 {% endfor %}
 {% elif not endpoint.is_polymorphic %}

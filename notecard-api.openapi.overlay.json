@@ -14,6 +14,7 @@
                         "name": "notify",
                         "description": "Enable AUX serial notifications. Combine flags to select which notifications are active (e.g. env + dfu).",
                         "mode_prefix": "notify",
+                        "mode_field_name": "notifications",
                         "fields": ["mode", "rate", "max", "ms", "minutes", "duration"]
                     },
                     {

@@ -519,8 +519,9 @@ run_coverage() {
     )
     for name in "${SRCS[@]}"; do
         "$GCC" $CXXFLAGS --coverage -fprofile-arcs $INCLUDE -I "$ROOT/tests" \
-            -c "$ROOT/tests/${name}.cpp" -o "$BUILD_DIR/${name}.o"
+            -c "$ROOT/tests/${name}.cpp" -o "$BUILD_DIR/${name}.o" &
     done
+    wait
     "$GCC" --coverage -fprofile-arcs -o "$BINARY" "$BUILD_DIR"/*.o
     "$BINARY"
 

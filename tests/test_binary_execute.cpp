@@ -446,13 +446,18 @@ struct VerifyTestHarness {
     }
 };
 
-TEST_CASE("Binary PUT: verify() queries card.binary status after transmit") {
+TEST_CASE("Binary PUT: verify() does pre-flight and post-transmit checks") {
     uint8_t data[] = {1, 2, 3};
     note::SoftwareMd5 md5;
     auto expected_md5 = md5.compute(data, sizeof(data));
 
-    // Response 0: PUT handshake, Response 1: verify status query
-    VerifyTestHarness h({"{}", "{\"status\":\"" + expected_md5 + "\"}"});
+    // verify pipeline: reset → status(pre) → PUT handshake → [COBS] → status(post)
+    VerifyTestHarness h({
+        "{}",                                                    // reset (card.binary delete)
+        "{\"max\":1024}",                                        // pre-flight status
+        "{}",                                                    // PUT handshake
+        "{\"status\":\"" + expected_md5 + "\"}"                  // post-verify status
+    });
 
     note::api::CardBinaryPut req;
     req.nc_ = &h.nc;
@@ -460,14 +465,18 @@ TEST_CASE("Binary PUT: verify() queries card.binary status after transmit") {
 
     auto rsp = req.execute();
     REQUIRE(rsp);
-    CHECK(h.transact_count == 2);  // handshake + verify
+    CHECK(h.transact_count == 4);  // reset + pre-status + handshake + post-status
 }
 
-TEST_CASE("Binary PUT: verify detects MD5 mismatch") {
+TEST_CASE("Binary PUT: verify detects post-transmit MD5 mismatch") {
     uint8_t data[] = {1, 2, 3};
 
-    // Response 1: wrong MD5
-    VerifyTestHarness h({"{}", "{\"status\":\"00000000000000000000000000000000\"}"});
+    VerifyTestHarness h({
+        "{}",                                                    // reset
+        "{\"max\":1024}",                                        // pre-flight status
+        "{}",                                                    // PUT handshake
+        "{\"status\":\"00000000000000000000000000000000\"}"       // wrong MD5
+    });
 
     note::api::CardBinaryPut req;
     req.nc_ = &h.nc;
@@ -476,6 +485,24 @@ TEST_CASE("Binary PUT: verify detects MD5 mismatch") {
     auto rsp = req.execute();
     REQUIRE(!rsp);
     CHECK(rsp.error().code == note::Error::ResponseLost);
+}
+
+TEST_CASE("Binary PUT: verify detects insufficient space") {
+    uint8_t data[100];
+    memset(data, 0x42, sizeof(data));
+
+    VerifyTestHarness h({
+        "{}",              // reset
+        "{\"max\":10}",    // only 10 bytes available — data is 100
+    });
+
+    note::api::CardBinaryPut req;
+    req.nc_ = &h.nc;
+    req.data(data, sizeof(data));
+
+    auto rsp = req.execute();
+    REQUIRE(!rsp);
+    CHECK(rsp.error().code == note::Error::Overflow);
 }
 
 TEST_CASE("Binary PUT: verify(false) skips status check") {

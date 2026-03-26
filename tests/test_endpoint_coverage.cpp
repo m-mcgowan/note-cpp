@@ -108,17 +108,17 @@ TEST_CASE("note::api::CardAttn::Request request builder") {
     req.verify(true);
 #endif
     req.execute();
-    REQUIRE(h.last_req.find("\"files\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"files\":[\"x-files-item\"]") != std::string::npos);
     REQUIRE(h.last_req.find("\"mode\"") != std::string::npos);
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
-    REQUIRE(h.last_req.find("\"off\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"off\":true") != std::string::npos);
 #endif
-    REQUIRE(h.last_req.find("\"on\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"payload\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"seconds\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"start\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"on\":true") != std::string::npos);
+    REQUIRE(h.last_req.find("\"payload\":\"x-payload\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"seconds\":42") != std::string::npos);
+    REQUIRE(h.last_req.find("\"start\":true") != std::string::npos);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
-    REQUIRE(h.last_req.find("\"verify\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"verify\":true") != std::string::npos);
 #endif
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
@@ -194,10 +194,10 @@ TEST_CASE("note::api::CardAttn::Arm request builder") {
     req.on(true);
     req.seconds(note::Seconds{42});
     req.execute();
-    REQUIRE(h.last_req.find("\"files\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"files\":[\"x-files-item\"]") != std::string::npos);
     REQUIRE(h.last_req.find("\"mode\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"on\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"seconds\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"on\":true") != std::string::npos);
+    REQUIRE(h.last_req.find("\"seconds\":42") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
@@ -251,7 +251,7 @@ TEST_CASE("note::api::CardAttn::Watchdog request builder") {
     req.execute();
     req.seconds(note::Seconds{42});
     req.execute();
-    REQUIRE(h.last_req.find("\"seconds\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"seconds\":42") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
@@ -282,8 +282,8 @@ TEST_CASE("note::api::CardAttn::Sleep request builder") {
     req.payload(note::string_view("x-payload"));
     req.seconds(note::Seconds{42});
     req.execute();
-    REQUIRE(h.last_req.find("\"payload\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"seconds\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"payload\":\"x-payload\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"seconds\":42") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
@@ -390,7 +390,7 @@ TEST_CASE("note::api::CardAttn::Query request builder") {
 #endif
     req.execute();
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
-    REQUIRE(h.last_req.find("\"verify\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"verify\":true") != std::string::npos);
 #endif
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
@@ -479,36 +479,36 @@ TEST_CASE("note::api::CardAux request builder") {
     req.usage.add(note::string_view("x-usage-item"));
     req.execute();
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1) || !defined(NOTE_API_STRICT)
-    REQUIRE(h.last_req.find("\"connected\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"connected\":true") != std::string::npos);
 #endif
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
-    REQUIRE(h.last_req.find("\"count\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"count\":42") != std::string::npos);
 #endif
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1) || !defined(NOTE_API_STRICT)
-    REQUIRE(h.last_req.find("\"file\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"file\":\"x-file\"") != std::string::npos);
 #endif
-    REQUIRE(h.last_req.find("\"gps\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"gps\":true") != std::string::npos);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-    REQUIRE(h.last_req.find("\"limit\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"limit\":true") != std::string::npos);
 #endif
-    REQUIRE(h.last_req.find("\"max\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"mode\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"max\":42") != std::string::npos);
+    REQUIRE(h.last_req.find("\"mode\":\"dfu\"") != std::string::npos);
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
-    REQUIRE(h.last_req.find("\"ms\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"ms\":42") != std::string::npos);
 #endif
-    REQUIRE(h.last_req.find("\"offset\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"offset\":42") != std::string::npos);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
-    REQUIRE(h.last_req.find("\"rate\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"rate\":42") != std::string::npos);
 #endif
-    REQUIRE(h.last_req.find("\"seconds\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"seconds\":42") != std::string::npos);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
-    REQUIRE(h.last_req.find("\"sensitivity\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"sensitivity\":42") != std::string::npos);
 #endif
-    REQUIRE(h.last_req.find("\"start\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"start\":true") != std::string::npos);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-    REQUIRE(h.last_req.find("\"sync\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"sync\":true") != std::string::npos);
 #endif
-    REQUIRE(h.last_req.find("\"usage\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"usage\":[\"x-usage-item\"]") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
@@ -609,16 +609,16 @@ TEST_CASE("note::api::CardAuxSerial::Request request builder") {
     req.rate(int32_t{42});
 #endif
     req.execute();
-    REQUIRE(h.last_req.find("\"duration\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"limit\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"max\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"duration\":42") != std::string::npos);
+    REQUIRE(h.last_req.find("\"limit\":true") != std::string::npos);
+    REQUIRE(h.last_req.find("\"max\":42") != std::string::npos);
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
-    REQUIRE(h.last_req.find("\"minutes\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"minutes\":42") != std::string::npos);
 #endif
     REQUIRE(h.last_req.find("\"mode\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"ms\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"ms\":42") != std::string::npos);
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-    REQUIRE(h.last_req.find("\"rate\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"rate\":42") != std::string::npos);
 #endif
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
@@ -696,15 +696,15 @@ TEST_CASE("note::api::CardAuxSerial::Notify request builder") {
     req.rate(int32_t{42});
 #endif
     req.execute();
-    REQUIRE(h.last_req.find("\"duration\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"max\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"duration\":42") != std::string::npos);
+    REQUIRE(h.last_req.find("\"max\":42") != std::string::npos);
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
-    REQUIRE(h.last_req.find("\"minutes\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"minutes\":42") != std::string::npos);
 #endif
     REQUIRE(h.last_req.find("\"mode\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"ms\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"ms\":42") != std::string::npos);
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-    REQUIRE(h.last_req.find("\"rate\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"rate\":42") != std::string::npos);
 #endif
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
@@ -747,9 +747,9 @@ TEST_CASE("note::api::CardAuxSerial::Gps request builder") {
     req.rate(int32_t{42});
 #endif
     req.execute();
-    REQUIRE(h.last_req.find("\"limit\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"limit\":true") != std::string::npos);
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-    REQUIRE(h.last_req.find("\"rate\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"rate\":42") != std::string::npos);
 #endif
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
@@ -786,7 +786,7 @@ TEST_CASE("note::api::CardAuxSerial::Configure request builder") {
 #endif
     req.execute();
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-    REQUIRE(h.last_req.find("\"rate\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"rate\":42") != std::string::npos);
 #endif
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
@@ -845,7 +845,7 @@ TEST_CASE("note::api::CardBinary::Status request builder") {
     req.execute();
     req.delete_(true);
     req.execute();
-    REQUIRE(h.last_req.find("\"delete\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"delete\":true") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
@@ -967,9 +967,9 @@ TEST_CASE("note::api::CardBinaryGet request builder") {
     req.length(int32_t{42});
     req.offset(int32_t{42});
     req.execute();
-    REQUIRE(h.last_req.find("\"cobs\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"length\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"offset\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"cobs\":42") != std::string::npos);
+    REQUIRE(h.last_req.find("\"length\":42") != std::string::npos);
+    REQUIRE(h.last_req.find("\"offset\":42") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
@@ -1027,9 +1027,9 @@ TEST_CASE("note::api::CardBinaryPut request builder") {
     req.offset(int32_t{42});
     req.status(note::string_view("x-status"));
     req.execute();
-    REQUIRE(h.last_req.find("\"cobs\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"offset\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"status\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"cobs\":42") != std::string::npos);
+    REQUIRE(h.last_req.find("\"offset\":42") != std::string::npos);
+    REQUIRE(h.last_req.find("\"status\":\"x-status\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
@@ -1083,7 +1083,7 @@ TEST_CASE("note::api::CardCarrier request builder") {
     req.execute();
     req.mode(note::string_view("charging"));
     req.execute();
-    REQUIRE(h.last_req.find("\"mode\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"mode\":\"charging\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
@@ -1140,10 +1140,10 @@ TEST_CASE("note::api::CardContact::Get request builder") {
     req.org(note::string_view("x-org"));
     req.role(note::string_view("x-role"));
     req.execute();
-    REQUIRE(h.last_req.find("\"email\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"name\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"org\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"role\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"email\":\"x-email\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"name\":\"x-name\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"org\":\"x-org\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"role\":\"x-role\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
@@ -1207,10 +1207,10 @@ TEST_CASE("note::api::CardContact::Set request builder") {
     req.org(note::string_view("x-org"));
     req.role(note::string_view("x-role"));
     req.execute();
-    REQUIRE(h.last_req.find("\"email\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"name\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"org\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"role\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"email\":\"x-email\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"name\":\"x-name\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"org\":\"x-org\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"role\":\"x-role\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
@@ -1277,13 +1277,13 @@ TEST_CASE("note::api::CardDfu request builder") {
     req.start(true);
     req.stop(true);
     req.execute();
-    REQUIRE(h.last_req.find("\"mode\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"name\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"off\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"on\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"seconds\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"start\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"stop\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"mode\":\"altdfu\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"name\":\"esp32\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"off\":true") != std::string::npos);
+    REQUIRE(h.last_req.find("\"on\":true") != std::string::npos);
+    REQUIRE(h.last_req.find("\"seconds\":42") != std::string::npos);
+    REQUIRE(h.last_req.find("\"start\":true") != std::string::npos);
+    REQUIRE(h.last_req.find("\"stop\":true") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
@@ -1390,8 +1390,8 @@ TEST_CASE("note::api::CardIo request builder") {
     req.i2c(int32_t{42});
     req.mode(note::string_view("-1"));
     req.execute();
-    REQUIRE(h.last_req.find("\"i2c\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"mode\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"i2c\":42") != std::string::npos);
+    REQUIRE(h.last_req.find("\"mode\":\"-1\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
@@ -1424,9 +1424,9 @@ TEST_CASE("note::api::CardLed request builder") {
     req.off(true);
     req.on(true);
     req.execute();
-    REQUIRE(h.last_req.find("\"mode\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"off\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"on\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"mode\":\"red\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"off\":true") != std::string::npos);
+    REQUIRE(h.last_req.find("\"on\":true") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
@@ -1530,17 +1530,17 @@ TEST_CASE("note::api::CardLocationMode::Get request builder") {
 #endif
     req.vseconds(note::string_view("x-vseconds"));
     req.execute();
-    REQUIRE(h.last_req.find("\"delete\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"lat\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"lon\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"max\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"minutes\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"mode\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"seconds\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"delete\":true") != std::string::npos);
+    REQUIRE(h.last_req.find("\"lat\":1.5") != std::string::npos);
+    REQUIRE(h.last_req.find("\"lon\":1.5") != std::string::npos);
+    REQUIRE(h.last_req.find("\"max\":42") != std::string::npos);
+    REQUIRE(h.last_req.find("\"minutes\":42") != std::string::npos);
+    REQUIRE(h.last_req.find("\"mode\":\"\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"seconds\":42") != std::string::npos);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-    REQUIRE(h.last_req.find("\"threshold\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"threshold\":42") != std::string::npos);
 #endif
-    REQUIRE(h.last_req.find("\"vseconds\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"vseconds\":\"x-vseconds\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
@@ -1630,17 +1630,17 @@ TEST_CASE("note::api::CardLocationMode::Set request builder") {
 #endif
     req.vseconds(note::string_view("x-vseconds"));
     req.execute();
-    REQUIRE(h.last_req.find("\"delete\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"lat\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"lon\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"max\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"minutes\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"mode\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"seconds\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"delete\":true") != std::string::npos);
+    REQUIRE(h.last_req.find("\"lat\":1.5") != std::string::npos);
+    REQUIRE(h.last_req.find("\"lon\":1.5") != std::string::npos);
+    REQUIRE(h.last_req.find("\"max\":42") != std::string::npos);
+    REQUIRE(h.last_req.find("\"minutes\":42") != std::string::npos);
+    REQUIRE(h.last_req.find("\"mode\":\"\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"seconds\":42") != std::string::npos);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-    REQUIRE(h.last_req.find("\"threshold\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"threshold\":42") != std::string::npos);
 #endif
-    REQUIRE(h.last_req.find("\"vseconds\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"vseconds\":\"x-vseconds\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
@@ -1724,9 +1724,9 @@ TEST_CASE("note::api::CardLocationMode::Continuous request builder") {
     req.vseconds(note::string_view("x-vseconds"));
     req.execute();
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-    REQUIRE(h.last_req.find("\"threshold\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"threshold\":42") != std::string::npos);
 #endif
-    REQUIRE(h.last_req.find("\"vseconds\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"vseconds\":\"x-vseconds\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
@@ -1797,15 +1797,15 @@ TEST_CASE("note::api::CardLocationMode::Periodic request builder") {
 #endif
     req.vseconds(note::string_view("x-vseconds"));
     req.execute();
-    REQUIRE(h.last_req.find("\"lat\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"lon\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"max\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"minutes\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"seconds\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"lat\":1.5") != std::string::npos);
+    REQUIRE(h.last_req.find("\"lon\":1.5") != std::string::npos);
+    REQUIRE(h.last_req.find("\"max\":42") != std::string::npos);
+    REQUIRE(h.last_req.find("\"minutes\":42") != std::string::npos);
+    REQUIRE(h.last_req.find("\"seconds\":42") != std::string::npos);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-    REQUIRE(h.last_req.find("\"threshold\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"threshold\":42") != std::string::npos);
 #endif
-    REQUIRE(h.last_req.find("\"vseconds\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"vseconds\":\"x-vseconds\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
@@ -1884,8 +1884,8 @@ TEST_CASE("note::api::CardLocationMode::Fixed request builder") {
     req.lat(1.5);
     req.lon(1.5);
     req.execute();
-    REQUIRE(h.last_req.find("\"lat\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"lon\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"lat\":1.5") != std::string::npos);
+    REQUIRE(h.last_req.find("\"lon\":1.5") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
@@ -1951,16 +1951,16 @@ TEST_CASE("note::api::CardLocationMode::Remove request builder") {
 #endif
     req.vseconds(note::string_view("x-vseconds"));
     req.execute();
-    REQUIRE(h.last_req.find("\"lat\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"lon\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"max\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"minutes\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"mode\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"seconds\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"lat\":1.5") != std::string::npos);
+    REQUIRE(h.last_req.find("\"lon\":1.5") != std::string::npos);
+    REQUIRE(h.last_req.find("\"max\":42") != std::string::npos);
+    REQUIRE(h.last_req.find("\"minutes\":42") != std::string::npos);
+    REQUIRE(h.last_req.find("\"mode\":\"\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"seconds\":42") != std::string::npos);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-    REQUIRE(h.last_req.find("\"threshold\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"threshold\":42") != std::string::npos);
 #endif
-    REQUIRE(h.last_req.find("\"vseconds\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"vseconds\":\"x-vseconds\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
@@ -2047,15 +2047,15 @@ TEST_CASE("note::api::CardLocationTrack request builder") {
     req.stop(true);
     req.sync(true);
     req.execute();
-    REQUIRE(h.last_req.find("\"file\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"heartbeat\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"hours\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"file\":\"x-file\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"heartbeat\":true") != std::string::npos);
+    REQUIRE(h.last_req.find("\"hours\":42") != std::string::npos);
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 5, 2) || !defined(NOTE_API_STRICT)
-    REQUIRE(h.last_req.find("\"payload\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"payload\":\"x-payload\"") != std::string::npos);
 #endif
-    REQUIRE(h.last_req.find("\"start\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"stop\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"sync\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"start\":true") != std::string::npos);
+    REQUIRE(h.last_req.find("\"stop\":true") != std::string::npos);
+    REQUIRE(h.last_req.find("\"sync\":true") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
@@ -2127,9 +2127,9 @@ TEST_CASE("note::api::CardMonitor request builder") {
     req.mode(note::string_view("green"));
     req.usb(true);
     req.execute();
-    REQUIRE(h.last_req.find("\"count\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"mode\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"usb\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"count\":42") != std::string::npos);
+    REQUIRE(h.last_req.find("\"mode\":\"green\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"usb\":true") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
@@ -2161,7 +2161,7 @@ TEST_CASE("note::api::CardMotion request builder") {
     req.execute();
     req.minutes(int32_t{42});
     req.execute();
-    REQUIRE(h.last_req.find("\"minutes\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"minutes\":42") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
@@ -2231,13 +2231,13 @@ TEST_CASE("note::api::CardMotionMode request builder") {
     req.start(true);
     req.stop(true);
     req.execute();
-    REQUIRE(h.last_req.find("\"motion\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"seconds\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"motion\":42") != std::string::npos);
+    REQUIRE(h.last_req.find("\"seconds\":42") != std::string::npos);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1) || !defined(NOTE_API_STRICT)
-    REQUIRE(h.last_req.find("\"sensitivity\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"sensitivity\":42") != std::string::npos);
 #endif
-    REQUIRE(h.last_req.find("\"start\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"stop\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"start\":true") != std::string::npos);
+    REQUIRE(h.last_req.find("\"stop\":true") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
@@ -2277,11 +2277,11 @@ TEST_CASE("note::api::CardMotionSync request builder") {
     req.stop(true);
     req.threshold(int32_t{42});
     req.execute();
-    REQUIRE(h.last_req.find("\"count\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"minutes\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"start\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"stop\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"threshold\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"count\":42") != std::string::npos);
+    REQUIRE(h.last_req.find("\"minutes\":42") != std::string::npos);
+    REQUIRE(h.last_req.find("\"start\":true") != std::string::npos);
+    REQUIRE(h.last_req.find("\"stop\":true") != std::string::npos);
+    REQUIRE(h.last_req.find("\"threshold\":42") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
@@ -2321,13 +2321,13 @@ TEST_CASE("note::api::CardMotionTrack request builder") {
     req.stop(true);
     req.threshold(int32_t{42});
     req.execute();
-    REQUIRE(h.last_req.find("\"count\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"file\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"minutes\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"now\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"start\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"stop\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"threshold\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"count\":42") != std::string::npos);
+    REQUIRE(h.last_req.find("\"file\":\"x-file\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"minutes\":42") != std::string::npos);
+    REQUIRE(h.last_req.find("\"now\":true") != std::string::npos);
+    REQUIRE(h.last_req.find("\"start\":true") != std::string::npos);
+    REQUIRE(h.last_req.find("\"stop\":true") != std::string::npos);
+    REQUIRE(h.last_req.find("\"threshold\":42") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
@@ -2364,8 +2364,8 @@ TEST_CASE("note::api::CardPower::Read request builder") {
     req.minutes(note::Minutes{42});
     req.reset(true);
     req.execute();
-    REQUIRE(h.last_req.find("\"minutes\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"reset\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"minutes\":42") != std::string::npos);
+    REQUIRE(h.last_req.find("\"reset\":true") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
@@ -2423,8 +2423,8 @@ TEST_CASE("note::api::CardPower::Configure request builder") {
     req.minutes(note::Minutes{42});
     req.reset(true);
     req.execute();
-    REQUIRE(h.last_req.find("\"minutes\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"reset\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"minutes\":42") != std::string::npos);
+    REQUIRE(h.last_req.find("\"reset\":true") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
@@ -2481,7 +2481,7 @@ TEST_CASE("note::api::CardPower::Reset request builder") {
     req.execute();
     req.minutes(note::Minutes{42});
     req.execute();
-    REQUIRE(h.last_req.find("\"minutes\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"minutes\":42") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
@@ -2538,8 +2538,8 @@ TEST_CASE("note::api::CardRandom request builder") {
     req.count(int32_t{42});
     req.mode(note::string_view("x-mode"));
     req.execute();
-    REQUIRE(h.last_req.find("\"count\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"mode\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"count\":42") != std::string::npos);
+    REQUIRE(h.last_req.find("\"mode\":\"x-mode\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
@@ -2621,8 +2621,8 @@ TEST_CASE("note::api::CardRestore request builder") {
     req.connected(true);
     req.delete_(true);
     req.execute();
-    REQUIRE(h.last_req.find("\"connected\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"delete\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"connected\":true") != std::string::npos);
+    REQUIRE(h.last_req.find("\"delete\":true") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
@@ -2656,10 +2656,10 @@ TEST_CASE("note::api::CardSleep request builder") {
     req.on(true);
     req.seconds(note::Seconds{42});
     req.execute();
-    REQUIRE(h.last_req.find("\"mode\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"off\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"on\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"seconds\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"mode\":\"accel\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"off\":true") != std::string::npos);
+    REQUIRE(h.last_req.find("\"on\":true") != std::string::npos);
+    REQUIRE(h.last_req.find("\"seconds\":42") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
@@ -2799,10 +2799,10 @@ TEST_CASE("note::api::CardTemp::Read request builder") {
     req.stop(true);
     req.sync(true);
     req.execute();
-    REQUIRE(h.last_req.find("\"minutes\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"status\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"stop\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"sync\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"minutes\":42") != std::string::npos);
+    REQUIRE(h.last_req.find("\"status\":\"x-status\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"stop\":true") != std::string::npos);
+    REQUIRE(h.last_req.find("\"sync\":true") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
@@ -2872,10 +2872,10 @@ TEST_CASE("note::api::CardTemp::Configure request builder") {
     req.stop(true);
     req.sync(true);
     req.execute();
-    REQUIRE(h.last_req.find("\"minutes\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"status\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"stop\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"sync\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"minutes\":42") != std::string::npos);
+    REQUIRE(h.last_req.find("\"status\":\"x-status\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"stop\":true") != std::string::npos);
+    REQUIRE(h.last_req.find("\"sync\":true") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
@@ -2944,9 +2944,9 @@ TEST_CASE("note::api::CardTemp::Stop request builder") {
     req.status(note::string_view("x-status"));
     req.sync(true);
     req.execute();
-    REQUIRE(h.last_req.find("\"minutes\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"status\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"sync\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"minutes\":42") != std::string::npos);
+    REQUIRE(h.last_req.find("\"status\":\"x-status\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"sync\":true") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
@@ -3072,7 +3072,7 @@ TEST_CASE("note::api::CardTrace request builder") {
     req.execute();
     req.mode(note::string_view("on"));
     req.execute();
-    REQUIRE(h.last_req.find("\"mode\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"mode\":\"on\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
@@ -3112,14 +3112,14 @@ TEST_CASE("note::api::CardTransport request builder") {
 #endif
     req.execute();
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
-    REQUIRE(h.last_req.find("\"allow\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"allow\":true") != std::string::npos);
 #endif
-    REQUIRE(h.last_req.find("\"method\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"method\":\"-\"") != std::string::npos);
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
-    REQUIRE(h.last_req.find("\"seconds\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"seconds\":42") != std::string::npos);
 #endif
 #if NOTE_API_VERSION >= NOTE_VERSION(9, 1, 1) || !defined(NOTE_API_STRICT)
-    REQUIRE(h.last_req.find("\"umin\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"umin\":true") != std::string::npos);
 #endif
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
@@ -3187,13 +3187,13 @@ TEST_CASE("note::api::CardTriangulate request builder") {
     req.time(int32_t{42});
     req.usb(true);
     req.execute();
-    REQUIRE(h.last_req.find("\"minutes\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"minutes\":42") != std::string::npos);
     REQUIRE(h.last_req.find("\"mode\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"on\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"set\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"text\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"time\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"usb\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"on\":true") != std::string::npos);
+    REQUIRE(h.last_req.find("\"set\":true") != std::string::npos);
+    REQUIRE(h.last_req.find("\"text\":\"x-text\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"time\":42") != std::string::npos);
+    REQUIRE(h.last_req.find("\"usb\":true") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
@@ -3262,8 +3262,8 @@ TEST_CASE("note::api::CardUsageGet request builder") {
     req.mode(note::string_view("total"));
     req.offset(int32_t{42});
     req.execute();
-    REQUIRE(h.last_req.find("\"mode\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"offset\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"mode\":\"total\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"offset\":42") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
@@ -3332,9 +3332,9 @@ TEST_CASE("note::api::CardUsageTest request builder") {
     req.hours(int32_t{42});
     req.megabytes(int32_t{42});
     req.execute();
-    REQUIRE(h.last_req.find("\"days\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"hours\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"megabytes\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"days\":42") != std::string::npos);
+    REQUIRE(h.last_req.find("\"hours\":42") != std::string::npos);
+    REQUIRE(h.last_req.find("\"megabytes\":42") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
@@ -3490,23 +3490,23 @@ TEST_CASE("note::api::CardVoltage::Read request builder") {
     req.vmax(1.5);
     req.vmin(1.5);
     req.execute();
-    REQUIRE(h.last_req.find("\"alert\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"alert\":true") != std::string::npos);
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 2) || !defined(NOTE_API_STRICT)
-    REQUIRE(h.last_req.find("\"calibration\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"calibration\":1.5") != std::string::npos);
 #endif
-    REQUIRE(h.last_req.find("\"hours\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"mode\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"name\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"off\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"offset\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"on\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"set\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"sync\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"hours\":42") != std::string::npos);
+    REQUIRE(h.last_req.find("\"mode\":\"default\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"name\":\"x-name\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"off\":true") != std::string::npos);
+    REQUIRE(h.last_req.find("\"offset\":42") != std::string::npos);
+    REQUIRE(h.last_req.find("\"on\":true") != std::string::npos);
+    REQUIRE(h.last_req.find("\"set\":true") != std::string::npos);
+    REQUIRE(h.last_req.find("\"sync\":true") != std::string::npos);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
-    REQUIRE(h.last_req.find("\"usb\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"usb\":true") != std::string::npos);
 #endif
-    REQUIRE(h.last_req.find("\"vmax\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"vmin\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"vmax\":1.5") != std::string::npos);
+    REQUIRE(h.last_req.find("\"vmin\":1.5") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
@@ -3614,23 +3614,23 @@ TEST_CASE("note::api::CardVoltage::Configure request builder") {
     req.vmax(1.5);
     req.vmin(1.5);
     req.execute();
-    REQUIRE(h.last_req.find("\"alert\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"alert\":true") != std::string::npos);
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 2) || !defined(NOTE_API_STRICT)
-    REQUIRE(h.last_req.find("\"calibration\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"calibration\":1.5") != std::string::npos);
 #endif
-    REQUIRE(h.last_req.find("\"hours\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"mode\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"name\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"off\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"offset\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"on\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"set\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"sync\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"hours\":42") != std::string::npos);
+    REQUIRE(h.last_req.find("\"mode\":\"default\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"name\":\"x-name\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"off\":true") != std::string::npos);
+    REQUIRE(h.last_req.find("\"offset\":42") != std::string::npos);
+    REQUIRE(h.last_req.find("\"on\":true") != std::string::npos);
+    REQUIRE(h.last_req.find("\"set\":true") != std::string::npos);
+    REQUIRE(h.last_req.find("\"sync\":true") != std::string::npos);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
-    REQUIRE(h.last_req.find("\"usb\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"usb\":true") != std::string::npos);
 #endif
-    REQUIRE(h.last_req.find("\"vmax\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"vmin\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"vmax\":1.5") != std::string::npos);
+    REQUIRE(h.last_req.find("\"vmin\":1.5") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
@@ -3729,13 +3729,13 @@ TEST_CASE("note::api::CardWifi request builder") {
     req.text(note::string_view("x-text"));
 #endif
     req.execute();
-    REQUIRE(h.last_req.find("\"name\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"org\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"password\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"ssid\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"start\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"name\":\"x-name\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"org\":\"x-org\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"password\":\"x-password\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"ssid\":\"x-ssid\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"start\":true") != std::string::npos);
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 5, 1) || !defined(NOTE_API_STRICT)
-    REQUIRE(h.last_req.find("\"text\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"text\":\"x-text\"") != std::string::npos);
 #endif
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
@@ -3804,10 +3804,10 @@ TEST_CASE("note::api::CardWireless request builder") {
     req.method(note::string_view("-"));
     req.mode(note::string_view("-"));
     req.execute();
-    REQUIRE(h.last_req.find("\"apn\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"hours\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"method\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"mode\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"apn\":\"x-apn\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"hours\":42") != std::string::npos);
+    REQUIRE(h.last_req.find("\"method\":\"-\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"mode\":\"-\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
@@ -3869,12 +3869,12 @@ TEST_CASE("note::api::CardWirelessPenalty::Check request builder") {
     req.reset(true);
     req.set(true);
     req.execute();
-    REQUIRE(h.last_req.find("\"add\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"max\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"min\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"rate\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"reset\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"set\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"add\":42") != std::string::npos);
+    REQUIRE(h.last_req.find("\"max\":42") != std::string::npos);
+    REQUIRE(h.last_req.find("\"min\":42") != std::string::npos);
+    REQUIRE(h.last_req.find("\"rate\":1.5") != std::string::npos);
+    REQUIRE(h.last_req.find("\"reset\":true") != std::string::npos);
+    REQUIRE(h.last_req.find("\"set\":true") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
@@ -3945,11 +3945,11 @@ TEST_CASE("note::api::CardWirelessPenalty::Set request builder") {
     req.rate(1.5);
     req.reset(true);
     req.execute();
-    REQUIRE(h.last_req.find("\"add\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"max\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"min\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"rate\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"reset\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"add\":42") != std::string::npos);
+    REQUIRE(h.last_req.find("\"max\":42") != std::string::npos);
+    REQUIRE(h.last_req.find("\"min\":42") != std::string::npos);
+    REQUIRE(h.last_req.find("\"rate\":1.5") != std::string::npos);
+    REQUIRE(h.last_req.find("\"reset\":true") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
@@ -4019,11 +4019,11 @@ TEST_CASE("note::api::CardWirelessPenalty::Clear request builder") {
     req.rate(1.5);
     req.set(true);
     req.execute();
-    REQUIRE(h.last_req.find("\"add\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"max\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"min\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"rate\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"set\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"add\":42") != std::string::npos);
+    REQUIRE(h.last_req.find("\"max\":42") != std::string::npos);
+    REQUIRE(h.last_req.find("\"min\":42") != std::string::npos);
+    REQUIRE(h.last_req.find("\"rate\":1.5") != std::string::npos);
+    REQUIRE(h.last_req.find("\"set\":true") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
@@ -4091,9 +4091,9 @@ TEST_CASE("note::api::DfuGet request builder") {
     req.length(int32_t{42});
     req.offset(int32_t{42});
     req.execute();
-    REQUIRE(h.last_req.find("\"binary\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"length\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"offset\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"binary\":true") != std::string::npos);
+    REQUIRE(h.last_req.find("\"length\":42") != std::string::npos);
+    REQUIRE(h.last_req.find("\"offset\":42") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
@@ -4160,14 +4160,14 @@ TEST_CASE("note::api::DfuStatus request builder") {
     req.version(note::string_view("x-version"));
     req.vvalue(note::string_view("x-vvalue"));
     req.execute();
-    REQUIRE(h.last_req.find("\"err\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"name\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"off\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"on\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"status\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"stop\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"version\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"vvalue\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"err\":\"x-err\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"name\":\"user\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"off\":true") != std::string::npos);
+    REQUIRE(h.last_req.find("\"on\":true") != std::string::npos);
+    REQUIRE(h.last_req.find("\"status\":\"x-status\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"stop\":true") != std::string::npos);
+    REQUIRE(h.last_req.find("\"version\":\"x-version\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"vvalue\":\"x-vvalue\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
@@ -4236,8 +4236,8 @@ TEST_CASE("note::api::EnvDefault::Set request builder") {
     req.text(note::string_view("x-text"));
     req.execute();
     REQUIRE(h.last_req.find("\"name\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"sync\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"text\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"sync\":true") != std::string::npos);
+    REQUIRE(h.last_req.find("\"text\":\"x-text\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
@@ -4269,7 +4269,7 @@ TEST_CASE("note::api::EnvDefault::Remove request builder") {
     req.sync(true);
     req.execute();
     REQUIRE(h.last_req.find("\"name\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"sync\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"sync\":true") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
@@ -4305,12 +4305,12 @@ TEST_CASE("note::api::EnvGet request builder") {
     req.time(int32_t{42});
 #endif
     req.execute();
-    REQUIRE(h.last_req.find("\"name\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"name\":\"x-name\"") != std::string::npos);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-    REQUIRE(h.last_req.find("\"names\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"names\":[\"x-names-item\"]") != std::string::npos);
 #endif
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-    REQUIRE(h.last_req.find("\"time\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"time\":42") != std::string::npos);
 #endif
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
@@ -4377,7 +4377,7 @@ TEST_CASE("note::api::EnvModified request builder") {
 #endif
     req.execute();
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-    REQUIRE(h.last_req.find("\"time\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"time\":42") != std::string::npos);
 #endif
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
@@ -4437,7 +4437,7 @@ TEST_CASE("note::api::EnvSet request builder") {
     req.text(note::string_view("x-text"));
     req.execute();
     REQUIRE(h.last_req.find("\"name\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"text\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"text\":\"x-text\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
@@ -4542,8 +4542,8 @@ TEST_CASE("note::api::FileChanges request builder") {
     req.files.add(note::string_view("x-files-item"));
     req.tracker(note::string_view("x-tracker"));
     req.execute();
-    REQUIRE(h.last_req.find("\"files\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"tracker\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"files\":[\"x-files-item\"]") != std::string::npos);
+    REQUIRE(h.last_req.find("\"tracker\":\"x-tracker\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
@@ -4651,7 +4651,7 @@ TEST_CASE("note::api::FileClear request builder") {
     req.execute();
     req.file(note::string_view("x-file"));
     req.execute();
-    REQUIRE(h.last_req.find("\"file\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"file\":\"x-file\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
@@ -4681,7 +4681,7 @@ TEST_CASE("note::api::FileDelete request builder") {
     req.execute();
     req.files.add(note::string_view("x-files-item"));
     req.execute();
-    REQUIRE(h.last_req.find("\"files\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"files\":[\"x-files-item\"]") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
@@ -4710,7 +4710,7 @@ TEST_CASE("note::api::FileStats request builder") {
     req.execute();
     req.file(note::string_view("x-file"));
     req.execute();
-    REQUIRE(h.last_req.find("\"file\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"file\":\"x-file\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
@@ -4834,9 +4834,9 @@ TEST_CASE("note::api::HubLog request builder") {
     req.sync(true);
     req.text(note::string_view("x-text"));
     req.execute();
-    REQUIRE(h.last_req.find("\"alert\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"sync\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"text\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"alert\":true") != std::string::npos);
+    REQUIRE(h.last_req.find("\"sync\":true") != std::string::npos);
+    REQUIRE(h.last_req.find("\"text\":\"x-text\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
@@ -4902,41 +4902,41 @@ TEST_CASE("note::api::HubSet request builder") {
     req.vinbound(note::string_view("x-vinbound"));
     req.voutbound(note::string_view("x-voutbound"));
     req.execute();
-    REQUIRE(h.last_req.find("\"align\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"align\":true") != std::string::npos);
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
-    REQUIRE(h.last_req.find("\"details\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"details\":\"x-details\"") != std::string::npos);
 #endif
-    REQUIRE(h.last_req.find("\"duration\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"host\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"inbound\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"mode\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"duration\":42") != std::string::npos);
+    REQUIRE(h.last_req.find("\"host\":\"x-host\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"inbound\":42") != std::string::npos);
+    REQUIRE(h.last_req.find("\"mode\":\"periodic\"") != std::string::npos);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-    REQUIRE(h.last_req.find("\"off\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"off\":true") != std::string::npos);
 #endif
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-    REQUIRE(h.last_req.find("\"on\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"on\":true") != std::string::npos);
 #endif
-    REQUIRE(h.last_req.find("\"outbound\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"product\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"outbound\":42") != std::string::npos);
+    REQUIRE(h.last_req.find("\"product\":\"x-product\"") != std::string::npos);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-    REQUIRE(h.last_req.find("\"seconds\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"seconds\":42") != std::string::npos);
 #endif
-    REQUIRE(h.last_req.find("\"sn\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"sync\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"sn\":\"x-sn\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"sync\":true") != std::string::npos);
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-    REQUIRE(h.last_req.find("\"umin\"") != std::string::npos);
-#endif
-#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-    REQUIRE(h.last_req.find("\"uoff\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"umin\":true") != std::string::npos);
 #endif
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-    REQUIRE(h.last_req.find("\"uperiodic\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"uoff\":true") != std::string::npos);
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
+    REQUIRE(h.last_req.find("\"uperiodic\":true") != std::string::npos);
 #endif
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 3, 1) || !defined(NOTE_API_STRICT)
-    REQUIRE(h.last_req.find("\"version\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"version\":\"x-version\"") != std::string::npos);
 #endif
-    REQUIRE(h.last_req.find("\"vinbound\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"voutbound\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"vinbound\":\"x-vinbound\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"voutbound\":\"x-voutbound\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
@@ -5003,7 +5003,7 @@ TEST_CASE("note::api::HubSignal request builder") {
 #endif
     req.execute();
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
-    REQUIRE(h.last_req.find("\"seconds\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"seconds\":42") != std::string::npos);
 #endif
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
@@ -5114,10 +5114,10 @@ TEST_CASE("note::api::HubSync request builder") {
     req.out(true);
 #endif
     req.execute();
-    REQUIRE(h.last_req.find("\"allow\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"in\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"allow\":true") != std::string::npos);
+    REQUIRE(h.last_req.find("\"in\":true") != std::string::npos);
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
-    REQUIRE(h.last_req.find("\"out\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"out\":true") != std::string::npos);
 #endif
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
@@ -5152,7 +5152,7 @@ TEST_CASE("note::api::HubSyncStatus request builder") {
     req.execute();
     req.sync(true);
     req.execute();
-    REQUIRE(h.last_req.find("\"sync\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"sync\":true") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
@@ -5249,26 +5249,26 @@ TEST_CASE("note::api::NoteAdd request builder") {
     req.verify(true);
     req.execute();
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
-    REQUIRE(h.last_req.find("\"binary\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"binary\":true") != std::string::npos);
 #endif
-    REQUIRE(h.last_req.find("\"file\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"file\":\"x-file\"") != std::string::npos);
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
-    REQUIRE(h.last_req.find("\"full\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"full\":true") != std::string::npos);
 #endif
-    REQUIRE(h.last_req.find("\"key\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"key\":\"x-key\"") != std::string::npos);
 #if NOTE_API_VERSION >= NOTE_VERSION(9, 1, 1) || !defined(NOTE_API_STRICT)
-    REQUIRE(h.last_req.find("\"limit\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"limit\":true") != std::string::npos);
 #endif
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
-    REQUIRE(h.last_req.find("\"live\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"live\":true") != std::string::npos);
 #endif
 #if NOTE_API_VERSION >= NOTE_VERSION(8, 2, 1) || !defined(NOTE_API_STRICT)
-    REQUIRE(h.last_req.find("\"max\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"max\":42") != std::string::npos);
 #endif
-    REQUIRE(h.last_req.find("\"note\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"payload\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"sync\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"verify\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"note\":\"x-note\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"payload\":\"x-payload\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"sync\":true") != std::string::npos);
+    REQUIRE(h.last_req.find("\"verify\":true") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
@@ -5350,13 +5350,13 @@ TEST_CASE("note::api::NoteChanges::Peek request builder") {
     req.stop(true);
     req.tracker(note::string_view("x-tracker"));
     req.execute();
-    REQUIRE(h.last_req.find("\"deleted\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"file\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"max\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"reset\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"start\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"stop\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"tracker\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"deleted\":true") != std::string::npos);
+    REQUIRE(h.last_req.find("\"file\":\"x-file\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"max\":42") != std::string::npos);
+    REQUIRE(h.last_req.find("\"reset\":true") != std::string::npos);
+    REQUIRE(h.last_req.find("\"start\":true") != std::string::npos);
+    REQUIRE(h.last_req.find("\"stop\":true") != std::string::npos);
+    REQUIRE(h.last_req.find("\"tracker\":\"x-tracker\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
@@ -5422,12 +5422,12 @@ TEST_CASE("note::api::NoteChanges::Pop request builder") {
     req.tracker(note::string_view("x-tracker"));
     req.execute();
     REQUIRE(h.last_req.find("\"file\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"deleted\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"max\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"reset\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"start\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"stop\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"tracker\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"deleted\":true") != std::string::npos);
+    REQUIRE(h.last_req.find("\"max\":42") != std::string::npos);
+    REQUIRE(h.last_req.find("\"reset\":true") != std::string::npos);
+    REQUIRE(h.last_req.find("\"start\":true") != std::string::npos);
+    REQUIRE(h.last_req.find("\"stop\":true") != std::string::npos);
+    REQUIRE(h.last_req.find("\"tracker\":\"x-tracker\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
@@ -5488,7 +5488,7 @@ TEST_CASE("note::api::NoteDelete request builder") {
     req.execute();
     REQUIRE(h.last_req.find("\"file\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"note\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"verify\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"verify\":true") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
@@ -5521,10 +5521,10 @@ TEST_CASE("note::api::NoteGet::Read request builder") {
     req.file(note::string_view("x-file"));
     req.noteId(note::string_view("x-note"));
     req.execute();
-    REQUIRE(h.last_req.find("\"decrypt\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"deleted\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"file\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"note\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"decrypt\":true") != std::string::npos);
+    REQUIRE(h.last_req.find("\"deleted\":true") != std::string::npos);
+    REQUIRE(h.last_req.find("\"file\":\"x-file\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"note\":\"x-note\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
@@ -5584,10 +5584,10 @@ TEST_CASE("note::api::NoteGet::Pop request builder") {
     req.file(note::string_view("x-file"));
     req.noteId(note::string_view("x-note"));
     req.execute();
-    REQUIRE(h.last_req.find("\"decrypt\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"deleted\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"file\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"note\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"decrypt\":true") != std::string::npos);
+    REQUIRE(h.last_req.find("\"deleted\":true") != std::string::npos);
+    REQUIRE(h.last_req.find("\"file\":\"x-file\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"note\":\"x-note\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
@@ -5653,14 +5653,14 @@ TEST_CASE("note::api::NoteTemplate::Define request builder") {
 #endif
     req.execute();
     REQUIRE(h.last_req.find("\"file\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"delete\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"delete\":true") != std::string::npos);
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
-    REQUIRE(h.last_req.find("\"format\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"format\":\"x-format\"") != std::string::npos);
 #endif
-    REQUIRE(h.last_req.find("\"length\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"port\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"length\":42") != std::string::npos);
+    REQUIRE(h.last_req.find("\"port\":42") != std::string::npos);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
-    REQUIRE(h.last_req.find("\"verify\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"verify\":true") != std::string::npos);
 #endif
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
@@ -5744,12 +5744,12 @@ TEST_CASE("note::api::NoteTemplate::Remove request builder") {
     req.execute();
     REQUIRE(h.last_req.find("\"file\"") != std::string::npos);
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
-    REQUIRE(h.last_req.find("\"format\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"format\":\"compact\"") != std::string::npos);
 #endif
-    REQUIRE(h.last_req.find("\"length\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"port\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"length\":42") != std::string::npos);
+    REQUIRE(h.last_req.find("\"port\":42") != std::string::npos);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
-    REQUIRE(h.last_req.find("\"verify\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"verify\":true") != std::string::npos);
 #endif
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
@@ -5826,8 +5826,8 @@ TEST_CASE("note::api::NoteUpdate request builder") {
     req.execute();
     REQUIRE(h.last_req.find("\"file\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"note\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"payload\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"verify\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"payload\":\"x-payload\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"verify\":true") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
@@ -5859,8 +5859,8 @@ TEST_CASE("note::api::NtnGps request builder") {
     req.off(true);
     req.on(true);
     req.execute();
-    REQUIRE(h.last_req.find("\"off\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"on\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"off\":true") != std::string::npos);
+    REQUIRE(h.last_req.find("\"on\":true") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
@@ -5992,8 +5992,8 @@ TEST_CASE("note::api::VarDelete request builder") {
     req.file(note::string_view("x-file"));
     req.name(note::string_view("x-name"));
     req.execute();
-    REQUIRE(h.last_req.find("\"file\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"name\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"file\":\"x-file\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"name\":\"x-name\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
@@ -6025,8 +6025,8 @@ TEST_CASE("note::api::VarGet request builder") {
     req.file(note::string_view("x-file"));
     req.name(note::string_view("x-name"));
     req.execute();
-    REQUIRE(h.last_req.find("\"file\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"name\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"file\":\"x-file\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"name\":\"x-name\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
@@ -6091,13 +6091,13 @@ TEST_CASE("note::api::VarSet request builder") {
     req.value(1.5);
     req.execute();
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 3, 1) || !defined(NOTE_API_STRICT)
-    REQUIRE(h.last_req.find("\"file\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"file\":\"x-file\"") != std::string::npos);
 #endif
-    REQUIRE(h.last_req.find("\"flag\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"name\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"sync\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"text\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"value\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"flag\":true") != std::string::npos);
+    REQUIRE(h.last_req.find("\"name\":\"x-name\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"sync\":true") != std::string::npos);
+    REQUIRE(h.last_req.find("\"text\":\"x-text\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"value\":1.5") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
@@ -6137,10 +6137,10 @@ TEST_CASE("note::api::Web request builder") {
     req.name(note::string_view("x-name"));
     req.route(note::string_view("x-route"));
     req.execute();
-    REQUIRE(h.last_req.find("\"content\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"method\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"name\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"route\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"content\":\"x-content\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"method\":\"CONNECT\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"name\":\"x-name\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"route\":\"x-route\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
@@ -6210,14 +6210,14 @@ TEST_CASE("note::api::WebDelete request builder") {
     req.seconds(int32_t{42});
     req.execute();
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
-    REQUIRE(h.last_req.find("\"async\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"async\":true") != std::string::npos);
 #endif
-    REQUIRE(h.last_req.find("\"content\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"file\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"name\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"note\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"route\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"seconds\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"content\":\"x-content\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"file\":\"x-file\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"name\":\"x-name\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"note\":\"x-note\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"route\":\"x-route\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"seconds\":42") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
@@ -6292,16 +6292,16 @@ TEST_CASE("note::api::WebGet request builder") {
     req.seconds(int32_t{42});
     req.execute();
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
-    REQUIRE(h.last_req.find("\"binary\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"binary\":true") != std::string::npos);
 #endif
-    REQUIRE(h.last_req.find("\"content\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"file\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"max\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"name\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"note\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"offset\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"route\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"seconds\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"content\":\"x-content\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"file\":\"x-file\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"max\":42") != std::string::npos);
+    REQUIRE(h.last_req.find("\"name\":\"x-name\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"note\":\"x-note\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"offset\":42") != std::string::npos);
+    REQUIRE(h.last_req.find("\"route\":\"x-route\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"seconds\":42") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
@@ -6389,25 +6389,25 @@ TEST_CASE("note::api::WebPost request builder") {
     req.verify(true);
     req.execute();
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
-    REQUIRE(h.last_req.find("\"async\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"async\":true") != std::string::npos);
 #endif
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
-    REQUIRE(h.last_req.find("\"binary\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"binary\":true") != std::string::npos);
 #endif
-    REQUIRE(h.last_req.find("\"content\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"file\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"max\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"name\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"note\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"offset\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"payload\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"route\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"seconds\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"status\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"content\":\"x-content\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"file\":\"x-file\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"max\":42") != std::string::npos);
+    REQUIRE(h.last_req.find("\"name\":\"x-name\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"note\":\"x-note\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"offset\":42") != std::string::npos);
+    REQUIRE(h.last_req.find("\"payload\":\"x-payload\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"route\":\"x-route\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"seconds\":42") != std::string::npos);
+    REQUIRE(h.last_req.find("\"status\":\"x-status\"") != std::string::npos);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
-    REQUIRE(h.last_req.find("\"total\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"total\":42") != std::string::npos);
 #endif
-    REQUIRE(h.last_req.find("\"verify\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"verify\":true") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
@@ -6510,25 +6510,25 @@ TEST_CASE("note::api::WebPut request builder") {
     req.verify(true);
     req.execute();
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
-    REQUIRE(h.last_req.find("\"async\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"async\":true") != std::string::npos);
 #endif
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
-    REQUIRE(h.last_req.find("\"binary\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"binary\":true") != std::string::npos);
 #endif
-    REQUIRE(h.last_req.find("\"content\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"file\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"max\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"name\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"note\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"offset\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"payload\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"route\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"seconds\"") != std::string::npos);
-    REQUIRE(h.last_req.find("\"status\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"content\":\"x-content\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"file\":\"x-file\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"max\":42") != std::string::npos);
+    REQUIRE(h.last_req.find("\"name\":\"x-name\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"note\":\"x-note\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"offset\":42") != std::string::npos);
+    REQUIRE(h.last_req.find("\"payload\":\"x-payload\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"route\":\"x-route\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"seconds\":42") != std::string::npos);
+    REQUIRE(h.last_req.find("\"status\":\"x-status\"") != std::string::npos);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
-    REQUIRE(h.last_req.find("\"total\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"total\":42") != std::string::npos);
 #endif
-    REQUIRE(h.last_req.find("\"verify\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"verify\":true") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
     { FailHarness fh; req.execute(fh.nc); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).

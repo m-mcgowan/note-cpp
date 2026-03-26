@@ -196,6 +196,30 @@ def _response_match_value(prop) -> str:
     return f'"x-{prop.wire_name}"'
 
 
+def _wire_value_fragment(prop) -> str:
+    """Expected JSON fragment for a field set with its test value.
+
+    Returns a string like '"mode":"periodic"' or '"seconds":42' that
+    can be used in a find() assertion on the wire output.
+    """
+    wire = prop.wire_name
+    if prop.has_unit:
+        return f'"\\"{wire}\\":42"'
+    if prop.is_array:
+        return f'"\\"{wire}\\":[\\\"x-{wire}-item\\\"]"'
+    if prop.has_flags:
+        return f'"\\"{wire}\\":\\"{prop.flags[0]}\\""'
+    if prop.cpp_type == "bool":
+        return f'"\\"{wire}\\":true"'
+    if prop.cpp_type == "int32_t":
+        return f'"\\"{wire}\\":42"'
+    if prop.cpp_type == "double":
+        return f'"\\"{wire}\\":1.5"'
+    if prop.enum_values:
+        return f'"\\"{wire}\\":\\"{prop.enum_values[0]}\\""'
+    return f'"\\"{wire}\\":\\"x-{wire}\\""'
+
+
 def _cpp_literal(value) -> str:
     """Convert a JSON value to a C++ literal string."""
     if isinstance(value, bool):
@@ -393,6 +417,7 @@ def main() -> None:
     env.filters["request_test_value"] = _cpp_request_test_value
     env.filters["reader_test_value"] = _reader_test_value
     env.filters["response_match_value"] = _response_match_value
+    env.filters["wire_value_fragment"] = _wire_value_fragment
     env.filters["flag_namespace"] = lambda wire: wire.rsplit(".", 1)[-1]
     env.filters["flag_cpp_name"] = lambda s: s.replace("-", "_")
     env.filters["enum_const_name"] = _enum_const_name

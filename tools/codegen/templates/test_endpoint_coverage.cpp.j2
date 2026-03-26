@@ -139,7 +139,13 @@ TEST_CASE("note::api::{{ type_qual }} request builder") {
 {% if prop.version_guard %}
 #if NOTE_API_VERSION >= {{ prop.version_guard }} || !defined(NOTE_API_STRICT)
 {% endif %}
+{% if prop.has_flags %}
+{# Flag fields with mode_prefix have the prefix prepended on the wire — check key only. #}
+{# Exact wire format is covered by test_samples.cpp.                                     #}
     REQUIRE(h.last_req.find("\"{{ prop.wire_name }}\"") != std::string::npos);
+{% else %}
+    REQUIRE(h.last_req.find({{ prop | wire_value_fragment }}) != std::string::npos);
+{% endif %}
 {% if prop.version_guard %}
 #endif
 {% endif %}

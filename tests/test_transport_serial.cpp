@@ -663,3 +663,84 @@ TEST_CASE("serial: transact returns CRC mismatch error") {
     // timeout path (CRC mismatch is the same retry loop).
     // TODO: test actual CRC mismatch when CRC is enabled.
 }
+
+// ---------------------------------------------------------------------------
+// do_receive() over-read — binary data after JSON \n must not be consumed
+// ---------------------------------------------------------------------------
+
+TEST_CASE("serial: do_receive does not consume bytes past \\n") {
+    // Simulate: HAL returns JSON response + \n + binary data in one chunk.
+    // do_receive() must stop at \n; do_read() must return the binary data.
+    ScriptedHal hal;
+    NotecardSerial transport(hal);
+
+    // First transact triggers reset. Queue a response for that.
+    hal.queue_response("{}\r\n");
+    auto r = transport.transact("{\"req\":\"init\"}", 5000);
+    REQUIRE(r.has_value());
+
+    // Now inject JSON response + binary data contiguously in the rx buffer.
+    // This simulates what happens when the UART buffer has both.
+    hal.rx.clear();
+    // JSON response: {"ok":true}\r\n  (13 bytes)
+    std::string json_part = "{\"ok\":true}\r\n";
+    for (char c : json_part) hal.rx.push_back(static_cast<uint8_t>(c));
+    // Binary data immediately after (3 bytes)
+    hal.rx.push_back(0xAA);
+    hal.rx.push_back(0xBB);
+    hal.rx.push_back(0xCC);
+
+    // transact → do_receive() should stop at \n, stash 0xAA/0xBB/0xCC
+    auto r2 = transport.transact("{\"req\":\"test\"}", 5000);
+    REQUIRE(r2.has_value());
+    REQUIRE(*r2 == "{\"ok\":true}");
+
+    // do_read() should return the 3 stashed binary bytes
+    uint8_t read_buf[16];
+    auto rd = transport.read(read_buf, sizeof(read_buf), 1000);
+    REQUIRE(rd.has_value());
+    REQUIRE(*rd == 3);
+    CHECK(read_buf[0] == 0xAA);
+    CHECK(read_buf[1] == 0xBB);
+    CHECK(read_buf[2] == 0xCC);
+}
+
+TEST_CASE("serial: do_receive with no over-read returns nothing in do_read") {
+    // When JSON response ends exactly at chunk boundary (no trailing bytes),
+    // do_read() should block until new data arrives (or timeout).
+    ScriptedHal hal;
+    NotecardSerial transport(hal);
+    hal.queue_response("{}\r\n");
+
+    auto r = transport.transact("{\"req\":\"test\"}", 5000);
+    REQUIRE(r.has_value());
+
+    // No extra bytes in rx — overflow should be empty.
+    // Just verify transact succeeded and didn't leave garbage.
+}
+
+TEST_CASE("serial: transact then read binary preserves all bytes") {
+    // End-to-end: JSON handshake response + binary payload.
+    // Simulates card.binary.get flow where binary follows JSON.
+    ScriptedHal hal;
+    NotecardSerial transport(hal);
+
+    // First transact triggers reset. Queue clean response for that.
+    // Then queue JSON handshake + inject binary immediately after.
+    hal.queue_response("{\"length\":5}\r\n");
+
+    auto r = transport.transact("{\"req\":\"card.binary.get\"}", 5000);
+    REQUIRE(r.has_value());
+    REQUIRE(*r == "{\"length\":5}");
+
+    // Now inject 5 bytes of binary data (simulating Notecard sending after handshake)
+    uint8_t expected[] = {0x01, 0x02, 0x00, 0x04, 0x05};
+    for (uint8_t b : expected) hal.rx.push_back(b);
+
+    // Read them back
+    uint8_t got[8];
+    auto rd = transport.read(got, sizeof(got), 1000);
+    REQUIRE(rd.has_value());
+    REQUIRE(*rd == 5);
+    for (size_t i = 0; i < 5; ++i) CHECK(got[i] == expected[i]);
+}

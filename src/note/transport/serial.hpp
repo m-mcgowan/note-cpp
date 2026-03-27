@@ -119,7 +119,8 @@ protected:
         return hal_.transmit(crlf, 2);
     }
 
-    // Receive until \n. Greedy: reads as much as available each poll.
+    // Receive until \n. Stops precisely at \n — does not over-read into
+    // subsequent data (important when binary follows JSON on serial).
     Result<void> do_receive(std::string& buf, uint32_t timeout_ms) override {
         uint8_t      chunk[64];
         bool         first_byte_seen = false;
@@ -133,13 +134,26 @@ protected:
                     first_byte_seen = true;
                     intra_start     = hal_.millis();
                 }
-                buf.append(reinterpret_cast<const char*>(chunk), n);
-                if (buf.back() == '\n') {
-                    while (!buf.empty() &&
-                           (buf.back() == '\n' || buf.back() == '\r'))
-                        buf.pop_back();
-                    return {};
+                // Scan for \n — append up to it (not past it).
+                // Bytes after \n stay in the UART for subsequent reads.
+                // The \n itself is consumed but not appended.
+                for (size_t i = 0; i < n; ++i) {
+                    if (chunk[i] == '\n') {
+                        buf.append(reinterpret_cast<const char*>(chunk), i);
+                        // Push back any bytes after \n so they're not lost.
+                        // hal_.receive already consumed them — we must
+                        // stash them for the next do_read() call.
+                        size_t leftover = n - (i + 1);
+                        if (leftover > 0) {
+                            overflow_len_ = leftover;
+                            memcpy(overflow_, chunk + i + 1, leftover);
+                        }
+                        while (!buf.empty() && buf.back() == '\r')
+                            buf.pop_back();
+                        return {};
+                    }
                 }
+                buf.append(reinterpret_cast<const char*>(chunk), n);
             } else {
                 hal_.delay(1);
                 const uint32_t now = hal_.millis();
@@ -160,8 +174,16 @@ protected:
     }
 
     // Read available bytes from serial (up to max_len).
-    // Blocks up to timeout_ms for at least one byte, then returns what's available.
+    // Drains any overflow from do_receive() first, then reads from HAL.
     Result<size_t> do_read(uint8_t* buf, size_t max_len, uint32_t timeout_ms) override {
+        // Drain overflow from do_receive() greedy read
+        if (overflow_len_ > 0) {
+            size_t n = (overflow_len_ < max_len) ? overflow_len_ : max_len;
+            memcpy(buf, overflow_ + overflow_pos_, n);
+            overflow_pos_ += n;
+            overflow_len_ -= n;
+            return n;
+        }
         const uint32_t start = hal_.millis();
         while (true) {
             size_t n = hal_.receive(buf, max_len);
@@ -212,6 +234,12 @@ protected:
 
 private:
     SerialHal& hal_;
+
+    // Overflow buffer: bytes read past \n by do_receive() are stashed here
+    // so do_read() can return them before polling the HAL.
+    uint8_t overflow_[64]{};
+    size_t overflow_len_ = 0;
+    size_t overflow_pos_ = 0;
 };
 
 // Deduction guides — allow construction without explicit template arguments.

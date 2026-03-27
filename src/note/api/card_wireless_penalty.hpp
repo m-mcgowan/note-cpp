@@ -11,7 +11,6 @@
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
-#include <note/units.hpp>
 #include <note/target.hpp>
 
 namespace note::api {
@@ -40,26 +39,26 @@ struct CardWirelessPenalty {
         /// The number of minutes to add to successive retries. Used with the
         /// `set` argument to override the Network Registration Failure Penalty
         /// Box defaults.
-        struct add_t : Field<note::Minutes> {
-            using Field<note::Minutes>::Field;
-            using Field<note::Minutes>::operator=;
-            CardWirelessPenalty::Check& operator()(note::Minutes v);
+        struct add_t : Field<int32_t> {
+            using Field<int32_t>::Field;
+            using Field<int32_t>::operator=;
+            CardWirelessPenalty::Check& operator()(int32_t v);
         } add{};
         /// The maximum number of minutes that a device can be in a Network
         /// Registration Failure Penalty Box. Used with the `set` argument to
         /// override the Network Registration Failure Penalty Box defaults.
-        struct max_t : Field<note::Minutes> {
-            using Field<note::Minutes>::Field;
-            using Field<note::Minutes>::operator=;
-            CardWirelessPenalty::Check& operator()(note::Minutes v);
+        struct max_t : Field<int32_t> {
+            using Field<int32_t>::Field;
+            using Field<int32_t>::operator=;
+            CardWirelessPenalty::Check& operator()(int32_t v);
         } max{};
         /// The number of minutes of the first retry interval of a Network
         /// Registration Failure Penalty Box. Used with the `set` argument to
         /// override the Network Registration Failure Penalty Box defaults.
-        struct min_t : Field<note::Minutes> {
-            using Field<note::Minutes>::Field;
-            using Field<note::Minutes>::operator=;
-            CardWirelessPenalty::Check& operator()(note::Minutes v);
+        struct min_t : Field<int32_t> {
+            using Field<int32_t>::Field;
+            using Field<int32_t>::operator=;
+            CardWirelessPenalty::Check& operator()(int32_t v);
         } min{};
         /// The rate at which the penalty box time multiplier is increased over
         /// successive retries. Used with the `set` argument to override the
@@ -301,26 +300,26 @@ struct CardWirelessPenalty {
         /// The number of minutes to add to successive retries. Used with the
         /// `set` argument to override the Network Registration Failure Penalty
         /// Box defaults.
-        struct add_t : Field<note::Minutes> {
-            using Field<note::Minutes>::Field;
-            using Field<note::Minutes>::operator=;
-            CardWirelessPenalty::Set& operator()(note::Minutes v);
+        struct add_t : Field<int32_t> {
+            using Field<int32_t>::Field;
+            using Field<int32_t>::operator=;
+            CardWirelessPenalty::Set& operator()(int32_t v);
         } add{};
         /// The maximum number of minutes that a device can be in a Network
         /// Registration Failure Penalty Box. Used with the `set` argument to
         /// override the Network Registration Failure Penalty Box defaults.
-        struct max_t : Field<note::Minutes> {
-            using Field<note::Minutes>::Field;
-            using Field<note::Minutes>::operator=;
-            CardWirelessPenalty::Set& operator()(note::Minutes v);
+        struct max_t : Field<int32_t> {
+            using Field<int32_t>::Field;
+            using Field<int32_t>::operator=;
+            CardWirelessPenalty::Set& operator()(int32_t v);
         } max{};
         /// The number of minutes of the first retry interval of a Network
         /// Registration Failure Penalty Box. Used with the `set` argument to
         /// override the Network Registration Failure Penalty Box defaults.
-        struct min_t : Field<note::Minutes> {
-            using Field<note::Minutes>::Field;
-            using Field<note::Minutes>::operator=;
-            CardWirelessPenalty::Set& operator()(note::Minutes v);
+        struct min_t : Field<int32_t> {
+            using Field<int32_t>::Field;
+            using Field<int32_t>::operator=;
+            CardWirelessPenalty::Set& operator()(int32_t v);
         } min{};
         /// The rate at which the penalty box time multiplier is increased over
         /// successive retries. Used with the `set` argument to override the
@@ -549,26 +548,26 @@ struct CardWirelessPenalty {
         /// The number of minutes to add to successive retries. Used with the
         /// `set` argument to override the Network Registration Failure Penalty
         /// Box defaults.
-        struct add_t : Field<note::Minutes> {
-            using Field<note::Minutes>::Field;
-            using Field<note::Minutes>::operator=;
-            CardWirelessPenalty::Clear& operator()(note::Minutes v);
+        struct add_t : Field<int32_t> {
+            using Field<int32_t>::Field;
+            using Field<int32_t>::operator=;
+            CardWirelessPenalty::Clear& operator()(int32_t v);
         } add{};
         /// The maximum number of minutes that a device can be in a Network
         /// Registration Failure Penalty Box. Used with the `set` argument to
         /// override the Network Registration Failure Penalty Box defaults.
-        struct max_t : Field<note::Minutes> {
-            using Field<note::Minutes>::Field;
-            using Field<note::Minutes>::operator=;
-            CardWirelessPenalty::Clear& operator()(note::Minutes v);
+        struct max_t : Field<int32_t> {
+            using Field<int32_t>::Field;
+            using Field<int32_t>::operator=;
+            CardWirelessPenalty::Clear& operator()(int32_t v);
         } max{};
         /// The number of minutes of the first retry interval of a Network
         /// Registration Failure Penalty Box. Used with the `set` argument to
         /// override the Network Registration Failure Penalty Box defaults.
-        struct min_t : Field<note::Minutes> {
-            using Field<note::Minutes>::Field;
-            using Field<note::Minutes>::operator=;
-            CardWirelessPenalty::Clear& operator()(note::Minutes v);
+        struct min_t : Field<int32_t> {
+            using Field<int32_t>::Field;
+            using Field<int32_t>::operator=;
+            CardWirelessPenalty::Clear& operator()(int32_t v);
         } min{};
         /// The rate at which the penalty box time multiplier is increased over
         /// successive retries. Used with the `set` argument to override the
@@ -782,18 +781,18 @@ struct CardWirelessPenalty {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-inline CardWirelessPenalty::Check& CardWirelessPenalty::Check::add_t::operator()(note::Minutes v) {
-    Field<note::Minutes>::operator=(v);
+inline CardWirelessPenalty::Check& CardWirelessPenalty::Check::add_t::operator()(int32_t v) {
+    Field<int32_t>::operator=(v);
     return *reinterpret_cast<CardWirelessPenalty::Check*>(
         reinterpret_cast<char*>(this) - offsetof(CardWirelessPenalty::Check, add));
 }
-inline CardWirelessPenalty::Check& CardWirelessPenalty::Check::max_t::operator()(note::Minutes v) {
-    Field<note::Minutes>::operator=(v);
+inline CardWirelessPenalty::Check& CardWirelessPenalty::Check::max_t::operator()(int32_t v) {
+    Field<int32_t>::operator=(v);
     return *reinterpret_cast<CardWirelessPenalty::Check*>(
         reinterpret_cast<char*>(this) - offsetof(CardWirelessPenalty::Check, max));
 }
-inline CardWirelessPenalty::Check& CardWirelessPenalty::Check::min_t::operator()(note::Minutes v) {
-    Field<note::Minutes>::operator=(v);
+inline CardWirelessPenalty::Check& CardWirelessPenalty::Check::min_t::operator()(int32_t v) {
+    Field<int32_t>::operator=(v);
     return *reinterpret_cast<CardWirelessPenalty::Check*>(
         reinterpret_cast<char*>(this) - offsetof(CardWirelessPenalty::Check, min));
 }
@@ -816,18 +815,18 @@ inline CardWirelessPenalty::Check& CardWirelessPenalty::Check::set_t::operator()
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-inline CardWirelessPenalty::Set& CardWirelessPenalty::Set::add_t::operator()(note::Minutes v) {
-    Field<note::Minutes>::operator=(v);
+inline CardWirelessPenalty::Set& CardWirelessPenalty::Set::add_t::operator()(int32_t v) {
+    Field<int32_t>::operator=(v);
     return *reinterpret_cast<CardWirelessPenalty::Set*>(
         reinterpret_cast<char*>(this) - offsetof(CardWirelessPenalty::Set, add));
 }
-inline CardWirelessPenalty::Set& CardWirelessPenalty::Set::max_t::operator()(note::Minutes v) {
-    Field<note::Minutes>::operator=(v);
+inline CardWirelessPenalty::Set& CardWirelessPenalty::Set::max_t::operator()(int32_t v) {
+    Field<int32_t>::operator=(v);
     return *reinterpret_cast<CardWirelessPenalty::Set*>(
         reinterpret_cast<char*>(this) - offsetof(CardWirelessPenalty::Set, max));
 }
-inline CardWirelessPenalty::Set& CardWirelessPenalty::Set::min_t::operator()(note::Minutes v) {
-    Field<note::Minutes>::operator=(v);
+inline CardWirelessPenalty::Set& CardWirelessPenalty::Set::min_t::operator()(int32_t v) {
+    Field<int32_t>::operator=(v);
     return *reinterpret_cast<CardWirelessPenalty::Set*>(
         reinterpret_cast<char*>(this) - offsetof(CardWirelessPenalty::Set, min));
 }
@@ -845,18 +844,18 @@ inline CardWirelessPenalty::Set& CardWirelessPenalty::Set::reset_t::operator()(b
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-inline CardWirelessPenalty::Clear& CardWirelessPenalty::Clear::add_t::operator()(note::Minutes v) {
-    Field<note::Minutes>::operator=(v);
+inline CardWirelessPenalty::Clear& CardWirelessPenalty::Clear::add_t::operator()(int32_t v) {
+    Field<int32_t>::operator=(v);
     return *reinterpret_cast<CardWirelessPenalty::Clear*>(
         reinterpret_cast<char*>(this) - offsetof(CardWirelessPenalty::Clear, add));
 }
-inline CardWirelessPenalty::Clear& CardWirelessPenalty::Clear::max_t::operator()(note::Minutes v) {
-    Field<note::Minutes>::operator=(v);
+inline CardWirelessPenalty::Clear& CardWirelessPenalty::Clear::max_t::operator()(int32_t v) {
+    Field<int32_t>::operator=(v);
     return *reinterpret_cast<CardWirelessPenalty::Clear*>(
         reinterpret_cast<char*>(this) - offsetof(CardWirelessPenalty::Clear, max));
 }
-inline CardWirelessPenalty::Clear& CardWirelessPenalty::Clear::min_t::operator()(note::Minutes v) {
-    Field<note::Minutes>::operator=(v);
+inline CardWirelessPenalty::Clear& CardWirelessPenalty::Clear::min_t::operator()(int32_t v) {
+    Field<int32_t>::operator=(v);
     return *reinterpret_cast<CardWirelessPenalty::Clear*>(
         reinterpret_cast<char*>(this) - offsetof(CardWirelessPenalty::Clear, min));
 }

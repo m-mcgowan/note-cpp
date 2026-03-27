@@ -11,7 +11,6 @@
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
-#include <note/units.hpp>
 #include <note/flag_set.hpp>
 #include <note/array_field.hpp>
 #include <note/target.hpp>
@@ -207,10 +206,10 @@ struct CardAttn {
         /// timeout is serviced by a routine that wakes every 15 seconds. You
         /// can predict when the device will wake, by rounding up to the nearest
         /// 15 second interval.
-        struct seconds_t : Field<note::Seconds> {
-            using Field<note::Seconds>::Field;
-            using Field<note::Seconds>::operator=;
-            CardAttn::Request& operator()(note::Seconds v);
+        struct seconds_t : Field<int32_t> {
+            using Field<int32_t>::Field;
+            using Field<int32_t>::operator=;
+            CardAttn::Request& operator()(int32_t v);
         } seconds{};
         /// When using `sleep` mode and the host has reawakened, request the
         /// Notecard to return the stored `payload`.
@@ -591,10 +590,10 @@ struct CardAttn {
         /// timeout is serviced by a routine that wakes every 15 seconds. You
         /// can predict when the device will wake, by rounding up to the nearest
         /// 15 second interval.
-        struct seconds_t : Field<note::Seconds> {
-            using Field<note::Seconds>::Field;
-            using Field<note::Seconds>::operator=;
-            CardAttn::Arm& operator()(note::Seconds v);
+        struct seconds_t : Field<int32_t> {
+            using Field<int32_t>::Field;
+            using Field<int32_t>::operator=;
+            CardAttn::Arm& operator()(int32_t v);
         } seconds{};
 
 
@@ -754,10 +753,10 @@ struct CardAttn {
         /// timeout is serviced by a routine that wakes every 15 seconds. You
         /// can predict when the device will wake, by rounding up to the nearest
         /// 15 second interval.
-        struct seconds_t : Field<note::Seconds> {
-            using Field<note::Seconds>::Field;
-            using Field<note::Seconds>::operator=;
-            CardAttn::Watchdog& operator()(note::Seconds v);
+        struct seconds_t : Field<int32_t> {
+            using Field<int32_t>::Field;
+            using Field<int32_t>::operator=;
+            CardAttn::Watchdog& operator()(int32_t v);
         } seconds{};
 
 
@@ -840,10 +839,10 @@ struct CardAttn {
         /// timeout is serviced by a routine that wakes every 15 seconds. You
         /// can predict when the device will wake, by rounding up to the nearest
         /// 15 second interval.
-        struct seconds_t : Field<note::Seconds> {
-            using Field<note::Seconds>::Field;
-            using Field<note::Seconds>::operator=;
-            CardAttn::Sleep& operator()(note::Seconds v);
+        struct seconds_t : Field<int32_t> {
+            using Field<int32_t>::Field;
+            using Field<int32_t>::operator=;
+            CardAttn::Sleep& operator()(int32_t v);
         } seconds{};
 
 
@@ -1362,8 +1361,8 @@ inline CardAttn::Request& CardAttn::Request::payload_t::operator()(note::string_
     return *reinterpret_cast<CardAttn::Request*>(
         reinterpret_cast<char*>(this) - offsetof(CardAttn::Request, payload));
 }
-inline CardAttn::Request& CardAttn::Request::seconds_t::operator()(note::Seconds v) {
-    Field<note::Seconds>::operator=(v);
+inline CardAttn::Request& CardAttn::Request::seconds_t::operator()(int32_t v) {
+    Field<int32_t>::operator=(v);
     return *reinterpret_cast<CardAttn::Request*>(
         reinterpret_cast<char*>(this) - offsetof(CardAttn::Request, seconds));
 }
@@ -1462,8 +1461,8 @@ inline CardAttn::Arm& CardAttn::Arm::on_t::operator()(bool v) {
     return *reinterpret_cast<CardAttn::Arm*>(
         reinterpret_cast<char*>(this) - offsetof(CardAttn::Arm, on));
 }
-inline CardAttn::Arm& CardAttn::Arm::seconds_t::operator()(note::Seconds v) {
-    Field<note::Seconds>::operator=(v);
+inline CardAttn::Arm& CardAttn::Arm::seconds_t::operator()(int32_t v) {
+    Field<int32_t>::operator=(v);
     return *reinterpret_cast<CardAttn::Arm*>(
         reinterpret_cast<char*>(this) - offsetof(CardAttn::Arm, seconds));
 }
@@ -1471,8 +1470,8 @@ inline CardAttn::Arm& CardAttn::Arm::seconds_t::operator()(note::Seconds v) {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-inline CardAttn::Watchdog& CardAttn::Watchdog::seconds_t::operator()(note::Seconds v) {
-    Field<note::Seconds>::operator=(v);
+inline CardAttn::Watchdog& CardAttn::Watchdog::seconds_t::operator()(int32_t v) {
+    Field<int32_t>::operator=(v);
     return *reinterpret_cast<CardAttn::Watchdog*>(
         reinterpret_cast<char*>(this) - offsetof(CardAttn::Watchdog, seconds));
 }
@@ -1485,8 +1484,8 @@ inline CardAttn::Sleep& CardAttn::Sleep::payload_t::operator()(note::string_view
     return *reinterpret_cast<CardAttn::Sleep*>(
         reinterpret_cast<char*>(this) - offsetof(CardAttn::Sleep, payload));
 }
-inline CardAttn::Sleep& CardAttn::Sleep::seconds_t::operator()(note::Seconds v) {
-    Field<note::Seconds>::operator=(v);
+inline CardAttn::Sleep& CardAttn::Sleep::seconds_t::operator()(int32_t v) {
+    Field<int32_t>::operator=(v);
     return *reinterpret_cast<CardAttn::Sleep*>(
         reinterpret_cast<char*>(this) - offsetof(CardAttn::Sleep, seconds));
 }

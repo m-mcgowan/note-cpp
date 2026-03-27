@@ -90,6 +90,7 @@ set(NOTE_CPP_TEST_SOURCES
     test_json_buf.cpp
     test_json_fmt.cpp
     test_json_sax.cpp
+    test_json_sax_streaming.cpp
     test_make_api.cpp
     test_notecard.cpp
     test_property_functor.cpp

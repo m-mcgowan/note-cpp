@@ -11,7 +11,6 @@
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
-#include <note/units.hpp>
 #include <note/voltage_variable.hpp>
 #include <note/target.hpp>
 
@@ -71,12 +70,10 @@ struct HubSet {
     /// session (the minimum allowed value is `15`). When this time elapses, the
     /// Notecard gracefully ends the current session and starts a new one in
     /// order to sync session-specific data to Notehub.
-    struct duration_t : Field<note::Minutes> {
-        using Field<note::Minutes>::Field;
-        using Field<note::Minutes>::operator=;
-        /// Reset to default
-        static constexpr note::Minutes reset{ -1 };
-        HubSet& operator()(note::Minutes v);
+    struct duration_t : Field<int32_t> {
+        using Field<int32_t>::Field;
+        using Field<int32_t>::operator=;
+        HubSet& operator()(int32_t v);
     } duration{};
     /// The URL of the Notehub service. Use `"-"` to reset to the default value.
     struct host_t : Field<note::string_view> {
@@ -95,14 +92,10 @@ struct HubSet {
     ///
     /// A value of `0` means that the Notecard will never sync inbound data
     /// unless explicitly told to do so (e.g. using `hub.sync`).
-    struct inbound_t : Field<note::Minutes> {
-        using Field<note::Minutes>::Field;
-        using Field<note::Minutes>::operator=;
-        /// Reset to default
-        static constexpr note::Minutes reset{ -1 };
-        /// Sync only when explicitly requested
-        static constexpr note::Minutes manual{ 0 };
-        HubSet& operator()(note::Minutes v);
+    struct inbound_t : Field<int32_t> {
+        using Field<int32_t>::Field;
+        using Field<int32_t>::operator=;
+        HubSet& operator()(int32_t v);
     } inbound{};
     /// The Notecard's synchronization mode.
     ///
@@ -190,14 +183,10 @@ struct HubSet {
     ///
     /// A value of `0` means that the Notecard will never sync outbound data
     /// unless explicitly told to do so (e.g. using `hub.sync`).
-    struct outbound_t : Field<note::Minutes> {
-        using Field<note::Minutes>::Field;
-        using Field<note::Minutes>::operator=;
-        /// Reset to default
-        static constexpr note::Minutes reset{ -1 };
-        /// Sync only when explicitly requested
-        static constexpr note::Minutes manual{ 0 };
-        HubSet& operator()(note::Minutes v);
+    struct outbound_t : Field<int32_t> {
+        using Field<int32_t>::Field;
+        using Field<int32_t>::operator=;
+        HubSet& operator()(int32_t v);
     } outbound{};
     /// A Notehub-managed unique identifier that is used to match Devices with
     /// Projects. This string is used during a device's auto-provisioning to
@@ -218,10 +207,10 @@ struct HubSet {
 #if NOTE_API_VERSION < NOTE_VERSION(3, 4, 1)
     [[deprecated("requires firmware >= 3.4.1")]]
 #endif
-    struct seconds_t : Field<note::Seconds> {
-        using Field<note::Seconds>::Field;
-        using Field<note::Seconds>::operator=;
-        HubSet& operator()(note::Seconds v);
+    struct seconds_t : Field<int32_t> {
+        using Field<int32_t>::Field;
+        using Field<int32_t>::operator=;
+        HubSet& operator()(int32_t v);
     } seconds{};
 #endif
     /// The end product's serial number.
@@ -594,8 +583,8 @@ inline HubSet& HubSet::details_t::operator()(note::string_view v) {
         reinterpret_cast<char*>(this) - offsetof(HubSet, details));
 }
 #endif
-inline HubSet& HubSet::duration_t::operator()(note::Minutes v) {
-    Field<note::Minutes>::operator=(v);
+inline HubSet& HubSet::duration_t::operator()(int32_t v) {
+    Field<int32_t>::operator=(v);
     return *reinterpret_cast<HubSet*>(
         reinterpret_cast<char*>(this) - offsetof(HubSet, duration));
 }
@@ -604,8 +593,8 @@ inline HubSet& HubSet::host_t::operator()(note::string_view v) {
     return *reinterpret_cast<HubSet*>(
         reinterpret_cast<char*>(this) - offsetof(HubSet, host));
 }
-inline HubSet& HubSet::inbound_t::operator()(note::Minutes v) {
-    Field<note::Minutes>::operator=(v);
+inline HubSet& HubSet::inbound_t::operator()(int32_t v) {
+    Field<int32_t>::operator=(v);
     return *reinterpret_cast<HubSet*>(
         reinterpret_cast<char*>(this) - offsetof(HubSet, inbound));
 }
@@ -628,8 +617,8 @@ inline HubSet& HubSet::on_t::operator()(bool v) {
         reinterpret_cast<char*>(this) - offsetof(HubSet, on));
 }
 #endif
-inline HubSet& HubSet::outbound_t::operator()(note::Minutes v) {
-    Field<note::Minutes>::operator=(v);
+inline HubSet& HubSet::outbound_t::operator()(int32_t v) {
+    Field<int32_t>::operator=(v);
     return *reinterpret_cast<HubSet*>(
         reinterpret_cast<char*>(this) - offsetof(HubSet, outbound));
 }
@@ -639,8 +628,8 @@ inline HubSet& HubSet::product_t::operator()(note::string_view v) {
         reinterpret_cast<char*>(this) - offsetof(HubSet, product));
 }
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-inline HubSet& HubSet::seconds_t::operator()(note::Seconds v) {
-    Field<note::Seconds>::operator=(v);
+inline HubSet& HubSet::seconds_t::operator()(int32_t v) {
+    Field<int32_t>::operator=(v);
     return *reinterpret_cast<HubSet*>(
         reinterpret_cast<char*>(this) - offsetof(HubSet, seconds));
 }

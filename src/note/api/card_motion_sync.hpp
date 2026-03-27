@@ -11,7 +11,6 @@
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
-#include <note/units.hpp>
 #include <note/target.hpp>
 
 namespace note::api {
@@ -43,10 +42,10 @@ struct CardMotionSync {
     /// The maximum frequency at which sync will be triggered. Even if a
     /// `threshold` is set and exceeded, there will only be a single sync for
     /// this amount of time.
-    struct minutes_t : Field<note::Minutes> {
-        using Field<note::Minutes>::Field;
-        using Field<note::Minutes>::operator=;
-        CardMotionSync& operator()(note::Minutes v);
+    struct minutes_t : Field<int32_t> {
+        using Field<int32_t>::Field;
+        using Field<int32_t>::operator=;
+        CardMotionSync& operator()(int32_t v);
     } minutes{};
     /// `true` to start motion-triggered syncing.
     struct start_t : Field<bool> {
@@ -160,8 +159,8 @@ inline CardMotionSync& CardMotionSync::count_t::operator()(int32_t v) {
     return *reinterpret_cast<CardMotionSync*>(
         reinterpret_cast<char*>(this) - offsetof(CardMotionSync, count));
 }
-inline CardMotionSync& CardMotionSync::minutes_t::operator()(note::Minutes v) {
-    Field<note::Minutes>::operator=(v);
+inline CardMotionSync& CardMotionSync::minutes_t::operator()(int32_t v) {
+    Field<int32_t>::operator=(v);
     return *reinterpret_cast<CardMotionSync*>(
         reinterpret_cast<char*>(this) - offsetof(CardMotionSync, minutes));
 }

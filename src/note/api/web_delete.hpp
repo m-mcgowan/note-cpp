@@ -38,6 +38,8 @@ struct WebDelete {
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
     /// If `true`, the Notecard performs the web request asynchronously, and
     /// returns control to the host without waiting for a response from Notehub.
+    /// This argument only applies when the Notecard is in `continuous` mode and
+    /// currently online.
     ///
     /// @since{5.1.1}
 #if NOTE_API_VERSION < NOTE_VERSION(5, 1, 1)
@@ -56,8 +58,13 @@ struct WebDelete {
         using Field<note::string_view>::operator=;
         WebDelete& operator()(note::string_view v);
     } content{};
-    /// The name of the local-only Database Notefile (`.dbx`) to be used if the
-    /// web request is issued asynchronously and you wish to store the response.
+    /// The name of a local-only Database Notefile (.dbx) where the response
+    /// will be stored when the web request is executed as a queued web
+    /// transaction (e.g. if the request is made when Notecard is not in
+    /// continuous mode and not online). If `file` is not specified, queued web
+    /// transaction responses are discarded. This argument is not used when the
+    /// Notecard is in `continuous` mode and online, as responses in that case
+    /// are returned directly to the host.
     struct file_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
@@ -71,8 +78,10 @@ struct WebDelete {
         using Field<note::string_view>::operator=;
         WebDelete& operator()(note::string_view v);
     } name{};
-    /// The unique Note ID for the local-only Database Notefile (`.dbx`). Only
-    /// used with asynchronous web requests (see `file` argument above).
+    /// The unique Note ID within the local-only Database Notefile (.dbx)
+    /// specified by the `file` argument (see above). Used with queued web
+    /// transactions to identify a specific Note where the response will be
+    /// stored.
     struct noteId_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;

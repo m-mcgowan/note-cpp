@@ -11,7 +11,6 @@
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
-#include <note/units.hpp>
 #include <note/target.hpp>
 
 namespace note::api {
@@ -94,12 +93,10 @@ struct CardSleep {
     } on{};
     /// The number of seconds the Notecard will wait before entering sleep mode
     /// (minimum value is 30).
-    struct seconds_t : Field<note::Seconds> {
-        using Field<note::Seconds>::Field;
-        using Field<note::Seconds>::operator=;
-        /// Reset to default behavior
-        static constexpr note::Seconds reset{ -1 };
-        CardSleep& operator()(note::Seconds v);
+    struct seconds_t : Field<int32_t> {
+        using Field<int32_t>::Field;
+        using Field<int32_t>::operator=;
+        CardSleep& operator()(int32_t v);
     } seconds{};
 
     // Valid values for 'mode':
@@ -295,8 +292,8 @@ inline CardSleep& CardSleep::on_t::operator()(bool v) {
     return *reinterpret_cast<CardSleep*>(
         reinterpret_cast<char*>(this) - offsetof(CardSleep, on));
 }
-inline CardSleep& CardSleep::seconds_t::operator()(note::Seconds v) {
-    Field<note::Seconds>::operator=(v);
+inline CardSleep& CardSleep::seconds_t::operator()(int32_t v) {
+    Field<int32_t>::operator=(v);
     return *reinterpret_cast<CardSleep*>(
         reinterpret_cast<char*>(this) - offsetof(CardSleep, seconds));
 }

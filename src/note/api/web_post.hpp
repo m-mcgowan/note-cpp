@@ -167,8 +167,7 @@ struct WebPost {
     /// When using the `application/octet-stream` content type, you may send
     /// large payloads to Notehub in fragments spanning several `web.post`
     /// requests by using `offset` (see above) and `total`. The `total` field
-    /// indicates the total size, in bytes (10MB max), of the payload across all
-    /// fragments.
+    /// indicates the total size, in bytes, of the payload across all fragments.
     ///
     /// @since{3.2.1}
 #if NOTE_API_VERSION < NOTE_VERSION(3, 2, 1)

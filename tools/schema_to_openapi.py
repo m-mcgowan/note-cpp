@@ -568,20 +568,7 @@ def main():
     upd.add_argument("-o", "--output", type=Path, default=None,
                      help="Output path (default: overwrite spec in place)")
 
-    # Legacy positional-arg mode (schema_dir as first arg, no subcommand)
-    parser.add_argument("schema_dir", type=Path, nargs="?",
-                        help="Path to notecard-schema repo (legacy mode)")
-    parser.add_argument("--safety", type=Path,
-                        default=Path(__file__).parent / "safety_semantics.json")
-    parser.add_argument("--binary", type=Path,
-                        default=Path(__file__).parent / "binary_transfer.json")
-    parser.add_argument("--extensions", type=Path,
-                        default=Path(__file__).parent / "property_extensions.json")
-    parser.add_argument("--op-extensions", type=Path,
-                        default=Path(__file__).parent / "operation_extensions.json")
-    parser.add_argument("--schema-tag", type=str, default=None)
-    parser.add_argument("--schema-commit", type=str, default=None)
-    parser.add_argument("-o", "--output", type=Path, default=None)
+    # No legacy mode — use 'convert' subcommand explicitly.
 
     args = parser.parse_args()
 

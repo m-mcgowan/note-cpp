@@ -11,7 +11,6 @@
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
-#include <note/units.hpp>
 #include <note/target.hpp>
 
 namespace note::api {
@@ -105,12 +104,10 @@ struct CardTransport {
 #if NOTE_API_VERSION < NOTE_VERSION(5, 3, 1)
     [[deprecated("requires firmware >= 5.3.1")]]
 #endif
-    struct seconds_t : Field<note::Seconds> {
-        using Field<note::Seconds>::Field;
-        using Field<note::Seconds>::operator=;
-        /// Reset to default
-        static constexpr note::Seconds reset{ -1 };
-        CardTransport& operator()(note::Seconds v);
+    struct seconds_t : Field<int32_t> {
+        using Field<int32_t>::Field;
+        using Field<int32_t>::operator=;
+        CardTransport& operator()(int32_t v);
     } seconds{};
 #endif
 #if NOTE_API_VERSION >= NOTE_VERSION(9, 1, 1) || !defined(NOTE_API_STRICT)
@@ -310,8 +307,8 @@ inline CardTransport& CardTransport::method_t::operator()(note::string_view v) {
         reinterpret_cast<char*>(this) - offsetof(CardTransport, method));
 }
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
-inline CardTransport& CardTransport::seconds_t::operator()(note::Seconds v) {
-    Field<note::Seconds>::operator=(v);
+inline CardTransport& CardTransport::seconds_t::operator()(int32_t v) {
+    Field<int32_t>::operator=(v);
     return *reinterpret_cast<CardTransport*>(
         reinterpret_cast<char*>(this) - offsetof(CardTransport, seconds));
 }

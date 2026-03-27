@@ -11,7 +11,6 @@
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
-#include <note/units.hpp>
 #include <note/target.hpp>
 
 namespace note::api {
@@ -48,10 +47,10 @@ struct CardMotionTrack {
         CardMotionTrack& operator()(note::string_view v);
     } file{};
     /// The maximum period to capture Notes in the Notefile.
-    struct minutes_t : Field<note::Minutes> {
-        using Field<note::Minutes>::Field;
-        using Field<note::Minutes>::operator=;
-        CardMotionTrack& operator()(note::Minutes v);
+    struct minutes_t : Field<int32_t> {
+        using Field<int32_t>::Field;
+        using Field<int32_t>::operator=;
+        CardMotionTrack& operator()(int32_t v);
     } minutes{};
     /// Set to `true` to trigger the immediate creation of a `_motion.qo` event
     /// if the orientation of the Notecard changes (overriding the `minutes`
@@ -188,8 +187,8 @@ inline CardMotionTrack& CardMotionTrack::file_t::operator()(note::string_view v)
     return *reinterpret_cast<CardMotionTrack*>(
         reinterpret_cast<char*>(this) - offsetof(CardMotionTrack, file));
 }
-inline CardMotionTrack& CardMotionTrack::minutes_t::operator()(note::Minutes v) {
-    Field<note::Minutes>::operator=(v);
+inline CardMotionTrack& CardMotionTrack::minutes_t::operator()(int32_t v) {
+    Field<int32_t>::operator=(v);
     return *reinterpret_cast<CardMotionTrack*>(
         reinterpret_cast<char*>(this) - offsetof(CardMotionTrack, minutes));
 }

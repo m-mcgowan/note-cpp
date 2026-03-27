@@ -11,7 +11,6 @@
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
-#include <note/units.hpp>
 #include <note/target.hpp>
 
 namespace note::api {
@@ -73,10 +72,10 @@ struct CardLocationMode {
         } max{};
         /// When geofence is enabled, the number of minutes the device should be
         /// outside the geofence before the Notecard location is tracked.
-        struct minutes_t : Field<note::Minutes> {
-            using Field<note::Minutes>::Field;
-            using Field<note::Minutes>::operator=;
-            CardLocationMode::Get& operator()(note::Minutes v);
+        struct minutes_t : Field<int32_t> {
+            using Field<int32_t>::Field;
+            using Field<int32_t>::operator=;
+            CardLocationMode::Get& operator()(int32_t v);
         } minutes{};
         /// Sets the location mode.
         // mode:  | off | periodic | continuous | fixed
@@ -122,12 +121,10 @@ struct CardLocationMode {
         /// if the Notecard detects motion. If seconds is < 300, during periods
         /// of sustained movement the Notecard will leave its onboard GPS/GNSS
         /// on continuously to avoid powering the module on and off repeatedly.
-        struct seconds_t : Field<note::Seconds> {
-            using Field<note::Seconds>::Field;
-            using Field<note::Seconds>::operator=;
-            /// Reset to default
-            static constexpr note::Seconds reset{ -1 };
-            CardLocationMode::Get& operator()(note::Seconds v);
+        struct seconds_t : Field<int32_t> {
+            using Field<int32_t>::Field;
+            using Field<int32_t>::operator=;
+            CardLocationMode::Get& operator()(int32_t v);
         } seconds{};
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
         /// When in `periodic` mode, the number of motion events (registered by
@@ -474,10 +471,10 @@ struct CardLocationMode {
         } max{};
         /// When geofence is enabled, the number of minutes the device should be
         /// outside the geofence before the Notecard location is tracked.
-        struct minutes_t : Field<note::Minutes> {
-            using Field<note::Minutes>::Field;
-            using Field<note::Minutes>::operator=;
-            CardLocationMode::Set& operator()(note::Minutes v);
+        struct minutes_t : Field<int32_t> {
+            using Field<int32_t>::Field;
+            using Field<int32_t>::operator=;
+            CardLocationMode::Set& operator()(int32_t v);
         } minutes{};
         /// Sets the location mode.
         // mode:  | off | periodic | continuous | fixed
@@ -523,12 +520,10 @@ struct CardLocationMode {
         /// if the Notecard detects motion. If seconds is < 300, during periods
         /// of sustained movement the Notecard will leave its onboard GPS/GNSS
         /// on continuously to avoid powering the module on and off repeatedly.
-        struct seconds_t : Field<note::Seconds> {
-            using Field<note::Seconds>::Field;
-            using Field<note::Seconds>::operator=;
-            /// Reset to default
-            static constexpr note::Seconds reset{ -1 };
-            CardLocationMode::Set& operator()(note::Seconds v);
+        struct seconds_t : Field<int32_t> {
+            using Field<int32_t>::Field;
+            using Field<int32_t>::operator=;
+            CardLocationMode::Set& operator()(int32_t v);
         } seconds{};
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
         /// When in `periodic` mode, the number of motion events (registered by
@@ -1073,21 +1068,19 @@ struct CardLocationMode {
         } max{};
         /// When geofence is enabled, the number of minutes the device should be
         /// outside the geofence before the Notecard location is tracked.
-        struct minutes_t : Field<note::Minutes> {
-            using Field<note::Minutes>::Field;
-            using Field<note::Minutes>::operator=;
-            CardLocationMode::Periodic& operator()(note::Minutes v);
+        struct minutes_t : Field<int32_t> {
+            using Field<int32_t>::Field;
+            using Field<int32_t>::operator=;
+            CardLocationMode::Periodic& operator()(int32_t v);
         } minutes{};
         /// When in `periodic` mode, location will be sampled at this interval,
         /// if the Notecard detects motion. If seconds is < 300, during periods
         /// of sustained movement the Notecard will leave its onboard GPS/GNSS
         /// on continuously to avoid powering the module on and off repeatedly.
-        struct seconds_t : Field<note::Seconds> {
-            using Field<note::Seconds>::Field;
-            using Field<note::Seconds>::operator=;
-            /// Reset to default
-            static constexpr note::Seconds reset{ -1 };
-            CardLocationMode::Periodic& operator()(note::Seconds v);
+        struct seconds_t : Field<int32_t> {
+            using Field<int32_t>::Field;
+            using Field<int32_t>::operator=;
+            CardLocationMode::Periodic& operator()(int32_t v);
         } seconds{};
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
         /// When in `periodic` mode, the number of motion events (registered by
@@ -1569,10 +1562,10 @@ struct CardLocationMode {
         } max{};
         /// When geofence is enabled, the number of minutes the device should be
         /// outside the geofence before the Notecard location is tracked.
-        struct minutes_t : Field<note::Minutes> {
-            using Field<note::Minutes>::Field;
-            using Field<note::Minutes>::operator=;
-            CardLocationMode::Remove& operator()(note::Minutes v);
+        struct minutes_t : Field<int32_t> {
+            using Field<int32_t>::Field;
+            using Field<int32_t>::operator=;
+            CardLocationMode::Remove& operator()(int32_t v);
         } minutes{};
         /// Sets the location mode.
         // mode:  | off | periodic | continuous | fixed
@@ -1618,12 +1611,10 @@ struct CardLocationMode {
         /// if the Notecard detects motion. If seconds is < 300, during periods
         /// of sustained movement the Notecard will leave its onboard GPS/GNSS
         /// on continuously to avoid powering the module on and off repeatedly.
-        struct seconds_t : Field<note::Seconds> {
-            using Field<note::Seconds>::Field;
-            using Field<note::Seconds>::operator=;
-            /// Reset to default
-            static constexpr note::Seconds reset{ -1 };
-            CardLocationMode::Remove& operator()(note::Seconds v);
+        struct seconds_t : Field<int32_t> {
+            using Field<int32_t>::Field;
+            using Field<int32_t>::operator=;
+            CardLocationMode::Remove& operator()(int32_t v);
         } seconds{};
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
         /// When in `periodic` mode, the number of motion events (registered by
@@ -1942,8 +1933,8 @@ inline CardLocationMode::Get& CardLocationMode::Get::max_t::operator()(int32_t v
     return *reinterpret_cast<CardLocationMode::Get*>(
         reinterpret_cast<char*>(this) - offsetof(CardLocationMode::Get, max));
 }
-inline CardLocationMode::Get& CardLocationMode::Get::minutes_t::operator()(note::Minutes v) {
-    Field<note::Minutes>::operator=(v);
+inline CardLocationMode::Get& CardLocationMode::Get::minutes_t::operator()(int32_t v) {
+    Field<int32_t>::operator=(v);
     return *reinterpret_cast<CardLocationMode::Get*>(
         reinterpret_cast<char*>(this) - offsetof(CardLocationMode::Get, minutes));
 }
@@ -1952,8 +1943,8 @@ inline CardLocationMode::Get& CardLocationMode::Get::mode_t::operator()(note::st
     return *reinterpret_cast<CardLocationMode::Get*>(
         reinterpret_cast<char*>(this) - offsetof(CardLocationMode::Get, mode));
 }
-inline CardLocationMode::Get& CardLocationMode::Get::seconds_t::operator()(note::Seconds v) {
-    Field<note::Seconds>::operator=(v);
+inline CardLocationMode::Get& CardLocationMode::Get::seconds_t::operator()(int32_t v) {
+    Field<int32_t>::operator=(v);
     return *reinterpret_cast<CardLocationMode::Get*>(
         reinterpret_cast<char*>(this) - offsetof(CardLocationMode::Get, seconds));
 }
@@ -1994,8 +1985,8 @@ inline CardLocationMode::Set& CardLocationMode::Set::max_t::operator()(int32_t v
     return *reinterpret_cast<CardLocationMode::Set*>(
         reinterpret_cast<char*>(this) - offsetof(CardLocationMode::Set, max));
 }
-inline CardLocationMode::Set& CardLocationMode::Set::minutes_t::operator()(note::Minutes v) {
-    Field<note::Minutes>::operator=(v);
+inline CardLocationMode::Set& CardLocationMode::Set::minutes_t::operator()(int32_t v) {
+    Field<int32_t>::operator=(v);
     return *reinterpret_cast<CardLocationMode::Set*>(
         reinterpret_cast<char*>(this) - offsetof(CardLocationMode::Set, minutes));
 }
@@ -2004,8 +1995,8 @@ inline CardLocationMode::Set& CardLocationMode::Set::mode_t::operator()(note::st
     return *reinterpret_cast<CardLocationMode::Set*>(
         reinterpret_cast<char*>(this) - offsetof(CardLocationMode::Set, mode));
 }
-inline CardLocationMode::Set& CardLocationMode::Set::seconds_t::operator()(note::Seconds v) {
-    Field<note::Seconds>::operator=(v);
+inline CardLocationMode::Set& CardLocationMode::Set::seconds_t::operator()(int32_t v) {
+    Field<int32_t>::operator=(v);
     return *reinterpret_cast<CardLocationMode::Set*>(
         reinterpret_cast<char*>(this) - offsetof(CardLocationMode::Set, seconds));
 }
@@ -2058,13 +2049,13 @@ inline CardLocationMode::Periodic& CardLocationMode::Periodic::max_t::operator()
     return *reinterpret_cast<CardLocationMode::Periodic*>(
         reinterpret_cast<char*>(this) - offsetof(CardLocationMode::Periodic, max));
 }
-inline CardLocationMode::Periodic& CardLocationMode::Periodic::minutes_t::operator()(note::Minutes v) {
-    Field<note::Minutes>::operator=(v);
+inline CardLocationMode::Periodic& CardLocationMode::Periodic::minutes_t::operator()(int32_t v) {
+    Field<int32_t>::operator=(v);
     return *reinterpret_cast<CardLocationMode::Periodic*>(
         reinterpret_cast<char*>(this) - offsetof(CardLocationMode::Periodic, minutes));
 }
-inline CardLocationMode::Periodic& CardLocationMode::Periodic::seconds_t::operator()(note::Seconds v) {
-    Field<note::Seconds>::operator=(v);
+inline CardLocationMode::Periodic& CardLocationMode::Periodic::seconds_t::operator()(int32_t v) {
+    Field<int32_t>::operator=(v);
     return *reinterpret_cast<CardLocationMode::Periodic*>(
         reinterpret_cast<char*>(this) - offsetof(CardLocationMode::Periodic, seconds));
 }
@@ -2114,8 +2105,8 @@ inline CardLocationMode::Remove& CardLocationMode::Remove::max_t::operator()(int
     return *reinterpret_cast<CardLocationMode::Remove*>(
         reinterpret_cast<char*>(this) - offsetof(CardLocationMode::Remove, max));
 }
-inline CardLocationMode::Remove& CardLocationMode::Remove::minutes_t::operator()(note::Minutes v) {
-    Field<note::Minutes>::operator=(v);
+inline CardLocationMode::Remove& CardLocationMode::Remove::minutes_t::operator()(int32_t v) {
+    Field<int32_t>::operator=(v);
     return *reinterpret_cast<CardLocationMode::Remove*>(
         reinterpret_cast<char*>(this) - offsetof(CardLocationMode::Remove, minutes));
 }
@@ -2124,8 +2115,8 @@ inline CardLocationMode::Remove& CardLocationMode::Remove::mode_t::operator()(no
     return *reinterpret_cast<CardLocationMode::Remove*>(
         reinterpret_cast<char*>(this) - offsetof(CardLocationMode::Remove, mode));
 }
-inline CardLocationMode::Remove& CardLocationMode::Remove::seconds_t::operator()(note::Seconds v) {
-    Field<note::Seconds>::operator=(v);
+inline CardLocationMode::Remove& CardLocationMode::Remove::seconds_t::operator()(int32_t v) {
+    Field<int32_t>::operator=(v);
     return *reinterpret_cast<CardLocationMode::Remove*>(
         reinterpret_cast<char*>(this) - offsetof(CardLocationMode::Remove, seconds));
 }

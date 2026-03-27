@@ -1212,7 +1212,9 @@ both libraries have similar per-request heap usage.
 - **`NOTE_C_LOW_MEM` equivalent** — note-cpp doesn't have a single
   "reduce everything" flag. Features are controlled structurally
   (template parameters, linker `--gc-sections`) rather than preprocessor
-  `#ifdef`. CRC validation is always present.
+  `#ifdef`. For the lowest memory path, `sax_parse_streaming()` parses
+  responses incrementally with only a small scratch buffer (`SaxStreamBuf`,
+  default 384 bytes on the stack). CRC validation is always present.
 
 See [Known Issues](known-issues.md) for details on the Clang limitation.
 

@@ -153,6 +153,24 @@ constexpr size_t raw_len = 1024;
 static_assert(note::cobs_encoded_size(raw_len) <= MAX_NOTECARD_BINARY);
 ```
 
+## Streaming SAX Parser
+
+For the lowest memory footprint, `sax_parse_streaming()` parses JSON
+incrementally from a transport read function — no full-response buffer needed.
+
+```cpp
+char buf[384];  // or any size — stack, static, arena
+note::SaxStreamBuf sbuf(buf);
+auto err = note::sax_parse_streaming(read_fn, timeout_ms, sbuf, sink);
+```
+
+The buffer is partitioned into three regions: read buffer (1/6), key scratch
+(1/6), and value scratch (4/6). Default overload uses 384 bytes on the stack.
+Zero heap allocation — all memory is caller-provided or stack.
+
+See [streaming-transport.md](streaming-transport.md) for the full design and
+`include/note/json_sax_streaming.hpp` for the implementation.
+
 ## See Also
 
 - [examples/zero_alloc.cpp](../examples/zero_alloc.cpp) — working example of all three patterns

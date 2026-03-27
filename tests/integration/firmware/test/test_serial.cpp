@@ -15,6 +15,8 @@
 #include <note/backends/cjson.hpp>
 #include <note/transport/serial.hpp>
 #include <note/transport/cobs.hpp>
+#include <note/json_sax_streaming.hpp>
+#include <note/units.hpp>
 #include "../include/cobs.hpp"  // cobs_encoded_size (legacy, used for verification)
 #include "../include/md5.hpp"
 
@@ -333,6 +335,165 @@ TEST_CASE("card.binary put + get — 512-byte payload") {
         data[i] = static_cast<uint8_t>((i * 7 + 13) & 0xFF);
     }
     binary_round_trip(f, data, sizeof(data), "512B");
+}
+
+// ─── Streaming SAX parser over real UART ────────────────────────────────────
+//
+// These tests parse Notecard responses incrementally via sax_parse_streaming,
+// reading directly from the serial transport. No full-response buffer.
+
+namespace {
+
+/// Sink that captures specific fields from a card.version response.
+struct VersionSink : public note::JsonSink {
+    std::string device, version;
+    void on_string(note::string_view key, note::string_view val) override {
+        if (key == "device")  device.assign(val.data(), val.size());
+        if (key == "version") version.assign(val.data(), val.size());
+    }
+};
+
+/// Sink that captures status from a card.status response.
+struct StatusSink : public note::JsonSink {
+    std::string status;
+    int32_t storage = -1;
+    void on_string(note::string_view key, note::string_view val) override {
+        if (key == "status") status.assign(val.data(), val.size());
+    }
+    void on_number(note::string_view key, note::string_view raw) override {
+        if (key == "storage") storage = note::parse_int(raw);
+    }
+};
+
+/// Sink that captures the "err" field (error responses).
+struct ErrorSink : public note::JsonSink {
+    std::string err;
+    void on_string(note::string_view key, note::string_view val) override {
+        if (key == "err") err.assign(val.data(), val.size());
+    }
+};
+
+/// Send a raw JSON request and parse the response via streaming SAX.
+/// Uses transport.send() to transmit, transport.read() to receive byte-by-byte.
+template<typename Sink>
+note::string_view streaming_request(SerialTransport& transport, const char* req_json,
+                                     Sink& sink, uint32_t timeout_ms = 10000) {
+    auto send_result = transport.send(note::string_view(req_json));
+    if (!send_result) return "send failed";
+
+    auto read_fn = [&](uint8_t* buf, size_t max, uint32_t timeout) -> note::Result<size_t> {
+        return transport.read(buf, max, timeout);
+    };
+    return note::sax_parse_streaming(read_fn, timeout_ms, sink);
+}
+
+template<typename Sink>
+note::string_view streaming_request(SerialTransport& transport, const char* req_json,
+                                     note::SaxStreamBuf& sbuf, Sink& sink,
+                                     uint32_t timeout_ms = 10000) {
+    auto send_result = transport.send(note::string_view(req_json));
+    if (!send_result) return "send failed";
+
+    auto read_fn = [&](uint8_t* buf, size_t max, uint32_t timeout) -> note::Result<size_t> {
+        return transport.read(buf, max, timeout);
+    };
+    return note::sax_parse_streaming(read_fn, timeout_ms, sbuf, sink);
+}
+
+} // namespace
+
+TEST_CASE("streaming sax: card.version matches execute()") {
+    Fixture f;
+
+    // Normal path — copy device (stable hardware ID) before buffer reuse
+    auto rsp = f.nc.card.version().execute();
+    REQUIRE(rsp);
+    std::string expected_device(rsp.device.data(), rsp.device.size());
+
+    // Streaming SAX path
+    VersionSink sink;
+    f.transport.reset();
+    auto err = streaming_request(f.transport, "{\"req\":\"card.version\"}\n", sink);
+    INFO("parse error: ", err.data());
+    REQUIRE(err.empty());
+
+    // device is a hardware serial number — must match exactly
+    CHECK(sink.device == expected_device);
+    // version has known prefix and varies in build metadata between calls
+    CHECK(sink.version.substr(0, 9) == "notecard-");
+    MESSAGE("streaming device: ", sink.device.c_str());
+    MESSAGE("streaming version: ", sink.version.c_str());
+}
+
+TEST_CASE("streaming sax: card.status") {
+    Fixture f;
+    StatusSink sink;
+    f.transport.reset();
+    auto err = streaming_request(f.transport, "{\"req\":\"card.status\"}\n", sink);
+    INFO("parse error: ", err.data());
+    REQUIRE(err.empty());
+    CHECK(!sink.status.empty());
+    MESSAGE("streaming status: ", sink.status.c_str());
+}
+
+TEST_CASE("streaming sax: small buffer (96 bytes)") {
+    Fixture f;
+    VersionSink sink;
+    char buf[96];
+    note::SaxStreamBuf sbuf(buf);
+    f.transport.reset();
+    auto err = streaming_request(f.transport, "{\"req\":\"card.version\"}\n", sbuf, sink);
+    INFO("parse error: ", err.data());
+    REQUIRE(err.empty());
+    CHECK(!sink.device.empty());
+    MESSAGE("96-byte buf device: ", sink.device.c_str());
+}
+
+TEST_CASE("streaming sax: error response") {
+    Fixture f;
+    ErrorSink sink;
+    f.transport.reset();
+    auto err = streaming_request(f.transport, "{\"req\":\"note.get\",\"file\":\"nonexistent.qi\"}\n", sink);
+    // Parse should succeed (it's valid JSON), but the response contains "err"
+    INFO("parse error: ", err.data());
+    REQUIRE(err.empty());
+    CHECK(!sink.err.empty());
+    MESSAGE("notecard error: ", sink.err.c_str());
+}
+
+TEST_CASE("streaming sax: sequential requests no desync") {
+    Fixture f;
+    for (int i = 0; i < 5; ++i) {
+        VersionSink sink;
+        f.transport.reset();
+        auto err = streaming_request(f.transport, "{\"req\":\"card.version\"}\n", sink);
+        INFO("iteration ", i, " parse error: ", err.data());
+        REQUIRE(err.empty());
+        CHECK(!sink.device.empty());
+    }
+    MESSAGE("5 sequential streaming parses completed");
+}
+
+TEST_CASE("streaming sax: interleaved with normal execute()") {
+    Fixture f;
+
+    // Normal execute
+    auto rsp1 = f.nc.card.version().execute();
+    REQUIRE(rsp1);
+
+    // Streaming SAX
+    VersionSink sink;
+    f.transport.reset();
+    auto err = streaming_request(f.transport, "{\"req\":\"card.version\"}\n", sink);
+    REQUIRE(err.empty());
+
+    // Normal execute again
+    auto rsp2 = f.nc.card.status().execute();
+    REQUIRE(rsp2);
+
+    // Verify all three succeeded
+    CHECK(!sink.device.empty());
+    CHECK(!note::string_view(rsp2.status).empty());
 }
 
 // ─── Error handling ─────────────────────────────────────────────────────────

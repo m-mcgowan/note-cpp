@@ -1,6 +1,6 @@
 # Streaming Transport — Design Document
 
-## Status: Proposed
+## Status: Phases 1–3 Complete
 
 This document captures the agreed design direction for refactoring the transport
 layer to support pure streaming and eliminate intermediate buffers.
@@ -137,7 +137,7 @@ flush remaining bytes before returning the error.
 
 ## Migration path
 
-### Phase 1 (current): add `write()`/`read()` alongside existing `transact()`
+### Phase 1 (complete): `write()`/`read()` alongside existing `transact()`
 
 - `write()` and `read()` added to `ITransport` with error defaults
 - `AbstractTransport` overrides via `do_write()`/`do_read()` protected virtuals
@@ -146,20 +146,30 @@ flush remaining bytes before returning the error.
 - JSON path continues using `transact()` with `response_buf_` (unchanged)
 - `CallbackTransport` accepts optional write/read callbacks for testing
 
-### Phase 2: caller-provided buffers for `transact()`
+### Phase 2 (complete): caller-provided buffers for `transact()`
 
-- Add `transact(request, buf, max_len, timeout)` overload
-- Receives into caller's buffer instead of `response_buf_`
-- `response_buf_` becomes optional / deprecated
-- Enables zero-allocation through the full stack
+- `set_receive_buffer(buf, len)` configures an external buffer for `transact()`
+- `transact_into(request, timeout, buf, size)` — one-shot caller-buffer transact
+- `receive_into()` private helper deduplicates read-until-newline + CRC logic
+- `transact_streaming()` — chunk-by-chunk response reading with callback
+- Phase 2 transport path: `response_buf_` bypassed, zero heap for receive
 
-### Phase 3: streaming JSON via SAX
+### Phase 3 (complete): streaming JSON via SAX
 
-- Build `transact_streaming(request, sink, timeout)` using `read()` + SAX parser
-- Response fields populated incrementally via `JsonSink` callbacks
-- Only string values buffered (via `StringPool` / arena)
-- `response_buf_` eliminated entirely
-- Full zero-allocation: no heap in transport, backend, or response parsing
+- `StreamingSaxParser` in `json_sax_streaming.hpp` — pull-model parser
+- Reads from any `ReadFn(uint8_t*, size_t, uint32_t) → Result<size_t>`
+- `SaxStreamBuf` partitions a caller-provided buffer into read/key/value regions
+- Default overload uses 384 bytes on the stack; caller can provide any buffer
+- Same `JsonSink` interface as the buffer-based SAX parser — generated code works unchanged
+- Zero heap allocation in the parser; strings accumulated into scratch buffers
+- Verified on real hardware (ESP32-S3 + Notecard over serial, all chunk sizes)
+
+### Future: backend dissolution
+
+- Wire `sax_parse_streaming` into the `Notecard::execute()` path
+- Eliminate `JsonBackend` for the streaming path (SAX parser replaces tree)
+- Incremental CRC checking (currently CRC requires the full response)
+- `response_buf_` fully eliminated
 
 ## Impact on `do_receive()` / `do_transmit()`
 

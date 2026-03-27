@@ -256,3 +256,361 @@ TEST_CASE("streaming sax: typical notecard response") {
         CHECK(events[4].value == "1711500000");
     }
 }
+
+// ---------------------------------------------------------------------------
+// Edge case tests
+// ---------------------------------------------------------------------------
+
+// ── 1. Long strings exceeding scratch ────────────────────────────────────
+
+TEST_CASE("streaming sax: long value string is silently truncated") {
+    // Default value scratch is 256 bytes. Build a 300+ char value.
+    std::string long_val(320, 'x');
+    std::string json = R"({"k":")" + long_val + R"("})";
+
+    // Should not crash at any chunk size
+    for (size_t chunk : {size_t(1), size_t(7), size_t(64), size_t(512)}) {
+        auto events = parse_with_chunks(json.c_str(), chunk);
+        REQUIRE(events.size() == 3);
+        CHECK(events[1].key == "k");
+        // Value should be truncated to 256 (default val scratch size)
+        CHECK(events[1].value.size() == 256);
+        CHECK(events[1].value == std::string(256, 'x'));
+    }
+}
+
+TEST_CASE("streaming sax: long key string is silently truncated") {
+    // Default key scratch is 64 bytes. Build an 80+ char key.
+    std::string long_key(80, 'k');
+    std::string json = R"({")" + long_key + R"(":1})";
+
+    for (size_t chunk : {size_t(1), size_t(5), size_t(256)}) {
+        auto events = parse_with_chunks(json.c_str(), chunk);
+        REQUIRE(events.size() == 3);
+        // Key should be truncated to 64 (default key scratch size)
+        CHECK(events[1].key.size() == 64);
+        CHECK(events[1].key == std::string(64, 'k'));
+        CHECK(events[1].value == "1");
+    }
+}
+
+// ── 2. Deeply nested objects ─────────────────────────────────────────────
+
+TEST_CASE("streaming sax: deeply nested objects (4 levels)") {
+    const char* json = R"({"a":{"b":{"c":{"d":1}}}})";
+
+    for (size_t chunk : {size_t(1), size_t(3)}) {
+        auto events = parse_with_chunks(json, chunk);
+        // { a:{ b:{ c:{ d:1 } } } }
+        REQUIRE(events.size() == 9);
+        CHECK(events[0].type == Event::ObjBegin);
+        CHECK(events[1].type == Event::ObjBegin);
+        CHECK(events[1].key == "a");
+        CHECK(events[2].type == Event::ObjBegin);
+        CHECK(events[2].key == "b");
+        CHECK(events[3].type == Event::ObjBegin);
+        CHECK(events[3].key == "c");
+        CHECK(events[4].type == Event::Number);
+        CHECK(events[4].key == "d");
+        CHECK(events[4].value == "1");
+        CHECK(events[5].type == Event::ObjEnd);
+        CHECK(events[6].type == Event::ObjEnd);
+        CHECK(events[7].type == Event::ObjEnd);
+        CHECK(events[8].type == Event::ObjEnd);
+    }
+}
+
+// ── 3. Empty containers in various positions ─────────────────────────────
+
+TEST_CASE("streaming sax: empty object and empty array") {
+    const char* json = R"({"a":{},"b":[]})";
+    for (size_t chunk : {size_t(1), size_t(3), size_t(64)}) {
+        auto events = parse_with_chunks(json, chunk);
+        // { a:{ } b:[ ] }
+        REQUIRE(events.size() == 6);
+        CHECK(events[0].type == Event::ObjBegin);
+        CHECK(events[1].type == Event::ObjBegin);
+        CHECK(events[1].key == "a");
+        CHECK(events[2].type == Event::ObjEnd);
+        CHECK(events[3].type == Event::ArrBegin);
+        CHECK(events[3].key == "b");
+        CHECK(events[4].type == Event::ArrEnd);
+        CHECK(events[5].type == Event::ObjEnd);
+    }
+}
+
+TEST_CASE("streaming sax: array containing empty object") {
+    const char* json = R"({"a":[{}]})";
+    for (size_t chunk : {size_t(1), size_t(2), size_t(64)}) {
+        auto events = parse_with_chunks(json, chunk);
+        // { a:[ { } ] }
+        REQUIRE(events.size() == 6);
+        CHECK(events[0].type == Event::ObjBegin);
+        CHECK(events[1].type == Event::ArrBegin);
+        CHECK(events[1].key == "a");
+        CHECK(events[2].type == Event::ObjBegin);
+        CHECK(events[3].type == Event::ObjEnd);
+        CHECK(events[4].type == Event::ArrEnd);
+        CHECK(events[5].type == Event::ObjEnd);
+    }
+}
+
+TEST_CASE("streaming sax: nested empty arrays") {
+    const char* json = R"({"a":[[],[]]})";
+    for (size_t chunk : {size_t(1), size_t(4), size_t(64)}) {
+        auto events = parse_with_chunks(json, chunk);
+        // { a:[ [ ] [ ] ] }
+        REQUIRE(events.size() == 8);
+        CHECK(events[0].type == Event::ObjBegin);
+        CHECK(events[1].type == Event::ArrBegin);
+        CHECK(events[1].key == "a");
+        CHECK(events[2].type == Event::ArrBegin);
+        CHECK(events[3].type == Event::ArrEnd);
+        CHECK(events[4].type == Event::ArrBegin);
+        CHECK(events[5].type == Event::ArrEnd);
+        CHECK(events[6].type == Event::ArrEnd);
+        CHECK(events[7].type == Event::ObjEnd);
+    }
+}
+
+// ── 4. Whitespace-heavy JSON ─────────────────────────────────────────────
+
+TEST_CASE("streaming sax: whitespace-heavy JSON with small chunks") {
+    const char* json = R"({  "a"  :  1  ,  "b"  :  2  })";
+    for (size_t chunk : {size_t(1), size_t(2), size_t(3)}) {
+        auto events = parse_with_chunks(json, chunk);
+        REQUIRE(events.size() == 4);
+        CHECK(events[0].type == Event::ObjBegin);
+        CHECK(events[1].type == Event::Number);
+        CHECK(events[1].key == "a");
+        CHECK(events[1].value == "1");
+        CHECK(events[2].type == Event::Number);
+        CHECK(events[2].key == "b");
+        CHECK(events[2].value == "2");
+        CHECK(events[3].type == Event::ObjEnd);
+    }
+}
+
+// ── 5. Malformed JSON error paths ────────────────────────────────────────
+
+TEST_CASE("streaming sax: error on unterminated string") {
+    const char* json = R"({"a":"hello)";
+    ByteFeeder feeder(json, strlen(json), 256);
+    RecordingSink sink;
+    auto read_fn = [&](uint8_t* buf, size_t max, uint32_t timeout) -> Result<size_t> {
+        return feeder.read(buf, max, timeout);
+    };
+    auto err = sax_parse_streaming(read_fn, 5000, sink);
+    REQUIRE(!err.empty());
+}
+
+TEST_CASE("streaming sax: error on missing colon") {
+    const char* json = R"({"a" 1})";
+    ByteFeeder feeder(json, strlen(json), 256);
+    RecordingSink sink;
+    auto read_fn = [&](uint8_t* buf, size_t max, uint32_t timeout) -> Result<size_t> {
+        return feeder.read(buf, max, timeout);
+    };
+    auto err = sax_parse_streaming(read_fn, 5000, sink);
+    REQUIRE(!err.empty());
+}
+
+TEST_CASE("streaming sax: error on missing comma") {
+    const char* json = R"({"a":1 "b":2})";
+    ByteFeeder feeder(json, strlen(json), 256);
+    RecordingSink sink;
+    auto read_fn = [&](uint8_t* buf, size_t max, uint32_t timeout) -> Result<size_t> {
+        return feeder.read(buf, max, timeout);
+    };
+    auto err = sax_parse_streaming(read_fn, 5000, sink);
+    REQUIRE(!err.empty());
+}
+
+TEST_CASE("streaming sax: error on truncated literal") {
+    const char* json = R"({"a":tru})";
+    ByteFeeder feeder(json, strlen(json), 256);
+    RecordingSink sink;
+    auto read_fn = [&](uint8_t* buf, size_t max, uint32_t timeout) -> Result<size_t> {
+        return feeder.read(buf, max, timeout);
+    };
+    auto err = sax_parse_streaming(read_fn, 5000, sink);
+    REQUIRE(!err.empty());
+}
+
+TEST_CASE("streaming sax: error on bare minus") {
+    const char* json = R"({"a":-})";
+    ByteFeeder feeder(json, strlen(json), 256);
+    RecordingSink sink;
+    auto read_fn = [&](uint8_t* buf, size_t max, uint32_t timeout) -> Result<size_t> {
+        return feeder.read(buf, max, timeout);
+    };
+    auto err = sax_parse_streaming(read_fn, 5000, sink);
+    REQUIRE(!err.empty());
+}
+
+TEST_CASE("streaming sax: error on leading zero in number") {
+    // Strict JSON rejects 01 as a number. Our parser consumes '0', then
+    // finds '1' where it expects ',' or '}', producing an error.
+    const char* json = R"({"a":01})";
+    ByteFeeder feeder(json, strlen(json), 256);
+    RecordingSink sink;
+    auto read_fn = [&](uint8_t* buf, size_t max, uint32_t timeout) -> Result<size_t> {
+        return feeder.read(buf, max, timeout);
+    };
+    auto err = sax_parse_streaming(read_fn, 5000, sink);
+    REQUIRE(!err.empty());
+}
+
+TEST_CASE("streaming sax: error on empty input") {
+    const char* json = "";
+    ByteFeeder feeder(json, strlen(json), 256);
+    RecordingSink sink;
+    auto read_fn = [&](uint8_t* buf, size_t max, uint32_t timeout) -> Result<size_t> {
+        return feeder.read(buf, max, timeout);
+    };
+    auto err = sax_parse_streaming(read_fn, 5000, sink);
+    REQUIRE(!err.empty());
+}
+
+TEST_CASE("streaming sax: error on just whitespace") {
+    const char* json = "   \t\n  ";
+    ByteFeeder feeder(json, strlen(json), 256);
+    RecordingSink sink;
+    auto read_fn = [&](uint8_t* buf, size_t max, uint32_t timeout) -> Result<size_t> {
+        return feeder.read(buf, max, timeout);
+    };
+    auto err = sax_parse_streaming(read_fn, 5000, sink);
+    REQUIRE(!err.empty());
+}
+
+// ── 6. SaxStreamBuf with caller-provided buffers ─────────────────────────
+
+TEST_CASE("streaming sax: explicit SaxStreamBuf with small buffer") {
+    const char* json = R"({"status":"ok","val":42})";
+
+    // 96 bytes total: partitioned as 16 read + 16 key + 64 value
+    char storage[96];
+    SaxStreamBuf sbuf(storage);
+
+    ByteFeeder feeder(json, strlen(json), 256);
+    RecordingSink sink;
+    auto read_fn = [&](uint8_t* buf, size_t max, uint32_t timeout) -> Result<size_t> {
+        return feeder.read(buf, max, timeout);
+    };
+    auto err = sax_parse_streaming(read_fn, 5000, sbuf, sink);
+    REQUIRE(err.empty());
+    REQUIRE(sink.events.size() == 4);
+    CHECK(sink.events[1].key == "status");
+    CHECK(sink.events[1].value == "ok");
+    CHECK(sink.events[2].key == "val");
+    CHECK(sink.events[2].value == "42");
+}
+
+TEST_CASE("streaming sax: explicit 3-region SaxStreamBuf") {
+    const char* json = R"({"x":"hello","y":true})";
+
+    // Separate buffers with explicit control
+    uint8_t rbuf[16];
+    char kbuf[32];
+    char vbuf[64];
+    SaxStreamBuf sbuf(rbuf, sizeof(rbuf), kbuf, sizeof(kbuf), vbuf, sizeof(vbuf));
+
+    ByteFeeder feeder(json, strlen(json), 256);
+    RecordingSink sink;
+    auto read_fn = [&](uint8_t* buf, size_t max, uint32_t timeout) -> Result<size_t> {
+        return feeder.read(buf, max, timeout);
+    };
+    auto err = sax_parse_streaming(read_fn, 5000, sbuf, sink);
+    REQUIRE(err.empty());
+    REQUIRE(sink.events.size() == 4);
+    CHECK(sink.events[1].key == "x");
+    CHECK(sink.events[1].value == "hello");
+    CHECK(sink.events[2].key == "y");
+    CHECK(sink.events[2].value == "true");
+}
+
+TEST_CASE("streaming sax: very small read buffer triggers frequent refills") {
+    const char* json = R"({"name":"test","count":7,"flag":false})";
+
+    // 8-byte read buffer with normal scratch sizes
+    uint8_t rbuf[8];
+    char kbuf[32];
+    char vbuf[128];
+    SaxStreamBuf sbuf(rbuf, sizeof(rbuf), kbuf, sizeof(kbuf), vbuf, sizeof(vbuf));
+
+    ByteFeeder feeder(json, strlen(json), 256);
+    RecordingSink sink;
+    auto read_fn = [&](uint8_t* buf, size_t max, uint32_t timeout) -> Result<size_t> {
+        return feeder.read(buf, max, timeout);
+    };
+    auto err = sax_parse_streaming(read_fn, 5000, sbuf, sink);
+    REQUIRE(err.empty());
+    REQUIRE(sink.events.size() == 5);
+    CHECK(sink.events[1].key == "name");
+    CHECK(sink.events[1].value == "test");
+    CHECK(sink.events[2].key == "count");
+    CHECK(sink.events[2].value == "7");
+    CHECK(sink.events[3].key == "flag");
+    CHECK(sink.events[3].value == "false");
+}
+
+// ── 7. Large number of fields ────────────────────────────────────────────
+
+TEST_CASE("streaming sax: 15+ fields in one object at 5-byte chunks") {
+    const char* json =
+        R"({"f1":1,"f2":2,"f3":3,"f4":4,"f5":5,"f6":6,"f7":7,"f8":8,)"
+        R"("f9":9,"f10":10,"f11":11,"f12":12,"f13":13,"f14":14,"f15":15,"f16":16})";
+
+    auto events = parse_with_chunks(json, 5);
+
+    // { + 16 fields + }
+    REQUIRE(events.size() == 18);
+    CHECK(events[0].type == Event::ObjBegin);
+    for (int i = 1; i <= 16; ++i) {
+        CHECK(events[static_cast<size_t>(i)].type == Event::Number);
+        CHECK(events[static_cast<size_t>(i)].key == "f" + std::to_string(i));
+        CHECK(events[static_cast<size_t>(i)].value == std::to_string(i));
+    }
+    CHECK(events[17].type == Event::ObjEnd);
+}
+
+// ── 8. Multiple consecutive parses ───────────────────────────────────────
+
+TEST_CASE("streaming sax: multiple consecutive parses through same infrastructure") {
+    const char* jsons[] = {
+        R"({"a":1})",
+        R"({"b":"two","c":true})",
+        R"({"d":[3,4],"e":null})",
+    };
+
+    // Parse 3 different JSON strings, verifying no state leaks between parses
+    for (int round = 0; round < 3; ++round) {
+        auto events = parse_with_chunks(jsons[round], 3);
+
+        switch (round) {
+        case 0:
+            REQUIRE(events.size() == 3);
+            CHECK(events[1].key == "a");
+            CHECK(events[1].value == "1");
+            break;
+        case 1:
+            REQUIRE(events.size() == 4);
+            CHECK(events[1].key == "b");
+            CHECK(events[1].value == "two");
+            CHECK(events[2].key == "c");
+            CHECK(events[2].value == "true");
+            break;
+        case 2:
+            REQUIRE(events.size() == 7);
+            CHECK(events[1].type == Event::ArrBegin);
+            CHECK(events[1].key == "d");
+            CHECK(events[2].value == "3");
+            CHECK(events[3].value == "4");
+            CHECK(events[4].type == Event::ArrEnd);
+            CHECK(events[5].type == Event::Null);
+            CHECK(events[5].key == "e");
+            CHECK(events[6].type == Event::ObjEnd);
+            break;
+        }
+    }
+}

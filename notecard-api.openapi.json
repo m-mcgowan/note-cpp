@@ -5901,6 +5901,10 @@
                         "const": "-",
                         "description": "Clear the currently-set triangulation mode."
                       }
+                    ],
+                    "x-flags": [
+                      "cell",
+                      "wifi"
                     ]
                   },
                   "on": {

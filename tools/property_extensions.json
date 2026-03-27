@@ -6,6 +6,9 @@
   "card.aux": {
     "start": { "x-action": "resetCounters" }
   },
+  "card.triangulate": {
+    "mode": { "x-flags": ["cell", "wifi"] }
+  },
   "card.dfu": {
     "on":    { "x-toggle": { "group": "update",    "method": "enableUpdate",      "combined": "enableUpdate" } },
     "off":   { "x-toggle": { "group": "update",    "method": "disableUpdate" } },

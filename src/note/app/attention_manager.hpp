@@ -2,6 +2,7 @@
 
 #include <note/api/card_attn.hpp>
 #include <note/app/state_store.hpp>
+#include <note/units.hpp>
 
 #include <algorithm>
 #include <string>

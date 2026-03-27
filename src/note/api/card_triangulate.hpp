@@ -11,7 +11,18 @@
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
+#include <note/flag_set.hpp>
 #include <note/target.hpp>
+
+namespace note::triangulate {
+    /// Enables cell tower scanning to determine the position of the Device.
+    inline constexpr uint32_t cell = 1u << 0;
+    /// Enables the use of nearby WiFi access points to determine the position
+    /// of the Device. To leverage this feature, the host will need to provide
+    /// access point information to the Notecard via the `text` argument in
+    /// subsequent requests.
+    inline constexpr uint32_t wifi = 1u << 1;
+} // namespace note::triangulate
 
 namespace note::api {
 
@@ -47,9 +58,65 @@ struct CardTriangulate {
     /// delimited list, in any order. See Using Cell Tower & WiFi Triangulation
     /// for more information.
     struct mode_t : Field<note::string_view> {
+#if __cplusplus >= 202002L && !defined(__clang__)
+        constexpr mode_t() = default;
+        template<std::size_t N_>
+        consteval mode_t(const char (&s)[N_])
+            : Field<note::string_view>(note::string_view(s, N_ - 1)) {
+            validate_flags(note::string_view(s, N_ - 1));
+        }
+        template<typename U>
+            requires std::is_convertible_v<U, note::string_view>
+                  && (!std::is_array_v<std::remove_reference_t<U>>)
+                  && (!std::is_same_v<std::decay_t<U>, mode_t>)
+        constexpr mode_t(U&& v) : Field<note::string_view>(note::string_view(std::forward<U>(v))) {}
+        template<typename U>
+            requires std::is_convertible_v<U, note::string_view>
+                  && (!std::is_array_v<std::remove_reference_t<U>>)
+                  && (!std::is_same_v<std::decay_t<U>, mode_t>)
+        mode_t& operator=(U&& v) {
+            Field<note::string_view>::operator=(note::string_view(std::forward<U>(v)));
+            return *this;
+        }
+        mode_t& operator=(std::nullopt_t) { Field<note::string_view>::reset(); return *this; }
+        mode_t(const mode_t&) = default;
+        mode_t& operator=(const mode_t&) = default;
+        mode_t(mode_t&&) = default;
+        mode_t& operator=(mode_t&&) = default;
+#else
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
+#endif
         CardTriangulate& operator()(note::string_view v);
+        CardTriangulate& operator=(uint32_t flags);
+        CardTriangulate& operator()(uint32_t flags);
+        mode_t& add(uint32_t flag);
+        mode_t& operator|=(uint32_t flag);
+        /// Enables cell tower scanning to determine the position of the Device.
+        mode_t& cell();
+        /// Enables the use of nearby WiFi access points to determine the
+        /// position of the Device. To leverage this feature, the host will need
+        /// to provide access point information to the Notecard via the `text`
+        /// argument in subsequent requests.
+        mode_t& wifi();
+        static constexpr note::FlagDef flag_defs_[] = {
+            { note::triangulate::cell, "cell" },
+            { note::triangulate::wifi, "wifi" },
+        };
+        note::FlagSet<2, 10> flags_{flag_defs_};
+#if __cplusplus >= 202002L
+        // consteval: validates that a string literal contains only known flags.
+        static consteval bool validate_flags(note::string_view sv) {
+            while (!sv.empty()) {
+                auto comma = sv.find(',');
+                auto token = (comma == sv.npos) ? sv : sv.substr(0, comma);
+                if (token != "cell" && token != "wifi")
+                    throw "card.triangulate: invalid flag";
+                sv = (comma == sv.npos) ? note::string_view{} : sv.substr(comma + 1);
+            }
+            return true;
+        }
+#endif
     } mode{};
     /// `true` to instruct the Notecard to triangulate even if the module has
     /// not moved. Only takes effect when `set` is `true`.
@@ -89,6 +156,8 @@ struct CardTriangulate {
     } usb{};
 
 
+    auto& cell() { mode.cell(); return *this; }
+    auto& wifi() { mode.wifi(); return *this; }
     template<typename T>
     auto& extra(note::string_view k_, T v_) {
         if (extras_count_ < NOTE_EXTRAS_MAX)
@@ -295,6 +364,35 @@ inline CardTriangulate& CardTriangulate::mode_t::operator()(note::string_view v)
     Field<note::string_view>::operator=(v);
     return *reinterpret_cast<CardTriangulate*>(
         reinterpret_cast<char*>(this) - offsetof(CardTriangulate, mode));
+}
+inline CardTriangulate& CardTriangulate::mode_t::operator=(uint32_t flags) {
+    flags_.set(flags);
+    Field<note::string_view>::operator=(flags_.str());
+    return *reinterpret_cast<CardTriangulate*>(
+        reinterpret_cast<char*>(this) - offsetof(CardTriangulate, mode));
+}
+inline CardTriangulate& CardTriangulate::mode_t::operator()(uint32_t flags) {
+    return operator=(flags);
+}
+inline CardTriangulate::mode_t& CardTriangulate::mode_t::add(uint32_t flag) {
+    flags_.add(flag);
+    Field<note::string_view>::operator=(flags_.str());
+    return *this;
+}
+inline CardTriangulate::mode_t& CardTriangulate::mode_t::operator|=(uint32_t flag) {
+    flags_ |= flag;
+    Field<note::string_view>::operator=(flags_.str());
+    return *this;
+}
+inline CardTriangulate::mode_t& CardTriangulate::mode_t::cell() {
+    flags_.add(note::triangulate::cell);
+    Field<note::string_view>::operator=(flags_.str());
+    return *this;
+}
+inline CardTriangulate::mode_t& CardTriangulate::mode_t::wifi() {
+    flags_.add(note::triangulate::wifi);
+    Field<note::string_view>::operator=(flags_.str());
+    return *this;
 }
 inline CardTriangulate& CardTriangulate::on_t::operator()(bool v) {
     Field<bool>::operator=(v);

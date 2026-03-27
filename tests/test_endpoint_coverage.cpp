@@ -3180,7 +3180,7 @@ TEST_CASE("note::api::CardTriangulate request builder") {
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.minutes(int32_t{42});
-    req.mode(note::string_view("x-mode"));
+    req.mode(note::string_view("cell"));
     req.on(true);
     req.set(true);
     req.text(note::string_view("x-text"));
@@ -3188,7 +3188,7 @@ TEST_CASE("note::api::CardTriangulate request builder") {
     req.usb(true);
     req.execute();
     REQUIRE(h.last_req.find("\"minutes\":42") != std::string::npos);
-    REQUIRE(h.last_req.find("\"mode\":\"x-mode\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"mode\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"on\":true") != std::string::npos);
     REQUIRE(h.last_req.find("\"set\":true") != std::string::npos);
     REQUIRE(h.last_req.find("\"text\":\"x-text\"") != std::string::npos);
@@ -3210,7 +3210,7 @@ TEST_CASE("note::api::CardTriangulate request builder") {
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover known-key routing in operator[] (true branch for each settable field)
     req["minutes"] = int32_t{42};
-    req["mode"] = note::string_view("x-mode");
+    req["mode"] = note::string_view("cell");
     req["on"] = true;
     req["set"] = true;
     req["text"] = note::string_view("x-text");

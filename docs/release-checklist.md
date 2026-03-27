@@ -35,10 +35,14 @@
 - [ ] Coverage ≥ 90% lines, 90% functions, 85% branches
 - [ ] Arduino CLI compiles both sketches
 
-### Streaming transport (if included in v0.1)
-- [ ] Phase 1: write()/read() on ITransport — binary streaming works
-- [ ] Binary send/receive verified on hardware
-- [ ] Design doc (streaming-transport.md) accurate
+### Streaming transport
+- [x] Phase 1: write()/read() on ITransport — binary streaming works
+- [x] Phase 2: caller-provided buffers (set_receive_buffer, transact_into)
+- [x] Phase 3: streaming SAX parser (StreamingSaxParser, SaxStreamBuf)
+- [x] Binary send/receive verified on hardware (serial, 1.9 MPCB)
+- [x] Streaming SAX verified on hardware (6 tests, all pass)
+- [x] Serial over-read fix — binary after JSON preserved via overflow buffer
+- [x] Design doc (streaming-transport.md) accurate
 
 ### API stability
 - [ ] Public API headers reviewed for consistency

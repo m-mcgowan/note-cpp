@@ -88,6 +88,13 @@ All in `namespace note::transport`:
 - CRC auto-detected: first response containing a `"crc"` field enables CRC for subsequent requests.
 - CRC sequence number is fixed for all retries of a given request (matches note-c behaviour).
 
+### Binary streaming
+
+`write()`/`read()` primitives bypass `transact()` for raw binary (COBS) data.
+On serial, `\n` is the frame delimiter for both JSON responses and COBS streams.
+`do_receive()` stops precisely at `\n`; subsequent `do_read()` calls receive
+the binary data that follows.
+
 ---
 
 ## I2C transport

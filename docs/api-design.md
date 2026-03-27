@@ -42,34 +42,37 @@ The `Api` class groups methods by the first segment of the `req` string, using a
 ```cpp
 note::Api api(nc);
 
-api.card.version()           // → {"req": "card.version"}
-api.card.locationMode()      // → {"req": "card.location.mode"}
-api.card.binary()            // → {"req": "card.binary"}
-api.card.binary.get()         // → {"req": "card.binary.get"}
+// Simple endpoints — group.method():
+api.card.version()            // → {"req": "card.version"}
+api.card.temp().read()        // → {"req": "card.temp"}
+api.hub.set()                 // → {"req": "hub.set"}
+
+// Nested endpoints — group.parent.child():
 api.card.binary.put()         // → {"req": "card.binary.put"}
+api.card.binary.get()         // → {"req": "card.binary.get"}
+api.card.binary.status()      // → {"req": "card.binary"}
+api.card.location.mode        // → card.location.mode (polymorphic factory)
+api.card.location.track()     // → {"req": "card.location.track"}
+api.card.aux.serial()         // → {"req": "card.aux.serial"}
+api.card.wireless.penalty     // → card.wireless.penalty (polymorphic factory)
+api.hub.sync.status()         // → {"req": "hub.sync.status"}
+api.file.changes().pending()  // → {"req": "file.changes.pending"}
 
-api.note.get()               // → {"req": "note.get"}
-api.note.delete_()           // → {"req": "note.delete"}
-api.note.add()               // → {"req": "note.add"}
-api.note.changes()           // → {"req": "note.changes"}
-api.note.template_()         // → {"req": "note.template"}
-api.note.update()            // → {"req": "note.update"}
+// Aliases with natural names:
+api.note.read("data.qi")     // → {"req": "note.get", "file": "data.qi"}
+api.note.remove("x.db", "n") // → {"req": "note.delete", "file": "x.db", "note": "n"}
+api.file.remove("old.db")    // → {"req": "file.delete", "files": ["old.db"]}
 
-api.hub.set()                // → {"req": "hub.set"}
-api.hub.get()                // → {"req": "hub.get"}
-api.hub.sync()               // → {"req": "hub.sync"}
-api.hub.syncStatus()         // → {"req": "hub.sync.status"}
-
-api.env.get()                // → {"req": "env.get"}
-api.env.set("name")          // → {"req": "env.set", "name": "name"}
-api.env.default_("name")     // → {"req": "env.default", "name": "name"}
-
-api.file.changes()           // → {"req": "file.changes"}
-api.file.remove("data.db")   // → {"req": "file.delete", "files": ["data.db"]}
-api.file.stats()             // → {"req": "file.stats"}
+// C++ keywords get _ suffix on the raw method:
+api.note.delete_()            // → {"req": "note.delete"}
+api.env.templates()           // → {"req": "env.template"} (renamed, not suffixed)
 ```
 
-The rule: strip the first segment, camelCase the rest, append `_` if it's a C++ keyword (`delete`, `template`, `default`).
+**Naming rules:**
+- Strip the first segment, use remaining segments as accessor path
+- 2-segment endpoints (e.g. `card.binary`) that have children become member factories: `api.card.binary.put()`
+- 1-segment parents keep children as flat methods: `api.hub.sync()` / `api.hub.sync.status()`
+- C++ keywords get `_` suffix: `delete_()`, or a natural rename: `remove()`, `templates()`
 
 ### Polymorphic endpoints in Layer 1
 
@@ -239,14 +242,15 @@ auto pop(string_view file) {
 
 ### `card` group
 
-| Layer 1 method | `req` string | Layer 2 aliases |
+| API accessor | `req` string | Layer 2 aliases |
 |---|---|---|
-| `card.attn()` | `card.attn` | |
+| `card.attn()` | `card.attn` | `.arm()`, `.sleep()`, `.retrieve()`, `.disarm()`, `.query()`, `.watchdog()` |
 | `card.aux()` | `card.aux` | |
-| `card.auxSerial()` | `card.aux.serial` | |
-| `card.binary()` | `card.binary` | `binary.status()`, `binary.clear()` |
-| `card.binary.get()` | `card.binary.get` | |
-| `card.binary.put()` | `card.binary.put` | |
+| `card.aux.serial()` | `card.aux.serial` | |
+| `card.binary.status()` | `card.binary` | Also: `binary.status()` (top-level) |
+| `card.binary.clear()` | `card.binary` | Also: `binary.clear()` (top-level) |
+| `card.binary.get()` | `card.binary.get` | Also: `binary.get()` (top-level) |
+| `card.binary.put()` | `card.binary.put` | Also: `binary.put()` (top-level) |
 | `card.carrier()` | `card.carrier` | |
 | `card.contact()` | `card.contact` | `.get()`, `.set()` |
 | `card.dfu()` | `card.dfu` | |
@@ -254,13 +258,13 @@ auto pop(string_view file) {
 | `card.io()` | `card.io` | |
 | `card.led()` | `card.led` | |
 | `card.location()` | `card.location` | |
-| `card.locationMode()` | `card.location.mode` | `.get()`, `.configure()`, `.remove()` |
-| `card.locationTrack()` | `card.location.track` | |
+| `card.location.mode` | `card.location.mode` | `.get()`, `.set()`, `.periodic()`, `.continuous()`, `.fixed()`, `.remove()` |
+| `card.location.track()` | `card.location.track` | |
 | `card.monitor()` | `card.monitor` | |
 | `card.motion()` | `card.motion` | |
-| `card.motionMode()` | `card.motion.mode` | |
-| `card.motionSync()` | `card.motion.sync` | |
-| `card.motionTrack()` | `card.motion.track` | |
+| `card.motion.mode()` | `card.motion.mode` | |
+| `card.motion.sync()` | `card.motion.sync` | |
+| `card.motion.track()` | `card.motion.track` | |
 | `card.power()` | `card.power` | `.read()`, `.configure()`, `.reset()` |
 | `card.random()` | `card.random` | |
 | `card.restart()` | `card.restart` | |
@@ -272,17 +276,17 @@ auto pop(string_view file) {
 | `card.trace()` | `card.trace` | |
 | `card.transport()` | `card.transport` | |
 | `card.triangulate()` | `card.triangulate` | |
-| `card.usageGet()` | `card.usage.get` | |
-| `card.usageTest()` | `card.usage.test` | |
+| `card.usage.get()` | `card.usage.get` | |
+| `card.usage.test()` | `card.usage.test` | |
 | `card.version()` | `card.version` | |
 | `card.voltage()` | `card.voltage` | `.read()`, `.configure()` |
 | `card.wifi()` | `card.wifi` | |
 | `card.wireless()` | `card.wireless` | |
-| `card.wirelessPenalty()` | `card.wireless.penalty` | `.check()`, `.override_()`, `.clear()` |
+| `card.wireless.penalty` | `card.wireless.penalty` | `.check()`, `.set()`, `.clear()` |
 
 ### `hub` group
 
-| Layer 1 method | `req` string | Layer 2 aliases |
+| API accessor | `req` string | Layer 2 aliases |
 |---|---|---|
 | `hub.get()` | `hub.get` | |
 | `hub.log()` | `hub.log` | |
@@ -290,54 +294,54 @@ auto pop(string_view file) {
 | `hub.signal()` | `hub.signal` | |
 | `hub.status()` | `hub.status` | |
 | `hub.sync()` | `hub.sync` | |
-| `hub.syncStatus()` | `hub.sync.status` | |
+| `hub.sync.status()` | `hub.sync.status` | |
 
 ### `note` group
 
-| Layer 1 method | `req` string | Layer 2 aliases |
+| API accessor | `req` string | Layer 2 aliases |
 |---|---|---|
 | `note.add()` | `note.add` | |
-| `note.changes()` | `note.changes` | `.peek()`, `.pop(file)` · `popChanges(file)` |
-| `note.remove(file, id)` | `note.delete` | |
+| `note.changes()` | `note.changes` | `.peek()`, `.pop()` · `popChanges(file)` |
+| `note.delete_()` | `note.delete` | `remove(file, noteId)` |
 | `note.get()` | `note.get` | `.read()`, `.pop()` · `read(file)`, `pop(file)` |
-| `note.templates()` | `note.template` | `.define(file)`, `.remove(file)` |
+| `note.templates()` | `note.template` | `.define(file)`, `.remove(file)` · `clearTemplate(file)` |
 | `note.update()` | `note.update` | |
 
 ### `env` group
 
-| Layer 1 method | `req` string | Layer 2 aliases |
+| API accessor | `req` string | Layer 2 aliases |
 |---|---|---|
 | `env.defaults()` | `env.default` | `.set()`, `.remove(name)` · `setDefault(name, text)`, `clearDefault(name)` |
 | `env.get()` | `env.get` | |
 | `env.modified()` | `env.modified` | |
-| `env.set("name")` | `env.set` | |
-| `env.template_()` | `env.template` | |
+| `env.set()` | `env.set` | |
+| `env.templates()` | `env.template` | |
 
 ### `file` group
 
-| Layer 1 method | `req` string | Layer 2 aliases |
+| API accessor | `req` string | Layer 2 aliases |
 |---|---|---|
 | `file.changes()` | `file.changes` | |
-| `file.changesPending()` | `file.changes.pending` | |
+| `file.changes().pending()` | `file.changes.pending` | |
 | `file.clear()` | `file.clear` | |
-| `file.delete_()` / `file.remove(file)` | `file.delete` | |
+| `file.delete_()` | `file.delete` | `remove()`, `remove(files)` |
 | `file.stats()` | `file.stats` | |
 
 ### Other groups
 
-| Layer 1 method | `req` string |
-|---|---|
-| `dfu.get()` | `dfu.get` |
-| `dfu.status()` | `dfu.status` |
-| `ntn.gps()` | `ntn.gps` |
-| `ntn.reset()` | `ntn.reset` |
-| `ntn.status()` | `ntn.status` |
-| `var.delete_()` | `var.delete` |
-| `var.get()` | `var.get` |
-| `var.set()` | `var.set` |
-| `web.request()` | `web` |
-| `web.delete_()` | `web.delete` |
-| `web.get()` | `web.get` |
-| `web.post()` | `web.post` |
-| `web.put()` | `web.put` |
+| API accessor | `req` string | Layer 2 aliases |
+|---|---|---|
+| `dfu.get()` | `dfu.get` | |
+| `dfu.status()` | `dfu.status` | |
+| `ntn.gps()` | `ntn.gps` | |
+| `ntn.reset()` | `ntn.reset` | |
+| `ntn.status()` | `ntn.status` | |
+| `var.delete_()` | `var.delete` | `remove()` |
+| `var.get()` | `var.get` | |
+| `var.set()` | `var.set` | |
+| `web()` | `web` | `request()` |
+| `web.delete_()` | `web.delete` | `remove()` |
+| `web.get()` | `web.get` | |
+| `web.post()` | `web.post` | |
+| `web.put()` | `web.put` | |
 

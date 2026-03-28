@@ -151,6 +151,26 @@ TEST_CASE("env.default set + get round-trip") {
 
 // ─── Error handling ─────────────────────────────────────────────────────────
 
+namespace { struct MaxTestPayload { int32_t a; NOTE_FIELDS(a) }; }
+
+TEST_CASE("note.add max limit produces Notecard error") {
+    auto& nc = notecard_api();
+    const char* file = "integration-err.qo";
+
+    nc.file.remove(file).execute();
+
+    auto r1 = nc.note.add().file(file).body(MaxTestPayload{1}).max(1).execute();
+    if (!r1) { MESSAGE("add error: ", note::to_string(r1.error())); }
+    REQUIRE(r1);
+
+    auto r2 = nc.note.add().file(file).body(MaxTestPayload{2}).max(1).execute();
+    REQUIRE_FALSE(r2);
+    REQUIRE(r2.error().code == note::Error::Notecard);
+    MESSAGE("Notecard error: ", r2.error().message);
+
+    nc.file.remove(file).execute();
+}
+
 TEST_CASE("bad request returns Notecard error") {
     auto& nc = notecard_api();
     auto rsp = nc.note.pop("nonexistent-file.qi").execute();

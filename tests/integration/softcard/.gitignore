@@ -1,0 +1,5 @@
+.cache/
+compile_commands.json
+logs/
+.pio/
+.vscode/

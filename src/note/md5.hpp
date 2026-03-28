@@ -124,10 +124,15 @@ public:
 };
 
 
+// Detect mbedtls MD5 availability. The header may exist (e.g. ESP32 SDK)
+// but MD5 can be disabled in the mbedtls config (MBEDTLS_MD5_C not defined).
 #if defined(NOTE_USE_MBEDTLS) || (defined(ESP_PLATFORM) && __has_include(<mbedtls/md5.h>))
 #include <mbedtls/md5.h>
+#endif
 
-/// mbedtls-backed MD5 — available when <mbedtls/md5.h> is present.
+#if defined(MBEDTLS_MD5_C) || defined(NOTE_USE_MBEDTLS)
+
+/// mbedtls-backed MD5 — available when mbedtls has MD5 enabled.
 /// Typically hardware-accelerated on ESP32 targets.
 class MbedTlsMd5 : public Md5Provider {
 public:

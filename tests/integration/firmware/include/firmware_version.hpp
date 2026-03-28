@@ -49,10 +49,20 @@ struct VersionGate {
 
 inline constexpr VersionGate VERSION_GATES[] = {
     { NOTE_VERSION(3, 2, 1), "fw>=3.2.1" },
+    { NOTE_VERSION(3, 3, 1), "fw>=3.3.1" },
     { NOTE_VERSION(3, 4, 1), "fw>=3.4.1" },
     { NOTE_VERSION(3, 5, 1), "fw>=3.5.1" },
+    { NOTE_VERSION(4, 1, 1), "fw>=4.1.1" },
     { NOTE_VERSION(5, 1, 1), "fw>=5.1.1" },
     { NOTE_VERSION(5, 3, 1), "fw>=5.3.1" },
+    { NOTE_VERSION(6, 2, 3), "fw>=6.2.3" },
+    { NOTE_VERSION(7, 2, 1), "fw>=7.2.1" },
+    { NOTE_VERSION(7, 2, 2), "fw>=7.2.2" },
+    { NOTE_VERSION(7, 3, 1), "fw>=7.3.1" },
+    { NOTE_VERSION(7, 5, 1), "fw>=7.5.1" },
+    { NOTE_VERSION(7, 5, 2), "fw>=7.5.2" },
+    { NOTE_VERSION(8, 2, 1), "fw>=8.2.1" },
+    { NOTE_VERSION(9, 1, 1), "fw>=9.1.1" },
 };
 
 /// Build comma-separated exclude pattern for suites above fw_version.

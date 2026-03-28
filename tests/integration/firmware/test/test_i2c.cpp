@@ -15,6 +15,7 @@
 #include <note/backends/cjson.hpp>
 #include <note/transport/i2c.hpp>
 #include <note/transport/cobs.hpp>
+#include <note/units.hpp>
 #include "../include/cobs.hpp"  // cobs_encoded_size (legacy, used for verification)
 #include "../include/md5.hpp"
 
@@ -420,6 +421,76 @@ TEST_CASE("bad request returns Notecard error") {
     }
 }
 
-} // TEST_SUITE
+// ─── Version-gated API fields ───────────────────────────────────────────────
+//
+// These tests exercise fields with x-min-api-version, wrapped in
+// TEST_SUITE("fw>=X.Y.Z") so they skip on older firmware. They verify
+// that the version gating infrastructure works and that the Notecard
+// accepts requests with these fields.
+
+TEST_SUITE("fw>=3.2.1") {
+TEST_CASE("card.attn verify field (3.2.1+)") {
+    Fixture f;
+    // verify is a boolean field on card.attn — just check it compiles and sends
+    auto rsp = f.nc.card.attn().request().verify(true).execute();
+    // Don't assert success — attn state depends on prior tests
+    MESSAGE("card.attn verify: ", rsp ? "ok" : note::to_string(rsp.error()));
+}
+} // fw>=3.2.1
+
+TEST_SUITE("fw>=3.4.1") {
+TEST_CASE("env.get with names filter (3.4.1+)") {
+    Fixture f;
+    auto req = f.nc.env.get();
+    req.names = {"_*"};
+    auto rsp = req.execute();
+    if (!rsp) { MESSAGE("env.get names: ", note::to_string(rsp.error())); }
+    CHECK(rsp);
+}
+} // fw>=3.4.1
+
+TEST_SUITE("fw>=5.1.1") {
+TEST_CASE("note.add full field (5.1.1+)") {
+    Fixture f;
+    // full:true tells Notecard to report when the notefile is full
+    auto rsp = f.nc.note.add().file("_integration_fw_gate.qo").full(true).execute();
+    if (!rsp) { MESSAGE("note.add full: ", note::to_string(rsp.error())); }
+    CHECK(rsp);
+    // Clean up
+    f.nc.file.remove("_integration_fw_gate.qo").execute();
+}
+} // fw>=5.1.1
+
+TEST_SUITE("fw>=5.3.1") {
+TEST_CASE("card.transport seconds field (5.3.1+)") {
+    Fixture f;
+    // Read transport settings — seconds field gated at 5.3.1
+    auto rsp = f.nc.card.transport().seconds(note::Seconds{3600}).execute();
+    if (!rsp) { MESSAGE("card.transport seconds: ", note::to_string(rsp.error())); }
+    CHECK(rsp);
+}
+} // fw>=5.3.1
+
+TEST_SUITE("fw>=8.2.1") {
+TEST_CASE("note.add max field (8.2.1+)") {
+    Fixture f;
+    auto rsp = f.nc.note.add().file("_integration_fw_gate.qo").max(10).execute();
+    if (!rsp) { MESSAGE("note.add max: ", note::to_string(rsp.error())); }
+    CHECK(rsp);
+    f.nc.file.remove("_integration_fw_gate.qo").execute();
+}
+} // fw>=8.2.1
+
+TEST_SUITE("fw>=9.1.1") {
+TEST_CASE("note.add limit field (9.1.1+)") {
+    Fixture f;
+    auto rsp = f.nc.note.add().file("_integration_fw_gate.qo").limit(100).execute();
+    if (!rsp) { MESSAGE("note.add limit: ", note::to_string(rsp.error())); }
+    CHECK(rsp);
+    f.nc.file.remove("_integration_fw_gate.qo").execute();
+}
+} // fw>=9.1.1
+
+} // TEST_SUITE("i2c")
 
 #endif // NOTECARD_TEST_I2C

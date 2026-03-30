@@ -545,6 +545,7 @@ run_coverage() {
         --quiet
     lcov --remove "$OUT_DIR/coverage-filtered.lcov" "*/third_party/*" \
         --rc branch_coverage=1 \
+        --ignore-errors unused \
         --output-file "$OUT_DIR/coverage.lcov" \
         --quiet
 

@@ -159,6 +159,8 @@ public:
 
 } // namespace detail
 
+#if __cplusplus >= 202002L
+
 /// Consteval: true if the string is well-formed JSON and a top-level object.
 consteval bool json_valid(std::string_view s) {
     detail::JsonValidator v;
@@ -170,5 +172,21 @@ consteval bool json_valid_any(std::string_view s) {
     detail::JsonValidator v;
     return v.validate(s);
 }
+
+#else
+
+/// Constexpr: true if the string is well-formed JSON and a top-level object.
+constexpr bool json_valid(std::string_view s) {
+    detail::JsonValidator v;
+    return v.validate_object(s);
+}
+
+/// Constexpr: true if the string is well-formed JSON (any top-level type).
+constexpr bool json_valid_any(std::string_view s) {
+    detail::JsonValidator v;
+    return v.validate(s);
+}
+
+#endif
 
 } // namespace note

@@ -7,3 +7,4 @@ docs/html/
 tests/integration/firmware/boards.sh
 
 ci.log
+.release-validation/

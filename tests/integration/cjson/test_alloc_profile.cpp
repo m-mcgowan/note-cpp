@@ -298,14 +298,14 @@ static void test_serial_transport_alloc_profile() {
     hal.queue_response("{\"version\":\"notecard-7.2.1\"}\r\n");
 
     // Warm up: first call triggers reset
-    auto warmup = transport("{\"req\":\"card.version\"}", 10000);
+    auto warmup = transport.transact("{\"req\":\"card.version\"}", 10000);
     assert(warmup.has_value());
 
     // Now measure a steady-state request
     hal.queue_response("{\"version\":\"notecard-7.2.1\"}\r\n");
 
     TrackingScope scope;
-    auto result = transport("{\"req\":\"card.version\"}", 10000);
+    auto result = transport.transact("{\"req\":\"card.version\"}", 10000);
     auto stats = scope.finish();
 
     assert(result.has_value());
@@ -323,14 +323,14 @@ static void test_i2c_transport_alloc_profile() {
 
     // Warm up
     hal.queue_response("{\"version\":\"notecard-7.2.1\"}\n");
-    auto warmup = transport("{\"req\":\"card.version\"}", 10000);
+    auto warmup = transport.transact("{\"req\":\"card.version\"}", 10000);
     assert(warmup.has_value());
 
     // Steady-state measurement
     hal.queue_response("{\"version\":\"notecard-7.2.1\"}\n");
 
     TrackingScope scope;
-    auto result = transport("{\"req\":\"card.version\"}", 10000);
+    auto result = transport.transact("{\"req\":\"card.version\"}", 10000);
     auto stats = scope.finish();
 
     assert(result.has_value());
@@ -349,7 +349,7 @@ static void test_full_execute_alloc_profile() {
 
     // Warm up transport
     hal.queue_response("{}\r\n");
-    auto warmup = transport("{\"req\":\"card.version\"}", 10000);
+    auto warmup = transport.transact("{\"req\":\"card.version\"}", 10000);
     assert(warmup.has_value());
 
     // Build the Notecard and Api outside the tracking scope
@@ -381,7 +381,7 @@ static void test_execute_with_body_alloc_profile() {
 
     // Warm up
     hal.queue_response("{}\r\n");
-    transport("{}", 10000);
+    transport.transact("{}", 10000);
 
     note::Notecard nc(backend, transport);
     note::Api api(nc);
@@ -411,7 +411,7 @@ static void test_leak_detection() {
 
     // Warm up
     hal.queue_response("{}\r\n");
-    transport("{}", 10000);
+    transport.transact("{}", 10000);
 
     note::Notecard nc(backend, transport);
     note::Api api(nc);
@@ -446,7 +446,7 @@ static void test_multiple_requests_no_growth() {
 
     // Warm up
     hal.queue_response("{}\r\n");
-    transport("{}", 10000);
+    transport.transact("{}", 10000);
 
     note::Notecard nc(backend, transport);
     note::Api api(nc);
@@ -497,7 +497,7 @@ static void test_arena_zero_heap_execute() {
 
     // Warm up: transport buffer + backend owned_reader_ established
     hal.queue_response("{\"version\":\"notecard-7.2.1\",\"device\":\"dev:12345\",\"board\":\"1.0\"}\r\n");
-    auto warmup = transport("{\"req\":\"card.version\"}", 10000);
+    auto warmup = transport.transact("{\"req\":\"card.version\"}", 10000);
     assert(warmup.has_value());
 
     note::Notecard nc(backend, transport);
@@ -539,7 +539,7 @@ static void test_arena_multiple_requests_bounded() {
 
     // Warm up transport with a realistic-sized response
     hal.queue_response("{\"version\":\"notecard-7.2.1\",\"device\":\"dev:1\"}\r\n");
-    transport("{\"req\":\"card.version\"}", 10000);
+    transport.transact("{\"req\":\"card.version\"}", 10000);
 
     note::Notecard nc(backend, transport);
     note::Api api(nc);

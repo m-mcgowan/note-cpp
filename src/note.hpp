@@ -15,6 +15,7 @@
 #include "note/notecard_api.hpp"
 #include "note/api.hpp"
 #include "note/body.hpp"
+#include "note/units.hpp"
 
 #ifdef ARDUINO
 #include "note/arduino.hpp"

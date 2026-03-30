@@ -24,6 +24,7 @@
 
 #include <note/notecard.hpp>
 #include <note/api/card_attn.hpp>
+#include <note/units.hpp>
 
 // ═════════════════════════════════════════════════════════════════════════
 // Intent-based API — each operation has its own type with only the

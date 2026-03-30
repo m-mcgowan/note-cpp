@@ -12,6 +12,7 @@ struct MockBuilder : note::JsonBuilder {
     MockBuilder& add(note::string_view, int32_t) override { return *this; }
     MockBuilder& add(note::string_view, double) override { return *this; }
     MockBuilder& add(note::string_view, note::string_view) override { return *this; }
+    MockBuilder& add_raw(note::string_view, note::string_view) override { return *this; }
     MockBuilder& begin_object(note::string_view) override { return *this; }
     MockBuilder& end_object() override { return *this; }
     MockBuilder& begin_array(note::string_view) override { return *this; }

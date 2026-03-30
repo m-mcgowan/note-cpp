@@ -1,0 +1,49 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract version from tag
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Verify changelog entry exists
+        run: |
+          version="${{ steps.version.outputs.version }}"
+          if ! grep -q "^## \[${version}\]" CHANGELOG.md; then
+            echo "ERROR: CHANGELOG.md has no entry for [${version}]"
+            exit 1
+          fi
+
+      - name: Extract changelog section
+        run: |
+          version="${{ steps.version.outputs.version }}"
+          # Capture lines between ## [version] and the next ## [
+          sed -n "/^## \[${version}\]/,/^## \[/{/^## \[${version}\]/d;/^## \[/d;p}" \
+            CHANGELOG.md > /tmp/release-notes.md
+          echo "--- Release notes ---"
+          cat /tmp/release-notes.md
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          version="${{ steps.version.outputs.version }}"
+          prerelease=""
+          if [[ "$version" == 0.* ]]; then
+            prerelease="--prerelease"
+          fi
+          gh release create "$GITHUB_REF_NAME" \
+            --title "v${version}" \
+            --notes-file /tmp/release-notes.md \
+            $prerelease

@@ -15,6 +15,7 @@
 
 #include <note/notecard.hpp>
 #include <note/api.hpp>
+#include <note/units.hpp>
 #include <note/voltage_variable.hpp>
 
 #include "../mock_backend.hpp"
@@ -103,17 +104,14 @@ int main() {
 
     std::puts("\n--- Named constants ---");
     {
-        using outbound_t = note::api::HubSet::outbound_t;
-        using inbound_t  = note::api::HubSet::inbound_t;
-
         // Reset outbound to default (sends -1 on the wire)
-        api.hub.set().outbound(outbound_t::reset).execute();
+        api.hub.set().outbound(-1).execute();
 
         // Manual sync only — no automatic outbound (sends 0)
-        api.hub.set().outbound(outbound_t::manual).execute();
+        api.hub.set().outbound(0).execute();
 
         // Same constants exist for inbound
-        api.hub.set().inbound(inbound_t::reset).execute();
+        api.hub.set().inbound(-1).execute();
     }
 
 

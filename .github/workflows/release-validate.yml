@@ -1,0 +1,94 @@
+name: Release Validation
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        required: true
+        description: "Release version (e.g. 0.1.0)"
+        type: string
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache apt packages
+        uses: actions/cache@v4
+        id: apt-cache
+        with:
+          path: ~/apt-cache
+          key: apt-release-validate-${{ hashFiles('.github/workflows/release-validate.yml') }}
+
+      - name: Install system dependencies
+        run: |
+          if [ -d ~/apt-cache ]; then
+            sudo cp -r ~/apt-cache/*.deb /var/cache/apt/archives/ 2>/dev/null || true
+          fi
+          sudo apt-get update
+          sudo apt-get install -y g++-13 lcov doxygen jq
+          mkdir -p ~/apt-cache
+          cp /var/cache/apt/archives/*.deb ~/apt-cache/ 2>/dev/null || true
+
+      - name: Install Python dependencies
+        run: pip install jinja2
+
+      - name: Install PlatformIO
+        run: pip install platformio
+
+      - name: Install arduino-cli
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/arduino/arduino-cli/master/install.sh | sh -s -- --dest ~/bin
+          echo "$HOME/bin" >> "$GITHUB_PATH"
+
+      - name: Install Arduino board cores
+        run: |
+          arduino-cli core update-index
+          arduino-cli core install esp32:esp32
+          arduino-cli core install STMicroelectronics:stm32
+
+      - name: "Step: version-check"
+        run: ./validate-release.sh ${{ inputs.version }} --step version-check
+
+      - name: "Step: changelog-check"
+        run: ./validate-release.sh ${{ inputs.version }} --step changelog-check
+
+      - name: "Step: codegen"
+        run: ./validate-release.sh ${{ inputs.version }} --step codegen
+
+      - name: "Step: host-tests"
+        run: ./validate-release.sh ${{ inputs.version }} --step host-tests
+
+      - name: "Step: full-checks"
+        env:
+          CXX: g++-13
+          CXXFLAGS: -std=c++23
+        run: ./validate-release.sh ${{ inputs.version }} --step full-checks
+
+      - name: "Step: integrations"
+        run: ./validate-release.sh ${{ inputs.version }} --step integrations
+
+      - name: "Step: coverage"
+        run: ./validate-release.sh ${{ inputs.version }} --step coverage
+
+      - name: "Step: docs"
+        run: ./validate-release.sh ${{ inputs.version }} --step docs
+
+      - name: "Step: pio-build"
+        run: ./validate-release.sh ${{ inputs.version }} --step pio-build
+
+      - name: "Step: arduino-build"
+        run: ./validate-release.sh ${{ inputs.version }} --step arduino-build
+
+      # Future: hardware steps on self-hosted runner
+      # - name: "Step: hw-esp32-serial"
+      #   run: ./validate-release.sh ${{ inputs.version }} --step hw-esp32-serial
+      # - name: "Step: hw-esp32-i2c"
+      #   run: ./validate-release.sh ${{ inputs.version }} --step hw-esp32-i2c
+      # - name: "Step: hw-esp32-arduino-serial"
+      #   run: ./validate-release.sh ${{ inputs.version }} --step hw-esp32-arduino-serial
+      # - name: "Step: hw-esp32-arduino-i2c"
+      #   run: ./validate-release.sh ${{ inputs.version }} --step hw-esp32-arduino-i2c
+      # - name: "Step: hw-swan-arduino-serial"
+      #   run: ./validate-release.sh ${{ inputs.version }} --step hw-swan-arduino-serial

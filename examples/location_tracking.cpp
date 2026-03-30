@@ -22,6 +22,7 @@
 
 #include <note/notecard.hpp>
 #include <note/api/card_location.hpp>
+#include <note/units.hpp>
 #include <note/api/card_location_mode.hpp>
 #include <note/api/card_location_track.hpp>
 

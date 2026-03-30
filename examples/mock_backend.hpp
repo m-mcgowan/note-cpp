@@ -30,6 +30,9 @@ struct MockBuilder : note::JsonBuilder {
     MockBuilder& add(note::string_view k, note::string_view v) override {
         sep(); buf_ += '"'; buf_ += k; buf_ += "\":\""; buf_ += v; buf_ += '"'; return *this;
     }
+    MockBuilder& add_raw(note::string_view k, note::string_view json_fragment) override {
+        sep(); buf_ += '"'; buf_ += k; buf_ += "\":"; buf_ += json_fragment; return *this;
+    }
     MockBuilder& begin_object(note::string_view k) override {
         sep(); buf_ += '"'; buf_ += k; buf_ += "\":{"; first_ = true; return *this;
     }

@@ -16,12 +16,12 @@ JSON.
 ```cpp
 // main.cpp#L85-L90
 
+    .mode("periodic")
     .outbound(2_hours)       // Hours → Minutes (= 120 on the wire)
     .inbound(7_days)         // Days → Minutes (= 10080 on the wire)
     .execute();
 
 // Works across the API — anywhere a Seconds field is expected:
-api.card.sleep()                 // WiFi Notecard only
 ```
 
 **Direct assignment:**
@@ -29,10 +29,10 @@ api.card.sleep()                 // WiFi Notecard only
 ```cpp
 // main.cpp#L94-L97
 
+
 api.card.attn().arm()
     .triggers(note::attn::connected)  // flag constant via operator() — "arm," prepended automatically
     .seconds(5_mins)                  // Minutes → Seconds (= 300 on the wire)
-    .execute();
 ```
 
 ## 2. Type-safe units
@@ -44,11 +44,11 @@ can't accidentally pass seconds where minutes are expected.
 // main.cpp#L106-L111
 
 
+// Reset outbound to default (sends -1 on the wire)
+api.hub.set().outbound(-1).execute();
 
-
-
-
-
+// Manual sync only — no automatic outbound (sends 0)
+api.hub.set().outbound(0).execute();
 ```
 
 Raw integers still work — they implicitly convert to the correct unit type:
@@ -57,9 +57,9 @@ Raw integers still work — they implicitly convert to the correct unit type:
 // main.cpp#L114-L117
 
 
-    // Same constants exist for inbound
-    api.hub.set().inbound(inbound_t::reset).execute();
-}
+
+
+
 ```
 
 Mixing units is a compile error:
@@ -77,8 +77,6 @@ constants on the field type. No need to remember magic numbers.
 ```cpp
 // main.cpp#L129-L140
 
-
-// This would fail at compile time:
 //   .mode(note::api::HubSet::validatedMode("perioidc"))
 //   error: "hub.set: invalid value for 'mode'"
 
@@ -89,6 +87,8 @@ constants on the field type. No need to remember magic numbers.
 
 // Raw string — works but easy to get the format wrong:
 std::puts("\n--- Voltage-variable sync (raw string) ---");
+api.hub.set()
+    .mode("periodic")
 ```
 
 ## 4. Consteval validation
@@ -99,10 +99,10 @@ trigger a compile error.
 ```cpp
 // main.cpp#L149-L152
 
-auto req = api.hub.set();
-req.mode = "periodic";
-req.voutbound.usb(5).high(15).normal(60).low(240).dead(0);
-req.vinbound.usb(5).high(30).normal(120).low(1440).dead(0);
+    req.voutbound.usb(5).high(15).normal(60).low(240).dead(0);
+    req.vinbound.usb(5).high(30).normal(120).low(1440).dead(0);
+    req.execute();
+}
 ```
 
 ## 5. Voltage-variable sync
@@ -115,10 +115,10 @@ picks the interval matching its current voltage level.
 ```cpp
 // main.cpp#L165-L168
 
-.mode("periodic")
-.outbound(60_mins)
-.uperiodic(true)
-.execute();
+    .uperiodic(true)
+    .execute();
+
+// Stay continuous on USB, fall back to minimum on battery
 ```
 
 **Builder** — type-safe, built directly on the field:
@@ -126,11 +126,11 @@ picks the interval matching its current voltage level.
 ```cpp
 // main.cpp#L173-L177
 
-    .umin(true)
-    .execute();
 
 // Stay continuous on USB, fall back to off on battery
 api.hub.set()
+    .mode("off")
+    .uoff(true)
 ```
 
 Only levels you set are emitted — partial configurations are valid (e.g. just

@@ -5,6 +5,8 @@ Follows [Keep a Changelog](https://keepachangelog.com/) conventions.
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-03-29
+
 ### Added
 - `make_api()` factory function and `target<Product>()` / `target<Rat>()` helpers for target-constrained APIs
 - `Target<Rat, Strict>` type system — unsupported endpoints get `[[deprecated]]` or are removed via `requires`

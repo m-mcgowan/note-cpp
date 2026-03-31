@@ -152,4 +152,58 @@ inline bool crc_check_and_strip(char* buf, size_t& len, uint16_t expected_seq,
     return (actual_seq != expected_seq || actual_crc != expected_crc);
 }
 
+/// Delayed CRC accumulator for streaming receive.
+///
+/// Uses a circular buffer of kCrcFieldLen+1 (23) bytes to delay CRC
+/// commitment. After parsing, if a CRC field is present (always last),
+/// the CRC state covers everything before it. finalize_with_brace()
+/// adds '}' to match the Notecard's CRC computation.
+///
+/// Frame terminators (\r, \n) are filtered out — they are not part of
+/// the JSON and not covered by CRC.
+struct CrcAccumulator {
+    static constexpr size_t kRingSize = kCrcFieldLen + 1;  // 23
+
+    uint32_t state = crc32_begin();
+    char ring[kRingSize]{};
+    size_t ring_pos = 0;
+    size_t ring_count = 0;
+
+    void feed(const char* data, size_t len) {
+        for (size_t i = 0; i < len; ++i) {
+            char c = data[i];
+            if (c == '\r' || c == '\n') continue;
+            if (ring_count == kRingSize) {
+                // Ring full — commit the byte being overwritten to CRC
+                state = crc32_update(state, &ring[ring_pos], 1);
+            } else {
+                ++ring_count;
+            }
+            ring[ring_pos] = c;
+            ring_pos = (ring_pos + 1) % kRingSize;
+        }
+    }
+
+    /// Finalize assuming CRC field is in the ring.
+    /// CRC state covers everything before the ring. Feed '}' for the
+    /// original closing brace.
+    uint32_t finalize_with_brace() const {
+        uint32_t s = crc32_update(state, "}", 1);
+        return crc32_finalize(s);
+    }
+
+    /// Finalize with no CRC field — commit all ring bytes to CRC.
+    uint32_t finalize_all() const {
+        uint32_t s = state;
+        if (ring_count > 0) {
+            size_t start = (ring_pos + kRingSize - ring_count) % kRingSize;
+            for (size_t i = 0; i < ring_count; ++i) {
+                size_t idx = (start + i) % kRingSize;
+                s = crc32_update(s, &ring[idx], 1);
+            }
+        }
+        return crc32_finalize(s);
+    }
+};
+
 }  // namespace note::transport::detail

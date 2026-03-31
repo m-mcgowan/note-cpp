@@ -41,6 +41,7 @@ inline bool check_crc(std::string& response, uint16_t seq, bool& flag) {
 }
 } // namespace
 
+#include <algorithm>
 #include <cstring>
 
 // ---------------------------------------------------------------------------
@@ -356,4 +357,81 @@ TEST_CASE("crc_check_and_strip: lowercase hex digits in CRC field — no error")
     bool error = check_crc(response, 3, flag);
     CHECK(!error);
     CHECK(response == original);  // CRC field stripped
+}
+
+// ---------------------------------------------------------------------------
+// CrcAccumulator — delayed ring buffer for streaming CRC
+// ---------------------------------------------------------------------------
+
+TEST_CASE("CrcAccumulator: no-CRC response accumulates all bytes") {
+    const char* json = R"({"status":"ok"})";
+    size_t len = strlen(json);
+
+    CrcAccumulator acc;
+    acc.feed(json, len);
+
+    uint32_t expected = crc32(json, len);
+    REQUIRE(acc.finalize_all() == expected);
+}
+
+TEST_CASE("CrcAccumulator: CRC response matches crc_add") {
+    char buf[256];
+    const char* json = R"({"status":"ok"})";
+    size_t len = strlen(json);
+    memcpy(buf, json, len);
+
+    uint16_t seq = 1;
+    size_t wire_len = crc_add(buf, len, sizeof(buf), seq);
+
+    CrcAccumulator acc;
+    acc.feed(buf, wire_len);
+
+    uint32_t expected = crc32(json, len);
+    REQUIRE(acc.finalize_with_brace() == expected);
+}
+
+TEST_CASE("CrcAccumulator: filters frame terminators") {
+    const char* json = R"({"x":1})";
+    size_t len = strlen(json);
+
+    char buf[64];
+    memcpy(buf, json, len);
+    buf[len] = '\r';
+    buf[len + 1] = '\n';
+
+    CrcAccumulator acc;
+    acc.feed(buf, len + 2);
+
+    uint32_t expected = crc32(json, len);
+    REQUIRE(acc.finalize_all() == expected);
+}
+
+TEST_CASE("CrcAccumulator: chunked feed matches single feed") {
+    char buf[256];
+    const char* json = R"({"temp":22.5,"label":"room"})";
+    size_t len = strlen(json);
+    memcpy(buf, json, len);
+    size_t wire_len = crc_add(buf, len, sizeof(buf), 3);
+
+    CrcAccumulator acc1;
+    acc1.feed(buf, wire_len);
+
+    CrcAccumulator acc2;
+    for (size_t i = 0; i < wire_len; i += 3) {
+        size_t chunk = std::min(size_t(3), wire_len - i);
+        acc2.feed(buf + i, chunk);
+    }
+
+    REQUIRE(acc1.finalize_with_brace() == acc2.finalize_with_brace());
+}
+
+TEST_CASE("CrcAccumulator: short response (shorter than ring)") {
+    const char* json = R"({})";
+    size_t len = strlen(json);
+
+    CrcAccumulator acc;
+    acc.feed(json, len);
+
+    uint32_t expected = crc32(json, len);
+    REQUIRE(acc.finalize_all() == expected);
 }

@@ -10,6 +10,7 @@
 
 #include <cstring>
 #include <string>
+#include <vector>
 
 using namespace note;
 using namespace note::transport::detail;
@@ -308,4 +309,81 @@ TEST_CASE("CrcWriter: round-trip with crc_check_and_strip") {
         b.end_object();
     });
     REQUIRE(string_view(buf, pos) == expected_json);
+}
+
+// ---------------------------------------------------------------------------
+// FilterJsonSink + reset
+// ---------------------------------------------------------------------------
+
+TEST_CASE("FilterJsonSink: forwards all events") {
+    struct Recorder : JsonSink {
+        int strings = 0, bools = 0, numbers = 0, nulls = 0;
+        int obj_begin = 0, obj_end = 0, arr_begin = 0, arr_end = 0;
+        int resets = 0;
+
+        void on_null(string_view) override { ++nulls; }
+        void on_bool(string_view, bool) override { ++bools; }
+        void on_number(string_view, string_view) override { ++numbers; }
+        void on_string(string_view, string_view) override { ++strings; }
+        void on_object_begin(string_view) override { ++obj_begin; }
+        void on_object_end(string_view) override { ++obj_end; }
+        void on_array_begin(string_view) override { ++arr_begin; }
+        void on_array_end(string_view) override { ++arr_end; }
+        void reset() override { ++resets; }
+    };
+
+    Recorder rec;
+    FilterJsonSink filter(rec);
+
+    filter.on_null("k");
+    filter.on_bool("k", true);
+    filter.on_number("k", "42");
+    filter.on_string("k", "v");
+    filter.on_object_begin("k");
+    filter.on_object_end("k");
+    filter.on_array_begin("k");
+    filter.on_array_end("k");
+    filter.reset();
+
+    REQUIRE(rec.nulls == 1);
+    REQUIRE(rec.bools == 1);
+    REQUIRE(rec.numbers == 1);
+    REQUIRE(rec.strings == 1);
+    REQUIRE(rec.obj_begin == 1);
+    REQUIRE(rec.obj_end == 1);
+    REQUIRE(rec.arr_begin == 1);
+    REQUIRE(rec.arr_end == 1);
+    REQUIRE(rec.resets == 1);
+}
+
+TEST_CASE("ErrorCaptureSink: intercepts err, forwards rest") {
+    struct Recorder : JsonSink {
+        std::vector<std::string> keys;
+        void on_string(string_view k, string_view) override {
+            keys.emplace_back(k.data(), k.size());
+        }
+    };
+
+    Recorder rec;
+    ErrorCaptureSink err(rec);
+
+    err.on_string("name", "alice");
+    err.on_string("err", "something broke");
+    err.on_string("status", "ok");
+
+    REQUIRE(err.captured_error() == "something broke");
+    REQUIRE(rec.keys.size() == 2);
+    REQUIRE(rec.keys[0] == "name");
+    REQUIRE(rec.keys[1] == "status");
+}
+
+TEST_CASE("ErrorCaptureSink: reset clears error") {
+    JsonSink null_sink;
+    ErrorCaptureSink err(null_sink);
+
+    err.on_string("err", "fail");
+    REQUIRE_FALSE(err.captured_error().empty());
+
+    err.reset();
+    REQUIRE(err.captured_error().empty());
 }

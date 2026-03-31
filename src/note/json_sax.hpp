@@ -43,6 +43,31 @@ public:
     // Called when an array begins/ends.
     virtual void on_array_begin(string_view key) { (void)key; }
     virtual void on_array_end(string_view key) { (void)key; }
+
+    virtual void reset() {}
+};
+
+// ---------------------------------------------------------------------------
+// FilterJsonSink — forwarding base class for sink filters.
+//
+// All callbacks forward to an inner sink. Subclasses override only what
+// they intercept. Used by ErrorCaptureSink, CrcFieldSink, etc.
+// ---------------------------------------------------------------------------
+class FilterJsonSink : public JsonSink {
+protected:
+    JsonSink& inner_;
+public:
+    explicit FilterJsonSink(JsonSink& inner) : inner_(inner) {}
+
+    void on_null(string_view key) override { inner_.on_null(key); }
+    void on_bool(string_view key, bool value) override { inner_.on_bool(key, value); }
+    void on_number(string_view key, string_view raw) override { inner_.on_number(key, raw); }
+    void on_string(string_view key, string_view value) override { inner_.on_string(key, value); }
+    void on_object_begin(string_view key) override { inner_.on_object_begin(key); }
+    void on_object_end(string_view key) override { inner_.on_object_end(key); }
+    void on_array_begin(string_view key) override { inner_.on_array_begin(key); }
+    void on_array_end(string_view key) override { inner_.on_array_end(key); }
+    void reset() override { inner_.reset(); }
 };
 
 // ---------------------------------------------------------------------------
@@ -423,25 +448,22 @@ inline string_view sax_parse(string_view json, JsonSink& sink) {
 // Used by the SAX execute path to detect Notecard errors without a separate
 // get_reader() pre-pass. All non-error events are forwarded to the inner sink.
 // ---------------------------------------------------------------------------
-class ErrorCaptureSink : public JsonSink {
-    JsonSink& inner_;
+class ErrorCaptureSink : public FilterJsonSink {
     string_view err_;
 public:
-    explicit ErrorCaptureSink(JsonSink& inner) : inner_(inner) {}
+    explicit ErrorCaptureSink(JsonSink& inner) : FilterJsonSink(inner) {}
 
     string_view captured_error() const { return err_; }
 
-    void on_null(string_view key) override { inner_.on_null(key); }
-    void on_bool(string_view key, bool value) override { inner_.on_bool(key, value); }
-    void on_number(string_view key, string_view raw) override { inner_.on_number(key, raw); }
     void on_string(string_view key, string_view value) override {
         if (key == "err") { err_ = value; return; }
         inner_.on_string(key, value);
     }
-    void on_object_begin(string_view key) override { inner_.on_object_begin(key); }
-    void on_object_end(string_view key) override { inner_.on_object_end(key); }
-    void on_array_begin(string_view key) override { inner_.on_array_begin(key); }
-    void on_array_end(string_view key) override { inner_.on_array_end(key); }
+
+    void reset() override {
+        err_ = {};
+        FilterJsonSink::reset();
+    }
 };
 
 }  // namespace note

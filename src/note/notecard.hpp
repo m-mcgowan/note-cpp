@@ -20,6 +20,11 @@ namespace detail {
     struct has_intern_strings : std::false_type {};
     template<typename T>
     struct has_intern_strings<T, std::void_t<decltype(std::declval<T>().intern_strings(std::declval<StringPool&>()))>> : std::true_type {};
+
+    template<typename T, typename = void>
+    struct has_sink : std::false_type {};
+    template<typename T>
+    struct has_sink<T, std::void_t<typename T::Sink>> : std::true_type {};
 }
 
 
@@ -95,6 +100,48 @@ public:
 
         if (!transport_) return Unexpected(make_error(Error::NotReady, "no transport configured"));
 
+        // Full streaming path: SAX-parse response directly from transport.
+        // Requires both streaming transport and an allocator (for string interning).
+        // Also requires Rsp to have a Sink type (generated responses do; ad-hoc ones don't).
+        if constexpr (std::is_void_v<Rsp> || detail::has_sink<Rsp>::value) {
+            if (streaming_transport_ && alloc_.has_value()) {
+                StringPool pool(*alloc_);
+
+                auto build = [&](JsonBuilder& b) {
+                    b.add("req", RequestT::notecard_request);
+                    req.build(b);
+                };
+
+                if constexpr (std::is_void_v<Rsp>) {
+                    JsonSink null_sink;
+                    ErrorCaptureSink err_sink(null_sink);
+                    auto rv = streaming_transport_->transact_streaming(
+                        build, err_sink, default_timeout_ms_);
+                    if (!rv) return Unexpected(rv.error());
+                    auto err = err_sink.captured_error();
+                    if (!err.empty()) {
+                        return ApiResult<void>(
+                            ErrorInfo{Error::Notecard, Cause::Unspecified, pool.intern(err)});
+                    }
+                    return ApiResult<void>{};
+                } else {
+                    Rsp rsp_val{};
+                    typename Rsp::Sink response_sink(rsp_val, pool);
+                    ErrorCaptureSink err_sink(response_sink);
+                    auto rv = streaming_transport_->transact_streaming(
+                        build, err_sink, default_timeout_ms_);
+                    if (!rv) return Unexpected(rv.error());
+                    auto err = err_sink.captured_error();
+                    if (!err.empty()) {
+                        return ApiResult<Rsp>(
+                            ErrorInfo{Error::Notecard, Cause::Unspecified, pool.intern(err)});
+                    }
+                    return ApiResult<Rsp>(std::move(rsp_val));
+                }
+            }
+        }
+
+        // Streaming send + buffered receive, OR fully buffered.
         Result<string_view> rsp = make_error(Error::NotReady, "");
         if (streaming_transport_) {
             rsp = streaming_transport_->transact_build([&](JsonBuilder& b) {

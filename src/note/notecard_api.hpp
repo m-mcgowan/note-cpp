@@ -13,6 +13,7 @@
 ///     note::NotecardApi nc(myBackend, transport);
 ///     nc.hub.set().product("com.example.app").execute();
 
+#include "allocator.hpp"
 #include "api.hpp"
 #include "notecard.hpp"
 #include "backends/buffer.hpp"
@@ -82,9 +83,15 @@ public:
         : detail::NcOwner(backend, transport)
         , Api<TargetT>(nc_) {}
 
-    /// Set the transport after construction.
+    /// Set the transport after construction (streaming + auto allocator).
     /// On Arduino, typically called from setup():
     ///   nc.begin(transport);
+    void begin(AbstractTransport& transport, Allocator alloc = {}) {
+        nc_ = Notecard(default_backend_, transport);
+        nc_.set_allocator(alloc);
+    }
+
+    /// Set the transport after construction (non-streaming).
     void begin(ITransport& transport) {
         nc_ = Notecard(default_backend_, transport);
     }
@@ -108,6 +115,11 @@ public:
     NotecardApi(JsonBackend& backend, ITransport& transport)
         : detail::NcOwner(backend, transport)
         , Api(detail::NcOwner::nc_) {}
+
+    void begin(AbstractTransport& transport, Allocator alloc = {}) {
+        detail::NcOwner::nc_ = Notecard(default_backend_, transport);
+        detail::NcOwner::nc_.set_allocator(alloc);
+    }
 
     void begin(ITransport& transport) {
         detail::NcOwner::nc_ = Notecard(default_backend_, transport);

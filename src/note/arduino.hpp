@@ -14,6 +14,7 @@
 ///       nc.hub.set().product("com.example.app").execute();
 ///   }
 
+#include <note/allocator.hpp>
 #include <note/notecard_api.hpp>
 #include <note/arduino/serial.hpp>
 #include <note/arduino/i2c.hpp>
@@ -47,6 +48,16 @@ public:
         Base::begin(*serial_transport_);
     }
 
+    /// Begin with serial transport and explicit allocator.
+    ///   MonotonicArena arena(buf);
+    ///   nc.begin(Serial1, 9600, arena_allocator(arena));
+    template<typename SerialT>
+    void begin(SerialT& uart, unsigned long baud, Allocator alloc) {
+        serial_hal_ = std::make_unique<SerialHal<SerialT>>(uart, baud);
+        serial_transport_ = std::make_unique<transport::NotecardSerial<>>(*serial_hal_);
+        Base::begin(*serial_transport_, alloc);
+    }
+
     /// Begin with I2C transport (default address).
     ///   nc.begin(Wire);
     void begin(TwoWire& wire) {
@@ -59,11 +70,21 @@ public:
         begin_i2c(wire, address);
     }
 
+    /// Begin with I2C transport and explicit allocator.
+    void begin(TwoWire& wire, Allocator alloc) {
+        begin_i2c(wire, transport::kI2cDefaultAddress, alloc);
+    }
+
+    /// Begin with I2C transport, address, and explicit allocator.
+    void begin(TwoWire& wire, uint8_t address, Allocator alloc) {
+        begin_i2c(wire, address, alloc);
+    }
+
 private:
-    void begin_i2c(TwoWire& wire, uint8_t address) {
+    void begin_i2c(TwoWire& wire, uint8_t address, Allocator alloc = {}) {
         i2c_hal_ = std::make_unique<I2CHal>(wire, address);
         i2c_transport_ = std::make_unique<transport::NotecardI2c<>>(*i2c_hal_);
-        Base::begin(*i2c_transport_);
+        Base::begin(*i2c_transport_, alloc);
     }
 
     std::unique_ptr<transport::SerialHal> serial_hal_;

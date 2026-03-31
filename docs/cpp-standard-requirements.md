@@ -120,6 +120,27 @@ Items 2-6 are trivial. Item 1 is the only real work — redesigning the
 type-dispatch in `body.hpp` and the binary detection in `notecard.hpp`
 to use SFINAE overloads instead of `if constexpr`.
 
+## `std::string` elimination progress
+
+| Header | Before | After | Status |
+|--------|--------|-------|--------|
+| `md5.hpp` | `std::string` return | `Md5Hex` (33-byte fixed buffer) | ✅ Done |
+| `notecard.hpp` | `std::string` local | `Md5Hex` | ✅ Done |
+| `error.hpp` | `std::string` return | `ErrorString` (256-byte fixed buffer) | ✅ Done |
+| `json.hpp` | `to_string()` + `view_buf_` | `to_view()` pure virtual, no string member | ✅ Done |
+| `transport.hpp` | `wire_`, `response_buf_` | Streaming transport bypasses; legacy path remains | ⬜ Blocked on `crc_add()` |
+| `crc32.hpp` | `crc_add()` takes/returns `std::string` | Needs char-buffer variant | ⬜ TODO |
+
+The streaming transport (`transact_streaming`, `set_receive_buffer`, `transact_into`)
+bypasses both `wire_` and `response_buf_` entirely. The `std::string` members are
+only used by the legacy `transact()` fallback path.
+
+For platforms without `<string>` (AVR), the streaming path + `BufferJsonBackend`
+avoids the fallback — but the compiler still parses the `std::string` member
+declarations. Full AVR support requires either:
+- A `std::string` polyfill from the compat project (fixed-capacity, no heap)
+- Or replacing `wire_`/`response_buf_` with a fixed-size buffer type
+
 ## What blocks AVR specifically
 
 Beyond C++ standard features, AVR's stock toolchain (avr-g++ 5.0) lacks
@@ -129,7 +150,7 @@ headers (`<stddef.h>`, `<stdint.h>`, `<string.h>`) work fine.
 AVR needs:
 1. All the C++14 changes above
 2. Polyfills for: `string_view`, `optional`, `type_traits`, `utility`
-3. Elimination of `std::string` (use fixed buffers)
+3. `std::string` polyfill or replacement in `transport.hpp` + `crc32.hpp`
 4. Elimination of `std::function` (use virtual interfaces or function pointers)
 5. Elimination of `std::variant` (use tagged union)
 6. C headers instead of C++ wrappers (`<stddef.h>` not `<cstddef>`)

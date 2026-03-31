@@ -1,290 +1,164 @@
-# Streaming Transport — Design Document
+# Streaming Transport
 
-## Status: Phases 1–3 Complete
+The transport layer provides three request execution paths with different
+allocation trade-offs. All three share the same `ITransport` interface.
 
-This document captures the agreed design direction for refactoring the transport
-layer to support pure streaming and eliminate intermediate buffers.
-
-## Motivation
-
-The current transport layer (`AbstractTransport`) owns a `std::string response_buf_`
-that receives the entire JSON response before parsing begins. This has two issues:
-
-1. **Heap allocation** — `std::string` allocates on the heap. Even though the buffer
-   is reused across calls (no per-request allocation in steady state), the initial
-   allocation is heap-backed. This conflicts with the zero-allocation goal achievable
-   via `BufferJsonBackend`.
-
-2. **Unnecessary buffering for binary** — COBS binary data can be streamed through
-   the `CobsDecoder` chunk-by-chunk. Buffering the entire COBS stream before
-   decoding wastes memory and adds latency.
-
-## Current Architecture
+## Transport Interface
 
 ```
 ITransport
   transact(request, timeout) → Result<string_view>   // JSON request/response
   send(request) → Result<void>                        // fire-and-forget
-  write(data, len) → Result<void>                     // raw byte write (new)
-  read(buf, max_len, timeout) → Result<size_t>        // raw byte read (new)
+  write(data, len) → Result<void>                     // raw byte write
+  read(buf, max_len, timeout) → Result<size_t>        // raw byte read
   reset()                                             // drain + resync
   abort()
-
-AbstractTransport : ITransport
-  owns: std::string wire_          // outbound request buffer
-  owns: std::string response_buf_  // inbound response buffer (the problem)
-  transact() = prepare_wire() → do_transmit() → do_receive(response_buf_) → CRC check
-  write()    = do_write()     // delegates to HAL, no framing
-  read()     = do_read()      // delegates to HAL, blocks for at least 1 byte
 ```
 
-### JSON path (current)
+`write()` and `read()` are byte-stream primitives — no framing, CRC, or
+line terminators. Used for binary (COBS) streaming.
 
-1. `transact()` clears `response_buf_` and calls `do_receive(response_buf_, timeout)`
-2. `do_receive()` appends chunks to the `std::string` until `\n`
-3. CRC check on the complete response
-4. Returns `string_view` into `response_buf_`
-5. `JsonBackend` parses from that `string_view`
+`transact()` and `send()` handle the full JSON protocol: wire buffer
+preparation, CRC, retry, and response parsing.
 
-### Binary path (new, using `write`/`read`)
+## Execution Paths
 
-1. JSON handshake via `transact()` (card.binary.put/get)
-2. COBS streaming via `write()`/`read()` — no intermediate buffer
+### Path 1: Legacy (`transact()` with internal buffers)
 
-## Proposed Architecture
-
-### Principle: transport is a byte pipe
-
-The transport should not own response buffers. It provides two primitives:
-
-- **`write(data, len)`** — send raw bytes to the Notecard
-- **`read(buf, max_len, timeout)`** — read available bytes from the Notecard
-
-All buffering and parsing happens at higher layers. The caller provides any
-buffers needed.
-
-### JSON path (proposed)
-
-The buffer comes from the caller, all the way from the top:
-
-```
-caller buffer → Notecard::execute()
-  → transport.read(caller_buf, max_len, timeout)  // receive into caller's buffer
-  → CRC check on caller_buf
-  → JsonBackend parses from caller_buf
-  → string_views point into caller_buf
+```cpp
+note::Notecard nc(backend, transport);
+auto rsp = nc.card.version().execute();
 ```
 
-With the streaming SAX parser (`JsonSink`), even the full-response buffer
-becomes optional — the SAX parser processes tokens as they arrive, and only
-string values need a small pool (arena) to survive chunk boundaries.
+- Uses `std::string wire_` and `response_buf_` inside `AbstractTransport`
+- CRC check operates in-place on char buffers (no temporary `std::string`)
+- Returns `string_view` into `response_buf_`
+- Requires `<string>` — guarded by `#ifndef NOTE_NO_STD_STRING`
 
-```
-Notecard::execute()
-  → transport.read(small_chunk, 64, timeout)    // read a chunk
-  → SaxParser.feed(small_chunk)                 // parse incrementally
-  → JsonSink.on_string(key, value)              // populate response fields
-  → StringPool.intern(value)                    // keep string alive
-  → repeat until response complete
-```
+### Path 2: Caller-provided buffers (`set_receive_buffer` / `transact_into`)
 
-No intermediate buffer for the full response. Just a 64-byte chunk on the
-stack and a string pool for string field values.
-
-### Binary path (proposed, implemented)
-
-Already streaming — `CobsDecoder.feed()` processes chunks as they arrive:
-
-```
-Notecard::do_binary_receive()
-  → transport.read(chunk, 64, timeout)          // read a chunk
-  → CobsDecoder.feed(chunk, callback)           // decode incrementally
-  → callback copies decoded bytes to caller's destination buffer
-  → repeat until EOP ('\n') seen
+```cpp
+char buf[512];
+transport.set_receive_buffer(buf, sizeof(buf));
+auto rsp = nc.card.version().execute();  // reads into buf
 ```
 
-No intermediate buffer for the COBS stream. Just a stack chunk and the
-caller's destination buffer.
-
-### `transact()` as a composed operation
-
-Once `read()`/`write()` are the primitives, `transact()` becomes a composed
-operation built on top of them:
-
-```
-transact(request, buf, max_len, timeout):
-  prepare_wire(request)                          // CRC if enabled
-  write(wire_data, wire_len)                     // send request
-  n = read_until_eop(buf, max_len, timeout)      // receive response (loop on read())
-  crc_check(buf, n)                              // verify CRC
-  return string_view(buf, n)                     // caller owns buf
+Or one-shot:
+```cpp
+auto rsp = transport.transact_into(request, timeout, buf, sizeof(buf));
 ```
 
-The `read_until_eop` helper loops on `read()`, accumulating into the
-caller-provided buffer until `\n` is found. This replaces `do_receive()`.
+- Zero heap allocation for the receive path
+- `response_buf_` bypassed entirely
+- CRC check in-place on the caller buffer
+- `wire_` still uses `std::string` for CRC append (see Remaining Work)
 
-### Resync after errors
+### Path 3: Streaming SAX (`transact_streaming` + `sax_parse_streaming`)
 
-If a binary transfer fails mid-stream (e.g. destination buffer too small,
-timeout, MD5 mismatch), bytes may remain in the transport. The next JSON
-`transact()` would read stale COBS data instead of a JSON response.
+```cpp
+VersionSink sink;
+auto err = note::sax_parse_streaming(read_fn, timeout, sink);
+```
 
-The existing `reset()` method handles this — both I2C and serial
-implementations send `\n` and drain until only control characters come back,
-matching note-c's `_serialNoteReset` / `_i2cNoteReset`. After a failed
-binary transfer, `Notecard::do_binary_receive()` should call `reset()` to
-flush remaining bytes before returning the error.
+- Zero-copy: reads 64-byte chunks, parses tokens as they arrive
+- `JsonSink` callbacks populate response fields incrementally
+- No intermediate buffer for the full response
+- String values accumulated into a small scratch buffer (`SaxStreamBuf`)
+- Verified on real hardware (ESP32-S3 + Notecard over serial)
 
-## Migration path
+### Binary path (`write` / `read` + COBS)
 
-### Phase 1 (complete): `write()`/`read()` alongside existing `transact()`
+```cpp
+api.card.binary.put().data(buf, len).execute();
+```
 
-- `write()` and `read()` added to `ITransport` with error defaults
-- `AbstractTransport` overrides via `do_write()`/`do_read()` protected virtuals
-- I2C and serial implement `do_write()`/`do_read()` using their HALs
-- Binary path uses `write()`/`read()` for streaming COBS
-- JSON path continues using `transact()` with `response_buf_` (unchanged)
-- `CallbackTransport` accepts optional write/read callbacks for testing
+- `do_binary_send`: COBS encode → stream via `write()`, MD5 verify
+- `do_binary_receive`: stream via `read()` → `CobsDecoder.feed()`, MD5 verify
+- 64-byte stack chunk — no intermediate buffer for the COBS stream
 
-### Phase 2 (complete): caller-provided buffers for `transact()`
+## CRC Handling
 
-- `set_receive_buffer(buf, len)` configures an external buffer for `transact()`
-- `transact_into(request, timeout, buf, size)` — one-shot caller-buffer transact
-- `receive_into()` private helper deduplicates read-until-newline + CRC logic
-- `transact_streaming()` — chunk-by-chunk response reading with callback
-- Phase 2 transport path: `response_buf_` bypassed, zero heap for receive
+CRC operates on char buffers — no `std::string` involved:
 
-### Phase 3 (complete): streaming JSON via SAX
+```cpp
+// Append CRC to outbound request (in-place)
+wire_len_ = crc_add(wire_data(), wire_len_, wire_capacity(), crc_seq_);
 
-- `StreamingSaxParser` in `json_sax_streaming.hpp` — pull-model parser
-- Reads from any `ReadFn(uint8_t*, size_t, uint32_t) → Result<size_t>`
-- `SaxStreamBuf` partitions a caller-provided buffer into read/key/value regions
-- Default overload uses 384 bytes on the stack; caller can provide any buffer
-- Same `JsonSink` interface as the buffer-based SAX parser — generated code works unchanged
-- Zero heap allocation in the parser; strings accumulated into scratch buffers
-- Verified on real hardware (ESP32-S3 + Notecard over serial, all chunk sizes)
+// Verify and strip CRC from inbound response (in-place)
+crc_check_and_strip(buf, len, expected_seq, crc_enabled);
+```
 
-### Future: backend dissolution
+Auto-detection: `crc_enabled` flips to `true` when the first valid CRC
+field is found in a response. All subsequent responses must have CRC.
 
-- Wire `sax_parse_streaming` into the `Notecard::execute()` path
-- Eliminate `JsonBackend` for the streaming path (SAX parser replaces tree)
-- Incremental CRC checking (currently CRC requires the full response)
-- `response_buf_` fully eliminated
+## `NOTE_NO_STD_STRING` Guard
 
-## Impact on `do_receive()` / `do_transmit()`
+Code that depends on `<string>` or `<functional>` is guarded:
 
-Once `transact()` is rebuilt on `read()`/`write()`:
+```cpp
+#ifndef NOTE_NO_STD_STRING
+    std::string wire_;
+    std::string response_buf_;
+    virtual Result<void> do_receive(std::string& buf, uint32_t timeout_ms) = 0;
+    // ... legacy transact, streaming transact, binary pipeline ...
+#endif
+```
 
-- `do_receive(std::string&, timeout)` — no longer needed
-- `do_transmit(const char*, size_t)` — replaced by `do_write(uint8_t*, size_t)`
-- `prepare_wire()` — moves to `transact()` implementation, not a virtual
+When `NOTE_NO_STD_STRING` is defined, only Path 2 (`transact_into` /
+`set_receive_buffer`) is available. This enables compilation on platforms
+without `<string>` (e.g. AVR with polyfills from the compat project).
 
-The `AbstractTransport` building blocks simplify to just `do_write()`,
-`do_read()`, and `do_reset()`.
+## Remaining Work
 
-## Testing: Transport Fuzzing
+### Outbound path (not streamed)
 
-Integration tests should include transport fuzzing to exercise error recovery
-on both send and receive paths:
+Requests are always fully buffered before transmission:
 
-- **Write errors**: HAL transmit fails mid-stream (partial COBS send). Verify
-  `reset()` is called and the next JSON transaction succeeds.
-- **Read errors**: HAL returns partial data, then times out. Verify `reset()`
-  drains stale bytes and resynchronizes.
-- **Truncated response**: Read buffer too small for COBS data. Verify the
-  transport resyncs (no stale bytes corrupt the next transaction).
-- **Corrupted data**: Random byte flips in COBS stream. Verify MD5 mismatch
-  is detected and reported.
-- **Interleaved operations**: Binary transfer followed immediately by JSON
-  request. Verify no cross-contamination.
+1. `JsonBuilder::to_view()` builds the request into the builder's buffer
+2. `prepare_wire()` copies it into `wire_` and appends CRC
+3. `do_transmit()` sends the complete wire buffer
 
-The `CallbackTransport` with `set_write()`/`set_read()` enables unit-level
-fuzzing. Integration tests on real hardware should use `serial-monitor` capture
-to verify wire-level behavior matches expectations.
+This is necessary because CRC is computed over the complete request body.
+Streaming the outbound path would require incremental CRC (see below).
 
-## Backend dissolution
+`wire_` is currently `std::string`. It could be replaced with:
+- A caller-provided buffer via `set_wire_buffer()`
+- A fixed-size member array (requests are typically <512 bytes)
 
-With full streaming (Phase 3), the `JsonBackend` abstraction dissolves.
-There is no object that "owns" JSON parsing or building — JSON is just the
-wire format the Notecard chose. The architecture becomes:
+### Backend dissolution
+
+Wire `sax_parse_streaming` into `Notecard::execute()` as the default
+parse path. The `JsonBackend` abstraction becomes optional — SAX replaces
+tree parsing. The architecture simplifies to:
 
 ```
 Developer code
   ↕  typed fields (C++ structs, ResponseField<T>)
 SAX stream
-  ↕  events (on_string, on_number, on_bool, begin_object, ...)
+  ↕  events (on_string, on_number, on_bool, ...)
 Transport byte pipe
   ↕  raw bytes (read/write)
 Notecard hardware
 ```
 
-No intermediate buffer, no backend choice, no allocator configuration.
-The developer works with typed fields. The library handles serialization
-as a transport detail.
+### Incremental CRC
 
-### Implication for `NotecardApi` / `arduino::Notecard`
+Currently CRC requires the full response (computed over the body before
+the CRC field). Incremental CRC (computed as bytes arrive) would eliminate
+the last reason to buffer the full response.
 
-Today these bundle a `BufferJsonBackend` as the default. With streaming,
-they bundle a SAX parser + small chunk buffer instead. The API surface
-doesn't change — `execute()` still returns typed `ApiResult<Response>`.
-The backend parameter disappears from constructors entirely.
+## Resync After Errors
 
-## Body content layering
+If a binary transfer fails mid-stream, bytes may remain in the transport.
+`reset()` drains stale bytes — both I2C and serial implementations send
+`\n` and wait for only control characters, matching note-c behavior.
+`do_binary_receive()` calls `reset()` on failure before returning.
 
-Response body content (`note.get`, inbound notes) may be freeform JSON
-whose schema isn't known at compile time. Streaming provides three tiers
-for handling body content, with allocation always under the developer's
-explicit control:
+## Body Content Tiers
 
-### Tier 1: SAX stream (zero allocation)
+Response body content may be freeform JSON. Three tiers, allocation
+always under developer control:
 
-The developer provides a `JsonSink` that handles events directly. No
-intermediate representation. Useful for filtering, forwarding, or
-populating application state incrementally.
-
-```cpp
-struct MySink : note::JsonSink {
-    void on_string(string_view key, string_view value) override {
-        if (key == "target") display.show(value);
-    }
-};
-```
-
-### Tier 2: `bodyAs<T>()` (struct population, zero intermediate allocation)
-
-The SAX stream feeds directly into a C++ struct via `NOTE_FIELDS` or
-C++20 aggregate reflection. No JSON tree built — fields are assigned
-as the tokens arrive.
-
-```cpp
-auto r = nc.note.get().file("config.qi").execute();
-auto config = r.bodyAs<MyConfig>();
-```
-
-### Tier 3: JSON tree (explicit allocation)
-
-A convenience `JsonTreeSink` builds an in-memory JSON object from
-the SAX stream. The developer explicitly opts into this allocation.
-Useful for freeform content that needs inspection, iteration over
-unknown keys, or forwarding to another JSON consumer.
-
-```cpp
-auto r = nc.note.get().file("data.qi").execute();
-auto tree = r.bodyAsJson();  // developer pays for allocation here
-for (auto& [key, value] : tree) {
-    // iterate over unknown fields
-}
-```
-
-### Design principle
-
-The library never allocates on behalf of the developer without their
-knowledge. Tier 1 and 2 are zero-allocation. Tier 3 allocates because
-the developer asked for a tree — the cost is visible in their code,
-not hidden inside a backend.
-
-This means:
-- No backend configuration knob for users
-- No hidden buffer sizes to tune
-- Memory usage is proportional to what the developer explicitly requests
-- The "which backend?" question disappears entirely
+1. **SAX stream** — `JsonSink` callbacks, zero allocation
+2. **`bodyAs<T>()`** — struct population via `NOTE_FIELDS`, zero intermediate allocation
+3. **JSON tree** — explicit `bodyAsJson()`, developer pays for allocation

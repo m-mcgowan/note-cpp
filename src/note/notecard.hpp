@@ -11,7 +11,6 @@
 #include "transport/cobs.hpp"
 
 #include <optional>
-#include <string>
 #include <type_traits>
 
 namespace note {
@@ -249,10 +248,10 @@ private:
         }
 
         req.cobs = static_cast<int32_t>(cobs_encoded_length(src.data(), src.size()));
-        std::string md5_hex;
+        Md5Hex md5_hex;
         if (md5_) {
             md5_hex = md5_->compute(src.data(), src.size());
-            req.status = md5_hex;  // string_view into md5_hex — must outlive execute()
+            req.status = md5_hex;  // string_view into md5_hex.buf — stack lifetime
         }
 
         auto result = execute(static_cast<const RequestT&>(req));
@@ -328,7 +327,7 @@ private:
         string_view expected_md5 = result.status;
         if (md5_ && !expected_md5.empty()) {
             auto actual = md5_->compute(dst.data(), decoded);
-            if (actual != std::string(expected_md5.data(), expected_md5.size())) {
+            if (actual != expected_md5) {
                 transport_->reset();
                 return ApiResult<typename RequestT::Response>(
                     ErrorInfo{Error::ResponseLost, Cause::CrcMismatch, "MD5 mismatch"});

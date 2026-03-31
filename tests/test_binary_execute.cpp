@@ -151,7 +151,8 @@ TEST_CASE("SoftwareMd5 computes correct hex digest") {
     auto hash = md5.compute(data, 512);
     REQUIRE(hash.size() == 32);
     // Verify it's a valid hex string
-    for (char c : hash) {
+    for (size_t i = 0; i < hash.size(); ++i) {
+        char c = hash.buf[i];
         REQUIRE(((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f')));
     }
 }
@@ -456,7 +457,7 @@ TEST_CASE("Binary PUT: verify() does pre-flight and post-transmit checks") {
         "{}",                                                    // reset (card.binary delete)
         "{\"max\":1024}",                                        // pre-flight status
         "{}",                                                    // PUT handshake
-        "{\"status\":\"" + expected_md5 + "\"}"                  // post-verify status
+        std::string("{\"status\":\"") + expected_md5.data() + "\"}"  // post-verify status
     });
 
     note::api::CardBinaryPut req;

@@ -6,7 +6,7 @@
 #include <note/md5.hpp>
 
 /// Compute the MD5 hex digest of `data` (len bytes).
-inline std::string md5_hex(const uint8_t* data, size_t len) {
+inline note::Md5Hex md5_hex(const uint8_t* data, size_t len) {
     note::PlatformMd5 md5;
     return md5.compute(data, len);
 }

@@ -3,12 +3,28 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
-#include <string>
+
+#include "types.hpp"
 
 namespace note {
 
+/// Fixed-size MD5 hex digest — 32 lowercase hex characters, no heap allocation.
+struct Md5Hex {
+    char buf[33]{};  // 32 hex + null terminator
+
+    /// Implicit conversion to string_view for comparisons and field assignment.
+    operator string_view() const { return {buf, 32}; }
+
+    bool operator==(string_view other) const { return string_view(*this) == other; }
+    bool operator!=(string_view other) const { return string_view(*this) != other; }
+
+    const char* data() const { return buf; }
+    static constexpr size_t size() { return 32; }
+    bool empty() const { return buf[0] == '\0'; }
+};
+
 /// Abstract interface for MD5 computation.
-/// Returns the MD5 of `len` raw bytes as a 32-character lowercase hex string.
+/// Returns the MD5 of `len` raw bytes as a 32-character lowercase hex digest.
 ///
 /// Inject into Notecard to use hardware-accelerated MD5 where available.
 /// The library provides SoftwareMd5 (pure C++17, always available) and
@@ -16,15 +32,27 @@ namespace note {
 /// whichever is best for the current target.
 class Md5Provider {
 public:
-    virtual std::string compute(const uint8_t* data, size_t len) = 0;
+    virtual Md5Hex compute(const uint8_t* data, size_t len) = 0;
     virtual ~Md5Provider() = default;
 };
 
 
 namespace detail {
 
+/// Encode a 16-byte digest into a Md5Hex struct.
+inline Md5Hex digest_to_hex(const uint8_t digest[16]) {
+    static constexpr char hex[] = "0123456789abcdef";
+    Md5Hex out;
+    for (size_t i = 0; i < 16; ++i) {
+        out.buf[i*2]   = hex[digest[i] >> 4];
+        out.buf[i*2+1] = hex[digest[i] & 0xf];
+    }
+    out.buf[32] = '\0';
+    return out;
+}
+
 /// RFC 1321 MD5 — pure C++17, no dependencies.
-inline std::string md5_hex(const uint8_t* msg, size_t len) {
+inline Md5Hex md5_hex(const uint8_t* msg, size_t len) {
     // Per-round shift amounts and per-round constants
     static constexpr uint32_t S[64] = {
         7,12,17,22, 7,12,17,22, 7,12,17,22, 7,12,17,22,
@@ -94,7 +122,7 @@ inline std::string md5_hex(const uint8_t* msg, size_t len) {
         a0 += A; b0 += B; c0 += C; d0 += D;
     }
 
-    // Produce little-endian digest and hex-encode
+    // Produce little-endian digest
     uint8_t digest[16];
     uint32_t words[4] = { a0, b0, c0, d0 };
     for (int i = 0; i < 4; ++i) {
@@ -103,13 +131,7 @@ inline std::string md5_hex(const uint8_t* msg, size_t len) {
         digest[i*4+2] = static_cast<uint8_t>(words[i] >> 16);
         digest[i*4+3] = static_cast<uint8_t>(words[i] >> 24);
     }
-    static constexpr char hex[] = "0123456789abcdef";
-    std::string out(32, '\0');
-    for (size_t i = 0; i < 16; ++i) {
-        out[i*2]   = hex[digest[i] >> 4];
-        out[i*2+1] = hex[digest[i] & 0xf];
-    }
-    return out;
+    return digest_to_hex(digest);
 }
 
 } // namespace detail
@@ -118,7 +140,7 @@ inline std::string md5_hex(const uint8_t* msg, size_t len) {
 /// Pure software MD5 — always available, no platform dependencies.
 class SoftwareMd5 : public Md5Provider {
 public:
-    std::string compute(const uint8_t* data, size_t len) override {
+    Md5Hex compute(const uint8_t* data, size_t len) override {
         return detail::md5_hex(data, len);
     }
 };
@@ -136,16 +158,10 @@ public:
 /// Typically hardware-accelerated on ESP32 targets.
 class MbedTlsMd5 : public Md5Provider {
 public:
-    std::string compute(const uint8_t* data, size_t len) override {
+    Md5Hex compute(const uint8_t* data, size_t len) override {
         uint8_t digest[16];
         mbedtls_md5(data, len, digest);
-        static constexpr char hex[] = "0123456789abcdef";
-        std::string out(32, '\0');
-        for (size_t i = 0; i < 16; ++i) {
-            out[i*2]   = hex[digest[i] >> 4];
-            out[i*2+1] = hex[digest[i] & 0xf];
-        }
-        return out;
+        return detail::digest_to_hex(digest);
     }
 };
 

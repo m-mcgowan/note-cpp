@@ -325,10 +325,12 @@ BodyValue template_of(const T&) {
     ::note::detail::_note_read_field(r, #field, (obj).field);
 
 #define NOTE_FIELDS(...) \
-    static void _note_fields_write(const auto& _self, ::note::JsonBuilder& _b) { \
+    template<typename Self_> \
+    static void _note_fields_write(const Self_& _self, ::note::JsonBuilder& _b) { \
         _NOTE_FIELDS_EXPAND(_NOTE_FIELDS_WRITE_EACH(_self, _b, __VA_ARGS__)) \
     } \
-    static void _note_fields_read(auto& _self, const ::note::JsonReader& _r) { \
+    template<typename Self_> \
+    static void _note_fields_read(Self_& _self, const ::note::JsonReader& _r) { \
         _NOTE_FIELDS_EXPAND(_NOTE_FIELDS_READ_EACH(_self, _r, __VA_ARGS__)) \
     }
 

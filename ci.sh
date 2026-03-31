@@ -110,6 +110,14 @@ HEOF
 #include <note/string_pool.hpp>
 H17EOF
         echo "  C++17 public headers OK"
+
+        # C++17 NOTE_FIELDS macro — must work since it's the primary user-facing macro
+        $CXX -std=c++17 $INCLUDE -fsyntax-only -x c++ - <<'NFEOF'
+#include <note/body.hpp>
+struct TestStruct { float a; int32_t b; NOTE_FIELDS(a, b) };
+NFEOF
+        echo "  C++17 NOTE_FIELDS OK"
+
         export CPP17_DONE=1
     fi
 

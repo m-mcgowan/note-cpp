@@ -39,24 +39,14 @@ public:
     // Used for body content that's already valid JSON.
     virtual JsonBuilder& add_raw(string_view key, string_view json_fragment) = 0;
 
-    // Finalize and return the built JSON as a string.
-    virtual std::string to_string() = 0;
-
-    // Finalize and return a view into an internal buffer.
-    // The view is valid until the next call to reset(), to_string(), or to_view().
-    // Default implementation calls to_string() and caches in a member.
-    // Backends may override to serialize into a pre-allocated buffer (zero-alloc).
-    virtual string_view to_view() {
-        view_buf_ = to_string();
-        return view_buf_;
-    }
+    // Finalize and return a view into the builder's internal buffer.
+    // The view is valid until the next call to reset() or to_view().
+    // All backends must implement this — it's the primary serialization method.
+    virtual string_view to_view() = 0;
 
     // Reset builder state for reuse (avoid re-allocating the builder object).
     // Default implementation is a no-op; backends override to clear internal state.
     virtual void reset() {}
-
-private:
-    std::string view_buf_;
 };
 
 class JsonReader {

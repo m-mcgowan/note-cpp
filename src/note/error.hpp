@@ -1,7 +1,7 @@
 #pragma once
 
 #include <cstdint>
-#include <string>
+#include <cstdio>
 #include <string_view>
 
 #include "arduino/compat.hpp"
@@ -94,28 +94,58 @@ constexpr std::string_view to_string(Cause c) {
     NOTE_UNREACHABLE();
 }
 
-/// Format an ErrorInfo for logging.
-///   Cause Unspecified: "notecard: {some device has no ProductUID configured}"
-///   Cause set:         "response_lost[timeout]: no response"
-inline std::string to_string(const ErrorInfo& e) {
-    std::string s;
+/// Fixed-size formatted error string — no heap allocation.
+/// Format: "code[cause]: message" or "code: message" if cause is Unspecified.
+/// Truncates if the message exceeds the buffer.
+struct ErrorString {
+    static constexpr size_t MAX_LEN = 255;
+    char buf[MAX_LEN + 1]{};
+    size_t len = 0;
+
+    operator std::string_view() const { return {buf, len}; }
+    bool operator==(std::string_view other) const { return std::string_view(*this) == other; }
+    bool operator!=(std::string_view other) const { return std::string_view(*this) != other; }
+    const char* c_str() const { return buf; }
+    const char* data() const { return buf; }
+    size_t size() const { return len; }
+};
+
+/// Format an ErrorInfo into a fixed buffer. No heap allocation.
+inline ErrorString to_string(const ErrorInfo& e) {
+    ErrorString out;
     auto code = to_string(e.code);
-    s.reserve(code.size() + 20 + e.message.size());
-    s += code;
-    if (e.cause != Cause::Unspecified) {
-        s += '[';
-        s += to_string(e.cause);
-        s += ']';
+    auto cause = to_string(e.cause);
+
+    // Write code
+    size_t pos = 0;
+    for (size_t i = 0; i < code.size() && pos < ErrorString::MAX_LEN; ++i)
+        out.buf[pos++] = code[i];
+
+    // Write [cause] if not Unspecified
+    if (e.cause != Cause::Unspecified && pos < ErrorString::MAX_LEN) {
+        out.buf[pos++] = '[';
+        for (size_t i = 0; i < cause.size() && pos < ErrorString::MAX_LEN; ++i)
+            out.buf[pos++] = cause[i];
+        if (pos < ErrorString::MAX_LEN) out.buf[pos++] = ']';
     }
-    s += ": ";
-    s += e.message;
-    return s;
+
+    // Write ": "
+    if (pos < ErrorString::MAX_LEN) out.buf[pos++] = ':';
+    if (pos < ErrorString::MAX_LEN) out.buf[pos++] = ' ';
+
+    // Write message (truncate if needed)
+    for (size_t i = 0; i < e.message.size() && pos < ErrorString::MAX_LEN; ++i)
+        out.buf[pos++] = e.message[i];
+
+    out.buf[pos] = '\0';
+    out.len = pos;
+    return out;
 }
 
 #ifdef ARDUINO
 inline size_t ErrorInfo::printTo(Print& p) const {
-    std::string s = to_string(*this);
-    return p.print(s.c_str());
+    auto s = to_string(*this);
+    return p.write(reinterpret_cast<const uint8_t*>(s.data()), s.size());
 }
 #endif
 

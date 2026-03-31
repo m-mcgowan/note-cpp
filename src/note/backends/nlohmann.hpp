@@ -81,8 +81,9 @@ public:
     NlohmannBuilder& add_element(string_view value) override {
         current()->push_back(std::string(value)); return *this;
     }
-    std::string to_string() override {
-        return root_.dump();
+    string_view to_view() override {
+        view_cache_ = root_.dump();
+        return view_cache_;
     }
     void reset() override {
         root_ = nlohmann::json::object();
@@ -93,6 +94,7 @@ public:
 private:
     nlohmann::json root_ = nlohmann::json::object();
     std::vector<nlohmann::json*> stack_;
+    std::string view_cache_;  // cache for to_view() — nlohmann::dump() returns std::string
 
     nlohmann::json* current() { return stack_.back(); }
 };

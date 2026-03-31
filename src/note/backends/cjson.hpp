@@ -122,13 +122,6 @@ public:
         cJSON_AddItemToArray(current(), cJSON_CreateString(zstr(value)));
         return *this;
     }
-    std::string to_string() override {
-        char* raw = cJSON_PrintUnformatted(root_);
-        std::string result(raw);
-        cJSON_free(raw);
-        return result;
-    }
-
     string_view to_view() override {
         // Try pre-allocated buffer first (avoids cJSON malloc + std::string copy).
         if (cJSON_PrintPreallocated(root_, print_buf_, sizeof(print_buf_), 0))

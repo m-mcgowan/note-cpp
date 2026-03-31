@@ -96,12 +96,12 @@ TEST_CASE("BufferJsonBuilder: reset reuses buffer") {
     REQUIRE(b.to_view() == R"({"second":false})");
 }
 
-TEST_CASE("BufferJsonBuilder: to_string returns std::string") {
+TEST_CASE("BufferJsonBuilder: to_view returns string_view") {
     char buf[128];
     BufferJsonBuilder b(buf, sizeof(buf));
     b.add("x", int32_t{1});
-    std::string s = b.to_string();
-    REQUIRE(s == R"({"x":1})");
+    auto v = b.to_view();
+    REQUIRE(v == R"({"x":1})");
 }
 
 TEST_CASE("BufferJsonBuilder: overflow truncates gracefully") {

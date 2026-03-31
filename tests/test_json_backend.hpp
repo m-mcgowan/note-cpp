@@ -74,14 +74,23 @@ public:
     TestJsonBuilder& add_element(string_view v) override {
         comma(); buf_ += '"'; escape_string(v); buf_ += '"'; return *this;
     }
-    std::string to_string() override {
-        buf_ += '}';
-        return std::move(buf_);
+    string_view to_view() override {
+        if (!closed_) { buf_ += '}'; closed_ = true; }
+        return buf_;
+    }
+
+    void reset() override {
+        buf_.clear();
+        buf_ = "{";
+        needs_comma_.clear();
+        needs_comma_.push_back(false);
+        closed_ = false;
     }
 
 private:
     std::string buf_;
     std::vector<bool> needs_comma_;
+    bool closed_ = false;
 
     void comma() { if (needs_comma_.back()) buf_ += ','; needs_comma_.back() = true; }
     void key(string_view k) { comma(); buf_ += '"'; buf_ += k; buf_ += "\":"; }

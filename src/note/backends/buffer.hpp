@@ -105,11 +105,6 @@ public:
         comma(); quoted(value); return *this;
     }
 
-    std::string to_string() override {
-        close();
-        return std::string(buf_, pos_ < capacity_ ? pos_ : capacity_ - 1);
-    }
-
     string_view to_view() override {
         close();
         return {buf_, pos_ < capacity_ ? pos_ : capacity_ - 1};

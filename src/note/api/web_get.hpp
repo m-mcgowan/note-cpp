@@ -212,12 +212,14 @@ struct WebGet {
         }
 
         // SAX sink — zero-allocation streaming parse into Response fields.
-        // String fields are string_views into the JSON buffer; caller must
-        // ensure the buffer outlives the Response (or intern strings after).
+        // String fields are interned into the StringPool immediately, so
+        // string_views survive after the parser's scratch buffer is reused.
         struct Sink : ::note::JsonSink {
             Response& rsp;
-            explicit Sink(Response& r) : rsp(r) {}
+            ::note::StringPool& pool_;
+            Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
             void on_string(::note::string_view k_, ::note::string_view v_) override {
+                v_ = pool_.intern(v_);
                 if (k_ == "payload") { rsp.payload = v_; return; }
             }
             void on_number(::note::string_view k_, ::note::string_view raw_) override {
@@ -225,6 +227,7 @@ struct WebGet {
                 if (k_ == "length") { rsp.length = ::note::parse_int(raw_); return; }
                 if (k_ == "result") { rsp.result = ::note::parse_int(raw_); return; }
             }
+            void reset() override { rsp = Response{}; }
         };
 
         void intern_strings(::note::StringPool& pool) {

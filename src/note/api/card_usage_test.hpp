@@ -143,11 +143,12 @@ struct CardUsageTest {
         }
 
         // SAX sink — zero-allocation streaming parse into Response fields.
-        // String fields are string_views into the JSON buffer; caller must
-        // ensure the buffer outlives the Response (or intern strings after).
+        // String fields are interned into the StringPool immediately, so
+        // string_views survive after the parser's scratch buffer is reused.
         struct Sink : ::note::JsonSink {
             Response& rsp;
-            explicit Sink(Response& r) : rsp(r) {}
+            ::note::StringPool& pool_;
+            Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
             void on_number(::note::string_view k_, ::note::string_view raw_) override {
                 if (k_ == "bytes_per_day") { rsp.bytesPerDay = ::note::parse_int(raw_); return; }
                 if (k_ == "bytes_received") { rsp.bytesReceived = ::note::parse_int(raw_); return; }
@@ -161,6 +162,7 @@ struct CardUsageTest {
                 if (k_ == "sessions_standard") { rsp.sessionsStandard = ::note::parse_int(raw_); return; }
                 if (k_ == "time") { rsp.time = ::note::parse_int(raw_); return; }
             }
+            void reset() override { rsp = Response{}; }
         };
 
         void intern_strings(::note::StringPool&) {}

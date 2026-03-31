@@ -336,14 +336,16 @@ struct CardAttn {
 #pragma GCC diagnostic pop
 
             // SAX sink — zero-allocation streaming parse into Response fields.
-            // String fields are string_views into the JSON buffer; caller must
-            // ensure the buffer outlives the Response (or intern strings after).
+            // String fields are interned into the StringPool immediately, so
+            // string_views survive after the parser's scratch buffer is reused.
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
             struct Sink : ::note::JsonSink {
                 Response& rsp;
-                explicit Sink(Response& r) : rsp(r) {}
+                ::note::StringPool& pool_;
+                Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
                 void on_string(::note::string_view k_, ::note::string_view v_) override {
+                    v_ = pool_.intern(v_);
                     if (k_ == "payload") { rsp.payload = v_; return; }
                 }
                 void on_bool(::note::string_view k_, bool v_) override {
@@ -355,6 +357,7 @@ struct CardAttn {
                 void on_number(::note::string_view k_, ::note::string_view raw_) override {
                     if (k_ == "time") { rsp.time = ::note::parse_int(raw_); return; }
                 }
+                void reset() override { rsp = Response{}; }
             };
 #pragma GCC diagnostic pop
 
@@ -659,14 +662,16 @@ struct CardAttn {
             }
 
             // SAX sink — zero-allocation streaming parse into Response fields.
-            // String fields are string_views into the JSON buffer; caller must
-            // ensure the buffer outlives the Response (or intern strings after).
+            // String fields are interned into the StringPool immediately, so
+            // string_views survive after the parser's scratch buffer is reused.
             struct Sink : ::note::JsonSink {
                 Response& rsp;
-                explicit Sink(Response& r) : rsp(r) {}
+                ::note::StringPool& pool_;
+                Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
                 void on_bool(::note::string_view k_, bool v_) override {
                     if (k_ == "set") { rsp.set = v_; return; }
                 }
+                void reset() override { rsp = Response{}; }
             };
 
             void intern_strings(::note::StringPool&) {}
@@ -969,17 +974,20 @@ struct CardAttn {
             }
 
             // SAX sink — zero-allocation streaming parse into Response fields.
-            // String fields are string_views into the JSON buffer; caller must
-            // ensure the buffer outlives the Response (or intern strings after).
+            // String fields are interned into the StringPool immediately, so
+            // string_views survive after the parser's scratch buffer is reused.
             struct Sink : ::note::JsonSink {
                 Response& rsp;
-                explicit Sink(Response& r) : rsp(r) {}
+                ::note::StringPool& pool_;
+                Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
                 void on_string(::note::string_view k_, ::note::string_view v_) override {
+                    v_ = pool_.intern(v_);
                     if (k_ == "payload") { rsp.payload = v_; return; }
                 }
                 void on_number(::note::string_view k_, ::note::string_view raw_) override {
                     if (k_ == "time") { rsp.time = ::note::parse_int(raw_); return; }
                 }
+                void reset() override { rsp = Response{}; }
             };
 
             void intern_strings(::note::StringPool& pool) {
@@ -1190,19 +1198,21 @@ struct CardAttn {
 #pragma GCC diagnostic pop
 
             // SAX sink — zero-allocation streaming parse into Response fields.
-            // String fields are string_views into the JSON buffer; caller must
-            // ensure the buffer outlives the Response (or intern strings after).
+            // String fields are interned into the StringPool immediately, so
+            // string_views survive after the parser's scratch buffer is reused.
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
             struct Sink : ::note::JsonSink {
                 Response& rsp;
-                explicit Sink(Response& r) : rsp(r) {}
+                ::note::StringPool& pool_;
+                Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
                 void on_bool(::note::string_view k_, bool v_) override {
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
                     if (k_ == "off") { rsp.off = v_; return; }
 #endif
                     if (k_ == "set") { rsp.set = v_; return; }
                 }
+                void reset() override { rsp = Response{}; }
             };
 #pragma GCC diagnostic pop
 

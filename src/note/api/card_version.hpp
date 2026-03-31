@@ -134,14 +134,16 @@ struct CardVersion {
 #pragma GCC diagnostic pop
 
         // SAX sink — zero-allocation streaming parse into Response fields.
-        // String fields are string_views into the JSON buffer; caller must
-        // ensure the buffer outlives the Response (or intern strings after).
+        // String fields are interned into the StringPool immediately, so
+        // string_views survive after the parser's scratch buffer is reused.
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
         struct Sink : ::note::JsonSink {
             Response& rsp;
-            explicit Sink(Response& r) : rsp(r) {}
+            ::note::StringPool& pool_;
+            Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
             void on_string(::note::string_view k_, ::note::string_view v_) override {
+                v_ = pool_.intern(v_);
                 if (k_ == "board") { rsp.board = v_; return; }
                 if (k_ == "device") { rsp.device = v_; return; }
                 if (k_ == "name") { rsp.name = v_; return; }
@@ -155,6 +157,7 @@ struct CardVersion {
                 if (k_ == "wifi") { rsp.wifi = v_; return; }
 #endif
             }
+            void reset() override { rsp = Response{}; }
         };
 #pragma GCC diagnostic pop
 

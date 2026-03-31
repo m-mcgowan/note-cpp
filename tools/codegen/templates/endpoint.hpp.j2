@@ -437,15 +437,16 @@ namespace note::api {
 {% if op.response.properties %}
 
 {{ indent }}    // SAX sink — zero-allocation streaming parse into Response fields.
-{{ indent }}    // String fields are string_views into the JSON buffer; caller must
-{{ indent }}    // ensure the buffer outlives the Response (or intern strings after).
+{{ indent }}    // String fields are interned into the StringPool immediately, so
+{{ indent }}    // string_views survive after the parser's scratch buffer is reused.
 {% if op.has_version_gated_response_props %}
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 {% endif %}
 {{ indent }}    struct Sink : ::note::JsonSink {
 {{ indent }}        Response& rsp;
-{{ indent }}        explicit Sink(Response& r) : rsp(r) {}
+{{ indent }}        ::note::StringPool& pool_;
+{{ indent }}        Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
 {% set string_props = [] %}
 {% set bool_props = [] %}
 {% set int_props = [] %}
@@ -459,6 +460,7 @@ namespace note::api {
 {% endfor %}
 {% if string_props %}
 {{ indent }}        void on_string(::note::string_view k_, ::note::string_view v_) override {
+{{ indent }}            v_ = pool_.intern(v_);
 {% for prop in string_props %}
 {{ version_guard_begin(prop.version_guard) -}}
 {{ indent }}            if (k_ == "{{ prop.wire_name }}") { rsp.{{ prop.accessor_name }} = v_; return; }
@@ -489,6 +491,7 @@ namespace note::api {
 {% endfor %}
 {{ indent }}        }
 {% endif %}
+{{ indent }}        void reset() override { rsp = Response{}; }
 {{ indent }}    };
 {% if op.has_version_gated_response_props %}
 #pragma GCC diagnostic pop

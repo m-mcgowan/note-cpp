@@ -87,6 +87,10 @@ public:
         ext_buf_size_ = len;
     }
 
+    // TODO: set_wire_buffer() for zero-heap outbound path.
+    // Blocked on crc_add() which is std::string-based.
+    // The streaming transport (transact_streaming) bypasses wire_ entirely.
+
     // ── ITransport ────────────────────────────────────────────────────────
 
     Result<string_view> transact(string_view request, uint32_t timeout_ms) override {
@@ -358,10 +362,15 @@ protected:
     bool initialized_ = false;
     bool crc_enabled_ = false;
     uint16_t crc_seq_ = 0;
-    std::string wire_;          // reused across requests
-    std::string response_buf_;  // reused — string_view return points here
 
-    // Phase 2: external receive buffer (set via set_receive_buffer)
+    // Wire and response buffers. When external buffers are set (via
+    // set_wire_buffer / set_receive_buffer), the std::string members are
+    // unused. This allows fully heap-free operation when the caller
+    // controls buffer placement.
+    std::string wire_;          // fallback outbound buffer
+    std::string response_buf_;  // fallback inbound buffer
+
+    // External buffers (Phase 2 — caller-provided, zero heap)
     char* ext_buf_ = nullptr;
     size_t ext_buf_size_ = 0;
 

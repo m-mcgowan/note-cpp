@@ -439,3 +439,141 @@ TEST_CASE("CrcFieldSink: reset clears state") {
     crc.reset();
     REQUIRE_FALSE(crc.has_crc());
 }
+
+// ---------------------------------------------------------------------------
+// Streaming receive integration (transport-level)
+// ---------------------------------------------------------------------------
+
+namespace {
+
+// Minimal concrete transport for testing streaming receive.
+struct TestStreamTransport : AbstractTransport {
+    // Expose protected members for test access
+    using AbstractTransport::initialized_;
+    using AbstractTransport::crc_enabled_;
+    using AbstractTransport::crc_seq_;
+
+    std::string response;
+    size_t read_pos = 0;
+    size_t chunk_size = 64;
+
+    bool do_transmit(const char*, size_t) override { return true; }
+#ifndef NOTE_NO_STD_STRING
+    Result<void> do_receive(std::string&, uint32_t) override {
+        return make_error(Error::NotReady, "use streaming");
+    }
+#endif
+    bool do_reset() override { return true; }
+    Result<size_t> do_read(uint8_t* buf, size_t max, uint32_t) override {
+        if (read_pos >= response.size()) return size_t(0);
+        size_t n = std::min({max, chunk_size, response.size() - read_pos});
+        memcpy(buf, response.data() + read_pos, n);
+        read_pos += n;
+        return n;
+    }
+    uint32_t max_retries() const override { return 0; }
+    uint32_t retry_delay_ms() const override { return 0; }
+    void delay(uint32_t) override {}
+
+    void set_response(const char* json) {
+        response = json;
+        response += '\n';
+        read_pos = 0;
+    }
+
+    /// Build response with CRC. seq is the value BEFORE transact_streaming
+    /// increments — the response CRC uses seq+1 to match.
+    void set_response_with_crc(const char* json, uint16_t seq) {
+        char buf[512];
+        size_t len = strlen(json);
+        memcpy(buf, json, len);
+        uint16_t wire_seq = static_cast<uint16_t>(seq + 1);
+        len = transport::detail::crc_add(buf, len, sizeof(buf), wire_seq);
+        response.assign(buf, len);
+        response += '\n';
+        read_pos = 0;
+        crc_enabled_ = true;
+        crc_seq_ = seq;
+    }
+};
+
+} // anonymous namespace
+
+TEST_CASE("transact_streaming: basic SAX parse") {
+    TestStreamTransport transport;
+    transport.set_response(R"({"status":"ok","temp":22.5})");
+    transport.initialized_ = true;
+
+    struct Sink : JsonSink {
+        std::string status;
+        double temp = 0;
+        void on_string(string_view k, string_view v) override {
+            if (k == "status") status = std::string(v.data(), v.size());
+        }
+        void on_number(string_view k, string_view raw) override {
+            if (k == "temp") temp = parse_double(raw);
+        }
+    } sink;
+
+    auto rv = transport.transact_streaming([](JsonBuilder& b) {
+        b.add("req", "test.run");
+    }, sink, 1000);
+    REQUIRE(rv.has_value());
+    REQUIRE(sink.status == "ok");
+    REQUIRE(sink.temp == Approx(22.5));
+}
+
+TEST_CASE("transact_streaming: CRC verification passes") {
+    TestStreamTransport transport;
+    transport.set_response_with_crc(R"({"val":42})", 0);
+    transport.initialized_ = true;
+
+    struct Sink : JsonSink {
+        int32_t val = 0;
+        void on_number(string_view k, string_view raw) override {
+            if (k == "val") val = parse_int(raw);
+        }
+    } sink;
+
+    auto rv = transport.transact_streaming([](JsonBuilder& b) {
+        b.add("req", "test.run");
+    }, sink, 1000);
+    REQUIRE(rv.has_value());
+    REQUIRE(sink.val == 42);
+}
+
+TEST_CASE("transact_streaming: CRC mismatch detected") {
+    TestStreamTransport transport;
+    transport.response = R"({"val":42,"crc":"0001:DEADBEEF"})";
+    transport.response += '\n';
+    transport.crc_enabled_ = true;
+    transport.crc_seq_ = 0;
+    transport.initialized_ = true;
+
+    JsonSink null_sink;
+    auto rv = transport.transact_streaming([](JsonBuilder& b) {
+        b.add("req", "test.run");
+    }, null_sink, 1000);
+    REQUIRE_FALSE(rv.has_value());
+    REQUIRE(rv.error().code == Error::ResponseLost);
+}
+
+TEST_CASE("transact_streaming: send + receive round trip") {
+    TestStreamTransport transport;
+    transport.set_response(R"({"result":"done"})");
+    transport.initialized_ = true;
+
+    struct Sink : JsonSink {
+        std::string result;
+        void on_string(string_view k, string_view v) override {
+            if (k == "result") result = std::string(v.data(), v.size());
+        }
+    } sink;
+
+    auto rv = transport.transact_streaming([](JsonBuilder& b) {
+        b.add("req", "test.run");
+    }, sink, 1000);
+
+    REQUIRE(rv.has_value());
+    REQUIRE(sink.result == "done");
+}

@@ -7,6 +7,7 @@
 
 #include <note/error.hpp>
 #include <note/json.hpp>
+#include <note/json_sax_streaming.hpp>
 #include <note/transport/detail/crc32.hpp>
 #include <note/types.hpp>
 
@@ -224,6 +225,46 @@ public:
             return make_error(Error::SendFailed, Cause::HalError, "transmit failed");
 
         return {};
+    }
+
+    /// Stream send + stream receive + retry.
+    /// build_fn populates a JsonBuilder& with request fields.
+    /// sink receives SAX events from the response (except "crc").
+    /// Calls sink.reset() before each retry attempt.
+    template<typename BuildFn>
+    Result<void> transact_streaming(BuildFn build_fn, JsonSink& sink,
+                                     uint32_t timeout_ms) {
+        if (!initialized_) {
+            if (!do_reset())
+                return make_error(Error::NotReady, "Notecard not ready after reset");
+            initialized_ = true;
+        }
+
+        if (crc_enabled_) ++crc_seq_;
+
+        ErrorInfo last_error{Error::SendFailed, Cause::HalError, "transmit failed"};
+
+        for (uint32_t attempt = 0; attempt <= max_retries(); ++attempt) {
+            if (attempt > 0) {
+                delay(retry_delay_ms());
+                do_reset();
+                sink.reset();
+            }
+
+            if (!stream_request(build_fn)) {
+                last_error = {Error::SendFailed, Cause::HalError, "transmit failed"};
+                continue;
+            }
+
+            auto rv = receive_streaming(sink, timeout_ms);
+            if (!rv) {
+                last_error = rv.error();
+                continue;
+            }
+            return {};
+        }
+
+        return Unexpected(last_error);
     }
 
     // ── ITransport ────────────────────────────────────────────────────────
@@ -590,6 +631,38 @@ protected:
 #else
         return make_error(Error::NotReady, "no receive buffer configured");
 #endif
+    }
+
+    /// Receive and SAX-parse a response directly from the transport.
+    /// CRC is verified via CrcAccumulator + CrcFieldSink.
+    /// The caller's sink receives all events except "crc".
+    Result<void> receive_streaming(JsonSink& sink, uint32_t timeout_ms) {
+        CrcFieldSink crc_sink(sink);
+        transport::detail::CrcAccumulator crc;
+
+        auto read_fn = [&](uint8_t* buf, size_t max, uint32_t t) -> Result<size_t> {
+            auto r = do_read(buf, max, t);
+            if (r) crc.feed(reinterpret_cast<const char*>(buf), *r);
+            return r;
+        };
+
+        auto parse_err = sax_parse_streaming(read_fn, timeout_ms, crc_sink);
+        if (!parse_err.empty())
+            return make_error(Error::Json, parse_err);
+
+        if (crc_sink.has_crc()) {
+            if (crc_sink.seq() != crc_seq_ ||
+                crc_sink.checksum() != crc.finalize_with_brace()) {
+                return make_error(Error::ResponseLost, Cause::CrcMismatch,
+                                  "CRC mismatch");
+            }
+            crc_enabled_ = true;
+        } else if (crc_enabled_) {
+            return make_error(Error::ResponseLost, Cause::CrcMismatch,
+                              "expected CRC");
+        }
+
+        return {};
     }
 
     // ── Shared state ──────────────────────────────────────────────────────

@@ -130,6 +130,41 @@ public:
         }
     };
 
+    /// SAX sink filter that intercepts the "crc" field from a response.
+    /// Extracts sequence number and checksum; does not forward to inner sink.
+    struct CrcFieldSink : FilterJsonSink {
+        uint16_t seq_ = 0;
+        uint32_t checksum_ = 0;
+        bool found_ = false;
+
+        explicit CrcFieldSink(JsonSink& inner) : FilterJsonSink(inner) {}
+
+        bool has_crc() const { return found_; }
+        uint16_t seq() const { return seq_; }
+        uint32_t checksum() const { return checksum_; }
+
+        void on_string(string_view key, string_view value) override {
+            if (key == "crc") {
+                if (value.size() == 13 && value[4] == ':') {
+                    seq_ = static_cast<uint16_t>(
+                        transport::detail::read_hex(value.data(), 4));
+                    checksum_ = static_cast<uint32_t>(
+                        transport::detail::read_hex(value.data() + 5, 8));
+                    found_ = true;
+                }
+                return;
+            }
+            inner_.on_string(key, value);
+        }
+
+        void reset() override {
+            seq_ = 0;
+            checksum_ = 0;
+            found_ = false;
+            FilterJsonSink::reset();
+        }
+    };
+
     // ── Streaming build — write JSON directly to transport ────────────────
     //
     // transact_build / send_build bypass the wire buffer entirely. The

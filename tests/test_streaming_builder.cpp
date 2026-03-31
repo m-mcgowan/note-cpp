@@ -387,3 +387,55 @@ TEST_CASE("ErrorCaptureSink: reset clears error") {
     err.reset();
     REQUIRE(err.captured_error().empty());
 }
+
+// ---------------------------------------------------------------------------
+// CrcFieldSink
+// ---------------------------------------------------------------------------
+
+TEST_CASE("CrcFieldSink: intercepts crc field, forwards rest") {
+    struct Recorder : JsonSink {
+        std::vector<std::string> keys;
+        void on_string(string_view k, string_view) override {
+            keys.emplace_back(k.data(), k.size());
+        }
+        void on_bool(string_view k, bool) override {
+            keys.emplace_back(k.data(), k.size());
+        }
+    };
+
+    Recorder rec;
+    AbstractTransport::CrcFieldSink crc(rec);
+
+    crc.on_string("status", "ok");
+    crc.on_bool("connected", true);
+    crc.on_string("crc", "0001:ABCDEF01");
+    crc.on_string("name", "test");
+
+    REQUIRE(crc.has_crc());
+    REQUIRE(crc.seq() == 1);
+    REQUIRE(crc.checksum() == 0xABCDEF01);
+    REQUIRE(rec.keys.size() == 3);
+    REQUIRE(rec.keys[0] == "status");
+    REQUIRE(rec.keys[1] == "connected");
+    REQUIRE(rec.keys[2] == "name");
+}
+
+TEST_CASE("CrcFieldSink: no crc field") {
+    JsonSink null_sink;
+    AbstractTransport::CrcFieldSink crc(null_sink);
+
+    crc.on_string("status", "ok");
+
+    REQUIRE_FALSE(crc.has_crc());
+}
+
+TEST_CASE("CrcFieldSink: reset clears state") {
+    JsonSink null_sink;
+    AbstractTransport::CrcFieldSink crc(null_sink);
+
+    crc.on_string("crc", "0005:12345678");
+    REQUIRE(crc.has_crc());
+
+    crc.reset();
+    REQUIRE_FALSE(crc.has_crc());
+}

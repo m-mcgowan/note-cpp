@@ -18,6 +18,31 @@
 
 using namespace note::transport::detail;
 
+// Helpers for char-buffer CRC API
+namespace {
+inline std::string add_crc(const char* json, uint16_t seq) {
+    char buf[512];
+    size_t len = strlen(json);
+    memcpy(buf, json, len);
+    size_t new_len = crc_add(buf, len, sizeof(buf), seq);
+    return std::string(buf, new_len);
+}
+inline std::string add_crc(const std::string& json, uint16_t seq) {
+    return add_crc(json.c_str(), seq);
+}
+inline bool check_crc(std::string& response, uint16_t seq, bool& flag) {
+    size_t len = response.size();
+    // Need writable buffer
+    char buf[512];
+    memcpy(buf, response.data(), len);
+    bool err = crc_check_and_strip(buf, len, seq, flag);
+    response.assign(buf, len);
+    return err;
+}
+} // namespace
+
+#include <cstring>
+
 // ---------------------------------------------------------------------------
 // crc32 — standard test vectors
 // ---------------------------------------------------------------------------
@@ -48,32 +73,32 @@ TEST_CASE("crc32 single byte 0xFF") {
 TEST_CASE("crc_add empty string returns unchanged") {
     // note-c: _crcAdd("", seqNo) == NULL (malloc would succeed but logic bails)
     // Our version: if json is empty or doesn't end with '}', return as-is.
-    std::string result = crc_add("", 1);
+    std::string result = add_crc("", 1);
     REQUIRE(result.empty());
 }
 
 TEST_CASE("crc_add empty object produces space-separated CRC field") {
     // note-c: _crcAdd("{}", 1) == "{ \"crc\":\"0001:A3A6BF43\"}"
     // Verified against note-c's _crc32 implementation.
-    std::string result = crc_add("{}", 1);
+    std::string result = add_crc("{}", 1);
     REQUIRE(result == "{ \"crc\":\"0001:A3A6BF43\"}");
 }
 
 TEST_CASE("crc_add valid JSON produces comma-separated CRC field") {
     // note-c: _crcAdd("{\"req\": \"hub.sync\"}", 1) == "{\"req\": \"hub.sync\",\"crc\":\"0001:DF2B9115\"}"
-    std::string result = crc_add("{\"req\": \"hub.sync\"}", 1);
+    std::string result = add_crc("{\"req\": \"hub.sync\"}", 1);
     REQUIRE(result == "{\"req\": \"hub.sync\",\"crc\":\"0001:DF2B9115\"}");
 }
 
 TEST_CASE("crc_add input without closing brace is returned unchanged") {
     // note-c: invalid JSON (no closing brace) → returns NULL
     std::string input = "{\"req\":";
-    std::string result = crc_add(input, 1);
+    std::string result = add_crc(input, 1);
     REQUIRE(result == input);
 }
 
 TEST_CASE("crc_add CRC field format is SSSS:CCCCCCCC") {
-    std::string out = crc_add("{\"req\":\"hub.set\"}", 0xAB12);
+    std::string out = add_crc("{\"req\":\"hub.set\"}", 0xAB12);
     auto pos = out.find("\"crc\":\"");
     REQUIRE(pos != std::string::npos);
     const char* val = out.data() + pos + 7;  // skip "crc":"
@@ -89,7 +114,7 @@ TEST_CASE("crc_add CRC field format is SSSS:CCCCCCCC") {
 
 TEST_CASE("crc_add total length increase is exactly kCrcFieldLen") {
     std::string json = R"({"req":"hub.set"})";
-    std::string out  = crc_add(json, 0x0001);
+    std::string out  = add_crc(json, 0x0001);
     REQUIRE(out.size() == json.size() + kCrcFieldLen);
 }
 
@@ -102,7 +127,7 @@ TEST_CASE("crc_check_and_strip: CRC not enabled, empty string — no error") {
     // note-c: _crcError("", seqNo) == false when !notecardFirmwareSupportsCrc
     bool flag = false;
     std::string response = "";
-    bool error = crc_check_and_strip(response, 1, flag);
+    bool error = check_crc(response, 1, flag);
     CHECK(!error);
     CHECK(!flag);
 }
@@ -111,7 +136,7 @@ TEST_CASE("crc_check_and_strip: CRC not enabled, invalid JSON (missing closing b
     // note-c: _crcError("{\"req\":\"hub.sync\",\"crc\":\"0009:10BAC79A\"", ...) == false
     bool flag = false;
     std::string response = "{\"req\":\"hub.sync\",\"crc\":\"0009:10BAC79A\"";  // no closing brace
-    bool error = crc_check_and_strip(response, 1, flag);
+    bool error = check_crc(response, 1, flag);
     CHECK(!error);
     CHECK(!flag);
 }
@@ -120,7 +145,7 @@ TEST_CASE("crc_check_and_strip: CRC not enabled, error response — no error") {
     // note-c: err field present → skip CRC check
     bool flag = false;
     std::string response = R"({"err":"cannot interpret JSON: bool being placed into a non-bool field {io}"})";
-    bool error = crc_check_and_strip(response, 1, flag);
+    bool error = check_crc(response, 1, flag);
     CHECK(!error);
     CHECK(!flag);
 }
@@ -129,7 +154,7 @@ TEST_CASE("crc_check_and_strip: CRC not enabled, no CRC field, short response �
     // note-c: no CRC field, notecardFirmwareSupportsCrc=false → no error
     bool flag = false;
     std::string response = R"({"req": "hub.sync"})";
-    bool error = crc_check_and_strip(response, 1, flag);
+    bool error = check_crc(response, 1, flag);
     CHECK(!error);
     CHECK(!flag);
 }
@@ -138,7 +163,7 @@ TEST_CASE("crc_check_and_strip: CRC not enabled, CRC not at tail — no error, f
     // note-c: CRC field embedded but not at tail → not detected → no error when !enabled
     bool flag = false;
     std::string response = R"({"crc":"0009:10BAC79A","req": "hub.sync"})";
-    bool error = crc_check_and_strip(response, 1, flag);
+    bool error = check_crc(response, 1, flag);
     CHECK(!error);
     CHECK(!flag);  // crc_enabled must NOT be set when CRC is not at tail
 }
@@ -151,7 +176,7 @@ TEST_CASE("crc_check_and_strip: hub.status regression — quote at CRC check off
     // Our 7-byte memcmp correctly rejects this.
     bool flag = false;
     std::string response = R"({"connected":false,"status":"connecting"})";
-    bool error = crc_check_and_strip(response, 1, flag);
+    bool error = check_crc(response, 1, flag);
     CHECK(!error);
     CHECK(!flag);  // flag must NOT be set by a false CRC field detection
 }
@@ -161,8 +186,8 @@ TEST_CASE("crc_check_and_strip: CRC not enabled, valid CRC field — no error, s
     // notecardFirmwareSupportsCrc becomes true (auto-detection).
     bool flag = false;
     std::string json = "{\"req\":\"hub.sync\"}";
-    std::string response = crc_add(json, 1);
-    bool error = crc_check_and_strip(response, 1, flag);
+    std::string response = add_crc(json, 1);
+    bool error = check_crc(response, 1, flag);
     CHECK(!error);
     CHECK(flag);  // auto-detected: firmware supports CRC
 }
@@ -177,7 +202,7 @@ TEST_CASE("crc_check_and_strip: CRC enabled, empty string — no error") {
     // (invalid JSON → bail out early before checking CRC expectation)
     bool flag = true;
     std::string response = "";
-    bool error = crc_check_and_strip(response, 1, flag);
+    bool error = check_crc(response, 1, flag);
     CHECK(!error);
 }
 
@@ -185,7 +210,7 @@ TEST_CASE("crc_check_and_strip: CRC enabled, invalid JSON — no error") {
     // note-c: _crcError("{\"req\":", seqNo) == false when notecardFirmwareSupportsCrc
     bool flag = true;
     std::string response = "{\"req\":";
-    bool error = crc_check_and_strip(response, 1, flag);
+    bool error = check_crc(response, 1, flag);
     CHECK(!error);
 }
 
@@ -193,7 +218,7 @@ TEST_CASE("crc_check_and_strip: CRC enabled, error response — no error") {
     // note-c: err field → skip CRC check even when CRC is expected
     bool flag = true;
     std::string response = R"({"err":"cannot interpret JSON: bool being placed into a non-bool field {io}"})";
-    bool error = crc_check_and_strip(response, 1, flag);
+    bool error = check_crc(response, 1, flag);
     CHECK(!error);
 }
 
@@ -204,7 +229,7 @@ TEST_CASE("crc_check_and_strip: CRC enabled, hub.status response without CRC —
     // but now with crc_enabled=true — the absence of CRC is an error.
     bool flag = true;
     std::string response = R"({"connected":false,"status":"connecting"})";
-    bool error = crc_check_and_strip(response, 1, flag);
+    bool error = check_crc(response, 1, flag);
     CHECK(error);
 }
 
@@ -212,7 +237,7 @@ TEST_CASE("crc_check_and_strip: CRC enabled, CRC not at tail — error") {
     // note-c: CRC embedded but not at tail → not detected → error when enabled
     bool flag = true;
     std::string response = R"({"crc":"0009:10BAC79A","req": "hub.sync"})";
-    bool error = crc_check_and_strip(response, 1, flag);
+    bool error = check_crc(response, 1, flag);
     CHECK(error);
 }
 
@@ -220,7 +245,7 @@ TEST_CASE("crc_check_and_strip: CRC enabled, wrong CRC value — error") {
     // note-c: WHEN "CRC doesn't match" → error
     bool flag = true;
     std::string response = R"({"req":"hub.sync","crc":"0001:DEADBEEF"})";
-    bool error = crc_check_and_strip(response, 1, flag);
+    bool error = check_crc(response, 1, flag);
     CHECK(error);
 }
 
@@ -228,7 +253,7 @@ TEST_CASE("crc_check_and_strip: CRC enabled, wrong sequence number — error") {
     // note-c: WHEN "Sequence number doesn't match" → error
     bool flag = true;
     std::string response = R"({"req":"hub.sync","crc":"0009:10BAC79A"})";
-    bool error = crc_check_and_strip(response, 1, flag);  // expected_seq=1, got 9
+    bool error = check_crc(response, 1, flag);  // expected_seq=1, got 9
     CHECK(error);
 }
 
@@ -236,8 +261,8 @@ TEST_CASE("crc_check_and_strip: CRC enabled, everything matches — no error, fi
     // note-c: WHEN "Everything matches" → no error
     bool flag = true;
     std::string json = "{\"req\":\"hub.sync\"}";
-    std::string response = crc_add(json, 1);
-    bool error = crc_check_and_strip(response, 1, flag);
+    std::string response = add_crc(json, 1);
+    bool error = check_crc(response, 1, flag);
     CHECK(!error);
     CHECK(response == json);  // CRC field stripped
 }
@@ -246,8 +271,8 @@ TEST_CASE("crc_check_and_strip: CRC enabled, trailing CRLF — no error") {
     // note-c: "a trailing CRLF" → trimmed before validation, no error
     bool flag = true;
     std::string json = "{\"req\":\"hub.sync\"}";
-    std::string response = crc_add(json, 1) + "\r\n";
-    bool error = crc_check_and_strip(response, 1, flag);
+    std::string response = add_crc(json, 1) + "\r\n";
+    bool error = check_crc(response, 1, flag);
     CHECK(!error);
 }
 
@@ -255,7 +280,7 @@ TEST_CASE("crc_check_and_strip: CRC enabled, short response without CRC — erro
     // note-c (from 13f8581): too-short response when CRC is enabled → error
     bool flag = true;
     std::string response = R"({"connected":true})";  // 18 chars < 24 minimum
-    bool error = crc_check_and_strip(response, 1, flag);
+    bool error = check_crc(response, 1, flag);
     CHECK(error);
 }
 
@@ -267,7 +292,7 @@ TEST_CASE("crc_check_and_strip: CRC not enabled, short response without CRC — 
     // Counterpart to "short response without CRC — error": with flag=false, no error.
     bool flag = false;
     std::string response = R"({"connected":true})";
-    bool error = crc_check_and_strip(response, 1, flag);
+    bool error = check_crc(response, 1, flag);
     CHECK(!error);
     CHECK(!flag);
     CHECK(response == R"({"connected":true})");  // unchanged
@@ -275,13 +300,13 @@ TEST_CASE("crc_check_and_strip: CRC not enabled, short response without CRC — 
 
 TEST_CASE("crc_check_and_strip: corrupted CRC value — error") {
     bool flag = false;
-    std::string response = crc_add("{\"ok\":true}", 1);
+    std::string response = add_crc("{\"ok\":true}", 1);
     // Corrupt the last hex digit of the checksum
     auto crc_pos = response.find("\"crc\":\"");
     REQUIRE(crc_pos != std::string::npos);
     char& c = response[crc_pos + 7 + 5 + 7];  // into the CCCCCCCC part
     c = (c == 'A') ? 'B' : 'A';
-    bool error = crc_check_and_strip(response, 1, flag);
+    bool error = check_crc(response, 1, flag);
     REQUIRE(error);
 }
 
@@ -294,10 +319,10 @@ TEST_CASE("crc round-trip: add then check_and_strip restores original") {
     uint16_t seq = 42;
     bool flag = false;
 
-    std::string with_crc = crc_add(original, seq);
+    std::string with_crc = add_crc(original, seq);
     REQUIRE(with_crc != original);
 
-    bool error = crc_check_and_strip(with_crc, seq, flag);
+    bool error = check_crc(with_crc, seq, flag);
     REQUIRE(!error);
     REQUIRE(flag);
     REQUIRE(with_crc == original);
@@ -307,8 +332,8 @@ TEST_CASE("crc round-trip works across multiple sequential sequence numbers") {
     bool flag = false;
     for (uint16_t seq = 0; seq < 10; ++seq) {
         const std::string original = R"({"req":"hub.set"})";
-        std::string with_crc = crc_add(original, seq);
-        bool error = crc_check_and_strip(with_crc, seq, flag);
+        std::string with_crc = add_crc(original, seq);
+        bool error = check_crc(with_crc, seq, flag);
         REQUIRE(!error);
         REQUIRE(with_crc == original);
     }
@@ -320,7 +345,7 @@ TEST_CASE("crc_check_and_strip: lowercase hex digits in CRC field — no error")
     // crc_add, then verify crc_check_and_strip still accepts it.
     bool flag = true;
     const std::string original = R"({"req":"hub.set"})";
-    std::string response = crc_add(original, 3);
+    std::string response = add_crc(original, 3);
     // Lowercase every hex letter in the SSSS:CCCCCCCC value (positions after "crc":"").
     auto pos = response.find("\"crc\":\"");
     REQUIRE(pos != std::string::npos);
@@ -328,7 +353,7 @@ TEST_CASE("crc_check_and_strip: lowercase hex digits in CRC field — no error")
         char& c = response[i];
         if (c >= 'A' && c <= 'F') c = static_cast<char>(c - 'A' + 'a');
     }
-    bool error = crc_check_and_strip(response, 3, flag);
+    bool error = check_crc(response, 3, flag);
     CHECK(!error);
     CHECK(response == original);  // CRC field stripped
 }

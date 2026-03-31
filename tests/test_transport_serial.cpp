@@ -21,6 +21,18 @@
 #include <functional>
 #include <string>
 
+// Helper: string-returning wrapper for char-buffer crc_add (test convenience)
+namespace {
+inline std::string str_crc_add(const std::string& json, uint16_t seq) {
+    char buf[512];
+    size_t len = json.size();
+    memcpy(buf, json.data(), len);
+    size_t new_len = note::transport::detail::crc_add(buf, len, sizeof(buf), seq);
+    return std::string(buf, new_len);
+}
+} // namespace
+
+
 using namespace note::transport;
 
 // ---------------------------------------------------------------------------
@@ -423,7 +435,7 @@ TEST_CASE("CRC auto-detection: first response with CRC sets enabled flag") {
 
     // crc_enabled_=false at start; seq not incremented (CRC not enabled yet)
     // The response includes a CRC field matching seq=0.
-    std::string resp = note::transport::detail::crc_add("{\"ok\":true}", 0) + "\r\n";
+    std::string resp = str_crc_add("{\"ok\":true}", 0) + "\r\n";
     hal.queue_response(resp);
     auto r = transport.transact("{\"req\":\"hub.set\"}", 5000);
     REQUIRE(r.has_value());
@@ -436,11 +448,11 @@ TEST_CASE("CRC: after detection, second request includes CRC field") {
     NotecardSerial transport(hal);
 
     // First call: CRC auto-detected (seq=0 response)
-    hal.queue_response(note::transport::detail::crc_add("{\"ok\":true}", 0) + "\r\n");
+    hal.queue_response(str_crc_add("{\"ok\":true}", 0) + "\r\n");
     transport.transact("{\"req\":\"hub.set\"}", 5000);
 
     // Second call: seq becomes 1, request must include CRC
-    hal.queue_response(note::transport::detail::crc_add("{\"ok\":true}", 1) + "\r\n");
+    hal.queue_response(str_crc_add("{\"ok\":true}", 1) + "\r\n");
     hal.tx.clear();
     transport.transact("{\"req\":\"hub.sync\"}", 5000);
 
@@ -454,12 +466,12 @@ TEST_CASE("CRC mismatch triggers retry and succeeds on clean response") {
     NotecardSerial transport(hal);
 
     // First call: CRC auto-detected
-    hal.queue_response(note::transport::detail::crc_add("{\"ok\":true}", 0) + "\r\n");
+    hal.queue_response(str_crc_add("{\"ok\":true}", 0) + "\r\n");
     transport.transact("{\"req\":\"hub.set\"}", 5000);
 
     // Second call: first response has wrong seq → retry; second response is correct
-    hal.queue_response(note::transport::detail::crc_add("{\"ok\":true}", 99) + "\r\n");  // wrong seq
-    hal.queue_response(note::transport::detail::crc_add("{\"ok\":true}", 1) + "\r\n");   // correct
+    hal.queue_response(str_crc_add("{\"ok\":true}", 99) + "\r\n");  // wrong seq
+    hal.queue_response(str_crc_add("{\"ok\":true}", 1) + "\r\n");   // correct
     auto r = transport.transact("{\"req\":\"hub.sync\"}", 5000);
     REQUIRE(r.has_value());
     REQUIRE(*r == "{\"ok\":true}");

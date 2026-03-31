@@ -20,6 +20,18 @@
 #include <deque>
 #include <string>
 
+// Helper: string-returning wrapper for char-buffer crc_add (test convenience)
+namespace {
+inline std::string str_crc_add(const std::string& json, uint16_t seq) {
+    char buf[512];
+    size_t len = json.size();
+    memcpy(buf, json.data(), len);
+    size_t new_len = note::transport::detail::crc_add(buf, len, sizeof(buf), seq);
+    return std::string(buf, new_len);
+}
+} // namespace
+
+
 using namespace note::transport;
 using note::Error;
 
@@ -452,14 +464,14 @@ TEST_CASE("i2c round-trip: CRC auto-detection on first CRC response") {
 
     // First request: response has CRC → auto-detection sets crc_enabled_.
     const std::string json = "{\"req\":\"hub.sync\"}";
-    const std::string resp_with_crc = detail::crc_add(json, 0) + "\n";
+    const std::string resp_with_crc = str_crc_add(json, 0) + "\n";
     hal.responses.push_back(resp_with_crc);
     auto r1 = transport.transact({json}, 5000);
     REQUIRE(r1);
     CHECK(*r1 == json);
 
     // Second request: transport should now include CRC in the request.
-    hal.responses.push_back(detail::crc_add("{}", 1) + "\n");
+    hal.responses.push_back(str_crc_add("{}", 1) + "\n");
     transport.transact({"{}"}, 5000);
     // The request forwarded by the transport should contain a CRC field.
     CHECK(hal.last_request.find("\"crc\"") != std::string::npos);
@@ -476,9 +488,9 @@ TEST_CASE("i2c round-trip: CRC mismatch triggers retry") {
     // First attempt: bad CRC → retry. Second attempt: good CRC → success.
     const std::string json = "{\"req\":\"hub.sync\"}";
     const std::string bad = "{\"req\":\"hub.sync\",\"crc\":\"0001:DEADBEEF\"}\n";
-    const std::string good = detail::crc_add(json, 1) + "\n";
+    const std::string good = str_crc_add(json, 1) + "\n";
     // Trigger CRC mode by first calling with a good CRC response.
-    hal.responses.push_back(detail::crc_add("{}", 0) + "\n");
+    hal.responses.push_back(str_crc_add("{}", 0) + "\n");
     transport.transact({"{}"}, 5000);  // this enables crc_enabled_
 
     hal.responses.push_back(bad);

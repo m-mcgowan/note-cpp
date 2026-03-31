@@ -131,7 +131,7 @@ protected:
     // I2C appends bare \n to the wire buffer (not \r\n like serial).
     void prepare_wire(string_view request) override {
         AbstractTransport::prepare_wire(request);
-        wire_ += '\n';
+        wire_[wire_len_++] = '\n';  // I2C appends bare \n (not \r\n like serial)
     }
 
     // Chunked transmit with IO delay before each chunk.

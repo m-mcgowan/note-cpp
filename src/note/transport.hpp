@@ -87,9 +87,11 @@ public:
         ext_buf_size_ = len;
     }
 
-    // TODO: set_wire_buffer() for zero-heap outbound path.
-    // Blocked on crc_add() which is std::string-based.
-    // The streaming transport (transact_streaming) bypasses wire_ entirely.
+    // TODO: Replace wire_ and response_buf_ (std::string) with fixed-size
+    // or caller-provided buffers to eliminate <string> dependency entirely.
+    // CRC is now char-buffer based; the remaining std::string is purely
+    // buffer storage. The streaming path (transact_streaming) already
+    // bypasses both — this is only the legacy transact() fallback.
 
     // ── ITransport ────────────────────────────────────────────────────────
 
@@ -107,7 +109,7 @@ public:
         for (uint32_t attempt = 0; attempt <= max_retries(); ++attempt) {
             if (attempt > 0) delay(retry_delay_ms());
 
-            if (!do_transmit(wire_.data(), wire_.size())) {
+            if (!do_transmit(wire_.data(), wire_len_)) {
                 last_error = {Error::SendFailed, Cause::HalError, "transmit failed"};
                 do_reset();
                 continue;
@@ -127,10 +129,13 @@ public:
                     continue;
                 }
 
-                if (transport::detail::crc_check_and_strip(response_buf_, crc_seq_, crc_enabled_)) {
+                size_t rsp_len = response_buf_.size();
+                if (transport::detail::crc_check_and_strip(
+                        response_buf_.data(), rsp_len, crc_seq_, crc_enabled_)) {
                     last_error = {Error::ResponseLost, Cause::CrcMismatch, "CRC mismatch"};
                     continue;
                 }
+                response_buf_.resize(rsp_len);
 
                 return string_view(response_buf_);
             }
@@ -148,7 +153,7 @@ public:
 
         prepare_wire(request);
 
-        if (!do_transmit(wire_.data(), wire_.size()))
+        if (!do_transmit(wire_.data(), wire_len_))
             return make_error(Error::SendFailed, Cause::HalError, "transmit failed");
 
         return {};
@@ -172,7 +177,7 @@ public:
         for (uint32_t attempt = 0; attempt <= max_retries(); ++attempt) {
             if (attempt > 0) delay(retry_delay_ms());
 
-            if (!do_transmit(wire_.data(), wire_.size())) {
+            if (!do_transmit(wire_.data(), wire_len_)) {
                 last_error = {Error::SendFailed, Cause::HalError, "transmit failed"};
                 do_reset();
                 continue;
@@ -207,17 +212,10 @@ public:
             // Strip trailing \r
             while (pos > 0 && buf[pos - 1] == '\r') --pos;
 
-            // CRC check (operates on buf, not response_buf_)
-            std::string crc_buf(buf, pos);
-            if (transport::detail::crc_check_and_strip(crc_buf, crc_seq_, crc_enabled_)) {
+            // CRC check (in-place on caller buffer)
+            if (transport::detail::crc_check_and_strip(buf, pos, crc_seq_, crc_enabled_)) {
                 last_error = {Error::ResponseLost, Cause::CrcMismatch, "CRC mismatch"};
                 continue;
-            }
-
-            // If CRC was stripped, copy the stripped version back
-            if (crc_enabled_) {
-                memcpy(buf, crc_buf.data(), crc_buf.size());
-                pos = crc_buf.size();
             }
 
             return string_view(buf, pos);
@@ -246,7 +244,7 @@ public:
         for (uint32_t attempt = 0; attempt <= max_retries(); ++attempt) {
             if (attempt > 0) delay(retry_delay_ms());
 
-            if (!do_transmit(wire_.data(), wire_.size())) {
+            if (!do_transmit(wire_.data(), wire_len_)) {
                 last_error = {Error::SendFailed, Cause::HalError, "transmit failed"};
                 do_reset();
                 continue;
@@ -286,10 +284,13 @@ public:
             // Strip trailing \r and check CRC
             while (!response_buf_.empty() && response_buf_.back() == '\r')
                 response_buf_.pop_back();
-            if (transport::detail::crc_check_and_strip(response_buf_, crc_seq_, crc_enabled_)) {
+            size_t rsp_len2 = response_buf_.size();
+            if (transport::detail::crc_check_and_strip(
+                    response_buf_.data(), rsp_len2, crc_seq_, crc_enabled_)) {
                 last_error = {Error::ResponseLost, Cause::CrcMismatch, "CRC mismatch"};
                 continue;
             }
+            response_buf_.resize(rsp_len2);
 
             return {};
         }
@@ -344,10 +345,13 @@ protected:
     /// Default: copies request and adds CRC if enabled.
     /// Override to append a protocol-specific line terminator (e.g. I2C \n).
     virtual void prepare_wire(string_view request) {
-        wire_.assign(request.data(), request.size());
+        wire_.resize(request.size() + transport::detail::kCrcOverhead);
+        memcpy(wire_.data(), request.data(), request.size());
+        wire_len_ = request.size();
         if (crc_enabled_) {
             ++crc_seq_;
-            wire_ = transport::detail::crc_add(std::move(wire_), crc_seq_);
+            wire_len_ = transport::detail::crc_add(
+                wire_.data(), wire_len_, wire_.size(), crc_seq_);
         }
     }
 
@@ -363,12 +367,9 @@ protected:
     bool crc_enabled_ = false;
     uint16_t crc_seq_ = 0;
 
-    // Wire and response buffers. When external buffers are set (via
-    // set_wire_buffer / set_receive_buffer), the std::string members are
-    // unused. This allows fully heap-free operation when the caller
-    // controls buffer placement.
-    std::string wire_;          // fallback outbound buffer
-    std::string response_buf_;  // fallback inbound buffer
+    std::string wire_;          // outbound buffer (sized with CRC headroom)
+    size_t wire_len_ = 0;      // actual wire content length
+    std::string response_buf_;  // inbound buffer (legacy path)
 
     // External buffers (Phase 2 — caller-provided, zero heap)
     char* ext_buf_ = nullptr;
@@ -400,15 +401,9 @@ private:
         // Strip trailing \r
         while (pos > 0 && buf[pos - 1] == '\r') --pos;
 
-        // CRC check (temporary std::string — acceptable for v0.1)
-        std::string crc_buf(buf, pos);
-        if (transport::detail::crc_check_and_strip(crc_buf, crc_seq_, crc_enabled_)) {
+        // CRC check (in-place)
+        if (transport::detail::crc_check_and_strip(buf, pos, crc_seq_, crc_enabled_)) {
             return make_error(Error::ResponseLost, Cause::CrcMismatch, "CRC mismatch");
-        }
-
-        if (crc_enabled_) {
-            memcpy(buf, crc_buf.data(), crc_buf.size());
-            pos = crc_buf.size();
         }
 
         return string_view(buf, pos);

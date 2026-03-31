@@ -8,23 +8,49 @@
 
 namespace note::transport::detail {
 
+// Nibble lookup table for CRC32 (shared by all CRC functions).
+inline constexpr uint32_t kCrc32Lut[16] = {
+    0x00000000, 0x1DB71064, 0x3B6E20C8, 0x26D930AC,
+    0x76DC4190, 0x6B6B51F4, 0x4DB26158, 0x5005713C,
+    0xEDB88320, 0xF00F9344, 0xD6D6A3E8, 0xCB61B38C,
+    0x9B64C2B0, 0x86D3D2D4, 0xA00AE278, 0xBDBDF21C,
+};
+
 // Half-byte (nibble) CRC32, matching note-c's _crc32().
 inline uint32_t crc32(const void* data, size_t len) {
-    static constexpr uint32_t lut[16] = {
-        0x00000000, 0x1DB71064, 0x3B6E20C8, 0x26D930AC,
-        0x76DC4190, 0x6B6B51F4, 0x4DB26158, 0x5005713C,
-        0xEDB88320, 0xF00F9344, 0xD6D6A3E8, 0xCB61B38C,
-        0x9B64C2B0, 0x86D3D2D4, 0xA00AE278, 0xBDBDF21C,
-    };
     uint32_t crc = ~uint32_t{0};
     const auto* p = static_cast<const unsigned char*>(data);
     while (len--) {
-        crc = lut[(crc ^  *p      ) & 0x0F] ^ (crc >> 4);
-        crc = lut[(crc ^ (*p >> 4)) & 0x0F] ^ (crc >> 4);
+        crc = kCrc32Lut[(crc ^  *p      ) & 0x0F] ^ (crc >> 4);
+        crc = kCrc32Lut[(crc ^ (*p >> 4)) & 0x0F] ^ (crc >> 4);
         ++p;
     }
     return ~crc;
 }
+
+// ── Incremental CRC32 ──────────────────────────────────────────────────────
+// Allows CRC to be accumulated across multiple write calls.
+//
+//   uint32_t state = crc32_begin();
+//   state = crc32_update(state, chunk1, len1);
+//   state = crc32_update(state, chunk2, len2);
+//   uint32_t checksum = crc32_finalize(state);
+//
+// Equivalent to: crc32(chunk1 + chunk2, len1 + len2)
+
+inline uint32_t crc32_begin() { return ~uint32_t{0}; }
+
+inline uint32_t crc32_update(uint32_t state, const void* data, size_t len) {
+    const auto* p = static_cast<const unsigned char*>(data);
+    while (len--) {
+        state = kCrc32Lut[(state ^  *p      ) & 0x0F] ^ (state >> 4);
+        state = kCrc32Lut[(state ^ (*p >> 4)) & 0x0F] ^ (state >> 4);
+        ++p;
+    }
+    return state;
+}
+
+inline uint32_t crc32_finalize(uint32_t state) { return ~state; }
 
 inline void write_hex16(char* out, uint16_t v) {
     static constexpr char h[] = "0123456789ABCDEF";

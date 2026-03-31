@@ -6,7 +6,9 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
+#ifndef NOTE_NO_STD_STRING
 #include <string>
+#endif
 
 // note::transport::NotecardI2c
 //
@@ -131,7 +133,7 @@ protected:
     // I2C appends bare \n to the wire buffer (not \r\n like serial).
     void prepare_wire(string_view request) override {
         AbstractTransport::prepare_wire(request);
-        wire_[wire_len_++] = '\n';  // I2C appends bare \n (not \r\n like serial)
+        wire_data()[wire_len_++] = '\n';  // I2C appends bare \n (not \r\n like serial)
     }
 
     // Chunked transmit with IO delay before each chunk.
@@ -173,6 +175,7 @@ protected:
         return true;
     }
 
+#ifndef NOTE_NO_STD_STRING
     // Priming-query receive: poll until data available, then chunked read.
     Result<void> do_receive(std::string& buf, uint32_t timeout_ms) override {
         delay_io();  // stability delay after final transmit chunk
@@ -227,6 +230,8 @@ protected:
 
         return {};
     }
+
+#endif // NOTE_NO_STD_STRING
 
     // Read available bytes from the I2C bus (up to max_len).
     // Uses priming query + chunked read. Returns bytes read.
@@ -306,6 +311,12 @@ protected:
             }
         }
         return false;
+    }
+
+    // I2C line terminator: bare \n (not \r\n like serial).
+    bool write_line_terminator() override {
+        const uint8_t nl = '\n';
+        return do_write(&nl, 1);
     }
 
     // Policy access for AbstractTransport.

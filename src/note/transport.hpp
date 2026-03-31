@@ -6,11 +6,14 @@
 /// CallbackTransport — adapter for test lambdas.
 
 #include <note/error.hpp>
+#include <note/json.hpp>
 #include <note/transport/detail/crc32.hpp>
 #include <note/types.hpp>
 
+#ifndef NOTE_NO_STD_STRING
 #include <functional>
 #include <string>
+#endif
 
 namespace note {
 
@@ -87,11 +90,106 @@ public:
         ext_buf_size_ = len;
     }
 
-    // TODO: Replace wire_ and response_buf_ (std::string) with fixed-size
-    // or caller-provided buffers to eliminate <string> dependency entirely.
-    // CRC is now char-buffer based; the remaining std::string is purely
-    // buffer storage. The streaming path (transact_streaming) already
-    // bypasses both — this is only the legacy transact() fallback.
+    // ── Streaming build types ────────────────────────────────────────────
+
+    /// JsonWriter adapter that writes raw bytes through do_write().
+    struct RawWriter : JsonWriter {
+        using JsonWriter::write;
+        AbstractTransport& transport;
+        bool ok = true;
+
+        explicit RawWriter(AbstractTransport& t) : transport(t) {}
+
+        bool write(const char* data, size_t len) override {
+            if (!ok) return false;
+            ok = transport.do_write(
+                reinterpret_cast<const uint8_t*>(data), len);
+            return ok;
+        }
+    };
+
+    /// JsonWriter that accumulates CRC32 and forwards to an inner writer.
+    struct CrcWriter : JsonWriter {
+        using JsonWriter::write;
+        JsonWriter& inner;
+        uint32_t state;
+
+        explicit CrcWriter(JsonWriter& w)
+            : inner(w), state(transport::detail::crc32_begin()) {}
+
+        bool write(const char* data, size_t len) override {
+            state = transport::detail::crc32_update(state, data, len);
+            return inner.write(data, len);
+        }
+
+        /// Feed '}' to CRC without writing it, return finalized checksum.
+        /// The CRC covers the original JSON {…} including closing brace.
+        uint32_t finalize_with_brace() {
+            state = transport::detail::crc32_update(state, "}", 1);
+            return transport::detail::crc32_finalize(state);
+        }
+    };
+
+    // ── Streaming build — write JSON directly to transport ────────────────
+    //
+    // transact_build / send_build bypass the wire buffer entirely. The
+    // StreamingJsonBuilder writes each byte directly through do_write(),
+    // with optional CRC accumulation. On retry, the build function is
+    // re-invoked to regenerate the request.
+
+    /// Build a JSON request via streaming builder and transact.
+    /// build_fn receives a JsonBuilder& and populates request fields.
+    /// The transport handles '{', '}', CRC, line terminator, and framing.
+    template<typename BuildFn>
+    Result<string_view> transact_build(BuildFn build_fn, uint32_t timeout_ms) {
+        if (!initialized_) {
+            if (!do_reset())
+                return make_error(Error::NotReady, "Notecard not ready after reset");
+            initialized_ = true;
+        }
+
+        if (crc_enabled_) ++crc_seq_;
+
+        ErrorInfo last_error{Error::SendFailed, Cause::HalError, "transmit failed"};
+
+        for (uint32_t attempt = 0; attempt <= max_retries(); ++attempt) {
+            if (attempt > 0) {
+                delay(retry_delay_ms());
+                do_reset();
+            }
+
+            if (!stream_request(build_fn)) {
+                last_error = {Error::SendFailed, Cause::HalError, "transmit failed"};
+                continue;
+            }
+
+            auto rv = receive_response(timeout_ms);
+            if (!rv) {
+                last_error = rv.error();
+                continue;
+            }
+            return *rv;
+        }
+
+        return Unexpected(last_error);
+    }
+
+    /// Build a JSON command via streaming builder (fire-and-forget).
+    template<typename BuildFn>
+    Result<void> send_build(BuildFn build_fn) {
+        if (!initialized_) {
+            if (!do_reset())
+                return make_error(Error::NotReady, "Notecard not ready after reset");
+            initialized_ = true;
+        }
+
+        if (crc_enabled_) ++crc_seq_;
+
+        if (!stream_request(build_fn))
+            return make_error(Error::SendFailed, Cause::HalError, "transmit failed");
+
+        return {};
+    }
 
     // ── ITransport ────────────────────────────────────────────────────────
 
@@ -109,7 +207,7 @@ public:
         for (uint32_t attempt = 0; attempt <= max_retries(); ++attempt) {
             if (attempt > 0) delay(retry_delay_ms());
 
-            if (!do_transmit(wire_.data(), wire_len_)) {
+            if (!do_transmit(wire_data(), wire_len_)) {
                 last_error = {Error::SendFailed, Cause::HalError, "transmit failed"};
                 do_reset();
                 continue;
@@ -120,7 +218,9 @@ public:
                 auto rv = receive_into(ext_buf_, ext_buf_size_, timeout_ms);
                 if (!rv) { last_error = rv.error(); continue; }
                 return *rv;
-            } else {
+            }
+#ifndef NOTE_NO_STD_STRING
+            else {
                 // Original path: read into response_buf_ via do_receive()
                 response_buf_.clear();
                 auto result = do_receive(response_buf_, timeout_ms);
@@ -139,6 +239,7 @@ public:
 
                 return string_view(response_buf_);
             }
+#endif
         }
 
         return Unexpected(last_error);
@@ -153,7 +254,7 @@ public:
 
         prepare_wire(request);
 
-        if (!do_transmit(wire_.data(), wire_len_))
+        if (!do_transmit(wire_data(), wire_len_))
             return make_error(Error::SendFailed, Cause::HalError, "transmit failed");
 
         return {};
@@ -177,7 +278,7 @@ public:
         for (uint32_t attempt = 0; attempt <= max_retries(); ++attempt) {
             if (attempt > 0) delay(retry_delay_ms());
 
-            if (!do_transmit(wire_.data(), wire_len_)) {
+            if (!do_transmit(wire_data(), wire_len_)) {
                 last_error = {Error::SendFailed, Cause::HalError, "transmit failed"};
                 do_reset();
                 continue;
@@ -224,6 +325,7 @@ public:
         return Unexpected(last_error);
     }
 
+#ifndef NOTE_NO_STD_STRING
     /// Streaming transact: send request, read response chunk-by-chunk.
     /// Each chunk is passed to on_chunk(data, len). Reading stops at '\n'.
     /// CRC is checked if enabled (uses response_buf_ internally for this).
@@ -244,7 +346,7 @@ public:
         for (uint32_t attempt = 0; attempt <= max_retries(); ++attempt) {
             if (attempt > 0) delay(retry_delay_ms());
 
-            if (!do_transmit(wire_.data(), wire_len_)) {
+            if (!do_transmit(wire_data(), wire_len_)) {
                 last_error = {Error::SendFailed, Cause::HalError, "transmit failed"};
                 do_reset();
                 continue;
@@ -297,6 +399,7 @@ public:
 
         return Unexpected(last_error);
     }
+#endif // NOTE_NO_STD_STRING
 
     void reset() override {
         do_reset();
@@ -322,9 +425,11 @@ protected:
     /// Returns false on hardware error.
     virtual bool do_transmit(const char* data, size_t len) = 0;
 
+#ifndef NOTE_NO_STD_STRING
     /// Receive a complete response line into buf.
     /// buf is already cleared before this call.
     virtual Result<void> do_receive(std::string& buf, uint32_t timeout_ms) = 0;
+#endif
 
     /// Reset the transport hardware to a known state.
     /// Returns true if the Notecard is ready for communication.
@@ -341,17 +446,39 @@ protected:
     /// Returns bytes read. Blocks up to timeout_ms for at least one byte.
     virtual Result<size_t> do_read(uint8_t* buf, size_t max_len, uint32_t timeout_ms) = 0;
 
+    // Accessors for wire buffer — abstracts over std::string vs fixed buffer
+    char* wire_data() {
+#ifndef NOTE_NO_STD_STRING
+        return wire_.data();
+#else
+        return wire_buf_;
+#endif
+    }
+    size_t wire_capacity() const {
+#ifndef NOTE_NO_STD_STRING
+        return wire_.size();
+#else
+        return wire_cap_;
+#endif
+    }
+
     /// Prepare the wire buffer from a JSON request string.
     /// Default: copies request and adds CRC if enabled.
     /// Override to append a protocol-specific line terminator (e.g. I2C \n).
     virtual void prepare_wire(string_view request) {
+#ifndef NOTE_NO_STD_STRING
         wire_.resize(request.size() + transport::detail::kCrcOverhead);
         memcpy(wire_.data(), request.data(), request.size());
+#else
+        if (request.size() + transport::detail::kCrcOverhead <= wire_cap_) {
+            memcpy(wire_buf_, request.data(), request.size());
+        }
+#endif
         wire_len_ = request.size();
         if (crc_enabled_) {
             ++crc_seq_;
             wire_len_ = transport::detail::crc_add(
-                wire_.data(), wire_len_, wire_.size(), crc_seq_);
+                wire_data(), wire_len_, wire_capacity(), crc_seq_);
         }
     }
 
@@ -361,19 +488,96 @@ protected:
     virtual uint32_t retry_delay_ms() const = 0;
     virtual void delay(uint32_t ms) = 0;
 
+    /// Write the protocol line terminator via do_write().
+    /// Default: \r\n (serial). Override for I2C (\n).
+    virtual bool write_line_terminator() {
+        const uint8_t crlf[] = {'\r', '\n'};
+        return do_write(crlf, 2);
+    }
+
+    /// Stream a JSON request to the transport via do_write().
+    /// Returns true on success, false on write error.
+    template<typename BuildFn>
+    bool stream_request(BuildFn& build_fn) {
+        RawWriter raw(*this);
+
+        if (crc_enabled_) {
+            CrcWriter crc(raw);
+            StreamingJsonBuilder builder(crc);
+            build_fn(builder);
+
+            // Finalize: compute CRC over {…} (with closing })
+            uint32_t checksum = crc.finalize_with_brace();
+
+            // Write CRC field + closing } directly (bypassing CRC)
+            char suffix[transport::detail::kCrcFieldLen + 1];
+            size_t pos = 0;
+            suffix[pos++] = ',';
+            suffix[pos++] = '"'; suffix[pos++] = 'c'; suffix[pos++] = 'r';
+            suffix[pos++] = 'c'; suffix[pos++] = '"'; suffix[pos++] = ':';
+            suffix[pos++] = '"';
+            transport::detail::write_hex16(suffix + pos, crc_seq_); pos += 4;
+            suffix[pos++] = ':';
+            transport::detail::write_hex32(suffix + pos, checksum); pos += 8;
+            suffix[pos++] = '"';
+            suffix[pos++] = '}';
+            raw.write(suffix, pos);
+        } else {
+            StreamingJsonBuilder builder(raw);
+            build_fn(builder);
+            raw.write("}", 1);
+        }
+
+        if (!raw.ok) return false;
+
+        return write_line_terminator();
+    }
+
+    /// Receive a response into the available buffer.
+    /// Uses ext_buf_ if set, otherwise falls back to response_buf_.
+    Result<string_view> receive_response(uint32_t timeout_ms) {
+        if (ext_buf_) {
+            return receive_into(ext_buf_, ext_buf_size_, timeout_ms);
+        }
+#ifndef NOTE_NO_STD_STRING
+        response_buf_.clear();
+        auto result = do_receive(response_buf_, timeout_ms);
+        if (!result) return Unexpected(result.error());
+
+        size_t rsp_len = response_buf_.size();
+        if (transport::detail::crc_check_and_strip(
+                response_buf_.data(), rsp_len, crc_seq_, crc_enabled_)) {
+            return make_error(Error::ResponseLost, Cause::CrcMismatch,
+                              "CRC mismatch");
+        }
+        response_buf_.resize(rsp_len);
+        return string_view(response_buf_);
+#else
+        return make_error(Error::NotReady, "no receive buffer configured");
+#endif
+    }
+
     // ── Shared state ──────────────────────────────────────────────────────
 
     bool initialized_ = false;
     bool crc_enabled_ = false;
     uint16_t crc_seq_ = 0;
 
+#ifndef NOTE_NO_STD_STRING
     std::string wire_;          // outbound buffer (sized with CRC headroom)
+#else
+    char* wire_buf_ = nullptr;  // fixed outbound buffer (set by subclass)
+    size_t wire_cap_ = 0;
+#endif
     size_t wire_len_ = 0;      // actual wire content length
+#ifndef NOTE_NO_STD_STRING
     std::string response_buf_;  // inbound buffer (legacy path)
+#endif
 
     // External buffers (Phase 2 — caller-provided, zero heap)
     char* ext_buf_ = nullptr;
     size_t ext_buf_size_ = 0;
+
 
 private:
     /// Read into a caller-provided buffer via do_read(), stopping at \n.

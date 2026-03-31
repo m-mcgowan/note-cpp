@@ -55,6 +55,12 @@ public:
         , transport_(&transport)
     {}
 
+    Notecard(JsonBackend& backend, AbstractTransport& transport)
+        : backend_(&backend)
+        , transport_(&transport)
+        , streaming_transport_(&transport)
+    {}
+
     // Configure an allocator for response string interning.
     // When set, execute() copies response string_view fields into the
     // allocator's backing store (e.g. a MonotonicArena) so they survive
@@ -89,11 +95,18 @@ public:
 
         if (!transport_) return Unexpected(make_error(Error::NotReady, "no transport configured"));
 
-        auto& builder = backend_->get_builder();
-        builder.add("req", RequestT::notecard_request);
-        req.build(builder);
-
-        auto rsp = transport_->transact(builder.to_view(), default_timeout_ms_);
+        Result<string_view> rsp = make_error(Error::NotReady, "");
+        if (streaming_transport_) {
+            rsp = streaming_transport_->transact_build([&](JsonBuilder& b) {
+                b.add("req", RequestT::notecard_request);
+                req.build(b);
+            }, default_timeout_ms_);
+        } else {
+            auto& builder = backend_->get_builder();
+            builder.add("req", RequestT::notecard_request);
+            req.build(builder);
+            rsp = transport_->transact(builder.to_view(), default_timeout_ms_);
+        }
         if (!rsp) return Unexpected(rsp.error());
 
         auto& reader = backend_->get_reader(*rsp);
@@ -137,6 +150,7 @@ public:
     /// Execute a mutable request — checks for attached binary buffers.
     template<typename RequestT>
     ApiResult<typename RequestT::Response> execute(RequestT& req) {
+#ifndef NOTE_NO_STD_STRING
         if constexpr (detail::has_binary_src<RequestT>::value) {
             if (req.has_binary_data()) {
                 return do_binary_send(req);
@@ -147,6 +161,7 @@ public:
                 return do_binary_receive(req);
             }
         }
+#endif
         return execute(static_cast<const RequestT&>(req));
     }
 
@@ -160,6 +175,7 @@ public:
         return result;
     }
 
+#ifndef NOTE_NO_STD_STRING
     // Ad-hoc request with a builder callback.
     // Returns a unique_ptr<JsonReader> for backward compatibility.
     // The reader's lifetime is independent — it owns its data.
@@ -168,26 +184,40 @@ public:
             std::function<void(JsonBuilder&)> build_fn = {}) {
         if (!transport_) return make_error(Error::NotReady, "no transport configured");
 
-        auto& builder = backend_->get_builder();
-        builder.add("req", req_type);
-        if (build_fn) build_fn(builder);
-
-        auto rsp = transport_->transact(builder.to_view(), default_timeout_ms_);
+        Result<string_view> rsp = make_error(Error::NotReady, "");
+        if (streaming_transport_) {
+            rsp = streaming_transport_->transact_build([&](JsonBuilder& b) {
+                b.add("req", req_type);
+                if (build_fn) build_fn(b);
+            }, default_timeout_ms_);
+        } else {
+            auto& builder = backend_->get_builder();
+            builder.add("req", req_type);
+            if (build_fn) build_fn(builder);
+            rsp = transport_->transact(builder.to_view(), default_timeout_ms_);
+        }
         if (!rsp) return Unexpected(rsp.error());
 
         auto reader = backend_->parse_response(*rsp);
         if (reader->has_error()) {
             return make_error(Error::Json, reader->get_error());
         }
-        // Note: we don't check get_error() here — the caller receives the
-        // reader directly and can inspect {"err":"..."} themselves.
-        return reader;
+        return Result<std::unique_ptr<JsonReader>>(std::move(reader));
     }
+
+#endif // NOTE_NO_STD_STRING
 
     // Fire-and-forget typed command (generated request types).
     template<typename RequestT>
     Result<void> command_typed(const RequestT& req) {
         if (!transport_) return make_error(Error::NotReady, "no transport configured");
+
+        if (streaming_transport_) {
+            return streaming_transport_->send_build([&](JsonBuilder& b) {
+                b.add("cmd", RequestT::notecard_request);
+                req.build(b);
+            });
+        }
 
         auto& builder = backend_->get_builder();
         builder.add("cmd", RequestT::notecard_request);
@@ -195,16 +225,25 @@ public:
         return transport_->send(builder.to_view());
     }
 
+#ifndef NOTE_NO_STD_STRING
     // Fire-and-forget command.
     Result<void> command(string_view cmd_type,
                          std::function<void(JsonBuilder&)> build_fn = {}) {
         if (!transport_) return make_error(Error::NotReady, "no transport configured");
+
+        if (streaming_transport_) {
+            return streaming_transport_->send_build([&](JsonBuilder& b) {
+                b.add("cmd", cmd_type);
+                if (build_fn) build_fn(b);
+            });
+        }
 
         auto& builder = backend_->get_builder();
         builder.add("cmd", cmd_type);
         if (build_fn) build_fn(builder);
         return transport_->send(builder.to_view());
     }
+#endif // NOTE_NO_STD_STRING
 
     void set_default_timeout(uint32_t ms) { default_timeout_ms_ = ms; }
     uint32_t default_timeout() const { return default_timeout_ms_; }
@@ -215,6 +254,7 @@ public:
     JsonBackend& backend() { return *backend_; }
 
 private:
+#ifndef NOTE_NO_STD_STRING
     template<typename RequestT>
     ApiResult<typename RequestT::Response> do_binary_send(RequestT& req) {
         auto src = req.binary_src_;
@@ -337,13 +377,20 @@ private:
         return result;
     }
 
+#endif // NOTE_NO_STD_STRING
+
     JsonBackend* backend_ = nullptr;
     ITransport* transport_ = nullptr;
+    AbstractTransport* streaming_transport_ = nullptr;
     uint32_t default_timeout_ms_ = 10000;
     std::optional<Allocator> alloc_;
     byte_span cobs_buf_{};          // optional external COBS working buffer
+#ifndef NOTE_NO_MD5
     PlatformMd5 platform_md5_{};    // default MD5 implementation
     Md5Provider* md5_ = &platform_md5_;
+#else
+    Md5Provider* md5_ = nullptr;
+#endif
 };
 
 } // namespace note

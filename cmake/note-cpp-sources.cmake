@@ -21,6 +21,7 @@ set(NOTE_CPP_PUBLIC_HEADERS
     include/note/error.hpp
     include/note/field.hpp
     include/note/flag_set.hpp
+    include/note/detail/number_format.hpp
     include/note/json.hpp
     include/note/json_buf.hpp
     include/note/json_sax.hpp
@@ -99,6 +100,7 @@ set(NOTE_CPP_TEST_SOURCES
     test_sync.cpp
     test_target.cpp
     test_templates.cpp
+    test_streaming_builder.cpp
     test_transport_crc32.cpp
     test_transport_i2c.cpp
     test_transport_serial.cpp

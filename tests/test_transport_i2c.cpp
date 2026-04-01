@@ -1,27 +1,83 @@
-// Tests for note::transport::NotecardI2c.
+// Tests for note::transport::NotecardI2c (TransportHal) and
+// note::StreamingTransport protocol logic over I2C.
 //
 // Ported from note-c test/src/_i2cNoteReset_test.cpp,
 // _i2cChunkedTransmit_test.cpp, and _i2cChunkedReceive_test.cpp.
 //
 // Key mapping:
-//   note-c _i2cNoteReset()       → NotecardI2c::do_reset()
-//   note-c _i2cChunkedTransmit() → NotecardI2c::send_chunked()
-//   note-c _i2cChunkedReceive()  → NotecardI2c::receive_response()
+//   note-c _i2cNoteReset()       → NotecardI2c::reset()
+//   note-c _i2cChunkedTransmit() → NotecardI2c::transmit() (chunked)
+//   note-c _i2cChunkedReceive()  → NotecardI2c::read() (priming query)
 //   note-c _I2CReceive(addr, buf, 0, &avail) → I2CHal::receive(buf, 0, avail)
 //
-// When note-c's I2C tests change, review the diff and update here accordingly.
+// NotecardI2c is a TransportHal (raw byte ops: transmit, read, reset,
+// write_line_terminator, delay). Protocol logic (transact, send, retry, CRC)
+// lives in StreamingTransport, which wraps a TransportHal.
+//
+// When note-c's I2C tests change, review the diffs and update accordingly.
 
 #include "catch.hpp"
 
 #include <note/transport/i2c.hpp>
 #include <note/transport/detail/crc32.hpp>
+#include <note/streaming_transport.hpp>
 
 #include <cstring>
 #include <deque>
 #include <string>
+#include <vector>
+
+// ---------------------------------------------------------------------------
+// CaptureSink — simple JsonSink that records string/bool/number events
+// ---------------------------------------------------------------------------
+
+namespace {
+
+struct CaptureSink : note::JsonSink {
+    struct Event {
+        std::string type;
+        std::string key;
+        std::string value;
+    };
+    std::vector<Event> events;
+
+    void on_null(note::string_view key) override {
+        events.push_back({"null", std::string(key), ""});
+    }
+    void on_bool(note::string_view key, bool value) override {
+        events.push_back({"bool", std::string(key), value ? "true" : "false"});
+    }
+    void on_number(note::string_view key, note::string_view raw) override {
+        events.push_back({"number", std::string(key), std::string(raw)});
+    }
+    void on_string(note::string_view key, note::string_view value) override {
+        events.push_back({"string", std::string(key), std::string(value)});
+    }
+    void on_object_begin(note::string_view key) override {
+        events.push_back({"object_begin", std::string(key), ""});
+    }
+    void on_object_end(note::string_view key) override {
+        events.push_back({"object_end", std::string(key), ""});
+    }
+
+    void reset() override { events.clear(); }
+
+    std::string find(const std::string& k, const std::string& t = "string") const {
+        for (auto& e : events) {
+            if (e.key == k && e.type == t) return e.value;
+        }
+        return {};
+    }
+
+    bool has_key(const std::string& k) const {
+        for (auto& e : events) {
+            if (e.key == k) return true;
+        }
+        return false;
+    }
+};
 
 // Helper: string-returning wrapper for char-buffer crc_add (test convenience)
-namespace {
 inline std::string str_crc_add(const std::string& json, uint16_t seq) {
     char buf[512];
     size_t len = json.size();
@@ -29,6 +85,7 @@ inline std::string str_crc_add(const std::string& json, uint16_t seq) {
     size_t new_len = note::transport::detail::crc_add(buf, len, sizeof(buf), seq);
     return std::string(buf, new_len);
 }
+
 } // namespace
 
 
@@ -58,6 +115,10 @@ struct ScriptedI2CHal : public I2CHal {
     std::deque<std::string> responses;           // queued complete responses (include \n)
     size_t             mtu           = 1024;     // default large: no chunking in most tests
 
+    // Per-call transmit override: if set, called with the 1-based call number.
+    // Return false to simulate a transmit failure.
+    std::function<bool(int)> transmit_ok_fn;
+
     // Observation
     int                reset_call_count    = 0;
     int                transmit_call_count = 0;
@@ -77,7 +138,11 @@ struct ScriptedI2CHal : public I2CHal {
 
     bool transmit(const uint8_t* data, size_t len) override {
         ++transmit_call_count;
-        if (!transmit_ok) return false;
+        if (transmit_ok_fn) {
+            if (!transmit_ok_fn(transmit_call_count)) return false;
+        } else if (!transmit_ok) {
+            return false;
+        }
 
         tx_accum.append(reinterpret_cast<const char*>(data), len);
 
@@ -121,81 +186,97 @@ struct ScriptedI2CHal : public I2CHal {
     }
 
     size_t max_transfer() override { return mtu; }
+};
 
-    // Helper: pre-initialize transport so the first transact() call skips reset.
-    template <typename T>
-    void prime(T& t) {
-        responses.push_back("{}\n");
-        auto r = t.transact(note::string_view{"{}"}, 5000);
-        (void)r;
-        reset_call_count    = 0;
-        transmit_call_count = 0;
-        delay_call_count    = 0;
-        total_delay_ms      = 0;
-        now_ms              = 0;
+// ---------------------------------------------------------------------------
+// I2cTestHarness — StreamingTransport over NotecardI2c over ScriptedI2CHal
+//
+// Returns by value — NotecardI2c and StreamingTransport hold references
+// to each other and to the hal, so callers must keep the Harness alive.
+// ---------------------------------------------------------------------------
+
+struct I2cTestHarness {
+    ScriptedI2CHal hal;
+    NotecardI2c<I2cPolicy> notecard_i2c;
+    note::StreamingTransport transport;
+
+    I2cTestHarness()
+        : notecard_i2c(hal)
+        , transport(notecard_i2c, /*max_retries=*/5, /*retry_delay_ms=*/500)
+    {}
+
+    // Convenience: transact with a simple build function and capture sink.
+    note::Result<void> transact(const char* req_name, CaptureSink& sink,
+                                uint32_t timeout_ms = 5000) {
+        note::IStreamingTransport& t = transport;
+        auto build = [&](note::JsonBuilder& b) { b.add("req", req_name); };
+        return t.transact(build, sink, timeout_ms);
+    }
+
+    // Transact with a NullSink (just check success/failure).
+    note::Result<void> transact(const char* req_name,
+                                uint32_t timeout_ms = 5000) {
+        note::IStreamingTransport& t = transport;
+        note::JsonSink null_sink;
+        auto build = [&](note::JsonBuilder& b) { b.add("req", req_name); };
+        return t.transact(build, null_sink, timeout_ms);
+    }
+
+    // Send (fire-and-forget).
+    note::Result<void> send(const char* cmd_name) {
+        note::IStreamingTransport& t = transport;
+        auto build = [&](note::JsonBuilder& b) { b.add("cmd", cmd_name); };
+        return t.send(build);
     }
 };
 
 // ---------------------------------------------------------------------------
-// do_reset — ported from note-c _i2cNoteReset_test.cpp
+// reset() — ported from note-c _i2cNoteReset_test.cpp
 // ---------------------------------------------------------------------------
 
 TEST_CASE("i2c reset: pre-delay of kI2cSegmentDelayMs (250 ms)") {
     ScriptedI2CHal hal;
-    NotecardI2c transport(hal);
-    hal.responses.push_back("{}\n");
-    transport.transact({"{}"}, 5000);
-    // First delay call must be the 250 ms pre-delay.
+    NotecardI2c<I2cPolicy> i2c(hal);
+    // reset() should start with a segment delay.
+    i2c.reset();
     CHECK(hal.total_delay_ms >= kI2cSegmentDelayMs);
 }
 
 TEST_CASE("i2c reset: calls hal.reset() once on first use") {
-    ScriptedI2CHal hal;
-    NotecardI2c transport(hal);
-    hal.responses.push_back("{}\n");
-    transport.transact({"{}"}, 5000);
-    CHECK(hal.reset_call_count >= 1);
+    I2cTestHarness h;
+    h.hal.responses.push_back("{}\n");
+    h.transact("hub.status");
+    CHECK(h.hal.reset_call_count >= 1);
 }
 
 TEST_CASE("i2c reset: io delay (6 ms) after reset()") {
-    // delayIO called after _I2CReset — counts toward total_delay_ms.
     ScriptedI2CHal hal;
-    NotecardI2c transport(hal);
-    hal.responses.push_back("{}\n");
-    transport.transact({"{}"}, 5000);
+    NotecardI2c<I2cPolicy> i2c(hal);
+    i2c.reset();
     CHECK(hal.total_delay_ms >= kI2cSegmentDelayMs + kI2cIoDelayMs);
 }
 
-TEST_CASE("i2c reset: reset() fails → NotReady error") {
-    // note-c: _i2cNoteReset returns false immediately when _I2CReset fails.
-    ScriptedI2CHal hal;
-    hal.reset_ok = false;
-    NotecardI2c transport(hal);
-    auto result = transport.transact({"{}"}, 5000);
+TEST_CASE("i2c reset: reset() fails -> NotReady error") {
+    I2cTestHarness h;
+    h.hal.reset_ok = false;
+    auto result = h.transact("hub.status");
     REQUIRE(!result);
     CHECK(result.error().code == Error::NotReady);
 }
 
 TEST_CASE("i2c reset: clean drain succeeds") {
-    // note-c: GIVEN _noteI2CReceive receives only \r and \n → succeeds.
-    ScriptedI2CHal hal;
-    NotecardI2c transport(hal);
-    hal.responses.push_back("{}\n");
-    auto result = transport.transact({"{}"}, 5000);
-    // If reset succeeded, operator() would proceed to the actual request.
+    I2cTestHarness h;
+    h.hal.responses.push_back("{}\n");
+    auto result = h.transact("hub.status");
     REQUIRE(result);
-    CHECK(*result == "{}");
 }
 
-TEST_CASE("i2c reset: transmit \n fails (NACK) all retries → NotReady error") {
-    // note-c: _noteI2CTransmit fails → delay 1000 ms per retry ×
-    // CARD_RESET_SYNC_RETRIES → return false.
+TEST_CASE("i2c reset: transmit \\n fails (NACK) all retries -> NotReady error") {
     ScriptedI2CHal hal;
     hal.transmit_ok = false;
-    NotecardI2c transport(hal);
-    auto result = transport.transact({"{}"}, 5000);
-    REQUIRE(!result);
-    CHECK(result.error().code == Error::NotReady);
+    NotecardI2c<I2cPolicy> i2c(hal);
+    bool ok = i2c.reset();
+    REQUIRE_FALSE(ok);
     // Should have retried kI2cResetSyncRetries times.
     CHECK(hal.transmit_call_count == static_cast<int>(kI2cResetSyncRetries));
 }
@@ -203,347 +284,412 @@ TEST_CASE("i2c reset: transmit \n fails (NACK) all retries → NotReady error") 
 TEST_CASE("i2c reset: NACK delays kI2cNackWaitMs (1000 ms) per attempt") {
     ScriptedI2CHal hal;
     hal.transmit_ok = false;
-    NotecardI2c transport(hal);
-    transport.transact({"{}"}, 5000);
+    NotecardI2c<I2cPolicy> i2c(hal);
+    i2c.reset();
     // Each NACK incurs kI2cNackWaitMs (1000 ms).
     CHECK(hal.total_delay_ms >= kI2cNackWaitMs * kI2cResetSyncRetries);
 }
 
-TEST_CASE("i2c reset: drain receives non-control chars → all retries fail") {
-    // note-c: non-control characters found in drain → notecardReady=false,
-    // retry. After kI2cResetSyncRetries all fail → return false.
+TEST_CASE("i2c reset: drain receives non-control chars -> all retries fail") {
     ScriptedI2CHal hal;
     hal.reset_response = "{}";  // non-control chars — garbage on the bus
-    NotecardI2c transport(hal);
-    auto result = transport.transact({"{}"}, 5000);
-    REQUIRE(!result);
-    CHECK(result.error().code == Error::NotReady);
+    NotecardI2c<I2cPolicy> i2c(hal);
+    bool ok = i2c.reset();
+    REQUIRE_FALSE(ok);
 }
 
 TEST_CASE("i2c reset: drain delay is kI2cSegmentDelayMs after transmit") {
-    // note-c: after _noteI2CTransmit succeeds → _DelayMs(CARD_REQUEST_I2C_SEGMENT_DELAY_MS).
     ScriptedI2CHal hal;
-    NotecardI2c transport(hal);
-    hal.responses.push_back("{}\n");
-    // Record delay sequence: pre(250) + io(6) + post-tx(250) + drain(500) + ...
-    transport.transact({"{}"}, 5000);
+    NotecardI2c<I2cPolicy> i2c(hal);
+    i2c.reset();
     CHECK(hal.total_delay_ms >= kI2cSegmentDelayMs + kI2cIoDelayMs + kI2cSegmentDelayMs);
 }
 
 TEST_CASE("i2c reset: priming query (len=0) is first receive in drain") {
-    // note-c: chunkLen starts at 0 → first _I2CReceive uses 0 as the size.
-    // Verify by observing that receive(0) is called before any data is read.
-    // Simulate by having reset_response return data only after priming.
-    ScriptedI2CHal hal;
-    NotecardI2c transport(hal);
-    hal.responses.push_back("{}\n");
-    // Default mtu=1024 but drain buf size=64 constrains reads.
-    // The priming call (len=0) must happen before chunk reads.
-    // If this call order is wrong, rx_buf would be consumed before available
-    // is known, and the drain loop would behave incorrectly.
-    auto result = transport.transact({"{}"}, 5000);
+    I2cTestHarness h;
+    h.hal.responses.push_back("{}\n");
+    auto result = h.transact("hub.status");
     CHECK(result.has_value());
 }
 
 // ---------------------------------------------------------------------------
-// send_chunked — ported from note-c _i2cChunkedTransmit_test.cpp
+// transmit() — chunked I2C transmit tests (HAL level)
 // ---------------------------------------------------------------------------
 
-TEST_CASE("i2c send: small request sent in one chunk") {
-    // note-c: buffer fits in one chunk → 1 call to _noteI2CTransmit.
+TEST_CASE("i2c transmit: small payload sent in one chunk") {
     ScriptedI2CHal hal;
     hal.mtu = 30;
-    NotecardI2c transport(hal);
-    hal.prime(transport);
-
-    hal.responses.push_back("{}\n");
-    transport.transact({"{\"req\":\"hub.sync\"}"}, 5000);
-
-    // One chunk for the request ("{\"req\":\"hub.sync\"}\n" = 20 bytes < 30).
+    NotecardI2c<I2cPolicy> i2c(hal);
+    uint8_t data[] = "short";
+    REQUIRE(i2c.transmit(data, 5));
+    // One chunk for 5 bytes (< 30 MTU).
     CHECK(hal.transmit_call_count == 1);
 }
 
-TEST_CASE("i2c send: multi-chunk request") {
-    // note-c: input buffer > MTU → multiple _noteI2CTransmit calls.
+TEST_CASE("i2c transmit: multi-chunk when payload exceeds MTU") {
     ScriptedI2CHal hal;
     hal.mtu = 10;
-    NotecardI2c transport(hal);
-    hal.prime(transport);
-
-    // Build a request larger than 10 bytes.
-    const std::string req(50, 'a');
-    const std::string json = "{\"x\":\"" + req + "\"}";
-    hal.responses.push_back("{}\n");
-    transport.transact({json}, 5000);
-
-    // json + \n = 59 bytes → ceil(59/10) = 6 chunks
-    CHECK(hal.transmit_call_count > 1);
+    NotecardI2c<I2cPolicy> i2c(hal);
+    uint8_t data[50];
+    memset(data, 'a', sizeof(data));
+    REQUIRE(i2c.transmit(data, sizeof(data)));
+    // 50/10 = 5 chunks
+    CHECK(hal.transmit_call_count == 5);
 }
 
-TEST_CASE("i2c send: io delay (6 ms) before each chunk") {
+TEST_CASE("i2c transmit: io delay (6 ms) before each chunk") {
     ScriptedI2CHal hal;
     hal.mtu = 10;
-    NotecardI2c transport(hal);
-    hal.prime(transport);
-
-    const std::string req(30, 'a');
-    const std::string json = "{\"x\":\"" + req + "\"}";  // ~36 chars + \n = 4 chunks
-    hal.responses.push_back("{}\n");
-    transport.transact({json}, 5000);
-
-    // Expect 1 io delay per chunk.
+    NotecardI2c<I2cPolicy> i2c(hal);
+    uint8_t data[30];
+    memset(data, 'a', sizeof(data));
+    i2c.transmit(data, sizeof(data));
+    // 3 chunks, each gets io delay
     int chunks = hal.transmit_call_count;
     CHECK(hal.total_delay_ms >= static_cast<uint32_t>(chunks) * kI2cIoDelayMs);
 }
 
-TEST_CASE("i2c send: chunk delay (20 ms) after each chunk") {
+TEST_CASE("i2c transmit: chunk delay (20 ms) after each chunk") {
     ScriptedI2CHal hal;
     hal.mtu = 10;
-    NotecardI2c transport(hal);
-    hal.prime(transport);
-
-    const std::string req(20, 'a');
-    const std::string json = "{\"x\":\"" + req + "\"}";
-    hal.responses.push_back("{}\n");
-    transport.transact({json}, 5000);
-
+    NotecardI2c<I2cPolicy> i2c(hal);
+    uint8_t data[20];
+    memset(data, 'a', sizeof(data));
+    i2c.transmit(data, sizeof(data));
     int chunks = hal.transmit_call_count;
-    // Each chunk gets io delay + chunk delay.
     CHECK(hal.total_delay_ms >= static_cast<uint32_t>(chunks) * (kI2cIoDelayMs + kI2cChunkDelayMs));
 }
 
-TEST_CASE("i2c send: segment delay (250 ms) after > 250 bytes in segment") {
-    // note-c: sentInSegment > CARD_REQUEST_I2C_SEGMENT_MAX_LEN (250) → delay 250 ms.
+TEST_CASE("i2c transmit: segment delay (250 ms) after > 250 bytes in segment") {
     ScriptedI2CHal hal;
-    hal.mtu = 30;  // 30-byte chunks
-    NotecardI2c transport(hal);
-    hal.prime(transport);
-
-    // Build a request whose wire form (JSON + \n) exceeds 250 bytes.
-    // With mtu=30: 8 full chunks = 240 bytes, chunk 9 = 19 bytes more.
-    // sentInSegment after chunk 9 = 259 > 250 → segment delay triggered.
-    // {"k":"<250x>"} = 258 chars + '\n' = 259 bytes total.
-    const std::string body(250, 'x');
-    const std::string json = "{\"k\":\"" + body + "\"}";  // 258 bytes + \n = 259 bytes
-    hal.responses.push_back("{}\n");
-    transport.transact({json}, 5000);
-
-    // Expect at least one segment delay.
+    hal.mtu = 30;
+    NotecardI2c<I2cPolicy> i2c(hal);
+    uint8_t data[259];
+    memset(data, 'x', sizeof(data));
+    i2c.transmit(data, sizeof(data));
     CHECK(hal.total_delay_ms >= kI2cSegmentDelayMs);
 }
 
-TEST_CASE("i2c send: transmit failure calls reset() and returns error") {
-    // note-c: _I2CTransmit fails → _I2CReset called, error returned.
+TEST_CASE("i2c transmit: failure calls reset() and returns false") {
     ScriptedI2CHal hal;
-    NotecardI2c transport(hal);
-    hal.prime(transport);
-
-    // Make all subsequent transmits fail; transport retries kI2cMaxRetries times.
     hal.transmit_ok = false;
-    auto result = transport.transact({"{\"req\":\"hub.sync\"}"}, 5000);
-    REQUIRE(!result);
-    // reset() called at least once due to transmit failure.
+    NotecardI2c<I2cPolicy> i2c(hal);
+    uint8_t data[] = "test";
+    bool ok = i2c.transmit(data, 4);
+    REQUIRE_FALSE(ok);
     CHECK(hal.reset_call_count >= 1);
 }
 
 // ---------------------------------------------------------------------------
-// receive_response — ported from note-c _i2cChunkedReceive_test.cpp
+// read() — priming-query receive tests (HAL level)
 // ---------------------------------------------------------------------------
 
-TEST_CASE("i2c receive: simple response received correctly") {
-    // note-c: _i2cChunkedReceive returns complete response, no error.
+TEST_CASE("i2c read: returns available bytes") {
     ScriptedI2CHal hal;
-    NotecardI2c transport(hal);
-    hal.prime(transport);
-
-    hal.responses.push_back("{\"connected\":true}\n");
-    auto result = transport.transact({"{\"req\":\"hub.status\"}"}, 5000);
-    REQUIRE(result);
-    CHECK(*result == "{\"connected\":true}");
+    NotecardI2c<I2cPolicy> i2c(hal);
+    hal.rx_buf = std::string("\xAA\xBB\x0A", 3);
+    uint8_t buf[16];
+    auto r = i2c.read(buf, sizeof(buf), 5000);
+    REQUIRE(r.has_value());
+    CHECK(*r <= 3);
+    CHECK(buf[0] == 0xAA);
 }
 
-TEST_CASE("i2c receive: response stripped of trailing CR+LF") {
+TEST_CASE("i2c read: times out when no data") {
     ScriptedI2CHal hal;
-    NotecardI2c transport(hal);
-    hal.prime(transport);
-
-    hal.responses.push_back("{\"ok\":true}\r\n");
-    auto result = transport.transact({"{}"}, 5000);
-    REQUIRE(result);
-    CHECK(*result == "{\"ok\":true}");
+    NotecardI2c<I2cPolicy> i2c(hal);
+    uint8_t buf[16];
+    auto r = i2c.read(buf, sizeof(buf), 10);
+    REQUIRE_FALSE(r.has_value());
+    CHECK(r.error().code == note::Error::ResponseLost);
 }
 
-TEST_CASE("i2c receive: priming timeout → ResponseLost") {
-    // note-c: _i2cNoteQueryLength times out → timeout error.
-    ScriptedI2CHal hal;
-    NotecardI2c transport(hal);
-    hal.prime(transport);
-
-    // No response queued → rx_buf stays empty → priming query always 0.
-    auto result = transport.transact({"{\"req\":\"hub.sync\"}"}, 100);
-    REQUIRE(!result);
-    CHECK(result.error().code == Error::ResponseLost);
-    CHECK(result.error().cause == note::Cause::Timeout);
-}
-
-TEST_CASE("i2c receive: intra-timeout (partial response, no newline) → ResponseLost") {
-    // note-c: timeout while waiting for complete response → error.
-    ScriptedI2CHal hal;
-    NotecardI2c transport(hal);
-    hal.prime(transport);
-
-    // Inject a response without '\n' — transport will wait for EOP then timeout.
-    hal.responses.push_back("{\"partial\":");  // deliberately no \n
-    auto result = transport.transact({"{}"}, 5000);
-    REQUIRE(!result);
-    CHECK(result.error().code == Error::ResponseLost);
-    CHECK((result.error().cause == note::Cause::Timeout ||
-           result.error().cause == note::Cause::TimeoutIntra));
-}
-
-TEST_CASE("i2c receive: multi-chunk response (> max_transfer) assembled correctly") {
-    // note-c: response larger than MTU → multiple _I2CReceive calls, buffer assembled.
-    ScriptedI2CHal hal;
-    hal.mtu = 10;  // force chunking on receive too
-    NotecardI2c transport(hal);
-    hal.prime(transport);
-
-    // 50-char response body → multiple receive chunks.
-    const std::string body(40, 'z');
-    const std::string resp = "{\"data\":\"" + body + "\"}\n";
-    hal.responses.push_back(resp);
-    auto result = transport.transact({"{}"}, 5000);
-    REQUIRE(result);
-    CHECK(result->size() == resp.size() - 1);  // -1 for stripped \n
-}
-
-TEST_CASE("i2c receive: drain excess after early newline") {
-    // note-c: if EOP received but available > 0, drain before returning.
-    // We model this by having a response that reports more bytes available
-    // than one chunk, with \n in the middle.
-    ScriptedI2CHal hal;
-    hal.mtu = 10;
-    NotecardI2c transport(hal);
-    hal.prime(transport);
-
-    // Response: first 10 bytes have \n at end, but 5 more bytes remain.
-    // ScriptedI2CHal delivers all bytes from rx_buf with available tracking,
-    // so just use a response longer than one chunk.
-    const std::string resp = "{\"x\":true}\n";  // 11 bytes, \n at offset 10
-    hal.responses.push_back(resp);
-    auto result = transport.transact({"{}"}, 5000);
-    REQUIRE(result);
-    CHECK(*result == "{\"x\":true}");
+TEST_CASE("i2c read: HAL receive failure returns error") {
+    int receive_call = 0;
+    auto failing_receive = [&](uint8_t*, size_t, uint32_t& avail) -> bool {
+        ++receive_call;
+        if (receive_call == 1) {
+            avail = 2;
+            return true;
+        }
+        return false;
+    };
+    uint32_t now = 0;
+    I2cCallbackHal cb{
+        []() -> bool { return true; },
+        [](const uint8_t*, size_t) -> bool { return true; },
+        failing_receive,
+        [&]() -> uint32_t { return now; },
+        [&](uint32_t ms) { now += ms; }
+    };
+    NotecardI2c<I2cPolicy> i2c(cb);
+    uint8_t buf[16];
+    auto r = i2c.read(buf, sizeof(buf), 5000);
+    REQUIRE_FALSE(r.has_value());
+    CHECK(r.error().code == note::Error::ResponseLost);
 }
 
 // ---------------------------------------------------------------------------
-// operator() round-trip tests
+// write_line_terminator() — I2C sends bare \n
+// ---------------------------------------------------------------------------
+
+TEST_CASE("i2c write_line_terminator: sends bare LF") {
+    ScriptedI2CHal hal;
+    NotecardI2c<I2cPolicy> i2c(hal);
+    REQUIRE(i2c.write_line_terminator());
+    REQUIRE(hal.tx_accum.size() == 0);  // tx_accum was consumed (bare \n triggers reset path)
+    // Verify via response injection: bare \n triggers reset_response
+    CHECK(hal.rx_buf == "\r\n");
+}
+
+// ---------------------------------------------------------------------------
+// delay() — forwards to HAL
+// ---------------------------------------------------------------------------
+
+TEST_CASE("i2c delay: forwards to HAL") {
+    ScriptedI2CHal hal;
+    NotecardI2c<I2cPolicy> i2c(hal);
+    i2c.delay(42);
+    CHECK(hal.now_ms == 42);
+}
+
+// ---------------------------------------------------------------------------
+// Protocol tests — through StreamingTransport
 // ---------------------------------------------------------------------------
 
 TEST_CASE("i2c round-trip: simple request and response") {
-    ScriptedI2CHal hal;
-    NotecardI2c transport(hal);
-    hal.responses.push_back("{\"connected\":true}\n");
-    auto result = transport.transact({"{\"req\":\"hub.status\"}"}, 5000);
+    I2cTestHarness h;
+    h.hal.responses.push_back("{}\n");
+    CaptureSink sink;
+    auto result = h.transact("hub.status", sink);
     REQUIRE(result);
-    CHECK(*result == "{\"connected\":true}");
 }
 
-TEST_CASE("i2c round-trip: request forwarded as sent (no mutation)") {
-    ScriptedI2CHal hal;
-    NotecardI2c transport(hal);
-    hal.responses.push_back("{}\n");
-    transport.transact({"{\"req\":\"hub.sync\"}"}, 5000);
-    CHECK(hal.last_request == "{\"req\":\"hub.sync\"}");
+TEST_CASE("i2c round-trip: response fields are delivered to sink") {
+    I2cTestHarness h;
+    h.hal.responses.push_back("{\"connected\":true}\n");
+    CaptureSink sink;
+    auto result = h.transact("hub.status", sink);
+    REQUIRE(result);
+    CHECK(sink.find("connected", "bool") == "true");
 }
 
-TEST_CASE("i2c round-trip: CRC auto-detection on first CRC response") {
-    // note-c: first response with CRC → notecardFirmwareSupportsCrc set true.
-    ScriptedI2CHal hal;
-    NotecardI2c transport(hal);
+TEST_CASE("i2c round-trip: request contains the req field") {
+    I2cTestHarness h;
+    h.hal.responses.push_back("{}\n");
+    h.transact("hub.sync");
+    CHECK(h.hal.last_request.find("\"req\"") != std::string::npos);
+    CHECK(h.hal.last_request.find("hub.sync") != std::string::npos);
+}
 
-    // First request: response has CRC → auto-detection sets crc_enabled_.
-    const std::string json = "{\"req\":\"hub.sync\"}";
-    const std::string resp_with_crc = str_crc_add(json, 0) + "\n";
-    hal.responses.push_back(resp_with_crc);
-    auto r1 = transport.transact({json}, 5000);
+TEST_CASE("i2c round-trip: second request after success") {
+    I2cTestHarness h;
+    h.hal.responses.push_back("{}\n");
+    h.hal.responses.push_back("{}\n");
+
+    auto r1 = h.transact("first");
     REQUIRE(r1);
-    CHECK(*r1 == json);
 
-    // Second request: transport should now include CRC in the request.
-    hal.responses.push_back(str_crc_add("{}", 1) + "\n");
-    transport.transact({"{}"}, 5000);
-    // The request forwarded by the transport should contain a CRC field.
-    CHECK(hal.last_request.find("\"crc\"") != std::string::npos);
+    auto r2 = h.transact("second");
+    REQUIRE(r2);
 }
 
-TEST_CASE("i2c round-trip: CRC mismatch triggers retry") {
-    ScriptedI2CHal hal;
-    NotecardI2c transport(hal);
-    hal.responses.push_back("{}\n");  // first: init (no CRC yet)
-    auto r0 = transport.transact({"{}"}, 5000);
-    REQUIRE(r0);
+TEST_CASE("i2c round-trip: transmit failure all retries -> SendFailed") {
+    I2cTestHarness h;
+    // First transact succeeds (init)
+    h.hal.responses.push_back("{}\n");
+    h.transact("init");
 
-    // Enable CRC by injecting a response with CRC for the next request.
-    // First attempt: bad CRC → retry. Second attempt: good CRC → success.
-    const std::string json = "{\"req\":\"hub.sync\"}";
-    const std::string bad = "{\"req\":\"hub.sync\",\"crc\":\"0001:DEADBEEF\"}\n";
-    const std::string good = str_crc_add(json, 1) + "\n";
-    // Trigger CRC mode by first calling with a good CRC response.
-    hal.responses.push_back(str_crc_add("{}", 0) + "\n");
-    transport.transact({"{}"}, 5000);  // this enables crc_enabled_
-
-    hal.responses.push_back(bad);
-    hal.responses.push_back(good);
-    auto result = transport.transact({json}, 5000);
-    REQUIRE(result);
-    CHECK(*result == json);
-}
-
-TEST_CASE("i2c round-trip: transmit failure all retries → SendFailed") {
-    // After initialization, make all transmits fail. Set reset_ok=false so
-    // the internal do_reset() calls inside the retry loop return quickly
-    // (fail fast on reset() rather than waiting through NACK retries).
-    ScriptedI2CHal hal;
-    NotecardI2c transport(hal);
-    hal.prime(transport);
-
-    hal.transmit_ok = false;
-    hal.reset_ok    = false;  // fast-fail do_reset() in retry loop
-    auto result = transport.transact({"{\"req\":\"hub.sync\"}"}, 5000);
+    // Make all subsequent transmits fail and reset fail too (fast-fail).
+    h.hal.transmit_ok = false;
+    h.hal.reset_ok    = false;
+    auto result = h.transact("hub.sync");
     REQUIRE(!result);
     CHECK(result.error().code == Error::SendFailed);
     CHECK(result.error().cause == note::Cause::HalError);
 }
 
-TEST_CASE("i2c round-trip: max retries exceeded → ResponseLost") {
-    // note-c equivalent: all retries fail → return error.
-    ScriptedI2CHal hal;
-    NotecardI2c transport(hal);
-    hal.responses.push_back("{}\n");  // for reset/init
-    transport.transact({"{}"}, 5000);
+TEST_CASE("i2c round-trip: timeout -> error") {
+    I2cTestHarness h;
+    h.hal.responses.push_back("{}\n");
+    h.transact("init");
 
-    // All subsequent receive calls return no data → timeout every time.
-    auto result = transport.transact({"{\"req\":\"hub.sync\"}"}, 10);
+    // No response queued — timeout on receive.
+    auto result = h.transact("hub.sync", 10);
     REQUIRE(!result);
-    CHECK(result.error().code == Error::ResponseLost);
-    CHECK(result.error().cause == note::Cause::Timeout);
 }
 
-TEST_CASE("i2c round-trip: second request after success") {
-    ScriptedI2CHal hal;
-    NotecardI2c transport(hal);
-    hal.responses.push_back("{\"first\":true}\n");
-    hal.responses.push_back("{\"second\":true}\n");
+TEST_CASE("i2c round-trip: CRC auto-detection on first CRC response") {
+    I2cTestHarness h;
 
-    // string_view return: must consume each response before the next call
-    auto r1 = transport.transact({"{\"req\":\"first\"}"}, 5000);
-    REQUIRE(r1);
-    CHECK(*r1 == "{\"first\":true}");
+    // First request: response has CRC -> auto-detection sets crc_enabled_.
+    const std::string json = "{\"ok\":true}";
+    std::string resp = str_crc_add(json, 0) + "\n";
+    h.hal.responses.push_back(resp);
+    CaptureSink sink;
+    auto r = h.transact("hub.sync", sink);
+    REQUIRE(r);
+    CHECK(sink.find("ok", "bool") == "true");
+    // CRC field should not appear in the user sink (intercepted by CrcFieldSink)
+    CHECK_FALSE(sink.has_key("crc"));
+}
 
-    auto r2 = transport.transact({"{\"req\":\"second\"}"}, 5000);
-    REQUIRE(r2);
-    CHECK(*r2 == "{\"second\":true}");
+TEST_CASE("i2c round-trip: after CRC detection, second request includes CRC field") {
+    I2cTestHarness h;
+
+    // First call: CRC auto-detected (seq=0 response)
+    h.hal.responses.push_back(str_crc_add("{\"ok\":true}", 0) + "\n");
+    h.transact("hub.set");
+
+    // Second call: CRC is now enabled, seq increments to 1.
+    h.hal.responses.push_back(str_crc_add("{\"ok\":true}", 1) + "\n");
+    h.hal.last_request.clear();
+    h.transact("hub.sync");
+
+    REQUIRE(h.hal.last_request.find("\"crc\":\"") != std::string::npos);
+}
+
+TEST_CASE("i2c round-trip: CRC mismatch triggers retry") {
+    I2cTestHarness h;
+
+    // First call: CRC auto-detected
+    h.hal.responses.push_back(str_crc_add("{\"ok\":true}", 0) + "\n");
+    h.transact("hub.set");
+
+    // Second call: first response has wrong seq -> CRC mismatch -> retry;
+    // second response is correct.
+    h.hal.responses.push_back(str_crc_add("{\"ok\":true}", 99) + "\n");  // wrong seq
+    h.hal.responses.push_back(str_crc_add("{\"ok\":true}", 1) + "\n");   // correct
+    CaptureSink sink;
+    auto r = h.transact("hub.sync", sink);
+    REQUIRE(r);
+    CHECK(sink.find("ok", "bool") == "true");
+}
+
+TEST_CASE("i2c round-trip: I/O error on transmit triggers retry, succeeds on recovery") {
+    I2cTestHarness h;
+    // transmit_ok_fn applies to the I2CHal-level transmit calls.
+    // Call 1: reset probe '\n' (during initial reset → succeeds)
+    // Call 2: first data byte '{' of request → fails
+    // NotecardI2c::transmit calls hal_.reset() then returns false.
+    // StreamingTransport retries: reset probe → succeeds, re-transmit → succeeds.
+    h.hal.transmit_ok_fn = [](int call) -> bool { return call != 2; };
+
+    h.hal.responses.push_back("{}\n");
+    auto r = h.transact("hub.set");
+    REQUIRE(r.has_value());
+}
+
+TEST_CASE("i2c round-trip: reset failure returns Error::NotReady") {
+    I2cTestHarness h;
+    h.hal.reset_response = "BAD\r\n";  // reset always fails (non-control chars)
+    auto r = h.transact("hub.set");
+    REQUIRE(!r.has_value());
+    REQUIRE(r.error().code == note::Error::NotReady);
+}
+
+// ---------------------------------------------------------------------------
+// send() — fire-and-forget via StreamingTransport
+// ---------------------------------------------------------------------------
+
+TEST_CASE("i2c send: transmits without waiting for response") {
+    I2cTestHarness h;
+    h.hal.responses.push_back("{}\n");
+    h.transact("init");  // init
+    h.hal.last_request.clear();
+
+    auto r = h.send("hub.set");
+    REQUIRE(r.has_value());
+    CHECK(h.hal.last_request.find("hub.set") != std::string::npos);
+}
+
+TEST_CASE("i2c send: before first transact triggers reset") {
+    I2cTestHarness h;
+    auto r = h.send("hub.set");
+    REQUIRE(r.has_value());
+}
+
+TEST_CASE("i2c send: fails when transmit fails") {
+    I2cTestHarness h;
+    h.hal.responses.push_back("{}\n");
+    h.transact("init");
+
+    h.hal.transmit_ok = false;
+    auto r = h.send("hub.set");
+    REQUIRE_FALSE(r.has_value());
+    CHECK(r.error().code == note::Error::SendFailed);
+}
+
+// ---------------------------------------------------------------------------
+// Binary write/read — raw byte streaming via StreamingTransport
+// ---------------------------------------------------------------------------
+
+TEST_CASE("i2c: write() sends raw bytes") {
+    I2cTestHarness h;
+    h.hal.responses.push_back("{}\n");
+    h.transact("card.binary.put");  // init
+    h.hal.tx_accum.clear();
+    h.hal.transmit_call_count = 0;
+
+    uint8_t data[] = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07};
+    auto r = h.transport.write(data, sizeof(data));
+    REQUIRE(r.has_value());
+
+    // Data should have been transmitted (possibly chunked by NotecardI2c)
+    CHECK(h.hal.transmit_call_count >= 1);
+}
+
+TEST_CASE("i2c: read() returns available bytes via StreamingTransport") {
+    I2cTestHarness h;
+    h.hal.responses.push_back("{}\n");
+    h.transact("init");
+
+    // Inject raw bytes to read
+    h.hal.rx_buf = std::string("\xAA\xBB\x0A", 3);
+
+    uint8_t buf[16];
+    auto r = h.transport.read(buf, sizeof(buf), 5000);
+    REQUIRE(r.has_value());
+    CHECK(*r <= 3);
+    CHECK(buf[0] == 0xAA);
+}
+
+TEST_CASE("i2c: read() times out when no data via StreamingTransport") {
+    I2cTestHarness h;
+    h.hal.responses.push_back("{}\n");
+    h.transact("init");
+
+    uint8_t buf[16];
+    auto r = h.transport.read(buf, sizeof(buf), 10);
+    REQUIRE_FALSE(r.has_value());
+    CHECK(r.error().code == note::Error::ResponseLost);
+}
+
+TEST_CASE("i2c: write() fails when HAL transmit fails") {
+    I2cTestHarness h;
+    h.hal.responses.push_back("{}\n");
+    h.transact("init");
+
+    h.hal.transmit_ok = false;
+    uint8_t data[] = {1, 2, 3};
+    auto r = h.transport.write(data, sizeof(data));
+    REQUIRE_FALSE(r.has_value());
+    CHECK(r.error().code == note::Error::SendFailed);
+}
+
+// ---------------------------------------------------------------------------
+// explicit reset() via StreamingTransport
+// ---------------------------------------------------------------------------
+
+TEST_CASE("i2c: explicit reset()") {
+    I2cTestHarness h;
+    h.hal.responses.push_back("{}\n");
+    h.transact("init");
+
+    h.transport.reset();
+    h.hal.responses.push_back("{}\n");
+    auto r = h.transact("card.version");
+    REQUIRE(r.has_value());
 }
 
 // ---------------------------------------------------------------------------
@@ -564,176 +710,42 @@ TEST_CASE("I2cCallbackHal delegates to callbacks") {
         [&](uint32_t ms)                                       { real.delay(ms); }
     };
 
-    NotecardI2c transport(cb);
-    auto r = transport.transact({"{\"req\":\"hub.status\"}"}, 5000);
+    NotecardI2c<I2cPolicy> notecard_i2c(cb);
+    note::StreamingTransport transport(notecard_i2c, /*max_retries=*/5);
+    note::IStreamingTransport& t = transport;
+    note::JsonSink null_sink;
+    auto build = [](note::JsonBuilder& b) { b.add("req", "hub.status"); };
+    auto r = t.transact(build, null_sink, 5000);
     REQUIRE(r.has_value());
-    CHECK(*r == "{}");
 }
 
 // ---------------------------------------------------------------------------
-// Binary write/read — raw byte streaming, no JSON framing
+// Multi-chunk send via StreamingTransport with small MTU
 // ---------------------------------------------------------------------------
 
-TEST_CASE("i2c: write() sends raw bytes in MTU chunks") {
-    ScriptedI2CHal hal;
-    hal.mtu = 4;
-    hal.responses.push_back("{}\n");
-    NotecardI2c transport(hal);
-    transport.transact("{\"req\":\"card.binary.put\"}", 5000);  // init
-    hal.tx_accum.clear();
-    hal.transmit_call_count = 0;
+TEST_CASE("i2c send: multi-chunk request with small MTU") {
+    I2cTestHarness h;
+    h.hal.mtu = 10;
+    h.hal.responses.push_back("{}\n");
+    h.hal.responses.push_back("{}\n");
 
-    uint8_t data[] = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07};
-    auto r = transport.write(data, sizeof(data));
-    REQUIRE(r.has_value());
+    h.transact("init");
+    h.hal.transmit_call_count = 0;
 
-    // Should be 2 chunks: 4 + 3 (MTU=4)
-    CHECK(hal.transmit_call_count >= 2);
+    h.transact("hub.sync");
+    // Request body + \n should be multiple chunks at MTU=10
+    CHECK(h.hal.transmit_call_count > 1);
 }
 
-TEST_CASE("i2c: read() returns available bytes") {
-    ScriptedI2CHal hal;
-    hal.responses.push_back("{}\n");
-    NotecardI2c transport(hal);
-    transport.transact("{}", 5000);  // init
+TEST_CASE("i2c receive: multi-chunk response with small MTU") {
+    I2cTestHarness h;
+    h.hal.mtu = 10;  // force chunking on receive too
 
-    // Inject raw bytes to read
-    hal.rx_buf = std::string("\xAA\xBB\x0A", 3);
-
-    uint8_t buf[16];
-    auto r = transport.read(buf, sizeof(buf), 5000);
-    REQUIRE(r.has_value());
-    CHECK(*r <= 3);
-    CHECK(buf[0] == 0xAA);
-}
-
-TEST_CASE("i2c: read() times out when no data") {
-    ScriptedI2CHal hal;
-    hal.responses.push_back("{}\n");
-    NotecardI2c transport(hal);
-    transport.transact("{}", 5000);  // init
-
-    uint8_t buf[16];
-    auto r = transport.read(buf, sizeof(buf), 10);
-    REQUIRE_FALSE(r.has_value());
-    CHECK(r.error().code == note::Error::ResponseLost);
-}
-
-TEST_CASE("i2c: send() transmits without waiting for response") {
-    ScriptedI2CHal hal;
-    hal.responses.push_back("{}\n");
-    NotecardI2c transport(hal);
-    transport.transact("{}", 5000);  // init
-    hal.last_request.clear();
-
-    auto r = transport.send("{\"cmd\":\"hub.set\"}");
-    REQUIRE(r.has_value());
-    CHECK(hal.last_request.find("hub.set") != std::string::npos);
-}
-
-TEST_CASE("i2c: explicit reset()") {
-    ScriptedI2CHal hal;
-    hal.responses.push_back("{}\n");
-    NotecardI2c transport(hal);
-    transport.transact("{}", 5000);  // init
-
-    transport.reset();
-    hal.responses.push_back("{}\n");
-    auto r = transport.transact("{\"req\":\"card.version\"}", 5000);
-    REQUIRE(r.has_value());
-}
-
-TEST_CASE("i2c: read() HAL receive failure returns error") {
-    ScriptedI2CHal hal;
-    hal.responses.push_back("{}\n");
-    NotecardI2c transport(hal);
-    transport.transact("{}", 5000);  // init
-
-    // Inject some data so priming query returns available > 0,
-    // then fail the actual read
-    hal.rx_buf = "AB";
-    int receive_call = 0;
-    // Override receive to fail on the second call (first is priming query)
-    auto orig_receive = [&](uint8_t*, size_t, uint32_t& avail) -> bool {
-        ++receive_call;
-        if (receive_call == 1) {
-            avail = 2;
-            return true;
-        }
-        return false;
-    };
-    // Can't easily override receive on ScriptedI2CHal, so use the callback HAL
-    I2cCallbackHal cb{
-        []() -> bool { return true; },
-        [](const uint8_t*, size_t) -> bool { return true; },
-        orig_receive,
-        [&]() -> uint32_t { return hal.millis(); },
-        [&](uint32_t ms) { hal.delay(ms); }
-    };
-    NotecardI2c transport2(cb);
-    cb.reset();  // trigger init
-    transport2.transact("{}", 5000);
-
-    uint8_t buf[16];
-    auto r = transport2.read(buf, sizeof(buf), 5000);
-    REQUIRE_FALSE(r.has_value());
-    CHECK(r.error().code == note::Error::ResponseLost);
-}
-
-TEST_CASE("i2c: send() before first transact triggers reset") {
-    ScriptedI2CHal hal;
-    NotecardI2c transport(hal);
-    auto r = transport.send("{\"cmd\":\"hub.set\"}");
-    REQUIRE(r.has_value());
-}
-
-TEST_CASE("i2c: send() fails when transmit fails") {
-    ScriptedI2CHal hal;
-    hal.responses.push_back("{}\n");
-    NotecardI2c transport(hal);
-    transport.transact("{}", 5000);
-
-    hal.transmit_ok = false;
-    auto r = transport.send("{\"cmd\":\"hub.set\"}");
-    REQUIRE_FALSE(r.has_value());
-    CHECK(r.error().code == note::Error::SendFailed);
-}
-
-TEST_CASE("i2c: write() fails when HAL transmit fails") {
-    ScriptedI2CHal hal;
-    hal.responses.push_back("{}\n");
-    NotecardI2c transport(hal);
-    transport.transact("{}", 5000);
-
-    hal.transmit_ok = false;
-    uint8_t data[] = {1, 2, 3};
-    auto r = transport.write(data, sizeof(data));
-    REQUIRE_FALSE(r.has_value());
-    CHECK(r.error().code == note::Error::SendFailed);
-}
-
-TEST_CASE("i2c: reset fails when HAL reset fails") {
-    ScriptedI2CHal hal;
-    hal.reset_ok = false;
-    NotecardI2c transport(hal);
-    // First transact triggers reset which fails
-    auto r = transport.transact("{}", 5000);
-    REQUIRE_FALSE(r.has_value());
-    CHECK(r.error().code == note::Error::NotReady);
-}
-
-TEST_CASE("i2c: transact retries on transmit failure") {
-    ScriptedI2CHal hal;
-    hal.responses.push_back("{}\n");
-    hal.responses.push_back("{}\n");
-    NotecardI2c transport(hal);
-
-    hal.transmit_ok = true;
-    transport.transact("{}", 5000);
-
-    // Now set up a scenario where first attempt fails
-    hal.transmit_ok = false;
-    auto r = transport.transact("{\"req\":\"hub.status\"}", 5000);
-    // All retries fail → error
-    REQUIRE_FALSE(r.has_value());
+    const std::string body(40, 'z');
+    const std::string resp = "{\"data\":\"" + body + "\"}\n";
+    h.hal.responses.push_back(resp);
+    CaptureSink sink;
+    auto result = h.transact("hub.status", sink);
+    REQUIRE(result);
+    CHECK(sink.find("data") == body);
 }

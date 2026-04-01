@@ -83,16 +83,15 @@ public:
         : detail::NcOwner(backend, transport)
         , Api<TargetT>(nc_) {}
 
-    /// Set the transport after construction (streaming + auto allocator).
+    /// Set the streaming transport after construction.
     /// On Arduino, typically called from setup():
-    ///   nc.begin(transport);
-    void begin(AbstractTransport& transport, Allocator alloc = {}) {
-        nc_ = Notecard(default_backend_, transport);
-        nc_.set_allocator(alloc);
+    ///   nc.begin(streaming_transport, allocator);
+    void begin(IStreamingTransport& transport, Allocator alloc) {
+        nc_ = Notecard(transport, alloc);
     }
 
-    /// Set the transport after construction (non-streaming).
-    void begin(ITransport& transport) {
+    /// Set the buffered transport after construction.
+    void begin(IBufferedTransport& transport) {
         nc_ = Notecard(default_backend_, transport);
     }
 
@@ -116,12 +115,11 @@ public:
         : detail::NcOwner(backend, transport)
         , Api(detail::NcOwner::nc_) {}
 
-    void begin(AbstractTransport& transport, Allocator alloc = {}) {
-        detail::NcOwner::nc_ = Notecard(default_backend_, transport);
-        detail::NcOwner::nc_.set_allocator(alloc);
+    void begin(IStreamingTransport& transport, Allocator alloc) {
+        detail::NcOwner::nc_ = Notecard(transport, alloc);
     }
 
-    void begin(ITransport& transport) {
+    void begin(IBufferedTransport& transport) {
         detail::NcOwner::nc_ = Notecard(default_backend_, transport);
     }
 

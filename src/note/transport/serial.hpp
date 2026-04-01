@@ -12,7 +12,7 @@
 
 // note::transport::NotecardSerial
 //
-// Implements the Notecard serial wire protocol. Extends AbstractTransport
+// Implements the Notecard serial wire protocol as a TransportHal.
 // with serial-specific byte I/O (segmented TX, greedy RX, \r\n framing).
 //
 // The PolicyType template parameter controls retry counts, segment pacing,

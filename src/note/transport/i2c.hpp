@@ -1,22 +1,21 @@
 #pragma once
 
-#include <note/transport.hpp>
+#include <note/transport_hal.hpp>
 #include <note/transport/protocol_policy.hpp>
 
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
-#ifndef NOTE_NO_STD_STRING
-#include <string>
-#endif
 
 // note::transport::NotecardI2c
 //
-// Implements the Notecard I2C wire protocol. Extends AbstractTransport
-// with I2C-specific byte I/O (chunked TX/RX, priming query, \n framing).
+// TransportHal implementation for I2C (Notecard SoI2C wire protocol).
+// Wraps a platform I2CHal (chunked TX/RX, priming query) into the
+// blocking TransportHal interface used by StreamingTransport.
 //
-// The PolicyType template parameter controls retry counts, segment pacing,
-// and timeouts. See protocol_policy.hpp for details.
+// The PolicyType template parameter controls segment pacing and timeouts
+// for the I2C-specific chunked transmit and priming-query receive.
+// See protocol_policy.hpp for details.
 //
 // Usage — compile-time default policy (zero overhead, most common):
 //
@@ -29,7 +28,7 @@
 // Usage — runtime mutable policy:
 //
 //   NotecardI2c<I2cPolicy> transport(hal);
-//   transport.policy.max_retries = 1;  // adjust before a destructive request
+//   transport.policy.segment_delay_ms = 100;  // adjust before a heavy request
 
 namespace note::transport {
 
@@ -109,15 +108,18 @@ private:
 };
 
 // ---------------------------------------------------------------------------
-// NotecardI2c — Notecard I2C protocol implementation
+// NotecardI2c — Notecard I2C protocol implementation (TransportHal)
 // ---------------------------------------------------------------------------
 
+/// NotecardI2c — TransportHal implementation for I2C.
+/// Wraps a platform I2CHal (chunked TX/RX, priming query) into the blocking
+/// TransportHal interface used by StreamingTransport.
 #if __cplusplus >= 202002L
 template <typename PolicyType = StaticI2cPolicy<I2cPolicy{}>>
 #else
 template <typename PolicyType = I2cPolicy>
 #endif
-class NotecardI2c : public note::AbstractTransport {
+class NotecardI2c : public note::TransportHal {
 public:
     // policy is public so callers can read or mutate it between requests.
     // For StaticI2cPolicy (the default), [[no_unique_address]] gives it
@@ -127,17 +129,8 @@ public:
     explicit NotecardI2c(I2CHal& hal, PolicyType pol = {})
         : policy(pol), hal_(hal) {}
 
-protected:
-    // ── AbstractTransport building blocks ──────────────────────────────────
-
-    // I2C appends bare \n to the wire buffer (not \r\n like serial).
-    void prepare_wire(string_view request) override {
-        AbstractTransport::prepare_wire(request);
-        wire_data()[wire_len_++] = '\n';  // I2C appends bare \n (not \r\n like serial)
-    }
-
     // Chunked transmit with IO delay before each chunk.
-    bool do_transmit(const char* data, size_t len) override {
+    bool transmit(const uint8_t* data, size_t len) override {
         size_t offset        = 0;
         size_t sentInSegment = 0;
 
@@ -145,7 +138,7 @@ protected:
             const size_t chunk = std::min(len - offset, hal_.max_transfer());
 
             delay_io();  // stability delay before each chunk
-            if (!hal_.transmit(reinterpret_cast<const uint8_t*>(data + offset), chunk)) {
+            if (!hal_.transmit(data + offset, chunk)) {
                 hal_.reset();
                 return false;
             }
@@ -163,79 +156,9 @@ protected:
         return true;
     }
 
-    // Raw binary write: chunked MTU writes, no segment pacing.
-    // Matches note-c _i2cChunkedTransmit with delay=false.
-    bool do_write(const uint8_t* data, size_t len) override {
-        size_t offset = 0;
-        while (offset < len) {
-            const size_t chunk = std::min(len - offset, hal_.max_transfer());
-            if (!hal_.transmit(data + offset, chunk)) return false;
-            offset += chunk;
-        }
-        return true;
-    }
-
-#ifndef NOTE_NO_STD_STRING
-    // Priming-query receive: poll until data available, then chunked read.
-    Result<void> do_receive(std::string& buf, uint32_t timeout_ms) override {
-        delay_io();  // stability delay after final transmit chunk
-
-        // Priming query loop: wait until Notecard has data available.
-        uint32_t available = 0;
-        {
-            uint8_t dummy = 0;
-            const uint32_t start = hal_.millis();
-            while (available == 0) {
-                if (!hal_.receive(&dummy, 0, available))
-                    return make_error(Error::ResponseLost, Cause::HalError, "I2C receive failed");
-                if (available == 0) {
-                    if (timeout_ms && hal_.millis() - start >= timeout_ms)
-                        return make_error(Error::ResponseLost, Cause::Timeout, "no response");
-                    hal_.delay(policy.response_poll_ms);
-                }
-            }
-        }
-
-        // Chunked receive loop.
-        uint8_t      chunk[64];
-        uint32_t     intra_start = hal_.millis();
-        bool         eop = false;
-
-        while (true) {
-            const size_t req = std::min({size_t(available),
-                                         hal_.max_transfer(),
-                                         sizeof(chunk)});
-
-            if (!hal_.receive(chunk, req, available))
-                return make_error(Error::ResponseLost, Cause::HalError, "I2C receive failed");
-
-            if (req > 0) {
-                buf.append(reinterpret_cast<const char*>(chunk), req);
-                intra_start = hal_.millis();
-                eop = eop || (buf.back() == '\n');
-            }
-
-            if (available > 0) continue;
-            if (eop) break;
-
-            if (hal_.millis() - intra_start >= policy.intra_timeout_ms)
-                return make_error(Error::ResponseLost, Cause::TimeoutIntra, "response incomplete");
-            hal_.delay(policy.response_poll_ms);
-        }
-
-        // Strip trailing \r\n.
-        while (!buf.empty() &&
-               (buf.back() == '\n' || buf.back() == '\r'))
-            buf.pop_back();
-
-        return {};
-    }
-
-#endif // NOTE_NO_STD_STRING
-
     // Read available bytes from the I2C bus (up to max_len).
     // Uses priming query + chunked read. Returns bytes read.
-    Result<size_t> do_read(uint8_t* buf, size_t max_len, uint32_t timeout_ms) override {
+    Result<size_t> read(uint8_t* buf, size_t max_len, uint32_t timeout_ms) override {
         uint32_t available = 0;
         {
             uint8_t dummy = 0;
@@ -258,7 +181,7 @@ protected:
     }
 
     // Reset — matches note-c _i2cNoteReset().
-    bool do_reset() override {
+    bool reset() override {
         hal_.delay(policy.segment_delay_ms);
         if (!hal_.reset()) return false;
         delay_io();
@@ -316,12 +239,9 @@ protected:
     // I2C line terminator: bare \n (not \r\n like serial).
     bool write_line_terminator() override {
         const uint8_t nl = '\n';
-        return do_write(&nl, 1);
+        return hal_.transmit(&nl, 1);
     }
 
-    // Policy access for AbstractTransport.
-    uint32_t max_retries() const override { return policy.max_retries; }
-    uint32_t retry_delay_ms() const override { return policy.retry_delay_ms; }
     void delay(uint32_t ms) override { hal_.delay(ms); }
 
 private:

@@ -16,6 +16,7 @@
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
+#include <note/progmem.hpp>
 #include <note/target.hpp>
 
 namespace note::api {
@@ -33,6 +34,16 @@ namespace note::api {
 ///
 /// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
 struct VarSet {
+    struct keys_ {
+        static constexpr char req[] NOTE_FLASH_ATTR = "var.set";
+        static constexpr char file[] NOTE_FLASH_ATTR = "file";
+        static constexpr char flag[] NOTE_FLASH_ATTR = "flag";
+        static constexpr char name[] NOTE_FLASH_ATTR = "name";
+        static constexpr char sync[] NOTE_FLASH_ATTR = "sync";
+        static constexpr char text[] NOTE_FLASH_ATTR = "text";
+        static constexpr char value[] NOTE_FLASH_ATTR = "value";
+    };
+
     static constexpr string_view notecard_request = "var.set";
     static constexpr bool supports_cmd = true;
     static constexpr Safety safety = Safety::Idempotent;
@@ -124,13 +135,13 @@ struct VarSet {
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
     void build(JsonBuilder& b) const {
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 3, 1) || !defined(NOTE_API_STRICT)
-        if (file) b.add("file", *file);
+        if (file) note::add_flash(b, note::flash(keys_::file), *file);
 #endif
-        if (flag) b.add("flag", *flag);
-        if (name) b.add("name", *name);
-        if (sync) b.add("sync", *sync);
-        if (text) b.add("text", *text);
-        if (value) b.add("value", *value);
+        if (flag) note::add_flash(b, note::flash(keys_::flag), *flag);
+        if (name) note::add_flash(b, note::flash(keys_::name), *name);
+        if (sync) note::add_flash(b, note::flash(keys_::sync), *sync);
+        if (text) note::add_flash(b, note::flash(keys_::text), *text);
+        if (value) note::add_flash(b, note::flash(keys_::value), *value);
 #if NOTE_EXTRAS
         for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
             std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },

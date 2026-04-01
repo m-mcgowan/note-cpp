@@ -16,6 +16,7 @@
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
+#include <note/progmem.hpp>
 #include <note/target.hpp>
 
 namespace note::api {
@@ -32,6 +33,13 @@ namespace note::api {
 ///
 /// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
 struct HubLog {
+    struct keys_ {
+        static constexpr char req[] NOTE_FLASH_ATTR = "hub.log";
+        static constexpr char alert[] NOTE_FLASH_ATTR = "alert";
+        static constexpr char sync[] NOTE_FLASH_ATTR = "sync";
+        static constexpr char text[] NOTE_FLASH_ATTR = "text";
+    };
+
     static constexpr string_view notecard_request = "hub.log";
     static constexpr bool supports_cmd = true;
     static constexpr Safety safety = Safety::NonIdempotent;
@@ -92,9 +100,9 @@ struct HubLog {
     using Response = void;
 
     void build(JsonBuilder& b) const {
-        if (alert) b.add("alert", *alert);
-        if (sync) b.add("sync", *sync);
-        if (text) b.add("text", *text);
+        if (alert) note::add_flash(b, note::flash(keys_::alert), *alert);
+        if (sync) note::add_flash(b, note::flash(keys_::sync), *sync);
+        if (text) note::add_flash(b, note::flash(keys_::text), *text);
 #if NOTE_EXTRAS
         for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
             std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },

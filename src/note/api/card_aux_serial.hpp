@@ -17,6 +17,7 @@
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
 #include <note/flag_set.hpp>
+#include <note/progmem.hpp>
 #include <note/target.hpp>
 
 namespace note::serial {
@@ -42,6 +43,19 @@ namespace note::api {
 struct CardAuxSerial {
 
     struct Request {
+        struct keys_ {
+            static constexpr char req[] NOTE_FLASH_ATTR = "card.aux.serial";
+            static constexpr char duration[] NOTE_FLASH_ATTR = "duration";
+            static constexpr char limit[] NOTE_FLASH_ATTR = "limit";
+            static constexpr char max[] NOTE_FLASH_ATTR = "max";
+            static constexpr char minutes[] NOTE_FLASH_ATTR = "minutes";
+            static constexpr char mode[] NOTE_FLASH_ATTR = "mode";
+            static constexpr char ms[] NOTE_FLASH_ATTR = "ms";
+            static constexpr char rate[] NOTE_FLASH_ATTR = "rate";
+            static constexpr char rsp_mode[] NOTE_FLASH_ATTR = "mode";
+            static constexpr char rsp_rate[] NOTE_FLASH_ATTR = "rate";
+        };
+
         static constexpr string_view notecard_request = "card.aux.serial";
         static constexpr bool supports_cmd = true;
         static constexpr Safety safety = Safety::Idempotent;
@@ -266,11 +280,11 @@ struct CardAuxSerial {
                 Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
                 void on_string(::note::string_view k_, ::note::string_view v_) override {
                     v_ = pool_.intern(v_);
-                    if (k_ == "mode") { rsp.mode = v_; return; }
+                    if (note::flash(keys_::rsp_mode) == k_) { rsp.mode = v_; return; }
                 }
                 void on_number(::note::string_view k_, ::note::string_view raw_) override {
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-                    if (k_ == "rate") { rsp.rate = ::note::parse_int(raw_); return; }
+                    if (note::flash(keys_::rsp_rate) == k_) { rsp.rate = ::note::parse_int(raw_); return; }
 #endif
                 }
                 void reset() override { rsp = Response{}; }
@@ -311,16 +325,16 @@ struct CardAuxSerial {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
         void build(JsonBuilder& b) const {
-            if (duration) b.add("duration", *duration);
-            if (limit) b.add("limit", *limit);
-            if (max) b.add("max", *max);
+            if (duration) note::add_flash(b, note::flash(keys_::duration), *duration);
+            if (limit) note::add_flash(b, note::flash(keys_::limit), *limit);
+            if (max) note::add_flash(b, note::flash(keys_::max), *max);
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
-            if (minutes) b.add("minutes", *minutes);
+            if (minutes) note::add_flash(b, note::flash(keys_::minutes), *minutes);
 #endif
-            if (mode) b.add("mode", *mode);
-            if (ms) b.add("ms", *ms);
+            if (mode) note::add_flash(b, note::flash(keys_::mode), *mode);
+            if (ms) note::add_flash(b, note::flash(keys_::ms), *ms);
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-            if (rate) b.add("rate", *rate);
+            if (rate) note::add_flash(b, note::flash(keys_::rate), *rate);
 #endif
 #if NOTE_EXTRAS
             for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
@@ -385,6 +399,16 @@ struct CardAuxSerial {
     ///
     /// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
     struct Notify {
+        struct keys_ {
+            static constexpr char req[] NOTE_FLASH_ATTR = "card.aux.serial";
+            static constexpr char duration[] NOTE_FLASH_ATTR = "duration";
+            static constexpr char max[] NOTE_FLASH_ATTR = "max";
+            static constexpr char minutes[] NOTE_FLASH_ATTR = "minutes";
+            static constexpr char notifications[] NOTE_FLASH_ATTR = "mode";
+            static constexpr char ms[] NOTE_FLASH_ATTR = "ms";
+            static constexpr char rate[] NOTE_FLASH_ATTR = "rate";
+        };
+
         static constexpr string_view notecard_request = "card.aux.serial";
         static constexpr bool supports_cmd = true;
         static constexpr Safety safety = Safety::Idempotent;
@@ -552,22 +576,22 @@ struct CardAuxSerial {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
         void build(JsonBuilder& b) const {
-            if (duration) b.add("duration", *duration);
-            if (max) b.add("max", *max);
+            if (duration) note::add_flash(b, note::flash(keys_::duration), *duration);
+            if (max) note::add_flash(b, note::flash(keys_::max), *max);
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
-            if (minutes) b.add("minutes", *minutes);
+            if (minutes) note::add_flash(b, note::flash(keys_::minutes), *minutes);
 #endif
             if (notifications) {
                 char mp_[96];
                 std::snprintf(mp_, sizeof(mp_), "notify,%.*s",
                              (int)(*notifications).size(), (*notifications).data());
-                b.add("mode", note::string_view{mp_});
+                note::add_flash(b, note::flash(keys_::notifications), note::string_view{mp_});
             } else {
-                b.add("mode", "notify");
+                note::add_flash(b, note::flash(keys_::notifications), "notify");
             }
-            if (ms) b.add("ms", *ms);
+            if (ms) note::add_flash(b, note::flash(keys_::ms), *ms);
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-            if (rate) b.add("rate", *rate);
+            if (rate) note::add_flash(b, note::flash(keys_::rate), *rate);
 #endif
 #if NOTE_EXTRAS
             for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
@@ -627,6 +651,13 @@ struct CardAuxSerial {
     ///
     /// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
     struct Gps {
+        struct keys_ {
+            static constexpr char req[] NOTE_FLASH_ATTR = "card.aux.serial";
+            static constexpr char limit[] NOTE_FLASH_ATTR = "limit";
+            static constexpr char rate[] NOTE_FLASH_ATTR = "rate";
+            static constexpr char mode[] NOTE_FLASH_ATTR = "mode";
+        };
+
         static constexpr string_view notecard_request = "card.aux.serial";
         static constexpr bool supports_cmd = true;
         static constexpr Safety safety = Safety::Idempotent;
@@ -691,10 +722,10 @@ struct CardAuxSerial {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
         void build(JsonBuilder& b) const {
-            b.add("mode", "gps");
-            if (limit) b.add("limit", *limit);
+            note::add_flash(b, note::flash(keys_::mode), "gps");
+            if (limit) note::add_flash(b, note::flash(keys_::limit), *limit);
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-            if (rate) b.add("rate", *rate);
+            if (rate) note::add_flash(b, note::flash(keys_::rate), *rate);
 #endif
 #if NOTE_EXTRAS
             for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
@@ -736,6 +767,12 @@ struct CardAuxSerial {
     ///
     /// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
     struct Configure {
+        struct keys_ {
+            static constexpr char req[] NOTE_FLASH_ATTR = "card.aux.serial";
+            static constexpr char rate[] NOTE_FLASH_ATTR = "rate";
+            static constexpr char mode[] NOTE_FLASH_ATTR = "mode";
+        };
+
         static constexpr string_view notecard_request = "card.aux.serial";
         static constexpr bool supports_cmd = true;
         static constexpr Safety safety = Safety::Idempotent;
@@ -792,9 +829,9 @@ struct CardAuxSerial {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
         void build(JsonBuilder& b) const {
-            b.add("mode", "req");
+            note::add_flash(b, note::flash(keys_::mode), "req");
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-            if (rate) b.add("rate", *rate);
+            if (rate) note::add_flash(b, note::flash(keys_::rate), *rate);
 #endif
 #if NOTE_EXTRAS
             for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
@@ -832,6 +869,11 @@ struct CardAuxSerial {
     ///
     /// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
     struct Off {
+        struct keys_ {
+            static constexpr char req[] NOTE_FLASH_ATTR = "card.aux.serial";
+            static constexpr char mode[] NOTE_FLASH_ATTR = "mode";
+        };
+
         static constexpr string_view notecard_request = "card.aux.serial";
         static constexpr bool supports_cmd = true;
         static constexpr Safety safety = Safety::Idempotent;
@@ -867,7 +909,7 @@ struct CardAuxSerial {
         using Response = void;
 
         void build(JsonBuilder& b) const {
-            b.add("mode", "-");
+            note::add_flash(b, note::flash(keys_::mode), "-");
 #if NOTE_EXTRAS
             for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
                 std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },

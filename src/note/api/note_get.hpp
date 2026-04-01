@@ -17,6 +17,7 @@
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
+#include <note/progmem.hpp>
 #include <note/target.hpp>
 
 namespace note::api {
@@ -38,6 +39,16 @@ namespace note::api {
 struct NoteGet {
 
     struct Read {
+        struct keys_ {
+            static constexpr char req[] NOTE_FLASH_ATTR = "note.get";
+            static constexpr char decrypt[] NOTE_FLASH_ATTR = "decrypt";
+            static constexpr char deleted[] NOTE_FLASH_ATTR = "deleted";
+            static constexpr char file[] NOTE_FLASH_ATTR = "file";
+            static constexpr char noteId[] NOTE_FLASH_ATTR = "note";
+            static constexpr char rsp_payload[] NOTE_FLASH_ATTR = "payload";
+            static constexpr char rsp_time[] NOTE_FLASH_ATTR = "time";
+        };
+
         static constexpr string_view notecard_request = "note.get";
         static constexpr bool supports_cmd = true;
         static constexpr Safety safety = Safety::ReadOnly;
@@ -146,10 +157,10 @@ struct NoteGet {
                 Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
                 void on_string(::note::string_view k_, ::note::string_view v_) override {
                     v_ = pool_.intern(v_);
-                    if (k_ == "payload") { rsp.payload = v_; return; }
+                    if (note::flash(keys_::rsp_payload) == k_) { rsp.payload = v_; return; }
                 }
                 void on_number(::note::string_view k_, ::note::string_view raw_) override {
-                    if (k_ == "time") { rsp.time = ::note::parse_int(raw_); return; }
+                    if (note::flash(keys_::rsp_time) == k_) { rsp.time = ::note::parse_int(raw_); return; }
                 }
                 void reset() override { rsp = Response{}; }
             };
@@ -198,10 +209,10 @@ struct NoteGet {
         };
 
         void build(JsonBuilder& b) const {
-            if (decrypt) b.add("decrypt", *decrypt);
-            if (deleted) b.add("deleted", *deleted);
-            if (file) b.add("file", *file);
-            if (noteId) b.add("note", *noteId);
+            if (decrypt) note::add_flash(b, note::flash(keys_::decrypt), *decrypt);
+            if (deleted) note::add_flash(b, note::flash(keys_::deleted), *deleted);
+            if (file) note::add_flash(b, note::flash(keys_::file), *file);
+            if (noteId) note::add_flash(b, note::flash(keys_::noteId), *noteId);
 #if NOTE_EXTRAS
             for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
                 std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
@@ -252,6 +263,17 @@ struct NoteGet {
     ///
     /// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
     struct Pop {
+        struct keys_ {
+            static constexpr char req[] NOTE_FLASH_ATTR = "note.get";
+            static constexpr char decrypt[] NOTE_FLASH_ATTR = "decrypt";
+            static constexpr char delete_[] NOTE_FLASH_ATTR = "delete";
+            static constexpr char deleted[] NOTE_FLASH_ATTR = "deleted";
+            static constexpr char file[] NOTE_FLASH_ATTR = "file";
+            static constexpr char noteId[] NOTE_FLASH_ATTR = "note";
+            static constexpr char rsp_payload[] NOTE_FLASH_ATTR = "payload";
+            static constexpr char rsp_time[] NOTE_FLASH_ATTR = "time";
+        };
+
         static constexpr string_view notecard_request = "note.get";
         static constexpr bool supports_cmd = true;
         static constexpr Safety safety = Safety::Destructive;
@@ -360,10 +382,10 @@ struct NoteGet {
                 Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
                 void on_string(::note::string_view k_, ::note::string_view v_) override {
                     v_ = pool_.intern(v_);
-                    if (k_ == "payload") { rsp.payload = v_; return; }
+                    if (note::flash(keys_::rsp_payload) == k_) { rsp.payload = v_; return; }
                 }
                 void on_number(::note::string_view k_, ::note::string_view raw_) override {
-                    if (k_ == "time") { rsp.time = ::note::parse_int(raw_); return; }
+                    if (note::flash(keys_::rsp_time) == k_) { rsp.time = ::note::parse_int(raw_); return; }
                 }
                 void reset() override { rsp = Response{}; }
             };
@@ -412,11 +434,11 @@ struct NoteGet {
         };
 
         void build(JsonBuilder& b) const {
-            if (decrypt) b.add("decrypt", *decrypt);
-            b.add("delete", true);
-            if (deleted) b.add("deleted", *deleted);
-            if (file) b.add("file", *file);
-            if (noteId) b.add("note", *noteId);
+            if (decrypt) note::add_flash(b, note::flash(keys_::decrypt), *decrypt);
+            note::add_flash(b, note::flash(keys_::delete_), true);
+            if (deleted) note::add_flash(b, note::flash(keys_::deleted), *deleted);
+            if (file) note::add_flash(b, note::flash(keys_::file), *file);
+            if (noteId) note::add_flash(b, note::flash(keys_::noteId), *noteId);
 #if NOTE_EXTRAS
             for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
                 std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },

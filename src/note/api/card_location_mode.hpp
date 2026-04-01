@@ -16,6 +16,7 @@
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
+#include <note/progmem.hpp>
 #include <note/target.hpp>
 
 namespace note::api {
@@ -34,6 +35,27 @@ namespace note::api {
 struct CardLocationMode {
 
     struct Get {
+        struct keys_ {
+            static constexpr char req[] NOTE_FLASH_ATTR = "card.location.mode";
+            static constexpr char delete_[] NOTE_FLASH_ATTR = "delete";
+            static constexpr char lat[] NOTE_FLASH_ATTR = "lat";
+            static constexpr char lon[] NOTE_FLASH_ATTR = "lon";
+            static constexpr char max[] NOTE_FLASH_ATTR = "max";
+            static constexpr char minutes[] NOTE_FLASH_ATTR = "minutes";
+            static constexpr char mode[] NOTE_FLASH_ATTR = "mode";
+            static constexpr char seconds[] NOTE_FLASH_ATTR = "seconds";
+            static constexpr char threshold[] NOTE_FLASH_ATTR = "threshold";
+            static constexpr char vseconds[] NOTE_FLASH_ATTR = "vseconds";
+            static constexpr char rsp_lat[] NOTE_FLASH_ATTR = "lat";
+            static constexpr char rsp_lon[] NOTE_FLASH_ATTR = "lon";
+            static constexpr char rsp_max[] NOTE_FLASH_ATTR = "max";
+            static constexpr char rsp_minutes[] NOTE_FLASH_ATTR = "minutes";
+            static constexpr char rsp_mode[] NOTE_FLASH_ATTR = "mode";
+            static constexpr char rsp_seconds[] NOTE_FLASH_ATTR = "seconds";
+            static constexpr char rsp_threshold[] NOTE_FLASH_ATTR = "threshold";
+            static constexpr char rsp_vseconds[] NOTE_FLASH_ATTR = "vseconds";
+        };
+
         static constexpr string_view notecard_request = "card.location.mode";
         static constexpr bool supports_cmd = true;
         static constexpr Safety safety = Safety::ReadOnly;
@@ -284,18 +306,18 @@ struct CardLocationMode {
                 Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
                 void on_string(::note::string_view k_, ::note::string_view v_) override {
                     v_ = pool_.intern(v_);
-                    if (k_ == "mode") { rsp.mode = v_; return; }
-                    if (k_ == "vseconds") { rsp.vseconds = v_; return; }
+                    if (note::flash(keys_::rsp_mode) == k_) { rsp.mode = v_; return; }
+                    if (note::flash(keys_::rsp_vseconds) == k_) { rsp.vseconds = v_; return; }
                 }
                 void on_number(::note::string_view k_, ::note::string_view raw_) override {
-                    if (k_ == "max") { rsp.max = ::note::parse_int(raw_); return; }
-                    if (k_ == "minutes") { rsp.minutes = ::note::parse_int(raw_); return; }
-                    if (k_ == "seconds") { rsp.seconds = ::note::parse_int(raw_); return; }
+                    if (note::flash(keys_::rsp_max) == k_) { rsp.max = ::note::parse_int(raw_); return; }
+                    if (note::flash(keys_::rsp_minutes) == k_) { rsp.minutes = ::note::parse_int(raw_); return; }
+                    if (note::flash(keys_::rsp_seconds) == k_) { rsp.seconds = ::note::parse_int(raw_); return; }
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-                    if (k_ == "threshold") { rsp.threshold = ::note::parse_int(raw_); return; }
+                    if (note::flash(keys_::rsp_threshold) == k_) { rsp.threshold = ::note::parse_int(raw_); return; }
 #endif
-                    if (k_ == "lat") { rsp.lat = ::note::parse_double(raw_); return; }
-                    if (k_ == "lon") { rsp.lon = ::note::parse_double(raw_); return; }
+                    if (note::flash(keys_::rsp_lat) == k_) { rsp.lat = ::note::parse_double(raw_); return; }
+                    if (note::flash(keys_::rsp_lon) == k_) { rsp.lon = ::note::parse_double(raw_); return; }
                 }
                 void reset() override { rsp = Response{}; }
             };
@@ -360,17 +382,17 @@ struct CardLocationMode {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
         void build(JsonBuilder& b) const {
-            if (delete_) b.add("delete", *delete_);
-            if (lat) b.add("lat", *lat);
-            if (lon) b.add("lon", *lon);
-            if (max) b.add("max", *max);
-            if (minutes) b.add("minutes", *minutes);
-            if (mode) b.add("mode", *mode);
-            if (seconds) b.add("seconds", *seconds);
+            if (delete_) note::add_flash(b, note::flash(keys_::delete_), *delete_);
+            if (lat) note::add_flash(b, note::flash(keys_::lat), *lat);
+            if (lon) note::add_flash(b, note::flash(keys_::lon), *lon);
+            if (max) note::add_flash(b, note::flash(keys_::max), *max);
+            if (minutes) note::add_flash(b, note::flash(keys_::minutes), *minutes);
+            if (mode) note::add_flash(b, note::flash(keys_::mode), *mode);
+            if (seconds) note::add_flash(b, note::flash(keys_::seconds), *seconds);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-            if (threshold) b.add("threshold", *threshold);
+            if (threshold) note::add_flash(b, note::flash(keys_::threshold), *threshold);
 #endif
-            if (vseconds) b.add("vseconds", *vseconds);
+            if (vseconds) note::add_flash(b, note::flash(keys_::vseconds), *vseconds);
 #if NOTE_EXTRAS
             for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
                 std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
@@ -440,6 +462,27 @@ struct CardLocationMode {
     ///
     /// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
     struct Set {
+        struct keys_ {
+            static constexpr char req[] NOTE_FLASH_ATTR = "card.location.mode";
+            static constexpr char delete_[] NOTE_FLASH_ATTR = "delete";
+            static constexpr char lat[] NOTE_FLASH_ATTR = "lat";
+            static constexpr char lon[] NOTE_FLASH_ATTR = "lon";
+            static constexpr char max[] NOTE_FLASH_ATTR = "max";
+            static constexpr char minutes[] NOTE_FLASH_ATTR = "minutes";
+            static constexpr char mode[] NOTE_FLASH_ATTR = "mode";
+            static constexpr char seconds[] NOTE_FLASH_ATTR = "seconds";
+            static constexpr char threshold[] NOTE_FLASH_ATTR = "threshold";
+            static constexpr char vseconds[] NOTE_FLASH_ATTR = "vseconds";
+            static constexpr char rsp_lat[] NOTE_FLASH_ATTR = "lat";
+            static constexpr char rsp_lon[] NOTE_FLASH_ATTR = "lon";
+            static constexpr char rsp_max[] NOTE_FLASH_ATTR = "max";
+            static constexpr char rsp_minutes[] NOTE_FLASH_ATTR = "minutes";
+            static constexpr char rsp_mode[] NOTE_FLASH_ATTR = "mode";
+            static constexpr char rsp_seconds[] NOTE_FLASH_ATTR = "seconds";
+            static constexpr char rsp_threshold[] NOTE_FLASH_ATTR = "threshold";
+            static constexpr char rsp_vseconds[] NOTE_FLASH_ATTR = "vseconds";
+        };
+
         static constexpr string_view notecard_request = "card.location.mode";
         static constexpr bool supports_cmd = true;
         static constexpr Safety safety = Safety::Idempotent;
@@ -690,18 +733,18 @@ struct CardLocationMode {
                 Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
                 void on_string(::note::string_view k_, ::note::string_view v_) override {
                     v_ = pool_.intern(v_);
-                    if (k_ == "mode") { rsp.mode = v_; return; }
-                    if (k_ == "vseconds") { rsp.vseconds = v_; return; }
+                    if (note::flash(keys_::rsp_mode) == k_) { rsp.mode = v_; return; }
+                    if (note::flash(keys_::rsp_vseconds) == k_) { rsp.vseconds = v_; return; }
                 }
                 void on_number(::note::string_view k_, ::note::string_view raw_) override {
-                    if (k_ == "max") { rsp.max = ::note::parse_int(raw_); return; }
-                    if (k_ == "minutes") { rsp.minutes = ::note::parse_int(raw_); return; }
-                    if (k_ == "seconds") { rsp.seconds = ::note::parse_int(raw_); return; }
+                    if (note::flash(keys_::rsp_max) == k_) { rsp.max = ::note::parse_int(raw_); return; }
+                    if (note::flash(keys_::rsp_minutes) == k_) { rsp.minutes = ::note::parse_int(raw_); return; }
+                    if (note::flash(keys_::rsp_seconds) == k_) { rsp.seconds = ::note::parse_int(raw_); return; }
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-                    if (k_ == "threshold") { rsp.threshold = ::note::parse_int(raw_); return; }
+                    if (note::flash(keys_::rsp_threshold) == k_) { rsp.threshold = ::note::parse_int(raw_); return; }
 #endif
-                    if (k_ == "lat") { rsp.lat = ::note::parse_double(raw_); return; }
-                    if (k_ == "lon") { rsp.lon = ::note::parse_double(raw_); return; }
+                    if (note::flash(keys_::rsp_lat) == k_) { rsp.lat = ::note::parse_double(raw_); return; }
+                    if (note::flash(keys_::rsp_lon) == k_) { rsp.lon = ::note::parse_double(raw_); return; }
                 }
                 void reset() override { rsp = Response{}; }
             };
@@ -766,17 +809,17 @@ struct CardLocationMode {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
         void build(JsonBuilder& b) const {
-            if (delete_) b.add("delete", *delete_);
-            if (lat) b.add("lat", *lat);
-            if (lon) b.add("lon", *lon);
-            if (max) b.add("max", *max);
-            if (minutes) b.add("minutes", *minutes);
-            if (mode) b.add("mode", *mode);
-            if (seconds) b.add("seconds", *seconds);
+            if (delete_) note::add_flash(b, note::flash(keys_::delete_), *delete_);
+            if (lat) note::add_flash(b, note::flash(keys_::lat), *lat);
+            if (lon) note::add_flash(b, note::flash(keys_::lon), *lon);
+            if (max) note::add_flash(b, note::flash(keys_::max), *max);
+            if (minutes) note::add_flash(b, note::flash(keys_::minutes), *minutes);
+            if (mode) note::add_flash(b, note::flash(keys_::mode), *mode);
+            if (seconds) note::add_flash(b, note::flash(keys_::seconds), *seconds);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-            if (threshold) b.add("threshold", *threshold);
+            if (threshold) note::add_flash(b, note::flash(keys_::threshold), *threshold);
 #endif
-            if (vseconds) b.add("vseconds", *vseconds);
+            if (vseconds) note::add_flash(b, note::flash(keys_::vseconds), *vseconds);
 #if NOTE_EXTRAS
             for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
                 std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
@@ -845,6 +888,16 @@ struct CardLocationMode {
     ///
     /// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
     struct Continuous {
+        struct keys_ {
+            static constexpr char req[] NOTE_FLASH_ATTR = "card.location.mode";
+            static constexpr char threshold[] NOTE_FLASH_ATTR = "threshold";
+            static constexpr char vseconds[] NOTE_FLASH_ATTR = "vseconds";
+            static constexpr char mode[] NOTE_FLASH_ATTR = "mode";
+            static constexpr char rsp_mode[] NOTE_FLASH_ATTR = "mode";
+            static constexpr char rsp_threshold[] NOTE_FLASH_ATTR = "threshold";
+            static constexpr char rsp_vseconds[] NOTE_FLASH_ATTR = "vseconds";
+        };
+
         static constexpr string_view notecard_request = "card.location.mode";
         static constexpr bool supports_cmd = true;
         static constexpr Safety safety = Safety::Idempotent;
@@ -962,12 +1015,12 @@ struct CardLocationMode {
                 Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
                 void on_string(::note::string_view k_, ::note::string_view v_) override {
                     v_ = pool_.intern(v_);
-                    if (k_ == "mode") { rsp.mode = v_; return; }
-                    if (k_ == "vseconds") { rsp.vseconds = v_; return; }
+                    if (note::flash(keys_::rsp_mode) == k_) { rsp.mode = v_; return; }
+                    if (note::flash(keys_::rsp_vseconds) == k_) { rsp.vseconds = v_; return; }
                 }
                 void on_number(::note::string_view k_, ::note::string_view raw_) override {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-                    if (k_ == "threshold") { rsp.threshold = ::note::parse_int(raw_); return; }
+                    if (note::flash(keys_::rsp_threshold) == k_) { rsp.threshold = ::note::parse_int(raw_); return; }
 #endif
                 }
                 void reset() override { rsp = Response{}; }
@@ -1013,11 +1066,11 @@ struct CardLocationMode {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
         void build(JsonBuilder& b) const {
-            b.add("mode", "continuous");
+            note::add_flash(b, note::flash(keys_::mode), "continuous");
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-            if (threshold) b.add("threshold", *threshold);
+            if (threshold) note::add_flash(b, note::flash(keys_::threshold), *threshold);
 #endif
-            if (vseconds) b.add("vseconds", *vseconds);
+            if (vseconds) note::add_flash(b, note::flash(keys_::vseconds), *vseconds);
 #if NOTE_EXTRAS
             for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
                 std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
@@ -1058,6 +1111,26 @@ struct CardLocationMode {
     ///
     /// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
     struct Periodic {
+        struct keys_ {
+            static constexpr char req[] NOTE_FLASH_ATTR = "card.location.mode";
+            static constexpr char lat[] NOTE_FLASH_ATTR = "lat";
+            static constexpr char lon[] NOTE_FLASH_ATTR = "lon";
+            static constexpr char max[] NOTE_FLASH_ATTR = "max";
+            static constexpr char minutes[] NOTE_FLASH_ATTR = "minutes";
+            static constexpr char seconds[] NOTE_FLASH_ATTR = "seconds";
+            static constexpr char threshold[] NOTE_FLASH_ATTR = "threshold";
+            static constexpr char vseconds[] NOTE_FLASH_ATTR = "vseconds";
+            static constexpr char mode[] NOTE_FLASH_ATTR = "mode";
+            static constexpr char rsp_lat[] NOTE_FLASH_ATTR = "lat";
+            static constexpr char rsp_lon[] NOTE_FLASH_ATTR = "lon";
+            static constexpr char rsp_max[] NOTE_FLASH_ATTR = "max";
+            static constexpr char rsp_minutes[] NOTE_FLASH_ATTR = "minutes";
+            static constexpr char rsp_mode[] NOTE_FLASH_ATTR = "mode";
+            static constexpr char rsp_seconds[] NOTE_FLASH_ATTR = "seconds";
+            static constexpr char rsp_threshold[] NOTE_FLASH_ATTR = "threshold";
+            static constexpr char rsp_vseconds[] NOTE_FLASH_ATTR = "vseconds";
+        };
+
         static constexpr string_view notecard_request = "card.location.mode";
         static constexpr bool supports_cmd = true;
         static constexpr Safety safety = Safety::Idempotent;
@@ -1245,18 +1318,18 @@ struct CardLocationMode {
                 Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
                 void on_string(::note::string_view k_, ::note::string_view v_) override {
                     v_ = pool_.intern(v_);
-                    if (k_ == "mode") { rsp.mode = v_; return; }
-                    if (k_ == "vseconds") { rsp.vseconds = v_; return; }
+                    if (note::flash(keys_::rsp_mode) == k_) { rsp.mode = v_; return; }
+                    if (note::flash(keys_::rsp_vseconds) == k_) { rsp.vseconds = v_; return; }
                 }
                 void on_number(::note::string_view k_, ::note::string_view raw_) override {
-                    if (k_ == "max") { rsp.max = ::note::parse_int(raw_); return; }
-                    if (k_ == "minutes") { rsp.minutes = ::note::parse_int(raw_); return; }
-                    if (k_ == "seconds") { rsp.seconds = ::note::parse_int(raw_); return; }
+                    if (note::flash(keys_::rsp_max) == k_) { rsp.max = ::note::parse_int(raw_); return; }
+                    if (note::flash(keys_::rsp_minutes) == k_) { rsp.minutes = ::note::parse_int(raw_); return; }
+                    if (note::flash(keys_::rsp_seconds) == k_) { rsp.seconds = ::note::parse_int(raw_); return; }
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-                    if (k_ == "threshold") { rsp.threshold = ::note::parse_int(raw_); return; }
+                    if (note::flash(keys_::rsp_threshold) == k_) { rsp.threshold = ::note::parse_int(raw_); return; }
 #endif
-                    if (k_ == "lat") { rsp.lat = ::note::parse_double(raw_); return; }
-                    if (k_ == "lon") { rsp.lon = ::note::parse_double(raw_); return; }
+                    if (note::flash(keys_::rsp_lat) == k_) { rsp.lat = ::note::parse_double(raw_); return; }
+                    if (note::flash(keys_::rsp_lon) == k_) { rsp.lon = ::note::parse_double(raw_); return; }
                 }
                 void reset() override { rsp = Response{}; }
             };
@@ -1321,16 +1394,16 @@ struct CardLocationMode {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
         void build(JsonBuilder& b) const {
-            b.add("mode", "periodic");
-            if (lat) b.add("lat", *lat);
-            if (lon) b.add("lon", *lon);
-            if (max) b.add("max", *max);
-            if (minutes) b.add("minutes", *minutes);
-            if (seconds) b.add("seconds", *seconds);
+            note::add_flash(b, note::flash(keys_::mode), "periodic");
+            if (lat) note::add_flash(b, note::flash(keys_::lat), *lat);
+            if (lon) note::add_flash(b, note::flash(keys_::lon), *lon);
+            if (max) note::add_flash(b, note::flash(keys_::max), *max);
+            if (minutes) note::add_flash(b, note::flash(keys_::minutes), *minutes);
+            if (seconds) note::add_flash(b, note::flash(keys_::seconds), *seconds);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-            if (threshold) b.add("threshold", *threshold);
+            if (threshold) note::add_flash(b, note::flash(keys_::threshold), *threshold);
 #endif
-            if (vseconds) b.add("vseconds", *vseconds);
+            if (vseconds) note::add_flash(b, note::flash(keys_::vseconds), *vseconds);
 #if NOTE_EXTRAS
             for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
                 std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
@@ -1391,6 +1464,16 @@ struct CardLocationMode {
     ///
     /// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
     struct Fixed {
+        struct keys_ {
+            static constexpr char req[] NOTE_FLASH_ATTR = "card.location.mode";
+            static constexpr char lat[] NOTE_FLASH_ATTR = "lat";
+            static constexpr char lon[] NOTE_FLASH_ATTR = "lon";
+            static constexpr char mode[] NOTE_FLASH_ATTR = "mode";
+            static constexpr char rsp_lat[] NOTE_FLASH_ATTR = "lat";
+            static constexpr char rsp_lon[] NOTE_FLASH_ATTR = "lon";
+            static constexpr char rsp_mode[] NOTE_FLASH_ATTR = "mode";
+        };
+
         static constexpr string_view notecard_request = "card.location.mode";
         static constexpr bool supports_cmd = true;
         static constexpr Safety safety = Safety::Idempotent;
@@ -1485,11 +1568,11 @@ struct CardLocationMode {
                 Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
                 void on_string(::note::string_view k_, ::note::string_view v_) override {
                     v_ = pool_.intern(v_);
-                    if (k_ == "mode") { rsp.mode = v_; return; }
+                    if (note::flash(keys_::rsp_mode) == k_) { rsp.mode = v_; return; }
                 }
                 void on_number(::note::string_view k_, ::note::string_view raw_) override {
-                    if (k_ == "lat") { rsp.lat = ::note::parse_double(raw_); return; }
-                    if (k_ == "lon") { rsp.lon = ::note::parse_double(raw_); return; }
+                    if (note::flash(keys_::rsp_lat) == k_) { rsp.lat = ::note::parse_double(raw_); return; }
+                    if (note::flash(keys_::rsp_lon) == k_) { rsp.lon = ::note::parse_double(raw_); return; }
                 }
                 void reset() override { rsp = Response{}; }
             };
@@ -1525,9 +1608,9 @@ struct CardLocationMode {
         };
 
         void build(JsonBuilder& b) const {
-            b.add("mode", "fixed");
-            if (lat) b.add("lat", *lat);
-            if (lon) b.add("lon", *lon);
+            note::add_flash(b, note::flash(keys_::mode), "fixed");
+            if (lat) note::add_flash(b, note::flash(keys_::lat), *lat);
+            if (lon) note::add_flash(b, note::flash(keys_::lon), *lon);
 #if NOTE_EXTRAS
             for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
                 std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
@@ -1566,6 +1649,27 @@ struct CardLocationMode {
     ///
     /// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
     struct Remove {
+        struct keys_ {
+            static constexpr char req[] NOTE_FLASH_ATTR = "card.location.mode";
+            static constexpr char delete_[] NOTE_FLASH_ATTR = "delete";
+            static constexpr char lat[] NOTE_FLASH_ATTR = "lat";
+            static constexpr char lon[] NOTE_FLASH_ATTR = "lon";
+            static constexpr char max[] NOTE_FLASH_ATTR = "max";
+            static constexpr char minutes[] NOTE_FLASH_ATTR = "minutes";
+            static constexpr char mode[] NOTE_FLASH_ATTR = "mode";
+            static constexpr char seconds[] NOTE_FLASH_ATTR = "seconds";
+            static constexpr char threshold[] NOTE_FLASH_ATTR = "threshold";
+            static constexpr char vseconds[] NOTE_FLASH_ATTR = "vseconds";
+            static constexpr char rsp_lat[] NOTE_FLASH_ATTR = "lat";
+            static constexpr char rsp_lon[] NOTE_FLASH_ATTR = "lon";
+            static constexpr char rsp_max[] NOTE_FLASH_ATTR = "max";
+            static constexpr char rsp_minutes[] NOTE_FLASH_ATTR = "minutes";
+            static constexpr char rsp_mode[] NOTE_FLASH_ATTR = "mode";
+            static constexpr char rsp_seconds[] NOTE_FLASH_ATTR = "seconds";
+            static constexpr char rsp_threshold[] NOTE_FLASH_ATTR = "threshold";
+            static constexpr char rsp_vseconds[] NOTE_FLASH_ATTR = "vseconds";
+        };
+
         static constexpr string_view notecard_request = "card.location.mode";
         static constexpr bool supports_cmd = true;
         static constexpr Safety safety = Safety::Destructive;
@@ -1808,18 +1912,18 @@ struct CardLocationMode {
                 Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
                 void on_string(::note::string_view k_, ::note::string_view v_) override {
                     v_ = pool_.intern(v_);
-                    if (k_ == "mode") { rsp.mode = v_; return; }
-                    if (k_ == "vseconds") { rsp.vseconds = v_; return; }
+                    if (note::flash(keys_::rsp_mode) == k_) { rsp.mode = v_; return; }
+                    if (note::flash(keys_::rsp_vseconds) == k_) { rsp.vseconds = v_; return; }
                 }
                 void on_number(::note::string_view k_, ::note::string_view raw_) override {
-                    if (k_ == "max") { rsp.max = ::note::parse_int(raw_); return; }
-                    if (k_ == "minutes") { rsp.minutes = ::note::parse_int(raw_); return; }
-                    if (k_ == "seconds") { rsp.seconds = ::note::parse_int(raw_); return; }
+                    if (note::flash(keys_::rsp_max) == k_) { rsp.max = ::note::parse_int(raw_); return; }
+                    if (note::flash(keys_::rsp_minutes) == k_) { rsp.minutes = ::note::parse_int(raw_); return; }
+                    if (note::flash(keys_::rsp_seconds) == k_) { rsp.seconds = ::note::parse_int(raw_); return; }
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-                    if (k_ == "threshold") { rsp.threshold = ::note::parse_int(raw_); return; }
+                    if (note::flash(keys_::rsp_threshold) == k_) { rsp.threshold = ::note::parse_int(raw_); return; }
 #endif
-                    if (k_ == "lat") { rsp.lat = ::note::parse_double(raw_); return; }
-                    if (k_ == "lon") { rsp.lon = ::note::parse_double(raw_); return; }
+                    if (note::flash(keys_::rsp_lat) == k_) { rsp.lat = ::note::parse_double(raw_); return; }
+                    if (note::flash(keys_::rsp_lon) == k_) { rsp.lon = ::note::parse_double(raw_); return; }
                 }
                 void reset() override { rsp = Response{}; }
             };
@@ -1884,17 +1988,17 @@ struct CardLocationMode {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
         void build(JsonBuilder& b) const {
-            b.add("delete", true);
-            if (lat) b.add("lat", *lat);
-            if (lon) b.add("lon", *lon);
-            if (max) b.add("max", *max);
-            if (minutes) b.add("minutes", *minutes);
-            if (mode) b.add("mode", *mode);
-            if (seconds) b.add("seconds", *seconds);
+            note::add_flash(b, note::flash(keys_::delete_), true);
+            if (lat) note::add_flash(b, note::flash(keys_::lat), *lat);
+            if (lon) note::add_flash(b, note::flash(keys_::lon), *lon);
+            if (max) note::add_flash(b, note::flash(keys_::max), *max);
+            if (minutes) note::add_flash(b, note::flash(keys_::minutes), *minutes);
+            if (mode) note::add_flash(b, note::flash(keys_::mode), *mode);
+            if (seconds) note::add_flash(b, note::flash(keys_::seconds), *seconds);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-            if (threshold) b.add("threshold", *threshold);
+            if (threshold) note::add_flash(b, note::flash(keys_::threshold), *threshold);
 #endif
-            if (vseconds) b.add("vseconds", *vseconds);
+            if (vseconds) note::add_flash(b, note::flash(keys_::vseconds), *vseconds);
 #if NOTE_EXTRAS
             for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
                 std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },

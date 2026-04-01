@@ -16,6 +16,7 @@
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
+#include <note/progmem.hpp>
 #include <note/target.hpp>
 
 namespace note::api {
@@ -32,6 +33,12 @@ namespace note::api {
 ///
 /// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
 struct EnvModified {
+    struct keys_ {
+        static constexpr char req[] NOTE_FLASH_ATTR = "env.modified";
+        static constexpr char time[] NOTE_FLASH_ATTR = "time";
+        static constexpr char rsp_time[] NOTE_FLASH_ATTR = "time";
+    };
+
     static constexpr string_view notecard_request = "env.modified";
     static constexpr bool supports_cmd = true;
     static constexpr Safety safety = Safety::ReadOnly;
@@ -133,7 +140,7 @@ struct EnvModified {
             Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
             void on_number(::note::string_view k_, ::note::string_view raw_) override {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-                if (k_ == "time") { rsp.time = ::note::parse_int(raw_); return; }
+                if (note::flash(keys_::rsp_time) == k_) { rsp.time = ::note::parse_int(raw_); return; }
 #endif
             }
             void reset() override { rsp = Response{}; }
@@ -166,7 +173,7 @@ struct EnvModified {
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
     void build(JsonBuilder& b) const {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-        if (time) b.add("time", *time);
+        if (time) note::add_flash(b, note::flash(keys_::time), *time);
 #endif
 #if NOTE_EXTRAS
         for (uint8_t i_ = 0; i_ < extras_count_; ++i_)

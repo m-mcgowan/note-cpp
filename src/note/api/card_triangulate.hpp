@@ -17,6 +17,7 @@
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
 #include <note/flag_set.hpp>
+#include <note/progmem.hpp>
 #include <note/target.hpp>
 
 namespace note::triangulate {
@@ -44,6 +45,23 @@ namespace note::api {
 ///
 /// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
 struct CardTriangulate {
+    struct keys_ {
+        static constexpr char req[] NOTE_FLASH_ATTR = "card.triangulate";
+        static constexpr char minutes[] NOTE_FLASH_ATTR = "minutes";
+        static constexpr char mode[] NOTE_FLASH_ATTR = "mode";
+        static constexpr char on[] NOTE_FLASH_ATTR = "on";
+        static constexpr char set[] NOTE_FLASH_ATTR = "set";
+        static constexpr char text[] NOTE_FLASH_ATTR = "text";
+        static constexpr char time[] NOTE_FLASH_ATTR = "time";
+        static constexpr char usb[] NOTE_FLASH_ATTR = "usb";
+        static constexpr char rsp_length[] NOTE_FLASH_ATTR = "length";
+        static constexpr char rsp_mode[] NOTE_FLASH_ATTR = "mode";
+        static constexpr char rsp_motion[] NOTE_FLASH_ATTR = "motion";
+        static constexpr char rsp_on[] NOTE_FLASH_ATTR = "on";
+        static constexpr char rsp_time[] NOTE_FLASH_ATTR = "time";
+        static constexpr char rsp_usb[] NOTE_FLASH_ATTR = "usb";
+    };
+
     static constexpr string_view notecard_request = "card.triangulate";
     static constexpr bool supports_cmd = true;
     static constexpr Safety safety = Safety::Idempotent;
@@ -248,16 +266,16 @@ struct CardTriangulate {
             Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
             void on_string(::note::string_view k_, ::note::string_view v_) override {
                 v_ = pool_.intern(v_);
-                if (k_ == "mode") { rsp.mode = v_; return; }
+                if (note::flash(keys_::rsp_mode) == k_) { rsp.mode = v_; return; }
             }
             void on_bool(::note::string_view k_, bool v_) override {
-                if (k_ == "on") { rsp.on = v_; return; }
-                if (k_ == "usb") { rsp.usb = v_; return; }
+                if (note::flash(keys_::rsp_on) == k_) { rsp.on = v_; return; }
+                if (note::flash(keys_::rsp_usb) == k_) { rsp.usb = v_; return; }
             }
             void on_number(::note::string_view k_, ::note::string_view raw_) override {
-                if (k_ == "length") { rsp.length = ::note::parse_int(raw_); return; }
-                if (k_ == "motion") { rsp.motion = ::note::parse_int(raw_); return; }
-                if (k_ == "time") { rsp.time = ::note::parse_int(raw_); return; }
+                if (note::flash(keys_::rsp_length) == k_) { rsp.length = ::note::parse_int(raw_); return; }
+                if (note::flash(keys_::rsp_motion) == k_) { rsp.motion = ::note::parse_int(raw_); return; }
+                if (note::flash(keys_::rsp_time) == k_) { rsp.time = ::note::parse_int(raw_); return; }
             }
             void reset() override { rsp = Response{}; }
         };
@@ -305,13 +323,13 @@ struct CardTriangulate {
     };
 
     void build(JsonBuilder& b) const {
-        if (minutes) b.add("minutes", *minutes);
-        if (mode) b.add("mode", *mode);
-        if (on) b.add("on", *on);
-        if (set) b.add("set", *set);
-        if (text) b.add("text", *text);
-        if (time) b.add("time", *time);
-        if (usb) b.add("usb", *usb);
+        if (minutes) note::add_flash(b, note::flash(keys_::minutes), *minutes);
+        if (mode) note::add_flash(b, note::flash(keys_::mode), *mode);
+        if (on) note::add_flash(b, note::flash(keys_::on), *on);
+        if (set) note::add_flash(b, note::flash(keys_::set), *set);
+        if (text) note::add_flash(b, note::flash(keys_::text), *text);
+        if (time) note::add_flash(b, note::flash(keys_::time), *time);
+        if (usb) note::add_flash(b, note::flash(keys_::usb), *usb);
 #if NOTE_EXTRAS
         for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
             std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },

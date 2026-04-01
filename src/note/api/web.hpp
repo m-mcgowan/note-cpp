@@ -17,6 +17,7 @@
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
+#include <note/progmem.hpp>
 #include <note/target.hpp>
 
 namespace note::api {
@@ -33,6 +34,18 @@ namespace note::api {
 ///
 /// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
 struct Web {
+    struct keys_ {
+        static constexpr char req[] NOTE_FLASH_ATTR = "web";
+        static constexpr char content[] NOTE_FLASH_ATTR = "content";
+        static constexpr char method[] NOTE_FLASH_ATTR = "method";
+        static constexpr char name[] NOTE_FLASH_ATTR = "name";
+        static constexpr char route[] NOTE_FLASH_ATTR = "route";
+        static constexpr char rsp_cobs[] NOTE_FLASH_ATTR = "cobs";
+        static constexpr char rsp_length[] NOTE_FLASH_ATTR = "length";
+        static constexpr char rsp_payload[] NOTE_FLASH_ATTR = "payload";
+        static constexpr char rsp_result[] NOTE_FLASH_ATTR = "result";
+    };
+
     static constexpr string_view notecard_request = "web";
     static constexpr bool supports_cmd = true;
     static constexpr Safety safety = Safety::NonIdempotent;
@@ -210,12 +223,12 @@ struct Web {
             Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
             void on_string(::note::string_view k_, ::note::string_view v_) override {
                 v_ = pool_.intern(v_);
-                if (k_ == "payload") { rsp.payload = v_; return; }
+                if (note::flash(keys_::rsp_payload) == k_) { rsp.payload = v_; return; }
             }
             void on_number(::note::string_view k_, ::note::string_view raw_) override {
-                if (k_ == "cobs") { rsp.cobs = ::note::parse_int(raw_); return; }
-                if (k_ == "length") { rsp.length = ::note::parse_int(raw_); return; }
-                if (k_ == "result") { rsp.result = ::note::parse_int(raw_); return; }
+                if (note::flash(keys_::rsp_cobs) == k_) { rsp.cobs = ::note::parse_int(raw_); return; }
+                if (note::flash(keys_::rsp_length) == k_) { rsp.length = ::note::parse_int(raw_); return; }
+                if (note::flash(keys_::rsp_result) == k_) { rsp.result = ::note::parse_int(raw_); return; }
             }
             void reset() override { rsp = Response{}; }
         };
@@ -272,10 +285,10 @@ struct Web {
     };
 
     void build(JsonBuilder& b) const {
-        if (content) b.add("content", *content);
-        if (method) b.add("method", *method);
-        if (name) b.add("name", *name);
-        if (route) b.add("route", *route);
+        if (content) note::add_flash(b, note::flash(keys_::content), *content);
+        if (method) note::add_flash(b, note::flash(keys_::method), *method);
+        if (name) note::add_flash(b, note::flash(keys_::name), *name);
+        if (route) note::add_flash(b, note::flash(keys_::route), *route);
 #if NOTE_EXTRAS
         for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
             std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },

@@ -16,6 +16,7 @@
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
+#include <note/progmem.hpp>
 #include <note/target.hpp>
 
 namespace note::api {
@@ -31,6 +32,14 @@ namespace note::api {
 ///
 /// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
 struct FileStats {
+    struct keys_ {
+        static constexpr char req[] NOTE_FLASH_ATTR = "file.stats";
+        static constexpr char file[] NOTE_FLASH_ATTR = "file";
+        static constexpr char rsp_changes[] NOTE_FLASH_ATTR = "changes";
+        static constexpr char rsp_sync[] NOTE_FLASH_ATTR = "sync";
+        static constexpr char rsp_total[] NOTE_FLASH_ATTR = "total";
+    };
+
     static constexpr string_view notecard_request = "file.stats";
     static constexpr bool supports_cmd = true;
     static constexpr Safety safety = Safety::ReadOnly;
@@ -109,11 +118,11 @@ struct FileStats {
             ::note::StringPool& pool_;
             Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
             void on_bool(::note::string_view k_, bool v_) override {
-                if (k_ == "sync") { rsp.sync = v_; return; }
+                if (note::flash(keys_::rsp_sync) == k_) { rsp.sync = v_; return; }
             }
             void on_number(::note::string_view k_, ::note::string_view raw_) override {
-                if (k_ == "changes") { rsp.changes = ::note::parse_int(raw_); return; }
-                if (k_ == "total") { rsp.total = ::note::parse_int(raw_); return; }
+                if (note::flash(keys_::rsp_changes) == k_) { rsp.changes = ::note::parse_int(raw_); return; }
+                if (note::flash(keys_::rsp_total) == k_) { rsp.total = ::note::parse_int(raw_); return; }
             }
             void reset() override { rsp = Response{}; }
         };
@@ -147,7 +156,7 @@ struct FileStats {
     };
 
     void build(JsonBuilder& b) const {
-        if (file) b.add("file", *file);
+        if (file) note::add_flash(b, note::flash(keys_::file), *file);
 #if NOTE_EXTRAS
         for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
             std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },

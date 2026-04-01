@@ -16,6 +16,7 @@
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
+#include <note/progmem.hpp>
 #include <note/target.hpp>
 
 namespace note::api {
@@ -32,6 +33,11 @@ namespace note::api {
 ///
 /// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
 struct FileClear {
+    struct keys_ {
+        static constexpr char req[] NOTE_FLASH_ATTR = "file.clear";
+        static constexpr char file[] NOTE_FLASH_ATTR = "file";
+    };
+
     static constexpr string_view notecard_request = "file.clear";
     static constexpr bool supports_cmd = true;
     static constexpr Safety safety = Safety::Destructive;
@@ -75,7 +81,7 @@ struct FileClear {
     using Response = void;
 
     void build(JsonBuilder& b) const {
-        if (file) b.add("file", *file);
+        if (file) note::add_flash(b, note::flash(keys_::file), *file);
 #if NOTE_EXTRAS
         for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
             std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },

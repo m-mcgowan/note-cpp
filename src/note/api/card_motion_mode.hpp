@@ -16,6 +16,7 @@
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
+#include <note/progmem.hpp>
 #include <note/target.hpp>
 
 namespace note::api {
@@ -32,6 +33,15 @@ namespace note::api {
 ///
 /// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
 struct CardMotionMode {
+    struct keys_ {
+        static constexpr char req[] NOTE_FLASH_ATTR = "card.motion.mode";
+        static constexpr char motion[] NOTE_FLASH_ATTR = "motion";
+        static constexpr char seconds[] NOTE_FLASH_ATTR = "seconds";
+        static constexpr char sensitivity[] NOTE_FLASH_ATTR = "sensitivity";
+        static constexpr char start[] NOTE_FLASH_ATTR = "start";
+        static constexpr char stop[] NOTE_FLASH_ATTR = "stop";
+    };
+
     static constexpr string_view notecard_request = "card.motion.mode";
     static constexpr bool supports_cmd = true;
     static constexpr Safety safety = Safety::Idempotent;
@@ -148,13 +158,13 @@ struct CardMotionMode {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
     void build(JsonBuilder& b) const {
-        if (motion) b.add("motion", *motion);
-        if (seconds) b.add("seconds", *seconds);
+        if (motion) note::add_flash(b, note::flash(keys_::motion), *motion);
+        if (seconds) note::add_flash(b, note::flash(keys_::seconds), *seconds);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1) || !defined(NOTE_API_STRICT)
-        if (sensitivity) b.add("sensitivity", *sensitivity);
+        if (sensitivity) note::add_flash(b, note::flash(keys_::sensitivity), *sensitivity);
 #endif
-        if (start) b.add("start", *start);
-        if (stop) b.add("stop", *stop);
+        if (start) note::add_flash(b, note::flash(keys_::start), *start);
+        if (stop) note::add_flash(b, note::flash(keys_::stop), *stop);
 #if NOTE_EXTRAS
         for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
             std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },

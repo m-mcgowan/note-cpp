@@ -16,6 +16,7 @@
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
+#include <note/progmem.hpp>
 #include <note/target.hpp>
 
 namespace note::api {
@@ -31,6 +32,17 @@ namespace note::api {
 ///
 /// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
 struct CardMotionTrack {
+    struct keys_ {
+        static constexpr char req[] NOTE_FLASH_ATTR = "card.motion.track";
+        static constexpr char count[] NOTE_FLASH_ATTR = "count";
+        static constexpr char file[] NOTE_FLASH_ATTR = "file";
+        static constexpr char minutes[] NOTE_FLASH_ATTR = "minutes";
+        static constexpr char now[] NOTE_FLASH_ATTR = "now";
+        static constexpr char start[] NOTE_FLASH_ATTR = "start";
+        static constexpr char stop[] NOTE_FLASH_ATTR = "stop";
+        static constexpr char threshold[] NOTE_FLASH_ATTR = "threshold";
+    };
+
     static constexpr string_view notecard_request = "card.motion.track";
     static constexpr bool supports_cmd = true;
     static constexpr Safety safety = Safety::Idempotent;
@@ -124,13 +136,13 @@ struct CardMotionTrack {
     using Response = void;
 
     void build(JsonBuilder& b) const {
-        if (count) b.add("count", *count);
-        if (file) b.add("file", *file);
-        if (minutes) b.add("minutes", *minutes);
-        if (now) b.add("now", *now);
-        if (start) b.add("start", *start);
-        if (stop) b.add("stop", *stop);
-        if (threshold) b.add("threshold", *threshold);
+        if (count) note::add_flash(b, note::flash(keys_::count), *count);
+        if (file) note::add_flash(b, note::flash(keys_::file), *file);
+        if (minutes) note::add_flash(b, note::flash(keys_::minutes), *minutes);
+        if (now) note::add_flash(b, note::flash(keys_::now), *now);
+        if (start) note::add_flash(b, note::flash(keys_::start), *start);
+        if (stop) note::add_flash(b, note::flash(keys_::stop), *stop);
+        if (threshold) note::add_flash(b, note::flash(keys_::threshold), *threshold);
 #if NOTE_EXTRAS
         for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
             std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },

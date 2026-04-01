@@ -16,6 +16,7 @@
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
+#include <note/progmem.hpp>
 #include <note/target.hpp>
 
 namespace note::api {
@@ -33,6 +34,14 @@ namespace note::api {
 ///
 /// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
 struct NtnGps {
+    struct keys_ {
+        static constexpr char req[] NOTE_FLASH_ATTR = "ntn.gps";
+        static constexpr char off[] NOTE_FLASH_ATTR = "off";
+        static constexpr char on[] NOTE_FLASH_ATTR = "on";
+        static constexpr char rsp_off[] NOTE_FLASH_ATTR = "off";
+        static constexpr char rsp_on[] NOTE_FLASH_ATTR = "on";
+    };
+
     static constexpr string_view notecard_request = "ntn.gps";
     static constexpr bool supports_cmd = true;
     static constexpr Safety safety = Safety::Idempotent;
@@ -121,8 +130,8 @@ struct NtnGps {
             ::note::StringPool& pool_;
             Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
             void on_bool(::note::string_view k_, bool v_) override {
-                if (k_ == "off") { rsp.off = v_; return; }
-                if (k_ == "on") { rsp.on = v_; return; }
+                if (note::flash(keys_::rsp_off) == k_) { rsp.off = v_; return; }
+                if (note::flash(keys_::rsp_on) == k_) { rsp.on = v_; return; }
             }
             void reset() override { rsp = Response{}; }
         };
@@ -152,8 +161,8 @@ struct NtnGps {
     };
 
     void build(JsonBuilder& b) const {
-        if (off) b.add("off", *off);
-        if (on) b.add("on", *on);
+        if (off) note::add_flash(b, note::flash(keys_::off), *off);
+        if (on) note::add_flash(b, note::flash(keys_::on), *on);
 #if NOTE_EXTRAS
         for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
             std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },

@@ -16,6 +16,7 @@
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
+#include <note/progmem.hpp>
 #include <note/target.hpp>
 
 namespace note::api {
@@ -34,6 +35,18 @@ namespace note::api {
 struct CardContact {
 
     struct Get {
+        struct keys_ {
+            static constexpr char req[] NOTE_FLASH_ATTR = "card.contact";
+            static constexpr char email[] NOTE_FLASH_ATTR = "email";
+            static constexpr char name[] NOTE_FLASH_ATTR = "name";
+            static constexpr char org[] NOTE_FLASH_ATTR = "org";
+            static constexpr char role[] NOTE_FLASH_ATTR = "role";
+            static constexpr char rsp_email[] NOTE_FLASH_ATTR = "email";
+            static constexpr char rsp_name[] NOTE_FLASH_ATTR = "name";
+            static constexpr char rsp_org[] NOTE_FLASH_ATTR = "org";
+            static constexpr char rsp_role[] NOTE_FLASH_ATTR = "role";
+        };
+
         static constexpr string_view notecard_request = "card.contact";
         static constexpr bool supports_cmd = true;
         static constexpr Safety safety = Safety::ReadOnly;
@@ -137,10 +150,10 @@ struct CardContact {
                 Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
                 void on_string(::note::string_view k_, ::note::string_view v_) override {
                     v_ = pool_.intern(v_);
-                    if (k_ == "email") { rsp.email = v_; return; }
-                    if (k_ == "name") { rsp.name = v_; return; }
-                    if (k_ == "org") { rsp.org = v_; return; }
-                    if (k_ == "role") { rsp.role = v_; return; }
+                    if (note::flash(keys_::rsp_email) == k_) { rsp.email = v_; return; }
+                    if (note::flash(keys_::rsp_name) == k_) { rsp.name = v_; return; }
+                    if (note::flash(keys_::rsp_org) == k_) { rsp.org = v_; return; }
+                    if (note::flash(keys_::rsp_role) == k_) { rsp.role = v_; return; }
                 }
                 void reset() override { rsp = Response{}; }
             };
@@ -183,10 +196,10 @@ struct CardContact {
         };
 
         void build(JsonBuilder& b) const {
-            if (email) b.add("email", *email);
-            if (name) b.add("name", *name);
-            if (org) b.add("org", *org);
-            if (role) b.add("role", *role);
+            if (email) note::add_flash(b, note::flash(keys_::email), *email);
+            if (name) note::add_flash(b, note::flash(keys_::name), *name);
+            if (org) note::add_flash(b, note::flash(keys_::org), *org);
+            if (role) note::add_flash(b, note::flash(keys_::role), *role);
 #if NOTE_EXTRAS
             for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
                 std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
@@ -233,6 +246,18 @@ struct CardContact {
     ///
     /// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
     struct Set {
+        struct keys_ {
+            static constexpr char req[] NOTE_FLASH_ATTR = "card.contact";
+            static constexpr char email[] NOTE_FLASH_ATTR = "email";
+            static constexpr char name[] NOTE_FLASH_ATTR = "name";
+            static constexpr char org[] NOTE_FLASH_ATTR = "org";
+            static constexpr char role[] NOTE_FLASH_ATTR = "role";
+            static constexpr char rsp_email[] NOTE_FLASH_ATTR = "email";
+            static constexpr char rsp_name[] NOTE_FLASH_ATTR = "name";
+            static constexpr char rsp_org[] NOTE_FLASH_ATTR = "org";
+            static constexpr char rsp_role[] NOTE_FLASH_ATTR = "role";
+        };
+
         static constexpr string_view notecard_request = "card.contact";
         static constexpr bool supports_cmd = true;
         static constexpr Safety safety = Safety::Idempotent;
@@ -336,10 +361,10 @@ struct CardContact {
                 Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
                 void on_string(::note::string_view k_, ::note::string_view v_) override {
                     v_ = pool_.intern(v_);
-                    if (k_ == "email") { rsp.email = v_; return; }
-                    if (k_ == "name") { rsp.name = v_; return; }
-                    if (k_ == "org") { rsp.org = v_; return; }
-                    if (k_ == "role") { rsp.role = v_; return; }
+                    if (note::flash(keys_::rsp_email) == k_) { rsp.email = v_; return; }
+                    if (note::flash(keys_::rsp_name) == k_) { rsp.name = v_; return; }
+                    if (note::flash(keys_::rsp_org) == k_) { rsp.org = v_; return; }
+                    if (note::flash(keys_::rsp_role) == k_) { rsp.role = v_; return; }
                 }
                 void reset() override { rsp = Response{}; }
             };
@@ -382,10 +407,10 @@ struct CardContact {
         };
 
         void build(JsonBuilder& b) const {
-            if (email) b.add("email", *email);
-            if (name) b.add("name", *name);
-            if (org) b.add("org", *org);
-            if (role) b.add("role", *role);
+            if (email) note::add_flash(b, note::flash(keys_::email), *email);
+            if (name) note::add_flash(b, note::flash(keys_::name), *name);
+            if (org) note::add_flash(b, note::flash(keys_::org), *org);
+            if (role) note::add_flash(b, note::flash(keys_::role), *role);
 #if NOTE_EXTRAS
             for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
                 std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },

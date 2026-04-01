@@ -16,6 +16,7 @@
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
+#include <note/progmem.hpp>
 #include <note/target.hpp>
 
 namespace note::api {
@@ -36,6 +37,18 @@ namespace note::api {
 ///
 /// @skus{WIFI}
 struct CardSleep {
+    struct keys_ {
+        static constexpr char req[] NOTE_FLASH_ATTR = "card.sleep";
+        static constexpr char mode[] NOTE_FLASH_ATTR = "mode";
+        static constexpr char off[] NOTE_FLASH_ATTR = "off";
+        static constexpr char on[] NOTE_FLASH_ATTR = "on";
+        static constexpr char seconds[] NOTE_FLASH_ATTR = "seconds";
+        static constexpr char rsp_mode[] NOTE_FLASH_ATTR = "mode";
+        static constexpr char rsp_off[] NOTE_FLASH_ATTR = "off";
+        static constexpr char rsp_on[] NOTE_FLASH_ATTR = "on";
+        static constexpr char rsp_seconds[] NOTE_FLASH_ATTR = "seconds";
+    };
+
     static constexpr string_view notecard_request = "card.sleep";
     static constexpr bool supports_cmd = true;
     static constexpr Safety safety = Safety::Idempotent;
@@ -195,14 +208,14 @@ struct CardSleep {
             Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
             void on_string(::note::string_view k_, ::note::string_view v_) override {
                 v_ = pool_.intern(v_);
-                if (k_ == "mode") { rsp.mode = v_; return; }
+                if (note::flash(keys_::rsp_mode) == k_) { rsp.mode = v_; return; }
             }
             void on_bool(::note::string_view k_, bool v_) override {
-                if (k_ == "off") { rsp.off = v_; return; }
-                if (k_ == "on") { rsp.on = v_; return; }
+                if (note::flash(keys_::rsp_off) == k_) { rsp.off = v_; return; }
+                if (note::flash(keys_::rsp_on) == k_) { rsp.on = v_; return; }
             }
             void on_number(::note::string_view k_, ::note::string_view raw_) override {
-                if (k_ == "seconds") { rsp.seconds = ::note::parse_int(raw_); return; }
+                if (note::flash(keys_::rsp_seconds) == k_) { rsp.seconds = ::note::parse_int(raw_); return; }
             }
             void reset() override { rsp = Response{}; }
         };
@@ -242,10 +255,10 @@ struct CardSleep {
     };
 
     void build(JsonBuilder& b) const {
-        if (mode) b.add("mode", *mode);
-        if (off) b.add("off", *off);
-        if (on) b.add("on", *on);
-        if (seconds) b.add("seconds", *seconds);
+        if (mode) note::add_flash(b, note::flash(keys_::mode), *mode);
+        if (off) note::add_flash(b, note::flash(keys_::off), *off);
+        if (on) note::add_flash(b, note::flash(keys_::on), *on);
+        if (seconds) note::add_flash(b, note::flash(keys_::seconds), *seconds);
 #if NOTE_EXTRAS
         for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
             std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },

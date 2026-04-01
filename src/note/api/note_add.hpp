@@ -17,6 +17,7 @@
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
+#include <note/progmem.hpp>
 #include <note/target.hpp>
 
 namespace note::api {
@@ -32,6 +33,25 @@ namespace note::api {
 ///
 /// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
 struct NoteAdd {
+    struct keys_ {
+        static constexpr char req[] NOTE_FLASH_ATTR = "note.add";
+        static constexpr char binary[] NOTE_FLASH_ATTR = "binary";
+        static constexpr char body[] NOTE_FLASH_ATTR = "body";
+        static constexpr char file[] NOTE_FLASH_ATTR = "file";
+        static constexpr char full[] NOTE_FLASH_ATTR = "full";
+        static constexpr char key[] NOTE_FLASH_ATTR = "key";
+        static constexpr char limit[] NOTE_FLASH_ATTR = "limit";
+        static constexpr char live[] NOTE_FLASH_ATTR = "live";
+        static constexpr char max[] NOTE_FLASH_ATTR = "max";
+        static constexpr char noteId[] NOTE_FLASH_ATTR = "note";
+        static constexpr char payload[] NOTE_FLASH_ATTR = "payload";
+        static constexpr char sync[] NOTE_FLASH_ATTR = "sync";
+        static constexpr char verify[] NOTE_FLASH_ATTR = "verify";
+        static constexpr char rsp_noteId[] NOTE_FLASH_ATTR = "note";
+        static constexpr char rsp_template_[] NOTE_FLASH_ATTR = "template";
+        static constexpr char rsp_total[] NOTE_FLASH_ATTR = "total";
+    };
+
     static constexpr string_view notecard_request = "note.add";
     static constexpr bool supports_cmd = true;
     static constexpr Safety safety = Safety::NonIdempotent;
@@ -285,13 +305,13 @@ struct NoteAdd {
             Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
             void on_string(::note::string_view k_, ::note::string_view v_) override {
                 v_ = pool_.intern(v_);
-                if (k_ == "note") { rsp.noteId = v_; return; }
+                if (note::flash(keys_::rsp_noteId) == k_) { rsp.noteId = v_; return; }
             }
             void on_bool(::note::string_view k_, bool v_) override {
-                if (k_ == "template") { rsp.template_ = v_; return; }
+                if (note::flash(keys_::rsp_template_) == k_) { rsp.template_ = v_; return; }
             }
             void on_number(::note::string_view k_, ::note::string_view raw_) override {
-                if (k_ == "total") { rsp.total = ::note::parse_int(raw_); return; }
+                if (note::flash(keys_::rsp_total) == k_) { rsp.total = ::note::parse_int(raw_); return; }
             }
             void reset() override { rsp = Response{}; }
         };
@@ -330,27 +350,27 @@ struct NoteAdd {
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
     void build(JsonBuilder& b) const {
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
-        if (binary) b.add("binary", *binary);
+        if (binary) note::add_flash(b, note::flash(keys_::binary), *binary);
 #endif
         body.write_to(b);
-        if (file) b.add("file", *file);
+        if (file) note::add_flash(b, note::flash(keys_::file), *file);
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
-        if (full) b.add("full", *full);
+        if (full) note::add_flash(b, note::flash(keys_::full), *full);
 #endif
-        if (key) b.add("key", *key);
+        if (key) note::add_flash(b, note::flash(keys_::key), *key);
 #if NOTE_API_VERSION >= NOTE_VERSION(9, 1, 1) || !defined(NOTE_API_STRICT)
-        if (limit) b.add("limit", *limit);
+        if (limit) note::add_flash(b, note::flash(keys_::limit), *limit);
 #endif
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
-        if (live) b.add("live", *live);
+        if (live) note::add_flash(b, note::flash(keys_::live), *live);
 #endif
 #if NOTE_API_VERSION >= NOTE_VERSION(8, 2, 1) || !defined(NOTE_API_STRICT)
-        if (max) b.add("max", *max);
+        if (max) note::add_flash(b, note::flash(keys_::max), *max);
 #endif
-        if (noteId) b.add("note", *noteId);
-        if (payload) b.add("payload", *payload);
-        if (sync) b.add("sync", *sync);
-        if (verify) b.add("verify", *verify);
+        if (noteId) note::add_flash(b, note::flash(keys_::noteId), *noteId);
+        if (payload) note::add_flash(b, note::flash(keys_::payload), *payload);
+        if (sync) note::add_flash(b, note::flash(keys_::sync), *sync);
+        if (verify) note::add_flash(b, note::flash(keys_::verify), *verify);
 #if NOTE_EXTRAS
         for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
             std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },

@@ -16,6 +16,7 @@
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
+#include <note/progmem.hpp>
 #include <note/target.hpp>
 
 namespace note::api {
@@ -36,6 +37,14 @@ namespace note::api {
 ///
 /// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
 struct CardBinaryPut : note::BinarySendMixin {
+    struct keys_ {
+        static constexpr char req[] NOTE_FLASH_ATTR = "card.binary.put";
+        static constexpr char cobs[] NOTE_FLASH_ATTR = "cobs";
+        static constexpr char offset[] NOTE_FLASH_ATTR = "offset";
+        static constexpr char status[] NOTE_FLASH_ATTR = "status";
+        static constexpr char rsp_err[] NOTE_FLASH_ATTR = "err";
+    };
+
     static constexpr string_view notecard_request = "card.binary.put";
     static constexpr bool supports_cmd = true;
     static constexpr Safety safety = Safety::NonIdempotent;
@@ -129,7 +138,7 @@ struct CardBinaryPut : note::BinarySendMixin {
             Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
             void on_string(::note::string_view k_, ::note::string_view v_) override {
                 v_ = pool_.intern(v_);
-                if (k_ == "err") { rsp.err = v_; return; }
+                if (note::flash(keys_::rsp_err) == k_) { rsp.err = v_; return; }
             }
             void reset() override { rsp = Response{}; }
         };
@@ -157,9 +166,9 @@ struct CardBinaryPut : note::BinarySendMixin {
     };
 
     void build(JsonBuilder& b) const {
-        if (cobs) b.add("cobs", *cobs);
-        if (offset) b.add("offset", *offset);
-        if (status) b.add("status", *status);
+        if (cobs) note::add_flash(b, note::flash(keys_::cobs), *cobs);
+        if (offset) note::add_flash(b, note::flash(keys_::offset), *offset);
+        if (status) note::add_flash(b, note::flash(keys_::status), *status);
 #if NOTE_EXTRAS
         for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
             std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },

@@ -16,6 +16,7 @@
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
+#include <note/progmem.hpp>
 #include <note/target.hpp>
 
 namespace note::api {
@@ -36,6 +37,13 @@ namespace note::api {
 ///
 /// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
 struct CardCarrier {
+    struct keys_ {
+        static constexpr char req[] NOTE_FLASH_ATTR = "card.carrier";
+        static constexpr char mode[] NOTE_FLASH_ATTR = "mode";
+        static constexpr char rsp_charging[] NOTE_FLASH_ATTR = "charging";
+        static constexpr char rsp_mode[] NOTE_FLASH_ATTR = "mode";
+    };
+
     static constexpr string_view notecard_request = "card.carrier";
     static constexpr bool supports_cmd = true;
     static constexpr Safety safety = Safety::Idempotent;
@@ -156,10 +164,10 @@ struct CardCarrier {
             Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
             void on_string(::note::string_view k_, ::note::string_view v_) override {
                 v_ = pool_.intern(v_);
-                if (k_ == "mode") { rsp.mode = v_; return; }
+                if (note::flash(keys_::rsp_mode) == k_) { rsp.mode = v_; return; }
             }
             void on_bool(::note::string_view k_, bool v_) override {
-                if (k_ == "charging") { rsp.charging = v_; return; }
+                if (note::flash(keys_::rsp_charging) == k_) { rsp.charging = v_; return; }
             }
             void reset() override { rsp = Response{}; }
         };
@@ -191,7 +199,7 @@ struct CardCarrier {
     };
 
     void build(JsonBuilder& b) const {
-        if (mode) b.add("mode", *mode);
+        if (mode) note::add_flash(b, note::flash(keys_::mode), *mode);
 #if NOTE_EXTRAS
         for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
             std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },

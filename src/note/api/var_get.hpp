@@ -16,6 +16,7 @@
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
+#include <note/progmem.hpp>
 #include <note/target.hpp>
 
 namespace note::api {
@@ -32,6 +33,15 @@ namespace note::api {
 ///
 /// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
 struct VarGet {
+    struct keys_ {
+        static constexpr char req[] NOTE_FLASH_ATTR = "var.get";
+        static constexpr char file[] NOTE_FLASH_ATTR = "file";
+        static constexpr char name[] NOTE_FLASH_ATTR = "name";
+        static constexpr char rsp_flag[] NOTE_FLASH_ATTR = "flag";
+        static constexpr char rsp_text[] NOTE_FLASH_ATTR = "text";
+        static constexpr char rsp_value[] NOTE_FLASH_ATTR = "value";
+    };
+
     static constexpr string_view notecard_request = "var.get";
     static constexpr bool supports_cmd = true;
     static constexpr Safety safety = Safety::ReadOnly;
@@ -118,13 +128,13 @@ struct VarGet {
             Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
             void on_string(::note::string_view k_, ::note::string_view v_) override {
                 v_ = pool_.intern(v_);
-                if (k_ == "text") { rsp.text = v_; return; }
+                if (note::flash(keys_::rsp_text) == k_) { rsp.text = v_; return; }
             }
             void on_bool(::note::string_view k_, bool v_) override {
-                if (k_ == "flag") { rsp.flag = v_; return; }
+                if (note::flash(keys_::rsp_flag) == k_) { rsp.flag = v_; return; }
             }
             void on_number(::note::string_view k_, ::note::string_view raw_) override {
-                if (k_ == "value") { rsp.value = ::note::parse_double(raw_); return; }
+                if (note::flash(keys_::rsp_value) == k_) { rsp.value = ::note::parse_double(raw_); return; }
             }
             void reset() override { rsp = Response{}; }
         };
@@ -160,8 +170,8 @@ struct VarGet {
     };
 
     void build(JsonBuilder& b) const {
-        if (file) b.add("file", *file);
-        if (name) b.add("name", *name);
+        if (file) note::add_flash(b, note::flash(keys_::file), *file);
+        if (name) note::add_flash(b, note::flash(keys_::name), *name);
 #if NOTE_EXTRAS
         for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
             std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },

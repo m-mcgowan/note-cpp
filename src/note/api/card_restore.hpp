@@ -16,6 +16,7 @@
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
+#include <note/progmem.hpp>
 #include <note/target.hpp>
 
 namespace note::api {
@@ -39,6 +40,12 @@ namespace note::api {
 ///
 /// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
 struct CardRestore {
+    struct keys_ {
+        static constexpr char req[] NOTE_FLASH_ATTR = "card.restore";
+        static constexpr char connected[] NOTE_FLASH_ATTR = "connected";
+        static constexpr char delete_[] NOTE_FLASH_ATTR = "delete";
+    };
+
     static constexpr string_view notecard_request = "card.restore";
     static constexpr bool supports_cmd = true;
     static constexpr Safety safety = Safety::Destructive;
@@ -101,8 +108,8 @@ struct CardRestore {
     using Response = void;
 
     void build(JsonBuilder& b) const {
-        if (connected) b.add("connected", *connected);
-        if (delete_) b.add("delete", *delete_);
+        if (connected) note::add_flash(b, note::flash(keys_::connected), *connected);
+        if (delete_) note::add_flash(b, note::flash(keys_::delete_), *delete_);
 #if NOTE_EXTRAS
         for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
             std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },

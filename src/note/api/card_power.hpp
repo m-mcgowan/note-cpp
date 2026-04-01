@@ -16,6 +16,7 @@
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
+#include <note/progmem.hpp>
 #include <note/target.hpp>
 
 namespace note::api {
@@ -34,6 +35,15 @@ namespace note::api {
 struct CardPower {
 
     struct Read {
+        struct keys_ {
+            static constexpr char req[] NOTE_FLASH_ATTR = "card.power";
+            static constexpr char minutes[] NOTE_FLASH_ATTR = "minutes";
+            static constexpr char reset[] NOTE_FLASH_ATTR = "reset";
+            static constexpr char rsp_milliampHours[] NOTE_FLASH_ATTR = "milliamp_hours";
+            static constexpr char rsp_temperature[] NOTE_FLASH_ATTR = "temperature";
+            static constexpr char rsp_voltage[] NOTE_FLASH_ATTR = "voltage";
+        };
+
         static constexpr string_view notecard_request = "card.power";
         static constexpr bool supports_cmd = true;
         static constexpr Safety safety = Safety::ReadOnly;
@@ -126,9 +136,9 @@ struct CardPower {
                 ::note::StringPool& pool_;
                 Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
                 void on_number(::note::string_view k_, ::note::string_view raw_) override {
-                    if (k_ == "milliamp_hours") { rsp.milliampHours = ::note::parse_double(raw_); return; }
-                    if (k_ == "temperature") { rsp.temperature = ::note::parse_double(raw_); return; }
-                    if (k_ == "voltage") { rsp.voltage = ::note::parse_double(raw_); return; }
+                    if (note::flash(keys_::rsp_milliampHours) == k_) { rsp.milliampHours = ::note::parse_double(raw_); return; }
+                    if (note::flash(keys_::rsp_temperature) == k_) { rsp.temperature = ::note::parse_double(raw_); return; }
+                    if (note::flash(keys_::rsp_voltage) == k_) { rsp.voltage = ::note::parse_double(raw_); return; }
                 }
                 void reset() override { rsp = Response{}; }
             };
@@ -162,8 +172,8 @@ struct CardPower {
         };
 
         void build(JsonBuilder& b) const {
-            if (minutes) b.add("minutes", *minutes);
-            if (reset) b.add("reset", *reset);
+            if (minutes) note::add_flash(b, note::flash(keys_::minutes), *minutes);
+            if (reset) note::add_flash(b, note::flash(keys_::reset), *reset);
 #if NOTE_EXTRAS
             for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
                 std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
@@ -203,6 +213,15 @@ struct CardPower {
     ///
     /// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
     struct Configure {
+        struct keys_ {
+            static constexpr char req[] NOTE_FLASH_ATTR = "card.power";
+            static constexpr char minutes[] NOTE_FLASH_ATTR = "minutes";
+            static constexpr char reset[] NOTE_FLASH_ATTR = "reset";
+            static constexpr char rsp_milliampHours[] NOTE_FLASH_ATTR = "milliamp_hours";
+            static constexpr char rsp_temperature[] NOTE_FLASH_ATTR = "temperature";
+            static constexpr char rsp_voltage[] NOTE_FLASH_ATTR = "voltage";
+        };
+
         static constexpr string_view notecard_request = "card.power";
         static constexpr bool supports_cmd = true;
         static constexpr Safety safety = Safety::Idempotent;
@@ -295,9 +314,9 @@ struct CardPower {
                 ::note::StringPool& pool_;
                 Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
                 void on_number(::note::string_view k_, ::note::string_view raw_) override {
-                    if (k_ == "milliamp_hours") { rsp.milliampHours = ::note::parse_double(raw_); return; }
-                    if (k_ == "temperature") { rsp.temperature = ::note::parse_double(raw_); return; }
-                    if (k_ == "voltage") { rsp.voltage = ::note::parse_double(raw_); return; }
+                    if (note::flash(keys_::rsp_milliampHours) == k_) { rsp.milliampHours = ::note::parse_double(raw_); return; }
+                    if (note::flash(keys_::rsp_temperature) == k_) { rsp.temperature = ::note::parse_double(raw_); return; }
+                    if (note::flash(keys_::rsp_voltage) == k_) { rsp.voltage = ::note::parse_double(raw_); return; }
                 }
                 void reset() override { rsp = Response{}; }
             };
@@ -331,8 +350,8 @@ struct CardPower {
         };
 
         void build(JsonBuilder& b) const {
-            if (minutes) b.add("minutes", *minutes);
-            if (reset) b.add("reset", *reset);
+            if (minutes) note::add_flash(b, note::flash(keys_::minutes), *minutes);
+            if (reset) note::add_flash(b, note::flash(keys_::reset), *reset);
 #if NOTE_EXTRAS
             for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
                 std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
@@ -372,6 +391,15 @@ struct CardPower {
     ///
     /// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
     struct Reset {
+        struct keys_ {
+            static constexpr char req[] NOTE_FLASH_ATTR = "card.power";
+            static constexpr char minutes[] NOTE_FLASH_ATTR = "minutes";
+            static constexpr char reset[] NOTE_FLASH_ATTR = "reset";
+            static constexpr char rsp_milliampHours[] NOTE_FLASH_ATTR = "milliamp_hours";
+            static constexpr char rsp_temperature[] NOTE_FLASH_ATTR = "temperature";
+            static constexpr char rsp_voltage[] NOTE_FLASH_ATTR = "voltage";
+        };
+
         static constexpr string_view notecard_request = "card.power";
         static constexpr bool supports_cmd = true;
         static constexpr Safety safety = Safety::Destructive;
@@ -453,9 +481,9 @@ struct CardPower {
                 ::note::StringPool& pool_;
                 Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
                 void on_number(::note::string_view k_, ::note::string_view raw_) override {
-                    if (k_ == "milliamp_hours") { rsp.milliampHours = ::note::parse_double(raw_); return; }
-                    if (k_ == "temperature") { rsp.temperature = ::note::parse_double(raw_); return; }
-                    if (k_ == "voltage") { rsp.voltage = ::note::parse_double(raw_); return; }
+                    if (note::flash(keys_::rsp_milliampHours) == k_) { rsp.milliampHours = ::note::parse_double(raw_); return; }
+                    if (note::flash(keys_::rsp_temperature) == k_) { rsp.temperature = ::note::parse_double(raw_); return; }
+                    if (note::flash(keys_::rsp_voltage) == k_) { rsp.voltage = ::note::parse_double(raw_); return; }
                 }
                 void reset() override { rsp = Response{}; }
             };
@@ -489,8 +517,8 @@ struct CardPower {
         };
 
         void build(JsonBuilder& b) const {
-            if (minutes) b.add("minutes", *minutes);
-            b.add("reset", true);
+            if (minutes) note::add_flash(b, note::flash(keys_::minutes), *minutes);
+            note::add_flash(b, note::flash(keys_::reset), true);
 #if NOTE_EXTRAS
             for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
                 std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },

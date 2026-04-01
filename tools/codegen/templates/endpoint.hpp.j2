@@ -31,6 +31,7 @@
 {% if has_array_fields %}
 #include <note/array_field.hpp>
 {% endif %}
+#include <note/progmem.hpp>
 #include <note/target.hpp>
 
 {% if has_flags_fields %}
@@ -94,6 +95,19 @@ namespace note::api {
 {#   polymorphic: "CardTemp::Get"                                           #}
 
 {% macro render_operation(op, parent_type, indent) %}
+{{ indent }}struct keys_ {
+{{ indent }}    static constexpr char req[] NOTE_FLASH_ATTR = "{{ op.notecard_request }}";
+{% for prop in op.properties %}
+{{ indent }}    static constexpr char {{ prop.accessor_name }}[] NOTE_FLASH_ATTR = "{{ prop.wire_name }}";
+{% endfor %}
+{% for imp in op.implicit_fields %}
+{{ indent }}    static constexpr char {{ imp.wire_name | replace(".", "_") }}[] NOTE_FLASH_ATTR = "{{ imp.wire_name }}";
+{% endfor %}
+{% for prop in op.response.properties %}
+{{ indent }}    static constexpr char rsp_{{ prop.accessor_name }}[] NOTE_FLASH_ATTR = "{{ prop.wire_name }}";
+{% endfor %}
+{{ indent }}};
+
 {{ indent }}static constexpr string_view notecard_request = "{{ op.notecard_request }}";
 {{ indent }}static constexpr bool supports_cmd = {{ "true" if op.supports_cmd else "false" }};
 {{ indent }}static constexpr Safety safety = Safety::{{ op.safety }};
@@ -470,7 +484,7 @@ namespace note::api {
 {{ indent }}            v_ = pool_.intern(v_);
 {% for prop in string_props %}
 {{ version_guard_begin(prop.version_guard) -}}
-{{ indent }}            if (k_ == "{{ prop.wire_name }}") { rsp.{{ prop.accessor_name }} = v_; return; }
+{{ indent }}            if (note::flash(keys_::rsp_{{ prop.accessor_name }}) == k_) { rsp.{{ prop.accessor_name }} = v_; return; }
 {{ version_guard_end(prop.version_guard) -}}
 {% endfor %}
 {{ indent }}        }
@@ -479,7 +493,7 @@ namespace note::api {
 {{ indent }}        void on_bool(::note::string_view k_, bool v_) override {
 {% for prop in bool_props %}
 {{ version_guard_begin(prop.version_guard) -}}
-{{ indent }}            if (k_ == "{{ prop.wire_name }}") { rsp.{{ prop.accessor_name }} = v_; return; }
+{{ indent }}            if (note::flash(keys_::rsp_{{ prop.accessor_name }}) == k_) { rsp.{{ prop.accessor_name }} = v_; return; }
 {{ version_guard_end(prop.version_guard) -}}
 {% endfor %}
 {{ indent }}        }
@@ -488,12 +502,12 @@ namespace note::api {
 {{ indent }}        void on_number(::note::string_view k_, ::note::string_view raw_) override {
 {% for prop in int_props %}
 {{ version_guard_begin(prop.version_guard) -}}
-{{ indent }}            if (k_ == "{{ prop.wire_name }}") { rsp.{{ prop.accessor_name }} = ::note::parse_int(raw_{{ prop.default_arg }}); return; }
+{{ indent }}            if (note::flash(keys_::rsp_{{ prop.accessor_name }}) == k_) { rsp.{{ prop.accessor_name }} = ::note::parse_int(raw_{{ prop.default_arg }}); return; }
 {{ version_guard_end(prop.version_guard) -}}
 {% endfor %}
 {% for prop in double_props %}
 {{ version_guard_begin(prop.version_guard) -}}
-{{ indent }}            if (k_ == "{{ prop.wire_name }}") { rsp.{{ prop.accessor_name }} = ::note::parse_double(raw_{{ prop.default_arg }}); return; }
+{{ indent }}            if (note::flash(keys_::rsp_{{ prop.accessor_name }}) == k_) { rsp.{{ prop.accessor_name }} = ::note::parse_double(raw_{{ prop.default_arg }}); return; }
 {{ version_guard_end(prop.version_guard) -}}
 {% endfor %}
 {{ indent }}        }
@@ -580,14 +594,14 @@ namespace note::api {
 {% endif %}
 {{ indent }}void build(JsonBuilder& b) const {
 {% for imp in op.implicit_fields %}
-{{ indent }}    b.add("{{ imp.wire_name }}", {{ imp.cpp_literal }});
+{{ indent }}    note::add_flash(b, note::flash(keys_::{{ imp.wire_name | replace(".", "_") }}), {{ imp.cpp_literal }});
 {% endfor %}
 {% for prop in op.properties %}
 {% if prop.is_required_by_dispatch %}
-{{ indent }}    b.add("{{ prop.wire_name }}", true);
+{{ indent }}    note::add_flash(b, note::flash(keys_::{{ prop.accessor_name }}), true);
 {% elif prop.is_required %}
 {{ version_guard_begin(prop.version_guard) -}}
-{{ indent }}    b.add("{{ prop.wire_name }}", {{ prop.accessor_name }});
+{{ indent }}    note::add_flash(b, note::flash(keys_::{{ prop.accessor_name }}), {{ prop.accessor_name }});
 {{ version_guard_end(prop.version_guard) -}}
 {% elif prop.is_array %}
 {{ version_guard_begin(prop.version_guard) -}}
@@ -604,12 +618,12 @@ namespace note::api {
 {{ indent }}        char mp_[96];
 {{ indent }}        std::snprintf(mp_, sizeof(mp_), "{{ op.mode_prefix }},%.*s",
 {{ indent }}                     (int)(*{{ prop.accessor_name }}).size(), (*{{ prop.accessor_name }}).data());
-{{ indent }}        b.add("{{ prop.wire_name }}", note::string_view{mp_});
+{{ indent }}        note::add_flash(b, note::flash(keys_::{{ prop.accessor_name }}), note::string_view{mp_});
 {{ indent }}    } else {
-{{ indent }}        b.add("{{ prop.wire_name }}", "{{ op.mode_prefix }}");
+{{ indent }}        note::add_flash(b, note::flash(keys_::{{ prop.accessor_name }}), "{{ op.mode_prefix }}");
 {{ indent }}    }
 {% else %}
-{{ indent }}    if ({{ prop.accessor_name }}) b.add("{{ prop.wire_name }}", *{{ prop.accessor_name }});
+{{ indent }}    if ({{ prop.accessor_name }}) note::add_flash(b, note::flash(keys_::{{ prop.accessor_name }}), *{{ prop.accessor_name }});
 {% endif %}
 {{ version_guard_end(prop.version_guard) -}}
 {% endif %}

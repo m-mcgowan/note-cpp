@@ -16,6 +16,7 @@
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
+#include <note/progmem.hpp>
 #include <note/target.hpp>
 
 namespace note::api {
@@ -31,6 +32,13 @@ namespace note::api {
 ///
 /// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
 struct FileChangesPending {
+    struct keys_ {
+        static constexpr char req[] NOTE_FLASH_ATTR = "file.changes.pending";
+        static constexpr char rsp_changes[] NOTE_FLASH_ATTR = "changes";
+        static constexpr char rsp_pending[] NOTE_FLASH_ATTR = "pending";
+        static constexpr char rsp_total[] NOTE_FLASH_ATTR = "total";
+    };
+
     static constexpr string_view notecard_request = "file.changes.pending";
     static constexpr bool supports_cmd = true;
     static constexpr Safety safety = Safety::ReadOnly;
@@ -101,11 +109,11 @@ struct FileChangesPending {
             ::note::StringPool& pool_;
             Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
             void on_bool(::note::string_view k_, bool v_) override {
-                if (k_ == "pending") { rsp.pending = v_; return; }
+                if (note::flash(keys_::rsp_pending) == k_) { rsp.pending = v_; return; }
             }
             void on_number(::note::string_view k_, ::note::string_view raw_) override {
-                if (k_ == "changes") { rsp.changes = ::note::parse_int(raw_); return; }
-                if (k_ == "total") { rsp.total = ::note::parse_int(raw_); return; }
+                if (note::flash(keys_::rsp_changes) == k_) { rsp.changes = ::note::parse_int(raw_); return; }
+                if (note::flash(keys_::rsp_total) == k_) { rsp.total = ::note::parse_int(raw_); return; }
             }
             void reset() override { rsp = Response{}; }
         };

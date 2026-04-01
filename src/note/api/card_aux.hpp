@@ -17,6 +17,7 @@
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
 #include <note/array_field.hpp>
+#include <note/progmem.hpp>
 #include <note/target.hpp>
 
 namespace note::api {
@@ -34,6 +35,29 @@ namespace note::api {
 ///
 /// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
 struct CardAux {
+    struct keys_ {
+        static constexpr char req[] NOTE_FLASH_ATTR = "card.aux";
+        static constexpr char connected[] NOTE_FLASH_ATTR = "connected";
+        static constexpr char count[] NOTE_FLASH_ATTR = "count";
+        static constexpr char file[] NOTE_FLASH_ATTR = "file";
+        static constexpr char gps[] NOTE_FLASH_ATTR = "gps";
+        static constexpr char limit[] NOTE_FLASH_ATTR = "limit";
+        static constexpr char max[] NOTE_FLASH_ATTR = "max";
+        static constexpr char mode[] NOTE_FLASH_ATTR = "mode";
+        static constexpr char ms[] NOTE_FLASH_ATTR = "ms";
+        static constexpr char offset[] NOTE_FLASH_ATTR = "offset";
+        static constexpr char rate[] NOTE_FLASH_ATTR = "rate";
+        static constexpr char seconds[] NOTE_FLASH_ATTR = "seconds";
+        static constexpr char sensitivity[] NOTE_FLASH_ATTR = "sensitivity";
+        static constexpr char start[] NOTE_FLASH_ATTR = "start";
+        static constexpr char sync[] NOTE_FLASH_ATTR = "sync";
+        static constexpr char usage[] NOTE_FLASH_ATTR = "usage";
+        static constexpr char rsp_mode[] NOTE_FLASH_ATTR = "mode";
+        static constexpr char rsp_power[] NOTE_FLASH_ATTR = "power";
+        static constexpr char rsp_seconds[] NOTE_FLASH_ATTR = "seconds";
+        static constexpr char rsp_time[] NOTE_FLASH_ATTR = "time";
+    };
+
     static constexpr string_view notecard_request = "card.aux";
     static constexpr bool supports_cmd = true;
     static constexpr Safety safety = Safety::Idempotent;
@@ -431,16 +455,16 @@ struct CardAux {
             Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
             void on_string(::note::string_view k_, ::note::string_view v_) override {
                 v_ = pool_.intern(v_);
-                if (k_ == "mode") { rsp.mode = v_; return; }
+                if (note::flash(keys_::rsp_mode) == k_) { rsp.mode = v_; return; }
             }
             void on_bool(::note::string_view k_, bool v_) override {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1) || !defined(NOTE_API_STRICT)
-                if (k_ == "power") { rsp.power = v_; return; }
+                if (note::flash(keys_::rsp_power) == k_) { rsp.power = v_; return; }
 #endif
             }
             void on_number(::note::string_view k_, ::note::string_view raw_) override {
-                if (k_ == "seconds") { rsp.seconds = ::note::parse_int(raw_); return; }
-                if (k_ == "time") { rsp.time = ::note::parse_int(raw_); return; }
+                if (note::flash(keys_::rsp_seconds) == k_) { rsp.seconds = ::note::parse_int(raw_); return; }
+                if (note::flash(keys_::rsp_time) == k_) { rsp.time = ::note::parse_int(raw_); return; }
             }
             void reset() override { rsp = Response{}; }
         };
@@ -489,34 +513,34 @@ struct CardAux {
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
     void build(JsonBuilder& b) const {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1) || !defined(NOTE_API_STRICT)
-        if (connected) b.add("connected", *connected);
+        if (connected) note::add_flash(b, note::flash(keys_::connected), *connected);
 #endif
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
-        if (count) b.add("count", *count);
+        if (count) note::add_flash(b, note::flash(keys_::count), *count);
 #endif
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1) || !defined(NOTE_API_STRICT)
-        if (file) b.add("file", *file);
+        if (file) note::add_flash(b, note::flash(keys_::file), *file);
 #endif
-        if (gps) b.add("gps", *gps);
+        if (gps) note::add_flash(b, note::flash(keys_::gps), *gps);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-        if (limit) b.add("limit", *limit);
+        if (limit) note::add_flash(b, note::flash(keys_::limit), *limit);
 #endif
-        if (max) b.add("max", *max);
-        if (mode) b.add("mode", *mode);
+        if (max) note::add_flash(b, note::flash(keys_::max), *max);
+        if (mode) note::add_flash(b, note::flash(keys_::mode), *mode);
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
-        if (ms) b.add("ms", *ms);
+        if (ms) note::add_flash(b, note::flash(keys_::ms), *ms);
 #endif
-        if (offset) b.add("offset", *offset);
+        if (offset) note::add_flash(b, note::flash(keys_::offset), *offset);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
-        if (rate) b.add("rate", *rate);
+        if (rate) note::add_flash(b, note::flash(keys_::rate), *rate);
 #endif
-        if (seconds) b.add("seconds", *seconds);
+        if (seconds) note::add_flash(b, note::flash(keys_::seconds), *seconds);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
-        if (sensitivity) b.add("sensitivity", *sensitivity);
+        if (sensitivity) note::add_flash(b, note::flash(keys_::sensitivity), *sensitivity);
 #endif
-        if (start) b.add("start", *start);
+        if (start) note::add_flash(b, note::flash(keys_::start), *start);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-        if (sync) b.add("sync", *sync);
+        if (sync) note::add_flash(b, note::flash(keys_::sync), *sync);
 #endif
         if (usage) usage.write_to(b, "usage");
 #if NOTE_EXTRAS

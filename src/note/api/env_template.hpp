@@ -17,6 +17,7 @@
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
+#include <note/progmem.hpp>
 #include <note/target.hpp>
 
 namespace note::api {
@@ -39,6 +40,12 @@ namespace note::api {
 ///
 /// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
 struct EnvTemplate {
+    struct keys_ {
+        static constexpr char req[] NOTE_FLASH_ATTR = "env.template";
+        static constexpr char body[] NOTE_FLASH_ATTR = "body";
+        static constexpr char rsp_bytes[] NOTE_FLASH_ATTR = "bytes";
+    };
+
     static constexpr string_view notecard_request = "env.template";
     static constexpr bool supports_cmd = true;
     static constexpr Safety safety = Safety::Idempotent;
@@ -119,7 +126,7 @@ struct EnvTemplate {
             ::note::StringPool& pool_;
             Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
             void on_number(::note::string_view k_, ::note::string_view raw_) override {
-                if (k_ == "bytes") { rsp.bytes = ::note::parse_int(raw_); return; }
+                if (note::flash(keys_::rsp_bytes) == k_) { rsp.bytes = ::note::parse_int(raw_); return; }
             }
             void reset() override { rsp = Response{}; }
         };

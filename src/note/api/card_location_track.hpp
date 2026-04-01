@@ -16,6 +16,7 @@
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
+#include <note/progmem.hpp>
 #include <note/target.hpp>
 
 namespace note::api {
@@ -43,6 +44,23 @@ namespace note::api {
 ///
 /// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
 struct CardLocationTrack {
+    struct keys_ {
+        static constexpr char req[] NOTE_FLASH_ATTR = "card.location.track";
+        static constexpr char file[] NOTE_FLASH_ATTR = "file";
+        static constexpr char heartbeat[] NOTE_FLASH_ATTR = "heartbeat";
+        static constexpr char hours[] NOTE_FLASH_ATTR = "hours";
+        static constexpr char payload[] NOTE_FLASH_ATTR = "payload";
+        static constexpr char start[] NOTE_FLASH_ATTR = "start";
+        static constexpr char stop[] NOTE_FLASH_ATTR = "stop";
+        static constexpr char sync[] NOTE_FLASH_ATTR = "sync";
+        static constexpr char rsp_file[] NOTE_FLASH_ATTR = "file";
+        static constexpr char rsp_heartbeat[] NOTE_FLASH_ATTR = "heartbeat";
+        static constexpr char rsp_minutes[] NOTE_FLASH_ATTR = "minutes";
+        static constexpr char rsp_seconds[] NOTE_FLASH_ATTR = "seconds";
+        static constexpr char rsp_start[] NOTE_FLASH_ATTR = "start";
+        static constexpr char rsp_stop[] NOTE_FLASH_ATTR = "stop";
+    };
+
     static constexpr string_view notecard_request = "card.location.track";
     static constexpr bool supports_cmd = true;
     static constexpr Safety safety = Safety::Idempotent;
@@ -199,16 +217,16 @@ struct CardLocationTrack {
             Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
             void on_string(::note::string_view k_, ::note::string_view v_) override {
                 v_ = pool_.intern(v_);
-                if (k_ == "file") { rsp.file = v_; return; }
+                if (note::flash(keys_::rsp_file) == k_) { rsp.file = v_; return; }
             }
             void on_bool(::note::string_view k_, bool v_) override {
-                if (k_ == "heartbeat") { rsp.heartbeat = v_; return; }
-                if (k_ == "start") { rsp.start = v_; return; }
-                if (k_ == "stop") { rsp.stop = v_; return; }
+                if (note::flash(keys_::rsp_heartbeat) == k_) { rsp.heartbeat = v_; return; }
+                if (note::flash(keys_::rsp_start) == k_) { rsp.start = v_; return; }
+                if (note::flash(keys_::rsp_stop) == k_) { rsp.stop = v_; return; }
             }
             void on_number(::note::string_view k_, ::note::string_view raw_) override {
-                if (k_ == "minutes") { rsp.minutes = ::note::parse_int(raw_); return; }
-                if (k_ == "seconds") { rsp.seconds = ::note::parse_int(raw_); return; }
+                if (note::flash(keys_::rsp_minutes) == k_) { rsp.minutes = ::note::parse_int(raw_); return; }
+                if (note::flash(keys_::rsp_seconds) == k_) { rsp.seconds = ::note::parse_int(raw_); return; }
             }
             void reset() override { rsp = Response{}; }
         };
@@ -258,15 +276,15 @@ struct CardLocationTrack {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
     void build(JsonBuilder& b) const {
-        if (file) b.add("file", *file);
-        if (heartbeat) b.add("heartbeat", *heartbeat);
-        if (hours) b.add("hours", *hours);
+        if (file) note::add_flash(b, note::flash(keys_::file), *file);
+        if (heartbeat) note::add_flash(b, note::flash(keys_::heartbeat), *heartbeat);
+        if (hours) note::add_flash(b, note::flash(keys_::hours), *hours);
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 5, 2) || !defined(NOTE_API_STRICT)
-        if (payload) b.add("payload", *payload);
+        if (payload) note::add_flash(b, note::flash(keys_::payload), *payload);
 #endif
-        if (start) b.add("start", *start);
-        if (stop) b.add("stop", *stop);
-        if (sync) b.add("sync", *sync);
+        if (start) note::add_flash(b, note::flash(keys_::start), *start);
+        if (stop) note::add_flash(b, note::flash(keys_::stop), *stop);
+        if (sync) note::add_flash(b, note::flash(keys_::sync), *sync);
 #if NOTE_EXTRAS
         for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
             std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },

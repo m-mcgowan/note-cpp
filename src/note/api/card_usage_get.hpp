@@ -16,6 +16,7 @@
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
+#include <note/progmem.hpp>
 #include <note/target.hpp>
 
 namespace note::api {
@@ -32,6 +33,20 @@ namespace note::api {
 ///
 /// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
 struct CardUsageGet {
+    struct keys_ {
+        static constexpr char req[] NOTE_FLASH_ATTR = "card.usage.get";
+        static constexpr char mode[] NOTE_FLASH_ATTR = "mode";
+        static constexpr char offset[] NOTE_FLASH_ATTR = "offset";
+        static constexpr char rsp_bytesReceived[] NOTE_FLASH_ATTR = "bytes_received";
+        static constexpr char rsp_bytesSent[] NOTE_FLASH_ATTR = "bytes_sent";
+        static constexpr char rsp_notesReceived[] NOTE_FLASH_ATTR = "notes_received";
+        static constexpr char rsp_notesSent[] NOTE_FLASH_ATTR = "notes_sent";
+        static constexpr char rsp_seconds[] NOTE_FLASH_ATTR = "seconds";
+        static constexpr char rsp_sessionsSecure[] NOTE_FLASH_ATTR = "sessions_secure";
+        static constexpr char rsp_sessionsStandard[] NOTE_FLASH_ATTR = "sessions_standard";
+        static constexpr char rsp_time[] NOTE_FLASH_ATTR = "time";
+    };
+
     static constexpr string_view notecard_request = "card.usage.get";
     static constexpr bool supports_cmd = true;
     static constexpr Safety safety = Safety::ReadOnly;
@@ -192,14 +207,14 @@ struct CardUsageGet {
             ::note::StringPool& pool_;
             Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
             void on_number(::note::string_view k_, ::note::string_view raw_) override {
-                if (k_ == "bytes_received") { rsp.bytesReceived = ::note::parse_int(raw_); return; }
-                if (k_ == "bytes_sent") { rsp.bytesSent = ::note::parse_int(raw_); return; }
-                if (k_ == "notes_received") { rsp.notesReceived = ::note::parse_int(raw_); return; }
-                if (k_ == "notes_sent") { rsp.notesSent = ::note::parse_int(raw_); return; }
-                if (k_ == "seconds") { rsp.seconds = ::note::parse_int(raw_); return; }
-                if (k_ == "sessions_secure") { rsp.sessionsSecure = ::note::parse_int(raw_); return; }
-                if (k_ == "sessions_standard") { rsp.sessionsStandard = ::note::parse_int(raw_); return; }
-                if (k_ == "time") { rsp.time = ::note::parse_int(raw_); return; }
+                if (note::flash(keys_::rsp_bytesReceived) == k_) { rsp.bytesReceived = ::note::parse_int(raw_); return; }
+                if (note::flash(keys_::rsp_bytesSent) == k_) { rsp.bytesSent = ::note::parse_int(raw_); return; }
+                if (note::flash(keys_::rsp_notesReceived) == k_) { rsp.notesReceived = ::note::parse_int(raw_); return; }
+                if (note::flash(keys_::rsp_notesSent) == k_) { rsp.notesSent = ::note::parse_int(raw_); return; }
+                if (note::flash(keys_::rsp_seconds) == k_) { rsp.seconds = ::note::parse_int(raw_); return; }
+                if (note::flash(keys_::rsp_sessionsSecure) == k_) { rsp.sessionsSecure = ::note::parse_int(raw_); return; }
+                if (note::flash(keys_::rsp_sessionsStandard) == k_) { rsp.sessionsStandard = ::note::parse_int(raw_); return; }
+                if (note::flash(keys_::rsp_time) == k_) { rsp.time = ::note::parse_int(raw_); return; }
             }
             void reset() override { rsp = Response{}; }
         };
@@ -253,8 +268,8 @@ struct CardUsageGet {
     };
 
     void build(JsonBuilder& b) const {
-        if (mode) b.add("mode", *mode);
-        if (offset) b.add("offset", *offset);
+        if (mode) note::add_flash(b, note::flash(keys_::mode), *mode);
+        if (offset) note::add_flash(b, note::flash(keys_::offset), *offset);
 #if NOTE_EXTRAS
         for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
             std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },

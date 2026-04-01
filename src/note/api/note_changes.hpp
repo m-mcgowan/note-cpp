@@ -16,6 +16,7 @@
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
+#include <note/progmem.hpp>
 #include <note/target.hpp>
 
 namespace note::api {
@@ -33,6 +34,19 @@ namespace note::api {
 struct NoteChanges {
 
     struct Peek {
+        struct keys_ {
+            static constexpr char req[] NOTE_FLASH_ATTR = "note.changes";
+            static constexpr char deleted[] NOTE_FLASH_ATTR = "deleted";
+            static constexpr char file[] NOTE_FLASH_ATTR = "file";
+            static constexpr char max[] NOTE_FLASH_ATTR = "max";
+            static constexpr char reset[] NOTE_FLASH_ATTR = "reset";
+            static constexpr char start[] NOTE_FLASH_ATTR = "start";
+            static constexpr char stop[] NOTE_FLASH_ATTR = "stop";
+            static constexpr char tracker[] NOTE_FLASH_ATTR = "tracker";
+            static constexpr char rsp_changes[] NOTE_FLASH_ATTR = "changes";
+            static constexpr char rsp_total[] NOTE_FLASH_ATTR = "total";
+        };
+
         static constexpr string_view notecard_request = "note.changes";
         static constexpr bool supports_cmd = true;
         static constexpr Safety safety = Safety::ReadOnly;
@@ -157,8 +171,8 @@ struct NoteChanges {
                 ::note::StringPool& pool_;
                 Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
                 void on_number(::note::string_view k_, ::note::string_view raw_) override {
-                    if (k_ == "changes") { rsp.changes = ::note::parse_int(raw_); return; }
-                    if (k_ == "total") { rsp.total = ::note::parse_int(raw_); return; }
+                    if (note::flash(keys_::rsp_changes) == k_) { rsp.changes = ::note::parse_int(raw_); return; }
+                    if (note::flash(keys_::rsp_total) == k_) { rsp.total = ::note::parse_int(raw_); return; }
                 }
                 void reset() override { rsp = Response{}; }
             };
@@ -188,13 +202,13 @@ struct NoteChanges {
         };
 
         void build(JsonBuilder& b) const {
-            if (deleted) b.add("deleted", *deleted);
-            if (file) b.add("file", *file);
-            if (max) b.add("max", *max);
-            if (reset) b.add("reset", *reset);
-            if (start) b.add("start", *start);
-            if (stop) b.add("stop", *stop);
-            if (tracker) b.add("tracker", *tracker);
+            if (deleted) note::add_flash(b, note::flash(keys_::deleted), *deleted);
+            if (file) note::add_flash(b, note::flash(keys_::file), *file);
+            if (max) note::add_flash(b, note::flash(keys_::max), *max);
+            if (reset) note::add_flash(b, note::flash(keys_::reset), *reset);
+            if (start) note::add_flash(b, note::flash(keys_::start), *start);
+            if (stop) note::add_flash(b, note::flash(keys_::stop), *stop);
+            if (tracker) note::add_flash(b, note::flash(keys_::tracker), *tracker);
 #if NOTE_EXTRAS
             for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
                 std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
@@ -253,6 +267,20 @@ struct NoteChanges {
     ///
     /// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
     struct Pop {
+        struct keys_ {
+            static constexpr char req[] NOTE_FLASH_ATTR = "note.changes";
+            static constexpr char delete_[] NOTE_FLASH_ATTR = "delete";
+            static constexpr char deleted[] NOTE_FLASH_ATTR = "deleted";
+            static constexpr char file[] NOTE_FLASH_ATTR = "file";
+            static constexpr char max[] NOTE_FLASH_ATTR = "max";
+            static constexpr char reset[] NOTE_FLASH_ATTR = "reset";
+            static constexpr char start[] NOTE_FLASH_ATTR = "start";
+            static constexpr char stop[] NOTE_FLASH_ATTR = "stop";
+            static constexpr char tracker[] NOTE_FLASH_ATTR = "tracker";
+            static constexpr char rsp_changes[] NOTE_FLASH_ATTR = "changes";
+            static constexpr char rsp_total[] NOTE_FLASH_ATTR = "total";
+        };
+
         static constexpr string_view notecard_request = "note.changes";
         static constexpr bool supports_cmd = true;
         static constexpr Safety safety = Safety::Destructive;
@@ -373,8 +401,8 @@ struct NoteChanges {
                 ::note::StringPool& pool_;
                 Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
                 void on_number(::note::string_view k_, ::note::string_view raw_) override {
-                    if (k_ == "changes") { rsp.changes = ::note::parse_int(raw_); return; }
-                    if (k_ == "total") { rsp.total = ::note::parse_int(raw_); return; }
+                    if (note::flash(keys_::rsp_changes) == k_) { rsp.changes = ::note::parse_int(raw_); return; }
+                    if (note::flash(keys_::rsp_total) == k_) { rsp.total = ::note::parse_int(raw_); return; }
                 }
                 void reset() override { rsp = Response{}; }
             };
@@ -404,14 +432,14 @@ struct NoteChanges {
         };
 
         void build(JsonBuilder& b) const {
-            b.add("delete", true);
-            if (deleted) b.add("deleted", *deleted);
-            b.add("file", file);
-            if (max) b.add("max", *max);
-            if (reset) b.add("reset", *reset);
-            if (start) b.add("start", *start);
-            if (stop) b.add("stop", *stop);
-            if (tracker) b.add("tracker", *tracker);
+            note::add_flash(b, note::flash(keys_::delete_), true);
+            if (deleted) note::add_flash(b, note::flash(keys_::deleted), *deleted);
+            note::add_flash(b, note::flash(keys_::file), file);
+            if (max) note::add_flash(b, note::flash(keys_::max), *max);
+            if (reset) note::add_flash(b, note::flash(keys_::reset), *reset);
+            if (start) note::add_flash(b, note::flash(keys_::start), *start);
+            if (stop) note::add_flash(b, note::flash(keys_::stop), *stop);
+            if (tracker) note::add_flash(b, note::flash(keys_::tracker), *tracker);
 #if NOTE_EXTRAS
             for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
                 std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },

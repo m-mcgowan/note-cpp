@@ -17,6 +17,7 @@
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
+#include <note/progmem.hpp>
 #include <note/target.hpp>
 
 namespace note::api {
@@ -33,6 +34,23 @@ namespace note::api {
 ///
 /// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
 struct DfuStatus {
+    struct keys_ {
+        static constexpr char req[] NOTE_FLASH_ATTR = "dfu.status";
+        static constexpr char err[] NOTE_FLASH_ATTR = "err";
+        static constexpr char name[] NOTE_FLASH_ATTR = "name";
+        static constexpr char off[] NOTE_FLASH_ATTR = "off";
+        static constexpr char on[] NOTE_FLASH_ATTR = "on";
+        static constexpr char status[] NOTE_FLASH_ATTR = "status";
+        static constexpr char stop[] NOTE_FLASH_ATTR = "stop";
+        static constexpr char version[] NOTE_FLASH_ATTR = "version";
+        static constexpr char vvalue[] NOTE_FLASH_ATTR = "vvalue";
+        static constexpr char rsp_mode[] NOTE_FLASH_ATTR = "mode";
+        static constexpr char rsp_off[] NOTE_FLASH_ATTR = "off";
+        static constexpr char rsp_on[] NOTE_FLASH_ATTR = "on";
+        static constexpr char rsp_pending[] NOTE_FLASH_ATTR = "pending";
+        static constexpr char rsp_status[] NOTE_FLASH_ATTR = "status";
+    };
+
     static constexpr string_view notecard_request = "dfu.status";
     static constexpr bool supports_cmd = true;
     static constexpr Safety safety = Safety::Idempotent;
@@ -251,13 +269,13 @@ struct DfuStatus {
             Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
             void on_string(::note::string_view k_, ::note::string_view v_) override {
                 v_ = pool_.intern(v_);
-                if (k_ == "mode") { rsp.mode = v_; return; }
-                if (k_ == "status") { rsp.status = v_; return; }
+                if (note::flash(keys_::rsp_mode) == k_) { rsp.mode = v_; return; }
+                if (note::flash(keys_::rsp_status) == k_) { rsp.status = v_; return; }
             }
             void on_bool(::note::string_view k_, bool v_) override {
-                if (k_ == "off") { rsp.off = v_; return; }
-                if (k_ == "on") { rsp.on = v_; return; }
-                if (k_ == "pending") { rsp.pending = v_; return; }
+                if (note::flash(keys_::rsp_off) == k_) { rsp.off = v_; return; }
+                if (note::flash(keys_::rsp_on) == k_) { rsp.on = v_; return; }
+                if (note::flash(keys_::rsp_pending) == k_) { rsp.pending = v_; return; }
             }
             void reset() override { rsp = Response{}; }
         };
@@ -319,14 +337,14 @@ struct DfuStatus {
     };
 
     void build(JsonBuilder& b) const {
-        if (err) b.add("err", *err);
-        if (name) b.add("name", *name);
-        if (off) b.add("off", *off);
-        if (on) b.add("on", *on);
-        if (status) b.add("status", *status);
-        if (stop) b.add("stop", *stop);
-        if (version) b.add("version", *version);
-        if (vvalue) b.add("vvalue", *vvalue);
+        if (err) note::add_flash(b, note::flash(keys_::err), *err);
+        if (name) note::add_flash(b, note::flash(keys_::name), *name);
+        if (off) note::add_flash(b, note::flash(keys_::off), *off);
+        if (on) note::add_flash(b, note::flash(keys_::on), *on);
+        if (status) note::add_flash(b, note::flash(keys_::status), *status);
+        if (stop) note::add_flash(b, note::flash(keys_::stop), *stop);
+        if (version) note::add_flash(b, note::flash(keys_::version), *version);
+        if (vvalue) note::add_flash(b, note::flash(keys_::vvalue), *vvalue);
 #if NOTE_EXTRAS
         for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
             std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },

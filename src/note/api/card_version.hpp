@@ -17,6 +17,7 @@
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
+#include <note/progmem.hpp>
 #include <note/target.hpp>
 
 namespace note::api {
@@ -32,6 +33,18 @@ namespace note::api {
 ///
 /// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
 struct CardVersion {
+    struct keys_ {
+        static constexpr char req[] NOTE_FLASH_ATTR = "card.version";
+        static constexpr char rsp_board[] NOTE_FLASH_ATTR = "board";
+        static constexpr char rsp_cell[] NOTE_FLASH_ATTR = "cell";
+        static constexpr char rsp_device[] NOTE_FLASH_ATTR = "device";
+        static constexpr char rsp_gps[] NOTE_FLASH_ATTR = "gps";
+        static constexpr char rsp_name[] NOTE_FLASH_ATTR = "name";
+        static constexpr char rsp_sku[] NOTE_FLASH_ATTR = "sku";
+        static constexpr char rsp_version[] NOTE_FLASH_ATTR = "version";
+        static constexpr char rsp_wifi[] NOTE_FLASH_ATTR = "wifi";
+    };
+
     static constexpr string_view notecard_request = "card.version";
     static constexpr bool supports_cmd = true;
     static constexpr Safety safety = Safety::ReadOnly;
@@ -151,17 +164,17 @@ struct CardVersion {
             Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
             void on_string(::note::string_view k_, ::note::string_view v_) override {
                 v_ = pool_.intern(v_);
-                if (k_ == "board") { rsp.board = v_; return; }
-                if (k_ == "device") { rsp.device = v_; return; }
-                if (k_ == "name") { rsp.name = v_; return; }
-                if (k_ == "sku") { rsp.sku = v_; return; }
-                if (k_ == "version") { rsp.version = v_; return; }
+                if (note::flash(keys_::rsp_board) == k_) { rsp.board = v_; return; }
+                if (note::flash(keys_::rsp_device) == k_) { rsp.device = v_; return; }
+                if (note::flash(keys_::rsp_name) == k_) { rsp.name = v_; return; }
+                if (note::flash(keys_::rsp_sku) == k_) { rsp.sku = v_; return; }
+                if (note::flash(keys_::rsp_version) == k_) { rsp.version = v_; return; }
             }
             void on_bool(::note::string_view k_, bool v_) override {
-                if (k_ == "cell") { rsp.cell = v_; return; }
-                if (k_ == "gps") { rsp.gps = v_; return; }
+                if (note::flash(keys_::rsp_cell) == k_) { rsp.cell = v_; return; }
+                if (note::flash(keys_::rsp_gps) == k_) { rsp.gps = v_; return; }
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
-                if (k_ == "wifi") { rsp.wifi = v_; return; }
+                if (note::flash(keys_::rsp_wifi) == k_) { rsp.wifi = v_; return; }
 #endif
             }
             void reset() override { rsp = Response{}; }

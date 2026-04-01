@@ -16,6 +16,7 @@
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
+#include <note/progmem.hpp>
 #include <note/target.hpp>
 
 namespace note::api {
@@ -32,6 +33,15 @@ namespace note::api {
 ///
 /// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
 struct CardTransport {
+    struct keys_ {
+        static constexpr char req[] NOTE_FLASH_ATTR = "card.transport";
+        static constexpr char allow[] NOTE_FLASH_ATTR = "allow";
+        static constexpr char method[] NOTE_FLASH_ATTR = "method";
+        static constexpr char seconds[] NOTE_FLASH_ATTR = "seconds";
+        static constexpr char umin[] NOTE_FLASH_ATTR = "umin";
+        static constexpr char rsp_method[] NOTE_FLASH_ATTR = "method";
+    };
+
     static constexpr string_view notecard_request = "card.transport";
     static constexpr bool supports_cmd = true;
     static constexpr Safety safety = Safety::Idempotent;
@@ -215,7 +225,7 @@ struct CardTransport {
             Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
             void on_string(::note::string_view k_, ::note::string_view v_) override {
                 v_ = pool_.intern(v_);
-                if (k_ == "method") { rsp.method = v_; return; }
+                if (note::flash(keys_::rsp_method) == k_) { rsp.method = v_; return; }
             }
             void reset() override { rsp = Response{}; }
         };
@@ -246,14 +256,14 @@ struct CardTransport {
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
     void build(JsonBuilder& b) const {
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
-        if (allow) b.add("allow", *allow);
+        if (allow) note::add_flash(b, note::flash(keys_::allow), *allow);
 #endif
-        if (method) b.add("method", *method);
+        if (method) note::add_flash(b, note::flash(keys_::method), *method);
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
-        if (seconds) b.add("seconds", *seconds);
+        if (seconds) note::add_flash(b, note::flash(keys_::seconds), *seconds);
 #endif
 #if NOTE_API_VERSION >= NOTE_VERSION(9, 1, 1) || !defined(NOTE_API_STRICT)
-        if (umin) b.add("umin", *umin);
+        if (umin) note::add_flash(b, note::flash(keys_::umin), *umin);
 #endif
 #if NOTE_EXTRAS
         for (uint8_t i_ = 0; i_ < extras_count_; ++i_)

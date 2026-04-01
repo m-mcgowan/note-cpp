@@ -17,6 +17,7 @@
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
 #include <note/voltage_variable.hpp>
+#include <note/progmem.hpp>
 #include <note/target.hpp>
 
 namespace note::api {
@@ -33,6 +34,29 @@ namespace note::api {
 ///
 /// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
 struct HubSet {
+    struct keys_ {
+        static constexpr char req[] NOTE_FLASH_ATTR = "hub.set";
+        static constexpr char align[] NOTE_FLASH_ATTR = "align";
+        static constexpr char details[] NOTE_FLASH_ATTR = "details";
+        static constexpr char duration[] NOTE_FLASH_ATTR = "duration";
+        static constexpr char host[] NOTE_FLASH_ATTR = "host";
+        static constexpr char inbound[] NOTE_FLASH_ATTR = "inbound";
+        static constexpr char mode[] NOTE_FLASH_ATTR = "mode";
+        static constexpr char off[] NOTE_FLASH_ATTR = "off";
+        static constexpr char on[] NOTE_FLASH_ATTR = "on";
+        static constexpr char outbound[] NOTE_FLASH_ATTR = "outbound";
+        static constexpr char product[] NOTE_FLASH_ATTR = "product";
+        static constexpr char seconds[] NOTE_FLASH_ATTR = "seconds";
+        static constexpr char sn[] NOTE_FLASH_ATTR = "sn";
+        static constexpr char sync[] NOTE_FLASH_ATTR = "sync";
+        static constexpr char umin[] NOTE_FLASH_ATTR = "umin";
+        static constexpr char uoff[] NOTE_FLASH_ATTR = "uoff";
+        static constexpr char uperiodic[] NOTE_FLASH_ATTR = "uperiodic";
+        static constexpr char version[] NOTE_FLASH_ATTR = "version";
+        static constexpr char vinbound[] NOTE_FLASH_ATTR = "vinbound";
+        static constexpr char voutbound[] NOTE_FLASH_ATTR = "voutbound";
+    };
+
     static constexpr string_view notecard_request = "hub.set";
     static constexpr bool supports_cmd = true;
     static constexpr Safety safety = Safety::Idempotent;
@@ -424,41 +448,41 @@ struct HubSet {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
     void build(JsonBuilder& b) const {
-        if (align) b.add("align", *align);
+        if (align) note::add_flash(b, note::flash(keys_::align), *align);
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
-        if (details) b.add("details", *details);
+        if (details) note::add_flash(b, note::flash(keys_::details), *details);
 #endif
-        if (duration) b.add("duration", *duration);
-        if (host) b.add("host", *host);
-        if (inbound) b.add("inbound", *inbound);
-        if (mode) b.add("mode", *mode);
+        if (duration) note::add_flash(b, note::flash(keys_::duration), *duration);
+        if (host) note::add_flash(b, note::flash(keys_::host), *host);
+        if (inbound) note::add_flash(b, note::flash(keys_::inbound), *inbound);
+        if (mode) note::add_flash(b, note::flash(keys_::mode), *mode);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-        if (off) b.add("off", *off);
+        if (off) note::add_flash(b, note::flash(keys_::off), *off);
 #endif
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-        if (on) b.add("on", *on);
+        if (on) note::add_flash(b, note::flash(keys_::on), *on);
 #endif
-        if (outbound) b.add("outbound", *outbound);
-        if (product) b.add("product", *product);
+        if (outbound) note::add_flash(b, note::flash(keys_::outbound), *outbound);
+        if (product) note::add_flash(b, note::flash(keys_::product), *product);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-        if (seconds) b.add("seconds", *seconds);
+        if (seconds) note::add_flash(b, note::flash(keys_::seconds), *seconds);
 #endif
-        if (sn) b.add("sn", *sn);
-        if (sync) b.add("sync", *sync);
+        if (sn) note::add_flash(b, note::flash(keys_::sn), *sn);
+        if (sync) note::add_flash(b, note::flash(keys_::sync), *sync);
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-        if (umin) b.add("umin", *umin);
-#endif
-#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-        if (uoff) b.add("uoff", *uoff);
+        if (umin) note::add_flash(b, note::flash(keys_::umin), *umin);
 #endif
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-        if (uperiodic) b.add("uperiodic", *uperiodic);
+        if (uoff) note::add_flash(b, note::flash(keys_::uoff), *uoff);
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
+        if (uperiodic) note::add_flash(b, note::flash(keys_::uperiodic), *uperiodic);
 #endif
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 3, 1) || !defined(NOTE_API_STRICT)
-        if (version) b.add("version", *version);
+        if (version) note::add_flash(b, note::flash(keys_::version), *version);
 #endif
-        if (vinbound) b.add("vinbound", *vinbound);
-        if (voutbound) b.add("voutbound", *voutbound);
+        if (vinbound) note::add_flash(b, note::flash(keys_::vinbound), *vinbound);
+        if (voutbound) note::add_flash(b, note::flash(keys_::voutbound), *voutbound);
 #if NOTE_EXTRAS
         for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
             std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },

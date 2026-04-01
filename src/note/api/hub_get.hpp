@@ -16,6 +16,7 @@
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
+#include <note/progmem.hpp>
 #include <note/target.hpp>
 
 namespace note::api {
@@ -31,6 +32,20 @@ namespace note::api {
 ///
 /// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
 struct HubGet {
+    struct keys_ {
+        static constexpr char req[] NOTE_FLASH_ATTR = "hub.get";
+        static constexpr char rsp_device[] NOTE_FLASH_ATTR = "device";
+        static constexpr char rsp_host[] NOTE_FLASH_ATTR = "host";
+        static constexpr char rsp_inbound[] NOTE_FLASH_ATTR = "inbound";
+        static constexpr char rsp_mode[] NOTE_FLASH_ATTR = "mode";
+        static constexpr char rsp_outbound[] NOTE_FLASH_ATTR = "outbound";
+        static constexpr char rsp_product[] NOTE_FLASH_ATTR = "product";
+        static constexpr char rsp_sn[] NOTE_FLASH_ATTR = "sn";
+        static constexpr char rsp_sync[] NOTE_FLASH_ATTR = "sync";
+        static constexpr char rsp_vinbound[] NOTE_FLASH_ATTR = "vinbound";
+        static constexpr char rsp_voutbound[] NOTE_FLASH_ATTR = "voutbound";
+    };
+
     static constexpr string_view notecard_request = "hub.get";
     static constexpr bool supports_cmd = true;
     static constexpr Safety safety = Safety::ReadOnly;
@@ -132,20 +147,20 @@ struct HubGet {
             Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
             void on_string(::note::string_view k_, ::note::string_view v_) override {
                 v_ = pool_.intern(v_);
-                if (k_ == "device") { rsp.device = v_; return; }
-                if (k_ == "host") { rsp.host = v_; return; }
-                if (k_ == "mode") { rsp.mode = v_; return; }
-                if (k_ == "product") { rsp.product = v_; return; }
-                if (k_ == "sn") { rsp.sn = v_; return; }
-                if (k_ == "vinbound") { rsp.vinbound = v_; return; }
-                if (k_ == "voutbound") { rsp.voutbound = v_; return; }
+                if (note::flash(keys_::rsp_device) == k_) { rsp.device = v_; return; }
+                if (note::flash(keys_::rsp_host) == k_) { rsp.host = v_; return; }
+                if (note::flash(keys_::rsp_mode) == k_) { rsp.mode = v_; return; }
+                if (note::flash(keys_::rsp_product) == k_) { rsp.product = v_; return; }
+                if (note::flash(keys_::rsp_sn) == k_) { rsp.sn = v_; return; }
+                if (note::flash(keys_::rsp_vinbound) == k_) { rsp.vinbound = v_; return; }
+                if (note::flash(keys_::rsp_voutbound) == k_) { rsp.voutbound = v_; return; }
             }
             void on_bool(::note::string_view k_, bool v_) override {
-                if (k_ == "sync") { rsp.sync = v_; return; }
+                if (note::flash(keys_::rsp_sync) == k_) { rsp.sync = v_; return; }
             }
             void on_number(::note::string_view k_, ::note::string_view raw_) override {
-                if (k_ == "inbound") { rsp.inbound = ::note::parse_int(raw_); return; }
-                if (k_ == "outbound") { rsp.outbound = ::note::parse_int(raw_); return; }
+                if (note::flash(keys_::rsp_inbound) == k_) { rsp.inbound = ::note::parse_int(raw_); return; }
+                if (note::flash(keys_::rsp_outbound) == k_) { rsp.outbound = ::note::parse_int(raw_); return; }
             }
             void reset() override { rsp = Response{}; }
         };

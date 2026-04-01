@@ -16,6 +16,7 @@
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
+#include <note/progmem.hpp>
 #include <note/target.hpp>
 
 namespace note::api {
@@ -32,6 +33,17 @@ namespace note::api {
 ///
 /// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
 struct DfuGet {
+    struct keys_ {
+        static constexpr char req[] NOTE_FLASH_ATTR = "dfu.get";
+        static constexpr char binary[] NOTE_FLASH_ATTR = "binary";
+        static constexpr char length[] NOTE_FLASH_ATTR = "length";
+        static constexpr char offset[] NOTE_FLASH_ATTR = "offset";
+        static constexpr char rsp_cobs[] NOTE_FLASH_ATTR = "cobs";
+        static constexpr char rsp_length[] NOTE_FLASH_ATTR = "length";
+        static constexpr char rsp_payload[] NOTE_FLASH_ATTR = "payload";
+        static constexpr char rsp_status[] NOTE_FLASH_ATTR = "status";
+    };
+
     static constexpr string_view notecard_request = "dfu.get";
     static constexpr bool supports_cmd = true;
     static constexpr Safety safety = Safety::ReadOnly;
@@ -148,12 +160,12 @@ struct DfuGet {
             Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
             void on_string(::note::string_view k_, ::note::string_view v_) override {
                 v_ = pool_.intern(v_);
-                if (k_ == "payload") { rsp.payload = v_; return; }
-                if (k_ == "status") { rsp.status = v_; return; }
+                if (note::flash(keys_::rsp_payload) == k_) { rsp.payload = v_; return; }
+                if (note::flash(keys_::rsp_status) == k_) { rsp.status = v_; return; }
             }
             void on_number(::note::string_view k_, ::note::string_view raw_) override {
-                if (k_ == "cobs") { rsp.cobs = ::note::parse_int(raw_); return; }
-                if (k_ == "length") { rsp.length = ::note::parse_int(raw_); return; }
+                if (note::flash(keys_::rsp_cobs) == k_) { rsp.cobs = ::note::parse_int(raw_); return; }
+                if (note::flash(keys_::rsp_length) == k_) { rsp.length = ::note::parse_int(raw_); return; }
             }
             void reset() override { rsp = Response{}; }
         };
@@ -194,9 +206,9 @@ struct DfuGet {
     };
 
     void build(JsonBuilder& b) const {
-        if (binary) b.add("binary", *binary);
-        if (length) b.add("length", *length);
-        if (offset) b.add("offset", *offset);
+        if (binary) note::add_flash(b, note::flash(keys_::binary), *binary);
+        if (length) note::add_flash(b, note::flash(keys_::length), *length);
+        if (offset) note::add_flash(b, note::flash(keys_::offset), *offset);
 #if NOTE_EXTRAS
         for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
             std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },

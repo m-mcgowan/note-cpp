@@ -16,6 +16,7 @@
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
+#include <note/progmem.hpp>
 #include <note/target.hpp>
 
 namespace note::api {
@@ -43,6 +44,13 @@ namespace note::api {
 ///
 /// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
 struct CardLed {
+    struct keys_ {
+        static constexpr char req[] NOTE_FLASH_ATTR = "card.led";
+        static constexpr char mode[] NOTE_FLASH_ATTR = "mode";
+        static constexpr char off[] NOTE_FLASH_ATTR = "off";
+        static constexpr char on[] NOTE_FLASH_ATTR = "on";
+    };
+
     static constexpr string_view notecard_request = "card.led";
     static constexpr bool supports_cmd = true;
     static constexpr Safety safety = Safety::Idempotent;
@@ -166,9 +174,9 @@ struct CardLed {
     using Response = void;
 
     void build(JsonBuilder& b) const {
-        if (mode) b.add("mode", *mode);
-        if (off) b.add("off", *off);
-        if (on) b.add("on", *on);
+        if (mode) note::add_flash(b, note::flash(keys_::mode), *mode);
+        if (off) note::add_flash(b, note::flash(keys_::off), *off);
+        if (on) note::add_flash(b, note::flash(keys_::on), *on);
 #if NOTE_EXTRAS
         for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
             std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },

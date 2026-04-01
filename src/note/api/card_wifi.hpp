@@ -16,6 +16,7 @@
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
+#include <note/progmem.hpp>
 #include <note/target.hpp>
 
 namespace note::api {
@@ -31,6 +32,20 @@ namespace note::api {
 ///
 /// @skus{CELL+WIFI,SKYLO,WIFI}
 struct CardWifi {
+    struct keys_ {
+        static constexpr char req[] NOTE_FLASH_ATTR = "card.wifi";
+        static constexpr char name[] NOTE_FLASH_ATTR = "name";
+        static constexpr char org[] NOTE_FLASH_ATTR = "org";
+        static constexpr char password[] NOTE_FLASH_ATTR = "password";
+        static constexpr char ssid[] NOTE_FLASH_ATTR = "ssid";
+        static constexpr char start[] NOTE_FLASH_ATTR = "start";
+        static constexpr char text[] NOTE_FLASH_ATTR = "text";
+        static constexpr char rsp_secure[] NOTE_FLASH_ATTR = "secure";
+        static constexpr char rsp_security[] NOTE_FLASH_ATTR = "security";
+        static constexpr char rsp_ssid[] NOTE_FLASH_ATTR = "ssid";
+        static constexpr char rsp_version[] NOTE_FLASH_ATTR = "version";
+    };
+
     static constexpr string_view notecard_request = "card.wifi";
     static constexpr bool supports_cmd = true;
     static constexpr Safety safety = Safety::Idempotent;
@@ -183,12 +198,12 @@ struct CardWifi {
             Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
             void on_string(::note::string_view k_, ::note::string_view v_) override {
                 v_ = pool_.intern(v_);
-                if (k_ == "security") { rsp.security = v_; return; }
-                if (k_ == "ssid") { rsp.ssid = v_; return; }
-                if (k_ == "version") { rsp.version = v_; return; }
+                if (note::flash(keys_::rsp_security) == k_) { rsp.security = v_; return; }
+                if (note::flash(keys_::rsp_ssid) == k_) { rsp.ssid = v_; return; }
+                if (note::flash(keys_::rsp_version) == k_) { rsp.version = v_; return; }
             }
             void on_bool(::note::string_view k_, bool v_) override {
-                if (k_ == "secure") { rsp.secure = v_; return; }
+                if (note::flash(keys_::rsp_secure) == k_) { rsp.secure = v_; return; }
             }
             void reset() override { rsp = Response{}; }
         };
@@ -232,13 +247,13 @@ struct CardWifi {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
     void build(JsonBuilder& b) const {
-        if (name) b.add("name", *name);
-        if (org) b.add("org", *org);
-        if (password) b.add("password", *password);
-        if (ssid) b.add("ssid", *ssid);
-        if (start) b.add("start", *start);
+        if (name) note::add_flash(b, note::flash(keys_::name), *name);
+        if (org) note::add_flash(b, note::flash(keys_::org), *org);
+        if (password) note::add_flash(b, note::flash(keys_::password), *password);
+        if (ssid) note::add_flash(b, note::flash(keys_::ssid), *ssid);
+        if (start) note::add_flash(b, note::flash(keys_::start), *start);
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 5, 1) || !defined(NOTE_API_STRICT)
-        if (text) b.add("text", *text);
+        if (text) note::add_flash(b, note::flash(keys_::text), *text);
 #endif
 #if NOTE_EXTRAS
         for (uint8_t i_ = 0; i_ < extras_count_; ++i_)

@@ -16,6 +16,7 @@
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
+#include <note/progmem.hpp>
 #include <note/target.hpp>
 
 namespace note::api {
@@ -35,6 +36,13 @@ namespace note::api {
 struct EnvDefault {
 
     struct Set {
+        struct keys_ {
+            static constexpr char req[] NOTE_FLASH_ATTR = "env.default";
+            static constexpr char name[] NOTE_FLASH_ATTR = "name";
+            static constexpr char sync[] NOTE_FLASH_ATTR = "sync";
+            static constexpr char text[] NOTE_FLASH_ATTR = "text";
+        };
+
         static constexpr string_view notecard_request = "env.default";
         static constexpr bool supports_cmd = true;
         static constexpr Safety safety = Safety::Idempotent;
@@ -89,9 +97,9 @@ struct EnvDefault {
         using Response = void;
 
         void build(JsonBuilder& b) const {
-            b.add("name", name);
-            if (sync) b.add("sync", *sync);
-            if (text) b.add("text", *text);
+            note::add_flash(b, note::flash(keys_::name), name);
+            if (sync) note::add_flash(b, note::flash(keys_::sync), *sync);
+            if (text) note::add_flash(b, note::flash(keys_::text), *text);
 #if NOTE_EXTRAS
             for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
                 std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
@@ -133,6 +141,12 @@ struct EnvDefault {
     ///
     /// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
     struct Remove {
+        struct keys_ {
+            static constexpr char req[] NOTE_FLASH_ATTR = "env.default";
+            static constexpr char name[] NOTE_FLASH_ATTR = "name";
+            static constexpr char sync[] NOTE_FLASH_ATTR = "sync";
+        };
+
         static constexpr string_view notecard_request = "env.default";
         static constexpr bool supports_cmd = true;
         static constexpr Safety safety = Safety::Destructive;
@@ -179,8 +193,8 @@ struct EnvDefault {
         using Response = void;
 
         void build(JsonBuilder& b) const {
-            b.add("name", name);
-            if (sync) b.add("sync", *sync);
+            note::add_flash(b, note::flash(keys_::name), name);
+            if (sync) note::add_flash(b, note::flash(keys_::sync), *sync);
 #if NOTE_EXTRAS
             for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
                 std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },

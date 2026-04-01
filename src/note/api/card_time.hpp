@@ -16,6 +16,7 @@
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
+#include <note/progmem.hpp>
 #include <note/target.hpp>
 
 namespace note::api {
@@ -35,6 +36,17 @@ namespace note::api {
 ///
 /// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
 struct CardTime {
+    struct keys_ {
+        static constexpr char req[] NOTE_FLASH_ATTR = "card.time";
+        static constexpr char rsp_area[] NOTE_FLASH_ATTR = "area";
+        static constexpr char rsp_country[] NOTE_FLASH_ATTR = "country";
+        static constexpr char rsp_lat[] NOTE_FLASH_ATTR = "lat";
+        static constexpr char rsp_lon[] NOTE_FLASH_ATTR = "lon";
+        static constexpr char rsp_minutes[] NOTE_FLASH_ATTR = "minutes";
+        static constexpr char rsp_time[] NOTE_FLASH_ATTR = "time";
+        static constexpr char rsp_zone[] NOTE_FLASH_ATTR = "zone";
+    };
+
     static constexpr string_view notecard_request = "card.time";
     static constexpr bool supports_cmd = true;
     static constexpr Safety safety = Safety::ReadOnly;
@@ -125,15 +137,15 @@ struct CardTime {
             Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
             void on_string(::note::string_view k_, ::note::string_view v_) override {
                 v_ = pool_.intern(v_);
-                if (k_ == "area") { rsp.area = v_; return; }
-                if (k_ == "country") { rsp.country = v_; return; }
-                if (k_ == "zone") { rsp.zone = v_; return; }
+                if (note::flash(keys_::rsp_area) == k_) { rsp.area = v_; return; }
+                if (note::flash(keys_::rsp_country) == k_) { rsp.country = v_; return; }
+                if (note::flash(keys_::rsp_zone) == k_) { rsp.zone = v_; return; }
             }
             void on_number(::note::string_view k_, ::note::string_view raw_) override {
-                if (k_ == "minutes") { rsp.minutes = ::note::parse_int(raw_); return; }
-                if (k_ == "time") { rsp.time = ::note::parse_int(raw_); return; }
-                if (k_ == "lat") { rsp.lat = ::note::parse_double(raw_); return; }
-                if (k_ == "lon") { rsp.lon = ::note::parse_double(raw_); return; }
+                if (note::flash(keys_::rsp_minutes) == k_) { rsp.minutes = ::note::parse_int(raw_); return; }
+                if (note::flash(keys_::rsp_time) == k_) { rsp.time = ::note::parse_int(raw_); return; }
+                if (note::flash(keys_::rsp_lat) == k_) { rsp.lat = ::note::parse_double(raw_); return; }
+                if (note::flash(keys_::rsp_lon) == k_) { rsp.lon = ::note::parse_double(raw_); return; }
             }
             void reset() override { rsp = Response{}; }
         };

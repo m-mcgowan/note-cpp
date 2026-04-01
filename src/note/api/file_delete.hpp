@@ -17,6 +17,7 @@
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
 #include <note/array_field.hpp>
+#include <note/progmem.hpp>
 #include <note/target.hpp>
 
 namespace note::api {
@@ -32,6 +33,11 @@ namespace note::api {
 ///
 /// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
 struct FileDelete {
+    struct keys_ {
+        static constexpr char req[] NOTE_FLASH_ATTR = "file.delete";
+        static constexpr char files[] NOTE_FLASH_ATTR = "files";
+    };
+
     static constexpr string_view notecard_request = "file.delete";
     static constexpr bool supports_cmd = true;
     static constexpr Safety safety = Safety::Destructive;

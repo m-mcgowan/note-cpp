@@ -16,6 +16,7 @@
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
+#include <note/progmem.hpp>
 #include <note/target.hpp>
 
 namespace note::api {
@@ -31,6 +32,12 @@ namespace note::api {
 ///
 /// @skus{CELL,CELL+WIFI,WIFI}
 struct NtnStatus {
+    struct keys_ {
+        static constexpr char req[] NOTE_FLASH_ATTR = "ntn.status";
+        static constexpr char rsp_err[] NOTE_FLASH_ATTR = "err";
+        static constexpr char rsp_status[] NOTE_FLASH_ATTR = "status";
+    };
+
     static constexpr string_view notecard_request = "ntn.status";
     static constexpr bool supports_cmd = true;
     static constexpr Safety safety = Safety::ReadOnly;
@@ -101,8 +108,8 @@ struct NtnStatus {
             Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
             void on_string(::note::string_view k_, ::note::string_view v_) override {
                 v_ = pool_.intern(v_);
-                if (k_ == "err") { rsp.err = v_; return; }
-                if (k_ == "status") { rsp.status = v_; return; }
+                if (note::flash(keys_::rsp_err) == k_) { rsp.err = v_; return; }
+                if (note::flash(keys_::rsp_status) == k_) { rsp.status = v_; return; }
             }
             void reset() override { rsp = Response{}; }
         };

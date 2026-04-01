@@ -16,6 +16,7 @@
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
+#include <note/progmem.hpp>
 #include <note/target.hpp>
 
 namespace note::api {
@@ -36,6 +37,10 @@ namespace note::api {
 ///
 /// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
 struct NtnReset {
+    struct keys_ {
+        static constexpr char req[] NOTE_FLASH_ATTR = "ntn.reset";
+    };
+
     static constexpr string_view notecard_request = "ntn.reset";
     static constexpr bool supports_cmd = true;
     static constexpr Safety safety = Safety::Destructive;

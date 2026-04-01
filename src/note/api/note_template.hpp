@@ -17,6 +17,7 @@
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
+#include <note/progmem.hpp>
 #include <note/target.hpp>
 
 namespace note::api {
@@ -42,6 +43,21 @@ namespace note::api {
 struct NoteTemplate {
 
     struct Define {
+        struct keys_ {
+            static constexpr char req[] NOTE_FLASH_ATTR = "note.template";
+            static constexpr char body[] NOTE_FLASH_ATTR = "body";
+            static constexpr char delete_[] NOTE_FLASH_ATTR = "delete";
+            static constexpr char file[] NOTE_FLASH_ATTR = "file";
+            static constexpr char format[] NOTE_FLASH_ATTR = "format";
+            static constexpr char length[] NOTE_FLASH_ATTR = "length";
+            static constexpr char port[] NOTE_FLASH_ATTR = "port";
+            static constexpr char verify[] NOTE_FLASH_ATTR = "verify";
+            static constexpr char rsp_bytes[] NOTE_FLASH_ATTR = "bytes";
+            static constexpr char rsp_format[] NOTE_FLASH_ATTR = "format";
+            static constexpr char rsp_length[] NOTE_FLASH_ATTR = "length";
+            static constexpr char rsp_template_[] NOTE_FLASH_ATTR = "template";
+        };
+
         static constexpr string_view notecard_request = "note.template";
         static constexpr bool supports_cmd = true;
         static constexpr Safety safety = Safety::Idempotent;
@@ -268,17 +284,17 @@ struct NoteTemplate {
                 void on_string(::note::string_view k_, ::note::string_view v_) override {
                     v_ = pool_.intern(v_);
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
-                    if (k_ == "format") { rsp.format = v_; return; }
+                    if (note::flash(keys_::rsp_format) == k_) { rsp.format = v_; return; }
 #endif
                 }
                 void on_bool(::note::string_view k_, bool v_) override {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
-                    if (k_ == "template") { rsp.template_ = v_; return; }
+                    if (note::flash(keys_::rsp_template_) == k_) { rsp.template_ = v_; return; }
 #endif
                 }
                 void on_number(::note::string_view k_, ::note::string_view raw_) override {
-                    if (k_ == "bytes") { rsp.bytes = ::note::parse_int(raw_); return; }
-                    if (k_ == "length") { rsp.length = ::note::parse_int(raw_); return; }
+                    if (note::flash(keys_::rsp_bytes) == k_) { rsp.bytes = ::note::parse_int(raw_); return; }
+                    if (note::flash(keys_::rsp_length) == k_) { rsp.length = ::note::parse_int(raw_); return; }
                 }
                 void reset() override { rsp = Response{}; }
             };
@@ -348,15 +364,15 @@ struct NoteTemplate {
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
         void build(JsonBuilder& b) const {
             body.write_to(b);
-            if (delete_) b.add("delete", *delete_);
-            b.add("file", file);
+            if (delete_) note::add_flash(b, note::flash(keys_::delete_), *delete_);
+            note::add_flash(b, note::flash(keys_::file), file);
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
-            if (format) b.add("format", *format);
+            if (format) note::add_flash(b, note::flash(keys_::format), *format);
 #endif
-            if (length) b.add("length", *length);
-            if (port) b.add("port", *port);
+            if (length) note::add_flash(b, note::flash(keys_::length), *length);
+            if (port) note::add_flash(b, note::flash(keys_::port), *port);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
-            if (verify) b.add("verify", *verify);
+            if (verify) note::add_flash(b, note::flash(keys_::verify), *verify);
 #endif
 #if NOTE_EXTRAS
             for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
@@ -423,6 +439,21 @@ struct NoteTemplate {
     ///
     /// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
     struct Remove {
+        struct keys_ {
+            static constexpr char req[] NOTE_FLASH_ATTR = "note.template";
+            static constexpr char body[] NOTE_FLASH_ATTR = "body";
+            static constexpr char delete_[] NOTE_FLASH_ATTR = "delete";
+            static constexpr char file[] NOTE_FLASH_ATTR = "file";
+            static constexpr char format[] NOTE_FLASH_ATTR = "format";
+            static constexpr char length[] NOTE_FLASH_ATTR = "length";
+            static constexpr char port[] NOTE_FLASH_ATTR = "port";
+            static constexpr char verify[] NOTE_FLASH_ATTR = "verify";
+            static constexpr char rsp_bytes[] NOTE_FLASH_ATTR = "bytes";
+            static constexpr char rsp_format[] NOTE_FLASH_ATTR = "format";
+            static constexpr char rsp_length[] NOTE_FLASH_ATTR = "length";
+            static constexpr char rsp_template_[] NOTE_FLASH_ATTR = "template";
+        };
+
         static constexpr string_view notecard_request = "note.template";
         static constexpr bool supports_cmd = true;
         static constexpr Safety safety = Safety::Destructive;
@@ -674,17 +705,17 @@ struct NoteTemplate {
                 void on_string(::note::string_view k_, ::note::string_view v_) override {
                     v_ = pool_.intern(v_);
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
-                    if (k_ == "format") { rsp.format = v_; return; }
+                    if (note::flash(keys_::rsp_format) == k_) { rsp.format = v_; return; }
 #endif
                 }
                 void on_bool(::note::string_view k_, bool v_) override {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
-                    if (k_ == "template") { rsp.template_ = v_; return; }
+                    if (note::flash(keys_::rsp_template_) == k_) { rsp.template_ = v_; return; }
 #endif
                 }
                 void on_number(::note::string_view k_, ::note::string_view raw_) override {
-                    if (k_ == "bytes") { rsp.bytes = ::note::parse_int(raw_); return; }
-                    if (k_ == "length") { rsp.length = ::note::parse_int(raw_); return; }
+                    if (note::flash(keys_::rsp_bytes) == k_) { rsp.bytes = ::note::parse_int(raw_); return; }
+                    if (note::flash(keys_::rsp_length) == k_) { rsp.length = ::note::parse_int(raw_); return; }
                 }
                 void reset() override { rsp = Response{}; }
             };
@@ -754,15 +785,15 @@ struct NoteTemplate {
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
         void build(JsonBuilder& b) const {
             body.write_to(b);
-            b.add("delete", true);
-            b.add("file", file);
+            note::add_flash(b, note::flash(keys_::delete_), true);
+            note::add_flash(b, note::flash(keys_::file), file);
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
-            if (format) b.add("format", *format);
+            if (format) note::add_flash(b, note::flash(keys_::format), *format);
 #endif
-            if (length) b.add("length", *length);
-            if (port) b.add("port", *port);
+            if (length) note::add_flash(b, note::flash(keys_::length), *length);
+            if (port) note::add_flash(b, note::flash(keys_::port), *port);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
-            if (verify) b.add("verify", *verify);
+            if (verify) note::add_flash(b, note::flash(keys_::verify), *verify);
 #endif
 #if NOTE_EXTRAS
             for (uint8_t i_ = 0; i_ < extras_count_; ++i_)

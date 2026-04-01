@@ -17,6 +17,7 @@
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
 #include <note/array_field.hpp>
+#include <note/progmem.hpp>
 #include <note/target.hpp>
 
 namespace note::api {
@@ -37,6 +38,15 @@ namespace note::api {
 ///
 /// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
 struct FileChanges {
+    struct keys_ {
+        static constexpr char req[] NOTE_FLASH_ATTR = "file.changes";
+        static constexpr char files[] NOTE_FLASH_ATTR = "files";
+        static constexpr char tracker[] NOTE_FLASH_ATTR = "tracker";
+        static constexpr char rsp_changes[] NOTE_FLASH_ATTR = "changes";
+        static constexpr char rsp_pending[] NOTE_FLASH_ATTR = "pending";
+        static constexpr char rsp_total[] NOTE_FLASH_ATTR = "total";
+    };
+
     static constexpr string_view notecard_request = "file.changes";
     static constexpr bool supports_cmd = true;
     static constexpr Safety safety = Safety::ReadOnly;
@@ -122,11 +132,11 @@ struct FileChanges {
             ::note::StringPool& pool_;
             Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
             void on_bool(::note::string_view k_, bool v_) override {
-                if (k_ == "pending") { rsp.pending = v_; return; }
+                if (note::flash(keys_::rsp_pending) == k_) { rsp.pending = v_; return; }
             }
             void on_number(::note::string_view k_, ::note::string_view raw_) override {
-                if (k_ == "changes") { rsp.changes = ::note::parse_int(raw_); return; }
-                if (k_ == "total") { rsp.total = ::note::parse_int(raw_); return; }
+                if (note::flash(keys_::rsp_changes) == k_) { rsp.changes = ::note::parse_int(raw_); return; }
+                if (note::flash(keys_::rsp_total) == k_) { rsp.total = ::note::parse_int(raw_); return; }
             }
             void reset() override { rsp = Response{}; }
         };
@@ -161,7 +171,7 @@ struct FileChanges {
 
     void build(JsonBuilder& b) const {
         if (files) files.write_to(b, "files");
-        if (tracker) b.add("tracker", *tracker);
+        if (tracker) note::add_flash(b, note::flash(keys_::tracker), *tracker);
 #if NOTE_EXTRAS
         for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
             std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },

@@ -16,6 +16,7 @@
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
+#include <note/progmem.hpp>
 #include <note/target.hpp>
 
 namespace note::api {
@@ -32,6 +33,13 @@ namespace note::api {
 ///
 /// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
 struct EnvSet {
+    struct keys_ {
+        static constexpr char req[] NOTE_FLASH_ATTR = "env.set";
+        static constexpr char name[] NOTE_FLASH_ATTR = "name";
+        static constexpr char text[] NOTE_FLASH_ATTR = "text";
+        static constexpr char rsp_time[] NOTE_FLASH_ATTR = "time";
+    };
+
     static constexpr string_view notecard_request = "env.set";
     static constexpr bool supports_cmd = true;
     static constexpr Safety safety = Safety::Idempotent;
@@ -125,7 +133,7 @@ struct EnvSet {
             Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
             void on_number(::note::string_view k_, ::note::string_view raw_) override {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-                if (k_ == "time") { rsp.time = ::note::parse_int(raw_); return; }
+                if (note::flash(keys_::rsp_time) == k_) { rsp.time = ::note::parse_int(raw_); return; }
 #endif
             }
             void reset() override { rsp = Response{}; }
@@ -155,8 +163,8 @@ struct EnvSet {
     };
 
     void build(JsonBuilder& b) const {
-        b.add("name", name);
-        if (text) b.add("text", *text);
+        note::add_flash(b, note::flash(keys_::name), name);
+        if (text) note::add_flash(b, note::flash(keys_::text), *text);
 #if NOTE_EXTRAS
         for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
             std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },

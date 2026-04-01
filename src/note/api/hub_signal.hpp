@@ -17,6 +17,7 @@
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
+#include <note/progmem.hpp>
 #include <note/target.hpp>
 
 namespace note::api {
@@ -37,6 +38,13 @@ namespace note::api {
 ///
 /// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
 struct HubSignal {
+    struct keys_ {
+        static constexpr char req[] NOTE_FLASH_ATTR = "hub.signal";
+        static constexpr char seconds[] NOTE_FLASH_ATTR = "seconds";
+        static constexpr char rsp_connected[] NOTE_FLASH_ATTR = "connected";
+        static constexpr char rsp_signals[] NOTE_FLASH_ATTR = "signals";
+    };
+
     static constexpr string_view notecard_request = "hub.signal";
     static constexpr bool supports_cmd = true;
     static constexpr Safety safety = Safety::NonIdempotent;
@@ -129,10 +137,10 @@ struct HubSignal {
             ::note::StringPool& pool_;
             Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
             void on_bool(::note::string_view k_, bool v_) override {
-                if (k_ == "connected") { rsp.connected = v_; return; }
+                if (note::flash(keys_::rsp_connected) == k_) { rsp.connected = v_; return; }
             }
             void on_number(::note::string_view k_, ::note::string_view raw_) override {
-                if (k_ == "signals") { rsp.signals = ::note::parse_int(raw_); return; }
+                if (note::flash(keys_::rsp_signals) == k_) { rsp.signals = ::note::parse_int(raw_); return; }
             }
             void reset() override { rsp = Response{}; }
         };
@@ -182,7 +190,7 @@ struct HubSignal {
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
     void build(JsonBuilder& b) const {
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
-        if (seconds) b.add("seconds", *seconds);
+        if (seconds) note::add_flash(b, note::flash(keys_::seconds), *seconds);
 #endif
 #if NOTE_EXTRAS
         for (uint8_t i_ = 0; i_ < extras_count_; ++i_)

@@ -16,6 +16,7 @@
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
+#include <note/progmem.hpp>
 #include <note/target.hpp>
 
 namespace note::api {
@@ -40,6 +41,21 @@ namespace note::api {
 struct CardTemp {
 
     struct Read {
+        struct keys_ {
+            static constexpr char req[] NOTE_FLASH_ATTR = "card.temp";
+            static constexpr char minutes[] NOTE_FLASH_ATTR = "minutes";
+            static constexpr char status[] NOTE_FLASH_ATTR = "status";
+            static constexpr char stop[] NOTE_FLASH_ATTR = "stop";
+            static constexpr char sync[] NOTE_FLASH_ATTR = "sync";
+            static constexpr char rsp_calibration[] NOTE_FLASH_ATTR = "calibration";
+            static constexpr char rsp_humidity[] NOTE_FLASH_ATTR = "humidity";
+            static constexpr char rsp_pressure[] NOTE_FLASH_ATTR = "pressure";
+            static constexpr char rsp_temperature[] NOTE_FLASH_ATTR = "temperature";
+            static constexpr char rsp_usb[] NOTE_FLASH_ATTR = "usb";
+            static constexpr char rsp_value[] NOTE_FLASH_ATTR = "value";
+            static constexpr char rsp_voltage[] NOTE_FLASH_ATTR = "voltage";
+        };
+
         static constexpr string_view notecard_request = "card.temp";
         static constexpr bool supports_cmd = true;
         static constexpr Safety safety = Safety::ReadOnly;
@@ -174,15 +190,15 @@ struct CardTemp {
                 ::note::StringPool& pool_;
                 Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
                 void on_bool(::note::string_view k_, bool v_) override {
-                    if (k_ == "usb") { rsp.usb = v_; return; }
+                    if (note::flash(keys_::rsp_usb) == k_) { rsp.usb = v_; return; }
                 }
                 void on_number(::note::string_view k_, ::note::string_view raw_) override {
-                    if (k_ == "calibration") { rsp.calibration = ::note::parse_double(raw_); return; }
-                    if (k_ == "humidity") { rsp.humidity = ::note::parse_double(raw_); return; }
-                    if (k_ == "pressure") { rsp.pressure = ::note::parse_double(raw_); return; }
-                    if (k_ == "temperature") { rsp.temperature = ::note::parse_double(raw_); return; }
-                    if (k_ == "value") { rsp.value = ::note::parse_double(raw_); return; }
-                    if (k_ == "voltage") { rsp.voltage = ::note::parse_double(raw_); return; }
+                    if (note::flash(keys_::rsp_calibration) == k_) { rsp.calibration = ::note::parse_double(raw_); return; }
+                    if (note::flash(keys_::rsp_humidity) == k_) { rsp.humidity = ::note::parse_double(raw_); return; }
+                    if (note::flash(keys_::rsp_pressure) == k_) { rsp.pressure = ::note::parse_double(raw_); return; }
+                    if (note::flash(keys_::rsp_temperature) == k_) { rsp.temperature = ::note::parse_double(raw_); return; }
+                    if (note::flash(keys_::rsp_value) == k_) { rsp.value = ::note::parse_double(raw_); return; }
+                    if (note::flash(keys_::rsp_voltage) == k_) { rsp.voltage = ::note::parse_double(raw_); return; }
                 }
                 void reset() override { rsp = Response{}; }
             };
@@ -232,10 +248,10 @@ struct CardTemp {
         };
 
         void build(JsonBuilder& b) const {
-            if (minutes) b.add("minutes", *minutes);
-            if (status) b.add("status", *status);
-            if (stop) b.add("stop", *stop);
-            if (sync) b.add("sync", *sync);
+            if (minutes) note::add_flash(b, note::flash(keys_::minutes), *minutes);
+            if (status) note::add_flash(b, note::flash(keys_::status), *status);
+            if (stop) note::add_flash(b, note::flash(keys_::stop), *stop);
+            if (sync) note::add_flash(b, note::flash(keys_::sync), *sync);
 #if NOTE_EXTRAS
             for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
                 std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
@@ -289,6 +305,21 @@ struct CardTemp {
     ///
     /// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
     struct Configure {
+        struct keys_ {
+            static constexpr char req[] NOTE_FLASH_ATTR = "card.temp";
+            static constexpr char minutes[] NOTE_FLASH_ATTR = "minutes";
+            static constexpr char status[] NOTE_FLASH_ATTR = "status";
+            static constexpr char stop[] NOTE_FLASH_ATTR = "stop";
+            static constexpr char sync[] NOTE_FLASH_ATTR = "sync";
+            static constexpr char rsp_calibration[] NOTE_FLASH_ATTR = "calibration";
+            static constexpr char rsp_humidity[] NOTE_FLASH_ATTR = "humidity";
+            static constexpr char rsp_pressure[] NOTE_FLASH_ATTR = "pressure";
+            static constexpr char rsp_temperature[] NOTE_FLASH_ATTR = "temperature";
+            static constexpr char rsp_usb[] NOTE_FLASH_ATTR = "usb";
+            static constexpr char rsp_value[] NOTE_FLASH_ATTR = "value";
+            static constexpr char rsp_voltage[] NOTE_FLASH_ATTR = "voltage";
+        };
+
         static constexpr string_view notecard_request = "card.temp";
         static constexpr bool supports_cmd = true;
         static constexpr Safety safety = Safety::Idempotent;
@@ -423,15 +454,15 @@ struct CardTemp {
                 ::note::StringPool& pool_;
                 Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
                 void on_bool(::note::string_view k_, bool v_) override {
-                    if (k_ == "usb") { rsp.usb = v_; return; }
+                    if (note::flash(keys_::rsp_usb) == k_) { rsp.usb = v_; return; }
                 }
                 void on_number(::note::string_view k_, ::note::string_view raw_) override {
-                    if (k_ == "calibration") { rsp.calibration = ::note::parse_double(raw_); return; }
-                    if (k_ == "humidity") { rsp.humidity = ::note::parse_double(raw_); return; }
-                    if (k_ == "pressure") { rsp.pressure = ::note::parse_double(raw_); return; }
-                    if (k_ == "temperature") { rsp.temperature = ::note::parse_double(raw_); return; }
-                    if (k_ == "value") { rsp.value = ::note::parse_double(raw_); return; }
-                    if (k_ == "voltage") { rsp.voltage = ::note::parse_double(raw_); return; }
+                    if (note::flash(keys_::rsp_calibration) == k_) { rsp.calibration = ::note::parse_double(raw_); return; }
+                    if (note::flash(keys_::rsp_humidity) == k_) { rsp.humidity = ::note::parse_double(raw_); return; }
+                    if (note::flash(keys_::rsp_pressure) == k_) { rsp.pressure = ::note::parse_double(raw_); return; }
+                    if (note::flash(keys_::rsp_temperature) == k_) { rsp.temperature = ::note::parse_double(raw_); return; }
+                    if (note::flash(keys_::rsp_value) == k_) { rsp.value = ::note::parse_double(raw_); return; }
+                    if (note::flash(keys_::rsp_voltage) == k_) { rsp.voltage = ::note::parse_double(raw_); return; }
                 }
                 void reset() override { rsp = Response{}; }
             };
@@ -481,10 +512,10 @@ struct CardTemp {
         };
 
         void build(JsonBuilder& b) const {
-            if (minutes) b.add("minutes", *minutes);
-            if (status) b.add("status", *status);
-            if (stop) b.add("stop", *stop);
-            if (sync) b.add("sync", *sync);
+            if (minutes) note::add_flash(b, note::flash(keys_::minutes), *minutes);
+            if (status) note::add_flash(b, note::flash(keys_::status), *status);
+            if (stop) note::add_flash(b, note::flash(keys_::stop), *stop);
+            if (sync) note::add_flash(b, note::flash(keys_::sync), *sync);
 #if NOTE_EXTRAS
             for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
                 std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
@@ -538,6 +569,21 @@ struct CardTemp {
     ///
     /// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
     struct Stop {
+        struct keys_ {
+            static constexpr char req[] NOTE_FLASH_ATTR = "card.temp";
+            static constexpr char minutes[] NOTE_FLASH_ATTR = "minutes";
+            static constexpr char status[] NOTE_FLASH_ATTR = "status";
+            static constexpr char stop[] NOTE_FLASH_ATTR = "stop";
+            static constexpr char sync[] NOTE_FLASH_ATTR = "sync";
+            static constexpr char rsp_calibration[] NOTE_FLASH_ATTR = "calibration";
+            static constexpr char rsp_humidity[] NOTE_FLASH_ATTR = "humidity";
+            static constexpr char rsp_pressure[] NOTE_FLASH_ATTR = "pressure";
+            static constexpr char rsp_temperature[] NOTE_FLASH_ATTR = "temperature";
+            static constexpr char rsp_usb[] NOTE_FLASH_ATTR = "usb";
+            static constexpr char rsp_value[] NOTE_FLASH_ATTR = "value";
+            static constexpr char rsp_voltage[] NOTE_FLASH_ATTR = "voltage";
+        };
+
         static constexpr string_view notecard_request = "card.temp";
         static constexpr bool supports_cmd = true;
         static constexpr Safety safety = Safety::Destructive;
@@ -659,15 +705,15 @@ struct CardTemp {
                 ::note::StringPool& pool_;
                 Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
                 void on_bool(::note::string_view k_, bool v_) override {
-                    if (k_ == "usb") { rsp.usb = v_; return; }
+                    if (note::flash(keys_::rsp_usb) == k_) { rsp.usb = v_; return; }
                 }
                 void on_number(::note::string_view k_, ::note::string_view raw_) override {
-                    if (k_ == "calibration") { rsp.calibration = ::note::parse_double(raw_); return; }
-                    if (k_ == "humidity") { rsp.humidity = ::note::parse_double(raw_); return; }
-                    if (k_ == "pressure") { rsp.pressure = ::note::parse_double(raw_); return; }
-                    if (k_ == "temperature") { rsp.temperature = ::note::parse_double(raw_); return; }
-                    if (k_ == "value") { rsp.value = ::note::parse_double(raw_); return; }
-                    if (k_ == "voltage") { rsp.voltage = ::note::parse_double(raw_); return; }
+                    if (note::flash(keys_::rsp_calibration) == k_) { rsp.calibration = ::note::parse_double(raw_); return; }
+                    if (note::flash(keys_::rsp_humidity) == k_) { rsp.humidity = ::note::parse_double(raw_); return; }
+                    if (note::flash(keys_::rsp_pressure) == k_) { rsp.pressure = ::note::parse_double(raw_); return; }
+                    if (note::flash(keys_::rsp_temperature) == k_) { rsp.temperature = ::note::parse_double(raw_); return; }
+                    if (note::flash(keys_::rsp_value) == k_) { rsp.value = ::note::parse_double(raw_); return; }
+                    if (note::flash(keys_::rsp_voltage) == k_) { rsp.voltage = ::note::parse_double(raw_); return; }
                 }
                 void reset() override { rsp = Response{}; }
             };
@@ -717,10 +763,10 @@ struct CardTemp {
         };
 
         void build(JsonBuilder& b) const {
-            if (minutes) b.add("minutes", *minutes);
-            if (status) b.add("status", *status);
-            b.add("stop", true);
-            if (sync) b.add("sync", *sync);
+            if (minutes) note::add_flash(b, note::flash(keys_::minutes), *minutes);
+            if (status) note::add_flash(b, note::flash(keys_::status), *status);
+            note::add_flash(b, note::flash(keys_::stop), true);
+            if (sync) note::add_flash(b, note::flash(keys_::sync), *sync);
 #if NOTE_EXTRAS
             for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
                 std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },

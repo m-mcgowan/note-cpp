@@ -17,6 +17,7 @@
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
+#include <note/progmem.hpp>
 #include <note/target.hpp>
 
 namespace note::api {
@@ -33,6 +34,20 @@ namespace note::api {
 ///
 /// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
 struct WebDelete {
+    struct keys_ {
+        static constexpr char req[] NOTE_FLASH_ATTR = "web.delete";
+        static constexpr char async[] NOTE_FLASH_ATTR = "async";
+        static constexpr char content[] NOTE_FLASH_ATTR = "content";
+        static constexpr char file[] NOTE_FLASH_ATTR = "file";
+        static constexpr char name[] NOTE_FLASH_ATTR = "name";
+        static constexpr char noteId[] NOTE_FLASH_ATTR = "note";
+        static constexpr char route[] NOTE_FLASH_ATTR = "route";
+        static constexpr char seconds[] NOTE_FLASH_ATTR = "seconds";
+        static constexpr char rsp_payload[] NOTE_FLASH_ATTR = "payload";
+        static constexpr char rsp_result[] NOTE_FLASH_ATTR = "result";
+        static constexpr char rsp_status[] NOTE_FLASH_ATTR = "status";
+    };
+
     static constexpr string_view notecard_request = "web.delete";
     static constexpr bool supports_cmd = true;
     static constexpr Safety safety = Safety::Destructive;
@@ -191,11 +206,11 @@ struct WebDelete {
             Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
             void on_string(::note::string_view k_, ::note::string_view v_) override {
                 v_ = pool_.intern(v_);
-                if (k_ == "payload") { rsp.payload = v_; return; }
-                if (k_ == "status") { rsp.status = v_; return; }
+                if (note::flash(keys_::rsp_payload) == k_) { rsp.payload = v_; return; }
+                if (note::flash(keys_::rsp_status) == k_) { rsp.status = v_; return; }
             }
             void on_number(::note::string_view k_, ::note::string_view raw_) override {
-                if (k_ == "result") { rsp.result = ::note::parse_int(raw_); return; }
+                if (note::flash(keys_::rsp_result) == k_) { rsp.result = ::note::parse_int(raw_); return; }
             }
             void reset() override { rsp = Response{}; }
         };
@@ -252,14 +267,14 @@ struct WebDelete {
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
     void build(JsonBuilder& b) const {
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
-        if (async) b.add("async", *async);
+        if (async) note::add_flash(b, note::flash(keys_::async), *async);
 #endif
-        if (content) b.add("content", *content);
-        if (file) b.add("file", *file);
-        if (name) b.add("name", *name);
-        if (noteId) b.add("note", *noteId);
-        if (route) b.add("route", *route);
-        if (seconds) b.add("seconds", *seconds);
+        if (content) note::add_flash(b, note::flash(keys_::content), *content);
+        if (file) note::add_flash(b, note::flash(keys_::file), *file);
+        if (name) note::add_flash(b, note::flash(keys_::name), *name);
+        if (noteId) note::add_flash(b, note::flash(keys_::noteId), *noteId);
+        if (route) note::add_flash(b, note::flash(keys_::route), *route);
+        if (seconds) note::add_flash(b, note::flash(keys_::seconds), *seconds);
 #if NOTE_EXTRAS
         for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
             std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },

@@ -17,6 +17,7 @@
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
+#include <note/progmem.hpp>
 #include <note/target.hpp>
 
 namespace note::api {
@@ -33,6 +34,30 @@ namespace note::api {
 ///
 /// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
 struct WebPost {
+    struct keys_ {
+        static constexpr char req[] NOTE_FLASH_ATTR = "web.post";
+        static constexpr char async[] NOTE_FLASH_ATTR = "async";
+        static constexpr char binary[] NOTE_FLASH_ATTR = "binary";
+        static constexpr char body[] NOTE_FLASH_ATTR = "body";
+        static constexpr char content[] NOTE_FLASH_ATTR = "content";
+        static constexpr char file[] NOTE_FLASH_ATTR = "file";
+        static constexpr char max[] NOTE_FLASH_ATTR = "max";
+        static constexpr char name[] NOTE_FLASH_ATTR = "name";
+        static constexpr char noteId[] NOTE_FLASH_ATTR = "note";
+        static constexpr char offset[] NOTE_FLASH_ATTR = "offset";
+        static constexpr char payload[] NOTE_FLASH_ATTR = "payload";
+        static constexpr char route[] NOTE_FLASH_ATTR = "route";
+        static constexpr char seconds[] NOTE_FLASH_ATTR = "seconds";
+        static constexpr char status[] NOTE_FLASH_ATTR = "status";
+        static constexpr char total[] NOTE_FLASH_ATTR = "total";
+        static constexpr char verify[] NOTE_FLASH_ATTR = "verify";
+        static constexpr char rsp_cobs[] NOTE_FLASH_ATTR = "cobs";
+        static constexpr char rsp_length[] NOTE_FLASH_ATTR = "length";
+        static constexpr char rsp_payload[] NOTE_FLASH_ATTR = "payload";
+        static constexpr char rsp_result[] NOTE_FLASH_ATTR = "result";
+        static constexpr char rsp_status[] NOTE_FLASH_ATTR = "status";
+    };
+
     static constexpr string_view notecard_request = "web.post";
     static constexpr bool supports_cmd = true;
     static constexpr Safety safety = Safety::NonIdempotent;
@@ -319,15 +344,15 @@ struct WebPost {
             Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
             void on_string(::note::string_view k_, ::note::string_view v_) override {
                 v_ = pool_.intern(v_);
-                if (k_ == "payload") { rsp.payload = v_; return; }
-                if (k_ == "status") { rsp.status = v_; return; }
+                if (note::flash(keys_::rsp_payload) == k_) { rsp.payload = v_; return; }
+                if (note::flash(keys_::rsp_status) == k_) { rsp.status = v_; return; }
             }
             void on_number(::note::string_view k_, ::note::string_view raw_) override {
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
-                if (k_ == "cobs") { rsp.cobs = ::note::parse_int(raw_); return; }
+                if (note::flash(keys_::rsp_cobs) == k_) { rsp.cobs = ::note::parse_int(raw_); return; }
 #endif
-                if (k_ == "length") { rsp.length = ::note::parse_int(raw_); return; }
-                if (k_ == "result") { rsp.result = ::note::parse_int(raw_); return; }
+                if (note::flash(keys_::rsp_length) == k_) { rsp.length = ::note::parse_int(raw_); return; }
+                if (note::flash(keys_::rsp_result) == k_) { rsp.result = ::note::parse_int(raw_); return; }
             }
             void reset() override { rsp = Response{}; }
         };
@@ -398,26 +423,26 @@ struct WebPost {
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
     void build(JsonBuilder& b) const {
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
-        if (async) b.add("async", *async);
+        if (async) note::add_flash(b, note::flash(keys_::async), *async);
 #endif
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
-        if (binary) b.add("binary", *binary);
+        if (binary) note::add_flash(b, note::flash(keys_::binary), *binary);
 #endif
         body.write_to(b);
-        if (content) b.add("content", *content);
-        if (file) b.add("file", *file);
-        if (max) b.add("max", *max);
-        if (name) b.add("name", *name);
-        if (noteId) b.add("note", *noteId);
-        if (offset) b.add("offset", *offset);
-        if (payload) b.add("payload", *payload);
-        if (route) b.add("route", *route);
-        if (seconds) b.add("seconds", *seconds);
-        if (status) b.add("status", *status);
+        if (content) note::add_flash(b, note::flash(keys_::content), *content);
+        if (file) note::add_flash(b, note::flash(keys_::file), *file);
+        if (max) note::add_flash(b, note::flash(keys_::max), *max);
+        if (name) note::add_flash(b, note::flash(keys_::name), *name);
+        if (noteId) note::add_flash(b, note::flash(keys_::noteId), *noteId);
+        if (offset) note::add_flash(b, note::flash(keys_::offset), *offset);
+        if (payload) note::add_flash(b, note::flash(keys_::payload), *payload);
+        if (route) note::add_flash(b, note::flash(keys_::route), *route);
+        if (seconds) note::add_flash(b, note::flash(keys_::seconds), *seconds);
+        if (status) note::add_flash(b, note::flash(keys_::status), *status);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
-        if (total) b.add("total", *total);
+        if (total) note::add_flash(b, note::flash(keys_::total), *total);
 #endif
-        if (verify) b.add("verify", *verify);
+        if (verify) note::add_flash(b, note::flash(keys_::verify), *verify);
 #if NOTE_EXTRAS
         for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
             std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },

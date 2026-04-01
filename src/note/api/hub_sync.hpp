@@ -16,6 +16,7 @@
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
+#include <note/progmem.hpp>
 #include <note/target.hpp>
 
 namespace note::api {
@@ -31,6 +32,13 @@ namespace note::api {
 ///
 /// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
 struct HubSync {
+    struct keys_ {
+        static constexpr char req[] NOTE_FLASH_ATTR = "hub.sync";
+        static constexpr char allow[] NOTE_FLASH_ATTR = "allow";
+        static constexpr char in[] NOTE_FLASH_ATTR = "in";
+        static constexpr char out[] NOTE_FLASH_ATTR = "out";
+    };
+
     static constexpr string_view notecard_request = "hub.sync";
     static constexpr bool supports_cmd = true;
     static constexpr Safety safety = Safety::NonIdempotent;
@@ -101,10 +109,10 @@ struct HubSync {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
     void build(JsonBuilder& b) const {
-        if (allow) b.add("allow", *allow);
-        if (in) b.add("in", *in);
+        if (allow) note::add_flash(b, note::flash(keys_::allow), *allow);
+        if (in) note::add_flash(b, note::flash(keys_::in), *in);
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
-        if (out) b.add("out", *out);
+        if (out) note::add_flash(b, note::flash(keys_::out), *out);
 #endif
 #if NOTE_EXTRAS
         for (uint8_t i_ = 0; i_ < extras_count_; ++i_)

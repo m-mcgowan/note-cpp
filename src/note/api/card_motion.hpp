@@ -16,6 +16,7 @@
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
+#include <note/progmem.hpp>
 #include <note/target.hpp>
 
 namespace note::api {
@@ -33,6 +34,18 @@ namespace note::api {
 ///
 /// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
 struct CardMotion {
+    struct keys_ {
+        static constexpr char req[] NOTE_FLASH_ATTR = "card.motion";
+        static constexpr char minutes[] NOTE_FLASH_ATTR = "minutes";
+        static constexpr char rsp_alert[] NOTE_FLASH_ATTR = "alert";
+        static constexpr char rsp_count[] NOTE_FLASH_ATTR = "count";
+        static constexpr char rsp_mode[] NOTE_FLASH_ATTR = "mode";
+        static constexpr char rsp_motion[] NOTE_FLASH_ATTR = "motion";
+        static constexpr char rsp_movements[] NOTE_FLASH_ATTR = "movements";
+        static constexpr char rsp_seconds[] NOTE_FLASH_ATTR = "seconds";
+        static constexpr char rsp_status[] NOTE_FLASH_ATTR = "status";
+    };
+
     static constexpr string_view notecard_request = "card.motion";
     static constexpr bool supports_cmd = true;
     static constexpr Safety safety = Safety::ReadOnly;
@@ -141,17 +154,17 @@ struct CardMotion {
             Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
             void on_string(::note::string_view k_, ::note::string_view v_) override {
                 v_ = pool_.intern(v_);
-                if (k_ == "mode") { rsp.mode = v_; return; }
-                if (k_ == "movements") { rsp.movements = v_; return; }
-                if (k_ == "status") { rsp.status = v_; return; }
+                if (note::flash(keys_::rsp_mode) == k_) { rsp.mode = v_; return; }
+                if (note::flash(keys_::rsp_movements) == k_) { rsp.movements = v_; return; }
+                if (note::flash(keys_::rsp_status) == k_) { rsp.status = v_; return; }
             }
             void on_bool(::note::string_view k_, bool v_) override {
-                if (k_ == "alert") { rsp.alert = v_; return; }
+                if (note::flash(keys_::rsp_alert) == k_) { rsp.alert = v_; return; }
             }
             void on_number(::note::string_view k_, ::note::string_view raw_) override {
-                if (k_ == "count") { rsp.count = ::note::parse_int(raw_); return; }
-                if (k_ == "motion") { rsp.motion = ::note::parse_int(raw_); return; }
-                if (k_ == "seconds") { rsp.seconds = ::note::parse_int(raw_); return; }
+                if (note::flash(keys_::rsp_count) == k_) { rsp.count = ::note::parse_int(raw_); return; }
+                if (note::flash(keys_::rsp_motion) == k_) { rsp.motion = ::note::parse_int(raw_); return; }
+                if (note::flash(keys_::rsp_seconds) == k_) { rsp.seconds = ::note::parse_int(raw_); return; }
             }
             void reset() override { rsp = Response{}; }
         };
@@ -205,7 +218,7 @@ struct CardMotion {
     };
 
     void build(JsonBuilder& b) const {
-        if (minutes) b.add("minutes", *minutes);
+        if (minutes) note::add_flash(b, note::flash(keys_::minutes), *minutes);
 #if NOTE_EXTRAS
         for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
             std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },

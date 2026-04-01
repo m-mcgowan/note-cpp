@@ -16,6 +16,7 @@
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
+#include <note/progmem.hpp>
 #include <note/target.hpp>
 
 namespace note::api {
@@ -34,6 +35,20 @@ namespace note::api {
 struct CardWirelessPenalty {
 
     struct Check {
+        struct keys_ {
+            static constexpr char req[] NOTE_FLASH_ATTR = "card.wireless.penalty";
+            static constexpr char add[] NOTE_FLASH_ATTR = "add";
+            static constexpr char max[] NOTE_FLASH_ATTR = "max";
+            static constexpr char min[] NOTE_FLASH_ATTR = "min";
+            static constexpr char rate[] NOTE_FLASH_ATTR = "rate";
+            static constexpr char reset[] NOTE_FLASH_ATTR = "reset";
+            static constexpr char set[] NOTE_FLASH_ATTR = "set";
+            static constexpr char rsp_count[] NOTE_FLASH_ATTR = "count";
+            static constexpr char rsp_minutes[] NOTE_FLASH_ATTR = "minutes";
+            static constexpr char rsp_seconds[] NOTE_FLASH_ATTR = "seconds";
+            static constexpr char rsp_status[] NOTE_FLASH_ATTR = "status";
+        };
+
         static constexpr string_view notecard_request = "card.wireless.penalty";
         static constexpr bool supports_cmd = true;
         static constexpr Safety safety = Safety::ReadOnly;
@@ -188,13 +203,13 @@ struct CardWirelessPenalty {
                 Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
                 void on_string(::note::string_view k_, ::note::string_view v_) override {
                     v_ = pool_.intern(v_);
-                    if (k_ == "status") { rsp.status = v_; return; }
+                    if (note::flash(keys_::rsp_status) == k_) { rsp.status = v_; return; }
                 }
                 void on_number(::note::string_view k_, ::note::string_view raw_) override {
-                    if (k_ == "count") { rsp.count = ::note::parse_int(raw_); return; }
-                    if (k_ == "minutes") { rsp.minutes = ::note::parse_int(raw_); return; }
+                    if (note::flash(keys_::rsp_count) == k_) { rsp.count = ::note::parse_int(raw_); return; }
+                    if (note::flash(keys_::rsp_minutes) == k_) { rsp.minutes = ::note::parse_int(raw_); return; }
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-                    if (k_ == "seconds") { rsp.seconds = ::note::parse_int(raw_); return; }
+                    if (note::flash(keys_::rsp_seconds) == k_) { rsp.seconds = ::note::parse_int(raw_); return; }
 #endif
                 }
                 void reset() override { rsp = Response{}; }
@@ -241,12 +256,12 @@ struct CardWirelessPenalty {
         };
 
         void build(JsonBuilder& b) const {
-            if (add) b.add("add", *add);
-            if (max) b.add("max", *max);
-            if (min) b.add("min", *min);
-            if (rate) b.add("rate", *rate);
-            if (reset) b.add("reset", *reset);
-            if (set) b.add("set", *set);
+            if (add) note::add_flash(b, note::flash(keys_::add), *add);
+            if (max) note::add_flash(b, note::flash(keys_::max), *max);
+            if (min) note::add_flash(b, note::flash(keys_::min), *min);
+            if (rate) note::add_flash(b, note::flash(keys_::rate), *rate);
+            if (reset) note::add_flash(b, note::flash(keys_::reset), *reset);
+            if (set) note::add_flash(b, note::flash(keys_::set), *set);
 #if NOTE_EXTRAS
             for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
                 std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
@@ -302,6 +317,20 @@ struct CardWirelessPenalty {
     ///
     /// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
     struct Set {
+        struct keys_ {
+            static constexpr char req[] NOTE_FLASH_ATTR = "card.wireless.penalty";
+            static constexpr char add[] NOTE_FLASH_ATTR = "add";
+            static constexpr char max[] NOTE_FLASH_ATTR = "max";
+            static constexpr char min[] NOTE_FLASH_ATTR = "min";
+            static constexpr char rate[] NOTE_FLASH_ATTR = "rate";
+            static constexpr char reset[] NOTE_FLASH_ATTR = "reset";
+            static constexpr char set[] NOTE_FLASH_ATTR = "set";
+            static constexpr char rsp_count[] NOTE_FLASH_ATTR = "count";
+            static constexpr char rsp_minutes[] NOTE_FLASH_ATTR = "minutes";
+            static constexpr char rsp_seconds[] NOTE_FLASH_ATTR = "seconds";
+            static constexpr char rsp_status[] NOTE_FLASH_ATTR = "status";
+        };
+
         static constexpr string_view notecard_request = "card.wireless.penalty";
         static constexpr bool supports_cmd = true;
         static constexpr Safety safety = Safety::Idempotent;
@@ -448,13 +477,13 @@ struct CardWirelessPenalty {
                 Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
                 void on_string(::note::string_view k_, ::note::string_view v_) override {
                     v_ = pool_.intern(v_);
-                    if (k_ == "status") { rsp.status = v_; return; }
+                    if (note::flash(keys_::rsp_status) == k_) { rsp.status = v_; return; }
                 }
                 void on_number(::note::string_view k_, ::note::string_view raw_) override {
-                    if (k_ == "count") { rsp.count = ::note::parse_int(raw_); return; }
-                    if (k_ == "minutes") { rsp.minutes = ::note::parse_int(raw_); return; }
+                    if (note::flash(keys_::rsp_count) == k_) { rsp.count = ::note::parse_int(raw_); return; }
+                    if (note::flash(keys_::rsp_minutes) == k_) { rsp.minutes = ::note::parse_int(raw_); return; }
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-                    if (k_ == "seconds") { rsp.seconds = ::note::parse_int(raw_); return; }
+                    if (note::flash(keys_::rsp_seconds) == k_) { rsp.seconds = ::note::parse_int(raw_); return; }
 #endif
                 }
                 void reset() override { rsp = Response{}; }
@@ -501,12 +530,12 @@ struct CardWirelessPenalty {
         };
 
         void build(JsonBuilder& b) const {
-            if (add) b.add("add", *add);
-            if (max) b.add("max", *max);
-            if (min) b.add("min", *min);
-            if (rate) b.add("rate", *rate);
-            if (reset) b.add("reset", *reset);
-            b.add("set", true);
+            if (add) note::add_flash(b, note::flash(keys_::add), *add);
+            if (max) note::add_flash(b, note::flash(keys_::max), *max);
+            if (min) note::add_flash(b, note::flash(keys_::min), *min);
+            if (rate) note::add_flash(b, note::flash(keys_::rate), *rate);
+            if (reset) note::add_flash(b, note::flash(keys_::reset), *reset);
+            note::add_flash(b, note::flash(keys_::set), true);
 #if NOTE_EXTRAS
             for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
                 std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
@@ -557,6 +586,20 @@ struct CardWirelessPenalty {
     ///
     /// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
     struct Clear {
+        struct keys_ {
+            static constexpr char req[] NOTE_FLASH_ATTR = "card.wireless.penalty";
+            static constexpr char add[] NOTE_FLASH_ATTR = "add";
+            static constexpr char max[] NOTE_FLASH_ATTR = "max";
+            static constexpr char min[] NOTE_FLASH_ATTR = "min";
+            static constexpr char rate[] NOTE_FLASH_ATTR = "rate";
+            static constexpr char reset[] NOTE_FLASH_ATTR = "reset";
+            static constexpr char set[] NOTE_FLASH_ATTR = "set";
+            static constexpr char rsp_count[] NOTE_FLASH_ATTR = "count";
+            static constexpr char rsp_minutes[] NOTE_FLASH_ATTR = "minutes";
+            static constexpr char rsp_seconds[] NOTE_FLASH_ATTR = "seconds";
+            static constexpr char rsp_status[] NOTE_FLASH_ATTR = "status";
+        };
+
         static constexpr string_view notecard_request = "card.wireless.penalty";
         static constexpr bool supports_cmd = true;
         static constexpr Safety safety = Safety::Destructive;
@@ -699,13 +742,13 @@ struct CardWirelessPenalty {
                 Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
                 void on_string(::note::string_view k_, ::note::string_view v_) override {
                     v_ = pool_.intern(v_);
-                    if (k_ == "status") { rsp.status = v_; return; }
+                    if (note::flash(keys_::rsp_status) == k_) { rsp.status = v_; return; }
                 }
                 void on_number(::note::string_view k_, ::note::string_view raw_) override {
-                    if (k_ == "count") { rsp.count = ::note::parse_int(raw_); return; }
-                    if (k_ == "minutes") { rsp.minutes = ::note::parse_int(raw_); return; }
+                    if (note::flash(keys_::rsp_count) == k_) { rsp.count = ::note::parse_int(raw_); return; }
+                    if (note::flash(keys_::rsp_minutes) == k_) { rsp.minutes = ::note::parse_int(raw_); return; }
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-                    if (k_ == "seconds") { rsp.seconds = ::note::parse_int(raw_); return; }
+                    if (note::flash(keys_::rsp_seconds) == k_) { rsp.seconds = ::note::parse_int(raw_); return; }
 #endif
                 }
                 void reset() override { rsp = Response{}; }
@@ -752,12 +795,12 @@ struct CardWirelessPenalty {
         };
 
         void build(JsonBuilder& b) const {
-            if (add) b.add("add", *add);
-            if (max) b.add("max", *max);
-            if (min) b.add("min", *min);
-            if (rate) b.add("rate", *rate);
-            b.add("reset", true);
-            if (set) b.add("set", *set);
+            if (add) note::add_flash(b, note::flash(keys_::add), *add);
+            if (max) note::add_flash(b, note::flash(keys_::max), *max);
+            if (min) note::add_flash(b, note::flash(keys_::min), *min);
+            if (rate) note::add_flash(b, note::flash(keys_::rate), *rate);
+            note::add_flash(b, note::flash(keys_::reset), true);
+            if (set) note::add_flash(b, note::flash(keys_::set), *set);
 #if NOTE_EXTRAS
             for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
                 std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },

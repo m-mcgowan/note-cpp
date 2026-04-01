@@ -16,6 +16,7 @@
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
+#include <note/progmem.hpp>
 #include <note/target.hpp>
 
 namespace note::api {
@@ -36,6 +37,17 @@ namespace note::api {
 struct CardBinary {
 
     struct Status {
+        struct keys_ {
+            static constexpr char req[] NOTE_FLASH_ATTR = "card.binary";
+            static constexpr char delete_[] NOTE_FLASH_ATTR = "delete";
+            static constexpr char rsp_cobs[] NOTE_FLASH_ATTR = "cobs";
+            static constexpr char rsp_connected[] NOTE_FLASH_ATTR = "connected";
+            static constexpr char rsp_err[] NOTE_FLASH_ATTR = "err";
+            static constexpr char rsp_length[] NOTE_FLASH_ATTR = "length";
+            static constexpr char rsp_max[] NOTE_FLASH_ATTR = "max";
+            static constexpr char rsp_status[] NOTE_FLASH_ATTR = "status";
+        };
+
         static constexpr string_view notecard_request = "card.binary";
         static constexpr bool supports_cmd = true;
         static constexpr Safety safety = Safety::ReadOnly;
@@ -130,16 +142,16 @@ struct CardBinary {
                 Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
                 void on_string(::note::string_view k_, ::note::string_view v_) override {
                     v_ = pool_.intern(v_);
-                    if (k_ == "err") { rsp.err = v_; return; }
-                    if (k_ == "status") { rsp.status = v_; return; }
+                    if (note::flash(keys_::rsp_err) == k_) { rsp.err = v_; return; }
+                    if (note::flash(keys_::rsp_status) == k_) { rsp.status = v_; return; }
                 }
                 void on_bool(::note::string_view k_, bool v_) override {
-                    if (k_ == "connected") { rsp.connected = v_; return; }
+                    if (note::flash(keys_::rsp_connected) == k_) { rsp.connected = v_; return; }
                 }
                 void on_number(::note::string_view k_, ::note::string_view raw_) override {
-                    if (k_ == "cobs") { rsp.cobs = ::note::parse_int(raw_); return; }
-                    if (k_ == "length") { rsp.length = ::note::parse_int(raw_); return; }
-                    if (k_ == "max") { rsp.max = ::note::parse_int(raw_); return; }
+                    if (note::flash(keys_::rsp_cobs) == k_) { rsp.cobs = ::note::parse_int(raw_); return; }
+                    if (note::flash(keys_::rsp_length) == k_) { rsp.length = ::note::parse_int(raw_); return; }
+                    if (note::flash(keys_::rsp_max) == k_) { rsp.max = ::note::parse_int(raw_); return; }
                 }
                 void reset() override { rsp = Response{}; }
             };
@@ -188,7 +200,7 @@ struct CardBinary {
         };
 
         void build(JsonBuilder& b) const {
-            if (delete_) b.add("delete", *delete_);
+            if (delete_) note::add_flash(b, note::flash(keys_::delete_), *delete_);
 #if NOTE_EXTRAS
             for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
                 std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
@@ -226,6 +238,17 @@ struct CardBinary {
     ///
     /// @skus{CELL,CELL+WIFI,SKYLO,WIFI}
     struct Clear {
+        struct keys_ {
+            static constexpr char req[] NOTE_FLASH_ATTR = "card.binary";
+            static constexpr char delete_[] NOTE_FLASH_ATTR = "delete";
+            static constexpr char rsp_cobs[] NOTE_FLASH_ATTR = "cobs";
+            static constexpr char rsp_connected[] NOTE_FLASH_ATTR = "connected";
+            static constexpr char rsp_err[] NOTE_FLASH_ATTR = "err";
+            static constexpr char rsp_length[] NOTE_FLASH_ATTR = "length";
+            static constexpr char rsp_max[] NOTE_FLASH_ATTR = "max";
+            static constexpr char rsp_status[] NOTE_FLASH_ATTR = "status";
+        };
+
         static constexpr string_view notecard_request = "card.binary";
         static constexpr bool supports_cmd = true;
         static constexpr Safety safety = Safety::Destructive;
@@ -312,16 +335,16 @@ struct CardBinary {
                 Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
                 void on_string(::note::string_view k_, ::note::string_view v_) override {
                     v_ = pool_.intern(v_);
-                    if (k_ == "err") { rsp.err = v_; return; }
-                    if (k_ == "status") { rsp.status = v_; return; }
+                    if (note::flash(keys_::rsp_err) == k_) { rsp.err = v_; return; }
+                    if (note::flash(keys_::rsp_status) == k_) { rsp.status = v_; return; }
                 }
                 void on_bool(::note::string_view k_, bool v_) override {
-                    if (k_ == "connected") { rsp.connected = v_; return; }
+                    if (note::flash(keys_::rsp_connected) == k_) { rsp.connected = v_; return; }
                 }
                 void on_number(::note::string_view k_, ::note::string_view raw_) override {
-                    if (k_ == "cobs") { rsp.cobs = ::note::parse_int(raw_); return; }
-                    if (k_ == "length") { rsp.length = ::note::parse_int(raw_); return; }
-                    if (k_ == "max") { rsp.max = ::note::parse_int(raw_); return; }
+                    if (note::flash(keys_::rsp_cobs) == k_) { rsp.cobs = ::note::parse_int(raw_); return; }
+                    if (note::flash(keys_::rsp_length) == k_) { rsp.length = ::note::parse_int(raw_); return; }
+                    if (note::flash(keys_::rsp_max) == k_) { rsp.max = ::note::parse_int(raw_); return; }
                 }
                 void reset() override { rsp = Response{}; }
             };
@@ -370,7 +393,7 @@ struct CardBinary {
         };
 
         void build(JsonBuilder& b) const {
-            b.add("delete", true);
+            note::add_flash(b, note::flash(keys_::delete_), true);
 #if NOTE_EXTRAS
             for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
                 std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },

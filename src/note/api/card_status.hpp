@@ -16,6 +16,7 @@
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
+#include <note/progmem.hpp>
 #include <note/target.hpp>
 
 namespace note::api {
@@ -31,6 +32,21 @@ namespace note::api {
 ///
 /// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
 struct CardStatus {
+    struct keys_ {
+        static constexpr char req[] NOTE_FLASH_ATTR = "card.status";
+        static constexpr char rsp_cell[] NOTE_FLASH_ATTR = "cell";
+        static constexpr char rsp_connected[] NOTE_FLASH_ATTR = "connected";
+        static constexpr char rsp_gps[] NOTE_FLASH_ATTR = "gps";
+        static constexpr char rsp_inbound[] NOTE_FLASH_ATTR = "inbound";
+        static constexpr char rsp_outbound[] NOTE_FLASH_ATTR = "outbound";
+        static constexpr char rsp_status[] NOTE_FLASH_ATTR = "status";
+        static constexpr char rsp_storage[] NOTE_FLASH_ATTR = "storage";
+        static constexpr char rsp_sync[] NOTE_FLASH_ATTR = "sync";
+        static constexpr char rsp_time[] NOTE_FLASH_ATTR = "time";
+        static constexpr char rsp_usb[] NOTE_FLASH_ATTR = "usb";
+        static constexpr char rsp_wifi[] NOTE_FLASH_ATTR = "wifi";
+    };
+
     static constexpr string_view notecard_request = "card.status";
     static constexpr bool supports_cmd = true;
     static constexpr Safety safety = Safety::ReadOnly;
@@ -170,25 +186,25 @@ struct CardStatus {
             Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
             void on_string(::note::string_view k_, ::note::string_view v_) override {
                 v_ = pool_.intern(v_);
-                if (k_ == "status") { rsp.status = v_; return; }
+                if (note::flash(keys_::rsp_status) == k_) { rsp.status = v_; return; }
             }
             void on_bool(::note::string_view k_, bool v_) override {
-                if (k_ == "cell") { rsp.cell = v_; return; }
-                if (k_ == "connected") { rsp.connected = v_; return; }
+                if (note::flash(keys_::rsp_cell) == k_) { rsp.cell = v_; return; }
+                if (note::flash(keys_::rsp_connected) == k_) { rsp.connected = v_; return; }
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1) || !defined(NOTE_API_STRICT)
-                if (k_ == "gps") { rsp.gps = v_; return; }
+                if (note::flash(keys_::rsp_gps) == k_) { rsp.gps = v_; return; }
 #endif
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 5, 1) || !defined(NOTE_API_STRICT)
-                if (k_ == "sync") { rsp.sync = v_; return; }
+                if (note::flash(keys_::rsp_sync) == k_) { rsp.sync = v_; return; }
 #endif
-                if (k_ == "usb") { rsp.usb = v_; return; }
-                if (k_ == "wifi") { rsp.wifi = v_; return; }
+                if (note::flash(keys_::rsp_usb) == k_) { rsp.usb = v_; return; }
+                if (note::flash(keys_::rsp_wifi) == k_) { rsp.wifi = v_; return; }
             }
             void on_number(::note::string_view k_, ::note::string_view raw_) override {
-                if (k_ == "inbound") { rsp.inbound = ::note::parse_int(raw_); return; }
-                if (k_ == "outbound") { rsp.outbound = ::note::parse_int(raw_); return; }
-                if (k_ == "storage") { rsp.storage = ::note::parse_int(raw_); return; }
-                if (k_ == "time") { rsp.time = ::note::parse_int(raw_); return; }
+                if (note::flash(keys_::rsp_inbound) == k_) { rsp.inbound = ::note::parse_int(raw_); return; }
+                if (note::flash(keys_::rsp_outbound) == k_) { rsp.outbound = ::note::parse_int(raw_); return; }
+                if (note::flash(keys_::rsp_storage) == k_) { rsp.storage = ::note::parse_int(raw_); return; }
+                if (note::flash(keys_::rsp_time) == k_) { rsp.time = ::note::parse_int(raw_); return; }
             }
             void reset() override { rsp = Response{}; }
         };

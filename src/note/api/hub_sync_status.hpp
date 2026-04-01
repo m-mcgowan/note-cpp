@@ -16,6 +16,7 @@
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
+#include <note/progmem.hpp>
 #include <note/target.hpp>
 
 namespace note::api {
@@ -31,6 +32,20 @@ namespace note::api {
 ///
 /// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
 struct HubSyncStatus {
+    struct keys_ {
+        static constexpr char req[] NOTE_FLASH_ATTR = "hub.sync.status";
+        static constexpr char sync[] NOTE_FLASH_ATTR = "sync";
+        static constexpr char rsp_alert[] NOTE_FLASH_ATTR = "alert";
+        static constexpr char rsp_completed[] NOTE_FLASH_ATTR = "completed";
+        static constexpr char rsp_mode[] NOTE_FLASH_ATTR = "mode";
+        static constexpr char rsp_requested[] NOTE_FLASH_ATTR = "requested";
+        static constexpr char rsp_scan[] NOTE_FLASH_ATTR = "scan";
+        static constexpr char rsp_seconds[] NOTE_FLASH_ATTR = "seconds";
+        static constexpr char rsp_status[] NOTE_FLASH_ATTR = "status";
+        static constexpr char rsp_sync[] NOTE_FLASH_ATTR = "sync";
+        static constexpr char rsp_time[] NOTE_FLASH_ATTR = "time";
+    };
+
     static constexpr string_view notecard_request = "hub.sync.status";
     static constexpr bool supports_cmd = true;
     static constexpr Safety safety = Safety::ReadOnly;
@@ -170,23 +185,23 @@ struct HubSyncStatus {
             Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
             void on_string(::note::string_view k_, ::note::string_view v_) override {
                 v_ = pool_.intern(v_);
-                if (k_ == "mode") { rsp.mode = v_; return; }
-                if (k_ == "status") { rsp.status = v_; return; }
+                if (note::flash(keys_::rsp_mode) == k_) { rsp.mode = v_; return; }
+                if (note::flash(keys_::rsp_status) == k_) { rsp.status = v_; return; }
             }
             void on_bool(::note::string_view k_, bool v_) override {
-                if (k_ == "alert") { rsp.alert = v_; return; }
+                if (note::flash(keys_::rsp_alert) == k_) { rsp.alert = v_; return; }
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 1, 1) || !defined(NOTE_API_STRICT)
-                if (k_ == "scan") { rsp.scan = v_; return; }
+                if (note::flash(keys_::rsp_scan) == k_) { rsp.scan = v_; return; }
 #endif
-                if (k_ == "sync") { rsp.sync = v_; return; }
+                if (note::flash(keys_::rsp_sync) == k_) { rsp.sync = v_; return; }
             }
             void on_number(::note::string_view k_, ::note::string_view raw_) override {
-                if (k_ == "completed") { rsp.completed = ::note::parse_int(raw_); return; }
-                if (k_ == "requested") { rsp.requested = ::note::parse_int(raw_); return; }
+                if (note::flash(keys_::rsp_completed) == k_) { rsp.completed = ::note::parse_int(raw_); return; }
+                if (note::flash(keys_::rsp_requested) == k_) { rsp.requested = ::note::parse_int(raw_); return; }
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-                if (k_ == "seconds") { rsp.seconds = ::note::parse_int(raw_); return; }
+                if (note::flash(keys_::rsp_seconds) == k_) { rsp.seconds = ::note::parse_int(raw_); return; }
 #endif
-                if (k_ == "time") { rsp.time = ::note::parse_int(raw_); return; }
+                if (note::flash(keys_::rsp_time) == k_) { rsp.time = ::note::parse_int(raw_); return; }
             }
             void reset() override { rsp = Response{}; }
         };
@@ -255,7 +270,7 @@ struct HubSyncStatus {
     };
 
     void build(JsonBuilder& b) const {
-        if (sync) b.add("sync", *sync);
+        if (sync) note::add_flash(b, note::flash(keys_::sync), *sync);
 #if NOTE_EXTRAS
         for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
             std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },

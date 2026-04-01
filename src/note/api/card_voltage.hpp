@@ -16,6 +16,7 @@
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
+#include <note/progmem.hpp>
 #include <note/target.hpp>
 
 namespace note::api {
@@ -35,6 +36,34 @@ namespace note::api {
 struct CardVoltage {
 
     struct Read {
+        struct keys_ {
+            static constexpr char req[] NOTE_FLASH_ATTR = "card.voltage";
+            static constexpr char alert[] NOTE_FLASH_ATTR = "alert";
+            static constexpr char calibration[] NOTE_FLASH_ATTR = "calibration";
+            static constexpr char hours[] NOTE_FLASH_ATTR = "hours";
+            static constexpr char mode[] NOTE_FLASH_ATTR = "mode";
+            static constexpr char name[] NOTE_FLASH_ATTR = "name";
+            static constexpr char off[] NOTE_FLASH_ATTR = "off";
+            static constexpr char offset[] NOTE_FLASH_ATTR = "offset";
+            static constexpr char on[] NOTE_FLASH_ATTR = "on";
+            static constexpr char set[] NOTE_FLASH_ATTR = "set";
+            static constexpr char sync[] NOTE_FLASH_ATTR = "sync";
+            static constexpr char usb[] NOTE_FLASH_ATTR = "usb";
+            static constexpr char vmax[] NOTE_FLASH_ATTR = "vmax";
+            static constexpr char vmin[] NOTE_FLASH_ATTR = "vmin";
+            static constexpr char rsp_daily[] NOTE_FLASH_ATTR = "daily";
+            static constexpr char rsp_hours[] NOTE_FLASH_ATTR = "hours";
+            static constexpr char rsp_minutes[] NOTE_FLASH_ATTR = "minutes";
+            static constexpr char rsp_mode[] NOTE_FLASH_ATTR = "mode";
+            static constexpr char rsp_monthly[] NOTE_FLASH_ATTR = "monthly";
+            static constexpr char rsp_usb[] NOTE_FLASH_ATTR = "usb";
+            static constexpr char rsp_value[] NOTE_FLASH_ATTR = "value";
+            static constexpr char rsp_vavg[] NOTE_FLASH_ATTR = "vavg";
+            static constexpr char rsp_vmax[] NOTE_FLASH_ATTR = "vmax";
+            static constexpr char rsp_vmin[] NOTE_FLASH_ATTR = "vmin";
+            static constexpr char rsp_weekly[] NOTE_FLASH_ATTR = "weekly";
+        };
+
         static constexpr string_view notecard_request = "card.voltage";
         static constexpr bool supports_cmd = true;
         static constexpr Safety safety = Safety::ReadOnly;
@@ -353,23 +382,23 @@ struct CardVoltage {
                 Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
                 void on_string(::note::string_view k_, ::note::string_view v_) override {
                     v_ = pool_.intern(v_);
-                    if (k_ == "mode") { rsp.mode = v_; return; }
+                    if (note::flash(keys_::rsp_mode) == k_) { rsp.mode = v_; return; }
                 }
                 void on_bool(::note::string_view k_, bool v_) override {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
-                    if (k_ == "usb") { rsp.usb = v_; return; }
+                    if (note::flash(keys_::rsp_usb) == k_) { rsp.usb = v_; return; }
 #endif
                 }
                 void on_number(::note::string_view k_, ::note::string_view raw_) override {
-                    if (k_ == "hours") { rsp.hours = ::note::parse_int(raw_); return; }
-                    if (k_ == "minutes") { rsp.minutes = ::note::parse_int(raw_); return; }
-                    if (k_ == "daily") { rsp.daily = ::note::parse_double(raw_); return; }
-                    if (k_ == "monthly") { rsp.monthly = ::note::parse_double(raw_); return; }
-                    if (k_ == "value") { rsp.value = ::note::parse_double(raw_); return; }
-                    if (k_ == "vavg") { rsp.vavg = ::note::parse_double(raw_); return; }
-                    if (k_ == "vmax") { rsp.vmax = ::note::parse_double(raw_); return; }
-                    if (k_ == "vmin") { rsp.vmin = ::note::parse_double(raw_); return; }
-                    if (k_ == "weekly") { rsp.weekly = ::note::parse_double(raw_); return; }
+                    if (note::flash(keys_::rsp_hours) == k_) { rsp.hours = ::note::parse_int(raw_); return; }
+                    if (note::flash(keys_::rsp_minutes) == k_) { rsp.minutes = ::note::parse_int(raw_); return; }
+                    if (note::flash(keys_::rsp_daily) == k_) { rsp.daily = ::note::parse_double(raw_); return; }
+                    if (note::flash(keys_::rsp_monthly) == k_) { rsp.monthly = ::note::parse_double(raw_); return; }
+                    if (note::flash(keys_::rsp_value) == k_) { rsp.value = ::note::parse_double(raw_); return; }
+                    if (note::flash(keys_::rsp_vavg) == k_) { rsp.vavg = ::note::parse_double(raw_); return; }
+                    if (note::flash(keys_::rsp_vmax) == k_) { rsp.vmax = ::note::parse_double(raw_); return; }
+                    if (note::flash(keys_::rsp_vmin) == k_) { rsp.vmin = ::note::parse_double(raw_); return; }
+                    if (note::flash(keys_::rsp_weekly) == k_) { rsp.weekly = ::note::parse_double(raw_); return; }
                 }
                 void reset() override { rsp = Response{}; }
             };
@@ -445,23 +474,23 @@ struct CardVoltage {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
         void build(JsonBuilder& b) const {
-            if (alert) b.add("alert", *alert);
+            if (alert) note::add_flash(b, note::flash(keys_::alert), *alert);
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 2) || !defined(NOTE_API_STRICT)
-            if (calibration) b.add("calibration", *calibration);
+            if (calibration) note::add_flash(b, note::flash(keys_::calibration), *calibration);
 #endif
-            if (hours) b.add("hours", *hours);
-            if (mode) b.add("mode", *mode);
-            if (name) b.add("name", *name);
-            if (off) b.add("off", *off);
-            if (offset) b.add("offset", *offset);
-            if (on) b.add("on", *on);
-            if (set) b.add("set", *set);
-            if (sync) b.add("sync", *sync);
+            if (hours) note::add_flash(b, note::flash(keys_::hours), *hours);
+            if (mode) note::add_flash(b, note::flash(keys_::mode), *mode);
+            if (name) note::add_flash(b, note::flash(keys_::name), *name);
+            if (off) note::add_flash(b, note::flash(keys_::off), *off);
+            if (offset) note::add_flash(b, note::flash(keys_::offset), *offset);
+            if (on) note::add_flash(b, note::flash(keys_::on), *on);
+            if (set) note::add_flash(b, note::flash(keys_::set), *set);
+            if (sync) note::add_flash(b, note::flash(keys_::sync), *sync);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
-            if (usb) b.add("usb", *usb);
+            if (usb) note::add_flash(b, note::flash(keys_::usb), *usb);
 #endif
-            if (vmax) b.add("vmax", *vmax);
-            if (vmin) b.add("vmin", *vmin);
+            if (vmax) note::add_flash(b, note::flash(keys_::vmax), *vmax);
+            if (vmin) note::add_flash(b, note::flash(keys_::vmin), *vmin);
 #if NOTE_EXTRAS
             for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
                 std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
@@ -552,6 +581,34 @@ struct CardVoltage {
     ///
     /// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
     struct Configure {
+        struct keys_ {
+            static constexpr char req[] NOTE_FLASH_ATTR = "card.voltage";
+            static constexpr char alert[] NOTE_FLASH_ATTR = "alert";
+            static constexpr char calibration[] NOTE_FLASH_ATTR = "calibration";
+            static constexpr char hours[] NOTE_FLASH_ATTR = "hours";
+            static constexpr char mode[] NOTE_FLASH_ATTR = "mode";
+            static constexpr char name[] NOTE_FLASH_ATTR = "name";
+            static constexpr char off[] NOTE_FLASH_ATTR = "off";
+            static constexpr char offset[] NOTE_FLASH_ATTR = "offset";
+            static constexpr char on[] NOTE_FLASH_ATTR = "on";
+            static constexpr char set[] NOTE_FLASH_ATTR = "set";
+            static constexpr char sync[] NOTE_FLASH_ATTR = "sync";
+            static constexpr char usb[] NOTE_FLASH_ATTR = "usb";
+            static constexpr char vmax[] NOTE_FLASH_ATTR = "vmax";
+            static constexpr char vmin[] NOTE_FLASH_ATTR = "vmin";
+            static constexpr char rsp_daily[] NOTE_FLASH_ATTR = "daily";
+            static constexpr char rsp_hours[] NOTE_FLASH_ATTR = "hours";
+            static constexpr char rsp_minutes[] NOTE_FLASH_ATTR = "minutes";
+            static constexpr char rsp_mode[] NOTE_FLASH_ATTR = "mode";
+            static constexpr char rsp_monthly[] NOTE_FLASH_ATTR = "monthly";
+            static constexpr char rsp_usb[] NOTE_FLASH_ATTR = "usb";
+            static constexpr char rsp_value[] NOTE_FLASH_ATTR = "value";
+            static constexpr char rsp_vavg[] NOTE_FLASH_ATTR = "vavg";
+            static constexpr char rsp_vmax[] NOTE_FLASH_ATTR = "vmax";
+            static constexpr char rsp_vmin[] NOTE_FLASH_ATTR = "vmin";
+            static constexpr char rsp_weekly[] NOTE_FLASH_ATTR = "weekly";
+        };
+
         static constexpr string_view notecard_request = "card.voltage";
         static constexpr bool supports_cmd = true;
         static constexpr Safety safety = Safety::Idempotent;
@@ -870,23 +927,23 @@ struct CardVoltage {
                 Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
                 void on_string(::note::string_view k_, ::note::string_view v_) override {
                     v_ = pool_.intern(v_);
-                    if (k_ == "mode") { rsp.mode = v_; return; }
+                    if (note::flash(keys_::rsp_mode) == k_) { rsp.mode = v_; return; }
                 }
                 void on_bool(::note::string_view k_, bool v_) override {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
-                    if (k_ == "usb") { rsp.usb = v_; return; }
+                    if (note::flash(keys_::rsp_usb) == k_) { rsp.usb = v_; return; }
 #endif
                 }
                 void on_number(::note::string_view k_, ::note::string_view raw_) override {
-                    if (k_ == "hours") { rsp.hours = ::note::parse_int(raw_); return; }
-                    if (k_ == "minutes") { rsp.minutes = ::note::parse_int(raw_); return; }
-                    if (k_ == "daily") { rsp.daily = ::note::parse_double(raw_); return; }
-                    if (k_ == "monthly") { rsp.monthly = ::note::parse_double(raw_); return; }
-                    if (k_ == "value") { rsp.value = ::note::parse_double(raw_); return; }
-                    if (k_ == "vavg") { rsp.vavg = ::note::parse_double(raw_); return; }
-                    if (k_ == "vmax") { rsp.vmax = ::note::parse_double(raw_); return; }
-                    if (k_ == "vmin") { rsp.vmin = ::note::parse_double(raw_); return; }
-                    if (k_ == "weekly") { rsp.weekly = ::note::parse_double(raw_); return; }
+                    if (note::flash(keys_::rsp_hours) == k_) { rsp.hours = ::note::parse_int(raw_); return; }
+                    if (note::flash(keys_::rsp_minutes) == k_) { rsp.minutes = ::note::parse_int(raw_); return; }
+                    if (note::flash(keys_::rsp_daily) == k_) { rsp.daily = ::note::parse_double(raw_); return; }
+                    if (note::flash(keys_::rsp_monthly) == k_) { rsp.monthly = ::note::parse_double(raw_); return; }
+                    if (note::flash(keys_::rsp_value) == k_) { rsp.value = ::note::parse_double(raw_); return; }
+                    if (note::flash(keys_::rsp_vavg) == k_) { rsp.vavg = ::note::parse_double(raw_); return; }
+                    if (note::flash(keys_::rsp_vmax) == k_) { rsp.vmax = ::note::parse_double(raw_); return; }
+                    if (note::flash(keys_::rsp_vmin) == k_) { rsp.vmin = ::note::parse_double(raw_); return; }
+                    if (note::flash(keys_::rsp_weekly) == k_) { rsp.weekly = ::note::parse_double(raw_); return; }
                 }
                 void reset() override { rsp = Response{}; }
             };
@@ -962,23 +1019,23 @@ struct CardVoltage {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
         void build(JsonBuilder& b) const {
-            if (alert) b.add("alert", *alert);
+            if (alert) note::add_flash(b, note::flash(keys_::alert), *alert);
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 2) || !defined(NOTE_API_STRICT)
-            if (calibration) b.add("calibration", *calibration);
+            if (calibration) note::add_flash(b, note::flash(keys_::calibration), *calibration);
 #endif
-            if (hours) b.add("hours", *hours);
-            if (mode) b.add("mode", *mode);
-            if (name) b.add("name", *name);
-            if (off) b.add("off", *off);
-            if (offset) b.add("offset", *offset);
-            if (on) b.add("on", *on);
-            if (set) b.add("set", *set);
-            if (sync) b.add("sync", *sync);
+            if (hours) note::add_flash(b, note::flash(keys_::hours), *hours);
+            if (mode) note::add_flash(b, note::flash(keys_::mode), *mode);
+            if (name) note::add_flash(b, note::flash(keys_::name), *name);
+            if (off) note::add_flash(b, note::flash(keys_::off), *off);
+            if (offset) note::add_flash(b, note::flash(keys_::offset), *offset);
+            if (on) note::add_flash(b, note::flash(keys_::on), *on);
+            if (set) note::add_flash(b, note::flash(keys_::set), *set);
+            if (sync) note::add_flash(b, note::flash(keys_::sync), *sync);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
-            if (usb) b.add("usb", *usb);
+            if (usb) note::add_flash(b, note::flash(keys_::usb), *usb);
 #endif
-            if (vmax) b.add("vmax", *vmax);
-            if (vmin) b.add("vmin", *vmin);
+            if (vmax) note::add_flash(b, note::flash(keys_::vmax), *vmax);
+            if (vmin) note::add_flash(b, note::flash(keys_::vmin), *vmin);
 #if NOTE_EXTRAS
             for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
                 std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },

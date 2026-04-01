@@ -17,6 +17,7 @@
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
+#include <note/progmem.hpp>
 #include <note/target.hpp>
 
 namespace note::api {
@@ -33,6 +34,15 @@ namespace note::api {
 ///
 /// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
 struct NoteUpdate {
+    struct keys_ {
+        static constexpr char req[] NOTE_FLASH_ATTR = "note.update";
+        static constexpr char body[] NOTE_FLASH_ATTR = "body";
+        static constexpr char file[] NOTE_FLASH_ATTR = "file";
+        static constexpr char noteId[] NOTE_FLASH_ATTR = "note";
+        static constexpr char payload[] NOTE_FLASH_ATTR = "payload";
+        static constexpr char verify[] NOTE_FLASH_ATTR = "verify";
+    };
+
     static constexpr string_view notecard_request = "note.update";
     static constexpr bool supports_cmd = true;
     static constexpr Safety safety = Safety::Idempotent;
@@ -106,10 +116,10 @@ struct NoteUpdate {
 
     void build(JsonBuilder& b) const {
         body.write_to(b);
-        b.add("file", file);
-        b.add("note", noteId);
-        if (payload) b.add("payload", *payload);
-        if (verify) b.add("verify", *verify);
+        note::add_flash(b, note::flash(keys_::file), file);
+        note::add_flash(b, note::flash(keys_::noteId), noteId);
+        if (payload) note::add_flash(b, note::flash(keys_::payload), *payload);
+        if (verify) note::add_flash(b, note::flash(keys_::verify), *verify);
 #if NOTE_EXTRAS
         for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
             std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },

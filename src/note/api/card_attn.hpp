@@ -18,6 +18,7 @@
 #include <note/types.hpp>
 #include <note/flag_set.hpp>
 #include <note/array_field.hpp>
+#include <note/progmem.hpp>
 #include <note/target.hpp>
 
 namespace note::attn {
@@ -72,6 +73,22 @@ namespace note::api {
 struct CardAttn {
 
     struct Request {
+        struct keys_ {
+            static constexpr char req[] NOTE_FLASH_ATTR = "card.attn";
+            static constexpr char files[] NOTE_FLASH_ATTR = "files";
+            static constexpr char mode[] NOTE_FLASH_ATTR = "mode";
+            static constexpr char off[] NOTE_FLASH_ATTR = "off";
+            static constexpr char on[] NOTE_FLASH_ATTR = "on";
+            static constexpr char payload[] NOTE_FLASH_ATTR = "payload";
+            static constexpr char seconds[] NOTE_FLASH_ATTR = "seconds";
+            static constexpr char start[] NOTE_FLASH_ATTR = "start";
+            static constexpr char verify[] NOTE_FLASH_ATTR = "verify";
+            static constexpr char rsp_off[] NOTE_FLASH_ATTR = "off";
+            static constexpr char rsp_payload[] NOTE_FLASH_ATTR = "payload";
+            static constexpr char rsp_set[] NOTE_FLASH_ATTR = "set";
+            static constexpr char rsp_time[] NOTE_FLASH_ATTR = "time";
+        };
+
         static constexpr string_view notecard_request = "card.attn";
         static constexpr bool supports_cmd = true;
         static constexpr Safety safety = Safety::Idempotent;
@@ -353,16 +370,16 @@ struct CardAttn {
                 Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
                 void on_string(::note::string_view k_, ::note::string_view v_) override {
                     v_ = pool_.intern(v_);
-                    if (k_ == "payload") { rsp.payload = v_; return; }
+                    if (note::flash(keys_::rsp_payload) == k_) { rsp.payload = v_; return; }
                 }
                 void on_bool(::note::string_view k_, bool v_) override {
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
-                    if (k_ == "off") { rsp.off = v_; return; }
+                    if (note::flash(keys_::rsp_off) == k_) { rsp.off = v_; return; }
 #endif
-                    if (k_ == "set") { rsp.set = v_; return; }
+                    if (note::flash(keys_::rsp_set) == k_) { rsp.set = v_; return; }
                 }
                 void on_number(::note::string_view k_, ::note::string_view raw_) override {
-                    if (k_ == "time") { rsp.time = ::note::parse_int(raw_); return; }
+                    if (note::flash(keys_::rsp_time) == k_) { rsp.time = ::note::parse_int(raw_); return; }
                 }
                 void reset() override { rsp = Response{}; }
             };
@@ -411,16 +428,16 @@ struct CardAttn {
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
         void build(JsonBuilder& b) const {
             if (files) files.write_to(b, "files");
-            if (mode) b.add("mode", *mode);
+            if (mode) note::add_flash(b, note::flash(keys_::mode), *mode);
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
-            if (off) b.add("off", *off);
+            if (off) note::add_flash(b, note::flash(keys_::off), *off);
 #endif
-            if (on) b.add("on", *on);
-            if (payload) b.add("payload", *payload);
-            if (seconds) b.add("seconds", *seconds);
-            if (start) b.add("start", *start);
+            if (on) note::add_flash(b, note::flash(keys_::on), *on);
+            if (payload) note::add_flash(b, note::flash(keys_::payload), *payload);
+            if (seconds) note::add_flash(b, note::flash(keys_::seconds), *seconds);
+            if (start) note::add_flash(b, note::flash(keys_::start), *start);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
-            if (verify) b.add("verify", *verify);
+            if (verify) note::add_flash(b, note::flash(keys_::verify), *verify);
 #endif
 #if NOTE_EXTRAS
             for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
@@ -484,6 +501,15 @@ struct CardAttn {
     ///
     /// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
     struct Arm {
+        struct keys_ {
+            static constexpr char req[] NOTE_FLASH_ATTR = "card.attn";
+            static constexpr char files[] NOTE_FLASH_ATTR = "files";
+            static constexpr char triggers[] NOTE_FLASH_ATTR = "mode";
+            static constexpr char on[] NOTE_FLASH_ATTR = "on";
+            static constexpr char seconds[] NOTE_FLASH_ATTR = "seconds";
+            static constexpr char rsp_set[] NOTE_FLASH_ATTR = "set";
+        };
+
         static constexpr string_view notecard_request = "card.attn";
         static constexpr bool supports_cmd = true;
         static constexpr Safety safety = Safety::Idempotent;
@@ -680,7 +706,7 @@ struct CardAttn {
                 ::note::StringPool& pool_;
                 Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
                 void on_bool(::note::string_view k_, bool v_) override {
-                    if (k_ == "set") { rsp.set = v_; return; }
+                    if (note::flash(keys_::rsp_set) == k_) { rsp.set = v_; return; }
                 }
                 void reset() override { rsp = Response{}; }
             };
@@ -711,12 +737,12 @@ struct CardAttn {
                 char mp_[96];
                 std::snprintf(mp_, sizeof(mp_), "arm,%.*s",
                              (int)(*triggers).size(), (*triggers).data());
-                b.add("mode", note::string_view{mp_});
+                note::add_flash(b, note::flash(keys_::triggers), note::string_view{mp_});
             } else {
-                b.add("mode", "arm");
+                note::add_flash(b, note::flash(keys_::triggers), "arm");
             }
-            if (on) b.add("on", *on);
-            if (seconds) b.add("seconds", *seconds);
+            if (on) note::add_flash(b, note::flash(keys_::on), *on);
+            if (seconds) note::add_flash(b, note::flash(keys_::seconds), *seconds);
 #if NOTE_EXTRAS
             for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
                 std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
@@ -758,6 +784,12 @@ struct CardAttn {
     ///
     /// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
     struct Watchdog {
+        struct keys_ {
+            static constexpr char req[] NOTE_FLASH_ATTR = "card.attn";
+            static constexpr char seconds[] NOTE_FLASH_ATTR = "seconds";
+            static constexpr char mode[] NOTE_FLASH_ATTR = "mode";
+        };
+
         static constexpr string_view notecard_request = "card.attn";
         static constexpr bool supports_cmd = true;
         static constexpr Safety safety = Safety::Idempotent;
@@ -806,8 +838,8 @@ struct CardAttn {
         using Response = void;
 
         void build(JsonBuilder& b) const {
-            b.add("mode", "watchdog");
-            if (seconds) b.add("seconds", *seconds);
+            note::add_flash(b, note::flash(keys_::mode), "watchdog");
+            if (seconds) note::add_flash(b, note::flash(keys_::seconds), *seconds);
 #if NOTE_EXTRAS
             for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
                 std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
@@ -841,6 +873,13 @@ struct CardAttn {
     ///
     /// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
     struct Sleep {
+        struct keys_ {
+            static constexpr char req[] NOTE_FLASH_ATTR = "card.attn";
+            static constexpr char payload[] NOTE_FLASH_ATTR = "payload";
+            static constexpr char seconds[] NOTE_FLASH_ATTR = "seconds";
+            static constexpr char mode[] NOTE_FLASH_ATTR = "mode";
+        };
+
         static constexpr string_view notecard_request = "card.attn";
         static constexpr bool supports_cmd = true;
         static constexpr Safety safety = Safety::Idempotent;
@@ -897,9 +936,9 @@ struct CardAttn {
         using Response = void;
 
         void build(JsonBuilder& b) const {
-            b.add("mode", "sleep");
-            if (payload) b.add("payload", *payload);
-            if (seconds) b.add("seconds", *seconds);
+            note::add_flash(b, note::flash(keys_::mode), "sleep");
+            if (payload) note::add_flash(b, note::flash(keys_::payload), *payload);
+            if (seconds) note::add_flash(b, note::flash(keys_::seconds), *seconds);
 #if NOTE_EXTRAS
             for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
                 std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
@@ -937,6 +976,13 @@ struct CardAttn {
     ///
     /// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
     struct Retrieve {
+        struct keys_ {
+            static constexpr char req[] NOTE_FLASH_ATTR = "card.attn";
+            static constexpr char start[] NOTE_FLASH_ATTR = "start";
+            static constexpr char rsp_payload[] NOTE_FLASH_ATTR = "payload";
+            static constexpr char rsp_time[] NOTE_FLASH_ATTR = "time";
+        };
+
         static constexpr string_view notecard_request = "card.attn";
         static constexpr bool supports_cmd = false;
         static constexpr Safety safety = Safety::Idempotent;
@@ -1005,10 +1051,10 @@ struct CardAttn {
                 Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
                 void on_string(::note::string_view k_, ::note::string_view v_) override {
                     v_ = pool_.intern(v_);
-                    if (k_ == "payload") { rsp.payload = v_; return; }
+                    if (note::flash(keys_::rsp_payload) == k_) { rsp.payload = v_; return; }
                 }
                 void on_number(::note::string_view k_, ::note::string_view raw_) override {
-                    if (k_ == "time") { rsp.time = ::note::parse_int(raw_); return; }
+                    if (note::flash(keys_::rsp_time) == k_) { rsp.time = ::note::parse_int(raw_); return; }
                 }
                 void reset() override { rsp = Response{}; }
             };
@@ -1040,7 +1086,7 @@ struct CardAttn {
         };
 
         void build(JsonBuilder& b) const {
-            b.add("start", true);
+            note::add_flash(b, note::flash(keys_::start), true);
 #if NOTE_EXTRAS
             for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
                 std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
@@ -1068,6 +1114,11 @@ struct CardAttn {
     ///
     /// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
     struct Disarm {
+        struct keys_ {
+            static constexpr char req[] NOTE_FLASH_ATTR = "card.attn";
+            static constexpr char mode[] NOTE_FLASH_ATTR = "mode";
+        };
+
         static constexpr string_view notecard_request = "card.attn";
         static constexpr bool supports_cmd = true;
         static constexpr Safety safety = Safety::Idempotent;
@@ -1103,7 +1154,7 @@ struct CardAttn {
         using Response = void;
 
         void build(JsonBuilder& b) const {
-            b.add("mode", "disarm,-all");
+            note::add_flash(b, note::flash(keys_::mode), "disarm,-all");
 #if NOTE_EXTRAS
             for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
                 std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
@@ -1133,6 +1184,13 @@ struct CardAttn {
     ///
     /// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
     struct Query {
+        struct keys_ {
+            static constexpr char req[] NOTE_FLASH_ATTR = "card.attn";
+            static constexpr char verify[] NOTE_FLASH_ATTR = "verify";
+            static constexpr char rsp_off[] NOTE_FLASH_ATTR = "off";
+            static constexpr char rsp_set[] NOTE_FLASH_ATTR = "set";
+        };
+
         static constexpr string_view notecard_request = "card.attn";
         static constexpr bool supports_cmd = false;
         static constexpr Safety safety = Safety::ReadOnly;
@@ -1239,9 +1297,9 @@ struct CardAttn {
                 Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
                 void on_bool(::note::string_view k_, bool v_) override {
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
-                    if (k_ == "off") { rsp.off = v_; return; }
+                    if (note::flash(keys_::rsp_off) == k_) { rsp.off = v_; return; }
 #endif
-                    if (k_ == "set") { rsp.set = v_; return; }
+                    if (note::flash(keys_::rsp_set) == k_) { rsp.set = v_; return; }
                 }
                 void reset() override { rsp = Response{}; }
             };
@@ -1277,7 +1335,7 @@ struct CardAttn {
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
         void build(JsonBuilder& b) const {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
-            if (verify) b.add("verify", *verify);
+            if (verify) note::add_flash(b, note::flash(keys_::verify), *verify);
 #endif
 #if NOTE_EXTRAS
             for (uint8_t i_ = 0; i_ < extras_count_; ++i_)

@@ -135,11 +135,13 @@ public:
         }
 
         // Buffered fallback: requires a JsonBackend for build/parse.
-        // When Notecard is constructed streaming-only (no backend),
-        // backend_ is null and LTO eliminates this entire block.
+        // Guarded by NOTE_NO_STD_STRING — when defined, the buffered path
+        // (which needs std::string for response buffering) is unavailable.
+#ifndef NOTE_NO_STD_STRING
         if (backend_) {
             return execute_buffered(req);
         }
+#endif
         return Unexpected(make_error(Error::NotReady, "no backend or streaming transport configured"));
     }
 

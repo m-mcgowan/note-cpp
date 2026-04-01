@@ -151,7 +151,12 @@ NFEOF
         "$ROOT/tests/test_attention.cpp" \
         "$ROOT/tests/test_setup.cpp" \
         "$ROOT/tests/test_cobs.cpp" \
-        "$ROOT/tests/test_arduino_printable.cpp"
+        "$ROOT/tests/test_arduino_printable.cpp" \
+        "$ROOT/tests/test_transport_streaming.cpp" \
+        "$ROOT/tests/test_json_sax_streaming.cpp" \
+        "$ROOT/tests/test_streaming_builder.cpp" \
+        "$ROOT/tests/test_endpoint_streaming.cpp" \
+        "$ROOT/tests/test_streaming_errors.cpp"
     /tmp/note-cpp-tests
     echo "  tests: OK"
 
@@ -341,14 +346,28 @@ MIN_BRANCH_COV=85
 
 check_coverage_thresholds() {
     local lcov_file="$1"
-    local summary
-    summary=$(lcov --summary "$lcov_file" --rc branch_coverage=1 2>&1)
 
-    # Parse "  lines.......: 98.5% (5127 of 5206 lines)" etc.
+    # Use per-file FNF/FNH records from the LCOV file for function coverage.
+    # lcov --summary double-counts template instantiations (each FNA record),
+    # inflating the denominator. FNF/FNH counts unique functions per file.
     local lines funcs branches
-    lines=$(echo "$summary" | awk '/lines/{gsub(/%/,""); print $2}')
-    funcs=$(echo "$summary" | awk '/functions/{gsub(/%/,""); print $2}')
-    branches=$(echo "$summary" | awk '/branches/{gsub(/%/,""); print $2}')
+    read -r lines funcs branches < <(python3 -c "
+import sys
+lf=lh=ff=fh=bf=bh=0
+with open('$lcov_file') as f:
+    for line in f:
+        line = line.strip()
+        if line.startswith('LF:'): lf += int(line[3:])
+        elif line.startswith('LH:'): lh += int(line[3:])
+        elif line.startswith('FNF:'): ff += int(line[4:])
+        elif line.startswith('FNH:'): fh += int(line[4:])
+        elif line.startswith('BRF:'): bf += int(line[4:])
+        elif line.startswith('BRH:'): bh += int(line[4:])
+l = 100.0*lh/lf if lf else 0
+fn = 100.0*fh/ff if ff else 0
+b = 100.0*bh/bf if bf else 0
+print(f'{l:.1f} {fn:.1f} {b:.1f}')
+")
 
     echo
     local FAILED=0
@@ -408,7 +427,12 @@ run_coverage_clang() {
         "$ROOT/tests/test_json_sax.cpp" \
         "$ROOT/tests/test_target.cpp" \
         "$ROOT/tests/test_make_api.cpp" \
-        "$ROOT/tests/test_units.cpp"
+        "$ROOT/tests/test_units.cpp" \
+        "$ROOT/tests/test_transport_streaming.cpp" \
+        "$ROOT/tests/test_json_sax_streaming.cpp" \
+        "$ROOT/tests/test_streaming_builder.cpp" \
+        "$ROOT/tests/test_endpoint_streaming.cpp" \
+        "$ROOT/tests/test_streaming_errors.cpp"
     LLVM_PROFILE_FILE="$PROFRAW" "$BINARY"
 
     "$LLVM_PROFDATA" merge -sparse "$PROFRAW" -o "$PROFDATA"
@@ -524,6 +548,8 @@ run_coverage() {
         test_target test_make_api test_units
         test_connection test_sync test_templates test_attention test_setup
         test_arduino_printable test_intent_flags test_cobs
+        test_transport_streaming test_json_sax_streaming test_streaming_builder
+        test_endpoint_streaming test_streaming_errors
     )
     for name in "${SRCS[@]}"; do
         "$GCC" $CXXFLAGS --coverage -fprofile-arcs $INCLUDE -I "$ROOT/tests" \

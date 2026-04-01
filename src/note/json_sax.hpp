@@ -89,7 +89,7 @@ public:
         skip_ws();
         if (pos_ >= len_) return "empty input";
 
-        if (json_[pos_] != '{') return "expected object";
+        if (json_[pos_] != '{') return NOTE_ERR("expected object");
         auto err = parse_object({});
         if (!err.empty()) return err;
 
@@ -144,7 +144,7 @@ private:
             if (c == '\\') {
                 has_escape = true;
                 ++pos_;  // skip backslash
-                if (pos_ >= len_) return "unexpected end in escape";
+                if (pos_ >= len_) return NOTE_ERR("unexpected end in escape");
                 char esc = json_[pos_];
                 if (esc == 'u') {
                     // Skip \uXXXX
@@ -153,17 +153,17 @@ private:
                         char h = json_[pos_];
                         if (!((h >= '0' && h <= '9') || (h >= 'a' && h <= 'f') ||
                               (h >= 'A' && h <= 'F')))
-                            return "invalid hex in \\u escape";
+                            return NOTE_ERR("invalid hex in \\u escape");
                     }
                     continue;
                 }
                 // Other escapes: just skip the escaped char
             }
             if (static_cast<unsigned char>(c) < 0x20 && c != '\t')
-                return "unescaped control character in string";
+                return NOTE_ERR("unescaped control character in string");
             ++pos_;
         }
-        return "unterminated string";
+        return NOTE_ERR("unterminated string");
     }
 
     // Unescape a JSON string into scratch buffer.
@@ -246,7 +246,7 @@ private:
             if (!err.empty()) return err;
 
             skip_ws();
-            if (advance() != ':') return "expected ':'";
+            if (advance() != ':') return NOTE_ERR("expected ':'");
             skip_ws();
 
             // Parse value
@@ -259,7 +259,7 @@ private:
                 sink_.on_object_end(key);
                 return {};
             }
-            if (c != ',') return "expected ',' or '}'";
+            if (c != ',') return NOTE_ERR("expected ',' or '}'");
         }
     }
 
@@ -286,7 +286,7 @@ private:
                 sink_.on_array_end(key);
                 return {};
             }
-            if (c != ',') return "expected ',' or ']'";
+            if (c != ',') return NOTE_ERR("expected ',' or ']'");
         }
     }
 
@@ -312,14 +312,14 @@ private:
         if (c == '-' || (c >= '0' && c <= '9'))
             return parse_number(key);
 
-        return "unexpected character";
+        return NOTE_ERR("unexpected character");
     }
 
     string_view parse_literal(const char* lit, size_t lit_len,
                                string_view key, bool value) {
-        if (pos_ + lit_len > len_) return "unexpected end";
+        if (pos_ + lit_len > len_) return NOTE_ERR("unexpected end");
         for (size_t i = 0; i < lit_len; ++i) {
-            if (json_[pos_ + i] != lit[i]) return "invalid literal";
+            if (json_[pos_ + i] != lit[i]) return NOTE_ERR("invalid literal");
         }
         pos_ += lit_len;
         sink_.on_bool(key, value);
@@ -327,10 +327,10 @@ private:
     }
 
     string_view parse_null(string_view key) {
-        if (pos_ + 4 > len_) return "unexpected end";
+        if (pos_ + 4 > len_) return NOTE_ERR("unexpected end");
         if (json_[pos_] != 'n' || json_[pos_+1] != 'u' ||
             json_[pos_+2] != 'l' || json_[pos_+3] != 'l')
-            return "invalid literal";
+            return NOTE_ERR("invalid literal");
         pos_ += 4;
         sink_.on_null(key);
         return {};
@@ -340,7 +340,7 @@ private:
         size_t start = pos_;
         if (peek() == '-') ++pos_;
 
-        if (pos_ >= len_) return "unexpected end in number";
+        if (pos_ >= len_) return NOTE_ERR("unexpected end in number");
 
         // Integer part
         if (peek() == '0') {
@@ -349,14 +349,14 @@ private:
             while (pos_ < len_ && json_[pos_] >= '0' && json_[pos_] <= '9')
                 ++pos_;
         } else {
-            return "invalid number";
+            return NOTE_ERR("invalid number");
         }
 
         // Fractional part
         if (pos_ < len_ && json_[pos_] == '.') {
             ++pos_;
             if (pos_ >= len_ || json_[pos_] < '0' || json_[pos_] > '9')
-                return "invalid number: digit expected after '.'";
+                return NOTE_ERR("invalid number: digit expected after '.'");
             while (pos_ < len_ && json_[pos_] >= '0' && json_[pos_] <= '9')
                 ++pos_;
         }
@@ -367,7 +367,7 @@ private:
             if (pos_ < len_ && (json_[pos_] == '+' || json_[pos_] == '-'))
                 ++pos_;
             if (pos_ >= len_ || json_[pos_] < '0' || json_[pos_] > '9')
-                return "invalid number: digit expected in exponent";
+                return NOTE_ERR("invalid number: digit expected in exponent");
             while (pos_ < len_ && json_[pos_] >= '0' && json_[pos_] <= '9')
                 ++pos_;
         }

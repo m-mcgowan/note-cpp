@@ -101,7 +101,7 @@ public:
         using Rsp = typename RequestT::Response;
 
         if (!transport_ && !streaming_transport_)
-            return Unexpected(make_error(Error::NotReady, "no transport configured"));
+            return Unexpected(make_error(Error::NotReady, NOTE_ERR("no transport configured")));
 
         // Full streaming path: SAX-parse response directly from transport.
         // Requires both streaming transport and an allocator (for string interning).
@@ -142,7 +142,7 @@ public:
             return execute_buffered(req);
         }
 #endif
-        return Unexpected(make_error(Error::NotReady, "no backend or streaming transport configured"));
+        return Unexpected(make_error(Error::NotReady, NOTE_ERR("no backend or streaming transport configured")));
     }
 
     // ── Binary transfer support ────────────────────────────────────────────
@@ -187,7 +187,7 @@ public:
             string_view req_type,
             std::function<void(JsonBuilder&)> build_fn = {}) {
         if (!transport_ || !backend_)
-            return make_error(Error::NotReady, "no buffered transport configured");
+            return make_error(Error::NotReady, NOTE_ERR("no buffered transport configured"));
 
         auto& builder = backend_->get_builder();
         builder.add("req", req_type);
@@ -217,7 +217,7 @@ public:
             };
             return streaming_transport_->send(fn, &build);
         }
-        if (!transport_) return make_error(Error::NotReady, "no transport configured");
+        if (!transport_) return make_error(Error::NotReady, NOTE_ERR("no transport configured"));
 
         auto& builder = backend_->get_builder();
         builder.add("cmd", RequestT::notecard_request);
@@ -235,7 +235,7 @@ public:
                 if (build_fn) build_fn(b);
             });
         }
-        if (!transport_) return make_error(Error::NotReady, "no transport configured");
+        if (!transport_) return make_error(Error::NotReady, NOTE_ERR("no transport configured"));
 
         auto& builder = backend_->get_builder();
         builder.add("cmd", cmd_type);
@@ -267,22 +267,22 @@ private:
                 });
                 if (!clear) {
                     return ApiResult<typename RequestT::Response>(
-                        ErrorInfo{Error::SendFailed, Cause::Unspecified, "binary reset failed"});
+                        ErrorInfo{Error::SendFailed, Cause::Unspecified, NOTE_ERR("binary reset failed")});
                 }
             }
             auto status = request("card.binary");
             if (!status) {
                 return ApiResult<typename RequestT::Response>(
-                    ErrorInfo{Error::SendFailed, Cause::Unspecified, "binary status query failed"});
+                    ErrorInfo{Error::SendFailed, Cause::Unspecified, NOTE_ERR("binary status query failed")});
             }
             auto max_bytes = (*status)->get_int("max", 0);
             if (max_bytes <= 0) {
                 return ApiResult<typename RequestT::Response>(
-                    ErrorInfo{Error::Overflow, Cause::Unspecified, "binary store not available"});
+                    ErrorInfo{Error::Overflow, Cause::Unspecified, NOTE_ERR("binary store not available")});
             }
             if (static_cast<int32_t>(src.size()) > max_bytes) {
                 return ApiResult<typename RequestT::Response>(
-                    ErrorInfo{Error::Overflow, Cause::Unspecified, "data exceeds binary store capacity"});
+                    ErrorInfo{Error::Overflow, Cause::Unspecified, NOTE_ERR("data exceeds binary store capacity")});
             }
         }
 
@@ -309,7 +309,7 @@ private:
         if (!tx_ok) {
             transport_->reset();
             return ApiResult<typename RequestT::Response>(
-                ErrorInfo{Error::SendFailed, Cause::HalError, "binary transmit failed"});
+                ErrorInfo{Error::SendFailed, Cause::HalError, NOTE_ERR("binary transmit failed")});
         }
 
         // Post-transmit verification: query card.binary status and confirm
@@ -318,12 +318,12 @@ private:
             auto status = request("card.binary");
             if (!status) {
                 return ApiResult<typename RequestT::Response>(
-                    ErrorInfo{Error::ResponseLost, Cause::Unspecified, "binary verify query failed"});
+                    ErrorInfo{Error::ResponseLost, Cause::Unspecified, NOTE_ERR("binary verify query failed")});
             }
             auto stored_md5 = (*status)->get_string("status");
             if (!stored_md5.empty() && stored_md5 != string_view(md5_hex)) {
                 return ApiResult<typename RequestT::Response>(
-                    ErrorInfo{Error::ResponseLost, Cause::CrcMismatch, "binary verify: MD5 mismatch"});
+                    ErrorInfo{Error::ResponseLost, Cause::CrcMismatch, NOTE_ERR("binary verify: MD5 mismatch")});
             }
         }
 
@@ -352,7 +352,7 @@ private:
             if (!r) {
                 transport_->reset();
                 return ApiResult<typename RequestT::Response>(
-                    ErrorInfo{Error::ResponseLost, Cause::Timeout, "binary receive timeout"});
+                    ErrorInfo{Error::ResponseLost, Cause::Timeout, NOTE_ERR("binary receive timeout")});
             }
             size_t n = *r;
             for (size_t i = 0; i < n; ++i) {

@@ -78,7 +78,7 @@ public:
     string_view parse() {
         skip_ws();
         if (at_end()) return "empty input";
-        if (peek() != '{') return "expected object";
+        if (peek() != '{') return NOTE_ERR("expected object");
         auto err = parse_object({});
         if (!err.empty()) return err;
         return {};
@@ -155,15 +155,15 @@ private:
                 continue;
             }
             if (static_cast<unsigned char>(c) < 0x20 && c != '\t')
-                return "unescaped control character in string";
+                return NOTE_ERR("unescaped control character in string");
             advance();
             if (out < scratch_size) scratch[out++] = c;
         }
-        return "unterminated string";
+        return NOTE_ERR("unterminated string");
     }
 
     string_view parse_escape(char* scratch, size_t scratch_size, size_t& out) {
-        if (at_end()) return "unexpected end in escape";
+        if (at_end()) return NOTE_ERR("unexpected end in escape");
         char esc = advance();
         switch (esc) {
         case '"':  if (out < scratch_size) scratch[out++] = '"';  return {};
@@ -177,13 +177,13 @@ private:
         case 'u': {
             uint16_t cp = 0;
             for (int i = 0; i < 4; ++i) {
-                if (at_end()) return "incomplete \\u escape";
+                if (at_end()) return NOTE_ERR("incomplete \\u escape");
                 char h = advance();
                 cp = static_cast<uint16_t>(cp << 4);
                 if (h >= '0' && h <= '9') cp = static_cast<uint16_t>(cp | (h - '0'));
                 else if (h >= 'a' && h <= 'f') cp = static_cast<uint16_t>(cp | (h - 'a' + 10));
                 else if (h >= 'A' && h <= 'F') cp = static_cast<uint16_t>(cp | (h - 'A' + 10));
-                else return "invalid hex in \\u escape";
+                else return NOTE_ERR("invalid hex in \\u escape");
             }
             if (cp < 0x80) {
                 if (out < scratch_size) scratch[out++] = static_cast<char>(cp);
@@ -229,7 +229,7 @@ private:
             if (!err.empty()) return err;
 
             skip_ws();
-            if (advance() != ':') return "expected ':'";
+            if (advance() != ':') return NOTE_ERR("expected ':'");
             skip_ws();
 
             err = parse_value(key);
@@ -241,7 +241,7 @@ private:
                 sink_.on_object_end(parent_key);
                 return {};
             }
-            if (c != ',') return "expected ',' or '}'";
+            if (c != ',') return NOTE_ERR("expected ',' or '}'");
         }
     }
 
@@ -267,7 +267,7 @@ private:
                 sink_.on_array_end(key);
                 return {};
             }
-            if (c != ',') return "expected ',' or ']'";
+            if (c != ',') return NOTE_ERR("expected ',' or ']'");
         }
     }
 
@@ -292,14 +292,14 @@ private:
         if (c == '-' || (c >= '0' && c <= '9'))
             return parse_number(key);
 
-        return "unexpected character";
+        return NOTE_ERR("unexpected character");
     }
 
     string_view parse_literal(const char* lit, size_t lit_len,
                                string_view key, bool value) {
         for (size_t i = 0; i < lit_len; ++i) {
-            if (at_end()) return "unexpected end";
-            if (advance() != lit[i]) return "invalid literal";
+            if (at_end()) return NOTE_ERR("unexpected end");
+            if (advance() != lit[i]) return NOTE_ERR("invalid literal");
         }
         sink_.on_bool(key, value);
         return {};
@@ -308,8 +308,8 @@ private:
     string_view parse_null(string_view key) {
         const char* lit = "null";
         for (size_t i = 0; i < 4; ++i) {
-            if (at_end()) return "unexpected end";
-            if (advance() != lit[i]) return "invalid literal";
+            if (at_end()) return NOTE_ERR("unexpected end");
+            if (advance() != lit[i]) return NOTE_ERR("invalid literal");
         }
         sink_.on_null(key);
         return {};
@@ -323,7 +323,7 @@ private:
             else advance();
         }
 
-        if (at_end()) return "unexpected end in number";
+        if (at_end()) return NOTE_ERR("unexpected end in number");
 
         if (peek() == '0') {
             if (out < buf_.val_size) buf_.val[out++] = advance();
@@ -334,14 +334,14 @@ private:
                 else advance();
             }
         } else {
-            return "invalid number";
+            return NOTE_ERR("invalid number");
         }
 
         if (!at_end() && peek() == '.') {
             if (out < buf_.val_size) buf_.val[out++] = advance();
             else advance();
             if (at_end() || peek() < '0' || peek() > '9')
-                return "invalid number: digit expected after '.'";
+                return NOTE_ERR("invalid number: digit expected after '.'");
             while (!at_end() && peek() >= '0' && peek() <= '9') {
                 if (out < buf_.val_size) buf_.val[out++] = advance();
                 else advance();
@@ -356,7 +356,7 @@ private:
                 else advance();
             }
             if (at_end() || peek() < '0' || peek() > '9')
-                return "invalid number: digit expected in exponent";
+                return NOTE_ERR("invalid number: digit expected in exponent");
             while (!at_end() && peek() >= '0' && peek() <= '9') {
                 if (out < buf_.val_size) buf_.val[out++] = advance();
                 else advance();

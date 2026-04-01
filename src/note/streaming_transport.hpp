@@ -11,6 +11,7 @@
 #include <note/json.hpp>
 #include <note/json_sax_streaming.hpp>
 #include <note/transport_hal.hpp>
+#include <note/compiler.hpp>
 #include <note/types.hpp>
 
 #ifndef NOTE_NO_CRC
@@ -42,10 +43,10 @@ struct IStreamingTransport {
 
     /// Raw binary I/O (for COBS streaming). Default: not supported.
     virtual Result<void> write(const uint8_t*, size_t) {
-        return make_error(Error::NotReady, "binary transfer not supported");
+        return make_error(Error::NotReady, NOTE_ERR("binary transfer not supported"));
     }
     virtual Result<size_t> read(uint8_t*, size_t, uint32_t) {
-        return make_error(Error::NotReady, "binary transfer not supported");
+        return make_error(Error::NotReady, NOTE_ERR("binary transfer not supported"));
     }
 
     /// Convenience: type-erase a callable.
@@ -123,7 +124,7 @@ public:
 #endif
 
         if (!stream_request(build_fn, ctx))
-            return make_error(Error::SendFailed, Cause::HalError, "transmit failed");
+            return make_error(Error::SendFailed, Cause::HalError, NOTE_ERR("transmit failed"));
         return {};
     }
 
@@ -136,7 +137,7 @@ public:
 
     Result<void> write(const uint8_t* data, size_t len) override {
         if (!hal_.transmit(data, len))
-            return make_error(Error::SendFailed, Cause::HalError, "binary transmit failed");
+            return make_error(Error::SendFailed, Cause::HalError, NOTE_ERR("binary transmit failed"));
         return {};
     }
 
@@ -219,7 +220,7 @@ private:
             }
             crc_enabled_ = true;
         } else if (crc_enabled_) {
-            return make_error(Error::ResponseLost, Cause::CrcMismatch, "expected CRC");
+            return make_error(Error::ResponseLost, Cause::CrcMismatch, NOTE_ERR("expected CRC"));
         }
 #else
         auto read_fn = [&](uint8_t* buf, size_t max, uint32_t t) -> Result<size_t> {

@@ -13,18 +13,15 @@
 
 #include <note/notecard.hpp>
 #include <note/api.hpp>
-#include <note/streaming_transport.hpp>
-#include <note/arduino/serial.hpp>
-#include <note/arena.hpp>
+#include <note/arduino/begin.hpp>
 
 // Arena for string interning during SAX parse (response string fields).
 alignas(4) static char arena_buf[64];
 static note::MonotonicArena arena(arena_buf);
 
-static note::arduino::SerialHal<HardwareSerial> hal(Serial, 9600);
-static note::transport::NotecardSerial serial_hal(hal);
-static note::StreamingTransport transport(serial_hal);
-static note::Notecard notecard(transport, note::arena_allocator(arena));
+// Transport stack + Notecard + API.
+static note::arduino::SerialTransportStack serial(Serial, 9600);
+static note::Notecard notecard(serial.transport, note::arena_allocator(arena));
 static note::Api nc(notecard);
 
 void setup() {

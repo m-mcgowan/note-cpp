@@ -66,6 +66,16 @@ public:
         , streaming_transport_(&transport)
     {}
 
+    /// Streaming-only constructor. No JsonBackend needed — requests are
+    /// streamed via StreamingJsonBuilder, responses SAX-parsed via Sink.
+    /// Requires set_allocator() before execute(). Endpoints without a
+    /// Response::Sink type are not supported (compile error).
+    Notecard(AbstractTransport& transport, Allocator alloc)
+        : transport_(&transport)
+        , streaming_transport_(&transport)
+        , alloc_(alloc)
+    {}
+
     // Configure an allocator for response string interning.
     // When set, execute() copies response string_view fields into the
     // allocator's backing store (e.g. a MonotonicArena) so they survive
@@ -141,51 +151,13 @@ public:
             }
         }
 
-        // Streaming send + buffered receive, OR fully buffered.
-        Result<string_view> rsp = make_error(Error::NotReady, "");
-        if (streaming_transport_) {
-            rsp = streaming_transport_->transact_build([&](JsonBuilder& b) {
-                b.add("req", RequestT::notecard_request);
-                req.build(b);
-            }, default_timeout_ms_);
-        } else {
-            auto& builder = backend_->get_builder();
-            builder.add("req", RequestT::notecard_request);
-            req.build(builder);
-            rsp = transport_->transact(builder.to_view(), default_timeout_ms_);
+        // Buffered fallback: requires a JsonBackend for build/parse.
+        // When Notecard is constructed streaming-only (no backend),
+        // backend_ is null and LTO eliminates this entire block.
+        if (backend_) {
+            return execute_buffered(req);
         }
-        if (!rsp) return Unexpected(rsp.error());
-
-        auto& reader = backend_->get_reader(*rsp);
-        if (reader.has_error()) {
-            return make_error(Error::Json, "JSON parse error");
-        }
-        auto err = reader.get_error();
-        if (!err.empty()) {
-            if (alloc_.has_value()) {
-                // Intern error message into allocator-backed storage
-                StringPool pool(*alloc_);
-                ErrorInfo ei{Error::Notecard, Cause::Unspecified, pool.intern(err)};
-                return ApiResult<Rsp>(std::move(ei));
-            }
-            // Fallback: use parse_response() to get an owned reader that
-            // keeps the error message string_view alive in ApiResult.
-            auto owned = backend_->parse_response(*rsp);
-            ErrorInfo ei{Error::Notecard, Cause::Unspecified, owned->get_error()};
-            return ApiResult<Rsp>(std::move(ei), std::move(owned));
-        }
-        if constexpr (std::is_void_v<Rsp>) {
-            return ApiResult<void>{};
-        } else {
-            ApiResult<Rsp> result(Rsp::parse(reader));
-            if constexpr (detail::has_intern_strings<Rsp>::value) {
-                if (alloc_.has_value()) {
-                    StringPool pool(*alloc_);
-                    result.intern_strings(pool);
-                }
-            }
-            return result;
-        }
+        return Unexpected(make_error(Error::NotReady, "no backend or streaming transport configured"));
     }
 
     // ── Binary transfer support ────────────────────────────────────────────
@@ -425,6 +397,55 @@ private:
     }
 
 #endif // NOTE_NO_STD_STRING
+
+    /// Buffered execute: build JSON via backend, transact, parse response.
+    /// Separated from execute() so LTO can eliminate it when backend_ is null.
+    template<typename RequestT>
+    ApiResult<typename RequestT::Response> execute_buffered(const RequestT& req) {
+        using Rsp = typename RequestT::Response;
+
+        Result<string_view> rsp = make_error(Error::NotReady, "");
+        if (streaming_transport_) {
+            rsp = streaming_transport_->transact_build([&](JsonBuilder& b) {
+                b.add("req", RequestT::notecard_request);
+                req.build(b);
+            }, default_timeout_ms_);
+        } else {
+            auto& builder = backend_->get_builder();
+            builder.add("req", RequestT::notecard_request);
+            req.build(builder);
+            rsp = transport_->transact(builder.to_view(), default_timeout_ms_);
+        }
+        if (!rsp) return Unexpected(rsp.error());
+
+        auto& reader = backend_->get_reader(*rsp);
+        if (reader.has_error()) {
+            return make_error(Error::Json, "JSON parse error");
+        }
+        auto err = reader.get_error();
+        if (!err.empty()) {
+            if (alloc_.has_value()) {
+                StringPool pool(*alloc_);
+                ErrorInfo ei{Error::Notecard, Cause::Unspecified, pool.intern(err)};
+                return ApiResult<Rsp>(std::move(ei));
+            }
+            auto owned = backend_->parse_response(*rsp);
+            ErrorInfo ei{Error::Notecard, Cause::Unspecified, owned->get_error()};
+            return ApiResult<Rsp>(std::move(ei), std::move(owned));
+        }
+        if constexpr (std::is_void_v<Rsp>) {
+            return ApiResult<void>{};
+        } else {
+            ApiResult<Rsp> result(Rsp::parse(reader));
+            if constexpr (detail::has_intern_strings<Rsp>::value) {
+                if (alloc_.has_value()) {
+                    StringPool pool(*alloc_);
+                    result.intern_strings(pool);
+                }
+            }
+            return result;
+        }
+    }
 
     JsonBackend* backend_ = nullptr;
     ITransport* transport_ = nullptr;

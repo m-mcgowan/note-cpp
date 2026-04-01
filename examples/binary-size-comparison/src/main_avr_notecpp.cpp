@@ -1,7 +1,8 @@
 // Binary size comparison: note-cpp on AVR.
 //
-// Uses BufferJsonBackend (zero heap, no external JSON library) with
-// fixed buffers for the streaming transport path. No std::string needed.
+// Full streaming path: request JSON streamed directly to transport via
+// StreamingJsonBuilder, response SAX-parsed directly from transport.
+// No intermediate buffers, no JsonBackend needed.
 //
 // Arduino Uno has only one HW serial (Serial), shared with Notecard.
 // Same transport as the note-c AVR example for a fair comparison.
@@ -10,26 +11,24 @@
 
 // NOTE_NO_STD_STRING is set via build_flags, before any includes.
 
-#include <note/backends/buffer.hpp>
 #include <note/notecard.hpp>
 #include <note/api.hpp>
 #include <note/arduino/serial.hpp>
+#include <note/arena.hpp>
 
-// Streaming build means the backend's build buffer is unused — minimize it.
-// RX buffer holds the full JSON response for parsing.
-static char rx_buf[96];
+// Arena for string interning during SAX parse (response string fields).
+alignas(4) static char arena_buf[64];
+static note::MonotonicArena arena(arena_buf);
 
-static note::backends::BufferJsonBackend<1, 12> backend;
 static note::arduino::SerialHal<HardwareSerial> hal(Serial, 9600);
 static note::transport::NotecardSerial serial_transport(hal);
-static note::Notecard notecard(backend, serial_transport);
+// Streaming-only: no JsonBackend needed. Requests streamed via
+// StreamingJsonBuilder, responses SAX-parsed via Response::Sink.
+static note::Notecard notecard(serial_transport, note::arena_allocator(arena));
 static note::Api nc(notecard);
 
 void setup() {
     Serial.begin(9600);
-
-    // Use fixed buffer for the streaming path (avoids std::string)
-    serial_transport.set_receive_buffer(rx_buf, sizeof(rx_buf));
 
     // Configure connection
     nc.hub.set()
@@ -40,6 +39,8 @@ void setup() {
 }
 
 void loop() {
+    arena.reset();  // reclaim arena between requests
+
     // Read temperature
     auto temp = nc.card.temp().read().execute();
     float temperature = 0;

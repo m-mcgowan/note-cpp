@@ -571,21 +571,23 @@ protected:
         return do_write(crlf, 2);
     }
 
+    /// Type-erased build function: void(*)(JsonBuilder&, void* ctx).
+    /// Avoids per-lambda template instantiation of stream_request.
+    using BuildFnPtr = void(*)(JsonBuilder&, void*);
+
     /// Stream a JSON request to the transport via do_write().
-    /// Returns true on success, false on write error.
-    template<typename BuildFn>
-    bool stream_request(BuildFn& build_fn) {
+    /// Non-template: one copy shared by all callers.
+    bool stream_request(BuildFnPtr build_fn, void* ctx) {
         RawWriter raw(*this);
 
+#ifndef NOTE_NO_CRC
         if (crc_enabled_) {
             CrcWriter crc(raw);
             StreamingJsonBuilder builder(crc);
-            build_fn(builder);
+            build_fn(builder, ctx);
 
-            // Finalize: compute CRC over {…} (with closing })
             uint32_t checksum = crc.finalize_with_brace();
 
-            // Write CRC field + closing } directly (bypassing CRC)
             char suffix[transport::detail::kCrcFieldLen + 1];
             size_t pos = 0;
             suffix[pos++] = ',';
@@ -598,15 +600,26 @@ protected:
             suffix[pos++] = '"';
             suffix[pos++] = '}';
             raw.write(suffix, pos);
-        } else {
+        } else
+#endif // NOTE_NO_CRC
+        {
             StreamingJsonBuilder builder(raw);
-            build_fn(builder);
+            build_fn(builder, ctx);
             raw.write("}", 1);
         }
 
         if (!raw.ok) return false;
 
         return write_line_terminator();
+    }
+
+    /// Convenience: type-erase a callable into BuildFnPtr + void* ctx.
+    template<typename BuildFn>
+    bool stream_request(BuildFn& build_fn) {
+        BuildFnPtr fn = [](JsonBuilder& b, void* p) {
+            (*static_cast<BuildFn*>(p))(b);
+        };
+        return stream_request(fn, &build_fn);
     }
 
     /// Receive a response into the available buffer.
@@ -634,9 +647,10 @@ protected:
     }
 
     /// Receive and SAX-parse a response directly from the transport.
-    /// CRC is verified via CrcAccumulator + CrcFieldSink.
+    /// CRC is verified via CrcAccumulator + CrcFieldSink (unless NOTE_NO_CRC).
     /// The caller's sink receives all events except "crc".
     Result<void> receive_streaming(JsonSink& sink, uint32_t timeout_ms) {
+#ifndef NOTE_NO_CRC
         CrcFieldSink crc_sink(sink);
         transport::detail::CrcAccumulator crc;
 
@@ -661,6 +675,15 @@ protected:
             return make_error(Error::ResponseLost, Cause::CrcMismatch,
                               "expected CRC");
         }
+#else
+        auto read_fn = [&](uint8_t* buf, size_t max, uint32_t t) -> Result<size_t> {
+            return do_read(buf, max, t);
+        };
+
+        auto parse_err = sax_parse_streaming(read_fn, timeout_ms, sink);
+        if (!parse_err.empty())
+            return make_error(Error::Json, parse_err);
+#endif // NOTE_NO_CRC
 
         return {};
     }

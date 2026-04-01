@@ -83,13 +83,11 @@ namespace note {
 
 #if __cplusplus >= 202002L
 template<typename TargetT = Unconstrained, typename NcT = Notecard>
+#else
+template<typename NcT = Notecard>
+#endif
 class Api {
     NcT& nc_;
-#else
-class Api {
-    Notecard& nc_;
-    using NcT = Notecard;
-#endif
 public:
     explicit Api(NcT& nc) : nc_(nc)
         , card{&nc_}
@@ -140,7 +138,11 @@ public:
 
     struct CardAttnFactory {
         NcT* nc_;
-        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
+        template<typename T> T create() {
+            T r;
+            if constexpr (std::is_same_v<NcT, Notecard>) r.nc_ = nc_;
+            return r;
+        }
         /// Configure hardware notifications from a Notecard to a host MCU.
         ///
         /// NOTE: Requires a connection between the Notecard ATTN pin and a GPIO
@@ -164,7 +166,11 @@ public:
 
     struct CardAuxSerialFactory {
         NcT* nc_;
-        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
+        template<typename T> T create() {
+            T r;
+            if constexpr (std::is_same_v<NcT, Notecard>) r.nc_ = nc_;
+            return r;
+        }
         /// Configure various uses of the AUXTX and AUXRX pins on the Notecard's
         /// edge connector.
         auto request() { return create<api::CardAuxSerial::Request>(); }
@@ -183,7 +189,11 @@ public:
 
     struct CardContactFactory {
         NcT* nc_;
-        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
+        template<typename T> T create() {
+            T r;
+            if constexpr (std::is_same_v<NcT, Notecard>) r.nc_ = nc_;
+            return r;
+        }
         /// Used to set or retrieve information about the Notecard maintainer.
         /// Once set, this information is synced to Notehub.
         auto get() { return create<api::CardContact::Get>(); }
@@ -194,7 +204,11 @@ public:
 
     struct CardLocationModeFactory {
         NcT* nc_;
-        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
+        template<typename T> T create() {
+            T r;
+            if constexpr (std::is_same_v<NcT, Notecard>) r.nc_ = nc_;
+            return r;
+        }
         /// Sets location-related configuration settings. Retrieves the current
         /// location mode when passed with no argument.
         auto get() { return create<api::CardLocationMode::Get>(); }
@@ -214,7 +228,11 @@ public:
 
     struct CardPowerFactory {
         NcT* nc_;
-        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
+        template<typename T> T create() {
+            T r;
+            if constexpr (std::is_same_v<NcT, Notecard>) r.nc_ = nc_;
+            return r;
+        }
         /// The `card.power` API is used to configure a connected Mojo device or
         /// to manually request power consumption readings in firmware.
         auto read() { return create<api::CardPower::Read>(); }
@@ -228,7 +246,11 @@ public:
 
     struct CardTempFactory {
         NcT* nc_;
-        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
+        template<typename T> T create() {
+            T r;
+            if constexpr (std::is_same_v<NcT, Notecard>) r.nc_ = nc_;
+            return r;
+        }
         /// Get the current temperature from the Notecard's onboard calibrated
         /// temperature sensor.
         ///
@@ -260,7 +282,11 @@ public:
 
     struct CardVoltageFactory {
         NcT* nc_;
-        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
+        template<typename T> T create() {
+            T r;
+            if constexpr (std::is_same_v<NcT, Notecard>) r.nc_ = nc_;
+            return r;
+        }
         /// Provides the current VMODEM_P voltage level on the Notecard, and
         /// provides information about historical voltage trends. When used with
         /// the mode argument, configures voltage thresholds based on how the
@@ -275,7 +301,11 @@ public:
 
     struct CardWirelessPenaltyFactory {
         NcT* nc_;
-        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
+        template<typename T> T create() {
+            T r;
+            if constexpr (std::is_same_v<NcT, Notecard>) r.nc_ = nc_;
+            return r;
+        }
         /// View the current state of a Notecard Penalty Box, manually remove
         /// the Notecard from a penalty box, or override penalty box defaults.
         auto check() { return create<api::CardWirelessPenalty::Check>(); }
@@ -289,7 +319,11 @@ public:
 
     struct EnvDefaultFactory {
         NcT* nc_;
-        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
+        template<typename T> T create() {
+            T r;
+            if constexpr (std::is_same_v<NcT, Notecard>) r.nc_ = nc_;
+            return r;
+        }
         /// Used by the Notecard host to specify a default value for an
         /// environment variable until that variable is overridden by a device,
         /// project or fleet-wide setting at Notehub.
@@ -310,7 +344,11 @@ public:
 
     struct NoteChangesFactory {
         NcT* nc_;
-        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
+        template<typename T> T create() {
+            T r;
+            if constexpr (std::is_same_v<NcT, Notecard>) r.nc_ = nc_;
+            return r;
+        }
         /// Used to incrementally retrieve changes within a specific Notefile.
         auto peek() { return create<api::NoteChanges::Peek>(); }
         /// Used to incrementally retrieve changes within a specific Notefile.
@@ -323,7 +361,11 @@ public:
 
     struct NoteGetFactory {
         NcT* nc_;
-        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
+        template<typename T> T create() {
+            T r;
+            if constexpr (std::is_same_v<NcT, Notecard>) r.nc_ = nc_;
+            return r;
+        }
         /// Retrieves a Note from a Notefile. The file must either be a DB
         /// Notefile or inbound queue file (see `file` argument below).
         ///
@@ -340,7 +382,11 @@ public:
 
     struct NoteTemplateFactory {
         NcT* nc_;
-        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
+        template<typename T> T create() {
+            T r;
+            if constexpr (std::is_same_v<NcT, Notecard>) r.nc_ = nc_;
+            return r;
+        }
         /// By using the `note.template` request with any `.qo`/`.qos` Notefile,
         /// developers can provide the Notecard with a schema of sorts to apply
         /// to future Notes added to the Notefile. This template acts as a hint
@@ -376,7 +422,11 @@ public:
 
     struct CardAuxFactory {
         NcT* nc_;
-        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
+        template<typename T> T create() {
+            T r;
+            if constexpr (std::is_same_v<NcT, Notecard>) r.nc_ = nc_;
+            return r;
+        }
         /// card.aux
         auto operator()() { return create<api::CardAux>(); }
         CardAuxSerialFactory serial{nc_};
@@ -384,7 +434,11 @@ public:
 
     struct CardBinaryFactory {
         NcT* nc_;
-        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
+        template<typename T> T create() {
+            T r;
+            if constexpr (std::is_same_v<NcT, Notecard>) r.nc_ = nc_;
+            return r;
+        }
         /// View the status of the binary storage area of the Notecard and
         /// optionally clear any data and related `card.binary` variables. See
         /// the guide on Sending and Receiving Large Binary Objects for best
@@ -403,7 +457,11 @@ public:
 
     struct CardLocationFactory {
         NcT* nc_;
-        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
+        template<typename T> T create() {
+            T r;
+            if constexpr (std::is_same_v<NcT, Notecard>) r.nc_ = nc_;
+            return r;
+        }
         /// card.location
         auto operator()() { return create<api::CardLocation>(); }
         CardLocationModeFactory mode{nc_};
@@ -413,7 +471,11 @@ public:
 
     struct CardMotionFactory {
         NcT* nc_;
-        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
+        template<typename T> T create() {
+            T r;
+            if constexpr (std::is_same_v<NcT, Notecard>) r.nc_ = nc_;
+            return r;
+        }
         /// card.motion
         auto operator()() { return create<api::CardMotion>(); }
         /// card.motion.mode
@@ -426,7 +488,11 @@ public:
 
     struct CardWirelessFactory {
         NcT* nc_;
-        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
+        template<typename T> T create() {
+            T r;
+            if constexpr (std::is_same_v<NcT, Notecard>) r.nc_ = nc_;
+            return r;
+        }
         /// card.wireless
         auto operator()() { return create<api::CardWireless>(); }
         CardWirelessPenaltyFactory penalty{nc_};
@@ -434,7 +500,11 @@ public:
 
     struct FileChangesFactory {
         NcT* nc_;
-        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
+        template<typename T> T create() {
+            T r;
+            if constexpr (std::is_same_v<NcT, Notecard>) r.nc_ = nc_;
+            return r;
+        }
         /// file.changes
         auto operator()() { return create<api::FileChanges>(); }
         /// file.changes.pending
@@ -443,7 +513,11 @@ public:
 
     struct HubSyncFactory {
         NcT* nc_;
-        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
+        template<typename T> T create() {
+            T r;
+            if constexpr (std::is_same_v<NcT, Notecard>) r.nc_ = nc_;
+            return r;
+        }
         /// hub.sync
         auto operator()() { return create<api::HubSync>(); }
         /// hub.sync.status
@@ -465,7 +539,11 @@ public:
 #endif
     struct CardGroup {
         NcT* nc_;
-        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
+        template<typename T> T create() {
+            T r;
+            if constexpr (std::is_same_v<NcT, Notecard>) r.nc_ = nc_;
+            return r;
+        }
 
 
         /// card.aux (and nested: card.aux.serial)
@@ -770,7 +848,11 @@ public:
 #endif
     struct DfuGroup {
         NcT* nc_;
-        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
+        template<typename T> T create() {
+            T r;
+            if constexpr (std::is_same_v<NcT, Notecard>) r.nc_ = nc_;
+            return r;
+        }
 
 
 
@@ -816,7 +898,11 @@ public:
 #endif
     struct EnvGroup {
         NcT* nc_;
-        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
+        template<typename T> T create() {
+            T r;
+            if constexpr (std::is_same_v<NcT, Notecard>) r.nc_ = nc_;
+            return r;
+        }
 
 
 
@@ -936,7 +1022,11 @@ public:
 #endif
     struct FileGroup {
         NcT* nc_;
-        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
+        template<typename T> T create() {
+            T r;
+            if constexpr (std::is_same_v<NcT, Notecard>) r.nc_ = nc_;
+            return r;
+        }
 
 
         /// file.changes (and nested: file.changes.pending)
@@ -1007,7 +1097,11 @@ public:
 #endif
     struct HubGroup {
         NcT* nc_;
-        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
+        template<typename T> T create() {
+            T r;
+            if constexpr (std::is_same_v<NcT, Notecard>) r.nc_ = nc_;
+            return r;
+        }
 
 
         /// hub.sync (and nested: hub.sync.status)
@@ -1064,7 +1158,11 @@ public:
 #endif
     struct NoteGroup {
         NcT* nc_;
-        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
+        template<typename T> T create() {
+            T r;
+            if constexpr (std::is_same_v<NcT, Notecard>) r.nc_ = nc_;
+            return r;
+        }
 
 
 
@@ -1279,7 +1377,11 @@ public:
 #endif
     struct NtnGroup {
         NcT* nc_;
-        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
+        template<typename T> T create() {
+            T r;
+            if constexpr (std::is_same_v<NcT, Notecard>) r.nc_ = nc_;
+            return r;
+        }
 
 
 
@@ -1339,7 +1441,11 @@ public:
 #endif
     struct VarGroup {
         NcT* nc_;
-        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
+        template<typename T> T create() {
+            T r;
+            if constexpr (std::is_same_v<NcT, Notecard>) r.nc_ = nc_;
+            return r;
+        }
 
 
 
@@ -1371,7 +1477,11 @@ public:
 #endif
     struct WebGroup {
         NcT* nc_;
-        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
+        template<typename T> T create() {
+            T r;
+            if constexpr (std::is_same_v<NcT, Notecard>) r.nc_ = nc_;
+            return r;
+        }
 
 
 
@@ -1472,10 +1582,11 @@ Api(Notecard&) -> Api<Unconstrained, Notecard>;
 template<typename T>
 Api(Notecard&, T) -> Api<T, Notecard>;
 
-template<typename T = Unconstrained>
-auto make_api(Notecard& nc, T = {}) { return Api<T>(nc); }
+template<typename T = Unconstrained, typename NcT = Notecard>
+auto make_api(NcT& nc, T = {}) { return Api<T, NcT>(nc); }
 #else
-inline Api make_api(Notecard& nc) { return Api(nc); }
+template<typename NcT = Notecard>
+Api<NcT> make_api(NcT& nc) { return Api<NcT>(nc); }
 #endif
 
 } // namespace note

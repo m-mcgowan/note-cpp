@@ -13,13 +13,11 @@ namespace note {
 
 #if __cplusplus >= 202002L
 template<typename TargetT = Unconstrained, typename NcT = Notecard>
+#else
+template<typename NcT = Notecard>
+#endif
 class Api {
     NcT& nc_;
-#else
-class Api {
-    Notecard& nc_;
-    using NcT = Notecard;
-#endif
 public:
     explicit Api(NcT& nc) : nc_(nc)
 {% for group in resource_groups %}
@@ -64,7 +62,11 @@ public:
 {% if endpoint.needs_factory and not endpoint.has_children %}
     struct {{ endpoint.struct_name }}Factory {
         NcT* nc_;
-        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
+        template<typename T> T create() {
+            T r;
+            if constexpr (std::is_same_v<NcT, Notecard>) r.nc_ = nc_;
+            return r;
+        }
 {% if endpoint.is_polymorphic %}
 {% for op in endpoint.operations %}
 {% if op.description %}
@@ -111,7 +113,11 @@ public:
 {% if endpoint.needs_factory and endpoint.has_children %}
     struct {{ endpoint.struct_name }}Factory {
         NcT* nc_;
-        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
+        template<typename T> T create() {
+            T r;
+            if constexpr (std::is_same_v<NcT, Notecard>) r.nc_ = nc_;
+            return r;
+        }
 {% if endpoint.is_polymorphic %}
 {% for op in endpoint.operations %}
 {% if op.description %}
@@ -248,7 +254,11 @@ public:
 #endif
     struct {{ group.struct_name }} {
         NcT* nc_;
-        template<typename T> T create() { T r; r.nc_ = nc_; return r; }
+        template<typename T> T create() {
+            T r;
+            if constexpr (std::is_same_v<NcT, Notecard>) r.nc_ = nc_;
+            return r;
+        }
 
 {# Collect parent wire names (only parents with factories) so we can skip their children #}
 {% set parent_wires = [] %}
@@ -366,10 +376,11 @@ Api(Notecard&) -> Api<Unconstrained, Notecard>;
 template<typename T>
 Api(Notecard&, T) -> Api<T, Notecard>;
 
-template<typename T = Unconstrained>
-auto make_api(Notecard& nc, T = {}) { return Api<T>(nc); }
+template<typename T = Unconstrained, typename NcT = Notecard>
+auto make_api(NcT& nc, T = {}) { return Api<T, NcT>(nc); }
 #else
-inline Api make_api(Notecard& nc) { return Api(nc); }
+template<typename NcT = Notecard>
+Api<NcT> make_api(NcT& nc) { return Api<NcT>(nc); }
 #endif
 
 } // namespace note

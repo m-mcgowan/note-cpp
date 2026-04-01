@@ -11,7 +11,7 @@
 
 // NOTE_NO_STD_STRING is set via build_flags, before any includes.
 
-#include <note/notecard.hpp>
+#include <note/static_notecard.hpp>
 #include <note/api.hpp>
 #include <note/arduino/begin.hpp>
 
@@ -19,10 +19,10 @@
 alignas(4) static char arena_buf[64];
 static note::MonotonicArena arena(arena_buf);
 
-// Transport stack + Notecard + API.
-static note::arduino::SerialTransportStack serial(Serial, 9600);
-static note::Notecard notecard(serial.transport, note::arena_allocator(arena));
-static note::Api nc(notecard);
+// Zero-vtable Notecard: transport stack owned by value, no virtual dispatch.
+using SerialNotecard = note::StaticNotecard<note::arduino::SerialTransportStack<>>;
+static SerialNotecard notecard(note::arena_allocator(arena), Serial, 9600);
+static note::Api<SerialNotecard> nc(notecard);
 
 void setup() {
     Serial.begin(9600);

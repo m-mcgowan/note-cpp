@@ -31,6 +31,42 @@ The naming rule: first segment becomes the module, remaining segments become a c
 - **Safety classification** -- `ReadOnly`, `Idempotent`, `Destructive` inform retry logic
 - **Target constraints** -- C++20 concepts that warn/error when an endpoint isn't available on the target SKU
 
+## Transport and Construction
+
+`note-cpp` has two construction paths, matching the two transport interfaces:
+
+### Streaming path (recommended)
+
+```cpp
+// Your hardware
+MySerialHal hal;
+note::transport::NotecardSerial serial_hal(hal);    // TransportHal
+note::StreamingTransport transport(serial_hal);     // IStreamingTransport
+
+// Zero heap — arena allocator for string interning
+char pool[256];
+note::MonotonicArena arena(pool);
+note::Notecard nc(transport, note::arena_allocator(arena));
+note::Api api(nc);
+```
+
+No `JsonBackend`. No `std::string`. No `operator new`. Requests stream directly to the transport via `StreamingJsonBuilder`; responses are SAX-parsed from the wire into typed `Response::Sink` objects.
+
+On AVR, this path produces a 28,760-byte binary (89% of 32 KB flash) with zero heap.
+
+### Buffered path (tests/compat)
+
+```cpp
+note::backends::BufferJsonBackend<512, 64> backend;
+MockTransport transport;                            // IBufferedTransport
+note::Notecard nc(backend, transport);
+note::Api api(nc);
+```
+
+Requires a `JsonBackend` for request building and response parsing. Used by `CallbackTransport` in test harnesses and by `NotecardI2c` (which still extends `AbstractTransport`).
+
+Both paths expose the same `Notecard` / `Api` interface — the API layer is agnostic to the transport underneath.
+
 ## Layer 1: Wire-mapped requests
 
 Layer 1 maps 1:1 to Notecard `req` strings, matching `note-python`'s naming. Each `req` string becomes a request builder with typed setters.

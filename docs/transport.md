@@ -1,21 +1,51 @@
 # note-cpp Transport Layer
 
-note-cpp ships a complete, header-only implementation of both Notecard wire protocols in `include/note/transport/`. These are a direct alternative to note-c's serial and I2C transports — same timing, same CRC, same retry behaviour, no global state, no cJSON dependency.
+note-cpp ships a complete, header-only implementation of both Notecard wire protocols. These are a direct alternative to note-c's serial and I2C transports — same timing, same CRC, same retry behaviour, no global state, no cJSON dependency.
+
+## Architecture
+
+The transport layer is split into three levels:
 
 ```
+TransportHal           Pure hardware abstraction (5 primitives)
+  ↓
+StreamingTransport     Protocol logic: retry, CRC, JSON framing
+  ↓
+IStreamingTransport    Interface consumed by Notecard
+```
+
+**`TransportHal`** (`include/note/transport_hal.hpp`) — the only thing you implement. Five methods: `transmit()`, `read()`, `reset()`, `write_line_terminator()`, `delay()`. No protocol logic, no buffers.
+
+**`StreamingTransport`** (`include/note/streaming_transport.hpp`) — protocol engine over any `TransportHal&`. Handles retry loops, CRC (append on send, verify on receive), and JSON framing. Implements `IStreamingTransport`.
+
+**`IStreamingTransport`** (`include/note/streaming_transport.hpp`) — the interface `Notecard` consumes. Two operations: `transact(build_fn, sink, timeout)` streams a request via a build function and SAX-parses the response into a sink; `send(build_fn)` is fire-and-forget. Also exposes raw `write()`/`read()` for binary (COBS) streaming.
+
+```
+include/note/
+    transport_hal.hpp          TransportHal (pure HAL)
+    streaming_transport.hpp    IStreamingTransport, StreamingTransport
+
 include/note/transport/
     serial.hpp          SerialHal, SerialCallbackHal, NotecardSerial
     i2c.hpp             I2CHal,    I2cCallbackHal,    NotecardI2c
     detail/crc32.hpp    CRC32, crc_add, crc_check_and_strip  (internal)
 ```
 
-Both transports satisfy the `note::Notecard` request callable signature:
+`NotecardSerial` implements `TransportHal` — it adapts a `SerialHal` (your hardware) into the `TransportHal` interface that `StreamingTransport` consumes. `NotecardI2c` extends `AbstractTransport` (the buffered path, see below).
+
+Auto-reset on first use, CRC auto-detection, segmented TX, and retry logic are handled by `StreamingTransport`, not the HAL.
+
+### Buffered path (backward compatibility)
+
+For testing or platforms that prefer buffered I/O, the original `IBufferedTransport` (renamed from `ITransport`, backward-compat alias kept) and `AbstractTransport` remain available. `CallbackTransport` wraps lambdas as an `IBufferedTransport` for test harnesses. `NotecardI2c` still extends `AbstractTransport`.
 
 ```cpp
-std::function<Result<std::string>(note::string_view request, uint32_t timeout_ms)>
-```
+// Buffered path — for tests and backward compat
+note::Notecard nc(backend, buffered_transport);
 
-Auto-reset on first use, CRC auto-detection, segmented TX, and retry logic are all handled internally.
+// Streaming path — zero buffer, zero heap
+note::Notecard nc(streaming_transport, allocator);
+```
 
 ---
 
@@ -46,10 +76,12 @@ public:
 };
 
 MySerial hal;
-note::transport::NotecardSerial transport(hal);
-note::Notecard nc(backend,
-    [&transport](note::string_view req, uint32_t t) { return transport(req, t); });
+note::transport::NotecardSerial serial_hal(hal);  // implements TransportHal
+note::StreamingTransport transport(serial_hal);    // protocol logic
+note::Notecard nc(transport, allocator);           // streaming path
 ```
+
+`NotecardSerial` implements `TransportHal` (not `AbstractTransport`). It adapts the four `SerialHal` primitives into `TransportHal`'s five methods — `transmit()`, `read()` (blocking with timeout), `reset()`, `write_line_terminator()` (`\r\n`), and `delay()`. Protocol logic (retry, CRC, JSON framing) is handled by `StreamingTransport`.
 
 ### Callback variant
 
@@ -62,7 +94,8 @@ note::transport::SerialCallbackHal hal{
     []() -> uint32_t                        { return millis(); },
     [](uint32_t ms)                         { delay(ms); },
 };
-note::transport::NotecardSerial transport(hal);
+note::transport::NotecardSerial serial_hal(hal);
+note::StreamingTransport transport(serial_hal);
 ```
 
 ### Protocol constants
@@ -90,10 +123,8 @@ All in `namespace note::transport`:
 
 ### Binary streaming
 
-`write()`/`read()` primitives bypass `transact()` for raw binary (COBS) data.
+`IStreamingTransport::write()`/`read()` pass through to `TransportHal::transmit()`/`read()` for raw binary (COBS) data, bypassing JSON framing and CRC.
 On serial, `\n` is the frame delimiter for both JSON responses and COBS streams.
-`do_receive()` stops precisely at `\n`; subsequent `do_read()` calls receive
-the binary data that follows.
 
 ---
 
@@ -103,6 +134,8 @@ the binary data that follows.
 **Ported from:** note-c `n_i2c.c`
 
 ### Implement `I2CHal`
+
+`NotecardI2c` currently extends `AbstractTransport` (the buffered path), so it is used with the buffered `Notecard` constructor. A `TransportHal` migration is planned.
 
 ```cpp
 #include <note/transport/i2c.hpp>
@@ -131,8 +164,7 @@ public:
 
 MyI2c hal;
 note::transport::NotecardI2c transport(hal);
-note::Notecard nc(backend,
-    [&transport](note::string_view req, uint32_t t) { return transport(req, t); });
+note::Notecard nc(backend, transport);  // buffered path (IBufferedTransport)
 ```
 
 ### Callback variant
@@ -147,6 +179,7 @@ note::transport::I2cCallbackHal hal{
     // optional 6th arg: max_transfer override (default 30)
 };
 note::transport::NotecardI2c transport(hal);
+// Use with buffered Notecard constructor: Notecard nc(backend, transport);
 ```
 
 ### Protocol constants
@@ -188,11 +221,16 @@ The default `max_transfer()` is 30 bytes — the limit imposed by the Arduino Wi
 
 ## CRC
 
-Both transports share `note/transport/detail/crc32.hpp` (internal header). CRC is:
+CRC is handled at two levels, depending on the transport path:
+
+**Streaming path** (`StreamingTransport`): CRC is accumulated incrementally. On send, a `CrcWriter` wraps the `JsonWriter` and appends the CRC suffix after the closing brace. On receive, a `CrcAccumulator` feeds on bytes as they arrive, and a `CrcFieldSink` in the SAX sink chain extracts the CRC field. `StreamingTransport` compares accumulated vs extracted values.
+
+**Buffered path** (`AbstractTransport`): CRC uses the in-place buffer functions from `note/transport/detail/crc32.hpp` — `crc_add()` appends CRC to the wire buffer, `crc_check_and_strip()` validates and removes it from the response.
+
+Both paths share the same CRC behavior:
 
 - **Auto-detected**: if the Notecard includes a `"crc"` field in any response, CRC is enabled for all subsequent requests in that session.
 - **Format**: `,"crc":"SSSS:CCCCCCCC"` — 22 bytes appended before the closing `}`. `SSSS` is a 4-hex-digit sequence number; `CCCCCCCC` is the CRC32 of the JSON body (without the CRC field, without the trailing newline).
-- **Validation**: `crc_check_and_strip()` validates sequence and checksum, then strips the field from the response in-place — the caller sees clean JSON.
 - Error responses (`"err"` field present) bypass CRC validation, matching note-c behaviour.
 
 The CRC implementation and test suite are ported directly from note-c and track upstream changes. See `tests/test_transport_crc32.cpp` for the full test coverage mapping.

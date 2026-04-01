@@ -1,29 +1,67 @@
 # Streaming Transport
 
-The transport layer provides three request execution paths with different
-allocation trade-offs. All three share the same `ITransport` interface.
+The transport layer has two interfaces — `IStreamingTransport` (streaming,
+zero-buffer) and `IBufferedTransport` (buffered, for tests/compat). The
+streaming path is the primary design; the buffered path exists for backward
+compatibility and test harnesses.
 
-## Transport Interface
+## Transport Interfaces
+
+### IStreamingTransport (primary)
 
 ```
-ITransport
-  transact(request, timeout) → Result<string_view>   // JSON request/response
-  send(request) → Result<void>                        // fire-and-forget
-  write(data, len) → Result<void>                     // raw byte write
-  read(buf, max_len, timeout) → Result<size_t>        // raw byte read
-  reset()                                             // drain + resync
+IStreamingTransport
+  transact(build_fn, sink, timeout) → Result<void>  // stream request, SAX-parse response
+  send(build_fn) → Result<void>                     // fire-and-forget
+  write(data, len) → Result<void>                   // raw byte write (binary/COBS)
+  read(buf, max_len, timeout) → Result<size_t>      // raw byte read (binary/COBS)
+  reset()                                           // drain + resync
   abort()
 ```
 
-`write()` and `read()` are byte-stream primitives — no framing, CRC, or
-line terminators. Used for binary (COBS) streaming.
+Requests are streamed via a build function (`BuildFn`) that writes JSON
+fields into a `JsonBuilder&`. Responses are SAX-parsed directly from the
+wire into a `JsonSink&`. No intermediate buffers.
 
-`transact()` and `send()` handle the full JSON protocol: wire buffer
-preparation, CRC, retry, and response parsing.
+### IBufferedTransport (backward compat)
+
+```
+IBufferedTransport (was ITransport)
+  transact(request, timeout) → Result<string_view>  // send string, receive string
+  send(request) → Result<void>                      // fire-and-forget
+  write(data, len) → Result<void>                   // raw byte write
+  read(buf, max_len, timeout) → Result<size_t>      // raw byte read
+  reset()
+  abort()
+```
+
+`ITransport` is a type alias for `IBufferedTransport` (kept for source compat).
+
+## Architecture
+
+The streaming path is layered:
+
+```
+SerialHal / I2CHal        Your hardware (4-5 methods)
+  ↓
+NotecardSerial            Implements TransportHal (adapts SerialHal)
+  ↓
+StreamingTransport        Protocol logic: retry, CRC, JSON framing
+  ↓
+IStreamingTransport       Interface consumed by Notecard
+  ↓
+Notecard                  Constructed with (IStreamingTransport&, Allocator)
+```
+
+`TransportHal` is the boundary between hardware and protocol. It has five
+pure virtual methods: `transmit()`, `read()`, `reset()`,
+`write_line_terminator()`, `delay()`. `StreamingTransport` owns all
+protocol logic — retry loops, CRC (append on send, verify on receive), and
+JSON request/response framing. Zero internal buffers.
 
 ## Usage
 
-### Default — streaming just works
+### Arduino — streaming just works
 
 ```cpp
 #include <note/arduino.hpp>
@@ -44,7 +82,7 @@ bytes arrive, strings are interned into heap-backed storage.
 
 No buffers. No tree. No copies.
 
-### Low Memory — explicit arena control
+### Low memory — explicit arena, zero heap
 
 On constrained platforms (or when you want zero heap allocation), provide
 a `MonotonicArena`:
@@ -73,73 +111,89 @@ For I2C:
 nc.begin(Wire, arena_allocator(arena));
 ```
 
-### Non-Arduino — direct transport setup
+### Non-Arduino — streaming path (recommended)
+
+Wire up the three layers directly: `SerialHal` -> `NotecardSerial` (`TransportHal`) -> `StreamingTransport` (`IStreamingTransport`) -> `Notecard`:
+
+```cpp
+#include <note/streaming_transport.hpp>
+#include <note/transport/serial.hpp>
+#include <note/arena.hpp>
+
+MySerialHal hal;                                    // your SerialHal impl
+note::transport::NotecardSerial serial_hal(hal);    // TransportHal
+note::StreamingTransport transport(serial_hal);     // IStreamingTransport
+
+char pool[256];
+note::MonotonicArena arena(pool);
+note::Notecard nc(transport, note::arena_allocator(arena));  // zero heap
+```
+
+No `JsonBackend` required. No `std::string` linked. No `operator new`.
+
+### Non-Arduino — buffered path (tests/compat)
 
 ```cpp
 note::backends::BufferJsonBackend<512, 64> backend;
-note::transport::NotecardSerial transport(hal);
-note::Notecard nc(backend, transport);  // AbstractTransport& → streaming
-nc.set_allocator(note::Allocator{});    // heap, or arena_allocator(arena)
+note::transport::NotecardI2c transport(hal);        // IBufferedTransport
+note::Notecard nc(backend, transport);
+nc.set_allocator(note::Allocator{});                // optional: arena or heap
 ```
+
+## Notecard Constructors
+
+| Constructor | Transport | Backend | Heap |
+|---|---|---|---|
+| `Notecard(IStreamingTransport&, Allocator)` | Streaming | None needed | Zero (arena) |
+| `Notecard(IBufferedTransport&, JsonBackend&)` | Buffered | Required | Depends on backend |
+
+The streaming-only constructor is the recommended path for production.
+It requires no `JsonBackend` — requests build directly into the transport,
+responses SAX-parse directly from the wire. The allocator provides backing
+storage for string interning (typically a `MonotonicArena`).
+
+The buffered constructor exists for test harnesses (where `CallbackTransport`
++ `MockBackend` is convenient) and for I2C (where `NotecardI2c` still extends
+`AbstractTransport`).
 
 ## How execute() Selects the Path
 
 `execute()` picks the best path based on what's configured:
 
-| Streaming transport | Allocator set | Path |
+| Constructor used | Allocator set | Path |
 |---|---|---|
-| Yes | Yes | **Full streaming** — SAX parse from transport, zero buffer |
-| Yes | No | **Streaming send** + buffered receive |
-| No | — | **Fully buffered** — legacy `transact()` path |
+| `IStreamingTransport` | Yes (required) | **Full streaming** — SAX parse from transport, zero buffer |
+| `IBufferedTransport` | Optional | **Fully buffered** — `transact()` with string buffer |
 
 The full streaming path:
-1. `StreamingJsonBuilder` writes request bytes directly to `do_write()`
-2. `sax_parse_streaming()` reads response bytes from `do_read()`
+1. `StreamingJsonBuilder` writes request bytes directly to `TransportHal::transmit()`
+2. `sax_parse_streaming()` reads response bytes from `TransportHal::read()`
 3. `CrcAccumulator` verifies CRC via a 23-byte delayed ring buffer
 4. `Response::Sink` stores fields as SAX callbacks fire
 5. `StringPool` interns string values immediately during callbacks
 
 ## Execution Paths (Internal)
 
-### Path 1: Full streaming (`transact_streaming`)
+### Path 1: Full streaming (via `IStreamingTransport`)
 
-Active when `streaming_transport_` and `alloc_` are both set.
+Active when `Notecard` was constructed with `(IStreamingTransport&, Allocator)`.
 
-- **Send:** `StreamingJsonBuilder` → `CrcWriter` → `RawWriter` → `do_write()`
-- **Receive:** `do_read()` → `CrcAccumulator` → `sax_parse_streaming()` → sink chain
+- **Send:** `StreamingJsonBuilder` → `CrcWriter` → `TransportHal::transmit()`
+- **Receive:** `TransportHal::read()` → `CrcAccumulator` → `sax_parse_streaming()` → sink chain
 - **Sink chain:** `CrcFieldSink` → `ErrorCaptureSink` → `Response::Sink(pool)`
-- **CRC:** accumulated incrementally on both send and receive
+- **CRC:** accumulated incrementally on both send and receive, verified by `StreamingTransport`
 - **Strings:** interned into `StringPool` during SAX callbacks
 - **Retries:** `sink.reset()` + rebuild request from the (still-alive) request object
+- **Buffers:** zero — all data flows through the HAL in small chunks
 
-### Path 2: Streaming send + buffered receive (`transact_build`)
+### Path 2: Fully buffered (via `IBufferedTransport`)
 
-Active when `streaming_transport_` is set but no allocator.
-
-- **Send:** streaming (same as Path 1)
-- **Receive:** response buffered into `ext_buf_` or `response_buf_`
-- **Parse:** `backend_->get_reader()` → `Rsp::parse(reader)`
-- Falls back here when response types lack a `Sink` (e.g. test harness types)
-
-### Path 3: Fully buffered (`transact`)
-
-Active when using `ITransport` (e.g. `CallbackTransport` for testing).
+Active when `Notecard` was constructed with `(IBufferedTransport&, JsonBackend&)`.
 
 - **Send:** `BufferJsonBuilder` → `prepare_wire()` → `do_transmit()`
 - **Receive:** `do_receive()` into `response_buf_`
-- Legacy path — requires `<string>`
-
-### Path 4: Caller-provided buffers (`set_receive_buffer` / `transact_into`)
-
-```cpp
-char buf[512];
-transport.set_receive_buffer(buf, sizeof(buf));
-auto rsp = nc.card.version().execute();
-```
-
-- Zero heap for the receive path
-- `response_buf_` bypassed
-- CRC check in-place on the caller buffer
+- **Parse:** `backend_->get_reader()` → `Rsp::parse(reader)`
+- Used by `CallbackTransport` for testing and `NotecardI2c` for I2C
 
 ### Binary path (`write` / `read` + COBS)
 
@@ -147,58 +201,53 @@ auto rsp = nc.card.version().execute();
 api.card.binary.put().data(buf, len).execute();
 ```
 
-- `do_binary_send`: COBS encode → stream via `write()`, MD5 verify
-- `do_binary_receive`: stream via `read()` → `CobsDecoder.feed()`, MD5 verify
+- `do_binary_send`: COBS encode → stream via `IStreamingTransport::write()` → `TransportHal::transmit()`, MD5 verify
+- `do_binary_receive`: stream via `IStreamingTransport::read()` → `TransportHal::read()` → `CobsDecoder.feed()`, MD5 verify
 - 64-byte stack chunk — no intermediate buffer for the COBS stream
 
 ## CRC Handling
 
-CRC operates on char buffers — no `std::string` involved:
+In the streaming path, CRC is handled entirely by `StreamingTransport`:
 
-```cpp
-// Append CRC to outbound request (in-place)
-wire_len_ = crc_add(wire_data(), wire_len_, wire_capacity(), crc_seq_);
-
-// Verify and strip CRC from inbound response (in-place)
-crc_check_and_strip(buf, len, expected_seq, crc_enabled);
-```
+- **Send:** a `CrcWriter` wraps the `JsonWriter` that writes to `TransportHal::transmit()`. It accumulates the CRC incrementally as JSON bytes are written, then appends the `,"crc":"SSSS:CCCCCCCC"}` suffix.
+- **Receive:** a `CrcAccumulator` feeds on bytes as they arrive from `TransportHal::read()`. A `CrcFieldSink` in the SAX sink chain extracts the CRC field value during parsing. After parsing, `StreamingTransport` compares the accumulated checksum against the extracted field.
 
 Auto-detection: `crc_enabled` flips to `true` when the first valid CRC
 field is found in a response. All subsequent responses must have CRC.
 
+In the buffered path, CRC uses the in-place buffer functions (`crc_add`,
+`crc_check_and_strip`) as before.
+
 ## `NOTE_NO_STD_STRING` Guard
 
-Code that depends on `<string>` or `<functional>` is guarded:
+The streaming path (`TransportHal` + `StreamingTransport` + `IStreamingTransport`)
+has no dependency on `<string>` or `<functional>`. It compiles cleanly with
+`NOTE_NO_STD_STRING` defined.
+
+The buffered path's `AbstractTransport` uses `std::string` for wire and
+response buffers, guarded behind `#ifndef NOTE_NO_STD_STRING`:
 
 ```cpp
 #ifndef NOTE_NO_STD_STRING
     std::string wire_;
     std::string response_buf_;
     virtual Result<void> do_receive(std::string& buf, uint32_t timeout_ms) = 0;
-    // ... legacy transact, streaming transact, binary pipeline ...
 #endif
 ```
 
-When `NOTE_NO_STD_STRING` is defined, only Path 2 (`transact_into` /
-`set_receive_buffer`) is available. This enables compilation on platforms
-without `<string>` (e.g. AVR with polyfills from the compat project).
+On AVR and other platforms without `<string>`, define `NOTE_NO_STD_STRING`
+and use the streaming path exclusively. The AVR binary fits in 32 KB:
+28,760 bytes (89%) flash with zero heap — no `operator new` linked.
 
 ## Remaining Work
 
-### Opt-in / opt-out mechanism
+### I2C migration to TransportHal
 
-Once streaming is verified reliable on all platforms, it should be the
-default. The transition mechanism is deferred — options include a
-`#define NOTE_STREAMING`, per-Notecard configuration, or simply removing
-the buffered fallback.
+`NotecardI2c` still extends `AbstractTransport` (the buffered path). Migrating
+it to implement `TransportHal` would allow I2C to use the streaming path and
+benefit from zero-buffer operation.
 
-### `wire_` std::string removal
-
-The legacy `transact()` path still uses `std::string wire_` for the send
-buffer. The streaming send path (`transact_build`) bypasses it entirely.
-Once all callers migrate to streaming, `wire_` can be removed.
-
-### Implicit Arena → Allocator conversion
+### Implicit Arena -> Allocator conversion
 
 Currently users must call `arena_allocator(arena)` explicitly. A future
 enhancement would add `MonotonicArena::operator Allocator()` for implicit

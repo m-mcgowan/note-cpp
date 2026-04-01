@@ -6,7 +6,9 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
+#ifndef NOTE_NO_STD_STRING
 #include <string>
+#endif
 
 // note::transport::NotecardSerial
 //
@@ -119,6 +121,7 @@ protected:
         return hal_.transmit(crlf, 2);
     }
 
+#ifndef NOTE_NO_STD_STRING
     // Receive until \n. Stops precisely at \n — does not over-read into
     // subsequent data (important when binary follows JSON on serial).
     Result<void> do_receive(std::string& buf, uint32_t timeout_ms) override {
@@ -167,6 +170,8 @@ protected:
             }
         }
     }
+
+#endif // NOTE_NO_STD_STRING
 
     // Raw binary write: plain HAL write, no \r\n terminator.
     bool do_write(const uint8_t* data, size_t len) override {

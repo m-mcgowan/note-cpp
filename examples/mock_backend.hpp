@@ -41,7 +41,7 @@ struct MockBuilder : note::JsonBuilder {
         sep(); buf_ += '"'; buf_ += k; buf_ += "\":["; first_ = true; return *this;
     }
     MockBuilder& end_array() override { buf_ += ']'; first_ = false; return *this; }
-    std::string to_string() override { buf_ += '}'; return std::move(buf_); }
+    note::string_view to_view() override { buf_ += '}'; return buf_; }
 };
 
 struct MockReader : note::JsonReader {

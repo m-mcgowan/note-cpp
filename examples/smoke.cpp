@@ -17,7 +17,7 @@ struct MockBuilder : note::JsonBuilder {
     MockBuilder& end_object() override { return *this; }
     MockBuilder& begin_array(note::string_view) override { return *this; }
     MockBuilder& end_array() override { return *this; }
-    std::string to_string() override { return "{}"; }
+    note::string_view to_view() override { return "{}"; }
 };
 
 struct MockReader : note::JsonReader {

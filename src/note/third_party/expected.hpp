@@ -20,14 +20,13 @@
 #define TL_EXPECTED_VERSION_MINOR 1
 #define TL_EXPECTED_VERSION_PATCH 0
 
+#if defined(__EXCEPTIONS) || defined(_CPPUNWIND)
+#define TL_EXPECTED_EXCEPTIONS_ENABLED
 #include <exception>
+#endif
 #include <functional>
 #include <type_traits>
 #include <utility>
-
-#if defined(__EXCEPTIONS) || defined(_CPPUNWIND)
-#define TL_EXPECTED_EXCEPTIONS_ENABLED
-#endif
 
 #if (defined(_MSC_VER) && _MSC_VER == 1900)
 #define TL_EXPECTED_MSVC2015
@@ -1219,6 +1218,7 @@ template <class T, class E> struct expected_default_ctor_base<T, E, false> {
 };
 } // namespace detail
 
+#ifdef TL_EXPECTED_EXCEPTIONS_ENABLED
 template <class E> class bad_expected_access : public std::exception {
 public:
   explicit bad_expected_access(E e) : m_val(std::move(e)) {}
@@ -1226,6 +1226,11 @@ public:
   virtual const char *what() const noexcept override {
     return "Bad expected access";
   }
+#else
+template <class E> class bad_expected_access {
+public:
+  explicit bad_expected_access(E e) : m_val(std::move(e)) {}
+#endif
 
   const E &error() const & { return m_val; }
   E &error() & { return m_val; }

@@ -19,7 +19,6 @@
 
 #include <cstring>
 #include <memory>
-#include <string>
 
 namespace note::backends {
 

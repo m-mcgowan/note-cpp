@@ -1,5 +1,16 @@
 #pragma once
 
+/// NOTE_PRINTABLE: set to 0 to disable Arduino Printable support on
+/// ErrorInfo and ResponseField. Saves vtable entries and ~900 bytes flash.
+/// Default: enabled when ARDUINO is defined.
+#ifndef NOTE_PRINTABLE
+#ifdef ARDUINO
+#define NOTE_PRINTABLE 1
+#else
+#define NOTE_PRINTABLE 0
+#endif
+#endif
+
 #include <cstdint>
 #include <cstdio>
 #include <string_view>
@@ -49,7 +60,7 @@ enum class Cause : uint8_t {
 };
 
 struct ErrorInfo
-#ifdef ARDUINO
+#if defined(ARDUINO) && NOTE_PRINTABLE
     : public Printable
 #endif
 {
@@ -63,7 +74,7 @@ struct ErrorInfo
     constexpr ErrorInfo(Error c, std::string_view m)
         : code(c), message(m) {}
 
-#ifdef ARDUINO
+#if defined(ARDUINO) && NOTE_PRINTABLE
     /// Arduino Printable support — allows Serial.println(result.error()).
     size_t printTo(Print& p) const override;
 #endif
@@ -142,7 +153,7 @@ inline ErrorString to_string(const ErrorInfo& e) {
     return out;
 }
 
-#ifdef ARDUINO
+#if defined(ARDUINO) && NOTE_PRINTABLE
 inline size_t ErrorInfo::printTo(Print& p) const {
     auto s = to_string(*this);
     return p.write(reinterpret_cast<const uint8_t*>(s.data()), s.size());

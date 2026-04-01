@@ -11,6 +11,14 @@
 /// Both support implicit conversion to const T& for ergonomic reads,
 /// and Printable on Arduino for direct Serial.println() usage.
 
+#ifndef NOTE_PRINTABLE
+#ifdef ARDUINO
+#define NOTE_PRINTABLE 1
+#else
+#define NOTE_PRINTABLE 0
+#endif
+#endif
+
 #include <optional>
 #include <type_traits>
 
@@ -20,7 +28,7 @@ namespace detail {
 
 /// Shared printing logic for Arduino Printable support.
 /// Extracted to avoid duplication between RequestField and ResponseField.
-#ifdef ARDUINO
+#if defined(ARDUINO) && NOTE_PRINTABLE
 template<typename T>
 inline size_t print_field(Print& p, const std::optional<T>& opt) {
     if (!opt.has_value()) return p.print("(unset)");
@@ -75,7 +83,7 @@ struct RequestField : std::optional<T> {
     operator const T&() const { return **this; }
 #endif
 
-#ifdef ARDUINO
+#if defined(ARDUINO) && NOTE_PRINTABLE
     size_t printTo(Print& p) const { return detail::print_field(p, *this); }
 #endif
 };
@@ -87,7 +95,7 @@ struct RequestField : std::optional<T> {
 /// from the JSON response.
 template<typename T>
 struct ResponseField
-#ifdef ARDUINO
+#if defined(ARDUINO) && NOTE_PRINTABLE
     : public Printable
 #endif
 {
@@ -138,7 +146,7 @@ struct ResponseField
         return value_.find(std::forward<Args>(args)...);
     }
 
-#ifdef ARDUINO
+#if defined(ARDUINO) && NOTE_PRINTABLE
     size_t printTo(Print& p) const override {
         if constexpr (std::is_same_v<T, bool>) {
             return p.print(value_ ? "true" : "false");

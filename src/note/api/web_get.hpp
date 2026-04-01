@@ -2,7 +2,12 @@
 #pragma once
 
 #include <note/body.hpp>
+#ifndef NOTE_EXTRAS
+#define NOTE_EXTRAS 1
+#endif
+#if NOTE_EXTRAS
 #include <note/dyn_field.hpp>
+#endif
 #include <note/field.hpp>
 #include <note/json.hpp>
 #include <note/json_sax.hpp>
@@ -133,6 +138,7 @@ struct WebGet {
     } seconds{};
 
 
+#if NOTE_EXTRAS
     template<typename T>
     auto& extra(note::string_view k_, T v_) {
         if (extras_count_ < NOTE_EXTRAS_MAX)
@@ -165,6 +171,7 @@ struct WebGet {
 
     std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
     uint8_t extras_count_ = 0;
+#endif // NOTE_EXTRAS
 
     /// Response containing the result of an HTTP or HTTPS GET request to an
     /// external endpoint.
@@ -296,9 +303,11 @@ struct WebGet {
         if (offset) b.add("offset", *offset);
         if (route) b.add("route", *route);
         if (seconds) b.add("seconds", *seconds);
+#if NOTE_EXTRAS
         for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
             std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
                        extras_[i_].value);
+#endif
     }
 #pragma GCC diagnostic pop
 

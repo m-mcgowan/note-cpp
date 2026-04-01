@@ -1,5 +1,14 @@
 #pragma once
 
+/// Define NOTE_EXTRAS=0 to disable extra()/operator[] on requests.
+/// Saves ~24 bytes .data (variant visitor tables) and eliminates
+/// std::variant/std::array from each request type.
+#ifndef NOTE_EXTRAS
+#define NOTE_EXTRAS 1
+#endif
+
+#if NOTE_EXTRAS
+
 #include <array>
 #include <cstdint>
 #include <variant>
@@ -108,3 +117,5 @@ inline DynField dyn_field_for(DynValue& slot) {
 }
 
 } // namespace note
+
+#endif // NOTE_EXTRAS

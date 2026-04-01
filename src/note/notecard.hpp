@@ -108,37 +108,27 @@ public:
         // Also requires Rsp to have a Sink type (generated responses do; ad-hoc ones don't).
         if constexpr (std::is_void_v<Rsp> || detail::has_sink<Rsp>::value) {
             if (streaming_transport_ && alloc_.has_value()) {
-                StringPool pool(*alloc_);
-
+                // Type-erase the build lambda for the non-template core.
                 auto build = [&](JsonBuilder& b) {
                     b.add("req", RequestT::notecard_request);
                     req.build(b);
                 };
+                BuildFn build_fn = [](JsonBuilder& b, void* p) {
+                    (*static_cast<decltype(build)*>(p))(b);
+                };
+
+                StringPool pool(*alloc_);
 
                 if constexpr (std::is_void_v<Rsp>) {
                     JsonSink null_sink;
-                    ErrorCaptureSink err_sink(null_sink);
-                    auto rv = streaming_transport_->transact(
-                        build, err_sink, default_timeout_ms_);
-                    if (!rv) return Unexpected(rv.error());
-                    auto err = err_sink.captured_error();
-                    if (!err.empty()) {
-                        return ApiResult<void>(
-                            ErrorInfo{Error::Notecard, Cause::Unspecified, pool.intern(err)});
-                    }
+                    auto ei = execute_streaming(build_fn, &build, null_sink, pool);
+                    if (ei.code != Error{}) return ApiResult<void>(ei);
                     return ApiResult<void>{};
                 } else {
                     Rsp rsp_val{};
                     typename Rsp::Sink response_sink(rsp_val, pool);
-                    ErrorCaptureSink err_sink(response_sink);
-                    auto rv = streaming_transport_->transact(
-                        build, err_sink, default_timeout_ms_);
-                    if (!rv) return Unexpected(rv.error());
-                    auto err = err_sink.captured_error();
-                    if (!err.empty()) {
-                        return ApiResult<Rsp>(
-                            ErrorInfo{Error::Notecard, Cause::Unspecified, pool.intern(err)});
-                    }
+                    auto ei = execute_streaming(build_fn, &build, response_sink, pool);
+                    if (ei.code != Error{}) return ApiResult<Rsp>(ei);
                     return ApiResult<Rsp>(std::move(rsp_val));
                 }
             }
@@ -216,10 +206,14 @@ public:
     template<typename RequestT>
     Result<void> command_typed(const RequestT& req) {
         if (streaming_transport_) {
-            return streaming_transport_->send([&](JsonBuilder& b) {
+            auto build = [&](JsonBuilder& b) {
                 b.add("cmd", RequestT::notecard_request);
                 req.build(b);
-            });
+            };
+            BuildFn fn = [](JsonBuilder& b, void* p) {
+                (*static_cast<decltype(build)*>(p))(b);
+            };
+            return streaming_transport_->send(fn, &build);
         }
         if (!transport_) return make_error(Error::NotReady, "no transport configured");
 
@@ -424,6 +418,20 @@ private:
             }
             return result;
         }
+    }
+
+    /// Non-template streaming execute core. Handles transport call, error
+    /// capture, and string interning. Returns ErrorInfo (code == Error{} on success).
+    /// One copy in the binary, shared by all execute() instantiations.
+    ErrorInfo execute_streaming(BuildFn build_fn, void* ctx,
+                                JsonSink& inner_sink, StringPool& pool) {
+        ErrorCaptureSink err_sink(inner_sink);
+        auto rv = streaming_transport_->transact(build_fn, ctx, err_sink, default_timeout_ms_);
+        if (!rv) return rv.error();
+        auto err = err_sink.captured_error();
+        if (!err.empty())
+            return ErrorInfo{Error::Notecard, Cause::Unspecified, pool.intern(err)};
+        return {};
     }
 
     JsonBackend* backend_ = nullptr;

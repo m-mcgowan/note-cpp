@@ -158,11 +158,11 @@ struct CardVersion {
         // string_views survive after the parser's scratch buffer is reused.
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-        struct Sink : ::note::JsonSink {
+        struct Sink : ::note::DefaultSink {
             Response& rsp;
             ::note::StringPool& pool_;
             Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
-            void on_string(::note::string_view k_, ::note::string_view v_) override {
+            void on_string(::note::string_view k_, ::note::string_view v_) {
                 v_ = pool_.intern(v_);
                 if (note::flash(keys_::rsp_board) == k_) { rsp.board = v_; return; }
                 if (note::flash(keys_::rsp_device) == k_) { rsp.device = v_; return; }
@@ -170,14 +170,14 @@ struct CardVersion {
                 if (note::flash(keys_::rsp_sku) == k_) { rsp.sku = v_; return; }
                 if (note::flash(keys_::rsp_version) == k_) { rsp.version = v_; return; }
             }
-            void on_bool(::note::string_view k_, bool v_) override {
+            void on_bool(::note::string_view k_, bool v_) {
                 if (note::flash(keys_::rsp_cell) == k_) { rsp.cell = v_; return; }
                 if (note::flash(keys_::rsp_gps) == k_) { rsp.gps = v_; return; }
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
                 if (note::flash(keys_::rsp_wifi) == k_) { rsp.wifi = v_; return; }
 #endif
             }
-            void reset() override { rsp = Response{}; }
+            void reset() { rsp = Response{}; }
         };
 #pragma GCC diagnostic pop
 

@@ -68,11 +68,11 @@ namespace detail {
 /// Streaming SAX parser that pulls bytes from a read function.
 ///
 /// ReadFn must be callable as: Result<size_t>(uint8_t* buf, size_t max, uint32_t timeout_ms)
-template<typename ReadFn>
+template<typename ReadFn, typename SinkT = JsonSink>
 class StreamingSaxParser {
 public:
     StreamingSaxParser(ReadFn& read, uint32_t timeout_ms,
-                       SaxStreamBuf& buf, JsonSink& sink)
+                       SaxStreamBuf& buf, SinkT& sink)
         : read_(read), timeout_ms_(timeout_ms), buf_(buf), sink_(sink) {}
 
     string_view parse() {
@@ -88,7 +88,7 @@ private:
     ReadFn& read_;
     uint32_t timeout_ms_;
     SaxStreamBuf& buf_;
-    JsonSink& sink_;
+    SinkT& sink_;
 
     // Read state — indexes into buf_.rbuf
     size_t rpos_ = 0;
@@ -371,16 +371,16 @@ private:
 }  // namespace detail
 
 /// Parse JSON from a streaming byte source with caller-provided buffers.
-template<typename ReadFn>
+template<typename ReadFn, typename SinkT = JsonSink>
 string_view sax_parse_streaming(ReadFn&& read, uint32_t timeout_ms,
-                                 SaxStreamBuf& buf, JsonSink& sink) {
-    detail::StreamingSaxParser<std::remove_reference_t<ReadFn>> parser(read, timeout_ms, buf, sink);
+                                 SaxStreamBuf& buf, SinkT& sink) {
+    detail::StreamingSaxParser<std::remove_reference_t<ReadFn>, SinkT> parser(read, timeout_ms, buf, sink);
     return parser.parse();
 }
 
 /// Parse JSON from a streaming byte source with default stack buffers.
-template<typename ReadFn>
-string_view sax_parse_streaming(ReadFn&& read, uint32_t timeout_ms, JsonSink& sink) {
+template<typename ReadFn, typename SinkT = JsonSink>
+string_view sax_parse_streaming(ReadFn&& read, uint32_t timeout_ms, SinkT& sink) {
     char storage[384];  // 64 read + 64 key + 256 value
     SaxStreamBuf buf(storage);
     return sax_parse_streaming(std::forward<ReadFn>(read), timeout_ms, buf, sink);

@@ -180,15 +180,15 @@ struct CardStatus {
         // string_views survive after the parser's scratch buffer is reused.
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-        struct Sink : ::note::JsonSink {
+        struct Sink : ::note::DefaultSink {
             Response& rsp;
             ::note::StringPool& pool_;
             Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
-            void on_string(::note::string_view k_, ::note::string_view v_) override {
+            void on_string(::note::string_view k_, ::note::string_view v_) {
                 v_ = pool_.intern(v_);
                 if (note::flash(keys_::rsp_status) == k_) { rsp.status = v_; return; }
             }
-            void on_bool(::note::string_view k_, bool v_) override {
+            void on_bool(::note::string_view k_, bool v_) {
                 if (note::flash(keys_::rsp_cell) == k_) { rsp.cell = v_; return; }
                 if (note::flash(keys_::rsp_connected) == k_) { rsp.connected = v_; return; }
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1) || !defined(NOTE_API_STRICT)
@@ -200,13 +200,13 @@ struct CardStatus {
                 if (note::flash(keys_::rsp_usb) == k_) { rsp.usb = v_; return; }
                 if (note::flash(keys_::rsp_wifi) == k_) { rsp.wifi = v_; return; }
             }
-            void on_number(::note::string_view k_, ::note::string_view raw_) override {
+            void on_number(::note::string_view k_, ::note::string_view raw_) {
                 if (note::flash(keys_::rsp_inbound) == k_) { rsp.inbound = ::note::parse_int(raw_); return; }
                 if (note::flash(keys_::rsp_outbound) == k_) { rsp.outbound = ::note::parse_int(raw_); return; }
                 if (note::flash(keys_::rsp_storage) == k_) { rsp.storage = ::note::parse_int(raw_); return; }
                 if (note::flash(keys_::rsp_time) == k_) { rsp.time = ::note::parse_int(raw_); return; }
             }
-            void reset() override { rsp = Response{}; }
+            void reset() { rsp = Response{}; }
         };
 #pragma GCC diagnostic pop
 

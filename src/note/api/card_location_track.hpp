@@ -211,24 +211,24 @@ struct CardLocationTrack {
         // SAX sink — zero-allocation streaming parse into Response fields.
         // String fields are interned into the StringPool immediately, so
         // string_views survive after the parser's scratch buffer is reused.
-        struct Sink : ::note::JsonSink {
+        struct Sink : ::note::DefaultSink {
             Response& rsp;
             ::note::StringPool& pool_;
             Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
-            void on_string(::note::string_view k_, ::note::string_view v_) override {
+            void on_string(::note::string_view k_, ::note::string_view v_) {
                 v_ = pool_.intern(v_);
                 if (note::flash(keys_::rsp_file) == k_) { rsp.file = v_; return; }
             }
-            void on_bool(::note::string_view k_, bool v_) override {
+            void on_bool(::note::string_view k_, bool v_) {
                 if (note::flash(keys_::rsp_heartbeat) == k_) { rsp.heartbeat = v_; return; }
                 if (note::flash(keys_::rsp_start) == k_) { rsp.start = v_; return; }
                 if (note::flash(keys_::rsp_stop) == k_) { rsp.stop = v_; return; }
             }
-            void on_number(::note::string_view k_, ::note::string_view raw_) override {
+            void on_number(::note::string_view k_, ::note::string_view raw_) {
                 if (note::flash(keys_::rsp_minutes) == k_) { rsp.minutes = ::note::parse_int(raw_); return; }
                 if (note::flash(keys_::rsp_seconds) == k_) { rsp.seconds = ::note::parse_int(raw_); return; }
             }
-            void reset() override { rsp = Response{}; }
+            void reset() { rsp = Response{}; }
         };
 
         void intern_strings(::note::StringPool& pool) {

@@ -127,7 +127,8 @@ public:
                 } else {
                     Rsp rsp_val{};
                     typename Rsp::Sink response_sink(rsp_val, pool);
-                    auto ei = execute_streaming(*streaming_transport_, default_timeout_ms_, build_fn, &build, response_sink, pool);
+                    JsonSinkAdapter<typename Rsp::Sink> virtual_sink(response_sink);
+                    auto ei = execute_streaming(*streaming_transport_, default_timeout_ms_, build_fn, &build, virtual_sink, pool);
                     if (ei.code != Error{}) return ApiResult<Rsp>(ei);
                     return ApiResult<Rsp>(std::move(rsp_val));
                 }

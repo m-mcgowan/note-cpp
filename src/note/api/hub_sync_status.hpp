@@ -179,23 +179,23 @@ struct HubSyncStatus {
         // string_views survive after the parser's scratch buffer is reused.
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-        struct Sink : ::note::JsonSink {
+        struct Sink : ::note::DefaultSink {
             Response& rsp;
             ::note::StringPool& pool_;
             Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
-            void on_string(::note::string_view k_, ::note::string_view v_) override {
+            void on_string(::note::string_view k_, ::note::string_view v_) {
                 v_ = pool_.intern(v_);
                 if (note::flash(keys_::rsp_mode) == k_) { rsp.mode = v_; return; }
                 if (note::flash(keys_::rsp_status) == k_) { rsp.status = v_; return; }
             }
-            void on_bool(::note::string_view k_, bool v_) override {
+            void on_bool(::note::string_view k_, bool v_) {
                 if (note::flash(keys_::rsp_alert) == k_) { rsp.alert = v_; return; }
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 1, 1) || !defined(NOTE_API_STRICT)
                 if (note::flash(keys_::rsp_scan) == k_) { rsp.scan = v_; return; }
 #endif
                 if (note::flash(keys_::rsp_sync) == k_) { rsp.sync = v_; return; }
             }
-            void on_number(::note::string_view k_, ::note::string_view raw_) override {
+            void on_number(::note::string_view k_, ::note::string_view raw_) {
                 if (note::flash(keys_::rsp_completed) == k_) { rsp.completed = ::note::parse_int(raw_); return; }
                 if (note::flash(keys_::rsp_requested) == k_) { rsp.requested = ::note::parse_int(raw_); return; }
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
@@ -203,7 +203,7 @@ struct HubSyncStatus {
 #endif
                 if (note::flash(keys_::rsp_time) == k_) { rsp.time = ::note::parse_int(raw_); return; }
             }
-            void reset() override { rsp = Response{}; }
+            void reset() { rsp = Response{}; }
         };
 #pragma GCC diagnostic pop
 

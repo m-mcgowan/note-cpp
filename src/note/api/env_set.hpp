@@ -127,16 +127,16 @@ struct EnvSet {
         // string_views survive after the parser's scratch buffer is reused.
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-        struct Sink : ::note::JsonSink {
+        struct Sink : ::note::DefaultSink {
             Response& rsp;
             ::note::StringPool& pool_;
             Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
-            void on_number(::note::string_view k_, ::note::string_view raw_) override {
+            void on_number(::note::string_view k_, ::note::string_view raw_) {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
                 if (note::flash(keys_::rsp_time) == k_) { rsp.time = ::note::parse_int(raw_); return; }
 #endif
             }
-            void reset() override { rsp = Response{}; }
+            void reset() { rsp = Response{}; }
         };
 #pragma GCC diagnostic pop
 

@@ -56,19 +56,34 @@ public:
         StringPool pool(alloc_);
 
         if constexpr (std::is_void_v<Rsp>) {
-            JsonSink null_sink;
-            auto ei = Notecard::execute_streaming(
-                stack_.transport, default_timeout_ms_,
-                build_fn, &build, null_sink, pool);
-            if (ei.code != Error{}) return ApiResult<void>(ei);
+            // Void response — null sink, template error capture.
+            struct NullSink {
+                void on_null(string_view) {}
+                void on_bool(string_view, bool) {}
+                void on_number(string_view, string_view) {}
+                void on_string(string_view, string_view) {}
+                void on_object_begin(string_view) {}
+                void on_object_end(string_view) {}
+                void on_array_begin(string_view) {}
+                void on_array_end(string_view) {}
+                void reset() {}
+            } null_sink;
+            ErrorCaptureSinkT<NullSink> err_sink(null_sink);
+            auto rv = stack_.transport.transact(build_fn, &build, err_sink, default_timeout_ms_);
+            if (!rv) return Unexpected(rv.error());
+            auto err = err_sink.captured_error();
+            if (!err.empty())
+                return ApiResult<void>(ErrorInfo{Error::Notecard, Cause::Unspecified, pool.intern(err)});
             return ApiResult<void>{};
         } else {
             Rsp rsp_val{};
             typename Rsp::Sink response_sink(rsp_val, pool);
-            auto ei = Notecard::execute_streaming(
-                stack_.transport, default_timeout_ms_,
-                build_fn, &build, response_sink, pool);
-            if (ei.code != Error{}) return ApiResult<Rsp>(ei);
+            ErrorCaptureSinkT<typename Rsp::Sink> err_sink(response_sink);
+            auto rv = stack_.transport.transact(build_fn, &build, err_sink, default_timeout_ms_);
+            if (!rv) return Unexpected(rv.error());
+            auto err = err_sink.captured_error();
+            if (!err.empty())
+                return ApiResult<Rsp>(ErrorInfo{Error::Notecard, Cause::Unspecified, pool.intern(err)});
             return ApiResult<Rsp>(std::move(rsp_val));
         }
     }

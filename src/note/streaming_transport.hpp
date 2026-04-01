@@ -81,8 +81,24 @@ public:
         , max_retries_(max_retries)
         , retry_delay_ms_(retry_delay_ms) {}
 
+    /// Virtual override for IStreamingTransport (used by Notecard).
     Result<void> transact(BuildFn build_fn, void* ctx,
                           JsonSink& sink, uint32_t timeout_ms) override {
+        return transact_impl(build_fn, ctx, sink, timeout_ms);
+    }
+
+    /// Template transact — concrete sink type, no vtable for sink dispatch.
+    /// Used by StaticNotecard for zero-vtable execute.
+    template<typename SinkT>
+    Result<void> transact(BuildFn build_fn, void* ctx,
+                          SinkT& sink, uint32_t timeout_ms) {
+        return transact_impl(build_fn, ctx, sink, timeout_ms);
+    }
+
+private:
+    template<typename SinkT>
+    Result<void> transact_impl(BuildFn build_fn, void* ctx,
+                                SinkT& sink, uint32_t timeout_ms) {
         if (!ensure_init())
             return make_error(Error::NotReady, "Notecard not ready after reset");
 
@@ -114,6 +130,8 @@ public:
 
         return Unexpected(last_error);
     }
+
+public:
 
     Result<void> send(BuildFn build_fn, void* ctx) override {
         if (!ensure_init())
@@ -198,9 +216,11 @@ private:
         return hal_.write_line_terminator();
     }
 
-    Result<void> receive_streaming(JsonSink& sink, uint32_t timeout_ms) {
+    /// Receive and SAX-parse — template on sink type for static dispatch.
+    template<typename SinkT>
+    Result<void> receive_streaming(SinkT& sink, uint32_t timeout_ms) {
 #ifndef NOTE_NO_CRC
-        CrcFieldSink crc_sink(sink);
+        CrcFieldSinkT<SinkT> crc_sink(sink);
         transport::detail::CrcAccumulator crc;
 
         auto read_fn = [&](uint8_t* buf, size_t max, uint32_t t) -> Result<size_t> {

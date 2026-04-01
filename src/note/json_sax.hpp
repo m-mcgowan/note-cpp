@@ -71,6 +71,84 @@ public:
 };
 
 // ---------------------------------------------------------------------------
+// Template filter/capture sinks — zero vtable overhead.
+// Used by the static (non-virtual) execute path.
+// ---------------------------------------------------------------------------
+
+/// Filter sink that forwards to a concrete inner sink (no vtable).
+template<typename InnerT>
+class FilterSink {
+protected:
+    InnerT& inner_;
+public:
+    explicit FilterSink(InnerT& inner) : inner_(inner) {}
+
+    void on_null(string_view key) { inner_.on_null(key); }
+    void on_bool(string_view key, bool value) { inner_.on_bool(key, value); }
+    void on_number(string_view key, string_view raw) { inner_.on_number(key, raw); }
+    void on_string(string_view key, string_view value) { inner_.on_string(key, value); }
+    void on_object_begin(string_view key) { inner_.on_object_begin(key); }
+    void on_object_end(string_view key) { inner_.on_object_end(key); }
+    void on_array_begin(string_view key) { inner_.on_array_begin(key); }
+    void on_array_end(string_view key) { inner_.on_array_end(key); }
+    void reset() { inner_.reset(); }
+};
+
+/// Error capture sink that wraps a concrete inner sink (no vtable).
+template<typename InnerT>
+class ErrorCaptureSinkT : public FilterSink<InnerT> {
+    string_view err_;
+public:
+    explicit ErrorCaptureSinkT(InnerT& inner) : FilterSink<InnerT>(inner) {}
+
+    string_view captured_error() const { return err_; }
+
+    void on_string(string_view key, string_view value) {
+        if (key == "err") { err_ = value; return; }
+        this->inner_.on_string(key, value);
+    }
+
+    void reset() {
+        err_ = {};
+        FilterSink<InnerT>::reset();
+    }
+};
+
+/// Non-virtual base with default no-op implementations.
+/// Generated Response::Sink types inherit this instead of JsonSink,
+/// keeping them vtable-free while providing default stubs.
+struct DefaultSink {
+    void on_null(string_view) {}
+    void on_bool(string_view, bool) {}
+    void on_number(string_view, string_view) {}
+    void on_string(string_view, string_view) {}
+    void on_object_begin(string_view) {}
+    void on_object_end(string_view) {}
+    void on_array_begin(string_view) {}
+    void on_array_end(string_view) {}
+    void reset() {}
+};
+
+/// Adapter that wraps any concrete sink type into a virtual JsonSink.
+/// Used by the virtual Notecard path to bridge non-virtual Response::Sink
+/// types into the virtual ErrorCaptureSink/FilterJsonSink chain.
+template<typename T>
+class JsonSinkAdapter : public JsonSink {
+    T& inner_;
+public:
+    explicit JsonSinkAdapter(T& inner) : inner_(inner) {}
+    void on_null(string_view key) override { inner_.on_null(key); }
+    void on_bool(string_view key, bool value) override { inner_.on_bool(key, value); }
+    void on_number(string_view key, string_view raw) override { inner_.on_number(key, raw); }
+    void on_string(string_view key, string_view value) override { inner_.on_string(key, value); }
+    void on_object_begin(string_view key) override { inner_.on_object_begin(key); }
+    void on_object_end(string_view key) override { inner_.on_object_end(key); }
+    void on_array_begin(string_view key) override { inner_.on_array_begin(key); }
+    void on_array_end(string_view key) override { inner_.on_array_end(key); }
+    void reset() override { inner_.reset(); }
+};
+
+// ---------------------------------------------------------------------------
 // SAX parser — zero allocation, single pass, streaming.
 //
 // Returns empty string_view on success, or an error message on parse failure.

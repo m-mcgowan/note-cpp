@@ -464,7 +464,7 @@ namespace note::api {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 {% endif %}
-{{ indent }}    struct Sink : ::note::JsonSink {
+{{ indent }}    struct Sink : ::note::DefaultSink {
 {{ indent }}        Response& rsp;
 {{ indent }}        ::note::StringPool& pool_;
 {{ indent }}        Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
@@ -480,7 +480,7 @@ namespace note::api {
 {% endif %}
 {% endfor %}
 {% if string_props %}
-{{ indent }}        void on_string(::note::string_view k_, ::note::string_view v_) override {
+{{ indent }}        void on_string(::note::string_view k_, ::note::string_view v_) {
 {{ indent }}            v_ = pool_.intern(v_);
 {% for prop in string_props %}
 {{ version_guard_begin(prop.version_guard) -}}
@@ -490,7 +490,7 @@ namespace note::api {
 {{ indent }}        }
 {% endif %}
 {% if bool_props %}
-{{ indent }}        void on_bool(::note::string_view k_, bool v_) override {
+{{ indent }}        void on_bool(::note::string_view k_, bool v_) {
 {% for prop in bool_props %}
 {{ version_guard_begin(prop.version_guard) -}}
 {{ indent }}            if (note::flash(keys_::rsp_{{ prop.accessor_name }}) == k_) { rsp.{{ prop.accessor_name }} = v_; return; }
@@ -499,7 +499,7 @@ namespace note::api {
 {{ indent }}        }
 {% endif %}
 {% if int_props or double_props %}
-{{ indent }}        void on_number(::note::string_view k_, ::note::string_view raw_) override {
+{{ indent }}        void on_number(::note::string_view k_, ::note::string_view raw_) {
 {% for prop in int_props %}
 {{ version_guard_begin(prop.version_guard) -}}
 {{ indent }}            if (note::flash(keys_::rsp_{{ prop.accessor_name }}) == k_) { rsp.{{ prop.accessor_name }} = ::note::parse_int(raw_{{ prop.default_arg }}); return; }
@@ -512,7 +512,7 @@ namespace note::api {
 {% endfor %}
 {{ indent }}        }
 {% endif %}
-{{ indent }}        void reset() override { rsp = Response{}; }
+{{ indent }}        void reset() { rsp = Response{}; }
 {{ indent }}    };
 {% if op.has_version_gated_response_props %}
 #pragma GCC diagnostic pop

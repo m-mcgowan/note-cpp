@@ -274,20 +274,20 @@ struct CardAuxSerial {
             // string_views survive after the parser's scratch buffer is reused.
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-            struct Sink : ::note::JsonSink {
+            struct Sink : ::note::DefaultSink {
                 Response& rsp;
                 ::note::StringPool& pool_;
                 Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
-                void on_string(::note::string_view k_, ::note::string_view v_) override {
+                void on_string(::note::string_view k_, ::note::string_view v_) {
                     v_ = pool_.intern(v_);
                     if (note::flash(keys_::rsp_mode) == k_) { rsp.mode = v_; return; }
                 }
-                void on_number(::note::string_view k_, ::note::string_view raw_) override {
+                void on_number(::note::string_view k_, ::note::string_view raw_) {
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
                     if (note::flash(keys_::rsp_rate) == k_) { rsp.rate = ::note::parse_int(raw_); return; }
 #endif
                 }
-                void reset() override { rsp = Response{}; }
+                void reset() { rsp = Response{}; }
             };
 #pragma GCC diagnostic pop
 

@@ -185,14 +185,14 @@ struct CardTemp {
             // SAX sink — zero-allocation streaming parse into Response fields.
             // String fields are interned into the StringPool immediately, so
             // string_views survive after the parser's scratch buffer is reused.
-            struct Sink : ::note::JsonSink {
+            struct Sink : ::note::DefaultSink {
                 Response& rsp;
                 ::note::StringPool& pool_;
                 Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
-                void on_bool(::note::string_view k_, bool v_) override {
+                void on_bool(::note::string_view k_, bool v_) {
                     if (note::flash(keys_::rsp_usb) == k_) { rsp.usb = v_; return; }
                 }
-                void on_number(::note::string_view k_, ::note::string_view raw_) override {
+                void on_number(::note::string_view k_, ::note::string_view raw_) {
                     if (note::flash(keys_::rsp_calibration) == k_) { rsp.calibration = ::note::parse_double(raw_); return; }
                     if (note::flash(keys_::rsp_humidity) == k_) { rsp.humidity = ::note::parse_double(raw_); return; }
                     if (note::flash(keys_::rsp_pressure) == k_) { rsp.pressure = ::note::parse_double(raw_); return; }
@@ -200,7 +200,7 @@ struct CardTemp {
                     if (note::flash(keys_::rsp_value) == k_) { rsp.value = ::note::parse_double(raw_); return; }
                     if (note::flash(keys_::rsp_voltage) == k_) { rsp.voltage = ::note::parse_double(raw_); return; }
                 }
-                void reset() override { rsp = Response{}; }
+                void reset() { rsp = Response{}; }
             };
 
             void intern_strings(::note::StringPool&) {}
@@ -449,14 +449,14 @@ struct CardTemp {
             // SAX sink — zero-allocation streaming parse into Response fields.
             // String fields are interned into the StringPool immediately, so
             // string_views survive after the parser's scratch buffer is reused.
-            struct Sink : ::note::JsonSink {
+            struct Sink : ::note::DefaultSink {
                 Response& rsp;
                 ::note::StringPool& pool_;
                 Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
-                void on_bool(::note::string_view k_, bool v_) override {
+                void on_bool(::note::string_view k_, bool v_) {
                     if (note::flash(keys_::rsp_usb) == k_) { rsp.usb = v_; return; }
                 }
-                void on_number(::note::string_view k_, ::note::string_view raw_) override {
+                void on_number(::note::string_view k_, ::note::string_view raw_) {
                     if (note::flash(keys_::rsp_calibration) == k_) { rsp.calibration = ::note::parse_double(raw_); return; }
                     if (note::flash(keys_::rsp_humidity) == k_) { rsp.humidity = ::note::parse_double(raw_); return; }
                     if (note::flash(keys_::rsp_pressure) == k_) { rsp.pressure = ::note::parse_double(raw_); return; }
@@ -464,7 +464,7 @@ struct CardTemp {
                     if (note::flash(keys_::rsp_value) == k_) { rsp.value = ::note::parse_double(raw_); return; }
                     if (note::flash(keys_::rsp_voltage) == k_) { rsp.voltage = ::note::parse_double(raw_); return; }
                 }
-                void reset() override { rsp = Response{}; }
+                void reset() { rsp = Response{}; }
             };
 
             void intern_strings(::note::StringPool&) {}
@@ -700,14 +700,14 @@ struct CardTemp {
             // SAX sink — zero-allocation streaming parse into Response fields.
             // String fields are interned into the StringPool immediately, so
             // string_views survive after the parser's scratch buffer is reused.
-            struct Sink : ::note::JsonSink {
+            struct Sink : ::note::DefaultSink {
                 Response& rsp;
                 ::note::StringPool& pool_;
                 Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
-                void on_bool(::note::string_view k_, bool v_) override {
+                void on_bool(::note::string_view k_, bool v_) {
                     if (note::flash(keys_::rsp_usb) == k_) { rsp.usb = v_; return; }
                 }
-                void on_number(::note::string_view k_, ::note::string_view raw_) override {
+                void on_number(::note::string_view k_, ::note::string_view raw_) {
                     if (note::flash(keys_::rsp_calibration) == k_) { rsp.calibration = ::note::parse_double(raw_); return; }
                     if (note::flash(keys_::rsp_humidity) == k_) { rsp.humidity = ::note::parse_double(raw_); return; }
                     if (note::flash(keys_::rsp_pressure) == k_) { rsp.pressure = ::note::parse_double(raw_); return; }
@@ -715,7 +715,7 @@ struct CardTemp {
                     if (note::flash(keys_::rsp_value) == k_) { rsp.value = ::note::parse_double(raw_); return; }
                     if (note::flash(keys_::rsp_voltage) == k_) { rsp.voltage = ::note::parse_double(raw_); return; }
                 }
-                void reset() override { rsp = Response{}; }
+                void reset() { rsp = Response{}; }
             };
 
             void intern_strings(::note::StringPool&) {}

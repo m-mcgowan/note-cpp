@@ -121,13 +121,13 @@ public:
 
                 if constexpr (std::is_void_v<Rsp>) {
                     JsonSink null_sink;
-                    auto ei = execute_streaming(build_fn, &build, null_sink, pool);
+                    auto ei = execute_streaming(*streaming_transport_, default_timeout_ms_, build_fn, &build, null_sink, pool);
                     if (ei.code != Error{}) return ApiResult<void>(ei);
                     return ApiResult<void>{};
                 } else {
                     Rsp rsp_val{};
                     typename Rsp::Sink response_sink(rsp_val, pool);
-                    auto ei = execute_streaming(build_fn, &build, response_sink, pool);
+                    auto ei = execute_streaming(*streaming_transport_, default_timeout_ms_, build_fn, &build, response_sink, pool);
                     if (ei.code != Error{}) return ApiResult<Rsp>(ei);
                     return ApiResult<Rsp>(std::move(rsp_val));
                 }
@@ -422,13 +422,16 @@ private:
         }
     }
 
-    /// Non-template streaming execute core. Handles transport call, error
-    /// capture, and string interning. Returns ErrorInfo (code == Error{} on success).
-    /// One copy in the binary, shared by all execute() instantiations.
-    ErrorInfo execute_streaming(BuildFn build_fn, void* ctx,
-                                JsonSink& inner_sink, StringPool& pool) {
+    /// Streaming execute core — template on transport to support both
+    /// virtual (IStreamingTransport*) and concrete (StaticNotecard) dispatch.
+    /// When called with a pointer, the compiler generates one shared copy.
+    /// When called with a concrete ref, it devirtualizes on modern GCC.
+    template<typename Transport>
+    static ErrorInfo execute_streaming(Transport& t, uint32_t timeout_ms,
+                                       BuildFn build_fn, void* ctx,
+                                       JsonSink& inner_sink, StringPool& pool) {
         ErrorCaptureSink err_sink(inner_sink);
-        auto rv = streaming_transport_->transact(build_fn, ctx, err_sink, default_timeout_ms_);
+        auto rv = t.transact(build_fn, ctx, err_sink, timeout_ms);
         if (!rv) return rv.error();
         auto err = err_sink.captured_error();
         if (!err.empty())

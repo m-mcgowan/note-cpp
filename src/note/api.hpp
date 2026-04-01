@@ -82,12 +82,16 @@ namespace note {
 
 
 #if __cplusplus >= 202002L
-template<typename TargetT = Unconstrained>
-#endif
+template<typename TargetT = Unconstrained, typename NcT = Notecard>
+class Api {
+    NcT& nc_;
+#else
 class Api {
     Notecard& nc_;
+    using NcT = Notecard;
+#endif
 public:
-    explicit Api(Notecard& nc) : nc_(nc)
+    explicit Api(NcT& nc) : nc_(nc)
         , card{&nc_}
         , dfu{&nc_}
         , env{&nc_}
@@ -101,7 +105,7 @@ public:
         , binary{&nc_}
     {}
 #if __cplusplus >= 202002L
-    explicit Api(Notecard& nc, TargetT) : nc_(nc)
+    explicit Api(NcT& nc, TargetT) : nc_(nc)
         , card{&nc_}
         , dfu{&nc_}
         , env{&nc_}
@@ -116,7 +120,7 @@ public:
     {}
 #endif
 
-    Notecard& notecard() { return nc_; }
+    NcT& notecard() { return nc_; }
 
     template<typename RequestT>
     RequestT create() { RequestT r; r.nc_ = &nc_; return r; }
@@ -135,7 +139,7 @@ public:
     // =====================================================================
 
     struct CardAttnFactory {
-        Notecard* nc_;
+        NcT* nc_;
         template<typename T> T create() { T r; r.nc_ = nc_; return r; }
         /// Configure hardware notifications from a Notecard to a host MCU.
         ///
@@ -159,7 +163,7 @@ public:
     };
 
     struct CardAuxSerialFactory {
-        Notecard* nc_;
+        NcT* nc_;
         template<typename T> T create() { T r; r.nc_ = nc_; return r; }
         /// Configure various uses of the AUXTX and AUXRX pins on the Notecard's
         /// edge connector.
@@ -178,7 +182,7 @@ public:
     };
 
     struct CardContactFactory {
-        Notecard* nc_;
+        NcT* nc_;
         template<typename T> T create() { T r; r.nc_ = nc_; return r; }
         /// Used to set or retrieve information about the Notecard maintainer.
         /// Once set, this information is synced to Notehub.
@@ -189,7 +193,7 @@ public:
     };
 
     struct CardLocationModeFactory {
-        Notecard* nc_;
+        NcT* nc_;
         template<typename T> T create() { T r; r.nc_ = nc_; return r; }
         /// Sets location-related configuration settings. Retrieves the current
         /// location mode when passed with no argument.
@@ -209,7 +213,7 @@ public:
     };
 
     struct CardPowerFactory {
-        Notecard* nc_;
+        NcT* nc_;
         template<typename T> T create() { T r; r.nc_ = nc_; return r; }
         /// The `card.power` API is used to configure a connected Mojo device or
         /// to manually request power consumption readings in firmware.
@@ -223,7 +227,7 @@ public:
     };
 
     struct CardTempFactory {
-        Notecard* nc_;
+        NcT* nc_;
         template<typename T> T create() { T r; r.nc_ = nc_; return r; }
         /// Get the current temperature from the Notecard's onboard calibrated
         /// temperature sensor.
@@ -255,7 +259,7 @@ public:
     };
 
     struct CardVoltageFactory {
-        Notecard* nc_;
+        NcT* nc_;
         template<typename T> T create() { T r; r.nc_ = nc_; return r; }
         /// Provides the current VMODEM_P voltage level on the Notecard, and
         /// provides information about historical voltage trends. When used with
@@ -270,7 +274,7 @@ public:
     };
 
     struct CardWirelessPenaltyFactory {
-        Notecard* nc_;
+        NcT* nc_;
         template<typename T> T create() { T r; r.nc_ = nc_; return r; }
         /// View the current state of a Notecard Penalty Box, manually remove
         /// the Notecard from a penalty box, or override penalty box defaults.
@@ -284,7 +288,7 @@ public:
     };
 
     struct EnvDefaultFactory {
-        Notecard* nc_;
+        NcT* nc_;
         template<typename T> T create() { T r; r.nc_ = nc_; return r; }
         /// Used by the Notecard host to specify a default value for an
         /// environment variable until that variable is overridden by a device,
@@ -305,7 +309,7 @@ public:
     };
 
     struct NoteChangesFactory {
-        Notecard* nc_;
+        NcT* nc_;
         template<typename T> T create() { T r; r.nc_ = nc_; return r; }
         /// Used to incrementally retrieve changes within a specific Notefile.
         auto peek() { return create<api::NoteChanges::Peek>(); }
@@ -318,7 +322,7 @@ public:
     };
 
     struct NoteGetFactory {
-        Notecard* nc_;
+        NcT* nc_;
         template<typename T> T create() { T r; r.nc_ = nc_; return r; }
         /// Retrieves a Note from a Notefile. The file must either be a DB
         /// Notefile or inbound queue file (see `file` argument below).
@@ -335,7 +339,7 @@ public:
     };
 
     struct NoteTemplateFactory {
-        Notecard* nc_;
+        NcT* nc_;
         template<typename T> T create() { T r; r.nc_ = nc_; return r; }
         /// By using the `note.template` request with any `.qo`/`.qos` Notefile,
         /// developers can provide the Notecard with a schema of sorts to apply
@@ -371,7 +375,7 @@ public:
 
 
     struct CardAuxFactory {
-        Notecard* nc_;
+        NcT* nc_;
         template<typename T> T create() { T r; r.nc_ = nc_; return r; }
         /// card.aux
         auto operator()() { return create<api::CardAux>(); }
@@ -379,7 +383,7 @@ public:
     };
 
     struct CardBinaryFactory {
-        Notecard* nc_;
+        NcT* nc_;
         template<typename T> T create() { T r; r.nc_ = nc_; return r; }
         /// View the status of the binary storage area of the Notecard and
         /// optionally clear any data and related `card.binary` variables. See
@@ -398,7 +402,7 @@ public:
     };
 
     struct CardLocationFactory {
-        Notecard* nc_;
+        NcT* nc_;
         template<typename T> T create() { T r; r.nc_ = nc_; return r; }
         /// card.location
         auto operator()() { return create<api::CardLocation>(); }
@@ -408,7 +412,7 @@ public:
     };
 
     struct CardMotionFactory {
-        Notecard* nc_;
+        NcT* nc_;
         template<typename T> T create() { T r; r.nc_ = nc_; return r; }
         /// card.motion
         auto operator()() { return create<api::CardMotion>(); }
@@ -421,7 +425,7 @@ public:
     };
 
     struct CardWirelessFactory {
-        Notecard* nc_;
+        NcT* nc_;
         template<typename T> T create() { T r; r.nc_ = nc_; return r; }
         /// card.wireless
         auto operator()() { return create<api::CardWireless>(); }
@@ -429,7 +433,7 @@ public:
     };
 
     struct FileChangesFactory {
-        Notecard* nc_;
+        NcT* nc_;
         template<typename T> T create() { T r; r.nc_ = nc_; return r; }
         /// file.changes
         auto operator()() { return create<api::FileChanges>(); }
@@ -438,7 +442,7 @@ public:
     };
 
     struct HubSyncFactory {
-        Notecard* nc_;
+        NcT* nc_;
         template<typename T> T create() { T r; r.nc_ = nc_; return r; }
         /// hub.sync
         auto operator()() { return create<api::HubSync>(); }
@@ -460,7 +464,7 @@ public:
     template<typename TargetT_ = void>
 #endif
     struct CardGroup {
-        Notecard* nc_;
+        NcT* nc_;
         template<typename T> T create() { T r; r.nc_ = nc_; return r; }
 
 
@@ -765,7 +769,7 @@ public:
     template<typename TargetT_ = void>
 #endif
     struct DfuGroup {
-        Notecard* nc_;
+        NcT* nc_;
         template<typename T> T create() { T r; r.nc_ = nc_; return r; }
 
 
@@ -811,7 +815,7 @@ public:
     template<typename TargetT_ = void>
 #endif
     struct EnvGroup {
-        Notecard* nc_;
+        NcT* nc_;
         template<typename T> T create() { T r; r.nc_ = nc_; return r; }
 
 
@@ -931,7 +935,7 @@ public:
     template<typename TargetT_ = void>
 #endif
     struct FileGroup {
-        Notecard* nc_;
+        NcT* nc_;
         template<typename T> T create() { T r; r.nc_ = nc_; return r; }
 
 
@@ -1002,7 +1006,7 @@ public:
     template<typename TargetT_ = void>
 #endif
     struct HubGroup {
-        Notecard* nc_;
+        NcT* nc_;
         template<typename T> T create() { T r; r.nc_ = nc_; return r; }
 
 
@@ -1059,7 +1063,7 @@ public:
     template<typename TargetT_ = void>
 #endif
     struct NoteGroup {
-        Notecard* nc_;
+        NcT* nc_;
         template<typename T> T create() { T r; r.nc_ = nc_; return r; }
 
 
@@ -1274,7 +1278,7 @@ public:
     template<typename TargetT_ = void>
 #endif
     struct NtnGroup {
-        Notecard* nc_;
+        NcT* nc_;
         template<typename T> T create() { T r; r.nc_ = nc_; return r; }
 
 
@@ -1334,7 +1338,7 @@ public:
     template<typename TargetT_ = void>
 #endif
     struct VarGroup {
-        Notecard* nc_;
+        NcT* nc_;
         template<typename T> T create() { T r; r.nc_ = nc_; return r; }
 
 
@@ -1366,7 +1370,7 @@ public:
     template<typename TargetT_ = void>
 #endif
     struct WebGroup {
-        Notecard* nc_;
+        NcT* nc_;
         template<typename T> T create() { T r; r.nc_ = nc_; return r; }
 
 
@@ -1464,9 +1468,9 @@ public:
 };
 
 #if __cplusplus >= 202002L
-Api(Notecard&) -> Api<Unconstrained>;
+Api(Notecard&) -> Api<Unconstrained, Notecard>;
 template<typename T>
-Api(Notecard&, T) -> Api<T>;
+Api(Notecard&, T) -> Api<T, Notecard>;
 
 template<typename T = Unconstrained>
 auto make_api(Notecard& nc, T = {}) { return Api<T>(nc); }

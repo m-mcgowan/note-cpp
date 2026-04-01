@@ -12,12 +12,16 @@ namespace note {
 {% macro required_params(op) %}{% for p in op.required_properties %}{{ p.field_type }} {{ p.accessor_name }}_arg{{ ", " if not loop.last }}{% endfor %}{% endmacro %}
 
 #if __cplusplus >= 202002L
-template<typename TargetT = Unconstrained>
-#endif
+template<typename TargetT = Unconstrained, typename NcT = Notecard>
+class Api {
+    NcT& nc_;
+#else
 class Api {
     Notecard& nc_;
+    using NcT = Notecard;
+#endif
 public:
-    explicit Api(Notecard& nc) : nc_(nc)
+    explicit Api(NcT& nc) : nc_(nc)
 {% for group in resource_groups %}
         , {{ group.name }}{&nc_}
 {% endfor %}
@@ -26,7 +30,7 @@ public:
 {% endif %}{% endfor %}
     {}
 #if __cplusplus >= 202002L
-    explicit Api(Notecard& nc, TargetT) : nc_(nc)
+    explicit Api(NcT& nc, TargetT) : nc_(nc)
 {% for group in resource_groups %}
         , {{ group.name }}{&nc_}
 {% endfor %}
@@ -36,7 +40,7 @@ public:
     {}
 #endif
 
-    Notecard& notecard() { return nc_; }
+    NcT& notecard() { return nc_; }
 
     template<typename RequestT>
     RequestT create() { RequestT r; r.nc_ = &nc_; return r; }
@@ -59,7 +63,7 @@ public:
 {% for endpoint in endpoints %}
 {% if endpoint.needs_factory and not endpoint.has_children %}
     struct {{ endpoint.struct_name }}Factory {
-        Notecard* nc_;
+        NcT* nc_;
         template<typename T> T create() { T r; r.nc_ = nc_; return r; }
 {% if endpoint.is_polymorphic %}
 {% for op in endpoint.operations %}
@@ -106,7 +110,7 @@ public:
 {% for endpoint in endpoints %}
 {% if endpoint.needs_factory and endpoint.has_children %}
     struct {{ endpoint.struct_name }}Factory {
-        Notecard* nc_;
+        NcT* nc_;
         template<typename T> T create() { T r; r.nc_ = nc_; return r; }
 {% if endpoint.is_polymorphic %}
 {% for op in endpoint.operations %}
@@ -243,7 +247,7 @@ public:
     template<typename TargetT_ = void>
 #endif
     struct {{ group.struct_name }} {
-        Notecard* nc_;
+        NcT* nc_;
         template<typename T> T create() { T r; r.nc_ = nc_; return r; }
 
 {# Collect parent wire names (only parents with factories) so we can skip their children #}
@@ -358,9 +362,9 @@ public:
 };
 
 #if __cplusplus >= 202002L
-Api(Notecard&) -> Api<Unconstrained>;
+Api(Notecard&) -> Api<Unconstrained, Notecard>;
 template<typename T>
-Api(Notecard&, T) -> Api<T>;
+Api(Notecard&, T) -> Api<T, Notecard>;
 
 template<typename T = Unconstrained>
 auto make_api(Notecard& nc, T = {}) { return Api<T>(nc); }

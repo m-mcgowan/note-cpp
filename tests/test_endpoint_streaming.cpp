@@ -2,8 +2,8 @@
 //
 // Endpoint streaming-execute coverage tests.
 // Exercises the Notecard::execute() streaming path for every endpoint:
-//   - Response::Sink (SAX parser) for non-void responses
-//   - transact_streaming() + receive_streaming() in transport.hpp
+//   - Response::Sink (SAX parser) via IStreamingTransport
+//   - StreamingTransport + TransportHal
 //   - StringPool interning
 //
 // Each endpoint with a Response::Sink gets a streaming execute test.
@@ -14,6 +14,7 @@
 
 #include <note/api.hpp>
 #include <note/allocator.hpp>
+#include <note/streaming_transport.hpp>
 #include <note/string_pool.hpp>
 
 #include <cstring>
@@ -28,53 +29,24 @@ using UnconstrainedApi = note::Api;
 
 namespace {
 
-/// Mock AbstractTransport that returns canned JSON via do_read().
-class MockStreamTransport : public note::AbstractTransport {
+/// Mock TransportHal that returns canned JSON via read().
+class MockHal : public note::TransportHal {
 public:
     std::deque<uint8_t> rx;
-    std::string last_transmitted;
     int transmit_count = 0;
-    bool transmit_fails = false;
-    bool reset_fails = false;
-    int reset_count = 0;
-    int delay_count = 0;
 
     void queue_response(const std::string& s) {
         for (char c : s) rx.push_back(static_cast<uint8_t>(c));
-        // Add \r\n terminator so CrcAccumulator sees line end
         rx.push_back('\r');
         rx.push_back('\n');
     }
 
-protected:
-    bool do_transmit(const char* data, size_t len) override {
+    bool transmit(const uint8_t*, size_t) override {
         ++transmit_count;
-        if (transmit_fails) return false;
-        last_transmitted.assign(data, len);
         return true;
     }
 
-#ifndef NOTE_NO_STD_STRING
-    note::Result<void> do_receive(std::string& buf, uint32_t) override {
-        while (!rx.empty()) {
-            uint8_t b = rx.front();
-            rx.pop_front();
-            if (b == '\n') {
-                while (!buf.empty() && buf.back() == '\r') buf.pop_back();
-                return {};
-            }
-            buf.push_back(static_cast<char>(b));
-        }
-        return note::make_error(note::Error::ResponseLost, note::Cause::Timeout, "timeout");
-    }
-#endif
-
-    bool do_reset() override {
-        ++reset_count;
-        return !reset_fails;
-    }
-
-    note::Result<size_t> do_read(uint8_t* buf, size_t max_len, uint32_t) override {
+    note::Result<size_t> read(uint8_t* buf, size_t max_len, uint32_t) override {
         if (rx.empty())
             return note::make_error(note::Error::ResponseLost, note::Cause::Timeout, "no data");
         size_t n = std::min(max_len, rx.size());
@@ -85,24 +57,22 @@ protected:
         return n;
     }
 
-    uint32_t max_retries() const override { return 1; }
-    uint32_t retry_delay_ms() const override { return 0; }
-    void delay(uint32_t) override { ++delay_count; }
+    bool reset() override { return true; }
+    bool write_line_terminator() override { return true; }
+    void delay(uint32_t) override {}
 };
 
 /// Harness for streaming execute tests.
 struct StreamingHarness {
-    note::test::TestJsonBackend backend;
-    MockStreamTransport transport;
+    MockHal hal;
+    note::StreamingTransport transport{hal, /*max_retries=*/1};
     note::Notecard nc;
     UnconstrainedApi api;
 
     StreamingHarness()
-        : nc(backend, transport)
+        : nc(transport, note::Allocator{})
         , api(nc)
-    {
-        nc.set_allocator(note::Allocator{});
-    }
+    {}
 };
 
 } // namespace
@@ -110,7 +80,7 @@ struct StreamingHarness {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardAttn::Request streaming execute") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({"off":true,"payload":"x-payload","set":true,"time":42})");
+    sh.hal.queue_response(R"({"off":true,"payload":"x-payload","set":true,"time":42})");
     auto req = sh.api.card.attn().request();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -125,7 +95,7 @@ TEST_CASE("note::api::CardAttn::Request streaming execute") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardAttn::Arm streaming execute") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({"set":true})");
+    sh.hal.queue_response(R"({"set":true})");
     auto req = sh.api.card.attn().arm();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -135,7 +105,7 @@ TEST_CASE("note::api::CardAttn::Arm streaming execute") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardAttn::Watchdog streaming execute (void)") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({})");
+    sh.hal.queue_response(R"({})");
     auto req = sh.api.card.attn().watchdog();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -144,7 +114,7 @@ TEST_CASE("note::api::CardAttn::Watchdog streaming execute (void)") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardAttn::Sleep streaming execute (void)") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({})");
+    sh.hal.queue_response(R"({})");
     auto req = sh.api.card.attn().sleep();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -153,7 +123,7 @@ TEST_CASE("note::api::CardAttn::Sleep streaming execute (void)") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardAttn::Retrieve streaming execute") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({"payload":"x-payload","time":42})");
+    sh.hal.queue_response(R"({"payload":"x-payload","time":42})");
     auto req = sh.api.card.attn().retrieve();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -164,7 +134,7 @@ TEST_CASE("note::api::CardAttn::Retrieve streaming execute") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardAttn::Disarm streaming execute (void)") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({})");
+    sh.hal.queue_response(R"({})");
     auto req = sh.api.card.attn().disarm();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -173,7 +143,7 @@ TEST_CASE("note::api::CardAttn::Disarm streaming execute (void)") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardAttn::Query streaming execute") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({"off":true,"set":true})");
+    sh.hal.queue_response(R"({"off":true,"set":true})");
     auto req = sh.api.card.attn().query();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -186,7 +156,7 @@ TEST_CASE("note::api::CardAttn::Query streaming execute") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardAux streaming execute") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({"mode":"x-mode","power":true,"seconds":42,"time":42})");
+    sh.hal.queue_response(R"({"mode":"x-mode","power":true,"seconds":42,"time":42})");
     auto req = sh.api.card.aux();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -201,7 +171,7 @@ TEST_CASE("note::api::CardAux streaming execute") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardAuxSerial::Request streaming execute") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({"mode":"x-mode","rate":42})");
+    sh.hal.queue_response(R"({"mode":"x-mode","rate":42})");
     auto req = sh.api.card.aux.serial.request();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -214,7 +184,7 @@ TEST_CASE("note::api::CardAuxSerial::Request streaming execute") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardAuxSerial::Notify streaming execute (void)") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({})");
+    sh.hal.queue_response(R"({})");
     auto req = sh.api.card.aux.serial.notify();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -223,7 +193,7 @@ TEST_CASE("note::api::CardAuxSerial::Notify streaming execute (void)") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardAuxSerial::Gps streaming execute (void)") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({})");
+    sh.hal.queue_response(R"({})");
     auto req = sh.api.card.aux.serial.gps();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -232,7 +202,7 @@ TEST_CASE("note::api::CardAuxSerial::Gps streaming execute (void)") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardAuxSerial::Configure streaming execute (void)") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({})");
+    sh.hal.queue_response(R"({})");
     auto req = sh.api.card.aux.serial.configure();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -241,7 +211,7 @@ TEST_CASE("note::api::CardAuxSerial::Configure streaming execute (void)") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardAuxSerial::Off streaming execute (void)") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({})");
+    sh.hal.queue_response(R"({})");
     auto req = sh.api.card.aux.serial.off();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -250,7 +220,7 @@ TEST_CASE("note::api::CardAuxSerial::Off streaming execute (void)") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardBinary::Status streaming execute") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({"cobs":42,"connected":true,"length":42,"max":42,"status":"x-status"})");
+    sh.hal.queue_response(R"({"cobs":42,"connected":true,"length":42,"max":42,"status":"x-status"})");
     auto req = sh.api.card.binary.status();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -264,7 +234,7 @@ TEST_CASE("note::api::CardBinary::Status streaming execute") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardBinary::Clear streaming execute") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({"cobs":42,"connected":true,"length":42,"max":42,"status":"x-status"})");
+    sh.hal.queue_response(R"({"cobs":42,"connected":true,"length":42,"max":42,"status":"x-status"})");
     auto req = sh.api.card.binary.clear();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -278,7 +248,7 @@ TEST_CASE("note::api::CardBinary::Clear streaming execute") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardBinaryGet streaming execute") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({"status":"x-status"})");
+    sh.hal.queue_response(R"({"status":"x-status"})");
     auto req = sh.api.card.binary.get();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -288,7 +258,7 @@ TEST_CASE("note::api::CardBinaryGet streaming execute") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardBinaryPut streaming execute") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({})");
+    sh.hal.queue_response(R"({})");
     auto req = sh.api.card.binary.put();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -297,7 +267,7 @@ TEST_CASE("note::api::CardBinaryPut streaming execute") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardCarrier streaming execute") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({"charging":true,"mode":"x-mode"})");
+    sh.hal.queue_response(R"({"charging":true,"mode":"x-mode"})");
     auto req = sh.api.card.carrier();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -308,7 +278,7 @@ TEST_CASE("note::api::CardCarrier streaming execute") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardContact::Get streaming execute") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({"email":"x-email","name":"x-name","org":"x-org","role":"x-role"})");
+    sh.hal.queue_response(R"({"email":"x-email","name":"x-name","org":"x-org","role":"x-role"})");
     auto req = sh.api.card.contact().get();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -321,7 +291,7 @@ TEST_CASE("note::api::CardContact::Get streaming execute") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardContact::Set streaming execute") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({"email":"x-email","name":"x-name","org":"x-org","role":"x-role"})");
+    sh.hal.queue_response(R"({"email":"x-email","name":"x-name","org":"x-org","role":"x-role"})");
     auto req = sh.api.card.contact().set();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -334,7 +304,7 @@ TEST_CASE("note::api::CardContact::Set streaming execute") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardDfu streaming execute") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({"name":"x-name"})");
+    sh.hal.queue_response(R"({"name":"x-name"})");
     auto req = sh.api.card.dfu();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -344,7 +314,7 @@ TEST_CASE("note::api::CardDfu streaming execute") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardIllumination streaming execute") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({"value":1.5})");
+    sh.hal.queue_response(R"({"value":1.5})");
     auto req = sh.api.card.illumination();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -354,7 +324,7 @@ TEST_CASE("note::api::CardIllumination streaming execute") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardIo streaming execute (void)") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({})");
+    sh.hal.queue_response(R"({})");
     auto req = sh.api.card.io();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -363,7 +333,7 @@ TEST_CASE("note::api::CardIo streaming execute (void)") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardLed streaming execute (void)") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({})");
+    sh.hal.queue_response(R"({})");
     auto req = sh.api.card.led();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -372,7 +342,7 @@ TEST_CASE("note::api::CardLed streaming execute (void)") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardLocation streaming execute") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({"count":42,"dop":1.5,"lat":1.5,"lon":1.5,"max":42,"mode":"x-mode","status":"x-status","time":42})");
+    sh.hal.queue_response(R"({"count":42,"dop":1.5,"lat":1.5,"lon":1.5,"max":42,"mode":"x-mode","status":"x-status","time":42})");
     auto req = sh.api.card.location();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -389,7 +359,7 @@ TEST_CASE("note::api::CardLocation streaming execute") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardLocationMode::Get streaming execute") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({"lat":1.5,"lon":1.5,"max":42,"minutes":42,"mode":"x-mode","seconds":42,"threshold":42,"vseconds":"x-vseconds"})");
+    sh.hal.queue_response(R"({"lat":1.5,"lon":1.5,"max":42,"minutes":42,"mode":"x-mode","seconds":42,"threshold":42,"vseconds":"x-vseconds"})");
     auto req = sh.api.card.location.mode.get();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -408,7 +378,7 @@ TEST_CASE("note::api::CardLocationMode::Get streaming execute") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardLocationMode::Set streaming execute") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({"lat":1.5,"lon":1.5,"max":42,"minutes":42,"mode":"x-mode","seconds":42,"threshold":42,"vseconds":"x-vseconds"})");
+    sh.hal.queue_response(R"({"lat":1.5,"lon":1.5,"max":42,"minutes":42,"mode":"x-mode","seconds":42,"threshold":42,"vseconds":"x-vseconds"})");
     auto req = sh.api.card.location.mode.set();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -427,7 +397,7 @@ TEST_CASE("note::api::CardLocationMode::Set streaming execute") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardLocationMode::Continuous streaming execute") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({"mode":"x-mode","threshold":42,"vseconds":"x-vseconds"})");
+    sh.hal.queue_response(R"({"mode":"x-mode","threshold":42,"vseconds":"x-vseconds"})");
     auto req = sh.api.card.location.mode.continuous();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -441,7 +411,7 @@ TEST_CASE("note::api::CardLocationMode::Continuous streaming execute") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardLocationMode::Periodic streaming execute") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({"lat":1.5,"lon":1.5,"max":42,"minutes":42,"mode":"x-mode","seconds":42,"threshold":42,"vseconds":"x-vseconds"})");
+    sh.hal.queue_response(R"({"lat":1.5,"lon":1.5,"max":42,"minutes":42,"mode":"x-mode","seconds":42,"threshold":42,"vseconds":"x-vseconds"})");
     auto req = sh.api.card.location.mode.periodic();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -460,7 +430,7 @@ TEST_CASE("note::api::CardLocationMode::Periodic streaming execute") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardLocationMode::Fixed streaming execute") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({"lat":1.5,"lon":1.5,"mode":"x-mode"})");
+    sh.hal.queue_response(R"({"lat":1.5,"lon":1.5,"mode":"x-mode"})");
     auto req = sh.api.card.location.mode.fixed();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -472,7 +442,7 @@ TEST_CASE("note::api::CardLocationMode::Fixed streaming execute") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardLocationMode::Remove streaming execute") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({"lat":1.5,"lon":1.5,"max":42,"minutes":42,"mode":"x-mode","seconds":42,"threshold":42,"vseconds":"x-vseconds"})");
+    sh.hal.queue_response(R"({"lat":1.5,"lon":1.5,"max":42,"minutes":42,"mode":"x-mode","seconds":42,"threshold":42,"vseconds":"x-vseconds"})");
     auto req = sh.api.card.location.mode.remove();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -491,7 +461,7 @@ TEST_CASE("note::api::CardLocationMode::Remove streaming execute") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardLocationTrack streaming execute") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({"file":"x-file","heartbeat":true,"minutes":42,"seconds":42,"start":true,"stop":true})");
+    sh.hal.queue_response(R"({"file":"x-file","heartbeat":true,"minutes":42,"seconds":42,"start":true,"stop":true})");
     auto req = sh.api.card.location.track();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -506,7 +476,7 @@ TEST_CASE("note::api::CardLocationTrack streaming execute") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardMonitor streaming execute (void)") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({})");
+    sh.hal.queue_response(R"({})");
     auto req = sh.api.card.monitor();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -515,7 +485,7 @@ TEST_CASE("note::api::CardMonitor streaming execute (void)") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardMotion streaming execute") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({"alert":true,"count":42,"mode":"x-mode","motion":42,"movements":"x-movements","seconds":42,"status":"x-status"})");
+    sh.hal.queue_response(R"({"alert":true,"count":42,"mode":"x-mode","motion":42,"movements":"x-movements","seconds":42,"status":"x-status"})");
     auto req = sh.api.card.motion();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -531,7 +501,7 @@ TEST_CASE("note::api::CardMotion streaming execute") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardMotionMode streaming execute (void)") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({})");
+    sh.hal.queue_response(R"({})");
     auto req = sh.api.card.motion.mode();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -540,7 +510,7 @@ TEST_CASE("note::api::CardMotionMode streaming execute (void)") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardMotionSync streaming execute (void)") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({})");
+    sh.hal.queue_response(R"({})");
     auto req = sh.api.card.motion.sync();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -549,7 +519,7 @@ TEST_CASE("note::api::CardMotionSync streaming execute (void)") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardMotionTrack streaming execute (void)") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({})");
+    sh.hal.queue_response(R"({})");
     auto req = sh.api.card.motion.track();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -558,7 +528,7 @@ TEST_CASE("note::api::CardMotionTrack streaming execute (void)") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardPower::Read streaming execute") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({"milliamp_hours":1.5,"temperature":1.5,"voltage":1.5})");
+    sh.hal.queue_response(R"({"milliamp_hours":1.5,"temperature":1.5,"voltage":1.5})");
     auto req = sh.api.card.power().read();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -570,7 +540,7 @@ TEST_CASE("note::api::CardPower::Read streaming execute") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardPower::Configure streaming execute") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({"milliamp_hours":1.5,"temperature":1.5,"voltage":1.5})");
+    sh.hal.queue_response(R"({"milliamp_hours":1.5,"temperature":1.5,"voltage":1.5})");
     auto req = sh.api.card.power().configure();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -582,7 +552,7 @@ TEST_CASE("note::api::CardPower::Configure streaming execute") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardPower::Reset streaming execute") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({"milliamp_hours":1.5,"temperature":1.5,"voltage":1.5})");
+    sh.hal.queue_response(R"({"milliamp_hours":1.5,"temperature":1.5,"voltage":1.5})");
     auto req = sh.api.card.power().reset();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -594,7 +564,7 @@ TEST_CASE("note::api::CardPower::Reset streaming execute") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardRandom streaming execute") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({"count":42,"payload":"x-payload"})");
+    sh.hal.queue_response(R"({"count":42,"payload":"x-payload"})");
     auto req = sh.api.card.random();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -605,7 +575,7 @@ TEST_CASE("note::api::CardRandom streaming execute") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardRestart streaming execute (void)") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({})");
+    sh.hal.queue_response(R"({})");
     auto req = sh.api.card.restart();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -614,7 +584,7 @@ TEST_CASE("note::api::CardRestart streaming execute (void)") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardRestore streaming execute (void)") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({})");
+    sh.hal.queue_response(R"({})");
     auto req = sh.api.card.restore();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -623,7 +593,7 @@ TEST_CASE("note::api::CardRestore streaming execute (void)") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardSleep streaming execute") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({"mode":"x-mode","off":true,"on":true,"seconds":42})");
+    sh.hal.queue_response(R"({"mode":"x-mode","off":true,"on":true,"seconds":42})");
     auto req = sh.api.card.sleep();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -636,7 +606,7 @@ TEST_CASE("note::api::CardSleep streaming execute") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardStatus streaming execute") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({"cell":true,"connected":true,"gps":true,"inbound":42,"outbound":42,"status":"x-status","storage":42,"sync":true,"time":42,"usb":true,"wifi":true})");
+    sh.hal.queue_response(R"({"cell":true,"connected":true,"gps":true,"inbound":42,"outbound":42,"status":"x-status","storage":42,"sync":true,"time":42,"usb":true,"wifi":true})");
     auto req = sh.api.card.status();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -660,7 +630,7 @@ TEST_CASE("note::api::CardStatus streaming execute") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardTemp::Read streaming execute") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({"calibration":1.5,"humidity":1.5,"pressure":1.5,"temperature":1.5,"usb":true,"value":1.5,"voltage":1.5})");
+    sh.hal.queue_response(R"({"calibration":1.5,"humidity":1.5,"pressure":1.5,"temperature":1.5,"usb":true,"value":1.5,"voltage":1.5})");
     auto req = sh.api.card.temp().read();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -676,7 +646,7 @@ TEST_CASE("note::api::CardTemp::Read streaming execute") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardTemp::Configure streaming execute") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({"calibration":1.5,"humidity":1.5,"pressure":1.5,"temperature":1.5,"usb":true,"value":1.5,"voltage":1.5})");
+    sh.hal.queue_response(R"({"calibration":1.5,"humidity":1.5,"pressure":1.5,"temperature":1.5,"usb":true,"value":1.5,"voltage":1.5})");
     auto req = sh.api.card.temp().configure();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -692,7 +662,7 @@ TEST_CASE("note::api::CardTemp::Configure streaming execute") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardTemp::Stop streaming execute") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({"calibration":1.5,"humidity":1.5,"pressure":1.5,"temperature":1.5,"usb":true,"value":1.5,"voltage":1.5})");
+    sh.hal.queue_response(R"({"calibration":1.5,"humidity":1.5,"pressure":1.5,"temperature":1.5,"usb":true,"value":1.5,"voltage":1.5})");
     auto req = sh.api.card.temp().stop();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -708,7 +678,7 @@ TEST_CASE("note::api::CardTemp::Stop streaming execute") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardTime streaming execute") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({"area":"x-area","country":"x-country","lat":1.5,"lon":1.5,"minutes":42,"time":42,"zone":"x-zone"})");
+    sh.hal.queue_response(R"({"area":"x-area","country":"x-country","lat":1.5,"lon":1.5,"minutes":42,"time":42,"zone":"x-zone"})");
     auto req = sh.api.card.time();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -724,7 +694,7 @@ TEST_CASE("note::api::CardTime streaming execute") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardTrace streaming execute (void)") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({})");
+    sh.hal.queue_response(R"({})");
     auto req = sh.api.card.trace();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -733,7 +703,7 @@ TEST_CASE("note::api::CardTrace streaming execute (void)") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardTransport streaming execute") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({"method":"x-method"})");
+    sh.hal.queue_response(R"({"method":"x-method"})");
     auto req = sh.api.card.transport();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -743,7 +713,7 @@ TEST_CASE("note::api::CardTransport streaming execute") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardTriangulate streaming execute") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({"length":42,"mode":"x-mode","motion":42,"on":true,"time":42,"usb":true})");
+    sh.hal.queue_response(R"({"length":42,"mode":"x-mode","motion":42,"on":true,"time":42,"usb":true})");
     auto req = sh.api.card.triangulate();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -758,7 +728,7 @@ TEST_CASE("note::api::CardTriangulate streaming execute") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardUsageGet streaming execute") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({"bytes_received":42,"bytes_sent":42,"notes_received":42,"notes_sent":42,"seconds":42,"sessions_secure":42,"sessions_standard":42,"time":42})");
+    sh.hal.queue_response(R"({"bytes_received":42,"bytes_sent":42,"notes_received":42,"notes_sent":42,"seconds":42,"sessions_secure":42,"sessions_standard":42,"time":42})");
     auto req = sh.api.card.usageGet();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -775,7 +745,7 @@ TEST_CASE("note::api::CardUsageGet streaming execute") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardUsageTest streaming execute") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({"bytes_per_day":42,"bytes_received":42,"bytes_sent":42,"days":42,"max":42,"notes_received":42,"notes_sent":42,"seconds":42,"sessions_secure":42,"sessions_standard":42,"time":42})");
+    sh.hal.queue_response(R"({"bytes_per_day":42,"bytes_received":42,"bytes_sent":42,"days":42,"max":42,"notes_received":42,"notes_sent":42,"seconds":42,"sessions_secure":42,"sessions_standard":42,"time":42})");
     auto req = sh.api.card.usageTest();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -795,7 +765,7 @@ TEST_CASE("note::api::CardUsageTest streaming execute") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardVersion streaming execute") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({"board":"x-board","cell":true,"device":"x-device","gps":true,"name":"x-name","sku":"x-sku","version":"x-version","wifi":true})");
+    sh.hal.queue_response(R"({"board":"x-board","cell":true,"device":"x-device","gps":true,"name":"x-name","sku":"x-sku","version":"x-version","wifi":true})");
     auto req = sh.api.card.version();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -814,7 +784,7 @@ TEST_CASE("note::api::CardVersion streaming execute") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardVoltage::Read streaming execute") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({"daily":1.5,"hours":42,"minutes":42,"mode":"x-mode","monthly":1.5,"usb":true,"value":1.5,"vavg":1.5,"vmax":1.5,"vmin":1.5,"weekly":1.5})");
+    sh.hal.queue_response(R"({"daily":1.5,"hours":42,"minutes":42,"mode":"x-mode","monthly":1.5,"usb":true,"value":1.5,"vavg":1.5,"vmax":1.5,"vmin":1.5,"weekly":1.5})");
     auto req = sh.api.card.voltage().read();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -836,7 +806,7 @@ TEST_CASE("note::api::CardVoltage::Read streaming execute") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardVoltage::Configure streaming execute") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({"daily":1.5,"hours":42,"minutes":42,"mode":"x-mode","monthly":1.5,"usb":true,"value":1.5,"vavg":1.5,"vmax":1.5,"vmin":1.5,"weekly":1.5})");
+    sh.hal.queue_response(R"({"daily":1.5,"hours":42,"minutes":42,"mode":"x-mode","monthly":1.5,"usb":true,"value":1.5,"vavg":1.5,"vmax":1.5,"vmin":1.5,"weekly":1.5})");
     auto req = sh.api.card.voltage().configure();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -858,7 +828,7 @@ TEST_CASE("note::api::CardVoltage::Configure streaming execute") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardWifi streaming execute") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({"secure":true,"security":"x-security","ssid":"x-ssid","version":"x-version"})");
+    sh.hal.queue_response(R"({"secure":true,"security":"x-security","ssid":"x-ssid","version":"x-version"})");
     auto req = sh.api.card.wifi();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -871,7 +841,7 @@ TEST_CASE("note::api::CardWifi streaming execute") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardWireless streaming execute") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({"count":42,"status":"x-status"})");
+    sh.hal.queue_response(R"({"count":42,"status":"x-status"})");
     auto req = sh.api.card.wireless();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -882,7 +852,7 @@ TEST_CASE("note::api::CardWireless streaming execute") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardWirelessPenalty::Check streaming execute") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({"count":42,"minutes":42,"seconds":42,"status":"x-status"})");
+    sh.hal.queue_response(R"({"count":42,"minutes":42,"seconds":42,"status":"x-status"})");
     auto req = sh.api.card.wireless.penalty.check();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -897,7 +867,7 @@ TEST_CASE("note::api::CardWirelessPenalty::Check streaming execute") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardWirelessPenalty::Set streaming execute") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({"count":42,"minutes":42,"seconds":42,"status":"x-status"})");
+    sh.hal.queue_response(R"({"count":42,"minutes":42,"seconds":42,"status":"x-status"})");
     auto req = sh.api.card.wireless.penalty.set();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -912,7 +882,7 @@ TEST_CASE("note::api::CardWirelessPenalty::Set streaming execute") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardWirelessPenalty::Clear streaming execute") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({"count":42,"minutes":42,"seconds":42,"status":"x-status"})");
+    sh.hal.queue_response(R"({"count":42,"minutes":42,"seconds":42,"status":"x-status"})");
     auto req = sh.api.card.wireless.penalty.clear();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -927,7 +897,7 @@ TEST_CASE("note::api::CardWirelessPenalty::Clear streaming execute") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::DfuGet streaming execute") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({"cobs":42,"length":42,"payload":"x-payload","status":"x-status"})");
+    sh.hal.queue_response(R"({"cobs":42,"length":42,"payload":"x-payload","status":"x-status"})");
     auto req = sh.api.dfu.get();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -940,7 +910,7 @@ TEST_CASE("note::api::DfuGet streaming execute") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::DfuStatus streaming execute") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({"mode":"x-mode","off":true,"on":true,"pending":true,"status":"x-status"})");
+    sh.hal.queue_response(R"({"mode":"x-mode","off":true,"on":true,"pending":true,"status":"x-status"})");
     auto req = sh.api.dfu.status();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -954,7 +924,7 @@ TEST_CASE("note::api::DfuStatus streaming execute") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::EnvDefault::Set streaming execute (void)") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({})");
+    sh.hal.queue_response(R"({})");
     auto req = sh.api.env.defaults().set(note::string_view("x-name"));
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -963,7 +933,7 @@ TEST_CASE("note::api::EnvDefault::Set streaming execute (void)") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::EnvDefault::Remove streaming execute (void)") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({})");
+    sh.hal.queue_response(R"({})");
     auto req = sh.api.env.defaults().remove(note::string_view("x-name"));
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -972,7 +942,7 @@ TEST_CASE("note::api::EnvDefault::Remove streaming execute (void)") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::EnvGet streaming execute") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({"text":"x-text","time":42})");
+    sh.hal.queue_response(R"({"text":"x-text","time":42})");
     auto req = sh.api.env.get();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -985,7 +955,7 @@ TEST_CASE("note::api::EnvGet streaming execute") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::EnvModified streaming execute") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({"time":42})");
+    sh.hal.queue_response(R"({"time":42})");
     auto req = sh.api.env.modified();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -997,7 +967,7 @@ TEST_CASE("note::api::EnvModified streaming execute") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::EnvSet streaming execute") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({"time":42})");
+    sh.hal.queue_response(R"({"time":42})");
     auto req = sh.api.env.set(note::string_view("x-name"));
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -1009,7 +979,7 @@ TEST_CASE("note::api::EnvSet streaming execute") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::EnvTemplate streaming execute") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({"bytes":42})");
+    sh.hal.queue_response(R"({"bytes":42})");
     auto req = sh.api.env.templates();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -1019,7 +989,7 @@ TEST_CASE("note::api::EnvTemplate streaming execute") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::FileChanges streaming execute") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({"changes":42,"pending":true,"total":42})");
+    sh.hal.queue_response(R"({"changes":42,"pending":true,"total":42})");
     auto req = sh.api.file.changes();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -1031,7 +1001,7 @@ TEST_CASE("note::api::FileChanges streaming execute") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::FileChangesPending streaming execute") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({"changes":42,"pending":true,"total":42})");
+    sh.hal.queue_response(R"({"changes":42,"pending":true,"total":42})");
     auto req = sh.api.file.changes.pending();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -1043,7 +1013,7 @@ TEST_CASE("note::api::FileChangesPending streaming execute") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::FileClear streaming execute (void)") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({})");
+    sh.hal.queue_response(R"({})");
     auto req = sh.api.file.clear();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -1052,7 +1022,7 @@ TEST_CASE("note::api::FileClear streaming execute (void)") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::FileDelete streaming execute (void)") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({})");
+    sh.hal.queue_response(R"({})");
     auto req = sh.api.file.delete_();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -1061,7 +1031,7 @@ TEST_CASE("note::api::FileDelete streaming execute (void)") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::FileStats streaming execute") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({"changes":42,"sync":true,"total":42})");
+    sh.hal.queue_response(R"({"changes":42,"sync":true,"total":42})");
     auto req = sh.api.file.stats();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -1073,7 +1043,7 @@ TEST_CASE("note::api::FileStats streaming execute") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::HubGet streaming execute") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({"device":"x-device","host":"x-host","inbound":42,"mode":"x-mode","outbound":42,"product":"x-product","sn":"x-sn","sync":true,"vinbound":"x-vinbound","voutbound":"x-voutbound"})");
+    sh.hal.queue_response(R"({"device":"x-device","host":"x-host","inbound":42,"mode":"x-mode","outbound":42,"product":"x-product","sn":"x-sn","sync":true,"vinbound":"x-vinbound","voutbound":"x-voutbound"})");
     auto req = sh.api.hub.get();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -1092,7 +1062,7 @@ TEST_CASE("note::api::HubGet streaming execute") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::HubLog streaming execute (void)") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({})");
+    sh.hal.queue_response(R"({})");
     auto req = sh.api.hub.log();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -1101,7 +1071,7 @@ TEST_CASE("note::api::HubLog streaming execute (void)") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::HubSet streaming execute (void)") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({})");
+    sh.hal.queue_response(R"({})");
     auto req = sh.api.hub.set();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -1110,7 +1080,7 @@ TEST_CASE("note::api::HubSet streaming execute (void)") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::HubSignal streaming execute") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({"connected":true,"signals":42})");
+    sh.hal.queue_response(R"({"connected":true,"signals":42})");
     auto req = sh.api.hub.signal();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -1121,7 +1091,7 @@ TEST_CASE("note::api::HubSignal streaming execute") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::HubStatus streaming execute") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({"connected":true,"status":"x-status"})");
+    sh.hal.queue_response(R"({"connected":true,"status":"x-status"})");
     auto req = sh.api.hub.status();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -1132,7 +1102,7 @@ TEST_CASE("note::api::HubStatus streaming execute") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::HubSync streaming execute (void)") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({})");
+    sh.hal.queue_response(R"({})");
     auto req = sh.api.hub.sync();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -1141,7 +1111,7 @@ TEST_CASE("note::api::HubSync streaming execute (void)") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::HubSyncStatus streaming execute") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({"alert":true,"completed":42,"mode":"x-mode","requested":42,"scan":true,"seconds":42,"status":"x-status","sync":true,"time":42})");
+    sh.hal.queue_response(R"({"alert":true,"completed":42,"mode":"x-mode","requested":42,"scan":true,"seconds":42,"status":"x-status","sync":true,"time":42})");
     auto req = sh.api.hub.sync.status();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -1163,7 +1133,7 @@ TEST_CASE("note::api::HubSyncStatus streaming execute") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::NoteAdd streaming execute") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({"note":"x-note","template":true,"total":42})");
+    sh.hal.queue_response(R"({"note":"x-note","template":true,"total":42})");
     auto req = sh.api.note.add();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -1175,7 +1145,7 @@ TEST_CASE("note::api::NoteAdd streaming execute") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::NoteChanges::Peek streaming execute") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({"changes":42,"total":42})");
+    sh.hal.queue_response(R"({"changes":42,"total":42})");
     auto req = sh.api.note.changes().peek();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -1186,7 +1156,7 @@ TEST_CASE("note::api::NoteChanges::Peek streaming execute") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::NoteChanges::Pop streaming execute") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({"changes":42,"total":42})");
+    sh.hal.queue_response(R"({"changes":42,"total":42})");
     auto req = sh.api.note.changes().pop(note::string_view("x-file"));
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -1197,7 +1167,7 @@ TEST_CASE("note::api::NoteChanges::Pop streaming execute") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::NoteDelete streaming execute (void)") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({})");
+    sh.hal.queue_response(R"({})");
     auto req = sh.api.note.delete_(note::string_view("x-file"), note::string_view("x-note"));
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -1206,7 +1176,7 @@ TEST_CASE("note::api::NoteDelete streaming execute (void)") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::NoteGet::Read streaming execute") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({"payload":"x-payload","time":42})");
+    sh.hal.queue_response(R"({"payload":"x-payload","time":42})");
     auto req = sh.api.note.get().read();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -1217,7 +1187,7 @@ TEST_CASE("note::api::NoteGet::Read streaming execute") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::NoteGet::Pop streaming execute") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({"payload":"x-payload","time":42})");
+    sh.hal.queue_response(R"({"payload":"x-payload","time":42})");
     auto req = sh.api.note.get().pop();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -1228,7 +1198,7 @@ TEST_CASE("note::api::NoteGet::Pop streaming execute") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::NoteTemplate::Define streaming execute") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({"bytes":42,"format":"x-format","length":42,"template":true})");
+    sh.hal.queue_response(R"({"bytes":42,"format":"x-format","length":42,"template":true})");
     auto req = sh.api.note.templates().define(note::string_view("x-file"));
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -1245,7 +1215,7 @@ TEST_CASE("note::api::NoteTemplate::Define streaming execute") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::NoteTemplate::Remove streaming execute") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({"bytes":42,"format":"x-format","length":42,"template":true})");
+    sh.hal.queue_response(R"({"bytes":42,"format":"x-format","length":42,"template":true})");
     auto req = sh.api.note.templates().remove(note::string_view("x-file"));
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -1262,7 +1232,7 @@ TEST_CASE("note::api::NoteTemplate::Remove streaming execute") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::NoteUpdate streaming execute (void)") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({})");
+    sh.hal.queue_response(R"({})");
     auto req = sh.api.note.update(note::string_view("x-file"), note::string_view("x-note"));
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -1271,7 +1241,7 @@ TEST_CASE("note::api::NoteUpdate streaming execute (void)") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::NtnGps streaming execute") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({"off":true,"on":true})");
+    sh.hal.queue_response(R"({"off":true,"on":true})");
     auto req = sh.api.ntn.gps();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -1282,7 +1252,7 @@ TEST_CASE("note::api::NtnGps streaming execute") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::NtnReset streaming execute (void)") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({})");
+    sh.hal.queue_response(R"({})");
     auto req = sh.api.ntn.reset();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -1291,7 +1261,7 @@ TEST_CASE("note::api::NtnReset streaming execute (void)") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::NtnStatus streaming execute") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({"status":"x-status"})");
+    sh.hal.queue_response(R"({"status":"x-status"})");
     auto req = sh.api.ntn.status();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -1301,7 +1271,7 @@ TEST_CASE("note::api::NtnStatus streaming execute") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::VarDelete streaming execute (void)") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({})");
+    sh.hal.queue_response(R"({})");
     auto req = sh.api.var.delete_();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -1310,7 +1280,7 @@ TEST_CASE("note::api::VarDelete streaming execute (void)") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::VarGet streaming execute") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({"flag":true,"text":"x-text","value":1.5})");
+    sh.hal.queue_response(R"({"flag":true,"text":"x-text","value":1.5})");
     auto req = sh.api.var.get();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -1322,7 +1292,7 @@ TEST_CASE("note::api::VarGet streaming execute") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::VarSet streaming execute (void)") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({})");
+    sh.hal.queue_response(R"({})");
     auto req = sh.api.var.set();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -1331,7 +1301,7 @@ TEST_CASE("note::api::VarSet streaming execute (void)") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::Web streaming execute") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({"cobs":42,"length":42,"payload":"x-payload","result":42})");
+    sh.hal.queue_response(R"({"cobs":42,"length":42,"payload":"x-payload","result":42})");
     auto req = sh.api.web.request();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -1344,7 +1314,7 @@ TEST_CASE("note::api::Web streaming execute") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::WebDelete streaming execute") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({"payload":"x-payload","result":42,"status":"x-status"})");
+    sh.hal.queue_response(R"({"payload":"x-payload","result":42,"status":"x-status"})");
     auto req = sh.api.web.delete_();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -1356,7 +1326,7 @@ TEST_CASE("note::api::WebDelete streaming execute") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::WebGet streaming execute") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({"cobs":42,"length":42,"payload":"x-payload","result":42})");
+    sh.hal.queue_response(R"({"cobs":42,"length":42,"payload":"x-payload","result":42})");
     auto req = sh.api.web.get();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -1369,7 +1339,7 @@ TEST_CASE("note::api::WebGet streaming execute") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::WebPost streaming execute") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({"cobs":42,"length":42,"payload":"x-payload","result":42,"status":"x-status"})");
+    sh.hal.queue_response(R"({"cobs":42,"length":42,"payload":"x-payload","result":42,"status":"x-status"})");
     auto req = sh.api.web.post();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -1385,7 +1355,7 @@ TEST_CASE("note::api::WebPost streaming execute") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::WebPut streaming execute") {
     StreamingHarness sh;
-    sh.transport.queue_response(R"({"payload":"x-payload","result":42,"status":"x-status"})");
+    sh.hal.queue_response(R"({"payload":"x-payload","result":42,"status":"x-status"})");
     auto req = sh.api.web.put();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());

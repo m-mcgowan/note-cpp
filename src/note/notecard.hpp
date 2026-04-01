@@ -6,6 +6,7 @@
 #include "md5.hpp"
 #include "safety.hpp"
 #include "span.hpp"
+#include "streaming_transport.hpp"
 #include "string_pool.hpp"
 #include "transport.hpp"
 #include "transport/cobs.hpp"
@@ -55,24 +56,15 @@ class Notecard {
 public:
     Notecard() = default;
 
-    Notecard(JsonBackend& backend, ITransport& transport)
+    Notecard(JsonBackend& backend, IBufferedTransport& transport)
         : backend_(&backend)
         , transport_(&transport)
     {}
 
-    Notecard(JsonBackend& backend, AbstractTransport& transport)
-        : backend_(&backend)
-        , transport_(&transport)
-        , streaming_transport_(&transport)
-    {}
-
-    /// Streaming-only constructor. No JsonBackend needed — requests are
-    /// streamed via StreamingJsonBuilder, responses SAX-parsed via Sink.
-    /// Requires set_allocator() before execute(). Endpoints without a
-    /// Response::Sink type are not supported (compile error).
-    Notecard(AbstractTransport& transport, Allocator alloc)
-        : transport_(&transport)
-        , streaming_transport_(&transport)
+    /// Streaming-only: no JsonBackend, no ITransport vtable overhead.
+    /// Requests streamed via StreamingJsonBuilder, responses SAX-parsed via Sink.
+    Notecard(IStreamingTransport& transport, Allocator alloc)
+        : streaming_transport_(&transport)
         , alloc_(alloc)
     {}
 
@@ -108,7 +100,8 @@ public:
     ApiResult<typename RequestT::Response> execute(const RequestT& req) {
         using Rsp = typename RequestT::Response;
 
-        if (!transport_) return Unexpected(make_error(Error::NotReady, "no transport configured"));
+        if (!transport_ && !streaming_transport_)
+            return Unexpected(make_error(Error::NotReady, "no transport configured"));
 
         // Full streaming path: SAX-parse response directly from transport.
         // Requires both streaming transport and an allocator (for string interning).
@@ -125,7 +118,7 @@ public:
                 if constexpr (std::is_void_v<Rsp>) {
                     JsonSink null_sink;
                     ErrorCaptureSink err_sink(null_sink);
-                    auto rv = streaming_transport_->transact_streaming(
+                    auto rv = streaming_transport_->transact(
                         build, err_sink, default_timeout_ms_);
                     if (!rv) return Unexpected(rv.error());
                     auto err = err_sink.captured_error();
@@ -138,7 +131,7 @@ public:
                     Rsp rsp_val{};
                     typename Rsp::Sink response_sink(rsp_val, pool);
                     ErrorCaptureSink err_sink(response_sink);
-                    auto rv = streaming_transport_->transact_streaming(
+                    auto rv = streaming_transport_->transact(
                         build, err_sink, default_timeout_ms_);
                     if (!rv) return Unexpected(rv.error());
                     auto err = err_sink.captured_error();
@@ -201,20 +194,13 @@ public:
     Result<std::unique_ptr<JsonReader>> request(
             string_view req_type,
             std::function<void(JsonBuilder&)> build_fn = {}) {
-        if (!transport_) return make_error(Error::NotReady, "no transport configured");
+        if (!transport_ || !backend_)
+            return make_error(Error::NotReady, "no buffered transport configured");
 
-        Result<string_view> rsp = make_error(Error::NotReady, "");
-        if (streaming_transport_) {
-            rsp = streaming_transport_->transact_build([&](JsonBuilder& b) {
-                b.add("req", req_type);
-                if (build_fn) build_fn(b);
-            }, default_timeout_ms_);
-        } else {
-            auto& builder = backend_->get_builder();
-            builder.add("req", req_type);
-            if (build_fn) build_fn(builder);
-            rsp = transport_->transact(builder.to_view(), default_timeout_ms_);
-        }
+        auto& builder = backend_->get_builder();
+        builder.add("req", req_type);
+        if (build_fn) build_fn(builder);
+        auto rsp = transport_->transact(builder.to_view(), default_timeout_ms_);
         if (!rsp) return Unexpected(rsp.error());
 
         auto reader = backend_->parse_response(*rsp);
@@ -229,14 +215,13 @@ public:
     // Fire-and-forget typed command (generated request types).
     template<typename RequestT>
     Result<void> command_typed(const RequestT& req) {
-        if (!transport_) return make_error(Error::NotReady, "no transport configured");
-
         if (streaming_transport_) {
-            return streaming_transport_->send_build([&](JsonBuilder& b) {
+            return streaming_transport_->send([&](JsonBuilder& b) {
                 b.add("cmd", RequestT::notecard_request);
                 req.build(b);
             });
         }
+        if (!transport_) return make_error(Error::NotReady, "no transport configured");
 
         auto& builder = backend_->get_builder();
         builder.add("cmd", RequestT::notecard_request);
@@ -248,14 +233,13 @@ public:
     // Fire-and-forget command.
     Result<void> command(string_view cmd_type,
                          std::function<void(JsonBuilder&)> build_fn = {}) {
-        if (!transport_) return make_error(Error::NotReady, "no transport configured");
-
         if (streaming_transport_) {
-            return streaming_transport_->send_build([&](JsonBuilder& b) {
+            return streaming_transport_->send([&](JsonBuilder& b) {
                 b.add("cmd", cmd_type);
                 if (build_fn) build_fn(b);
             });
         }
+        if (!transport_) return make_error(Error::NotReady, "no transport configured");
 
         auto& builder = backend_->get_builder();
         builder.add("cmd", cmd_type);
@@ -268,7 +252,7 @@ public:
     uint32_t default_timeout() const { return default_timeout_ms_; }
 
     /// Access the underlying transport.
-    ITransport& transport() { return *transport_; }
+    IBufferedTransport& transport() { return *transport_; }
 
     JsonBackend& backend() { return *backend_; }
 
@@ -405,12 +389,7 @@ private:
         using Rsp = typename RequestT::Response;
 
         Result<string_view> rsp = make_error(Error::NotReady, "");
-        if (streaming_transport_) {
-            rsp = streaming_transport_->transact_build([&](JsonBuilder& b) {
-                b.add("req", RequestT::notecard_request);
-                req.build(b);
-            }, default_timeout_ms_);
-        } else {
+        {
             auto& builder = backend_->get_builder();
             builder.add("req", RequestT::notecard_request);
             req.build(builder);
@@ -448,8 +427,8 @@ private:
     }
 
     JsonBackend* backend_ = nullptr;
-    ITransport* transport_ = nullptr;
-    AbstractTransport* streaming_transport_ = nullptr;
+    IBufferedTransport* transport_ = nullptr;
+    IStreamingTransport* streaming_transport_ = nullptr;
     uint32_t default_timeout_ms_ = 10000;
     std::optional<Allocator> alloc_;
     byte_span cobs_buf_{};          // optional external COBS working buffer

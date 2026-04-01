@@ -19,16 +19,16 @@
 namespace note {
 
 // ---------------------------------------------------------------------------
-// ITransport — pure virtual transport contract
+// IBufferedTransport — buffered transport contract
 // ---------------------------------------------------------------------------
 
-/// Transport interface for Notecard communication.
+/// Buffered transport interface for Notecard communication.
 ///
 /// Implementations handle the wire protocol (serial, I2C) and buffer
 /// management. The string_view returned from transact() points into the
 /// transport's internal buffer and is valid until the next transact() call.
-struct ITransport {
-    virtual ~ITransport() = default;
+struct IBufferedTransport {
+    virtual ~IBufferedTransport() = default;
 
     /// Send a JSON request and receive the response.
     virtual Result<string_view> transact(string_view request, uint32_t timeout_ms) = 0;
@@ -60,6 +60,9 @@ struct ITransport {
     }
 };
 
+/// @deprecated Use IBufferedTransport directly.
+using ITransport = IBufferedTransport;
+
 
 // ---------------------------------------------------------------------------
 // AbstractTransport — shared retry/CRC logic for Notecard wire protocols
@@ -81,7 +84,7 @@ struct ITransport {
 ///   3. Return response or last error
 ///
 /// send() is fire-and-forget: prepare + transmit, no receive.
-class AbstractTransport : public ITransport {
+class AbstractTransport : public IBufferedTransport {
 public:
     /// Set an external receive buffer. When set, transact() reads into
     /// this buffer instead of the internal response_buf_ (zero heap).
@@ -757,7 +760,7 @@ private:
 ///         [](string_view req, uint32_t) -> Result<string_view> { return "{}"; });
 ///     Notecard nc(backend, transport);
 /// @endcode
-class CallbackTransport : public ITransport {
+class CallbackTransport : public IBufferedTransport {
 public:
     using TransactFn = std::function<Result<string_view>(string_view, uint32_t)>;
     using SendFn = std::function<Result<void>(string_view)>;

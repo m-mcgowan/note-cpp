@@ -15,6 +15,7 @@
 
 #include <note/api.hpp>
 #include <note/allocator.hpp>
+#include <note/streaming_transport.hpp>
 #include <note/string_pool.hpp>
 
 #include <cstring>
@@ -30,12 +31,12 @@ using UnconstrainedApi = note::Api;
 
 namespace {
 
-/// Mock transport with fine-grained error injection.
-class ErrorInjectTransport : public note::AbstractTransport {
+/// Mock TransportHal with fine-grained error injection.
+class ErrorInjectHal : public note::TransportHal {
 public:
     struct ReadChunk {
         std::vector<uint8_t> data;
-        bool fail = false;  // If true, return error instead of data
+        bool fail = false;
     };
 
     std::vector<ReadChunk> read_sequence;
@@ -45,10 +46,7 @@ public:
     int reset_count = 0;
     int delay_count = 0;
 
-    // Per-attempt control: transmit_results[attempt] = success/fail
-    std::vector<bool> transmit_results;  // true=succeed, false=fail
-
-    uint32_t retries = 1;
+    std::vector<bool> transmit_results;  // per-attempt: true=succeed, false=fail
 
     void queue_response(const std::string& s) {
         ReadChunk chunk;
@@ -70,25 +68,13 @@ public:
         read_sequence.push_back(std::move(chunk));
     }
 
-protected:
-    bool do_transmit(const char* /*data*/, size_t /*len*/) override {
+    bool transmit(const uint8_t*, size_t) override {
         auto idx = static_cast<size_t>(transmit_count++);
         if (idx < transmit_results.size()) return transmit_results[idx];
         return true;
     }
 
-#ifndef NOTE_NO_STD_STRING
-    note::Result<void> do_receive(std::string& /*buf*/, uint32_t) override {
-        return note::make_error(note::Error::ResponseLost, note::Cause::Timeout, "not used");
-    }
-#endif
-
-    bool do_reset() override {
-        ++reset_count;
-        return true;
-    }
-
-    note::Result<size_t> do_read(uint8_t* buf, size_t max_len, uint32_t) override {
+    note::Result<size_t> read(uint8_t* buf, size_t max_len, uint32_t) override {
         if (read_idx >= read_sequence.size())
             return note::make_error(note::Error::ResponseLost, note::Cause::Timeout, "no data");
 
@@ -101,23 +87,22 @@ protected:
         return n;
     }
 
-    uint32_t max_retries() const override { return retries; }
-    uint32_t retry_delay_ms() const override { return 0; }
+    bool reset() override { ++reset_count; return true; }
+    bool write_line_terminator() override { return true; }
     void delay(uint32_t) override { ++delay_count; }
 };
 
 struct ErrorHarness {
-    note::test::TestJsonBackend backend;
-    ErrorInjectTransport transport;
+    ErrorInjectHal hal;
+    note::StreamingTransport transport;
     note::Notecard nc;
     UnconstrainedApi api;
 
-    ErrorHarness()
-        : nc(backend, transport)
+    explicit ErrorHarness(uint32_t retries = 1)
+        : transport(hal, retries)
+        , nc(transport, note::Allocator{})
         , api(nc)
-    {
-        nc.set_allocator(note::Allocator{});
-    }
+    {}
 };
 
 // Simple deterministic PRNG for reproducible fuzz data
@@ -138,49 +123,46 @@ struct Xorshift32 {
 // ── Transmit failure + retry ──────────────────────────────────────────────
 
 TEST_CASE("streaming: transmit failure triggers retry") {
-    ErrorHarness h;
-    h.transport.retries = 2;
+    ErrorHarness h(2);
     // First transmit attempt fails (the request line + \r\n = 2 transmits per attempt)
     // stream_request calls do_write (via do_transmit) for each builder write + line terminator
     // Simplification: fail the first transmit, succeed after retry
-    h.transport.transmit_results = {false};  // First transmit fails, rest succeed
+    h.hal.transmit_results = {false};  // First transmit fails, rest succeed
     // After retry, queue a valid response
-    h.transport.queue_read_error();  // First attempt read (won't reach it, but just in case)
-    h.transport.queue_response(R"({})");
+    h.hal.queue_read_error();  // First attempt read (won't reach it, but just in case)
+    h.hal.queue_response(R"({})");
 
     auto req = h.api.card.status();
     auto rsp = req.execute();
     // May succeed (retry worked) or fail (depending on transmit sequencing)
     // The important thing is the retry path was exercised
-    CHECK(h.transport.delay_count >= 0);
-    CHECK(h.transport.reset_count >= 1);
+    CHECK(h.hal.delay_count >= 0);
+    CHECK(h.hal.reset_count >= 1);
 }
 
 // ── Read timeout + retry ──────────────────────────────────────────────────
 
 TEST_CASE("streaming: read timeout triggers retry and recovers") {
-    ErrorHarness h;
-    h.transport.retries = 2;
+    ErrorHarness h(2);
     // First attempt: transmit succeeds, read fails
-    h.transport.queue_read_error();
+    h.hal.queue_read_error();
     // Second attempt: transmit succeeds, read succeeds
-    h.transport.queue_response(R"({"status":"ok"})");
+    h.hal.queue_response(R"({"status":"ok"})");
 
     auto req = h.api.card.status();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
     CHECK(rsp.status == "ok");
-    CHECK(h.transport.delay_count >= 1);
+    CHECK(h.hal.delay_count >= 1);
 }
 
 // ── All retries exhausted ─────────────────────────────────────────────────
 
 TEST_CASE("streaming: all retries exhausted returns error") {
-    ErrorHarness h;
-    h.transport.retries = 1;
+    ErrorHarness h(1);
     // Both attempts fail with read errors
-    h.transport.queue_read_error();
-    h.transport.queue_read_error();
+    h.hal.queue_read_error();
+    h.hal.queue_read_error();
 
     auto req = h.api.card.status();
     auto rsp = req.execute();
@@ -191,7 +173,7 @@ TEST_CASE("streaming: all retries exhausted returns error") {
 
 TEST_CASE("streaming: Notecard error response propagates") {
     ErrorHarness h;
-    h.transport.queue_response(R"({"err":"device not ready"})");
+    h.hal.queue_response(R"({"err":"device not ready"})");
 
     auto req = h.api.card.status();
     auto rsp = req.execute();
@@ -201,7 +183,7 @@ TEST_CASE("streaming: Notecard error response propagates") {
 
 TEST_CASE("streaming: void endpoint with Notecard error") {
     ErrorHarness h;
-    h.transport.queue_response(R"({"err":"busy"})");
+    h.hal.queue_response(R"({"err":"busy"})");
 
     auto req = h.api.card.restart();
     auto rsp = req.execute();
@@ -212,13 +194,12 @@ TEST_CASE("streaming: void endpoint with Notecard error") {
 // ── CRC mismatch ──────────────────────────────────────────────────────────
 
 TEST_CASE("streaming: CRC mismatch triggers retry") {
-    ErrorHarness h;
-    h.transport.retries = 2;
+    ErrorHarness h(2);
 
     // First attempt: response with bad CRC
-    h.transport.queue_response(R"({"status":"ok","crc":"0001:deadbeef"})");
+    h.hal.queue_response(R"({"status":"ok","crc":"0001:deadbeef"})");
     // Second attempt: response without CRC (accepted since crc not yet enabled)
-    h.transport.queue_response(R"({"status":"recovered"})");
+    h.hal.queue_response(R"({"status":"recovered"})");
 
     auto req = h.api.card.status();
     auto rsp = req.execute();
@@ -228,8 +209,7 @@ TEST_CASE("streaming: CRC mismatch triggers retry") {
 }
 
 TEST_CASE("streaming: CRC expected but missing returns error") {
-    ErrorHarness h;
-    h.transport.retries = 0;  // No retries
+    ErrorHarness h(0);  // No retries
 
     // First response has valid CRC — enables crc_enabled_
     // But we need to get the transport into crc_enabled state first.
@@ -237,7 +217,7 @@ TEST_CASE("streaming: CRC expected but missing returns error") {
     // Instead, test the path directly via transact_streaming with a sink.
 
     // Queue response without CRC for a fresh transport — should succeed
-    h.transport.queue_response(R"({"status":"ok"})");
+    h.hal.queue_response(R"({"status":"ok"})");
     auto req = h.api.card.status();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
@@ -246,11 +226,10 @@ TEST_CASE("streaming: CRC expected but missing returns error") {
 // ── JSON parse errors ─────────────────────────────────────────────────────
 
 TEST_CASE("streaming: truncated JSON response") {
-    ErrorHarness h;
-    h.transport.retries = 0;
+    ErrorHarness h(0);
     // Truncated JSON — missing closing brace
-    h.transport.queue_raw_bytes({'{'});
-    h.transport.queue_read_error();  // EOF after truncation
+    h.hal.queue_raw_bytes({'{'});
+    h.hal.queue_read_error();  // EOF after truncation
 
     auto req = h.api.card.status();
     auto rsp = req.execute();
@@ -258,12 +237,11 @@ TEST_CASE("streaming: truncated JSON response") {
 }
 
 TEST_CASE("streaming: malformed JSON response") {
-    ErrorHarness h;
-    h.transport.retries = 0;
+    ErrorHarness h(0);
     // Invalid JSON
     std::string bad = "{not valid json}\r\n";
     std::vector<uint8_t> bytes(bad.begin(), bad.end());
-    h.transport.queue_raw_bytes(bytes);
+    h.hal.queue_raw_bytes(bytes);
 
     auto req = h.api.card.status();
     auto rsp = req.execute();
@@ -272,7 +250,7 @@ TEST_CASE("streaming: malformed JSON response") {
 
 TEST_CASE("streaming: empty JSON object") {
     ErrorHarness h;
-    h.transport.queue_response(R"({})");
+    h.hal.queue_response(R"({})");
 
     auto req = h.api.card.status();
     auto rsp = req.execute();
@@ -283,37 +261,30 @@ TEST_CASE("streaming: empty JSON object") {
 // ── Reset failure at init ─────────────────────────────────────────────────
 
 TEST_CASE("streaming: initial reset failure returns error") {
-    // Use a fresh transport that hasn't been initialized
-    note::test::TestJsonBackend backend;
-    ErrorInjectTransport transport;
-    note::Notecard nc(backend, transport);
-    nc.set_allocator(note::Allocator{});
+    ErrorInjectHal hal;
+    note::StreamingTransport transport(hal, /*max_retries=*/0);
+    note::Notecard nc(transport, note::Allocator{});
 
-    // Make reset fail — this is checked on first transact_streaming
-    // But ErrorInjectTransport::do_reset always returns true. We need a
-    // transport that fails on reset.
-    // The important path is already covered by the transmit/read error tests.
     // This test verifies the init path is reached.
-    transport.queue_response(R"({})");
+    hal.queue_response(R"({})");
     UnconstrainedApi api(nc);
     auto req = api.card.status();
     auto rsp = req.execute();
     REQUIRE(rsp.has_value());
-    CHECK(transport.reset_count >= 1);  // First call triggers init reset
+    CHECK(hal.reset_count >= 1);  // First call triggers init reset
 }
 
 // ── Retry with sink reset ─────────────────────────────────────────────────
 
 TEST_CASE("streaming: sink reset on retry clears partial state") {
-    ErrorHarness h;
-    h.transport.retries = 2;
+    ErrorHarness h(2);
     // First attempt: partial response then error
     std::string partial = R"({"status":"partial)";
     std::vector<uint8_t> bytes(partial.begin(), partial.end());
-    h.transport.queue_raw_bytes(bytes);
-    h.transport.queue_read_error();  // Truncation error
+    h.hal.queue_raw_bytes(bytes);
+    h.hal.queue_read_error();  // Truncation error
     // Second attempt: complete response
-    h.transport.queue_response(R"({"status":"final"})");
+    h.hal.queue_response(R"({"status":"final"})");
 
     auto req = h.api.card.status();
     auto rsp = req.execute();
@@ -335,15 +306,14 @@ TEST_CASE("streaming fuzz: random bytes") {
     Xorshift32 rng(42);
 
     for (int trial = 0; trial < 50; ++trial) {
-        ErrorHarness h;
-        h.transport.retries = 0;
+        ErrorHarness h(0);
 
         // Generate 10-200 random bytes
         size_t len = 10 + (rng.next() % 191);
         std::vector<uint8_t> fuzz_data(len);
         for (size_t i = 0; i < len; ++i) fuzz_data[i] = rng.next_byte();
-        h.transport.queue_raw_bytes(fuzz_data);
-        h.transport.queue_read_error();  // Ensure termination
+        h.hal.queue_raw_bytes(fuzz_data);
+        h.hal.queue_read_error();  // Ensure termination
 
         auto req = h.api.card.status();
         auto rsp = req.execute();
@@ -356,16 +326,15 @@ TEST_CASE("streaming fuzz: random bytes starting with brace") {
     Xorshift32 rng(123);
 
     for (int trial = 0; trial < 50; ++trial) {
-        ErrorHarness h;
-        h.transport.retries = 0;
+        ErrorHarness h(0);
 
         // Start with { to enter the JSON parser, then random
         size_t len = 5 + (rng.next() % 100);
         std::vector<uint8_t> fuzz_data(len);
         fuzz_data[0] = '{';
         for (size_t i = 1; i < len; ++i) fuzz_data[i] = rng.next_byte();
-        h.transport.queue_raw_bytes(fuzz_data);
-        h.transport.queue_read_error();
+        h.hal.queue_raw_bytes(fuzz_data);
+        h.hal.queue_read_error();
 
         auto req = h.api.card.status();
         auto rsp = req.execute();
@@ -395,15 +364,14 @@ TEST_CASE("streaming fuzz: JSON-like structures with random values") {
     };
 
     for (const auto& tmpl : templates) {
-        ErrorHarness h;
-        h.transport.retries = 0;
+        ErrorHarness h(0);
 
         std::vector<uint8_t> bytes(tmpl.begin(), tmpl.end());
         // Append \r\n to terminate
         bytes.push_back('\r');
         bytes.push_back('\n');
-        h.transport.queue_raw_bytes(bytes);
-        h.transport.queue_read_error();
+        h.hal.queue_raw_bytes(bytes);
+        h.hal.queue_read_error();
 
         auto req = h.api.card.status();
         auto rsp = req.execute();
@@ -413,12 +381,11 @@ TEST_CASE("streaming fuzz: JSON-like structures with random values") {
 }
 
 TEST_CASE("streaming fuzz: very long field names and values") {
-    ErrorHarness h;
-    h.transport.retries = 0;
+    ErrorHarness h(0);
 
     // Build a response with very long field name and value
     std::string response = R"({")" + std::string(500, 'x') + R"(":")" + std::string(500, 'y') + R"("})";
-    h.transport.queue_response(response);
+    h.hal.queue_response(response);
 
     auto req = h.api.card.status();
     auto rsp = req.execute();
@@ -427,8 +394,7 @@ TEST_CASE("streaming fuzz: very long field names and values") {
 }
 
 TEST_CASE("streaming fuzz: many fields") {
-    ErrorHarness h;
-    h.transport.retries = 0;
+    ErrorHarness h(0);
 
     // Response with 100 unknown fields
     std::string response = "{";
@@ -437,7 +403,7 @@ TEST_CASE("streaming fuzz: many fields") {
         response += "\"f" + std::to_string(i) + "\":" + std::to_string(i);
     }
     response += "}";
-    h.transport.queue_response(response);
+    h.hal.queue_response(response);
 
     auto req = h.api.card.status();
     auto rsp = req.execute();
@@ -446,15 +412,14 @@ TEST_CASE("streaming fuzz: many fields") {
 }
 
 TEST_CASE("streaming fuzz: byte-at-a-time delivery") {
-    ErrorHarness h;
-    h.transport.retries = 0;
+    ErrorHarness h(0);
 
     // Deliver valid JSON one byte at a time
     std::string json = R"({"status":"byte-by-byte","connected":true,"time":42})";
     json += "\r\n";
     for (char c : json) {
         std::vector<uint8_t> byte = {static_cast<uint8_t>(c)};
-        h.transport.queue_raw_bytes(byte);
+        h.hal.queue_raw_bytes(byte);
     }
 
     auto req = h.api.card.status();

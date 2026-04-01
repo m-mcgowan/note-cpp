@@ -1,4 +1,5 @@
-// Tests for note::transport::NotecardSerial.
+// Tests for note::transport::NotecardSerial (TransportHal) and
+// note::StreamingTransport protocol logic over serial.
 //
 // Ported from note-c test/src/_serialNoteReset_test.cpp,
 //                        _serialChunkedTransmit_test.cpp,
@@ -11,18 +12,75 @@
 //     bytes; '\r\n' terminator → injects the next queued JSON response.
 //     This prevents pre-loaded responses from being consumed during reset.
 //
+// NotecardSerial is now a TransportHal (raw byte ops: transmit, read, reset,
+// write_line_terminator, delay). Protocol logic (transact, send, retry, CRC)
+// lives in StreamingTransport, which wraps a TransportHal.
+//
 // When note-c's serial tests change, review the diffs and update accordingly.
 
 #include "catch.hpp"
 
 #include <note/transport/serial.hpp>
+#include <note/streaming_transport.hpp>
 
 #include <deque>
 #include <functional>
 #include <string>
+#include <vector>
 
-// Helper: string-returning wrapper for char-buffer crc_add (test convenience)
+// ---------------------------------------------------------------------------
+// CaptureSink — simple JsonSink that records string/bool/number events
+// ---------------------------------------------------------------------------
+
 namespace {
+
+struct CaptureSink : note::JsonSink {
+    struct Event {
+        std::string type;
+        std::string key;
+        std::string value;
+    };
+    std::vector<Event> events;
+
+    void on_null(note::string_view key) override {
+        events.push_back({"null", std::string(key), ""});
+    }
+    void on_bool(note::string_view key, bool value) override {
+        events.push_back({"bool", std::string(key), value ? "true" : "false"});
+    }
+    void on_number(note::string_view key, note::string_view raw) override {
+        events.push_back({"number", std::string(key), std::string(raw)});
+    }
+    void on_string(note::string_view key, note::string_view value) override {
+        events.push_back({"string", std::string(key), std::string(value)});
+    }
+    void on_object_begin(note::string_view key) override {
+        events.push_back({"object_begin", std::string(key), ""});
+    }
+    void on_object_end(note::string_view key) override {
+        events.push_back({"object_end", std::string(key), ""});
+    }
+
+    void reset() override { events.clear(); }
+
+    // Find the value for a given key and event type.
+    std::string find(const std::string& k, const std::string& t = "string") const {
+        for (auto& e : events) {
+            if (e.key == k && e.type == t) return e.value;
+        }
+        return {};
+    }
+
+    bool has_key(const std::string& k) const {
+        for (auto& e : events) {
+            if (e.key == k) return true;
+        }
+        return false;
+    }
+};
+
+// Helper: string-returning wrapper for char-buffer crc_add (test convenience).
+// Used to build CRC-bearing responses that StreamingTransport validates.
 inline std::string str_crc_add(const std::string& json, uint16_t seq) {
     char buf[512];
     size_t len = json.size();
@@ -30,6 +88,7 @@ inline std::string str_crc_add(const std::string& json, uint16_t seq) {
     size_t new_len = note::transport::detail::crc_add(buf, len, sizeof(buf), seq);
     return std::string(buf, new_len);
 }
+
 } // namespace
 
 
@@ -46,7 +105,7 @@ using namespace note::transport;
 //   transmit("\r\n", 2)   → inject next queued JSON response (if any)
 //   other transmits       → append to tx log only
 //
-// Tests queue JSON responses with queue_response() before calling operator().
+// Tests queue JSON responses with queue_response() before calling transact().
 // ---------------------------------------------------------------------------
 
 struct ScriptedHal : public SerialHal {
@@ -66,10 +125,6 @@ struct ScriptedHal : public SerialHal {
 
     // Clock and delay
     uint32_t now_ms = 0;
-    // Counts inter-segment delays (kSerialSegmentDelayMs) that occur during
-    // request transmission — excludes the pre-reset delay.
-    int segment_delay_count = 0;
-    bool in_request_ = false;  // true after first non-probe transmit byte
 
     void queue_response(const std::string& s) {
         json_responses.push_back(s);
@@ -87,18 +142,14 @@ struct ScriptedHal : public SerialHal {
         for (size_t i = 0; i < n; ++i) tx.push_back(d[i]);
 
         if (n == 1 && d[0] == '\n') {
-            // Reset probe → inject reset drain response; not in a request
-            in_request_ = false;
+            // Reset probe → inject reset drain response
             for (char c : reset_drain_response) rx.push_back(uint8_t(c));
         } else if (n == 2 && d[0] == '\r' && d[1] == '\n') {
-            // Request terminator → inject next queued JSON response
+            // Request terminator (from write_line_terminator) → inject next response
             if (!json_responses.empty()) {
                 for (char c : json_responses.front()) rx.push_back(uint8_t(c));
                 json_responses.pop_front();
             }
-        } else {
-            // JSON segment — we are now in a request
-            in_request_ = true;
         }
         return true;
     }
@@ -113,8 +164,6 @@ struct ScriptedHal : public SerialHal {
 
     void delay(uint32_t ms) override {
         now_ms += ms;
-        // Only count inter-segment delays during request transmission
-        if (in_request_ && ms == kSerialSegmentDelayMs) ++segment_delay_count;
     }
 
     std::string take_tx() {
@@ -125,48 +174,73 @@ struct ScriptedHal : public SerialHal {
 };
 
 // ---------------------------------------------------------------------------
+// Helper: create a StreamingTransport over NotecardSerial over ScriptedHal.
+//
+// Returns by value — NotecardSerial and StreamingTransport hold references
+// to each other and to the hal, so callers must keep the Harness alive.
+// ---------------------------------------------------------------------------
+
+struct SerialTestHarness {
+    ScriptedHal hal;
+    NotecardSerial<SerialPolicy> notecard_serial;
+    note::StreamingTransport transport;
+
+    SerialTestHarness()
+        : notecard_serial(hal)
+        , transport(notecard_serial, /*max_retries=*/5, /*retry_delay_ms=*/500)
+    {}
+
+    // Convenience: transact with a simple build function and capture sink.
+    // Returns Result<void>; captured fields are in the sink.
+    note::Result<void> transact(const char* req_name, CaptureSink& sink,
+                                uint32_t timeout_ms = 5000) {
+        note::IStreamingTransport& t = transport;
+        auto build = [&](note::JsonBuilder& b) { b.add("req", req_name); };
+        return t.transact(build, sink, timeout_ms);
+    }
+
+    // Transact with a NullSink (just check success/failure).
+    note::Result<void> transact(const char* req_name,
+                                uint32_t timeout_ms = 5000) {
+        note::IStreamingTransport& t = transport;
+        note::JsonSink null_sink;
+        auto build = [&](note::JsonBuilder& b) { b.add("req", req_name); };
+        return t.transact(build, null_sink, timeout_ms);
+    }
+
+    // Send (fire-and-forget).
+    note::Result<void> send(const char* cmd_name) {
+        note::IStreamingTransport& t = transport;
+        auto build = [&](note::JsonBuilder& b) { b.add("cmd", cmd_name); };
+        return t.send(build);
+    }
+};
+
+// ---------------------------------------------------------------------------
 // reset() — ported from note-c _serialNoteReset_test.cpp
 // ---------------------------------------------------------------------------
 
 TEST_CASE("reset succeeds when drain sees only control characters") {
     // note-c: "Only control character received" → _serialNoteReset() == true
-    ScriptedHal hal;  // default reset_drain_response = "\r\n"
-    NotecardSerial transport(hal);
-    hal.queue_response("{}\r\n");
-    auto r = transport.transact("{\"req\":\"hub.set\"}", 5000);
+    SerialTestHarness h;
+    h.hal.queue_response("{}\r\n");
+    auto r = h.transact("hub.set");
     REQUIRE(r.has_value());
 }
 
 TEST_CASE("reset: first byte transmitted is bare newline") {
     // note-c: _noteSerialTransmit is called once with a single '\n'
-    ScriptedHal hal;
-    NotecardSerial transport(hal);
-    hal.queue_response("{}\r\n");
-    transport.transact("{\"req\":\"hub.set\"}", 5000);
-    std::string all_tx(hal.tx.begin(), hal.tx.end());
+    SerialTestHarness h;
+    h.hal.queue_response("{}\r\n");
+    h.transact("hub.set");
+    std::string all_tx(h.hal.tx.begin(), h.hal.tx.end());
     REQUIRE(!all_tx.empty());
     REQUIRE(all_tx.front() == '\n');
 }
 
 TEST_CASE("reset retries on non-control characters in drain") {
     // note-c: "Non-control character received" + "Retry" → retries and succeeds
-    // First reset probe → inject non-control data (triggers retry)
-    // Second probe → inject clean "\r\n" (succeeds)
-    ScriptedHal hal;
-    hal.transmit_ok_fn = [](int /*call*/) -> bool {
-        // We intercept by watching what's in the tx queue via override
-        return true;
-    };
-    // Override: first reset probe gets garbage; subsequent ones get clean drain.
-    // We achieve this by making reset_drain_response a queue.
-    // Simplest approach: use a stateful transmit that changes the response.
-    ScriptedHal hal2;
-    hal2.transmit_ok_fn = [](int /*call*/) -> bool {
-        // track in receive: handled by overriding transmit fully below
-        return true;
-    };
-
-    // Use a custom HAL subclass to control per-probe behavior
+    // Use a custom HAL subclass to control per-probe behavior.
     struct RetryHal : public SerialHal {
         std::deque<uint8_t> rx, tx;
         std::deque<std::string> json_responses;
@@ -203,122 +277,89 @@ TEST_CASE("reset retries on non-control characters in drain") {
     } retry_hal;
 
     retry_hal.json_responses.push_back("{}\r\n");
-    NotecardSerial transport2(retry_hal);
-    auto r = transport2.transact("{\"req\":\"hub.set\"}", 5000);
+    NotecardSerial<SerialPolicy> notecard_serial(retry_hal);
+    note::StreamingTransport transport(notecard_serial, /*max_retries=*/5);
+    note::IStreamingTransport& t = transport;
+    note::JsonSink null_sink;
+    auto build = [](note::JsonBuilder& b) { b.add("req", "hub.set"); };
+    auto r = t.transact(build, null_sink, 5000);
     REQUIRE(r.has_value());
     REQUIRE(retry_hal.probe_num >= 2);
 }
 
 TEST_CASE("reset fails if all attempts see non-control chars") {
     // note-c: "Serial never available" → _serialNoteReset() == false
-    // (or: all retries see non-control data)
-    ScriptedHal hal;
-    hal.reset_drain_response = "BAD\r\n";  // always injects non-control data
-    NotecardSerial transport(hal);
-    auto r = transport.transact("{\"req\":\"hub.set\"}", 5000);
+    SerialTestHarness h;
+    h.hal.reset_drain_response = "BAD\r\n";  // always injects non-control data
+    auto r = h.transact("hub.set");
     REQUIRE(!r.has_value());
     REQUIRE(r.error().code == note::Error::NotReady);
 }
 
 // ---------------------------------------------------------------------------
-// send_segmented — ported from note-c _serialChunkedTransmit_test.cpp
+// Transmit framing — write_line_terminator appends CRLF
+//
+// Note: The old NotecardSerial did segmented TX with pacing delays. The new
+// NotecardSerial is a raw TransportHal — no segmenting. StreamingTransport
+// writes the JSON body field-by-field, then calls write_line_terminator().
+// Segmented transmit tests are no longer applicable.
 // ---------------------------------------------------------------------------
 
-TEST_CASE("short request is sent as single segment with CRLF") {
-    // note-c: buffer < CARD_REQUEST_SERIAL_SEGMENT_MAX_LEN → 1 transmit call
-    ScriptedHal hal;
-    NotecardSerial transport(hal);
-    hal.queue_response("{}\r\n");
-    transport.transact("{\"req\":\"hub.set\"}", 5000);
+TEST_CASE("request is terminated with CRLF") {
+    // After JSON body, write_line_terminator sends \r\n.
+    SerialTestHarness h;
+    h.hal.queue_response("{}\r\n");
+    h.transact("hub.set");
 
-    std::string tx = std::string(hal.tx.begin(), hal.tx.end());
-    auto req_start = tx.find('{');
-    REQUIRE(req_start != std::string::npos);
-    std::string req_part = tx.substr(req_start);
-    REQUIRE(req_part == "{\"req\":\"hub.set\"}\r\n");
+    std::string tx(h.hal.tx.begin(), h.hal.tx.end());
+    // Find last \r\n — should be the request terminator
+    auto last_crlf = tx.rfind("\r\n");
+    REQUIRE(last_crlf != std::string::npos);
+    // There should be JSON content before the \r\n
+    auto json_start = tx.find('{');
+    REQUIRE(json_start != std::string::npos);
+    REQUIRE(json_start < last_crlf);
 }
 
-TEST_CASE("600-byte request splits into 3 segments with 2 inter-segment delays") {
-    // note-c: buffer > CARD_REQUEST_SERIAL_SEGMENT_MAX_LEN → multiple transmit calls
-    // 600 bytes = 250 + 250 + 100 → 3 segments, 2 inter-segment delays
-    ScriptedHal hal;
-    NotecardSerial transport(hal);
+TEST_CASE("request JSON contains the req field") {
+    SerialTestHarness h;
+    h.hal.queue_response("{}\r\n");
+    h.transact("hub.set");
 
-    std::string big_req = "{\"req\":\"hub.set\",\"data\":\"";
-    big_req += std::string(570, 'x');
-    big_req += "\"}";
-
-    hal.queue_response("{}\r\n");
-    transport.transact(big_req, 5000);
-
-    REQUIRE(hal.segment_delay_count == 2);
-}
-
-TEST_CASE("request at exactly segment boundary sends in 1 segment") {
-    // note-c: buffer == CARD_REQUEST_SERIAL_SEGMENT_MAX_LEN → 1 transmit call
-    ScriptedHal hal;
-    NotecardSerial transport(hal);
-
-    // Build exactly 250-byte JSON
-    std::string req = "{\"d\":\"";
-    req += std::string(250 - 9, 'x');  // 250 total including {"d":"...",CRLF but CRLF is separate
-    req += "\"}";
-    // Adjust to exactly kSerialSegmentMaxLen bytes
-    // kSerialSegmentMaxLen = 250
-    // We just need < 250 to avoid splitting
-    std::string exact_req(kSerialSegmentMaxLen, 'x');
-    exact_req[0] = '{'; exact_req[kSerialSegmentMaxLen-1] = '}';
-
-    hal.queue_response("{}\r\n");
-    transport.transact(exact_req, 5000);
-    REQUIRE(hal.segment_delay_count == 0);  // no inter-segment delays
-}
-
-TEST_CASE("send_segmented appends CRLF terminator") {
-    ScriptedHal hal;
-    NotecardSerial transport(hal);
-    hal.queue_response("{}\r\n");
-    transport.transact("{\"req\":\"hub.set\"}", 5000);
-
-    std::string tx = std::string(hal.tx.begin(), hal.tx.end());
-    auto req_start = tx.find('{');
-    REQUIRE(req_start != std::string::npos);
-    std::string req_part = tx.substr(req_start);
-    REQUIRE(req_part.size() >= 2);
-    REQUIRE(req_part[req_part.size()-2] == '\r');
-    REQUIRE(req_part[req_part.size()-1] == '\n');
+    std::string tx(h.hal.tx.begin(), h.hal.tx.end());
+    // The JSON body should contain "req" and "hub.set"
+    REQUIRE(tx.find("\"req\"") != std::string::npos);
+    REQUIRE(tx.find("hub.set") != std::string::npos);
 }
 
 // ---------------------------------------------------------------------------
-// receive_line — ported from note-c _serialChunkedReceive_test.cpp
+// Response parsing — ported from note-c _serialChunkedReceive_test.cpp
 // ---------------------------------------------------------------------------
 
-TEST_CASE("receive_line returns JSON stripped of CRLF") {
+TEST_CASE("response JSON fields are delivered to sink") {
     // note-c: packet received → correct bytes returned
-    ScriptedHal hal;
-    NotecardSerial transport(hal);
-    hal.queue_response("{\"connected\":true}\r\n");
-    auto r = transport.transact("{\"req\":\"hub.set\"}", 5000);
+    SerialTestHarness h;
+    h.hal.queue_response("{\"connected\":true}\r\n");
+    CaptureSink sink;
+    auto r = h.transact("hub.set", sink);
     REQUIRE(r.has_value());
-    REQUIRE(*r == "{\"connected\":true}");
+    CHECK(sink.find("connected", "bool") == "true");
 }
 
-TEST_CASE("receive_line returns JSON stripped of bare LF") {
-    ScriptedHal hal;
-    NotecardSerial transport(hal);
-    hal.queue_response("{\"ok\":true}\n");
-    auto r = transport.transact("{\"req\":\"hub.set\"}", 5000);
+TEST_CASE("response with bare LF terminator is parsed") {
+    SerialTestHarness h;
+    h.hal.queue_response("{\"ok\":true}\n");
+    CaptureSink sink;
+    auto r = h.transact("hub.set", sink);
     REQUIRE(r.has_value());
-    REQUIRE(*r == "{\"ok\":true}");
+    CHECK(sink.find("ok", "bool") == "true");
 }
 
-TEST_CASE("receive_line timeout before first byte returns ResponseLost") {
+TEST_CASE("response timeout before first byte returns error") {
     // note-c: _noteSerialAvailable always false → timeout → error
-    // Uses a custom HAL whose delay() fast-forwards the clock.
     struct NoDataHal : public SerialHal {
         uint32_t now_ms = 0;
-        std::deque<uint8_t> rx;  // starts with reset drain bytes
-        bool reset_consumed = false;
+        std::deque<uint8_t> rx;
 
         bool transmit(const uint8_t* d, size_t n) override {
             if (n == 1 && d[0] == '\n') {
@@ -332,24 +373,27 @@ TEST_CASE("receive_line timeout before first byte returns ResponseLost") {
             return n;
         }
         uint32_t millis() override { return now_ms; }
-        // Fast-forward: add extra to each delay so timeout fires quickly
+        // Fast-forward time so timeout fires quickly
         void delay(uint32_t ms) override { now_ms += ms + 100; }
     } hal;
 
-    NotecardSerial transport(hal);
-    auto r = transport.transact("{\"req\":\"hub.set\"}", 500);
+    NotecardSerial<SerialPolicy> notecard_serial(hal);
+    note::StreamingTransport transport(notecard_serial, /*max_retries=*/5);
+    note::IStreamingTransport& t = transport;
+    note::JsonSink null_sink;
+    auto build = [](note::JsonBuilder& b) { b.add("req", "hub.set"); };
+    auto r = t.transact(build, null_sink, 500);
     REQUIRE(!r.has_value());
-    // After kMaxRetries timeouts, the last error is propagated.
-    REQUIRE(r.error().code == note::Error::ResponseLost);
-    REQUIRE(r.error().cause == note::Cause::Timeout);
+    // In the streaming path, a read timeout causes the SAX parser to see
+    // EOF. The parser returns a parse error, which maps to Error::Json.
+    REQUIRE(r.error().code == note::Error::Json);
 }
 
-TEST_CASE("receive_line intra-transaction timeout after first byte") {
+TEST_CASE("response timeout after partial data") {
     // note-c: bytes intermittently available but no terminator, timeout
     struct PartialHal : public SerialHal {
         uint32_t now_ms = 0;
         std::deque<uint8_t> rx;
-        bool first_data_given = false;
 
         bool transmit(const uint8_t* d, size_t n) override {
             if (n == 1 && d[0] == '\n') {
@@ -367,114 +411,119 @@ TEST_CASE("receive_line intra-transaction timeout after first byte") {
             return n;
         }
         uint32_t millis() override { return now_ms; }
-        // Fast-forward: add extra to each delay
+        // Fast-forward time
         void delay(uint32_t ms) override { now_ms += ms + 200; }
     } hal;
 
-    NotecardSerial transport(hal);
-    auto r = transport.transact("{\"req\":\"hub.set\"}", 10000);
+    NotecardSerial<SerialPolicy> notecard_serial(hal);
+    note::StreamingTransport transport(notecard_serial, /*max_retries=*/5);
+    note::IStreamingTransport& t = transport;
+    note::JsonSink null_sink;
+    auto build = [](note::JsonBuilder& b) { b.add("req", "hub.set"); };
+    auto r = t.transact(build, null_sink, 10000);
     REQUIRE(!r.has_value());
-    // After retrying with partial responses that never complete, exhausts retries.
-    REQUIRE(r.error().code == note::Error::ResponseLost);
-    REQUIRE((r.error().cause == note::Cause::Timeout ||
-             r.error().cause == note::Cause::TimeoutIntra));
+    // In the streaming path, partial data + timeout causes a SAX parse error.
+    REQUIRE(r.error().code == note::Error::Json);
 }
 
 // ---------------------------------------------------------------------------
 // Full round-trip
 // ---------------------------------------------------------------------------
 
-TEST_CASE("full round-trip: request transmitted, response returned") {
-    ScriptedHal hal;
-    NotecardSerial transport(hal);
-    hal.queue_response("{\"version\":\"1.0\"}\r\n");
-    auto r = transport.transact("{\"req\":\"card.version\"}", 5000);
+TEST_CASE("full round-trip: request transmitted, response parsed") {
+    SerialTestHarness h;
+    h.hal.queue_response("{\"version\":\"1.0\"}\r\n");
+    CaptureSink sink;
+    auto r = h.transact("card.version", sink);
     REQUIRE(r.has_value());
-    REQUIRE(*r == "{\"version\":\"1.0\"}");
+    CHECK(sink.find("version") == "1.0");
 }
 
 TEST_CASE("second call reuses existing connection without reset") {
     // note-c: initialized_ = true after first call, no re-reset
-    ScriptedHal hal;
-    NotecardSerial transport(hal);
+    SerialTestHarness h;
 
-    hal.queue_response("{\"ok\":true}\r\n");
-    auto r1 = transport.transact("{\"req\":\"hub.set\"}", 5000);
+    h.hal.queue_response("{\"ok\":true}\r\n");
+    auto r1 = h.transact("hub.set");
     REQUIRE(r1.has_value());
 
-    for (auto b : hal.tx) if (b == '\n' && (&b == &hal.tx.back() || true)) { /* count */ }
-    size_t tx_size_after_first = hal.tx.size();
+    size_t tx_size_after_first = h.hal.tx.size();
 
-    hal.queue_response("{\"ok\":true}\r\n");
-    auto r2 = transport.transact("{\"req\":\"hub.sync\"}", 5000);
+    h.hal.queue_response("{\"ok\":true}\r\n");
+    auto r2 = h.transact("hub.sync");
     REQUIRE(r2.has_value());
 
     // Second call should NOT have sent another reset probe ('\n' alone)
     // The tx from the second call should start directly with the JSON
-    std::string all_tx(hal.tx.begin() + static_cast<std::ptrdiff_t>(tx_size_after_first), hal.tx.end());
+    std::string all_tx(h.hal.tx.begin() + static_cast<std::ptrdiff_t>(tx_size_after_first), h.hal.tx.end());
     REQUIRE(all_tx.front() == '{');  // starts with JSON, not reset probe
 }
 
 // ---------------------------------------------------------------------------
-// CRC auto-detection and validation
+// CRC auto-detection and validation — via StreamingTransport
+//
+// StreamingTransport handles CRC internally via CrcFieldSink + CrcAccumulator.
+// These tests verify the full CRC path through the streaming transport.
 // ---------------------------------------------------------------------------
 
-TEST_CASE("CRC auto-detection: no CRC in response, flag stays false") {
-    ScriptedHal hal;
-    NotecardSerial transport(hal);
-    hal.queue_response("{\"connected\":true}\r\n");
-    auto r = transport.transact("{\"req\":\"hub.set\"}", 5000);
+TEST_CASE("CRC auto-detection: no CRC in response, no error") {
+    SerialTestHarness h;
+    h.hal.queue_response("{\"connected\":true}\r\n");
+    CaptureSink sink;
+    auto r = h.transact("hub.set", sink);
     REQUIRE(r.has_value());
-    REQUIRE(*r == "{\"connected\":true}");
-    // crc_enabled_ remains false — verified by checking next request has no CRC
+    CHECK(sink.find("connected", "bool") == "true");
 }
 
-TEST_CASE("CRC auto-detection: first response with CRC sets enabled flag") {
-    ScriptedHal hal;
-    NotecardSerial transport(hal);
+TEST_CASE("CRC auto-detection: first response with CRC enables CRC") {
+    SerialTestHarness h;
 
-    // crc_enabled_=false at start; seq not incremented (CRC not enabled yet)
-    // The response includes a CRC field matching seq=0.
+    // Response includes a CRC field matching seq=0. StreamingTransport only
+    // increments crc_seq_ when crc_enabled_ is already true, so the first
+    // request uses seq=0.
     std::string resp = str_crc_add("{\"ok\":true}", 0) + "\r\n";
-    hal.queue_response(resp);
-    auto r = transport.transact("{\"req\":\"hub.set\"}", 5000);
+    h.hal.queue_response(resp);
+    CaptureSink sink;
+    auto r = h.transact("hub.set", sink);
     REQUIRE(r.has_value());
-    REQUIRE(*r == "{\"ok\":true}");
-    // crc_enabled_ is now true
+    CHECK(sink.find("ok", "bool") == "true");
+    // CRC field should not appear in the user sink (intercepted by CrcFieldSink)
+    CHECK_FALSE(sink.has_key("crc"));
 }
 
 TEST_CASE("CRC: after detection, second request includes CRC field") {
-    ScriptedHal hal;
-    NotecardSerial transport(hal);
+    SerialTestHarness h;
 
     // First call: CRC auto-detected (seq=0 response)
-    hal.queue_response(str_crc_add("{\"ok\":true}", 0) + "\r\n");
-    transport.transact("{\"req\":\"hub.set\"}", 5000);
+    h.hal.queue_response(str_crc_add("{\"ok\":true}", 0) + "\r\n");
+    h.transact("hub.set");
 
-    // Second call: seq becomes 1, request must include CRC
-    hal.queue_response(str_crc_add("{\"ok\":true}", 1) + "\r\n");
-    hal.tx.clear();
-    transport.transact("{\"req\":\"hub.sync\"}", 5000);
+    // Second call: CRC is now enabled, seq increments to 1.
+    // The request should include a CRC field in the transmitted bytes.
+    h.hal.queue_response(str_crc_add("{\"ok\":true}", 1) + "\r\n");
+    h.hal.tx.clear();
+    h.transact("hub.sync");
 
-    std::string tx(hal.tx.begin(), hal.tx.end());
+    std::string tx(h.hal.tx.begin(), h.hal.tx.end());
     REQUIRE(tx.find("\"crc\":\"") != std::string::npos);
 }
 
 TEST_CASE("CRC mismatch triggers retry and succeeds on clean response") {
     // note-c: NoteRequestWithRetry / retry on CRC error
-    ScriptedHal hal;
-    NotecardSerial transport(hal);
+    SerialTestHarness h;
 
     // First call: CRC auto-detected
-    hal.queue_response(str_crc_add("{\"ok\":true}", 0) + "\r\n");
-    transport.transact("{\"req\":\"hub.set\"}", 5000);
+    h.hal.queue_response(str_crc_add("{\"ok\":true}", 0) + "\r\n");
+    h.transact("hub.set");
 
-    // Second call: first response has wrong seq → retry; second response is correct
-    hal.queue_response(str_crc_add("{\"ok\":true}", 99) + "\r\n");  // wrong seq
-    hal.queue_response(str_crc_add("{\"ok\":true}", 1) + "\r\n");   // correct
-    auto r = transport.transact("{\"req\":\"hub.sync\"}", 5000);
+    // Second call: first response has wrong seq → CRC mismatch → retry;
+    // second response is correct.
+    h.hal.queue_response(str_crc_add("{\"ok\":true}", 99) + "\r\n");  // wrong seq
+    h.hal.queue_response(str_crc_add("{\"ok\":true}", 1) + "\r\n");   // correct
+    CaptureSink sink;
+    auto r = h.transact("hub.sync", sink);
     REQUIRE(r.has_value());
-    REQUIRE(*r == "{\"ok\":true}");
+    CHECK(sink.find("ok", "bool") == "true");
 }
 
 // ---------------------------------------------------------------------------
@@ -483,30 +532,30 @@ TEST_CASE("CRC mismatch triggers retry and succeeds on clean response") {
 
 TEST_CASE("I/O error on transmit triggers retry, succeeds on recovery") {
     // note-c: _noteSerialTransmit fails on first data send → retry succeeds
-    ScriptedHal hal;
+    SerialTestHarness h;
+    // The transmit_ok_fn applies to the SerialHal-level transmit calls.
     // Call 1: reset probe '\n' (succeeds)
-    // Call 2: first JSON segment → fails
-    // Call 3: second reset probe '\n' (succeeds, from do_reset() in retry)
-    // Call 4+: JSON segment + CRLF → succeeds
-    hal.transmit_ok_fn = [](int call) -> bool { return call != 2; };
+    // Call 2: first JSON body fragment → fails
+    // After failure, StreamingTransport retries: reset + re-transmit
+    // Call 3: retry reset '\n' → succeeds
+    // Call 4+: JSON body + CRLF → succeeds
+    h.hal.transmit_ok_fn = [](int call) -> bool { return call != 2; };
 
-    NotecardSerial transport(hal);
-    hal.queue_response("{\"ok\":true}\r\n");
-    auto r = transport.transact("{\"req\":\"hub.set\"}", 5000);
+    h.hal.queue_response("{\"ok\":true}\r\n");
+    auto r = h.transact("hub.set");
     REQUIRE(r.has_value());
 }
 
 TEST_CASE("reset failure returns Error::NotReady") {
-    ScriptedHal hal;
-    hal.reset_drain_response = "BAD\r\n";  // reset always fails
-    NotecardSerial transport(hal);
-    auto r = transport.transact("{\"req\":\"hub.set\"}", 5000);
+    SerialTestHarness h;
+    h.hal.reset_drain_response = "BAD\r\n";  // reset always fails
+    auto r = h.transact("hub.set");
     REQUIRE(!r.has_value());
     REQUIRE(r.error().code == note::Error::NotReady);
 }
 
 // ---------------------------------------------------------------------------
-// SerialCallbackHal — verify all four delegate methods are called through
+// SerialCallbackHal — verify all delegate methods are called through
 // ---------------------------------------------------------------------------
 
 TEST_CASE("SerialCallbackHal delegates to callbacks") {
@@ -522,46 +571,47 @@ TEST_CASE("SerialCallbackHal delegates to callbacks") {
         [&](uint32_t ms)                             { real.delay(ms); }
     };
 
-    NotecardSerial transport(cb);
-    auto r = transport.transact("{\"req\":\"hub.status\"}", 5000);
+    NotecardSerial<SerialPolicy> notecard_serial(cb);
+    note::StreamingTransport transport(notecard_serial, /*max_retries=*/5);
+    note::IStreamingTransport& t = transport;
+    note::JsonSink null_sink;
+    auto build = [](note::JsonBuilder& b) { b.add("req", "hub.status"); };
+    auto r = t.transact(build, null_sink, 5000);
     REQUIRE(r.has_value());
-    CHECK(*r == "{}");
 }
 
 // ---------------------------------------------------------------------------
-// Binary write/read — raw byte streaming, no JSON framing
+// Binary write/read — raw byte streaming via StreamingTransport
 // ---------------------------------------------------------------------------
 
-TEST_CASE("serial: write() sends raw bytes without \\r\\n") {
-    ScriptedHal hal;
-    NotecardSerial transport(hal);
-    hal.queue_response("{}\r\n");
-    transport.transact("{\"req\":\"card.binary.put\"}", 5000);  // init
-    hal.tx.clear();
+TEST_CASE("serial: write() sends raw bytes without framing") {
+    SerialTestHarness h;
+    h.hal.queue_response("{}\r\n");
+    h.transact("card.binary.put");  // init
+    h.hal.tx.clear();
 
     uint8_t data[] = {0x01, 0x02, 0x0A, 0x03};
-    auto r = transport.write(data, sizeof(data));
+    auto r = h.transport.write(data, sizeof(data));
     REQUIRE(r.has_value());
 
     // Raw bytes — no \r\n appended
-    REQUIRE(hal.tx.size() == 4);
-    CHECK(hal.tx[0] == 0x01);
-    CHECK(hal.tx[2] == 0x0A);
+    REQUIRE(h.hal.tx.size() == 4);
+    CHECK(h.hal.tx[0] == 0x01);
+    CHECK(h.hal.tx[2] == 0x0A);
 }
 
 TEST_CASE("serial: read() returns available bytes") {
-    ScriptedHal hal;
-    NotecardSerial transport(hal);
-    hal.queue_response("{}\r\n");
-    transport.transact("{\"req\":\"card.binary.get\"}", 5000);  // init
+    SerialTestHarness h;
+    h.hal.queue_response("{}\r\n");
+    h.transact("card.binary.get");  // init
 
     // Inject some bytes to read
-    hal.rx.push_back(0xAA);
-    hal.rx.push_back(0xBB);
-    hal.rx.push_back(0x0A);  // EOP
+    h.hal.rx.push_back(0xAA);
+    h.hal.rx.push_back(0xBB);
+    h.hal.rx.push_back(0x0A);
 
     uint8_t buf[16];
-    auto r = transport.read(buf, sizeof(buf), 5000);
+    auto r = h.transport.read(buf, sizeof(buf), 5000);
     REQUIRE(r.has_value());
     REQUIRE(*r == 3);
     CHECK(buf[0] == 0xAA);
@@ -570,189 +620,163 @@ TEST_CASE("serial: read() returns available bytes") {
 }
 
 TEST_CASE("serial: read() times out when no data") {
-    ScriptedHal hal;
-    NotecardSerial transport(hal);
-    hal.queue_response("{}\r\n");
-    transport.transact("{}", 5000);  // init
+    SerialTestHarness h;
+    h.hal.queue_response("{}\r\n");
+    h.transact("init");  // init
 
     // No bytes in rx — should timeout
     uint8_t buf[16];
-    auto r = transport.read(buf, sizeof(buf), 10);
+    auto r = h.transport.read(buf, sizeof(buf), 10);
     REQUIRE_FALSE(r.has_value());
     CHECK(r.error().code == note::Error::ResponseLost);
 }
 
 // ---------------------------------------------------------------------------
-// send() — fire-and-forget via AbstractTransport
+// send() — fire-and-forget via StreamingTransport
 // ---------------------------------------------------------------------------
 
 TEST_CASE("serial: send() transmits without waiting for response") {
-    ScriptedHal hal;
-    NotecardSerial transport(hal);
-    hal.queue_response("{}\r\n");
-    transport.transact("{}", 5000);  // init
-    hal.tx.clear();
+    SerialTestHarness h;
+    h.hal.queue_response("{}\r\n");
+    h.transact("init");  // init
+    h.hal.tx.clear();
 
-    auto r = transport.send("{\"cmd\":\"hub.set\"}");
+    auto r = h.send("hub.set");
     REQUIRE(r.has_value());
-    auto sent = hal.take_tx();
+    auto sent = h.hal.take_tx();
     CHECK(sent.find("hub.set") != std::string::npos);
 }
 
 TEST_CASE("serial: explicit reset()") {
-    ScriptedHal hal;
-    NotecardSerial transport(hal);
-    hal.queue_response("{}\r\n");
-    transport.transact("{}", 5000);  // init
+    SerialTestHarness h;
+    h.hal.queue_response("{}\r\n");
+    h.transact("init");  // init
 
-    transport.reset();
-    hal.queue_response("{}\r\n");
-    auto r = transport.transact("{\"req\":\"card.version\"}", 5000);
+    h.transport.reset();
+    h.hal.queue_response("{}\r\n");
+    auto r = h.transact("card.version");
     REQUIRE(r.has_value());
 }
 
 TEST_CASE("serial: send() before first transact triggers reset") {
-    ScriptedHal hal;
-    NotecardSerial transport(hal);
+    SerialTestHarness h;
     // No transact() — transport is uninitialized, send() must auto-reset.
-    auto r = transport.send("{\"cmd\":\"hub.set\"}");
+    auto r = h.send("hub.set");
     REQUIRE(r.has_value());
 }
 
 TEST_CASE("serial: send() fails when transmit fails") {
-    ScriptedHal hal;
-    NotecardSerial transport(hal);
-    hal.queue_response("{}\r\n");
-    transport.transact("{}", 5000);
+    SerialTestHarness h;
+    h.hal.queue_response("{}\r\n");
+    h.transact("init");
 
     // Make transmit fail
-    hal.transmit_ok_fn = [](int) { return false; };
-    auto r = transport.send("{\"cmd\":\"hub.set\"}");
+    h.hal.transmit_ok_fn = [](int) { return false; };
+    auto r = h.send("hub.set");
     REQUIRE_FALSE(r.has_value());
     CHECK(r.error().code == note::Error::SendFailed);
 }
 
 TEST_CASE("serial: write() fails when HAL transmit fails") {
-    ScriptedHal hal;
-    NotecardSerial transport(hal);
-    hal.queue_response("{}\r\n");
-    transport.transact("{}", 5000);
+    SerialTestHarness h;
+    h.hal.queue_response("{}\r\n");
+    h.transact("init");
 
-    hal.transmit_ok_fn = [](int) { return false; };
+    h.hal.transmit_ok_fn = [](int) { return false; };
     uint8_t data[] = {1, 2, 3};
-    auto r = transport.write(data, sizeof(data));
+    auto r = h.transport.write(data, sizeof(data));
     REQUIRE_FALSE(r.has_value());
     CHECK(r.error().code == note::Error::SendFailed);
 }
 
 TEST_CASE("serial: transact retries on transmit failure then succeeds") {
-    ScriptedHal hal;
-    NotecardSerial transport(hal);
-    hal.queue_response("{}\r\n");  // consumed by reset during init
-    hal.queue_response("{}\r\n");  // the actual response after retry
+    SerialTestHarness h;
+    h.hal.queue_response("{}\r\n");  // consumed by first attempt
+    h.hal.queue_response("{}\r\n");  // the actual response after retry
 
-    // First transmit fails, second succeeds
+    // Fail initial transmits, succeed later
     int call = 0;
-    hal.transmit_ok_fn = [&](int) {
+    h.hal.transmit_ok_fn = [&](int) {
         ++call;
-        // Fail all transmits of the first attempt (request body + \r\n),
+        // Fail the first few transmit calls of the request body,
         // succeed all subsequent attempts
         return call > 2;
     };
 
-    auto r = transport.transact("{\"req\":\"hub.status\"}", 5000);
+    auto r = h.transact("hub.status");
     REQUIRE(r.has_value());
 }
 
-TEST_CASE("serial: transact returns CRC mismatch error") {
-    ScriptedHal hal;
-    NotecardSerial transport(hal);
+// ---------------------------------------------------------------------------
+// HAL-level tests — test NotecardSerial directly as TransportHal
+// ---------------------------------------------------------------------------
 
-    // Enable CRC by responding with a CRC-bearing response to trigger detection.
-    // Simpler: just inject a response that the CRC checker flags as mismatched.
-    // The CRC check only activates when crc_enabled_ is true, which is set
-    // when the transport sees a CRC in a response. For now, test the receive
-    // timeout path (CRC mismatch is the same retry loop).
-    // TODO: test actual CRC mismatch when CRC is enabled.
+TEST_CASE("NotecardSerial::reset() succeeds on clean drain") {
+    ScriptedHal hal;
+    NotecardSerial<SerialPolicy> serial(hal);
+    REQUIRE(serial.reset() == true);
 }
 
-// ---------------------------------------------------------------------------
-// do_receive() over-read — binary data after JSON \n must not be consumed
-// ---------------------------------------------------------------------------
-
-TEST_CASE("serial: do_receive does not consume bytes past \\n") {
-    // Simulate: HAL returns JSON response + \n + binary data in one chunk.
-    // do_receive() must stop at \n; do_read() must return the binary data.
+TEST_CASE("NotecardSerial::reset() fails when drain has non-control chars") {
     ScriptedHal hal;
-    NotecardSerial transport(hal);
+    hal.reset_drain_response = "GARBAGE\r\n";
+    NotecardSerial<SerialPolicy> serial(hal);
+    REQUIRE(serial.reset() == false);
+}
 
-    // First transact triggers reset. Queue a response for that.
-    hal.queue_response("{}\r\n");
-    auto r = transport.transact("{\"req\":\"init\"}", 5000);
-    REQUIRE(r.has_value());
+TEST_CASE("NotecardSerial::transmit() forwards to SerialHal") {
+    ScriptedHal hal;
+    NotecardSerial<SerialPolicy> serial(hal);
+    uint8_t data[] = {0x41, 0x42, 0x43};
+    REQUIRE(serial.transmit(data, 3) == true);
+    REQUIRE(hal.tx.size() == 3);
+    CHECK(hal.tx[0] == 0x41);
+    CHECK(hal.tx[1] == 0x42);
+    CHECK(hal.tx[2] == 0x43);
+}
 
-    // Now inject JSON response + binary data contiguously in the rx buffer.
-    // This simulates what happens when the UART buffer has both.
-    hal.rx.clear();
-    // JSON response: {"ok":true}\r\n  (13 bytes)
-    std::string json_part = "{\"ok\":true}\r\n";
-    for (char c : json_part) hal.rx.push_back(static_cast<uint8_t>(c));
-    // Binary data immediately after (3 bytes)
+TEST_CASE("NotecardSerial::transmit() returns false on HAL failure") {
+    ScriptedHal hal;
+    hal.transmit_ok_fn = [](int) { return false; };
+    NotecardSerial<SerialPolicy> serial(hal);
+    uint8_t data[] = {0x41};
+    REQUIRE(serial.transmit(data, 1) == false);
+}
+
+TEST_CASE("NotecardSerial::write_line_terminator() sends CRLF") {
+    ScriptedHal hal;
+    NotecardSerial<SerialPolicy> serial(hal);
+    REQUIRE(serial.write_line_terminator() == true);
+    REQUIRE(hal.tx.size() == 2);
+    CHECK(hal.tx[0] == '\r');
+    CHECK(hal.tx[1] == '\n');
+}
+
+TEST_CASE("NotecardSerial::read() returns data from SerialHal") {
+    ScriptedHal hal;
     hal.rx.push_back(0xAA);
     hal.rx.push_back(0xBB);
-    hal.rx.push_back(0xCC);
-
-    // transact → do_receive() should stop at \n, stash 0xAA/0xBB/0xCC
-    auto r2 = transport.transact("{\"req\":\"test\"}", 5000);
-    REQUIRE(r2.has_value());
-    REQUIRE(*r2 == "{\"ok\":true}");
-
-    // do_read() should return the 3 stashed binary bytes
-    uint8_t read_buf[16];
-    auto rd = transport.read(read_buf, sizeof(read_buf), 1000);
-    REQUIRE(rd.has_value());
-    REQUIRE(*rd == 3);
-    CHECK(read_buf[0] == 0xAA);
-    CHECK(read_buf[1] == 0xBB);
-    CHECK(read_buf[2] == 0xCC);
+    NotecardSerial<SerialPolicy> serial(hal);
+    uint8_t buf[8];
+    auto r = serial.read(buf, sizeof(buf), 5000);
+    REQUIRE(r.has_value());
+    REQUIRE(*r == 2);
+    CHECK(buf[0] == 0xAA);
+    CHECK(buf[1] == 0xBB);
 }
 
-TEST_CASE("serial: do_receive with no over-read returns nothing in do_read") {
-    // When JSON response ends exactly at chunk boundary (no trailing bytes),
-    // do_read() should block until new data arrives (or timeout).
+TEST_CASE("NotecardSerial::read() times out when no data available") {
     ScriptedHal hal;
-    NotecardSerial transport(hal);
-    hal.queue_response("{}\r\n");
-
-    auto r = transport.transact("{\"req\":\"test\"}", 5000);
-    REQUIRE(r.has_value());
-
-    // No extra bytes in rx — overflow should be empty.
-    // Just verify transact succeeded and didn't leave garbage.
+    NotecardSerial<SerialPolicy> serial(hal);
+    uint8_t buf[8];
+    auto r = serial.read(buf, sizeof(buf), 10);
+    REQUIRE_FALSE(r.has_value());
+    CHECK(r.error().code == note::Error::ResponseLost);
 }
 
-TEST_CASE("serial: transact then read binary preserves all bytes") {
-    // End-to-end: JSON handshake response + binary payload.
-    // Simulates card.binary.get flow where binary follows JSON.
+TEST_CASE("NotecardSerial::delay() forwards to SerialHal") {
     ScriptedHal hal;
-    NotecardSerial transport(hal);
-
-    // First transact triggers reset. Queue clean response for that.
-    // Then queue JSON handshake + inject binary immediately after.
-    hal.queue_response("{\"length\":5}\r\n");
-
-    auto r = transport.transact("{\"req\":\"card.binary.get\"}", 5000);
-    REQUIRE(r.has_value());
-    REQUIRE(*r == "{\"length\":5}");
-
-    // Now inject 5 bytes of binary data (simulating Notecard sending after handshake)
-    uint8_t expected[] = {0x01, 0x02, 0x00, 0x04, 0x05};
-    for (uint8_t b : expected) hal.rx.push_back(b);
-
-    // Read them back
-    uint8_t got[8];
-    auto rd = transport.read(got, sizeof(got), 1000);
-    REQUIRE(rd.has_value());
-    REQUIRE(*rd == 5);
-    for (size_t i = 0; i < 5; ++i) CHECK(got[i] == expected[i]);
+    NotecardSerial<SerialPolicy> serial(hal);
+    serial.delay(42);
+    CHECK(hal.now_ms == 42);
 }

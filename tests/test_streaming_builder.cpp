@@ -1,12 +1,14 @@
 // Tests for StreamingJsonBuilder, JsonBufferWriter, CrcWriter,
-// and the incremental CRC32 API.
+// CrcFieldSink, and streaming transport integration.
 
 #include "catch.hpp"
 
 #include <note/backends/buffer.hpp>
 #include <note/json.hpp>
+#include <note/streaming_transport.hpp>
 #include <note/transport/detail/crc32.hpp>
-#include <note/transport.hpp>
+#include <note/transport/detail/crc_types.hpp>
+#include <note/transport_hal.hpp>
 
 #include <cstring>
 #include <string>
@@ -108,7 +110,7 @@ TEST_CASE("JsonBufferWriter: single char write") {
 }
 
 // ---------------------------------------------------------------------------
-// StreamingJsonBuilder — output must match BufferJsonBuilder exactly
+// StreamingJsonBuilder -- output must match BufferJsonBuilder exactly
 // ---------------------------------------------------------------------------
 
 namespace {
@@ -210,13 +212,13 @@ TEST_CASE("StreamingJsonBuilder: raw JSON fragment") {
 
 TEST_CASE("StreamingJsonBuilder: add with const char*") {
     auto fn = [](JsonBuilder& b) {
-        b.add("key", "value");  // const char* → string_view overload
+        b.add("key", "value");  // const char* -> string_view overload
     };
     REQUIRE(streaming_build(fn) == buffer_build(fn));
 }
 
 // ---------------------------------------------------------------------------
-// CrcWriter (nested in AbstractTransport)
+// CrcWriter (standalone in namespace note)
 // ---------------------------------------------------------------------------
 
 TEST_CASE("CrcWriter: CRC matches single-shot crc32") {
@@ -228,7 +230,7 @@ TEST_CASE("CrcWriter: CRC matches single-shot crc32") {
 
     char buf[256];
     JsonBufferWriter bw(buf, sizeof(buf));
-    AbstractTransport::CrcWriter cw(bw);
+    CrcWriter cw(bw);
 
     // Write everything except closing }
     cw.write(json, len - 1);
@@ -253,7 +255,7 @@ TEST_CASE("CrcWriter: streaming build CRC matches crc_add") {
     // Method 2: StreamingJsonBuilder + CrcWriter
     char buf2[256];
     JsonBufferWriter bw(buf2, sizeof(buf2));
-    AbstractTransport::CrcWriter cw(bw);
+    CrcWriter cw(bw);
     StreamingJsonBuilder sbuilder(cw);
     sbuilder.add("req", string_view("card.status"));
     uint32_t checksum = cw.finalize_with_brace();
@@ -277,7 +279,7 @@ TEST_CASE("CrcWriter: round-trip with crc_check_and_strip") {
     // Build with CrcWriter, verify with crc_check_and_strip.
     char buf[256];
     JsonBufferWriter bw(buf, sizeof(buf));
-    AbstractTransport::CrcWriter cw(bw);
+    CrcWriter cw(bw);
     StreamingJsonBuilder builder(cw);
     builder.add("req", string_view("note.add"));
     builder.begin_object("body");
@@ -389,7 +391,7 @@ TEST_CASE("ErrorCaptureSink: reset clears error") {
 }
 
 // ---------------------------------------------------------------------------
-// CrcFieldSink
+// CrcFieldSink (standalone in namespace note)
 // ---------------------------------------------------------------------------
 
 TEST_CASE("CrcFieldSink: intercepts crc field, forwards rest") {
@@ -404,7 +406,7 @@ TEST_CASE("CrcFieldSink: intercepts crc field, forwards rest") {
     };
 
     Recorder rec;
-    AbstractTransport::CrcFieldSink crc(rec);
+    CrcFieldSink crc(rec);
 
     crc.on_string("status", "ok");
     crc.on_bool("connected", true);
@@ -422,7 +424,7 @@ TEST_CASE("CrcFieldSink: intercepts crc field, forwards rest") {
 
 TEST_CASE("CrcFieldSink: no crc field") {
     JsonSink null_sink;
-    AbstractTransport::CrcFieldSink crc(null_sink);
+    CrcFieldSink crc(null_sink);
 
     crc.on_string("status", "ok");
 
@@ -431,7 +433,7 @@ TEST_CASE("CrcFieldSink: no crc field") {
 
 TEST_CASE("CrcFieldSink: reset clears state") {
     JsonSink null_sink;
-    AbstractTransport::CrcFieldSink crc(null_sink);
+    CrcFieldSink crc(null_sink);
 
     crc.on_string("crc", "0005:12345678");
     REQUIRE(crc.has_crc());
@@ -441,38 +443,32 @@ TEST_CASE("CrcFieldSink: reset clears state") {
 }
 
 // ---------------------------------------------------------------------------
-// Streaming receive integration (transport-level)
+// Streaming receive integration (transport-level via StreamingTransport)
 // ---------------------------------------------------------------------------
 
 namespace {
 
-// Minimal concrete transport for testing streaming receive.
-struct TestStreamTransport : AbstractTransport {
-    // Expose protected members for test access
-    using AbstractTransport::initialized_;
-    using AbstractTransport::crc_enabled_;
-    using AbstractTransport::crc_seq_;
-
+/// Minimal TransportHal for testing streaming receive.
+/// Stores a canned response and serves it via read().
+struct TestHal : TransportHal {
     std::string response;
     size_t read_pos = 0;
     size_t chunk_size = 64;
 
-    bool do_transmit(const char*, size_t) override { return true; }
-#ifndef NOTE_NO_STD_STRING
-    Result<void> do_receive(std::string&, uint32_t) override {
-        return make_error(Error::NotReady, "use streaming");
-    }
-#endif
-    bool do_reset() override { return true; }
-    Result<size_t> do_read(uint8_t* buf, size_t max, uint32_t) override {
+    bool transmit(const uint8_t*, size_t) override { return true; }
+
+    Result<size_t> read(uint8_t* buf, size_t max, uint32_t) override {
         if (read_pos >= response.size()) return size_t(0);
         size_t n = std::min({max, chunk_size, response.size() - read_pos});
         memcpy(buf, response.data() + read_pos, n);
         read_pos += n;
         return n;
     }
-    uint32_t max_retries() const override { return 0; }
-    uint32_t retry_delay_ms() const override { return 0; }
+
+    bool reset() override { return true; }
+
+    bool write_line_terminator() override { return true; }
+
     void delay(uint32_t) override {}
 
     void set_response(const char* json) {
@@ -481,28 +477,29 @@ struct TestStreamTransport : AbstractTransport {
         read_pos = 0;
     }
 
-    /// Build response with CRC. seq is the value BEFORE transact_streaming
-    /// increments — the response CRC uses seq+1 to match.
-    void set_response_with_crc(const char* json, uint16_t seq) {
+    /// Build response with CRC. The wire seq is the value that
+    /// StreamingTransport will expect in the response.
+    void set_response_with_crc(const char* json, uint16_t wire_seq) {
         char buf[512];
         size_t len = strlen(json);
         memcpy(buf, json, len);
-        uint16_t wire_seq = static_cast<uint16_t>(seq + 1);
         len = transport::detail::crc_add(buf, len, sizeof(buf), wire_seq);
         response.assign(buf, len);
         response += '\n';
         read_pos = 0;
-        crc_enabled_ = true;
-        crc_seq_ = seq;
     }
+
+    /// Reset read position for the next transaction.
+    void reset_read() { read_pos = 0; }
 };
 
 } // anonymous namespace
 
 TEST_CASE("transact_streaming: basic SAX parse") {
-    TestStreamTransport transport;
-    transport.set_response(R"({"status":"ok","temp":22.5})");
-    transport.initialized_ = true;
+    TestHal hal;
+    hal.set_response(R"({"status":"ok","temp":22.5})");
+    StreamingTransport transport(hal, 0 /*max_retries*/);
+    IStreamingTransport& st = transport;
 
     struct Sink : JsonSink {
         std::string status;
@@ -515,7 +512,7 @@ TEST_CASE("transact_streaming: basic SAX parse") {
         }
     } sink;
 
-    auto rv = transport.transact_streaming([](JsonBuilder& b) {
+    auto rv = st.transact([](JsonBuilder& b) {
         b.add("req", "test.run");
     }, sink, 1000);
     REQUIRE(rv.has_value());
@@ -524,9 +521,14 @@ TEST_CASE("transact_streaming: basic SAX parse") {
 }
 
 TEST_CASE("transact_streaming: CRC verification passes") {
-    TestStreamTransport transport;
-    transport.set_response_with_crc(R"({"val":42})", 0);
-    transport.initialized_ = true;
+    // First transaction: CRC not yet enabled, but the response includes
+    // a valid CRC field. StreamingTransport auto-enables CRC on success.
+    // On first transact with CRC disabled, crc_seq_ stays 0, so the
+    // response CRC should use seq=0.
+    TestHal hal;
+    hal.set_response_with_crc(R"({"val":42})", 0);
+    StreamingTransport transport(hal, 0 /*max_retries*/);
+    IStreamingTransport& st = transport;
 
     struct Sink : JsonSink {
         int32_t val = 0;
@@ -535,7 +537,7 @@ TEST_CASE("transact_streaming: CRC verification passes") {
         }
     } sink;
 
-    auto rv = transport.transact_streaming([](JsonBuilder& b) {
+    auto rv = st.transact([](JsonBuilder& b) {
         b.add("req", "test.run");
     }, sink, 1000);
     REQUIRE(rv.has_value());
@@ -543,25 +545,39 @@ TEST_CASE("transact_streaming: CRC verification passes") {
 }
 
 TEST_CASE("transact_streaming: CRC mismatch detected") {
-    TestStreamTransport transport;
-    transport.response = R"({"val":42,"crc":"0001:DEADBEEF"})";
-    transport.response += '\n';
-    transport.crc_enabled_ = true;
-    transport.crc_seq_ = 0;
-    transport.initialized_ = true;
+    // First, do a successful transaction with CRC to enable CRC mode.
+    // Then do a second transaction with a bad CRC checksum.
+    TestHal hal;
+    hal.set_response_with_crc(R"({"ok":true})", 0);
+    StreamingTransport transport(hal, 0 /*max_retries*/);
+    IStreamingTransport& st = transport;
 
     JsonSink null_sink;
-    auto rv = transport.transact_streaming([](JsonBuilder& b) {
+
+    // Transaction 1: enables CRC
+    auto rv1 = st.transact([](JsonBuilder& b) {
+        b.add("req", "test.setup");
+    }, null_sink, 1000);
+    REQUIRE(rv1.has_value());
+
+    // Transaction 2: CRC enabled, crc_seq_ increments to 1.
+    // Send a response with correct seq (1) but wrong checksum.
+    hal.response = R"({"val":42,"crc":"0001:DEADBEEF"})";
+    hal.response += '\n';
+    hal.read_pos = 0;
+
+    auto rv2 = st.transact([](JsonBuilder& b) {
         b.add("req", "test.run");
     }, null_sink, 1000);
-    REQUIRE_FALSE(rv.has_value());
-    REQUIRE(rv.error().code == Error::ResponseLost);
+    REQUIRE_FALSE(rv2.has_value());
+    REQUIRE(rv2.error().code == Error::ResponseLost);
 }
 
 TEST_CASE("transact_streaming: send + receive round trip") {
-    TestStreamTransport transport;
-    transport.set_response(R"({"result":"done"})");
-    transport.initialized_ = true;
+    TestHal hal;
+    hal.set_response(R"({"result":"done"})");
+    StreamingTransport transport(hal, 0 /*max_retries*/);
+    IStreamingTransport& st = transport;
 
     struct Sink : JsonSink {
         std::string result;
@@ -570,7 +586,7 @@ TEST_CASE("transact_streaming: send + receive round trip") {
         }
     } sink;
 
-    auto rv = transport.transact_streaming([](JsonBuilder& b) {
+    auto rv = st.transact([](JsonBuilder& b) {
         b.add("req", "test.run");
     }, sink, 1000);
 

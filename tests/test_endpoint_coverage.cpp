@@ -434,6 +434,56 @@ TEST_CASE("note::api::CardAttn::Disarm request builder") {
 }
 
 // ---------------------------------------------------------------------------
+TEST_CASE("note::api::CardAttn::Off request builder") {
+    Harness h;
+    auto req = h.api.card.attn().off();
+    // Execute with no optional fields set — covers all !has_value() (false) branches.
+    req.execute();
+    req.execute();
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; fh.nc.execute(req); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
+    req.execute();
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover command()
+    req.command();
+}
+
+// ---------------------------------------------------------------------------
+TEST_CASE("note::api::CardAttn::On request builder") {
+    Harness h;
+    auto req = h.api.card.attn().on();
+    // Execute with no optional fields set — covers all !has_value() (false) branches.
+    req.execute();
+    req.execute();
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; fh.nc.execute(req); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
+    req.execute();
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover command()
+    req.command();
+}
+
+// ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardAttn::Query request builder") {
     Harness h;
     auto req = h.api.card.attn().query();

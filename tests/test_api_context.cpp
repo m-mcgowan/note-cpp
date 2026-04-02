@@ -80,6 +80,8 @@ TEST_CASE("Api::card resource group") {
     h.api.execute(h.api.card.attn().sleep());
     h.api.execute(h.api.card.attn().retrieve());
     h.api.execute(h.api.card.attn().disarm());
+    h.api.execute(h.api.card.attn().off());
+    h.api.execute(h.api.card.attn().on());
     h.api.execute(h.api.card.attn().query());
     REQUIRE(h.last_req.find("card.attn") != std::string::npos);
     // card.aux (factory member — callable)

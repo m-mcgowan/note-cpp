@@ -20,6 +20,8 @@ TEST_CASE("Request struct sizes") {
         {"CardAttn::Sleep", sizeof(note::api::CardAttn::Sleep)},
         {"CardAttn::Retrieve", sizeof(note::api::CardAttn::Retrieve)},
         {"CardAttn::Disarm", sizeof(note::api::CardAttn::Disarm)},
+        {"CardAttn::Off", sizeof(note::api::CardAttn::Off)},
+        {"CardAttn::On", sizeof(note::api::CardAttn::On)},
         {"CardAttn::Query", sizeof(note::api::CardAttn::Query)},
         {"CardAux", sizeof(note::api::CardAux)},
         {"CardAuxSerial::Request", sizeof(note::api::CardAuxSerial::Request)},

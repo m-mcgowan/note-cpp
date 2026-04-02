@@ -1508,6 +1508,152 @@ struct CardAttn {
 
     };
 
+    /// Disable all ATTN processing. Unlike disarm, this completely stops ATTN
+    /// monitoring rather than just clearing triggers.
+    ///
+    /// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
+    struct Off {
+        struct keys_ {
+            static constexpr char req[] NOTE_FLASH_ATTR = "card.attn";
+            static constexpr char off[] NOTE_FLASH_ATTR = "off";
+        };
+
+        static constexpr string_view notecard_request = "card.attn";
+        static constexpr bool supports_cmd = true;
+        static constexpr Safety safety = Safety::Idempotent;
+        static constexpr Skus skus{};
+
+        void* nc_ = nullptr;
+
+
+
+#if NOTE_EXTRAS
+        template<typename T>
+        auto& extra(note::string_view k_, T v_) {
+            if (extras_count_ < NOTE_EXTRAS_MAX)
+                extras_[extras_count_++] = {k_, note::DynValue{v_}};
+            return *this;
+        }
+        auto& extra(note::string_view k_, const char* v_) {
+            return extra(k_, note::string_view{v_});
+        }
+
+        note::DynField operator[](note::string_view k_) {
+            if (extras_count_ < NOTE_EXTRAS_MAX) {
+                auto& slot = extras_[extras_count_++];
+                slot.key = k_;
+                return note::dyn_field_for(slot.value);
+            }
+            return {};
+        }
+
+        std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
+        uint8_t extras_count_ = 0;
+#endif // NOTE_EXTRAS
+
+        using Response = void;
+
+        ApiResult<Response>(*execute_fn_)(void*, const CardAttn::Off&) = nullptr;
+        auto execute() const { return execute_fn_(nc_, *this); }
+        Result<void>(*command_fn_)(void*, const CardAttn::Off&) = nullptr;
+        Result<void> command() const { return command_fn_(nc_, *this); }
+
+        void build(JsonBuilder& b) const {
+            note::add_flash(b, note::flash(keys_::off), true);
+#if NOTE_EXTRAS
+            for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
+                std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
+                           extras_[i_].value);
+#endif
+        }
+
+
+#ifdef ARDUINO
+        /// Arduino Printable: prints the JSON request to Serial or any Print stream.
+        size_t printTo(Print& p) const {
+            size_t n = p.print("{\"req\":\"");
+            n += p.print(notecard_request.data());
+            n += p.print("\"");
+            n += p.print("}");
+            return n;
+        }
+#endif
+
+    };
+
+    /// Re-enable ATTN processing after it was disabled with off(). Retained
+    /// across device restarts.
+    ///
+    /// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
+    struct On {
+        struct keys_ {
+            static constexpr char req[] NOTE_FLASH_ATTR = "card.attn";
+            static constexpr char on[] NOTE_FLASH_ATTR = "on";
+        };
+
+        static constexpr string_view notecard_request = "card.attn";
+        static constexpr bool supports_cmd = true;
+        static constexpr Safety safety = Safety::Idempotent;
+        static constexpr Skus skus{};
+
+        void* nc_ = nullptr;
+
+
+
+#if NOTE_EXTRAS
+        template<typename T>
+        auto& extra(note::string_view k_, T v_) {
+            if (extras_count_ < NOTE_EXTRAS_MAX)
+                extras_[extras_count_++] = {k_, note::DynValue{v_}};
+            return *this;
+        }
+        auto& extra(note::string_view k_, const char* v_) {
+            return extra(k_, note::string_view{v_});
+        }
+
+        note::DynField operator[](note::string_view k_) {
+            if (extras_count_ < NOTE_EXTRAS_MAX) {
+                auto& slot = extras_[extras_count_++];
+                slot.key = k_;
+                return note::dyn_field_for(slot.value);
+            }
+            return {};
+        }
+
+        std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
+        uint8_t extras_count_ = 0;
+#endif // NOTE_EXTRAS
+
+        using Response = void;
+
+        ApiResult<Response>(*execute_fn_)(void*, const CardAttn::On&) = nullptr;
+        auto execute() const { return execute_fn_(nc_, *this); }
+        Result<void>(*command_fn_)(void*, const CardAttn::On&) = nullptr;
+        Result<void> command() const { return command_fn_(nc_, *this); }
+
+        void build(JsonBuilder& b) const {
+            note::add_flash(b, note::flash(keys_::on), true);
+#if NOTE_EXTRAS
+            for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
+                std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
+                           extras_[i_].value);
+#endif
+        }
+
+
+#ifdef ARDUINO
+        /// Arduino Printable: prints the JSON request to Serial or any Print stream.
+        size_t printTo(Print& p) const {
+            size_t n = p.print("{\"req\":\"");
+            n += p.print(notecard_request.data());
+            n += p.print("\"");
+            n += p.print("}");
+            return n;
+        }
+#endif
+
+    };
+
     /// Query current ATTN state and configuration.
     ///
     /// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
@@ -2009,6 +2155,8 @@ inline CardAttn::Sleep& CardAttn::Sleep::seconds_t::operator()(int32_t v) {
         reinterpret_cast<char*>(this) - offsetof(CardAttn::Sleep, seconds));
 }
 #pragma GCC diagnostic pop
+
+
 
 
 

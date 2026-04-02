@@ -257,6 +257,46 @@ TEST_CASE("note::api::CardAttn::Disarm transport equivalence (void)") {
 
 
 // ---------------------------------------------------------------------------
+TEST_CASE("note::api::CardAttn::Off transport equivalence (void)") {
+    SECTION("streaming") {
+        StreamingHarness sh;
+        sh.hal.queue_response(R"({})");
+    auto req = sh.api.card.attn().off();
+
+        auto rsp = req.execute();
+        REQUIRE(rsp.has_value());
+    }
+    SECTION("buffered") {
+        BufferedHarness bh(R"({})");
+    auto req = bh.api.card.attn().off();
+
+        auto rsp = req.execute();
+        REQUIRE(rsp.has_value());
+    }
+}
+
+
+// ---------------------------------------------------------------------------
+TEST_CASE("note::api::CardAttn::On transport equivalence (void)") {
+    SECTION("streaming") {
+        StreamingHarness sh;
+        sh.hal.queue_response(R"({})");
+    auto req = sh.api.card.attn().on();
+
+        auto rsp = req.execute();
+        REQUIRE(rsp.has_value());
+    }
+    SECTION("buffered") {
+        BufferedHarness bh(R"({})");
+    auto req = bh.api.card.attn().on();
+
+        auto rsp = req.execute();
+        REQUIRE(rsp.has_value());
+    }
+}
+
+
+// ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardAttn::Query transport equivalence") {
     SECTION("streaming") {
         StreamingHarness sh;

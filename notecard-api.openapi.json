@@ -603,6 +603,26 @@
             "supports_cmd": true
           },
           {
+            "name": "off",
+            "description": "Disable all ATTN processing. Unlike disarm, this completely stops ATTN monitoring rather than just clearing triggers.",
+            "implicit": {
+              "off": true
+            },
+            "fields": [],
+            "response": [],
+            "supports_cmd": true
+          },
+          {
+            "name": "on",
+            "description": "Re-enable ATTN processing after it was disabled with off(). Retained across device restarts.",
+            "implicit": {
+              "on": true
+            },
+            "fields": [],
+            "response": [],
+            "supports_cmd": true
+          },
+          {
             "name": "query",
             "description": "Query current ATTN state and configuration.",
             "fields": [

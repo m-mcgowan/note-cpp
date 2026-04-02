@@ -205,6 +205,12 @@ public:
         auto retrieve() { return create_<api::CardAttn::Retrieve>(); }
         /// Disarm all attention interrupts.
         auto disarm() { return create_<api::CardAttn::Disarm>(); }
+        /// Disable all ATTN processing. Unlike disarm, this completely stops
+        /// ATTN monitoring rather than just clearing triggers.
+        auto off() { return create_<api::CardAttn::Off>(); }
+        /// Re-enable ATTN processing after it was disabled with off(). Retained
+        /// across device restarts.
+        auto on() { return create_<api::CardAttn::On>(); }
         /// Query current ATTN state and configuration.
         auto query() { return create_<api::CardAttn::Query>(); }
     };

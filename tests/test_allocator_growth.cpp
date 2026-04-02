@@ -191,7 +191,7 @@ TEST_CASE("transact: initial alloc failure returns clean error") {
 // Sequential calls: previous buffer freed before new allocation
 // ---------------------------------------------------------------------------
 
-TEST_CASE("transact: second call frees previous buffer") {
+TEST_CASE("transact: caller owns each buffer independently") {
     MockHal hal(100);
     note::StreamingTransport transport(hal);
     TrackingAllocator tracker;
@@ -199,13 +199,31 @@ TEST_CASE("transact: second call frees previous buffer") {
 
     auto rsp1 = nc.transact(R"({"req":"card.version"})");
     REQUIRE(rsp1);
-    CHECK(tracker.alloc_count == 1);
 
     auto rsp2 = nc.transact(R"({"req":"card.version"})");
     REQUIRE(rsp2);
-    CHECK(tracker.free_count >= 1);  // first buffer was freed
-    // Only one buffer alive at a time
-    CHECK(tracker.live.size() == 1);
+
+    // Both buffers are alive — caller owns each
+    CHECK(tracker.live.size() == 2);
+
+    // Both are independently valid
+    CHECK(rsp1->size() > 0);
+    CHECK(rsp2->size() > 0);
+}
+
+TEST_CASE("transact: OwnedBuffer freed on scope exit") {
+    MockHal hal(100);
+    note::StreamingTransport transport(hal);
+    TrackingAllocator tracker;
+    note::Notecard nc(transport, tracker.to_allocator());
+
+    {
+        auto rsp = nc.transact(R"({"req":"card.version"})");
+        REQUIRE(rsp);
+        CHECK(tracker.live.size() == 1);
+    }
+    // OwnedBuffer out of scope — freed
+    CHECK(tracker.live.empty());
 }
 
 // ---------------------------------------------------------------------------

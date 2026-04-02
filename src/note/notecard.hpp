@@ -2,6 +2,7 @@
 
 #include "allocator.hpp"
 #include "binary_request.hpp"
+#include "owned_buffer.hpp"
 #include "json.hpp"
 #include "md5.hpp"
 #include "safety.hpp"
@@ -55,7 +56,6 @@ public:
 class Notecard {
 public:
     Notecard() = default;
-    ~Notecard() { free_raw_buf(); }
 
     Notecard(JsonBackend& backend, IBufferedTransport& transport)
         : backend_(&backend)
@@ -245,53 +245,45 @@ public:
     }
 #endif // !NOTE_NO_STD_STRING && !NOTE_NO_STD_FUNCTION
 
-    /// Validated JSON passthrough — allocates response buffer from the
-    /// registered allocator (heap by default, or arena). The string_view
-    /// is valid until the next transact() call or Notecard destruction.
-    Result<string_view> transact(string_view json) {
+    /// Validated JSON passthrough — returns an OwnedBuffer that the caller owns.
+    /// The buffer is freed when it goes out of scope. No dangling views.
+    Result<OwnedBuffer> transact(string_view json) {
         if (!validate_json_envelope(json))
             return make_error(Error::Json, NOTE_ERR("malformed JSON"));
 
-        // Buffered path: transport owns the response buffer, no allocation needed.
+        // Buffered path: copy response into an OwnedBuffer.
         if (transport_) {
-            return transport_->transact(json, default_timeout_ms_);
+            auto rv = transport_->transact(json, default_timeout_ms_);
+            if (!rv) return Unexpected(rv.error());
+            auto buf = OwnedBuffer::create(alloc_value(), rv->size() + 1);
+            if (!buf) return make_error(Error::Overflow, NOTE_ERR("alloc failed"));
+            buf.append(rv->data(), rv->size());
+            buf.null_terminate();
+            return buf;
         }
 
-        // Streaming path: transmit, then read response into a growing buffer.
-        // Like note-c's realloc loop — starts at 1KB, grows via realloc.
-        // Capped at 16KB to prevent runaway allocation.
+        // Streaming path: transmit, read response into a growing OwnedBuffer.
         if (streaming_transport_) {
-            free_raw_buf();
             auto* st = static_cast<StreamingTransport*>(streaming_transport_);
 
             auto send_rv = st->send_raw(json);
             if (!send_rv) return Unexpected(send_rv.error());
 
-            auto alloc = alloc_value();
-            raw_buf_size_ = 1024;
-            raw_buf_ = static_cast<char*>(alloc.allocate(raw_buf_size_));
-            if (!raw_buf_) return make_error(Error::Overflow, NOTE_ERR("alloc failed"));
-            size_t pos = 0;
+            auto buf = OwnedBuffer::create(alloc_value(), 1024);
+            if (!buf) return make_error(Error::Overflow, NOTE_ERR("alloc failed"));
 
             for (;;) {
                 uint8_t byte;
                 auto rv = st->read(&byte, 1, default_timeout_ms_);
-                if (!rv) { free_raw_buf(); return Unexpected(rv.error()); }
-                if (*rv == 0) { free_raw_buf(); return make_error(Error::ResponseLost, Cause::Timeout, NOTE_ERR("response timeout")); }
+                if (!rv) return Unexpected(rv.error());
+                if (*rv == 0) return make_error(Error::ResponseLost, Cause::Timeout, NOTE_ERR("response timeout"));
                 if (byte == '\n') break;
                 if (byte == '\r') continue;
-
-                if (pos >= raw_buf_size_ - 1) {
-                    size_t new_size = raw_buf_size_ * 2;
-                    auto* grown = static_cast<char*>(alloc.reallocate(raw_buf_, raw_buf_size_, new_size));
-                    if (!grown) { free_raw_buf(); return make_error(Error::Overflow, NOTE_ERR("realloc failed")); }
-                    raw_buf_ = grown;
-                    raw_buf_size_ = new_size;
-                }
-                raw_buf_[pos++] = static_cast<char>(byte);
+                if (!buf.append(static_cast<char>(byte)))
+                    return make_error(Error::Overflow, NOTE_ERR("response exceeds available memory"));
             }
-            raw_buf_[pos] = '\0';
-            return string_view(raw_buf_, pos);
+            buf.null_terminate();
+            return buf;
         }
 
         return make_error(Error::NotReady, NOTE_ERR("no transport configured"));
@@ -546,17 +538,12 @@ private:
     }
 
     Allocator alloc_value() const { return alloc_.value_or(Allocator{}); }
-    void free_raw_buf() {
-        if (raw_buf_) { alloc_value().deallocate(raw_buf_, raw_buf_size_); raw_buf_ = nullptr; }
-    }
 
     JsonBackend* backend_ = nullptr;
     IBufferedTransport* transport_ = nullptr;
     IStreamingTransport* streaming_transport_ = nullptr;
     uint32_t default_timeout_ms_ = 10000;
     std::optional<Allocator> alloc_;
-    char* raw_buf_ = nullptr;
-    size_t raw_buf_size_ = 0;
     byte_span cobs_buf_{};          // optional external COBS working buffer
 #ifndef NOTE_NO_MD5
     PlatformMd5 platform_md5_{};    // default MD5 implementation

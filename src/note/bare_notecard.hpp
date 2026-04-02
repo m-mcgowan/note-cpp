@@ -21,6 +21,7 @@
 
 #include "error.hpp"
 #include "json_sax.hpp"
+#include "owned_buffer.hpp"
 #include "span.hpp"
 #include "streaming_transport.hpp"
 #include "types.hpp"

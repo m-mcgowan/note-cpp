@@ -63,7 +63,8 @@ public:
 
     /// Streaming-only: no JsonBackend, no ITransport vtable overhead.
     /// Requests streamed via StreamingJsonBuilder, responses SAX-parsed via Sink.
-    Notecard(IStreamingTransport& transport, Allocator alloc)
+    /// Allocator defaults to heap (operator new/delete).
+    Notecard(IStreamingTransport& transport, Allocator alloc = {})
         : streaming_transport_(&transport)
         , alloc_(alloc)
     {}

@@ -12,3 +12,6 @@ extern note::Api<>* g_api;
 
 /// Get the global Api reference. Asserts that it was initialized.
 inline note::Api<>& notecard_api() { return *g_api; }
+
+/// Get the underlying Notecard (for passthrough, debug, etc.).
+inline note::Notecard& notecard_nc() { return g_api->notecard(); }

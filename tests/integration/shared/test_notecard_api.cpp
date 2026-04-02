@@ -15,6 +15,7 @@
 #include <note/error.hpp>
 #include <note/api.hpp>
 #include <note/body.hpp>
+#include <note/debug.hpp>
 #include <note/units.hpp>
 
 // ─── Shared types ───────────────────────────────────────────────────────────
@@ -230,6 +231,108 @@ TEST_CASE("note.add max field (8.2.1+)") {
     nc.file.remove("_integration_fw_gate.qo").execute();
 }
 } // fw>=8.2.1
+
+// ─── ATTN intents ──────────────────────────────────────────────────────
+
+TEST_CASE("card.attn arm + query + disarm round-trip") {
+    auto& nc = notecard_api();
+
+    auto arm_rsp = nc.card.attn().arm(note::attn::files).seconds(60).execute();
+    if (!arm_rsp) { MESSAGE("arm error: ", note::to_string(arm_rsp.error())); }
+    REQUIRE(arm_rsp);
+
+    auto query_rsp = nc.card.attn().query().execute();
+    if (!query_rsp) { MESSAGE("query error: ", note::to_string(query_rsp.error())); }
+    REQUIRE(query_rsp);
+    CHECK(query_rsp.set == true);
+
+    auto disarm_rsp = nc.card.attn().disarm().execute();
+    if (!disarm_rsp) { MESSAGE("disarm error: ", note::to_string(disarm_rsp.error())); }
+    REQUIRE(disarm_rsp);
+}
+
+TEST_CASE("card.attn rearm is idempotent") {
+    auto& nc = notecard_api();
+
+    nc.card.attn().arm(note::attn::files).seconds(60).execute();
+    auto r1 = nc.card.attn().rearm(note::attn::files).seconds(60).execute();
+    if (!r1) { MESSAGE("rearm 1: ", note::to_string(r1.error())); }
+    REQUIRE(r1);
+
+    auto r2 = nc.card.attn().rearm(note::attn::files).seconds(60).execute();
+    if (!r2) { MESSAGE("rearm 2: ", note::to_string(r2.error())); }
+    REQUIRE(r2);
+
+    nc.card.attn().disarm().execute();
+}
+
+TEST_CASE("card.attn off + on") {
+    auto& nc = notecard_api();
+
+    auto off_rsp = nc.card.attn().off().execute();
+    if (!off_rsp) { MESSAGE("off error: ", note::to_string(off_rsp.error())); }
+    REQUIRE(off_rsp);
+
+    auto on_rsp = nc.card.attn().on().execute();
+    if (!on_rsp) { MESSAGE("on error: ", note::to_string(on_rsp.error())); }
+    REQUIRE(on_rsp);
+}
+
+// ─── Raw JSON passthrough ──────────────────────────────────────────────
+
+TEST_CASE("transact(json, buf) returns valid JSON") {
+    auto& nc = notecard_nc();
+    char buf[512];
+    auto rsp = nc.transact(R"({"req":"card.version"})", buf);
+    if (!rsp) { MESSAGE("transact error: ", note::to_string(rsp.error())); }
+    REQUIRE(rsp);
+    CHECK(rsp->find("version") != note::string_view::npos);
+}
+
+TEST_CASE("transact(json) auto-sizes response") {
+    auto& nc = notecard_nc();
+    auto rsp = nc.transact(R"({"req":"card.version"})");
+    if (!rsp) { MESSAGE("transact error: ", note::to_string(rsp.error())); }
+    REQUIRE(rsp);
+    CHECK(rsp->view().find("version") != note::string_view::npos);
+}
+
+TEST_CASE("send(json) fire-and-forget") {
+    auto& nc = notecard_nc();
+    auto r = nc.send(R"({"cmd":"hub.set","product":"com.example.integration-test"})");
+    if (!r) { MESSAGE("send error: ", note::to_string(r.error())); }
+    REQUIRE(r);
+}
+
+// ─── Debug output ──────────────────────────────────────────────────────
+
+TEST_CASE("debug wire output captures request and response") {
+    auto& nc = notecard_nc();
+
+    bool saw_send = false;
+    bool saw_receive = false;
+    note::DebugListener d;
+    d.ctx = &saw_send;  // reuse for both
+    d.on_wire = [](const note::WireEvent& ev, void* ctx) {
+        if (ev.direction == note::WireDirection::Send) *static_cast<bool*>(ctx) = true;
+    };
+    // Capture receive in a separate way — use a struct
+    struct Ctx { bool* send; bool recv = false; };
+    Ctx debug_ctx{&saw_send};
+    d.ctx = &debug_ctx;
+    d.on_wire = [](const note::WireEvent& ev, void* ctx) {
+        auto* c = static_cast<Ctx*>(ctx);
+        if (ev.direction == note::WireDirection::Send) *c->send = true;
+        if (ev.direction == note::WireDirection::Receive) c->recv = true;
+    };
+    nc.set_debug(d);
+
+    nc.execute(note::api::CardVersion{});
+
+    CHECK(saw_send);
+    CHECK(debug_ctx.recv);
+    nc.clear_debug();
+}
 
 TEST_SUITE("fw>=9.1.1") {
 TEST_CASE("note.add limit field (9.1.1+)") {

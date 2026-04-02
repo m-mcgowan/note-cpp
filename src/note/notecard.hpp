@@ -421,6 +421,8 @@ private:
         return result;
     }
 
+#endif // NOTE_NO_BUFFERED
+
     /// Validate that a string is well-formed JSON using the SAX parser.
     static bool validate_json_envelope(string_view json) {
         JsonSink null_sink;
@@ -430,8 +432,6 @@ private:
 
     /// Raw passthrough on the streaming transport — transmit bytes, read response.
     Result<string_view> streaming_transact_raw(string_view json, span<char> buf) {
-        // StreamingTransport provides transact_raw which transmits raw bytes
-        // and reads the response line directly — no SAX parsing or reconstruction.
         auto* st = static_cast<StreamingTransport*>(streaming_transport_);
         return st->transact_raw(json, buf.data(), buf.size(), default_timeout_ms_);
     }
@@ -441,8 +441,6 @@ private:
         auto* st = static_cast<StreamingTransport*>(streaming_transport_);
         return st->send_raw(json);
     }
-
-#endif // NOTE_NO_BUFFERED
 
     /// Buffered execute: build JSON via backend, transact, parse response.
     /// Separated from execute() so LTO can eliminate it when backend_ is null.

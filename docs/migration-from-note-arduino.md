@@ -460,12 +460,12 @@ if (rsp != NULL) {
 ```cpp
 auto r = nc.card.version().execute();
 if (r) {
-    auto ver = r.version;
-    auto dev = r.device;
-    Serial.println(ver.data());
+    // Print individual fields
+    Serial.print("ver=");
+    Serial.println(r.version);
+    // Or print the entire response as JSON
+    Serial.println(r);
 }
-
-
 
 
 ```
@@ -478,6 +478,9 @@ if (r) {
   note-cpp returns `string_view` with the same lifetime constraint, but you
   never have to think about `deleteResponse` — it happens automatically.
 - `r.version` and `r.device` are typed members, not string lookups.
+- Response fields and full responses are Arduino `Printable` —
+  `Serial.print(r.version)` just works. Avoid `printf("%.*s")` with
+  `string_view` — use `Serial.print()` instead.
 
 ## ATTN pin — arming for interrupts
 
@@ -1243,7 +1246,19 @@ Moving from C to C++ brings benefits independent of note-cpp:
 
 ### Binary size
 
-On ESP32-S3 with the same cJSON backend and identical operations
+**AVR (ATmega328P, 32 KB flash / 2 KB RAM)** — using `StaticNotecard`
+with streaming transport (see `examples/binary-size-comparison/`):
+
+| | note-c | note-cpp | Delta |
+|---|---|---|---|
+| Flash | 24,646 (76%) | 14,592 (45%) | **-10,054 (-41%)** |
+| RAM | 739 (36%) | 712 (35%) | **-27 (-4%)** |
+
+note-cpp is 41% smaller on flash because the streaming transport and
+SAX parser eliminate the cJSON tree, and `StaticNotecard` has zero
+virtual dispatch overhead.
+
+**ESP32-S3** — with the same cJSON backend and identical operations
 (hub.set, note.template, card.temp, note.add):
 
 | | note-c | note-cpp | Delta |
@@ -1274,16 +1289,29 @@ both libraries have similar per-request heap usage.
 
 ### What note-cpp doesn't support (yet)
 
-- **AVR** — no hosted C++ standard library (no `std::string`, `std::optional`)
 - **ESP8266** — `tl::expected` polyfill incompatible with GCC 10.3
 - **Apple Clang consteval** — string literal validation disabled due to
   a compiler bug (named constants and flag methods always work)
-- **`NOTE_C_LOW_MEM` equivalent** — note-cpp doesn't have a single
-  "reduce everything" flag. Features are controlled structurally
-  (template parameters, linker `--gc-sections`) rather than preprocessor
-  `#ifdef`. For the lowest memory path, `sax_parse_streaming()` parses
-  responses incrementally with only a small scratch buffer (`SaxStreamBuf`,
-  default 384 bytes on the stack). CRC validation is always present.
+
+### AVR support
+
+note-cpp runs on AVR (ATmega328P) with the streaming transport path.
+Uses `StaticNotecard` for zero-vtable dispatch and `avr-libstdcpp` for
+standard library headers. See `examples/binary-size-comparison/` for
+the full PlatformIO configuration. Key build flags:
+
+- `NOTE_NO_STD_STRING` — excludes `std::string`/`std::functional` paths
+- `NOTE_NO_MD5`, `NOTE_NO_CRC` — excludes lookup tables
+- `NOTE_EXTRAS=0` — disables dynamic fields (saves ~168 bytes per request)
+- `NOTE_SHORT_ERRORS=1` — collapses error messages to save flash
+
+### Controlling binary size
+
+Features are controlled structurally (template parameters, linker
+`--gc-sections`) rather than a single preprocessor flag. For the
+lowest memory path, `sax_parse_streaming()` parses responses
+incrementally with only a small scratch buffer (`SaxStreamBuf`,
+default 384 bytes on the stack).
 
 See [Known Issues](known-issues.md) for details on the Clang limitation.
 

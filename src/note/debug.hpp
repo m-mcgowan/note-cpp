@@ -137,4 +137,14 @@ struct RuntimeDebug {
     }
 };
 
+// ── Debug category flags ───────────────────────────────────────────────
+// Used by convenience adapters (e.g. arduino::serial_debug) to select
+// which categories are enabled.
+
+inline constexpr uint8_t DebugWire     = 1u << 0;
+inline constexpr uint8_t DebugTiming   = 1u << 1;
+inline constexpr uint8_t DebugMemory   = 1u << 2;
+inline constexpr uint8_t DebugTransport = 1u << 3;
+inline constexpr uint8_t DebugAll      = 0xFF;
+
 } // namespace note

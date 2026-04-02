@@ -84,9 +84,11 @@ public:
         begin_i2c(wire, address, alloc);
     }
 
-    /// Enable wire debug output to an Arduino Print (e.g. Serial).
-    void setDebugOutput(Print& out) {
-        Base::notecard().set_debug(arduino::serial_debug(out));
+    /// Enable debug output to an Arduino Print (e.g. Serial).
+    /// Default: wire data only. Pass flags for more categories:
+    ///   nc.setDebugOutput(Serial, note::DebugWire | note::DebugTiming);
+    void setDebugOutput(Print& out, uint8_t flags = DebugWire) {
+        Base::notecard().set_debug(arduino::serial_debug(out, flags));
     }
 
     /// Disable debug output.

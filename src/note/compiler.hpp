@@ -1,5 +1,7 @@
 #pragma once
 
+#include <note/note_config.hpp>
+
 // Compiler portability utilities.
 //
 // NOTE_UNREACHABLE() — marks a code path as unreachable.

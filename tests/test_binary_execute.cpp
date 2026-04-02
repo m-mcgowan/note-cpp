@@ -216,10 +216,9 @@ TEST_CASE("Binary PUT: COBS encodes and writes via transport") {
 
     uint8_t data[] = {1, 2, 3, 4, 5, 0, 6, 7, 8};
     note::api::CardBinaryPut req;
-    req.nc_ = &h.nc;
     req.data(data, sizeof(data)).verify(false);  // skip verify for basic test
 
-    auto rsp = req.execute();  // const execute — copy-and-execute path
+    auto rsp = h.nc.execute(req);  // const execute — copy-and-execute path
     REQUIRE(rsp);
 
     // Verify JSON handshake included cobs and status fields
@@ -260,9 +259,8 @@ TEST_CASE("Binary PUT: MD5 status matches data") {
 
     uint8_t data[] = {'h', 'e', 'l', 'l', 'o'};
     note::api::CardBinaryPut req;
-    req.nc_ = &h.nc;
     req.data(data, sizeof(data)).verify(false);
-    req.execute();
+    h.nc.execute(req);
 
     note::SoftwareMd5 md5;
     auto expected_md5 = md5.compute(data, sizeof(data));
@@ -285,7 +283,6 @@ TEST_CASE("Binary GET: reads and COBS-decodes from transport") {
 
     uint8_t dst[64] = {};
     note::api::CardBinaryGet req;
-    req.nc_ = &h.nc;
     req.into(dst, sizeof(dst));
     req.length = static_cast<int32_t>(sizeof(original));
 
@@ -304,7 +301,6 @@ TEST_CASE("Binary GET: MD5 mismatch returns error") {
 
     uint8_t dst[64] = {};
     note::api::CardBinaryGet req;
-    req.nc_ = &h.nc;
     req.into(dst, sizeof(dst));
     req.length = static_cast<int32_t>(sizeof(original));
 
@@ -322,7 +318,6 @@ TEST_CASE("Binary GET: empty MD5 in response skips verification") {
 
     uint8_t dst[64] = {};
     note::api::CardBinaryGet req;
-    req.nc_ = &h.nc;
     req.into(dst, sizeof(dst));
     req.length = static_cast<int32_t>(sizeof(original));
 
@@ -339,10 +334,9 @@ TEST_CASE("Binary PUT without data() falls through to JSON") {
     BinaryTestHarness h;
 
     note::api::CardBinaryPut req;
-    req.nc_ = &h.nc;
     req.cobs = 100;
     req.status = "abc";
-    req.execute();
+    h.nc.execute(req);
 
     // Should be a normal JSON request, no binary write
     REQUIRE(h.written_bytes.empty());
@@ -353,9 +347,8 @@ TEST_CASE("Binary GET without into() falls through to JSON") {
     BinaryTestHarness h;
 
     note::api::CardBinaryGet req;
-    req.nc_ = &h.nc;
     req.length = 100;
-    req.execute();
+    h.nc.execute(req);
 
     REQUIRE(h.written_bytes.empty());
     REQUIRE(h.last_request.find("\"length\":100") != std::string::npos);
@@ -385,11 +378,10 @@ TEST_CASE("Binary PUT: const execute() triggers binary pipeline") {
     BinaryTestHarness h;
 
     note::api::CardBinaryPut put;
-    put.nc_ = &h.nc;
     put.data(reinterpret_cast<const uint8_t*>("hello"), 5).verify(false);
 
     // This calls the const execute() which detects binary data and copies
-    put.execute();
+    h.nc.execute(put);
 
     // Binary bytes were written (not just JSON)
     REQUIRE(!h.written_bytes.empty());
@@ -406,11 +398,10 @@ TEST_CASE("Binary GET: const execute() triggers binary pipeline") {
 
     uint8_t dst[64] = {};
     note::api::CardBinaryGet get;
-    get.nc_ = &h.nc;
     get.into(dst, sizeof(dst)).length(static_cast<int32_t>(sizeof(original)));
 
     // const execute() detects buffer and copies
-    auto rsp = get.execute();
+    auto rsp = h.nc.execute(get);
     REQUIRE(rsp);
     REQUIRE(memcmp(dst, original, sizeof(original)) == 0);
 }
@@ -461,10 +452,9 @@ TEST_CASE("Binary PUT: verify() does pre-flight and post-transmit checks") {
     });
 
     note::api::CardBinaryPut req;
-    req.nc_ = &h.nc;
     req.data(data, sizeof(data)).verify();
 
-    auto rsp = req.execute();
+    auto rsp = h.nc.execute(req);
     REQUIRE(rsp);
     CHECK(h.transact_count == 4);  // reset + pre-status + handshake + post-status
 }
@@ -480,10 +470,9 @@ TEST_CASE("Binary PUT: verify detects post-transmit MD5 mismatch") {
     });
 
     note::api::CardBinaryPut req;
-    req.nc_ = &h.nc;
     req.data(data, sizeof(data));  // verify=true by default
 
-    auto rsp = req.execute();
+    auto rsp = h.nc.execute(req);
     REQUIRE(!rsp);
     CHECK(rsp.error().code == note::Error::ResponseLost);
 }
@@ -498,10 +487,9 @@ TEST_CASE("Binary PUT: verify detects insufficient space") {
     });
 
     note::api::CardBinaryPut req;
-    req.nc_ = &h.nc;
     req.data(data, sizeof(data));
 
-    auto rsp = req.execute();
+    auto rsp = h.nc.execute(req);
     REQUIRE(!rsp);
     CHECK(rsp.error().code == note::Error::Overflow);
 }
@@ -511,10 +499,9 @@ TEST_CASE("Binary PUT: verify(false) skips status check") {
 
     uint8_t data[] = {1, 2, 3};
     note::api::CardBinaryPut req;
-    req.nc_ = &h.nc;
     req.data(data, sizeof(data)).verify(false);
 
-    auto rsp = req.execute();
+    auto rsp = h.nc.execute(req);
     REQUIRE(rsp);
     CHECK(h.transact_count == 1);  // handshake only
 }

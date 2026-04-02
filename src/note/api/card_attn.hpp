@@ -7,11 +7,11 @@
 #if NOTE_EXTRAS
 #include <note/dyn_field.hpp>
 #endif
+#include <note/notecard.hpp>
 #include <note/field.hpp>
 #include <note/json.hpp>
 #include <note/json_sax.hpp>
 #include <note/binary_request.hpp>
-#include <note/notecard.hpp>
 #include <note/print.hpp>
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
@@ -94,7 +94,8 @@ struct CardAttn {
         static constexpr Safety safety = Safety::Idempotent;
         static constexpr Skus skus{};
 
-        Notecard* nc_ = nullptr;
+        void* nc_ = nullptr;
+
 
         /// A list of Notefiles to watch for file-based interrupts.
         /// A list of Notefiles to watch for file-based interrupts.
@@ -123,13 +124,17 @@ struct CardAttn {
                 return *this;
             }
             mode_t& operator=(std::nullopt_t) { Field<note::string_view>::reset(); return *this; }
-            mode_t(const mode_t&) = default;
-            mode_t& operator=(const mode_t&) = default;
-            mode_t(mode_t&&) = default;
-            mode_t& operator=(mode_t&&) = default;
+            mode_t(const mode_t& o) : Field<note::string_view>(), flags_(o.flags_) { fixup_(o); }
+            mode_t& operator=(const mode_t& o) { flags_ = o.flags_; fixup_(o); return *this; }
+            mode_t(mode_t&& o) : Field<note::string_view>(), flags_(o.flags_) { fixup_(o); }
+            mode_t& operator=(mode_t&& o) { flags_ = o.flags_; fixup_(o); return *this; }
 #else
             using Field<note::string_view>::Field;
             using Field<note::string_view>::operator=;
+            mode_t(const mode_t& o) : Field<note::string_view>(), flags_(o.flags_) { fixup_(o); }
+            mode_t& operator=(const mode_t& o) { flags_ = o.flags_; fixup_(o); return *this; }
+            mode_t(mode_t&& o) : Field<note::string_view>(), flags_(o.flags_) { fixup_(o); }
+            mode_t& operator=(mode_t&& o) { flags_ = o.flags_; fixup_(o); return *this; }
 #endif
             CardAttn::Request& operator()(note::string_view v);
             CardAttn::Request& operator=(uint32_t flags);
@@ -180,6 +185,11 @@ struct CardAttn {
                 { note::attn::wireless, "wireless" },
             };
             note::FlagSet<10, 77> flags_{flag_defs_};
+            void fixup_(const mode_t& o) {
+                if (flags_) Field<note::string_view>::operator=(flags_.str());
+                else if (o.has_value()) Field<note::string_view>::operator=(*o);
+                else Field<note::string_view>::reset();
+            }
 #if __cplusplus >= 202002L
             // consteval: validates that a string literal contains only known flags.
             static consteval bool validate_flags(note::string_view sv) {
@@ -424,6 +434,11 @@ struct CardAttn {
             std::unique_ptr<JsonReader> reader_;
         };
 
+        ApiResult<Response>(*execute_fn_)(void*, const CardAttn::Request&) = nullptr;
+        auto execute() const { return execute_fn_(nc_, *this); }
+        Result<void>(*command_fn_)(void*, const CardAttn::Request&) = nullptr;
+        Result<void> command() const { return command_fn_(nc_, *this); }
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
         void build(JsonBuilder& b) const {
@@ -447,10 +462,6 @@ struct CardAttn {
         }
 #pragma GCC diagnostic pop
 
-        auto execute() const { return nc_->execute(*this); }
-        auto execute(Notecard& nc) const { return nc.execute(*this); }
-        Result<void> command() const { return nc_->command_typed(*this); }
-        Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
 
 #ifdef ARDUINO
         /// Arduino Printable: prints the JSON request to Serial or any Print stream.
@@ -515,7 +526,8 @@ struct CardAttn {
         static constexpr Safety safety = Safety::Idempotent;
         static constexpr Skus skus{};
 
-        Notecard* nc_ = nullptr;
+        void* nc_ = nullptr;
+
 
         /// A list of Notefiles to watch for file-based interrupts.
         /// A list of Notefiles to watch for file-based interrupts.
@@ -544,13 +556,17 @@ struct CardAttn {
                 return *this;
             }
             triggers_t& operator=(std::nullopt_t) { Field<note::string_view>::reset(); return *this; }
-            triggers_t(const triggers_t&) = default;
-            triggers_t& operator=(const triggers_t&) = default;
-            triggers_t(triggers_t&&) = default;
-            triggers_t& operator=(triggers_t&&) = default;
+            triggers_t(const triggers_t& o) : Field<note::string_view>(), flags_(o.flags_) { fixup_(o); }
+            triggers_t& operator=(const triggers_t& o) { flags_ = o.flags_; fixup_(o); return *this; }
+            triggers_t(triggers_t&& o) : Field<note::string_view>(), flags_(o.flags_) { fixup_(o); }
+            triggers_t& operator=(triggers_t&& o) { flags_ = o.flags_; fixup_(o); return *this; }
 #else
             using Field<note::string_view>::Field;
             using Field<note::string_view>::operator=;
+            triggers_t(const triggers_t& o) : Field<note::string_view>(), flags_(o.flags_) { fixup_(o); }
+            triggers_t& operator=(const triggers_t& o) { flags_ = o.flags_; fixup_(o); return *this; }
+            triggers_t(triggers_t&& o) : Field<note::string_view>(), flags_(o.flags_) { fixup_(o); }
+            triggers_t& operator=(triggers_t&& o) { flags_ = o.flags_; fixup_(o); return *this; }
 #endif
             CardAttn::Arm& operator()(note::string_view v);
             CardAttn::Arm& operator=(uint32_t flags);
@@ -601,6 +617,11 @@ struct CardAttn {
                 { note::attn::wireless, "wireless" },
             };
             note::FlagSet<10, 77> flags_{flag_defs_};
+            void fixup_(const triggers_t& o) {
+                if (flags_) Field<note::string_view>::operator=(flags_.str());
+                else if (o.has_value()) Field<note::string_view>::operator=(*o);
+                else Field<note::string_view>::reset();
+            }
 #if __cplusplus >= 202002L
             // consteval: validates that a string literal contains only known flags.
             static consteval bool validate_flags(note::string_view sv) {
@@ -731,6 +752,11 @@ struct CardAttn {
             std::unique_ptr<JsonReader> reader_;
         };
 
+        ApiResult<Response>(*execute_fn_)(void*, const CardAttn::Arm&) = nullptr;
+        auto execute() const { return execute_fn_(nc_, *this); }
+        Result<void>(*command_fn_)(void*, const CardAttn::Arm&) = nullptr;
+        Result<void> command() const { return command_fn_(nc_, *this); }
+
         void build(JsonBuilder& b) const {
             if (files) files.write_to(b, "files");
             if (triggers) {
@@ -750,10 +776,304 @@ struct CardAttn {
 #endif
         }
 
-        auto execute() const { return nc_->execute(*this); }
-        auto execute(Notecard& nc) const { return nc.execute(*this); }
-        Result<void> command() const { return nc_->command_typed(*this); }
-        Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
+
+#ifdef ARDUINO
+        /// Arduino Printable: prints the JSON request to Serial or any Print stream.
+        size_t printTo(Print& p) const {
+            size_t n = p.print("{\"req\":\"");
+            n += p.print(notecard_request.data());
+            n += p.print("\"");
+            if (triggers) {
+                n += p.print(",\"mode\":");
+                n += note::detail::print_json_value(p, *triggers);
+            }
+            if (on) {
+                n += p.print(",\"on\":");
+                n += note::detail::print_json_value(p, *on);
+            }
+            if (seconds) {
+                n += p.print(",\"seconds\":");
+                n += note::detail::print_json_value(p, *seconds);
+            }
+            n += p.print("}");
+            return n;
+        }
+#endif
+
+    };
+
+    /// Idempotent arm — arms ATTN if not already armed, or resets
+    /// mode/files/seconds to the values given. Safe to call repeatedly (unlike
+    /// arm which briefly disarms).
+    ///
+    /// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
+    struct Rearm {
+        struct keys_ {
+            static constexpr char req[] NOTE_FLASH_ATTR = "card.attn";
+            static constexpr char files[] NOTE_FLASH_ATTR = "files";
+            static constexpr char triggers[] NOTE_FLASH_ATTR = "mode";
+            static constexpr char on[] NOTE_FLASH_ATTR = "on";
+            static constexpr char seconds[] NOTE_FLASH_ATTR = "seconds";
+            static constexpr char rsp_set[] NOTE_FLASH_ATTR = "set";
+        };
+
+        static constexpr string_view notecard_request = "card.attn";
+        static constexpr bool supports_cmd = true;
+        static constexpr Safety safety = Safety::Idempotent;
+        static constexpr Skus skus{};
+
+        void* nc_ = nullptr;
+
+
+        /// A list of Notefiles to watch for file-based interrupts.
+        /// A list of Notefiles to watch for file-based interrupts.
+        note::ArrayField<note::string_view, 8> files{};
+        /// A comma-separated list of one or more of the following keywords.
+        /// Some keywords are only supported on certain types of Notecards.
+        struct triggers_t : Field<note::string_view> {
+#if __cplusplus >= 202002L && !defined(__clang__)
+            constexpr triggers_t() = default;
+            template<std::size_t N_>
+            consteval triggers_t(const char (&s)[N_])
+                : Field<note::string_view>(note::string_view(s, N_ - 1)) {
+                validate_flags(note::string_view(s, N_ - 1));
+            }
+            template<typename U>
+                requires std::is_convertible_v<U, note::string_view>
+                      && (!std::is_array_v<std::remove_reference_t<U>>)
+                      && (!std::is_same_v<std::decay_t<U>, triggers_t>)
+            constexpr triggers_t(U&& v) : Field<note::string_view>(note::string_view(std::forward<U>(v))) {}
+            template<typename U>
+                requires std::is_convertible_v<U, note::string_view>
+                      && (!std::is_array_v<std::remove_reference_t<U>>)
+                      && (!std::is_same_v<std::decay_t<U>, triggers_t>)
+            triggers_t& operator=(U&& v) {
+                Field<note::string_view>::operator=(note::string_view(std::forward<U>(v)));
+                return *this;
+            }
+            triggers_t& operator=(std::nullopt_t) { Field<note::string_view>::reset(); return *this; }
+            triggers_t(const triggers_t& o) : Field<note::string_view>(), flags_(o.flags_) { fixup_(o); }
+            triggers_t& operator=(const triggers_t& o) { flags_ = o.flags_; fixup_(o); return *this; }
+            triggers_t(triggers_t&& o) : Field<note::string_view>(), flags_(o.flags_) { fixup_(o); }
+            triggers_t& operator=(triggers_t&& o) { flags_ = o.flags_; fixup_(o); return *this; }
+#else
+            using Field<note::string_view>::Field;
+            using Field<note::string_view>::operator=;
+            triggers_t(const triggers_t& o) : Field<note::string_view>(), flags_(o.flags_) { fixup_(o); }
+            triggers_t& operator=(const triggers_t& o) { flags_ = o.flags_; fixup_(o); return *this; }
+            triggers_t(triggers_t&& o) : Field<note::string_view>(), flags_(o.flags_) { fixup_(o); }
+            triggers_t& operator=(triggers_t&& o) { flags_ = o.flags_; fixup_(o); return *this; }
+#endif
+            CardAttn::Rearm& operator()(note::string_view v);
+            CardAttn::Rearm& operator=(uint32_t flags);
+            CardAttn::Rearm& operator()(uint32_t flags);
+            triggers_t& add(uint32_t flag);
+            triggers_t& operator|=(uint32_t flag);
+            /// When armed, causes ATTN to fire if an AUX GPIO input changes.
+            /// Disable by using `-auxgpio`.
+            triggers_t& auxgpio();
+            /// When armed, will cause ATTN to fire whenever the module connects
+            /// to cellular. Disable with `-connected`.
+            triggers_t& connected();
+            /// When armed, causes ATTN to fire if an environment variable
+            /// changes on the Notecard. Disable by using `-env`.
+            triggers_t& env();
+            /// When armed, will cause ATTN to fire if any of the "files" are
+            /// modified. Disable by using `-files`.
+            triggers_t& files();
+            /// When armed, will cause ATTN to fire whenever the Notecard GPS
+            /// module makes a position fix. Disable by using `-location`.
+            triggers_t& location();
+            /// When armed, will cause ATTN to fire whenever the accelerometer
+            /// detects module motion. Disable with `-motion`.
+            triggers_t& motion();
+            /// When armed, will cause ATTN to fire whenever the
+            /// `card.motion.mode` changes from "moving" to "stopped" (or vice
+            /// versa). Learn how to configure this feature in this guide.
+            triggers_t& motionchange();
+            /// When armed, will cause ATTN to fire whenever the Notecard
+            /// receives a signal.
+            triggers_t& signal();
+            /// When armed, will enable USB power events firing the ATTN pin.
+            /// Disable with `-usb`.
+            triggers_t& usb();
+            /// Instruct the Notecard to fire the ATTN pin whenever the
+            /// `card.wireless` status changes.
+            triggers_t& wireless();
+            static constexpr note::FlagDef flag_defs_[] = {
+                { note::attn::auxgpio, "auxgpio" },
+                { note::attn::connected, "connected" },
+                { note::attn::env, "env" },
+                { note::attn::files, "files" },
+                { note::attn::location, "location" },
+                { note::attn::motion, "motion" },
+                { note::attn::motionchange, "motionchange" },
+                { note::attn::signal, "signal" },
+                { note::attn::usb, "usb" },
+                { note::attn::wireless, "wireless" },
+            };
+            note::FlagSet<10, 77> flags_{flag_defs_};
+            void fixup_(const triggers_t& o) {
+                if (flags_) Field<note::string_view>::operator=(flags_.str());
+                else if (o.has_value()) Field<note::string_view>::operator=(*o);
+                else Field<note::string_view>::reset();
+            }
+#if __cplusplus >= 202002L
+            // consteval: validates that a string literal contains only known flags.
+            static consteval bool validate_flags(note::string_view sv) {
+                while (!sv.empty()) {
+                    auto comma = sv.find(',');
+                    auto token = (comma == sv.npos) ? sv : sv.substr(0, comma);
+                    if (token != "auxgpio" && token != "connected" && token != "env" && token != "files" && token != "location" && token != "motion" && token != "motionchange" && token != "signal" && token != "usb" && token != "wireless")
+                        throw "card.attn: invalid flag";
+                    sv = (comma == sv.npos) ? note::string_view{} : sv.substr(comma + 1);
+                }
+                return true;
+            }
+#endif
+        } triggers{};
+        /// When `true`, enables ATTN processing. This setting is retained
+        /// across device restarts.
+        struct on_t : Field<bool> {
+            using Field<bool>::Field;
+            using Field<bool>::operator=;
+            CardAttn::Rearm& operator()(bool v);
+        } on{};
+        /// To set an ATTN timeout when arming, or when using `sleep`.
+        ///
+        /// NOTE: When the Notecard is in `continuous` mode, the `seconds`
+        /// timeout is serviced by a routine that wakes every 15 seconds. You
+        /// can predict when the device will wake, by rounding up to the nearest
+        /// 15 second interval.
+        struct seconds_t : Field<int32_t> {
+            using Field<int32_t>::Field;
+            using Field<int32_t>::operator=;
+            CardAttn::Rearm& operator()(int32_t v);
+        } seconds{};
+
+
+    // Semantic convenience methods — generated from x-toggle / x-action metadata
+    // (method names that match a field accessor are skipped to avoid redefinition)
+        auto& persist() { on = true; return *this; }
+        auto& persist(bool v_) { on = v_; return *this; }
+        auto& auxgpio() { triggers.auxgpio(); return *this; }
+        auto& connected() { triggers.connected(); return *this; }
+        auto& env() { triggers.env(); return *this; }
+        auto& location() { triggers.location(); return *this; }
+        auto& motion() { triggers.motion(); return *this; }
+        auto& motionchange() { triggers.motionchange(); return *this; }
+        auto& signal() { triggers.signal(); return *this; }
+        auto& usb() { triggers.usb(); return *this; }
+        auto& wireless() { triggers.wireless(); return *this; }
+#if NOTE_EXTRAS
+        template<typename T>
+        auto& extra(note::string_view k_, T v_) {
+            if (extras_count_ < NOTE_EXTRAS_MAX)
+                extras_[extras_count_++] = {k_, note::DynValue{v_}};
+            return *this;
+        }
+        auto& extra(note::string_view k_, const char* v_) {
+            return extra(k_, note::string_view{v_});
+        }
+
+        note::DynField operator[](note::string_view k_) {
+            if (k_ == "mode") return note::dyn_field_for(triggers);
+            if (k_ == "on") return note::dyn_field_for(on);
+            if (k_ == "seconds") return note::dyn_field_for(seconds);
+            if (extras_count_ < NOTE_EXTRAS_MAX) {
+                auto& slot = extras_[extras_count_++];
+                slot.key = k_;
+                return note::dyn_field_for(slot.value);
+            }
+            return {};
+        }
+
+        std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
+        uint8_t extras_count_ = 0;
+#endif // NOTE_EXTRAS
+
+        /// Idempotent arm — arms ATTN if not already armed, or resets
+        /// mode/files/seconds to the values given. Safe to call repeatedly
+        /// (unlike arm which briefly disarms).
+        struct Response {
+            /// Reflects the state of the attention pin. The `set` field is
+            /// `true` when the attention pin is `HIGH`, otherwise the `set`
+            /// field will not be present when the attention pin is `LOW`.
+            note::ResponseField<bool> set{};
+
+            static Response parse(std::unique_ptr<JsonReader> reader_) {
+                Response rsp;
+                rsp.set = reader_->get_bool("set");
+                rsp.reader_ = std::move(reader_);
+                return rsp;
+            }
+
+            // Non-owning parse: string_views point into the reader's data.
+            // The reader (and its underlying JSON buffer) must outlive the Response,
+            // or the caller must consume all string fields before the reader is reused.
+            static Response parse(const JsonReader& reader_) {
+                Response rsp;
+                rsp.set = reader_.get_bool("set");
+                return rsp;
+            }
+
+            // SAX sink — zero-allocation streaming parse into Response fields.
+            // String fields are interned into the StringPool immediately, so
+            // string_views survive after the parser's scratch buffer is reused.
+            struct Sink : ::note::DefaultSink {
+                Response& rsp;
+                ::note::StringPool& pool_;
+                Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
+                void on_bool(::note::string_view k_, bool v_) {
+                    if (note::flash(keys_::rsp_set) == k_) { rsp.set = v_; return; }
+                }
+                void reset() { rsp = Response{}; }
+            };
+
+            void intern_strings(::note::StringPool&) {}
+
+#ifdef ARDUINO
+            /// Arduino Printable: prints response fields to Serial or any Print stream.
+            size_t printTo(Print& p) const {
+                size_t n = p.print("{");
+                bool first_ = true;
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"set\":");
+                n += note::detail::print_json_value(p, set.value());
+                n += p.print("}");
+                return n;
+            }
+#endif
+
+        private:
+            std::unique_ptr<JsonReader> reader_;
+        };
+
+        ApiResult<Response>(*execute_fn_)(void*, const CardAttn::Rearm&) = nullptr;
+        auto execute() const { return execute_fn_(nc_, *this); }
+        Result<void>(*command_fn_)(void*, const CardAttn::Rearm&) = nullptr;
+        Result<void> command() const { return command_fn_(nc_, *this); }
+
+        void build(JsonBuilder& b) const {
+            if (files) files.write_to(b, "files");
+            if (triggers) {
+                char mp_[96];
+                std::snprintf(mp_, sizeof(mp_), "rearm,%.*s",
+                             (int)(*triggers).size(), (*triggers).data());
+                note::add_flash(b, note::flash(keys_::triggers), note::string_view{mp_});
+            } else {
+                note::add_flash(b, note::flash(keys_::triggers), "rearm");
+            }
+            if (on) note::add_flash(b, note::flash(keys_::on), *on);
+            if (seconds) note::add_flash(b, note::flash(keys_::seconds), *seconds);
+#if NOTE_EXTRAS
+            for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
+                std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
+                           extras_[i_].value);
+#endif
+        }
+
 
 #ifdef ARDUINO
         /// Arduino Printable: prints the JSON request to Serial or any Print stream.
@@ -795,7 +1115,8 @@ struct CardAttn {
         static constexpr Safety safety = Safety::Idempotent;
         static constexpr Skus skus{};
 
-        Notecard* nc_ = nullptr;
+        void* nc_ = nullptr;
+
 
         /// To set an ATTN timeout when arming, or when using `sleep`.
         ///
@@ -837,6 +1158,11 @@ struct CardAttn {
 
         using Response = void;
 
+        ApiResult<Response>(*execute_fn_)(void*, const CardAttn::Watchdog&) = nullptr;
+        auto execute() const { return execute_fn_(nc_, *this); }
+        Result<void>(*command_fn_)(void*, const CardAttn::Watchdog&) = nullptr;
+        Result<void> command() const { return command_fn_(nc_, *this); }
+
         void build(JsonBuilder& b) const {
             note::add_flash(b, note::flash(keys_::mode), "watchdog");
             if (seconds) note::add_flash(b, note::flash(keys_::seconds), *seconds);
@@ -847,10 +1173,6 @@ struct CardAttn {
 #endif
         }
 
-        auto execute() const { return nc_->execute(*this); }
-        auto execute(Notecard& nc) const { return nc.execute(*this); }
-        Result<void> command() const { return nc_->command_typed(*this); }
-        Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
 
 #ifdef ARDUINO
         /// Arduino Printable: prints the JSON request to Serial or any Print stream.
@@ -885,7 +1207,8 @@ struct CardAttn {
         static constexpr Safety safety = Safety::Idempotent;
         static constexpr Skus skus{};
 
-        Notecard* nc_ = nullptr;
+        void* nc_ = nullptr;
+
 
         /// When using `sleep` mode, a payload of data from the host that the
         /// Notecard should hold in memory until retrieved by the host.
@@ -935,6 +1258,11 @@ struct CardAttn {
 
         using Response = void;
 
+        ApiResult<Response>(*execute_fn_)(void*, const CardAttn::Sleep&) = nullptr;
+        auto execute() const { return execute_fn_(nc_, *this); }
+        Result<void>(*command_fn_)(void*, const CardAttn::Sleep&) = nullptr;
+        Result<void> command() const { return command_fn_(nc_, *this); }
+
         void build(JsonBuilder& b) const {
             note::add_flash(b, note::flash(keys_::mode), "sleep");
             if (payload) note::add_flash(b, note::flash(keys_::payload), *payload);
@@ -946,10 +1274,6 @@ struct CardAttn {
 #endif
         }
 
-        auto execute() const { return nc_->execute(*this); }
-        auto execute(Notecard& nc) const { return nc.execute(*this); }
-        Result<void> command() const { return nc_->command_typed(*this); }
-        Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
 
 #ifdef ARDUINO
         /// Arduino Printable: prints the JSON request to Serial or any Print stream.
@@ -988,7 +1312,8 @@ struct CardAttn {
         static constexpr Safety safety = Safety::Idempotent;
         static constexpr Skus skus{};
 
-        Notecard* nc_ = nullptr;
+        void* nc_ = nullptr;
+
 
 
 #if NOTE_EXTRAS
@@ -1085,6 +1410,9 @@ struct CardAttn {
             std::unique_ptr<JsonReader> reader_;
         };
 
+        ApiResult<Response>(*execute_fn_)(void*, const CardAttn::Retrieve&) = nullptr;
+        auto execute() const { return execute_fn_(nc_, *this); }
+
         void build(JsonBuilder& b) const {
             note::add_flash(b, note::flash(keys_::start), true);
 #if NOTE_EXTRAS
@@ -1094,8 +1422,6 @@ struct CardAttn {
 #endif
         }
 
-        auto execute() const { return nc_->execute(*this); }
-        auto execute(Notecard& nc) const { return nc.execute(*this); }
 
 #ifdef ARDUINO
         /// Arduino Printable: prints the JSON request to Serial or any Print stream.
@@ -1124,7 +1450,8 @@ struct CardAttn {
         static constexpr Safety safety = Safety::Idempotent;
         static constexpr Skus skus{};
 
-        Notecard* nc_ = nullptr;
+        void* nc_ = nullptr;
+
 
 
 #if NOTE_EXTRAS
@@ -1153,6 +1480,11 @@ struct CardAttn {
 
         using Response = void;
 
+        ApiResult<Response>(*execute_fn_)(void*, const CardAttn::Disarm&) = nullptr;
+        auto execute() const { return execute_fn_(nc_, *this); }
+        Result<void>(*command_fn_)(void*, const CardAttn::Disarm&) = nullptr;
+        Result<void> command() const { return command_fn_(nc_, *this); }
+
         void build(JsonBuilder& b) const {
             note::add_flash(b, note::flash(keys_::mode), "disarm,-all");
 #if NOTE_EXTRAS
@@ -1162,10 +1494,6 @@ struct CardAttn {
 #endif
         }
 
-        auto execute() const { return nc_->execute(*this); }
-        auto execute(Notecard& nc) const { return nc.execute(*this); }
-        Result<void> command() const { return nc_->command_typed(*this); }
-        Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
 
 #ifdef ARDUINO
         /// Arduino Printable: prints the JSON request to Serial or any Print stream.
@@ -1196,7 +1524,8 @@ struct CardAttn {
         static constexpr Safety safety = Safety::ReadOnly;
         static constexpr Skus skus{};
 
-        Notecard* nc_ = nullptr;
+        void* nc_ = nullptr;
+
 
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
         /// When `true`, returns the current attention mode configuration, if
@@ -1331,6 +1660,9 @@ struct CardAttn {
             std::unique_ptr<JsonReader> reader_;
         };
 
+        ApiResult<Response>(*execute_fn_)(void*, const CardAttn::Query&) = nullptr;
+        auto execute() const { return execute_fn_(nc_, *this); }
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
         void build(JsonBuilder& b) const {
@@ -1345,8 +1677,6 @@ struct CardAttn {
         }
 #pragma GCC diagnostic pop
 
-        auto execute() const { return nc_->execute(*this); }
-        auto execute(Notecard& nc) const { return nc.execute(*this); }
 
 #ifdef ARDUINO
         /// Arduino Printable: prints the JSON request to Serial or any Print stream.
@@ -1566,6 +1896,94 @@ inline CardAttn::Arm& CardAttn::Arm::seconds_t::operator()(int32_t v) {
     Field<int32_t>::operator=(v);
     return *reinterpret_cast<CardAttn::Arm*>(
         reinterpret_cast<char*>(this) - offsetof(CardAttn::Arm, seconds));
+}
+#pragma GCC diagnostic pop
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+inline CardAttn::Rearm& CardAttn::Rearm::triggers_t::operator()(note::string_view v) {
+    Field<note::string_view>::operator=(v);
+    return *reinterpret_cast<CardAttn::Rearm*>(
+        reinterpret_cast<char*>(this) - offsetof(CardAttn::Rearm, triggers));
+}
+inline CardAttn::Rearm& CardAttn::Rearm::triggers_t::operator=(uint32_t flags) {
+    flags_.set(flags);
+    Field<note::string_view>::operator=(flags_.str());
+    return *reinterpret_cast<CardAttn::Rearm*>(
+        reinterpret_cast<char*>(this) - offsetof(CardAttn::Rearm, triggers));
+}
+inline CardAttn::Rearm& CardAttn::Rearm::triggers_t::operator()(uint32_t flags) {
+    return operator=(flags);
+}
+inline CardAttn::Rearm::triggers_t& CardAttn::Rearm::triggers_t::add(uint32_t flag) {
+    flags_.add(flag);
+    Field<note::string_view>::operator=(flags_.str());
+    return *this;
+}
+inline CardAttn::Rearm::triggers_t& CardAttn::Rearm::triggers_t::operator|=(uint32_t flag) {
+    flags_ |= flag;
+    Field<note::string_view>::operator=(flags_.str());
+    return *this;
+}
+inline CardAttn::Rearm::triggers_t& CardAttn::Rearm::triggers_t::auxgpio() {
+    flags_.add(note::attn::auxgpio);
+    Field<note::string_view>::operator=(flags_.str());
+    return *this;
+}
+inline CardAttn::Rearm::triggers_t& CardAttn::Rearm::triggers_t::connected() {
+    flags_.add(note::attn::connected);
+    Field<note::string_view>::operator=(flags_.str());
+    return *this;
+}
+inline CardAttn::Rearm::triggers_t& CardAttn::Rearm::triggers_t::env() {
+    flags_.add(note::attn::env);
+    Field<note::string_view>::operator=(flags_.str());
+    return *this;
+}
+inline CardAttn::Rearm::triggers_t& CardAttn::Rearm::triggers_t::files() {
+    flags_.add(note::attn::files);
+    Field<note::string_view>::operator=(flags_.str());
+    return *this;
+}
+inline CardAttn::Rearm::triggers_t& CardAttn::Rearm::triggers_t::location() {
+    flags_.add(note::attn::location);
+    Field<note::string_view>::operator=(flags_.str());
+    return *this;
+}
+inline CardAttn::Rearm::triggers_t& CardAttn::Rearm::triggers_t::motion() {
+    flags_.add(note::attn::motion);
+    Field<note::string_view>::operator=(flags_.str());
+    return *this;
+}
+inline CardAttn::Rearm::triggers_t& CardAttn::Rearm::triggers_t::motionchange() {
+    flags_.add(note::attn::motionchange);
+    Field<note::string_view>::operator=(flags_.str());
+    return *this;
+}
+inline CardAttn::Rearm::triggers_t& CardAttn::Rearm::triggers_t::signal() {
+    flags_.add(note::attn::signal);
+    Field<note::string_view>::operator=(flags_.str());
+    return *this;
+}
+inline CardAttn::Rearm::triggers_t& CardAttn::Rearm::triggers_t::usb() {
+    flags_.add(note::attn::usb);
+    Field<note::string_view>::operator=(flags_.str());
+    return *this;
+}
+inline CardAttn::Rearm::triggers_t& CardAttn::Rearm::triggers_t::wireless() {
+    flags_.add(note::attn::wireless);
+    Field<note::string_view>::operator=(flags_.str());
+    return *this;
+}
+inline CardAttn::Rearm& CardAttn::Rearm::on_t::operator()(bool v) {
+    Field<bool>::operator=(v);
+    return *reinterpret_cast<CardAttn::Rearm*>(
+        reinterpret_cast<char*>(this) - offsetof(CardAttn::Rearm, on));
+}
+inline CardAttn::Rearm& CardAttn::Rearm::seconds_t::operator()(int32_t v) {
+    Field<int32_t>::operator=(v);
+    return *reinterpret_cast<CardAttn::Rearm*>(
+        reinterpret_cast<char*>(this) - offsetof(CardAttn::Rearm, seconds));
 }
 #pragma GCC diagnostic pop
 

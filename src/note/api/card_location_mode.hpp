@@ -7,11 +7,11 @@
 #if NOTE_EXTRAS
 #include <note/dyn_field.hpp>
 #endif
+#include <note/notecard.hpp>
 #include <note/field.hpp>
 #include <note/json.hpp>
 #include <note/json_sax.hpp>
 #include <note/binary_request.hpp>
-#include <note/notecard.hpp>
 #include <note/print.hpp>
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
@@ -61,7 +61,8 @@ struct CardLocationMode {
         static constexpr Safety safety = Safety::ReadOnly;
         static constexpr Skus skus{};
 
-        Notecard* nc_ = nullptr;
+        void* nc_ = nullptr;
+
 
         /// Set to `true` to delete the last known location stored in the
         /// Notecard.
@@ -379,6 +380,11 @@ struct CardLocationMode {
             std::unique_ptr<JsonReader> reader_;
         };
 
+        ApiResult<Response>(*execute_fn_)(void*, const CardLocationMode::Get&) = nullptr;
+        auto execute() const { return execute_fn_(nc_, *this); }
+        Result<void>(*command_fn_)(void*, const CardLocationMode::Get&) = nullptr;
+        Result<void> command() const { return command_fn_(nc_, *this); }
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
         void build(JsonBuilder& b) const {
@@ -401,10 +407,6 @@ struct CardLocationMode {
         }
 #pragma GCC diagnostic pop
 
-        auto execute() const { return nc_->execute(*this); }
-        auto execute(Notecard& nc) const { return nc.execute(*this); }
-        Result<void> command() const { return nc_->command_typed(*this); }
-        Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
 
 #ifdef ARDUINO
         /// Arduino Printable: prints the JSON request to Serial or any Print stream.
@@ -488,7 +490,8 @@ struct CardLocationMode {
         static constexpr Safety safety = Safety::Idempotent;
         static constexpr Skus skus{};
 
-        Notecard* nc_ = nullptr;
+        void* nc_ = nullptr;
+
 
         /// Set to `true` to delete the last known location stored in the
         /// Notecard.
@@ -806,6 +809,11 @@ struct CardLocationMode {
             std::unique_ptr<JsonReader> reader_;
         };
 
+        ApiResult<Response>(*execute_fn_)(void*, const CardLocationMode::Set&) = nullptr;
+        auto execute() const { return execute_fn_(nc_, *this); }
+        Result<void>(*command_fn_)(void*, const CardLocationMode::Set&) = nullptr;
+        Result<void> command() const { return command_fn_(nc_, *this); }
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
         void build(JsonBuilder& b) const {
@@ -828,10 +836,6 @@ struct CardLocationMode {
         }
 #pragma GCC diagnostic pop
 
-        auto execute() const { return nc_->execute(*this); }
-        auto execute(Notecard& nc) const { return nc.execute(*this); }
-        Result<void> command() const { return nc_->command_typed(*this); }
-        Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
 
 #ifdef ARDUINO
         /// Arduino Printable: prints the JSON request to Serial or any Print stream.
@@ -903,7 +907,8 @@ struct CardLocationMode {
         static constexpr Safety safety = Safety::Idempotent;
         static constexpr Skus skus{};
 
-        Notecard* nc_ = nullptr;
+        void* nc_ = nullptr;
+
 
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
         /// When in `periodic` mode, the number of motion events (registered by
@@ -1063,6 +1068,11 @@ struct CardLocationMode {
             std::unique_ptr<JsonReader> reader_;
         };
 
+        ApiResult<Response>(*execute_fn_)(void*, const CardLocationMode::Continuous&) = nullptr;
+        auto execute() const { return execute_fn_(nc_, *this); }
+        Result<void>(*command_fn_)(void*, const CardLocationMode::Continuous&) = nullptr;
+        Result<void> command() const { return command_fn_(nc_, *this); }
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
         void build(JsonBuilder& b) const {
@@ -1079,10 +1089,6 @@ struct CardLocationMode {
         }
 #pragma GCC diagnostic pop
 
-        auto execute() const { return nc_->execute(*this); }
-        auto execute(Notecard& nc) const { return nc.execute(*this); }
-        Result<void> command() const { return nc_->command_typed(*this); }
-        Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
 
 #ifdef ARDUINO
         /// Arduino Printable: prints the JSON request to Serial or any Print stream.
@@ -1136,7 +1142,8 @@ struct CardLocationMode {
         static constexpr Safety safety = Safety::Idempotent;
         static constexpr Skus skus{};
 
-        Notecard* nc_ = nullptr;
+        void* nc_ = nullptr;
+
 
         /// When in periodic or continuous mode, providing this value enables
         /// geofencing. The value you provide for this argument should be the
@@ -1391,6 +1398,11 @@ struct CardLocationMode {
             std::unique_ptr<JsonReader> reader_;
         };
 
+        ApiResult<Response>(*execute_fn_)(void*, const CardLocationMode::Periodic&) = nullptr;
+        auto execute() const { return execute_fn_(nc_, *this); }
+        Result<void>(*command_fn_)(void*, const CardLocationMode::Periodic&) = nullptr;
+        Result<void> command() const { return command_fn_(nc_, *this); }
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
         void build(JsonBuilder& b) const {
@@ -1412,10 +1424,6 @@ struct CardLocationMode {
         }
 #pragma GCC diagnostic pop
 
-        auto execute() const { return nc_->execute(*this); }
-        auto execute(Notecard& nc) const { return nc.execute(*this); }
-        Result<void> command() const { return nc_->command_typed(*this); }
-        Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
 
 #ifdef ARDUINO
         /// Arduino Printable: prints the JSON request to Serial or any Print stream.
@@ -1479,7 +1487,8 @@ struct CardLocationMode {
         static constexpr Safety safety = Safety::Idempotent;
         static constexpr Skus skus{};
 
-        Notecard* nc_ = nullptr;
+        void* nc_ = nullptr;
+
 
         /// When in periodic or continuous mode, providing this value enables
         /// geofencing. The value you provide for this argument should be the
@@ -1607,6 +1616,11 @@ struct CardLocationMode {
             std::unique_ptr<JsonReader> reader_;
         };
 
+        ApiResult<Response>(*execute_fn_)(void*, const CardLocationMode::Fixed&) = nullptr;
+        auto execute() const { return execute_fn_(nc_, *this); }
+        Result<void>(*command_fn_)(void*, const CardLocationMode::Fixed&) = nullptr;
+        Result<void> command() const { return command_fn_(nc_, *this); }
+
         void build(JsonBuilder& b) const {
             note::add_flash(b, note::flash(keys_::mode), "fixed");
             if (lat) note::add_flash(b, note::flash(keys_::lat), *lat);
@@ -1618,10 +1632,6 @@ struct CardLocationMode {
 #endif
         }
 
-        auto execute() const { return nc_->execute(*this); }
-        auto execute(Notecard& nc) const { return nc.execute(*this); }
-        Result<void> command() const { return nc_->command_typed(*this); }
-        Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
 
 #ifdef ARDUINO
         /// Arduino Printable: prints the JSON request to Serial or any Print stream.
@@ -1675,7 +1685,8 @@ struct CardLocationMode {
         static constexpr Safety safety = Safety::Destructive;
         static constexpr Skus skus{};
 
-        Notecard* nc_ = nullptr;
+        void* nc_ = nullptr;
+
 
         /// When in periodic or continuous mode, providing this value enables
         /// geofencing. The value you provide for this argument should be the
@@ -1985,6 +1996,11 @@ struct CardLocationMode {
             std::unique_ptr<JsonReader> reader_;
         };
 
+        ApiResult<Response>(*execute_fn_)(void*, const CardLocationMode::Remove&) = nullptr;
+        auto execute() const { return execute_fn_(nc_, *this); }
+        Result<void>(*command_fn_)(void*, const CardLocationMode::Remove&) = nullptr;
+        Result<void> command() const { return command_fn_(nc_, *this); }
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
         void build(JsonBuilder& b) const {
@@ -2007,10 +2023,6 @@ struct CardLocationMode {
         }
 #pragma GCC diagnostic pop
 
-        auto execute() const { return nc_->execute(*this); }
-        auto execute(Notecard& nc) const { return nc.execute(*this); }
-        Result<void> command() const { return nc_->command_typed(*this); }
-        Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
 
 #ifdef ARDUINO
         /// Arduino Printable: prints the JSON request to Serial or any Print stream.

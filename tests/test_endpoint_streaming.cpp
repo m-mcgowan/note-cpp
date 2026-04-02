@@ -151,6 +151,28 @@ TEST_CASE("note::api::CardAttn::Arm transport equivalence") {
 
 
 // ---------------------------------------------------------------------------
+TEST_CASE("note::api::CardAttn::Rearm transport equivalence") {
+    SECTION("streaming") {
+        StreamingHarness sh;
+        sh.hal.queue_response(R"({"set":true})");
+    auto req = sh.api.card.attn().rearm();
+
+        auto rsp = req.execute();
+        REQUIRE(rsp.has_value());
+        CHECK(rsp.set == true);
+    }
+    SECTION("buffered") {
+        BufferedHarness bh(R"({"set":true})");
+    auto req = bh.api.card.attn().rearm();
+
+        auto rsp = req.execute();
+        REQUIRE(rsp.has_value());
+        CHECK(rsp.set == true);
+    }
+}
+
+
+// ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardAttn::Watchdog transport equivalence (void)") {
     SECTION("streaming") {
         StreamingHarness sh;

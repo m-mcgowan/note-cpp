@@ -7,11 +7,11 @@
 #if NOTE_EXTRAS
 #include <note/dyn_field.hpp>
 #endif
+#include <note/notecard.hpp>
 #include <note/field.hpp>
 #include <note/json.hpp>
 #include <note/json_sax.hpp>
 #include <note/binary_request.hpp>
-#include <note/notecard.hpp>
 #include <note/print.hpp>
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
@@ -67,7 +67,8 @@ struct CardTriangulate {
     static constexpr Safety safety = Safety::Idempotent;
     static constexpr Skus skus = Skus::from(Product::Cell, Product::CellWifi, Product::Skylo, Product::WiFi);
 
-    Notecard* nc_ = nullptr;
+    void* nc_ = nullptr;
+
 
     /// Minimum delay, in minutes, between triangulation attempts. Use `0` for
     /// no time-based suppression.
@@ -102,13 +103,17 @@ struct CardTriangulate {
             return *this;
         }
         mode_t& operator=(std::nullopt_t) { Field<note::string_view>::reset(); return *this; }
-        mode_t(const mode_t&) = default;
-        mode_t& operator=(const mode_t&) = default;
-        mode_t(mode_t&&) = default;
-        mode_t& operator=(mode_t&&) = default;
+        mode_t(const mode_t& o) : Field<note::string_view>(), flags_(o.flags_) { fixup_(o); }
+        mode_t& operator=(const mode_t& o) { flags_ = o.flags_; fixup_(o); return *this; }
+        mode_t(mode_t&& o) : Field<note::string_view>(), flags_(o.flags_) { fixup_(o); }
+        mode_t& operator=(mode_t&& o) { flags_ = o.flags_; fixup_(o); return *this; }
 #else
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
+        mode_t(const mode_t& o) : Field<note::string_view>(), flags_(o.flags_) { fixup_(o); }
+        mode_t& operator=(const mode_t& o) { flags_ = o.flags_; fixup_(o); return *this; }
+        mode_t(mode_t&& o) : Field<note::string_view>(), flags_(o.flags_) { fixup_(o); }
+        mode_t& operator=(mode_t&& o) { flags_ = o.flags_; fixup_(o); return *this; }
 #endif
         CardTriangulate& operator()(note::string_view v);
         CardTriangulate& operator=(uint32_t flags);
@@ -127,6 +132,11 @@ struct CardTriangulate {
             { note::triangulate::wifi, "wifi" },
         };
         note::FlagSet<2, 10> flags_{flag_defs_};
+        void fixup_(const mode_t& o) {
+            if (flags_) Field<note::string_view>::operator=(flags_.str());
+            else if (o.has_value()) Field<note::string_view>::operator=(*o);
+            else Field<note::string_view>::reset();
+        }
 #if __cplusplus >= 202002L
         // consteval: validates that a string literal contains only known flags.
         static consteval bool validate_flags(note::string_view sv) {
@@ -322,6 +332,11 @@ struct CardTriangulate {
         std::unique_ptr<JsonReader> reader_;
     };
 
+    ApiResult<Response>(*execute_fn_)(void*, const CardTriangulate&) = nullptr;
+    auto execute() const { return execute_fn_(nc_, *this); }
+    Result<void>(*command_fn_)(void*, const CardTriangulate&) = nullptr;
+    Result<void> command() const { return command_fn_(nc_, *this); }
+
     void build(JsonBuilder& b) const {
         if (minutes) note::add_flash(b, note::flash(keys_::minutes), *minutes);
         if (mode) note::add_flash(b, note::flash(keys_::mode), *mode);
@@ -337,10 +352,6 @@ struct CardTriangulate {
 #endif
     }
 
-    auto execute() const { return nc_->execute(*this); }
-    auto execute(Notecard& nc) const { return nc.execute(*this); }
-    Result<void> command() const { return nc_->command_typed(*this); }
-    Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
 
 #ifdef ARDUINO
     /// Arduino Printable: prints the JSON request to Serial or any Print stream.

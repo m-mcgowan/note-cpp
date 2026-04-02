@@ -121,12 +121,12 @@ TEST_CASE("note::api::CardAttn::Request request builder") {
     REQUIRE(h.last_req.find("\"verify\":true") != std::string::npos);
 #endif
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -146,9 +146,8 @@ TEST_CASE("note::api::CardAttn::Request request builder") {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
     req["verify"] = true;
 #endif
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -199,12 +198,12 @@ TEST_CASE("note::api::CardAttn::Arm request builder") {
     REQUIRE(h.last_req.find("\"on\":true") != std::string::npos);
     REQUIRE(h.last_req.find("\"seconds\":42") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -216,9 +215,8 @@ TEST_CASE("note::api::CardAttn::Arm request builder") {
     req["mode"] = note::string_view("auxgpio");
     req["on"] = true;
     req["seconds"] = int32_t{42};
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -244,6 +242,65 @@ TEST_CASE("note::api::CardAttn::Arm response parsing") {
 }
 
 // ---------------------------------------------------------------------------
+TEST_CASE("note::api::CardAttn::Rearm request builder") {
+    Harness h;
+    auto req = h.api.card.attn().rearm();
+    // Execute with no optional fields set — covers all !has_value() (false) branches.
+    req.execute();
+    req.files.add(note::string_view("x-files-item"));
+    req.triggers(note::string_view("auxgpio"));
+    req.on(true);
+    req.seconds(int32_t{42});
+    req.execute();
+    REQUIRE(h.last_req.find("\"files\":[\"x-files-item\"]") != std::string::npos);
+    REQUIRE(h.last_req.find("\"mode\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"on\":true") != std::string::npos);
+    REQUIRE(h.last_req.find("\"seconds\":42") != std::string::npos);
+    // Cover ApiResult error constructor (transport failure path).
+    { FailHarness fh; fh.nc.execute(req); }
+    // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
+    // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
+    req.execute();
+    req.extra("_bool", true);
+    req.extra("_int", int32_t{1});
+    req.extra("_dbl", 1.5);
+    req["_str"] = note::string_view("v");  // operator[] true branch (slot creation)
+    // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
+    req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
+    req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover known-key routing in operator[] (true branch for each settable field)
+    req["mode"] = note::string_view("auxgpio");
+    req["on"] = true;
+    req["seconds"] = int32_t{42};
+    // Cover command()
+    req.command();
+}
+
+// ---------------------------------------------------------------------------
+TEST_CASE("note::api::CardAttn::Rearm response parsing") {
+    auto reader = std::make_unique<note::test::PopulatedJsonReader>();
+    reader->set("set", true);
+    auto rsp = note::api::CardAttn::Rearm::Response::parse(std::move(reader));
+    REQUIRE(rsp.set == true);
+    // Cover intern_strings() — copies string_view fields into pool storage.
+    {
+        note::Allocator alloc;  // default: uses operator new/delete
+        note::StringPool pool(alloc);
+        rsp.intern_strings(pool);
+    }
+    // Cover intern_strings() empty-field branches (field.empty() == true).
+    {
+        auto empty_rdr = std::make_unique<note::test::PopulatedJsonReader>();
+        auto empty_rsp = note::api::CardAttn::Rearm::Response::parse(std::move(empty_rdr));
+        note::Allocator alloc;
+        note::StringPool pool(alloc);
+        empty_rsp.intern_strings(pool);
+    }
+}
+
+// ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardAttn::Watchdog request builder") {
     Harness h;
     auto req = h.api.card.attn().watchdog();
@@ -253,12 +310,12 @@ TEST_CASE("note::api::CardAttn::Watchdog request builder") {
     req.execute();
     REQUIRE(h.last_req.find("\"seconds\":42") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -268,9 +325,8 @@ TEST_CASE("note::api::CardAttn::Watchdog request builder") {
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover known-key routing in operator[] (true branch for each settable field)
     req["seconds"] = int32_t{42};
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -285,12 +341,12 @@ TEST_CASE("note::api::CardAttn::Sleep request builder") {
     REQUIRE(h.last_req.find("\"payload\":\"x-payload\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"seconds\":42") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -301,9 +357,8 @@ TEST_CASE("note::api::CardAttn::Sleep request builder") {
     // Cover known-key routing in operator[] (true branch for each settable field)
     req["payload"] = note::string_view("x-payload");
     req["seconds"] = int32_t{42};
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -314,12 +369,12 @@ TEST_CASE("note::api::CardAttn::Retrieve request builder") {
     req.execute();
     req.execute();
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -361,12 +416,12 @@ TEST_CASE("note::api::CardAttn::Disarm request builder") {
     req.execute();
     req.execute();
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -374,9 +429,8 @@ TEST_CASE("note::api::CardAttn::Disarm request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -393,12 +447,12 @@ TEST_CASE("note::api::CardAttn::Query request builder") {
     REQUIRE(h.last_req.find("\"verify\":true") != std::string::npos);
 #endif
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -510,12 +564,12 @@ TEST_CASE("note::api::CardAux request builder") {
 #endif
     REQUIRE(h.last_req.find("\"usage\":[\"x-usage-item\"]") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -554,9 +608,8 @@ TEST_CASE("note::api::CardAux request builder") {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
     req["sync"] = true;
 #endif
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -621,12 +674,12 @@ TEST_CASE("note::api::CardAuxSerial::Request request builder") {
     REQUIRE(h.last_req.find("\"rate\":42") != std::string::npos);
 #endif
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -646,9 +699,8 @@ TEST_CASE("note::api::CardAuxSerial::Request request builder") {
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
     req["rate"] = int32_t{42};
 #endif
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -707,12 +759,12 @@ TEST_CASE("note::api::CardAuxSerial::Notify request builder") {
     REQUIRE(h.last_req.find("\"rate\":42") != std::string::npos);
 #endif
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -731,9 +783,8 @@ TEST_CASE("note::api::CardAuxSerial::Notify request builder") {
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
     req["rate"] = int32_t{42};
 #endif
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -752,12 +803,12 @@ TEST_CASE("note::api::CardAuxSerial::Gps request builder") {
     REQUIRE(h.last_req.find("\"rate\":42") != std::string::npos);
 #endif
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -770,9 +821,8 @@ TEST_CASE("note::api::CardAuxSerial::Gps request builder") {
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
     req["rate"] = int32_t{42};
 #endif
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -789,12 +839,12 @@ TEST_CASE("note::api::CardAuxSerial::Configure request builder") {
     REQUIRE(h.last_req.find("\"rate\":42") != std::string::npos);
 #endif
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -806,9 +856,8 @@ TEST_CASE("note::api::CardAuxSerial::Configure request builder") {
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
     req["rate"] = int32_t{42};
 #endif
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -819,12 +868,12 @@ TEST_CASE("note::api::CardAuxSerial::Off request builder") {
     req.execute();
     req.execute();
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -832,9 +881,8 @@ TEST_CASE("note::api::CardAuxSerial::Off request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -847,12 +895,12 @@ TEST_CASE("note::api::CardBinary::Status request builder") {
     req.execute();
     REQUIRE(h.last_req.find("\"delete\":true") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -862,9 +910,8 @@ TEST_CASE("note::api::CardBinary::Status request builder") {
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover known-key routing in operator[] (true branch for each settable field)
     req["delete"] = true;
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -907,12 +954,12 @@ TEST_CASE("note::api::CardBinary::Clear request builder") {
     req.execute();
     req.execute();
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -920,9 +967,8 @@ TEST_CASE("note::api::CardBinary::Clear request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -971,12 +1017,12 @@ TEST_CASE("note::api::CardBinaryGet request builder") {
     REQUIRE(h.last_req.find("\"length\":42") != std::string::npos);
     REQUIRE(h.last_req.find("\"offset\":42") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -988,9 +1034,8 @@ TEST_CASE("note::api::CardBinaryGet request builder") {
     req["cobs"] = int32_t{42};
     req["length"] = int32_t{42};
     req["offset"] = int32_t{42};
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -1031,12 +1076,12 @@ TEST_CASE("note::api::CardBinaryPut request builder") {
     REQUIRE(h.last_req.find("\"offset\":42") != std::string::npos);
     REQUIRE(h.last_req.find("\"status\":\"x-status\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -1048,9 +1093,8 @@ TEST_CASE("note::api::CardBinaryPut request builder") {
     req["cobs"] = int32_t{42};
     req["offset"] = int32_t{42};
     req["status"] = note::string_view("x-status");
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -1085,12 +1129,12 @@ TEST_CASE("note::api::CardCarrier request builder") {
     req.execute();
     REQUIRE(h.last_req.find("\"mode\":\"charging\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -1100,9 +1144,8 @@ TEST_CASE("note::api::CardCarrier request builder") {
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover known-key routing in operator[] (true branch for each settable field)
     req["mode"] = note::string_view("charging");
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -1145,12 +1188,12 @@ TEST_CASE("note::api::CardContact::Get request builder") {
     REQUIRE(h.last_req.find("\"org\":\"x-org\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"role\":\"x-role\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -1163,9 +1206,8 @@ TEST_CASE("note::api::CardContact::Get request builder") {
     req["name"] = note::string_view("x-name");
     req["org"] = note::string_view("x-org");
     req["role"] = note::string_view("x-role");
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -1212,12 +1254,12 @@ TEST_CASE("note::api::CardContact::Set request builder") {
     REQUIRE(h.last_req.find("\"org\":\"x-org\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"role\":\"x-role\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -1230,9 +1272,8 @@ TEST_CASE("note::api::CardContact::Set request builder") {
     req["name"] = note::string_view("x-name");
     req["org"] = note::string_view("x-org");
     req["role"] = note::string_view("x-role");
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -1285,12 +1326,12 @@ TEST_CASE("note::api::CardDfu request builder") {
     REQUIRE(h.last_req.find("\"start\":true") != std::string::npos);
     REQUIRE(h.last_req.find("\"stop\":true") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -1306,9 +1347,8 @@ TEST_CASE("note::api::CardDfu request builder") {
     req["seconds"] = int32_t{42};
     req["start"] = true;
     req["stop"] = true;
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -1341,12 +1381,12 @@ TEST_CASE("note::api::CardIllumination request builder") {
     req.execute();
     req.execute();
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -1354,9 +1394,8 @@ TEST_CASE("note::api::CardIllumination request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -1393,12 +1432,12 @@ TEST_CASE("note::api::CardIo request builder") {
     REQUIRE(h.last_req.find("\"i2c\":42") != std::string::npos);
     REQUIRE(h.last_req.find("\"mode\":\"-1\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -1409,9 +1448,8 @@ TEST_CASE("note::api::CardIo request builder") {
     // Cover known-key routing in operator[] (true branch for each settable field)
     req["i2c"] = int32_t{42};
     req["mode"] = note::string_view("-1");
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -1428,12 +1466,12 @@ TEST_CASE("note::api::CardLed request builder") {
     REQUIRE(h.last_req.find("\"off\":true") != std::string::npos);
     REQUIRE(h.last_req.find("\"on\":true") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -1445,9 +1483,8 @@ TEST_CASE("note::api::CardLed request builder") {
     req["mode"] = note::string_view("red");
     req["off"] = true;
     req["on"] = true;
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -1458,12 +1495,12 @@ TEST_CASE("note::api::CardLocation request builder") {
     req.execute();
     req.execute();
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -1471,9 +1508,8 @@ TEST_CASE("note::api::CardLocation request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -1542,12 +1578,12 @@ TEST_CASE("note::api::CardLocationMode::Get request builder") {
 #endif
     REQUIRE(h.last_req.find("\"vseconds\":\"x-vseconds\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -1567,9 +1603,8 @@ TEST_CASE("note::api::CardLocationMode::Get request builder") {
     req["threshold"] = int32_t{42};
 #endif
     req["vseconds"] = note::string_view("x-vseconds");
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -1642,12 +1677,12 @@ TEST_CASE("note::api::CardLocationMode::Set request builder") {
 #endif
     REQUIRE(h.last_req.find("\"vseconds\":\"x-vseconds\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -1667,9 +1702,8 @@ TEST_CASE("note::api::CardLocationMode::Set request builder") {
     req["threshold"] = int32_t{42};
 #endif
     req["vseconds"] = note::string_view("x-vseconds");
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -1728,12 +1762,12 @@ TEST_CASE("note::api::CardLocationMode::Continuous request builder") {
 #endif
     REQUIRE(h.last_req.find("\"vseconds\":\"x-vseconds\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -1746,9 +1780,8 @@ TEST_CASE("note::api::CardLocationMode::Continuous request builder") {
     req["threshold"] = int32_t{42};
 #endif
     req["vseconds"] = note::string_view("x-vseconds");
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -1807,12 +1840,12 @@ TEST_CASE("note::api::CardLocationMode::Periodic request builder") {
 #endif
     REQUIRE(h.last_req.find("\"vseconds\":\"x-vseconds\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -1830,9 +1863,8 @@ TEST_CASE("note::api::CardLocationMode::Periodic request builder") {
     req["threshold"] = int32_t{42};
 #endif
     req["vseconds"] = note::string_view("x-vseconds");
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -1887,12 +1919,12 @@ TEST_CASE("note::api::CardLocationMode::Fixed request builder") {
     REQUIRE(h.last_req.find("\"lat\":1.5") != std::string::npos);
     REQUIRE(h.last_req.find("\"lon\":1.5") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -1903,9 +1935,8 @@ TEST_CASE("note::api::CardLocationMode::Fixed request builder") {
     // Cover known-key routing in operator[] (true branch for each settable field)
     req["lat"] = 1.5;
     req["lon"] = 1.5;
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -1962,12 +1993,12 @@ TEST_CASE("note::api::CardLocationMode::Remove request builder") {
 #endif
     REQUIRE(h.last_req.find("\"vseconds\":\"x-vseconds\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -1986,9 +2017,8 @@ TEST_CASE("note::api::CardLocationMode::Remove request builder") {
     req["threshold"] = int32_t{42};
 #endif
     req["vseconds"] = note::string_view("x-vseconds");
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -2057,12 +2087,12 @@ TEST_CASE("note::api::CardLocationTrack request builder") {
     REQUIRE(h.last_req.find("\"stop\":true") != std::string::npos);
     REQUIRE(h.last_req.find("\"sync\":true") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -2080,9 +2110,8 @@ TEST_CASE("note::api::CardLocationTrack request builder") {
     req["start"] = true;
     req["stop"] = true;
     req["sync"] = true;
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -2131,12 +2160,12 @@ TEST_CASE("note::api::CardMonitor request builder") {
     REQUIRE(h.last_req.find("\"mode\":\"green\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"usb\":true") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -2148,9 +2177,8 @@ TEST_CASE("note::api::CardMonitor request builder") {
     req["count"] = int32_t{42};
     req["mode"] = note::string_view("green");
     req["usb"] = true;
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -2163,12 +2191,12 @@ TEST_CASE("note::api::CardMotion request builder") {
     req.execute();
     REQUIRE(h.last_req.find("\"minutes\":42") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -2178,9 +2206,8 @@ TEST_CASE("note::api::CardMotion request builder") {
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover known-key routing in operator[] (true branch for each settable field)
     req["minutes"] = int32_t{42};
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -2239,12 +2266,12 @@ TEST_CASE("note::api::CardMotionMode request builder") {
     REQUIRE(h.last_req.find("\"start\":true") != std::string::npos);
     REQUIRE(h.last_req.find("\"stop\":true") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -2260,9 +2287,8 @@ TEST_CASE("note::api::CardMotionMode request builder") {
 #endif
     req["start"] = true;
     req["stop"] = true;
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -2283,12 +2309,12 @@ TEST_CASE("note::api::CardMotionSync request builder") {
     REQUIRE(h.last_req.find("\"stop\":true") != std::string::npos);
     REQUIRE(h.last_req.find("\"threshold\":42") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -2302,9 +2328,8 @@ TEST_CASE("note::api::CardMotionSync request builder") {
     req["start"] = true;
     req["stop"] = true;
     req["threshold"] = int32_t{42};
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -2329,12 +2354,12 @@ TEST_CASE("note::api::CardMotionTrack request builder") {
     REQUIRE(h.last_req.find("\"stop\":true") != std::string::npos);
     REQUIRE(h.last_req.find("\"threshold\":42") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -2350,9 +2375,8 @@ TEST_CASE("note::api::CardMotionTrack request builder") {
     req["start"] = true;
     req["stop"] = true;
     req["threshold"] = int32_t{42};
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -2367,12 +2391,12 @@ TEST_CASE("note::api::CardPower::Read request builder") {
     REQUIRE(h.last_req.find("\"minutes\":42") != std::string::npos);
     REQUIRE(h.last_req.find("\"reset\":true") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -2383,9 +2407,8 @@ TEST_CASE("note::api::CardPower::Read request builder") {
     // Cover known-key routing in operator[] (true branch for each settable field)
     req["minutes"] = int32_t{42};
     req["reset"] = true;
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -2426,12 +2449,12 @@ TEST_CASE("note::api::CardPower::Configure request builder") {
     REQUIRE(h.last_req.find("\"minutes\":42") != std::string::npos);
     REQUIRE(h.last_req.find("\"reset\":true") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -2442,9 +2465,8 @@ TEST_CASE("note::api::CardPower::Configure request builder") {
     // Cover known-key routing in operator[] (true branch for each settable field)
     req["minutes"] = int32_t{42};
     req["reset"] = true;
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -2483,12 +2505,12 @@ TEST_CASE("note::api::CardPower::Reset request builder") {
     req.execute();
     REQUIRE(h.last_req.find("\"minutes\":42") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -2498,9 +2520,8 @@ TEST_CASE("note::api::CardPower::Reset request builder") {
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover known-key routing in operator[] (true branch for each settable field)
     req["minutes"] = int32_t{42};
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -2541,12 +2562,12 @@ TEST_CASE("note::api::CardRandom request builder") {
     REQUIRE(h.last_req.find("\"count\":42") != std::string::npos);
     REQUIRE(h.last_req.find("\"mode\":\"x-mode\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -2557,9 +2578,8 @@ TEST_CASE("note::api::CardRandom request builder") {
     // Cover known-key routing in operator[] (true branch for each settable field)
     req["count"] = int32_t{42};
     req["mode"] = note::string_view("x-mode");
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -2594,12 +2614,12 @@ TEST_CASE("note::api::CardRestart request builder") {
     req.execute();
     req.execute();
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -2607,9 +2627,8 @@ TEST_CASE("note::api::CardRestart request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -2624,12 +2643,12 @@ TEST_CASE("note::api::CardRestore request builder") {
     REQUIRE(h.last_req.find("\"connected\":true") != std::string::npos);
     REQUIRE(h.last_req.find("\"delete\":true") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -2640,9 +2659,8 @@ TEST_CASE("note::api::CardRestore request builder") {
     // Cover known-key routing in operator[] (true branch for each settable field)
     req["connected"] = true;
     req["delete"] = true;
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -2661,12 +2679,12 @@ TEST_CASE("note::api::CardSleep request builder") {
     REQUIRE(h.last_req.find("\"on\":true") != std::string::npos);
     REQUIRE(h.last_req.find("\"seconds\":42") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -2679,9 +2697,8 @@ TEST_CASE("note::api::CardSleep request builder") {
     req["off"] = true;
     req["on"] = true;
     req["seconds"] = int32_t{42};
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -2720,12 +2737,12 @@ TEST_CASE("note::api::CardStatus request builder") {
     req.execute();
     req.execute();
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -2733,9 +2750,8 @@ TEST_CASE("note::api::CardStatus request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -2804,12 +2820,12 @@ TEST_CASE("note::api::CardTemp::Read request builder") {
     REQUIRE(h.last_req.find("\"stop\":true") != std::string::npos);
     REQUIRE(h.last_req.find("\"sync\":true") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -2822,9 +2838,8 @@ TEST_CASE("note::api::CardTemp::Read request builder") {
     req["status"] = note::string_view("x-status");
     req["stop"] = true;
     req["sync"] = true;
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -2877,12 +2892,12 @@ TEST_CASE("note::api::CardTemp::Configure request builder") {
     REQUIRE(h.last_req.find("\"stop\":true") != std::string::npos);
     REQUIRE(h.last_req.find("\"sync\":true") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -2895,9 +2910,8 @@ TEST_CASE("note::api::CardTemp::Configure request builder") {
     req["status"] = note::string_view("x-status");
     req["stop"] = true;
     req["sync"] = true;
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -2948,12 +2962,12 @@ TEST_CASE("note::api::CardTemp::Stop request builder") {
     REQUIRE(h.last_req.find("\"status\":\"x-status\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"sync\":true") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -2965,9 +2979,8 @@ TEST_CASE("note::api::CardTemp::Stop request builder") {
     req["minutes"] = int32_t{42};
     req["status"] = note::string_view("x-status");
     req["sync"] = true;
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -3012,12 +3025,12 @@ TEST_CASE("note::api::CardTime request builder") {
     req.execute();
     req.execute();
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -3025,9 +3038,8 @@ TEST_CASE("note::api::CardTime request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -3074,12 +3086,12 @@ TEST_CASE("note::api::CardTrace request builder") {
     req.execute();
     REQUIRE(h.last_req.find("\"mode\":\"on\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -3089,9 +3101,8 @@ TEST_CASE("note::api::CardTrace request builder") {
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover known-key routing in operator[] (true branch for each settable field)
     req["mode"] = note::string_view("on");
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -3122,12 +3133,12 @@ TEST_CASE("note::api::CardTransport request builder") {
     REQUIRE(h.last_req.find("\"umin\":true") != std::string::npos);
 #endif
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -3146,9 +3157,8 @@ TEST_CASE("note::api::CardTransport request builder") {
 #if NOTE_API_VERSION >= NOTE_VERSION(9, 1, 1) || !defined(NOTE_API_STRICT)
     req["umin"] = true;
 #endif
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -3195,12 +3205,12 @@ TEST_CASE("note::api::CardTriangulate request builder") {
     REQUIRE(h.last_req.find("\"time\":42") != std::string::npos);
     REQUIRE(h.last_req.find("\"usb\":true") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -3216,9 +3226,8 @@ TEST_CASE("note::api::CardTriangulate request builder") {
     req["text"] = note::string_view("x-text");
     req["time"] = int32_t{42};
     req["usb"] = true;
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -3265,12 +3274,12 @@ TEST_CASE("note::api::CardUsageGet request builder") {
     REQUIRE(h.last_req.find("\"mode\":\"total\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"offset\":42") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -3281,9 +3290,8 @@ TEST_CASE("note::api::CardUsageGet request builder") {
     // Cover known-key routing in operator[] (true branch for each settable field)
     req["mode"] = note::string_view("total");
     req["offset"] = int32_t{42};
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -3336,12 +3344,12 @@ TEST_CASE("note::api::CardUsageTest request builder") {
     REQUIRE(h.last_req.find("\"hours\":42") != std::string::npos);
     REQUIRE(h.last_req.find("\"megabytes\":42") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -3353,9 +3361,8 @@ TEST_CASE("note::api::CardUsageTest request builder") {
     req["days"] = int32_t{42};
     req["hours"] = int32_t{42};
     req["megabytes"] = int32_t{42};
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -3408,12 +3415,12 @@ TEST_CASE("note::api::CardVersion request builder") {
     req.execute();
     req.execute();
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -3421,9 +3428,8 @@ TEST_CASE("note::api::CardVersion request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -3508,12 +3514,12 @@ TEST_CASE("note::api::CardVoltage::Read request builder") {
     REQUIRE(h.last_req.find("\"vmax\":1.5") != std::string::npos);
     REQUIRE(h.last_req.find("\"vmin\":1.5") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -3539,9 +3545,8 @@ TEST_CASE("note::api::CardVoltage::Read request builder") {
 #endif
     req["vmax"] = 1.5;
     req["vmin"] = 1.5;
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -3632,12 +3637,12 @@ TEST_CASE("note::api::CardVoltage::Configure request builder") {
     REQUIRE(h.last_req.find("\"vmax\":1.5") != std::string::npos);
     REQUIRE(h.last_req.find("\"vmin\":1.5") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -3663,9 +3668,8 @@ TEST_CASE("note::api::CardVoltage::Configure request builder") {
 #endif
     req["vmax"] = 1.5;
     req["vmin"] = 1.5;
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -3738,12 +3742,12 @@ TEST_CASE("note::api::CardWifi request builder") {
     REQUIRE(h.last_req.find("\"text\":\"x-text\"") != std::string::npos);
 #endif
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -3760,9 +3764,8 @@ TEST_CASE("note::api::CardWifi request builder") {
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 5, 1) || !defined(NOTE_API_STRICT)
     req["text"] = note::string_view("x-text");
 #endif
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -3809,12 +3812,12 @@ TEST_CASE("note::api::CardWireless request builder") {
     REQUIRE(h.last_req.find("\"method\":\"-\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"mode\":\"-\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -3827,9 +3830,8 @@ TEST_CASE("note::api::CardWireless request builder") {
     req["hours"] = int32_t{42};
     req["method"] = note::string_view("-");
     req["mode"] = note::string_view("-");
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -3876,12 +3878,12 @@ TEST_CASE("note::api::CardWirelessPenalty::Check request builder") {
     REQUIRE(h.last_req.find("\"reset\":true") != std::string::npos);
     REQUIRE(h.last_req.find("\"set\":true") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -3896,9 +3898,8 @@ TEST_CASE("note::api::CardWirelessPenalty::Check request builder") {
     req["rate"] = 1.5;
     req["reset"] = true;
     req["set"] = true;
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -3951,12 +3952,12 @@ TEST_CASE("note::api::CardWirelessPenalty::Set request builder") {
     REQUIRE(h.last_req.find("\"rate\":1.5") != std::string::npos);
     REQUIRE(h.last_req.find("\"reset\":true") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -3970,9 +3971,8 @@ TEST_CASE("note::api::CardWirelessPenalty::Set request builder") {
     req["min"] = int32_t{42};
     req["rate"] = 1.5;
     req["reset"] = true;
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -4025,12 +4025,12 @@ TEST_CASE("note::api::CardWirelessPenalty::Clear request builder") {
     REQUIRE(h.last_req.find("\"rate\":1.5") != std::string::npos);
     REQUIRE(h.last_req.find("\"set\":true") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -4044,9 +4044,8 @@ TEST_CASE("note::api::CardWirelessPenalty::Clear request builder") {
     req["min"] = int32_t{42};
     req["rate"] = 1.5;
     req["set"] = true;
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -4095,12 +4094,12 @@ TEST_CASE("note::api::DfuGet request builder") {
     REQUIRE(h.last_req.find("\"length\":42") != std::string::npos);
     REQUIRE(h.last_req.find("\"offset\":42") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -4112,9 +4111,8 @@ TEST_CASE("note::api::DfuGet request builder") {
     req["binary"] = true;
     req["length"] = int32_t{42};
     req["offset"] = int32_t{42};
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -4169,12 +4167,12 @@ TEST_CASE("note::api::DfuStatus request builder") {
     REQUIRE(h.last_req.find("\"version\":\"x-version\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"vvalue\":\"x-vvalue\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -4191,9 +4189,8 @@ TEST_CASE("note::api::DfuStatus request builder") {
     req["stop"] = true;
     req["version"] = note::string_view("x-version");
     req["vvalue"] = note::string_view("x-vvalue");
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -4239,12 +4236,12 @@ TEST_CASE("note::api::EnvDefault::Set request builder") {
     REQUIRE(h.last_req.find("\"sync\":true") != std::string::npos);
     REQUIRE(h.last_req.find("\"text\":\"x-text\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -4255,9 +4252,8 @@ TEST_CASE("note::api::EnvDefault::Set request builder") {
     // Cover known-key routing in operator[] (true branch for each settable field)
     req["sync"] = true;
     req["text"] = note::string_view("x-text");
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -4271,12 +4267,12 @@ TEST_CASE("note::api::EnvDefault::Remove request builder") {
     REQUIRE(h.last_req.find("\"name\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"sync\":true") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -4286,9 +4282,8 @@ TEST_CASE("note::api::EnvDefault::Remove request builder") {
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover known-key routing in operator[] (true branch for each settable field)
     req["sync"] = true;
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -4313,12 +4308,12 @@ TEST_CASE("note::api::EnvGet request builder") {
     REQUIRE(h.last_req.find("\"time\":42") != std::string::npos);
 #endif
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -4333,9 +4328,8 @@ TEST_CASE("note::api::EnvGet request builder") {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
     req["time"] = int32_t{42};
 #endif
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -4380,12 +4374,12 @@ TEST_CASE("note::api::EnvModified request builder") {
     REQUIRE(h.last_req.find("\"time\":42") != std::string::npos);
 #endif
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -4397,9 +4391,8 @@ TEST_CASE("note::api::EnvModified request builder") {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
     req["time"] = int32_t{42};
 #endif
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -4439,12 +4432,12 @@ TEST_CASE("note::api::EnvSet request builder") {
     REQUIRE(h.last_req.find("\"name\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"text\":\"x-text\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -4454,9 +4447,8 @@ TEST_CASE("note::api::EnvSet request builder") {
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover known-key routing in operator[] (true branch for each settable field)
     req["text"] = note::string_view("x-text");
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -4493,12 +4485,12 @@ TEST_CASE("note::api::EnvTemplate request builder") {
     req.execute();
     req.execute();
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -4506,9 +4498,8 @@ TEST_CASE("note::api::EnvTemplate request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -4545,12 +4536,12 @@ TEST_CASE("note::api::FileChanges request builder") {
     REQUIRE(h.last_req.find("\"files\":[\"x-files-item\"]") != std::string::npos);
     REQUIRE(h.last_req.find("\"tracker\":\"x-tracker\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -4560,9 +4551,8 @@ TEST_CASE("note::api::FileChanges request builder") {
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover known-key routing in operator[] (true branch for each settable field)
     req["tracker"] = note::string_view("x-tracker");
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -4599,12 +4589,12 @@ TEST_CASE("note::api::FileChangesPending request builder") {
     req.execute();
     req.execute();
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -4612,9 +4602,8 @@ TEST_CASE("note::api::FileChangesPending request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -4653,12 +4642,12 @@ TEST_CASE("note::api::FileClear request builder") {
     req.execute();
     REQUIRE(h.last_req.find("\"file\":\"x-file\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -4668,9 +4657,8 @@ TEST_CASE("note::api::FileClear request builder") {
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover known-key routing in operator[] (true branch for each settable field)
     req["file"] = note::string_view("x-file");
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -4683,12 +4671,12 @@ TEST_CASE("note::api::FileDelete request builder") {
     req.execute();
     REQUIRE(h.last_req.find("\"files\":[\"x-files-item\"]") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -4697,9 +4685,8 @@ TEST_CASE("note::api::FileDelete request builder") {
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover known-key routing in operator[] (true branch for each settable field)
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -4712,12 +4699,12 @@ TEST_CASE("note::api::FileStats request builder") {
     req.execute();
     REQUIRE(h.last_req.find("\"file\":\"x-file\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -4727,9 +4714,8 @@ TEST_CASE("note::api::FileStats request builder") {
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover known-key routing in operator[] (true branch for each settable field)
     req["file"] = note::string_view("x-file");
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -4766,12 +4752,12 @@ TEST_CASE("note::api::HubGet request builder") {
     req.execute();
     req.execute();
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -4779,9 +4765,8 @@ TEST_CASE("note::api::HubGet request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -4838,12 +4823,12 @@ TEST_CASE("note::api::HubLog request builder") {
     REQUIRE(h.last_req.find("\"sync\":true") != std::string::npos);
     REQUIRE(h.last_req.find("\"text\":\"x-text\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -4855,9 +4840,8 @@ TEST_CASE("note::api::HubLog request builder") {
     req["alert"] = true;
     req["sync"] = true;
     req["text"] = note::string_view("x-text");
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -4938,12 +4922,12 @@ TEST_CASE("note::api::HubSet request builder") {
     REQUIRE(h.last_req.find("\"vinbound\":\"x-vinbound\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"voutbound\":\"x-voutbound\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -4987,9 +4971,8 @@ TEST_CASE("note::api::HubSet request builder") {
 #endif
     req["vinbound"] = note::string_view("x-vinbound");
     req["voutbound"] = note::string_view("x-voutbound");
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -5006,12 +4989,12 @@ TEST_CASE("note::api::HubSignal request builder") {
     REQUIRE(h.last_req.find("\"seconds\":42") != std::string::npos);
 #endif
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -5023,9 +5006,8 @@ TEST_CASE("note::api::HubSignal request builder") {
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
     req["seconds"] = int32_t{42};
 #endif
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -5060,12 +5042,12 @@ TEST_CASE("note::api::HubStatus request builder") {
     req.execute();
     req.execute();
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -5073,9 +5055,8 @@ TEST_CASE("note::api::HubStatus request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -5120,12 +5101,12 @@ TEST_CASE("note::api::HubSync request builder") {
     REQUIRE(h.last_req.find("\"out\":true") != std::string::npos);
 #endif
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -5139,9 +5120,8 @@ TEST_CASE("note::api::HubSync request builder") {
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
     req["out"] = true;
 #endif
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -5154,12 +5134,12 @@ TEST_CASE("note::api::HubSyncStatus request builder") {
     req.execute();
     REQUIRE(h.last_req.find("\"sync\":true") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -5169,9 +5149,8 @@ TEST_CASE("note::api::HubSyncStatus request builder") {
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover known-key routing in operator[] (true branch for each settable field)
     req["sync"] = true;
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -5270,12 +5249,12 @@ TEST_CASE("note::api::NoteAdd request builder") {
     REQUIRE(h.last_req.find("\"sync\":true") != std::string::npos);
     REQUIRE(h.last_req.find("\"verify\":true") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -5305,9 +5284,8 @@ TEST_CASE("note::api::NoteAdd request builder") {
     req["payload"] = note::string_view("x-payload");
     req["sync"] = true;
     req["verify"] = true;
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -5358,12 +5336,12 @@ TEST_CASE("note::api::NoteChanges::Peek request builder") {
     REQUIRE(h.last_req.find("\"stop\":true") != std::string::npos);
     REQUIRE(h.last_req.find("\"tracker\":\"x-tracker\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -5379,9 +5357,8 @@ TEST_CASE("note::api::NoteChanges::Peek request builder") {
     req["start"] = true;
     req["stop"] = true;
     req["tracker"] = note::string_view("x-tracker");
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -5429,12 +5406,12 @@ TEST_CASE("note::api::NoteChanges::Pop request builder") {
     REQUIRE(h.last_req.find("\"stop\":true") != std::string::npos);
     REQUIRE(h.last_req.find("\"tracker\":\"x-tracker\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -5449,9 +5426,8 @@ TEST_CASE("note::api::NoteChanges::Pop request builder") {
     req["start"] = true;
     req["stop"] = true;
     req["tracker"] = note::string_view("x-tracker");
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -5490,12 +5466,12 @@ TEST_CASE("note::api::NoteDelete request builder") {
     REQUIRE(h.last_req.find("\"note\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"verify\":true") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -5505,9 +5481,8 @@ TEST_CASE("note::api::NoteDelete request builder") {
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover known-key routing in operator[] (true branch for each settable field)
     req["verify"] = true;
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -5526,12 +5501,12 @@ TEST_CASE("note::api::NoteGet::Read request builder") {
     REQUIRE(h.last_req.find("\"file\":\"x-file\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"note\":\"x-note\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -5544,9 +5519,8 @@ TEST_CASE("note::api::NoteGet::Read request builder") {
     req["deleted"] = true;
     req["file"] = note::string_view("x-file");
     req["note"] = note::string_view("x-note");
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -5589,12 +5563,12 @@ TEST_CASE("note::api::NoteGet::Pop request builder") {
     REQUIRE(h.last_req.find("\"file\":\"x-file\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"note\":\"x-note\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -5607,9 +5581,8 @@ TEST_CASE("note::api::NoteGet::Pop request builder") {
     req["deleted"] = true;
     req["file"] = note::string_view("x-file");
     req["note"] = note::string_view("x-note");
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -5663,12 +5636,12 @@ TEST_CASE("note::api::NoteTemplate::Define request builder") {
     REQUIRE(h.last_req.find("\"verify\":true") != std::string::npos);
 #endif
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -5686,9 +5659,8 @@ TEST_CASE("note::api::NoteTemplate::Define request builder") {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
     req["verify"] = true;
 #endif
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -5752,12 +5724,12 @@ TEST_CASE("note::api::NoteTemplate::Remove request builder") {
     REQUIRE(h.last_req.find("\"verify\":true") != std::string::npos);
 #endif
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -5774,9 +5746,8 @@ TEST_CASE("note::api::NoteTemplate::Remove request builder") {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
     req["verify"] = true;
 #endif
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -5829,12 +5800,12 @@ TEST_CASE("note::api::NoteUpdate request builder") {
     REQUIRE(h.last_req.find("\"payload\":\"x-payload\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"verify\":true") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -5845,9 +5816,8 @@ TEST_CASE("note::api::NoteUpdate request builder") {
     // Cover known-key routing in operator[] (true branch for each settable field)
     req["payload"] = note::string_view("x-payload");
     req["verify"] = true;
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -5862,12 +5832,12 @@ TEST_CASE("note::api::NtnGps request builder") {
     REQUIRE(h.last_req.find("\"off\":true") != std::string::npos);
     REQUIRE(h.last_req.find("\"on\":true") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -5878,9 +5848,8 @@ TEST_CASE("note::api::NtnGps request builder") {
     // Cover known-key routing in operator[] (true branch for each settable field)
     req["off"] = true;
     req["on"] = true;
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -5915,12 +5884,12 @@ TEST_CASE("note::api::NtnReset request builder") {
     req.execute();
     req.execute();
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -5928,9 +5897,8 @@ TEST_CASE("note::api::NtnReset request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -5941,12 +5909,12 @@ TEST_CASE("note::api::NtnStatus request builder") {
     req.execute();
     req.execute();
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -5954,9 +5922,8 @@ TEST_CASE("note::api::NtnStatus request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -5995,12 +5962,12 @@ TEST_CASE("note::api::VarDelete request builder") {
     REQUIRE(h.last_req.find("\"file\":\"x-file\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"name\":\"x-name\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -6011,9 +5978,8 @@ TEST_CASE("note::api::VarDelete request builder") {
     // Cover known-key routing in operator[] (true branch for each settable field)
     req["file"] = note::string_view("x-file");
     req["name"] = note::string_view("x-name");
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -6028,12 +5994,12 @@ TEST_CASE("note::api::VarGet request builder") {
     REQUIRE(h.last_req.find("\"file\":\"x-file\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"name\":\"x-name\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -6044,9 +6010,8 @@ TEST_CASE("note::api::VarGet request builder") {
     // Cover known-key routing in operator[] (true branch for each settable field)
     req["file"] = note::string_view("x-file");
     req["name"] = note::string_view("x-name");
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -6099,12 +6064,12 @@ TEST_CASE("note::api::VarSet request builder") {
     REQUIRE(h.last_req.find("\"text\":\"x-text\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"value\":1.5") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -6121,9 +6086,8 @@ TEST_CASE("note::api::VarSet request builder") {
     req["sync"] = true;
     req["text"] = note::string_view("x-text");
     req["value"] = 1.5;
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -6142,12 +6106,12 @@ TEST_CASE("note::api::Web request builder") {
     REQUIRE(h.last_req.find("\"name\":\"x-name\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"route\":\"x-route\"") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -6160,9 +6124,8 @@ TEST_CASE("note::api::Web request builder") {
     req["method"] = note::string_view("CONNECT");
     req["name"] = note::string_view("x-name");
     req["route"] = note::string_view("x-route");
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -6219,12 +6182,12 @@ TEST_CASE("note::api::WebDelete request builder") {
     REQUIRE(h.last_req.find("\"route\":\"x-route\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"seconds\":42") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -6242,9 +6205,8 @@ TEST_CASE("note::api::WebDelete request builder") {
     req["note"] = note::string_view("x-note");
     req["route"] = note::string_view("x-route");
     req["seconds"] = int32_t{42};
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -6303,12 +6265,12 @@ TEST_CASE("note::api::WebGet request builder") {
     REQUIRE(h.last_req.find("\"route\":\"x-route\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"seconds\":42") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -6328,9 +6290,8 @@ TEST_CASE("note::api::WebGet request builder") {
     req["offset"] = int32_t{42};
     req["route"] = note::string_view("x-route");
     req["seconds"] = int32_t{42};
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -6409,12 +6370,12 @@ TEST_CASE("note::api::WebPost request builder") {
 #endif
     REQUIRE(h.last_req.find("\"verify\":true") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -6443,9 +6404,8 @@ TEST_CASE("note::api::WebPost request builder") {
     req["total"] = int32_t{42};
 #endif
     req["verify"] = true;
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------
@@ -6530,12 +6490,12 @@ TEST_CASE("note::api::WebPut request builder") {
 #endif
     REQUIRE(h.last_req.find("\"verify\":true") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -6564,9 +6524,8 @@ TEST_CASE("note::api::WebPut request builder") {
     req["total"] = int32_t{42};
 #endif
     req["verify"] = true;
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 }
 
 // ---------------------------------------------------------------------------

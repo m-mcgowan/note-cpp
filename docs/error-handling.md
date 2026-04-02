@@ -90,10 +90,10 @@ Your transport or retry logic can inspect `Request::safety` to decide whether to
 ```cpp
 template<typename Req>
 auto retry_once(Notecard& nc, Req req) -> ApiResult<typename Req::Response> {
-    auto r = req.execute(nc);
+    auto r = nc.execute(req);
     if (!r && r.error().code == Error::ResponseLost) {
         if constexpr (Req::safety <= Safety::Idempotent) {
-            return req.execute(nc);  // safe to retry
+            return nc.execute(req);  // safe to retry
         }
     }
     return r;

@@ -7,11 +7,11 @@
 #if NOTE_EXTRAS
 #include <note/dyn_field.hpp>
 #endif
+#include <note/notecard.hpp>
 #include <note/field.hpp>
 #include <note/json.hpp>
 #include <note/json_sax.hpp>
 #include <note/binary_request.hpp>
-#include <note/notecard.hpp>
 #include <note/print.hpp>
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
@@ -62,7 +62,8 @@ struct HubSet {
     static constexpr Safety safety = Safety::Idempotent;
     static constexpr Skus skus{};
 
-    Notecard* nc_ = nullptr;
+    void* nc_ = nullptr;
+
 
     /// Use `true` to align syncs on a regular time-periodic cycle.
     struct align_t : Field<bool> {
@@ -445,6 +446,11 @@ struct HubSet {
 
     using Response = void;
 
+    ApiResult<Response>(*execute_fn_)(void*, const HubSet&) = nullptr;
+    auto execute() const { return execute_fn_(nc_, *this); }
+    Result<void>(*command_fn_)(void*, const HubSet&) = nullptr;
+    Result<void> command() const { return command_fn_(nc_, *this); }
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
     void build(JsonBuilder& b) const {
@@ -491,10 +497,6 @@ struct HubSet {
     }
 #pragma GCC diagnostic pop
 
-    auto execute() const { return nc_->execute(*this); }
-    auto execute(Notecard& nc) const { return nc.execute(*this); }
-    Result<void> command() const { return nc_->command_typed(*this); }
-    Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
 
 #ifdef ARDUINO
     /// Arduino Printable: prints the JSON request to Serial or any Print stream.

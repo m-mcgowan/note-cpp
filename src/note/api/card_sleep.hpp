@@ -7,11 +7,11 @@
 #if NOTE_EXTRAS
 #include <note/dyn_field.hpp>
 #endif
+#include <note/notecard.hpp>
 #include <note/field.hpp>
 #include <note/json.hpp>
 #include <note/json_sax.hpp>
 #include <note/binary_request.hpp>
-#include <note/notecard.hpp>
 #include <note/print.hpp>
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
@@ -54,7 +54,8 @@ struct CardSleep {
     static constexpr Safety safety = Safety::Idempotent;
     static constexpr Skus skus = Skus::from(Product::WiFi);
 
-    Notecard* nc_ = nullptr;
+    void* nc_ = nullptr;
+
 
     /// Set to `"accel"` to wake from deep sleep on any movement detected by the
     /// onboard accelerometer. Set to `"-accel"` to reset to the default
@@ -254,6 +255,11 @@ struct CardSleep {
         std::unique_ptr<JsonReader> reader_;
     };
 
+    ApiResult<Response>(*execute_fn_)(void*, const CardSleep&) = nullptr;
+    auto execute() const { return execute_fn_(nc_, *this); }
+    Result<void>(*command_fn_)(void*, const CardSleep&) = nullptr;
+    Result<void> command() const { return command_fn_(nc_, *this); }
+
     void build(JsonBuilder& b) const {
         if (mode) note::add_flash(b, note::flash(keys_::mode), *mode);
         if (off) note::add_flash(b, note::flash(keys_::off), *off);
@@ -266,10 +272,6 @@ struct CardSleep {
 #endif
     }
 
-    auto execute() const { return nc_->execute(*this); }
-    auto execute(Notecard& nc) const { return nc.execute(*this); }
-    Result<void> command() const { return nc_->command_typed(*this); }
-    Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
 
 #ifdef ARDUINO
     /// Arduino Printable: prints the JSON request to Serial or any Print stream.

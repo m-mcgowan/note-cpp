@@ -98,22 +98,22 @@ public:
     Notecard& notecard() { return nc_; }
 };
 #else
-class NotecardApi : private detail::NcOwner, public Api {
+class NotecardApi : private detail::NcOwner, public Api<Notecard> {
     // Resolve ambiguous nc_ (NcOwner::nc_ vs Api::nc_).
     Notecard& nc() { return detail::NcOwner::nc_; }
 
 public:
     NotecardApi()
         : detail::NcOwner()
-        , Api(detail::NcOwner::nc_) {}
+        , Api<Notecard>(detail::NcOwner::nc_) {}
 
     explicit NotecardApi(ITransport& transport)
         : detail::NcOwner(transport)
-        , Api(detail::NcOwner::nc_) {}
+        , Api<Notecard>(detail::NcOwner::nc_) {}
 
     NotecardApi(JsonBackend& backend, ITransport& transport)
         : detail::NcOwner(backend, transport)
-        , Api(detail::NcOwner::nc_) {}
+        , Api<Notecard>(detail::NcOwner::nc_) {}
 
     void begin(IStreamingTransport& transport, Allocator alloc) {
         detail::NcOwner::nc_ = Notecard(transport, alloc);

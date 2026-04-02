@@ -86,4 +86,5 @@ set(NOTE_CPP_GENERATED_TEST_SOURCES
     test_endpoint_coverage.cpp
     test_endpoint_streaming.cpp
     test_samples.cpp
+    test_sizeof_report.cpp
 )

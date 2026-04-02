@@ -7,11 +7,11 @@
 #if NOTE_EXTRAS
 #include <note/dyn_field.hpp>
 #endif
+#include <note/notecard.hpp>
 #include <note/field.hpp>
 #include <note/json.hpp>
 #include <note/json_sax.hpp>
 #include <note/binary_request.hpp>
-#include <note/notecard.hpp>
 #include <note/print.hpp>
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
@@ -52,7 +52,8 @@ struct FileChanges {
     static constexpr Safety safety = Safety::ReadOnly;
     static constexpr Skus skus{};
 
-    Notecard* nc_ = nullptr;
+    void* nc_ = nullptr;
+
 
     /// One or more files to obtain change information from. Omit to return
     /// changes for all Notefiles.
@@ -169,6 +170,11 @@ struct FileChanges {
         std::unique_ptr<JsonReader> reader_;
     };
 
+    ApiResult<Response>(*execute_fn_)(void*, const FileChanges&) = nullptr;
+    auto execute() const { return execute_fn_(nc_, *this); }
+    Result<void>(*command_fn_)(void*, const FileChanges&) = nullptr;
+    Result<void> command() const { return command_fn_(nc_, *this); }
+
     void build(JsonBuilder& b) const {
         if (files) files.write_to(b, "files");
         if (tracker) note::add_flash(b, note::flash(keys_::tracker), *tracker);
@@ -179,10 +185,6 @@ struct FileChanges {
 #endif
     }
 
-    auto execute() const { return nc_->execute(*this); }
-    auto execute(Notecard& nc) const { return nc.execute(*this); }
-    Result<void> command() const { return nc_->command_typed(*this); }
-    Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
 
 #ifdef ARDUINO
     /// Arduino Printable: prints the JSON request to Serial or any Print stream.

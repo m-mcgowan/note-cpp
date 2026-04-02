@@ -81,6 +81,7 @@
 namespace note {
 
 
+
 #if __cplusplus >= 202002L
 template<typename TargetT = Unconstrained, typename NcT = Notecard>
 #else
@@ -121,7 +122,28 @@ public:
     NcT& notecard() { return nc_; }
 
     template<typename RequestT>
-    RequestT create() { RequestT r; r.nc_ = &nc_; return r; }
+    RequestT create() {
+        RequestT r;
+        r.nc_ = &nc_;
+        if constexpr (std::is_same_v<NcT, Notecard>) {
+            r.execute_fn_ = [](void* p_, const RequestT& req_) {
+                auto* nc__ = static_cast<Notecard*>(p_);
+                if constexpr (detail::has_binary_src<RequestT>::value) {
+                    if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
+                }
+                if constexpr (detail::has_binary_dst<RequestT>::value) {
+                    if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
+                }
+                return nc__->execute(req_);
+            };
+            if constexpr (RequestT::supports_cmd) {
+                r.command_fn_ = [](void* p_, const RequestT& req_) {
+                    return static_cast<Notecard*>(p_)->command_typed(req_);
+                };
+            }
+        }
+        return r;
+    }
 
     template<typename RequestT>
     auto execute(const RequestT& req) { return nc_.execute(req); }
@@ -138,117 +160,225 @@ public:
 
     struct CardAttnFactory {
         NcT* nc_;
-        template<typename T> T create() {
+        template<typename T> T create_() {
             T r;
-            if constexpr (std::is_same_v<NcT, Notecard>) r.nc_ = nc_;
+            r.nc_ = nc_;
+            if constexpr (std::is_same_v<NcT, Notecard>) {
+                r.execute_fn_ = [](void* p_, const T& req_) {
+                    auto* nc__ = static_cast<Notecard*>(p_);
+                    if constexpr (detail::has_binary_src<T>::value) {
+                        if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
+                    }
+                    if constexpr (detail::has_binary_dst<T>::value) {
+                        if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
+                    }
+                    return nc__->execute(req_);
+                };
+                if constexpr (T::supports_cmd) {
+                    r.command_fn_ = [](void* p_, const T& req_) {
+                        return static_cast<Notecard*>(p_)->command_typed(req_);
+                    };
+                }
+            }
             return r;
         }
         /// Configure hardware notifications from a Notecard to a host MCU.
         ///
         /// NOTE: Requires a connection between the Notecard ATTN pin and a GPIO
         /// pin on the host MCU.
-        auto request() { return create<api::CardAttn::Request>(); }
+        auto request() { return create_<api::CardAttn::Request>(); }
         /// Arm ATTN pin for interrupt on an event trigger.
-        auto arm() { return create<api::CardAttn::Arm>(); }
-        auto arm(uint32_t flags) { auto r = create<api::CardAttn::Arm>(); r.triggers = flags; return r; }
-        auto arm(note::string_view flags) { auto r = create<api::CardAttn::Arm>(); r.triggers = flags; return r; }
+        auto arm() { return create_<api::CardAttn::Arm>(); }
+        auto arm(uint32_t flags) { auto r = create_<api::CardAttn::Arm>(); r.triggers = flags; return r; }
+        auto arm(note::string_view flags) { auto r = create_<api::CardAttn::Arm>(); r.triggers = flags; return r; }
+        /// Idempotent arm — arms ATTN if not already armed, or resets
+        /// mode/files/seconds to the values given. Safe to call repeatedly
+        /// (unlike arm which briefly disarms).
+        auto rearm() { return create_<api::CardAttn::Rearm>(); }
+        auto rearm(uint32_t flags) { auto r = create_<api::CardAttn::Rearm>(); r.triggers = flags; return r; }
+        auto rearm(note::string_view flags) { auto r = create_<api::CardAttn::Rearm>(); r.triggers = flags; return r; }
         /// Configure ATTN as a watchdog timer.
-        auto watchdog() { return create<api::CardAttn::Watchdog>(); }
+        auto watchdog() { return create_<api::CardAttn::Watchdog>(); }
         /// Instruct host MCU to sleep with optional payload.
-        auto sleep() { return create<api::CardAttn::Sleep>(); }
+        auto sleep() { return create_<api::CardAttn::Sleep>(); }
         /// Retrieve stored payload after sleep.
-        auto retrieve() { return create<api::CardAttn::Retrieve>(); }
+        auto retrieve() { return create_<api::CardAttn::Retrieve>(); }
         /// Disarm all attention interrupts.
-        auto disarm() { return create<api::CardAttn::Disarm>(); }
+        auto disarm() { return create_<api::CardAttn::Disarm>(); }
         /// Query current ATTN state and configuration.
-        auto query() { return create<api::CardAttn::Query>(); }
+        auto query() { return create_<api::CardAttn::Query>(); }
     };
 
     struct CardAuxSerialFactory {
         NcT* nc_;
-        template<typename T> T create() {
+        template<typename T> T create_() {
             T r;
-            if constexpr (std::is_same_v<NcT, Notecard>) r.nc_ = nc_;
+            r.nc_ = nc_;
+            if constexpr (std::is_same_v<NcT, Notecard>) {
+                r.execute_fn_ = [](void* p_, const T& req_) {
+                    auto* nc__ = static_cast<Notecard*>(p_);
+                    if constexpr (detail::has_binary_src<T>::value) {
+                        if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
+                    }
+                    if constexpr (detail::has_binary_dst<T>::value) {
+                        if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
+                    }
+                    return nc__->execute(req_);
+                };
+                if constexpr (T::supports_cmd) {
+                    r.command_fn_ = [](void* p_, const T& req_) {
+                        return static_cast<Notecard*>(p_)->command_typed(req_);
+                    };
+                }
+            }
             return r;
         }
         /// Configure various uses of the AUXTX and AUXRX pins on the Notecard's
         /// edge connector.
-        auto request() { return create<api::CardAuxSerial::Request>(); }
+        auto request() { return create_<api::CardAuxSerial::Request>(); }
         /// Enable AUX serial notifications. Combine flags to select which
         /// notifications are active (e.g. env + dfu).
-        auto notify() { return create<api::CardAuxSerial::Notify>(); }
-        auto notify(uint32_t flags) { auto r = create<api::CardAuxSerial::Notify>(); r.notifications = flags; return r; }
-        auto notify(note::string_view flags) { auto r = create<api::CardAuxSerial::Notify>(); r.notifications = flags; return r; }
+        auto notify() { return create_<api::CardAuxSerial::Notify>(); }
+        auto notify(uint32_t flags) { auto r = create_<api::CardAuxSerial::Notify>(); r.notifications = flags; return r; }
+        auto notify(note::string_view flags) { auto r = create_<api::CardAuxSerial::Notify>(); r.notifications = flags; return r; }
         /// Configure AUX serial for external GPS/GNSS module.
-        auto gps() { return create<api::CardAuxSerial::Gps>(); }
+        auto gps() { return create_<api::CardAuxSerial::Gps>(); }
         /// Configure AUX serial for request/response monitoring (default mode).
-        auto configure() { return create<api::CardAuxSerial::Configure>(); }
+        auto configure() { return create_<api::CardAuxSerial::Configure>(); }
         /// Disable AUX serial.
-        auto off() { return create<api::CardAuxSerial::Off>(); }
+        auto off() { return create_<api::CardAuxSerial::Off>(); }
     };
 
     struct CardContactFactory {
         NcT* nc_;
-        template<typename T> T create() {
+        template<typename T> T create_() {
             T r;
-            if constexpr (std::is_same_v<NcT, Notecard>) r.nc_ = nc_;
+            r.nc_ = nc_;
+            if constexpr (std::is_same_v<NcT, Notecard>) {
+                r.execute_fn_ = [](void* p_, const T& req_) {
+                    auto* nc__ = static_cast<Notecard*>(p_);
+                    if constexpr (detail::has_binary_src<T>::value) {
+                        if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
+                    }
+                    if constexpr (detail::has_binary_dst<T>::value) {
+                        if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
+                    }
+                    return nc__->execute(req_);
+                };
+                if constexpr (T::supports_cmd) {
+                    r.command_fn_ = [](void* p_, const T& req_) {
+                        return static_cast<Notecard*>(p_)->command_typed(req_);
+                    };
+                }
+            }
             return r;
         }
         /// Used to set or retrieve information about the Notecard maintainer.
         /// Once set, this information is synced to Notehub.
-        auto get() { return create<api::CardContact::Get>(); }
+        auto get() { return create_<api::CardContact::Get>(); }
         /// Used to set or retrieve information about the Notecard maintainer.
         /// Once set, this information is synced to Notehub.
-        auto set() { return create<api::CardContact::Set>(); }
+        auto set() { return create_<api::CardContact::Set>(); }
     };
 
     struct CardLocationModeFactory {
         NcT* nc_;
-        template<typename T> T create() {
+        template<typename T> T create_() {
             T r;
-            if constexpr (std::is_same_v<NcT, Notecard>) r.nc_ = nc_;
+            r.nc_ = nc_;
+            if constexpr (std::is_same_v<NcT, Notecard>) {
+                r.execute_fn_ = [](void* p_, const T& req_) {
+                    auto* nc__ = static_cast<Notecard*>(p_);
+                    if constexpr (detail::has_binary_src<T>::value) {
+                        if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
+                    }
+                    if constexpr (detail::has_binary_dst<T>::value) {
+                        if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
+                    }
+                    return nc__->execute(req_);
+                };
+                if constexpr (T::supports_cmd) {
+                    r.command_fn_ = [](void* p_, const T& req_) {
+                        return static_cast<Notecard*>(p_)->command_typed(req_);
+                    };
+                }
+            }
             return r;
         }
         /// Sets location-related configuration settings. Retrieves the current
         /// location mode when passed with no argument.
-        auto get() { return create<api::CardLocationMode::Get>(); }
+        auto get() { return create_<api::CardLocationMode::Get>(); }
         /// Sets location-related configuration settings. Retrieves the current
         /// location mode when passed with no argument.
-        auto set() { return create<api::CardLocationMode::Set>(); }
+        auto set() { return create_<api::CardLocationMode::Set>(); }
         /// Enable continuous GPS/GNSS sampling.
-        auto continuous() { return create<api::CardLocationMode::Continuous>(); }
+        auto continuous() { return create_<api::CardLocationMode::Continuous>(); }
         /// Enable periodic location sampling, optionally with geofencing.
-        auto periodic() { return create<api::CardLocationMode::Periodic>(); }
+        auto periodic() { return create_<api::CardLocationMode::Periodic>(); }
         /// Set a fixed location for the device.
-        auto fixed() { return create<api::CardLocationMode::Fixed>(); }
+        auto fixed() { return create_<api::CardLocationMode::Fixed>(); }
         /// Sets location-related configuration settings. Retrieves the current
         /// location mode when passed with no argument.
-        auto remove() { return create<api::CardLocationMode::Remove>(); }
+        auto remove() { return create_<api::CardLocationMode::Remove>(); }
     };
 
     struct CardPowerFactory {
         NcT* nc_;
-        template<typename T> T create() {
+        template<typename T> T create_() {
             T r;
-            if constexpr (std::is_same_v<NcT, Notecard>) r.nc_ = nc_;
+            r.nc_ = nc_;
+            if constexpr (std::is_same_v<NcT, Notecard>) {
+                r.execute_fn_ = [](void* p_, const T& req_) {
+                    auto* nc__ = static_cast<Notecard*>(p_);
+                    if constexpr (detail::has_binary_src<T>::value) {
+                        if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
+                    }
+                    if constexpr (detail::has_binary_dst<T>::value) {
+                        if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
+                    }
+                    return nc__->execute(req_);
+                };
+                if constexpr (T::supports_cmd) {
+                    r.command_fn_ = [](void* p_, const T& req_) {
+                        return static_cast<Notecard*>(p_)->command_typed(req_);
+                    };
+                }
+            }
             return r;
         }
         /// The `card.power` API is used to configure a connected Mojo device or
         /// to manually request power consumption readings in firmware.
-        auto read() { return create<api::CardPower::Read>(); }
+        auto read() { return create_<api::CardPower::Read>(); }
         /// The `card.power` API is used to configure a connected Mojo device or
         /// to manually request power consumption readings in firmware.
-        auto configure() { return create<api::CardPower::Configure>(); }
+        auto configure() { return create_<api::CardPower::Configure>(); }
         /// The `card.power` API is used to configure a connected Mojo device or
         /// to manually request power consumption readings in firmware.
-        auto reset() { return create<api::CardPower::Reset>(); }
+        auto reset() { return create_<api::CardPower::Reset>(); }
     };
 
     struct CardTempFactory {
         NcT* nc_;
-        template<typename T> T create() {
+        template<typename T> T create_() {
             T r;
-            if constexpr (std::is_same_v<NcT, Notecard>) r.nc_ = nc_;
+            r.nc_ = nc_;
+            if constexpr (std::is_same_v<NcT, Notecard>) {
+                r.execute_fn_ = [](void* p_, const T& req_) {
+                    auto* nc__ = static_cast<Notecard*>(p_);
+                    if constexpr (detail::has_binary_src<T>::value) {
+                        if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
+                    }
+                    if constexpr (detail::has_binary_dst<T>::value) {
+                        if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
+                    }
+                    return nc__->execute(req_);
+                };
+                if constexpr (T::supports_cmd) {
+                    r.command_fn_ = [](void* p_, const T& req_) {
+                        return static_cast<Notecard*>(p_)->command_typed(req_);
+                    };
+                }
+            }
             return r;
         }
         /// Get the current temperature from the Notecard's onboard calibrated
@@ -259,7 +389,7 @@ public:
         /// `pressure`, and `humidity` fields to the response. If you connect an
         /// ENS210 sensor on the I2C bus the Notecard will add `temperature` and
         /// `pressure` fields to the response.
-        auto read() { return create<api::CardTemp::Read>(); }
+        auto read() { return create_<api::CardTemp::Read>(); }
         /// Get the current temperature from the Notecard's onboard calibrated
         /// temperature sensor.
         ///
@@ -268,7 +398,7 @@ public:
         /// `pressure`, and `humidity` fields to the response. If you connect an
         /// ENS210 sensor on the I2C bus the Notecard will add `temperature` and
         /// `pressure` fields to the response.
-        auto configure() { return create<api::CardTemp::Configure>(); }
+        auto configure() { return create_<api::CardTemp::Configure>(); }
         /// Get the current temperature from the Notecard's onboard calibrated
         /// temperature sensor.
         ///
@@ -277,58 +407,109 @@ public:
         /// `pressure`, and `humidity` fields to the response. If you connect an
         /// ENS210 sensor on the I2C bus the Notecard will add `temperature` and
         /// `pressure` fields to the response.
-        auto stop() { return create<api::CardTemp::Stop>(); }
+        auto stop() { return create_<api::CardTemp::Stop>(); }
     };
 
     struct CardVoltageFactory {
         NcT* nc_;
-        template<typename T> T create() {
+        template<typename T> T create_() {
             T r;
-            if constexpr (std::is_same_v<NcT, Notecard>) r.nc_ = nc_;
+            r.nc_ = nc_;
+            if constexpr (std::is_same_v<NcT, Notecard>) {
+                r.execute_fn_ = [](void* p_, const T& req_) {
+                    auto* nc__ = static_cast<Notecard*>(p_);
+                    if constexpr (detail::has_binary_src<T>::value) {
+                        if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
+                    }
+                    if constexpr (detail::has_binary_dst<T>::value) {
+                        if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
+                    }
+                    return nc__->execute(req_);
+                };
+                if constexpr (T::supports_cmd) {
+                    r.command_fn_ = [](void* p_, const T& req_) {
+                        return static_cast<Notecard*>(p_)->command_typed(req_);
+                    };
+                }
+            }
             return r;
         }
         /// Provides the current VMODEM_P voltage level on the Notecard, and
         /// provides information about historical voltage trends. When used with
         /// the mode argument, configures voltage thresholds based on how the
         /// device is powered.
-        auto read() { return create<api::CardVoltage::Read>(); }
+        auto read() { return create_<api::CardVoltage::Read>(); }
         /// Provides the current VMODEM_P voltage level on the Notecard, and
         /// provides information about historical voltage trends. When used with
         /// the mode argument, configures voltage thresholds based on how the
         /// device is powered.
-        auto configure() { return create<api::CardVoltage::Configure>(); }
+        auto configure() { return create_<api::CardVoltage::Configure>(); }
     };
 
     struct CardWirelessPenaltyFactory {
         NcT* nc_;
-        template<typename T> T create() {
+        template<typename T> T create_() {
             T r;
-            if constexpr (std::is_same_v<NcT, Notecard>) r.nc_ = nc_;
+            r.nc_ = nc_;
+            if constexpr (std::is_same_v<NcT, Notecard>) {
+                r.execute_fn_ = [](void* p_, const T& req_) {
+                    auto* nc__ = static_cast<Notecard*>(p_);
+                    if constexpr (detail::has_binary_src<T>::value) {
+                        if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
+                    }
+                    if constexpr (detail::has_binary_dst<T>::value) {
+                        if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
+                    }
+                    return nc__->execute(req_);
+                };
+                if constexpr (T::supports_cmd) {
+                    r.command_fn_ = [](void* p_, const T& req_) {
+                        return static_cast<Notecard*>(p_)->command_typed(req_);
+                    };
+                }
+            }
             return r;
         }
         /// View the current state of a Notecard Penalty Box, manually remove
         /// the Notecard from a penalty box, or override penalty box defaults.
-        auto check() { return create<api::CardWirelessPenalty::Check>(); }
+        auto check() { return create_<api::CardWirelessPenalty::Check>(); }
         /// View the current state of a Notecard Penalty Box, manually remove
         /// the Notecard from a penalty box, or override penalty box defaults.
-        auto set() { return create<api::CardWirelessPenalty::Set>(); }
+        auto set() { return create_<api::CardWirelessPenalty::Set>(); }
         /// View the current state of a Notecard Penalty Box, manually remove
         /// the Notecard from a penalty box, or override penalty box defaults.
-        auto clear() { return create<api::CardWirelessPenalty::Clear>(); }
+        auto clear() { return create_<api::CardWirelessPenalty::Clear>(); }
     };
 
     struct EnvDefaultFactory {
         NcT* nc_;
-        template<typename T> T create() {
+        template<typename T> T create_() {
             T r;
-            if constexpr (std::is_same_v<NcT, Notecard>) r.nc_ = nc_;
+            r.nc_ = nc_;
+            if constexpr (std::is_same_v<NcT, Notecard>) {
+                r.execute_fn_ = [](void* p_, const T& req_) {
+                    auto* nc__ = static_cast<Notecard*>(p_);
+                    if constexpr (detail::has_binary_src<T>::value) {
+                        if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
+                    }
+                    if constexpr (detail::has_binary_dst<T>::value) {
+                        if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
+                    }
+                    return nc__->execute(req_);
+                };
+                if constexpr (T::supports_cmd) {
+                    r.command_fn_ = [](void* p_, const T& req_) {
+                        return static_cast<Notecard*>(p_)->command_typed(req_);
+                    };
+                }
+            }
             return r;
         }
         /// Used by the Notecard host to specify a default value for an
         /// environment variable until that variable is overridden by a device,
         /// project or fleet-wide setting at Notehub.
         auto set(note::string_view name_arg) {
-            auto r = create<api::EnvDefault::Set>();
+            auto r = create_<api::EnvDefault::Set>();
             r.name = name_arg;
             return r;
         }
@@ -336,7 +517,7 @@ public:
         /// environment variable until that variable is overridden by a device,
         /// project or fleet-wide setting at Notehub.
         auto remove(note::string_view name_arg) {
-            auto r = create<api::EnvDefault::Remove>();
+            auto r = create_<api::EnvDefault::Remove>();
             r.name = name_arg;
             return r;
         }
@@ -344,16 +525,33 @@ public:
 
     struct NoteChangesFactory {
         NcT* nc_;
-        template<typename T> T create() {
+        template<typename T> T create_() {
             T r;
-            if constexpr (std::is_same_v<NcT, Notecard>) r.nc_ = nc_;
+            r.nc_ = nc_;
+            if constexpr (std::is_same_v<NcT, Notecard>) {
+                r.execute_fn_ = [](void* p_, const T& req_) {
+                    auto* nc__ = static_cast<Notecard*>(p_);
+                    if constexpr (detail::has_binary_src<T>::value) {
+                        if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
+                    }
+                    if constexpr (detail::has_binary_dst<T>::value) {
+                        if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
+                    }
+                    return nc__->execute(req_);
+                };
+                if constexpr (T::supports_cmd) {
+                    r.command_fn_ = [](void* p_, const T& req_) {
+                        return static_cast<Notecard*>(p_)->command_typed(req_);
+                    };
+                }
+            }
             return r;
         }
         /// Used to incrementally retrieve changes within a specific Notefile.
-        auto peek() { return create<api::NoteChanges::Peek>(); }
+        auto peek() { return create_<api::NoteChanges::Peek>(); }
         /// Used to incrementally retrieve changes within a specific Notefile.
         auto pop(note::string_view file_arg) {
-            auto r = create<api::NoteChanges::Pop>();
+            auto r = create_<api::NoteChanges::Pop>();
             r.file = file_arg;
             return r;
         }
@@ -361,9 +559,26 @@ public:
 
     struct NoteGetFactory {
         NcT* nc_;
-        template<typename T> T create() {
+        template<typename T> T create_() {
             T r;
-            if constexpr (std::is_same_v<NcT, Notecard>) r.nc_ = nc_;
+            r.nc_ = nc_;
+            if constexpr (std::is_same_v<NcT, Notecard>) {
+                r.execute_fn_ = [](void* p_, const T& req_) {
+                    auto* nc__ = static_cast<Notecard*>(p_);
+                    if constexpr (detail::has_binary_src<T>::value) {
+                        if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
+                    }
+                    if constexpr (detail::has_binary_dst<T>::value) {
+                        if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
+                    }
+                    return nc__->execute(req_);
+                };
+                if constexpr (T::supports_cmd) {
+                    r.command_fn_ = [](void* p_, const T& req_) {
+                        return static_cast<Notecard*>(p_)->command_typed(req_);
+                    };
+                }
+            }
             return r;
         }
         /// Retrieves a Note from a Notefile. The file must either be a DB
@@ -371,20 +586,37 @@ public:
         ///
         /// `.qo`/`.qos` Notes must be read from the Notehub event table using
         /// the Notehub Event API.
-        auto read() { return create<api::NoteGet::Read>(); }
+        auto read() { return create_<api::NoteGet::Read>(); }
         /// Retrieves a Note from a Notefile. The file must either be a DB
         /// Notefile or inbound queue file (see `file` argument below).
         ///
         /// `.qo`/`.qos` Notes must be read from the Notehub event table using
         /// the Notehub Event API.
-        auto pop() { return create<api::NoteGet::Pop>(); }
+        auto pop() { return create_<api::NoteGet::Pop>(); }
     };
 
     struct NoteTemplateFactory {
         NcT* nc_;
-        template<typename T> T create() {
+        template<typename T> T create_() {
             T r;
-            if constexpr (std::is_same_v<NcT, Notecard>) r.nc_ = nc_;
+            r.nc_ = nc_;
+            if constexpr (std::is_same_v<NcT, Notecard>) {
+                r.execute_fn_ = [](void* p_, const T& req_) {
+                    auto* nc__ = static_cast<Notecard*>(p_);
+                    if constexpr (detail::has_binary_src<T>::value) {
+                        if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
+                    }
+                    if constexpr (detail::has_binary_dst<T>::value) {
+                        if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
+                    }
+                    return nc__->execute(req_);
+                };
+                if constexpr (T::supports_cmd) {
+                    r.command_fn_ = [](void* p_, const T& req_) {
+                        return static_cast<Notecard*>(p_)->command_typed(req_);
+                    };
+                }
+            }
             return r;
         }
         /// By using the `note.template` request with any `.qo`/`.qos` Notefile,
@@ -398,7 +630,7 @@ public:
         ///
         /// Read about Working with Note Templates for additional information.
         auto define(note::string_view file_arg) {
-            auto r = create<api::NoteTemplate::Define>();
+            auto r = create_<api::NoteTemplate::Define>();
             r.file = file_arg;
             return r;
         }
@@ -413,7 +645,7 @@ public:
         ///
         /// Read about Working with Note Templates for additional information.
         auto remove(note::string_view file_arg) {
-            auto r = create<api::NoteTemplate::Remove>();
+            auto r = create_<api::NoteTemplate::Remove>();
             r.file = file_arg;
             return r;
         }
@@ -422,106 +654,225 @@ public:
 
     struct CardAuxFactory {
         NcT* nc_;
-        template<typename T> T create() {
+        template<typename T> T create_() {
             T r;
-            if constexpr (std::is_same_v<NcT, Notecard>) r.nc_ = nc_;
+            r.nc_ = nc_;
+            if constexpr (std::is_same_v<NcT, Notecard>) {
+                r.execute_fn_ = [](void* p_, const T& req_) {
+                    auto* nc__ = static_cast<Notecard*>(p_);
+                    if constexpr (detail::has_binary_src<T>::value) {
+                        if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
+                    }
+                    if constexpr (detail::has_binary_dst<T>::value) {
+                        if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
+                    }
+                    return nc__->execute(req_);
+                };
+                if constexpr (T::supports_cmd) {
+                    r.command_fn_ = [](void* p_, const T& req_) {
+                        return static_cast<Notecard*>(p_)->command_typed(req_);
+                    };
+                }
+            }
             return r;
         }
         /// card.aux
-        auto operator()() { return create<api::CardAux>(); }
+        auto operator()() { return create_<api::CardAux>(); }
         CardAuxSerialFactory serial{nc_};
     };
 
     struct CardBinaryFactory {
         NcT* nc_;
-        template<typename T> T create() {
+        template<typename T> T create_() {
             T r;
-            if constexpr (std::is_same_v<NcT, Notecard>) r.nc_ = nc_;
+            r.nc_ = nc_;
+            if constexpr (std::is_same_v<NcT, Notecard>) {
+                r.execute_fn_ = [](void* p_, const T& req_) {
+                    auto* nc__ = static_cast<Notecard*>(p_);
+                    if constexpr (detail::has_binary_src<T>::value) {
+                        if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
+                    }
+                    if constexpr (detail::has_binary_dst<T>::value) {
+                        if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
+                    }
+                    return nc__->execute(req_);
+                };
+                if constexpr (T::supports_cmd) {
+                    r.command_fn_ = [](void* p_, const T& req_) {
+                        return static_cast<Notecard*>(p_)->command_typed(req_);
+                    };
+                }
+            }
             return r;
         }
         /// View the status of the binary storage area of the Notecard and
         /// optionally clear any data and related `card.binary` variables. See
         /// the guide on Sending and Receiving Large Binary Objects for best
         /// practices when using `card.binary`.
-        auto status() { return create<api::CardBinary::Status>(); }
+        auto status() { return create_<api::CardBinary::Status>(); }
         /// View the status of the binary storage area of the Notecard and
         /// optionally clear any data and related `card.binary` variables. See
         /// the guide on Sending and Receiving Large Binary Objects for best
         /// practices when using `card.binary`.
-        auto clear() { return create<api::CardBinary::Clear>(); }
+        auto clear() { return create_<api::CardBinary::Clear>(); }
         /// card.binary.get
-        auto get() { return create<api::CardBinaryGet>(); }
+        auto get() { return create_<api::CardBinaryGet>(); }
         /// card.binary.put
-        auto put() { return create<api::CardBinaryPut>(); }
+        auto put() { return create_<api::CardBinaryPut>(); }
     };
 
     struct CardLocationFactory {
         NcT* nc_;
-        template<typename T> T create() {
+        template<typename T> T create_() {
             T r;
-            if constexpr (std::is_same_v<NcT, Notecard>) r.nc_ = nc_;
+            r.nc_ = nc_;
+            if constexpr (std::is_same_v<NcT, Notecard>) {
+                r.execute_fn_ = [](void* p_, const T& req_) {
+                    auto* nc__ = static_cast<Notecard*>(p_);
+                    if constexpr (detail::has_binary_src<T>::value) {
+                        if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
+                    }
+                    if constexpr (detail::has_binary_dst<T>::value) {
+                        if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
+                    }
+                    return nc__->execute(req_);
+                };
+                if constexpr (T::supports_cmd) {
+                    r.command_fn_ = [](void* p_, const T& req_) {
+                        return static_cast<Notecard*>(p_)->command_typed(req_);
+                    };
+                }
+            }
             return r;
         }
         /// card.location
-        auto operator()() { return create<api::CardLocation>(); }
+        auto operator()() { return create_<api::CardLocation>(); }
         CardLocationModeFactory mode{nc_};
         /// card.location.track
-        auto track() { return create<api::CardLocationTrack>(); }
+        auto track() { return create_<api::CardLocationTrack>(); }
     };
 
     struct CardMotionFactory {
         NcT* nc_;
-        template<typename T> T create() {
+        template<typename T> T create_() {
             T r;
-            if constexpr (std::is_same_v<NcT, Notecard>) r.nc_ = nc_;
+            r.nc_ = nc_;
+            if constexpr (std::is_same_v<NcT, Notecard>) {
+                r.execute_fn_ = [](void* p_, const T& req_) {
+                    auto* nc__ = static_cast<Notecard*>(p_);
+                    if constexpr (detail::has_binary_src<T>::value) {
+                        if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
+                    }
+                    if constexpr (detail::has_binary_dst<T>::value) {
+                        if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
+                    }
+                    return nc__->execute(req_);
+                };
+                if constexpr (T::supports_cmd) {
+                    r.command_fn_ = [](void* p_, const T& req_) {
+                        return static_cast<Notecard*>(p_)->command_typed(req_);
+                    };
+                }
+            }
             return r;
         }
         /// card.motion
-        auto operator()() { return create<api::CardMotion>(); }
+        auto operator()() { return create_<api::CardMotion>(); }
         /// card.motion.mode
-        auto mode() { return create<api::CardMotionMode>(); }
+        auto mode() { return create_<api::CardMotionMode>(); }
         /// card.motion.sync
-        auto sync() { return create<api::CardMotionSync>(); }
+        auto sync() { return create_<api::CardMotionSync>(); }
         /// card.motion.track
-        auto track() { return create<api::CardMotionTrack>(); }
+        auto track() { return create_<api::CardMotionTrack>(); }
     };
 
     struct CardWirelessFactory {
         NcT* nc_;
-        template<typename T> T create() {
+        template<typename T> T create_() {
             T r;
-            if constexpr (std::is_same_v<NcT, Notecard>) r.nc_ = nc_;
+            r.nc_ = nc_;
+            if constexpr (std::is_same_v<NcT, Notecard>) {
+                r.execute_fn_ = [](void* p_, const T& req_) {
+                    auto* nc__ = static_cast<Notecard*>(p_);
+                    if constexpr (detail::has_binary_src<T>::value) {
+                        if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
+                    }
+                    if constexpr (detail::has_binary_dst<T>::value) {
+                        if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
+                    }
+                    return nc__->execute(req_);
+                };
+                if constexpr (T::supports_cmd) {
+                    r.command_fn_ = [](void* p_, const T& req_) {
+                        return static_cast<Notecard*>(p_)->command_typed(req_);
+                    };
+                }
+            }
             return r;
         }
         /// card.wireless
-        auto operator()() { return create<api::CardWireless>(); }
+        auto operator()() { return create_<api::CardWireless>(); }
         CardWirelessPenaltyFactory penalty{nc_};
     };
 
     struct FileChangesFactory {
         NcT* nc_;
-        template<typename T> T create() {
+        template<typename T> T create_() {
             T r;
-            if constexpr (std::is_same_v<NcT, Notecard>) r.nc_ = nc_;
+            r.nc_ = nc_;
+            if constexpr (std::is_same_v<NcT, Notecard>) {
+                r.execute_fn_ = [](void* p_, const T& req_) {
+                    auto* nc__ = static_cast<Notecard*>(p_);
+                    if constexpr (detail::has_binary_src<T>::value) {
+                        if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
+                    }
+                    if constexpr (detail::has_binary_dst<T>::value) {
+                        if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
+                    }
+                    return nc__->execute(req_);
+                };
+                if constexpr (T::supports_cmd) {
+                    r.command_fn_ = [](void* p_, const T& req_) {
+                        return static_cast<Notecard*>(p_)->command_typed(req_);
+                    };
+                }
+            }
             return r;
         }
         /// file.changes
-        auto operator()() { return create<api::FileChanges>(); }
+        auto operator()() { return create_<api::FileChanges>(); }
         /// file.changes.pending
-        auto pending() { return create<api::FileChangesPending>(); }
+        auto pending() { return create_<api::FileChangesPending>(); }
     };
 
     struct HubSyncFactory {
         NcT* nc_;
-        template<typename T> T create() {
+        template<typename T> T create_() {
             T r;
-            if constexpr (std::is_same_v<NcT, Notecard>) r.nc_ = nc_;
+            r.nc_ = nc_;
+            if constexpr (std::is_same_v<NcT, Notecard>) {
+                r.execute_fn_ = [](void* p_, const T& req_) {
+                    auto* nc__ = static_cast<Notecard*>(p_);
+                    if constexpr (detail::has_binary_src<T>::value) {
+                        if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
+                    }
+                    if constexpr (detail::has_binary_dst<T>::value) {
+                        if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
+                    }
+                    return nc__->execute(req_);
+                };
+                if constexpr (T::supports_cmd) {
+                    r.command_fn_ = [](void* p_, const T& req_) {
+                        return static_cast<Notecard*>(p_)->command_typed(req_);
+                    };
+                }
+            }
             return r;
         }
         /// hub.sync
-        auto operator()() { return create<api::HubSync>(); }
+        auto operator()() { return create_<api::HubSync>(); }
         /// hub.sync.status
-        auto status() { return create<api::HubSyncStatus>(); }
+        auto status() { return create_<api::HubSyncStatus>(); }
     };
 
     // =====================================================================
@@ -539,9 +890,26 @@ public:
 #endif
     struct CardGroup {
         NcT* nc_;
-        template<typename T> T create() {
+        template<typename T> T create_() {
             T r;
-            if constexpr (std::is_same_v<NcT, Notecard>) r.nc_ = nc_;
+            r.nc_ = nc_;
+            if constexpr (std::is_same_v<NcT, Notecard>) {
+                r.execute_fn_ = [](void* p_, const T& req_) {
+                    auto* nc__ = static_cast<Notecard*>(p_);
+                    if constexpr (detail::has_binary_src<T>::value) {
+                        if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
+                    }
+                    if constexpr (detail::has_binary_dst<T>::value) {
+                        if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
+                    }
+                    return nc__->execute(req_);
+                };
+                if constexpr (T::supports_cmd) {
+                    r.command_fn_ = [](void* p_, const T& req_) {
+                        return static_cast<Notecard*>(p_)->command_typed(req_);
+                    };
+                }
+            }
             return r;
         }
 
@@ -570,14 +938,14 @@ public:
 #if __cplusplus >= 202002L
         template<typename T_ = TargetT_>
         requires (IsUnconstrained<T_> || T_::supports(api::CardCarrier::skus))
-        auto carrier() { return create<api::CardCarrier>(); }
+        auto carrier() { return create_<api::CardCarrier>(); }
 
         template<typename T_ = TargetT_>
         requires (!IsUnconstrained<T_> && !T_::supports(api::CardCarrier::skus) && !T_::strict)
         [[deprecated("card.carrier is not available on this target")]]
-        auto carrier() { return create<api::CardCarrier>(); }
+        auto carrier() { return create_<api::CardCarrier>(); }
 #else
-        auto carrier() { return create<api::CardCarrier>(); }
+        auto carrier() { return create_<api::CardCarrier>(); }
 #endif
 
         /// card.contact
@@ -598,48 +966,48 @@ public:
 #if __cplusplus >= 202002L
         template<typename T_ = TargetT_>
         requires (IsUnconstrained<T_> || T_::supports(api::CardDfu::skus))
-        auto dfu() { return create<api::CardDfu>(); }
+        auto dfu() { return create_<api::CardDfu>(); }
 
         template<typename T_ = TargetT_>
         requires (!IsUnconstrained<T_> && !T_::supports(api::CardDfu::skus) && !T_::strict)
         [[deprecated("card.dfu is not available on this target")]]
-        auto dfu() { return create<api::CardDfu>(); }
+        auto dfu() { return create_<api::CardDfu>(); }
 #else
-        auto dfu() { return create<api::CardDfu>(); }
+        auto dfu() { return create_<api::CardDfu>(); }
 #endif
 
         /// card.illumination
 #if __cplusplus >= 202002L
         template<typename T_ = TargetT_>
         requires (IsUnconstrained<T_> || T_::supports(api::CardIllumination::skus))
-        auto illumination() { return create<api::CardIllumination>(); }
+        auto illumination() { return create_<api::CardIllumination>(); }
 
         template<typename T_ = TargetT_>
         requires (!IsUnconstrained<T_> && !T_::supports(api::CardIllumination::skus) && !T_::strict)
         [[deprecated("card.illumination is not available on this target")]]
-        auto illumination() { return create<api::CardIllumination>(); }
+        auto illumination() { return create_<api::CardIllumination>(); }
 #else
-        auto illumination() { return create<api::CardIllumination>(); }
+        auto illumination() { return create_<api::CardIllumination>(); }
 #endif
 
         /// card.io
-        auto io() { return create<api::CardIo>(); }
+        auto io() { return create_<api::CardIo>(); }
 
         /// card.led
-        auto led() { return create<api::CardLed>(); }
+        auto led() { return create_<api::CardLed>(); }
 
         /// card.monitor
 #if __cplusplus >= 202002L
         template<typename T_ = TargetT_>
         requires (IsUnconstrained<T_> || T_::supports(api::CardMonitor::skus))
-        auto monitor() { return create<api::CardMonitor>(); }
+        auto monitor() { return create_<api::CardMonitor>(); }
 
         template<typename T_ = TargetT_>
         requires (!IsUnconstrained<T_> && !T_::supports(api::CardMonitor::skus) && !T_::strict)
         [[deprecated("card.monitor is not available on this target")]]
-        auto monitor() { return create<api::CardMonitor>(); }
+        auto monitor() { return create_<api::CardMonitor>(); }
 #else
-        auto monitor() { return create<api::CardMonitor>(); }
+        auto monitor() { return create_<api::CardMonitor>(); }
 #endif
 
         /// card.power
@@ -660,106 +1028,106 @@ public:
 #if __cplusplus >= 202002L
         template<typename T_ = TargetT_>
         requires (IsUnconstrained<T_> || T_::supports(api::CardRandom::skus))
-        auto random() { return create<api::CardRandom>(); }
+        auto random() { return create_<api::CardRandom>(); }
 
         template<typename T_ = TargetT_>
         requires (!IsUnconstrained<T_> && !T_::supports(api::CardRandom::skus) && !T_::strict)
         [[deprecated("card.random is not available on this target")]]
-        auto random() { return create<api::CardRandom>(); }
+        auto random() { return create_<api::CardRandom>(); }
 #else
-        auto random() { return create<api::CardRandom>(); }
+        auto random() { return create_<api::CardRandom>(); }
 #endif
 
         /// card.restart
-        auto restart() { return create<api::CardRestart>(); }
+        auto restart() { return create_<api::CardRestart>(); }
 
         /// card.restore
-        auto restore() { return create<api::CardRestore>(); }
+        auto restore() { return create_<api::CardRestore>(); }
 
         /// card.sleep
 #if __cplusplus >= 202002L
         template<typename T_ = TargetT_>
         requires (IsUnconstrained<T_> || T_::supports(api::CardSleep::skus))
-        auto sleep() { return create<api::CardSleep>(); }
+        auto sleep() { return create_<api::CardSleep>(); }
 
         template<typename T_ = TargetT_>
         requires (!IsUnconstrained<T_> && !T_::supports(api::CardSleep::skus) && !T_::strict)
         [[deprecated("card.sleep is not available on this target")]]
-        auto sleep() { return create<api::CardSleep>(); }
+        auto sleep() { return create_<api::CardSleep>(); }
 #else
-        auto sleep() { return create<api::CardSleep>(); }
+        auto sleep() { return create_<api::CardSleep>(); }
 #endif
 
         /// card.status
-        auto status() { return create<api::CardStatus>(); }
+        auto status() { return create_<api::CardStatus>(); }
 
         /// card.temp
         CardTempFactory temp() { return {nc_}; }
 
         /// card.time
-        auto time() { return create<api::CardTime>(); }
+        auto time() { return create_<api::CardTime>(); }
 
         /// card.trace
-        auto trace() { return create<api::CardTrace>(); }
+        auto trace() { return create_<api::CardTrace>(); }
 
         /// card.transport
 #if __cplusplus >= 202002L
         template<typename T_ = TargetT_>
         requires (IsUnconstrained<T_> || T_::supports(api::CardTransport::skus))
-        auto transport() { return create<api::CardTransport>(); }
+        auto transport() { return create_<api::CardTransport>(); }
 
         template<typename T_ = TargetT_>
         requires (!IsUnconstrained<T_> && !T_::supports(api::CardTransport::skus) && !T_::strict)
         [[deprecated("card.transport is not available on this target")]]
-        auto transport() { return create<api::CardTransport>(); }
+        auto transport() { return create_<api::CardTransport>(); }
 #else
-        auto transport() { return create<api::CardTransport>(); }
+        auto transport() { return create_<api::CardTransport>(); }
 #endif
 
         /// card.triangulate
 #if __cplusplus >= 202002L
         template<typename T_ = TargetT_>
         requires (IsUnconstrained<T_> || T_::supports(api::CardTriangulate::skus))
-        auto triangulate() { return create<api::CardTriangulate>(); }
+        auto triangulate() { return create_<api::CardTriangulate>(); }
 
         template<typename T_ = TargetT_>
         requires (!IsUnconstrained<T_> && !T_::supports(api::CardTriangulate::skus) && !T_::strict)
         [[deprecated("card.triangulate is not available on this target")]]
-        auto triangulate() { return create<api::CardTriangulate>(); }
+        auto triangulate() { return create_<api::CardTriangulate>(); }
 #else
-        auto triangulate() { return create<api::CardTriangulate>(); }
+        auto triangulate() { return create_<api::CardTriangulate>(); }
 #endif
 
         /// card.usage.get
 #if __cplusplus >= 202002L
         template<typename T_ = TargetT_>
         requires (IsUnconstrained<T_> || T_::supports(api::CardUsageGet::skus))
-        auto usageGet() { return create<api::CardUsageGet>(); }
+        auto usageGet() { return create_<api::CardUsageGet>(); }
 
         template<typename T_ = TargetT_>
         requires (!IsUnconstrained<T_> && !T_::supports(api::CardUsageGet::skus) && !T_::strict)
         [[deprecated("card.usage.get is not available on this target")]]
-        auto usageGet() { return create<api::CardUsageGet>(); }
+        auto usageGet() { return create_<api::CardUsageGet>(); }
 #else
-        auto usageGet() { return create<api::CardUsageGet>(); }
+        auto usageGet() { return create_<api::CardUsageGet>(); }
 #endif
 
         /// card.usage.test
 #if __cplusplus >= 202002L
         template<typename T_ = TargetT_>
         requires (IsUnconstrained<T_> || T_::supports(api::CardUsageTest::skus))
-        auto usageTest() { return create<api::CardUsageTest>(); }
+        auto usageTest() { return create_<api::CardUsageTest>(); }
 
         template<typename T_ = TargetT_>
         requires (!IsUnconstrained<T_> && !T_::supports(api::CardUsageTest::skus) && !T_::strict)
         [[deprecated("card.usage.test is not available on this target")]]
-        auto usageTest() { return create<api::CardUsageTest>(); }
+        auto usageTest() { return create_<api::CardUsageTest>(); }
 #else
-        auto usageTest() { return create<api::CardUsageTest>(); }
+        auto usageTest() { return create_<api::CardUsageTest>(); }
 #endif
 
         /// card.version
-        auto version() { return create<api::CardVersion>(); }
+        auto version() { return create_<api::CardVersion>(); }
 
         /// card.voltage
         CardVoltageFactory voltage() { return {nc_}; }
@@ -768,14 +1136,14 @@ public:
 #if __cplusplus >= 202002L
         template<typename T_ = TargetT_>
         requires (IsUnconstrained<T_> || T_::supports(api::CardWifi::skus))
-        auto wifi() { return create<api::CardWifi>(); }
+        auto wifi() { return create_<api::CardWifi>(); }
 
         template<typename T_ = TargetT_>
         requires (!IsUnconstrained<T_> && !T_::supports(api::CardWifi::skus) && !T_::strict)
         [[deprecated("card.wifi is not available on this target")]]
-        auto wifi() { return create<api::CardWifi>(); }
+        auto wifi() { return create_<api::CardWifi>(); }
 #else
-        auto wifi() { return create<api::CardWifi>(); }
+        auto wifi() { return create_<api::CardWifi>(); }
 #endif
 
 
@@ -784,27 +1152,27 @@ public:
         /// optionally clear any data and related `card.binary` variables. See
         /// the guide on Sending and Receiving Large Binary Objects for best
         /// practices when using `card.binary`.
-        auto binaryStatus() { return create<api::CardBinary::Status>(); }
+        auto binaryStatus() { return create_<api::CardBinary::Status>(); }
         /// View the status of the binary storage area of the Notecard and
         /// optionally clear any data and related `card.binary` variables. See
         /// the guide on Sending and Receiving Large Binary Objects for best
         /// practices when using `card.binary`.
-        auto binaryClear() { return create<api::CardBinary::Clear>(); }
+        auto binaryClear() { return create_<api::CardBinary::Clear>(); }
         /// Used to set or retrieve information about the Notecard maintainer.
         /// Once set, this information is synced to Notehub.
-        auto readContact() { return create<api::CardContact::Get>(); }
+        auto readContact() { return create_<api::CardContact::Get>(); }
         /// Sets location-related configuration settings. Retrieves the current
         /// location mode when passed with no argument.
-        auto readLocationMode() { return create<api::CardLocationMode::Get>(); }
+        auto readLocationMode() { return create_<api::CardLocationMode::Get>(); }
         /// Sets location-related configuration settings. Retrieves the current
         /// location mode when passed with no argument.
-        auto resetLocationMode() { return create<api::CardLocationMode::Remove>(); }
+        auto resetLocationMode() { return create_<api::CardLocationMode::Remove>(); }
         /// The `card.power` API is used to configure a connected Mojo device or
         /// to manually request power consumption readings in firmware.
-        auto readPower() { return create<api::CardPower::Read>(); }
+        auto readPower() { return create_<api::CardPower::Read>(); }
         /// The `card.power` API is used to configure a connected Mojo device or
         /// to manually request power consumption readings in firmware.
-        auto resetPower() { return create<api::CardPower::Reset>(); }
+        auto resetPower() { return create_<api::CardPower::Reset>(); }
         /// Get the current temperature from the Notecard's onboard calibrated
         /// temperature sensor.
         ///
@@ -813,7 +1181,7 @@ public:
         /// `pressure`, and `humidity` fields to the response. If you connect an
         /// ENS210 sensor on the I2C bus the Notecard will add `temperature` and
         /// `pressure` fields to the response.
-        auto readTemp() { return create<api::CardTemp::Read>(); }
+        auto readTemp() { return create_<api::CardTemp::Read>(); }
         /// Get the current temperature from the Notecard's onboard calibrated
         /// temperature sensor.
         ///
@@ -822,18 +1190,18 @@ public:
         /// `pressure`, and `humidity` fields to the response. If you connect an
         /// ENS210 sensor on the I2C bus the Notecard will add `temperature` and
         /// `pressure` fields to the response.
-        auto stopTemp() { return create<api::CardTemp::Stop>(); }
+        auto stopTemp() { return create_<api::CardTemp::Stop>(); }
         /// Provides the current VMODEM_P voltage level on the Notecard, and
         /// provides information about historical voltage trends. When used with
         /// the mode argument, configures voltage thresholds based on how the
         /// device is powered.
-        auto readVoltage() { return create<api::CardVoltage::Read>(); }
+        auto readVoltage() { return create_<api::CardVoltage::Read>(); }
         /// View the current state of a Notecard Penalty Box, manually remove
         /// the Notecard from a penalty box, or override penalty box defaults.
-        auto readWirelessPenalty() { return create<api::CardWirelessPenalty::Check>(); }
+        auto readWirelessPenalty() { return create_<api::CardWirelessPenalty::Check>(); }
         /// View the current state of a Notecard Penalty Box, manually remove
         /// the Notecard from a penalty box, or override penalty box defaults.
-        auto resetWirelessPenalty() { return create<api::CardWirelessPenalty::Clear>(); }
+        auto resetWirelessPenalty() { return create_<api::CardWirelessPenalty::Clear>(); }
     };
 #if __cplusplus >= 202002L
     CardGroup<TargetT> card;
@@ -848,9 +1216,26 @@ public:
 #endif
     struct DfuGroup {
         NcT* nc_;
-        template<typename T> T create() {
+        template<typename T> T create_() {
             T r;
-            if constexpr (std::is_same_v<NcT, Notecard>) r.nc_ = nc_;
+            r.nc_ = nc_;
+            if constexpr (std::is_same_v<NcT, Notecard>) {
+                r.execute_fn_ = [](void* p_, const T& req_) {
+                    auto* nc__ = static_cast<Notecard*>(p_);
+                    if constexpr (detail::has_binary_src<T>::value) {
+                        if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
+                    }
+                    if constexpr (detail::has_binary_dst<T>::value) {
+                        if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
+                    }
+                    return nc__->execute(req_);
+                };
+                if constexpr (T::supports_cmd) {
+                    r.command_fn_ = [](void* p_, const T& req_) {
+                        return static_cast<Notecard*>(p_)->command_typed(req_);
+                    };
+                }
+            }
             return r;
         }
 
@@ -860,28 +1245,28 @@ public:
 #if __cplusplus >= 202002L
         template<typename T_ = TargetT_>
         requires (IsUnconstrained<T_> || T_::supports(api::DfuGet::skus))
-        auto get() { return create<api::DfuGet>(); }
+        auto get() { return create_<api::DfuGet>(); }
 
         template<typename T_ = TargetT_>
         requires (!IsUnconstrained<T_> && !T_::supports(api::DfuGet::skus) && !T_::strict)
         [[deprecated("dfu.get is not available on this target")]]
-        auto get() { return create<api::DfuGet>(); }
+        auto get() { return create_<api::DfuGet>(); }
 #else
-        auto get() { return create<api::DfuGet>(); }
+        auto get() { return create_<api::DfuGet>(); }
 #endif
 
         /// dfu.status
 #if __cplusplus >= 202002L
         template<typename T_ = TargetT_>
         requires (IsUnconstrained<T_> || T_::supports(api::DfuStatus::skus))
-        auto status() { return create<api::DfuStatus>(); }
+        auto status() { return create_<api::DfuStatus>(); }
 
         template<typename T_ = TargetT_>
         requires (!IsUnconstrained<T_> && !T_::supports(api::DfuStatus::skus) && !T_::strict)
         [[deprecated("dfu.status is not available on this target")]]
-        auto status() { return create<api::DfuStatus>(); }
+        auto status() { return create_<api::DfuStatus>(); }
 #else
-        auto status() { return create<api::DfuStatus>(); }
+        auto status() { return create_<api::DfuStatus>(); }
 #endif
 
     };
@@ -898,9 +1283,26 @@ public:
 #endif
     struct EnvGroup {
         NcT* nc_;
-        template<typename T> T create() {
+        template<typename T> T create_() {
             T r;
-            if constexpr (std::is_same_v<NcT, Notecard>) r.nc_ = nc_;
+            r.nc_ = nc_;
+            if constexpr (std::is_same_v<NcT, Notecard>) {
+                r.execute_fn_ = [](void* p_, const T& req_) {
+                    auto* nc__ = static_cast<Notecard*>(p_);
+                    if constexpr (detail::has_binary_src<T>::value) {
+                        if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
+                    }
+                    if constexpr (detail::has_binary_dst<T>::value) {
+                        if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
+                    }
+                    return nc__->execute(req_);
+                };
+                if constexpr (T::supports_cmd) {
+                    r.command_fn_ = [](void* p_, const T& req_) {
+                        return static_cast<Notecard*>(p_)->command_typed(req_);
+                    };
+                }
+            }
             return r;
         }
 
@@ -910,17 +1312,17 @@ public:
         EnvDefaultFactory defaults() { return {nc_}; }
 
         /// env.get
-        auto get() { return create<api::EnvGet>(); }
+        auto get() { return create_<api::EnvGet>(); }
 
         /// env.modified
-        auto modified() { return create<api::EnvModified>(); }
+        auto modified() { return create_<api::EnvModified>(); }
 
         /// env.set
 #if __cplusplus >= 202002L
         template<typename T_ = TargetT_>
         requires (IsUnconstrained<T_> || T_::supports(api::EnvSet::skus))
         auto set(note::string_view name_arg) {
-            auto r = create<api::EnvSet>();
+            auto r = create_<api::EnvSet>();
             r.name = name_arg;
             return r;
         }
@@ -929,20 +1331,20 @@ public:
         requires (!IsUnconstrained<T_> && !T_::supports(api::EnvSet::skus) && !T_::strict)
         [[deprecated("env.set is not available on this target")]]
         auto set(note::string_view name_arg) {
-            auto r = create<api::EnvSet>();
+            auto r = create_<api::EnvSet>();
             r.name = name_arg;
             return r;
         }
 #else
         auto set(note::string_view name_arg) {
-            auto r = create<api::EnvSet>();
+            auto r = create_<api::EnvSet>();
             r.name = name_arg;
             return r;
         }
 #endif
 
         /// env.template
-        auto templates() { return create<api::EnvTemplate>(); }
+        auto templates() { return create_<api::EnvTemplate>(); }
 
 
         // Layer 2 convenience aliases
@@ -955,14 +1357,14 @@ public:
         /// environment variable until that variable is overridden by a device,
         /// project or fleet-wide setting at Notehub.
         auto setDefault(note::string_view name_arg, note::string_view text_arg) {
-            auto r = create<api::EnvDefault::Set>();
+            auto r = create_<api::EnvDefault::Set>();
             r.name = name_arg;
             r.text = text_arg;
             return r;
         }
         /// Accepts SetDefaultArgs for aggregate/designated init.
         auto setDefault(SetDefaultArgs args) {
-            auto r = create<api::EnvDefault::Set>();
+            auto r = create_<api::EnvDefault::Set>();
             r.name = args.name;
             r.text = args.text;
             return r;
@@ -973,7 +1375,7 @@ public:
             requires (requires(const T& _v) { { _v.name }; { _v.text }; }
                       && !std::is_same_v<std::decay_t<T>, SetDefaultArgs>)
         auto setDefault(T args) {
-            auto r = create<api::EnvDefault::Set>();
+            auto r = create_<api::EnvDefault::Set>();
             r.name = args.name;
             r.text = args.text;
             return r;
@@ -987,13 +1389,13 @@ public:
         /// environment variable until that variable is overridden by a device,
         /// project or fleet-wide setting at Notehub.
         auto clearDefault(note::string_view name_arg) {
-            auto r = create<api::EnvDefault::Remove>();
+            auto r = create_<api::EnvDefault::Remove>();
             r.name = name_arg;
             return r;
         }
         /// Accepts ClearDefaultArgs for aggregate/designated init.
         auto clearDefault(ClearDefaultArgs args) {
-            auto r = create<api::EnvDefault::Remove>();
+            auto r = create_<api::EnvDefault::Remove>();
             r.name = args.name;
             return r;
         }
@@ -1003,7 +1405,7 @@ public:
             requires (requires(const T& _v) { { _v.name }; }
                       && !std::is_same_v<std::decay_t<T>, ClearDefaultArgs>)
         auto clearDefault(T args) {
-            auto r = create<api::EnvDefault::Remove>();
+            auto r = create_<api::EnvDefault::Remove>();
             r.name = args.name;
             return r;
         }
@@ -1022,9 +1424,26 @@ public:
 #endif
     struct FileGroup {
         NcT* nc_;
-        template<typename T> T create() {
+        template<typename T> T create_() {
             T r;
-            if constexpr (std::is_same_v<NcT, Notecard>) r.nc_ = nc_;
+            r.nc_ = nc_;
+            if constexpr (std::is_same_v<NcT, Notecard>) {
+                r.execute_fn_ = [](void* p_, const T& req_) {
+                    auto* nc__ = static_cast<Notecard*>(p_);
+                    if constexpr (detail::has_binary_src<T>::value) {
+                        if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
+                    }
+                    if constexpr (detail::has_binary_dst<T>::value) {
+                        if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
+                    }
+                    return nc__->execute(req_);
+                };
+                if constexpr (T::supports_cmd) {
+                    r.command_fn_ = [](void* p_, const T& req_) {
+                        return static_cast<Notecard*>(p_)->command_typed(req_);
+                    };
+                }
+            }
             return r;
         }
 
@@ -1036,39 +1455,39 @@ public:
 #if __cplusplus >= 202002L
         template<typename T_ = TargetT_>
         requires (IsUnconstrained<T_> || T_::supports(api::FileClear::skus))
-        auto clear() { return create<api::FileClear>(); }
+        auto clear() { return create_<api::FileClear>(); }
 
         template<typename T_ = TargetT_>
         requires (!IsUnconstrained<T_> && !T_::supports(api::FileClear::skus) && !T_::strict)
         [[deprecated("file.clear is not available on this target")]]
-        auto clear() { return create<api::FileClear>(); }
+        auto clear() { return create_<api::FileClear>(); }
 #else
-        auto clear() { return create<api::FileClear>(); }
+        auto clear() { return create_<api::FileClear>(); }
 #endif
 
         /// file.delete
-        auto delete_() { return create<api::FileDelete>(); }
+        auto delete_() { return create_<api::FileDelete>(); }
 
         /// file.stats
-        auto stats() { return create<api::FileStats>(); }
+        auto stats() { return create_<api::FileStats>(); }
 
 
         // Layer 2 convenience aliases
         /// Delete Notefiles.
-        auto remove() { return create<api::FileDelete>(); }
+        auto remove() { return create_<api::FileDelete>(); }
         /// Argument struct for remove() — supports `{.field = value}` init.
         struct RemoveArgs {
             note::ArrayField<note::string_view, 8> files{};
         };
         /// Delete a Notefile by name.
         auto remove(note::string_view files_arg) {
-            auto r = create<api::FileDelete>();
+            auto r = create_<api::FileDelete>();
             r.files = files_arg;
             return r;
         }
         /// Accepts RemoveArgs for aggregate/designated init.
         auto remove(RemoveArgs args) {
-            auto r = create<api::FileDelete>();
+            auto r = create_<api::FileDelete>();
             r.files = args.files;
             return r;
         }
@@ -1078,7 +1497,7 @@ public:
             requires (requires(const T& _v) { { _v.files }; }
                       && !std::is_same_v<std::decay_t<T>, RemoveArgs>)
         auto remove(T args) {
-            auto r = create<api::FileDelete>();
+            auto r = create_<api::FileDelete>();
             r.files = args.files;
             return r;
         }
@@ -1097,9 +1516,26 @@ public:
 #endif
     struct HubGroup {
         NcT* nc_;
-        template<typename T> T create() {
+        template<typename T> T create_() {
             T r;
-            if constexpr (std::is_same_v<NcT, Notecard>) r.nc_ = nc_;
+            r.nc_ = nc_;
+            if constexpr (std::is_same_v<NcT, Notecard>) {
+                r.execute_fn_ = [](void* p_, const T& req_) {
+                    auto* nc__ = static_cast<Notecard*>(p_);
+                    if constexpr (detail::has_binary_src<T>::value) {
+                        if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
+                    }
+                    if constexpr (detail::has_binary_dst<T>::value) {
+                        if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
+                    }
+                    return nc__->execute(req_);
+                };
+                if constexpr (T::supports_cmd) {
+                    r.command_fn_ = [](void* p_, const T& req_) {
+                        return static_cast<Notecard*>(p_)->command_typed(req_);
+                    };
+                }
+            }
             return r;
         }
 
@@ -1108,41 +1544,41 @@ public:
         HubSyncFactory sync{nc_};
 
         /// hub.get
-        auto get() { return create<api::HubGet>(); }
+        auto get() { return create_<api::HubGet>(); }
 
         /// hub.log
 #if __cplusplus >= 202002L
         template<typename T_ = TargetT_>
         requires (IsUnconstrained<T_> || T_::supports(api::HubLog::skus))
-        auto log() { return create<api::HubLog>(); }
+        auto log() { return create_<api::HubLog>(); }
 
         template<typename T_ = TargetT_>
         requires (!IsUnconstrained<T_> && !T_::supports(api::HubLog::skus) && !T_::strict)
         [[deprecated("hub.log is not available on this target")]]
-        auto log() { return create<api::HubLog>(); }
+        auto log() { return create_<api::HubLog>(); }
 #else
-        auto log() { return create<api::HubLog>(); }
+        auto log() { return create_<api::HubLog>(); }
 #endif
 
         /// hub.set
-        auto set() { return create<api::HubSet>(); }
+        auto set() { return create_<api::HubSet>(); }
 
         /// hub.signal
 #if __cplusplus >= 202002L
         template<typename T_ = TargetT_>
         requires (IsUnconstrained<T_> || T_::supports(api::HubSignal::skus))
-        auto signal() { return create<api::HubSignal>(); }
+        auto signal() { return create_<api::HubSignal>(); }
 
         template<typename T_ = TargetT_>
         requires (!IsUnconstrained<T_> && !T_::supports(api::HubSignal::skus) && !T_::strict)
         [[deprecated("hub.signal is not available on this target")]]
-        auto signal() { return create<api::HubSignal>(); }
+        auto signal() { return create_<api::HubSignal>(); }
 #else
-        auto signal() { return create<api::HubSignal>(); }
+        auto signal() { return create_<api::HubSignal>(); }
 #endif
 
         /// hub.status
-        auto status() { return create<api::HubStatus>(); }
+        auto status() { return create_<api::HubStatus>(); }
 
     };
 #if __cplusplus >= 202002L
@@ -1158,16 +1594,33 @@ public:
 #endif
     struct NoteGroup {
         NcT* nc_;
-        template<typename T> T create() {
+        template<typename T> T create_() {
             T r;
-            if constexpr (std::is_same_v<NcT, Notecard>) r.nc_ = nc_;
+            r.nc_ = nc_;
+            if constexpr (std::is_same_v<NcT, Notecard>) {
+                r.execute_fn_ = [](void* p_, const T& req_) {
+                    auto* nc__ = static_cast<Notecard*>(p_);
+                    if constexpr (detail::has_binary_src<T>::value) {
+                        if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
+                    }
+                    if constexpr (detail::has_binary_dst<T>::value) {
+                        if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
+                    }
+                    return nc__->execute(req_);
+                };
+                if constexpr (T::supports_cmd) {
+                    r.command_fn_ = [](void* p_, const T& req_) {
+                        return static_cast<Notecard*>(p_)->command_typed(req_);
+                    };
+                }
+            }
             return r;
         }
 
 
 
         /// note.add
-        auto add() { return create<api::NoteAdd>(); }
+        auto add() { return create_<api::NoteAdd>(); }
 
         /// note.changes
 #if __cplusplus >= 202002L
@@ -1185,7 +1638,7 @@ public:
 
         /// note.delete
         auto delete_(note::string_view file_arg, note::string_view noteId_arg) {
-            auto r = create<api::NoteDelete>();
+            auto r = create_<api::NoteDelete>();
             r.file = file_arg;
             r.noteId = noteId_arg;
             return r;
@@ -1199,7 +1652,7 @@ public:
 
         /// note.update
         auto update(note::string_view file_arg, note::string_view noteId_arg) {
-            auto r = create<api::NoteUpdate>();
+            auto r = create_<api::NoteUpdate>();
             r.file = file_arg;
             r.noteId = noteId_arg;
             return r;
@@ -1213,13 +1666,13 @@ public:
         };
         /// Used to incrementally retrieve changes within a specific Notefile.
         auto popChanges(note::string_view file_arg) {
-            auto r = create<api::NoteChanges::Pop>();
+            auto r = create_<api::NoteChanges::Pop>();
             r.file = file_arg;
             return r;
         }
         /// Accepts PopChangesArgs for aggregate/designated init.
         auto popChanges(PopChangesArgs args) {
-            auto r = create<api::NoteChanges::Pop>();
+            auto r = create_<api::NoteChanges::Pop>();
             r.file = args.file;
             return r;
         }
@@ -1229,7 +1682,7 @@ public:
             requires (requires(const T& _v) { { _v.file }; }
                       && !std::is_same_v<std::decay_t<T>, PopChangesArgs>)
         auto popChanges(T args) {
-            auto r = create<api::NoteChanges::Pop>();
+            auto r = create_<api::NoteChanges::Pop>();
             r.file = args.file;
             return r;
         }
@@ -1241,14 +1694,14 @@ public:
         };
         /// Deletes a Note from a DB Notefile by its Note ID.
         auto remove(note::string_view file_arg, note::string_view noteId_arg) {
-            auto r = create<api::NoteDelete>();
+            auto r = create_<api::NoteDelete>();
             r.file = file_arg;
             r.noteId = noteId_arg;
             return r;
         }
         /// Accepts RemoveArgs for aggregate/designated init.
         auto remove(RemoveArgs args) {
-            auto r = create<api::NoteDelete>();
+            auto r = create_<api::NoteDelete>();
             r.file = args.file;
             r.noteId = args.noteId;
             return r;
@@ -1259,7 +1712,7 @@ public:
             requires (requires(const T& _v) { { _v.file }; { _v.noteId }; }
                       && !std::is_same_v<std::decay_t<T>, RemoveArgs>)
         auto remove(T args) {
-            auto r = create<api::NoteDelete>();
+            auto r = create_<api::NoteDelete>();
             r.file = args.file;
             r.noteId = args.noteId;
             return r;
@@ -1275,13 +1728,13 @@ public:
         /// `.qo`/`.qos` Notes must be read from the Notehub event table using
         /// the Notehub Event API.
         auto read(note::string_view file_arg) {
-            auto r = create<api::NoteGet::Read>();
+            auto r = create_<api::NoteGet::Read>();
             r.file = file_arg;
             return r;
         }
         /// Accepts ReadArgs for aggregate/designated init.
         auto read(ReadArgs args) {
-            auto r = create<api::NoteGet::Read>();
+            auto r = create_<api::NoteGet::Read>();
             r.file = args.file;
             return r;
         }
@@ -1291,7 +1744,7 @@ public:
             requires (requires(const T& _v) { { _v.file }; }
                       && !std::is_same_v<std::decay_t<T>, ReadArgs>)
         auto read(T args) {
-            auto r = create<api::NoteGet::Read>();
+            auto r = create_<api::NoteGet::Read>();
             r.file = args.file;
             return r;
         }
@@ -1306,13 +1759,13 @@ public:
         /// `.qo`/`.qos` Notes must be read from the Notehub event table using
         /// the Notehub Event API.
         auto pop(note::string_view file_arg) {
-            auto r = create<api::NoteGet::Pop>();
+            auto r = create_<api::NoteGet::Pop>();
             r.file = file_arg;
             return r;
         }
         /// Accepts PopArgs for aggregate/designated init.
         auto pop(PopArgs args) {
-            auto r = create<api::NoteGet::Pop>();
+            auto r = create_<api::NoteGet::Pop>();
             r.file = args.file;
             return r;
         }
@@ -1322,7 +1775,7 @@ public:
             requires (requires(const T& _v) { { _v.file }; }
                       && !std::is_same_v<std::decay_t<T>, PopArgs>)
         auto pop(T args) {
-            auto r = create<api::NoteGet::Pop>();
+            auto r = create_<api::NoteGet::Pop>();
             r.file = args.file;
             return r;
         }
@@ -1342,13 +1795,13 @@ public:
         ///
         /// Read about Working with Note Templates for additional information.
         auto clearTemplate(note::string_view file_arg) {
-            auto r = create<api::NoteTemplate::Remove>();
+            auto r = create_<api::NoteTemplate::Remove>();
             r.file = file_arg;
             return r;
         }
         /// Accepts ClearTemplateArgs for aggregate/designated init.
         auto clearTemplate(ClearTemplateArgs args) {
-            auto r = create<api::NoteTemplate::Remove>();
+            auto r = create_<api::NoteTemplate::Remove>();
             r.file = args.file;
             return r;
         }
@@ -1358,7 +1811,7 @@ public:
             requires (requires(const T& _v) { { _v.file }; }
                       && !std::is_same_v<std::decay_t<T>, ClearTemplateArgs>)
         auto clearTemplate(T args) {
-            auto r = create<api::NoteTemplate::Remove>();
+            auto r = create_<api::NoteTemplate::Remove>();
             r.file = args.file;
             return r;
         }
@@ -1377,9 +1830,26 @@ public:
 #endif
     struct NtnGroup {
         NcT* nc_;
-        template<typename T> T create() {
+        template<typename T> T create_() {
             T r;
-            if constexpr (std::is_same_v<NcT, Notecard>) r.nc_ = nc_;
+            r.nc_ = nc_;
+            if constexpr (std::is_same_v<NcT, Notecard>) {
+                r.execute_fn_ = [](void* p_, const T& req_) {
+                    auto* nc__ = static_cast<Notecard*>(p_);
+                    if constexpr (detail::has_binary_src<T>::value) {
+                        if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
+                    }
+                    if constexpr (detail::has_binary_dst<T>::value) {
+                        if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
+                    }
+                    return nc__->execute(req_);
+                };
+                if constexpr (T::supports_cmd) {
+                    r.command_fn_ = [](void* p_, const T& req_) {
+                        return static_cast<Notecard*>(p_)->command_typed(req_);
+                    };
+                }
+            }
             return r;
         }
 
@@ -1389,42 +1859,42 @@ public:
 #if __cplusplus >= 202002L
         template<typename T_ = TargetT_>
         requires (IsUnconstrained<T_> || T_::supports(api::NtnGps::skus))
-        auto gps() { return create<api::NtnGps>(); }
+        auto gps() { return create_<api::NtnGps>(); }
 
         template<typename T_ = TargetT_>
         requires (!IsUnconstrained<T_> && !T_::supports(api::NtnGps::skus) && !T_::strict)
         [[deprecated("ntn.gps is not available on this target")]]
-        auto gps() { return create<api::NtnGps>(); }
+        auto gps() { return create_<api::NtnGps>(); }
 #else
-        auto gps() { return create<api::NtnGps>(); }
+        auto gps() { return create_<api::NtnGps>(); }
 #endif
 
         /// ntn.reset
 #if __cplusplus >= 202002L
         template<typename T_ = TargetT_>
         requires (IsUnconstrained<T_> || T_::supports(api::NtnReset::skus))
-        auto reset() { return create<api::NtnReset>(); }
+        auto reset() { return create_<api::NtnReset>(); }
 
         template<typename T_ = TargetT_>
         requires (!IsUnconstrained<T_> && !T_::supports(api::NtnReset::skus) && !T_::strict)
         [[deprecated("ntn.reset is not available on this target")]]
-        auto reset() { return create<api::NtnReset>(); }
+        auto reset() { return create_<api::NtnReset>(); }
 #else
-        auto reset() { return create<api::NtnReset>(); }
+        auto reset() { return create_<api::NtnReset>(); }
 #endif
 
         /// ntn.status
 #if __cplusplus >= 202002L
         template<typename T_ = TargetT_>
         requires (IsUnconstrained<T_> || T_::supports(api::NtnStatus::skus))
-        auto status() { return create<api::NtnStatus>(); }
+        auto status() { return create_<api::NtnStatus>(); }
 
         template<typename T_ = TargetT_>
         requires (!IsUnconstrained<T_> && !T_::supports(api::NtnStatus::skus) && !T_::strict)
         [[deprecated("ntn.status is not available on this target")]]
-        auto status() { return create<api::NtnStatus>(); }
+        auto status() { return create_<api::NtnStatus>(); }
 #else
-        auto status() { return create<api::NtnStatus>(); }
+        auto status() { return create_<api::NtnStatus>(); }
 #endif
 
     };
@@ -1441,28 +1911,45 @@ public:
 #endif
     struct VarGroup {
         NcT* nc_;
-        template<typename T> T create() {
+        template<typename T> T create_() {
             T r;
-            if constexpr (std::is_same_v<NcT, Notecard>) r.nc_ = nc_;
+            r.nc_ = nc_;
+            if constexpr (std::is_same_v<NcT, Notecard>) {
+                r.execute_fn_ = [](void* p_, const T& req_) {
+                    auto* nc__ = static_cast<Notecard*>(p_);
+                    if constexpr (detail::has_binary_src<T>::value) {
+                        if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
+                    }
+                    if constexpr (detail::has_binary_dst<T>::value) {
+                        if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
+                    }
+                    return nc__->execute(req_);
+                };
+                if constexpr (T::supports_cmd) {
+                    r.command_fn_ = [](void* p_, const T& req_) {
+                        return static_cast<Notecard*>(p_)->command_typed(req_);
+                    };
+                }
+            }
             return r;
         }
 
 
 
         /// var.delete
-        auto delete_() { return create<api::VarDelete>(); }
+        auto delete_() { return create_<api::VarDelete>(); }
 
         /// var.get
-        auto get() { return create<api::VarGet>(); }
+        auto get() { return create_<api::VarGet>(); }
 
         /// var.set
-        auto set() { return create<api::VarSet>(); }
+        auto set() { return create_<api::VarSet>(); }
 
 
         // Layer 2 convenience aliases
         /// Delete a Note from a DB Notefile by its `name`. Provides a simpler
         /// interface to the note.delete API.
-        auto remove() { return create<api::VarDelete>(); }
+        auto remove() { return create_<api::VarDelete>(); }
     };
 #if __cplusplus >= 202002L
     VarGroup<TargetT> var;
@@ -1477,9 +1964,26 @@ public:
 #endif
     struct WebGroup {
         NcT* nc_;
-        template<typename T> T create() {
+        template<typename T> T create_() {
             T r;
-            if constexpr (std::is_same_v<NcT, Notecard>) r.nc_ = nc_;
+            r.nc_ = nc_;
+            if constexpr (std::is_same_v<NcT, Notecard>) {
+                r.execute_fn_ = [](void* p_, const T& req_) {
+                    auto* nc__ = static_cast<Notecard*>(p_);
+                    if constexpr (detail::has_binary_src<T>::value) {
+                        if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
+                    }
+                    if constexpr (detail::has_binary_dst<T>::value) {
+                        if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
+                    }
+                    return nc__->execute(req_);
+                };
+                if constexpr (T::supports_cmd) {
+                    r.command_fn_ = [](void* p_, const T& req_) {
+                        return static_cast<Notecard*>(p_)->command_typed(req_);
+                    };
+                }
+            }
             return r;
         }
 
@@ -1489,77 +1993,77 @@ public:
 #if __cplusplus >= 202002L
         template<typename T_ = TargetT_>
         requires (IsUnconstrained<T_> || T_::supports(api::Web::skus))
-        auto request() { return create<api::Web>(); }
+        auto request() { return create_<api::Web>(); }
 
         template<typename T_ = TargetT_>
         requires (!IsUnconstrained<T_> && !T_::supports(api::Web::skus) && !T_::strict)
         [[deprecated("web is not available on this target")]]
-        auto request() { return create<api::Web>(); }
+        auto request() { return create_<api::Web>(); }
 #else
-        auto request() { return create<api::Web>(); }
+        auto request() { return create_<api::Web>(); }
 #endif
 
         /// web.delete
 #if __cplusplus >= 202002L
         template<typename T_ = TargetT_>
         requires (IsUnconstrained<T_> || T_::supports(api::WebDelete::skus))
-        auto delete_() { return create<api::WebDelete>(); }
+        auto delete_() { return create_<api::WebDelete>(); }
 
         template<typename T_ = TargetT_>
         requires (!IsUnconstrained<T_> && !T_::supports(api::WebDelete::skus) && !T_::strict)
         [[deprecated("web.delete is not available on this target")]]
-        auto delete_() { return create<api::WebDelete>(); }
+        auto delete_() { return create_<api::WebDelete>(); }
 #else
-        auto delete_() { return create<api::WebDelete>(); }
+        auto delete_() { return create_<api::WebDelete>(); }
 #endif
 
         /// web.get
 #if __cplusplus >= 202002L
         template<typename T_ = TargetT_>
         requires (IsUnconstrained<T_> || T_::supports(api::WebGet::skus))
-        auto get() { return create<api::WebGet>(); }
+        auto get() { return create_<api::WebGet>(); }
 
         template<typename T_ = TargetT_>
         requires (!IsUnconstrained<T_> && !T_::supports(api::WebGet::skus) && !T_::strict)
         [[deprecated("web.get is not available on this target")]]
-        auto get() { return create<api::WebGet>(); }
+        auto get() { return create_<api::WebGet>(); }
 #else
-        auto get() { return create<api::WebGet>(); }
+        auto get() { return create_<api::WebGet>(); }
 #endif
 
         /// web.post
 #if __cplusplus >= 202002L
         template<typename T_ = TargetT_>
         requires (IsUnconstrained<T_> || T_::supports(api::WebPost::skus))
-        auto post() { return create<api::WebPost>(); }
+        auto post() { return create_<api::WebPost>(); }
 
         template<typename T_ = TargetT_>
         requires (!IsUnconstrained<T_> && !T_::supports(api::WebPost::skus) && !T_::strict)
         [[deprecated("web.post is not available on this target")]]
-        auto post() { return create<api::WebPost>(); }
+        auto post() { return create_<api::WebPost>(); }
 #else
-        auto post() { return create<api::WebPost>(); }
+        auto post() { return create_<api::WebPost>(); }
 #endif
 
         /// web.put
 #if __cplusplus >= 202002L
         template<typename T_ = TargetT_>
         requires (IsUnconstrained<T_> || T_::supports(api::WebPut::skus))
-        auto put() { return create<api::WebPut>(); }
+        auto put() { return create_<api::WebPut>(); }
 
         template<typename T_ = TargetT_>
         requires (!IsUnconstrained<T_> && !T_::supports(api::WebPut::skus) && !T_::strict)
         [[deprecated("web.put is not available on this target")]]
-        auto put() { return create<api::WebPut>(); }
+        auto put() { return create_<api::WebPut>(); }
 #else
-        auto put() { return create<api::WebPut>(); }
+        auto put() { return create_<api::WebPut>(); }
 #endif
 
 
         // Layer 2 convenience aliases
         /// Performs a simple HTTP or HTTPS `DELETE` request against an external
         /// endpoint, and returns the response to the Notecard.
-        auto remove() { return create<api::WebDelete>(); }
+        auto remove() { return create_<api::WebDelete>(); }
     };
 #if __cplusplus >= 202002L
     WebGroup<TargetT> web;

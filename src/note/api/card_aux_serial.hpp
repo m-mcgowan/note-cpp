@@ -7,11 +7,11 @@
 #if NOTE_EXTRAS
 #include <note/dyn_field.hpp>
 #endif
+#include <note/notecard.hpp>
 #include <note/field.hpp>
 #include <note/json.hpp>
 #include <note/json_sax.hpp>
 #include <note/binary_request.hpp>
-#include <note/notecard.hpp>
 #include <note/print.hpp>
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
@@ -61,7 +61,8 @@ struct CardAuxSerial {
         static constexpr Safety safety = Safety::Idempotent;
         static constexpr Skus skus = Skus::from(Product::Cell, Product::CellWifi, Product::Skylo, Product::WiFi);
 
-        Notecard* nc_ = nullptr;
+        void* nc_ = nullptr;
+
 
         /// If using `"mode": "accel"`, specify a sampling duration for the
         /// Notecard accelerometer.
@@ -126,13 +127,17 @@ struct CardAuxSerial {
                 return *this;
             }
             mode_t& operator=(std::nullopt_t) { Field<note::string_view>::reset(); return *this; }
-            mode_t(const mode_t&) = default;
-            mode_t& operator=(const mode_t&) = default;
-            mode_t(mode_t&&) = default;
-            mode_t& operator=(mode_t&&) = default;
+            mode_t(const mode_t& o) : Field<note::string_view>(), flags_(o.flags_) { fixup_(o); }
+            mode_t& operator=(const mode_t& o) { flags_ = o.flags_; fixup_(o); return *this; }
+            mode_t(mode_t&& o) : Field<note::string_view>(), flags_(o.flags_) { fixup_(o); }
+            mode_t& operator=(mode_t&& o) { flags_ = o.flags_; fixup_(o); return *this; }
 #else
             using Field<note::string_view>::Field;
             using Field<note::string_view>::operator=;
+            mode_t(const mode_t& o) : Field<note::string_view>(), flags_(o.flags_) { fixup_(o); }
+            mode_t& operator=(const mode_t& o) { flags_ = o.flags_; fixup_(o); return *this; }
+            mode_t(mode_t&& o) : Field<note::string_view>(), flags_(o.flags_) { fixup_(o); }
+            mode_t& operator=(mode_t&& o) { flags_ = o.flags_; fixup_(o); return *this; }
 #endif
             CardAuxSerial::Request& operator()(note::string_view v);
             CardAuxSerial::Request& operator=(uint32_t flags);
@@ -150,6 +155,11 @@ struct CardAuxSerial {
                 { note::serial::accel, "accel" },
             };
             note::FlagSet<4, 22> flags_{flag_defs_};
+            void fixup_(const mode_t& o) {
+                if (flags_) Field<note::string_view>::operator=(flags_.str());
+                else if (o.has_value()) Field<note::string_view>::operator=(*o);
+                else Field<note::string_view>::reset();
+            }
 #if __cplusplus >= 202002L
             // consteval: validates that a string literal contains only known flags.
             static consteval bool validate_flags(note::string_view sv) {
@@ -322,6 +332,11 @@ struct CardAuxSerial {
             std::unique_ptr<JsonReader> reader_;
         };
 
+        ApiResult<Response>(*execute_fn_)(void*, const CardAuxSerial::Request&) = nullptr;
+        auto execute() const { return execute_fn_(nc_, *this); }
+        Result<void>(*command_fn_)(void*, const CardAuxSerial::Request&) = nullptr;
+        Result<void> command() const { return command_fn_(nc_, *this); }
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
         void build(JsonBuilder& b) const {
@@ -344,10 +359,6 @@ struct CardAuxSerial {
         }
 #pragma GCC diagnostic pop
 
-        auto execute() const { return nc_->execute(*this); }
-        auto execute(Notecard& nc) const { return nc.execute(*this); }
-        Result<void> command() const { return nc_->command_typed(*this); }
-        Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
 
 #ifdef ARDUINO
         /// Arduino Printable: prints the JSON request to Serial or any Print stream.
@@ -414,7 +425,8 @@ struct CardAuxSerial {
         static constexpr Safety safety = Safety::Idempotent;
         static constexpr Skus skus = Skus::from(Product::Cell, Product::CellWifi, Product::Skylo, Product::WiFi);
 
-        Notecard* nc_ = nullptr;
+        void* nc_ = nullptr;
+
 
         /// If using `"mode": "accel"`, specify a sampling duration for the
         /// Notecard accelerometer.
@@ -472,13 +484,17 @@ struct CardAuxSerial {
                 return *this;
             }
             notifications_t& operator=(std::nullopt_t) { Field<note::string_view>::reset(); return *this; }
-            notifications_t(const notifications_t&) = default;
-            notifications_t& operator=(const notifications_t&) = default;
-            notifications_t(notifications_t&&) = default;
-            notifications_t& operator=(notifications_t&&) = default;
+            notifications_t(const notifications_t& o) : Field<note::string_view>(), flags_(o.flags_) { fixup_(o); }
+            notifications_t& operator=(const notifications_t& o) { flags_ = o.flags_; fixup_(o); return *this; }
+            notifications_t(notifications_t&& o) : Field<note::string_view>(), flags_(o.flags_) { fixup_(o); }
+            notifications_t& operator=(notifications_t&& o) { flags_ = o.flags_; fixup_(o); return *this; }
 #else
             using Field<note::string_view>::Field;
             using Field<note::string_view>::operator=;
+            notifications_t(const notifications_t& o) : Field<note::string_view>(), flags_(o.flags_) { fixup_(o); }
+            notifications_t& operator=(const notifications_t& o) { flags_ = o.flags_; fixup_(o); return *this; }
+            notifications_t(notifications_t&& o) : Field<note::string_view>(), flags_(o.flags_) { fixup_(o); }
+            notifications_t& operator=(notifications_t&& o) { flags_ = o.flags_; fixup_(o); return *this; }
 #endif
             CardAuxSerial::Notify& operator()(note::string_view v);
             CardAuxSerial::Notify& operator=(uint32_t flags);
@@ -496,6 +512,11 @@ struct CardAuxSerial {
                 { note::serial::accel, "accel" },
             };
             note::FlagSet<4, 22> flags_{flag_defs_};
+            void fixup_(const notifications_t& o) {
+                if (flags_) Field<note::string_view>::operator=(flags_.str());
+                else if (o.has_value()) Field<note::string_view>::operator=(*o);
+                else Field<note::string_view>::reset();
+            }
 #if __cplusplus >= 202002L
             // consteval: validates that a string literal contains only known flags.
             static consteval bool validate_flags(note::string_view sv) {
@@ -573,6 +594,11 @@ struct CardAuxSerial {
 
         using Response = void;
 
+        ApiResult<Response>(*execute_fn_)(void*, const CardAuxSerial::Notify&) = nullptr;
+        auto execute() const { return execute_fn_(nc_, *this); }
+        Result<void>(*command_fn_)(void*, const CardAuxSerial::Notify&) = nullptr;
+        Result<void> command() const { return command_fn_(nc_, *this); }
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
         void build(JsonBuilder& b) const {
@@ -601,10 +627,6 @@ struct CardAuxSerial {
         }
 #pragma GCC diagnostic pop
 
-        auto execute() const { return nc_->execute(*this); }
-        auto execute(Notecard& nc) const { return nc.execute(*this); }
-        Result<void> command() const { return nc_->command_typed(*this); }
-        Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
 
 #ifdef ARDUINO
         /// Arduino Printable: prints the JSON request to Serial or any Print stream.
@@ -663,7 +685,8 @@ struct CardAuxSerial {
         static constexpr Safety safety = Safety::Idempotent;
         static constexpr Skus skus = Skus::from(Product::Cell, Product::CellWifi, Product::Skylo, Product::WiFi);
 
-        Notecard* nc_ = nullptr;
+        void* nc_ = nullptr;
+
 
         /// If `true`, along with `"mode":"gps"` the Notecard will disable
         /// concurrent modem use during GPS tracking.
@@ -719,6 +742,11 @@ struct CardAuxSerial {
 
         using Response = void;
 
+        ApiResult<Response>(*execute_fn_)(void*, const CardAuxSerial::Gps&) = nullptr;
+        auto execute() const { return execute_fn_(nc_, *this); }
+        Result<void>(*command_fn_)(void*, const CardAuxSerial::Gps&) = nullptr;
+        Result<void> command() const { return command_fn_(nc_, *this); }
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
         void build(JsonBuilder& b) const {
@@ -735,10 +763,6 @@ struct CardAuxSerial {
         }
 #pragma GCC diagnostic pop
 
-        auto execute() const { return nc_->execute(*this); }
-        auto execute(Notecard& nc) const { return nc.execute(*this); }
-        Result<void> command() const { return nc_->command_typed(*this); }
-        Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
 
 #ifdef ARDUINO
         /// Arduino Printable: prints the JSON request to Serial or any Print stream.
@@ -778,7 +802,8 @@ struct CardAuxSerial {
         static constexpr Safety safety = Safety::Idempotent;
         static constexpr Skus skus = Skus::from(Product::Cell, Product::CellWifi, Product::Skylo, Product::WiFi);
 
-        Notecard* nc_ = nullptr;
+        void* nc_ = nullptr;
+
 
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
         /// The baud rate or speed at which information is transmitted over AUX
@@ -826,6 +851,11 @@ struct CardAuxSerial {
 
         using Response = void;
 
+        ApiResult<Response>(*execute_fn_)(void*, const CardAuxSerial::Configure&) = nullptr;
+        auto execute() const { return execute_fn_(nc_, *this); }
+        Result<void>(*command_fn_)(void*, const CardAuxSerial::Configure&) = nullptr;
+        Result<void> command() const { return command_fn_(nc_, *this); }
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
         void build(JsonBuilder& b) const {
@@ -841,10 +871,6 @@ struct CardAuxSerial {
         }
 #pragma GCC diagnostic pop
 
-        auto execute() const { return nc_->execute(*this); }
-        auto execute(Notecard& nc) const { return nc.execute(*this); }
-        Result<void> command() const { return nc_->command_typed(*this); }
-        Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
 
 #ifdef ARDUINO
         /// Arduino Printable: prints the JSON request to Serial or any Print stream.
@@ -879,7 +905,8 @@ struct CardAuxSerial {
         static constexpr Safety safety = Safety::Idempotent;
         static constexpr Skus skus = Skus::from(Product::Cell, Product::CellWifi, Product::Skylo, Product::WiFi);
 
-        Notecard* nc_ = nullptr;
+        void* nc_ = nullptr;
+
 
 
 #if NOTE_EXTRAS
@@ -908,6 +935,11 @@ struct CardAuxSerial {
 
         using Response = void;
 
+        ApiResult<Response>(*execute_fn_)(void*, const CardAuxSerial::Off&) = nullptr;
+        auto execute() const { return execute_fn_(nc_, *this); }
+        Result<void>(*command_fn_)(void*, const CardAuxSerial::Off&) = nullptr;
+        Result<void> command() const { return command_fn_(nc_, *this); }
+
         void build(JsonBuilder& b) const {
             note::add_flash(b, note::flash(keys_::mode), "-");
 #if NOTE_EXTRAS
@@ -917,10 +949,6 @@ struct CardAuxSerial {
 #endif
         }
 
-        auto execute() const { return nc_->execute(*this); }
-        auto execute(Notecard& nc) const { return nc.execute(*this); }
-        Result<void> command() const { return nc_->command_typed(*this); }
-        Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
 
 #ifdef ARDUINO
         /// Arduino Printable: prints the JSON request to Serial or any Print stream.

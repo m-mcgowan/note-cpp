@@ -7,11 +7,11 @@
 #if NOTE_EXTRAS
 #include <note/dyn_field.hpp>
 #endif
+#include <note/notecard.hpp>
 #include <note/field.hpp>
 #include <note/json.hpp>
 #include <note/json_sax.hpp>
 #include <note/binary_request.hpp>
-#include <note/notecard.hpp>
 #include <note/print.hpp>
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
@@ -55,7 +55,8 @@ struct CardBinaryPut : note::BinarySendMixin {
         static constexpr string_view encoding = "cobs";
     };
 
-    Notecard* nc_ = nullptr;
+    void* nc_ = nullptr;
+
 
     /// The size of the COBS-encoded data (in bytes).
     struct cobs_t : Field<int32_t> {
@@ -165,6 +166,11 @@ struct CardBinaryPut : note::BinarySendMixin {
         std::unique_ptr<JsonReader> reader_;
     };
 
+    ApiResult<Response>(*execute_fn_)(void*, const CardBinaryPut&) = nullptr;
+    auto execute() const { return execute_fn_(nc_, *this); }
+    Result<void>(*command_fn_)(void*, const CardBinaryPut&) = nullptr;
+    Result<void> command() const { return command_fn_(nc_, *this); }
+
     void build(JsonBuilder& b) const {
         if (cobs) note::add_flash(b, note::flash(keys_::cobs), *cobs);
         if (offset) note::add_flash(b, note::flash(keys_::offset), *offset);
@@ -176,16 +182,6 @@ struct CardBinaryPut : note::BinarySendMixin {
 #endif
     }
 
-    auto execute() const {
-        if (has_binary_data()) { auto copy = *this; return nc_->execute(copy); }
-        return nc_->execute(*this);
-    }
-    auto execute(Notecard& nc) const {
-        if (has_binary_data()) { auto copy = *this; return nc.execute(copy); }
-        return nc.execute(*this);
-    }
-    Result<void> command() const { return nc_->command_typed(*this); }
-    Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
 
 #ifdef ARDUINO
     /// Arduino Printable: prints the JSON request to Serial or any Print stream.

@@ -7,11 +7,11 @@
 #if NOTE_EXTRAS
 #include <note/dyn_field.hpp>
 #endif
+#include <note/notecard.hpp>
 #include <note/field.hpp>
 #include <note/json.hpp>
 #include <note/json_sax.hpp>
 #include <note/binary_request.hpp>
-#include <note/notecard.hpp>
 #include <note/print.hpp>
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
@@ -52,7 +52,8 @@ struct NoteChanges {
         static constexpr Safety safety = Safety::ReadOnly;
         static constexpr Skus skus = Skus::from(Product::Cell, Product::CellWifi, Product::Skylo, Product::WiFi);
 
-        Notecard* nc_ = nullptr;
+        void* nc_ = nullptr;
+
 
         /// `true` to return deleted Notes with this request. Deleted Notes are
         /// only persisted in a database notefile (`.db/.dbs`) between the time
@@ -201,6 +202,11 @@ struct NoteChanges {
             std::unique_ptr<JsonReader> reader_;
         };
 
+        ApiResult<Response>(*execute_fn_)(void*, const NoteChanges::Peek&) = nullptr;
+        auto execute() const { return execute_fn_(nc_, *this); }
+        Result<void>(*command_fn_)(void*, const NoteChanges::Peek&) = nullptr;
+        Result<void> command() const { return command_fn_(nc_, *this); }
+
         void build(JsonBuilder& b) const {
             if (deleted) note::add_flash(b, note::flash(keys_::deleted), *deleted);
             if (file) note::add_flash(b, note::flash(keys_::file), *file);
@@ -216,10 +222,6 @@ struct NoteChanges {
 #endif
         }
 
-        auto execute() const { return nc_->execute(*this); }
-        auto execute(Notecard& nc) const { return nc.execute(*this); }
-        Result<void> command() const { return nc_->command_typed(*this); }
-        Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
 
 #ifdef ARDUINO
         /// Arduino Printable: prints the JSON request to Serial or any Print stream.
@@ -286,7 +288,8 @@ struct NoteChanges {
         static constexpr Safety safety = Safety::Destructive;
         static constexpr Skus skus = Skus::from(Product::Cell, Product::CellWifi, Product::Skylo, Product::WiFi);
 
-        Notecard* nc_ = nullptr;
+        void* nc_ = nullptr;
+
 
         /// `true` to return deleted Notes with this request. Deleted Notes are
         /// only persisted in a database notefile (`.db/.dbs`) between the time
@@ -431,6 +434,11 @@ struct NoteChanges {
             std::unique_ptr<JsonReader> reader_;
         };
 
+        ApiResult<Response>(*execute_fn_)(void*, const NoteChanges::Pop&) = nullptr;
+        auto execute() const { return execute_fn_(nc_, *this); }
+        Result<void>(*command_fn_)(void*, const NoteChanges::Pop&) = nullptr;
+        Result<void> command() const { return command_fn_(nc_, *this); }
+
         void build(JsonBuilder& b) const {
             note::add_flash(b, note::flash(keys_::delete_), true);
             if (deleted) note::add_flash(b, note::flash(keys_::deleted), *deleted);
@@ -447,10 +455,6 @@ struct NoteChanges {
 #endif
         }
 
-        auto execute() const { return nc_->execute(*this); }
-        auto execute(Notecard& nc) const { return nc.execute(*this); }
-        Result<void> command() const { return nc_->command_typed(*this); }
-        Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
 
 #ifdef ARDUINO
         /// Arduino Printable: prints the JSON request to Serial or any Print stream.

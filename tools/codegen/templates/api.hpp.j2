@@ -11,6 +11,29 @@ namespace note {
 
 {% macro required_params(op) %}{% for p in op.required_properties %}{{ p.field_type }} {{ p.accessor_name }}_arg{{ ", " if not loop.last }}{% endfor %}{% endmacro %}
 
+{# ===================================================================== #}
+{# bind: Set nc_, execute_fn_, and (if supports_cmd) command_fn_ on a   #}
+{# request, wiring it to the NcT this Api was constructed with.          #}
+{# ===================================================================== #}
+{% macro bind(var) %}
+{{ var }}.nc_ = nc_;
+{{ var }}.execute_fn_ = [](void* p_, const std::remove_reference_t<decltype({{ var }})>& req_) {
+    auto* nc__ = static_cast<NcT*>(p_);
+    if constexpr (detail::has_binary_src<std::decay_t<decltype({{ var }})>>::value) {
+        if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
+    }
+    if constexpr (detail::has_binary_dst<std::decay_t<decltype({{ var }})>>::value) {
+        if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
+    }
+    return nc__->execute(req_);
+};
+if constexpr (std::decay_t<decltype({{ var }})>::supports_cmd) {
+    {{ var }}.command_fn_ = [](void* p_, const std::remove_reference_t<decltype({{ var }})>& req_) {
+        return static_cast<NcT*>(p_)->command_typed(req_);
+    };
+}
+{% endmacro %}
+
 #if __cplusplus >= 202002L
 template<typename TargetT = Unconstrained, typename NcT = Notecard>
 #else
@@ -41,7 +64,28 @@ public:
     NcT& notecard() { return nc_; }
 
     template<typename RequestT>
-    RequestT create() { RequestT r; r.nc_ = &nc_; return r; }
+    RequestT create() {
+        RequestT r;
+        r.nc_ = &nc_;
+        if constexpr (std::is_same_v<NcT, Notecard>) {
+            r.execute_fn_ = [](void* p_, const RequestT& req_) {
+                auto* nc__ = static_cast<Notecard*>(p_);
+                if constexpr (detail::has_binary_src<RequestT>::value) {
+                    if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
+                }
+                if constexpr (detail::has_binary_dst<RequestT>::value) {
+                    if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
+                }
+                return nc__->execute(req_);
+            };
+            if constexpr (RequestT::supports_cmd) {
+                r.command_fn_ = [](void* p_, const RequestT& req_) {
+                    return static_cast<Notecard*>(p_)->command_typed(req_);
+                };
+            }
+        }
+        return r;
+    }
 
     template<typename RequestT>
     auto execute(const RequestT& req) { return nc_.execute(req); }
@@ -62,9 +106,26 @@ public:
 {% if endpoint.needs_factory and not endpoint.has_children %}
     struct {{ endpoint.struct_name }}Factory {
         NcT* nc_;
-        template<typename T> T create() {
+        template<typename T> T create_() {
             T r;
-            if constexpr (std::is_same_v<NcT, Notecard>) r.nc_ = nc_;
+            r.nc_ = nc_;
+            if constexpr (std::is_same_v<NcT, Notecard>) {
+                r.execute_fn_ = [](void* p_, const T& req_) {
+                    auto* nc__ = static_cast<Notecard*>(p_);
+                    if constexpr (detail::has_binary_src<T>::value) {
+                        if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
+                    }
+                    if constexpr (detail::has_binary_dst<T>::value) {
+                        if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
+                    }
+                    return nc__->execute(req_);
+                };
+                if constexpr (T::supports_cmd) {
+                    r.command_fn_ = [](void* p_, const T& req_) {
+                        return static_cast<Notecard*>(p_)->command_typed(req_);
+                    };
+                }
+            }
             return r;
         }
 {% if endpoint.is_polymorphic %}
@@ -74,24 +135,24 @@ public:
 {% endif %}
 {% if op.required_properties %}
         auto {{ op.factory_method }}({{ required_params(op) }}) {
-            auto r = create<api::{{ endpoint.struct_name }}::{{ op.struct_name }}>();
+            auto r = create_<api::{{ endpoint.struct_name }}::{{ op.struct_name }}>();
 {% for prop in op.required_properties %}
             r.{{ prop.accessor_name }} = {{ prop.accessor_name }}_arg;
 {% endfor %}
             return r;
         }
 {% else %}
-        auto {{ op.factory_method }}() { return create<api::{{ endpoint.struct_name }}::{{ op.struct_name }}>(); }
+        auto {{ op.factory_method }}() { return create_<api::{{ endpoint.struct_name }}::{{ op.struct_name }}>(); }
 {% endif %}
 {% if op.mode_prefix %}
-        auto {{ op.factory_method }}(uint32_t flags) { auto r = create<api::{{ endpoint.struct_name }}::{{ op.struct_name }}>(); r.{{ op.mode_field_name }} = flags; return r; }
-        auto {{ op.factory_method }}(note::string_view flags) { auto r = create<api::{{ endpoint.struct_name }}::{{ op.struct_name }}>(); r.{{ op.mode_field_name }} = flags; return r; }
+        auto {{ op.factory_method }}(uint32_t flags) { auto r = create_<api::{{ endpoint.struct_name }}::{{ op.struct_name }}>(); r.{{ op.mode_field_name }} = flags; return r; }
+        auto {{ op.factory_method }}(note::string_view flags) { auto r = create_<api::{{ endpoint.struct_name }}::{{ op.struct_name }}>(); r.{{ op.mode_field_name }} = flags; return r; }
 {% endif %}
 {% endfor %}
 {% elif not endpoint.is_polymorphic %}
 {# Non-polymorphic parent: callable to create its own request type #}
         /// {{ endpoint.wire_name }}
-        auto operator()() { return create<api::{{ endpoint.struct_name }}>(); }
+        auto operator()() { return create_<api::{{ endpoint.struct_name }}>(); }
 {% endif %}
 {% for child in endpoint.children %}
 {% if child.is_polymorphic %}
@@ -99,7 +160,7 @@ public:
         {{ child.struct_name }}Factory {{ child.child_method }}{nc_};
 {% else %}
         /// {{ child.wire_name }}
-        auto {{ child.child_method }}() { return create<api::{{ child.struct_name }}>(); }
+        auto {{ child.child_method }}() { return create_<api::{{ child.struct_name }}>(); }
 {% endif %}
 {% endfor %}
     };
@@ -113,9 +174,26 @@ public:
 {% if endpoint.needs_factory and endpoint.has_children %}
     struct {{ endpoint.struct_name }}Factory {
         NcT* nc_;
-        template<typename T> T create() {
+        template<typename T> T create_() {
             T r;
-            if constexpr (std::is_same_v<NcT, Notecard>) r.nc_ = nc_;
+            r.nc_ = nc_;
+            if constexpr (std::is_same_v<NcT, Notecard>) {
+                r.execute_fn_ = [](void* p_, const T& req_) {
+                    auto* nc__ = static_cast<Notecard*>(p_);
+                    if constexpr (detail::has_binary_src<T>::value) {
+                        if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
+                    }
+                    if constexpr (detail::has_binary_dst<T>::value) {
+                        if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
+                    }
+                    return nc__->execute(req_);
+                };
+                if constexpr (T::supports_cmd) {
+                    r.command_fn_ = [](void* p_, const T& req_) {
+                        return static_cast<Notecard*>(p_)->command_typed(req_);
+                    };
+                }
+            }
             return r;
         }
 {% if endpoint.is_polymorphic %}
@@ -125,24 +203,24 @@ public:
 {% endif %}
 {% if op.required_properties %}
         auto {{ op.factory_method }}({{ required_params(op) }}) {
-            auto r = create<api::{{ endpoint.struct_name }}::{{ op.struct_name }}>();
+            auto r = create_<api::{{ endpoint.struct_name }}::{{ op.struct_name }}>();
 {% for prop in op.required_properties %}
             r.{{ prop.accessor_name }} = {{ prop.accessor_name }}_arg;
 {% endfor %}
             return r;
         }
 {% else %}
-        auto {{ op.factory_method }}() { return create<api::{{ endpoint.struct_name }}::{{ op.struct_name }}>(); }
+        auto {{ op.factory_method }}() { return create_<api::{{ endpoint.struct_name }}::{{ op.struct_name }}>(); }
 {% endif %}
 {% if op.mode_prefix %}
-        auto {{ op.factory_method }}(uint32_t flags) { auto r = create<api::{{ endpoint.struct_name }}::{{ op.struct_name }}>(); r.{{ op.mode_field_name }} = flags; return r; }
-        auto {{ op.factory_method }}(note::string_view flags) { auto r = create<api::{{ endpoint.struct_name }}::{{ op.struct_name }}>(); r.{{ op.mode_field_name }} = flags; return r; }
+        auto {{ op.factory_method }}(uint32_t flags) { auto r = create_<api::{{ endpoint.struct_name }}::{{ op.struct_name }}>(); r.{{ op.mode_field_name }} = flags; return r; }
+        auto {{ op.factory_method }}(note::string_view flags) { auto r = create_<api::{{ endpoint.struct_name }}::{{ op.struct_name }}>(); r.{{ op.mode_field_name }} = flags; return r; }
 {% endif %}
 {% endfor %}
 {% elif not endpoint.is_polymorphic %}
 {# Non-polymorphic parent: callable to create its own request type #}
         /// {{ endpoint.wire_name }}
-        auto operator()() { return create<api::{{ endpoint.struct_name }}>(); }
+        auto operator()() { return create_<api::{{ endpoint.struct_name }}>(); }
 {% endif %}
 {% for child in endpoint.children %}
 {% if child.is_polymorphic %}
@@ -150,7 +228,7 @@ public:
         {{ child.struct_name }}Factory {{ child.child_method }}{nc_};
 {% else %}
         /// {{ child.wire_name }}
-        auto {{ child.child_method }}() { return create<api::{{ child.struct_name }}>(); }
+        auto {{ child.child_method }}() { return create_<api::{{ child.struct_name }}>(); }
 {% endif %}
 {% endfor %}
     };
@@ -191,7 +269,7 @@ public:
         template<typename T_ = TargetT_>
         requires (IsUnconstrained<T_> || T_::supports({{ skus_type }}::skus))
         auto {{ endpoint.group_method }}({{ required_params(op) }}) {
-            auto r = create<api::{{ endpoint.struct_name }}>();
+            auto r = create_<api::{{ endpoint.struct_name }}>();
 {% for prop in op.required_properties %}
             r.{{ prop.accessor_name }} = {{ prop.accessor_name }}_arg;
 {% endfor %}
@@ -202,7 +280,7 @@ public:
         requires (!IsUnconstrained<T_> && !T_::supports({{ skus_type }}::skus) && !T_::strict)
         [[deprecated("{{ endpoint.wire_name }} is not available on this target")]]
         auto {{ endpoint.group_method }}({{ required_params(op) }}) {
-            auto r = create<api::{{ endpoint.struct_name }}>();
+            auto r = create_<api::{{ endpoint.struct_name }}>();
 {% for prop in op.required_properties %}
             r.{{ prop.accessor_name }} = {{ prop.accessor_name }}_arg;
 {% endfor %}
@@ -210,7 +288,7 @@ public:
         }
 #else
         auto {{ endpoint.group_method }}({{ required_params(op) }}) {
-            auto r = create<api::{{ endpoint.struct_name }}>();
+            auto r = create_<api::{{ endpoint.struct_name }}>();
 {% for prop in op.required_properties %}
             r.{{ prop.accessor_name }} = {{ prop.accessor_name }}_arg;
 {% endfor %}
@@ -219,7 +297,7 @@ public:
 #endif
 {% else %}
         auto {{ endpoint.group_method }}({{ required_params(op) }}) {
-            auto r = create<api::{{ endpoint.struct_name }}>();
+            auto r = create_<api::{{ endpoint.struct_name }}>();
 {% for prop in op.required_properties %}
             r.{{ prop.accessor_name }} = {{ prop.accessor_name }}_arg;
 {% endfor %}
@@ -231,17 +309,17 @@ public:
 #if __cplusplus >= 202002L
         template<typename T_ = TargetT_>
         requires (IsUnconstrained<T_> || T_::supports({{ skus_type }}::skus))
-        auto {{ endpoint.group_method }}() { return create<api::{{ endpoint.struct_name }}>(); }
+        auto {{ endpoint.group_method }}() { return create_<api::{{ endpoint.struct_name }}>(); }
 
         template<typename T_ = TargetT_>
         requires (!IsUnconstrained<T_> && !T_::supports({{ skus_type }}::skus) && !T_::strict)
         [[deprecated("{{ endpoint.wire_name }} is not available on this target")]]
-        auto {{ endpoint.group_method }}() { return create<api::{{ endpoint.struct_name }}>(); }
+        auto {{ endpoint.group_method }}() { return create_<api::{{ endpoint.struct_name }}>(); }
 #else
-        auto {{ endpoint.group_method }}() { return create<api::{{ endpoint.struct_name }}>(); }
+        auto {{ endpoint.group_method }}() { return create_<api::{{ endpoint.struct_name }}>(); }
 #endif
 {% else %}
-        auto {{ endpoint.group_method }}() { return create<api::{{ endpoint.struct_name }}>(); }
+        auto {{ endpoint.group_method }}() { return create_<api::{{ endpoint.struct_name }}>(); }
 {% endif %}
 {% endif %}
 {% endmacro %}
@@ -254,9 +332,26 @@ public:
 #endif
     struct {{ group.struct_name }} {
         NcT* nc_;
-        template<typename T> T create() {
+        template<typename T> T create_() {
             T r;
-            if constexpr (std::is_same_v<NcT, Notecard>) r.nc_ = nc_;
+            r.nc_ = nc_;
+            if constexpr (std::is_same_v<NcT, Notecard>) {
+                r.execute_fn_ = [](void* p_, const T& req_) {
+                    auto* nc__ = static_cast<Notecard*>(p_);
+                    if constexpr (detail::has_binary_src<T>::value) {
+                        if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
+                    }
+                    if constexpr (detail::has_binary_dst<T>::value) {
+                        if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
+                    }
+                    return nc__->execute(req_);
+                };
+                if constexpr (T::supports_cmd) {
+                    r.command_fn_ = [](void* p_, const T& req_) {
+                        return static_cast<Notecard*>(p_)->command_typed(req_);
+                    };
+                }
+            }
             return r;
         }
 
@@ -315,7 +410,7 @@ public:
 {{ alias_doc | doc_comment("        ") }}
 {% endif %}
         auto {{ alias.method_name }}({% for p in resolved %}{{ p.field_type }} {{ p.accessor_name }}_arg{{ ", " if not loop.last }}{% endfor %}) {
-            auto r = create<{{ alias.qualified_type }}>();
+            auto r = create_<{{ alias.qualified_type }}>();
 {% for p in resolved %}
             r.{{ p.accessor_name }} = {{ p.accessor_name }}_arg;
 {% endfor %}
@@ -323,7 +418,7 @@ public:
         }
         /// Accepts {{ alias.method_name | first_upper }}Args for aggregate/designated init.
         auto {{ alias.method_name }}({{ alias.method_name | first_upper }}Args args) {
-            auto r = create<{{ alias.qualified_type }}>();
+            auto r = create_<{{ alias.qualified_type }}>();
 {% for p in resolved %}
             r.{{ p.accessor_name }} = args.{{ p.accessor_name }};
 {% endfor %}
@@ -335,7 +430,7 @@ public:
             requires (requires(const T& _v) { {% for p in resolved %}{ _v.{{ p.accessor_name }} }{% if not loop.last %}; {% endif %}{% endfor %}; }
                       && !std::is_same_v<std::decay_t<T>, {{ alias.method_name | first_upper }}Args>)
         auto {{ alias.method_name }}(T args) {
-            auto r = create<{{ alias.qualified_type }}>();
+            auto r = create_<{{ alias.qualified_type }}>();
 {% for p in resolved %}
             r.{{ p.accessor_name }} = args.{{ p.accessor_name }};
 {% endfor %}
@@ -346,7 +441,7 @@ public:
 {% if alias_doc %}
 {{ alias_doc | doc_comment("        ") }}
 {% endif %}
-        auto {{ alias.method_name }}() { return create<{{ alias.qualified_type }}>(); }
+        auto {{ alias.method_name }}() { return create_<{{ alias.qualified_type }}>(); }
 {% endif %}
 {% endfor %}
 {% endfor %}

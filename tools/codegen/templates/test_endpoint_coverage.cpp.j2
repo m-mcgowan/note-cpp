@@ -151,12 +151,12 @@ TEST_CASE("note::api::{{ type_qual }} request builder") {
 {% endif %}
 {% endfor %}
     // Cover ApiResult error constructor (transport failure path).
-    { FailHarness fh; req.execute(fh.nc); }
+    { FailHarness fh; fh.nc.execute(req); }
     // Cover ApiResult error constructor (Notecard error path — {"err":"..."}).
-    { NcErrorHarness neh; req.execute(neh.nc); }
-    // Cover execute(Notecard&) and extra() with all four DynValue types
+    { NcErrorHarness neh; neh.nc.execute(req); }
+    // Cover extra() with all four DynValue types
     // (covers std::visit dispatch for bool/int32_t/double/string_view in build()).
-    req.execute(h.nc);
+    req.execute();
     req.extra("_bool", true);
     req.extra("_int", int32_t{1});
     req.extra("_dbl", 1.5);
@@ -178,9 +178,8 @@ TEST_CASE("note::api::{{ type_qual }} request builder") {
 {% endfor %}
 {% endif %}
 {% if op.supports_cmd %}
-    // Cover command() overloads
+    // Cover command()
     req.command();
-    req.command(h.nc);
 {% endif %}
 }
 

@@ -10,11 +10,11 @@
 #if NOTE_EXTRAS
 #include <note/dyn_field.hpp>
 #endif
+#include <note/notecard.hpp>
 #include <note/field.hpp>
 #include <note/json.hpp>
 #include <note/json_sax.hpp>
 #include <note/binary_request.hpp>
-#include <note/notecard.hpp>
 #include <note/print.hpp>
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
@@ -130,7 +130,8 @@ namespace note::api {
 {{ indent }}};
 {% endif %}
 
-{{ indent }}Notecard* nc_ = nullptr;
+{{ indent }}void* nc_ = nullptr;
+
 {% if op.properties %}
 
 {% for prop in op.properties %}
@@ -214,17 +215,36 @@ namespace note::api {
 {{ indent }}        return *this;
 {{ indent }}    }
 {{ indent }}    {{ prop.nested_type_name }}& operator=(std::nullopt_t) { Field<note::string_view>::reset(); return *this; }
+{% if prop.has_flags %}
+{{ indent }}    {{ prop.nested_type_name }}(const {{ prop.nested_type_name }}& o) : Field<note::string_view>(), flags_(o.flags_) { fixup_(o); }
+{{ indent }}    {{ prop.nested_type_name }}& operator=(const {{ prop.nested_type_name }}& o) { flags_ = o.flags_; fixup_(o); return *this; }
+{{ indent }}    {{ prop.nested_type_name }}({{ prop.nested_type_name }}&& o) : Field<note::string_view>(), flags_(o.flags_) { fixup_(o); }
+{{ indent }}    {{ prop.nested_type_name }}& operator=({{ prop.nested_type_name }}&& o) { flags_ = o.flags_; fixup_(o); return *this; }
+{% else %}
 {{ indent }}    {{ prop.nested_type_name }}(const {{ prop.nested_type_name }}&) = default;
 {{ indent }}    {{ prop.nested_type_name }}& operator=(const {{ prop.nested_type_name }}&) = default;
 {{ indent }}    {{ prop.nested_type_name }}({{ prop.nested_type_name }}&&) = default;
 {{ indent }}    {{ prop.nested_type_name }}& operator=({{ prop.nested_type_name }}&&) = default;
+{% endif %}
 #else
 {{ indent }}    using Field<{{ prop.field_type }}>::Field;
 {{ indent }}    using Field<{{ prop.field_type }}>::operator=;
+{% if prop.has_flags %}
+{{ indent }}    {{ prop.nested_type_name }}(const {{ prop.nested_type_name }}& o) : Field<note::string_view>(), flags_(o.flags_) { fixup_(o); }
+{{ indent }}    {{ prop.nested_type_name }}& operator=(const {{ prop.nested_type_name }}& o) { flags_ = o.flags_; fixup_(o); return *this; }
+{{ indent }}    {{ prop.nested_type_name }}({{ prop.nested_type_name }}&& o) : Field<note::string_view>(), flags_(o.flags_) { fixup_(o); }
+{{ indent }}    {{ prop.nested_type_name }}& operator=({{ prop.nested_type_name }}&& o) { flags_ = o.flags_; fixup_(o); return *this; }
+{% endif %}
 #endif
 {% else %}
 {{ indent }}    using Field<{{ prop.field_type }}>::Field;
 {{ indent }}    using Field<{{ prop.field_type }}>::operator=;
+{% if prop.has_flags %}
+{{ indent }}    {{ prop.nested_type_name }}(const {{ prop.nested_type_name }}& o) : Field<note::string_view>(), flags_(o.flags_) { fixup_(o); }
+{{ indent }}    {{ prop.nested_type_name }}& operator=(const {{ prop.nested_type_name }}& o) { flags_ = o.flags_; fixup_(o); return *this; }
+{{ indent }}    {{ prop.nested_type_name }}({{ prop.nested_type_name }}&& o) : Field<note::string_view>(), flags_(o.flags_) { fixup_(o); }
+{{ indent }}    {{ prop.nested_type_name }}& operator=({{ prop.nested_type_name }}&& o) { flags_ = o.flags_; fixup_(o); return *this; }
+{% endif %}
 {% endif %}
 {% if prop.constants %}
 {% for cname, cinfo in prop.constants.items() %}
@@ -274,6 +294,11 @@ namespace note::api {
 {% endfor %}
 {{ indent }}    };
 {{ indent }}    note::FlagSet<{{ prop.flags | length }}, {{ prop.flags | map('length') | sum + prop.flags | length }}> flags_{flag_defs_};
+{{ indent }}    void fixup_(const {{ prop.nested_type_name }}& o) {
+{{ indent }}        if (flags_) Field<note::string_view>::operator=(flags_.str());
+{{ indent }}        else if (o.has_value()) Field<note::string_view>::operator=(*o);
+{{ indent }}        else Field<note::string_view>::reset();
+{{ indent }}    }
 #if __cplusplus >= 202002L
 {{ indent }}    // consteval: validates that a string literal contains only known flags.
 {{ indent }}    static consteval bool validate_flags(note::string_view sv) {
@@ -588,6 +613,13 @@ namespace note::api {
 {{ indent }}using Response = void;
 {% endif %}
 
+{{ indent }}ApiResult<Response>(*execute_fn_)(void*, const {{ parent_type }}&) = nullptr;
+{{ indent }}auto execute() const { return execute_fn_(nc_, *this); }
+{% if op.supports_cmd %}
+{{ indent }}Result<void>(*command_fn_)(void*, const {{ parent_type }}&) = nullptr;
+{{ indent }}Result<void> command() const { return command_fn_(nc_, *this); }
+{% endif %}
+
 {% if op.has_version_gated_props %}
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
@@ -641,32 +673,6 @@ namespace note::api {
 #pragma GCC diagnostic pop
 {% endif %}
 
-{% if op.binary_transfer and op.binary_transfer.direction_cpp == "Direction::Send" %}
-{{ indent }}auto execute() const {
-{{ indent }}    if (has_binary_data()) { auto copy = *this; return nc_->execute(copy); }
-{{ indent }}    return nc_->execute(*this);
-{{ indent }}}
-{{ indent }}auto execute(Notecard& nc) const {
-{{ indent }}    if (has_binary_data()) { auto copy = *this; return nc.execute(copy); }
-{{ indent }}    return nc.execute(*this);
-{{ indent }}}
-{% elif op.binary_transfer and op.binary_transfer.direction_cpp == "Direction::Receive" %}
-{{ indent }}auto execute() const {
-{{ indent }}    if (has_binary_buffer()) { auto copy = *this; return nc_->execute(copy); }
-{{ indent }}    return nc_->execute(*this);
-{{ indent }}}
-{{ indent }}auto execute(Notecard& nc) const {
-{{ indent }}    if (has_binary_buffer()) { auto copy = *this; return nc.execute(copy); }
-{{ indent }}    return nc.execute(*this);
-{{ indent }}}
-{% else %}
-{{ indent }}auto execute() const { return nc_->execute(*this); }
-{{ indent }}auto execute(Notecard& nc) const { return nc.execute(*this); }
-{% endif %}
-{% if op.supports_cmd %}
-{{ indent }}Result<void> command() const { return nc_->command_typed(*this); }
-{{ indent }}Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
-{% endif %}
 
 #ifdef ARDUINO
 {{ indent }}/// Arduino Printable: prints the JSON request to Serial or any Print stream.

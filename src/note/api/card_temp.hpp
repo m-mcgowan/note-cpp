@@ -7,11 +7,11 @@
 #if NOTE_EXTRAS
 #include <note/dyn_field.hpp>
 #endif
+#include <note/notecard.hpp>
 #include <note/field.hpp>
 #include <note/json.hpp>
 #include <note/json_sax.hpp>
 #include <note/binary_request.hpp>
-#include <note/notecard.hpp>
 #include <note/print.hpp>
 #include <note/safety.hpp>
 #include <note/string_pool.hpp>
@@ -61,7 +61,8 @@ struct CardTemp {
         static constexpr Safety safety = Safety::ReadOnly;
         static constexpr Skus skus{};
 
-        Notecard* nc_ = nullptr;
+        void* nc_ = nullptr;
+
 
         /// If specified, creates a templated `temp.qo` file that gathers
         /// Notecard temperature value at the specified minutes interval. When
@@ -247,6 +248,11 @@ struct CardTemp {
             std::unique_ptr<JsonReader> reader_;
         };
 
+        ApiResult<Response>(*execute_fn_)(void*, const CardTemp::Read&) = nullptr;
+        auto execute() const { return execute_fn_(nc_, *this); }
+        Result<void>(*command_fn_)(void*, const CardTemp::Read&) = nullptr;
+        Result<void> command() const { return command_fn_(nc_, *this); }
+
         void build(JsonBuilder& b) const {
             if (minutes) note::add_flash(b, note::flash(keys_::minutes), *minutes);
             if (status) note::add_flash(b, note::flash(keys_::status), *status);
@@ -259,10 +265,6 @@ struct CardTemp {
 #endif
         }
 
-        auto execute() const { return nc_->execute(*this); }
-        auto execute(Notecard& nc) const { return nc.execute(*this); }
-        Result<void> command() const { return nc_->command_typed(*this); }
-        Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
 
 #ifdef ARDUINO
         /// Arduino Printable: prints the JSON request to Serial or any Print stream.
@@ -325,7 +327,8 @@ struct CardTemp {
         static constexpr Safety safety = Safety::Idempotent;
         static constexpr Skus skus{};
 
-        Notecard* nc_ = nullptr;
+        void* nc_ = nullptr;
+
 
         /// If specified, creates a templated `temp.qo` file that gathers
         /// Notecard temperature value at the specified minutes interval. When
@@ -511,6 +514,11 @@ struct CardTemp {
             std::unique_ptr<JsonReader> reader_;
         };
 
+        ApiResult<Response>(*execute_fn_)(void*, const CardTemp::Configure&) = nullptr;
+        auto execute() const { return execute_fn_(nc_, *this); }
+        Result<void>(*command_fn_)(void*, const CardTemp::Configure&) = nullptr;
+        Result<void> command() const { return command_fn_(nc_, *this); }
+
         void build(JsonBuilder& b) const {
             if (minutes) note::add_flash(b, note::flash(keys_::minutes), *minutes);
             if (status) note::add_flash(b, note::flash(keys_::status), *status);
@@ -523,10 +531,6 @@ struct CardTemp {
 #endif
         }
 
-        auto execute() const { return nc_->execute(*this); }
-        auto execute(Notecard& nc) const { return nc.execute(*this); }
-        Result<void> command() const { return nc_->command_typed(*this); }
-        Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
 
 #ifdef ARDUINO
         /// Arduino Printable: prints the JSON request to Serial or any Print stream.
@@ -589,7 +593,8 @@ struct CardTemp {
         static constexpr Safety safety = Safety::Destructive;
         static constexpr Skus skus{};
 
-        Notecard* nc_ = nullptr;
+        void* nc_ = nullptr;
+
 
         /// If specified, creates a templated `temp.qo` file that gathers
         /// Notecard temperature value at the specified minutes interval. When
@@ -762,6 +767,11 @@ struct CardTemp {
             std::unique_ptr<JsonReader> reader_;
         };
 
+        ApiResult<Response>(*execute_fn_)(void*, const CardTemp::Stop&) = nullptr;
+        auto execute() const { return execute_fn_(nc_, *this); }
+        Result<void>(*command_fn_)(void*, const CardTemp::Stop&) = nullptr;
+        Result<void> command() const { return command_fn_(nc_, *this); }
+
         void build(JsonBuilder& b) const {
             if (minutes) note::add_flash(b, note::flash(keys_::minutes), *minutes);
             if (status) note::add_flash(b, note::flash(keys_::status), *status);
@@ -774,10 +784,6 @@ struct CardTemp {
 #endif
         }
 
-        auto execute() const { return nc_->execute(*this); }
-        auto execute(Notecard& nc) const { return nc.execute(*this); }
-        Result<void> command() const { return nc_->command_typed(*this); }
-        Result<void> command(Notecard& nc) const { return nc.command_typed(*this); }
 
 #ifdef ARDUINO
         /// Arduino Printable: prints the JSON request to Serial or any Print stream.

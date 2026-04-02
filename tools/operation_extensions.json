@@ -12,6 +12,14 @@
           "mode_prefix": "arm"
         },
         {
+          "name": "rearm",
+          "description": "Idempotent arm — arms ATTN if not already armed, or resets mode/files/seconds to the values given. Safe to call repeatedly (unlike arm which briefly disarms).",
+          "fields": ["mode", "files", "seconds", "on"],
+          "response": ["set"],
+          "supports_cmd": true,
+          "mode_prefix": "rearm"
+        },
+        {
           "name": "watchdog",
           "description": "Configure ATTN as a watchdog timer.",
           "implicit": {"mode": "watchdog"},

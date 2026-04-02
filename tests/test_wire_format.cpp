@@ -216,19 +216,19 @@ TEST_CASE("Direct field assignment produces correct wire format") {
 // req.execute(nc) member method
 // ---------------------------------------------------------------------------
 
-TEST_CASE("req.execute(nc) works like nc.execute(req)") {
+TEST_CASE("nc.execute(req) works with raw request types") {
     TestHarness h;
     note::api::HubSet req;
     req.product("test");
-    req.execute(h.nc);
+    h.nc.execute(req);
     REQUIRE(h.last_request == R"({"req":"hub.set","product":"test"})");
 }
 
-TEST_CASE("Typed command_typed via req.command(nc)") {
+TEST_CASE("nc.command_typed(req) works with raw request types") {
     TestHarness h;
     note::api::HubSet req;
     req.product("test");
-    req.command(h.nc);
+    h.nc.command_typed(req);
     REQUIRE(h.last_request == R"({"cmd":"hub.set","product":"test"})");
 }
 
@@ -540,8 +540,7 @@ TEST_CASE("DX: designated initializer with validated field") {
 
     // Designated init — literal validated at compile time
     note::api::HubSet req{.mode = "periodic"};
-    req.nc_ = &h.nc;
-    req.execute();
+    h.nc.execute(req);
     REQUIRE(h.last_request == R"({"req":"hub.set","mode":"periodic"})");
 
     // Invalid would fail at compile time:

@@ -5,6 +5,8 @@
 #include "test_json_backend.hpp"
 #include <note/api.hpp>
 #include <note/notecard_api.hpp>
+#include <note/streaming_transport.hpp>
+#include <note/transport/serial.hpp>
 #include <note/units.hpp>
 
 namespace {
@@ -135,13 +137,43 @@ TEST_CASE("Issue 5: literals work with request fields") {
 }
 
 // ---------------------------------------------------------------------------
-// Issue 6: raw JSON passthrough via transport
+// ---------------------------------------------------------------------------
+// Issue 1b: arduino::Notecard::begin() wiring
+// The HAL (transport::NotecardSerial<>) must go through StreamingTransport
+// before reaching NotecardApi::begin(IStreamingTransport&).
 // ---------------------------------------------------------------------------
 
-TEST_CASE("Issue 6: raw JSON passthrough via notecard().transport()") {
+TEST_CASE("Issue 1b: transport::NotecardSerial is a TransportHal, not IStreamingTransport") {
+    // Verify that the transport types are what we expect
+    static_assert(!std::is_base_of_v<note::IStreamingTransport, note::transport::NotecardSerial<>>,
+        "NotecardSerial should NOT implement IStreamingTransport directly");
+    static_assert(std::is_base_of_v<note::TransportHal, note::transport::NotecardSerial<>>,
+        "NotecardSerial should be a TransportHal");
+    static_assert(std::is_base_of_v<note::IStreamingTransport, note::StreamingTransport>,
+        "StreamingTransport should implement IStreamingTransport");
+    REQUIRE(true);
+}
+
+// ---------------------------------------------------------------------------
+// Issue 6: raw JSON passthrough
+// The migration from note-c needs a way to send pre-formatted JSON strings,
+// e.g. for serial passthrough protocols where a Python test script sends
+// arbitrary JSON to the Notecard via the host firmware.
+// ---------------------------------------------------------------------------
+
+TEST_CASE("Issue 6: raw JSON request passthrough") {
     Harness h;
-    // Demonstrates the escape hatch for raw JSON
-    h.nc.command("card.version", [](note::JsonBuilder&) {});
-    // The command was sent through the transport
-    REQUIRE(h.last_req.find("card.version") != std::string::npos);
+    // note-c equivalent: NoteRequestResponseJSON / requestAndResponse(JParse(json))
+    // Sends pre-formatted JSON, returns response as string_view.
+    auto rsp = h.nc.transact(R"({"req":"card.version"})");
+    REQUIRE(rsp);
+    REQUIRE(h.last_req == R"({"req":"card.version"})");
+}
+
+TEST_CASE("Issue 6: raw JSON command passthrough") {
+    Harness h;
+    // note-c equivalent: sendRequest(JParse(json)) — fire and forget
+    auto result = h.nc.send(R"({"cmd":"hub.set","product":"com.example"})");
+    REQUIRE(result);
+    REQUIRE(h.last_req == R"({"cmd":"hub.set","product":"com.example"})");
 }

@@ -16,6 +16,7 @@
 
 #include <note/allocator.hpp>
 #include <note/notecard_api.hpp>
+#include <note/streaming_transport.hpp>
 #include <note/arduino/serial.hpp>
 #include <note/arduino/i2c.hpp>
 
@@ -44,8 +45,9 @@ public:
     template<typename SerialT>
     void begin(SerialT& uart, unsigned long baud = 9600) {
         serial_hal_ = std::make_unique<SerialHal<SerialT>>(uart, baud);
-        serial_transport_ = std::make_unique<transport::NotecardSerial<>>(*serial_hal_);
-        Base::begin(*serial_transport_);
+        serial_hal_transport_ = std::make_unique<transport::NotecardSerial<>>(*serial_hal_);
+        serial_streaming_ = std::make_unique<StreamingTransport>(*serial_hal_transport_);
+        Base::begin(*serial_streaming_);
     }
 
     /// Begin with serial transport and explicit allocator.
@@ -54,8 +56,9 @@ public:
     template<typename SerialT>
     void begin(SerialT& uart, unsigned long baud, Allocator alloc) {
         serial_hal_ = std::make_unique<SerialHal<SerialT>>(uart, baud);
-        serial_transport_ = std::make_unique<transport::NotecardSerial<>>(*serial_hal_);
-        Base::begin(*serial_transport_, alloc);
+        serial_hal_transport_ = std::make_unique<transport::NotecardSerial<>>(*serial_hal_);
+        serial_streaming_ = std::make_unique<StreamingTransport>(*serial_hal_transport_);
+        Base::begin(*serial_streaming_, alloc);
     }
 
     /// Begin with I2C transport (default address).
@@ -83,14 +86,17 @@ public:
 private:
     void begin_i2c(TwoWire& wire, uint8_t address, Allocator alloc = {}) {
         i2c_hal_ = std::make_unique<I2CHal>(wire, address);
-        i2c_transport_ = std::make_unique<transport::NotecardI2c<>>(*i2c_hal_);
-        Base::begin(*i2c_transport_, alloc);
+        i2c_hal_transport_ = std::make_unique<transport::NotecardI2c<>>(*i2c_hal_);
+        i2c_streaming_ = std::make_unique<StreamingTransport>(*i2c_hal_transport_);
+        Base::begin(*i2c_streaming_, alloc);
     }
 
     std::unique_ptr<transport::SerialHal> serial_hal_;
-    std::unique_ptr<transport::NotecardSerial<>> serial_transport_;
+    std::unique_ptr<transport::NotecardSerial<>> serial_hal_transport_;
+    std::unique_ptr<StreamingTransport> serial_streaming_;
     std::unique_ptr<I2CHal> i2c_hal_;
-    std::unique_ptr<transport::NotecardI2c<>> i2c_transport_;
+    std::unique_ptr<transport::NotecardI2c<>> i2c_hal_transport_;
+    std::unique_ptr<StreamingTransport> i2c_streaming_;
 };
 
 } // namespace note::arduino

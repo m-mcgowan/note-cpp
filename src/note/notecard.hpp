@@ -243,6 +243,22 @@ public:
         if (build_fn) build_fn(builder);
         return transport_->send(builder.to_view());
     }
+    // Raw JSON passthrough — send pre-formatted JSON, get response as string_view.
+    // Goes through the transport layer (framing, CRC) but does not parse or
+    // validate the JSON content. Equivalent to note-c's NoteTransactionString.
+    Result<string_view> transact(string_view json) {
+        if (!transport_)
+            return make_error(Error::NotReady, NOTE_ERR("no buffered transport configured"));
+        return transport_->transact(json, default_timeout_ms_);
+    }
+
+    // Raw JSON fire-and-forget — send pre-formatted JSON with no response.
+    Result<void> send(string_view json) {
+        if (!transport_)
+            return make_error(Error::NotReady, NOTE_ERR("no buffered transport configured"));
+        return transport_->send(json);
+    }
+
 #endif // NOTE_NO_STD_STRING
 
     void set_default_timeout(uint32_t ms) { default_timeout_ms_ = ms; }

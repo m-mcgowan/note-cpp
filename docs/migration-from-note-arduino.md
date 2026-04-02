@@ -513,33 +513,35 @@ nc.card.attn().arm()
     .seconds(120_s)
     .execute();
 
-// Re-arm (idempotent — safe to call every
-// time ATTN fires to re-enable it)
-nc.card.attn().rearm()
-    .connected()
-    .motion()
-    .seconds(120_s)
-    .execute();
-
 // Disarm all triggers
 nc.card.attn().disarm().execute();
+
+
+
+
+```
+
+</td></tr>
+</table>
+
+Additional ATTN operations:
+
+```cpp
+// Re-arm (idempotent — safe to call every time ATTN fires)
+nc.card.attn().rearm()
+    .connected().motion().seconds(120_s)
+    .execute();
 
 // Disable/enable ATTN processing entirely
 nc.card.attn().off().execute();
 nc.card.attn().on().execute();
-```
 
-Or using the raw Request type for full control:
-
-```cpp
+// Raw Request for full control (string validated at compile time)
 note::api::CardAttn::Request req;
 req.mode = "arm,connected,motion";
 req.seconds = 120;
 nc.execute(req);
 ```
-
-</td></tr>
-</table>
 
 **Key differences:**
 - No manual string concatenation for mode flags. In note-c, you build

@@ -34,6 +34,21 @@ foreach(src ${COMPILE_FAIL_SOURCES})
     set_tests_properties("compile-fail/${test_name}" PROPERTIES WILL_FAIL TRUE)
 endforeach()
 
+# Compile-check tests: verify that expected includes/features work.
+# Each .cpp file should compile successfully. The test passes if compilation succeeds.
+file(GLOB COMPILE_CHECK_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/compile_check/*.cpp")
+foreach(src ${COMPILE_CHECK_SOURCES})
+    get_filename_component(test_name ${src} NAME_WE)
+    add_test(
+        NAME "compile-check/${test_name}"
+        COMMAND ${CMAKE_CXX_COMPILER}
+            -std=c++20 -fsyntax-only
+            -I${NOTE_CPP_ROOT}/include
+            ${src}
+    )
+    # No WILL_FAIL — these must succeed
+endforeach()
+
 # Arduino build (same sources, ARDUINO defined globally like a real Arduino toolchain).
 # Force-include the stubs header so Print/Printable are defined before any note-cpp header.
 add_executable(note-cpp-tests-arduino ${ALL_TEST_SOURCES})

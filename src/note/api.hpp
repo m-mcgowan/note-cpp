@@ -3,6 +3,7 @@
 
 #include <note/notecard.hpp>
 #include <note/target.hpp>
+#include <note/units.hpp>
 #include <note/api/card_attn.hpp>
 #include <note/api/card_aux.hpp>
 #include <note/api/card_aux_serial.hpp>

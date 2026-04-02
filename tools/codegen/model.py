@@ -36,6 +36,7 @@ class PropertyDef:
     constants: dict | None = None  # {"reset": {"value": -1, "description": "..."}}
     format: str | None = None  # "voltage-variable" or "flags"
     flags: list[str] | None = None  # ["arm", "connected", ...] for x-flags fields
+    valid_values: list[str] | None = None  # ["arm", "rearm", ...] for consteval validator (superset of flags)
     sub_descriptions: list[SubDescription] | None = None  # per-value docs
     is_array: bool = False  # True for type:array fields (use ArrayField)
     array_max_items: int = 8  # Max elements for ArrayField (overridable via x-max-items)

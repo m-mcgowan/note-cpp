@@ -226,6 +226,18 @@
                       }
                     ],
                     "x-flags": [
+                      "auxgpio",
+                      "connected",
+                      "env",
+                      "files",
+                      "location",
+                      "motion",
+                      "motionchange",
+                      "signal",
+                      "usb",
+                      "wireless"
+                    ],
+                    "x-valid-values": [
                       "arm",
                       "rearm",
                       "disarm",

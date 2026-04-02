@@ -6,9 +6,6 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
-#ifndef NOTE_NO_STD_STRING
-#include <string>
-#endif
 
 // note::transport::NotecardSerial
 //

@@ -136,10 +136,8 @@ public:
             }
         }
 
-        // Buffered fallback: requires a JsonBackend for build/parse.
-        // Guarded by NOTE_NO_STD_STRING — when defined, the buffered path
-        // (which needs std::string for response buffering) is unavailable.
-#ifndef NOTE_NO_STD_STRING
+        // Buffered fallback: requires a JsonBackend + buffered transport.
+#ifndef NOTE_NO_BUFFERED
         if (backend_) {
             return execute_buffered(req);
         }
@@ -156,7 +154,7 @@ public:
     /// Execute a mutable request — checks for attached binary buffers.
     template<typename RequestT>
     ApiResult<typename RequestT::Response> execute(RequestT& req) {
-#ifndef NOTE_NO_STD_STRING
+#ifndef NOTE_NO_BUFFERED
         if constexpr (detail::has_binary_src<RequestT>::value) {
             if (req.has_binary_data()) {
                 return do_binary_send(req);
@@ -181,10 +179,9 @@ public:
         return result;
     }
 
-#ifndef NOTE_NO_STD_STRING
+#if !defined(NOTE_NO_STD_STRING) && !defined(NOTE_NO_STD_FUNCTION)
     // Ad-hoc request with a builder callback.
-    // Returns a unique_ptr<JsonReader> for backward compatibility.
-    // The reader's lifetime is independent — it owns its data.
+    // Requires std::function and a buffered transport + backend.
     Result<std::unique_ptr<JsonReader>> request(
             string_view req_type,
             std::function<void(JsonBuilder&)> build_fn = {}) {
@@ -204,7 +201,7 @@ public:
         return Result<std::unique_ptr<JsonReader>>(std::move(reader));
     }
 
-#endif // NOTE_NO_STD_STRING
+#endif // !NOTE_NO_STD_STRING && !NOTE_NO_STD_FUNCTION
 
     // Fire-and-forget typed command (generated request types).
     template<typename RequestT>
@@ -227,8 +224,9 @@ public:
         return transport_->send(builder.to_view());
     }
 
-#ifndef NOTE_NO_STD_STRING
-    // Fire-and-forget command.
+#if !defined(NOTE_NO_STD_STRING) && !defined(NOTE_NO_STD_FUNCTION)
+    // Fire-and-forget command with builder callback.
+    // Requires std::function.
     Result<void> command(string_view cmd_type,
                          std::function<void(JsonBuilder&)> build_fn = {}) {
         if (streaming_transport_) {
@@ -244,6 +242,8 @@ public:
         if (build_fn) build_fn(builder);
         return transport_->send(builder.to_view());
     }
+#endif // !NOTE_NO_STD_STRING && !NOTE_NO_STD_FUNCTION
+
     /// Validated JSON passthrough — allocates response buffer from the
     /// registered allocator (heap by default, or arena). The string_view
     /// is valid until the next transact() call or Notecard destruction.
@@ -289,8 +289,6 @@ public:
         return make_error(Error::NotReady, NOTE_ERR("no transport configured"));
     }
 
-#endif // NOTE_NO_STD_STRING
-
     void set_default_timeout(uint32_t ms) { default_timeout_ms_ = ms; }
     uint32_t default_timeout() const { return default_timeout_ms_; }
 
@@ -300,7 +298,7 @@ public:
     JsonBackend& backend() { return *backend_; }
 
 private:
-#ifndef NOTE_NO_STD_STRING
+#ifndef NOTE_NO_BUFFERED
     template<typename RequestT>
     ApiResult<typename RequestT::Response> do_binary_send(RequestT& req) {
         auto src = req.binary_src_;
@@ -444,7 +442,7 @@ private:
         return st->send_raw(json);
     }
 
-#endif // NOTE_NO_STD_STRING
+#endif // NOTE_NO_BUFFERED
 
     /// Buffered execute: build JSON via backend, transact, parse response.
     /// Separated from execute() so LTO can eliminate it when backend_ is null.

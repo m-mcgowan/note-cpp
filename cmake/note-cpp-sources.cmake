@@ -87,6 +87,7 @@ set(NOTE_CPP_TEST_SOURCES
     test_channel.cpp
     test_cobs.cpp
     test_connection.cpp
+    test_debug.cpp
     test_flag_set.cpp
     test_intent_flags.cpp
     test_json_buf.cpp

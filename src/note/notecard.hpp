@@ -2,6 +2,7 @@
 
 #include "allocator.hpp"
 #include "binary_request.hpp"
+#include "debug.hpp"
 #include "owned_buffer.hpp"
 #include "json.hpp"
 #include "md5.hpp"
@@ -102,12 +103,14 @@ public:
     ApiResult<typename RequestT::Response> execute(const RequestT& req) {
         using Rsp = typename RequestT::Response;
 
-        if (!transport_ && !streaming_transport_)
+        debug_timing(debug_, TimingEvent::TransactionBegin, RequestT::notecard_request);
+
+        if (!transport_ && !streaming_transport_) {
+            debug_timing(debug_, TimingEvent::TransactionEnd, RequestT::notecard_request);
             return Unexpected(make_error(Error::NotReady, NOTE_ERR("no transport configured")));
+        }
 
         // Full streaming path: SAX-parse response directly from transport.
-        // Requires both streaming transport and an allocator (for string interning).
-        // Also requires Rsp to have a Sink type (generated responses do; ad-hoc ones don't).
         if constexpr (std::is_void_v<Rsp> || detail::has_sink<Rsp>::value) {
             if (streaming_transport_ && alloc_.has_value()) {
                 // Type-erase the build lambda for the non-template core.
@@ -140,9 +143,12 @@ public:
         // Buffered fallback: requires a JsonBackend + buffered transport.
 #ifndef NOTE_NO_BUFFERED
         if (backend_) {
-            return execute_buffered(req);
+            auto result = execute_buffered(req);
+            debug_timing(debug_, TimingEvent::TransactionEnd, RequestT::notecard_request);
+            return result;
         }
 #endif
+        debug_timing(debug_, TimingEvent::TransactionEnd, RequestT::notecard_request);
         return Unexpected(make_error(Error::NotReady, NOTE_ERR("no backend or streaming transport configured")));
     }
 
@@ -326,6 +332,16 @@ public:
     void set_default_timeout(uint32_t ms) { default_timeout_ms_ = ms; }
     uint32_t default_timeout() const { return default_timeout_ms_; }
 
+    /// Set a debug listener for observability (wire data, timing, memory).
+    /// Pass a default-constructed DebugListener or call clear_debug() to disable.
+    void set_debug(DebugListener d) { debug_ = d; }
+
+    /// Disable all debug callbacks.
+    void clear_debug() { debug_ = {}; }
+
+    /// Access the current debug listener.
+    const DebugListener& debug() const { return debug_; }
+
     /// Access the underlying transport.
     IBufferedTransport& transport() { return *transport_; }
 
@@ -484,12 +500,17 @@ private:
 
         Result<string_view> rsp = make_error(Error::NotReady, "");
         {
+            debug_timing(debug_, TimingEvent::BuildBegin, RequestT::notecard_request);
             auto& builder = backend_->get_builder();
             builder.add("req", RequestT::notecard_request);
             req.build(builder);
-            rsp = transport_->transact(builder.to_view(), default_timeout_ms_);
+            auto req_json = builder.to_view();
+            debug_timing(debug_, TimingEvent::BuildEnd, RequestT::notecard_request);
+            debug_wire(debug_, req_json, WireDirection::Send);
+            rsp = transport_->transact(req_json, default_timeout_ms_);
         }
         if (!rsp) return Unexpected(rsp.error());
+        debug_wire(debug_, *rsp, WireDirection::Receive);
 
         auto& reader = backend_->get_reader(*rsp);
         if (reader.has_error()) {
@@ -544,6 +565,7 @@ private:
     IStreamingTransport* streaming_transport_ = nullptr;
     uint32_t default_timeout_ms_ = 10000;
     std::optional<Allocator> alloc_;
+    DebugListener debug_{};
     byte_span cobs_buf_{};          // optional external COBS working buffer
 #ifndef NOTE_NO_MD5
     PlatformMd5 platform_md5_{};    // default MD5 implementation

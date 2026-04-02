@@ -17,6 +17,7 @@
 #include <note/allocator.hpp>
 #include <note/notecard_api.hpp>
 #include <note/streaming_transport.hpp>
+#include <note/arduino/debug.hpp>
 #include <note/arduino/serial.hpp>
 #include <note/arduino/i2c.hpp>
 
@@ -81,6 +82,16 @@ public:
     /// Begin with I2C transport, address, and explicit allocator.
     void begin(TwoWire& wire, uint8_t address, Allocator alloc) {
         begin_i2c(wire, address, alloc);
+    }
+
+    /// Enable wire debug output to an Arduino Print (e.g. Serial).
+    void setDebugOutput(Print& out) {
+        Base::notecard().set_debug(arduino::serial_debug(out));
+    }
+
+    /// Disable debug output.
+    void clearDebugOutput() {
+        Base::notecard().clear_debug();
     }
 
 private:

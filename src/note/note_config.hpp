@@ -46,4 +46,13 @@
 #    define NOTE_SHORT_ERRORS 1
 #  endif
 
+#  ifndef NOTE_DEBUG_ENABLED
+#    define NOTE_DEBUG_ENABLED 0
+#  endif
+
 #endif // NOTE_MINIMAL
+
+// Default: runtime debug available (can be activated with set_debug()).
+#ifndef NOTE_DEBUG_ENABLED
+#define NOTE_DEBUG_ENABLED 1
+#endif

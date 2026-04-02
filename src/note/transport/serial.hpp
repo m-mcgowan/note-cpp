@@ -99,7 +99,15 @@ public:
         : policy(pol), hal_(hal) {}
 
     bool transmit(const uint8_t* data, size_t len) override {
-        return hal_.transmit(data, len);
+        size_t offset = 0;
+        while (offset < len) {
+            size_t chunk = std::min(len - offset, size_t(policy.segment_max_len));
+            if (!hal_.transmit(data + offset, chunk)) return false;
+            offset += chunk;
+            if (offset < len && policy.segment_delay_ms > 0)
+                hal_.delay(policy.segment_delay_ms);
+        }
+        return true;
     }
 
     Result<size_t> read(uint8_t* buf, size_t max_len, uint32_t timeout_ms) override {

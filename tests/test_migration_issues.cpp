@@ -50,15 +50,29 @@ TEST_CASE("Issue 1: NotecardApi::begin(IStreamingTransport&) without allocator")
 // Issue 2: "rearm" rejected by consteval mode validator on base Request
 // ---------------------------------------------------------------------------
 
-TEST_CASE("Issue 2: rearm as string on base Request type") {
+TEST_CASE("Issue 2: rearm accepted by mode consteval validator") {
     Harness h;
     note::api::CardAttn::Request req;
-    // "rearm" is a valid mode value per the OpenAPI spec.
-    // The consteval validator on mode_t should accept it.
-    // Workaround: use note::string_view("rearm") to bypass consteval.
-    req.mode = note::string_view("rearm");
+    // "rearm" is now accepted by the consteval validator — no workaround needed.
+    req.mode = "rearm";
     h.nc.execute(req);
     REQUIRE(h.last_req.find("\"mode\":\"rearm\"") != std::string::npos);
+}
+
+TEST_CASE("Issue 2: arm,connected,files accepted by mode validator") {
+    Harness h;
+    note::api::CardAttn::Request req;
+    req.mode = "arm,connected,files";
+    h.nc.execute(req);
+    REQUIRE(h.last_req.find("\"mode\":\"arm,connected,files\"") != std::string::npos);
+}
+
+TEST_CASE("Issue 2: disarm,-all accepted by mode validator") {
+    Harness h;
+    note::api::CardAttn::Request req;
+    req.mode = "disarm,-all";
+    h.nc.execute(req);
+    REQUIRE(h.last_req.find("\"mode\":\"disarm,-all\"") != std::string::npos);
 }
 
 TEST_CASE("Issue 2 resolved: use Rearm intent instead") {

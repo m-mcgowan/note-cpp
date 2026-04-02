@@ -6,12 +6,12 @@
             "put": {
                 "properties": {
                     "mode": {
-                        "x-flags": ["auxgpio", "connected", "env", "files", "location", "motion", "motionchange", "signal", "usb", "wireless"]
-                    }
-                },
-                "x-intent-patches": {
-                    "arm": {
-                        "flags": ["auxgpio", "connected", "env", "files", "location", "motion", "motionchange", "signal", "usb", "wireless"]
+                        "x-flags": [
+                            "arm", "rearm", "disarm", "sleep", "watchdog",
+                            "-all", "-env", "-files", "-location", "-motion", "-usb",
+                            "auxgpio", "connected", "env", "files", "location",
+                            "motion", "motionchange", "signal", "usb", "wireless"
+                        ]
                     }
                 }
             }

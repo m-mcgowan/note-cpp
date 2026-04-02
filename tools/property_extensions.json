@@ -1,6 +1,14 @@
 {
   "$comment": "Per-property extensions not in upstream notecard-schema. Merged into the OpenAPI spec by schema_to_openapi.py during conversion. Keys are endpoint names, values map property wire-names to extension objects.",
   "card.attn": {
+    "mode": {
+      "x-flags": [
+        "arm", "rearm", "disarm", "sleep", "watchdog",
+        "-all", "-env", "-files", "-location", "-motion", "-usb",
+        "auxgpio", "connected", "env", "files", "location",
+        "motion", "motionchange", "signal", "usb", "wireless"
+      ]
+    },
     "on": { "x-action": "persist" }
   },
   "card.aux": {

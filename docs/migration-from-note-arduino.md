@@ -513,21 +513,29 @@ nc.card.attn().arm()
     .seconds(120_s)
     .execute();
 
-// Disarm
+// Re-arm (idempotent — safe to call every
+// time ATTN fires to re-enable it)
+nc.card.attn().rearm()
+    .connected()
+    .motion()
+    .seconds(120_s)
+    .execute();
+
+// Disarm all triggers
 nc.card.attn().disarm().execute();
 
-
-
-
+// Disable/enable ATTN processing entirely
+nc.card.attn().off().execute();
+nc.card.attn().on().execute();
 ```
 
-Or using the intent-based types:
+Or using the raw Request type for full control:
 
 ```cpp
-nc.execute(
-    CardAttn::Arm{}.connected());
-
-nc.execute(CardAttn::Disarm{});
+note::api::CardAttn::Request req;
+req.mode = "arm,connected,motion";
+req.seconds = 120;
+nc.execute(req);
 ```
 
 </td></tr>
@@ -537,10 +545,11 @@ nc.execute(CardAttn::Disarm{});
 - No manual string concatenation for mode flags. In note-c, you build
   `"arm,connected,motion"` yourself — get the commas or names wrong and it
   fails silently. note-cpp has named methods (`.connected()`, `.motion()`)
-  and flag constants (`note::attn::arm | note::attn::connected`).
-- Intent-based types (`Arm`, `Disarm`, `Sleep`, `Watchdog`) expose only the
-  fields relevant to that operation. You can't accidentally set a sleep
-  timeout on a disarm request.
+  and flag constants (`note::attn::connected | note::attn::motion`).
+- Intent-based types (`Arm`, `Rearm`, `Disarm`, `Sleep`, `Watchdog`, `Off`, `On`)
+  expose only the fields relevant to that operation.
+- The base `Request` type accepts all mode values if you need full control —
+  string literals are validated at compile time (C++20).
 
 ## ATTN pin — sleep with state
 

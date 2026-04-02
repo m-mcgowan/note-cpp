@@ -7,6 +7,7 @@
           "name": "arm",
           "description": "Arm ATTN pin for interrupt on an event trigger.",
           "fields": ["mode", "files", "seconds", "on"],
+          "flags": ["auxgpio", "connected", "env", "files", "location", "motion", "motionchange", "signal", "usb", "wireless"],
           "response": ["set"],
           "supports_cmd": true,
           "mode_prefix": "arm"
@@ -15,6 +16,7 @@
           "name": "rearm",
           "description": "Idempotent arm — arms ATTN if not already armed, or resets mode/files/seconds to the values given. Safe to call repeatedly (unlike arm which briefly disarms).",
           "fields": ["mode", "files", "seconds", "on"],
+          "flags": ["auxgpio", "connected", "env", "files", "location", "motion", "motionchange", "signal", "usb", "wireless"],
           "response": ["set"],
           "supports_cmd": true,
           "mode_prefix": "rearm"

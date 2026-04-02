@@ -200,6 +200,16 @@ public:
         if (!item || !cJSON_IsString(item)) return def;
         return string_view(item->valuestring);
     }
+    size_t get_string_array(string_view key, string_view* out, size_t max) const override {
+        auto* item = cJSON_GetObjectItemCaseSensitive(root_, zkey(key));
+        if (!item || !cJSON_IsArray(item)) return 0;
+        size_t n = 0;
+        for (auto* elem = item->child; elem && n < max; elem = elem->next) {
+            if (cJSON_IsString(elem))
+                out[n++] = string_view(elem->valuestring);
+        }
+        return n;
+    }
     std::unique_ptr<JsonReader> get_object(string_view key) const override {
         auto* item = cJSON_GetObjectItemCaseSensitive(root_, zkey(key));
         if (!item || !cJSON_IsObject(item)) return nullptr;

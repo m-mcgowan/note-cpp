@@ -100,11 +100,12 @@ struct BufferedHarness {
 TEST_CASE("note::api::CardAttn::Request transport equivalence") {
     SECTION("streaming") {
         StreamingHarness sh;
-        sh.hal.queue_response(R"({"off":true,"payload":"x-payload","set":true,"time":42})");
+        sh.hal.queue_response(R"({"files":["x-files-a","x-files-b"],"off":true,"payload":"x-payload","set":true,"time":42})");
     auto req = sh.api.card.attn().request();
 
         auto rsp = req.execute();
         REQUIRE(rsp.has_value());
+        CHECK(rsp.files.size() == 2);
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
         CHECK(rsp.off == true);
 #endif
@@ -113,11 +114,12 @@ TEST_CASE("note::api::CardAttn::Request transport equivalence") {
         CHECK(rsp.time == 42);
     }
     SECTION("buffered") {
-        BufferedHarness bh(R"({"off":true,"payload":"x-payload","set":true,"time":42})");
+        BufferedHarness bh(R"({"files":["x-files-a","x-files-b"],"off":true,"payload":"x-payload","set":true,"time":42})");
     auto req = bh.api.card.attn().request();
 
         auto rsp = req.execute();
         REQUIRE(rsp.has_value());
+        CHECK(rsp.files.size() == 2);
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
         CHECK(rsp.off == true);
 #endif
@@ -300,22 +302,24 @@ TEST_CASE("note::api::CardAttn::On transport equivalence (void)") {
 TEST_CASE("note::api::CardAttn::Query transport equivalence") {
     SECTION("streaming") {
         StreamingHarness sh;
-        sh.hal.queue_response(R"({"off":true,"set":true})");
+        sh.hal.queue_response(R"({"files":["x-files-a","x-files-b"],"off":true,"set":true})");
     auto req = sh.api.card.attn().query();
 
         auto rsp = req.execute();
         REQUIRE(rsp.has_value());
+        CHECK(rsp.files.size() == 2);
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
         CHECK(rsp.off == true);
 #endif
         CHECK(rsp.set == true);
     }
     SECTION("buffered") {
-        BufferedHarness bh(R"({"off":true,"set":true})");
+        BufferedHarness bh(R"({"files":["x-files-a","x-files-b"],"off":true,"set":true})");
     auto req = bh.api.card.attn().query();
 
         auto rsp = req.execute();
         REQUIRE(rsp.has_value());
+        CHECK(rsp.files.size() == 2);
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
         CHECK(rsp.off == true);
 #endif

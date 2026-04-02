@@ -73,7 +73,7 @@
           "name": "query",
           "description": "Query current ATTN state and configuration.",
           "fields": ["verify"],
-          "response": ["set", "off"],
+          "response": ["set", "off", "files"],
           "safety": "readonly",
           "supports_cmd": false
         }

@@ -117,6 +117,13 @@ public:
 
     virtual std::unique_ptr<JsonReader> get_object(string_view key) const = 0;
 
+    /// Read a JSON array of strings. Returns the number of elements read.
+    /// Default: 0 (backends override to implement).
+    virtual size_t get_string_array(string_view key, string_view* out, size_t max) const {
+        (void)key; (void)out; (void)max;
+        return 0;
+    }
+
     virtual bool has_error() const = 0;
     virtual string_view get_error() const = 0;
 };

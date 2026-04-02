@@ -18,6 +18,7 @@
 #include <note/types.hpp>
 #include <note/flag_set.hpp>
 #include <note/array_field.hpp>
+#include <note/response_array.hpp>
 #include <note/progmem.hpp>
 #include <note/target.hpp>
 
@@ -112,6 +113,7 @@ struct CardAttn {
             static constexpr char seconds[] NOTE_FLASH_ATTR = "seconds";
             static constexpr char start[] NOTE_FLASH_ATTR = "start";
             static constexpr char verify[] NOTE_FLASH_ATTR = "verify";
+            static constexpr char rsp_files[] NOTE_FLASH_ATTR = "files";
             static constexpr char rsp_off[] NOTE_FLASH_ATTR = "off";
             static constexpr char rsp_payload[] NOTE_FLASH_ATTR = "payload";
             static constexpr char rsp_set[] NOTE_FLASH_ATTR = "set";
@@ -396,6 +398,10 @@ struct CardAttn {
 
         /// Successful response
         struct Response {
+            /// A list of files changed since `file` attention mode was set. In
+            /// addition, this field will include keywords to signify the
+            /// occurrence of other attention mode triggers:
+            note::ResponseArray<note::string_view, 8> files{};
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
             /// This field is present and set to `true` if ATTN processing has
             /// been disabled with the `off` argument.
@@ -421,6 +427,7 @@ struct CardAttn {
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
+                { note::string_view arr_[8]; auto n_ = reader_->get_string_array("files", arr_, 8); for (size_t i_ = 0; i_ < n_; ++i_) rsp.files.add(arr_[i_]); }
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
                 rsp.off = reader_->get_bool("off");
 #endif
@@ -439,6 +446,7 @@ struct CardAttn {
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
             static Response parse(const JsonReader& reader_) {
                 Response rsp;
+                { note::string_view arr_[8]; auto n_ = reader_.get_string_array("files", arr_, 8); for (size_t i_ = 0; i_ < n_; ++i_) rsp.files.add(arr_[i_]); }
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
                 rsp.off = reader_.get_bool("off");
 #endif
@@ -458,8 +466,18 @@ struct CardAttn {
                 Response& rsp;
                 ::note::StringPool& pool_;
                 Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
+                enum class ArrayCtx_ : uint8_t { none, files } array_ctx_{};
+                void on_array_begin(::note::string_view k_) {
+                    if (note::flash(keys_::rsp_files) == k_) { array_ctx_ = ArrayCtx_::files; return; }
+                }
+                void on_array_end(::note::string_view) { array_ctx_ = ArrayCtx_::none; }
                 void on_string(::note::string_view k_, ::note::string_view v_) {
                     v_ = pool_.intern(v_);
+                    if (array_ctx_ != ArrayCtx_::none) {
+                        // Array element — dispatch based on current array context
+                        if (array_ctx_ == ArrayCtx_::files) { rsp.files.add(v_); return; }
+                        return;
+                    }
                     if (note::flash(keys_::rsp_payload) == k_) { rsp.payload = v_; return; }
                 }
                 void on_bool(::note::string_view k_, bool v_) {
@@ -478,6 +496,7 @@ struct CardAttn {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
             void intern_strings(::note::StringPool& pool) {
+                for (auto& v_ : files) if (!v_.empty()) v_ = pool.intern(v_);
                 if (!payload.empty()) payload = pool.intern(payload);
             }
 #pragma GCC diagnostic pop
@@ -487,6 +506,15 @@ struct CardAttn {
             size_t printTo(Print& p) const {
                 size_t n = p.print("{");
                 bool first_ = true;
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"files\":");
+                n += p.print("[");
+                for (size_t i_ = 0; i_ < files.size(); ++i_) {
+                    if (i_) n += p.print(",");
+                    n += note::detail::print_json_value(p, files[i_]);
+                }
+                n += p.print("]");
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
                 if (!first_) n += p.print(",");
                 first_ = false;
@@ -1741,6 +1769,7 @@ struct CardAttn {
         struct keys_ {
             static constexpr char req[] NOTE_FLASH_ATTR = "card.attn";
             static constexpr char verify[] NOTE_FLASH_ATTR = "verify";
+            static constexpr char rsp_files[] NOTE_FLASH_ATTR = "files";
             static constexpr char rsp_off[] NOTE_FLASH_ATTR = "off";
             static constexpr char rsp_set[] NOTE_FLASH_ATTR = "set";
         };
@@ -1798,6 +1827,10 @@ struct CardAttn {
 
         /// Query current ATTN state and configuration.
         struct Response {
+            /// A list of files changed since `file` attention mode was set. In
+            /// addition, this field will include keywords to signify the
+            /// occurrence of other attention mode triggers:
+            note::ResponseArray<note::string_view, 8> files{};
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
             /// This field is present and set to `true` if ATTN processing has
             /// been disabled with the `off` argument.
@@ -1817,6 +1850,7 @@ struct CardAttn {
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
+                { note::string_view arr_[8]; auto n_ = reader_->get_string_array("files", arr_, 8); for (size_t i_ = 0; i_ < n_; ++i_) rsp.files.add(arr_[i_]); }
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
                 rsp.off = reader_->get_bool("off");
 #endif
@@ -1833,6 +1867,7 @@ struct CardAttn {
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
             static Response parse(const JsonReader& reader_) {
                 Response rsp;
+                { note::string_view arr_[8]; auto n_ = reader_.get_string_array("files", arr_, 8); for (size_t i_ = 0; i_ < n_; ++i_) rsp.files.add(arr_[i_]); }
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
                 rsp.off = reader_.get_bool("off");
 #endif
@@ -1850,6 +1885,20 @@ struct CardAttn {
                 Response& rsp;
                 ::note::StringPool& pool_;
                 Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
+                enum class ArrayCtx_ : uint8_t { none, files } array_ctx_{};
+                void on_array_begin(::note::string_view k_) {
+                    if (note::flash(keys_::rsp_files) == k_) { array_ctx_ = ArrayCtx_::files; return; }
+                }
+                void on_array_end(::note::string_view) { array_ctx_ = ArrayCtx_::none; }
+                void on_string(::note::string_view k_, ::note::string_view v_) {
+                    v_ = pool_.intern(v_);
+                    (void)k_;
+                    if (array_ctx_ != ArrayCtx_::none) {
+                        // Array element — dispatch based on current array context
+                        if (array_ctx_ == ArrayCtx_::files) { rsp.files.add(v_); return; }
+                        return;
+                    }
+                }
                 void on_bool(::note::string_view k_, bool v_) {
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
                     if (note::flash(keys_::rsp_off) == k_) { rsp.off = v_; return; }
@@ -1860,13 +1909,27 @@ struct CardAttn {
             };
 #pragma GCC diagnostic pop
 
-            void intern_strings(::note::StringPool&) {}
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+            void intern_strings(::note::StringPool& pool) {
+                for (auto& v_ : files) if (!v_.empty()) v_ = pool.intern(v_);
+            }
+#pragma GCC diagnostic pop
 
 #ifdef ARDUINO
             /// Arduino Printable: prints response fields to Serial or any Print stream.
             size_t printTo(Print& p) const {
                 size_t n = p.print("{");
                 bool first_ = true;
+                if (!first_) n += p.print(",");
+                first_ = false;
+                n += p.print("\"files\":");
+                n += p.print("[");
+                for (size_t i_ = 0; i_ < files.size(); ++i_) {
+                    if (i_) n += p.print(",");
+                    n += note::detail::print_json_value(p, files[i_]);
+                }
+                n += p.print("]");
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
                 if (!first_) n += p.print(",");
                 first_ = false;

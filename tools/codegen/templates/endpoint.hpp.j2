@@ -31,6 +31,9 @@
 {% if has_array_fields %}
 #include <note/array_field.hpp>
 {% endif %}
+{% if has_response_array_fields %}
+#include <note/response_array.hpp>
+{% endif %}
 #include <note/progmem.hpp>
 #include <note/target.hpp>
 
@@ -423,7 +426,11 @@ namespace note::api {
 {{ version_guard_begin(prop.version_guard) -}}
 {{ doc_for_prop(prop, indent + "    ") -}}
 {{ deprecated_attr(prop.version_guard, prop.min_api_version, indent + "    ") -}}
+{% if prop.is_array %}
+{{ indent }}    note::ResponseArray<{{ prop.field_type }}, {{ prop.array_max_items }}> {{ prop.accessor_name }}{};
+{% else %}
 {{ indent }}    note::ResponseField<{{ prop.field_type }}> {{ prop.accessor_name }}{};
+{% endif %}
 {{ version_guard_end(prop.version_guard) -}}
 {% endfor %}
 {% if op.response.has_body %}
@@ -445,7 +452,11 @@ namespace note::api {
 {{ indent }}        Response rsp;
 {% for prop in op.response.properties %}
 {{ version_guard_begin(prop.version_guard) -}}
+{% if prop.is_array %}
+{{ indent }}        { note::string_view arr_[{{ prop.array_max_items }}]; auto n_ = reader_->get_string_array("{{ prop.wire_name }}", arr_, {{ prop.array_max_items }}); for (size_t i_ = 0; i_ < n_; ++i_) rsp.{{ prop.accessor_name }}.add(arr_[i_]); }
+{% else %}
 {{ indent }}        rsp.{{ prop.accessor_name }} = reader_->get_{{ prop.getter }}("{{ prop.wire_name }}"{{ prop.default_arg }});
+{% endif %}
 {{ version_guard_end(prop.version_guard) -}}
 {% endfor %}
 {% if op.response.has_body %}
@@ -469,7 +480,11 @@ namespace note::api {
 {{ indent }}        Response rsp;
 {% for prop in op.response.properties %}
 {{ version_guard_begin(prop.version_guard) -}}
+{% if prop.is_array %}
+{{ indent }}        { note::string_view arr_[{{ prop.array_max_items }}]; auto n_ = reader_.get_string_array("{{ prop.wire_name }}", arr_, {{ prop.array_max_items }}); for (size_t i_ = 0; i_ < n_; ++i_) rsp.{{ prop.accessor_name }}.add(arr_[i_]); }
+{% else %}
 {{ indent }}        rsp.{{ prop.accessor_name }} = reader_.get_{{ prop.getter }}("{{ prop.wire_name }}"{{ prop.default_arg }});
+{% endif %}
 {{ version_guard_end(prop.version_guard) -}}
 {% endfor %}
 {% if op.response.has_body %}
@@ -494,19 +509,46 @@ namespace note::api {
 {{ indent }}        ::note::StringPool& pool_;
 {{ indent }}        Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
 {% set string_props = [] %}
+{% set array_string_props = [] %}
 {% set bool_props = [] %}
 {% set int_props = [] %}
 {% set double_props = [] %}
 {% for prop in op.response.properties %}
-{% if prop.cpp_type == "note::string_view" %}{% if string_props.append(prop) %}{% endif %}
+{% if prop.is_array and prop.cpp_type == "note::string_view" %}{% if array_string_props.append(prop) %}{% endif %}
+{% elif prop.cpp_type == "note::string_view" %}{% if string_props.append(prop) %}{% endif %}
 {% elif prop.cpp_type == "bool" %}{% if bool_props.append(prop) %}{% endif %}
 {% elif prop.cpp_type == "int32_t" %}{% if int_props.append(prop) %}{% endif %}
 {% elif prop.cpp_type == "double" %}{% if double_props.append(prop) %}{% endif %}
 {% endif %}
 {% endfor %}
-{% if string_props %}
+{% if array_string_props %}
+{{ indent }}        enum class ArrayCtx_ : uint8_t { none{% for prop in array_string_props %}, {{ prop.accessor_name }}{% endfor %} } array_ctx_{};
+{{ indent }}        void on_array_begin(::note::string_view k_) {
+{% for prop in array_string_props %}
+{{ version_guard_begin(prop.version_guard) -}}
+{{ indent }}            if (note::flash(keys_::rsp_{{ prop.accessor_name }}) == k_) { array_ctx_ = ArrayCtx_::{{ prop.accessor_name }}; return; }
+{{ version_guard_end(prop.version_guard) -}}
+{% endfor %}
+{{ indent }}        }
+{{ indent }}        void on_array_end(::note::string_view) { array_ctx_ = ArrayCtx_::none; }
+{% endif %}
+{% if string_props or array_string_props %}
 {{ indent }}        void on_string(::note::string_view k_, ::note::string_view v_) {
 {{ indent }}            v_ = pool_.intern(v_);
+{% if not string_props %}
+{{ indent }}            (void)k_;
+{% endif %}
+{% if array_string_props %}
+{{ indent }}            if (array_ctx_ != ArrayCtx_::none) {
+{{ indent }}                // Array element — dispatch based on current array context
+{% for prop in array_string_props %}
+{{ version_guard_begin(prop.version_guard) -}}
+{{ indent }}                if (array_ctx_ == ArrayCtx_::{{ prop.accessor_name }}) { rsp.{{ prop.accessor_name }}.add(v_); return; }
+{{ version_guard_end(prop.version_guard) -}}
+{% endfor %}
+{{ indent }}                return;
+{{ indent }}            }
+{% endif %}
 {% for prop in string_props %}
 {{ version_guard_begin(prop.version_guard) -}}
 {{ indent }}            if (note::flash(keys_::rsp_{{ prop.accessor_name }}) == k_) { rsp.{{ prop.accessor_name }} = v_; return; }
@@ -558,7 +600,11 @@ namespace note::api {
 {{ indent }}    void intern_strings(::note::StringPool& pool) {
 {% for prop in rsp_string_props %}
 {{ version_guard_begin(prop.version_guard) -}}
+{% if prop.is_array %}
+{{ indent }}        for (auto& v_ : {{ prop.accessor_name }}) if (!v_.empty()) v_ = pool.intern(v_);
+{% else %}
 {{ indent }}        if (!{{ prop.accessor_name }}.empty()) {{ prop.accessor_name }} = pool.intern({{ prop.accessor_name }});
+{% endif %}
 {{ version_guard_end(prop.version_guard) -}}
 {% endfor %}
 {{ indent }}    }
@@ -579,7 +625,16 @@ namespace note::api {
 {{ indent }}        if (!first_) n += p.print(",");
 {{ indent }}        first_ = false;
 {{ indent }}        n += p.print("\"{{ prop.wire_name }}\":");
+{% if prop.is_array %}
+{{ indent }}        n += p.print("[");
+{{ indent }}        for (size_t i_ = 0; i_ < {{ prop.accessor_name }}.size(); ++i_) {
+{{ indent }}            if (i_) n += p.print(",");
+{{ indent }}            n += note::detail::print_json_value(p, {{ prop.accessor_name }}[i_]);
+{{ indent }}        }
+{{ indent }}        n += p.print("]");
+{% else %}
 {{ indent }}        n += note::detail::print_json_value(p, {{ prop.accessor_name }}.value());
+{% endif %}
 {{ version_guard_end(prop.version_guard) -}}
 {% endfor %}
 {{ indent }}        n += p.print("}");

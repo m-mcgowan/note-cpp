@@ -153,6 +153,7 @@ TEST_CASE("note::api::CardAttn::Request request builder") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardAttn::Request response parsing") {
     auto reader = std::make_unique<note::test::PopulatedJsonReader>();
+    reader->set_array("files", {"x-files-a", "x-files-b"});
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
     reader->set("off", true);
 #endif
@@ -160,6 +161,9 @@ TEST_CASE("note::api::CardAttn::Request response parsing") {
     reader->set("set", true);
     reader->set("time", int32_t{42});
     auto rsp = note::api::CardAttn::Request::Response::parse(std::move(reader));
+    REQUIRE(rsp.files.size() == 2);
+    REQUIRE(rsp.files[0] == "x-files-a");
+    REQUIRE(rsp.files[1] == "x-files-b");
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
     REQUIRE(rsp.off == true);
 #endif
@@ -519,11 +523,15 @@ TEST_CASE("note::api::CardAttn::Query request builder") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardAttn::Query response parsing") {
     auto reader = std::make_unique<note::test::PopulatedJsonReader>();
+    reader->set_array("files", {"x-files-a", "x-files-b"});
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
     reader->set("off", true);
 #endif
     reader->set("set", true);
     auto rsp = note::api::CardAttn::Query::Response::parse(std::move(reader));
+    REQUIRE(rsp.files.size() == 2);
+    REQUIRE(rsp.files[0] == "x-files-a");
+    REQUIRE(rsp.files[1] == "x-files-b");
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
     REQUIRE(rsp.off == true);
 #endif

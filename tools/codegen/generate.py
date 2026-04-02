@@ -199,9 +199,11 @@ def _response_match_value(prop) -> str:
 def _json_test_value(prop) -> str:
     """JSON-encoded test value for streaming response tests.
 
-    Returns a raw JSON token: true, 42, 1.5, or "\"x-fieldname\"".
+    Returns a raw JSON token: true, 42, 1.5, "\"x-fieldname\"", or ["a","b"].
     Used in generated R"(...)" response strings.
     """
+    if prop.is_array:
+        return f'["x-{prop.wire_name}-a","x-{prop.wire_name}-b"]'
     if prop.cpp_type == "bool":
         return "true"
     if prop.cpp_type == "int32_t":
@@ -472,6 +474,11 @@ def main() -> None:
             for op in endpoint.operations
             for prop in op.properties
         )
+        has_response_array_fields = any(
+            prop.is_array
+            for op in endpoint.operations
+            for prop in op.response.properties
+        )
         has_enum_fields = any(
             prop.enum_values and prop.field_type == "note::string_view"
             for op in endpoint.operations
@@ -485,6 +492,7 @@ def main() -> None:
             has_format_fields=has_format_fields,
             has_flags_fields=has_flags_fields,
             has_array_fields=has_array_fields,
+            has_response_array_fields=has_response_array_fields,
             has_enum_fields=has_enum_fields,
         )
         out_path = output_dir / endpoint.header_filename

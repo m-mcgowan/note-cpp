@@ -131,6 +131,20 @@ public:
         cached_string_ = it->get<std::string>();
         return cached_string_;
     }
+    size_t get_string_array(string_view key, string_view* out, size_t max) const override {
+        auto it = json_.find(std::string(key));
+        if (it == json_.end() || !it->is_array()) return 0;
+        size_t n = 0;
+        cached_array_.clear();
+        for (auto& elem : *it) {
+            if (n >= max) break;
+            if (elem.is_string()) {
+                cached_array_.push_back(elem.get<std::string>());
+                out[n++] = cached_array_.back();
+            }
+        }
+        return n;
+    }
     std::unique_ptr<JsonReader> get_object(string_view key) const override {
         auto it = json_.find(std::string(key));
         if (it == json_.end() || !it->is_object()) return nullptr;
@@ -152,6 +166,7 @@ public:
 private:
     nlohmann::json json_;
     mutable std::string cached_string_;
+    mutable std::vector<std::string> cached_array_;
 };
 
 // ---------------------------------------------------------------------------

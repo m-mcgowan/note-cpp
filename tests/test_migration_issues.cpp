@@ -161,6 +161,14 @@ TEST_CASE("Issue 1b: transport::NotecardSerial is a TransportHal, not IStreaming
 // arbitrary JSON to the Notecard via the host firmware.
 // ---------------------------------------------------------------------------
 
+TEST_CASE("Issue 6: transact with allocator-managed buffer") {
+    Harness h;
+    // No buffer arg — uses the Notecard's allocator (heap by default)
+    auto rsp = h.nc.transact(R"({"req":"card.version"})");
+    REQUIRE(rsp);
+    REQUIRE(h.last_req == R"({"req":"card.version"})");
+}
+
 TEST_CASE("Issue 6: transact with caller-provided buffer") {
     Harness h;
     char buf[256];

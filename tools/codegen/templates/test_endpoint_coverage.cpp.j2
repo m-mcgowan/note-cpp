@@ -191,7 +191,11 @@ TEST_CASE("note::api::{{ type_qual }} response parsing") {
 {% if prop.version_guard %}
 #if NOTE_API_VERSION >= {{ prop.version_guard }} || !defined(NOTE_API_STRICT)
 {% endif %}
+{% if prop.is_array %}
+    reader->set_array("{{ prop.wire_name }}", {"x-{{ prop.wire_name }}-a", "x-{{ prop.wire_name }}-b"});
+{% else %}
     reader->set("{{ prop.wire_name }}", {{ prop | reader_test_value }});
+{% endif %}
 {% if prop.version_guard %}
 #endif
 {% endif %}
@@ -201,7 +205,13 @@ TEST_CASE("note::api::{{ type_qual }} response parsing") {
 {% if prop.version_guard %}
 #if NOTE_API_VERSION >= {{ prop.version_guard }} || !defined(NOTE_API_STRICT)
 {% endif %}
+{% if prop.is_array %}
+    REQUIRE(rsp.{{ prop.accessor_name }}.size() == 2);
+    REQUIRE(rsp.{{ prop.accessor_name }}[0] == "x-{{ prop.wire_name }}-a");
+    REQUIRE(rsp.{{ prop.accessor_name }}[1] == "x-{{ prop.wire_name }}-b");
+{% else %}
     REQUIRE(rsp.{{ prop.accessor_name }} == {{ prop | response_match_value }});
+{% endif %}
 {% if prop.version_guard %}
 #endif
 {% endif %}

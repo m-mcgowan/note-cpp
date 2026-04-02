@@ -228,6 +228,22 @@ public:
         return tok_view(idx);
     }
 
+    size_t get_string_array(string_view key, string_view* out, size_t max) const override {
+        int idx = find_value(key);
+        if (idx < 0 || tokens_[idx].type != JSMN_ARRAY) return 0;
+        int count = tokens_[idx].size;
+        size_t n = 0;
+        int elem = idx + 1;  // first element follows the array token
+        for (int i = 0; i < count && n < max; ++i) {
+            if (elem >= token_count_) break;
+            if (tokens_[elem].type == JSMN_STRING)
+                out[n++] = tok_view(elem);
+            // Skip to next sibling (element + its children)
+            elem += tok_span(elem);
+        }
+        return n;
+    }
+
     std::unique_ptr<JsonReader> get_object(string_view key) const override {
         int idx = find_value(key);
         if (idx < 0 || tokens_[idx].type != JSMN_OBJECT) return nullptr;

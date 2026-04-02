@@ -225,11 +225,17 @@ def _extract_response_props(operation: dict) -> tuple[list[PropertyDef], bool]:
             has_body = True
             continue  # handled specially in template, not as a regular prop
 
-        # Skip other nested objects and arrays for now
-        if t == "object" or t == "array":
+        # Skip nested objects (except body, handled above)
+        if t == "object":
             continue
         if isinstance(t, list):
             continue
+
+        # Handle array-of-string response fields
+        if t == "array":
+            items_type = prop_schema.get("items", {}).get("type")
+            if items_type != "string":
+                continue  # only string arrays supported for now
         props.append(_parse_property(name, prop_schema, is_request=False))
     return props, has_body
 

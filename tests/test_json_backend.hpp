@@ -141,9 +141,13 @@ public:
         objects_[key] = std::move(obj);
     }
 
+    void set_array(const std::string& key, std::vector<std::string> arr) {
+        arrays_[key] = std::move(arr);
+    }
+
     bool has(string_view k) const override {
         auto key = std::string(k);
-        return values_.count(key) || objects_.count(key);
+        return values_.count(key) || objects_.count(key) || arrays_.count(key);
     }
     bool get_bool(string_view k, bool def) const override {
         auto it = values_.find(std::string(k));
@@ -187,12 +191,22 @@ public:
         }
         return nullptr;
     }
+    size_t get_string_array(string_view k, string_view* out, size_t max) const override {
+        auto it = arrays_.find(std::string(k));
+        if (it == arrays_.end()) return 0;
+        size_t n = std::min(max, it->second.size());
+        for (size_t i = 0; i < n; ++i)
+            out[i] = string_view(it->second[i]);
+        return n;
+    }
+
     bool has_error() const override { return false; }
     string_view get_error() const override { return {}; }
 
 private:
     std::map<std::string, Value> values_;
     std::map<std::string, std::unique_ptr<PopulatedJsonReader>> objects_;
+    std::map<std::string, std::vector<std::string>> arrays_;
 };
 
 // ---------------------------------------------------------------------------

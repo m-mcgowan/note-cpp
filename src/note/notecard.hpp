@@ -244,9 +244,19 @@ public:
         if (build_fn) build_fn(builder);
         return transport_->send(builder.to_view());
     }
-    /// Validated JSON passthrough — send pre-formatted JSON, get response.
-    /// The JSON is validated (balanced braces) before sending. The response
-    /// is written into the caller-provided buffer and returned as string_view.
+    /// Validated JSON passthrough — allocates response buffer from the
+    /// registered allocator (heap by default, or arena). The string_view
+    /// is valid until the next transact() call or Notecard destruction.
+    Result<string_view> transact(string_view json) {
+        free_raw_buf();
+        constexpr size_t kDefaultBufSize = 1024;
+        raw_buf_ = static_cast<char*>(alloc_value().allocate(kDefaultBufSize));
+        raw_buf_size_ = kDefaultBufSize;
+        return transact(json, span<char>(raw_buf_, raw_buf_size_));
+    }
+
+    /// Validated JSON passthrough — caller-provided buffer variant.
+    /// The response is written into buf and returned as string_view.
     /// Works with both buffered and streaming transports.
     Result<string_view> transact(string_view json, span<char> buf) {
         if (!validate_json_envelope(json))
@@ -497,11 +507,18 @@ private:
         return {};
     }
 
+    Allocator alloc_value() const { return alloc_.value_or(Allocator{}); }
+    void free_raw_buf() {
+        if (raw_buf_) { alloc_value().deallocate(raw_buf_, raw_buf_size_); raw_buf_ = nullptr; }
+    }
+
     JsonBackend* backend_ = nullptr;
     IBufferedTransport* transport_ = nullptr;
     IStreamingTransport* streaming_transport_ = nullptr;
     uint32_t default_timeout_ms_ = 10000;
     std::optional<Allocator> alloc_;
+    char* raw_buf_ = nullptr;
+    size_t raw_buf_size_ = 0;
     byte_span cobs_buf_{};          // optional external COBS working buffer
 #ifndef NOTE_NO_MD5
     PlatformMd5 platform_md5_{};    // default MD5 implementation

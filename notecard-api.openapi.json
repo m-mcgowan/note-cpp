@@ -677,7 +677,8 @@
             ],
             "response": [
               "set",
-              "off"
+              "off",
+              "files"
             ],
             "safety": "readonly",
             "supports_cmd": false

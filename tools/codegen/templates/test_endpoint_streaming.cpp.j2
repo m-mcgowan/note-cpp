@@ -140,7 +140,11 @@ TEST_CASE("note::api::{{ type_qual }} transport equivalence") {
 {% if prop.version_guard %}
 #if NOTE_API_VERSION >= {{ prop.version_guard }} || !defined(NOTE_API_STRICT)
 {% endif %}
+{% if prop.is_array %}
+        CHECK(rsp.{{ prop.accessor_name }}.size() == 2);
+{% else %}
         CHECK(rsp.{{ prop.accessor_name }} == {{ prop | response_match_value }});
+{% endif %}
 {% if prop.version_guard %}
 #endif
 {% endif %}
@@ -155,7 +159,11 @@ TEST_CASE("note::api::{{ type_qual }} transport equivalence") {
 {% if prop.version_guard %}
 #if NOTE_API_VERSION >= {{ prop.version_guard }} || !defined(NOTE_API_STRICT)
 {% endif %}
+{% if prop.is_array %}
+        CHECK(rsp.{{ prop.accessor_name }}.size() == 2);
+{% else %}
         CHECK(rsp.{{ prop.accessor_name }} == {{ prop | response_match_value }});
+{% endif %}
 {% if prop.version_guard %}
 #endif
 {% endif %}

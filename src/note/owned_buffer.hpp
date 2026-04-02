@@ -129,10 +129,18 @@ public:
     /// Check if the buffer has valid backing memory.
     explicit operator bool() const { return data_ != nullptr; }
 
-#if defined(ARDUINO) && NOTE_PRINTABLE
+#ifdef ARDUINO
+#if NOTE_PRINTABLE
     size_t printTo(Print& p) const override {
         return p.write(reinterpret_cast<const uint8_t*>(data_), size_);
     }
+#endif
+    /// Implicit conversion to Arduino String.
+    /// Guarded by NOTE_ARDUINO_STUBS to avoid including in test stubs
+    /// that define ARDUINO but not the String class.
+#if !defined(NOTE_ARDUINO_STUBS)
+    operator String() const { return String(data_, size_); }
+#endif
 #endif
 
 private:

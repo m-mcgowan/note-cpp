@@ -58,8 +58,79 @@ namespace detail {
 #endif
 } // namespace detail
 
+/// Result type — extends expected with a printTo() method for Arduino.
+///
+/// Does NOT inherit Printable to avoid adding a vtable pointer to every
+/// Result (used in every API call). Call printTo() directly:
+///
+///   auto r = nc.transact(json);
+///   r.printTo(Serial);  // prints response or "Error: ..."
+///
+/// For contexts that require Printable (e.g. Serial.println()), use
+/// PrintableResult(r) wrapper.
 template<typename T>
-using Result = detail::expected<T, ErrorInfo>;
+class Result : public detail::expected<T, ErrorInfo> {
+    using Base = detail::expected<T, ErrorInfo>;
+public:
+    using Base::Base;
+    Result(const Base& b) : Base(b) {}
+    Result(Base&& b) : Base(std::move(b)) {}
+
+#ifdef ARDUINO
+    /// Print the value (if Printable) or error message.
+    /// Non-virtual — does not add vtable overhead.
+    size_t printTo(Print& p) const {
+        if (this->has_value()) {
+            if constexpr (std::is_base_of_v<Printable, std::decay_t<T>>)
+                return this->value().printTo(p);
+            else
+                return p.print("(ok)");
+        } else {
+            size_t n = p.print("Error: ");
+            auto& e = this->error();
+            n += p.write(reinterpret_cast<const uint8_t*>(e.message.data()), e.message.size());
+            return n;
+        }
+    }
+#endif
+};
+
+#ifdef ARDUINO
+
+#if __cplusplus >= 202002L
+/// Concept: type has a printTo(Print&) const method.
+template<typename T>
+concept HasPrintTo = requires(const T& v, Print& p) {
+    { v.printTo(p) } -> std::convertible_to<size_t>;
+};
+#endif
+
+/// Thin Printable wrapper for any type with a printTo(Print&) method.
+/// Zero-copy: holds a reference to the original object.
+///   Serial.println(printable(r));
+#if __cplusplus >= 202002L
+template<HasPrintTo T>
+#else
+template<typename T>
+#endif
+class PrintableWrapper : public Printable {
+    const T& ref_;
+public:
+    explicit PrintableWrapper(const T& r) : ref_(r) {}
+    size_t printTo(Print& p) const override { return ref_.printTo(p); }
+};
+
+#if __cplusplus >= 202002L
+template<HasPrintTo T>
+#else
+template<typename T>
+#endif
+PrintableWrapper<T> printable(const T& v) { return PrintableWrapper<T>(v); }
+
+template<typename T>
+using PrintableResult = PrintableWrapper<Result<T>>;
+
+#endif // ARDUINO
 
 using Unexpected = detail::unexpected<ErrorInfo>;
 

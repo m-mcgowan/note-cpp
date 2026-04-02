@@ -7,6 +7,7 @@
 /// Zero transport-internal buffers: requests are streamed via
 /// StreamingJsonBuilder, responses SAX-parsed directly from the wire.
 
+#include <note/debug.hpp>
 #include <note/error.hpp>
 #include <note/json.hpp>
 #include <note/json_sax_streaming.hpp>
@@ -40,6 +41,9 @@ struct IStreamingTransport {
 
     virtual void reset() = 0;
     virtual void abort() = 0;
+
+    /// Set debug listener. Default: no-op.
+    virtual void set_debug(const DebugListener&) {}
 
     /// Raw binary I/O (for COBS streaming). Default: not supported.
     virtual Result<void> write(const uint8_t*, size_t) {
@@ -81,6 +85,8 @@ public:
         , max_retries_(max_retries)
         , retry_delay_ms_(retry_delay_ms) {}
 
+    void set_debug(const DebugListener& d) override { debug_ = d; }
+
     /// Virtual override for IStreamingTransport (used by Notecard).
     Result<void> transact(BuildFn build_fn, void* ctx,
                           JsonSink& sink, uint32_t timeout_ms) override {
@@ -99,8 +105,10 @@ private:
     template<typename SinkT>
     Result<void> transact_impl(BuildFn build_fn, void* ctx,
                                 SinkT& sink, uint32_t timeout_ms) {
-        if (!ensure_init())
+        if (!ensure_init()) {
+            debug_transport(debug_, TransportEvent::ResetFailed, 0);
             return make_error(Error::NotReady, "Notecard not ready after reset");
+        }
 
 #ifndef NOTE_NO_CRC
         if (crc_enabled_) ++crc_seq_;
@@ -110,18 +118,31 @@ private:
 
         for (uint32_t attempt = 0; attempt <= max_retries_; ++attempt) {
             if (attempt > 0) {
+                debug_transport(debug_, TransportEvent::Retry, attempt);
+                debug_timing(debug_, TimingEvent::RetryBegin);
                 hal_.delay(retry_delay_ms_);
+                debug_timing(debug_, TimingEvent::ResetBegin);
                 hal_.reset();
+                debug_timing(debug_, TimingEvent::ResetEnd);
                 sink.reset();
             }
 
+            debug_timing(debug_, TimingEvent::TransmitBegin);
             if (!stream_request(build_fn, ctx)) {
+                debug_transport(debug_, TransportEvent::SendFailed, attempt);
                 last_error = {Error::SendFailed, Cause::HalError, "transmit failed"};
                 continue;
             }
+            debug_timing(debug_, TimingEvent::TransmitEnd);
 
+            debug_timing(debug_, TimingEvent::ReceiveBegin);
             auto rv = receive_streaming(sink, timeout_ms);
+            debug_timing(debug_, TimingEvent::ReceiveEnd);
             if (!rv) {
+                if (rv.error().cause == Cause::Timeout)
+                    debug_transport(debug_, TransportEvent::Timeout, attempt);
+                else if (rv.error().cause == Cause::CrcMismatch)
+                    debug_transport(debug_, TransportEvent::CrcMismatch, attempt);
                 last_error = rv.error();
                 continue;
             }
@@ -310,6 +331,7 @@ private:
     uint32_t max_retries_;
     uint32_t retry_delay_ms_;
     bool initialized_ = false;
+    DebugListener debug_{};
 #ifndef NOTE_NO_CRC
     bool crc_enabled_ = false;
     uint16_t crc_seq_ = 0;

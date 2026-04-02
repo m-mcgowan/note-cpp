@@ -113,7 +113,7 @@ public:
         // Full streaming path: SAX-parse response directly from transport.
         if constexpr (std::is_void_v<Rsp> || detail::has_sink<Rsp>::value) {
             if (streaming_transport_ && alloc_.has_value()) {
-                // Type-erase the build lambda for the non-template core.
+                debug_timing(debug_, TimingEvent::BuildBegin, RequestT::notecard_request);
                 auto build = [&](JsonBuilder& b) {
                     b.add("req", RequestT::notecard_request);
                     req.build(b);
@@ -121,12 +121,14 @@ public:
                 BuildFn build_fn = [](JsonBuilder& b, void* p) {
                     (*static_cast<decltype(build)*>(p))(b);
                 };
+                debug_timing(debug_, TimingEvent::BuildEnd, RequestT::notecard_request);
 
                 StringPool pool(*alloc_);
 
                 if constexpr (std::is_void_v<Rsp>) {
                     JsonSink null_sink;
                     auto ei = execute_streaming(*streaming_transport_, default_timeout_ms_, build_fn, &build, null_sink, pool);
+                    debug_timing(debug_, TimingEvent::TransactionEnd, RequestT::notecard_request);
                     if (ei.code != Error{}) return ApiResult<void>(ei);
                     return ApiResult<void>{};
                 } else {
@@ -134,6 +136,7 @@ public:
                     typename Rsp::Sink response_sink(rsp_val, pool);
                     JsonSinkAdapter<typename Rsp::Sink> virtual_sink(response_sink);
                     auto ei = execute_streaming(*streaming_transport_, default_timeout_ms_, build_fn, &build, virtual_sink, pool);
+                    debug_timing(debug_, TimingEvent::TransactionEnd, RequestT::notecard_request);
                     if (ei.code != Error{}) return ApiResult<Rsp>(ei);
                     return ApiResult<Rsp>(std::move(rsp_val));
                 }
@@ -334,10 +337,14 @@ public:
 
     /// Set a debug listener for observability (wire data, timing, memory).
     /// Pass a default-constructed DebugListener or call clear_debug() to disable.
-    void set_debug(DebugListener d) { debug_ = d; }
+    void set_debug(DebugListener d) {
+        debug_ = d;
+        if (streaming_transport_)
+            streaming_transport_->set_debug(d);
+    }
 
     /// Disable all debug callbacks.
-    void clear_debug() { debug_ = {}; }
+    void clear_debug() { set_debug({}); }
 
     /// Access the current debug listener.
     const DebugListener& debug() const { return debug_; }

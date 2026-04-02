@@ -107,6 +107,7 @@ set(NOTE_CPP_TEST_SOURCES
     test_transport_i2c.cpp
     test_transport_serial.cpp
     test_transport_timing.cpp
+    test_allocator_growth.cpp
     test_transport_streaming.cpp
     test_units.cpp
     test_voltage_variable.cpp

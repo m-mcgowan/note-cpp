@@ -55,6 +55,7 @@ public:
 class Notecard {
 public:
     Notecard() = default;
+    ~Notecard() { free_raw_buf(); }
 
     Notecard(JsonBackend& backend, IBufferedTransport& transport)
         : backend_(&backend)

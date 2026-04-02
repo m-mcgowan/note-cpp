@@ -4,6 +4,7 @@
 #include "catch.hpp"
 #include "test_json_backend.hpp"
 #include <note/api.hpp>
+#include <note/backends/buffer.hpp>
 #include <note/notecard_api.hpp>
 #include <note/streaming_transport.hpp>
 #include <note/transport/serial.hpp>
@@ -137,6 +138,41 @@ TEST_CASE("Issue 5: literals work with request fields") {
 }
 
 // ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// card.aux state: array of objects response
+// ---------------------------------------------------------------------------
+
+TEST_CASE("card.aux state: get_object_array reads pin states") {
+    // Simulate a card.aux response with state array
+    std::string canned = R"({"mode":"gpio","state":[{"high":true},{"low":true,"input":true},{}]})";
+    note::backends::BufferJsonBackend<1024, 64> backend;
+    note::CallbackTransport transport(
+        [&](note::string_view, uint32_t) -> note::Result<note::string_view> {
+            return note::string_view(canned);
+        });
+    note::Notecard nc(backend, transport);
+
+    // Parse response via the buffered path — uses real JSON parser
+    auto rsp = nc.request("card.aux");
+    REQUIRE(rsp);
+
+    // Access the state array via the reader
+    std::unique_ptr<note::JsonReader> pins[8];
+    size_t n = (*rsp)->get_object_array("state", pins, 8);
+    REQUIRE(n == 3);
+
+    // Pin 0: high=true
+    CHECK(pins[0]->get_bool("high") == true);
+    CHECK(pins[0]->get_bool("low") == false);
+
+    // Pin 1: low=true, input=true
+    CHECK(pins[1]->get_bool("low") == true);
+    CHECK(pins[1]->get_bool("input") == true);
+
+    // Pin 2: empty object
+    CHECK(pins[2]->get_bool("high") == false);
+}
+
 // ---------------------------------------------------------------------------
 // Issue 1b: arduino::Notecard::begin() wiring
 // The HAL (transport::NotecardSerial<>) must go through StreamingTransport

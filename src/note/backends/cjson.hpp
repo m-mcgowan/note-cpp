@@ -210,6 +210,17 @@ public:
         }
         return n;
     }
+    size_t get_object_array(string_view key,
+                            std::unique_ptr<JsonReader>* out, size_t max) const override {
+        auto* item = cJSON_GetObjectItemCaseSensitive(root_, zkey(key));
+        if (!item || !cJSON_IsArray(item)) return 0;
+        size_t n = 0;
+        for (auto* elem = item->child; elem && n < max; elem = elem->next) {
+            if (cJSON_IsObject(elem))
+                out[n++] = std::unique_ptr<JsonReader>(new CjsonReader(elem, false));
+        }
+        return n;
+    }
     std::unique_ptr<JsonReader> get_object(string_view key) const override {
         auto* item = cJSON_GetObjectItemCaseSensitive(root_, zkey(key));
         if (!item || !cJSON_IsObject(item)) return nullptr;

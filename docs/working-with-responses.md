@@ -146,6 +146,37 @@ if (r && r.body()) {
 }
 ```
 
+## Object arrays in responses
+
+Some responses include arrays of objects (e.g., `card.aux` returns a
+`state` array of GPIO pin states). Access these through the reader's
+`get_object_array()`:
+
+```cpp
+auto r = nc.card.aux().execute();
+if (r) {
+    auto* reader = ...;  // get the response reader
+    std::unique_ptr<note::JsonReader> pins[8];
+    size_t n = reader->get_object_array("state", pins, 8);
+    for (size_t i = 0; i < n; ++i) {
+        bool high = pins[i]->get_bool("high");
+        bool low = pins[i]->get_bool("low");
+        bool input = pins[i]->get_bool("input");
+    }
+}
+```
+
+For simple cases, you can also use `nc.transact()` to get the raw JSON
+and parse it yourself:
+
+```cpp
+char buf[512];
+auto r = nc.transact(R"({"req":"card.aux"})", buf);
+if (r) {
+    // *r is the raw JSON — parse state array as needed
+}
+```
+
 ## Response lifetimes
 
 Response fields are views into the transport buffer. For `string_view`

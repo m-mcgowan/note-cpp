@@ -145,6 +145,18 @@ public:
         }
         return n;
     }
+    size_t get_object_array(string_view key,
+                            std::unique_ptr<JsonReader>* out, size_t max) const override {
+        auto it = json_.find(std::string(key));
+        if (it == json_.end() || !it->is_array()) return 0;
+        size_t n = 0;
+        for (auto& elem : *it) {
+            if (n >= max) break;
+            if (elem.is_object())
+                out[n++] = std::make_unique<NlohmannReader>(elem);
+        }
+        return n;
+    }
     std::unique_ptr<JsonReader> get_object(string_view key) const override {
         auto it = json_.find(std::string(key));
         if (it == json_.end() || !it->is_object()) return nullptr;

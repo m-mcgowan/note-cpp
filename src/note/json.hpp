@@ -124,6 +124,14 @@ public:
         return 0;
     }
 
+    /// Read a JSON array of objects. Populates out[] with readers for each element.
+    /// Returns the number of elements read. Default: 0.
+    virtual size_t get_object_array(string_view key,
+                                     std::unique_ptr<JsonReader>* out, size_t max) const {
+        (void)key; (void)out; (void)max;
+        return 0;
+    }
+
     virtual bool has_error() const = 0;
     virtual string_view get_error() const = 0;
 };

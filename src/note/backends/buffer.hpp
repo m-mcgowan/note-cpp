@@ -244,6 +244,23 @@ public:
         return n;
     }
 
+    size_t get_object_array(string_view key,
+                            std::unique_ptr<JsonReader>* out, size_t max) const override {
+        int idx = find_value(key);
+        if (idx < 0 || tokens_[idx].type != JSMN_ARRAY) return 0;
+        int count = tokens_[idx].size;
+        size_t n = 0;
+        int elem = idx + 1;
+        for (int i = 0; i < count && n < max; ++i) {
+            if (elem >= token_count_) break;
+            if (tokens_[elem].type == JSMN_OBJECT)
+                out[n++] = std::make_unique<JsmnJsonReader>(
+                    json_, json_len_, tokens_, token_count_, elem);
+            elem += tok_span(elem);
+        }
+        return n;
+    }
+
     std::unique_ptr<JsonReader> get_object(string_view key) const override {
         int idx = find_value(key);
         if (idx < 0 || tokens_[idx].type != JSMN_OBJECT) return nullptr;

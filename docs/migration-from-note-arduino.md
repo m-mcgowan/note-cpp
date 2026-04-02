@@ -481,6 +481,8 @@ if (r) {
 - Response fields and full responses are Arduino `Printable` —
   `Serial.print(r.version)` just works. Avoid `printf("%.*s")` with
   `string_view` — use `Serial.print()` instead.
+  See [Arduino Guide](arduino-guide.md) for printing patterns, String
+  conversion, and AVR setup.
 
 ## ATTN pin — arming for interrupts
 

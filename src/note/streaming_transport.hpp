@@ -194,18 +194,25 @@ public:
 
 private:
     /// Read bytes from HAL until newline, filling buf. Returns string_view into buf.
+    /// If the response exceeds bufsize, drains the remainder and returns an error.
     Result<string_view> read_line(char* buf, size_t bufsize, uint32_t timeout_ms) {
         size_t pos = 0;
-        while (pos < bufsize - 1) {
+        bool overflow = false;
+        for (;;) {
             uint8_t byte;
             auto rv = hal_.read(&byte, 1, timeout_ms);
             if (!rv) return Unexpected(rv.error());
             if (*rv == 0) return make_error(Error::ResponseLost, Cause::Timeout, NOTE_ERR("response timeout"));
             if (byte == '\n') break;
-            if (byte == '\r') continue;  // skip CR in CRLF
-            buf[pos++] = static_cast<char>(byte);
+            if (byte == '\r') continue;
+            if (pos < bufsize - 1)
+                buf[pos++] = static_cast<char>(byte);
+            else
+                overflow = true;  // keep reading to drain, but flag the overflow
         }
         buf[pos] = '\0';
+        if (overflow)
+            return make_error(Error::Overflow, NOTE_ERR("response exceeds buffer"));
         return string_view(buf, pos);
     }
 

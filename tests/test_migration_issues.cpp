@@ -184,6 +184,38 @@ TEST_CASE("Issue 6: send fire-and-forget") {
     REQUIRE(h.last_req == R"({"cmd":"hub.set","product":"com.example"})");
 }
 
+TEST_CASE("Issue 6: transact returns overflow error for large response") {
+    // Streaming transport with a response larger than the buffer
+    struct MockHal : note::TransportHal {
+        std::string canned_rsp;
+        size_t rsp_pos = 0;
+
+        explicit MockHal(size_t rsp_size) : canned_rsp(rsp_size, 'x') {
+            canned_rsp = "{\"data\":\"" + canned_rsp + "\"}\r\n";
+        }
+        bool transmit(const uint8_t*, size_t) override { return true; }
+        note::Result<size_t> read(uint8_t* buf, size_t max, uint32_t) override {
+            if (rsp_pos >= canned_rsp.size()) return size_t(0);
+            size_t n = std::min(max, canned_rsp.size() - rsp_pos);
+            std::memcpy(buf, canned_rsp.data() + rsp_pos, n);
+            rsp_pos += n;
+            return n;
+        }
+        bool reset() override { return true; }
+        bool write_line_terminator() override { rsp_pos = 0; return true; }
+        void delay(uint32_t) override {}
+    };
+
+    MockHal hal(200);  // response > 64 bytes
+    note::StreamingTransport transport(hal);
+    note::Notecard nc(transport);
+
+    char buf[64];  // intentionally small
+    auto rsp = nc.transact(R"({"req":"card.version"})", buf);
+    REQUIRE(!rsp);  // must return error, not corrupted data
+    REQUIRE(rsp.error().code == note::Error::Overflow);
+}
+
 TEST_CASE("Issue 6: transact rejects malformed JSON") {
     Harness h;
     char buf[256];

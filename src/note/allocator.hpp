@@ -21,6 +21,8 @@
 #include <note/arena.hpp>
 
 #include <cstddef>
+#include <cstdlib>
+#include <cstring>
 #include <new>
 
 namespace note {
@@ -28,13 +30,18 @@ namespace note {
 struct Allocator {
     void* (*alloc)(size_t n, void* ctx) = default_alloc;
     void  (*free)(void* p, size_t n, void* ctx) = default_free;
+    void* (*realloc)(void* p, size_t old_n, size_t new_n, void* ctx) = default_realloc;
     void* ctx = nullptr;
 
     void* allocate(size_t n) const { return alloc(n, ctx); }
     void deallocate(void* p, size_t n) const { free(p, n, ctx); }
+    void* reallocate(void* p, size_t old_n, size_t new_n) const { return realloc(p, old_n, new_n, ctx); }
 
-    static void* default_alloc(size_t n, void*) { return ::operator new(n); }
-    static void  default_free(void* p, size_t, void*) { ::operator delete(p); }
+    static void* default_alloc(size_t n, void*) { return std::malloc(n); }
+    static void  default_free(void* p, size_t, void*) { std::free(p); }
+    static void* default_realloc(void* p, size_t, size_t new_n, void*) {
+        return std::realloc(p, new_n);  // may extend in place
+    }
 };
 
 // Arena adapter — routes allocations through a MonotonicArena.
@@ -44,7 +51,15 @@ inline Allocator arena_allocator(MonotonicArena& a) {
         [](size_t n, void* ctx) -> void* {
             return static_cast<MonotonicArena*>(ctx)->allocate(n);
         },
-        [](void*, size_t, void*) {},
+        [](void*, size_t, void*) {},  // arena free is a no-op
+        [](void* p, size_t old_n, size_t new_n, void* ctx) -> void* {
+            // Arena can't extend in place — allocate new, copy, old is leaked
+            // (reclaimed on arena reset).
+            auto* arena = static_cast<MonotonicArena*>(ctx);
+            void* np = arena->allocate(new_n);
+            if (np && p) std::memcpy(np, p, old_n < new_n ? old_n : new_n);
+            return np;
+        },
         &a
     };
 }
@@ -66,6 +81,15 @@ inline Allocator pmr_allocator(std::pmr::memory_resource* r) {
         [](void* p, size_t n, void* ctx) {
             static_cast<std::pmr::memory_resource*>(ctx)->deallocate(
                 p, n, alignof(std::max_align_t));
+        },
+        [](void* p, size_t old_n, size_t new_n, void* ctx) -> void* {
+            auto* res = static_cast<std::pmr::memory_resource*>(ctx);
+            void* np = res->allocate(new_n, alignof(std::max_align_t));
+            if (np && p) {
+                std::memcpy(np, p, old_n < new_n ? old_n : new_n);
+                res->deallocate(p, old_n, alignof(std::max_align_t));
+            }
+            return np;
         },
         r
     };

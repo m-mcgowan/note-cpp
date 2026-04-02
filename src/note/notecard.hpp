@@ -248,11 +248,52 @@ public:
     /// registered allocator (heap by default, or arena). The string_view
     /// is valid until the next transact() call or Notecard destruction.
     Result<string_view> transact(string_view json) {
-        free_raw_buf();
-        constexpr size_t kDefaultBufSize = 1024;
-        raw_buf_ = static_cast<char*>(alloc_value().allocate(kDefaultBufSize));
-        raw_buf_size_ = kDefaultBufSize;
-        return transact(json, span<char>(raw_buf_, raw_buf_size_));
+        if (!validate_json_envelope(json))
+            return make_error(Error::Json, NOTE_ERR("malformed JSON"));
+
+        // Buffered path: transport owns the response buffer, no allocation needed.
+        if (transport_) {
+            return transport_->transact(json, default_timeout_ms_);
+        }
+
+        // Streaming path: transmit, then read response into a growing buffer.
+        // Like note-c's realloc loop — starts at 1KB, grows via realloc.
+        // Capped at 16KB to prevent runaway allocation.
+        if (streaming_transport_) {
+            free_raw_buf();
+            auto* st = static_cast<StreamingTransport*>(streaming_transport_);
+
+            auto send_rv = st->send_raw(json);
+            if (!send_rv) return Unexpected(send_rv.error());
+
+            auto alloc = alloc_value();
+            raw_buf_size_ = 1024;
+            raw_buf_ = static_cast<char*>(alloc.allocate(raw_buf_size_));
+            if (!raw_buf_) return make_error(Error::Overflow, NOTE_ERR("alloc failed"));
+            size_t pos = 0;
+
+            for (;;) {
+                uint8_t byte;
+                auto rv = st->read(&byte, 1, default_timeout_ms_);
+                if (!rv) { free_raw_buf(); return Unexpected(rv.error()); }
+                if (*rv == 0) { free_raw_buf(); return make_error(Error::ResponseLost, Cause::Timeout, NOTE_ERR("response timeout")); }
+                if (byte == '\n') break;
+                if (byte == '\r') continue;
+
+                if (pos >= raw_buf_size_ - 1) {
+                    size_t new_size = raw_buf_size_ * 2;
+                    auto* grown = static_cast<char*>(alloc.reallocate(raw_buf_, raw_buf_size_, new_size));
+                    if (!grown) { free_raw_buf(); return make_error(Error::Overflow, NOTE_ERR("realloc failed")); }
+                    raw_buf_ = grown;
+                    raw_buf_size_ = new_size;
+                }
+                raw_buf_[pos++] = static_cast<char>(byte);
+            }
+            raw_buf_[pos] = '\0';
+            return string_view(raw_buf_, pos);
+        }
+
+        return make_error(Error::NotReady, NOTE_ERR("no transport configured"));
     }
 
     /// Validated JSON passthrough — caller-provided buffer variant.

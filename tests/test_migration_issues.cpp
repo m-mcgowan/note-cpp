@@ -188,3 +188,101 @@ TEST_CASE("Issue 6: send rejects malformed JSON") {
     auto result = h.nc.send("{missing closing brace");
     REQUIRE(!result);
 }
+
+// ---------------------------------------------------------------------------
+// Issue 6b: streaming passthrough must preserve nested JSON
+// The BufSink SAX re-serializes the response. Nested objects and arrays
+// must not be flattened.
+// ---------------------------------------------------------------------------
+
+TEST_CASE("Issue 6b: buffered passthrough preserves nested objects") {
+    // Buffered transport returns response verbatim — no re-serialization
+    note::test::TestJsonBackend backend;
+    std::string last_req;
+    std::string canned_rsp = R"({"version":"7.2.1","body":{"org":"blues","product":"feather"}})";
+    note::CallbackTransport transport(
+        [&](note::string_view r, uint32_t) -> note::Result<note::string_view> {
+            last_req = std::string(r);
+            return note::string_view(canned_rsp);
+        });
+    note::Notecard nc(backend, transport);
+
+    char buf[512];
+    auto rsp = nc.transact(R"({"req":"card.version"})", buf);
+    REQUIRE(rsp);
+    // Response must contain the nested body object, not flattened fields
+    REQUIRE(std::string(*rsp).find("\"body\":{") != std::string::npos);
+    REQUIRE(std::string(*rsp).find("\"org\":\"blues\"") != std::string::npos);
+}
+
+TEST_CASE("Issue 6b: streaming passthrough preserves nested objects") {
+    // Mock HAL that returns a canned response with nested JSON.
+    // The raw passthrough reads bytes directly — no SAX reconstruction.
+    struct MockHal : note::TransportHal {
+        std::string last_sent;
+        std::string canned_rsp = "{\"version\":\"7.2.1\",\"body\":{\"org\":\"blues\",\"product\":\"feather\"}}\r\n";
+        size_t rsp_pos = 0;
+
+        bool transmit(const uint8_t* data, size_t len) override {
+            last_sent.append(reinterpret_cast<const char*>(data), len);
+            return true;
+        }
+        note::Result<size_t> read(uint8_t* buf, size_t max, uint32_t) override {
+            if (rsp_pos >= canned_rsp.size()) return size_t(0);
+            size_t n = std::min(max, canned_rsp.size() - rsp_pos);
+            std::memcpy(buf, canned_rsp.data() + rsp_pos, n);
+            rsp_pos += n;
+            return n;
+        }
+        bool reset() override { return true; }
+        bool write_line_terminator() override {
+            last_sent += "\r\n";
+            rsp_pos = 0;  // reset for reading response
+            return true;
+        }
+        void delay(uint32_t) override {}
+    };
+
+    MockHal hal;
+    note::StreamingTransport transport(hal);
+    note::Notecard nc(transport, note::Allocator{});
+
+    char buf[512];
+    auto rsp = nc.transact(R"({"req":"card.version"})", buf);
+    REQUIRE(rsp);
+    auto rsp_str = std::string(*rsp);
+    // Raw bytes preserved — nested body object intact
+    REQUIRE(rsp_str.find("\"body\":{") != std::string::npos);
+    REQUIRE(rsp_str.find("\"org\":\"blues\"") != std::string::npos);
+}
+
+TEST_CASE("Issue 6b: streaming passthrough preserves arrays") {
+    struct MockHal : note::TransportHal {
+        std::string canned_rsp = "{\"files\":[\"data.qi\",\"config.db\"],\"total\":2}\r\n";
+        size_t rsp_pos = 0;
+
+        bool transmit(const uint8_t*, size_t) override { return true; }
+        note::Result<size_t> read(uint8_t* buf, size_t max, uint32_t) override {
+            if (rsp_pos >= canned_rsp.size()) return size_t(0);
+            size_t n = std::min(max, canned_rsp.size() - rsp_pos);
+            std::memcpy(buf, canned_rsp.data() + rsp_pos, n);
+            rsp_pos += n;
+            return n;
+        }
+        bool reset() override { return true; }
+        bool write_line_terminator() override { rsp_pos = 0; return true; }
+        void delay(uint32_t) override {}
+    };
+
+    MockHal hal;
+    note::StreamingTransport transport(hal);
+    note::Notecard nc(transport, note::Allocator{});
+
+    char buf[512];
+    auto rsp = nc.transact(R"({"req":"file.changes"})", buf);
+    REQUIRE(rsp);
+    auto rsp_str = std::string(*rsp);
+    REQUIRE(rsp_str.find("\"files\":[") != std::string::npos);
+    REQUIRE(rsp_str.find("\"data.qi\"") != std::string::npos);
+    REQUIRE(rsp_str.find("\"config.db\"") != std::string::npos);
+}

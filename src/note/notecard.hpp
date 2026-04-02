@@ -419,66 +419,18 @@ private:
         return err.empty();
     }
 
-    /// Stream raw JSON to the streaming transport and read response into buf.
+    /// Raw passthrough on the streaming transport — transmit bytes, read response.
     Result<string_view> streaming_transact_raw(string_view json, span<char> buf) {
-        // Use a BuildFn that writes the JSON interior (without outer braces)
-        // through the streaming builder which adds its own '{' and '}'.
-        auto interior = json.substr(1, json.size() - 2);  // strip { and }
-        BuildFn build = [](JsonBuilder& b, void* ctx) {
-            b.add_raw_interior(*static_cast<string_view*>(ctx));
-        };
-
-        // Sink that captures the raw response as a JSON string
-        struct BufSink : JsonSink {
-            char* dst;
-            size_t cap;
-            size_t len = 0;
-            bool overflow = false;
-
-            BufSink(char* d, size_t c) : dst(d), cap(c) {}
-
-            void on_string(string_view k, string_view v) { add_field(k); add_quoted(v); }
-            void on_number(string_view k, string_view v) { add_field(k); append(v); }
-            void on_bool(string_view k, bool v) { add_field(k); append(v ? "true" : "false"); }
-            void reset() { len = 0; overflow = false; }
-
-        private:
-            void add_field(string_view k) {
-                if (len > 0) append(",");
-                append("\""); append(k); append("\":");
-            }
-            void add_quoted(string_view v) {
-                append("\""); append(v); append("\"");
-            }
-            void append(string_view s) {
-                for (char c : s) {
-                    if (len < cap) dst[len++] = c;
-                    else overflow = true;
-                }
-            }
-        };
-
-        BufSink sink(buf.data() + 1, buf.size() - 2);  // leave room for { and }
-        auto rv = streaming_transport_->transact(build, &interior, sink, default_timeout_ms_);
-        if (!rv) return Unexpected(rv.error());
-        if (sink.overflow)
-            return make_error(Error::Overflow, NOTE_ERR("response exceeds buffer"));
-
-        // Wrap in braces
-        buf[0] = '{';
-        std::memmove(buf.data() + 1, buf.data() + 1, sink.len);
-        buf[sink.len + 1] = '}';
-        buf[sink.len + 2] = '\0';
-        return string_view(buf.data(), sink.len + 2);
+        // StreamingTransport provides transact_raw which transmits raw bytes
+        // and reads the response line directly — no SAX parsing or reconstruction.
+        auto* st = static_cast<StreamingTransport*>(streaming_transport_);
+        return st->transact_raw(json, buf.data(), buf.size(), default_timeout_ms_);
     }
 
-    /// Stream raw JSON fire-and-forget via the streaming transport.
+    /// Raw fire-and-forget on the streaming transport.
     Result<void> streaming_send_raw(string_view json) {
-        auto interior = json.substr(1, json.size() - 2);
-        BuildFn build = [](JsonBuilder& b, void* ctx) {
-            b.add_raw_interior(*static_cast<string_view*>(ctx));
-        };
-        return streaming_transport_->send(build, &interior);
+        auto* st = static_cast<StreamingTransport*>(streaming_transport_);
+        return st->send_raw(json);
     }
 
 #endif // NOTE_NO_STD_STRING

@@ -146,6 +146,35 @@ public:
         return {};
     }
 
+    /// Raw passthrough: transmit pre-formatted JSON + line terminator,
+    /// read response line into caller's buffer. No SAX parsing — raw bytes.
+    Result<string_view> transact_raw(string_view json, char* buf, size_t bufsize,
+                                      uint32_t timeout_ms) {
+        if (!ensure_init())
+            return make_error(Error::NotReady, "Notecard not ready after reset");
+
+        // Transmit the raw JSON + line terminator
+        if (!hal_.transmit(reinterpret_cast<const uint8_t*>(json.data()), json.size()))
+            return make_error(Error::SendFailed, Cause::HalError, NOTE_ERR("transmit failed"));
+        if (!hal_.write_line_terminator())
+            return make_error(Error::SendFailed, Cause::HalError, NOTE_ERR("line terminator failed"));
+
+        // Read response bytes until newline or timeout
+        return read_line(buf, bufsize, timeout_ms);
+    }
+
+    /// Raw passthrough: transmit pre-formatted JSON + line terminator, no response.
+    Result<void> send_raw(string_view json) {
+        if (!ensure_init())
+            return make_error(Error::NotReady, "Notecard not ready after reset");
+
+        if (!hal_.transmit(reinterpret_cast<const uint8_t*>(json.data()), json.size()))
+            return make_error(Error::SendFailed, Cause::HalError, NOTE_ERR("transmit failed"));
+        if (!hal_.write_line_terminator())
+            return make_error(Error::SendFailed, Cause::HalError, NOTE_ERR("line terminator failed"));
+        return {};
+    }
+
     void reset() override {
         hal_.reset();
         initialized_ = false;
@@ -164,6 +193,22 @@ public:
     }
 
 private:
+    /// Read bytes from HAL until newline, filling buf. Returns string_view into buf.
+    Result<string_view> read_line(char* buf, size_t bufsize, uint32_t timeout_ms) {
+        size_t pos = 0;
+        while (pos < bufsize - 1) {
+            uint8_t byte;
+            auto rv = hal_.read(&byte, 1, timeout_ms);
+            if (!rv) return Unexpected(rv.error());
+            if (*rv == 0) return make_error(Error::ResponseLost, Cause::Timeout, NOTE_ERR("response timeout"));
+            if (byte == '\n') break;
+            if (byte == '\r') continue;  // skip CR in CRLF
+            buf[pos++] = static_cast<char>(byte);
+        }
+        buf[pos] = '\0';
+        return string_view(buf, pos);
+    }
+
     bool ensure_init() {
         if (initialized_) return true;
         if (!hal_.reset()) return false;

@@ -243,19 +243,22 @@ public:
         if (build_fn) build_fn(builder);
         return transport_->send(builder.to_view());
     }
-    // Raw JSON passthrough — send pre-formatted JSON, get response as string_view.
-    // Goes through the transport layer (framing, CRC) but does not parse or
-    // validate the JSON content. Equivalent to note-c's NoteTransactionString.
+    /// Raw JSON passthrough — send pre-formatted JSON, get response as string_view.
+    /// Goes through the transport layer (framing, CRC) but does not parse or
+    /// validate the JSON content. Equivalent to note-c's NoteTransactionString.
+    /// Requires a buffered transport (the response string_view lives in the
+    /// transport's internal buffer).
     Result<string_view> transact(string_view json) {
         if (!transport_)
-            return make_error(Error::NotReady, NOTE_ERR("no buffered transport configured"));
+            return make_error(Error::NotReady, NOTE_ERR("transact() requires a buffered transport"));
         return transport_->transact(json, default_timeout_ms_);
     }
 
-    // Raw JSON fire-and-forget — send pre-formatted JSON with no response.
+    /// Raw JSON fire-and-forget — send pre-formatted JSON with no response.
+    /// Requires a buffered transport.
     Result<void> send(string_view json) {
         if (!transport_)
-            return make_error(Error::NotReady, NOTE_ERR("no buffered transport configured"));
+            return make_error(Error::NotReady, NOTE_ERR("send() requires a buffered transport"));
         return transport_->send(json);
     }
 

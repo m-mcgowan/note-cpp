@@ -1034,6 +1034,57 @@ nc.hub.sync().command();
 </td></tr>
 </table>
 
+## Raw JSON passthrough
+
+For serial passthrough protocols, debug consoles, or any situation where you
+need to send pre-formatted JSON to the Notecard:
+
+<table>
+<tr><th>note-c</th><th>note-cpp</th></tr>
+<tr><td>
+
+```c
+// Parse, send, get response
+J *req = JParse(json_string);
+J *rsp = notecard.requestAndResponse(req);
+char *s = JPrintUnformatted(rsp);
+// use s...
+JFree(s);
+JDelete(rsp);
+
+```
+
+</td><td>
+
+```cpp
+// Send pre-formatted JSON, get response
+auto rsp = nc.transact(json_string);
+if (rsp) {
+    // *rsp is a string_view of the response
+}
+
+// Fire-and-forget raw JSON
+nc.send(json_command);
+```
+
+</td></tr>
+</table>
+
+`transact()` and `send()` go through the transport layer (framing, CRC)
+but do not parse or validate the JSON content. They are the equivalent of
+note-c's `NoteTransactionString` / `NoteRequestResponseJSON`.
+
+These methods require a buffered transport (the response string_view lives
+in the transport's internal buffer). On Arduino, use a JSON backend:
+
+```cpp
+note::backends::CjsonBackend backend;
+note::NotecardApi nc(backend, transport);
+```
+
+For the typed API (which works with both buffered and streaming transports),
+use `nc.execute(req)` or the fluent factory pattern.
+
 ## Binary data transfers (card.binary)
 
 Both libraries provide high-level convenience functions and low-level

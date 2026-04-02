@@ -161,19 +161,30 @@ TEST_CASE("Issue 1b: transport::NotecardSerial is a TransportHal, not IStreaming
 // arbitrary JSON to the Notecard via the host firmware.
 // ---------------------------------------------------------------------------
 
-TEST_CASE("Issue 6: raw JSON request passthrough") {
+TEST_CASE("Issue 6: transact with caller-provided buffer") {
     Harness h;
-    // note-c equivalent: NoteRequestResponseJSON / requestAndResponse(JParse(json))
-    // Sends pre-formatted JSON, returns response as string_view.
-    auto rsp = h.nc.transact(R"({"req":"card.version"})");
+    char buf[256];
+    auto rsp = h.nc.transact(R"({"req":"card.version"})", buf);
     REQUIRE(rsp);
     REQUIRE(h.last_req == R"({"req":"card.version"})");
 }
 
-TEST_CASE("Issue 6: raw JSON command passthrough") {
+TEST_CASE("Issue 6: send fire-and-forget") {
     Harness h;
-    // note-c equivalent: sendRequest(JParse(json)) — fire and forget
     auto result = h.nc.send(R"({"cmd":"hub.set","product":"com.example"})");
     REQUIRE(result);
     REQUIRE(h.last_req == R"({"cmd":"hub.set","product":"com.example"})");
+}
+
+TEST_CASE("Issue 6: transact rejects malformed JSON") {
+    Harness h;
+    char buf[256];
+    auto rsp = h.nc.transact("not json at all", buf);
+    REQUIRE(!rsp);
+}
+
+TEST_CASE("Issue 6: send rejects malformed JSON") {
+    Harness h;
+    auto result = h.nc.send("{missing closing brace");
+    REQUIRE(!result);
 }

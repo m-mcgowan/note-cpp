@@ -93,6 +93,11 @@ public:
     // Used for body content that's already valid JSON.
     virtual JsonBuilder& add_raw(string_view key, string_view json_fragment) = 0;
 
+    // Write raw interior content (pre-formatted key-value pairs without outer braces).
+    // Used by raw JSON passthrough to stream pre-formatted JSON through the builder.
+    // Default: not supported. StreamingJsonBuilder overrides.
+    virtual void add_raw_interior(string_view) {}
+
     // Finalize and return a view into the builder's internal buffer.
     // The view is valid until the next call to reset() or to_view().
     // All backends must implement this — it's the primary serialization method.
@@ -209,6 +214,14 @@ public:
         kv(key);
         writer_.write(json_fragment);
         return *this;
+    }
+
+    void add_raw_interior(string_view content) override {
+        if (!content.empty()) {
+            if (need_comma_) writer_.write(',');
+            writer_.write(content);
+            need_comma_ = true;
+        }
     }
 
     JsonBuilder& begin_object(string_view key) override {

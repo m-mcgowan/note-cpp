@@ -243,23 +243,39 @@ public:
         if (build_fn) build_fn(builder);
         return transport_->send(builder.to_view());
     }
-    /// Raw JSON passthrough — send pre-formatted JSON, get response as string_view.
-    /// Goes through the transport layer (framing, CRC) but does not parse or
-    /// validate the JSON content. Equivalent to note-c's NoteTransactionString.
-    /// Requires a buffered transport (the response string_view lives in the
-    /// transport's internal buffer).
-    Result<string_view> transact(string_view json) {
-        if (!transport_)
-            return make_error(Error::NotReady, NOTE_ERR("transact() requires a buffered transport"));
-        return transport_->transact(json, default_timeout_ms_);
+    /// Validated JSON passthrough — send pre-formatted JSON, get response.
+    /// The JSON is validated (balanced braces) before sending. The response
+    /// is written into the caller-provided buffer and returned as string_view.
+    /// Works with both buffered and streaming transports.
+    Result<string_view> transact(string_view json, span<char> buf) {
+        if (!validate_json_envelope(json))
+            return make_error(Error::Json, NOTE_ERR("malformed JSON"));
+        if (transport_) {
+            auto rv = transport_->transact(json, default_timeout_ms_);
+            if (!rv) return rv;
+            auto rsp = *rv;
+            if (rsp.size() >= buf.size())
+                return make_error(Error::Overflow, NOTE_ERR("response exceeds buffer"));
+            std::memcpy(buf.data(), rsp.data(), rsp.size());
+            buf[rsp.size()] = '\0';
+            return string_view(buf.data(), rsp.size());
+        }
+        if (streaming_transport_) {
+            return streaming_transact_raw(json, buf);
+        }
+        return make_error(Error::NotReady, NOTE_ERR("no transport configured"));
     }
 
-    /// Raw JSON fire-and-forget — send pre-formatted JSON with no response.
-    /// Requires a buffered transport.
+    /// Validated JSON fire-and-forget — send pre-formatted JSON, no response.
+    /// Works with both buffered and streaming transports.
     Result<void> send(string_view json) {
-        if (!transport_)
-            return make_error(Error::NotReady, NOTE_ERR("send() requires a buffered transport"));
-        return transport_->send(json);
+        if (!validate_json_envelope(json))
+            return make_error(Error::Json, NOTE_ERR("malformed JSON"));
+        if (transport_)
+            return transport_->send(json);
+        if (streaming_transport_)
+            return streaming_send_raw(json);
+        return make_error(Error::NotReady, NOTE_ERR("no transport configured"));
     }
 
 #endif // NOTE_NO_STD_STRING
@@ -394,6 +410,75 @@ private:
         }
 
         return result;
+    }
+
+    /// Validate that a string is well-formed JSON using the SAX parser.
+    static bool validate_json_envelope(string_view json) {
+        JsonSink null_sink;
+        auto err = sax_parse(json, null_sink);
+        return err.empty();
+    }
+
+    /// Stream raw JSON to the streaming transport and read response into buf.
+    Result<string_view> streaming_transact_raw(string_view json, span<char> buf) {
+        // Use a BuildFn that writes the JSON interior (without outer braces)
+        // through the streaming builder which adds its own '{' and '}'.
+        auto interior = json.substr(1, json.size() - 2);  // strip { and }
+        BuildFn build = [](JsonBuilder& b, void* ctx) {
+            b.add_raw_interior(*static_cast<string_view*>(ctx));
+        };
+
+        // Sink that captures the raw response as a JSON string
+        struct BufSink : JsonSink {
+            char* dst;
+            size_t cap;
+            size_t len = 0;
+            bool overflow = false;
+
+            BufSink(char* d, size_t c) : dst(d), cap(c) {}
+
+            void on_string(string_view k, string_view v) { add_field(k); add_quoted(v); }
+            void on_number(string_view k, string_view v) { add_field(k); append(v); }
+            void on_bool(string_view k, bool v) { add_field(k); append(v ? "true" : "false"); }
+            void reset() { len = 0; overflow = false; }
+
+        private:
+            void add_field(string_view k) {
+                if (len > 0) append(",");
+                append("\""); append(k); append("\":");
+            }
+            void add_quoted(string_view v) {
+                append("\""); append(v); append("\"");
+            }
+            void append(string_view s) {
+                for (char c : s) {
+                    if (len < cap) dst[len++] = c;
+                    else overflow = true;
+                }
+            }
+        };
+
+        BufSink sink(buf.data() + 1, buf.size() - 2);  // leave room for { and }
+        auto rv = streaming_transport_->transact(build, &interior, sink, default_timeout_ms_);
+        if (!rv) return Unexpected(rv.error());
+        if (sink.overflow)
+            return make_error(Error::Overflow, NOTE_ERR("response exceeds buffer"));
+
+        // Wrap in braces
+        buf[0] = '{';
+        std::memmove(buf.data() + 1, buf.data() + 1, sink.len);
+        buf[sink.len + 1] = '}';
+        buf[sink.len + 2] = '\0';
+        return string_view(buf.data(), sink.len + 2);
+    }
+
+    /// Stream raw JSON fire-and-forget via the streaming transport.
+    Result<void> streaming_send_raw(string_view json) {
+        auto interior = json.substr(1, json.size() - 2);
+        BuildFn build = [](JsonBuilder& b, void* ctx) {
+            b.add_raw_interior(*static_cast<string_view*>(ctx));
+        };
+        return streaming_transport_->send(build, &interior);
     }
 
 #endif // NOTE_NO_STD_STRING

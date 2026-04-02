@@ -1052,38 +1052,45 @@ char *s = JPrintUnformatted(rsp);
 JFree(s);
 JDelete(rsp);
 
+
+
 ```
 
 </td><td>
 
 ```cpp
-// Send pre-formatted JSON, get response
-auto rsp = nc.transact(json_string);
-if (rsp) {
-    // *rsp is a string_view of the response
-}
+// BareNotecard — standalone raw JSON transport
+note::StreamingTransport transport(hal);
+note::BareNotecard bare(transport);
 
-// Fire-and-forget raw JSON
-nc.send(json_command);
+char buf[512];
+auto rsp = bare.transact(json_string, buf);
+if (rsp) { /* *rsp is the response */ }
+
+// Fire-and-forget
+bare.send(json_command);
 ```
 
 </td></tr>
 </table>
 
-`transact()` and `send()` go through the transport layer (framing, CRC)
-but do not parse or validate the JSON content. They are the equivalent of
-note-c's `NoteTransactionString` / `NoteRequestResponseJSON`.
+`BareNotecard` validates the JSON (SAX-parsed) before sending, then
+transmits the raw bytes through the transport and reads the response
+into a caller-provided buffer. No allocator, no JSON backend, no typed
+API — just validated JSON in/out. Equivalent to note-c's
+`requestAndResponse(JParse(json))`.
 
-These methods require a buffered transport (the response string_view lives
-in the transport's internal buffer). On Arduino, use a JSON backend:
+`transact()` and `send()` are also available on `Notecard` directly
+for firmware that uses both the typed API and raw passthrough:
 
 ```cpp
-note::backends::CjsonBackend backend;
-note::NotecardApi nc(backend, transport);
-```
+// Typed API for firmware operations
+nc.hub.set().product("com.example").execute();
 
-For the typed API (which works with both buffered and streaming transports),
-use `nc.execute(req)` or the fluent factory pattern.
+// Raw passthrough for external commands
+char buf[512];
+auto rsp = nc.transact(R"({"req":"card.version"})", buf);
+```
 
 ## Binary data transfers (card.binary)
 

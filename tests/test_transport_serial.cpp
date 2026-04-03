@@ -356,7 +356,7 @@ TEST_CASE("response with bare LF terminator is parsed") {
 }
 
 TEST_CASE("response timeout before first byte returns error") {
-    // note-c: _noteSerialAvailable always false → timeout → error
+    // note-c: _noteSerialAvailable always false -> timeout -> error
     struct NoDataHal : public SerialHal {
         uint32_t now_ms = 0;
         std::deque<uint8_t> rx;
@@ -378,15 +378,14 @@ TEST_CASE("response timeout before first byte returns error") {
     } hal;
 
     NotecardSerial<SerialPolicy> notecard_serial(hal);
-    note::StreamingTransport transport(notecard_serial, /*max_retries=*/5);
+    note::StreamingTransport transport(notecard_serial);
     note::IStreamingTransport& t = transport;
     note::JsonSink null_sink;
     auto build = [](note::JsonBuilder& b) { b.add("req", "hub.set"); };
     auto r = t.transact(build, null_sink, 500);
     REQUIRE(!r.has_value());
-    // In the streaming path, a read timeout causes the SAX parser to see
-    // EOF. The parser returns a parse error, which maps to Error::Json.
-    REQUIRE(r.error().code == note::Error::Json);
+    // Timeout on the wire is a transport-level error: ResponseLost.
+    REQUIRE(r.error().code == note::Error::ResponseLost);
 }
 
 TEST_CASE("response timeout after partial data") {
@@ -416,14 +415,14 @@ TEST_CASE("response timeout after partial data") {
     } hal;
 
     NotecardSerial<SerialPolicy> notecard_serial(hal);
-    note::StreamingTransport transport(notecard_serial, /*max_retries=*/5);
+    note::StreamingTransport transport(notecard_serial);
     note::IStreamingTransport& t = transport;
     note::JsonSink null_sink;
     auto build = [](note::JsonBuilder& b) { b.add("req", "hub.set"); };
     auto r = t.transact(build, null_sink, 10000);
     REQUIRE(!r.has_value());
-    // In the streaming path, partial data + timeout causes a SAX parse error.
-    REQUIRE(r.error().code == note::Error::Json);
+    // Partial data + timeout is a transport-level error: ResponseLost.
+    REQUIRE(r.error().code == note::Error::ResponseLost);
 }
 
 // ---------------------------------------------------------------------------
@@ -508,42 +507,38 @@ TEST_CASE("CRC: after detection, second request includes CRC field") {
     REQUIRE(tx.find("\"crc\":\"") != std::string::npos);
 }
 
-TEST_CASE("CRC mismatch triggers retry and succeeds on clean response") {
-    // note-c: NoteRequestWithRetry / retry on CRC error
+TEST_CASE("CRC mismatch returns ResponseLost") {
     SerialTestHarness h;
 
     // First call: CRC auto-detected
     h.hal.queue_response(str_crc_add("{\"ok\":true}", 0) + "\r\n");
     h.transact("hub.set");
 
-    // Second call: first response has wrong seq → CRC mismatch → retry;
-    // second response is correct.
+    // Second call: response has wrong seq -> CRC mismatch -> error (no retry).
     h.hal.queue_response(str_crc_add("{\"ok\":true}", 99) + "\r\n");  // wrong seq
-    h.hal.queue_response(str_crc_add("{\"ok\":true}", 1) + "\r\n");   // correct
     CaptureSink sink;
     auto r = h.transact("hub.sync", sink);
-    REQUIRE(r.has_value());
-    CHECK(sink.find("ok", "bool") == "true");
+    REQUIRE(!r.has_value());
+    CHECK(r.error().code == note::Error::ResponseLost);
+    CHECK(r.error().cause == note::Cause::CrcMismatch);
 }
 
 // ---------------------------------------------------------------------------
 // Retry on I/O error — ported from note-c NoteRequestWithRetry_test.cpp
 // ---------------------------------------------------------------------------
 
-TEST_CASE("I/O error on transmit triggers retry, succeeds on recovery") {
-    // note-c: _noteSerialTransmit fails on first data send → retry succeeds
+TEST_CASE("I/O error on transmit returns SendFailed") {
     SerialTestHarness h;
     // The transmit_ok_fn applies to the SerialHal-level transmit calls.
     // Call 1: reset probe '\n' (succeeds)
-    // Call 2: first JSON body fragment → fails
-    // After failure, StreamingTransport retries: reset + re-transmit
-    // Call 3: retry reset '\n' → succeeds
-    // Call 4+: JSON body + CRLF → succeeds
+    // Call 2: first JSON body fragment -> fails
+    // Transport returns SendFailed immediately (no retry).
     h.hal.transmit_ok_fn = [](int call) -> bool { return call != 2; };
 
     h.hal.queue_response("{\"ok\":true}\r\n");
     auto r = h.transact("hub.set");
-    REQUIRE(r.has_value());
+    REQUIRE(!r.has_value());
+    CHECK(r.error().code == note::Error::SendFailed);
 }
 
 TEST_CASE("reset failure returns Error::NotReady") {

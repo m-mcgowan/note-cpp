@@ -32,6 +32,11 @@ struct TransportHal {
     /// Serial: \r\n. I2C: \n.
     virtual bool write_line_terminator() = 0;
 
+    /// Monotonic millisecond counter (wraps after ~49 days).
+    /// Used by the Notecard layer for inter-transaction timing and retry
+    /// budget tracking.
+    virtual uint32_t millis() = 0;
+
     /// Platform delay. Here for convenience to avoid a separate platform
     /// abstraction — the HAL already knows the platform. May evolve into
     /// a broader platform hooks interface (e.g. watchdog feeding on ESP32

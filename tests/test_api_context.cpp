@@ -7,6 +7,7 @@
 
 #include "catch.hpp"
 #include "test_json_backend.hpp"
+#include "test_notecard_factory.hpp"
 
 #include <note/api.hpp>
 
@@ -35,7 +36,7 @@ struct Harness {
                 last_req = std::string(r);
                 return {};
             })
-        , nc(backend, transport)
+        , nc(note::test::make_test_notecard(backend, transport))
         , api(nc)
     {}
 };

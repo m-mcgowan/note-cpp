@@ -1,6 +1,7 @@
 // Wire format tests: verify that generated request types produce correct JSON.
 #include "catch.hpp"
 #include "test_json_backend.hpp"
+#include "test_notecard_factory.hpp"
 
 #include <note/notecard.hpp>
 #include <note/notecard_api.hpp>
@@ -32,7 +33,7 @@ struct TestHarness {
                 last_request = std::string(req);
                 return {};
             })
-        , nc(backend, transport) {}
+        , nc(note::test::make_test_notecard(backend, transport)) {}
 };
 
 } // namespace
@@ -661,6 +662,8 @@ TEST_CASE("NotecardApi: construct with transport") {
             return note::string_view("{}");
         });
     note::NotecardApi nc(transport);
+    nc.notecard().set_request_ids(false);
+    nc.notecard().set_retry_policy({.max_retries = 0});
 
     // Use Api surface directly on nc — no separate Api object needed
     nc.hub.set().product("com.example.app").mode("periodic").execute();

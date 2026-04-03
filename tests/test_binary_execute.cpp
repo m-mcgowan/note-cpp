@@ -3,6 +3,7 @@
 
 #include "catch.hpp"
 #include "test_json_backend.hpp"
+#include "test_notecard_factory.hpp"
 
 #include <note/notecard.hpp>
 #include <note/md5.hpp>
@@ -47,7 +48,7 @@ struct BinaryTestHarness {
                 last_request = std::string(req);
                 return {};
             })
-        , nc(backend, transport)
+        , nc(note::test::make_test_notecard(backend, transport))
     {
         transport.set_write([this](const uint8_t* data, size_t len) -> note::Result<void> {
             written_bytes.insert(written_bytes.end(), data, data + len);
@@ -99,7 +100,7 @@ struct BinaryGetHarness {
                 last_request = std::string(req);
                 return note::string_view(json_response);
             })
-        , nc(backend, transport)
+        , nc(note::test::make_test_notecard(backend, transport))
     {
         transport.set_write([](const uint8_t*, size_t) -> note::Result<void> { return {}; });
         transport.set_read([this](uint8_t* buf, size_t max_len, uint32_t) -> note::Result<size_t> {
@@ -429,7 +430,7 @@ struct VerifyTestHarness {
                     return note::string_view(responses[idx]);
                 return note::string_view("{}");
             })
-        , nc(backend, transport)
+        , nc(note::test::make_test_notecard(backend, transport))
     {
         transport.set_write([this](const uint8_t* d, size_t n) -> note::Result<void> {
             written_bytes.insert(written_bytes.end(), d, d + n);

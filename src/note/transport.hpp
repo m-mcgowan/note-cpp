@@ -37,6 +37,12 @@ struct IBufferedTransport {
     /// Request abort of an in-progress transaction.
     virtual void abort() = 0;
 
+    /// Monotonic millisecond counter for inter-transaction timing.
+    virtual uint32_t millis() = 0;
+
+    /// Platform delay.
+    virtual void delay(uint32_t ms) = 0;
+
     /// Write raw bytes (for binary COBS streaming). Default: not supported.
     virtual Result<void> write(const uint8_t*, size_t) {
         return make_error(Error::NotReady, "binary transfer not supported");
@@ -104,11 +110,21 @@ public:
     void reset() override {}
     void abort() override {}
 
+    uint32_t millis() override { return millis_ ? millis_() : 0; }
+    void delay(uint32_t ms) override { if (delay_) delay_(ms); }
+
+    using MillisFn = std::function<uint32_t()>;
+    using DelayFn = std::function<void(uint32_t)>;
+    void set_millis(MillisFn fn) { millis_ = std::move(fn); }
+    void set_delay(DelayFn fn) { delay_ = std::move(fn); }
+
 private:
     TransactFn transact_;
     SendFn send_;
     WriteFn write_;
     ReadFn read_;
+    MillisFn millis_;
+    DelayFn delay_;
 };
 #endif // !NOTE_NO_STD_STRING && !NOTE_NO_STD_FUNCTION
 

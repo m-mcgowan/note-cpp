@@ -116,6 +116,7 @@ public:
     }
 
     void delay(uint32_t /*ms*/) override {}
+    uint32_t millis() override { return 0; }
 };
 
 // Helper: get IStreamingTransport& from StreamingTransport to access
@@ -284,20 +285,19 @@ TEST_CASE("transact: reset failure returns NotReady") {
 
 
 // ---------------------------------------------------------------------------
-// transact: sink receives reset on retry
+// transact: single attempt returns error on failure (no retry)
 // ---------------------------------------------------------------------------
 
-TEST_CASE("transact: sink is reset between retries") {
+TEST_CASE("transact: single attempt returns error without retry") {
     MockHal hal;
-    // No data queued — both attempts fail. Sink should be reset on each retry.
-    StreamingTransport transport(hal, /*max_retries=*/2, /*retry_delay_ms=*/0);
+    // No data queued — single attempt fails immediately.
+    StreamingTransport transport(hal);
     CollectorSink sink;
 
     auto r = iface(transport).transact(
         [](JsonBuilder& b) { b.add("req", "test"); }, sink, 5000);
     REQUIRE_FALSE(r.has_value());
-    // Sink should have been reset for each retry (attempts 1 and 2)
-    REQUIRE(sink.reset_count == 2);
+    REQUIRE(r.error().code == Error::ResponseLost);
 }
 
 

@@ -13,6 +13,7 @@
 
 #include "catch.hpp"
 #include "test_json_backend.hpp"
+#include "test_notecard_factory.hpp"
 
 #include <note/api.hpp>
 #include <note/string_pool.hpp>
@@ -42,7 +43,7 @@ struct Harness {
                 last_req = std::string(r);
                 return {};
             })
-        , nc(backend, transport)
+        , nc(note::test::make_test_notecard(backend, transport))
         , api(nc)
     {}
 };
@@ -62,7 +63,7 @@ struct FailHarness {
             [](note::string_view) -> note::Result<void> {
                 return note::make_error(note::Error::SendFailed, "test");
             })
-        , nc(backend, transport)
+        , nc(note::test::make_test_notecard(backend, transport))
         , api(nc)
     {}
 };
@@ -82,7 +83,7 @@ struct NcErrorHarness {
             [](note::string_view) -> note::Result<void> {
                 return {};
             })
-        , nc(backend, transport)
+        , nc(note::test::make_test_notecard(backend, transport))
         , api(nc)
     {}
 };

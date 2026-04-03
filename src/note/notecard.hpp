@@ -6,6 +6,8 @@
 #include "owned_buffer.hpp"
 #include "json.hpp"
 #include "md5.hpp"
+#include "retry.hpp"
+#include "retry_policy.hpp"
 #include "safety.hpp"
 #include "span.hpp"
 #include "streaming_transport.hpp"
@@ -102,6 +104,8 @@ public:
     template<typename RequestT>
     ApiResult<typename RequestT::Response> execute(const RequestT& req) {
         using Rsp = typename RequestT::Response;
+        constexpr Safety safety = RequestT::safety;
+        const uint32_t req_id = request_ids_enabled_ ? next_request_id_++ : 0;
 
         debug_timing(debug_, TimingEvent::TransactionBegin, RequestT::notecard_request);
 
@@ -113,40 +117,52 @@ public:
         // Full streaming path: SAX-parse response directly from transport.
         if constexpr (std::is_void_v<Rsp> || detail::has_sink<Rsp>::value) {
             if (streaming_transport_ && alloc_.has_value()) {
-                debug_timing(debug_, TimingEvent::BuildBegin, RequestT::notecard_request);
                 auto build = [&](JsonBuilder& b) {
                     b.add("req", RequestT::notecard_request);
+                    if (req_id) b.add("id", static_cast<int32_t>(req_id));
                     req.build(b);
                 };
                 BuildFn build_fn = [](JsonBuilder& b, void* p) {
                     (*static_cast<decltype(build)*>(p))(b);
                 };
-                debug_timing(debug_, TimingEvent::BuildEnd, RequestT::notecard_request);
 
-                StringPool pool(*alloc_);
+                auto attempt = [&]() -> ApiResult<Rsp> {
+                    StringPool pool(*alloc_);
+                    if constexpr (std::is_void_v<Rsp>) {
+                        JsonSink null_sink;
+                        auto ei = execute_streaming(*streaming_transport_, default_timeout_ms_, build_fn, &build, null_sink, pool, debug_);
+                        if (ei.code != Error{}) return ApiResult<void>(ei);
+                        return ApiResult<void>{};
+                    } else {
+                        Rsp rsp_val{};
+                        typename Rsp::Sink response_sink(rsp_val, pool);
+                        JsonSinkAdapter<typename Rsp::Sink> virtual_sink(response_sink);
+                        auto ei = execute_streaming(*streaming_transport_, default_timeout_ms_, build_fn, &build, virtual_sink, pool, debug_);
+                        if (ei.code != Error{}) return ApiResult<Rsp>(ei);
+                        return ApiResult<Rsp>(std::move(rsp_val));
+                    }
+                };
+                auto reset = [&]() { streaming_transport_->reset(); };
 
-                if constexpr (std::is_void_v<Rsp>) {
-                    JsonSink null_sink;
-                    auto ei = execute_streaming(*streaming_transport_, default_timeout_ms_, build_fn, &build, null_sink, pool);
-                    debug_timing(debug_, TimingEvent::TransactionEnd, RequestT::notecard_request);
-                    if (ei.code != Error{}) return ApiResult<void>(ei);
-                    return ApiResult<void>{};
-                } else {
-                    Rsp rsp_val{};
-                    typename Rsp::Sink response_sink(rsp_val, pool);
-                    JsonSinkAdapter<typename Rsp::Sink> virtual_sink(response_sink);
-                    auto ei = execute_streaming(*streaming_transport_, default_timeout_ms_, build_fn, &build, virtual_sink, pool);
-                    debug_timing(debug_, TimingEvent::TransactionEnd, RequestT::notecard_request);
-                    if (ei.code != Error{}) return ApiResult<Rsp>(ei);
-                    return ApiResult<Rsp>(std::move(rsp_val));
-                }
+                auto result = retry_transaction<ApiResult<Rsp>>(
+                    *streaming_transport_, timing_, safety, retry_policy_,
+                    attempt, reset);
+                debug_timing(debug_, TimingEvent::TransactionEnd, RequestT::notecard_request);
+                return result;
             }
         }
 
         // Buffered fallback: requires a JsonBackend + buffered transport.
 #ifndef NOTE_NO_BUFFERED
         if (backend_) {
-            auto result = execute_buffered(req);
+            auto attempt = [&]() -> ApiResult<Rsp> {
+                return execute_buffered(req, req_id);
+            };
+            auto reset = [&]() { transport_->reset(); };
+
+            auto result = retry_transaction<ApiResult<Rsp>>(
+                *transport_, timing_, safety, retry_policy_,
+                attempt, reset);
             debug_timing(debug_, TimingEvent::TransactionEnd, RequestT::notecard_request);
             return result;
         }
@@ -214,8 +230,11 @@ public:
 #endif // !NOTE_NO_STD_STRING && !NOTE_NO_STD_FUNCTION
 
     // Fire-and-forget typed command (generated request types).
+    // Inter-transaction timing enforced, but no retry (no response to check).
     template<typename RequestT>
     Result<void> command_typed(const RequestT& req) {
+        enforce_timing();
+        Result<void> result;
         if (streaming_transport_) {
             auto build = [&](JsonBuilder& b) {
                 b.add("cmd", RequestT::notecard_request);
@@ -224,14 +243,17 @@ public:
             BuildFn fn = [](JsonBuilder& b, void* p) {
                 (*static_cast<decltype(build)*>(p))(b);
             };
-            return streaming_transport_->send(fn, &build);
+            result = streaming_transport_->send(fn, &build);
+        } else if (transport_) {
+            auto& builder = backend_->get_builder();
+            builder.add("cmd", RequestT::notecard_request);
+            req.build(builder);
+            result = transport_->send(builder.to_view());
+        } else {
+            return make_error(Error::NotReady, NOTE_ERR("no transport configured"));
         }
-        if (!transport_) return make_error(Error::NotReady, NOTE_ERR("no transport configured"));
-
-        auto& builder = backend_->get_builder();
-        builder.add("cmd", RequestT::notecard_request);
-        req.build(builder);
-        return transport_->send(builder.to_view());
+        record_timing();
+        return result;
     }
 
 #if !defined(NOTE_NO_STD_STRING) && !defined(NOTE_NO_STD_FUNCTION)
@@ -256,43 +278,55 @@ public:
 
     /// Validated JSON passthrough — returns an OwnedBuffer that the caller owns.
     /// The buffer is freed when it goes out of scope. No dangling views.
+    /// Assumes NonIdempotent safety (only retries on SendFailed).
     Result<OwnedBuffer> transact(string_view json) {
         if (!validate_json_envelope(json))
             return make_error(Error::Json, NOTE_ERR("malformed JSON"));
 
-        // Buffered path: copy response into an OwnedBuffer.
+        // Buffered path with retry.
         if (transport_) {
-            auto rv = transport_->transact(json, default_timeout_ms_);
-            if (!rv) return Unexpected(rv.error());
-            auto buf = OwnedBuffer::create(alloc_value(), rv->size() + 1);
-            if (!buf) return make_error(Error::Overflow, NOTE_ERR("alloc failed"));
-            buf.append(rv->data(), rv->size());
-            buf.null_terminate();
-            return buf;
+            auto attempt = [&]() -> Result<OwnedBuffer> {
+                auto rv = transport_->transact(json, default_timeout_ms_);
+                if (!rv) return Unexpected(rv.error());
+                auto buf = OwnedBuffer::create(alloc_value(), rv->size() + 1);
+                if (!buf) return make_error(Error::Overflow, NOTE_ERR("alloc failed"));
+                buf.append(rv->data(), rv->size());
+                buf.null_terminate();
+                return buf;
+            };
+            auto reset = [&]() { transport_->reset(); };
+            return retry_transaction<Result<OwnedBuffer>>(
+                *transport_, timing_, Safety::NonIdempotent, retry_policy_,
+                attempt, reset);
         }
 
-        // Streaming path: transmit, read response into a growing OwnedBuffer.
+        // Streaming path with retry.
         if (streaming_transport_) {
-            auto* st = static_cast<StreamingTransport*>(streaming_transport_);
+            auto attempt = [&]() -> Result<OwnedBuffer> {
+                auto* st = static_cast<StreamingTransport*>(streaming_transport_);
+                auto send_rv = st->send_raw(json);
+                if (!send_rv) return Unexpected(send_rv.error());
 
-            auto send_rv = st->send_raw(json);
-            if (!send_rv) return Unexpected(send_rv.error());
+                auto buf = OwnedBuffer::create(alloc_value(), 1024);
+                if (!buf) return make_error(Error::Overflow, NOTE_ERR("alloc failed"));
 
-            auto buf = OwnedBuffer::create(alloc_value(), 1024);
-            if (!buf) return make_error(Error::Overflow, NOTE_ERR("alloc failed"));
-
-            for (;;) {
-                uint8_t byte;
-                auto rv = st->read(&byte, 1, default_timeout_ms_);
-                if (!rv) return Unexpected(rv.error());
-                if (*rv == 0) return make_error(Error::ResponseLost, Cause::Timeout, NOTE_ERR("response timeout"));
-                if (byte == '\n') break;
-                if (byte == '\r') continue;
-                if (!buf.append(static_cast<char>(byte)))
-                    return make_error(Error::Overflow, NOTE_ERR("response exceeds available memory"));
-            }
-            buf.null_terminate();
-            return buf;
+                for (;;) {
+                    uint8_t byte;
+                    auto rv = st->read(&byte, 1, default_timeout_ms_);
+                    if (!rv) return Unexpected(rv.error());
+                    if (*rv == 0) return make_error(Error::ResponseLost, Cause::Timeout, NOTE_ERR("response timeout"));
+                    if (byte == '\n') break;
+                    if (byte == '\r') continue;
+                    if (!buf.append(static_cast<char>(byte)))
+                        return make_error(Error::Overflow, NOTE_ERR("response exceeds available memory"));
+                }
+                buf.null_terminate();
+                return buf;
+            };
+            auto reset = [&]() { streaming_transport_->reset(); };
+            return retry_transaction<Result<OwnedBuffer>>(
+                *streaming_transport_, timing_, Safety::NonIdempotent, retry_policy_,
+                attempt, reset);
         }
 
         return make_error(Error::NotReady, NOTE_ERR("no transport configured"));
@@ -300,40 +334,67 @@ public:
 
     /// Validated JSON passthrough — caller-provided buffer variant.
     /// The response is written into buf and returned as string_view.
-    /// Works with both buffered and streaming transports.
+    /// Assumes NonIdempotent safety (only retries on SendFailed).
     Result<string_view> transact(string_view json, span<char> buf) {
         if (!validate_json_envelope(json))
             return make_error(Error::Json, NOTE_ERR("malformed JSON"));
         if (transport_) {
-            auto rv = transport_->transact(json, default_timeout_ms_);
-            if (!rv) return rv;
-            auto rsp = *rv;
-            if (rsp.size() >= buf.size())
-                return make_error(Error::Overflow, NOTE_ERR("response exceeds buffer"));
-            std::memcpy(buf.data(), rsp.data(), rsp.size());
-            buf[rsp.size()] = '\0';
-            return string_view(buf.data(), rsp.size());
+            auto attempt = [&]() -> Result<string_view> {
+                auto rv = transport_->transact(json, default_timeout_ms_);
+                if (!rv) return rv;
+                auto rsp = *rv;
+                if (rsp.size() >= buf.size())
+                    return make_error(Error::Overflow, NOTE_ERR("response exceeds buffer"));
+                std::memcpy(buf.data(), rsp.data(), rsp.size());
+                buf[rsp.size()] = '\0';
+                return string_view(buf.data(), rsp.size());
+            };
+            auto reset = [&]() { transport_->reset(); };
+            return retry_transaction<Result<string_view>>(
+                *transport_, timing_, Safety::NonIdempotent, retry_policy_,
+                attempt, reset);
         }
         if (streaming_transport_) {
-            return streaming_transact_raw(json, buf);
+            auto attempt = [&]() -> Result<string_view> {
+                return streaming_transact_raw(json, buf);
+            };
+            auto reset = [&]() { streaming_transport_->reset(); };
+            return retry_transaction<Result<string_view>>(
+                *streaming_transport_, timing_, Safety::NonIdempotent, retry_policy_,
+                attempt, reset);
         }
         return make_error(Error::NotReady, NOTE_ERR("no transport configured"));
     }
 
     /// Validated JSON fire-and-forget — send pre-formatted JSON, no response.
-    /// Works with both buffered and streaming transports.
+    /// Inter-transaction timing enforced, but no retry (no response to check).
     Result<void> send(string_view json) {
         if (!validate_json_envelope(json))
             return make_error(Error::Json, NOTE_ERR("malformed JSON"));
+        enforce_timing();
+        Result<void> result;
         if (transport_)
-            return transport_->send(json);
-        if (streaming_transport_)
-            return streaming_send_raw(json);
-        return make_error(Error::NotReady, NOTE_ERR("no transport configured"));
+            result = transport_->send(json);
+        else if (streaming_transport_)
+            result = streaming_send_raw(json);
+        else
+            return make_error(Error::NotReady, NOTE_ERR("no transport configured"));
+        record_timing();
+        return result;
     }
 
     void set_default_timeout(uint32_t ms) { default_timeout_ms_ = ms; }
     uint32_t default_timeout() const { return default_timeout_ms_; }
+
+    void set_retry_policy(RetryPolicy policy) { retry_policy_ = policy; }
+    const RetryPolicy& retry_policy() const { return retry_policy_; }
+
+    void set_inter_transaction_gap(uint32_t ms) { timing_.min_gap_ms = ms; }
+    uint32_t inter_transaction_gap() const { return timing_.min_gap_ms; }
+
+    /// Enable/disable auto-incrementing request IDs in JSON output.
+    /// Default: enabled. Disable in tests that check exact wire format.
+    void set_request_ids(bool enabled) { request_ids_enabled_ = enabled; }
 
     /// Set a debug listener for observability (wire data, timing, memory).
     /// Pass a default-constructed DebugListener or call clear_debug() to disable.
@@ -502,7 +563,7 @@ private:
     /// Buffered execute: build JSON via backend, transact, parse response.
     /// Separated from execute() so LTO can eliminate it when backend_ is null.
     template<typename RequestT>
-    ApiResult<typename RequestT::Response> execute_buffered(const RequestT& req) {
+    ApiResult<typename RequestT::Response> execute_buffered(const RequestT& req, uint32_t req_id = 0) {
         using Rsp = typename RequestT::Response;
 
         Result<string_view> rsp = make_error(Error::NotReady, "");
@@ -510,6 +571,7 @@ private:
             debug_timing(debug_, TimingEvent::BuildBegin, RequestT::notecard_request);
             auto& builder = backend_->get_builder();
             builder.add("req", RequestT::notecard_request);
+            if (req_id) builder.add("id", static_cast<int32_t>(req_id));
             req.build(builder);
             auto req_json = builder.to_view();
             debug_timing(debug_, TimingEvent::BuildEnd, RequestT::notecard_request);
@@ -555,7 +617,27 @@ private:
     template<typename Transport>
     static ErrorInfo execute_streaming(Transport& t, uint32_t timeout_ms,
                                        BuildFn build_fn, void* ctx,
-                                       JsonSink& inner_sink, StringPool& pool) {
+                                       JsonSink& inner_sink, StringPool& pool,
+                                       const DebugListener& debug = {}) {
+        // Emit wire-send event: build the JSON into a temporary buffer for debug.
+        // Only when a wire listener is set — zero overhead otherwise.
+        if (debug.on_wire) {
+            // Build into a sizing pass to get the JSON for debug output.
+            // This duplicates the build but only when debug is active.
+            struct SizingWriter : JsonWriter {
+                using JsonWriter::write;
+                std::string buf;
+                bool write(const char* data, size_t len) override {
+                    buf.append(data, len);
+                    return true;
+                }
+            } sizer;
+            StreamingJsonBuilder sizing_builder(sizer);
+            build_fn(sizing_builder, ctx);
+            sizer.buf += '}';
+            debug_wire(debug, string_view(sizer.buf.data(), sizer.buf.size()), WireDirection::Send);
+        }
+
         ErrorCaptureSink err_sink(inner_sink);
         auto rv = t.transact(build_fn, ctx, err_sink, timeout_ms);
         if (!rv) return rv.error();
@@ -563,6 +645,29 @@ private:
         if (!err.empty())
             return ErrorInfo{Error::Notecard, Cause::Unspecified, pool.intern(err)};
         return {};
+    }
+
+    /// Enforce inter-transaction gap using whichever transport is active.
+    void enforce_timing() {
+        if (!timing_.has_previous) return;
+        if (streaming_transport_) {
+            uint32_t elapsed = streaming_transport_->millis() - timing_.last_transaction_end_ms;
+            if (elapsed < timing_.min_gap_ms)
+                streaming_transport_->delay(timing_.min_gap_ms - elapsed);
+        } else if (transport_) {
+            uint32_t elapsed = transport_->millis() - timing_.last_transaction_end_ms;
+            if (elapsed < timing_.min_gap_ms)
+                transport_->delay(timing_.min_gap_ms - elapsed);
+        }
+    }
+
+    /// Record that a transaction just completed.
+    void record_timing() {
+        if (streaming_transport_)
+            timing_.last_transaction_end_ms = streaming_transport_->millis();
+        else if (transport_)
+            timing_.last_transaction_end_ms = transport_->millis();
+        timing_.has_previous = true;
     }
 
     Allocator alloc_value() const { return alloc_.value_or(Allocator{}); }
@@ -574,6 +679,10 @@ private:
     std::optional<Allocator> alloc_;
     DebugListener debug_{};
     byte_span cobs_buf_{};          // optional external COBS working buffer
+    RetryPolicy retry_policy_{};
+    TransactionTiming timing_{};
+    uint32_t next_request_id_ = 1;
+    bool request_ids_enabled_ = true;
 #ifndef NOTE_NO_MD5
     PlatformMd5 platform_md5_{};    // default MD5 implementation
     Md5Provider* md5_ = &platform_md5_;

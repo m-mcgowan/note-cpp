@@ -549,35 +549,34 @@ TEST_CASE("i2c round-trip: after CRC detection, second request includes CRC fiel
     REQUIRE(h.hal.last_request.find("\"crc\":\"") != std::string::npos);
 }
 
-TEST_CASE("i2c round-trip: CRC mismatch triggers retry") {
+TEST_CASE("i2c round-trip: CRC mismatch returns ResponseLost") {
     I2cTestHarness h;
 
     // First call: CRC auto-detected
     h.hal.responses.push_back(str_crc_add("{\"ok\":true}", 0) + "\n");
     h.transact("hub.set");
 
-    // Second call: first response has wrong seq -> CRC mismatch -> retry;
-    // second response is correct.
+    // Second call: response has wrong seq -> CRC mismatch -> error (no retry).
     h.hal.responses.push_back(str_crc_add("{\"ok\":true}", 99) + "\n");  // wrong seq
-    h.hal.responses.push_back(str_crc_add("{\"ok\":true}", 1) + "\n");   // correct
     CaptureSink sink;
     auto r = h.transact("hub.sync", sink);
-    REQUIRE(r);
-    CHECK(sink.find("ok", "bool") == "true");
+    REQUIRE(!r);
+    CHECK(r.error().code == note::Error::ResponseLost);
+    CHECK(r.error().cause == note::Cause::CrcMismatch);
 }
 
-TEST_CASE("i2c round-trip: I/O error on transmit triggers retry, succeeds on recovery") {
+TEST_CASE("i2c round-trip: I/O error on transmit returns SendFailed") {
     I2cTestHarness h;
     // transmit_ok_fn applies to the I2CHal-level transmit calls.
-    // Call 1: reset probe '\n' (during initial reset → succeeds)
-    // Call 2: first data byte '{' of request → fails
-    // NotecardI2c::transmit calls hal_.reset() then returns false.
-    // StreamingTransport retries: reset probe → succeeds, re-transmit → succeeds.
+    // Call 1: reset probe '\n' (during initial reset -> succeeds)
+    // Call 2: first data byte '{' of request -> fails
+    // Transport returns SendFailed immediately (no retry).
     h.hal.transmit_ok_fn = [](int call) -> bool { return call != 2; };
 
     h.hal.responses.push_back("{}\n");
     auto r = h.transact("hub.set");
-    REQUIRE(r.has_value());
+    REQUIRE(!r.has_value());
+    CHECK(r.error().code == note::Error::SendFailed);
 }
 
 TEST_CASE("i2c round-trip: reset failure returns Error::NotReady") {

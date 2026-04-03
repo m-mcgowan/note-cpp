@@ -27,8 +27,8 @@ using Api = note::Api<>;
 struct Fixture {
     SerialHal hal{notecardUart()};
     SerialTransport transport{hal};
-    note::backends::CjsonBackend backend;
-    note::Notecard notecard{backend, transport};
+    note::StreamingTransport streaming{transport};
+    note::Notecard notecard{streaming};
     Api nc{notecard};
 };
 
@@ -165,9 +165,9 @@ struct ErrorSink : public note::JsonSink {
 };
 
 template<typename Sink>
-note::string_view streaming_request(SerialTransport& transport, const char* req_json,
+note::string_view streaming_request(note::StreamingTransport& transport, const char* req_json,
                                      Sink& sink, uint32_t timeout_ms = 10000) {
-    auto send_result = transport.send(note::string_view(req_json));
+    auto send_result = transport.send_raw(note::string_view(req_json));
     if (!send_result) return "send failed";
     auto read_fn = [&](uint8_t* buf, size_t max, uint32_t timeout) -> note::Result<size_t> {
         return transport.read(buf, max, timeout);
@@ -176,10 +176,10 @@ note::string_view streaming_request(SerialTransport& transport, const char* req_
 }
 
 template<typename Sink>
-note::string_view streaming_request(SerialTransport& transport, const char* req_json,
+note::string_view streaming_request(note::StreamingTransport& transport, const char* req_json,
                                      note::SaxStreamBuf& sbuf, Sink& sink,
                                      uint32_t timeout_ms = 10000) {
-    auto send_result = transport.send(note::string_view(req_json));
+    auto send_result = transport.send_raw(note::string_view(req_json));
     if (!send_result) return "send failed";
     auto read_fn = [&](uint8_t* buf, size_t max, uint32_t timeout) -> note::Result<size_t> {
         return transport.read(buf, max, timeout);
@@ -196,8 +196,8 @@ TEST_CASE("streaming sax: card.version matches execute()") {
     std::string expected_device(rsp.device.data(), rsp.device.size());
 
     VersionSink sink;
-    f.transport.reset();
-    auto err = streaming_request(f.transport, "{\"req\":\"card.version\"}\n", sink);
+    f.streaming.reset();
+    auto err = streaming_request(f.streaming, "{\"req\":\"card.version\"}\n", sink);
     INFO("parse error: ", err.data());
     REQUIRE(err.empty());
     CHECK(sink.device == expected_device);
@@ -207,8 +207,8 @@ TEST_CASE("streaming sax: card.version matches execute()") {
 TEST_CASE("streaming sax: card.status") {
     Fixture f;
     StatusSink sink;
-    f.transport.reset();
-    auto err = streaming_request(f.transport, "{\"req\":\"card.status\"}\n", sink);
+    f.streaming.reset();
+    auto err = streaming_request(f.streaming, "{\"req\":\"card.status\"}\n", sink);
     INFO("parse error: ", err.data());
     REQUIRE(err.empty());
     CHECK(!sink.status.empty());
@@ -219,8 +219,8 @@ TEST_CASE("streaming sax: small buffer (96 bytes)") {
     VersionSink sink;
     char buf[96];
     note::SaxStreamBuf sbuf(buf);
-    f.transport.reset();
-    auto err = streaming_request(f.transport, "{\"req\":\"card.version\"}\n", sbuf, sink);
+    f.streaming.reset();
+    auto err = streaming_request(f.streaming, "{\"req\":\"card.version\"}\n", sbuf, sink);
     INFO("parse error: ", err.data());
     REQUIRE(err.empty());
     CHECK(!sink.device.empty());
@@ -229,8 +229,8 @@ TEST_CASE("streaming sax: small buffer (96 bytes)") {
 TEST_CASE("streaming sax: error response") {
     Fixture f;
     ErrorSink sink;
-    f.transport.reset();
-    auto err = streaming_request(f.transport, "{\"req\":\"note.get\",\"file\":\"nonexistent.qi\"}\n", sink);
+    f.streaming.reset();
+    auto err = streaming_request(f.streaming, "{\"req\":\"note.get\",\"file\":\"nonexistent.qi\"}\n", sink);
     INFO("parse error: ", err.data());
     REQUIRE(err.empty());
     CHECK(!sink.err.empty());
@@ -240,8 +240,8 @@ TEST_CASE("streaming sax: sequential requests no desync") {
     Fixture f;
     for (int i = 0; i < 5; ++i) {
         VersionSink sink;
-        f.transport.reset();
-        auto err = streaming_request(f.transport, "{\"req\":\"card.version\"}\n", sink);
+        f.streaming.reset();
+        auto err = streaming_request(f.streaming, "{\"req\":\"card.version\"}\n", sink);
         INFO("iteration ", i, " parse error: ", err.data());
         REQUIRE(err.empty());
         CHECK(!sink.device.empty());
@@ -254,8 +254,8 @@ TEST_CASE("streaming sax: interleaved with normal execute()") {
     REQUIRE(rsp1);
 
     VersionSink sink;
-    f.transport.reset();
-    auto err = streaming_request(f.transport, "{\"req\":\"card.version\"}\n", sink);
+    f.streaming.reset();
+    auto err = streaming_request(f.streaming, "{\"req\":\"card.version\"}\n", sink);
     REQUIRE(err.empty());
 
     auto rsp2 = f.nc.card.status().execute();

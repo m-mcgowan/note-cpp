@@ -18,6 +18,8 @@
 #include "compiler.hpp"
 #include "json.hpp"
 #include "notecard.hpp"
+#include "retry.hpp"
+#include "retry_policy.hpp"
 #include "string_pool.hpp"
 #include "streaming_transport.hpp"
 
@@ -41,55 +43,70 @@ public:
     void set_default_timeout(uint32_t ms) { default_timeout_ms_ = ms; }
     uint32_t default_timeout() const { return default_timeout_ms_; }
 
+    void set_retry_policy(RetryPolicy policy) { retry_policy_ = policy; }
+    void set_inter_transaction_gap(uint32_t ms) { timing_.min_gap_ms = ms; }
+    void set_request_ids(bool enabled) { request_ids_enabled_ = enabled; }
+
     template<typename RequestT>
     ApiResult<typename RequestT::Response> execute(const RequestT& req) {
         using Rsp = typename RequestT::Response;
+        constexpr Safety safety = RequestT::safety;
+        const uint32_t req_id = request_ids_enabled_ ? next_request_id_++ : 0;
 
         auto build = [&](JsonBuilder& b) {
             b.add("req", RequestT::notecard_request);
+            if (req_id) b.add("id", static_cast<int32_t>(req_id));
             req.build(b);
         };
         BuildFn build_fn = [](JsonBuilder& b, void* p) {
             (*static_cast<decltype(build)*>(p))(b);
         };
 
-        StringPool pool(alloc_);
+        auto attempt = [&]() -> ApiResult<Rsp> {
+            StringPool pool(alloc_);
 
-        if constexpr (std::is_void_v<Rsp>) {
-            // Void response — null sink, template error capture.
-            struct NullSink {
-                void on_null(string_view) {}
-                void on_bool(string_view, bool) {}
-                void on_number(string_view, string_view) {}
-                void on_string(string_view, string_view) {}
-                void on_object_begin(string_view) {}
-                void on_object_end(string_view) {}
-                void on_array_begin(string_view) {}
-                void on_array_end(string_view) {}
-                void reset() {}
-            } null_sink;
-            ErrorCaptureSinkT<NullSink> err_sink(null_sink);
-            auto rv = stack_.transport.transact(build_fn, &build, err_sink, default_timeout_ms_);
-            if (!rv) return Unexpected(rv.error());
-            auto err = err_sink.captured_error();
-            if (!err.empty())
-                return ApiResult<void>(ErrorInfo{Error::Notecard, Cause::Unspecified, pool.intern(err)});
-            return ApiResult<void>{};
-        } else {
-            Rsp rsp_val{};
-            typename Rsp::Sink response_sink(rsp_val, pool);
-            ErrorCaptureSinkT<typename Rsp::Sink> err_sink(response_sink);
-            auto rv = stack_.transport.transact(build_fn, &build, err_sink, default_timeout_ms_);
-            if (!rv) return Unexpected(rv.error());
-            auto err = err_sink.captured_error();
-            if (!err.empty())
-                return ApiResult<Rsp>(ErrorInfo{Error::Notecard, Cause::Unspecified, pool.intern(err)});
-            return ApiResult<Rsp>(std::move(rsp_val));
-        }
+            if constexpr (std::is_void_v<Rsp>) {
+                struct NullSink {
+                    void on_null(string_view) {}
+                    void on_bool(string_view, bool) {}
+                    void on_number(string_view, string_view) {}
+                    void on_string(string_view, string_view) {}
+                    void on_object_begin(string_view) {}
+                    void on_object_end(string_view) {}
+                    void on_array_begin(string_view) {}
+                    void on_array_end(string_view) {}
+                    void reset() {}
+                } null_sink;
+                ErrorCaptureSinkT<NullSink> err_sink(null_sink);
+                auto rv = stack_.transport.transact(build_fn, &build, err_sink, default_timeout_ms_);
+                if (!rv) return Unexpected(rv.error());
+                auto err = err_sink.captured_error();
+                if (!err.empty())
+                    return ApiResult<void>(ErrorInfo{Error::Notecard, Cause::Unspecified, pool.intern(err)});
+                return ApiResult<void>{};
+            } else {
+                Rsp rsp_val{};
+                typename Rsp::Sink response_sink(rsp_val, pool);
+                ErrorCaptureSinkT<typename Rsp::Sink> err_sink(response_sink);
+                auto rv = stack_.transport.transact(build_fn, &build, err_sink, default_timeout_ms_);
+                if (!rv) return Unexpected(rv.error());
+                auto err = err_sink.captured_error();
+                if (!err.empty())
+                    return ApiResult<Rsp>(ErrorInfo{Error::Notecard, Cause::Unspecified, pool.intern(err)});
+                return ApiResult<Rsp>(std::move(rsp_val));
+            }
+        };
+
+        auto reset = [&]() { stack_.transport.reset(); };
+
+        return retry_transaction<ApiResult<Rsp>>(
+            stack_.transport, timing_, safety, retry_policy_,
+            attempt, reset);
     }
 
     template<typename RequestT>
     Result<void> command_typed(const RequestT& req) {
+        enforce_timing();
         auto build = [&](JsonBuilder& b) {
             b.add("cmd", RequestT::notecard_request);
             req.build(b);
@@ -97,16 +114,34 @@ public:
         BuildFn build_fn = [](JsonBuilder& b, void* p) {
             (*static_cast<decltype(build)*>(p))(b);
         };
-        return stack_.transport.send(build_fn, &build);
+        auto result = stack_.transport.send(build_fn, &build);
+        record_timing();
+        return result;
     }
 
     /// Access the transport stack (e.g. for binary I/O).
     Stack& stack() { return stack_; }
 
 private:
+    void enforce_timing() {
+        if (!timing_.has_previous) return;
+        uint32_t elapsed = stack_.transport.millis() - timing_.last_transaction_end_ms;
+        if (elapsed < timing_.min_gap_ms)
+            stack_.transport.delay(timing_.min_gap_ms - elapsed);
+    }
+
+    void record_timing() {
+        timing_.last_transaction_end_ms = stack_.transport.millis();
+        timing_.has_previous = true;
+    }
+
     Stack stack_;
     Allocator alloc_;
     uint32_t default_timeout_ms_ = 10000;
+    RetryPolicy retry_policy_{};
+    TransactionTiming timing_{};
+    uint32_t next_request_id_ = 1;
+    bool request_ids_enabled_ = true;
 };
 
 } // namespace note

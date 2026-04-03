@@ -9,6 +9,7 @@
 // Void-response endpoints verify both paths succeed without error.
 
 #include "catch.hpp"
+#include "test_notecard_factory.hpp"
 
 #include <note/api.hpp>
 #include <note/allocator.hpp>
@@ -56,6 +57,7 @@ public:
     bool reset() override { return true; }
     bool write_line_terminator() override { return true; }
     void delay(uint32_t) override {}
+    uint32_t millis() override { return 0; }
 };
 
 /// Streaming harness: StreamingTransport over MockHal.
@@ -88,7 +90,7 @@ struct BufferedHarness {
             [](note::string_view) -> note::Result<void> {
                 return {};
             })
-        , nc(backend, transport)
+        , nc(note::test::make_test_notecard(backend, transport))
         , api(nc)
     {}
 };

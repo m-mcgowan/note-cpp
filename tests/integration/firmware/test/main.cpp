@@ -38,6 +38,10 @@ static note::transport::NotecardSerial<>& serial_transport() {
     static note::transport::NotecardSerial<> t{serial_hal()};
     return t;
 }
+static note::StreamingTransport& serial_streaming() {
+    static note::StreamingTransport st{serial_transport()};
+    return st;
+}
 #endif
 
 #ifdef NOTECARD_TEST_I2C
@@ -53,13 +57,17 @@ static note::transport::NotecardI2c<>& i2c_transport() {
     static note::transport::NotecardI2c<> t{i2c_hal()};
     return t;
 }
+static note::StreamingTransport& i2c_streaming() {
+    static note::StreamingTransport st{i2c_transport()};
+    return st;
+}
 #endif
 
 static note::Notecard& get_notecard() {
 #ifdef NOTECARD_TEST_SERIAL
-    static note::Notecard nc(g_backend, serial_transport());
+    static note::Notecard nc(serial_streaming());
 #elif defined(NOTECARD_TEST_I2C)
-    static note::Notecard nc(g_backend, i2c_transport());
+    static note::Notecard nc(i2c_streaming());
 #endif
     return nc;
 }

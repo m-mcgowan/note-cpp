@@ -694,6 +694,19 @@ run_quick() {
     "$BUILD_DIR/tests/note-cpp-tests-arduino"
     echo "  arduino tests: OK"
 
+    # PlatformIO integration test build (compile only, no hardware)
+    if command -v pio >/dev/null 2>&1; then
+        ci_stage "PIO integration build"
+        local PIO_DIR="$ROOT/tests/integration/firmware"
+        for env in serial i2c; do
+            echo "  Building $env..."
+            NOTECARD_SERIAL_RX=38 NOTECARD_SERIAL_TX=39 \
+            NOTECARD_I2C_SDA=14 NOTECARD_I2C_SCL=21 \
+            pio run -d "$PIO_DIR" -e "$env" > /dev/null 2>&1
+            echo "  $env: OK"
+        done
+    fi
+
     ci_stage "Done"
     printf "\nQuick check passed in %ds.\n\n" $(( $(date +%s) - _ci_run_start ))
 }

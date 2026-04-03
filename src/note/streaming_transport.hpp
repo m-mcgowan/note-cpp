@@ -42,6 +42,12 @@ struct IStreamingTransport {
     virtual void reset() = 0;
     virtual void abort() = 0;
 
+    /// Monotonic millisecond counter for inter-transaction timing.
+    virtual uint32_t millis() = 0;
+
+    /// Platform delay.
+    virtual void delay(uint32_t ms) = 0;
+
     /// Set debug listener. Default: no-op.
     virtual void set_debug(const DebugListener&) {}
 
@@ -78,14 +84,18 @@ struct IStreamingTransport {
 
 class StreamingTransport : public IStreamingTransport {
 public:
-    explicit StreamingTransport(TransportHal& hal,
-                                uint32_t max_retries = 5,
-                                uint32_t retry_delay_ms = 500)
-        : hal_(hal)
-        , max_retries_(max_retries)
-        , retry_delay_ms_(retry_delay_ms) {}
+    explicit StreamingTransport(TransportHal& hal)
+        : hal_(hal) {}
+
+    /// @deprecated Retry is now orchestrated by the Notecard layer.
+    /// These parameters are accepted for source compatibility but ignored.
+    StreamingTransport(TransportHal& hal, uint32_t /*max_retries*/, uint32_t /*retry_delay_ms*/ = 500)
+        : hal_(hal) {}
 
     void set_debug(const DebugListener& d) override { debug_ = d; }
+
+    uint32_t millis() override { return hal_.millis(); }
+    void delay(uint32_t ms) override { hal_.delay(ms); }
 
     /// Virtual override for IStreamingTransport (used by Notecard).
     Result<void> transact(BuildFn build_fn, void* ctx,
@@ -102,6 +112,7 @@ public:
     }
 
 private:
+    /// Single-attempt transact. Retry is orchestrated by the Notecard layer.
     template<typename SinkT>
     Result<void> transact_impl(BuildFn build_fn, void* ctx,
                                 SinkT& sink, uint32_t timeout_ms) {
@@ -114,42 +125,24 @@ private:
         if (crc_enabled_) ++crc_seq_;
 #endif
 
-        ErrorInfo last_error{Error::SendFailed, Cause::HalError, "transmit failed"};
-
-        for (uint32_t attempt = 0; attempt <= max_retries_; ++attempt) {
-            if (attempt > 0) {
-                debug_transport(debug_, TransportEvent::Retry, attempt);
-                debug_timing(debug_, TimingEvent::RetryBegin);
-                hal_.delay(retry_delay_ms_);
-                debug_timing(debug_, TimingEvent::ResetBegin);
-                hal_.reset();
-                debug_timing(debug_, TimingEvent::ResetEnd);
-                sink.reset();
-            }
-
-            debug_timing(debug_, TimingEvent::TransmitBegin);
-            if (!stream_request(build_fn, ctx)) {
-                debug_transport(debug_, TransportEvent::SendFailed, attempt);
-                last_error = {Error::SendFailed, Cause::HalError, "transmit failed"};
-                continue;
-            }
-            debug_timing(debug_, TimingEvent::TransmitEnd);
-
-            debug_timing(debug_, TimingEvent::ReceiveBegin);
-            auto rv = receive_streaming(sink, timeout_ms);
-            debug_timing(debug_, TimingEvent::ReceiveEnd);
-            if (!rv) {
-                if (rv.error().cause == Cause::Timeout)
-                    debug_transport(debug_, TransportEvent::Timeout, attempt);
-                else if (rv.error().cause == Cause::CrcMismatch)
-                    debug_transport(debug_, TransportEvent::CrcMismatch, attempt);
-                last_error = rv.error();
-                continue;
-            }
-            return {};
+        debug_timing(debug_, TimingEvent::TransmitBegin);
+        if (!stream_request(build_fn, ctx)) {
+            debug_transport(debug_, TransportEvent::SendFailed, 0);
+            return make_error(Error::SendFailed, Cause::HalError, "transmit failed");
         }
+        debug_timing(debug_, TimingEvent::TransmitEnd);
 
-        return Unexpected(last_error);
+        debug_timing(debug_, TimingEvent::ReceiveBegin);
+        auto rv = receive_streaming(sink, timeout_ms);
+        debug_timing(debug_, TimingEvent::ReceiveEnd);
+        if (!rv) {
+            if (rv.error().cause == Cause::Timeout)
+                debug_transport(debug_, TransportEvent::Timeout, 0);
+            else if (rv.error().cause == Cause::CrcMismatch)
+                debug_transport(debug_, TransportEvent::CrcMismatch, 0);
+            return Unexpected(rv.error());
+        }
+        return {};
     }
 
 public:
@@ -237,6 +230,18 @@ private:
         return string_view(buf, pos);
     }
 
+    /// Drain the trailing frame boundary (\r\n) after SAX parsing.
+    /// JSON never contains literal \n, so \n is always a frame delimiter.
+    void drain_frame_boundary(uint32_t timeout_ms) {
+        uint8_t byte;
+        for (;;) {
+            auto rv = hal_.read(&byte, 1, timeout_ms);
+            if (!rv || *rv == 0) break;
+            if (byte == '\n') break;
+            // \r — keep reading for the \n
+        }
+    }
+
     bool ensure_init() {
         if (initialized_) return true;
         if (!hal_.reset()) return false;
@@ -290,6 +295,8 @@ private:
     }
 
     /// Receive and SAX-parse — template on sink type for static dispatch.
+    /// After parsing, drains the trailing frame boundary (\r\n) so the
+    /// wire is clean for the next transaction.
     template<typename SinkT>
     Result<void> receive_streaming(SinkT& sink, uint32_t timeout_ms) {
 #ifndef NOTE_NO_CRC
@@ -304,7 +311,7 @@ private:
 
         auto parse_err = sax_parse_streaming(read_fn, timeout_ms, crc_sink);
         if (!parse_err.empty())
-            return make_error(Error::Json, parse_err);
+            return make_error(Error::ResponseLost, Cause::Unspecified, parse_err);
 
         if (crc_sink.has_crc()) {
             if (crc_sink.seq() != crc_seq_ ||
@@ -322,14 +329,15 @@ private:
 
         auto parse_err = sax_parse_streaming(read_fn, timeout_ms, sink);
         if (!parse_err.empty())
-            return make_error(Error::Json, parse_err);
+            return make_error(Error::ResponseLost, Cause::Unspecified, parse_err);
 #endif
+        // SAX parser stops at '}'. Drain the trailing frame boundary
+        // (\r\n or \n) so the next transaction starts with a clean wire.
+        drain_frame_boundary(timeout_ms);
         return {};
     }
 
     TransportHal& hal_;
-    uint32_t max_retries_;
-    uint32_t retry_delay_ms_;
     bool initialized_ = false;
     DebugListener debug_{};
 #ifndef NOTE_NO_CRC

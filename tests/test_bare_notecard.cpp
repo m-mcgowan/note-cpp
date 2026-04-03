@@ -36,6 +36,7 @@ struct MockHal : note::TransportHal {
         return true;
     }
     void delay(uint32_t) override {}
+    uint32_t millis() override { return 0; }
 };
 
 } // namespace

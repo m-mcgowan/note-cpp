@@ -5,6 +5,7 @@
 
 #include "catch.hpp"
 #include "test_json_backend.hpp"
+#include "test_notecard_factory.hpp"
 
 #include <note/notecard.hpp>
 #include <note/api.hpp>
@@ -70,7 +71,7 @@ TEST_CASE("functor chaining terminates with execute() on bound request") {
                     last_request = std::string(req);
                     return {};
                 })
-            , nc(backend, transport) {}
+            , nc(note::test::make_test_notecard(backend, transport)) {}
     } h;
 
     note::Api api(h.nc);
@@ -151,7 +152,7 @@ TEST_CASE("extra() adds undocumented bool property to wire format") {
                 [](note::string_view) -> note::Result<void> {
                     return {};
                 })
-            , nc(backend, transport) {}
+            , nc(note::test::make_test_notecard(backend, transport)) {}
     } h;
     note::api::HubSet req;
     req.mode("periodic").extra("exp_feature", true);

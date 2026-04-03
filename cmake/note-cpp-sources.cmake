@@ -98,6 +98,7 @@ set(NOTE_CPP_TEST_SOURCES
     test_migration_support.cpp
     test_notecard.cpp
     test_property_functor.cpp
+    test_retry.cpp
     test_setup.cpp
     test_state_store.cpp
     test_sync.cpp

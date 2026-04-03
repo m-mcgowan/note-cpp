@@ -3,6 +3,7 @@
 
 #include "catch.hpp"
 #include "test_json_backend.hpp"
+#include "test_notecard_factory.hpp"
 
 #include <note/api.hpp>
 #include <note/app/channel.hpp>
@@ -27,7 +28,7 @@ struct TestFixture {
                 captured.emplace_back(req);
                 return note::string_view("{}");
             })
-        , nc(backend, transport)
+        , nc(note::test::make_test_notecard(backend, transport))
         , ch(nc) {}
 };
 
@@ -182,7 +183,7 @@ TEST_CASE("Attention::arm() propagates transport errors") {
         [](note::string_view, uint32_t) -> note::Result<note::string_view> {
             return note::make_error(note::Error::SendFailed, "write failed");
         });
-    note::Notecard nc(backend, transport);
+    auto nc = note::test::make_test_notecard(backend, transport);
     note::app::DirectChannel ch(nc);
     Store store;
     note::app::Attention<note::app::DirectChannel, Store> attn(ch, store);

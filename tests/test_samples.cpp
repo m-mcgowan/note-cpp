@@ -6,6 +6,7 @@
 
 #include "catch.hpp"
 #include "test_json_backend.hpp"
+#include "test_notecard_factory.hpp"
 
 #include <note/notecard.hpp>
 #include <note/api.hpp>
@@ -28,7 +29,7 @@ struct TestHarness {
                 last_request = std::string(req);
                 return {};
             })
-        , nc(backend, transport) {}
+        , nc(note::test::make_test_notecard(backend, transport)) {}
 };
 
 } // namespace

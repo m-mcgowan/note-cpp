@@ -1,6 +1,6 @@
 # note-cpp Transport Layer
 
-note-cpp ships a complete, header-only implementation of both Notecard wire protocols. These are a direct alternative to note-c's serial and I2C transports — same timing, same CRC, same retry behaviour, no global state, no cJSON dependency.
+note-cpp ships a complete, header-only implementation of both Notecard wire protocols. These are a direct alternative to note-c's serial and I2C transports — same timing, same CRC, no global state, no cJSON dependency. Retry is orchestrated by the Notecard layer (not the transport) with safety-gated logic — see `docs/retry-design.md`.
 
 ## Architecture
 
@@ -9,14 +9,14 @@ The transport layer is split into three levels:
 ```
 TransportHal           Pure hardware abstraction (5 primitives)
   ↓
-StreamingTransport     Protocol logic: retry, CRC, JSON framing
+StreamingTransport     Protocol logic: CRC, JSON framing (single-attempt)
   ↓
 IStreamingTransport    Interface consumed by Notecard
 ```
 
-**`TransportHal`** (`include/note/transport_hal.hpp`) — the only thing you implement. Five methods: `transmit()`, `read()`, `reset()`, `write_line_terminator()`, `delay()`. No protocol logic, no buffers.
+**`TransportHal`** (`include/note/transport_hal.hpp`) — the only thing you implement. Six methods: `transmit()`, `read()`, `reset()`, `write_line_terminator()`, `millis()`, `delay()`. No protocol logic, no buffers.
 
-**`StreamingTransport`** (`include/note/streaming_transport.hpp`) — protocol engine over any `TransportHal&`. Handles retry loops, CRC (append on send, verify on receive), and JSON framing. Implements `IStreamingTransport`.
+**`StreamingTransport`** (`include/note/streaming_transport.hpp`) — single-attempt protocol engine over any `TransportHal&`. Handles CRC (append on send, verify on receive) and JSON framing. Implements `IStreamingTransport`. Retry is handled by the Notecard layer above.
 
 **`IStreamingTransport`** (`include/note/streaming_transport.hpp`) — the interface `Notecard` consumes. Two operations: `transact(build_fn, sink, timeout)` streams a request via a build function and SAX-parses the response into a sink; `send(build_fn)` is fire-and-forget. Also exposes raw `write()`/`read()` for binary (COBS) streaming.
 
@@ -33,7 +33,7 @@ include/note/transport/
 
 `NotecardSerial` implements `TransportHal` — it adapts a `SerialHal` (your hardware) into the `TransportHal` interface that `StreamingTransport` consumes. `NotecardI2c` extends `AbstractTransport` (the buffered path, see below).
 
-Auto-reset on first use, CRC auto-detection, segmented TX, and retry logic are handled by `StreamingTransport`, not the HAL.
+Auto-reset on first use, CRC auto-detection, and segmented TX are handled by `StreamingTransport`, not the HAL. Retry logic is in the Notecard layer (`retry_transaction()` in `include/note/retry.hpp`).
 
 ### Buffered path (backward compatibility)
 

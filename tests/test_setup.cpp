@@ -3,6 +3,7 @@
 
 #include "catch.hpp"
 #include "test_json_backend.hpp"
+#include "test_notecard_factory.hpp"
 
 #include <note/app/channel.hpp>
 #include <note/app/setup.hpp>
@@ -26,7 +27,7 @@ struct TestFixture {
                 captured.emplace_back(req);
                 return note::string_view("{}");
             })
-        , nc(backend, transport)
+        , nc(note::test::make_test_notecard(backend, transport))
         , ch(nc) {}
 };
 
@@ -163,7 +164,7 @@ TEST_CASE("Setup::run() fails at hub.set step") {
                 return note::make_error(note::Error::SendFailed, "write failed");
             return note::string_view("{}");
         });
-    note::Notecard nc(backend, transport);
+    auto nc = note::test::make_test_notecard(backend, transport);
     note::app::DirectChannel ch(nc);
     Store store;
     note::app::Setup<note::app::DirectChannel, Store> setup(ch, store);
@@ -187,7 +188,7 @@ TEST_CASE("Setup::run() fails at template step") {
                 return note::make_error(note::Error::SendFailed, "write failed");
             return note::string_view("{}");
         });
-    note::Notecard nc(backend, transport);
+    auto nc = note::test::make_test_notecard(backend, transport);
     note::app::DirectChannel ch(nc);
     Store store;
     note::app::Setup<note::app::DirectChannel, Store> setup(ch, store);

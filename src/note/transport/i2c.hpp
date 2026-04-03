@@ -242,6 +242,7 @@ public:
         return hal_.transmit(&nl, 1);
     }
 
+    uint32_t millis() override { return hal_.millis(); }
     void delay(uint32_t ms) override { hal_.delay(ms); }
 
 private:

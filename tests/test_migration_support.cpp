@@ -3,6 +3,7 @@
 
 #include "catch.hpp"
 #include "test_json_backend.hpp"
+#include "test_notecard_factory.hpp"
 #include <note/api.hpp>
 #include <note/backends/buffer.hpp>
 #include <note/notecard_api.hpp>
@@ -24,7 +25,7 @@ struct Harness {
                 last_req = std::string(r);
                 return note::string_view("{}");
             })
-        , nc(backend, transport) {}
+        , nc(note::test::make_test_notecard(backend, transport)) {}
 };
 
 } // namespace
@@ -42,6 +43,8 @@ TEST_CASE("Issue 1: NotecardApi::begin(IStreamingTransport&) without allocator")
         note::Result<void> send(note::BuildFn, void*) override { return {}; }
         void reset() override {}
         void abort() override {}
+        uint32_t millis() override { return 0; }
+        void delay(uint32_t) override {}
     } transport;
 
     note::NotecardApi nc;
@@ -150,7 +153,7 @@ TEST_CASE("card.aux state: get_object_array reads pin states") {
         [&](note::string_view, uint32_t) -> note::Result<note::string_view> {
             return note::string_view(canned);
         });
-    note::Notecard nc(backend, transport);
+    auto nc = note::test::make_test_notecard(backend, transport);
 
     // Parse response via the buffered path — uses real JSON parser
     auto rsp = nc.request("card.aux");
@@ -240,11 +243,12 @@ TEST_CASE("Issue 6: transact returns overflow error for large response") {
         bool reset() override { return true; }
         bool write_line_terminator() override { rsp_pos = 0; return true; }
         void delay(uint32_t) override {}
+        uint32_t millis() override { return 0; }
     };
 
     MockHal hal(200);  // response > 64 bytes
     note::StreamingTransport transport(hal);
-    note::Notecard nc(transport);
+    auto nc = note::test::make_test_notecard(transport);
 
     char buf[64];  // intentionally small
     auto rsp = nc.transact(R"({"req":"card.version"})", buf);
@@ -281,7 +285,7 @@ TEST_CASE("Issue 6b: buffered passthrough preserves nested objects") {
             last_req = std::string(r);
             return note::string_view(canned_rsp);
         });
-    note::Notecard nc(backend, transport);
+    auto nc = note::test::make_test_notecard(backend, transport);
 
     char buf[512];
     auto rsp = nc.transact(R"({"req":"card.version"})", buf);
@@ -317,11 +321,12 @@ TEST_CASE("Issue 6b: streaming passthrough preserves nested objects") {
             return true;
         }
         void delay(uint32_t) override {}
+        uint32_t millis() override { return 0; }
     };
 
     MockHal hal;
     note::StreamingTransport transport(hal);
-    note::Notecard nc(transport, note::Allocator{});
+    auto nc = note::test::make_test_notecard(transport, note::Allocator{});
 
     char buf[512];
     auto rsp = nc.transact(R"({"req":"card.version"})", buf);
@@ -348,11 +353,12 @@ TEST_CASE("Issue 6b: streaming passthrough preserves arrays") {
         bool reset() override { return true; }
         bool write_line_terminator() override { rsp_pos = 0; return true; }
         void delay(uint32_t) override {}
+        uint32_t millis() override { return 0; }
     };
 
     MockHal hal;
     note::StreamingTransport transport(hal);
-    note::Notecard nc(transport, note::Allocator{});
+    auto nc = note::test::make_test_notecard(transport, note::Allocator{});
 
     char buf[512];
     auto rsp = nc.transact(R"({"req":"file.changes"})", buf);

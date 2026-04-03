@@ -276,17 +276,39 @@ nc.hub.set().product("...").send(Importance::Normal, {.timeout_ms = 60000});
 The resolved policy starts from the importance level's defaults, then
 overlays any non-sentinel override values.
 
-## Implementation Plan
+## Implementation Status
 
-1. **ITransport interface** — refactor `Notecard` from `RequestFn`/`SendFn` to
-   `ITransport&`. Update `NotecardSerial`, `NotecardI2c`, `NotecardApi`,
-   `ArduinoNotecard`, and all tests.
-2. Add `RetryPolicy`, `Importance`, `RetryPolicyOverride` types
-3. Add retry loop to `Notecard::execute()` with reset/abort support
-4. Add `.send(Importance, RetryPolicyOverride)` to request types
-5. Keep `.execute()` and `.command()` as convenience aliases
-6. Add importance-level policy table with `set_importance_policy()`
-7. Add tests for each safety × error × importance combination
-8. Fuzz tests with random transport failures
-9. Integration tests on hardware
-10. Future: detect and use note-c #238 last-response caching
+### Done
+
+- **Transport simplification**: `StreamingTransport` is now single-attempt.
+  Retry moved to the Notecard layer. Constructor's `max_retries`/`retry_delay_ms`
+  params are deprecated (accepted but ignored).
+- **`RetryPolicy`** (`include/note/retry_policy.hpp`): `max_retries` (default 5),
+  `retry_delay_ms` (500), `timeout_ms` (30000).
+- **`TransactionTiming`** (`include/note/retry.hpp`): wall-clock gap enforcement.
+  `min_gap_ms` (default 2ms, configurable via `set_inter_transaction_gap()`).
+- **`retry_transaction()`** (`include/note/retry.hpp`): free function template
+  used by Notecard, StaticNotecard, and BareNotecard. Enforces inter-transaction
+  gap, gates retry on `Safety`, respects timeout budget.
+- **Notecard integration**: `execute()` wrapped with retry using `RequestT::safety`.
+  `transact()` wrapped with `Safety::NonIdempotent`. `send()`/`command_typed()`
+  get timing enforcement but no retry.
+- **Request IDs**: auto-incrementing `"id"` field injected into JSON requests
+  for log correlation. Configurable via `set_request_ids(bool)`.
+- **`millis()` on TransportHal**: required for timing. All HALs implement it.
+- **StaticNotecard and BareNotecard**: same retry/timing as Notecard.
+  BareNotecard has explicit `Safety` overload for callers who know their
+  passthrough request is safe.
+- **Error classification fix**: SAX parse failures on the wire are now
+  `Error::ResponseLost` (not `Error::Json`) — they're retryable for safe requests.
+- **Unit tests**: 17 tests in `test_retry.cpp` covering Safety × Error matrix,
+  timeout budget, gap enforcement, reset between retries, end-time recording.
+
+### Future
+
+- `Importance` enum and per-importance policy tables (deferred — `RetryPolicy`
+  is the foundation, `Importance` is API sugar on top)
+- `.send(Importance, RetryPolicyOverride)` on request types
+- `set_importance_policy()` global customization
+- Fuzz tests with random transport failures
+- note-c issue #238 last-response caching (safe retry for NonIdempotent)

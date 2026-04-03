@@ -8,6 +8,7 @@
 // 5. Work with constrained allocators (arena with limited space)
 
 #include "catch.hpp"
+#include "test_notecard_factory.hpp"
 #include <note/notecard.hpp>
 #include <note/streaming_transport.hpp>
 #include <note/allocator.hpp>
@@ -44,6 +45,7 @@ struct MockHal : note::TransportHal {
     bool reset() override { return true; }
     bool write_line_terminator() override { rsp_pos = 0; return true; }
     void delay(uint32_t) override {}
+    uint32_t millis() override { return 0; }
 };
 
 // Allocator that tracks allocations and can simulate failure at a threshold.
@@ -118,7 +120,7 @@ TEST_CASE("transact: small response fits without growth") {
     note::StreamingTransport transport(hal);
     TrackingAllocator tracker;
     {
-        note::Notecard nc(transport, tracker.to_allocator());
+        auto nc = note::test::make_test_notecard(transport, tracker.to_allocator());
         auto rsp = nc.transact(R"({"req":"card.version"})");
         REQUIRE(rsp);
         CHECK(rsp->size() > 0);
@@ -137,7 +139,7 @@ TEST_CASE("transact: large response triggers realloc growth") {
     MockHal hal(3000);  // 3KB response — exceeds 1KB initial
     note::StreamingTransport transport(hal);
     TrackingAllocator tracker;
-    note::Notecard nc(transport, tracker.to_allocator());
+    auto nc = note::test::make_test_notecard(transport, tracker.to_allocator());
 
     auto rsp = nc.transact(R"({"req":"env.get"})");
     REQUIRE(rsp);
@@ -154,7 +156,7 @@ TEST_CASE("transact: realloc failure returns clean error") {
     note::StreamingTransport transport(hal);
     TrackingAllocator tracker;
     tracker.max_total = 1536;  // allow initial 1KB, deny growth to 2KB
-    note::Notecard nc(transport, tracker.to_allocator());
+    auto nc = note::test::make_test_notecard(transport, tracker.to_allocator());
 
     auto rsp = nc.transact(R"({"req":"env.get"})");
     REQUIRE(!rsp);
@@ -166,7 +168,7 @@ TEST_CASE("transact: no leak on realloc failure") {
     note::StreamingTransport transport(hal);
     TrackingAllocator tracker;
     tracker.max_total = 1536;
-    note::Notecard nc(transport, tracker.to_allocator());
+    auto nc = note::test::make_test_notecard(transport, tracker.to_allocator());
 
     auto rsp = nc.transact(R"({"req":"env.get"})");
     REQUIRE(!rsp);
@@ -180,7 +182,7 @@ TEST_CASE("transact: initial alloc failure returns clean error") {
     note::StreamingTransport transport(hal);
     TrackingAllocator tracker;
     tracker.max_total = 0;  // can't allocate anything
-    note::Notecard nc(transport, tracker.to_allocator());
+    auto nc = note::test::make_test_notecard(transport, tracker.to_allocator());
 
     auto rsp = nc.transact(R"({"req":"card.version"})");
     REQUIRE(!rsp);
@@ -195,7 +197,7 @@ TEST_CASE("transact: caller owns each buffer independently") {
     MockHal hal(100);
     note::StreamingTransport transport(hal);
     TrackingAllocator tracker;
-    note::Notecard nc(transport, tracker.to_allocator());
+    auto nc = note::test::make_test_notecard(transport, tracker.to_allocator());
 
     auto rsp1 = nc.transact(R"({"req":"card.version"})");
     REQUIRE(rsp1);
@@ -215,7 +217,7 @@ TEST_CASE("transact: OwnedBuffer freed on scope exit") {
     MockHal hal(100);
     note::StreamingTransport transport(hal);
     TrackingAllocator tracker;
-    note::Notecard nc(transport, tracker.to_allocator());
+    auto nc = note::test::make_test_notecard(transport, tracker.to_allocator());
 
     {
         auto rsp = nc.transact(R"({"req":"card.version"})");
@@ -233,7 +235,7 @@ TEST_CASE("transact: OwnedBuffer freed on scope exit") {
 TEST_CASE("transact(buf): overflow returns error and drains response") {
     MockHal hal(500);
     note::StreamingTransport transport(hal);
-    note::Notecard nc(transport);
+    auto nc = note::test::make_test_notecard(transport);
 
     char buf[64];  // way too small
     auto rsp = nc.transact(R"({"req":"card.version"})", buf);
@@ -243,7 +245,7 @@ TEST_CASE("transact(buf): overflow returns error and drains response") {
     // Second call should work — the HAL was drained, not left with stale data
     MockHal hal2(30);
     note::StreamingTransport transport2(hal2);
-    note::Notecard nc2(transport2);
+    auto nc2 = note::test::make_test_notecard(transport2);
     char buf2[256];
     auto rsp2 = nc2.transact(R"({"req":"card.version"})", buf2);
     REQUIRE(rsp2);
@@ -259,7 +261,7 @@ TEST_CASE("transact: works with arena allocator") {
 
     char pool[4096];
     note::MonotonicArena arena(pool);
-    note::Notecard nc(transport, note::arena_allocator(arena));
+    auto nc = note::test::make_test_notecard(transport, note::arena_allocator(arena));
 
     auto rsp = nc.transact(R"({"req":"card.version"})");
     REQUIRE(rsp);
@@ -272,7 +274,7 @@ TEST_CASE("transact: arena exhaustion returns clean error") {
 
     char pool[512];  // tiny arena — can't hold the response
     note::MonotonicArena arena(pool);
-    note::Notecard nc(transport, note::arena_allocator(arena));
+    auto nc = note::test::make_test_notecard(transport, note::arena_allocator(arena));
 
     auto rsp = nc.transact(R"({"req":"env.get"})");
     REQUIRE(!rsp);

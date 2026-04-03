@@ -12,6 +12,7 @@
 
 #include "catch.hpp"
 #include "test_json_backend.hpp"
+#include "test_notecard_factory.hpp"
 
 #include <note/api.hpp>
 #include <note/allocator.hpp>
@@ -90,6 +91,7 @@ public:
     bool reset() override { ++reset_count; return true; }
     bool write_line_terminator() override { return true; }
     void delay(uint32_t) override { ++delay_count; }
+    uint32_t millis() override { return 0; }
 };
 
 struct ErrorHarness {
@@ -100,7 +102,7 @@ struct ErrorHarness {
 
     explicit ErrorHarness(uint32_t retries = 1)
         : transport(hal, retries)
-        , nc(transport, note::Allocator{})
+        , nc(note::test::make_test_notecard(transport, note::Allocator{}))
         , api(nc)
     {}
 };
@@ -263,7 +265,7 @@ TEST_CASE("streaming: empty JSON object") {
 TEST_CASE("streaming: initial reset failure returns error") {
     ErrorInjectHal hal;
     note::StreamingTransport transport(hal, /*max_retries=*/0);
-    note::Notecard nc(transport, note::Allocator{});
+    auto nc = note::test::make_test_notecard(transport, note::Allocator{});
 
     // This test verifies the init path is reached.
     hal.queue_response(R"({})");

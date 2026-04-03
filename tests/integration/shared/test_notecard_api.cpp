@@ -150,6 +150,100 @@ TEST_CASE("env.default set + get round-trip") {
     nc.env.clearDefault("_integration_test_var").execute();
 }
 
+// ─── Inter-transaction timing ───────────────────────────────────────────────
+//
+// note-cpp has no inter-transaction delay. Consecutive execute() calls go
+// back-to-back with zero gap. note-c has implicit overhead (~100ms+ from
+// malloc, J* tree ops, _TransactionStart hooks) that gives the Notecard
+// breathing room between requests.
+//
+// Bug: after card.attn fires (env changed), an immediate env.get returns
+// empty because the Notecard hasn't finished processing. A 2-second delay
+// was required as a workaround.
+
+TEST_CASE("rapid env set+get burst — inter-transaction timing") {
+    auto& nc = notecard_api();
+    constexpr int BURST_SIZE = 10;
+    int failures = 0;
+
+    for (int i = 0; i < BURST_SIZE; ++i) {
+        char val[32];
+        snprintf(val, sizeof(val), "burst-%d", i);
+
+        auto set_rsp = nc.env.setDefault("_burst_timing", val).execute();
+        INFO("set iteration ", i);
+        REQUIRE(set_rsp);
+
+        // Immediate read — no inter-transaction delay
+        auto get_rsp = nc.env.get().name("_burst_timing").execute();
+        INFO("get iteration ", i);
+        if (!get_rsp) { MESSAGE("get error: ", note::to_string(get_rsp.error())); }
+        REQUIRE(get_rsp);
+
+        if (note::string_view(get_rsp.text) != val) {
+            MESSAGE("TIMING BUG at iteration ", i, ": expected '", val,
+                    "' got '", get_rsp.text.data(), "'");
+            ++failures;
+        }
+    }
+
+    CHECK_MESSAGE(failures == 0,
+        "Inter-transaction timing: ", failures, "/", BURST_SIZE,
+        " reads returned stale or empty data");
+
+    nc.env.clearDefault("_burst_timing").execute();
+}
+
+TEST_CASE("note.add then immediate note.changes — inter-transaction timing") {
+    auto& nc = notecard_api();
+    const char* file = "_timing_changes.db";
+    const char* tracker = "_timing_tracker";
+
+    // Clean slate
+    nc.file.remove(file).execute();
+    auto reset = nc.note.changes().peek()
+        .file(file).tracker(tracker).resetTracker().execute();
+    if (!reset) { MESSAGE("reset: ", note::to_string(reset.error())); }
+
+    // Add a note and immediately check changes — no delay
+    auto add_rsp = nc.note.add().file(file).execute();
+    REQUIRE(add_rsp);
+
+    auto changes_rsp = nc.note.changes().peek()
+        .file(file).tracker(tracker).execute();
+    if (!changes_rsp) { MESSAGE("changes error: ", note::to_string(changes_rsp.error())); }
+    REQUIRE(changes_rsp);
+    CHECK_MESSAGE(changes_rsp.changes > 0,
+        "Inter-transaction timing: note.changes returned 0 immediately after note.add");
+
+    // Cleanup
+    nc.file.remove(file).execute();
+}
+
+TEST_CASE("back-to-back diverse transactions — inter-transaction timing") {
+    auto& nc = notecard_api();
+
+    // Fire 5 different request types in rapid succession.
+    // If the transport has no inter-transaction gap, the Notecard may
+    // not have finished post-processing one request before the next arrives.
+    auto r1 = nc.card.version().execute();
+    REQUIRE(r1);
+    auto r2 = nc.card.status().execute();
+    REQUIRE(r2);
+    auto r3 = nc.hub.get().execute();
+    REQUIRE(r3);
+    auto r4 = nc.card.version().execute();
+    REQUIRE(r4);
+    auto r5 = nc.card.status().execute();
+    REQUIRE(r5);
+
+    // Verify no data corruption across the burst
+    CHECK(note::string_view(r1.device) == note::string_view(r4.device));
+    CHECK(note::string_view(r1.version) == note::string_view(r4.version));
+    CHECK(!note::string_view(r2.status).empty());
+    CHECK(!note::string_view(r5.status).empty());
+}
+
 // ─── Error handling ─────────────────────────────────────────────────────────
 
 namespace { struct MaxTestPayload { int32_t a; NOTE_FIELDS(a) }; }
@@ -188,7 +282,8 @@ TEST_SUITE("fw>=3.2.1") {
 TEST_CASE("card.attn verify field (3.2.1+)") {
     auto& nc = notecard_api();
     auto rsp = nc.card.attn().request().verify(true).execute();
-    MESSAGE("card.attn verify: ", rsp ? "ok" : note::to_string(rsp.error()));
+    if (rsp) { MESSAGE("card.attn verify: ok"); }
+    else { MESSAGE("card.attn verify: ", note::to_string(rsp.error())); }
 }
 } // fw>=3.2.1
 
@@ -286,6 +381,7 @@ TEST_CASE("transact(json, buf) returns valid JSON") {
     auto rsp = nc.transact(R"({"req":"card.version"})", buf);
     if (!rsp) { MESSAGE("transact error: ", note::to_string(rsp.error())); }
     REQUIRE(rsp);
+    MESSAGE("transact buf response (", rsp->size(), " bytes): [", rsp->data(), "]");
     CHECK(rsp->find("version") != note::string_view::npos);
 }
 

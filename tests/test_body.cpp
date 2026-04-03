@@ -1,6 +1,7 @@
 // Tests for BodyValue: string, builder, schema, and response body parsing.
 #include "catch.hpp"
 #include "test_json_backend.hpp"
+#include "test_notecard_factory.hpp"
 
 #include <note/body.hpp>
 #include <note/json_buf.hpp>
@@ -49,7 +50,7 @@ struct TestHarness {
                 last_request = std::string(req);
                 return {};
             })
-        , nc(backend, transport) {}
+        , nc(note::test::make_test_notecard(backend, transport)) {}
 };
 
 // ── Schema test types ───────────────────────────────────────────────────────

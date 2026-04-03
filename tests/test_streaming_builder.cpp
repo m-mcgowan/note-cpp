@@ -470,6 +470,7 @@ struct TestHal : TransportHal {
     bool write_line_terminator() override { return true; }
 
     void delay(uint32_t) override {}
+    uint32_t millis() override { return 0; }
 
     void set_response(const char* json) {
         response = json;

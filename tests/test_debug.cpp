@@ -2,6 +2,7 @@
 
 #include "catch.hpp"
 #include "test_json_backend.hpp"
+#include "test_notecard_factory.hpp"
 #include <note/api.hpp>
 #include <note/debug.hpp>
 
@@ -50,7 +51,7 @@ struct Harness {
                 last_req = std::string(r);
                 return note::string_view("{}");
             })
-        , nc(backend, transport) {}
+        , nc(note::test::make_test_notecard(backend, transport)) {}
 };
 
 } // namespace
@@ -100,6 +101,53 @@ TEST_CASE("Debug: on_wire shows correct direction") {
     REQUIRE(directions.size() >= 2);
     CHECK(directions[0] == note::WireDirection::Send);
     CHECK(directions[1] == note::WireDirection::Receive);
+}
+
+// ---------------------------------------------------------------------------
+// Wire data hooks — streaming path
+// ---------------------------------------------------------------------------
+
+TEST_CASE("Debug: on_wire fires on streaming execute") {
+    // Streaming harness with a mock HAL
+    struct MockHal : note::TransportHal {
+        uint8_t rx[256];
+        size_t rx_len = 0;
+        size_t rx_pos = 0;
+        void queue(const char* s) {
+            for (; *s; ++s) rx[rx_len++] = static_cast<uint8_t>(*s);
+            rx[rx_len++] = '\r'; rx[rx_len++] = '\n';
+        }
+        bool transmit(const uint8_t*, size_t) override { return true; }
+        note::Result<size_t> read(uint8_t* buf, size_t max_len, uint32_t) override {
+            if (rx_pos >= rx_len)
+                return note::make_error(note::Error::ResponseLost, note::Cause::Timeout, "");
+            size_t n = std::min(max_len, rx_len - rx_pos);
+            for (size_t i = 0; i < n; ++i) buf[i] = rx[rx_pos++];
+            return n;
+        }
+        bool reset() override { rx_pos = 0; return true; }
+        bool write_line_terminator() override { return true; }
+        void delay(uint32_t) override {}
+        uint32_t millis() override { return 0; }
+    };
+
+    MockHal hal;
+    hal.queue(R"({"version":"notecard-test"})");
+    note::StreamingTransport transport(static_cast<note::TransportHal&>(hal));
+    auto nc = note::test::make_test_notecard(transport);
+
+    bool saw_send = false;
+    note::DebugListener d;
+    d.ctx = &saw_send;
+    d.on_wire = [](const note::WireEvent& ev, void* ctx) {
+        if (ev.direction == note::WireDirection::Send) *static_cast<bool*>(ctx) = true;
+    };
+    nc.set_debug(d);
+
+    note::Api api(nc);
+    api.card.version().execute();
+
+    CHECK(saw_send);
 }
 
 // ---------------------------------------------------------------------------

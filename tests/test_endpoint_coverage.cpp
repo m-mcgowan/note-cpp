@@ -13,6 +13,7 @@
 
 #include "catch.hpp"
 #include "test_json_backend.hpp"
+#include "test_notecard_factory.hpp"
 
 #include <note/api.hpp>
 #include <note/string_pool.hpp>
@@ -42,7 +43,7 @@ struct Harness {
                 last_req = std::string(r);
                 return {};
             })
-        , nc(backend, transport)
+        , nc(note::test::make_test_notecard(backend, transport))
         , api(nc)
     {}
 };
@@ -62,7 +63,7 @@ struct FailHarness {
             [](note::string_view) -> note::Result<void> {
                 return note::make_error(note::Error::SendFailed, "test");
             })
-        , nc(backend, transport)
+        , nc(note::test::make_test_notecard(backend, transport))
         , api(nc)
     {}
 };
@@ -82,7 +83,7 @@ struct NcErrorHarness {
             [](note::string_view) -> note::Result<void> {
                 return {};
             })
-        , nc(backend, transport)
+        , nc(note::test::make_test_notecard(backend, transport))
         , api(nc)
     {}
 };
@@ -96,7 +97,7 @@ TEST_CASE("note::api::CardAttn::Request request builder") {
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.files.add(note::string_view("x-files-item"));
-    req.mode(note::string_view("arm"));
+    req.mode(note::string_view("auxgpio"));
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
     req.off(true);
 #endif
@@ -135,7 +136,7 @@ TEST_CASE("note::api::CardAttn::Request request builder") {
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover known-key routing in operator[] (true branch for each settable field)
-    req["mode"] = note::string_view("arm");
+    req["mode"] = note::string_view("auxgpio");
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
     req["off"] = true;
 #endif

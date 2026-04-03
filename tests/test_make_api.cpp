@@ -1,5 +1,6 @@
 #include "catch.hpp"
 #include "test_json_backend.hpp"
+#include "test_notecard_factory.hpp"
 
 #include <note/api.hpp>
 
@@ -7,7 +8,7 @@ namespace {
 
 note::Notecard make_nc(note::test::TestJsonBackend& backend,
                        note::CallbackTransport& transport) {
-    return note::Notecard(backend, transport);
+    return note::test::make_test_notecard(backend, transport);
 }
 
 } // namespace

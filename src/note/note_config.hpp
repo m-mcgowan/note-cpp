@@ -50,6 +50,14 @@
 #    define NOTE_DEBUG_ENABLED 0
 #  endif
 
+#  ifndef NOTE_NO_RETRY
+#    define NOTE_NO_RETRY
+#  endif
+
+#  ifndef NOTE_NO_REQUEST_IDS
+#    define NOTE_NO_REQUEST_IDS
+#  endif
+
 #endif // NOTE_MINIMAL
 
 // Default: runtime debug available (can be activated with set_debug()).

@@ -1,4 +1,5 @@
 #pragma once
+#include "note_config.hpp"
 
 /// NOTE_PRINTABLE: set to 0 to disable Arduino Printable support on
 /// ErrorInfo and ResponseField. Saves vtable entries and ~900 bytes flash.

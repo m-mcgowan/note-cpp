@@ -43,15 +43,23 @@ public:
     void set_default_timeout(uint32_t ms) { default_timeout_ms_ = ms; }
     uint32_t default_timeout() const { return default_timeout_ms_; }
 
+#ifndef NOTE_NO_RETRY
     void set_retry_policy(RetryPolicy policy) { retry_policy_ = policy; }
     void set_inter_transaction_gap(uint32_t ms) { timing_.min_gap_ms = ms; }
+#endif
+#ifndef NOTE_NO_REQUEST_IDS
     void set_request_ids(bool enabled) { request_ids_enabled_ = enabled; }
+#endif
 
     template<typename RequestT>
     ApiResult<typename RequestT::Response> execute(const RequestT& req) {
         using Rsp = typename RequestT::Response;
         constexpr Safety safety = RequestT::safety;
+#ifndef NOTE_NO_REQUEST_IDS
         const uint32_t req_id = request_ids_enabled_ ? next_request_id_++ : 0;
+#else
+        constexpr uint32_t req_id = 0;
+#endif
 
         auto build = [&](JsonBuilder& b) {
             b.add("req", RequestT::notecard_request);
@@ -105,16 +113,22 @@ public:
             }
         };
 
+#ifndef NOTE_NO_RETRY
         auto reset = [&]() { stack_.transport.reset(); };
 
         return retry_transaction<ApiResult<Rsp>>(
             stack_.transport, timing_, safety, retry_policy_,
             attempt, reset);
+#else
+        return attempt();
+#endif
     }
 
     template<typename RequestT>
     Result<void> command_typed(const RequestT& req) {
+#ifndef NOTE_NO_RETRY
         enforce_timing();
+#endif
         auto build = [&](JsonBuilder& b) {
             b.add("cmd", RequestT::notecard_request);
             req.build(b);
@@ -123,7 +137,9 @@ public:
             (*static_cast<decltype(build)*>(p))(b);
         };
         auto result = stack_.transport.send(build_fn, &build);
+#ifndef NOTE_NO_RETRY
         record_timing();
+#endif
         return result;
     }
 
@@ -131,6 +147,7 @@ public:
     Stack& stack() { return stack_; }
 
 private:
+#ifndef NOTE_NO_RETRY
     void enforce_timing() {
         if (!timing_.has_previous) return;
         uint32_t elapsed = stack_.transport.millis() - timing_.last_transaction_end_ms;
@@ -142,14 +159,19 @@ private:
         timing_.last_transaction_end_ms = stack_.transport.millis();
         timing_.has_previous = true;
     }
+#endif
 
     Stack stack_;
     Allocator alloc_;
     uint32_t default_timeout_ms_ = 10000;
+#ifndef NOTE_NO_RETRY
     RetryPolicy retry_policy_{};
     TransactionTiming timing_{};
+#endif
+#ifndef NOTE_NO_REQUEST_IDS
     uint32_t next_request_id_ = 1;
     bool request_ids_enabled_ = true;
+#endif
 };
 
 } // namespace note

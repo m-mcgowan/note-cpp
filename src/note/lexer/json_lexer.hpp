@@ -18,6 +18,7 @@
 ///       lexer.feed(byte, [](LexerEvent ev) { ... });
 ///   }
 
+#include <note/compiler.hpp>
 #include <note/lexer/event.hpp>
 #include <note/lexer/bit_stack.hpp>
 #include <note/lexer/number_parser.hpp>
@@ -104,11 +105,11 @@ private:
     void on_value_start(char c, H&& h) {
         if (is_ws(c)) return;
         if (c == '{') {
-            if (!stack_.push_object()) return emit_error("nesting overflow", h);
+            if (!stack_.push_object()) return emit_error(NOTE_ERR("\1"), h);
             emit(LexerEvent::object_begin(), h);
             state_ = State::ObjectStart;
         } else if (c == '[') {
-            if (!stack_.push_array()) return emit_error("nesting overflow", h);
+            if (!stack_.push_array()) return emit_error(NOTE_ERR("\1"), h);
             emit(LexerEvent::array_begin(), h);
             state_ = State::ArrayStart;
         } else if (c == '"') {
@@ -135,7 +136,7 @@ private:
             literal_len_ = 4;
             state_ = State::InLiteral;
         } else {
-            emit_error("unexpected character", h);
+            emit_error(NOTE_ERR("\1"), h);
         }
     }
 
@@ -143,14 +144,14 @@ private:
     void on_object_start(char c, H&& h) {
         if (is_ws(c)) return;
         if (c == '}') {
-            if (!stack_.pop_object()) return emit_error("mismatched brace", h);
+            if (!stack_.pop_object()) return emit_error(NOTE_ERR("\1"), h);
             emit(LexerEvent::object_end(), h);
             state_ = container_next_state();
         } else if (c == '"') {
             string_ctx_ = StringContext::Key;
             state_ = State::InString;
         } else {
-            emit_error("expected key or '}'", h);
+            emit_error(NOTE_ERR("\1"), h);
         }
     }
 
@@ -162,7 +163,7 @@ private:
             string_ctx_ = StringContext::Key;
             state_ = State::InString;
         } else {
-            emit_error("expected key string", h);
+            emit_error(NOTE_ERR("\1"), h);
         }
     }
 
@@ -172,7 +173,7 @@ private:
         if (c == ':') {
             state_ = State::ObjectValue;
         } else {
-            emit_error("expected ':'", h);
+            emit_error(NOTE_ERR("\1"), h);
         }
     }
 
@@ -182,11 +183,11 @@ private:
         if (c == ',') {
             state_ = State::ObjectKey;
         } else if (c == '}') {
-            if (!stack_.pop_object()) return emit_error("mismatched brace", h);
+            if (!stack_.pop_object()) return emit_error(NOTE_ERR("\1"), h);
             emit(LexerEvent::object_end(), h);
             state_ = container_next_state();
         } else {
-            emit_error("expected ',' or '}'", h);
+            emit_error(NOTE_ERR("\1"), h);
         }
     }
 
@@ -194,7 +195,7 @@ private:
     void on_array_start(char c, H&& h) {
         if (is_ws(c)) return;
         if (c == ']') {
-            if (!stack_.pop_array()) return emit_error("mismatched bracket", h);
+            if (!stack_.pop_array()) return emit_error(NOTE_ERR("\1"), h);
             emit(LexerEvent::array_end(), h);
             state_ = container_next_state();
         } else {
@@ -210,11 +211,11 @@ private:
         if (c == ',') {
             state_ = State::ArrayValue;
         } else if (c == ']') {
-            if (!stack_.pop_array()) return emit_error("mismatched bracket", h);
+            if (!stack_.pop_array()) return emit_error(NOTE_ERR("\1"), h);
             emit(LexerEvent::array_end(), h);
             state_ = container_next_state();
         } else {
-            emit_error("expected ',' or ']'", h);
+            emit_error(NOTE_ERR("\1"), h);
         }
     }
 
@@ -234,7 +235,7 @@ private:
                 state_ = container_next_state();
             }
         } else if (static_cast<unsigned char>(c) < 0x20 && c != '\t') {
-            emit_error("unescaped control character", h);
+            emit_error(NOTE_ERR("\1"), h);
         } else {
             if (string_ctx_ == StringContext::Key)
                 emit(LexerEvent::key_char(c), h);
@@ -252,7 +253,7 @@ private:
                 emit(LexerEvent::string_char(decoded), h);
         };
         if (!escape_.feed(c, emit_char)) {
-            emit_error("invalid escape", h);
+            emit_error(NOTE_ERR("\1"), h);
             return;
         }
         if (escape_.in_unicode())
@@ -270,7 +271,7 @@ private:
                 emit(LexerEvent::string_char(decoded), h);
         };
         if (!escape_.feed_hex(c, emit_char)) {
-            emit_error("invalid hex in \\u escape", h);
+            emit_error(NOTE_ERR("\1"), h);
             return;
         }
         if (!escape_.in_unicode())
@@ -298,7 +299,7 @@ private:
                 number_.add_digit(static_cast<uint8_t>(c - '0'));
                 number_state_ = (c == '0') ? NumState::Zero : NumState::Int;
             } else {
-                emit_error("expected digit", h);
+                emit_error(NOTE_ERR("\1"), h);
             }
             return;
         case NumState::Zero:
@@ -313,7 +314,7 @@ private:
             break;
         case NumState::FracStart:
             if (c >= '0' && c <= '9') { number_.add_frac_digit(static_cast<uint8_t>(c - '0')); number_state_ = NumState::Frac; return; }
-            emit_error("expected digit after '.'", h);
+            emit_error(NOTE_ERR("\1"), h);
             return;
         case NumState::Frac:
             if (c >= '0' && c <= '9') { number_.add_frac_digit(static_cast<uint8_t>(c - '0')); return; }
@@ -323,11 +324,11 @@ private:
             if (c == '+') { number_state_ = NumState::ExpStart; return; }
             if (c == '-') { number_.set_exp_negative(); number_state_ = NumState::ExpStart; return; }
             if (c >= '0' && c <= '9') { number_.add_exp_digit(static_cast<uint8_t>(c - '0')); number_state_ = NumState::Exp; return; }
-            emit_error("expected digit or sign in exponent", h);
+            emit_error(NOTE_ERR("\1"), h);
             return;
         case NumState::ExpStart:
             if (c >= '0' && c <= '9') { number_.add_exp_digit(static_cast<uint8_t>(c - '0')); number_state_ = NumState::Exp; return; }
-            emit_error("expected digit in exponent", h);
+            emit_error(NOTE_ERR("\1"), h);
             return;
         case NumState::Exp:
             if (c >= '0' && c <= '9') { number_.add_exp_digit(static_cast<uint8_t>(c - '0')); return; }
@@ -351,7 +352,7 @@ private:
     template<typename H>
     void on_in_literal(char c, H&& h) {
         if (c != literal_[literal_pos_]) {
-            emit_error("invalid literal", h);
+            emit_error(NOTE_ERR("\1"), h);
             return;
         }
         ++literal_pos_;

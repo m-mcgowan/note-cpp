@@ -18,6 +18,7 @@
 // When NOTE_SHORT_ERRORS is 1, all error messages collapse to "E",
 // saving ~960 bytes of RAM on AVR (Harvard architecture copies all
 // string literals from flash to RAM at startup).
+#include "note_config.hpp"
 #ifndef NOTE_SHORT_ERRORS
 #define NOTE_SHORT_ERRORS 0
 #endif

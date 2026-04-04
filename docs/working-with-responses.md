@@ -84,23 +84,13 @@ range-for, `size()`, `operator[]`, and `begin()`/`end()`.
 ## Body responses — nested objects
 
 Endpoints like `note.get` return a `body` field containing user data
-(sensor readings, configuration). Access it with `body()` (raw reader)
-or `bodyAs<T>()` (typed parse):
-
-### Raw body access
-
-```cpp
-auto r = nc.note.get().read().file("sensors.qi").execute();
-if (r && r.body()) {
-    auto* body = r.body();  // const JsonReader*
-    float temp = body->get_double("temperature");
-    int32_t humidity = body->get_int("humidity");
-}
-```
+(sensor readings, configuration). Use `.into()` on the request to parse
+the body directly into a struct during streaming, or `body()` for raw
+reader access on the buffered path.
 
 ### Typed body parsing (recommended)
 
-Define a struct matching the body shape:
+Define a struct matching the body shape, and pass it to `.into()`:
 
 ```cpp
 struct Readings {
@@ -109,15 +99,19 @@ struct Readings {
     NOTE_FIELDS(temperature, humidity)  // C++17; not needed on C++20+
 };
 
-auto r = nc.note.get().read().file("sensors.qi").execute();
+Readings data;
+auto r = nc.note.read("sensors.qi").into(data).execute();
 if (r) {
-    auto data = r.bodyAs<Readings>();
     Serial.print("Temp: ");
     Serial.print(data.temperature);
     Serial.print(" Humidity: ");
     Serial.println(data.humidity);
 }
 ```
+
+The body is parsed during the SAX streaming pass — primitive fields
+are written directly into the struct with zero arena cost. String
+fields are interned into the arena.
 
 The `NOTE_FIELDS` macro enables reflection-based parsing on C++17.
 On C++20+, aggregate structs are reflected automatically — no macro
@@ -128,6 +122,19 @@ struct Readings {
     float temperature;
     int16_t humidity;
 };
+```
+
+### Raw body access (buffered path)
+
+On the buffered parse path, the raw `JsonReader` is still available:
+
+```cpp
+auto r = nc.note.read("sensors.qi").execute();
+if (r && r.body()) {
+    auto* body = r.body();  // const JsonReader*
+    float temp = body->get_double("temperature");
+    int32_t humidity = body->get_int("humidity");
+}
 ```
 
 ### Body arrays

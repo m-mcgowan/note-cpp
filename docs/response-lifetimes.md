@@ -61,7 +61,7 @@ arena.reset();  // all interned strings invalidated
 - **Immediate use** — read the field, print it, act on it, done
 - **Non-string fields** — `bool`, `int32_t`, `double` are copied values,
   not views. They're always safe.
-- **Typed structs** — `bodyAs<T>()` copies field values into the struct.
+- **Typed structs** — `.into(T&)` copies field values into the struct.
   The struct owns its data.
 
 ## See also

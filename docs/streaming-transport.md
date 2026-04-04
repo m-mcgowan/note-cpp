@@ -267,5 +267,5 @@ Response body content may be freeform JSON. Three tiers, allocation
 always under developer control:
 
 1. **SAX stream** — `JsonSink` callbacks, zero allocation
-2. **`bodyAs<T>()`** — struct population via `NOTE_FIELDS`, zero intermediate allocation
+2. **`.into(T&)`** — struct population via `NOTE_FIELDS`, zero intermediate allocation
 3. **JSON tree** — explicit `bodyAsJson()`, developer pays for allocation

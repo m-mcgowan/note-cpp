@@ -203,15 +203,19 @@ req.execute();
 
 ## Receiving typed bodies
 
-Parse a response body back into your struct with `bodyAs<T>()`:
+Parse a response body directly into your struct with `.into()`:
 
 ```cpp
-auto r = api.note.get().get().file("data.qi").execute();
+Readings data;
+auto r = api.note.read("data.qi").into(data).execute();
 if (r) {
-    Readings data = r.bodyAs<Readings>();
     printf("temp=%.1f humidity=%d\n", data.temperature, data.humidity);
 }
 ```
+
+The body is parsed during the SAX streaming pass — primitive fields
+(`float`, `int32_t`, `bool`) are written directly into the struct with
+zero arena cost. String fields are interned into the arena.
 
 ## Template registration
 

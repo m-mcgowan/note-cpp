@@ -824,10 +824,11 @@ nc.env.setDefault("interval", "60");
 The shorthand methods accept required parameters directly — no need to
 set them separately.
 
-## Receiving data (bodyAs)
+## Receiving data (into)
 
 When reading notes with structured data, note-c returns raw JSON that
-you parse field by field. note-cpp parses directly into your struct:
+you parse field by field. note-cpp parses the body directly into your
+struct during the streaming SAX pass — no intermediate buffer:
 
 <table>
 <tr><th>note-arduino</th><th>note-cpp</th></tr>
@@ -847,14 +848,14 @@ if (rsp && !nc.responseError(rsp)) {
 </td><td>
 
 ```cpp
+Readings data;
 auto r = nc.note.read("data.qi")
+    .into(data)
     .execute();
 if (r) {
-    Readings data = r.bodyAs<Readings>();
     // data.temperature, data.humidity
-    // populated from the JSON body
+    // populated during SAX parse
 }
-
 ```
 
 </td></tr>

@@ -138,7 +138,9 @@ TEST_CASE("StructSink handles on_number with raw string") {
     REQUIRE(data.humidity == 45);
 }
 
-// ── Nested struct tests ────────────────────────────────────────────────
+// ── Nested struct + array tests ────────────────────────────────────────
+
+#include <array>
 
 namespace {
 
@@ -153,6 +155,18 @@ struct TripPoint {
     float speed;
     note::string_view label;
     NOTE_FIELDS(location, speed, label)
+};
+
+struct WithArrays {
+    std::array<float, 4> temps;
+    int32_t count;
+    NOTE_FIELDS(temps, count)
+};
+
+struct WithStructArray {
+    std::array<Location, 3> waypoints;
+    int32_t count;
+    NOTE_FIELDS(waypoints, count)
 };
 
 } // namespace
@@ -208,4 +222,70 @@ TEST_CASE("StructSink deeply nested unknown objects are skipped") {
 
     sink.on_float("speed", 50.0);
     REQUIRE(tp.speed == 50.0f);
+}
+
+TEST_CASE("StructSink parses array of primitives") {
+    WithArrays wa{};
+    char buf[256];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+    note::StructSink<WithArrays> sink(wa, pool);
+
+    sink.on_int("count", 3);
+    sink.on_array_begin("temps");
+    sink.on_float("", 22.5);
+    sink.on_float("", 23.1);
+    sink.on_float("", 21.8);
+    sink.on_array_end("temps");
+
+    REQUIRE(wa.count == 3);
+    REQUIRE(wa.temps[0] == 22.5f);
+    REQUIRE(wa.temps[1] == 23.1f);
+    REQUIRE(wa.temps[2] == 21.8f);
+    REQUIRE(wa.temps[3] == 0.0f);
+}
+
+TEST_CASE("StructSink parses array of structs") {
+    WithStructArray wsa{};
+    char buf[512];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+    note::StructSink<WithStructArray> sink(wsa, pool);
+
+    sink.on_int("count", 2);
+    sink.on_array_begin("waypoints");
+    sink.on_object_begin("");
+    sink.on_float("lat", 42.36);
+    sink.on_float("lon", -71.06);
+    sink.on_object_end("");
+    sink.on_object_begin("");
+    sink.on_float("lat", 43.00);
+    sink.on_float("lon", -72.00);
+    sink.on_object_end("");
+    sink.on_array_end("waypoints");
+
+    REQUIRE(wsa.count == 2);
+    REQUIRE(wsa.waypoints[0].lat == Approx(42.36));
+    REQUIRE(wsa.waypoints[0].lon == Approx(-71.06));
+    REQUIRE(wsa.waypoints[1].lat == Approx(43.00));
+    REQUIRE(wsa.waypoints[1].lon == Approx(-72.00));
+    REQUIRE(wsa.waypoints[2].lat == 0.0);
+}
+
+TEST_CASE("StructSink array overflow is safe") {
+    WithArrays wa{};
+    char buf[256];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+    note::StructSink<WithArrays> sink(wa, pool);
+
+    sink.on_array_begin("temps");
+    sink.on_float("", 1.0);
+    sink.on_float("", 2.0);
+    sink.on_float("", 3.0);
+    sink.on_float("", 4.0);
+    sink.on_float("", 5.0);  // overflow
+    sink.on_array_end("temps");
+
+    REQUIRE(wa.temps[3] == 4.0f);
 }

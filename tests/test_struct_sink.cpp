@@ -137,3 +137,75 @@ TEST_CASE("StructSink handles on_number with raw string") {
     REQUIRE(data.temperature == 22.5f);
     REQUIRE(data.humidity == 45);
 }
+
+// ── Nested struct tests ────────────────────────────────────────────────
+
+namespace {
+
+struct Location {
+    double lat;
+    double lon;
+    NOTE_FIELDS(lat, lon)
+};
+
+struct TripPoint {
+    Location location;
+    float speed;
+    note::string_view label;
+    NOTE_FIELDS(location, speed, label)
+};
+
+} // namespace
+
+TEST_CASE("StructSink parses nested struct") {
+    TripPoint tp{};
+    char buf[512];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+    note::StructSink<TripPoint> sink(tp, pool);
+
+    sink.on_float("speed", 65.5);
+    sink.on_string("label", "start");
+    sink.on_object_begin("location");
+    sink.on_float("lat", 42.3601);
+    sink.on_float("lon", -71.0589);
+    sink.on_object_end("location");
+
+    REQUIRE(tp.speed == 65.5f);
+    REQUIRE(tp.label == "start");
+    REQUIRE(tp.location.lat == Approx(42.3601));
+    REQUIRE(tp.location.lon == Approx(-71.0589));
+}
+
+TEST_CASE("StructSink skips unknown nested objects") {
+    TripPoint tp{};
+    char buf[256];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+    note::StructSink<TripPoint> sink(tp, pool);
+
+    sink.on_object_begin("unknown");
+    sink.on_float("x", 1.0);
+    sink.on_object_end("unknown");
+
+    sink.on_float("speed", 30.0);
+    REQUIRE(tp.speed == 30.0f);
+    REQUIRE(tp.location.lat == 0.0);
+}
+
+TEST_CASE("StructSink deeply nested unknown objects are skipped") {
+    TripPoint tp{};
+    char buf[256];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+    note::StructSink<TripPoint> sink(tp, pool);
+
+    sink.on_object_begin("unknown");
+    sink.on_object_begin("deep");
+    sink.on_float("val", 1.0);
+    sink.on_object_end("deep");
+    sink.on_object_end("unknown");
+
+    sink.on_float("speed", 50.0);
+    REQUIRE(tp.speed == 50.0f);
+}

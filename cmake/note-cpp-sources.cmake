@@ -29,6 +29,7 @@ set(NOTE_CPP_PUBLIC_HEADERS
     include/note/notecard.hpp
     include/note/notecard_api.hpp
     include/note/print.hpp
+    include/note/request_set.hpp
     include/note/safety.hpp
     include/note/span.hpp
     include/note/string_pool.hpp
@@ -112,6 +113,7 @@ set(NOTE_CPP_TEST_SOURCES
     test_transport_timing.cpp
     test_allocator_growth.cpp
     test_body_capture_arena.cpp
+    test_static_sizing.cpp
     test_transport_streaming.cpp
     test_streaming_errors.cpp
     test_units.cpp

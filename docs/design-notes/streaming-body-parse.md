@@ -1,0 +1,338 @@
+# Streaming Body Parse — Direct SAX-to-Struct
+
+## Goal
+
+Parse response body fields directly into a user-provided struct during SAX
+streaming, eliminating the raw-JSON capture → re-parse cycle. Body primitives
+(int, float, bool) are written straight into struct fields with zero arena
+cost. Body strings are interned into the arena. No intermediate buffer.
+
+### Developer experience
+
+```cpp
+struct SensorData {
+    float temperature;
+    int32_t humidity;
+    NOTE_FIELDS(temperature, humidity)
+};
+
+note::Notecard nc(transport);
+note::Api api(nc);
+
+// Receiving — body parsed inline during execute()
+SensorData data;
+auto result = api.note.read().body(data).execute();
+if (result) {
+    data.temperature;  // 22.5 — populated during SAX parse
+    data.humidity;     // 45
+    result.time;       // response-level field
+}
+
+// Sending — body serialized from struct
+SensorData reading{22.5, 45};
+api.note.add().body(reading).execute();
+```
+
+### Aliases
+
+`.body(ref)` is the primary method, matching the Notecard protocol's `"body"`
+field name. Directional aliases for clarity:
+
+```cpp
+api.note.read().into(data).execute();    // alias for .body(data) on receive
+api.note.add().from(reading).execute();  // alias for .body(data) on send
+```
+
+### Shorthand via resource group aliases
+
+```cpp
+api.note.read().body(data).execute();    // short for api.note.get().read().body(data)
+api.note.pop().body(data).execute();     // short for api.note.get().pop().body(data)
+```
+
+## What changes
+
+### Eliminated
+
+- **`BodyCaptureSink`** — the raw-JSON accumulation base class. No longer
+  needed: body events are dispatched directly to the struct.
+- **`body_json_`** member on Response — no raw JSON to store.
+- **`body_`** (`std::unique_ptr<JsonReader>`) on Response — no deferred parse.
+- **`bodyAs<T>()`** on Response — replaced by the `.body(ref)` parameter.
+- **`parse_body_()` / `parse_body_json_()`** — the re-parse machinery.
+- **Body arena budget** in `max_arena_size` — body primitives cost zero;
+  only body string fields (if any) contribute to the arena.
+
+### Added
+
+- **`StructSink<T>`** — generic SAX-to-struct dispatcher. Uses the same
+  reflection that `parse<T>()` already uses (`NOTE_FIELDS` on C++17,
+  aggregate reflection on C++20), but generates SAX dispatch instead of
+  `JsonReader` queries.
+- **`.body(T&)`** method on generated request builders (body-having
+  endpoints only). Returns a type carrying `T` so the Sink is
+  parameterized at compile time.
+- **`.into(T&)` / `.from(T&)`** — directional aliases for `.body()`.
+
+### Request builders without `.body()`
+
+For body-having endpoints, calling the factory without `.body()` is still
+valid — body events are simply discarded during parse. The response
+contains only the non-body fields. There is no `bodyAs<T>()` fallback.
+
+```cpp
+// No body needed — body events discarded
+auto result = api.note.read().execute();
+result.time;      // available
+// result.body  — does not exist, no bodyAs<T>()
+```
+
+## Architecture
+
+```
+note.read().body(data)  →  Read<SensorData>
+                               │
+                               └─ execute() constructs:
+                                     Sink<SensorData>(rsp, pool, data)
+                                          │
+                                          ├─ top-level fields → rsp.time, rsp.payload
+                                          └─ body depth > 0 → StructSink<SensorData>
+                                                 │
+                                                 ├─ on_number("temperature", "22.5")
+                                                 │      → data.temperature = 22.5f
+                                                 │        (direct assignment, zero arena)
+                                                 │
+                                                 └─ on_number("humidity", "45")
+                                                        → data.humidity = 45
+                                                          (direct assignment, zero arena)
+```
+
+### StructSink<T>
+
+Dispatches SAX events to struct fields using compile-time reflection.
+
+**C++20 path** (aggregate reflection):
+
+```cpp
+template<typename T>
+struct StructSink {
+    T& obj;
+    StringPool* pool;
+
+    void on_number(string_view k, string_view raw) {
+        [&]<size_t... Ns>(std::index_sequence<Ns...>) {
+            ((k == reflect::member_name<Ns, T>() &&
+              detail::assign_number(reflect::get<Ns>(obj), raw)), ...);
+        }(std::make_index_sequence<reflect::size<T>()>{});
+    }
+
+    void on_string(string_view k, string_view v) {
+        v = pool->intern(v);
+        [&]<size_t... Ns>(std::index_sequence<Ns...>) {
+            ((k == reflect::member_name<Ns, T>() &&
+              detail::assign_string(reflect::get<Ns>(obj), v)), ...);
+        }(std::make_index_sequence<reflect::size<T>()>{});
+    }
+
+    void on_bool(string_view k, bool v) {
+        [&]<size_t... Ns>(std::index_sequence<Ns...>) {
+            ((k == reflect::member_name<Ns, T>() &&
+              detail::assign_bool(reflect::get<Ns>(obj), v)), ...);
+        }(std::make_index_sequence<reflect::size<T>()>{});
+    }
+
+    // on_int, on_float — same pattern with direct type assignment
+};
+```
+
+The `assign_*` helpers use `if constexpr` to match the field type:
+
+```cpp
+template<typename F>
+bool assign_number(F& field, string_view raw) {
+    if constexpr (std::is_floating_point_v<F>) {
+        field = static_cast<F>(parse_double(raw));
+        return true;
+    } else if constexpr (std::is_integral_v<F>) {
+        field = static_cast<F>(parse_int(raw));
+        return true;
+    }
+    return false;
+}
+```
+
+**C++17 path** (`NOTE_FIELDS`): The macro generates a
+`_note_fields_sax` static method alongside the existing
+`_note_fields_write` and `_note_fields_read`, providing the same
+key→field dispatch for SAX events.
+
+### Generated Sink changes
+
+For endpoints with body responses, the generated `Sink` replaces
+`BodyCaptureSink` inheritance with `StructSink<T>` delegation:
+
+```cpp
+// Before (raw JSON capture):
+struct Sink : ::note::BodyCaptureSink {
+    void on_string(k, v) {
+        if (capture_body_string(k, v)) return;  // → raw JSON buffer
+        // top-level fields...
+    }
+};
+
+// After (streaming body parse):
+template<typename BodyT>
+struct Sink : ::note::DefaultSink {
+    Response& rsp;
+    StringPool& pool_;
+    StructSink<BodyT> body_sink_;  // dispatches body fields to struct
+    int body_depth_ = 0;
+
+    void on_string(k, v) {
+        if (body_depth_ > 0) { body_sink_.on_string(k, v); return; }
+        v = pool_.intern(v);
+        // top-level fields...
+    }
+    void on_object_begin(k) {
+        if (k == "body") { ++body_depth_; return; }
+    }
+    void on_object_end(k) {
+        if (body_depth_ > 0) { --body_depth_; return; }
+    }
+    // etc.
+};
+```
+
+When `BodyT` is `void` (no `.body()` called), the body sink is a no-op
+and body events are discarded. This can be a specialization or a
+constexpr-if branch.
+
+### Type flow through execute
+
+```cpp
+// Generated:
+struct NoteGet {
+    template<typename BodyT = void>
+    struct Read {
+        BodyT* body_ptr_ = nullptr;
+        // ... request fields ...
+
+        template<typename T>
+        Read<T> body(T& out) const {
+            Read<T> r{*this};  // copy request fields
+            r.body_ptr_ = &out;
+            return r;
+        }
+
+        template<typename T>
+        Read<T> into(T& out) const { return body(out); }
+
+        using Response = /* ... */;
+    };
+
+    template<typename BodyT = void>
+    Read<BodyT> read() { return {}; }
+
+    template<typename BodyT>
+    Read<BodyT> read(BodyT& out) {
+        Read<BodyT> r{};
+        r.body_ptr_ = &out;
+        return r;
+    }
+};
+```
+
+The `execute()` path (both `Notecard` and `StaticNotecard`) passes
+`body_ptr_` through to the Sink constructor. When `BodyT` is `void`,
+the Sink uses the no-body path.
+
+## Type safety and mismatch behavior
+
+When the body JSON doesn't match the struct, behavior is well-defined
+and safe — no crashes, no undefined behavior, no memory corruption.
+
+**Missing JSON fields** (body has fewer fields than struct):
+Struct fields keep their default value (zero-initialized from `T obj{}`).
+
+**Extra JSON fields** (body has fields not in struct):
+Silently ignored — no field name matches in the dispatch, event is
+dropped. No arena cost.
+
+**Type mismatch** (e.g., JSON sends `"temperature": "hello"`, struct
+expects `float`): The string event doesn't match any numeric field in
+the dispatch. The field stays at its default (0.0). Silent.
+
+**Completely wrong struct**: All body fields are ignored. Struct stays
+default-initialized. Safe but returns no useful data.
+
+**Debug diagnostics**: When a debug stream is configured on the
+Notecard, `StructSink<T>` logs mismatches automatically:
+
+```
+[note] body: ignored unknown field "firmware_version"
+[note] body: type mismatch for "temperature" (expected number, got string)
+```
+
+No opt-in needed — if you have debug output, you see mismatches. No
+overhead when debug is not configured (the checks compile away or
+short-circuit on the null debug stream).
+
+**Guideline**: Ensure struct fields match the Notecard template
+registered with `note.template`. Mismatches degrade safely to defaults
+and are visible in debug output.
+
+## Arena sizing impact
+
+Body budget drops from a flat 256-byte raw-JSON buffer to just the
+interned string fields within the body struct. For the common case of
+numeric-only sensor bodies, the body arena cost is **zero**.
+
+| Body type | Old budget | New budget |
+|-----------|-----------|-----------|
+| `{temperature: 22.5, humidity: 45}` | 256 | **0** |
+| `{label: "room-42", temp: 22.5}` | 256 | **48** (one string) |
+| `{name: "sensor", id: "abc123"}` | 256 | **96** (two strings) |
+
+The `max_arena_size` computation on Response changes: instead of
+`arena_cost(max_body_size)`, it sums `arena_cost(max_length)` for
+each string field in the body struct. For `BodyT = void` (no body
+parsing), the body contribution is zero.
+
+Computing body string costs at compile time requires either:
+- A `constexpr` method on the body struct (generated by `NOTE_FIELDS`
+  or derived from reflection) that sums max lengths
+- A developer-declared budget via a trait or template parameter
+- A default per-string-field budget (same as response string fields)
+
+The simplest initial approach: body string fields use the same
+`_DEFAULT_RSP_MAX_LENGTH` (48 bytes) unless the developer overrides
+via a trait on the body struct.
+
+## Key code areas
+
+An implementer needs to understand these files:
+
+| File | Role |
+|------|------|
+| `src/note/body.hpp` | `NOTE_FIELDS` macro, `parse<T>()`, reflection |
+| `src/note/json_sax.hpp` | `BodyCaptureSink` (to be replaced), `DefaultSink` |
+| `src/note/notecard.hpp` | `Notecard::execute()` streaming path |
+| `src/note/static_notecard.hpp` | `StaticNotecard::execute()` |
+| `tools/codegen/templates/endpoint.hpp.j2` | Generated Sink, Response, factory methods |
+| `tools/codegen/model.py` | `ResponseDef`, `OperationDef` |
+| `tools/codegen/spec_parser.py` | `_extract_response_props()` |
+
+## Open questions
+
+- Should `StructSink<T>` support nested body objects (body within body)?
+  Current Notecard responses don't have deeply nested bodies, so flat
+  dispatch (single level) is likely sufficient.
+
+- Should the `NOTE_FIELDS` macro emit `_note_fields_sax` automatically,
+  or should `StructSink` work generically via the existing field
+  iteration? The latter avoids changing the macro.
+
+- For the buffered `Notecard` path (JsonReader-based), `.body(ref)` can
+  fall back to `parse<T>(reader.get_object("body"))` — the existing
+  mechanism. Only the streaming path benefits from `StructSink<T>`.
+  Should both paths be unified, or is the fallback acceptable?

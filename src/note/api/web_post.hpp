@@ -272,10 +272,10 @@ struct WebPost {
     using BodyHandlerFactory_ = ::note::BodyHandler(*)(void* body, ::note::StringPool& pool, void* storage);
     BodyHandlerFactory_ body_handler_factory_ = nullptr;
 
-    /// Parse the response body directly into a struct.
+    /// Parse the response body directly into a struct during SAX streaming.
     /// The struct must use NOTE_FIELDS() or be a C++20 aggregate.
     template<typename BodyT_>
-    auto& body_into(BodyT_& out) {
+    auto& into(BodyT_& out) {
         body_ptr_ = &out;
         body_handler_factory_ = [](void* b, ::note::StringPool& pool, void* storage) -> ::note::BodyHandler {
             auto* sink = new (storage) ::note::StructSink<BodyT_>(*static_cast<BodyT_*>(b), pool);
@@ -283,10 +283,7 @@ struct WebPost {
         };
         return *this;
     }
-    /// Parse the response body directly into a struct (alias for body_into).
-    template<typename BodyT_> auto& into(BodyT_& out) { return body_into(out); }
-    /// Parse the response body directly into a struct (alias for body_into).
-    template<typename BodyT_> auto& from(BodyT_& out) { return body_into(out); }
+    template<typename BodyT_> auto& from(BodyT_& out) { return into(out); }
 
     /// Response containing the result of an HTTP or HTTPS POST request to an
     /// external endpoint.
@@ -322,14 +319,6 @@ struct WebPost {
 
         /// Access the body as a JsonReader (buffered parse path only).
         const JsonReader* body() const { return body_.get(); }
-
-        /// Parse the body into a typed struct (buffered parse path).
-        /// For streaming SAX path, use .body_into(T&) on the request instead.
-        template<typename T>
-        T bodyAs() const {
-            if (body_) return parse_body_<T>(*body_);
-            return T{};
-        }
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
@@ -480,22 +469,6 @@ struct WebPost {
     private:
         std::unique_ptr<JsonReader> reader_;
         std::unique_ptr<JsonReader> body_;
-
-        template<typename T>
-        static T parse_body_(const JsonReader& r) {
-            if constexpr (detail::has_note_fields_trait<T>::value) {
-                return ::note::parse<T>(r);
-            }
-#if __cplusplus >= 202002L
-            else if constexpr (detail::ReflectableAggregate<T>) {
-                return ::note::parse<T>(r);
-            }
-#endif
-            else {
-                (void)r;
-                return T{};
-            }
-        }
     };
 
     ApiResult<Response>(*execute_fn_)(void*, const WebPost&) = nullptr;

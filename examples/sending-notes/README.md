@@ -99,7 +99,7 @@ them at a fraction of the size.
 
 ## 6. Receive and parse
 
-Read a note and parse the body back into your struct with `bodyAs<T>()`.
+Read a note and parse the body directly into your struct with `.into(data)`.
 
 ```cpp
 // main.cpp#L163-L168

@@ -336,7 +336,7 @@ TEST_CASE("default BodyHandler is falsy") {
     REQUIRE_FALSE(static_cast<bool>(handler));
 }
 
-// ── body_into() on generated request types ────────────────────────────
+// ── into() on generated request types ────────────────────────────
 
 #include <note/api/env_get.hpp>
 
@@ -355,10 +355,10 @@ struct EnvBodyFull {
 
 } // namespace
 
-TEST_CASE("body_into() sets body handler factory on body-having endpoint") {
+TEST_CASE("into() sets body handler factory on body-having endpoint") {
     EnvBody body{};
     note::api::EnvGet req;
-    req.body_into(body);
+    req.into(body);
     REQUIRE(req.body_ptr_ != nullptr);
     REQUIRE(req.body_handler_factory_ != nullptr);
 }
@@ -387,7 +387,7 @@ TEST_CASE("from() alias works on body-having endpoint") {
 TEST_CASE("body handler factory creates working StructSink") {
     EnvBodyFull body{};
     note::api::EnvGet req;
-    req.body_into(body);
+    req.into(body);
 
     // Call the factory to create the handler
     char buf[512];

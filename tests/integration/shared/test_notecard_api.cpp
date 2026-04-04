@@ -90,13 +90,14 @@ TEST_CASE("note.update + note.get body round-trip") {
     if (!update_rsp) { MESSAGE("update error: ", note::to_string(update_rsp.error())); }
     REQUIRE(update_rsp);
 
+    SensorData received{};
     auto get_rsp = nc.note.read(file)
         .noteId(noteId)
+        .into(received)
         .execute();
     if (!get_rsp) { MESSAGE("get error: ", note::to_string(get_rsp.error())); }
     REQUIRE(get_rsp);
 
-    SensorData received = get_rsp.bodyAs<SensorData>();
     CHECK(received.temperature == doctest::Approx(sent.temperature));
     CHECK(received.humidity == sent.humidity);
 }

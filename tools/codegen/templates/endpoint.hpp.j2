@@ -430,10 +430,10 @@ namespace note::api {
 {{ indent }}using BodyHandlerFactory_ = ::note::BodyHandler(*)(void* body, ::note::StringPool& pool, void* storage);
 {{ indent }}BodyHandlerFactory_ body_handler_factory_ = nullptr;
 
-{{ indent }}/// Parse the response body directly into a struct.
+{{ indent }}/// Parse the response body directly into a struct during SAX streaming.
 {{ indent }}/// The struct must use NOTE_FIELDS() or be a C++20 aggregate.
 {{ indent }}template<typename BodyT_>
-{{ indent }}auto& body_into(BodyT_& out) {
+{{ indent }}auto& into(BodyT_& out) {
 {{ indent }}    body_ptr_ = &out;
 {{ indent }}    body_handler_factory_ = [](void* b, ::note::StringPool& pool, void* storage) -> ::note::BodyHandler {
 {{ indent }}        auto* sink = new (storage) ::note::StructSink<BodyT_>(*static_cast<BodyT_*>(b), pool);
@@ -442,13 +442,9 @@ namespace note::api {
 {{ indent }}    return *this;
 {{ indent }}}
 {% if not has_body_prop %}
-{{ indent }}/// Parse the response body directly into a struct (alias for body_into).
-{{ indent }}template<typename BodyT_> auto& body(BodyT_& out) { return body_into(out); }
+{{ indent }}template<typename BodyT_> auto& body(BodyT_& out) { return into(out); }
 {% endif %}
-{{ indent }}/// Parse the response body directly into a struct (alias for body_into).
-{{ indent }}template<typename BodyT_> auto& into(BodyT_& out) { return body_into(out); }
-{{ indent }}/// Parse the response body directly into a struct (alias for body_into).
-{{ indent }}template<typename BodyT_> auto& from(BodyT_& out) { return body_into(out); }
+{{ indent }}template<typename BodyT_> auto& from(BodyT_& out) { return into(out); }
 {% endif %}
 
 {% if op.response.properties or op.response.has_body %}
@@ -486,14 +482,6 @@ namespace note::api {
 
 {{ indent }}    /// Access the body as a JsonReader (buffered parse path only).
 {{ indent }}    const JsonReader* body() const { return body_.get(); }
-
-{{ indent }}    /// Parse the body into a typed struct (buffered parse path).
-{{ indent }}    /// For streaming SAX path, use .body_into(T&) on the request instead.
-{{ indent }}    template<typename T>
-{{ indent }}    T bodyAs() const {
-{{ indent }}        if (body_) return parse_body_<T>(*body_);
-{{ indent }}        return T{};
-{{ indent }}    }
 {% endif %}
 
 {% if op.has_version_gated_response_props %}
@@ -803,22 +791,6 @@ namespace note::api {
 {{ indent }}    std::unique_ptr<JsonReader> reader_;
 {% if op.response.has_body %}
 {{ indent }}    std::unique_ptr<JsonReader> body_;
-
-{{ indent }}    template<typename T>
-{{ indent }}    static T parse_body_(const JsonReader& r) {
-{{ indent }}        if constexpr (detail::has_note_fields_trait<T>::value) {
-{{ indent }}            return ::note::parse<T>(r);
-{{ indent }}        }
-#if __cplusplus >= 202002L
-{{ indent }}        else if constexpr (detail::ReflectableAggregate<T>) {
-{{ indent }}            return ::note::parse<T>(r);
-{{ indent }}        }
-#endif
-{{ indent }}        else {
-{{ indent }}            (void)r;
-{{ indent }}            return T{};
-{{ indent }}        }
-{{ indent }}    }
 {% endif %}
 {{ indent }}};
 {% else %}

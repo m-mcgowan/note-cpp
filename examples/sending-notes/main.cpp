@@ -34,7 +34,7 @@
 //
 // This one struct is used to:
 //   - Send data (body of note.add)
-//   - Receive data (bodyAs<Readings>() on note.get response)
+//   - Receive data (.into(readings) on note.get request)
 //   - Register a template (note::template_of<Readings>() generates type hints)
 
 struct Readings {
@@ -134,14 +134,14 @@ int main() {
 
 
     // ═════════════════════════════════════════════════════════════════════════
-    // 6. Receive and parse — note.get with bodyAs<T>()
+    // 6. Receive and parse — note.get with .into(T&)
     // ═════════════════════════════════════════════════════════════════════════
 
     std::puts("\n--- Receive and parse ---");
     {
-        auto result = api.note.read("data.qi").execute();
+        Readings data{};
+        auto result = api.note.read("data.qi").into(data).execute();
         if (result) {
-            auto data = result.bodyAs<Readings>();
             (void)data.temperature;
             (void)data.humidity;
         }

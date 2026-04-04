@@ -278,9 +278,9 @@ int main() {
     // Parse a response body back into your struct.
     std::puts("--- note.read (parse body) ---");
     {
-        auto r = api.note.read("data.qi").execute();
+        Readings data{};
+        auto r = api.note.read("data.qi").into(data).execute();
         if (r) {
-            Readings data = r.bodyAs<Readings>();
             (void)data.temperature;
             (void)data.humidity;
             std::puts("  (body parsed into Readings struct)");

@@ -421,7 +421,7 @@ TEST_CASE("note.get response body() returns reader when body present") {
 
 #if __cplusplus >= 202002L
 
-TEST_CASE("note.get response body_as<T>() with reflected struct") {
+TEST_CASE("note.get response parse<T>(body) with reflected struct") {
     auto body = std::make_unique<note::test::PopulatedJsonReader>();
     body->set("temperature", 22.5);
     body->set("humidity", int32_t{60});
@@ -430,20 +430,19 @@ TEST_CASE("note.get response body_as<T>() with reflected struct") {
     reader->set_object("body", std::move(body));
 
     auto rsp = note::api::NoteGet::Get::Response::parse(std::move(reader));
-    auto r = rsp.bodyAs<Readings>();
+    REQUIRE(rsp.body() != nullptr);
+    auto r = note::parse<Readings>(*rsp.body());
     REQUIRE(r.temperature == 22.5f);
     REQUIRE(r.humidity == 60);
 }
 
-TEST_CASE("note.get response body_as<T>() returns default when no body") {
+TEST_CASE("note.get response body() is null when no body") {
     auto reader = std::make_unique<note::test::PopulatedJsonReader>();
     auto rsp = note::api::NoteGet::Get::Response::parse(std::move(reader));
-    auto r = rsp.bodyAs<Readings>();
-    REQUIRE(r.temperature == 0.0f);
-    REQUIRE(r.humidity == 0);
+    REQUIRE(rsp.body() == nullptr);
 }
 
-TEST_CASE("note.get response body_as<T>() with mixed types") {
+TEST_CASE("note.get response parse<T>(body) with mixed types") {
     auto body = std::make_unique<note::test::PopulatedJsonReader>();
     body->set("voltage", 3.3);
     body->set("active", true);
@@ -453,7 +452,7 @@ TEST_CASE("note.get response body_as<T>() with mixed types") {
     reader->set_object("body", std::move(body));
 
     auto rsp = note::api::NoteGet::Get::Response::parse(std::move(reader));
-    auto sd = rsp.bodyAs<SensorData>();
+    auto sd = note::parse<SensorData>(*rsp.body());
     REQUIRE(sd.voltage == 3.3);
     REQUIRE(sd.active == true);
     REQUIRE(sd.count == 42);
@@ -463,7 +462,7 @@ TEST_CASE("note.get response body_as<T>() with mixed types") {
 
 // ── NOTE_FIELDS macro response parsing ───────────────────────────────────────
 
-TEST_CASE("note.get response body_as<T>() with NOTE_FIELDS macro type") {
+TEST_CASE("note.get response parse<T>(body) with NOTE_FIELDS macro type") {
     auto body = std::make_unique<note::test::PopulatedJsonReader>();
     body->set("temperature", 22.5);
     body->set("humidity", int32_t{60});
@@ -472,7 +471,8 @@ TEST_CASE("note.get response body_as<T>() with NOTE_FIELDS macro type") {
     reader->set_object("body", std::move(body));
 
     auto rsp = note::api::NoteGet::Get::Response::parse(std::move(reader));
-    auto r = rsp.bodyAs<MacroReadings>();
+    REQUIRE(rsp.body() != nullptr);
+    auto r = note::parse<MacroReadings>(*rsp.body());
     REQUIRE(r.temperature == 22.5f);
     REQUIRE(r.humidity == 60);
 }
@@ -532,7 +532,7 @@ TEST_CASE("note.template response: body() is null when no body in response") {
 
 #if __cplusplus >= 202002L
 
-TEST_CASE("note.template response: bodyAs<T>() parses existing template body") {
+TEST_CASE("note.template response: parse<T>(body) parses existing template body") {
     auto body = std::make_unique<note::test::PopulatedJsonReader>();
     body->set("temperature", 22.5);
     body->set("humidity", int32_t{60});
@@ -542,7 +542,8 @@ TEST_CASE("note.template response: bodyAs<T>() parses existing template body") {
     reader->set_object("body", std::move(body));
 
     auto rsp = note::api::NoteTemplate::Set::Response::parse(std::move(reader));
-    auto r = rsp.bodyAs<Readings>();
+    REQUIRE(rsp.body() != nullptr);
+    auto r = note::parse<Readings>(*rsp.body());
     REQUIRE(r.temperature == 22.5f);
     REQUIRE(r.humidity == 60);
 }

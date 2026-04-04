@@ -28,7 +28,7 @@ arena cost, zero conversion overhead.
 delivers body fields directly to the user-provided struct via `StructSink<T>`.
 Primitive body fields (`bool`, `int32_t`, `double`) have zero arena cost.
 Body string fields are interned into the user's own `StringPool`, not this arena.
-The `body_into(T&)` call on the request builder wires up the struct sink before
+The `into(T&)` call on the request builder wires up the struct sink before
 execution — no arena budget is needed for body parsing here.
 
 ### Alignment overhead

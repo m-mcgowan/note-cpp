@@ -406,3 +406,18 @@ TEST_CASE("body handler factory creates working StructSink") {
     REQUIRE(body.temp == 22.5f);
     REQUIRE(body.label == "room-42");
 }
+
+TEST_CASE("const into() returns copy, original unchanged") {
+    EnvBody body1{};
+    EnvBody body2{};
+    const note::api::EnvGet req;
+
+    auto r1 = req.into(body1);
+    REQUIRE(r1.body_ptr_ != nullptr);
+    REQUIRE(req.body_ptr_ == nullptr);  // original untouched
+
+    auto r2 = req.into(body2);
+    REQUIRE(r2.body_ptr_ == &body2);
+    REQUIRE(r1.body_ptr_ == &body1);   // r1 still points to body1
+    REQUIRE(req.body_ptr_ == nullptr);  // original still untouched
+}

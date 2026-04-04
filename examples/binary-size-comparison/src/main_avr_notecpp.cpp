@@ -9,11 +9,19 @@
 
 #ifdef USE_NOTECPP_AVR
 
-// NOTE_NO_STD_STRING is set via build_flags, before any includes.
+// NOTE_MINIMAL is set via build_flags, before any includes.
 
 #include <note/static_notecard.hpp>
 #include <note/api.hpp>
 #include <note/arduino/begin.hpp>
+
+// ── Application data struct ────────────────────────────────────────────
+// One struct for sending, receiving, and template registration.
+struct Readings {
+    float temperature;
+    int32_t humidity;
+    NOTE_FIELDS(temperature, humidity)
+};
 
 // Arena for string interning during SAX parse (response string fields).
 alignas(4) static char arena_buf[64];
@@ -33,6 +41,14 @@ void setup() {
         .mode("periodic")
         .outbound(60)
         .execute();
+
+    // Register template (manual type hints — template_of<T>() requires C++20)
+    nc.note.templates().define("sensors.qo")
+        .body(note::body([](note::JsonBuilder& b) {
+            b.add("temperature", 14.1);
+            b.add("humidity", int32_t{1});
+        }))
+        .execute();
 }
 
 void loop() {
@@ -45,10 +61,20 @@ void loop() {
         temperature = temp.value;
     }
 
-    // Publish sensor data
+    // Publish sensor data with typed body
+    Readings out{temperature, 60};
     nc.note.add()
         .file("sensors.qo")
+        .body(out)
         .execute();
+
+    // Read back a note with typed body parsing
+    Readings in{};
+    auto result = nc.note.read("sensors.qo").into(in).execute();
+    if (result) {
+        (void)in.temperature;
+        (void)in.humidity;
+    }
 
     delay(60000);
 }

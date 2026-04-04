@@ -401,6 +401,19 @@ struct CardVoltage {
                     if (note::flash(keys_::rsp_vmin) == k_) { rsp.vmin = ::note::parse_double(raw_); return; }
                     if (note::flash(keys_::rsp_weekly) == k_) { rsp.weekly = ::note::parse_double(raw_); return; }
                 }
+                void on_int(::note::string_view k_, int32_t v_) {
+                    if (note::flash(keys_::rsp_hours) == k_) { rsp.hours = v_; return; }
+                    if (note::flash(keys_::rsp_minutes) == k_) { rsp.minutes = v_; return; }
+                }
+                void on_float(::note::string_view k_, double v_) {
+                    if (note::flash(keys_::rsp_daily) == k_) { rsp.daily = v_; return; }
+                    if (note::flash(keys_::rsp_monthly) == k_) { rsp.monthly = v_; return; }
+                    if (note::flash(keys_::rsp_value) == k_) { rsp.value = v_; return; }
+                    if (note::flash(keys_::rsp_vavg) == k_) { rsp.vavg = v_; return; }
+                    if (note::flash(keys_::rsp_vmax) == k_) { rsp.vmax = v_; return; }
+                    if (note::flash(keys_::rsp_vmin) == k_) { rsp.vmin = v_; return; }
+                    if (note::flash(keys_::rsp_weekly) == k_) { rsp.weekly = v_; return; }
+                }
                 void reset() {
                     rsp = Response{};
                 }
@@ -949,6 +962,19 @@ struct CardVoltage {
                     if (note::flash(keys_::rsp_vmax) == k_) { rsp.vmax = ::note::parse_double(raw_); return; }
                     if (note::flash(keys_::rsp_vmin) == k_) { rsp.vmin = ::note::parse_double(raw_); return; }
                     if (note::flash(keys_::rsp_weekly) == k_) { rsp.weekly = ::note::parse_double(raw_); return; }
+                }
+                void on_int(::note::string_view k_, int32_t v_) {
+                    if (note::flash(keys_::rsp_hours) == k_) { rsp.hours = v_; return; }
+                    if (note::flash(keys_::rsp_minutes) == k_) { rsp.minutes = v_; return; }
+                }
+                void on_float(::note::string_view k_, double v_) {
+                    if (note::flash(keys_::rsp_daily) == k_) { rsp.daily = v_; return; }
+                    if (note::flash(keys_::rsp_monthly) == k_) { rsp.monthly = v_; return; }
+                    if (note::flash(keys_::rsp_value) == k_) { rsp.value = v_; return; }
+                    if (note::flash(keys_::rsp_vavg) == k_) { rsp.vavg = v_; return; }
+                    if (note::flash(keys_::rsp_vmax) == k_) { rsp.vmax = v_; return; }
+                    if (note::flash(keys_::rsp_vmin) == k_) { rsp.vmin = v_; return; }
+                    if (note::flash(keys_::rsp_weekly) == k_) { rsp.weekly = v_; return; }
                 }
                 void reset() {
                     rsp = Response{};

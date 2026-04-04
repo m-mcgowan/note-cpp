@@ -227,6 +227,11 @@ struct WebDelete {
                 if (capture_body_number(k_, raw_)) return;
                 if (note::flash(keys_::rsp_result) == k_) { rsp.result = ::note::parse_int(raw_); return; }
             }
+            void on_int(::note::string_view k_, int32_t v_) {
+                if (capture_body_int(k_, v_)) return;
+                if (note::flash(keys_::rsp_result) == k_) { rsp.result = v_; return; }
+            }
+            void on_float(::note::string_view k_, double v_) { capture_body_float(k_, v_); }
             void reset() {
                 BodyCaptureSink::reset();
                 rsp = Response{};

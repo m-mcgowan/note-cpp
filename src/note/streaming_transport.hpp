@@ -11,6 +11,7 @@
 #include <note/error.hpp>
 #include <note/json.hpp>
 #include <note/json_sax_streaming.hpp>
+#include <note/lexer/parse.hpp>
 #include <note/transport_hal.hpp>
 #include <note/compiler.hpp>
 #include <note/types.hpp>
@@ -378,7 +379,7 @@ private:
             return r;
         };
 
-        auto parse_err = sax_parse_streaming(read_fn, timeout_ms, crc_sink);
+        auto parse_err = sax_lex_streaming(read_fn, timeout_ms, crc_sink);
 
         // Drain through \n if partial data was received but the frame
         // delimiter wasn't found. Skip drain when no data arrived at all
@@ -399,7 +400,7 @@ private:
             return make_error(Error::ResponseLost, Cause::CrcMismatch, NOTE_ERR("expected CRC"));
         }
 #else
-        auto parse_err = sax_parse_streaming(frame_read, timeout_ms, sink);
+        auto parse_err = sax_lex_streaming(frame_read, timeout_ms, sink);
 
         if (!frame_terminated && any_data_received)
             drain_frame_boundary();

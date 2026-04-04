@@ -154,6 +154,11 @@ struct CardBinary {
                     if (note::flash(keys_::rsp_length) == k_) { rsp.length = ::note::parse_int(raw_); return; }
                     if (note::flash(keys_::rsp_max) == k_) { rsp.max = ::note::parse_int(raw_); return; }
                 }
+                void on_int(::note::string_view k_, int32_t v_) {
+                    if (note::flash(keys_::rsp_cobs) == k_) { rsp.cobs = v_; return; }
+                    if (note::flash(keys_::rsp_length) == k_) { rsp.length = v_; return; }
+                    if (note::flash(keys_::rsp_max) == k_) { rsp.max = v_; return; }
+                }
                 void reset() {
                     rsp = Response{};
                 }
@@ -350,6 +355,11 @@ struct CardBinary {
                     if (note::flash(keys_::rsp_cobs) == k_) { rsp.cobs = ::note::parse_int(raw_); return; }
                     if (note::flash(keys_::rsp_length) == k_) { rsp.length = ::note::parse_int(raw_); return; }
                     if (note::flash(keys_::rsp_max) == k_) { rsp.max = ::note::parse_int(raw_); return; }
+                }
+                void on_int(::note::string_view k_, int32_t v_) {
+                    if (note::flash(keys_::rsp_cobs) == k_) { rsp.cobs = v_; return; }
+                    if (note::flash(keys_::rsp_length) == k_) { rsp.length = v_; return; }
+                    if (note::flash(keys_::rsp_max) == k_) { rsp.max = v_; return; }
                 }
                 void reset() {
                     rsp = Response{};

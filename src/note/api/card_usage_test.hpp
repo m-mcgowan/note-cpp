@@ -189,6 +189,19 @@ struct CardUsageTest {
                 if (note::flash(keys_::rsp_sessionsStandard) == k_) { rsp.sessionsStandard = ::note::parse_int(raw_); return; }
                 if (note::flash(keys_::rsp_time) == k_) { rsp.time = ::note::parse_int(raw_); return; }
             }
+            void on_int(::note::string_view k_, int32_t v_) {
+                if (note::flash(keys_::rsp_bytesPerDay) == k_) { rsp.bytesPerDay = v_; return; }
+                if (note::flash(keys_::rsp_bytesReceived) == k_) { rsp.bytesReceived = v_; return; }
+                if (note::flash(keys_::rsp_bytesSent) == k_) { rsp.bytesSent = v_; return; }
+                if (note::flash(keys_::rsp_days) == k_) { rsp.days = v_; return; }
+                if (note::flash(keys_::rsp_max) == k_) { rsp.max = v_; return; }
+                if (note::flash(keys_::rsp_notesReceived) == k_) { rsp.notesReceived = v_; return; }
+                if (note::flash(keys_::rsp_notesSent) == k_) { rsp.notesSent = v_; return; }
+                if (note::flash(keys_::rsp_seconds) == k_) { rsp.seconds = v_; return; }
+                if (note::flash(keys_::rsp_sessionsSecure) == k_) { rsp.sessionsSecure = v_; return; }
+                if (note::flash(keys_::rsp_sessionsStandard) == k_) { rsp.sessionsStandard = v_; return; }
+                if (note::flash(keys_::rsp_time) == k_) { rsp.time = v_; return; }
+            }
             void reset() {
                 rsp = Response{};
             }

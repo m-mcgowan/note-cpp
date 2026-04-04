@@ -16,9 +16,31 @@
 #include "types.hpp"
 
 #include <cstddef>
+#include <cstdio>
 #include <string>
 
 namespace note {
+
+namespace detail {
+    inline size_t format_int(char* buf, int32_t v) {
+        // Simple int-to-string without snprintf dependency
+        if (v == 0) { buf[0] = '0'; return 1; }
+        size_t pos = 0;
+        bool neg = v < 0;
+        uint32_t abs = neg ? static_cast<uint32_t>(-(v + 1)) + 1u : static_cast<uint32_t>(v);
+        char tmp[11];
+        size_t tpos = 0;
+        while (abs > 0) { tmp[tpos++] = static_cast<char>('0' + abs % 10); abs /= 10; }
+        if (neg) buf[pos++] = '-';
+        for (size_t i = tpos; i > 0; --i) buf[pos++] = tmp[i - 1];
+        return pos;
+    }
+    inline size_t format_float(char* buf, double v) {
+        // Use snprintf for doubles — no simple way to avoid it
+        int n = snprintf(buf, 24, "%.17g", v);
+        return n > 0 ? static_cast<size_t>(n) : 0;
+    }
+} // namespace detail
 
 // ---------------------------------------------------------------------------
 // JsonSink — callback interface driven by the SAX parser.
@@ -34,6 +56,16 @@ public:
     virtual void on_null(string_view key) { (void)key; }
     virtual void on_bool(string_view key, bool value) { (void)key; (void)value; }
     virtual void on_number(string_view key, string_view raw) { (void)key; (void)raw; }
+    virtual void on_int(string_view key, int32_t value) {
+        char buf[12];
+        auto n = detail::format_int(buf, value);
+        on_number(key, string_view(buf, n));
+    }
+    virtual void on_float(string_view key, double value) {
+        char buf[24];
+        auto n = detail::format_float(buf, value);
+        on_number(key, string_view(buf, n));
+    }
     virtual void on_string(string_view key, string_view value) { (void)key; (void)value; }
 
     // Called when a nested object begins/ends. The parser delivers the object's
@@ -64,6 +96,8 @@ public:
     void on_null(string_view key) override { inner_.on_null(key); }
     void on_bool(string_view key, bool value) override { inner_.on_bool(key, value); }
     void on_number(string_view key, string_view raw) override { inner_.on_number(key, raw); }
+    void on_int(string_view key, int32_t value) override { inner_.on_int(key, value); }
+    void on_float(string_view key, double value) override { inner_.on_float(key, value); }
     void on_string(string_view key, string_view value) override { inner_.on_string(key, value); }
     void on_object_begin(string_view key) override { inner_.on_object_begin(key); }
     void on_object_end(string_view key) override { inner_.on_object_end(key); }
@@ -88,6 +122,8 @@ public:
     void on_null(string_view key) { inner_.on_null(key); }
     void on_bool(string_view key, bool value) { inner_.on_bool(key, value); }
     void on_number(string_view key, string_view raw) { inner_.on_number(key, raw); }
+    void on_int(string_view key, int32_t value) { inner_.on_int(key, value); }
+    void on_float(string_view key, double value) { inner_.on_float(key, value); }
     void on_string(string_view key, string_view value) { inner_.on_string(key, value); }
     void on_object_begin(string_view key) { inner_.on_object_begin(key); }
     void on_object_end(string_view key) { inner_.on_object_end(key); }
@@ -131,6 +167,8 @@ struct DefaultSink {
     void on_null(string_view) {}
     void on_bool(string_view, bool) {}
     void on_number(string_view, string_view) {}
+    void on_int(string_view, int32_t) {}
+    void on_float(string_view, double) {}
     void on_string(string_view, string_view) {}
     void on_object_begin(string_view) {}
     void on_object_end(string_view) {}
@@ -244,6 +282,30 @@ struct BodyCaptureSink : DefaultSink {
         return false;
     }
 
+    bool capture_body_int(string_view key, int32_t value) {
+        if (body_depth_ > 0) {
+            emit_key_(key);
+            char buf[12];
+            auto n = detail::format_int(buf, value);
+            body_buf_.append(buf, n);
+            body_need_comma_ = true;
+            return true;
+        }
+        return false;
+    }
+
+    bool capture_body_float(string_view key, double value) {
+        if (body_depth_ > 0) {
+            emit_key_(key);
+            char buf[24];
+            auto n = detail::format_float(buf, value);
+            body_buf_.append(buf, n);
+            body_need_comma_ = true;
+            return true;
+        }
+        return false;
+    }
+
     bool capture_body_bool(string_view key, bool value) {
         if (body_depth_ > 0) {
             emit_key_(key);
@@ -300,6 +362,8 @@ public:
     void on_null(string_view key) override { inner_.on_null(key); }
     void on_bool(string_view key, bool value) override { inner_.on_bool(key, value); }
     void on_number(string_view key, string_view raw) override { inner_.on_number(key, raw); }
+    void on_int(string_view key, int32_t value) override { inner_.on_int(key, value); }
+    void on_float(string_view key, double value) override { inner_.on_float(key, value); }
     void on_string(string_view key, string_view value) override { inner_.on_string(key, value); }
     void on_object_begin(string_view key) override { inner_.on_object_begin(key); }
     void on_object_end(string_view key) override { inner_.on_object_end(key); }

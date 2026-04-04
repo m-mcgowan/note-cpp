@@ -292,6 +292,8 @@ struct DfuStatus {
                 if (note::flash(keys_::rsp_pending) == k_) { rsp.pending = v_; return; }
             }
             void on_number(::note::string_view k_, ::note::string_view raw_) { capture_body_number(k_, raw_); }
+            void on_int(::note::string_view k_, int32_t v_) { capture_body_int(k_, v_); }
+            void on_float(::note::string_view k_, double v_) { capture_body_float(k_, v_); }
             void reset() {
                 BodyCaptureSink::reset();
                 rsp = Response{};

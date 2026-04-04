@@ -139,6 +139,10 @@ struct FileChanges {
                 if (note::flash(keys_::rsp_changes) == k_) { rsp.changes = ::note::parse_int(raw_); return; }
                 if (note::flash(keys_::rsp_total) == k_) { rsp.total = ::note::parse_int(raw_); return; }
             }
+            void on_int(::note::string_view k_, int32_t v_) {
+                if (note::flash(keys_::rsp_changes) == k_) { rsp.changes = v_; return; }
+                if (note::flash(keys_::rsp_total) == k_) { rsp.total = v_; return; }
+            }
             void reset() {
                 rsp = Response{};
             }

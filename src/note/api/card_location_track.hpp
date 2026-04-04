@@ -229,6 +229,10 @@ struct CardLocationTrack {
                 if (note::flash(keys_::rsp_minutes) == k_) { rsp.minutes = ::note::parse_int(raw_); return; }
                 if (note::flash(keys_::rsp_seconds) == k_) { rsp.seconds = ::note::parse_int(raw_); return; }
             }
+            void on_int(::note::string_view k_, int32_t v_) {
+                if (note::flash(keys_::rsp_minutes) == k_) { rsp.minutes = v_; return; }
+                if (note::flash(keys_::rsp_seconds) == k_) { rsp.seconds = v_; return; }
+            }
             void reset() {
                 rsp = Response{};
             }

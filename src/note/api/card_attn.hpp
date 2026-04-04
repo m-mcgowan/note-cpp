@@ -411,6 +411,9 @@ struct CardAttn {
                 void on_number(::note::string_view k_, ::note::string_view raw_) {
                     if (note::flash(keys_::rsp_time) == k_) { rsp.time = ::note::parse_int(raw_); return; }
                 }
+                void on_int(::note::string_view k_, int32_t v_) {
+                    if (note::flash(keys_::rsp_time) == k_) { rsp.time = v_; return; }
+                }
                 void reset() {
                     rsp = Response{};
                 }
@@ -1416,6 +1419,9 @@ struct CardAttn {
                 }
                 void on_number(::note::string_view k_, ::note::string_view raw_) {
                     if (note::flash(keys_::rsp_time) == k_) { rsp.time = ::note::parse_int(raw_); return; }
+                }
+                void on_int(::note::string_view k_, int32_t v_) {
+                    if (note::flash(keys_::rsp_time) == k_) { rsp.time = v_; return; }
                 }
                 void reset() {
                     rsp = Response{};

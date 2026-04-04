@@ -287,6 +287,11 @@ struct CardTriangulate {
                 if (note::flash(keys_::rsp_motion) == k_) { rsp.motion = ::note::parse_int(raw_); return; }
                 if (note::flash(keys_::rsp_time) == k_) { rsp.time = ::note::parse_int(raw_); return; }
             }
+            void on_int(::note::string_view k_, int32_t v_) {
+                if (note::flash(keys_::rsp_length) == k_) { rsp.length = v_; return; }
+                if (note::flash(keys_::rsp_motion) == k_) { rsp.motion = v_; return; }
+                if (note::flash(keys_::rsp_time) == k_) { rsp.time = v_; return; }
+            }
             void reset() {
                 rsp = Response{};
             }

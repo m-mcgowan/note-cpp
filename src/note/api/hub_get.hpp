@@ -163,6 +163,10 @@ struct HubGet {
                 if (note::flash(keys_::rsp_inbound) == k_) { rsp.inbound = ::note::parse_int(raw_); return; }
                 if (note::flash(keys_::rsp_outbound) == k_) { rsp.outbound = ::note::parse_int(raw_); return; }
             }
+            void on_int(::note::string_view k_, int32_t v_) {
+                if (note::flash(keys_::rsp_inbound) == k_) { rsp.inbound = v_; return; }
+                if (note::flash(keys_::rsp_outbound) == k_) { rsp.outbound = v_; return; }
+            }
             void reset() {
                 rsp = Response{};
             }

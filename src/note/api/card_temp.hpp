@@ -201,6 +201,14 @@ struct CardTemp {
                     if (note::flash(keys_::rsp_value) == k_) { rsp.value = ::note::parse_double(raw_); return; }
                     if (note::flash(keys_::rsp_voltage) == k_) { rsp.voltage = ::note::parse_double(raw_); return; }
                 }
+                void on_float(::note::string_view k_, double v_) {
+                    if (note::flash(keys_::rsp_calibration) == k_) { rsp.calibration = v_; return; }
+                    if (note::flash(keys_::rsp_humidity) == k_) { rsp.humidity = v_; return; }
+                    if (note::flash(keys_::rsp_pressure) == k_) { rsp.pressure = v_; return; }
+                    if (note::flash(keys_::rsp_temperature) == k_) { rsp.temperature = v_; return; }
+                    if (note::flash(keys_::rsp_value) == k_) { rsp.value = v_; return; }
+                    if (note::flash(keys_::rsp_voltage) == k_) { rsp.voltage = v_; return; }
+                }
                 void reset() {
                     rsp = Response{};
                 }
@@ -469,6 +477,14 @@ struct CardTemp {
                     if (note::flash(keys_::rsp_value) == k_) { rsp.value = ::note::parse_double(raw_); return; }
                     if (note::flash(keys_::rsp_voltage) == k_) { rsp.voltage = ::note::parse_double(raw_); return; }
                 }
+                void on_float(::note::string_view k_, double v_) {
+                    if (note::flash(keys_::rsp_calibration) == k_) { rsp.calibration = v_; return; }
+                    if (note::flash(keys_::rsp_humidity) == k_) { rsp.humidity = v_; return; }
+                    if (note::flash(keys_::rsp_pressure) == k_) { rsp.pressure = v_; return; }
+                    if (note::flash(keys_::rsp_temperature) == k_) { rsp.temperature = v_; return; }
+                    if (note::flash(keys_::rsp_value) == k_) { rsp.value = v_; return; }
+                    if (note::flash(keys_::rsp_voltage) == k_) { rsp.voltage = v_; return; }
+                }
                 void reset() {
                     rsp = Response{};
                 }
@@ -723,6 +739,14 @@ struct CardTemp {
                     if (note::flash(keys_::rsp_temperature) == k_) { rsp.temperature = ::note::parse_double(raw_); return; }
                     if (note::flash(keys_::rsp_value) == k_) { rsp.value = ::note::parse_double(raw_); return; }
                     if (note::flash(keys_::rsp_voltage) == k_) { rsp.voltage = ::note::parse_double(raw_); return; }
+                }
+                void on_float(::note::string_view k_, double v_) {
+                    if (note::flash(keys_::rsp_calibration) == k_) { rsp.calibration = v_; return; }
+                    if (note::flash(keys_::rsp_humidity) == k_) { rsp.humidity = v_; return; }
+                    if (note::flash(keys_::rsp_pressure) == k_) { rsp.pressure = v_; return; }
+                    if (note::flash(keys_::rsp_temperature) == k_) { rsp.temperature = v_; return; }
+                    if (note::flash(keys_::rsp_value) == k_) { rsp.value = v_; return; }
+                    if (note::flash(keys_::rsp_voltage) == k_) { rsp.voltage = v_; return; }
                 }
                 void reset() {
                     rsp = Response{};

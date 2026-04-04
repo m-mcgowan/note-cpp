@@ -320,6 +320,18 @@ struct CardLocationMode {
                     if (note::flash(keys_::rsp_lat) == k_) { rsp.lat = ::note::parse_double(raw_); return; }
                     if (note::flash(keys_::rsp_lon) == k_) { rsp.lon = ::note::parse_double(raw_); return; }
                 }
+                void on_int(::note::string_view k_, int32_t v_) {
+                    if (note::flash(keys_::rsp_max) == k_) { rsp.max = v_; return; }
+                    if (note::flash(keys_::rsp_minutes) == k_) { rsp.minutes = v_; return; }
+                    if (note::flash(keys_::rsp_seconds) == k_) { rsp.seconds = v_; return; }
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+                    if (note::flash(keys_::rsp_threshold) == k_) { rsp.threshold = v_; return; }
+#endif
+                }
+                void on_float(::note::string_view k_, double v_) {
+                    if (note::flash(keys_::rsp_lat) == k_) { rsp.lat = v_; return; }
+                    if (note::flash(keys_::rsp_lon) == k_) { rsp.lon = v_; return; }
+                }
                 void reset() {
                     rsp = Response{};
                 }
@@ -751,6 +763,18 @@ struct CardLocationMode {
                     if (note::flash(keys_::rsp_lat) == k_) { rsp.lat = ::note::parse_double(raw_); return; }
                     if (note::flash(keys_::rsp_lon) == k_) { rsp.lon = ::note::parse_double(raw_); return; }
                 }
+                void on_int(::note::string_view k_, int32_t v_) {
+                    if (note::flash(keys_::rsp_max) == k_) { rsp.max = v_; return; }
+                    if (note::flash(keys_::rsp_minutes) == k_) { rsp.minutes = v_; return; }
+                    if (note::flash(keys_::rsp_seconds) == k_) { rsp.seconds = v_; return; }
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+                    if (note::flash(keys_::rsp_threshold) == k_) { rsp.threshold = v_; return; }
+#endif
+                }
+                void on_float(::note::string_view k_, double v_) {
+                    if (note::flash(keys_::rsp_lat) == k_) { rsp.lat = v_; return; }
+                    if (note::flash(keys_::rsp_lon) == k_) { rsp.lon = v_; return; }
+                }
                 void reset() {
                     rsp = Response{};
                 }
@@ -1030,6 +1054,11 @@ struct CardLocationMode {
                 void on_number(::note::string_view k_, ::note::string_view raw_) {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
                     if (note::flash(keys_::rsp_threshold) == k_) { rsp.threshold = ::note::parse_int(raw_); return; }
+#endif
+                }
+                void on_int(::note::string_view k_, int32_t v_) {
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+                    if (note::flash(keys_::rsp_threshold) == k_) { rsp.threshold = v_; return; }
 #endif
                 }
                 void reset() {
@@ -1344,6 +1373,18 @@ struct CardLocationMode {
                     if (note::flash(keys_::rsp_lat) == k_) { rsp.lat = ::note::parse_double(raw_); return; }
                     if (note::flash(keys_::rsp_lon) == k_) { rsp.lon = ::note::parse_double(raw_); return; }
                 }
+                void on_int(::note::string_view k_, int32_t v_) {
+                    if (note::flash(keys_::rsp_max) == k_) { rsp.max = v_; return; }
+                    if (note::flash(keys_::rsp_minutes) == k_) { rsp.minutes = v_; return; }
+                    if (note::flash(keys_::rsp_seconds) == k_) { rsp.seconds = v_; return; }
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+                    if (note::flash(keys_::rsp_threshold) == k_) { rsp.threshold = v_; return; }
+#endif
+                }
+                void on_float(::note::string_view k_, double v_) {
+                    if (note::flash(keys_::rsp_lat) == k_) { rsp.lat = v_; return; }
+                    if (note::flash(keys_::rsp_lon) == k_) { rsp.lon = v_; return; }
+                }
                 void reset() {
                     rsp = Response{};
                 }
@@ -1590,6 +1631,10 @@ struct CardLocationMode {
                 void on_number(::note::string_view k_, ::note::string_view raw_) {
                     if (note::flash(keys_::rsp_lat) == k_) { rsp.lat = ::note::parse_double(raw_); return; }
                     if (note::flash(keys_::rsp_lon) == k_) { rsp.lon = ::note::parse_double(raw_); return; }
+                }
+                void on_float(::note::string_view k_, double v_) {
+                    if (note::flash(keys_::rsp_lat) == k_) { rsp.lat = v_; return; }
+                    if (note::flash(keys_::rsp_lon) == k_) { rsp.lon = v_; return; }
                 }
                 void reset() {
                     rsp = Response{};
@@ -1945,6 +1990,18 @@ struct CardLocationMode {
 #endif
                     if (note::flash(keys_::rsp_lat) == k_) { rsp.lat = ::note::parse_double(raw_); return; }
                     if (note::flash(keys_::rsp_lon) == k_) { rsp.lon = ::note::parse_double(raw_); return; }
+                }
+                void on_int(::note::string_view k_, int32_t v_) {
+                    if (note::flash(keys_::rsp_max) == k_) { rsp.max = v_; return; }
+                    if (note::flash(keys_::rsp_minutes) == k_) { rsp.minutes = v_; return; }
+                    if (note::flash(keys_::rsp_seconds) == k_) { rsp.seconds = v_; return; }
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+                    if (note::flash(keys_::rsp_threshold) == k_) { rsp.threshold = v_; return; }
+#endif
+                }
+                void on_float(::note::string_view k_, double v_) {
+                    if (note::flash(keys_::rsp_lat) == k_) { rsp.lat = v_; return; }
+                    if (note::flash(keys_::rsp_lon) == k_) { rsp.lon = v_; return; }
                 }
                 void reset() {
                     rsp = Response{};

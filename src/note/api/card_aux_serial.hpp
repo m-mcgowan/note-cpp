@@ -297,6 +297,11 @@ struct CardAuxSerial {
                     if (note::flash(keys_::rsp_rate) == k_) { rsp.rate = ::note::parse_int(raw_); return; }
 #endif
                 }
+                void on_int(::note::string_view k_, int32_t v_) {
+#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
+                    if (note::flash(keys_::rsp_rate) == k_) { rsp.rate = v_; return; }
+#endif
+                }
                 void reset() {
                     rsp = Response{};
                 }

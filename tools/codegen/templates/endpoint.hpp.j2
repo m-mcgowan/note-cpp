@@ -625,8 +625,38 @@ namespace note::api {
 {{ version_guard_end(prop.version_guard) -}}
 {% endfor %}
 {{ indent }}        }
+{% if int_props %}
+{{ indent }}        void on_int(::note::string_view k_, int32_t v_) {
+{% if op.response.has_body %}
+{{ indent }}            if (capture_body_int(k_, v_)) return;
+{% endif %}
+{% for prop in int_props %}
+{{ version_guard_begin(prop.version_guard) -}}
+{{ indent }}            if (note::flash(keys_::rsp_{{ prop.accessor_name }}) == k_) { rsp.{{ prop.accessor_name }} = v_; return; }
+{{ version_guard_end(prop.version_guard) -}}
+{% endfor %}
+{{ indent }}        }
+{% elif op.response.has_body %}
+{{ indent }}        void on_int(::note::string_view k_, int32_t v_) { capture_body_int(k_, v_); }
+{% endif %}
+{% if double_props %}
+{{ indent }}        void on_float(::note::string_view k_, double v_) {
+{% if op.response.has_body %}
+{{ indent }}            if (capture_body_float(k_, v_)) return;
+{% endif %}
+{% for prop in double_props %}
+{{ version_guard_begin(prop.version_guard) -}}
+{{ indent }}            if (note::flash(keys_::rsp_{{ prop.accessor_name }}) == k_) { rsp.{{ prop.accessor_name }} = v_; return; }
+{{ version_guard_end(prop.version_guard) -}}
+{% endfor %}
+{{ indent }}        }
+{% elif op.response.has_body %}
+{{ indent }}        void on_float(::note::string_view k_, double v_) { capture_body_float(k_, v_); }
+{% endif %}
 {% elif op.response.has_body %}
 {{ indent }}        void on_number(::note::string_view k_, ::note::string_view raw_) { capture_body_number(k_, raw_); }
+{{ indent }}        void on_int(::note::string_view k_, int32_t v_) { capture_body_int(k_, v_); }
+{{ indent }}        void on_float(::note::string_view k_, double v_) { capture_body_float(k_, v_); }
 {% endif %}
 {{ indent }}        void reset() {
 {% if op.response.has_body %}

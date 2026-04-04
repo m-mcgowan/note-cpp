@@ -141,6 +141,11 @@ struct CardPower {
                     if (note::flash(keys_::rsp_temperature) == k_) { rsp.temperature = ::note::parse_double(raw_); return; }
                     if (note::flash(keys_::rsp_voltage) == k_) { rsp.voltage = ::note::parse_double(raw_); return; }
                 }
+                void on_float(::note::string_view k_, double v_) {
+                    if (note::flash(keys_::rsp_milliampHours) == k_) { rsp.milliampHours = v_; return; }
+                    if (note::flash(keys_::rsp_temperature) == k_) { rsp.temperature = v_; return; }
+                    if (note::flash(keys_::rsp_voltage) == k_) { rsp.voltage = v_; return; }
+                }
                 void reset() {
                     rsp = Response{};
                 }
@@ -323,6 +328,11 @@ struct CardPower {
                     if (note::flash(keys_::rsp_temperature) == k_) { rsp.temperature = ::note::parse_double(raw_); return; }
                     if (note::flash(keys_::rsp_voltage) == k_) { rsp.voltage = ::note::parse_double(raw_); return; }
                 }
+                void on_float(::note::string_view k_, double v_) {
+                    if (note::flash(keys_::rsp_milliampHours) == k_) { rsp.milliampHours = v_; return; }
+                    if (note::flash(keys_::rsp_temperature) == k_) { rsp.temperature = v_; return; }
+                    if (note::flash(keys_::rsp_voltage) == k_) { rsp.voltage = v_; return; }
+                }
                 void reset() {
                     rsp = Response{};
                 }
@@ -493,6 +503,11 @@ struct CardPower {
                     if (note::flash(keys_::rsp_milliampHours) == k_) { rsp.milliampHours = ::note::parse_double(raw_); return; }
                     if (note::flash(keys_::rsp_temperature) == k_) { rsp.temperature = ::note::parse_double(raw_); return; }
                     if (note::flash(keys_::rsp_voltage) == k_) { rsp.voltage = ::note::parse_double(raw_); return; }
+                }
+                void on_float(::note::string_view k_, double v_) {
+                    if (note::flash(keys_::rsp_milliampHours) == k_) { rsp.milliampHours = v_; return; }
+                    if (note::flash(keys_::rsp_temperature) == k_) { rsp.temperature = v_; return; }
+                    if (note::flash(keys_::rsp_voltage) == k_) { rsp.voltage = v_; return; }
                 }
                 void reset() {
                     rsp = Response{};

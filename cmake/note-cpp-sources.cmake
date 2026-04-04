@@ -94,6 +94,7 @@ set(NOTE_CPP_TEST_SOURCES
     test_json_fmt.cpp
     test_json_sax.cpp
     test_json_sax_streaming.cpp
+    test_json_lexer.cpp
     test_make_api.cpp
     test_migration_support.cpp
     test_notecard.cpp

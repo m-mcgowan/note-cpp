@@ -204,6 +204,14 @@ struct HubSyncStatus {
 #endif
                 if (note::flash(keys_::rsp_time) == k_) { rsp.time = ::note::parse_int(raw_); return; }
             }
+            void on_int(::note::string_view k_, int32_t v_) {
+                if (note::flash(keys_::rsp_completed) == k_) { rsp.completed = v_; return; }
+                if (note::flash(keys_::rsp_requested) == k_) { rsp.requested = v_; return; }
+#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
+                if (note::flash(keys_::rsp_seconds) == k_) { rsp.seconds = v_; return; }
+#endif
+                if (note::flash(keys_::rsp_time) == k_) { rsp.time = v_; return; }
+            }
             void reset() {
                 rsp = Response{};
             }

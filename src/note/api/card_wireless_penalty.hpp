@@ -213,6 +213,13 @@ struct CardWirelessPenalty {
                     if (note::flash(keys_::rsp_seconds) == k_) { rsp.seconds = ::note::parse_int(raw_); return; }
 #endif
                 }
+                void on_int(::note::string_view k_, int32_t v_) {
+                    if (note::flash(keys_::rsp_count) == k_) { rsp.count = v_; return; }
+                    if (note::flash(keys_::rsp_minutes) == k_) { rsp.minutes = v_; return; }
+#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
+                    if (note::flash(keys_::rsp_seconds) == k_) { rsp.seconds = v_; return; }
+#endif
+                }
                 void reset() {
                     rsp = Response{};
                 }
@@ -491,6 +498,13 @@ struct CardWirelessPenalty {
                     if (note::flash(keys_::rsp_seconds) == k_) { rsp.seconds = ::note::parse_int(raw_); return; }
 #endif
                 }
+                void on_int(::note::string_view k_, int32_t v_) {
+                    if (note::flash(keys_::rsp_count) == k_) { rsp.count = v_; return; }
+                    if (note::flash(keys_::rsp_minutes) == k_) { rsp.minutes = v_; return; }
+#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
+                    if (note::flash(keys_::rsp_seconds) == k_) { rsp.seconds = v_; return; }
+#endif
+                }
                 void reset() {
                     rsp = Response{};
                 }
@@ -758,6 +772,13 @@ struct CardWirelessPenalty {
                     if (note::flash(keys_::rsp_minutes) == k_) { rsp.minutes = ::note::parse_int(raw_); return; }
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
                     if (note::flash(keys_::rsp_seconds) == k_) { rsp.seconds = ::note::parse_int(raw_); return; }
+#endif
+                }
+                void on_int(::note::string_view k_, int32_t v_) {
+                    if (note::flash(keys_::rsp_count) == k_) { rsp.count = v_; return; }
+                    if (note::flash(keys_::rsp_minutes) == k_) { rsp.minutes = v_; return; }
+#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
+                    if (note::flash(keys_::rsp_seconds) == k_) { rsp.seconds = v_; return; }
 #endif
                 }
                 void reset() {

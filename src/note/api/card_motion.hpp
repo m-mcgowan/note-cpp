@@ -167,6 +167,11 @@ struct CardMotion {
                 if (note::flash(keys_::rsp_motion) == k_) { rsp.motion = ::note::parse_int(raw_); return; }
                 if (note::flash(keys_::rsp_seconds) == k_) { rsp.seconds = ::note::parse_int(raw_); return; }
             }
+            void on_int(::note::string_view k_, int32_t v_) {
+                if (note::flash(keys_::rsp_count) == k_) { rsp.count = v_; return; }
+                if (note::flash(keys_::rsp_motion) == k_) { rsp.motion = v_; return; }
+                if (note::flash(keys_::rsp_seconds) == k_) { rsp.seconds = v_; return; }
+            }
             void reset() {
                 rsp = Response{};
             }

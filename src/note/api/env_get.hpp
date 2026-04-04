@@ -200,6 +200,13 @@ struct EnvGet {
                 if (note::flash(keys_::rsp_time) == k_) { rsp.time = ::note::parse_int(raw_); return; }
 #endif
             }
+            void on_int(::note::string_view k_, int32_t v_) {
+                if (capture_body_int(k_, v_)) return;
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+                if (note::flash(keys_::rsp_time) == k_) { rsp.time = v_; return; }
+#endif
+            }
+            void on_float(::note::string_view k_, double v_) { capture_body_float(k_, v_); }
             void reset() {
                 BodyCaptureSink::reset();
                 rsp = Response{};

@@ -137,6 +137,9 @@ struct VarGet {
             void on_number(::note::string_view k_, ::note::string_view raw_) {
                 if (note::flash(keys_::rsp_value) == k_) { rsp.value = ::note::parse_double(raw_); return; }
             }
+            void on_float(::note::string_view k_, double v_) {
+                if (note::flash(keys_::rsp_value) == k_) { rsp.value = v_; return; }
+            }
             void reset() {
                 rsp = Response{};
             }

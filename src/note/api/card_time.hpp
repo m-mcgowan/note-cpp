@@ -148,6 +148,14 @@ struct CardTime {
                 if (note::flash(keys_::rsp_lat) == k_) { rsp.lat = ::note::parse_double(raw_); return; }
                 if (note::flash(keys_::rsp_lon) == k_) { rsp.lon = ::note::parse_double(raw_); return; }
             }
+            void on_int(::note::string_view k_, int32_t v_) {
+                if (note::flash(keys_::rsp_minutes) == k_) { rsp.minutes = v_; return; }
+                if (note::flash(keys_::rsp_time) == k_) { rsp.time = v_; return; }
+            }
+            void on_float(::note::string_view k_, double v_) {
+                if (note::flash(keys_::rsp_lat) == k_) { rsp.lat = v_; return; }
+                if (note::flash(keys_::rsp_lon) == k_) { rsp.lon = v_; return; }
+            }
             void reset() {
                 rsp = Response{};
             }

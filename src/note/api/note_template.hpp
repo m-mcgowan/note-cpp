@@ -311,6 +311,12 @@ struct NoteTemplate {
                     if (note::flash(keys_::rsp_bytes) == k_) { rsp.bytes = ::note::parse_int(raw_); return; }
                     if (note::flash(keys_::rsp_length) == k_) { rsp.length = ::note::parse_int(raw_); return; }
                 }
+                void on_int(::note::string_view k_, int32_t v_) {
+                    if (capture_body_int(k_, v_)) return;
+                    if (note::flash(keys_::rsp_bytes) == k_) { rsp.bytes = v_; return; }
+                    if (note::flash(keys_::rsp_length) == k_) { rsp.length = v_; return; }
+                }
+                void on_float(::note::string_view k_, double v_) { capture_body_float(k_, v_); }
                 void reset() {
                     BodyCaptureSink::reset();
                     rsp = Response{};
@@ -759,6 +765,12 @@ struct NoteTemplate {
                     if (note::flash(keys_::rsp_bytes) == k_) { rsp.bytes = ::note::parse_int(raw_); return; }
                     if (note::flash(keys_::rsp_length) == k_) { rsp.length = ::note::parse_int(raw_); return; }
                 }
+                void on_int(::note::string_view k_, int32_t v_) {
+                    if (capture_body_int(k_, v_)) return;
+                    if (note::flash(keys_::rsp_bytes) == k_) { rsp.bytes = v_; return; }
+                    if (note::flash(keys_::rsp_length) == k_) { rsp.length = v_; return; }
+                }
+                void on_float(::note::string_view k_, double v_) { capture_body_float(k_, v_); }
                 void reset() {
                     BodyCaptureSink::reset();
                     rsp = Response{};

@@ -593,37 +593,65 @@ const ArrayElemVTable& SaxCaptureArray::array_elem_vtable_for() {
 // make_body_handler<T>().
 // ═══════════════════════════════════════════════════════════════════════
 
+/// Type-erased body event — single dispatch avoids per-event-type thunks.
+struct BodyEvent {
+    enum Tag : uint8_t {
+        Bool, Int, Float, String, Number,
+        ObjectBegin, ObjectEnd, ArrayBegin, ArrayEnd, Reset
+    };
+    struct StringRef { const char* data; size_t len; };
+
+    Tag tag;
+    string_view key;
+    union {
+        bool b;
+        int32_t i;
+        double f;
+        StringRef sv;
+    };
+
+    static BodyEvent make_bool(string_view k, bool v) { BodyEvent e; e.tag = Bool; e.key = k; e.b = v; return e; }
+    static BodyEvent make_int(string_view k, int32_t v) { BodyEvent e; e.tag = Int; e.key = k; e.i = v; return e; }
+    static BodyEvent make_float(string_view k, double v) { BodyEvent e; e.tag = Float; e.key = k; e.f = v; return e; }
+    static BodyEvent make_string(string_view k, string_view v) { BodyEvent e; e.tag = String; e.key = k; e.sv = {v.data(), v.size()}; return e; }
+    static BodyEvent make_number(string_view k, string_view v) { BodyEvent e; e.tag = Number; e.key = k; e.sv = {v.data(), v.size()}; return e; }
+    static BodyEvent make_object_begin(string_view k) { BodyEvent e; e.tag = ObjectBegin; e.key = k; return e; }
+    static BodyEvent make_object_end(string_view k) { BodyEvent e; e.tag = ObjectEnd; e.key = k; return e; }
+    static BodyEvent make_array_begin(string_view k) { BodyEvent e; e.tag = ArrayBegin; e.key = k; return e; }
+    static BodyEvent make_array_end(string_view k) { BodyEvent e; e.tag = ArrayEnd; e.key = k; return e; }
+    static BodyEvent make_reset() { BodyEvent e; e.tag = Reset; return e; }
+};
+
+/// Type-erased body handler — single function pointer dispatch.
 struct BodyHandler {
     void* ctx = nullptr;
-    void (*on_bool)(void*, string_view, bool) = nullptr;
-    void (*on_int)(void*, string_view, int32_t) = nullptr;
-    void (*on_float)(void*, string_view, double) = nullptr;
-    void (*on_string)(void*, string_view, string_view) = nullptr;
-    void (*on_number)(void*, string_view, string_view) = nullptr;
-    void (*on_object_begin)(void*, string_view) = nullptr;
-    void (*on_object_end)(void*, string_view) = nullptr;
-    void (*on_array_begin)(void*, string_view) = nullptr;
-    void (*on_array_end)(void*, string_view) = nullptr;
-    void (*reset)(void*) = nullptr;
+    void (*dispatch)(void*, const BodyEvent&) = nullptr;
 
+    void send(const BodyEvent& ev) const { dispatch(ctx, ev); }
     explicit operator bool() const { return ctx != nullptr; }
 };
 
-/// Create a BodyHandler that forwards SAX events to a StructSink<T>.
+/// Create a BodyHandler that forwards events to a StructSink<T>.
+/// Single dispatch function — no per-event-type thunk bloat.
 template<typename T>
 BodyHandler make_body_handler(StructSink<T>& sink) {
     return {
         &sink,
-        [](void* c, string_view k, bool v) { static_cast<StructSink<T>*>(c)->on_bool(k, v); },
-        [](void* c, string_view k, int32_t v) { static_cast<StructSink<T>*>(c)->on_int(k, v); },
-        [](void* c, string_view k, double v) { static_cast<StructSink<T>*>(c)->on_float(k, v); },
-        [](void* c, string_view k, string_view v) { static_cast<StructSink<T>*>(c)->on_string(k, v); },
-        [](void* c, string_view k, string_view raw) { static_cast<StructSink<T>*>(c)->on_number(k, raw); },
-        [](void* c, string_view k) { static_cast<StructSink<T>*>(c)->on_object_begin(k); },
-        [](void* c, string_view k) { static_cast<StructSink<T>*>(c)->on_object_end(k); },
-        [](void* c, string_view k) { static_cast<StructSink<T>*>(c)->on_array_begin(k); },
-        [](void* c, string_view k) { static_cast<StructSink<T>*>(c)->on_array_end(k); },
-        [](void* c) { static_cast<StructSink<T>*>(c)->reset(); },
+        [](void* c, const BodyEvent& ev) {
+            auto& s = *static_cast<StructSink<T>*>(c);
+            switch (ev.tag) {
+            case BodyEvent::Bool:        s.on_bool(ev.key, ev.b); break;
+            case BodyEvent::Int:         s.on_int(ev.key, ev.i); break;
+            case BodyEvent::Float:       s.on_float(ev.key, ev.f); break;
+            case BodyEvent::String:      s.on_string(ev.key, {ev.sv.data, ev.sv.len}); break;
+            case BodyEvent::Number:      s.on_number(ev.key, {ev.sv.data, ev.sv.len}); break;
+            case BodyEvent::ObjectBegin: s.on_object_begin(ev.key); break;
+            case BodyEvent::ObjectEnd:   s.on_object_end(ev.key); break;
+            case BodyEvent::ArrayBegin:  s.on_array_begin(ev.key); break;
+            case BodyEvent::ArrayEnd:    s.on_array_end(ev.key); break;
+            case BodyEvent::Reset:       s.reset(); break;
+            }
+        },
     };
 }
 

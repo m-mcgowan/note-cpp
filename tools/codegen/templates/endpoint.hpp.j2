@@ -582,7 +582,7 @@ namespace note::api {
 {{ indent }}        enum class ArrayCtx_ : uint8_t { none{% for prop in array_string_props %}, {{ prop.accessor_name }}{% endfor %} } array_ctx_{};
 {{ indent }}        void on_array_begin(::note::string_view k_) {
 {% if op.response.has_body %}
-{{ indent }}            if (body_depth_ > 0) { if (body_handler_) body_handler_.on_array_begin(body_handler_.ctx, k_); return; }
+{{ indent }}            if (body_depth_ > 0) { if (body_handler_) body_handler_.send(::note::BodyEvent::make_array_begin(k_)); return; }
 {% endif %}
 {% for prop in array_string_props %}
 {{ version_guard_begin(prop.version_guard) -}}
@@ -592,23 +592,23 @@ namespace note::api {
 {{ indent }}        }
 {{ indent }}        void on_array_end(::note::string_view k_) {
 {% if op.response.has_body %}
-{{ indent }}            if (body_depth_ > 0) { if (body_handler_) body_handler_.on_array_end(body_handler_.ctx, k_); return; }
+{{ indent }}            if (body_depth_ > 0) { if (body_handler_) body_handler_.send(::note::BodyEvent::make_array_end(k_)); return; }
 {% endif %}
 {{ indent }}            (void)k_; array_ctx_ = ArrayCtx_::none;
 {{ indent }}        }
 {% elif op.response.has_body %}
 {{ indent }}        void on_array_begin(::note::string_view k_) {
-{{ indent }}            if (body_depth_ > 0 && body_handler_) body_handler_.on_array_begin(body_handler_.ctx, k_);
+{{ indent }}            if (body_depth_ > 0 && body_handler_) body_handler_.send(::note::BodyEvent::make_array_begin(k_));
 {{ indent }}        }
 {{ indent }}        void on_array_end(::note::string_view k_) {
-{{ indent }}            if (body_depth_ > 0 && body_handler_) body_handler_.on_array_end(body_handler_.ctx, k_);
+{{ indent }}            if (body_depth_ > 0 && body_handler_) body_handler_.send(::note::BodyEvent::make_array_end(k_));
 {{ indent }}        }
 {% endif %}
 {% if op.response.has_body %}
 {{ indent }}        void on_object_begin(::note::string_view k_) {
 {{ indent }}            if (body_depth_ > 0) {
 {{ indent }}                ++body_depth_;
-{{ indent }}                if (body_handler_) body_handler_.on_object_begin(body_handler_.ctx, k_);
+{{ indent }}                if (body_handler_) body_handler_.send(::note::BodyEvent::make_object_begin(k_));
 {{ indent }}                return;
 {{ indent }}            }
 {{ indent }}            if (k_ == "body") { body_depth_ = 1; return; }
@@ -616,7 +616,7 @@ namespace note::api {
 {{ indent }}        void on_object_end(::note::string_view k_) {
 {{ indent }}            if (body_depth_ > 0) {
 {{ indent }}                --body_depth_;
-{{ indent }}                if (body_depth_ > 0 && body_handler_) body_handler_.on_object_end(body_handler_.ctx, k_);
+{{ indent }}                if (body_depth_ > 0 && body_handler_) body_handler_.send(::note::BodyEvent::make_object_end(k_));
 {{ indent }}                return;
 {{ indent }}            }
 {{ indent }}        }
@@ -625,7 +625,7 @@ namespace note::api {
 {% if string_props or array_string_props %}
 {{ indent }}        void on_string(::note::string_view k_, ::note::string_view v_) {
 {% if op.response.has_body %}
-{{ indent }}            if (body_depth_ > 0) { if (body_handler_) body_handler_.on_string(body_handler_.ctx, k_, v_); return; }
+{{ indent }}            if (body_depth_ > 0) { if (body_handler_) body_handler_.send(::note::BodyEvent::make_string(k_, v_)); return; }
 {% endif %}
 {{ indent }}            v_ = pool_.intern(v_);
 {% if not string_props %}
@@ -650,13 +650,13 @@ namespace note::api {
 {{ indent }}        }
 {% elif op.response.has_body %}
 {{ indent }}        void on_string(::note::string_view k_, ::note::string_view v_) {
-{{ indent }}            if (body_depth_ > 0 && body_handler_) body_handler_.on_string(body_handler_.ctx, k_, v_);
+{{ indent }}            if (body_depth_ > 0 && body_handler_) body_handler_.send(::note::BodyEvent::make_string(k_, v_));
 {{ indent }}        }
 {% endif %}
 {% if bool_props %}
 {{ indent }}        void on_bool(::note::string_view k_, bool v_) {
 {% if op.response.has_body %}
-{{ indent }}            if (body_depth_ > 0) { if (body_handler_) body_handler_.on_bool(body_handler_.ctx, k_, v_); return; }
+{{ indent }}            if (body_depth_ > 0) { if (body_handler_) body_handler_.send(::note::BodyEvent::make_bool(k_, v_)); return; }
 {% endif %}
 {% for prop in bool_props %}
 {{ version_guard_begin(prop.version_guard) -}}
@@ -666,13 +666,13 @@ namespace note::api {
 {{ indent }}        }
 {% elif op.response.has_body %}
 {{ indent }}        void on_bool(::note::string_view k_, bool v_) {
-{{ indent }}            if (body_depth_ > 0 && body_handler_) body_handler_.on_bool(body_handler_.ctx, k_, v_);
+{{ indent }}            if (body_depth_ > 0 && body_handler_) body_handler_.send(::note::BodyEvent::make_bool(k_, v_));
 {{ indent }}        }
 {% endif %}
 {% if int_props or double_props %}
 {{ indent }}        void on_number(::note::string_view k_, ::note::string_view raw_) {
 {% if op.response.has_body %}
-{{ indent }}            if (body_depth_ > 0) { if (body_handler_) body_handler_.on_number(body_handler_.ctx, k_, raw_); return; }
+{{ indent }}            if (body_depth_ > 0) { if (body_handler_) body_handler_.send(::note::BodyEvent::make_number(k_, raw_)); return; }
 {% endif %}
 {% for prop in int_props %}
 {{ version_guard_begin(prop.version_guard) -}}
@@ -688,7 +688,7 @@ namespace note::api {
 {% if int_props %}
 {{ indent }}        void on_int(::note::string_view k_, int32_t v_) {
 {% if op.response.has_body %}
-{{ indent }}            if (body_depth_ > 0) { if (body_handler_) body_handler_.on_int(body_handler_.ctx, k_, v_); return; }
+{{ indent }}            if (body_depth_ > 0) { if (body_handler_) body_handler_.send(::note::BodyEvent::make_int(k_, v_)); return; }
 {% endif %}
 {% for prop in int_props %}
 {{ version_guard_begin(prop.version_guard) -}}
@@ -698,13 +698,13 @@ namespace note::api {
 {{ indent }}        }
 {% elif op.response.has_body %}
 {{ indent }}        void on_int(::note::string_view k_, int32_t v_) {
-{{ indent }}            if (body_depth_ > 0 && body_handler_) body_handler_.on_int(body_handler_.ctx, k_, v_);
+{{ indent }}            if (body_depth_ > 0 && body_handler_) body_handler_.send(::note::BodyEvent::make_int(k_, v_));
 {{ indent }}        }
 {% endif %}
 {% if double_props %}
 {{ indent }}        void on_float(::note::string_view k_, double v_) {
 {% if op.response.has_body %}
-{{ indent }}            if (body_depth_ > 0) { if (body_handler_) body_handler_.on_float(body_handler_.ctx, k_, v_); return; }
+{{ indent }}            if (body_depth_ > 0) { if (body_handler_) body_handler_.send(::note::BodyEvent::make_float(k_, v_)); return; }
 {% endif %}
 {% for prop in double_props %}
 {{ version_guard_begin(prop.version_guard) -}}
@@ -714,24 +714,24 @@ namespace note::api {
 {{ indent }}        }
 {% elif op.response.has_body %}
 {{ indent }}        void on_float(::note::string_view k_, double v_) {
-{{ indent }}            if (body_depth_ > 0 && body_handler_) body_handler_.on_float(body_handler_.ctx, k_, v_);
+{{ indent }}            if (body_depth_ > 0 && body_handler_) body_handler_.send(::note::BodyEvent::make_float(k_, v_));
 {{ indent }}        }
 {% endif %}
 {% elif op.response.has_body %}
 {{ indent }}        void on_number(::note::string_view k_, ::note::string_view raw_) {
-{{ indent }}            if (body_depth_ > 0 && body_handler_) body_handler_.on_number(body_handler_.ctx, k_, raw_);
+{{ indent }}            if (body_depth_ > 0 && body_handler_) body_handler_.send(::note::BodyEvent::make_number(k_, raw_));
 {{ indent }}        }
 {{ indent }}        void on_int(::note::string_view k_, int32_t v_) {
-{{ indent }}            if (body_depth_ > 0 && body_handler_) body_handler_.on_int(body_handler_.ctx, k_, v_);
+{{ indent }}            if (body_depth_ > 0 && body_handler_) body_handler_.send(::note::BodyEvent::make_int(k_, v_));
 {{ indent }}        }
 {{ indent }}        void on_float(::note::string_view k_, double v_) {
-{{ indent }}            if (body_depth_ > 0 && body_handler_) body_handler_.on_float(body_handler_.ctx, k_, v_);
+{{ indent }}            if (body_depth_ > 0 && body_handler_) body_handler_.send(::note::BodyEvent::make_float(k_, v_));
 {{ indent }}        }
 {% endif %}
 {{ indent }}        void reset() {
 {% if op.response.has_body %}
 {{ indent }}            body_depth_ = 0;
-{{ indent }}            if (body_handler_ && body_handler_.reset) body_handler_.reset(body_handler_.ctx);
+{{ indent }}            if (body_handler_) body_handler_.send(::note::BodyEvent::make_reset());
 {% endif %}
 {{ indent }}            rsp = Response{};
 {{ indent }}        }

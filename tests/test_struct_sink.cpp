@@ -302,16 +302,7 @@ TEST_CASE("make_body_handler creates valid handler") {
     auto handler = note::make_body_handler(sink);
     REQUIRE(static_cast<bool>(handler));
     REQUIRE(handler.ctx != nullptr);
-    REQUIRE(handler.on_bool != nullptr);
-    REQUIRE(handler.on_int != nullptr);
-    REQUIRE(handler.on_float != nullptr);
-    REQUIRE(handler.on_string != nullptr);
-    REQUIRE(handler.on_number != nullptr);
-    REQUIRE(handler.on_object_begin != nullptr);
-    REQUIRE(handler.on_object_end != nullptr);
-    REQUIRE(handler.on_array_begin != nullptr);
-    REQUIRE(handler.on_array_end != nullptr);
-    REQUIRE(handler.reset != nullptr);
+    REQUIRE(handler.dispatch != nullptr);
 }
 
 TEST_CASE("BodyHandler forwards events to StructSink") {
@@ -322,9 +313,9 @@ TEST_CASE("BodyHandler forwards events to StructSink") {
     note::StructSink<SensorData> sink(data, pool);
 
     auto handler = note::make_body_handler(sink);
-    handler.on_float(handler.ctx, "temperature", 22.5);
-    handler.on_int(handler.ctx, "humidity", 45);
-    handler.on_bool(handler.ctx, "active", true);
+    handler.send(note::BodyEvent::make_float("temperature", 22.5));
+    handler.send(note::BodyEvent::make_int("humidity", 45));
+    handler.send(note::BodyEvent::make_bool("active", true));
 
     REQUIRE(data.temperature == 22.5f);
     REQUIRE(data.humidity == 45);
@@ -400,8 +391,8 @@ TEST_CASE("body handler factory creates working StructSink") {
     REQUIRE(static_cast<bool>(handler));
 
     // Forward events through the handler
-    handler.on_float(handler.ctx, "temp", 22.5);
-    handler.on_string(handler.ctx, "label", "room-42");
+    handler.send(note::BodyEvent::make_float("temp", 22.5));
+    handler.send(note::BodyEvent::make_string("label", "room-42"));
 
     REQUIRE(body.temp == 22.5f);
     REQUIRE(body.label == "room-42");

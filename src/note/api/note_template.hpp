@@ -316,15 +316,15 @@ struct NoteTemplate {
                 Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
                 void set_body_handler(::note::BodyHandler bh) { body_handler_ = bh; }
                 void on_array_begin(::note::string_view k_) {
-                    if (body_depth_ > 0 && body_handler_) body_handler_.on_array_begin(body_handler_.ctx, k_);
+                    if (body_depth_ > 0 && body_handler_) body_handler_.send(::note::BodyEvent::make_array_begin(k_));
                 }
                 void on_array_end(::note::string_view k_) {
-                    if (body_depth_ > 0 && body_handler_) body_handler_.on_array_end(body_handler_.ctx, k_);
+                    if (body_depth_ > 0 && body_handler_) body_handler_.send(::note::BodyEvent::make_array_end(k_));
                 }
                 void on_object_begin(::note::string_view k_) {
                     if (body_depth_ > 0) {
                         ++body_depth_;
-                        if (body_handler_) body_handler_.on_object_begin(body_handler_.ctx, k_);
+                        if (body_handler_) body_handler_.send(::note::BodyEvent::make_object_begin(k_));
                         return;
                     }
                     if (k_ == "body") { body_depth_ = 1; return; }
@@ -332,40 +332,40 @@ struct NoteTemplate {
                 void on_object_end(::note::string_view k_) {
                     if (body_depth_ > 0) {
                         --body_depth_;
-                        if (body_depth_ > 0 && body_handler_) body_handler_.on_object_end(body_handler_.ctx, k_);
+                        if (body_depth_ > 0 && body_handler_) body_handler_.send(::note::BodyEvent::make_object_end(k_));
                         return;
                     }
                 }
                 void on_null(::note::string_view k_) { (void)k_; }
                 void on_string(::note::string_view k_, ::note::string_view v_) {
-                    if (body_depth_ > 0) { if (body_handler_) body_handler_.on_string(body_handler_.ctx, k_, v_); return; }
+                    if (body_depth_ > 0) { if (body_handler_) body_handler_.send(::note::BodyEvent::make_string(k_, v_)); return; }
                     v_ = pool_.intern(v_);
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
                     if (note::flash(keys_::rsp_format) == k_) { rsp.format = v_; return; }
 #endif
                 }
                 void on_bool(::note::string_view k_, bool v_) {
-                    if (body_depth_ > 0) { if (body_handler_) body_handler_.on_bool(body_handler_.ctx, k_, v_); return; }
+                    if (body_depth_ > 0) { if (body_handler_) body_handler_.send(::note::BodyEvent::make_bool(k_, v_)); return; }
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
                     if (note::flash(keys_::rsp_template_) == k_) { rsp.template_ = v_; return; }
 #endif
                 }
                 void on_number(::note::string_view k_, ::note::string_view raw_) {
-                    if (body_depth_ > 0) { if (body_handler_) body_handler_.on_number(body_handler_.ctx, k_, raw_); return; }
+                    if (body_depth_ > 0) { if (body_handler_) body_handler_.send(::note::BodyEvent::make_number(k_, raw_)); return; }
                     if (note::flash(keys_::rsp_bytes) == k_) { rsp.bytes = ::note::parse_int(raw_); return; }
                     if (note::flash(keys_::rsp_length) == k_) { rsp.length = ::note::parse_int(raw_); return; }
                 }
                 void on_int(::note::string_view k_, int32_t v_) {
-                    if (body_depth_ > 0) { if (body_handler_) body_handler_.on_int(body_handler_.ctx, k_, v_); return; }
+                    if (body_depth_ > 0) { if (body_handler_) body_handler_.send(::note::BodyEvent::make_int(k_, v_)); return; }
                     if (note::flash(keys_::rsp_bytes) == k_) { rsp.bytes = v_; return; }
                     if (note::flash(keys_::rsp_length) == k_) { rsp.length = v_; return; }
                 }
                 void on_float(::note::string_view k_, double v_) {
-                    if (body_depth_ > 0 && body_handler_) body_handler_.on_float(body_handler_.ctx, k_, v_);
+                    if (body_depth_ > 0 && body_handler_) body_handler_.send(::note::BodyEvent::make_float(k_, v_));
                 }
                 void reset() {
                     body_depth_ = 0;
-                    if (body_handler_ && body_handler_.reset) body_handler_.reset(body_handler_.ctx);
+                    if (body_handler_) body_handler_.send(::note::BodyEvent::make_reset());
                     rsp = Response{};
                 }
             };
@@ -790,15 +790,15 @@ struct NoteTemplate {
                 Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
                 void set_body_handler(::note::BodyHandler bh) { body_handler_ = bh; }
                 void on_array_begin(::note::string_view k_) {
-                    if (body_depth_ > 0 && body_handler_) body_handler_.on_array_begin(body_handler_.ctx, k_);
+                    if (body_depth_ > 0 && body_handler_) body_handler_.send(::note::BodyEvent::make_array_begin(k_));
                 }
                 void on_array_end(::note::string_view k_) {
-                    if (body_depth_ > 0 && body_handler_) body_handler_.on_array_end(body_handler_.ctx, k_);
+                    if (body_depth_ > 0 && body_handler_) body_handler_.send(::note::BodyEvent::make_array_end(k_));
                 }
                 void on_object_begin(::note::string_view k_) {
                     if (body_depth_ > 0) {
                         ++body_depth_;
-                        if (body_handler_) body_handler_.on_object_begin(body_handler_.ctx, k_);
+                        if (body_handler_) body_handler_.send(::note::BodyEvent::make_object_begin(k_));
                         return;
                     }
                     if (k_ == "body") { body_depth_ = 1; return; }
@@ -806,40 +806,40 @@ struct NoteTemplate {
                 void on_object_end(::note::string_view k_) {
                     if (body_depth_ > 0) {
                         --body_depth_;
-                        if (body_depth_ > 0 && body_handler_) body_handler_.on_object_end(body_handler_.ctx, k_);
+                        if (body_depth_ > 0 && body_handler_) body_handler_.send(::note::BodyEvent::make_object_end(k_));
                         return;
                     }
                 }
                 void on_null(::note::string_view k_) { (void)k_; }
                 void on_string(::note::string_view k_, ::note::string_view v_) {
-                    if (body_depth_ > 0) { if (body_handler_) body_handler_.on_string(body_handler_.ctx, k_, v_); return; }
+                    if (body_depth_ > 0) { if (body_handler_) body_handler_.send(::note::BodyEvent::make_string(k_, v_)); return; }
                     v_ = pool_.intern(v_);
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
                     if (note::flash(keys_::rsp_format) == k_) { rsp.format = v_; return; }
 #endif
                 }
                 void on_bool(::note::string_view k_, bool v_) {
-                    if (body_depth_ > 0) { if (body_handler_) body_handler_.on_bool(body_handler_.ctx, k_, v_); return; }
+                    if (body_depth_ > 0) { if (body_handler_) body_handler_.send(::note::BodyEvent::make_bool(k_, v_)); return; }
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
                     if (note::flash(keys_::rsp_template_) == k_) { rsp.template_ = v_; return; }
 #endif
                 }
                 void on_number(::note::string_view k_, ::note::string_view raw_) {
-                    if (body_depth_ > 0) { if (body_handler_) body_handler_.on_number(body_handler_.ctx, k_, raw_); return; }
+                    if (body_depth_ > 0) { if (body_handler_) body_handler_.send(::note::BodyEvent::make_number(k_, raw_)); return; }
                     if (note::flash(keys_::rsp_bytes) == k_) { rsp.bytes = ::note::parse_int(raw_); return; }
                     if (note::flash(keys_::rsp_length) == k_) { rsp.length = ::note::parse_int(raw_); return; }
                 }
                 void on_int(::note::string_view k_, int32_t v_) {
-                    if (body_depth_ > 0) { if (body_handler_) body_handler_.on_int(body_handler_.ctx, k_, v_); return; }
+                    if (body_depth_ > 0) { if (body_handler_) body_handler_.send(::note::BodyEvent::make_int(k_, v_)); return; }
                     if (note::flash(keys_::rsp_bytes) == k_) { rsp.bytes = v_; return; }
                     if (note::flash(keys_::rsp_length) == k_) { rsp.length = v_; return; }
                 }
                 void on_float(::note::string_view k_, double v_) {
-                    if (body_depth_ > 0 && body_handler_) body_handler_.on_float(body_handler_.ctx, k_, v_);
+                    if (body_depth_ > 0 && body_handler_) body_handler_.send(::note::BodyEvent::make_float(k_, v_));
                 }
                 void reset() {
                     body_depth_ = 0;
-                    if (body_handler_ && body_handler_.reset) body_handler_.reset(body_handler_.ctx);
+                    if (body_handler_) body_handler_.send(::note::BodyEvent::make_reset());
                     rsp = Response{};
                 }
             };

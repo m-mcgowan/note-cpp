@@ -58,6 +58,10 @@
 #    define NOTE_NO_REQUEST_IDS
 #  endif
 
+#  ifndef NOTE_UNICODE_ESCAPES
+// NOTE_MINIMAL strips \uXXXX handling. Define NOTE_UNICODE_ESCAPES to keep it.
+#  endif
+
 #endif // NOTE_MINIMAL
 
 // Default: runtime debug available (can be activated with set_debug()).

@@ -84,4 +84,29 @@ private:
     }
 };
 
+/// Minimal escape decoder — handles basic escapes only, no \uXXXX.
+/// Notecard responses never use unicode escapes.
+struct BasicEscapeDecoder {
+    bool in_unicode() const { return false; }
+    void reset() {}
+
+    template<typename EmitFn>
+    bool feed(char c, EmitFn&& emit) {
+        switch (c) {
+        case '"':  emit('"');  return true;
+        case '\\': emit('\\'); return true;
+        case '/':  emit('/');  return true;
+        case 'b':  emit('\b'); return true;
+        case 'f':  emit('\f'); return true;
+        case 'n':  emit('\n'); return true;
+        case 'r':  emit('\r'); return true;
+        case 't':  emit('\t'); return true;
+        default:   return false;
+        }
+    }
+
+    template<typename EmitFn>
+    bool feed_hex(char, EmitFn&&) { return false; }
+};
+
 } // namespace note

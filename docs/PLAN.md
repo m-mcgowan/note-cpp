@@ -80,7 +80,7 @@ Type-safe C++ API for the Blues Notecard (C++17/20/23). Header-only, zero depend
   - Tier 3: Schema struct (`body(readings)`)
 - `NOTE_FIELDS` macro for C++17 struct binding
 - `template_of<T>()` for Notecard template registration
-- Response body parsing with `body()` and `bodyAs<T>()`
+- Response body parsing with `body()` and `.into(T&)` on request builders
 
 ### Phase 4: ApiResult
 - `ApiResult<Response>` — inherits from Response for dot-access
@@ -127,7 +127,7 @@ Type-safe C++ API for the Blues Notecard (C++17/20/23). Header-only, zero depend
 - Direct field assignment and designated initializers preserved (aggregate stays public)
 - `extra(key, value)` for undocumented properties; `operator[]` as syntactic sugar
 - `DynField` proxy type with type-erased setter; `ExtraSlot` fixed-size buffer (default 4)
-- camelCase accessor names: `note_id` → `noteId`, `body_as<T>()` → `bodyAs<T>()`
+- camelCase accessor names: `note_id` → `noteId`, `body_as<T>()` → `bodyAs<T>()` (later superseded by `.into(T&)`)
 - `validatedMode()` etc. renamed from `validated_mode()`
 - `dyn_field.hpp` new header; `endpoint.hpp.j2` template fully rewritten
 - 33 new tests in `test_property_functor.cpp`

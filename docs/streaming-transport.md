@@ -268,4 +268,4 @@ always under developer control:
 
 1. **SAX stream** — `JsonSink` callbacks, zero allocation
 2. **`.into(T&)`** — struct population via `NOTE_FIELDS`, zero intermediate allocation
-3. **JSON tree** — explicit `bodyAsJson()`, developer pays for allocation
+3. **JSON tree** — `result->body()` returns a `JsonReader*`, developer pays for allocation

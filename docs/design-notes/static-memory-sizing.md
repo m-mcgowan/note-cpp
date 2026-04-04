@@ -121,7 +121,7 @@ is smaller than the spec default.
 
 ### Approach 4: Body sizing from struct reflection
 
-For `bodyAs<T>()` where `T` has `NOTE_FIELDS`, the body JSON size is
+For `.into(T&)` where `T` has `NOTE_FIELDS`, the body JSON size is
 calculable at compile time:
 
 ```cpp

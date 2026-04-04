@@ -228,7 +228,9 @@ struct CardTransport {
                 v_ = pool_.intern(v_);
                 if (note::flash(keys_::rsp_method) == k_) { rsp.method = v_; return; }
             }
-            void reset() { rsp = Response{}; }
+            void reset() {
+                rsp = Response{};
+            }
         };
 
         void intern_strings(::note::StringPool& pool) {

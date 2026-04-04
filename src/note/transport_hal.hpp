@@ -21,8 +21,14 @@ struct TransportHal {
     /// Send raw bytes. Returns false on hardware error.
     virtual bool transmit(const uint8_t* data, size_t len) = 0;
 
-    /// Read available bytes (up to max_len). Blocks up to timeout_ms
-    /// for at least one byte. Returns number of bytes read.
+    /// Read available bytes (up to max_len) into buf.
+    ///
+    /// Blocks up to timeout_ms for at least one byte. On success, returns
+    /// the number of bytes read (always > 0). On timeout or hardware error,
+    /// returns an error.
+    ///
+    /// Returning 0 is discouraged — callers treat it as end-of-stream.
+    /// Implementations should return an error on timeout instead.
     virtual Result<size_t> read(uint8_t* buf, size_t max_len, uint32_t timeout_ms) = 0;
 
     /// Reset the hardware to a known state. Returns true when ready.

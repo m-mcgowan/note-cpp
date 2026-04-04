@@ -144,7 +144,9 @@ struct EnvModified {
                 if (note::flash(keys_::rsp_time) == k_) { rsp.time = ::note::parse_int(raw_); return; }
 #endif
             }
-            void reset() { rsp = Response{}; }
+            void reset() {
+                rsp = Response{};
+            }
         };
 #pragma GCC diagnostic pop
 

@@ -201,7 +201,9 @@ struct CardTemp {
                     if (note::flash(keys_::rsp_value) == k_) { rsp.value = ::note::parse_double(raw_); return; }
                     if (note::flash(keys_::rsp_voltage) == k_) { rsp.voltage = ::note::parse_double(raw_); return; }
                 }
-                void reset() { rsp = Response{}; }
+                void reset() {
+                    rsp = Response{};
+                }
             };
 
             void intern_strings(::note::StringPool&) {}
@@ -467,7 +469,9 @@ struct CardTemp {
                     if (note::flash(keys_::rsp_value) == k_) { rsp.value = ::note::parse_double(raw_); return; }
                     if (note::flash(keys_::rsp_voltage) == k_) { rsp.voltage = ::note::parse_double(raw_); return; }
                 }
-                void reset() { rsp = Response{}; }
+                void reset() {
+                    rsp = Response{};
+                }
             };
 
             void intern_strings(::note::StringPool&) {}
@@ -720,7 +724,9 @@ struct CardTemp {
                     if (note::flash(keys_::rsp_value) == k_) { rsp.value = ::note::parse_double(raw_); return; }
                     if (note::flash(keys_::rsp_voltage) == k_) { rsp.voltage = ::note::parse_double(raw_); return; }
                 }
-                void reset() { rsp = Response{}; }
+                void reset() {
+                    rsp = Response{};
+                }
             };
 
             void intern_strings(::note::StringPool&) {}

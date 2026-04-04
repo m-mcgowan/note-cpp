@@ -168,7 +168,9 @@ struct DfuGet {
                 if (note::flash(keys_::rsp_cobs) == k_) { rsp.cobs = ::note::parse_int(raw_); return; }
                 if (note::flash(keys_::rsp_length) == k_) { rsp.length = ::note::parse_int(raw_); return; }
             }
-            void reset() { rsp = Response{}; }
+            void reset() {
+                rsp = Response{};
+            }
         };
 
         void intern_strings(::note::StringPool& pool) {

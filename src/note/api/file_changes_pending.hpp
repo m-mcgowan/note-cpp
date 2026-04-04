@@ -116,7 +116,9 @@ struct FileChangesPending {
                 if (note::flash(keys_::rsp_changes) == k_) { rsp.changes = ::note::parse_int(raw_); return; }
                 if (note::flash(keys_::rsp_total) == k_) { rsp.total = ::note::parse_int(raw_); return; }
             }
-            void reset() { rsp = Response{}; }
+            void reset() {
+                rsp = Response{};
+            }
         };
 
         void intern_strings(::note::StringPool&) {}

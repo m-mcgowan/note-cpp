@@ -24,6 +24,7 @@ namespace {
 using SerialTransport = note::transport::NotecardSerial<>;
 using Api = note::Api<>;
 
+/// Streaming-only fixture for ATTN, SAX, and API tests.
 struct Fixture {
     SerialHal hal{notecardUart()};
     SerialTransport transport{hal};
@@ -92,7 +93,12 @@ void binary_round_trip(Fixture& f, const uint8_t* data, size_t data_len, const c
     auto put_rsp = nc.card.binary.put()
         .data(data, data_len)
         .execute();
-    if (!put_rsp) { MESSAGE("put error: ", note::to_string(put_rsp.error())); }
+    if (!put_rsp) {
+        auto es = note::to_string(put_rsp.error());
+        char msg[300];
+        snprintf(msg, sizeof(msg), "put error: %.*s", (int)es.size(), es.data());
+        MESSAGE(msg);
+    }
     REQUIRE(put_rsp);
 
     auto status_rsp = nc.binary.status().execute();
@@ -104,7 +110,12 @@ void binary_round_trip(Fixture& f, const uint8_t* data, size_t data_len, const c
         .into(dst.data(), dst.size())
         .length(status_rsp.length)
         .execute();
-    if (!get_rsp) { MESSAGE("get error: ", note::to_string(get_rsp.error())); }
+    if (!get_rsp) {
+        auto es = note::to_string(get_rsp.error());
+        char msg[300];
+        snprintf(msg, sizeof(msg), "get error: %.*s", (int)es.size(), es.data());
+        MESSAGE(msg);
+    }
     REQUIRE(get_rsp);
 
     CHECK(memcmp(dst.data(), data, data_len) == 0);

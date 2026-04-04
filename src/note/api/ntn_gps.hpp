@@ -134,7 +134,9 @@ struct NtnGps {
                 if (note::flash(keys_::rsp_off) == k_) { rsp.off = v_; return; }
                 if (note::flash(keys_::rsp_on) == k_) { rsp.on = v_; return; }
             }
-            void reset() { rsp = Response{}; }
+            void reset() {
+                rsp = Response{};
+            }
         };
 
         void intern_strings(::note::StringPool&) {}

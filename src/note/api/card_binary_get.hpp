@@ -149,7 +149,9 @@ struct CardBinaryGet : note::BinaryReceiveMixin {
                 if (note::flash(keys_::rsp_err) == k_) { rsp.err = v_; return; }
                 if (note::flash(keys_::rsp_status) == k_) { rsp.status = v_; return; }
             }
-            void reset() { rsp = Response{}; }
+            void reset() {
+                rsp = Response{};
+            }
         };
 
         void intern_strings(::note::StringPool& pool) {

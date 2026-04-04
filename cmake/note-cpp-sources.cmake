@@ -111,6 +111,7 @@ set(NOTE_CPP_TEST_SOURCES
     test_transport_timing.cpp
     test_allocator_growth.cpp
     test_transport_streaming.cpp
+    test_streaming_errors.cpp
     test_units.cpp
     test_voltage_variable.cpp
     test_wire_format.cpp

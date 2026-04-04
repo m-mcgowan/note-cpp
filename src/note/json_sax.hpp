@@ -12,9 +12,11 @@
 //   auto err = note::sax_parse(json, len, sink);
 #pragma once
 
+#include "string_pool.hpp"
 #include "types.hpp"
 
 #include <cstddef>
+#include <string>
 
 namespace note {
 
@@ -95,8 +97,11 @@ public:
 };
 
 /// Error capture sink that wraps a concrete inner sink (no vtable).
+/// Copies the error string into a local buffer (same reason as ErrorCaptureSink).
 template<typename InnerT>
 class ErrorCaptureSinkT : public FilterSink<InnerT> {
+    static constexpr size_t kMaxErrLen = 64;
+    char err_buf_[kMaxErrLen];
     string_view err_;
 public:
     explicit ErrorCaptureSinkT(InnerT& inner) : FilterSink<InnerT>(inner) {}
@@ -104,7 +109,12 @@ public:
     string_view captured_error() const { return err_; }
 
     void on_string(string_view key, string_view value) {
-        if (key == "err") { err_ = value; return; }
+        if (key == "err") {
+            size_t len = value.size() < kMaxErrLen ? value.size() : kMaxErrLen;
+            for (size_t i = 0; i < len; ++i) err_buf_[i] = value[i];
+            err_ = string_view(err_buf_, len);
+            return;
+        }
         this->inner_.on_string(key, value);
     }
 
@@ -127,6 +137,156 @@ struct DefaultSink {
     void on_array_begin(string_view) {}
     void on_array_end(string_view) {}
     void reset() {}
+};
+
+// ---------------------------------------------------------------------------
+// BodyCaptureSink — accumulates the "body" sub-object as raw JSON.
+//
+// Generated sinks for endpoints with a body response inherit this.
+// When on_object_begin("body") fires, all subsequent events are serialized
+// into body_json until the matching on_object_end. The captured JSON is
+// interned into the StringPool so it outlives the parser.
+//
+// Usage in generated sinks:
+//   struct Sink : ::note::BodyCaptureSink {
+//       void on_string(k, v) {
+//           if (capture_body_event(...)) return;  // body handled
+//           // normal field handling...
+//       }
+//       // same for on_bool, on_number, on_null, on_object_begin/end, on_array_begin/end
+//   };
+//   After parsing: rsp.body_json_ = sink.body_json;
+// ---------------------------------------------------------------------------
+struct BodyCaptureSink : DefaultSink {
+    string_view body_json{};  // set after body object is fully captured
+
+    // Returns true if the event was consumed by body capture.
+    // Call from each on_* method in the generated sink.
+
+    bool capture_body_object_begin(string_view key) {
+        if (body_depth_ == 0 && key == "body") {
+            body_depth_ = 1;
+            body_buf_.clear();
+            body_buf_ += '{';
+            return true;
+        }
+        if (body_depth_ > 0) {
+            if (body_need_comma_) body_buf_ += ',';
+            if (!key.empty()) {
+                body_buf_ += '"';
+                body_buf_.append(key.data(), key.size());
+                body_buf_ += "\":";
+            }
+            body_buf_ += '{';
+            ++body_depth_;
+            body_need_comma_ = false;
+            return true;
+        }
+        return false;
+    }
+
+    bool capture_body_object_end() {
+        if (body_depth_ > 0) {
+            body_buf_ += '}';
+            --body_depth_;
+            body_need_comma_ = true;
+            if (body_depth_ == 0) {
+                body_json = pool_->intern(string_view(body_buf_.data(), body_buf_.size()));
+            }
+            return true;
+        }
+        return false;
+    }
+
+    bool capture_body_array_begin(string_view key) {
+        if (body_depth_ > 0) {
+            if (body_need_comma_) body_buf_ += ',';
+            if (!key.empty()) {
+                body_buf_ += '"';
+                body_buf_.append(key.data(), key.size());
+                body_buf_ += "\":";
+            }
+            body_buf_ += '[';
+            body_need_comma_ = false;
+            return true;
+        }
+        return false;
+    }
+
+    bool capture_body_array_end() {
+        if (body_depth_ > 0) {
+            body_buf_ += ']';
+            body_need_comma_ = true;
+            return true;
+        }
+        return false;
+    }
+
+    bool capture_body_string(string_view key, string_view value) {
+        if (body_depth_ > 0) {
+            emit_key_(key);
+            body_buf_ += '"';
+            body_buf_.append(value.data(), value.size());
+            body_buf_ += '"';
+            body_need_comma_ = true;
+            return true;
+        }
+        return false;
+    }
+
+    bool capture_body_number(string_view key, string_view raw) {
+        if (body_depth_ > 0) {
+            emit_key_(key);
+            body_buf_.append(raw.data(), raw.size());
+            body_need_comma_ = true;
+            return true;
+        }
+        return false;
+    }
+
+    bool capture_body_bool(string_view key, bool value) {
+        if (body_depth_ > 0) {
+            emit_key_(key);
+            body_buf_ += value ? "true" : "false";
+            body_need_comma_ = true;
+            return true;
+        }
+        return false;
+    }
+
+    bool capture_body_null(string_view key) {
+        if (body_depth_ > 0) {
+            emit_key_(key);
+            body_buf_ += "null";
+            body_need_comma_ = true;
+            return true;
+        }
+        return false;
+    }
+
+    void reset() {
+        body_json = {};
+        body_depth_ = 0;
+        body_buf_.clear();
+        body_need_comma_ = false;
+    }
+
+protected:
+    StringPool* pool_ = nullptr;  // set by generated Sink constructor
+
+private:
+    std::string body_buf_;
+    int body_depth_ = 0;
+    bool body_need_comma_ = false;
+
+    void emit_key_(string_view key) {
+        if (body_need_comma_) body_buf_ += ',';
+        if (!key.empty()) {
+            body_buf_ += '"';
+            body_buf_.append(key.data(), key.size());
+            body_buf_ += "\":";
+        }
+    }
 };
 
 /// Adapter that wraps any concrete sink type into a virtual JsonSink.
@@ -525,8 +685,13 @@ inline string_view sax_parse(string_view json, JsonSink& sink) {
 //
 // Used by the SAX execute path to detect Notecard errors without a separate
 // get_reader() pre-pass. All non-error events are forwarded to the inner sink.
+//
+// Copies the error string into a local buffer so it outlives the SAX parser's
+// scratch buffers (which are destroyed when sax_parse_streaming returns).
 // ---------------------------------------------------------------------------
 class ErrorCaptureSink : public FilterJsonSink {
+    static constexpr size_t kMaxErrLen = 64;
+    char err_buf_[kMaxErrLen];
     string_view err_;
 public:
     explicit ErrorCaptureSink(JsonSink& inner) : FilterJsonSink(inner) {}
@@ -534,7 +699,12 @@ public:
     string_view captured_error() const { return err_; }
 
     void on_string(string_view key, string_view value) override {
-        if (key == "err") { err_ = value; return; }
+        if (key == "err") {
+            size_t len = value.size() < kMaxErrLen ? value.size() : kMaxErrLen;
+            for (size_t i = 0; i < len; ++i) err_buf_[i] = value[i];
+            err_ = string_view(err_buf_, len);
+            return;
+        }
         inner_.on_string(key, value);
     }
 

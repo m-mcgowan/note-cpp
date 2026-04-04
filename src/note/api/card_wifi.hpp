@@ -206,7 +206,9 @@ struct CardWifi {
             void on_bool(::note::string_view k_, bool v_) {
                 if (note::flash(keys_::rsp_secure) == k_) { rsp.secure = v_; return; }
             }
-            void reset() { rsp = Response{}; }
+            void reset() {
+                rsp = Response{};
+            }
         };
 
         void intern_strings(::note::StringPool& pool) {

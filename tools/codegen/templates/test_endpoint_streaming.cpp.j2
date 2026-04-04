@@ -37,7 +37,6 @@ public:
 
     void queue_response(const std::string& s) {
         for (char c : s) rx.push_back(static_cast<uint8_t>(c));
-        rx.push_back('\r');
         rx.push_back('\n');
     }
 
@@ -63,12 +62,12 @@ public:
 /// Streaming harness: StreamingTransport over MockHal.
 struct StreamingHarness {
     MockHal hal;
-    note::StreamingTransport transport{hal, /*max_retries=*/1};
+    note::StreamingTransport transport{hal};
     note::Notecard nc;
     UnconstrainedApi api;
 
     StreamingHarness()
-        : nc(transport, note::Allocator{})
+        : nc(note::test::make_test_notecard(transport, note::Allocator{}))
         , api(nc)
     {}
 };
@@ -152,6 +151,20 @@ TEST_CASE("note::api::{{ type_qual }} transport equivalence") {
 {% endif %}
 {% endfor %}
     }
+    SECTION("streaming error") {
+        StreamingHarness sh;  // no response queued — HAL returns error
+{{ make_request("req", "sh.api") }}
+        auto rsp = req.execute();
+        REQUIRE_FALSE(rsp.has_value());
+    }
+    SECTION("streaming notecard error") {
+        StreamingHarness sh;
+        sh.hal.queue_response(R"({"err":"test"})");
+{{ make_request("req", "sh.api") }}
+        auto rsp = req.execute();
+        REQUIRE_FALSE(rsp.has_value());
+        CHECK(rsp.error().code == note::Error::Notecard);
+    }
     SECTION("buffered") {
         BufferedHarness bh(R"({{ json_response }})");
 {{ make_request("req", "bh.api") }}
@@ -181,6 +194,20 @@ TEST_CASE("note::api::{{ type_qual }} transport equivalence (void)") {
 {{ make_request("req", "sh.api") }}
         auto rsp = req.execute();
         REQUIRE(rsp.has_value());
+    }
+    SECTION("streaming error") {
+        StreamingHarness sh;
+{{ make_request("req", "sh.api") }}
+        auto rsp = req.execute();
+        REQUIRE_FALSE(rsp.has_value());
+    }
+    SECTION("streaming notecard error") {
+        StreamingHarness sh;
+        sh.hal.queue_response(R"({"err":"test"})");
+{{ make_request("req", "sh.api") }}
+        auto rsp = req.execute();
+        REQUIRE_FALSE(rsp.has_value());
+        CHECK(rsp.error().code == note::Error::Notecard);
     }
     SECTION("buffered") {
         BufferedHarness bh(R"({})");

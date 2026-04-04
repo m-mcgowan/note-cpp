@@ -297,7 +297,9 @@ struct CardAuxSerial {
                     if (note::flash(keys_::rsp_rate) == k_) { rsp.rate = ::note::parse_int(raw_); return; }
 #endif
                 }
-                void reset() { rsp = Response{}; }
+                void reset() {
+                    rsp = Response{};
+                }
             };
 #pragma GCC diagnostic pop
 

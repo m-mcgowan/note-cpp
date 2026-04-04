@@ -42,6 +42,7 @@ public:
 
     std::vector<ReadChunk> read_sequence;
     size_t read_idx = 0;
+    size_t chunk_pos = 0;  // position within current chunk
 
     int transmit_count = 0;
     int reset_count = 0;
@@ -52,7 +53,6 @@ public:
     void queue_response(const std::string& s) {
         ReadChunk chunk;
         for (char c : s) chunk.data.push_back(static_cast<uint8_t>(c));
-        chunk.data.push_back('\r');
         chunk.data.push_back('\n');
         read_sequence.push_back(std::move(chunk));
     }
@@ -79,12 +79,21 @@ public:
         if (read_idx >= read_sequence.size())
             return note::make_error(note::Error::ResponseLost, note::Cause::Timeout, "no data");
 
-        auto& chunk = read_sequence[read_idx++];
-        if (chunk.fail)
+        auto& chunk = read_sequence[read_idx];
+        if (chunk.fail) {
+            ++read_idx;
+            chunk_pos = 0;
             return note::make_error(note::Error::ResponseLost, note::Cause::Timeout, "injected error");
+        }
 
-        size_t n = std::min(max_len, chunk.data.size());
-        std::memcpy(buf, chunk.data.data(), n);
+        size_t remaining = chunk.data.size() - chunk_pos;
+        size_t n = std::min(max_len, remaining);
+        std::memcpy(buf, chunk.data.data() + chunk_pos, n);
+        chunk_pos += n;
+        if (chunk_pos >= chunk.data.size()) {
+            ++read_idx;
+            chunk_pos = 0;
+        }
         return n;
     }
 
@@ -101,10 +110,15 @@ struct ErrorHarness {
     UnconstrainedApi api;
 
     explicit ErrorHarness(uint32_t retries = 1)
-        : transport(hal, retries)
-        , nc(note::test::make_test_notecard(transport, note::Allocator{}))
+        : transport(hal)
+        , nc(transport, note::Allocator{})
         , api(nc)
-    {}
+    {
+        nc.set_request_ids(false);
+        nc.set_retry_policy({.max_retries = static_cast<uint8_t>(retries),
+                             .retry_delay_ms = 0,
+                             .timeout_ms = 30000});
+    }
 };
 
 // Simple deterministic PRNG for reproducible fuzz data
@@ -280,11 +294,12 @@ TEST_CASE("streaming: initial reset failure returns error") {
 
 TEST_CASE("streaming: sink reset on retry clears partial state") {
     ErrorHarness h(2);
-    // First attempt: partial response then error
-    std::string partial = R"({"status":"partial)";
+    // First attempt: partial (invalid) JSON with frame terminator.
+    // The frame-aware read sees \n and marks the frame as terminated,
+    // so drain doesn't consume bytes from the retry response.
+    std::string partial = "{\"status\":\"partial\n";
     std::vector<uint8_t> bytes(partial.begin(), partial.end());
     h.hal.queue_raw_bytes(bytes);
-    h.hal.queue_read_error();  // Truncation error
     // Second attempt: complete response
     h.hal.queue_response(R"({"status":"final"})");
 

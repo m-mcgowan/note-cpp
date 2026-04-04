@@ -99,11 +99,13 @@ private:
 
     void refill() {
         auto r = read_(buf_.rbuf, buf_.rbuf_size, timeout_ms_);
-        if (!r || *r == 0) {
+        if (!r) {
+            // Read error (timeout, frame ended, hardware failure).
             eof_ = true;
             rfill_ = 0;
         } else {
             rfill_ = *r;
+            if (rfill_ == 0) eof_ = true;  // defensive; blocking reads shouldn't return 0
         }
         rpos_ = 0;
     }

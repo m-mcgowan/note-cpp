@@ -4,6 +4,9 @@
 {% if has_body_field or has_body_response %}
 #include <note/body.hpp>
 {% endif %}
+{% if has_body_response %}
+#include <note/backends/buffer.hpp>
+{% endif %}
 #ifndef NOTE_EXTRAS
 #define NOTE_EXTRAS 1
 #endif
@@ -441,6 +444,7 @@ namespace note::api {
 {{ indent }}    template<typename T>
 {{ indent }}    T bodyAs() const {
 {{ indent }}        if (body_) return parse_body_<T>(*body_);
+{{ indent }}        if (!body_json_.empty()) return parse_body_json_<T>(body_json_);
 {{ indent }}        return T{};
 {{ indent }}    }
 {% endif %}
@@ -505,10 +509,16 @@ namespace note::api {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 {% endif %}
+{% if op.response.has_body %}
+{{ indent }}    struct Sink : ::note::BodyCaptureSink {
+{{ indent }}        Response& rsp;
+{{ indent }}        Sink(Response& r, ::note::StringPool& pool) : rsp(r) { pool_ = &pool; }
+{% else %}
 {{ indent }}    struct Sink : ::note::DefaultSink {
 {{ indent }}        Response& rsp;
 {{ indent }}        ::note::StringPool& pool_;
 {{ indent }}        Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
+{% endif %}
 {% set string_props = [] %}
 {% set array_string_props = [] %}
 {% set bool_props = [] %}
@@ -525,17 +535,41 @@ namespace note::api {
 {% if array_string_props %}
 {{ indent }}        enum class ArrayCtx_ : uint8_t { none{% for prop in array_string_props %}, {{ prop.accessor_name }}{% endfor %} } array_ctx_{};
 {{ indent }}        void on_array_begin(::note::string_view k_) {
+{% if op.response.has_body %}
+{{ indent }}            if (capture_body_array_begin(k_)) return;
+{% endif %}
 {% for prop in array_string_props %}
 {{ version_guard_begin(prop.version_guard) -}}
 {{ indent }}            if (note::flash(keys_::rsp_{{ prop.accessor_name }}) == k_) { array_ctx_ = ArrayCtx_::{{ prop.accessor_name }}; return; }
 {{ version_guard_end(prop.version_guard) -}}
 {% endfor %}
 {{ indent }}        }
-{{ indent }}        void on_array_end(::note::string_view) { array_ctx_ = ArrayCtx_::none; }
+{{ indent }}        void on_array_end(::note::string_view k_) {
+{% if op.response.has_body %}
+{{ indent }}            if (capture_body_array_end()) return;
+{% endif %}
+{{ indent }}            (void)k_; array_ctx_ = ArrayCtx_::none;
+{{ indent }}        }
+{% elif op.response.has_body %}
+{{ indent }}        void on_array_begin(::note::string_view k_) { capture_body_array_begin(k_); }
+{{ indent }}        void on_array_end(::note::string_view) { capture_body_array_end(); }
+{% endif %}
+{% if op.response.has_body %}
+{{ indent }}        void on_object_begin(::note::string_view k_) { capture_body_object_begin(k_); }
+{{ indent }}        void on_object_end(::note::string_view) {
+{{ indent }}            if (capture_body_object_end()) {
+{{ indent }}                if (!body_json.empty()) rsp.body_json_ = body_json;
+{{ indent }}                return;
+{{ indent }}            }
+{{ indent }}        }
+{{ indent }}        void on_null(::note::string_view k_) { capture_body_null(k_); }
 {% endif %}
 {% if string_props or array_string_props %}
 {{ indent }}        void on_string(::note::string_view k_, ::note::string_view v_) {
-{{ indent }}            v_ = pool_.intern(v_);
+{% if op.response.has_body %}
+{{ indent }}            if (capture_body_string(k_, v_)) return;
+{% endif %}
+{{ indent }}            v_ = {% if op.response.has_body %}pool_->{% else %}pool_.{% endif %}intern(v_);
 {% if not string_props %}
 {{ indent }}            (void)k_;
 {% endif %}
@@ -556,18 +590,30 @@ namespace note::api {
 {{ version_guard_end(prop.version_guard) -}}
 {% endfor %}
 {{ indent }}        }
+{% elif op.response.has_body %}
+{{ indent }}        void on_string(::note::string_view k_, ::note::string_view v_) {
+{{ indent }}            capture_body_string(k_, v_);
+{{ indent }}        }
 {% endif %}
 {% if bool_props %}
 {{ indent }}        void on_bool(::note::string_view k_, bool v_) {
+{% if op.response.has_body %}
+{{ indent }}            if (capture_body_bool(k_, v_)) return;
+{% endif %}
 {% for prop in bool_props %}
 {{ version_guard_begin(prop.version_guard) -}}
 {{ indent }}            if (note::flash(keys_::rsp_{{ prop.accessor_name }}) == k_) { rsp.{{ prop.accessor_name }} = v_; return; }
 {{ version_guard_end(prop.version_guard) -}}
 {% endfor %}
 {{ indent }}        }
+{% elif op.response.has_body %}
+{{ indent }}        void on_bool(::note::string_view k_, bool v_) { capture_body_bool(k_, v_); }
 {% endif %}
 {% if int_props or double_props %}
 {{ indent }}        void on_number(::note::string_view k_, ::note::string_view raw_) {
+{% if op.response.has_body %}
+{{ indent }}            if (capture_body_number(k_, raw_)) return;
+{% endif %}
 {% for prop in int_props %}
 {{ version_guard_begin(prop.version_guard) -}}
 {{ indent }}            if (note::flash(keys_::rsp_{{ prop.accessor_name }}) == k_) { rsp.{{ prop.accessor_name }} = ::note::parse_int(raw_{{ prop.default_arg }}); return; }
@@ -579,8 +625,15 @@ namespace note::api {
 {{ version_guard_end(prop.version_guard) -}}
 {% endfor %}
 {{ indent }}        }
+{% elif op.response.has_body %}
+{{ indent }}        void on_number(::note::string_view k_, ::note::string_view raw_) { capture_body_number(k_, raw_); }
 {% endif %}
-{{ indent }}        void reset() { rsp = Response{}; }
+{{ indent }}        void reset() {
+{% if op.response.has_body %}
+{{ indent }}            BodyCaptureSink::reset();
+{% endif %}
+{{ indent }}            rsp = Response{};
+{{ indent }}        }
 {{ indent }}    };
 {% if op.has_version_gated_response_props %}
 #pragma GCC diagnostic pop
@@ -647,6 +700,7 @@ namespace note::api {
 {{ indent }}    std::unique_ptr<JsonReader> reader_;
 {% if op.response.has_body %}
 {{ indent }}    std::unique_ptr<JsonReader> body_;
+{{ indent }}    ::note::string_view body_json_;  // SAX-captured body JSON
 
 {{ indent }}    template<typename T>
 {{ indent }}    static T parse_body_(const JsonReader& r) {
@@ -662,6 +716,14 @@ namespace note::api {
 {{ indent }}            (void)r;
 {{ indent }}            return T{};
 {{ indent }}        }
+{{ indent }}    }
+
+{{ indent }}    template<typename T>
+{{ indent }}    static T parse_body_json_(::note::string_view json) {
+{{ indent }}        ::note::backends::BufferJsonBackend<256, 16> be;
+{{ indent }}        auto& reader = be.get_reader(json);
+{{ indent }}        if (reader.has_error()) return T{};
+{{ indent }}        return parse_body_<T>(reader);
 {{ indent }}    }
 {% endif %}
 {{ indent }}};

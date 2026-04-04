@@ -156,7 +156,9 @@ struct CardContact {
                     if (note::flash(keys_::rsp_org) == k_) { rsp.org = v_; return; }
                     if (note::flash(keys_::rsp_role) == k_) { rsp.role = v_; return; }
                 }
-                void reset() { rsp = Response{}; }
+                void reset() {
+                    rsp = Response{};
+                }
             };
 
             void intern_strings(::note::StringPool& pool) {
@@ -369,7 +371,9 @@ struct CardContact {
                     if (note::flash(keys_::rsp_org) == k_) { rsp.org = v_; return; }
                     if (note::flash(keys_::rsp_role) == k_) { rsp.role = v_; return; }
                 }
-                void reset() { rsp = Response{}; }
+                void reset() {
+                    rsp = Response{};
+                }
             };
 
             void intern_strings(::note::StringPool& pool) {

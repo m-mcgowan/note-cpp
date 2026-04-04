@@ -401,7 +401,9 @@ struct CardVoltage {
                     if (note::flash(keys_::rsp_vmin) == k_) { rsp.vmin = ::note::parse_double(raw_); return; }
                     if (note::flash(keys_::rsp_weekly) == k_) { rsp.weekly = ::note::parse_double(raw_); return; }
                 }
-                void reset() { rsp = Response{}; }
+                void reset() {
+                    rsp = Response{};
+                }
             };
 #pragma GCC diagnostic pop
 
@@ -948,7 +950,9 @@ struct CardVoltage {
                     if (note::flash(keys_::rsp_vmin) == k_) { rsp.vmin = ::note::parse_double(raw_); return; }
                     if (note::flash(keys_::rsp_weekly) == k_) { rsp.weekly = ::note::parse_double(raw_); return; }
                 }
-                void reset() { rsp = Response{}; }
+                void reset() {
+                    rsp = Response{};
+                }
             };
 #pragma GCC diagnostic pop
 

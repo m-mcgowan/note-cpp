@@ -213,7 +213,9 @@ struct CardWirelessPenalty {
                     if (note::flash(keys_::rsp_seconds) == k_) { rsp.seconds = ::note::parse_int(raw_); return; }
 #endif
                 }
-                void reset() { rsp = Response{}; }
+                void reset() {
+                    rsp = Response{};
+                }
             };
 #pragma GCC diagnostic pop
 
@@ -489,7 +491,9 @@ struct CardWirelessPenalty {
                     if (note::flash(keys_::rsp_seconds) == k_) { rsp.seconds = ::note::parse_int(raw_); return; }
 #endif
                 }
-                void reset() { rsp = Response{}; }
+                void reset() {
+                    rsp = Response{};
+                }
             };
 #pragma GCC diagnostic pop
 
@@ -756,7 +760,9 @@ struct CardWirelessPenalty {
                     if (note::flash(keys_::rsp_seconds) == k_) { rsp.seconds = ::note::parse_int(raw_); return; }
 #endif
                 }
-                void reset() { rsp = Response{}; }
+                void reset() {
+                    rsp = Response{};
+                }
             };
 #pragma GCC diagnostic pop
 

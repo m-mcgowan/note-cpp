@@ -104,8 +104,6 @@ public:
     template<typename RequestT>
     ApiResult<typename RequestT::Response> execute(const RequestT& req) {
         using Rsp = typename RequestT::Response;
-        constexpr Safety safety = RequestT::safety;
-        const uint32_t req_id = request_ids_enabled_ ? next_request_id_++ : 0;
 
         debug_timing(debug_, TimingEvent::TransactionBegin, RequestT::notecard_request);
 
@@ -117,51 +115,43 @@ public:
         // Full streaming path: SAX-parse response directly from transport.
         if constexpr (std::is_void_v<Rsp> || detail::has_sink<Rsp>::value) {
             if (streaming_transport_ && alloc_.has_value()) {
-                auto build = [&](JsonBuilder& b) {
-                    b.add("req", RequestT::notecard_request);
-                    if (req_id) b.add("id", static_cast<int32_t>(req_id));
-                    req.build(b);
-                };
+                auto build = [&](JsonBuilder& b) { req.build(b); };
                 BuildFn build_fn = [](JsonBuilder& b, void* p) {
                     (*static_cast<decltype(build)*>(p))(b);
                 };
+                RequestFrame frame{build_fn, &build, RequestT::notecard_request,
+                                   request_ids_enabled_ ? next_request_id_++ : 0};
 
-                auto attempt = [&]() -> ApiResult<Rsp> {
-                    StringPool pool(*alloc_);
-                    if constexpr (std::is_void_v<Rsp>) {
-                        JsonSink null_sink;
-                        auto ei = execute_streaming(*streaming_transport_, default_timeout_ms_, build_fn, &build, null_sink, pool, debug_);
-                        if (ei.code != Error{}) return ApiResult<void>(ei);
-                        return ApiResult<void>{};
-                    } else {
-                        Rsp rsp_val{};
-                        typename Rsp::Sink response_sink(rsp_val, pool);
-                        JsonSinkAdapter<typename Rsp::Sink> virtual_sink(response_sink);
-                        auto ei = execute_streaming(*streaming_transport_, default_timeout_ms_, build_fn, &build, virtual_sink, pool, debug_);
-                        if (ei.code != Error{}) return ApiResult<Rsp>(ei);
-                        return ApiResult<Rsp>(std::move(rsp_val));
-                    }
-                };
-                auto reset = [&]() { streaming_transport_->reset(); };
-
-                auto result = retry_transaction<ApiResult<Rsp>>(
-                    *streaming_transport_, timing_, safety, retry_policy_,
-                    attempt, reset);
-                debug_timing(debug_, TimingEvent::TransactionEnd, RequestT::notecard_request);
-                return result;
+                if constexpr (std::is_void_v<Rsp>) {
+                    JsonSink null_sink;
+                    auto ei = streaming_execute(frame, null_sink, RequestT::safety,
+                                                nullptr, nullptr);
+                    debug_timing(debug_, TimingEvent::TransactionEnd, RequestT::notecard_request);
+                    if (ei.code != Error{}) return ApiResult<void>(ei);
+                    return ApiResult<void>{};
+                } else {
+                    Rsp rsp{};
+                    auto reset_rsp = [](void* p) { *static_cast<Rsp*>(p) = Rsp{}; };
+                    auto ei = streaming_execute_typed<typename Rsp::Sink>(
+                        frame, rsp, RequestT::safety, reset_rsp, &rsp);
+                    debug_timing(debug_, TimingEvent::TransactionEnd, RequestT::notecard_request);
+                    if (ei.code != Error{}) return ApiResult<Rsp>(ei);
+                    return ApiResult<Rsp>(std::move(rsp));
+                }
             }
         }
 
         // Buffered fallback: requires a JsonBackend + buffered transport.
 #ifndef NOTE_NO_BUFFERED
         if (backend_) {
+            const uint32_t req_id = request_ids_enabled_ ? next_request_id_++ : 0;
             auto attempt = [&]() -> ApiResult<Rsp> {
                 return execute_buffered(req, req_id);
             };
             auto reset = [&]() { transport_->reset(); };
 
             auto result = retry_transaction<ApiResult<Rsp>>(
-                *transport_, timing_, safety, retry_policy_,
+                *transport_, timing_, RequestT::safety, retry_policy_,
                 attempt, reset);
             debug_timing(debug_, TimingEvent::TransactionEnd, RequestT::notecard_request);
             return result;
@@ -180,7 +170,6 @@ public:
     /// Execute a mutable request — checks for attached binary buffers.
     template<typename RequestT>
     ApiResult<typename RequestT::Response> execute(RequestT& req) {
-#ifndef NOTE_NO_BUFFERED
         if constexpr (detail::has_binary_src<RequestT>::value) {
             if (req.has_binary_data()) {
                 return do_binary_send(req);
@@ -191,7 +180,6 @@ public:
                 return do_binary_receive(req);
             }
         }
-#endif
         return execute(static_cast<const RequestT&>(req));
     }
 
@@ -416,37 +404,31 @@ public:
     JsonBackend& backend() { return *backend_; }
 
 private:
-#ifndef NOTE_NO_BUFFERED
     template<typename RequestT>
     ApiResult<typename RequestT::Response> do_binary_send(RequestT& req) {
+        using Rsp = typename RequestT::Response;
         auto src = req.binary_src_;
 
         // Pre-flight: check space and auto-reset if offset==0.
         if (req.binary_verify_) {
             // Reset on first segment (offset not set or == 0)
             if (!req.offset || *req.offset == 0) {
-                auto clear = request("card.binary", [](JsonBuilder& b) {
-                    b.add("delete", true);
-                });
-                if (!clear) {
-                    return ApiResult<typename RequestT::Response>(
+                auto clear = binary_control(R"({"req":"card.binary","delete":true})");
+                if (!clear)
+                    return ApiResult<Rsp>(
                         ErrorInfo{Error::SendFailed, Cause::Unspecified, NOTE_ERR("binary reset failed")});
-                }
             }
-            auto status = request("card.binary");
-            if (!status) {
-                return ApiResult<typename RequestT::Response>(
+            auto status = binary_control(R"({"req":"card.binary"})");
+            if (!status)
+                return ApiResult<Rsp>(
                     ErrorInfo{Error::SendFailed, Cause::Unspecified, NOTE_ERR("binary status query failed")});
-            }
-            auto max_bytes = (*status)->get_int("max", 0);
-            if (max_bytes <= 0) {
-                return ApiResult<typename RequestT::Response>(
+            auto max_bytes = binary_response_int(*status, "max");
+            if (max_bytes <= 0)
+                return ApiResult<Rsp>(
                     ErrorInfo{Error::Overflow, Cause::Unspecified, NOTE_ERR("binary store not available")});
-            }
-            if (static_cast<int32_t>(src.size()) > max_bytes) {
-                return ApiResult<typename RequestT::Response>(
+            if (static_cast<int32_t>(src.size()) > max_bytes)
+                return ApiResult<Rsp>(
                     ErrorInfo{Error::Overflow, Cause::Unspecified, NOTE_ERR("data exceeds binary store capacity")});
-            }
         }
 
         req.cobs = static_cast<int32_t>(cobs_encoded_length(src.data(), src.size()));
@@ -463,31 +445,29 @@ private:
         CobsEncoder encoder;
         bool tx_ok = true;
         encoder.encode(src.data(), src.size(), [&](const uint8_t* block, size_t n) {
-            if (tx_ok) tx_ok = !!transport_->write(block, n);
+            if (tx_ok) tx_ok = !!binary_write(block, n);
         });
         if (tx_ok) {
             uint8_t eop = cobs_eop;
-            tx_ok = !!transport_->write(&eop, 1);
+            tx_ok = !!binary_write(&eop, 1);
         }
         if (!tx_ok) {
-            transport_->reset();
-            return ApiResult<typename RequestT::Response>(
+            binary_io_reset();
+            return ApiResult<Rsp>(
                 ErrorInfo{Error::SendFailed, Cause::HalError, NOTE_ERR("binary transmit failed")});
         }
 
         // Post-transmit verification: query card.binary status and confirm
         // the Notecard's stored MD5 matches what we sent.
         if (req.binary_verify_ && !md5_hex.empty()) {
-            auto status = request("card.binary");
-            if (!status) {
-                return ApiResult<typename RequestT::Response>(
+            auto verify = binary_control(R"({"req":"card.binary"})");
+            if (!verify)
+                return ApiResult<Rsp>(
                     ErrorInfo{Error::ResponseLost, Cause::Unspecified, NOTE_ERR("binary verify query failed")});
-            }
-            auto stored_md5 = (*status)->get_string("status");
-            if (!stored_md5.empty() && stored_md5 != string_view(md5_hex)) {
-                return ApiResult<typename RequestT::Response>(
+            auto stored_md5 = binary_response_string(*verify, "status");
+            if (!stored_md5.empty() && stored_md5 != string_view(md5_hex))
+                return ApiResult<Rsp>(
                     ErrorInfo{Error::ResponseLost, Cause::CrcMismatch, NOTE_ERR("binary verify: MD5 mismatch")});
-            }
         }
 
         return result;
@@ -495,6 +475,7 @@ private:
 
     template<typename RequestT>
     ApiResult<typename RequestT::Response> do_binary_receive(RequestT& req) {
+        using Rsp = typename RequestT::Response;
         auto dst = req.binary_dst_;
         auto result = execute(static_cast<const RequestT&>(req));
         if (!result) return result;
@@ -511,10 +492,10 @@ private:
         uint8_t chunk[64];
         bool eop_seen = false;
         while (!eop_seen) {
-            auto r = transport_->read(chunk, sizeof(chunk), default_timeout_ms_);
+            auto r = binary_read(chunk, sizeof(chunk), default_timeout_ms_);
             if (!r) {
-                transport_->reset();
-                return ApiResult<typename RequestT::Response>(
+                binary_io_reset();
+                return ApiResult<Rsp>(
                     ErrorInfo{Error::ResponseLost, Cause::Timeout, NOTE_ERR("binary receive timeout")});
             }
             size_t n = *r;
@@ -530,8 +511,8 @@ private:
         if (md5_ && !expected_md5.empty()) {
             auto actual = md5_->compute(dst.data(), decoded);
             if (actual != expected_md5) {
-                transport_->reset();
-                return ApiResult<typename RequestT::Response>(
+                binary_io_reset();
+                return ApiResult<Rsp>(
                     ErrorInfo{Error::ResponseLost, Cause::CrcMismatch, "MD5 mismatch"});
             }
         }
@@ -539,7 +520,70 @@ private:
         return result;
     }
 
-#endif // NOTE_NO_BUFFERED
+    // ── Binary transfer helpers ────────────────────────────────────────
+
+    /// Binary I/O: write bytes to whichever transport is available.
+    Result<void> binary_write(const uint8_t* data, size_t len) {
+        if (streaming_transport_) return streaming_transport_->write(data, len);
+        if (transport_) return transport_->write(data, len);
+        return make_error(Error::NotReady, NOTE_ERR("no transport for binary I/O"));
+    }
+    /// Binary I/O: read bytes from whichever transport is available.
+    Result<size_t> binary_read(uint8_t* buf, size_t max_len, uint32_t timeout_ms) {
+        if (streaming_transport_) return streaming_transport_->read(buf, max_len, timeout_ms);
+        if (transport_) return transport_->read(buf, max_len, timeout_ms);
+        return make_error(Error::NotReady, NOTE_ERR("no transport for binary I/O"));
+    }
+    void binary_io_reset() {
+        if (streaming_transport_) streaming_transport_->reset();
+        else if (transport_) transport_->reset();
+    }
+
+    /// Send a raw JSON control command for binary transfer and return
+    /// the response as a string_view. Uses streaming transact_raw when
+    /// available, falls back to buffered transport.
+    Result<string_view> binary_control(string_view json) {
+        if (streaming_transport_) {
+            return streaming_transact_raw(json, span<char>(binary_ctrl_buf_, sizeof(binary_ctrl_buf_)));
+        }
+#ifndef NOTE_NO_BUFFERED
+        if (transport_ && backend_) {
+            return transport_->transact(json, default_timeout_ms_);
+        }
+#endif
+        return make_error(Error::NotReady, NOTE_ERR("no transport for binary control"));
+    }
+
+    /// Extract an integer field from a raw JSON response (for binary control).
+    static int32_t binary_response_int(string_view json, string_view key) {
+        // Minimal parse: find "key":NUMBER in the JSON
+        JsonSink null_sink;
+        struct IntCapture : JsonSink {
+            string_view target_key;
+            int32_t value = 0;
+            void on_number(string_view k, string_view raw) override {
+                if (k == target_key) value = parse_int(raw);
+            }
+        } capture;
+        capture.target_key = key;
+        sax_parse(json, capture);
+        return capture.value;
+    }
+
+    /// Extract a string field from a raw JSON response (for binary control).
+    static string_view binary_response_string(string_view json, string_view key) {
+        // Returns a view into the json buffer (valid as long as json is).
+        struct StringCapture : JsonSink {
+            string_view target_key;
+            string_view value{};
+            void on_string(string_view k, string_view v) override {
+                if (k == target_key) value = v;
+            }
+        } capture;
+        capture.target_key = key;
+        sax_parse(json, capture);
+        return capture.value;
+    }
 
     /// Validate that a string is well-formed JSON using the SAX parser.
     static bool validate_json_envelope(string_view json) {
@@ -608,6 +652,95 @@ private:
             }
             return result;
         }
+    }
+
+    // ── Request framing ─────────────────────────────────────────────────
+
+    /// Bundles a type-erased build function with request name and ID.
+    /// Passed to streaming_execute / framed_build.
+    struct RequestFrame {
+        BuildFn inner;
+        void* inner_ctx;
+        string_view request_name;
+        uint32_t req_id;
+    };
+
+    /// Non-template build function: prepends "req" and optional "id"
+    /// before delegating to the per-endpoint builder.
+    static void framed_build(JsonBuilder& b, void* p) {
+        auto& f = *static_cast<RequestFrame*>(p);
+        b.add("req", f.request_name);
+        if (f.req_id) b.add("id", static_cast<int32_t>(f.req_id));
+        f.inner(b, f.inner_ctx);
+    }
+
+    // ── Streaming execute (non-template) ────────────────────────────────
+
+    /// Single streaming attempt: transact + error capture.
+    /// Pool is used for error message interning only.
+    ErrorInfo streaming_attempt(RequestFrame& frame, JsonSink& sink) {
+        if (debug_.on_wire) {
+            struct SizingWriter : JsonWriter {
+                using JsonWriter::write;
+                std::string buf;
+                bool write(const char* data, size_t len) override {
+                    buf.append(data, len);
+                    return true;
+                }
+            } sizer;
+            StreamingJsonBuilder sizing_builder(sizer);
+            framed_build(sizing_builder, &frame);
+            sizer.buf += '}';
+            debug_wire(debug_, string_view(sizer.buf.data(), sizer.buf.size()), WireDirection::Send);
+        }
+
+        ErrorCaptureSink err_sink(sink);
+        auto rv = streaming_transport_->transact(
+            framed_build, &frame, err_sink, default_timeout_ms_);
+        if (!rv) return rv.error();
+        auto err = err_sink.captured_error();
+        if (!err.empty()) {
+            // Intern via the Notecard's allocator so the message outlives
+            // this scope. StringPool is lightweight (no destructor cost).
+            StringPool pool(*alloc_);
+            return ErrorInfo{Error::Notecard, Cause::Unspecified, pool.intern(err)};
+        }
+        return {};
+    }
+
+    /// Streaming execute with retry — non-template.
+    /// Calls sink.reset() + reset_fn between retries.
+    /// reset_fn/reset_ctx allow the template caller to zero the Response.
+    ErrorInfo streaming_execute(RequestFrame& frame, JsonSink& sink,
+                                Safety safety,
+                                void (*reset_fn)(void*), void* reset_ctx) {
+        auto attempt = [&]() -> Result<void> {
+            auto ei = streaming_attempt(frame, sink);
+            if (ei.code != Error{}) return Unexpected(ei);
+            return {};
+        };
+        auto reset = [&]() {
+            streaming_transport_->reset();
+            sink.reset();
+            if (reset_fn) reset_fn(reset_ctx);
+        };
+        auto result = retry_transaction<Result<void>>(
+            *streaming_transport_, timing_, safety, retry_policy_,
+            attempt, reset);
+        if (!result) return result.error();
+        return {};
+    }
+
+    /// Typed streaming execute — thin template that constructs the
+    /// per-type Sink and delegates to the non-template streaming_execute.
+    template<typename SinkT>
+    ErrorInfo streaming_execute_typed(RequestFrame& frame, auto& rsp,
+                                      Safety safety,
+                                      void (*reset_fn)(void*), void* reset_ctx) {
+        StringPool pool(*alloc_);
+        SinkT response_sink(rsp, pool);
+        JsonSinkAdapter<SinkT> virtual_sink(response_sink);
+        return streaming_execute(frame, virtual_sink, safety, reset_fn, reset_ctx);
     }
 
     /// Streaming execute core — template on transport to support both
@@ -679,6 +812,7 @@ private:
     std::optional<Allocator> alloc_;
     DebugListener debug_{};
     byte_span cobs_buf_{};          // optional external COBS working buffer
+    char binary_ctrl_buf_[256]{};   // buffer for binary control command responses
     RetryPolicy retry_policy_{};
     TransactionTiming timing_{};
     uint32_t next_request_id_ = 1;

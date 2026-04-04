@@ -569,17 +569,18 @@ run_coverage() {
         --gcov-tool "$GCOV" \
         --rc branch_coverage=1 \
         --rc no_exception_branch=1 \
-        --ignore-errors mismatch \
+        --ignore-errors mismatch,inconsistent \
         --output-file "$OUT_DIR/coverage-raw.lcov" \
         --quiet
     # Keep only our headers; strip third_party.
     lcov --extract "$OUT_DIR/coverage-raw.lcov" "*/include/note/*" \
         --rc branch_coverage=1 \
+        --ignore-errors inconsistent \
         --output-file "$OUT_DIR/coverage-filtered.lcov" \
         --quiet
     lcov --remove "$OUT_DIR/coverage-filtered.lcov" "*/third_party/*" \
         --rc branch_coverage=1 \
-        --ignore-errors unused \
+        --ignore-errors unused,inconsistent \
         --output-file "$OUT_DIR/coverage.lcov" \
         --quiet
 

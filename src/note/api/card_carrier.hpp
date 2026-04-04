@@ -170,7 +170,9 @@ struct CardCarrier {
             void on_bool(::note::string_view k_, bool v_) {
                 if (note::flash(keys_::rsp_charging) == k_) { rsp.charging = v_; return; }
             }
-            void reset() { rsp = Response{}; }
+            void reset() {
+                rsp = Response{};
+            }
         };
 
         void intern_strings(::note::StringPool& pool) {

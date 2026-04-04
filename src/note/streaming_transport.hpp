@@ -15,6 +15,10 @@
 #include <note/compiler.hpp>
 #include <note/types.hpp>
 
+#include <algorithm>
+#include <cstring>
+#include <string>
+
 #ifndef NOTE_NO_CRC
 #include <note/transport/detail/crc_types.hpp>
 #endif
@@ -203,6 +207,14 @@ public:
     }
 
     Result<size_t> read(uint8_t* buf, size_t max_len, uint32_t timeout_ms) override {
+        // Return any lookahead bytes saved by frame_read before hitting the HAL.
+        if (lookahead_len_ > 0) {
+            size_t n = std::min(max_len, lookahead_len_);
+            memcpy(buf, lookahead_ + lookahead_pos_, n);
+            lookahead_pos_ += n;
+            lookahead_len_ -= n;
+            return n;
+        }
         return hal_.read(buf, max_len, timeout_ms);
     }
 
@@ -230,15 +242,18 @@ private:
         return string_view(buf, pos);
     }
 
-    /// Drain the trailing frame boundary (\r\n) after SAX parsing.
-    /// JSON never contains literal \n, so \n is always a frame delimiter.
-    void drain_frame_boundary(uint32_t timeout_ms) {
+    /// Drain remaining bytes through the \n frame delimiter.
+    /// Called when the frame-aware read didn't encounter \n (e.g. serial
+    /// latency delayed the terminator past the end of SAX parsing).
+    /// Uses a short timeout — \n follows } closely on the wire.
+    static constexpr uint32_t kDrainTimeoutMs = 250;
+
+    void drain_frame_boundary() {
         uint8_t byte;
         for (;;) {
-            auto rv = hal_.read(&byte, 1, timeout_ms);
+            auto rv = hal_.read(&byte, 1, kDrainTimeoutMs);
             if (!rv || *rv == 0) break;
             if (byte == '\n') break;
-            // \r — keep reading for the \n
         }
     }
 
@@ -295,21 +310,82 @@ private:
     }
 
     /// Receive and SAX-parse — template on sink type for static dispatch.
-    /// After parsing, drains the trailing frame boundary (\r\n) so the
-    /// wire is clean for the next transaction.
+    /// Uses a frame-aware read that stops at the \n boundary, so the SAX
+    /// parser never sees past the current frame. After parsing, drains any
+    /// remaining frame bytes so the wire is clean for the next transaction.
     template<typename SinkT>
     Result<void> receive_streaming(SinkT& sink, uint32_t timeout_ms) {
+        bool frame_terminated = false;
+        bool any_data_received = false;
+
+        // Wire debug: accumulate response bytes when a listener is active.
+        // Only allocates when debug_.on_wire is set — zero cost otherwise.
+        std::string debug_recv;
+
+        // Frame-aware read: blocks until data arrives, truncates at \n.
+        // JSON never contains a literal \n byte, so \n always delimits a frame.
+        auto frame_read = [&](uint8_t* buf, size_t max, uint32_t t) -> Result<size_t> {
+            if (frame_terminated)
+                return make_error(Error::ResponseLost, Cause::Unspecified,
+                                  NOTE_ERR("frame ended"));
+
+            // Block until at least one byte arrives. The HAL contract says
+            // read() blocks and returns error on timeout, but third-party
+            // HALs may return 0 for "no data yet" — retry with delay.
+            size_t n = 0;
+            uint32_t start = hal_.millis();
+            while (n == 0) {
+                auto r = hal_.read(buf, max, t);
+                if (!r) return r;
+                n = *r;
+                if (n == 0) {
+                    if (t > 0 && hal_.millis() - start >= t)
+                        return make_error(Error::ResponseLost, Cause::Timeout,
+                                          NOTE_ERR("timeout"));
+                    hal_.delay(1);
+                }
+            }
+            any_data_received = true;
+
+            for (size_t i = 0; i < n; ++i) {
+                if (buf[i] == '\n') {
+                    frame_terminated = true;
+                    if (debug_.on_wire)
+                        debug_recv.append(reinterpret_cast<const char*>(buf), i);
+                    // Save bytes after \n for subsequent read() calls
+                    // (e.g. binary COBS data that arrived with the JSON response).
+                    size_t after = n - i - 1;
+                    if (after > 0 && after <= sizeof(lookahead_)) {
+                        memcpy(lookahead_, buf + i + 1, after);
+                        lookahead_pos_ = 0;
+                        lookahead_len_ = after;
+                    }
+                    return i;  // bytes before \n only
+                }
+            }
+            if (debug_.on_wire)
+                debug_recv.append(reinterpret_cast<const char*>(buf), n);
+            return n;
+        };
+
 #ifndef NOTE_NO_CRC
         CrcFieldSinkT<SinkT> crc_sink(sink);
         transport::detail::CrcAccumulator crc;
 
         auto read_fn = [&](uint8_t* buf, size_t max, uint32_t t) -> Result<size_t> {
-            auto r = hal_.read(buf, max, t);
+            auto r = frame_read(buf, max, t);
             if (r) crc.feed(reinterpret_cast<const char*>(buf), *r);
             return r;
         };
 
         auto parse_err = sax_parse_streaming(read_fn, timeout_ms, crc_sink);
+
+        // Drain through \n if partial data was received but the frame
+        // delimiter wasn't found. Skip drain when no data arrived at all
+        // (e.g. timeout on first read) — there's nothing on the wire.
+        if (!frame_terminated && any_data_received)
+            drain_frame_boundary();
+
         if (!parse_err.empty())
             return make_error(Error::ResponseLost, Cause::Unspecified, parse_err);
 
@@ -323,23 +399,31 @@ private:
             return make_error(Error::ResponseLost, Cause::CrcMismatch, NOTE_ERR("expected CRC"));
         }
 #else
-        auto read_fn = [&](uint8_t* buf, size_t max, uint32_t t) -> Result<size_t> {
-            return hal_.read(buf, max, t);
-        };
+        auto parse_err = sax_parse_streaming(frame_read, timeout_ms, sink);
 
-        auto parse_err = sax_parse_streaming(read_fn, timeout_ms, sink);
+        if (!frame_terminated && any_data_received)
+            drain_frame_boundary();
+
         if (!parse_err.empty())
             return make_error(Error::ResponseLost, Cause::Unspecified, parse_err);
 #endif
-        // SAX parser stops at '}'. Drain the trailing frame boundary
-        // (\r\n or \n) so the next transaction starts with a clean wire.
-        drain_frame_boundary(timeout_ms);
+        // Emit wire receive debug event with the accumulated response bytes.
+        if (debug_.on_wire && !debug_recv.empty())
+            debug_wire(debug_, string_view(debug_recv.data(), debug_recv.size()),
+                       WireDirection::Receive);
         return {};
     }
 
     TransportHal& hal_;
     bool initialized_ = false;
     DebugListener debug_{};
+
+    // Lookahead buffer: bytes read from the HAL that arrived after \n
+    // in the same chunk. Returned by subsequent read() calls (e.g. binary I/O).
+    uint8_t lookahead_[64]{};
+    size_t lookahead_pos_ = 0;
+    size_t lookahead_len_ = 0;
+
 #ifndef NOTE_NO_CRC
     bool crc_enabled_ = false;
     uint16_t crc_seq_ = 0;

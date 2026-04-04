@@ -138,7 +138,9 @@ struct CardRandom {
             void on_number(::note::string_view k_, ::note::string_view raw_) {
                 if (note::flash(keys_::rsp_count) == k_) { rsp.count = ::note::parse_int(raw_); return; }
             }
-            void reset() { rsp = Response{}; }
+            void reset() {
+                rsp = Response{};
+            }
         };
 
         void intern_strings(::note::StringPool& pool) {

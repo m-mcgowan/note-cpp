@@ -77,6 +77,11 @@ static note::Api<>& get_api() {
     return api;
 }
 
+static void wire_debug(const note::WireEvent& ev, void*) {
+    const char* dir = (ev.direction == note::WireDirection::Send) ? ">>>" : "<<<";
+    Serial.printf("  [wire %s] %.*s\n", dir, (int)ev.json.size(), ev.json.data());
+}
+
 static bool board_init(Print& log) {
     log.println("=== note-cpp integration tests ===");
 #ifdef NOTECARD_TEST_SERIAL
@@ -93,10 +98,15 @@ static bool board_init(Print& log) {
     // Initialize global Api for shared tests.
     g_api = &get_api();
 
-    // Probe firmware version.
-    auto rsp = get_notecard().request("card.version");
-    if (rsp) {
-        auto ver = (*rsp)->get_string("version");
+    // Enable wire debug — prints request/response JSON to serial log.
+    note::DebugListener d{};
+    d.on_wire = wire_debug;
+    get_notecard().set_debug(d);
+
+    // Probe firmware version via typed API (works with streaming transport).
+    auto ver_rsp = get_api().card.version().execute();
+    if (ver_rsp) {
+        auto ver = note::string_view(ver_rsp.version);
         log.printf("  Firmware: %.*s\n", (int)ver.size(), ver.data());
         g_fw_version = parse_firmware_version(ver);
     } else {

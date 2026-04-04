@@ -218,7 +218,9 @@ struct CardSleep {
             void on_number(::note::string_view k_, ::note::string_view raw_) {
                 if (note::flash(keys_::rsp_seconds) == k_) { rsp.seconds = ::note::parse_int(raw_); return; }
             }
-            void reset() { rsp = Response{}; }
+            void reset() {
+                rsp = Response{};
+            }
         };
 
         void intern_strings(::note::StringPool& pool) {

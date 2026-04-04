@@ -279,7 +279,9 @@ struct CardDfu {
                 v_ = pool_.intern(v_);
                 if (note::flash(keys_::rsp_name) == k_) { rsp.name = v_; return; }
             }
-            void reset() { rsp = Response{}; }
+            void reset() {
+                rsp = Response{};
+            }
         };
 
         void intern_strings(::note::StringPool& pool) {

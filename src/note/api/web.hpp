@@ -2,6 +2,7 @@
 #pragma once
 
 #include <note/body.hpp>
+#include <note/backends/buffer.hpp>
 #ifndef NOTE_EXTRAS
 #define NOTE_EXTRAS 1
 #endif
@@ -188,6 +189,7 @@ struct Web {
         template<typename T>
         T bodyAs() const {
             if (body_) return parse_body_<T>(*body_);
+            if (!body_json_.empty()) return parse_body_json_<T>(body_json_);
             return T{};
         }
 
@@ -218,20 +220,35 @@ struct Web {
         // SAX sink — zero-allocation streaming parse into Response fields.
         // String fields are interned into the StringPool immediately, so
         // string_views survive after the parser's scratch buffer is reused.
-        struct Sink : ::note::DefaultSink {
+        struct Sink : ::note::BodyCaptureSink {
             Response& rsp;
-            ::note::StringPool& pool_;
-            Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
+            Sink(Response& r, ::note::StringPool& pool) : rsp(r) { pool_ = &pool; }
+            void on_array_begin(::note::string_view k_) { capture_body_array_begin(k_); }
+            void on_array_end(::note::string_view) { capture_body_array_end(); }
+            void on_object_begin(::note::string_view k_) { capture_body_object_begin(k_); }
+            void on_object_end(::note::string_view) {
+                if (capture_body_object_end()) {
+                    if (!body_json.empty()) rsp.body_json_ = body_json;
+                    return;
+                }
+            }
+            void on_null(::note::string_view k_) { capture_body_null(k_); }
             void on_string(::note::string_view k_, ::note::string_view v_) {
-                v_ = pool_.intern(v_);
+                if (capture_body_string(k_, v_)) return;
+                v_ = pool_->intern(v_);
                 if (note::flash(keys_::rsp_payload) == k_) { rsp.payload = v_; return; }
             }
+            void on_bool(::note::string_view k_, bool v_) { capture_body_bool(k_, v_); }
             void on_number(::note::string_view k_, ::note::string_view raw_) {
+                if (capture_body_number(k_, raw_)) return;
                 if (note::flash(keys_::rsp_cobs) == k_) { rsp.cobs = ::note::parse_int(raw_); return; }
                 if (note::flash(keys_::rsp_length) == k_) { rsp.length = ::note::parse_int(raw_); return; }
                 if (note::flash(keys_::rsp_result) == k_) { rsp.result = ::note::parse_int(raw_); return; }
             }
-            void reset() { rsp = Response{}; }
+            void reset() {
+                BodyCaptureSink::reset();
+                rsp = Response{};
+            }
         };
 
         void intern_strings(::note::StringPool& pool) {
@@ -267,6 +284,7 @@ struct Web {
     private:
         std::unique_ptr<JsonReader> reader_;
         std::unique_ptr<JsonReader> body_;
+        ::note::string_view body_json_;  // SAX-captured body JSON
 
         template<typename T>
         static T parse_body_(const JsonReader& r) {
@@ -282,6 +300,14 @@ struct Web {
                 (void)r;
                 return T{};
             }
+        }
+
+        template<typename T>
+        static T parse_body_json_(::note::string_view json) {
+            ::note::backends::BufferJsonBackend<256, 16> be;
+            auto& reader = be.get_reader(json);
+            if (reader.has_error()) return T{};
+            return parse_body_<T>(reader);
         }
     };
 

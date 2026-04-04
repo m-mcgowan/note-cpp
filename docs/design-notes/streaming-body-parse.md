@@ -47,7 +47,9 @@ api.note.add().from(reading).execute();  // alias for .body(data) on send
 
 ```cpp
 api.note.read().body(data).execute();    // short for api.note.get().read().body(data)
+api.note.read().into(data).execute();    // alias
 api.note.pop().body(data).execute();     // short for api.note.get().pop().body(data)
+api.note.pop().into(data).execute();     // alias
 ```
 
 ## What changes
@@ -322,11 +324,52 @@ An implementer needs to understand these files:
 | `tools/codegen/model.py` | `ResponseDef`, `OperationDef` |
 | `tools/codegen/spec_parser.py` | `_extract_response_props()` |
 
-## Open questions
+## Supported body field types
 
-- Should `StructSink<T>` support nested body objects (body within body)?
-  Current Notecard responses don't have deeply nested bodies, so flat
-  dispatch (single level) is likely sufficient.
+`StructSink<T>` supports full fidelity with the types expressible in
+Notecard body templates:
+
+- **Primitives** — `bool`, integer types, floating-point types.
+  Assigned directly from SAX events. Zero arena cost.
+- **Strings** — `string_view` or string-constructible types.
+  Interned into the arena via `StringPool`.
+- **Nested structs** — fields whose type is itself a reflectable
+  aggregate (`NOTE_FIELDS` or C++20 reflection). When
+  `on_object_begin("location")` arrives and `location` is a
+  reflectable type, a nested `StructSink<Location>` handles its
+  fields.
+- **Fixed-size arrays of primitives** — `std::array<float, N>` or
+  `float[N]`. Elements filled sequentially from array SAX events.
+- **Fixed-size arrays of structs** — `std::array<Location, N>`.
+  On `on_array_begin`, enter array mode with an element index.
+  Each `on_object_begin` within the array dispatches to
+  `StructSink<Location>` targeting `elements[index++]`.
+
+```cpp
+struct Location {
+    double lat;
+    double lon;
+    NOTE_FIELDS(lat, lon)
+};
+
+struct TripData {
+    std::array<Location, 10> waypoints;
+    int32_t count;
+    float distance;
+    NOTE_FIELDS(waypoints, count, distance)
+};
+
+TripData trip;
+api.note.read().body(trip).execute();
+// trip.waypoints[0].lat, trip.waypoints[0].lon — populated
+// trip.count — populated
+```
+
+**Not supported:** Recursive types (a struct containing itself).
+For body structures that don't fit this model, developers should
+write a custom serialization sink/source.
+
+## Open questions
 
 - Should the `NOTE_FIELDS` macro emit `_note_fields_sax` automatically,
   or should `StructSink` work generically via the existing field

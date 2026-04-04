@@ -8,6 +8,7 @@
 #include <note/dyn_field.hpp>
 #endif
 #include <note/notecard.hpp>
+#include <note/arena.hpp>
 #include <note/field.hpp>
 #include <note/json.hpp>
 #include <note/json_sax.hpp>
@@ -110,6 +111,10 @@ struct CardUsageTest {
 
     /// Response containing cellular data usage projection and analysis results.
     struct Response {
+        /// Compile-time arena budget for this response type.
+        static constexpr size_t max_arena_size =
+            ::note::detail::arena_cost(64);  // error reserve
+
         /// Average bytes per day used during the test period.
         note::ResponseField<int32_t> bytesPerDay{};
         /// Number of bytes received by the Notecard from Notehub.

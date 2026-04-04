@@ -8,6 +8,7 @@
 #include <note/dyn_field.hpp>
 #endif
 #include <note/notecard.hpp>
+#include <note/arena.hpp>
 #include <note/field.hpp>
 #include <note/json.hpp>
 #include <note/json_sax.hpp>
@@ -92,6 +93,12 @@ struct CardBinary {
 
         /// Successful response
         struct Response {
+            /// Compile-time arena budget for this response type.
+            static constexpr size_t max_arena_size =
+                ::note::detail::arena_cost(48) +
+                ::note::detail::arena_cost(80) +
+                ::note::detail::arena_cost(64);  // error reserve
+
             /// The size of COBS-encoded data stored in the reserved area
             /// (without the trailing ).
             note::ResponseField<int32_t> cobs{};
@@ -294,6 +301,12 @@ struct CardBinary {
 
         /// Successful response
         struct Response {
+            /// Compile-time arena budget for this response type.
+            static constexpr size_t max_arena_size =
+                ::note::detail::arena_cost(48) +
+                ::note::detail::arena_cost(80) +
+                ::note::detail::arena_cost(64);  // error reserve
+
             /// The size of COBS-encoded data stored in the reserved area
             /// (without the trailing ).
             note::ResponseField<int32_t> cobs{};

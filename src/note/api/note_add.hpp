@@ -9,6 +9,7 @@
 #include <note/dyn_field.hpp>
 #endif
 #include <note/notecard.hpp>
+#include <note/arena.hpp>
 #include <note/field.hpp>
 #include <note/json.hpp>
 #include <note/json_sax.hpp>
@@ -270,6 +271,11 @@ struct NoteAdd {
 
     /// Response containing information about the added Note.
     struct Response {
+        /// Compile-time arena budget for this response type.
+        static constexpr size_t max_arena_size =
+            ::note::detail::arena_cost(48) +
+            ::note::detail::arena_cost(64);  // error reserve
+
         /// The generated unique Note ID when `note` parameter was set to "?".
         note::ResponseField<note::string_view> noteId{};
         /// `true` when a template is active on the Notefile.

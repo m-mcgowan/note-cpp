@@ -10,6 +10,7 @@
 #include <note/dyn_field.hpp>
 #endif
 #include <note/notecard.hpp>
+#include <note/arena.hpp>
 #include <note/field.hpp>
 #include <note/json.hpp>
 #include <note/json_sax.hpp>
@@ -119,6 +120,12 @@ struct EnvGet {
     /// Response containing environment variable values and metadata based on
     /// the request parameters.
     struct Response {
+        /// Compile-time arena budget for this response type.
+        static constexpr size_t max_arena_size =
+            ::note::detail::arena_cost(128) +
+            ::note::detail::arena_cost(256) +  // body
+            ::note::detail::arena_cost(64);  // error reserve
+
         /// If a `name` was specified, the value of the environment variable.
         note::ResponseField<note::string_view> text{};
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)

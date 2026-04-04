@@ -8,6 +8,7 @@
 #include <note/dyn_field.hpp>
 #endif
 #include <note/notecard.hpp>
+#include <note/arena.hpp>
 #include <note/field.hpp>
 #include <note/json.hpp>
 #include <note/json_sax.hpp>
@@ -318,6 +319,12 @@ struct CardAttn {
 
         /// Successful response
         struct Response {
+            /// Compile-time arena budget for this response type.
+            static constexpr size_t max_arena_size =
+                ::note::detail::arena_cost(384) +
+                ::note::detail::arena_cost(256) +
+                ::note::detail::arena_cost(64);  // error reserve
+
             /// A list of files changed since `file` attention mode was set. In
             /// addition, this field will include keywords to signify the
             /// occurrence of other attention mode triggers:
@@ -733,6 +740,10 @@ struct CardAttn {
 
         /// Arm ATTN pin for interrupt on an event trigger.
         struct Response {
+            /// Compile-time arena budget for this response type.
+            static constexpr size_t max_arena_size =
+                ::note::detail::arena_cost(64);  // error reserve
+
             /// Reflects the state of the attention pin. The `set` field is
             /// `true` when the attention pin is `HIGH`, otherwise the `set`
             /// field will not be present when the attention pin is `LOW`.
@@ -1033,6 +1044,10 @@ struct CardAttn {
         /// mode/files/seconds to the values given. Safe to call repeatedly
         /// (unlike arm which briefly disarms).
         struct Response {
+            /// Compile-time arena budget for this response type.
+            static constexpr size_t max_arena_size =
+                ::note::detail::arena_cost(64);  // error reserve
+
             /// Reflects the state of the attention pin. The `set` field is
             /// `true` when the attention pin is `HIGH`, otherwise the `set`
             /// field will not be present when the attention pin is `LOW`.
@@ -1381,6 +1396,11 @@ struct CardAttn {
 
         /// Retrieve stored payload after sleep.
         struct Response {
+            /// Compile-time arena budget for this response type.
+            static constexpr size_t max_arena_size =
+                ::note::detail::arena_cost(256) +
+                ::note::detail::arena_cost(64);  // error reserve
+
             /// When using `sleep` mode with a `payload`, the payload provided
             /// by the host to the Notecard.
             note::ResponseField<note::string_view> payload{};
@@ -1763,6 +1783,11 @@ struct CardAttn {
 
         /// Query current ATTN state and configuration.
         struct Response {
+            /// Compile-time arena budget for this response type.
+            static constexpr size_t max_arena_size =
+                ::note::detail::arena_cost(384) +
+                ::note::detail::arena_cost(64);  // error reserve
+
             /// A list of files changed since `file` attention mode was set. In
             /// addition, this field will include keywords to signify the
             /// occurrence of other attention mode triggers:

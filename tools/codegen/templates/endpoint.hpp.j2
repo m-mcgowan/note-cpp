@@ -14,6 +14,7 @@
 #include <note/dyn_field.hpp>
 #endif
 #include <note/notecard.hpp>
+#include <note/arena.hpp>
 #include <note/field.hpp>
 #include <note/json.hpp>
 #include <note/json_sax.hpp>
@@ -426,6 +427,24 @@ namespace note::api {
 {{ op.response.description | doc_comment(indent) }}
 {% endif %}
 {{ indent }}struct Response {
+{% set string_sizes = [] %}
+{% for prop in op.response.properties %}
+{% if prop.is_array and prop.cpp_type == "note::string_view" %}
+{% if string_sizes.append((prop.max_length or 48) * prop.array_max_items) %}{% endif %}
+{% elif prop.cpp_type == "note::string_view" %}
+{% if string_sizes.append(prop.max_length or 48) %}{% endif %}
+{% endif %}
+{% endfor %}
+{{ indent }}    /// Compile-time arena budget for this response type.
+{{ indent }}    static constexpr size_t max_arena_size =
+{% for sz in string_sizes %}
+{{ indent }}        ::note::detail::arena_cost({{ sz }}) +
+{% endfor %}
+{% if op.response.has_body %}
+{{ indent }}        ::note::detail::arena_cost({{ op.response.max_body_size }}) +  // body
+{% endif %}
+{{ indent }}        ::note::detail::arena_cost(64);  // error reserve
+
 {% for prop in op.response.properties %}
 {{ version_guard_begin(prop.version_guard) -}}
 {{ doc_for_prop(prop, indent + "    ") -}}

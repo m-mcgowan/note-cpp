@@ -10,6 +10,7 @@
 #include <note/dyn_field.hpp>
 #endif
 #include <note/notecard.hpp>
+#include <note/arena.hpp>
 #include <note/field.hpp>
 #include <note/json.hpp>
 #include <note/json_sax.hpp>
@@ -81,6 +82,16 @@ struct CardVersion {
 
     /// Response containing firmware version information and device details.
     struct Response {
+        /// Compile-time arena budget for this response type.
+        static constexpr size_t max_arena_size =
+            ::note::detail::arena_cost(32) +
+            ::note::detail::arena_cost(32) +
+            ::note::detail::arena_cost(48) +
+            ::note::detail::arena_cost(24) +
+            ::note::detail::arena_cost(40) +
+            ::note::detail::arena_cost(256) +  // body
+            ::note::detail::arena_cost(64);  // error reserve
+
         /// The Notecard board version number.
         note::ResponseField<note::string_view> board{};
         /// If `true`, indicates the Notecard supports cellular connectivity.

@@ -8,6 +8,7 @@
 #include <note/dyn_field.hpp>
 #endif
 #include <note/notecard.hpp>
+#include <note/arena.hpp>
 #include <note/field.hpp>
 #include <note/json.hpp>
 #include <note/json_sax.hpp>
@@ -74,6 +75,11 @@ struct HubStatus {
     /// Response containing the current status of the Notecard's connection to
     /// Notehub.
     struct Response {
+        /// Compile-time arena budget for this response type.
+        static constexpr size_t max_arena_size =
+            ::note::detail::arena_cost(80) +
+            ::note::detail::arena_cost(64);  // error reserve
+
         /// `true` if the Notecard is connected to Notehub.
         note::ResponseField<bool> connected{};
         /// Details about the Notecard's transport (e.g. cellular, WiFi, LoRa)

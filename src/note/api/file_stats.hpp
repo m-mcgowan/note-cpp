@@ -8,6 +8,7 @@
 #include <note/dyn_field.hpp>
 #endif
 #include <note/notecard.hpp>
+#include <note/arena.hpp>
 #include <note/field.hpp>
 #include <note/json.hpp>
 #include <note/json_sax.hpp>
@@ -83,6 +84,10 @@ struct FileStats {
 
     /// Response containing resource statistics about local Notefiles.
     struct Response {
+        /// Compile-time arena budget for this response type.
+        static constexpr size_t max_arena_size =
+            ::note::detail::arena_cost(64);  // error reserve
+
         /// The number of Notes across all Notefiles pending sync.
         note::ResponseField<int32_t> changes{};
         /// `true` if a sync is recommended based on the number of pending

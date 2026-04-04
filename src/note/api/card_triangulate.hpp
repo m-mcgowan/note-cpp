@@ -8,6 +8,7 @@
 #include <note/dyn_field.hpp>
 #endif
 #include <note/notecard.hpp>
+#include <note/arena.hpp>
 #include <note/field.hpp>
 #include <note/json.hpp>
 #include <note/json_sax.hpp>
@@ -225,6 +226,11 @@ struct CardTriangulate {
     /// Response containing triangulated location information and triangulation
     /// settings.
     struct Response {
+        /// Compile-time arena budget for this response type.
+        static constexpr size_t max_arena_size =
+            ::note::detail::arena_cost(32) +
+            ::note::detail::arena_cost(64);  // error reserve
+
         /// The length of the `text` buffer provided in the current or a
         /// previous request.
         note::ResponseField<int32_t> length{};

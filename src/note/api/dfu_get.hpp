@@ -8,6 +8,7 @@
 #include <note/dyn_field.hpp>
 #endif
 #include <note/notecard.hpp>
+#include <note/arena.hpp>
 #include <note/field.hpp>
 #include <note/json.hpp>
 #include <note/json_sax.hpp>
@@ -114,6 +115,12 @@ struct DfuGet {
     /// Response containing base64-encoded firmware data retrieved from the
     /// Notecard for use with host MCU firmware updates.
     struct Response {
+        /// Compile-time arena budget for this response type.
+        static constexpr size_t max_arena_size =
+            ::note::detail::arena_cost(256) +
+            ::note::detail::arena_cost(80) +
+            ::note::detail::arena_cost(64);  // error reserve
+
         /// When `binary` is `true` in the request, this field contains the COBS
         /// encoded length of the firmware data in the binary I/O buffer.
         note::ResponseField<int32_t> cobs{};

@@ -8,6 +8,7 @@
 #include <note/dyn_field.hpp>
 #endif
 #include <note/notecard.hpp>
+#include <note/arena.hpp>
 #include <note/field.hpp>
 #include <note/json.hpp>
 #include <note/json_sax.hpp>
@@ -81,6 +82,17 @@ struct HubGet {
 
     /// Response containing the current Notehub configuration for the Notecard.
     struct Response {
+        /// Compile-time arena budget for this response type.
+        static constexpr size_t max_arena_size =
+            ::note::detail::arena_cost(32) +
+            ::note::detail::arena_cost(64) +
+            ::note::detail::arena_cost(32) +
+            ::note::detail::arena_cost(64) +
+            ::note::detail::arena_cost(32) +
+            ::note::detail::arena_cost(48) +
+            ::note::detail::arena_cost(48) +
+            ::note::detail::arena_cost(64);  // error reserve
+
         /// The DeviceUID for the Notecard.
         note::ResponseField<note::string_view> device{};
         /// The URL of the Notehub host.

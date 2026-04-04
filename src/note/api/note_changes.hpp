@@ -8,6 +8,7 @@
 #include <note/dyn_field.hpp>
 #endif
 #include <note/notecard.hpp>
+#include <note/arena.hpp>
 #include <note/field.hpp>
 #include <note/json.hpp>
 #include <note/json_sax.hpp>
@@ -141,6 +142,10 @@ struct NoteChanges {
 
         /// Response containing incremental changes from a specific Notefile.
         struct Response {
+            /// Compile-time arena budget for this response type.
+            static constexpr size_t max_arena_size =
+                ::note::detail::arena_cost(64);  // error reserve
+
             /// The number of pending changes in the Notefile.
             note::ResponseField<int32_t> changes{};
             /// The total number of Notes in the Notefile.
@@ -379,6 +384,10 @@ struct NoteChanges {
 
         /// Response containing incremental changes from a specific Notefile.
         struct Response {
+            /// Compile-time arena budget for this response type.
+            static constexpr size_t max_arena_size =
+                ::note::detail::arena_cost(64);  // error reserve
+
             /// The number of pending changes in the Notefile.
             note::ResponseField<int32_t> changes{};
             /// The total number of Notes in the Notefile.

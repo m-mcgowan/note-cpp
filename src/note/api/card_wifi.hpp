@@ -8,6 +8,7 @@
 #include <note/dyn_field.hpp>
 #endif
 #include <note/notecard.hpp>
+#include <note/arena.hpp>
 #include <note/field.hpp>
 #include <note/json.hpp>
 #include <note/json_sax.hpp>
@@ -158,6 +159,13 @@ struct CardWifi {
     /// Response containing WiFi connection status and configuration information
     /// from the Notecard.
     struct Response {
+        /// Compile-time arena budget for this response type.
+        static constexpr size_t max_arena_size =
+            ::note::detail::arena_cost(24) +
+            ::note::detail::arena_cost(48) +
+            ::note::detail::arena_cost(40) +
+            ::note::detail::arena_cost(64);  // error reserve
+
         /// `true` means that the WiFi access point is using Management Frame
         /// Protection.
         note::ResponseField<bool> secure{};

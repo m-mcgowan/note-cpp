@@ -8,6 +8,7 @@
 #include <note/dyn_field.hpp>
 #endif
 #include <note/notecard.hpp>
+#include <note/arena.hpp>
 #include <note/field.hpp>
 #include <note/json.hpp>
 #include <note/json_sax.hpp>
@@ -92,6 +93,13 @@ struct CardMotion {
 
     /// Successful response
     struct Response {
+        /// Compile-time arena budget for this response type.
+        static constexpr size_t max_arena_size =
+            ::note::detail::arena_cost(32) +
+            ::note::detail::arena_cost(128) +
+            ::note::detail::arena_cost(80) +
+            ::note::detail::arena_cost(64);  // error reserve
+
         /// `true` if the Notecard's accelerometer detected a free-fall since
         /// the last request to `card.motion`.
         note::ResponseField<bool> alert{};

@@ -8,6 +8,7 @@
 #include <note/dyn_field.hpp>
 #endif
 #include <note/notecard.hpp>
+#include <note/arena.hpp>
 #include <note/field.hpp>
 #include <note/json.hpp>
 #include <note/json_sax.hpp>
@@ -95,6 +96,10 @@ struct FileChanges {
 
     /// Response containing information about file changes and their status.
     struct Response {
+        /// Compile-time arena budget for this response type.
+        static constexpr size_t max_arena_size =
+            ::note::detail::arena_cost(64);  // error reserve
+
         /// If a change tracker is used, the number of changes across all files.
         note::ResponseField<int32_t> changes{};
         /// Set to `true` if this was a pending changes request and there are

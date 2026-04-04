@@ -8,6 +8,7 @@
 #include <note/dyn_field.hpp>
 #endif
 #include <note/notecard.hpp>
+#include <note/arena.hpp>
 #include <note/field.hpp>
 #include <note/json.hpp>
 #include <note/json_sax.hpp>
@@ -83,6 +84,13 @@ struct CardTime {
     /// Response containing current date and time information in UTC along with
     /// location data if available.
     struct Response {
+        /// Compile-time arena budget for this response type.
+        static constexpr size_t max_arena_size =
+            ::note::detail::arena_cost(16) +
+            ::note::detail::arena_cost(8) +
+            ::note::detail::arena_cost(48) +
+            ::note::detail::arena_cost(64);  // error reserve
+
         /// The geographic area of the Notecard, if the cell tower is
         /// recognized.
         note::ResponseField<note::string_view> area{};

@@ -10,6 +10,7 @@
 #include <note/dyn_field.hpp>
 #endif
 #include <note/notecard.hpp>
+#include <note/arena.hpp>
 #include <note/field.hpp>
 #include <note/json.hpp>
 #include <note/json_sax.hpp>
@@ -267,6 +268,13 @@ struct WebPut {
     /// Response containing the result of an HTTP or HTTPS PUT request to an
     /// external endpoint.
     struct Response {
+        /// Compile-time arena budget for this response type.
+        static constexpr size_t max_arena_size =
+            ::note::detail::arena_cost(256) +
+            ::note::detail::arena_cost(80) +
+            ::note::detail::arena_cost(256) +  // body
+            ::note::detail::arena_cost(64);  // error reserve
+
         /// A base64-encoded binary payload from the external service, if any.
         /// The maximum response size from the service is 8192 bytes.
         note::ResponseField<note::string_view> payload{};

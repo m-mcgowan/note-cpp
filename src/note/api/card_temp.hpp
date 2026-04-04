@@ -8,6 +8,7 @@
 #include <note/dyn_field.hpp>
 #endif
 #include <note/notecard.hpp>
+#include <note/arena.hpp>
 #include <note/field.hpp>
 #include <note/json.hpp>
 #include <note/json_sax.hpp>
@@ -133,6 +134,10 @@ struct CardTemp {
         /// Response containing temperature readings from the Notecard's onboard
         /// sensor and any connected I2C sensors.
         struct Response {
+            /// Compile-time arena budget for this response type.
+            static constexpr size_t max_arena_size =
+                ::note::detail::arena_cost(64);  // error reserve
+
             /// The calibration differential of the Notecard's onboard sensor.
             note::ResponseField<double> calibration{};
             /// If the Notecard finds a BME280 sensor on the I2C bus, this field
@@ -409,6 +414,10 @@ struct CardTemp {
         /// Response containing temperature readings from the Notecard's onboard
         /// sensor and any connected I2C sensors.
         struct Response {
+            /// Compile-time arena budget for this response type.
+            static constexpr size_t max_arena_size =
+                ::note::detail::arena_cost(64);  // error reserve
+
             /// The calibration differential of the Notecard's onboard sensor.
             note::ResponseField<double> calibration{};
             /// If the Notecard finds a BME280 sensor on the I2C bus, this field
@@ -672,6 +681,10 @@ struct CardTemp {
         /// Response containing temperature readings from the Notecard's onboard
         /// sensor and any connected I2C sensors.
         struct Response {
+            /// Compile-time arena budget for this response type.
+            static constexpr size_t max_arena_size =
+                ::note::detail::arena_cost(64);  // error reserve
+
             /// The calibration differential of the Notecard's onboard sensor.
             note::ResponseField<double> calibration{};
             /// If the Notecard finds a BME280 sensor on the I2C bus, this field

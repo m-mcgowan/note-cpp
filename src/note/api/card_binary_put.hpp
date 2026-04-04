@@ -8,6 +8,7 @@
 #include <note/dyn_field.hpp>
 #endif
 #include <note/notecard.hpp>
+#include <note/arena.hpp>
 #include <note/field.hpp>
 #include <note/json.hpp>
 #include <note/json_sax.hpp>
@@ -110,6 +111,11 @@ struct CardBinaryPut : note::BinarySendMixin {
 
     /// Successful response
     struct Response {
+        /// Compile-time arena budget for this response type.
+        static constexpr size_t max_arena_size =
+            ::note::detail::arena_cost(48) +
+            ::note::detail::arena_cost(64);  // error reserve
+
         /// If present, a string describing the error that occurred during
         /// transmission
         note::ResponseField<note::string_view> err{};

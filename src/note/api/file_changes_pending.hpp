@@ -8,6 +8,7 @@
 #include <note/dyn_field.hpp>
 #endif
 #include <note/notecard.hpp>
+#include <note/arena.hpp>
 #include <note/field.hpp>
 #include <note/json.hpp>
 #include <note/json_sax.hpp>
@@ -75,6 +76,10 @@ struct FileChangesPending {
     /// Response containing information about file changes pending upload to
     /// Notehub.
     struct Response {
+        /// Compile-time arena budget for this response type.
+        static constexpr size_t max_arena_size =
+            ::note::detail::arena_cost(64);  // error reserve
+
         /// The number of changes across all files.
         note::ResponseField<int32_t> changes{};
         /// `true` if there are pending changes.

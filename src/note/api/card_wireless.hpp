@@ -8,6 +8,7 @@
 #include <note/dyn_field.hpp>
 #endif
 #include <note/notecard.hpp>
+#include <note/arena.hpp>
 #include <note/field.hpp>
 #include <note/json.hpp>
 #include <note/json_sax.hpp>
@@ -212,6 +213,11 @@ struct CardWireless {
     /// Response containing wireless connection status, signal quality
     /// information, and detailed modem/network data from the Notecard.
     struct Response {
+        /// Compile-time arena budget for this response type.
+        static constexpr size_t max_arena_size =
+            ::note::detail::arena_cost(80) +
+            ::note::detail::arena_cost(64);  // error reserve
+
         /// Number of bars of signal quality.
         note::ResponseField<int32_t> count{};
         /// The current status of the wireless connection and modem.

@@ -8,6 +8,7 @@
 #include <note/dyn_field.hpp>
 #endif
 #include <note/notecard.hpp>
+#include <note/arena.hpp>
 #include <note/field.hpp>
 #include <note/json.hpp>
 #include <note/json_sax.hpp>
@@ -167,6 +168,11 @@ struct CardSleep {
     /// Response containing current sleep mode configuration for Notecard WiFi
     /// v2.
     struct Response {
+        /// Compile-time arena budget for this response type.
+        static constexpr size_t max_arena_size =
+            ::note::detail::arena_cost(32) +
+            ::note::detail::arena_cost(64);  // error reserve
+
         /// Returns `"accel"` if the Notecard is configured to wake from deep
         /// sleep on any movement detected by the onboard accelerometer.
         note::ResponseField<note::string_view> mode{};

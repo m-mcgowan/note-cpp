@@ -10,6 +10,7 @@
 #include <note/dyn_field.hpp>
 #endif
 #include <note/notecard.hpp>
+#include <note/arena.hpp>
 #include <note/field.hpp>
 #include <note/json.hpp>
 #include <note/json_sax.hpp>
@@ -98,6 +99,11 @@ struct HubSignal {
 
     /// Response containing a received signal from Notehub.
     struct Response {
+        /// Compile-time arena budget for this response type.
+        static constexpr size_t max_arena_size =
+            ::note::detail::arena_cost(256) +  // body
+            ::note::detail::arena_cost(64);  // error reserve
+
         /// `true` if the Notecard is connected to Notehub.
         note::ResponseField<bool> connected{};
         /// The number of queued signals remaining.

@@ -8,6 +8,7 @@
 #include <note/dyn_field.hpp>
 #endif
 #include <note/notecard.hpp>
+#include <note/arena.hpp>
 #include <note/field.hpp>
 #include <note/json.hpp>
 #include <note/json_sax.hpp>
@@ -86,6 +87,12 @@ struct CardLocation {
 
     /// Successful response
     struct Response {
+        /// Compile-time arena budget for this response type.
+        static constexpr size_t max_arena_size =
+            ::note::detail::arena_cost(32) +
+            ::note::detail::arena_cost(80) +
+            ::note::detail::arena_cost(64);  // error reserve
+
         /// The number of consecutive recorded GPS/GNSS failures.
         note::ResponseField<int32_t> count{};
         /// The "Dilution of Precision" value from the latest GPS/GNSS reading.

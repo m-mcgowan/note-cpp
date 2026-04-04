@@ -9,6 +9,7 @@
 #include <note/dyn_field.hpp>
 #endif
 #include <note/notecard.hpp>
+#include <note/arena.hpp>
 #include <note/field.hpp>
 #include <note/json.hpp>
 #include <note/json_sax.hpp>
@@ -98,6 +99,10 @@ struct EnvTemplate {
     /// Response containing the maximum number of bytes for the environment
     /// variable template.
     struct Response {
+        /// Compile-time arena budget for this response type.
+        static constexpr size_t max_arena_size =
+            ::note::detail::arena_cost(64);  // error reserve
+
         /// The maximum number of bytes that will be used when environment
         /// variables are communicated or stored, so long as the variables do
         /// not include variable-length strings.

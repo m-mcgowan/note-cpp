@@ -8,6 +8,7 @@
 #include <note/dyn_field.hpp>
 #endif
 #include <note/notecard.hpp>
+#include <note/arena.hpp>
 #include <note/field.hpp>
 #include <note/json.hpp>
 #include <note/json_sax.hpp>
@@ -74,6 +75,12 @@ struct NtnStatus {
     /// Response showing current status of Notecard's connection to paired
     /// Starnote.
     struct Response {
+        /// Compile-time arena budget for this response type.
+        static constexpr size_t max_arena_size =
+            ::note::detail::arena_cost(48) +
+            ::note::detail::arena_cost(80) +
+            ::note::detail::arena_cost(64);  // error reserve
+
         /// This member is present if any errors have occurred while connecting
         /// to a paired Starnote, for example: `{"err":"no NTN module is
         /// connected {no-ntn-module}"}`

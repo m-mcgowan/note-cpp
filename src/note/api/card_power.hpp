@@ -8,6 +8,7 @@
 #include <note/dyn_field.hpp>
 #endif
 #include <note/notecard.hpp>
+#include <note/arena.hpp>
 #include <note/field.hpp>
 #include <note/json.hpp>
 #include <note/json_sax.hpp>
@@ -100,6 +101,10 @@ struct CardPower {
         /// Response containing power consumption readings and environmental
         /// data from the Notecard.
         struct Response {
+            /// Compile-time arena budget for this response type.
+            static constexpr size_t max_arena_size =
+                ::note::detail::arena_cost(64);  // error reserve
+
             /// The cumulative number of milliamp hours (mAh) consumed. You can
             /// reset this number with this request's `reset` argument.
             note::ResponseField<double> milliampHours{};
@@ -287,6 +292,10 @@ struct CardPower {
         /// Response containing power consumption readings and environmental
         /// data from the Notecard.
         struct Response {
+            /// Compile-time arena budget for this response type.
+            static constexpr size_t max_arena_size =
+                ::note::detail::arena_cost(64);  // error reserve
+
             /// The cumulative number of milliamp hours (mAh) consumed. You can
             /// reset this number with this request's `reset` argument.
             note::ResponseField<double> milliampHours{};
@@ -463,6 +472,10 @@ struct CardPower {
         /// Response containing power consumption readings and environmental
         /// data from the Notecard.
         struct Response {
+            /// Compile-time arena budget for this response type.
+            static constexpr size_t max_arena_size =
+                ::note::detail::arena_cost(64);  // error reserve
+
             /// The cumulative number of milliamp hours (mAh) consumed. You can
             /// reset this number with this request's `reset` argument.
             note::ResponseField<double> milliampHours{};

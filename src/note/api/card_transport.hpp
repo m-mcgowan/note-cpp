@@ -8,6 +8,7 @@
 #include <note/dyn_field.hpp>
 #endif
 #include <note/notecard.hpp>
+#include <note/arena.hpp>
 #include <note/field.hpp>
 #include <note/json.hpp>
 #include <note/json_sax.hpp>
@@ -198,6 +199,11 @@ struct CardTransport {
     /// Response containing the current connectivity method configuration of the
     /// Notecard.
     struct Response {
+        /// Compile-time arena budget for this response type.
+        static constexpr size_t max_arena_size =
+            ::note::detail::arena_cost(16) +
+            ::note::detail::arena_cost(64);  // error reserve
+
         /// The connectivity method currently enabled on the device.
         note::ResponseField<note::string_view> method{};
 

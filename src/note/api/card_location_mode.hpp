@@ -8,6 +8,7 @@
 #include <note/dyn_field.hpp>
 #endif
 #include <note/notecard.hpp>
+#include <note/arena.hpp>
 #include <note/field.hpp>
 #include <note/json.hpp>
 #include <note/json_sax.hpp>
@@ -228,6 +229,12 @@ struct CardLocationMode {
 
         /// Successful response
         struct Response {
+            /// Compile-time arena budget for this response type.
+            static constexpr size_t max_arena_size =
+                ::note::detail::arena_cost(32) +
+                ::note::detail::arena_cost(48) +
+                ::note::detail::arena_cost(64);  // error reserve
+
             /// If geofence is enabled, the geofence center latitude in degrees.
             note::ResponseField<double> lat{};
             /// If geofence is enabled, the geofence center longitude in
@@ -671,6 +678,12 @@ struct CardLocationMode {
 
         /// Successful response
         struct Response {
+            /// Compile-time arena budget for this response type.
+            static constexpr size_t max_arena_size =
+                ::note::detail::arena_cost(32) +
+                ::note::detail::arena_cost(48) +
+                ::note::detail::arena_cost(64);  // error reserve
+
             /// If geofence is enabled, the geofence center latitude in degrees.
             note::ResponseField<double> lat{};
             /// If geofence is enabled, the geofence center longitude in
@@ -991,6 +1004,12 @@ struct CardLocationMode {
 
         /// Enable continuous GPS/GNSS sampling.
         struct Response {
+            /// Compile-time arena budget for this response type.
+            static constexpr size_t max_arena_size =
+                ::note::detail::arena_cost(32) +
+                ::note::detail::arena_cost(48) +
+                ::note::detail::arena_cost(64);  // error reserve
+
             /// The current location mode.
             note::ResponseField<note::string_view> mode{};
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
@@ -1281,6 +1300,12 @@ struct CardLocationMode {
 
         /// Enable periodic location sampling, optionally with geofencing.
         struct Response {
+            /// Compile-time arena budget for this response type.
+            static constexpr size_t max_arena_size =
+                ::note::detail::arena_cost(32) +
+                ::note::detail::arena_cost(48) +
+                ::note::detail::arena_cost(64);  // error reserve
+
             /// If geofence is enabled, the geofence center latitude in degrees.
             note::ResponseField<double> lat{};
             /// If geofence is enabled, the geofence center longitude in
@@ -1589,6 +1614,11 @@ struct CardLocationMode {
 
         /// Set a fixed location for the device.
         struct Response {
+            /// Compile-time arena budget for this response type.
+            static constexpr size_t max_arena_size =
+                ::note::detail::arena_cost(32) +
+                ::note::detail::arena_cost(64);  // error reserve
+
             /// If geofence is enabled, the geofence center latitude in degrees.
             note::ResponseField<double> lat{};
             /// If geofence is enabled, the geofence center longitude in
@@ -1899,6 +1929,12 @@ struct CardLocationMode {
 
         /// Successful response
         struct Response {
+            /// Compile-time arena budget for this response type.
+            static constexpr size_t max_arena_size =
+                ::note::detail::arena_cost(32) +
+                ::note::detail::arena_cost(48) +
+                ::note::detail::arena_cost(64);  // error reserve
+
             /// If geofence is enabled, the geofence center latitude in degrees.
             note::ResponseField<double> lat{};
             /// If geofence is enabled, the geofence center longitude in

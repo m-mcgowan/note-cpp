@@ -10,6 +10,7 @@
 #include <note/dyn_field.hpp>
 #endif
 #include <note/notecard.hpp>
+#include <note/arena.hpp>
 #include <note/field.hpp>
 #include <note/json.hpp>
 #include <note/json_sax.hpp>
@@ -268,6 +269,13 @@ struct WebPost {
     /// Response containing the result of an HTTP or HTTPS POST request to an
     /// external endpoint.
     struct Response {
+        /// Compile-time arena budget for this response type.
+        static constexpr size_t max_arena_size =
+            ::note::detail::arena_cost(256) +
+            ::note::detail::arena_cost(80) +
+            ::note::detail::arena_cost(256) +  // body
+            ::note::detail::arena_cost(64);  // error reserve
+
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
         /// If the web transaction returns a binary payload, `cobs` is the size
         /// of the COBS-encoded payload (in bytes).

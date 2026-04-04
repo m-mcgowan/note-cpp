@@ -8,6 +8,7 @@
 #include <note/dyn_field.hpp>
 #endif
 #include <note/notecard.hpp>
+#include <note/arena.hpp>
 #include <note/field.hpp>
 #include <note/json.hpp>
 #include <note/json_sax.hpp>
@@ -248,6 +249,11 @@ struct CardDfu {
 
     /// Successful response
     struct Response {
+        /// Compile-time arena budget for this response type.
+        static constexpr size_t max_arena_size =
+            ::note::detail::arena_cost(48) +
+            ::note::detail::arena_cost(64);  // error reserve
+
         /// The class of MCU that the Notecard is currently configured to
         /// support for Outboard DFU.
         note::ResponseField<note::string_view> name{};

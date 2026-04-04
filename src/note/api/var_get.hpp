@@ -8,6 +8,7 @@
 #include <note/dyn_field.hpp>
 #endif
 #include <note/notecard.hpp>
+#include <note/arena.hpp>
 #include <note/field.hpp>
 #include <note/json.hpp>
 #include <note/json_sax.hpp>
@@ -93,6 +94,11 @@ struct VarGet {
 
     /// Response containing a Note value from a DB Notefile.
     struct Response {
+        /// Compile-time arena budget for this response type.
+        static constexpr size_t max_arena_size =
+            ::note::detail::arena_cost(128) +
+            ::note::detail::arena_cost(64);  // error reserve
+
         /// The boolean value stored in the DB Notefile.
         note::ResponseField<bool> flag{};
         /// The string-based value stored in the DB Notefile.

@@ -33,6 +33,7 @@ set(NOTE_CPP_PUBLIC_HEADERS
     include/note/safety.hpp
     include/note/span.hpp
     include/note/string_pool.hpp
+    include/note/struct_sink.hpp
     include/note/target.hpp
     include/note/transport.hpp
     include/note/types.hpp

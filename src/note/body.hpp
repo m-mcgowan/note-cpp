@@ -324,6 +324,9 @@ BodyValue template_of(const T&) {
 #define _NOTE_FIELDS_READ_FIELD(obj, r, field) \
     ::note::detail::_note_read_field(r, #field, (obj).field);
 
+#define _NOTE_FIELDS_DISPATCH_FIELD(obj, k, handler, field) \
+    if ((k) == #field) { (handler)((obj).field); return true; }
+
 #define NOTE_FIELDS(...) \
     template<typename Self_> \
     static void _note_fields_write(const Self_& _self, ::note::JsonBuilder& _b) { \
@@ -332,6 +335,11 @@ BodyValue template_of(const T&) {
     template<typename Self_> \
     static void _note_fields_read(Self_& _self, const ::note::JsonReader& _r) { \
         _NOTE_FIELDS_EXPAND(_NOTE_FIELDS_READ_EACH(_self, _r, __VA_ARGS__)) \
+    } \
+    template<typename Self_, typename Handler_> \
+    static bool _note_fields_dispatch(Self_& _self, ::note::string_view _k, Handler_&& _handler) { \
+        _NOTE_FIELDS_EXPAND(_NOTE_FIELDS_DISPATCH_EACH(_self, _k, _handler, __VA_ARGS__)) \
+        return false; \
     }
 
 // Deprecated compatibility alias.
@@ -423,6 +431,49 @@ BodyValue template_of(const T&) {
     _NOTE_FIELDS_READ_MAP_14(obj, r, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14) _NOTE_FIELDS_READ_FIELD(obj, r, f15)
 #define _NOTE_FIELDS_READ_MAP_16(obj, r, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, f15, f16, ...) \
     _NOTE_FIELDS_READ_MAP_15(obj, r, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, f15) _NOTE_FIELDS_READ_FIELD(obj, r, f16)
+
+// Macro helpers for field iteration (dispatch path).
+#define _NOTE_FIELDS_DISPATCH_EACH(obj, k, handler, ...) \
+    _NOTE_FIELDS_DISPATCH_MAP(obj, k, handler, __VA_ARGS__)
+#define _NOTE_FIELDS_DISPATCH_MAP(obj, k, handler, ...) \
+    _NOTE_FIELDS_DISPATCH_MAP_N(obj, k, handler, __VA_ARGS__, \
+        16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1)
+#define _NOTE_FIELDS_DISPATCH_MAP_N(obj, k, handler, \
+    f1,f2,f3,f4,f5,f6,f7,f8,f9,f10,f11,f12,f13,f14,f15,f16, N, ...) \
+    _NOTE_FIELDS_DISPATCH_MAP_##N(obj, k, handler, \
+        f1,f2,f3,f4,f5,f6,f7,f8,f9,f10,f11,f12,f13,f14,f15,f16)
+#define _NOTE_FIELDS_DISPATCH_MAP_1(obj, k, handler, f1, ...) \
+    _NOTE_FIELDS_DISPATCH_FIELD(obj, k, handler, f1)
+#define _NOTE_FIELDS_DISPATCH_MAP_2(obj, k, handler, f1, f2, ...) \
+    _NOTE_FIELDS_DISPATCH_FIELD(obj, k, handler, f1) _NOTE_FIELDS_DISPATCH_FIELD(obj, k, handler, f2)
+#define _NOTE_FIELDS_DISPATCH_MAP_3(obj, k, handler, f1, f2, f3, ...) \
+    _NOTE_FIELDS_DISPATCH_MAP_2(obj, k, handler, f1, f2) _NOTE_FIELDS_DISPATCH_FIELD(obj, k, handler, f3)
+#define _NOTE_FIELDS_DISPATCH_MAP_4(obj, k, handler, f1, f2, f3, f4, ...) \
+    _NOTE_FIELDS_DISPATCH_MAP_3(obj, k, handler, f1, f2, f3) _NOTE_FIELDS_DISPATCH_FIELD(obj, k, handler, f4)
+#define _NOTE_FIELDS_DISPATCH_MAP_5(obj, k, handler, f1, f2, f3, f4, f5, ...) \
+    _NOTE_FIELDS_DISPATCH_MAP_4(obj, k, handler, f1, f2, f3, f4) _NOTE_FIELDS_DISPATCH_FIELD(obj, k, handler, f5)
+#define _NOTE_FIELDS_DISPATCH_MAP_6(obj, k, handler, f1, f2, f3, f4, f5, f6, ...) \
+    _NOTE_FIELDS_DISPATCH_MAP_5(obj, k, handler, f1, f2, f3, f4, f5) _NOTE_FIELDS_DISPATCH_FIELD(obj, k, handler, f6)
+#define _NOTE_FIELDS_DISPATCH_MAP_7(obj, k, handler, f1, f2, f3, f4, f5, f6, f7, ...) \
+    _NOTE_FIELDS_DISPATCH_MAP_6(obj, k, handler, f1, f2, f3, f4, f5, f6) _NOTE_FIELDS_DISPATCH_FIELD(obj, k, handler, f7)
+#define _NOTE_FIELDS_DISPATCH_MAP_8(obj, k, handler, f1, f2, f3, f4, f5, f6, f7, f8, ...) \
+    _NOTE_FIELDS_DISPATCH_MAP_7(obj, k, handler, f1, f2, f3, f4, f5, f6, f7) _NOTE_FIELDS_DISPATCH_FIELD(obj, k, handler, f8)
+#define _NOTE_FIELDS_DISPATCH_MAP_9(obj, k, handler, f1, f2, f3, f4, f5, f6, f7, f8, f9, ...) \
+    _NOTE_FIELDS_DISPATCH_MAP_8(obj, k, handler, f1, f2, f3, f4, f5, f6, f7, f8) _NOTE_FIELDS_DISPATCH_FIELD(obj, k, handler, f9)
+#define _NOTE_FIELDS_DISPATCH_MAP_10(obj, k, handler, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, ...) \
+    _NOTE_FIELDS_DISPATCH_MAP_9(obj, k, handler, f1, f2, f3, f4, f5, f6, f7, f8, f9) _NOTE_FIELDS_DISPATCH_FIELD(obj, k, handler, f10)
+#define _NOTE_FIELDS_DISPATCH_MAP_11(obj, k, handler, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, ...) \
+    _NOTE_FIELDS_DISPATCH_MAP_10(obj, k, handler, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10) _NOTE_FIELDS_DISPATCH_FIELD(obj, k, handler, f11)
+#define _NOTE_FIELDS_DISPATCH_MAP_12(obj, k, handler, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, ...) \
+    _NOTE_FIELDS_DISPATCH_MAP_11(obj, k, handler, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11) _NOTE_FIELDS_DISPATCH_FIELD(obj, k, handler, f12)
+#define _NOTE_FIELDS_DISPATCH_MAP_13(obj, k, handler, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, ...) \
+    _NOTE_FIELDS_DISPATCH_MAP_12(obj, k, handler, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12) _NOTE_FIELDS_DISPATCH_FIELD(obj, k, handler, f13)
+#define _NOTE_FIELDS_DISPATCH_MAP_14(obj, k, handler, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, ...) \
+    _NOTE_FIELDS_DISPATCH_MAP_13(obj, k, handler, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13) _NOTE_FIELDS_DISPATCH_FIELD(obj, k, handler, f14)
+#define _NOTE_FIELDS_DISPATCH_MAP_15(obj, k, handler, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, f15, ...) \
+    _NOTE_FIELDS_DISPATCH_MAP_14(obj, k, handler, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14) _NOTE_FIELDS_DISPATCH_FIELD(obj, k, handler, f15)
+#define _NOTE_FIELDS_DISPATCH_MAP_16(obj, k, handler, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, f15, f16, ...) \
+    _NOTE_FIELDS_DISPATCH_MAP_15(obj, k, handler, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, f15) _NOTE_FIELDS_DISPATCH_FIELD(obj, k, handler, f16)
 
 namespace detail {
 

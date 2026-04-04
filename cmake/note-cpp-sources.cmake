@@ -116,6 +116,7 @@ set(NOTE_CPP_TEST_SOURCES
     test_static_sizing.cpp
     test_transport_streaming.cpp
     test_streaming_errors.cpp
+    test_struct_sink.cpp
     test_units.cpp
     test_voltage_variable.cpp
     test_wire_format.cpp

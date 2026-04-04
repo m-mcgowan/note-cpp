@@ -1,5 +1,9 @@
 # Static Memory Sizing — Compile-Time Arena Calculation
 
+> **Note**: The `BodyCaptureSink` migration discussed below was superseded by
+> [Streaming Body Parse](streaming-body-parse.md), which eliminates body
+> buffering entirely. Body primitives now have zero arena cost.
+
 ## Goal
 
 When all request types are known at compile time, note-cpp should be able

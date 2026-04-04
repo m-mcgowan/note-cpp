@@ -21,7 +21,7 @@ note::Api api(nc);
 
 // Receiving — body parsed inline during execute()
 SensorData data;
-auto result = api.note.read().body(data).execute();
+auto result = api.note.read().into(data).execute();
 if (result) {
     data.temperature;  // 22.5 — populated during SAX parse
     data.humidity;     // 45
@@ -35,21 +35,22 @@ api.note.add().body(reading).execute();
 
 ### Aliases
 
-`.body(ref)` is the primary method, matching the Notecard protocol's `"body"`
-field name. Directional aliases for clarity:
+`.into(ref)` is the primary method for receiving body data. `.body(ref)`
+and `.from(ref)` are aliases. `.body()` is only available when there is no
+`body` request field (e.g., not on `web.*` or `note.template` which use
+`body` for sending).
 
 ```cpp
-api.note.read().into(data).execute();    // alias for .body(data) on receive
-api.note.add().from(reading).execute();  // alias for .body(data) on send
+api.note.read().into(data).execute();     // primary — always available
+api.note.read().body(data).execute();     // alias (where no body request field)
+api.note.add().from(reading).execute();   // alias for .body(reading) on send
 ```
 
 ### Shorthand via resource group aliases
 
 ```cpp
-api.note.read().body(data).execute();    // short for api.note.get().read().body(data)
-api.note.read().into(data).execute();    // alias
-api.note.pop().body(data).execute();     // short for api.note.get().pop().body(data)
-api.note.pop().into(data).execute();     // alias
+api.note.read().into(data).execute();    // short for api.note.get().read().into(data)
+api.note.pop().into(data).execute();     // short for api.note.get().pop().into(data)
 ```
 
 ## What changes
@@ -60,7 +61,7 @@ api.note.pop().into(data).execute();     // alias
   needed: body events are dispatched directly to the struct.
 - **`body_json_`** member on Response — no raw JSON to store.
 - **`body_`** (`std::unique_ptr<JsonReader>`) on Response — no deferred parse.
-- **`bodyAs<T>()`** on Response — replaced by the `.body(ref)` parameter.
+- **`bodyAs<T>()`** on Response — replaced by `.into(ref)` on the request.
 - **`parse_body_()` / `parse_body_json_()`** — the re-parse machinery.
 - **Body arena budget** in `max_arena_size` — body primitives cost zero;
   only body string fields (if any) contribute to the arena.
@@ -80,13 +81,18 @@ api.note.pop().into(data).execute();     // alias
 
 For body-having endpoints, calling the factory without `.body()` is still
 valid — body events are simply discarded during parse. The response
-contains only the non-body fields. There is no `bodyAs<T>()` fallback.
+contains only the non-body fields. For the buffered parse path, `body()`
+returns a `JsonReader*` which can be used with `note::parse<T>()`.
 
 ```cpp
-// No body needed — body events discarded
+// No body parsing — body events discarded on streaming path
 auto result = api.note.read().execute();
 result.time;      // available
-// result.body  — does not exist, no bodyAs<T>()
+
+// Buffered path: manual parse via JsonReader
+if (auto* b = result.body()) {
+    auto data = note::parse<SensorData>(*b);
+}
 ```
 
 ## Architecture

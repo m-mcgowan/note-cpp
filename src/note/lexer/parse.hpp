@@ -14,6 +14,26 @@
 
 namespace note {
 
+namespace detail {
+
+/// Shared feed loop: pushes bytes through the lexer into the adapter.
+/// Returns error string on failure, empty on success.
+/// Used by both sax_lex_streaming and sax_lex to ensure a single
+/// feed<SaxAdapter<SinkT>> instantiation per SinkT.
+template<typename SinkT>
+string_view lex_feed_loop(DefaultLexer& lexer, const uint8_t* data, size_t n,
+                          SaxAdapter<SinkT>& adapter) {
+    for (size_t i = 0; i < n; ++i) {
+        lexer.feed(data[i], adapter);
+        if (lexer.has_error())
+            return adapter.error() ? adapter.error() : NOTE_ERR("parse error");
+        if (lexer.is_done()) return {};
+    }
+    return {};
+}
+
+} // namespace detail
+
 /// Parse JSON from a streaming byte source using the lexer pipeline.
 /// ReadFn: Result<size_t>(uint8_t* buf, size_t max, uint32_t timeout_ms)
 ///
@@ -22,12 +42,9 @@ template<typename ReadFn, typename SinkT = JsonSink>
 string_view sax_lex_streaming(ReadFn&& read, uint32_t timeout_ms,
                                SaxStreamBuf& buf, SinkT& sink) {
     SaxAdapter<SinkT> adapter(buf, sink);
-
     DefaultLexer lexer;
 
-    // Read loop: pull bytes, push into lexer
     for (;;) {
-        // Read into the SaxStreamBuf's read buffer for chunked I/O
         auto r = read(buf.rbuf, buf.rbuf_size, timeout_ms);
         if (!r) {
             if (lexer.is_done()) break;
@@ -39,15 +56,8 @@ string_view sax_lex_streaming(ReadFn&& read, uint32_t timeout_ms,
             return NOTE_ERR("unexpected end of input");
         }
 
-        for (size_t i = 0; i < n; ++i) {
-            lexer.feed(buf.rbuf[i], [&](LexerEvent ev) {
-                adapter.on_event(ev);
-            });
-            if (lexer.has_error()) {
-                return adapter.error() ? adapter.error() : NOTE_ERR("parse error");
-            }
-            if (lexer.is_done()) return {};
-        }
+        auto err = detail::lex_feed_loop(lexer, buf.rbuf, n, adapter);
+        if (!err.empty() || lexer.is_done()) return err;
     }
     if (!lexer.is_done()) return NOTE_ERR("incomplete JSON");
     return {};
@@ -69,13 +79,8 @@ string_view sax_lex(const char* json, size_t len, SinkT& sink) {
     SaxAdapter<SinkT> adapter(buf, sink);
     DefaultLexer lexer;
 
-    for (size_t i = 0; i < len; ++i) {
-        lexer.feed(static_cast<uint8_t>(json[i]), [&](LexerEvent ev) {
-            adapter.on_event(ev);
-        });
-        if (lexer.has_error())
-            return adapter.error() ? adapter.error() : NOTE_ERR("parse error");
-    }
+    auto err = detail::lex_feed_loop(lexer, reinterpret_cast<const uint8_t*>(json), len, adapter);
+    if (!err.empty()) return err;
     if (!lexer.is_done()) return NOTE_ERR("incomplete JSON");
     return {};
 }

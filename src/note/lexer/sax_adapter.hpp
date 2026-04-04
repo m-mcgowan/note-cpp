@@ -37,6 +37,9 @@ public:
         , val_cap_(buf.val_size)
     {}
 
+    /// Process one lexer event. Callable as handler for JsonLexer::feed().
+    void operator()(const LexerEvent& ev) { on_event(ev); }
+
     /// Process one lexer event. Call this from the lexer callback.
     void on_event(const LexerEvent& ev) {
         switch (ev.tag) {

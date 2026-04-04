@@ -53,4 +53,15 @@ private:
     size_t offset_ = 0;
 };
 
+namespace detail {
+
+/// Compile-time arena allocation cost: size rounded up to arena alignment.
+/// Used by generated Response::max_arena_size constants.
+constexpr size_t arena_cost(size_t n) {
+    constexpr size_t kAlign = alignof(std::max_align_t);
+    return n == 0 ? 0 : (n + kAlign - 1) & ~(kAlign - 1);
+}
+
+} // namespace detail
+
 } // namespace note

@@ -17,6 +17,9 @@ class StringPool {
 public:
     explicit StringPool(Allocator alloc) : alloc_(alloc) {}
 
+    /// Access the underlying allocator (for arena-backed buffer growth).
+    Allocator& allocator() { return alloc_; }
+
     /// Copy sv's data into pool storage, return a view into the copy.
     string_view intern(string_view sv) {
         if (sv.empty()) return {};

@@ -2,7 +2,7 @@
 #pragma once
 
 #include <note/body.hpp>
-#include <note/backends/buffer.hpp>
+#include <note/struct_sink.hpp>
 #ifndef NOTE_EXTRAS
 #define NOTE_EXTRAS 1
 #endif
@@ -266,6 +266,28 @@ struct WebPost {
     uint8_t extras_count_ = 0;
 #endif // NOTE_EXTRAS
 
+    // Type-erased body handler factory for streaming body parse.
+    // Set by .into(T&) — execute paths use this to create a StructSink.
+    void* body_ptr_ = nullptr;
+    using BodyHandlerFactory_ = ::note::BodyHandler(*)(void* body, ::note::StringPool& pool, void* storage);
+    BodyHandlerFactory_ body_handler_factory_ = nullptr;
+
+    /// Parse the response body directly into a struct.
+    /// The struct must use NOTE_FIELDS() or be a C++20 aggregate.
+    template<typename BodyT_>
+    auto& body_into(BodyT_& out) {
+        body_ptr_ = &out;
+        body_handler_factory_ = [](void* b, ::note::StringPool& pool, void* storage) -> ::note::BodyHandler {
+            auto* sink = new (storage) ::note::StructSink<BodyT_>(*static_cast<BodyT_*>(b), pool);
+            return ::note::make_body_handler(*sink);
+        };
+        return *this;
+    }
+    /// Parse the response body directly into a struct (alias for body_into).
+    template<typename BodyT_> auto& into(BodyT_& out) { return body_into(out); }
+    /// Parse the response body directly into a struct (alias for body_into).
+    template<typename BodyT_> auto& from(BodyT_& out) { return body_into(out); }
+
     /// Response containing the result of an HTTP or HTTPS POST request to an
     /// external endpoint.
     struct Response {
@@ -273,7 +295,7 @@ struct WebPost {
         static constexpr size_t max_arena_size =
             ::note::detail::arena_cost(256) +
             ::note::detail::arena_cost(80) +
-            ::note::detail::arena_cost(256) +  // body
+            ::note::detail::arena_cost(256) +  // body struct interning headroom
             ::note::detail::arena_cost(64);  // error reserve
 
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
@@ -299,12 +321,14 @@ struct WebPost {
         /// the host to check for any I2C/UART corruption.
         note::ResponseField<note::string_view> status{};
 
+        /// Access the body as a JsonReader (buffered parse path only).
         const JsonReader* body() const { return body_.get(); }
 
+        /// Parse the body into a typed struct (buffered parse path).
+        /// For streaming SAX path, use .body_into(T&) on the request instead.
         template<typename T>
         T bodyAs() const {
             if (body_) return parse_body_<T>(*body_);
-            if (!body_json_.empty()) return parse_body_json_<T>(body_json_);
             return T{};
         }
 
@@ -349,28 +373,46 @@ struct WebPost {
         // string_views survive after the parser's scratch buffer is reused.
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-        struct Sink : ::note::BodyCaptureSink {
+        struct Sink : ::note::DefaultSink {
             Response& rsp;
-            Sink(Response& r, ::note::StringPool& pool) : rsp(r) { pool_ = &pool; }
-            void on_array_begin(::note::string_view k_) { capture_body_array_begin(k_); }
-            void on_array_end(::note::string_view) { capture_body_array_end(); }
-            void on_object_begin(::note::string_view k_) { capture_body_object_begin(k_); }
-            void on_object_end(::note::string_view) {
-                if (capture_body_object_end()) {
-                    if (!body_json.empty()) rsp.body_json_ = body_json;
+            ::note::StringPool& pool_;
+            ::note::BodyHandler body_handler_{};
+            int body_depth_ = 0;
+            Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
+            void set_body_handler(::note::BodyHandler bh) { body_handler_ = bh; }
+            void on_array_begin(::note::string_view k_) {
+                if (body_depth_ > 0 && body_handler_) body_handler_.on_array_begin(body_handler_.ctx, k_);
+            }
+            void on_array_end(::note::string_view k_) {
+                if (body_depth_ > 0 && body_handler_) body_handler_.on_array_end(body_handler_.ctx, k_);
+            }
+            void on_object_begin(::note::string_view k_) {
+                if (body_depth_ > 0) {
+                    ++body_depth_;
+                    if (body_handler_) body_handler_.on_object_begin(body_handler_.ctx, k_);
+                    return;
+                }
+                if (k_ == "body") { body_depth_ = 1; return; }
+            }
+            void on_object_end(::note::string_view k_) {
+                if (body_depth_ > 0) {
+                    --body_depth_;
+                    if (body_depth_ > 0 && body_handler_) body_handler_.on_object_end(body_handler_.ctx, k_);
                     return;
                 }
             }
-            void on_null(::note::string_view k_) { capture_body_null(k_); }
+            void on_null(::note::string_view k_) { (void)k_; }
             void on_string(::note::string_view k_, ::note::string_view v_) {
-                if (capture_body_string(k_, v_)) return;
-                v_ = pool_->intern(v_);
+                if (body_depth_ > 0) { if (body_handler_) body_handler_.on_string(body_handler_.ctx, k_, v_); return; }
+                v_ = pool_.intern(v_);
                 if (note::flash(keys_::rsp_payload) == k_) { rsp.payload = v_; return; }
                 if (note::flash(keys_::rsp_status) == k_) { rsp.status = v_; return; }
             }
-            void on_bool(::note::string_view k_, bool v_) { capture_body_bool(k_, v_); }
+            void on_bool(::note::string_view k_, bool v_) {
+                if (body_depth_ > 0 && body_handler_) body_handler_.on_bool(body_handler_.ctx, k_, v_);
+            }
             void on_number(::note::string_view k_, ::note::string_view raw_) {
-                if (capture_body_number(k_, raw_)) return;
+                if (body_depth_ > 0) { if (body_handler_) body_handler_.on_number(body_handler_.ctx, k_, raw_); return; }
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
                 if (note::flash(keys_::rsp_cobs) == k_) { rsp.cobs = ::note::parse_int(raw_); return; }
 #endif
@@ -378,16 +420,19 @@ struct WebPost {
                 if (note::flash(keys_::rsp_result) == k_) { rsp.result = ::note::parse_int(raw_); return; }
             }
             void on_int(::note::string_view k_, int32_t v_) {
-                if (capture_body_int(k_, v_)) return;
+                if (body_depth_ > 0) { if (body_handler_) body_handler_.on_int(body_handler_.ctx, k_, v_); return; }
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
                 if (note::flash(keys_::rsp_cobs) == k_) { rsp.cobs = v_; return; }
 #endif
                 if (note::flash(keys_::rsp_length) == k_) { rsp.length = v_; return; }
                 if (note::flash(keys_::rsp_result) == k_) { rsp.result = v_; return; }
             }
-            void on_float(::note::string_view k_, double v_) { capture_body_float(k_, v_); }
+            void on_float(::note::string_view k_, double v_) {
+                if (body_depth_ > 0 && body_handler_) body_handler_.on_float(body_handler_.ctx, k_, v_);
+            }
             void reset() {
-                BodyCaptureSink::reset();
+                body_depth_ = 0;
+                if (body_handler_ && body_handler_.reset) body_handler_.reset(body_handler_.ctx);
                 rsp = Response{};
             }
         };
@@ -436,7 +481,6 @@ struct WebPost {
     private:
         std::unique_ptr<JsonReader> reader_;
         std::unique_ptr<JsonReader> body_;
-        ::note::string_view body_json_;  // SAX-captured body JSON
 
         template<typename T>
         static T parse_body_(const JsonReader& r) {
@@ -452,14 +496,6 @@ struct WebPost {
                 (void)r;
                 return T{};
             }
-        }
-
-        template<typename T>
-        static T parse_body_json_(::note::string_view json) {
-            ::note::backends::BufferJsonBackend<256, 16> be;
-            auto& reader = be.get_reader(json);
-            if (reader.has_error()) return T{};
-            return parse_body_<T>(reader);
         }
     };
 

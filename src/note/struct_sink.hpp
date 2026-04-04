@@ -584,4 +584,55 @@ const ArrayElemVTable& SaxCaptureArray::array_elem_vtable_for() {
 
 } // namespace detail
 
+
+// ═══════════════════════════════════════════════════════════════════════
+// BodyHandler — type-erased SAX event forwarder for streaming body parse.
+//
+// Stores a context pointer and function pointers that dispatch SAX events
+// to a StructSink<T> without the caller needing to know T. Created via
+// make_body_handler<T>().
+// ═══════════════════════════════════════════════════════════════════════
+
+struct BodyHandler {
+    void* ctx = nullptr;
+    void (*on_bool)(void*, string_view, bool) = nullptr;
+    void (*on_int)(void*, string_view, int32_t) = nullptr;
+    void (*on_float)(void*, string_view, double) = nullptr;
+    void (*on_string)(void*, string_view, string_view) = nullptr;
+    void (*on_number)(void*, string_view, string_view) = nullptr;
+    void (*on_object_begin)(void*, string_view) = nullptr;
+    void (*on_object_end)(void*, string_view) = nullptr;
+    void (*on_array_begin)(void*, string_view) = nullptr;
+    void (*on_array_end)(void*, string_view) = nullptr;
+    void (*reset)(void*) = nullptr;
+
+    explicit operator bool() const { return ctx != nullptr; }
+};
+
+/// Create a BodyHandler that forwards SAX events to a StructSink<T>.
+template<typename T>
+BodyHandler make_body_handler(StructSink<T>& sink) {
+    return {
+        &sink,
+        [](void* c, string_view k, bool v) { static_cast<StructSink<T>*>(c)->on_bool(k, v); },
+        [](void* c, string_view k, int32_t v) { static_cast<StructSink<T>*>(c)->on_int(k, v); },
+        [](void* c, string_view k, double v) { static_cast<StructSink<T>*>(c)->on_float(k, v); },
+        [](void* c, string_view k, string_view v) { static_cast<StructSink<T>*>(c)->on_string(k, v); },
+        [](void* c, string_view k, string_view raw) { static_cast<StructSink<T>*>(c)->on_number(k, raw); },
+        [](void* c, string_view k) { static_cast<StructSink<T>*>(c)->on_object_begin(k); },
+        [](void* c, string_view k) { static_cast<StructSink<T>*>(c)->on_object_end(k); },
+        [](void* c, string_view k) { static_cast<StructSink<T>*>(c)->on_array_begin(k); },
+        [](void* c, string_view k) { static_cast<StructSink<T>*>(c)->on_array_end(k); },
+        [](void* c) { static_cast<StructSink<T>*>(c)->reset(); },
+    };
+}
+
+/// Size of the StructSink workspace for body handler storage.
+/// Used by execute paths to allocate stack storage for the body sink.
+inline constexpr std::size_t body_sink_storage_size =
+    sizeof(StructSink<detail::SinkSizeProbe>);
+
+/// Alignment of the StructSink for body handler storage.
+inline constexpr std::size_t body_sink_storage_align = alignof(std::max_align_t);
+
 } // namespace note

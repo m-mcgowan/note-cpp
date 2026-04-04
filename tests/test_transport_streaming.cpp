@@ -617,7 +617,7 @@ TEST_CASE("transact: frame_read retries when HAL returns 0") {
 
 namespace { struct SensorReading { float temperature; int32_t humidity; NOTE_FIELDS(temperature, humidity) }; }
 
-TEST_CASE("bodyAs<T>() parses body from streaming SAX path") {
+TEST_CASE("body_into<T>() parses body from streaming SAX path") {
     MockHal hal;
     // Simulate note.get response with a body object
     hal.queue_response(R"({"payload":"dGVzdA==","time":1234,"body":{"temperature":23.5,"humidity":65}})");
@@ -630,11 +630,11 @@ TEST_CASE("bodyAs<T>() parses body from streaming SAX path") {
     note::Api api(nc);
 #endif
 
-    auto rsp = api.note.read("test.db").noteId("x").execute();
+    SensorReading reading{};
+    auto rsp = api.note.read("test.db").noteId("x").body_into(reading).execute();
     REQUIRE(rsp.has_value());
     CHECK(rsp.time == 1234);
 
-    auto reading = rsp.bodyAs<SensorReading>();
     CHECK(reading.temperature == Approx(23.5f));
     CHECK(reading.humidity == 65);
 }

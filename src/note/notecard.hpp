@@ -12,6 +12,7 @@
 #include "span.hpp"
 #include "streaming_transport.hpp"
 #include "string_pool.hpp"
+#include "struct_sink.hpp"
 #include "transport.hpp"
 #include "transport/cobs.hpp"
 
@@ -30,6 +31,16 @@ namespace detail {
     struct has_sink : std::false_type {};
     template<typename T>
     struct has_sink<T, std::void_t<typename T::Sink>> : std::true_type {};
+
+    template<typename T, typename = void>
+    struct has_body_factory : std::false_type {};
+    template<typename T>
+    struct has_body_factory<T, std::void_t<decltype(T::body_handler_factory_)>> : std::true_type {};
+
+    template<typename T, typename = void>
+    struct has_set_body_handler : std::false_type {};
+    template<typename T>
+    struct has_set_body_handler<T, std::void_t<decltype(std::declval<T>().set_body_handler(std::declval<BodyHandler>()))>> : std::true_type {};
 }
 
 
@@ -132,8 +143,17 @@ public:
                 } else {
                     Rsp rsp{};
                     auto reset_rsp = [](void* p) { *static_cast<Rsp*>(p) = Rsp{}; };
+                    alignas(body_sink_storage_align) char body_storage[body_sink_storage_size];
                     auto ei = streaming_execute_typed<typename Rsp::Sink>(
-                        frame, rsp, RequestT::safety, reset_rsp, &rsp);
+                        frame, rsp, RequestT::safety, reset_rsp, &rsp,
+                        [&](StringPool& pool) -> BodyHandler {
+                            if constexpr (detail::has_body_factory<RequestT>::value) {
+                                if (req.body_handler_factory_) {
+                                    return req.body_handler_factory_(req.body_ptr_, pool, body_storage);
+                                }
+                            }
+                            return {};
+                        });
                     debug_timing(debug_, TimingEvent::TransactionEnd, RequestT::notecard_request);
                     if (ei.code != Error{}) return ApiResult<Rsp>(ei);
                     return ApiResult<Rsp>(std::move(rsp));
@@ -739,6 +759,23 @@ private:
                                       void (*reset_fn)(void*), void* reset_ctx) {
         StringPool pool(*alloc_);
         SinkT response_sink(rsp, pool);
+        JsonSinkAdapter<SinkT> virtual_sink(response_sink);
+        return streaming_execute(frame, virtual_sink, safety, reset_fn, reset_ctx);
+    }
+
+    /// Typed streaming execute with body handler factory.
+    /// The factory is called with the StringPool so StructSink can intern strings.
+    template<typename SinkT, typename BodyFactoryFn>
+    ErrorInfo streaming_execute_typed(RequestFrame& frame, auto& rsp,
+                                      Safety safety,
+                                      void (*reset_fn)(void*), void* reset_ctx,
+                                      BodyFactoryFn&& body_factory) {
+        StringPool pool(*alloc_);
+        SinkT response_sink(rsp, pool);
+        if constexpr (detail::has_set_body_handler<SinkT>::value) {
+            auto bh = body_factory(pool);
+            if (bh) response_sink.set_body_handler(bh);
+        }
         JsonSinkAdapter<SinkT> virtual_sink(response_sink);
         return streaming_execute(frame, virtual_sink, safety, reset_fn, reset_ctx);
     }

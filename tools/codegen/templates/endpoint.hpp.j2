@@ -5,7 +5,7 @@
 #include <note/body.hpp>
 {% endif %}
 {% if has_body_response %}
-#include <note/backends/buffer.hpp>
+#include <note/struct_sink.hpp>
 {% endif %}
 #ifndef NOTE_EXTRAS
 #define NOTE_EXTRAS 1
@@ -421,6 +421,35 @@ namespace note::api {
 {{ indent }}std::array<note::detail::ExtraSlot, NOTE_EXTRAS_MAX> extras_{};
 {{ indent }}uint8_t extras_count_ = 0;
 #endif // NOTE_EXTRAS
+{% if op.response.has_body %}
+{% set has_body_prop = op.properties | selectattr('is_body') | list | length > 0 %}
+
+{{ indent }}// Type-erased body handler factory for streaming body parse.
+{{ indent }}// Set by .into(T&) — execute paths use this to create a StructSink.
+{{ indent }}void* body_ptr_ = nullptr;
+{{ indent }}using BodyHandlerFactory_ = ::note::BodyHandler(*)(void* body, ::note::StringPool& pool, void* storage);
+{{ indent }}BodyHandlerFactory_ body_handler_factory_ = nullptr;
+
+{{ indent }}/// Parse the response body directly into a struct.
+{{ indent }}/// The struct must use NOTE_FIELDS() or be a C++20 aggregate.
+{{ indent }}template<typename BodyT_>
+{{ indent }}auto& body_into(BodyT_& out) {
+{{ indent }}    body_ptr_ = &out;
+{{ indent }}    body_handler_factory_ = [](void* b, ::note::StringPool& pool, void* storage) -> ::note::BodyHandler {
+{{ indent }}        auto* sink = new (storage) ::note::StructSink<BodyT_>(*static_cast<BodyT_*>(b), pool);
+{{ indent }}        return ::note::make_body_handler(*sink);
+{{ indent }}    };
+{{ indent }}    return *this;
+{{ indent }}}
+{% if not has_body_prop %}
+{{ indent }}/// Parse the response body directly into a struct (alias for body_into).
+{{ indent }}template<typename BodyT_> auto& body(BodyT_& out) { return body_into(out); }
+{% endif %}
+{{ indent }}/// Parse the response body directly into a struct (alias for body_into).
+{{ indent }}template<typename BodyT_> auto& into(BodyT_& out) { return body_into(out); }
+{{ indent }}/// Parse the response body directly into a struct (alias for body_into).
+{{ indent }}template<typename BodyT_> auto& from(BodyT_& out) { return body_into(out); }
+{% endif %}
 
 {% if op.response.properties or op.response.has_body %}
 {% if op.response.description %}
@@ -441,7 +470,7 @@ namespace note::api {
 {{ indent }}        ::note::detail::arena_cost({{ sz }}) +
 {% endfor %}
 {% if op.response.has_body %}
-{{ indent }}        ::note::detail::arena_cost({{ op.response.max_body_size }}) +  // body
+{{ indent }}        ::note::detail::arena_cost(256) +  // body struct interning headroom
 {% endif %}
 {{ indent }}        ::note::detail::arena_cost(64);  // error reserve
 
@@ -458,12 +487,14 @@ namespace note::api {
 {% endfor %}
 {% if op.response.has_body %}
 
+{{ indent }}    /// Access the body as a JsonReader (buffered parse path only).
 {{ indent }}    const JsonReader* body() const { return body_.get(); }
 
+{{ indent }}    /// Parse the body into a typed struct (buffered parse path).
+{{ indent }}    /// For streaming SAX path, use .body_into(T&) on the request instead.
 {{ indent }}    template<typename T>
 {{ indent }}    T bodyAs() const {
 {{ indent }}        if (body_) return parse_body_<T>(*body_);
-{{ indent }}        if (!body_json_.empty()) return parse_body_json_<T>(body_json_);
 {{ indent }}        return T{};
 {{ indent }}    }
 {% endif %}
@@ -528,15 +559,16 @@ namespace note::api {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 {% endif %}
-{% if op.response.has_body %}
-{{ indent }}    struct Sink : ::note::BodyCaptureSink {
-{{ indent }}        Response& rsp;
-{{ indent }}        Sink(Response& r, ::note::StringPool& pool) : rsp(r) { pool_ = &pool; }
-{% else %}
 {{ indent }}    struct Sink : ::note::DefaultSink {
 {{ indent }}        Response& rsp;
 {{ indent }}        ::note::StringPool& pool_;
+{% if op.response.has_body %}
+{{ indent }}        ::note::BodyHandler body_handler_{};
+{{ indent }}        int body_depth_ = 0;
+{% endif %}
 {{ indent }}        Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
+{% if op.response.has_body %}
+{{ indent }}        void set_body_handler(::note::BodyHandler bh) { body_handler_ = bh; }
 {% endif %}
 {% set string_props = [] %}
 {% set array_string_props = [] %}
@@ -555,7 +587,7 @@ namespace note::api {
 {{ indent }}        enum class ArrayCtx_ : uint8_t { none{% for prop in array_string_props %}, {{ prop.accessor_name }}{% endfor %} } array_ctx_{};
 {{ indent }}        void on_array_begin(::note::string_view k_) {
 {% if op.response.has_body %}
-{{ indent }}            if (capture_body_array_begin(k_)) return;
+{{ indent }}            if (body_depth_ > 0) { if (body_handler_) body_handler_.on_array_begin(body_handler_.ctx, k_); return; }
 {% endif %}
 {% for prop in array_string_props %}
 {{ version_guard_begin(prop.version_guard) -}}
@@ -565,30 +597,42 @@ namespace note::api {
 {{ indent }}        }
 {{ indent }}        void on_array_end(::note::string_view k_) {
 {% if op.response.has_body %}
-{{ indent }}            if (capture_body_array_end()) return;
+{{ indent }}            if (body_depth_ > 0) { if (body_handler_) body_handler_.on_array_end(body_handler_.ctx, k_); return; }
 {% endif %}
 {{ indent }}            (void)k_; array_ctx_ = ArrayCtx_::none;
 {{ indent }}        }
 {% elif op.response.has_body %}
-{{ indent }}        void on_array_begin(::note::string_view k_) { capture_body_array_begin(k_); }
-{{ indent }}        void on_array_end(::note::string_view) { capture_body_array_end(); }
+{{ indent }}        void on_array_begin(::note::string_view k_) {
+{{ indent }}            if (body_depth_ > 0 && body_handler_) body_handler_.on_array_begin(body_handler_.ctx, k_);
+{{ indent }}        }
+{{ indent }}        void on_array_end(::note::string_view k_) {
+{{ indent }}            if (body_depth_ > 0 && body_handler_) body_handler_.on_array_end(body_handler_.ctx, k_);
+{{ indent }}        }
 {% endif %}
 {% if op.response.has_body %}
-{{ indent }}        void on_object_begin(::note::string_view k_) { capture_body_object_begin(k_); }
-{{ indent }}        void on_object_end(::note::string_view) {
-{{ indent }}            if (capture_body_object_end()) {
-{{ indent }}                if (!body_json.empty()) rsp.body_json_ = body_json;
+{{ indent }}        void on_object_begin(::note::string_view k_) {
+{{ indent }}            if (body_depth_ > 0) {
+{{ indent }}                ++body_depth_;
+{{ indent }}                if (body_handler_) body_handler_.on_object_begin(body_handler_.ctx, k_);
+{{ indent }}                return;
+{{ indent }}            }
+{{ indent }}            if (k_ == "body") { body_depth_ = 1; return; }
+{{ indent }}        }
+{{ indent }}        void on_object_end(::note::string_view k_) {
+{{ indent }}            if (body_depth_ > 0) {
+{{ indent }}                --body_depth_;
+{{ indent }}                if (body_depth_ > 0 && body_handler_) body_handler_.on_object_end(body_handler_.ctx, k_);
 {{ indent }}                return;
 {{ indent }}            }
 {{ indent }}        }
-{{ indent }}        void on_null(::note::string_view k_) { capture_body_null(k_); }
+{{ indent }}        void on_null(::note::string_view k_) { (void)k_; }
 {% endif %}
 {% if string_props or array_string_props %}
 {{ indent }}        void on_string(::note::string_view k_, ::note::string_view v_) {
 {% if op.response.has_body %}
-{{ indent }}            if (capture_body_string(k_, v_)) return;
+{{ indent }}            if (body_depth_ > 0) { if (body_handler_) body_handler_.on_string(body_handler_.ctx, k_, v_); return; }
 {% endif %}
-{{ indent }}            v_ = {% if op.response.has_body %}pool_->{% else %}pool_.{% endif %}intern(v_);
+{{ indent }}            v_ = pool_.intern(v_);
 {% if not string_props %}
 {{ indent }}            (void)k_;
 {% endif %}
@@ -611,13 +655,13 @@ namespace note::api {
 {{ indent }}        }
 {% elif op.response.has_body %}
 {{ indent }}        void on_string(::note::string_view k_, ::note::string_view v_) {
-{{ indent }}            capture_body_string(k_, v_);
+{{ indent }}            if (body_depth_ > 0 && body_handler_) body_handler_.on_string(body_handler_.ctx, k_, v_);
 {{ indent }}        }
 {% endif %}
 {% if bool_props %}
 {{ indent }}        void on_bool(::note::string_view k_, bool v_) {
 {% if op.response.has_body %}
-{{ indent }}            if (capture_body_bool(k_, v_)) return;
+{{ indent }}            if (body_depth_ > 0) { if (body_handler_) body_handler_.on_bool(body_handler_.ctx, k_, v_); return; }
 {% endif %}
 {% for prop in bool_props %}
 {{ version_guard_begin(prop.version_guard) -}}
@@ -626,12 +670,14 @@ namespace note::api {
 {% endfor %}
 {{ indent }}        }
 {% elif op.response.has_body %}
-{{ indent }}        void on_bool(::note::string_view k_, bool v_) { capture_body_bool(k_, v_); }
+{{ indent }}        void on_bool(::note::string_view k_, bool v_) {
+{{ indent }}            if (body_depth_ > 0 && body_handler_) body_handler_.on_bool(body_handler_.ctx, k_, v_);
+{{ indent }}        }
 {% endif %}
 {% if int_props or double_props %}
 {{ indent }}        void on_number(::note::string_view k_, ::note::string_view raw_) {
 {% if op.response.has_body %}
-{{ indent }}            if (capture_body_number(k_, raw_)) return;
+{{ indent }}            if (body_depth_ > 0) { if (body_handler_) body_handler_.on_number(body_handler_.ctx, k_, raw_); return; }
 {% endif %}
 {% for prop in int_props %}
 {{ version_guard_begin(prop.version_guard) -}}
@@ -647,7 +693,7 @@ namespace note::api {
 {% if int_props %}
 {{ indent }}        void on_int(::note::string_view k_, int32_t v_) {
 {% if op.response.has_body %}
-{{ indent }}            if (capture_body_int(k_, v_)) return;
+{{ indent }}            if (body_depth_ > 0) { if (body_handler_) body_handler_.on_int(body_handler_.ctx, k_, v_); return; }
 {% endif %}
 {% for prop in int_props %}
 {{ version_guard_begin(prop.version_guard) -}}
@@ -656,12 +702,14 @@ namespace note::api {
 {% endfor %}
 {{ indent }}        }
 {% elif op.response.has_body %}
-{{ indent }}        void on_int(::note::string_view k_, int32_t v_) { capture_body_int(k_, v_); }
+{{ indent }}        void on_int(::note::string_view k_, int32_t v_) {
+{{ indent }}            if (body_depth_ > 0 && body_handler_) body_handler_.on_int(body_handler_.ctx, k_, v_);
+{{ indent }}        }
 {% endif %}
 {% if double_props %}
 {{ indent }}        void on_float(::note::string_view k_, double v_) {
 {% if op.response.has_body %}
-{{ indent }}            if (capture_body_float(k_, v_)) return;
+{{ indent }}            if (body_depth_ > 0) { if (body_handler_) body_handler_.on_float(body_handler_.ctx, k_, v_); return; }
 {% endif %}
 {% for prop in double_props %}
 {{ version_guard_begin(prop.version_guard) -}}
@@ -670,16 +718,25 @@ namespace note::api {
 {% endfor %}
 {{ indent }}        }
 {% elif op.response.has_body %}
-{{ indent }}        void on_float(::note::string_view k_, double v_) { capture_body_float(k_, v_); }
+{{ indent }}        void on_float(::note::string_view k_, double v_) {
+{{ indent }}            if (body_depth_ > 0 && body_handler_) body_handler_.on_float(body_handler_.ctx, k_, v_);
+{{ indent }}        }
 {% endif %}
 {% elif op.response.has_body %}
-{{ indent }}        void on_number(::note::string_view k_, ::note::string_view raw_) { capture_body_number(k_, raw_); }
-{{ indent }}        void on_int(::note::string_view k_, int32_t v_) { capture_body_int(k_, v_); }
-{{ indent }}        void on_float(::note::string_view k_, double v_) { capture_body_float(k_, v_); }
+{{ indent }}        void on_number(::note::string_view k_, ::note::string_view raw_) {
+{{ indent }}            if (body_depth_ > 0 && body_handler_) body_handler_.on_number(body_handler_.ctx, k_, raw_);
+{{ indent }}        }
+{{ indent }}        void on_int(::note::string_view k_, int32_t v_) {
+{{ indent }}            if (body_depth_ > 0 && body_handler_) body_handler_.on_int(body_handler_.ctx, k_, v_);
+{{ indent }}        }
+{{ indent }}        void on_float(::note::string_view k_, double v_) {
+{{ indent }}            if (body_depth_ > 0 && body_handler_) body_handler_.on_float(body_handler_.ctx, k_, v_);
+{{ indent }}        }
 {% endif %}
 {{ indent }}        void reset() {
 {% if op.response.has_body %}
-{{ indent }}            BodyCaptureSink::reset();
+{{ indent }}            body_depth_ = 0;
+{{ indent }}            if (body_handler_ && body_handler_.reset) body_handler_.reset(body_handler_.ctx);
 {% endif %}
 {{ indent }}            rsp = Response{};
 {{ indent }}        }
@@ -749,7 +806,6 @@ namespace note::api {
 {{ indent }}    std::unique_ptr<JsonReader> reader_;
 {% if op.response.has_body %}
 {{ indent }}    std::unique_ptr<JsonReader> body_;
-{{ indent }}    ::note::string_view body_json_;  // SAX-captured body JSON
 
 {{ indent }}    template<typename T>
 {{ indent }}    static T parse_body_(const JsonReader& r) {
@@ -765,14 +821,6 @@ namespace note::api {
 {{ indent }}            (void)r;
 {{ indent }}            return T{};
 {{ indent }}        }
-{{ indent }}    }
-
-{{ indent }}    template<typename T>
-{{ indent }}    static T parse_body_json_(::note::string_view json) {
-{{ indent }}        ::note::backends::BufferJsonBackend<256, 16> be;
-{{ indent }}        auto& reader = be.get_reader(json);
-{{ indent }}        if (reader.has_error()) return T{};
-{{ indent }}        return parse_body_<T>(reader);
 {{ indent }}    }
 {% endif %}
 {{ indent }}};

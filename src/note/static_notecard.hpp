@@ -87,6 +87,14 @@ public:
             } else {
                 Rsp rsp_val{};
                 typename Rsp::Sink response_sink(rsp_val, pool);
+                alignas(body_sink_storage_align) char body_storage[body_sink_storage_size];
+                if constexpr (detail::has_body_factory<RequestT>::value
+                              && detail::has_set_body_handler<typename Rsp::Sink>::value) {
+                    if (req.body_handler_factory_) {
+                        auto bh = req.body_handler_factory_(req.body_ptr_, pool, body_storage);
+                        if (bh) response_sink.set_body_handler(bh);
+                    }
+                }
                 ErrorCaptureSinkT<typename Rsp::Sink> err_sink(response_sink);
                 auto rv = stack_.transport.transact(build_fn, &build, err_sink, default_timeout_ms_);
                 if (!rv) return Unexpected(rv.error());

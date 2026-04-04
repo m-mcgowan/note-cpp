@@ -289,3 +289,120 @@ TEST_CASE("StructSink array overflow is safe") {
 
     REQUIRE(wa.temps[3] == 4.0f);
 }
+
+// ── BodyHandler tests ─────────────────────────────────────────────────
+
+TEST_CASE("make_body_handler creates valid handler") {
+    SensorData data{};
+    char buf[256];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+    note::StructSink<SensorData> sink(data, pool);
+
+    auto handler = note::make_body_handler(sink);
+    REQUIRE(static_cast<bool>(handler));
+    REQUIRE(handler.ctx != nullptr);
+    REQUIRE(handler.on_bool != nullptr);
+    REQUIRE(handler.on_int != nullptr);
+    REQUIRE(handler.on_float != nullptr);
+    REQUIRE(handler.on_string != nullptr);
+    REQUIRE(handler.on_number != nullptr);
+    REQUIRE(handler.on_object_begin != nullptr);
+    REQUIRE(handler.on_object_end != nullptr);
+    REQUIRE(handler.on_array_begin != nullptr);
+    REQUIRE(handler.on_array_end != nullptr);
+    REQUIRE(handler.reset != nullptr);
+}
+
+TEST_CASE("BodyHandler forwards events to StructSink") {
+    SensorData data{};
+    char buf[256];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+    note::StructSink<SensorData> sink(data, pool);
+
+    auto handler = note::make_body_handler(sink);
+    handler.on_float(handler.ctx, "temperature", 22.5);
+    handler.on_int(handler.ctx, "humidity", 45);
+    handler.on_bool(handler.ctx, "active", true);
+
+    REQUIRE(data.temperature == 22.5f);
+    REQUIRE(data.humidity == 45);
+    REQUIRE(data.active == true);
+}
+
+TEST_CASE("default BodyHandler is falsy") {
+    note::BodyHandler handler{};
+    REQUIRE_FALSE(static_cast<bool>(handler));
+}
+
+// ── body_into() on generated request types ────────────────────────────
+
+#include <note/api/env_get.hpp>
+
+namespace {
+
+struct EnvBody {
+    float temp;
+    NOTE_FIELDS(temp)
+};
+
+struct EnvBodyFull {
+    float temp;
+    note::string_view label;
+    NOTE_FIELDS(temp, label)
+};
+
+} // namespace
+
+TEST_CASE("body_into() sets body handler factory on body-having endpoint") {
+    EnvBody body{};
+    note::api::EnvGet req;
+    req.body_into(body);
+    REQUIRE(req.body_ptr_ != nullptr);
+    REQUIRE(req.body_handler_factory_ != nullptr);
+}
+
+TEST_CASE("body() alias works on endpoints without body request field") {
+    EnvBody body{};
+    note::api::EnvGet req;
+    req.body(body);  // should compile — EnvGet has no body request field
+    REQUIRE(req.body_ptr_ != nullptr);
+}
+
+TEST_CASE("into() alias works on body-having endpoint") {
+    EnvBody body{};
+    note::api::EnvGet req;
+    req.into(body);
+    REQUIRE(req.body_ptr_ != nullptr);
+}
+
+TEST_CASE("from() alias works on body-having endpoint") {
+    EnvBody body{};
+    note::api::EnvGet req;
+    req.from(body);
+    REQUIRE(req.body_ptr_ != nullptr);
+}
+
+TEST_CASE("body handler factory creates working StructSink") {
+    EnvBodyFull body{};
+    note::api::EnvGet req;
+    req.body_into(body);
+
+    // Call the factory to create the handler
+    char buf[512];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+    alignas(note::body_sink_storage_align)
+        char storage[note::body_sink_storage_size];
+
+    auto handler = req.body_handler_factory_(req.body_ptr_, pool, storage);
+    REQUIRE(static_cast<bool>(handler));
+
+    // Forward events through the handler
+    handler.on_float(handler.ctx, "temp", 22.5);
+    handler.on_string(handler.ctx, "label", "room-42");
+
+    REQUIRE(body.temp == 22.5f);
+    REQUIRE(body.label == "room-42");
+}

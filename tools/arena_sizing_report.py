@@ -1,0 +1,359 @@
+#!/usr/bin/env python3
+"""Generate the arena sizing report from the OpenAPI spec.
+
+Reuses the codegen model so the report is always in sync with generated headers.
+
+Usage:
+    python3 tools/arena_sizing_report.py notecard-api.openapi.json
+    python3 tools/arena_sizing_report.py notecard-api.openapi.json -o docs/arena-sizing.md
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+from pathlib import Path
+
+# Allow running from repo root
+sys.path.insert(0, str(Path(__file__).resolve().parents[0]))
+
+from codegen.spec_parser import parse_spec, _RSP_STRING_MAX_LENGTHS, _DEFAULT_RSP_MAX_LENGTH
+
+
+# ---------------------------------------------------------------------------
+# Alignment — must match MonotonicArena (arena.hpp)
+# ---------------------------------------------------------------------------
+
+ALIGN = 16  # alignof(std::max_align_t) on all modern 32/64-bit platforms
+ERROR_RESERVE = 64  # ErrorCaptureSinkT::kMaxErrLen
+
+
+def arena_cost(n: int) -> int:
+    """Mirror of note::detail::arena_cost()."""
+    if n == 0:
+        return 0
+    return (n + ALIGN - 1) & ~(ALIGN - 1)
+
+
+# ---------------------------------------------------------------------------
+# Data collection from codegen model
+# ---------------------------------------------------------------------------
+
+def _qualified_name(endpoint, op) -> str:
+    """Build the qualified C++ type name like 'CardAttn::Arm'."""
+    if endpoint.is_polymorphic:
+        return f"{endpoint.struct_name}::{op.struct_name}"
+    return endpoint.struct_name
+
+
+def _collect_response_info(endpoints):
+    """Collect arena sizing info for every operation with a Response struct."""
+    rows = []
+
+    for ep in endpoints:
+        for op in ep.operations:
+            rsp = op.response
+            if not rsp.properties and not rsp.has_body:
+                continue  # void response
+
+            name = _qualified_name(ep, op)
+            string_fields = []
+            total = 0
+
+            for prop in rsp.properties:
+                if prop.is_array and prop.cpp_type == "note::string_view":
+                    per_item = prop.max_length or _DEFAULT_RSP_MAX_LENGTH
+                    raw = per_item * prop.array_max_items
+                    cost = arena_cost(raw)
+                    string_fields.append({
+                        "wire": prop.wire_name,
+                        "max_len": per_item,
+                        "is_array": True,
+                        "array_items": prop.array_max_items,
+                        "raw": raw,
+                        "cost": cost,
+                    })
+                    total += cost
+                elif prop.cpp_type == "note::string_view":
+                    raw = prop.max_length or _DEFAULT_RSP_MAX_LENGTH
+                    cost = arena_cost(raw)
+                    string_fields.append({
+                        "wire": prop.wire_name,
+                        "max_len": raw,
+                        "is_array": False,
+                        "raw": raw,
+                        "cost": cost,
+                    })
+                    total += cost
+
+            body_cost = 0
+            if rsp.has_body:
+                body_cost = arena_cost(rsp.max_body_size)
+                total += body_cost
+
+            err_cost = arena_cost(ERROR_RESERVE)
+            total += err_cost
+
+            rows.append({
+                "name": name,
+                "string_fields": string_fields,
+                "has_body": rsp.has_body,
+                "body_budget": rsp.max_body_size if rsp.has_body else 0,
+                "body_cost": body_cost,
+                "err_cost": err_cost,
+                "total": total,
+            })
+
+    return sorted(rows, key=lambda r: (-r["total"], r["name"]))
+
+
+def _collect_void_responses(endpoints):
+    """Collect endpoint names with void responses."""
+    names = []
+    for ep in endpoints:
+        for op in ep.operations:
+            rsp = op.response
+            if not rsp.properties and not rsp.has_body:
+                names.append(_qualified_name(ep, op))
+    return sorted(names)
+
+
+# ---------------------------------------------------------------------------
+# Markdown rendering
+# ---------------------------------------------------------------------------
+
+def _render_field_summary(fields) -> str:
+    """Render string fields as a compact summary."""
+    if not fields:
+        return "*(none)*"
+    parts = []
+    for f in fields:
+        if f["is_array"]:
+            parts.append(f'`{f["wire"]}[{f["array_items"]}]`={f["max_len"]}×{f["array_items"]}')
+        else:
+            parts.append(f'`{f["wire"]}`={f["max_len"]}')
+    return ", ".join(parts)
+
+
+def generate_report(endpoints) -> str:
+    """Generate the full markdown report."""
+    rows = _collect_response_info(endpoints)
+    void_names = _collect_void_responses(endpoints)
+
+    lines = []
+    w = lines.append
+
+    w("# Arena Sizing Report")
+    w("")
+    w("*Auto-generated by `tools/arena_sizing_report.py` from the OpenAPI spec.*")
+    w("")
+
+    # --- How it works ---
+    w("## How Arena Sizing Works")
+    w("")
+    w("Each generated `Response` struct carries a `static constexpr size_t max_arena_size`")
+    w("— the minimum arena buffer needed to hold all dynamic data from that response type.")
+    w("")
+    w("### What goes in the arena")
+    w("")
+    w("**String fields** — `ResponseField<string_view>` values are *interned* into the")
+    w("arena by `StringPool::intern()` during SAX parsing. Each interned string costs")
+    w("its byte length, rounded up to alignment.")
+    w("")
+    w("**Body JSON** — when a response includes a `body` object, `BodyCaptureSink`")
+    w("accumulates the raw JSON directly in the arena (no intermediate `std::string`).")
+    w("")
+    w("**Error string** — the error message (if any) is interned into the arena.")
+    w("Budget: 64 bytes (matches `ErrorCaptureSinkT::kMaxErrLen`).")
+    w("")
+    w("### What does NOT go in the arena")
+    w("")
+    w("**Primitives** — `bool`, `int32_t`, and `double` response fields are stored")
+    w("directly in the `Response` struct on the stack. The streaming SAX parser delivers")
+    w("these as native values (`on_bool`, `on_int`, `on_float`) with no intermediate")
+    w("buffer or conversion — they are written straight into `ResponseField<T>`. Zero")
+    w("arena cost, zero conversion overhead.")
+    w("")
+    w("### Alignment overhead")
+    w("")
+    w(f"Each arena allocation is aligned to `alignof(std::max_align_t)` = **{ALIGN} bytes**")
+    w("on all modern platforms (ARM Cortex-M, ESP32, AVR, x86-64). The `arena_cost(n)`")
+    w(f"function rounds `n` up to the next multiple of {ALIGN}:")
+    w("")
+    w("```")
+    w(f"arena_cost(n) = (n + {ALIGN - 1}) & ~{ALIGN - 1}    // 0 → 0, 1..{ALIGN} → {ALIGN}, {ALIGN + 1}..{ALIGN * 2} → {ALIGN * 2}, ...")
+    w("```")
+    w("")
+
+    # --- Assumptions ---
+    w("## String Length Assumptions")
+    w("")
+    w("Default maximum lengths by wire name, used when `x-max-length` is not set in the")
+    w("spec. Fields not listed use the default of **48 bytes**.")
+    w("")
+    w("| Wire name | Max length | Aligned cost | Notes |")
+    w("|-----------|-----------|-------------|-------|")
+
+    # Sort by max_length descending for readability
+    sorted_defaults = sorted(_RSP_STRING_MAX_LENGTHS.items(), key=lambda x: (-x[1], x[0]))
+    for wire, max_len in sorted_defaults:
+        cost = arena_cost(max_len)
+        pad_note = f" (rounds up from {max_len})" if cost != max_len else ""
+        w(f"| `{wire}` | {max_len} | {cost}{pad_note} | |")
+    w(f"| *(default)* | {_DEFAULT_RSP_MAX_LENGTH} | {arena_cost(_DEFAULT_RSP_MAX_LENGTH)} | any unlisted wire name |")
+    w("")
+
+    # --- Per-endpoint table ---
+    w("## Per-Endpoint Arena Sizes")
+    w("")
+    w("Sorted by `max_arena_size` descending. Error reserve (64 bytes) is always included.")
+    w("")
+    w("| Endpoint | String fields | Body | Error | **Total** |")
+    w("|----------|-------------|------|-------|-----------|")
+
+    for r in rows:
+        fields_str = _render_field_summary(r["string_fields"])
+        body_str = str(r["body_budget"]) if r["has_body"] else "—"
+        w(f"| `{r['name']}` | {fields_str} | {body_str} | {r['err_cost']} | **{r['total']}** |")
+
+    w("")
+
+    if void_names:
+        w("### Void-response endpoints (no arena cost)")
+        w("")
+        w(", ".join(f"`{n}`" for n in void_names))
+        w("")
+
+    # --- Summary ---
+    totals = [r["total"] for r in rows]
+    unique_sizes = sorted(set(totals))
+    body_count = sum(1 for r in rows if r["has_body"])
+    no_string = sum(1 for r in rows if not r["string_fields"])
+
+    w("## Summary")
+    w("")
+    w("| Metric | Value |")
+    w("|--------|-------|")
+    w(f"| Endpoints with `max_arena_size` | {len(rows)} |")
+    w(f"| Void-response endpoints | {len(void_names)} |")
+    w(f"| Largest response | `{rows[0]['name']}` — {rows[0]['total']} bytes |")
+    smallest_with_strings = next((r for r in reversed(rows) if r["string_fields"]), None)
+    if smallest_with_strings:
+        w(f"| Smallest (with strings) | `{smallest_with_strings['name']}` — {smallest_with_strings['total']} bytes |")
+    w(f"| Error-reserve only (no strings, no body) | {no_string} endpoints — {arena_cost(ERROR_RESERVE)} bytes each |")
+    w(f"| Endpoints with body | {body_count} |")
+    w(f"| Default body budget | 256 bytes |")
+    w(f"| Default string max length | {_DEFAULT_RSP_MAX_LENGTH} bytes |")
+    w(f"| Alignment | {ALIGN} bytes (`alignof(std::max_align_t)`) |")
+    w("")
+
+    # --- RequestSet examples ---
+    w("## RequestSet Examples")
+    w("")
+    w("`RequestSet::max_arena_size` is the **maximum** of its members — allocate once, reuse for any request.")
+    w("")
+
+    examples = [
+        {
+            "title": "Minimal sensor loop",
+            "types": [
+                ("note::api::CardTemp::Read", "CardTemp::Read"),
+                ("note::api::CardVoltage::Read", "CardVoltage::Read"),
+                ("note::api::CardStatus", "CardStatus"),
+                ("note::api::HubStatus", "HubStatus"),
+            ],
+        },
+        {
+            "title": "Note I/O with body parsing",
+            "types": [
+                ("note::api::NoteAdd", "NoteAdd"),
+                ("note::api::NoteGet::Read", "NoteGet::Read"),
+                ("note::api::NoteGet::Pop", "NoteGet::Pop"),
+            ],
+        },
+        {
+            "title": "ATTN with scoped intents (vs full Request)",
+            "types": [
+                ("note::api::CardAttn::Arm", "CardAttn::Arm"),
+                ("note::api::CardAttn::Query", "CardAttn::Query"),
+                ("note::api::CardStatus", "CardStatus"),
+            ],
+        },
+    ]
+
+    # Build name→total lookup
+    by_name = {r["name"]: r["total"] for r in rows}
+
+    for ex in examples:
+        w(f"### {ex['title']}")
+        w("")
+        w("```cpp")
+        type_strs = ", ".join(t[0] for t in ex["types"])
+        w(f"using Requests = note::RequestSet<{type_strs}>;")
+        sizes = [by_name.get(t[1], 0) for t in ex["types"]]
+        max_sz = max(sizes) if sizes else 0
+        w(f"// max_arena_size = {max_sz}")
+        w("```")
+        w("")
+        for t, sz in zip(ex["types"], sizes):
+            w(f"- `{t[1]}`: {sz} bytes")
+        w("")
+
+    return "\n".join(lines) + "\n"
+
+
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
+
+def main():
+    parser = argparse.ArgumentParser(description="Generate arena sizing report")
+    parser.add_argument("spec", help="Path to OpenAPI spec JSON")
+    parser.add_argument("-o", "--output", help="Output file (default: stdout)")
+    args = parser.parse_args()
+
+    spec_path = Path(args.spec)
+
+    # Load spec with overlay (same as generate.py)
+    overlay_path = spec_path.with_suffix(".overlay.json")
+    with open(spec_path) as f:
+        spec = json.load(f)
+    if overlay_path.exists():
+        with open(overlay_path) as f:
+            overlay = json.load(f)
+        for path_name, methods in overlay.get("paths", {}).items():
+            spec_path_obj = spec.get("paths", {}).get(path_name)
+            if not spec_path_obj:
+                continue
+            for method, patches in methods.items():
+                spec_method = spec_path_obj.get(method)
+                if not spec_method:
+                    continue
+                props_patches = patches.get("properties", {})
+                spec_props = (spec_method
+                              .get("requestBody", {})
+                              .get("content", {})
+                              .get("application/json", {})
+                              .get("schema", {})
+                              .get("properties", {}))
+                for prop_name, prop_patch in props_patches.items():
+                    if prop_name in spec_props:
+                        spec_props[prop_name].update(prop_patch)
+                for key, value in patches.items():
+                    if key in ("properties", "x-intent-patches"):
+                        continue
+                    spec_method[key] = value
+
+    endpoints = parse_spec(spec_path, spec_dict=spec)
+    report = generate_report(endpoints)
+
+    if args.output:
+        Path(args.output).write_text(report)
+        print(f"Report written to {args.output}")
+    else:
+        print(report)
+
+
+if __name__ == "__main__":
+    main()

@@ -139,7 +139,11 @@ public:
     /// Guarded by NOTE_ARDUINO_STUBS to avoid including in test stubs
     /// that define ARDUINO but not the String class.
 #if !defined(NOTE_ARDUINO_STUBS)
-    operator String() const { return String(data_, size_); }
+    operator String() const {
+        // OwnedBuffer data is null-terminated JSON, so const char* ctor works
+        // on all Arduino platforms (AVR String lacks the (char*, size_t) overload).
+        return data_ ? String(static_cast<const char*>(data_)) : String();
+    }
 #endif
 #endif
 

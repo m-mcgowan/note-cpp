@@ -18,7 +18,9 @@
 
 #include <algorithm>
 #include <cstring>
+#ifndef NOTE_MINIMAL
 #include <string>
+#endif
 
 #ifndef NOTE_NO_CRC
 #include <note/transport/detail/crc_types.hpp>
@@ -319,9 +321,11 @@ private:
         bool frame_terminated = false;
         bool any_data_received = false;
 
+#ifndef NOTE_MINIMAL
         // Wire debug: accumulate response bytes when a listener is active.
         // Only allocates when debug_.on_wire is set — zero cost otherwise.
         std::string debug_recv;
+#endif
 
         // Frame-aware read: blocks until data arrives, truncates at \n.
         // JSON never contains a literal \n byte, so \n always delimits a frame.
@@ -351,8 +355,10 @@ private:
             for (size_t i = 0; i < n; ++i) {
                 if (buf[i] == '\n') {
                     frame_terminated = true;
-                    if (debug_.on_wire)
+    #ifndef NOTE_MINIMAL
+                if (debug_.on_wire)
                         debug_recv.append(reinterpret_cast<const char*>(buf), i);
+#endif
                     // Save bytes after \n for subsequent read() calls
                     // (e.g. binary COBS data that arrived with the JSON response).
                     size_t after = n - i - 1;
@@ -364,8 +370,10 @@ private:
                     return i;  // bytes before \n only
                 }
             }
+#ifndef NOTE_MINIMAL
             if (debug_.on_wire)
                 debug_recv.append(reinterpret_cast<const char*>(buf), n);
+#endif
             return n;
         };
 
@@ -408,10 +416,12 @@ private:
         if (!parse_err.empty())
             return make_error(Error::ResponseLost, Cause::Unspecified, parse_err);
 #endif
+#ifndef NOTE_MINIMAL
         // Emit wire receive debug event with the accumulated response bytes.
         if (debug_.on_wire && !debug_recv.empty())
             debug_wire(debug_, string_view(debug_recv.data(), debug_recv.size()),
                        WireDirection::Receive);
+#endif
         return {};
     }
 

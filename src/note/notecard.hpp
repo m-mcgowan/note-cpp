@@ -300,7 +300,7 @@ public:
                 if (!buf) return make_error(Error::Overflow, NOTE_ERR("alloc failed"));
                 buf.append(rv->data(), rv->size());
                 buf.null_terminate();
-                return buf;
+                return std::move(buf);
             };
             auto reset = [&]() { transport_->reset(); };
             return retry_transaction<Result<OwnedBuffer>>(
@@ -329,7 +329,7 @@ public:
                         return make_error(Error::Overflow, NOTE_ERR("response exceeds available memory"));
                 }
                 buf.null_terminate();
-                return buf;
+                return std::move(buf);
             };
             auto reset = [&]() { streaming_transport_->reset(); };
             return retry_transaction<Result<OwnedBuffer>>(
@@ -699,6 +699,7 @@ private:
     /// Single streaming attempt: transact + error capture.
     /// Pool is used for error message interning only.
     ErrorInfo streaming_attempt(RequestFrame& frame, JsonSink& sink) {
+#ifndef NOTE_NO_STD_STRING
         if (debug_.on_wire) {
             struct SizingWriter : JsonWriter {
                 using JsonWriter::write;
@@ -713,6 +714,7 @@ private:
             sizer.buf += '}';
             debug_wire(debug_, string_view(sizer.buf.data(), sizer.buf.size()), WireDirection::Send);
         }
+#endif // NOTE_NO_STD_STRING
 
         ErrorCaptureSink err_sink(sink);
         auto rv = streaming_transport_->transact(
@@ -791,6 +793,7 @@ private:
                                        const DebugListener& debug = {}) {
         // Emit wire-send event: build the JSON into a temporary buffer for debug.
         // Only when a wire listener is set — zero overhead otherwise.
+#ifndef NOTE_NO_STD_STRING
         if (debug.on_wire) {
             // Build into a sizing pass to get the JSON for debug output.
             // This duplicates the build but only when debug is active.
@@ -807,6 +810,7 @@ private:
             sizer.buf += '}';
             debug_wire(debug, string_view(sizer.buf.data(), sizer.buf.size()), WireDirection::Send);
         }
+#endif // NOTE_NO_STD_STRING
 
         ErrorCaptureSink err_sink(inner_sink);
         auto rv = t.transact(build_fn, ctx, err_sink, timeout_ms);

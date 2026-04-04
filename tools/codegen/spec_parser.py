@@ -43,6 +43,39 @@ TYPE_MAP: dict[str, str] = {
     "string": "note::string_view",
 }
 
+# Default max lengths for response string fields (arena sizing).
+# Keyed by wire name. Fields not listed get _DEFAULT_RSP_MAX_LENGTH.
+# Override per-field with x-max-length in the spec.
+_RSP_STRING_MAX_LENGTHS: dict[str, int] = {
+    "status": 80,
+    "version": 40,
+    "device": 32,
+    "sn": 32,
+    "sku": 24,
+    "board": 32,
+    "name": 48,
+    "text": 128,
+    "payload": 256,
+    "mode": 32,
+    "why": 80,
+    "zone": 48,
+    "country": 8,
+    "area": 16,
+    "email": 64,
+    "host": 64,
+    "org": 48,
+    "product": 64,
+    "role": 32,
+    "ssid": 48,
+    "security": 24,
+    "file": 48,
+    "note": 48,
+    "method": 16,
+    "format": 32,
+    "movements": 128,
+}
+_DEFAULT_RSP_MAX_LENGTH = 48
+
 
 def _map_type(schema: dict) -> str:
     """Map an OpenAPI property schema to a C++ type string."""
@@ -111,6 +144,11 @@ def _parse_property(name: str, schema: dict, *,
 
     is_array = schema_type == "array"
 
+    # Compute max_length for response string fields (arena sizing)
+    max_length = schema.get("x-max-length")
+    if not is_request and cpp_type == "note::string_view" and max_length is None:
+        max_length = _RSP_STRING_MAX_LENGTHS.get(wire_name, _DEFAULT_RSP_MAX_LENGTH)
+
     return PropertyDef(
         wire_name=wire_name,
         cpp_name=property_to_cpp_name(wire_name),
@@ -132,6 +170,7 @@ def _parse_property(name: str, schema: dict, *,
         array_max_items=schema.get("x-max-items", 8),
         toggle=schema.get("x-toggle"),
         action=schema.get("x-action"),
+        max_length=max_length,
     )
 
 
@@ -200,11 +239,12 @@ def _extract_response_description(operation: dict) -> str:
     return resp_200.get("description", "")
 
 
-def _extract_response_props(operation: dict) -> tuple[list[PropertyDef], bool]:
+def _extract_response_props(operation: dict) -> tuple[list[PropertyDef], bool, int]:
     """Extract response properties from the 200 response.
 
-    Returns (properties, has_body) where has_body is True if the response
-    includes a "body" object field.
+    Returns (properties, has_body, max_body_size) where has_body is True if the
+    response includes a "body" object field, and max_body_size is the body JSON
+    budget for arena sizing (from x-max-body-size, default 256).
     """
     resp_200 = operation.get("responses", {}).get("200", {})
     schema = (resp_200
@@ -212,6 +252,7 @@ def _extract_response_props(operation: dict) -> tuple[list[PropertyDef], bool]:
               .get("application/json", {})
               .get("schema", {}))
     properties = schema.get("properties", {})
+    max_body_size = schema.get("x-max-body-size", 256)
 
     props = []
     has_body = False
@@ -238,7 +279,7 @@ def _extract_response_props(operation: dict) -> tuple[list[PropertyDef], bool]:
             if items_type != "string":
                 continue  # only string arrays supported for now
         props.append(_parse_property(name, prop_schema, is_request=False))
-    return props, has_body
+    return props, has_body, max_body_size
 
 
 def _compute_semantic_methods(
@@ -331,7 +372,7 @@ def _parse_operation(op: dict, *, suffix: str | None = None) -> OperationDef:
         req_props = []
 
     # Extract response properties
-    rsp_props, has_body_response = _extract_response_props(op)
+    rsp_props, has_body_response, max_body_size = _extract_response_props(op)
 
     # Determine struct name — x-intent-name overrides the suffix-derived name
     intent_name = op.get("x-intent-name")
@@ -359,6 +400,7 @@ def _parse_operation(op: dict, *, suffix: str | None = None) -> OperationDef:
             properties=rsp_props,
             has_body=has_body_response,
             description=_extract_response_description(op),
+            max_body_size=max_body_size,
         ),
         dispatch=dispatch,
         binary_transfer=_parse_binary_transfer(op.get("x-binary-transfer")),
@@ -389,6 +431,7 @@ def _expand_intents(
     all_req_props: list[PropertyDef],
     all_rsp_props: list[PropertyDef],
     rsp_has_body: bool,
+    rsp_max_body_size: int = 256,
 ) -> list[OperationDef]:
     """Expand x-intents into per-intent OperationDef objects.
 
@@ -463,6 +506,7 @@ def _expand_intents(
                 properties=rsp_props,
                 has_body="body" in intent_rsp_names if intent_rsp_names else rsp_has_body,
                 description=intent.get("description", ""),
+                max_body_size=rsp_max_body_size,
             ),
             dispatch=base_op.dispatch,
             binary_transfer=base_op.binary_transfer,
@@ -540,12 +584,13 @@ def parse_spec(spec_path: str | Path, spec_dict: dict | None = None) -> list[End
             # Check for x-intents — expand one operation into many.
             intents = op.get("x-intents")
             if intents:
-                rsp_props, rsp_has_body = _extract_response_props(op)
+                rsp_props, rsp_has_body, rsp_max_body_size = _extract_response_props(op)
                 intent_ops = _expand_intents(
                     parsed_op, intents,
                     all_req_props=parsed_op.properties,
                     all_rsp_props=rsp_props,
                     rsp_has_body=rsp_has_body,
+                    rsp_max_body_size=rsp_max_body_size,
                 )
                 # Keep the base operation (full field set, full response).
                 # If the operation already has a dispatch suffix (e.g. "Set"),

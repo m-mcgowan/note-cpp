@@ -42,6 +42,7 @@ class PropertyDef:
     array_max_items: int = 8  # Max elements for ArrayField (overridable via x-max-items)
     toggle: dict | None = None   # x-toggle metadata for paired boolean semantic methods
     action: str | None = None    # x-action method name for standalone boolean trigger
+    max_length: int | None = None  # Max expected string length for arena sizing
 
     @property
     def field_type(self) -> str:
@@ -212,6 +213,7 @@ class ResponseDef:
     properties: list[PropertyDef] = field(default_factory=list)
     has_body: bool = False  # True when response includes a body object
     description: str = ""  # From 200 response description
+    max_body_size: int = 256  # Default body JSON budget for arena sizing
 
 
 _FACTORY_METHOD_RENAMES: dict[str, str] = {

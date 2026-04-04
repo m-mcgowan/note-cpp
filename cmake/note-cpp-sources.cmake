@@ -111,6 +111,7 @@ set(NOTE_CPP_TEST_SOURCES
     test_transport_serial.cpp
     test_transport_timing.cpp
     test_allocator_growth.cpp
+    test_body_capture_arena.cpp
     test_transport_streaming.cpp
     test_streaming_errors.cpp
     test_units.cpp

@@ -17,7 +17,7 @@
 
 #include <cstddef>
 #include <cstdio>
-#include <string>
+#include <cstring>
 
 namespace note {
 
@@ -204,18 +204,18 @@ struct BodyCaptureSink : DefaultSink {
     bool capture_body_object_begin(string_view key) {
         if (body_depth_ == 0 && key == "body") {
             body_depth_ = 1;
-            body_buf_.clear();
-            body_buf_ += '{';
+            body_size_ = 0;
+            body_put_('{');
             return true;
         }
         if (body_depth_ > 0) {
-            if (body_need_comma_) body_buf_ += ',';
+            if (body_need_comma_) body_put_(',');
             if (!key.empty()) {
-                body_buf_ += '"';
-                body_buf_.append(key.data(), key.size());
-                body_buf_ += "\":";
+                body_put_('"');
+                body_put_(key.data(), key.size());
+                body_put_("\":", 2);
             }
-            body_buf_ += '{';
+            body_put_('{');
             ++body_depth_;
             body_need_comma_ = false;
             return true;
@@ -225,11 +225,12 @@ struct BodyCaptureSink : DefaultSink {
 
     bool capture_body_object_end() {
         if (body_depth_ > 0) {
-            body_buf_ += '}';
+            body_put_('}');
             --body_depth_;
             body_need_comma_ = true;
             if (body_depth_ == 0) {
-                body_json = pool_->intern(string_view(body_buf_.data(), body_buf_.size()));
+                // Data is already in arena memory — no intern needed
+                body_json = string_view(body_data_, body_size_);
             }
             return true;
         }
@@ -238,13 +239,13 @@ struct BodyCaptureSink : DefaultSink {
 
     bool capture_body_array_begin(string_view key) {
         if (body_depth_ > 0) {
-            if (body_need_comma_) body_buf_ += ',';
+            if (body_need_comma_) body_put_(',');
             if (!key.empty()) {
-                body_buf_ += '"';
-                body_buf_.append(key.data(), key.size());
-                body_buf_ += "\":";
+                body_put_('"');
+                body_put_(key.data(), key.size());
+                body_put_("\":", 2);
             }
-            body_buf_ += '[';
+            body_put_('[');
             body_need_comma_ = false;
             return true;
         }
@@ -253,7 +254,7 @@ struct BodyCaptureSink : DefaultSink {
 
     bool capture_body_array_end() {
         if (body_depth_ > 0) {
-            body_buf_ += ']';
+            body_put_(']');
             body_need_comma_ = true;
             return true;
         }
@@ -263,9 +264,9 @@ struct BodyCaptureSink : DefaultSink {
     bool capture_body_string(string_view key, string_view value) {
         if (body_depth_ > 0) {
             emit_key_(key);
-            body_buf_ += '"';
-            body_buf_.append(value.data(), value.size());
-            body_buf_ += '"';
+            body_put_('"');
+            body_put_(value.data(), value.size());
+            body_put_('"');
             body_need_comma_ = true;
             return true;
         }
@@ -275,7 +276,7 @@ struct BodyCaptureSink : DefaultSink {
     bool capture_body_number(string_view key, string_view raw) {
         if (body_depth_ > 0) {
             emit_key_(key);
-            body_buf_.append(raw.data(), raw.size());
+            body_put_(raw.data(), raw.size());
             body_need_comma_ = true;
             return true;
         }
@@ -287,7 +288,7 @@ struct BodyCaptureSink : DefaultSink {
             emit_key_(key);
             char buf[12];
             auto n = detail::format_int(buf, value);
-            body_buf_.append(buf, n);
+            body_put_(buf, n);
             body_need_comma_ = true;
             return true;
         }
@@ -299,7 +300,7 @@ struct BodyCaptureSink : DefaultSink {
             emit_key_(key);
             char buf[24];
             auto n = detail::format_float(buf, value);
-            body_buf_.append(buf, n);
+            body_put_(buf, n);
             body_need_comma_ = true;
             return true;
         }
@@ -309,7 +310,7 @@ struct BodyCaptureSink : DefaultSink {
     bool capture_body_bool(string_view key, bool value) {
         if (body_depth_ > 0) {
             emit_key_(key);
-            body_buf_ += value ? "true" : "false";
+            body_put_(value ? "true" : "false", value ? 4 : 5);
             body_need_comma_ = true;
             return true;
         }
@@ -319,7 +320,7 @@ struct BodyCaptureSink : DefaultSink {
     bool capture_body_null(string_view key) {
         if (body_depth_ > 0) {
             emit_key_(key);
-            body_buf_ += "null";
+            body_put_("null", 4);
             body_need_comma_ = true;
             return true;
         }
@@ -329,7 +330,9 @@ struct BodyCaptureSink : DefaultSink {
     void reset() {
         body_json = {};
         body_depth_ = 0;
-        body_buf_.clear();
+        body_data_ = nullptr;
+        body_size_ = 0;
+        body_cap_ = 0;
         body_need_comma_ = false;
     }
 
@@ -337,16 +340,36 @@ protected:
     StringPool* pool_ = nullptr;  // set by generated Sink constructor
 
 private:
-    std::string body_buf_;
+    char* body_data_ = nullptr;
+    size_t body_size_ = 0;
+    size_t body_cap_ = 0;
     int body_depth_ = 0;
     bool body_need_comma_ = false;
 
+    void body_reserve_(size_t needed) {
+        if (needed <= body_cap_) return;
+        size_t new_cap = body_cap_ ? body_cap_ * 2 : 64;
+        while (new_cap < needed) new_cap *= 2;
+        body_data_ = static_cast<char*>(
+            pool_->allocator().reallocate(body_data_, body_cap_, new_cap));
+        body_cap_ = new_cap;
+    }
+    void body_put_(char c) {
+        body_reserve_(body_size_ + 1);
+        body_data_[body_size_++] = c;
+    }
+    void body_put_(const char* s, size_t n) {
+        body_reserve_(body_size_ + n);
+        std::memcpy(body_data_ + body_size_, s, n);
+        body_size_ += n;
+    }
+
     void emit_key_(string_view key) {
-        if (body_need_comma_) body_buf_ += ',';
+        if (body_need_comma_) body_put_(',');
         if (!key.empty()) {
-            body_buf_ += '"';
-            body_buf_.append(key.data(), key.size());
-            body_buf_ += "\":";
+            body_put_('"');
+            body_put_(key.data(), key.size());
+            body_put_("\":", 2);
         }
     }
 };

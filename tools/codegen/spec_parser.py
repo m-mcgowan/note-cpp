@@ -239,12 +239,11 @@ def _extract_response_description(operation: dict) -> str:
     return resp_200.get("description", "")
 
 
-def _extract_response_props(operation: dict) -> tuple[list[PropertyDef], bool, int]:
+def _extract_response_props(operation: dict) -> tuple[list[PropertyDef], bool]:
     """Extract response properties from the 200 response.
 
-    Returns (properties, has_body, max_body_size) where has_body is True if the
-    response includes a "body" object field, and max_body_size is the body JSON
-    budget for arena sizing (from x-max-body-size, default 256).
+    Returns (properties, has_body) where has_body is True if the response
+    includes a "body" object field.
     """
     resp_200 = operation.get("responses", {}).get("200", {})
     schema = (resp_200
@@ -252,7 +251,6 @@ def _extract_response_props(operation: dict) -> tuple[list[PropertyDef], bool, i
               .get("application/json", {})
               .get("schema", {}))
     properties = schema.get("properties", {})
-    max_body_size = schema.get("x-max-body-size", 256)
 
     props = []
     has_body = False
@@ -279,7 +277,7 @@ def _extract_response_props(operation: dict) -> tuple[list[PropertyDef], bool, i
             if items_type != "string":
                 continue  # only string arrays supported for now
         props.append(_parse_property(name, prop_schema, is_request=False))
-    return props, has_body, max_body_size
+    return props, has_body
 
 
 def _compute_semantic_methods(
@@ -372,7 +370,7 @@ def _parse_operation(op: dict, *, suffix: str | None = None) -> OperationDef:
         req_props = []
 
     # Extract response properties
-    rsp_props, has_body_response, max_body_size = _extract_response_props(op)
+    rsp_props, has_body_response = _extract_response_props(op)
 
     # Determine struct name — x-intent-name overrides the suffix-derived name
     intent_name = op.get("x-intent-name")
@@ -400,7 +398,6 @@ def _parse_operation(op: dict, *, suffix: str | None = None) -> OperationDef:
             properties=rsp_props,
             has_body=has_body_response,
             description=_extract_response_description(op),
-            max_body_size=max_body_size,
         ),
         dispatch=dispatch,
         binary_transfer=_parse_binary_transfer(op.get("x-binary-transfer")),
@@ -431,7 +428,6 @@ def _expand_intents(
     all_req_props: list[PropertyDef],
     all_rsp_props: list[PropertyDef],
     rsp_has_body: bool,
-    rsp_max_body_size: int = 256,
 ) -> list[OperationDef]:
     """Expand x-intents into per-intent OperationDef objects.
 
@@ -506,7 +502,6 @@ def _expand_intents(
                 properties=rsp_props,
                 has_body="body" in intent_rsp_names if intent_rsp_names else rsp_has_body,
                 description=intent.get("description", ""),
-                max_body_size=rsp_max_body_size,
             ),
             dispatch=base_op.dispatch,
             binary_transfer=base_op.binary_transfer,
@@ -584,13 +579,12 @@ def parse_spec(spec_path: str | Path, spec_dict: dict | None = None) -> list[End
             # Check for x-intents — expand one operation into many.
             intents = op.get("x-intents")
             if intents:
-                rsp_props, rsp_has_body, rsp_max_body_size = _extract_response_props(op)
+                rsp_props, rsp_has_body = _extract_response_props(op)
                 intent_ops = _expand_intents(
                     parsed_op, intents,
                     all_req_props=parsed_op.properties,
                     all_rsp_props=rsp_props,
                     rsp_has_body=rsp_has_body,
-                    rsp_max_body_size=rsp_max_body_size,
                 )
                 # Keep the base operation (full field set, full response).
                 # If the operation already has a dispatch suffix (e.g. "Set"),

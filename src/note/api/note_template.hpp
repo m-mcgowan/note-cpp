@@ -228,7 +228,6 @@ struct NoteTemplate {
             /// Compile-time arena budget for this response type.
             static constexpr size_t max_arena_size =
                 ::note::detail::arena_cost(32) +
-                ::note::detail::arena_cost(256) +  // body struct interning headroom
                 ::note::detail::arena_cost(64);  // error reserve
 
             /// The number of bytes that will be transmitted to Notehub, per
@@ -722,7 +721,6 @@ struct NoteTemplate {
             /// Compile-time arena budget for this response type.
             static constexpr size_t max_arena_size =
                 ::note::detail::arena_cost(32) +
-                ::note::detail::arena_cost(256) +  // body struct interning headroom
                 ::note::detail::arena_cost(64);  // error reserve
 
             /// The number of bytes that will be transmitted to Notehub, per

@@ -188,7 +188,6 @@ struct WebDelete {
         static constexpr size_t max_arena_size =
             ::note::detail::arena_cost(256) +
             ::note::detail::arena_cost(80) +
-            ::note::detail::arena_cost(256) +  // body struct interning headroom
             ::note::detail::arena_cost(64);  // error reserve
 
         /// A base64-encoded binary payload from the external service, if any.

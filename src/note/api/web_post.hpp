@@ -295,7 +295,6 @@ struct WebPost {
         static constexpr size_t max_arena_size =
             ::note::detail::arena_cost(256) +
             ::note::detail::arena_cost(80) +
-            ::note::detail::arena_cost(256) +  // body struct interning headroom
             ::note::detail::arena_cost(64);  // error reserve
 
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)

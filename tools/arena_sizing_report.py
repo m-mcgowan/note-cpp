@@ -87,11 +87,6 @@ def _collect_response_info(endpoints):
                     })
                     total += cost
 
-            body_cost = 0
-            if rsp.has_body:
-                body_cost = arena_cost(rsp.max_body_size)
-                total += body_cost
-
             err_cost = arena_cost(ERROR_RESERVE)
             total += err_cost
 
@@ -99,8 +94,6 @@ def _collect_response_info(endpoints):
                 "name": name,
                 "string_fields": string_fields,
                 "has_body": rsp.has_body,
-                "body_budget": rsp.max_body_size if rsp.has_body else 0,
-                "body_cost": body_cost,
                 "err_cost": err_cost,
                 "total": total,
             })
@@ -161,9 +154,6 @@ def generate_report(endpoints) -> str:
     w("arena by `StringPool::intern()` during SAX parsing. Each interned string costs")
     w("its byte length, rounded up to alignment.")
     w("")
-    w("**Body JSON** — when a response includes a `body` object, `BodyCaptureSink`")
-    w("accumulates the raw JSON directly in the arena (no intermediate `std::string`).")
-    w("")
     w("**Error string** — the error message (if any) is interned into the arena.")
     w("Budget: 64 bytes (matches `ErrorCaptureSinkT::kMaxErrLen`).")
     w("")
@@ -174,6 +164,13 @@ def generate_report(endpoints) -> str:
     w("these as native values (`on_bool`, `on_int`, `on_float`) with no intermediate")
     w("buffer or conversion — they are written straight into `ResponseField<T>`. Zero")
     w("arena cost, zero conversion overhead.")
+    w("")
+    w("**Body primitives** — when a response includes a `body` object, the SAX parser")
+    w("delivers body fields directly to the user-provided struct via `StructSink<T>`.")
+    w("Primitive body fields (`bool`, `int32_t`, `double`) have zero arena cost.")
+    w("Body string fields are interned into the user's own `StringPool`, not this arena.")
+    w("The `body_into(T&)` call on the request builder wires up the struct sink before")
+    w("execution — no arena budget is needed for body parsing here.")
     w("")
     w("### Alignment overhead")
     w("")
@@ -209,13 +206,12 @@ def generate_report(endpoints) -> str:
     w("")
     w("Sorted by `max_arena_size` descending. Error reserve (64 bytes) is always included.")
     w("")
-    w("| Endpoint | String fields | Body | Error | **Total** |")
-    w("|----------|-------------|------|-------|-----------|")
+    w("| Endpoint | String fields | Error | **Total** |")
+    w("|----------|-------------|-------|-----------|")
 
     for r in rows:
         fields_str = _render_field_summary(r["string_fields"])
-        body_str = str(r["body_budget"]) if r["has_body"] else "—"
-        w(f"| `{r['name']}` | {fields_str} | {body_str} | {r['err_cost']} | **{r['total']}** |")
+        w(f"| `{r['name']}` | {fields_str} | {r['err_cost']} | **{r['total']}** |")
 
     w("")
 
@@ -228,7 +224,6 @@ def generate_report(endpoints) -> str:
     # --- Summary ---
     totals = [r["total"] for r in rows]
     unique_sizes = sorted(set(totals))
-    body_count = sum(1 for r in rows if r["has_body"])
     no_string = sum(1 for r in rows if not r["string_fields"])
 
     w("## Summary")
@@ -241,9 +236,7 @@ def generate_report(endpoints) -> str:
     smallest_with_strings = next((r for r in reversed(rows) if r["string_fields"]), None)
     if smallest_with_strings:
         w(f"| Smallest (with strings) | `{smallest_with_strings['name']}` — {smallest_with_strings['total']} bytes |")
-    w(f"| Error-reserve only (no strings, no body) | {no_string} endpoints — {arena_cost(ERROR_RESERVE)} bytes each |")
-    w(f"| Endpoints with body | {body_count} |")
-    w(f"| Default body budget | 256 bytes |")
+    w(f"| Error-reserve only (no strings) | {no_string} endpoints — {arena_cost(ERROR_RESERVE)} bytes each |")
     w(f"| Default string max length | {_DEFAULT_RSP_MAX_LENGTH} bytes |")
     w(f"| Alignment | {ALIGN} bytes (`alignof(std::max_align_t)`) |")
     w("")

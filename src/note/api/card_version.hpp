@@ -113,7 +113,6 @@ struct CardVersion {
             ::note::detail::arena_cost(48) +
             ::note::detail::arena_cost(24) +
             ::note::detail::arena_cost(40) +
-            ::note::detail::arena_cost(256) +  // body struct interning headroom
             ::note::detail::arena_cost(64);  // error reserve
 
         /// The Notecard board version number.

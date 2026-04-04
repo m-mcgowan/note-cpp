@@ -246,7 +246,6 @@ struct DfuStatus {
         static constexpr size_t max_arena_size =
             ::note::detail::arena_cost(32) +
             ::note::detail::arena_cost(80) +
-            ::note::detail::arena_cost(256) +  // body struct interning headroom
             ::note::detail::arena_cost(64);  // error reserve
 
         /// The current DFU mode. Will be one of:

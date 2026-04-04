@@ -469,9 +469,6 @@ namespace note::api {
 {% for sz in string_sizes %}
 {{ indent }}        ::note::detail::arena_cost({{ sz }}) +
 {% endfor %}
-{% if op.response.has_body %}
-{{ indent }}        ::note::detail::arena_cost(256) +  // body struct interning headroom
-{% endif %}
 {{ indent }}        ::note::detail::arena_cost(64);  // error reserve
 
 {% for prop in op.response.properties %}

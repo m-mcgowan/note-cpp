@@ -147,7 +147,6 @@ struct EnvGet {
         /// Compile-time arena budget for this response type.
         static constexpr size_t max_arena_size =
             ::note::detail::arena_cost(128) +
-            ::note::detail::arena_cost(256) +  // body struct interning headroom
             ::note::detail::arena_cost(64);  // error reserve
 
         /// If a `name` was specified, the value of the environment variable.

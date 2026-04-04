@@ -213,7 +213,6 @@ class ResponseDef:
     properties: list[PropertyDef] = field(default_factory=list)
     has_body: bool = False  # True when response includes a body object
     description: str = ""  # From 200 response description
-    max_body_size: int = 256  # Default body JSON budget for arena sizing
 
 
 _FACTORY_METHOD_RENAMES: dict[str, str] = {

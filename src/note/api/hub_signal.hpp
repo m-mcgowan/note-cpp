@@ -125,7 +125,6 @@ struct HubSignal {
     struct Response {
         /// Compile-time arena budget for this response type.
         static constexpr size_t max_arena_size =
-            ::note::detail::arena_cost(256) +  // body struct interning headroom
             ::note::detail::arena_cost(64);  // error reserve
 
         /// `true` if the Notecard is connected to Notehub.

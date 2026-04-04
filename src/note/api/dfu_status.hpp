@@ -221,7 +221,7 @@ struct DfuStatus {
     using BodyHandlerFactory_ = ::note::BodyHandler(*)(void* body, ::note::StringPool& pool, void* storage);
     BodyHandlerFactory_ body_handler_factory_ = nullptr;
 
-    /// Parse the response body directly into a struct during SAX streaming.
+    /// Wire body parsing to the given struct.
     /// The struct must use NOTE_FIELDS() or be a C++20 aggregate.
     template<typename BodyT_>
     auto& into(BodyT_& out) {
@@ -232,8 +232,17 @@ struct DfuStatus {
         };
         return *this;
     }
+    /// Return a copy with body parsing wired to the given struct (const overload).
+    template<typename BodyT_>
+    auto into(BodyT_& out) const {
+        auto copy = *this;
+        copy.into(out);
+        return copy;
+    }
     template<typename BodyT_> auto& body(BodyT_& out) { return into(out); }
+    template<typename BodyT_> auto body(BodyT_& out) const { return into(out); }
     template<typename BodyT_> auto& from(BodyT_& out) { return into(out); }
+    template<typename BodyT_> auto from(BodyT_& out) const { return into(out); }
 
     /// Response containing the current DFU mode and status information for
     /// firmware downloads.

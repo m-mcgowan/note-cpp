@@ -759,6 +759,8 @@ static_assert(req.view() == R"({"req":"hub.set","mode":"periodic"})");
 ## Documentation
 
 - [Migrating from note-arduino](docs/migration-from-note-arduino.md) — side-by-side examples for common patterns
+- [Feature flags](docs/feature-flags.md) — compile-time options for binary size optimization (AVR, Cortex-M0)
+- [Full documentation index](docs/README.md) — all guides, from getting started to internals
 - [API reference (Doxygen)](https://m-mcgowan.github.io/note-cpp/)
 
 ## Contributing

@@ -16,14 +16,15 @@
 ## Infrastructure
 
 8. **[Memory management](memory.md)** — zero-allocation patterns, StringPool for response string lifetime, arena sizing, allocation profiling
-9. **[JSON backend](json-backend.md)** — how `note-cpp` handles JSON internally, when and why to customize it, available backends
-10. **[Transport layer](transport.md)** — serial and I2C protocol implementations, HAL interfaces, CRC, segmented TX/RX
-11. **[Coverage](coverage.md)** — test coverage methodology, GCC + lcov 2.x requirements
+9. **[Feature flags](feature-flags.md)** — compile-time options for binary size optimization (`NOTE_MINIMAL`, per-feature flags, AVR configuration)
+10. **[JSON backend](json-backend.md)** — how `note-cpp` handles JSON internally, when and why to customize it, available backends
+11. **[Transport layer](transport.md)** — serial and I2C protocol implementations, HAL interfaces, CRC, segmented TX/RX
+12. **[Coverage](coverage.md)** — test coverage methodology, GCC + lcov 2.x requirements
 
 ## App layer
 
-12. **[App design](note-cpp-app.md)** — higher-level app abstractions: channels, state stores, managers
-13. **[App orchestration](app-orchestration.md)** — NTN/satellite handling, template lifecycle, sync direction management, composed setup procedures
+13. **[App design](note-cpp-app.md)** — higher-level app abstractions: channels, state stores, managers
+14. **[App orchestration](app-orchestration.md)** — NTN/satellite handling, template lifecycle, sync direction management, composed setup procedures
 
 ## Documentation site
 
@@ -31,7 +32,7 @@
 
 ## Project
 
-14. **[Project plan](PLAN.md)** — architecture, completed phases, component status, roadmap
+16. **[Project plan](PLAN.md)** — architecture, completed phases, component status, roadmap
 
 ## Examples
 

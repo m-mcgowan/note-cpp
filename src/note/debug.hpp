@@ -81,6 +81,9 @@ struct DebugListener {
 // ── Inline call-site helpers ───────────────────────────────────────────
 // These check the pointer before calling. When the pointer is null,
 // the entire call (including argument evaluation) is eliminated.
+// When NOTE_DEBUG_ENABLED is 0, all calls are no-ops (zero code).
+
+#if NOTE_DEBUG_ENABLED
 
 inline void debug_wire(const DebugListener& d, string_view json, WireDirection dir) {
     if (d.on_wire) d.on_wire({json, dir}, d.ctx);
@@ -107,6 +110,24 @@ inline void debug_realloc(const DebugListener& d, void* old_ptr, void* new_ptr,
     if (d.on_realloc) d.on_realloc(old_ptr, new_ptr, old_n, new_n, d.ctx);
 }
 
+#else // !NOTE_DEBUG_ENABLED — no-op stubs, zero code generation
+
+inline void debug_wire(const DebugListener&, string_view, WireDirection) {}
+inline void debug_timing(const DebugListener&, TimingEvent, string_view = {}) {}
+inline void debug_transport(const DebugListener&, TransportEvent, uint32_t = 0) {}
+inline void debug_alloc(const DebugListener&, void*, size_t) {}
+inline void debug_free(const DebugListener&, void*, size_t) {}
+inline void debug_realloc(const DebugListener&, void*, void*, size_t, size_t) {}
+
+// Also accept NoDebug (used by StreamingTransport when NOTE_DEBUG_ENABLED=0).
+struct NoDebug;
+inline void debug_wire(const NoDebug&, string_view, WireDirection) {}
+inline void debug_timing(const NoDebug&, TimingEvent, string_view = {}) {}
+inline void debug_transport(const NoDebug&, TransportEvent, uint32_t = 0) {}
+inline void debug_alloc(const NoDebug&, void*, size_t) {}
+
+#endif // NOTE_DEBUG_ENABLED
+
 // ── Debug policies ─────────────────────────────────────────────────────
 
 /// NoDebug — compile-time zero debug. All methods are constexpr no-ops.
@@ -120,6 +141,7 @@ struct NoDebug {
     static constexpr void realloc(void*, void*, size_t, size_t) {}
 };
 
+#if NOTE_DEBUG_ENABLED
 /// RuntimeDebug — wraps DebugListener. Zero overhead when all null.
 struct RuntimeDebug {
     DebugListener listener{};
@@ -136,6 +158,7 @@ struct RuntimeDebug {
         debug_realloc(listener, old_ptr, new_ptr, old_n, new_n);
     }
 };
+#endif // NOTE_DEBUG_ENABLED
 
 // ── Debug category flags ───────────────────────────────────────────────
 // Used by convenience adapters (e.g. arduino::serial_debug) to select

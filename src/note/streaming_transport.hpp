@@ -99,7 +99,9 @@ public:
     StreamingTransport(TransportHal& hal, uint32_t /*max_retries*/, uint32_t /*retry_delay_ms*/ = 500)
         : hal_(hal) {}
 
+#if NOTE_DEBUG_ENABLED
     void set_debug(const DebugListener& d) override { debug_ = d; }
+#endif
 
     uint32_t millis() override { return hal_.millis(); }
     void delay(uint32_t ms) override { hal_.delay(ms); }
@@ -210,6 +212,7 @@ public:
     }
 
     Result<size_t> read(uint8_t* buf, size_t max_len, uint32_t timeout_ms) override {
+#ifndef NOTE_MINIMAL
         // Return any lookahead bytes saved by frame_read before hitting the HAL.
         if (lookahead_len_ > 0) {
             size_t n = std::min(max_len, lookahead_len_);
@@ -218,6 +221,7 @@ public:
             lookahead_len_ -= n;
             return n;
         }
+#endif
         return hal_.read(buf, max_len, timeout_ms);
     }
 
@@ -359,6 +363,7 @@ private:
                 if (debug_.on_wire)
                         debug_recv.append(reinterpret_cast<const char*>(buf), i);
 #endif
+#ifndef NOTE_MINIMAL
                     // Save bytes after \n for subsequent read() calls
                     // (e.g. binary COBS data that arrived with the JSON response).
                     size_t after = n - i - 1;
@@ -367,6 +372,7 @@ private:
                         lookahead_pos_ = 0;
                         lookahead_len_ = after;
                     }
+#endif
                     return i;  // bytes before \n only
                 }
             }
@@ -427,13 +433,19 @@ private:
 
     TransportHal& hal_;
     bool initialized_ = false;
+#if NOTE_DEBUG_ENABLED
     DebugListener debug_{};
+#else
+    NoDebug debug_{};
+#endif
 
+#ifndef NOTE_MINIMAL
     // Lookahead buffer: bytes read from the HAL that arrived after \n
     // in the same chunk. Returned by subsequent read() calls (e.g. binary I/O).
     uint8_t lookahead_[64]{};
     size_t lookahead_pos_ = 0;
     size_t lookahead_len_ = 0;
+#endif
 
 #ifndef NOTE_NO_CRC
     bool crc_enabled_ = false;

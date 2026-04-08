@@ -14,6 +14,7 @@
 #if NOTE_EXTRAS
 #include <note/dyn_field.hpp>
 #endif
+#include <note/generic_builder.hpp>
 #include <note/generic_sink.hpp>
 #include <note/notecard.hpp>
 #include <note/arena.hpp>
@@ -876,6 +877,35 @@ namespace note::api {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 {% endif %}
+{# Collect simple optional fields for generic builder #}
+{% set simple_req_props = [] %}
+{% for prop in op.properties %}
+{% if not prop.is_required_by_dispatch and not prop.is_required and not prop.is_array and not prop.is_body and not prop.version_guard and not (op.mode_prefix and prop.wire_name == "mode") and prop.cpp_type in ["bool", "int32_t", "double", "note::string_view"] %}
+{% if simple_req_props.append(prop) %}{% endif %}
+{% endif %}
+{% endfor %}
+{% if simple_req_props %}
+{{ indent }}static constexpr uint8_t req_field_count_ = {{ simple_req_props | length }};
+{{ indent }}static const ::note::ReqFieldDesc* req_field_descs_ptr_() {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+{{ indent }}    static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
+{% for prop in simple_req_props %}
+{% if prop.cpp_type == "bool" %}
+{{ indent }}        {keys_::{{ prop.accessor_name }}, static_cast<uint16_t>(offsetof({{ parent_type }}, {{ prop.accessor_name }})), ::note::ReqFieldType::Bool},
+{% elif prop.cpp_type == "int32_t" %}
+{{ indent }}        {keys_::{{ prop.accessor_name }}, static_cast<uint16_t>(offsetof({{ parent_type }}, {{ prop.accessor_name }})), ::note::ReqFieldType::Int32},
+{% elif prop.cpp_type == "double" %}
+{{ indent }}        {keys_::{{ prop.accessor_name }}, static_cast<uint16_t>(offsetof({{ parent_type }}, {{ prop.accessor_name }})), ::note::ReqFieldType::Double},
+{% elif prop.cpp_type == "note::string_view" %}
+{{ indent }}        {keys_::{{ prop.accessor_name }}, static_cast<uint16_t>(offsetof({{ parent_type }}, {{ prop.accessor_name }})), ::note::ReqFieldType::String},
+{% endif %}
+{% endfor %}
+{{ indent }}    };
+#pragma GCC diagnostic pop
+{{ indent }}    return table_;
+{{ indent }}}
+{% endif %}
 {{ indent }}void build(JsonBuilder& b) const {
 {% for imp in op.implicit_fields %}
 {{ indent }}    note::add_flash(b, note::flash(keys_::{{ imp.wire_name | replace(".", "_") }}), {{ imp.cpp_literal }});
@@ -906,12 +936,17 @@ namespace note::api {
 {{ indent }}    } else {
 {{ indent }}        note::add_flash(b, note::flash(keys_::{{ prop.accessor_name }}), "{{ op.mode_prefix }}");
 {{ indent }}    }
+{% elif prop in simple_req_props %}
+{# Handled by generic_build below #}
 {% else %}
 {{ indent }}    if ({{ prop.accessor_name }}) note::add_flash(b, note::flash(keys_::{{ prop.accessor_name }}), *{{ prop.accessor_name }});
 {% endif %}
 {{ version_guard_end(prop.version_guard) -}}
 {% endif %}
 {% endfor %}
+{% if simple_req_props %}
+{{ indent }}    ::note::generic_build(b, this, req_field_descs_ptr_(), req_field_count_);
+{% endif %}
 #if NOTE_EXTRAS
 {{ indent }}    for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
 {{ indent }}        std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },

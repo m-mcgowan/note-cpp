@@ -8,6 +8,7 @@
 #if NOTE_EXTRAS
 #include <note/dyn_field.hpp>
 #endif
+#include <note/generic_builder.hpp>
 #include <note/generic_sink.hpp>
 #include <note/notecard.hpp>
 #include <note/arena.hpp>
@@ -164,14 +165,24 @@ struct CardMotionTrack {
         return send_fn_(nc_, fn_, &build_);
     }
 
+    static constexpr uint8_t req_field_count_ = 7;
+    static const ::note::ReqFieldDesc* req_field_descs_ptr_() {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+        static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
+            {keys_::count, static_cast<uint16_t>(offsetof(CardMotionTrack, count)), ::note::ReqFieldType::Int32},
+            {keys_::file, static_cast<uint16_t>(offsetof(CardMotionTrack, file)), ::note::ReqFieldType::String},
+            {keys_::minutes, static_cast<uint16_t>(offsetof(CardMotionTrack, minutes)), ::note::ReqFieldType::Int32},
+            {keys_::now, static_cast<uint16_t>(offsetof(CardMotionTrack, now)), ::note::ReqFieldType::Bool},
+            {keys_::start, static_cast<uint16_t>(offsetof(CardMotionTrack, start)), ::note::ReqFieldType::Bool},
+            {keys_::stop, static_cast<uint16_t>(offsetof(CardMotionTrack, stop)), ::note::ReqFieldType::Bool},
+            {keys_::threshold, static_cast<uint16_t>(offsetof(CardMotionTrack, threshold)), ::note::ReqFieldType::Int32},
+        };
+#pragma GCC diagnostic pop
+        return table_;
+    }
     void build(JsonBuilder& b) const {
-        if (count) note::add_flash(b, note::flash(keys_::count), *count);
-        if (file) note::add_flash(b, note::flash(keys_::file), *file);
-        if (minutes) note::add_flash(b, note::flash(keys_::minutes), *minutes);
-        if (now) note::add_flash(b, note::flash(keys_::now), *now);
-        if (start) note::add_flash(b, note::flash(keys_::start), *start);
-        if (stop) note::add_flash(b, note::flash(keys_::stop), *stop);
-        if (threshold) note::add_flash(b, note::flash(keys_::threshold), *threshold);
+        ::note::generic_build(b, this, req_field_descs_ptr_(), req_field_count_);
 #if NOTE_EXTRAS
         for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
             std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },

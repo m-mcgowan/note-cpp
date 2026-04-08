@@ -8,6 +8,7 @@
 #if NOTE_EXTRAS
 #include <note/dyn_field.hpp>
 #endif
+#include <note/generic_builder.hpp>
 #include <note/generic_sink.hpp>
 #include <note/notecard.hpp>
 #include <note/arena.hpp>
@@ -476,28 +477,39 @@ struct HubSet {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+    static constexpr uint8_t req_field_count_ = 11;
+    static const ::note::ReqFieldDesc* req_field_descs_ptr_() {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+        static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
+            {keys_::align, static_cast<uint16_t>(offsetof(HubSet, align)), ::note::ReqFieldType::Bool},
+            {keys_::duration, static_cast<uint16_t>(offsetof(HubSet, duration)), ::note::ReqFieldType::Int32},
+            {keys_::host, static_cast<uint16_t>(offsetof(HubSet, host)), ::note::ReqFieldType::String},
+            {keys_::inbound, static_cast<uint16_t>(offsetof(HubSet, inbound)), ::note::ReqFieldType::Int32},
+            {keys_::mode, static_cast<uint16_t>(offsetof(HubSet, mode)), ::note::ReqFieldType::String},
+            {keys_::outbound, static_cast<uint16_t>(offsetof(HubSet, outbound)), ::note::ReqFieldType::Int32},
+            {keys_::product, static_cast<uint16_t>(offsetof(HubSet, product)), ::note::ReqFieldType::String},
+            {keys_::sn, static_cast<uint16_t>(offsetof(HubSet, sn)), ::note::ReqFieldType::String},
+            {keys_::sync, static_cast<uint16_t>(offsetof(HubSet, sync)), ::note::ReqFieldType::Bool},
+            {keys_::vinbound, static_cast<uint16_t>(offsetof(HubSet, vinbound)), ::note::ReqFieldType::String},
+            {keys_::voutbound, static_cast<uint16_t>(offsetof(HubSet, voutbound)), ::note::ReqFieldType::String},
+        };
+#pragma GCC diagnostic pop
+        return table_;
+    }
     void build(JsonBuilder& b) const {
-        if (align) note::add_flash(b, note::flash(keys_::align), *align);
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
         if (details) note::add_flash(b, note::flash(keys_::details), *details);
 #endif
-        if (duration) note::add_flash(b, note::flash(keys_::duration), *duration);
-        if (host) note::add_flash(b, note::flash(keys_::host), *host);
-        if (inbound) note::add_flash(b, note::flash(keys_::inbound), *inbound);
-        if (mode) note::add_flash(b, note::flash(keys_::mode), *mode);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
         if (off) note::add_flash(b, note::flash(keys_::off), *off);
 #endif
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
         if (on) note::add_flash(b, note::flash(keys_::on), *on);
 #endif
-        if (outbound) note::add_flash(b, note::flash(keys_::outbound), *outbound);
-        if (product) note::add_flash(b, note::flash(keys_::product), *product);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
         if (seconds) note::add_flash(b, note::flash(keys_::seconds), *seconds);
 #endif
-        if (sn) note::add_flash(b, note::flash(keys_::sn), *sn);
-        if (sync) note::add_flash(b, note::flash(keys_::sync), *sync);
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
         if (umin) note::add_flash(b, note::flash(keys_::umin), *umin);
 #endif
@@ -510,8 +522,7 @@ struct HubSet {
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 3, 1) || !defined(NOTE_API_STRICT)
         if (version) note::add_flash(b, note::flash(keys_::version), *version);
 #endif
-        if (vinbound) note::add_flash(b, note::flash(keys_::vinbound), *vinbound);
-        if (voutbound) note::add_flash(b, note::flash(keys_::voutbound), *voutbound);
+        ::note::generic_build(b, this, req_field_descs_ptr_(), req_field_count_);
 #if NOTE_EXTRAS
         for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
             std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },

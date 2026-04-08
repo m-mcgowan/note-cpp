@@ -8,6 +8,7 @@
 #if NOTE_EXTRAS
 #include <note/dyn_field.hpp>
 #endif
+#include <note/generic_builder.hpp>
 #include <note/generic_sink.hpp>
 #include <note/notecard.hpp>
 #include <note/arena.hpp>
@@ -450,18 +451,28 @@ struct CardLocationMode {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+        static constexpr uint8_t req_field_count_ = 8;
+        static const ::note::ReqFieldDesc* req_field_descs_ptr_() {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+            static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
+                {keys_::delete_, static_cast<uint16_t>(offsetof(CardLocationMode::Get, delete_)), ::note::ReqFieldType::Bool},
+                {keys_::lat, static_cast<uint16_t>(offsetof(CardLocationMode::Get, lat)), ::note::ReqFieldType::Double},
+                {keys_::lon, static_cast<uint16_t>(offsetof(CardLocationMode::Get, lon)), ::note::ReqFieldType::Double},
+                {keys_::max, static_cast<uint16_t>(offsetof(CardLocationMode::Get, max)), ::note::ReqFieldType::Int32},
+                {keys_::minutes, static_cast<uint16_t>(offsetof(CardLocationMode::Get, minutes)), ::note::ReqFieldType::Int32},
+                {keys_::mode, static_cast<uint16_t>(offsetof(CardLocationMode::Get, mode)), ::note::ReqFieldType::String},
+                {keys_::seconds, static_cast<uint16_t>(offsetof(CardLocationMode::Get, seconds)), ::note::ReqFieldType::Int32},
+                {keys_::vseconds, static_cast<uint16_t>(offsetof(CardLocationMode::Get, vseconds)), ::note::ReqFieldType::String},
+            };
+#pragma GCC diagnostic pop
+            return table_;
+        }
         void build(JsonBuilder& b) const {
-            if (delete_) note::add_flash(b, note::flash(keys_::delete_), *delete_);
-            if (lat) note::add_flash(b, note::flash(keys_::lat), *lat);
-            if (lon) note::add_flash(b, note::flash(keys_::lon), *lon);
-            if (max) note::add_flash(b, note::flash(keys_::max), *max);
-            if (minutes) note::add_flash(b, note::flash(keys_::minutes), *minutes);
-            if (mode) note::add_flash(b, note::flash(keys_::mode), *mode);
-            if (seconds) note::add_flash(b, note::flash(keys_::seconds), *seconds);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
             if (threshold) note::add_flash(b, note::flash(keys_::threshold), *threshold);
 #endif
-            if (vseconds) note::add_flash(b, note::flash(keys_::vseconds), *vseconds);
+            ::note::generic_build(b, this, req_field_descs_ptr_(), req_field_count_);
 #if NOTE_EXTRAS
             for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
                 std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
@@ -938,18 +949,28 @@ struct CardLocationMode {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+        static constexpr uint8_t req_field_count_ = 8;
+        static const ::note::ReqFieldDesc* req_field_descs_ptr_() {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+            static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
+                {keys_::delete_, static_cast<uint16_t>(offsetof(CardLocationMode::Set, delete_)), ::note::ReqFieldType::Bool},
+                {keys_::lat, static_cast<uint16_t>(offsetof(CardLocationMode::Set, lat)), ::note::ReqFieldType::Double},
+                {keys_::lon, static_cast<uint16_t>(offsetof(CardLocationMode::Set, lon)), ::note::ReqFieldType::Double},
+                {keys_::max, static_cast<uint16_t>(offsetof(CardLocationMode::Set, max)), ::note::ReqFieldType::Int32},
+                {keys_::minutes, static_cast<uint16_t>(offsetof(CardLocationMode::Set, minutes)), ::note::ReqFieldType::Int32},
+                {keys_::mode, static_cast<uint16_t>(offsetof(CardLocationMode::Set, mode)), ::note::ReqFieldType::String},
+                {keys_::seconds, static_cast<uint16_t>(offsetof(CardLocationMode::Set, seconds)), ::note::ReqFieldType::Int32},
+                {keys_::vseconds, static_cast<uint16_t>(offsetof(CardLocationMode::Set, vseconds)), ::note::ReqFieldType::String},
+            };
+#pragma GCC diagnostic pop
+            return table_;
+        }
         void build(JsonBuilder& b) const {
-            if (delete_) note::add_flash(b, note::flash(keys_::delete_), *delete_);
-            if (lat) note::add_flash(b, note::flash(keys_::lat), *lat);
-            if (lon) note::add_flash(b, note::flash(keys_::lon), *lon);
-            if (max) note::add_flash(b, note::flash(keys_::max), *max);
-            if (minutes) note::add_flash(b, note::flash(keys_::minutes), *minutes);
-            if (mode) note::add_flash(b, note::flash(keys_::mode), *mode);
-            if (seconds) note::add_flash(b, note::flash(keys_::seconds), *seconds);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
             if (threshold) note::add_flash(b, note::flash(keys_::threshold), *threshold);
 #endif
-            if (vseconds) note::add_flash(b, note::flash(keys_::vseconds), *vseconds);
+            ::note::generic_build(b, this, req_field_descs_ptr_(), req_field_count_);
 #if NOTE_EXTRAS
             for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
                 std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
@@ -1244,12 +1265,22 @@ struct CardLocationMode {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+        static constexpr uint8_t req_field_count_ = 1;
+        static const ::note::ReqFieldDesc* req_field_descs_ptr_() {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+            static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
+                {keys_::vseconds, static_cast<uint16_t>(offsetof(CardLocationMode::Continuous, vseconds)), ::note::ReqFieldType::String},
+            };
+#pragma GCC diagnostic pop
+            return table_;
+        }
         void build(JsonBuilder& b) const {
             note::add_flash(b, note::flash(keys_::mode), "continuous");
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
             if (threshold) note::add_flash(b, note::flash(keys_::threshold), *threshold);
 #endif
-            if (vseconds) note::add_flash(b, note::flash(keys_::vseconds), *vseconds);
+            ::note::generic_build(b, this, req_field_descs_ptr_(), req_field_count_);
 #if NOTE_EXTRAS
             for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
                 std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
@@ -1633,17 +1664,27 @@ struct CardLocationMode {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+        static constexpr uint8_t req_field_count_ = 6;
+        static const ::note::ReqFieldDesc* req_field_descs_ptr_() {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+            static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
+                {keys_::lat, static_cast<uint16_t>(offsetof(CardLocationMode::Periodic, lat)), ::note::ReqFieldType::Double},
+                {keys_::lon, static_cast<uint16_t>(offsetof(CardLocationMode::Periodic, lon)), ::note::ReqFieldType::Double},
+                {keys_::max, static_cast<uint16_t>(offsetof(CardLocationMode::Periodic, max)), ::note::ReqFieldType::Int32},
+                {keys_::minutes, static_cast<uint16_t>(offsetof(CardLocationMode::Periodic, minutes)), ::note::ReqFieldType::Int32},
+                {keys_::seconds, static_cast<uint16_t>(offsetof(CardLocationMode::Periodic, seconds)), ::note::ReqFieldType::Int32},
+                {keys_::vseconds, static_cast<uint16_t>(offsetof(CardLocationMode::Periodic, vseconds)), ::note::ReqFieldType::String},
+            };
+#pragma GCC diagnostic pop
+            return table_;
+        }
         void build(JsonBuilder& b) const {
             note::add_flash(b, note::flash(keys_::mode), "periodic");
-            if (lat) note::add_flash(b, note::flash(keys_::lat), *lat);
-            if (lon) note::add_flash(b, note::flash(keys_::lon), *lon);
-            if (max) note::add_flash(b, note::flash(keys_::max), *max);
-            if (minutes) note::add_flash(b, note::flash(keys_::minutes), *minutes);
-            if (seconds) note::add_flash(b, note::flash(keys_::seconds), *seconds);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
             if (threshold) note::add_flash(b, note::flash(keys_::threshold), *threshold);
 #endif
-            if (vseconds) note::add_flash(b, note::flash(keys_::vseconds), *vseconds);
+            ::note::generic_build(b, this, req_field_descs_ptr_(), req_field_count_);
 #if NOTE_EXTRAS
             for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
                 std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
@@ -1895,10 +1936,20 @@ struct CardLocationMode {
             return send_fn_(nc_, fn_, &build_);
         }
 
+        static constexpr uint8_t req_field_count_ = 2;
+        static const ::note::ReqFieldDesc* req_field_descs_ptr_() {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+            static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
+                {keys_::lat, static_cast<uint16_t>(offsetof(CardLocationMode::Fixed, lat)), ::note::ReqFieldType::Double},
+                {keys_::lon, static_cast<uint16_t>(offsetof(CardLocationMode::Fixed, lon)), ::note::ReqFieldType::Double},
+            };
+#pragma GCC diagnostic pop
+            return table_;
+        }
         void build(JsonBuilder& b) const {
             note::add_flash(b, note::flash(keys_::mode), "fixed");
-            if (lat) note::add_flash(b, note::flash(keys_::lat), *lat);
-            if (lon) note::add_flash(b, note::flash(keys_::lon), *lon);
+            ::note::generic_build(b, this, req_field_descs_ptr_(), req_field_count_);
 #if NOTE_EXTRAS
             for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
                 std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
@@ -2336,18 +2387,28 @@ struct CardLocationMode {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+        static constexpr uint8_t req_field_count_ = 7;
+        static const ::note::ReqFieldDesc* req_field_descs_ptr_() {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+            static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
+                {keys_::lat, static_cast<uint16_t>(offsetof(CardLocationMode::Remove, lat)), ::note::ReqFieldType::Double},
+                {keys_::lon, static_cast<uint16_t>(offsetof(CardLocationMode::Remove, lon)), ::note::ReqFieldType::Double},
+                {keys_::max, static_cast<uint16_t>(offsetof(CardLocationMode::Remove, max)), ::note::ReqFieldType::Int32},
+                {keys_::minutes, static_cast<uint16_t>(offsetof(CardLocationMode::Remove, minutes)), ::note::ReqFieldType::Int32},
+                {keys_::mode, static_cast<uint16_t>(offsetof(CardLocationMode::Remove, mode)), ::note::ReqFieldType::String},
+                {keys_::seconds, static_cast<uint16_t>(offsetof(CardLocationMode::Remove, seconds)), ::note::ReqFieldType::Int32},
+                {keys_::vseconds, static_cast<uint16_t>(offsetof(CardLocationMode::Remove, vseconds)), ::note::ReqFieldType::String},
+            };
+#pragma GCC diagnostic pop
+            return table_;
+        }
         void build(JsonBuilder& b) const {
             note::add_flash(b, note::flash(keys_::delete_), true);
-            if (lat) note::add_flash(b, note::flash(keys_::lat), *lat);
-            if (lon) note::add_flash(b, note::flash(keys_::lon), *lon);
-            if (max) note::add_flash(b, note::flash(keys_::max), *max);
-            if (minutes) note::add_flash(b, note::flash(keys_::minutes), *minutes);
-            if (mode) note::add_flash(b, note::flash(keys_::mode), *mode);
-            if (seconds) note::add_flash(b, note::flash(keys_::seconds), *seconds);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
             if (threshold) note::add_flash(b, note::flash(keys_::threshold), *threshold);
 #endif
-            if (vseconds) note::add_flash(b, note::flash(keys_::vseconds), *vseconds);
+            ::note::generic_build(b, this, req_field_descs_ptr_(), req_field_count_);
 #if NOTE_EXTRAS
             for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
                 std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },

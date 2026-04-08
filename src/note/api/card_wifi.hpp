@@ -8,6 +8,7 @@
 #if NOTE_EXTRAS
 #include <note/dyn_field.hpp>
 #endif
+#include <note/generic_builder.hpp>
 #include <note/generic_sink.hpp>
 #include <note/notecard.hpp>
 #include <note/arena.hpp>
@@ -301,15 +302,25 @@ struct CardWifi {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+    static constexpr uint8_t req_field_count_ = 5;
+    static const ::note::ReqFieldDesc* req_field_descs_ptr_() {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+        static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
+            {keys_::name, static_cast<uint16_t>(offsetof(CardWifi, name)), ::note::ReqFieldType::String},
+            {keys_::org, static_cast<uint16_t>(offsetof(CardWifi, org)), ::note::ReqFieldType::String},
+            {keys_::password, static_cast<uint16_t>(offsetof(CardWifi, password)), ::note::ReqFieldType::String},
+            {keys_::ssid, static_cast<uint16_t>(offsetof(CardWifi, ssid)), ::note::ReqFieldType::String},
+            {keys_::start, static_cast<uint16_t>(offsetof(CardWifi, start)), ::note::ReqFieldType::Bool},
+        };
+#pragma GCC diagnostic pop
+        return table_;
+    }
     void build(JsonBuilder& b) const {
-        if (name) note::add_flash(b, note::flash(keys_::name), *name);
-        if (org) note::add_flash(b, note::flash(keys_::org), *org);
-        if (password) note::add_flash(b, note::flash(keys_::password), *password);
-        if (ssid) note::add_flash(b, note::flash(keys_::ssid), *ssid);
-        if (start) note::add_flash(b, note::flash(keys_::start), *start);
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 5, 1) || !defined(NOTE_API_STRICT)
         if (text) note::add_flash(b, note::flash(keys_::text), *text);
 #endif
+        ::note::generic_build(b, this, req_field_descs_ptr_(), req_field_count_);
 #if NOTE_EXTRAS
         for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
             std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },

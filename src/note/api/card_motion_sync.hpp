@@ -8,6 +8,7 @@
 #if NOTE_EXTRAS
 #include <note/dyn_field.hpp>
 #endif
+#include <note/generic_builder.hpp>
 #include <note/generic_sink.hpp>
 #include <note/notecard.hpp>
 #include <note/arena.hpp>
@@ -149,12 +150,22 @@ struct CardMotionSync {
         return send_fn_(nc_, fn_, &build_);
     }
 
+    static constexpr uint8_t req_field_count_ = 5;
+    static const ::note::ReqFieldDesc* req_field_descs_ptr_() {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+        static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
+            {keys_::count, static_cast<uint16_t>(offsetof(CardMotionSync, count)), ::note::ReqFieldType::Int32},
+            {keys_::minutes, static_cast<uint16_t>(offsetof(CardMotionSync, minutes)), ::note::ReqFieldType::Int32},
+            {keys_::start, static_cast<uint16_t>(offsetof(CardMotionSync, start)), ::note::ReqFieldType::Bool},
+            {keys_::stop, static_cast<uint16_t>(offsetof(CardMotionSync, stop)), ::note::ReqFieldType::Bool},
+            {keys_::threshold, static_cast<uint16_t>(offsetof(CardMotionSync, threshold)), ::note::ReqFieldType::Int32},
+        };
+#pragma GCC diagnostic pop
+        return table_;
+    }
     void build(JsonBuilder& b) const {
-        if (count) note::add_flash(b, note::flash(keys_::count), *count);
-        if (minutes) note::add_flash(b, note::flash(keys_::minutes), *minutes);
-        if (start) note::add_flash(b, note::flash(keys_::start), *start);
-        if (stop) note::add_flash(b, note::flash(keys_::stop), *stop);
-        if (threshold) note::add_flash(b, note::flash(keys_::threshold), *threshold);
+        ::note::generic_build(b, this, req_field_descs_ptr_(), req_field_count_);
 #if NOTE_EXTRAS
         for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
             std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },

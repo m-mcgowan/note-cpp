@@ -10,6 +10,7 @@
 #if NOTE_EXTRAS
 #include <note/dyn_field.hpp>
 #endif
+#include <note/generic_builder.hpp>
 #include <note/generic_sink.hpp>
 #include <note/notecard.hpp>
 #include <note/arena.hpp>
@@ -399,19 +400,29 @@ struct WebGet {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+    static constexpr uint8_t req_field_count_ = 8;
+    static const ::note::ReqFieldDesc* req_field_descs_ptr_() {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+        static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
+            {keys_::content, static_cast<uint16_t>(offsetof(WebGet, content)), ::note::ReqFieldType::String},
+            {keys_::file, static_cast<uint16_t>(offsetof(WebGet, file)), ::note::ReqFieldType::String},
+            {keys_::max, static_cast<uint16_t>(offsetof(WebGet, max)), ::note::ReqFieldType::Int32},
+            {keys_::name, static_cast<uint16_t>(offsetof(WebGet, name)), ::note::ReqFieldType::String},
+            {keys_::noteId, static_cast<uint16_t>(offsetof(WebGet, noteId)), ::note::ReqFieldType::String},
+            {keys_::offset, static_cast<uint16_t>(offsetof(WebGet, offset)), ::note::ReqFieldType::Int32},
+            {keys_::route, static_cast<uint16_t>(offsetof(WebGet, route)), ::note::ReqFieldType::String},
+            {keys_::seconds, static_cast<uint16_t>(offsetof(WebGet, seconds)), ::note::ReqFieldType::Int32},
+        };
+#pragma GCC diagnostic pop
+        return table_;
+    }
     void build(JsonBuilder& b) const {
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
         if (binary) note::add_flash(b, note::flash(keys_::binary), *binary);
 #endif
         body.write_to(b);
-        if (content) note::add_flash(b, note::flash(keys_::content), *content);
-        if (file) note::add_flash(b, note::flash(keys_::file), *file);
-        if (max) note::add_flash(b, note::flash(keys_::max), *max);
-        if (name) note::add_flash(b, note::flash(keys_::name), *name);
-        if (noteId) note::add_flash(b, note::flash(keys_::noteId), *noteId);
-        if (offset) note::add_flash(b, note::flash(keys_::offset), *offset);
-        if (route) note::add_flash(b, note::flash(keys_::route), *route);
-        if (seconds) note::add_flash(b, note::flash(keys_::seconds), *seconds);
+        ::note::generic_build(b, this, req_field_descs_ptr_(), req_field_count_);
 #if NOTE_EXTRAS
         for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
             std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },

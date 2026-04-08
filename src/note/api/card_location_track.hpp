@@ -8,6 +8,7 @@
 #if NOTE_EXTRAS
 #include <note/dyn_field.hpp>
 #endif
+#include <note/generic_builder.hpp>
 #include <note/generic_sink.hpp>
 #include <note/notecard.hpp>
 #include <note/arena.hpp>
@@ -334,16 +335,26 @@ struct CardLocationTrack {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+    static constexpr uint8_t req_field_count_ = 6;
+    static const ::note::ReqFieldDesc* req_field_descs_ptr_() {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+        static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
+            {keys_::file, static_cast<uint16_t>(offsetof(CardLocationTrack, file)), ::note::ReqFieldType::String},
+            {keys_::heartbeat, static_cast<uint16_t>(offsetof(CardLocationTrack, heartbeat)), ::note::ReqFieldType::Bool},
+            {keys_::hours, static_cast<uint16_t>(offsetof(CardLocationTrack, hours)), ::note::ReqFieldType::Int32},
+            {keys_::start, static_cast<uint16_t>(offsetof(CardLocationTrack, start)), ::note::ReqFieldType::Bool},
+            {keys_::stop, static_cast<uint16_t>(offsetof(CardLocationTrack, stop)), ::note::ReqFieldType::Bool},
+            {keys_::sync, static_cast<uint16_t>(offsetof(CardLocationTrack, sync)), ::note::ReqFieldType::Bool},
+        };
+#pragma GCC diagnostic pop
+        return table_;
+    }
     void build(JsonBuilder& b) const {
-        if (file) note::add_flash(b, note::flash(keys_::file), *file);
-        if (heartbeat) note::add_flash(b, note::flash(keys_::heartbeat), *heartbeat);
-        if (hours) note::add_flash(b, note::flash(keys_::hours), *hours);
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 5, 2) || !defined(NOTE_API_STRICT)
         if (payload) note::add_flash(b, note::flash(keys_::payload), *payload);
 #endif
-        if (start) note::add_flash(b, note::flash(keys_::start), *start);
-        if (stop) note::add_flash(b, note::flash(keys_::stop), *stop);
-        if (sync) note::add_flash(b, note::flash(keys_::sync), *sync);
+        ::note::generic_build(b, this, req_field_descs_ptr_(), req_field_count_);
 #if NOTE_EXTRAS
         for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
             std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },

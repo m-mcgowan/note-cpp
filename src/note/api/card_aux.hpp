@@ -8,6 +8,7 @@
 #if NOTE_EXTRAS
 #include <note/dyn_field.hpp>
 #endif
+#include <note/generic_builder.hpp>
 #include <note/generic_sink.hpp>
 #include <note/notecard.hpp>
 #include <note/arena.hpp>
@@ -567,6 +568,21 @@ struct CardAux {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+    static constexpr uint8_t req_field_count_ = 6;
+    static const ::note::ReqFieldDesc* req_field_descs_ptr_() {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+        static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
+            {keys_::gps, static_cast<uint16_t>(offsetof(CardAux, gps)), ::note::ReqFieldType::Bool},
+            {keys_::max, static_cast<uint16_t>(offsetof(CardAux, max)), ::note::ReqFieldType::Int32},
+            {keys_::mode, static_cast<uint16_t>(offsetof(CardAux, mode)), ::note::ReqFieldType::String},
+            {keys_::offset, static_cast<uint16_t>(offsetof(CardAux, offset)), ::note::ReqFieldType::Int32},
+            {keys_::seconds, static_cast<uint16_t>(offsetof(CardAux, seconds)), ::note::ReqFieldType::Int32},
+            {keys_::start, static_cast<uint16_t>(offsetof(CardAux, start)), ::note::ReqFieldType::Bool},
+        };
+#pragma GCC diagnostic pop
+        return table_;
+    }
     void build(JsonBuilder& b) const {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1) || !defined(NOTE_API_STRICT)
         if (connected) note::add_flash(b, note::flash(keys_::connected), *connected);
@@ -577,28 +593,23 @@ struct CardAux {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1) || !defined(NOTE_API_STRICT)
         if (file) note::add_flash(b, note::flash(keys_::file), *file);
 #endif
-        if (gps) note::add_flash(b, note::flash(keys_::gps), *gps);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
         if (limit) note::add_flash(b, note::flash(keys_::limit), *limit);
 #endif
-        if (max) note::add_flash(b, note::flash(keys_::max), *max);
-        if (mode) note::add_flash(b, note::flash(keys_::mode), *mode);
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
         if (ms) note::add_flash(b, note::flash(keys_::ms), *ms);
 #endif
-        if (offset) note::add_flash(b, note::flash(keys_::offset), *offset);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
         if (rate) note::add_flash(b, note::flash(keys_::rate), *rate);
 #endif
-        if (seconds) note::add_flash(b, note::flash(keys_::seconds), *seconds);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
         if (sensitivity) note::add_flash(b, note::flash(keys_::sensitivity), *sensitivity);
 #endif
-        if (start) note::add_flash(b, note::flash(keys_::start), *start);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
         if (sync) note::add_flash(b, note::flash(keys_::sync), *sync);
 #endif
         if (usage) usage.write_to(b, "usage");
+        ::note::generic_build(b, this, req_field_descs_ptr_(), req_field_count_);
 #if NOTE_EXTRAS
         for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
             std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },

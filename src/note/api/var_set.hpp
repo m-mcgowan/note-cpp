@@ -8,6 +8,7 @@
 #if NOTE_EXTRAS
 #include <note/dyn_field.hpp>
 #endif
+#include <note/generic_builder.hpp>
 #include <note/generic_sink.hpp>
 #include <note/notecard.hpp>
 #include <note/arena.hpp>
@@ -162,15 +163,25 @@ struct VarSet {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+    static constexpr uint8_t req_field_count_ = 5;
+    static const ::note::ReqFieldDesc* req_field_descs_ptr_() {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+        static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
+            {keys_::flag, static_cast<uint16_t>(offsetof(VarSet, flag)), ::note::ReqFieldType::Bool},
+            {keys_::name, static_cast<uint16_t>(offsetof(VarSet, name)), ::note::ReqFieldType::String},
+            {keys_::sync, static_cast<uint16_t>(offsetof(VarSet, sync)), ::note::ReqFieldType::Bool},
+            {keys_::text, static_cast<uint16_t>(offsetof(VarSet, text)), ::note::ReqFieldType::String},
+            {keys_::value, static_cast<uint16_t>(offsetof(VarSet, value)), ::note::ReqFieldType::Double},
+        };
+#pragma GCC diagnostic pop
+        return table_;
+    }
     void build(JsonBuilder& b) const {
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 3, 1) || !defined(NOTE_API_STRICT)
         if (file) note::add_flash(b, note::flash(keys_::file), *file);
 #endif
-        if (flag) note::add_flash(b, note::flash(keys_::flag), *flag);
-        if (name) note::add_flash(b, note::flash(keys_::name), *name);
-        if (sync) note::add_flash(b, note::flash(keys_::sync), *sync);
-        if (text) note::add_flash(b, note::flash(keys_::text), *text);
-        if (value) note::add_flash(b, note::flash(keys_::value), *value);
+        ::note::generic_build(b, this, req_field_descs_ptr_(), req_field_count_);
 #if NOTE_EXTRAS
         for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
             std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },

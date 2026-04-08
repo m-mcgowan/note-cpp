@@ -8,6 +8,7 @@
 #if NOTE_EXTRAS
 #include <note/dyn_field.hpp>
 #endif
+#include <note/generic_builder.hpp>
 #include <note/generic_sink.hpp>
 #include <note/notecard.hpp>
 #include <note/arena.hpp>
@@ -310,11 +311,21 @@ struct CardTemp {
             return send_fn_(nc_, fn_, &build_);
         }
 
+        static constexpr uint8_t req_field_count_ = 4;
+        static const ::note::ReqFieldDesc* req_field_descs_ptr_() {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+            static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
+                {keys_::minutes, static_cast<uint16_t>(offsetof(CardTemp::Read, minutes)), ::note::ReqFieldType::Int32},
+                {keys_::status, static_cast<uint16_t>(offsetof(CardTemp::Read, status)), ::note::ReqFieldType::String},
+                {keys_::stop, static_cast<uint16_t>(offsetof(CardTemp::Read, stop)), ::note::ReqFieldType::Bool},
+                {keys_::sync, static_cast<uint16_t>(offsetof(CardTemp::Read, sync)), ::note::ReqFieldType::Bool},
+            };
+#pragma GCC diagnostic pop
+            return table_;
+        }
         void build(JsonBuilder& b) const {
-            if (minutes) note::add_flash(b, note::flash(keys_::minutes), *minutes);
-            if (status) note::add_flash(b, note::flash(keys_::status), *status);
-            if (stop) note::add_flash(b, note::flash(keys_::stop), *stop);
-            if (sync) note::add_flash(b, note::flash(keys_::sync), *sync);
+            ::note::generic_build(b, this, req_field_descs_ptr_(), req_field_count_);
 #if NOTE_EXTRAS
             for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
                 std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
@@ -629,11 +640,21 @@ struct CardTemp {
             return send_fn_(nc_, fn_, &build_);
         }
 
+        static constexpr uint8_t req_field_count_ = 4;
+        static const ::note::ReqFieldDesc* req_field_descs_ptr_() {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+            static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
+                {keys_::minutes, static_cast<uint16_t>(offsetof(CardTemp::Configure, minutes)), ::note::ReqFieldType::Int32},
+                {keys_::status, static_cast<uint16_t>(offsetof(CardTemp::Configure, status)), ::note::ReqFieldType::String},
+                {keys_::stop, static_cast<uint16_t>(offsetof(CardTemp::Configure, stop)), ::note::ReqFieldType::Bool},
+                {keys_::sync, static_cast<uint16_t>(offsetof(CardTemp::Configure, sync)), ::note::ReqFieldType::Bool},
+            };
+#pragma GCC diagnostic pop
+            return table_;
+        }
         void build(JsonBuilder& b) const {
-            if (minutes) note::add_flash(b, note::flash(keys_::minutes), *minutes);
-            if (status) note::add_flash(b, note::flash(keys_::status), *status);
-            if (stop) note::add_flash(b, note::flash(keys_::stop), *stop);
-            if (sync) note::add_flash(b, note::flash(keys_::sync), *sync);
+            ::note::generic_build(b, this, req_field_descs_ptr_(), req_field_count_);
 #if NOTE_EXTRAS
             for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
                 std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
@@ -935,11 +956,21 @@ struct CardTemp {
             return send_fn_(nc_, fn_, &build_);
         }
 
+        static constexpr uint8_t req_field_count_ = 3;
+        static const ::note::ReqFieldDesc* req_field_descs_ptr_() {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+            static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
+                {keys_::minutes, static_cast<uint16_t>(offsetof(CardTemp::Stop, minutes)), ::note::ReqFieldType::Int32},
+                {keys_::status, static_cast<uint16_t>(offsetof(CardTemp::Stop, status)), ::note::ReqFieldType::String},
+                {keys_::sync, static_cast<uint16_t>(offsetof(CardTemp::Stop, sync)), ::note::ReqFieldType::Bool},
+            };
+#pragma GCC diagnostic pop
+            return table_;
+        }
         void build(JsonBuilder& b) const {
-            if (minutes) note::add_flash(b, note::flash(keys_::minutes), *minutes);
-            if (status) note::add_flash(b, note::flash(keys_::status), *status);
             note::add_flash(b, note::flash(keys_::stop), true);
-            if (sync) note::add_flash(b, note::flash(keys_::sync), *sync);
+            ::note::generic_build(b, this, req_field_descs_ptr_(), req_field_count_);
 #if NOTE_EXTRAS
             for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
                 std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },

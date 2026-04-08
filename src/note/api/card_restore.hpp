@@ -8,6 +8,7 @@
 #if NOTE_EXTRAS
 #include <note/dyn_field.hpp>
 #endif
+#include <note/generic_builder.hpp>
 #include <note/generic_sink.hpp>
 #include <note/notecard.hpp>
 #include <note/arena.hpp>
@@ -136,9 +137,19 @@ struct CardRestore {
         return send_fn_(nc_, fn_, &build_);
     }
 
+    static constexpr uint8_t req_field_count_ = 2;
+    static const ::note::ReqFieldDesc* req_field_descs_ptr_() {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+        static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
+            {keys_::connected, static_cast<uint16_t>(offsetof(CardRestore, connected)), ::note::ReqFieldType::Bool},
+            {keys_::delete_, static_cast<uint16_t>(offsetof(CardRestore, delete_)), ::note::ReqFieldType::Bool},
+        };
+#pragma GCC diagnostic pop
+        return table_;
+    }
     void build(JsonBuilder& b) const {
-        if (connected) note::add_flash(b, note::flash(keys_::connected), *connected);
-        if (delete_) note::add_flash(b, note::flash(keys_::delete_), *delete_);
+        ::note::generic_build(b, this, req_field_descs_ptr_(), req_field_count_);
 #if NOTE_EXTRAS
         for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
             std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },

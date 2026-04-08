@@ -8,6 +8,7 @@
 #if NOTE_EXTRAS
 #include <note/dyn_field.hpp>
 #endif
+#include <note/generic_builder.hpp>
 #include <note/generic_sink.hpp>
 #include <note/notecard.hpp>
 #include <note/arena.hpp>
@@ -251,11 +252,21 @@ struct CardContact {
             return send_fn_(nc_, fn_, &build_);
         }
 
+        static constexpr uint8_t req_field_count_ = 4;
+        static const ::note::ReqFieldDesc* req_field_descs_ptr_() {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+            static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
+                {keys_::email, static_cast<uint16_t>(offsetof(CardContact::Get, email)), ::note::ReqFieldType::String},
+                {keys_::name, static_cast<uint16_t>(offsetof(CardContact::Get, name)), ::note::ReqFieldType::String},
+                {keys_::org, static_cast<uint16_t>(offsetof(CardContact::Get, org)), ::note::ReqFieldType::String},
+                {keys_::role, static_cast<uint16_t>(offsetof(CardContact::Get, role)), ::note::ReqFieldType::String},
+            };
+#pragma GCC diagnostic pop
+            return table_;
+        }
         void build(JsonBuilder& b) const {
-            if (email) note::add_flash(b, note::flash(keys_::email), *email);
-            if (name) note::add_flash(b, note::flash(keys_::name), *name);
-            if (org) note::add_flash(b, note::flash(keys_::org), *org);
-            if (role) note::add_flash(b, note::flash(keys_::role), *role);
+            ::note::generic_build(b, this, req_field_descs_ptr_(), req_field_count_);
 #if NOTE_EXTRAS
             for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
                 std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
@@ -510,11 +521,21 @@ struct CardContact {
             return send_fn_(nc_, fn_, &build_);
         }
 
+        static constexpr uint8_t req_field_count_ = 4;
+        static const ::note::ReqFieldDesc* req_field_descs_ptr_() {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+            static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
+                {keys_::email, static_cast<uint16_t>(offsetof(CardContact::Set, email)), ::note::ReqFieldType::String},
+                {keys_::name, static_cast<uint16_t>(offsetof(CardContact::Set, name)), ::note::ReqFieldType::String},
+                {keys_::org, static_cast<uint16_t>(offsetof(CardContact::Set, org)), ::note::ReqFieldType::String},
+                {keys_::role, static_cast<uint16_t>(offsetof(CardContact::Set, role)), ::note::ReqFieldType::String},
+            };
+#pragma GCC diagnostic pop
+            return table_;
+        }
         void build(JsonBuilder& b) const {
-            if (email) note::add_flash(b, note::flash(keys_::email), *email);
-            if (name) note::add_flash(b, note::flash(keys_::name), *name);
-            if (org) note::add_flash(b, note::flash(keys_::org), *org);
-            if (role) note::add_flash(b, note::flash(keys_::role), *role);
+            ::note::generic_build(b, this, req_field_descs_ptr_(), req_field_count_);
 #if NOTE_EXTRAS
             for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
                 std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },

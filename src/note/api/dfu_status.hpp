@@ -10,6 +10,7 @@
 #if NOTE_EXTRAS
 #include <note/dyn_field.hpp>
 #endif
+#include <note/generic_builder.hpp>
 #include <note/generic_sink.hpp>
 #include <note/notecard.hpp>
 #include <note/arena.hpp>
@@ -426,15 +427,25 @@ struct DfuStatus {
         return send_fn_(nc_, fn_, &build_);
     }
 
+    static constexpr uint8_t req_field_count_ = 8;
+    static const ::note::ReqFieldDesc* req_field_descs_ptr_() {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+        static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
+            {keys_::err, static_cast<uint16_t>(offsetof(DfuStatus, err)), ::note::ReqFieldType::String},
+            {keys_::name, static_cast<uint16_t>(offsetof(DfuStatus, name)), ::note::ReqFieldType::String},
+            {keys_::off, static_cast<uint16_t>(offsetof(DfuStatus, off)), ::note::ReqFieldType::Bool},
+            {keys_::on, static_cast<uint16_t>(offsetof(DfuStatus, on)), ::note::ReqFieldType::Bool},
+            {keys_::status, static_cast<uint16_t>(offsetof(DfuStatus, status)), ::note::ReqFieldType::String},
+            {keys_::stop, static_cast<uint16_t>(offsetof(DfuStatus, stop)), ::note::ReqFieldType::Bool},
+            {keys_::version, static_cast<uint16_t>(offsetof(DfuStatus, version)), ::note::ReqFieldType::String},
+            {keys_::vvalue, static_cast<uint16_t>(offsetof(DfuStatus, vvalue)), ::note::ReqFieldType::String},
+        };
+#pragma GCC diagnostic pop
+        return table_;
+    }
     void build(JsonBuilder& b) const {
-        if (err) note::add_flash(b, note::flash(keys_::err), *err);
-        if (name) note::add_flash(b, note::flash(keys_::name), *name);
-        if (off) note::add_flash(b, note::flash(keys_::off), *off);
-        if (on) note::add_flash(b, note::flash(keys_::on), *on);
-        if (status) note::add_flash(b, note::flash(keys_::status), *status);
-        if (stop) note::add_flash(b, note::flash(keys_::stop), *stop);
-        if (version) note::add_flash(b, note::flash(keys_::version), *version);
-        if (vvalue) note::add_flash(b, note::flash(keys_::vvalue), *vvalue);
+        ::note::generic_build(b, this, req_field_descs_ptr_(), req_field_count_);
 #if NOTE_EXTRAS
         for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
             std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },

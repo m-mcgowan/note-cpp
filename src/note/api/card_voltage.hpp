@@ -8,6 +8,7 @@
 #if NOTE_EXTRAS
 #include <note/dyn_field.hpp>
 #endif
+#include <note/generic_builder.hpp>
 #include <note/generic_sink.hpp>
 #include <note/notecard.hpp>
 #include <note/arena.hpp>
@@ -545,24 +546,34 @@ struct CardVoltage {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+        static constexpr uint8_t req_field_count_ = 11;
+        static const ::note::ReqFieldDesc* req_field_descs_ptr_() {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+            static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
+                {keys_::alert, static_cast<uint16_t>(offsetof(CardVoltage::Read, alert)), ::note::ReqFieldType::Bool},
+                {keys_::hours, static_cast<uint16_t>(offsetof(CardVoltage::Read, hours)), ::note::ReqFieldType::Int32},
+                {keys_::mode, static_cast<uint16_t>(offsetof(CardVoltage::Read, mode)), ::note::ReqFieldType::String},
+                {keys_::name, static_cast<uint16_t>(offsetof(CardVoltage::Read, name)), ::note::ReqFieldType::String},
+                {keys_::off, static_cast<uint16_t>(offsetof(CardVoltage::Read, off)), ::note::ReqFieldType::Bool},
+                {keys_::offset, static_cast<uint16_t>(offsetof(CardVoltage::Read, offset)), ::note::ReqFieldType::Int32},
+                {keys_::on, static_cast<uint16_t>(offsetof(CardVoltage::Read, on)), ::note::ReqFieldType::Bool},
+                {keys_::set, static_cast<uint16_t>(offsetof(CardVoltage::Read, set)), ::note::ReqFieldType::Bool},
+                {keys_::sync, static_cast<uint16_t>(offsetof(CardVoltage::Read, sync)), ::note::ReqFieldType::Bool},
+                {keys_::vmax, static_cast<uint16_t>(offsetof(CardVoltage::Read, vmax)), ::note::ReqFieldType::Double},
+                {keys_::vmin, static_cast<uint16_t>(offsetof(CardVoltage::Read, vmin)), ::note::ReqFieldType::Double},
+            };
+#pragma GCC diagnostic pop
+            return table_;
+        }
         void build(JsonBuilder& b) const {
-            if (alert) note::add_flash(b, note::flash(keys_::alert), *alert);
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 2) || !defined(NOTE_API_STRICT)
             if (calibration) note::add_flash(b, note::flash(keys_::calibration), *calibration);
 #endif
-            if (hours) note::add_flash(b, note::flash(keys_::hours), *hours);
-            if (mode) note::add_flash(b, note::flash(keys_::mode), *mode);
-            if (name) note::add_flash(b, note::flash(keys_::name), *name);
-            if (off) note::add_flash(b, note::flash(keys_::off), *off);
-            if (offset) note::add_flash(b, note::flash(keys_::offset), *offset);
-            if (on) note::add_flash(b, note::flash(keys_::on), *on);
-            if (set) note::add_flash(b, note::flash(keys_::set), *set);
-            if (sync) note::add_flash(b, note::flash(keys_::sync), *sync);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
             if (usb) note::add_flash(b, note::flash(keys_::usb), *usb);
 #endif
-            if (vmax) note::add_flash(b, note::flash(keys_::vmax), *vmax);
-            if (vmin) note::add_flash(b, note::flash(keys_::vmin), *vmin);
+            ::note::generic_build(b, this, req_field_descs_ptr_(), req_field_count_);
 #if NOTE_EXTRAS
             for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
                 std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
@@ -1154,24 +1165,34 @@ struct CardVoltage {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+        static constexpr uint8_t req_field_count_ = 11;
+        static const ::note::ReqFieldDesc* req_field_descs_ptr_() {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+            static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
+                {keys_::alert, static_cast<uint16_t>(offsetof(CardVoltage::Configure, alert)), ::note::ReqFieldType::Bool},
+                {keys_::hours, static_cast<uint16_t>(offsetof(CardVoltage::Configure, hours)), ::note::ReqFieldType::Int32},
+                {keys_::mode, static_cast<uint16_t>(offsetof(CardVoltage::Configure, mode)), ::note::ReqFieldType::String},
+                {keys_::name, static_cast<uint16_t>(offsetof(CardVoltage::Configure, name)), ::note::ReqFieldType::String},
+                {keys_::off, static_cast<uint16_t>(offsetof(CardVoltage::Configure, off)), ::note::ReqFieldType::Bool},
+                {keys_::offset, static_cast<uint16_t>(offsetof(CardVoltage::Configure, offset)), ::note::ReqFieldType::Int32},
+                {keys_::on, static_cast<uint16_t>(offsetof(CardVoltage::Configure, on)), ::note::ReqFieldType::Bool},
+                {keys_::set, static_cast<uint16_t>(offsetof(CardVoltage::Configure, set)), ::note::ReqFieldType::Bool},
+                {keys_::sync, static_cast<uint16_t>(offsetof(CardVoltage::Configure, sync)), ::note::ReqFieldType::Bool},
+                {keys_::vmax, static_cast<uint16_t>(offsetof(CardVoltage::Configure, vmax)), ::note::ReqFieldType::Double},
+                {keys_::vmin, static_cast<uint16_t>(offsetof(CardVoltage::Configure, vmin)), ::note::ReqFieldType::Double},
+            };
+#pragma GCC diagnostic pop
+            return table_;
+        }
         void build(JsonBuilder& b) const {
-            if (alert) note::add_flash(b, note::flash(keys_::alert), *alert);
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 2) || !defined(NOTE_API_STRICT)
             if (calibration) note::add_flash(b, note::flash(keys_::calibration), *calibration);
 #endif
-            if (hours) note::add_flash(b, note::flash(keys_::hours), *hours);
-            if (mode) note::add_flash(b, note::flash(keys_::mode), *mode);
-            if (name) note::add_flash(b, note::flash(keys_::name), *name);
-            if (off) note::add_flash(b, note::flash(keys_::off), *off);
-            if (offset) note::add_flash(b, note::flash(keys_::offset), *offset);
-            if (on) note::add_flash(b, note::flash(keys_::on), *on);
-            if (set) note::add_flash(b, note::flash(keys_::set), *set);
-            if (sync) note::add_flash(b, note::flash(keys_::sync), *sync);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
             if (usb) note::add_flash(b, note::flash(keys_::usb), *usb);
 #endif
-            if (vmax) note::add_flash(b, note::flash(keys_::vmax), *vmax);
-            if (vmin) note::add_flash(b, note::flash(keys_::vmin), *vmin);
+            ::note::generic_build(b, this, req_field_descs_ptr_(), req_field_count_);
 #if NOTE_EXTRAS
             for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
                 std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },

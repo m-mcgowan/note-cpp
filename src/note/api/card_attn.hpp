@@ -8,6 +8,7 @@
 #if NOTE_EXTRAS
 #include <note/dyn_field.hpp>
 #endif
+#include <note/generic_builder.hpp>
 #include <note/generic_sink.hpp>
 #include <note/notecard.hpp>
 #include <note/arena.hpp>
@@ -521,19 +522,29 @@ struct CardAttn {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+        static constexpr uint8_t req_field_count_ = 5;
+        static const ::note::ReqFieldDesc* req_field_descs_ptr_() {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+            static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
+                {keys_::mode, static_cast<uint16_t>(offsetof(CardAttn::Request, mode)), ::note::ReqFieldType::String},
+                {keys_::on, static_cast<uint16_t>(offsetof(CardAttn::Request, on)), ::note::ReqFieldType::Bool},
+                {keys_::payload, static_cast<uint16_t>(offsetof(CardAttn::Request, payload)), ::note::ReqFieldType::String},
+                {keys_::seconds, static_cast<uint16_t>(offsetof(CardAttn::Request, seconds)), ::note::ReqFieldType::Int32},
+                {keys_::start, static_cast<uint16_t>(offsetof(CardAttn::Request, start)), ::note::ReqFieldType::Bool},
+            };
+#pragma GCC diagnostic pop
+            return table_;
+        }
         void build(JsonBuilder& b) const {
             if (files) files.write_to(b, "files");
-            if (mode) note::add_flash(b, note::flash(keys_::mode), *mode);
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
             if (off) note::add_flash(b, note::flash(keys_::off), *off);
 #endif
-            if (on) note::add_flash(b, note::flash(keys_::on), *on);
-            if (payload) note::add_flash(b, note::flash(keys_::payload), *payload);
-            if (seconds) note::add_flash(b, note::flash(keys_::seconds), *seconds);
-            if (start) note::add_flash(b, note::flash(keys_::start), *start);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
             if (verify) note::add_flash(b, note::flash(keys_::verify), *verify);
 #endif
+            ::note::generic_build(b, this, req_field_descs_ptr_(), req_field_count_);
 #if NOTE_EXTRAS
             for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
                 std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
@@ -876,6 +887,17 @@ struct CardAttn {
             return send_fn_(nc_, fn_, &build_);
         }
 
+        static constexpr uint8_t req_field_count_ = 2;
+        static const ::note::ReqFieldDesc* req_field_descs_ptr_() {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+            static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
+                {keys_::on, static_cast<uint16_t>(offsetof(CardAttn::Arm, on)), ::note::ReqFieldType::Bool},
+                {keys_::seconds, static_cast<uint16_t>(offsetof(CardAttn::Arm, seconds)), ::note::ReqFieldType::Int32},
+            };
+#pragma GCC diagnostic pop
+            return table_;
+        }
         void build(JsonBuilder& b) const {
             if (files) files.write_to(b, "files");
             if (triggers) {
@@ -886,8 +908,7 @@ struct CardAttn {
             } else {
                 note::add_flash(b, note::flash(keys_::triggers), "arm");
             }
-            if (on) note::add_flash(b, note::flash(keys_::on), *on);
-            if (seconds) note::add_flash(b, note::flash(keys_::seconds), *seconds);
+            ::note::generic_build(b, this, req_field_descs_ptr_(), req_field_count_);
 #if NOTE_EXTRAS
             for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
                 std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
@@ -1213,6 +1234,17 @@ struct CardAttn {
             return send_fn_(nc_, fn_, &build_);
         }
 
+        static constexpr uint8_t req_field_count_ = 2;
+        static const ::note::ReqFieldDesc* req_field_descs_ptr_() {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+            static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
+                {keys_::on, static_cast<uint16_t>(offsetof(CardAttn::Rearm, on)), ::note::ReqFieldType::Bool},
+                {keys_::seconds, static_cast<uint16_t>(offsetof(CardAttn::Rearm, seconds)), ::note::ReqFieldType::Int32},
+            };
+#pragma GCC diagnostic pop
+            return table_;
+        }
         void build(JsonBuilder& b) const {
             if (files) files.write_to(b, "files");
             if (triggers) {
@@ -1223,8 +1255,7 @@ struct CardAttn {
             } else {
                 note::add_flash(b, note::flash(keys_::triggers), "rearm");
             }
-            if (on) note::add_flash(b, note::flash(keys_::on), *on);
-            if (seconds) note::add_flash(b, note::flash(keys_::seconds), *seconds);
+            ::note::generic_build(b, this, req_field_descs_ptr_(), req_field_count_);
 #if NOTE_EXTRAS
             for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
                 std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
@@ -1340,9 +1371,19 @@ struct CardAttn {
             return send_fn_(nc_, fn_, &build_);
         }
 
+        static constexpr uint8_t req_field_count_ = 1;
+        static const ::note::ReqFieldDesc* req_field_descs_ptr_() {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+            static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
+                {keys_::seconds, static_cast<uint16_t>(offsetof(CardAttn::Watchdog, seconds)), ::note::ReqFieldType::Int32},
+            };
+#pragma GCC diagnostic pop
+            return table_;
+        }
         void build(JsonBuilder& b) const {
             note::add_flash(b, note::flash(keys_::mode), "watchdog");
-            if (seconds) note::add_flash(b, note::flash(keys_::seconds), *seconds);
+            ::note::generic_build(b, this, req_field_descs_ptr_(), req_field_count_);
 #if NOTE_EXTRAS
             for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
                 std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
@@ -1459,10 +1500,20 @@ struct CardAttn {
             return send_fn_(nc_, fn_, &build_);
         }
 
+        static constexpr uint8_t req_field_count_ = 2;
+        static const ::note::ReqFieldDesc* req_field_descs_ptr_() {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+            static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
+                {keys_::payload, static_cast<uint16_t>(offsetof(CardAttn::Sleep, payload)), ::note::ReqFieldType::String},
+                {keys_::seconds, static_cast<uint16_t>(offsetof(CardAttn::Sleep, seconds)), ::note::ReqFieldType::Int32},
+            };
+#pragma GCC diagnostic pop
+            return table_;
+        }
         void build(JsonBuilder& b) const {
             note::add_flash(b, note::flash(keys_::mode), "sleep");
-            if (payload) note::add_flash(b, note::flash(keys_::payload), *payload);
-            if (seconds) note::add_flash(b, note::flash(keys_::seconds), *seconds);
+            ::note::generic_build(b, this, req_field_descs_ptr_(), req_field_count_);
 #if NOTE_EXTRAS
             for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
                 std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },

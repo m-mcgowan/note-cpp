@@ -10,6 +10,7 @@
 #if NOTE_EXTRAS
 #include <note/dyn_field.hpp>
 #endif
+#include <note/generic_builder.hpp>
 #include <note/generic_sink.hpp>
 #include <note/notecard.hpp>
 #include <note/arena.hpp>
@@ -449,18 +450,28 @@ struct NoteTemplate {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+        static constexpr uint8_t req_field_count_ = 3;
+        static const ::note::ReqFieldDesc* req_field_descs_ptr_() {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+            static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
+                {keys_::delete_, static_cast<uint16_t>(offsetof(NoteTemplate::Define, delete_)), ::note::ReqFieldType::Bool},
+                {keys_::length, static_cast<uint16_t>(offsetof(NoteTemplate::Define, length)), ::note::ReqFieldType::Int32},
+                {keys_::port, static_cast<uint16_t>(offsetof(NoteTemplate::Define, port)), ::note::ReqFieldType::Int32},
+            };
+#pragma GCC diagnostic pop
+            return table_;
+        }
         void build(JsonBuilder& b) const {
             body.write_to(b);
-            if (delete_) note::add_flash(b, note::flash(keys_::delete_), *delete_);
             note::add_flash(b, note::flash(keys_::file), file);
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
             if (format) note::add_flash(b, note::flash(keys_::format), *format);
 #endif
-            if (length) note::add_flash(b, note::flash(keys_::length), *length);
-            if (port) note::add_flash(b, note::flash(keys_::port), *port);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
             if (verify) note::add_flash(b, note::flash(keys_::verify), *verify);
 #endif
+            ::note::generic_build(b, this, req_field_descs_ptr_(), req_field_count_);
 #if NOTE_EXTRAS
             for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
                 std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
@@ -948,6 +959,17 @@ struct NoteTemplate {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+        static constexpr uint8_t req_field_count_ = 2;
+        static const ::note::ReqFieldDesc* req_field_descs_ptr_() {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+            static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
+                {keys_::length, static_cast<uint16_t>(offsetof(NoteTemplate::Remove, length)), ::note::ReqFieldType::Int32},
+                {keys_::port, static_cast<uint16_t>(offsetof(NoteTemplate::Remove, port)), ::note::ReqFieldType::Int32},
+            };
+#pragma GCC diagnostic pop
+            return table_;
+        }
         void build(JsonBuilder& b) const {
             body.write_to(b);
             note::add_flash(b, note::flash(keys_::delete_), true);
@@ -955,11 +977,10 @@ struct NoteTemplate {
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
             if (format) note::add_flash(b, note::flash(keys_::format), *format);
 #endif
-            if (length) note::add_flash(b, note::flash(keys_::length), *length);
-            if (port) note::add_flash(b, note::flash(keys_::port), *port);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
             if (verify) note::add_flash(b, note::flash(keys_::verify), *verify);
 #endif
+            ::note::generic_build(b, this, req_field_descs_ptr_(), req_field_count_);
 #if NOTE_EXTRAS
             for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
                 std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },

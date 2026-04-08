@@ -8,6 +8,7 @@
 #if NOTE_EXTRAS
 #include <note/dyn_field.hpp>
 #endif
+#include <note/generic_builder.hpp>
 #include <note/generic_sink.hpp>
 #include <note/notecard.hpp>
 #include <note/arena.hpp>
@@ -215,10 +216,20 @@ struct CardBinaryPut : note::BinarySendMixin {
         return send_fn_(nc_, fn_, &build_);
     }
 
+    static constexpr uint8_t req_field_count_ = 3;
+    static const ::note::ReqFieldDesc* req_field_descs_ptr_() {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+        static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
+            {keys_::cobs, static_cast<uint16_t>(offsetof(CardBinaryPut, cobs)), ::note::ReqFieldType::Int32},
+            {keys_::offset, static_cast<uint16_t>(offsetof(CardBinaryPut, offset)), ::note::ReqFieldType::Int32},
+            {keys_::status, static_cast<uint16_t>(offsetof(CardBinaryPut, status)), ::note::ReqFieldType::String},
+        };
+#pragma GCC diagnostic pop
+        return table_;
+    }
     void build(JsonBuilder& b) const {
-        if (cobs) note::add_flash(b, note::flash(keys_::cobs), *cobs);
-        if (offset) note::add_flash(b, note::flash(keys_::offset), *offset);
-        if (status) note::add_flash(b, note::flash(keys_::status), *status);
+        ::note::generic_build(b, this, req_field_descs_ptr_(), req_field_count_);
 #if NOTE_EXTRAS
         for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
             std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },

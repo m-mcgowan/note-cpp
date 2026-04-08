@@ -8,6 +8,7 @@
 #if NOTE_EXTRAS
 #include <note/dyn_field.hpp>
 #endif
+#include <note/generic_builder.hpp>
 #include <note/generic_sink.hpp>
 #include <note/notecard.hpp>
 #include <note/arena.hpp>
@@ -255,14 +256,24 @@ struct NoteChanges {
             return send_fn_(nc_, fn_, &build_);
         }
 
+        static constexpr uint8_t req_field_count_ = 7;
+        static const ::note::ReqFieldDesc* req_field_descs_ptr_() {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+            static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
+                {keys_::deleted, static_cast<uint16_t>(offsetof(NoteChanges::Peek, deleted)), ::note::ReqFieldType::Bool},
+                {keys_::file, static_cast<uint16_t>(offsetof(NoteChanges::Peek, file)), ::note::ReqFieldType::String},
+                {keys_::max, static_cast<uint16_t>(offsetof(NoteChanges::Peek, max)), ::note::ReqFieldType::Int32},
+                {keys_::reset, static_cast<uint16_t>(offsetof(NoteChanges::Peek, reset)), ::note::ReqFieldType::Bool},
+                {keys_::start, static_cast<uint16_t>(offsetof(NoteChanges::Peek, start)), ::note::ReqFieldType::Bool},
+                {keys_::stop, static_cast<uint16_t>(offsetof(NoteChanges::Peek, stop)), ::note::ReqFieldType::Bool},
+                {keys_::tracker, static_cast<uint16_t>(offsetof(NoteChanges::Peek, tracker)), ::note::ReqFieldType::String},
+            };
+#pragma GCC diagnostic pop
+            return table_;
+        }
         void build(JsonBuilder& b) const {
-            if (deleted) note::add_flash(b, note::flash(keys_::deleted), *deleted);
-            if (file) note::add_flash(b, note::flash(keys_::file), *file);
-            if (max) note::add_flash(b, note::flash(keys_::max), *max);
-            if (reset) note::add_flash(b, note::flash(keys_::reset), *reset);
-            if (start) note::add_flash(b, note::flash(keys_::start), *start);
-            if (stop) note::add_flash(b, note::flash(keys_::stop), *stop);
-            if (tracker) note::add_flash(b, note::flash(keys_::tracker), *tracker);
+            ::note::generic_build(b, this, req_field_descs_ptr_(), req_field_count_);
 #if NOTE_EXTRAS
             for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
                 std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
@@ -531,15 +542,25 @@ struct NoteChanges {
             return send_fn_(nc_, fn_, &build_);
         }
 
+        static constexpr uint8_t req_field_count_ = 6;
+        static const ::note::ReqFieldDesc* req_field_descs_ptr_() {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+            static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
+                {keys_::deleted, static_cast<uint16_t>(offsetof(NoteChanges::Pop, deleted)), ::note::ReqFieldType::Bool},
+                {keys_::max, static_cast<uint16_t>(offsetof(NoteChanges::Pop, max)), ::note::ReqFieldType::Int32},
+                {keys_::reset, static_cast<uint16_t>(offsetof(NoteChanges::Pop, reset)), ::note::ReqFieldType::Bool},
+                {keys_::start, static_cast<uint16_t>(offsetof(NoteChanges::Pop, start)), ::note::ReqFieldType::Bool},
+                {keys_::stop, static_cast<uint16_t>(offsetof(NoteChanges::Pop, stop)), ::note::ReqFieldType::Bool},
+                {keys_::tracker, static_cast<uint16_t>(offsetof(NoteChanges::Pop, tracker)), ::note::ReqFieldType::String},
+            };
+#pragma GCC diagnostic pop
+            return table_;
+        }
         void build(JsonBuilder& b) const {
             note::add_flash(b, note::flash(keys_::delete_), true);
-            if (deleted) note::add_flash(b, note::flash(keys_::deleted), *deleted);
             note::add_flash(b, note::flash(keys_::file), file);
-            if (max) note::add_flash(b, note::flash(keys_::max), *max);
-            if (reset) note::add_flash(b, note::flash(keys_::reset), *reset);
-            if (start) note::add_flash(b, note::flash(keys_::start), *start);
-            if (stop) note::add_flash(b, note::flash(keys_::stop), *stop);
-            if (tracker) note::add_flash(b, note::flash(keys_::tracker), *tracker);
+            ::note::generic_build(b, this, req_field_descs_ptr_(), req_field_count_);
 #if NOTE_EXTRAS
             for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
                 std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },

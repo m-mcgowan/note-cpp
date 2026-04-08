@@ -8,6 +8,7 @@
 #if NOTE_EXTRAS
 #include <note/dyn_field.hpp>
 #endif
+#include <note/generic_builder.hpp>
 #include <note/generic_sink.hpp>
 #include <note/notecard.hpp>
 #include <note/arena.hpp>
@@ -186,14 +187,24 @@ struct CardMotionMode {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+    static constexpr uint8_t req_field_count_ = 4;
+    static const ::note::ReqFieldDesc* req_field_descs_ptr_() {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+        static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
+            {keys_::motion, static_cast<uint16_t>(offsetof(CardMotionMode, motion)), ::note::ReqFieldType::Int32},
+            {keys_::seconds, static_cast<uint16_t>(offsetof(CardMotionMode, seconds)), ::note::ReqFieldType::Int32},
+            {keys_::start, static_cast<uint16_t>(offsetof(CardMotionMode, start)), ::note::ReqFieldType::Bool},
+            {keys_::stop, static_cast<uint16_t>(offsetof(CardMotionMode, stop)), ::note::ReqFieldType::Bool},
+        };
+#pragma GCC diagnostic pop
+        return table_;
+    }
     void build(JsonBuilder& b) const {
-        if (motion) note::add_flash(b, note::flash(keys_::motion), *motion);
-        if (seconds) note::add_flash(b, note::flash(keys_::seconds), *seconds);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1) || !defined(NOTE_API_STRICT)
         if (sensitivity) note::add_flash(b, note::flash(keys_::sensitivity), *sensitivity);
 #endif
-        if (start) note::add_flash(b, note::flash(keys_::start), *start);
-        if (stop) note::add_flash(b, note::flash(keys_::stop), *stop);
+        ::note::generic_build(b, this, req_field_descs_ptr_(), req_field_count_);
 #if NOTE_EXTRAS
         for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
             std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },

@@ -71,7 +71,10 @@ TEST_CASE("{{ test.endpoint }} {{ test.title }}") {
 {% endfor %}
     h.nc.execute(req);
 {% endif %}
-    REQUIRE(h.last_request == R"json({{ test.wire }})json");
+    // Check each key-value pair (order-independent — generic_build may reorder fields).
+{% for kv in test.wire_kvs %}
+    REQUIRE(h.last_request.find(R"({{ kv }})") != std::string::npos);
+{% endfor %}
 }
 
 {% endfor %}

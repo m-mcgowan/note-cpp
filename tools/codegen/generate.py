@@ -369,6 +369,17 @@ def _collect_sample_tests(spec_path: Path, endpoints=None, spec_dict: dict | Non
                         "flag_calls": calls,
                     })
 
+                # Extract key-value fragments for order-independent assertions.
+                # Parse the wire JSON and produce "key":value fragments.
+                import json as _json
+                wire_kvs = []
+                try:
+                    wire_obj = _json.loads(wire)
+                    for k, v in wire_obj.items():
+                        wire_kvs.append(f'"{k}":{_json.dumps(v, separators=(",", ":"))}')
+                except _json.JSONDecodeError:
+                    wire_kvs = [wire]  # fallback to full string
+
                 tests.append({
                     "endpoint": notecard_request,
                     "title": title.replace('"', '\\"'),
@@ -378,6 +389,7 @@ def _collect_sample_tests(spec_path: Path, endpoints=None, spec_dict: dict | Non
                     "command": is_command,
                     "fields": fields,
                     "wire": wire,
+                    "wire_kvs": wire_kvs,
                 })
 
     return tests

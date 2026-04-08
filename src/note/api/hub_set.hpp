@@ -456,13 +456,13 @@ struct HubSet {
     using Response = void;
 
 #if NOTE_SINGLETON
-    /// Singleton void execute — builds JSON inline, calls shared function.
-    static inline Result<void>(*execute_void_fn_)(void*, BuildFn, void*, ::note::detail::NcErrorCapture&);
+    /// Singleton void execute — shared "req" prefix, per-type fields only.
+    static inline Result<void>(*execute_void_fn_)(void*, ::note::string_view, BuildFn, void*, ::note::detail::NcErrorCapture&);
     ApiResult<void> execute() const {
-        auto build_ = [&](JsonBuilder& b_) { b_.add("req", notecard_request); this->build(b_); };
+        auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
         BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
         ::note::detail::NcErrorCapture nc_err_;
-        auto rv_ = execute_void_fn_(nc_, fn_, &build_, nc_err_);
+        auto rv_ = execute_void_fn_(nc_, notecard_request, fn_, &build_, nc_err_);
         if (!rv_) return ::note::Unexpected(rv_.error());
         if (!nc_err_.empty()) return ApiResult<void>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
         return ApiResult<void>{};
@@ -486,52 +486,69 @@ struct HubSet {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-    static constexpr uint8_t req_field_count_ = 11;
-    static const ::note::ReqFieldDesc* req_field_descs_ptr_() {
+    static const ::note::ReqFieldDesc* req_field_descs_ptr_(uint8_t& n_out) {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
         static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
             {keys_::align, static_cast<uint16_t>(offsetof(HubSet, align)), ::note::ReqFieldType::Bool},
+#if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
+            {keys_::details, static_cast<uint16_t>(offsetof(HubSet, details)), ::note::ReqFieldType::String},
+#endif
             {keys_::duration, static_cast<uint16_t>(offsetof(HubSet, duration)), ::note::ReqFieldType::Int32},
             {keys_::host, static_cast<uint16_t>(offsetof(HubSet, host)), ::note::ReqFieldType::String},
             {keys_::inbound, static_cast<uint16_t>(offsetof(HubSet, inbound)), ::note::ReqFieldType::Int32},
             {keys_::mode, static_cast<uint16_t>(offsetof(HubSet, mode)), ::note::ReqFieldType::String},
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+            {keys_::off, static_cast<uint16_t>(offsetof(HubSet, off)), ::note::ReqFieldType::Bool},
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+            {keys_::on, static_cast<uint16_t>(offsetof(HubSet, on)), ::note::ReqFieldType::Bool},
+#endif
             {keys_::outbound, static_cast<uint16_t>(offsetof(HubSet, outbound)), ::note::ReqFieldType::Int32},
             {keys_::product, static_cast<uint16_t>(offsetof(HubSet, product)), ::note::ReqFieldType::String},
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+            {keys_::seconds, static_cast<uint16_t>(offsetof(HubSet, seconds)), ::note::ReqFieldType::Int32},
+#endif
             {keys_::sn, static_cast<uint16_t>(offsetof(HubSet, sn)), ::note::ReqFieldType::String},
             {keys_::sync, static_cast<uint16_t>(offsetof(HubSet, sync)), ::note::ReqFieldType::Bool},
+#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
+            {keys_::umin, static_cast<uint16_t>(offsetof(HubSet, umin)), ::note::ReqFieldType::Bool},
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
+            {keys_::uoff, static_cast<uint16_t>(offsetof(HubSet, uoff)), ::note::ReqFieldType::Bool},
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
+            {keys_::uperiodic, static_cast<uint16_t>(offsetof(HubSet, uperiodic)), ::note::ReqFieldType::Bool},
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(7, 3, 1) || !defined(NOTE_API_STRICT)
+            {keys_::version, static_cast<uint16_t>(offsetof(HubSet, version)), ::note::ReqFieldType::String},
+#endif
             {keys_::vinbound, static_cast<uint16_t>(offsetof(HubSet, vinbound)), ::note::ReqFieldType::String},
             {keys_::voutbound, static_cast<uint16_t>(offsetof(HubSet, voutbound)), ::note::ReqFieldType::String},
         };
 #pragma GCC diagnostic pop
+        n_out = sizeof(table_) / sizeof(table_[0]);
         return table_;
     }
     void build(JsonBuilder& b) const {
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
-        if (details) note::add_flash(b, note::flash(keys_::details), *details);
 #endif
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-        if (off) note::add_flash(b, note::flash(keys_::off), *off);
 #endif
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-        if (on) note::add_flash(b, note::flash(keys_::on), *on);
 #endif
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-        if (seconds) note::add_flash(b, note::flash(keys_::seconds), *seconds);
 #endif
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-        if (umin) note::add_flash(b, note::flash(keys_::umin), *umin);
 #endif
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-        if (uoff) note::add_flash(b, note::flash(keys_::uoff), *uoff);
 #endif
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-        if (uperiodic) note::add_flash(b, note::flash(keys_::uperiodic), *uperiodic);
 #endif
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 3, 1) || !defined(NOTE_API_STRICT)
-        if (version) note::add_flash(b, note::flash(keys_::version), *version);
 #endif
-        ::note::generic_build(b, this, req_field_descs_ptr_(), req_field_count_);
+        uint8_t n_; auto* descs_ = req_field_descs_ptr_(n_);
+        ::note::generic_build(b, this, descs_, n_);
 #if NOTE_EXTRAS
         for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
             std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },

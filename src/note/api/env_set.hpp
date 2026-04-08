@@ -208,19 +208,20 @@ struct EnvSet {
         return send_fn_(nc_, fn_, &build_);
     }
 
-    static constexpr uint8_t req_field_count_ = 1;
-    static const ::note::ReqFieldDesc* req_field_descs_ptr_() {
+    static const ::note::ReqFieldDesc* req_field_descs_ptr_(uint8_t& n_out) {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
         static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
             {keys_::text, static_cast<uint16_t>(offsetof(EnvSet, text)), ::note::ReqFieldType::String},
         };
 #pragma GCC diagnostic pop
+        n_out = sizeof(table_) / sizeof(table_[0]);
         return table_;
     }
     void build(JsonBuilder& b) const {
         note::add_flash(b, note::flash(keys_::name), name);
-        ::note::generic_build(b, this, req_field_descs_ptr_(), req_field_count_);
+        uint8_t n_; auto* descs_ = req_field_descs_ptr_(n_);
+        ::note::generic_build(b, this, descs_, n_);
 #if NOTE_EXTRAS
         for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
             std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },

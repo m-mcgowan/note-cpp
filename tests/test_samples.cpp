@@ -38,7 +38,9 @@ TEST_CASE("card.aux.serial Enable GPS Mode") {
     TestHarness h;
     note::api::CardAuxSerial::Gps req;
     h.nc.execute(req);
-    REQUIRE(h.last_request == R"json({"req":"card.aux.serial","mode":"gps"})json");
+    // Check each key-value pair (order-independent — generic_build may reorder fields).
+    REQUIRE(h.last_request.find(R"("req":"card.aux.serial")") != std::string::npos);
+    REQUIRE(h.last_request.find(R"("mode":"gps")") != std::string::npos);
 }
 
 TEST_CASE("card.aux.serial Enable DFU Notifications") {
@@ -47,7 +49,10 @@ TEST_CASE("card.aux.serial Enable DFU Notifications") {
     req.dfu();
     req.minutes = int32_t{5};
     h.nc.execute(req);
-    REQUIRE(h.last_request == R"json({"req":"card.aux.serial","minutes":5,"mode":"notify,dfu"})json");
+    // Check each key-value pair (order-independent — generic_build may reorder fields).
+    REQUIRE(h.last_request.find(R"("req":"card.aux.serial")") != std::string::npos);
+    REQUIRE(h.last_request.find(R"("minutes":5)") != std::string::npos);
+    REQUIRE(h.last_request.find(R"("mode":"notify,dfu")") != std::string::npos);
 }
 
 TEST_CASE("card.aux.serial Enable Environment Notifications") {
@@ -55,7 +60,9 @@ TEST_CASE("card.aux.serial Enable Environment Notifications") {
     note::api::CardAuxSerial::Notify req;
     req.env();
     h.nc.execute(req);
-    REQUIRE(h.last_request == R"json({"req":"card.aux.serial","mode":"notify,env"})json");
+    // Check each key-value pair (order-independent — generic_build may reorder fields).
+    REQUIRE(h.last_request.find(R"("req":"card.aux.serial")") != std::string::npos);
+    REQUIRE(h.last_request.find(R"("mode":"notify,env")") != std::string::npos);
 }
 
 TEST_CASE("card.aux.serial Multiple Notifications") {
@@ -64,13 +71,18 @@ TEST_CASE("card.aux.serial Multiple Notifications") {
     req.notifications = note::string_view(R"sv(accel,env)sv");
     req.duration = int32_t{500};
     h.nc.execute(req);
-    REQUIRE(h.last_request == R"json({"req":"card.aux.serial","duration":500,"mode":"notify,accel,env"})json");
+    // Check each key-value pair (order-independent — generic_build may reorder fields).
+    REQUIRE(h.last_request.find(R"("req":"card.aux.serial")") != std::string::npos);
+    REQUIRE(h.last_request.find(R"("duration":500)") != std::string::npos);
+    REQUIRE(h.last_request.find(R"("mode":"notify,accel,env")") != std::string::npos);
 }
 
 TEST_CASE("card.aux.serial Disable AUX Serial") {
     TestHarness h;
     note::api::CardAuxSerial::Off req;
     h.nc.execute(req);
-    REQUIRE(h.last_request == R"json({"req":"card.aux.serial","mode":"-"})json");
+    // Check each key-value pair (order-independent — generic_build may reorder fields).
+    REQUIRE(h.last_request.find(R"("req":"card.aux.serial")") != std::string::npos);
+    REQUIRE(h.last_request.find(R"("mode":"-")") != std::string::npos);
 }
 

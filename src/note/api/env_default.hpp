@@ -107,13 +107,13 @@ struct EnvDefault {
         using Response = void;
 
 #if NOTE_SINGLETON
-        /// Singleton void execute — builds JSON inline, calls shared function.
-        static inline Result<void>(*execute_void_fn_)(void*, BuildFn, void*, ::note::detail::NcErrorCapture&);
+        /// Singleton void execute — shared "req" prefix, per-type fields only.
+        static inline Result<void>(*execute_void_fn_)(void*, ::note::string_view, BuildFn, void*, ::note::detail::NcErrorCapture&);
         ApiResult<void> execute() const {
-            auto build_ = [&](JsonBuilder& b_) { b_.add("req", notecard_request); this->build(b_); };
+            auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
             BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
             ::note::detail::NcErrorCapture nc_err_;
-            auto rv_ = execute_void_fn_(nc_, fn_, &build_, nc_err_);
+            auto rv_ = execute_void_fn_(nc_, notecard_request, fn_, &build_, nc_err_);
             if (!rv_) return ::note::Unexpected(rv_.error());
             if (!nc_err_.empty()) return ApiResult<void>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
             return ApiResult<void>{};
@@ -135,8 +135,7 @@ struct EnvDefault {
             return send_fn_(nc_, fn_, &build_);
         }
 
-        static constexpr uint8_t req_field_count_ = 2;
-        static const ::note::ReqFieldDesc* req_field_descs_ptr_() {
+        static const ::note::ReqFieldDesc* req_field_descs_ptr_(uint8_t& n_out) {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
             static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
@@ -144,11 +143,13 @@ struct EnvDefault {
                 {keys_::text, static_cast<uint16_t>(offsetof(EnvDefault::Set, text)), ::note::ReqFieldType::String},
             };
 #pragma GCC diagnostic pop
+            n_out = sizeof(table_) / sizeof(table_[0]);
             return table_;
         }
         void build(JsonBuilder& b) const {
             note::add_flash(b, note::flash(keys_::name), name);
-            ::note::generic_build(b, this, req_field_descs_ptr_(), req_field_count_);
+            uint8_t n_; auto* descs_ = req_field_descs_ptr_(n_);
+            ::note::generic_build(b, this, descs_, n_);
 #if NOTE_EXTRAS
             for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
                 std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
@@ -243,13 +244,13 @@ struct EnvDefault {
         using Response = void;
 
 #if NOTE_SINGLETON
-        /// Singleton void execute — builds JSON inline, calls shared function.
-        static inline Result<void>(*execute_void_fn_)(void*, BuildFn, void*, ::note::detail::NcErrorCapture&);
+        /// Singleton void execute — shared "req" prefix, per-type fields only.
+        static inline Result<void>(*execute_void_fn_)(void*, ::note::string_view, BuildFn, void*, ::note::detail::NcErrorCapture&);
         ApiResult<void> execute() const {
-            auto build_ = [&](JsonBuilder& b_) { b_.add("req", notecard_request); this->build(b_); };
+            auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
             BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
             ::note::detail::NcErrorCapture nc_err_;
-            auto rv_ = execute_void_fn_(nc_, fn_, &build_, nc_err_);
+            auto rv_ = execute_void_fn_(nc_, notecard_request, fn_, &build_, nc_err_);
             if (!rv_) return ::note::Unexpected(rv_.error());
             if (!nc_err_.empty()) return ApiResult<void>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
             return ApiResult<void>{};
@@ -271,19 +272,20 @@ struct EnvDefault {
             return send_fn_(nc_, fn_, &build_);
         }
 
-        static constexpr uint8_t req_field_count_ = 1;
-        static const ::note::ReqFieldDesc* req_field_descs_ptr_() {
+        static const ::note::ReqFieldDesc* req_field_descs_ptr_(uint8_t& n_out) {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
             static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
                 {keys_::sync, static_cast<uint16_t>(offsetof(EnvDefault::Remove, sync)), ::note::ReqFieldType::Bool},
             };
 #pragma GCC diagnostic pop
+            n_out = sizeof(table_) / sizeof(table_[0]);
             return table_;
         }
         void build(JsonBuilder& b) const {
             note::add_flash(b, note::flash(keys_::name), name);
-            ::note::generic_build(b, this, req_field_descs_ptr_(), req_field_count_);
+            uint8_t n_; auto* descs_ = req_field_descs_ptr_(n_);
+            ::note::generic_build(b, this, descs_, n_);
 #if NOTE_EXTRAS
             for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
                 std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },

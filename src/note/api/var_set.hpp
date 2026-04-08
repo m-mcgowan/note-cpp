@@ -142,13 +142,13 @@ struct VarSet {
     using Response = void;
 
 #if NOTE_SINGLETON
-    /// Singleton void execute — builds JSON inline, calls shared function.
-    static inline Result<void>(*execute_void_fn_)(void*, BuildFn, void*, ::note::detail::NcErrorCapture&);
+    /// Singleton void execute — shared "req" prefix, per-type fields only.
+    static inline Result<void>(*execute_void_fn_)(void*, ::note::string_view, BuildFn, void*, ::note::detail::NcErrorCapture&);
     ApiResult<void> execute() const {
-        auto build_ = [&](JsonBuilder& b_) { b_.add("req", notecard_request); this->build(b_); };
+        auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
         BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
         ::note::detail::NcErrorCapture nc_err_;
-        auto rv_ = execute_void_fn_(nc_, fn_, &build_, nc_err_);
+        auto rv_ = execute_void_fn_(nc_, notecard_request, fn_, &build_, nc_err_);
         if (!rv_) return ::note::Unexpected(rv_.error());
         if (!nc_err_.empty()) return ApiResult<void>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
         return ApiResult<void>{};
@@ -172,11 +172,13 @@ struct VarSet {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-    static constexpr uint8_t req_field_count_ = 5;
-    static const ::note::ReqFieldDesc* req_field_descs_ptr_() {
+    static const ::note::ReqFieldDesc* req_field_descs_ptr_(uint8_t& n_out) {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
         static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
+#if NOTE_API_VERSION >= NOTE_VERSION(7, 3, 1) || !defined(NOTE_API_STRICT)
+            {keys_::file, static_cast<uint16_t>(offsetof(VarSet, file)), ::note::ReqFieldType::String},
+#endif
             {keys_::flag, static_cast<uint16_t>(offsetof(VarSet, flag)), ::note::ReqFieldType::Bool},
             {keys_::name, static_cast<uint16_t>(offsetof(VarSet, name)), ::note::ReqFieldType::String},
             {keys_::sync, static_cast<uint16_t>(offsetof(VarSet, sync)), ::note::ReqFieldType::Bool},
@@ -184,13 +186,14 @@ struct VarSet {
             {keys_::value, static_cast<uint16_t>(offsetof(VarSet, value)), ::note::ReqFieldType::Double},
         };
 #pragma GCC diagnostic pop
+        n_out = sizeof(table_) / sizeof(table_[0]);
         return table_;
     }
     void build(JsonBuilder& b) const {
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 3, 1) || !defined(NOTE_API_STRICT)
-        if (file) note::add_flash(b, note::flash(keys_::file), *file);
 #endif
-        ::note::generic_build(b, this, req_field_descs_ptr_(), req_field_count_);
+        uint8_t n_; auto* descs_ = req_field_descs_ptr_(n_);
+        ::note::generic_build(b, this, descs_, n_);
 #if NOTE_EXTRAS
         for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
             std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },

@@ -368,15 +368,15 @@ struct CardAuxSerial {
         }
 
 #if NOTE_SINGLETON
-        /// Singleton generic execute — builds JSON inline, calls shared function.
-        static inline Result<void>(*execute_generic_fn_)(void*, BuildFn, void*, void*, const ::note::FieldDesc*, uint8_t, ::note::detail::NcErrorCapture&, bool&);
+        /// Singleton generic execute — shared "req" prefix, per-type fields only.
+        static inline Result<void>(*execute_generic_fn_)(void*, ::note::string_view, BuildFn, void*, void*, const ::note::FieldDesc*, uint8_t, ::note::detail::NcErrorCapture&, bool&);
         ApiResult<Response> execute() const {
-            auto build_ = [&](JsonBuilder& b_) { b_.add("req", notecard_request); this->build(b_); };
+            auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
             BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
             Response rsp_{};
             ::note::detail::NcErrorCapture nc_err_;
             bool exhausted_ = false;
-            auto rv_ = execute_generic_fn_(nc_, fn_, &build_, &rsp_, field_descs_ptr(), field_count, nc_err_, exhausted_);
+            auto rv_ = execute_generic_fn_(nc_, notecard_request, fn_, &build_, &rsp_, field_descs_ptr(), field_count, nc_err_, exhausted_);
             if (!rv_) return ::note::Unexpected(rv_.error());
             if (!nc_err_.empty()) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
             if (exhausted_) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Overflow, ::note::Cause::Unspecified, NOTE_ERR("arena exhausted")});
@@ -401,28 +401,33 @@ struct CardAuxSerial {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-        static constexpr uint8_t req_field_count_ = 5;
-        static const ::note::ReqFieldDesc* req_field_descs_ptr_() {
+        static const ::note::ReqFieldDesc* req_field_descs_ptr_(uint8_t& n_out) {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
             static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
                 {keys_::duration, static_cast<uint16_t>(offsetof(CardAuxSerial::Request, duration)), ::note::ReqFieldType::Int32},
                 {keys_::limit, static_cast<uint16_t>(offsetof(CardAuxSerial::Request, limit)), ::note::ReqFieldType::Bool},
                 {keys_::max, static_cast<uint16_t>(offsetof(CardAuxSerial::Request, max)), ::note::ReqFieldType::Int32},
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
+                {keys_::minutes, static_cast<uint16_t>(offsetof(CardAuxSerial::Request, minutes)), ::note::ReqFieldType::Int32},
+#endif
                 {keys_::mode, static_cast<uint16_t>(offsetof(CardAuxSerial::Request, mode)), ::note::ReqFieldType::String},
                 {keys_::ms, static_cast<uint16_t>(offsetof(CardAuxSerial::Request, ms)), ::note::ReqFieldType::Int32},
+#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
+                {keys_::rate, static_cast<uint16_t>(offsetof(CardAuxSerial::Request, rate)), ::note::ReqFieldType::Int32},
+#endif
             };
 #pragma GCC diagnostic pop
+            n_out = sizeof(table_) / sizeof(table_[0]);
             return table_;
         }
         void build(JsonBuilder& b) const {
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
-            if (minutes) note::add_flash(b, note::flash(keys_::minutes), *minutes);
 #endif
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-            if (rate) note::add_flash(b, note::flash(keys_::rate), *rate);
 #endif
-            ::note::generic_build(b, this, req_field_descs_ptr_(), req_field_count_);
+            uint8_t n_; auto* descs_ = req_field_descs_ptr_(n_);
+            ::note::generic_build(b, this, descs_, n_);
 #if NOTE_EXTRAS
             for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
                 std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
@@ -671,13 +676,13 @@ struct CardAuxSerial {
         using Response = void;
 
 #if NOTE_SINGLETON
-        /// Singleton void execute — builds JSON inline, calls shared function.
-        static inline Result<void>(*execute_void_fn_)(void*, BuildFn, void*, ::note::detail::NcErrorCapture&);
+        /// Singleton void execute — shared "req" prefix, per-type fields only.
+        static inline Result<void>(*execute_void_fn_)(void*, ::note::string_view, BuildFn, void*, ::note::detail::NcErrorCapture&);
         ApiResult<void> execute() const {
-            auto build_ = [&](JsonBuilder& b_) { b_.add("req", notecard_request); this->build(b_); };
+            auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
             BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
             ::note::detail::NcErrorCapture nc_err_;
-            auto rv_ = execute_void_fn_(nc_, fn_, &build_, nc_err_);
+            auto rv_ = execute_void_fn_(nc_, notecard_request, fn_, &build_, nc_err_);
             if (!rv_) return ::note::Unexpected(rv_.error());
             if (!nc_err_.empty()) return ApiResult<void>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
             return ApiResult<void>{};
@@ -701,21 +706,26 @@ struct CardAuxSerial {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-        static constexpr uint8_t req_field_count_ = 3;
-        static const ::note::ReqFieldDesc* req_field_descs_ptr_() {
+        static const ::note::ReqFieldDesc* req_field_descs_ptr_(uint8_t& n_out) {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
             static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
                 {keys_::duration, static_cast<uint16_t>(offsetof(CardAuxSerial::Notify, duration)), ::note::ReqFieldType::Int32},
                 {keys_::max, static_cast<uint16_t>(offsetof(CardAuxSerial::Notify, max)), ::note::ReqFieldType::Int32},
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
+                {keys_::minutes, static_cast<uint16_t>(offsetof(CardAuxSerial::Notify, minutes)), ::note::ReqFieldType::Int32},
+#endif
                 {keys_::ms, static_cast<uint16_t>(offsetof(CardAuxSerial::Notify, ms)), ::note::ReqFieldType::Int32},
+#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
+                {keys_::rate, static_cast<uint16_t>(offsetof(CardAuxSerial::Notify, rate)), ::note::ReqFieldType::Int32},
+#endif
             };
 #pragma GCC diagnostic pop
+            n_out = sizeof(table_) / sizeof(table_[0]);
             return table_;
         }
         void build(JsonBuilder& b) const {
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
-            if (minutes) note::add_flash(b, note::flash(keys_::minutes), *minutes);
 #endif
             if (notifications) {
                 char mp_[96];
@@ -726,9 +736,9 @@ struct CardAuxSerial {
                 note::add_flash(b, note::flash(keys_::notifications), "notify");
             }
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-            if (rate) note::add_flash(b, note::flash(keys_::rate), *rate);
 #endif
-            ::note::generic_build(b, this, req_field_descs_ptr_(), req_field_count_);
+            uint8_t n_; auto* descs_ = req_field_descs_ptr_(n_);
+            ::note::generic_build(b, this, descs_, n_);
 #if NOTE_EXTRAS
             for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
                 std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
@@ -857,13 +867,13 @@ struct CardAuxSerial {
         using Response = void;
 
 #if NOTE_SINGLETON
-        /// Singleton void execute — builds JSON inline, calls shared function.
-        static inline Result<void>(*execute_void_fn_)(void*, BuildFn, void*, ::note::detail::NcErrorCapture&);
+        /// Singleton void execute — shared "req" prefix, per-type fields only.
+        static inline Result<void>(*execute_void_fn_)(void*, ::note::string_view, BuildFn, void*, ::note::detail::NcErrorCapture&);
         ApiResult<void> execute() const {
-            auto build_ = [&](JsonBuilder& b_) { b_.add("req", notecard_request); this->build(b_); };
+            auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
             BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
             ::note::detail::NcErrorCapture nc_err_;
-            auto rv_ = execute_void_fn_(nc_, fn_, &build_, nc_err_);
+            auto rv_ = execute_void_fn_(nc_, notecard_request, fn_, &build_, nc_err_);
             if (!rv_) return ::note::Unexpected(rv_.error());
             if (!nc_err_.empty()) return ApiResult<void>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
             return ApiResult<void>{};
@@ -887,22 +897,25 @@ struct CardAuxSerial {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-        static constexpr uint8_t req_field_count_ = 1;
-        static const ::note::ReqFieldDesc* req_field_descs_ptr_() {
+        static const ::note::ReqFieldDesc* req_field_descs_ptr_(uint8_t& n_out) {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
             static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
                 {keys_::limit, static_cast<uint16_t>(offsetof(CardAuxSerial::Gps, limit)), ::note::ReqFieldType::Bool},
+#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
+                {keys_::rate, static_cast<uint16_t>(offsetof(CardAuxSerial::Gps, rate)), ::note::ReqFieldType::Int32},
+#endif
             };
 #pragma GCC diagnostic pop
+            n_out = sizeof(table_) / sizeof(table_[0]);
             return table_;
         }
         void build(JsonBuilder& b) const {
             note::add_flash(b, note::flash(keys_::mode), "gps");
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-            if (rate) note::add_flash(b, note::flash(keys_::rate), *rate);
 #endif
-            ::note::generic_build(b, this, req_field_descs_ptr_(), req_field_count_);
+            uint8_t n_; auto* descs_ = req_field_descs_ptr_(n_);
+            ::note::generic_build(b, this, descs_, n_);
 #if NOTE_EXTRAS
             for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
                 std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
@@ -1004,13 +1017,13 @@ struct CardAuxSerial {
         using Response = void;
 
 #if NOTE_SINGLETON
-        /// Singleton void execute — builds JSON inline, calls shared function.
-        static inline Result<void>(*execute_void_fn_)(void*, BuildFn, void*, ::note::detail::NcErrorCapture&);
+        /// Singleton void execute — shared "req" prefix, per-type fields only.
+        static inline Result<void>(*execute_void_fn_)(void*, ::note::string_view, BuildFn, void*, ::note::detail::NcErrorCapture&);
         ApiResult<void> execute() const {
-            auto build_ = [&](JsonBuilder& b_) { b_.add("req", notecard_request); this->build(b_); };
+            auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
             BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
             ::note::detail::NcErrorCapture nc_err_;
-            auto rv_ = execute_void_fn_(nc_, fn_, &build_, nc_err_);
+            auto rv_ = execute_void_fn_(nc_, notecard_request, fn_, &build_, nc_err_);
             if (!rv_) return ::note::Unexpected(rv_.error());
             if (!nc_err_.empty()) return ApiResult<void>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
             return ApiResult<void>{};
@@ -1034,11 +1047,24 @@ struct CardAuxSerial {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+        static const ::note::ReqFieldDesc* req_field_descs_ptr_(uint8_t& n_out) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+            static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
+#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
+                {keys_::rate, static_cast<uint16_t>(offsetof(CardAuxSerial::Configure, rate)), ::note::ReqFieldType::Int32},
+#endif
+            };
+#pragma GCC diagnostic pop
+            n_out = sizeof(table_) / sizeof(table_[0]);
+            return table_;
+        }
         void build(JsonBuilder& b) const {
             note::add_flash(b, note::flash(keys_::mode), "req");
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-            if (rate) note::add_flash(b, note::flash(keys_::rate), *rate);
 #endif
+            uint8_t n_; auto* descs_ = req_field_descs_ptr_(n_);
+            ::note::generic_build(b, this, descs_, n_);
 #if NOTE_EXTRAS
             for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
                 std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
@@ -1116,13 +1142,13 @@ struct CardAuxSerial {
         using Response = void;
 
 #if NOTE_SINGLETON
-        /// Singleton void execute — builds JSON inline, calls shared function.
-        static inline Result<void>(*execute_void_fn_)(void*, BuildFn, void*, ::note::detail::NcErrorCapture&);
+        /// Singleton void execute — shared "req" prefix, per-type fields only.
+        static inline Result<void>(*execute_void_fn_)(void*, ::note::string_view, BuildFn, void*, ::note::detail::NcErrorCapture&);
         ApiResult<void> execute() const {
-            auto build_ = [&](JsonBuilder& b_) { b_.add("req", notecard_request); this->build(b_); };
+            auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
             BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
             ::note::detail::NcErrorCapture nc_err_;
-            auto rv_ = execute_void_fn_(nc_, fn_, &build_, nc_err_);
+            auto rv_ = execute_void_fn_(nc_, notecard_request, fn_, &build_, nc_err_);
             if (!rv_) return ::note::Unexpected(rv_.error());
             if (!nc_err_.empty()) return ApiResult<void>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
             return ApiResult<void>{};

@@ -86,13 +86,13 @@ struct NtnReset {
     using Response = void;
 
 #if NOTE_SINGLETON
-    /// Singleton void execute — builds JSON inline, calls shared function.
-    static inline Result<void>(*execute_void_fn_)(void*, BuildFn, void*, ::note::detail::NcErrorCapture&);
+    /// Singleton void execute — shared "req" prefix, per-type fields only.
+    static inline Result<void>(*execute_void_fn_)(void*, ::note::string_view, BuildFn, void*, ::note::detail::NcErrorCapture&);
     ApiResult<void> execute() const {
-        auto build_ = [&](JsonBuilder& b_) { b_.add("req", notecard_request); this->build(b_); };
+        auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
         BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
         ::note::detail::NcErrorCapture nc_err_;
-        auto rv_ = execute_void_fn_(nc_, fn_, &build_, nc_err_);
+        auto rv_ = execute_void_fn_(nc_, notecard_request, fn_, &build_, nc_err_);
         if (!rv_) return ::note::Unexpected(rv_.error());
         if (!nc_err_.empty()) return ApiResult<void>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
         return ApiResult<void>{};

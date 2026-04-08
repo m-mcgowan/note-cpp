@@ -525,15 +525,15 @@ struct CardVoltage {
         }
 
 #if NOTE_SINGLETON
-        /// Singleton generic execute — builds JSON inline, calls shared function.
-        static inline Result<void>(*execute_generic_fn_)(void*, BuildFn, void*, void*, const ::note::FieldDesc*, uint8_t, ::note::detail::NcErrorCapture&, bool&);
+        /// Singleton generic execute — shared "req" prefix, per-type fields only.
+        static inline Result<void>(*execute_generic_fn_)(void*, ::note::string_view, BuildFn, void*, void*, const ::note::FieldDesc*, uint8_t, ::note::detail::NcErrorCapture&, bool&);
         ApiResult<Response> execute() const {
-            auto build_ = [&](JsonBuilder& b_) { b_.add("req", notecard_request); this->build(b_); };
+            auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
             BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
             Response rsp_{};
             ::note::detail::NcErrorCapture nc_err_;
             bool exhausted_ = false;
-            auto rv_ = execute_generic_fn_(nc_, fn_, &build_, &rsp_, field_descs_ptr(), field_count, nc_err_, exhausted_);
+            auto rv_ = execute_generic_fn_(nc_, notecard_request, fn_, &build_, &rsp_, field_descs_ptr(), field_count, nc_err_, exhausted_);
             if (!rv_) return ::note::Unexpected(rv_.error());
             if (!nc_err_.empty()) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
             if (exhausted_) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Overflow, ::note::Cause::Unspecified, NOTE_ERR("arena exhausted")});
@@ -558,12 +558,14 @@ struct CardVoltage {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-        static constexpr uint8_t req_field_count_ = 11;
-        static const ::note::ReqFieldDesc* req_field_descs_ptr_() {
+        static const ::note::ReqFieldDesc* req_field_descs_ptr_(uint8_t& n_out) {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
             static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
                 {keys_::alert, static_cast<uint16_t>(offsetof(CardVoltage::Read, alert)), ::note::ReqFieldType::Bool},
+#if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 2) || !defined(NOTE_API_STRICT)
+                {keys_::calibration, static_cast<uint16_t>(offsetof(CardVoltage::Read, calibration)), ::note::ReqFieldType::Double},
+#endif
                 {keys_::hours, static_cast<uint16_t>(offsetof(CardVoltage::Read, hours)), ::note::ReqFieldType::Int32},
                 {keys_::mode, static_cast<uint16_t>(offsetof(CardVoltage::Read, mode)), ::note::ReqFieldType::String},
                 {keys_::name, static_cast<uint16_t>(offsetof(CardVoltage::Read, name)), ::note::ReqFieldType::String},
@@ -572,20 +574,23 @@ struct CardVoltage {
                 {keys_::on, static_cast<uint16_t>(offsetof(CardVoltage::Read, on)), ::note::ReqFieldType::Bool},
                 {keys_::set, static_cast<uint16_t>(offsetof(CardVoltage::Read, set)), ::note::ReqFieldType::Bool},
                 {keys_::sync, static_cast<uint16_t>(offsetof(CardVoltage::Read, sync)), ::note::ReqFieldType::Bool},
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
+                {keys_::usb, static_cast<uint16_t>(offsetof(CardVoltage::Read, usb)), ::note::ReqFieldType::Bool},
+#endif
                 {keys_::vmax, static_cast<uint16_t>(offsetof(CardVoltage::Read, vmax)), ::note::ReqFieldType::Double},
                 {keys_::vmin, static_cast<uint16_t>(offsetof(CardVoltage::Read, vmin)), ::note::ReqFieldType::Double},
             };
 #pragma GCC diagnostic pop
+            n_out = sizeof(table_) / sizeof(table_[0]);
             return table_;
         }
         void build(JsonBuilder& b) const {
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 2) || !defined(NOTE_API_STRICT)
-            if (calibration) note::add_flash(b, note::flash(keys_::calibration), *calibration);
 #endif
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
-            if (usb) note::add_flash(b, note::flash(keys_::usb), *usb);
 #endif
-            ::note::generic_build(b, this, req_field_descs_ptr_(), req_field_count_);
+            uint8_t n_; auto* descs_ = req_field_descs_ptr_(n_);
+            ::note::generic_build(b, this, descs_, n_);
 #if NOTE_EXTRAS
             for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
                 std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
@@ -1156,15 +1161,15 @@ struct CardVoltage {
         }
 
 #if NOTE_SINGLETON
-        /// Singleton generic execute — builds JSON inline, calls shared function.
-        static inline Result<void>(*execute_generic_fn_)(void*, BuildFn, void*, void*, const ::note::FieldDesc*, uint8_t, ::note::detail::NcErrorCapture&, bool&);
+        /// Singleton generic execute — shared "req" prefix, per-type fields only.
+        static inline Result<void>(*execute_generic_fn_)(void*, ::note::string_view, BuildFn, void*, void*, const ::note::FieldDesc*, uint8_t, ::note::detail::NcErrorCapture&, bool&);
         ApiResult<Response> execute() const {
-            auto build_ = [&](JsonBuilder& b_) { b_.add("req", notecard_request); this->build(b_); };
+            auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
             BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
             Response rsp_{};
             ::note::detail::NcErrorCapture nc_err_;
             bool exhausted_ = false;
-            auto rv_ = execute_generic_fn_(nc_, fn_, &build_, &rsp_, field_descs_ptr(), field_count, nc_err_, exhausted_);
+            auto rv_ = execute_generic_fn_(nc_, notecard_request, fn_, &build_, &rsp_, field_descs_ptr(), field_count, nc_err_, exhausted_);
             if (!rv_) return ::note::Unexpected(rv_.error());
             if (!nc_err_.empty()) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
             if (exhausted_) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Overflow, ::note::Cause::Unspecified, NOTE_ERR("arena exhausted")});
@@ -1189,12 +1194,14 @@ struct CardVoltage {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-        static constexpr uint8_t req_field_count_ = 11;
-        static const ::note::ReqFieldDesc* req_field_descs_ptr_() {
+        static const ::note::ReqFieldDesc* req_field_descs_ptr_(uint8_t& n_out) {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
             static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
                 {keys_::alert, static_cast<uint16_t>(offsetof(CardVoltage::Configure, alert)), ::note::ReqFieldType::Bool},
+#if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 2) || !defined(NOTE_API_STRICT)
+                {keys_::calibration, static_cast<uint16_t>(offsetof(CardVoltage::Configure, calibration)), ::note::ReqFieldType::Double},
+#endif
                 {keys_::hours, static_cast<uint16_t>(offsetof(CardVoltage::Configure, hours)), ::note::ReqFieldType::Int32},
                 {keys_::mode, static_cast<uint16_t>(offsetof(CardVoltage::Configure, mode)), ::note::ReqFieldType::String},
                 {keys_::name, static_cast<uint16_t>(offsetof(CardVoltage::Configure, name)), ::note::ReqFieldType::String},
@@ -1203,20 +1210,23 @@ struct CardVoltage {
                 {keys_::on, static_cast<uint16_t>(offsetof(CardVoltage::Configure, on)), ::note::ReqFieldType::Bool},
                 {keys_::set, static_cast<uint16_t>(offsetof(CardVoltage::Configure, set)), ::note::ReqFieldType::Bool},
                 {keys_::sync, static_cast<uint16_t>(offsetof(CardVoltage::Configure, sync)), ::note::ReqFieldType::Bool},
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
+                {keys_::usb, static_cast<uint16_t>(offsetof(CardVoltage::Configure, usb)), ::note::ReqFieldType::Bool},
+#endif
                 {keys_::vmax, static_cast<uint16_t>(offsetof(CardVoltage::Configure, vmax)), ::note::ReqFieldType::Double},
                 {keys_::vmin, static_cast<uint16_t>(offsetof(CardVoltage::Configure, vmin)), ::note::ReqFieldType::Double},
             };
 #pragma GCC diagnostic pop
+            n_out = sizeof(table_) / sizeof(table_[0]);
             return table_;
         }
         void build(JsonBuilder& b) const {
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 2) || !defined(NOTE_API_STRICT)
-            if (calibration) note::add_flash(b, note::flash(keys_::calibration), *calibration);
 #endif
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
-            if (usb) note::add_flash(b, note::flash(keys_::usb), *usb);
 #endif
-            ::note::generic_build(b, this, req_field_descs_ptr_(), req_field_count_);
+            uint8_t n_; auto* descs_ = req_field_descs_ptr_(n_);
+            ::note::generic_build(b, this, descs_, n_);
 #if NOTE_EXTRAS
             for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
                 std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },

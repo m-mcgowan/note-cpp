@@ -821,7 +821,7 @@ namespace note::api {
 {% if simple_rsp_props.append(prop) %}{% endif %}
 {% endif %}
 {% endfor %}
-{% if simple_rsp_props and not op.response.has_body %}
+{% if simple_rsp_props %}
 {{ indent }}static constexpr uint8_t field_count = {{ simple_rsp_props | length }};
 {{ indent }}static const ::note::FieldDesc* field_descs_ptr() {
 #pragma GCC diagnostic push
@@ -868,7 +868,7 @@ namespace note::api {
 {{ indent }}    if (!nc_err_.empty()) return ApiResult<void>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
 {{ indent }}    return ApiResult<void>{};
 {{ indent }}}
-{% elif exec_simple_props and not op.response.has_body %}
+{% elif exec_simple_props %}
 {{ indent }}/// Singleton generic execute — builds JSON inline, calls shared function.
 {{ indent }}static inline Result<void>(*execute_generic_fn_)(void*, BuildFn, void*, void*, const ::note::FieldDesc*, uint8_t, ::note::detail::NcErrorCapture&, bool&);
 {{ indent }}ApiResult<Response> execute() const {

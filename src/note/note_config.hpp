@@ -78,7 +78,19 @@
 #    define NOTE_MUTABLE_POLICY 0
 #  endif
 
+#  ifndef NOTE_RESPONSE_BODY
+#    define NOTE_RESPONSE_BODY 0
+#  endif
+
 #endif // NOTE_MINIMAL
+
+// NOTE_RESPONSE_BODY — when 1, response types include body parsing support
+// (on_object_begin/end tracking, BodyHandler dispatch). When 0, body fields
+// in responses are ignored and all endpoints use GenericResponseSink.
+// Default: 1. NOTE_MINIMAL sets 0.
+#ifndef NOTE_RESPONSE_BODY
+#define NOTE_RESPONSE_BODY 1
+#endif
 
 // NOTE_MUTABLE_POLICY — when 1, protocol policy fields are mutable instance
 // members (uint32_t, 28 bytes). When 0, fields are static constexpr (zero bytes).

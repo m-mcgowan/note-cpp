@@ -92,7 +92,7 @@ public:
                 return ApiResult<void>{};
             } else if constexpr (NOTE_PRINTABLE == 0
                                  && detail::has_field_descs<RequestT>::value
-                                 && !detail::has_body_factory<RequestT>::value) {
+                                 && (!detail::has_body_factory<RequestT>::value || !NOTE_RESPONSE_BODY)) {
                 // Table-driven path: shared execute_generic (one copy for all types).
                 Rsp rsp_val{};
                 bool arena_exhausted = false;

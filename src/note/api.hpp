@@ -204,7 +204,7 @@ public:
                     return static_cast<NcT*>(p_)->execute_void(fn_, ctx_, err_);
                 };
             } else if constexpr (detail::has_field_descs<T>::value
-                                 && !detail::has_body_factory<T>::value) {
+                                 && (!detail::has_body_factory<T>::value || !NOTE_RESPONSE_BODY)) {
                 T::execute_generic_fn_ = [](void* p_, BuildFn fn_, void* ctx_, void* rsp_,
                         const FieldDesc* f_, uint8_t n_, detail::NcErrorCapture& err_, bool& ex_) {
                     return static_cast<NcT*>(p_)->execute_generic(fn_, ctx_, rsp_, f_, n_, err_, ex_);
@@ -294,7 +294,7 @@ public:
                     return static_cast<NcT*>(p_)->execute_void(fn_, ctx_, err_);
                 };
             } else if constexpr (detail::has_field_descs<T>::value
-                                 && !detail::has_body_factory<T>::value) {
+                                 && (!detail::has_body_factory<T>::value || !NOTE_RESPONSE_BODY)) {
                 T::execute_generic_fn_ = [](void* p_, BuildFn fn_, void* ctx_, void* rsp_,
                         const FieldDesc* f_, uint8_t n_, detail::NcErrorCapture& err_, bool& ex_) {
                     return static_cast<NcT*>(p_)->execute_generic(fn_, ctx_, rsp_, f_, n_, err_, ex_);
@@ -367,7 +367,7 @@ public:
                     return static_cast<NcT*>(p_)->execute_void(fn_, ctx_, err_);
                 };
             } else if constexpr (detail::has_field_descs<T>::value
-                                 && !detail::has_body_factory<T>::value) {
+                                 && (!detail::has_body_factory<T>::value || !NOTE_RESPONSE_BODY)) {
                 T::execute_generic_fn_ = [](void* p_, BuildFn fn_, void* ctx_, void* rsp_,
                         const FieldDesc* f_, uint8_t n_, detail::NcErrorCapture& err_, bool& ex_) {
                     return static_cast<NcT*>(p_)->execute_generic(fn_, ctx_, rsp_, f_, n_, err_, ex_);
@@ -432,7 +432,7 @@ public:
                     return static_cast<NcT*>(p_)->execute_void(fn_, ctx_, err_);
                 };
             } else if constexpr (detail::has_field_descs<T>::value
-                                 && !detail::has_body_factory<T>::value) {
+                                 && (!detail::has_body_factory<T>::value || !NOTE_RESPONSE_BODY)) {
                 T::execute_generic_fn_ = [](void* p_, BuildFn fn_, void* ctx_, void* rsp_,
                         const FieldDesc* f_, uint8_t n_, detail::NcErrorCapture& err_, bool& ex_) {
                     return static_cast<NcT*>(p_)->execute_generic(fn_, ctx_, rsp_, f_, n_, err_, ex_);
@@ -506,7 +506,7 @@ public:
                     return static_cast<NcT*>(p_)->execute_void(fn_, ctx_, err_);
                 };
             } else if constexpr (detail::has_field_descs<T>::value
-                                 && !detail::has_body_factory<T>::value) {
+                                 && (!detail::has_body_factory<T>::value || !NOTE_RESPONSE_BODY)) {
                 T::execute_generic_fn_ = [](void* p_, BuildFn fn_, void* ctx_, void* rsp_,
                         const FieldDesc* f_, uint8_t n_, detail::NcErrorCapture& err_, bool& ex_) {
                     return static_cast<NcT*>(p_)->execute_generic(fn_, ctx_, rsp_, f_, n_, err_, ex_);
@@ -574,7 +574,7 @@ public:
                     return static_cast<NcT*>(p_)->execute_void(fn_, ctx_, err_);
                 };
             } else if constexpr (detail::has_field_descs<T>::value
-                                 && !detail::has_body_factory<T>::value) {
+                                 && (!detail::has_body_factory<T>::value || !NOTE_RESPONSE_BODY)) {
                 T::execute_generic_fn_ = [](void* p_, BuildFn fn_, void* ctx_, void* rsp_,
                         const FieldDesc* f_, uint8_t n_, detail::NcErrorCapture& err_, bool& ex_) {
                     return static_cast<NcT*>(p_)->execute_generic(fn_, ctx_, rsp_, f_, n_, err_, ex_);
@@ -660,7 +660,7 @@ public:
                     return static_cast<NcT*>(p_)->execute_void(fn_, ctx_, err_);
                 };
             } else if constexpr (detail::has_field_descs<T>::value
-                                 && !detail::has_body_factory<T>::value) {
+                                 && (!detail::has_body_factory<T>::value || !NOTE_RESPONSE_BODY)) {
                 T::execute_generic_fn_ = [](void* p_, BuildFn fn_, void* ctx_, void* rsp_,
                         const FieldDesc* f_, uint8_t n_, detail::NcErrorCapture& err_, bool& ex_) {
                     return static_cast<NcT*>(p_)->execute_generic(fn_, ctx_, rsp_, f_, n_, err_, ex_);
@@ -729,7 +729,7 @@ public:
                     return static_cast<NcT*>(p_)->execute_void(fn_, ctx_, err_);
                 };
             } else if constexpr (detail::has_field_descs<T>::value
-                                 && !detail::has_body_factory<T>::value) {
+                                 && (!detail::has_body_factory<T>::value || !NOTE_RESPONSE_BODY)) {
                 T::execute_generic_fn_ = [](void* p_, BuildFn fn_, void* ctx_, void* rsp_,
                         const FieldDesc* f_, uint8_t n_, detail::NcErrorCapture& err_, bool& ex_) {
                     return static_cast<NcT*>(p_)->execute_generic(fn_, ctx_, rsp_, f_, n_, err_, ex_);
@@ -797,7 +797,7 @@ public:
                     return static_cast<NcT*>(p_)->execute_void(fn_, ctx_, err_);
                 };
             } else if constexpr (detail::has_field_descs<T>::value
-                                 && !detail::has_body_factory<T>::value) {
+                                 && (!detail::has_body_factory<T>::value || !NOTE_RESPONSE_BODY)) {
                 T::execute_generic_fn_ = [](void* p_, BuildFn fn_, void* ctx_, void* rsp_,
                         const FieldDesc* f_, uint8_t n_, detail::NcErrorCapture& err_, bool& ex_) {
                     return static_cast<NcT*>(p_)->execute_generic(fn_, ctx_, rsp_, f_, n_, err_, ex_);
@@ -872,7 +872,7 @@ public:
                     return static_cast<NcT*>(p_)->execute_void(fn_, ctx_, err_);
                 };
             } else if constexpr (detail::has_field_descs<T>::value
-                                 && !detail::has_body_factory<T>::value) {
+                                 && (!detail::has_body_factory<T>::value || !NOTE_RESPONSE_BODY)) {
                 T::execute_generic_fn_ = [](void* p_, BuildFn fn_, void* ctx_, void* rsp_,
                         const FieldDesc* f_, uint8_t n_, detail::NcErrorCapture& err_, bool& ex_) {
                     return static_cast<NcT*>(p_)->execute_generic(fn_, ctx_, rsp_, f_, n_, err_, ex_);
@@ -939,7 +939,7 @@ public:
                     return static_cast<NcT*>(p_)->execute_void(fn_, ctx_, err_);
                 };
             } else if constexpr (detail::has_field_descs<T>::value
-                                 && !detail::has_body_factory<T>::value) {
+                                 && (!detail::has_body_factory<T>::value || !NOTE_RESPONSE_BODY)) {
                 T::execute_generic_fn_ = [](void* p_, BuildFn fn_, void* ctx_, void* rsp_,
                         const FieldDesc* f_, uint8_t n_, detail::NcErrorCapture& err_, bool& ex_) {
                     return static_cast<NcT*>(p_)->execute_generic(fn_, ctx_, rsp_, f_, n_, err_, ex_);
@@ -1010,7 +1010,7 @@ public:
                     return static_cast<NcT*>(p_)->execute_void(fn_, ctx_, err_);
                 };
             } else if constexpr (detail::has_field_descs<T>::value
-                                 && !detail::has_body_factory<T>::value) {
+                                 && (!detail::has_body_factory<T>::value || !NOTE_RESPONSE_BODY)) {
                 T::execute_generic_fn_ = [](void* p_, BuildFn fn_, void* ctx_, void* rsp_,
                         const FieldDesc* f_, uint8_t n_, detail::NcErrorCapture& err_, bool& ex_) {
                     return static_cast<NcT*>(p_)->execute_generic(fn_, ctx_, rsp_, f_, n_, err_, ex_);
@@ -1100,7 +1100,7 @@ public:
                     return static_cast<NcT*>(p_)->execute_void(fn_, ctx_, err_);
                 };
             } else if constexpr (detail::has_field_descs<T>::value
-                                 && !detail::has_body_factory<T>::value) {
+                                 && (!detail::has_body_factory<T>::value || !NOTE_RESPONSE_BODY)) {
                 T::execute_generic_fn_ = [](void* p_, BuildFn fn_, void* ctx_, void* rsp_,
                         const FieldDesc* f_, uint8_t n_, detail::NcErrorCapture& err_, bool& ex_) {
                     return static_cast<NcT*>(p_)->execute_generic(fn_, ctx_, rsp_, f_, n_, err_, ex_);
@@ -1166,7 +1166,7 @@ public:
                     return static_cast<NcT*>(p_)->execute_void(fn_, ctx_, err_);
                 };
             } else if constexpr (detail::has_field_descs<T>::value
-                                 && !detail::has_body_factory<T>::value) {
+                                 && (!detail::has_body_factory<T>::value || !NOTE_RESPONSE_BODY)) {
                 T::execute_generic_fn_ = [](void* p_, BuildFn fn_, void* ctx_, void* rsp_,
                         const FieldDesc* f_, uint8_t n_, detail::NcErrorCapture& err_, bool& ex_) {
                     return static_cast<NcT*>(p_)->execute_generic(fn_, ctx_, rsp_, f_, n_, err_, ex_);
@@ -1239,7 +1239,7 @@ public:
                     return static_cast<NcT*>(p_)->execute_void(fn_, ctx_, err_);
                 };
             } else if constexpr (detail::has_field_descs<T>::value
-                                 && !detail::has_body_factory<T>::value) {
+                                 && (!detail::has_body_factory<T>::value || !NOTE_RESPONSE_BODY)) {
                 T::execute_generic_fn_ = [](void* p_, BuildFn fn_, void* ctx_, void* rsp_,
                         const FieldDesc* f_, uint8_t n_, detail::NcErrorCapture& err_, bool& ex_) {
                     return static_cast<NcT*>(p_)->execute_generic(fn_, ctx_, rsp_, f_, n_, err_, ex_);
@@ -1307,7 +1307,7 @@ public:
                     return static_cast<NcT*>(p_)->execute_void(fn_, ctx_, err_);
                 };
             } else if constexpr (detail::has_field_descs<T>::value
-                                 && !detail::has_body_factory<T>::value) {
+                                 && (!detail::has_body_factory<T>::value || !NOTE_RESPONSE_BODY)) {
                 T::execute_generic_fn_ = [](void* p_, BuildFn fn_, void* ctx_, void* rsp_,
                         const FieldDesc* f_, uint8_t n_, detail::NcErrorCapture& err_, bool& ex_) {
                     return static_cast<NcT*>(p_)->execute_generic(fn_, ctx_, rsp_, f_, n_, err_, ex_);
@@ -1374,7 +1374,7 @@ public:
                     return static_cast<NcT*>(p_)->execute_void(fn_, ctx_, err_);
                 };
             } else if constexpr (detail::has_field_descs<T>::value
-                                 && !detail::has_body_factory<T>::value) {
+                                 && (!detail::has_body_factory<T>::value || !NOTE_RESPONSE_BODY)) {
                 T::execute_generic_fn_ = [](void* p_, BuildFn fn_, void* ctx_, void* rsp_,
                         const FieldDesc* f_, uint8_t n_, detail::NcErrorCapture& err_, bool& ex_) {
                     return static_cast<NcT*>(p_)->execute_generic(fn_, ctx_, rsp_, f_, n_, err_, ex_);
@@ -1440,7 +1440,7 @@ public:
                     return static_cast<NcT*>(p_)->execute_void(fn_, ctx_, err_);
                 };
             } else if constexpr (detail::has_field_descs<T>::value
-                                 && !detail::has_body_factory<T>::value) {
+                                 && (!detail::has_body_factory<T>::value || !NOTE_RESPONSE_BODY)) {
                 T::execute_generic_fn_ = [](void* p_, BuildFn fn_, void* ctx_, void* rsp_,
                         const FieldDesc* f_, uint8_t n_, detail::NcErrorCapture& err_, bool& ex_) {
                     return static_cast<NcT*>(p_)->execute_generic(fn_, ctx_, rsp_, f_, n_, err_, ex_);
@@ -1503,7 +1503,7 @@ public:
                     return static_cast<NcT*>(p_)->execute_void(fn_, ctx_, err_);
                 };
             } else if constexpr (detail::has_field_descs<T>::value
-                                 && !detail::has_body_factory<T>::value) {
+                                 && (!detail::has_body_factory<T>::value || !NOTE_RESPONSE_BODY)) {
                 T::execute_generic_fn_ = [](void* p_, BuildFn fn_, void* ctx_, void* rsp_,
                         const FieldDesc* f_, uint8_t n_, detail::NcErrorCapture& err_, bool& ex_) {
                     return static_cast<NcT*>(p_)->execute_generic(fn_, ctx_, rsp_, f_, n_, err_, ex_);
@@ -1579,7 +1579,7 @@ public:
                     return static_cast<NcT*>(p_)->execute_void(fn_, ctx_, err_);
                 };
             } else if constexpr (detail::has_field_descs<T>::value
-                                 && !detail::has_body_factory<T>::value) {
+                                 && (!detail::has_body_factory<T>::value || !NOTE_RESPONSE_BODY)) {
                 T::execute_generic_fn_ = [](void* p_, BuildFn fn_, void* ctx_, void* rsp_,
                         const FieldDesc* f_, uint8_t n_, detail::NcErrorCapture& err_, bool& ex_) {
                     return static_cast<NcT*>(p_)->execute_generic(fn_, ctx_, rsp_, f_, n_, err_, ex_);
@@ -2024,7 +2024,7 @@ public:
                     return static_cast<NcT*>(p_)->execute_void(fn_, ctx_, err_);
                 };
             } else if constexpr (detail::has_field_descs<T>::value
-                                 && !detail::has_body_factory<T>::value) {
+                                 && (!detail::has_body_factory<T>::value || !NOTE_RESPONSE_BODY)) {
                 T::execute_generic_fn_ = [](void* p_, BuildFn fn_, void* ctx_, void* rsp_,
                         const FieldDesc* f_, uint8_t n_, detail::NcErrorCapture& err_, bool& ex_) {
                     return static_cast<NcT*>(p_)->execute_generic(fn_, ctx_, rsp_, f_, n_, err_, ex_);
@@ -2124,7 +2124,7 @@ public:
                     return static_cast<NcT*>(p_)->execute_void(fn_, ctx_, err_);
                 };
             } else if constexpr (detail::has_field_descs<T>::value
-                                 && !detail::has_body_factory<T>::value) {
+                                 && (!detail::has_body_factory<T>::value || !NOTE_RESPONSE_BODY)) {
                 T::execute_generic_fn_ = [](void* p_, BuildFn fn_, void* ctx_, void* rsp_,
                         const FieldDesc* f_, uint8_t n_, detail::NcErrorCapture& err_, bool& ex_) {
                     return static_cast<NcT*>(p_)->execute_generic(fn_, ctx_, rsp_, f_, n_, err_, ex_);
@@ -2304,7 +2304,7 @@ public:
                     return static_cast<NcT*>(p_)->execute_void(fn_, ctx_, err_);
                 };
             } else if constexpr (detail::has_field_descs<T>::value
-                                 && !detail::has_body_factory<T>::value) {
+                                 && (!detail::has_body_factory<T>::value || !NOTE_RESPONSE_BODY)) {
                 T::execute_generic_fn_ = [](void* p_, BuildFn fn_, void* ctx_, void* rsp_,
                         const FieldDesc* f_, uint8_t n_, detail::NcErrorCapture& err_, bool& ex_) {
                     return static_cast<NcT*>(p_)->execute_generic(fn_, ctx_, rsp_, f_, n_, err_, ex_);
@@ -2433,7 +2433,7 @@ public:
                     return static_cast<NcT*>(p_)->execute_void(fn_, ctx_, err_);
                 };
             } else if constexpr (detail::has_field_descs<T>::value
-                                 && !detail::has_body_factory<T>::value) {
+                                 && (!detail::has_body_factory<T>::value || !NOTE_RESPONSE_BODY)) {
                 T::execute_generic_fn_ = [](void* p_, BuildFn fn_, void* ctx_, void* rsp_,
                         const FieldDesc* f_, uint8_t n_, detail::NcErrorCapture& err_, bool& ex_) {
                     return static_cast<NcT*>(p_)->execute_generic(fn_, ctx_, rsp_, f_, n_, err_, ex_);
@@ -2548,7 +2548,7 @@ public:
                     return static_cast<NcT*>(p_)->execute_void(fn_, ctx_, err_);
                 };
             } else if constexpr (detail::has_field_descs<T>::value
-                                 && !detail::has_body_factory<T>::value) {
+                                 && (!detail::has_body_factory<T>::value || !NOTE_RESPONSE_BODY)) {
                 T::execute_generic_fn_ = [](void* p_, BuildFn fn_, void* ctx_, void* rsp_,
                         const FieldDesc* f_, uint8_t n_, detail::NcErrorCapture& err_, bool& ex_) {
                     return static_cast<NcT*>(p_)->execute_generic(fn_, ctx_, rsp_, f_, n_, err_, ex_);
@@ -2847,7 +2847,7 @@ public:
                     return static_cast<NcT*>(p_)->execute_void(fn_, ctx_, err_);
                 };
             } else if constexpr (detail::has_field_descs<T>::value
-                                 && !detail::has_body_factory<T>::value) {
+                                 && (!detail::has_body_factory<T>::value || !NOTE_RESPONSE_BODY)) {
                 T::execute_generic_fn_ = [](void* p_, BuildFn fn_, void* ctx_, void* rsp_,
                         const FieldDesc* f_, uint8_t n_, detail::NcErrorCapture& err_, bool& ex_) {
                     return static_cast<NcT*>(p_)->execute_generic(fn_, ctx_, rsp_, f_, n_, err_, ex_);
@@ -2961,7 +2961,7 @@ public:
                     return static_cast<NcT*>(p_)->execute_void(fn_, ctx_, err_);
                 };
             } else if constexpr (detail::has_field_descs<T>::value
-                                 && !detail::has_body_factory<T>::value) {
+                                 && (!detail::has_body_factory<T>::value || !NOTE_RESPONSE_BODY)) {
                 T::execute_generic_fn_ = [](void* p_, BuildFn fn_, void* ctx_, void* rsp_,
                         const FieldDesc* f_, uint8_t n_, detail::NcErrorCapture& err_, bool& ex_) {
                     return static_cast<NcT*>(p_)->execute_generic(fn_, ctx_, rsp_, f_, n_, err_, ex_);
@@ -3047,7 +3047,7 @@ public:
                     return static_cast<NcT*>(p_)->execute_void(fn_, ctx_, err_);
                 };
             } else if constexpr (detail::has_field_descs<T>::value
-                                 && !detail::has_body_factory<T>::value) {
+                                 && (!detail::has_body_factory<T>::value || !NOTE_RESPONSE_BODY)) {
                 T::execute_generic_fn_ = [](void* p_, BuildFn fn_, void* ctx_, void* rsp_,
                         const FieldDesc* f_, uint8_t n_, detail::NcErrorCapture& err_, bool& ex_) {
                     return static_cast<NcT*>(p_)->execute_generic(fn_, ctx_, rsp_, f_, n_, err_, ex_);

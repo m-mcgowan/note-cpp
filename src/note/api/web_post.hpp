@@ -492,11 +492,35 @@ struct WebPost {
         std::unique_ptr<JsonReader> body_;
 #endif
     };
+    static constexpr uint8_t field_count = 4;
+    static const ::note::FieldDesc* field_descs_ptr() {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+        static constexpr ::note::FieldDesc table[] NOTE_FLASH_ATTR = {
+            {keys_::rsp_length, static_cast<uint16_t>(offsetof(Response, length)), ::note::FieldType::Int32},
+            {keys_::rsp_payload, static_cast<uint16_t>(offsetof(Response, payload)), ::note::FieldType::String},
+            {keys_::rsp_result, static_cast<uint16_t>(offsetof(Response, result)), ::note::FieldType::Int32},
+            {keys_::rsp_status, static_cast<uint16_t>(offsetof(Response, status)), ::note::FieldType::String},
+        };
+#pragma GCC diagnostic pop
+        return table;
+    }
 
 #if NOTE_SINGLETON
-    /// Singleton per-type execute (body-enabled or non-standard response).
-    static inline ApiResult<Response>(*execute_fn_)(void*, const WebPost&);
-    auto execute() const { return execute_fn_(nc_, *this); }
+    /// Singleton generic execute — builds JSON inline, calls shared function.
+    static inline Result<void>(*execute_generic_fn_)(void*, BuildFn, void*, void*, const ::note::FieldDesc*, uint8_t, ::note::detail::NcErrorCapture&, bool&);
+    ApiResult<Response> execute() const {
+        auto build_ = [&](JsonBuilder& b_) { b_.add("req", notecard_request); this->build(b_); };
+        BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
+        Response rsp_{};
+        ::note::detail::NcErrorCapture nc_err_;
+        bool exhausted_ = false;
+        auto rv_ = execute_generic_fn_(nc_, fn_, &build_, &rsp_, field_descs_ptr(), field_count, nc_err_, exhausted_);
+        if (!rv_) return ::note::Unexpected(rv_.error());
+        if (!nc_err_.empty()) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
+        if (exhausted_) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Overflow, ::note::Cause::Unspecified, NOTE_ERR("arena exhausted")});
+        return ApiResult<Response>(std::move(rsp_));
+    }
     static inline Result<void>(*send_fn_)(void*, BuildFn, void*);
 #else
     ApiResult<Response>(*execute_fn_)(void*, const WebPost&) = nullptr;

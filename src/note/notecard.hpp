@@ -49,12 +49,16 @@ namespace detail {
 template<>
 class ApiResult<void> {
     std::optional<ErrorInfo> err_;
+#ifndef NOTE_NO_BUFFERED
     std::unique_ptr<JsonReader> reader_;
+#endif
 public:
     ApiResult() = default;
     ApiResult(ErrorInfo e) : err_(std::move(e)) {}
+#ifndef NOTE_NO_BUFFERED
     ApiResult(ErrorInfo e, std::unique_ptr<JsonReader> reader)
         : err_(std::move(e)), reader_(std::move(reader)) {}
+#endif
 #if defined(__cpp_lib_expected) && __cpp_lib_expected >= 202202L
     ApiResult(Unexpected e) : err_(std::move(e).error()) {}
 #else

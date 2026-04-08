@@ -156,12 +156,16 @@ inline Unexpected make_error(Error code, Cause cause, string_view message = {}) 
 template<typename Response>
 class ApiResult : public Response {
     std::optional<ErrorInfo> err_;
+#ifndef NOTE_NO_BUFFERED
     std::unique_ptr<JsonReader> reader_;  // keeps error message string_views alive
+#endif
 public:
     ApiResult(Response r) : Response(std::move(r)) {}
     ApiResult(ErrorInfo e) : err_(std::move(e)) {}
+#ifndef NOTE_NO_BUFFERED
     ApiResult(ErrorInfo e, std::unique_ptr<JsonReader> reader)
         : err_(std::move(e)), reader_(std::move(reader)) {}
+#endif
 #if defined(__cpp_lib_expected) && __cpp_lib_expected >= 202202L
     ApiResult(Unexpected e) : err_(std::move(e).error()) {}
 #else

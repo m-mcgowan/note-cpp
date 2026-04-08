@@ -95,13 +95,17 @@ public:
                                  && !detail::has_body_factory<RequestT>::value) {
                 // Table-driven path: shared execute_generic (one copy for all types).
                 Rsp rsp_val{};
+                bool arena_exhausted = false;
                 auto rv = execute_generic(build_fn, &build, &rsp_val,
-                                          RequestT::field_descs_ptr(), RequestT::field_count, nc_err);
+                                          RequestT::field_descs_ptr(), RequestT::field_count,
+                                          nc_err, arena_exhausted);
                 if (!rv) return Unexpected(rv.error());
                 if (!nc_err.empty()) {
                     StringPool pool(alloc_);
                     return ApiResult<Rsp>(ErrorInfo{Error::Notecard, Cause::Unspecified, pool.intern(nc_err.view())});
                 }
+                if (arena_exhausted)
+                    return ApiResult<Rsp>(ErrorInfo{Error::Overflow, Cause::Unspecified, NOTE_ERR("arena exhausted")});
                 return ApiResult<Rsp>(std::move(rsp_val));
             } else {
                 // Custom sink path: for body-enabled endpoints or types without field_descs.
@@ -172,11 +176,14 @@ public:
     /// Shared by all endpoints that use table-driven field dispatch.
     Result<void> execute_generic(BuildFn build_fn, void* build_ctx,
                                  void* rsp_storage, const FieldDesc* fields,
-                                 uint8_t n_fields, detail::NcErrorCapture& nc_err) {
+                                 uint8_t n_fields, detail::NcErrorCapture& nc_err,
+                                 bool& arena_exhausted) {
         StringPool pool(alloc_);
         GenericResponseSink gsink{rsp_storage, fields, n_fields, &pool};
         auto dispatch = make_sax_dispatch(gsink);
-        return stack_.transport.transact_dispatch(build_fn, build_ctx, dispatch, default_timeout_ms_, nc_err);
+        auto rv = stack_.transport.transact_dispatch(build_fn, build_ctx, dispatch, default_timeout_ms_, nc_err);
+        arena_exhausted = pool.exhausted();
+        return rv;
     }
 
     /// Non-template execute for void-response endpoints.

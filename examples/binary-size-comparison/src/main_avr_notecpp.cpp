@@ -7,6 +7,7 @@
 
 #include <note/static_notecard.hpp>
 #include <note/api.hpp>
+#include <note/request_set.hpp>
 #include <note/arduino/begin.hpp>
 
 struct Readings {
@@ -15,7 +16,17 @@ struct Readings {
     NOTE_FIELDS(temperature, humidity)
 };
 
-alignas(4) static char arena_buf[64];
+// Compute arena size from the endpoints actually used.
+using UsedRequests = note::RequestSet<
+    note::api::HubSet,
+    note::api::NoteTemplate::Define,
+    note::api::CardTemp::Read,
+    note::api::NoteAdd
+>;
+static constexpr size_t kArenaSize = UsedRequests::max_arena_size;
+static_assert(kArenaSize > 0, "arena size must be non-zero");
+
+alignas(4) static char arena_buf[kArenaSize];
 static note::MonotonicArena arena(arena_buf);
 
 using SerialNotecard = note::StaticNotecard<note::arduino::SerialTransportStack<>>;

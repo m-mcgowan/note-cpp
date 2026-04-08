@@ -14,6 +14,7 @@ namespace note {
 
 class StringPool {
     Allocator alloc_;
+    bool exhausted_ = false;
 public:
     explicit StringPool(Allocator alloc) : alloc_(alloc) {}
 
@@ -24,9 +25,13 @@ public:
     string_view intern(string_view sv) {
         if (sv.empty()) return {};
         auto* p = static_cast<char*>(alloc_.allocate(sv.size()));
+        if (!p) { exhausted_ = true; return {}; }
         std::memcpy(p, sv.data(), sv.size());
         return {p, sv.size()};
     }
+
+    /// Returns true if any intern() call failed due to allocation exhaustion.
+    bool exhausted() const { return exhausted_; }
 };
 
 } // namespace note

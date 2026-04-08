@@ -93,3 +93,60 @@ TEST_CASE("Arena usage fits max_arena_size for CardVersion (body endpoint)") {
     REQUIRE(arena.used() <= sz);
     REQUIRE(rsp.version.value() == "notecard-7.4.1.17591");
 }
+
+// ── Arena exhaustion tests ──────────────────────────────────────────────────
+
+TEST_CASE("StringPool returns empty string_view on arena exhaustion") {
+    char buf[8];  // tiny arena
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    // First intern should succeed if it fits
+    auto s1 = pool.intern("hi");
+    REQUIRE(!s1.empty());
+    // Eventually the arena will run out
+    auto s2 = pool.intern("this string is way too long for an 8 byte arena");
+    // Exhausted: intern returns empty
+    REQUIRE(s2.empty());
+}
+
+TEST_CASE("Arena allocate returns nullptr on exhaustion") {
+    char buf[4];
+    note::MonotonicArena arena(buf);
+
+    void* p1 = arena.allocate(2);
+    REQUIRE(p1 != nullptr);
+
+    void* p2 = arena.allocate(16);  // won't fit
+    REQUIRE(p2 == nullptr);
+}
+
+// GenericResponseSink uses offsetof which requires standard-layout ResponseField
+// (no Printable vtable). Only valid when NOTE_PRINTABLE=0.
+#if NOTE_PRINTABLE == 0
+TEST_CASE("GenericResponseSink handles arena exhaustion gracefully") {
+    // Use a 1-byte arena — too small for any string interning.
+    char buf[1];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    note::api::NoteAdd::Response rsp{};
+    note::GenericResponseSink gsink{
+        &rsp,
+        note::api::NoteAdd::field_descs_ptr(),
+        note::api::NoteAdd::field_count,
+        &pool
+    };
+
+    // String field — interning will fail, field should be empty
+    gsink.on_string("note", "sensors.qo");
+    REQUIRE(rsp.noteId.value().empty());
+
+    // Non-string fields should still work (no arena needed)
+    gsink.on_bool("template", true);
+    REQUIRE(rsp.template_.value() == true);
+
+    gsink.on_int("total", 42);
+    REQUIRE(rsp.total.value() == 42);
+}
+#endif

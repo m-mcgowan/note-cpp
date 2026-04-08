@@ -1,5 +1,6 @@
 #pragma once
 
+#include <note/note_config.hpp>
 #include <cstdint>
 
 // note::transport protocol policy types.
@@ -43,6 +44,7 @@ namespace note::transport {
 // ProtocolPolicy — fields common to all Notecard wire transports
 // ---------------------------------------------------------------------------
 
+#if NOTE_MUTABLE_POLICY
 struct ProtocolPolicy {
     uint32_t segment_max_len    = 250;   // max bytes per TX segment before a pacing delay
     uint32_t segment_delay_ms   = 250;   // inter-segment delay (ms)
@@ -52,6 +54,19 @@ struct ProtocolPolicy {
     uint32_t max_retries        = 5;     // max transaction retries on failure
     uint32_t retry_delay_ms     = 500;   // delay between retries (ms)
 };
+#else
+/// Constant protocol policy — all values are constexpr, zero storage.
+/// With [[no_unique_address]], the policy member occupies 0 bytes.
+struct ProtocolPolicy {
+    static constexpr uint16_t segment_max_len    = 250;
+    static constexpr uint16_t segment_delay_ms   = 250;
+    static constexpr uint16_t intra_timeout_ms   = 1000;
+    static constexpr uint16_t reset_drain_ms     = 500;
+    static constexpr uint16_t reset_sync_retries = 10;
+    static constexpr uint16_t max_retries        = 5;
+    static constexpr uint16_t retry_delay_ms     = 500;
+};
+#endif
 
 // ---------------------------------------------------------------------------
 // SerialPolicy — protocol policy for serial (UART) transport
@@ -62,8 +77,7 @@ struct ProtocolPolicy {
 // ---------------------------------------------------------------------------
 
 struct SerialPolicy : ProtocolPolicy {
-    // Reduce delays for hardware that is known to be responsive.
-    // Useful for benchtop development or characterised production hardware.
+#if NOTE_MUTABLE_POLICY
     static constexpr SerialPolicy fast() {
         SerialPolicy p;
         p.segment_delay_ms   = 0;
@@ -74,6 +88,7 @@ struct SerialPolicy : ProtocolPolicy {
         p.retry_delay_ms     = 100;
         return p;
     }
+#endif
 };
 
 // ---------------------------------------------------------------------------
@@ -83,10 +98,11 @@ struct SerialPolicy : ProtocolPolicy {
 // ---------------------------------------------------------------------------
 
 struct I2cPolicy : ProtocolPolicy {
-    uint32_t io_delay_ms      = 6;    // empirical stability delay before each I2C op (ms)
-    uint32_t chunk_delay_ms   = 20;   // inter-chunk delay within a segment (ms)
-    uint32_t nack_wait_ms     = 1000; // wait after NACK before retrying reset (ms)
-    uint32_t response_poll_ms = 50;   // polling interval while waiting for response (ms)
+#if NOTE_MUTABLE_POLICY
+    uint32_t io_delay_ms      = 6;
+    uint32_t chunk_delay_ms   = 20;
+    uint32_t nack_wait_ms     = 1000;
+    uint32_t response_poll_ms = 50;
 
     static constexpr I2cPolicy fast() {
         I2cPolicy p;
@@ -100,6 +116,12 @@ struct I2cPolicy : ProtocolPolicy {
         p.retry_delay_ms     = 100;
         return p;
     }
+#else
+    static constexpr uint16_t io_delay_ms      = 6;
+    static constexpr uint16_t chunk_delay_ms   = 20;
+    static constexpr uint16_t nack_wait_ms     = 1000;
+    static constexpr uint16_t response_poll_ms = 50;
+#endif
 };
 
 // ---------------------------------------------------------------------------

@@ -74,7 +74,18 @@
 #    define NOTE_STATIC_HAL 1
 #  endif
 
+#  ifndef NOTE_MUTABLE_POLICY
+#    define NOTE_MUTABLE_POLICY 0
+#  endif
+
 #endif // NOTE_MINIMAL
+
+// NOTE_MUTABLE_POLICY — when 1, protocol policy fields are mutable instance
+// members (uint32_t, 28 bytes). When 0, fields are static constexpr (zero bytes).
+// Default: 1 (mutable). NOTE_MINIMAL sets 0.
+#ifndef NOTE_MUTABLE_POLICY
+#define NOTE_MUTABLE_POLICY 1
+#endif
 
 // NOTE_STATIC_HAL — when 1, transport types are templated on concrete HAL types
 // instead of using virtual base references. Eliminates SerialHal and TransportHal

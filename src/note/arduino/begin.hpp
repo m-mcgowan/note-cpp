@@ -19,9 +19,18 @@ namespace note::arduino {
 /// Owns the full serial transport stack: SerialHal → NotecardSerial → StreamingTransport.
 template<typename SerialT = HardwareSerial>
 struct SerialTransportStack {
-    SerialHal<SerialT> hal;
-    transport::NotecardSerial<> notecard_hal;
-    StreamingTransport transport;
+    using Hal = SerialHal<SerialT>;
+#if NOTE_STATIC_HAL
+    using NcSerial = transport::NotecardSerial<Hal>;
+    using Transport = StreamingTransport<NcSerial>;
+#else
+    using NcSerial = transport::NotecardSerial<>;
+    using Transport = StreamingTransport;
+#endif
+
+    Hal hal;
+    NcSerial notecard_hal;
+    Transport transport;
 
     SerialTransportStack(SerialT& uart, unsigned long baud,
                          uint32_t max_retries = 5, uint32_t retry_delay = 500)

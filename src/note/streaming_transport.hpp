@@ -200,19 +200,32 @@ struct IStreamingTransport {
 // StreamingTransport — protocol logic over a TransportHal
 // ---------------------------------------------------------------------------
 
-#ifdef NOTE_MINIMAL
+#if NOTE_STATIC_HAL
+template<typename HalT>
 class StreamingTransport {
-#else
-class StreamingTransport : public IStreamingTransport {
-#endif
+public:
+    explicit StreamingTransport(HalT& hal)
+        : hal_(hal) {}
+
+    StreamingTransport(HalT& hal, uint32_t /*max_retries*/, uint32_t /*retry_delay_ms*/ = 500)
+        : hal_(hal) {}
+#elif defined(NOTE_MINIMAL)
+class StreamingTransport {
 public:
     explicit StreamingTransport(TransportHal& hal)
         : hal_(hal) {}
 
-    /// @deprecated Retry is now orchestrated by the Notecard layer.
-    /// These parameters are accepted for source compatibility but ignored.
     StreamingTransport(TransportHal& hal, uint32_t /*max_retries*/, uint32_t /*retry_delay_ms*/ = 500)
         : hal_(hal) {}
+#else
+class StreamingTransport : public IStreamingTransport {
+public:
+    explicit StreamingTransport(TransportHal& hal)
+        : hal_(hal) {}
+
+    StreamingTransport(TransportHal& hal, uint32_t /*max_retries*/, uint32_t /*retry_delay_ms*/ = 500)
+        : hal_(hal) {}
+#endif
 
 #if NOTE_DEBUG_ENABLED
 #ifdef NOTE_MINIMAL
@@ -457,9 +470,15 @@ private:
     bool stream_request(BuildFn build_fn, void* ctx) {
         struct Writer : JsonWriter {
             using JsonWriter::write;
+#if NOTE_STATIC_HAL
+            HalT& hal;
+            bool ok = true;
+            explicit Writer(HalT& h) : hal(h) {}
+#else
             TransportHal& hal;
             bool ok = true;
             explicit Writer(TransportHal& h) : hal(h) {}
+#endif
             bool write(const char* data, size_t len) override {
                 if (!ok) return false;
                 ok = hal.transmit(reinterpret_cast<const uint8_t*>(data), len);
@@ -623,7 +642,11 @@ private:
         return {};
     }
 
+#if NOTE_STATIC_HAL
+    HalT& hal_;
+#else
     TransportHal& hal_;
+#endif
     bool initialized_ = false;
 #if NOTE_DEBUG_ENABLED
     DebugListener debug_{};

@@ -8,12 +8,12 @@
 #include <cstddef>
 #include <cstdint>
 
-// NOTE_MINIMAL strips virtual inheritance from HAL types.
+// NOTE_STATIC_HAL strips virtual inheritance from HAL types.
 // Concrete types provide the same methods without vtable overhead.
-#ifdef NOTE_MINIMAL
-#define override
+#if NOTE_STATIC_HAL
+#define NOTE_HAL_OVERRIDE
 #else
-#define override override
+#define NOTE_HAL_OVERRIDE override
 #endif
 
 // note::transport::NotecardSerial
@@ -86,19 +86,28 @@ private:
 /// NotecardSerial — TransportHal implementation for serial (UART).
 /// Wraps a platform SerialHal (non-blocking receive) into the blocking
 /// TransportHal interface used by StreamingTransport.
-#if __cplusplus >= 202002L
+#if NOTE_STATIC_HAL
+template <typename HalT, typename PolicyType = SerialPolicy>
+class NotecardSerial {
+#elif __cplusplus >= 202002L
 template <typename PolicyType = StaticSerialPolicy<SerialPolicy{}>>
+class NotecardSerial : public note::TransportHal {
 #else
 template <typename PolicyType = SerialPolicy>
-#endif
 class NotecardSerial : public note::TransportHal {
+#endif
 public:
     [[no_unique_address]] PolicyType policy;
 
+#if NOTE_STATIC_HAL
+    explicit NotecardSerial(HalT& hal, PolicyType pol = {})
+        : policy(pol), hal_(hal) {}
+#else
     explicit NotecardSerial(SerialHal& hal, PolicyType pol = {})
         : policy(pol), hal_(hal) {}
+#endif
 
-    bool transmit(const uint8_t* data, size_t len) override {
+    bool transmit(const uint8_t* data, size_t len) NOTE_HAL_OVERRIDE {
         size_t offset = 0;
         while (offset < len) {
             size_t chunk = std::min(len - offset, size_t(policy.segment_max_len));
@@ -110,7 +119,7 @@ public:
         return true;
     }
 
-    Result<size_t> read(uint8_t* buf, size_t max_len, uint32_t timeout_ms) override {
+    Result<size_t> read(uint8_t* buf, size_t max_len, uint32_t timeout_ms) NOTE_HAL_OVERRIDE {
         const uint32_t start = hal_.millis();
         while (true) {
             size_t n = hal_.receive(buf, max_len);
@@ -121,7 +130,7 @@ public:
         }
     }
 
-    bool reset() override {
+    bool reset() NOTE_HAL_OVERRIDE {
         hal_.delay(policy.segment_delay_ms);
 
         for (uint32_t retry = 0; retry < policy.reset_sync_retries; ++retry) {
@@ -151,16 +160,20 @@ public:
         return false;
     }
 
-    bool write_line_terminator() override {
+    bool write_line_terminator() NOTE_HAL_OVERRIDE {
         const uint8_t crlf[] = {'\r', '\n'};
         return hal_.transmit(crlf, 2);
     }
 
-    uint32_t millis() override { return hal_.millis(); }
-    void delay(uint32_t ms) override { hal_.delay(ms); }
+    uint32_t millis() NOTE_HAL_OVERRIDE { return hal_.millis(); }
+    void delay(uint32_t ms) NOTE_HAL_OVERRIDE { hal_.delay(ms); }
 
 private:
+#if NOTE_STATIC_HAL
+    HalT& hal_;
+#else
     SerialHal& hal_;
+#endif
 };
 
 // Deduction guides — allow construction without explicit template arguments.

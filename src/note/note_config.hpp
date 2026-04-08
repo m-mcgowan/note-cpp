@@ -70,7 +70,19 @@
 #    define NOTE_SINGLETON 1
 #  endif
 
+#  ifndef NOTE_STATIC_HAL
+#    define NOTE_STATIC_HAL 1
+#  endif
+
 #endif // NOTE_MINIMAL
+
+// NOTE_STATIC_HAL — when 1, transport types are templated on concrete HAL types
+// instead of using virtual base references. Eliminates SerialHal and TransportHal
+// vtables (~600 bytes on AVR). The DX is unchanged — SerialTransportStack
+// handles the type plumbing internally.
+#ifndef NOTE_STATIC_HAL
+#define NOTE_STATIC_HAL 0
+#endif
 
 // NOTE_SINGLETON — when 1, Api uses a single static notecard pointer instead
 // of per-group storage. Eliminates ~28 pointer inits in the constructor.

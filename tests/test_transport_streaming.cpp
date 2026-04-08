@@ -704,3 +704,66 @@ TEST_CASE("reset: forces re-initialization on next transact") {
     REQUIRE(r2.has_value());
     REQUIRE(hal.reset_count > count_after_first);
 }
+
+// ── transact_dispatch tests (non-template path) ────────────────────────────
+
+TEST_CASE("transact_dispatch: basic response via SaxDispatch") {
+    MockHal hal;
+    StreamingTransport transport(hal);
+    hal.queue_response(R"({"value":42,"name":"test"})");
+
+    struct {
+        int32_t value = 0;
+        note::string_view name;
+    } rsp;
+
+    note::FieldDesc fields[] = {
+        {"value", static_cast<uint16_t>(offsetof(decltype(rsp), value)), note::FieldType::Int32},
+        {"name", static_cast<uint16_t>(offsetof(decltype(rsp), name)), note::FieldType::String},
+    };
+
+    char pool_buf[64];
+    note::MonotonicArena arena(pool_buf);
+    note::StringPool pool(note::arena_allocator(arena));
+    note::GenericResponseSink gsink{&rsp, fields, 2, &pool};
+    auto dispatch = note::make_sax_dispatch(gsink);
+
+    detail::NcErrorCapture nc_err;
+    BuildFn fn = [](JsonBuilder& b, void*) { b.add("req", "test"); };
+    auto rv = transport.transact_dispatch(fn, nullptr, dispatch, 5000, nc_err);
+    REQUIRE(rv.has_value());
+    REQUIRE(nc_err.empty());
+    REQUIRE(rsp.value == 42);
+    REQUIRE(rsp.name == "test");
+}
+
+TEST_CASE("transact_dispatch: captures err field") {
+    MockHal hal;
+    StreamingTransport transport(hal);
+    hal.queue_response(R"({"err":"something went wrong"})");
+
+    note::NullSink null_sink;
+    auto dispatch = note::make_sax_dispatch(null_sink);
+
+    detail::NcErrorCapture nc_err;
+    BuildFn fn = [](JsonBuilder& b, void*) { b.add("req", "test"); };
+    auto rv = transport.transact_dispatch(fn, nullptr, dispatch, 5000, nc_err);
+    REQUIRE(rv.has_value());
+    REQUIRE_FALSE(nc_err.empty());
+    REQUIRE(nc_err.view() == "something went wrong");
+}
+
+TEST_CASE("transact_dispatch: transmit failure") {
+    MockHal hal;
+    hal.transmit_fails = true;
+    StreamingTransport transport(hal);
+
+    note::NullSink null_sink;
+    auto dispatch = note::make_sax_dispatch(null_sink);
+
+    detail::NcErrorCapture nc_err;
+    BuildFn fn = [](JsonBuilder& b, void*) { b.add("req", "test"); };
+    auto rv = transport.transact_dispatch(fn, nullptr, dispatch, 5000, nc_err);
+    REQUIRE_FALSE(rv.has_value());
+    REQUIRE(rv.error().code == Error::SendFailed);
+}

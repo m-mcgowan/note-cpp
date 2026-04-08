@@ -857,27 +857,27 @@ namespace note::api {
 {% endif %}
 #if NOTE_SINGLETON
 {% if not op.response.properties %}
-{{ indent }}/// Singleton void execute — builds JSON inline, calls shared function.
-{{ indent }}static inline Result<void>(*execute_void_fn_)(void*, BuildFn, void*, ::note::detail::NcErrorCapture&);
+{{ indent }}/// Singleton void execute — shared "req" prefix, per-type fields only.
+{{ indent }}static inline Result<void>(*execute_void_fn_)(void*, ::note::string_view, BuildFn, void*, ::note::detail::NcErrorCapture&);
 {{ indent }}ApiResult<void> execute() const {
-{{ indent }}    auto build_ = [&](JsonBuilder& b_) { b_.add("req", notecard_request); this->build(b_); };
+{{ indent }}    auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
 {{ indent }}    BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
 {{ indent }}    ::note::detail::NcErrorCapture nc_err_;
-{{ indent }}    auto rv_ = execute_void_fn_(nc_, fn_, &build_, nc_err_);
+{{ indent }}    auto rv_ = execute_void_fn_(nc_, notecard_request, fn_, &build_, nc_err_);
 {{ indent }}    if (!rv_) return ::note::Unexpected(rv_.error());
 {{ indent }}    if (!nc_err_.empty()) return ApiResult<void>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
 {{ indent }}    return ApiResult<void>{};
 {{ indent }}}
 {% elif exec_simple_props %}
-{{ indent }}/// Singleton generic execute — builds JSON inline, calls shared function.
-{{ indent }}static inline Result<void>(*execute_generic_fn_)(void*, BuildFn, void*, void*, const ::note::FieldDesc*, uint8_t, ::note::detail::NcErrorCapture&, bool&);
+{{ indent }}/// Singleton generic execute — shared "req" prefix, per-type fields only.
+{{ indent }}static inline Result<void>(*execute_generic_fn_)(void*, ::note::string_view, BuildFn, void*, void*, const ::note::FieldDesc*, uint8_t, ::note::detail::NcErrorCapture&, bool&);
 {{ indent }}ApiResult<Response> execute() const {
-{{ indent }}    auto build_ = [&](JsonBuilder& b_) { b_.add("req", notecard_request); this->build(b_); };
+{{ indent }}    auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
 {{ indent }}    BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
 {{ indent }}    Response rsp_{};
 {{ indent }}    ::note::detail::NcErrorCapture nc_err_;
 {{ indent }}    bool exhausted_ = false;
-{{ indent }}    auto rv_ = execute_generic_fn_(nc_, fn_, &build_, &rsp_, field_descs_ptr(), field_count, nc_err_, exhausted_);
+{{ indent }}    auto rv_ = execute_generic_fn_(nc_, notecard_request, fn_, &build_, &rsp_, field_descs_ptr(), field_count, nc_err_, exhausted_);
 {{ indent }}    if (!rv_) return ::note::Unexpected(rv_.error());
 {{ indent }}    if (!nc_err_.empty()) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
 {{ indent }}    if (exhausted_) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Overflow, ::note::Cause::Unspecified, NOTE_ERR("arena exhausted")});

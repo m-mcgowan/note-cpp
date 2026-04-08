@@ -70,20 +70,19 @@ public:
         constexpr uint32_t req_id = 0;
 #endif
 
-        auto build = [&](JsonBuilder& b) {
-            b.add("req", RequestT::notecard_request);
+        auto fields = [&](JsonBuilder& b) {
             if (req_id) b.add("id", static_cast<int32_t>(req_id));
             req.build(b);
         };
-        BuildFn build_fn = [](JsonBuilder& b, void* p) {
-            (*static_cast<decltype(build)*>(p))(b);
+        BuildFn fields_fn = [](JsonBuilder& b, void* p) {
+            (*static_cast<decltype(fields)*>(p))(b);
         };
 
         auto attempt = [&]() -> ApiResult<Rsp> {
             detail::NcErrorCapture nc_err;
 
             if constexpr (std::is_void_v<Rsp>) {
-                auto rv = execute_void(build_fn, &build, nc_err);
+                auto rv = execute_void(RequestT::notecard_request, fields_fn, &fields, nc_err);
                 if (!rv) return Unexpected(rv.error());
                 if (!nc_err.empty()) {
                     StringPool pool(alloc_);
@@ -96,7 +95,7 @@ public:
                 // Table-driven path: shared execute_generic (one copy for all types).
                 Rsp rsp_val{};
                 bool arena_exhausted = false;
-                auto rv = execute_generic(build_fn, &build, &rsp_val,
+                auto rv = execute_generic(RequestT::notecard_request, fields_fn, &fields, &rsp_val,
                                           RequestT::field_descs_ptr(), RequestT::field_count,
                                           nc_err, arena_exhausted);
                 if (!rv) return Unexpected(rv.error());
@@ -120,8 +119,16 @@ public:
                         if (bh) response_sink.set_body_handler(bh);
                     }
                 }
+                // Build full request JSON (including "req" field) for custom sink path.
+                auto full_build = [&](JsonBuilder& b) {
+                    b.add("req", RequestT::notecard_request);
+                    fields_fn(b, &fields);
+                };
+                BuildFn full_fn = [](JsonBuilder& b, void* p) {
+                    (*static_cast<decltype(full_build)*>(p))(b);
+                };
                 auto dispatch = make_sax_dispatch(response_sink);
-                auto rv = stack_.transport.transact_dispatch(build_fn, &build, dispatch, default_timeout_ms_, nc_err);
+                auto rv = stack_.transport.transact_dispatch(full_fn, &full_build, dispatch, default_timeout_ms_, nc_err);
                 if (!rv) return Unexpected(rv.error());
                 if (!nc_err.empty())
                     return ApiResult<Rsp>(ErrorInfo{Error::Notecard, Cause::Unspecified, pool.intern(nc_err.view())});
@@ -174,24 +181,40 @@ public:
 
     /// Non-template execute for GenericResponseSink endpoints.
     /// Shared by all endpoints that use table-driven field dispatch.
-    Result<void> execute_generic(BuildFn build_fn, void* build_ctx,
+    /// req_type is the "req" field value (e.g. "card.temp").
+    /// fields_fn serializes only the request-specific fields (not "req").
+    Result<void> execute_generic(string_view req_type, BuildFn fields_fn, void* fields_ctx,
                                  void* rsp_storage, const FieldDesc* fields,
                                  uint8_t n_fields, detail::NcErrorCapture& nc_err,
                                  bool& arena_exhausted) {
+        struct Ctx { string_view req; BuildFn fn; void* inner; };
+        Ctx ctx{req_type, fields_fn, fields_ctx};
+        BuildFn wrapped = [](JsonBuilder& b, void* p) {
+            auto& c = *static_cast<Ctx*>(p);
+            b.add("req", c.req);
+            if (c.fn) c.fn(b, c.inner);
+        };
         StringPool pool(alloc_);
         GenericResponseSink gsink{rsp_storage, fields, n_fields, &pool};
         auto dispatch = make_sax_dispatch(gsink);
-        auto rv = stack_.transport.transact_dispatch(build_fn, build_ctx, dispatch, default_timeout_ms_, nc_err);
+        auto rv = stack_.transport.transact_dispatch(wrapped, &ctx, dispatch, default_timeout_ms_, nc_err);
         arena_exhausted = pool.exhausted();
         return rv;
     }
 
     /// Non-template execute for void-response endpoints.
-    Result<void> execute_void(BuildFn build_fn, void* build_ctx,
+    Result<void> execute_void(string_view req_type, BuildFn fields_fn, void* fields_ctx,
                               detail::NcErrorCapture& nc_err) {
+        struct Ctx { string_view req; BuildFn fn; void* inner; };
+        Ctx ctx{req_type, fields_fn, fields_ctx};
+        BuildFn wrapped = [](JsonBuilder& b, void* p) {
+            auto& c = *static_cast<Ctx*>(p);
+            b.add("req", c.req);
+            if (c.fn) c.fn(b, c.inner);
+        };
         NullSink null_sink;
         auto dispatch = make_sax_dispatch(null_sink);
-        return stack_.transport.transact_dispatch(build_fn, build_ctx, dispatch, default_timeout_ms_, nc_err);
+        return stack_.transport.transact_dispatch(wrapped, &ctx, dispatch, default_timeout_ms_, nc_err);
     }
 
     /// Access the transport stack (e.g. for binary I/O).

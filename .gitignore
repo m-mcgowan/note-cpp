@@ -2,9 +2,15 @@ __pycache__/
 .venv/
 .claude/
 a.out
+build/
+build-*/
 coverage/
 docs/html/
 tests/integration/firmware/boards.sh
 
 ci.log
 .release-validation/
+
+# PlatformIO
+.pio/
+*.gcno

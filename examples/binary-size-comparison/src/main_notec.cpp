@@ -1,7 +1,8 @@
 // Binary size comparison: note-c (note-arduino) side.
 //
-// Minimal but realistic app: configure hub, register a template,
-// read temperature, publish a note. Same operations as main_notecpp.cpp.
+// Realistic 8-endpoint app: configure, template, read sensors, publish,
+// check status, read voltage, read inbound notes, get environment vars.
+// Same operations as main_avr_notecpp.cpp.
 
 #ifdef USE_NOTEC
 
@@ -57,6 +58,47 @@ void loop() {
         JAddNumberToObject(body, "humidity", 60);
         nc.sendRequest(req);
     }
+
+    // Check connection status
+    bool connected = false;
+    {
+        J *rsp = nc.requestAndResponse(nc.newRequest("card.status"));
+        if (rsp != NULL) {
+            connected = JGetBool(rsp, "connected");
+            nc.deleteResponse(rsp);
+        }
+    }
+
+    // Read battery voltage
+    double voltage = 0;
+    {
+        J *rsp = nc.requestAndResponse(nc.newRequest("card.voltage"));
+        if (rsp != NULL) {
+            voltage = JGetNumber(rsp, "value");
+            nc.deleteResponse(rsp);
+        }
+    }
+
+    // Read inbound note (if any)
+    {
+        J *req = nc.newRequest("note.get");
+        JAddStringToObject(req, "file", "config.qi");
+        J *rsp = nc.requestAndResponse(req);
+        if (rsp != NULL) {
+            nc.deleteResponse(rsp);
+        }
+    }
+
+    // Read environment variables
+    {
+        J *rsp = nc.requestAndResponse(nc.newRequest("env.get"));
+        if (rsp != NULL) {
+            nc.deleteResponse(rsp);
+        }
+    }
+
+    (void)connected;
+    (void)voltage;
 
     delay(60000);
 }

@@ -265,11 +265,11 @@ struct CardWifi {
     static const ::note::FieldDesc* field_descs_ptr() {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-        static constexpr ::note::FieldDesc table[] = {
-            {"secure", static_cast<uint16_t>(offsetof(Response, secure)), ::note::FieldType::Bool},
-            {"security", static_cast<uint16_t>(offsetof(Response, security)), ::note::FieldType::String},
-            {"ssid", static_cast<uint16_t>(offsetof(Response, ssid)), ::note::FieldType::String},
-            {"version", static_cast<uint16_t>(offsetof(Response, version)), ::note::FieldType::String},
+        static constexpr ::note::FieldDesc table[] NOTE_FLASH_ATTR = {
+            {keys_::rsp_secure, static_cast<uint16_t>(offsetof(Response, secure)), ::note::FieldType::Bool},
+            {keys_::rsp_security, static_cast<uint16_t>(offsetof(Response, security)), ::note::FieldType::String},
+            {keys_::rsp_ssid, static_cast<uint16_t>(offsetof(Response, ssid)), ::note::FieldType::String},
+            {keys_::rsp_version, static_cast<uint16_t>(offsetof(Response, version)), ::note::FieldType::String},
         };
 #pragma GCC diagnostic pop
         return table;

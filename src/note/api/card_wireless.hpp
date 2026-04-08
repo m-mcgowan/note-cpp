@@ -299,9 +299,9 @@ struct CardWireless {
     static const ::note::FieldDesc* field_descs_ptr() {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-        static constexpr ::note::FieldDesc table[] = {
-            {"count", static_cast<uint16_t>(offsetof(Response, count)), ::note::FieldType::Int32},
-            {"status", static_cast<uint16_t>(offsetof(Response, status)), ::note::FieldType::String},
+        static constexpr ::note::FieldDesc table[] NOTE_FLASH_ATTR = {
+            {keys_::rsp_count, static_cast<uint16_t>(offsetof(Response, count)), ::note::FieldType::Int32},
+            {keys_::rsp_status, static_cast<uint16_t>(offsetof(Response, status)), ::note::FieldType::String},
         };
 #pragma GCC diagnostic pop
         return table;

@@ -147,8 +147,8 @@ struct CardIllumination {
     static const ::note::FieldDesc* field_descs_ptr() {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-        static constexpr ::note::FieldDesc table[] = {
-            {"value", static_cast<uint16_t>(offsetof(Response, value)), ::note::FieldType::Double},
+        static constexpr ::note::FieldDesc table[] NOTE_FLASH_ATTR = {
+            {keys_::rsp_value, static_cast<uint16_t>(offsetof(Response, value)), ::note::FieldType::Double},
         };
 #pragma GCC diagnostic pop
         return table;

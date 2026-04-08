@@ -297,14 +297,14 @@ struct HubSyncStatus {
     static const ::note::FieldDesc* field_descs_ptr() {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-        static constexpr ::note::FieldDesc table[] = {
-            {"alert", static_cast<uint16_t>(offsetof(Response, alert)), ::note::FieldType::Bool},
-            {"completed", static_cast<uint16_t>(offsetof(Response, completed)), ::note::FieldType::Int32},
-            {"mode", static_cast<uint16_t>(offsetof(Response, mode)), ::note::FieldType::String},
-            {"requested", static_cast<uint16_t>(offsetof(Response, requested)), ::note::FieldType::Int32},
-            {"status", static_cast<uint16_t>(offsetof(Response, status)), ::note::FieldType::String},
-            {"sync", static_cast<uint16_t>(offsetof(Response, sync)), ::note::FieldType::Bool},
-            {"time", static_cast<uint16_t>(offsetof(Response, time)), ::note::FieldType::Int32},
+        static constexpr ::note::FieldDesc table[] NOTE_FLASH_ATTR = {
+            {keys_::rsp_alert, static_cast<uint16_t>(offsetof(Response, alert)), ::note::FieldType::Bool},
+            {keys_::rsp_completed, static_cast<uint16_t>(offsetof(Response, completed)), ::note::FieldType::Int32},
+            {keys_::rsp_mode, static_cast<uint16_t>(offsetof(Response, mode)), ::note::FieldType::String},
+            {keys_::rsp_requested, static_cast<uint16_t>(offsetof(Response, requested)), ::note::FieldType::Int32},
+            {keys_::rsp_status, static_cast<uint16_t>(offsetof(Response, status)), ::note::FieldType::String},
+            {keys_::rsp_sync, static_cast<uint16_t>(offsetof(Response, sync)), ::note::FieldType::Bool},
+            {keys_::rsp_time, static_cast<uint16_t>(offsetof(Response, time)), ::note::FieldType::Int32},
         };
 #pragma GCC diagnostic pop
         return table;

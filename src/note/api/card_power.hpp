@@ -194,10 +194,10 @@ struct CardPower {
         static const ::note::FieldDesc* field_descs_ptr() {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-            static constexpr ::note::FieldDesc table[] = {
-                {"milliamp_hours", static_cast<uint16_t>(offsetof(Response, milliampHours)), ::note::FieldType::Double},
-                {"temperature", static_cast<uint16_t>(offsetof(Response, temperature)), ::note::FieldType::Double},
-                {"voltage", static_cast<uint16_t>(offsetof(Response, voltage)), ::note::FieldType::Double},
+            static constexpr ::note::FieldDesc table[] NOTE_FLASH_ATTR = {
+                {keys_::rsp_milliampHours, static_cast<uint16_t>(offsetof(Response, milliampHours)), ::note::FieldType::Double},
+                {keys_::rsp_temperature, static_cast<uint16_t>(offsetof(Response, temperature)), ::note::FieldType::Double},
+                {keys_::rsp_voltage, static_cast<uint16_t>(offsetof(Response, voltage)), ::note::FieldType::Double},
             };
 #pragma GCC diagnostic pop
             return table;
@@ -416,10 +416,10 @@ struct CardPower {
         static const ::note::FieldDesc* field_descs_ptr() {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-            static constexpr ::note::FieldDesc table[] = {
-                {"milliamp_hours", static_cast<uint16_t>(offsetof(Response, milliampHours)), ::note::FieldType::Double},
-                {"temperature", static_cast<uint16_t>(offsetof(Response, temperature)), ::note::FieldType::Double},
-                {"voltage", static_cast<uint16_t>(offsetof(Response, voltage)), ::note::FieldType::Double},
+            static constexpr ::note::FieldDesc table[] NOTE_FLASH_ATTR = {
+                {keys_::rsp_milliampHours, static_cast<uint16_t>(offsetof(Response, milliampHours)), ::note::FieldType::Double},
+                {keys_::rsp_temperature, static_cast<uint16_t>(offsetof(Response, temperature)), ::note::FieldType::Double},
+                {keys_::rsp_voltage, static_cast<uint16_t>(offsetof(Response, voltage)), ::note::FieldType::Double},
             };
 #pragma GCC diagnostic pop
             return table;
@@ -627,10 +627,10 @@ struct CardPower {
         static const ::note::FieldDesc* field_descs_ptr() {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-            static constexpr ::note::FieldDesc table[] = {
-                {"milliamp_hours", static_cast<uint16_t>(offsetof(Response, milliampHours)), ::note::FieldType::Double},
-                {"temperature", static_cast<uint16_t>(offsetof(Response, temperature)), ::note::FieldType::Double},
-                {"voltage", static_cast<uint16_t>(offsetof(Response, voltage)), ::note::FieldType::Double},
+            static constexpr ::note::FieldDesc table[] NOTE_FLASH_ATTR = {
+                {keys_::rsp_milliampHours, static_cast<uint16_t>(offsetof(Response, milliampHours)), ::note::FieldType::Double},
+                {keys_::rsp_temperature, static_cast<uint16_t>(offsetof(Response, temperature)), ::note::FieldType::Double},
+                {keys_::rsp_voltage, static_cast<uint16_t>(offsetof(Response, voltage)), ::note::FieldType::Double},
             };
 #pragma GCC diagnostic pop
             return table;

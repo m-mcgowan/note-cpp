@@ -188,9 +188,9 @@ struct CardRandom {
     static const ::note::FieldDesc* field_descs_ptr() {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-        static constexpr ::note::FieldDesc table[] = {
-            {"count", static_cast<uint16_t>(offsetof(Response, count)), ::note::FieldType::Int32},
-            {"payload", static_cast<uint16_t>(offsetof(Response, payload)), ::note::FieldType::String},
+        static constexpr ::note::FieldDesc table[] NOTE_FLASH_ATTR = {
+            {keys_::rsp_count, static_cast<uint16_t>(offsetof(Response, count)), ::note::FieldType::Int32},
+            {keys_::rsp_payload, static_cast<uint16_t>(offsetof(Response, payload)), ::note::FieldType::String},
         };
 #pragma GCC diagnostic pop
         return table;

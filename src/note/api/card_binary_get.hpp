@@ -198,9 +198,9 @@ struct CardBinaryGet : note::BinaryReceiveMixin {
     static const ::note::FieldDesc* field_descs_ptr() {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-        static constexpr ::note::FieldDesc table[] = {
-            {"err", static_cast<uint16_t>(offsetof(Response, err)), ::note::FieldType::String},
-            {"status", static_cast<uint16_t>(offsetof(Response, status)), ::note::FieldType::String},
+        static constexpr ::note::FieldDesc table[] NOTE_FLASH_ATTR = {
+            {keys_::rsp_err, static_cast<uint16_t>(offsetof(Response, err)), ::note::FieldType::String},
+            {keys_::rsp_status, static_cast<uint16_t>(offsetof(Response, status)), ::note::FieldType::String},
         };
 #pragma GCC diagnostic pop
         return table;

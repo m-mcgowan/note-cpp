@@ -304,16 +304,16 @@ struct CardStatus {
     static const ::note::FieldDesc* field_descs_ptr() {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-        static constexpr ::note::FieldDesc table[] = {
-            {"cell", static_cast<uint16_t>(offsetof(Response, cell)), ::note::FieldType::Bool},
-            {"connected", static_cast<uint16_t>(offsetof(Response, connected)), ::note::FieldType::Bool},
-            {"inbound", static_cast<uint16_t>(offsetof(Response, inbound)), ::note::FieldType::Int32},
-            {"outbound", static_cast<uint16_t>(offsetof(Response, outbound)), ::note::FieldType::Int32},
-            {"status", static_cast<uint16_t>(offsetof(Response, status)), ::note::FieldType::String},
-            {"storage", static_cast<uint16_t>(offsetof(Response, storage)), ::note::FieldType::Int32},
-            {"time", static_cast<uint16_t>(offsetof(Response, time)), ::note::FieldType::Int32},
-            {"usb", static_cast<uint16_t>(offsetof(Response, usb)), ::note::FieldType::Bool},
-            {"wifi", static_cast<uint16_t>(offsetof(Response, wifi)), ::note::FieldType::Bool},
+        static constexpr ::note::FieldDesc table[] NOTE_FLASH_ATTR = {
+            {keys_::rsp_cell, static_cast<uint16_t>(offsetof(Response, cell)), ::note::FieldType::Bool},
+            {keys_::rsp_connected, static_cast<uint16_t>(offsetof(Response, connected)), ::note::FieldType::Bool},
+            {keys_::rsp_inbound, static_cast<uint16_t>(offsetof(Response, inbound)), ::note::FieldType::Int32},
+            {keys_::rsp_outbound, static_cast<uint16_t>(offsetof(Response, outbound)), ::note::FieldType::Int32},
+            {keys_::rsp_status, static_cast<uint16_t>(offsetof(Response, status)), ::note::FieldType::String},
+            {keys_::rsp_storage, static_cast<uint16_t>(offsetof(Response, storage)), ::note::FieldType::Int32},
+            {keys_::rsp_time, static_cast<uint16_t>(offsetof(Response, time)), ::note::FieldType::Int32},
+            {keys_::rsp_usb, static_cast<uint16_t>(offsetof(Response, usb)), ::note::FieldType::Bool},
+            {keys_::rsp_wifi, static_cast<uint16_t>(offsetof(Response, wifi)), ::note::FieldType::Bool},
         };
 #pragma GCC diagnostic pop
         return table;

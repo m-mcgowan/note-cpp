@@ -295,15 +295,15 @@ struct CardUsageGet {
     static const ::note::FieldDesc* field_descs_ptr() {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-        static constexpr ::note::FieldDesc table[] = {
-            {"bytes_received", static_cast<uint16_t>(offsetof(Response, bytesReceived)), ::note::FieldType::Int32},
-            {"bytes_sent", static_cast<uint16_t>(offsetof(Response, bytesSent)), ::note::FieldType::Int32},
-            {"notes_received", static_cast<uint16_t>(offsetof(Response, notesReceived)), ::note::FieldType::Int32},
-            {"notes_sent", static_cast<uint16_t>(offsetof(Response, notesSent)), ::note::FieldType::Int32},
-            {"seconds", static_cast<uint16_t>(offsetof(Response, seconds)), ::note::FieldType::Int32},
-            {"sessions_secure", static_cast<uint16_t>(offsetof(Response, sessionsSecure)), ::note::FieldType::Int32},
-            {"sessions_standard", static_cast<uint16_t>(offsetof(Response, sessionsStandard)), ::note::FieldType::Int32},
-            {"time", static_cast<uint16_t>(offsetof(Response, time)), ::note::FieldType::Int32},
+        static constexpr ::note::FieldDesc table[] NOTE_FLASH_ATTR = {
+            {keys_::rsp_bytesReceived, static_cast<uint16_t>(offsetof(Response, bytesReceived)), ::note::FieldType::Int32},
+            {keys_::rsp_bytesSent, static_cast<uint16_t>(offsetof(Response, bytesSent)), ::note::FieldType::Int32},
+            {keys_::rsp_notesReceived, static_cast<uint16_t>(offsetof(Response, notesReceived)), ::note::FieldType::Int32},
+            {keys_::rsp_notesSent, static_cast<uint16_t>(offsetof(Response, notesSent)), ::note::FieldType::Int32},
+            {keys_::rsp_seconds, static_cast<uint16_t>(offsetof(Response, seconds)), ::note::FieldType::Int32},
+            {keys_::rsp_sessionsSecure, static_cast<uint16_t>(offsetof(Response, sessionsSecure)), ::note::FieldType::Int32},
+            {keys_::rsp_sessionsStandard, static_cast<uint16_t>(offsetof(Response, sessionsStandard)), ::note::FieldType::Int32},
+            {keys_::rsp_time, static_cast<uint16_t>(offsetof(Response, time)), ::note::FieldType::Int32},
         };
 #pragma GCC diagnostic pop
         return table;

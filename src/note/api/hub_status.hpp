@@ -161,9 +161,9 @@ struct HubStatus {
     static const ::note::FieldDesc* field_descs_ptr() {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-        static constexpr ::note::FieldDesc table[] = {
-            {"connected", static_cast<uint16_t>(offsetof(Response, connected)), ::note::FieldType::Bool},
-            {"status", static_cast<uint16_t>(offsetof(Response, status)), ::note::FieldType::String},
+        static constexpr ::note::FieldDesc table[] NOTE_FLASH_ATTR = {
+            {keys_::rsp_connected, static_cast<uint16_t>(offsetof(Response, connected)), ::note::FieldType::Bool},
+            {keys_::rsp_status, static_cast<uint16_t>(offsetof(Response, status)), ::note::FieldType::String},
         };
 #pragma GCC diagnostic pop
         return table;

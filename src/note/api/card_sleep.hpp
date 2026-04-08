@@ -276,11 +276,11 @@ struct CardSleep {
     static const ::note::FieldDesc* field_descs_ptr() {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-        static constexpr ::note::FieldDesc table[] = {
-            {"mode", static_cast<uint16_t>(offsetof(Response, mode)), ::note::FieldType::String},
-            {"off", static_cast<uint16_t>(offsetof(Response, off)), ::note::FieldType::Bool},
-            {"on", static_cast<uint16_t>(offsetof(Response, on)), ::note::FieldType::Bool},
-            {"seconds", static_cast<uint16_t>(offsetof(Response, seconds)), ::note::FieldType::Int32},
+        static constexpr ::note::FieldDesc table[] NOTE_FLASH_ATTR = {
+            {keys_::rsp_mode, static_cast<uint16_t>(offsetof(Response, mode)), ::note::FieldType::String},
+            {keys_::rsp_off, static_cast<uint16_t>(offsetof(Response, off)), ::note::FieldType::Bool},
+            {keys_::rsp_on, static_cast<uint16_t>(offsetof(Response, on)), ::note::FieldType::Bool},
+            {keys_::rsp_seconds, static_cast<uint16_t>(offsetof(Response, seconds)), ::note::FieldType::Int32},
         };
 #pragma GCC diagnostic pop
         return table;

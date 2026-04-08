@@ -172,8 +172,8 @@ struct EnvTemplate {
     static const ::note::FieldDesc* field_descs_ptr() {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-        static constexpr ::note::FieldDesc table[] = {
-            {"bytes", static_cast<uint16_t>(offsetof(Response, bytes)), ::note::FieldType::Int32},
+        static constexpr ::note::FieldDesc table[] NOTE_FLASH_ATTR = {
+            {keys_::rsp_bytes, static_cast<uint16_t>(offsetof(Response, bytes)), ::note::FieldType::Int32},
         };
 #pragma GCC diagnostic pop
         return table;

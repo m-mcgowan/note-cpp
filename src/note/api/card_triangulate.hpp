@@ -355,13 +355,13 @@ struct CardTriangulate {
     static const ::note::FieldDesc* field_descs_ptr() {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-        static constexpr ::note::FieldDesc table[] = {
-            {"length", static_cast<uint16_t>(offsetof(Response, length)), ::note::FieldType::Int32},
-            {"mode", static_cast<uint16_t>(offsetof(Response, mode)), ::note::FieldType::String},
-            {"motion", static_cast<uint16_t>(offsetof(Response, motion)), ::note::FieldType::Int32},
-            {"on", static_cast<uint16_t>(offsetof(Response, on)), ::note::FieldType::Bool},
-            {"time", static_cast<uint16_t>(offsetof(Response, time)), ::note::FieldType::Int32},
-            {"usb", static_cast<uint16_t>(offsetof(Response, usb)), ::note::FieldType::Bool},
+        static constexpr ::note::FieldDesc table[] NOTE_FLASH_ATTR = {
+            {keys_::rsp_length, static_cast<uint16_t>(offsetof(Response, length)), ::note::FieldType::Int32},
+            {keys_::rsp_mode, static_cast<uint16_t>(offsetof(Response, mode)), ::note::FieldType::String},
+            {keys_::rsp_motion, static_cast<uint16_t>(offsetof(Response, motion)), ::note::FieldType::Int32},
+            {keys_::rsp_on, static_cast<uint16_t>(offsetof(Response, on)), ::note::FieldType::Bool},
+            {keys_::rsp_time, static_cast<uint16_t>(offsetof(Response, time)), ::note::FieldType::Int32},
+            {keys_::rsp_usb, static_cast<uint16_t>(offsetof(Response, usb)), ::note::FieldType::Bool},
         };
 #pragma GCC diagnostic pop
         return table;

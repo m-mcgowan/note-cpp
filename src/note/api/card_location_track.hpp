@@ -296,13 +296,13 @@ struct CardLocationTrack {
     static const ::note::FieldDesc* field_descs_ptr() {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-        static constexpr ::note::FieldDesc table[] = {
-            {"file", static_cast<uint16_t>(offsetof(Response, file)), ::note::FieldType::String},
-            {"heartbeat", static_cast<uint16_t>(offsetof(Response, heartbeat)), ::note::FieldType::Bool},
-            {"minutes", static_cast<uint16_t>(offsetof(Response, minutes)), ::note::FieldType::Int32},
-            {"seconds", static_cast<uint16_t>(offsetof(Response, seconds)), ::note::FieldType::Int32},
-            {"start", static_cast<uint16_t>(offsetof(Response, start)), ::note::FieldType::Bool},
-            {"stop", static_cast<uint16_t>(offsetof(Response, stop)), ::note::FieldType::Bool},
+        static constexpr ::note::FieldDesc table[] NOTE_FLASH_ATTR = {
+            {keys_::rsp_file, static_cast<uint16_t>(offsetof(Response, file)), ::note::FieldType::String},
+            {keys_::rsp_heartbeat, static_cast<uint16_t>(offsetof(Response, heartbeat)), ::note::FieldType::Bool},
+            {keys_::rsp_minutes, static_cast<uint16_t>(offsetof(Response, minutes)), ::note::FieldType::Int32},
+            {keys_::rsp_seconds, static_cast<uint16_t>(offsetof(Response, seconds)), ::note::FieldType::Int32},
+            {keys_::rsp_start, static_cast<uint16_t>(offsetof(Response, start)), ::note::FieldType::Bool},
+            {keys_::rsp_stop, static_cast<uint16_t>(offsetof(Response, stop)), ::note::FieldType::Bool},
         };
 #pragma GCC diagnostic pop
         return table;

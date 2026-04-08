@@ -819,16 +819,16 @@ namespace note::api {
 {{ indent }}static const ::note::FieldDesc* field_descs_ptr() {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-{{ indent }}    static constexpr ::note::FieldDesc table[] = {
+{{ indent }}    static constexpr ::note::FieldDesc table[] NOTE_FLASH_ATTR = {
 {% for prop in simple_rsp_props %}
 {% if prop.cpp_type == "bool" %}
-{{ indent }}        {"{{ prop.wire_name }}", static_cast<uint16_t>(offsetof(Response, {{ prop.accessor_name }})), ::note::FieldType::Bool},
+{{ indent }}        {keys_::rsp_{{ prop.accessor_name }}, static_cast<uint16_t>(offsetof(Response, {{ prop.accessor_name }})), ::note::FieldType::Bool},
 {% elif prop.cpp_type == "int32_t" %}
-{{ indent }}        {"{{ prop.wire_name }}", static_cast<uint16_t>(offsetof(Response, {{ prop.accessor_name }})), ::note::FieldType::Int32},
+{{ indent }}        {keys_::rsp_{{ prop.accessor_name }}, static_cast<uint16_t>(offsetof(Response, {{ prop.accessor_name }})), ::note::FieldType::Int32},
 {% elif prop.cpp_type == "double" %}
-{{ indent }}        {"{{ prop.wire_name }}", static_cast<uint16_t>(offsetof(Response, {{ prop.accessor_name }})), ::note::FieldType::Double},
+{{ indent }}        {keys_::rsp_{{ prop.accessor_name }}, static_cast<uint16_t>(offsetof(Response, {{ prop.accessor_name }})), ::note::FieldType::Double},
 {% elif prop.cpp_type == "note::string_view" %}
-{{ indent }}        {"{{ prop.wire_name }}", static_cast<uint16_t>(offsetof(Response, {{ prop.accessor_name }})), ::note::FieldType::String},
+{{ indent }}        {keys_::rsp_{{ prop.accessor_name }}, static_cast<uint16_t>(offsetof(Response, {{ prop.accessor_name }})), ::note::FieldType::String},
 {% endif %}
 {% endfor %}
 {{ indent }}    };

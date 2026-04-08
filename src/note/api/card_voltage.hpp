@@ -503,17 +503,17 @@ struct CardVoltage {
         static const ::note::FieldDesc* field_descs_ptr() {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-            static constexpr ::note::FieldDesc table[] = {
-                {"daily", static_cast<uint16_t>(offsetof(Response, daily)), ::note::FieldType::Double},
-                {"hours", static_cast<uint16_t>(offsetof(Response, hours)), ::note::FieldType::Int32},
-                {"minutes", static_cast<uint16_t>(offsetof(Response, minutes)), ::note::FieldType::Int32},
-                {"mode", static_cast<uint16_t>(offsetof(Response, mode)), ::note::FieldType::String},
-                {"monthly", static_cast<uint16_t>(offsetof(Response, monthly)), ::note::FieldType::Double},
-                {"value", static_cast<uint16_t>(offsetof(Response, value)), ::note::FieldType::Double},
-                {"vavg", static_cast<uint16_t>(offsetof(Response, vavg)), ::note::FieldType::Double},
-                {"vmax", static_cast<uint16_t>(offsetof(Response, vmax)), ::note::FieldType::Double},
-                {"vmin", static_cast<uint16_t>(offsetof(Response, vmin)), ::note::FieldType::Double},
-                {"weekly", static_cast<uint16_t>(offsetof(Response, weekly)), ::note::FieldType::Double},
+            static constexpr ::note::FieldDesc table[] NOTE_FLASH_ATTR = {
+                {keys_::rsp_daily, static_cast<uint16_t>(offsetof(Response, daily)), ::note::FieldType::Double},
+                {keys_::rsp_hours, static_cast<uint16_t>(offsetof(Response, hours)), ::note::FieldType::Int32},
+                {keys_::rsp_minutes, static_cast<uint16_t>(offsetof(Response, minutes)), ::note::FieldType::Int32},
+                {keys_::rsp_mode, static_cast<uint16_t>(offsetof(Response, mode)), ::note::FieldType::String},
+                {keys_::rsp_monthly, static_cast<uint16_t>(offsetof(Response, monthly)), ::note::FieldType::Double},
+                {keys_::rsp_value, static_cast<uint16_t>(offsetof(Response, value)), ::note::FieldType::Double},
+                {keys_::rsp_vavg, static_cast<uint16_t>(offsetof(Response, vavg)), ::note::FieldType::Double},
+                {keys_::rsp_vmax, static_cast<uint16_t>(offsetof(Response, vmax)), ::note::FieldType::Double},
+                {keys_::rsp_vmin, static_cast<uint16_t>(offsetof(Response, vmin)), ::note::FieldType::Double},
+                {keys_::rsp_weekly, static_cast<uint16_t>(offsetof(Response, weekly)), ::note::FieldType::Double},
             };
 #pragma GCC diagnostic pop
             return table;
@@ -1108,17 +1108,17 @@ struct CardVoltage {
         static const ::note::FieldDesc* field_descs_ptr() {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-            static constexpr ::note::FieldDesc table[] = {
-                {"daily", static_cast<uint16_t>(offsetof(Response, daily)), ::note::FieldType::Double},
-                {"hours", static_cast<uint16_t>(offsetof(Response, hours)), ::note::FieldType::Int32},
-                {"minutes", static_cast<uint16_t>(offsetof(Response, minutes)), ::note::FieldType::Int32},
-                {"mode", static_cast<uint16_t>(offsetof(Response, mode)), ::note::FieldType::String},
-                {"monthly", static_cast<uint16_t>(offsetof(Response, monthly)), ::note::FieldType::Double},
-                {"value", static_cast<uint16_t>(offsetof(Response, value)), ::note::FieldType::Double},
-                {"vavg", static_cast<uint16_t>(offsetof(Response, vavg)), ::note::FieldType::Double},
-                {"vmax", static_cast<uint16_t>(offsetof(Response, vmax)), ::note::FieldType::Double},
-                {"vmin", static_cast<uint16_t>(offsetof(Response, vmin)), ::note::FieldType::Double},
-                {"weekly", static_cast<uint16_t>(offsetof(Response, weekly)), ::note::FieldType::Double},
+            static constexpr ::note::FieldDesc table[] NOTE_FLASH_ATTR = {
+                {keys_::rsp_daily, static_cast<uint16_t>(offsetof(Response, daily)), ::note::FieldType::Double},
+                {keys_::rsp_hours, static_cast<uint16_t>(offsetof(Response, hours)), ::note::FieldType::Int32},
+                {keys_::rsp_minutes, static_cast<uint16_t>(offsetof(Response, minutes)), ::note::FieldType::Int32},
+                {keys_::rsp_mode, static_cast<uint16_t>(offsetof(Response, mode)), ::note::FieldType::String},
+                {keys_::rsp_monthly, static_cast<uint16_t>(offsetof(Response, monthly)), ::note::FieldType::Double},
+                {keys_::rsp_value, static_cast<uint16_t>(offsetof(Response, value)), ::note::FieldType::Double},
+                {keys_::rsp_vavg, static_cast<uint16_t>(offsetof(Response, vavg)), ::note::FieldType::Double},
+                {keys_::rsp_vmax, static_cast<uint16_t>(offsetof(Response, vmax)), ::note::FieldType::Double},
+                {keys_::rsp_vmin, static_cast<uint16_t>(offsetof(Response, vmin)), ::note::FieldType::Double},
+                {keys_::rsp_weekly, static_cast<uint16_t>(offsetof(Response, weekly)), ::note::FieldType::Double},
             };
 #pragma GCC diagnostic pop
             return table;

@@ -486,10 +486,10 @@ struct CardAttn {
         static const ::note::FieldDesc* field_descs_ptr() {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-            static constexpr ::note::FieldDesc table[] = {
-                {"payload", static_cast<uint16_t>(offsetof(Response, payload)), ::note::FieldType::String},
-                {"set", static_cast<uint16_t>(offsetof(Response, set)), ::note::FieldType::Bool},
-                {"time", static_cast<uint16_t>(offsetof(Response, time)), ::note::FieldType::Int32},
+            static constexpr ::note::FieldDesc table[] NOTE_FLASH_ATTR = {
+                {keys_::rsp_payload, static_cast<uint16_t>(offsetof(Response, payload)), ::note::FieldType::String},
+                {keys_::rsp_set, static_cast<uint16_t>(offsetof(Response, set)), ::note::FieldType::Bool},
+                {keys_::rsp_time, static_cast<uint16_t>(offsetof(Response, time)), ::note::FieldType::Int32},
             };
 #pragma GCC diagnostic pop
             return table;
@@ -841,8 +841,8 @@ struct CardAttn {
         static const ::note::FieldDesc* field_descs_ptr() {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-            static constexpr ::note::FieldDesc table[] = {
-                {"set", static_cast<uint16_t>(offsetof(Response, set)), ::note::FieldType::Bool},
+            static constexpr ::note::FieldDesc table[] NOTE_FLASH_ATTR = {
+                {keys_::rsp_set, static_cast<uint16_t>(offsetof(Response, set)), ::note::FieldType::Bool},
             };
 #pragma GCC diagnostic pop
             return table;
@@ -1174,8 +1174,8 @@ struct CardAttn {
         static const ::note::FieldDesc* field_descs_ptr() {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-            static constexpr ::note::FieldDesc table[] = {
-                {"set", static_cast<uint16_t>(offsetof(Response, set)), ::note::FieldType::Bool},
+            static constexpr ::note::FieldDesc table[] NOTE_FLASH_ATTR = {
+                {keys_::rsp_set, static_cast<uint16_t>(offsetof(Response, set)), ::note::FieldType::Bool},
             };
 #pragma GCC diagnostic pop
             return table;
@@ -1611,9 +1611,9 @@ struct CardAttn {
         static const ::note::FieldDesc* field_descs_ptr() {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-            static constexpr ::note::FieldDesc table[] = {
-                {"payload", static_cast<uint16_t>(offsetof(Response, payload)), ::note::FieldType::String},
-                {"time", static_cast<uint16_t>(offsetof(Response, time)), ::note::FieldType::Int32},
+            static constexpr ::note::FieldDesc table[] NOTE_FLASH_ATTR = {
+                {keys_::rsp_payload, static_cast<uint16_t>(offsetof(Response, payload)), ::note::FieldType::String},
+                {keys_::rsp_time, static_cast<uint16_t>(offsetof(Response, time)), ::note::FieldType::Int32},
             };
 #pragma GCC diagnostic pop
             return table;
@@ -2128,8 +2128,8 @@ struct CardAttn {
         static const ::note::FieldDesc* field_descs_ptr() {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-            static constexpr ::note::FieldDesc table[] = {
-                {"set", static_cast<uint16_t>(offsetof(Response, set)), ::note::FieldType::Bool},
+            static constexpr ::note::FieldDesc table[] NOTE_FLASH_ATTR = {
+                {keys_::rsp_set, static_cast<uint16_t>(offsetof(Response, set)), ::note::FieldType::Bool},
             };
 #pragma GCC diagnostic pop
             return table;

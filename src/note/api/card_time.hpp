@@ -227,14 +227,14 @@ struct CardTime {
     static const ::note::FieldDesc* field_descs_ptr() {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-        static constexpr ::note::FieldDesc table[] = {
-            {"area", static_cast<uint16_t>(offsetof(Response, area)), ::note::FieldType::String},
-            {"country", static_cast<uint16_t>(offsetof(Response, country)), ::note::FieldType::String},
-            {"lat", static_cast<uint16_t>(offsetof(Response, lat)), ::note::FieldType::Double},
-            {"lon", static_cast<uint16_t>(offsetof(Response, lon)), ::note::FieldType::Double},
-            {"minutes", static_cast<uint16_t>(offsetof(Response, minutes)), ::note::FieldType::Int32},
-            {"time", static_cast<uint16_t>(offsetof(Response, time)), ::note::FieldType::Int32},
-            {"zone", static_cast<uint16_t>(offsetof(Response, zone)), ::note::FieldType::String},
+        static constexpr ::note::FieldDesc table[] NOTE_FLASH_ATTR = {
+            {keys_::rsp_area, static_cast<uint16_t>(offsetof(Response, area)), ::note::FieldType::String},
+            {keys_::rsp_country, static_cast<uint16_t>(offsetof(Response, country)), ::note::FieldType::String},
+            {keys_::rsp_lat, static_cast<uint16_t>(offsetof(Response, lat)), ::note::FieldType::Double},
+            {keys_::rsp_lon, static_cast<uint16_t>(offsetof(Response, lon)), ::note::FieldType::Double},
+            {keys_::rsp_minutes, static_cast<uint16_t>(offsetof(Response, minutes)), ::note::FieldType::Int32},
+            {keys_::rsp_time, static_cast<uint16_t>(offsetof(Response, time)), ::note::FieldType::Int32},
+            {keys_::rsp_zone, static_cast<uint16_t>(offsetof(Response, zone)), ::note::FieldType::String},
         };
 #pragma GCC diagnostic pop
         return table;

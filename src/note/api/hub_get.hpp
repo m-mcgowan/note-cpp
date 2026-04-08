@@ -258,17 +258,17 @@ struct HubGet {
     static const ::note::FieldDesc* field_descs_ptr() {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-        static constexpr ::note::FieldDesc table[] = {
-            {"device", static_cast<uint16_t>(offsetof(Response, device)), ::note::FieldType::String},
-            {"host", static_cast<uint16_t>(offsetof(Response, host)), ::note::FieldType::String},
-            {"inbound", static_cast<uint16_t>(offsetof(Response, inbound)), ::note::FieldType::Int32},
-            {"mode", static_cast<uint16_t>(offsetof(Response, mode)), ::note::FieldType::String},
-            {"outbound", static_cast<uint16_t>(offsetof(Response, outbound)), ::note::FieldType::Int32},
-            {"product", static_cast<uint16_t>(offsetof(Response, product)), ::note::FieldType::String},
-            {"sn", static_cast<uint16_t>(offsetof(Response, sn)), ::note::FieldType::String},
-            {"sync", static_cast<uint16_t>(offsetof(Response, sync)), ::note::FieldType::Bool},
-            {"vinbound", static_cast<uint16_t>(offsetof(Response, vinbound)), ::note::FieldType::String},
-            {"voutbound", static_cast<uint16_t>(offsetof(Response, voutbound)), ::note::FieldType::String},
+        static constexpr ::note::FieldDesc table[] NOTE_FLASH_ATTR = {
+            {keys_::rsp_device, static_cast<uint16_t>(offsetof(Response, device)), ::note::FieldType::String},
+            {keys_::rsp_host, static_cast<uint16_t>(offsetof(Response, host)), ::note::FieldType::String},
+            {keys_::rsp_inbound, static_cast<uint16_t>(offsetof(Response, inbound)), ::note::FieldType::Int32},
+            {keys_::rsp_mode, static_cast<uint16_t>(offsetof(Response, mode)), ::note::FieldType::String},
+            {keys_::rsp_outbound, static_cast<uint16_t>(offsetof(Response, outbound)), ::note::FieldType::Int32},
+            {keys_::rsp_product, static_cast<uint16_t>(offsetof(Response, product)), ::note::FieldType::String},
+            {keys_::rsp_sn, static_cast<uint16_t>(offsetof(Response, sn)), ::note::FieldType::String},
+            {keys_::rsp_sync, static_cast<uint16_t>(offsetof(Response, sync)), ::note::FieldType::Bool},
+            {keys_::rsp_vinbound, static_cast<uint16_t>(offsetof(Response, vinbound)), ::note::FieldType::String},
+            {keys_::rsp_voutbound, static_cast<uint16_t>(offsetof(Response, voutbound)), ::note::FieldType::String},
         };
 #pragma GCC diagnostic pop
         return table;

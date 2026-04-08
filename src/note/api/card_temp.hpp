@@ -273,14 +273,14 @@ struct CardTemp {
         static const ::note::FieldDesc* field_descs_ptr() {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-            static constexpr ::note::FieldDesc table[] = {
-                {"calibration", static_cast<uint16_t>(offsetof(Response, calibration)), ::note::FieldType::Double},
-                {"humidity", static_cast<uint16_t>(offsetof(Response, humidity)), ::note::FieldType::Double},
-                {"pressure", static_cast<uint16_t>(offsetof(Response, pressure)), ::note::FieldType::Double},
-                {"temperature", static_cast<uint16_t>(offsetof(Response, temperature)), ::note::FieldType::Double},
-                {"usb", static_cast<uint16_t>(offsetof(Response, usb)), ::note::FieldType::Bool},
-                {"value", static_cast<uint16_t>(offsetof(Response, value)), ::note::FieldType::Double},
-                {"voltage", static_cast<uint16_t>(offsetof(Response, voltage)), ::note::FieldType::Double},
+            static constexpr ::note::FieldDesc table[] NOTE_FLASH_ATTR = {
+                {keys_::rsp_calibration, static_cast<uint16_t>(offsetof(Response, calibration)), ::note::FieldType::Double},
+                {keys_::rsp_humidity, static_cast<uint16_t>(offsetof(Response, humidity)), ::note::FieldType::Double},
+                {keys_::rsp_pressure, static_cast<uint16_t>(offsetof(Response, pressure)), ::note::FieldType::Double},
+                {keys_::rsp_temperature, static_cast<uint16_t>(offsetof(Response, temperature)), ::note::FieldType::Double},
+                {keys_::rsp_usb, static_cast<uint16_t>(offsetof(Response, usb)), ::note::FieldType::Bool},
+                {keys_::rsp_value, static_cast<uint16_t>(offsetof(Response, value)), ::note::FieldType::Double},
+                {keys_::rsp_voltage, static_cast<uint16_t>(offsetof(Response, voltage)), ::note::FieldType::Double},
             };
 #pragma GCC diagnostic pop
             return table;
@@ -588,14 +588,14 @@ struct CardTemp {
         static const ::note::FieldDesc* field_descs_ptr() {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-            static constexpr ::note::FieldDesc table[] = {
-                {"calibration", static_cast<uint16_t>(offsetof(Response, calibration)), ::note::FieldType::Double},
-                {"humidity", static_cast<uint16_t>(offsetof(Response, humidity)), ::note::FieldType::Double},
-                {"pressure", static_cast<uint16_t>(offsetof(Response, pressure)), ::note::FieldType::Double},
-                {"temperature", static_cast<uint16_t>(offsetof(Response, temperature)), ::note::FieldType::Double},
-                {"usb", static_cast<uint16_t>(offsetof(Response, usb)), ::note::FieldType::Bool},
-                {"value", static_cast<uint16_t>(offsetof(Response, value)), ::note::FieldType::Double},
-                {"voltage", static_cast<uint16_t>(offsetof(Response, voltage)), ::note::FieldType::Double},
+            static constexpr ::note::FieldDesc table[] NOTE_FLASH_ATTR = {
+                {keys_::rsp_calibration, static_cast<uint16_t>(offsetof(Response, calibration)), ::note::FieldType::Double},
+                {keys_::rsp_humidity, static_cast<uint16_t>(offsetof(Response, humidity)), ::note::FieldType::Double},
+                {keys_::rsp_pressure, static_cast<uint16_t>(offsetof(Response, pressure)), ::note::FieldType::Double},
+                {keys_::rsp_temperature, static_cast<uint16_t>(offsetof(Response, temperature)), ::note::FieldType::Double},
+                {keys_::rsp_usb, static_cast<uint16_t>(offsetof(Response, usb)), ::note::FieldType::Bool},
+                {keys_::rsp_value, static_cast<uint16_t>(offsetof(Response, value)), ::note::FieldType::Double},
+                {keys_::rsp_voltage, static_cast<uint16_t>(offsetof(Response, voltage)), ::note::FieldType::Double},
             };
 #pragma GCC diagnostic pop
             return table;
@@ -890,14 +890,14 @@ struct CardTemp {
         static const ::note::FieldDesc* field_descs_ptr() {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-            static constexpr ::note::FieldDesc table[] = {
-                {"calibration", static_cast<uint16_t>(offsetof(Response, calibration)), ::note::FieldType::Double},
-                {"humidity", static_cast<uint16_t>(offsetof(Response, humidity)), ::note::FieldType::Double},
-                {"pressure", static_cast<uint16_t>(offsetof(Response, pressure)), ::note::FieldType::Double},
-                {"temperature", static_cast<uint16_t>(offsetof(Response, temperature)), ::note::FieldType::Double},
-                {"usb", static_cast<uint16_t>(offsetof(Response, usb)), ::note::FieldType::Bool},
-                {"value", static_cast<uint16_t>(offsetof(Response, value)), ::note::FieldType::Double},
-                {"voltage", static_cast<uint16_t>(offsetof(Response, voltage)), ::note::FieldType::Double},
+            static constexpr ::note::FieldDesc table[] NOTE_FLASH_ATTR = {
+                {keys_::rsp_calibration, static_cast<uint16_t>(offsetof(Response, calibration)), ::note::FieldType::Double},
+                {keys_::rsp_humidity, static_cast<uint16_t>(offsetof(Response, humidity)), ::note::FieldType::Double},
+                {keys_::rsp_pressure, static_cast<uint16_t>(offsetof(Response, pressure)), ::note::FieldType::Double},
+                {keys_::rsp_temperature, static_cast<uint16_t>(offsetof(Response, temperature)), ::note::FieldType::Double},
+                {keys_::rsp_usb, static_cast<uint16_t>(offsetof(Response, usb)), ::note::FieldType::Bool},
+                {keys_::rsp_value, static_cast<uint16_t>(offsetof(Response, value)), ::note::FieldType::Double},
+                {keys_::rsp_voltage, static_cast<uint16_t>(offsetof(Response, voltage)), ::note::FieldType::Double},
             };
 #pragma GCC diagnostic pop
             return table;

@@ -191,10 +191,10 @@ struct FileChanges {
     static const ::note::FieldDesc* field_descs_ptr() {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-        static constexpr ::note::FieldDesc table[] = {
-            {"changes", static_cast<uint16_t>(offsetof(Response, changes)), ::note::FieldType::Int32},
-            {"pending", static_cast<uint16_t>(offsetof(Response, pending)), ::note::FieldType::Bool},
-            {"total", static_cast<uint16_t>(offsetof(Response, total)), ::note::FieldType::Int32},
+        static constexpr ::note::FieldDesc table[] NOTE_FLASH_ATTR = {
+            {keys_::rsp_changes, static_cast<uint16_t>(offsetof(Response, changes)), ::note::FieldType::Int32},
+            {keys_::rsp_pending, static_cast<uint16_t>(offsetof(Response, pending)), ::note::FieldType::Bool},
+            {keys_::rsp_total, static_cast<uint16_t>(offsetof(Response, total)), ::note::FieldType::Int32},
         };
 #pragma GCC diagnostic pop
         return table;

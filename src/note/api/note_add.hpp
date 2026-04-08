@@ -368,10 +368,10 @@ struct NoteAdd {
     static const ::note::FieldDesc* field_descs_ptr() {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-        static constexpr ::note::FieldDesc table[] = {
-            {"note", static_cast<uint16_t>(offsetof(Response, noteId)), ::note::FieldType::String},
-            {"template", static_cast<uint16_t>(offsetof(Response, template_)), ::note::FieldType::Bool},
-            {"total", static_cast<uint16_t>(offsetof(Response, total)), ::note::FieldType::Int32},
+        static constexpr ::note::FieldDesc table[] NOTE_FLASH_ATTR = {
+            {keys_::rsp_noteId, static_cast<uint16_t>(offsetof(Response, noteId)), ::note::FieldType::String},
+            {keys_::rsp_template_, static_cast<uint16_t>(offsetof(Response, template_)), ::note::FieldType::Bool},
+            {keys_::rsp_total, static_cast<uint16_t>(offsetof(Response, total)), ::note::FieldType::Int32},
         };
 #pragma GCC diagnostic pop
         return table;

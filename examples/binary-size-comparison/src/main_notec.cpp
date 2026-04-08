@@ -79,12 +79,19 @@ void loop() {
         }
     }
 
-    // Read inbound note (if any)
+    // Read inbound note body
+    float note_temp = 0;
+    int note_humidity = 0;
     {
         J *req = nc.newRequest("note.get");
         JAddStringToObject(req, "file", "config.qi");
         J *rsp = nc.requestAndResponse(req);
         if (rsp != NULL) {
+            J *body = JGetObject(rsp, "body");
+            if (body) {
+                note_temp = JGetNumber(body, "temperature");
+                note_humidity = (int)JGetNumber(body, "humidity");
+            }
             nc.deleteResponse(rsp);
         }
     }
@@ -99,6 +106,8 @@ void loop() {
 
     (void)connected;
     (void)voltage;
+    (void)note_temp;
+    (void)note_humidity;
 
     delay(60000);
 }

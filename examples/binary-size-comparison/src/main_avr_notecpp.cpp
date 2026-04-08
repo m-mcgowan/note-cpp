@@ -124,13 +124,15 @@ void loop() {
 #endif
     double voltage = volt ? volt.value : 0;
 
-    // Read inbound note (if any)
+    // Read inbound note body
+    Readings note_body{};
 #if API_STYLE == 1
-    auto note_in = api.note.read("config.qi").execute();
+    auto note_in = api.note.read("config.qi").into(note_body).execute();
 #else
     {
         note::api::NoteGet::Read req;
         req.file = "config.qi";
+        req.into(note_body);
         auto note_in = nc.execute(req);
         (void)note_in;
     }
@@ -142,10 +144,13 @@ void loop() {
 #else
     auto env = nc.execute(note::api::EnvGet{});
 #endif
+    // Access an env body field (env vars are in the body)
+    // note-cpp: env body requires into() with a typed struct
+    // For simplicity, just check the non-body fields here
 
     (void)connected;
     (void)voltage;
-    (void)env;
+    (void)note_body;
 
     delay(60000);
 }

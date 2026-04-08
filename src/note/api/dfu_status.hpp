@@ -422,7 +422,12 @@ struct DfuStatus {
     }
 
 #if NOTE_SINGLETON
-    /// Singleton generic execute — shared "req" prefix, per-type fields only.
+    /// Body-response endpoint: uses generic path when NOTE_RESPONSE_BODY=0,
+    /// per-type path when body parsing is enabled.
+#if NOTE_RESPONSE_BODY
+    static inline ApiResult<Response>(*execute_fn_)(void*, const DfuStatus&);
+    auto execute() const { return execute_fn_(nc_, *this); }
+#else
     static inline Result<void>(*execute_generic_fn_)(void*, ::note::string_view, BuildFn, void*, void*, const ::note::FieldDesc*, uint8_t, ::note::detail::NcErrorCapture&, bool&);
     ApiResult<Response> execute() const {
         auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
@@ -436,6 +441,7 @@ struct DfuStatus {
         if (exhausted_) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Overflow, ::note::Cause::Unspecified, NOTE_ERR("arena exhausted")});
         return ApiResult<Response>(std::move(rsp_));
     }
+#endif
     static inline Result<void>(*send_fn_)(void*, BuildFn, void*);
 #else
     ApiResult<Response>(*execute_fn_)(void*, const DfuStatus&) = nullptr;

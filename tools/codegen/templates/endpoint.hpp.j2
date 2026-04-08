@@ -868,8 +868,8 @@ namespace note::api {
 {{ indent }}    if (!nc_err_.empty()) return ApiResult<void>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
 {{ indent }}    return ApiResult<void>{};
 {{ indent }}}
-{% elif exec_simple_props %}
-{{ indent }}/// Singleton generic execute — shared "req" prefix, per-type fields only.
+{% elif exec_simple_props and not op.response.has_body %}
+{{ indent }}/// Singleton generic execute — builds JSON inline, calls shared function.
 {{ indent }}static inline Result<void>(*execute_generic_fn_)(void*, ::note::string_view, BuildFn, void*, void*, const ::note::FieldDesc*, uint8_t, ::note::detail::NcErrorCapture&, bool&);
 {{ indent }}ApiResult<Response> execute() const {
 {{ indent }}    auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
@@ -883,6 +883,27 @@ namespace note::api {
 {{ indent }}    if (exhausted_) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Overflow, ::note::Cause::Unspecified, NOTE_ERR("arena exhausted")});
 {{ indent }}    return ApiResult<Response>(std::move(rsp_));
 {{ indent }}}
+{% elif exec_simple_props and op.response.has_body %}
+{{ indent }}/// Body-response endpoint: uses generic path when NOTE_RESPONSE_BODY=0,
+{{ indent }}/// per-type path when body parsing is enabled.
+#if NOTE_RESPONSE_BODY
+{{ indent }}static inline ApiResult<Response>(*execute_fn_)(void*, const {{ parent_type }}&);
+{{ indent }}auto execute() const { return execute_fn_(nc_, *this); }
+#else
+{{ indent }}static inline Result<void>(*execute_generic_fn_)(void*, ::note::string_view, BuildFn, void*, void*, const ::note::FieldDesc*, uint8_t, ::note::detail::NcErrorCapture&, bool&);
+{{ indent }}ApiResult<Response> execute() const {
+{{ indent }}    auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
+{{ indent }}    BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
+{{ indent }}    Response rsp_{};
+{{ indent }}    ::note::detail::NcErrorCapture nc_err_;
+{{ indent }}    bool exhausted_ = false;
+{{ indent }}    auto rv_ = execute_generic_fn_(nc_, notecard_request, fn_, &build_, &rsp_, field_descs_ptr(), field_count, nc_err_, exhausted_);
+{{ indent }}    if (!rv_) return ::note::Unexpected(rv_.error());
+{{ indent }}    if (!nc_err_.empty()) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
+{{ indent }}    if (exhausted_) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Overflow, ::note::Cause::Unspecified, NOTE_ERR("arena exhausted")});
+{{ indent }}    return ApiResult<Response>(std::move(rsp_));
+{{ indent }}}
+#endif
 {% else %}
 {{ indent }}/// Singleton per-type execute (body-enabled or non-standard response).
 {{ indent }}static inline ApiResult<Response>(*execute_fn_)(void*, const {{ parent_type }}&);

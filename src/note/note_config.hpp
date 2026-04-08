@@ -78,10 +78,6 @@
 #    define NOTE_MUTABLE_POLICY 0
 #  endif
 
-#  ifndef NOTE_RESPONSE_BODY
-#    define NOTE_RESPONSE_BODY 0
-#  endif
-
 #endif // NOTE_MINIMAL
 
 // NOTE_RESPONSE_BODY — when 1, response types include body parsing support

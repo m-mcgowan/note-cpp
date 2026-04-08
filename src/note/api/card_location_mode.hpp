@@ -430,7 +430,7 @@ struct CardLocationMode {
         }
 
 #if NOTE_SINGLETON
-        /// Singleton generic execute — shared "req" prefix, per-type fields only.
+        /// Singleton generic execute — builds JSON inline, calls shared function.
         static inline Result<void>(*execute_generic_fn_)(void*, ::note::string_view, BuildFn, void*, void*, const ::note::FieldDesc*, uint8_t, ::note::detail::NcErrorCapture&, bool&);
         ApiResult<Response> execute() const {
             auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
@@ -943,7 +943,7 @@ struct CardLocationMode {
         }
 
 #if NOTE_SINGLETON
-        /// Singleton generic execute — shared "req" prefix, per-type fields only.
+        /// Singleton generic execute — builds JSON inline, calls shared function.
         static inline Result<void>(*execute_generic_fn_)(void*, ::note::string_view, BuildFn, void*, void*, const ::note::FieldDesc*, uint8_t, ::note::detail::NcErrorCapture&, bool&);
         ApiResult<Response> execute() const {
             auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
@@ -1274,7 +1274,7 @@ struct CardLocationMode {
         }
 
 #if NOTE_SINGLETON
-        /// Singleton generic execute — shared "req" prefix, per-type fields only.
+        /// Singleton generic execute — builds JSON inline, calls shared function.
         static inline Result<void>(*execute_generic_fn_)(void*, ::note::string_view, BuildFn, void*, void*, const ::note::FieldDesc*, uint8_t, ::note::detail::NcErrorCapture&, bool&);
         ApiResult<Response> execute() const {
             auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
@@ -1688,7 +1688,7 @@ struct CardLocationMode {
         }
 
 #if NOTE_SINGLETON
-        /// Singleton generic execute — shared "req" prefix, per-type fields only.
+        /// Singleton generic execute — builds JSON inline, calls shared function.
         static inline Result<void>(*execute_generic_fn_)(void*, ::note::string_view, BuildFn, void*, void*, const ::note::FieldDesc*, uint8_t, ::note::detail::NcErrorCapture&, bool&);
         ApiResult<Response> execute() const {
             auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
@@ -1977,7 +1977,7 @@ struct CardLocationMode {
         }
 
 #if NOTE_SINGLETON
-        /// Singleton generic execute — shared "req" prefix, per-type fields only.
+        /// Singleton generic execute — builds JSON inline, calls shared function.
         static inline Result<void>(*execute_generic_fn_)(void*, ::note::string_view, BuildFn, void*, void*, const ::note::FieldDesc*, uint8_t, ::note::detail::NcErrorCapture&, bool&);
         ApiResult<Response> execute() const {
             auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
@@ -2439,7 +2439,7 @@ struct CardLocationMode {
         }
 
 #if NOTE_SINGLETON
-        /// Singleton generic execute — shared "req" prefix, per-type fields only.
+        /// Singleton generic execute — builds JSON inline, calls shared function.
         static inline Result<void>(*execute_generic_fn_)(void*, ::note::string_view, BuildFn, void*, void*, const ::note::FieldDesc*, uint8_t, ::note::detail::NcErrorCapture&, bool&);
         ApiResult<Response> execute() const {
             auto build_ = [&](JsonBuilder& b_) { this->build(b_); };

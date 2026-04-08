@@ -212,9 +212,12 @@ struct WebDelete {
         /// the host to check for any I2C/UART corruption.
         note::ResponseField<note::string_view> status{};
 
+#ifndef NOTE_NO_BUFFERED
         /// Access the body as a JsonReader (buffered parse path only).
         const JsonReader* body() const { return body_.get(); }
+#endif
 
+#ifndef NOTE_NO_BUFFERED
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
             rsp.payload = reader_->get_string("payload");
@@ -236,6 +239,7 @@ struct WebDelete {
             rsp.body_ = reader_.get_object("body");
             return rsp;
         }
+#endif // !NOTE_NO_BUFFERED
 
         // SAX sink — zero-allocation streaming parse into Response fields.
         // String fields are interned into the StringPool immediately, so
@@ -323,9 +327,11 @@ struct WebDelete {
         }
 #endif
 
+#ifndef NOTE_NO_BUFFERED
     private:
         std::unique_ptr<JsonReader> reader_;
         std::unique_ptr<JsonReader> body_;
+#endif
     };
 
 #if NOTE_SINGLETON

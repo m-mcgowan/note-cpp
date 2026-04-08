@@ -247,9 +247,12 @@ struct WebGet {
         /// The HTTP Status Code.
         note::ResponseField<int32_t> result{};
 
+#ifndef NOTE_NO_BUFFERED
         /// Access the body as a JsonReader (buffered parse path only).
         const JsonReader* body() const { return body_.get(); }
+#endif
 
+#ifndef NOTE_NO_BUFFERED
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
             rsp.cobs = reader_->get_int("cobs");
@@ -273,6 +276,7 @@ struct WebGet {
             rsp.body_ = reader_.get_object("body");
             return rsp;
         }
+#endif // !NOTE_NO_BUFFERED
 
         // SAX sink — zero-allocation streaming parse into Response fields.
         // String fields are interned into the StringPool immediately, so
@@ -366,9 +370,11 @@ struct WebGet {
         }
 #endif
 
+#ifndef NOTE_NO_BUFFERED
     private:
         std::unique_ptr<JsonReader> reader_;
         std::unique_ptr<JsonReader> body_;
+#endif
     };
 
 #if NOTE_SINGLETON

@@ -182,6 +182,7 @@ struct CardUsageGet {
         /// activation.
         note::ResponseField<int32_t> time{};
 
+#ifndef NOTE_NO_BUFFERED
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
             rsp.bytesReceived = reader_->get_int("bytes_received");
@@ -211,6 +212,7 @@ struct CardUsageGet {
             rsp.time = reader_.get_int("time");
             return rsp;
         }
+#endif // !NOTE_NO_BUFFERED
 
         // SAX sink — zero-allocation streaming parse into Response fields.
         // String fields are interned into the StringPool immediately, so
@@ -288,8 +290,10 @@ struct CardUsageGet {
         }
 #endif
 
+#ifndef NOTE_NO_BUFFERED
     private:
         std::unique_ptr<JsonReader> reader_;
+#endif
     };
     static constexpr uint8_t field_count = 8;
     static const ::note::FieldDesc* field_descs_ptr() {

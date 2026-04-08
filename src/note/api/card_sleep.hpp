@@ -191,6 +191,7 @@ struct CardSleep {
         /// mode (only included if default settings are overridden).
         note::ResponseField<int32_t> seconds{};
 
+#ifndef NOTE_NO_BUFFERED
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
             rsp.mode = reader_->get_string("mode");
@@ -212,6 +213,7 @@ struct CardSleep {
             rsp.seconds = reader_.get_int("seconds");
             return rsp;
         }
+#endif // !NOTE_NO_BUFFERED
 
         // SAX sink — zero-allocation streaming parse into Response fields.
         // String fields are interned into the StringPool immediately, so
@@ -269,8 +271,10 @@ struct CardSleep {
         }
 #endif
 
+#ifndef NOTE_NO_BUFFERED
     private:
         std::unique_ptr<JsonReader> reader_;
+#endif
     };
     static constexpr uint8_t field_count = 4;
     static const ::note::FieldDesc* field_descs_ptr() {

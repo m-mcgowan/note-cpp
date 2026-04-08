@@ -254,6 +254,7 @@ struct CardTriangulate {
         /// is USB-powered.
         note::ResponseField<bool> usb{};
 
+#ifndef NOTE_NO_BUFFERED
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
             rsp.length = reader_->get_int("length");
@@ -279,6 +280,7 @@ struct CardTriangulate {
             rsp.usb = reader_.get_bool("usb");
             return rsp;
         }
+#endif // !NOTE_NO_BUFFERED
 
         // SAX sink — zero-allocation streaming parse into Response fields.
         // String fields are interned into the StringPool immediately, so
@@ -348,8 +350,10 @@ struct CardTriangulate {
         }
 #endif
 
+#ifndef NOTE_NO_BUFFERED
     private:
         std::unique_ptr<JsonReader> reader_;
+#endif
     };
     static constexpr uint8_t field_count = 6;
     static const ::note::FieldDesc* field_descs_ptr() {

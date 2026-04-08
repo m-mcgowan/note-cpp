@@ -495,14 +495,17 @@ namespace note::api {
 {% endfor %}
 {% if op.response.has_body %}
 
+#ifndef NOTE_NO_BUFFERED
 {{ indent }}    /// Access the body as a JsonReader (buffered parse path only).
 {{ indent }}    const JsonReader* body() const { return body_.get(); }
+#endif
 {% endif %}
 
 {% if op.has_version_gated_response_props %}
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 {% endif %}
+#ifndef NOTE_NO_BUFFERED
 {{ indent }}    static Response parse(std::unique_ptr<JsonReader> reader_) {
 {{ indent }}        Response rsp;
 {% for prop in op.response.properties %}
@@ -550,6 +553,7 @@ namespace note::api {
 {% if op.has_version_gated_response_props %}
 #pragma GCC diagnostic pop
 {% endif %}
+#endif // !NOTE_NO_BUFFERED
 {% if op.response.properties %}
 
 {{ indent }}    // SAX sink — zero-allocation streaming parse into Response fields.
@@ -802,11 +806,13 @@ namespace note::api {
 {{ indent }}    }
 #endif
 
+#ifndef NOTE_NO_BUFFERED
 {{ indent }}private:
 {{ indent }}    std::unique_ptr<JsonReader> reader_;
 {% if op.response.has_body %}
 {{ indent }}    std::unique_ptr<JsonReader> body_;
 {% endif %}
+#endif
 {{ indent }}};
 {% set simple_rsp_props = [] %}
 {% for prop in op.response.properties %}

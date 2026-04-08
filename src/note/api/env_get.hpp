@@ -173,11 +173,14 @@ struct EnvGet {
         note::ResponseField<int32_t> time{};
 #endif
 
+#ifndef NOTE_NO_BUFFERED
         /// Access the body as a JsonReader (buffered parse path only).
         const JsonReader* body() const { return body_.get(); }
+#endif
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#ifndef NOTE_NO_BUFFERED
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
             rsp.text = reader_->get_string("text");
@@ -205,6 +208,7 @@ struct EnvGet {
             return rsp;
         }
 #pragma GCC diagnostic pop
+#endif // !NOTE_NO_BUFFERED
 
         // SAX sink — zero-allocation streaming parse into Response fields.
         // String fields are interned into the StringPool immediately, so
@@ -298,9 +302,11 @@ struct EnvGet {
         }
 #endif
 
+#ifndef NOTE_NO_BUFFERED
     private:
         std::unique_ptr<JsonReader> reader_;
         std::unique_ptr<JsonReader> body_;
+#endif
     };
 
 #if NOTE_SINGLETON

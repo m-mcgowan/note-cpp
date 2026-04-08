@@ -115,6 +115,7 @@ struct EnvTemplate {
         /// not include variable-length strings.
         note::ResponseField<int32_t> bytes{};
 
+#ifndef NOTE_NO_BUFFERED
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
             rsp.bytes = reader_->get_int("bytes");
@@ -130,6 +131,7 @@ struct EnvTemplate {
             rsp.bytes = reader_.get_int("bytes");
             return rsp;
         }
+#endif // !NOTE_NO_BUFFERED
 
         // SAX sink — zero-allocation streaming parse into Response fields.
         // String fields are interned into the StringPool immediately, so
@@ -165,8 +167,10 @@ struct EnvTemplate {
         }
 #endif
 
+#ifndef NOTE_NO_BUFFERED
     private:
         std::unique_ptr<JsonReader> reader_;
+#endif
     };
     static constexpr uint8_t field_count = 1;
     static const ::note::FieldDesc* field_descs_ptr() {

@@ -90,6 +90,7 @@ struct CardIllumination {
         /// An illumination reading (in lux) from the attached OPT3001 sensor.
         note::ResponseField<double> value{};
 
+#ifndef NOTE_NO_BUFFERED
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
             rsp.value = reader_->get_double("value");
@@ -105,6 +106,7 @@ struct CardIllumination {
             rsp.value = reader_.get_double("value");
             return rsp;
         }
+#endif // !NOTE_NO_BUFFERED
 
         // SAX sink — zero-allocation streaming parse into Response fields.
         // String fields are interned into the StringPool immediately, so
@@ -140,8 +142,10 @@ struct CardIllumination {
         }
 #endif
 
+#ifndef NOTE_NO_BUFFERED
     private:
         std::unique_ptr<JsonReader> reader_;
+#endif
     };
     static constexpr uint8_t field_count = 1;
     static const ::note::FieldDesc* field_descs_ptr() {

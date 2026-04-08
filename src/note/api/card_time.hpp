@@ -116,6 +116,7 @@ struct CardTime {
         /// The time zone of the Notecard, if the cell tower is recognized.
         note::ResponseField<note::string_view> zone{};
 
+#ifndef NOTE_NO_BUFFERED
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
             rsp.area = reader_->get_string("area");
@@ -143,6 +144,7 @@ struct CardTime {
             rsp.zone = reader_.get_string("zone");
             return rsp;
         }
+#endif // !NOTE_NO_BUFFERED
 
         // SAX sink — zero-allocation streaming parse into Response fields.
         // String fields are interned into the StringPool immediately, so
@@ -220,8 +222,10 @@ struct CardTime {
         }
 #endif
 
+#ifndef NOTE_NO_BUFFERED
     private:
         std::unique_ptr<JsonReader> reader_;
+#endif
     };
     static constexpr uint8_t field_count = 7;
     static const ::note::FieldDesc* field_descs_ptr() {

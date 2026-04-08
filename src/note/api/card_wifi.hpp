@@ -183,6 +183,7 @@ struct CardWifi {
         /// The Silicon Labs WF200 WiFi Transceiver binary version.
         note::ResponseField<note::string_view> version{};
 
+#ifndef NOTE_NO_BUFFERED
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
             rsp.secure = reader_->get_bool("secure");
@@ -204,6 +205,7 @@ struct CardWifi {
             rsp.version = reader_.get_string("version");
             return rsp;
         }
+#endif // !NOTE_NO_BUFFERED
 
         // SAX sink — zero-allocation streaming parse into Response fields.
         // String fields are interned into the StringPool immediately, so
@@ -258,8 +260,10 @@ struct CardWifi {
         }
 #endif
 
+#ifndef NOTE_NO_BUFFERED
     private:
         std::unique_ptr<JsonReader> reader_;
+#endif
     };
     static constexpr uint8_t field_count = 4;
     static const ::note::FieldDesc* field_descs_ptr() {

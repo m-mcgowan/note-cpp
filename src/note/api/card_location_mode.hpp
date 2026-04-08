@@ -272,6 +272,7 @@ struct CardLocationMode {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#ifndef NOTE_NO_BUFFERED
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
                 rsp.lat = reader_->get_double("lat");
@@ -309,6 +310,7 @@ struct CardLocationMode {
                 return rsp;
             }
 #pragma GCC diagnostic pop
+#endif // !NOTE_NO_BUFFERED
 
             // SAX sink — zero-allocation streaming parse into Response fields.
             // String fields are interned into the StringPool immediately, so
@@ -404,8 +406,10 @@ struct CardLocationMode {
             }
 #endif
 
+#ifndef NOTE_NO_BUFFERED
         private:
             std::unique_ptr<JsonReader> reader_;
+#endif
         };
         static constexpr uint8_t field_count = 7;
         static const ::note::FieldDesc* field_descs_ptr() {
@@ -756,6 +760,7 @@ struct CardLocationMode {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#ifndef NOTE_NO_BUFFERED
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
                 rsp.lat = reader_->get_double("lat");
@@ -793,6 +798,7 @@ struct CardLocationMode {
                 return rsp;
             }
 #pragma GCC diagnostic pop
+#endif // !NOTE_NO_BUFFERED
 
             // SAX sink — zero-allocation streaming parse into Response fields.
             // String fields are interned into the StringPool immediately, so
@@ -888,8 +894,10 @@ struct CardLocationMode {
             }
 #endif
 
+#ifndef NOTE_NO_BUFFERED
         private:
             std::unique_ptr<JsonReader> reader_;
+#endif
         };
         static constexpr uint8_t field_count = 7;
         static const ::note::FieldDesc* field_descs_ptr() {
@@ -1105,6 +1113,7 @@ struct CardLocationMode {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#ifndef NOTE_NO_BUFFERED
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
                 rsp.mode = reader_->get_string("mode");
@@ -1132,6 +1141,7 @@ struct CardLocationMode {
                 return rsp;
             }
 #pragma GCC diagnostic pop
+#endif // !NOTE_NO_BUFFERED
 
             // SAX sink — zero-allocation streaming parse into Response fields.
             // String fields are interned into the StringPool immediately, so
@@ -1195,8 +1205,10 @@ struct CardLocationMode {
             }
 #endif
 
+#ifndef NOTE_NO_BUFFERED
         private:
             std::unique_ptr<JsonReader> reader_;
+#endif
         };
         static constexpr uint8_t field_count = 2;
         static const ::note::FieldDesc* field_descs_ptr() {
@@ -1443,6 +1455,7 @@ struct CardLocationMode {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#ifndef NOTE_NO_BUFFERED
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
                 rsp.lat = reader_->get_double("lat");
@@ -1480,6 +1493,7 @@ struct CardLocationMode {
                 return rsp;
             }
 #pragma GCC diagnostic pop
+#endif // !NOTE_NO_BUFFERED
 
             // SAX sink — zero-allocation streaming parse into Response fields.
             // String fields are interned into the StringPool immediately, so
@@ -1575,8 +1589,10 @@ struct CardLocationMode {
             }
 #endif
 
+#ifndef NOTE_NO_BUFFERED
         private:
             std::unique_ptr<JsonReader> reader_;
+#endif
         };
         static constexpr uint8_t field_count = 7;
         static const ::note::FieldDesc* field_descs_ptr() {
@@ -1769,6 +1785,7 @@ struct CardLocationMode {
             /// The current location mode.
             note::ResponseField<note::string_view> mode{};
 
+#ifndef NOTE_NO_BUFFERED
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
                 rsp.lat = reader_->get_double("lat");
@@ -1788,6 +1805,7 @@ struct CardLocationMode {
                 rsp.mode = reader_.get_string("mode");
                 return rsp;
             }
+#endif // !NOTE_NO_BUFFERED
 
             // SAX sink — zero-allocation streaming parse into Response fields.
             // String fields are interned into the StringPool immediately, so
@@ -1839,8 +1857,10 @@ struct CardLocationMode {
             }
 #endif
 
+#ifndef NOTE_NO_BUFFERED
         private:
             std::unique_ptr<JsonReader> reader_;
+#endif
         };
         static constexpr uint8_t field_count = 3;
         static const ::note::FieldDesc* field_descs_ptr() {
@@ -2138,6 +2158,7 @@ struct CardLocationMode {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#ifndef NOTE_NO_BUFFERED
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
                 rsp.lat = reader_->get_double("lat");
@@ -2175,6 +2196,7 @@ struct CardLocationMode {
                 return rsp;
             }
 #pragma GCC diagnostic pop
+#endif // !NOTE_NO_BUFFERED
 
             // SAX sink — zero-allocation streaming parse into Response fields.
             // String fields are interned into the StringPool immediately, so
@@ -2270,8 +2292,10 @@ struct CardLocationMode {
             }
 #endif
 
+#ifndef NOTE_NO_BUFFERED
         private:
             std::unique_ptr<JsonReader> reader_;
+#endif
         };
         static constexpr uint8_t field_count = 7;
         static const ::note::FieldDesc* field_descs_ptr() {

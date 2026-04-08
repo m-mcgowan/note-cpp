@@ -214,6 +214,7 @@ struct CardTransport {
         /// The connectivity method currently enabled on the device.
         note::ResponseField<note::string_view> method{};
 
+#ifndef NOTE_NO_BUFFERED
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
             rsp.method = reader_->get_string("method");
@@ -229,6 +230,7 @@ struct CardTransport {
             rsp.method = reader_.get_string("method");
             return rsp;
         }
+#endif // !NOTE_NO_BUFFERED
 
         // SAX sink — zero-allocation streaming parse into Response fields.
         // String fields are interned into the StringPool immediately, so
@@ -264,8 +266,10 @@ struct CardTransport {
         }
 #endif
 
+#ifndef NOTE_NO_BUFFERED
     private:
         std::unique_ptr<JsonReader> reader_;
+#endif
     };
     static constexpr uint8_t field_count = 1;
     static const ::note::FieldDesc* field_descs_ptr() {

@@ -265,6 +265,7 @@ struct CardDfu {
         /// support for Outboard DFU.
         note::ResponseField<note::string_view> name{};
 
+#ifndef NOTE_NO_BUFFERED
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
             rsp.name = reader_->get_string("name");
@@ -280,6 +281,7 @@ struct CardDfu {
             rsp.name = reader_.get_string("name");
             return rsp;
         }
+#endif // !NOTE_NO_BUFFERED
 
         // SAX sink — zero-allocation streaming parse into Response fields.
         // String fields are interned into the StringPool immediately, so
@@ -315,8 +317,10 @@ struct CardDfu {
         }
 #endif
 
+#ifndef NOTE_NO_BUFFERED
     private:
         std::unique_ptr<JsonReader> reader_;
+#endif
     };
     static constexpr uint8_t field_count = 1;
     static const ::note::FieldDesc* field_descs_ptr() {

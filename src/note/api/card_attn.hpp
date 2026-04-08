@@ -359,6 +359,7 @@ struct CardAttn {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#ifndef NOTE_NO_BUFFERED
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
                 { note::string_view arr_[8]; auto n_ = reader_->get_string_array("files", arr_, 8); for (size_t i_ = 0; i_ < n_; ++i_) rsp.files.add(arr_[i_]); }
@@ -390,6 +391,7 @@ struct CardAttn {
                 return rsp;
             }
 #pragma GCC diagnostic pop
+#endif // !NOTE_NO_BUFFERED
 
             // SAX sink — zero-allocation streaming parse into Response fields.
             // String fields are interned into the StringPool immediately, so
@@ -479,8 +481,10 @@ struct CardAttn {
             }
 #endif
 
+#ifndef NOTE_NO_BUFFERED
         private:
             std::unique_ptr<JsonReader> reader_;
+#endif
         };
         static constexpr uint8_t field_count = 3;
         static const ::note::FieldDesc* field_descs_ptr() {
@@ -787,6 +791,7 @@ struct CardAttn {
             /// field will not be present when the attention pin is `LOW`.
             note::ResponseField<bool> set{};
 
+#ifndef NOTE_NO_BUFFERED
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
                 rsp.set = reader_->get_bool("set");
@@ -802,6 +807,7 @@ struct CardAttn {
                 rsp.set = reader_.get_bool("set");
                 return rsp;
             }
+#endif // !NOTE_NO_BUFFERED
 
             // SAX sink — zero-allocation streaming parse into Response fields.
             // String fields are interned into the StringPool immediately, so
@@ -834,8 +840,10 @@ struct CardAttn {
             }
 #endif
 
+#ifndef NOTE_NO_BUFFERED
         private:
             std::unique_ptr<JsonReader> reader_;
+#endif
         };
         static constexpr uint8_t field_count = 1;
         static const ::note::FieldDesc* field_descs_ptr() {
@@ -1120,6 +1128,7 @@ struct CardAttn {
             /// field will not be present when the attention pin is `LOW`.
             note::ResponseField<bool> set{};
 
+#ifndef NOTE_NO_BUFFERED
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
                 rsp.set = reader_->get_bool("set");
@@ -1135,6 +1144,7 @@ struct CardAttn {
                 rsp.set = reader_.get_bool("set");
                 return rsp;
             }
+#endif // !NOTE_NO_BUFFERED
 
             // SAX sink — zero-allocation streaming parse into Response fields.
             // String fields are interned into the StringPool immediately, so
@@ -1167,8 +1177,10 @@ struct CardAttn {
             }
 #endif
 
+#ifndef NOTE_NO_BUFFERED
         private:
             std::unique_ptr<JsonReader> reader_;
+#endif
         };
         static constexpr uint8_t field_count = 1;
         static const ::note::FieldDesc* field_descs_ptr() {
@@ -1542,6 +1554,7 @@ struct CardAttn {
             /// time) that the payload was stored by the Notecard.
             note::ResponseField<int32_t> time{};
 
+#ifndef NOTE_NO_BUFFERED
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
                 rsp.payload = reader_->get_string("payload");
@@ -1559,6 +1572,7 @@ struct CardAttn {
                 rsp.time = reader_.get_int("time");
                 return rsp;
             }
+#endif // !NOTE_NO_BUFFERED
 
             // SAX sink — zero-allocation streaming parse into Response fields.
             // String fields are interned into the StringPool immediately, so
@@ -1604,8 +1618,10 @@ struct CardAttn {
             }
 #endif
 
+#ifndef NOTE_NO_BUFFERED
         private:
             std::unique_ptr<JsonReader> reader_;
+#endif
         };
         static constexpr uint8_t field_count = 2;
         static const ::note::FieldDesc* field_descs_ptr() {
@@ -2020,6 +2036,7 @@ struct CardAttn {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#ifndef NOTE_NO_BUFFERED
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
                 { note::string_view arr_[8]; auto n_ = reader_->get_string_array("files", arr_, 8); for (size_t i_ = 0; i_ < n_; ++i_) rsp.files.add(arr_[i_]); }
@@ -2047,6 +2064,7 @@ struct CardAttn {
                 return rsp;
             }
 #pragma GCC diagnostic pop
+#endif // !NOTE_NO_BUFFERED
 
             // SAX sink — zero-allocation streaming parse into Response fields.
             // String fields are interned into the StringPool immediately, so
@@ -2121,8 +2139,10 @@ struct CardAttn {
             }
 #endif
 
+#ifndef NOTE_NO_BUFFERED
         private:
             std::unique_ptr<JsonReader> reader_;
+#endif
         };
         static constexpr uint8_t field_count = 1;
         static const ::note::FieldDesc* field_descs_ptr() {

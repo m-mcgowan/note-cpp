@@ -113,6 +113,7 @@ struct VarGet {
         /// The numeric value stored in the DB Notefile.
         note::ResponseField<double> value{};
 
+#ifndef NOTE_NO_BUFFERED
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
             rsp.flag = reader_->get_bool("flag");
@@ -132,6 +133,7 @@ struct VarGet {
             rsp.value = reader_.get_double("value");
             return rsp;
         }
+#endif // !NOTE_NO_BUFFERED
 
         // SAX sink — zero-allocation streaming parse into Response fields.
         // String fields are interned into the StringPool immediately, so
@@ -184,8 +186,10 @@ struct VarGet {
         }
 #endif
 
+#ifndef NOTE_NO_BUFFERED
     private:
         std::unique_ptr<JsonReader> reader_;
+#endif
     };
     static constexpr uint8_t field_count = 3;
     static const ::note::FieldDesc* field_descs_ptr() {

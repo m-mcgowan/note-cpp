@@ -124,6 +124,7 @@ struct HubGet {
         /// If `outbound` is overridden with a voltage-variable value.
         note::ResponseField<note::string_view> voutbound{};
 
+#ifndef NOTE_NO_BUFFERED
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
             rsp.device = reader_->get_string("device");
@@ -157,6 +158,7 @@ struct HubGet {
             rsp.voutbound = reader_.get_string("voutbound");
             return rsp;
         }
+#endif // !NOTE_NO_BUFFERED
 
         // SAX sink — zero-allocation streaming parse into Response fields.
         // String fields are interned into the StringPool immediately, so
@@ -251,8 +253,10 @@ struct HubGet {
         }
 #endif
 
+#ifndef NOTE_NO_BUFFERED
     private:
         std::unique_ptr<JsonReader> reader_;
+#endif
     };
     static constexpr uint8_t field_count = 10;
     static const ::note::FieldDesc* field_descs_ptr() {

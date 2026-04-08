@@ -117,6 +117,7 @@ struct NtnGps {
         /// from its paired Notecard.
         note::ResponseField<bool> on{};
 
+#ifndef NOTE_NO_BUFFERED
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
             rsp.off = reader_->get_bool("off");
@@ -134,6 +135,7 @@ struct NtnGps {
             rsp.on = reader_.get_bool("on");
             return rsp;
         }
+#endif // !NOTE_NO_BUFFERED
 
         // SAX sink — zero-allocation streaming parse into Response fields.
         // String fields are interned into the StringPool immediately, so
@@ -171,8 +173,10 @@ struct NtnGps {
         }
 #endif
 
+#ifndef NOTE_NO_BUFFERED
     private:
         std::unique_ptr<JsonReader> reader_;
+#endif
     };
     static constexpr uint8_t field_count = 2;
     static const ::note::FieldDesc* field_descs_ptr() {

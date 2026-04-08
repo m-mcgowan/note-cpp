@@ -79,5 +79,7 @@ struct MockTransport : note::ITransport {
     }
     void reset() override {}
     void abort() override {}
+    uint32_t millis() override { return 0; }
+    void delay(uint32_t) override {}
 };
 

@@ -8,6 +8,7 @@
 #if NOTE_EXTRAS
 #include <note/dyn_field.hpp>
 #endif
+#include <note/generic_sink.hpp>
 #include <note/notecard.hpp>
 #include <note/arena.hpp>
 #include <note/field.hpp>
@@ -22,6 +23,7 @@
 #include <note/target.hpp>
 
 namespace note::api {
+
 
 
 
@@ -54,7 +56,11 @@ struct CardContact {
         static constexpr Safety safety = Safety::ReadOnly;
         static constexpr Skus skus = Skus::from(Product::Cell, Product::CellWifi, Product::Skylo, Product::WiFi);
 
+#if NOTE_SINGLETON
+        static inline void* nc_;
+#else
         void* nc_ = nullptr;
+#endif
 
 
         /// Set the email address of the Notecard maintainer.
@@ -159,14 +165,14 @@ struct CardContact {
                 Response& rsp;
                 ::note::StringPool& pool_;
                 Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
-                void on_string(::note::string_view k_, ::note::string_view v_) {
+                NOTE_SINK_NOINLINE void on_string(::note::string_view k_, ::note::string_view v_) {
                     v_ = pool_.intern(v_);
                     if (note::flash(keys_::rsp_email) == k_) { rsp.email = v_; return; }
                     if (note::flash(keys_::rsp_name) == k_) { rsp.name = v_; return; }
                     if (note::flash(keys_::rsp_org) == k_) { rsp.org = v_; return; }
                     if (note::flash(keys_::rsp_role) == k_) { rsp.role = v_; return; }
                 }
-                void reset() {
+                NOTE_SINK_NOINLINE void reset() {
                     rsp = Response{};
                 }
             };
@@ -207,11 +213,39 @@ struct CardContact {
         private:
             std::unique_ptr<JsonReader> reader_;
         };
+        static constexpr uint8_t field_count = 4;
+        static const ::note::FieldDesc* field_descs_ptr() {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+            static constexpr ::note::FieldDesc table[] = {
+                {"email", static_cast<uint16_t>(offsetof(Response, email)), ::note::FieldType::String},
+                {"name", static_cast<uint16_t>(offsetof(Response, name)), ::note::FieldType::String},
+                {"org", static_cast<uint16_t>(offsetof(Response, org)), ::note::FieldType::String},
+                {"role", static_cast<uint16_t>(offsetof(Response, role)), ::note::FieldType::String},
+            };
+#pragma GCC diagnostic pop
+            return table;
+        }
 
+#if NOTE_SINGLETON
+        /// Singleton: type-erased execute — one static fn ptr per type, set by Api.
+        static inline ApiResult<Response>(*execute_fn_)(void*, const CardContact::Get&);
+        static inline Result<void>(*send_fn_)(void*, BuildFn, void*);
+#else
         ApiResult<Response>(*execute_fn_)(void*, const CardContact::Get&) = nullptr;
+        Result<void>(*send_fn_)(void*, BuildFn, void*) = nullptr;
+#endif
         auto execute() const { return execute_fn_(nc_, *this); }
-        Result<void>(*command_fn_)(void*, const CardContact::Get&) = nullptr;
-        Result<void> command() const { return command_fn_(nc_, *this); }
+        Result<void> command() const {
+            auto build_ = [&](JsonBuilder& b_) {
+                b_.add("cmd", notecard_request);
+                this->build(b_);
+            };
+            BuildFn fn_ = [](JsonBuilder& b_, void* p_) {
+                (*static_cast<decltype(build_)*>(p_))(b_);
+            };
+            return send_fn_(nc_, fn_, &build_);
+        }
 
         void build(JsonBuilder& b) const {
             if (email) note::add_flash(b, note::flash(keys_::email), *email);
@@ -277,7 +311,11 @@ struct CardContact {
         static constexpr Safety safety = Safety::Idempotent;
         static constexpr Skus skus = Skus::from(Product::Cell, Product::CellWifi, Product::Skylo, Product::WiFi);
 
+#if NOTE_SINGLETON
+        static inline void* nc_;
+#else
         void* nc_ = nullptr;
+#endif
 
 
         /// Set the email address of the Notecard maintainer.
@@ -382,14 +420,14 @@ struct CardContact {
                 Response& rsp;
                 ::note::StringPool& pool_;
                 Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
-                void on_string(::note::string_view k_, ::note::string_view v_) {
+                NOTE_SINK_NOINLINE void on_string(::note::string_view k_, ::note::string_view v_) {
                     v_ = pool_.intern(v_);
                     if (note::flash(keys_::rsp_email) == k_) { rsp.email = v_; return; }
                     if (note::flash(keys_::rsp_name) == k_) { rsp.name = v_; return; }
                     if (note::flash(keys_::rsp_org) == k_) { rsp.org = v_; return; }
                     if (note::flash(keys_::rsp_role) == k_) { rsp.role = v_; return; }
                 }
-                void reset() {
+                NOTE_SINK_NOINLINE void reset() {
                     rsp = Response{};
                 }
             };
@@ -430,11 +468,39 @@ struct CardContact {
         private:
             std::unique_ptr<JsonReader> reader_;
         };
+        static constexpr uint8_t field_count = 4;
+        static const ::note::FieldDesc* field_descs_ptr() {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+            static constexpr ::note::FieldDesc table[] = {
+                {"email", static_cast<uint16_t>(offsetof(Response, email)), ::note::FieldType::String},
+                {"name", static_cast<uint16_t>(offsetof(Response, name)), ::note::FieldType::String},
+                {"org", static_cast<uint16_t>(offsetof(Response, org)), ::note::FieldType::String},
+                {"role", static_cast<uint16_t>(offsetof(Response, role)), ::note::FieldType::String},
+            };
+#pragma GCC diagnostic pop
+            return table;
+        }
 
+#if NOTE_SINGLETON
+        /// Singleton: type-erased execute — one static fn ptr per type, set by Api.
+        static inline ApiResult<Response>(*execute_fn_)(void*, const CardContact::Set&);
+        static inline Result<void>(*send_fn_)(void*, BuildFn, void*);
+#else
         ApiResult<Response>(*execute_fn_)(void*, const CardContact::Set&) = nullptr;
+        Result<void>(*send_fn_)(void*, BuildFn, void*) = nullptr;
+#endif
         auto execute() const { return execute_fn_(nc_, *this); }
-        Result<void>(*command_fn_)(void*, const CardContact::Set&) = nullptr;
-        Result<void> command() const { return command_fn_(nc_, *this); }
+        Result<void> command() const {
+            auto build_ = [&](JsonBuilder& b_) {
+                b_.add("cmd", notecard_request);
+                this->build(b_);
+            };
+            BuildFn fn_ = [](JsonBuilder& b_, void* p_) {
+                (*static_cast<decltype(build_)*>(p_))(b_);
+            };
+            return send_fn_(nc_, fn_, &build_);
+        }
 
         void build(JsonBuilder& b) const {
             if (email) note::add_flash(b, note::flash(keys_::email), *email);
@@ -503,6 +569,7 @@ inline CardContact::Get& CardContact::Get::role_t::operator()(note::string_view 
 }
 #pragma GCC diagnostic pop
 
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
 inline CardContact::Set& CardContact::Set::email_t::operator()(note::string_view v) {
@@ -526,6 +593,7 @@ inline CardContact::Set& CardContact::Set::role_t::operator()(note::string_view 
         reinterpret_cast<char*>(this) - offsetof(CardContact::Set, role));
 }
 #pragma GCC diagnostic pop
+
 
 
 } // namespace note::api

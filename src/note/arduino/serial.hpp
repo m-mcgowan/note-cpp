@@ -37,8 +37,6 @@ public:
         return written == len;
     }
 
-    // Non-blocking read: return however many bytes are immediately available,
-    // up to max_len. Must not block — NotecardSerial drives the timeout loop.
     size_t receive(uint8_t* buf, size_t max_len) override {
         const size_t avail = static_cast<size_t>(uart_.available());
         if (avail == 0) return 0;
@@ -46,7 +44,7 @@ public:
     }
 
     uint32_t millis() override { return ::millis(); }
-    void     delay(uint32_t ms) override { ::delay(ms); }
+    void delay(uint32_t ms) override { ::delay(ms); }
 
 private:
     SerialT&      uart_;

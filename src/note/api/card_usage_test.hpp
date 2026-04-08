@@ -8,6 +8,7 @@
 #if NOTE_EXTRAS
 #include <note/dyn_field.hpp>
 #endif
+#include <note/generic_sink.hpp>
 #include <note/notecard.hpp>
 #include <note/arena.hpp>
 #include <note/field.hpp>
@@ -22,6 +23,7 @@
 #include <note/target.hpp>
 
 namespace note::api {
+
 
 
 
@@ -58,7 +60,11 @@ struct CardUsageTest {
     static constexpr Safety safety = Safety::ReadOnly;
     static constexpr Skus skus = Skus::from(Product::Cell, Product::CellWifi, Product::Skylo, Product::WiFi);
 
+#if NOTE_SINGLETON
+    static inline void* nc_;
+#else
     void* nc_ = nullptr;
+#endif
 
 
     /// Number of days to use for the test.
@@ -182,7 +188,7 @@ struct CardUsageTest {
             Response& rsp;
             ::note::StringPool& pool_;
             Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
-            void on_number(::note::string_view k_, ::note::string_view raw_) {
+            NOTE_SINK_NOINLINE void on_number(::note::string_view k_, ::note::string_view raw_) {
                 if (note::flash(keys_::rsp_bytesPerDay) == k_) { rsp.bytesPerDay = ::note::parse_int(raw_); return; }
                 if (note::flash(keys_::rsp_bytesReceived) == k_) { rsp.bytesReceived = ::note::parse_int(raw_); return; }
                 if (note::flash(keys_::rsp_bytesSent) == k_) { rsp.bytesSent = ::note::parse_int(raw_); return; }
@@ -195,7 +201,7 @@ struct CardUsageTest {
                 if (note::flash(keys_::rsp_sessionsStandard) == k_) { rsp.sessionsStandard = ::note::parse_int(raw_); return; }
                 if (note::flash(keys_::rsp_time) == k_) { rsp.time = ::note::parse_int(raw_); return; }
             }
-            void on_int(::note::string_view k_, int32_t v_) {
+            NOTE_SINK_NOINLINE void on_int(::note::string_view k_, int32_t v_) {
                 if (note::flash(keys_::rsp_bytesPerDay) == k_) { rsp.bytesPerDay = v_; return; }
                 if (note::flash(keys_::rsp_bytesReceived) == k_) { rsp.bytesReceived = v_; return; }
                 if (note::flash(keys_::rsp_bytesSent) == k_) { rsp.bytesSent = v_; return; }
@@ -208,7 +214,7 @@ struct CardUsageTest {
                 if (note::flash(keys_::rsp_sessionsStandard) == k_) { rsp.sessionsStandard = v_; return; }
                 if (note::flash(keys_::rsp_time) == k_) { rsp.time = v_; return; }
             }
-            void reset() {
+            NOTE_SINK_NOINLINE void reset() {
                 rsp = Response{};
             }
         };
@@ -272,11 +278,46 @@ struct CardUsageTest {
     private:
         std::unique_ptr<JsonReader> reader_;
     };
+    static constexpr uint8_t field_count = 11;
+    static const ::note::FieldDesc* field_descs_ptr() {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+        static constexpr ::note::FieldDesc table[] = {
+            {"bytes_per_day", static_cast<uint16_t>(offsetof(Response, bytesPerDay)), ::note::FieldType::Int32},
+            {"bytes_received", static_cast<uint16_t>(offsetof(Response, bytesReceived)), ::note::FieldType::Int32},
+            {"bytes_sent", static_cast<uint16_t>(offsetof(Response, bytesSent)), ::note::FieldType::Int32},
+            {"days", static_cast<uint16_t>(offsetof(Response, days)), ::note::FieldType::Int32},
+            {"max", static_cast<uint16_t>(offsetof(Response, max)), ::note::FieldType::Int32},
+            {"notes_received", static_cast<uint16_t>(offsetof(Response, notesReceived)), ::note::FieldType::Int32},
+            {"notes_sent", static_cast<uint16_t>(offsetof(Response, notesSent)), ::note::FieldType::Int32},
+            {"seconds", static_cast<uint16_t>(offsetof(Response, seconds)), ::note::FieldType::Int32},
+            {"sessions_secure", static_cast<uint16_t>(offsetof(Response, sessionsSecure)), ::note::FieldType::Int32},
+            {"sessions_standard", static_cast<uint16_t>(offsetof(Response, sessionsStandard)), ::note::FieldType::Int32},
+            {"time", static_cast<uint16_t>(offsetof(Response, time)), ::note::FieldType::Int32},
+        };
+#pragma GCC diagnostic pop
+        return table;
+    }
 
+#if NOTE_SINGLETON
+    /// Singleton: type-erased execute — one static fn ptr per type, set by Api.
+    static inline ApiResult<Response>(*execute_fn_)(void*, const CardUsageTest&);
+    static inline Result<void>(*send_fn_)(void*, BuildFn, void*);
+#else
     ApiResult<Response>(*execute_fn_)(void*, const CardUsageTest&) = nullptr;
+    Result<void>(*send_fn_)(void*, BuildFn, void*) = nullptr;
+#endif
     auto execute() const { return execute_fn_(nc_, *this); }
-    Result<void>(*command_fn_)(void*, const CardUsageTest&) = nullptr;
-    Result<void> command() const { return command_fn_(nc_, *this); }
+    Result<void> command() const {
+        auto build_ = [&](JsonBuilder& b_) {
+            b_.add("cmd", notecard_request);
+            this->build(b_);
+        };
+        BuildFn fn_ = [](JsonBuilder& b_, void* p_) {
+            (*static_cast<decltype(build_)*>(p_))(b_);
+        };
+        return send_fn_(nc_, fn_, &build_);
+    }
 
     void build(JsonBuilder& b) const {
         if (days) note::add_flash(b, note::flash(keys_::days), *days);
@@ -333,6 +374,7 @@ inline CardUsageTest& CardUsageTest::megabytes_t::operator()(int32_t v) {
         reinterpret_cast<char*>(this) - offsetof(CardUsageTest, megabytes));
 }
 #pragma GCC diagnostic pop
+
 
 
 } // namespace note::api

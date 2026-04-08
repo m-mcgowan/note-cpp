@@ -8,6 +8,7 @@
 #if NOTE_EXTRAS
 #include <note/dyn_field.hpp>
 #endif
+#include <note/generic_sink.hpp>
 #include <note/notecard.hpp>
 #include <note/arena.hpp>
 #include <note/field.hpp>
@@ -22,6 +23,7 @@
 #include <note/target.hpp>
 
 namespace note::api {
+
 
 
 
@@ -48,7 +50,11 @@ struct NtnReset {
     static constexpr Safety safety = Safety::Destructive;
     static constexpr Skus skus = Skus::from(Product::Cell, Product::CellWifi, Product::Skylo, Product::WiFi);
 
+#if NOTE_SINGLETON
+    static inline void* nc_;
+#else
     void* nc_ = nullptr;
+#endif
 
 
 
@@ -78,10 +84,25 @@ struct NtnReset {
 
     using Response = void;
 
+#if NOTE_SINGLETON
+    /// Singleton: type-erased execute — one static fn ptr per type, set by Api.
+    static inline ApiResult<Response>(*execute_fn_)(void*, const NtnReset&);
+    static inline Result<void>(*send_fn_)(void*, BuildFn, void*);
+#else
     ApiResult<Response>(*execute_fn_)(void*, const NtnReset&) = nullptr;
+    Result<void>(*send_fn_)(void*, BuildFn, void*) = nullptr;
+#endif
     auto execute() const { return execute_fn_(nc_, *this); }
-    Result<void>(*command_fn_)(void*, const NtnReset&) = nullptr;
-    Result<void> command() const { return command_fn_(nc_, *this); }
+    Result<void> command() const {
+        auto build_ = [&](JsonBuilder& b_) {
+            b_.add("cmd", notecard_request);
+            this->build(b_);
+        };
+        BuildFn fn_ = [](JsonBuilder& b_, void* p_) {
+            (*static_cast<decltype(build_)*>(p_))(b_);
+        };
+        return send_fn_(nc_, fn_, &build_);
+    }
 
     void build(JsonBuilder& b) const {
 #if NOTE_EXTRAS
@@ -105,6 +126,7 @@ struct NtnReset {
 #endif
 
 };
+
 
 
 

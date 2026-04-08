@@ -84,12 +84,35 @@ namespace note {
 
 
 #if __cplusplus >= 202002L
-template<typename TargetT = Unconstrained, typename NcT = Notecard>
+template<typename TargetT = Unconstrained, typename NcT =
+#ifndef NOTE_MINIMAL
+    Notecard
 #else
-template<typename NcT = Notecard>
+    void
+#endif
+>
+#else
+template<typename NcT =
+#ifndef NOTE_MINIMAL
+    Notecard
+#else
+    void
+#endif
+>
 #endif
 class Api {
+#if NOTE_SINGLETON
+    static inline NcT* nc_ptr_s_;
+    static NcT* nc_ptr() { return nc_ptr_s_; }
+public:
+    explicit Api(NcT& nc) { nc_ptr_s_ = &nc; }
+#if __cplusplus >= 202002L
+    explicit Api(NcT& nc, TargetT) { nc_ptr_s_ = &nc; }
+#endif
+    NcT& notecard() { return *nc_ptr_s_; }
+#else
     NcT& nc_;
+    NcT* nc_ptr() const { return &nc_; }
 public:
     explicit Api(NcT& nc) : nc_(nc)
         , card{&nc_}
@@ -119,67 +142,84 @@ public:
         , binary{&nc_}
     {}
 #endif
-
     NcT& notecard() { return nc_; }
+#endif
 
     template<typename RequestT>
     RequestT create() {
         RequestT r;
-        r.nc_ = &nc_;
-        if constexpr (std::is_same_v<NcT, Notecard>) {
-            r.execute_fn_ = [](void* p_, const RequestT& req_) {
-                auto* nc__ = static_cast<Notecard*>(p_);
-                if constexpr (detail::has_binary_src<RequestT>::value) {
-                    if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
-                }
-                if constexpr (detail::has_binary_dst<RequestT>::value) {
-                    if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
-                }
-                return nc__->execute(req_);
-            };
-            if constexpr (RequestT::supports_cmd) {
-                r.command_fn_ = [](void* p_, const RequestT& req_) {
-                    return static_cast<Notecard*>(p_)->command_typed(req_);
-                };
+#if NOTE_SINGLETON
+        RequestT::nc_ = nc_ptr();
+        RequestT::execute_fn_ = [](void* p_, const RequestT& req_) {
+#else
+        r.nc_ = nc_ptr();
+        r.execute_fn_ = [](void* p_, const RequestT& req_) {
+#endif
+            auto* nc__ = static_cast<NcT*>(p_);
+            if constexpr (detail::has_binary_src<RequestT>::value) {
+                if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
             }
+            if constexpr (detail::has_binary_dst<RequestT>::value) {
+                if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
+            }
+            return nc__->execute(req_);
+        };
+        if constexpr (RequestT::supports_cmd) {
+#if NOTE_SINGLETON
+            RequestT::send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
+#else
+            r.send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
+#endif
+                return static_cast<NcT*>(p_)->send_command(fn_, ctx_);
+            };
         }
         return r;
     }
 
     template<typename RequestT>
-    auto execute(const RequestT& req) { return nc_.execute(req); }
+    auto execute(const RequestT& req) { return nc_ptr()->execute(req); }
 
     template<typename RequestT>
-    auto execute(RequestT&& req) { return nc_.execute(req); }
+    auto execute(RequestT&& req) { return nc_ptr()->execute(req); }
 
     template<typename RequestT>
-    Result<void> command(const RequestT& req) { return nc_.command_typed(req); }
+    Result<void> command(const RequestT& req) { return nc_ptr()->command_typed(req); }
 
     // =====================================================================
     // Polymorphic factory structs (used by resource group methods)
     // =====================================================================
 
     struct CardAttnFactory {
+#if !NOTE_SINGLETON
         NcT* nc_;
+#endif
         template<typename T> T create_() {
             T r;
+#if NOTE_SINGLETON
+            // Singleton: set statics on the type (once), not per instance.
+            T::nc_ = nc_ptr();
+            T::execute_fn_ = [](void* p_, const T& req_) {
+#else
             r.nc_ = nc_;
-            if constexpr (std::is_same_v<NcT, Notecard>) {
-                r.execute_fn_ = [](void* p_, const T& req_) {
-                    auto* nc__ = static_cast<Notecard*>(p_);
-                    if constexpr (detail::has_binary_src<T>::value) {
-                        if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
-                    }
-                    if constexpr (detail::has_binary_dst<T>::value) {
-                        if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
-                    }
-                    return nc__->execute(req_);
-                };
-                if constexpr (T::supports_cmd) {
-                    r.command_fn_ = [](void* p_, const T& req_) {
-                        return static_cast<Notecard*>(p_)->command_typed(req_);
-                    };
+            r.execute_fn_ = [](void* p_, const T& req_) {
+#endif
+                auto* nc__ = static_cast<NcT*>(p_);
+                if constexpr (detail::has_binary_src<T>::value) {
+                    if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
                 }
+                if constexpr (detail::has_binary_dst<T>::value) {
+                    if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
+                }
+                return nc__->execute(req_);
+            };
+            if constexpr (T::supports_cmd) {
+#if NOTE_SINGLETON
+                T::send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
+#else
+                r.send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
+#endif
+                    return static_cast<NcT*>(p_)->send_command(fn_, ctx_);
+                };
             }
             return r;
         }
@@ -217,26 +257,36 @@ public:
     };
 
     struct CardAuxSerialFactory {
+#if !NOTE_SINGLETON
         NcT* nc_;
+#endif
         template<typename T> T create_() {
             T r;
+#if NOTE_SINGLETON
+            // Singleton: set statics on the type (once), not per instance.
+            T::nc_ = nc_ptr();
+            T::execute_fn_ = [](void* p_, const T& req_) {
+#else
             r.nc_ = nc_;
-            if constexpr (std::is_same_v<NcT, Notecard>) {
-                r.execute_fn_ = [](void* p_, const T& req_) {
-                    auto* nc__ = static_cast<Notecard*>(p_);
-                    if constexpr (detail::has_binary_src<T>::value) {
-                        if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
-                    }
-                    if constexpr (detail::has_binary_dst<T>::value) {
-                        if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
-                    }
-                    return nc__->execute(req_);
-                };
-                if constexpr (T::supports_cmd) {
-                    r.command_fn_ = [](void* p_, const T& req_) {
-                        return static_cast<Notecard*>(p_)->command_typed(req_);
-                    };
+            r.execute_fn_ = [](void* p_, const T& req_) {
+#endif
+                auto* nc__ = static_cast<NcT*>(p_);
+                if constexpr (detail::has_binary_src<T>::value) {
+                    if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
                 }
+                if constexpr (detail::has_binary_dst<T>::value) {
+                    if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
+                }
+                return nc__->execute(req_);
+            };
+            if constexpr (T::supports_cmd) {
+#if NOTE_SINGLETON
+                T::send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
+#else
+                r.send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
+#endif
+                    return static_cast<NcT*>(p_)->send_command(fn_, ctx_);
+                };
             }
             return r;
         }
@@ -257,26 +307,36 @@ public:
     };
 
     struct CardContactFactory {
+#if !NOTE_SINGLETON
         NcT* nc_;
+#endif
         template<typename T> T create_() {
             T r;
+#if NOTE_SINGLETON
+            // Singleton: set statics on the type (once), not per instance.
+            T::nc_ = nc_ptr();
+            T::execute_fn_ = [](void* p_, const T& req_) {
+#else
             r.nc_ = nc_;
-            if constexpr (std::is_same_v<NcT, Notecard>) {
-                r.execute_fn_ = [](void* p_, const T& req_) {
-                    auto* nc__ = static_cast<Notecard*>(p_);
-                    if constexpr (detail::has_binary_src<T>::value) {
-                        if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
-                    }
-                    if constexpr (detail::has_binary_dst<T>::value) {
-                        if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
-                    }
-                    return nc__->execute(req_);
-                };
-                if constexpr (T::supports_cmd) {
-                    r.command_fn_ = [](void* p_, const T& req_) {
-                        return static_cast<Notecard*>(p_)->command_typed(req_);
-                    };
+            r.execute_fn_ = [](void* p_, const T& req_) {
+#endif
+                auto* nc__ = static_cast<NcT*>(p_);
+                if constexpr (detail::has_binary_src<T>::value) {
+                    if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
                 }
+                if constexpr (detail::has_binary_dst<T>::value) {
+                    if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
+                }
+                return nc__->execute(req_);
+            };
+            if constexpr (T::supports_cmd) {
+#if NOTE_SINGLETON
+                T::send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
+#else
+                r.send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
+#endif
+                    return static_cast<NcT*>(p_)->send_command(fn_, ctx_);
+                };
             }
             return r;
         }
@@ -289,26 +349,36 @@ public:
     };
 
     struct CardLocationModeFactory {
+#if !NOTE_SINGLETON
         NcT* nc_;
+#endif
         template<typename T> T create_() {
             T r;
+#if NOTE_SINGLETON
+            // Singleton: set statics on the type (once), not per instance.
+            T::nc_ = nc_ptr();
+            T::execute_fn_ = [](void* p_, const T& req_) {
+#else
             r.nc_ = nc_;
-            if constexpr (std::is_same_v<NcT, Notecard>) {
-                r.execute_fn_ = [](void* p_, const T& req_) {
-                    auto* nc__ = static_cast<Notecard*>(p_);
-                    if constexpr (detail::has_binary_src<T>::value) {
-                        if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
-                    }
-                    if constexpr (detail::has_binary_dst<T>::value) {
-                        if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
-                    }
-                    return nc__->execute(req_);
-                };
-                if constexpr (T::supports_cmd) {
-                    r.command_fn_ = [](void* p_, const T& req_) {
-                        return static_cast<Notecard*>(p_)->command_typed(req_);
-                    };
+            r.execute_fn_ = [](void* p_, const T& req_) {
+#endif
+                auto* nc__ = static_cast<NcT*>(p_);
+                if constexpr (detail::has_binary_src<T>::value) {
+                    if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
                 }
+                if constexpr (detail::has_binary_dst<T>::value) {
+                    if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
+                }
+                return nc__->execute(req_);
+            };
+            if constexpr (T::supports_cmd) {
+#if NOTE_SINGLETON
+                T::send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
+#else
+                r.send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
+#endif
+                    return static_cast<NcT*>(p_)->send_command(fn_, ctx_);
+                };
             }
             return r;
         }
@@ -330,26 +400,36 @@ public:
     };
 
     struct CardPowerFactory {
+#if !NOTE_SINGLETON
         NcT* nc_;
+#endif
         template<typename T> T create_() {
             T r;
+#if NOTE_SINGLETON
+            // Singleton: set statics on the type (once), not per instance.
+            T::nc_ = nc_ptr();
+            T::execute_fn_ = [](void* p_, const T& req_) {
+#else
             r.nc_ = nc_;
-            if constexpr (std::is_same_v<NcT, Notecard>) {
-                r.execute_fn_ = [](void* p_, const T& req_) {
-                    auto* nc__ = static_cast<Notecard*>(p_);
-                    if constexpr (detail::has_binary_src<T>::value) {
-                        if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
-                    }
-                    if constexpr (detail::has_binary_dst<T>::value) {
-                        if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
-                    }
-                    return nc__->execute(req_);
-                };
-                if constexpr (T::supports_cmd) {
-                    r.command_fn_ = [](void* p_, const T& req_) {
-                        return static_cast<Notecard*>(p_)->command_typed(req_);
-                    };
+            r.execute_fn_ = [](void* p_, const T& req_) {
+#endif
+                auto* nc__ = static_cast<NcT*>(p_);
+                if constexpr (detail::has_binary_src<T>::value) {
+                    if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
                 }
+                if constexpr (detail::has_binary_dst<T>::value) {
+                    if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
+                }
+                return nc__->execute(req_);
+            };
+            if constexpr (T::supports_cmd) {
+#if NOTE_SINGLETON
+                T::send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
+#else
+                r.send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
+#endif
+                    return static_cast<NcT*>(p_)->send_command(fn_, ctx_);
+                };
             }
             return r;
         }
@@ -365,26 +445,36 @@ public:
     };
 
     struct CardTempFactory {
+#if !NOTE_SINGLETON
         NcT* nc_;
+#endif
         template<typename T> T create_() {
             T r;
+#if NOTE_SINGLETON
+            // Singleton: set statics on the type (once), not per instance.
+            T::nc_ = nc_ptr();
+            T::execute_fn_ = [](void* p_, const T& req_) {
+#else
             r.nc_ = nc_;
-            if constexpr (std::is_same_v<NcT, Notecard>) {
-                r.execute_fn_ = [](void* p_, const T& req_) {
-                    auto* nc__ = static_cast<Notecard*>(p_);
-                    if constexpr (detail::has_binary_src<T>::value) {
-                        if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
-                    }
-                    if constexpr (detail::has_binary_dst<T>::value) {
-                        if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
-                    }
-                    return nc__->execute(req_);
-                };
-                if constexpr (T::supports_cmd) {
-                    r.command_fn_ = [](void* p_, const T& req_) {
-                        return static_cast<Notecard*>(p_)->command_typed(req_);
-                    };
+            r.execute_fn_ = [](void* p_, const T& req_) {
+#endif
+                auto* nc__ = static_cast<NcT*>(p_);
+                if constexpr (detail::has_binary_src<T>::value) {
+                    if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
                 }
+                if constexpr (detail::has_binary_dst<T>::value) {
+                    if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
+                }
+                return nc__->execute(req_);
+            };
+            if constexpr (T::supports_cmd) {
+#if NOTE_SINGLETON
+                T::send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
+#else
+                r.send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
+#endif
+                    return static_cast<NcT*>(p_)->send_command(fn_, ctx_);
+                };
             }
             return r;
         }
@@ -418,26 +508,36 @@ public:
     };
 
     struct CardVoltageFactory {
+#if !NOTE_SINGLETON
         NcT* nc_;
+#endif
         template<typename T> T create_() {
             T r;
+#if NOTE_SINGLETON
+            // Singleton: set statics on the type (once), not per instance.
+            T::nc_ = nc_ptr();
+            T::execute_fn_ = [](void* p_, const T& req_) {
+#else
             r.nc_ = nc_;
-            if constexpr (std::is_same_v<NcT, Notecard>) {
-                r.execute_fn_ = [](void* p_, const T& req_) {
-                    auto* nc__ = static_cast<Notecard*>(p_);
-                    if constexpr (detail::has_binary_src<T>::value) {
-                        if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
-                    }
-                    if constexpr (detail::has_binary_dst<T>::value) {
-                        if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
-                    }
-                    return nc__->execute(req_);
-                };
-                if constexpr (T::supports_cmd) {
-                    r.command_fn_ = [](void* p_, const T& req_) {
-                        return static_cast<Notecard*>(p_)->command_typed(req_);
-                    };
+            r.execute_fn_ = [](void* p_, const T& req_) {
+#endif
+                auto* nc__ = static_cast<NcT*>(p_);
+                if constexpr (detail::has_binary_src<T>::value) {
+                    if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
                 }
+                if constexpr (detail::has_binary_dst<T>::value) {
+                    if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
+                }
+                return nc__->execute(req_);
+            };
+            if constexpr (T::supports_cmd) {
+#if NOTE_SINGLETON
+                T::send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
+#else
+                r.send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
+#endif
+                    return static_cast<NcT*>(p_)->send_command(fn_, ctx_);
+                };
             }
             return r;
         }
@@ -454,26 +554,36 @@ public:
     };
 
     struct CardWirelessPenaltyFactory {
+#if !NOTE_SINGLETON
         NcT* nc_;
+#endif
         template<typename T> T create_() {
             T r;
+#if NOTE_SINGLETON
+            // Singleton: set statics on the type (once), not per instance.
+            T::nc_ = nc_ptr();
+            T::execute_fn_ = [](void* p_, const T& req_) {
+#else
             r.nc_ = nc_;
-            if constexpr (std::is_same_v<NcT, Notecard>) {
-                r.execute_fn_ = [](void* p_, const T& req_) {
-                    auto* nc__ = static_cast<Notecard*>(p_);
-                    if constexpr (detail::has_binary_src<T>::value) {
-                        if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
-                    }
-                    if constexpr (detail::has_binary_dst<T>::value) {
-                        if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
-                    }
-                    return nc__->execute(req_);
-                };
-                if constexpr (T::supports_cmd) {
-                    r.command_fn_ = [](void* p_, const T& req_) {
-                        return static_cast<Notecard*>(p_)->command_typed(req_);
-                    };
+            r.execute_fn_ = [](void* p_, const T& req_) {
+#endif
+                auto* nc__ = static_cast<NcT*>(p_);
+                if constexpr (detail::has_binary_src<T>::value) {
+                    if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
                 }
+                if constexpr (detail::has_binary_dst<T>::value) {
+                    if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
+                }
+                return nc__->execute(req_);
+            };
+            if constexpr (T::supports_cmd) {
+#if NOTE_SINGLETON
+                T::send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
+#else
+                r.send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
+#endif
+                    return static_cast<NcT*>(p_)->send_command(fn_, ctx_);
+                };
             }
             return r;
         }
@@ -489,26 +599,36 @@ public:
     };
 
     struct EnvDefaultFactory {
+#if !NOTE_SINGLETON
         NcT* nc_;
+#endif
         template<typename T> T create_() {
             T r;
+#if NOTE_SINGLETON
+            // Singleton: set statics on the type (once), not per instance.
+            T::nc_ = nc_ptr();
+            T::execute_fn_ = [](void* p_, const T& req_) {
+#else
             r.nc_ = nc_;
-            if constexpr (std::is_same_v<NcT, Notecard>) {
-                r.execute_fn_ = [](void* p_, const T& req_) {
-                    auto* nc__ = static_cast<Notecard*>(p_);
-                    if constexpr (detail::has_binary_src<T>::value) {
-                        if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
-                    }
-                    if constexpr (detail::has_binary_dst<T>::value) {
-                        if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
-                    }
-                    return nc__->execute(req_);
-                };
-                if constexpr (T::supports_cmd) {
-                    r.command_fn_ = [](void* p_, const T& req_) {
-                        return static_cast<Notecard*>(p_)->command_typed(req_);
-                    };
+            r.execute_fn_ = [](void* p_, const T& req_) {
+#endif
+                auto* nc__ = static_cast<NcT*>(p_);
+                if constexpr (detail::has_binary_src<T>::value) {
+                    if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
                 }
+                if constexpr (detail::has_binary_dst<T>::value) {
+                    if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
+                }
+                return nc__->execute(req_);
+            };
+            if constexpr (T::supports_cmd) {
+#if NOTE_SINGLETON
+                T::send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
+#else
+                r.send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
+#endif
+                    return static_cast<NcT*>(p_)->send_command(fn_, ctx_);
+                };
             }
             return r;
         }
@@ -531,26 +651,36 @@ public:
     };
 
     struct NoteChangesFactory {
+#if !NOTE_SINGLETON
         NcT* nc_;
+#endif
         template<typename T> T create_() {
             T r;
+#if NOTE_SINGLETON
+            // Singleton: set statics on the type (once), not per instance.
+            T::nc_ = nc_ptr();
+            T::execute_fn_ = [](void* p_, const T& req_) {
+#else
             r.nc_ = nc_;
-            if constexpr (std::is_same_v<NcT, Notecard>) {
-                r.execute_fn_ = [](void* p_, const T& req_) {
-                    auto* nc__ = static_cast<Notecard*>(p_);
-                    if constexpr (detail::has_binary_src<T>::value) {
-                        if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
-                    }
-                    if constexpr (detail::has_binary_dst<T>::value) {
-                        if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
-                    }
-                    return nc__->execute(req_);
-                };
-                if constexpr (T::supports_cmd) {
-                    r.command_fn_ = [](void* p_, const T& req_) {
-                        return static_cast<Notecard*>(p_)->command_typed(req_);
-                    };
+            r.execute_fn_ = [](void* p_, const T& req_) {
+#endif
+                auto* nc__ = static_cast<NcT*>(p_);
+                if constexpr (detail::has_binary_src<T>::value) {
+                    if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
                 }
+                if constexpr (detail::has_binary_dst<T>::value) {
+                    if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
+                }
+                return nc__->execute(req_);
+            };
+            if constexpr (T::supports_cmd) {
+#if NOTE_SINGLETON
+                T::send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
+#else
+                r.send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
+#endif
+                    return static_cast<NcT*>(p_)->send_command(fn_, ctx_);
+                };
             }
             return r;
         }
@@ -565,26 +695,36 @@ public:
     };
 
     struct NoteGetFactory {
+#if !NOTE_SINGLETON
         NcT* nc_;
+#endif
         template<typename T> T create_() {
             T r;
+#if NOTE_SINGLETON
+            // Singleton: set statics on the type (once), not per instance.
+            T::nc_ = nc_ptr();
+            T::execute_fn_ = [](void* p_, const T& req_) {
+#else
             r.nc_ = nc_;
-            if constexpr (std::is_same_v<NcT, Notecard>) {
-                r.execute_fn_ = [](void* p_, const T& req_) {
-                    auto* nc__ = static_cast<Notecard*>(p_);
-                    if constexpr (detail::has_binary_src<T>::value) {
-                        if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
-                    }
-                    if constexpr (detail::has_binary_dst<T>::value) {
-                        if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
-                    }
-                    return nc__->execute(req_);
-                };
-                if constexpr (T::supports_cmd) {
-                    r.command_fn_ = [](void* p_, const T& req_) {
-                        return static_cast<Notecard*>(p_)->command_typed(req_);
-                    };
+            r.execute_fn_ = [](void* p_, const T& req_) {
+#endif
+                auto* nc__ = static_cast<NcT*>(p_);
+                if constexpr (detail::has_binary_src<T>::value) {
+                    if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
                 }
+                if constexpr (detail::has_binary_dst<T>::value) {
+                    if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
+                }
+                return nc__->execute(req_);
+            };
+            if constexpr (T::supports_cmd) {
+#if NOTE_SINGLETON
+                T::send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
+#else
+                r.send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
+#endif
+                    return static_cast<NcT*>(p_)->send_command(fn_, ctx_);
+                };
             }
             return r;
         }
@@ -603,26 +743,36 @@ public:
     };
 
     struct NoteTemplateFactory {
+#if !NOTE_SINGLETON
         NcT* nc_;
+#endif
         template<typename T> T create_() {
             T r;
+#if NOTE_SINGLETON
+            // Singleton: set statics on the type (once), not per instance.
+            T::nc_ = nc_ptr();
+            T::execute_fn_ = [](void* p_, const T& req_) {
+#else
             r.nc_ = nc_;
-            if constexpr (std::is_same_v<NcT, Notecard>) {
-                r.execute_fn_ = [](void* p_, const T& req_) {
-                    auto* nc__ = static_cast<Notecard*>(p_);
-                    if constexpr (detail::has_binary_src<T>::value) {
-                        if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
-                    }
-                    if constexpr (detail::has_binary_dst<T>::value) {
-                        if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
-                    }
-                    return nc__->execute(req_);
-                };
-                if constexpr (T::supports_cmd) {
-                    r.command_fn_ = [](void* p_, const T& req_) {
-                        return static_cast<Notecard*>(p_)->command_typed(req_);
-                    };
+            r.execute_fn_ = [](void* p_, const T& req_) {
+#endif
+                auto* nc__ = static_cast<NcT*>(p_);
+                if constexpr (detail::has_binary_src<T>::value) {
+                    if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
                 }
+                if constexpr (detail::has_binary_dst<T>::value) {
+                    if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
+                }
+                return nc__->execute(req_);
+            };
+            if constexpr (T::supports_cmd) {
+#if NOTE_SINGLETON
+                T::send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
+#else
+                r.send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
+#endif
+                    return static_cast<NcT*>(p_)->send_command(fn_, ctx_);
+                };
             }
             return r;
         }
@@ -660,55 +810,79 @@ public:
 
 
     struct CardAuxFactory {
+#if !NOTE_SINGLETON
         NcT* nc_;
+#endif
         template<typename T> T create_() {
             T r;
+#if NOTE_SINGLETON
+            // Singleton: set statics on the type (once), not per instance.
+            T::nc_ = nc_ptr();
+            T::execute_fn_ = [](void* p_, const T& req_) {
+#else
             r.nc_ = nc_;
-            if constexpr (std::is_same_v<NcT, Notecard>) {
-                r.execute_fn_ = [](void* p_, const T& req_) {
-                    auto* nc__ = static_cast<Notecard*>(p_);
-                    if constexpr (detail::has_binary_src<T>::value) {
-                        if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
-                    }
-                    if constexpr (detail::has_binary_dst<T>::value) {
-                        if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
-                    }
-                    return nc__->execute(req_);
-                };
-                if constexpr (T::supports_cmd) {
-                    r.command_fn_ = [](void* p_, const T& req_) {
-                        return static_cast<Notecard*>(p_)->command_typed(req_);
-                    };
+            r.execute_fn_ = [](void* p_, const T& req_) {
+#endif
+                auto* nc__ = static_cast<NcT*>(p_);
+                if constexpr (detail::has_binary_src<T>::value) {
+                    if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
                 }
+                if constexpr (detail::has_binary_dst<T>::value) {
+                    if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
+                }
+                return nc__->execute(req_);
+            };
+            if constexpr (T::supports_cmd) {
+#if NOTE_SINGLETON
+                T::send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
+#else
+                r.send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
+#endif
+                    return static_cast<NcT*>(p_)->send_command(fn_, ctx_);
+                };
             }
             return r;
         }
         /// card.aux
         auto operator()() { return create_<api::CardAux>(); }
+#if NOTE_SINGLETON
+        CardAuxSerialFactory serial;
+#else
         CardAuxSerialFactory serial{nc_};
+#endif
     };
 
     struct CardBinaryFactory {
+#if !NOTE_SINGLETON
         NcT* nc_;
+#endif
         template<typename T> T create_() {
             T r;
+#if NOTE_SINGLETON
+            // Singleton: set statics on the type (once), not per instance.
+            T::nc_ = nc_ptr();
+            T::execute_fn_ = [](void* p_, const T& req_) {
+#else
             r.nc_ = nc_;
-            if constexpr (std::is_same_v<NcT, Notecard>) {
-                r.execute_fn_ = [](void* p_, const T& req_) {
-                    auto* nc__ = static_cast<Notecard*>(p_);
-                    if constexpr (detail::has_binary_src<T>::value) {
-                        if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
-                    }
-                    if constexpr (detail::has_binary_dst<T>::value) {
-                        if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
-                    }
-                    return nc__->execute(req_);
-                };
-                if constexpr (T::supports_cmd) {
-                    r.command_fn_ = [](void* p_, const T& req_) {
-                        return static_cast<Notecard*>(p_)->command_typed(req_);
-                    };
+            r.execute_fn_ = [](void* p_, const T& req_) {
+#endif
+                auto* nc__ = static_cast<NcT*>(p_);
+                if constexpr (detail::has_binary_src<T>::value) {
+                    if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
                 }
+                if constexpr (detail::has_binary_dst<T>::value) {
+                    if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
+                }
+                return nc__->execute(req_);
+            };
+            if constexpr (T::supports_cmd) {
+#if NOTE_SINGLETON
+                T::send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
+#else
+                r.send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
+#endif
+                    return static_cast<NcT*>(p_)->send_command(fn_, ctx_);
+                };
             }
             return r;
         }
@@ -729,57 +903,81 @@ public:
     };
 
     struct CardLocationFactory {
+#if !NOTE_SINGLETON
         NcT* nc_;
+#endif
         template<typename T> T create_() {
             T r;
+#if NOTE_SINGLETON
+            // Singleton: set statics on the type (once), not per instance.
+            T::nc_ = nc_ptr();
+            T::execute_fn_ = [](void* p_, const T& req_) {
+#else
             r.nc_ = nc_;
-            if constexpr (std::is_same_v<NcT, Notecard>) {
-                r.execute_fn_ = [](void* p_, const T& req_) {
-                    auto* nc__ = static_cast<Notecard*>(p_);
-                    if constexpr (detail::has_binary_src<T>::value) {
-                        if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
-                    }
-                    if constexpr (detail::has_binary_dst<T>::value) {
-                        if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
-                    }
-                    return nc__->execute(req_);
-                };
-                if constexpr (T::supports_cmd) {
-                    r.command_fn_ = [](void* p_, const T& req_) {
-                        return static_cast<Notecard*>(p_)->command_typed(req_);
-                    };
+            r.execute_fn_ = [](void* p_, const T& req_) {
+#endif
+                auto* nc__ = static_cast<NcT*>(p_);
+                if constexpr (detail::has_binary_src<T>::value) {
+                    if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
                 }
+                if constexpr (detail::has_binary_dst<T>::value) {
+                    if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
+                }
+                return nc__->execute(req_);
+            };
+            if constexpr (T::supports_cmd) {
+#if NOTE_SINGLETON
+                T::send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
+#else
+                r.send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
+#endif
+                    return static_cast<NcT*>(p_)->send_command(fn_, ctx_);
+                };
             }
             return r;
         }
         /// card.location
         auto operator()() { return create_<api::CardLocation>(); }
+#if NOTE_SINGLETON
+        CardLocationModeFactory mode;
+#else
         CardLocationModeFactory mode{nc_};
+#endif
         /// card.location.track
         auto track() { return create_<api::CardLocationTrack>(); }
     };
 
     struct CardMotionFactory {
+#if !NOTE_SINGLETON
         NcT* nc_;
+#endif
         template<typename T> T create_() {
             T r;
+#if NOTE_SINGLETON
+            // Singleton: set statics on the type (once), not per instance.
+            T::nc_ = nc_ptr();
+            T::execute_fn_ = [](void* p_, const T& req_) {
+#else
             r.nc_ = nc_;
-            if constexpr (std::is_same_v<NcT, Notecard>) {
-                r.execute_fn_ = [](void* p_, const T& req_) {
-                    auto* nc__ = static_cast<Notecard*>(p_);
-                    if constexpr (detail::has_binary_src<T>::value) {
-                        if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
-                    }
-                    if constexpr (detail::has_binary_dst<T>::value) {
-                        if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
-                    }
-                    return nc__->execute(req_);
-                };
-                if constexpr (T::supports_cmd) {
-                    r.command_fn_ = [](void* p_, const T& req_) {
-                        return static_cast<Notecard*>(p_)->command_typed(req_);
-                    };
+            r.execute_fn_ = [](void* p_, const T& req_) {
+#endif
+                auto* nc__ = static_cast<NcT*>(p_);
+                if constexpr (detail::has_binary_src<T>::value) {
+                    if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
                 }
+                if constexpr (detail::has_binary_dst<T>::value) {
+                    if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
+                }
+                return nc__->execute(req_);
+            };
+            if constexpr (T::supports_cmd) {
+#if NOTE_SINGLETON
+                T::send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
+#else
+                r.send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
+#endif
+                    return static_cast<NcT*>(p_)->send_command(fn_, ctx_);
+                };
             }
             return r;
         }
@@ -794,55 +992,79 @@ public:
     };
 
     struct CardWirelessFactory {
+#if !NOTE_SINGLETON
         NcT* nc_;
+#endif
         template<typename T> T create_() {
             T r;
+#if NOTE_SINGLETON
+            // Singleton: set statics on the type (once), not per instance.
+            T::nc_ = nc_ptr();
+            T::execute_fn_ = [](void* p_, const T& req_) {
+#else
             r.nc_ = nc_;
-            if constexpr (std::is_same_v<NcT, Notecard>) {
-                r.execute_fn_ = [](void* p_, const T& req_) {
-                    auto* nc__ = static_cast<Notecard*>(p_);
-                    if constexpr (detail::has_binary_src<T>::value) {
-                        if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
-                    }
-                    if constexpr (detail::has_binary_dst<T>::value) {
-                        if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
-                    }
-                    return nc__->execute(req_);
-                };
-                if constexpr (T::supports_cmd) {
-                    r.command_fn_ = [](void* p_, const T& req_) {
-                        return static_cast<Notecard*>(p_)->command_typed(req_);
-                    };
+            r.execute_fn_ = [](void* p_, const T& req_) {
+#endif
+                auto* nc__ = static_cast<NcT*>(p_);
+                if constexpr (detail::has_binary_src<T>::value) {
+                    if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
                 }
+                if constexpr (detail::has_binary_dst<T>::value) {
+                    if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
+                }
+                return nc__->execute(req_);
+            };
+            if constexpr (T::supports_cmd) {
+#if NOTE_SINGLETON
+                T::send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
+#else
+                r.send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
+#endif
+                    return static_cast<NcT*>(p_)->send_command(fn_, ctx_);
+                };
             }
             return r;
         }
         /// card.wireless
         auto operator()() { return create_<api::CardWireless>(); }
+#if NOTE_SINGLETON
+        CardWirelessPenaltyFactory penalty;
+#else
         CardWirelessPenaltyFactory penalty{nc_};
+#endif
     };
 
     struct FileChangesFactory {
+#if !NOTE_SINGLETON
         NcT* nc_;
+#endif
         template<typename T> T create_() {
             T r;
+#if NOTE_SINGLETON
+            // Singleton: set statics on the type (once), not per instance.
+            T::nc_ = nc_ptr();
+            T::execute_fn_ = [](void* p_, const T& req_) {
+#else
             r.nc_ = nc_;
-            if constexpr (std::is_same_v<NcT, Notecard>) {
-                r.execute_fn_ = [](void* p_, const T& req_) {
-                    auto* nc__ = static_cast<Notecard*>(p_);
-                    if constexpr (detail::has_binary_src<T>::value) {
-                        if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
-                    }
-                    if constexpr (detail::has_binary_dst<T>::value) {
-                        if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
-                    }
-                    return nc__->execute(req_);
-                };
-                if constexpr (T::supports_cmd) {
-                    r.command_fn_ = [](void* p_, const T& req_) {
-                        return static_cast<Notecard*>(p_)->command_typed(req_);
-                    };
+            r.execute_fn_ = [](void* p_, const T& req_) {
+#endif
+                auto* nc__ = static_cast<NcT*>(p_);
+                if constexpr (detail::has_binary_src<T>::value) {
+                    if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
                 }
+                if constexpr (detail::has_binary_dst<T>::value) {
+                    if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
+                }
+                return nc__->execute(req_);
+            };
+            if constexpr (T::supports_cmd) {
+#if NOTE_SINGLETON
+                T::send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
+#else
+                r.send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
+#endif
+                    return static_cast<NcT*>(p_)->send_command(fn_, ctx_);
+                };
             }
             return r;
         }
@@ -853,26 +1075,36 @@ public:
     };
 
     struct HubSyncFactory {
+#if !NOTE_SINGLETON
         NcT* nc_;
+#endif
         template<typename T> T create_() {
             T r;
+#if NOTE_SINGLETON
+            // Singleton: set statics on the type (once), not per instance.
+            T::nc_ = nc_ptr();
+            T::execute_fn_ = [](void* p_, const T& req_) {
+#else
             r.nc_ = nc_;
-            if constexpr (std::is_same_v<NcT, Notecard>) {
-                r.execute_fn_ = [](void* p_, const T& req_) {
-                    auto* nc__ = static_cast<Notecard*>(p_);
-                    if constexpr (detail::has_binary_src<T>::value) {
-                        if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
-                    }
-                    if constexpr (detail::has_binary_dst<T>::value) {
-                        if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
-                    }
-                    return nc__->execute(req_);
-                };
-                if constexpr (T::supports_cmd) {
-                    r.command_fn_ = [](void* p_, const T& req_) {
-                        return static_cast<Notecard*>(p_)->command_typed(req_);
-                    };
+            r.execute_fn_ = [](void* p_, const T& req_) {
+#endif
+                auto* nc__ = static_cast<NcT*>(p_);
+                if constexpr (detail::has_binary_src<T>::value) {
+                    if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
                 }
+                if constexpr (detail::has_binary_dst<T>::value) {
+                    if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
+                }
+                return nc__->execute(req_);
+            };
+            if constexpr (T::supports_cmd) {
+#if NOTE_SINGLETON
+                T::send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
+#else
+                r.send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
+#endif
+                    return static_cast<NcT*>(p_)->send_command(fn_, ctx_);
+                };
             }
             return r;
         }
@@ -896,50 +1128,98 @@ public:
     template<typename TargetT_ = void>
 #endif
     struct CardGroup {
+#if !NOTE_SINGLETON
         NcT* nc_;
+#endif
         template<typename T> T create_() {
             T r;
+#if NOTE_SINGLETON
+            // Singleton: set statics on the type (once), not per instance.
+            T::nc_ = nc_ptr();
+            T::execute_fn_ = [](void* p_, const T& req_) {
+#else
             r.nc_ = nc_;
-            if constexpr (std::is_same_v<NcT, Notecard>) {
-                r.execute_fn_ = [](void* p_, const T& req_) {
-                    auto* nc__ = static_cast<Notecard*>(p_);
-                    if constexpr (detail::has_binary_src<T>::value) {
-                        if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
-                    }
-                    if constexpr (detail::has_binary_dst<T>::value) {
-                        if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
-                    }
-                    return nc__->execute(req_);
-                };
-                if constexpr (T::supports_cmd) {
-                    r.command_fn_ = [](void* p_, const T& req_) {
-                        return static_cast<Notecard*>(p_)->command_typed(req_);
-                    };
+            r.execute_fn_ = [](void* p_, const T& req_) {
+#endif
+                auto* nc__ = static_cast<NcT*>(p_);
+                if constexpr (detail::has_binary_src<T>::value) {
+                    if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
                 }
+                if constexpr (detail::has_binary_dst<T>::value) {
+                    if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
+                }
+                return nc__->execute(req_);
+            };
+            if constexpr (T::supports_cmd) {
+#if NOTE_SINGLETON
+                T::send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
+#else
+                r.send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
+#endif
+                    return static_cast<NcT*>(p_)->send_command(fn_, ctx_);
+                };
             }
             return r;
         }
 
 
         /// card.aux (and nested: card.aux.serial)
+#if NOTE_SINGLETON
+        CardAuxFactory aux;
+#else
         CardAuxFactory aux{nc_};
+#endif
         /// card.aux.serial (and nested: )
+#if NOTE_SINGLETON
+        CardAuxSerialFactory auxSerial;
+#else
         CardAuxSerialFactory auxSerial{nc_};
+#endif
         /// card.binary (and nested: card.binary.get, card.binary.put)
+#if NOTE_SINGLETON
+        CardBinaryFactory binary;
+#else
         CardBinaryFactory binary{nc_};
+#endif
         /// card.location (and nested: card.location.mode, card.location.track)
+#if NOTE_SINGLETON
+        CardLocationFactory location;
+#else
         CardLocationFactory location{nc_};
+#endif
         /// card.location.mode (and nested: )
+#if NOTE_SINGLETON
+        CardLocationModeFactory locationMode;
+#else
         CardLocationModeFactory locationMode{nc_};
+#endif
         /// card.motion (and nested: card.motion.mode, card.motion.sync, card.motion.track)
+#if NOTE_SINGLETON
+        CardMotionFactory motion;
+#else
         CardMotionFactory motion{nc_};
+#endif
         /// card.wireless (and nested: card.wireless.penalty)
+#if NOTE_SINGLETON
+        CardWirelessFactory wireless;
+#else
         CardWirelessFactory wireless{nc_};
+#endif
         /// card.wireless.penalty (and nested: )
+#if NOTE_SINGLETON
+        CardWirelessPenaltyFactory wirelessPenalty;
+#else
         CardWirelessPenaltyFactory wirelessPenalty{nc_};
+#endif
 
         /// card.attn
-        CardAttnFactory attn() { return {nc_}; }
+        CardAttnFactory attn() { return
+#if NOTE_SINGLETON
+            {}
+#else
+            {nc_}
+#endif
+        ; }
 
         /// card.carrier
 #if __cplusplus >= 202002L
@@ -959,14 +1239,32 @@ public:
 #if __cplusplus >= 202002L
         template<typename T_ = TargetT_>
         requires (IsUnconstrained<T_> || T_::supports(api::CardContact::Get::skus))
-        CardContactFactory contact() { return {nc_}; }
+        CardContactFactory contact() { return
+#if NOTE_SINGLETON
+            {}
+#else
+            {nc_}
+#endif
+        ; }
 
         template<typename T_ = TargetT_>
         requires (!IsUnconstrained<T_> && !T_::supports(api::CardContact::Get::skus) && !T_::strict)
         [[deprecated("card.contact is not available on this target")]]
-        CardContactFactory contact() { return {nc_}; }
+        CardContactFactory contact() { return
+#if NOTE_SINGLETON
+            {}
 #else
-        CardContactFactory contact() { return {nc_}; }
+            {nc_}
+#endif
+        ; }
+#else
+        CardContactFactory contact() { return
+#if NOTE_SINGLETON
+            {}
+#else
+            {nc_}
+#endif
+        ; }
 #endif
 
         /// card.dfu
@@ -1021,14 +1319,32 @@ public:
 #if __cplusplus >= 202002L
         template<typename T_ = TargetT_>
         requires (IsUnconstrained<T_> || T_::supports(api::CardPower::Read::skus))
-        CardPowerFactory power() { return {nc_}; }
+        CardPowerFactory power() { return
+#if NOTE_SINGLETON
+            {}
+#else
+            {nc_}
+#endif
+        ; }
 
         template<typename T_ = TargetT_>
         requires (!IsUnconstrained<T_> && !T_::supports(api::CardPower::Read::skus) && !T_::strict)
         [[deprecated("card.power is not available on this target")]]
-        CardPowerFactory power() { return {nc_}; }
+        CardPowerFactory power() { return
+#if NOTE_SINGLETON
+            {}
 #else
-        CardPowerFactory power() { return {nc_}; }
+            {nc_}
+#endif
+        ; }
+#else
+        CardPowerFactory power() { return
+#if NOTE_SINGLETON
+            {}
+#else
+            {nc_}
+#endif
+        ; }
 #endif
 
         /// card.random
@@ -1069,7 +1385,13 @@ public:
         auto status() { return create_<api::CardStatus>(); }
 
         /// card.temp
-        CardTempFactory temp() { return {nc_}; }
+        CardTempFactory temp() { return
+#if NOTE_SINGLETON
+            {}
+#else
+            {nc_}
+#endif
+        ; }
 
         /// card.time
         auto time() { return create_<api::CardTime>(); }
@@ -1137,7 +1459,13 @@ public:
         auto version() { return create_<api::CardVersion>(); }
 
         /// card.voltage
-        CardVoltageFactory voltage() { return {nc_}; }
+        CardVoltageFactory voltage() { return
+#if NOTE_SINGLETON
+            {}
+#else
+            {nc_}
+#endif
+        ; }
 
         /// card.wifi
 #if __cplusplus >= 202002L
@@ -1222,26 +1550,36 @@ public:
     template<typename TargetT_ = void>
 #endif
     struct DfuGroup {
+#if !NOTE_SINGLETON
         NcT* nc_;
+#endif
         template<typename T> T create_() {
             T r;
+#if NOTE_SINGLETON
+            // Singleton: set statics on the type (once), not per instance.
+            T::nc_ = nc_ptr();
+            T::execute_fn_ = [](void* p_, const T& req_) {
+#else
             r.nc_ = nc_;
-            if constexpr (std::is_same_v<NcT, Notecard>) {
-                r.execute_fn_ = [](void* p_, const T& req_) {
-                    auto* nc__ = static_cast<Notecard*>(p_);
-                    if constexpr (detail::has_binary_src<T>::value) {
-                        if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
-                    }
-                    if constexpr (detail::has_binary_dst<T>::value) {
-                        if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
-                    }
-                    return nc__->execute(req_);
-                };
-                if constexpr (T::supports_cmd) {
-                    r.command_fn_ = [](void* p_, const T& req_) {
-                        return static_cast<Notecard*>(p_)->command_typed(req_);
-                    };
+            r.execute_fn_ = [](void* p_, const T& req_) {
+#endif
+                auto* nc__ = static_cast<NcT*>(p_);
+                if constexpr (detail::has_binary_src<T>::value) {
+                    if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
                 }
+                if constexpr (detail::has_binary_dst<T>::value) {
+                    if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
+                }
+                return nc__->execute(req_);
+            };
+            if constexpr (T::supports_cmd) {
+#if NOTE_SINGLETON
+                T::send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
+#else
+                r.send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
+#endif
+                    return static_cast<NcT*>(p_)->send_command(fn_, ctx_);
+                };
             }
             return r;
         }
@@ -1289,26 +1627,36 @@ public:
     template<typename TargetT_ = void>
 #endif
     struct EnvGroup {
+#if !NOTE_SINGLETON
         NcT* nc_;
+#endif
         template<typename T> T create_() {
             T r;
+#if NOTE_SINGLETON
+            // Singleton: set statics on the type (once), not per instance.
+            T::nc_ = nc_ptr();
+            T::execute_fn_ = [](void* p_, const T& req_) {
+#else
             r.nc_ = nc_;
-            if constexpr (std::is_same_v<NcT, Notecard>) {
-                r.execute_fn_ = [](void* p_, const T& req_) {
-                    auto* nc__ = static_cast<Notecard*>(p_);
-                    if constexpr (detail::has_binary_src<T>::value) {
-                        if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
-                    }
-                    if constexpr (detail::has_binary_dst<T>::value) {
-                        if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
-                    }
-                    return nc__->execute(req_);
-                };
-                if constexpr (T::supports_cmd) {
-                    r.command_fn_ = [](void* p_, const T& req_) {
-                        return static_cast<Notecard*>(p_)->command_typed(req_);
-                    };
+            r.execute_fn_ = [](void* p_, const T& req_) {
+#endif
+                auto* nc__ = static_cast<NcT*>(p_);
+                if constexpr (detail::has_binary_src<T>::value) {
+                    if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
                 }
+                if constexpr (detail::has_binary_dst<T>::value) {
+                    if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
+                }
+                return nc__->execute(req_);
+            };
+            if constexpr (T::supports_cmd) {
+#if NOTE_SINGLETON
+                T::send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
+#else
+                r.send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
+#endif
+                    return static_cast<NcT*>(p_)->send_command(fn_, ctx_);
+                };
             }
             return r;
         }
@@ -1316,7 +1664,13 @@ public:
 
 
         /// env.default
-        EnvDefaultFactory defaults() { return {nc_}; }
+        EnvDefaultFactory defaults() { return
+#if NOTE_SINGLETON
+            {}
+#else
+            {nc_}
+#endif
+        ; }
 
         /// env.get
         auto get() { return create_<api::EnvGet>(); }
@@ -1430,33 +1784,47 @@ public:
     template<typename TargetT_ = void>
 #endif
     struct FileGroup {
+#if !NOTE_SINGLETON
         NcT* nc_;
+#endif
         template<typename T> T create_() {
             T r;
+#if NOTE_SINGLETON
+            // Singleton: set statics on the type (once), not per instance.
+            T::nc_ = nc_ptr();
+            T::execute_fn_ = [](void* p_, const T& req_) {
+#else
             r.nc_ = nc_;
-            if constexpr (std::is_same_v<NcT, Notecard>) {
-                r.execute_fn_ = [](void* p_, const T& req_) {
-                    auto* nc__ = static_cast<Notecard*>(p_);
-                    if constexpr (detail::has_binary_src<T>::value) {
-                        if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
-                    }
-                    if constexpr (detail::has_binary_dst<T>::value) {
-                        if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
-                    }
-                    return nc__->execute(req_);
-                };
-                if constexpr (T::supports_cmd) {
-                    r.command_fn_ = [](void* p_, const T& req_) {
-                        return static_cast<Notecard*>(p_)->command_typed(req_);
-                    };
+            r.execute_fn_ = [](void* p_, const T& req_) {
+#endif
+                auto* nc__ = static_cast<NcT*>(p_);
+                if constexpr (detail::has_binary_src<T>::value) {
+                    if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
                 }
+                if constexpr (detail::has_binary_dst<T>::value) {
+                    if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
+                }
+                return nc__->execute(req_);
+            };
+            if constexpr (T::supports_cmd) {
+#if NOTE_SINGLETON
+                T::send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
+#else
+                r.send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
+#endif
+                    return static_cast<NcT*>(p_)->send_command(fn_, ctx_);
+                };
             }
             return r;
         }
 
 
         /// file.changes (and nested: file.changes.pending)
+#if NOTE_SINGLETON
+        FileChangesFactory changes;
+#else
         FileChangesFactory changes{nc_};
+#endif
 
         /// file.clear
 #if __cplusplus >= 202002L
@@ -1522,33 +1890,47 @@ public:
     template<typename TargetT_ = void>
 #endif
     struct HubGroup {
+#if !NOTE_SINGLETON
         NcT* nc_;
+#endif
         template<typename T> T create_() {
             T r;
+#if NOTE_SINGLETON
+            // Singleton: set statics on the type (once), not per instance.
+            T::nc_ = nc_ptr();
+            T::execute_fn_ = [](void* p_, const T& req_) {
+#else
             r.nc_ = nc_;
-            if constexpr (std::is_same_v<NcT, Notecard>) {
-                r.execute_fn_ = [](void* p_, const T& req_) {
-                    auto* nc__ = static_cast<Notecard*>(p_);
-                    if constexpr (detail::has_binary_src<T>::value) {
-                        if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
-                    }
-                    if constexpr (detail::has_binary_dst<T>::value) {
-                        if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
-                    }
-                    return nc__->execute(req_);
-                };
-                if constexpr (T::supports_cmd) {
-                    r.command_fn_ = [](void* p_, const T& req_) {
-                        return static_cast<Notecard*>(p_)->command_typed(req_);
-                    };
+            r.execute_fn_ = [](void* p_, const T& req_) {
+#endif
+                auto* nc__ = static_cast<NcT*>(p_);
+                if constexpr (detail::has_binary_src<T>::value) {
+                    if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
                 }
+                if constexpr (detail::has_binary_dst<T>::value) {
+                    if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
+                }
+                return nc__->execute(req_);
+            };
+            if constexpr (T::supports_cmd) {
+#if NOTE_SINGLETON
+                T::send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
+#else
+                r.send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
+#endif
+                    return static_cast<NcT*>(p_)->send_command(fn_, ctx_);
+                };
             }
             return r;
         }
 
 
         /// hub.sync (and nested: hub.sync.status)
+#if NOTE_SINGLETON
+        HubSyncFactory sync;
+#else
         HubSyncFactory sync{nc_};
+#endif
 
         /// hub.get
         auto get() { return create_<api::HubGet>(); }
@@ -1600,26 +1982,36 @@ public:
     template<typename TargetT_ = void>
 #endif
     struct NoteGroup {
+#if !NOTE_SINGLETON
         NcT* nc_;
+#endif
         template<typename T> T create_() {
             T r;
+#if NOTE_SINGLETON
+            // Singleton: set statics on the type (once), not per instance.
+            T::nc_ = nc_ptr();
+            T::execute_fn_ = [](void* p_, const T& req_) {
+#else
             r.nc_ = nc_;
-            if constexpr (std::is_same_v<NcT, Notecard>) {
-                r.execute_fn_ = [](void* p_, const T& req_) {
-                    auto* nc__ = static_cast<Notecard*>(p_);
-                    if constexpr (detail::has_binary_src<T>::value) {
-                        if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
-                    }
-                    if constexpr (detail::has_binary_dst<T>::value) {
-                        if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
-                    }
-                    return nc__->execute(req_);
-                };
-                if constexpr (T::supports_cmd) {
-                    r.command_fn_ = [](void* p_, const T& req_) {
-                        return static_cast<Notecard*>(p_)->command_typed(req_);
-                    };
+            r.execute_fn_ = [](void* p_, const T& req_) {
+#endif
+                auto* nc__ = static_cast<NcT*>(p_);
+                if constexpr (detail::has_binary_src<T>::value) {
+                    if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
                 }
+                if constexpr (detail::has_binary_dst<T>::value) {
+                    if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
+                }
+                return nc__->execute(req_);
+            };
+            if constexpr (T::supports_cmd) {
+#if NOTE_SINGLETON
+                T::send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
+#else
+                r.send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
+#endif
+                    return static_cast<NcT*>(p_)->send_command(fn_, ctx_);
+                };
             }
             return r;
         }
@@ -1633,14 +2025,32 @@ public:
 #if __cplusplus >= 202002L
         template<typename T_ = TargetT_>
         requires (IsUnconstrained<T_> || T_::supports(api::NoteChanges::Peek::skus))
-        NoteChangesFactory changes() { return {nc_}; }
+        NoteChangesFactory changes() { return
+#if NOTE_SINGLETON
+            {}
+#else
+            {nc_}
+#endif
+        ; }
 
         template<typename T_ = TargetT_>
         requires (!IsUnconstrained<T_> && !T_::supports(api::NoteChanges::Peek::skus) && !T_::strict)
         [[deprecated("note.changes is not available on this target")]]
-        NoteChangesFactory changes() { return {nc_}; }
+        NoteChangesFactory changes() { return
+#if NOTE_SINGLETON
+            {}
 #else
-        NoteChangesFactory changes() { return {nc_}; }
+            {nc_}
+#endif
+        ; }
+#else
+        NoteChangesFactory changes() { return
+#if NOTE_SINGLETON
+            {}
+#else
+            {nc_}
+#endif
+        ; }
 #endif
 
         /// note.delete
@@ -1652,10 +2062,22 @@ public:
         }
 
         /// note.get
-        NoteGetFactory get() { return {nc_}; }
+        NoteGetFactory get() { return
+#if NOTE_SINGLETON
+            {}
+#else
+            {nc_}
+#endif
+        ; }
 
         /// note.template
-        NoteTemplateFactory templates() { return {nc_}; }
+        NoteTemplateFactory templates() { return
+#if NOTE_SINGLETON
+            {}
+#else
+            {nc_}
+#endif
+        ; }
 
         /// note.update
         auto update(note::string_view file_arg, note::string_view noteId_arg) {
@@ -1836,26 +2258,36 @@ public:
     template<typename TargetT_ = void>
 #endif
     struct NtnGroup {
+#if !NOTE_SINGLETON
         NcT* nc_;
+#endif
         template<typename T> T create_() {
             T r;
+#if NOTE_SINGLETON
+            // Singleton: set statics on the type (once), not per instance.
+            T::nc_ = nc_ptr();
+            T::execute_fn_ = [](void* p_, const T& req_) {
+#else
             r.nc_ = nc_;
-            if constexpr (std::is_same_v<NcT, Notecard>) {
-                r.execute_fn_ = [](void* p_, const T& req_) {
-                    auto* nc__ = static_cast<Notecard*>(p_);
-                    if constexpr (detail::has_binary_src<T>::value) {
-                        if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
-                    }
-                    if constexpr (detail::has_binary_dst<T>::value) {
-                        if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
-                    }
-                    return nc__->execute(req_);
-                };
-                if constexpr (T::supports_cmd) {
-                    r.command_fn_ = [](void* p_, const T& req_) {
-                        return static_cast<Notecard*>(p_)->command_typed(req_);
-                    };
+            r.execute_fn_ = [](void* p_, const T& req_) {
+#endif
+                auto* nc__ = static_cast<NcT*>(p_);
+                if constexpr (detail::has_binary_src<T>::value) {
+                    if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
                 }
+                if constexpr (detail::has_binary_dst<T>::value) {
+                    if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
+                }
+                return nc__->execute(req_);
+            };
+            if constexpr (T::supports_cmd) {
+#if NOTE_SINGLETON
+                T::send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
+#else
+                r.send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
+#endif
+                    return static_cast<NcT*>(p_)->send_command(fn_, ctx_);
+                };
             }
             return r;
         }
@@ -1917,26 +2349,36 @@ public:
     template<typename TargetT_ = void>
 #endif
     struct VarGroup {
+#if !NOTE_SINGLETON
         NcT* nc_;
+#endif
         template<typename T> T create_() {
             T r;
+#if NOTE_SINGLETON
+            // Singleton: set statics on the type (once), not per instance.
+            T::nc_ = nc_ptr();
+            T::execute_fn_ = [](void* p_, const T& req_) {
+#else
             r.nc_ = nc_;
-            if constexpr (std::is_same_v<NcT, Notecard>) {
-                r.execute_fn_ = [](void* p_, const T& req_) {
-                    auto* nc__ = static_cast<Notecard*>(p_);
-                    if constexpr (detail::has_binary_src<T>::value) {
-                        if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
-                    }
-                    if constexpr (detail::has_binary_dst<T>::value) {
-                        if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
-                    }
-                    return nc__->execute(req_);
-                };
-                if constexpr (T::supports_cmd) {
-                    r.command_fn_ = [](void* p_, const T& req_) {
-                        return static_cast<Notecard*>(p_)->command_typed(req_);
-                    };
+            r.execute_fn_ = [](void* p_, const T& req_) {
+#endif
+                auto* nc__ = static_cast<NcT*>(p_);
+                if constexpr (detail::has_binary_src<T>::value) {
+                    if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
                 }
+                if constexpr (detail::has_binary_dst<T>::value) {
+                    if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
+                }
+                return nc__->execute(req_);
+            };
+            if constexpr (T::supports_cmd) {
+#if NOTE_SINGLETON
+                T::send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
+#else
+                r.send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
+#endif
+                    return static_cast<NcT*>(p_)->send_command(fn_, ctx_);
+                };
             }
             return r;
         }
@@ -1970,26 +2412,36 @@ public:
     template<typename TargetT_ = void>
 #endif
     struct WebGroup {
+#if !NOTE_SINGLETON
         NcT* nc_;
+#endif
         template<typename T> T create_() {
             T r;
+#if NOTE_SINGLETON
+            // Singleton: set statics on the type (once), not per instance.
+            T::nc_ = nc_ptr();
+            T::execute_fn_ = [](void* p_, const T& req_) {
+#else
             r.nc_ = nc_;
-            if constexpr (std::is_same_v<NcT, Notecard>) {
-                r.execute_fn_ = [](void* p_, const T& req_) {
-                    auto* nc__ = static_cast<Notecard*>(p_);
-                    if constexpr (detail::has_binary_src<T>::value) {
-                        if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
-                    }
-                    if constexpr (detail::has_binary_dst<T>::value) {
-                        if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
-                    }
-                    return nc__->execute(req_);
-                };
-                if constexpr (T::supports_cmd) {
-                    r.command_fn_ = [](void* p_, const T& req_) {
-                        return static_cast<Notecard*>(p_)->command_typed(req_);
-                    };
+            r.execute_fn_ = [](void* p_, const T& req_) {
+#endif
+                auto* nc__ = static_cast<NcT*>(p_);
+                if constexpr (detail::has_binary_src<T>::value) {
+                    if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
                 }
+                if constexpr (detail::has_binary_dst<T>::value) {
+                    if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
+                }
+                return nc__->execute(req_);
+            };
+            if constexpr (T::supports_cmd) {
+#if NOTE_SINGLETON
+                T::send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
+#else
+                r.send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
+#endif
+                    return static_cast<NcT*>(p_)->send_command(fn_, ctx_);
+                };
             }
             return r;
         }
@@ -2088,6 +2540,7 @@ public:
     CardBinaryFactory binary;
 };
 
+#ifndef NOTE_MINIMAL
 #if __cplusplus >= 202002L
 Api(Notecard&) -> Api<Unconstrained, Notecard>;
 template<typename T>
@@ -2099,5 +2552,6 @@ auto make_api(NcT& nc, T = {}) { return Api<T, NcT>(nc); }
 template<typename NcT = Notecard>
 Api<NcT> make_api(NcT& nc) { return Api<NcT>(nc); }
 #endif
+#endif // !NOTE_MINIMAL
 
 } // namespace note

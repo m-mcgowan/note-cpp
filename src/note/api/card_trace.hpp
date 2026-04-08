@@ -8,6 +8,7 @@
 #if NOTE_EXTRAS
 #include <note/dyn_field.hpp>
 #endif
+#include <note/generic_sink.hpp>
 #include <note/notecard.hpp>
 #include <note/arena.hpp>
 #include <note/field.hpp>
@@ -30,6 +31,7 @@ namespace note::api {
 
 
 
+
 /// Enable and disable trace mode on a Notecard for debugging.
 ///
 /// @skus{CELL,CELL+WIFI,LORA,SKYLO,WIFI}
@@ -44,7 +46,11 @@ struct CardTrace {
     static constexpr Safety safety = Safety::Idempotent;
     static constexpr Skus skus{};
 
+#if NOTE_SINGLETON
+    static inline void* nc_;
+#else
     void* nc_ = nullptr;
+#endif
 
 
     // mode: on | off
@@ -125,10 +131,25 @@ struct CardTrace {
 
     using Response = void;
 
+#if NOTE_SINGLETON
+    /// Singleton: type-erased execute — one static fn ptr per type, set by Api.
+    static inline ApiResult<Response>(*execute_fn_)(void*, const CardTrace&);
+    static inline Result<void>(*send_fn_)(void*, BuildFn, void*);
+#else
     ApiResult<Response>(*execute_fn_)(void*, const CardTrace&) = nullptr;
+    Result<void>(*send_fn_)(void*, BuildFn, void*) = nullptr;
+#endif
     auto execute() const { return execute_fn_(nc_, *this); }
-    Result<void>(*command_fn_)(void*, const CardTrace&) = nullptr;
-    Result<void> command() const { return command_fn_(nc_, *this); }
+    Result<void> command() const {
+        auto build_ = [&](JsonBuilder& b_) {
+            b_.add("cmd", notecard_request);
+            this->build(b_);
+        };
+        BuildFn fn_ = [](JsonBuilder& b_, void* p_) {
+            (*static_cast<decltype(build_)*>(p_))(b_);
+        };
+        return send_fn_(nc_, fn_, &build_);
+    }
 
     void build(JsonBuilder& b) const {
         if (mode) note::add_flash(b, note::flash(keys_::mode), *mode);
@@ -165,6 +186,7 @@ inline CardTrace& CardTrace::mode_t::operator()(note::string_view v) {
         reinterpret_cast<char*>(this) - offsetof(CardTrace, mode));
 }
 #pragma GCC diagnostic pop
+
 
 
 } // namespace note::api

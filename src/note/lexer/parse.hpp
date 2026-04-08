@@ -5,7 +5,7 @@
 ///
 /// sax_lex_streaming() is the drop-in replacement for sax_parse_streaming()
 /// using the new zero-buffer lexer pipeline:
-///   HAL → ReadFn → JsonLexer → SaxAdapter → JsonSink
+///   HAL → ReadFn → JsonLexer → SaxAdapter → SaxDispatch → SinkT
 
 #include <note/lexer/json_lexer.hpp>
 #include <note/lexer/sax_adapter.hpp>
@@ -17,12 +17,9 @@ namespace note {
 namespace detail {
 
 /// Shared feed loop: pushes bytes through the lexer into the adapter.
-/// Returns error string on failure, empty on success.
-/// Used by both sax_lex_streaming and sax_lex to ensure a single
-/// feed<SaxAdapter<SinkT>> instantiation per SinkT.
-template<typename SinkT>
-string_view lex_feed_loop(DefaultLexer& lexer, const uint8_t* data, size_t n,
-                          SaxAdapter<SinkT>& adapter) {
+/// Not templated on SinkT — one instantiation for all sink types.
+inline string_view lex_feed_loop(DefaultLexer& lexer, const uint8_t* data,
+                                 size_t n, SaxAdapter& adapter) {
     for (size_t i = 0; i < n; ++i) {
         lexer.feed(data[i], adapter);
         if (lexer.has_error())
@@ -41,7 +38,24 @@ string_view lex_feed_loop(DefaultLexer& lexer, const uint8_t* data, size_t n,
 template<typename ReadFn, typename SinkT = JsonSink>
 string_view sax_lex_streaming(ReadFn&& read, uint32_t timeout_ms,
                                SaxStreamBuf& buf, SinkT& sink) {
-    SaxAdapter<SinkT> adapter(buf, sink);
+    auto dispatch = make_sax_dispatch(sink);
+    return sax_lex_streaming(std::forward<ReadFn>(read), timeout_ms, buf, dispatch);
+}
+
+/// Parse with default stack buffers.
+template<typename ReadFn, typename SinkT = JsonSink>
+string_view sax_lex_streaming(ReadFn&& read, uint32_t timeout_ms, SinkT& sink) {
+    char storage[384];  // 64 read + 64 key + 256 value (same default as old parser)
+    SaxStreamBuf buf(storage);
+    return sax_lex_streaming(std::forward<ReadFn>(read), timeout_ms, buf, sink);
+}
+
+/// SaxDispatch overload — takes a pre-built dispatch table (no per-SinkT template).
+/// This is the core implementation; the SinkT overloads above delegate here.
+template<typename ReadFn>
+string_view sax_lex_streaming(ReadFn&& read, uint32_t timeout_ms,
+                               SaxStreamBuf& buf, SaxDispatch dispatch) {
+    SaxAdapter adapter(buf, dispatch);
     DefaultLexer lexer;
 
     for (;;) {
@@ -63,12 +77,13 @@ string_view sax_lex_streaming(ReadFn&& read, uint32_t timeout_ms,
     return {};
 }
 
-/// Parse with default stack buffers.
-template<typename ReadFn, typename SinkT = JsonSink>
-string_view sax_lex_streaming(ReadFn&& read, uint32_t timeout_ms, SinkT& sink) {
-    char storage[384];  // 64 read + 64 key + 256 value (same default as old parser)
+/// SaxDispatch overload with default stack buffers.
+template<typename ReadFn>
+string_view sax_lex_streaming(ReadFn&& read, uint32_t timeout_ms,
+                               SaxDispatch dispatch) {
+    char storage[384];
     SaxStreamBuf buf(storage);
-    return sax_lex_streaming(std::forward<ReadFn>(read), timeout_ms, buf, sink);
+    return sax_lex_streaming(std::forward<ReadFn>(read), timeout_ms, buf, dispatch);
 }
 
 /// Parse a complete JSON string (buffer-based, for testing).
@@ -76,7 +91,8 @@ template<typename SinkT = JsonSink>
 string_view sax_lex(const char* json, size_t len, SinkT& sink) {
     char storage[384];
     SaxStreamBuf buf(storage);
-    SaxAdapter<SinkT> adapter(buf, sink);
+    auto dispatch = make_sax_dispatch(sink);
+    SaxAdapter adapter(buf, dispatch);
     DefaultLexer lexer;
 
     auto err = detail::lex_feed_loop(lexer, reinterpret_cast<const uint8_t*>(json), len, adapter);

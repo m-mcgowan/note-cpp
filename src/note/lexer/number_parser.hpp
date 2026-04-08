@@ -80,4 +80,76 @@ struct IncrementalNumber {
     }
 };
 
+/// Compact number parser for constrained platforms.
+/// Uses int32_t instead of int64_t (no 64-bit soft math on AVR).
+/// Notecard responses fit within int32_t range.
+struct CompactNumber {
+    int32_t integer_acc = 0;
+    int32_t frac_digits = 0;   // fractional digits as integer (e.g. 125 for .125)
+    int8_t frac_count = 0;     // number of fractional digits
+    int8_t exp_acc = 0;
+    int8_t sign = 1;
+    int8_t exp_sign = 1;
+    bool is_float = false;
+
+    void reset() {
+        integer_acc = 0;
+        frac_digits = 0;
+        frac_count = 0;
+        exp_acc = 0;
+        sign = 1;
+        exp_sign = 1;
+        is_float = false;
+    }
+
+    void set_negative() { sign = -1; }
+
+    void add_digit(uint8_t d) {
+        integer_acc = integer_acc * 10 + d;
+    }
+
+    void start_fraction() { is_float = true; }
+
+    void add_frac_digit(uint8_t d) {
+        if (frac_count < 6) {  // 6 decimal digits of precision
+            frac_digits = frac_digits * 10 + d;
+            ++frac_count;
+        }
+    }
+
+    void start_exponent() {
+        is_float = true;
+        exp_acc = 0;
+        exp_sign = 1;
+    }
+
+    void set_exp_negative() { exp_sign = -1; }
+
+    void add_exp_digit(uint8_t d) {
+        exp_acc = static_cast<int8_t>(exp_acc * 10 + d);
+    }
+
+    bool is_integer() const { return !is_float; }
+
+    int32_t to_int32() const {
+        return sign * integer_acc;
+    }
+
+    double to_float() const {
+        double v = static_cast<double>(integer_acc);
+        if (frac_count > 0) {
+            // Single division: frac_digits / 10^frac_count
+            double divisor = 1.0;
+            for (int8_t i = 0; i < frac_count; ++i) divisor *= 10.0;
+            v += static_cast<double>(frac_digits) / divisor;
+        }
+        if (exp_acc != 0) {
+            double e = 1.0;
+            for (int8_t i = 0; i < exp_acc; ++i) e *= 10.0;
+            if (exp_sign < 0) v /= e; else v *= e;
+        }
+        return sign * v;
+    }
+};
+
 } // namespace note

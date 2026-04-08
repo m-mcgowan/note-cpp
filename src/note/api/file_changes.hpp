@@ -8,6 +8,7 @@
 #if NOTE_EXTRAS
 #include <note/dyn_field.hpp>
 #endif
+#include <note/generic_sink.hpp>
 #include <note/notecard.hpp>
 #include <note/arena.hpp>
 #include <note/field.hpp>
@@ -23,6 +24,7 @@
 #include <note/target.hpp>
 
 namespace note::api {
+
 
 
 
@@ -54,7 +56,11 @@ struct FileChanges {
     static constexpr Safety safety = Safety::ReadOnly;
     static constexpr Skus skus{};
 
+#if NOTE_SINGLETON
+    static inline void* nc_;
+#else
     void* nc_ = nullptr;
+#endif
 
 
     /// One or more files to obtain change information from. Omit to return
@@ -138,18 +144,18 @@ struct FileChanges {
             Response& rsp;
             ::note::StringPool& pool_;
             Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
-            void on_bool(::note::string_view k_, bool v_) {
+            NOTE_SINK_NOINLINE void on_bool(::note::string_view k_, bool v_) {
                 if (note::flash(keys_::rsp_pending) == k_) { rsp.pending = v_; return; }
             }
-            void on_number(::note::string_view k_, ::note::string_view raw_) {
+            NOTE_SINK_NOINLINE void on_number(::note::string_view k_, ::note::string_view raw_) {
                 if (note::flash(keys_::rsp_changes) == k_) { rsp.changes = ::note::parse_int(raw_); return; }
                 if (note::flash(keys_::rsp_total) == k_) { rsp.total = ::note::parse_int(raw_); return; }
             }
-            void on_int(::note::string_view k_, int32_t v_) {
+            NOTE_SINK_NOINLINE void on_int(::note::string_view k_, int32_t v_) {
                 if (note::flash(keys_::rsp_changes) == k_) { rsp.changes = v_; return; }
                 if (note::flash(keys_::rsp_total) == k_) { rsp.total = v_; return; }
             }
-            void reset() {
+            NOTE_SINK_NOINLINE void reset() {
                 rsp = Response{};
             }
         };
@@ -181,11 +187,38 @@ struct FileChanges {
     private:
         std::unique_ptr<JsonReader> reader_;
     };
+    static constexpr uint8_t field_count = 3;
+    static const ::note::FieldDesc* field_descs_ptr() {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+        static constexpr ::note::FieldDesc table[] = {
+            {"changes", static_cast<uint16_t>(offsetof(Response, changes)), ::note::FieldType::Int32},
+            {"pending", static_cast<uint16_t>(offsetof(Response, pending)), ::note::FieldType::Bool},
+            {"total", static_cast<uint16_t>(offsetof(Response, total)), ::note::FieldType::Int32},
+        };
+#pragma GCC diagnostic pop
+        return table;
+    }
 
+#if NOTE_SINGLETON
+    /// Singleton: type-erased execute — one static fn ptr per type, set by Api.
+    static inline ApiResult<Response>(*execute_fn_)(void*, const FileChanges&);
+    static inline Result<void>(*send_fn_)(void*, BuildFn, void*);
+#else
     ApiResult<Response>(*execute_fn_)(void*, const FileChanges&) = nullptr;
+    Result<void>(*send_fn_)(void*, BuildFn, void*) = nullptr;
+#endif
     auto execute() const { return execute_fn_(nc_, *this); }
-    Result<void>(*command_fn_)(void*, const FileChanges&) = nullptr;
-    Result<void> command() const { return command_fn_(nc_, *this); }
+    Result<void> command() const {
+        auto build_ = [&](JsonBuilder& b_) {
+            b_.add("cmd", notecard_request);
+            this->build(b_);
+        };
+        BuildFn fn_ = [](JsonBuilder& b_, void* p_) {
+            (*static_cast<decltype(build_)*>(p_))(b_);
+        };
+        return send_fn_(nc_, fn_, &build_);
+    }
 
     void build(JsonBuilder& b) const {
         if (files) files.write_to(b, "files");
@@ -223,6 +256,7 @@ inline FileChanges& FileChanges::tracker_t::operator()(note::string_view v) {
         reinterpret_cast<char*>(this) - offsetof(FileChanges, tracker));
 }
 #pragma GCC diagnostic pop
+
 
 
 } // namespace note::api

@@ -14,6 +14,7 @@
 #if NOTE_EXTRAS
 #include <note/dyn_field.hpp>
 #endif
+#include <note/generic_sink.hpp>
 #include <note/notecard.hpp>
 #include <note/arena.hpp>
 #include <note/field.hpp>
@@ -138,7 +139,11 @@ namespace note::api {
 {{ indent }}};
 {% endif %}
 
+#if NOTE_SINGLETON
+{{ indent }}static inline void* nc_;
+#else
 {{ indent }}void* nc_ = nullptr;
+#endif
 
 {% if op.properties %}
 
@@ -580,7 +585,7 @@ namespace note::api {
 {% endfor %}
 {% if array_string_props %}
 {{ indent }}        enum class ArrayCtx_ : uint8_t { none{% for prop in array_string_props %}, {{ prop.accessor_name }}{% endfor %} } array_ctx_{};
-{{ indent }}        void on_array_begin(::note::string_view k_) {
+{{ indent }}        NOTE_SINK_NOINLINE void on_array_begin(::note::string_view k_) {
 {% if op.response.has_body %}
 {{ indent }}            if (body_depth_ > 0) { if (body_handler_) body_handler_.send(::note::BodyEvent::make_array_begin(k_)); return; }
 {% endif %}
@@ -590,22 +595,22 @@ namespace note::api {
 {{ version_guard_end(prop.version_guard) -}}
 {% endfor %}
 {{ indent }}        }
-{{ indent }}        void on_array_end(::note::string_view k_) {
+{{ indent }}        NOTE_SINK_NOINLINE void on_array_end(::note::string_view k_) {
 {% if op.response.has_body %}
 {{ indent }}            if (body_depth_ > 0) { if (body_handler_) body_handler_.send(::note::BodyEvent::make_array_end(k_)); return; }
 {% endif %}
 {{ indent }}            (void)k_; array_ctx_ = ArrayCtx_::none;
 {{ indent }}        }
 {% elif op.response.has_body %}
-{{ indent }}        void on_array_begin(::note::string_view k_) {
+{{ indent }}        NOTE_SINK_NOINLINE void on_array_begin(::note::string_view k_) {
 {{ indent }}            if (body_depth_ > 0 && body_handler_) body_handler_.send(::note::BodyEvent::make_array_begin(k_));
 {{ indent }}        }
-{{ indent }}        void on_array_end(::note::string_view k_) {
+{{ indent }}        NOTE_SINK_NOINLINE void on_array_end(::note::string_view k_) {
 {{ indent }}            if (body_depth_ > 0 && body_handler_) body_handler_.send(::note::BodyEvent::make_array_end(k_));
 {{ indent }}        }
 {% endif %}
 {% if op.response.has_body %}
-{{ indent }}        void on_object_begin(::note::string_view k_) {
+{{ indent }}        NOTE_SINK_NOINLINE void on_object_begin(::note::string_view k_) {
 {{ indent }}            if (body_depth_ > 0) {
 {{ indent }}                ++body_depth_;
 {{ indent }}                if (body_handler_) body_handler_.send(::note::BodyEvent::make_object_begin(k_));
@@ -613,17 +618,17 @@ namespace note::api {
 {{ indent }}            }
 {{ indent }}            if (k_ == "body") { body_depth_ = 1; return; }
 {{ indent }}        }
-{{ indent }}        void on_object_end(::note::string_view k_) {
+{{ indent }}        NOTE_SINK_NOINLINE void on_object_end(::note::string_view k_) {
 {{ indent }}            if (body_depth_ > 0) {
 {{ indent }}                --body_depth_;
 {{ indent }}                if (body_depth_ > 0 && body_handler_) body_handler_.send(::note::BodyEvent::make_object_end(k_));
 {{ indent }}                return;
 {{ indent }}            }
 {{ indent }}        }
-{{ indent }}        void on_null(::note::string_view k_) { (void)k_; }
+{{ indent }}        NOTE_SINK_NOINLINE void on_null(::note::string_view k_) { (void)k_; }
 {% endif %}
 {% if string_props or array_string_props %}
-{{ indent }}        void on_string(::note::string_view k_, ::note::string_view v_) {
+{{ indent }}        NOTE_SINK_NOINLINE void on_string(::note::string_view k_, ::note::string_view v_) {
 {% if op.response.has_body %}
 {{ indent }}            if (body_depth_ > 0) { if (body_handler_) body_handler_.send(::note::BodyEvent::make_string(k_, v_)); return; }
 {% endif %}
@@ -649,12 +654,12 @@ namespace note::api {
 {% endfor %}
 {{ indent }}        }
 {% elif op.response.has_body %}
-{{ indent }}        void on_string(::note::string_view k_, ::note::string_view v_) {
+{{ indent }}        NOTE_SINK_NOINLINE void on_string(::note::string_view k_, ::note::string_view v_) {
 {{ indent }}            if (body_depth_ > 0 && body_handler_) body_handler_.send(::note::BodyEvent::make_string(k_, v_));
 {{ indent }}        }
 {% endif %}
 {% if bool_props %}
-{{ indent }}        void on_bool(::note::string_view k_, bool v_) {
+{{ indent }}        NOTE_SINK_NOINLINE void on_bool(::note::string_view k_, bool v_) {
 {% if op.response.has_body %}
 {{ indent }}            if (body_depth_ > 0) { if (body_handler_) body_handler_.send(::note::BodyEvent::make_bool(k_, v_)); return; }
 {% endif %}
@@ -665,12 +670,12 @@ namespace note::api {
 {% endfor %}
 {{ indent }}        }
 {% elif op.response.has_body %}
-{{ indent }}        void on_bool(::note::string_view k_, bool v_) {
+{{ indent }}        NOTE_SINK_NOINLINE void on_bool(::note::string_view k_, bool v_) {
 {{ indent }}            if (body_depth_ > 0 && body_handler_) body_handler_.send(::note::BodyEvent::make_bool(k_, v_));
 {{ indent }}        }
 {% endif %}
 {% if int_props or double_props %}
-{{ indent }}        void on_number(::note::string_view k_, ::note::string_view raw_) {
+{{ indent }}        NOTE_SINK_NOINLINE void on_number(::note::string_view k_, ::note::string_view raw_) {
 {% if op.response.has_body %}
 {{ indent }}            if (body_depth_ > 0) { if (body_handler_) body_handler_.send(::note::BodyEvent::make_number(k_, raw_)); return; }
 {% endif %}
@@ -686,7 +691,7 @@ namespace note::api {
 {% endfor %}
 {{ indent }}        }
 {% if int_props %}
-{{ indent }}        void on_int(::note::string_view k_, int32_t v_) {
+{{ indent }}        NOTE_SINK_NOINLINE void on_int(::note::string_view k_, int32_t v_) {
 {% if op.response.has_body %}
 {{ indent }}            if (body_depth_ > 0) { if (body_handler_) body_handler_.send(::note::BodyEvent::make_int(k_, v_)); return; }
 {% endif %}
@@ -697,12 +702,12 @@ namespace note::api {
 {% endfor %}
 {{ indent }}        }
 {% elif op.response.has_body %}
-{{ indent }}        void on_int(::note::string_view k_, int32_t v_) {
+{{ indent }}        NOTE_SINK_NOINLINE void on_int(::note::string_view k_, int32_t v_) {
 {{ indent }}            if (body_depth_ > 0 && body_handler_) body_handler_.send(::note::BodyEvent::make_int(k_, v_));
 {{ indent }}        }
 {% endif %}
 {% if double_props %}
-{{ indent }}        void on_float(::note::string_view k_, double v_) {
+{{ indent }}        NOTE_SINK_NOINLINE void on_float(::note::string_view k_, double v_) {
 {% if op.response.has_body %}
 {{ indent }}            if (body_depth_ > 0) { if (body_handler_) body_handler_.send(::note::BodyEvent::make_float(k_, v_)); return; }
 {% endif %}
@@ -713,22 +718,22 @@ namespace note::api {
 {% endfor %}
 {{ indent }}        }
 {% elif op.response.has_body %}
-{{ indent }}        void on_float(::note::string_view k_, double v_) {
+{{ indent }}        NOTE_SINK_NOINLINE void on_float(::note::string_view k_, double v_) {
 {{ indent }}            if (body_depth_ > 0 && body_handler_) body_handler_.send(::note::BodyEvent::make_float(k_, v_));
 {{ indent }}        }
 {% endif %}
 {% elif op.response.has_body %}
-{{ indent }}        void on_number(::note::string_view k_, ::note::string_view raw_) {
+{{ indent }}        NOTE_SINK_NOINLINE void on_number(::note::string_view k_, ::note::string_view raw_) {
 {{ indent }}            if (body_depth_ > 0 && body_handler_) body_handler_.send(::note::BodyEvent::make_number(k_, raw_));
 {{ indent }}        }
-{{ indent }}        void on_int(::note::string_view k_, int32_t v_) {
+{{ indent }}        NOTE_SINK_NOINLINE void on_int(::note::string_view k_, int32_t v_) {
 {{ indent }}            if (body_depth_ > 0 && body_handler_) body_handler_.send(::note::BodyEvent::make_int(k_, v_));
 {{ indent }}        }
-{{ indent }}        void on_float(::note::string_view k_, double v_) {
+{{ indent }}        NOTE_SINK_NOINLINE void on_float(::note::string_view k_, double v_) {
 {{ indent }}            if (body_depth_ > 0 && body_handler_) body_handler_.send(::note::BodyEvent::make_float(k_, v_));
 {{ indent }}        }
 {% endif %}
-{{ indent }}        void reset() {
+{{ indent }}        NOTE_SINK_NOINLINE void reset() {
 {% if op.response.has_body %}
 {{ indent }}            body_depth_ = 0;
 {{ indent }}            if (body_handler_) body_handler_.send(::note::BodyEvent::make_reset());
@@ -803,15 +808,62 @@ namespace note::api {
 {{ indent }}    std::unique_ptr<JsonReader> body_;
 {% endif %}
 {{ indent }}};
+{% set simple_rsp_props = [] %}
+{% for prop in op.response.properties %}
+{% if not prop.version_guard and not prop.is_array and prop.cpp_type in ["bool", "int32_t", "double", "note::string_view"] %}
+{% if simple_rsp_props.append(prop) %}{% endif %}
+{% endif %}
+{% endfor %}
+{% if simple_rsp_props and not op.response.has_body %}
+{{ indent }}static constexpr uint8_t field_count = {{ simple_rsp_props | length }};
+{{ indent }}static const ::note::FieldDesc* field_descs_ptr() {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+{{ indent }}    static constexpr ::note::FieldDesc table[] = {
+{% for prop in simple_rsp_props %}
+{% if prop.cpp_type == "bool" %}
+{{ indent }}        {"{{ prop.wire_name }}", static_cast<uint16_t>(offsetof(Response, {{ prop.accessor_name }})), ::note::FieldType::Bool},
+{% elif prop.cpp_type == "int32_t" %}
+{{ indent }}        {"{{ prop.wire_name }}", static_cast<uint16_t>(offsetof(Response, {{ prop.accessor_name }})), ::note::FieldType::Int32},
+{% elif prop.cpp_type == "double" %}
+{{ indent }}        {"{{ prop.wire_name }}", static_cast<uint16_t>(offsetof(Response, {{ prop.accessor_name }})), ::note::FieldType::Double},
+{% elif prop.cpp_type == "note::string_view" %}
+{{ indent }}        {"{{ prop.wire_name }}", static_cast<uint16_t>(offsetof(Response, {{ prop.accessor_name }})), ::note::FieldType::String},
+{% endif %}
+{% endfor %}
+{{ indent }}    };
+#pragma GCC diagnostic pop
+{{ indent }}    return table;
+{{ indent }}}
+{% endif %}
 {% else %}
 {{ indent }}using Response = void;
 {% endif %}
 
+#if NOTE_SINGLETON
+{{ indent }}/// Singleton: type-erased execute — one static fn ptr per type, set by Api.
+{{ indent }}static inline ApiResult<Response>(*execute_fn_)(void*, const {{ parent_type }}&);
+{% if op.supports_cmd %}
+{{ indent }}static inline Result<void>(*send_fn_)(void*, BuildFn, void*);
+{% endif %}
+#else
 {{ indent }}ApiResult<Response>(*execute_fn_)(void*, const {{ parent_type }}&) = nullptr;
+{% if op.supports_cmd %}
+{{ indent }}Result<void>(*send_fn_)(void*, BuildFn, void*) = nullptr;
+{% endif %}
+#endif
 {{ indent }}auto execute() const { return execute_fn_(nc_, *this); }
 {% if op.supports_cmd %}
-{{ indent }}Result<void>(*command_fn_)(void*, const {{ parent_type }}&) = nullptr;
-{{ indent }}Result<void> command() const { return command_fn_(nc_, *this); }
+{{ indent }}Result<void> command() const {
+{{ indent }}    auto build_ = [&](JsonBuilder& b_) {
+{{ indent }}        b_.add("cmd", notecard_request);
+{{ indent }}        this->build(b_);
+{{ indent }}    };
+{{ indent }}    BuildFn fn_ = [](JsonBuilder& b_, void* p_) {
+{{ indent }}        (*static_cast<decltype(build_)*>(p_))(b_);
+{{ indent }}    };
+{{ indent }}    return send_fn_(nc_, fn_, &build_);
+{{ indent }}}
 {% endif %}
 
 {% if op.has_version_gated_props %}
@@ -990,6 +1042,9 @@ inline {{ parent_qual }}::{{ prop.nested_type_name }}& {{ parent_qual }}::{{ pro
 {% endif %}
 {% endmacro %}
 
+{% macro field_table(op, parent_qual) %}
+{% endmacro %}
+
 {# Build doc string for an operation struct, appending @skus if restricted #}
 {% macro op_doc(op) -%}
 {% if op.skus -%}
@@ -1041,6 +1096,7 @@ struct {{ endpoint.struct_name }} {
 
 {% for op in endpoint.operations %}
 {{ prop_impls(op, endpoint.struct_name + "::" + op.struct_name) }}
+{{ field_table(op, endpoint.struct_name + "::" + op.struct_name) }}
 {% endfor %}
 {% else %}
 {% set op = endpoint.operations[0] %}
@@ -1069,6 +1125,7 @@ struct {{ endpoint.struct_name }} {
 };
 
 {{ prop_impls(op, endpoint.struct_name) }}
+{{ field_table(op, endpoint.struct_name) }}
 {% endif %}
 
 } // namespace note::api

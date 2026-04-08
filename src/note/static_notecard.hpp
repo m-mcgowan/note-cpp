@@ -16,6 +16,7 @@
 
 #include "allocator.hpp"
 #include "compiler.hpp"
+#include "generic_sink.hpp"
 #include "json.hpp"
 #include "notecard.hpp"
 #include "retry.hpp"
@@ -27,6 +28,14 @@
 #include <type_traits>
 
 namespace note {
+
+namespace detail {
+    /// Detects request types that provide a generic field descriptor table.
+    template<typename T, typename = void>
+    struct has_field_descs : std::false_type {};
+    template<typename T>
+    struct has_field_descs<T, std::void_t<decltype(T::field_descs_ptr())>> : std::true_type {};
+}
 
 /// Notecard implementation with zero virtual dispatch overhead.
 /// Stack must provide a `transport` member with `transact(BuildFn, void*, JsonSink&, uint32_t)`.
@@ -71,28 +80,32 @@ public:
         };
 
         auto attempt = [&]() -> ApiResult<Rsp> {
-            StringPool pool(alloc_);
+            detail::NcErrorCapture nc_err;
 
             if constexpr (std::is_void_v<Rsp>) {
-                struct NullSink {
-                    void on_null(string_view) {}
-                    void on_bool(string_view, bool) {}
-                    void on_number(string_view, string_view) {}
-                    void on_string(string_view, string_view) {}
-                    void on_object_begin(string_view) {}
-                    void on_object_end(string_view) {}
-                    void on_array_begin(string_view) {}
-                    void on_array_end(string_view) {}
-                    void reset() {}
-                } null_sink;
-                ErrorCaptureSinkT<NullSink> err_sink(null_sink);
-                auto rv = stack_.transport.transact(build_fn, &build, err_sink, default_timeout_ms_);
+                auto rv = execute_void(build_fn, &build, nc_err);
                 if (!rv) return Unexpected(rv.error());
-                auto err = err_sink.captured_error();
-                if (!err.empty())
-                    return ApiResult<void>(ErrorInfo{Error::Notecard, Cause::Unspecified, pool.intern(err)});
+                if (!nc_err.empty()) {
+                    StringPool pool(alloc_);
+                    return ApiResult<void>(ErrorInfo{Error::Notecard, Cause::Unspecified, pool.intern(nc_err.view())});
+                }
                 return ApiResult<void>{};
+            } else if constexpr (NOTE_PRINTABLE == 0
+                                 && detail::has_field_descs<RequestT>::value
+                                 && !detail::has_body_factory<RequestT>::value) {
+                // Table-driven path: shared execute_generic (one copy for all types).
+                Rsp rsp_val{};
+                auto rv = execute_generic(build_fn, &build, &rsp_val,
+                                          RequestT::field_descs_ptr(), RequestT::field_count, nc_err);
+                if (!rv) return Unexpected(rv.error());
+                if (!nc_err.empty()) {
+                    StringPool pool(alloc_);
+                    return ApiResult<Rsp>(ErrorInfo{Error::Notecard, Cause::Unspecified, pool.intern(nc_err.view())});
+                }
+                return ApiResult<Rsp>(std::move(rsp_val));
             } else {
+                // Custom sink path: for body-enabled endpoints or types without field_descs.
+                StringPool pool(alloc_);
                 Rsp rsp_val{};
                 typename Rsp::Sink response_sink(rsp_val, pool);
                 alignas(body_sink_storage_align) char body_storage[body_sink_storage_size];
@@ -103,12 +116,11 @@ public:
                         if (bh) response_sink.set_body_handler(bh);
                     }
                 }
-                ErrorCaptureSinkT<typename Rsp::Sink> err_sink(response_sink);
-                auto rv = stack_.transport.transact(build_fn, &build, err_sink, default_timeout_ms_);
+                auto dispatch = make_sax_dispatch(response_sink);
+                auto rv = stack_.transport.transact_dispatch(build_fn, &build, dispatch, default_timeout_ms_, nc_err);
                 if (!rv) return Unexpected(rv.error());
-                auto err = err_sink.captured_error();
-                if (!err.empty())
-                    return ApiResult<Rsp>(ErrorInfo{Error::Notecard, Cause::Unspecified, pool.intern(err)});
+                if (!nc_err.empty())
+                    return ApiResult<Rsp>(ErrorInfo{Error::Notecard, Cause::Unspecified, pool.intern(nc_err.view())});
                 return ApiResult<Rsp>(std::move(rsp_val));
             }
         };
@@ -141,6 +153,38 @@ public:
         record_timing();
 #endif
         return result;
+    }
+
+    /// Type-erased send (fire-and-forget). Used by generated command() methods
+    /// via send_fn_ — a single shared function pointer for all request types.
+    Result<void> send_command(BuildFn build_fn, void* ctx) {
+#ifndef NOTE_NO_RETRY
+        enforce_timing();
+#endif
+        auto result = stack_.transport.send(build_fn, ctx);
+#ifndef NOTE_NO_RETRY
+        record_timing();
+#endif
+        return result;
+    }
+
+    /// Non-template execute for GenericResponseSink endpoints.
+    /// Shared by all endpoints that use table-driven field dispatch.
+    Result<void> execute_generic(BuildFn build_fn, void* build_ctx,
+                                 void* rsp_storage, const FieldDesc* fields,
+                                 uint8_t n_fields, detail::NcErrorCapture& nc_err) {
+        StringPool pool(alloc_);
+        GenericResponseSink gsink{rsp_storage, fields, n_fields, &pool};
+        auto dispatch = make_sax_dispatch(gsink);
+        return stack_.transport.transact_dispatch(build_fn, build_ctx, dispatch, default_timeout_ms_, nc_err);
+    }
+
+    /// Non-template execute for void-response endpoints.
+    Result<void> execute_void(BuildFn build_fn, void* build_ctx,
+                              detail::NcErrorCapture& nc_err) {
+        NullSink null_sink;
+        auto dispatch = make_sax_dispatch(null_sink);
+        return stack_.transport.transact_dispatch(build_fn, build_ctx, dispatch, default_timeout_ms_, nc_err);
     }
 
     /// Access the transport stack (e.g. for binary I/O).

@@ -29,6 +29,11 @@
 #  define NOTE_ERR(msg) msg
 #endif
 
+// NOTE_SINK_NOINLINE — reserved for future use. Currently a no-op because
+// on AVR with LTO + -Os, outlining sink methods into separate functions
+// adds prologue overhead that exceeds the savings from smaller thunks.
+#define NOTE_SINK_NOINLINE
+
 #if defined(__cpp_lib_unreachable)
 #  include <utility>
 #  define NOTE_UNREACHABLE() ::std::unreachable()

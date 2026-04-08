@@ -67,6 +67,7 @@ public:
     const ErrorInfo& error() const { return *err_; }
 };
 
+#ifndef NOTE_MINIMAL
 class Notecard {
 public:
     Notecard() = default;
@@ -237,8 +238,26 @@ public:
 
 #endif // !NOTE_NO_STD_STRING && !NOTE_NO_STD_FUNCTION
 
-    // Fire-and-forget typed command (generated request types).
-    // Inter-transaction timing enforced, but no retry (no response to check).
+    /// Type-erased send (fire-and-forget). Used by generated command() methods
+    /// via send_fn_ — a single shared function pointer for all request types.
+    Result<void> send_command(BuildFn build_fn, void* ctx) {
+        enforce_timing();
+        Result<void> result;
+        if (streaming_transport_)
+            result = streaming_transport_->send(build_fn, ctx);
+#ifndef NOTE_NO_BUFFERED
+        else if (transport_) {
+            auto& builder = backend_->get_builder();
+            build_fn(builder, ctx);
+            result = transport_->send(builder.to_view());
+        }
+#endif
+        else
+            return make_error(Error::NotReady, NOTE_ERR("no transport configured"));
+        record_timing();
+        return result;
+    }
+
     template<typename RequestT>
     Result<void> command_typed(const RequestT& req) {
         enforce_timing();
@@ -755,8 +774,8 @@ private:
 
     /// Typed streaming execute — thin template that constructs the
     /// per-type Sink and delegates to the non-template streaming_execute.
-    template<typename SinkT>
-    ErrorInfo streaming_execute_typed(RequestFrame& frame, auto& rsp,
+    template<typename SinkT, typename RspT>
+    ErrorInfo streaming_execute_typed(RequestFrame& frame, RspT& rsp,
                                       Safety safety,
                                       void (*reset_fn)(void*), void* reset_ctx) {
         StringPool pool(*alloc_);
@@ -767,8 +786,8 @@ private:
 
     /// Typed streaming execute with body handler factory.
     /// The factory is called with the StringPool so StructSink can intern strings.
-    template<typename SinkT, typename BodyFactoryFn>
-    ErrorInfo streaming_execute_typed(RequestFrame& frame, auto& rsp,
+    template<typename SinkT, typename RspT, typename BodyFactoryFn>
+    ErrorInfo streaming_execute_typed(RequestFrame& frame, RspT& rsp,
                                       Safety safety,
                                       void (*reset_fn)(void*), void* reset_ctx,
                                       BodyFactoryFn&& body_factory) {
@@ -865,5 +884,6 @@ private:
     Md5Provider* md5_ = nullptr;
 #endif
 };
+#endif // !NOTE_MINIMAL
 
 } // namespace note

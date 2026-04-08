@@ -10,6 +10,7 @@
 #if NOTE_EXTRAS
 #include <note/dyn_field.hpp>
 #endif
+#include <note/generic_sink.hpp>
 #include <note/notecard.hpp>
 #include <note/arena.hpp>
 #include <note/field.hpp>
@@ -24,6 +25,7 @@
 #include <note/target.hpp>
 
 namespace note::api {
+
 
 
 
@@ -57,7 +59,11 @@ struct NoteGet {
         static constexpr Safety safety = Safety::ReadOnly;
         static constexpr Skus skus{};
 
+#if NOTE_SINGLETON
+        static inline void* nc_;
+#else
         void* nc_ = nullptr;
+#endif
 
 
         /// `true` to decrypt encrypted inbound Notefiles.
@@ -191,13 +197,13 @@ struct NoteGet {
                 int body_depth_ = 0;
                 Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
                 void set_body_handler(::note::BodyHandler bh) { body_handler_ = bh; }
-                void on_array_begin(::note::string_view k_) {
+                NOTE_SINK_NOINLINE void on_array_begin(::note::string_view k_) {
                     if (body_depth_ > 0 && body_handler_) body_handler_.send(::note::BodyEvent::make_array_begin(k_));
                 }
-                void on_array_end(::note::string_view k_) {
+                NOTE_SINK_NOINLINE void on_array_end(::note::string_view k_) {
                     if (body_depth_ > 0 && body_handler_) body_handler_.send(::note::BodyEvent::make_array_end(k_));
                 }
-                void on_object_begin(::note::string_view k_) {
+                NOTE_SINK_NOINLINE void on_object_begin(::note::string_view k_) {
                     if (body_depth_ > 0) {
                         ++body_depth_;
                         if (body_handler_) body_handler_.send(::note::BodyEvent::make_object_begin(k_));
@@ -205,34 +211,34 @@ struct NoteGet {
                     }
                     if (k_ == "body") { body_depth_ = 1; return; }
                 }
-                void on_object_end(::note::string_view k_) {
+                NOTE_SINK_NOINLINE void on_object_end(::note::string_view k_) {
                     if (body_depth_ > 0) {
                         --body_depth_;
                         if (body_depth_ > 0 && body_handler_) body_handler_.send(::note::BodyEvent::make_object_end(k_));
                         return;
                     }
                 }
-                void on_null(::note::string_view k_) { (void)k_; }
-                void on_string(::note::string_view k_, ::note::string_view v_) {
+                NOTE_SINK_NOINLINE void on_null(::note::string_view k_) { (void)k_; }
+                NOTE_SINK_NOINLINE void on_string(::note::string_view k_, ::note::string_view v_) {
                     if (body_depth_ > 0) { if (body_handler_) body_handler_.send(::note::BodyEvent::make_string(k_, v_)); return; }
                     v_ = pool_.intern(v_);
                     if (note::flash(keys_::rsp_payload) == k_) { rsp.payload = v_; return; }
                 }
-                void on_bool(::note::string_view k_, bool v_) {
+                NOTE_SINK_NOINLINE void on_bool(::note::string_view k_, bool v_) {
                     if (body_depth_ > 0 && body_handler_) body_handler_.send(::note::BodyEvent::make_bool(k_, v_));
                 }
-                void on_number(::note::string_view k_, ::note::string_view raw_) {
+                NOTE_SINK_NOINLINE void on_number(::note::string_view k_, ::note::string_view raw_) {
                     if (body_depth_ > 0) { if (body_handler_) body_handler_.send(::note::BodyEvent::make_number(k_, raw_)); return; }
                     if (note::flash(keys_::rsp_time) == k_) { rsp.time = ::note::parse_int(raw_); return; }
                 }
-                void on_int(::note::string_view k_, int32_t v_) {
+                NOTE_SINK_NOINLINE void on_int(::note::string_view k_, int32_t v_) {
                     if (body_depth_ > 0) { if (body_handler_) body_handler_.send(::note::BodyEvent::make_int(k_, v_)); return; }
                     if (note::flash(keys_::rsp_time) == k_) { rsp.time = v_; return; }
                 }
-                void on_float(::note::string_view k_, double v_) {
+                NOTE_SINK_NOINLINE void on_float(::note::string_view k_, double v_) {
                     if (body_depth_ > 0 && body_handler_) body_handler_.send(::note::BodyEvent::make_float(k_, v_));
                 }
-                void reset() {
+                NOTE_SINK_NOINLINE void reset() {
                     body_depth_ = 0;
                     if (body_handler_) body_handler_.send(::note::BodyEvent::make_reset());
                     rsp = Response{};
@@ -266,10 +272,25 @@ struct NoteGet {
             std::unique_ptr<JsonReader> body_;
         };
 
+#if NOTE_SINGLETON
+        /// Singleton: type-erased execute — one static fn ptr per type, set by Api.
+        static inline ApiResult<Response>(*execute_fn_)(void*, const NoteGet::Read&);
+        static inline Result<void>(*send_fn_)(void*, BuildFn, void*);
+#else
         ApiResult<Response>(*execute_fn_)(void*, const NoteGet::Read&) = nullptr;
+        Result<void>(*send_fn_)(void*, BuildFn, void*) = nullptr;
+#endif
         auto execute() const { return execute_fn_(nc_, *this); }
-        Result<void>(*command_fn_)(void*, const NoteGet::Read&) = nullptr;
-        Result<void> command() const { return command_fn_(nc_, *this); }
+        Result<void> command() const {
+            auto build_ = [&](JsonBuilder& b_) {
+                b_.add("cmd", notecard_request);
+                this->build(b_);
+            };
+            BuildFn fn_ = [](JsonBuilder& b_, void* p_) {
+                (*static_cast<decltype(build_)*>(p_))(b_);
+            };
+            return send_fn_(nc_, fn_, &build_);
+        }
 
         void build(JsonBuilder& b) const {
             if (decrypt) note::add_flash(b, note::flash(keys_::decrypt), *decrypt);
@@ -338,7 +359,11 @@ struct NoteGet {
         static constexpr Safety safety = Safety::Destructive;
         static constexpr Skus skus{};
 
+#if NOTE_SINGLETON
+        static inline void* nc_;
+#else
         void* nc_ = nullptr;
+#endif
 
 
         /// `true` to decrypt encrypted inbound Notefiles.
@@ -472,13 +497,13 @@ struct NoteGet {
                 int body_depth_ = 0;
                 Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
                 void set_body_handler(::note::BodyHandler bh) { body_handler_ = bh; }
-                void on_array_begin(::note::string_view k_) {
+                NOTE_SINK_NOINLINE void on_array_begin(::note::string_view k_) {
                     if (body_depth_ > 0 && body_handler_) body_handler_.send(::note::BodyEvent::make_array_begin(k_));
                 }
-                void on_array_end(::note::string_view k_) {
+                NOTE_SINK_NOINLINE void on_array_end(::note::string_view k_) {
                     if (body_depth_ > 0 && body_handler_) body_handler_.send(::note::BodyEvent::make_array_end(k_));
                 }
-                void on_object_begin(::note::string_view k_) {
+                NOTE_SINK_NOINLINE void on_object_begin(::note::string_view k_) {
                     if (body_depth_ > 0) {
                         ++body_depth_;
                         if (body_handler_) body_handler_.send(::note::BodyEvent::make_object_begin(k_));
@@ -486,34 +511,34 @@ struct NoteGet {
                     }
                     if (k_ == "body") { body_depth_ = 1; return; }
                 }
-                void on_object_end(::note::string_view k_) {
+                NOTE_SINK_NOINLINE void on_object_end(::note::string_view k_) {
                     if (body_depth_ > 0) {
                         --body_depth_;
                         if (body_depth_ > 0 && body_handler_) body_handler_.send(::note::BodyEvent::make_object_end(k_));
                         return;
                     }
                 }
-                void on_null(::note::string_view k_) { (void)k_; }
-                void on_string(::note::string_view k_, ::note::string_view v_) {
+                NOTE_SINK_NOINLINE void on_null(::note::string_view k_) { (void)k_; }
+                NOTE_SINK_NOINLINE void on_string(::note::string_view k_, ::note::string_view v_) {
                     if (body_depth_ > 0) { if (body_handler_) body_handler_.send(::note::BodyEvent::make_string(k_, v_)); return; }
                     v_ = pool_.intern(v_);
                     if (note::flash(keys_::rsp_payload) == k_) { rsp.payload = v_; return; }
                 }
-                void on_bool(::note::string_view k_, bool v_) {
+                NOTE_SINK_NOINLINE void on_bool(::note::string_view k_, bool v_) {
                     if (body_depth_ > 0 && body_handler_) body_handler_.send(::note::BodyEvent::make_bool(k_, v_));
                 }
-                void on_number(::note::string_view k_, ::note::string_view raw_) {
+                NOTE_SINK_NOINLINE void on_number(::note::string_view k_, ::note::string_view raw_) {
                     if (body_depth_ > 0) { if (body_handler_) body_handler_.send(::note::BodyEvent::make_number(k_, raw_)); return; }
                     if (note::flash(keys_::rsp_time) == k_) { rsp.time = ::note::parse_int(raw_); return; }
                 }
-                void on_int(::note::string_view k_, int32_t v_) {
+                NOTE_SINK_NOINLINE void on_int(::note::string_view k_, int32_t v_) {
                     if (body_depth_ > 0) { if (body_handler_) body_handler_.send(::note::BodyEvent::make_int(k_, v_)); return; }
                     if (note::flash(keys_::rsp_time) == k_) { rsp.time = v_; return; }
                 }
-                void on_float(::note::string_view k_, double v_) {
+                NOTE_SINK_NOINLINE void on_float(::note::string_view k_, double v_) {
                     if (body_depth_ > 0 && body_handler_) body_handler_.send(::note::BodyEvent::make_float(k_, v_));
                 }
-                void reset() {
+                NOTE_SINK_NOINLINE void reset() {
                     body_depth_ = 0;
                     if (body_handler_) body_handler_.send(::note::BodyEvent::make_reset());
                     rsp = Response{};
@@ -547,10 +572,25 @@ struct NoteGet {
             std::unique_ptr<JsonReader> body_;
         };
 
+#if NOTE_SINGLETON
+        /// Singleton: type-erased execute — one static fn ptr per type, set by Api.
+        static inline ApiResult<Response>(*execute_fn_)(void*, const NoteGet::Pop&);
+        static inline Result<void>(*send_fn_)(void*, BuildFn, void*);
+#else
         ApiResult<Response>(*execute_fn_)(void*, const NoteGet::Pop&) = nullptr;
+        Result<void>(*send_fn_)(void*, BuildFn, void*) = nullptr;
+#endif
         auto execute() const { return execute_fn_(nc_, *this); }
-        Result<void>(*command_fn_)(void*, const NoteGet::Pop&) = nullptr;
-        Result<void> command() const { return command_fn_(nc_, *this); }
+        Result<void> command() const {
+            auto build_ = [&](JsonBuilder& b_) {
+                b_.add("cmd", notecard_request);
+                this->build(b_);
+            };
+            BuildFn fn_ = [](JsonBuilder& b_, void* p_) {
+                (*static_cast<decltype(build_)*>(p_))(b_);
+            };
+            return send_fn_(nc_, fn_, &build_);
+        }
 
         void build(JsonBuilder& b) const {
             if (decrypt) note::add_flash(b, note::flash(keys_::decrypt), *decrypt);
@@ -621,6 +661,7 @@ inline NoteGet::Read& NoteGet::Read::noteId_t::operator()(note::string_view v) {
 }
 #pragma GCC diagnostic pop
 
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
 inline NoteGet::Pop& NoteGet::Pop::decrypt_t::operator()(bool v) {
@@ -644,6 +685,7 @@ inline NoteGet::Pop& NoteGet::Pop::noteId_t::operator()(note::string_view v) {
         reinterpret_cast<char*>(this) - offsetof(NoteGet::Pop, noteId));
 }
 #pragma GCC diagnostic pop
+
 
 
 } // namespace note::api

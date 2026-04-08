@@ -62,7 +62,31 @@
 // NOTE_MINIMAL strips \uXXXX handling. Define NOTE_UNICODE_ESCAPES to keep it.
 #  endif
 
+#  ifndef NOTE_INT32_MATH
+#    define NOTE_INT32_MATH 1
+#  endif
+
+#  ifndef NOTE_SINGLETON
+#    define NOTE_SINGLETON 1
+#  endif
+
 #endif // NOTE_MINIMAL
+
+// NOTE_SINGLETON — when 1, Api uses a single static notecard pointer instead
+// of per-group storage. Eliminates ~28 pointer inits in the constructor.
+// Safe for the 99% of projects that use one Notecard. Define NOTE_SINGLETON=0
+// to support multiple Notecard instances.
+#ifndef NOTE_SINGLETON
+#define NOTE_SINGLETON 0
+#endif
+
+// NOTE_INT32_MATH — when 1, uses int32_t instead of int64_t for number
+// formatting (dtoa). Saves ~286 bytes on platforms with software 64-bit math
+// (AVR, Cortex-M0). Values above INT32_MAX will be truncated.
+// Default: 0 (full int64_t precision).
+#ifndef NOTE_INT32_MATH
+#define NOTE_INT32_MATH 0
+#endif
 
 // Default: runtime debug available (can be activated with set_debug()).
 #ifndef NOTE_DEBUG_ENABLED

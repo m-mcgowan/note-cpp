@@ -8,6 +8,7 @@
 #if NOTE_EXTRAS
 #include <note/dyn_field.hpp>
 #endif
+#include <note/generic_sink.hpp>
 #include <note/notecard.hpp>
 #include <note/arena.hpp>
 #include <note/field.hpp>
@@ -22,6 +23,7 @@
 #include <note/target.hpp>
 
 namespace note::api {
+
 
 
 
@@ -51,7 +53,11 @@ struct CardPower {
         static constexpr Safety safety = Safety::ReadOnly;
         static constexpr Skus skus = Skus::from(Product::Cell, Product::CellWifi, Product::Skylo, Product::WiFi);
 
+#if NOTE_SINGLETON
+        static inline void* nc_;
+#else
         void* nc_ = nullptr;
+#endif
 
 
         /// How often, in minutes, Notecard should log power consumption in a
@@ -142,17 +148,17 @@ struct CardPower {
                 Response& rsp;
                 ::note::StringPool& pool_;
                 Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
-                void on_number(::note::string_view k_, ::note::string_view raw_) {
+                NOTE_SINK_NOINLINE void on_number(::note::string_view k_, ::note::string_view raw_) {
                     if (note::flash(keys_::rsp_milliampHours) == k_) { rsp.milliampHours = ::note::parse_double(raw_); return; }
                     if (note::flash(keys_::rsp_temperature) == k_) { rsp.temperature = ::note::parse_double(raw_); return; }
                     if (note::flash(keys_::rsp_voltage) == k_) { rsp.voltage = ::note::parse_double(raw_); return; }
                 }
-                void on_float(::note::string_view k_, double v_) {
+                NOTE_SINK_NOINLINE void on_float(::note::string_view k_, double v_) {
                     if (note::flash(keys_::rsp_milliampHours) == k_) { rsp.milliampHours = v_; return; }
                     if (note::flash(keys_::rsp_temperature) == k_) { rsp.temperature = v_; return; }
                     if (note::flash(keys_::rsp_voltage) == k_) { rsp.voltage = v_; return; }
                 }
-                void reset() {
+                NOTE_SINK_NOINLINE void reset() {
                     rsp = Response{};
                 }
             };
@@ -184,11 +190,38 @@ struct CardPower {
         private:
             std::unique_ptr<JsonReader> reader_;
         };
+        static constexpr uint8_t field_count = 3;
+        static const ::note::FieldDesc* field_descs_ptr() {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+            static constexpr ::note::FieldDesc table[] = {
+                {"milliamp_hours", static_cast<uint16_t>(offsetof(Response, milliampHours)), ::note::FieldType::Double},
+                {"temperature", static_cast<uint16_t>(offsetof(Response, temperature)), ::note::FieldType::Double},
+                {"voltage", static_cast<uint16_t>(offsetof(Response, voltage)), ::note::FieldType::Double},
+            };
+#pragma GCC diagnostic pop
+            return table;
+        }
 
+#if NOTE_SINGLETON
+        /// Singleton: type-erased execute — one static fn ptr per type, set by Api.
+        static inline ApiResult<Response>(*execute_fn_)(void*, const CardPower::Read&);
+        static inline Result<void>(*send_fn_)(void*, BuildFn, void*);
+#else
         ApiResult<Response>(*execute_fn_)(void*, const CardPower::Read&) = nullptr;
+        Result<void>(*send_fn_)(void*, BuildFn, void*) = nullptr;
+#endif
         auto execute() const { return execute_fn_(nc_, *this); }
-        Result<void>(*command_fn_)(void*, const CardPower::Read&) = nullptr;
-        Result<void> command() const { return command_fn_(nc_, *this); }
+        Result<void> command() const {
+            auto build_ = [&](JsonBuilder& b_) {
+                b_.add("cmd", notecard_request);
+                this->build(b_);
+            };
+            BuildFn fn_ = [](JsonBuilder& b_, void* p_) {
+                (*static_cast<decltype(build_)*>(p_))(b_);
+            };
+            return send_fn_(nc_, fn_, &build_);
+        }
 
         void build(JsonBuilder& b) const {
             if (minutes) note::add_flash(b, note::flash(keys_::minutes), *minutes);
@@ -242,7 +275,11 @@ struct CardPower {
         static constexpr Safety safety = Safety::Idempotent;
         static constexpr Skus skus = Skus::from(Product::Cell, Product::CellWifi, Product::Skylo, Product::WiFi);
 
+#if NOTE_SINGLETON
+        static inline void* nc_;
+#else
         void* nc_ = nullptr;
+#endif
 
 
         /// How often, in minutes, Notecard should log power consumption in a
@@ -333,17 +370,17 @@ struct CardPower {
                 Response& rsp;
                 ::note::StringPool& pool_;
                 Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
-                void on_number(::note::string_view k_, ::note::string_view raw_) {
+                NOTE_SINK_NOINLINE void on_number(::note::string_view k_, ::note::string_view raw_) {
                     if (note::flash(keys_::rsp_milliampHours) == k_) { rsp.milliampHours = ::note::parse_double(raw_); return; }
                     if (note::flash(keys_::rsp_temperature) == k_) { rsp.temperature = ::note::parse_double(raw_); return; }
                     if (note::flash(keys_::rsp_voltage) == k_) { rsp.voltage = ::note::parse_double(raw_); return; }
                 }
-                void on_float(::note::string_view k_, double v_) {
+                NOTE_SINK_NOINLINE void on_float(::note::string_view k_, double v_) {
                     if (note::flash(keys_::rsp_milliampHours) == k_) { rsp.milliampHours = v_; return; }
                     if (note::flash(keys_::rsp_temperature) == k_) { rsp.temperature = v_; return; }
                     if (note::flash(keys_::rsp_voltage) == k_) { rsp.voltage = v_; return; }
                 }
-                void reset() {
+                NOTE_SINK_NOINLINE void reset() {
                     rsp = Response{};
                 }
             };
@@ -375,11 +412,38 @@ struct CardPower {
         private:
             std::unique_ptr<JsonReader> reader_;
         };
+        static constexpr uint8_t field_count = 3;
+        static const ::note::FieldDesc* field_descs_ptr() {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+            static constexpr ::note::FieldDesc table[] = {
+                {"milliamp_hours", static_cast<uint16_t>(offsetof(Response, milliampHours)), ::note::FieldType::Double},
+                {"temperature", static_cast<uint16_t>(offsetof(Response, temperature)), ::note::FieldType::Double},
+                {"voltage", static_cast<uint16_t>(offsetof(Response, voltage)), ::note::FieldType::Double},
+            };
+#pragma GCC diagnostic pop
+            return table;
+        }
 
+#if NOTE_SINGLETON
+        /// Singleton: type-erased execute — one static fn ptr per type, set by Api.
+        static inline ApiResult<Response>(*execute_fn_)(void*, const CardPower::Configure&);
+        static inline Result<void>(*send_fn_)(void*, BuildFn, void*);
+#else
         ApiResult<Response>(*execute_fn_)(void*, const CardPower::Configure&) = nullptr;
+        Result<void>(*send_fn_)(void*, BuildFn, void*) = nullptr;
+#endif
         auto execute() const { return execute_fn_(nc_, *this); }
-        Result<void>(*command_fn_)(void*, const CardPower::Configure&) = nullptr;
-        Result<void> command() const { return command_fn_(nc_, *this); }
+        Result<void> command() const {
+            auto build_ = [&](JsonBuilder& b_) {
+                b_.add("cmd", notecard_request);
+                this->build(b_);
+            };
+            BuildFn fn_ = [](JsonBuilder& b_, void* p_) {
+                (*static_cast<decltype(build_)*>(p_))(b_);
+            };
+            return send_fn_(nc_, fn_, &build_);
+        }
 
         void build(JsonBuilder& b) const {
             if (minutes) note::add_flash(b, note::flash(keys_::minutes), *minutes);
@@ -433,7 +497,11 @@ struct CardPower {
         static constexpr Safety safety = Safety::Destructive;
         static constexpr Skus skus = Skus::from(Product::Cell, Product::CellWifi, Product::Skylo, Product::WiFi);
 
+#if NOTE_SINGLETON
+        static inline void* nc_;
+#else
         void* nc_ = nullptr;
+#endif
 
 
         /// How often, in minutes, Notecard should log power consumption in a
@@ -513,17 +581,17 @@ struct CardPower {
                 Response& rsp;
                 ::note::StringPool& pool_;
                 Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
-                void on_number(::note::string_view k_, ::note::string_view raw_) {
+                NOTE_SINK_NOINLINE void on_number(::note::string_view k_, ::note::string_view raw_) {
                     if (note::flash(keys_::rsp_milliampHours) == k_) { rsp.milliampHours = ::note::parse_double(raw_); return; }
                     if (note::flash(keys_::rsp_temperature) == k_) { rsp.temperature = ::note::parse_double(raw_); return; }
                     if (note::flash(keys_::rsp_voltage) == k_) { rsp.voltage = ::note::parse_double(raw_); return; }
                 }
-                void on_float(::note::string_view k_, double v_) {
+                NOTE_SINK_NOINLINE void on_float(::note::string_view k_, double v_) {
                     if (note::flash(keys_::rsp_milliampHours) == k_) { rsp.milliampHours = v_; return; }
                     if (note::flash(keys_::rsp_temperature) == k_) { rsp.temperature = v_; return; }
                     if (note::flash(keys_::rsp_voltage) == k_) { rsp.voltage = v_; return; }
                 }
-                void reset() {
+                NOTE_SINK_NOINLINE void reset() {
                     rsp = Response{};
                 }
             };
@@ -555,11 +623,38 @@ struct CardPower {
         private:
             std::unique_ptr<JsonReader> reader_;
         };
+        static constexpr uint8_t field_count = 3;
+        static const ::note::FieldDesc* field_descs_ptr() {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+            static constexpr ::note::FieldDesc table[] = {
+                {"milliamp_hours", static_cast<uint16_t>(offsetof(Response, milliampHours)), ::note::FieldType::Double},
+                {"temperature", static_cast<uint16_t>(offsetof(Response, temperature)), ::note::FieldType::Double},
+                {"voltage", static_cast<uint16_t>(offsetof(Response, voltage)), ::note::FieldType::Double},
+            };
+#pragma GCC diagnostic pop
+            return table;
+        }
 
+#if NOTE_SINGLETON
+        /// Singleton: type-erased execute — one static fn ptr per type, set by Api.
+        static inline ApiResult<Response>(*execute_fn_)(void*, const CardPower::Reset&);
+        static inline Result<void>(*send_fn_)(void*, BuildFn, void*);
+#else
         ApiResult<Response>(*execute_fn_)(void*, const CardPower::Reset&) = nullptr;
+        Result<void>(*send_fn_)(void*, BuildFn, void*) = nullptr;
+#endif
         auto execute() const { return execute_fn_(nc_, *this); }
-        Result<void>(*command_fn_)(void*, const CardPower::Reset&) = nullptr;
-        Result<void> command() const { return command_fn_(nc_, *this); }
+        Result<void> command() const {
+            auto build_ = [&](JsonBuilder& b_) {
+                b_.add("cmd", notecard_request);
+                this->build(b_);
+            };
+            BuildFn fn_ = [](JsonBuilder& b_, void* p_) {
+                (*static_cast<decltype(build_)*>(p_))(b_);
+            };
+            return send_fn_(nc_, fn_, &build_);
+        }
 
         void build(JsonBuilder& b) const {
             if (minutes) note::add_flash(b, note::flash(keys_::minutes), *minutes);
@@ -605,6 +700,7 @@ inline CardPower::Read& CardPower::Read::reset_t::operator()(bool v) {
 }
 #pragma GCC diagnostic pop
 
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
 inline CardPower::Configure& CardPower::Configure::minutes_t::operator()(int32_t v) {
@@ -619,6 +715,7 @@ inline CardPower::Configure& CardPower::Configure::reset_t::operator()(bool v) {
 }
 #pragma GCC diagnostic pop
 
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
 inline CardPower::Reset& CardPower::Reset::minutes_t::operator()(int32_t v) {
@@ -627,6 +724,7 @@ inline CardPower::Reset& CardPower::Reset::minutes_t::operator()(int32_t v) {
         reinterpret_cast<char*>(this) - offsetof(CardPower::Reset, minutes));
 }
 #pragma GCC diagnostic pop
+
 
 
 } // namespace note::api

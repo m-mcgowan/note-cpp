@@ -36,12 +36,35 @@ if constexpr (std::decay_t<decltype({{ var }})>::supports_cmd) {
 {% endmacro %}
 
 #if __cplusplus >= 202002L
-template<typename TargetT = Unconstrained, typename NcT = Notecard>
+template<typename TargetT = Unconstrained, typename NcT =
+#ifndef NOTE_MINIMAL
+    Notecard
 #else
-template<typename NcT = Notecard>
+    void
+#endif
+>
+#else
+template<typename NcT =
+#ifndef NOTE_MINIMAL
+    Notecard
+#else
+    void
+#endif
+>
 #endif
 class Api {
+#if NOTE_SINGLETON
+    static inline NcT* nc_ptr_s_;
+    static NcT* nc_ptr() { return nc_ptr_s_; }
+public:
+    explicit Api(NcT& nc) { nc_ptr_s_ = &nc; }
+#if __cplusplus >= 202002L
+    explicit Api(NcT& nc, TargetT) { nc_ptr_s_ = &nc; }
+#endif
+    NcT& notecard() { return *nc_ptr_s_; }
+#else
     NcT& nc_;
+    NcT* nc_ptr() const { return &nc_; }
 public:
     explicit Api(NcT& nc) : nc_(nc)
 {% for group in resource_groups %}
@@ -61,41 +84,48 @@ public:
 {% endif %}{% endfor %}
     {}
 #endif
-
     NcT& notecard() { return nc_; }
+#endif
 
     template<typename RequestT>
     RequestT create() {
         RequestT r;
-        r.nc_ = &nc_;
-        if constexpr (std::is_same_v<NcT, Notecard>) {
-            r.execute_fn_ = [](void* p_, const RequestT& req_) {
-                auto* nc__ = static_cast<Notecard*>(p_);
-                if constexpr (detail::has_binary_src<RequestT>::value) {
-                    if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
-                }
-                if constexpr (detail::has_binary_dst<RequestT>::value) {
-                    if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
-                }
-                return nc__->execute(req_);
-            };
-            if constexpr (RequestT::supports_cmd) {
-                r.command_fn_ = [](void* p_, const RequestT& req_) {
-                    return static_cast<Notecard*>(p_)->command_typed(req_);
-                };
+#if NOTE_SINGLETON
+        RequestT::nc_ = nc_ptr();
+        RequestT::execute_fn_ = [](void* p_, const RequestT& req_) {
+#else
+        r.nc_ = nc_ptr();
+        r.execute_fn_ = [](void* p_, const RequestT& req_) {
+#endif
+            auto* nc__ = static_cast<NcT*>(p_);
+            if constexpr (detail::has_binary_src<RequestT>::value) {
+                if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
             }
+            if constexpr (detail::has_binary_dst<RequestT>::value) {
+                if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
+            }
+            return nc__->execute(req_);
+        };
+        if constexpr (RequestT::supports_cmd) {
+#if NOTE_SINGLETON
+            RequestT::send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
+#else
+            r.send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
+#endif
+                return static_cast<NcT*>(p_)->send_command(fn_, ctx_);
+            };
         }
         return r;
     }
 
     template<typename RequestT>
-    auto execute(const RequestT& req) { return nc_.execute(req); }
+    auto execute(const RequestT& req) { return nc_ptr()->execute(req); }
 
     template<typename RequestT>
-    auto execute(RequestT&& req) { return nc_.execute(req); }
+    auto execute(RequestT&& req) { return nc_ptr()->execute(req); }
 
     template<typename RequestT>
-    Result<void> command(const RequestT& req) { return nc_.command_typed(req); }
+    Result<void> command(const RequestT& req) { return nc_ptr()->command_typed(req); }
 
     // =====================================================================
     // Polymorphic factory structs (used by resource group methods)
@@ -106,26 +136,36 @@ public:
 {% for endpoint in endpoints %}
 {% if endpoint.needs_factory and not endpoint.has_children %}
     struct {{ endpoint.struct_name }}Factory {
+#if !NOTE_SINGLETON
         NcT* nc_;
+#endif
         template<typename T> T create_() {
             T r;
+#if NOTE_SINGLETON
+            // Singleton: set statics on the type (once), not per instance.
+            T::nc_ = nc_ptr();
+            T::execute_fn_ = [](void* p_, const T& req_) {
+#else
             r.nc_ = nc_;
-            if constexpr (std::is_same_v<NcT, Notecard>) {
-                r.execute_fn_ = [](void* p_, const T& req_) {
-                    auto* nc__ = static_cast<Notecard*>(p_);
-                    if constexpr (detail::has_binary_src<T>::value) {
-                        if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
-                    }
-                    if constexpr (detail::has_binary_dst<T>::value) {
-                        if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
-                    }
-                    return nc__->execute(req_);
-                };
-                if constexpr (T::supports_cmd) {
-                    r.command_fn_ = [](void* p_, const T& req_) {
-                        return static_cast<Notecard*>(p_)->command_typed(req_);
-                    };
+            r.execute_fn_ = [](void* p_, const T& req_) {
+#endif
+                auto* nc__ = static_cast<NcT*>(p_);
+                if constexpr (detail::has_binary_src<T>::value) {
+                    if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
                 }
+                if constexpr (detail::has_binary_dst<T>::value) {
+                    if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
+                }
+                return nc__->execute(req_);
+            };
+            if constexpr (T::supports_cmd) {
+#if NOTE_SINGLETON
+                T::send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
+#else
+                r.send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
+#endif
+                    return static_cast<NcT*>(p_)->send_command(fn_, ctx_);
+                };
             }
             return r;
         }
@@ -158,7 +198,11 @@ public:
 {% for child in endpoint.children %}
 {% if child.is_polymorphic %}
 {# Child is polymorphic: nested sub-factory as member #}
+#if NOTE_SINGLETON
+        {{ child.struct_name }}Factory {{ child.child_method }};
+#else
         {{ child.struct_name }}Factory {{ child.child_method }}{nc_};
+#endif
 {% else %}
         /// {{ child.wire_name }}
         auto {{ child.child_method }}() { return create_<api::{{ child.struct_name }}>(); }
@@ -174,26 +218,36 @@ public:
 {% for endpoint in endpoints %}
 {% if endpoint.needs_factory and endpoint.has_children %}
     struct {{ endpoint.struct_name }}Factory {
+#if !NOTE_SINGLETON
         NcT* nc_;
+#endif
         template<typename T> T create_() {
             T r;
+#if NOTE_SINGLETON
+            // Singleton: set statics on the type (once), not per instance.
+            T::nc_ = nc_ptr();
+            T::execute_fn_ = [](void* p_, const T& req_) {
+#else
             r.nc_ = nc_;
-            if constexpr (std::is_same_v<NcT, Notecard>) {
-                r.execute_fn_ = [](void* p_, const T& req_) {
-                    auto* nc__ = static_cast<Notecard*>(p_);
-                    if constexpr (detail::has_binary_src<T>::value) {
-                        if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
-                    }
-                    if constexpr (detail::has_binary_dst<T>::value) {
-                        if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
-                    }
-                    return nc__->execute(req_);
-                };
-                if constexpr (T::supports_cmd) {
-                    r.command_fn_ = [](void* p_, const T& req_) {
-                        return static_cast<Notecard*>(p_)->command_typed(req_);
-                    };
+            r.execute_fn_ = [](void* p_, const T& req_) {
+#endif
+                auto* nc__ = static_cast<NcT*>(p_);
+                if constexpr (detail::has_binary_src<T>::value) {
+                    if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
                 }
+                if constexpr (detail::has_binary_dst<T>::value) {
+                    if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
+                }
+                return nc__->execute(req_);
+            };
+            if constexpr (T::supports_cmd) {
+#if NOTE_SINGLETON
+                T::send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
+#else
+                r.send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
+#endif
+                    return static_cast<NcT*>(p_)->send_command(fn_, ctx_);
+                };
             }
             return r;
         }
@@ -226,7 +280,11 @@ public:
 {% for child in endpoint.children %}
 {% if child.is_polymorphic %}
 {# Child is polymorphic: nested sub-factory as member #}
+#if NOTE_SINGLETON
+        {{ child.struct_name }}Factory {{ child.child_method }};
+#else
         {{ child.struct_name }}Factory {{ child.child_method }}{nc_};
+#endif
 {% else %}
         /// {{ child.wire_name }}
         auto {{ child.child_method }}() { return create_<api::{{ child.struct_name }}>(); }
@@ -252,17 +310,41 @@ public:
 #if __cplusplus >= 202002L
         template<typename T_ = TargetT_>
         requires (IsUnconstrained<T_> || T_::supports({{ skus_type }}::skus))
-        {{ endpoint.struct_name }}Factory {{ endpoint.group_method }}() { return {nc_}; }
+        {{ endpoint.struct_name }}Factory {{ endpoint.group_method }}() { return
+#if NOTE_SINGLETON
+            {}
+#else
+            {nc_}
+#endif
+        ; }
 
         template<typename T_ = TargetT_>
         requires (!IsUnconstrained<T_> && !T_::supports({{ skus_type }}::skus) && !T_::strict)
         [[deprecated("{{ endpoint.wire_name }} is not available on this target")]]
-        {{ endpoint.struct_name }}Factory {{ endpoint.group_method }}() { return {nc_}; }
+        {{ endpoint.struct_name }}Factory {{ endpoint.group_method }}() { return
+#if NOTE_SINGLETON
+            {}
 #else
-        {{ endpoint.struct_name }}Factory {{ endpoint.group_method }}() { return {nc_}; }
+            {nc_}
+#endif
+        ; }
+#else
+        {{ endpoint.struct_name }}Factory {{ endpoint.group_method }}() { return
+#if NOTE_SINGLETON
+            {}
+#else
+            {nc_}
+#endif
+        ; }
 #endif
 {% else %}
-        {{ endpoint.struct_name }}Factory {{ endpoint.group_method }}() { return {nc_}; }
+        {{ endpoint.struct_name }}Factory {{ endpoint.group_method }}() { return
+#if NOTE_SINGLETON
+            {}
+#else
+            {nc_}
+#endif
+        ; }
 {% endif %}
 {% elif op.required_properties %}
 {% if has_skus %}
@@ -332,26 +414,36 @@ public:
     template<typename TargetT_ = void>
 #endif
     struct {{ group.struct_name }} {
+#if !NOTE_SINGLETON
         NcT* nc_;
+#endif
         template<typename T> T create_() {
             T r;
+#if NOTE_SINGLETON
+            // Singleton: set statics on the type (once), not per instance.
+            T::nc_ = nc_ptr();
+            T::execute_fn_ = [](void* p_, const T& req_) {
+#else
             r.nc_ = nc_;
-            if constexpr (std::is_same_v<NcT, Notecard>) {
-                r.execute_fn_ = [](void* p_, const T& req_) {
-                    auto* nc__ = static_cast<Notecard*>(p_);
-                    if constexpr (detail::has_binary_src<T>::value) {
-                        if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
-                    }
-                    if constexpr (detail::has_binary_dst<T>::value) {
-                        if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
-                    }
-                    return nc__->execute(req_);
-                };
-                if constexpr (T::supports_cmd) {
-                    r.command_fn_ = [](void* p_, const T& req_) {
-                        return static_cast<Notecard*>(p_)->command_typed(req_);
-                    };
+            r.execute_fn_ = [](void* p_, const T& req_) {
+#endif
+                auto* nc__ = static_cast<NcT*>(p_);
+                if constexpr (detail::has_binary_src<T>::value) {
+                    if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
                 }
+                if constexpr (detail::has_binary_dst<T>::value) {
+                    if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
+                }
+                return nc__->execute(req_);
+            };
+            if constexpr (T::supports_cmd) {
+#if NOTE_SINGLETON
+                T::send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
+#else
+                r.send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
+#endif
+                    return static_cast<NcT*>(p_)->send_command(fn_, ctx_);
+                };
             }
             return r;
         }
@@ -366,7 +458,11 @@ public:
 {% for endpoint in group.endpoints %}
 {% if endpoint.is_factory_member %}
         /// {{ endpoint.wire_name }} (and nested: {% for c in endpoint.children %}{{ c.wire_name }}{{ ", " if not loop.last }}{% endfor %})
+#if NOTE_SINGLETON
+        {{ endpoint.struct_name }}Factory {{ endpoint.group_method }};
+#else
         {{ endpoint.struct_name }}Factory {{ endpoint.group_method }}{nc_};
+#endif
 {% endif %}
 {% endfor %}
 
@@ -467,6 +563,7 @@ public:
 {% endfor %}
 };
 
+#ifndef NOTE_MINIMAL
 #if __cplusplus >= 202002L
 Api(Notecard&) -> Api<Unconstrained, Notecard>;
 template<typename T>
@@ -478,5 +575,6 @@ auto make_api(NcT& nc, T = {}) { return Api<T, NcT>(nc); }
 template<typename NcT = Notecard>
 Api<NcT> make_api(NcT& nc) { return Api<NcT>(nc); }
 #endif
+#endif // !NOTE_MINIMAL
 
 } // namespace note

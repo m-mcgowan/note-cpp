@@ -1,11 +1,20 @@
 #pragma once
 
+#include <note/note_config.hpp>
 #include <note/transport_hal.hpp>
 #include <note/transport/protocol_policy.hpp>
 
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
+
+// NOTE_MINIMAL strips virtual inheritance from HAL types.
+// Concrete types provide the same methods without vtable overhead.
+#ifdef NOTE_MINIMAL
+#define override
+#else
+#define override override
+#endif
 
 // note::transport::NotecardSerial
 //
@@ -37,18 +46,9 @@ namespace note::transport {
 class SerialHal {
 public:
     virtual ~SerialHal() = default;
-
-    // Send all len bytes. Returns false on hardware error.
     virtual bool     transmit(const uint8_t* data, size_t len) = 0;
-
-    // Non-blocking read. Returns 0..max_len bytes currently available.
-    // Must not block waiting for more data.
     virtual size_t   receive(uint8_t* buf, size_t max_len) = 0;
-
-    // Monotonic millisecond counter (wraps after ~49 days — same as Arduino millis()).
     virtual uint32_t millis() = 0;
-
-    // Block for exactly ms milliseconds.
     virtual void     delay(uint32_t ms) = 0;
 };
 

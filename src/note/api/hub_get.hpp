@@ -8,6 +8,7 @@
 #if NOTE_EXTRAS
 #include <note/dyn_field.hpp>
 #endif
+#include <note/generic_sink.hpp>
 #include <note/notecard.hpp>
 #include <note/arena.hpp>
 #include <note/field.hpp>
@@ -22,6 +23,7 @@
 #include <note/target.hpp>
 
 namespace note::api {
+
 
 
 
@@ -53,7 +55,11 @@ struct HubGet {
     static constexpr Safety safety = Safety::ReadOnly;
     static constexpr Skus skus{};
 
+#if NOTE_SINGLETON
+    static inline void* nc_;
+#else
     void* nc_ = nullptr;
+#endif
 
 
 
@@ -159,7 +165,7 @@ struct HubGet {
             Response& rsp;
             ::note::StringPool& pool_;
             Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
-            void on_string(::note::string_view k_, ::note::string_view v_) {
+            NOTE_SINK_NOINLINE void on_string(::note::string_view k_, ::note::string_view v_) {
                 v_ = pool_.intern(v_);
                 if (note::flash(keys_::rsp_device) == k_) { rsp.device = v_; return; }
                 if (note::flash(keys_::rsp_host) == k_) { rsp.host = v_; return; }
@@ -169,18 +175,18 @@ struct HubGet {
                 if (note::flash(keys_::rsp_vinbound) == k_) { rsp.vinbound = v_; return; }
                 if (note::flash(keys_::rsp_voutbound) == k_) { rsp.voutbound = v_; return; }
             }
-            void on_bool(::note::string_view k_, bool v_) {
+            NOTE_SINK_NOINLINE void on_bool(::note::string_view k_, bool v_) {
                 if (note::flash(keys_::rsp_sync) == k_) { rsp.sync = v_; return; }
             }
-            void on_number(::note::string_view k_, ::note::string_view raw_) {
+            NOTE_SINK_NOINLINE void on_number(::note::string_view k_, ::note::string_view raw_) {
                 if (note::flash(keys_::rsp_inbound) == k_) { rsp.inbound = ::note::parse_int(raw_); return; }
                 if (note::flash(keys_::rsp_outbound) == k_) { rsp.outbound = ::note::parse_int(raw_); return; }
             }
-            void on_int(::note::string_view k_, int32_t v_) {
+            NOTE_SINK_NOINLINE void on_int(::note::string_view k_, int32_t v_) {
                 if (note::flash(keys_::rsp_inbound) == k_) { rsp.inbound = v_; return; }
                 if (note::flash(keys_::rsp_outbound) == k_) { rsp.outbound = v_; return; }
             }
-            void reset() {
+            NOTE_SINK_NOINLINE void reset() {
                 rsp = Response{};
             }
         };
@@ -248,11 +254,45 @@ struct HubGet {
     private:
         std::unique_ptr<JsonReader> reader_;
     };
+    static constexpr uint8_t field_count = 10;
+    static const ::note::FieldDesc* field_descs_ptr() {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+        static constexpr ::note::FieldDesc table[] = {
+            {"device", static_cast<uint16_t>(offsetof(Response, device)), ::note::FieldType::String},
+            {"host", static_cast<uint16_t>(offsetof(Response, host)), ::note::FieldType::String},
+            {"inbound", static_cast<uint16_t>(offsetof(Response, inbound)), ::note::FieldType::Int32},
+            {"mode", static_cast<uint16_t>(offsetof(Response, mode)), ::note::FieldType::String},
+            {"outbound", static_cast<uint16_t>(offsetof(Response, outbound)), ::note::FieldType::Int32},
+            {"product", static_cast<uint16_t>(offsetof(Response, product)), ::note::FieldType::String},
+            {"sn", static_cast<uint16_t>(offsetof(Response, sn)), ::note::FieldType::String},
+            {"sync", static_cast<uint16_t>(offsetof(Response, sync)), ::note::FieldType::Bool},
+            {"vinbound", static_cast<uint16_t>(offsetof(Response, vinbound)), ::note::FieldType::String},
+            {"voutbound", static_cast<uint16_t>(offsetof(Response, voutbound)), ::note::FieldType::String},
+        };
+#pragma GCC diagnostic pop
+        return table;
+    }
 
+#if NOTE_SINGLETON
+    /// Singleton: type-erased execute — one static fn ptr per type, set by Api.
+    static inline ApiResult<Response>(*execute_fn_)(void*, const HubGet&);
+    static inline Result<void>(*send_fn_)(void*, BuildFn, void*);
+#else
     ApiResult<Response>(*execute_fn_)(void*, const HubGet&) = nullptr;
+    Result<void>(*send_fn_)(void*, BuildFn, void*) = nullptr;
+#endif
     auto execute() const { return execute_fn_(nc_, *this); }
-    Result<void>(*command_fn_)(void*, const HubGet&) = nullptr;
-    Result<void> command() const { return command_fn_(nc_, *this); }
+    Result<void> command() const {
+        auto build_ = [&](JsonBuilder& b_) {
+            b_.add("cmd", notecard_request);
+            this->build(b_);
+        };
+        BuildFn fn_ = [](JsonBuilder& b_, void* p_) {
+            (*static_cast<decltype(build_)*>(p_))(b_);
+        };
+        return send_fn_(nc_, fn_, &build_);
+    }
 
     void build(JsonBuilder& b) const {
 #if NOTE_EXTRAS
@@ -276,6 +316,7 @@ struct HubGet {
 #endif
 
 };
+
 
 
 

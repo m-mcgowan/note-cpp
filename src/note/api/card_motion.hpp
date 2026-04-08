@@ -8,6 +8,7 @@
 #if NOTE_EXTRAS
 #include <note/dyn_field.hpp>
 #endif
+#include <note/generic_sink.hpp>
 #include <note/notecard.hpp>
 #include <note/arena.hpp>
 #include <note/field.hpp>
@@ -22,6 +23,7 @@
 #include <note/target.hpp>
 
 namespace note::api {
+
 
 
 
@@ -53,7 +55,11 @@ struct CardMotion {
     static constexpr Safety safety = Safety::ReadOnly;
     static constexpr Skus skus = Skus::from(Product::Cell, Product::CellWifi, Product::Skylo, Product::WiFi);
 
+#if NOTE_SINGLETON
+    static inline void* nc_;
+#else
     void* nc_ = nullptr;
+#endif
 
 
     /// Amount of time to sample for buckets of accelerometer-measured movement.
@@ -162,26 +168,26 @@ struct CardMotion {
             Response& rsp;
             ::note::StringPool& pool_;
             Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
-            void on_string(::note::string_view k_, ::note::string_view v_) {
+            NOTE_SINK_NOINLINE void on_string(::note::string_view k_, ::note::string_view v_) {
                 v_ = pool_.intern(v_);
                 if (note::flash(keys_::rsp_mode) == k_) { rsp.mode = v_; return; }
                 if (note::flash(keys_::rsp_movements) == k_) { rsp.movements = v_; return; }
                 if (note::flash(keys_::rsp_status) == k_) { rsp.status = v_; return; }
             }
-            void on_bool(::note::string_view k_, bool v_) {
+            NOTE_SINK_NOINLINE void on_bool(::note::string_view k_, bool v_) {
                 if (note::flash(keys_::rsp_alert) == k_) { rsp.alert = v_; return; }
             }
-            void on_number(::note::string_view k_, ::note::string_view raw_) {
+            NOTE_SINK_NOINLINE void on_number(::note::string_view k_, ::note::string_view raw_) {
                 if (note::flash(keys_::rsp_count) == k_) { rsp.count = ::note::parse_int(raw_); return; }
                 if (note::flash(keys_::rsp_motion) == k_) { rsp.motion = ::note::parse_int(raw_); return; }
                 if (note::flash(keys_::rsp_seconds) == k_) { rsp.seconds = ::note::parse_int(raw_); return; }
             }
-            void on_int(::note::string_view k_, int32_t v_) {
+            NOTE_SINK_NOINLINE void on_int(::note::string_view k_, int32_t v_) {
                 if (note::flash(keys_::rsp_count) == k_) { rsp.count = v_; return; }
                 if (note::flash(keys_::rsp_motion) == k_) { rsp.motion = v_; return; }
                 if (note::flash(keys_::rsp_seconds) == k_) { rsp.seconds = v_; return; }
             }
-            void reset() {
+            NOTE_SINK_NOINLINE void reset() {
                 rsp = Response{};
             }
         };
@@ -233,11 +239,42 @@ struct CardMotion {
     private:
         std::unique_ptr<JsonReader> reader_;
     };
+    static constexpr uint8_t field_count = 7;
+    static const ::note::FieldDesc* field_descs_ptr() {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+        static constexpr ::note::FieldDesc table[] = {
+            {"alert", static_cast<uint16_t>(offsetof(Response, alert)), ::note::FieldType::Bool},
+            {"count", static_cast<uint16_t>(offsetof(Response, count)), ::note::FieldType::Int32},
+            {"mode", static_cast<uint16_t>(offsetof(Response, mode)), ::note::FieldType::String},
+            {"motion", static_cast<uint16_t>(offsetof(Response, motion)), ::note::FieldType::Int32},
+            {"movements", static_cast<uint16_t>(offsetof(Response, movements)), ::note::FieldType::String},
+            {"seconds", static_cast<uint16_t>(offsetof(Response, seconds)), ::note::FieldType::Int32},
+            {"status", static_cast<uint16_t>(offsetof(Response, status)), ::note::FieldType::String},
+        };
+#pragma GCC diagnostic pop
+        return table;
+    }
 
+#if NOTE_SINGLETON
+    /// Singleton: type-erased execute — one static fn ptr per type, set by Api.
+    static inline ApiResult<Response>(*execute_fn_)(void*, const CardMotion&);
+    static inline Result<void>(*send_fn_)(void*, BuildFn, void*);
+#else
     ApiResult<Response>(*execute_fn_)(void*, const CardMotion&) = nullptr;
+    Result<void>(*send_fn_)(void*, BuildFn, void*) = nullptr;
+#endif
     auto execute() const { return execute_fn_(nc_, *this); }
-    Result<void>(*command_fn_)(void*, const CardMotion&) = nullptr;
-    Result<void> command() const { return command_fn_(nc_, *this); }
+    Result<void> command() const {
+        auto build_ = [&](JsonBuilder& b_) {
+            b_.add("cmd", notecard_request);
+            this->build(b_);
+        };
+        BuildFn fn_ = [](JsonBuilder& b_, void* p_) {
+            (*static_cast<decltype(build_)*>(p_))(b_);
+        };
+        return send_fn_(nc_, fn_, &build_);
+    }
 
     void build(JsonBuilder& b) const {
         if (minutes) note::add_flash(b, note::flash(keys_::minutes), *minutes);
@@ -274,6 +311,7 @@ inline CardMotion& CardMotion::minutes_t::operator()(int32_t v) {
         reinterpret_cast<char*>(this) - offsetof(CardMotion, minutes));
 }
 #pragma GCC diagnostic pop
+
 
 
 } // namespace note::api

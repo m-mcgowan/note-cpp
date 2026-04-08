@@ -1,5 +1,7 @@
 #pragma once
 
+#include <note/note_config.hpp>
+
 #include <cstddef>
 #include <cstdint>
 
@@ -46,8 +48,14 @@ constexpr size_t dtoa(char* buf, size_t cap, double value) {
         value = -value;
     }
 
-    // Integer part.
+    // Integer part. NOTE_INT32_MATH uses int32_t to avoid pulling in 64-bit
+    // soft-math on platforms without hardware 64-bit ops (~286 bytes on AVR).
+    // Values above INT32_MAX are truncated. Full builds use int64_t.
+#if NOTE_INT32_MATH
+    auto int_part = static_cast<int32_t>(value);
+#else
     auto int_part = static_cast<int64_t>(value);
+#endif
     double frac = value - static_cast<double>(int_part);
 
     // Write integer part via itoa logic.
@@ -56,7 +64,7 @@ constexpr size_t dtoa(char* buf, size_t cap, double value) {
             if (pos < cap) buf[pos++] = '0';
         } else {
             size_t start = pos;
-            int64_t v = int_part;
+            decltype(int_part) v = int_part;
             while (v > 0 && pos < cap) {
                 buf[pos++] = '0' + static_cast<char>(v % 10);
                 v /= 10;

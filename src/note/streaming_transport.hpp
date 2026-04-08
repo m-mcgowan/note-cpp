@@ -29,6 +29,117 @@
 namespace note {
 
 // ---------------------------------------------------------------------------
+// NcErrorCapture — captures the Notecard "err" JSON field during parsing.
+// Used by transact_dispatch to report Notecard errors without templated sinks.
+// ---------------------------------------------------------------------------
+
+namespace detail {
+
+struct NcErrorCapture {
+    static constexpr size_t kMaxLen = 64;
+    char buf[kMaxLen]{};
+    size_t len = 0;
+
+    void capture(string_view v) {
+        len = v.size() < kMaxLen ? v.size() : kMaxLen;
+        for (size_t i = 0; i < len; ++i) buf[i] = v[i];
+    }
+
+    bool empty() const { return len == 0; }
+    string_view view() const { return {buf, len}; }
+};
+
+/// ReceiveContext — wraps a SaxDispatch to intercept "err" and "crc" fields.
+/// Creates a single wrapping dispatch table (not templated) so that
+/// receive_dispatch can be a non-template member function.
+struct ReceiveContext {
+    SaxDispatch inner;
+    NcErrorCapture& err;
+#ifndef NOTE_NO_CRC
+    uint16_t crc_seq = 0;
+    uint32_t crc_checksum = 0;
+    bool crc_found = false;
+#endif
+
+    ReceiveContext(SaxDispatch inner_, NcErrorCapture& err_)
+        : inner(inner_), err(err_) {}
+
+    /// Build a SaxDispatch that intercepts "err" and "crc" on_string events,
+    /// forwarding everything else to the inner dispatch.
+    SaxDispatch wrapping_dispatch() {
+        SaxDispatch d;
+        d.sink = this;
+        d.on_null = [](void* p, string_view k) {
+            auto& c = *static_cast<ReceiveContext*>(p);
+            c.inner.on_null(c.inner.sink, k);
+        };
+        d.on_bool = [](void* p, string_view k, bool v) {
+            auto& c = *static_cast<ReceiveContext*>(p);
+            c.inner.on_bool(c.inner.sink, k, v);
+        };
+        d.on_int = [](void* p, string_view k, int32_t v) {
+            auto& c = *static_cast<ReceiveContext*>(p);
+            c.inner.on_int(c.inner.sink, k, v);
+        };
+        d.on_float = [](void* p, string_view k, double v) {
+            auto& c = *static_cast<ReceiveContext*>(p);
+            c.inner.on_float(c.inner.sink, k, v);
+        };
+        d.on_string = [](void* p, string_view k, string_view v) {
+            auto& c = *static_cast<ReceiveContext*>(p);
+            if (k == "err") {
+                c.err.capture(v);
+                // Also forward — virtual path's ErrorCaptureSink may need it.
+                c.inner.on_string(c.inner.sink, k, v);
+                return;
+            }
+#ifndef NOTE_NO_CRC
+            if (k == "crc") {
+                if (v.size() == 13 && v[4] == ':') {
+                    c.crc_seq = static_cast<uint16_t>(
+                        transport::detail::read_hex(v.data(), 4));
+                    c.crc_checksum = static_cast<uint32_t>(
+                        transport::detail::read_hex(v.data() + 5, 8));
+                    c.crc_found = true;
+                }
+                return;  // CRC is transport-only, don't forward
+            }
+#endif
+            c.inner.on_string(c.inner.sink, k, v);
+        };
+        d.on_object_begin = [](void* p, string_view k) {
+            auto& c = *static_cast<ReceiveContext*>(p);
+            c.inner.on_object_begin(c.inner.sink, k);
+        };
+        d.on_object_end = [](void* p, string_view k) {
+            auto& c = *static_cast<ReceiveContext*>(p);
+            c.inner.on_object_end(c.inner.sink, k);
+        };
+        d.on_array_begin = [](void* p, string_view k) {
+            auto& c = *static_cast<ReceiveContext*>(p);
+            c.inner.on_array_begin(c.inner.sink, k);
+        };
+        d.on_array_end = [](void* p, string_view k) {
+            auto& c = *static_cast<ReceiveContext*>(p);
+            c.inner.on_array_end(c.inner.sink, k);
+        };
+        d.reset = [](void* p) {
+            auto& c = *static_cast<ReceiveContext*>(p);
+            c.err = {};
+#ifndef NOTE_NO_CRC
+            c.crc_seq = 0;
+            c.crc_checksum = 0;
+            c.crc_found = false;
+#endif
+            c.inner.reset(c.inner.sink);
+        };
+        return d;
+    }
+};
+
+} // namespace detail
+
+// ---------------------------------------------------------------------------
 // IStreamingTransport
 // ---------------------------------------------------------------------------
 
@@ -89,7 +200,11 @@ struct IStreamingTransport {
 // StreamingTransport — protocol logic over a TransportHal
 // ---------------------------------------------------------------------------
 
+#ifdef NOTE_MINIMAL
+class StreamingTransport {
+#else
 class StreamingTransport : public IStreamingTransport {
+#endif
 public:
     explicit StreamingTransport(TransportHal& hal)
         : hal_(hal) {}
@@ -100,9 +215,17 @@ public:
         : hal_(hal) {}
 
 #if NOTE_DEBUG_ENABLED
+#ifdef NOTE_MINIMAL
+    void set_debug(const DebugListener& d) { debug_ = d; }
+#else
     void set_debug(const DebugListener& d) override { debug_ = d; }
 #endif
+#endif
 
+#ifdef NOTE_MINIMAL
+    uint32_t millis() { return hal_.millis(); }
+    void delay(uint32_t ms) { hal_.delay(ms); }
+#else
     uint32_t millis() override { return hal_.millis(); }
     void delay(uint32_t ms) override { hal_.delay(ms); }
 
@@ -111,6 +234,7 @@ public:
                           JsonSink& sink, uint32_t timeout_ms) override {
         return transact_impl(build_fn, ctx, sink, timeout_ms);
     }
+#endif
 
     /// Template transact — concrete sink type, no vtable for sink dispatch.
     /// Used by StaticNotecard for zero-vtable execute.
@@ -120,14 +244,19 @@ public:
         return transact_impl(build_fn, ctx, sink, timeout_ms);
     }
 
-private:
-    /// Single-attempt transact. Retry is orchestrated by the Notecard layer.
-    template<typename SinkT>
-    Result<void> transact_impl(BuildFn build_fn, void* ctx,
-                                SinkT& sink, uint32_t timeout_ms) {
+    /// Non-template transact via SaxDispatch — single instantiation for all
+    /// sink types. Error capture ("err") and CRC handling are done at the
+    /// dispatch level, so the caller doesn't need ErrorCaptureSinkT/CrcFieldSinkT.
+    ///
+    /// @param dispatch  Type-erased sink dispatch table (from make_sax_dispatch).
+    /// @param nc_err    Receives the Notecard "err" field content, if any.
+    ///                  Valid as long as nc_err is in scope.
+    Result<void> transact_dispatch(BuildFn build_fn, void* ctx,
+                                   SaxDispatch dispatch, uint32_t timeout_ms,
+                                   detail::NcErrorCapture& nc_err) {
         if (!ensure_init()) {
             debug_transport(debug_, TransportEvent::ResetFailed, 0);
-            return make_error(Error::NotReady, "Notecard not ready after reset");
+            return make_error(Error::NotReady, NOTE_ERR("not ready"));
         }
 
 #ifndef NOTE_NO_CRC
@@ -137,7 +266,41 @@ private:
         debug_timing(debug_, TimingEvent::TransmitBegin);
         if (!stream_request(build_fn, ctx)) {
             debug_transport(debug_, TransportEvent::SendFailed, 0);
-            return make_error(Error::SendFailed, Cause::HalError, "transmit failed");
+            return make_error(Error::SendFailed, Cause::HalError, NOTE_ERR("transmit failed"));
+        }
+        debug_timing(debug_, TimingEvent::TransmitEnd);
+
+        debug_timing(debug_, TimingEvent::ReceiveBegin);
+        auto rv = receive_dispatch(dispatch, timeout_ms, nc_err);
+        debug_timing(debug_, TimingEvent::ReceiveEnd);
+        if (!rv) {
+            if (rv.error().cause == Cause::Timeout)
+                debug_transport(debug_, TransportEvent::Timeout, 0);
+            else if (rv.error().cause == Cause::CrcMismatch)
+                debug_transport(debug_, TransportEvent::CrcMismatch, 0);
+            return Unexpected(rv.error());
+        }
+        return {};
+    }
+
+private:
+    /// Single-attempt transact. Retry is orchestrated by the Notecard layer.
+    template<typename SinkT>
+    Result<void> transact_impl(BuildFn build_fn, void* ctx,
+                                SinkT& sink, uint32_t timeout_ms) {
+        if (!ensure_init()) {
+            debug_transport(debug_, TransportEvent::ResetFailed, 0);
+            return make_error(Error::NotReady, NOTE_ERR("not ready"));
+        }
+
+#ifndef NOTE_NO_CRC
+        if (crc_enabled_) ++crc_seq_;
+#endif
+
+        debug_timing(debug_, TimingEvent::TransmitBegin);
+        if (!stream_request(build_fn, ctx)) {
+            debug_transport(debug_, TransportEvent::SendFailed, 0);
+            return make_error(Error::SendFailed, Cause::HalError, NOTE_ERR("transmit failed"));
         }
         debug_timing(debug_, TimingEvent::TransmitEnd);
 
@@ -156,9 +319,13 @@ private:
 
 public:
 
-    Result<void> send(BuildFn build_fn, void* ctx) override {
+    Result<void> send(BuildFn build_fn, void* ctx)
+#ifndef NOTE_MINIMAL
+        override
+#endif
+    {
         if (!ensure_init())
-            return make_error(Error::NotReady, "Notecard not ready after reset");
+            return make_error(Error::NotReady, NOTE_ERR("not ready"));
 
 #ifndef NOTE_NO_CRC
         if (crc_enabled_) ++crc_seq_;
@@ -174,7 +341,7 @@ public:
     Result<string_view> transact_raw(string_view json, char* buf, size_t bufsize,
                                       uint32_t timeout_ms) {
         if (!ensure_init())
-            return make_error(Error::NotReady, "Notecard not ready after reset");
+            return make_error(Error::NotReady, NOTE_ERR("not ready"));
 
         // Transmit the raw JSON + line terminator
         if (!hal_.transmit(reinterpret_cast<const uint8_t*>(json.data()), json.size()))
@@ -189,7 +356,7 @@ public:
     /// Raw passthrough: transmit pre-formatted JSON + line terminator, no response.
     Result<void> send_raw(string_view json) {
         if (!ensure_init())
-            return make_error(Error::NotReady, "Notecard not ready after reset");
+            return make_error(Error::NotReady, NOTE_ERR("not ready"));
 
         if (!hal_.transmit(reinterpret_cast<const uint8_t*>(json.data()), json.size()))
             return make_error(Error::SendFailed, Cause::HalError, NOTE_ERR("transmit failed"));
@@ -198,20 +365,36 @@ public:
         return {};
     }
 
-    void reset() override {
+    void reset()
+#ifndef NOTE_MINIMAL
+        override
+#endif
+    {
         hal_.reset();
         initialized_ = false;
     }
 
-    void abort() override {}
+    void abort()
+#ifndef NOTE_MINIMAL
+        override
+#endif
+    {}
 
-    Result<void> write(const uint8_t* data, size_t len) override {
+    Result<void> write(const uint8_t* data, size_t len)
+#ifndef NOTE_MINIMAL
+        override
+#endif
+    {
         if (!hal_.transmit(data, len))
             return make_error(Error::SendFailed, Cause::HalError, NOTE_ERR("binary transmit failed"));
         return {};
     }
 
-    Result<size_t> read(uint8_t* buf, size_t max_len, uint32_t timeout_ms) override {
+    Result<size_t> read(uint8_t* buf, size_t max_len, uint32_t timeout_ms)
+#ifndef NOTE_MINIMAL
+        override
+#endif
+    {
 #ifndef NOTE_MINIMAL
         // Return any lookahead bytes saved by frame_read before hitting the HAL.
         if (lookahead_len_ > 0) {
@@ -322,6 +505,19 @@ private:
     /// remaining frame bytes so the wire is clean for the next transaction.
     template<typename SinkT>
     Result<void> receive_streaming(SinkT& sink, uint32_t timeout_ms) {
+        auto dispatch = make_sax_dispatch(sink);
+        detail::NcErrorCapture dummy_err;
+        return receive_dispatch(dispatch, timeout_ms, dummy_err);
+    }
+
+    /// Non-template receive using SaxDispatch. Error capture ("err") and CRC
+    /// interception are done via ReceiveContext wrapping at the dispatch level.
+    /// This is the single implementation — both template and virtual paths delegate here.
+    Result<void> receive_dispatch(SaxDispatch dispatch, uint32_t timeout_ms,
+                                  detail::NcErrorCapture& nc_err) {
+        detail::ReceiveContext ctx(dispatch, nc_err);
+        auto wrapped = ctx.wrapping_dispatch();
+
         bool frame_terminated = false;
         bool any_data_received = false;
 
@@ -384,7 +580,6 @@ private:
         };
 
 #ifndef NOTE_NO_CRC
-        CrcFieldSinkT<SinkT> crc_sink(sink);
         transport::detail::CrcAccumulator crc;
 
         auto read_fn = [&](uint8_t* buf, size_t max, uint32_t t) -> Result<size_t> {
@@ -393,28 +588,25 @@ private:
             return r;
         };
 
-        auto parse_err = sax_lex_streaming(read_fn, timeout_ms, crc_sink);
+        auto parse_err = sax_lex_streaming(read_fn, timeout_ms, wrapped);
 
-        // Drain through \n if partial data was received but the frame
-        // delimiter wasn't found. Skip drain when no data arrived at all
-        // (e.g. timeout on first read) — there's nothing on the wire.
         if (!frame_terminated && any_data_received)
             drain_frame_boundary();
 
         if (!parse_err.empty())
             return make_error(Error::ResponseLost, Cause::Unspecified, parse_err);
 
-        if (crc_sink.has_crc()) {
-            if (crc_sink.seq() != crc_seq_ ||
-                crc_sink.checksum() != crc.finalize_with_brace()) {
-                return make_error(Error::ResponseLost, Cause::CrcMismatch, "CRC mismatch");
+        if (ctx.crc_found) {
+            if (ctx.crc_seq != crc_seq_ ||
+                ctx.crc_checksum != crc.finalize_with_brace()) {
+                return make_error(Error::ResponseLost, Cause::CrcMismatch, NOTE_ERR("CRC mismatch"));
             }
             crc_enabled_ = true;
         } else if (crc_enabled_) {
             return make_error(Error::ResponseLost, Cause::CrcMismatch, NOTE_ERR("expected CRC"));
         }
 #else
-        auto parse_err = sax_lex_streaming(frame_read, timeout_ms, sink);
+        auto parse_err = sax_lex_streaming(frame_read, timeout_ms, wrapped);
 
         if (!frame_terminated && any_data_received)
             drain_frame_boundary();

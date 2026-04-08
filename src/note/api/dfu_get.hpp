@@ -8,6 +8,7 @@
 #if NOTE_EXTRAS
 #include <note/dyn_field.hpp>
 #endif
+#include <note/generic_sink.hpp>
 #include <note/notecard.hpp>
 #include <note/arena.hpp>
 #include <note/field.hpp>
@@ -22,6 +23,7 @@
 #include <note/target.hpp>
 
 namespace note::api {
+
 
 
 
@@ -55,7 +57,11 @@ struct DfuGet {
         static constexpr Direction direction = Direction::Receive;
     };
 
+#if NOTE_SINGLETON
+    static inline void* nc_;
+#else
     void* nc_ = nullptr;
+#endif
 
 
     /// If `true`, the Notecard will return firmware data in the binary I/O
@@ -167,20 +173,20 @@ struct DfuGet {
             Response& rsp;
             ::note::StringPool& pool_;
             Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
-            void on_string(::note::string_view k_, ::note::string_view v_) {
+            NOTE_SINK_NOINLINE void on_string(::note::string_view k_, ::note::string_view v_) {
                 v_ = pool_.intern(v_);
                 if (note::flash(keys_::rsp_payload) == k_) { rsp.payload = v_; return; }
                 if (note::flash(keys_::rsp_status) == k_) { rsp.status = v_; return; }
             }
-            void on_number(::note::string_view k_, ::note::string_view raw_) {
+            NOTE_SINK_NOINLINE void on_number(::note::string_view k_, ::note::string_view raw_) {
                 if (note::flash(keys_::rsp_cobs) == k_) { rsp.cobs = ::note::parse_int(raw_); return; }
                 if (note::flash(keys_::rsp_length) == k_) { rsp.length = ::note::parse_int(raw_); return; }
             }
-            void on_int(::note::string_view k_, int32_t v_) {
+            NOTE_SINK_NOINLINE void on_int(::note::string_view k_, int32_t v_) {
                 if (note::flash(keys_::rsp_cobs) == k_) { rsp.cobs = v_; return; }
                 if (note::flash(keys_::rsp_length) == k_) { rsp.length = v_; return; }
             }
-            void reset() {
+            NOTE_SINK_NOINLINE void reset() {
                 rsp = Response{};
             }
         };
@@ -219,11 +225,39 @@ struct DfuGet {
     private:
         std::unique_ptr<JsonReader> reader_;
     };
+    static constexpr uint8_t field_count = 4;
+    static const ::note::FieldDesc* field_descs_ptr() {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+        static constexpr ::note::FieldDesc table[] = {
+            {"cobs", static_cast<uint16_t>(offsetof(Response, cobs)), ::note::FieldType::Int32},
+            {"length", static_cast<uint16_t>(offsetof(Response, length)), ::note::FieldType::Int32},
+            {"payload", static_cast<uint16_t>(offsetof(Response, payload)), ::note::FieldType::String},
+            {"status", static_cast<uint16_t>(offsetof(Response, status)), ::note::FieldType::String},
+        };
+#pragma GCC diagnostic pop
+        return table;
+    }
 
+#if NOTE_SINGLETON
+    /// Singleton: type-erased execute — one static fn ptr per type, set by Api.
+    static inline ApiResult<Response>(*execute_fn_)(void*, const DfuGet&);
+    static inline Result<void>(*send_fn_)(void*, BuildFn, void*);
+#else
     ApiResult<Response>(*execute_fn_)(void*, const DfuGet&) = nullptr;
+    Result<void>(*send_fn_)(void*, BuildFn, void*) = nullptr;
+#endif
     auto execute() const { return execute_fn_(nc_, *this); }
-    Result<void>(*command_fn_)(void*, const DfuGet&) = nullptr;
-    Result<void> command() const { return command_fn_(nc_, *this); }
+    Result<void> command() const {
+        auto build_ = [&](JsonBuilder& b_) {
+            b_.add("cmd", notecard_request);
+            this->build(b_);
+        };
+        BuildFn fn_ = [](JsonBuilder& b_, void* p_) {
+            (*static_cast<decltype(build_)*>(p_))(b_);
+        };
+        return send_fn_(nc_, fn_, &build_);
+    }
 
     void build(JsonBuilder& b) const {
         if (binary) note::add_flash(b, note::flash(keys_::binary), *binary);
@@ -280,6 +314,7 @@ inline DfuGet& DfuGet::offset_t::operator()(int32_t v) {
         reinterpret_cast<char*>(this) - offsetof(DfuGet, offset));
 }
 #pragma GCC diagnostic pop
+
 
 
 } // namespace note::api

@@ -8,6 +8,7 @@
 #if NOTE_EXTRAS
 #include <note/dyn_field.hpp>
 #endif
+#include <note/generic_sink.hpp>
 #include <note/notecard.hpp>
 #include <note/arena.hpp>
 #include <note/field.hpp>
@@ -22,6 +23,7 @@
 #include <note/target.hpp>
 
 namespace note::api {
+
 
 
 
@@ -63,7 +65,11 @@ struct CardLocationMode {
         static constexpr Safety safety = Safety::ReadOnly;
         static constexpr Skus skus{};
 
+#if NOTE_SINGLETON
+        static inline void* nc_;
+#else
         void* nc_ = nullptr;
+#endif
 
 
         /// Set to `true` to delete the last known location stored in the
@@ -313,12 +319,12 @@ struct CardLocationMode {
                 Response& rsp;
                 ::note::StringPool& pool_;
                 Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
-                void on_string(::note::string_view k_, ::note::string_view v_) {
+                NOTE_SINK_NOINLINE void on_string(::note::string_view k_, ::note::string_view v_) {
                     v_ = pool_.intern(v_);
                     if (note::flash(keys_::rsp_mode) == k_) { rsp.mode = v_; return; }
                     if (note::flash(keys_::rsp_vseconds) == k_) { rsp.vseconds = v_; return; }
                 }
-                void on_number(::note::string_view k_, ::note::string_view raw_) {
+                NOTE_SINK_NOINLINE void on_number(::note::string_view k_, ::note::string_view raw_) {
                     if (note::flash(keys_::rsp_max) == k_) { rsp.max = ::note::parse_int(raw_); return; }
                     if (note::flash(keys_::rsp_minutes) == k_) { rsp.minutes = ::note::parse_int(raw_); return; }
                     if (note::flash(keys_::rsp_seconds) == k_) { rsp.seconds = ::note::parse_int(raw_); return; }
@@ -328,7 +334,7 @@ struct CardLocationMode {
                     if (note::flash(keys_::rsp_lat) == k_) { rsp.lat = ::note::parse_double(raw_); return; }
                     if (note::flash(keys_::rsp_lon) == k_) { rsp.lon = ::note::parse_double(raw_); return; }
                 }
-                void on_int(::note::string_view k_, int32_t v_) {
+                NOTE_SINK_NOINLINE void on_int(::note::string_view k_, int32_t v_) {
                     if (note::flash(keys_::rsp_max) == k_) { rsp.max = v_; return; }
                     if (note::flash(keys_::rsp_minutes) == k_) { rsp.minutes = v_; return; }
                     if (note::flash(keys_::rsp_seconds) == k_) { rsp.seconds = v_; return; }
@@ -336,11 +342,11 @@ struct CardLocationMode {
                     if (note::flash(keys_::rsp_threshold) == k_) { rsp.threshold = v_; return; }
 #endif
                 }
-                void on_float(::note::string_view k_, double v_) {
+                NOTE_SINK_NOINLINE void on_float(::note::string_view k_, double v_) {
                     if (note::flash(keys_::rsp_lat) == k_) { rsp.lat = v_; return; }
                     if (note::flash(keys_::rsp_lon) == k_) { rsp.lon = v_; return; }
                 }
-                void reset() {
+                NOTE_SINK_NOINLINE void reset() {
                     rsp = Response{};
                 }
             };
@@ -401,11 +407,42 @@ struct CardLocationMode {
         private:
             std::unique_ptr<JsonReader> reader_;
         };
+        static constexpr uint8_t field_count = 7;
+        static const ::note::FieldDesc* field_descs_ptr() {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+            static constexpr ::note::FieldDesc table[] = {
+                {"lat", static_cast<uint16_t>(offsetof(Response, lat)), ::note::FieldType::Double},
+                {"lon", static_cast<uint16_t>(offsetof(Response, lon)), ::note::FieldType::Double},
+                {"max", static_cast<uint16_t>(offsetof(Response, max)), ::note::FieldType::Int32},
+                {"minutes", static_cast<uint16_t>(offsetof(Response, minutes)), ::note::FieldType::Int32},
+                {"mode", static_cast<uint16_t>(offsetof(Response, mode)), ::note::FieldType::String},
+                {"seconds", static_cast<uint16_t>(offsetof(Response, seconds)), ::note::FieldType::Int32},
+                {"vseconds", static_cast<uint16_t>(offsetof(Response, vseconds)), ::note::FieldType::String},
+            };
+#pragma GCC diagnostic pop
+            return table;
+        }
 
+#if NOTE_SINGLETON
+        /// Singleton: type-erased execute — one static fn ptr per type, set by Api.
+        static inline ApiResult<Response>(*execute_fn_)(void*, const CardLocationMode::Get&);
+        static inline Result<void>(*send_fn_)(void*, BuildFn, void*);
+#else
         ApiResult<Response>(*execute_fn_)(void*, const CardLocationMode::Get&) = nullptr;
+        Result<void>(*send_fn_)(void*, BuildFn, void*) = nullptr;
+#endif
         auto execute() const { return execute_fn_(nc_, *this); }
-        Result<void>(*command_fn_)(void*, const CardLocationMode::Get&) = nullptr;
-        Result<void> command() const { return command_fn_(nc_, *this); }
+        Result<void> command() const {
+            auto build_ = [&](JsonBuilder& b_) {
+                b_.add("cmd", notecard_request);
+                this->build(b_);
+            };
+            BuildFn fn_ = [](JsonBuilder& b_, void* p_) {
+                (*static_cast<decltype(build_)*>(p_))(b_);
+            };
+            return send_fn_(nc_, fn_, &build_);
+        }
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
@@ -512,7 +549,11 @@ struct CardLocationMode {
         static constexpr Safety safety = Safety::Idempotent;
         static constexpr Skus skus{};
 
+#if NOTE_SINGLETON
+        static inline void* nc_;
+#else
         void* nc_ = nullptr;
+#endif
 
 
         /// Set to `true` to delete the last known location stored in the
@@ -762,12 +803,12 @@ struct CardLocationMode {
                 Response& rsp;
                 ::note::StringPool& pool_;
                 Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
-                void on_string(::note::string_view k_, ::note::string_view v_) {
+                NOTE_SINK_NOINLINE void on_string(::note::string_view k_, ::note::string_view v_) {
                     v_ = pool_.intern(v_);
                     if (note::flash(keys_::rsp_mode) == k_) { rsp.mode = v_; return; }
                     if (note::flash(keys_::rsp_vseconds) == k_) { rsp.vseconds = v_; return; }
                 }
-                void on_number(::note::string_view k_, ::note::string_view raw_) {
+                NOTE_SINK_NOINLINE void on_number(::note::string_view k_, ::note::string_view raw_) {
                     if (note::flash(keys_::rsp_max) == k_) { rsp.max = ::note::parse_int(raw_); return; }
                     if (note::flash(keys_::rsp_minutes) == k_) { rsp.minutes = ::note::parse_int(raw_); return; }
                     if (note::flash(keys_::rsp_seconds) == k_) { rsp.seconds = ::note::parse_int(raw_); return; }
@@ -777,7 +818,7 @@ struct CardLocationMode {
                     if (note::flash(keys_::rsp_lat) == k_) { rsp.lat = ::note::parse_double(raw_); return; }
                     if (note::flash(keys_::rsp_lon) == k_) { rsp.lon = ::note::parse_double(raw_); return; }
                 }
-                void on_int(::note::string_view k_, int32_t v_) {
+                NOTE_SINK_NOINLINE void on_int(::note::string_view k_, int32_t v_) {
                     if (note::flash(keys_::rsp_max) == k_) { rsp.max = v_; return; }
                     if (note::flash(keys_::rsp_minutes) == k_) { rsp.minutes = v_; return; }
                     if (note::flash(keys_::rsp_seconds) == k_) { rsp.seconds = v_; return; }
@@ -785,11 +826,11 @@ struct CardLocationMode {
                     if (note::flash(keys_::rsp_threshold) == k_) { rsp.threshold = v_; return; }
 #endif
                 }
-                void on_float(::note::string_view k_, double v_) {
+                NOTE_SINK_NOINLINE void on_float(::note::string_view k_, double v_) {
                     if (note::flash(keys_::rsp_lat) == k_) { rsp.lat = v_; return; }
                     if (note::flash(keys_::rsp_lon) == k_) { rsp.lon = v_; return; }
                 }
-                void reset() {
+                NOTE_SINK_NOINLINE void reset() {
                     rsp = Response{};
                 }
             };
@@ -850,11 +891,42 @@ struct CardLocationMode {
         private:
             std::unique_ptr<JsonReader> reader_;
         };
+        static constexpr uint8_t field_count = 7;
+        static const ::note::FieldDesc* field_descs_ptr() {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+            static constexpr ::note::FieldDesc table[] = {
+                {"lat", static_cast<uint16_t>(offsetof(Response, lat)), ::note::FieldType::Double},
+                {"lon", static_cast<uint16_t>(offsetof(Response, lon)), ::note::FieldType::Double},
+                {"max", static_cast<uint16_t>(offsetof(Response, max)), ::note::FieldType::Int32},
+                {"minutes", static_cast<uint16_t>(offsetof(Response, minutes)), ::note::FieldType::Int32},
+                {"mode", static_cast<uint16_t>(offsetof(Response, mode)), ::note::FieldType::String},
+                {"seconds", static_cast<uint16_t>(offsetof(Response, seconds)), ::note::FieldType::Int32},
+                {"vseconds", static_cast<uint16_t>(offsetof(Response, vseconds)), ::note::FieldType::String},
+            };
+#pragma GCC diagnostic pop
+            return table;
+        }
 
+#if NOTE_SINGLETON
+        /// Singleton: type-erased execute — one static fn ptr per type, set by Api.
+        static inline ApiResult<Response>(*execute_fn_)(void*, const CardLocationMode::Set&);
+        static inline Result<void>(*send_fn_)(void*, BuildFn, void*);
+#else
         ApiResult<Response>(*execute_fn_)(void*, const CardLocationMode::Set&) = nullptr;
+        Result<void>(*send_fn_)(void*, BuildFn, void*) = nullptr;
+#endif
         auto execute() const { return execute_fn_(nc_, *this); }
-        Result<void>(*command_fn_)(void*, const CardLocationMode::Set&) = nullptr;
-        Result<void> command() const { return command_fn_(nc_, *this); }
+        Result<void> command() const {
+            auto build_ = [&](JsonBuilder& b_) {
+                b_.add("cmd", notecard_request);
+                this->build(b_);
+            };
+            BuildFn fn_ = [](JsonBuilder& b_, void* p_) {
+                (*static_cast<decltype(build_)*>(p_))(b_);
+            };
+            return send_fn_(nc_, fn_, &build_);
+        }
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
@@ -949,7 +1021,11 @@ struct CardLocationMode {
         static constexpr Safety safety = Safety::Idempotent;
         static constexpr Skus skus{};
 
+#if NOTE_SINGLETON
+        static inline void* nc_;
+#else
         void* nc_ = nullptr;
+#endif
 
 
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
@@ -1066,22 +1142,22 @@ struct CardLocationMode {
                 Response& rsp;
                 ::note::StringPool& pool_;
                 Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
-                void on_string(::note::string_view k_, ::note::string_view v_) {
+                NOTE_SINK_NOINLINE void on_string(::note::string_view k_, ::note::string_view v_) {
                     v_ = pool_.intern(v_);
                     if (note::flash(keys_::rsp_mode) == k_) { rsp.mode = v_; return; }
                     if (note::flash(keys_::rsp_vseconds) == k_) { rsp.vseconds = v_; return; }
                 }
-                void on_number(::note::string_view k_, ::note::string_view raw_) {
+                NOTE_SINK_NOINLINE void on_number(::note::string_view k_, ::note::string_view raw_) {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
                     if (note::flash(keys_::rsp_threshold) == k_) { rsp.threshold = ::note::parse_int(raw_); return; }
 #endif
                 }
-                void on_int(::note::string_view k_, int32_t v_) {
+                NOTE_SINK_NOINLINE void on_int(::note::string_view k_, int32_t v_) {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
                     if (note::flash(keys_::rsp_threshold) == k_) { rsp.threshold = v_; return; }
 #endif
                 }
-                void reset() {
+                NOTE_SINK_NOINLINE void reset() {
                     rsp = Response{};
                 }
             };
@@ -1122,11 +1198,37 @@ struct CardLocationMode {
         private:
             std::unique_ptr<JsonReader> reader_;
         };
+        static constexpr uint8_t field_count = 2;
+        static const ::note::FieldDesc* field_descs_ptr() {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+            static constexpr ::note::FieldDesc table[] = {
+                {"mode", static_cast<uint16_t>(offsetof(Response, mode)), ::note::FieldType::String},
+                {"vseconds", static_cast<uint16_t>(offsetof(Response, vseconds)), ::note::FieldType::String},
+            };
+#pragma GCC diagnostic pop
+            return table;
+        }
 
+#if NOTE_SINGLETON
+        /// Singleton: type-erased execute — one static fn ptr per type, set by Api.
+        static inline ApiResult<Response>(*execute_fn_)(void*, const CardLocationMode::Continuous&);
+        static inline Result<void>(*send_fn_)(void*, BuildFn, void*);
+#else
         ApiResult<Response>(*execute_fn_)(void*, const CardLocationMode::Continuous&) = nullptr;
+        Result<void>(*send_fn_)(void*, BuildFn, void*) = nullptr;
+#endif
         auto execute() const { return execute_fn_(nc_, *this); }
-        Result<void>(*command_fn_)(void*, const CardLocationMode::Continuous&) = nullptr;
-        Result<void> command() const { return command_fn_(nc_, *this); }
+        Result<void> command() const {
+            auto build_ = [&](JsonBuilder& b_) {
+                b_.add("cmd", notecard_request);
+                this->build(b_);
+            };
+            BuildFn fn_ = [](JsonBuilder& b_, void* p_) {
+                (*static_cast<decltype(build_)*>(p_))(b_);
+            };
+            return send_fn_(nc_, fn_, &build_);
+        }
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
@@ -1197,7 +1299,11 @@ struct CardLocationMode {
         static constexpr Safety safety = Safety::Idempotent;
         static constexpr Skus skus{};
 
+#if NOTE_SINGLETON
+        static inline void* nc_;
+#else
         void* nc_ = nullptr;
+#endif
 
 
         /// When in periodic or continuous mode, providing this value enables
@@ -1384,12 +1490,12 @@ struct CardLocationMode {
                 Response& rsp;
                 ::note::StringPool& pool_;
                 Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
-                void on_string(::note::string_view k_, ::note::string_view v_) {
+                NOTE_SINK_NOINLINE void on_string(::note::string_view k_, ::note::string_view v_) {
                     v_ = pool_.intern(v_);
                     if (note::flash(keys_::rsp_mode) == k_) { rsp.mode = v_; return; }
                     if (note::flash(keys_::rsp_vseconds) == k_) { rsp.vseconds = v_; return; }
                 }
-                void on_number(::note::string_view k_, ::note::string_view raw_) {
+                NOTE_SINK_NOINLINE void on_number(::note::string_view k_, ::note::string_view raw_) {
                     if (note::flash(keys_::rsp_max) == k_) { rsp.max = ::note::parse_int(raw_); return; }
                     if (note::flash(keys_::rsp_minutes) == k_) { rsp.minutes = ::note::parse_int(raw_); return; }
                     if (note::flash(keys_::rsp_seconds) == k_) { rsp.seconds = ::note::parse_int(raw_); return; }
@@ -1399,7 +1505,7 @@ struct CardLocationMode {
                     if (note::flash(keys_::rsp_lat) == k_) { rsp.lat = ::note::parse_double(raw_); return; }
                     if (note::flash(keys_::rsp_lon) == k_) { rsp.lon = ::note::parse_double(raw_); return; }
                 }
-                void on_int(::note::string_view k_, int32_t v_) {
+                NOTE_SINK_NOINLINE void on_int(::note::string_view k_, int32_t v_) {
                     if (note::flash(keys_::rsp_max) == k_) { rsp.max = v_; return; }
                     if (note::flash(keys_::rsp_minutes) == k_) { rsp.minutes = v_; return; }
                     if (note::flash(keys_::rsp_seconds) == k_) { rsp.seconds = v_; return; }
@@ -1407,11 +1513,11 @@ struct CardLocationMode {
                     if (note::flash(keys_::rsp_threshold) == k_) { rsp.threshold = v_; return; }
 #endif
                 }
-                void on_float(::note::string_view k_, double v_) {
+                NOTE_SINK_NOINLINE void on_float(::note::string_view k_, double v_) {
                     if (note::flash(keys_::rsp_lat) == k_) { rsp.lat = v_; return; }
                     if (note::flash(keys_::rsp_lon) == k_) { rsp.lon = v_; return; }
                 }
-                void reset() {
+                NOTE_SINK_NOINLINE void reset() {
                     rsp = Response{};
                 }
             };
@@ -1472,11 +1578,42 @@ struct CardLocationMode {
         private:
             std::unique_ptr<JsonReader> reader_;
         };
+        static constexpr uint8_t field_count = 7;
+        static const ::note::FieldDesc* field_descs_ptr() {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+            static constexpr ::note::FieldDesc table[] = {
+                {"lat", static_cast<uint16_t>(offsetof(Response, lat)), ::note::FieldType::Double},
+                {"lon", static_cast<uint16_t>(offsetof(Response, lon)), ::note::FieldType::Double},
+                {"max", static_cast<uint16_t>(offsetof(Response, max)), ::note::FieldType::Int32},
+                {"minutes", static_cast<uint16_t>(offsetof(Response, minutes)), ::note::FieldType::Int32},
+                {"mode", static_cast<uint16_t>(offsetof(Response, mode)), ::note::FieldType::String},
+                {"seconds", static_cast<uint16_t>(offsetof(Response, seconds)), ::note::FieldType::Int32},
+                {"vseconds", static_cast<uint16_t>(offsetof(Response, vseconds)), ::note::FieldType::String},
+            };
+#pragma GCC diagnostic pop
+            return table;
+        }
 
+#if NOTE_SINGLETON
+        /// Singleton: type-erased execute — one static fn ptr per type, set by Api.
+        static inline ApiResult<Response>(*execute_fn_)(void*, const CardLocationMode::Periodic&);
+        static inline Result<void>(*send_fn_)(void*, BuildFn, void*);
+#else
         ApiResult<Response>(*execute_fn_)(void*, const CardLocationMode::Periodic&) = nullptr;
+        Result<void>(*send_fn_)(void*, BuildFn, void*) = nullptr;
+#endif
         auto execute() const { return execute_fn_(nc_, *this); }
-        Result<void>(*command_fn_)(void*, const CardLocationMode::Periodic&) = nullptr;
-        Result<void> command() const { return command_fn_(nc_, *this); }
+        Result<void> command() const {
+            auto build_ = [&](JsonBuilder& b_) {
+                b_.add("cmd", notecard_request);
+                this->build(b_);
+            };
+            BuildFn fn_ = [](JsonBuilder& b_, void* p_) {
+                (*static_cast<decltype(build_)*>(p_))(b_);
+            };
+            return send_fn_(nc_, fn_, &build_);
+        }
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
@@ -1562,7 +1699,11 @@ struct CardLocationMode {
         static constexpr Safety safety = Safety::Idempotent;
         static constexpr Skus skus{};
 
+#if NOTE_SINGLETON
+        static inline void* nc_;
+#else
         void* nc_ = nullptr;
+#endif
 
 
         /// When in periodic or continuous mode, providing this value enables
@@ -1655,19 +1796,19 @@ struct CardLocationMode {
                 Response& rsp;
                 ::note::StringPool& pool_;
                 Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
-                void on_string(::note::string_view k_, ::note::string_view v_) {
+                NOTE_SINK_NOINLINE void on_string(::note::string_view k_, ::note::string_view v_) {
                     v_ = pool_.intern(v_);
                     if (note::flash(keys_::rsp_mode) == k_) { rsp.mode = v_; return; }
                 }
-                void on_number(::note::string_view k_, ::note::string_view raw_) {
+                NOTE_SINK_NOINLINE void on_number(::note::string_view k_, ::note::string_view raw_) {
                     if (note::flash(keys_::rsp_lat) == k_) { rsp.lat = ::note::parse_double(raw_); return; }
                     if (note::flash(keys_::rsp_lon) == k_) { rsp.lon = ::note::parse_double(raw_); return; }
                 }
-                void on_float(::note::string_view k_, double v_) {
+                NOTE_SINK_NOINLINE void on_float(::note::string_view k_, double v_) {
                     if (note::flash(keys_::rsp_lat) == k_) { rsp.lat = v_; return; }
                     if (note::flash(keys_::rsp_lon) == k_) { rsp.lon = v_; return; }
                 }
-                void reset() {
+                NOTE_SINK_NOINLINE void reset() {
                     rsp = Response{};
                 }
             };
@@ -1701,11 +1842,38 @@ struct CardLocationMode {
         private:
             std::unique_ptr<JsonReader> reader_;
         };
+        static constexpr uint8_t field_count = 3;
+        static const ::note::FieldDesc* field_descs_ptr() {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+            static constexpr ::note::FieldDesc table[] = {
+                {"lat", static_cast<uint16_t>(offsetof(Response, lat)), ::note::FieldType::Double},
+                {"lon", static_cast<uint16_t>(offsetof(Response, lon)), ::note::FieldType::Double},
+                {"mode", static_cast<uint16_t>(offsetof(Response, mode)), ::note::FieldType::String},
+            };
+#pragma GCC diagnostic pop
+            return table;
+        }
 
+#if NOTE_SINGLETON
+        /// Singleton: type-erased execute — one static fn ptr per type, set by Api.
+        static inline ApiResult<Response>(*execute_fn_)(void*, const CardLocationMode::Fixed&);
+        static inline Result<void>(*send_fn_)(void*, BuildFn, void*);
+#else
         ApiResult<Response>(*execute_fn_)(void*, const CardLocationMode::Fixed&) = nullptr;
+        Result<void>(*send_fn_)(void*, BuildFn, void*) = nullptr;
+#endif
         auto execute() const { return execute_fn_(nc_, *this); }
-        Result<void>(*command_fn_)(void*, const CardLocationMode::Fixed&) = nullptr;
-        Result<void> command() const { return command_fn_(nc_, *this); }
+        Result<void> command() const {
+            auto build_ = [&](JsonBuilder& b_) {
+                b_.add("cmd", notecard_request);
+                this->build(b_);
+            };
+            BuildFn fn_ = [](JsonBuilder& b_, void* p_) {
+                (*static_cast<decltype(build_)*>(p_))(b_);
+            };
+            return send_fn_(nc_, fn_, &build_);
+        }
 
         void build(JsonBuilder& b) const {
             note::add_flash(b, note::flash(keys_::mode), "fixed");
@@ -1771,7 +1939,11 @@ struct CardLocationMode {
         static constexpr Safety safety = Safety::Destructive;
         static constexpr Skus skus{};
 
+#if NOTE_SINGLETON
+        static inline void* nc_;
+#else
         void* nc_ = nullptr;
+#endif
 
 
         /// When in periodic or continuous mode, providing this value enables
@@ -2013,12 +2185,12 @@ struct CardLocationMode {
                 Response& rsp;
                 ::note::StringPool& pool_;
                 Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
-                void on_string(::note::string_view k_, ::note::string_view v_) {
+                NOTE_SINK_NOINLINE void on_string(::note::string_view k_, ::note::string_view v_) {
                     v_ = pool_.intern(v_);
                     if (note::flash(keys_::rsp_mode) == k_) { rsp.mode = v_; return; }
                     if (note::flash(keys_::rsp_vseconds) == k_) { rsp.vseconds = v_; return; }
                 }
-                void on_number(::note::string_view k_, ::note::string_view raw_) {
+                NOTE_SINK_NOINLINE void on_number(::note::string_view k_, ::note::string_view raw_) {
                     if (note::flash(keys_::rsp_max) == k_) { rsp.max = ::note::parse_int(raw_); return; }
                     if (note::flash(keys_::rsp_minutes) == k_) { rsp.minutes = ::note::parse_int(raw_); return; }
                     if (note::flash(keys_::rsp_seconds) == k_) { rsp.seconds = ::note::parse_int(raw_); return; }
@@ -2028,7 +2200,7 @@ struct CardLocationMode {
                     if (note::flash(keys_::rsp_lat) == k_) { rsp.lat = ::note::parse_double(raw_); return; }
                     if (note::flash(keys_::rsp_lon) == k_) { rsp.lon = ::note::parse_double(raw_); return; }
                 }
-                void on_int(::note::string_view k_, int32_t v_) {
+                NOTE_SINK_NOINLINE void on_int(::note::string_view k_, int32_t v_) {
                     if (note::flash(keys_::rsp_max) == k_) { rsp.max = v_; return; }
                     if (note::flash(keys_::rsp_minutes) == k_) { rsp.minutes = v_; return; }
                     if (note::flash(keys_::rsp_seconds) == k_) { rsp.seconds = v_; return; }
@@ -2036,11 +2208,11 @@ struct CardLocationMode {
                     if (note::flash(keys_::rsp_threshold) == k_) { rsp.threshold = v_; return; }
 #endif
                 }
-                void on_float(::note::string_view k_, double v_) {
+                NOTE_SINK_NOINLINE void on_float(::note::string_view k_, double v_) {
                     if (note::flash(keys_::rsp_lat) == k_) { rsp.lat = v_; return; }
                     if (note::flash(keys_::rsp_lon) == k_) { rsp.lon = v_; return; }
                 }
-                void reset() {
+                NOTE_SINK_NOINLINE void reset() {
                     rsp = Response{};
                 }
             };
@@ -2101,11 +2273,42 @@ struct CardLocationMode {
         private:
             std::unique_ptr<JsonReader> reader_;
         };
+        static constexpr uint8_t field_count = 7;
+        static const ::note::FieldDesc* field_descs_ptr() {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+            static constexpr ::note::FieldDesc table[] = {
+                {"lat", static_cast<uint16_t>(offsetof(Response, lat)), ::note::FieldType::Double},
+                {"lon", static_cast<uint16_t>(offsetof(Response, lon)), ::note::FieldType::Double},
+                {"max", static_cast<uint16_t>(offsetof(Response, max)), ::note::FieldType::Int32},
+                {"minutes", static_cast<uint16_t>(offsetof(Response, minutes)), ::note::FieldType::Int32},
+                {"mode", static_cast<uint16_t>(offsetof(Response, mode)), ::note::FieldType::String},
+                {"seconds", static_cast<uint16_t>(offsetof(Response, seconds)), ::note::FieldType::Int32},
+                {"vseconds", static_cast<uint16_t>(offsetof(Response, vseconds)), ::note::FieldType::String},
+            };
+#pragma GCC diagnostic pop
+            return table;
+        }
 
+#if NOTE_SINGLETON
+        /// Singleton: type-erased execute — one static fn ptr per type, set by Api.
+        static inline ApiResult<Response>(*execute_fn_)(void*, const CardLocationMode::Remove&);
+        static inline Result<void>(*send_fn_)(void*, BuildFn, void*);
+#else
         ApiResult<Response>(*execute_fn_)(void*, const CardLocationMode::Remove&) = nullptr;
+        Result<void>(*send_fn_)(void*, BuildFn, void*) = nullptr;
+#endif
         auto execute() const { return execute_fn_(nc_, *this); }
-        Result<void>(*command_fn_)(void*, const CardLocationMode::Remove&) = nullptr;
-        Result<void> command() const { return command_fn_(nc_, *this); }
+        Result<void> command() const {
+            auto build_ = [&](JsonBuilder& b_) {
+                b_.add("cmd", notecard_request);
+                this->build(b_);
+            };
+            BuildFn fn_ = [](JsonBuilder& b_, void* p_) {
+                (*static_cast<decltype(build_)*>(p_))(b_);
+            };
+            return send_fn_(nc_, fn_, &build_);
+        }
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
@@ -2231,6 +2434,7 @@ inline CardLocationMode::Get& CardLocationMode::Get::vseconds_t::operator()(note
 }
 #pragma GCC diagnostic pop
 
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
@@ -2283,6 +2487,7 @@ inline CardLocationMode::Set& CardLocationMode::Set::vseconds_t::operator()(note
 }
 #pragma GCC diagnostic pop
 
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
@@ -2299,6 +2504,7 @@ inline CardLocationMode::Continuous& CardLocationMode::Continuous::vseconds_t::o
         reinterpret_cast<char*>(this) - offsetof(CardLocationMode::Continuous, vseconds));
 }
 #pragma GCC diagnostic pop
+
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
@@ -2342,6 +2548,7 @@ inline CardLocationMode::Periodic& CardLocationMode::Periodic::vseconds_t::opera
 }
 #pragma GCC diagnostic pop
 
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
 inline CardLocationMode::Fixed& CardLocationMode::Fixed::lat_t::operator()(double v) {
@@ -2355,6 +2562,7 @@ inline CardLocationMode::Fixed& CardLocationMode::Fixed::lon_t::operator()(doubl
         reinterpret_cast<char*>(this) - offsetof(CardLocationMode::Fixed, lon));
 }
 #pragma GCC diagnostic pop
+
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
@@ -2402,6 +2610,7 @@ inline CardLocationMode::Remove& CardLocationMode::Remove::vseconds_t::operator(
         reinterpret_cast<char*>(this) - offsetof(CardLocationMode::Remove, vseconds));
 }
 #pragma GCC diagnostic pop
+
 
 
 } // namespace note::api

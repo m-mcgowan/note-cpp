@@ -8,6 +8,7 @@
 #if NOTE_EXTRAS
 #include <note/dyn_field.hpp>
 #endif
+#include <note/generic_sink.hpp>
 #include <note/notecard.hpp>
 #include <note/arena.hpp>
 #include <note/field.hpp>
@@ -22,6 +23,7 @@
 #include <note/target.hpp>
 
 namespace note::api {
+
 
 
 
@@ -63,7 +65,11 @@ struct CardTemp {
         static constexpr Safety safety = Safety::ReadOnly;
         static constexpr Skus skus{};
 
+#if NOTE_SINGLETON
+        static inline void* nc_;
+#else
         void* nc_ = nullptr;
+#endif
 
 
         /// If specified, creates a templated `temp.qo` file that gathers
@@ -196,10 +202,10 @@ struct CardTemp {
                 Response& rsp;
                 ::note::StringPool& pool_;
                 Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
-                void on_bool(::note::string_view k_, bool v_) {
+                NOTE_SINK_NOINLINE void on_bool(::note::string_view k_, bool v_) {
                     if (note::flash(keys_::rsp_usb) == k_) { rsp.usb = v_; return; }
                 }
-                void on_number(::note::string_view k_, ::note::string_view raw_) {
+                NOTE_SINK_NOINLINE void on_number(::note::string_view k_, ::note::string_view raw_) {
                     if (note::flash(keys_::rsp_calibration) == k_) { rsp.calibration = ::note::parse_double(raw_); return; }
                     if (note::flash(keys_::rsp_humidity) == k_) { rsp.humidity = ::note::parse_double(raw_); return; }
                     if (note::flash(keys_::rsp_pressure) == k_) { rsp.pressure = ::note::parse_double(raw_); return; }
@@ -207,7 +213,7 @@ struct CardTemp {
                     if (note::flash(keys_::rsp_value) == k_) { rsp.value = ::note::parse_double(raw_); return; }
                     if (note::flash(keys_::rsp_voltage) == k_) { rsp.voltage = ::note::parse_double(raw_); return; }
                 }
-                void on_float(::note::string_view k_, double v_) {
+                NOTE_SINK_NOINLINE void on_float(::note::string_view k_, double v_) {
                     if (note::flash(keys_::rsp_calibration) == k_) { rsp.calibration = v_; return; }
                     if (note::flash(keys_::rsp_humidity) == k_) { rsp.humidity = v_; return; }
                     if (note::flash(keys_::rsp_pressure) == k_) { rsp.pressure = v_; return; }
@@ -215,7 +221,7 @@ struct CardTemp {
                     if (note::flash(keys_::rsp_value) == k_) { rsp.value = v_; return; }
                     if (note::flash(keys_::rsp_voltage) == k_) { rsp.voltage = v_; return; }
                 }
-                void reset() {
+                NOTE_SINK_NOINLINE void reset() {
                     rsp = Response{};
                 }
             };
@@ -263,11 +269,42 @@ struct CardTemp {
         private:
             std::unique_ptr<JsonReader> reader_;
         };
+        static constexpr uint8_t field_count = 7;
+        static const ::note::FieldDesc* field_descs_ptr() {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+            static constexpr ::note::FieldDesc table[] = {
+                {"calibration", static_cast<uint16_t>(offsetof(Response, calibration)), ::note::FieldType::Double},
+                {"humidity", static_cast<uint16_t>(offsetof(Response, humidity)), ::note::FieldType::Double},
+                {"pressure", static_cast<uint16_t>(offsetof(Response, pressure)), ::note::FieldType::Double},
+                {"temperature", static_cast<uint16_t>(offsetof(Response, temperature)), ::note::FieldType::Double},
+                {"usb", static_cast<uint16_t>(offsetof(Response, usb)), ::note::FieldType::Bool},
+                {"value", static_cast<uint16_t>(offsetof(Response, value)), ::note::FieldType::Double},
+                {"voltage", static_cast<uint16_t>(offsetof(Response, voltage)), ::note::FieldType::Double},
+            };
+#pragma GCC diagnostic pop
+            return table;
+        }
 
+#if NOTE_SINGLETON
+        /// Singleton: type-erased execute — one static fn ptr per type, set by Api.
+        static inline ApiResult<Response>(*execute_fn_)(void*, const CardTemp::Read&);
+        static inline Result<void>(*send_fn_)(void*, BuildFn, void*);
+#else
         ApiResult<Response>(*execute_fn_)(void*, const CardTemp::Read&) = nullptr;
+        Result<void>(*send_fn_)(void*, BuildFn, void*) = nullptr;
+#endif
         auto execute() const { return execute_fn_(nc_, *this); }
-        Result<void>(*command_fn_)(void*, const CardTemp::Read&) = nullptr;
-        Result<void> command() const { return command_fn_(nc_, *this); }
+        Result<void> command() const {
+            auto build_ = [&](JsonBuilder& b_) {
+                b_.add("cmd", notecard_request);
+                this->build(b_);
+            };
+            BuildFn fn_ = [](JsonBuilder& b_, void* p_) {
+                (*static_cast<decltype(build_)*>(p_))(b_);
+            };
+            return send_fn_(nc_, fn_, &build_);
+        }
 
         void build(JsonBuilder& b) const {
             if (minutes) note::add_flash(b, note::flash(keys_::minutes), *minutes);
@@ -343,7 +380,11 @@ struct CardTemp {
         static constexpr Safety safety = Safety::Idempotent;
         static constexpr Skus skus{};
 
+#if NOTE_SINGLETON
+        static inline void* nc_;
+#else
         void* nc_ = nullptr;
+#endif
 
 
         /// If specified, creates a templated `temp.qo` file that gathers
@@ -476,10 +517,10 @@ struct CardTemp {
                 Response& rsp;
                 ::note::StringPool& pool_;
                 Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
-                void on_bool(::note::string_view k_, bool v_) {
+                NOTE_SINK_NOINLINE void on_bool(::note::string_view k_, bool v_) {
                     if (note::flash(keys_::rsp_usb) == k_) { rsp.usb = v_; return; }
                 }
-                void on_number(::note::string_view k_, ::note::string_view raw_) {
+                NOTE_SINK_NOINLINE void on_number(::note::string_view k_, ::note::string_view raw_) {
                     if (note::flash(keys_::rsp_calibration) == k_) { rsp.calibration = ::note::parse_double(raw_); return; }
                     if (note::flash(keys_::rsp_humidity) == k_) { rsp.humidity = ::note::parse_double(raw_); return; }
                     if (note::flash(keys_::rsp_pressure) == k_) { rsp.pressure = ::note::parse_double(raw_); return; }
@@ -487,7 +528,7 @@ struct CardTemp {
                     if (note::flash(keys_::rsp_value) == k_) { rsp.value = ::note::parse_double(raw_); return; }
                     if (note::flash(keys_::rsp_voltage) == k_) { rsp.voltage = ::note::parse_double(raw_); return; }
                 }
-                void on_float(::note::string_view k_, double v_) {
+                NOTE_SINK_NOINLINE void on_float(::note::string_view k_, double v_) {
                     if (note::flash(keys_::rsp_calibration) == k_) { rsp.calibration = v_; return; }
                     if (note::flash(keys_::rsp_humidity) == k_) { rsp.humidity = v_; return; }
                     if (note::flash(keys_::rsp_pressure) == k_) { rsp.pressure = v_; return; }
@@ -495,7 +536,7 @@ struct CardTemp {
                     if (note::flash(keys_::rsp_value) == k_) { rsp.value = v_; return; }
                     if (note::flash(keys_::rsp_voltage) == k_) { rsp.voltage = v_; return; }
                 }
-                void reset() {
+                NOTE_SINK_NOINLINE void reset() {
                     rsp = Response{};
                 }
             };
@@ -543,11 +584,42 @@ struct CardTemp {
         private:
             std::unique_ptr<JsonReader> reader_;
         };
+        static constexpr uint8_t field_count = 7;
+        static const ::note::FieldDesc* field_descs_ptr() {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+            static constexpr ::note::FieldDesc table[] = {
+                {"calibration", static_cast<uint16_t>(offsetof(Response, calibration)), ::note::FieldType::Double},
+                {"humidity", static_cast<uint16_t>(offsetof(Response, humidity)), ::note::FieldType::Double},
+                {"pressure", static_cast<uint16_t>(offsetof(Response, pressure)), ::note::FieldType::Double},
+                {"temperature", static_cast<uint16_t>(offsetof(Response, temperature)), ::note::FieldType::Double},
+                {"usb", static_cast<uint16_t>(offsetof(Response, usb)), ::note::FieldType::Bool},
+                {"value", static_cast<uint16_t>(offsetof(Response, value)), ::note::FieldType::Double},
+                {"voltage", static_cast<uint16_t>(offsetof(Response, voltage)), ::note::FieldType::Double},
+            };
+#pragma GCC diagnostic pop
+            return table;
+        }
 
+#if NOTE_SINGLETON
+        /// Singleton: type-erased execute — one static fn ptr per type, set by Api.
+        static inline ApiResult<Response>(*execute_fn_)(void*, const CardTemp::Configure&);
+        static inline Result<void>(*send_fn_)(void*, BuildFn, void*);
+#else
         ApiResult<Response>(*execute_fn_)(void*, const CardTemp::Configure&) = nullptr;
+        Result<void>(*send_fn_)(void*, BuildFn, void*) = nullptr;
+#endif
         auto execute() const { return execute_fn_(nc_, *this); }
-        Result<void>(*command_fn_)(void*, const CardTemp::Configure&) = nullptr;
-        Result<void> command() const { return command_fn_(nc_, *this); }
+        Result<void> command() const {
+            auto build_ = [&](JsonBuilder& b_) {
+                b_.add("cmd", notecard_request);
+                this->build(b_);
+            };
+            BuildFn fn_ = [](JsonBuilder& b_, void* p_) {
+                (*static_cast<decltype(build_)*>(p_))(b_);
+            };
+            return send_fn_(nc_, fn_, &build_);
+        }
 
         void build(JsonBuilder& b) const {
             if (minutes) note::add_flash(b, note::flash(keys_::minutes), *minutes);
@@ -623,7 +695,11 @@ struct CardTemp {
         static constexpr Safety safety = Safety::Destructive;
         static constexpr Skus skus{};
 
+#if NOTE_SINGLETON
+        static inline void* nc_;
+#else
         void* nc_ = nullptr;
+#endif
 
 
         /// If specified, creates a templated `temp.qo` file that gathers
@@ -743,10 +819,10 @@ struct CardTemp {
                 Response& rsp;
                 ::note::StringPool& pool_;
                 Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
-                void on_bool(::note::string_view k_, bool v_) {
+                NOTE_SINK_NOINLINE void on_bool(::note::string_view k_, bool v_) {
                     if (note::flash(keys_::rsp_usb) == k_) { rsp.usb = v_; return; }
                 }
-                void on_number(::note::string_view k_, ::note::string_view raw_) {
+                NOTE_SINK_NOINLINE void on_number(::note::string_view k_, ::note::string_view raw_) {
                     if (note::flash(keys_::rsp_calibration) == k_) { rsp.calibration = ::note::parse_double(raw_); return; }
                     if (note::flash(keys_::rsp_humidity) == k_) { rsp.humidity = ::note::parse_double(raw_); return; }
                     if (note::flash(keys_::rsp_pressure) == k_) { rsp.pressure = ::note::parse_double(raw_); return; }
@@ -754,7 +830,7 @@ struct CardTemp {
                     if (note::flash(keys_::rsp_value) == k_) { rsp.value = ::note::parse_double(raw_); return; }
                     if (note::flash(keys_::rsp_voltage) == k_) { rsp.voltage = ::note::parse_double(raw_); return; }
                 }
-                void on_float(::note::string_view k_, double v_) {
+                NOTE_SINK_NOINLINE void on_float(::note::string_view k_, double v_) {
                     if (note::flash(keys_::rsp_calibration) == k_) { rsp.calibration = v_; return; }
                     if (note::flash(keys_::rsp_humidity) == k_) { rsp.humidity = v_; return; }
                     if (note::flash(keys_::rsp_pressure) == k_) { rsp.pressure = v_; return; }
@@ -762,7 +838,7 @@ struct CardTemp {
                     if (note::flash(keys_::rsp_value) == k_) { rsp.value = v_; return; }
                     if (note::flash(keys_::rsp_voltage) == k_) { rsp.voltage = v_; return; }
                 }
-                void reset() {
+                NOTE_SINK_NOINLINE void reset() {
                     rsp = Response{};
                 }
             };
@@ -810,11 +886,42 @@ struct CardTemp {
         private:
             std::unique_ptr<JsonReader> reader_;
         };
+        static constexpr uint8_t field_count = 7;
+        static const ::note::FieldDesc* field_descs_ptr() {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+            static constexpr ::note::FieldDesc table[] = {
+                {"calibration", static_cast<uint16_t>(offsetof(Response, calibration)), ::note::FieldType::Double},
+                {"humidity", static_cast<uint16_t>(offsetof(Response, humidity)), ::note::FieldType::Double},
+                {"pressure", static_cast<uint16_t>(offsetof(Response, pressure)), ::note::FieldType::Double},
+                {"temperature", static_cast<uint16_t>(offsetof(Response, temperature)), ::note::FieldType::Double},
+                {"usb", static_cast<uint16_t>(offsetof(Response, usb)), ::note::FieldType::Bool},
+                {"value", static_cast<uint16_t>(offsetof(Response, value)), ::note::FieldType::Double},
+                {"voltage", static_cast<uint16_t>(offsetof(Response, voltage)), ::note::FieldType::Double},
+            };
+#pragma GCC diagnostic pop
+            return table;
+        }
 
+#if NOTE_SINGLETON
+        /// Singleton: type-erased execute — one static fn ptr per type, set by Api.
+        static inline ApiResult<Response>(*execute_fn_)(void*, const CardTemp::Stop&);
+        static inline Result<void>(*send_fn_)(void*, BuildFn, void*);
+#else
         ApiResult<Response>(*execute_fn_)(void*, const CardTemp::Stop&) = nullptr;
+        Result<void>(*send_fn_)(void*, BuildFn, void*) = nullptr;
+#endif
         auto execute() const { return execute_fn_(nc_, *this); }
-        Result<void>(*command_fn_)(void*, const CardTemp::Stop&) = nullptr;
-        Result<void> command() const { return command_fn_(nc_, *this); }
+        Result<void> command() const {
+            auto build_ = [&](JsonBuilder& b_) {
+                b_.add("cmd", notecard_request);
+                this->build(b_);
+            };
+            BuildFn fn_ = [](JsonBuilder& b_, void* p_) {
+                (*static_cast<decltype(build_)*>(p_))(b_);
+            };
+            return send_fn_(nc_, fn_, &build_);
+        }
 
         void build(JsonBuilder& b) const {
             if (minutes) note::add_flash(b, note::flash(keys_::minutes), *minutes);
@@ -880,6 +987,7 @@ inline CardTemp::Read& CardTemp::Read::sync_t::operator()(bool v) {
 }
 #pragma GCC diagnostic pop
 
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
 inline CardTemp::Configure& CardTemp::Configure::minutes_t::operator()(int32_t v) {
@@ -904,6 +1012,7 @@ inline CardTemp::Configure& CardTemp::Configure::sync_t::operator()(bool v) {
 }
 #pragma GCC diagnostic pop
 
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
 inline CardTemp::Stop& CardTemp::Stop::minutes_t::operator()(int32_t v) {
@@ -922,6 +1031,7 @@ inline CardTemp::Stop& CardTemp::Stop::sync_t::operator()(bool v) {
         reinterpret_cast<char*>(this) - offsetof(CardTemp::Stop, sync));
 }
 #pragma GCC diagnostic pop
+
 
 
 } // namespace note::api

@@ -829,3 +829,161 @@ TEST_CASE("Equivalence: deeply nested") {
 TEST_CASE("Equivalence: array of mixed types") {
     check_equivalence(R"({"a":[1,"two",true,null,3.14]})");
 }
+
+// ── CompactNumber unit tests ────────────────────────────────────────────────
+
+TEST_CASE("CompactNumber: positive integer") {
+    CompactNumber n;
+    n.add_digit(1); n.add_digit(2); n.add_digit(3);
+    REQUIRE(n.is_integer());
+    REQUIRE(n.to_int32() == 123);
+}
+
+TEST_CASE("CompactNumber: negative integer") {
+    CompactNumber n;
+    n.set_negative();
+    n.add_digit(4); n.add_digit(2);
+    REQUIRE(n.to_int32() == -42);
+}
+
+TEST_CASE("CompactNumber: zero") {
+    CompactNumber n;
+    n.add_digit(0);
+    REQUIRE(n.to_int32() == 0);
+}
+
+TEST_CASE("CompactNumber: simple float") {
+    CompactNumber n;
+    n.add_digit(3);
+    n.start_fraction();
+    n.add_frac_digit(1); n.add_frac_digit(4);
+    REQUIRE_FALSE(n.is_integer());
+    REQUIRE(n.to_float() == Approx(3.14).epsilon(0.01));
+}
+
+TEST_CASE("CompactNumber: negative float") {
+    CompactNumber n;
+    n.set_negative();
+    n.add_digit(2);
+    n.start_fraction();
+    n.add_frac_digit(5);
+    REQUIRE(n.to_float() == Approx(-2.5).epsilon(0.01));
+}
+
+TEST_CASE("CompactNumber: float with exponent") {
+    CompactNumber n;
+    n.add_digit(1);
+    n.start_fraction();
+    n.add_frac_digit(5);
+    n.start_exponent();
+    n.add_exp_digit(2);
+    REQUIRE(n.to_float() == Approx(150.0).epsilon(1.0));
+}
+
+TEST_CASE("CompactNumber: float with negative exponent") {
+    CompactNumber n;
+    n.add_digit(5);
+    n.start_exponent();
+    n.set_exp_negative();
+    n.add_exp_digit(1);
+    REQUIRE(n.to_float() == Approx(0.5).epsilon(0.01));
+}
+
+TEST_CASE("CompactNumber: reset") {
+    CompactNumber n;
+    n.add_digit(9); n.set_negative();
+    n.reset();
+    n.add_digit(1);
+    REQUIRE(n.to_int32() == 1);
+}
+
+TEST_CASE("CompactNumber: large integer within int32 range") {
+    CompactNumber n;
+    // 2,000,000,000
+    n.add_digit(2);
+    for (int i = 0; i < 9; ++i) n.add_digit(0);
+    REQUIRE(n.to_int32() == 2000000000);
+}
+
+TEST_CASE("CompactNumber: fractional precision 6 digits") {
+    CompactNumber n;
+    n.add_digit(0);
+    n.start_fraction();
+    n.add_frac_digit(1); n.add_frac_digit(2); n.add_frac_digit(3);
+    n.add_frac_digit(4); n.add_frac_digit(5); n.add_frac_digit(6);
+    REQUIRE(n.to_float() == Approx(0.123456).epsilon(0.0001));
+}
+
+// ── CompactNumber through lexer (integration) ──────────────────────────────
+
+using CompactLexer = JsonLexer<BitStack<uint8_t>, CompactNumber, BasicEscapeDecoder>;
+
+static std::vector<LexerEvent> lex_compact(const char* json) {
+    std::vector<LexerEvent> events;
+    CompactLexer lexer;
+    for (const char* p = json; *p; ++p) {
+        lexer.feed(static_cast<uint8_t>(*p), [&](LexerEvent ev) {
+            events.push_back(ev);
+        });
+        if (lexer.has_error()) break;
+    }
+    return events;
+}
+
+TEST_CASE("CompactLexer: integer value") {
+    auto events = lex_compact(R"({"value":42})");
+    bool found_int = false;
+    for (auto& ev : events) {
+        if (ev.tag == LexerEvent::Integer) {
+            REQUIRE(ev.integer == 42);
+            found_int = true;
+        }
+    }
+    REQUIRE(found_int);
+}
+
+TEST_CASE("CompactLexer: negative integer") {
+    auto events = lex_compact(R"({"v":-99})");
+    for (auto& ev : events) {
+        if (ev.tag == LexerEvent::Integer) {
+            REQUIRE(ev.integer == -99);
+            return;
+        }
+    }
+    FAIL("No integer event");
+}
+
+TEST_CASE("CompactLexer: float value") {
+    auto events = lex_compact(R"({"temp":22.5})");
+    for (auto& ev : events) {
+        if (ev.tag == LexerEvent::Float) {
+            REQUIRE(ev.floating == Approx(22.5).epsilon(0.01));
+            return;
+        }
+    }
+    FAIL("No float event");
+}
+
+TEST_CASE("CompactLexer: scientific notation") {
+    auto events = lex_compact(R"({"big":1.5e3})");
+    for (auto& ev : events) {
+        if (ev.tag == LexerEvent::Float) {
+            REQUIRE(ev.floating == Approx(1500.0).epsilon(1.0));
+            return;
+        }
+    }
+    FAIL("No float event");
+}
+
+TEST_CASE("CompactLexer: 8-level nesting with BitStack<uint8_t>") {
+    // BitStack<uint8_t> supports 8 levels — verify we can nest that deep
+    auto events = lex_compact(R"({"a":{"b":{"c":{"d":{"e":{"f":{"g":{"h":1}}}}}}}})");
+    bool found_int = false;
+    for (auto& ev : events) {
+        if (ev.tag == LexerEvent::Integer) {
+            REQUIRE(ev.integer == 1);
+            found_int = true;
+        }
+    }
+    REQUIRE(found_int);
+}

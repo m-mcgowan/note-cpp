@@ -8,6 +8,7 @@
 #if NOTE_EXTRAS
 #include <note/dyn_field.hpp>
 #endif
+#include <note/generic_sink.hpp>
 #include <note/notecard.hpp>
 #include <note/arena.hpp>
 #include <note/field.hpp>
@@ -22,6 +23,7 @@
 #include <note/target.hpp>
 
 namespace note::api {
+
 
 
 
@@ -68,7 +70,11 @@ struct CardLocationTrack {
     static constexpr Safety safety = Safety::Idempotent;
     static constexpr Skus skus = Skus::from(Product::Cell, Product::CellWifi, Product::Skylo, Product::WiFi);
 
+#if NOTE_SINGLETON
+    static inline void* nc_;
+#else
     void* nc_ = nullptr;
+#endif
 
 
     /// The Notefile in which to store tracked location data. See the
@@ -223,24 +229,24 @@ struct CardLocationTrack {
             Response& rsp;
             ::note::StringPool& pool_;
             Sink(Response& r, ::note::StringPool& pool) : rsp(r), pool_(pool) {}
-            void on_string(::note::string_view k_, ::note::string_view v_) {
+            NOTE_SINK_NOINLINE void on_string(::note::string_view k_, ::note::string_view v_) {
                 v_ = pool_.intern(v_);
                 if (note::flash(keys_::rsp_file) == k_) { rsp.file = v_; return; }
             }
-            void on_bool(::note::string_view k_, bool v_) {
+            NOTE_SINK_NOINLINE void on_bool(::note::string_view k_, bool v_) {
                 if (note::flash(keys_::rsp_heartbeat) == k_) { rsp.heartbeat = v_; return; }
                 if (note::flash(keys_::rsp_start) == k_) { rsp.start = v_; return; }
                 if (note::flash(keys_::rsp_stop) == k_) { rsp.stop = v_; return; }
             }
-            void on_number(::note::string_view k_, ::note::string_view raw_) {
+            NOTE_SINK_NOINLINE void on_number(::note::string_view k_, ::note::string_view raw_) {
                 if (note::flash(keys_::rsp_minutes) == k_) { rsp.minutes = ::note::parse_int(raw_); return; }
                 if (note::flash(keys_::rsp_seconds) == k_) { rsp.seconds = ::note::parse_int(raw_); return; }
             }
-            void on_int(::note::string_view k_, int32_t v_) {
+            NOTE_SINK_NOINLINE void on_int(::note::string_view k_, int32_t v_) {
                 if (note::flash(keys_::rsp_minutes) == k_) { rsp.minutes = v_; return; }
                 if (note::flash(keys_::rsp_seconds) == k_) { rsp.seconds = v_; return; }
             }
-            void reset() {
+            NOTE_SINK_NOINLINE void reset() {
                 rsp = Response{};
             }
         };
@@ -286,11 +292,41 @@ struct CardLocationTrack {
     private:
         std::unique_ptr<JsonReader> reader_;
     };
+    static constexpr uint8_t field_count = 6;
+    static const ::note::FieldDesc* field_descs_ptr() {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+        static constexpr ::note::FieldDesc table[] = {
+            {"file", static_cast<uint16_t>(offsetof(Response, file)), ::note::FieldType::String},
+            {"heartbeat", static_cast<uint16_t>(offsetof(Response, heartbeat)), ::note::FieldType::Bool},
+            {"minutes", static_cast<uint16_t>(offsetof(Response, minutes)), ::note::FieldType::Int32},
+            {"seconds", static_cast<uint16_t>(offsetof(Response, seconds)), ::note::FieldType::Int32},
+            {"start", static_cast<uint16_t>(offsetof(Response, start)), ::note::FieldType::Bool},
+            {"stop", static_cast<uint16_t>(offsetof(Response, stop)), ::note::FieldType::Bool},
+        };
+#pragma GCC diagnostic pop
+        return table;
+    }
 
+#if NOTE_SINGLETON
+    /// Singleton: type-erased execute — one static fn ptr per type, set by Api.
+    static inline ApiResult<Response>(*execute_fn_)(void*, const CardLocationTrack&);
+    static inline Result<void>(*send_fn_)(void*, BuildFn, void*);
+#else
     ApiResult<Response>(*execute_fn_)(void*, const CardLocationTrack&) = nullptr;
+    Result<void>(*send_fn_)(void*, BuildFn, void*) = nullptr;
+#endif
     auto execute() const { return execute_fn_(nc_, *this); }
-    Result<void>(*command_fn_)(void*, const CardLocationTrack&) = nullptr;
-    Result<void> command() const { return command_fn_(nc_, *this); }
+    Result<void> command() const {
+        auto build_ = [&](JsonBuilder& b_) {
+            b_.add("cmd", notecard_request);
+            this->build(b_);
+        };
+        BuildFn fn_ = [](JsonBuilder& b_, void* p_) {
+            (*static_cast<decltype(build_)*>(p_))(b_);
+        };
+        return send_fn_(nc_, fn_, &build_);
+    }
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
@@ -397,6 +433,7 @@ inline CardLocationTrack& CardLocationTrack::sync_t::operator()(bool v) {
         reinterpret_cast<char*>(this) - offsetof(CardLocationTrack, sync));
 }
 #pragma GCC diagnostic pop
+
 
 
 } // namespace note::api

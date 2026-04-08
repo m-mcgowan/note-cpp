@@ -43,6 +43,28 @@ namespace detail {
 } // namespace detail
 
 // ---------------------------------------------------------------------------
+// SinkLike — compile-time check that a type satisfies the sink interface.
+// Used by ErrorCaptureSinkT, FilterSink, and StaticNotecard's NullSink.
+// ---------------------------------------------------------------------------
+#if __cplusplus >= 202002L
+template<typename T>
+concept SinkLike = requires(T t, string_view k, string_view v, bool b,
+                            int32_t i, double f) {
+    t.on_null(k);
+    t.on_bool(k, b);
+    t.on_int(k, i);
+    t.on_float(k, f);
+    t.on_number(k, v);
+    t.on_string(k, v);
+    t.on_object_begin(k);
+    t.on_object_end(k);
+    t.on_array_begin(k);
+    t.on_array_end(k);
+    t.reset();
+};
+#endif
+
+// ---------------------------------------------------------------------------
 // JsonSink — callback interface driven by the SAX parser.
 //
 // The parser calls these methods as it encounters JSON values. Object keys
@@ -111,8 +133,30 @@ public:
 // Used by the static (non-virtual) execute path.
 // ---------------------------------------------------------------------------
 
+/// Non-virtual base with all sink methods as no-ops. Use as a starting
+/// point when writing sinks that only handle a subset of events.
+struct NullSink {
+    void on_null(string_view) {}
+    void on_bool(string_view, bool) {}
+    void on_int(string_view, int32_t) {}
+    void on_float(string_view, double) {}
+    void on_number(string_view, string_view) {}
+    void on_string(string_view, string_view) {}
+    void on_object_begin(string_view) {}
+    void on_object_end(string_view) {}
+    void on_array_begin(string_view) {}
+    void on_array_end(string_view) {}
+    void reset() {}
+};
+#if __cplusplus >= 202002L
+static_assert(SinkLike<NullSink>, "NullSink must satisfy SinkLike");
+#endif
+
 /// Filter sink that forwards to a concrete inner sink (no vtable).
 template<typename InnerT>
+#if __cplusplus >= 202002L
+    requires SinkLike<InnerT>
+#endif
 class FilterSink {
 protected:
     InnerT& inner_;

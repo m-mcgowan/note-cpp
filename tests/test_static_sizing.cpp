@@ -7,6 +7,7 @@
 #include <note/api/note_add.hpp>
 #include <note/arena.hpp>
 #include <note/allocator.hpp>
+#include <note/generic_sink.hpp>
 #include <note/string_pool.hpp>
 
 TEST_CASE("RequestSet::max_arena_size is max of component responses") {
@@ -121,32 +122,98 @@ TEST_CASE("Arena allocate returns nullptr on exhaustion") {
     REQUIRE(p2 == nullptr);
 }
 
-// GenericResponseSink uses offsetof which requires standard-layout ResponseField
-// (no Printable vtable). Only valid when NOTE_PRINTABLE=0.
-#if NOTE_PRINTABLE == 0
-TEST_CASE("GenericResponseSink handles arena exhaustion gracefully") {
-    // Use a 1-byte arena — too small for any string interning.
-    char buf[1];
+// GenericResponseSink tests — use a plain struct (no ResponseField) to avoid
+// Printable vtable layout issues. Tests the sink dispatch logic directly.
+namespace {
+struct PlainResponse {
+    bool flag = false;
+    int32_t count = 0;
+    double value = 0.0;
+    note::string_view name;
+};
+
+constexpr note::FieldDesc plain_fields[] = {
+    {"flag", static_cast<uint16_t>(offsetof(PlainResponse, flag)), note::FieldType::Bool},
+    {"count", static_cast<uint16_t>(offsetof(PlainResponse, count)), note::FieldType::Int32},
+    {"value", static_cast<uint16_t>(offsetof(PlainResponse, value)), note::FieldType::Double},
+    {"name", static_cast<uint16_t>(offsetof(PlainResponse, name)), note::FieldType::String},
+};
+constexpr uint8_t plain_field_count = sizeof(plain_fields) / sizeof(plain_fields[0]);
+} // namespace
+
+TEST_CASE("GenericResponseSink dispatches to correct fields") {
+    char buf[128];
     note::MonotonicArena arena(buf);
     note::StringPool pool(note::arena_allocator(arena));
 
-    note::api::NoteAdd::Response rsp{};
-    note::GenericResponseSink gsink{
-        &rsp,
-        note::api::NoteAdd::field_descs_ptr(),
-        note::api::NoteAdd::field_count,
-        &pool
-    };
+    PlainResponse rsp{};
+    note::GenericResponseSink gsink{&rsp, plain_fields, plain_field_count, &pool};
+
+    gsink.on_bool("flag", true);
+    REQUIRE(rsp.flag == true);
+
+    gsink.on_int("count", 42);
+    REQUIRE(rsp.count == 42);
+
+    gsink.on_float("value", 3.14);
+    REQUIRE(rsp.value == Approx(3.14));
+
+    gsink.on_string("name", "hello");
+    REQUIRE(rsp.name == "hello");
+}
+
+TEST_CASE("GenericResponseSink ignores unknown fields") {
+    char buf[64];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    PlainResponse rsp{};
+    note::GenericResponseSink gsink{&rsp, plain_fields, plain_field_count, &pool};
+
+    gsink.on_bool("unknown", true);
+    gsink.on_int("nope", 99);
+    gsink.on_float("missing", 1.5);
+    gsink.on_string("absent", "data");
+
+    // Original fields unchanged
+    REQUIRE(rsp.flag == false);
+    REQUIRE(rsp.count == 0);
+    REQUIRE(rsp.value == 0.0);
+    REQUIRE(rsp.name.empty());
+}
+
+TEST_CASE("GenericResponseSink reset clears all fields") {
+    char buf[64];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    PlainResponse rsp{};
+    note::GenericResponseSink gsink{&rsp, plain_fields, plain_field_count, &pool};
+
+    gsink.on_bool("flag", true);
+    gsink.on_int("count", 99);
+    gsink.reset();
+
+    REQUIRE(rsp.flag == false);
+    REQUIRE(rsp.count == 0);
+}
+
+TEST_CASE("GenericResponseSink handles arena exhaustion gracefully") {
+    char buf[1];  // tiny arena
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    PlainResponse rsp{};
+    note::GenericResponseSink gsink{&rsp, plain_fields, plain_field_count, &pool};
 
     // String field — interning will fail, field should be empty
-    gsink.on_string("note", "sensors.qo");
-    REQUIRE(rsp.noteId.value().empty());
+    gsink.on_string("name", "this is too long for 1 byte");
+    REQUIRE(rsp.name.empty());
 
-    // Non-string fields should still work (no arena needed)
-    gsink.on_bool("template", true);
-    REQUIRE(rsp.template_.value() == true);
+    // Non-string fields still work (no arena needed)
+    gsink.on_bool("flag", true);
+    REQUIRE(rsp.flag == true);
 
-    gsink.on_int("total", 42);
-    REQUIRE(rsp.total.value() == 42);
+    gsink.on_int("count", 42);
+    REQUIRE(rsp.count == 42);
 }
-#endif

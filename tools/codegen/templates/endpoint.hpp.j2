@@ -847,9 +847,47 @@ namespace note::api {
 {{ indent }}using Response = void;
 {% endif %}
 
+{% set exec_simple_props = [] %}
+{% if op.response and op.response.properties %}
+{% for prop in op.response.properties %}
+{% if not prop.version_guard and not prop.is_array and prop.cpp_type in ["bool", "int32_t", "double", "note::string_view"] %}
+{% if exec_simple_props.append(prop) %}{% endif %}
+{% endif %}
+{% endfor %}
+{% endif %}
 #if NOTE_SINGLETON
-{{ indent }}/// Singleton: type-erased execute — one static fn ptr per type, set by Api.
+{% if not op.response.properties %}
+{{ indent }}/// Singleton void execute — builds JSON inline, calls shared function.
+{{ indent }}static inline Result<void>(*execute_void_fn_)(void*, BuildFn, void*, ::note::detail::NcErrorCapture&);
+{{ indent }}ApiResult<void> execute() const {
+{{ indent }}    auto build_ = [&](JsonBuilder& b_) { b_.add("req", notecard_request); this->build(b_); };
+{{ indent }}    BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
+{{ indent }}    ::note::detail::NcErrorCapture nc_err_;
+{{ indent }}    auto rv_ = execute_void_fn_(nc_, fn_, &build_, nc_err_);
+{{ indent }}    if (!rv_) return ::note::Unexpected(rv_.error());
+{{ indent }}    if (!nc_err_.empty()) return ApiResult<void>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
+{{ indent }}    return ApiResult<void>{};
+{{ indent }}}
+{% elif exec_simple_props and not op.response.has_body %}
+{{ indent }}/// Singleton generic execute — builds JSON inline, calls shared function.
+{{ indent }}static inline Result<void>(*execute_generic_fn_)(void*, BuildFn, void*, void*, const ::note::FieldDesc*, uint8_t, ::note::detail::NcErrorCapture&, bool&);
+{{ indent }}ApiResult<Response> execute() const {
+{{ indent }}    auto build_ = [&](JsonBuilder& b_) { b_.add("req", notecard_request); this->build(b_); };
+{{ indent }}    BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
+{{ indent }}    Response rsp_{};
+{{ indent }}    ::note::detail::NcErrorCapture nc_err_;
+{{ indent }}    bool exhausted_ = false;
+{{ indent }}    auto rv_ = execute_generic_fn_(nc_, fn_, &build_, &rsp_, field_descs_ptr(), field_count, nc_err_, exhausted_);
+{{ indent }}    if (!rv_) return ::note::Unexpected(rv_.error());
+{{ indent }}    if (!nc_err_.empty()) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
+{{ indent }}    if (exhausted_) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Overflow, ::note::Cause::Unspecified, NOTE_ERR("arena exhausted")});
+{{ indent }}    return ApiResult<Response>(std::move(rsp_));
+{{ indent }}}
+{% else %}
+{{ indent }}/// Singleton per-type execute (body-enabled or non-standard response).
 {{ indent }}static inline ApiResult<Response>(*execute_fn_)(void*, const {{ parent_type }}&);
+{{ indent }}auto execute() const { return execute_fn_(nc_, *this); }
+{% endif %}
 {% if op.supports_cmd %}
 {{ indent }}static inline Result<void>(*send_fn_)(void*, BuildFn, void*);
 {% endif %}
@@ -858,8 +896,8 @@ namespace note::api {
 {% if op.supports_cmd %}
 {{ indent }}Result<void>(*send_fn_)(void*, BuildFn, void*) = nullptr;
 {% endif %}
-#endif
 {{ indent }}auto execute() const { return execute_fn_(nc_, *this); }
+#endif
 {% if op.supports_cmd %}
 {{ indent }}Result<void> command() const {
 {{ indent }}    auto build_ = [&](JsonBuilder& b_) {

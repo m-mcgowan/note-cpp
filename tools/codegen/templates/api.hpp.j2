@@ -142,13 +142,39 @@ public:
         template<typename T> T create_() {
             T r;
 #if NOTE_SINGLETON
-            // Singleton: set statics on the type (once), not per instance.
             T::nc_ = nc_ptr();
-            T::execute_fn_ = [](void* p_, const T& req_) {
+            // Void/generic endpoints use shared fn ptrs — no per-type execute template.
+            // Only body-enabled endpoints fall through to per-type execute_fn_.
+            if constexpr (std::is_void_v<typename T::Response>) {
+                T::execute_void_fn_ = [](void* p_, BuildFn fn_, void* ctx_, detail::NcErrorCapture& err_) {
+                    return static_cast<NcT*>(p_)->execute_void(fn_, ctx_, err_);
+                };
+            } else if constexpr (detail::has_field_descs<T>::value
+                                 && !detail::has_body_factory<T>::value) {
+                T::execute_generic_fn_ = [](void* p_, BuildFn fn_, void* ctx_, void* rsp_,
+                        const FieldDesc* f_, uint8_t n_, detail::NcErrorCapture& err_, bool& ex_) {
+                    return static_cast<NcT*>(p_)->execute_generic(fn_, ctx_, rsp_, f_, n_, err_, ex_);
+                };
+            } else {
+                T::execute_fn_ = [](void* p_, const T& req_) {
+                    auto* nc__ = static_cast<NcT*>(p_);
+                    if constexpr (detail::has_binary_src<T>::value) {
+                        if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
+                    }
+                    if constexpr (detail::has_binary_dst<T>::value) {
+                        if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
+                    }
+                    return nc__->execute(req_);
+                };
+            }
+            if constexpr (T::supports_cmd) {
+                T::send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
+                    return static_cast<NcT*>(p_)->send_command(fn_, ctx_);
+                };
+            }
 #else
             r.nc_ = nc_;
             r.execute_fn_ = [](void* p_, const T& req_) {
-#endif
                 auto* nc__ = static_cast<NcT*>(p_);
                 if constexpr (detail::has_binary_src<T>::value) {
                     if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
@@ -159,14 +185,11 @@ public:
                 return nc__->execute(req_);
             };
             if constexpr (T::supports_cmd) {
-#if NOTE_SINGLETON
-                T::send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
-#else
                 r.send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
-#endif
                     return static_cast<NcT*>(p_)->send_command(fn_, ctx_);
                 };
             }
+#endif
             return r;
         }
 {% if endpoint.is_polymorphic %}
@@ -224,13 +247,39 @@ public:
         template<typename T> T create_() {
             T r;
 #if NOTE_SINGLETON
-            // Singleton: set statics on the type (once), not per instance.
             T::nc_ = nc_ptr();
-            T::execute_fn_ = [](void* p_, const T& req_) {
+            // Void/generic endpoints use shared fn ptrs — no per-type execute template.
+            // Only body-enabled endpoints fall through to per-type execute_fn_.
+            if constexpr (std::is_void_v<typename T::Response>) {
+                T::execute_void_fn_ = [](void* p_, BuildFn fn_, void* ctx_, detail::NcErrorCapture& err_) {
+                    return static_cast<NcT*>(p_)->execute_void(fn_, ctx_, err_);
+                };
+            } else if constexpr (detail::has_field_descs<T>::value
+                                 && !detail::has_body_factory<T>::value) {
+                T::execute_generic_fn_ = [](void* p_, BuildFn fn_, void* ctx_, void* rsp_,
+                        const FieldDesc* f_, uint8_t n_, detail::NcErrorCapture& err_, bool& ex_) {
+                    return static_cast<NcT*>(p_)->execute_generic(fn_, ctx_, rsp_, f_, n_, err_, ex_);
+                };
+            } else {
+                T::execute_fn_ = [](void* p_, const T& req_) {
+                    auto* nc__ = static_cast<NcT*>(p_);
+                    if constexpr (detail::has_binary_src<T>::value) {
+                        if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
+                    }
+                    if constexpr (detail::has_binary_dst<T>::value) {
+                        if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
+                    }
+                    return nc__->execute(req_);
+                };
+            }
+            if constexpr (T::supports_cmd) {
+                T::send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
+                    return static_cast<NcT*>(p_)->send_command(fn_, ctx_);
+                };
+            }
 #else
             r.nc_ = nc_;
             r.execute_fn_ = [](void* p_, const T& req_) {
-#endif
                 auto* nc__ = static_cast<NcT*>(p_);
                 if constexpr (detail::has_binary_src<T>::value) {
                     if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
@@ -241,14 +290,11 @@ public:
                 return nc__->execute(req_);
             };
             if constexpr (T::supports_cmd) {
-#if NOTE_SINGLETON
-                T::send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
-#else
                 r.send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
-#endif
                     return static_cast<NcT*>(p_)->send_command(fn_, ctx_);
                 };
             }
+#endif
             return r;
         }
 {% if endpoint.is_polymorphic %}
@@ -420,13 +466,39 @@ public:
         template<typename T> T create_() {
             T r;
 #if NOTE_SINGLETON
-            // Singleton: set statics on the type (once), not per instance.
             T::nc_ = nc_ptr();
-            T::execute_fn_ = [](void* p_, const T& req_) {
+            // Void/generic endpoints use shared fn ptrs — no per-type execute template.
+            // Only body-enabled endpoints fall through to per-type execute_fn_.
+            if constexpr (std::is_void_v<typename T::Response>) {
+                T::execute_void_fn_ = [](void* p_, BuildFn fn_, void* ctx_, detail::NcErrorCapture& err_) {
+                    return static_cast<NcT*>(p_)->execute_void(fn_, ctx_, err_);
+                };
+            } else if constexpr (detail::has_field_descs<T>::value
+                                 && !detail::has_body_factory<T>::value) {
+                T::execute_generic_fn_ = [](void* p_, BuildFn fn_, void* ctx_, void* rsp_,
+                        const FieldDesc* f_, uint8_t n_, detail::NcErrorCapture& err_, bool& ex_) {
+                    return static_cast<NcT*>(p_)->execute_generic(fn_, ctx_, rsp_, f_, n_, err_, ex_);
+                };
+            } else {
+                T::execute_fn_ = [](void* p_, const T& req_) {
+                    auto* nc__ = static_cast<NcT*>(p_);
+                    if constexpr (detail::has_binary_src<T>::value) {
+                        if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
+                    }
+                    if constexpr (detail::has_binary_dst<T>::value) {
+                        if (req_.has_binary_buffer()) { auto copy_ = req_; return nc__->execute(copy_); }
+                    }
+                    return nc__->execute(req_);
+                };
+            }
+            if constexpr (T::supports_cmd) {
+                T::send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
+                    return static_cast<NcT*>(p_)->send_command(fn_, ctx_);
+                };
+            }
 #else
             r.nc_ = nc_;
             r.execute_fn_ = [](void* p_, const T& req_) {
-#endif
                 auto* nc__ = static_cast<NcT*>(p_);
                 if constexpr (detail::has_binary_src<T>::value) {
                     if (req_.has_binary_data()) { auto copy_ = req_; return nc__->execute(copy_); }
@@ -437,14 +509,11 @@ public:
                 return nc__->execute(req_);
             };
             if constexpr (T::supports_cmd) {
-#if NOTE_SINGLETON
-                T::send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
-#else
                 r.send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
-#endif
                     return static_cast<NcT*>(p_)->send_command(fn_, ctx_);
                 };
             }
+#endif
             return r;
         }
 

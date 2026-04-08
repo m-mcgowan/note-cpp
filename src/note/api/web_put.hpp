@@ -442,14 +442,15 @@ struct WebPut {
     };
 
 #if NOTE_SINGLETON
-    /// Singleton: type-erased execute — one static fn ptr per type, set by Api.
+    /// Singleton per-type execute (body-enabled or non-standard response).
     static inline ApiResult<Response>(*execute_fn_)(void*, const WebPut&);
+    auto execute() const { return execute_fn_(nc_, *this); }
     static inline Result<void>(*send_fn_)(void*, BuildFn, void*);
 #else
     ApiResult<Response>(*execute_fn_)(void*, const WebPut&) = nullptr;
     Result<void>(*send_fn_)(void*, BuildFn, void*) = nullptr;
-#endif
     auto execute() const { return execute_fn_(nc_, *this); }
+#endif
     Result<void> command() const {
         auto build_ = [&](JsonBuilder& b_) {
             b_.add("cmd", notecard_request);

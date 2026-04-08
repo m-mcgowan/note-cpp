@@ -107,14 +107,23 @@ struct EnvDefault {
         using Response = void;
 
 #if NOTE_SINGLETON
-        /// Singleton: type-erased execute — one static fn ptr per type, set by Api.
-        static inline ApiResult<Response>(*execute_fn_)(void*, const EnvDefault::Set&);
+        /// Singleton void execute — builds JSON inline, calls shared function.
+        static inline Result<void>(*execute_void_fn_)(void*, BuildFn, void*, ::note::detail::NcErrorCapture&);
+        ApiResult<void> execute() const {
+            auto build_ = [&](JsonBuilder& b_) { b_.add("req", notecard_request); this->build(b_); };
+            BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
+            ::note::detail::NcErrorCapture nc_err_;
+            auto rv_ = execute_void_fn_(nc_, fn_, &build_, nc_err_);
+            if (!rv_) return ::note::Unexpected(rv_.error());
+            if (!nc_err_.empty()) return ApiResult<void>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
+            return ApiResult<void>{};
+        }
         static inline Result<void>(*send_fn_)(void*, BuildFn, void*);
 #else
         ApiResult<Response>(*execute_fn_)(void*, const EnvDefault::Set&) = nullptr;
         Result<void>(*send_fn_)(void*, BuildFn, void*) = nullptr;
-#endif
         auto execute() const { return execute_fn_(nc_, *this); }
+#endif
         Result<void> command() const {
             auto build_ = [&](JsonBuilder& b_) {
                 b_.add("cmd", notecard_request);
@@ -234,14 +243,23 @@ struct EnvDefault {
         using Response = void;
 
 #if NOTE_SINGLETON
-        /// Singleton: type-erased execute — one static fn ptr per type, set by Api.
-        static inline ApiResult<Response>(*execute_fn_)(void*, const EnvDefault::Remove&);
+        /// Singleton void execute — builds JSON inline, calls shared function.
+        static inline Result<void>(*execute_void_fn_)(void*, BuildFn, void*, ::note::detail::NcErrorCapture&);
+        ApiResult<void> execute() const {
+            auto build_ = [&](JsonBuilder& b_) { b_.add("req", notecard_request); this->build(b_); };
+            BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
+            ::note::detail::NcErrorCapture nc_err_;
+            auto rv_ = execute_void_fn_(nc_, fn_, &build_, nc_err_);
+            if (!rv_) return ::note::Unexpected(rv_.error());
+            if (!nc_err_.empty()) return ApiResult<void>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
+            return ApiResult<void>{};
+        }
         static inline Result<void>(*send_fn_)(void*, BuildFn, void*);
 #else
         ApiResult<Response>(*execute_fn_)(void*, const EnvDefault::Remove&) = nullptr;
         Result<void>(*send_fn_)(void*, BuildFn, void*) = nullptr;
-#endif
         auto execute() const { return execute_fn_(nc_, *this); }
+#endif
         Result<void> command() const {
             auto build_ = [&](JsonBuilder& b_) {
                 b_.add("cmd", notecard_request);

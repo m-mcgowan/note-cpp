@@ -237,14 +237,26 @@ struct NoteChanges {
         }
 
 #if NOTE_SINGLETON
-        /// Singleton: type-erased execute — one static fn ptr per type, set by Api.
-        static inline ApiResult<Response>(*execute_fn_)(void*, const NoteChanges::Peek&);
+        /// Singleton generic execute — builds JSON inline, calls shared function.
+        static inline Result<void>(*execute_generic_fn_)(void*, BuildFn, void*, void*, const ::note::FieldDesc*, uint8_t, ::note::detail::NcErrorCapture&, bool&);
+        ApiResult<Response> execute() const {
+            auto build_ = [&](JsonBuilder& b_) { b_.add("req", notecard_request); this->build(b_); };
+            BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
+            Response rsp_{};
+            ::note::detail::NcErrorCapture nc_err_;
+            bool exhausted_ = false;
+            auto rv_ = execute_generic_fn_(nc_, fn_, &build_, &rsp_, field_descs_ptr(), field_count, nc_err_, exhausted_);
+            if (!rv_) return ::note::Unexpected(rv_.error());
+            if (!nc_err_.empty()) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
+            if (exhausted_) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Overflow, ::note::Cause::Unspecified, NOTE_ERR("arena exhausted")});
+            return ApiResult<Response>(std::move(rsp_));
+        }
         static inline Result<void>(*send_fn_)(void*, BuildFn, void*);
 #else
         ApiResult<Response>(*execute_fn_)(void*, const NoteChanges::Peek&) = nullptr;
         Result<void>(*send_fn_)(void*, BuildFn, void*) = nullptr;
-#endif
         auto execute() const { return execute_fn_(nc_, *this); }
+#endif
         Result<void> command() const {
             auto build_ = [&](JsonBuilder& b_) {
                 b_.add("cmd", notecard_request);
@@ -523,14 +535,26 @@ struct NoteChanges {
         }
 
 #if NOTE_SINGLETON
-        /// Singleton: type-erased execute — one static fn ptr per type, set by Api.
-        static inline ApiResult<Response>(*execute_fn_)(void*, const NoteChanges::Pop&);
+        /// Singleton generic execute — builds JSON inline, calls shared function.
+        static inline Result<void>(*execute_generic_fn_)(void*, BuildFn, void*, void*, const ::note::FieldDesc*, uint8_t, ::note::detail::NcErrorCapture&, bool&);
+        ApiResult<Response> execute() const {
+            auto build_ = [&](JsonBuilder& b_) { b_.add("req", notecard_request); this->build(b_); };
+            BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
+            Response rsp_{};
+            ::note::detail::NcErrorCapture nc_err_;
+            bool exhausted_ = false;
+            auto rv_ = execute_generic_fn_(nc_, fn_, &build_, &rsp_, field_descs_ptr(), field_count, nc_err_, exhausted_);
+            if (!rv_) return ::note::Unexpected(rv_.error());
+            if (!nc_err_.empty()) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
+            if (exhausted_) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Overflow, ::note::Cause::Unspecified, NOTE_ERR("arena exhausted")});
+            return ApiResult<Response>(std::move(rsp_));
+        }
         static inline Result<void>(*send_fn_)(void*, BuildFn, void*);
 #else
         ApiResult<Response>(*execute_fn_)(void*, const NoteChanges::Pop&) = nullptr;
         Result<void>(*send_fn_)(void*, BuildFn, void*) = nullptr;
-#endif
         auto execute() const { return execute_fn_(nc_, *this); }
+#endif
         Result<void> command() const {
             auto build_ = [&](JsonBuilder& b_) {
                 b_.add("cmd", notecard_request);

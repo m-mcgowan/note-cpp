@@ -64,7 +64,7 @@ TEST_CASE("card.aux.serial Multiple Notifications") {
     req.notifications = note::string_view(R"sv(accel,env)sv");
     req.duration = int32_t{500};
     h.nc.execute(req);
-    // Field order may vary (mode_prefix fields serialize before generic_build)
+    // Field order may differ: mode_prefix fields serialize before generic_build.
     REQUIRE(h.last_request.find("\"duration\":500") != std::string::npos);
     REQUIRE(h.last_request.find("\"mode\":\"notify,accel,env\"") != std::string::npos);
 }

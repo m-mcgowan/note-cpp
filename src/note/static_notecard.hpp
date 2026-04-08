@@ -63,7 +63,7 @@ public:
     template<typename RequestT>
     ApiResult<typename RequestT::Response> execute(const RequestT& req) {
         using Rsp = typename RequestT::Response;
-        constexpr Safety safety = RequestT::safety;
+        [[maybe_unused]] constexpr Safety safety = RequestT::safety;
 #ifndef NOTE_NO_REQUEST_IDS
         const uint32_t req_id = request_ids_enabled_ ? next_request_id_++ : 0;
 #else

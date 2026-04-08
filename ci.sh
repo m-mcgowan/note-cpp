@@ -160,6 +160,16 @@ NFEOF
     /tmp/note-cpp-tests
     echo "  tests: OK"
 
+    # NOTE_MINIMAL host build — exercises singleton, static HAL, constexpr policy.
+    # Subset of tests that don't depend on unicode escapes or buffered transport.
+    ci_stage "Unit tests (NOTE_MINIMAL)"
+    $CXX $CXXFLAGS -DNOTE_MINIMAL $INCLUDE -I "$ROOT/tests" -o /tmp/note-cpp-tests-minimal \
+        "$ROOT/tests/test_main.cpp" \
+        "$ROOT/tests/test_static_notecard.cpp" \
+        "$ROOT/tests/test_static_sizing.cpp"
+    /tmp/note-cpp-tests-minimal
+    echo "  minimal tests: OK"
+
     # Version gating tests
     echo
     ci_stage "Version gating"
@@ -698,6 +708,22 @@ run_quick() {
     echo "  host tests: OK"
     "$BUILD_DIR/tests/note-cpp-tests-arduino"
     echo "  arduino tests: OK"
+
+    # NOTE_MINIMAL host build — exercises singleton, static HAL, constexpr policy paths
+    ci_stage "Build tests (NOTE_MINIMAL)"
+    local BUILD_MIN="/tmp/note-cpp-build-minimal"
+    cmake -G "$GENERATOR" -B "$BUILD_MIN" -S "$ROOT" \
+        -DCMAKE_CXX_COMPILER="$CXX" \
+        -DCMAKE_CXX_STANDARD=20 \
+        -DCMAKE_CXX_FLAGS="-DNOTE_MINIMAL" \
+        > /dev/null 2>&1
+    cmake --build "$BUILD_MIN" --parallel
+
+    ci_stage "Run tests (NOTE_MINIMAL)"
+    "$BUILD_MIN/tests/note-cpp-tests"
+    echo "  host minimal tests: OK"
+    "$BUILD_MIN/tests/note-cpp-tests-arduino"
+    echo "  arduino minimal tests: OK"
 
     # PlatformIO integration test build (compile only, no hardware)
     if command -v pio >/dev/null 2>&1; then

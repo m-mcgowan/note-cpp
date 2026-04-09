@@ -77,7 +77,8 @@ build_flags = -DNOTE_MINIMAL -DNOTE_UNICODE_ESCAPES
 build_flags = -DNOTE_MINIMAL
 ```
 
-Result: ~20 KB flash (63%), ~736 B RAM (36%), zero heap.
+Result: ~27.5 KB flash (85%), ~832 B RAM (41%), zero heap (8-endpoint app
+with body parsing). See [API styles](#api-styles-and-flash-cost) below.
 
 ### ESP32 / STM32 / RP2040 — no constraints
 
@@ -98,6 +99,33 @@ keeping all protocol features.
 build_flags = -DNOTE_DEBUG_ENABLED=0 -DNOTE_EXTRAS=0
 ```
 
+## API styles and flash cost
+
+`note-cpp` offers two usage styles for building requests:
+
+**Convenience groups** (`Api` factory):
+```cpp
+note::Api api(nc);
+api.hub.set().product("com.example").mode("periodic").execute();
+auto temp = api.card.temp().read().execute();
+```
+
+**Direct assignment**:
+```cpp
+note::api::HubSet req;
+req.product = "com.example";
+req.mode = "periodic";
+nc.execute(req);
+```
+
+Both styles produce the same wire format and compile to the same execute path.
+The convenience groups add a small amount of flash overhead for the factory
+structs and group wiring, which is typically negligible on 32-bit platforms.
+
+On very constrained targets (AVR Uno), the direct assignment style avoids
+this overhead entirely. Use `-DAPI_STYLE=2` in the binary size comparison
+example to see the difference.
+
 ## Where flags are defined
 
 - **`include/note/note_config.hpp`** — `NOTE_MINIMAL` defaults
@@ -107,12 +135,50 @@ build_flags = -DNOTE_DEBUG_ENABLED=0 -DNOTE_EXTRAS=0
 - **`include/note/static_notecard.hpp`** — `NOTE_NO_RETRY`, `NOTE_NO_REQUEST_IDS`
 - **`include/note/streaming_transport.hpp`** — `NOTE_NO_CRC`, `NOTE_MINIMAL` (lookahead), `NOTE_DEBUG_ENABLED`
 
-## Size impact summary (AVR ATmega328P, full body example)
+## Size impact summary (AVR ATmega328P, 8-endpoint app with body parsing)
 
 | Configuration | Flash | Static RAM | Heap (peak) | Total RAM |
 |--------------|-------|------------|-------------|-----------|
-| `NOTE_MINIMAL` | 20,392 (63%) | 736 (36%) | 0 (0%) | 736 (36%) |
-| No flags (full) | ~31,000+ | ~2,600+ | not measured | — |
-| note-c (reference) | 24,646 (76%) | 739 (36%) | 371 (18%) | 1,110 (54%) |
+| `note-cpp` `NOTE_MINIMAL` | 27,498 (85%) | 832 (41%) | 0 (0%) | 832 (41%) |
+| `note-c` (reference) | 25,076 (78%) | 729 (36%) | 371 (18%) | 1,100 (54%) |
 
-note-c heap measured via `__brkval` watermark on Wokwi (8-endpoint app with mock Notecard).
+`note-cpp` uses 24% less total RAM than `note-c` (zero heap vs 371 bytes
+peak heap allocation). The flash gap (2,422 bytes) is the cost of streaming
+SAX response parsing — the shared infrastructure that enables zero-copy,
+zero-heap operation.
+
+note-c heap measured via `__brkval` watermark on Wokwi (mock Notecard).
+
+### Flash budget breakdown (AVR, `NOTE_MINIMAL`)
+
+The 2,422-byte flash gap vs `note-c` breaks down as:
+
+| Component | Bytes | Purpose |
+|-----------|-------|---------|
+| SAX dispatch thunks (GenericResponseSink) | ~1,734 | 10 per-event-type functions with inlined field matching |
+| `make_generic_body_handler` | ~1,254 | Body event dispatch switch (StructSink table-driven) |
+| Api thunks (generic, void, send) | ~1,378 | Shared execute dispatch (3 functions for all endpoints) |
+| Per-endpoint `execute()` call sites | ~530 | Build lambda + thunk call + error handling |
+
+These are shared once regardless of endpoint count — adding more endpoints
+costs only the field descriptor tables (~30 bytes each).
+
+### Future optimization: unified SAX dispatch
+
+The SAX dispatch architecture currently uses 10 function pointers in
+`SaxDispatch`, each forwarding to a method on `GenericResponseSink`. With
+LTO, the compiler inlines the sink methods into the thunks, producing 10
+medium-sized functions (~170 bytes average) that share the same
+loop-and-match pattern but differ only in the type check and assignment.
+
+A unified dispatch would replace the 10 function pointers with a single
+`dispatch(SaxEvent)` function pointer, where `SaxEvent` carries a tag and
+value union (similar to the existing `BodyEvent`). This would:
+
+- Reduce `SaxDispatch` from 22 bytes to 6 bytes (1 pointer + 1 fn ptr)
+- Replace 10 thunks with 1, sharing the field-matching loop
+- Estimated savings: ~800 bytes flash
+
+This requires changes to `SaxDispatch`, `SaxAdapter::on_event()`,
+`GenericResponseSink`, and all sink types (`NullSink`, `GenericBodySink`)
+— a moderate refactor best done as a dedicated effort.

@@ -30,6 +30,8 @@
 extern "C" {
 #endif
 
+// LCOV_EXCL_START — third-party tokenizer; coverage tracked upstream
+
 #ifdef JSMN_STATIC
 #define JSMN_API static
 #else
@@ -463,6 +465,8 @@ JSMN_API void jsmn_init(jsmn_parser *parser) {
 }
 
 #endif /* JSMN_HEADER */
+
+// LCOV_EXCL_STOP
 
 #ifdef __cplusplus
 }

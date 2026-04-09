@@ -277,7 +277,29 @@ TEST_CASE("note::api::{{ type_qual }} sink body coverage") {
 {% endif %}
 {% endfor %}
 
-    // Exercise body path: enter body, send events, exit.
+    // Exercise on_int / on_float dispatch (separate from on_number).
+{% for prop in rsp_props %}
+{% if prop.version_guard %}
+#if NOTE_API_VERSION >= {{ prop.version_guard }} || !defined(NOTE_API_STRICT)
+{% endif %}
+{% if prop.field_type_name in ["int32_t", "int16_t"] %}
+    sink.on_int("{{ prop.wire_name }}", 99);
+{% elif prop.field_type_name == "double" %}
+    sink.on_float("{{ prop.wire_name }}", 9.9);
+{% endif %}
+{% if prop.version_guard %}
+#endif
+{% endif %}
+{% endfor %}
+
+    // Unknown field fallthrough — covers FALSE branch of last dispatch in each method.
+    sink.on_string("_unknown_", "x");
+    sink.on_bool("_unknown_", false);
+    sink.on_number("_unknown_", "0");
+    sink.on_int("_unknown_", 0);
+    sink.on_float("_unknown_", 0.0);
+
+    // Exercise body path: enter body, send events, exit (no handler).
     sink.on_object_begin("body");
     sink.on_bool("flag", true);
     sink.on_number("count", "5");
@@ -295,15 +317,82 @@ TEST_CASE("note::api::{{ type_qual }} sink body coverage") {
     sink.on_array_end("items");
     sink.on_object_end("body");
 
-    // Exercise body path WITH a body handler connected.
+    // Exercise body path WITH a body handler — all method types.
     CoverageTestBody_ tbody{};
     note::StructSink<CoverageTestBody_> body_sink(tbody, pool);
     auto handler = note::make_body_handler(body_sink);
     sink.set_body_handler(handler);
     sink.on_object_begin("body");
+    sink.on_string("s", "v");
+    sink.on_bool("b", true);
+    sink.on_number("n", "1");
+    sink.on_int("i", 1);
     sink.on_float("v", 42.0);
+    sink.on_null("z");
     sink.on_object_end("body");
     REQUIRE(tbody.v == 42.0f);
+
+    // Reset path.
+    sink.reset();
+}
+
+{% endif %}
+{% if not op.response.has_body and rsp_props %}
+// ---------------------------------------------------------------------------
+TEST_CASE("note::api::{{ type_qual }} sink field coverage") {
+    // Exercise the Sink's field dispatch via on_int / on_float (separate from
+    // on_number) and unknown-field fallthrough for non-body endpoints.
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    note::api::{{ type_qual }}::Response rsp{};
+    note::api::{{ type_qual }}::Response::Sink sink(rsp, pool);
+
+    // Feed response-level fields through the sink (on_number / on_string / on_bool).
+{% for prop in rsp_props %}
+{% if prop.version_guard %}
+#if NOTE_API_VERSION >= {{ prop.version_guard }} || !defined(NOTE_API_STRICT)
+{% endif %}
+{% if prop.field_type_name == "bool" %}
+    sink.on_bool("{{ prop.wire_name }}", true);
+{% elif prop.field_type_name in ["int32_t", "int16_t"] %}
+    sink.on_number("{{ prop.wire_name }}", "42");
+{% elif prop.field_type_name == "double" %}
+    sink.on_number("{{ prop.wire_name }}", "3.14");
+{% elif prop.is_array %}
+    sink.on_array_begin("{{ prop.wire_name }}");
+    sink.on_string("{{ prop.wire_name }}", "x-val");
+    sink.on_array_end("{{ prop.wire_name }}");
+{% else %}
+    sink.on_string("{{ prop.wire_name }}", "x-{{ prop.wire_name }}");
+{% endif %}
+{% if prop.version_guard %}
+#endif
+{% endif %}
+{% endfor %}
+
+    // Exercise on_int / on_float dispatch (separate from on_number).
+{% for prop in rsp_props %}
+{% if prop.version_guard %}
+#if NOTE_API_VERSION >= {{ prop.version_guard }} || !defined(NOTE_API_STRICT)
+{% endif %}
+{% if prop.field_type_name in ["int32_t", "int16_t"] %}
+    sink.on_int("{{ prop.wire_name }}", 99);
+{% elif prop.field_type_name == "double" %}
+    sink.on_float("{{ prop.wire_name }}", 9.9);
+{% endif %}
+{% if prop.version_guard %}
+#endif
+{% endif %}
+{% endfor %}
+
+    // Unknown field fallthrough — covers FALSE branch of last dispatch.
+    sink.on_string("_unknown_", "x");
+    sink.on_bool("_unknown_", false);
+    sink.on_number("_unknown_", "0");
+    sink.on_int("_unknown_", 0);
+    sink.on_float("_unknown_", 0.0);
 
     // Reset path.
     sink.reset();

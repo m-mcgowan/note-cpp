@@ -356,7 +356,7 @@ discover_compilers() {
 # multiple flag combinations would restore coverage to previous levels.
 MIN_LINE_COV=90
 MIN_FUNC_COV=90
-MIN_BRANCH_COV=79
+MIN_BRANCH_COV=85
 
 check_coverage_thresholds() {
     local lcov_file="$1"

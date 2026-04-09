@@ -345,3 +345,527 @@ TEST_CASE("sax_parse: all escape sequences") {
     REQUIRE(err.empty());
     REQUIRE(sink.events[1].value == "a/b\bc\fd\re\tf");
 }
+
+// ---------------------------------------------------------------------------
+// Branch coverage: escape sequences
+// ---------------------------------------------------------------------------
+
+TEST_CASE("sax_parse: unknown escape character falls through to default") {
+    // An unrecognized escape like \x should be kept as 'x' (default case in unescape)
+    RecordingSink sink;
+    auto err = note::sax_parse(R"({"s":"hello\xworld"})", sink);
+    REQUIRE(err.empty());
+    // The \x in the unescape default case outputs 'x'
+    REQUIRE(sink.events[1].value == "helloxworld");
+}
+
+TEST_CASE("sax_parse: backslash-backslash escape") {
+    RecordingSink sink;
+    auto err = note::sax_parse(R"({"s":"a\\b"})", sink);
+    REQUIRE(err.empty());
+    REQUIRE(sink.events[1].value == "a\\b");
+}
+
+// ---------------------------------------------------------------------------
+// Branch coverage: number parsing edge cases
+// ---------------------------------------------------------------------------
+
+TEST_CASE("sax_parse: negative number") {
+    RecordingSink sink;
+    auto err = note::sax_parse(R"({"a":-42})", sink);
+    REQUIRE(err.empty());
+    REQUIRE(sink.events[1].type == "number");
+    REQUIRE(sink.events[1].value == "-42");
+}
+
+TEST_CASE("sax_parse: exponent with plus sign") {
+    RecordingSink sink;
+    auto err = note::sax_parse(R"({"a":1e+2})", sink);
+    REQUIRE(err.empty());
+    REQUIRE(sink.events[1].value == "1e+2");
+}
+
+TEST_CASE("sax_parse: uppercase exponent with minus sign") {
+    RecordingSink sink;
+    auto err = note::sax_parse(R"({"a":1E-3})", sink);
+    REQUIRE(err.empty());
+    REQUIRE(sink.events[1].value == "1E-3");
+}
+
+TEST_CASE("sax_parse: number at exact end of input (no trailing })") {
+    // Tests the branch where number parsing reaches end of input
+    RecordingSink sink;
+    auto err = note::sax_parse(R"({"a":123)", sink);
+    // Missing closing brace — the number parses, but object is unterminated
+    REQUIRE(!err.empty());
+}
+
+TEST_CASE("sax_parse: exponent sign only no digits") {
+    RecordingSink sink;
+    auto err = note::sax_parse(R"({"a":1e+})", sink);
+    REQUIRE(!err.empty());
+}
+
+// ---------------------------------------------------------------------------
+// Branch coverage: UTF-8 encoding from unicode escapes
+// ---------------------------------------------------------------------------
+
+TEST_CASE("sax_parse: unicode single byte (ASCII)") {
+    RecordingSink sink;
+    auto err = note::sax_parse(R"({"a":"\u0041"})", sink);
+    REQUIRE(err.empty());
+    REQUIRE(sink.events[1].value == "A");
+}
+
+TEST_CASE("sax_parse: unicode 2-byte UTF-8") {
+    RecordingSink sink;
+    auto err = note::sax_parse(R"({"a":"\u00E9"})", sink);
+    REQUIRE(err.empty());
+    // é = 0xC3 0xA9
+    REQUIRE(sink.events[1].value == "\xC3\xA9");
+}
+
+TEST_CASE("sax_parse: unicode 3-byte UTF-8") {
+    RecordingSink sink;
+    auto err = note::sax_parse(R"({"a":"\u4E16"})", sink);
+    REQUIRE(err.empty());
+    // 世 = 0xE4 0xB8 0x96
+    REQUIRE(sink.events[1].value == "\xE4\xB8\x96");
+}
+
+TEST_CASE("sax_parse: unicode surrogate replaced with placeholder") {
+    RecordingSink sink;
+    auto err = note::sax_parse(R"({"a":"\uD800"})", sink);
+    REQUIRE(err.empty());
+    REQUIRE(sink.events[1].value == "?");
+}
+
+TEST_CASE("sax_parse: unicode high surrogate DFFF") {
+    RecordingSink sink;
+    auto err = note::sax_parse(R"({"a":"\uDFFF"})", sink);
+    REQUIRE(err.empty());
+    REQUIRE(sink.events[1].value == "?");
+}
+
+TEST_CASE("sax_parse: incomplete unicode escape at end") {
+    // \u00 — only 2 hex digits before end of string
+    RecordingSink sink;
+    std::string json = R"({"a":"\u00"})";
+    auto err = note::sax_parse(json, sink);
+    // The \u00 has invalid hex (the closing " is not a hex digit)
+    REQUIRE(!err.empty());
+}
+
+TEST_CASE("sax_parse: unicode escape lowercase hex") {
+    RecordingSink sink;
+    auto err = note::sax_parse(R"({"a":"\u006f"})", sink);
+    REQUIRE(err.empty());
+    REQUIRE(sink.events[1].value == "o");
+}
+
+// ---------------------------------------------------------------------------
+// Branch coverage: truncated literals at end of input
+// ---------------------------------------------------------------------------
+
+TEST_CASE("sax_parse: truncated true at end") {
+    RecordingSink sink;
+    auto err = note::sax_parse(R"({"a":tru)", sink);
+    REQUIRE(!err.empty());
+}
+
+TEST_CASE("sax_parse: truncated false at end") {
+    RecordingSink sink;
+    auto err = note::sax_parse(R"({"a":fal)", sink);
+    REQUIRE(!err.empty());
+}
+
+TEST_CASE("sax_parse: truncated null at end") {
+    RecordingSink sink;
+    auto err = note::sax_parse(R"({"a":nul)", sink);
+    REQUIRE(!err.empty());
+}
+
+// ---------------------------------------------------------------------------
+// Branch coverage: format_int via on_int (JsonSink default impl)
+// ---------------------------------------------------------------------------
+
+TEST_CASE("format_int: zero") {
+    char buf[12];
+    auto n = note::detail::format_int(buf, 0);
+    REQUIRE(n == 1);
+    REQUIRE(buf[0] == '0');
+}
+
+TEST_CASE("format_int: positive") {
+    char buf[12];
+    auto n = note::detail::format_int(buf, 42);
+    REQUIRE(std::string(buf, n) == "42");
+}
+
+TEST_CASE("format_int: negative") {
+    char buf[12];
+    auto n = note::detail::format_int(buf, -7);
+    REQUIRE(std::string(buf, n) == "-7");
+}
+
+TEST_CASE("format_int: INT32_MIN") {
+    char buf[12];
+    auto n = note::detail::format_int(buf, -2147483647 - 1);
+    REQUIRE(std::string(buf, n) == "-2147483648");
+}
+
+TEST_CASE("format_float: basic") {
+    char buf[24];
+    auto n = note::detail::format_float(buf, 3.14);
+    REQUIRE(n > 0);
+    // Just verify it round-trips
+    REQUIRE(std::string(buf, n).find("3.14") != std::string::npos);
+}
+
+// Test on_int and on_float default implementations via JsonSink
+TEST_CASE("JsonSink on_int default forwards to on_number") {
+    RecordingSink sink;
+    // Call on_int directly — the default impl formats and calls on_number
+    sink.on_int("key", 42);
+    REQUIRE(sink.events.size() == 1);
+    REQUIRE(sink.events[0].type == "number");
+    REQUIRE(sink.events[0].key == "key");
+    REQUIRE(sink.events[0].value == "42");
+}
+
+TEST_CASE("JsonSink on_int with negative value") {
+    RecordingSink sink;
+    sink.on_int("neg", -99);
+    REQUIRE(sink.events.size() == 1);
+    REQUIRE(sink.events[0].value == "-99");
+}
+
+TEST_CASE("JsonSink on_float default forwards to on_number") {
+    RecordingSink sink;
+    sink.on_float("pi", 3.14);
+    REQUIRE(sink.events.size() == 1);
+    REQUIRE(sink.events[0].type == "number");
+    REQUIRE(sink.events[0].key == "pi");
+    // Just check it produced a number string
+    REQUIRE(!sink.events[0].value.empty());
+}
+
+// ---------------------------------------------------------------------------
+// Branch coverage: parse_double edge cases
+// ---------------------------------------------------------------------------
+
+TEST_CASE("parse_double: uppercase E exponent") {
+    REQUIRE(note::parse_double("1.5E2") == Approx(150.0));
+}
+
+TEST_CASE("parse_double: positive exponent with plus sign") {
+    REQUIRE(note::parse_double("1e+2") == Approx(100.0));
+}
+
+TEST_CASE("parse_double: integer only (no decimal, no exponent)") {
+    REQUIRE(note::parse_double("999") == Approx(999.0));
+}
+
+TEST_CASE("parse_double: exponent without decimal part") {
+    REQUIRE(note::parse_double("5e3") == Approx(5000.0));
+}
+
+// ---------------------------------------------------------------------------
+// Branch coverage: parse_int edge cases
+// ---------------------------------------------------------------------------
+
+TEST_CASE("parse_int: large negative") {
+    REQUIRE(note::parse_int("-1000") == -1000);
+}
+
+TEST_CASE("parse_int: zero") {
+    REQUIRE(note::parse_int("0") == 0);
+}
+
+TEST_CASE("parse_int: negative with decimal truncation") {
+    REQUIRE(note::parse_int("-3.9") == -3);
+}
+
+// ---------------------------------------------------------------------------
+// Branch coverage: ErrorCaptureSinkT (template, non-virtual version)
+// ---------------------------------------------------------------------------
+
+TEST_CASE("ErrorCaptureSinkT: captures err from template sink") {
+    note::NullSink inner;
+    note::ErrorCaptureSinkT<note::NullSink> sink(inner);
+    // Manually deliver events as the SAX parser would
+    sink.on_string("err", "device error");
+    REQUIRE(sink.captured_error() == "device error");
+}
+
+TEST_CASE("ErrorCaptureSinkT: forwards non-err strings") {
+    // Use a simple recording struct
+    struct CountingSink : note::NullSink {
+        int string_count = 0;
+        void on_string(note::string_view, note::string_view) { ++string_count; }
+    };
+    CountingSink inner;
+    note::ErrorCaptureSinkT<CountingSink> sink(inner);
+    sink.on_string("name", "Alice");
+    REQUIRE(sink.captured_error().empty());
+    REQUIRE(inner.string_count == 1);
+}
+
+TEST_CASE("ErrorCaptureSinkT: reset clears error") {
+    note::NullSink inner;
+    note::ErrorCaptureSinkT<note::NullSink> sink(inner);
+    sink.on_string("err", "some error");
+    REQUIRE(!sink.captured_error().empty());
+    sink.reset();
+    REQUIRE(sink.captured_error().empty());
+}
+
+TEST_CASE("ErrorCaptureSinkT: truncates long error") {
+    note::NullSink inner;
+    note::ErrorCaptureSinkT<note::NullSink> sink(inner);
+    // Error longer than kMaxErrLen (64)
+    std::string long_err(100, 'x');
+    sink.on_string("err", note::string_view(long_err.data(), long_err.size()));
+    REQUIRE(sink.captured_error().size() == 64);
+}
+
+// ---------------------------------------------------------------------------
+// Branch coverage: ErrorCaptureSink (virtual version) reset
+// ---------------------------------------------------------------------------
+
+TEST_CASE("ErrorCaptureSink: reset clears captured error") {
+    RecordingSink inner;
+    note::ErrorCaptureSink sink(inner);
+    note::sax_parse(R"({"err":"oops"})", sink);
+    REQUIRE(sink.captured_error() == "oops");
+    sink.reset();
+    REQUIRE(sink.captured_error().empty());
+}
+
+// ---------------------------------------------------------------------------
+// Branch coverage: FilterSink template
+// ---------------------------------------------------------------------------
+
+TEST_CASE("FilterSink: forwards all event types") {
+    struct TrackingSink : note::NullSink {
+        int null_count = 0;
+        int bool_count = 0;
+        int number_count = 0;
+        int int_count = 0;
+        int float_count = 0;
+        int string_count = 0;
+        int obj_begin_count = 0;
+        int obj_end_count = 0;
+        int arr_begin_count = 0;
+        int arr_end_count = 0;
+        bool was_reset = false;
+
+        void on_null(note::string_view) { ++null_count; }
+        void on_bool(note::string_view, bool) { ++bool_count; }
+        void on_number(note::string_view, note::string_view) { ++number_count; }
+        void on_int(note::string_view, int32_t) { ++int_count; }
+        void on_float(note::string_view, double) { ++float_count; }
+        void on_string(note::string_view, note::string_view) { ++string_count; }
+        void on_object_begin(note::string_view) { ++obj_begin_count; }
+        void on_object_end(note::string_view) { ++obj_end_count; }
+        void on_array_begin(note::string_view) { ++arr_begin_count; }
+        void on_array_end(note::string_view) { ++arr_end_count; }
+        void reset() { was_reset = true; }
+    };
+
+    TrackingSink inner;
+    note::FilterSink<TrackingSink> filter(inner);
+
+    filter.on_null("k");
+    filter.on_bool("k", true);
+    filter.on_number("k", "42");
+    filter.on_int("k", 7);
+    filter.on_float("k", 1.5);
+    filter.on_string("k", "v");
+    filter.on_object_begin("k");
+    filter.on_object_end("k");
+    filter.on_array_begin("k");
+    filter.on_array_end("k");
+    filter.reset();
+
+    REQUIRE(inner.null_count == 1);
+    REQUIRE(inner.bool_count == 1);
+    REQUIRE(inner.number_count == 1);
+    REQUIRE(inner.int_count == 1);
+    REQUIRE(inner.float_count == 1);
+    REQUIRE(inner.string_count == 1);
+    REQUIRE(inner.obj_begin_count == 1);
+    REQUIRE(inner.obj_end_count == 1);
+    REQUIRE(inner.arr_begin_count == 1);
+    REQUIRE(inner.arr_end_count == 1);
+    REQUIRE(inner.was_reset);
+}
+
+// ---------------------------------------------------------------------------
+// Branch coverage: JsonSinkAdapter
+// ---------------------------------------------------------------------------
+
+TEST_CASE("JsonSinkAdapter: adapts concrete sink to virtual JsonSink") {
+    struct SimpleSink {
+        int calls = 0;
+        void on_null(note::string_view) { ++calls; }
+        void on_bool(note::string_view, bool) { ++calls; }
+        void on_number(note::string_view, note::string_view) { ++calls; }
+        void on_int(note::string_view, int32_t) { ++calls; }
+        void on_float(note::string_view, double) { ++calls; }
+        void on_string(note::string_view, note::string_view) { ++calls; }
+        void on_object_begin(note::string_view) { ++calls; }
+        void on_object_end(note::string_view) { ++calls; }
+        void on_array_begin(note::string_view) { ++calls; }
+        void on_array_end(note::string_view) { ++calls; }
+        void reset() { ++calls; }
+    };
+
+    SimpleSink concrete;
+    note::JsonSinkAdapter<SimpleSink> adapter(concrete);
+
+    // Use as a JsonSink reference (virtual dispatch)
+    note::JsonSink& virt = adapter;
+    virt.on_null("k");
+    virt.on_bool("k", false);
+    virt.on_number("k", "1");
+    virt.on_int("k", 5);
+    virt.on_float("k", 2.0);
+    virt.on_string("k", "v");
+    virt.on_object_begin("k");
+    virt.on_object_end("k");
+    virt.on_array_begin("k");
+    virt.on_array_end("k");
+    virt.reset();
+
+    REQUIRE(concrete.calls == 11);
+}
+
+// ---------------------------------------------------------------------------
+// Branch coverage: scratch buffer overflow in unescape
+// ---------------------------------------------------------------------------
+
+TEST_CASE("sax_parse: 2-byte unicode at scratch boundary still fits") {
+    // Scratch buffer is 256 bytes. Loop condition: out < 255.
+    // With 254 plain chars: out=254, enters loop, \u00E9 check: out+1=255 < 256 → true.
+    // The 2-byte char fits, producing 256 bytes total.
+    std::string value(254, 'A');
+    value += "\\u00E9";  // 2-byte UTF-8, fits at position 254
+    std::string json = R"({"s":")" + value + R"("})";
+    RecordingSink sink;
+    auto err = note::sax_parse(json, sink);
+    REQUIRE(err.empty());
+    // 254 A's + 2 bytes for é = 256
+    REQUIRE(sink.events[1].value.size() == 256);
+}
+
+TEST_CASE("sax_parse: long string with 3-byte unicode near scratch limit") {
+    // Similar to above but for 3-byte UTF-8: need out >= 254 so out+2 >= 256
+    // Use 254 chars to get out=254, then \u4E16 → out+2=256 !< 256 → skip
+    std::string value(254, 'B');
+    value += "\\u4E16";  // 3-byte UTF-8 — out+2=256 !< 256 → skip
+    std::string json = R"({"s":")" + value + R"("})";
+    RecordingSink sink;
+    auto err = note::sax_parse(json, sink);
+    REQUIRE(err.empty());
+    // 254 B's; the 3-byte unicode char is skipped because out+2 >= kScratchSize
+    REQUIRE(sink.events[1].value.size() == 254);
+}
+
+// ---------------------------------------------------------------------------
+// Branch coverage: multiple escapes in one string
+// ---------------------------------------------------------------------------
+
+TEST_CASE("sax_parse: string with mixed escapes and unicode") {
+    RecordingSink sink;
+    auto err = note::sax_parse(R"({"s":"a\nb\tc\/d\u0041"})", sink);
+    REQUIRE(err.empty());
+    REQUIRE(sink.events[1].value == "a\nb\tc/dA");
+}
+
+// ---------------------------------------------------------------------------
+// Branch coverage: FilterJsonSink (virtual version) all methods
+// ---------------------------------------------------------------------------
+
+TEST_CASE("FilterJsonSink: forwards all events to inner") {
+    RecordingSink inner;
+    note::FilterJsonSink filter(inner);
+
+    filter.on_null("k");
+    filter.on_bool("k", true);
+    filter.on_number("k", "1");
+    filter.on_int("k", 5);
+    filter.on_float("k", 2.0);
+    filter.on_string("k", "v");
+    filter.on_object_begin("k");
+    filter.on_object_end("k");
+    filter.on_array_begin("k");
+    filter.on_array_end("k");
+    filter.reset();
+
+    // on_int and on_float go through default impl -> on_number
+    // So: null, bool, number(raw), number(from int), number(from float),
+    //     string, obj_begin, obj_end, arr_begin, arr_end
+    REQUIRE(inner.events.size() == 10);
+}
+
+// ---------------------------------------------------------------------------
+// Branch coverage: deeply nested object keys
+// ---------------------------------------------------------------------------
+
+TEST_CASE("sax_parse: nested array with objects") {
+    RecordingSink sink;
+    auto err = note::sax_parse(R"({"arr":[{"x":1},{"y":2}]})", sink);
+    REQUIRE(err.empty());
+    // root_begin, arr_begin, obj_begin, x:1, obj_end, obj_begin, y:2, obj_end, arr_end, root_end
+    CHECK(sink.events[0].type == "object_begin");
+    CHECK(sink.events[1].type == "array_begin");
+    CHECK(sink.events[2].type == "object_begin");
+    CHECK(sink.events[3].type == "number");
+    CHECK(sink.events[3].key == "x");
+    CHECK(sink.events[4].type == "object_end");
+    CHECK(sink.events[9].type == "object_end");
+}
+
+// ---------------------------------------------------------------------------
+// Branch coverage: edge case — empty string value
+// ---------------------------------------------------------------------------
+
+TEST_CASE("sax_parse: empty string value") {
+    RecordingSink sink;
+    auto err = note::sax_parse(R"({"a":""})", sink);
+    REQUIRE(err.empty());
+    REQUIRE(sink.events[1].value.empty());
+}
+
+// ---------------------------------------------------------------------------
+// Branch coverage: null as only value
+// ---------------------------------------------------------------------------
+
+TEST_CASE("sax_parse: null truncated at very end of buffer") {
+    RecordingSink sink;
+    // "nul" without the final 'l' — should error
+    std::string json = R"({"a":nul)";
+    auto err = note::sax_parse(json, sink);
+    REQUIRE(!err.empty());
+}
+
+// ---------------------------------------------------------------------------
+// Branch coverage: false literal mismatch
+// ---------------------------------------------------------------------------
+
+TEST_CASE("sax_parse: false literal mismatch") {
+    RecordingSink sink;
+    auto err = note::sax_parse(R"({"a":faxse})", sink);
+    REQUIRE(!err.empty());
+}
+
+// ---------------------------------------------------------------------------
+// Branch coverage: null literal mismatch
+// ---------------------------------------------------------------------------
+
+TEST_CASE("sax_parse: null literal mismatch") {
+    RecordingSink sink;
+    auto err = note::sax_parse(R"({"a":noll})", sink);
+    REQUIRE(!err.empty());
+}

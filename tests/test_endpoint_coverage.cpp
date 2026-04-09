@@ -195,6 +195,43 @@ TEST_CASE("note::api::CardAttn::Request response parsing") {
 }
 
 // ---------------------------------------------------------------------------
+TEST_CASE("note::api::CardAttn::Request sink field coverage") {
+    // Exercise the Sink's field dispatch via on_int / on_float (separate from
+    // on_number) and unknown-field fallthrough for non-body endpoints.
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    note::api::CardAttn::Request::Response rsp{};
+    note::api::CardAttn::Request::Response::Sink sink(rsp, pool);
+
+    // Feed response-level fields through the sink (on_number / on_string / on_bool).
+    sink.on_array_begin("files");
+    sink.on_string("files", "x-val");
+    sink.on_array_end("files");
+#if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
+    sink.on_string("off", "x-off");
+#endif
+    sink.on_string("payload", "x-payload");
+    sink.on_string("set", "x-set");
+    sink.on_string("time", "x-time");
+
+    // Exercise on_int / on_float dispatch (separate from on_number).
+#if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
+#endif
+
+    // Unknown field fallthrough — covers FALSE branch of last dispatch.
+    sink.on_string("_unknown_", "x");
+    sink.on_bool("_unknown_", false);
+    sink.on_number("_unknown_", "0");
+    sink.on_int("_unknown_", 0);
+    sink.on_float("_unknown_", 0.0);
+
+    // Reset path.
+    sink.reset();
+}
+
+// ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardAttn::Arm request builder") {
     Harness h;
     auto req = h.api.card.attn().arm();
@@ -254,6 +291,33 @@ TEST_CASE("note::api::CardAttn::Arm response parsing") {
 }
 
 // ---------------------------------------------------------------------------
+TEST_CASE("note::api::CardAttn::Arm sink field coverage") {
+    // Exercise the Sink's field dispatch via on_int / on_float (separate from
+    // on_number) and unknown-field fallthrough for non-body endpoints.
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    note::api::CardAttn::Arm::Response rsp{};
+    note::api::CardAttn::Arm::Response::Sink sink(rsp, pool);
+
+    // Feed response-level fields through the sink (on_number / on_string / on_bool).
+    sink.on_string("set", "x-set");
+
+    // Exercise on_int / on_float dispatch (separate from on_number).
+
+    // Unknown field fallthrough — covers FALSE branch of last dispatch.
+    sink.on_string("_unknown_", "x");
+    sink.on_bool("_unknown_", false);
+    sink.on_number("_unknown_", "0");
+    sink.on_int("_unknown_", 0);
+    sink.on_float("_unknown_", 0.0);
+
+    // Reset path.
+    sink.reset();
+}
+
+// ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardAttn::Rearm request builder") {
     Harness h;
     auto req = h.api.card.attn().rearm();
@@ -310,6 +374,33 @@ TEST_CASE("note::api::CardAttn::Rearm response parsing") {
         note::StringPool pool(alloc);
         empty_rsp.intern_strings(pool);
     }
+}
+
+// ---------------------------------------------------------------------------
+TEST_CASE("note::api::CardAttn::Rearm sink field coverage") {
+    // Exercise the Sink's field dispatch via on_int / on_float (separate from
+    // on_number) and unknown-field fallthrough for non-body endpoints.
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    note::api::CardAttn::Rearm::Response rsp{};
+    note::api::CardAttn::Rearm::Response::Sink sink(rsp, pool);
+
+    // Feed response-level fields through the sink (on_number / on_string / on_bool).
+    sink.on_string("set", "x-set");
+
+    // Exercise on_int / on_float dispatch (separate from on_number).
+
+    // Unknown field fallthrough — covers FALSE branch of last dispatch.
+    sink.on_string("_unknown_", "x");
+    sink.on_bool("_unknown_", false);
+    sink.on_number("_unknown_", "0");
+    sink.on_int("_unknown_", 0);
+    sink.on_float("_unknown_", 0.0);
+
+    // Reset path.
+    sink.reset();
 }
 
 // ---------------------------------------------------------------------------
@@ -418,6 +509,34 @@ TEST_CASE("note::api::CardAttn::Retrieve response parsing") {
         note::StringPool pool(alloc);
         empty_rsp.intern_strings(pool);
     }
+}
+
+// ---------------------------------------------------------------------------
+TEST_CASE("note::api::CardAttn::Retrieve sink field coverage") {
+    // Exercise the Sink's field dispatch via on_int / on_float (separate from
+    // on_number) and unknown-field fallthrough for non-body endpoints.
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    note::api::CardAttn::Retrieve::Response rsp{};
+    note::api::CardAttn::Retrieve::Response::Sink sink(rsp, pool);
+
+    // Feed response-level fields through the sink (on_number / on_string / on_bool).
+    sink.on_string("payload", "x-payload");
+    sink.on_string("time", "x-time");
+
+    // Exercise on_int / on_float dispatch (separate from on_number).
+
+    // Unknown field fallthrough — covers FALSE branch of last dispatch.
+    sink.on_string("_unknown_", "x");
+    sink.on_bool("_unknown_", false);
+    sink.on_number("_unknown_", "0");
+    sink.on_int("_unknown_", 0);
+    sink.on_float("_unknown_", 0.0);
+
+    // Reset path.
+    sink.reset();
 }
 
 // ---------------------------------------------------------------------------
@@ -558,6 +677,41 @@ TEST_CASE("note::api::CardAttn::Query response parsing") {
         note::StringPool pool(alloc);
         empty_rsp.intern_strings(pool);
     }
+}
+
+// ---------------------------------------------------------------------------
+TEST_CASE("note::api::CardAttn::Query sink field coverage") {
+    // Exercise the Sink's field dispatch via on_int / on_float (separate from
+    // on_number) and unknown-field fallthrough for non-body endpoints.
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    note::api::CardAttn::Query::Response rsp{};
+    note::api::CardAttn::Query::Response::Sink sink(rsp, pool);
+
+    // Feed response-level fields through the sink (on_number / on_string / on_bool).
+    sink.on_array_begin("files");
+    sink.on_string("files", "x-val");
+    sink.on_array_end("files");
+#if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
+    sink.on_string("off", "x-off");
+#endif
+    sink.on_string("set", "x-set");
+
+    // Exercise on_int / on_float dispatch (separate from on_number).
+#if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
+#endif
+
+    // Unknown field fallthrough — covers FALSE branch of last dispatch.
+    sink.on_string("_unknown_", "x");
+    sink.on_bool("_unknown_", false);
+    sink.on_number("_unknown_", "0");
+    sink.on_int("_unknown_", 0);
+    sink.on_float("_unknown_", 0.0);
+
+    // Reset path.
+    sink.reset();
 }
 
 // ---------------------------------------------------------------------------
@@ -711,6 +865,40 @@ TEST_CASE("note::api::CardAux response parsing") {
 }
 
 // ---------------------------------------------------------------------------
+TEST_CASE("note::api::CardAux sink field coverage") {
+    // Exercise the Sink's field dispatch via on_int / on_float (separate from
+    // on_number) and unknown-field fallthrough for non-body endpoints.
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    note::api::CardAux::Response rsp{};
+    note::api::CardAux::Response::Sink sink(rsp, pool);
+
+    // Feed response-level fields through the sink (on_number / on_string / on_bool).
+    sink.on_string("mode", "x-mode");
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1) || !defined(NOTE_API_STRICT)
+    sink.on_string("power", "x-power");
+#endif
+    sink.on_string("seconds", "x-seconds");
+    sink.on_string("time", "x-time");
+
+    // Exercise on_int / on_float dispatch (separate from on_number).
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1) || !defined(NOTE_API_STRICT)
+#endif
+
+    // Unknown field fallthrough — covers FALSE branch of last dispatch.
+    sink.on_string("_unknown_", "x");
+    sink.on_bool("_unknown_", false);
+    sink.on_number("_unknown_", "0");
+    sink.on_int("_unknown_", 0);
+    sink.on_float("_unknown_", 0.0);
+
+    // Reset path.
+    sink.reset();
+}
+
+// ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardAuxSerial::Request request builder") {
     Harness h;
     auto req = h.api.card.aux.serial.request();
@@ -795,6 +983,38 @@ TEST_CASE("note::api::CardAuxSerial::Request response parsing") {
         note::StringPool pool(alloc);
         empty_rsp.intern_strings(pool);
     }
+}
+
+// ---------------------------------------------------------------------------
+TEST_CASE("note::api::CardAuxSerial::Request sink field coverage") {
+    // Exercise the Sink's field dispatch via on_int / on_float (separate from
+    // on_number) and unknown-field fallthrough for non-body endpoints.
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    note::api::CardAuxSerial::Request::Response rsp{};
+    note::api::CardAuxSerial::Request::Response::Sink sink(rsp, pool);
+
+    // Feed response-level fields through the sink (on_number / on_string / on_bool).
+    sink.on_string("mode", "x-mode");
+#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
+    sink.on_string("rate", "x-rate");
+#endif
+
+    // Exercise on_int / on_float dispatch (separate from on_number).
+#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
+#endif
+
+    // Unknown field fallthrough — covers FALSE branch of last dispatch.
+    sink.on_string("_unknown_", "x");
+    sink.on_bool("_unknown_", false);
+    sink.on_number("_unknown_", "0");
+    sink.on_int("_unknown_", 0);
+    sink.on_float("_unknown_", 0.0);
+
+    // Reset path.
+    sink.reset();
 }
 
 // ---------------------------------------------------------------------------
@@ -1013,6 +1233,38 @@ TEST_CASE("note::api::CardBinary::Status response parsing") {
 }
 
 // ---------------------------------------------------------------------------
+TEST_CASE("note::api::CardBinary::Status sink field coverage") {
+    // Exercise the Sink's field dispatch via on_int / on_float (separate from
+    // on_number) and unknown-field fallthrough for non-body endpoints.
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    note::api::CardBinary::Status::Response rsp{};
+    note::api::CardBinary::Status::Response::Sink sink(rsp, pool);
+
+    // Feed response-level fields through the sink (on_number / on_string / on_bool).
+    sink.on_string("cobs", "x-cobs");
+    sink.on_string("connected", "x-connected");
+    sink.on_string("err", "x-err");
+    sink.on_string("length", "x-length");
+    sink.on_string("max", "x-max");
+    sink.on_string("status", "x-status");
+
+    // Exercise on_int / on_float dispatch (separate from on_number).
+
+    // Unknown field fallthrough — covers FALSE branch of last dispatch.
+    sink.on_string("_unknown_", "x");
+    sink.on_bool("_unknown_", false);
+    sink.on_number("_unknown_", "0");
+    sink.on_int("_unknown_", 0);
+    sink.on_float("_unknown_", 0.0);
+
+    // Reset path.
+    sink.reset();
+}
+
+// ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardBinary::Clear request builder") {
     Harness h;
     auto req = h.api.card.binary.clear();
@@ -1067,6 +1319,38 @@ TEST_CASE("note::api::CardBinary::Clear response parsing") {
         note::StringPool pool(alloc);
         empty_rsp.intern_strings(pool);
     }
+}
+
+// ---------------------------------------------------------------------------
+TEST_CASE("note::api::CardBinary::Clear sink field coverage") {
+    // Exercise the Sink's field dispatch via on_int / on_float (separate from
+    // on_number) and unknown-field fallthrough for non-body endpoints.
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    note::api::CardBinary::Clear::Response rsp{};
+    note::api::CardBinary::Clear::Response::Sink sink(rsp, pool);
+
+    // Feed response-level fields through the sink (on_number / on_string / on_bool).
+    sink.on_string("cobs", "x-cobs");
+    sink.on_string("connected", "x-connected");
+    sink.on_string("err", "x-err");
+    sink.on_string("length", "x-length");
+    sink.on_string("max", "x-max");
+    sink.on_string("status", "x-status");
+
+    // Exercise on_int / on_float dispatch (separate from on_number).
+
+    // Unknown field fallthrough — covers FALSE branch of last dispatch.
+    sink.on_string("_unknown_", "x");
+    sink.on_bool("_unknown_", false);
+    sink.on_number("_unknown_", "0");
+    sink.on_int("_unknown_", 0);
+    sink.on_float("_unknown_", 0.0);
+
+    // Reset path.
+    sink.reset();
 }
 
 // ---------------------------------------------------------------------------
@@ -1129,6 +1413,34 @@ TEST_CASE("note::api::CardBinaryGet response parsing") {
 }
 
 // ---------------------------------------------------------------------------
+TEST_CASE("note::api::CardBinaryGet sink field coverage") {
+    // Exercise the Sink's field dispatch via on_int / on_float (separate from
+    // on_number) and unknown-field fallthrough for non-body endpoints.
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    note::api::CardBinaryGet::Response rsp{};
+    note::api::CardBinaryGet::Response::Sink sink(rsp, pool);
+
+    // Feed response-level fields through the sink (on_number / on_string / on_bool).
+    sink.on_string("err", "x-err");
+    sink.on_string("status", "x-status");
+
+    // Exercise on_int / on_float dispatch (separate from on_number).
+
+    // Unknown field fallthrough — covers FALSE branch of last dispatch.
+    sink.on_string("_unknown_", "x");
+    sink.on_bool("_unknown_", false);
+    sink.on_number("_unknown_", "0");
+    sink.on_int("_unknown_", 0);
+    sink.on_float("_unknown_", 0.0);
+
+    // Reset path.
+    sink.reset();
+}
+
+// ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardBinaryPut request builder") {
     Harness h;
     auto req = h.api.card.binary.put();
@@ -1186,6 +1498,33 @@ TEST_CASE("note::api::CardBinaryPut response parsing") {
 }
 
 // ---------------------------------------------------------------------------
+TEST_CASE("note::api::CardBinaryPut sink field coverage") {
+    // Exercise the Sink's field dispatch via on_int / on_float (separate from
+    // on_number) and unknown-field fallthrough for non-body endpoints.
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    note::api::CardBinaryPut::Response rsp{};
+    note::api::CardBinaryPut::Response::Sink sink(rsp, pool);
+
+    // Feed response-level fields through the sink (on_number / on_string / on_bool).
+    sink.on_string("err", "x-err");
+
+    // Exercise on_int / on_float dispatch (separate from on_number).
+
+    // Unknown field fallthrough — covers FALSE branch of last dispatch.
+    sink.on_string("_unknown_", "x");
+    sink.on_bool("_unknown_", false);
+    sink.on_number("_unknown_", "0");
+    sink.on_int("_unknown_", 0);
+    sink.on_float("_unknown_", 0.0);
+
+    // Reset path.
+    sink.reset();
+}
+
+// ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardCarrier request builder") {
     Harness h;
     auto req = h.api.card.carrier();
@@ -1236,6 +1575,34 @@ TEST_CASE("note::api::CardCarrier response parsing") {
         note::StringPool pool(alloc);
         empty_rsp.intern_strings(pool);
     }
+}
+
+// ---------------------------------------------------------------------------
+TEST_CASE("note::api::CardCarrier sink field coverage") {
+    // Exercise the Sink's field dispatch via on_int / on_float (separate from
+    // on_number) and unknown-field fallthrough for non-body endpoints.
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    note::api::CardCarrier::Response rsp{};
+    note::api::CardCarrier::Response::Sink sink(rsp, pool);
+
+    // Feed response-level fields through the sink (on_number / on_string / on_bool).
+    sink.on_string("charging", "x-charging");
+    sink.on_string("mode", "x-mode");
+
+    // Exercise on_int / on_float dispatch (separate from on_number).
+
+    // Unknown field fallthrough — covers FALSE branch of last dispatch.
+    sink.on_string("_unknown_", "x");
+    sink.on_bool("_unknown_", false);
+    sink.on_number("_unknown_", "0");
+    sink.on_int("_unknown_", 0);
+    sink.on_float("_unknown_", 0.0);
+
+    // Reset path.
+    sink.reset();
 }
 
 // ---------------------------------------------------------------------------
@@ -1305,6 +1672,36 @@ TEST_CASE("note::api::CardContact::Get response parsing") {
 }
 
 // ---------------------------------------------------------------------------
+TEST_CASE("note::api::CardContact::Get sink field coverage") {
+    // Exercise the Sink's field dispatch via on_int / on_float (separate from
+    // on_number) and unknown-field fallthrough for non-body endpoints.
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    note::api::CardContact::Get::Response rsp{};
+    note::api::CardContact::Get::Response::Sink sink(rsp, pool);
+
+    // Feed response-level fields through the sink (on_number / on_string / on_bool).
+    sink.on_string("email", "x-email");
+    sink.on_string("name", "x-name");
+    sink.on_string("org", "x-org");
+    sink.on_string("role", "x-role");
+
+    // Exercise on_int / on_float dispatch (separate from on_number).
+
+    // Unknown field fallthrough — covers FALSE branch of last dispatch.
+    sink.on_string("_unknown_", "x");
+    sink.on_bool("_unknown_", false);
+    sink.on_number("_unknown_", "0");
+    sink.on_int("_unknown_", 0);
+    sink.on_float("_unknown_", 0.0);
+
+    // Reset path.
+    sink.reset();
+}
+
+// ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardContact::Set request builder") {
     Harness h;
     auto req = h.api.card.contact().set();
@@ -1368,6 +1765,36 @@ TEST_CASE("note::api::CardContact::Set response parsing") {
         note::StringPool pool(alloc);
         empty_rsp.intern_strings(pool);
     }
+}
+
+// ---------------------------------------------------------------------------
+TEST_CASE("note::api::CardContact::Set sink field coverage") {
+    // Exercise the Sink's field dispatch via on_int / on_float (separate from
+    // on_number) and unknown-field fallthrough for non-body endpoints.
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    note::api::CardContact::Set::Response rsp{};
+    note::api::CardContact::Set::Response::Sink sink(rsp, pool);
+
+    // Feed response-level fields through the sink (on_number / on_string / on_bool).
+    sink.on_string("email", "x-email");
+    sink.on_string("name", "x-name");
+    sink.on_string("org", "x-org");
+    sink.on_string("role", "x-role");
+
+    // Exercise on_int / on_float dispatch (separate from on_number).
+
+    // Unknown field fallthrough — covers FALSE branch of last dispatch.
+    sink.on_string("_unknown_", "x");
+    sink.on_bool("_unknown_", false);
+    sink.on_number("_unknown_", "0");
+    sink.on_int("_unknown_", 0);
+    sink.on_float("_unknown_", 0.0);
+
+    // Reset path.
+    sink.reset();
 }
 
 // ---------------------------------------------------------------------------
@@ -1440,6 +1867,33 @@ TEST_CASE("note::api::CardDfu response parsing") {
 }
 
 // ---------------------------------------------------------------------------
+TEST_CASE("note::api::CardDfu sink field coverage") {
+    // Exercise the Sink's field dispatch via on_int / on_float (separate from
+    // on_number) and unknown-field fallthrough for non-body endpoints.
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    note::api::CardDfu::Response rsp{};
+    note::api::CardDfu::Response::Sink sink(rsp, pool);
+
+    // Feed response-level fields through the sink (on_number / on_string / on_bool).
+    sink.on_string("name", "x-name");
+
+    // Exercise on_int / on_float dispatch (separate from on_number).
+
+    // Unknown field fallthrough — covers FALSE branch of last dispatch.
+    sink.on_string("_unknown_", "x");
+    sink.on_bool("_unknown_", false);
+    sink.on_number("_unknown_", "0");
+    sink.on_int("_unknown_", 0);
+    sink.on_float("_unknown_", 0.0);
+
+    // Reset path.
+    sink.reset();
+}
+
+// ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardIllumination request builder") {
     Harness h;
     auto req = h.api.card.illumination();
@@ -1484,6 +1938,33 @@ TEST_CASE("note::api::CardIllumination response parsing") {
         note::StringPool pool(alloc);
         empty_rsp.intern_strings(pool);
     }
+}
+
+// ---------------------------------------------------------------------------
+TEST_CASE("note::api::CardIllumination sink field coverage") {
+    // Exercise the Sink's field dispatch via on_int / on_float (separate from
+    // on_number) and unknown-field fallthrough for non-body endpoints.
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    note::api::CardIllumination::Response rsp{};
+    note::api::CardIllumination::Response::Sink sink(rsp, pool);
+
+    // Feed response-level fields through the sink (on_number / on_string / on_bool).
+    sink.on_string("value", "x-value");
+
+    // Exercise on_int / on_float dispatch (separate from on_number).
+
+    // Unknown field fallthrough — covers FALSE branch of last dispatch.
+    sink.on_string("_unknown_", "x");
+    sink.on_bool("_unknown_", false);
+    sink.on_number("_unknown_", "0");
+    sink.on_int("_unknown_", 0);
+    sink.on_float("_unknown_", 0.0);
+
+    // Reset path.
+    sink.reset();
 }
 
 // ---------------------------------------------------------------------------
@@ -1615,6 +2096,40 @@ TEST_CASE("note::api::CardLocation response parsing") {
 }
 
 // ---------------------------------------------------------------------------
+TEST_CASE("note::api::CardLocation sink field coverage") {
+    // Exercise the Sink's field dispatch via on_int / on_float (separate from
+    // on_number) and unknown-field fallthrough for non-body endpoints.
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    note::api::CardLocation::Response rsp{};
+    note::api::CardLocation::Response::Sink sink(rsp, pool);
+
+    // Feed response-level fields through the sink (on_number / on_string / on_bool).
+    sink.on_string("count", "x-count");
+    sink.on_string("dop", "x-dop");
+    sink.on_string("lat", "x-lat");
+    sink.on_string("lon", "x-lon");
+    sink.on_string("max", "x-max");
+    sink.on_string("mode", "x-mode");
+    sink.on_string("status", "x-status");
+    sink.on_string("time", "x-time");
+
+    // Exercise on_int / on_float dispatch (separate from on_number).
+
+    // Unknown field fallthrough — covers FALSE branch of last dispatch.
+    sink.on_string("_unknown_", "x");
+    sink.on_bool("_unknown_", false);
+    sink.on_number("_unknown_", "0");
+    sink.on_int("_unknown_", 0);
+    sink.on_float("_unknown_", 0.0);
+
+    // Reset path.
+    sink.reset();
+}
+
+// ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardLocationMode::Get request builder") {
     Harness h;
     auto req = h.api.card.location.mode.get();
@@ -1711,6 +2226,44 @@ TEST_CASE("note::api::CardLocationMode::Get response parsing") {
         note::StringPool pool(alloc);
         empty_rsp.intern_strings(pool);
     }
+}
+
+// ---------------------------------------------------------------------------
+TEST_CASE("note::api::CardLocationMode::Get sink field coverage") {
+    // Exercise the Sink's field dispatch via on_int / on_float (separate from
+    // on_number) and unknown-field fallthrough for non-body endpoints.
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    note::api::CardLocationMode::Get::Response rsp{};
+    note::api::CardLocationMode::Get::Response::Sink sink(rsp, pool);
+
+    // Feed response-level fields through the sink (on_number / on_string / on_bool).
+    sink.on_string("lat", "x-lat");
+    sink.on_string("lon", "x-lon");
+    sink.on_string("max", "x-max");
+    sink.on_string("minutes", "x-minutes");
+    sink.on_string("mode", "x-mode");
+    sink.on_string("seconds", "x-seconds");
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+    sink.on_string("threshold", "x-threshold");
+#endif
+    sink.on_string("vseconds", "x-vseconds");
+
+    // Exercise on_int / on_float dispatch (separate from on_number).
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+#endif
+
+    // Unknown field fallthrough — covers FALSE branch of last dispatch.
+    sink.on_string("_unknown_", "x");
+    sink.on_bool("_unknown_", false);
+    sink.on_number("_unknown_", "0");
+    sink.on_int("_unknown_", 0);
+    sink.on_float("_unknown_", 0.0);
+
+    // Reset path.
+    sink.reset();
 }
 
 // ---------------------------------------------------------------------------
@@ -1813,6 +2366,44 @@ TEST_CASE("note::api::CardLocationMode::Set response parsing") {
 }
 
 // ---------------------------------------------------------------------------
+TEST_CASE("note::api::CardLocationMode::Set sink field coverage") {
+    // Exercise the Sink's field dispatch via on_int / on_float (separate from
+    // on_number) and unknown-field fallthrough for non-body endpoints.
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    note::api::CardLocationMode::Set::Response rsp{};
+    note::api::CardLocationMode::Set::Response::Sink sink(rsp, pool);
+
+    // Feed response-level fields through the sink (on_number / on_string / on_bool).
+    sink.on_string("lat", "x-lat");
+    sink.on_string("lon", "x-lon");
+    sink.on_string("max", "x-max");
+    sink.on_string("minutes", "x-minutes");
+    sink.on_string("mode", "x-mode");
+    sink.on_string("seconds", "x-seconds");
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+    sink.on_string("threshold", "x-threshold");
+#endif
+    sink.on_string("vseconds", "x-vseconds");
+
+    // Exercise on_int / on_float dispatch (separate from on_number).
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+#endif
+
+    // Unknown field fallthrough — covers FALSE branch of last dispatch.
+    sink.on_string("_unknown_", "x");
+    sink.on_bool("_unknown_", false);
+    sink.on_number("_unknown_", "0");
+    sink.on_int("_unknown_", 0);
+    sink.on_float("_unknown_", 0.0);
+
+    // Reset path.
+    sink.reset();
+}
+
+// ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardLocationMode::Continuous request builder") {
     Harness h;
     auto req = h.api.card.location.mode.continuous();
@@ -1878,6 +2469,39 @@ TEST_CASE("note::api::CardLocationMode::Continuous response parsing") {
         note::StringPool pool(alloc);
         empty_rsp.intern_strings(pool);
     }
+}
+
+// ---------------------------------------------------------------------------
+TEST_CASE("note::api::CardLocationMode::Continuous sink field coverage") {
+    // Exercise the Sink's field dispatch via on_int / on_float (separate from
+    // on_number) and unknown-field fallthrough for non-body endpoints.
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    note::api::CardLocationMode::Continuous::Response rsp{};
+    note::api::CardLocationMode::Continuous::Response::Sink sink(rsp, pool);
+
+    // Feed response-level fields through the sink (on_number / on_string / on_bool).
+    sink.on_string("mode", "x-mode");
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+    sink.on_string("threshold", "x-threshold");
+#endif
+    sink.on_string("vseconds", "x-vseconds");
+
+    // Exercise on_int / on_float dispatch (separate from on_number).
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+#endif
+
+    // Unknown field fallthrough — covers FALSE branch of last dispatch.
+    sink.on_string("_unknown_", "x");
+    sink.on_bool("_unknown_", false);
+    sink.on_number("_unknown_", "0");
+    sink.on_int("_unknown_", 0);
+    sink.on_float("_unknown_", 0.0);
+
+    // Reset path.
+    sink.reset();
 }
 
 // ---------------------------------------------------------------------------
@@ -1974,6 +2598,44 @@ TEST_CASE("note::api::CardLocationMode::Periodic response parsing") {
 }
 
 // ---------------------------------------------------------------------------
+TEST_CASE("note::api::CardLocationMode::Periodic sink field coverage") {
+    // Exercise the Sink's field dispatch via on_int / on_float (separate from
+    // on_number) and unknown-field fallthrough for non-body endpoints.
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    note::api::CardLocationMode::Periodic::Response rsp{};
+    note::api::CardLocationMode::Periodic::Response::Sink sink(rsp, pool);
+
+    // Feed response-level fields through the sink (on_number / on_string / on_bool).
+    sink.on_string("lat", "x-lat");
+    sink.on_string("lon", "x-lon");
+    sink.on_string("max", "x-max");
+    sink.on_string("minutes", "x-minutes");
+    sink.on_string("mode", "x-mode");
+    sink.on_string("seconds", "x-seconds");
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+    sink.on_string("threshold", "x-threshold");
+#endif
+    sink.on_string("vseconds", "x-vseconds");
+
+    // Exercise on_int / on_float dispatch (separate from on_number).
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+#endif
+
+    // Unknown field fallthrough — covers FALSE branch of last dispatch.
+    sink.on_string("_unknown_", "x");
+    sink.on_bool("_unknown_", false);
+    sink.on_number("_unknown_", "0");
+    sink.on_int("_unknown_", 0);
+    sink.on_float("_unknown_", 0.0);
+
+    // Reset path.
+    sink.reset();
+}
+
+// ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardLocationMode::Fixed request builder") {
     Harness h;
     auto req = h.api.card.location.mode.fixed();
@@ -2029,6 +2691,35 @@ TEST_CASE("note::api::CardLocationMode::Fixed response parsing") {
         note::StringPool pool(alloc);
         empty_rsp.intern_strings(pool);
     }
+}
+
+// ---------------------------------------------------------------------------
+TEST_CASE("note::api::CardLocationMode::Fixed sink field coverage") {
+    // Exercise the Sink's field dispatch via on_int / on_float (separate from
+    // on_number) and unknown-field fallthrough for non-body endpoints.
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    note::api::CardLocationMode::Fixed::Response rsp{};
+    note::api::CardLocationMode::Fixed::Response::Sink sink(rsp, pool);
+
+    // Feed response-level fields through the sink (on_number / on_string / on_bool).
+    sink.on_string("lat", "x-lat");
+    sink.on_string("lon", "x-lon");
+    sink.on_string("mode", "x-mode");
+
+    // Exercise on_int / on_float dispatch (separate from on_number).
+
+    // Unknown field fallthrough — covers FALSE branch of last dispatch.
+    sink.on_string("_unknown_", "x");
+    sink.on_bool("_unknown_", false);
+    sink.on_number("_unknown_", "0");
+    sink.on_int("_unknown_", 0);
+    sink.on_float("_unknown_", 0.0);
+
+    // Reset path.
+    sink.reset();
 }
 
 // ---------------------------------------------------------------------------
@@ -2128,6 +2819,44 @@ TEST_CASE("note::api::CardLocationMode::Remove response parsing") {
 }
 
 // ---------------------------------------------------------------------------
+TEST_CASE("note::api::CardLocationMode::Remove sink field coverage") {
+    // Exercise the Sink's field dispatch via on_int / on_float (separate from
+    // on_number) and unknown-field fallthrough for non-body endpoints.
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    note::api::CardLocationMode::Remove::Response rsp{};
+    note::api::CardLocationMode::Remove::Response::Sink sink(rsp, pool);
+
+    // Feed response-level fields through the sink (on_number / on_string / on_bool).
+    sink.on_string("lat", "x-lat");
+    sink.on_string("lon", "x-lon");
+    sink.on_string("max", "x-max");
+    sink.on_string("minutes", "x-minutes");
+    sink.on_string("mode", "x-mode");
+    sink.on_string("seconds", "x-seconds");
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+    sink.on_string("threshold", "x-threshold");
+#endif
+    sink.on_string("vseconds", "x-vseconds");
+
+    // Exercise on_int / on_float dispatch (separate from on_number).
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+#endif
+
+    // Unknown field fallthrough — covers FALSE branch of last dispatch.
+    sink.on_string("_unknown_", "x");
+    sink.on_bool("_unknown_", false);
+    sink.on_number("_unknown_", "0");
+    sink.on_int("_unknown_", 0);
+    sink.on_float("_unknown_", 0.0);
+
+    // Reset path.
+    sink.reset();
+}
+
+// ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardLocationTrack request builder") {
     Harness h;
     auto req = h.api.card.location.track();
@@ -2210,6 +2939,38 @@ TEST_CASE("note::api::CardLocationTrack response parsing") {
         note::StringPool pool(alloc);
         empty_rsp.intern_strings(pool);
     }
+}
+
+// ---------------------------------------------------------------------------
+TEST_CASE("note::api::CardLocationTrack sink field coverage") {
+    // Exercise the Sink's field dispatch via on_int / on_float (separate from
+    // on_number) and unknown-field fallthrough for non-body endpoints.
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    note::api::CardLocationTrack::Response rsp{};
+    note::api::CardLocationTrack::Response::Sink sink(rsp, pool);
+
+    // Feed response-level fields through the sink (on_number / on_string / on_bool).
+    sink.on_string("file", "x-file");
+    sink.on_string("heartbeat", "x-heartbeat");
+    sink.on_string("minutes", "x-minutes");
+    sink.on_string("seconds", "x-seconds");
+    sink.on_string("start", "x-start");
+    sink.on_string("stop", "x-stop");
+
+    // Exercise on_int / on_float dispatch (separate from on_number).
+
+    // Unknown field fallthrough — covers FALSE branch of last dispatch.
+    sink.on_string("_unknown_", "x");
+    sink.on_bool("_unknown_", false);
+    sink.on_number("_unknown_", "0");
+    sink.on_int("_unknown_", 0);
+    sink.on_float("_unknown_", 0.0);
+
+    // Reset path.
+    sink.reset();
 }
 
 // ---------------------------------------------------------------------------
@@ -2308,6 +3069,39 @@ TEST_CASE("note::api::CardMotion response parsing") {
         note::StringPool pool(alloc);
         empty_rsp.intern_strings(pool);
     }
+}
+
+// ---------------------------------------------------------------------------
+TEST_CASE("note::api::CardMotion sink field coverage") {
+    // Exercise the Sink's field dispatch via on_int / on_float (separate from
+    // on_number) and unknown-field fallthrough for non-body endpoints.
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    note::api::CardMotion::Response rsp{};
+    note::api::CardMotion::Response::Sink sink(rsp, pool);
+
+    // Feed response-level fields through the sink (on_number / on_string / on_bool).
+    sink.on_string("alert", "x-alert");
+    sink.on_string("count", "x-count");
+    sink.on_string("mode", "x-mode");
+    sink.on_string("motion", "x-motion");
+    sink.on_string("movements", "x-movements");
+    sink.on_string("seconds", "x-seconds");
+    sink.on_string("status", "x-status");
+
+    // Exercise on_int / on_float dispatch (separate from on_number).
+
+    // Unknown field fallthrough — covers FALSE branch of last dispatch.
+    sink.on_string("_unknown_", "x");
+    sink.on_bool("_unknown_", false);
+    sink.on_number("_unknown_", "0");
+    sink.on_int("_unknown_", 0);
+    sink.on_float("_unknown_", 0.0);
+
+    // Reset path.
+    sink.reset();
 }
 
 // ---------------------------------------------------------------------------
@@ -2504,6 +3298,35 @@ TEST_CASE("note::api::CardPower::Read response parsing") {
 }
 
 // ---------------------------------------------------------------------------
+TEST_CASE("note::api::CardPower::Read sink field coverage") {
+    // Exercise the Sink's field dispatch via on_int / on_float (separate from
+    // on_number) and unknown-field fallthrough for non-body endpoints.
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    note::api::CardPower::Read::Response rsp{};
+    note::api::CardPower::Read::Response::Sink sink(rsp, pool);
+
+    // Feed response-level fields through the sink (on_number / on_string / on_bool).
+    sink.on_string("milliamp_hours", "x-milliamp_hours");
+    sink.on_string("temperature", "x-temperature");
+    sink.on_string("voltage", "x-voltage");
+
+    // Exercise on_int / on_float dispatch (separate from on_number).
+
+    // Unknown field fallthrough — covers FALSE branch of last dispatch.
+    sink.on_string("_unknown_", "x");
+    sink.on_bool("_unknown_", false);
+    sink.on_number("_unknown_", "0");
+    sink.on_int("_unknown_", 0);
+    sink.on_float("_unknown_", 0.0);
+
+    // Reset path.
+    sink.reset();
+}
+
+// ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardPower::Configure request builder") {
     Harness h;
     auto req = h.api.card.power().configure();
@@ -2562,6 +3385,35 @@ TEST_CASE("note::api::CardPower::Configure response parsing") {
 }
 
 // ---------------------------------------------------------------------------
+TEST_CASE("note::api::CardPower::Configure sink field coverage") {
+    // Exercise the Sink's field dispatch via on_int / on_float (separate from
+    // on_number) and unknown-field fallthrough for non-body endpoints.
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    note::api::CardPower::Configure::Response rsp{};
+    note::api::CardPower::Configure::Response::Sink sink(rsp, pool);
+
+    // Feed response-level fields through the sink (on_number / on_string / on_bool).
+    sink.on_string("milliamp_hours", "x-milliamp_hours");
+    sink.on_string("temperature", "x-temperature");
+    sink.on_string("voltage", "x-voltage");
+
+    // Exercise on_int / on_float dispatch (separate from on_number).
+
+    // Unknown field fallthrough — covers FALSE branch of last dispatch.
+    sink.on_string("_unknown_", "x");
+    sink.on_bool("_unknown_", false);
+    sink.on_number("_unknown_", "0");
+    sink.on_int("_unknown_", 0);
+    sink.on_float("_unknown_", 0.0);
+
+    // Reset path.
+    sink.reset();
+}
+
+// ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardPower::Reset request builder") {
     Harness h;
     auto req = h.api.card.power().reset();
@@ -2614,6 +3466,35 @@ TEST_CASE("note::api::CardPower::Reset response parsing") {
         note::StringPool pool(alloc);
         empty_rsp.intern_strings(pool);
     }
+}
+
+// ---------------------------------------------------------------------------
+TEST_CASE("note::api::CardPower::Reset sink field coverage") {
+    // Exercise the Sink's field dispatch via on_int / on_float (separate from
+    // on_number) and unknown-field fallthrough for non-body endpoints.
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    note::api::CardPower::Reset::Response rsp{};
+    note::api::CardPower::Reset::Response::Sink sink(rsp, pool);
+
+    // Feed response-level fields through the sink (on_number / on_string / on_bool).
+    sink.on_string("milliamp_hours", "x-milliamp_hours");
+    sink.on_string("temperature", "x-temperature");
+    sink.on_string("voltage", "x-voltage");
+
+    // Exercise on_int / on_float dispatch (separate from on_number).
+
+    // Unknown field fallthrough — covers FALSE branch of last dispatch.
+    sink.on_string("_unknown_", "x");
+    sink.on_bool("_unknown_", false);
+    sink.on_number("_unknown_", "0");
+    sink.on_int("_unknown_", 0);
+    sink.on_float("_unknown_", 0.0);
+
+    // Reset path.
+    sink.reset();
 }
 
 // ---------------------------------------------------------------------------
@@ -2670,6 +3551,34 @@ TEST_CASE("note::api::CardRandom response parsing") {
         note::StringPool pool(alloc);
         empty_rsp.intern_strings(pool);
     }
+}
+
+// ---------------------------------------------------------------------------
+TEST_CASE("note::api::CardRandom sink field coverage") {
+    // Exercise the Sink's field dispatch via on_int / on_float (separate from
+    // on_number) and unknown-field fallthrough for non-body endpoints.
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    note::api::CardRandom::Response rsp{};
+    note::api::CardRandom::Response::Sink sink(rsp, pool);
+
+    // Feed response-level fields through the sink (on_number / on_string / on_bool).
+    sink.on_string("count", "x-count");
+    sink.on_string("payload", "x-payload");
+
+    // Exercise on_int / on_float dispatch (separate from on_number).
+
+    // Unknown field fallthrough — covers FALSE branch of last dispatch.
+    sink.on_string("_unknown_", "x");
+    sink.on_bool("_unknown_", false);
+    sink.on_number("_unknown_", "0");
+    sink.on_int("_unknown_", 0);
+    sink.on_float("_unknown_", 0.0);
+
+    // Reset path.
+    sink.reset();
 }
 
 // ---------------------------------------------------------------------------
@@ -2796,6 +3705,36 @@ TEST_CASE("note::api::CardSleep response parsing") {
 }
 
 // ---------------------------------------------------------------------------
+TEST_CASE("note::api::CardSleep sink field coverage") {
+    // Exercise the Sink's field dispatch via on_int / on_float (separate from
+    // on_number) and unknown-field fallthrough for non-body endpoints.
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    note::api::CardSleep::Response rsp{};
+    note::api::CardSleep::Response::Sink sink(rsp, pool);
+
+    // Feed response-level fields through the sink (on_number / on_string / on_bool).
+    sink.on_string("mode", "x-mode");
+    sink.on_string("off", "x-off");
+    sink.on_string("on", "x-on");
+    sink.on_string("seconds", "x-seconds");
+
+    // Exercise on_int / on_float dispatch (separate from on_number).
+
+    // Unknown field fallthrough — covers FALSE branch of last dispatch.
+    sink.on_string("_unknown_", "x");
+    sink.on_bool("_unknown_", false);
+    sink.on_number("_unknown_", "0");
+    sink.on_int("_unknown_", 0);
+    sink.on_float("_unknown_", 0.0);
+
+    // Reset path.
+    sink.reset();
+}
+
+// ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardStatus request builder") {
     Harness h;
     auto req = h.api.card.status();
@@ -2871,6 +3810,51 @@ TEST_CASE("note::api::CardStatus response parsing") {
 }
 
 // ---------------------------------------------------------------------------
+TEST_CASE("note::api::CardStatus sink field coverage") {
+    // Exercise the Sink's field dispatch via on_int / on_float (separate from
+    // on_number) and unknown-field fallthrough for non-body endpoints.
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    note::api::CardStatus::Response rsp{};
+    note::api::CardStatus::Response::Sink sink(rsp, pool);
+
+    // Feed response-level fields through the sink (on_number / on_string / on_bool).
+    sink.on_string("cell", "x-cell");
+    sink.on_string("connected", "x-connected");
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1) || !defined(NOTE_API_STRICT)
+    sink.on_string("gps", "x-gps");
+#endif
+    sink.on_string("inbound", "x-inbound");
+    sink.on_string("outbound", "x-outbound");
+    sink.on_string("status", "x-status");
+    sink.on_string("storage", "x-storage");
+#if NOTE_API_VERSION >= NOTE_VERSION(7, 5, 1) || !defined(NOTE_API_STRICT)
+    sink.on_string("sync", "x-sync");
+#endif
+    sink.on_string("time", "x-time");
+    sink.on_string("usb", "x-usb");
+    sink.on_string("wifi", "x-wifi");
+
+    // Exercise on_int / on_float dispatch (separate from on_number).
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1) || !defined(NOTE_API_STRICT)
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(7, 5, 1) || !defined(NOTE_API_STRICT)
+#endif
+
+    // Unknown field fallthrough — covers FALSE branch of last dispatch.
+    sink.on_string("_unknown_", "x");
+    sink.on_bool("_unknown_", false);
+    sink.on_number("_unknown_", "0");
+    sink.on_int("_unknown_", 0);
+    sink.on_float("_unknown_", 0.0);
+
+    // Reset path.
+    sink.reset();
+}
+
+// ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardTemp::Read request builder") {
     Harness h;
     auto req = h.api.card.temp().read();
@@ -2940,6 +3924,39 @@ TEST_CASE("note::api::CardTemp::Read response parsing") {
         note::StringPool pool(alloc);
         empty_rsp.intern_strings(pool);
     }
+}
+
+// ---------------------------------------------------------------------------
+TEST_CASE("note::api::CardTemp::Read sink field coverage") {
+    // Exercise the Sink's field dispatch via on_int / on_float (separate from
+    // on_number) and unknown-field fallthrough for non-body endpoints.
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    note::api::CardTemp::Read::Response rsp{};
+    note::api::CardTemp::Read::Response::Sink sink(rsp, pool);
+
+    // Feed response-level fields through the sink (on_number / on_string / on_bool).
+    sink.on_string("calibration", "x-calibration");
+    sink.on_string("humidity", "x-humidity");
+    sink.on_string("pressure", "x-pressure");
+    sink.on_string("temperature", "x-temperature");
+    sink.on_string("usb", "x-usb");
+    sink.on_string("value", "x-value");
+    sink.on_string("voltage", "x-voltage");
+
+    // Exercise on_int / on_float dispatch (separate from on_number).
+
+    // Unknown field fallthrough — covers FALSE branch of last dispatch.
+    sink.on_string("_unknown_", "x");
+    sink.on_bool("_unknown_", false);
+    sink.on_number("_unknown_", "0");
+    sink.on_int("_unknown_", 0);
+    sink.on_float("_unknown_", 0.0);
+
+    // Reset path.
+    sink.reset();
 }
 
 // ---------------------------------------------------------------------------
@@ -3015,6 +4032,39 @@ TEST_CASE("note::api::CardTemp::Configure response parsing") {
 }
 
 // ---------------------------------------------------------------------------
+TEST_CASE("note::api::CardTemp::Configure sink field coverage") {
+    // Exercise the Sink's field dispatch via on_int / on_float (separate from
+    // on_number) and unknown-field fallthrough for non-body endpoints.
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    note::api::CardTemp::Configure::Response rsp{};
+    note::api::CardTemp::Configure::Response::Sink sink(rsp, pool);
+
+    // Feed response-level fields through the sink (on_number / on_string / on_bool).
+    sink.on_string("calibration", "x-calibration");
+    sink.on_string("humidity", "x-humidity");
+    sink.on_string("pressure", "x-pressure");
+    sink.on_string("temperature", "x-temperature");
+    sink.on_string("usb", "x-usb");
+    sink.on_string("value", "x-value");
+    sink.on_string("voltage", "x-voltage");
+
+    // Exercise on_int / on_float dispatch (separate from on_number).
+
+    // Unknown field fallthrough — covers FALSE branch of last dispatch.
+    sink.on_string("_unknown_", "x");
+    sink.on_bool("_unknown_", false);
+    sink.on_number("_unknown_", "0");
+    sink.on_int("_unknown_", 0);
+    sink.on_float("_unknown_", 0.0);
+
+    // Reset path.
+    sink.reset();
+}
+
+// ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardTemp::Stop request builder") {
     Harness h;
     auto req = h.api.card.temp().stop();
@@ -3084,6 +4134,39 @@ TEST_CASE("note::api::CardTemp::Stop response parsing") {
 }
 
 // ---------------------------------------------------------------------------
+TEST_CASE("note::api::CardTemp::Stop sink field coverage") {
+    // Exercise the Sink's field dispatch via on_int / on_float (separate from
+    // on_number) and unknown-field fallthrough for non-body endpoints.
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    note::api::CardTemp::Stop::Response rsp{};
+    note::api::CardTemp::Stop::Response::Sink sink(rsp, pool);
+
+    // Feed response-level fields through the sink (on_number / on_string / on_bool).
+    sink.on_string("calibration", "x-calibration");
+    sink.on_string("humidity", "x-humidity");
+    sink.on_string("pressure", "x-pressure");
+    sink.on_string("temperature", "x-temperature");
+    sink.on_string("usb", "x-usb");
+    sink.on_string("value", "x-value");
+    sink.on_string("voltage", "x-voltage");
+
+    // Exercise on_int / on_float dispatch (separate from on_number).
+
+    // Unknown field fallthrough — covers FALSE branch of last dispatch.
+    sink.on_string("_unknown_", "x");
+    sink.on_bool("_unknown_", false);
+    sink.on_number("_unknown_", "0");
+    sink.on_int("_unknown_", 0);
+    sink.on_float("_unknown_", 0.0);
+
+    // Reset path.
+    sink.reset();
+}
+
+// ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardTime request builder") {
     Harness h;
     auto req = h.api.card.time();
@@ -3140,6 +4223,39 @@ TEST_CASE("note::api::CardTime response parsing") {
         note::StringPool pool(alloc);
         empty_rsp.intern_strings(pool);
     }
+}
+
+// ---------------------------------------------------------------------------
+TEST_CASE("note::api::CardTime sink field coverage") {
+    // Exercise the Sink's field dispatch via on_int / on_float (separate from
+    // on_number) and unknown-field fallthrough for non-body endpoints.
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    note::api::CardTime::Response rsp{};
+    note::api::CardTime::Response::Sink sink(rsp, pool);
+
+    // Feed response-level fields through the sink (on_number / on_string / on_bool).
+    sink.on_string("area", "x-area");
+    sink.on_string("country", "x-country");
+    sink.on_string("lat", "x-lat");
+    sink.on_string("lon", "x-lon");
+    sink.on_string("minutes", "x-minutes");
+    sink.on_string("time", "x-time");
+    sink.on_string("zone", "x-zone");
+
+    // Exercise on_int / on_float dispatch (separate from on_number).
+
+    // Unknown field fallthrough — covers FALSE branch of last dispatch.
+    sink.on_string("_unknown_", "x");
+    sink.on_bool("_unknown_", false);
+    sink.on_number("_unknown_", "0");
+    sink.on_int("_unknown_", 0);
+    sink.on_float("_unknown_", 0.0);
+
+    // Reset path.
+    sink.reset();
 }
 
 // ---------------------------------------------------------------------------
@@ -3250,6 +4366,33 @@ TEST_CASE("note::api::CardTransport response parsing") {
 }
 
 // ---------------------------------------------------------------------------
+TEST_CASE("note::api::CardTransport sink field coverage") {
+    // Exercise the Sink's field dispatch via on_int / on_float (separate from
+    // on_number) and unknown-field fallthrough for non-body endpoints.
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    note::api::CardTransport::Response rsp{};
+    note::api::CardTransport::Response::Sink sink(rsp, pool);
+
+    // Feed response-level fields through the sink (on_number / on_string / on_bool).
+    sink.on_string("method", "x-method");
+
+    // Exercise on_int / on_float dispatch (separate from on_number).
+
+    // Unknown field fallthrough — covers FALSE branch of last dispatch.
+    sink.on_string("_unknown_", "x");
+    sink.on_bool("_unknown_", false);
+    sink.on_number("_unknown_", "0");
+    sink.on_int("_unknown_", 0);
+    sink.on_float("_unknown_", 0.0);
+
+    // Reset path.
+    sink.reset();
+}
+
+// ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardTriangulate request builder") {
     Harness h;
     auto req = h.api.card.triangulate();
@@ -3329,6 +4472,38 @@ TEST_CASE("note::api::CardTriangulate response parsing") {
 }
 
 // ---------------------------------------------------------------------------
+TEST_CASE("note::api::CardTriangulate sink field coverage") {
+    // Exercise the Sink's field dispatch via on_int / on_float (separate from
+    // on_number) and unknown-field fallthrough for non-body endpoints.
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    note::api::CardTriangulate::Response rsp{};
+    note::api::CardTriangulate::Response::Sink sink(rsp, pool);
+
+    // Feed response-level fields through the sink (on_number / on_string / on_bool).
+    sink.on_string("length", "x-length");
+    sink.on_string("mode", "x-mode");
+    sink.on_string("motion", "x-motion");
+    sink.on_string("on", "x-on");
+    sink.on_string("time", "x-time");
+    sink.on_string("usb", "x-usb");
+
+    // Exercise on_int / on_float dispatch (separate from on_number).
+
+    // Unknown field fallthrough — covers FALSE branch of last dispatch.
+    sink.on_string("_unknown_", "x");
+    sink.on_bool("_unknown_", false);
+    sink.on_number("_unknown_", "0");
+    sink.on_int("_unknown_", 0);
+    sink.on_float("_unknown_", 0.0);
+
+    // Reset path.
+    sink.reset();
+}
+
+// ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardUsageGet request builder") {
     Harness h;
     auto req = h.api.card.usageGet();
@@ -3394,6 +4569,40 @@ TEST_CASE("note::api::CardUsageGet response parsing") {
         note::StringPool pool(alloc);
         empty_rsp.intern_strings(pool);
     }
+}
+
+// ---------------------------------------------------------------------------
+TEST_CASE("note::api::CardUsageGet sink field coverage") {
+    // Exercise the Sink's field dispatch via on_int / on_float (separate from
+    // on_number) and unknown-field fallthrough for non-body endpoints.
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    note::api::CardUsageGet::Response rsp{};
+    note::api::CardUsageGet::Response::Sink sink(rsp, pool);
+
+    // Feed response-level fields through the sink (on_number / on_string / on_bool).
+    sink.on_string("bytes_received", "x-bytes_received");
+    sink.on_string("bytes_sent", "x-bytes_sent");
+    sink.on_string("notes_received", "x-notes_received");
+    sink.on_string("notes_sent", "x-notes_sent");
+    sink.on_string("seconds", "x-seconds");
+    sink.on_string("sessions_secure", "x-sessions_secure");
+    sink.on_string("sessions_standard", "x-sessions_standard");
+    sink.on_string("time", "x-time");
+
+    // Exercise on_int / on_float dispatch (separate from on_number).
+
+    // Unknown field fallthrough — covers FALSE branch of last dispatch.
+    sink.on_string("_unknown_", "x");
+    sink.on_bool("_unknown_", false);
+    sink.on_number("_unknown_", "0");
+    sink.on_int("_unknown_", 0);
+    sink.on_float("_unknown_", 0.0);
+
+    // Reset path.
+    sink.reset();
 }
 
 // ---------------------------------------------------------------------------
@@ -3471,6 +4680,43 @@ TEST_CASE("note::api::CardUsageTest response parsing") {
         note::StringPool pool(alloc);
         empty_rsp.intern_strings(pool);
     }
+}
+
+// ---------------------------------------------------------------------------
+TEST_CASE("note::api::CardUsageTest sink field coverage") {
+    // Exercise the Sink's field dispatch via on_int / on_float (separate from
+    // on_number) and unknown-field fallthrough for non-body endpoints.
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    note::api::CardUsageTest::Response rsp{};
+    note::api::CardUsageTest::Response::Sink sink(rsp, pool);
+
+    // Feed response-level fields through the sink (on_number / on_string / on_bool).
+    sink.on_string("bytes_per_day", "x-bytes_per_day");
+    sink.on_string("bytes_received", "x-bytes_received");
+    sink.on_string("bytes_sent", "x-bytes_sent");
+    sink.on_string("days", "x-days");
+    sink.on_string("max", "x-max");
+    sink.on_string("notes_received", "x-notes_received");
+    sink.on_string("notes_sent", "x-notes_sent");
+    sink.on_string("seconds", "x-seconds");
+    sink.on_string("sessions_secure", "x-sessions_secure");
+    sink.on_string("sessions_standard", "x-sessions_standard");
+    sink.on_string("time", "x-time");
+
+    // Exercise on_int / on_float dispatch (separate from on_number).
+
+    // Unknown field fallthrough — covers FALSE branch of last dispatch.
+    sink.on_string("_unknown_", "x");
+    sink.on_bool("_unknown_", false);
+    sink.on_number("_unknown_", "0");
+    sink.on_int("_unknown_", 0);
+    sink.on_float("_unknown_", 0.0);
+
+    // Reset path.
+    sink.reset();
 }
 
 // ---------------------------------------------------------------------------
@@ -3562,7 +4808,18 @@ TEST_CASE("note::api::CardVersion sink body coverage") {
     sink.on_string("wifi", "x-wifi");
 #endif
 
-    // Exercise body path: enter body, send events, exit.
+    // Exercise on_int / on_float dispatch (separate from on_number).
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
+#endif
+
+    // Unknown field fallthrough — covers FALSE branch of last dispatch in each method.
+    sink.on_string("_unknown_", "x");
+    sink.on_bool("_unknown_", false);
+    sink.on_number("_unknown_", "0");
+    sink.on_int("_unknown_", 0);
+    sink.on_float("_unknown_", 0.0);
+
+    // Exercise body path: enter body, send events, exit (no handler).
     sink.on_object_begin("body");
     sink.on_bool("flag", true);
     sink.on_number("count", "5");
@@ -3580,13 +4837,18 @@ TEST_CASE("note::api::CardVersion sink body coverage") {
     sink.on_array_end("items");
     sink.on_object_end("body");
 
-    // Exercise body path WITH a body handler connected.
+    // Exercise body path WITH a body handler — all method types.
     CoverageTestBody_ tbody{};
     note::StructSink<CoverageTestBody_> body_sink(tbody, pool);
     auto handler = note::make_body_handler(body_sink);
     sink.set_body_handler(handler);
     sink.on_object_begin("body");
+    sink.on_string("s", "v");
+    sink.on_bool("b", true);
+    sink.on_number("n", "1");
+    sink.on_int("i", 1);
     sink.on_float("v", 42.0);
+    sink.on_null("z");
     sink.on_object_end("body");
     REQUIRE(tbody.v == 42.0f);
 
@@ -3718,6 +4980,47 @@ TEST_CASE("note::api::CardVoltage::Read response parsing") {
 }
 
 // ---------------------------------------------------------------------------
+TEST_CASE("note::api::CardVoltage::Read sink field coverage") {
+    // Exercise the Sink's field dispatch via on_int / on_float (separate from
+    // on_number) and unknown-field fallthrough for non-body endpoints.
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    note::api::CardVoltage::Read::Response rsp{};
+    note::api::CardVoltage::Read::Response::Sink sink(rsp, pool);
+
+    // Feed response-level fields through the sink (on_number / on_string / on_bool).
+    sink.on_string("daily", "x-daily");
+    sink.on_string("hours", "x-hours");
+    sink.on_string("minutes", "x-minutes");
+    sink.on_string("mode", "x-mode");
+    sink.on_string("monthly", "x-monthly");
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
+    sink.on_string("usb", "x-usb");
+#endif
+    sink.on_string("value", "x-value");
+    sink.on_string("vavg", "x-vavg");
+    sink.on_string("vmax", "x-vmax");
+    sink.on_string("vmin", "x-vmin");
+    sink.on_string("weekly", "x-weekly");
+
+    // Exercise on_int / on_float dispatch (separate from on_number).
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
+#endif
+
+    // Unknown field fallthrough — covers FALSE branch of last dispatch.
+    sink.on_string("_unknown_", "x");
+    sink.on_bool("_unknown_", false);
+    sink.on_number("_unknown_", "0");
+    sink.on_int("_unknown_", 0);
+    sink.on_float("_unknown_", 0.0);
+
+    // Reset path.
+    sink.reset();
+}
+
+// ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardVoltage::Configure request builder") {
     Harness h;
     auto req = h.api.card.voltage().configure();
@@ -3841,6 +5144,47 @@ TEST_CASE("note::api::CardVoltage::Configure response parsing") {
 }
 
 // ---------------------------------------------------------------------------
+TEST_CASE("note::api::CardVoltage::Configure sink field coverage") {
+    // Exercise the Sink's field dispatch via on_int / on_float (separate from
+    // on_number) and unknown-field fallthrough for non-body endpoints.
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    note::api::CardVoltage::Configure::Response rsp{};
+    note::api::CardVoltage::Configure::Response::Sink sink(rsp, pool);
+
+    // Feed response-level fields through the sink (on_number / on_string / on_bool).
+    sink.on_string("daily", "x-daily");
+    sink.on_string("hours", "x-hours");
+    sink.on_string("minutes", "x-minutes");
+    sink.on_string("mode", "x-mode");
+    sink.on_string("monthly", "x-monthly");
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
+    sink.on_string("usb", "x-usb");
+#endif
+    sink.on_string("value", "x-value");
+    sink.on_string("vavg", "x-vavg");
+    sink.on_string("vmax", "x-vmax");
+    sink.on_string("vmin", "x-vmin");
+    sink.on_string("weekly", "x-weekly");
+
+    // Exercise on_int / on_float dispatch (separate from on_number).
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
+#endif
+
+    // Unknown field fallthrough — covers FALSE branch of last dispatch.
+    sink.on_string("_unknown_", "x");
+    sink.on_bool("_unknown_", false);
+    sink.on_number("_unknown_", "0");
+    sink.on_int("_unknown_", 0);
+    sink.on_float("_unknown_", 0.0);
+
+    // Reset path.
+    sink.reset();
+}
+
+// ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardWifi request builder") {
     Harness h;
     auto req = h.api.card.wifi();
@@ -3919,6 +5263,36 @@ TEST_CASE("note::api::CardWifi response parsing") {
 }
 
 // ---------------------------------------------------------------------------
+TEST_CASE("note::api::CardWifi sink field coverage") {
+    // Exercise the Sink's field dispatch via on_int / on_float (separate from
+    // on_number) and unknown-field fallthrough for non-body endpoints.
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    note::api::CardWifi::Response rsp{};
+    note::api::CardWifi::Response::Sink sink(rsp, pool);
+
+    // Feed response-level fields through the sink (on_number / on_string / on_bool).
+    sink.on_string("secure", "x-secure");
+    sink.on_string("security", "x-security");
+    sink.on_string("ssid", "x-ssid");
+    sink.on_string("version", "x-version");
+
+    // Exercise on_int / on_float dispatch (separate from on_number).
+
+    // Unknown field fallthrough — covers FALSE branch of last dispatch.
+    sink.on_string("_unknown_", "x");
+    sink.on_bool("_unknown_", false);
+    sink.on_number("_unknown_", "0");
+    sink.on_int("_unknown_", 0);
+    sink.on_float("_unknown_", 0.0);
+
+    // Reset path.
+    sink.reset();
+}
+
+// ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardWireless request builder") {
     Harness h;
     auto req = h.api.card.wireless();
@@ -3978,6 +5352,34 @@ TEST_CASE("note::api::CardWireless response parsing") {
         note::StringPool pool(alloc);
         empty_rsp.intern_strings(pool);
     }
+}
+
+// ---------------------------------------------------------------------------
+TEST_CASE("note::api::CardWireless sink field coverage") {
+    // Exercise the Sink's field dispatch via on_int / on_float (separate from
+    // on_number) and unknown-field fallthrough for non-body endpoints.
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    note::api::CardWireless::Response rsp{};
+    note::api::CardWireless::Response::Sink sink(rsp, pool);
+
+    // Feed response-level fields through the sink (on_number / on_string / on_bool).
+    sink.on_string("count", "x-count");
+    sink.on_string("status", "x-status");
+
+    // Exercise on_int / on_float dispatch (separate from on_number).
+
+    // Unknown field fallthrough — covers FALSE branch of last dispatch.
+    sink.on_string("_unknown_", "x");
+    sink.on_bool("_unknown_", false);
+    sink.on_number("_unknown_", "0");
+    sink.on_int("_unknown_", 0);
+    sink.on_float("_unknown_", 0.0);
+
+    // Reset path.
+    sink.reset();
 }
 
 // ---------------------------------------------------------------------------
@@ -4057,6 +5459,40 @@ TEST_CASE("note::api::CardWirelessPenalty::Check response parsing") {
 }
 
 // ---------------------------------------------------------------------------
+TEST_CASE("note::api::CardWirelessPenalty::Check sink field coverage") {
+    // Exercise the Sink's field dispatch via on_int / on_float (separate from
+    // on_number) and unknown-field fallthrough for non-body endpoints.
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    note::api::CardWirelessPenalty::Check::Response rsp{};
+    note::api::CardWirelessPenalty::Check::Response::Sink sink(rsp, pool);
+
+    // Feed response-level fields through the sink (on_number / on_string / on_bool).
+    sink.on_string("count", "x-count");
+    sink.on_string("minutes", "x-minutes");
+#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
+    sink.on_string("seconds", "x-seconds");
+#endif
+    sink.on_string("status", "x-status");
+
+    // Exercise on_int / on_float dispatch (separate from on_number).
+#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
+#endif
+
+    // Unknown field fallthrough — covers FALSE branch of last dispatch.
+    sink.on_string("_unknown_", "x");
+    sink.on_bool("_unknown_", false);
+    sink.on_number("_unknown_", "0");
+    sink.on_int("_unknown_", 0);
+    sink.on_float("_unknown_", 0.0);
+
+    // Reset path.
+    sink.reset();
+}
+
+// ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardWirelessPenalty::Set request builder") {
     Harness h;
     auto req = h.api.card.wireless.penalty.set();
@@ -4127,6 +5563,40 @@ TEST_CASE("note::api::CardWirelessPenalty::Set response parsing") {
         note::StringPool pool(alloc);
         empty_rsp.intern_strings(pool);
     }
+}
+
+// ---------------------------------------------------------------------------
+TEST_CASE("note::api::CardWirelessPenalty::Set sink field coverage") {
+    // Exercise the Sink's field dispatch via on_int / on_float (separate from
+    // on_number) and unknown-field fallthrough for non-body endpoints.
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    note::api::CardWirelessPenalty::Set::Response rsp{};
+    note::api::CardWirelessPenalty::Set::Response::Sink sink(rsp, pool);
+
+    // Feed response-level fields through the sink (on_number / on_string / on_bool).
+    sink.on_string("count", "x-count");
+    sink.on_string("minutes", "x-minutes");
+#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
+    sink.on_string("seconds", "x-seconds");
+#endif
+    sink.on_string("status", "x-status");
+
+    // Exercise on_int / on_float dispatch (separate from on_number).
+#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
+#endif
+
+    // Unknown field fallthrough — covers FALSE branch of last dispatch.
+    sink.on_string("_unknown_", "x");
+    sink.on_bool("_unknown_", false);
+    sink.on_number("_unknown_", "0");
+    sink.on_int("_unknown_", 0);
+    sink.on_float("_unknown_", 0.0);
+
+    // Reset path.
+    sink.reset();
 }
 
 // ---------------------------------------------------------------------------
@@ -4203,6 +5673,40 @@ TEST_CASE("note::api::CardWirelessPenalty::Clear response parsing") {
 }
 
 // ---------------------------------------------------------------------------
+TEST_CASE("note::api::CardWirelessPenalty::Clear sink field coverage") {
+    // Exercise the Sink's field dispatch via on_int / on_float (separate from
+    // on_number) and unknown-field fallthrough for non-body endpoints.
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    note::api::CardWirelessPenalty::Clear::Response rsp{};
+    note::api::CardWirelessPenalty::Clear::Response::Sink sink(rsp, pool);
+
+    // Feed response-level fields through the sink (on_number / on_string / on_bool).
+    sink.on_string("count", "x-count");
+    sink.on_string("minutes", "x-minutes");
+#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
+    sink.on_string("seconds", "x-seconds");
+#endif
+    sink.on_string("status", "x-status");
+
+    // Exercise on_int / on_float dispatch (separate from on_number).
+#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
+#endif
+
+    // Unknown field fallthrough — covers FALSE branch of last dispatch.
+    sink.on_string("_unknown_", "x");
+    sink.on_bool("_unknown_", false);
+    sink.on_number("_unknown_", "0");
+    sink.on_int("_unknown_", 0);
+    sink.on_float("_unknown_", 0.0);
+
+    // Reset path.
+    sink.reset();
+}
+
+// ---------------------------------------------------------------------------
 TEST_CASE("note::api::DfuGet request builder") {
     Harness h;
     auto req = h.api.dfu.get();
@@ -4263,6 +5767,36 @@ TEST_CASE("note::api::DfuGet response parsing") {
         note::StringPool pool(alloc);
         empty_rsp.intern_strings(pool);
     }
+}
+
+// ---------------------------------------------------------------------------
+TEST_CASE("note::api::DfuGet sink field coverage") {
+    // Exercise the Sink's field dispatch via on_int / on_float (separate from
+    // on_number) and unknown-field fallthrough for non-body endpoints.
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    note::api::DfuGet::Response rsp{};
+    note::api::DfuGet::Response::Sink sink(rsp, pool);
+
+    // Feed response-level fields through the sink (on_number / on_string / on_bool).
+    sink.on_string("cobs", "x-cobs");
+    sink.on_string("length", "x-length");
+    sink.on_string("payload", "x-payload");
+    sink.on_string("status", "x-status");
+
+    // Exercise on_int / on_float dispatch (separate from on_number).
+
+    // Unknown field fallthrough — covers FALSE branch of last dispatch.
+    sink.on_string("_unknown_", "x");
+    sink.on_bool("_unknown_", false);
+    sink.on_number("_unknown_", "0");
+    sink.on_int("_unknown_", 0);
+    sink.on_float("_unknown_", 0.0);
+
+    // Reset path.
+    sink.reset();
 }
 
 // ---------------------------------------------------------------------------
@@ -4364,7 +5898,16 @@ TEST_CASE("note::api::DfuStatus sink body coverage") {
     sink.on_string("pending", "x-pending");
     sink.on_string("status", "x-status");
 
-    // Exercise body path: enter body, send events, exit.
+    // Exercise on_int / on_float dispatch (separate from on_number).
+
+    // Unknown field fallthrough — covers FALSE branch of last dispatch in each method.
+    sink.on_string("_unknown_", "x");
+    sink.on_bool("_unknown_", false);
+    sink.on_number("_unknown_", "0");
+    sink.on_int("_unknown_", 0);
+    sink.on_float("_unknown_", 0.0);
+
+    // Exercise body path: enter body, send events, exit (no handler).
     sink.on_object_begin("body");
     sink.on_bool("flag", true);
     sink.on_number("count", "5");
@@ -4382,13 +5925,18 @@ TEST_CASE("note::api::DfuStatus sink body coverage") {
     sink.on_array_end("items");
     sink.on_object_end("body");
 
-    // Exercise body path WITH a body handler connected.
+    // Exercise body path WITH a body handler — all method types.
     CoverageTestBody_ tbody{};
     note::StructSink<CoverageTestBody_> body_sink(tbody, pool);
     auto handler = note::make_body_handler(body_sink);
     sink.set_body_handler(handler);
     sink.on_object_begin("body");
+    sink.on_string("s", "v");
+    sink.on_bool("b", true);
+    sink.on_number("n", "1");
+    sink.on_int("i", 1);
     sink.on_float("v", 42.0);
+    sink.on_null("z");
     sink.on_object_end("body");
     REQUIRE(tbody.v == 42.0f);
 
@@ -4551,7 +6099,18 @@ TEST_CASE("note::api::EnvGet sink body coverage") {
     sink.on_string("time", "x-time");
 #endif
 
-    // Exercise body path: enter body, send events, exit.
+    // Exercise on_int / on_float dispatch (separate from on_number).
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+#endif
+
+    // Unknown field fallthrough — covers FALSE branch of last dispatch in each method.
+    sink.on_string("_unknown_", "x");
+    sink.on_bool("_unknown_", false);
+    sink.on_number("_unknown_", "0");
+    sink.on_int("_unknown_", 0);
+    sink.on_float("_unknown_", 0.0);
+
+    // Exercise body path: enter body, send events, exit (no handler).
     sink.on_object_begin("body");
     sink.on_bool("flag", true);
     sink.on_number("count", "5");
@@ -4569,13 +6128,18 @@ TEST_CASE("note::api::EnvGet sink body coverage") {
     sink.on_array_end("items");
     sink.on_object_end("body");
 
-    // Exercise body path WITH a body handler connected.
+    // Exercise body path WITH a body handler — all method types.
     CoverageTestBody_ tbody{};
     note::StructSink<CoverageTestBody_> body_sink(tbody, pool);
     auto handler = note::make_body_handler(body_sink);
     sink.set_body_handler(handler);
     sink.on_object_begin("body");
+    sink.on_string("s", "v");
+    sink.on_bool("b", true);
+    sink.on_number("n", "1");
+    sink.on_int("i", 1);
     sink.on_float("v", 42.0);
+    sink.on_null("z");
     sink.on_object_end("body");
     REQUIRE(tbody.v == 42.0f);
 
@@ -4645,6 +6209,37 @@ TEST_CASE("note::api::EnvModified response parsing") {
 }
 
 // ---------------------------------------------------------------------------
+TEST_CASE("note::api::EnvModified sink field coverage") {
+    // Exercise the Sink's field dispatch via on_int / on_float (separate from
+    // on_number) and unknown-field fallthrough for non-body endpoints.
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    note::api::EnvModified::Response rsp{};
+    note::api::EnvModified::Response::Sink sink(rsp, pool);
+
+    // Feed response-level fields through the sink (on_number / on_string / on_bool).
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+    sink.on_string("time", "x-time");
+#endif
+
+    // Exercise on_int / on_float dispatch (separate from on_number).
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+#endif
+
+    // Unknown field fallthrough — covers FALSE branch of last dispatch.
+    sink.on_string("_unknown_", "x");
+    sink.on_bool("_unknown_", false);
+    sink.on_number("_unknown_", "0");
+    sink.on_int("_unknown_", 0);
+    sink.on_float("_unknown_", 0.0);
+
+    // Reset path.
+    sink.reset();
+}
+
+// ---------------------------------------------------------------------------
 TEST_CASE("note::api::EnvSet request builder") {
     Harness h;
     auto req = h.api.env.set(note::string_view("x-name"));
@@ -4701,6 +6296,37 @@ TEST_CASE("note::api::EnvSet response parsing") {
 }
 
 // ---------------------------------------------------------------------------
+TEST_CASE("note::api::EnvSet sink field coverage") {
+    // Exercise the Sink's field dispatch via on_int / on_float (separate from
+    // on_number) and unknown-field fallthrough for non-body endpoints.
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    note::api::EnvSet::Response rsp{};
+    note::api::EnvSet::Response::Sink sink(rsp, pool);
+
+    // Feed response-level fields through the sink (on_number / on_string / on_bool).
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+    sink.on_string("time", "x-time");
+#endif
+
+    // Exercise on_int / on_float dispatch (separate from on_number).
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+#endif
+
+    // Unknown field fallthrough — covers FALSE branch of last dispatch.
+    sink.on_string("_unknown_", "x");
+    sink.on_bool("_unknown_", false);
+    sink.on_number("_unknown_", "0");
+    sink.on_int("_unknown_", 0);
+    sink.on_float("_unknown_", 0.0);
+
+    // Reset path.
+    sink.reset();
+}
+
+// ---------------------------------------------------------------------------
 TEST_CASE("note::api::EnvTemplate request builder") {
     Harness h;
     auto req = h.api.env.templates();
@@ -4745,6 +6371,33 @@ TEST_CASE("note::api::EnvTemplate response parsing") {
         note::StringPool pool(alloc);
         empty_rsp.intern_strings(pool);
     }
+}
+
+// ---------------------------------------------------------------------------
+TEST_CASE("note::api::EnvTemplate sink field coverage") {
+    // Exercise the Sink's field dispatch via on_int / on_float (separate from
+    // on_number) and unknown-field fallthrough for non-body endpoints.
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    note::api::EnvTemplate::Response rsp{};
+    note::api::EnvTemplate::Response::Sink sink(rsp, pool);
+
+    // Feed response-level fields through the sink (on_number / on_string / on_bool).
+    sink.on_string("bytes", "x-bytes");
+
+    // Exercise on_int / on_float dispatch (separate from on_number).
+
+    // Unknown field fallthrough — covers FALSE branch of last dispatch.
+    sink.on_string("_unknown_", "x");
+    sink.on_bool("_unknown_", false);
+    sink.on_number("_unknown_", "0");
+    sink.on_int("_unknown_", 0);
+    sink.on_float("_unknown_", 0.0);
+
+    // Reset path.
+    sink.reset();
 }
 
 // ---------------------------------------------------------------------------
@@ -4805,6 +6458,35 @@ TEST_CASE("note::api::FileChanges response parsing") {
 }
 
 // ---------------------------------------------------------------------------
+TEST_CASE("note::api::FileChanges sink field coverage") {
+    // Exercise the Sink's field dispatch via on_int / on_float (separate from
+    // on_number) and unknown-field fallthrough for non-body endpoints.
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    note::api::FileChanges::Response rsp{};
+    note::api::FileChanges::Response::Sink sink(rsp, pool);
+
+    // Feed response-level fields through the sink (on_number / on_string / on_bool).
+    sink.on_string("changes", "x-changes");
+    sink.on_string("pending", "x-pending");
+    sink.on_string("total", "x-total");
+
+    // Exercise on_int / on_float dispatch (separate from on_number).
+
+    // Unknown field fallthrough — covers FALSE branch of last dispatch.
+    sink.on_string("_unknown_", "x");
+    sink.on_bool("_unknown_", false);
+    sink.on_number("_unknown_", "0");
+    sink.on_int("_unknown_", 0);
+    sink.on_float("_unknown_", 0.0);
+
+    // Reset path.
+    sink.reset();
+}
+
+// ---------------------------------------------------------------------------
 TEST_CASE("note::api::FileChangesPending request builder") {
     Harness h;
     auto req = h.api.file.changes.pending();
@@ -4853,6 +6535,35 @@ TEST_CASE("note::api::FileChangesPending response parsing") {
         note::StringPool pool(alloc);
         empty_rsp.intern_strings(pool);
     }
+}
+
+// ---------------------------------------------------------------------------
+TEST_CASE("note::api::FileChangesPending sink field coverage") {
+    // Exercise the Sink's field dispatch via on_int / on_float (separate from
+    // on_number) and unknown-field fallthrough for non-body endpoints.
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    note::api::FileChangesPending::Response rsp{};
+    note::api::FileChangesPending::Response::Sink sink(rsp, pool);
+
+    // Feed response-level fields through the sink (on_number / on_string / on_bool).
+    sink.on_string("changes", "x-changes");
+    sink.on_string("pending", "x-pending");
+    sink.on_string("total", "x-total");
+
+    // Exercise on_int / on_float dispatch (separate from on_number).
+
+    // Unknown field fallthrough — covers FALSE branch of last dispatch.
+    sink.on_string("_unknown_", "x");
+    sink.on_bool("_unknown_", false);
+    sink.on_number("_unknown_", "0");
+    sink.on_int("_unknown_", 0);
+    sink.on_float("_unknown_", 0.0);
+
+    // Reset path.
+    sink.reset();
 }
 
 // ---------------------------------------------------------------------------
@@ -4968,6 +6679,35 @@ TEST_CASE("note::api::FileStats response parsing") {
 }
 
 // ---------------------------------------------------------------------------
+TEST_CASE("note::api::FileStats sink field coverage") {
+    // Exercise the Sink's field dispatch via on_int / on_float (separate from
+    // on_number) and unknown-field fallthrough for non-body endpoints.
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    note::api::FileStats::Response rsp{};
+    note::api::FileStats::Response::Sink sink(rsp, pool);
+
+    // Feed response-level fields through the sink (on_number / on_string / on_bool).
+    sink.on_string("changes", "x-changes");
+    sink.on_string("sync", "x-sync");
+    sink.on_string("total", "x-total");
+
+    // Exercise on_int / on_float dispatch (separate from on_number).
+
+    // Unknown field fallthrough — covers FALSE branch of last dispatch.
+    sink.on_string("_unknown_", "x");
+    sink.on_bool("_unknown_", false);
+    sink.on_number("_unknown_", "0");
+    sink.on_int("_unknown_", 0);
+    sink.on_float("_unknown_", 0.0);
+
+    // Reset path.
+    sink.reset();
+}
+
+// ---------------------------------------------------------------------------
 TEST_CASE("note::api::HubGet request builder") {
     Harness h;
     auto req = h.api.hub.get();
@@ -5030,6 +6770,42 @@ TEST_CASE("note::api::HubGet response parsing") {
         note::StringPool pool(alloc);
         empty_rsp.intern_strings(pool);
     }
+}
+
+// ---------------------------------------------------------------------------
+TEST_CASE("note::api::HubGet sink field coverage") {
+    // Exercise the Sink's field dispatch via on_int / on_float (separate from
+    // on_number) and unknown-field fallthrough for non-body endpoints.
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    note::api::HubGet::Response rsp{};
+    note::api::HubGet::Response::Sink sink(rsp, pool);
+
+    // Feed response-level fields through the sink (on_number / on_string / on_bool).
+    sink.on_string("device", "x-device");
+    sink.on_string("host", "x-host");
+    sink.on_string("inbound", "x-inbound");
+    sink.on_string("mode", "x-mode");
+    sink.on_string("outbound", "x-outbound");
+    sink.on_string("product", "x-product");
+    sink.on_string("sn", "x-sn");
+    sink.on_string("sync", "x-sync");
+    sink.on_string("vinbound", "x-vinbound");
+    sink.on_string("voutbound", "x-voutbound");
+
+    // Exercise on_int / on_float dispatch (separate from on_number).
+
+    // Unknown field fallthrough — covers FALSE branch of last dispatch.
+    sink.on_string("_unknown_", "x");
+    sink.on_bool("_unknown_", false);
+    sink.on_number("_unknown_", "0");
+    sink.on_int("_unknown_", 0);
+    sink.on_float("_unknown_", 0.0);
+
+    // Reset path.
+    sink.reset();
 }
 
 // ---------------------------------------------------------------------------
@@ -5273,7 +7049,16 @@ TEST_CASE("note::api::HubSignal sink body coverage") {
     sink.on_string("connected", "x-connected");
     sink.on_string("signals", "x-signals");
 
-    // Exercise body path: enter body, send events, exit.
+    // Exercise on_int / on_float dispatch (separate from on_number).
+
+    // Unknown field fallthrough — covers FALSE branch of last dispatch in each method.
+    sink.on_string("_unknown_", "x");
+    sink.on_bool("_unknown_", false);
+    sink.on_number("_unknown_", "0");
+    sink.on_int("_unknown_", 0);
+    sink.on_float("_unknown_", 0.0);
+
+    // Exercise body path: enter body, send events, exit (no handler).
     sink.on_object_begin("body");
     sink.on_bool("flag", true);
     sink.on_number("count", "5");
@@ -5291,13 +7076,18 @@ TEST_CASE("note::api::HubSignal sink body coverage") {
     sink.on_array_end("items");
     sink.on_object_end("body");
 
-    // Exercise body path WITH a body handler connected.
+    // Exercise body path WITH a body handler — all method types.
     CoverageTestBody_ tbody{};
     note::StructSink<CoverageTestBody_> body_sink(tbody, pool);
     auto handler = note::make_body_handler(body_sink);
     sink.set_body_handler(handler);
     sink.on_object_begin("body");
+    sink.on_string("s", "v");
+    sink.on_bool("b", true);
+    sink.on_number("n", "1");
+    sink.on_int("i", 1);
     sink.on_float("v", 42.0);
+    sink.on_null("z");
     sink.on_object_end("body");
     REQUIRE(tbody.v == 42.0f);
 
@@ -5352,6 +7142,34 @@ TEST_CASE("note::api::HubStatus response parsing") {
         note::StringPool pool(alloc);
         empty_rsp.intern_strings(pool);
     }
+}
+
+// ---------------------------------------------------------------------------
+TEST_CASE("note::api::HubStatus sink field coverage") {
+    // Exercise the Sink's field dispatch via on_int / on_float (separate from
+    // on_number) and unknown-field fallthrough for non-body endpoints.
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    note::api::HubStatus::Response rsp{};
+    note::api::HubStatus::Response::Sink sink(rsp, pool);
+
+    // Feed response-level fields through the sink (on_number / on_string / on_bool).
+    sink.on_string("connected", "x-connected");
+    sink.on_string("status", "x-status");
+
+    // Exercise on_int / on_float dispatch (separate from on_number).
+
+    // Unknown field fallthrough — covers FALSE branch of last dispatch.
+    sink.on_string("_unknown_", "x");
+    sink.on_bool("_unknown_", false);
+    sink.on_number("_unknown_", "0");
+    sink.on_int("_unknown_", 0);
+    sink.on_float("_unknown_", 0.0);
+
+    // Reset path.
+    sink.reset();
 }
 
 // ---------------------------------------------------------------------------
@@ -5471,6 +7289,49 @@ TEST_CASE("note::api::HubSyncStatus response parsing") {
 }
 
 // ---------------------------------------------------------------------------
+TEST_CASE("note::api::HubSyncStatus sink field coverage") {
+    // Exercise the Sink's field dispatch via on_int / on_float (separate from
+    // on_number) and unknown-field fallthrough for non-body endpoints.
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    note::api::HubSyncStatus::Response rsp{};
+    note::api::HubSyncStatus::Response::Sink sink(rsp, pool);
+
+    // Feed response-level fields through the sink (on_number / on_string / on_bool).
+    sink.on_string("alert", "x-alert");
+    sink.on_string("completed", "x-completed");
+    sink.on_string("mode", "x-mode");
+    sink.on_string("requested", "x-requested");
+#if NOTE_API_VERSION >= NOTE_VERSION(6, 1, 1) || !defined(NOTE_API_STRICT)
+    sink.on_string("scan", "x-scan");
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
+    sink.on_string("seconds", "x-seconds");
+#endif
+    sink.on_string("status", "x-status");
+    sink.on_string("sync", "x-sync");
+    sink.on_string("time", "x-time");
+
+    // Exercise on_int / on_float dispatch (separate from on_number).
+#if NOTE_API_VERSION >= NOTE_VERSION(6, 1, 1) || !defined(NOTE_API_STRICT)
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
+#endif
+
+    // Unknown field fallthrough — covers FALSE branch of last dispatch.
+    sink.on_string("_unknown_", "x");
+    sink.on_bool("_unknown_", false);
+    sink.on_number("_unknown_", "0");
+    sink.on_int("_unknown_", 0);
+    sink.on_float("_unknown_", 0.0);
+
+    // Reset path.
+    sink.reset();
+}
+
+// ---------------------------------------------------------------------------
 TEST_CASE("note::api::NoteAdd request builder") {
     Harness h;
     auto req = h.api.note.add();
@@ -5586,6 +7447,35 @@ TEST_CASE("note::api::NoteAdd response parsing") {
 }
 
 // ---------------------------------------------------------------------------
+TEST_CASE("note::api::NoteAdd sink field coverage") {
+    // Exercise the Sink's field dispatch via on_int / on_float (separate from
+    // on_number) and unknown-field fallthrough for non-body endpoints.
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    note::api::NoteAdd::Response rsp{};
+    note::api::NoteAdd::Response::Sink sink(rsp, pool);
+
+    // Feed response-level fields through the sink (on_number / on_string / on_bool).
+    sink.on_string("note", "x-note");
+    sink.on_string("template", "x-template");
+    sink.on_string("total", "x-total");
+
+    // Exercise on_int / on_float dispatch (separate from on_number).
+
+    // Unknown field fallthrough — covers FALSE branch of last dispatch.
+    sink.on_string("_unknown_", "x");
+    sink.on_bool("_unknown_", false);
+    sink.on_number("_unknown_", "0");
+    sink.on_int("_unknown_", 0);
+    sink.on_float("_unknown_", 0.0);
+
+    // Reset path.
+    sink.reset();
+}
+
+// ---------------------------------------------------------------------------
 TEST_CASE("note::api::NoteChanges::Peek request builder") {
     Harness h;
     auto req = h.api.note.changes().peek();
@@ -5657,6 +7547,34 @@ TEST_CASE("note::api::NoteChanges::Peek response parsing") {
 }
 
 // ---------------------------------------------------------------------------
+TEST_CASE("note::api::NoteChanges::Peek sink field coverage") {
+    // Exercise the Sink's field dispatch via on_int / on_float (separate from
+    // on_number) and unknown-field fallthrough for non-body endpoints.
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    note::api::NoteChanges::Peek::Response rsp{};
+    note::api::NoteChanges::Peek::Response::Sink sink(rsp, pool);
+
+    // Feed response-level fields through the sink (on_number / on_string / on_bool).
+    sink.on_string("changes", "x-changes");
+    sink.on_string("total", "x-total");
+
+    // Exercise on_int / on_float dispatch (separate from on_number).
+
+    // Unknown field fallthrough — covers FALSE branch of last dispatch.
+    sink.on_string("_unknown_", "x");
+    sink.on_bool("_unknown_", false);
+    sink.on_number("_unknown_", "0");
+    sink.on_int("_unknown_", 0);
+    sink.on_float("_unknown_", 0.0);
+
+    // Reset path.
+    sink.reset();
+}
+
+// ---------------------------------------------------------------------------
 TEST_CASE("note::api::NoteChanges::Pop request builder") {
     Harness h;
     auto req = h.api.note.changes().pop(note::string_view("x-file"));
@@ -5723,6 +7641,34 @@ TEST_CASE("note::api::NoteChanges::Pop response parsing") {
         note::StringPool pool(alloc);
         empty_rsp.intern_strings(pool);
     }
+}
+
+// ---------------------------------------------------------------------------
+TEST_CASE("note::api::NoteChanges::Pop sink field coverage") {
+    // Exercise the Sink's field dispatch via on_int / on_float (separate from
+    // on_number) and unknown-field fallthrough for non-body endpoints.
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    note::api::NoteChanges::Pop::Response rsp{};
+    note::api::NoteChanges::Pop::Response::Sink sink(rsp, pool);
+
+    // Feed response-level fields through the sink (on_number / on_string / on_bool).
+    sink.on_string("changes", "x-changes");
+    sink.on_string("total", "x-total");
+
+    // Exercise on_int / on_float dispatch (separate from on_number).
+
+    // Unknown field fallthrough — covers FALSE branch of last dispatch.
+    sink.on_string("_unknown_", "x");
+    sink.on_bool("_unknown_", false);
+    sink.on_number("_unknown_", "0");
+    sink.on_int("_unknown_", 0);
+    sink.on_float("_unknown_", 0.0);
+
+    // Reset path.
+    sink.reset();
 }
 
 // ---------------------------------------------------------------------------
@@ -5834,7 +7780,16 @@ TEST_CASE("note::api::NoteGet::Read sink body coverage") {
     sink.on_string("payload", "x-payload");
     sink.on_string("time", "x-time");
 
-    // Exercise body path: enter body, send events, exit.
+    // Exercise on_int / on_float dispatch (separate from on_number).
+
+    // Unknown field fallthrough — covers FALSE branch of last dispatch in each method.
+    sink.on_string("_unknown_", "x");
+    sink.on_bool("_unknown_", false);
+    sink.on_number("_unknown_", "0");
+    sink.on_int("_unknown_", 0);
+    sink.on_float("_unknown_", 0.0);
+
+    // Exercise body path: enter body, send events, exit (no handler).
     sink.on_object_begin("body");
     sink.on_bool("flag", true);
     sink.on_number("count", "5");
@@ -5852,13 +7807,18 @@ TEST_CASE("note::api::NoteGet::Read sink body coverage") {
     sink.on_array_end("items");
     sink.on_object_end("body");
 
-    // Exercise body path WITH a body handler connected.
+    // Exercise body path WITH a body handler — all method types.
     CoverageTestBody_ tbody{};
     note::StructSink<CoverageTestBody_> body_sink(tbody, pool);
     auto handler = note::make_body_handler(body_sink);
     sink.set_body_handler(handler);
     sink.on_object_begin("body");
+    sink.on_string("s", "v");
+    sink.on_bool("b", true);
+    sink.on_number("n", "1");
+    sink.on_int("i", 1);
     sink.on_float("v", 42.0);
+    sink.on_null("z");
     sink.on_object_end("body");
     REQUIRE(tbody.v == 42.0f);
 
@@ -5944,7 +7904,16 @@ TEST_CASE("note::api::NoteGet::Pop sink body coverage") {
     sink.on_string("payload", "x-payload");
     sink.on_string("time", "x-time");
 
-    // Exercise body path: enter body, send events, exit.
+    // Exercise on_int / on_float dispatch (separate from on_number).
+
+    // Unknown field fallthrough — covers FALSE branch of last dispatch in each method.
+    sink.on_string("_unknown_", "x");
+    sink.on_bool("_unknown_", false);
+    sink.on_number("_unknown_", "0");
+    sink.on_int("_unknown_", 0);
+    sink.on_float("_unknown_", 0.0);
+
+    // Exercise body path: enter body, send events, exit (no handler).
     sink.on_object_begin("body");
     sink.on_bool("flag", true);
     sink.on_number("count", "5");
@@ -5962,13 +7931,18 @@ TEST_CASE("note::api::NoteGet::Pop sink body coverage") {
     sink.on_array_end("items");
     sink.on_object_end("body");
 
-    // Exercise body path WITH a body handler connected.
+    // Exercise body path WITH a body handler — all method types.
     CoverageTestBody_ tbody{};
     note::StructSink<CoverageTestBody_> body_sink(tbody, pool);
     auto handler = note::make_body_handler(body_sink);
     sink.set_body_handler(handler);
     sink.on_object_begin("body");
+    sink.on_string("s", "v");
+    sink.on_bool("b", true);
+    sink.on_number("n", "1");
+    sink.on_int("i", 1);
     sink.on_float("v", 42.0);
+    sink.on_null("z");
     sink.on_object_end("body");
     REQUIRE(tbody.v == 42.0f);
 
@@ -6088,7 +8062,20 @@ TEST_CASE("note::api::NoteTemplate::Define sink body coverage") {
     sink.on_string("template", "x-template");
 #endif
 
-    // Exercise body path: enter body, send events, exit.
+    // Exercise on_int / on_float dispatch (separate from on_number).
+#if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
+#endif
+
+    // Unknown field fallthrough — covers FALSE branch of last dispatch in each method.
+    sink.on_string("_unknown_", "x");
+    sink.on_bool("_unknown_", false);
+    sink.on_number("_unknown_", "0");
+    sink.on_int("_unknown_", 0);
+    sink.on_float("_unknown_", 0.0);
+
+    // Exercise body path: enter body, send events, exit (no handler).
     sink.on_object_begin("body");
     sink.on_bool("flag", true);
     sink.on_number("count", "5");
@@ -6106,13 +8093,18 @@ TEST_CASE("note::api::NoteTemplate::Define sink body coverage") {
     sink.on_array_end("items");
     sink.on_object_end("body");
 
-    // Exercise body path WITH a body handler connected.
+    // Exercise body path WITH a body handler — all method types.
     CoverageTestBody_ tbody{};
     note::StructSink<CoverageTestBody_> body_sink(tbody, pool);
     auto handler = note::make_body_handler(body_sink);
     sink.set_body_handler(handler);
     sink.on_object_begin("body");
+    sink.on_string("s", "v");
+    sink.on_bool("b", true);
+    sink.on_number("n", "1");
+    sink.on_int("i", 1);
     sink.on_float("v", 42.0);
+    sink.on_null("z");
     sink.on_object_end("body");
     REQUIRE(tbody.v == 42.0f);
 
@@ -6229,7 +8221,20 @@ TEST_CASE("note::api::NoteTemplate::Remove sink body coverage") {
     sink.on_string("template", "x-template");
 #endif
 
-    // Exercise body path: enter body, send events, exit.
+    // Exercise on_int / on_float dispatch (separate from on_number).
+#if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
+#endif
+
+    // Unknown field fallthrough — covers FALSE branch of last dispatch in each method.
+    sink.on_string("_unknown_", "x");
+    sink.on_bool("_unknown_", false);
+    sink.on_number("_unknown_", "0");
+    sink.on_int("_unknown_", 0);
+    sink.on_float("_unknown_", 0.0);
+
+    // Exercise body path: enter body, send events, exit (no handler).
     sink.on_object_begin("body");
     sink.on_bool("flag", true);
     sink.on_number("count", "5");
@@ -6247,13 +8252,18 @@ TEST_CASE("note::api::NoteTemplate::Remove sink body coverage") {
     sink.on_array_end("items");
     sink.on_object_end("body");
 
-    // Exercise body path WITH a body handler connected.
+    // Exercise body path WITH a body handler — all method types.
     CoverageTestBody_ tbody{};
     note::StructSink<CoverageTestBody_> body_sink(tbody, pool);
     auto handler = note::make_body_handler(body_sink);
     sink.set_body_handler(handler);
     sink.on_object_begin("body");
+    sink.on_string("s", "v");
+    sink.on_bool("b", true);
+    sink.on_number("n", "1");
+    sink.on_int("i", 1);
     sink.on_float("v", 42.0);
+    sink.on_null("z");
     sink.on_object_end("body");
     REQUIRE(tbody.v == 42.0f);
 
@@ -6352,6 +8362,34 @@ TEST_CASE("note::api::NtnGps response parsing") {
 }
 
 // ---------------------------------------------------------------------------
+TEST_CASE("note::api::NtnGps sink field coverage") {
+    // Exercise the Sink's field dispatch via on_int / on_float (separate from
+    // on_number) and unknown-field fallthrough for non-body endpoints.
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    note::api::NtnGps::Response rsp{};
+    note::api::NtnGps::Response::Sink sink(rsp, pool);
+
+    // Feed response-level fields through the sink (on_number / on_string / on_bool).
+    sink.on_string("off", "x-off");
+    sink.on_string("on", "x-on");
+
+    // Exercise on_int / on_float dispatch (separate from on_number).
+
+    // Unknown field fallthrough — covers FALSE branch of last dispatch.
+    sink.on_string("_unknown_", "x");
+    sink.on_bool("_unknown_", false);
+    sink.on_number("_unknown_", "0");
+    sink.on_int("_unknown_", 0);
+    sink.on_float("_unknown_", 0.0);
+
+    // Reset path.
+    sink.reset();
+}
+
+// ---------------------------------------------------------------------------
 TEST_CASE("note::api::NtnReset request builder") {
     Harness h;
     auto req = h.api.ntn.reset();
@@ -6423,6 +8461,34 @@ TEST_CASE("note::api::NtnStatus response parsing") {
         note::StringPool pool(alloc);
         empty_rsp.intern_strings(pool);
     }
+}
+
+// ---------------------------------------------------------------------------
+TEST_CASE("note::api::NtnStatus sink field coverage") {
+    // Exercise the Sink's field dispatch via on_int / on_float (separate from
+    // on_number) and unknown-field fallthrough for non-body endpoints.
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    note::api::NtnStatus::Response rsp{};
+    note::api::NtnStatus::Response::Sink sink(rsp, pool);
+
+    // Feed response-level fields through the sink (on_number / on_string / on_bool).
+    sink.on_string("err", "x-err");
+    sink.on_string("status", "x-status");
+
+    // Exercise on_int / on_float dispatch (separate from on_number).
+
+    // Unknown field fallthrough — covers FALSE branch of last dispatch.
+    sink.on_string("_unknown_", "x");
+    sink.on_bool("_unknown_", false);
+    sink.on_number("_unknown_", "0");
+    sink.on_int("_unknown_", 0);
+    sink.on_float("_unknown_", 0.0);
+
+    // Reset path.
+    sink.reset();
 }
 
 // ---------------------------------------------------------------------------
@@ -6513,6 +8579,35 @@ TEST_CASE("note::api::VarGet response parsing") {
         note::StringPool pool(alloc);
         empty_rsp.intern_strings(pool);
     }
+}
+
+// ---------------------------------------------------------------------------
+TEST_CASE("note::api::VarGet sink field coverage") {
+    // Exercise the Sink's field dispatch via on_int / on_float (separate from
+    // on_number) and unknown-field fallthrough for non-body endpoints.
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    note::api::VarGet::Response rsp{};
+    note::api::VarGet::Response::Sink sink(rsp, pool);
+
+    // Feed response-level fields through the sink (on_number / on_string / on_bool).
+    sink.on_string("flag", "x-flag");
+    sink.on_string("text", "x-text");
+    sink.on_string("value", "x-value");
+
+    // Exercise on_int / on_float dispatch (separate from on_number).
+
+    // Unknown field fallthrough — covers FALSE branch of last dispatch.
+    sink.on_string("_unknown_", "x");
+    sink.on_bool("_unknown_", false);
+    sink.on_number("_unknown_", "0");
+    sink.on_int("_unknown_", 0);
+    sink.on_float("_unknown_", 0.0);
+
+    // Reset path.
+    sink.reset();
 }
 
 // ---------------------------------------------------------------------------
@@ -6649,7 +8744,16 @@ TEST_CASE("note::api::Web sink body coverage") {
     sink.on_string("payload", "x-payload");
     sink.on_string("result", "x-result");
 
-    // Exercise body path: enter body, send events, exit.
+    // Exercise on_int / on_float dispatch (separate from on_number).
+
+    // Unknown field fallthrough — covers FALSE branch of last dispatch in each method.
+    sink.on_string("_unknown_", "x");
+    sink.on_bool("_unknown_", false);
+    sink.on_number("_unknown_", "0");
+    sink.on_int("_unknown_", 0);
+    sink.on_float("_unknown_", 0.0);
+
+    // Exercise body path: enter body, send events, exit (no handler).
     sink.on_object_begin("body");
     sink.on_bool("flag", true);
     sink.on_number("count", "5");
@@ -6667,13 +8771,18 @@ TEST_CASE("note::api::Web sink body coverage") {
     sink.on_array_end("items");
     sink.on_object_end("body");
 
-    // Exercise body path WITH a body handler connected.
+    // Exercise body path WITH a body handler — all method types.
     CoverageTestBody_ tbody{};
     note::StructSink<CoverageTestBody_> body_sink(tbody, pool);
     auto handler = note::make_body_handler(body_sink);
     sink.set_body_handler(handler);
     sink.on_object_begin("body");
+    sink.on_string("s", "v");
+    sink.on_bool("b", true);
+    sink.on_number("n", "1");
+    sink.on_int("i", 1);
     sink.on_float("v", 42.0);
+    sink.on_null("z");
     sink.on_object_end("body");
     REQUIRE(tbody.v == 42.0f);
 
@@ -6777,7 +8886,16 @@ TEST_CASE("note::api::WebDelete sink body coverage") {
     sink.on_string("result", "x-result");
     sink.on_string("status", "x-status");
 
-    // Exercise body path: enter body, send events, exit.
+    // Exercise on_int / on_float dispatch (separate from on_number).
+
+    // Unknown field fallthrough — covers FALSE branch of last dispatch in each method.
+    sink.on_string("_unknown_", "x");
+    sink.on_bool("_unknown_", false);
+    sink.on_number("_unknown_", "0");
+    sink.on_int("_unknown_", 0);
+    sink.on_float("_unknown_", 0.0);
+
+    // Exercise body path: enter body, send events, exit (no handler).
     sink.on_object_begin("body");
     sink.on_bool("flag", true);
     sink.on_number("count", "5");
@@ -6795,13 +8913,18 @@ TEST_CASE("note::api::WebDelete sink body coverage") {
     sink.on_array_end("items");
     sink.on_object_end("body");
 
-    // Exercise body path WITH a body handler connected.
+    // Exercise body path WITH a body handler — all method types.
     CoverageTestBody_ tbody{};
     note::StructSink<CoverageTestBody_> body_sink(tbody, pool);
     auto handler = note::make_body_handler(body_sink);
     sink.set_body_handler(handler);
     sink.on_object_begin("body");
+    sink.on_string("s", "v");
+    sink.on_bool("b", true);
+    sink.on_number("n", "1");
+    sink.on_int("i", 1);
     sink.on_float("v", 42.0);
+    sink.on_null("z");
     sink.on_object_end("body");
     REQUIRE(tbody.v == 42.0f);
 
@@ -6914,7 +9037,16 @@ TEST_CASE("note::api::WebGet sink body coverage") {
     sink.on_string("payload", "x-payload");
     sink.on_string("result", "x-result");
 
-    // Exercise body path: enter body, send events, exit.
+    // Exercise on_int / on_float dispatch (separate from on_number).
+
+    // Unknown field fallthrough — covers FALSE branch of last dispatch in each method.
+    sink.on_string("_unknown_", "x");
+    sink.on_bool("_unknown_", false);
+    sink.on_number("_unknown_", "0");
+    sink.on_int("_unknown_", 0);
+    sink.on_float("_unknown_", 0.0);
+
+    // Exercise body path: enter body, send events, exit (no handler).
     sink.on_object_begin("body");
     sink.on_bool("flag", true);
     sink.on_number("count", "5");
@@ -6932,13 +9064,18 @@ TEST_CASE("note::api::WebGet sink body coverage") {
     sink.on_array_end("items");
     sink.on_object_end("body");
 
-    // Exercise body path WITH a body handler connected.
+    // Exercise body path WITH a body handler — all method types.
     CoverageTestBody_ tbody{};
     note::StructSink<CoverageTestBody_> body_sink(tbody, pool);
     auto handler = note::make_body_handler(body_sink);
     sink.set_body_handler(handler);
     sink.on_object_begin("body");
+    sink.on_string("s", "v");
+    sink.on_bool("b", true);
+    sink.on_number("n", "1");
+    sink.on_int("i", 1);
     sink.on_float("v", 42.0);
+    sink.on_null("z");
     sink.on_object_end("body");
     REQUIRE(tbody.v == 42.0f);
 
@@ -7087,7 +9224,18 @@ TEST_CASE("note::api::WebPost sink body coverage") {
     sink.on_string("result", "x-result");
     sink.on_string("status", "x-status");
 
-    // Exercise body path: enter body, send events, exit.
+    // Exercise on_int / on_float dispatch (separate from on_number).
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
+#endif
+
+    // Unknown field fallthrough — covers FALSE branch of last dispatch in each method.
+    sink.on_string("_unknown_", "x");
+    sink.on_bool("_unknown_", false);
+    sink.on_number("_unknown_", "0");
+    sink.on_int("_unknown_", 0);
+    sink.on_float("_unknown_", 0.0);
+
+    // Exercise body path: enter body, send events, exit (no handler).
     sink.on_object_begin("body");
     sink.on_bool("flag", true);
     sink.on_number("count", "5");
@@ -7105,13 +9253,18 @@ TEST_CASE("note::api::WebPost sink body coverage") {
     sink.on_array_end("items");
     sink.on_object_end("body");
 
-    // Exercise body path WITH a body handler connected.
+    // Exercise body path WITH a body handler — all method types.
     CoverageTestBody_ tbody{};
     note::StructSink<CoverageTestBody_> body_sink(tbody, pool);
     auto handler = note::make_body_handler(body_sink);
     sink.set_body_handler(handler);
     sink.on_object_begin("body");
+    sink.on_string("s", "v");
+    sink.on_bool("b", true);
+    sink.on_number("n", "1");
+    sink.on_int("i", 1);
     sink.on_float("v", 42.0);
+    sink.on_null("z");
     sink.on_object_end("body");
     REQUIRE(tbody.v == 42.0f);
 
@@ -7248,7 +9401,16 @@ TEST_CASE("note::api::WebPut sink body coverage") {
     sink.on_string("result", "x-result");
     sink.on_string("status", "x-status");
 
-    // Exercise body path: enter body, send events, exit.
+    // Exercise on_int / on_float dispatch (separate from on_number).
+
+    // Unknown field fallthrough — covers FALSE branch of last dispatch in each method.
+    sink.on_string("_unknown_", "x");
+    sink.on_bool("_unknown_", false);
+    sink.on_number("_unknown_", "0");
+    sink.on_int("_unknown_", 0);
+    sink.on_float("_unknown_", 0.0);
+
+    // Exercise body path: enter body, send events, exit (no handler).
     sink.on_object_begin("body");
     sink.on_bool("flag", true);
     sink.on_number("count", "5");
@@ -7266,13 +9428,18 @@ TEST_CASE("note::api::WebPut sink body coverage") {
     sink.on_array_end("items");
     sink.on_object_end("body");
 
-    // Exercise body path WITH a body handler connected.
+    // Exercise body path WITH a body handler — all method types.
     CoverageTestBody_ tbody{};
     note::StructSink<CoverageTestBody_> body_sink(tbody, pool);
     auto handler = note::make_body_handler(body_sink);
     sink.set_body_handler(handler);
     sink.on_object_begin("body");
+    sink.on_string("s", "v");
+    sink.on_bool("b", true);
+    sink.on_number("n", "1");
+    sink.on_int("i", 1);
     sink.on_float("v", 42.0);
+    sink.on_null("z");
     sink.on_object_end("body");
     REQUIRE(tbody.v == 42.0f);
 

@@ -309,3 +309,291 @@ TEST_CASE("BufferJsonBackend: create_builder returns owned builder") {
     builder->add("key", string_view("val"));
     REQUIRE(builder->to_view() == R"({"key":"val"})");
 }
+
+
+// ---------------------------------------------------------------------------
+// BufferJsonBuilder: control character escaping
+// ---------------------------------------------------------------------------
+
+TEST_CASE("BufferJsonBuilder: control characters pass through default case") {
+    char buf[256];
+    BufferJsonBuilder b(buf, sizeof(buf));
+    // \x01 is a control character not handled by the switch cases
+    // It should pass through the default branch
+    std::string val = "hello";
+    val += '\x01';
+    val += "world";
+    b.add("msg", string_view(val.data(), val.size()));
+    auto json = b.to_view();
+    // The control char should appear as-is in the JSON
+    REQUIRE(json.find('\x01') != std::string::npos);
+    // Verify the string structure is correct
+    REQUIRE(json.find("\"msg\":\"") != std::string::npos);
+}
+
+
+// ---------------------------------------------------------------------------
+// BufferJsonBuilder: overflow and reset cycle
+// ---------------------------------------------------------------------------
+
+TEST_CASE("BufferJsonBuilder: overflow then reset allows reuse") {
+    char buf[20];  // Tiny buffer to force overflow
+    BufferJsonBuilder b(buf, sizeof(buf));
+
+    // Fill with data that will overflow
+    b.add("longkey", string_view("longvalue-overflow"));
+    REQUIRE(b.overflow());
+
+    // Reset and fill again — should succeed with short data
+    b.reset();
+    REQUIRE_FALSE(b.overflow());
+    b.add("x", int32_t{1});
+    REQUIRE_FALSE(b.overflow());
+    REQUIRE(b.to_view() == R"({"x":1})");
+}
+
+
+// ---------------------------------------------------------------------------
+// JsmnJsonReader: get_string on non-string field returns default
+// ---------------------------------------------------------------------------
+
+TEST_CASE("JsmnJsonReader: get_string on integer returns default empty") {
+    const char* json = R"({"count":42})";
+    jsmntok_t tokens[8];
+    JsmnJsonReader r(json, strlen(json), tokens, 8);
+
+    // get_string on "count" which is a number token → returns default
+    REQUIRE(r.get_string("count") == "");
+    REQUIRE(r.get_string("count", "fallback") == "fallback");
+}
+
+
+// ---------------------------------------------------------------------------
+// JsmnJsonReader: parse_int with decimal truncation (value 3.9 → 3)
+// ---------------------------------------------------------------------------
+
+TEST_CASE("JsmnJsonReader: get_int on decimal 3.9 returns 3") {
+    const char* json = R"({"value":3.9})";
+    jsmntok_t tokens[8];
+    JsmnJsonReader r(json, strlen(json), tokens, 8);
+
+    REQUIRE(r.get_int("value", 0) == 3);
+}
+
+TEST_CASE("JsmnJsonReader: get_int on negative decimal -7.3 returns -7") {
+    const char* json = R"({"value":-7.3})";
+    jsmntok_t tokens[8];
+    JsmnJsonReader r(json, strlen(json), tokens, 8);
+
+    REQUIRE(r.get_int("value", 0) == -7);
+}
+
+
+// ---------------------------------------------------------------------------
+// JsmnJsonReader: get_string_array with missing key returns 0 elements
+// ---------------------------------------------------------------------------
+
+TEST_CASE("JsmnJsonReader: get_string_array missing key returns 0") {
+    const char* json = R"({"name":"test"})";
+    jsmntok_t tokens[8];
+    JsmnJsonReader r(json, strlen(json), tokens, 8);
+
+    string_view out[4];
+    size_t count = r.get_string_array("files", out, 4);
+    REQUIRE(count == 0);
+}
+
+TEST_CASE("JsmnJsonReader: get_string_array on non-array returns 0") {
+    const char* json = R"({"files":"not-an-array"})";
+    jsmntok_t tokens[8];
+    JsmnJsonReader r(json, strlen(json), tokens, 8);
+
+    string_view out[4];
+    size_t count = r.get_string_array("files", out, 4);
+    REQUIRE(count == 0);
+}
+
+
+// ---------------------------------------------------------------------------
+// JsmnJsonReader: parse error on JSON array root → has_error()
+// ---------------------------------------------------------------------------
+
+TEST_CASE("JsmnJsonReader: array root has_error true") {
+    const char* json = "[1,2,3]";
+    jsmntok_t tokens[8];
+    JsmnJsonReader r(json, strlen(json), tokens, 8);
+
+    REQUIRE(r.has_error());
+    REQUIRE(r.get_error() == "JSON parse error");
+}
+
+
+// ---------------------------------------------------------------------------
+// JsmnJsonReader: get_string_array success with actual array
+// ---------------------------------------------------------------------------
+
+TEST_CASE("JsmnJsonReader: get_string_array returns elements") {
+    const char* json = R"({"files":["data.qi","settings.db","env.db"]})";
+    jsmntok_t tokens[16];
+    JsmnJsonReader r(json, strlen(json), tokens, 16);
+
+    string_view out[4];
+    size_t count = r.get_string_array("files", out, 4);
+    REQUIRE(count == 3);
+    REQUIRE(out[0] == "data.qi");
+    REQUIRE(out[1] == "settings.db");
+    REQUIRE(out[2] == "env.db");
+}
+
+TEST_CASE("JsmnJsonReader: get_string_array limited by max") {
+    const char* json = R"({"files":["a","b","c"]})";
+    jsmntok_t tokens[16];
+    JsmnJsonReader r(json, strlen(json), tokens, 16);
+
+    string_view out[2];
+    size_t count = r.get_string_array("files", out, 2);
+    REQUIRE(count == 2);
+    REQUIRE(out[0] == "a");
+    REQUIRE(out[1] == "b");
+}
+
+
+// ---------------------------------------------------------------------------
+// JsmnJsonReader: parse_int with non-numeric returns default
+// ---------------------------------------------------------------------------
+
+TEST_CASE("JsmnJsonReader: get_int on boolean returns default") {
+    const char* json = R"({"flag":true})";
+    jsmntok_t tokens[8];
+    JsmnJsonReader r(json, strlen(json), tokens, 8);
+
+    // "true" contains 't' which is not a digit → parse_int returns default
+    REQUIRE(r.get_int("flag", -99) == -99);
+}
+
+
+// ---------------------------------------------------------------------------
+// JsmnJsonReader: parse_double negative value
+// ---------------------------------------------------------------------------
+
+TEST_CASE("JsmnJsonReader: get_double negative value") {
+    const char* json = R"({"temp":-12.5})";
+    jsmntok_t tokens[8];
+    JsmnJsonReader r(json, strlen(json), tokens, 8);
+
+    REQUIRE(r.get_double("temp", 0.0) == Approx(-12.5));
+}
+
+
+// ---------------------------------------------------------------------------
+// JsmnJsonReader: get_object_array with objects
+// ---------------------------------------------------------------------------
+
+TEST_CASE("JsmnJsonReader: get_object_array returns objects") {
+    const char* json = R"({"items":[{"a":1},{"b":2}]})";
+    jsmntok_t tokens[32];
+    JsmnJsonReader r(json, strlen(json), tokens, 32);
+
+    std::unique_ptr<JsonReader> out[4];
+    size_t count = r.get_object_array("items", out, 4);
+    REQUIRE(count == 2);
+    REQUIRE(out[0]->get_int("a", 0) == 1);
+    REQUIRE(out[1]->get_int("b", 0) == 2);
+}
+
+TEST_CASE("JsmnJsonReader: get_object_array missing key returns 0") {
+    const char* json = R"({"x":1})";
+    jsmntok_t tokens[8];
+    JsmnJsonReader r(json, strlen(json), tokens, 8);
+
+    std::unique_ptr<JsonReader> out[4];
+    size_t count = r.get_object_array("items", out, 4);
+    REQUIRE(count == 0);
+}
+
+
+// ---------------------------------------------------------------------------
+// JsmnJsonReader: empty parse_int and parse_double
+// ---------------------------------------------------------------------------
+
+TEST_CASE("JsmnJsonReader: get_int with empty string key returns default") {
+    const char* json = R"({"":42})";
+    jsmntok_t tokens[8];
+    JsmnJsonReader r(json, strlen(json), tokens, 8);
+
+    // Empty key should be found
+    REQUIRE(r.get_int("", 0) == 42);
+}
+
+
+// ---------------------------------------------------------------------------
+// JsmnJsonReader: get_bool on non-boolean returns default
+// ---------------------------------------------------------------------------
+
+TEST_CASE("JsmnJsonReader: get_bool on number returns default") {
+    const char* json = R"({"val":42})";
+    jsmntok_t tokens[8];
+    JsmnJsonReader r(json, strlen(json), tokens, 8);
+
+    // "42" is neither "true" nor "false" → returns default
+    REQUIRE(r.get_bool("val", true) == true);
+    REQUIRE(r.get_bool("val", false) == false);
+}
+
+
+// ---------------------------------------------------------------------------
+// BufferJsonBuilder: all escape sequences in one string
+// ---------------------------------------------------------------------------
+
+TEST_CASE("BufferJsonBuilder: all escape sequences covered") {
+    char buf[256];
+    BufferJsonBuilder b(buf, sizeof(buf));
+    b.add("s", string_view("a\"b\\c\nd\re\tf"));
+    auto json = b.to_view();
+    // All escape sequences should be present
+    REQUIRE(json.find("\\\"") != std::string::npos);
+    REQUIRE(json.find("\\\\") != std::string::npos);
+    REQUIRE(json.find("\\n") != std::string::npos);
+    REQUIRE(json.find("\\r") != std::string::npos);
+    REQUIRE(json.find("\\t") != std::string::npos);
+}
+
+
+// ---------------------------------------------------------------------------
+// BufferJsonBuilder: add_raw method
+// ---------------------------------------------------------------------------
+
+TEST_CASE("BufferJsonBuilder: add_raw inserts verbatim JSON") {
+    char buf[256];
+    BufferJsonBuilder b(buf, sizeof(buf));
+    b.add_raw("body", string_view("{\"temp\":22.5}"));
+    REQUIRE(b.to_view() == R"({"body":{"temp":22.5}})");
+}
+
+
+// ---------------------------------------------------------------------------
+// BufferJsonBuilder: multiple to_view calls are idempotent
+// ---------------------------------------------------------------------------
+
+TEST_CASE("BufferJsonBuilder: to_view is idempotent") {
+    char buf[128];
+    BufferJsonBuilder b(buf, sizeof(buf));
+    b.add("x", int32_t{1});
+    auto v1 = b.to_view();
+    auto v2 = b.to_view();
+    REQUIRE(v1 == v2);
+    REQUIRE(v1 == R"({"x":1})");
+}
+
+
+// ---------------------------------------------------------------------------
+// JsmnJsonReader: token overflow handled gracefully
+// ---------------------------------------------------------------------------
+
+TEST_CASE("JsmnJsonReader: too few tokens reports error") {
+    const char* json = R"({"a":1,"b":2,"c":3})";
+    jsmntok_t tokens[4];  // Not enough tokens for all key-value pairs
+    JsmnJsonReader r(json, strlen(json), tokens, 4);
+    // jsmn returns negative on insufficient tokens → token_count_ = 0 → has_error
+    REQUIRE(r.has_error());
+}

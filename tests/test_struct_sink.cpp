@@ -565,6 +565,246 @@ TEST_CASE("make_generic_body_handler round-trip via BodyEvent") {
     REQUIRE(std::string(data.label.data(), data.label.size()) == "sensor-1");
 }
 
+// ── Additional branch coverage tests ─────────────────────────────────
+
+namespace {
+struct WithIntArray {
+    std::array<int32_t, 4> values;
+    NOTE_FIELDS(values)
+};
+
+struct WithStringArray {
+    std::array<note::string_view, 3> tags;
+    NOTE_FIELDS(tags)
+};
+} // namespace
+
+TEST_CASE("StructSink: int-to-float coercion in float array") {
+    WithArrays wa{};
+    char buf[256];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+    note::StructSink<WithArrays> sink(wa, pool);
+
+    sink.on_array_begin("temps");
+    sink.on_int("", 22);   // int → float coercion
+    sink.on_int("", 23);
+    sink.on_array_end("temps");
+
+    REQUIRE(wa.temps[0] == 22.0f);
+    REQUIRE(wa.temps[1] == 23.0f);
+}
+
+TEST_CASE("StructSink: float-to-int coercion in int array") {
+    WithIntArray wa{};
+    char buf[256];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+    note::StructSink<WithIntArray> sink(wa, pool);
+
+    sink.on_array_begin("values");
+    sink.on_float("", 42.7);   // float → int coercion (truncation)
+    sink.on_float("", 99.1);
+    sink.on_array_end("values");
+
+    REQUIRE(wa.values[0] == 42);
+    REQUIRE(wa.values[1] == 99);
+}
+
+TEST_CASE("StructSink: on_number with raw string for int array") {
+    WithIntArray wa{};
+    char buf[256];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+    note::StructSink<WithIntArray> sink(wa, pool);
+
+    sink.on_array_begin("values");
+    sink.on_number("", "42");
+    sink.on_number("", "99");
+    sink.on_array_end("values");
+
+    REQUIRE(wa.values[0] == 42);
+    REQUIRE(wa.values[1] == 99);
+}
+
+TEST_CASE("StructSink: string array elements") {
+    WithStringArray ws{};
+    char buf[512];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+    note::StructSink<WithStringArray> sink(ws, pool);
+
+    sink.on_array_begin("tags");
+    sink.on_string("", "alpha");
+    sink.on_string("", "beta");
+    sink.on_array_end("tags");
+
+    REQUIRE(ws.tags[0] == "alpha");
+    REQUIRE(ws.tags[1] == "beta");
+    REQUIRE(ws.tags[2].empty());
+}
+
+TEST_CASE("StructSink: unknown array field sets skip") {
+    SensorData data{};
+    data.humidity = 42;
+    char buf[256];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+    note::StructSink<SensorData> sink(data, pool);
+
+    sink.on_array_begin("nonexistent");
+    sink.on_int("", 999);
+    sink.on_string("", "junk");
+    sink.on_array_end("nonexistent");
+
+    REQUIRE(data.humidity == 42); // unchanged
+}
+
+TEST_CASE("StructSink: primitive array receives object → skip") {
+    WithArrays wa{};
+    char buf[256];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+    note::StructSink<WithArrays> sink(wa, pool);
+
+    sink.on_array_begin("temps");
+    sink.on_float("", 1.0);
+    sink.on_object_begin("");  // unexpected object in primitive array → skip
+    sink.on_float("x", 999.0);
+    sink.on_object_end("");
+    sink.on_float("", 2.0);
+    sink.on_array_end("temps");
+
+    REQUIRE(wa.temps[0] == 1.0f);
+    REQUIRE(wa.temps[1] == 2.0f);
+}
+
+TEST_CASE("StructSink: struct array at capacity receives object → skip") {
+    WithStructArray wsa{};
+    char buf[512];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+    note::StructSink<WithStructArray> sink(wsa, pool);
+
+    sink.on_array_begin("waypoints");
+    // Fill all 3 slots
+    for (int i = 0; i < 3; ++i) {
+        sink.on_object_begin("");
+        sink.on_float("lat", 10.0 + i);
+        sink.on_float("lon", 20.0 + i);
+        sink.on_object_end("");
+    }
+    // 4th object → at capacity, should skip
+    sink.on_object_begin("");
+    sink.on_float("lat", 999.0);
+    sink.on_object_end("");
+    sink.on_array_end("waypoints");
+
+    REQUIRE(wsa.waypoints[2].lat == Approx(12.0));
+}
+
+TEST_CASE("StructSink: array in skip context increments skip_depth") {
+    TripPoint tp{};
+    char buf[256];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+    note::StructSink<TripPoint> sink(tp, pool);
+
+    // Enter unknown object → skip_depth = 1
+    sink.on_object_begin("unknown");
+    // Array inside unknown object → skip_depth increments
+    sink.on_array_begin("nested_array");
+    sink.on_int("", 42);
+    sink.on_array_end("nested_array");
+    sink.on_object_end("unknown");
+
+    sink.on_float("speed", 55.0);
+    REQUIRE(tp.speed == 55.0f);
+}
+
+TEST_CASE("StructSink: events in skip context are ignored") {
+    SensorData data{};
+    char buf[256];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+    note::StructSink<SensorData> sink(data, pool);
+
+    // Enter unknown object → skip
+    sink.on_object_begin("unknown");
+    sink.on_bool("active", true);       // should be skipped
+    sink.on_int("humidity", 99);        // should be skipped
+    sink.on_float("temperature", 99.9); // should be skipped
+    sink.on_string("x", "y");           // should be skipped
+    sink.on_number("temperature", "99");// should be skipped
+    sink.on_object_end("unknown");
+
+    REQUIRE(data.temperature == 0.0f);
+    REQUIRE(data.humidity == 0);
+    REQUIRE(data.active == false);
+}
+
+TEST_CASE("StructSink: on_null is no-op") {
+    SensorData data{};
+    data.humidity = 42;
+    char buf[256];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+    note::StructSink<SensorData> sink(data, pool);
+
+    sink.on_null("humidity");
+    sink.on_null("unknown");
+
+    REQUIRE(data.humidity == 42); // unchanged
+}
+
+namespace {
+struct WithBoolArray {
+    std::array<bool, 3> flags;
+    NOTE_FIELDS(flags)
+};
+} // namespace
+
+TEST_CASE("StructSink: bool array elements") {
+    WithBoolArray wa{};
+    char buf[256];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+    note::StructSink<WithBoolArray> sink(wa, pool);
+
+    sink.on_array_begin("flags");
+    sink.on_bool("", true);
+    sink.on_bool("", false);
+    sink.on_bool("", true);
+    sink.on_array_end("flags");
+
+    REQUIRE(wa.flags[0] == true);
+    REQUIRE(wa.flags[1] == false);
+    REQUIRE(wa.flags[2] == true);
+}
+
+TEST_CASE("make_generic_body_handler: ignored event types") {
+    GBSTestData data{};
+    data.humidity = 42;
+    char buf[256];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    uint8_t n = 0;
+    auto* descs = GBSTestData::_note_field_descs<GBSTestData>(n);
+    note::GenericBodySink sink{&data, descs, n, &pool};
+
+    auto handler = note::make_generic_body_handler(sink);
+
+    // These events should be silently ignored (default: break).
+    handler.send(note::BodyEvent::make_object_begin("nested"));
+    handler.send(note::BodyEvent::make_object_end("nested"));
+    handler.send(note::BodyEvent::make_array_begin("items"));
+    handler.send(note::BodyEvent::make_array_end("items"));
+    handler.send(note::BodyEvent::make_reset());
+
+    REQUIRE(data.humidity == 42); // unchanged (reset goes to default: break)
+}
+
 TEST_CASE("field_type_of maps C++ types correctly") {
     STATIC_REQUIRE(note::field_type_of<bool>() == note::FieldType::Bool);
     STATIC_REQUIRE(note::field_type_of<int8_t>() == note::FieldType::Int8);

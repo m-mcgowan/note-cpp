@@ -767,3 +767,358 @@ TEST_CASE("transact_dispatch: transmit failure") {
     REQUIRE_FALSE(rv.has_value());
     REQUIRE(rv.error().code == Error::SendFailed);
 }
+
+
+// ---------------------------------------------------------------------------
+// send_raw: transmit failure returns SendFailed
+// ---------------------------------------------------------------------------
+
+TEST_CASE("send_raw: transmit failure returns SendFailed") {
+    MockHal hal;
+    // First transact to initialize transport
+    hal.queue_response("{}");
+    StreamingTransport transport(hal, 1, 0);
+    CollectorSink sink;
+    (void)iface(transport).transact(
+        [](JsonBuilder& b) { b.add("req", "init"); }, sink, 5000);
+
+    // Now fail transmit
+    hal.transmit_fails = true;
+    auto r = transport.send_raw(string_view("{\"req\":\"test\"}"));
+    REQUIRE_FALSE(r.has_value());
+    REQUIRE(r.error().code == Error::SendFailed);
+}
+
+
+// ---------------------------------------------------------------------------
+// send_raw: write_line_terminator failure returns SendFailed
+// ---------------------------------------------------------------------------
+
+TEST_CASE("send_raw: line terminator failure returns SendFailed") {
+    struct FailTermHal : MockHal {
+        bool write_line_terminator() override { return false; }
+    };
+
+    FailTermHal hal;
+    hal.queue_response("{}");
+    StreamingTransport transport(hal, 1, 0);
+    CollectorSink sink;
+    (void)iface(transport).transact(
+        [](JsonBuilder& b) { b.add("req", "init"); }, sink, 5000);
+
+    auto r = transport.send_raw(string_view("{\"req\":\"test\"}"));
+    REQUIRE_FALSE(r.has_value());
+    REQUIRE(r.error().code == Error::SendFailed);
+}
+
+
+// ---------------------------------------------------------------------------
+// send_raw: success path
+// ---------------------------------------------------------------------------
+
+TEST_CASE("send_raw: success transmits JSON with line terminator") {
+    MockHal hal;
+    hal.queue_response("{}");
+    StreamingTransport transport(hal, 1, 0);
+    CollectorSink sink;
+    (void)iface(transport).transact(
+        [](JsonBuilder& b) { b.add("req", "init"); }, sink, 5000);
+    hal.last_transmitted.clear();
+
+    auto r = transport.send_raw(string_view("{\"req\":\"card.led\"}"));
+    REQUIRE(r.has_value());
+    // Should contain the JSON + CRLF from write_line_terminator
+    REQUIRE(hal.last_transmitted.find("card.led") != std::string::npos);
+    REQUIRE(hal.last_transmitted.find("\r\n") != std::string::npos);
+}
+
+
+// ---------------------------------------------------------------------------
+// send_raw: not initialized returns NotReady
+// ---------------------------------------------------------------------------
+
+TEST_CASE("send_raw: not initialized returns NotReady") {
+    struct FailResetHal : MockHal {
+        bool reset() override { return false; }
+    };
+
+    FailResetHal hal;
+    StreamingTransport transport(hal, 1, 0);
+
+    auto r = transport.send_raw(string_view("{\"req\":\"test\"}"));
+    REQUIRE_FALSE(r.has_value());
+    REQUIRE(r.error().code == Error::NotReady);
+}
+
+
+// ---------------------------------------------------------------------------
+// transact_raw: success reads response line
+// ---------------------------------------------------------------------------
+
+TEST_CASE("transact_raw: success reads response") {
+    MockHal hal;
+    hal.queue_response("{}");
+    StreamingTransport transport(hal, 1, 0);
+    CollectorSink sink;
+    (void)iface(transport).transact(
+        [](JsonBuilder& b) { b.add("req", "init"); }, sink, 5000);
+    hal.last_transmitted.clear();
+
+    // Queue a response for the raw transact
+    hal.queue_response("{\"ok\":true}");
+
+    char buf[128];
+    auto r = transport.transact_raw(string_view("{\"req\":\"test\"}"), buf, sizeof(buf), 5000);
+    REQUIRE(r.has_value());
+    REQUIRE(r->find("ok") != std::string::npos);
+}
+
+
+// ---------------------------------------------------------------------------
+// transact_raw: transmit failure
+// ---------------------------------------------------------------------------
+
+TEST_CASE("transact_raw: transmit failure returns SendFailed") {
+    MockHal hal;
+    hal.queue_response("{}");
+    StreamingTransport transport(hal, 1, 0);
+    CollectorSink sink;
+    (void)iface(transport).transact(
+        [](JsonBuilder& b) { b.add("req", "init"); }, sink, 5000);
+
+    hal.transmit_fails = true;
+    char buf[128];
+    auto r = transport.transact_raw(string_view("{\"req\":\"test\"}"), buf, sizeof(buf), 5000);
+    REQUIRE_FALSE(r.has_value());
+    REQUIRE(r.error().code == Error::SendFailed);
+}
+
+
+// ---------------------------------------------------------------------------
+// transact_raw: line terminator failure
+// ---------------------------------------------------------------------------
+
+TEST_CASE("transact_raw: line terminator failure returns SendFailed") {
+    struct FailTermHal : MockHal {
+        bool term_fail = false;
+        bool write_line_terminator() override {
+            if (term_fail) return false;
+            last_transmitted += "\r\n";
+            return true;
+        }
+    };
+
+    FailTermHal hal;
+    hal.queue_response("{}");
+    StreamingTransport transport(hal, 1, 0);
+    CollectorSink sink;
+    (void)iface(transport).transact(
+        [](JsonBuilder& b) { b.add("req", "init"); }, sink, 5000);
+
+    hal.term_fail = true;
+    char buf[128];
+    auto r = transport.transact_raw(string_view("{\"req\":\"test\"}"), buf, sizeof(buf), 5000);
+    REQUIRE_FALSE(r.has_value());
+    REQUIRE(r.error().code == Error::SendFailed);
+}
+
+
+// ---------------------------------------------------------------------------
+// transact_raw: not initialized returns NotReady
+// ---------------------------------------------------------------------------
+
+TEST_CASE("transact_raw: not initialized returns NotReady") {
+    struct FailResetHal : MockHal {
+        bool reset() override { return false; }
+    };
+
+    FailResetHal hal;
+    StreamingTransport transport(hal, 1, 0);
+
+    char buf[128];
+    auto r = transport.transact_raw(string_view("{\"req\":\"test\"}"), buf, sizeof(buf), 5000);
+    REQUIRE_FALSE(r.has_value());
+    REQUIRE(r.error().code == Error::NotReady);
+}
+
+
+// ---------------------------------------------------------------------------
+// transact_raw: response overflow returns Overflow error
+// ---------------------------------------------------------------------------
+
+TEST_CASE("transact_raw: response overflow returns Overflow") {
+    MockHal hal;
+    hal.queue_response("{}");
+    StreamingTransport transport(hal, 1, 0);
+    CollectorSink sink;
+    (void)iface(transport).transact(
+        [](JsonBuilder& b) { b.add("req", "init"); }, sink, 5000);
+
+    // Queue a long response that exceeds the tiny buffer
+    hal.queue_response("{\"data\":\"this-is-a-very-long-response\"}");
+
+    char buf[8];  // tiny buffer
+    auto r = transport.transact_raw(string_view("{\"req\":\"test\"}"), buf, sizeof(buf), 5000);
+    REQUIRE_FALSE(r.has_value());
+    REQUIRE(r.error().code == Error::Overflow);
+}
+
+
+// ---------------------------------------------------------------------------
+// transact_raw: response with \r\n line ending (carriage return skipped)
+// ---------------------------------------------------------------------------
+
+TEST_CASE("transact_raw: \\r in response is skipped") {
+    MockHal hal;
+    hal.queue_response("{}");
+    StreamingTransport transport(hal, 1, 0);
+    CollectorSink sink;
+    (void)iface(transport).transact(
+        [](JsonBuilder& b) { b.add("req", "init"); }, sink, 5000);
+
+    // Manually queue response with \r\n ending (real Notecard serial behavior)
+    std::string resp = "{\"v\":1}\r\n";
+    for (char c : resp) hal.rx.push_back(static_cast<uint8_t>(c));
+
+    char buf[128];
+    auto r = transport.transact_raw(string_view("{\"req\":\"test\"}"), buf, sizeof(buf), 5000);
+    REQUIRE(r.has_value());
+    REQUIRE(*r == "{\"v\":1}");  // \r should be stripped
+}
+
+
+// ---------------------------------------------------------------------------
+// transact_raw: read returns 0 → timeout error
+// ---------------------------------------------------------------------------
+
+TEST_CASE("transact_raw: read returns 0 triggers timeout") {
+    struct ZeroReadHal : MockHal {
+        bool first_read_done = false;
+        Result<size_t> read(uint8_t*, size_t, uint32_t) override {
+            // Always return 0 bytes
+            return size_t(0);
+        }
+    };
+
+    ZeroReadHal hal;
+    hal.queue_response("{}");
+    // Use base MockHal for init, then swap behavior
+    StreamingTransport transport(hal, 1, 0);
+    // Force init by doing a normal transact with the mock's default read
+    // Actually, our ZeroReadHal overrides read, so init will fail.
+    // Instead, set initialized by calling a regular transact via a different approach.
+
+    // Let's use a HAL that only returns 0 on the raw path:
+    struct LazyZeroHal : MockHal {
+        bool zero_mode = false;
+        Result<size_t> read(uint8_t* buf, size_t max_len, uint32_t timeout_ms) override {
+            if (zero_mode) return size_t(0);
+            return MockHal::read(buf, max_len, timeout_ms);
+        }
+    };
+
+    LazyZeroHal hal2;
+    hal2.queue_response("{}");
+    StreamingTransport transport2(hal2, 1, 0);
+    CollectorSink sink;
+    (void)iface(transport2).transact(
+        [](JsonBuilder& b) { b.add("req", "init"); }, sink, 5000);
+
+    hal2.zero_mode = true;
+    char buf[128];
+    auto r = transport2.transact_raw(string_view("{\"req\":\"test\"}"), buf, sizeof(buf), 5000);
+    REQUIRE_FALSE(r.has_value());
+    REQUIRE(r.error().code == Error::ResponseLost);
+}
+
+
+// ---------------------------------------------------------------------------
+// send: not initialized (reset fails) returns NotReady
+// ---------------------------------------------------------------------------
+
+TEST_CASE("send: not initialized returns NotReady") {
+    struct FailResetHal : MockHal {
+        bool reset() override { return false; }
+    };
+
+    FailResetHal hal;
+    StreamingTransport transport(hal, 1, 0);
+
+    auto r = iface(transport).send(
+        [](JsonBuilder& b) { b.add("req", "card.led"); });
+    REQUIRE_FALSE(r.has_value());
+    REQUIRE(r.error().code == Error::NotReady);
+}
+
+
+// ---------------------------------------------------------------------------
+// lookahead: bytes after \n in frame_read are returned by subsequent read()
+// ---------------------------------------------------------------------------
+
+TEST_CASE("read: lookahead bytes from frame_read returned first") {
+    MockHal hal;
+    StreamingTransport transport(hal, 1, 0);
+
+    // Queue a response that includes extra bytes AFTER \n in the same chunk.
+    // Simulate: {"ok":true}\nEXTRA
+    std::string data = "{\"ok\":true}\nAB";
+    for (char c : data) hal.rx.push_back(static_cast<uint8_t>(c));
+
+    CollectorSink sink;
+    auto r = iface(transport).transact(
+        [](JsonBuilder& b) { b.add("req", "test"); }, sink, 5000);
+    REQUIRE(r.has_value());
+    REQUIRE(sink.get("ok") == "true");
+
+    // Now read() should return the lookahead bytes 'A', 'B' before hitting HAL
+    uint8_t buf[16];
+    auto r2 = transport.read(buf, sizeof(buf), 1000);
+    REQUIRE(r2.has_value());
+    REQUIRE(*r2 == 2);
+    REQUIRE(buf[0] == 'A');
+    REQUIRE(buf[1] == 'B');
+}
+
+
+// ---------------------------------------------------------------------------
+// transact_dispatch: reset failure returns NotReady
+// ---------------------------------------------------------------------------
+
+TEST_CASE("transact_dispatch: reset failure returns NotReady") {
+    struct FailResetHal : MockHal {
+        bool reset() override { return false; }
+    };
+
+    FailResetHal hal;
+    StreamingTransport transport(hal, 1, 0);
+
+    note::NullSink null_sink;
+    auto dispatch = note::make_sax_dispatch(null_sink);
+
+    detail::NcErrorCapture nc_err;
+    BuildFn fn = [](JsonBuilder& b, void*) { b.add("req", "test"); };
+    auto rv = transport.transact_dispatch(fn, nullptr, dispatch, 5000, nc_err);
+    REQUIRE_FALSE(rv.has_value());
+    REQUIRE(rv.error().code == Error::NotReady);
+}
+
+
+// ---------------------------------------------------------------------------
+// transact_dispatch: response timeout (no data)
+// ---------------------------------------------------------------------------
+
+TEST_CASE("transact_dispatch: response timeout returns ResponseLost") {
+    MockHal hal;
+    // No data queued → timeout
+    StreamingTransport transport(hal, 1, 0);
+
+    note::NullSink null_sink;
+    auto dispatch = note::make_sax_dispatch(null_sink);
+
+    detail::NcErrorCapture nc_err;
+    BuildFn fn = [](JsonBuilder& b, void*) { b.add("req", "test"); };
+    auto rv = transport.transact_dispatch(fn, nullptr, dispatch, 5000, nc_err);
+    REQUIRE_FALSE(rv.has_value());
+    // Timeout causes ResponseLost
+    REQUIRE(rv.error().code == Error::ResponseLost);
+}

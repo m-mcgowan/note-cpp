@@ -483,6 +483,192 @@ TEST_CASE("streaming sax: error on just whitespace") {
     REQUIRE(!err.empty());
 }
 
+// ── Branch coverage: number parsing edge cases ──────────────────────────
+
+static string_view parse_error(const char* json, size_t chunk = 256) {
+    ByteFeeder feeder(json, strlen(json), chunk);
+    RecordingSink sink;
+    auto read_fn = [&](uint8_t* buf, size_t max, uint32_t timeout) -> Result<size_t> {
+        return feeder.read(buf, max, timeout);
+    };
+    return sax_parse_streaming(read_fn, 5000, sink);
+}
+
+TEST_CASE("streaming sax: trailing decimal error") {
+    auto err = parse_error(R"({"a":1.})");
+    REQUIRE(!err.empty());
+    // Also at 1-byte chunks
+    err = parse_error(R"({"a":1.})", 1);
+    REQUIRE(!err.empty());
+}
+
+TEST_CASE("streaming sax: bare exponent error") {
+    auto err = parse_error(R"({"a":1e})");
+    REQUIRE(!err.empty());
+}
+
+TEST_CASE("streaming sax: exponent with sign only error") {
+    auto err = parse_error(R"({"a":1e+})");
+    REQUIRE(!err.empty());
+}
+
+TEST_CASE("streaming sax: valid plus sign in exponent") {
+    auto events = parse_with_chunks(R"({"a":1e+2})", 1);
+    REQUIRE(events.size() == 3);
+    CHECK(events[1].value == "1e+2");
+}
+
+TEST_CASE("streaming sax: valid minus sign in exponent") {
+    auto events = parse_with_chunks(R"({"a":1E-3})", 1);
+    REQUIRE(events.size() == 3);
+    CHECK(events[1].value == "1E-3");
+}
+
+TEST_CASE("streaming sax: number exceeding value buffer") {
+    // Build a number longer than the default 256-byte val scratch
+    std::string big_num(300, '9');
+    std::string json = R"({"n":)" + big_num + "}";
+    auto events = parse_with_chunks(json.c_str(), 8);
+    REQUIRE(events.size() == 3);
+    CHECK(events[1].key == "n");
+    // Value should be truncated to 256 (default val scratch)
+    CHECK(events[1].value.size() == 256);
+}
+
+TEST_CASE("streaming sax: number with overflow in decimal digits") {
+    // Long decimal part that exceeds value buffer
+    std::string json = R"({"n":0.)" + std::string(300, '1') + "}";
+    auto events = parse_with_chunks(json.c_str(), 8);
+    REQUIRE(events.size() == 3);
+    CHECK(events[1].key == "n");
+}
+
+TEST_CASE("streaming sax: number with overflow in exponent digits") {
+    std::string json = R"({"n":1e)" + std::string(300, '9') + "}";
+    auto events = parse_with_chunks(json.c_str(), 8);
+    REQUIRE(events.size() == 3);
+    CHECK(events[1].key == "n");
+}
+
+// ── Branch coverage: escape sequence edge cases ─────────────────────────
+
+TEST_CASE("streaming sax: all escape sequences at 1-byte chunks") {
+    // Test \/ \b \f \r (already tested: \" \\ \n \t \u)
+    const char* json = R"({"a":"\/\b\f\r"})";
+    auto events = parse_with_chunks(json, 1);
+    REQUIRE(events.size() == 3);
+    CHECK(events[1].value == "/\b\f\r");
+}
+
+TEST_CASE("streaming sax: invalid escape character") {
+    // \x is not a valid JSON escape
+    const char* json = R"({"a":"\x"})";
+    // Our parser treats unknown escapes as literal (outputs the char after backslash)
+    auto events = parse_with_chunks(json, 1);
+    REQUIRE(events.size() == 3);
+    CHECK(events[1].value == "x");
+}
+
+TEST_CASE("streaming sax: unicode 2-byte UTF-8") {
+    // \u00E9 = 'é' = 2-byte UTF-8: 0xC3 0xA9
+    const char* json = R"({"c":"\u00E9"})";
+    auto events = parse_with_chunks(json, 1);
+    REQUIRE(events.size() == 3);
+    CHECK(events[1].value == "\xC3\xA9");
+}
+
+TEST_CASE("streaming sax: unicode 3-byte UTF-8") {
+    // \u4E16 = '世' = 3-byte UTF-8: 0xE4 0xB8 0x96
+    const char* json = R"({"c":"\u4E16"})";
+    auto events = parse_with_chunks(json, 1);
+    REQUIRE(events.size() == 3);
+    CHECK(events[1].value == "\xE4\xB8\x96");
+}
+
+TEST_CASE("streaming sax: unicode surrogate replaced with ?") {
+    // \uD800 is a surrogate — should be replaced with '?'
+    const char* json = R"({"c":"\uD800"})";
+    auto events = parse_with_chunks(json, 1);
+    REQUIRE(events.size() == 3);
+    CHECK(events[1].value == "?");
+}
+
+TEST_CASE("streaming sax: invalid hex in unicode escape") {
+    const char* json = R"({"a":"\uGGGG"})";
+    auto err = parse_error(json, 1);
+    REQUIRE(!err.empty());
+}
+
+TEST_CASE("streaming sax: incomplete unicode escape at EOF") {
+    const char* json = R"({"a":"\u00)";
+    auto err = parse_error(json, 1);
+    REQUIRE(!err.empty());
+}
+
+// ── Branch coverage: literal keywords split at 1-byte ───────────────────
+
+TEST_CASE("streaming sax: true/false/null all split at 1-byte boundary") {
+    auto events = parse_with_chunks(R"({"a":true,"b":false,"c":null})", 1);
+    REQUIRE(events.size() == 5);
+    CHECK(events[1].type == Event::Bool);
+    CHECK(events[1].value == "true");
+    CHECK(events[2].type == Event::Bool);
+    CHECK(events[2].value == "false");
+    CHECK(events[3].type == Event::Null);
+}
+
+// ── Branch coverage: truncated input / EOF ──────────────────────────────
+
+TEST_CASE("streaming sax: EOF after key colon") {
+    auto err = parse_error(R"({"a":)");
+    REQUIRE(!err.empty());
+}
+
+TEST_CASE("streaming sax: EOF in array after comma") {
+    auto err = parse_error(R"({"a":[1,)");
+    REQUIRE(!err.empty());
+}
+
+TEST_CASE("streaming sax: EOF after nested object") {
+    auto err = parse_error(R"({"a":{})");
+    REQUIRE(!err.empty());
+}
+
+TEST_CASE("streaming sax: EOF during number") {
+    auto err = parse_error(R"({"a":12)");
+    REQUIRE(!err.empty());
+}
+
+TEST_CASE("streaming sax: EOF after minus sign") {
+    auto err = parse_error(R"({"a":-)");
+    REQUIRE(!err.empty());
+}
+
+// ── Branch coverage: unexpected character ────────────────────────────────
+
+TEST_CASE("streaming sax: unexpected character at value position") {
+    auto err = parse_error(R"({"a":$})");
+    REQUIRE(!err.empty());
+}
+
+// ── Branch coverage: control character in string ─────────────────────────
+
+TEST_CASE("streaming sax: control character in string") {
+    std::string json = R"({"a":")";
+    json += '\x01';
+    json += R"("})";
+    auto err = parse_error(json.c_str(), 1);
+    REQUIRE(!err.empty());
+}
+
+// ── Branch coverage: escape at EOF ──────────────────────────────────────
+
+TEST_CASE("streaming sax: backslash at end of input") {
+    std::string json = R"({"a":"\)";
+    auto err = parse_error(json.c_str(), 1);
+    REQUIRE(!err.empty());
+}
+
 // ── 6. SaxStreamBuf with caller-provided buffers ─────────────────────────
 
 TEST_CASE("streaming sax: explicit SaxStreamBuf with small buffer") {

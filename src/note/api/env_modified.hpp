@@ -195,7 +195,7 @@ struct EnvModified {
     };
 
 #if NOTE_SINGLETON
-    /// Singleton per-type execute (body-enabled or non-standard response).
+    /// Singleton per-type execute (non-standard response).
     static inline ApiResult<Response>(*execute_fn_)(void*, const EnvModified&);
     auto execute() const { return execute_fn_(nc_, *this); }
     static inline Result<void>(*send_fn_)(void*, BuildFn, void*);

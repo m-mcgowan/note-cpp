@@ -48,4 +48,9 @@ struct BodyHandler {
     explicit operator bool() const { return ctx != nullptr; }
 };
 
+class StringPool;  // forward
+
+/// Type-erased body handler factory — shared by generated endpoints.
+using BodyHandlerFactory = BodyHandler(*)(void* body, StringPool& pool, void* storage);
+
 } // namespace note

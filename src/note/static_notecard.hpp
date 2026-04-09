@@ -214,6 +214,25 @@ public:
         return transact_retried(wrapped, &ctx, dispatch, nc_err, safety);
     }
 
+    /// Non-template execute_generic with body handler factory.
+    /// Used by the unified singleton thunk — body endpoints pass their factory,
+    /// non-body endpoints pass nullptr. Avoids per-type template instantiation.
+    Result<void> execute_generic_with_body(
+            string_view req_type, BuildFn fields_fn, void* fields_ctx,
+            void* rsp_storage, const FieldDesc* rsp_fields, uint8_t n_fields,
+            detail::NcErrorCapture& nc_err, bool& arena_exhausted,
+            void* body_ptr, BodyHandlerFactory body_factory) {
+        alignas(body_sink_storage_align) char body_storage[body_sink_storage_size];
+        BodyHandler body_handler{};
+        if (body_factory) {
+            StringPool pool(alloc_);
+            body_handler = body_factory(body_ptr, pool, body_storage);
+        }
+        return execute_generic_retried(req_type, fields_fn, fields_ctx,
+                                        rsp_storage, rsp_fields, n_fields,
+                                        nc_err, arena_exhausted, Safety::NonIdempotent, body_handler);
+    }
+
     /// Access the transport stack (e.g. for binary I/O).
     Stack& stack() { return stack_; }
 

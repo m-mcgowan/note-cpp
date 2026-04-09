@@ -275,26 +275,20 @@ struct HubSignal {
     }
 
 #if NOTE_SINGLETON
-    /// Body-response endpoint: uses generic path when NOTE_RESPONSE_BODY=0,
-    /// per-type path when body parsing is enabled.
-#if NOTE_RESPONSE_BODY
-    static inline ApiResult<Response>(*execute_fn_)(void*, const HubSignal&);
-    auto execute() const { return execute_fn_(nc_, *this); }
-#else
-    static inline Result<void>(*execute_generic_fn_)(void*, ::note::string_view, BuildFn, void*, void*, const ::note::FieldDesc*, uint8_t, ::note::detail::NcErrorCapture&, bool&);
+    /// Singleton generic execute — shared thunk with body factory params.
+    static inline Result<void>(*execute_generic_fn_)(void*, ::note::string_view, BuildFn, void*, void*, const ::note::FieldDesc*, uint8_t, ::note::detail::NcErrorCapture&, bool&, void*, ::note::BodyHandlerFactory);
     ApiResult<Response> execute() const {
         auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
         BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
         Response rsp_{};
         ::note::detail::NcErrorCapture nc_err_;
         bool exhausted_ = false;
-        auto rv_ = execute_generic_fn_(nc_, notecard_request, fn_, &build_, &rsp_, field_descs_ptr(), field_count, nc_err_, exhausted_);
+        auto rv_ = execute_generic_fn_(nc_, notecard_request, fn_, &build_, &rsp_, field_descs_ptr(), field_count, nc_err_, exhausted_, body_ptr_, body_handler_factory_);
         if (!rv_) return ::note::Unexpected(rv_.error());
         if (!nc_err_.empty()) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
         if (exhausted_) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Overflow, ::note::Cause::Unspecified, NOTE_ERR("arena exhausted")});
         return ApiResult<Response>(std::move(rsp_));
     }
-#endif
     static inline Result<void>(*send_fn_)(void*, BuildFn, void*);
 #else
     ApiResult<Response>(*execute_fn_)(void*, const HubSignal&) = nullptr;

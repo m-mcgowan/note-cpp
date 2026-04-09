@@ -81,7 +81,7 @@ struct CardRestart {
     using Response = void;
 
 #if NOTE_SINGLETON
-    /// Singleton void execute — shared "req" prefix, per-type fields only.
+    /// Singleton void execute — shared thunk, no per-type instantiation.
     static inline Result<void>(*execute_void_fn_)(void*, ::note::string_view, BuildFn, void*, ::note::detail::NcErrorCapture&);
     ApiResult<void> execute() const {
         auto build_ = [&](JsonBuilder& b_) { this->build(b_); };

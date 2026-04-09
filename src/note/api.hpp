@@ -135,6 +135,22 @@ public:
     NcT& notecard() { return nc_; }
 #endif
 
+#if NOTE_SINGLETON
+    // Static thunks — one copy each, shared by all endpoints via create_().
+    // Eliminates per-type lambda instantiation in the factory methods.
+    static Result<void> void_thunk_(void* p, string_view req, BuildFn fn, void* ctx, detail::NcErrorCapture& err) {
+        return static_cast<NcT*>(p)->execute_void(req, fn, ctx, err);
+    }
+    static Result<void> generic_thunk_(void* p, string_view req, BuildFn fn, void* ctx,
+            void* rsp, const FieldDesc* f, uint8_t n, detail::NcErrorCapture& err, bool& ex,
+            void* body_ptr, BodyHandlerFactory body_factory) {
+        return static_cast<NcT*>(p)->execute_generic_with_body(req, fn, ctx, rsp, f, n, err, ex, body_ptr, body_factory);
+    }
+    static Result<void> send_thunk_(void* p, BuildFn fn, void* ctx) {
+        return static_cast<NcT*>(p)->send_command(fn, ctx);
+    }
+#endif
+
     template<typename RequestT>
     RequestT create() {
         RequestT r;
@@ -187,18 +203,10 @@ public:
             T r;
 #if NOTE_SINGLETON
             T::nc_ = nc_ptr();
-            // Void/generic endpoints use shared fn ptrs — no per-type execute template.
-            // Only body-enabled endpoints fall through to per-type execute_fn_.
             if constexpr (std::is_void_v<typename T::Response>) {
-                T::execute_void_fn_ = [](void* p_, string_view req_, BuildFn fn_, void* ctx_, detail::NcErrorCapture& err_) {
-                    return static_cast<NcT*>(p_)->execute_void(req_, fn_, ctx_, err_);
-                };
-            } else if constexpr (detail::has_field_descs<T>::value
-                                 && (!detail::has_body_factory<T>::value || !NOTE_RESPONSE_BODY)) {
-                T::execute_generic_fn_ = [](void* p_, string_view req_, BuildFn fn_, void* ctx_, void* rsp_,
-                        const FieldDesc* f_, uint8_t n_, detail::NcErrorCapture& err_, bool& ex_) {
-                    return static_cast<NcT*>(p_)->execute_generic(req_, fn_, ctx_, rsp_, f_, n_, err_, ex_);
-                };
+                T::execute_void_fn_ = &Api::void_thunk_;
+            } else if constexpr (detail::has_field_descs<T>::value) {
+                T::execute_generic_fn_ = &Api::generic_thunk_;
             } else {
                 T::execute_fn_ = [](void* p_, const T& req_) {
                     auto* nc__ = static_cast<NcT*>(p_);
@@ -212,9 +220,7 @@ public:
                 };
             }
             if constexpr (T::supports_cmd) {
-                T::send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
-                    return static_cast<NcT*>(p_)->send_command(fn_, ctx_);
-                };
+                T::send_fn_ = &Api::send_thunk_;
             }
 #else
             r.nc_ = nc_;
@@ -277,18 +283,10 @@ public:
             T r;
 #if NOTE_SINGLETON
             T::nc_ = nc_ptr();
-            // Void/generic endpoints use shared fn ptrs — no per-type execute template.
-            // Only body-enabled endpoints fall through to per-type execute_fn_.
             if constexpr (std::is_void_v<typename T::Response>) {
-                T::execute_void_fn_ = [](void* p_, string_view req_, BuildFn fn_, void* ctx_, detail::NcErrorCapture& err_) {
-                    return static_cast<NcT*>(p_)->execute_void(req_, fn_, ctx_, err_);
-                };
-            } else if constexpr (detail::has_field_descs<T>::value
-                                 && (!detail::has_body_factory<T>::value || !NOTE_RESPONSE_BODY)) {
-                T::execute_generic_fn_ = [](void* p_, string_view req_, BuildFn fn_, void* ctx_, void* rsp_,
-                        const FieldDesc* f_, uint8_t n_, detail::NcErrorCapture& err_, bool& ex_) {
-                    return static_cast<NcT*>(p_)->execute_generic(req_, fn_, ctx_, rsp_, f_, n_, err_, ex_);
-                };
+                T::execute_void_fn_ = &Api::void_thunk_;
+            } else if constexpr (detail::has_field_descs<T>::value) {
+                T::execute_generic_fn_ = &Api::generic_thunk_;
             } else {
                 T::execute_fn_ = [](void* p_, const T& req_) {
                     auto* nc__ = static_cast<NcT*>(p_);
@@ -302,9 +300,7 @@ public:
                 };
             }
             if constexpr (T::supports_cmd) {
-                T::send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
-                    return static_cast<NcT*>(p_)->send_command(fn_, ctx_);
-                };
+                T::send_fn_ = &Api::send_thunk_;
             }
 #else
             r.nc_ = nc_;
@@ -350,18 +346,10 @@ public:
             T r;
 #if NOTE_SINGLETON
             T::nc_ = nc_ptr();
-            // Void/generic endpoints use shared fn ptrs — no per-type execute template.
-            // Only body-enabled endpoints fall through to per-type execute_fn_.
             if constexpr (std::is_void_v<typename T::Response>) {
-                T::execute_void_fn_ = [](void* p_, string_view req_, BuildFn fn_, void* ctx_, detail::NcErrorCapture& err_) {
-                    return static_cast<NcT*>(p_)->execute_void(req_, fn_, ctx_, err_);
-                };
-            } else if constexpr (detail::has_field_descs<T>::value
-                                 && (!detail::has_body_factory<T>::value || !NOTE_RESPONSE_BODY)) {
-                T::execute_generic_fn_ = [](void* p_, string_view req_, BuildFn fn_, void* ctx_, void* rsp_,
-                        const FieldDesc* f_, uint8_t n_, detail::NcErrorCapture& err_, bool& ex_) {
-                    return static_cast<NcT*>(p_)->execute_generic(req_, fn_, ctx_, rsp_, f_, n_, err_, ex_);
-                };
+                T::execute_void_fn_ = &Api::void_thunk_;
+            } else if constexpr (detail::has_field_descs<T>::value) {
+                T::execute_generic_fn_ = &Api::generic_thunk_;
             } else {
                 T::execute_fn_ = [](void* p_, const T& req_) {
                     auto* nc__ = static_cast<NcT*>(p_);
@@ -375,9 +363,7 @@ public:
                 };
             }
             if constexpr (T::supports_cmd) {
-                T::send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
-                    return static_cast<NcT*>(p_)->send_command(fn_, ctx_);
-                };
+                T::send_fn_ = &Api::send_thunk_;
             }
 #else
             r.nc_ = nc_;
@@ -415,18 +401,10 @@ public:
             T r;
 #if NOTE_SINGLETON
             T::nc_ = nc_ptr();
-            // Void/generic endpoints use shared fn ptrs — no per-type execute template.
-            // Only body-enabled endpoints fall through to per-type execute_fn_.
             if constexpr (std::is_void_v<typename T::Response>) {
-                T::execute_void_fn_ = [](void* p_, string_view req_, BuildFn fn_, void* ctx_, detail::NcErrorCapture& err_) {
-                    return static_cast<NcT*>(p_)->execute_void(req_, fn_, ctx_, err_);
-                };
-            } else if constexpr (detail::has_field_descs<T>::value
-                                 && (!detail::has_body_factory<T>::value || !NOTE_RESPONSE_BODY)) {
-                T::execute_generic_fn_ = [](void* p_, string_view req_, BuildFn fn_, void* ctx_, void* rsp_,
-                        const FieldDesc* f_, uint8_t n_, detail::NcErrorCapture& err_, bool& ex_) {
-                    return static_cast<NcT*>(p_)->execute_generic(req_, fn_, ctx_, rsp_, f_, n_, err_, ex_);
-                };
+                T::execute_void_fn_ = &Api::void_thunk_;
+            } else if constexpr (detail::has_field_descs<T>::value) {
+                T::execute_generic_fn_ = &Api::generic_thunk_;
             } else {
                 T::execute_fn_ = [](void* p_, const T& req_) {
                     auto* nc__ = static_cast<NcT*>(p_);
@@ -440,9 +418,7 @@ public:
                 };
             }
             if constexpr (T::supports_cmd) {
-                T::send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
-                    return static_cast<NcT*>(p_)->send_command(fn_, ctx_);
-                };
+                T::send_fn_ = &Api::send_thunk_;
             }
 #else
             r.nc_ = nc_;
@@ -489,18 +465,10 @@ public:
             T r;
 #if NOTE_SINGLETON
             T::nc_ = nc_ptr();
-            // Void/generic endpoints use shared fn ptrs — no per-type execute template.
-            // Only body-enabled endpoints fall through to per-type execute_fn_.
             if constexpr (std::is_void_v<typename T::Response>) {
-                T::execute_void_fn_ = [](void* p_, string_view req_, BuildFn fn_, void* ctx_, detail::NcErrorCapture& err_) {
-                    return static_cast<NcT*>(p_)->execute_void(req_, fn_, ctx_, err_);
-                };
-            } else if constexpr (detail::has_field_descs<T>::value
-                                 && (!detail::has_body_factory<T>::value || !NOTE_RESPONSE_BODY)) {
-                T::execute_generic_fn_ = [](void* p_, string_view req_, BuildFn fn_, void* ctx_, void* rsp_,
-                        const FieldDesc* f_, uint8_t n_, detail::NcErrorCapture& err_, bool& ex_) {
-                    return static_cast<NcT*>(p_)->execute_generic(req_, fn_, ctx_, rsp_, f_, n_, err_, ex_);
-                };
+                T::execute_void_fn_ = &Api::void_thunk_;
+            } else if constexpr (detail::has_field_descs<T>::value) {
+                T::execute_generic_fn_ = &Api::generic_thunk_;
             } else {
                 T::execute_fn_ = [](void* p_, const T& req_) {
                     auto* nc__ = static_cast<NcT*>(p_);
@@ -514,9 +482,7 @@ public:
                 };
             }
             if constexpr (T::supports_cmd) {
-                T::send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
-                    return static_cast<NcT*>(p_)->send_command(fn_, ctx_);
-                };
+                T::send_fn_ = &Api::send_thunk_;
             }
 #else
             r.nc_ = nc_;
@@ -557,18 +523,10 @@ public:
             T r;
 #if NOTE_SINGLETON
             T::nc_ = nc_ptr();
-            // Void/generic endpoints use shared fn ptrs — no per-type execute template.
-            // Only body-enabled endpoints fall through to per-type execute_fn_.
             if constexpr (std::is_void_v<typename T::Response>) {
-                T::execute_void_fn_ = [](void* p_, string_view req_, BuildFn fn_, void* ctx_, detail::NcErrorCapture& err_) {
-                    return static_cast<NcT*>(p_)->execute_void(req_, fn_, ctx_, err_);
-                };
-            } else if constexpr (detail::has_field_descs<T>::value
-                                 && (!detail::has_body_factory<T>::value || !NOTE_RESPONSE_BODY)) {
-                T::execute_generic_fn_ = [](void* p_, string_view req_, BuildFn fn_, void* ctx_, void* rsp_,
-                        const FieldDesc* f_, uint8_t n_, detail::NcErrorCapture& err_, bool& ex_) {
-                    return static_cast<NcT*>(p_)->execute_generic(req_, fn_, ctx_, rsp_, f_, n_, err_, ex_);
-                };
+                T::execute_void_fn_ = &Api::void_thunk_;
+            } else if constexpr (detail::has_field_descs<T>::value) {
+                T::execute_generic_fn_ = &Api::generic_thunk_;
             } else {
                 T::execute_fn_ = [](void* p_, const T& req_) {
                     auto* nc__ = static_cast<NcT*>(p_);
@@ -582,9 +540,7 @@ public:
                 };
             }
             if constexpr (T::supports_cmd) {
-                T::send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
-                    return static_cast<NcT*>(p_)->send_command(fn_, ctx_);
-                };
+                T::send_fn_ = &Api::send_thunk_;
             }
 #else
             r.nc_ = nc_;
@@ -643,18 +599,10 @@ public:
             T r;
 #if NOTE_SINGLETON
             T::nc_ = nc_ptr();
-            // Void/generic endpoints use shared fn ptrs — no per-type execute template.
-            // Only body-enabled endpoints fall through to per-type execute_fn_.
             if constexpr (std::is_void_v<typename T::Response>) {
-                T::execute_void_fn_ = [](void* p_, string_view req_, BuildFn fn_, void* ctx_, detail::NcErrorCapture& err_) {
-                    return static_cast<NcT*>(p_)->execute_void(req_, fn_, ctx_, err_);
-                };
-            } else if constexpr (detail::has_field_descs<T>::value
-                                 && (!detail::has_body_factory<T>::value || !NOTE_RESPONSE_BODY)) {
-                T::execute_generic_fn_ = [](void* p_, string_view req_, BuildFn fn_, void* ctx_, void* rsp_,
-                        const FieldDesc* f_, uint8_t n_, detail::NcErrorCapture& err_, bool& ex_) {
-                    return static_cast<NcT*>(p_)->execute_generic(req_, fn_, ctx_, rsp_, f_, n_, err_, ex_);
-                };
+                T::execute_void_fn_ = &Api::void_thunk_;
+            } else if constexpr (detail::has_field_descs<T>::value) {
+                T::execute_generic_fn_ = &Api::generic_thunk_;
             } else {
                 T::execute_fn_ = [](void* p_, const T& req_) {
                     auto* nc__ = static_cast<NcT*>(p_);
@@ -668,9 +616,7 @@ public:
                 };
             }
             if constexpr (T::supports_cmd) {
-                T::send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
-                    return static_cast<NcT*>(p_)->send_command(fn_, ctx_);
-                };
+                T::send_fn_ = &Api::send_thunk_;
             }
 #else
             r.nc_ = nc_;
@@ -712,18 +658,10 @@ public:
             T r;
 #if NOTE_SINGLETON
             T::nc_ = nc_ptr();
-            // Void/generic endpoints use shared fn ptrs — no per-type execute template.
-            // Only body-enabled endpoints fall through to per-type execute_fn_.
             if constexpr (std::is_void_v<typename T::Response>) {
-                T::execute_void_fn_ = [](void* p_, string_view req_, BuildFn fn_, void* ctx_, detail::NcErrorCapture& err_) {
-                    return static_cast<NcT*>(p_)->execute_void(req_, fn_, ctx_, err_);
-                };
-            } else if constexpr (detail::has_field_descs<T>::value
-                                 && (!detail::has_body_factory<T>::value || !NOTE_RESPONSE_BODY)) {
-                T::execute_generic_fn_ = [](void* p_, string_view req_, BuildFn fn_, void* ctx_, void* rsp_,
-                        const FieldDesc* f_, uint8_t n_, detail::NcErrorCapture& err_, bool& ex_) {
-                    return static_cast<NcT*>(p_)->execute_generic(req_, fn_, ctx_, rsp_, f_, n_, err_, ex_);
-                };
+                T::execute_void_fn_ = &Api::void_thunk_;
+            } else if constexpr (detail::has_field_descs<T>::value) {
+                T::execute_generic_fn_ = &Api::generic_thunk_;
             } else {
                 T::execute_fn_ = [](void* p_, const T& req_) {
                     auto* nc__ = static_cast<NcT*>(p_);
@@ -737,9 +675,7 @@ public:
                 };
             }
             if constexpr (T::supports_cmd) {
-                T::send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
-                    return static_cast<NcT*>(p_)->send_command(fn_, ctx_);
-                };
+                T::send_fn_ = &Api::send_thunk_;
             }
 #else
             r.nc_ = nc_;
@@ -780,18 +716,10 @@ public:
             T r;
 #if NOTE_SINGLETON
             T::nc_ = nc_ptr();
-            // Void/generic endpoints use shared fn ptrs — no per-type execute template.
-            // Only body-enabled endpoints fall through to per-type execute_fn_.
             if constexpr (std::is_void_v<typename T::Response>) {
-                T::execute_void_fn_ = [](void* p_, string_view req_, BuildFn fn_, void* ctx_, detail::NcErrorCapture& err_) {
-                    return static_cast<NcT*>(p_)->execute_void(req_, fn_, ctx_, err_);
-                };
-            } else if constexpr (detail::has_field_descs<T>::value
-                                 && (!detail::has_body_factory<T>::value || !NOTE_RESPONSE_BODY)) {
-                T::execute_generic_fn_ = [](void* p_, string_view req_, BuildFn fn_, void* ctx_, void* rsp_,
-                        const FieldDesc* f_, uint8_t n_, detail::NcErrorCapture& err_, bool& ex_) {
-                    return static_cast<NcT*>(p_)->execute_generic(req_, fn_, ctx_, rsp_, f_, n_, err_, ex_);
-                };
+                T::execute_void_fn_ = &Api::void_thunk_;
+            } else if constexpr (detail::has_field_descs<T>::value) {
+                T::execute_generic_fn_ = &Api::generic_thunk_;
             } else {
                 T::execute_fn_ = [](void* p_, const T& req_) {
                     auto* nc__ = static_cast<NcT*>(p_);
@@ -805,9 +733,7 @@ public:
                 };
             }
             if constexpr (T::supports_cmd) {
-                T::send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
-                    return static_cast<NcT*>(p_)->send_command(fn_, ctx_);
-                };
+                T::send_fn_ = &Api::send_thunk_;
             }
 #else
             r.nc_ = nc_;
@@ -855,18 +781,10 @@ public:
             T r;
 #if NOTE_SINGLETON
             T::nc_ = nc_ptr();
-            // Void/generic endpoints use shared fn ptrs — no per-type execute template.
-            // Only body-enabled endpoints fall through to per-type execute_fn_.
             if constexpr (std::is_void_v<typename T::Response>) {
-                T::execute_void_fn_ = [](void* p_, string_view req_, BuildFn fn_, void* ctx_, detail::NcErrorCapture& err_) {
-                    return static_cast<NcT*>(p_)->execute_void(req_, fn_, ctx_, err_);
-                };
-            } else if constexpr (detail::has_field_descs<T>::value
-                                 && (!detail::has_body_factory<T>::value || !NOTE_RESPONSE_BODY)) {
-                T::execute_generic_fn_ = [](void* p_, string_view req_, BuildFn fn_, void* ctx_, void* rsp_,
-                        const FieldDesc* f_, uint8_t n_, detail::NcErrorCapture& err_, bool& ex_) {
-                    return static_cast<NcT*>(p_)->execute_generic(req_, fn_, ctx_, rsp_, f_, n_, err_, ex_);
-                };
+                T::execute_void_fn_ = &Api::void_thunk_;
+            } else if constexpr (detail::has_field_descs<T>::value) {
+                T::execute_generic_fn_ = &Api::generic_thunk_;
             } else {
                 T::execute_fn_ = [](void* p_, const T& req_) {
                     auto* nc__ = static_cast<NcT*>(p_);
@@ -880,9 +798,7 @@ public:
                 };
             }
             if constexpr (T::supports_cmd) {
-                T::send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
-                    return static_cast<NcT*>(p_)->send_command(fn_, ctx_);
-                };
+                T::send_fn_ = &Api::send_thunk_;
             }
 #else
             r.nc_ = nc_;
@@ -922,18 +838,10 @@ public:
             T r;
 #if NOTE_SINGLETON
             T::nc_ = nc_ptr();
-            // Void/generic endpoints use shared fn ptrs — no per-type execute template.
-            // Only body-enabled endpoints fall through to per-type execute_fn_.
             if constexpr (std::is_void_v<typename T::Response>) {
-                T::execute_void_fn_ = [](void* p_, string_view req_, BuildFn fn_, void* ctx_, detail::NcErrorCapture& err_) {
-                    return static_cast<NcT*>(p_)->execute_void(req_, fn_, ctx_, err_);
-                };
-            } else if constexpr (detail::has_field_descs<T>::value
-                                 && (!detail::has_body_factory<T>::value || !NOTE_RESPONSE_BODY)) {
-                T::execute_generic_fn_ = [](void* p_, string_view req_, BuildFn fn_, void* ctx_, void* rsp_,
-                        const FieldDesc* f_, uint8_t n_, detail::NcErrorCapture& err_, bool& ex_) {
-                    return static_cast<NcT*>(p_)->execute_generic(req_, fn_, ctx_, rsp_, f_, n_, err_, ex_);
-                };
+                T::execute_void_fn_ = &Api::void_thunk_;
+            } else if constexpr (detail::has_field_descs<T>::value) {
+                T::execute_generic_fn_ = &Api::generic_thunk_;
             } else {
                 T::execute_fn_ = [](void* p_, const T& req_) {
                     auto* nc__ = static_cast<NcT*>(p_);
@@ -947,9 +855,7 @@ public:
                 };
             }
             if constexpr (T::supports_cmd) {
-                T::send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
-                    return static_cast<NcT*>(p_)->send_command(fn_, ctx_);
-                };
+                T::send_fn_ = &Api::send_thunk_;
             }
 #else
             r.nc_ = nc_;
@@ -993,18 +899,10 @@ public:
             T r;
 #if NOTE_SINGLETON
             T::nc_ = nc_ptr();
-            // Void/generic endpoints use shared fn ptrs — no per-type execute template.
-            // Only body-enabled endpoints fall through to per-type execute_fn_.
             if constexpr (std::is_void_v<typename T::Response>) {
-                T::execute_void_fn_ = [](void* p_, string_view req_, BuildFn fn_, void* ctx_, detail::NcErrorCapture& err_) {
-                    return static_cast<NcT*>(p_)->execute_void(req_, fn_, ctx_, err_);
-                };
-            } else if constexpr (detail::has_field_descs<T>::value
-                                 && (!detail::has_body_factory<T>::value || !NOTE_RESPONSE_BODY)) {
-                T::execute_generic_fn_ = [](void* p_, string_view req_, BuildFn fn_, void* ctx_, void* rsp_,
-                        const FieldDesc* f_, uint8_t n_, detail::NcErrorCapture& err_, bool& ex_) {
-                    return static_cast<NcT*>(p_)->execute_generic(req_, fn_, ctx_, rsp_, f_, n_, err_, ex_);
-                };
+                T::execute_void_fn_ = &Api::void_thunk_;
+            } else if constexpr (detail::has_field_descs<T>::value) {
+                T::execute_generic_fn_ = &Api::generic_thunk_;
             } else {
                 T::execute_fn_ = [](void* p_, const T& req_) {
                     auto* nc__ = static_cast<NcT*>(p_);
@@ -1018,9 +916,7 @@ public:
                 };
             }
             if constexpr (T::supports_cmd) {
-                T::send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
-                    return static_cast<NcT*>(p_)->send_command(fn_, ctx_);
-                };
+                T::send_fn_ = &Api::send_thunk_;
             }
 #else
             r.nc_ = nc_;
@@ -1083,18 +979,10 @@ public:
             T r;
 #if NOTE_SINGLETON
             T::nc_ = nc_ptr();
-            // Void/generic endpoints use shared fn ptrs — no per-type execute template.
-            // Only body-enabled endpoints fall through to per-type execute_fn_.
             if constexpr (std::is_void_v<typename T::Response>) {
-                T::execute_void_fn_ = [](void* p_, string_view req_, BuildFn fn_, void* ctx_, detail::NcErrorCapture& err_) {
-                    return static_cast<NcT*>(p_)->execute_void(req_, fn_, ctx_, err_);
-                };
-            } else if constexpr (detail::has_field_descs<T>::value
-                                 && (!detail::has_body_factory<T>::value || !NOTE_RESPONSE_BODY)) {
-                T::execute_generic_fn_ = [](void* p_, string_view req_, BuildFn fn_, void* ctx_, void* rsp_,
-                        const FieldDesc* f_, uint8_t n_, detail::NcErrorCapture& err_, bool& ex_) {
-                    return static_cast<NcT*>(p_)->execute_generic(req_, fn_, ctx_, rsp_, f_, n_, err_, ex_);
-                };
+                T::execute_void_fn_ = &Api::void_thunk_;
+            } else if constexpr (detail::has_field_descs<T>::value) {
+                T::execute_generic_fn_ = &Api::generic_thunk_;
             } else {
                 T::execute_fn_ = [](void* p_, const T& req_) {
                     auto* nc__ = static_cast<NcT*>(p_);
@@ -1108,9 +996,7 @@ public:
                 };
             }
             if constexpr (T::supports_cmd) {
-                T::send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
-                    return static_cast<NcT*>(p_)->send_command(fn_, ctx_);
-                };
+                T::send_fn_ = &Api::send_thunk_;
             }
 #else
             r.nc_ = nc_;
@@ -1149,18 +1035,10 @@ public:
             T r;
 #if NOTE_SINGLETON
             T::nc_ = nc_ptr();
-            // Void/generic endpoints use shared fn ptrs — no per-type execute template.
-            // Only body-enabled endpoints fall through to per-type execute_fn_.
             if constexpr (std::is_void_v<typename T::Response>) {
-                T::execute_void_fn_ = [](void* p_, string_view req_, BuildFn fn_, void* ctx_, detail::NcErrorCapture& err_) {
-                    return static_cast<NcT*>(p_)->execute_void(req_, fn_, ctx_, err_);
-                };
-            } else if constexpr (detail::has_field_descs<T>::value
-                                 && (!detail::has_body_factory<T>::value || !NOTE_RESPONSE_BODY)) {
-                T::execute_generic_fn_ = [](void* p_, string_view req_, BuildFn fn_, void* ctx_, void* rsp_,
-                        const FieldDesc* f_, uint8_t n_, detail::NcErrorCapture& err_, bool& ex_) {
-                    return static_cast<NcT*>(p_)->execute_generic(req_, fn_, ctx_, rsp_, f_, n_, err_, ex_);
-                };
+                T::execute_void_fn_ = &Api::void_thunk_;
+            } else if constexpr (detail::has_field_descs<T>::value) {
+                T::execute_generic_fn_ = &Api::generic_thunk_;
             } else {
                 T::execute_fn_ = [](void* p_, const T& req_) {
                     auto* nc__ = static_cast<NcT*>(p_);
@@ -1174,9 +1052,7 @@ public:
                 };
             }
             if constexpr (T::supports_cmd) {
-                T::send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
-                    return static_cast<NcT*>(p_)->send_command(fn_, ctx_);
-                };
+                T::send_fn_ = &Api::send_thunk_;
             }
 #else
             r.nc_ = nc_;
@@ -1222,18 +1098,10 @@ public:
             T r;
 #if NOTE_SINGLETON
             T::nc_ = nc_ptr();
-            // Void/generic endpoints use shared fn ptrs — no per-type execute template.
-            // Only body-enabled endpoints fall through to per-type execute_fn_.
             if constexpr (std::is_void_v<typename T::Response>) {
-                T::execute_void_fn_ = [](void* p_, string_view req_, BuildFn fn_, void* ctx_, detail::NcErrorCapture& err_) {
-                    return static_cast<NcT*>(p_)->execute_void(req_, fn_, ctx_, err_);
-                };
-            } else if constexpr (detail::has_field_descs<T>::value
-                                 && (!detail::has_body_factory<T>::value || !NOTE_RESPONSE_BODY)) {
-                T::execute_generic_fn_ = [](void* p_, string_view req_, BuildFn fn_, void* ctx_, void* rsp_,
-                        const FieldDesc* f_, uint8_t n_, detail::NcErrorCapture& err_, bool& ex_) {
-                    return static_cast<NcT*>(p_)->execute_generic(req_, fn_, ctx_, rsp_, f_, n_, err_, ex_);
-                };
+                T::execute_void_fn_ = &Api::void_thunk_;
+            } else if constexpr (detail::has_field_descs<T>::value) {
+                T::execute_generic_fn_ = &Api::generic_thunk_;
             } else {
                 T::execute_fn_ = [](void* p_, const T& req_) {
                     auto* nc__ = static_cast<NcT*>(p_);
@@ -1247,9 +1115,7 @@ public:
                 };
             }
             if constexpr (T::supports_cmd) {
-                T::send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
-                    return static_cast<NcT*>(p_)->send_command(fn_, ctx_);
-                };
+                T::send_fn_ = &Api::send_thunk_;
             }
 #else
             r.nc_ = nc_;
@@ -1290,18 +1156,10 @@ public:
             T r;
 #if NOTE_SINGLETON
             T::nc_ = nc_ptr();
-            // Void/generic endpoints use shared fn ptrs — no per-type execute template.
-            // Only body-enabled endpoints fall through to per-type execute_fn_.
             if constexpr (std::is_void_v<typename T::Response>) {
-                T::execute_void_fn_ = [](void* p_, string_view req_, BuildFn fn_, void* ctx_, detail::NcErrorCapture& err_) {
-                    return static_cast<NcT*>(p_)->execute_void(req_, fn_, ctx_, err_);
-                };
-            } else if constexpr (detail::has_field_descs<T>::value
-                                 && (!detail::has_body_factory<T>::value || !NOTE_RESPONSE_BODY)) {
-                T::execute_generic_fn_ = [](void* p_, string_view req_, BuildFn fn_, void* ctx_, void* rsp_,
-                        const FieldDesc* f_, uint8_t n_, detail::NcErrorCapture& err_, bool& ex_) {
-                    return static_cast<NcT*>(p_)->execute_generic(req_, fn_, ctx_, rsp_, f_, n_, err_, ex_);
-                };
+                T::execute_void_fn_ = &Api::void_thunk_;
+            } else if constexpr (detail::has_field_descs<T>::value) {
+                T::execute_generic_fn_ = &Api::generic_thunk_;
             } else {
                 T::execute_fn_ = [](void* p_, const T& req_) {
                     auto* nc__ = static_cast<NcT*>(p_);
@@ -1315,9 +1173,7 @@ public:
                 };
             }
             if constexpr (T::supports_cmd) {
-                T::send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
-                    return static_cast<NcT*>(p_)->send_command(fn_, ctx_);
-                };
+                T::send_fn_ = &Api::send_thunk_;
             }
 #else
             r.nc_ = nc_;
@@ -1357,18 +1213,10 @@ public:
             T r;
 #if NOTE_SINGLETON
             T::nc_ = nc_ptr();
-            // Void/generic endpoints use shared fn ptrs — no per-type execute template.
-            // Only body-enabled endpoints fall through to per-type execute_fn_.
             if constexpr (std::is_void_v<typename T::Response>) {
-                T::execute_void_fn_ = [](void* p_, string_view req_, BuildFn fn_, void* ctx_, detail::NcErrorCapture& err_) {
-                    return static_cast<NcT*>(p_)->execute_void(req_, fn_, ctx_, err_);
-                };
-            } else if constexpr (detail::has_field_descs<T>::value
-                                 && (!detail::has_body_factory<T>::value || !NOTE_RESPONSE_BODY)) {
-                T::execute_generic_fn_ = [](void* p_, string_view req_, BuildFn fn_, void* ctx_, void* rsp_,
-                        const FieldDesc* f_, uint8_t n_, detail::NcErrorCapture& err_, bool& ex_) {
-                    return static_cast<NcT*>(p_)->execute_generic(req_, fn_, ctx_, rsp_, f_, n_, err_, ex_);
-                };
+                T::execute_void_fn_ = &Api::void_thunk_;
+            } else if constexpr (detail::has_field_descs<T>::value) {
+                T::execute_generic_fn_ = &Api::generic_thunk_;
             } else {
                 T::execute_fn_ = [](void* p_, const T& req_) {
                     auto* nc__ = static_cast<NcT*>(p_);
@@ -1382,9 +1230,7 @@ public:
                 };
             }
             if constexpr (T::supports_cmd) {
-                T::send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
-                    return static_cast<NcT*>(p_)->send_command(fn_, ctx_);
-                };
+                T::send_fn_ = &Api::send_thunk_;
             }
 #else
             r.nc_ = nc_;
@@ -1423,18 +1269,10 @@ public:
             T r;
 #if NOTE_SINGLETON
             T::nc_ = nc_ptr();
-            // Void/generic endpoints use shared fn ptrs — no per-type execute template.
-            // Only body-enabled endpoints fall through to per-type execute_fn_.
             if constexpr (std::is_void_v<typename T::Response>) {
-                T::execute_void_fn_ = [](void* p_, string_view req_, BuildFn fn_, void* ctx_, detail::NcErrorCapture& err_) {
-                    return static_cast<NcT*>(p_)->execute_void(req_, fn_, ctx_, err_);
-                };
-            } else if constexpr (detail::has_field_descs<T>::value
-                                 && (!detail::has_body_factory<T>::value || !NOTE_RESPONSE_BODY)) {
-                T::execute_generic_fn_ = [](void* p_, string_view req_, BuildFn fn_, void* ctx_, void* rsp_,
-                        const FieldDesc* f_, uint8_t n_, detail::NcErrorCapture& err_, bool& ex_) {
-                    return static_cast<NcT*>(p_)->execute_generic(req_, fn_, ctx_, rsp_, f_, n_, err_, ex_);
-                };
+                T::execute_void_fn_ = &Api::void_thunk_;
+            } else if constexpr (detail::has_field_descs<T>::value) {
+                T::execute_generic_fn_ = &Api::generic_thunk_;
             } else {
                 T::execute_fn_ = [](void* p_, const T& req_) {
                     auto* nc__ = static_cast<NcT*>(p_);
@@ -1448,9 +1286,7 @@ public:
                 };
             }
             if constexpr (T::supports_cmd) {
-                T::send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
-                    return static_cast<NcT*>(p_)->send_command(fn_, ctx_);
-                };
+                T::send_fn_ = &Api::send_thunk_;
             }
 #else
             r.nc_ = nc_;
@@ -1486,18 +1322,10 @@ public:
             T r;
 #if NOTE_SINGLETON
             T::nc_ = nc_ptr();
-            // Void/generic endpoints use shared fn ptrs — no per-type execute template.
-            // Only body-enabled endpoints fall through to per-type execute_fn_.
             if constexpr (std::is_void_v<typename T::Response>) {
-                T::execute_void_fn_ = [](void* p_, string_view req_, BuildFn fn_, void* ctx_, detail::NcErrorCapture& err_) {
-                    return static_cast<NcT*>(p_)->execute_void(req_, fn_, ctx_, err_);
-                };
-            } else if constexpr (detail::has_field_descs<T>::value
-                                 && (!detail::has_body_factory<T>::value || !NOTE_RESPONSE_BODY)) {
-                T::execute_generic_fn_ = [](void* p_, string_view req_, BuildFn fn_, void* ctx_, void* rsp_,
-                        const FieldDesc* f_, uint8_t n_, detail::NcErrorCapture& err_, bool& ex_) {
-                    return static_cast<NcT*>(p_)->execute_generic(req_, fn_, ctx_, rsp_, f_, n_, err_, ex_);
-                };
+                T::execute_void_fn_ = &Api::void_thunk_;
+            } else if constexpr (detail::has_field_descs<T>::value) {
+                T::execute_generic_fn_ = &Api::generic_thunk_;
             } else {
                 T::execute_fn_ = [](void* p_, const T& req_) {
                     auto* nc__ = static_cast<NcT*>(p_);
@@ -1511,9 +1339,7 @@ public:
                 };
             }
             if constexpr (T::supports_cmd) {
-                T::send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
-                    return static_cast<NcT*>(p_)->send_command(fn_, ctx_);
-                };
+                T::send_fn_ = &Api::send_thunk_;
             }
 #else
             r.nc_ = nc_;
@@ -1562,18 +1388,10 @@ public:
             T r;
 #if NOTE_SINGLETON
             T::nc_ = nc_ptr();
-            // Void/generic endpoints use shared fn ptrs — no per-type execute template.
-            // Only body-enabled endpoints fall through to per-type execute_fn_.
             if constexpr (std::is_void_v<typename T::Response>) {
-                T::execute_void_fn_ = [](void* p_, string_view req_, BuildFn fn_, void* ctx_, detail::NcErrorCapture& err_) {
-                    return static_cast<NcT*>(p_)->execute_void(req_, fn_, ctx_, err_);
-                };
-            } else if constexpr (detail::has_field_descs<T>::value
-                                 && (!detail::has_body_factory<T>::value || !NOTE_RESPONSE_BODY)) {
-                T::execute_generic_fn_ = [](void* p_, string_view req_, BuildFn fn_, void* ctx_, void* rsp_,
-                        const FieldDesc* f_, uint8_t n_, detail::NcErrorCapture& err_, bool& ex_) {
-                    return static_cast<NcT*>(p_)->execute_generic(req_, fn_, ctx_, rsp_, f_, n_, err_, ex_);
-                };
+                T::execute_void_fn_ = &Api::void_thunk_;
+            } else if constexpr (detail::has_field_descs<T>::value) {
+                T::execute_generic_fn_ = &Api::generic_thunk_;
             } else {
                 T::execute_fn_ = [](void* p_, const T& req_) {
                     auto* nc__ = static_cast<NcT*>(p_);
@@ -1587,9 +1405,7 @@ public:
                 };
             }
             if constexpr (T::supports_cmd) {
-                T::send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
-                    return static_cast<NcT*>(p_)->send_command(fn_, ctx_);
-                };
+                T::send_fn_ = &Api::send_thunk_;
             }
 #else
             r.nc_ = nc_;
@@ -2009,18 +1825,10 @@ public:
             T r;
 #if NOTE_SINGLETON
             T::nc_ = nc_ptr();
-            // Void/generic endpoints use shared fn ptrs — no per-type execute template.
-            // Only body-enabled endpoints fall through to per-type execute_fn_.
             if constexpr (std::is_void_v<typename T::Response>) {
-                T::execute_void_fn_ = [](void* p_, string_view req_, BuildFn fn_, void* ctx_, detail::NcErrorCapture& err_) {
-                    return static_cast<NcT*>(p_)->execute_void(req_, fn_, ctx_, err_);
-                };
-            } else if constexpr (detail::has_field_descs<T>::value
-                                 && (!detail::has_body_factory<T>::value || !NOTE_RESPONSE_BODY)) {
-                T::execute_generic_fn_ = [](void* p_, string_view req_, BuildFn fn_, void* ctx_, void* rsp_,
-                        const FieldDesc* f_, uint8_t n_, detail::NcErrorCapture& err_, bool& ex_) {
-                    return static_cast<NcT*>(p_)->execute_generic(req_, fn_, ctx_, rsp_, f_, n_, err_, ex_);
-                };
+                T::execute_void_fn_ = &Api::void_thunk_;
+            } else if constexpr (detail::has_field_descs<T>::value) {
+                T::execute_generic_fn_ = &Api::generic_thunk_;
             } else {
                 T::execute_fn_ = [](void* p_, const T& req_) {
                     auto* nc__ = static_cast<NcT*>(p_);
@@ -2034,9 +1842,7 @@ public:
                 };
             }
             if constexpr (T::supports_cmd) {
-                T::send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
-                    return static_cast<NcT*>(p_)->send_command(fn_, ctx_);
-                };
+                T::send_fn_ = &Api::send_thunk_;
             }
 #else
             r.nc_ = nc_;
@@ -2111,18 +1917,10 @@ public:
             T r;
 #if NOTE_SINGLETON
             T::nc_ = nc_ptr();
-            // Void/generic endpoints use shared fn ptrs — no per-type execute template.
-            // Only body-enabled endpoints fall through to per-type execute_fn_.
             if constexpr (std::is_void_v<typename T::Response>) {
-                T::execute_void_fn_ = [](void* p_, string_view req_, BuildFn fn_, void* ctx_, detail::NcErrorCapture& err_) {
-                    return static_cast<NcT*>(p_)->execute_void(req_, fn_, ctx_, err_);
-                };
-            } else if constexpr (detail::has_field_descs<T>::value
-                                 && (!detail::has_body_factory<T>::value || !NOTE_RESPONSE_BODY)) {
-                T::execute_generic_fn_ = [](void* p_, string_view req_, BuildFn fn_, void* ctx_, void* rsp_,
-                        const FieldDesc* f_, uint8_t n_, detail::NcErrorCapture& err_, bool& ex_) {
-                    return static_cast<NcT*>(p_)->execute_generic(req_, fn_, ctx_, rsp_, f_, n_, err_, ex_);
-                };
+                T::execute_void_fn_ = &Api::void_thunk_;
+            } else if constexpr (detail::has_field_descs<T>::value) {
+                T::execute_generic_fn_ = &Api::generic_thunk_;
             } else {
                 T::execute_fn_ = [](void* p_, const T& req_) {
                     auto* nc__ = static_cast<NcT*>(p_);
@@ -2136,9 +1934,7 @@ public:
                 };
             }
             if constexpr (T::supports_cmd) {
-                T::send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
-                    return static_cast<NcT*>(p_)->send_command(fn_, ctx_);
-                };
+                T::send_fn_ = &Api::send_thunk_;
             }
 #else
             r.nc_ = nc_;
@@ -2293,18 +2089,10 @@ public:
             T r;
 #if NOTE_SINGLETON
             T::nc_ = nc_ptr();
-            // Void/generic endpoints use shared fn ptrs — no per-type execute template.
-            // Only body-enabled endpoints fall through to per-type execute_fn_.
             if constexpr (std::is_void_v<typename T::Response>) {
-                T::execute_void_fn_ = [](void* p_, string_view req_, BuildFn fn_, void* ctx_, detail::NcErrorCapture& err_) {
-                    return static_cast<NcT*>(p_)->execute_void(req_, fn_, ctx_, err_);
-                };
-            } else if constexpr (detail::has_field_descs<T>::value
-                                 && (!detail::has_body_factory<T>::value || !NOTE_RESPONSE_BODY)) {
-                T::execute_generic_fn_ = [](void* p_, string_view req_, BuildFn fn_, void* ctx_, void* rsp_,
-                        const FieldDesc* f_, uint8_t n_, detail::NcErrorCapture& err_, bool& ex_) {
-                    return static_cast<NcT*>(p_)->execute_generic(req_, fn_, ctx_, rsp_, f_, n_, err_, ex_);
-                };
+                T::execute_void_fn_ = &Api::void_thunk_;
+            } else if constexpr (detail::has_field_descs<T>::value) {
+                T::execute_generic_fn_ = &Api::generic_thunk_;
             } else {
                 T::execute_fn_ = [](void* p_, const T& req_) {
                     auto* nc__ = static_cast<NcT*>(p_);
@@ -2318,9 +2106,7 @@ public:
                 };
             }
             if constexpr (T::supports_cmd) {
-                T::send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
-                    return static_cast<NcT*>(p_)->send_command(fn_, ctx_);
-                };
+                T::send_fn_ = &Api::send_thunk_;
             }
 #else
             r.nc_ = nc_;
@@ -2424,18 +2210,10 @@ public:
             T r;
 #if NOTE_SINGLETON
             T::nc_ = nc_ptr();
-            // Void/generic endpoints use shared fn ptrs — no per-type execute template.
-            // Only body-enabled endpoints fall through to per-type execute_fn_.
             if constexpr (std::is_void_v<typename T::Response>) {
-                T::execute_void_fn_ = [](void* p_, string_view req_, BuildFn fn_, void* ctx_, detail::NcErrorCapture& err_) {
-                    return static_cast<NcT*>(p_)->execute_void(req_, fn_, ctx_, err_);
-                };
-            } else if constexpr (detail::has_field_descs<T>::value
-                                 && (!detail::has_body_factory<T>::value || !NOTE_RESPONSE_BODY)) {
-                T::execute_generic_fn_ = [](void* p_, string_view req_, BuildFn fn_, void* ctx_, void* rsp_,
-                        const FieldDesc* f_, uint8_t n_, detail::NcErrorCapture& err_, bool& ex_) {
-                    return static_cast<NcT*>(p_)->execute_generic(req_, fn_, ctx_, rsp_, f_, n_, err_, ex_);
-                };
+                T::execute_void_fn_ = &Api::void_thunk_;
+            } else if constexpr (detail::has_field_descs<T>::value) {
+                T::execute_generic_fn_ = &Api::generic_thunk_;
             } else {
                 T::execute_fn_ = [](void* p_, const T& req_) {
                     auto* nc__ = static_cast<NcT*>(p_);
@@ -2449,9 +2227,7 @@ public:
                 };
             }
             if constexpr (T::supports_cmd) {
-                T::send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
-                    return static_cast<NcT*>(p_)->send_command(fn_, ctx_);
-                };
+                T::send_fn_ = &Api::send_thunk_;
             }
 #else
             r.nc_ = nc_;
@@ -2541,18 +2317,10 @@ public:
             T r;
 #if NOTE_SINGLETON
             T::nc_ = nc_ptr();
-            // Void/generic endpoints use shared fn ptrs — no per-type execute template.
-            // Only body-enabled endpoints fall through to per-type execute_fn_.
             if constexpr (std::is_void_v<typename T::Response>) {
-                T::execute_void_fn_ = [](void* p_, string_view req_, BuildFn fn_, void* ctx_, detail::NcErrorCapture& err_) {
-                    return static_cast<NcT*>(p_)->execute_void(req_, fn_, ctx_, err_);
-                };
-            } else if constexpr (detail::has_field_descs<T>::value
-                                 && (!detail::has_body_factory<T>::value || !NOTE_RESPONSE_BODY)) {
-                T::execute_generic_fn_ = [](void* p_, string_view req_, BuildFn fn_, void* ctx_, void* rsp_,
-                        const FieldDesc* f_, uint8_t n_, detail::NcErrorCapture& err_, bool& ex_) {
-                    return static_cast<NcT*>(p_)->execute_generic(req_, fn_, ctx_, rsp_, f_, n_, err_, ex_);
-                };
+                T::execute_void_fn_ = &Api::void_thunk_;
+            } else if constexpr (detail::has_field_descs<T>::value) {
+                T::execute_generic_fn_ = &Api::generic_thunk_;
             } else {
                 T::execute_fn_ = [](void* p_, const T& req_) {
                     auto* nc__ = static_cast<NcT*>(p_);
@@ -2566,9 +2334,7 @@ public:
                 };
             }
             if constexpr (T::supports_cmd) {
-                T::send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
-                    return static_cast<NcT*>(p_)->send_command(fn_, ctx_);
-                };
+                T::send_fn_ = &Api::send_thunk_;
             }
 #else
             r.nc_ = nc_;
@@ -2842,18 +2608,10 @@ public:
             T r;
 #if NOTE_SINGLETON
             T::nc_ = nc_ptr();
-            // Void/generic endpoints use shared fn ptrs — no per-type execute template.
-            // Only body-enabled endpoints fall through to per-type execute_fn_.
             if constexpr (std::is_void_v<typename T::Response>) {
-                T::execute_void_fn_ = [](void* p_, string_view req_, BuildFn fn_, void* ctx_, detail::NcErrorCapture& err_) {
-                    return static_cast<NcT*>(p_)->execute_void(req_, fn_, ctx_, err_);
-                };
-            } else if constexpr (detail::has_field_descs<T>::value
-                                 && (!detail::has_body_factory<T>::value || !NOTE_RESPONSE_BODY)) {
-                T::execute_generic_fn_ = [](void* p_, string_view req_, BuildFn fn_, void* ctx_, void* rsp_,
-                        const FieldDesc* f_, uint8_t n_, detail::NcErrorCapture& err_, bool& ex_) {
-                    return static_cast<NcT*>(p_)->execute_generic(req_, fn_, ctx_, rsp_, f_, n_, err_, ex_);
-                };
+                T::execute_void_fn_ = &Api::void_thunk_;
+            } else if constexpr (detail::has_field_descs<T>::value) {
+                T::execute_generic_fn_ = &Api::generic_thunk_;
             } else {
                 T::execute_fn_ = [](void* p_, const T& req_) {
                     auto* nc__ = static_cast<NcT*>(p_);
@@ -2867,9 +2625,7 @@ public:
                 };
             }
             if constexpr (T::supports_cmd) {
-                T::send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
-                    return static_cast<NcT*>(p_)->send_command(fn_, ctx_);
-                };
+                T::send_fn_ = &Api::send_thunk_;
             }
 #else
             r.nc_ = nc_;
@@ -2958,18 +2714,10 @@ public:
             T r;
 #if NOTE_SINGLETON
             T::nc_ = nc_ptr();
-            // Void/generic endpoints use shared fn ptrs — no per-type execute template.
-            // Only body-enabled endpoints fall through to per-type execute_fn_.
             if constexpr (std::is_void_v<typename T::Response>) {
-                T::execute_void_fn_ = [](void* p_, string_view req_, BuildFn fn_, void* ctx_, detail::NcErrorCapture& err_) {
-                    return static_cast<NcT*>(p_)->execute_void(req_, fn_, ctx_, err_);
-                };
-            } else if constexpr (detail::has_field_descs<T>::value
-                                 && (!detail::has_body_factory<T>::value || !NOTE_RESPONSE_BODY)) {
-                T::execute_generic_fn_ = [](void* p_, string_view req_, BuildFn fn_, void* ctx_, void* rsp_,
-                        const FieldDesc* f_, uint8_t n_, detail::NcErrorCapture& err_, bool& ex_) {
-                    return static_cast<NcT*>(p_)->execute_generic(req_, fn_, ctx_, rsp_, f_, n_, err_, ex_);
-                };
+                T::execute_void_fn_ = &Api::void_thunk_;
+            } else if constexpr (detail::has_field_descs<T>::value) {
+                T::execute_generic_fn_ = &Api::generic_thunk_;
             } else {
                 T::execute_fn_ = [](void* p_, const T& req_) {
                     auto* nc__ = static_cast<NcT*>(p_);
@@ -2983,9 +2731,7 @@ public:
                 };
             }
             if constexpr (T::supports_cmd) {
-                T::send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
-                    return static_cast<NcT*>(p_)->send_command(fn_, ctx_);
-                };
+                T::send_fn_ = &Api::send_thunk_;
             }
 #else
             r.nc_ = nc_;
@@ -3046,18 +2792,10 @@ public:
             T r;
 #if NOTE_SINGLETON
             T::nc_ = nc_ptr();
-            // Void/generic endpoints use shared fn ptrs — no per-type execute template.
-            // Only body-enabled endpoints fall through to per-type execute_fn_.
             if constexpr (std::is_void_v<typename T::Response>) {
-                T::execute_void_fn_ = [](void* p_, string_view req_, BuildFn fn_, void* ctx_, detail::NcErrorCapture& err_) {
-                    return static_cast<NcT*>(p_)->execute_void(req_, fn_, ctx_, err_);
-                };
-            } else if constexpr (detail::has_field_descs<T>::value
-                                 && (!detail::has_body_factory<T>::value || !NOTE_RESPONSE_BODY)) {
-                T::execute_generic_fn_ = [](void* p_, string_view req_, BuildFn fn_, void* ctx_, void* rsp_,
-                        const FieldDesc* f_, uint8_t n_, detail::NcErrorCapture& err_, bool& ex_) {
-                    return static_cast<NcT*>(p_)->execute_generic(req_, fn_, ctx_, rsp_, f_, n_, err_, ex_);
-                };
+                T::execute_void_fn_ = &Api::void_thunk_;
+            } else if constexpr (detail::has_field_descs<T>::value) {
+                T::execute_generic_fn_ = &Api::generic_thunk_;
             } else {
                 T::execute_fn_ = [](void* p_, const T& req_) {
                     auto* nc__ = static_cast<NcT*>(p_);
@@ -3071,9 +2809,7 @@ public:
                 };
             }
             if constexpr (T::supports_cmd) {
-                T::send_fn_ = [](void* p_, BuildFn fn_, void* ctx_) {
-                    return static_cast<NcT*>(p_)->send_command(fn_, ctx_);
-                };
+                T::send_fn_ = &Api::send_thunk_;
             }
 #else
             r.nc_ = nc_;

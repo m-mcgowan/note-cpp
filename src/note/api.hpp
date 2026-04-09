@@ -91,6 +91,12 @@ template<typename TargetT = Unconstrained, typename NcT = Notecard>
 template<typename NcT = Notecard>
 #endif
 class Api {
+#ifdef NOTE_NO_API_GROUPS
+    static_assert(!sizeof(NcT*),
+        "Api groups are disabled by NOTE_NO_API_GROUPS. "
+        "Use direct assignment instead: nc.execute(req). "
+        "See docs/feature-flags.md#api-styles-and-flash-cost");
+#endif
 #if NOTE_SINGLETON
     static inline NcT* nc_ptr_s_;
     static NcT* nc_ptr() { return nc_ptr_s_; }

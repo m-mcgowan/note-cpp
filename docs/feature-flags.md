@@ -42,6 +42,7 @@ build_flags = -DNOTE_MINIMAL -UNDEF_NOTE_NO_CRC
 | `NOTE_EXTRAS` | `1` | **(M)** `0` | Disable `.extra()` and `operator[]` for ad-hoc fields on requests. | ~100-200 B flash per endpoint |
 | `NOTE_PRINTABLE` | `1` (Arduino) / `0` (other) | **(M)** `0` | Disable Arduino `Printable` support on `ErrorInfo`, `ResponseField`, and `Response` types. | ~900 B flash (vtable entries) |
 | `NOTE_UNICODE_ESCAPES` | on | **(M)** off | Enable `\uXXXX` JSON escape decoding. Without this, the lexer only handles basic escapes (`\n`, `\t`, `\\`, `\"`, etc.). Notecard responses never use unicode escapes. | ~234 B flash |
+| `NOTE_NO_API_GROUPS` | off | off | Prevent instantiation of `Api` convenience groups. Any `note::Api<NcT>` triggers a compile error pointing to direct assignment. See [API styles](#api-styles-and-flash-cost). | ~500 B flash |
 
 ### Diagnostics
 

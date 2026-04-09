@@ -385,13 +385,32 @@ The core library works with C++17. Each successive standard unlocks additional f
 
 ### Low-memory targets
 
-note-cpp is designed for zero heap allocation in steady state.
-`BufferJsonBackend<N, T>` keeps JSON build buffers and parse tokens on
-the stack with template-controlled sizes. Transports reuse a member
-buffer across calls. `StringPool` provides arena-backed string interning
-when response data must outlive the transport buffer. Unused endpoints
-are eliminated by the linker via `-ffunction-sections` + `--gc-sections`
-(enabled by default on Arduino/PlatformIO).
+Despite the feature set above, `note-cpp` is smaller than `note-c` on
+constrained targets. JSON is streamed directly to and from the Notecard
+— requests are serialized field-by-field into the transport, and
+responses are parsed with a SAX (event-driven) parser that populates
+typed structs without building an intermediate tree. This means no JSON
+library in memory, no heap allocation, and no buffer large enough to
+hold the entire request or response.
+
+The library can be configured for **zero heap allocation** — all buffers
+are statically sized at compile time using `MonotonicArena` and
+`StaticNotecard`. On an Arduino Uno (ATmega328P, 32 KB flash / 2 KB RAM),
+an 8-endpoint application compares as follows:
+
+| | note-c | `note-cpp` | Delta |
+|---|---|---|---|
+| **Flash** | 24,646 (76%) | 20,392 (63%) | **-17%** |
+| **Static RAM** | 739 (36%) | 736 (36%) | -3 |
+| **Heap (peak)** | 371 (18%) | 0 (0%) | **-371** |
+| **Total RAM** | 1,110 (54%) | 736 (36%) | **-34%** |
+
+`note-cpp`'s static RAM includes the arena used for response string
+interning — memory that `note-c` allocates on the heap at runtime.
+note-c heap measured via `__brkval` watermark on Wokwi with a mock
+Notecard. See [feature flags](docs/feature-flags.md) for the
+compile-time options that enable this (`NOTE_MINIMAL`, `NOTE_NO_RETRY`,
+etc.).
 
 ---
 

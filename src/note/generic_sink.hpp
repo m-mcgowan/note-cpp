@@ -12,6 +12,7 @@
 /// Field tables use NOTE_FLASH_ATTR (PROGMEM on AVR) so they live in flash
 /// rather than RAM. Reads go through pgm_read helpers on Harvard platforms.
 
+#include <note/body_handler.hpp>
 #include <note/field_desc.hpp>
 #include <note/json_sax.hpp>
 #include <note/string_pool.hpp>
@@ -20,15 +21,24 @@
 namespace note {
 
 /// Non-template sink — one instantiation for all response types.
+/// Handles response-level fields via field descriptor table, and forwards
+/// body events to a BodyHandler (GenericBodySink on NOTE_MINIMAL).
 struct GenericResponseSink {
     void* rsp;
     const FieldDesc* fields;
     uint8_t n_fields;
     StringPool* pool;
+    BodyHandler body_handler_{};
+    int body_depth_ = 0;
 
-    void on_null(string_view) {}
+    void set_body_handler(BodyHandler bh) { body_handler_ = bh; }
+
+    void on_null(string_view k) {
+        if (body_depth_ > 0 && body_handler_) body_handler_.send(BodyEvent::make_bool(k, false));
+    }
 
     void on_bool(string_view k, bool v) {
+        if (body_depth_ > 0) { if (body_handler_) body_handler_.send(BodyEvent::make_bool(k, v)); return; }
         for (uint8_t i = 0; i < n_fields; ++i) {
             auto d = detail::read_field_desc(&fields[i]);
             if (d.type == FieldType::Bool && detail::flash_key_eq(k, d.name)) {
@@ -39,6 +49,7 @@ struct GenericResponseSink {
     }
 
     void on_int(string_view k, int32_t v) {
+        if (body_depth_ > 0) { if (body_handler_) body_handler_.send(BodyEvent::make_int(k, v)); return; }
         for (uint8_t i = 0; i < n_fields; ++i) {
             auto d = detail::read_field_desc(&fields[i]);
             if (d.type == FieldType::Int32 && detail::flash_key_eq(k, d.name)) {
@@ -49,6 +60,7 @@ struct GenericResponseSink {
     }
 
     void on_float(string_view k, double v) {
+        if (body_depth_ > 0) { if (body_handler_) body_handler_.send(BodyEvent::make_float(k, v)); return; }
         for (uint8_t i = 0; i < n_fields; ++i) {
             auto d = detail::read_field_desc(&fields[i]);
             if (d.type == FieldType::Double && detail::flash_key_eq(k, d.name)) {
@@ -59,6 +71,7 @@ struct GenericResponseSink {
     }
 
     void on_string(string_view k, string_view v) {
+        if (body_depth_ > 0) { if (body_handler_) body_handler_.send(BodyEvent::make_string(k, v)); return; }
         for (uint8_t i = 0; i < n_fields; ++i) {
             auto d = detail::read_field_desc(&fields[i]);
             if (d.type == FieldType::String && detail::flash_key_eq(k, d.name)) {
@@ -68,13 +81,38 @@ struct GenericResponseSink {
         }
     }
 
-    void on_number(string_view, string_view) {}
-    void on_object_begin(string_view) {}
-    void on_object_end(string_view) {}
-    void on_array_begin(string_view) {}
-    void on_array_end(string_view) {}
+    void on_number(string_view k, string_view raw) {
+        if (body_depth_ > 0 && body_handler_) body_handler_.send(BodyEvent::make_number(k, raw));
+    }
+
+    void on_object_begin(string_view k) {
+        if (body_depth_ > 0) {
+            ++body_depth_;
+            if (body_handler_) body_handler_.send(BodyEvent::make_object_begin(k));
+            return;
+        }
+        if (k == "body") { body_depth_ = 1; return; }
+    }
+
+    void on_object_end(string_view k) {
+        if (body_depth_ > 0) {
+            --body_depth_;
+            if (body_depth_ > 0 && body_handler_) body_handler_.send(BodyEvent::make_object_end(k));
+            return;
+        }
+    }
+
+    void on_array_begin(string_view k) {
+        if (body_depth_ > 0 && body_handler_) body_handler_.send(BodyEvent::make_array_begin(k));
+    }
+
+    void on_array_end(string_view k) {
+        if (body_depth_ > 0 && body_handler_) body_handler_.send(BodyEvent::make_array_end(k));
+    }
 
     void reset() {
+        body_depth_ = 0;
+        if (body_handler_) body_handler_.send(BodyEvent::make_reset());
         for (uint8_t i = 0; i < n_fields; ++i) {
             auto d = detail::read_field_desc(&fields[i]);
             switch (d.type) {

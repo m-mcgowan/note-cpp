@@ -3,13 +3,11 @@
 /// @file retry.hpp
 /// Inter-transaction timing and safety-gated retry for Notecard transactions.
 ///
-/// The retry_transaction() template is called by Notecard, StaticNotecard,
-/// and BareNotecard to wrap every transport call with:
-///   1. Inter-transaction gap enforcement (wall-clock based)
-///   2. Single transport attempt
-///   3. Safety-gated retry decision
-///   4. Transport reset between retries
-///   5. Timeout budget tracking
+/// Two APIs:
+/// - retry_loop(): non-template, type-erased — used by StaticNotecard to avoid
+///   per-endpoint monomorphization on constrained targets.
+/// - retry_transaction(): template — used by Notecard (polymorphic, non-AVR)
+///   where code size is less critical.
 
 #include <note/error.hpp>
 #include <note/retry_policy.hpp>
@@ -33,6 +31,19 @@ struct TransactionTiming {
 };
 
 // ---------------------------------------------------------------------------
+// Type-erased transport operations for retry_loop
+// ---------------------------------------------------------------------------
+
+/// Minimal transport operations needed by retry_loop.
+/// Avoids templating the retry loop on the transport type.
+struct RetryTransportOps {
+    void* ctx;
+    uint32_t (*millis_fn)(void* ctx);
+    void (*delay_fn)(void* ctx, uint32_t ms);
+    void (*reset_fn)(void* ctx);
+};
+
+// ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
@@ -52,24 +63,67 @@ inline bool should_retry(Error error, Safety safety) {
 } // namespace detail
 
 // ---------------------------------------------------------------------------
-// retry_transaction — the unified retry wrapper
+// retry_loop — non-template retry engine (for StaticNotecard / AVR)
+// ---------------------------------------------------------------------------
+
+/// Type-erased attempt function. Called by retry_loop.
+/// Returns true on success. On failure, writes the Error code to *out_error.
+using RetryAttemptFn = bool (*)(void* ctx, Error* out_error);
+
+/// Execute a transport call with inter-transaction timing and safety-gated retry.
+/// Non-template — one copy in the binary regardless of endpoint count.
+///
+/// The caller provides the first attempt result (success + error code).
+/// retry_loop only runs the retry iterations (not the first attempt), so the
+/// caller's typed result lives in the caller's stack frame.
+inline bool retry_loop(
+    bool first_ok,
+    Error first_error,
+    RetryAttemptFn attempt,
+    void* attempt_ctx,
+    RetryTransportOps& ops,
+    TransactionTiming& timing,
+    Safety safety,
+    const RetryPolicy& policy)
+{
+    // Record timing on exit.
+    auto record = [&]() {
+        timing.last_transaction_end_ms = ops.millis_fn(ops.ctx);
+        timing.has_previous = true;
+    };
+
+    uint32_t start_ms = ops.millis_fn(ops.ctx);
+    bool ok = first_ok;
+    Error last_error = first_error;
+
+    for (uint32_t i = 0; i < policy.max_retries; ++i) {
+        if (ok) { record(); return true; }
+        if (!detail::should_retry(last_error, safety)) { record(); return false; }
+
+        if (policy.timeout_ms > 0) {
+            uint32_t elapsed = ops.millis_fn(ops.ctx) - start_ms;
+            if (elapsed >= policy.timeout_ms) break;
+        }
+
+        ops.delay_fn(ops.ctx, policy.retry_delay_ms);
+        ops.reset_fn(ops.ctx);
+        ok = attempt(attempt_ctx, &last_error);
+    }
+
+    record();
+    return ok;
+}
+
+// ---------------------------------------------------------------------------
+// retry_transaction — template wrapper (for Notecard / non-constrained)
 // ---------------------------------------------------------------------------
 
 /// Execute a transport call with inter-transaction timing and safety-gated retry.
 ///
 /// @tparam ResultT    The return type (e.g. ApiResult<Rsp>, Result<string_view>).
-///                    Must support: `if (result)` for success test, and
-///                    `result.error().code` for Error extraction on failure.
 /// @tparam Transport  Anything with millis(), delay(uint32_t), reset().
-/// @tparam AttemptFn  Callable returning ResultT — performs one transport attempt.
+/// @tparam AttemptFn  Callable returning ResultT.
 /// @tparam ResetFn    Callable with no args — resets the transport.
-///
-/// The wrapper:
-///   1. Enforces inter-transaction gap (waits remaining delta)
-///   2. Attempts the transport call
-///   3. On success or non-retryable error: records end time, returns
-///   4. On retryable error: checks timeout budget, delays, resets, retries
-///
 template<typename ResultT, typename Transport, typename AttemptFn, typename ResetFn>
 ResultT retry_transaction(
     Transport& transport,

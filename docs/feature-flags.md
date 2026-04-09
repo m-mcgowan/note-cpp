@@ -109,8 +109,10 @@ build_flags = -DNOTE_DEBUG_ENABLED=0 -DNOTE_EXTRAS=0
 
 ## Size impact summary (AVR ATmega328P, full body example)
 
-| Configuration | Flash | RAM | Heap |
-|--------------|-------|-----|------|
-| `NOTE_MINIMAL` | 20,392 (63%) | 736 (36%) | zero |
-| No flags (full) | ~31,000+ | ~2,600+ | ~500 runtime |
-| note-c (reference) | 24,646 (76%) | 739 (36%) | ~500 runtime |
+| Configuration | Flash | Static RAM | Heap (peak) | Total RAM |
+|--------------|-------|------------|-------------|-----------|
+| `NOTE_MINIMAL` | 20,392 (63%) | 736 (36%) | 0 (0%) | 736 (36%) |
+| No flags (full) | ~31,000+ | ~2,600+ | not measured | — |
+| note-c (reference) | 24,646 (76%) | 739 (36%) | 371 (18%) | 1,110 (54%) |
+
+note-c heap measured via `__brkval` watermark on Wokwi (8-endpoint app with mock Notecard).

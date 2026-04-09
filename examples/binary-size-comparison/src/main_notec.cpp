@@ -10,6 +10,19 @@
 
 Notecard nc;
 
+// ── Heap watermark ──────────────────────────────────────────────────────
+extern char *__brkval;
+extern char __heap_start;
+
+static uint16_t heap_peak;
+
+static void heap_sample() {
+    if (__brkval) {
+        uint16_t used = __brkval - &__heap_start;
+        if (used > heap_peak) heap_peak = used;
+    }
+}
+
 void setup() {
 #ifdef ARDUINO_AVR_UNO
     nc.begin(Serial, 9600);
@@ -26,6 +39,7 @@ void setup() {
         JAddNumberToObject(req, "outbound", 60);
         nc.sendRequest(req);
     }
+    heap_sample();
 
     // Register template
     {
@@ -36,6 +50,7 @@ void setup() {
         JAddNumberToObject(body, "humidity", 1);
         nc.sendRequest(req);
     }
+    heap_sample();
 }
 
 void loop() {
@@ -43,6 +58,7 @@ void loop() {
     float temperature = 0;
     {
         J *rsp = nc.requestAndResponse(nc.newRequest("card.temp"));
+        heap_sample();
         if (rsp != NULL) {
             temperature = JGetNumber(rsp, "value");
             nc.deleteResponse(rsp);
@@ -58,11 +74,13 @@ void loop() {
         JAddNumberToObject(body, "humidity", 60);
         nc.sendRequest(req);
     }
+    heap_sample();
 
     // Check connection status
     bool connected = false;
     {
         J *rsp = nc.requestAndResponse(nc.newRequest("card.status"));
+        heap_sample();
         if (rsp != NULL) {
             connected = JGetBool(rsp, "connected");
             nc.deleteResponse(rsp);
@@ -73,6 +91,7 @@ void loop() {
     double voltage = 0;
     {
         J *rsp = nc.requestAndResponse(nc.newRequest("card.voltage"));
+        heap_sample();
         if (rsp != NULL) {
             voltage = JGetNumber(rsp, "value");
             nc.deleteResponse(rsp);
@@ -86,6 +105,7 @@ void loop() {
         J *req = nc.newRequest("note.get");
         JAddStringToObject(req, "file", "config.qi");
         J *rsp = nc.requestAndResponse(req);
+        heap_sample();
         if (rsp != NULL) {
             J *body = JGetObject(rsp, "body");
             if (body) {
@@ -99,6 +119,7 @@ void loop() {
     // Read environment variables
     {
         J *rsp = nc.requestAndResponse(nc.newRequest("env.get"));
+        heap_sample();
         if (rsp != NULL) {
             nc.deleteResponse(rsp);
         }
@@ -108,6 +129,10 @@ void loop() {
     (void)voltage;
     (void)note_temp;
     (void)note_humidity;
+
+    // Report peak heap
+    Serial.print("HEAP_PEAK:");
+    Serial.println(heap_peak);
 
     delay(60000);
 }

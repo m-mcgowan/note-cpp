@@ -41,6 +41,11 @@ namespace detail {
     struct has_set_body_handler : std::false_type {};
     template<typename T>
     struct has_set_body_handler<T, std::void_t<decltype(std::declval<T>().set_body_handler(std::declval<BodyHandler>()))>> : std::true_type {};
+
+    template<typename T, typename = void>
+    struct has_field_descs : std::false_type {};
+    template<typename T>
+    struct has_field_descs<T, std::void_t<decltype(T::field_descs_ptr())>> : std::true_type {};
 }
 
 

@@ -83,22 +83,12 @@ namespace note {
 
 
 
-#if __cplusplus >= 202002L
-template<typename TargetT = Unconstrained, typename NcT =
-#ifndef NOTE_MINIMAL
-    Notecard
+#ifdef NOTE_MINIMAL
+template<typename NcT>
+#elif __cplusplus >= 202002L
+template<typename TargetT = Unconstrained, typename NcT = Notecard>
 #else
-    void
-#endif
->
-#else
-template<typename NcT =
-#ifndef NOTE_MINIMAL
-    Notecard
-#else
-    void
-#endif
->
+template<typename NcT = Notecard>
 #endif
 class Api {
 #if NOTE_SINGLETON
@@ -106,7 +96,7 @@ class Api {
     static NcT* nc_ptr() { return nc_ptr_s_; }
 public:
     explicit Api(NcT& nc) { nc_ptr_s_ = &nc; }
-#if __cplusplus >= 202002L
+#if __cplusplus >= 202002L && !defined(NOTE_MINIMAL)
     explicit Api(NcT& nc, TargetT) { nc_ptr_s_ = &nc; }
 #endif
     NcT& notecard() { return *nc_ptr_s_; }
@@ -127,7 +117,7 @@ public:
         , attn{&nc_}
         , binary{&nc_}
     {}
-#if __cplusplus >= 202002L
+#if __cplusplus >= 202002L && !defined(NOTE_MINIMAL)
     explicit Api(NcT& nc, TargetT) : nc_(nc)
         , card{&nc_}
         , dfu{&nc_}
@@ -1998,8 +1988,10 @@ public:
         /// the Notecard from a penalty box, or override penalty box defaults.
         auto resetWirelessPenalty() { return create_<api::CardWirelessPenalty::Clear>(); }
     };
-#if __cplusplus >= 202002L
+#if __cplusplus >= 202002L && !defined(NOTE_MINIMAL)
     CardGroup<TargetT> card;
+#elif __cplusplus >= 202002L
+    CardGroup<void> card;
 #else
     CardGroup<> card;
 #endif
@@ -2098,8 +2090,10 @@ public:
 #endif
 
     };
-#if __cplusplus >= 202002L
+#if __cplusplus >= 202002L && !defined(NOTE_MINIMAL)
     DfuGroup<TargetT> dfu;
+#elif __cplusplus >= 202002L
+    DfuGroup<void> dfu;
 #else
     DfuGroup<> dfu;
 #endif
@@ -2278,8 +2272,10 @@ public:
         }
 #endif
     };
-#if __cplusplus >= 202002L
+#if __cplusplus >= 202002L && !defined(NOTE_MINIMAL)
     EnvGroup<TargetT> env;
+#elif __cplusplus >= 202002L
+    EnvGroup<void> env;
 #else
     EnvGroup<> env;
 #endif
@@ -2407,8 +2403,10 @@ public:
         }
 #endif
     };
-#if __cplusplus >= 202002L
+#if __cplusplus >= 202002L && !defined(NOTE_MINIMAL)
     FileGroup<TargetT> file;
+#elif __cplusplus >= 202002L
+    FileGroup<void> file;
 #else
     FileGroup<> file;
 #endif
@@ -2522,8 +2520,10 @@ public:
         auto status() { return create_<api::HubStatus>(); }
 
     };
-#if __cplusplus >= 202002L
+#if __cplusplus >= 202002L && !defined(NOTE_MINIMAL)
     HubGroup<TargetT> hub;
+#elif __cplusplus >= 202002L
+    HubGroup<void> hub;
 #else
     HubGroup<> hub;
 #endif
@@ -2821,8 +2821,10 @@ public:
         }
 #endif
     };
-#if __cplusplus >= 202002L
+#if __cplusplus >= 202002L && !defined(NOTE_MINIMAL)
     NoteGroup<TargetT> note;
+#elif __cplusplus >= 202002L
+    NoteGroup<void> note;
 #else
     NoteGroup<> note;
 #endif
@@ -2935,8 +2937,10 @@ public:
 #endif
 
     };
-#if __cplusplus >= 202002L
+#if __cplusplus >= 202002L && !defined(NOTE_MINIMAL)
     NtnGroup<TargetT> ntn;
+#elif __cplusplus >= 202002L
+    NtnGroup<void> ntn;
 #else
     NtnGroup<> ntn;
 #endif
@@ -3021,8 +3025,10 @@ public:
         /// interface to the note.delete API.
         auto remove() { return create_<api::VarDelete>(); }
     };
-#if __cplusplus >= 202002L
+#if __cplusplus >= 202002L && !defined(NOTE_MINIMAL)
     VarGroup<TargetT> var;
+#elif __cplusplus >= 202002L
+    VarGroup<void> var;
 #else
     VarGroup<> var;
 #endif
@@ -3168,8 +3174,10 @@ public:
         /// endpoint, and returns the response to the Notecard.
         auto remove() { return create_<api::WebDelete>(); }
     };
-#if __cplusplus >= 202002L
+#if __cplusplus >= 202002L && !defined(NOTE_MINIMAL)
     WebGroup<TargetT> web;
+#elif __cplusplus >= 202002L
+    WebGroup<void> web;
 #else
     WebGroup<> web;
 #endif

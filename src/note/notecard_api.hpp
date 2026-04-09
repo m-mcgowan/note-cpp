@@ -1,4 +1,11 @@
 #pragma once
+
+// NotecardApi requires the polymorphic Notecard class, which is not
+// available under NOTE_MINIMAL (use StaticNotecard + Api<NcT> instead).
+#ifdef NOTE_MINIMAL
+// Empty — NotecardApi not available under NOTE_MINIMAL.
+#else
+
 /// @file notecard_api.hpp
 /// NotecardApi — single-object entry point for Notecard communication.
 ///
@@ -135,3 +142,5 @@ public:
 #endif
 
 } // namespace note
+
+#endif // NOTE_MINIMAL

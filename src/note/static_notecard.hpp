@@ -29,14 +29,6 @@
 
 namespace note {
 
-namespace detail {
-    /// Detects request types that provide a generic field descriptor table.
-    template<typename T, typename = void>
-    struct has_field_descs : std::false_type {};
-    template<typename T>
-    struct has_field_descs<T, std::void_t<decltype(T::field_descs_ptr())>> : std::true_type {};
-}
-
 /// Notecard implementation with zero virtual dispatch overhead.
 /// Stack must provide a `transport` member with `transact(BuildFn, void*, JsonSink&, uint32_t)`.
 template<typename Stack>

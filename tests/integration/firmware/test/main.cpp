@@ -122,16 +122,17 @@ static bool board_init(Print& log) {
     return true;
 }
 
-#define PTR_BOARD_INIT board_init
-
 static void configure_context(doctest::Context& ctx) {
     if (!g_fw_excludes.empty()) {
         ctx.setOption("test-suite-exclude", g_fw_excludes.c_str());
     }
 }
-#define PTR_CONFIGURE_CONTEXT configure_context
 
 #include <pio_test_runner/doctest_runner.h>
 
-void setup() { DOCTEST_SETUP(); }
+void setup() {
+    ptr_doctest::config.board_init = board_init;
+    ptr_doctest::config.configure_context = configure_context;
+    DOCTEST_SETUP();
+}
 void loop()  { DOCTEST_LOOP(); }

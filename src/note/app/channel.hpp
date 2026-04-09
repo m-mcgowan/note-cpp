@@ -2,6 +2,8 @@
 
 #include <note/notecard.hpp>
 
+#ifndef NOTE_MINIMAL
+
 namespace note::app {
 
 // DirectChannel — executes requests immediately against a Notecard instance.
@@ -35,3 +37,5 @@ private:
 };
 
 } // namespace note::app
+
+#endif // !NOTE_MINIMAL

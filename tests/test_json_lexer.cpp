@@ -449,10 +449,12 @@ TEST_CASE("Lexer: escaped strings") {
     CHECK(values[1] == "a\\b");
 }
 
+#if NOTE_UNICODE_ESCAPES
 TEST_CASE("Lexer: unicode escape") {
     auto events = lex(R"({"c":"\u0041"})");
     CHECK(collect_chars(events, LexerEvent::StringChar) == "A");
 }
+#endif
 
 TEST_CASE("Lexer: number with exponent sign") {
     REQUIRE(lex_ok(R"({"a":1e+2,"b":1e-2,"c":1E3})"));
@@ -806,9 +808,11 @@ TEST_CASE("Equivalence: escaped strings") {
     check_equivalence(R"({"msg":"hello\nworld","path":"a\\b"})");
 }
 
+#if NOTE_UNICODE_ESCAPES
 TEST_CASE("Equivalence: unicode escape") {
     check_equivalence(R"({"c":"\u0041"})");
 }
+#endif
 
 TEST_CASE("Equivalence: number formats") {
     check_equivalence(R"({"a":0,"b":3.14,"c":-1,"d":2.5e10})");

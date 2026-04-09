@@ -221,8 +221,15 @@ struct NoteTemplate {
         auto& into(BodyT_& out) {
             body_ptr_ = &out;
             body_handler_factory_ = [](void* b, ::note::StringPool& pool, void* storage) -> ::note::BodyHandler {
+#if NOTE_MINIMAL
+                uint8_t n_;
+                auto* descs_ = BodyT_::template _note_field_descs<BodyT_>(n_);
+                auto* sink = new (storage) ::note::GenericBodySink{b, descs_, n_, &pool};
+                return ::note::make_generic_body_handler(*sink);
+#else
                 auto* sink = new (storage) ::note::StructSink<BodyT_>(*static_cast<BodyT_*>(b), pool);
                 return ::note::make_body_handler(*sink);
+#endif
             };
             return *this;
         }
@@ -764,8 +771,15 @@ struct NoteTemplate {
         auto& into(BodyT_& out) {
             body_ptr_ = &out;
             body_handler_factory_ = [](void* b, ::note::StringPool& pool, void* storage) -> ::note::BodyHandler {
+#if NOTE_MINIMAL
+                uint8_t n_;
+                auto* descs_ = BodyT_::template _note_field_descs<BodyT_>(n_);
+                auto* sink = new (storage) ::note::GenericBodySink{b, descs_, n_, &pool};
+                return ::note::make_generic_body_handler(*sink);
+#else
                 auto* sink = new (storage) ::note::StructSink<BodyT_>(*static_cast<BodyT_*>(b), pool);
                 return ::note::make_body_handler(*sink);
+#endif
             };
             return *this;
         }

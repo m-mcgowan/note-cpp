@@ -1,5 +1,9 @@
 #pragma once
 
+// BareNotecard uses non-template StreamingTransport which requires
+// IStreamingTransport — not available under NOTE_MINIMAL.
+#ifndef NOTE_MINIMAL
+
 /// @file bare_notecard.hpp
 /// BareNotecard — raw JSON passthrough over a Notecard transport.
 ///
@@ -111,3 +115,5 @@ private:
 };
 
 } // namespace note
+
+#endif // !NOTE_MINIMAL

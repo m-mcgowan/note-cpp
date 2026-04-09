@@ -412,3 +412,167 @@ TEST_CASE("const into() returns copy, original unchanged") {
     REQUIRE(r1.body_ptr_ == &body1);   // r1 still points to body1
     REQUIRE(req.body_ptr_ == nullptr);  // original still untouched
 }
+
+// ═══════════════════════════════════════════════════════════════════════
+// GenericBodySink — table-driven body parsing (NOTE_MINIMAL path)
+// ═══════════════════════════════════════════════════════════════════════
+
+#include <note/generic_sink.hpp>
+
+namespace {
+struct GBSTestData {
+    float temperature;
+    int32_t humidity;
+    bool active;
+    note::string_view label;
+    NOTE_FIELDS(temperature, humidity, active, label)
+};
+} // namespace
+
+TEST_CASE("_note_field_descs generates correct descriptor table") {
+    uint8_t n = 0;
+    auto* descs = GBSTestData::_note_field_descs<GBSTestData>(n);
+
+    REQUIRE(n == 4);
+    REQUIRE(descs[0].type == note::FieldType::Float32);   // float → Float32
+    REQUIRE(descs[1].type == note::FieldType::Int32);
+    REQUIRE(descs[2].type == note::FieldType::Bool);
+    REQUIRE(descs[3].type == note::FieldType::String);
+
+    // Verify offsets are correct
+    REQUIRE(descs[0].offset == offsetof(GBSTestData, temperature));
+    REQUIRE(descs[1].offset == offsetof(GBSTestData, humidity));
+    REQUIRE(descs[2].offset == offsetof(GBSTestData, active));
+    REQUIRE(descs[3].offset == offsetof(GBSTestData, label));
+
+    // Verify names
+    REQUIRE(note::string_view(descs[0].name) == "temperature");
+    REQUIRE(note::string_view(descs[1].name) == "humidity");
+    REQUIRE(note::string_view(descs[2].name) == "active");
+    REQUIRE(note::string_view(descs[3].name) == "label");
+}
+
+TEST_CASE("GenericBodySink dispatches all primitive types") {
+    GBSTestData data{};
+    char buf[256];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    uint8_t n = 0;
+    auto* descs = GBSTestData::_note_field_descs<GBSTestData>(n);
+    note::GenericBodySink sink{&data, descs, n, &pool};
+
+    sink.on_float("temperature", 22.5);
+    sink.on_int("humidity", 65);
+    sink.on_bool("active", true);
+    sink.on_string("label", "room-42");
+
+    REQUIRE(data.temperature == 22.5f);
+    REQUIRE(data.humidity == 65);
+    REQUIRE(data.active == true);
+    REQUIRE(std::string(data.label.data(), data.label.size()) == "room-42");
+}
+
+TEST_CASE("GenericBodySink handles int-to-float coercion") {
+    GBSTestData data{};
+    char buf[128];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    uint8_t n = 0;
+    auto* descs = GBSTestData::_note_field_descs<GBSTestData>(n);
+    note::GenericBodySink sink{&data, descs, n, &pool};
+
+    // JSON parser may deliver integer for a float field
+    sink.on_int("temperature", 23);
+    REQUIRE(data.temperature == 23.0f);
+
+    // And float for an integer field
+    sink.on_float("humidity", 65.7);
+    REQUIRE(data.humidity == 65);
+}
+
+TEST_CASE("GenericBodySink handles on_number") {
+    GBSTestData data{};
+    char buf[128];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    uint8_t n = 0;
+    auto* descs = GBSTestData::_note_field_descs<GBSTestData>(n);
+    note::GenericBodySink sink{&data, descs, n, &pool};
+
+    sink.on_number("temperature", "22.5");
+    sink.on_number("humidity", "65");
+
+    REQUIRE(data.temperature == 22.5f);
+    REQUIRE(data.humidity == 65);
+}
+
+TEST_CASE("GenericBodySink ignores unknown fields") {
+    GBSTestData data{};
+    data.humidity = 42;
+    char buf[128];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    uint8_t n = 0;
+    auto* descs = GBSTestData::_note_field_descs<GBSTestData>(n);
+    note::GenericBodySink sink{&data, descs, n, &pool};
+
+    sink.on_int("nonexistent", 999);
+    REQUIRE(data.humidity == 42);  // unchanged
+}
+
+TEST_CASE("GenericBodySink reset() zeros all fields") {
+    GBSTestData data{23.5f, 65, true, "hello"};
+    char buf[128];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    uint8_t n = 0;
+    auto* descs = GBSTestData::_note_field_descs<GBSTestData>(n);
+    note::GenericBodySink sink{&data, descs, n, &pool};
+
+    sink.reset();
+    REQUIRE(data.temperature == 0.0f);
+    REQUIRE(data.humidity == 0);
+    REQUIRE(data.active == false);
+    REQUIRE(data.label.empty());
+}
+
+TEST_CASE("make_generic_body_handler round-trip via BodyEvent") {
+    GBSTestData data{};
+    char buf[256];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    uint8_t n = 0;
+    auto* descs = GBSTestData::_note_field_descs<GBSTestData>(n);
+    note::GenericBodySink sink{&data, descs, n, &pool};
+
+    auto handler = note::make_generic_body_handler(sink);
+    REQUIRE(static_cast<bool>(handler));
+
+    handler.send(note::BodyEvent::make_float("temperature", 22.5));
+    handler.send(note::BodyEvent::make_int("humidity", 65));
+    handler.send(note::BodyEvent::make_bool("active", true));
+    handler.send(note::BodyEvent::make_string("label", "sensor-1"));
+
+    REQUIRE(data.temperature == 22.5f);
+    REQUIRE(data.humidity == 65);
+    REQUIRE(data.active == true);
+    REQUIRE(std::string(data.label.data(), data.label.size()) == "sensor-1");
+}
+
+TEST_CASE("field_type_of maps C++ types correctly") {
+    STATIC_REQUIRE(note::field_type_of<bool>() == note::FieldType::Bool);
+    STATIC_REQUIRE(note::field_type_of<int8_t>() == note::FieldType::Int8);
+    STATIC_REQUIRE(note::field_type_of<uint8_t>() == note::FieldType::Int8);
+    STATIC_REQUIRE(note::field_type_of<int16_t>() == note::FieldType::Int16);
+    STATIC_REQUIRE(note::field_type_of<uint16_t>() == note::FieldType::Int16);
+    STATIC_REQUIRE(note::field_type_of<int32_t>() == note::FieldType::Int32);
+    STATIC_REQUIRE(note::field_type_of<float>() == note::FieldType::Float32);
+    STATIC_REQUIRE(note::field_type_of<double>() == note::FieldType::Double);
+    STATIC_REQUIRE(note::field_type_of<note::string_view>() == note::FieldType::String);
+}

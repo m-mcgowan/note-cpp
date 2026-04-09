@@ -35,22 +35,12 @@ if constexpr (std::decay_t<decltype({{ var }})>::supports_cmd) {
 }
 {% endmacro %}
 
-#if __cplusplus >= 202002L
-template<typename TargetT = Unconstrained, typename NcT =
-#ifndef NOTE_MINIMAL
-    Notecard
+#ifdef NOTE_MINIMAL
+template<typename NcT>
+#elif __cplusplus >= 202002L
+template<typename TargetT = Unconstrained, typename NcT = Notecard>
 #else
-    void
-#endif
->
-#else
-template<typename NcT =
-#ifndef NOTE_MINIMAL
-    Notecard
-#else
-    void
-#endif
->
+template<typename NcT = Notecard>
 #endif
 class Api {
 #if NOTE_SINGLETON
@@ -58,7 +48,7 @@ class Api {
     static NcT* nc_ptr() { return nc_ptr_s_; }
 public:
     explicit Api(NcT& nc) { nc_ptr_s_ = &nc; }
-#if __cplusplus >= 202002L
+#if __cplusplus >= 202002L && !defined(NOTE_MINIMAL)
     explicit Api(NcT& nc, TargetT) { nc_ptr_s_ = &nc; }
 #endif
     NcT& notecard() { return *nc_ptr_s_; }
@@ -74,7 +64,7 @@ public:
         , {{ endpoint.flat_alias }}{&nc_}
 {% endif %}{% endfor %}
     {}
-#if __cplusplus >= 202002L
+#if __cplusplus >= 202002L && !defined(NOTE_MINIMAL)
     explicit Api(NcT& nc, TargetT) : nc_(nc)
 {% for group in resource_groups %}
         , {{ group.name }}{&nc_}
@@ -613,8 +603,10 @@ public:
 {% endfor %}
 {% endif %}
     };
-#if __cplusplus >= 202002L
+#if __cplusplus >= 202002L && !defined(NOTE_MINIMAL)
     {{ group.struct_name }}<TargetT> {{ group.name }};
+#elif __cplusplus >= 202002L
+    {{ group.struct_name }}<void> {{ group.name }};
 #else
     {{ group.struct_name }}<> {{ group.name }};
 #endif

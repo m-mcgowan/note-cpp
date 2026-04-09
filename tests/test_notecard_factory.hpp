@@ -9,6 +9,8 @@
 
 #include <note/notecard.hpp>
 
+#ifndef NOTE_MINIMAL
+
 namespace note::test {
 
 /// Create a Notecard configured for testing: request IDs disabled,
@@ -29,3 +31,5 @@ inline Notecard make_test_notecard(IStreamingTransport& transport, Allocator all
 }
 
 } // namespace note::test
+
+#endif // !NOTE_MINIMAL

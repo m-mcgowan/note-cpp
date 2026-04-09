@@ -20,7 +20,9 @@ set(NOTE_CPP_PUBLIC_HEADERS
     include/note/dyn_field.hpp
     include/note/error.hpp
     include/note/field.hpp
+    include/note/field_desc.hpp
     include/note/flag_set.hpp
+    include/note/generic_sink.hpp
     include/note/detail/number_format.hpp
     include/note/json.hpp
     include/note/json_buf.hpp
@@ -78,48 +80,58 @@ set(NOTE_CPP_THIRD_PARTY_HEADERS
 # ── Test sources (hand-written) ───────────────────────────────────────────
 # Paths relative to project root.
 
-set(NOTE_CPP_TEST_SOURCES
+# Tests that compile under both regular and NOTE_MINIMAL builds.
+set(NOTE_CPP_TEST_SOURCES_COMMON
     test_main.cpp
-    test_arduino_printable.cpp
-    test_attention.cpp
-    test_bare_notecard.cpp
-    test_binary_execute.cpp
-    test_body.cpp
     test_buffer_backend.cpp
-    test_channel.cpp
     test_cobs.cpp
-    test_connection.cpp
-    test_debug.cpp
     test_flag_set.cpp
-    test_intent_flags.cpp
     test_json_buf.cpp
     test_json_fmt.cpp
     test_json_sax.cpp
     test_json_sax_streaming.cpp
     test_json_lexer.cpp
-    test_make_api.cpp
-    test_migration_support.cpp
-    test_notecard.cpp
-    test_property_functor.cpp
     test_retry.cpp
-    test_setup.cpp
     test_state_store.cpp
-    test_sync.cpp
     test_target.cpp
-    test_templates.cpp
-    test_streaming_builder.cpp
     test_transport_crc32.cpp
-    test_transport_i2c.cpp
-    test_transport_serial.cpp
-    test_transport_timing.cpp
-    test_allocator_growth.cpp
     test_body_capture_arena.cpp
     test_static_sizing.cpp
-    test_transport_streaming.cpp
-    test_streaming_errors.cpp
     test_static_notecard.cpp
     test_struct_sink.cpp
     test_units.cpp
     test_voltage_variable.cpp
+)
+
+# Tests that require the polymorphic Notecard class (not available under NOTE_MINIMAL).
+set(NOTE_CPP_TEST_SOURCES_FULL_ONLY
+    test_arduino_printable.cpp
+    test_allocator_growth.cpp
+    test_attention.cpp
+    test_bare_notecard.cpp
+    test_binary_execute.cpp
+    test_body.cpp
+    test_channel.cpp
+    test_connection.cpp
+    test_debug.cpp
+    test_intent_flags.cpp
+    test_make_api.cpp
+    test_migration_support.cpp
+    test_notecard.cpp
+    test_property_functor.cpp
+    test_setup.cpp
+    test_streaming_builder.cpp
+    test_streaming_errors.cpp
+    test_sync.cpp
+    test_templates.cpp
+    test_transport_i2c.cpp
+    test_transport_serial.cpp
+    test_transport_streaming.cpp
+    test_transport_timing.cpp
     test_wire_format.cpp
+)
+
+set(NOTE_CPP_TEST_SOURCES
+    ${NOTE_CPP_TEST_SOURCES_COMMON}
+    ${NOTE_CPP_TEST_SOURCES_FULL_ONLY}
 )

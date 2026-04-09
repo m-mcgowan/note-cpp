@@ -16,7 +16,10 @@
 #include "test_notecard_factory.hpp"
 
 #include <note/api.hpp>
+#include <note/arena.hpp>
+#include <note/allocator.hpp>
 #include <note/string_pool.hpp>
+#include <note/struct_sink.hpp>
 
 #if __cplusplus >= 202002L
 using UnconstrainedApi = note::Api<>;
@@ -87,6 +90,10 @@ struct NcErrorHarness {
         , api(nc)
     {}
 };
+
+// Body struct for sink body coverage tests — must be at namespace scope
+// (NOTE_FIELDS generates templates, which can't be inside local classes).
+struct CoverageTestBody_ { float v; NOTE_FIELDS(v) };
 
 } // namespace
 
@@ -3532,6 +3539,62 @@ TEST_CASE("note::api::CardVersion response parsing") {
 }
 
 // ---------------------------------------------------------------------------
+TEST_CASE("note::api::CardVersion sink body coverage") {
+    // Exercise the Sink's body_depth tracking and body_handler dispatch.
+    // Covers: on_object_begin("body"), body event forwarding, on_object_end,
+    // and the no-body-handler fallthrough branches.
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    note::api::CardVersion::Response rsp{};
+    note::api::CardVersion::Response::Sink sink(rsp, pool);
+
+    // Feed response-level fields through the sink.
+    sink.on_string("board", "x-board");
+    sink.on_string("cell", "x-cell");
+    sink.on_string("device", "x-device");
+    sink.on_string("gps", "x-gps");
+    sink.on_string("name", "x-name");
+    sink.on_string("sku", "x-sku");
+    sink.on_string("version", "x-version");
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
+    sink.on_string("wifi", "x-wifi");
+#endif
+
+    // Exercise body path: enter body, send events, exit.
+    sink.on_object_begin("body");
+    sink.on_bool("flag", true);
+    sink.on_number("count", "5");
+    sink.on_string("label", "test");
+    sink.on_float("value", 1.5);
+    sink.on_int("idx", 7);
+    sink.on_null("n");
+    // Nested object inside body — should forward to body handler.
+    sink.on_object_begin("nested");
+    sink.on_string("inner", "x");
+    sink.on_object_end("nested");
+    // Array inside body.
+    sink.on_array_begin("items");
+    sink.on_int("items", 1);
+    sink.on_array_end("items");
+    sink.on_object_end("body");
+
+    // Exercise body path WITH a body handler connected.
+    CoverageTestBody_ tbody{};
+    note::StructSink<CoverageTestBody_> body_sink(tbody, pool);
+    auto handler = note::make_body_handler(body_sink);
+    sink.set_body_handler(handler);
+    sink.on_object_begin("body");
+    sink.on_float("v", 42.0);
+    sink.on_object_end("body");
+    REQUIRE(tbody.v == 42.0f);
+
+    // Reset path.
+    sink.reset();
+}
+
+// ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardVoltage::Read request builder") {
     Harness h;
     auto req = h.api.card.voltage().read();
@@ -4283,6 +4346,57 @@ TEST_CASE("note::api::DfuStatus response parsing") {
 }
 
 // ---------------------------------------------------------------------------
+TEST_CASE("note::api::DfuStatus sink body coverage") {
+    // Exercise the Sink's body_depth tracking and body_handler dispatch.
+    // Covers: on_object_begin("body"), body event forwarding, on_object_end,
+    // and the no-body-handler fallthrough branches.
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    note::api::DfuStatus::Response rsp{};
+    note::api::DfuStatus::Response::Sink sink(rsp, pool);
+
+    // Feed response-level fields through the sink.
+    sink.on_string("mode", "x-mode");
+    sink.on_string("off", "x-off");
+    sink.on_string("on", "x-on");
+    sink.on_string("pending", "x-pending");
+    sink.on_string("status", "x-status");
+
+    // Exercise body path: enter body, send events, exit.
+    sink.on_object_begin("body");
+    sink.on_bool("flag", true);
+    sink.on_number("count", "5");
+    sink.on_string("label", "test");
+    sink.on_float("value", 1.5);
+    sink.on_int("idx", 7);
+    sink.on_null("n");
+    // Nested object inside body — should forward to body handler.
+    sink.on_object_begin("nested");
+    sink.on_string("inner", "x");
+    sink.on_object_end("nested");
+    // Array inside body.
+    sink.on_array_begin("items");
+    sink.on_int("items", 1);
+    sink.on_array_end("items");
+    sink.on_object_end("body");
+
+    // Exercise body path WITH a body handler connected.
+    CoverageTestBody_ tbody{};
+    note::StructSink<CoverageTestBody_> body_sink(tbody, pool);
+    auto handler = note::make_body_handler(body_sink);
+    sink.set_body_handler(handler);
+    sink.on_object_begin("body");
+    sink.on_float("v", 42.0);
+    sink.on_object_end("body");
+    REQUIRE(tbody.v == 42.0f);
+
+    // Reset path.
+    sink.reset();
+}
+
+// ---------------------------------------------------------------------------
 TEST_CASE("note::api::EnvDefault::Set request builder") {
     Harness h;
     auto req = h.api.env.defaults().set(note::string_view("x-name"));
@@ -4417,6 +4531,56 @@ TEST_CASE("note::api::EnvGet response parsing") {
         note::StringPool pool(alloc);
         empty_rsp.intern_strings(pool);
     }
+}
+
+// ---------------------------------------------------------------------------
+TEST_CASE("note::api::EnvGet sink body coverage") {
+    // Exercise the Sink's body_depth tracking and body_handler dispatch.
+    // Covers: on_object_begin("body"), body event forwarding, on_object_end,
+    // and the no-body-handler fallthrough branches.
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    note::api::EnvGet::Response rsp{};
+    note::api::EnvGet::Response::Sink sink(rsp, pool);
+
+    // Feed response-level fields through the sink.
+    sink.on_string("text", "x-text");
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+    sink.on_string("time", "x-time");
+#endif
+
+    // Exercise body path: enter body, send events, exit.
+    sink.on_object_begin("body");
+    sink.on_bool("flag", true);
+    sink.on_number("count", "5");
+    sink.on_string("label", "test");
+    sink.on_float("value", 1.5);
+    sink.on_int("idx", 7);
+    sink.on_null("n");
+    // Nested object inside body — should forward to body handler.
+    sink.on_object_begin("nested");
+    sink.on_string("inner", "x");
+    sink.on_object_end("nested");
+    // Array inside body.
+    sink.on_array_begin("items");
+    sink.on_int("items", 1);
+    sink.on_array_end("items");
+    sink.on_object_end("body");
+
+    // Exercise body path WITH a body handler connected.
+    CoverageTestBody_ tbody{};
+    note::StructSink<CoverageTestBody_> body_sink(tbody, pool);
+    auto handler = note::make_body_handler(body_sink);
+    sink.set_body_handler(handler);
+    sink.on_object_begin("body");
+    sink.on_float("v", 42.0);
+    sink.on_object_end("body");
+    REQUIRE(tbody.v == 42.0f);
+
+    // Reset path.
+    sink.reset();
 }
 
 // ---------------------------------------------------------------------------
@@ -5094,6 +5258,54 @@ TEST_CASE("note::api::HubSignal response parsing") {
 }
 
 // ---------------------------------------------------------------------------
+TEST_CASE("note::api::HubSignal sink body coverage") {
+    // Exercise the Sink's body_depth tracking and body_handler dispatch.
+    // Covers: on_object_begin("body"), body event forwarding, on_object_end,
+    // and the no-body-handler fallthrough branches.
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    note::api::HubSignal::Response rsp{};
+    note::api::HubSignal::Response::Sink sink(rsp, pool);
+
+    // Feed response-level fields through the sink.
+    sink.on_string("connected", "x-connected");
+    sink.on_string("signals", "x-signals");
+
+    // Exercise body path: enter body, send events, exit.
+    sink.on_object_begin("body");
+    sink.on_bool("flag", true);
+    sink.on_number("count", "5");
+    sink.on_string("label", "test");
+    sink.on_float("value", 1.5);
+    sink.on_int("idx", 7);
+    sink.on_null("n");
+    // Nested object inside body — should forward to body handler.
+    sink.on_object_begin("nested");
+    sink.on_string("inner", "x");
+    sink.on_object_end("nested");
+    // Array inside body.
+    sink.on_array_begin("items");
+    sink.on_int("items", 1);
+    sink.on_array_end("items");
+    sink.on_object_end("body");
+
+    // Exercise body path WITH a body handler connected.
+    CoverageTestBody_ tbody{};
+    note::StructSink<CoverageTestBody_> body_sink(tbody, pool);
+    auto handler = note::make_body_handler(body_sink);
+    sink.set_body_handler(handler);
+    sink.on_object_begin("body");
+    sink.on_float("v", 42.0);
+    sink.on_object_end("body");
+    REQUIRE(tbody.v == 42.0f);
+
+    // Reset path.
+    sink.reset();
+}
+
+// ---------------------------------------------------------------------------
 TEST_CASE("note::api::HubStatus request builder") {
     Harness h;
     auto req = h.api.hub.status();
@@ -5607,6 +5819,54 @@ TEST_CASE("note::api::NoteGet::Read response parsing") {
 }
 
 // ---------------------------------------------------------------------------
+TEST_CASE("note::api::NoteGet::Read sink body coverage") {
+    // Exercise the Sink's body_depth tracking and body_handler dispatch.
+    // Covers: on_object_begin("body"), body event forwarding, on_object_end,
+    // and the no-body-handler fallthrough branches.
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    note::api::NoteGet::Read::Response rsp{};
+    note::api::NoteGet::Read::Response::Sink sink(rsp, pool);
+
+    // Feed response-level fields through the sink.
+    sink.on_string("payload", "x-payload");
+    sink.on_string("time", "x-time");
+
+    // Exercise body path: enter body, send events, exit.
+    sink.on_object_begin("body");
+    sink.on_bool("flag", true);
+    sink.on_number("count", "5");
+    sink.on_string("label", "test");
+    sink.on_float("value", 1.5);
+    sink.on_int("idx", 7);
+    sink.on_null("n");
+    // Nested object inside body — should forward to body handler.
+    sink.on_object_begin("nested");
+    sink.on_string("inner", "x");
+    sink.on_object_end("nested");
+    // Array inside body.
+    sink.on_array_begin("items");
+    sink.on_int("items", 1);
+    sink.on_array_end("items");
+    sink.on_object_end("body");
+
+    // Exercise body path WITH a body handler connected.
+    CoverageTestBody_ tbody{};
+    note::StructSink<CoverageTestBody_> body_sink(tbody, pool);
+    auto handler = note::make_body_handler(body_sink);
+    sink.set_body_handler(handler);
+    sink.on_object_begin("body");
+    sink.on_float("v", 42.0);
+    sink.on_object_end("body");
+    REQUIRE(tbody.v == 42.0f);
+
+    // Reset path.
+    sink.reset();
+}
+
+// ---------------------------------------------------------------------------
 TEST_CASE("note::api::NoteGet::Pop request builder") {
     Harness h;
     auto req = h.api.note.get().pop();
@@ -5666,6 +5926,54 @@ TEST_CASE("note::api::NoteGet::Pop response parsing") {
         note::StringPool pool(alloc);
         empty_rsp.intern_strings(pool);
     }
+}
+
+// ---------------------------------------------------------------------------
+TEST_CASE("note::api::NoteGet::Pop sink body coverage") {
+    // Exercise the Sink's body_depth tracking and body_handler dispatch.
+    // Covers: on_object_begin("body"), body event forwarding, on_object_end,
+    // and the no-body-handler fallthrough branches.
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    note::api::NoteGet::Pop::Response rsp{};
+    note::api::NoteGet::Pop::Response::Sink sink(rsp, pool);
+
+    // Feed response-level fields through the sink.
+    sink.on_string("payload", "x-payload");
+    sink.on_string("time", "x-time");
+
+    // Exercise body path: enter body, send events, exit.
+    sink.on_object_begin("body");
+    sink.on_bool("flag", true);
+    sink.on_number("count", "5");
+    sink.on_string("label", "test");
+    sink.on_float("value", 1.5);
+    sink.on_int("idx", 7);
+    sink.on_null("n");
+    // Nested object inside body — should forward to body handler.
+    sink.on_object_begin("nested");
+    sink.on_string("inner", "x");
+    sink.on_object_end("nested");
+    // Array inside body.
+    sink.on_array_begin("items");
+    sink.on_int("items", 1);
+    sink.on_array_end("items");
+    sink.on_object_end("body");
+
+    // Exercise body path WITH a body handler connected.
+    CoverageTestBody_ tbody{};
+    note::StructSink<CoverageTestBody_> body_sink(tbody, pool);
+    auto handler = note::make_body_handler(body_sink);
+    sink.set_body_handler(handler);
+    sink.on_object_begin("body");
+    sink.on_float("v", 42.0);
+    sink.on_object_end("body");
+    REQUIRE(tbody.v == 42.0f);
+
+    // Reset path.
+    sink.reset();
 }
 
 // ---------------------------------------------------------------------------
@@ -5759,6 +6067,60 @@ TEST_CASE("note::api::NoteTemplate::Define response parsing") {
 }
 
 // ---------------------------------------------------------------------------
+TEST_CASE("note::api::NoteTemplate::Define sink body coverage") {
+    // Exercise the Sink's body_depth tracking and body_handler dispatch.
+    // Covers: on_object_begin("body"), body event forwarding, on_object_end,
+    // and the no-body-handler fallthrough branches.
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    note::api::NoteTemplate::Define::Response rsp{};
+    note::api::NoteTemplate::Define::Response::Sink sink(rsp, pool);
+
+    // Feed response-level fields through the sink.
+    sink.on_string("bytes", "x-bytes");
+#if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
+    sink.on_string("format", "x-format");
+#endif
+    sink.on_string("length", "x-length");
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
+    sink.on_string("template", "x-template");
+#endif
+
+    // Exercise body path: enter body, send events, exit.
+    sink.on_object_begin("body");
+    sink.on_bool("flag", true);
+    sink.on_number("count", "5");
+    sink.on_string("label", "test");
+    sink.on_float("value", 1.5);
+    sink.on_int("idx", 7);
+    sink.on_null("n");
+    // Nested object inside body — should forward to body handler.
+    sink.on_object_begin("nested");
+    sink.on_string("inner", "x");
+    sink.on_object_end("nested");
+    // Array inside body.
+    sink.on_array_begin("items");
+    sink.on_int("items", 1);
+    sink.on_array_end("items");
+    sink.on_object_end("body");
+
+    // Exercise body path WITH a body handler connected.
+    CoverageTestBody_ tbody{};
+    note::StructSink<CoverageTestBody_> body_sink(tbody, pool);
+    auto handler = note::make_body_handler(body_sink);
+    sink.set_body_handler(handler);
+    sink.on_object_begin("body");
+    sink.on_float("v", 42.0);
+    sink.on_object_end("body");
+    REQUIRE(tbody.v == 42.0f);
+
+    // Reset path.
+    sink.reset();
+}
+
+// ---------------------------------------------------------------------------
 TEST_CASE("note::api::NoteTemplate::Remove request builder") {
     Harness h;
     auto req = h.api.note.templates().remove(note::string_view("x-file"));
@@ -5843,6 +6205,60 @@ TEST_CASE("note::api::NoteTemplate::Remove response parsing") {
         note::StringPool pool(alloc);
         empty_rsp.intern_strings(pool);
     }
+}
+
+// ---------------------------------------------------------------------------
+TEST_CASE("note::api::NoteTemplate::Remove sink body coverage") {
+    // Exercise the Sink's body_depth tracking and body_handler dispatch.
+    // Covers: on_object_begin("body"), body event forwarding, on_object_end,
+    // and the no-body-handler fallthrough branches.
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    note::api::NoteTemplate::Remove::Response rsp{};
+    note::api::NoteTemplate::Remove::Response::Sink sink(rsp, pool);
+
+    // Feed response-level fields through the sink.
+    sink.on_string("bytes", "x-bytes");
+#if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
+    sink.on_string("format", "x-format");
+#endif
+    sink.on_string("length", "x-length");
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
+    sink.on_string("template", "x-template");
+#endif
+
+    // Exercise body path: enter body, send events, exit.
+    sink.on_object_begin("body");
+    sink.on_bool("flag", true);
+    sink.on_number("count", "5");
+    sink.on_string("label", "test");
+    sink.on_float("value", 1.5);
+    sink.on_int("idx", 7);
+    sink.on_null("n");
+    // Nested object inside body — should forward to body handler.
+    sink.on_object_begin("nested");
+    sink.on_string("inner", "x");
+    sink.on_object_end("nested");
+    // Array inside body.
+    sink.on_array_begin("items");
+    sink.on_int("items", 1);
+    sink.on_array_end("items");
+    sink.on_object_end("body");
+
+    // Exercise body path WITH a body handler connected.
+    CoverageTestBody_ tbody{};
+    note::StructSink<CoverageTestBody_> body_sink(tbody, pool);
+    auto handler = note::make_body_handler(body_sink);
+    sink.set_body_handler(handler);
+    sink.on_object_begin("body");
+    sink.on_float("v", 42.0);
+    sink.on_object_end("body");
+    REQUIRE(tbody.v == 42.0f);
+
+    // Reset path.
+    sink.reset();
 }
 
 // ---------------------------------------------------------------------------
@@ -6216,6 +6632,56 @@ TEST_CASE("note::api::Web response parsing") {
 }
 
 // ---------------------------------------------------------------------------
+TEST_CASE("note::api::Web sink body coverage") {
+    // Exercise the Sink's body_depth tracking and body_handler dispatch.
+    // Covers: on_object_begin("body"), body event forwarding, on_object_end,
+    // and the no-body-handler fallthrough branches.
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    note::api::Web::Response rsp{};
+    note::api::Web::Response::Sink sink(rsp, pool);
+
+    // Feed response-level fields through the sink.
+    sink.on_string("cobs", "x-cobs");
+    sink.on_string("length", "x-length");
+    sink.on_string("payload", "x-payload");
+    sink.on_string("result", "x-result");
+
+    // Exercise body path: enter body, send events, exit.
+    sink.on_object_begin("body");
+    sink.on_bool("flag", true);
+    sink.on_number("count", "5");
+    sink.on_string("label", "test");
+    sink.on_float("value", 1.5);
+    sink.on_int("idx", 7);
+    sink.on_null("n");
+    // Nested object inside body — should forward to body handler.
+    sink.on_object_begin("nested");
+    sink.on_string("inner", "x");
+    sink.on_object_end("nested");
+    // Array inside body.
+    sink.on_array_begin("items");
+    sink.on_int("items", 1);
+    sink.on_array_end("items");
+    sink.on_object_end("body");
+
+    // Exercise body path WITH a body handler connected.
+    CoverageTestBody_ tbody{};
+    note::StructSink<CoverageTestBody_> body_sink(tbody, pool);
+    auto handler = note::make_body_handler(body_sink);
+    sink.set_body_handler(handler);
+    sink.on_object_begin("body");
+    sink.on_float("v", 42.0);
+    sink.on_object_end("body");
+    REQUIRE(tbody.v == 42.0f);
+
+    // Reset path.
+    sink.reset();
+}
+
+// ---------------------------------------------------------------------------
 TEST_CASE("note::api::WebDelete request builder") {
     Harness h;
     auto req = h.api.web.delete_();
@@ -6292,6 +6758,55 @@ TEST_CASE("note::api::WebDelete response parsing") {
         note::StringPool pool(alloc);
         empty_rsp.intern_strings(pool);
     }
+}
+
+// ---------------------------------------------------------------------------
+TEST_CASE("note::api::WebDelete sink body coverage") {
+    // Exercise the Sink's body_depth tracking and body_handler dispatch.
+    // Covers: on_object_begin("body"), body event forwarding, on_object_end,
+    // and the no-body-handler fallthrough branches.
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    note::api::WebDelete::Response rsp{};
+    note::api::WebDelete::Response::Sink sink(rsp, pool);
+
+    // Feed response-level fields through the sink.
+    sink.on_string("payload", "x-payload");
+    sink.on_string("result", "x-result");
+    sink.on_string("status", "x-status");
+
+    // Exercise body path: enter body, send events, exit.
+    sink.on_object_begin("body");
+    sink.on_bool("flag", true);
+    sink.on_number("count", "5");
+    sink.on_string("label", "test");
+    sink.on_float("value", 1.5);
+    sink.on_int("idx", 7);
+    sink.on_null("n");
+    // Nested object inside body — should forward to body handler.
+    sink.on_object_begin("nested");
+    sink.on_string("inner", "x");
+    sink.on_object_end("nested");
+    // Array inside body.
+    sink.on_array_begin("items");
+    sink.on_int("items", 1);
+    sink.on_array_end("items");
+    sink.on_object_end("body");
+
+    // Exercise body path WITH a body handler connected.
+    CoverageTestBody_ tbody{};
+    note::StructSink<CoverageTestBody_> body_sink(tbody, pool);
+    auto handler = note::make_body_handler(body_sink);
+    sink.set_body_handler(handler);
+    sink.on_object_begin("body");
+    sink.on_float("v", 42.0);
+    sink.on_object_end("body");
+    REQUIRE(tbody.v == 42.0f);
+
+    // Reset path.
+    sink.reset();
 }
 
 // ---------------------------------------------------------------------------
@@ -6379,6 +6894,56 @@ TEST_CASE("note::api::WebGet response parsing") {
         note::StringPool pool(alloc);
         empty_rsp.intern_strings(pool);
     }
+}
+
+// ---------------------------------------------------------------------------
+TEST_CASE("note::api::WebGet sink body coverage") {
+    // Exercise the Sink's body_depth tracking and body_handler dispatch.
+    // Covers: on_object_begin("body"), body event forwarding, on_object_end,
+    // and the no-body-handler fallthrough branches.
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    note::api::WebGet::Response rsp{};
+    note::api::WebGet::Response::Sink sink(rsp, pool);
+
+    // Feed response-level fields through the sink.
+    sink.on_string("cobs", "x-cobs");
+    sink.on_string("length", "x-length");
+    sink.on_string("payload", "x-payload");
+    sink.on_string("result", "x-result");
+
+    // Exercise body path: enter body, send events, exit.
+    sink.on_object_begin("body");
+    sink.on_bool("flag", true);
+    sink.on_number("count", "5");
+    sink.on_string("label", "test");
+    sink.on_float("value", 1.5);
+    sink.on_int("idx", 7);
+    sink.on_null("n");
+    // Nested object inside body — should forward to body handler.
+    sink.on_object_begin("nested");
+    sink.on_string("inner", "x");
+    sink.on_object_end("nested");
+    // Array inside body.
+    sink.on_array_begin("items");
+    sink.on_int("items", 1);
+    sink.on_array_end("items");
+    sink.on_object_end("body");
+
+    // Exercise body path WITH a body handler connected.
+    CoverageTestBody_ tbody{};
+    note::StructSink<CoverageTestBody_> body_sink(tbody, pool);
+    auto handler = note::make_body_handler(body_sink);
+    sink.set_body_handler(handler);
+    sink.on_object_begin("body");
+    sink.on_float("v", 42.0);
+    sink.on_object_end("body");
+    REQUIRE(tbody.v == 42.0f);
+
+    // Reset path.
+    sink.reset();
 }
 
 // ---------------------------------------------------------------------------
@@ -6502,6 +7067,59 @@ TEST_CASE("note::api::WebPost response parsing") {
 }
 
 // ---------------------------------------------------------------------------
+TEST_CASE("note::api::WebPost sink body coverage") {
+    // Exercise the Sink's body_depth tracking and body_handler dispatch.
+    // Covers: on_object_begin("body"), body event forwarding, on_object_end,
+    // and the no-body-handler fallthrough branches.
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    note::api::WebPost::Response rsp{};
+    note::api::WebPost::Response::Sink sink(rsp, pool);
+
+    // Feed response-level fields through the sink.
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
+    sink.on_string("cobs", "x-cobs");
+#endif
+    sink.on_string("length", "x-length");
+    sink.on_string("payload", "x-payload");
+    sink.on_string("result", "x-result");
+    sink.on_string("status", "x-status");
+
+    // Exercise body path: enter body, send events, exit.
+    sink.on_object_begin("body");
+    sink.on_bool("flag", true);
+    sink.on_number("count", "5");
+    sink.on_string("label", "test");
+    sink.on_float("value", 1.5);
+    sink.on_int("idx", 7);
+    sink.on_null("n");
+    // Nested object inside body — should forward to body handler.
+    sink.on_object_begin("nested");
+    sink.on_string("inner", "x");
+    sink.on_object_end("nested");
+    // Array inside body.
+    sink.on_array_begin("items");
+    sink.on_int("items", 1);
+    sink.on_array_end("items");
+    sink.on_object_end("body");
+
+    // Exercise body path WITH a body handler connected.
+    CoverageTestBody_ tbody{};
+    note::StructSink<CoverageTestBody_> body_sink(tbody, pool);
+    auto handler = note::make_body_handler(body_sink);
+    sink.set_body_handler(handler);
+    sink.on_object_begin("body");
+    sink.on_float("v", 42.0);
+    sink.on_object_end("body");
+    REQUIRE(tbody.v == 42.0f);
+
+    // Reset path.
+    sink.reset();
+}
+
+// ---------------------------------------------------------------------------
 TEST_CASE("note::api::WebPut request builder") {
     Harness h;
     auto req = h.api.web.put();
@@ -6611,5 +7229,54 @@ TEST_CASE("note::api::WebPut response parsing") {
         note::StringPool pool(alloc);
         empty_rsp.intern_strings(pool);
     }
+}
+
+// ---------------------------------------------------------------------------
+TEST_CASE("note::api::WebPut sink body coverage") {
+    // Exercise the Sink's body_depth tracking and body_handler dispatch.
+    // Covers: on_object_begin("body"), body event forwarding, on_object_end,
+    // and the no-body-handler fallthrough branches.
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+
+    note::api::WebPut::Response rsp{};
+    note::api::WebPut::Response::Sink sink(rsp, pool);
+
+    // Feed response-level fields through the sink.
+    sink.on_string("payload", "x-payload");
+    sink.on_string("result", "x-result");
+    sink.on_string("status", "x-status");
+
+    // Exercise body path: enter body, send events, exit.
+    sink.on_object_begin("body");
+    sink.on_bool("flag", true);
+    sink.on_number("count", "5");
+    sink.on_string("label", "test");
+    sink.on_float("value", 1.5);
+    sink.on_int("idx", 7);
+    sink.on_null("n");
+    // Nested object inside body — should forward to body handler.
+    sink.on_object_begin("nested");
+    sink.on_string("inner", "x");
+    sink.on_object_end("nested");
+    // Array inside body.
+    sink.on_array_begin("items");
+    sink.on_int("items", 1);
+    sink.on_array_end("items");
+    sink.on_object_end("body");
+
+    // Exercise body path WITH a body handler connected.
+    CoverageTestBody_ tbody{};
+    note::StructSink<CoverageTestBody_> body_sink(tbody, pool);
+    auto handler = note::make_body_handler(body_sink);
+    sink.set_body_handler(handler);
+    sink.on_object_begin("body");
+    sink.on_float("v", 42.0);
+    sink.on_object_end("body");
+    REQUIRE(tbody.v == 42.0f);
+
+    // Reset path.
+    sink.reset();
 }
 

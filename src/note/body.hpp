@@ -1,9 +1,11 @@
 #pragma once
 
+#include "field_desc.hpp"
 #include "json.hpp"
 #include "json_validate.hpp"
 #include "types.hpp"
 
+#include <cstddef>
 #include <type_traits>
 #include <utility>
 
@@ -327,6 +329,10 @@ BodyValue template_of(const T&) {
 #define _NOTE_FIELDS_DISPATCH_FIELD(obj, k, handler, field) \
     if ((k) == #field) { (handler)((obj).field); return true; }
 
+#define _NOTE_FIELDS_DESC_FIELD(field) \
+    {#field, static_cast<uint16_t>(offsetof(Self_, field)), \
+     ::note::field_type_of<decltype(Self_::field)>()},
+
 #define NOTE_FIELDS(...) \
     template<typename Self_> \
     static void _note_fields_write(const Self_& _self, ::note::JsonBuilder& _b) { \
@@ -340,6 +346,14 @@ BodyValue template_of(const T&) {
     static bool _note_fields_dispatch(Self_& _self, ::note::string_view _k, Handler_&& _handler) { \
         _NOTE_FIELDS_EXPAND(_NOTE_FIELDS_DISPATCH_EACH(_self, _k, _handler, __VA_ARGS__)) \
         return false; \
+    } \
+    template<typename Self_> \
+    static const ::note::FieldDesc* _note_field_descs(uint8_t& _n) { \
+        static constexpr ::note::FieldDesc _table[] NOTE_FLASH_ATTR = { \
+            _NOTE_FIELDS_EXPAND(_NOTE_FIELDS_DESC_EACH(__VA_ARGS__)) \
+        }; \
+        _n = sizeof(_table)/sizeof(_table[0]); \
+        return _table; \
     }
 
 // Deprecated compatibility alias.
@@ -474,6 +488,49 @@ BodyValue template_of(const T&) {
     _NOTE_FIELDS_DISPATCH_MAP_14(obj, k, handler, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14) _NOTE_FIELDS_DISPATCH_FIELD(obj, k, handler, f15)
 #define _NOTE_FIELDS_DISPATCH_MAP_16(obj, k, handler, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, f15, f16, ...) \
     _NOTE_FIELDS_DISPATCH_MAP_15(obj, k, handler, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, f15) _NOTE_FIELDS_DISPATCH_FIELD(obj, k, handler, f16)
+
+// Macro helpers for field iteration (descriptor table path).
+#define _NOTE_FIELDS_DESC_EACH(...) \
+    _NOTE_FIELDS_DESC_MAP(__VA_ARGS__)
+#define _NOTE_FIELDS_DESC_MAP(...) \
+    _NOTE_FIELDS_DESC_MAP_N(__VA_ARGS__, \
+        16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1)
+#define _NOTE_FIELDS_DESC_MAP_N( \
+    f1,f2,f3,f4,f5,f6,f7,f8,f9,f10,f11,f12,f13,f14,f15,f16, N, ...) \
+    _NOTE_FIELDS_DESC_MAP_##N( \
+        f1,f2,f3,f4,f5,f6,f7,f8,f9,f10,f11,f12,f13,f14,f15,f16)
+#define _NOTE_FIELDS_DESC_MAP_1(f1, ...) \
+    _NOTE_FIELDS_DESC_FIELD(f1)
+#define _NOTE_FIELDS_DESC_MAP_2(f1, f2, ...) \
+    _NOTE_FIELDS_DESC_FIELD(f1) _NOTE_FIELDS_DESC_FIELD(f2)
+#define _NOTE_FIELDS_DESC_MAP_3(f1, f2, f3, ...) \
+    _NOTE_FIELDS_DESC_MAP_2(f1, f2) _NOTE_FIELDS_DESC_FIELD(f3)
+#define _NOTE_FIELDS_DESC_MAP_4(f1, f2, f3, f4, ...) \
+    _NOTE_FIELDS_DESC_MAP_3(f1, f2, f3) _NOTE_FIELDS_DESC_FIELD(f4)
+#define _NOTE_FIELDS_DESC_MAP_5(f1, f2, f3, f4, f5, ...) \
+    _NOTE_FIELDS_DESC_MAP_4(f1, f2, f3, f4) _NOTE_FIELDS_DESC_FIELD(f5)
+#define _NOTE_FIELDS_DESC_MAP_6(f1, f2, f3, f4, f5, f6, ...) \
+    _NOTE_FIELDS_DESC_MAP_5(f1, f2, f3, f4, f5) _NOTE_FIELDS_DESC_FIELD(f6)
+#define _NOTE_FIELDS_DESC_MAP_7(f1, f2, f3, f4, f5, f6, f7, ...) \
+    _NOTE_FIELDS_DESC_MAP_6(f1, f2, f3, f4, f5, f6) _NOTE_FIELDS_DESC_FIELD(f7)
+#define _NOTE_FIELDS_DESC_MAP_8(f1, f2, f3, f4, f5, f6, f7, f8, ...) \
+    _NOTE_FIELDS_DESC_MAP_7(f1, f2, f3, f4, f5, f6, f7) _NOTE_FIELDS_DESC_FIELD(f8)
+#define _NOTE_FIELDS_DESC_MAP_9(f1, f2, f3, f4, f5, f6, f7, f8, f9, ...) \
+    _NOTE_FIELDS_DESC_MAP_8(f1, f2, f3, f4, f5, f6, f7, f8) _NOTE_FIELDS_DESC_FIELD(f9)
+#define _NOTE_FIELDS_DESC_MAP_10(f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, ...) \
+    _NOTE_FIELDS_DESC_MAP_9(f1, f2, f3, f4, f5, f6, f7, f8, f9) _NOTE_FIELDS_DESC_FIELD(f10)
+#define _NOTE_FIELDS_DESC_MAP_11(f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, ...) \
+    _NOTE_FIELDS_DESC_MAP_10(f1, f2, f3, f4, f5, f6, f7, f8, f9, f10) _NOTE_FIELDS_DESC_FIELD(f11)
+#define _NOTE_FIELDS_DESC_MAP_12(f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, ...) \
+    _NOTE_FIELDS_DESC_MAP_11(f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11) _NOTE_FIELDS_DESC_FIELD(f12)
+#define _NOTE_FIELDS_DESC_MAP_13(f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, ...) \
+    _NOTE_FIELDS_DESC_MAP_12(f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12) _NOTE_FIELDS_DESC_FIELD(f13)
+#define _NOTE_FIELDS_DESC_MAP_14(f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, ...) \
+    _NOTE_FIELDS_DESC_MAP_13(f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13) _NOTE_FIELDS_DESC_FIELD(f14)
+#define _NOTE_FIELDS_DESC_MAP_15(f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, f15, ...) \
+    _NOTE_FIELDS_DESC_MAP_14(f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14) _NOTE_FIELDS_DESC_FIELD(f15)
+#define _NOTE_FIELDS_DESC_MAP_16(f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, f15, f16, ...) \
+    _NOTE_FIELDS_DESC_MAP_15(f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, f15) _NOTE_FIELDS_DESC_FIELD(f16)
 
 namespace detail {
 

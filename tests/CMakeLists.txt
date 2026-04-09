@@ -13,7 +13,13 @@ include_directories(${NOTE_CPP_ROOT}/include ${CMAKE_CURRENT_SOURCE_DIR})
 include(${NOTE_CPP_ROOT}/cmake/note-cpp-sources.cmake)
 include(${NOTE_CPP_ROOT}/cmake/note-cpp-generated.cmake)
 
-set(ALL_TEST_SOURCES ${NOTE_CPP_TEST_SOURCES} ${NOTE_CPP_GENERATED_TEST_SOURCES})
+# Under NOTE_MINIMAL, only compile tests that don't require the polymorphic Notecard class.
+string(FIND "${CMAKE_CXX_FLAGS}" "NOTE_MINIMAL" _note_minimal_pos)
+if(_note_minimal_pos GREATER -1)
+    set(ALL_TEST_SOURCES ${NOTE_CPP_TEST_SOURCES_COMMON})
+else()
+    set(ALL_TEST_SOURCES ${NOTE_CPP_TEST_SOURCES} ${NOTE_CPP_GENERATED_TEST_SOURCES})
+endif()
 
 # Non-Arduino build (default host environment)
 add_executable(note-cpp-tests ${ALL_TEST_SOURCES})

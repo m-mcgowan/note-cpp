@@ -22,6 +22,7 @@
 #pragma once
 
 #include "body.hpp"
+#include "generic_sink.hpp"
 #include "json_sax.hpp"
 #include "string_pool.hpp"
 #include "types.hpp"
@@ -655,10 +656,34 @@ BodyHandler make_body_handler(StructSink<T>& sink) {
     };
 }
 
+/// Create a BodyHandler that forwards events to a GenericBodySink.
+/// Non-template: ONE instantiation for all body types.
+inline BodyHandler make_generic_body_handler(GenericBodySink& sink) {
+    return {
+        &sink,
+        [](void* c, const BodyEvent& ev) {
+            auto& s = *static_cast<GenericBodySink*>(c);
+            switch (ev.tag) {
+            case BodyEvent::Bool:   s.on_bool(ev.key, ev.b); break;
+            case BodyEvent::Int:    s.on_int(ev.key, ev.i); break;
+            case BodyEvent::Float:  s.on_float(ev.key, ev.f); break;
+            case BodyEvent::String: s.on_string(ev.key, {ev.sv.data, ev.sv.len}); break;
+            case BodyEvent::Number: s.on_number(ev.key, {ev.sv.data, ev.sv.len}); break;
+            default: break;
+            }
+        },
+    };
+}
+
 /// Size of the StructSink workspace for body handler storage.
 /// Used by execute paths to allocate stack storage for the body sink.
+/// Under NOTE_MINIMAL, GenericBodySink replaces StructSink — much smaller.
 inline constexpr std::size_t body_sink_storage_size =
+#if NOTE_MINIMAL
+    sizeof(GenericBodySink);
+#else
     sizeof(StructSink<detail::SinkSizeProbe>);
+#endif
 
 /// Alignment of the StructSink for body handler storage.
 inline constexpr std::size_t body_sink_storage_align = alignof(std::max_align_t);

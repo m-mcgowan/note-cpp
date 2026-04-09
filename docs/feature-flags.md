@@ -150,36 +150,6 @@ zero-heap operation.
 
 note-c heap measured via `__brkval` watermark on Wokwi (mock Notecard).
 
-### Flash budget breakdown (AVR, `NOTE_MINIMAL`)
-
-The 2,422-byte flash gap vs `note-c` breaks down as:
-
-| Component | Bytes | Purpose |
-|-----------|-------|---------|
-| SAX dispatch thunks (GenericResponseSink) | ~1,734 | 10 per-event-type functions with inlined field matching |
-| `make_generic_body_handler` | ~1,254 | Body event dispatch switch (StructSink table-driven) |
-| Api thunks (generic, void, send) | ~1,378 | Shared execute dispatch (3 functions for all endpoints) |
-| Per-endpoint `execute()` call sites | ~530 | Build lambda + thunk call + error handling |
-
-These are shared once regardless of endpoint count — adding more endpoints
-costs only the field descriptor tables (~30 bytes each).
-
-### Future optimization: unified SAX dispatch
-
-The SAX dispatch architecture currently uses 10 function pointers in
-`SaxDispatch`, each forwarding to a method on `GenericResponseSink`. With
-LTO, the compiler inlines the sink methods into the thunks, producing 10
-medium-sized functions (~170 bytes average) that share the same
-loop-and-match pattern but differ only in the type check and assignment.
-
-A unified dispatch would replace the 10 function pointers with a single
-`dispatch(SaxEvent)` function pointer, where `SaxEvent` carries a tag and
-value union (similar to the existing `BodyEvent`). This would:
-
-- Reduce `SaxDispatch` from 22 bytes to 6 bytes (1 pointer + 1 fn ptr)
-- Replace 10 thunks with 1, sharing the field-matching loop
-- Estimated savings: ~800 bytes flash
-
-This requires changes to `SaxDispatch`, `SaxAdapter::on_event()`,
-`GenericResponseSink`, and all sink types (`NullSink`, `GenericBodySink`)
-— a moderate refactor best done as a dedicated effort.
+The flash gap is shared infrastructure that does not grow with the number
+of endpoints — adding more endpoints costs only field descriptor tables
+(~30 bytes each).

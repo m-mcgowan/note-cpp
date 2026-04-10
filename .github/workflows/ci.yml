@@ -71,10 +71,13 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          # lcov 2.x required: lcov 1.x cannot parse GCC 13+ .gcno format (see docs/coverage.md).
-          # ubuntu-latest (24.04) ships lcov 2.0; ubuntu-22.04 ships 1.14 and will fail.
           # GCC required for accurate consteval coverage (see docs/coverage.md).
-          sudo apt-get install -y g++-13 lcov
+          # lcov 2.2+ required: 2.0 (Ubuntu apt) inflates function counts by
+          # counting each template instantiation separately, and misreports branches.
+          sudo apt-get install -y g++-13
+          LCOV_VERSION=2.3
+          curl -sL "https://github.com/linux-test-project/lcov/releases/download/v${LCOV_VERSION}/lcov-${LCOV_VERSION}.tar.gz" \
+            | sudo tar -xz -C /usr/local --strip-components=1
 
       - name: Install Python dependencies
         run: pip install jinja2

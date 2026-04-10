@@ -604,7 +604,7 @@ run_coverage() {
     mkdir -p "$OUT_DIR"
     echo
     echo "=== Collecting coverage data ==="
-    local LCOV_OPTS="--rc branch_coverage=1 --rc no_exception_branch=1 --ignore-errors mismatch,inconsistent"
+    local LCOV_OPTS="--rc branch_coverage=1 --rc no_exception_branch=1 --rc geninfo_unexecuted_blocks=1 --ignore-errors mismatch,inconsistent,gcov"
     # lcov --capture reads source files and applies LCOV_EXCL markers, correctly
     # excluding both line and function entries (unlike genhtml-only processing).
     lcov --capture \

@@ -76,8 +76,8 @@ jobs:
           # counting each template instantiation separately, and misreports branches.
           sudo apt-get install -y g++-13
           LCOV_VERSION=2.3
-          curl -sL "https://github.com/linux-test-project/lcov/releases/download/v${LCOV_VERSION}/lcov-${LCOV_VERSION}.tar.gz" \
-            | sudo tar -xz -C /usr/local --strip-components=1
+          curl -sL "https://github.com/linux-test-project/lcov/releases/download/v${LCOV_VERSION}/lcov-${LCOV_VERSION}.tar.gz" | tar -xz
+          sudo make -C "lcov-${LCOV_VERSION}" install
 
       - name: Install Python dependencies
         run: pip install jinja2

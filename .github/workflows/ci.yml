@@ -74,7 +74,9 @@ jobs:
           # GCC required for accurate consteval coverage (see docs/coverage.md).
           # lcov 2.2+ required: 2.0 (Ubuntu apt) inflates function counts by
           # counting each template instantiation separately, and misreports branches.
-          sudo apt-get install -y g++-13
+          # lcov 2.3 Perl dependencies (see lcov-2.3/README §3)
+          sudo apt-get install -y g++-13 \
+            libcapture-tiny-perl libdatetime-perl libjson-perl libtimedate-perl
           LCOV_VERSION=2.3
           curl -sL "https://github.com/linux-test-project/lcov/releases/download/v${LCOV_VERSION}/lcov-${LCOV_VERSION}.tar.gz" | tar -xz
           sudo make -C "lcov-${LCOV_VERSION}" install

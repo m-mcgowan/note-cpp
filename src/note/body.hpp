@@ -39,8 +39,9 @@ public:
 
     constexpr BodyValue() = default;
 
-#if __cplusplus >= 202002L && !defined(__clang__)
+#if __cplusplus >= 202002L && !defined(__clang__) && !(defined(__GNUC__) && __GNUC__ < 14)
     // String literal: validated at compile time as well-formed JSON object.
+    // Excluded from GCC < 14: inherited consteval constructors are broken (PR 102933).
     template<std::size_t N>
     consteval BodyValue(const char (&s)[N])
         : str_(string_view(s, N - 1)), write_fn_(&write_string) {

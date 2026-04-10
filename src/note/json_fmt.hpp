@@ -109,7 +109,7 @@ consteval bool check_type(PlaceholderType pt) {
 }
 
 template<typename... Args, std::size_t... Is>
-consteval bool check_all_types(std::string_view fmt, std::index_sequence<Is...>) {
+consteval bool check_all_types([[maybe_unused]] std::string_view fmt, std::index_sequence<Is...>) {
     return (check_type<Args>(placeholder_type(fmt, Is)) && ...);
 }
 
@@ -157,7 +157,7 @@ auto json_fmt(Args&&... args) {
             if (skip > 0) {
                 std::apply([&](auto&&... all) {
                     std::size_t idx = 0;
-                    auto emit = [&](auto&& v) {
+                    [[maybe_unused]] auto emit = [&](auto&& v) {
                         if (idx++ != arg_idx) return;
                         using V = std::remove_cvref_t<decltype(v)>;
                         if constexpr (std::is_same_v<V, bool>) {

@@ -328,7 +328,7 @@ public:
                 if (!buf) return make_error(Error::Overflow, NOTE_ERR("alloc failed"));
                 buf.append(rv->data(), rv->size());
                 buf.null_terminate();
-                return std::move(buf);
+                return buf;
             };
             auto reset = [&]() { transport_->reset(); };
             return retry_transaction<Result<OwnedBuffer>>(
@@ -357,7 +357,7 @@ public:
                         return make_error(Error::Overflow, NOTE_ERR("response exceeds available memory"));
                 }
                 buf.null_terminate();
-                return std::move(buf);
+                return buf;
             };
             auto reset = [&]() { streaming_transport_->reset(); };
             return retry_transaction<Result<OwnedBuffer>>(

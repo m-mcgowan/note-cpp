@@ -1,7 +1,7 @@
 // Compile-fail test: body must be a JSON object, not a primitive.
 // STATUS: CURRENTLY COMPILES (not yet validated).
-#if defined(__clang__)
-#error "Skipped on Clang (consteval bug)"
+#if defined(__clang__) || (defined(__GNUC__) && __GNUC__ < 14)
+#error "Skipped: consteval body validation unavailable"
 #endif
 #include <note/api/note_add.hpp>
 void test() {

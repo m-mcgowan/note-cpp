@@ -30,7 +30,7 @@ struct BitStack {
 
     bool push_array() {
         if (depth >= max_depth) return false;
-        bits &= ~(Word{1} << depth);
+        bits &= static_cast<Word>(~(Word{1} << depth));
         ++depth;
         return true;
     }

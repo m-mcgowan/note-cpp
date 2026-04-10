@@ -160,8 +160,8 @@ struct HubSignal {
 #ifndef NOTE_NO_BUFFERED
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
-            rsp.connected = reader_->get_bool("connected");
-            rsp.signals = reader_->get_int("signals");
+            if (reader_->has("connected")) rsp.connected = reader_->get_bool("connected");
+            if (reader_->has("signals")) rsp.signals = reader_->get_int("signals");
             rsp.body_ = reader_->get_object("body");
             rsp.reader_ = std::move(reader_);
             return rsp;
@@ -172,8 +172,8 @@ struct HubSignal {
         // or the caller must consume all string fields before the reader is reused.
         static Response parse(const JsonReader& reader_) {
             Response rsp;
-            rsp.connected = reader_.get_bool("connected");
-            rsp.signals = reader_.get_int("signals");
+            if (reader_.has("connected")) rsp.connected = reader_.get_bool("connected");
+            if (reader_.has("signals")) rsp.signals = reader_.get_int("signals");
             rsp.body_ = reader_.get_object("body");
             return rsp;
         }

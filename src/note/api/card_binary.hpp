@@ -126,12 +126,12 @@ struct CardBinary {
 #ifndef NOTE_NO_BUFFERED
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
-                rsp.cobs = reader_->get_int("cobs");
-                rsp.connected = reader_->get_bool("connected");
-                rsp.err = reader_->get_string("err");
-                rsp.length = reader_->get_int("length");
-                rsp.max = reader_->get_int("max");
-                rsp.status = reader_->get_string("status");
+                if (reader_->has("cobs")) rsp.cobs = reader_->get_int("cobs");
+                if (reader_->has("connected")) rsp.connected = reader_->get_bool("connected");
+                if (reader_->has("err")) rsp.err = reader_->get_string("err");
+                if (reader_->has("length")) rsp.length = reader_->get_int("length");
+                if (reader_->has("max")) rsp.max = reader_->get_int("max");
+                if (reader_->has("status")) rsp.status = reader_->get_string("status");
                 rsp.reader_ = std::move(reader_);
                 return rsp;
             }
@@ -141,12 +141,12 @@ struct CardBinary {
             // or the caller must consume all string fields before the reader is reused.
             static Response parse(const JsonReader& reader_) {
                 Response rsp;
-                rsp.cobs = reader_.get_int("cobs");
-                rsp.connected = reader_.get_bool("connected");
-                rsp.err = reader_.get_string("err");
-                rsp.length = reader_.get_int("length");
-                rsp.max = reader_.get_int("max");
-                rsp.status = reader_.get_string("status");
+                if (reader_.has("cobs")) rsp.cobs = reader_.get_int("cobs");
+                if (reader_.has("connected")) rsp.connected = reader_.get_bool("connected");
+                if (reader_.has("err")) rsp.err = reader_.get_string("err");
+                if (reader_.has("length")) rsp.length = reader_.get_int("length");
+                if (reader_.has("max")) rsp.max = reader_.get_int("max");
+                if (reader_.has("status")) rsp.status = reader_.get_string("status");
                 return rsp;
             }
 #endif // !NOTE_NO_BUFFERED
@@ -395,12 +395,12 @@ struct CardBinary {
 #ifndef NOTE_NO_BUFFERED
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
-                rsp.cobs = reader_->get_int("cobs");
-                rsp.connected = reader_->get_bool("connected");
-                rsp.err = reader_->get_string("err");
-                rsp.length = reader_->get_int("length");
-                rsp.max = reader_->get_int("max");
-                rsp.status = reader_->get_string("status");
+                if (reader_->has("cobs")) rsp.cobs = reader_->get_int("cobs");
+                if (reader_->has("connected")) rsp.connected = reader_->get_bool("connected");
+                if (reader_->has("err")) rsp.err = reader_->get_string("err");
+                if (reader_->has("length")) rsp.length = reader_->get_int("length");
+                if (reader_->has("max")) rsp.max = reader_->get_int("max");
+                if (reader_->has("status")) rsp.status = reader_->get_string("status");
                 rsp.reader_ = std::move(reader_);
                 return rsp;
             }
@@ -410,12 +410,12 @@ struct CardBinary {
             // or the caller must consume all string fields before the reader is reused.
             static Response parse(const JsonReader& reader_) {
                 Response rsp;
-                rsp.cobs = reader_.get_int("cobs");
-                rsp.connected = reader_.get_bool("connected");
-                rsp.err = reader_.get_string("err");
-                rsp.length = reader_.get_int("length");
-                rsp.max = reader_.get_int("max");
-                rsp.status = reader_.get_string("status");
+                if (reader_.has("cobs")) rsp.cobs = reader_.get_int("cobs");
+                if (reader_.has("connected")) rsp.connected = reader_.get_bool("connected");
+                if (reader_.has("err")) rsp.err = reader_.get_string("err");
+                if (reader_.has("length")) rsp.length = reader_.get_int("length");
+                if (reader_.has("max")) rsp.max = reader_.get_int("max");
+                if (reader_.has("status")) rsp.status = reader_.get_string("status");
                 return rsp;
             }
 #endif // !NOTE_NO_BUFFERED

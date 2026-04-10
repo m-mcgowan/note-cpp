@@ -180,8 +180,8 @@ struct NoteGet {
 #ifndef NOTE_NO_BUFFERED
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
-                rsp.payload = reader_->get_string("payload");
-                rsp.time = reader_->get_int("time");
+                if (reader_->has("payload")) rsp.payload = reader_->get_string("payload");
+                if (reader_->has("time")) rsp.time = reader_->get_int("time");
                 rsp.body_ = reader_->get_object("body");
                 rsp.reader_ = std::move(reader_);
                 return rsp;
@@ -192,8 +192,8 @@ struct NoteGet {
             // or the caller must consume all string fields before the reader is reused.
             static Response parse(const JsonReader& reader_) {
                 Response rsp;
-                rsp.payload = reader_.get_string("payload");
-                rsp.time = reader_.get_int("time");
+                if (reader_.has("payload")) rsp.payload = reader_.get_string("payload");
+                if (reader_.has("time")) rsp.time = reader_.get_int("time");
                 rsp.body_ = reader_.get_object("body");
                 return rsp;
             }
@@ -527,8 +527,8 @@ struct NoteGet {
 #ifndef NOTE_NO_BUFFERED
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
-                rsp.payload = reader_->get_string("payload");
-                rsp.time = reader_->get_int("time");
+                if (reader_->has("payload")) rsp.payload = reader_->get_string("payload");
+                if (reader_->has("time")) rsp.time = reader_->get_int("time");
                 rsp.body_ = reader_->get_object("body");
                 rsp.reader_ = std::move(reader_);
                 return rsp;
@@ -539,8 +539,8 @@ struct NoteGet {
             // or the caller must consume all string fields before the reader is reused.
             static Response parse(const JsonReader& reader_) {
                 Response rsp;
-                rsp.payload = reader_.get_string("payload");
-                rsp.time = reader_.get_int("time");
+                if (reader_.has("payload")) rsp.payload = reader_.get_string("payload");
+                if (reader_.has("time")) rsp.time = reader_.get_int("time");
                 rsp.body_ = reader_.get_object("body");
                 return rsp;
             }

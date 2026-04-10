@@ -171,13 +171,13 @@ struct CardTemp {
 #ifndef NOTE_NO_BUFFERED
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
-                rsp.calibration = reader_->get_double("calibration");
-                rsp.humidity = reader_->get_double("humidity");
-                rsp.pressure = reader_->get_double("pressure");
-                rsp.temperature = reader_->get_double("temperature");
-                rsp.usb = reader_->get_bool("usb");
-                rsp.value = reader_->get_double("value");
-                rsp.voltage = reader_->get_double("voltage");
+                if (reader_->has("calibration")) rsp.calibration = reader_->get_double("calibration");
+                if (reader_->has("humidity")) rsp.humidity = reader_->get_double("humidity");
+                if (reader_->has("pressure")) rsp.pressure = reader_->get_double("pressure");
+                if (reader_->has("temperature")) rsp.temperature = reader_->get_double("temperature");
+                if (reader_->has("usb")) rsp.usb = reader_->get_bool("usb");
+                if (reader_->has("value")) rsp.value = reader_->get_double("value");
+                if (reader_->has("voltage")) rsp.voltage = reader_->get_double("voltage");
                 rsp.reader_ = std::move(reader_);
                 return rsp;
             }
@@ -187,13 +187,13 @@ struct CardTemp {
             // or the caller must consume all string fields before the reader is reused.
             static Response parse(const JsonReader& reader_) {
                 Response rsp;
-                rsp.calibration = reader_.get_double("calibration");
-                rsp.humidity = reader_.get_double("humidity");
-                rsp.pressure = reader_.get_double("pressure");
-                rsp.temperature = reader_.get_double("temperature");
-                rsp.usb = reader_.get_bool("usb");
-                rsp.value = reader_.get_double("value");
-                rsp.voltage = reader_.get_double("voltage");
+                if (reader_.has("calibration")) rsp.calibration = reader_.get_double("calibration");
+                if (reader_.has("humidity")) rsp.humidity = reader_.get_double("humidity");
+                if (reader_.has("pressure")) rsp.pressure = reader_.get_double("pressure");
+                if (reader_.has("temperature")) rsp.temperature = reader_.get_double("temperature");
+                if (reader_.has("usb")) rsp.usb = reader_.get_bool("usb");
+                if (reader_.has("value")) rsp.value = reader_.get_double("value");
+                if (reader_.has("voltage")) rsp.voltage = reader_.get_double("voltage");
                 return rsp;
             }
 #endif // !NOTE_NO_BUFFERED
@@ -513,13 +513,13 @@ struct CardTemp {
 #ifndef NOTE_NO_BUFFERED
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
-                rsp.calibration = reader_->get_double("calibration");
-                rsp.humidity = reader_->get_double("humidity");
-                rsp.pressure = reader_->get_double("pressure");
-                rsp.temperature = reader_->get_double("temperature");
-                rsp.usb = reader_->get_bool("usb");
-                rsp.value = reader_->get_double("value");
-                rsp.voltage = reader_->get_double("voltage");
+                if (reader_->has("calibration")) rsp.calibration = reader_->get_double("calibration");
+                if (reader_->has("humidity")) rsp.humidity = reader_->get_double("humidity");
+                if (reader_->has("pressure")) rsp.pressure = reader_->get_double("pressure");
+                if (reader_->has("temperature")) rsp.temperature = reader_->get_double("temperature");
+                if (reader_->has("usb")) rsp.usb = reader_->get_bool("usb");
+                if (reader_->has("value")) rsp.value = reader_->get_double("value");
+                if (reader_->has("voltage")) rsp.voltage = reader_->get_double("voltage");
                 rsp.reader_ = std::move(reader_);
                 return rsp;
             }
@@ -529,13 +529,13 @@ struct CardTemp {
             // or the caller must consume all string fields before the reader is reused.
             static Response parse(const JsonReader& reader_) {
                 Response rsp;
-                rsp.calibration = reader_.get_double("calibration");
-                rsp.humidity = reader_.get_double("humidity");
-                rsp.pressure = reader_.get_double("pressure");
-                rsp.temperature = reader_.get_double("temperature");
-                rsp.usb = reader_.get_bool("usb");
-                rsp.value = reader_.get_double("value");
-                rsp.voltage = reader_.get_double("voltage");
+                if (reader_.has("calibration")) rsp.calibration = reader_.get_double("calibration");
+                if (reader_.has("humidity")) rsp.humidity = reader_.get_double("humidity");
+                if (reader_.has("pressure")) rsp.pressure = reader_.get_double("pressure");
+                if (reader_.has("temperature")) rsp.temperature = reader_.get_double("temperature");
+                if (reader_.has("usb")) rsp.usb = reader_.get_bool("usb");
+                if (reader_.has("value")) rsp.value = reader_.get_double("value");
+                if (reader_.has("voltage")) rsp.voltage = reader_.get_double("voltage");
                 return rsp;
             }
 #endif // !NOTE_NO_BUFFERED
@@ -842,13 +842,13 @@ struct CardTemp {
 #ifndef NOTE_NO_BUFFERED
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
-                rsp.calibration = reader_->get_double("calibration");
-                rsp.humidity = reader_->get_double("humidity");
-                rsp.pressure = reader_->get_double("pressure");
-                rsp.temperature = reader_->get_double("temperature");
-                rsp.usb = reader_->get_bool("usb");
-                rsp.value = reader_->get_double("value");
-                rsp.voltage = reader_->get_double("voltage");
+                if (reader_->has("calibration")) rsp.calibration = reader_->get_double("calibration");
+                if (reader_->has("humidity")) rsp.humidity = reader_->get_double("humidity");
+                if (reader_->has("pressure")) rsp.pressure = reader_->get_double("pressure");
+                if (reader_->has("temperature")) rsp.temperature = reader_->get_double("temperature");
+                if (reader_->has("usb")) rsp.usb = reader_->get_bool("usb");
+                if (reader_->has("value")) rsp.value = reader_->get_double("value");
+                if (reader_->has("voltage")) rsp.voltage = reader_->get_double("voltage");
                 rsp.reader_ = std::move(reader_);
                 return rsp;
             }
@@ -858,13 +858,13 @@ struct CardTemp {
             // or the caller must consume all string fields before the reader is reused.
             static Response parse(const JsonReader& reader_) {
                 Response rsp;
-                rsp.calibration = reader_.get_double("calibration");
-                rsp.humidity = reader_.get_double("humidity");
-                rsp.pressure = reader_.get_double("pressure");
-                rsp.temperature = reader_.get_double("temperature");
-                rsp.usb = reader_.get_bool("usb");
-                rsp.value = reader_.get_double("value");
-                rsp.voltage = reader_.get_double("voltage");
+                if (reader_.has("calibration")) rsp.calibration = reader_.get_double("calibration");
+                if (reader_.has("humidity")) rsp.humidity = reader_.get_double("humidity");
+                if (reader_.has("pressure")) rsp.pressure = reader_.get_double("pressure");
+                if (reader_.has("temperature")) rsp.temperature = reader_.get_double("temperature");
+                if (reader_.has("usb")) rsp.usb = reader_.get_bool("usb");
+                if (reader_.has("value")) rsp.value = reader_.get_double("value");
+                if (reader_.has("voltage")) rsp.voltage = reader_.get_double("voltage");
                 return rsp;
             }
 #endif // !NOTE_NO_BUFFERED

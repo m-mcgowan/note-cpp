@@ -120,13 +120,13 @@ struct CardTime {
 #ifndef NOTE_NO_BUFFERED
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
-            rsp.area = reader_->get_string("area");
-            rsp.country = reader_->get_string("country");
-            rsp.lat = reader_->get_double("lat");
-            rsp.lon = reader_->get_double("lon");
-            rsp.minutes = reader_->get_int("minutes");
-            rsp.time = reader_->get_int("time");
-            rsp.zone = reader_->get_string("zone");
+            if (reader_->has("area")) rsp.area = reader_->get_string("area");
+            if (reader_->has("country")) rsp.country = reader_->get_string("country");
+            if (reader_->has("lat")) rsp.lat = reader_->get_double("lat");
+            if (reader_->has("lon")) rsp.lon = reader_->get_double("lon");
+            if (reader_->has("minutes")) rsp.minutes = reader_->get_int("minutes");
+            if (reader_->has("time")) rsp.time = reader_->get_int("time");
+            if (reader_->has("zone")) rsp.zone = reader_->get_string("zone");
             rsp.reader_ = std::move(reader_);
             return rsp;
         }
@@ -136,13 +136,13 @@ struct CardTime {
         // or the caller must consume all string fields before the reader is reused.
         static Response parse(const JsonReader& reader_) {
             Response rsp;
-            rsp.area = reader_.get_string("area");
-            rsp.country = reader_.get_string("country");
-            rsp.lat = reader_.get_double("lat");
-            rsp.lon = reader_.get_double("lon");
-            rsp.minutes = reader_.get_int("minutes");
-            rsp.time = reader_.get_int("time");
-            rsp.zone = reader_.get_string("zone");
+            if (reader_.has("area")) rsp.area = reader_.get_string("area");
+            if (reader_.has("country")) rsp.country = reader_.get_string("country");
+            if (reader_.has("lat")) rsp.lat = reader_.get_double("lat");
+            if (reader_.has("lon")) rsp.lon = reader_.get_double("lon");
+            if (reader_.has("minutes")) rsp.minutes = reader_.get_int("minutes");
+            if (reader_.has("time")) rsp.time = reader_.get_int("time");
+            if (reader_.has("zone")) rsp.zone = reader_.get_string("zone");
             return rsp;
         }
 #endif // !NOTE_NO_BUFFERED

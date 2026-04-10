@@ -140,10 +140,10 @@ struct CardContact {
 #ifndef NOTE_NO_BUFFERED
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
-                rsp.email = reader_->get_string("email");
-                rsp.name = reader_->get_string("name");
-                rsp.org = reader_->get_string("org");
-                rsp.role = reader_->get_string("role");
+                if (reader_->has("email")) rsp.email = reader_->get_string("email");
+                if (reader_->has("name")) rsp.name = reader_->get_string("name");
+                if (reader_->has("org")) rsp.org = reader_->get_string("org");
+                if (reader_->has("role")) rsp.role = reader_->get_string("role");
                 rsp.reader_ = std::move(reader_);
                 return rsp;
             }
@@ -153,10 +153,10 @@ struct CardContact {
             // or the caller must consume all string fields before the reader is reused.
             static Response parse(const JsonReader& reader_) {
                 Response rsp;
-                rsp.email = reader_.get_string("email");
-                rsp.name = reader_.get_string("name");
-                rsp.org = reader_.get_string("org");
-                rsp.role = reader_.get_string("role");
+                if (reader_.has("email")) rsp.email = reader_.get_string("email");
+                if (reader_.has("name")) rsp.name = reader_.get_string("name");
+                if (reader_.has("org")) rsp.org = reader_.get_string("org");
+                if (reader_.has("role")) rsp.role = reader_.get_string("role");
                 return rsp;
             }
 #endif // !NOTE_NO_BUFFERED
@@ -422,10 +422,10 @@ struct CardContact {
 #ifndef NOTE_NO_BUFFERED
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
-                rsp.email = reader_->get_string("email");
-                rsp.name = reader_->get_string("name");
-                rsp.org = reader_->get_string("org");
-                rsp.role = reader_->get_string("role");
+                if (reader_->has("email")) rsp.email = reader_->get_string("email");
+                if (reader_->has("name")) rsp.name = reader_->get_string("name");
+                if (reader_->has("org")) rsp.org = reader_->get_string("org");
+                if (reader_->has("role")) rsp.role = reader_->get_string("role");
                 rsp.reader_ = std::move(reader_);
                 return rsp;
             }
@@ -435,10 +435,10 @@ struct CardContact {
             // or the caller must consume all string fields before the reader is reused.
             static Response parse(const JsonReader& reader_) {
                 Response rsp;
-                rsp.email = reader_.get_string("email");
-                rsp.name = reader_.get_string("name");
-                rsp.org = reader_.get_string("org");
-                rsp.role = reader_.get_string("role");
+                if (reader_.has("email")) rsp.email = reader_.get_string("email");
+                if (reader_.has("name")) rsp.name = reader_.get_string("name");
+                if (reader_.has("org")) rsp.org = reader_.get_string("org");
+                if (reader_.has("role")) rsp.role = reader_.get_string("role");
                 return rsp;
             }
 #endif // !NOTE_NO_BUFFERED

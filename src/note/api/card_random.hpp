@@ -123,8 +123,8 @@ struct CardRandom {
 #ifndef NOTE_NO_BUFFERED
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
-            rsp.count = reader_->get_int("count");
-            rsp.payload = reader_->get_string("payload");
+            if (reader_->has("count")) rsp.count = reader_->get_int("count");
+            if (reader_->has("payload")) rsp.payload = reader_->get_string("payload");
             rsp.reader_ = std::move(reader_);
             return rsp;
         }
@@ -134,8 +134,8 @@ struct CardRandom {
         // or the caller must consume all string fields before the reader is reused.
         static Response parse(const JsonReader& reader_) {
             Response rsp;
-            rsp.count = reader_.get_int("count");
-            rsp.payload = reader_.get_string("payload");
+            if (reader_.has("count")) rsp.count = reader_.get_int("count");
+            if (reader_.has("payload")) rsp.payload = reader_.get_string("payload");
             return rsp;
         }
 #endif // !NOTE_NO_BUFFERED

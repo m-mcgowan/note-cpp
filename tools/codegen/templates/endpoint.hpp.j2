@@ -521,7 +521,7 @@ namespace note::api {
 {% if prop.is_array %}
 {{ indent }}        { note::string_view arr_[{{ prop.array_max_items }}]; auto n_ = reader_->get_string_array("{{ prop.wire_name }}", arr_, {{ prop.array_max_items }}); for (size_t i_ = 0; i_ < n_; ++i_) rsp.{{ prop.accessor_name }}.add(arr_[i_]); }
 {% else %}
-{{ indent }}        rsp.{{ prop.accessor_name }} = reader_->get_{{ prop.getter }}("{{ prop.wire_name }}"{{ prop.default_arg }});
+{{ indent }}        if (reader_->has("{{ prop.wire_name }}")) rsp.{{ prop.accessor_name }} = reader_->get_{{ prop.getter }}("{{ prop.wire_name }}"{{ prop.default_arg }});
 {% endif %}
 {{ version_guard_end(prop.version_guard) -}}
 {% endfor %}
@@ -549,7 +549,7 @@ namespace note::api {
 {% if prop.is_array %}
 {{ indent }}        { note::string_view arr_[{{ prop.array_max_items }}]; auto n_ = reader_.get_string_array("{{ prop.wire_name }}", arr_, {{ prop.array_max_items }}); for (size_t i_ = 0; i_ < n_; ++i_) rsp.{{ prop.accessor_name }}.add(arr_[i_]); }
 {% else %}
-{{ indent }}        rsp.{{ prop.accessor_name }} = reader_.get_{{ prop.getter }}("{{ prop.wire_name }}"{{ prop.default_arg }});
+{{ indent }}        if (reader_.has("{{ prop.wire_name }}")) rsp.{{ prop.accessor_name }} = reader_.get_{{ prop.getter }}("{{ prop.wire_name }}"{{ prop.default_arg }});
 {% endif %}
 {{ version_guard_end(prop.version_guard) -}}
 {% endfor %}

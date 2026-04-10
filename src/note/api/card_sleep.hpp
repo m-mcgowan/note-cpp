@@ -195,10 +195,10 @@ struct CardSleep {
 #ifndef NOTE_NO_BUFFERED
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
-            rsp.mode = reader_->get_string("mode");
-            rsp.off = reader_->get_bool("off");
-            rsp.on = reader_->get_bool("on");
-            rsp.seconds = reader_->get_int("seconds");
+            if (reader_->has("mode")) rsp.mode = reader_->get_string("mode");
+            if (reader_->has("off")) rsp.off = reader_->get_bool("off");
+            if (reader_->has("on")) rsp.on = reader_->get_bool("on");
+            if (reader_->has("seconds")) rsp.seconds = reader_->get_int("seconds");
             rsp.reader_ = std::move(reader_);
             return rsp;
         }
@@ -208,10 +208,10 @@ struct CardSleep {
         // or the caller must consume all string fields before the reader is reused.
         static Response parse(const JsonReader& reader_) {
             Response rsp;
-            rsp.mode = reader_.get_string("mode");
-            rsp.off = reader_.get_bool("off");
-            rsp.on = reader_.get_bool("on");
-            rsp.seconds = reader_.get_int("seconds");
+            if (reader_.has("mode")) rsp.mode = reader_.get_string("mode");
+            if (reader_.has("off")) rsp.off = reader_.get_bool("off");
+            if (reader_.has("on")) rsp.on = reader_.get_bool("on");
+            if (reader_.has("seconds")) rsp.seconds = reader_.get_int("seconds");
             return rsp;
         }
 #endif // !NOTE_NO_BUFFERED

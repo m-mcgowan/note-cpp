@@ -125,9 +125,9 @@ struct CardPower {
 #ifndef NOTE_NO_BUFFERED
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
-                rsp.milliampHours = reader_->get_double("milliamp_hours");
-                rsp.temperature = reader_->get_double("temperature");
-                rsp.voltage = reader_->get_double("voltage");
+                if (reader_->has("milliamp_hours")) rsp.milliampHours = reader_->get_double("milliamp_hours");
+                if (reader_->has("temperature")) rsp.temperature = reader_->get_double("temperature");
+                if (reader_->has("voltage")) rsp.voltage = reader_->get_double("voltage");
                 rsp.reader_ = std::move(reader_);
                 return rsp;
             }
@@ -137,9 +137,9 @@ struct CardPower {
             // or the caller must consume all string fields before the reader is reused.
             static Response parse(const JsonReader& reader_) {
                 Response rsp;
-                rsp.milliampHours = reader_.get_double("milliamp_hours");
-                rsp.temperature = reader_.get_double("temperature");
-                rsp.voltage = reader_.get_double("voltage");
+                if (reader_.has("milliamp_hours")) rsp.milliampHours = reader_.get_double("milliamp_hours");
+                if (reader_.has("temperature")) rsp.temperature = reader_.get_double("temperature");
+                if (reader_.has("voltage")) rsp.voltage = reader_.get_double("voltage");
                 return rsp;
             }
 #endif // !NOTE_NO_BUFFERED
@@ -374,9 +374,9 @@ struct CardPower {
 #ifndef NOTE_NO_BUFFERED
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
-                rsp.milliampHours = reader_->get_double("milliamp_hours");
-                rsp.temperature = reader_->get_double("temperature");
-                rsp.voltage = reader_->get_double("voltage");
+                if (reader_->has("milliamp_hours")) rsp.milliampHours = reader_->get_double("milliamp_hours");
+                if (reader_->has("temperature")) rsp.temperature = reader_->get_double("temperature");
+                if (reader_->has("voltage")) rsp.voltage = reader_->get_double("voltage");
                 rsp.reader_ = std::move(reader_);
                 return rsp;
             }
@@ -386,9 +386,9 @@ struct CardPower {
             // or the caller must consume all string fields before the reader is reused.
             static Response parse(const JsonReader& reader_) {
                 Response rsp;
-                rsp.milliampHours = reader_.get_double("milliamp_hours");
-                rsp.temperature = reader_.get_double("temperature");
-                rsp.voltage = reader_.get_double("voltage");
+                if (reader_.has("milliamp_hours")) rsp.milliampHours = reader_.get_double("milliamp_hours");
+                if (reader_.has("temperature")) rsp.temperature = reader_.get_double("temperature");
+                if (reader_.has("voltage")) rsp.voltage = reader_.get_double("voltage");
                 return rsp;
             }
 #endif // !NOTE_NO_BUFFERED
@@ -612,9 +612,9 @@ struct CardPower {
 #ifndef NOTE_NO_BUFFERED
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
-                rsp.milliampHours = reader_->get_double("milliamp_hours");
-                rsp.temperature = reader_->get_double("temperature");
-                rsp.voltage = reader_->get_double("voltage");
+                if (reader_->has("milliamp_hours")) rsp.milliampHours = reader_->get_double("milliamp_hours");
+                if (reader_->has("temperature")) rsp.temperature = reader_->get_double("temperature");
+                if (reader_->has("voltage")) rsp.voltage = reader_->get_double("voltage");
                 rsp.reader_ = std::move(reader_);
                 return rsp;
             }
@@ -624,9 +624,9 @@ struct CardPower {
             // or the caller must consume all string fields before the reader is reused.
             static Response parse(const JsonReader& reader_) {
                 Response rsp;
-                rsp.milliampHours = reader_.get_double("milliamp_hours");
-                rsp.temperature = reader_.get_double("temperature");
-                rsp.voltage = reader_.get_double("voltage");
+                if (reader_.has("milliamp_hours")) rsp.milliampHours = reader_.get_double("milliamp_hours");
+                if (reader_.has("temperature")) rsp.temperature = reader_.get_double("temperature");
+                if (reader_.has("voltage")) rsp.voltage = reader_.get_double("voltage");
                 return rsp;
             }
 #endif // !NOTE_NO_BUFFERED

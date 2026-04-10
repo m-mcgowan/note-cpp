@@ -270,9 +270,9 @@ struct CardAuxSerial {
 #ifndef NOTE_NO_BUFFERED
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
-                rsp.mode = reader_->get_string("mode");
+                if (reader_->has("mode")) rsp.mode = reader_->get_string("mode");
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-                rsp.rate = reader_->get_int("rate");
+                if (reader_->has("rate")) rsp.rate = reader_->get_int("rate");
 #endif
                 rsp.reader_ = std::move(reader_);
                 return rsp;
@@ -286,9 +286,9 @@ struct CardAuxSerial {
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
             static Response parse(const JsonReader& reader_) {
                 Response rsp;
-                rsp.mode = reader_.get_string("mode");
+                if (reader_.has("mode")) rsp.mode = reader_.get_string("mode");
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-                rsp.rate = reader_.get_int("rate");
+                if (reader_.has("rate")) rsp.rate = reader_.get_int("rate");
 #endif
                 return rsp;
             }

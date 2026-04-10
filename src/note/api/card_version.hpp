@@ -169,15 +169,15 @@ struct CardVersion {
 #ifndef NOTE_NO_BUFFERED
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
-            rsp.board = reader_->get_string("board");
-            rsp.cell = reader_->get_bool("cell");
-            rsp.device = reader_->get_string("device");
-            rsp.gps = reader_->get_bool("gps");
-            rsp.name = reader_->get_string("name");
-            rsp.sku = reader_->get_string("sku");
-            rsp.version = reader_->get_string("version");
+            if (reader_->has("board")) rsp.board = reader_->get_string("board");
+            if (reader_->has("cell")) rsp.cell = reader_->get_bool("cell");
+            if (reader_->has("device")) rsp.device = reader_->get_string("device");
+            if (reader_->has("gps")) rsp.gps = reader_->get_bool("gps");
+            if (reader_->has("name")) rsp.name = reader_->get_string("name");
+            if (reader_->has("sku")) rsp.sku = reader_->get_string("sku");
+            if (reader_->has("version")) rsp.version = reader_->get_string("version");
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
-            rsp.wifi = reader_->get_bool("wifi");
+            if (reader_->has("wifi")) rsp.wifi = reader_->get_bool("wifi");
 #endif
             rsp.body_ = reader_->get_object("body");
             rsp.reader_ = std::move(reader_);
@@ -192,15 +192,15 @@ struct CardVersion {
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
         static Response parse(const JsonReader& reader_) {
             Response rsp;
-            rsp.board = reader_.get_string("board");
-            rsp.cell = reader_.get_bool("cell");
-            rsp.device = reader_.get_string("device");
-            rsp.gps = reader_.get_bool("gps");
-            rsp.name = reader_.get_string("name");
-            rsp.sku = reader_.get_string("sku");
-            rsp.version = reader_.get_string("version");
+            if (reader_.has("board")) rsp.board = reader_.get_string("board");
+            if (reader_.has("cell")) rsp.cell = reader_.get_bool("cell");
+            if (reader_.has("device")) rsp.device = reader_.get_string("device");
+            if (reader_.has("gps")) rsp.gps = reader_.get_bool("gps");
+            if (reader_.has("name")) rsp.name = reader_.get_string("name");
+            if (reader_.has("sku")) rsp.sku = reader_.get_string("sku");
+            if (reader_.has("version")) rsp.version = reader_.get_string("version");
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
-            rsp.wifi = reader_.get_bool("wifi");
+            if (reader_.has("wifi")) rsp.wifi = reader_.get_bool("wifi");
 #endif
             rsp.body_ = reader_.get_object("body");
             return rsp;

@@ -155,8 +155,8 @@ struct CardCarrier {
 #ifndef NOTE_NO_BUFFERED
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
-            rsp.charging = reader_->get_bool("charging");
-            rsp.mode = reader_->get_string("mode");
+            if (reader_->has("charging")) rsp.charging = reader_->get_bool("charging");
+            if (reader_->has("mode")) rsp.mode = reader_->get_string("mode");
             rsp.reader_ = std::move(reader_);
             return rsp;
         }
@@ -166,8 +166,8 @@ struct CardCarrier {
         // or the caller must consume all string fields before the reader is reused.
         static Response parse(const JsonReader& reader_) {
             Response rsp;
-            rsp.charging = reader_.get_bool("charging");
-            rsp.mode = reader_.get_string("mode");
+            if (reader_.has("charging")) rsp.charging = reader_.get_bool("charging");
+            if (reader_.has("mode")) rsp.mode = reader_.get_string("mode");
             return rsp;
         }
 #endif // !NOTE_NO_BUFFERED

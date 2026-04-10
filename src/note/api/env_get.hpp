@@ -191,9 +191,9 @@ struct EnvGet {
 #ifndef NOTE_NO_BUFFERED
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
-            rsp.text = reader_->get_string("text");
+            if (reader_->has("text")) rsp.text = reader_->get_string("text");
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-            rsp.time = reader_->get_int("time");
+            if (reader_->has("time")) rsp.time = reader_->get_int("time");
 #endif
             rsp.body_ = reader_->get_object("body");
             rsp.reader_ = std::move(reader_);
@@ -208,9 +208,9 @@ struct EnvGet {
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
         static Response parse(const JsonReader& reader_) {
             Response rsp;
-            rsp.text = reader_.get_string("text");
+            if (reader_.has("text")) rsp.text = reader_.get_string("text");
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-            rsp.time = reader_.get_int("time");
+            if (reader_.has("time")) rsp.time = reader_.get_int("time");
 #endif
             rsp.body_ = reader_.get_object("body");
             return rsp;

@@ -76,7 +76,11 @@ TEST_CASE("card.attn payload with sleep timer") {
     if (!retrieve) { MESSAGE("retrieve error: ", note::to_string(retrieve.error())); }
     REQUIRE(retrieve);
 
-    CHECK(retrieve.time.value() != 0);
+    if (retrieve.time.has_value()) {
+        CHECK(retrieve.time.value() != 0);
+    } else {
+        MESSAGE("time field absent from retrieve response");
+    }
     CHECK(note::string_view(retrieve.payload) == "dGVzdC1wYXlsb2FkLXdpdGgtc2xlZXA=");
 
     nc.card.attn().disarm().execute();

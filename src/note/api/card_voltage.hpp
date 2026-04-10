@@ -345,19 +345,19 @@ struct CardVoltage {
 #ifndef NOTE_NO_BUFFERED
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
-                rsp.daily = reader_->get_double("daily");
-                rsp.hours = reader_->get_int("hours");
-                rsp.minutes = reader_->get_int("minutes");
-                rsp.mode = reader_->get_string("mode");
-                rsp.monthly = reader_->get_double("monthly");
+                if (reader_->has("daily")) rsp.daily = reader_->get_double("daily");
+                if (reader_->has("hours")) rsp.hours = reader_->get_int("hours");
+                if (reader_->has("minutes")) rsp.minutes = reader_->get_int("minutes");
+                if (reader_->has("mode")) rsp.mode = reader_->get_string("mode");
+                if (reader_->has("monthly")) rsp.monthly = reader_->get_double("monthly");
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
-                rsp.usb = reader_->get_bool("usb");
+                if (reader_->has("usb")) rsp.usb = reader_->get_bool("usb");
 #endif
-                rsp.value = reader_->get_double("value");
-                rsp.vavg = reader_->get_double("vavg");
-                rsp.vmax = reader_->get_double("vmax");
-                rsp.vmin = reader_->get_double("vmin");
-                rsp.weekly = reader_->get_double("weekly");
+                if (reader_->has("value")) rsp.value = reader_->get_double("value");
+                if (reader_->has("vavg")) rsp.vavg = reader_->get_double("vavg");
+                if (reader_->has("vmax")) rsp.vmax = reader_->get_double("vmax");
+                if (reader_->has("vmin")) rsp.vmin = reader_->get_double("vmin");
+                if (reader_->has("weekly")) rsp.weekly = reader_->get_double("weekly");
                 rsp.reader_ = std::move(reader_);
                 return rsp;
             }
@@ -370,19 +370,19 @@ struct CardVoltage {
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
             static Response parse(const JsonReader& reader_) {
                 Response rsp;
-                rsp.daily = reader_.get_double("daily");
-                rsp.hours = reader_.get_int("hours");
-                rsp.minutes = reader_.get_int("minutes");
-                rsp.mode = reader_.get_string("mode");
-                rsp.monthly = reader_.get_double("monthly");
+                if (reader_.has("daily")) rsp.daily = reader_.get_double("daily");
+                if (reader_.has("hours")) rsp.hours = reader_.get_int("hours");
+                if (reader_.has("minutes")) rsp.minutes = reader_.get_int("minutes");
+                if (reader_.has("mode")) rsp.mode = reader_.get_string("mode");
+                if (reader_.has("monthly")) rsp.monthly = reader_.get_double("monthly");
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
-                rsp.usb = reader_.get_bool("usb");
+                if (reader_.has("usb")) rsp.usb = reader_.get_bool("usb");
 #endif
-                rsp.value = reader_.get_double("value");
-                rsp.vavg = reader_.get_double("vavg");
-                rsp.vmax = reader_.get_double("vmax");
-                rsp.vmin = reader_.get_double("vmin");
-                rsp.weekly = reader_.get_double("weekly");
+                if (reader_.has("value")) rsp.value = reader_.get_double("value");
+                if (reader_.has("vavg")) rsp.vavg = reader_.get_double("vavg");
+                if (reader_.has("vmax")) rsp.vmax = reader_.get_double("vmax");
+                if (reader_.has("vmin")) rsp.vmin = reader_.get_double("vmin");
+                if (reader_.has("weekly")) rsp.weekly = reader_.get_double("weekly");
                 return rsp;
             }
 #pragma GCC diagnostic pop
@@ -981,19 +981,19 @@ struct CardVoltage {
 #ifndef NOTE_NO_BUFFERED
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
-                rsp.daily = reader_->get_double("daily");
-                rsp.hours = reader_->get_int("hours");
-                rsp.minutes = reader_->get_int("minutes");
-                rsp.mode = reader_->get_string("mode");
-                rsp.monthly = reader_->get_double("monthly");
+                if (reader_->has("daily")) rsp.daily = reader_->get_double("daily");
+                if (reader_->has("hours")) rsp.hours = reader_->get_int("hours");
+                if (reader_->has("minutes")) rsp.minutes = reader_->get_int("minutes");
+                if (reader_->has("mode")) rsp.mode = reader_->get_string("mode");
+                if (reader_->has("monthly")) rsp.monthly = reader_->get_double("monthly");
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
-                rsp.usb = reader_->get_bool("usb");
+                if (reader_->has("usb")) rsp.usb = reader_->get_bool("usb");
 #endif
-                rsp.value = reader_->get_double("value");
-                rsp.vavg = reader_->get_double("vavg");
-                rsp.vmax = reader_->get_double("vmax");
-                rsp.vmin = reader_->get_double("vmin");
-                rsp.weekly = reader_->get_double("weekly");
+                if (reader_->has("value")) rsp.value = reader_->get_double("value");
+                if (reader_->has("vavg")) rsp.vavg = reader_->get_double("vavg");
+                if (reader_->has("vmax")) rsp.vmax = reader_->get_double("vmax");
+                if (reader_->has("vmin")) rsp.vmin = reader_->get_double("vmin");
+                if (reader_->has("weekly")) rsp.weekly = reader_->get_double("weekly");
                 rsp.reader_ = std::move(reader_);
                 return rsp;
             }
@@ -1006,19 +1006,19 @@ struct CardVoltage {
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
             static Response parse(const JsonReader& reader_) {
                 Response rsp;
-                rsp.daily = reader_.get_double("daily");
-                rsp.hours = reader_.get_int("hours");
-                rsp.minutes = reader_.get_int("minutes");
-                rsp.mode = reader_.get_string("mode");
-                rsp.monthly = reader_.get_double("monthly");
+                if (reader_.has("daily")) rsp.daily = reader_.get_double("daily");
+                if (reader_.has("hours")) rsp.hours = reader_.get_int("hours");
+                if (reader_.has("minutes")) rsp.minutes = reader_.get_int("minutes");
+                if (reader_.has("mode")) rsp.mode = reader_.get_string("mode");
+                if (reader_.has("monthly")) rsp.monthly = reader_.get_double("monthly");
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
-                rsp.usb = reader_.get_bool("usb");
+                if (reader_.has("usb")) rsp.usb = reader_.get_bool("usb");
 #endif
-                rsp.value = reader_.get_double("value");
-                rsp.vavg = reader_.get_double("vavg");
-                rsp.vmax = reader_.get_double("vmax");
-                rsp.vmin = reader_.get_double("vmin");
-                rsp.weekly = reader_.get_double("weekly");
+                if (reader_.has("value")) rsp.value = reader_.get_double("value");
+                if (reader_.has("vavg")) rsp.vavg = reader_.get_double("vavg");
+                if (reader_.has("vmax")) rsp.vmax = reader_.get_double("vmax");
+                if (reader_.has("vmin")) rsp.vmin = reader_.get_double("vmin");
+                if (reader_.has("weekly")) rsp.weekly = reader_.get_double("weekly");
                 return rsp;
             }
 #pragma GCC diagnostic pop

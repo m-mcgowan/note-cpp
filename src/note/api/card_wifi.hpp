@@ -187,10 +187,10 @@ struct CardWifi {
 #ifndef NOTE_NO_BUFFERED
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
-            rsp.secure = reader_->get_bool("secure");
-            rsp.security = reader_->get_string("security");
-            rsp.ssid = reader_->get_string("ssid");
-            rsp.version = reader_->get_string("version");
+            if (reader_->has("secure")) rsp.secure = reader_->get_bool("secure");
+            if (reader_->has("security")) rsp.security = reader_->get_string("security");
+            if (reader_->has("ssid")) rsp.ssid = reader_->get_string("ssid");
+            if (reader_->has("version")) rsp.version = reader_->get_string("version");
             rsp.reader_ = std::move(reader_);
             return rsp;
         }
@@ -200,10 +200,10 @@ struct CardWifi {
         // or the caller must consume all string fields before the reader is reused.
         static Response parse(const JsonReader& reader_) {
             Response rsp;
-            rsp.secure = reader_.get_bool("secure");
-            rsp.security = reader_.get_string("security");
-            rsp.ssid = reader_.get_string("ssid");
-            rsp.version = reader_.get_string("version");
+            if (reader_.has("secure")) rsp.secure = reader_.get_bool("secure");
+            if (reader_.has("security")) rsp.security = reader_.get_string("security");
+            if (reader_.has("ssid")) rsp.ssid = reader_.get_string("ssid");
+            if (reader_.has("version")) rsp.version = reader_.get_string("version");
             return rsp;
         }
 #endif // !NOTE_NO_BUFFERED

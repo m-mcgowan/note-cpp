@@ -119,7 +119,7 @@ struct EnvTemplate {
 #ifndef NOTE_NO_BUFFERED
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
-            rsp.bytes = reader_->get_int("bytes");
+            if (reader_->has("bytes")) rsp.bytes = reader_->get_int("bytes");
             rsp.reader_ = std::move(reader_);
             return rsp;
         }
@@ -129,7 +129,7 @@ struct EnvTemplate {
         // or the caller must consume all string fields before the reader is reused.
         static Response parse(const JsonReader& reader_) {
             Response rsp;
-            rsp.bytes = reader_.get_int("bytes");
+            if (reader_.has("bytes")) rsp.bytes = reader_.get_int("bytes");
             return rsp;
         }
 #endif // !NOTE_NO_BUFFERED

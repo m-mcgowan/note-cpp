@@ -100,8 +100,8 @@ struct NtnStatus {
 #ifndef NOTE_NO_BUFFERED
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
-            rsp.err = reader_->get_string("err");
-            rsp.status = reader_->get_string("status");
+            if (reader_->has("err")) rsp.err = reader_->get_string("err");
+            if (reader_->has("status")) rsp.status = reader_->get_string("status");
             rsp.reader_ = std::move(reader_);
             return rsp;
         }
@@ -111,8 +111,8 @@ struct NtnStatus {
         // or the caller must consume all string fields before the reader is reused.
         static Response parse(const JsonReader& reader_) {
             Response rsp;
-            rsp.err = reader_.get_string("err");
-            rsp.status = reader_.get_string("status");
+            if (reader_.has("err")) rsp.err = reader_.get_string("err");
+            if (reader_.has("status")) rsp.status = reader_.get_string("status");
             return rsp;
         }
 #endif // !NOTE_NO_BUFFERED

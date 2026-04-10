@@ -436,6 +436,8 @@ TEST_CASE("debug wire output captures request and response") {
 TEST_SUITE("fw>=9.1.1") {
 TEST_CASE("note.add limit field (9.1.1+)") {
     auto& nc = notecard_api();
+    // Clear any leftover notes from previous runs
+    nc.file.remove("test-fw-gate.qo").execute();
     auto rsp = nc.note.add().file("test-fw-gate.qo").limit(100).execute();
     if (!rsp) { MESSAGE("note.add limit: ", note::to_string(rsp.error())); }
     CHECK(rsp);

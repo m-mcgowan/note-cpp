@@ -286,13 +286,13 @@ struct NoteTemplate {
 #ifndef NOTE_NO_BUFFERED
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
-                rsp.bytes = reader_->get_int("bytes");
+                if (reader_->has("bytes")) rsp.bytes = reader_->get_int("bytes");
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
-                rsp.format = reader_->get_string("format");
+                if (reader_->has("format")) rsp.format = reader_->get_string("format");
 #endif
-                rsp.length = reader_->get_int("length");
+                if (reader_->has("length")) rsp.length = reader_->get_int("length");
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
-                rsp.template_ = reader_->get_bool("template");
+                if (reader_->has("template")) rsp.template_ = reader_->get_bool("template");
 #endif
                 rsp.body_ = reader_->get_object("body");
                 rsp.reader_ = std::move(reader_);
@@ -307,13 +307,13 @@ struct NoteTemplate {
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
             static Response parse(const JsonReader& reader_) {
                 Response rsp;
-                rsp.bytes = reader_.get_int("bytes");
+                if (reader_.has("bytes")) rsp.bytes = reader_.get_int("bytes");
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
-                rsp.format = reader_.get_string("format");
+                if (reader_.has("format")) rsp.format = reader_.get_string("format");
 #endif
-                rsp.length = reader_.get_int("length");
+                if (reader_.has("length")) rsp.length = reader_.get_int("length");
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
-                rsp.template_ = reader_.get_bool("template");
+                if (reader_.has("template")) rsp.template_ = reader_.get_bool("template");
 #endif
                 rsp.body_ = reader_.get_object("body");
                 return rsp;
@@ -830,13 +830,13 @@ struct NoteTemplate {
 #ifndef NOTE_NO_BUFFERED
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
-                rsp.bytes = reader_->get_int("bytes");
+                if (reader_->has("bytes")) rsp.bytes = reader_->get_int("bytes");
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
-                rsp.format = reader_->get_string("format");
+                if (reader_->has("format")) rsp.format = reader_->get_string("format");
 #endif
-                rsp.length = reader_->get_int("length");
+                if (reader_->has("length")) rsp.length = reader_->get_int("length");
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
-                rsp.template_ = reader_->get_bool("template");
+                if (reader_->has("template")) rsp.template_ = reader_->get_bool("template");
 #endif
                 rsp.body_ = reader_->get_object("body");
                 rsp.reader_ = std::move(reader_);
@@ -851,13 +851,13 @@ struct NoteTemplate {
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
             static Response parse(const JsonReader& reader_) {
                 Response rsp;
-                rsp.bytes = reader_.get_int("bytes");
+                if (reader_.has("bytes")) rsp.bytes = reader_.get_int("bytes");
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
-                rsp.format = reader_.get_string("format");
+                if (reader_.has("format")) rsp.format = reader_.get_string("format");
 #endif
-                rsp.length = reader_.get_int("length");
+                if (reader_.has("length")) rsp.length = reader_.get_int("length");
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
-                rsp.template_ = reader_.get_bool("template");
+                if (reader_.has("template")) rsp.template_ = reader_.get_bool("template");
 #endif
                 rsp.body_ = reader_.get_object("body");
                 return rsp;

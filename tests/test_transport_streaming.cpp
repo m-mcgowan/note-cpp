@@ -707,20 +707,29 @@ TEST_CASE("reset: forces re-initialization on next transact") {
 
 // ── transact_dispatch tests (non-template path) ────────────────────────────
 
+namespace {
+struct DispatchTestRsp {
+    note::ResponseField<int32_t> value;
+    note::ResponseField<note::string_view> name;
+};
+} // namespace
+
 TEST_CASE("transact_dispatch: basic response via SaxDispatch") {
     MockHal hal;
     StreamingTransport transport(hal);
     hal.queue_response(R"({"value":42,"name":"test"})");
 
-    struct {
-        int32_t value = 0;
-        note::string_view name;
-    } rsp;
+    DispatchTestRsp rsp;
 
+    // ResponseField<T> is non-standard-layout (user-provided ctors), but offsetof
+    // works correctly on all implementations. Suppress the pedantic warning.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
     note::FieldDesc fields[] = {
-        {"value", static_cast<uint16_t>(offsetof(decltype(rsp), value)), note::FieldType::Int32},
-        {"name", static_cast<uint16_t>(offsetof(decltype(rsp), name)), note::FieldType::String},
+        {"value", static_cast<uint16_t>(offsetof(DispatchTestRsp, value)), note::FieldType::Int32},
+        {"name", static_cast<uint16_t>(offsetof(DispatchTestRsp, name)), note::FieldType::String},
     };
+#pragma GCC diagnostic pop
 
     char pool_buf[64];
     note::MonotonicArena arena(pool_buf);

@@ -128,16 +128,16 @@ struct HubGet {
 #ifndef NOTE_NO_BUFFERED
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
-            rsp.device = reader_->get_string("device");
-            rsp.host = reader_->get_string("host");
-            rsp.inbound = reader_->get_int("inbound");
-            rsp.mode = reader_->get_string("mode");
-            rsp.outbound = reader_->get_int("outbound");
-            rsp.product = reader_->get_string("product");
-            rsp.sn = reader_->get_string("sn");
-            rsp.sync = reader_->get_bool("sync");
-            rsp.vinbound = reader_->get_string("vinbound");
-            rsp.voutbound = reader_->get_string("voutbound");
+            if (reader_->has("device")) rsp.device = reader_->get_string("device");
+            if (reader_->has("host")) rsp.host = reader_->get_string("host");
+            if (reader_->has("inbound")) rsp.inbound = reader_->get_int("inbound");
+            if (reader_->has("mode")) rsp.mode = reader_->get_string("mode");
+            if (reader_->has("outbound")) rsp.outbound = reader_->get_int("outbound");
+            if (reader_->has("product")) rsp.product = reader_->get_string("product");
+            if (reader_->has("sn")) rsp.sn = reader_->get_string("sn");
+            if (reader_->has("sync")) rsp.sync = reader_->get_bool("sync");
+            if (reader_->has("vinbound")) rsp.vinbound = reader_->get_string("vinbound");
+            if (reader_->has("voutbound")) rsp.voutbound = reader_->get_string("voutbound");
             rsp.reader_ = std::move(reader_);
             return rsp;
         }
@@ -147,16 +147,16 @@ struct HubGet {
         // or the caller must consume all string fields before the reader is reused.
         static Response parse(const JsonReader& reader_) {
             Response rsp;
-            rsp.device = reader_.get_string("device");
-            rsp.host = reader_.get_string("host");
-            rsp.inbound = reader_.get_int("inbound");
-            rsp.mode = reader_.get_string("mode");
-            rsp.outbound = reader_.get_int("outbound");
-            rsp.product = reader_.get_string("product");
-            rsp.sn = reader_.get_string("sn");
-            rsp.sync = reader_.get_bool("sync");
-            rsp.vinbound = reader_.get_string("vinbound");
-            rsp.voutbound = reader_.get_string("voutbound");
+            if (reader_.has("device")) rsp.device = reader_.get_string("device");
+            if (reader_.has("host")) rsp.host = reader_.get_string("host");
+            if (reader_.has("inbound")) rsp.inbound = reader_.get_int("inbound");
+            if (reader_.has("mode")) rsp.mode = reader_.get_string("mode");
+            if (reader_.has("outbound")) rsp.outbound = reader_.get_int("outbound");
+            if (reader_.has("product")) rsp.product = reader_.get_string("product");
+            if (reader_.has("sn")) rsp.sn = reader_.get_string("sn");
+            if (reader_.has("sync")) rsp.sync = reader_.get_bool("sync");
+            if (reader_.has("vinbound")) rsp.vinbound = reader_.get_string("vinbound");
+            if (reader_.has("voutbound")) rsp.voutbound = reader_.get_string("voutbound");
             return rsp;
         }
 #endif // !NOTE_NO_BUFFERED

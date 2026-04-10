@@ -149,17 +149,17 @@ struct CardUsageTest {
 #ifndef NOTE_NO_BUFFERED
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
-            rsp.bytesPerDay = reader_->get_int("bytes_per_day");
-            rsp.bytesReceived = reader_->get_int("bytes_received");
-            rsp.bytesSent = reader_->get_int("bytes_sent");
-            rsp.days = reader_->get_int("days");
-            rsp.max = reader_->get_int("max");
-            rsp.notesReceived = reader_->get_int("notes_received");
-            rsp.notesSent = reader_->get_int("notes_sent");
-            rsp.seconds = reader_->get_int("seconds");
-            rsp.sessionsSecure = reader_->get_int("sessions_secure");
-            rsp.sessionsStandard = reader_->get_int("sessions_standard");
-            rsp.time = reader_->get_int("time");
+            if (reader_->has("bytes_per_day")) rsp.bytesPerDay = reader_->get_int("bytes_per_day");
+            if (reader_->has("bytes_received")) rsp.bytesReceived = reader_->get_int("bytes_received");
+            if (reader_->has("bytes_sent")) rsp.bytesSent = reader_->get_int("bytes_sent");
+            if (reader_->has("days")) rsp.days = reader_->get_int("days");
+            if (reader_->has("max")) rsp.max = reader_->get_int("max");
+            if (reader_->has("notes_received")) rsp.notesReceived = reader_->get_int("notes_received");
+            if (reader_->has("notes_sent")) rsp.notesSent = reader_->get_int("notes_sent");
+            if (reader_->has("seconds")) rsp.seconds = reader_->get_int("seconds");
+            if (reader_->has("sessions_secure")) rsp.sessionsSecure = reader_->get_int("sessions_secure");
+            if (reader_->has("sessions_standard")) rsp.sessionsStandard = reader_->get_int("sessions_standard");
+            if (reader_->has("time")) rsp.time = reader_->get_int("time");
             rsp.reader_ = std::move(reader_);
             return rsp;
         }
@@ -169,17 +169,17 @@ struct CardUsageTest {
         // or the caller must consume all string fields before the reader is reused.
         static Response parse(const JsonReader& reader_) {
             Response rsp;
-            rsp.bytesPerDay = reader_.get_int("bytes_per_day");
-            rsp.bytesReceived = reader_.get_int("bytes_received");
-            rsp.bytesSent = reader_.get_int("bytes_sent");
-            rsp.days = reader_.get_int("days");
-            rsp.max = reader_.get_int("max");
-            rsp.notesReceived = reader_.get_int("notes_received");
-            rsp.notesSent = reader_.get_int("notes_sent");
-            rsp.seconds = reader_.get_int("seconds");
-            rsp.sessionsSecure = reader_.get_int("sessions_secure");
-            rsp.sessionsStandard = reader_.get_int("sessions_standard");
-            rsp.time = reader_.get_int("time");
+            if (reader_.has("bytes_per_day")) rsp.bytesPerDay = reader_.get_int("bytes_per_day");
+            if (reader_.has("bytes_received")) rsp.bytesReceived = reader_.get_int("bytes_received");
+            if (reader_.has("bytes_sent")) rsp.bytesSent = reader_.get_int("bytes_sent");
+            if (reader_.has("days")) rsp.days = reader_.get_int("days");
+            if (reader_.has("max")) rsp.max = reader_.get_int("max");
+            if (reader_.has("notes_received")) rsp.notesReceived = reader_.get_int("notes_received");
+            if (reader_.has("notes_sent")) rsp.notesSent = reader_.get_int("notes_sent");
+            if (reader_.has("seconds")) rsp.seconds = reader_.get_int("seconds");
+            if (reader_.has("sessions_secure")) rsp.sessionsSecure = reader_.get_int("sessions_secure");
+            if (reader_.has("sessions_standard")) rsp.sessionsStandard = reader_.get_int("sessions_standard");
+            if (reader_.has("time")) rsp.time = reader_.get_int("time");
             return rsp;
         }
 #endif // !NOTE_NO_BUFFERED

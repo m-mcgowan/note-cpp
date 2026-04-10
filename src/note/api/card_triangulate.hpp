@@ -258,12 +258,12 @@ struct CardTriangulate {
 #ifndef NOTE_NO_BUFFERED
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
-            rsp.length = reader_->get_int("length");
-            rsp.mode = reader_->get_string("mode");
-            rsp.motion = reader_->get_int("motion");
-            rsp.on = reader_->get_bool("on");
-            rsp.time = reader_->get_int("time");
-            rsp.usb = reader_->get_bool("usb");
+            if (reader_->has("length")) rsp.length = reader_->get_int("length");
+            if (reader_->has("mode")) rsp.mode = reader_->get_string("mode");
+            if (reader_->has("motion")) rsp.motion = reader_->get_int("motion");
+            if (reader_->has("on")) rsp.on = reader_->get_bool("on");
+            if (reader_->has("time")) rsp.time = reader_->get_int("time");
+            if (reader_->has("usb")) rsp.usb = reader_->get_bool("usb");
             rsp.reader_ = std::move(reader_);
             return rsp;
         }
@@ -273,12 +273,12 @@ struct CardTriangulate {
         // or the caller must consume all string fields before the reader is reused.
         static Response parse(const JsonReader& reader_) {
             Response rsp;
-            rsp.length = reader_.get_int("length");
-            rsp.mode = reader_.get_string("mode");
-            rsp.motion = reader_.get_int("motion");
-            rsp.on = reader_.get_bool("on");
-            rsp.time = reader_.get_int("time");
-            rsp.usb = reader_.get_bool("usb");
+            if (reader_.has("length")) rsp.length = reader_.get_int("length");
+            if (reader_.has("mode")) rsp.mode = reader_.get_string("mode");
+            if (reader_.has("motion")) rsp.motion = reader_.get_int("motion");
+            if (reader_.has("on")) rsp.on = reader_.get_bool("on");
+            if (reader_.has("time")) rsp.time = reader_.get_int("time");
+            if (reader_.has("usb")) rsp.usb = reader_.get_bool("usb");
             return rsp;
         }
 #endif // !NOTE_NO_BUFFERED

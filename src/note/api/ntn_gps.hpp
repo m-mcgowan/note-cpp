@@ -121,8 +121,8 @@ struct NtnGps {
 #ifndef NOTE_NO_BUFFERED
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
-            rsp.off = reader_->get_bool("off");
-            rsp.on = reader_->get_bool("on");
+            if (reader_->has("off")) rsp.off = reader_->get_bool("off");
+            if (reader_->has("on")) rsp.on = reader_->get_bool("on");
             rsp.reader_ = std::move(reader_);
             return rsp;
         }
@@ -132,8 +132,8 @@ struct NtnGps {
         // or the caller must consume all string fields before the reader is reused.
         static Response parse(const JsonReader& reader_) {
             Response rsp;
-            rsp.off = reader_.get_bool("off");
-            rsp.on = reader_.get_bool("on");
+            if (reader_.has("off")) rsp.off = reader_.get_bool("off");
+            if (reader_.has("on")) rsp.on = reader_.get_bool("on");
             return rsp;
         }
 #endif // !NOTE_NO_BUFFERED

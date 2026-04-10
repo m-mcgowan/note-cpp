@@ -200,12 +200,12 @@ struct CardLocationTrack {
 #ifndef NOTE_NO_BUFFERED
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
-            rsp.file = reader_->get_string("file");
-            rsp.heartbeat = reader_->get_bool("heartbeat");
-            rsp.minutes = reader_->get_int("minutes");
-            rsp.seconds = reader_->get_int("seconds");
-            rsp.start = reader_->get_bool("start");
-            rsp.stop = reader_->get_bool("stop");
+            if (reader_->has("file")) rsp.file = reader_->get_string("file");
+            if (reader_->has("heartbeat")) rsp.heartbeat = reader_->get_bool("heartbeat");
+            if (reader_->has("minutes")) rsp.minutes = reader_->get_int("minutes");
+            if (reader_->has("seconds")) rsp.seconds = reader_->get_int("seconds");
+            if (reader_->has("start")) rsp.start = reader_->get_bool("start");
+            if (reader_->has("stop")) rsp.stop = reader_->get_bool("stop");
             rsp.reader_ = std::move(reader_);
             return rsp;
         }
@@ -215,12 +215,12 @@ struct CardLocationTrack {
         // or the caller must consume all string fields before the reader is reused.
         static Response parse(const JsonReader& reader_) {
             Response rsp;
-            rsp.file = reader_.get_string("file");
-            rsp.heartbeat = reader_.get_bool("heartbeat");
-            rsp.minutes = reader_.get_int("minutes");
-            rsp.seconds = reader_.get_int("seconds");
-            rsp.start = reader_.get_bool("start");
-            rsp.stop = reader_.get_bool("stop");
+            if (reader_.has("file")) rsp.file = reader_.get_string("file");
+            if (reader_.has("heartbeat")) rsp.heartbeat = reader_.get_bool("heartbeat");
+            if (reader_.has("minutes")) rsp.minutes = reader_.get_int("minutes");
+            if (reader_.has("seconds")) rsp.seconds = reader_.get_int("seconds");
+            if (reader_.has("start")) rsp.start = reader_.get_bool("start");
+            if (reader_.has("stop")) rsp.stop = reader_.get_bool("stop");
             return rsp;
         }
 #endif // !NOTE_NO_BUFFERED

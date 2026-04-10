@@ -351,12 +351,12 @@ struct WebPost {
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
-            rsp.cobs = reader_->get_int("cobs");
+            if (reader_->has("cobs")) rsp.cobs = reader_->get_int("cobs");
 #endif
-            rsp.length = reader_->get_int("length");
-            rsp.payload = reader_->get_string("payload");
-            rsp.result = reader_->get_int("result");
-            rsp.status = reader_->get_string("status");
+            if (reader_->has("length")) rsp.length = reader_->get_int("length");
+            if (reader_->has("payload")) rsp.payload = reader_->get_string("payload");
+            if (reader_->has("result")) rsp.result = reader_->get_int("result");
+            if (reader_->has("status")) rsp.status = reader_->get_string("status");
             rsp.body_ = reader_->get_object("body");
             rsp.reader_ = std::move(reader_);
             return rsp;
@@ -371,12 +371,12 @@ struct WebPost {
         static Response parse(const JsonReader& reader_) {
             Response rsp;
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
-            rsp.cobs = reader_.get_int("cobs");
+            if (reader_.has("cobs")) rsp.cobs = reader_.get_int("cobs");
 #endif
-            rsp.length = reader_.get_int("length");
-            rsp.payload = reader_.get_string("payload");
-            rsp.result = reader_.get_int("result");
-            rsp.status = reader_.get_string("status");
+            if (reader_.has("length")) rsp.length = reader_.get_int("length");
+            if (reader_.has("payload")) rsp.payload = reader_.get_string("payload");
+            if (reader_.has("result")) rsp.result = reader_.get_int("result");
+            if (reader_.has("status")) rsp.status = reader_.get_string("status");
             rsp.body_ = reader_.get_object("body");
             return rsp;
         }

@@ -125,14 +125,14 @@ struct CardLocation {
 #ifndef NOTE_NO_BUFFERED
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
-            rsp.count = reader_->get_int("count");
-            rsp.dop = reader_->get_double("dop");
-            rsp.lat = reader_->get_double("lat");
-            rsp.lon = reader_->get_double("lon");
-            rsp.max = reader_->get_int("max");
-            rsp.mode = reader_->get_string("mode");
-            rsp.status = reader_->get_string("status");
-            rsp.time = reader_->get_int("time");
+            if (reader_->has("count")) rsp.count = reader_->get_int("count");
+            if (reader_->has("dop")) rsp.dop = reader_->get_double("dop");
+            if (reader_->has("lat")) rsp.lat = reader_->get_double("lat");
+            if (reader_->has("lon")) rsp.lon = reader_->get_double("lon");
+            if (reader_->has("max")) rsp.max = reader_->get_int("max");
+            if (reader_->has("mode")) rsp.mode = reader_->get_string("mode");
+            if (reader_->has("status")) rsp.status = reader_->get_string("status");
+            if (reader_->has("time")) rsp.time = reader_->get_int("time");
             rsp.reader_ = std::move(reader_);
             return rsp;
         }
@@ -142,14 +142,14 @@ struct CardLocation {
         // or the caller must consume all string fields before the reader is reused.
         static Response parse(const JsonReader& reader_) {
             Response rsp;
-            rsp.count = reader_.get_int("count");
-            rsp.dop = reader_.get_double("dop");
-            rsp.lat = reader_.get_double("lat");
-            rsp.lon = reader_.get_double("lon");
-            rsp.max = reader_.get_int("max");
-            rsp.mode = reader_.get_string("mode");
-            rsp.status = reader_.get_string("status");
-            rsp.time = reader_.get_int("time");
+            if (reader_.has("count")) rsp.count = reader_.get_int("count");
+            if (reader_.has("dop")) rsp.dop = reader_.get_double("dop");
+            if (reader_.has("lat")) rsp.lat = reader_.get_double("lat");
+            if (reader_.has("lon")) rsp.lon = reader_.get_double("lon");
+            if (reader_.has("max")) rsp.max = reader_.get_int("max");
+            if (reader_.has("mode")) rsp.mode = reader_.get_string("mode");
+            if (reader_.has("status")) rsp.status = reader_.get_string("status");
+            if (reader_.has("time")) rsp.time = reader_.get_int("time");
             return rsp;
         }
 #endif // !NOTE_NO_BUFFERED

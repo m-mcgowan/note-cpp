@@ -94,7 +94,7 @@ struct CardIllumination {
 #ifndef NOTE_NO_BUFFERED
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
-            rsp.value = reader_->get_double("value");
+            if (reader_->has("value")) rsp.value = reader_->get_double("value");
             rsp.reader_ = std::move(reader_);
             return rsp;
         }
@@ -104,7 +104,7 @@ struct CardIllumination {
         // or the caller must consume all string fields before the reader is reused.
         static Response parse(const JsonReader& reader_) {
             Response rsp;
-            rsp.value = reader_.get_double("value");
+            if (reader_.has("value")) rsp.value = reader_.get_double("value");
             return rsp;
         }
 #endif // !NOTE_NO_BUFFERED

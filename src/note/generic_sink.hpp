@@ -13,6 +13,7 @@
 /// rather than RAM. Reads go through pgm_read helpers on Harvard platforms.
 
 #include <note/body_handler.hpp>
+#include <note/field.hpp>
 #include <note/field_desc.hpp>
 #include <note/json_sax.hpp>
 #include <note/string_pool.hpp>
@@ -42,7 +43,7 @@ struct GenericResponseSink {
         for (uint8_t i = 0; i < n_fields; ++i) {
             auto d = detail::read_field_desc(&fields[i]);
             if (d.type == FieldType::Bool && detail::flash_key_eq(k, d.name)) {
-                *field_ptr<bool>(d.offset) = v;
+                set_field<bool>(d.offset, v);
                 return;
             }
         }
@@ -53,7 +54,7 @@ struct GenericResponseSink {
         for (uint8_t i = 0; i < n_fields; ++i) {
             auto d = detail::read_field_desc(&fields[i]);
             if (d.type == FieldType::Int32 && detail::flash_key_eq(k, d.name)) {
-                *field_ptr<int32_t>(d.offset) = v;
+                set_field<int32_t>(d.offset, v);
                 return;
             }
         }
@@ -64,7 +65,7 @@ struct GenericResponseSink {
         for (uint8_t i = 0; i < n_fields; ++i) {
             auto d = detail::read_field_desc(&fields[i]);
             if (d.type == FieldType::Double && detail::flash_key_eq(k, d.name)) {
-                *field_ptr<double>(d.offset) = v;
+                set_field<double>(d.offset, v);
                 return;
             }
         }
@@ -75,7 +76,7 @@ struct GenericResponseSink {
         for (uint8_t i = 0; i < n_fields; ++i) {
             auto d = detail::read_field_desc(&fields[i]);
             if (d.type == FieldType::String && detail::flash_key_eq(k, d.name)) {
-                *field_ptr<string_view>(d.offset) = pool->intern(v);
+                set_field<string_view>(d.offset, pool->intern(v));
                 return;
             }
         }
@@ -116,13 +117,13 @@ struct GenericResponseSink {
         for (uint8_t i = 0; i < n_fields; ++i) {
             auto d = detail::read_field_desc(&fields[i]);
             switch (d.type) {
-            case FieldType::Bool:    *field_ptr<bool>(d.offset) = false; break;
-            case FieldType::Int8:    *field_ptr<int8_t>(d.offset) = 0; break;
-            case FieldType::Int16:   *field_ptr<int16_t>(d.offset) = 0; break;
-            case FieldType::Int32:   *field_ptr<int32_t>(d.offset) = 0; break;
-            case FieldType::Float32: *field_ptr<float>(d.offset) = 0.0f; break;
-            case FieldType::Double:  *field_ptr<double>(d.offset) = 0.0; break;
-            case FieldType::String:  *field_ptr<string_view>(d.offset) = {}; break;
+            case FieldType::Bool:    reset_field<bool>(d.offset); break;
+            case FieldType::Int8:    reset_field<int8_t>(d.offset); break;
+            case FieldType::Int16:   reset_field<int16_t>(d.offset); break;
+            case FieldType::Int32:   reset_field<int32_t>(d.offset); break;
+            case FieldType::Float32: reset_field<float>(d.offset); break;
+            case FieldType::Double:  reset_field<double>(d.offset); break;
+            case FieldType::String:  reset_field<string_view>(d.offset); break;
             }
         }
     }
@@ -131,6 +132,20 @@ private:
     template<typename T>
     T* field_ptr(uint16_t offset) {
         return reinterpret_cast<T*>(static_cast<char*>(rsp) + offset);
+    }
+
+    /// Assign a value to a response field at the given offset.
+    /// Writes through ResponseField<T>::operator= so presence is tracked.
+    template<typename T>
+    void set_field(uint16_t offset, T v) {
+        *reinterpret_cast<ResponseField<T>*>(static_cast<char*>(rsp) + offset) = v;
+    }
+
+    /// Reset a response field to its default.
+    template<typename T>
+    void reset_field(uint16_t offset) {
+        auto* rf = reinterpret_cast<ResponseField<T>*>(static_cast<char*>(rsp) + offset);
+        *rf = ResponseField<T>{};
     }
 };
 

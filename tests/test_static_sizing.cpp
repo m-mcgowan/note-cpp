@@ -122,14 +122,13 @@ TEST_CASE("Arena allocate returns nullptr on exhaustion") {
     REQUIRE(p2 == nullptr);
 }
 
-// GenericResponseSink tests — use a plain struct (no ResponseField) to avoid
-// Printable vtable layout issues. Tests the sink dispatch logic directly.
+// GenericResponseSink tests — uses ResponseField<T> to match generated Response structs.
 namespace {
 struct PlainResponse {
-    bool flag = false;
-    int32_t count = 0;
-    double value = 0.0;
-    note::string_view name;
+    note::ResponseField<bool> flag;
+    note::ResponseField<int32_t> count;
+    note::ResponseField<double> value;
+    note::ResponseField<note::string_view> name;
 };
 
 constexpr note::FieldDesc plain_fields[] = {
@@ -156,10 +155,16 @@ TEST_CASE("GenericResponseSink dispatches to correct fields") {
     REQUIRE(rsp.count == 42);
 
     gsink.on_float("value", 3.14);
-    REQUIRE(rsp.value == Approx(3.14));
+    REQUIRE(rsp.value.value() == Approx(3.14));
 
     gsink.on_string("name", "hello");
     REQUIRE(rsp.name == "hello");
+
+    // Presence tracking: all assigned fields should report present
+    REQUIRE(rsp.flag.has_value());
+    REQUIRE(rsp.count.has_value());
+    REQUIRE(rsp.value.has_value());
+    REQUIRE(rsp.name.has_value());
 }
 
 TEST_CASE("GenericResponseSink ignores unknown fields") {
@@ -178,11 +183,17 @@ TEST_CASE("GenericResponseSink ignores unknown fields") {
     // Original fields unchanged
     REQUIRE(rsp.flag == false);
     REQUIRE(rsp.count == 0);
-    REQUIRE(rsp.value == 0.0);
+    REQUIRE(rsp.value.value() == 0.0);
     REQUIRE(rsp.name.empty());
+
+    // Unset fields should not report present
+    REQUIRE_FALSE(rsp.flag.has_value());
+    REQUIRE_FALSE(rsp.count.has_value());
+    REQUIRE_FALSE(rsp.value.has_value());
+    REQUIRE_FALSE(rsp.name.has_value());
 }
 
-TEST_CASE("GenericResponseSink reset clears all fields") {
+TEST_CASE("GenericResponseSink reset clears all fields and presence") {
     char buf[64];
     note::MonotonicArena arena(buf);
     note::StringPool pool(note::arena_allocator(arena));
@@ -192,10 +203,15 @@ TEST_CASE("GenericResponseSink reset clears all fields") {
 
     gsink.on_bool("flag", true);
     gsink.on_int("count", 99);
+    REQUIRE(rsp.flag.has_value());
+    REQUIRE(rsp.count.has_value());
+
     gsink.reset();
 
     REQUIRE(rsp.flag == false);
     REQUIRE(rsp.count == 0);
+    REQUIRE_FALSE(rsp.flag.has_value());
+    REQUIRE_FALSE(rsp.count.has_value());
 }
 
 TEST_CASE("GenericResponseSink handles arena exhaustion gracefully") {

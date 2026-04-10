@@ -98,9 +98,9 @@ struct FileChangesPending {
 #ifndef NOTE_NO_BUFFERED
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
-            rsp.changes = reader_->get_int("changes");
-            rsp.pending = reader_->get_bool("pending");
-            rsp.total = reader_->get_int("total");
+            if (reader_->has("changes")) rsp.changes = reader_->get_int("changes");
+            if (reader_->has("pending")) rsp.pending = reader_->get_bool("pending");
+            if (reader_->has("total")) rsp.total = reader_->get_int("total");
             rsp.reader_ = std::move(reader_);
             return rsp;
         }
@@ -110,9 +110,9 @@ struct FileChangesPending {
         // or the caller must consume all string fields before the reader is reused.
         static Response parse(const JsonReader& reader_) {
             Response rsp;
-            rsp.changes = reader_.get_int("changes");
-            rsp.pending = reader_.get_bool("pending");
-            rsp.total = reader_.get_int("total");
+            if (reader_.has("changes")) rsp.changes = reader_.get_int("changes");
+            if (reader_.has("pending")) rsp.pending = reader_.get_bool("pending");
+            if (reader_.has("total")) rsp.total = reader_.get_int("total");
             return rsp;
         }
 #endif // !NOTE_NO_BUFFERED

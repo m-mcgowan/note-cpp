@@ -294,9 +294,9 @@ struct NoteAdd {
 #ifndef NOTE_NO_BUFFERED
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
-            rsp.noteId = reader_->get_string("note");
-            rsp.template_ = reader_->get_bool("template");
-            rsp.total = reader_->get_int("total");
+            if (reader_->has("note")) rsp.noteId = reader_->get_string("note");
+            if (reader_->has("template")) rsp.template_ = reader_->get_bool("template");
+            if (reader_->has("total")) rsp.total = reader_->get_int("total");
             rsp.reader_ = std::move(reader_);
             return rsp;
         }
@@ -306,9 +306,9 @@ struct NoteAdd {
         // or the caller must consume all string fields before the reader is reused.
         static Response parse(const JsonReader& reader_) {
             Response rsp;
-            rsp.noteId = reader_.get_string("note");
-            rsp.template_ = reader_.get_bool("template");
-            rsp.total = reader_.get_int("total");
+            if (reader_.has("note")) rsp.noteId = reader_.get_string("note");
+            if (reader_.has("template")) rsp.template_ = reader_.get_bool("template");
+            if (reader_.has("total")) rsp.total = reader_.get_int("total");
             return rsp;
         }
 #endif // !NOTE_NO_BUFFERED

@@ -180,12 +180,12 @@ struct CardWirelessPenalty {
 #ifndef NOTE_NO_BUFFERED
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
-                rsp.count = reader_->get_int("count");
-                rsp.minutes = reader_->get_int("minutes");
+                if (reader_->has("count")) rsp.count = reader_->get_int("count");
+                if (reader_->has("minutes")) rsp.minutes = reader_->get_int("minutes");
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-                rsp.seconds = reader_->get_int("seconds");
+                if (reader_->has("seconds")) rsp.seconds = reader_->get_int("seconds");
 #endif
-                rsp.status = reader_->get_string("status");
+                if (reader_->has("status")) rsp.status = reader_->get_string("status");
                 rsp.reader_ = std::move(reader_);
                 return rsp;
             }
@@ -198,12 +198,12 @@ struct CardWirelessPenalty {
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
             static Response parse(const JsonReader& reader_) {
                 Response rsp;
-                rsp.count = reader_.get_int("count");
-                rsp.minutes = reader_.get_int("minutes");
+                if (reader_.has("count")) rsp.count = reader_.get_int("count");
+                if (reader_.has("minutes")) rsp.minutes = reader_.get_int("minutes");
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-                rsp.seconds = reader_.get_int("seconds");
+                if (reader_.has("seconds")) rsp.seconds = reader_.get_int("seconds");
 #endif
-                rsp.status = reader_.get_string("status");
+                if (reader_.has("status")) rsp.status = reader_.get_string("status");
                 return rsp;
             }
 #pragma GCC diagnostic pop
@@ -528,12 +528,12 @@ struct CardWirelessPenalty {
 #ifndef NOTE_NO_BUFFERED
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
-                rsp.count = reader_->get_int("count");
-                rsp.minutes = reader_->get_int("minutes");
+                if (reader_->has("count")) rsp.count = reader_->get_int("count");
+                if (reader_->has("minutes")) rsp.minutes = reader_->get_int("minutes");
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-                rsp.seconds = reader_->get_int("seconds");
+                if (reader_->has("seconds")) rsp.seconds = reader_->get_int("seconds");
 #endif
-                rsp.status = reader_->get_string("status");
+                if (reader_->has("status")) rsp.status = reader_->get_string("status");
                 rsp.reader_ = std::move(reader_);
                 return rsp;
             }
@@ -546,12 +546,12 @@ struct CardWirelessPenalty {
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
             static Response parse(const JsonReader& reader_) {
                 Response rsp;
-                rsp.count = reader_.get_int("count");
-                rsp.minutes = reader_.get_int("minutes");
+                if (reader_.has("count")) rsp.count = reader_.get_int("count");
+                if (reader_.has("minutes")) rsp.minutes = reader_.get_int("minutes");
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-                rsp.seconds = reader_.get_int("seconds");
+                if (reader_.has("seconds")) rsp.seconds = reader_.get_int("seconds");
 #endif
-                rsp.status = reader_.get_string("status");
+                if (reader_.has("status")) rsp.status = reader_.get_string("status");
                 return rsp;
             }
 #pragma GCC diagnostic pop
@@ -867,12 +867,12 @@ struct CardWirelessPenalty {
 #ifndef NOTE_NO_BUFFERED
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
-                rsp.count = reader_->get_int("count");
-                rsp.minutes = reader_->get_int("minutes");
+                if (reader_->has("count")) rsp.count = reader_->get_int("count");
+                if (reader_->has("minutes")) rsp.minutes = reader_->get_int("minutes");
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-                rsp.seconds = reader_->get_int("seconds");
+                if (reader_->has("seconds")) rsp.seconds = reader_->get_int("seconds");
 #endif
-                rsp.status = reader_->get_string("status");
+                if (reader_->has("status")) rsp.status = reader_->get_string("status");
                 rsp.reader_ = std::move(reader_);
                 return rsp;
             }
@@ -885,12 +885,12 @@ struct CardWirelessPenalty {
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
             static Response parse(const JsonReader& reader_) {
                 Response rsp;
-                rsp.count = reader_.get_int("count");
-                rsp.minutes = reader_.get_int("minutes");
+                if (reader_.has("count")) rsp.count = reader_.get_int("count");
+                if (reader_.has("minutes")) rsp.minutes = reader_.get_int("minutes");
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-                rsp.seconds = reader_.get_int("seconds");
+                if (reader_.has("seconds")) rsp.seconds = reader_.get_int("seconds");
 #endif
-                rsp.status = reader_.get_string("status");
+                if (reader_.has("status")) rsp.status = reader_.get_string("status");
                 return rsp;
             }
 #pragma GCC diagnostic pop

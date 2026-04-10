@@ -287,11 +287,11 @@ struct DfuStatus {
 #ifndef NOTE_NO_BUFFERED
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
-            rsp.mode = reader_->get_string("mode");
-            rsp.off = reader_->get_bool("off");
-            rsp.on = reader_->get_bool("on");
-            rsp.pending = reader_->get_bool("pending");
-            rsp.status = reader_->get_string("status");
+            if (reader_->has("mode")) rsp.mode = reader_->get_string("mode");
+            if (reader_->has("off")) rsp.off = reader_->get_bool("off");
+            if (reader_->has("on")) rsp.on = reader_->get_bool("on");
+            if (reader_->has("pending")) rsp.pending = reader_->get_bool("pending");
+            if (reader_->has("status")) rsp.status = reader_->get_string("status");
             rsp.body_ = reader_->get_object("body");
             rsp.reader_ = std::move(reader_);
             return rsp;
@@ -302,11 +302,11 @@ struct DfuStatus {
         // or the caller must consume all string fields before the reader is reused.
         static Response parse(const JsonReader& reader_) {
             Response rsp;
-            rsp.mode = reader_.get_string("mode");
-            rsp.off = reader_.get_bool("off");
-            rsp.on = reader_.get_bool("on");
-            rsp.pending = reader_.get_bool("pending");
-            rsp.status = reader_.get_string("status");
+            if (reader_.has("mode")) rsp.mode = reader_.get_string("mode");
+            if (reader_.has("off")) rsp.off = reader_.get_bool("off");
+            if (reader_.has("on")) rsp.on = reader_.get_bool("on");
+            if (reader_.has("pending")) rsp.pending = reader_.get_bool("pending");
+            if (reader_.has("status")) rsp.status = reader_.get_string("status");
             rsp.body_ = reader_.get_object("body");
             return rsp;
         }

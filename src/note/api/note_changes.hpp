@@ -162,8 +162,8 @@ struct NoteChanges {
 #ifndef NOTE_NO_BUFFERED
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
-                rsp.changes = reader_->get_int("changes");
-                rsp.total = reader_->get_int("total");
+                if (reader_->has("changes")) rsp.changes = reader_->get_int("changes");
+                if (reader_->has("total")) rsp.total = reader_->get_int("total");
                 rsp.reader_ = std::move(reader_);
                 return rsp;
             }
@@ -173,8 +173,8 @@ struct NoteChanges {
             // or the caller must consume all string fields before the reader is reused.
             static Response parse(const JsonReader& reader_) {
                 Response rsp;
-                rsp.changes = reader_.get_int("changes");
-                rsp.total = reader_.get_int("total");
+                if (reader_.has("changes")) rsp.changes = reader_.get_int("changes");
+                if (reader_.has("total")) rsp.total = reader_.get_int("total");
                 return rsp;
             }
 #endif // !NOTE_NO_BUFFERED
@@ -461,8 +461,8 @@ struct NoteChanges {
 #ifndef NOTE_NO_BUFFERED
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
-                rsp.changes = reader_->get_int("changes");
-                rsp.total = reader_->get_int("total");
+                if (reader_->has("changes")) rsp.changes = reader_->get_int("changes");
+                if (reader_->has("total")) rsp.total = reader_->get_int("total");
                 rsp.reader_ = std::move(reader_);
                 return rsp;
             }
@@ -472,8 +472,8 @@ struct NoteChanges {
             // or the caller must consume all string fields before the reader is reused.
             static Response parse(const JsonReader& reader_) {
                 Response rsp;
-                rsp.changes = reader_.get_int("changes");
-                rsp.total = reader_.get_int("total");
+                if (reader_.has("changes")) rsp.changes = reader_.get_int("changes");
+                if (reader_.has("total")) rsp.total = reader_.get_int("total");
                 return rsp;
             }
 #endif // !NOTE_NO_BUFFERED

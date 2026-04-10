@@ -131,7 +131,7 @@ struct CardBinaryPut : note::BinarySendMixin {
 #ifndef NOTE_NO_BUFFERED
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
-            rsp.err = reader_->get_string("err");
+            if (reader_->has("err")) rsp.err = reader_->get_string("err");
             rsp.reader_ = std::move(reader_);
             return rsp;
         }
@@ -141,7 +141,7 @@ struct CardBinaryPut : note::BinarySendMixin {
         // or the caller must consume all string fields before the reader is reused.
         static Response parse(const JsonReader& reader_) {
             Response rsp;
-            rsp.err = reader_.get_string("err");
+            if (reader_.has("err")) rsp.err = reader_.get_string("err");
             return rsp;
         }
 #endif // !NOTE_NO_BUFFERED

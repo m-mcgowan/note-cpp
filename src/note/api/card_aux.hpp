@@ -432,12 +432,12 @@ struct CardAux {
 #ifndef NOTE_NO_BUFFERED
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
-            rsp.mode = reader_->get_string("mode");
+            if (reader_->has("mode")) rsp.mode = reader_->get_string("mode");
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1) || !defined(NOTE_API_STRICT)
-            rsp.power = reader_->get_bool("power");
+            if (reader_->has("power")) rsp.power = reader_->get_bool("power");
 #endif
-            rsp.seconds = reader_->get_int("seconds");
-            rsp.time = reader_->get_int("time");
+            if (reader_->has("seconds")) rsp.seconds = reader_->get_int("seconds");
+            if (reader_->has("time")) rsp.time = reader_->get_int("time");
             rsp.reader_ = std::move(reader_);
             return rsp;
         }
@@ -450,12 +450,12 @@ struct CardAux {
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
         static Response parse(const JsonReader& reader_) {
             Response rsp;
-            rsp.mode = reader_.get_string("mode");
+            if (reader_.has("mode")) rsp.mode = reader_.get_string("mode");
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1) || !defined(NOTE_API_STRICT)
-            rsp.power = reader_.get_bool("power");
+            if (reader_.has("power")) rsp.power = reader_.get_bool("power");
 #endif
-            rsp.seconds = reader_.get_int("seconds");
-            rsp.time = reader_.get_int("time");
+            if (reader_.has("seconds")) rsp.seconds = reader_.get_int("seconds");
+            if (reader_.has("time")) rsp.time = reader_.get_int("time");
             return rsp;
         }
 #pragma GCC diagnostic pop

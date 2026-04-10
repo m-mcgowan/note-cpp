@@ -365,11 +365,11 @@ struct CardAttn {
                 Response rsp;
                 { note::string_view arr_[8]; auto n_ = reader_->get_string_array("files", arr_, 8); for (size_t i_ = 0; i_ < n_; ++i_) rsp.files.add(arr_[i_]); }
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
-                rsp.off = reader_->get_bool("off");
+                if (reader_->has("off")) rsp.off = reader_->get_bool("off");
 #endif
-                rsp.payload = reader_->get_string("payload");
-                rsp.set = reader_->get_bool("set");
-                rsp.time = reader_->get_int("time");
+                if (reader_->has("payload")) rsp.payload = reader_->get_string("payload");
+                if (reader_->has("set")) rsp.set = reader_->get_bool("set");
+                if (reader_->has("time")) rsp.time = reader_->get_int("time");
                 rsp.reader_ = std::move(reader_);
                 return rsp;
             }
@@ -384,11 +384,11 @@ struct CardAttn {
                 Response rsp;
                 { note::string_view arr_[8]; auto n_ = reader_.get_string_array("files", arr_, 8); for (size_t i_ = 0; i_ < n_; ++i_) rsp.files.add(arr_[i_]); }
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
-                rsp.off = reader_.get_bool("off");
+                if (reader_.has("off")) rsp.off = reader_.get_bool("off");
 #endif
-                rsp.payload = reader_.get_string("payload");
-                rsp.set = reader_.get_bool("set");
-                rsp.time = reader_.get_int("time");
+                if (reader_.has("payload")) rsp.payload = reader_.get_string("payload");
+                if (reader_.has("set")) rsp.set = reader_.get_bool("set");
+                if (reader_.has("time")) rsp.time = reader_.get_int("time");
                 return rsp;
             }
 #pragma GCC diagnostic pop
@@ -822,7 +822,7 @@ struct CardAttn {
 #ifndef NOTE_NO_BUFFERED
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
-                rsp.set = reader_->get_bool("set");
+                if (reader_->has("set")) rsp.set = reader_->get_bool("set");
                 rsp.reader_ = std::move(reader_);
                 return rsp;
             }
@@ -832,7 +832,7 @@ struct CardAttn {
             // or the caller must consume all string fields before the reader is reused.
             static Response parse(const JsonReader& reader_) {
                 Response rsp;
-                rsp.set = reader_.get_bool("set");
+                if (reader_.has("set")) rsp.set = reader_.get_bool("set");
                 return rsp;
             }
 #endif // !NOTE_NO_BUFFERED
@@ -1182,7 +1182,7 @@ struct CardAttn {
 #ifndef NOTE_NO_BUFFERED
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
-                rsp.set = reader_->get_bool("set");
+                if (reader_->has("set")) rsp.set = reader_->get_bool("set");
                 rsp.reader_ = std::move(reader_);
                 return rsp;
             }
@@ -1192,7 +1192,7 @@ struct CardAttn {
             // or the caller must consume all string fields before the reader is reused.
             static Response parse(const JsonReader& reader_) {
                 Response rsp;
-                rsp.set = reader_.get_bool("set");
+                if (reader_.has("set")) rsp.set = reader_.get_bool("set");
                 return rsp;
             }
 #endif // !NOTE_NO_BUFFERED
@@ -1671,8 +1671,8 @@ struct CardAttn {
 #ifndef NOTE_NO_BUFFERED
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
-                rsp.payload = reader_->get_string("payload");
-                rsp.time = reader_->get_int("time");
+                if (reader_->has("payload")) rsp.payload = reader_->get_string("payload");
+                if (reader_->has("time")) rsp.time = reader_->get_int("time");
                 rsp.reader_ = std::move(reader_);
                 return rsp;
             }
@@ -1682,8 +1682,8 @@ struct CardAttn {
             // or the caller must consume all string fields before the reader is reused.
             static Response parse(const JsonReader& reader_) {
                 Response rsp;
-                rsp.payload = reader_.get_string("payload");
-                rsp.time = reader_.get_int("time");
+                if (reader_.has("payload")) rsp.payload = reader_.get_string("payload");
+                if (reader_.has("time")) rsp.time = reader_.get_int("time");
                 return rsp;
             }
 #endif // !NOTE_NO_BUFFERED
@@ -2194,9 +2194,9 @@ struct CardAttn {
                 Response rsp;
                 { note::string_view arr_[8]; auto n_ = reader_->get_string_array("files", arr_, 8); for (size_t i_ = 0; i_ < n_; ++i_) rsp.files.add(arr_[i_]); }
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
-                rsp.off = reader_->get_bool("off");
+                if (reader_->has("off")) rsp.off = reader_->get_bool("off");
 #endif
-                rsp.set = reader_->get_bool("set");
+                if (reader_->has("set")) rsp.set = reader_->get_bool("set");
                 rsp.reader_ = std::move(reader_);
                 return rsp;
             }
@@ -2211,9 +2211,9 @@ struct CardAttn {
                 Response rsp;
                 { note::string_view arr_[8]; auto n_ = reader_.get_string_array("files", arr_, 8); for (size_t i_ = 0; i_ < n_; ++i_) rsp.files.add(arr_[i_]); }
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
-                rsp.off = reader_.get_bool("off");
+                if (reader_.has("off")) rsp.off = reader_.get_bool("off");
 #endif
-                rsp.set = reader_.get_bool("set");
+                if (reader_.has("set")) rsp.set = reader_.get_bool("set");
                 return rsp;
             }
 #pragma GCC diagnostic pop

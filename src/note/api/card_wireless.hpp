@@ -234,8 +234,8 @@ struct CardWireless {
 #ifndef NOTE_NO_BUFFERED
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
-            rsp.count = reader_->get_int("count");
-            rsp.status = reader_->get_string("status");
+            if (reader_->has("count")) rsp.count = reader_->get_int("count");
+            if (reader_->has("status")) rsp.status = reader_->get_string("status");
             rsp.reader_ = std::move(reader_);
             return rsp;
         }
@@ -245,8 +245,8 @@ struct CardWireless {
         // or the caller must consume all string fields before the reader is reused.
         static Response parse(const JsonReader& reader_) {
             Response rsp;
-            rsp.count = reader_.get_int("count");
-            rsp.status = reader_.get_string("status");
+            if (reader_.has("count")) rsp.count = reader_.get_int("count");
+            if (reader_.has("status")) rsp.status = reader_.get_string("status");
             return rsp;
         }
 #endif // !NOTE_NO_BUFFERED

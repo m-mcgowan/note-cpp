@@ -218,7 +218,7 @@ struct CardTransport {
 #ifndef NOTE_NO_BUFFERED
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
-            rsp.method = reader_->get_string("method");
+            if (reader_->has("method")) rsp.method = reader_->get_string("method");
             rsp.reader_ = std::move(reader_);
             return rsp;
         }
@@ -228,7 +228,7 @@ struct CardTransport {
         // or the caller must consume all string fields before the reader is reused.
         static Response parse(const JsonReader& reader_) {
             Response rsp;
-            rsp.method = reader_.get_string("method");
+            if (reader_.has("method")) rsp.method = reader_.get_string("method");
             return rsp;
         }
 #endif // !NOTE_NO_BUFFERED

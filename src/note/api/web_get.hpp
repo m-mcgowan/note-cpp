@@ -263,10 +263,10 @@ struct WebGet {
 #ifndef NOTE_NO_BUFFERED
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
-            rsp.cobs = reader_->get_int("cobs");
-            rsp.length = reader_->get_int("length");
-            rsp.payload = reader_->get_string("payload");
-            rsp.result = reader_->get_int("result");
+            if (reader_->has("cobs")) rsp.cobs = reader_->get_int("cobs");
+            if (reader_->has("length")) rsp.length = reader_->get_int("length");
+            if (reader_->has("payload")) rsp.payload = reader_->get_string("payload");
+            if (reader_->has("result")) rsp.result = reader_->get_int("result");
             rsp.body_ = reader_->get_object("body");
             rsp.reader_ = std::move(reader_);
             return rsp;
@@ -277,10 +277,10 @@ struct WebGet {
         // or the caller must consume all string fields before the reader is reused.
         static Response parse(const JsonReader& reader_) {
             Response rsp;
-            rsp.cobs = reader_.get_int("cobs");
-            rsp.length = reader_.get_int("length");
-            rsp.payload = reader_.get_string("payload");
-            rsp.result = reader_.get_int("result");
+            if (reader_.has("cobs")) rsp.cobs = reader_.get_int("cobs");
+            if (reader_.has("length")) rsp.length = reader_.get_int("length");
+            if (reader_.has("payload")) rsp.payload = reader_.get_string("payload");
+            if (reader_.has("result")) rsp.result = reader_.get_int("result");
             rsp.body_ = reader_.get_object("body");
             return rsp;
         }

@@ -145,21 +145,21 @@ struct CardStatus {
 #ifndef NOTE_NO_BUFFERED
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
-            rsp.cell = reader_->get_bool("cell");
-            rsp.connected = reader_->get_bool("connected");
+            if (reader_->has("cell")) rsp.cell = reader_->get_bool("cell");
+            if (reader_->has("connected")) rsp.connected = reader_->get_bool("connected");
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1) || !defined(NOTE_API_STRICT)
-            rsp.gps = reader_->get_bool("gps");
+            if (reader_->has("gps")) rsp.gps = reader_->get_bool("gps");
 #endif
-            rsp.inbound = reader_->get_int("inbound");
-            rsp.outbound = reader_->get_int("outbound");
-            rsp.status = reader_->get_string("status");
-            rsp.storage = reader_->get_int("storage");
+            if (reader_->has("inbound")) rsp.inbound = reader_->get_int("inbound");
+            if (reader_->has("outbound")) rsp.outbound = reader_->get_int("outbound");
+            if (reader_->has("status")) rsp.status = reader_->get_string("status");
+            if (reader_->has("storage")) rsp.storage = reader_->get_int("storage");
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 5, 1) || !defined(NOTE_API_STRICT)
-            rsp.sync = reader_->get_bool("sync");
+            if (reader_->has("sync")) rsp.sync = reader_->get_bool("sync");
 #endif
-            rsp.time = reader_->get_int("time");
-            rsp.usb = reader_->get_bool("usb");
-            rsp.wifi = reader_->get_bool("wifi");
+            if (reader_->has("time")) rsp.time = reader_->get_int("time");
+            if (reader_->has("usb")) rsp.usb = reader_->get_bool("usb");
+            if (reader_->has("wifi")) rsp.wifi = reader_->get_bool("wifi");
             rsp.reader_ = std::move(reader_);
             return rsp;
         }
@@ -172,21 +172,21 @@ struct CardStatus {
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
         static Response parse(const JsonReader& reader_) {
             Response rsp;
-            rsp.cell = reader_.get_bool("cell");
-            rsp.connected = reader_.get_bool("connected");
+            if (reader_.has("cell")) rsp.cell = reader_.get_bool("cell");
+            if (reader_.has("connected")) rsp.connected = reader_.get_bool("connected");
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1) || !defined(NOTE_API_STRICT)
-            rsp.gps = reader_.get_bool("gps");
+            if (reader_.has("gps")) rsp.gps = reader_.get_bool("gps");
 #endif
-            rsp.inbound = reader_.get_int("inbound");
-            rsp.outbound = reader_.get_int("outbound");
-            rsp.status = reader_.get_string("status");
-            rsp.storage = reader_.get_int("storage");
+            if (reader_.has("inbound")) rsp.inbound = reader_.get_int("inbound");
+            if (reader_.has("outbound")) rsp.outbound = reader_.get_int("outbound");
+            if (reader_.has("status")) rsp.status = reader_.get_string("status");
+            if (reader_.has("storage")) rsp.storage = reader_.get_int("storage");
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 5, 1) || !defined(NOTE_API_STRICT)
-            rsp.sync = reader_.get_bool("sync");
+            if (reader_.has("sync")) rsp.sync = reader_.get_bool("sync");
 #endif
-            rsp.time = reader_.get_int("time");
-            rsp.usb = reader_.get_bool("usb");
-            rsp.wifi = reader_.get_bool("wifi");
+            if (reader_.has("time")) rsp.time = reader_.get_int("time");
+            if (reader_.has("usb")) rsp.usb = reader_.get_bool("usb");
+            if (reader_.has("wifi")) rsp.wifi = reader_.get_bool("wifi");
             return rsp;
         }
 #pragma GCC diagnostic pop

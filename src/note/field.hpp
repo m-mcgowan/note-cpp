@@ -89,10 +89,96 @@ struct RequestField : std::optional<T> {
 };
 
 
-/// Value wrapper for parsed response fields.
-/// Holds a T with implicit conversion, so `r.version` and `r.connected`
-/// work naturally. No optional overhead — default-initialized if absent
-/// from the JSON response.
+/// Read-only field for parsed responses.
+///
+/// With NOTE_RESPONSE_PRESENCE (default): extends std::optional<T> so callers
+/// can distinguish "field absent" from "field was zero/empty".
+///
+/// Without NOTE_RESPONSE_PRESENCE: plain value wrapper, zero-initialized if
+/// absent from the JSON response. Smaller but lossy for integer/bool fields.
+#ifndef NOTE_RESPONSE_PRESENCE
+#define NOTE_RESPONSE_PRESENCE 1
+#endif
+
+#if NOTE_RESPONSE_PRESENCE
+
+template<typename T>
+struct ResponseField
+#if defined(ARDUINO) && NOTE_PRINTABLE
+    : public Printable
+#endif
+{
+    T value_{};
+    bool present_{false};
+
+    constexpr ResponseField() = default;
+    constexpr ResponseField(const ResponseField&) = default;
+    constexpr ResponseField(ResponseField&&) = default;
+    constexpr ResponseField& operator=(const ResponseField&) = default;
+    constexpr ResponseField& operator=(ResponseField&&) = default;
+
+    // Assignment from value — used by parse code. Sets present flag.
+    template<typename U, std::enable_if_t<
+        std::is_convertible_v<U, T> && !std::is_same_v<std::decay_t<U>, ResponseField>, int> = 0>
+    ResponseField& operator=(U&& v) { value_ = T(std::forward<U>(v)); present_ = true; return *this; }
+
+    /// Whether this field was present in the JSON response.
+    constexpr bool has_value() const { return present_; }
+
+    /// Implicit conversion to const T& for ergonomic reads.
+    operator const T&() const { return value_; }
+
+    /// Arrow operator for calling methods on the underlying value.
+    const T* operator->() const { return &value_; }
+
+    /// Explicit value access.
+    const T& value() const { return value_; }
+
+    /// Comparison operators — compare the underlying value.
+    friend bool operator==(const ResponseField& lhs, const ResponseField& rhs) { return lhs.value_ == rhs.value_; }
+    friend bool operator!=(const ResponseField& lhs, const ResponseField& rhs) { return lhs.value_ != rhs.value_; }
+
+    template<typename U>
+    friend bool operator==(const ResponseField& lhs, const U& rhs) { return lhs.value_ == rhs; }
+    template<typename U>
+    friend bool operator!=(const ResponseField& lhs, const U& rhs) { return lhs.value_ != rhs; }
+    template<typename U>
+    friend bool operator==(const U& lhs, const ResponseField& rhs) { return lhs == rhs.value_; }
+    template<typename U>
+    friend bool operator!=(const U& lhs, const ResponseField& rhs) { return lhs != rhs.value_; }
+
+    // Forward common string_view methods.
+    template<typename U = T>
+    auto size() const -> decltype(std::declval<const U&>().size()) { return value_.size(); }
+    template<typename U = T>
+    auto data() const -> decltype(std::declval<const U&>().data()) { return value_.data(); }
+    template<typename U = T>
+    auto empty() const -> decltype(std::declval<const U&>().empty()) { return value_.empty(); }
+    template<typename U = T, typename... Args>
+    auto find(Args&&... args) const -> decltype(std::declval<const U&>().find(std::forward<Args>(args)...)) {
+        return value_.find(std::forward<Args>(args)...);
+    }
+
+#if defined(ARDUINO) && NOTE_PRINTABLE
+    size_t printTo(Print& p) const override {
+        if (!present_) return p.print("(unset)");
+        if constexpr (std::is_same_v<T, bool>) {
+            return p.print(value_ ? "true" : "false");
+        } else if constexpr (std::is_same_v<T, std::string_view>) {
+            return p.write(reinterpret_cast<const uint8_t*>(value_.data()), value_.size());
+        } else if constexpr (std::is_integral_v<T>) {
+            return p.print(static_cast<long>(value_));
+        } else if constexpr (std::is_floating_point_v<T>) {
+            return p.print(static_cast<double>(value_));
+        } else {
+            return 0;
+        }
+    }
+#endif
+};
+
+#else // !NOTE_RESPONSE_PRESENCE — plain value wrapper, no presence tracking
+
 template<typename T>
 struct ResponseField
 #if defined(ARDUINO) && NOTE_PRINTABLE
@@ -120,6 +206,9 @@ struct ResponseField
 
     /// Explicit value access.
     const T& value() const { return value_; }
+
+    /// Stub: always true (no presence tracking).
+    constexpr bool has_value() const { return true; }
 
     /// Comparison operators — compare the underlying value.
     friend bool operator==(const ResponseField& lhs, const ResponseField& rhs) { return lhs.value_ == rhs.value_; }
@@ -162,6 +251,8 @@ struct ResponseField
     }
 #endif
 };
+
+#endif // NOTE_RESPONSE_PRESENCE
 
 
 /// Backward-compatible alias. Existing code using Field<T> continues to work.

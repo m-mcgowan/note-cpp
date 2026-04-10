@@ -276,16 +276,16 @@ struct CardLocationMode {
 #ifndef NOTE_NO_BUFFERED
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
-                rsp.lat = reader_->get_double("lat");
-                rsp.lon = reader_->get_double("lon");
-                rsp.max = reader_->get_int("max");
-                rsp.minutes = reader_->get_int("minutes");
-                rsp.mode = reader_->get_string("mode");
-                rsp.seconds = reader_->get_int("seconds");
+                if (reader_->has("lat")) rsp.lat = reader_->get_double("lat");
+                if (reader_->has("lon")) rsp.lon = reader_->get_double("lon");
+                if (reader_->has("max")) rsp.max = reader_->get_int("max");
+                if (reader_->has("minutes")) rsp.minutes = reader_->get_int("minutes");
+                if (reader_->has("mode")) rsp.mode = reader_->get_string("mode");
+                if (reader_->has("seconds")) rsp.seconds = reader_->get_int("seconds");
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-                rsp.threshold = reader_->get_int("threshold");
+                if (reader_->has("threshold")) rsp.threshold = reader_->get_int("threshold");
 #endif
-                rsp.vseconds = reader_->get_string("vseconds");
+                if (reader_->has("vseconds")) rsp.vseconds = reader_->get_string("vseconds");
                 rsp.reader_ = std::move(reader_);
                 return rsp;
             }
@@ -298,16 +298,16 @@ struct CardLocationMode {
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
             static Response parse(const JsonReader& reader_) {
                 Response rsp;
-                rsp.lat = reader_.get_double("lat");
-                rsp.lon = reader_.get_double("lon");
-                rsp.max = reader_.get_int("max");
-                rsp.minutes = reader_.get_int("minutes");
-                rsp.mode = reader_.get_string("mode");
-                rsp.seconds = reader_.get_int("seconds");
+                if (reader_.has("lat")) rsp.lat = reader_.get_double("lat");
+                if (reader_.has("lon")) rsp.lon = reader_.get_double("lon");
+                if (reader_.has("max")) rsp.max = reader_.get_int("max");
+                if (reader_.has("minutes")) rsp.minutes = reader_.get_int("minutes");
+                if (reader_.has("mode")) rsp.mode = reader_.get_string("mode");
+                if (reader_.has("seconds")) rsp.seconds = reader_.get_int("seconds");
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-                rsp.threshold = reader_.get_int("threshold");
+                if (reader_.has("threshold")) rsp.threshold = reader_.get_int("threshold");
 #endif
-                rsp.vseconds = reader_.get_string("vseconds");
+                if (reader_.has("vseconds")) rsp.vseconds = reader_.get_string("vseconds");
                 return rsp;
             }
 #pragma GCC diagnostic pop
@@ -789,16 +789,16 @@ struct CardLocationMode {
 #ifndef NOTE_NO_BUFFERED
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
-                rsp.lat = reader_->get_double("lat");
-                rsp.lon = reader_->get_double("lon");
-                rsp.max = reader_->get_int("max");
-                rsp.minutes = reader_->get_int("minutes");
-                rsp.mode = reader_->get_string("mode");
-                rsp.seconds = reader_->get_int("seconds");
+                if (reader_->has("lat")) rsp.lat = reader_->get_double("lat");
+                if (reader_->has("lon")) rsp.lon = reader_->get_double("lon");
+                if (reader_->has("max")) rsp.max = reader_->get_int("max");
+                if (reader_->has("minutes")) rsp.minutes = reader_->get_int("minutes");
+                if (reader_->has("mode")) rsp.mode = reader_->get_string("mode");
+                if (reader_->has("seconds")) rsp.seconds = reader_->get_int("seconds");
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-                rsp.threshold = reader_->get_int("threshold");
+                if (reader_->has("threshold")) rsp.threshold = reader_->get_int("threshold");
 #endif
-                rsp.vseconds = reader_->get_string("vseconds");
+                if (reader_->has("vseconds")) rsp.vseconds = reader_->get_string("vseconds");
                 rsp.reader_ = std::move(reader_);
                 return rsp;
             }
@@ -811,16 +811,16 @@ struct CardLocationMode {
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
             static Response parse(const JsonReader& reader_) {
                 Response rsp;
-                rsp.lat = reader_.get_double("lat");
-                rsp.lon = reader_.get_double("lon");
-                rsp.max = reader_.get_int("max");
-                rsp.minutes = reader_.get_int("minutes");
-                rsp.mode = reader_.get_string("mode");
-                rsp.seconds = reader_.get_int("seconds");
+                if (reader_.has("lat")) rsp.lat = reader_.get_double("lat");
+                if (reader_.has("lon")) rsp.lon = reader_.get_double("lon");
+                if (reader_.has("max")) rsp.max = reader_.get_int("max");
+                if (reader_.has("minutes")) rsp.minutes = reader_.get_int("minutes");
+                if (reader_.has("mode")) rsp.mode = reader_.get_string("mode");
+                if (reader_.has("seconds")) rsp.seconds = reader_.get_int("seconds");
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-                rsp.threshold = reader_.get_int("threshold");
+                if (reader_.has("threshold")) rsp.threshold = reader_.get_int("threshold");
 #endif
-                rsp.vseconds = reader_.get_string("vseconds");
+                if (reader_.has("vseconds")) rsp.vseconds = reader_.get_string("vseconds");
                 return rsp;
             }
 #pragma GCC diagnostic pop
@@ -1167,11 +1167,11 @@ struct CardLocationMode {
 #ifndef NOTE_NO_BUFFERED
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
-                rsp.mode = reader_->get_string("mode");
+                if (reader_->has("mode")) rsp.mode = reader_->get_string("mode");
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-                rsp.threshold = reader_->get_int("threshold");
+                if (reader_->has("threshold")) rsp.threshold = reader_->get_int("threshold");
 #endif
-                rsp.vseconds = reader_->get_string("vseconds");
+                if (reader_->has("vseconds")) rsp.vseconds = reader_->get_string("vseconds");
                 rsp.reader_ = std::move(reader_);
                 return rsp;
             }
@@ -1184,11 +1184,11 @@ struct CardLocationMode {
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
             static Response parse(const JsonReader& reader_) {
                 Response rsp;
-                rsp.mode = reader_.get_string("mode");
+                if (reader_.has("mode")) rsp.mode = reader_.get_string("mode");
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-                rsp.threshold = reader_.get_int("threshold");
+                if (reader_.has("threshold")) rsp.threshold = reader_.get_int("threshold");
 #endif
-                rsp.vseconds = reader_.get_string("vseconds");
+                if (reader_.has("vseconds")) rsp.vseconds = reader_.get_string("vseconds");
                 return rsp;
             }
 #pragma GCC diagnostic pop
@@ -1534,16 +1534,16 @@ struct CardLocationMode {
 #ifndef NOTE_NO_BUFFERED
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
-                rsp.lat = reader_->get_double("lat");
-                rsp.lon = reader_->get_double("lon");
-                rsp.max = reader_->get_int("max");
-                rsp.minutes = reader_->get_int("minutes");
-                rsp.mode = reader_->get_string("mode");
-                rsp.seconds = reader_->get_int("seconds");
+                if (reader_->has("lat")) rsp.lat = reader_->get_double("lat");
+                if (reader_->has("lon")) rsp.lon = reader_->get_double("lon");
+                if (reader_->has("max")) rsp.max = reader_->get_int("max");
+                if (reader_->has("minutes")) rsp.minutes = reader_->get_int("minutes");
+                if (reader_->has("mode")) rsp.mode = reader_->get_string("mode");
+                if (reader_->has("seconds")) rsp.seconds = reader_->get_int("seconds");
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-                rsp.threshold = reader_->get_int("threshold");
+                if (reader_->has("threshold")) rsp.threshold = reader_->get_int("threshold");
 #endif
-                rsp.vseconds = reader_->get_string("vseconds");
+                if (reader_->has("vseconds")) rsp.vseconds = reader_->get_string("vseconds");
                 rsp.reader_ = std::move(reader_);
                 return rsp;
             }
@@ -1556,16 +1556,16 @@ struct CardLocationMode {
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
             static Response parse(const JsonReader& reader_) {
                 Response rsp;
-                rsp.lat = reader_.get_double("lat");
-                rsp.lon = reader_.get_double("lon");
-                rsp.max = reader_.get_int("max");
-                rsp.minutes = reader_.get_int("minutes");
-                rsp.mode = reader_.get_string("mode");
-                rsp.seconds = reader_.get_int("seconds");
+                if (reader_.has("lat")) rsp.lat = reader_.get_double("lat");
+                if (reader_.has("lon")) rsp.lon = reader_.get_double("lon");
+                if (reader_.has("max")) rsp.max = reader_.get_int("max");
+                if (reader_.has("minutes")) rsp.minutes = reader_.get_int("minutes");
+                if (reader_.has("mode")) rsp.mode = reader_.get_string("mode");
+                if (reader_.has("seconds")) rsp.seconds = reader_.get_int("seconds");
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-                rsp.threshold = reader_.get_int("threshold");
+                if (reader_.has("threshold")) rsp.threshold = reader_.get_int("threshold");
 #endif
-                rsp.vseconds = reader_.get_string("vseconds");
+                if (reader_.has("vseconds")) rsp.vseconds = reader_.get_string("vseconds");
                 return rsp;
             }
 #pragma GCC diagnostic pop
@@ -1889,9 +1889,9 @@ struct CardLocationMode {
 #ifndef NOTE_NO_BUFFERED
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
-                rsp.lat = reader_->get_double("lat");
-                rsp.lon = reader_->get_double("lon");
-                rsp.mode = reader_->get_string("mode");
+                if (reader_->has("lat")) rsp.lat = reader_->get_double("lat");
+                if (reader_->has("lon")) rsp.lon = reader_->get_double("lon");
+                if (reader_->has("mode")) rsp.mode = reader_->get_string("mode");
                 rsp.reader_ = std::move(reader_);
                 return rsp;
             }
@@ -1901,9 +1901,9 @@ struct CardLocationMode {
             // or the caller must consume all string fields before the reader is reused.
             static Response parse(const JsonReader& reader_) {
                 Response rsp;
-                rsp.lat = reader_.get_double("lat");
-                rsp.lon = reader_.get_double("lon");
-                rsp.mode = reader_.get_string("mode");
+                if (reader_.has("lat")) rsp.lat = reader_.get_double("lat");
+                if (reader_.has("lon")) rsp.lon = reader_.get_double("lon");
+                if (reader_.has("mode")) rsp.mode = reader_.get_string("mode");
                 return rsp;
             }
 #endif // !NOTE_NO_BUFFERED
@@ -2285,16 +2285,16 @@ struct CardLocationMode {
 #ifndef NOTE_NO_BUFFERED
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
-                rsp.lat = reader_->get_double("lat");
-                rsp.lon = reader_->get_double("lon");
-                rsp.max = reader_->get_int("max");
-                rsp.minutes = reader_->get_int("minutes");
-                rsp.mode = reader_->get_string("mode");
-                rsp.seconds = reader_->get_int("seconds");
+                if (reader_->has("lat")) rsp.lat = reader_->get_double("lat");
+                if (reader_->has("lon")) rsp.lon = reader_->get_double("lon");
+                if (reader_->has("max")) rsp.max = reader_->get_int("max");
+                if (reader_->has("minutes")) rsp.minutes = reader_->get_int("minutes");
+                if (reader_->has("mode")) rsp.mode = reader_->get_string("mode");
+                if (reader_->has("seconds")) rsp.seconds = reader_->get_int("seconds");
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-                rsp.threshold = reader_->get_int("threshold");
+                if (reader_->has("threshold")) rsp.threshold = reader_->get_int("threshold");
 #endif
-                rsp.vseconds = reader_->get_string("vseconds");
+                if (reader_->has("vseconds")) rsp.vseconds = reader_->get_string("vseconds");
                 rsp.reader_ = std::move(reader_);
                 return rsp;
             }
@@ -2307,16 +2307,16 @@ struct CardLocationMode {
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
             static Response parse(const JsonReader& reader_) {
                 Response rsp;
-                rsp.lat = reader_.get_double("lat");
-                rsp.lon = reader_.get_double("lon");
-                rsp.max = reader_.get_int("max");
-                rsp.minutes = reader_.get_int("minutes");
-                rsp.mode = reader_.get_string("mode");
-                rsp.seconds = reader_.get_int("seconds");
+                if (reader_.has("lat")) rsp.lat = reader_.get_double("lat");
+                if (reader_.has("lon")) rsp.lon = reader_.get_double("lon");
+                if (reader_.has("max")) rsp.max = reader_.get_int("max");
+                if (reader_.has("minutes")) rsp.minutes = reader_.get_int("minutes");
+                if (reader_.has("mode")) rsp.mode = reader_.get_string("mode");
+                if (reader_.has("seconds")) rsp.seconds = reader_.get_int("seconds");
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-                rsp.threshold = reader_.get_int("threshold");
+                if (reader_.has("threshold")) rsp.threshold = reader_.get_int("threshold");
 #endif
-                rsp.vseconds = reader_.get_string("vseconds");
+                if (reader_.has("vseconds")) rsp.vseconds = reader_.get_string("vseconds");
                 return rsp;
             }
 #pragma GCC diagnostic pop

@@ -123,7 +123,7 @@ struct EnvModified {
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-            rsp.time = reader_->get_int("time");
+            if (reader_->has("time")) rsp.time = reader_->get_int("time");
 #endif
             rsp.reader_ = std::move(reader_);
             return rsp;
@@ -138,7 +138,7 @@ struct EnvModified {
         static Response parse(const JsonReader& reader_) {
             Response rsp;
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-            rsp.time = reader_.get_int("time");
+            if (reader_.has("time")) rsp.time = reader_.get_int("time");
 #endif
             return rsp;
         }

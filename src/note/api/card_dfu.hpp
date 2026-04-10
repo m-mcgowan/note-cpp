@@ -269,7 +269,7 @@ struct CardDfu {
 #ifndef NOTE_NO_BUFFERED
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
-            rsp.name = reader_->get_string("name");
+            if (reader_->has("name")) rsp.name = reader_->get_string("name");
             rsp.reader_ = std::move(reader_);
             return rsp;
         }
@@ -279,7 +279,7 @@ struct CardDfu {
         // or the caller must consume all string fields before the reader is reused.
         static Response parse(const JsonReader& reader_) {
             Response rsp;
-            rsp.name = reader_.get_string("name");
+            if (reader_.has("name")) rsp.name = reader_.get_string("name");
             return rsp;
         }
 #endif // !NOTE_NO_BUFFERED

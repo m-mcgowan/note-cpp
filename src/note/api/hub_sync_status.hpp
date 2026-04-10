@@ -149,19 +149,19 @@ struct HubSyncStatus {
 #ifndef NOTE_NO_BUFFERED
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
-            rsp.alert = reader_->get_bool("alert");
-            rsp.completed = reader_->get_int("completed");
-            rsp.mode = reader_->get_string("mode");
-            rsp.requested = reader_->get_int("requested");
+            if (reader_->has("alert")) rsp.alert = reader_->get_bool("alert");
+            if (reader_->has("completed")) rsp.completed = reader_->get_int("completed");
+            if (reader_->has("mode")) rsp.mode = reader_->get_string("mode");
+            if (reader_->has("requested")) rsp.requested = reader_->get_int("requested");
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 1, 1) || !defined(NOTE_API_STRICT)
-            rsp.scan = reader_->get_bool("scan");
+            if (reader_->has("scan")) rsp.scan = reader_->get_bool("scan");
 #endif
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-            rsp.seconds = reader_->get_int("seconds");
+            if (reader_->has("seconds")) rsp.seconds = reader_->get_int("seconds");
 #endif
-            rsp.status = reader_->get_string("status");
-            rsp.sync = reader_->get_bool("sync");
-            rsp.time = reader_->get_int("time");
+            if (reader_->has("status")) rsp.status = reader_->get_string("status");
+            if (reader_->has("sync")) rsp.sync = reader_->get_bool("sync");
+            if (reader_->has("time")) rsp.time = reader_->get_int("time");
             rsp.reader_ = std::move(reader_);
             return rsp;
         }
@@ -174,19 +174,19 @@ struct HubSyncStatus {
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
         static Response parse(const JsonReader& reader_) {
             Response rsp;
-            rsp.alert = reader_.get_bool("alert");
-            rsp.completed = reader_.get_int("completed");
-            rsp.mode = reader_.get_string("mode");
-            rsp.requested = reader_.get_int("requested");
+            if (reader_.has("alert")) rsp.alert = reader_.get_bool("alert");
+            if (reader_.has("completed")) rsp.completed = reader_.get_int("completed");
+            if (reader_.has("mode")) rsp.mode = reader_.get_string("mode");
+            if (reader_.has("requested")) rsp.requested = reader_.get_int("requested");
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 1, 1) || !defined(NOTE_API_STRICT)
-            rsp.scan = reader_.get_bool("scan");
+            if (reader_.has("scan")) rsp.scan = reader_.get_bool("scan");
 #endif
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-            rsp.seconds = reader_.get_int("seconds");
+            if (reader_.has("seconds")) rsp.seconds = reader_.get_int("seconds");
 #endif
-            rsp.status = reader_.get_string("status");
-            rsp.sync = reader_.get_bool("sync");
-            rsp.time = reader_.get_int("time");
+            if (reader_.has("status")) rsp.status = reader_.get_string("status");
+            if (reader_.has("sync")) rsp.sync = reader_.get_bool("sync");
+            if (reader_.has("time")) rsp.time = reader_.get_int("time");
             return rsp;
         }
 #pragma GCC diagnostic pop

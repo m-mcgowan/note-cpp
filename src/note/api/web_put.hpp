@@ -334,9 +334,9 @@ struct WebPut {
 #ifndef NOTE_NO_BUFFERED
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
-            rsp.payload = reader_->get_string("payload");
-            rsp.result = reader_->get_int("result");
-            rsp.status = reader_->get_string("status");
+            if (reader_->has("payload")) rsp.payload = reader_->get_string("payload");
+            if (reader_->has("result")) rsp.result = reader_->get_int("result");
+            if (reader_->has("status")) rsp.status = reader_->get_string("status");
             rsp.body_ = reader_->get_object("body");
             rsp.reader_ = std::move(reader_);
             return rsp;
@@ -347,9 +347,9 @@ struct WebPut {
         // or the caller must consume all string fields before the reader is reused.
         static Response parse(const JsonReader& reader_) {
             Response rsp;
-            rsp.payload = reader_.get_string("payload");
-            rsp.result = reader_.get_int("result");
-            rsp.status = reader_.get_string("status");
+            if (reader_.has("payload")) rsp.payload = reader_.get_string("payload");
+            if (reader_.has("result")) rsp.result = reader_.get_int("result");
+            if (reader_.has("status")) rsp.status = reader_.get_string("status");
             rsp.body_ = reader_.get_object("body");
             return rsp;
         }

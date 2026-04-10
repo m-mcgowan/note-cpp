@@ -503,7 +503,7 @@ run_coverage() {
     fi
 
     local GCC=""
-    for g in g++-14 g++-13; do
+    for g in g++-13 g++-14; do
         for p in /opt/homebrew/bin /usr/local/bin /usr/bin ""; do
             local candidate="${p:+$p/}$g"
             if command -v "$candidate" >/dev/null 2>&1; then
@@ -567,6 +567,7 @@ run_coverage() {
         test_json_sax_streaming test_streaming_builder
         test_endpoint_streaming test_streaming_errors
         test_allocator_growth test_body_capture_arena
+        test_sax_dispatch
         test_static_sizing test_static_notecard test_struct_sink
         test_debug test_migration_support test_retry test_sizeof_report
     )
@@ -587,7 +588,7 @@ run_coverage() {
         test_main test_buffer_backend test_cobs test_flag_set
         test_json_buf test_json_fmt test_json_sax test_json_sax_streaming
         test_json_lexer test_retry test_state_store test_target
-        test_transport_crc32 test_body_capture_arena
+        test_transport_crc32 test_body_capture_arena test_sax_dispatch
         test_static_sizing test_static_notecard test_struct_sink
         test_units test_voltage_variable
     )
@@ -639,7 +640,7 @@ run_coverage() {
 
     echo
     echo "=== Coverage summary ==="
-    lcov --summary "$OUT_DIR/coverage.lcov" --rc branch_coverage=1
+    lcov --summary "$OUT_DIR/coverage.lcov" --rc branch_coverage=1 --ignore-errors inconsistent
 
     check_coverage_thresholds "$OUT_DIR/coverage.lcov"
 

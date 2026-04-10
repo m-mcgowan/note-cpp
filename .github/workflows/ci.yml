@@ -90,6 +90,9 @@ jobs:
       - name: Generate coverage report
         run: ./ci.sh --coverage
 
+      - name: Configure lcov
+        run: echo -e "check_data_consistency = 0\nbranch_coverage = 1" > ~/.lcovrc
+
       - name: Report coverage
         uses: zgosalvez/github-actions-report-lcov@v4
         with:

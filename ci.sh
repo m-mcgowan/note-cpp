@@ -650,6 +650,7 @@ run_coverage() {
         --output-directory "$OUT_DIR/html" \
         --title "note-cpp coverage" \
         --branch-coverage \
+        --ignore-errors inconsistent \
         --quiet
 
     echo "  HTML report: ${OUT_DIR}/html/index.html"

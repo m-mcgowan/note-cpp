@@ -67,73 +67,42 @@ struct ReceiveContext {
     /// Build a SaxDispatch that intercepts "err" and "crc" on_string events,
     /// forwarding everything else to the inner dispatch.
     SaxDispatch wrapping_dispatch() {
-        SaxDispatch d;
-        d.sink = this;
-        d.on_null = [](void* p, string_view k) {
-            auto& c = *static_cast<ReceiveContext*>(p);
-            c.inner.on_null(c.inner.sink, k);
-        };
-        d.on_bool = [](void* p, string_view k, bool v) {
-            auto& c = *static_cast<ReceiveContext*>(p);
-            c.inner.on_bool(c.inner.sink, k, v);
-        };
-        d.on_int = [](void* p, string_view k, int32_t v) {
-            auto& c = *static_cast<ReceiveContext*>(p);
-            c.inner.on_int(c.inner.sink, k, v);
-        };
-        d.on_float = [](void* p, string_view k, double v) {
-            auto& c = *static_cast<ReceiveContext*>(p);
-            c.inner.on_float(c.inner.sink, k, v);
-        };
-        d.on_string = [](void* p, string_view k, string_view v) {
-            auto& c = *static_cast<ReceiveContext*>(p);
-            if (k == "err") {
-                c.err.capture(v);
-                // Also forward — virtual path's ErrorCaptureSink may need it.
-                c.inner.on_string(c.inner.sink, k, v);
-                return;
-            }
+        return SaxDispatch{
+            this,
+            [](void* p, const SaxEvent& ev) {
+                auto& c = *static_cast<ReceiveContext*>(p);
+                if (ev.tag == SaxEvent::String) {
+                    auto v = string_view(ev.sv.data, ev.sv.len);
+                    if (ev.key == "err") {
+                        c.err.capture(v);
+                        // Also forward — virtual path's ErrorCaptureSink may need it.
+                        c.inner.dispatch(c.inner.sink, ev);
+                        return;
+                    }
 #ifndef NOTE_NO_CRC
-            if (k == "crc") {
-                if (v.size() == 13 && v[4] == ':') {
-                    c.crc_seq = static_cast<uint16_t>(
-                        transport::detail::read_hex(v.data(), 4));
-                    c.crc_checksum = static_cast<uint32_t>(
-                        transport::detail::read_hex(v.data() + 5, 8));
-                    c.crc_found = true;
+                    if (ev.key == "crc") {
+                        if (v.size() == 13 && v[4] == ':') {
+                            c.crc_seq = static_cast<uint16_t>(
+                                transport::detail::read_hex(v.data(), 4));
+                            c.crc_checksum = static_cast<uint32_t>(
+                                transport::detail::read_hex(v.data() + 5, 8));
+                            c.crc_found = true;
+                        }
+                        return;  // CRC is transport-only, don't forward
+                    }
+#endif
                 }
-                return;  // CRC is transport-only, don't forward
-            }
-#endif
-            c.inner.on_string(c.inner.sink, k, v);
-        };
-        d.on_object_begin = [](void* p, string_view k) {
-            auto& c = *static_cast<ReceiveContext*>(p);
-            c.inner.on_object_begin(c.inner.sink, k);
-        };
-        d.on_object_end = [](void* p, string_view k) {
-            auto& c = *static_cast<ReceiveContext*>(p);
-            c.inner.on_object_end(c.inner.sink, k);
-        };
-        d.on_array_begin = [](void* p, string_view k) {
-            auto& c = *static_cast<ReceiveContext*>(p);
-            c.inner.on_array_begin(c.inner.sink, k);
-        };
-        d.on_array_end = [](void* p, string_view k) {
-            auto& c = *static_cast<ReceiveContext*>(p);
-            c.inner.on_array_end(c.inner.sink, k);
-        };
-        d.reset = [](void* p) {
-            auto& c = *static_cast<ReceiveContext*>(p);
-            c.err = {};
+                if (ev.tag == SaxEvent::Reset) {
+                    c.err = {};
 #ifndef NOTE_NO_CRC
-            c.crc_seq = 0;
-            c.crc_checksum = 0;
-            c.crc_found = false;
+                    c.crc_seq = 0;
+                    c.crc_checksum = 0;
+                    c.crc_found = false;
 #endif
-            c.inner.reset(c.inner.sink);
+                }
+                c.inner.dispatch(c.inner.sink, ev);
+            },
         };
-        return d;
     }
 };
 

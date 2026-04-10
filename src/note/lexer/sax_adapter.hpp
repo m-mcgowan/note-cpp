@@ -21,62 +21,65 @@
 
 namespace note {
 
-/// Type-erased event dispatcher — routes completed SAX events to a concrete sink.
-struct SaxDispatch {
-    void* sink;
-    void (*on_null)(void*, string_view);
-    void (*on_bool)(void*, string_view, bool);
-    void (*on_int)(void*, string_view, int32_t);
-    void (*on_float)(void*, string_view, double);
-    void (*on_string)(void*, string_view, string_view);
-    void (*on_object_begin)(void*, string_view);
-    void (*on_object_end)(void*, string_view);
-    void (*on_array_begin)(void*, string_view);
-    void (*on_array_end)(void*, string_view);
-    void (*reset)(void*);
+/// Tagged SAX event — single-dispatch alternative to per-event function pointers.
+/// Structurally similar to BodyEvent but for the lexer->sink path.
+/// Has Null (no Number) because the lexer parses numbers into int/float.
+struct SaxEvent {
+    enum Tag : uint8_t {
+        Null, Bool, Int, Float, String,
+        ObjectBegin, ObjectEnd, ArrayBegin, ArrayEnd, Reset
+    };
+    struct StringRef { const char* data; size_t len; };
+
+    Tag tag;
+    string_view key;
+    union {
+        bool b;
+        int32_t i;
+        double f;
+        StringRef sv;
+    };
+
+    static SaxEvent make_null(string_view k) { SaxEvent e; e.tag = Null; e.key = k; return e; }
+    static SaxEvent make_bool(string_view k, bool v) { SaxEvent e; e.tag = Bool; e.key = k; e.b = v; return e; }
+    static SaxEvent make_int(string_view k, int32_t v) { SaxEvent e; e.tag = Int; e.key = k; e.i = v; return e; }
+    static SaxEvent make_float(string_view k, double v) { SaxEvent e; e.tag = Float; e.key = k; e.f = v; return e; }
+    static SaxEvent make_string(string_view k, string_view v) { SaxEvent e; e.tag = String; e.key = k; e.sv = {v.data(), v.size()}; return e; }
+    static SaxEvent make_object_begin(string_view k) { SaxEvent e; e.tag = ObjectBegin; e.key = k; return e; }
+    static SaxEvent make_object_end(string_view k) { SaxEvent e; e.tag = ObjectEnd; e.key = k; return e; }
+    static SaxEvent make_array_begin(string_view k) { SaxEvent e; e.tag = ArrayBegin; e.key = k; return e; }
+    static SaxEvent make_array_end(string_view k) { SaxEvent e; e.tag = ArrayEnd; e.key = k; return e; }
+    static SaxEvent make_reset() { SaxEvent e; e.tag = Reset; return e; }
 };
 
-/// Dispatch thunk functions — noinline to prevent LTO from inlining
-/// the entire sink method into each thunk. Keeps thunks tiny (~10 bytes)
-/// while sink methods remain as separate, shareable functions.
-namespace dispatch_thunks {
-template<typename SinkT> __attribute__((noinline))
-void on_null(void* p, string_view k) { static_cast<SinkT*>(p)->on_null(k); }
-template<typename SinkT> __attribute__((noinline))
-void on_bool(void* p, string_view k, bool v) { static_cast<SinkT*>(p)->on_bool(k, v); }
-template<typename SinkT> __attribute__((noinline))
-void on_int(void* p, string_view k, int32_t v) { static_cast<SinkT*>(p)->on_int(k, v); }
-template<typename SinkT> __attribute__((noinline))
-void on_float(void* p, string_view k, double v) { static_cast<SinkT*>(p)->on_float(k, v); }
-template<typename SinkT> __attribute__((noinline))
-void on_string(void* p, string_view k, string_view v) { static_cast<SinkT*>(p)->on_string(k, v); }
-template<typename SinkT> __attribute__((noinline))
-void on_object_begin(void* p, string_view k) { static_cast<SinkT*>(p)->on_object_begin(k); }
-template<typename SinkT> __attribute__((noinline))
-void on_object_end(void* p, string_view k) { static_cast<SinkT*>(p)->on_object_end(k); }
-template<typename SinkT> __attribute__((noinline))
-void on_array_begin(void* p, string_view k) { static_cast<SinkT*>(p)->on_array_begin(k); }
-template<typename SinkT> __attribute__((noinline))
-void on_array_end(void* p, string_view k) { static_cast<SinkT*>(p)->on_array_end(k); }
-template<typename SinkT> __attribute__((noinline))
-void do_reset(void* p) { static_cast<SinkT*>(p)->reset(); }
-} // namespace dispatch_thunks
+/// Type-erased event dispatcher — single function pointer dispatch.
+/// Reduced from 11 members (void* + 10 fn ptrs) to 2 (void* + 1 fn ptr).
+struct SaxDispatch {
+    void* sink;
+    void (*dispatch)(void*, const SaxEvent&);
+};
 
-/// Create a SaxDispatch that forwards to a concrete SinkT.
+/// Create a SaxDispatch that forwards events to a concrete SinkT.
+/// Single dispatch function with switch — replaces 10 per-event thunks.
 template<typename SinkT>
 SaxDispatch make_sax_dispatch(SinkT& s) {
     return SaxDispatch{
         &s,
-        dispatch_thunks::on_null<SinkT>,
-        dispatch_thunks::on_bool<SinkT>,
-        dispatch_thunks::on_int<SinkT>,
-        dispatch_thunks::on_float<SinkT>,
-        dispatch_thunks::on_string<SinkT>,
-        dispatch_thunks::on_object_begin<SinkT>,
-        dispatch_thunks::on_object_end<SinkT>,
-        dispatch_thunks::on_array_begin<SinkT>,
-        dispatch_thunks::on_array_end<SinkT>,
-        dispatch_thunks::do_reset<SinkT>,
+        [](void* p, const SaxEvent& ev) {
+            auto& sink = *static_cast<SinkT*>(p);
+            switch (ev.tag) {
+            case SaxEvent::Null:        sink.on_null(ev.key); break;
+            case SaxEvent::Bool:        sink.on_bool(ev.key, ev.b); break;
+            case SaxEvent::Int:         sink.on_int(ev.key, ev.i); break;
+            case SaxEvent::Float:       sink.on_float(ev.key, ev.f); break;
+            case SaxEvent::String:      sink.on_string(ev.key, {ev.sv.data, ev.sv.len}); break;
+            case SaxEvent::ObjectBegin: sink.on_object_begin(ev.key); break;
+            case SaxEvent::ObjectEnd:   sink.on_object_end(ev.key); break;
+            case SaxEvent::ArrayBegin:  sink.on_array_begin(ev.key); break;
+            case SaxEvent::ArrayEnd:    sink.on_array_end(ev.key); break;
+            case SaxEvent::Reset:       sink.reset(); break;
+            }
+        },
     };
 }
 
@@ -98,20 +101,24 @@ public:
     void on_event(const LexerEvent& ev) {
         switch (ev.tag) {
         case LexerEvent::ObjectBegin:
-            dispatch_.on_object_begin(dispatch_.sink, current_key());
+            dispatch_.dispatch(dispatch_.sink,
+                SaxEvent::make_object_begin(current_key()));
             push_key();
             break;
         case LexerEvent::ObjectEnd:
             pop_key();
-            dispatch_.on_object_end(dispatch_.sink, current_key());
+            dispatch_.dispatch(dispatch_.sink,
+                SaxEvent::make_object_end(current_key()));
             break;
         case LexerEvent::ArrayBegin:
-            dispatch_.on_array_begin(dispatch_.sink, current_key());
+            dispatch_.dispatch(dispatch_.sink,
+                SaxEvent::make_array_begin(current_key()));
             in_array_depth_++;
             break;
         case LexerEvent::ArrayEnd:
             if (in_array_depth_ > 0) in_array_depth_--;
-            dispatch_.on_array_end(dispatch_.sink, current_key());
+            dispatch_.dispatch(dispatch_.sink,
+                SaxEvent::make_array_end(current_key()));
             break;
         case LexerEvent::KeyChar:
             if (!in_key_) { key_len_ = 0; in_key_ = true; }
@@ -124,21 +131,26 @@ public:
             if (val_len_ < val_cap_) val_buf_[val_len_++] = ev.ch;
             break;
         case LexerEvent::StringEnd:
-            dispatch_.on_string(dispatch_.sink, current_key(),
-                                string_view(val_buf_, val_len_));
+            dispatch_.dispatch(dispatch_.sink,
+                SaxEvent::make_string(current_key(),
+                    string_view(val_buf_, val_len_)));
             val_len_ = 0;
             break;
         case LexerEvent::Integer:
-            dispatch_.on_int(dispatch_.sink, current_key(), ev.integer);
+            dispatch_.dispatch(dispatch_.sink,
+                SaxEvent::make_int(current_key(), ev.integer));
             break;
         case LexerEvent::Float:
-            dispatch_.on_float(dispatch_.sink, current_key(), ev.floating);
+            dispatch_.dispatch(dispatch_.sink,
+                SaxEvent::make_float(current_key(), ev.floating));
             break;
         case LexerEvent::Bool:
-            dispatch_.on_bool(dispatch_.sink, current_key(), ev.boolean);
+            dispatch_.dispatch(dispatch_.sink,
+                SaxEvent::make_bool(current_key(), ev.boolean));
             break;
         case LexerEvent::Null:
-            dispatch_.on_null(dispatch_.sink, current_key());
+            dispatch_.dispatch(dispatch_.sink,
+                SaxEvent::make_null(current_key()));
             break;
         case LexerEvent::Error:
             error_ = ev.error;
@@ -154,7 +166,7 @@ public:
         stack_depth_ = 0;
         in_array_depth_ = 0;
         error_ = nullptr;
-        dispatch_.reset(dispatch_.sink);
+        dispatch_.dispatch(dispatch_.sink, SaxEvent::make_reset());
     }
 
 private:

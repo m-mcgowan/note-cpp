@@ -98,6 +98,7 @@ set(NOTE_CPP_TEST_SOURCES_COMMON
     test_body_capture_arena.cpp
     test_static_sizing.cpp
     test_static_notecard.cpp
+    test_sax_dispatch.cpp
     test_struct_sink.cpp
     test_units.cpp
     test_voltage_variable.cpp

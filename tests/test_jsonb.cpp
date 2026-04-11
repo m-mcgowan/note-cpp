@@ -868,6 +868,35 @@ TEST_CASE("jsonb CobsDecodingReader: card.version mock response") {
     CHECK(sink.events[3].s == "1.0");
 }
 
+TEST_CASE("jsonb parser: truncated stream returns error") {
+    // Stream ends before kEndObject — should return an error.
+    std::vector<uint8_t> opcodes = {
+        jsonb::kBeginObject,
+        jsonb::kItem, 'x', '\0',
+        jsonb::kString, 'v', '\0',
+        // missing kEndObject
+    };
+    RecordingSink sink;
+    VectorReader reader{opcodes};
+    char storage[384];
+    SaxStreamBuf buf(storage);
+    auto dispatch = make_sax_dispatch(sink);
+    auto err = jsonb_parse_streaming(reader, 1000, buf, dispatch);
+    CHECK_FALSE(err.empty());  // should report truncation
+}
+
+TEST_CASE("jsonb parser: empty stream is not an error") {
+    std::vector<uint8_t> opcodes = {};
+    RecordingSink sink;
+    VectorReader reader{opcodes};
+    char storage[384];
+    SaxStreamBuf buf(storage);
+    auto dispatch = make_sax_dispatch(sink);
+    auto err = jsonb_parse_streaming(reader, 1000, buf, dispatch);
+    CHECK(err.empty());  // no data, no error
+    CHECK(sink.events.empty());
+}
+
 // TODO: split-trailer test (`:` in chunk 1, `}` in chunk 2) — needs
 // pending-byte state machine in CobsDecodingReader. Deferred: the real
 // transport typically returns the full response in one frame_read chunk.

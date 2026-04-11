@@ -354,7 +354,10 @@ public:
 
         for (;;) {
             int opcode = read_byte(read);
-            if (opcode < 0) break;
+            if (opcode < 0) {
+                if (depth > 0) return NOTE_ERR("truncated JSONB");
+                break;
+            }
 
             switch (static_cast<uint8_t>(opcode)) {
             case jsonb::kBeginObject:

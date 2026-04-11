@@ -17,7 +17,7 @@
 #include <note/compiler.hpp>
 #include <note/types.hpp>
 
-#ifdef NOTE_JSONB
+#if NOTE_JSONB
 #include <note/jsonb.hpp>
 #endif
 
@@ -460,7 +460,7 @@ private:
             }
         } writer(hal_);
 
-#ifdef NOTE_JSONB
+#if NOTE_JSONB
         // JSONB wire format: {: <COBS-encoded opcodes> :}\n
         // No CRC — COBS framing provides integrity.
         writer.write("{:", 2);
@@ -584,7 +584,7 @@ private:
             return n;
         };
 
-#ifdef NOTE_JSONB
+#if NOTE_JSONB
         // JSONB wire format: read {: header, COBS-decode, parse JSONB opcodes.
         // No CRC — COBS framing provides integrity.
         {

@@ -103,7 +103,9 @@ public:
     }
 
     JsonBuilder& add_raw(string_view, string_view) override {
-        // Raw JSON fragments cannot be embedded in JSONB.
+        // No-op — raw JSON fragments cannot be embedded in JSONB.
+        // BodyValue's raw-string constructor is disabled when NOTE_JSONB=1
+        // so this path is unreachable in normal use.
         return *this;
     }
 

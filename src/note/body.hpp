@@ -4,6 +4,7 @@
 #include "json.hpp"
 #include "json_validate.hpp"
 #include "types.hpp"
+#include "wire_format.hpp"
 
 #include <cstddef>
 #include <type_traits>
@@ -39,7 +40,10 @@ public:
 
     constexpr BodyValue() = default;
 
-#if __cplusplus >= 202002L && !defined(__clang__) && !(defined(__GNUC__) && __GNUC__ < 14)
+#if NOTE_JSONB
+    // Raw JSON string bodies are not supported with JSONB wire format.
+    // Use body() with a lambda or typed struct instead.
+#elif __cplusplus >= 202002L && !defined(__clang__) && !(defined(__GNUC__) && __GNUC__ < 14)
     // String literal: validated at compile time as well-formed JSON object.
     // Excluded from GCC < 14: inherited consteval constructors are broken (PR 102933).
     template<std::size_t N>

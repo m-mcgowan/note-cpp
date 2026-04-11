@@ -6,15 +6,23 @@
 /// - JsonWireFormat:  JSON text + optional CRC (default)
 /// - JsonbWireFormat: JSONB binary + COBS framing (no CRC)
 ///
-/// Selection is compile-time via NOTE_JSONB. When NOTE_JSONB is defined,
-/// StreamingTransport uses JSONB for all request/response encoding.
+/// Selection is compile-time via NOTE_JSONB.
+/// NOTE_MINIMAL implies NOTE_JSONB=1 unless explicitly set to 0.
+
+#ifndef NOTE_JSONB
+#   ifdef NOTE_MINIMAL
+#       define NOTE_JSONB 1
+#   else
+#       define NOTE_JSONB 0
+#   endif
+#endif
 
 namespace note {
 
 struct JsonWireFormat {};
 struct JsonbWireFormat {};
 
-#ifdef NOTE_JSONB
+#if NOTE_JSONB
 using ActiveWireFormat = JsonbWireFormat;
 #else
 using ActiveWireFormat = JsonWireFormat;

@@ -51,6 +51,15 @@ build_flags = -DNOTE_MINIMAL -UNDEF_NOTE_NO_CRC
 | `NOTE_DEBUG_ENABLED` | `1` | **(M)** `0` | Enable runtime debug listener support (`set_debug()`). When `0`, all debug calls compile to no-ops and the `DebugListener` field is eliminated. | ~16 B RAM, ~500 B flash |
 | `NOTE_SHORT_ERRORS` | `0` | **(M)** `1` | Collapse all `NOTE_ERR("message")` strings to `"E"`. On AVR (Harvard architecture), this saves RAM because string literals are copied from flash to RAM at startup. | ~350 B RAM |
 
+### Namespace imports
+
+| Flag | Default | Effect |
+|------|---------|--------|
+| `NOTE_NO_USING_NAMESPACE` | off | Disable all global namespace imports from `note.hpp` |
+| `NOTE_NO_USING_LITERALS` | off | Disable only `using namespace note::literals` (keep `Notecard` etc.) |
+
+On Arduino, `note.hpp` imports `Notecard` and duration literals (`15_mins`, `5_s`, etc.) into the global namespace for developer convenience. Define these flags before `#include <note.hpp>` if you need to avoid name collisions.
+
 ## Overriding `NOTE_MINIMAL` defaults
 
 Every flag set by `NOTE_MINIMAL` uses `#ifndef` — if you define the flag

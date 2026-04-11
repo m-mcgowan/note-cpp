@@ -126,6 +126,7 @@ struct JsonFmtResult {
     void puts(std::string_view s) { for (char c : s) put(c); }
 
     std::string_view view() const { return {buf, len}; }
+    operator std::string_view() const { return view(); }
 };
 
 /// Compile-time validated JSON format with runtime value substitution.

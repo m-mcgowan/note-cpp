@@ -35,7 +35,7 @@
 // This one struct is used to:
 //   - Send data (body of note.add)
 //   - Receive data (.into(readings) on note.get request)
-//   - Register a template (note::template_of<Readings>() generates type hints)
+//   - Register a template (note::template_of(Readings()) generates type hints)
 
 struct Readings {
     float temperature;
@@ -103,7 +103,7 @@ int main() {
 
     std::puts("\n--- Template registration ---");
     api.note.templates().define("sensors.qo")
-        .body(note::template_of<Readings>())
+        .body(note::template_of(Readings()))
         .execute();
 
 
@@ -119,12 +119,12 @@ int main() {
 
     std::puts("\n--- Template + send ---");
     {
-        // Register the template once at startup. template_of<Readings>()
+        // Register the template once at startup. template_of(Readings())
         // generates type hints from your struct's field types:
         //   float    → 14.1 (TFLOAT32)
         //   int16_t  → 11   (TINT16)
         api.note.templates().define("sensors.qo")
-            .body(note::template_of<Readings>())
+            .body(note::template_of(Readings()))
             .execute();
 
         // Then send notes as usual — the Notecard stores them compactly.

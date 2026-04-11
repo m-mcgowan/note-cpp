@@ -196,14 +196,14 @@ The buffer is partitioned into three regions: read buffer (1/6), key scratch
 (1/6), and value scratch (4/6). Default overload uses 384 bytes on the stack.
 Zero heap allocation — all memory is caller-provided or stack.
 
-See [streaming-transport.md](streaming-transport.md) for the full design and
+See [streaming-transport.md](internal/streaming-transport.md) for the full design and
 `include/note/json_sax_streaming.hpp` for the implementation.
 
 ## See Also
 
 - [examples/zero_alloc.cpp](../examples/zero_alloc.cpp) — working example of all three patterns
 - [docs/transport.md](transport.md) — transport layer architecture (`TransportHal`, `StreamingTransport`)
-- [docs/streaming-transport.md](streaming-transport.md) — streaming execution paths and CRC
+- [docs/streaming-transport.md](internal/streaming-transport.md) — streaming execution paths and CRC
 - [docs/json-backend.md](json-backend.md) — backend selection and customization
 - `include/note/transport_hal.hpp` — `TransportHal` interface
 - `include/note/streaming_transport.hpp` — `IStreamingTransport`, `StreamingTransport`

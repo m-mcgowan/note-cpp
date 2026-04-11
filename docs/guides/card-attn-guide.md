@@ -1,7 +1,7 @@
-# ATTN Pin — Interrupt-Driven Wake
+# ATTN Pin
 
 The `card.attn` API controls the Notecard's ATTN pin, which can wake a sleeping
-host MCU when events occur (file changes, connectivity, motion, etc.).
+host MCUor interrupt an awake one when events occur (file changes, connectivity, motion, etc.).
 
 ## Quick Reference
 

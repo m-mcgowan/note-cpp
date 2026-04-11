@@ -266,13 +266,26 @@ int main() {
         req.execute();
     }
 
+    // json_fmt — compile-time validated template with runtime values (C++20).
+    // The JSON structure is checked at compile time; values are substituted
+    // at runtime. No .view() needed — implicitly converts to string_view.
+    std::puts("--- note.add (json_fmt body) ---");
+    {
+        float temp = 22.5f;
+        int hum = 60;
+        api.note.add()
+           .file("sensors.qo")
+           .body(note::json_fmt<R"({"temp":{},"humidity":{}})">(temp, hum))
+           .execute();
+    }
+
     // Register a Notecard template. This tells the Notecard the shape of
     // your data so it can store notes compactly (bit-packed binary instead
     // of JSON text). The type hints are generated automatically from your
     // struct's field types (e.g. float → 14.1, int16_t → 11).
     std::puts("--- note.template ---");
     api.note.templates().define("sensors.qo")
-        .body(note::template_of<Readings>())
+        .body(note::template_of(Readings()))
         .execute();
 
     // Parse a response body back into your struct.

@@ -222,12 +222,12 @@ zero arena cost. String fields are interned into the arena.
 Notecard [templates](https://dev.blues.io/notecard/notecard-walkthrough/low-bandwidth-design/#notecard-templates) optimize bandwidth by sending only values, not field names. `note-cpp` auto-generates the template definition from your struct:
 
 ```cpp
-api.note.template_().set("sensors.qo")
-    .body(note::template_of<Readings>())
+api.note.templates().define("sensors.qo")
+    .body(template_of(Readings()))
     .execute();
 ```
 
-`template_of<Readings>()` produces the Notecard type hints: `14.1` (TFLOAT32) for `float`, `11` (TINT16) for `int16_t`. The mapping is:
+`template_of(Readings())` produces the Notecard type hints: `14.1` (TFLOAT32) for `float`, `11` (TINT16) for `int16_t`. The mapping is:
 
 | C++ type | Notecard type | Template value |
 |----------|--------------|----------------|
@@ -255,6 +255,6 @@ The macro generates the reflection metadata needed for serialization, deserializ
 
 ## NTN considerations
 
-When using NTN (satellite), templates should use `compact` format and specify a port (1-100) for efficient over-the-air encoding. The [app orchestration layer](app-orchestration.md) handles this automatically when NTN mode is enabled.
+When using NTN (satellite), templates should use `compact` format and specify a port (1-100) for efficient over-the-air encoding. The [app orchestration layer]# handles this automatically when NTN mode is enabled.
 
 See [examples/sending-notes/](../examples/sending-notes/) for a complete walkthrough of all body patterns.

@@ -1,38 +1,52 @@
-# note-cpp Documentation
+# Documentation
 
 ## Getting started
 
-1. **[Why note-cpp?](comparison.md)** — side-by-side comparison with `note-c` showing what type safety buys you
-2. **[Getting started example](../examples/getting_started.cpp)** — four tiers of the API, from raw JSON to typed body schemas
+1. **[Getting started example](../examples/getting_started.cpp)** — from setup to typed body schemas
+2. **[Migration guide](guides/migration-from-note-arduino.md)** — side-by-side comparison with `note-c`, pattern-by-pattern
+
 
 ## Core features
 
-3. **[Error handling](error-handling.md)** — `Result<T>`, `ErrorInfo` with phase-based `Error` + diagnostic `Cause`, safety levels and retry guidance
-4. **[Duration units](duration-units.md)** — `Minutes`, `Seconds`, `Hours`, `Days` with compile-time unit safety, voltage-variable sync
-5. **[Body values and Note templates](body-values.md)** — three tiers (raw JSON, builder lambda, typed struct), template registration with `template_of<T>()`
-6. **[Polymorphic APIs](polymorphic-apis.md)** — endpoints with multiple behaviors modeled as distinct types (`NoteGet::Get` vs `NoteGet::Delete`)
-7. **[JSON buffer builder](json-builder.md)** — zero-allocation `constexpr` JSON building with `JsonBuf`
+3. **[API calling patterns](api-patterns.md)** — fluent, assignment, conditional, fire-and-forget
+4. **[Working with responses](working-with-responses.md)** — field access, `has_value()`, body parsing, lifetimes
+5. **[Error handling](error-handling.md)** — `Result<T>`, `ErrorInfo`, safety levels
+6. **[Intent-scoped APIs](intent-scoped-apis.md)** — distinct types for multi-purpose endpoints
+7. **[Duration units](duration-units.md)** — `Minutes`, `Seconds`, `Hours`, `Days` with compile-time safety
+8. **[Body values and Note templates](body-values.md)** — raw JSON, builder lambda, typed struct, `template_of<T>()`
+9. **[Custom field transforms](custom-field-transforms.md)** — `VoltageVariable`, comma-separated flags
+10. **[JSON buffer builder](json-builder.md)** — zero-allocation `constexpr` JSON building
+11. **[Raw requests](raw-requests.md)** — escape hatch for requests not covered by the typed API
 
 ## Infrastructure
 
-8. **[Memory management](memory.md)** — zero-allocation patterns, StringPool for response string lifetime, arena sizing, allocation profiling
-9. **[Feature flags](feature-flags.md)** — compile-time options for binary size optimization (`NOTE_MINIMAL`, per-feature flags, AVR configuration)
-10. **[JSON backend](json-backend.md)** — how `note-cpp` handles JSON internally, when and why to customize it, available backends
-11. **[Transport layer](transport.md)** — serial and I2C protocol implementations, HAL interfaces, CRC, segmented TX/RX
-12. **[Coverage](coverage.md)** — test coverage methodology, GCC + lcov 2.x requirements
+12. **[Memory management](memory.md)** — zero-allocation patterns, `StringPool`, arena sizing
+13. **[Feature flags](feature-flags.md)** — `NOTE_MINIMAL`, `NOTE_NO_RETRY`, AVR configuration
+14. **[JSON backend](json-backend.md)** — how JSON is handled internally, available backends
+15. **[Transport layer](transport.md)** — serial and I2C protocols, HAL interfaces, CRC
+16. **[Binary transfer](binary-transfer.md)** — `card.binary` put/get with COBS framing
+17. **[Response lifetimes](response-lifetimes.md)** — string_view validity, arena interning
+18. **[C++ standard requirements](cpp-standard-requirements.md)** — what each standard version enables
+19. **[Debugging](debugging.md)** — wire tracing, transport diagnostics
+20. **[Known issues](known-issues.md)**
 
-## App layer
+## Guides
 
-13. **[App design](note-cpp-app.md)** — higher-level app abstractions: channels, state stores, managers
-14. **[App orchestration](app-orchestration.md)** — NTN/satellite handling, template lifecycle, sync direction management, composed setup procedures
+21. **[Arduino guide](guides/arduino-guide.md)** — setup, wiring, examples
+22. **[ATTN pin guide](guides/card-attn-guide.md)** — interrupt-driven wake patterns
+23. **[Migrating from note-arduino](guides/migration-from-note-arduino.md)** — side-by-side examples
 
-## Documentation site
+## Contributing
 
-15. **[Documentation generation](documentation.md)** — how the Doxygen API reference site is generated, firmware/SKU filtering, and link validation
+Internal documentation for contributors:
 
-## Project
-
-16. **[Project plan](PLAN.md)** — architecture, completed phases, component status, roadmap
+- **[API design](internal/api-design.md)** — two-layer architecture, naming conventions
+- **[Code generation](internal/codegen.md)** — OpenAPI spec → C++ headers pipeline
+- **[Coverage](internal/coverage.md)** — GCC + lcov methodology
+- **[Documentation generation](internal/documentation.md)** — Doxygen site
+- **[Retry design](internal/retry-design.md)** — transport retry and safety levels
+- **[Streaming transport](internal/streaming-transport.md)** — SAX pipeline internals
+- **[Release checklist](internal/release-checklist.md)**
 
 ## Examples
 

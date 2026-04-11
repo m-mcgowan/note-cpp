@@ -1,12 +1,16 @@
 // Arduino migration example — compiled with PlatformIO to verify every
-// code snippet in docs/migration-from-note-arduino.md works on real Arduino.
+// code snippet in docs/guides/migration-from-note-arduino.md works on
+// real Arduino.
 //
 // This file is the source of truth for the migration guide's note-cpp
 // examples. The doc references line numbers from this file via embedme.
+//
+// IMPORTANT: If you edit this file, update the line number references in:
+//   - docs/guides/migration-from-note-arduino.md
+//   - README.md (if the same snippet appears there)
+// Run tools/verify-docs.sh to check for mismatches.
 
-#include <note/arduino.hpp>
-using namespace note::api;
-using namespace note::literals;
+#include <note.hpp>
 
 
 // ── Body struct (used across note.add, templates, and receive examples) ──
@@ -14,13 +18,13 @@ using namespace note::literals;
 struct Readings {
     float temperature;
     int16_t humidity;
-    NOTE_FIELDS(temperature, humidity)
+    NOTE_FIELDS(temperature, humidity)  // not needed on C++20
 };
 
 
 // ── Setup ────────────────────────────────────────────────────────────────
 
-note::arduino::Notecard nc;
+Notecard nc;
 
 void setup() {
     nc.begin(Serial1, 9600);
@@ -55,18 +59,6 @@ void hub_set_direct() {
 }
 
 
-// ── hub.set: designated initializers ─────────────────────────────────────
-
-void hub_set_desig() {
-    HubSet req{
-        .mode     = "periodic",
-        .outbound = 60_mins,
-        .product  = "com.example.app",
-    };
-    nc.execute(req);
-}
-
-
 // ── note.add: send sensor data ───────────────────────────────────────────
 
 void note_add() {
@@ -87,8 +79,7 @@ void note_add_errors() {
         .body(r)
         .execute();
     if (!result) {
-        auto err = result.error();
-        Serial.println(err);
+        Serial.println(result.error());
     }
 }
 
@@ -97,7 +88,7 @@ void note_add_errors() {
 
 void note_template() {
     nc.note.templates().define("sensors.qo")
-        .body(note::template_of(Readings{}))
+        .body(note::template_of(Readings()))
         .execute();
 }
 
@@ -107,13 +98,14 @@ void note_template() {
 void card_temp() {
     auto r = nc.card.temp().read().execute();
     if (r) {
-        double temp = r.value;
-        Serial.println(temp);
+        Serial.println(r.value);
     } else {
         Serial.println(r.error());
     }
+}
 
-    // Configure periodic monitoring
+// Configure periodic monitoring
+void card_temp_configure() {
     nc.card.temp().configure()
         .minutes(5)
         .execute();
@@ -125,11 +117,25 @@ void card_temp() {
 void card_version() {
     auto r = nc.card.version().execute();
     if (r) {
-        auto ver = r.version;
-        auto dev = r.device;
-        Serial.println(ver);
-        Serial.println(dev);
+        Serial.println(r.version);
+        Serial.println(r.device);
     }
+}
+
+
+// ── Response lifetime ────────────────────────────────────────────────────
+// Non-string fields (int, bool, double) are plain values — always safe.
+// String fields (string_view) are valid until the next execute().
+// See docs/response-lifetimes.md for arena-based string extension.
+
+double last_temperature = 0;
+
+void keep_response() {
+    auto r = nc.card.temp().read().execute();
+    if (r) {
+        last_temperature = r.value;  // safe — plain double
+    }
+    // Response goes out of scope here — no manual cleanup needed.
 }
 
 
@@ -147,6 +153,7 @@ void card_attn_disarm() {
     nc.card.attn().disarm().execute();
 }
 
+
 // ── card.attn: sleep with state ──────────────────────────────────────────
 
 void card_attn_sleep() {
@@ -158,8 +165,8 @@ void card_attn_sleep() {
 
 void card_attn_retrieve() {
     auto r = nc.card.attn().retrieve().execute();
-    if (r && r.time != 0) {
-        auto payload = r.payload; // "checkpoint-v1"
+    if (r && r.time.has_value()) {
+        auto payload = r.payload;
         (void)payload;
     }
 }
@@ -187,8 +194,20 @@ void env_set_default() {
 void error_handling() {
     auto r = nc.card.version().execute();
     if (!r) {
+        Serial.println(r.error());
+    }
+}
+
+void error_details() {
+    auto r = nc.card.version().execute();
+    if (!r) {
         auto err = r.error();
+        // err.code:    Error::Notecard, SendFailed, etc.
+        // err.cause:   Cause::Timeout, HalError, etc.
+        // err.message: human-readable string
         Serial.println(err);
+    } else {
+        // use r.version, r.device, etc.
     }
 }
 
@@ -200,6 +219,4 @@ void hub_sync() {
 }
 
 
-void loop() {
-    // Examples are called from setup or on demand — loop is empty.
-}
+void loop() {}

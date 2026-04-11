@@ -8,7 +8,9 @@ Type-safe C++ API for the [Blues Notecard](https://blues.com/notecard). Works wi
 
 ## Why note-cpp?
 
-The Notecard C API is *stringly-typed* — field names are strings, types are manual, typos compile fine and fail at runtime. `note-cpp` provides the Notecard API in a type-safe way, while also still allowing notes to be defined by the application, via type-safe structs. Requests and responses have typed fields and IDE auto-completion — misspelled field names, wrong types, and missing required fields are all compile errors. Targeting for the specific Notecard radio technologies and firmware version is also supported. [See the full comparison with note-c.](docs/comparison.md)
+The Notecard C API is ***stringly**-typed* — field names are strings, types are manual, typos compile fine and fail at runtime. `note-cpp` replaces this with typed structs: requests and responses have named fields with IDE auto-completion, and misspelled field names, wrong types, or missing required fields are all compile errors. You don't need to write or parse JSON — the Notecard's wire format is handled by the library, and your code works with plain C++ structs and method calls. (If you do need raw JSON access, [it's available](docs/raw-requests.md).) 
+
+Coming from note-c? See the [migration guide](docs/guides/migration-from-note-arduino.md).
 
 The API supports fluent setters
 
@@ -73,7 +75,7 @@ and property assignment
 ```
 
 > **Coming from note-arduino / note-c?** The
-> [migration guide](docs/migration-from-note-arduino.md) has side-by-side
+> [migration guide](docs/guides/migration-from-note-arduino.md) has side-by-side
 > examples covering setup, hub.set, note.add, templates, error handling,
 > binary transfers, and more.
 
@@ -124,7 +126,7 @@ api.note.add().file("sensors.qo").body(Readings{.temperature = 22.5f, .humidity 
 Readings data = result.bodyAs<Readings>();
 
 // Register template (auto-generates type hints for compact storage)
-api.note.templates().define("sensors.qo").body(note::template_of<Readings>()).execute();
+api.note.templates().define("sensors.qo").body(note::template_of(Readings())).execute();
 ```
 
 ### Meet the developer where they are
@@ -184,7 +186,7 @@ the compiler stops you.
 
 **The compiler catches what it can.** Misspelled field names are compile
 errors — there's no `"prodcut"` field on `hub.set`, so the compiler tells
-you. Polymorphic variants expose only their valid fields, so setting a field
+you. Intent-scoped variants expose only their valid fields, so setting a field
 that doesn't apply to that operation won't compile.
 
 On C++20, named constants and flag methods are the primary way to set
@@ -223,7 +225,7 @@ on your Notecard SKU. The goal: catch mistakes before they reach the device.
 The surface API is simple because the complexity is pushed elsewhere:
 
 - **Code generation** — 74 request types are auto-generated from an OpenAPI
-  spec. The generated code handles fluent setters, version gating, polymorphic
+  spec. The generated code handles fluent setters, version gating, intent
   dispatch, and JSON serialization. Users never edit or read it.
 - **Internals** — Template metaprogramming, SFINAE, and `constexpr` machinery
   live in `detail` namespaces and implementation headers. They make the simple
@@ -239,9 +241,9 @@ The surface API is simple because the complexity is pushed elsewhere:
   tools for library internals, not for the API a developer types every day.
   If the API requires a C++ book to understand, it's a bug.
 - **Templates only when they earn their place.** If a function takes
-  `template<typename T>`, it should be for a clear reason (like
-  `template_of<Readings>()` where the type itself is the input, not a value),
-  not because the implementation was easier that way.
+  `template<typename T>`, it should be for a clear reason, not because
+  the implementation was easier that way. Prefer type deduction from
+  arguments over explicit template parameters.
 - **Namespaces, not macros.** `NOTE_FIELDS(...)` is the one macro, and it's
   optional on C++20. Everything else lives in the `note` namespace — no
   `#define`-driven configuration, no macro-based dispatch, no global
@@ -251,7 +253,7 @@ The surface API is simple because the complexity is pushed elsewhere:
 
 ```
 ┌────────────────────────────────────────────────┐
-│  Your application  (optionally note-cpp-app)   │
+│  Your application                              │
 ├────────────────────────────────────────────────┤
 │  Typed API layer              note-cpp         │
 │    Generated requests & responses              │
@@ -260,19 +262,14 @@ The surface API is simple because the complexity is pushed elsewhere:
 │  Protocol layer               note-cpp         │
 │    Notecard serial & I2C framing               │
 │    CRC · retry · segmented TX/RX               │
-├───────────────────────┬────────────────────────┤
-│  JSON backend         │  Platform HAL          │
-│  (customizable)       │  note-cpp-arduino      │
-│                       │  note-cpp-zephyr       │
-└───────────────────────┴────────────────────────┘
+├────────────────────────────────────────────────┤
+│  Platform HAL                 note-cpp         │
+│    Arduino · Zephyr · ESP-IDF · Linux          │
+│    (built-in, selected by build environment)   │
+└────────────────────────────────────────────────┘
 ```
 
-note-cpp owns everything above the bottom row. Platform libraries provide the HAL — pick one for your platform:
-
-- **note-cpp-arduino** — Arduino (`HardwareSerial` + `Wire`)
-- **note-cpp-zephyr** — Zephyr RTOS (UART + I2C)
-- **note-cpp-espidf** — ESP-IDF (UART + I2C)
-- **note-cpp-linux** — Linux (`/dev/ttyACM0`, `/dev/i2c-N`)
+note-cpp is a single library that includes platform HALs for common targets. The HAL for your platform is selected automatically based on your build environment (Arduino framework, Zephyr, ESP-IDF, or POSIX). Custom HALs are a simple callback interface — see [docs/transport.md](docs/transport.md).
 
 The JSON backend works out of the box. It's customizable if you have specific resource or tooling constraints — see [docs/json-backend.md](docs/json-backend.md).
 
@@ -283,7 +280,7 @@ The JSON backend works out of the box. It's customizable if you have specific re
 ```cpp
 #include <note.hpp>
 
-note::arduino::Notecard nc;
+Notecard nc;
 
 void setup() {
     nc.begin(Serial1, 9600);       // serial — or nc.begin(Wire) for I2C
@@ -300,7 +297,7 @@ Install via Arduino Library Manager or `arduino-cli lib install note-cpp`.
 ### PlatformIO
 
 ```ini
-lib_deps = note-cpp
+lib_deps = https://github.com/m-mcgowan/note-cpp.git
 ```
 
 ### CMake
@@ -315,8 +312,6 @@ target_link_libraries(my_app PRIVATE note-cpp)
 Once set up, the typed API is the same on every platform:
 
 ```cpp
-using namespace note::literals;
-
 nc.hub.set()
    .product("com.example.app")
    .mode("periodic")
@@ -338,7 +333,7 @@ See the [getting started example](examples/getting_started.cpp) for a complete w
 
 - [API Types](#generated-api-types) — typed requests and responses for all Notecard APIs
 - [Target Filtering](#target-filtering) — APIs not relevant to your Notecard are deprecated or optionally rejected at compile time (C++20)
-- [Polymorphic APIs](#polymorphic-apis) — handles Notecard APIs with overloaded behavior depending on the request
+- [Intent-Scoped APIs](#intent-scoped-apis) — distinct types for each operation on multi-purpose endpoints
 - [Body Values](#body-values) — raw JSON, builder lambdas, or typed structs
 - [Body Structs and Note Templates](#body-structs-and-note-templates) — one struct for send, receive, and template registration
 - [Type-Safe Duration Units](#type-safe-duration-units) — `Minutes`, `Seconds`, `Hours`, `Days` with implicit conversion and compile-time safety
@@ -383,34 +378,48 @@ The core library works with C++17. Each successive standard unlocks additional f
 | `std::expected` (native, vs `tl::expected` fallback) | — | — | yes |
 | `std::unreachable` (native, vs compiler builtins) | — | — | yes |
 
+### Streaming architecture
+
+`note-c` builds a complete JSON tree in memory (via cJSON), serializes
+it to a string, sends it, then parses the response string back into
+another tree. Both trees live on the heap simultaneously.
+
+`note-cpp` eliminates both buffers. The request and response sides use
+the same streaming approach:
+
+- **Requests** — each field is serialized directly to the transport as
+  it's set. The JSON `{`, keys, values, and `}` are written byte-by-byte
+  to the wire. No request string is ever held in memory.
+- **Responses** — a SAX (event-driven) parser reads bytes from the wire
+  and populates typed struct fields as they arrive. No response string
+  or JSON tree is built.
+
+This means the library never needs a buffer large enough to hold an
+entire request or response — only a small read buffer for the transport
+and an arena for interning response strings.
+
 ### Low-memory targets
 
-Despite the feature set above, `note-cpp` is smaller than `note-c` on
-constrained targets. JSON is streamed directly to and from the Notecard
-— requests are serialized field-by-field into the transport, and
-responses are parsed with a SAX (event-driven) parser that populates
-typed structs without building an intermediate tree. This means no JSON
-library in memory, no heap allocation, and no buffer large enough to
-hold the entire request or response.
-
-The library can be configured for **zero heap allocation** — all buffers
-are statically sized at compile time using `MonotonicArena` and
-`StaticNotecard`. On an Arduino Uno (ATmega328P, 32 KB flash / 2 KB RAM),
-an 8-endpoint application compares as follows:
+The streaming architecture means `note-cpp` can be configured for
+**zero heap allocation** — all buffers are statically sized at compile
+time using `MonotonicArena` and `StaticNotecard`. On an Arduino Uno
+(ATmega328P, 32 KB flash / 2 KB RAM), an 8-endpoint application
+compares as follows:
 
 | | note-c | `note-cpp` | Delta |
 |---|---|---|---|
-| **Flash** | 24,646 (76%) | 20,392 (63%) | **-17%** |
-| **Static RAM** | 739 (36%) | 736 (36%) | -3 |
+| **Flash** | 25,076 (78%) | 26,488 (82%) | +1,412 |
+| **Static RAM** | 729 (36%) | 832 (41%) | +103 |
 | **Heap (peak)** | 371 (18%) | 0 (0%) | **-371** |
-| **Total RAM** | 1,110 (54%) | 736 (36%) | **-34%** |
+| **Total RAM** | 1,100 (54%) | 832 (41%) | **-24%** |
 
-`note-cpp`'s static RAM includes the arena used for response string
-interning — memory that `note-c` allocates on the heap at runtime.
-note-c heap measured via `__brkval` watermark on Wokwi with a mock
-Notecard. See [feature flags](docs/feature-flags.md) for the
-compile-time options that enable this (`NOTE_MINIMAL`, `NOTE_NO_RETRY`,
-etc.).
+`note-cpp` uses 24% less total RAM than `note-c` — all memory is
+statically allocated at compile time using `MonotonicArena` and
+`StaticNotecard`, while `note-c` allocates JSON buffers on the heap
+at runtime. The flash gap of ~1,400 bytes is the cost of streaming
+SAX parsing infrastructure that replaces `note-c`'s cJSON dependency.
+See [feature flags](docs/feature-flags.md) for the compile-time
+options that enable this (`NOTE_MINIMAL`, `NOTE_NO_RETRY`, etc.).
 
 ---
 
@@ -451,9 +460,9 @@ Each API type carries `static constexpr Skus skus` for introspection. See [examp
 
 ---
 
-## Polymorphic APIs
+## Intent-Scoped APIs
 
-Some Notecard APIs behave differently depending on which fields you send. In `note-c` these share a single function — you pass the right combination of fields and hope you didn't set one that's irrelevant or wrong. In `note-cpp`, each behavior is a **distinct type** with only the fields that apply, its own response type, and a compile-time safety level:
+Some Notecard APIs behave differently depending on which fields you send. In `note-c` these share a single function — you pass the right combination of fields and hope you didn't set one that's irrelevant or wrong. In `note-cpp`, each intent is a **distinct type** with only the fields that apply, its own response type, and a compile-time safety level:
 
 ```cpp
 // Read a Note by ID (ReadOnly — safe to retry on failure)
@@ -470,9 +479,9 @@ nc.card.locationMode().fixed()
 nc.card.locationMode().get().execute();       // no lat/lon fields to misuse
 ```
 
-Each variant exposes only the fields the Notecard expects for that operation — setting a field that doesn't apply is a compile error, not a silent wire-level mistake.
+Each intent exposes only the fields the Notecard expects for that operation — setting a field that doesn't apply is a compile error, not a silent wire-level mistake.
 
-The same pattern applies to `card.binary`, `card.contact`, `card.location.mode`, `card.temp`, `note.template`, and others. See [docs/polymorphic-apis.md](docs/polymorphic-apis.md) for the full list.
+The same pattern applies to `card.binary`, `card.contact`, `card.location.mode`, `card.temp`, `note.template`, and others. See [docs/intent-scoped-apis.md](docs/intent-scoped-apis.md) for the full list.
 
 ---
 
@@ -493,7 +502,7 @@ Two endpoints use plural group method names to avoid C++ keywords:
 
 ### Intent method names
 
-For polymorphic APIs, the method names on the factory struct are **intent-based** — describing what the operation *does*, not the underlying HTTP verb. Old verb-based names (`get()`, `set()`, `delete_()`) are kept as `[[deprecated]]` aliases.
+For intent-scoped APIs, the method names describe what the operation *does*, not the underlying HTTP verb. Old verb-based names (`get()`, `set()`, `delete_()`) are kept as `[[deprecated]]` aliases.
 
 | Notecard request | C++ method |
 |-----------------|------------|
@@ -561,7 +570,7 @@ nc.note.add().file("sensors.qo").body(r).execute();
 
 // 2. json_fmt (C++20) — concise, compile-time validated, runtime values
 nc.note.add().file("sensors.qo")
-    .body(note::json_fmt<R"({"temp":{},"humidity":{}})">(temp, hum).view())
+    .body(json_fmt<R"({"temp":{},"humidity":{}})">(temp, hum))
     .execute();
 
 // 3. Builder lambda — structured, runtime values, can't produce bad JSON
@@ -611,7 +620,7 @@ Register a template (auto-generates type hints `14.1` = TFLOAT32, `11` = TINT16)
 // examples/getting_started.cpp#L277-L279
 
 nc.note.templates().define("sensors.qo")
-    .body(note::template_of<Readings>())
+    .body(note::template_of(Readings()))
     .execute();
 ```
 
@@ -775,9 +784,28 @@ static_assert(req.view() == R"({"req":"hub.set","mode":"periodic"})");
 
 ---
 
+## Testing
+
+The library is tested at multiple levels — from host-side unit tests to
+on-device integration with a real Notecard.
+
+| Level | What | Count |
+|-------|------|-------|
+| **Host unit tests** | Catch2 tests covering all endpoints, transport, SAX parsing, body structs, error handling | ~1,400 test cases |
+| **Compile-fail tests** | Verify that invalid API usage doesn't compile (wrong types, invalid flags, bad JSON) | 19 |
+| **Arduino build** | Same test suite compiled with `ARDUINO` defined, verifying `Printable` integration | ~1,400 test cases |
+| **Code coverage** | GCC 13 + lcov 2.3 — lines 96%, functions 98%, branches 89% | CI enforced |
+| **Multi-compiler CI** | g++ 12/13/14, clang++ 17/18, C++20 and C++23, libstdc++ and libc++ | 5 configurations |
+| **On-device integration** | ESP32-S3 with a real Notecard over serial — API requests, body parsing, binary transfer, streaming SAX | 36 test cases |
+| **AVR build verification** | ATmega328P (Arduino Uno) binary size comparison against note-c | PlatformIO |
+| **Embedded compatibility** | Library examples compiled across ESP32, AVR, STM32 via [compat-check](https://github.com/m-mcgowan/embedded-cpp-compat-check) | CI |
+
+Host tests run in ~35 seconds. The full CI matrix (5 compilers + coverage
++ embedded compat) runs on every push.
+
 ## Documentation
 
-- [Migrating from note-arduino](docs/migration-from-note-arduino.md) — side-by-side examples for common patterns
+- [Migrating from note-arduino](docs/guides/migration-from-note-arduino.md) — side-by-side examples for common patterns
 - [Feature flags](docs/feature-flags.md) — compile-time options for binary size optimization (AVR, Cortex-M0)
 - [Full documentation index](docs/README.md) — all guides, from getting started to internals
 - [API reference (Doxygen)](https://m-mcgowan.github.io/note-cpp/)

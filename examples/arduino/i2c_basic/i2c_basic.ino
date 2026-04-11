@@ -7,8 +7,6 @@
 
 #include <note.hpp>
 
-using namespace note::literals;
-
 // ── Sensor data ──────────────────────────────────────────────────────────
 struct Sensor {
     float   temperature;
@@ -17,7 +15,7 @@ struct Sensor {
 };
 
 // ── Notecard ─────────────────────────────────────────────────────────────
-note::arduino::Notecard nc;
+Notecard nc;
 
 void setup() {
     Serial.begin(115200);

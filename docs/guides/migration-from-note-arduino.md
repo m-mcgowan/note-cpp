@@ -1,19 +1,144 @@
 # Migrating from note-arduino (note-c) to note-cpp
 
+
+# Overview
+
 If you're coming from the [note-arduino](https://github.com/blues/note-arduino)
 library (which wraps [note-c](https://github.com/blues/note-c)), this guide
-shows how your existing code maps to note-cpp. Each section shows the note-c
-pattern on the left and the note-cpp equivalent on the right.
+shows how your existing code maps to `note-cpp`. Each section shows the note-c
+pattern on the left and the `note-cpp` equivalent on the right.
 
-The short version: note-c builds JSON by hand with string keys and manual
-memory management. note-cpp gives you typed fields, IDE autocomplete, and
-compile-time error checking — the same requests on the wire, but the compiler
-catches mistakes before they reach the device.
+> All `note-cpp` code in this guide is taken from real examples compiled against note-cpp
+> from [examples/arduino-migration/](../../examples/arduino-migration/).
+> The note-c examples are compiled from
+> [examples/migration_notec.cpp](../../examples/migration_notec.cpp).
 
-> All note-cpp code in this guide is compiled against the real Arduino SDK
-> via [examples/arduino-migration/](../examples/arduino-migration/). The
-> note-c examples are compiled via
-> [examples/migration_notec.cpp](../examples/migration_notec.cpp).
+Here's a few examples to illustrate the key differences in API style.
+
+<table>
+<tr><th>note-c</th><th>note-cpp</th></tr>
+<tr>
+<td>
+
+```c
+// Field names are strings, types are
+// manual, no IDE help.
+J *req = NoteNewRequest("hub.set");
+JAddStringToObject(req, "product",
+    "com.example.app");
+JAddStringToObject(req, "mode", "periodic");
+JAddNumberToObject(req, "outbound", 60);
+NoteRequest(req);
+```
+
+</td>
+<td>
+
+```cpp
+// Every field is a named member.
+// IDE auto-completes after the dot.
+nc.hub.set()
+   .product("com.example.app")
+   .mode("periodic")
+   .outbound(60)
+   .execute();
+
+```
+
+</td>
+</tr>
+<tr>
+<td>
+
+```c
+// Body is a manual J* tree.
+J *req = NoteNewRequest("note.add");
+JAddStringToObject(req, "file", "sensors.qo");
+J *body = JAddObjectToObject(req, "body");
+JAddNumberToObject(body, "temp", 22.5);
+JAddNumberToObject(body, "humidity", 60);
+NoteRequest(req);
+```
+</td>
+<td>
+
+```cpp
+// Body from a typed struct.
+Readings r{.temperature = 22.5f, .humidity = 60};
+nc.note.add()
+   .file("sensors.qo")
+   .body(r)
+   .execute();
+
+```
+</td>
+</tr>
+<tr>
+<td>
+
+```c
+// Stringly-typed — no compiler help
+// if you misspell a field.
+J *rsp = NoteRequestResponse(
+    NoteNewRequest("card.version"));
+char *ver = JGetString(rsp, "verison"); // typo!
+char *dev = JGetString(rsp, "device");
+NoteDeleteResponse(rsp);
+```
+
+</td>
+<td>
+
+```cpp
+// Typed struct — misspelled fields
+// won't compile.
+auto r = nc.card.version().execute();
+if (r) {
+    auto ver = r.version; // typo would be an error
+    auto dev = r.device;
+}
+```
+
+</td>
+</tr>
+<tr>
+<td>
+
+```c
+// Template type hints must match the
+// body fields you'll send.
+J *req = NoteNewRequest("note.template");
+JAddStringToObject(req, "file", "sensors.qo");
+J *body = JAddObjectToObject(req, "body");
+JAddNumberToObject(body, "temperature",
+    TFLOAT32);
+JAddNumberToObject(body, "humidity", TINT16);
+NoteRequest(req);
+```
+
+</td>
+<td>
+
+```cpp
+// Same Readings struct auto-generates
+// matching type hints — no duplication.
+nc.note.templates().define("sensors.qo")
+   .body(template_of(Readings()))
+   .execute();
+
+
+
+
+```
+
+</td>
+</tr>
+</table>
+
+The compiler catches what `note-c` defers to runtime: wrong field names, wrong types, wrong enum values, missing required fields. The rest of this guide covers each pattern in detail.
+
+
+
 
 ## Setup
 
@@ -29,28 +154,26 @@ Notecard nc;
 void setup() {
     nc.begin(Serial1, 9600);
 }
-
 ```
-
 </td><td>
 
 ```cpp
-#include <note/arduino.hpp>
-using namespace note::api;
+#include <note.hpp>
 
-note::arduino::Notecard nc;
+Notecard nc;
 
 void setup() {
     nc.begin(Serial1, 9600);
 }
 ```
-
 </td></tr>
 </table>
 
-> The `using namespace note::api` import is used throughout the remaining
-> examples for brevity. It brings in the request types (`HubSet`, `CardAttn`,
-> etc.) without affecting `nc` or other `note::` types.
+> On Arduino, `note.hpp` imports the API into the global namespace for
+> developer convenience — `Notecard`, duration literals (`15_mins`, `5_s`),
+> and other common names are available without qualification. See
+> [namespace imports](../feature-flags.md#namespace-imports) for how to
+> customize this.
 
 ## Configuring the Hub (hub.set)
 
@@ -59,7 +182,7 @@ void setup() {
 <tr><td>
 
 ```c
-// ../examples/migration_notec.cpp#L54-L59
+// ../../examples/migration_notec.cpp#L54-L59
 
 J *req = nc.newRequest("hub.set");
 JAddStringToObject(req, "product",
@@ -72,14 +195,14 @@ nc.sendRequest(req);
 </td><td>
 
 ```cpp
-// ../examples/arduino-migration/src/main.cpp#L33-L37
+// ../../examples/arduino-migration/src/main.cpp#L37-L42
 
-nc.hub.set()
-    .product("com.example.app")
-    .mode("periodic")
-    .outbound(60_mins)
-    .execute();
-
+    nc.hub.set()
+        .product("com.example.app")
+        .mode("periodic")
+        .outbound(60_mins)
+        .execute();
+}
 ```
 
 </td></tr>
@@ -91,12 +214,13 @@ nc.hub.set()
   tells you — note-c compiles it silently.
 - `outbound` is a bare integer in note-c — you have to remember it's in
   minutes. note-cpp accepts `60_mins` or `1_hours` with type-safe duration
-  units that prevent accidental mixing of minutes and seconds.
-- On C++20, `"periodic"` is validated at compile time. A typo like
+  units that prevent accidental use, such as passing 30_seconds where a whole number of minutes are expected.
+- On C++20, `"periodic"`, even as a string literal, is validated at compile time. A typo like
   `"perioidc"` is a compile error.
 
+## API Styles
 
-The example above shows the fluent chain approach.  Note-c offers 3 primary API styles:
+Note-c offers 3 primary API styles:
 
 1. fluent chain
 2. direct assignment
@@ -104,18 +228,20 @@ The example above shows the fluent chain approach.  Note-c offers 3 primary API 
 
 ### Fluent chain
 
-Build and execute in one expression. Good when all fields are known upfront, or their values may be conditional (computed by a helper function).
+Build and execute in one expression. Good when all fields are known upfront, or their values may be computed by a function.
+
+The example above demonstrates the fluent chain approach.
 
 ### Direct assignment
 
-Set fields individually. Good when fields come from different sources or are set with inline conditional code.
+Set fields individually. This is good when fields come from different sources or are set with inline conditional code.
 
 <table>
 <tr><th>note-arduino</th><th>note-cpp</th></tr>
 <tr><td>
 
 ```c
-// ../examples/migration_notec.cpp#L65-L77
+// ../../examples/migration_notec.cpp#L65-L77
 
 J *req = nc.newRequest("hub.set");
 JAddStringToObject(req, "product",
@@ -165,7 +291,7 @@ isn't needed.
 <tr><td>
 
 ```c
-// ../examples/migration_notec.cpp#L54-L59
+// ../../examples/migration_notec.cpp#L54-L59
 
 J *req = nc.newRequest("hub.set");
 JAddStringToObject(req, "product",
@@ -173,19 +299,29 @@ JAddStringToObject(req, "product",
 JAddStringToObject(req, "mode", "periodic");
 JAddNumberToObject(req, "outbound", 60);
 nc.sendRequest(req);
+
+
+
+
+
 ```
 
 </td><td>
 
 ```cpp
-// ../examples/arduino-migration/src/main.cpp#L61-L66
+// ../../examples/arduino-migration/src/main.cpp#L48-L58
 
-HubSet req{
-    .mode     = "periodic",
-    .outbound = 60_mins,
-    .product  = "com.example.app",
-};
-nc.execute(req);
+bool use_continuous = false;
+auto req = nc.hub.set();
+req.product  = "com.example.app";
+req.outbound = 60_mins;
+if (use_continuous) {
+    req.mode = "continuous";
+    req.sync = true;
+} else {
+    req.mode = "periodic";
+}
+req.execute();
 ```
 
 </td></tr>
@@ -207,7 +343,7 @@ or conditional logic. Designated initializers read like data, not procedure
 **note-arduino:**
 
 ```c
-// ../examples/migration_notec.cpp#L82-L93
+// ../../examples/migration_notec.cpp#L82-L93
 
 struct Readings {
     float temperature;
@@ -226,16 +362,24 @@ nc.sendRequest(req);
 **note-cpp:**
 
 ```cpp
+// ../../examples/arduino-migration/src/main.cpp#L18-L22
+
 struct Readings {
     float temperature;
     int16_t humidity;
+    NOTE_FIELDS(temperature, humidity)  // not needed on C++20
 };
+```
 
-Readings r{.temperature = 22.5f, .humidity = 60};
-nc.note.add()
-    .file("sensors.qo")
-    .body(r)
-    .execute();
+```cpp
+// ../../examples/arduino-migration/src/main.cpp#L65-L70
+
+    Readings r{.temperature = 22.5f, .humidity = 60};
+    nc.note.add()
+        .file("sensors.qo")
+        .body(r)
+        .execute();
+}
 ```
 
 **With error handling:**
@@ -244,7 +388,7 @@ In note-c, you check for a null response, then check the `err` field — an
 unstructured string you have to parse yourself:
 
 ```c
-// ../examples/migration_notec.cpp#L99-L108
+// ../../examples/migration_notec.cpp#L99-L108
 
 J *rsp = nc.requestAndResponse(req);
 if (rsp == NULL) {
@@ -259,8 +403,7 @@ if (rsp == NULL) {
 ```
 
 In note-cpp, the result carries structured error information. The error code
-tells you what layer failed, the cause tells you why, and you can decide
-whether retrying is safe without parsing strings:
+tells you where the failure happened (e.g. notecard, json parsing, transport) and the cause tells you why.
 
 ```cpp
 auto result = nc.note.add()
@@ -268,18 +411,23 @@ auto result = nc.note.add()
     .body(r)
     .execute();
 if (!result) {
-    auto err = result.error();
-    Serial.println(err);
+    Serial.println(result.error());
 }
 ```
 
-Possible output (Notecard error):
+`note-cpp` on Arduino provides some time-savers, sch as converting most objects to a Printable so they are easily used with arduino streams.
 
-    notecard: note.add: queue full
+Example outputs:
 
-Possible output (transport failure):
+ - notecard error: `notecard: note.add: queue full`
+ - transport failure: `send_failed[timeout]: no response within deadline`
 
-    send_failed[timeout]: no response within deadline
+
+You can save the error to a variable when you want to inspect it in more detail:
+
+```
+auto err = result.error();
+```
 
 Error details:
 - `err.code` tells you which layer failed:
@@ -292,18 +440,15 @@ Error details:
   - `"note.add: file not found"`
   - `"note.add: queue full"`
 
-See [Error Handling](error-handling.md) for the full reference including
+See [Error Handling](../error-handling.md) for the full reference including
 retry safety levels.
 
 **Key differences:**
-- Both sides define the same struct, but note-cpp uses it directly as the
-  body — no manual field-by-field JSON construction.
+- Both sides define the same struct, note-cpp uses it directly as the
+  body without manual field-by-field JSON construction.
 - No two-level pointer management (`req` then `body`). If you forget
   `JAddObjectToObject` in note-c, the fields end up on the request itself
   and are silently ignored.
-- `JAddNumberToObject` sends everything as `double`. note-cpp preserves the
-  original type (`float`, `int16_t`) so template registration generates the
-  correct type hints automatically.
 
 For quick schemaless bodies without defining a struct, `json_fmt` (C++20)
 is the most concise option:
@@ -311,13 +456,13 @@ is the most concise option:
 ```cpp
 nc.note.add()
     .file("sensors.qo")
-    .body(note::json_fmt<R"({"temp":{},"humidity":{}})">(temp, humidity).view())
+    .body(json_fmt<R"({"temp":{},"humidity":{}})">(temp, humidity))
     .execute();
 ```
 
 The JSON structure is validated at compile time — malformed JSON or wrong
 argument count/types are compile errors. At runtime it's just string
-concatenation, no heap allocation. See [Body Values](body-values.md)
+concatenation, no heap allocation. See [Body Values](../body-values.md)
 for all approaches.
 
 
@@ -328,7 +473,7 @@ for all approaches.
 <tr><td>
 
 ```c
-// ../examples/migration_notec.cpp#L113-L120
+// ../../examples/migration_notec.cpp#L113-L120
 
 // Type constants from note.h — you pick the
 // right one for each field manually.
@@ -343,10 +488,10 @@ nc.sendRequest(req);
 </td><td>
 
 ```cpp
-// ../examples/arduino-migration/src/main.cpp#L99-L101
+// ../../examples/arduino-migration/src/main.cpp#L90-L92
 
 nc.note.templates().define("sensors.qo")
-    .body(note::template_of(Readings{}))
+    .body(note::template_of(Readings()))
     .execute();
 
 
@@ -367,9 +512,9 @@ nc.note.templates().define("sensors.qo")
 - One struct for everything. Define `Readings` once, and the library uses it
   for sending, receiving, and template registration.
 
-If you are comfortable with C++ template syntax, you can also use a type-only format without requiring an instance:
-```
-   .body(note::template_of<Readings>())
+If you prefer, you can also use an explicit template parameter instead of an instance:
+```cpp
+   .body(template_of<Readings>())
 ```
 
 ## Reading temperature (card.temp)
@@ -379,7 +524,7 @@ If you are comfortable with C++ template syntax, you can also use a type-only fo
 <tr><td>
 
 ```c
-// ../examples/migration_notec.cpp#L125-L141
+// ../../examples/migration_notec.cpp#L125-L141
 
 J *rsp = nc.requestAndResponse(
     nc.newRequest("card.temp"));
@@ -403,20 +548,20 @@ nc.sendRequest(req);
 </td><td>
 
 ```cpp
-// ../examples/arduino-migration/src/main.cpp#L108-L119
+// ../../examples/arduino-migration/src/main.cpp#L99-L105
 
-auto r = nc.card.temp().read().execute();
-if (r) {
-    double temp = r.value;
-    Serial.println(temp);
-} else {
-    Serial.println(r.error());
+    auto r = nc.card.temp().read().execute();
+    if (r) {
+        Serial.println(r.value);
+    } else {
+        Serial.println(r.error());
+    }
 }
 
-// Configure periodic monitoring
-nc.card.temp().configure()
-    .minutes(5)
-    .execute();
+
+
+
+
 
 
 
@@ -428,8 +573,7 @@ nc.card.temp().configure()
 </table>
 
 **Key differences:**
-- Avoided manual response lifecycle (`deleteResponse`). The response is an
-  RAII value that cleans up automatically. If you need to keep the response for longer, you can 
+- Avoided manual response lifecycle (`deleteResponse`). The response is cleaned up automatically when it goes out of scope ([RAII](https://en.cppreference.com/w/cpp/language/raii.html)). Numeric and boolean fields are plain values — safe to keep indefinitely. String fields (`string_view`) are valid until the next request unless you use an arena. See [Response Lifetimes](../response-lifetimes.md).
 - `JGetNumber(rsp, "value")` returns 0.0 on misspelling with no error.
   `r.value` is a named member — misspelling won't compile.
 - `card.temp` can do several things - it can read the current
@@ -443,7 +587,7 @@ nc.card.temp().configure()
 <tr><td>
 
 ```c
-// ../examples/migration_notec.cpp#L141-L148
+// ../../examples/migration_notec.cpp#L141-L148
 
 nc.sendRequest(req);
 }
@@ -481,7 +625,7 @@ if (r) {
 - Response fields and full responses are Arduino `Printable` —
   `Serial.print(r.version)` just works. Avoid `printf("%.*s")` with
   `string_view` — use `Serial.print()` instead.
-  See [Arduino Guide](arduino-guide.md) for printing patterns, String
+  See the [Arduino Guide](arduino-guide.md) for printing patterns, String
   conversion, and AVR setup.
 
 ## ATTN pin — arming for interrupts
@@ -491,7 +635,7 @@ if (r) {
 <tr><td>
 
 ```c
-// ../examples/migration_notec.cpp#L153-L164
+// ../../examples/migration_notec.cpp#L153-L164
 
     nc.deleteResponse(rsp);
 }
@@ -722,7 +866,7 @@ auto r = nc.note.pop("data.qi")
 Both produce `note.get` on the wire. The difference: `read()` can't
 accidentally include `delete:true`, and `pop()` always includes it.
 Each variant only exposes the fields that apply.
-See [Polymorphic APIs](polymorphic-apis.md) for the full list.
+See [Polymorphic APIs](../intent-scoped-apis.md) for the full list.
 
 ### card.temp — read vs configure
 
@@ -862,7 +1006,7 @@ if (r) {
 </table>
 
 The same `Readings` struct used for sending and template registration
-also works for receiving. See [Body Values](body-values.md) for details.
+also works for receiving. See [Body Values](../body-values.md) for details.
 
 ## Type-safe units
 
@@ -890,7 +1034,7 @@ nc.card.sleep()
 In note-c, `outbound` is a plain integer — you have to know from the
 docs that it's in minutes - sometimes the requests make the unit clear by the name
 (e.g. "seconds") but sometimes not. The duration type system avoids any ambiguity. 
-See [Duration Units](duration-units.md) for the full type system.
+See [Duration Units](../duration-units.md) for the full type system.
 
 ## Named constants
 
@@ -935,7 +1079,7 @@ maps directly to code.
 <tr><td>
 
 ```c
-// ../examples/migration_notec.cpp#L212-L223
+// ../../examples/migration_notec.cpp#L212-L223
 
 JAddStringToObject(req2, "text", "60");
 nc.sendRequest(req2);
@@ -1020,7 +1164,7 @@ requests are safe to retry, and currently note-c retries all requests.
 <tr><td>
 
 ```c
-// ../examples/migration_notec.cpp#L228-L231
+// ../../examples/migration_notec.cpp#L228-L231
 
     nc.deleteResponse(rsp);
 }
@@ -1030,7 +1174,7 @@ requests are safe to retry, and currently note-c retries all requests.
 </td><td>
 
 ```cpp
-// ../examples/arduino-migration/src/main.cpp#L199-L199
+// ../../examples/arduino-migration/src/main.cpp#L218-L218
 
 nc.hub.sync().command();
 
@@ -1236,7 +1380,7 @@ Moving from C to C++ brings benefits independent of note-cpp:
 - **Automatic cleanup** — no manual `deleteResponse` / `JDelete`.
   Responses clean up when they go out of scope. No leak risk.
   You can have responses outlive the current scope —
-  see [Response Lifetimes](response-lifetimes.md).
+  see [Response Lifetimes](../response-lifetimes.md).
 - **Type safety** — field types are checked at compile time. No more
   `JGetNumber` returning 0.0 on a misspelled field name.
 - **Namespaces** — no global symbol pollution. Your code and the
@@ -1316,7 +1460,7 @@ lowest memory path, `sax_parse_streaming()` parses responses
 incrementally with only a small scratch buffer (`SaxStreamBuf`,
 default 384 bytes on the stack).
 
-See [Known Issues](known-issues.md) for details on the Clang limitation.
+See [Known Issues](../known-issues.md) for details on the Clang limitation.
 
 ## Migration checklist
 

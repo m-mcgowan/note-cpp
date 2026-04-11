@@ -1,15 +1,14 @@
 # API Calling Patterns
 
 Every Notecard API endpoint in `note-cpp` supports multiple calling styles.
-You only pay for what you use — a simple one-liner compiles to the same code
-as the verbose builder form.
+A simple one-liner compiles to the same code as the verbose builder form.
 
 ## Quick reference
 
 ```cpp
 note::Api api(nc);
 
-// ── Most common: one-liner with positional args ─────────────────────────
+// ── one-liner with positional args ─────────────────────────
 api.hub.set().mode("periodic").execute();
 api.note.read("data.qi").execute();
 api.note.remove("data.db", "my-note").execute();

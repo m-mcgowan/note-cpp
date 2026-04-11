@@ -382,6 +382,22 @@ public:
                 break;
             }
 
+            // Signed integers — all widths dispatch as int32.
+            case jsonb::kInt8: {
+                uint8_t raw[1];
+                if (!read_exact(read, raw, 1)) return NOTE_ERR("truncated int8");
+                dispatch_.dispatch(dispatch_.sink,
+                    SaxEvent::make_int(current_key(), static_cast<int8_t>(raw[0])));
+                break;
+            }
+            case jsonb::kInt16: {
+                uint8_t le[2];
+                if (!read_exact(read, le, 2)) return NOTE_ERR("truncated int16");
+                auto val = static_cast<int16_t>(uint16_t(le[0]) | (uint16_t(le[1]) << 8));
+                dispatch_.dispatch(dispatch_.sink,
+                    SaxEvent::make_int(current_key(), val));
+                break;
+            }
             case jsonb::kInt32: {
                 uint8_t le[4];
                 if (!read_exact(read, le, 4)) return NOTE_ERR("truncated int32");
@@ -392,7 +408,65 @@ public:
                     SaxEvent::make_int(current_key(), val));
                 break;
             }
+            case jsonb::kInt64: {
+                uint8_t raw[8];
+                if (!read_exact(read, raw, 8)) return NOTE_ERR("truncated int64");
+                // Truncate to int32 — SaxEvent only carries int32.
+                auto val = static_cast<int32_t>(
+                    uint32_t(raw[0]) | (uint32_t(raw[1]) << 8) |
+                    (uint32_t(raw[2]) << 16) | (uint32_t(raw[3]) << 24));
+                dispatch_.dispatch(dispatch_.sink,
+                    SaxEvent::make_int(current_key(), val));
+                break;
+            }
 
+            // Unsigned integers — all widths dispatch as int32.
+            case jsonb::kUint8: {
+                uint8_t raw[1];
+                if (!read_exact(read, raw, 1)) return NOTE_ERR("truncated uint8");
+                dispatch_.dispatch(dispatch_.sink,
+                    SaxEvent::make_int(current_key(), static_cast<int32_t>(raw[0])));
+                break;
+            }
+            case jsonb::kUint16: {
+                uint8_t le[2];
+                if (!read_exact(read, le, 2)) return NOTE_ERR("truncated uint16");
+                auto val = static_cast<int32_t>(uint16_t(le[0]) | (uint16_t(le[1]) << 8));
+                dispatch_.dispatch(dispatch_.sink,
+                    SaxEvent::make_int(current_key(), val));
+                break;
+            }
+            case jsonb::kUint32: {
+                uint8_t le[4];
+                if (!read_exact(read, le, 4)) return NOTE_ERR("truncated uint32");
+                auto val = static_cast<int32_t>(
+                    uint32_t(le[0]) | (uint32_t(le[1]) << 8) |
+                    (uint32_t(le[2]) << 16) | (uint32_t(le[3]) << 24));
+                dispatch_.dispatch(dispatch_.sink,
+                    SaxEvent::make_int(current_key(), val));
+                break;
+            }
+            case jsonb::kUint64: {
+                uint8_t raw[8];
+                if (!read_exact(read, raw, 8)) return NOTE_ERR("truncated uint64");
+                auto val = static_cast<int32_t>(
+                    uint32_t(raw[0]) | (uint32_t(raw[1]) << 8) |
+                    (uint32_t(raw[2]) << 16) | (uint32_t(raw[3]) << 24));
+                dispatch_.dispatch(dispatch_.sink,
+                    SaxEvent::make_int(current_key(), val));
+                break;
+            }
+
+            // Floats
+            case jsonb::kFloat: {
+                uint8_t raw[4];
+                if (!read_exact(read, raw, 4)) return NOTE_ERR("truncated float");
+                float fval;
+                memcpy(&fval, raw, 4);
+                dispatch_.dispatch(dispatch_.sink,
+                    SaxEvent::make_float(current_key(), static_cast<double>(fval)));
+                break;
+            }
             case jsonb::kDouble: {
                 uint8_t raw[8];
                 if (!read_exact(read, raw, 8)) return NOTE_ERR("truncated double");

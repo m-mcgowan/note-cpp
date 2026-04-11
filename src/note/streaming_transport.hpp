@@ -13,8 +13,13 @@
 #include <note/json_sax_streaming.hpp>
 #include <note/lexer/parse.hpp>
 #include <note/transport_hal.hpp>
+#include <note/wire_format.hpp>
 #include <note/compiler.hpp>
 #include <note/types.hpp>
+
+#ifdef NOTE_JSONB
+#include <note/jsonb.hpp>
+#endif
 
 #include <algorithm>
 #include <cstring>
@@ -455,6 +460,17 @@ private:
             }
         } writer(hal_);
 
+#ifdef NOTE_JSONB
+        // JSONB wire format: {: <COBS-encoded opcodes> :}\n
+        // No CRC — COBS framing provides integrity.
+        writer.write("{:", 2);
+        CobsStreamWriter cobs(writer, jsonb::kCobsXor);
+        StreamingJsonbBuilder builder(cobs);
+        build_fn(builder, ctx);
+        cobs.write(reinterpret_cast<const char*>(&jsonb::kEndObject), 1);
+        cobs.flush();
+        writer.write(":}", 2);
+#else
 #ifndef NOTE_NO_CRC
         if (crc_enabled_) {
             CrcWriter crc(writer);
@@ -482,6 +498,7 @@ private:
             build_fn(builder, ctx);
             writer.write("}", 1);
         }
+#endif // NOTE_JSONB
 
         if (!writer.ok) return false;
         return hal_.write_line_terminator();
@@ -567,6 +584,36 @@ private:
             return n;
         };
 
+#ifdef NOTE_JSONB
+        // JSONB wire format: read {: header, COBS-decode, parse JSONB opcodes.
+        // No CRC — COBS framing provides integrity.
+        {
+            // Read and verify {: header (2 bytes).
+            uint8_t header[2]{};
+            size_t hdr_got = 0;
+            while (hdr_got < 2) {
+                auto r = frame_read(header + hdr_got, 2 - hdr_got, timeout_ms);
+                if (!r) return Unexpected(r.error());
+                if (*r == 0) return make_error(Error::ResponseLost, Cause::Timeout,
+                                               NOTE_ERR("JSONB header timeout"));
+                hdr_got += *r;
+            }
+            if (header[0] != '{' || header[1] != ':')
+                return make_error(Error::ResponseLost, Cause::Unspecified,
+                                  NOTE_ERR("expected JSONB header {:"));
+
+            // COBS-decode and parse JSONB opcodes.
+            detail::CobsDecodingReader<decltype(frame_read)> cobs_reader(
+                frame_read, timeout_ms);
+            auto parse_err = jsonb_parse_streaming(cobs_reader, timeout_ms, wrapped);
+
+            if (!frame_terminated && any_data_received)
+                drain_frame_boundary();
+
+            if (!parse_err.empty())
+                return make_error(Error::ResponseLost, Cause::Unspecified, parse_err);
+        }
+#else
 #ifndef NOTE_NO_CRC
         transport::detail::CrcAccumulator crc;
 
@@ -602,6 +649,7 @@ private:
         if (!parse_err.empty())
             return make_error(Error::ResponseLost, Cause::Unspecified, parse_err);
 #endif
+#endif // NOTE_JSONB
 #ifndef NOTE_MINIMAL
         // Emit wire receive debug event with the accumulated response bytes.
         if (debug_.on_wire && !debug_recv.empty())

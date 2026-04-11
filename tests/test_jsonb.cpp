@@ -1,10 +1,12 @@
-// Tests for JSONB opcode constants, StreamingJsonbBuilder, and parser.
+// Tests for JSONB opcode constants, StreamingJsonbBuilder, parser,
+// and COBS stream writer.
 
 #include "catch.hpp"
 
 #include <note/jsonb.hpp>
 #include <note/json_sax_streaming.hpp>
 #include <note/lexer/sax_adapter.hpp>
+#include <note/transport/cobs.hpp>
 
 #include <cstring>
 #include <string>
@@ -607,4 +609,178 @@ TEST_CASE("jsonb parser: small chunk reads") {
     CHECK(sink.events[1].s == "card.version");
     CHECK(sink.events[2].key == "count");
     CHECK(sink.events[2].i == 5);
+}
+
+// ---------------------------------------------------------------------------
+// CobsStreamWriter
+// ---------------------------------------------------------------------------
+
+TEST_CASE("jsonb CobsStreamWriter: round-trip with CobsDecoder") {
+    // Write JSONB opcodes through CobsStreamWriter, decode with CobsDecoder,
+    // verify the decoded output matches the original opcodes.
+    char enc_buf[256];
+    JsonBufferWriter enc_writer(enc_buf, sizeof(enc_buf));
+    CobsStreamWriter cobs(enc_writer, jsonb::kCobsXor);
+
+    // Write raw JSONB opcode stream for {"req":"card.version"}
+    const uint8_t opcodes[] = {
+        jsonb::kBeginObject,
+        jsonb::kItem, 'r', 'e', 'q', 0x00,
+        jsonb::kString, 'c', 'a', 'r', 'd', '.', 'v', 'e', 'r', 's', 'i', 'o', 'n', 0x00,
+        jsonb::kEndObject,
+    };
+    cobs.write(reinterpret_cast<const char*>(opcodes), sizeof(opcodes));
+    cobs.flush();
+
+    // Decode
+    CobsDecoder decoder(jsonb::kCobsXor);
+    std::vector<uint8_t> decoded;
+    decoder.feed(reinterpret_cast<const uint8_t*>(enc_buf), enc_writer.pos(),
+        [&](const uint8_t* data, size_t n) {
+            decoded.insert(decoded.end(), data, data + n);
+        });
+    decoder.flush([&](const uint8_t* data, size_t n) {
+        decoded.insert(decoded.end(), data, data + n);
+    });
+
+    REQUIRE(decoded.size() == sizeof(opcodes));
+    CHECK(memcmp(decoded.data(), opcodes, sizeof(opcodes)) == 0);
+}
+
+TEST_CASE("jsonb CobsStreamWriter: matches CobsEncoder output") {
+    // Verify that CobsStreamWriter (byte-at-a-time) produces the same
+    // encoded output as CobsEncoder (batch).
+    const uint8_t opcodes[] = {
+        jsonb::kBeginObject,
+        jsonb::kItem, 'k', 0x00,
+        jsonb::kInt32, 42, 0, 0, 0,
+        jsonb::kEndObject,
+    };
+
+    // Batch encode
+    std::vector<uint8_t> batch_encoded;
+    CobsEncoder encoder(jsonb::kCobsXor);
+    encoder.encode(opcodes, sizeof(opcodes),
+        [&](const uint8_t* block, size_t n) {
+            batch_encoded.insert(batch_encoded.end(), block, block + n);
+        });
+
+    // Stream encode
+    char stream_buf[256];
+    JsonBufferWriter stream_writer(stream_buf, sizeof(stream_buf));
+    CobsStreamWriter cobs(stream_writer, jsonb::kCobsXor);
+    cobs.write(reinterpret_cast<const char*>(opcodes), sizeof(opcodes));
+    cobs.flush();
+
+    REQUIRE(stream_writer.pos() == batch_encoded.size());
+    CHECK(memcmp(stream_buf, batch_encoded.data(), batch_encoded.size()) == 0);
+}
+
+// ---------------------------------------------------------------------------
+// Full JSONB wire framing: {: <COBS> :}\n round-trip
+// ---------------------------------------------------------------------------
+
+TEST_CASE("jsonb framing: build framed request, decode and parse") {
+    // Build a JSONB request with full wire framing: {: <COBS opcodes> :}\n
+    char wire[256];
+    JsonBufferWriter wire_writer(wire, sizeof(wire));
+
+    // Write {: header
+    wire_writer.write("{:", 2);
+
+    // COBS-encode JSONB opcodes
+    CobsStreamWriter cobs(wire_writer, jsonb::kCobsXor);
+    StreamingJsonbBuilder builder(cobs);
+    builder.add("req", string_view("card.version"));
+    cobs.write(reinterpret_cast<const char*>(&jsonb::kEndObject), 1);
+    cobs.flush();
+
+    // Write :}\n trailer
+    wire_writer.write(":}\n", 3);
+
+    auto framed = wire_writer.view();
+    REQUIRE(framed.size() > 5);
+    CHECK(framed[0] == '{');
+    CHECK(framed[1] == ':');
+    CHECK(framed[framed.size() - 3] == ':');
+    CHECK(framed[framed.size() - 2] == '}');
+    CHECK(framed[framed.size() - 1] == '\n');
+
+    // Now parse: strip framing, COBS-decode, parse JSONB
+    // Strip {: header and :}\n trailer
+    const uint8_t* payload = reinterpret_cast<const uint8_t*>(framed.data()) + 2;
+    size_t payload_len = framed.size() - 5;  // minus "{:" and ":}\n"
+
+    // COBS decode
+    std::vector<uint8_t> decoded;
+    CobsDecoder decoder(jsonb::kCobsXor);
+    decoder.feed(payload, payload_len,
+        [&](const uint8_t* data, size_t n) {
+            decoded.insert(decoded.end(), data, data + n);
+        });
+    decoder.flush([&](const uint8_t* data, size_t n) {
+        decoded.insert(decoded.end(), data, data + n);
+    });
+
+    // Parse JSONB opcodes
+    RecordingSink sink;
+    VectorReader reader{decoded};
+    char storage[384];
+    SaxStreamBuf buf(storage);
+    auto dispatch = make_sax_dispatch(sink);
+    auto err = jsonb_parse_streaming(reader, 1000, buf, dispatch);
+    REQUIRE(err.empty());
+
+    // Verify events
+    REQUIRE(sink.events.size() == 3);
+    CHECK(sink.events[0].type == RecordingSink::ObjBegin);
+    CHECK(sink.events[1].type == RecordingSink::String);
+    CHECK(sink.events[1].key == "req");
+    CHECK(sink.events[1].s == "card.version");
+    CHECK(sink.events[2].type == RecordingSink::ObjEnd);
+}
+
+// ---------------------------------------------------------------------------
+// CobsDecodingReader round-trip
+// ---------------------------------------------------------------------------
+
+TEST_CASE("jsonb CobsDecodingReader: decode and parse through reader adapter") {
+    // Build COBS-encoded JSONB payload + :} trailer (as it appears on the wire
+    // after the {: header has been stripped).
+    std::vector<uint8_t> wire_payload;
+
+    // COBS-encode opcodes
+    const uint8_t opcodes[] = {
+        jsonb::kBeginObject,
+        jsonb::kItem, 'v', 'a', 'l', 0x00,
+        jsonb::kInt32, 0x2A, 0x00, 0x00, 0x00,  // 42
+        jsonb::kEndObject,
+    };
+    CobsEncoder encoder(jsonb::kCobsXor);
+    encoder.encode(opcodes, sizeof(opcodes),
+        [&](const uint8_t* block, size_t n) {
+            wire_payload.insert(wire_payload.end(), block, block + n);
+        });
+    // Append :} trailer
+    wire_payload.push_back(':');
+    wire_payload.push_back('}');
+
+    // Create a reader over the wire payload
+    VectorReader wire_reader{wire_payload, 0, 8};  // small chunks
+
+    // Parse through CobsDecodingReader
+    detail::CobsDecodingReader<VectorReader> cobs_reader(wire_reader, 1000);
+    RecordingSink sink;
+    char storage[384];
+    SaxStreamBuf buf(storage);
+    auto dispatch = make_sax_dispatch(sink);
+    auto err = jsonb_parse_streaming(cobs_reader, 1000, buf, dispatch);
+    REQUIRE(err.empty());
+
+    REQUIRE(sink.events.size() == 3);
+    CHECK(sink.events[0].type == RecordingSink::ObjBegin);
+    CHECK(sink.events[1].type == RecordingSink::Int);
+    CHECK(sink.events[1].key == "val");
+    CHECK(sink.events[1].i == 42);
+    CHECK(sink.events[2].type == RecordingSink::ObjEnd);
 }

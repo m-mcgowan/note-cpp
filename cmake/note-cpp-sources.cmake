@@ -27,6 +27,7 @@ set(NOTE_CPP_PUBLIC_HEADERS
     include/note/json.hpp
     include/note/json_buf.hpp
     include/note/jsonb.hpp
+    include/note/wire_format.hpp
     include/note/json_sax.hpp
     include/note/md5.hpp
     include/note/notecard.hpp

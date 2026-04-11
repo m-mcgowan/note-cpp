@@ -13,6 +13,7 @@
 #include "json.hpp"
 #include "json_sax_streaming.hpp"
 #include "lexer/sax_adapter.hpp"
+#include "transport/cobs.hpp"
 
 #include <cstdint>
 #include <cstring>
@@ -194,6 +195,129 @@ private:
         emit('\0');
     }
 };
+
+// ---------------------------------------------------------------------------
+// CobsStreamWriter — JsonWriter that COBS-encodes bytes as they're written.
+//
+// Processes bytes one at a time through a 255-byte block buffer. When a
+// zero byte is encountered or the block fills (code=0xFF), the block is
+// flushed to the inner writer. Call flush() after the last write to emit
+// the final block.
+// ---------------------------------------------------------------------------
+
+class CobsStreamWriter : public JsonWriter {
+public:
+    using JsonWriter::write;
+
+    CobsStreamWriter(JsonWriter& inner, uint8_t xor_byte)
+        : inner_(inner), xor_(xor_byte) {}
+
+    bool write(const char* data, size_t len) override {
+        for (size_t i = 0; i < len; ++i) {
+            auto byte = static_cast<uint8_t>(data[i]);
+            if (byte == 0) {
+                if (!flush_block()) return false;
+            } else {
+                block_[block_len_++] = byte ^ xor_;
+                ++code_;
+                if (code_ == 0xFF) {
+                    if (!flush_block()) return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    bool flush() { return flush_block(); }
+
+private:
+    JsonWriter& inner_;
+    uint8_t xor_;
+    uint8_t block_[255]{};
+    size_t block_len_ = 1;  // slot 0 reserved for code byte
+    uint8_t code_ = 1;
+
+    bool flush_block() {
+        block_[0] = code_ ^ xor_;
+        bool ok = inner_.write(reinterpret_cast<const char*>(block_), block_len_);
+        code_ = 1;
+        block_len_ = 1;
+        return ok;
+    }
+};
+
+// ---------------------------------------------------------------------------
+// CobsDecodingReader — ReadFn adapter that COBS-decodes bytes from an
+// inner ReadFn. Reads encoded chunks, decodes them, and returns decoded
+// bytes to the caller. Also strips the `:}` JSONB trailer.
+// ---------------------------------------------------------------------------
+
+namespace detail {
+
+template<typename ReadFn>
+class CobsDecodingReader {
+public:
+    CobsDecodingReader(ReadFn& inner, uint32_t timeout_ms)
+        : inner_(inner), timeout_ms_(timeout_ms), decoder_(jsonb::kCobsXor) {}
+
+    Result<size_t> operator()(uint8_t* buf, size_t max, uint32_t /*timeout*/) {
+        // Return any buffered decoded bytes first.
+        if (dec_pos_ < dec_len_) {
+            size_t n = max < (dec_len_ - dec_pos_) ? max : (dec_len_ - dec_pos_);
+            memcpy(buf, dec_buf_ + dec_pos_, n);
+            dec_pos_ += n;
+            return n;
+        }
+
+        if (done_) return size_t(0);
+
+        // Read encoded bytes from the wire.
+        uint8_t enc[64];
+        auto r = inner_(enc, sizeof(enc), timeout_ms_);
+        if (!r) return r;
+        if (*r == 0) { done_ = true; return size_t(0); }
+
+        // Strip `:}` trailer if present at the end of the chunk.
+        size_t enc_len = *r;
+        if (enc_len >= 2 &&
+            enc[enc_len - 2] == ':' && enc[enc_len - 1] == '}') {
+            enc_len -= 2;
+            done_ = true;
+        }
+        if (enc_len == 0) return size_t(0);
+
+        // COBS-decode into the decode buffer.
+        dec_len_ = 0;
+        dec_pos_ = 0;
+        auto out = [this](const uint8_t* data, size_t n) {
+            size_t copy = n;
+            if (dec_len_ + copy > sizeof(dec_buf_))
+                copy = sizeof(dec_buf_) - dec_len_;
+            memcpy(dec_buf_ + dec_len_, data, copy);
+            dec_len_ += copy;
+        };
+        decoder_.feed(enc, enc_len, out);
+        decoder_.flush(out);
+
+        // Return as many decoded bytes as requested.
+        size_t n = max < dec_len_ ? max : dec_len_;
+        memcpy(buf, dec_buf_, n);
+        dec_pos_ = n;
+        return n;
+    }
+
+private:
+    ReadFn& inner_;
+    uint32_t timeout_ms_;
+    CobsDecoder decoder_;
+    bool done_ = false;
+
+    uint8_t dec_buf_[NOTE_COBS_BLOCK_SIZE + 1]{};
+    size_t dec_pos_ = 0;
+    size_t dec_len_ = 0;
+};
+
+}  // namespace detail
 
 // ---------------------------------------------------------------------------
 // Streaming JSONB parser — reads opcodes from a byte source and dispatches

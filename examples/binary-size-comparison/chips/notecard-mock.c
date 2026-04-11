@@ -118,7 +118,23 @@ static uint32_t jsonb_build_response(const char *req_name, uint8_t *buf, uint32_
 
     opcodes[pos++] = JSONB_BEGIN_OBJECT;
 
-    if (strstr(req_name, "card.temp")) {
+    if (strstr(req_name, "card.version")) {
+        // {"version":"mock-1.0.0","device":"dev:mock","board":"1.0"}
+        opcodes[pos++] = JSONB_ITEM;
+        memcpy(&opcodes[pos], "version\0", 8); pos += 8;
+        opcodes[pos++] = JSONB_STRING;
+        memcpy(&opcodes[pos], "mock-1.0.0\0", 11); pos += 11;
+
+        opcodes[pos++] = JSONB_ITEM;
+        memcpy(&opcodes[pos], "device\0", 7); pos += 7;
+        opcodes[pos++] = JSONB_STRING;
+        memcpy(&opcodes[pos], "dev:mock\0", 9); pos += 9;
+
+        opcodes[pos++] = JSONB_ITEM;
+        memcpy(&opcodes[pos], "board\0", 6); pos += 6;
+        opcodes[pos++] = JSONB_STRING;
+        memcpy(&opcodes[pos], "1.0\0", 4); pos += 4;
+    } else if (strstr(req_name, "card.temp")) {
         // {"value":22.5}
         opcodes[pos++] = JSONB_ITEM;
         memcpy(&opcodes[pos], "value\0", 6); pos += 6;
@@ -161,19 +177,22 @@ static uint32_t jsonb_build_response(const char *req_name, uint8_t *buf, uint32_
     opcodes[pos++] = JSONB_END_OBJECT;
 
     // Frame: {: <COBS> :}\n
-    if (2 + pos + (pos / 254) + 1 + 3 > buf_size) return 0;
+    if (2 + pos + (pos / 254) + 1 + 4 > buf_size) return 0;
     buf[0] = '{';
     buf[1] = ':';
     uint32_t enc_len = cobs_encode(opcodes, pos, JSONB_COBS_XOR, &buf[2]);
     buf[2 + enc_len] = ':';
     buf[3 + enc_len] = '}';
-    buf[4 + enc_len] = '\n';
-    return 5 + enc_len;
+    buf[4 + enc_len] = '\r';
+    buf[5 + enc_len] = '\n';
+    return 6 + enc_len;
 }
 
 // ── JSON response (unchanged from original) ────────────────────────────────
 
 static const char* json_match_response(const char* req) {
+    if (strstr(req, "\"card.version\""))
+        return "{\"version\":\"mock-1.0.0\",\"device\":\"dev:mock\",\"board\":\"1.0\"}\r\n";
     if (strstr(req, "\"card.temp\""))
         return "{\"value\":22.5}\r\n";
     if (strstr(req, "\"note.template\""))
@@ -219,9 +238,12 @@ static void on_uart_rx_data(void *user_data, uint8_t byte) {
             if (chip->rx_pos > 40) printf(" ...");
             printf("\n");
 
-            // Strip {: header and :} trailer
+            // Strip {: header and :}\r trailer (serial line ending is \r\n)
             uint8_t *payload = chip->rx_buf + 2;
             uint32_t payload_len = chip->rx_pos - 2;
+            // Strip trailing \r if present
+            if (payload_len > 0 && payload[payload_len - 1] == '\r')
+                payload_len--;
             if (payload_len >= 2 &&
                 payload[payload_len - 2] == ':' && payload[payload_len - 1] == '}') {
                 payload_len -= 2;
@@ -246,7 +268,10 @@ static void on_uart_rx_data(void *user_data, uint8_t byte) {
             uint32_t resp_len = jsonb_build_response(
                 req_name ? req_name : "", resp_buf, sizeof(resp_buf));
             if (resp_len > 0) {
-                printf("[mock] JSONB response (%u bytes)\n", resp_len);
+                printf("[mock] JSONB response (%u bytes):", resp_len);
+                for (uint32_t j = 0; j < resp_len && j < 64; j++)
+                    printf(" %02x", resp_buf[j]);
+                printf("\n");
                 uart_write(chip->uart, resp_buf, resp_len);
             }
         } else if (chip->rx_buf[0] == '{') {
@@ -273,7 +298,7 @@ static void on_uart_write_done(void *user_data) {
 void chip_init(void) {
     chip_state_t *chip = malloc(sizeof(chip_state_t));
     memset(chip, 0, sizeof(chip_state_t));
-    printf("[mock] chip_init v3 (JSON + JSONB)\n");
+    printf("[mock] chip_init v4 (JSON + JSONB)\n");
 
     const uart_config_t uart_config = {
         .tx = pin_init("TX", INPUT_PULLUP),

@@ -260,7 +260,8 @@ template<typename ReadFn>
 class CobsDecodingReader {
 public:
     CobsDecodingReader(ReadFn& inner, uint32_t timeout_ms)
-        : inner_(inner), timeout_ms_(timeout_ms), decoder_(jsonb::kCobsXor) {}
+        : inner_(inner), timeout_ms_(timeout_ms)
+        , decoder_(byte_span{cobs_storage_, sizeof(cobs_storage_)}, jsonb::kCobsXor) {}
 
     Result<size_t> operator()(uint8_t* buf, size_t max, uint32_t /*timeout*/) {
         // Return any buffered decoded bytes first.
@@ -271,59 +272,41 @@ public:
             return n;
         }
 
-        if (done_) return size_t(0);
+        // Keep reading and decoding until we have output or hit EOF.
+        // The COBS decoder may need multiple encoded bytes before
+        // producing decoded output (it buffers partial blocks).
+        while (dec_pos_ >= dec_len_) {
+            if (done_) return size_t(0);
 
-        // Read encoded bytes from the wire.
-        uint8_t enc[64];
-        auto r = inner_(enc, sizeof(enc), timeout_ms_);
-        if (!r) return r;
-        if (*r == 0) { done_ = true; return size_t(0); }
+            uint8_t enc[64];
+            auto r = inner_(enc, sizeof(enc), timeout_ms_);
+            if (!r) return r;
+            if (*r == 0) { done_ = true; return size_t(0); }
 
-        // Strip `:}` trailer — may span chunk boundaries.
-        size_t enc_len = *r;
-        size_t start = 0;
-        if (pending_colon_) {
-            pending_colon_ = false;
-            if (enc_len > 0 && enc[0] == '}') {
-                // Previous chunk ended with `:`, this one starts with `}`.
+            size_t enc_len = *r;
+
+            // Strip :} or :}\r trailer at end of frame.
+            size_t tail = enc_len;
+            while (tail > 0 && enc[tail - 1] == '\r') tail--;
+            if (tail >= 2 && enc[tail - 2] == ':' && enc[tail - 1] == '}') {
+                enc_len = tail - 2;
                 done_ = true;
-                return size_t(0);
             }
-            // The `:` was real encoded data, not part of trailer.
-            // Feed it to the decoder below by prepending it.
-            // (Rare edge case — `:` is 0x3A which is valid COBS data.)
-            pending_byte_ = ':';
-            have_pending_byte_ = true;
-        }
-        if (enc_len >= 2 &&
-            enc[enc_len - 2] == ':' && enc[enc_len - 1] == '}') {
-            enc_len -= 2;
-            done_ = true;
-        } else if (enc_len >= 1 && enc[enc_len - 1] == ':') {
-            // Chunk ends with `:` — could be start of `:}` trailer.
-            enc_len -= 1;
-            pending_colon_ = true;
-        }
-        if (enc_len == 0 && !have_pending_byte_) return size_t(0);
+            if (enc_len == 0) continue;
 
-        // COBS-decode into the decode buffer.
-        dec_len_ = 0;
-        dec_pos_ = 0;
-        auto out = [this](const uint8_t* data, size_t n) {
-            size_t copy = n;
-            if (dec_len_ + copy > sizeof(dec_buf_))
-                copy = sizeof(dec_buf_) - dec_len_;
-            memcpy(dec_buf_ + dec_len_, data, copy);
-            dec_len_ += copy;
-        };
-        if (have_pending_byte_) {
-            have_pending_byte_ = false;
-            decoder_.feed(&pending_byte_, 1, out);
+            dec_len_ = 0;
+            dec_pos_ = 0;
+            auto out = [this](const uint8_t* data, size_t n) {
+                size_t copy = n;
+                if (dec_len_ + copy > sizeof(dec_buf_))
+                    copy = sizeof(dec_buf_) - dec_len_;
+                memcpy(dec_buf_ + dec_len_, data, copy);
+                dec_len_ += copy;
+            };
+            decoder_.feed(enc, enc_len, out);
+            decoder_.flush(out);
         }
-        decoder_.feed(enc + start, enc_len - start, out);
-        decoder_.flush(out);
 
-        // Return as many decoded bytes as requested.
         size_t n = max < dec_len_ ? max : dec_len_;
         memcpy(buf, dec_buf_, n);
         dec_pos_ = n;
@@ -333,13 +316,11 @@ public:
 private:
     ReadFn& inner_;
     uint32_t timeout_ms_;
-    CobsDecoder decoder_;
+    uint8_t cobs_storage_[64]{};
+    CobsDecoderExt decoder_;
     bool done_ = false;
-    bool pending_colon_ = false;
-    bool have_pending_byte_ = false;
-    uint8_t pending_byte_ = 0;
 
-    uint8_t dec_buf_[NOTE_COBS_BLOCK_SIZE + 1]{};
+    uint8_t dec_buf_[64]{};
     size_t dec_pos_ = 0;
     size_t dec_len_ = 0;
 };

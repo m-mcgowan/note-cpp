@@ -603,9 +603,14 @@ private:
                                   NOTE_ERR("expected JSONB header {:"));
 
             // COBS-decode and parse JSONB opcodes.
+            // Use the frame_read's existing buffer for COBS decoding to
+            // minimize stack usage (critical on AVR with 2KB stack).
             detail::CobsDecodingReader<decltype(frame_read)> cobs_reader(
                 frame_read, timeout_ms);
-            auto parse_err = jsonb_parse_streaming(cobs_reader, timeout_ms, wrapped);
+            char jsonb_storage[128];
+            SaxStreamBuf jsonb_buf(jsonb_storage);
+            auto parse_err = jsonb_parse_streaming(
+                cobs_reader, timeout_ms, jsonb_buf, wrapped);
 
             if (!frame_terminated && any_data_received)
                 drain_frame_boundary();

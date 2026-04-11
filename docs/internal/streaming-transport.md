@@ -174,17 +174,40 @@ The full streaming path:
 
 ## Execution Paths (Internal)
 
-### Path 1: Full streaming (via `IStreamingTransport`)
+### Path 1a: JSON streaming (default, via `IStreamingTransport`)
 
-Active when `Notecard` was constructed with `(IStreamingTransport&, Allocator)`.
+Active when `NOTE_JSONB=0` (the default for non-MINIMAL builds).
 
 - **Send:** `StreamingJsonBuilder` → `CrcWriter` → `TransportHal::transmit()`
-- **Receive:** `TransportHal::read()` → `CrcAccumulator` → `sax_parse_streaming()` → sink chain
-- **Sink chain:** `CrcFieldSink` → `ErrorCaptureSink` → `Response::Sink(pool)`
+- **Receive:** `TransportHal::read()` → `CrcAccumulator` → `sax_lex_streaming()` → sink chain
+- **Sink chain:** `ReceiveContext` (err/crc interception) → `Response::Sink(pool)`
 - **CRC:** accumulated incrementally on both send and receive, verified by `StreamingTransport`
+- **Wire format:** `{"req":"card.version",...}\r\n`
 - **Strings:** interned into `StringPool` during SAX callbacks
 - **Retries:** `sink.reset()` + rebuild request from the (still-alive) request object
 - **Buffers:** zero — all data flows through the HAL in small chunks
+
+### Path 1b: JSONB streaming (via `IStreamingTransport`, `NOTE_JSONB=1`)
+
+Active when `NOTE_JSONB=1` (auto-enabled by `NOTE_MINIMAL`). See [docs/jsonb.md](../jsonb.md).
+
+- **Send:** `StreamingJsonbBuilder` → `CobsStreamWriter` → `TransportHal::transmit()`. Transport writes `{:` header, builder emits JSONB opcodes through COBS encoder, transport writes `:}` trailer + line terminator.
+- **Receive:** `TransportHal::read()` → `frame_read` (stops at `\n`) → strip `{:` header → `CobsDecodingReader` (COBS decode) → `jsonb_parse_streaming()` → `JsonbParser` → sink chain
+- **Sink chain:** Same as JSON path — `ReceiveContext` (err interception) → `Response::Sink(pool)`
+- **CRC:** disabled — COBS framing provides integrity
+- **Wire format:** `{:<COBS-encoded JSONB opcodes>:}\r\n`
+- **Parser depth tracking:** stops at root `kEndObject` to avoid consuming trailer bytes
+- **Strings:** JSONB strings are null-terminated in the opcode stream; interned into `StringPool` during SAX callbacks (same as JSON path)
+- **Buffers:** `CobsStreamWriter` uses a 255-byte block buffer (same as `CobsEncoder`). `CobsDecodingReader` uses a 64-byte decode buffer. `SaxStreamBuf` uses 128 bytes for the JSONB path (vs 384 for JSON).
+
+**Key components** (all in `include/note/jsonb.hpp`):
+
+| Component | Role |
+|-----------|------|
+| `StreamingJsonbBuilder` | `JsonBuilder` impl — emits JSONB opcodes to a `JsonWriter` |
+| `CobsStreamWriter` | `JsonWriter` impl — COBS-encodes bytes incrementally (255-byte block) |
+| `JsonbParser` | Reads opcodes, dispatches `SaxEvent`s through `SaxDispatch` |
+| `CobsDecodingReader` | `ReadFn` adapter — COBS-decodes wire bytes, strips `:}` trailer |
 
 ### Path 2: Fully buffered (via `IBufferedTransport`)
 
@@ -207,10 +230,13 @@ api.card.binary.put().data(buf, len).execute();
 
 ## CRC Handling
 
-In the streaming path, CRC is handled entirely by `StreamingTransport`:
+CRC applies to the **JSON path only** (`NOTE_JSONB=0`). When `NOTE_JSONB=1`,
+the entire CRC mechanism is bypassed — COBS framing provides its own integrity.
+
+In the JSON streaming path, CRC is handled entirely by `StreamingTransport`:
 
 - **Send:** a `CrcWriter` wraps the `JsonWriter` that writes to `TransportHal::transmit()`. It accumulates the CRC incrementally as JSON bytes are written, then appends the `,"crc":"SSSS:CCCCCCCC"}` suffix.
-- **Receive:** a `CrcAccumulator` feeds on bytes as they arrive from `TransportHal::read()`. A `CrcFieldSink` in the SAX sink chain extracts the CRC field value during parsing. After parsing, `StreamingTransport` compares the accumulated checksum against the extracted field.
+- **Receive:** a `CrcAccumulator` feeds on bytes as they arrive from `TransportHal::read()`. The `ReceiveContext` wrapping dispatch extracts the CRC field value during parsing. After parsing, `StreamingTransport` compares the accumulated checksum against the extracted field.
 
 Auto-detection: `crc_enabled` flips to `true` when the first valid CRC
 field is found in a response. All subsequent responses must have CRC.

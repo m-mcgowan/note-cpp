@@ -13,20 +13,26 @@ JSON remains the default. JSONB is opt-in via a compile-time flag.
 
 ## Enabling JSONB
 
-Define `NOTE_JSONB` before including `note-cpp` headers:
+`NOTE_MINIMAL` enables JSONB automatically -- no extra flags needed for constrained targets:
 
-```cpp
-#define NOTE_JSONB 1
-#include <note/api.hpp>
+```ini
+# platformio.ini — JSONB is on by default with NOTE_MINIMAL
+build_flags = -DNOTE_MINIMAL
 ```
 
-Or add it to your build system:
+To enable JSONB explicitly on non-MINIMAL builds:
 
 ```cmake
-target_compile_definitions(my_app PRIVATE NOTE_JSONB)
+target_compile_definitions(my_app PRIVATE NOTE_JSONB=1)
 ```
 
-When `NOTE_JSONB` is defined, `StreamingTransport` automatically encodes requests in JSONB and decodes JSONB responses. The typed API (`nc.card.version()`, `nc.hub.set()`, etc.) works identically -- the wire format is transparent to application code.
+To opt out of JSONB on a MINIMAL build:
+
+```ini
+build_flags = -DNOTE_MINIMAL -DNOTE_JSONB=0
+```
+
+When `NOTE_JSONB=1`, `StreamingTransport` automatically encodes requests in JSONB and decodes JSONB responses. The typed API (`nc.card.version()`, `nc.hub.set()`, etc.) works identically -- the wire format is transparent to application code.
 
 ## Wire framing
 

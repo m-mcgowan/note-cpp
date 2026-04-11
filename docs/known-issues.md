@@ -36,3 +36,29 @@ req.triggers = attn::connected;        // always safe
 with the fix. The `#if !defined(__clang__)` guards can be removed once
 the bug is resolved. The compile-fail tests have `#error` skips for
 Clang so they'll start failing (correctly) when the fix lands.
+
+## JSONB: raw JSON string bodies are a compile error
+
+**Affects:** builds with `NOTE_JSONB=1` (including `NOTE_MINIMAL`).
+
+**Symptom:** `req.body = R"({"temp":22.5})"` or `req.body("json string")`
+fails to compile with "no viable overloaded '='".
+
+**Cause:** JSONB cannot embed raw JSON text fragments. The `add_raw()`
+builder method is a no-op in JSONB mode, so the raw-string `BodyValue`
+constructors are disabled to prevent silent data loss.
+
+**Workaround:** Use a builder lambda or typed struct instead:
+
+```cpp
+// Lambda body — works with both JSON and JSONB
+req.body(note::body([](note::JsonBuilder& b) {
+    b.add("temp", 22.5);
+}));
+
+// Typed struct body — works with both JSON and JSONB
+req.body(Readings{.temperature = 22.5, .humidity = 60});
+```
+
+A compile-fail test (`tests/compile_fail/jsonb_raw_body.cpp`) verifies
+this behavior.

@@ -28,6 +28,7 @@ build_flags = -DNOTE_MINIMAL -UNDEF_NOTE_NO_CRC
 
 | Flag | Default | Minimal | Effect | Savings |
 |------|---------|---------|--------|---------|
+| `NOTE_JSONB` | `0` | **(M)** `1` | Use [JSONB binary wire format](jsonb.md) instead of JSON text. Requests/responses encoded as COBS-framed binary opcodes. CRC is bypassed (COBS provides framing integrity). Raw JSON string bodies are a compile error — use lambdas or typed structs. Requires Notecard firmware 11.x+. | ~1.9 KB flash (replaces JSON builder/lexer with smaller JSONB builder/parser) |
 | `NOTE_NO_BUFFERED` | off | **(M)** on | Disable `JsonBackend`/`JsonReader` buffered parse path. Only streaming SAX parse available. | ~2-4 KB flash, ~300 B RAM |
 | `NOTE_NO_CRC` | off | **(M)** on | Disable CRC32 on request/response framing. | ~200 B flash, 64 B .data (LUT) |
 | `NOTE_NO_MD5` | off | **(M)** on | Disable MD5 for binary transfer verification. | ~512 B .data (tables) |
@@ -139,6 +140,7 @@ example to see the difference.
 ## Where flags are defined
 
 - **`include/note/note_config.hpp`** — `NOTE_MINIMAL` defaults
+- **`include/note/wire_format.hpp`** — `NOTE_JSONB` default (`NOTE_MINIMAL` → `1`)
 - **`include/note/compiler.hpp`** — `NOTE_SHORT_ERRORS`, `NOTE_ERR()` macro
 - **`include/note/error.hpp`** — `NOTE_PRINTABLE` default
 - **`include/note/lexer/json_lexer.hpp`** — `NOTE_UNICODE_ESCAPES` → `BasicEscapeDecoder`
@@ -149,16 +151,14 @@ example to see the difference.
 
 | Configuration | Flash | Static RAM | Heap (peak) | Total RAM |
 |--------------|-------|------------|-------------|-----------|
-| `note-cpp` `NOTE_MINIMAL` | 27,498 (85%) | 832 (41%) | 0 (0%) | 832 (41%) |
+| `note-cpp` `NOTE_MINIMAL` (JSONB) | 24,290 (75%) | 832 (41%) | 0 (0%) | 832 (41%) |
+| `note-cpp` `NOTE_MINIMAL` + `NOTE_JSONB=0` (JSON) | 26,484 (82%) | 832 (41%) | 0 (0%) | 832 (41%) |
 | `note-c` (reference) | 25,076 (78%) | 729 (36%) | 371 (18%) | 1,100 (54%) |
 
-`note-cpp` uses 24% less total RAM than `note-c` (zero heap vs 371 bytes
-peak heap allocation). The flash gap (2,422 bytes) is the cost of streaming
-SAX response parsing — the shared infrastructure that enables zero-copy,
-zero-heap operation.
+With JSONB (the default for `NOTE_MINIMAL`), `note-cpp` is **786 bytes smaller**
+in flash than `note-c` while using 24% less total RAM (zero heap vs 371 bytes
+peak). The JSON text path is 1,408 bytes larger in flash due to the streaming
+SAX infrastructure, but this gap is eliminated by JSONB's simpler binary
+encoding.
 
 note-c heap measured via `__brkval` watermark on Wokwi (mock Notecard).
-
-The flash gap is shared infrastructure that does not grow with the number
-of endpoints — adding more endpoints costs only field descriptor tables
-(~30 bytes each).

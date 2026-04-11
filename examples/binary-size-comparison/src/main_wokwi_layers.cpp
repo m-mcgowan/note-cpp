@@ -82,19 +82,7 @@ void setup() {
 
     auto rsp = api.card.version().execute();
     if (!rsp) {
-        auto e = rsp.error();
-        Serial.write("FAIL:");
-        // Print error code as decimal
-        char c = '0' + static_cast<uint8_t>(e.code);
-        Serial.write(&c, 1);
-        Serial.write("/");
-        c = '0' + static_cast<uint8_t>(e.cause);
-        Serial.write(&c, 1);
-        if (e.msg.size() > 0) {
-            Serial.write(" ");
-            Serial.write(e.msg.data(), e.msg.size());
-        }
-        Serial.write("\n");
+        Serial.write("FAIL L4\n");
         return;
     }
     if (!rsp.version.has_value() || !rsp.device.has_value()) {

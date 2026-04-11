@@ -113,7 +113,7 @@ jobs:
           key: pio-compat-${{ hashFiles('library.json') }}
           restore-keys: pio-compat-
 
-      - uses: m-mcgowan/embedded-cpp-compat-check@main
+      - uses: m-mcgowan/embedded-cpp-compat-check/action@main
         with:
           platforms: esp32s3-arduino-v3 avr-uno stm32-nucleo-f411re
 

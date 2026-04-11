@@ -350,6 +350,7 @@ public:
     template<typename ReadFn>
     string_view parse(ReadFn& read, uint32_t timeout_ms) {
         timeout_ms_ = timeout_ms;
+        int depth = 0;
 
         for (;;) {
             int opcode = read_byte(read);
@@ -357,6 +358,7 @@ public:
 
             switch (static_cast<uint8_t>(opcode)) {
             case jsonb::kBeginObject:
+                ++depth;
                 dispatch_.dispatch(dispatch_.sink,
                     SaxEvent::make_object_begin(current_key()));
                 push_key();
@@ -366,6 +368,7 @@ public:
                 pop_key();
                 dispatch_.dispatch(dispatch_.sink,
                     SaxEvent::make_object_end(current_key()));
+                if (--depth <= 0) return {};  // root object closed — done
                 break;
 
             case jsonb::kBeginArray:

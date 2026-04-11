@@ -921,9 +921,11 @@ struct JsonbMockHal : note::TransportHal {
 
     bool transmit(const uint8_t*, size_t) override { return true; }
 
+    size_t chunk_size = 1;  // byte at a time, like slow serial
+
     note::Result<size_t> read(uint8_t* buf, size_t max, uint32_t) override {
         if (read_pos >= response.size()) return size_t(0);
-        size_t n = std::min(max, response.size() - read_pos);
+        size_t n = std::min({max, chunk_size, response.size() - read_pos});
         memcpy(buf, response.data() + read_pos, n);
         read_pos += n;
         return n;
@@ -935,7 +937,8 @@ struct JsonbMockHal : note::TransportHal {
         return true;
     }
     void delay(uint32_t) override {}
-    uint32_t millis() override { return 0; }
+    uint32_t ms_ = 0;
+    uint32_t millis() override { return ms_++; }
 };
 
 }  // anonymous namespace
@@ -955,6 +958,10 @@ TEST_CASE("jsonb end-to-end: StaticNotecard card.version") {
     note::Api<> api(nc);
 
     auto rsp = api.card.version().execute();
+    if (!rsp) {
+        auto e = rsp.error();
+        printf("execute error: code=%d cause=%d\n", (int)e.code, (int)e.cause);
+    }
     REQUIRE(rsp.has_value());
     CHECK(rsp.version.has_value());
     CHECK(rsp.device.has_value());

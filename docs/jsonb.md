@@ -16,7 +16,7 @@ JSON remains the default. JSONB is opt-in via a compile-time flag.
 Define `NOTE_JSONB` before including `note-cpp` headers:
 
 ```cpp
-#define NOTE_JSONB
+#define NOTE_JSONB 1
 #include <note/api.hpp>
 ```
 

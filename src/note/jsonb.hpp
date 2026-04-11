@@ -279,14 +279,32 @@ public:
         if (!r) return r;
         if (*r == 0) { done_ = true; return size_t(0); }
 
-        // Strip `:}` trailer if present at the end of the chunk.
+        // Strip `:}` trailer — may span chunk boundaries.
         size_t enc_len = *r;
+        size_t start = 0;
+        if (pending_colon_) {
+            pending_colon_ = false;
+            if (enc_len > 0 && enc[0] == '}') {
+                // Previous chunk ended with `:`, this one starts with `}`.
+                done_ = true;
+                return size_t(0);
+            }
+            // The `:` was real encoded data, not part of trailer.
+            // Feed it to the decoder below by prepending it.
+            // (Rare edge case — `:` is 0x3A which is valid COBS data.)
+            pending_byte_ = ':';
+            have_pending_byte_ = true;
+        }
         if (enc_len >= 2 &&
             enc[enc_len - 2] == ':' && enc[enc_len - 1] == '}') {
             enc_len -= 2;
             done_ = true;
+        } else if (enc_len >= 1 && enc[enc_len - 1] == ':') {
+            // Chunk ends with `:` — could be start of `:}` trailer.
+            enc_len -= 1;
+            pending_colon_ = true;
         }
-        if (enc_len == 0) return size_t(0);
+        if (enc_len == 0 && !have_pending_byte_) return size_t(0);
 
         // COBS-decode into the decode buffer.
         dec_len_ = 0;
@@ -298,7 +316,11 @@ public:
             memcpy(dec_buf_ + dec_len_, data, copy);
             dec_len_ += copy;
         };
-        decoder_.feed(enc, enc_len, out);
+        if (have_pending_byte_) {
+            have_pending_byte_ = false;
+            decoder_.feed(&pending_byte_, 1, out);
+        }
+        decoder_.feed(enc + start, enc_len - start, out);
         decoder_.flush(out);
 
         // Return as many decoded bytes as requested.
@@ -313,6 +335,9 @@ private:
     uint32_t timeout_ms_;
     CobsDecoder decoder_;
     bool done_ = false;
+    bool pending_colon_ = false;
+    bool have_pending_byte_ = false;
+    uint8_t pending_byte_ = 0;
 
     uint8_t dec_buf_[NOTE_COBS_BLOCK_SIZE + 1]{};
     size_t dec_pos_ = 0;

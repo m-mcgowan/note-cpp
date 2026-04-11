@@ -784,3 +784,43 @@ TEST_CASE("jsonb CobsDecodingReader: decode and parse through reader adapter") {
     CHECK(sink.events[1].i == 42);
     CHECK(sink.events[2].type == RecordingSink::ObjEnd);
 }
+
+TEST_CASE("jsonb CobsDecodingReader: trailer split across chunks") {
+    // The `:}` trailer may land with `:` at the end of one chunk and `}`
+    // at the start of the next. Verify the reader handles this correctly.
+    std::vector<uint8_t> wire_payload;
+
+    const uint8_t opcodes[] = {
+        jsonb::kBeginObject,
+        jsonb::kItem, 'x', 0x00,
+        jsonb::kTrue,
+        jsonb::kEndObject,
+    };
+    CobsEncoder encoder(jsonb::kCobsXor);
+    encoder.encode(opcodes, sizeof(opcodes),
+        [&](const uint8_t* block, size_t n) {
+            wire_payload.insert(wire_payload.end(), block, block + n);
+        });
+    wire_payload.push_back(':');
+    wire_payload.push_back('}');
+
+    // Use chunk_size = encoded_len + 1 so `:` is the last byte of chunk 1
+    // and `}` is the first byte of chunk 2.
+    size_t split_at = wire_payload.size() - 1;  // `:` is last byte of first chunk
+    VectorReader wire_reader{wire_payload, 0, split_at};
+
+    detail::CobsDecodingReader<VectorReader> cobs_reader(wire_reader, 1000);
+    RecordingSink sink;
+    char storage[384];
+    SaxStreamBuf buf(storage);
+    auto dispatch = make_sax_dispatch(sink);
+    auto err = jsonb_parse_streaming(cobs_reader, 1000, buf, dispatch);
+    REQUIRE(err.empty());
+
+    REQUIRE(sink.events.size() == 3);
+    CHECK(sink.events[0].type == RecordingSink::ObjBegin);
+    CHECK(sink.events[1].type == RecordingSink::Bool);
+    CHECK(sink.events[1].key == "x");
+    CHECK(sink.events[1].b == true);
+    CHECK(sink.events[2].type == RecordingSink::ObjEnd);
+}

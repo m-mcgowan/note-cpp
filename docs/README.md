@@ -25,6 +25,7 @@
 14. **[JSON backend](json-backend.md)** — how JSON is handled internally, available backends
 15. **[Transport layer](transport.md)** — serial and I2C protocols, HAL interfaces, CRC
 16. **[Binary transfer](binary-transfer.md)** — `card.binary` put/get with COBS framing
+17. **[JSONB wire format](jsonb.md)** — binary encoding alternative to JSON text
 17. **[Response lifetimes](response-lifetimes.md)** — string_view validity, arena interning
 18. **[C++ standard requirements](cpp-standard-requirements.md)** — what each standard version enables
 19. **[Debugging](debugging.md)** — wire tracing, transport diagnostics
@@ -32,7 +33,7 @@
 
 ## Guides
 
-21. **[Arduino guide](guides/arduino-guide.md)** — setup, wiring, examples
+21. **[Arduino guide](platforms/arduino/guide.md)** — setup, wiring, examples
 22. **[ATTN pin guide](guides/card-attn-guide.md)** — interrupt-driven wake patterns
 23. **[Migrating from note-arduino](guides/migration-from-note-arduino.md)** — side-by-side examples
 

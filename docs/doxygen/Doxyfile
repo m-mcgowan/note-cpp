@@ -1,10 +1,11 @@
 # Doxyfile for note-cpp
-# Generate with: doxygen Doxyfile  (or ./ci.sh --docs)
+# Generate with: doxygen docs/doxygen/Doxyfile  (or ./ci.sh --docs)
+# All paths are relative to the project root.
 
 PROJECT_NAME           = "note-cpp"
 PROJECT_BRIEF          = "Modern C++ SDK for the Blues Notecard"
 OUTPUT_DIRECTORY       = docs
-INPUT                  = include/note docs/mainpage.md docs/groups.dox
+INPUT                  = include/note docs/doxygen/mainpage.md docs/doxygen/groups.dox
 RECURSIVE              = YES
 FILE_PATTERNS          = *.hpp *.md
 EXCLUDE_PATTERNS       = */third_party/* */backends/*
@@ -34,9 +35,9 @@ EXCLUDE_SYMBOLS        = note::detail::*
 # HTML output with doxygen-awesome theme
 GENERATE_HTML          = YES
 HTML_OUTPUT            = html
-HTML_HEADER            = docs/doxygen-header.html
-HTML_EXTRA_STYLESHEET  = docs/doxygen-awesome-css/doxygen-awesome.css
-HTML_EXTRA_FILES       = docs/doxygen-filter.js docs/doxygen-filter.css
+HTML_HEADER            = docs/doxygen/doxygen-header.html
+HTML_EXTRA_STYLESHEET  = docs/doxygen/doxygen-awesome-css/doxygen-awesome.css
+HTML_EXTRA_FILES       = docs/doxygen/doxygen-filter.js docs/doxygen/doxygen-filter.css
 HTML_COLORSTYLE        = LIGHT
 GENERATE_TREEVIEW      = YES
 DISABLE_INDEX          = NO

@@ -43,7 +43,7 @@ Internal documentation for contributors:
 - **[API design](internal/api-design.md)** — two-layer architecture, naming conventions
 - **[Code generation](internal/codegen.md)** — OpenAPI spec → C++ headers pipeline
 - **[Coverage](internal/coverage.md)** — GCC + lcov methodology
-- **[Documentation generation](internal/documentation.md)** — Doxygen site
+- **[Documentation generation](doxygen/documentation.md)** — Doxygen site
 - **[Retry design](internal/retry-design.md)** — transport retry and safety levels
 - **[Streaming transport](internal/streaming-transport.md)** — SAX pipeline internals
 - **[Release checklist](internal/release-checklist.md)**

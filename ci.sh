@@ -664,7 +664,7 @@ run_docs() {
         exit 1
     fi
     echo "  Doxygen $(doxygen --version)"
-    doxygen "$ROOT/Doxyfile"
+    doxygen "$ROOT/docs/doxygen/Doxyfile"
     echo
 
     # Validate internal links in generated HTML

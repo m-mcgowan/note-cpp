@@ -26,6 +26,7 @@ set(NOTE_CPP_PUBLIC_HEADERS
     include/note/detail/number_format.hpp
     include/note/json.hpp
     include/note/json_buf.hpp
+    include/note/jsonb.hpp
     include/note/json_sax.hpp
     include/note/md5.hpp
     include/note/notecard.hpp
@@ -85,6 +86,7 @@ set(NOTE_CPP_TEST_SOURCES_COMMON
     test_main.cpp
     test_buffer_backend.cpp
     test_cobs.cpp
+    test_jsonb.cpp
     test_flag_set.cpp
     test_json_buf.cpp
     test_json_fmt.cpp

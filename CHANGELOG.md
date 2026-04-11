@@ -12,8 +12,8 @@ details belong in git commit messages and design docs, not here.
 
 ### Added
 - [`has_value()`](docs/working-with-responses.md#checking-for-fields) on response fields
-- `.into(T&)` on request builders — stream response body fields directly into a user struct
-- `Response::max_arena_size` uses to compute compile-time arena budgets for all requests used.
+- [`.into(T&)`](docs/working-with-responses.md#typed-body-parsing-recommended) on request builders for streaming body parse
+- [`Response::max_arena_size`](docs/arena-sizing.md) for compile-time arena budgets
 - Feature flags: [`NOTE_MINIMAL`](docs/feature-flags.md), [`NOTE_NO_API_GROUPS`](docs/feature-flags.md) for constrained targets
 
 ### Fixed
@@ -28,16 +28,16 @@ details belong in git commit messages and design docs, not here.
 ## [0.1.0] - 2026-03-29
 
 ### Added
-- 74 auto-generated endpoint types from OpenAPI 3.1 spec with fluent builder API
-- `ApiResult<T>` dot-access for response fields (`rsp.temperature`, `rsp.connected`)
-- Native serial and I2C transport with CRC32, retry, and chunking
-- Type-safe duration units: `Seconds`, `Minutes`, `Hours`
-- `VoltageVariable` builder for structured voltage thresholds
-- `JsonBuf` constexpr JSON builder; `json_fmt` compile-time validated templates (C++20)
-- Target constraints via `make_api()` with `target<Product>()` / `target<Rat>()`
-- `body()` helper and `NOTE_FIELDS` macro for typed request/response bodies
+- 74 auto-generated endpoint types with [fluent builder API](docs/api-patterns.md)
+- [`ApiResult<T>`](docs/working-with-responses.md) dot-access for response fields
+- [Native serial and I2C transport](docs/transport.md) with CRC32, retry, and chunking
+- [Type-safe duration units](docs/duration-units.md): `Seconds`, `Minutes`, `Hours`
+- [`VoltageVariable`](docs/custom-field-transforms.md) builder for structured voltage thresholds
+- [`JsonBuf`](docs/body-values.md) constexpr JSON builder; [`json_fmt`](docs/json-fmt-design.md) compile-time validated templates (C++20)
+- [Target constraints](docs/polymorphic-apis.md) via `make_api()` with `target<Product>()` / `target<Rat>()`
+- [`body()`](docs/body-values.md) helper and `NOTE_FIELDS` macro for typed request/response bodies
 - Arduino `Printable` support for response fields and errors
-- Raw JSON escape hatch: `transact(json, buf)` and `send(json)`
+- [Raw JSON escape hatch](docs/raw-requests.md): `transact(json, buf)` and `send(json)`
 - [Examples](examples/): getting started, sending notes, hub configuration, attention, location
 
 ### Fixed

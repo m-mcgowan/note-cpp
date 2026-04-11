@@ -11,9 +11,9 @@ details belong in git commit messages and design docs, not here.
 ## [Unreleased]
 
 ### Added
-- `has_value()` on response fields — detect whether a field was present in the JSON response
+- [`has_value()`](docs/working-with-responses.md#checking-for-fields) on response fields
 - `.into(T&)` on request builders — stream response body fields directly into a user struct
-- `Response::max_arena_size` and `RequestSet<Req...>::max_arena_size` — compile-time arena budgets
+- `Response::max_arena_size` uses to compute compile-time arena budgets for all requests used.
 - Feature flags: [`NOTE_MINIMAL`](docs/feature-flags.md), [`NOTE_NO_API_GROUPS`](docs/feature-flags.md) for constrained targets
 
 ### Fixed

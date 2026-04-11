@@ -32,17 +32,36 @@ On Arduino, every field and every response is `Printable` —
 
 ## Checking for fields
 
-Response fields are always present (no `std::optional`). Missing fields
-get their type's default: empty string_view, 0, false. Check presence
-with the reader if needed:
+Response fields track whether they were present in the JSON response.
+Use `has_value()` to distinguish absent fields from zero/empty values:
 
 ```cpp
-auto r = nc.card.temp().read().execute();
+auto r = nc.card.attn().retrieve().execute();
 if (r) {
-    float temp = r.value;        // 0.0 if field absent
-    int32_t calibration = r.calibration;  // 0 if field absent
+    if (r.time.has_value()) {
+        Serial.print("Time: ");
+        Serial.println(r.time);
+    } else {
+        Serial.println("time field not in response");
+    }
+
+    // Reading a field that wasn't present returns the type default (0, false, "")
+    int32_t t = r.time;  // 0 if absent — same as before
 }
 ```
+
+For string fields, `empty()` is often sufficient since the Notecard
+doesn't send empty strings for absent fields:
+
+```cpp
+auto r = nc.card.version().execute();
+if (!r.version.empty()) {
+    Serial.println(r.version);
+}
+```
+
+You can disable presence tracking with `NOTE_RESPONSE_PRESENCE=0` to
+save a byte per field. When disabled, `has_value()` always returns true.
 
 ## Void responses
 

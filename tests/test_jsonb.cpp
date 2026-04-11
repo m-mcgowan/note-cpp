@@ -1,8 +1,10 @@
-// Tests for JSONB opcode constants and StreamingJsonbBuilder.
+// Tests for JSONB opcode constants, StreamingJsonbBuilder, and parser.
 
 #include "catch.hpp"
 
 #include <note/jsonb.hpp>
+#include <note/json_sax_streaming.hpp>
+#include <note/lexer/sax_adapter.hpp>
 
 #include <cstring>
 #include <string>
@@ -369,4 +371,240 @@ TEST_CASE("jsonb builder: card.version matches note-c-zero encoding") {
 
     REQUIRE(bytes.size() == sizeof(expected));
     CHECK(memcmp(bytes.data(), expected, sizeof(expected)) == 0);
+}
+
+// ---------------------------------------------------------------------------
+// JSONB Parser — round-trip tests (build → parse → verify events)
+// ---------------------------------------------------------------------------
+
+namespace {
+
+// Recording sink that logs SAX events for verification.
+struct RecordingSink : JsonSink {
+    enum Type { Null, Bool, Int, Float, String, ObjBegin, ObjEnd, ArrBegin, ArrEnd };
+    struct Event {
+        Type type;
+        std::string key;
+        bool b = false;
+        int32_t i = 0;
+        double f = 0;
+        std::string s;
+    };
+    std::vector<Event> events;
+
+    void on_null(string_view k) override {
+        events.push_back({Null, s(k), false, 0, 0, {}});
+    }
+    void on_bool(string_view k, bool v) override {
+        events.push_back({Bool, s(k), v, 0, 0, {}});
+    }
+    void on_int(string_view k, int32_t v) override {
+        events.push_back({Int, s(k), false, v, 0, {}});
+    }
+    void on_float(string_view k, double v) override {
+        events.push_back({Float, s(k), false, 0, v, {}});
+    }
+    void on_string(string_view k, string_view v) override {
+        events.push_back({String, s(k), false, 0, 0, s(v)});
+    }
+    void on_object_begin(string_view k) override {
+        events.push_back({ObjBegin, s(k), false, 0, 0, {}});
+    }
+    void on_object_end(string_view k) override {
+        events.push_back({ObjEnd, s(k), false, 0, 0, {}});
+    }
+    void on_array_begin(string_view k) override {
+        events.push_back({ArrBegin, s(k), false, 0, 0, {}});
+    }
+    void on_array_end(string_view k) override {
+        events.push_back({ArrEnd, s(k), false, 0, 0, {}});
+    }
+    static std::string s(string_view sv) {
+        return std::string(sv.data(), sv.size());
+    }
+};
+
+// Read function that serves bytes from a vector.
+struct VectorReader {
+    const std::vector<uint8_t>& data;
+    size_t pos = 0;
+    size_t chunk_size = 64;
+
+    Result<size_t> operator()(uint8_t* buf, size_t max, uint32_t) {
+        if (pos >= data.size()) return size_t(0);
+        size_t n = std::min({max, chunk_size, data.size() - pos});
+        memcpy(buf, data.data() + pos, n);
+        pos += n;
+        return n;
+    }
+};
+
+// Helper: build JSONB, then parse and return the recorded events.
+template<typename BuildFn>
+std::vector<RecordingSink::Event> jsonb_round_trip(BuildFn fn) {
+    auto opcodes = jsonb_build(fn);
+    RecordingSink sink;
+    VectorReader reader{opcodes};
+    char storage[384];
+    SaxStreamBuf buf(storage);
+    auto dispatch = make_sax_dispatch(sink);
+    auto err = jsonb_parse_streaming(reader, 1000, buf, dispatch);
+    REQUIRE(err.empty());
+    return sink.events;
+}
+
+}  // anonymous namespace
+
+TEST_CASE("jsonb parser: empty object") {
+    auto events = jsonb_round_trip([](JsonBuilder&) {});
+    REQUIRE(events.size() == 2);
+    CHECK(events[0].type == RecordingSink::ObjBegin);
+    CHECK(events[0].key.empty());
+    CHECK(events[1].type == RecordingSink::ObjEnd);
+}
+
+TEST_CASE("jsonb parser: single string field") {
+    auto events = jsonb_round_trip([](JsonBuilder& b) {
+        b.add("req", string_view("card.version"));
+    });
+    // object_begin, string("req","card.version"), object_end
+    REQUIRE(events.size() == 3);
+    CHECK(events[0].type == RecordingSink::ObjBegin);
+    CHECK(events[1].type == RecordingSink::String);
+    CHECK(events[1].key == "req");
+    CHECK(events[1].s == "card.version");
+    CHECK(events[2].type == RecordingSink::ObjEnd);
+}
+
+TEST_CASE("jsonb parser: int32 field") {
+    auto events = jsonb_round_trip([](JsonBuilder& b) {
+        b.add("count", int32_t{42});
+    });
+    REQUIRE(events.size() == 3);
+    CHECK(events[1].type == RecordingSink::Int);
+    CHECK(events[1].key == "count");
+    CHECK(events[1].i == 42);
+}
+
+TEST_CASE("jsonb parser: negative int32") {
+    auto events = jsonb_round_trip([](JsonBuilder& b) {
+        b.add("val", int32_t{-100});
+    });
+    REQUIRE(events.size() == 3);
+    CHECK(events[1].type == RecordingSink::Int);
+    CHECK(events[1].i == -100);
+}
+
+TEST_CASE("jsonb parser: double field") {
+    auto events = jsonb_round_trip([](JsonBuilder& b) {
+        b.add("temp", 22.5);
+    });
+    REQUIRE(events.size() == 3);
+    CHECK(events[1].type == RecordingSink::Float);
+    CHECK(events[1].key == "temp");
+    CHECK(events[1].f == Approx(22.5));
+}
+
+TEST_CASE("jsonb parser: bool fields") {
+    auto events = jsonb_round_trip([](JsonBuilder& b) {
+        b.add("on", true);
+        b.add("off", false);
+    });
+    REQUIRE(events.size() == 4);
+    CHECK(events[1].type == RecordingSink::Bool);
+    CHECK(events[1].key == "on");
+    CHECK(events[1].b == true);
+    CHECK(events[2].type == RecordingSink::Bool);
+    CHECK(events[2].key == "off");
+    CHECK(events[2].b == false);
+}
+
+TEST_CASE("jsonb parser: nested object") {
+    auto events = jsonb_round_trip([](JsonBuilder& b) {
+        b.add("req", string_view("note.add"));
+        b.begin_object("body");
+        b.add("temp", 22.5);
+        b.add("label", string_view("room"));
+        b.end_object();
+    });
+    // object_begin(""), string("req"), object_begin("body"),
+    // float("temp"), string("label"), object_end("body"), object_end("")
+    REQUIRE(events.size() == 7);
+    CHECK(events[0].type == RecordingSink::ObjBegin);
+    CHECK(events[0].key.empty());
+    CHECK(events[1].type == RecordingSink::String);
+    CHECK(events[1].key == "req");
+    CHECK(events[2].type == RecordingSink::ObjBegin);
+    CHECK(events[2].key == "body");
+    CHECK(events[3].type == RecordingSink::Float);
+    CHECK(events[3].key == "temp");
+    CHECK(events[4].type == RecordingSink::String);
+    CHECK(events[4].key == "label");
+    CHECK(events[4].s == "room");
+    CHECK(events[5].type == RecordingSink::ObjEnd);
+    CHECK(events[5].key == "body");
+    CHECK(events[6].type == RecordingSink::ObjEnd);
+    CHECK(events[6].key.empty());
+}
+
+TEST_CASE("jsonb parser: array of strings") {
+    auto events = jsonb_round_trip([](JsonBuilder& b) {
+        b.begin_array("files");
+        b.add_element(string_view("data.qi"));
+        b.add_element(string_view("settings.db"));
+        b.end_array();
+    });
+    // object_begin, array_begin("files"), string("files","data.qi"),
+    // string("files","settings.db"), array_end("files"), object_end
+    REQUIRE(events.size() == 6);
+    CHECK(events[1].type == RecordingSink::ArrBegin);
+    CHECK(events[1].key == "files");
+    CHECK(events[2].type == RecordingSink::String);
+    CHECK(events[2].key == "files");
+    CHECK(events[2].s == "data.qi");
+    CHECK(events[3].type == RecordingSink::String);
+    CHECK(events[3].key == "files");
+    CHECK(events[3].s == "settings.db");
+    CHECK(events[4].type == RecordingSink::ArrEnd);
+    CHECK(events[4].key == "files");
+}
+
+TEST_CASE("jsonb parser: null field") {
+    // Build manually since JsonBuilder doesn't have add(key, null)
+    std::vector<uint8_t> opcodes = {
+        jsonb::kBeginObject,
+        jsonb::kItem, 'x', '\0',
+        jsonb::kNull,
+        jsonb::kEndObject,
+    };
+    RecordingSink sink;
+    VectorReader reader{opcodes};
+    char storage[384];
+    SaxStreamBuf buf(storage);
+    auto dispatch = make_sax_dispatch(sink);
+    auto err = jsonb_parse_streaming(reader, 1000, buf, dispatch);
+    REQUIRE(err.empty());
+    REQUIRE(sink.events.size() == 3);
+    CHECK(sink.events[1].type == RecordingSink::Null);
+    CHECK(sink.events[1].key == "x");
+}
+
+TEST_CASE("jsonb parser: small chunk reads") {
+    // Ensure the parser handles byte-at-a-time reads.
+    auto opcodes = jsonb_build([](JsonBuilder& b) {
+        b.add("req", string_view("card.version"));
+        b.add("count", int32_t{5});
+    });
+    RecordingSink sink;
+    VectorReader reader{opcodes, 0, 1};  // 1 byte at a time
+    char storage[384];
+    SaxStreamBuf buf(storage);
+    auto dispatch = make_sax_dispatch(sink);
+    auto err = jsonb_parse_streaming(reader, 1000, buf, dispatch);
+    REQUIRE(err.empty());
+    REQUIRE(sink.events.size() == 4);
+    CHECK(sink.events[1].key == "req");
+    CHECK(sink.events[1].s == "card.version");
+    CHECK(sink.events[2].key == "count");
+    CHECK(sink.events[2].i == 5);
 }

@@ -11,6 +11,8 @@
 /// transport path).
 
 #include "json.hpp"
+#include "json_sax_streaming.hpp"
+#include "lexer/sax_adapter.hpp"
 
 #include <cstdint>
 #include <cstring>
@@ -192,5 +194,220 @@ private:
         emit('\0');
     }
 };
+
+// ---------------------------------------------------------------------------
+// Streaming JSONB parser — reads opcodes from a byte source and dispatches
+// SAX events through a SaxDispatch.
+//
+// The caller is responsible for COBS decoding and framing — this function
+// receives raw JSONB opcodes (the payload between {: and :}).
+//
+// Uses SaxStreamBuf for read buffering and key/value accumulation.
+// ---------------------------------------------------------------------------
+
+namespace detail {
+
+class JsonbParser {
+public:
+    JsonbParser(SaxStreamBuf& buf, SaxDispatch dispatch)
+        : dispatch_(dispatch)
+        , rbuf_(buf.rbuf), rbuf_cap_(buf.rbuf_size)
+        , key_buf_(buf.key), key_cap_(buf.key_size)
+        , val_buf_(buf.val), val_cap_(buf.val_size) {}
+
+    template<typename ReadFn>
+    string_view parse(ReadFn& read, uint32_t timeout_ms) {
+        timeout_ms_ = timeout_ms;
+
+        for (;;) {
+            int opcode = read_byte(read);
+            if (opcode < 0) break;
+
+            switch (static_cast<uint8_t>(opcode)) {
+            case jsonb::kBeginObject:
+                dispatch_.dispatch(dispatch_.sink,
+                    SaxEvent::make_object_begin(current_key()));
+                push_key();
+                break;
+
+            case jsonb::kEndObject:
+                pop_key();
+                dispatch_.dispatch(dispatch_.sink,
+                    SaxEvent::make_object_end(current_key()));
+                break;
+
+            case jsonb::kBeginArray:
+                dispatch_.dispatch(dispatch_.sink,
+                    SaxEvent::make_array_begin(current_key()));
+                break;
+
+            case jsonb::kEndArray:
+                dispatch_.dispatch(dispatch_.sink,
+                    SaxEvent::make_array_end(current_key()));
+                break;
+
+            case jsonb::kItem:
+                key_len_ = read_string(read, key_buf_, key_cap_);
+                break;
+
+            case jsonb::kString: {
+                size_t vlen = read_string(read, val_buf_, val_cap_);
+                dispatch_.dispatch(dispatch_.sink,
+                    SaxEvent::make_string(current_key(),
+                        string_view(val_buf_, vlen)));
+                break;
+            }
+
+            case jsonb::kInt32: {
+                uint8_t le[4];
+                if (!read_exact(read, le, 4)) return NOTE_ERR("truncated int32");
+                auto val = static_cast<int32_t>(
+                    uint32_t(le[0]) | (uint32_t(le[1]) << 8) |
+                    (uint32_t(le[2]) << 16) | (uint32_t(le[3]) << 24));
+                dispatch_.dispatch(dispatch_.sink,
+                    SaxEvent::make_int(current_key(), val));
+                break;
+            }
+
+            case jsonb::kDouble: {
+                uint8_t raw[8];
+                if (!read_exact(read, raw, 8)) return NOTE_ERR("truncated double");
+                double val;
+                memcpy(&val, raw, 8);
+                dispatch_.dispatch(dispatch_.sink,
+                    SaxEvent::make_float(current_key(), val));
+                break;
+            }
+
+            case jsonb::kTrue:
+                dispatch_.dispatch(dispatch_.sink,
+                    SaxEvent::make_bool(current_key(), true));
+                break;
+
+            case jsonb::kFalse:
+                dispatch_.dispatch(dispatch_.sink,
+                    SaxEvent::make_bool(current_key(), false));
+                break;
+
+            case jsonb::kNull:
+                dispatch_.dispatch(dispatch_.sink,
+                    SaxEvent::make_null(current_key()));
+                break;
+
+            default:
+                return NOTE_ERR("unknown JSONB opcode");
+            }
+        }
+        return {};
+    }
+
+private:
+    SaxDispatch dispatch_;
+    uint8_t* rbuf_;
+    size_t rbuf_cap_;
+    char* key_buf_;
+    size_t key_cap_;
+    char* val_buf_;
+    size_t val_cap_;
+
+    size_t rpos_ = 0;
+    size_t rfill_ = 0;
+    bool eof_ = false;
+    uint32_t timeout_ms_ = 0;
+
+    size_t key_len_ = 0;
+
+    // Key stack for nested objects (same approach as SaxAdapter).
+    static constexpr uint8_t kMaxDepth = 8;
+    static constexpr uint8_t kMaxKeyPerLevel = 32;
+    struct KeySlot {
+        char saved[kMaxKeyPerLevel]{};
+        uint8_t length = 0;
+    };
+    KeySlot key_stack_[kMaxDepth]{};
+    uint8_t stack_depth_ = 0;
+
+    string_view current_key() const {
+        return string_view(key_buf_, key_len_);
+    }
+
+    void push_key() {
+        if (stack_depth_ < kMaxDepth) {
+            auto save_len = static_cast<uint8_t>(
+                key_len_ < kMaxKeyPerLevel ? key_len_ : kMaxKeyPerLevel);
+            for (uint8_t i = 0; i < save_len; ++i)
+                key_stack_[stack_depth_].saved[i] = key_buf_[i];
+            key_stack_[stack_depth_].length = save_len;
+            ++stack_depth_;
+        }
+        key_len_ = 0;
+    }
+
+    void pop_key() {
+        if (stack_depth_ > 0) {
+            --stack_depth_;
+            auto restore_len = key_stack_[stack_depth_].length;
+            for (uint8_t i = 0; i < restore_len && i < key_cap_; ++i)
+                key_buf_[i] = key_stack_[stack_depth_].saved[i];
+            key_len_ = restore_len < key_cap_ ? restore_len : key_cap_;
+        } else {
+            key_len_ = 0;
+        }
+    }
+
+    template<typename ReadFn>
+    int read_byte(ReadFn& read) {
+        if (rpos_ >= rfill_) {
+            if (eof_) return -1;
+            auto r = read(rbuf_, rbuf_cap_, timeout_ms_);
+            if (!r || *r == 0) { eof_ = true; return -1; }
+            rfill_ = *r;
+            rpos_ = 0;
+        }
+        return rbuf_[rpos_++];
+    }
+
+    template<typename ReadFn>
+    bool read_exact(ReadFn& read, uint8_t* dst, size_t count) {
+        for (size_t i = 0; i < count; ++i) {
+            int b = read_byte(read);
+            if (b < 0) return false;
+            dst[i] = static_cast<uint8_t>(b);
+        }
+        return true;
+    }
+
+    template<typename ReadFn>
+    size_t read_string(ReadFn& read, char* dst, size_t cap) {
+        size_t len = 0;
+        for (;;) {
+            int c = read_byte(read);
+            if (c <= 0) break;  // EOF or null terminator
+            if (len < cap) dst[len] = static_cast<char>(c);
+            ++len;
+        }
+        return len < cap ? len : cap;
+    }
+};
+
+}  // namespace detail
+
+/// Parse a JSONB opcode stream from a streaming byte source.
+/// ReadFn signature: Result<size_t>(uint8_t* buf, size_t max, uint32_t timeout_ms)
+template<typename ReadFn>
+string_view jsonb_parse_streaming(ReadFn&& read, uint32_t timeout_ms,
+                                   SaxStreamBuf& buf, SaxDispatch dispatch) {
+    detail::JsonbParser parser(buf, dispatch);
+    return parser.parse(read, timeout_ms);
+}
+
+/// Convenience overload with default stack buffers.
+template<typename ReadFn>
+string_view jsonb_parse_streaming(ReadFn&& read, uint32_t timeout_ms,
+                                   SaxDispatch dispatch) {
+    char storage[384];
+    SaxStreamBuf buf(storage);
+    return jsonb_parse_streaming(std::forward<ReadFn>(read), timeout_ms, buf, dispatch);
+}
 
 }  // namespace note

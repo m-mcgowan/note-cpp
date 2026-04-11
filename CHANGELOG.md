@@ -11,6 +11,7 @@ details belong in git commit messages and design docs, not here.
 ## [Unreleased]
 
 ### Added
+- [JSONB binary wire format](docs/jsonb.md) — opt-in via `NOTE_JSONB`, replaces JSON text with compact binary opcodes
 - [`has_value()`](docs/working-with-responses.md#checking-for-fields) on response fields
 - [`.into(T&)`](docs/working-with-responses.md#typed-body-parsing-recommended) on request builders for streaming body parse
 - [`Response::max_arena_size`](docs/arena-sizing.md) for compile-time arena budgets

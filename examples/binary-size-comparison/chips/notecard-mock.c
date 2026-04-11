@@ -59,25 +59,52 @@ static const char* jsonb_find_req(const uint8_t *buf, uint32_t len) {
     uint32_t pos = 0;
     while (pos < len) {
         uint8_t op = buf[pos++];
-        if (op == JSONB_ITEM) {
+        switch (op) {
+        case JSONB_BEGIN_OBJECT:
+        case JSONB_END_OBJECT:
+        case JSONB_TRUE:
+        case JSONB_FALSE:
+        case JSONB_NULL:
+            break;
+        case JSONB_ITEM: {
             const char *name = (const char *)&buf[pos];
-            uint32_t nlen = 0;
-            while (pos + nlen < len && buf[pos + nlen] != 0) nlen++;
-            pos += nlen + 1;  // skip name + null
+            // Skip past null-terminated name
+            while (pos < len && buf[pos] != 0) pos++;
             if (pos >= len) return NULL;
+            pos++;  // skip null terminator
+            if (pos >= len) return NULL;
+            // Read value opcode
             uint8_t vop = buf[pos++];
-            if (vop == JSONB_STRING && strcmp(name, "req") == 0) {
-                return (const char *)&buf[pos];
-            }
-            // Skip value
             if (vop == JSONB_STRING) {
+                const char *val = (const char *)&buf[pos];
+                if (strcmp(name, "req") == 0) return val;
+                // Skip past string value
                 while (pos < len && buf[pos] != 0) pos++;
                 pos++;  // null
             } else if (vop == JSONB_INT32) { pos += 4; }
             else if (vop == JSONB_DOUBLE) { pos += 8; }
-            // bool/null/object/array: no payload to skip (simplified)
-        } else if (op == JSONB_BEGIN_OBJECT || op == JSONB_END_OBJECT) {
-            // skip
+            else if (vop == JSONB_BEGIN_OBJECT) {
+                // Nested object — skip by counting depth
+                int depth = 1;
+                while (pos < len && depth > 0) {
+                    if (buf[pos] == JSONB_BEGIN_OBJECT) depth++;
+                    else if (buf[pos] == JSONB_END_OBJECT) depth--;
+                    pos++;
+                }
+            }
+            // bool/null: no payload
+            break;
+        }
+        case JSONB_STRING:
+            // Bare string (array element) — skip
+            while (pos < len && buf[pos] != 0) pos++;
+            pos++;
+            break;
+        case JSONB_INT32: pos += 4; break;
+        case JSONB_DOUBLE: pos += 8; break;
+        default:
+            // Unknown opcode — can't parse further
+            return NULL;
         }
     }
     return NULL;
@@ -186,7 +213,11 @@ static void on_uart_rx_data(void *user_data, uint8_t byte) {
             uart_write(chip->uart, (uint8_t*)resp, strlen(resp));
         } else if (chip->rx_pos >= 2 && chip->rx_buf[0] == '{' && chip->rx_buf[1] == ':') {
             // JSONB request: {:<COBS payload>:}
-            printf("[mock] JSONB request (%u bytes)\n", chip->rx_pos);
+            printf("[mock] JSONB request (%u bytes):", chip->rx_pos);
+            for (uint32_t i = 0; i < chip->rx_pos && i < 40; i++)
+                printf(" %02x", chip->rx_buf[i]);
+            if (chip->rx_pos > 40) printf(" ...");
+            printf("\n");
 
             // Strip {: header and :} trailer
             uint8_t *payload = chip->rx_buf + 2;
@@ -199,6 +230,12 @@ static void on_uart_rx_data(void *user_data, uint8_t byte) {
             // COBS-decode in place
             uint8_t decoded[BUF_SIZE];
             uint32_t dec_len = cobs_decode(payload, payload_len, JSONB_COBS_XOR, decoded);
+
+            printf("[mock] decoded (%u bytes):", dec_len);
+            for (uint32_t i = 0; i < dec_len && i < 40; i++)
+                printf(" %02x", decoded[i]);
+            if (dec_len > 40) printf(" ...");
+            printf("\n");
 
             // Find req field
             const char *req_name = jsonb_find_req(decoded, dec_len);
@@ -236,7 +273,7 @@ static void on_uart_write_done(void *user_data) {
 void chip_init(void) {
     chip_state_t *chip = malloc(sizeof(chip_state_t));
     memset(chip, 0, sizeof(chip_state_t));
-    printf("[mock] chip_init (JSON + JSONB)\n");
+    printf("[mock] chip_init v3 (JSON + JSONB)\n");
 
     const uart_config_t uart_config = {
         .tx = pin_init("TX", INPUT_PULLUP),

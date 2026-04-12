@@ -45,7 +45,7 @@ static note::StreamingTransport& serial_streaming() {
 #endif
 
 #ifdef NOTECARD_TEST_I2C
-static TwoWire& notecardWire() {
+TwoWire& notecardWire() {
     static TwoWire wire(0);
     return wire;
 }
@@ -128,11 +128,11 @@ static void configure_context(doctest::Context& ctx) {
     }
 }
 
-#include <pio_test_runner/doctest_runner.h>
+#include <etst/doctest/runner.h>
 
 void setup() {
-    ptr_doctest::config.board_init = board_init;
-    ptr_doctest::config.configure_context = configure_context;
+    etst::config.board_init = board_init;
+    etst::doctest::config.configure = configure_context;
     DOCTEST_SETUP();
 }
 void loop()  { DOCTEST_LOOP(); }

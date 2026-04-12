@@ -52,8 +52,6 @@ run_ci() {
         fi
         if command -v "$PYTHON" >/dev/null 2>&1; then
             ci_stage "Code generation"
-            "$PYTHON" "$ROOT/tools/schema_to_openapi.py" generate-overlay \
-                -o "$ROOT/notecard-api.openapi.overlay.json"
             "$PYTHON" "$ROOT/tools/codegen/generate.py" "$ROOT/notecard-api.openapi.json" \
                 -o "$ROOT/include/note/api" \
                 --api "$ROOT/include/note/api.hpp" \
@@ -790,8 +788,6 @@ run_quick() {
         PYTHON="$ROOT/.venv/bin/python3"
     fi
     if command -v "$PYTHON" >/dev/null 2>&1; then
-        "$PYTHON" "$ROOT/tools/schema_to_openapi.py" generate-overlay \
-            -o "$ROOT/notecard-api.openapi.overlay.json"
         "$PYTHON" "$ROOT/tools/codegen/generate.py" "$ROOT/notecard-api.openapi.json" \
             -o "$ROOT/include/note/api" \
             --api "$ROOT/include/note/api.hpp" \

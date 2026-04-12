@@ -44,7 +44,8 @@ struct CardRestart {
     static constexpr string_view notecard_request = "card.restart";
     static constexpr bool supports_cmd = true;
     static constexpr Safety safety = Safety::NonIdempotent;
-    static constexpr Skus skus{};
+    static constexpr HardwareSupport hardware{};
+    static constexpr Firmware min_firmware{};
 
 #if NOTE_SINGLETON
     static inline void* nc_;

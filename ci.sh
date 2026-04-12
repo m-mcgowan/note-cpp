@@ -52,6 +52,8 @@ run_ci() {
         fi
         if command -v "$PYTHON" >/dev/null 2>&1; then
             ci_stage "Code generation"
+            "$PYTHON" "$ROOT/tools/schema_to_openapi.py" generate-overlay \
+                -o "$ROOT/notecard-api.openapi.overlay.json"
             "$PYTHON" "$ROOT/tools/codegen/generate.py" "$ROOT/notecard-api.openapi.json" \
                 -o "$ROOT/include/note/api" \
                 --api "$ROOT/include/note/api.hpp" \
@@ -225,7 +227,7 @@ VEOF
     printf "  %-40s " "strict rejects unsupported"
     STRICT_TARGET_OUT=$($CXX $CXXFLAGS $INCLUDE -fsyntax-only -x c++ - <<'TEOF' 2>&1 || true
 #include <note/api.hpp>
-using LoRaStrict = note::Target<note::Product::LoRa, true>;
+using LoRaStrict = note::Target<note::Hardware::LoRa, true>;
 void test(note::Api<LoRaStrict>& api) { api.card.sleep(); }
 TEOF
     )
@@ -241,7 +243,7 @@ TEOF
     printf "  %-40s " "warn for unsupported"
     WARN_TARGET_OUT=$($CXX $CXXFLAGS $INCLUDE -fsyntax-only -x c++ - <<'TEOF' 2>&1 || true
 #include <note/api.hpp>
-using LoRaWarn = note::Target<note::Product::LoRa, false>;
+using LoRaWarn = note::Target<note::Hardware::LoRa, false>;
 void test(note::Api<LoRaWarn>& api) { api.card.sleep(); }
 TEOF
     )
@@ -257,12 +259,73 @@ TEOF
     printf "  %-40s " "supported (no warnings)"
     if $CXX $CXXFLAGS $INCLUDE -Werror -fsyntax-only -x c++ - <<'TEOF' 2>&1; then
 #include <note/api.hpp>
-using WifiTarget = note::Target<note::Product::WiFi>;
+using WifiTarget = note::Target<note::Hardware::WiFi>;
 void test(note::Api<WifiTarget>& api) { api.card.sleep(); api.hub.set(); }
 TEOF
         echo "OK"
     else
         echo "FAIL (unexpected warnings for supported target)"
+        exit 1
+    fi
+
+    # Firmware gating: warn when firmware too old
+    printf "  %-40s " "firmware warn for unsupported"
+    FW_WARN_OUT=$($CXX $CXXFLAGS $INCLUDE -fsyntax-only -x c++ - <<'TEOF' 2>&1 || true
+#include <note/api.hpp>
+using OldFw = note::MinFirmware<5, 0, 0>;
+void test(note::Api<OldFw>& api) { api.card.illumination(); }
+TEOF
+    )
+    if echo "$FW_WARN_OUT" | grep -q "deprecated.*not available on this target"; then
+        echo "OK"
+    else
+        echo "FAIL (expected deprecation warning for firmware-gated endpoint)"
+        echo "$FW_WARN_OUT"
+        exit 1
+    fi
+
+    # Firmware gating: sufficient firmware, no warnings
+    printf "  %-40s " "firmware supported (no warnings)"
+    if $CXX $CXXFLAGS $INCLUDE -Werror -fsyntax-only -x c++ - <<'TEOF' 2>&1; then
+#include <note/api.hpp>
+using NewFw = note::MinFirmware<9, 1, 1>;
+void test(note::Api<NewFw>& api) { api.card.illumination(); api.card.version(); }
+TEOF
+        echo "OK"
+    else
+        echo "FAIL (unexpected warnings for sufficient firmware target)"
+        exit 1
+    fi
+
+    # Firmware strict mode: unsupported endpoint should fail to compile
+    printf "  %-40s " "firmware strict rejects unsupported"
+    FW_STRICT_OUT=$($CXX $CXXFLAGS $INCLUDE -fsyntax-only -x c++ - <<'TEOF' 2>&1 || true
+#include <note/api.hpp>
+using OldFwStrict = note::MinFirmware<5, 0, 0, true>;
+void test(note::Api<OldFwStrict>& api) { api.card.illumination(); }
+TEOF
+    )
+    if echo "$FW_STRICT_OUT" | grep -qE "constraint|no matching"; then
+        echo "OK"
+    else
+        echo "FAIL (expected compile error for firmware-gated endpoint on strict target)"
+        echo "$FW_STRICT_OUT"
+        exit 1
+    fi
+
+    # Combined hardware + firmware: warn mode
+    printf "  %-40s " "combined hw+fw warn"
+    COMBINED_WARN_OUT=$($CXX $CXXFLAGS $INCLUDE -fsyntax-only -x c++ - <<'TEOF' 2>&1 || true
+#include <note/api.hpp>
+using OldWifi = note::Target<note::Hardware::WiFi, 5, 0, 0>;
+void test(note::Api<OldWifi>& api) { api.card.illumination(); }
+TEOF
+    )
+    if echo "$COMBINED_WARN_OUT" | grep -q "deprecated.*not available on this target"; then
+        echo "OK"
+    else
+        echo "FAIL (expected deprecation warning for combined hw+fw target)"
+        echo "$COMBINED_WARN_OUT"
         exit 1
     fi
 
@@ -727,6 +790,8 @@ run_quick() {
         PYTHON="$ROOT/.venv/bin/python3"
     fi
     if command -v "$PYTHON" >/dev/null 2>&1; then
+        "$PYTHON" "$ROOT/tools/schema_to_openapi.py" generate-overlay \
+            -o "$ROOT/notecard-api.openapi.overlay.json"
         "$PYTHON" "$ROOT/tools/codegen/generate.py" "$ROOT/notecard-api.openapi.json" \
             -o "$ROOT/include/note/api" \
             --api "$ROOT/include/note/api.hpp" \

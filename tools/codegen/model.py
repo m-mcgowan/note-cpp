@@ -228,12 +228,12 @@ _ACTION_VERBS: dict[str, str] = {
 }
 
 
-_SKU_PRODUCT_MAP: dict[str, str] = {
-    "CELL": "Product::Cell",
-    "WIFI": "Product::WiFi",
-    "LORA": "Product::LoRa",
-    "CELL+WIFI": "Product::CellWifi",
-    "SKYLO": "Product::Skylo",
+_SKU_HARDWARE_MAP: dict[str, str] = {
+    "CELL": "Hardware::Cell",
+    "WIFI": "Hardware::WiFi",
+    "LORA": "Hardware::LoRa",
+    "CELL+WIFI": "Hardware::CellWifi",
+    "SKYLO": "Hardware::Skylo",
 }
 
 
@@ -257,6 +257,7 @@ class OperationDef:
     mode_field_name: str = "triggers"  # C++ name for mode field when mode_prefix is set
     toggle_pairs: list['TogglePairDef'] = field(default_factory=list)
     action_methods: list['ActionMethodDef'] = field(default_factory=list)
+    min_api_version: str | None = None  # Operation-level minimum firmware, e.g. "7.5.1"
 
     @property
     def legacy_factory_method(self) -> str | None:
@@ -306,23 +307,39 @@ class OperationDef:
 
     @property
     def skus_rats_expr(self) -> str:
-        """C++ expression for Skus::from(Product::...), e.g. 'Skus::from(Product::Cell, Product::WiFi)'.
+        """C++ expression for HardwareSupport::from(Hardware::...).
 
-        Returns empty string if universal (no SKUs, or all products covered).
+        Returns empty string if universal (no SKUs, or all variants covered).
         """
         if not self.skus:
             return ""
-        products: list[str] = []
+        variants: list[str] = []
         for sku in self.skus:
-            expr = _SKU_PRODUCT_MAP.get(sku)
+            expr = _SKU_HARDWARE_MAP.get(sku)
             if expr:
-                products.append(expr)
-        if not products:
+                variants.append(expr)
+        if not variants:
             return ""
-        # If all products are covered, treat as universal
-        if len(products) == len(_SKU_PRODUCT_MAP):
+        # If all variants are covered, treat as universal
+        if len(variants) == len(_SKU_HARDWARE_MAP):
             return ""
-        return "Skus::from(" + ", ".join(products) + ")"
+        return "HardwareSupport::from(" + ", ".join(variants) + ")"
+
+    @property
+    def min_firmware_expr(self) -> str:
+        """C++ expression for Firmware{major, minor, patch}.
+
+        Returns empty string if no minimum firmware version.
+        """
+        if not self.min_api_version:
+            return ""
+        parts = self.min_api_version.split(".")
+        if len(parts) < 2:
+            return ""
+        major = parts[0]
+        minor = parts[1]
+        patch = parts[2] if len(parts) > 2 else "0"
+        return f"Firmware{{{major}, {minor}, {patch}}}"
 
 
 @dataclass
@@ -453,6 +470,20 @@ class EndpointGroup:
         """
         for op in self.operations:
             expr = op.skus_rats_expr
+            if expr:
+                return expr
+        return ""
+
+    @property
+    def min_firmware_expr(self) -> str:
+        """Firmware version expression for this endpoint group.
+
+        Returns the expression from the first operation that has one.
+        For polymorphic endpoints, uses the minimum across operations
+        (the endpoint itself was introduced at the earliest version).
+        """
+        for op in self.operations:
+            expr = op.min_firmware_expr
             if expr:
                 return expr
         return ""

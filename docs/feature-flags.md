@@ -61,6 +61,74 @@ build_flags = -DNOTE_MINIMAL -UNDEF_NOTE_NO_CRC
 
 On Arduino, `note.hpp` imports `Notecard` and duration literals (`15_mins`, `5_s`, etc.) into the global namespace for developer convenience. Define these flags before `#include <note.hpp>` if you need to avoid name collisions.
 
+### API version gating and strict mode
+
+| Flag | Default | Effect |
+|------|---------|--------|
+| `NOTE_API_VERSION` | Latest (currently `NOTE_VERSION(9, 1, 1)`) | Target firmware version. Fields added after this version produce `[[deprecated]]` warnings. |
+| `NOTE_API_STRICT` | off | Remove version-gated fields entirely (compile error instead of warning). |
+
+These flags control **per-field** visibility based on the firmware version that
+introduced each field. The Notecard API spec annotates when each field was
+added (`x-min-api-version`), and codegen wraps newer fields with version guards.
+
+**Default (no flags defined):** all fields available, no warnings.
+
+**Warn mode** (`-DNOTE_API_VERSION=NOTE_VERSION(7,0,0)`): fields added after
+firmware 7.0.0 produce deprecation warnings but remain visible — your IDE
+still shows them in autocomplete, and the code compiles.
+
+**Strict mode** (also define `-DNOTE_API_STRICT`): newer fields are compiled
+out entirely via `#if` guards. Accessing them is a compile error, not a
+warning. This is useful for production firmware that must not accidentally
+use features unavailable on the deployed Notecard.
+
+```ini
+# platformio.ini — warn about fields newer than firmware 7.2.1
+build_flags = -DNOTE_API_VERSION=NOTE_VERSION(7,2,1)
+
+# Strict: error on fields newer than 7.2.1
+build_flags = -DNOTE_API_VERSION=NOTE_VERSION(7,2,1) -DNOTE_API_STRICT
+```
+
+For **endpoint-level** filtering (entire endpoints, not individual fields),
+use the C++20 target filtering API instead — see the
+[Target Filtering](#target-filtering-c20) section.
+
+### Target filtering (C++20)
+
+Target filtering constrains the `Api` by hardware variant, firmware version,
+or both. Unlike the preprocessor flags above, this uses C++20 concepts and
+produces better compiler diagnostics.
+
+```cpp
+// Hardware constraint — card.wifi warns on Cell target
+Api cell_api(nc, target<Hardware::Cell>());
+
+// Firmware constraint — card.illumination warns if firmware < 9.1.1
+Api old_api(nc, min_firmware<5, 0, 0>());
+
+// Combined — both checks
+Api both_api(nc, target<Hardware::WiFi, 9, 1, 1>());
+```
+
+**Warn mode** (default): unsupported endpoints produce `[[deprecated]]`
+warnings but remain callable.
+
+**Strict mode**: unsupported endpoints are removed via `requires` constraints —
+calling them is a compile error with a clear diagnostic.
+
+```cpp
+// Strict hardware target — card.sleep is a compile error on LoRa
+Api api(nc, Target<Hardware::LoRa, 0, 0, 0, true>{});
+
+// Or use .as_strict() on any target
+auto strict = target<Hardware::LoRa>().as_strict();
+```
+
+See [examples/target_filtering.cpp](../examples/target_filtering.cpp) for
+complete examples.
+
 ## Overriding `NOTE_MINIMAL` defaults
 
 Every flag set by `NOTE_MINIMAL` uses `#ifndef` — if you define the flag

@@ -625,7 +625,7 @@ if (r) {
 - Response fields and full responses are Arduino `Printable` —
   `Serial.print(r.version)` just works. Avoid `printf("%.*s")` with
   `string_view` — use `Serial.print()` instead.
-  See the [Arduino Guide](arduino-guide.md) for printing patterns, String
+  See the [Arduino Guide](../platforms/arduino/guide.md) for printing patterns, String
   conversion, and AVR setup.
 
 ## ATTN pin — arming for interrupts
@@ -1357,12 +1357,12 @@ nc.hub.set()
 
 With `NOTE_API_STRICT` defined, the warning becomes a compile error.
 
-**SKU targeting** (C++20) — constrain your `Api` to a specific Notecard
-product. Endpoints that don't support that hardware produce warnings (or
+**Hardware targeting** (C++20) — constrain your `Api` to a specific Notecard
+variant. Endpoints that don't support that hardware produce warnings (or
 errors in strict mode):
 
 ```cpp
-note::Api<note::Product::WiFi> nc(notecard);
+Api<Hardware::WiFi> nc(notecard);
 nc.card.wifi();   // OK — WiFi endpoint on WiFi hardware
 nc.card.sleep();  // OK — universal endpoint
 // nc.card.lora(); // warning: not available on WiFi

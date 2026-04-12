@@ -52,7 +52,8 @@ struct CardPower {
         static constexpr string_view notecard_request = "card.power";
         static constexpr bool supports_cmd = true;
         static constexpr Safety safety = Safety::ReadOnly;
-        static constexpr Skus skus = Skus::from(Product::Cell, Product::CellWifi, Product::Skylo, Product::WiFi);
+        static constexpr HardwareSupport hardware = HardwareSupport::from(Hardware::Cell, Hardware::CellWifi, Hardware::Skylo, Hardware::WiFi);
+        static constexpr Firmware min_firmware = Firmware{8, 1, 3};
 
 #if NOTE_SINGLETON
         static inline void* nc_;
@@ -301,7 +302,8 @@ struct CardPower {
         static constexpr string_view notecard_request = "card.power";
         static constexpr bool supports_cmd = true;
         static constexpr Safety safety = Safety::Idempotent;
-        static constexpr Skus skus = Skus::from(Product::Cell, Product::CellWifi, Product::Skylo, Product::WiFi);
+        static constexpr HardwareSupport hardware = HardwareSupport::from(Hardware::Cell, Hardware::CellWifi, Hardware::Skylo, Hardware::WiFi);
+        static constexpr Firmware min_firmware = Firmware{8, 1, 3};
 
 #if NOTE_SINGLETON
         static inline void* nc_;
@@ -550,7 +552,8 @@ struct CardPower {
         static constexpr string_view notecard_request = "card.power";
         static constexpr bool supports_cmd = true;
         static constexpr Safety safety = Safety::Destructive;
-        static constexpr Skus skus = Skus::from(Product::Cell, Product::CellWifi, Product::Skylo, Product::WiFi);
+        static constexpr HardwareSupport hardware = HardwareSupport::from(Hardware::Cell, Hardware::CellWifi, Hardware::Skylo, Hardware::WiFi);
+        static constexpr Firmware min_firmware = Firmware{8, 1, 3};
 
 #if NOTE_SINGLETON
         static inline void* nc_;

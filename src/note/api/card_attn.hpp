@@ -99,7 +99,8 @@ struct CardAttn {
         static constexpr string_view notecard_request = "card.attn";
         static constexpr bool supports_cmd = true;
         static constexpr Safety safety = Safety::Idempotent;
-        static constexpr Skus skus{};
+        static constexpr HardwareSupport hardware{};
+        static constexpr Firmware min_firmware{};
 
 #if NOTE_SINGLETON
         static inline void* nc_;
@@ -632,7 +633,8 @@ struct CardAttn {
         static constexpr string_view notecard_request = "card.attn";
         static constexpr bool supports_cmd = true;
         static constexpr Safety safety = Safety::Idempotent;
-        static constexpr Skus skus{};
+        static constexpr HardwareSupport hardware{};
+        static constexpr Firmware min_firmware{};
 
 #if NOTE_SINGLETON
         static inline void* nc_;
@@ -990,7 +992,8 @@ struct CardAttn {
         static constexpr string_view notecard_request = "card.attn";
         static constexpr bool supports_cmd = true;
         static constexpr Safety safety = Safety::Idempotent;
-        static constexpr Skus skus{};
+        static constexpr HardwareSupport hardware{};
+        static constexpr Firmware min_firmware{};
 
 #if NOTE_SINGLETON
         static inline void* nc_;
@@ -1345,7 +1348,8 @@ struct CardAttn {
         static constexpr string_view notecard_request = "card.attn";
         static constexpr bool supports_cmd = true;
         static constexpr Safety safety = Safety::Idempotent;
-        static constexpr Skus skus{};
+        static constexpr HardwareSupport hardware{};
+        static constexpr Firmware min_firmware{};
 
 #if NOTE_SINGLETON
         static inline void* nc_;
@@ -1476,7 +1480,8 @@ struct CardAttn {
         static constexpr string_view notecard_request = "card.attn";
         static constexpr bool supports_cmd = true;
         static constexpr Safety safety = Safety::Idempotent;
-        static constexpr Skus skus{};
+        static constexpr HardwareSupport hardware{};
+        static constexpr Firmware min_firmware{};
 
 #if NOTE_SINGLETON
         static inline void* nc_;
@@ -1620,7 +1625,8 @@ struct CardAttn {
         static constexpr string_view notecard_request = "card.attn";
         static constexpr bool supports_cmd = false;
         static constexpr Safety safety = Safety::Idempotent;
-        static constexpr Skus skus{};
+        static constexpr HardwareSupport hardware{};
+        static constexpr Firmware min_firmware{};
 
 #if NOTE_SINGLETON
         static inline void* nc_;
@@ -1804,7 +1810,8 @@ struct CardAttn {
         static constexpr string_view notecard_request = "card.attn";
         static constexpr bool supports_cmd = true;
         static constexpr Safety safety = Safety::Idempotent;
-        static constexpr Skus skus{};
+        static constexpr HardwareSupport hardware{};
+        static constexpr Firmware min_firmware{};
 
 #if NOTE_SINGLETON
         static inline void* nc_;
@@ -1905,7 +1912,8 @@ struct CardAttn {
         static constexpr string_view notecard_request = "card.attn";
         static constexpr bool supports_cmd = true;
         static constexpr Safety safety = Safety::Idempotent;
-        static constexpr Skus skus{};
+        static constexpr HardwareSupport hardware{};
+        static constexpr Firmware min_firmware{};
 
 #if NOTE_SINGLETON
         static inline void* nc_;
@@ -2006,7 +2014,8 @@ struct CardAttn {
         static constexpr string_view notecard_request = "card.attn";
         static constexpr bool supports_cmd = true;
         static constexpr Safety safety = Safety::Idempotent;
-        static constexpr Skus skus{};
+        static constexpr HardwareSupport hardware{};
+        static constexpr Firmware min_firmware{};
 
 #if NOTE_SINGLETON
         static inline void* nc_;
@@ -2109,7 +2118,8 @@ struct CardAttn {
         static constexpr string_view notecard_request = "card.attn";
         static constexpr bool supports_cmd = false;
         static constexpr Safety safety = Safety::ReadOnly;
-        static constexpr Skus skus{};
+        static constexpr HardwareSupport hardware{};
+        static constexpr Firmware min_firmware{};
 
 #if NOTE_SINGLETON
         static inline void* nc_;

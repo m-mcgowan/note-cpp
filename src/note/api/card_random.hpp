@@ -49,7 +49,8 @@ struct CardRandom {
     static constexpr string_view notecard_request = "card.random";
     static constexpr bool supports_cmd = true;
     static constexpr Safety safety = Safety::ReadOnly;
-    static constexpr Skus skus = Skus::from(Product::Cell, Product::CellWifi, Product::Skylo, Product::WiFi);
+    static constexpr HardwareSupport hardware = HardwareSupport::from(Hardware::Cell, Hardware::CellWifi, Hardware::Skylo, Hardware::WiFi);
+    static constexpr Firmware min_firmware{};
 
 #if NOTE_SINGLETON
     static inline void* nc_;

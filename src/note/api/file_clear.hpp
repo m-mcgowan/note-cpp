@@ -46,7 +46,8 @@ struct FileClear {
     static constexpr string_view notecard_request = "file.clear";
     static constexpr bool supports_cmd = true;
     static constexpr Safety safety = Safety::Destructive;
-    static constexpr Skus skus = Skus::from(Product::Cell, Product::CellWifi, Product::Skylo, Product::WiFi);
+    static constexpr HardwareSupport hardware = HardwareSupport::from(Hardware::Cell, Hardware::CellWifi, Hardware::Skylo, Hardware::WiFi);
+    static constexpr Firmware min_firmware = Firmware{8, 2, 1};
 
 #if NOTE_SINGLETON
     static inline void* nc_;

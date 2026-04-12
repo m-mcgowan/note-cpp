@@ -50,7 +50,8 @@ struct NtnGps {
     static constexpr string_view notecard_request = "ntn.gps";
     static constexpr bool supports_cmd = true;
     static constexpr Safety safety = Safety::Idempotent;
-    static constexpr Skus skus = Skus::from(Product::Cell, Product::CellWifi, Product::Skylo, Product::WiFi);
+    static constexpr HardwareSupport hardware = HardwareSupport::from(Hardware::Cell, Hardware::CellWifi, Hardware::Skylo, Hardware::WiFi);
+    static constexpr Firmware min_firmware = Firmware{6, 2, 3};
 
 #if NOTE_SINGLETON
     static inline void* nc_;

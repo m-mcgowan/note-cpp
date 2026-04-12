@@ -46,7 +46,8 @@ struct FileDelete {
     static constexpr string_view notecard_request = "file.delete";
     static constexpr bool supports_cmd = true;
     static constexpr Safety safety = Safety::Destructive;
-    static constexpr Skus skus{};
+    static constexpr HardwareSupport hardware{};
+    static constexpr Firmware min_firmware{};
 
 #if NOTE_SINGLETON
     static inline void* nc_;

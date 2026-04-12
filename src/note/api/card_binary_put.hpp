@@ -53,7 +53,8 @@ struct CardBinaryPut : note::BinarySendMixin {
     static constexpr string_view notecard_request = "card.binary.put";
     static constexpr bool supports_cmd = true;
     static constexpr Safety safety = Safety::NonIdempotent;
-    static constexpr Skus skus = Skus::from(Product::Cell, Product::CellWifi, Product::Skylo, Product::WiFi);
+    static constexpr HardwareSupport hardware = HardwareSupport::from(Hardware::Cell, Hardware::CellWifi, Hardware::Skylo, Hardware::WiFi);
+    static constexpr Firmware min_firmware = Firmware{5, 3, 1};
 
     struct BinaryTransfer {
         static constexpr Direction direction = Direction::Send;

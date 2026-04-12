@@ -1496,11 +1496,11 @@ public:
         /// card.carrier
 #if __cplusplus >= 202002L
         template<typename T_ = TargetT_>
-        requires (IsUnconstrained<T_> || T_::supports(api::CardCarrier::skus))
+        requires (target_supports<T_, api::CardCarrier>())
         auto carrier() { return create_<api::CardCarrier>(); }
 
         template<typename T_ = TargetT_>
-        requires (!IsUnconstrained<T_> && !T_::supports(api::CardCarrier::skus) && !T_::strict)
+        requires (!target_supports<T_, api::CardCarrier>() && !T_::strict)
         [[deprecated("card.carrier is not available on this target")]]
         auto carrier() { return create_<api::CardCarrier>(); }
 #else
@@ -1510,7 +1510,7 @@ public:
         /// card.contact
 #if __cplusplus >= 202002L
         template<typename T_ = TargetT_>
-        requires (IsUnconstrained<T_> || T_::supports(api::CardContact::Get::skus))
+        requires (target_supports<T_, api::CardContact::Get>())
         CardContactFactory contact() { return
 #if NOTE_SINGLETON
             {}
@@ -1520,7 +1520,7 @@ public:
         ; }
 
         template<typename T_ = TargetT_>
-        requires (!IsUnconstrained<T_> && !T_::supports(api::CardContact::Get::skus) && !T_::strict)
+        requires (!target_supports<T_, api::CardContact::Get>() && !T_::strict)
         [[deprecated("card.contact is not available on this target")]]
         CardContactFactory contact() { return
 #if NOTE_SINGLETON
@@ -1542,11 +1542,11 @@ public:
         /// card.dfu
 #if __cplusplus >= 202002L
         template<typename T_ = TargetT_>
-        requires (IsUnconstrained<T_> || T_::supports(api::CardDfu::skus))
+        requires (target_supports<T_, api::CardDfu>())
         auto dfu() { return create_<api::CardDfu>(); }
 
         template<typename T_ = TargetT_>
-        requires (!IsUnconstrained<T_> && !T_::supports(api::CardDfu::skus) && !T_::strict)
+        requires (!target_supports<T_, api::CardDfu>() && !T_::strict)
         [[deprecated("card.dfu is not available on this target")]]
         auto dfu() { return create_<api::CardDfu>(); }
 #else
@@ -1556,11 +1556,11 @@ public:
         /// card.illumination
 #if __cplusplus >= 202002L
         template<typename T_ = TargetT_>
-        requires (IsUnconstrained<T_> || T_::supports(api::CardIllumination::skus))
+        requires (target_supports<T_, api::CardIllumination>())
         auto illumination() { return create_<api::CardIllumination>(); }
 
         template<typename T_ = TargetT_>
-        requires (!IsUnconstrained<T_> && !T_::supports(api::CardIllumination::skus) && !T_::strict)
+        requires (!target_supports<T_, api::CardIllumination>() && !T_::strict)
         [[deprecated("card.illumination is not available on this target")]]
         auto illumination() { return create_<api::CardIllumination>(); }
 #else
@@ -1568,19 +1568,41 @@ public:
 #endif
 
         /// card.io
+#if __cplusplus >= 202002L
+        template<typename T_ = TargetT_>
+        requires (target_supports<T_, api::CardIo>())
         auto io() { return create_<api::CardIo>(); }
 
+        template<typename T_ = TargetT_>
+        requires (!target_supports<T_, api::CardIo>() && !T_::strict)
+        [[deprecated("card.io is not available on this target")]]
+        auto io() { return create_<api::CardIo>(); }
+#else
+        auto io() { return create_<api::CardIo>(); }
+#endif
+
         /// card.led
+#if __cplusplus >= 202002L
+        template<typename T_ = TargetT_>
+        requires (target_supports<T_, api::CardLed>())
         auto led() { return create_<api::CardLed>(); }
+
+        template<typename T_ = TargetT_>
+        requires (!target_supports<T_, api::CardLed>() && !T_::strict)
+        [[deprecated("card.led is not available on this target")]]
+        auto led() { return create_<api::CardLed>(); }
+#else
+        auto led() { return create_<api::CardLed>(); }
+#endif
 
         /// card.monitor
 #if __cplusplus >= 202002L
         template<typename T_ = TargetT_>
-        requires (IsUnconstrained<T_> || T_::supports(api::CardMonitor::skus))
+        requires (target_supports<T_, api::CardMonitor>())
         auto monitor() { return create_<api::CardMonitor>(); }
 
         template<typename T_ = TargetT_>
-        requires (!IsUnconstrained<T_> && !T_::supports(api::CardMonitor::skus) && !T_::strict)
+        requires (!target_supports<T_, api::CardMonitor>() && !T_::strict)
         [[deprecated("card.monitor is not available on this target")]]
         auto monitor() { return create_<api::CardMonitor>(); }
 #else
@@ -1590,7 +1612,7 @@ public:
         /// card.power
 #if __cplusplus >= 202002L
         template<typename T_ = TargetT_>
-        requires (IsUnconstrained<T_> || T_::supports(api::CardPower::Read::skus))
+        requires (target_supports<T_, api::CardPower::Read>())
         CardPowerFactory power() { return
 #if NOTE_SINGLETON
             {}
@@ -1600,7 +1622,7 @@ public:
         ; }
 
         template<typename T_ = TargetT_>
-        requires (!IsUnconstrained<T_> && !T_::supports(api::CardPower::Read::skus) && !T_::strict)
+        requires (!target_supports<T_, api::CardPower::Read>() && !T_::strict)
         [[deprecated("card.power is not available on this target")]]
         CardPowerFactory power() { return
 #if NOTE_SINGLETON
@@ -1622,11 +1644,11 @@ public:
         /// card.random
 #if __cplusplus >= 202002L
         template<typename T_ = TargetT_>
-        requires (IsUnconstrained<T_> || T_::supports(api::CardRandom::skus))
+        requires (target_supports<T_, api::CardRandom>())
         auto random() { return create_<api::CardRandom>(); }
 
         template<typename T_ = TargetT_>
-        requires (!IsUnconstrained<T_> && !T_::supports(api::CardRandom::skus) && !T_::strict)
+        requires (!target_supports<T_, api::CardRandom>() && !T_::strict)
         [[deprecated("card.random is not available on this target")]]
         auto random() { return create_<api::CardRandom>(); }
 #else
@@ -1642,11 +1664,11 @@ public:
         /// card.sleep
 #if __cplusplus >= 202002L
         template<typename T_ = TargetT_>
-        requires (IsUnconstrained<T_> || T_::supports(api::CardSleep::skus))
+        requires (target_supports<T_, api::CardSleep>())
         auto sleep() { return create_<api::CardSleep>(); }
 
         template<typename T_ = TargetT_>
-        requires (!IsUnconstrained<T_> && !T_::supports(api::CardSleep::skus) && !T_::strict)
+        requires (!target_supports<T_, api::CardSleep>() && !T_::strict)
         [[deprecated("card.sleep is not available on this target")]]
         auto sleep() { return create_<api::CardSleep>(); }
 #else
@@ -1674,11 +1696,11 @@ public:
         /// card.transport
 #if __cplusplus >= 202002L
         template<typename T_ = TargetT_>
-        requires (IsUnconstrained<T_> || T_::supports(api::CardTransport::skus))
+        requires (target_supports<T_, api::CardTransport>())
         auto transport() { return create_<api::CardTransport>(); }
 
         template<typename T_ = TargetT_>
-        requires (!IsUnconstrained<T_> && !T_::supports(api::CardTransport::skus) && !T_::strict)
+        requires (!target_supports<T_, api::CardTransport>() && !T_::strict)
         [[deprecated("card.transport is not available on this target")]]
         auto transport() { return create_<api::CardTransport>(); }
 #else
@@ -1688,11 +1710,11 @@ public:
         /// card.triangulate
 #if __cplusplus >= 202002L
         template<typename T_ = TargetT_>
-        requires (IsUnconstrained<T_> || T_::supports(api::CardTriangulate::skus))
+        requires (target_supports<T_, api::CardTriangulate>())
         auto triangulate() { return create_<api::CardTriangulate>(); }
 
         template<typename T_ = TargetT_>
-        requires (!IsUnconstrained<T_> && !T_::supports(api::CardTriangulate::skus) && !T_::strict)
+        requires (!target_supports<T_, api::CardTriangulate>() && !T_::strict)
         [[deprecated("card.triangulate is not available on this target")]]
         auto triangulate() { return create_<api::CardTriangulate>(); }
 #else
@@ -1702,11 +1724,11 @@ public:
         /// card.usage.get
 #if __cplusplus >= 202002L
         template<typename T_ = TargetT_>
-        requires (IsUnconstrained<T_> || T_::supports(api::CardUsageGet::skus))
+        requires (target_supports<T_, api::CardUsageGet>())
         auto usageGet() { return create_<api::CardUsageGet>(); }
 
         template<typename T_ = TargetT_>
-        requires (!IsUnconstrained<T_> && !T_::supports(api::CardUsageGet::skus) && !T_::strict)
+        requires (!target_supports<T_, api::CardUsageGet>() && !T_::strict)
         [[deprecated("card.usage.get is not available on this target")]]
         auto usageGet() { return create_<api::CardUsageGet>(); }
 #else
@@ -1716,11 +1738,11 @@ public:
         /// card.usage.test
 #if __cplusplus >= 202002L
         template<typename T_ = TargetT_>
-        requires (IsUnconstrained<T_> || T_::supports(api::CardUsageTest::skus))
+        requires (target_supports<T_, api::CardUsageTest>())
         auto usageTest() { return create_<api::CardUsageTest>(); }
 
         template<typename T_ = TargetT_>
-        requires (!IsUnconstrained<T_> && !T_::supports(api::CardUsageTest::skus) && !T_::strict)
+        requires (!target_supports<T_, api::CardUsageTest>() && !T_::strict)
         [[deprecated("card.usage.test is not available on this target")]]
         auto usageTest() { return create_<api::CardUsageTest>(); }
 #else
@@ -1742,11 +1764,11 @@ public:
         /// card.wifi
 #if __cplusplus >= 202002L
         template<typename T_ = TargetT_>
-        requires (IsUnconstrained<T_> || T_::supports(api::CardWifi::skus))
+        requires (target_supports<T_, api::CardWifi>())
         auto wifi() { return create_<api::CardWifi>(); }
 
         template<typename T_ = TargetT_>
-        requires (!IsUnconstrained<T_> && !T_::supports(api::CardWifi::skus) && !T_::strict)
+        requires (!target_supports<T_, api::CardWifi>() && !T_::strict)
         [[deprecated("card.wifi is not available on this target")]]
         auto wifi() { return create_<api::CardWifi>(); }
 #else
@@ -1876,11 +1898,11 @@ public:
         /// dfu.get
 #if __cplusplus >= 202002L
         template<typename T_ = TargetT_>
-        requires (IsUnconstrained<T_> || T_::supports(api::DfuGet::skus))
+        requires (target_supports<T_, api::DfuGet>())
         auto get() { return create_<api::DfuGet>(); }
 
         template<typename T_ = TargetT_>
-        requires (!IsUnconstrained<T_> && !T_::supports(api::DfuGet::skus) && !T_::strict)
+        requires (!target_supports<T_, api::DfuGet>() && !T_::strict)
         [[deprecated("dfu.get is not available on this target")]]
         auto get() { return create_<api::DfuGet>(); }
 #else
@@ -1890,11 +1912,11 @@ public:
         /// dfu.status
 #if __cplusplus >= 202002L
         template<typename T_ = TargetT_>
-        requires (IsUnconstrained<T_> || T_::supports(api::DfuStatus::skus))
+        requires (target_supports<T_, api::DfuStatus>())
         auto status() { return create_<api::DfuStatus>(); }
 
         template<typename T_ = TargetT_>
-        requires (!IsUnconstrained<T_> && !T_::supports(api::DfuStatus::skus) && !T_::strict)
+        requires (!target_supports<T_, api::DfuStatus>() && !T_::strict)
         [[deprecated("dfu.status is not available on this target")]]
         auto status() { return create_<api::DfuStatus>(); }
 #else
@@ -1983,7 +2005,7 @@ public:
         /// env.set
 #if __cplusplus >= 202002L
         template<typename T_ = TargetT_>
-        requires (IsUnconstrained<T_> || T_::supports(api::EnvSet::skus))
+        requires (target_supports<T_, api::EnvSet>())
         auto set(note::string_view name_arg) {
             auto r = create_<api::EnvSet>();
             r.name = name_arg;
@@ -1991,7 +2013,7 @@ public:
         }
 
         template<typename T_ = TargetT_>
-        requires (!IsUnconstrained<T_> && !T_::supports(api::EnvSet::skus) && !T_::strict)
+        requires (!target_supports<T_, api::EnvSet>() && !T_::strict)
         [[deprecated("env.set is not available on this target")]]
         auto set(note::string_view name_arg) {
             auto r = create_<api::EnvSet>();
@@ -2146,11 +2168,11 @@ public:
         /// file.clear
 #if __cplusplus >= 202002L
         template<typename T_ = TargetT_>
-        requires (IsUnconstrained<T_> || T_::supports(api::FileClear::skus))
+        requires (target_supports<T_, api::FileClear>())
         auto clear() { return create_<api::FileClear>(); }
 
         template<typename T_ = TargetT_>
-        requires (!IsUnconstrained<T_> && !T_::supports(api::FileClear::skus) && !T_::strict)
+        requires (!target_supports<T_, api::FileClear>() && !T_::strict)
         [[deprecated("file.clear is not available on this target")]]
         auto clear() { return create_<api::FileClear>(); }
 #else
@@ -2270,11 +2292,11 @@ public:
         /// hub.log
 #if __cplusplus >= 202002L
         template<typename T_ = TargetT_>
-        requires (IsUnconstrained<T_> || T_::supports(api::HubLog::skus))
+        requires (target_supports<T_, api::HubLog>())
         auto log() { return create_<api::HubLog>(); }
 
         template<typename T_ = TargetT_>
-        requires (!IsUnconstrained<T_> && !T_::supports(api::HubLog::skus) && !T_::strict)
+        requires (!target_supports<T_, api::HubLog>() && !T_::strict)
         [[deprecated("hub.log is not available on this target")]]
         auto log() { return create_<api::HubLog>(); }
 #else
@@ -2287,11 +2309,11 @@ public:
         /// hub.signal
 #if __cplusplus >= 202002L
         template<typename T_ = TargetT_>
-        requires (IsUnconstrained<T_> || T_::supports(api::HubSignal::skus))
+        requires (target_supports<T_, api::HubSignal>())
         auto signal() { return create_<api::HubSignal>(); }
 
         template<typename T_ = TargetT_>
-        requires (!IsUnconstrained<T_> && !T_::supports(api::HubSignal::skus) && !T_::strict)
+        requires (!target_supports<T_, api::HubSignal>() && !T_::strict)
         [[deprecated("hub.signal is not available on this target")]]
         auto signal() { return create_<api::HubSignal>(); }
 #else
@@ -2371,7 +2393,7 @@ public:
         /// note.changes
 #if __cplusplus >= 202002L
         template<typename T_ = TargetT_>
-        requires (IsUnconstrained<T_> || T_::supports(api::NoteChanges::Peek::skus))
+        requires (target_supports<T_, api::NoteChanges::Peek>())
         NoteChangesFactory changes() { return
 #if NOTE_SINGLETON
             {}
@@ -2381,7 +2403,7 @@ public:
         ; }
 
         template<typename T_ = TargetT_>
-        requires (!IsUnconstrained<T_> && !T_::supports(api::NoteChanges::Peek::skus) && !T_::strict)
+        requires (!target_supports<T_, api::NoteChanges::Peek>() && !T_::strict)
         [[deprecated("note.changes is not available on this target")]]
         NoteChangesFactory changes() { return
 #if NOTE_SINGLETON
@@ -2659,11 +2681,11 @@ public:
         /// ntn.gps
 #if __cplusplus >= 202002L
         template<typename T_ = TargetT_>
-        requires (IsUnconstrained<T_> || T_::supports(api::NtnGps::skus))
+        requires (target_supports<T_, api::NtnGps>())
         auto gps() { return create_<api::NtnGps>(); }
 
         template<typename T_ = TargetT_>
-        requires (!IsUnconstrained<T_> && !T_::supports(api::NtnGps::skus) && !T_::strict)
+        requires (!target_supports<T_, api::NtnGps>() && !T_::strict)
         [[deprecated("ntn.gps is not available on this target")]]
         auto gps() { return create_<api::NtnGps>(); }
 #else
@@ -2673,11 +2695,11 @@ public:
         /// ntn.reset
 #if __cplusplus >= 202002L
         template<typename T_ = TargetT_>
-        requires (IsUnconstrained<T_> || T_::supports(api::NtnReset::skus))
+        requires (target_supports<T_, api::NtnReset>())
         auto reset() { return create_<api::NtnReset>(); }
 
         template<typename T_ = TargetT_>
-        requires (!IsUnconstrained<T_> && !T_::supports(api::NtnReset::skus) && !T_::strict)
+        requires (!target_supports<T_, api::NtnReset>() && !T_::strict)
         [[deprecated("ntn.reset is not available on this target")]]
         auto reset() { return create_<api::NtnReset>(); }
 #else
@@ -2687,11 +2709,11 @@ public:
         /// ntn.status
 #if __cplusplus >= 202002L
         template<typename T_ = TargetT_>
-        requires (IsUnconstrained<T_> || T_::supports(api::NtnStatus::skus))
+        requires (target_supports<T_, api::NtnStatus>())
         auto status() { return create_<api::NtnStatus>(); }
 
         template<typename T_ = TargetT_>
-        requires (!IsUnconstrained<T_> && !T_::supports(api::NtnStatus::skus) && !T_::strict)
+        requires (!target_supports<T_, api::NtnStatus>() && !T_::strict)
         [[deprecated("ntn.status is not available on this target")]]
         auto status() { return create_<api::NtnStatus>(); }
 #else
@@ -2763,10 +2785,32 @@ public:
 
 
         /// var.delete
+#if __cplusplus >= 202002L
+        template<typename T_ = TargetT_>
+        requires (target_supports<T_, api::VarDelete>())
         auto delete_() { return create_<api::VarDelete>(); }
 
+        template<typename T_ = TargetT_>
+        requires (!target_supports<T_, api::VarDelete>() && !T_::strict)
+        [[deprecated("var.delete is not available on this target")]]
+        auto delete_() { return create_<api::VarDelete>(); }
+#else
+        auto delete_() { return create_<api::VarDelete>(); }
+#endif
+
         /// var.get
+#if __cplusplus >= 202002L
+        template<typename T_ = TargetT_>
+        requires (target_supports<T_, api::VarGet>())
         auto get() { return create_<api::VarGet>(); }
+
+        template<typename T_ = TargetT_>
+        requires (!target_supports<T_, api::VarGet>() && !T_::strict)
+        [[deprecated("var.get is not available on this target")]]
+        auto get() { return create_<api::VarGet>(); }
+#else
+        auto get() { return create_<api::VarGet>(); }
+#endif
 
         /// var.set
         auto set() { return create_<api::VarSet>(); }
@@ -2843,11 +2887,11 @@ public:
         /// web
 #if __cplusplus >= 202002L
         template<typename T_ = TargetT_>
-        requires (IsUnconstrained<T_> || T_::supports(api::Web::skus))
+        requires (target_supports<T_, api::Web>())
         auto request() { return create_<api::Web>(); }
 
         template<typename T_ = TargetT_>
-        requires (!IsUnconstrained<T_> && !T_::supports(api::Web::skus) && !T_::strict)
+        requires (!target_supports<T_, api::Web>() && !T_::strict)
         [[deprecated("web is not available on this target")]]
         auto request() { return create_<api::Web>(); }
 #else
@@ -2857,11 +2901,11 @@ public:
         /// web.delete
 #if __cplusplus >= 202002L
         template<typename T_ = TargetT_>
-        requires (IsUnconstrained<T_> || T_::supports(api::WebDelete::skus))
+        requires (target_supports<T_, api::WebDelete>())
         auto delete_() { return create_<api::WebDelete>(); }
 
         template<typename T_ = TargetT_>
-        requires (!IsUnconstrained<T_> && !T_::supports(api::WebDelete::skus) && !T_::strict)
+        requires (!target_supports<T_, api::WebDelete>() && !T_::strict)
         [[deprecated("web.delete is not available on this target")]]
         auto delete_() { return create_<api::WebDelete>(); }
 #else
@@ -2871,11 +2915,11 @@ public:
         /// web.get
 #if __cplusplus >= 202002L
         template<typename T_ = TargetT_>
-        requires (IsUnconstrained<T_> || T_::supports(api::WebGet::skus))
+        requires (target_supports<T_, api::WebGet>())
         auto get() { return create_<api::WebGet>(); }
 
         template<typename T_ = TargetT_>
-        requires (!IsUnconstrained<T_> && !T_::supports(api::WebGet::skus) && !T_::strict)
+        requires (!target_supports<T_, api::WebGet>() && !T_::strict)
         [[deprecated("web.get is not available on this target")]]
         auto get() { return create_<api::WebGet>(); }
 #else
@@ -2885,11 +2929,11 @@ public:
         /// web.post
 #if __cplusplus >= 202002L
         template<typename T_ = TargetT_>
-        requires (IsUnconstrained<T_> || T_::supports(api::WebPost::skus))
+        requires (target_supports<T_, api::WebPost>())
         auto post() { return create_<api::WebPost>(); }
 
         template<typename T_ = TargetT_>
-        requires (!IsUnconstrained<T_> && !T_::supports(api::WebPost::skus) && !T_::strict)
+        requires (!target_supports<T_, api::WebPost>() && !T_::strict)
         [[deprecated("web.post is not available on this target")]]
         auto post() { return create_<api::WebPost>(); }
 #else
@@ -2899,11 +2943,11 @@ public:
         /// web.put
 #if __cplusplus >= 202002L
         template<typename T_ = TargetT_>
-        requires (IsUnconstrained<T_> || T_::supports(api::WebPut::skus))
+        requires (target_supports<T_, api::WebPut>())
         auto put() { return create_<api::WebPut>(); }
 
         template<typename T_ = TargetT_>
-        requires (!IsUnconstrained<T_> && !T_::supports(api::WebPut::skus) && !T_::strict)
+        requires (!target_supports<T_, api::WebPut>() && !T_::strict)
         [[deprecated("web.put is not available on this target")]]
         auto put() { return create_<api::WebPut>(); }
 #else

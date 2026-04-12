@@ -1,14 +1,11 @@
-// Target filtering — compile-time checks for Notecard hardware compatibility.
+// Target filtering — compile-time checks for Notecard compatibility.
 //
-// The Notecard comes in different variants: WiFi, Cell, LoRa, Skylo. Some
-// API endpoints only work on specific hardware — for example, card.wifi is
-// only available on WiFi Notecards. If you accidentally call card.wifi on
-// a cellular device, the Notecard returns an error at runtime.
+// The Notecard comes in different hardware variants (WiFi, Cell, CellWifi,
+// LoRa, Skylo) and endpoints may require a minimum firmware version. Target
+// filtering catches mismatches at compile time instead of runtime.
 //
-// Target filtering catches this at compile time instead. Constrain your Api
-// to a specific product, and unsupported endpoints produce compiler warnings
-// (or errors in strict mode). This is especially useful when you're building
-// firmware that targets a specific Notecard variant.
+// Constrain your Api to a hardware variant, firmware version, or both.
+// Unsupported endpoints produce compiler warnings (or errors in strict mode).
 //
 // Requires C++20. On C++17, all endpoints are available (no filtering).
 //
@@ -17,47 +14,61 @@
 #include <note/api.hpp>
 #include "mock_backend.hpp"
 
+using namespace note;
+
 int main() {
     MockBackend backend;
     MockTransport transport;
-    note::Notecard nc(backend, transport);
+    Notecard nc(backend, transport);
 
     // ─── 1. Unconstrained API (default) ─────────────────────────────────
     // Without a target, all endpoints are available. This is fine when your
     // code runs on multiple Notecard variants, or when you don't care about
-    // compile-time hardware checks.
+    // compile-time checks.
 
-    note::Api api(nc);
-    api.execute(api.card.sleep());    // OK: unconstrained API skips SKU checks
+    Api api(nc);
+    api.execute(api.card.sleep());    // OK: unconstrained API skips checks
     api.execute(api.hub.set());       // OK: universal endpoint
 
 #if __cplusplus >= 202002L
-    // ─── 2. WiFi target ─────────────────────────────────────────────────
-    // Constrain to WiFi Notecard. WiFi-specific endpoints compile normally.
-    // Endpoints that don't support WiFi produce deprecation warnings (or
-    // compile errors if NOTE_API_STRICT is defined).
+    // ─── 2. Hardware filtering ──────────────────────────────────────────
+    // Constrain to a specific Notecard variant. Endpoints that don't
+    // support this hardware produce deprecation warnings (or compile errors
+    // in strict mode).
 
-    note::Api wifi_api(nc, note::target<note::Product::WiFi>());
+    Api wifi_api(nc, target<Hardware::WiFi>());
     wifi_api.execute(wifi_api.card.sleep());   // OK: WiFi supports card.sleep
     wifi_api.execute(wifi_api.card.wifi());    // OK: WiFi-specific endpoint
     wifi_api.execute(wifi_api.hub.set());      // OK: universal
+    // wifi_api.card.carrier();  // Would warn: card.carrier is not on WiFi
 
-    // ─── 3. Product-specific targets ────────────────────────────────────
-    // Each Notecard SKU is a distinct product with its own API surface.
-    // Skylo supports card.wifi (it has WiFi) but NOT card.sleep (WiFi v2 only).
+    // ─── 3. Firmware filtering ──────────────────────────────────────────
+    // Constrain to a minimum firmware version. Endpoints that require a
+    // newer firmware produce warnings.
 
-    note::Api skylo_api(nc, note::target<note::Product::Skylo>());
-    skylo_api.execute(skylo_api.card.wifi());  // OK: Skylo has WiFi
-    skylo_api.execute(skylo_api.hub.set());    // OK: universal
-    // skylo_api.card.sleep();  // Would warn: card.sleep is WiFi v2 only
+    Api fw_api(nc, min_firmware<9, 1, 1>());
+    fw_api.execute(fw_api.card.illumination()); // OK: added in 9.1.1
+    fw_api.execute(fw_api.card.version());      // OK: universal
+    // With an older firmware target, card.illumination would warn:
+    // Api old_api(nc, min_firmware<5, 0, 0>());
+    // old_api.card.illumination();  // Would warn: requires firmware >= 9.1.1
 
-    // ─── 4. Compile-time SKU introspection ──────────────────────────────
-    // Every request type carries a static `skus` field listing which
-    // products support it. You can query this at compile time.
+    // ─── 4. Combined hardware + firmware ────────────────────────────────
+    // Both constraints checked simultaneously.
 
-    static_assert(note::api::CardSleep::skus.supports(note::Product::WiFi));
-    static_assert(!note::api::CardSleep::skus.supports(note::Product::CellWifi));
-    static_assert(!note::api::CardSleep::skus.supports(note::Product::LoRa));
-    static_assert(note::api::HubSet::skus.supports(note::Product::LoRa)); // universal
+    Api both_api(nc, target<Hardware::WiFi, 9, 1, 1>());
+    both_api.execute(both_api.card.illumination()); // OK: fw >= 9.1.1
+    both_api.execute(both_api.card.wifi());          // OK: WiFi hardware
+    both_api.execute(both_api.hub.set());            // OK: universal
+
+    // ─── 5. Compile-time introspection ──────────────────────────────────
+    // Every request type carries static `hardware` and `min_firmware` fields.
+
+    static_assert(api::CardSleep::hardware.supports(Hardware::WiFi));
+    static_assert(!api::CardSleep::hardware.supports(Hardware::CellWifi));
+    static_assert(api::HubSet::hardware.supports(Hardware::LoRa)); // universal
+
+    static_assert(api::CardIllumination::min_firmware >= Firmware{9, 1, 1});
+    static_assert(api::CardVersion::min_firmware == Firmware{}); // universal
 #endif
 }

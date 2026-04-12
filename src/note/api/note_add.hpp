@@ -60,7 +60,8 @@ struct NoteAdd {
     static constexpr string_view notecard_request = "note.add";
     static constexpr bool supports_cmd = true;
     static constexpr Safety safety = Safety::NonIdempotent;
-    static constexpr Skus skus{};
+    static constexpr HardwareSupport hardware{};
+    static constexpr Firmware min_firmware{};
 
     struct BinaryBuffer {
         static constexpr Direction direction = Direction::Send;

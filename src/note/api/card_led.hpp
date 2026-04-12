@@ -59,7 +59,8 @@ struct CardLed {
     static constexpr string_view notecard_request = "card.led";
     static constexpr bool supports_cmd = true;
     static constexpr Safety safety = Safety::Idempotent;
-    static constexpr Skus skus{};
+    static constexpr HardwareSupport hardware{};
+    static constexpr Firmware min_firmware = Firmware{3, 5, 1};
 
 #if NOTE_SINGLETON
     static inline void* nc_;

@@ -341,13 +341,13 @@ public:
 
 {# ===== Macro for a single group method with optional target filtering ==== #}
 {% macro group_method(endpoint, op) %}
-{% set has_skus = endpoint.skus_rats_expr != "" %}
-{% set skus_type = ("api::" + endpoint.struct_name + "::" + endpoint.operations[0].struct_name) if endpoint.is_polymorphic else ("api::" + endpoint.struct_name) %}
+{% set has_constraints = (endpoint.skus_rats_expr != "" or endpoint.min_firmware_expr != "") %}
+{% set ep_type = ("api::" + endpoint.struct_name + "::" + endpoint.operations[0].struct_name) if endpoint.is_polymorphic else ("api::" + endpoint.struct_name) %}
 {% if endpoint.is_polymorphic %}
-{% if has_skus %}
+{% if has_constraints %}
 #if __cplusplus >= 202002L
         template<typename T_ = TargetT_>
-        requires (IsUnconstrained<T_> || T_::supports({{ skus_type }}::skus))
+        requires (target_supports<T_, {{ ep_type }}>())
         {{ endpoint.struct_name }}Factory {{ endpoint.group_method }}() { return
 #if NOTE_SINGLETON
             {}
@@ -357,7 +357,7 @@ public:
         ; }
 
         template<typename T_ = TargetT_>
-        requires (!IsUnconstrained<T_> && !T_::supports({{ skus_type }}::skus) && !T_::strict)
+        requires (!target_supports<T_, {{ ep_type }}>() && !T_::strict)
         [[deprecated("{{ endpoint.wire_name }} is not available on this target")]]
         {{ endpoint.struct_name }}Factory {{ endpoint.group_method }}() { return
 #if NOTE_SINGLETON
@@ -385,10 +385,10 @@ public:
         ; }
 {% endif %}
 {% elif op.required_properties %}
-{% if has_skus %}
+{% if has_constraints %}
 #if __cplusplus >= 202002L
         template<typename T_ = TargetT_>
-        requires (IsUnconstrained<T_> || T_::supports({{ skus_type }}::skus))
+        requires (target_supports<T_, {{ ep_type }}>())
         auto {{ endpoint.group_method }}({{ required_params(op) }}) {
             auto r = create_<api::{{ endpoint.struct_name }}>();
 {% for prop in op.required_properties %}
@@ -398,7 +398,7 @@ public:
         }
 
         template<typename T_ = TargetT_>
-        requires (!IsUnconstrained<T_> && !T_::supports({{ skus_type }}::skus) && !T_::strict)
+        requires (!target_supports<T_, {{ ep_type }}>() && !T_::strict)
         [[deprecated("{{ endpoint.wire_name }} is not available on this target")]]
         auto {{ endpoint.group_method }}({{ required_params(op) }}) {
             auto r = create_<api::{{ endpoint.struct_name }}>();
@@ -426,14 +426,14 @@ public:
         }
 {% endif %}
 {% else %}
-{% if has_skus %}
+{% if has_constraints %}
 #if __cplusplus >= 202002L
         template<typename T_ = TargetT_>
-        requires (IsUnconstrained<T_> || T_::supports({{ skus_type }}::skus))
+        requires (target_supports<T_, {{ ep_type }}>())
         auto {{ endpoint.group_method }}() { return create_<api::{{ endpoint.struct_name }}>(); }
 
         template<typename T_ = TargetT_>
-        requires (!IsUnconstrained<T_> && !T_::supports({{ skus_type }}::skus) && !T_::strict)
+        requires (!target_supports<T_, {{ ep_type }}>() && !T_::strict)
         [[deprecated("{{ endpoint.wire_name }} is not available on this target")]]
         auto {{ endpoint.group_method }}() { return create_<api::{{ endpoint.struct_name }}>(); }
 #else

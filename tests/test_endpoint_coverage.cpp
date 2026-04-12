@@ -7958,7 +7958,7 @@ TEST_CASE("note::api::NoteTemplate::Define request builder") {
     req.execute();
     req.delete_(true);
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
-    req.format(note::string_view("x-format"));
+    req.format(note::string_view("compact"));
 #endif
     req.length(int32_t{42});
     req.port(int32_t{42});
@@ -7969,7 +7969,7 @@ TEST_CASE("note::api::NoteTemplate::Define request builder") {
     REQUIRE(h.last_req.find("\"file\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"delete\":true") != std::string::npos);
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
-    REQUIRE(h.last_req.find("\"format\":\"x-format\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"format\":\"compact\"") != std::string::npos);
 #endif
     REQUIRE(h.last_req.find("\"length\":42") != std::string::npos);
     REQUIRE(h.last_req.find("\"port\":42") != std::string::npos);
@@ -7993,7 +7993,7 @@ TEST_CASE("note::api::NoteTemplate::Define request builder") {
     // Cover known-key routing in operator[] (true branch for each settable field)
     req["delete"] = true;
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
-    req["format"] = note::string_view("x-format");
+    req["format"] = note::string_view("compact");
 #endif
     req["length"] = int32_t{42};
     req["port"] = int32_t{42};

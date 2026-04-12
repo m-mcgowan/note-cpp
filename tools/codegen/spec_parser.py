@@ -403,6 +403,7 @@ def _parse_operation(op: dict, *, suffix: str | None = None) -> OperationDef:
         binary_transfer=_parse_binary_transfer(op.get("x-binary-transfer")),
         binary_buffer=_parse_binary_buffer(op.get("x-binary-buffer")),
         skus=op.get("x-skus", []),
+        min_api_version=op.get("x-min-api-version"),
         description=op.get("summary", ""),
         legacy_struct_name=legacy_struct_name,
         toggle_pairs=toggle_pairs,

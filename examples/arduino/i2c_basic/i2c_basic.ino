@@ -6,6 +6,8 @@
 // Dependencies: just note-cpp (header-only, no external JSON library needed).
 
 #include <note.hpp>
+#include <nonstdlibcpp.hpp> // required only on AVR platforms
+
 
 // ── Sensor data ──────────────────────────────────────────────────────────
 struct Sensor {
@@ -24,16 +26,16 @@ void setup() {
 
     nc.begin(Wire);
 
-    if (auto r = nc.hub.set()
-            .product("com.example.myproject:mydevice")
-            .mode("periodic")
-            .outbound(15_mins)
-            .execute();
-        !r) {
+    auto r = nc.hub.set()
+        .product("com.example.myproject:mydevice")
+        .mode("periodic")
+        .outbound(15_mins)
+        .execute();
+    if (r) {
+        Serial.println("[ok] hub.set");
+    } else {
         Serial.print("[error] hub.set: ");
         Serial.println(r.error().message.data());
-    } else {
-        Serial.println("[ok] hub.set");
     }
 }
 

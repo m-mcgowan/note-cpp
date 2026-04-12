@@ -2,7 +2,7 @@
 // C++20 + GCC: consteval validates and rejects "perioidc".
 // Clang: skipped — Apple Clang consteval + optional materialization bug.
 #if defined(__clang__)
-#error "Skipped on Clang (consteval bug — see TODO)"
+#error "Skipped: Apple Clang miscompiles consteval + optional materialization in assignment context"
 #endif
 #include <note/api/hub_set.hpp>
 void test() {

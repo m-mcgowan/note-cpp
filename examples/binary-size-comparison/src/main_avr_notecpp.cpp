@@ -7,8 +7,13 @@
 //   1 = Api groups:   api.hub.set().product(...).execute()
 //   2 = Direct:       nc.execute(req)
 
+// Guarded by USE_NOTECPP_AVR to prevent accidental compilation
+// if src_filter config changes — defensive + self-documenting.
 #ifdef USE_NOTECPP_AVR
 
+// Targeted includes — note.hpp pulls in arduino.hpp which unconditionally
+// includes Wire.h (I2C). This serial-only app doesn't need Wire, and on AVR
+// it adds unwanted flash/RAM. Fix: split arduino.hpp so I2C is opt-in.
 #include <note/static_notecard.hpp>
 #include <note/api.hpp>
 #include <note/request_set.hpp>

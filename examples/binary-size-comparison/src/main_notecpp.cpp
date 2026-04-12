@@ -7,8 +7,10 @@
 // comparison. The BufferJsonBackend alternative eliminates heap allocation
 // but adds ~1.7 KB of static RAM.
 
-#ifdef USE_NOTECPP
+#if 1
 
+// Explicit includes (not <note.hpp>) because this uses the cJSON heap
+// backend and raw SerialHal for a like-for-like comparison with note-c.
 #include <note/backends/cjson.hpp>
 #include <note/notecard.hpp>
 #include <note/api.hpp>

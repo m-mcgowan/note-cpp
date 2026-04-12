@@ -128,8 +128,8 @@ to use SFINAE overloads instead of `if constexpr`.
 | `notecard.hpp` | `std::string` local | `Md5Hex` | ✅ Done |
 | `error.hpp` | `std::string` return | `ErrorString` (256-byte fixed buffer) | ✅ Done |
 | `json.hpp` | `to_string()` + `view_buf_` | `to_view()` pure virtual, no string member | ✅ Done |
-| `transport.hpp` | `wire_`, `response_buf_` | Streaming transport bypasses; legacy path remains | ⬜ Blocked on `crc_add()` |
-| `crc32.hpp` | `crc_add()` takes/returns `std::string` | Needs char-buffer variant | ⬜ TODO |
+| `transport.hpp` | `wire_`, `response_buf_` | Streaming transport bypasses; legacy path remains | ✅ Done |
+| `crc32.hpp` | `crc_add()` char-buffer variant | In-place `crc_add(buf, len, capacity, seq)` | ✅ Done |
 
 The streaming transport (`transact_streaming`, `set_receive_buffer`, `transact_into`)
 bypasses both `wire_` and `response_buf_` entirely. The `std::string` members are

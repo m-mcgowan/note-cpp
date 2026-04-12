@@ -897,9 +897,9 @@ TEST_CASE("jsonb parser: empty stream is not an error") {
     CHECK(sink.events.empty());
 }
 
-// TODO: split-trailer test (`:` in chunk 1, `}` in chunk 2) — needs
-// pending-byte state machine in CobsDecodingReader. Deferred: the real
-// transport typically returns the full response in one frame_read chunk.
+// Deferred: split-trailer test (`:` in chunk 1, `}` in chunk 2) would need
+// pending-byte state machine in CobsDecodingReader. Not a practical concern —
+// the real transport returns the full response in one frame_read chunk.
 
 // ---------------------------------------------------------------------------
 // End-to-end: StaticNotecard + Api + card.version over JSONB mock HAL

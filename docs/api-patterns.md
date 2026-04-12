@@ -3,10 +3,10 @@
 Every Notecard API endpoint in `note-cpp` supports multiple calling styles.
 A simple one-liner compiles to the same code as the verbose builder form.
 
-## Quick reference
+## Quickstart
 
 ```cpp
-note::Api api(nc);
+note::Api nc(notecard);
 
 // ── one-liner with positional args ─────────────────────────
 api.hub.set().mode("periodic").execute();
@@ -14,51 +14,49 @@ api.note.read("data.qi").execute();
 api.note.remove("data.db", "my-note").execute();
 api.file.remove("old-data.db").execute();
 
-// ── Designated initializers (C++20) ─────────────────────────────────────
-api.note.read({.file = "data.qi"}).execute();
-api.note.remove({.file = "data.db", .noteId = "my-note"}).execute();
-api.file.remove({.files = {"a.db", "b.db"}}).execute();
-
 // ── Builder pattern ─────────────────────────────────────────────────────
 auto req = api.hub.set();
 req.mode("periodic");
 req.product("com.example.app");
 req.execute();
+
+// ── Designated initializers (C++20) ─────────────────────────────────────
+api.note.read({.file = "data.qi"}).execute();
+api.note.remove({.file = "data.db", .noteId = "my-note"}).execute();
+api.file.remove({.files = {"a.db", "b.db"}}).execute();
 ```
 
-## The five calling forms
+### 1. Fluent builder
 
-### 1. Fluent builder (works everywhere)
-
-Every endpoint returns a builder with typed setters that chain:
+Every endpoint is a builder with typed setters that chain:
 
 ```cpp
-api.hub.set()
+auto result = api.hub.set()
     .mode("periodic")
     .product("com.example.app")
-    .outbound(int32_t{60})
+    .outbound(60)
     .execute();
 ```
 
 Each setter returns a reference to the builder, so calls chain naturally.
 `execute()` sends the request and returns a typed `ApiResult<Response>`.
 
-### 2. Positional shorthand
 
-Aliases accept the most common arguments as positional parameters:
+### 5. Direct struct construction
 
-```cpp
-api.note.read("data.qi")                  // file
-api.note.remove("data.db", "my-note")     // file, noteId
-api.env.setDefault("name", "value")       // name, text
-api.file.remove("old.db")                 // files (single)
-```
-
-These return the same builder — you can chain further:
+For `api.execute()` with a fully constructed request:
 
 ```cpp
-api.note.read("data.qi").noteId("specific-note").execute();
+// C++20 designated init:
+api.execute(note::api::EnvSet{.name = "temp", .text = "22.5"});
+
+// C++17:
+note::api::EnvSet req;
+req.name = "temp";
+req.text = "22.5";
+api.execute(req);
 ```
+
 
 ### 3. Designated initializers (C++20)
 
@@ -89,26 +87,29 @@ api.note.remove({"data.db", "my-note"}).execute();
 api.file.remove({{"a.db", "b.db"}}).execute();
 ```
 
-### 5. Direct struct construction
 
-For `api.execute()` with a fully constructed request:
+### 2. Positional shorthand
+
+Aliases accept the most common arguments as positional parameters:
 
 ```cpp
-// C++20 designated init:
-api.execute(note::api::EnvSet{.name = "temp", .text = "22.5"});
-
-// C++17:
-note::api::EnvSet req;
-req.name = "temp";
-req.text = "22.5";
-api.execute(req);
+api.note.read("data.qi")                  // file
+api.note.remove("data.db", "my-note")     // file, noteId
+api.env.setDefault("name", "value")       // name, text
+api.file.remove("old.db")                 // files (single)
 ```
+
+These return the same builder — you can chain further:
+
+```cpp
+api.note.read("data.qi").noteId("specific-note").execute();
+```
+
 
 ## Array fields
 
 Some request fields accept multiple values (e.g. `file.delete` takes a list
-of filenames). These use `ArrayField<T, N>` which supports several
-initialization styles:
+of filenames). These support several initialization styles:
 
 ```cpp
 auto req = api.file.remove();
@@ -128,8 +129,7 @@ req.files({"data.qi", "settings.db"});
 
 All produce the same wire format: `"files":["data.qi","settings.db"]`.
 
-Single-value assignment (`req.files = "data.qi"`) uses standard `operator=`
-semantics — it replaces the array contents. Use `add()` to append.
+Single-value assignment (`req.files = "data.qi"`) replaces the array contents. Use `add()` to append.
 
 ## Responses
 
@@ -147,6 +147,7 @@ if (rsp) {
     float temp = rsp.value;      // temperature in °C
 }
 ```
+`.read()` selects the Read intent — `card.temp` is polymorphic (`Read`, `Configure`, `Stop`).
 
 On error, `rsp` is falsy and `rsp.error()` returns the `ErrorInfo`:
 
@@ -160,8 +161,7 @@ if (!rsp) {
 
 ## C++17 vs C++20
 
-The library targets C++17. C++20 adds ergonomic improvements but is not
-required.
+The library requires C++17 or later standard. C++20 adds ergonomic improvements
 
 | Feature | C++17 | C++20 |
 |---------|-------|-------|
@@ -170,8 +170,12 @@ required.
 | Designated initializers | — | ✓ `{.file = "x"}` |
 | Args struct (nested braces) | ✓ `({"x"})` | ✓ |
 | Duck-typed args (any struct with matching fields) | — | ✓ |
-| `constexpr` field validation | — | ✓ `validatedMode("periodic")` |
-| `note::span` aliases `std::span` | — | ✓ (C++17 uses custom impl) |
+| `consteval` field validation | — | ✓ compile-time enum checking |
+
+On C++20, enum fields like `mode` are validated at compile time — passing an
+invalid string is a compile error. On C++17, the same API compiles and runs
+but invalid values are only caught at runtime by the Notecard.
+
 
 ### Setting the C++ standard
 
@@ -212,15 +216,6 @@ Or in `CMakeLists.txt`:
 set(CMAKE_CXX_STANDARD 20)
 ```
 
-#### Arduino IDE
-
-Arduino IDE does not expose C++ standard settings directly. Use PlatformIO
-for C++17+ features, or add compiler flags via `platform.local.txt`:
-
-```
-# ~/.arduino15/packages/<platform>/hardware/<arch>/<version>/platform.local.txt
-compiler.cpp.extra_flags=-std=gnu++17
-```
 
 ## IDE discoverability
 

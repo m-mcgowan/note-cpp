@@ -22,6 +22,11 @@ if [ -n "$READMES" ] && command -v npx >/dev/null 2>&1; then
     echo "  OK"
 fi
 
+# Verify README code snippets match source files
+echo "=== README snippet verification ==="
+python3 "$ROOT/tools/inject-snippets.py" --check README.md
+echo "  OK"
+
 # Verify migration guide table alignment
 if [ -f "$MIGRATION" ]; then
     echo "=== Migration table alignment ==="

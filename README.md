@@ -230,7 +230,7 @@ Each request carries a compile-time safety level (`ReadOnly`, `Idempotent`, `Non
 <summary><strong>Target Filtering</strong> — compile-time API compatibility checks by Notecard hardware and firmware (C++20)</summary>
 
 By default, all Notecard APIs are available irrespective of the Notecard hardware or firmware being targeted. You can
-constrain the by hardware variant, minimum firmware version, or both. Request types and fields not supported
+constrain by hardware variant, minimum firmware version, or both. Request types and fields not supported
 by the Notecard hardware or firmware produce compiler warnings (or errors in strict mode).
 
 ```cpp
@@ -363,7 +363,7 @@ Host tests run in ~35 seconds. The full CI matrix (5 compilers + coverage + embe
 - [Migrating from note-arduino](docs/guides/migration-from-note-arduino.md) — side-by-side examples for common patterns
 - [Feature flags](docs/feature-flags.md) — compile-time options for binary size optimization (AVR, Cortex-M0)
 - [Full documentation index](docs/README.md) — all guides, from getting started to internals
-- [API reference (Doxygen)](https://m-mcgowan.github.io/note-cpp/)
+- API reference (Doxygen) — generate locally with `./ci.sh --docs`
 
 ## Contributing
 

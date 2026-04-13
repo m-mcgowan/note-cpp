@@ -1,7 +1,6 @@
 # Migrating from note-arduino (note-c) to note-cpp
 
-
-# Overview
+## Overview
 
 If you're coming from the [note-arduino](https://github.com/blues/note-arduino)
 library (which wraps [note-c](https://github.com/blues/note-c)), this guide

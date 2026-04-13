@@ -477,10 +477,9 @@ TEST_CASE("CRC auto-detection: no CRC in response, no error") {
 TEST_CASE("CRC auto-detection: first response with CRC enables CRC") {
     SerialTestHarness h;
 
-    // Response includes a CRC field matching seq=0. StreamingTransport only
-    // increments crc_seq_ when crc_enabled_ is already true, so the first
-    // request uses seq=0.
-    std::string resp = str_crc_add("{\"ok\":true}", 0) + "\r\n";
+    // CRC is always sent. crc_seq_ starts at 0, incremented before send,
+    // so the first request uses seq=1.
+    std::string resp = str_crc_add("{\"ok\":true}", 1) + "\r\n";
     h.hal.queue_response(resp);
     CaptureSink sink;
     auto r = h.transact("hub.set", sink);
@@ -493,13 +492,12 @@ TEST_CASE("CRC auto-detection: first response with CRC enables CRC") {
 TEST_CASE("CRC: after detection, second request includes CRC field") {
     SerialTestHarness h;
 
-    // First call: CRC auto-detected (seq=0 response)
-    h.hal.queue_response(str_crc_add("{\"ok\":true}", 0) + "\r\n");
+    // First call: seq=1 (always sent)
+    h.hal.queue_response(str_crc_add("{\"ok\":true}", 1) + "\r\n");
     h.transact("hub.set");
 
-    // Second call: CRC is now enabled, seq increments to 1.
-    // The request should include a CRC field in the transmitted bytes.
-    h.hal.queue_response(str_crc_add("{\"ok\":true}", 1) + "\r\n");
+    // Second call: seq=2
+    h.hal.queue_response(str_crc_add("{\"ok\":true}", 2) + "\r\n");
     h.hal.tx.clear();
     h.transact("hub.sync");
 
@@ -510,8 +508,8 @@ TEST_CASE("CRC: after detection, second request includes CRC field") {
 TEST_CASE("CRC mismatch returns ResponseLost") {
     SerialTestHarness h;
 
-    // First call: CRC auto-detected
-    h.hal.queue_response(str_crc_add("{\"ok\":true}", 0) + "\r\n");
+    // First call: seq=1
+    h.hal.queue_response(str_crc_add("{\"ok\":true}", 1) + "\r\n");
     h.transact("hub.set");
 
     // Second call: response has wrong seq -> CRC mismatch -> error (no retry).

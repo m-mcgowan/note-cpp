@@ -522,12 +522,10 @@ TEST_CASE("transact_streaming: basic SAX parse") {
 }
 
 TEST_CASE("transact_streaming: CRC verification passes") {
-    // First transaction: CRC not yet enabled, but the response includes
-    // a valid CRC field. StreamingTransport auto-enables CRC on success.
-    // On first transact with CRC disabled, crc_seq_ stays 0, so the
-    // response CRC should use seq=0.
+    // First transaction: CRC always sent. crc_seq_ starts at 0, incremented
+    // before send, so first request uses seq=1.
     TestHal hal;
-    hal.set_response_with_crc(R"({"val":42})", 0);
+    hal.set_response_with_crc(R"({"val":42})", 1);
     StreamingTransport transport(hal, 0 /*max_retries*/);
     IStreamingTransport& st = transport;
 
@@ -546,10 +544,10 @@ TEST_CASE("transact_streaming: CRC verification passes") {
 }
 
 TEST_CASE("transact_streaming: CRC mismatch detected") {
-    // First, do a successful transaction with CRC to enable CRC mode.
-    // Then do a second transaction with a bad CRC checksum.
+    // First transaction succeeds with valid CRC (seq=1).
+    // Second transaction has correct seq (2) but wrong checksum.
     TestHal hal;
-    hal.set_response_with_crc(R"({"ok":true})", 0);
+    hal.set_response_with_crc(R"({"ok":true})", 1);
     StreamingTransport transport(hal, 0 /*max_retries*/);
     IStreamingTransport& st = transport;
 
@@ -561,9 +559,8 @@ TEST_CASE("transact_streaming: CRC mismatch detected") {
     }, null_sink, 1000);
     REQUIRE(rv1.has_value());
 
-    // Transaction 2: CRC enabled, crc_seq_ increments to 1.
-    // Send a response with correct seq (1) but wrong checksum.
-    hal.response = R"({"val":42,"crc":"0001:DEADBEEF"})";
+    // Transaction 2: seq=2, wrong checksum.
+    hal.response = R"({"val":42,"crc":"0002:DEADBEEF"})";
     hal.response += '\n';
     hal.read_pos = 0;
 
@@ -593,4 +590,71 @@ TEST_CASE("transact_streaming: send + receive round trip") {
 
     REQUIRE(rv.has_value());
     REQUIRE(sink.result == "done");
+}
+
+// ---------------------------------------------------------------------------
+// CRC send-side: library must always include CRC in requests
+// (matching note-c's _crcAdd behavior). The Notecard only echoes CRC back
+// when the client sends it first.
+// ---------------------------------------------------------------------------
+
+namespace {
+struct CapturingHal : TestHal {
+    std::string sent;
+    bool transmit(const uint8_t* data, size_t len) override {
+        sent.append(reinterpret_cast<const char*>(data), len);
+        return true;
+    }
+    bool write_line_terminator() override {
+        sent += '\n';
+        return true;
+    }
+};
+} // namespace
+
+TEST_CASE("CRC: first request includes CRC field even before CRC is auto-detected") {
+    // Bug: note-cpp only sent CRC after crc_enabled_ became true, but the
+    // Notecard only echoes CRC back when the client sends it first. So CRC
+    // was never enabled. note-c always sends CRC unconditionally.
+    CapturingHal hal;
+    hal.set_response(R"({"ok":true})");  // no CRC in response
+    StreamingTransport transport(hal, 0);
+    IStreamingTransport& st = transport;
+
+    JsonSink sink;
+    auto rv = st.transact([](JsonBuilder& b) {
+        b.add("req", "test.run");
+    }, sink, 1000);
+    REQUIRE(rv.has_value());
+
+    // The sent request must contain a "crc" field
+    REQUIRE(hal.sent.find("\"crc\":\"") != std::string::npos);
+}
+
+TEST_CASE("CRC: sequence number increments with each request") {
+    CapturingHal hal;
+    // crc_seq_ starts at 0, incremented before each send.
+    // First transaction: seq=1, second: seq=2.
+    hal.set_response_with_crc(R"({"ok":true})", 1);
+    StreamingTransport transport(hal, 0);
+    IStreamingTransport& st = transport;
+
+    JsonSink sink;
+
+    // Transaction 1: seq=1
+    auto rv1 = st.transact([](JsonBuilder& b) {
+        b.add("req", "first");
+    }, sink, 1000);
+    REQUIRE(rv1.has_value());
+    REQUIRE(hal.sent.find("\"crc\":\"0001:") != std::string::npos);
+
+    // Transaction 2: seq=2
+    hal.sent.clear();
+    hal.set_response_with_crc(R"({"ok":true})", 2);
+
+    auto rv2 = st.transact([](JsonBuilder& b) {
+        b.add("req", "second");
+    }, sink, 1000);
+    REQUIRE(rv2.has_value());
+    REQUIRE(hal.sent.find("\"crc\":\"0002:") != std::string::npos);
 }

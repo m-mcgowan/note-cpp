@@ -522,9 +522,9 @@ TEST_CASE("i2c round-trip: timeout -> error") {
 TEST_CASE("i2c round-trip: CRC auto-detection on first CRC response") {
     I2cTestHarness h;
 
-    // First request: response has CRC -> auto-detection sets crc_enabled_.
+    // First request: CRC always sent with seq=1. Response echoes CRC back.
     const std::string json = "{\"ok\":true}";
-    std::string resp = str_crc_add(json, 0) + "\n";
+    std::string resp = str_crc_add(json, 1) + "\n";
     h.hal.responses.push_back(resp);
     CaptureSink sink;
     auto r = h.transact("hub.sync", sink);
@@ -537,12 +537,12 @@ TEST_CASE("i2c round-trip: CRC auto-detection on first CRC response") {
 TEST_CASE("i2c round-trip: after CRC detection, second request includes CRC field") {
     I2cTestHarness h;
 
-    // First call: CRC auto-detected (seq=0 response)
-    h.hal.responses.push_back(str_crc_add("{\"ok\":true}", 0) + "\n");
+    // First call: seq=1 (always sent)
+    h.hal.responses.push_back(str_crc_add("{\"ok\":true}", 1) + "\n");
     h.transact("hub.set");
 
-    // Second call: CRC is now enabled, seq increments to 1.
-    h.hal.responses.push_back(str_crc_add("{\"ok\":true}", 1) + "\n");
+    // Second call: seq=2
+    h.hal.responses.push_back(str_crc_add("{\"ok\":true}", 2) + "\n");
     h.hal.last_request.clear();
     h.transact("hub.sync");
 
@@ -552,8 +552,8 @@ TEST_CASE("i2c round-trip: after CRC detection, second request includes CRC fiel
 TEST_CASE("i2c round-trip: CRC mismatch returns ResponseLost") {
     I2cTestHarness h;
 
-    // First call: CRC auto-detected
-    h.hal.responses.push_back(str_crc_add("{\"ok\":true}", 0) + "\n");
+    // First call: seq=1
+    h.hal.responses.push_back(str_crc_add("{\"ok\":true}", 1) + "\n");
     h.transact("hub.set");
 
     // Second call: response has wrong seq -> CRC mismatch -> error (no retry).

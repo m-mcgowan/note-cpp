@@ -247,7 +247,7 @@ public:
         }
 
 #ifndef NOTE_NO_CRC
-        if (crc_enabled_) ++crc_seq_;
+        ++crc_seq_;
 #endif
 
         debug_timing(debug_, TimingEvent::TransmitBegin);
@@ -281,7 +281,7 @@ private:
         }
 
 #ifndef NOTE_NO_CRC
-        if (crc_enabled_) ++crc_seq_;
+        ++crc_seq_;
 #endif
 
         debug_timing(debug_, TimingEvent::TransmitBegin);
@@ -315,7 +315,7 @@ public:
             return make_error(Error::NotReady, NOTE_ERR("not ready"));
 
 #ifndef NOTE_NO_CRC
-        if (crc_enabled_) ++crc_seq_;
+        ++crc_seq_;
 #endif
 
         if (!stream_request(build_fn, ctx))
@@ -472,7 +472,9 @@ private:
         writer.write(":}", 2);
 #else
 #ifndef NOTE_NO_CRC
-        if (crc_enabled_) {
+        {
+            // Always send CRC — the Notecard echoes CRC back only when the
+            // client includes it. Matches note-c's unconditional _crcAdd().
             CrcWriter crc(writer);
             StreamingJsonBuilder builder(crc);
             build_fn(builder, ctx);
@@ -491,13 +493,14 @@ private:
             suffix[pos++] = '"';
             suffix[pos++] = '}';
             writer.write(suffix, pos);
-        } else
-#endif
+        }
+#else
         {
             StreamingJsonBuilder builder(writer);
             build_fn(builder, ctx);
             writer.write("}", 1);
         }
+#endif
 #endif // NOTE_JSONB
 
         if (!writer.ok) return false;

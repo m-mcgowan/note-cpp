@@ -26,6 +26,7 @@
 15. **[Transport layer](transport.md)** — serial and I2C protocols, HAL interfaces, CRC
 16. **[Binary transfer](binary-transfer.md)** — `card.binary` put/get with COBS framing
 17. **[JSONB wire format](jsonb.md)** — binary encoding alternative to JSON text
+18. **[Streaming vs buffered](streaming-vs-buffered.md)** — when to use each path, migration from note-c
 17. **[Response lifetimes](response-lifetimes.md)** — string_view validity, arena interning
 18. **[C++ standard requirements](cpp-standard-requirements.md)** — what each standard version enables
 19. **[Debugging](debugging.md)** — wire tracing, transport diagnostics
@@ -56,5 +57,5 @@ Internal documentation for contributors:
 | [getting_started.cpp](../examples/getting_started.cpp) | Four tiers: ad-hoc, constexpr JSON, typed API, body schemas |
 | [hub-configuration/](../examples/hub-configuration/) | Units, named constants, consteval validation, voltage-variable sync |
 | [sending-notes/](../examples/sending-notes/) | All body patterns: raw, lambda, struct, template, receive, command |
-| [target_filtering.cpp](../examples/target_filtering.cpp) | Product targeting with compile-time warnings/errors |
+| [target_filtering.cpp](../examples/target_filtering.cpp) | Hardware and firmware targeting with compile-time warnings/errors |
 | [zero_alloc.cpp](../examples/zero_alloc.cpp) | Zero-allocation patterns: BufferJsonBackend, StringPool, CjsonArena |

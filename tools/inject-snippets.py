@@ -243,7 +243,7 @@ def process_markdown(md_path: Path, root: Path, inject: bool) -> int:
             if parsed['srclink']:
                 want_srclink = True
 
-            if parsed['name'] and parsed['start'] is None:
+            if parsed['name']:
                 # Named marker — resolve from source
                 if parsed['file'] not in source_cache:
                     source_cache[parsed['file']] = extract_source_blocks(src_path)

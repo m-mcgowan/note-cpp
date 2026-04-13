@@ -2,8 +2,10 @@
 // Marker comments (// readme:<name>) are used by verify-docs to
 // check that README.md code blocks match this source.
 
+// readme:arduino-quickstart
 #include <note.hpp>
 using namespace note;
+// readme:end
 
 // readme:body-struct-def
 struct Readings {
@@ -13,7 +15,9 @@ struct Readings {
 };
 // readme:end
 
+// readme:arduino-declare
 Notecard nc;
+// readme:end
 
 void setup() {
     // readme:arduino-setup

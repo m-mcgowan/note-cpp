@@ -33,7 +33,11 @@ struct TransportHal {
     /// Monotonic millisecond counter (wraps after ~49 days).
     virtual uint32_t millis() = 0;
 
-    /// Platform delay.
+    /// Platform delay. Must yield to the RTOS scheduler on platforms with
+    /// a task watchdog (e.g. ESP32). Arduino's ::delay() already does this.
+    /// Custom implementations should use vTaskDelay() on FreeRTOS or
+    /// equivalent. A busy-wait loop will trigger watchdog resets during
+    /// long Notecard transactions (reset sequences can take several seconds).
     virtual void delay(uint32_t ms) = 0;
 };
 

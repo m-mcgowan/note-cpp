@@ -327,11 +327,9 @@ def _apply_operation_extensions(op: dict, method_extensions: dict) -> None:
 def _apply_path_extensions(path_item: dict, path_extensions: dict) -> None:
     """Merge path-item level extensions (x-aliases, x-flat-alias) into a path item.
 
-    TODO: Revisit whether x-aliases/x-flat-alias should live at path-item level or
-    on a specific operation. Currently stored under a "path" pseudo-method key in
-    operation_extensions.json and applied here to the path item, since they're
-    endpoint-scoped (not tied to one HTTP verb). If a better home is found, this
-    function and the "path" key convention can be updated.
+    x-aliases and x-flat-alias are endpoint-scoped (not tied to one HTTP verb),
+    so they live at the path-item level. operation_extensions.json stores them
+    under a "path" pseudo-method key, which this function merges into the path item.
     """
     path_item.update(path_extensions)
 

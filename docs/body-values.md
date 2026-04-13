@@ -241,17 +241,44 @@ api.note.templates().define("sensors.qo")
 
 ## NOTE_FIELDS macro
 
-On C++20+, plain aggregates work automatically via structured bindings. On C++17, you need the `NOTE_FIELDS` macro to tell the library about your fields:
+On C++20+, **plain aggregates** work automatically — no macro needed:
 
 ```cpp
 struct Readings {
     float temperature;
     int16_t humidity;
+};
+```
+
+A plain aggregate is a struct with all public members and no user-defined
+constructors. The library uses compile-time reflection to discover fields
+automatically.
+
+**When you need `NOTE_FIELDS`:**
+
+- **C++17** — always required (no compile-time reflection available)
+- **C++20 with non-aggregate structs** — if your struct has a user-defined
+  constructor, it's no longer an aggregate and reflection can't inspect it.
+  Add `NOTE_FIELDS` to restore support:
+
+```cpp
+// Has a constructor → not an aggregate → needs NOTE_FIELDS on C++20
+struct Readings {
+    float temperature;
+    int16_t humidity;
+    Readings() : temperature(0), humidity(0) {}
     NOTE_FIELDS(temperature, humidity)
 };
 ```
 
-The macro generates the reflection metadata needed for serialization, deserialization, and template generation.
+The macro generates the serialization, deserialization, and template
+metadata. It works identically on C++17 and C++20 — the only difference
+is whether you can omit it for plain aggregates.
+
+**Requirements:**
+- All fields listed in `NOTE_FIELDS` must be public
+- Up to 16 fields supported
+- Struct must be default-constructible (response parsing calls `T{}` internally)
 
 ## NTN considerations
 

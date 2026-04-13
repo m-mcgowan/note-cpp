@@ -150,7 +150,7 @@ Setting a field that doesn't apply to that operation is a compile error. See [do
 <details>
 <summary><strong>Body Values and Note Templates</strong> — one struct for send, receive, and template registration</summary>
 
-Define a body struct once and use it everywhere. On C++20+, plain aggregates work automatically. On C++17, add `NOTE_FIELDS(...)`.
+Define a body struct once and use it everywhere. On C++20+, plain aggregates work automatically. On C++17, or for non-aggregate structs (e.g. with constructors), add `NOTE_FIELDS(...)`. See [docs/body-values.md](docs/body-values.md).
 
 <!-- snippet:body-send examples/arduino/readme_quickstart/readme_quickstart.ino:45-48 -->
 <!-- snippet:body-receive examples/arduino/readme_quickstart/readme_quickstart.ino:52-52 -->

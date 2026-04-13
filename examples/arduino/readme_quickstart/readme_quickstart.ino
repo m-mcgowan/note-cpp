@@ -53,6 +53,7 @@ void setup() {
     // readme:end
 
     // readme:body-receive
+    auto rsp = nc.note.read("data.qi").execute();
     Readings data = rsp.bodyAs<Readings>();
     // readme:end
 

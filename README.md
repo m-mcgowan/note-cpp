@@ -85,7 +85,7 @@ nc.note.add()
 
 Read responses with typed fields:
 
-<!-- snippet:read-response examples/arduino/readme_quickstart/readme_quickstart.ino:64-70 -->
+<!-- snippet:read-response examples/arduino/readme_quickstart/readme_quickstart.ino:65-71 -->
 ```cpp
 auto rsp = nc.card.version().execute();
 if (rsp) {
@@ -160,14 +160,15 @@ Setting a field that doesn't apply to that operation is a compile error. See [do
 Define a body struct once and use it everywhere. On C++20+, plain aggregates work automatically. On C++17, or for non-aggregate structs (e.g. with constructors), add `NOTE_FIELDS(...)`. See [docs/body-values.md](docs/body-values.md).
 
 <!-- snippet:body-send examples/arduino/readme_quickstart/readme_quickstart.ino:49-52 -->
-<!-- snippet:body-receive examples/arduino/readme_quickstart/readme_quickstart.ino:56-56 -->
-<!-- snippet:body-template examples/arduino/readme_quickstart/readme_quickstart.ino:60-60 -->
+<!-- snippet:body-receive examples/arduino/readme_quickstart/readme_quickstart.ino:56-57 -->
+<!-- snippet:body-template examples/arduino/readme_quickstart/readme_quickstart.ino:61-61 -->
 ```cpp
 nc.note.add()
    .file("sensors.qo")
    .body(Readings{.temperature = 22.5f, .humidity = 60})
    .execute();
 
+auto rsp = nc.note.read("data.qi").execute();
 Readings data = rsp.bodyAs<Readings>();
 
 nc.note.templates().define("sensors.qo").body(template_of(Readings())).execute();

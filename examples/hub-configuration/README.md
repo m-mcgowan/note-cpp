@@ -13,26 +13,24 @@ JSON.
 
 **Fluent style:**
 
+<!-- snippet:fluent examples/hub-configuration/main.cpp:44-49 -->
 ```cpp
-// main.cpp#L85-L90
-
+api.hub.set()
+    .product("com.example.app")
     .mode("periodic")
-    .outbound(2_hours)       // Hours → Minutes (= 120 on the wire)
-    .inbound(7_days)         // Days → Minutes (= 10080 on the wire)
+    .outbound(60)
+    .inbound(120)
     .execute();
-
-// Works across the API — anywhere a Seconds field is expected:
 ```
 
 **Direct assignment:**
 
+<!-- snippet:direct examples/hub-configuration/main.cpp:55-58 -->
 ```cpp
-// main.cpp#L94-L97
-
-
-api.card.attn().arm()
-    .triggers(note::attn::connected)  // flag constant via operator() — "arm," prepended automatically
-    .seconds(5_mins)                  // Minutes → Seconds (= 300 on the wire)
+auto req = api.hub.set();
+req.product = "com.example.app";
+req.mode = "continuous";
+req.execute();
 ```
 
 ## 2. Type-safe units
@@ -40,26 +38,47 @@ api.card.attn().arm()
 Duration fields use typed wrappers (`note::Minutes`, `note::Seconds`) so you
 can't accidentally pass seconds where minutes are expected.
 
+<!-- snippet:units examples/hub-configuration/main.cpp:69-75 -->
 ```cpp
-// main.cpp#L106-L111
-
-
-// Reset outbound to default (sends -1 on the wire)
-api.hub.set().outbound(-1).execute();
-
-// Manual sync only — no automatic outbound (sends 0)
-api.hub.set().outbound(0).execute();
+api.hub.set()
+    .product("com.example.app")
+    .mode("periodic")
+    .outbound(60_mins)       // Minutes literal
+    .inbound(120_minutes)    // Long-form also works
+    .seconds(300_s)          // Seconds literal
+    .execute();
 ```
 
 Raw integers still work — they implicitly convert to the correct unit type:
 
+<!-- snippet:units-raw examples/hub-configuration/main.cpp:80-83 -->
 ```cpp
-// main.cpp#L114-L117
+api.hub.set()
+    .outbound(60)            // int → Minutes (outbound is in minutes)
+    .seconds(300)            // int → Seconds (seconds is in seconds)
+    .execute();
+```
 
+Hours and Days convert to smaller units automatically:
 
+<!-- snippet:hours-days examples/hub-configuration/main.cpp:92-107 -->
+```cpp
+api.hub.set()
+    .product("com.example.app")
+    .mode("periodic")
+    .outbound(2_hours)       // Hours → Minutes (= 120 on the wire)
+    .inbound(7_days)         // Days → Minutes (= 10080 on the wire)
+    .execute();
 
+// Works across the API — anywhere a Seconds field is expected:
+api.card.sleep()                 // WiFi Notecard only
+    .seconds(12_hours)       // Hours → Seconds (= 43200 on the wire)
+    .execute();
 
-
+api.card.attn().arm()
+    .triggers(note::attn::connected)  // flag constant via operator() — "arm," prepended automatically
+    .seconds(5_mins)                  // Minutes → Seconds (= 300 on the wire)
+    .execute();
 ```
 
 Mixing units is a compile error:
@@ -74,21 +93,16 @@ Mixing units is a compile error:
 Special values like "reset to default" and "manual sync only" are named
 constants on the field type. No need to remember magic numbers.
 
+<!-- snippet:named-constants examples/hub-configuration/main.cpp:118-125 -->
 ```cpp
-// main.cpp#L129-L140
+// Reset outbound to default (sends -1 on the wire)
+api.hub.set().outbound(-1).execute();
 
-//   .mode(note::api::HubSet::validatedMode("perioidc"))
-//   error: "hub.set: invalid value for 'mode'"
+// Manual sync only — no automatic outbound (sends 0)
+api.hub.set().outbound(0).execute();
 
-
-// ═════════════════════════════════════════════════════════════════════════
-// 5. Voltage-variable strings — adaptive sync based on power
-// ═════════════════════════════════════════════════════════════════════════
-
-// Raw string — works but easy to get the format wrong:
-std::puts("\n--- Voltage-variable sync (raw string) ---");
-api.hub.set()
-    .mode("periodic")
+// Same constants exist for inbound
+api.hub.set().inbound(-1).execute();
 ```
 
 ## 4. Consteval validation
@@ -96,13 +110,16 @@ api.hub.set()
 Catch mode typos at compile time with `validatedMode()`. Invalid strings
 trigger a compile error.
 
+<!-- snippet:consteval examples/hub-configuration/main.cpp:136-143 -->
 ```cpp
-// main.cpp#L149-L152
+api.hub.set()
+    .product("com.example.app")
+    .mode(note::api::HubSet::validatedMode("periodic"))
+    .execute();
 
-    req.voutbound.usb(5).high(15).normal(60).low(240).dead(0);
-    req.vinbound.usb(5).high(30).normal(120).low(1440).dead(0);
-    req.execute();
-}
+// This would fail at compile time:
+//   .mode(note::api::HubSet::validatedMode("perioidc"))
+//   error: "hub.set: invalid value for 'mode'"
 ```
 
 ## 5. Voltage-variable sync
@@ -112,25 +129,23 @@ picks the interval matching its current voltage level.
 
 **Raw string:**
 
+<!-- snippet:vvar-raw examples/hub-configuration/main.cpp:154-157 -->
 ```cpp
-// main.cpp#L165-L168
-
-    .uperiodic(true)
+api.hub.set()
+    .mode("periodic")
+    .voutbound("usb:5;high:15;normal:60;low:240;dead:0")
     .execute();
-
-// Stay continuous on USB, fall back to minimum on battery
 ```
 
 **Builder** — type-safe, built directly on the field:
 
+<!-- snippet:vvar-builder examples/hub-configuration/main.cpp:164-168 -->
 ```cpp
-// main.cpp#L173-L177
-
-
-// Stay continuous on USB, fall back to off on battery
-api.hub.set()
-    .mode("off")
-    .uoff(true)
+auto req = api.hub.set();
+req.mode = "periodic";
+req.voutbound.usb(5).high(15).normal(60).low(240).dead(0);
+req.vinbound.usb(5).high(30).normal(120).low(1440).dead(0);
+req.execute();
 ```
 
 Only levels you set are emitted — partial configurations are valid (e.g. just
@@ -141,8 +156,25 @@ Only levels you set are emitted — partial configurations are valid (e.g. just
 Automatically switch between `continuous` mode on USB power and a fallback
 mode on battery.
 
+<!-- snippet:usb-variable examples/hub-configuration/main.cpp:179-197 -->
 ```cpp
-// main.cpp#L187-L204
+// Stay continuous on USB, fall back to periodic on battery
+api.hub.set()
+    .product("com.example.app")
+    .mode("periodic")
+    .outbound(60_mins)
+    .uperiodic(true)
+    .execute();
 
+// Stay continuous on USB, fall back to minimum on battery
+api.hub.set()
+    .mode("minimum")
+    .umin(true)
+    .execute();
 
+// Stay continuous on USB, fall back to off on battery
+api.hub.set()
+    .mode("off")
+    .uoff(true)
+    .execute();
 ```

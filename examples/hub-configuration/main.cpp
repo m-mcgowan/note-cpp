@@ -40,19 +40,23 @@ int main() {
     // ═════════════════════════════════════════════════════════════════════════
 
     std::puts("\n--- Fluent style ---");
+    // readme:fluent
     api.hub.set()
         .product("com.example.app")
         .mode("periodic")
         .outbound(60)
         .inbound(120)
         .execute();
+    // readme:end
 
     std::puts("\n--- Direct assignment ---");
     {
+        // readme:direct
         auto req = api.hub.set();
         req.product = "com.example.app";
         req.mode = "continuous";
         req.execute();
+        // readme:end
     }
 
 
@@ -61,6 +65,7 @@ int main() {
     // ═════════════════════════════════════════════════════════════════════════
 
     std::puts("\n--- Type-safe units ---");
+    // readme:units
     api.hub.set()
         .product("com.example.app")
         .mode("periodic")
@@ -68,18 +73,22 @@ int main() {
         .inbound(120_minutes)    // Long-form also works
         .seconds(300_s)          // Seconds literal
         .execute();
+    // readme:end
 
     // Raw integers still work — they implicitly convert to the correct unit:
+    // readme:units-raw
     api.hub.set()
         .outbound(60)            // int → Minutes (outbound is in minutes)
         .seconds(300)            // int → Seconds (seconds is in seconds)
         .execute();
+    // readme:end
 
     // But you can't mix them up — this would be a compile error:
     //   api.hubSet().outbound(60_s);  // error: Seconds ≠ Minutes
 
     // Hours and Days convert implicitly to smaller units:
     std::puts("\n--- Hours and Days ---");
+    // readme:hours-days
     api.hub.set()
         .product("com.example.app")
         .mode("periodic")
@@ -96,6 +105,7 @@ int main() {
         .triggers(note::attn::connected)  // flag constant via operator() — "arm," prepended automatically
         .seconds(5_mins)                  // Minutes → Seconds (= 300 on the wire)
         .execute();
+    // readme:end
 
 
     // ═════════════════════════════════════════════════════════════════════════
@@ -104,6 +114,7 @@ int main() {
 
     std::puts("\n--- Named constants ---");
     {
+        // readme:named-constants
         // Reset outbound to default (sends -1 on the wire)
         api.hub.set().outbound(-1).execute();
 
@@ -112,6 +123,7 @@ int main() {
 
         // Same constants exist for inbound
         api.hub.set().inbound(-1).execute();
+        // readme:end
     }
 
 
@@ -120,6 +132,7 @@ int main() {
     // ═════════════════════════════════════════════════════════════════════════
 
     std::puts("\n--- Consteval validation ---");
+    // readme:consteval
     api.hub.set()
         .product("com.example.app")
         .mode(note::api::HubSet::validatedMode("periodic"))
@@ -128,6 +141,7 @@ int main() {
     // This would fail at compile time:
     //   .mode(note::api::HubSet::validatedMode("perioidc"))
     //   error: "hub.set: invalid value for 'mode'"
+    // readme:end
 
 
     // ═════════════════════════════════════════════════════════════════════════
@@ -136,19 +150,23 @@ int main() {
 
     // Raw string — works but easy to get the format wrong:
     std::puts("\n--- Voltage-variable sync (raw string) ---");
+    // readme:vvar-raw
     api.hub.set()
         .mode("periodic")
         .voutbound("usb:5;high:15;normal:60;low:240;dead:0")
         .execute();
+    // readme:end
 
     // Builder — type-safe, built directly on the field:
     std::puts("\n--- Voltage-variable sync (builder) ---");
     {
+        // readme:vvar-builder
         auto req = api.hub.set();
         req.mode = "periodic";
         req.voutbound.usb(5).high(15).normal(60).low(240).dead(0);
         req.vinbound.usb(5).high(30).normal(120).low(1440).dead(0);
         req.execute();
+        // readme:end
     }
 
 
@@ -157,6 +175,7 @@ int main() {
     // ═════════════════════════════════════════════════════════════════════════
 
     std::puts("\n--- USB-variable sync ---");
+    // readme:usb-variable
     // Stay continuous on USB, fall back to periodic on battery
     api.hub.set()
         .product("com.example.app")
@@ -176,6 +195,7 @@ int main() {
         .mode("off")
         .uoff(true)
         .execute();
+    // readme:end
 
 
     std::puts("\nAll hub-configuration examples completed.");

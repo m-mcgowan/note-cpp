@@ -6,28 +6,14 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 
-# Verify embedded code snippets (embedme)
-READMES=$(find "$ROOT/examples" -name 'README.md' -not -path '*/.pio/*' 2>/dev/null || true)
-MIGRATION="$ROOT/docs/guides/migration-from-note-arduino.md"
-# Legacy path for backward compat with older branches
-[ ! -f "$MIGRATION" ] && MIGRATION="$ROOT/docs/migration-from-note-arduino.md"
-if [ -f "$MIGRATION" ]; then
-    READMES="$READMES $MIGRATION"
-fi
-
-if [ -n "$READMES" ] && command -v npx >/dev/null 2>&1; then
-    echo "=== Embedded doc verification ==="
-    # shellcheck disable=SC2086
-    npx -y embedme --verify $READMES
-    echo "  OK"
-fi
-
-# Verify README code snippets match source files
-echo "=== README snippet verification ==="
-python3 "$ROOT/tools/inject-snippets.py" --check README.md
+# Verify code snippets in all markdown files with <!-- snippet: --> markers
+echo "=== Snippet verification ==="
+SNIPPET_MDS=$(find "$ROOT" -name 'README.md' -not -path '*/.pio/*' -not -path '*/node_modules/*' 2>/dev/null || true)
+python3 "$ROOT/tools/inject-snippets.py" --check $SNIPPET_MDS
 echo "  OK"
 
 # Verify migration guide table alignment
+MIGRATION="$ROOT/docs/guides/migration-from-note-arduino.md"
 if [ -f "$MIGRATION" ]; then
     echo "=== Migration table alignment ==="
     python3 "$ROOT/tools/pad_migration_tables.py" --check

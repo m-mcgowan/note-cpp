@@ -37,11 +37,13 @@
 //   - Receive data (.into(readings) on note.get request)
 //   - Register a template (note::template_of(Readings()) generates type hints)
 
+// readme:body-struct
 struct Readings {
     float temperature;
     int16_t humidity;
     NOTE_FIELDS(temperature, humidity)
 };
+// readme:end
 
 
 int main() {
@@ -61,10 +63,12 @@ int main() {
     // ═════════════════════════════════════════════════════════════════════════
 
     std::puts("\n--- Ad-hoc note.add ---");
+    // readme:adhoc
     nc.request("note.add", [](note::JsonBuilder& b) {
         b.add("file", "sensors.qo");
         b.add("body", R"({"temp":22.5,"humidity":60})");
     });
+    // readme:end
 
 
     // ═════════════════════════════════════════════════════════════════════════
@@ -72,6 +76,7 @@ int main() {
     // ═════════════════════════════════════════════════════════════════════════
 
     std::puts("\n--- Builder body ---");
+    // readme:builder-body
     api.note.add()
         .file("sensors.qo")
         .body(note::body([](note::JsonBuilder& b) {
@@ -79,6 +84,7 @@ int main() {
             b.add("humidity", int32_t{60});
         }))
         .execute();
+    // readme:end
 
 
     // ═════════════════════════════════════════════════════════════════════════
@@ -92,8 +98,10 @@ int main() {
 
     std::puts("\n--- Typed body struct ---");
     {
+        // readme:typed-body
         Readings r{.temperature = 22.5f, .humidity = 60};
         api.note.add().file("sensors.qo").body(r).execute();
+        // readme:end
     }
 
 
@@ -102,9 +110,11 @@ int main() {
     // ═════════════════════════════════════════════════════════════════════════
 
     std::puts("\n--- Template registration ---");
+    // readme:template-register
     api.note.templates().define("sensors.qo")
         .body(note::template_of(Readings()))
         .execute();
+    // readme:end
 
 
     // ═════════════════════════════════════════════════════════════════════════
@@ -119,6 +129,7 @@ int main() {
 
     std::puts("\n--- Template + send ---");
     {
+        // readme:template-send
         // Register the template once at startup. template_of(Readings())
         // generates type hints from your struct's field types:
         //   float    → 14.1 (TFLOAT32)
@@ -130,6 +141,7 @@ int main() {
         // Then send notes as usual — the Notecard stores them compactly.
         Readings r{.temperature = 22.5f, .humidity = 60};
         api.note.add().file("sensors.qo").body(r).execute();
+        // readme:end
     }
 
 
@@ -139,12 +151,14 @@ int main() {
 
     std::puts("\n--- Receive and parse ---");
     {
+        // readme:receive
         Readings data{};
         auto result = api.note.read("data.qi").into(data).execute();
         if (result) {
             (void)data.temperature;
             (void)data.humidity;
         }
+        // readme:end
     }
 
 
@@ -154,8 +168,10 @@ int main() {
 
     std::puts("\n--- Fire-and-forget command ---");
     {
+        // readme:command
         Readings r{.temperature = 22.5f, .humidity = 60};
         api.note.add().file("sensors.qo").body(r).command();
+        // readme:end
     }
 
 
@@ -165,6 +181,7 @@ int main() {
 
     std::puts("\n--- Compile-time JSON ---");
     {
+        // readme:constexpr-json
         constexpr auto json = note::json<[](auto& b) {
             b.add("req", "note.add");
             b.add("file", "sensors.qo");
@@ -177,6 +194,7 @@ int main() {
 
         static_assert(json.view() ==
             R"({"req":"note.add","file":"sensors.qo","body":{"temp":22.5,"humidity":60}})");
+        // readme:end
 
         std::printf("  >> %.*s\n", (int)json.size(), json.data());
     }

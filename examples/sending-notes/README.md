@@ -11,14 +11,13 @@ Define a struct once — use it to send data, receive data, and register
 Notecard templates. On C++20, plain aggregates work automatically. On C++17,
 add the `NOTE_FIELDS` macro.
 
+<!-- snippet:body-struct examples/sending-notes/main.cpp:41-45 -->
 ```cpp
-// main.cpp#L74-L78
-
-std::puts("\n--- Builder body ---");
-api.note.add()
-    .file("sensors.qo")
-    .body(note::body([](note::JsonBuilder& b) {
-        b.add("temp", 22.5);
+struct Readings {
+    float temperature;
+    int16_t humidity;
+    NOTE_FIELDS(temperature, humidity)
+};
 ```
 
 ## 1. Ad-hoc note.add
@@ -26,13 +25,12 @@ api.note.add()
 The simplest approach — build JSON fields with a lambda. No generated types
 needed, just `notecard.hpp`.
 
+<!-- snippet:adhoc examples/sending-notes/main.cpp:67-70 -->
 ```cpp
-// main.cpp#L97-L100
-
-}
-
-
-// ═════════════════════════════════════════════════════════════════════════
+nc.request("note.add", [](note::JsonBuilder& b) {
+    b.add("file", "sensors.qo");
+    b.add("body", R"({"temp":22.5,"humidity":60})");
+});
 ```
 
 ## 2. Builder body
@@ -40,16 +38,15 @@ needed, just `notecard.hpp`.
 Use `note::body()` to construct the body with a lambda. The typed API handles
 the `"req"` and `"file"` fields; you just provide the body content.
 
+<!-- snippet:builder-body examples/sending-notes/main.cpp:80-86 -->
 ```cpp
-// main.cpp#L108-L114
-
-
-
-// ═════════════════════════════════════════════════════════════════════════
-// 5. Template + send — the production pattern
-//
-// Without a template, the Notecard stores each note as a JSON string.
-// With a template, it knows the shape of your data upfront and stores
+api.note.add()
+    .file("sensors.qo")
+    .body(note::body([](note::JsonBuilder& b) {
+        b.add("temp", 22.5);
+        b.add("humidity", int32_t{60});
+    }))
+    .execute();
 ```
 
 ## 3. Typed body struct (recommended)
@@ -57,25 +54,22 @@ the `"req"` and `"file"` fields; you just provide the body content.
 Pass the struct directly. Field names are extracted automatically via C++20
 reflection.
 
+<!-- snippet:typed-body examples/sending-notes/main.cpp:102-103 -->
 ```cpp
-// main.cpp#L123-L124
-
-// generates type hints from your struct's field types:
-//   float    → 14.1 (TFLOAT32)
+Readings r{.temperature = 22.5f, .humidity = 60};
+api.note.add().file("sensors.qo").body(r).execute();
 ```
 
 ## 4. Template registration
 
-Register a Notecard template to enable compact storage. `template_of<T>()`
+Register a Notecard template to enable compact storage. `template_of(Readings())`
 auto-generates the type hints (`14.1` = TFLOAT32, `11` = TINT16).
 
+<!-- snippet:template-register examples/sending-notes/main.cpp:114-116 -->
 ```cpp
-// main.cpp#L133-L136
-
-}
-
-
-// ═════════════════════════════════════════════════════════════════════════
+api.note.templates().define("sensors.qo")
+    .body(note::template_of(Readings()))
+    .execute();
 ```
 
 ## 5. Template + send (the production pattern)
@@ -83,33 +77,33 @@ auto-generates the type hints (`14.1` = TFLOAT32, `11` = TINT16).
 Register the template once at startup, then send notes. The Notecard stores
 them at a fraction of the size.
 
+<!-- snippet:template-send examples/sending-notes/main.cpp:133-143 -->
 ```cpp
-// main.cpp#L145-L153
+// Register the template once at startup. template_of(Readings())
+// generates type hints from your struct's field types:
+//   float    → 14.1 (TFLOAT32)
+//   int16_t  → 11   (TINT16)
+api.note.templates().define("sensors.qo")
+    .body(note::template_of(Readings()))
+    .execute();
 
-        (void)data.temperature;
-        (void)data.humidity;
-    }
-}
-
-
-// ═════════════════════════════════════════════════════════════════════════
-// 7. Command (fire-and-forget) — sends "cmd" instead of "req"
-// ═════════════════════════════════════════════════════════════════════════
+// Then send notes as usual — the Notecard stores them compactly.
+Readings r{.temperature = 22.5f, .humidity = 60};
+api.note.add().file("sensors.qo").body(r).execute();
 ```
 
 ## 6. Receive and parse
 
 Read a note and parse the body directly into your struct with `.into(data)`.
 
+<!-- snippet:receive examples/sending-notes/main.cpp:155-160 -->
 ```cpp
-// main.cpp#L163-L168
-
-// 8. Compile-time JSON — zero-allocation constexpr buffer
-// ═════════════════════════════════════════════════════════════════════════
-
-std::puts("\n--- Compile-time JSON ---");
-{
-    constexpr auto json = note::json<[](auto& b) {
+Readings data{};
+auto result = api.note.read("data.qi").into(data).execute();
+if (result) {
+    (void)data.temperature;
+    (void)data.humidity;
+}
 ```
 
 ## 7. Fire-and-forget command
@@ -117,11 +111,10 @@ std::puts("\n--- Compile-time JSON ---");
 Send `"cmd"` instead of `"req"` — the Notecard won't send a response, saving
 a round-trip.
 
+<!-- snippet:command examples/sending-notes/main.cpp:172-173 -->
 ```cpp
-// main.cpp#L178-L179
-
-static_assert(json.view() ==
-    R"({"req":"note.add","file":"sensors.qo","body":{"temp":22.5,"humidity":60}})");
+Readings r{.temperature = 22.5f, .humidity = 60};
+api.note.add().file("sensors.qo").body(r).command();
 ```
 
 ## 8. Compile-time JSON
@@ -130,8 +123,18 @@ For static requests that never change, `JsonBuf` builds the JSON at compile
 time. Zero allocation, zero runtime cost. The compiler verifies the JSON is
 well-formed.
 
+<!-- snippet:constexpr-json examples/sending-notes/main.cpp:185-196 -->
 ```cpp
-// main.cpp#L189-L200
+constexpr auto json = note::json<[](auto& b) {
+    b.add("req", "note.add");
+    b.add("file", "sensors.qo");
+    b.begin_object("body");
+        b.add("temp", 22.5);
+        b.add("humidity", 60);
+    b.end_object();
+    b.close();
+}>();
 
-
+static_assert(json.view() ==
+    R"({"req":"note.add","file":"sensors.qo","body":{"temp":22.5,"humidity":60}})");
 ```

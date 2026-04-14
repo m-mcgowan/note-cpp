@@ -102,6 +102,13 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           update-comment: true
 
+      - name: Upload to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: coverage/coverage.lcov
+          flags: unittests
+          fail_ci_if_error: false
+
   embedded-compat:
     runs-on: ubuntu-latest
     steps:

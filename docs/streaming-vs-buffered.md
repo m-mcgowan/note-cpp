@@ -1,53 +1,41 @@
-# Streaming vs Buffered API
+# Streaming vs Buffered
+
+The default configuration uses streaming — zero heap, maximum efficiency.
+Your typed API code (`execute()`, response fields, body structs) works
+identically on both paths.
+
+**When this choice matters:**
+- **Migrating from note-c** with existing cJSON/`J*` code — the buffered
+  path preserves that workflow
+- **Inspecting raw JSON responses** at runtime (debugging, dynamic data)
+- **Constrained platforms** — streaming + JSONB gives the smallest footprint
+
+On constrained platforms (AVR, Cortex-M0), `NOTE_MINIMAL` additionally
+enables [JSONB](jsonb.md) — a compact binary wire format similar to
+[note-c-zero](https://github.com/blues/note-c-zero) — replacing JSON
+text with binary opcodes for smaller flash and faster parsing. This is
+transparent to your application code.
+
+---
+
+## The two paths
 
 `note-cpp` has two internal paths for communicating with the Notecard:
-**streaming** (default) and **buffered**. From the user's perspective, the
-typed API (`execute()`, response fields, body structs) works identically
-on both — the choice only matters in specific situations.
 
-## When to use streaming (default)
-
-Streaming is the default and recommended path. Requests are serialized
-directly to the wire, and responses are parsed with a SAX (event-driven)
-parser that populates struct fields as bytes arrive. No intermediate
-buffer is needed.
-
-```cpp
-// Arduino — streaming by default
-#include <note.hpp>
-Notecard nc;
-nc.begin(Serial1, 9600);
-
-auto rsp = nc.card.version().execute();  // streaming under the hood
-```
-
-**Use streaming when:**
-- Starting a new project
-- Targeting constrained devices (AVR, Cortex-M0)
-- You want zero-heap operation
-- You're using the typed API exclusively
+- **Streaming** (default) — requests serialized directly to the wire,
+  responses parsed with a SAX parser as bytes arrive. No intermediate
+  buffer, no heap.
+- **Buffered** — requests built into a string buffer, responses parsed
+  into a JSON tree. Requires a JSON backend (cJSON, nlohmann, or
+  `BufferJsonBackend`).
 
 ## When to use buffered
 
-The buffered path requires a JSON backend (cJSON, nlohmann, or
-`BufferJsonBackend`). Requests are built into a string buffer, sent as a
-whole, and responses are parsed into a JSON tree that you can walk manually.
-
-```cpp
-// Buffered — explicit backend + transport
-#include <note/backends/cjson.hpp>
-#include <note/notecard.hpp>
-
-note::backends::CjsonBackend backend;
-note::Notecard nc(backend, transport);
-```
-
-**Use buffered when:**
+You might prefer the buffered path when:
 
 - **Migrating from note-c** — existing code builds JSON with cJSON (`J*`
   functions). The buffered path lets you keep that pattern while gradually
-  adopting typed requests. The `request()` lambda method mirrors the
-  note-c workflow:
+  adopting typed requests:
 
   ```cpp
   auto reader = nc.request("hub.set", [](JsonBuilder& b) {
@@ -58,11 +46,9 @@ note::Notecard nc(backend, transport);
 
 - **Manual JSON tree inspection** — if you need to walk an unknown or
   dynamic response structure (not a typed endpoint), `JsonReader` from
-  the buffered path gives tree-style access. Streaming only provides
-  typed fields or raw string passthrough.
+  the buffered path gives tree-style access.
 
-- **Debugging** — the intermediate JSON string is visible in debuggers,
-  which can help diagnose wire format issues.
+- **Debugging** — the intermediate JSON string is visible in debuggers.
 
 ## What's the same on both paths
 
@@ -75,7 +61,6 @@ note::Notecard nc(backend, transport);
 | Error handling (`ApiResult`, `ErrorInfo`) | yes | yes |
 | `operator[]` for ad-hoc fields | yes | yes |
 | Fire-and-forget `.command()` | yes | yes |
-| Wire format identical | yes | yes |
 
 ## What's different
 
@@ -85,8 +70,16 @@ note::Notecard nc(backend, transport);
 | `JsonReader` tree access on responses | — | yes |
 | Requires a `JsonBackend` | no | yes |
 | Intermediate request/response buffer | none | full string |
-| Allocator required | yes | optional |
 | Zero-heap capable | yes | no (cJSON uses malloc) |
+
+## Wire format
+
+By default, `note-cpp` uses JSON text on the wire — the same format as
+note-c. On constrained platforms, enable [JSONB](jsonb.md) (`NOTE_JSONB`
+or `NOTE_MINIMAL`) to use a compact binary encoding instead. JSONB is
+the same binary format used by Blues'
+[note-c-zero](https://github.com/blues/note-c-zero) library. Your
+application code doesn't change — only the bytes on the wire are different.
 
 ## Disabling the buffered path
 
@@ -96,8 +89,6 @@ Define `NOTE_NO_BUFFERED` to remove the buffered path entirely, saving
 See [feature-flags.md](feature-flags.md) for all compile-time options.
 
 ## Choosing a JSON backend (buffered path only)
-
-If you use the buffered path, you need a backend:
 
 | Backend | Heap | Best for |
 |---------|:----:|----------|

@@ -71,6 +71,7 @@
 - [ ] Verify `include/` → `src/` symlink works for Arduino Library Manager
 - [ ] Publish to PlatformIO registry (beta tag)
 - [ ] Update README badge with version
+- [ ] Remove codecov badge token from README (private repo token `?token=...` not needed once public)
 
 ### Announcement — beta testers
 - [ ] Blues community forum (discuss.blues.io): post with migration guide link,

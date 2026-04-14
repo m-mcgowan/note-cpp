@@ -48,6 +48,21 @@ class JsonReader;  // Forward declaration — ApiResult holds reader to extend l
 
 using string_view = std::string_view;
 
+/// A string_view that supports Arduino printTo() without adding a vtable.
+/// Used as the element type in ResponseArray<> so that array elements can
+/// be printed with Serial.println(printable(element)) or element.printTo(p).
+struct printable_string_view : string_view {
+    using string_view::string_view;
+    using string_view::operator=;
+    printable_string_view() = default;
+    printable_string_view(string_view sv) : string_view(sv) {}
+#ifdef ARDUINO
+    size_t printTo(Print& p) const {
+        return p.write(reinterpret_cast<const uint8_t*>(data()), size());
+    }
+#endif
+};
+
 namespace detail {
 #if defined(__cpp_lib_expected) && __cpp_lib_expected >= 202202L
     template<typename T, typename E> using expected = std::expected<T, E>;

@@ -500,7 +500,7 @@ namespace note::api {
 {{ doc_for_prop(prop, indent + "    ") -}}
 {{ deprecated_attr(prop.version_guard, prop.min_api_version, indent + "    ") -}}
 {% if prop.is_array %}
-{{ indent }}    note::ResponseArray<{{ prop.field_type }}, {{ prop.array_max_items }}> {{ prop.accessor_name }}{};
+{{ indent }}    note::ResponseArray<{{ prop.array_element_type }}, {{ prop.array_max_items }}> {{ prop.accessor_name }}{};
 {% else %}
 {{ indent }}    note::ResponseField<{{ prop.field_type }}> {{ prop.accessor_name }}{};
 {% endif %}

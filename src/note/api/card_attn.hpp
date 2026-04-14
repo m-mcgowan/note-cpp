@@ -337,7 +337,7 @@ struct CardAttn {
             /// A list of files changed since `file` attention mode was set. In
             /// addition, this field will include keywords to signify the
             /// occurrence of other attention mode triggers:
-            note::ResponseArray<note::string_view, 8> files{};
+            note::ResponseArray<note::printable_string_view, 8> files{};
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
             /// This field is present and set to `true` if ATTN processing has
             /// been disabled with the `off` argument.
@@ -2181,7 +2181,7 @@ struct CardAttn {
             /// A list of files changed since `file` attention mode was set. In
             /// addition, this field will include keywords to signify the
             /// occurrence of other attention mode triggers:
-            note::ResponseArray<note::string_view, 8> files{};
+            note::ResponseArray<note::printable_string_view, 8> files{};
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
             /// This field is present and set to `true` if ATTN processing has
             /// been disabled with the `off` argument.

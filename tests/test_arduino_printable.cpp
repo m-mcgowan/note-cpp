@@ -80,4 +80,30 @@ TEST_CASE("Arduino: CardVersion response printTo") {
     REQUIRE(p.buf.find("dev:12345") != std::string::npos);
 }
 
+// ---------------------------------------------------------------------------
+// printable_string_view — ResponseArray element printing
+// ---------------------------------------------------------------------------
+
+TEST_CASE("Arduino: printable_string_view has printTo") {
+    Print p;
+    note::printable_string_view sv("hello world");
+    sv.printTo(p);
+    REQUIRE(p.buf == "hello world");
+}
+
+TEST_CASE("Arduino: printable_string_view converts from string_view") {
+    note::string_view plain = "test";
+    note::printable_string_view psv = plain;
+    REQUIRE(psv == "test");
+    REQUIRE(psv.size() == 4);
+}
+
+TEST_CASE("Arduino: printable_string_view works with printable() wrapper") {
+    Print p;
+    note::printable_string_view sv("wrapped");
+    auto w = note::printable(sv);
+    w.printTo(p);
+    REQUIRE(p.buf == "wrapped");
+}
+
 #endif // ARDUINO

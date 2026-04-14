@@ -77,6 +77,14 @@ class PropertyDef:
         return nested_type_name(self.cpp_name)
 
     @property
+    def array_element_type(self) -> str:
+        """C++ type for array elements. Uses printable_string_view for string
+        arrays so elements can be printed on Arduino without note::println()."""
+        if self.cpp_type == "note::string_view":
+            return "note::printable_string_view"
+        return self.cpp_type
+
+    @property
     def version_guard(self) -> str | None:
         """C preprocessor guard for this property, or None if ungated."""
         if not self.min_api_version:

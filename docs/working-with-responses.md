@@ -86,19 +86,30 @@ Some responses include JSON arrays (e.g., `card.attn` query returns a
 ```cpp
 auto r = nc.card.attn().query().execute();
 if (r) {
-    Serial.print("ATTN set: ");
-    Serial.println(r.set ? "yes" : "no");
-
-    // Iterate the files that triggered ATTN
     for (auto& file : r.files) {
-        Serial.print("  trigger: ");
-        Serial.println(file);
+        // file is a printable_string_view — works like string_view
+        process(file);
     }
 }
 ```
 
 `ResponseArray` is a fixed-capacity inline array (no heap). It supports
-range-for, `size()`, `operator[]`, and `begin()`/`end()`.
+range-for, `size()`, `operator[]`, and `begin()`/`end()`. String array
+elements are `printable_string_view` — a `string_view` subtype that adds
+`printTo()` support on Arduino.
+
+<details><summary><strong>Arduino</strong>: printing array elements</summary>
+
+Response fields like `r.version` are directly `Printable` via
+`Serial.println()`. Array elements need the `printable()` wrapper:
+
+```cpp
+for (auto& file : r.files) {
+    Serial.println(printable(file));  // printable() wraps for Serial
+}
+```
+
+</details>
 
 ## Body responses — nested objects
 

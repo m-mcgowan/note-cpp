@@ -56,10 +56,29 @@ build_flags = -DNOTE_MINIMAL -UNDEF_NOTE_NO_CRC
 
 | Flag | Default | Effect |
 |------|---------|--------|
-| `NOTE_NO_USING_NAMESPACE` | off | Disable all global namespace imports from `note.hpp` |
-| `NOTE_NO_USING_LITERALS` | off | Disable only `using namespace note::literals` (keep `Notecard` etc.) |
+| `NOTE_USING_NAMESPACE` | `1` | Import `using namespace note` from `note.hpp`. Set to `0` to disable all imports. |
+| `NOTE_USING_LITERALS` | `1` | Import `using namespace note::literals` (`15_mins`, `5_s`, `7_days`). |
+| `NOTE_USING_ATTN` | `1` | Import `using namespace note::attn` (flag constants: `connected`, `motion`, etc.). |
+| `NOTE_USING_SERIAL` | `1` | Import `using namespace note::serial` (serial mode constants). |
+| `NOTE_USING_TRIANGULATE` | `1` | Import `using namespace note::triangulate` (triangulation mode constants). |
 
-On Arduino, `note.hpp` imports `Notecard` and duration literals (`15_mins`, `5_s`, etc.) into the global namespace for developer convenience. Define these flags before `#include <note.hpp>` if you need to avoid name collisions.
+`note.hpp` imports the `note` namespace and sub-namespaces by default so user
+code reads naturally. On Arduino, `Notecard` is also imported.
+
+Sub-flags default to the value of `NOTE_USING_NAMESPACE`, so setting the
+master to `0` disables everything. Override individual flags to re-enable
+selectively:
+
+```ini
+# Disable all namespace imports
+build_flags = -DNOTE_USING_NAMESPACE=0
+
+# Disable all, but keep duration literals
+build_flags = -DNOTE_USING_NAMESPACE=0 -DNOTE_USING_LITERALS=1
+
+# Keep everything except attn constants
+build_flags = -DNOTE_USING_ATTN=0
+```
 
 ### API version gating and strict mode
 

@@ -26,16 +26,44 @@
 //   Notecard nc;             // instead of note::arduino::Notecard
 //   nc.hub.set().outbound(15_mins).execute();
 //
-// Opt out with:
-//   #define NOTE_NO_USING_NAMESPACE 1    — disable all imports
-//   #define NOTE_NO_USING_LITERALS  1    — disable literals only
+// Defaults: all enabled. Set NOTE_USING_NAMESPACE=0 to disable everything,
+// or set individual flags to 0 for finer control.
+#ifndef NOTE_USING_NAMESPACE
+#define NOTE_USING_NAMESPACE 1
+#endif
+#ifndef NOTE_USING_LITERALS
+#define NOTE_USING_LITERALS NOTE_USING_NAMESPACE
+#endif
+#ifndef NOTE_USING_ATTN
+#define NOTE_USING_ATTN NOTE_USING_NAMESPACE
+#endif
+#ifndef NOTE_USING_SERIAL
+#define NOTE_USING_SERIAL NOTE_USING_NAMESPACE
+#endif
+#ifndef NOTE_USING_TRIANGULATE
+#define NOTE_USING_TRIANGULATE NOTE_USING_NAMESPACE
+#endif
 
-#ifndef NOTE_NO_USING_NAMESPACE
+// Opt out:
+//   #define NOTE_USING_NAMESPACE 0     — disable all imports
+//   #define NOTE_USING_LITERALS 0      — disable duration literals only
+//   #define NOTE_USING_ATTN 0          — disable attn flag constants
+//   etc.
 
-#ifndef NOTE_NO_USING_LITERALS
+#if NOTE_USING_NAMESPACE
+
+using namespace note;
+
+#if NOTE_USING_LITERALS
 using namespace note::literals;
+#endif
+#if NOTE_USING_ATTN
 using namespace note::attn;
+#endif
+#if NOTE_USING_SERIAL
 using namespace note::serial;
+#endif
+#if NOTE_USING_TRIANGULATE
 using namespace note::triangulate;
 #endif
 
@@ -43,4 +71,4 @@ using namespace note::triangulate;
 using note::arduino::Notecard;
 #endif
 
-#endif // NOTE_NO_USING_NAMESPACE
+#endif // NOTE_USING_NAMESPACE

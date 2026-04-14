@@ -4,7 +4,6 @@
 
 // readme:arduino-quickstart
 #include <note.hpp>
-using namespace note;
 // readme:end
 
 // readme:body-struct-def

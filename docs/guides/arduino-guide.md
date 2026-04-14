@@ -74,8 +74,9 @@ if (r) {
 }
 ```
 
-> **Don't use `Serial.printf("%s", ...)` with response fields** —
-> they may not be null-terminated. Use `Serial.print()` instead.
+> Response string fields are null-terminated, so `Serial.printf("%s", r.version.c_str())`
+> and `printf("%s", f.c_str())` are safe. Use `.c_str()` or `.data()` when a
+> `const char*` is needed.
 
 ## Error Handling
 

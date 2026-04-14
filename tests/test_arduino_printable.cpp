@@ -11,7 +11,6 @@
 #include <note/api.hpp>
 #include <note/error.hpp>
 #include <cstring>
-using namespace std::string_view_literals;
 
 // ---------------------------------------------------------------------------
 // ErrorInfo Printable
@@ -96,7 +95,7 @@ TEST_CASE("Arduino: printable_string_view has printTo") {
 TEST_CASE("Arduino: printable_string_view converts from string_view") {
     note::string_view plain = "test";
     note::printable_string_view psv = plain;
-    REQUIRE(psv == "test"sv);
+    REQUIRE(psv == "test");
     REQUIRE(psv.size() == 4);
 }
 

@@ -17,8 +17,6 @@
 
 #include <note/api.hpp>
 #include <note/arena.hpp>
-
-using namespace std::string_view_literals;
 #include <note/allocator.hpp>
 #include <note/string_pool.hpp>
 #include <note/struct_sink.hpp>
@@ -172,8 +170,8 @@ TEST_CASE("note::api::CardAttn::Request response parsing") {
     reader->set("time", int32_t{42});
     auto rsp = note::api::CardAttn::Request::Response::parse(std::move(reader));
     REQUIRE(rsp.files.size() == 2);
-    REQUIRE(rsp.files[0] == "x-files-a"sv);
-    REQUIRE(rsp.files[1] == "x-files-b"sv);
+    REQUIRE(rsp.files[0] == "x-files-a");
+    REQUIRE(rsp.files[1] == "x-files-b");
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
     REQUIRE(rsp.off == true);
 #endif
@@ -659,8 +657,8 @@ TEST_CASE("note::api::CardAttn::Query response parsing") {
     reader->set("set", true);
     auto rsp = note::api::CardAttn::Query::Response::parse(std::move(reader));
     REQUIRE(rsp.files.size() == 2);
-    REQUIRE(rsp.files[0] == "x-files-a"sv);
-    REQUIRE(rsp.files[1] == "x-files-b"sv);
+    REQUIRE(rsp.files[0] == "x-files-a");
+    REQUIRE(rsp.files[1] == "x-files-b");
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
     REQUIRE(rsp.off == true);
 #endif

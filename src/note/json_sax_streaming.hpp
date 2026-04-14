@@ -128,12 +128,27 @@ private:
 
     // ── Whitespace ───────────────────────────────────────────────────────
 
-    void skip_ws() {
-        while (!at_end()) {
-            char c = peek();
-            if (c != ' ' && c != '\t' && c != '\n' && c != '\r') break;
-            advance();
+    static bool is_ws(char c) {
+        switch (static_cast<unsigned char>(c)) {
+        case ' ': case '\t': case '\n': case '\r': return true;
+        default: return false;
         }
+    }
+
+    static bool is_digit(char c) {
+        return static_cast<unsigned>(c - '0') < 10;
+    }
+
+    static int hex_val(char c) {
+        if (is_digit(c)) return c - '0';
+        if (static_cast<unsigned>(c - 'a') < 6) return c - 'a' + 10;
+        if (static_cast<unsigned>(c - 'A') < 6) return c - 'A' + 10;
+        return -1;
+    }
+
+    void skip_ws() {
+        while (!at_end() && is_ws(peek()))
+            advance();
     }
 
     // ── String parsing ───────────────────────────────────────────────────
@@ -180,12 +195,9 @@ private:
             uint16_t cp = 0;
             for (int i = 0; i < 4; ++i) {
                 if (at_end()) return NOTE_ERR("incomplete \\u escape");
-                char h = advance();
-                cp = static_cast<uint16_t>(cp << 4);
-                if (h >= '0' && h <= '9') cp = static_cast<uint16_t>(cp | (h - '0'));
-                else if (h >= 'a' && h <= 'f') cp = static_cast<uint16_t>(cp | (h - 'a' + 10));
-                else if (h >= 'A' && h <= 'F') cp = static_cast<uint16_t>(cp | (h - 'A' + 10));
-                else return NOTE_ERR("invalid hex in \\u escape");
+                int hv = hex_val(advance());
+                if (hv < 0) return NOTE_ERR("invalid hex in \\u escape");
+                cp = static_cast<uint16_t>((cp << 4) | hv);
             }
             if (cp < 0x80) {
                 if (out < scratch_size) scratch[out++] = static_cast<char>(cp);
@@ -291,7 +303,7 @@ private:
         if (c == 'f') return parse_literal("false", 5, key, false);
         if (c == 'n') return parse_null(key);
 
-        if (c == '-' || (c >= '0' && c <= '9'))
+        if (c == '-' || is_digit(c))
             return parse_number(key);
 
         return NOTE_ERR("unexpected character");

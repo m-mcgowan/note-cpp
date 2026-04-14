@@ -113,8 +113,10 @@ public:
             if (arena_exhausted)
                 return ApiResult<Rsp>(ErrorInfo{Error::Overflow, Cause::Unspecified, NOTE_ERR("arena exhausted")});
             return ApiResult<Rsp>(std::move(rsp_val));
-        } else {
-            // Custom sink path: type-dependent setup, type-erased transport call.
+        } else if constexpr (NOTE_PRINTABLE) {
+            // Custom sink path: per-type Sink when ResponseField implements
+            // Printable (Arduino). The generic table-driven path above handles
+            // all endpoints on non-Arduino targets.
             StringPool pool(alloc_);
             Rsp rsp_val{};
             typename Rsp::Sink response_sink(rsp_val, pool);
@@ -140,6 +142,10 @@ public:
             if (!nc_err.empty())
                 return ApiResult<Rsp>(ErrorInfo{Error::Notecard, Cause::Unspecified, pool.intern(nc_err.view())});
             return ApiResult<Rsp>(std::move(rsp_val));
+        } else {
+            static_assert(detail::has_field_descs<RequestT>::value,
+                "endpoint must have field descriptors for StaticNotecard");
+            NOTE_UNREACHABLE();
         }
     }
 

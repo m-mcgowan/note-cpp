@@ -18,8 +18,11 @@
 #include <note/api.hpp>
 #include <note/arena.hpp>
 #include <note/allocator.hpp>
+#include <note/streaming_transport.hpp>
 #include <note/string_pool.hpp>
 #include <note/struct_sink.hpp>
+
+#include <deque>
 
 #if __cplusplus >= 202002L
 using UnconstrainedApi = note::Api<>;
@@ -91,6 +94,37 @@ struct NcErrorHarness {
     {}
 };
 
+// Streaming transport harness — exercises the streaming execute path in Notecard.
+class CoverageMockHal : public note::TransportHal {
+public:
+    std::deque<uint8_t> rx;
+    void queue_response(const std::string& s) {
+        for (char c : s) rx.push_back(static_cast<uint8_t>(c));
+        rx.push_back('\n');
+    }
+    bool transmit(const uint8_t*, size_t) override { return true; }
+    note::Result<size_t> read(uint8_t* buf, size_t max_len, uint32_t) override {
+        if (rx.empty()) return size_t(0);
+        size_t n = max_len < rx.size() ? max_len : rx.size();
+        for (size_t i = 0; i < n; ++i) { buf[i] = rx.front(); rx.pop_front(); }
+        return n;
+    }
+    bool reset() override { return true; }
+    bool write_line_terminator() override { return true; }
+    void delay(uint32_t) override {}
+    uint32_t millis() override { return 0; }
+};
+
+struct StreamingHarness {
+    CoverageMockHal hal;
+    note::StreamingTransport transport{hal};
+    note::Notecard nc;
+    UnconstrainedApi api;
+    StreamingHarness()
+        : nc(note::test::make_test_notecard(transport, note::Allocator{}))
+        , api(nc) {}
+};
+
 // Body struct for sink body coverage tests — must be at namespace scope
 // (NOTE_FIELDS generates templates, which can't be inside local classes).
 struct CoverageTestBody_ { float v; NOTE_FIELDS(v) };
@@ -102,6 +136,7 @@ struct CoverageTestBody_ { float v; NOTE_FIELDS(v) };
 {% set type_qual = (endpoint.struct_name ~ "::" ~ op.struct_name) if endpoint.is_polymorphic else endpoint.struct_name %}
 {% set required = op.required_properties %}
 {% set settable = op.properties | rejectattr("is_required_by_dispatch") | rejectattr("is_body") | rejectattr("is_required") | list %}
+{% set bracket_props = op.properties | rejectattr("is_required_by_dispatch") | rejectattr("is_body") | rejectattr("is_array") | list %}
 {% set rsp_props = op.response.properties | list %}
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::{{ type_qual }} request builder") {
@@ -172,14 +207,13 @@ TEST_CASE("note::api::{{ type_qual }} request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-{% if settable %}
-    // Cover known-key routing in operator[] (true branch for each settable field)
-{% for prop in settable %}
+{% if bracket_props %}
+    // Cover known-key routing in operator[] (true branch for each routed field).
+{% for prop in bracket_props %}
 {% if prop.version_guard %}
 #if NOTE_API_VERSION >= {{ prop.version_guard }} || !defined(NOTE_API_STRICT)
 {% endif %}
-{% if not prop.is_array %}    req["{{ prop.wire_name }}"] = {{ prop | request_test_value }};
-{% endif %}
+    req["{{ prop.wire_name }}"] = {{ prop | request_test_value }};
 {% if prop.version_guard %}
 #endif
 {% endif %}
@@ -189,6 +223,32 @@ TEST_CASE("note::api::{{ type_qual }} request builder") {
     // Cover command()
     req.command();
 {% endif %}
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+{% set acc = endpoint.api_accessor %}
+{% if endpoint.is_polymorphic %}
+{% if required %}
+        auto sreq = sh.api.{{ endpoint.group_name }}.{{ acc }}{% if not endpoint.is_factory_member %}(){% endif %}.{{ op.factory_method }}({% for p in required %}{{ p | request_test_value }}{{ ", " if not loop.last }}{% endfor %});
+{% else %}
+        auto sreq = sh.api.{{ endpoint.group_name }}.{{ acc }}{% if not endpoint.is_factory_member %}(){% endif %}.{{ op.factory_method }}();
+{% endif %}
+{% elif endpoint.is_factory_member %}
+{% if required %}
+        auto sreq = sh.api.{{ endpoint.group_name }}.{{ acc }}({% for p in required %}{{ p | request_test_value }}{{ ", " if not loop.last }}{% endfor %});
+{% else %}
+        auto sreq = sh.api.{{ endpoint.group_name }}.{{ acc }}();
+{% endif %}
+{% else %}
+{% if required %}
+        auto sreq = sh.api.{{ endpoint.group_name }}.{{ acc }}({% for p in required %}{{ p | request_test_value }}{{ ", " if not loop.last }}{% endfor %});
+{% else %}
+        auto sreq = sh.api.{{ endpoint.group_name }}.{{ acc }}();
+{% endif %}
+{% endif %}
+        sreq.execute();
+    }
 }
 
 {% if rsp_props %}
@@ -259,11 +319,11 @@ TEST_CASE("note::api::{{ type_qual }} sink body coverage") {
 {% if prop.version_guard %}
 #if NOTE_API_VERSION >= {{ prop.version_guard }} || !defined(NOTE_API_STRICT)
 {% endif %}
-{% if prop.field_type_name == "bool" %}
+{% if prop.cpp_type == "bool" %}
     sink.on_bool("{{ prop.wire_name }}", true);
-{% elif prop.field_type_name in ["int32_t", "int16_t"] %}
+{% elif prop.cpp_type in ["int32_t", "int16_t"] %}
     sink.on_number("{{ prop.wire_name }}", "42");
-{% elif prop.field_type_name == "double" %}
+{% elif prop.cpp_type == "double" %}
     sink.on_number("{{ prop.wire_name }}", "3.14");
 {% elif prop.is_array %}
     sink.on_array_begin("{{ prop.wire_name }}");
@@ -282,9 +342,9 @@ TEST_CASE("note::api::{{ type_qual }} sink body coverage") {
 {% if prop.version_guard %}
 #if NOTE_API_VERSION >= {{ prop.version_guard }} || !defined(NOTE_API_STRICT)
 {% endif %}
-{% if prop.field_type_name in ["int32_t", "int16_t"] %}
+{% if prop.cpp_type in ["int32_t", "int16_t"] %}
     sink.on_int("{{ prop.wire_name }}", 99);
-{% elif prop.field_type_name == "double" %}
+{% elif prop.cpp_type == "double" %}
     sink.on_float("{{ prop.wire_name }}", 9.9);
 {% endif %}
 {% if prop.version_guard %}
@@ -317,6 +377,9 @@ TEST_CASE("note::api::{{ type_qual }} sink body coverage") {
     sink.on_array_end("items");
     sink.on_object_end("body");
 
+    // Reset without body handler — covers the !body_handler_ branch.
+    sink.reset();
+
     // Exercise body path WITH a body handler — all method types.
     CoverageTestBody_ tbody{};
     note::StructSink<CoverageTestBody_> body_sink(tbody, pool);
@@ -329,10 +392,18 @@ TEST_CASE("note::api::{{ type_qual }} sink body coverage") {
     sink.on_int("i", 1);
     sink.on_float("v", 42.0);
     sink.on_null("z");
+    // Nested object inside body with handler — covers body_handler_.send(object_begin/end).
+    sink.on_object_begin("nested");
+    sink.on_string("inner", "x");
+    sink.on_object_end("nested");
+    // Array inside body with handler — covers body_handler_.send(array_begin/end).
+    sink.on_array_begin("items");
+    sink.on_int("items", 1);
+    sink.on_array_end("items");
     sink.on_object_end("body");
     REQUIRE(tbody.v == 42.0f);
 
-    // Reset path.
+    // Reset with body handler — covers the body_handler_ true branch.
     sink.reset();
 }
 
@@ -354,11 +425,11 @@ TEST_CASE("note::api::{{ type_qual }} sink field coverage") {
 {% if prop.version_guard %}
 #if NOTE_API_VERSION >= {{ prop.version_guard }} || !defined(NOTE_API_STRICT)
 {% endif %}
-{% if prop.field_type_name == "bool" %}
+{% if prop.cpp_type == "bool" %}
     sink.on_bool("{{ prop.wire_name }}", true);
-{% elif prop.field_type_name in ["int32_t", "int16_t"] %}
+{% elif prop.cpp_type in ["int32_t", "int16_t"] %}
     sink.on_number("{{ prop.wire_name }}", "42");
-{% elif prop.field_type_name == "double" %}
+{% elif prop.cpp_type == "double" %}
     sink.on_number("{{ prop.wire_name }}", "3.14");
 {% elif prop.is_array %}
     sink.on_array_begin("{{ prop.wire_name }}");
@@ -377,9 +448,9 @@ TEST_CASE("note::api::{{ type_qual }} sink field coverage") {
 {% if prop.version_guard %}
 #if NOTE_API_VERSION >= {{ prop.version_guard }} || !defined(NOTE_API_STRICT)
 {% endif %}
-{% if prop.field_type_name in ["int32_t", "int16_t"] %}
+{% if prop.cpp_type in ["int32_t", "int16_t"] %}
     sink.on_int("{{ prop.wire_name }}", 99);
-{% elif prop.field_type_name == "double" %}
+{% elif prop.cpp_type == "double" %}
     sink.on_float("{{ prop.wire_name }}", 9.9);
 {% endif %}
 {% if prop.version_guard %}

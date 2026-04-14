@@ -53,7 +53,6 @@ struct SaxEvent {
 };
 
 /// Type-erased event dispatcher — single function pointer dispatch.
-/// Reduced from 11 members (void* + 10 fn ptrs) to 2 (void* + 1 fn ptr).
 struct SaxDispatch {
     void* sink;
     void (*dispatch)(void*, const SaxEvent&);
@@ -78,9 +77,16 @@ SaxDispatch make_sax_dispatch(SinkT& s) {
             case SaxEvent::ArrayBegin:  sink.on_array_begin(ev.key); break;
             case SaxEvent::ArrayEnd:    sink.on_array_end(ev.key); break;
             case SaxEvent::Reset:       sink.reset(); break;
+            default: NOTE_UNREACHABLE();
             }
         },
     };
+}
+
+/// NullSink specialization — all methods are no-ops, so the entire dispatch
+/// is a no-op. Eliminates the 10-case switch from the binary.
+inline SaxDispatch make_sax_dispatch(NullSink&) {
+    return SaxDispatch{nullptr, [](void*, const SaxEvent&) {}};
 }
 
 /// Non-template SaxAdapter — single instantiation for all sink types.

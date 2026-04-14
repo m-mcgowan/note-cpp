@@ -9,6 +9,7 @@
 // a JsonSink) and send() (fire-and-forget).
 
 #include "catch.hpp"
+#include "test_sax_exerciser.hpp"
 
 #include <note/streaming_transport.hpp>
 #include <note/transport_hal.hpp>
@@ -746,6 +747,23 @@ TEST_CASE("transact_dispatch: basic response via SaxDispatch") {
     REQUIRE(rsp.name == "test");
 }
 
+TEST_CASE("make_sax_dispatch: exercise all events for GenericResponseSink") {
+    DispatchTestRsp rsp;
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+    note::FieldDesc fields[] = {
+        {"value", static_cast<uint16_t>(offsetof(DispatchTestRsp, value)), note::FieldType::Int32},
+        {"name", static_cast<uint16_t>(offsetof(DispatchTestRsp, name)), note::FieldType::String},
+    };
+#pragma GCC diagnostic pop
+    char pool_buf[128];
+    note::MonotonicArena arena(pool_buf);
+    note::StringPool pool(note::arena_allocator(arena));
+    note::GenericResponseSink gsink{&rsp, fields, 2, &pool};
+    auto dispatch = note::make_sax_dispatch(gsink);
+    note::test::exercise_all_events(dispatch);
+}
+
 TEST_CASE("transact_dispatch: captures err field") {
     MockHal hal;
     StreamingTransport transport(hal);
@@ -1130,4 +1148,427 @@ TEST_CASE("transact_dispatch: response timeout returns ResponseLost") {
     REQUIRE_FALSE(rv.has_value());
     // Timeout causes ResponseLost
     REQUIRE(rv.error().code == Error::ResponseLost);
+}
+
+
+// ---------------------------------------------------------------------------
+// CRC response helper — computes CRC32 and formats a response with CRC field
+// ---------------------------------------------------------------------------
+
+namespace {
+
+/// Build a JSON response with a valid CRC field.
+/// @param body_without_brace  JSON body without closing brace, e.g. R"({"ok":true)"
+/// @param seq   The CRC sequence number (must match the transport's crc_seq_).
+/// @return      Full JSON string with CRC, e.g. {"ok":true,"crc":"0001:XXXXXXXX"}
+std::string make_crc_response(const std::string& body_without_brace, uint16_t seq) {
+    // The CRC is computed over the original JSON including closing brace.
+    std::string original = body_without_brace + "}";
+    uint32_t checksum = note::transport::detail::crc32(original.data(), original.size());
+
+    // Format: ,"crc":"SSSS:CCCCCCCC"}
+    char suffix[24];
+    size_t pos = 0;
+    suffix[pos++] = ',';
+    suffix[pos++] = '"'; suffix[pos++] = 'c'; suffix[pos++] = 'r';
+    suffix[pos++] = 'c'; suffix[pos++] = '"'; suffix[pos++] = ':';
+    suffix[pos++] = '"';
+    note::transport::detail::write_hex16(suffix + pos, seq); pos += 4;
+    suffix[pos++] = ':';
+    note::transport::detail::write_hex32(suffix + pos, checksum); pos += 8;
+    suffix[pos++] = '"';
+    suffix[pos++] = '}';
+    suffix[pos] = '\0';
+
+    return body_without_brace + std::string(suffix, pos);
+}
+
+} // namespace
+
+
+// ---------------------------------------------------------------------------
+// CRC: valid CRC in response — exercises ReceiveContext CRC parsing (line 89)
+// ---------------------------------------------------------------------------
+
+TEST_CASE("transact_dispatch: valid CRC response succeeds") {
+    MockHal hal;
+    StreamingTransport transport(hal);
+
+    // First transact increments crc_seq_ to 1.
+    // Build a response with valid CRC for seq=1.
+    auto resp = make_crc_response(R"({"ok":true)", 1);
+    for (char c : resp) hal.rx.push_back(static_cast<uint8_t>(c));
+    hal.rx.push_back(static_cast<uint8_t>('\n'));
+
+    note::NullSink null_sink;
+    auto dispatch = note::make_sax_dispatch(null_sink);
+
+    detail::NcErrorCapture nc_err;
+    BuildFn fn = [](JsonBuilder& b, void*) { b.add("req", "test"); };
+    auto rv = transport.transact_dispatch(fn, nullptr, dispatch, 5000, nc_err);
+    REQUIRE(rv.has_value());
+}
+
+
+// ---------------------------------------------------------------------------
+// CRC: mismatched CRC checksum — exercises CRC mismatch (line 648, 266)
+// ---------------------------------------------------------------------------
+
+TEST_CASE("transact_dispatch: CRC mismatch returns error") {
+    MockHal hal;
+    StreamingTransport transport(hal);
+
+    // Build a response with wrong CRC (use wrong checksum)
+    std::string resp = R"({"ok":true,"crc":"0001:DEADBEEF"})";
+    for (char c : resp) hal.rx.push_back(static_cast<uint8_t>(c));
+    hal.rx.push_back(static_cast<uint8_t>('\n'));
+
+    note::NullSink null_sink;
+    auto dispatch = note::make_sax_dispatch(null_sink);
+
+    detail::NcErrorCapture nc_err;
+    BuildFn fn = [](JsonBuilder& b, void*) { b.add("req", "test"); };
+    auto rv = transport.transact_dispatch(fn, nullptr, dispatch, 5000, nc_err);
+    REQUIRE_FALSE(rv.has_value());
+    REQUIRE(rv.error().cause == Cause::CrcMismatch);
+}
+
+
+// ---------------------------------------------------------------------------
+// CRC: seq mismatch — wrong seq number (line 648)
+// ---------------------------------------------------------------------------
+
+TEST_CASE("transact_dispatch: CRC seq mismatch returns error") {
+    MockHal hal;
+    StreamingTransport transport(hal);
+
+    // Valid checksum but wrong seq (use seq=99 instead of 1)
+    auto resp = make_crc_response(R"({"ok":true)", 99);
+    for (char c : resp) hal.rx.push_back(static_cast<uint8_t>(c));
+    hal.rx.push_back(static_cast<uint8_t>('\n'));
+
+    note::NullSink null_sink;
+    auto dispatch = note::make_sax_dispatch(null_sink);
+
+    detail::NcErrorCapture nc_err;
+    BuildFn fn = [](JsonBuilder& b, void*) { b.add("req", "test"); };
+    auto rv = transport.transact_dispatch(fn, nullptr, dispatch, 5000, nc_err);
+    REQUIRE_FALSE(rv.has_value());
+    REQUIRE(rv.error().cause == Cause::CrcMismatch);
+}
+
+
+// ---------------------------------------------------------------------------
+// CRC: expected CRC missing — previously enabled but now absent (line 648)
+// ---------------------------------------------------------------------------
+
+TEST_CASE("transact_dispatch: expected CRC missing returns error") {
+    MockHal hal;
+    StreamingTransport transport(hal);
+
+    // First transaction WITH valid CRC enables crc_enabled_
+    {
+        auto resp = make_crc_response(R"({"ok":true)", 1);
+        for (char c : resp) hal.rx.push_back(static_cast<uint8_t>(c));
+        hal.rx.push_back(static_cast<uint8_t>('\n'));
+
+        note::NullSink null_sink;
+        auto dispatch = note::make_sax_dispatch(null_sink);
+        detail::NcErrorCapture nc_err;
+        BuildFn fn = [](JsonBuilder& b, void*) { b.add("req", "test"); };
+        auto rv = transport.transact_dispatch(fn, nullptr, dispatch, 5000, nc_err);
+        REQUIRE(rv.has_value());
+    }
+
+    // Second transaction WITHOUT CRC: crc_enabled_ is true but no CRC found
+    {
+        hal.queue_response(R"({"ok":true})");
+
+        note::NullSink null_sink;
+        auto dispatch = note::make_sax_dispatch(null_sink);
+        detail::NcErrorCapture nc_err;
+        BuildFn fn = [](JsonBuilder& b, void*) { b.add("req", "test2"); };
+        auto rv = transport.transact_dispatch(fn, nullptr, dispatch, 5000, nc_err);
+        REQUIRE_FALSE(rv.has_value());
+        REQUIRE(rv.error().cause == Cause::CrcMismatch);
+    }
+}
+
+
+// ---------------------------------------------------------------------------
+// CRC: valid CRC via transact_impl (template path) — exercises line 298
+// ---------------------------------------------------------------------------
+
+TEST_CASE("transact: CRC mismatch via template path returns error") {
+    MockHal hal;
+    StreamingTransport transport(hal);
+
+    // Build a response with wrong CRC
+    std::string resp = R"({"ok":true,"crc":"0001:DEADBEEF"})";
+    for (char c : resp) hal.rx.push_back(static_cast<uint8_t>(c));
+    hal.rx.push_back(static_cast<uint8_t>('\n'));
+
+    CollectorSink sink;
+    auto r = iface(transport).transact(
+        [](JsonBuilder& b) { b.add("req", "test"); }, sink, 5000);
+    REQUIRE_FALSE(r.has_value());
+    REQUIRE(r.error().cause == Cause::CrcMismatch);
+}
+
+
+// ---------------------------------------------------------------------------
+// NcErrorCapture: truncation of long error (line 49)
+// ---------------------------------------------------------------------------
+
+TEST_CASE("transact_dispatch: long err field is truncated in NcErrorCapture") {
+    MockHal hal;
+    StreamingTransport transport(hal);
+
+    // Create an error message > 64 chars to exercise truncation
+    std::string long_err(80, 'x');
+    std::string resp = R"({"err":")" + long_err + R"("})";
+    hal.queue_response(resp);
+
+    note::NullSink null_sink;
+    auto dispatch = note::make_sax_dispatch(null_sink);
+
+    detail::NcErrorCapture nc_err;
+    BuildFn fn = [](JsonBuilder& b, void*) { b.add("req", "test"); };
+    auto rv = transport.transact_dispatch(fn, nullptr, dispatch, 5000, nc_err);
+    REQUIRE(rv.has_value());
+    REQUIRE_FALSE(nc_err.empty());
+    // Should be truncated to 64 chars
+    REQUIRE(nc_err.view().size() == 64);
+}
+
+
+// ---------------------------------------------------------------------------
+// ReceiveContext: Reset event clears err and CRC state (line 100)
+// ---------------------------------------------------------------------------
+
+TEST_CASE("ReceiveContext: reset event clears err and CRC state") {
+    detail::NcErrorCapture nc_err;
+    nc_err.capture("previous error");
+
+    note::NullSink null_sink;
+    auto inner = note::make_sax_dispatch(null_sink);
+
+    detail::ReceiveContext ctx(inner, nc_err);
+    auto wrapped = ctx.wrapping_dispatch();
+
+    // Send a Reset event
+    auto reset_ev = SaxEvent::make_reset();
+    wrapped.dispatch(wrapped.sink, reset_ev);
+
+    // Error should be cleared
+    REQUIRE(nc_err.empty());
+    // CRC state should be reset
+    REQUIRE_FALSE(ctx.crc_found);
+    REQUIRE(ctx.crc_seq == 0);
+    REQUIRE(ctx.crc_checksum == 0);
+}
+
+
+// ---------------------------------------------------------------------------
+// ReceiveContext: CRC field parsing (line 89)
+// ---------------------------------------------------------------------------
+
+TEST_CASE("ReceiveContext: CRC field parsing extracts seq and checksum") {
+    detail::NcErrorCapture nc_err;
+    note::NullSink null_sink;
+    auto inner = note::make_sax_dispatch(null_sink);
+
+    detail::ReceiveContext ctx(inner, nc_err);
+    auto wrapped = ctx.wrapping_dispatch();
+
+    // Simulate a CRC string event: "crc" with value "0042:DEADBEEF"
+    auto ev = SaxEvent::make_string("crc", "0042:DEADBEEF");
+    wrapped.dispatch(wrapped.sink, ev);
+
+    REQUIRE(ctx.crc_found);
+    REQUIRE(ctx.crc_seq == 0x0042);
+    REQUIRE(ctx.crc_checksum == 0xDEADBEEF);
+}
+
+TEST_CASE("ReceiveContext: CRC field with wrong format is ignored") {
+    detail::NcErrorCapture nc_err;
+    note::NullSink null_sink;
+    auto inner = note::make_sax_dispatch(null_sink);
+
+    detail::ReceiveContext ctx(inner, nc_err);
+    auto wrapped = ctx.wrapping_dispatch();
+
+    // CRC value with wrong length (not 13)
+    auto ev = SaxEvent::make_string("crc", "short");
+    wrapped.dispatch(wrapped.sink, ev);
+
+    REQUIRE_FALSE(ctx.crc_found);
+}
+
+TEST_CASE("ReceiveContext: err field is captured and forwarded") {
+    detail::NcErrorCapture nc_err;
+
+    // Use NullSink (no-op dispatch) — we only need to verify ReceiveContext
+    // captures the "err" field, not that the inner sink processes it.
+    note::NullSink null_sink;
+    auto inner = note::make_sax_dispatch(null_sink);
+
+    detail::ReceiveContext ctx(inner, nc_err);
+    auto wrapped = ctx.wrapping_dispatch();
+
+    auto ev = SaxEvent::make_string("err", "something failed");
+    wrapped.dispatch(wrapped.sink, ev);
+
+    REQUIRE_FALSE(nc_err.empty());
+    REQUIRE(nc_err.view() == "something failed");
+}
+
+
+// ---------------------------------------------------------------------------
+// frame_read timeout: HAL returns 0 and eventually times out (line 555)
+// ---------------------------------------------------------------------------
+
+TEST_CASE("transact: frame_read timeout when HAL always returns 0") {
+    struct AlwaysZeroHal : MockHal {
+        uint32_t time = 0;
+        Result<size_t> read(uint8_t*, size_t, uint32_t) override {
+            return size_t(0);
+        }
+        void delay(uint32_t ms) override { time += ms; }
+        uint32_t millis() override { return time; }
+    };
+
+    AlwaysZeroHal hal;
+    StreamingTransport transport(hal);
+    CollectorSink sink;
+
+    auto r = iface(transport).transact(
+        [](JsonBuilder& b) { b.add("req", "test"); }, sink, 100);
+    REQUIRE_FALSE(r.has_value());
+    REQUIRE(r.error().code == Error::ResponseLost);
+    // frame_read timeout surfaces as Unspecified through SAX parse error path
+}
+
+
+// ---------------------------------------------------------------------------
+// transact_dispatch: timeout path exercises Cause::Timeout debug (line 264)
+// ---------------------------------------------------------------------------
+
+TEST_CASE("transact_dispatch: timeout returns ResponseLost via dispatch") {
+    struct AlwaysZeroHal : MockHal {
+        uint32_t time = 0;
+        Result<size_t> read(uint8_t*, size_t, uint32_t) override {
+            return size_t(0);
+        }
+        void delay(uint32_t ms) override { time += ms; }
+        uint32_t millis() override { return time; }
+    };
+
+    AlwaysZeroHal hal;
+    StreamingTransport transport(hal);
+
+    note::NullSink null_sink;
+    auto dispatch = note::make_sax_dispatch(null_sink);
+
+    detail::NcErrorCapture nc_err;
+    BuildFn fn = [](JsonBuilder& b, void*) { b.add("req", "test"); };
+    auto rv = transport.transact_dispatch(fn, nullptr, dispatch, 100, nc_err);
+    REQUIRE_FALSE(rv.has_value());
+    REQUIRE(rv.error().code == Error::ResponseLost);
+}
+
+
+// ---------------------------------------------------------------------------
+// CRC mismatch debug event (line 266)
+// ---------------------------------------------------------------------------
+
+TEST_CASE("transact_dispatch: CRC mismatch with debug listener") {
+    MockHal hal;
+    StreamingTransport transport(hal);
+
+    bool saw_crc_mismatch = false;
+    DebugListener debug{};
+    debug.ctx = &saw_crc_mismatch;
+    debug.on_transport = [](TransportEvent ev, uint32_t, void* ctx) {
+        if (ev == TransportEvent::CrcMismatch)
+            *static_cast<bool*>(ctx) = true;
+    };
+    transport.set_debug(debug);
+
+    // Build response with bad CRC
+    std::string resp = R"({"ok":true,"crc":"0001:DEADBEEF"})";
+    for (char c : resp) hal.rx.push_back(static_cast<uint8_t>(c));
+    hal.rx.push_back(static_cast<uint8_t>('\n'));
+
+    note::NullSink null_sink;
+    auto dispatch = note::make_sax_dispatch(null_sink);
+
+    detail::NcErrorCapture nc_err;
+    BuildFn fn = [](JsonBuilder& b, void*) { b.add("req", "test"); };
+    auto rv = transport.transact_dispatch(fn, nullptr, dispatch, 5000, nc_err);
+    REQUIRE_FALSE(rv.has_value());
+    REQUIRE(rv.error().cause == Cause::CrcMismatch);
+    REQUIRE(saw_crc_mismatch);
+}
+
+
+// ---------------------------------------------------------------------------
+// lookahead: bytes after \n in frame_read (line 574)
+// ---------------------------------------------------------------------------
+
+TEST_CASE("transact: lookahead buffer saves bytes after frame delimiter") {
+    // Use a HAL that delivers everything in one big chunk
+    struct BigChunkHal : MockHal {
+        Result<size_t> read(uint8_t* buf, size_t max_len, uint32_t timeout_ms) override {
+            return MockHal::read(buf, max_len, timeout_ms);
+        }
+    };
+
+    BigChunkHal hal;
+    // Queue: response + \n + extra bytes all in one deque
+    std::string payload = "{\"ok\":true}\nBINARY";
+    for (char c : payload) hal.rx.push_back(static_cast<uint8_t>(c));
+
+    StreamingTransport transport(hal);
+    CollectorSink sink;
+
+    auto r = iface(transport).transact(
+        [](JsonBuilder& b) { b.add("req", "test"); }, sink, 5000);
+    REQUIRE(r.has_value());
+    REQUIRE(sink.get("ok") == "true");
+
+    // The lookahead should contain "BINARY"
+    uint8_t buf[16];
+    auto r2 = transport.read(buf, sizeof(buf), 1000);
+    REQUIRE(r2.has_value());
+    REQUIRE(*r2 == 6);
+    REQUIRE(std::string(reinterpret_cast<char*>(buf), 6) == "BINARY");
+}
+
+
+// ---------------------------------------------------------------------------
+// Wire debug: debug_recv accumulates multi-chunk response (line 584)
+// ---------------------------------------------------------------------------
+
+TEST_CASE("transact: wire debug accumulates multi-chunk response") {
+    ChunkedMockHal hal(1);
+    hal.queue_response(R"({"a":"b"})");
+
+    StreamingTransport transport(hal);
+
+    std::string captured;
+    DebugListener debug{};
+    debug.ctx = &captured;
+    debug.on_wire = [](const WireEvent& ev, void* ctx) {
+        if (ev.direction == WireDirection::Receive)
+            *static_cast<std::string*>(ctx) = std::string(ev.json.data(), ev.json.size());
+    };
+    transport.set_debug(debug);
+
+    CollectorSink sink;
+    auto r = iface(transport).transact(
+        [](JsonBuilder& b) { b.add("req", "test"); }, sink, 5000);
+    REQUIRE(r.has_value());
+    REQUIRE_FALSE(captured.empty());
+    REQUIRE(captured.find("\"a\":\"b\"") != std::string::npos);
 }

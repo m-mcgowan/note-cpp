@@ -18,8 +18,11 @@
 #include <note/api.hpp>
 #include <note/arena.hpp>
 #include <note/allocator.hpp>
+#include <note/streaming_transport.hpp>
 #include <note/string_pool.hpp>
 #include <note/struct_sink.hpp>
+
+#include <deque>
 
 #if __cplusplus >= 202002L
 using UnconstrainedApi = note::Api<>;
@@ -91,6 +94,37 @@ struct NcErrorHarness {
     {}
 };
 
+// Streaming transport harness — exercises the streaming execute path in Notecard.
+class CoverageMockHal : public note::TransportHal {
+public:
+    std::deque<uint8_t> rx;
+    void queue_response(const std::string& s) {
+        for (char c : s) rx.push_back(static_cast<uint8_t>(c));
+        rx.push_back('\n');
+    }
+    bool transmit(const uint8_t*, size_t) override { return true; }
+    note::Result<size_t> read(uint8_t* buf, size_t max_len, uint32_t) override {
+        if (rx.empty()) return size_t(0);
+        size_t n = max_len < rx.size() ? max_len : rx.size();
+        for (size_t i = 0; i < n; ++i) { buf[i] = rx.front(); rx.pop_front(); }
+        return n;
+    }
+    bool reset() override { return true; }
+    bool write_line_terminator() override { return true; }
+    void delay(uint32_t) override {}
+    uint32_t millis() override { return 0; }
+};
+
+struct StreamingHarness {
+    CoverageMockHal hal;
+    note::StreamingTransport transport{hal};
+    note::Notecard nc;
+    UnconstrainedApi api;
+    StreamingHarness()
+        : nc(note::test::make_test_notecard(transport, note::Allocator{}))
+        , api(nc) {}
+};
+
 // Body struct for sink body coverage tests — must be at namespace scope
 // (NOTE_FIELDS generates templates, which can't be inside local classes).
 struct CoverageTestBody_ { float v; NOTE_FIELDS(v) };
@@ -142,7 +176,7 @@ TEST_CASE("note::api::CardAttn::Request request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
+    // Cover known-key routing in operator[] (true branch for each routed field).
     req["mode"] = note::string_view("auxgpio");
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
     req["off"] = true;
@@ -156,6 +190,13 @@ TEST_CASE("note::api::CardAttn::Request request builder") {
 #endif
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.card.attn().request();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -210,15 +251,16 @@ TEST_CASE("note::api::CardAttn::Request sink field coverage") {
     sink.on_string("files", "x-val");
     sink.on_array_end("files");
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
-    sink.on_string("off", "x-off");
+    sink.on_bool("off", true);
 #endif
     sink.on_string("payload", "x-payload");
-    sink.on_string("set", "x-set");
-    sink.on_string("time", "x-time");
+    sink.on_bool("set", true);
+    sink.on_number("time", "42");
 
     // Exercise on_int / on_float dispatch (separate from on_number).
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
 #endif
+    sink.on_int("time", 99);
 
     // Unknown field fallthrough — covers FALSE branch of last dispatch.
     sink.on_string("_unknown_", "x");
@@ -260,12 +302,19 @@ TEST_CASE("note::api::CardAttn::Arm request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
+    // Cover known-key routing in operator[] (true branch for each routed field).
     req["mode"] = note::string_view("auxgpio");
     req["on"] = true;
     req["seconds"] = int32_t{42};
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.card.attn().arm();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -302,7 +351,7 @@ TEST_CASE("note::api::CardAttn::Arm sink field coverage") {
     note::api::CardAttn::Arm::Response::Sink sink(rsp, pool);
 
     // Feed response-level fields through the sink (on_number / on_string / on_bool).
-    sink.on_string("set", "x-set");
+    sink.on_bool("set", true);
 
     // Exercise on_int / on_float dispatch (separate from on_number).
 
@@ -346,12 +395,19 @@ TEST_CASE("note::api::CardAttn::Rearm request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
+    // Cover known-key routing in operator[] (true branch for each routed field).
     req["mode"] = note::string_view("auxgpio");
     req["on"] = true;
     req["seconds"] = int32_t{42};
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.card.attn().rearm();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -388,7 +444,7 @@ TEST_CASE("note::api::CardAttn::Rearm sink field coverage") {
     note::api::CardAttn::Rearm::Response::Sink sink(rsp, pool);
 
     // Feed response-level fields through the sink (on_number / on_string / on_bool).
-    sink.on_string("set", "x-set");
+    sink.on_bool("set", true);
 
     // Exercise on_int / on_float dispatch (separate from on_number).
 
@@ -426,10 +482,17 @@ TEST_CASE("note::api::CardAttn::Watchdog request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
+    // Cover known-key routing in operator[] (true branch for each routed field).
     req["seconds"] = int32_t{42};
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.card.attn().watchdog();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -457,11 +520,18 @@ TEST_CASE("note::api::CardAttn::Sleep request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
+    // Cover known-key routing in operator[] (true branch for each routed field).
     req["payload"] = note::string_view("x-payload");
     req["seconds"] = int32_t{42};
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.card.attn().sleep();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -485,6 +555,13 @@ TEST_CASE("note::api::CardAttn::Retrieve request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.card.attn().retrieve();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -524,9 +601,10 @@ TEST_CASE("note::api::CardAttn::Retrieve sink field coverage") {
 
     // Feed response-level fields through the sink (on_number / on_string / on_bool).
     sink.on_string("payload", "x-payload");
-    sink.on_string("time", "x-time");
+    sink.on_number("time", "42");
 
     // Exercise on_int / on_float dispatch (separate from on_number).
+    sink.on_int("time", 99);
 
     // Unknown field fallthrough — covers FALSE branch of last dispatch.
     sink.on_string("_unknown_", "x");
@@ -562,6 +640,13 @@ TEST_CASE("note::api::CardAttn::Disarm request builder") {
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.card.attn().disarm();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -587,6 +672,13 @@ TEST_CASE("note::api::CardAttn::Off request builder") {
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.card.attn().off();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -612,6 +704,13 @@ TEST_CASE("note::api::CardAttn::On request builder") {
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.card.attn().on();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -641,10 +740,17 @@ TEST_CASE("note::api::CardAttn::Query request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
+    // Cover known-key routing in operator[] (true branch for each routed field).
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
     req["verify"] = true;
 #endif
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.card.attn().query();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -695,9 +801,9 @@ TEST_CASE("note::api::CardAttn::Query sink field coverage") {
     sink.on_string("files", "x-val");
     sink.on_array_end("files");
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
-    sink.on_string("off", "x-off");
+    sink.on_bool("off", true);
 #endif
-    sink.on_string("set", "x-set");
+    sink.on_bool("set", true);
 
     // Exercise on_int / on_float dispatch (separate from on_number).
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
@@ -797,7 +903,7 @@ TEST_CASE("note::api::CardAux request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
+    // Cover known-key routing in operator[] (true branch for each routed field).
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1) || !defined(NOTE_API_STRICT)
     req["connected"] = true;
 #endif
@@ -830,6 +936,13 @@ TEST_CASE("note::api::CardAux request builder") {
 #endif
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.card.aux();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -878,14 +991,16 @@ TEST_CASE("note::api::CardAux sink field coverage") {
     // Feed response-level fields through the sink (on_number / on_string / on_bool).
     sink.on_string("mode", "x-mode");
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1) || !defined(NOTE_API_STRICT)
-    sink.on_string("power", "x-power");
+    sink.on_bool("power", true);
 #endif
-    sink.on_string("seconds", "x-seconds");
-    sink.on_string("time", "x-time");
+    sink.on_number("seconds", "42");
+    sink.on_number("time", "42");
 
     // Exercise on_int / on_float dispatch (separate from on_number).
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1) || !defined(NOTE_API_STRICT)
 #endif
+    sink.on_int("seconds", 99);
+    sink.on_int("time", 99);
 
     // Unknown field fallthrough — covers FALSE branch of last dispatch.
     sink.on_string("_unknown_", "x");
@@ -941,7 +1056,7 @@ TEST_CASE("note::api::CardAuxSerial::Request request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
+    // Cover known-key routing in operator[] (true branch for each routed field).
     req["duration"] = int32_t{42};
     req["limit"] = true;
     req["max"] = int32_t{42};
@@ -955,6 +1070,13 @@ TEST_CASE("note::api::CardAuxSerial::Request request builder") {
 #endif
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.card.aux.serial.request();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -999,11 +1121,12 @@ TEST_CASE("note::api::CardAuxSerial::Request sink field coverage") {
     // Feed response-level fields through the sink (on_number / on_string / on_bool).
     sink.on_string("mode", "x-mode");
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-    sink.on_string("rate", "x-rate");
+    sink.on_number("rate", "42");
 #endif
 
     // Exercise on_int / on_float dispatch (separate from on_number).
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
+    sink.on_int("rate", 99);
 #endif
 
     // Unknown field fallthrough — covers FALSE branch of last dispatch.
@@ -1058,7 +1181,7 @@ TEST_CASE("note::api::CardAuxSerial::Notify request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
+    // Cover known-key routing in operator[] (true branch for each routed field).
     req["duration"] = int32_t{42};
     req["max"] = int32_t{42};
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
@@ -1071,6 +1194,13 @@ TEST_CASE("note::api::CardAuxSerial::Notify request builder") {
 #endif
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.card.aux.serial.notify();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -1102,13 +1232,20 @@ TEST_CASE("note::api::CardAuxSerial::Gps request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
+    // Cover known-key routing in operator[] (true branch for each routed field).
     req["limit"] = true;
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
     req["rate"] = int32_t{42};
 #endif
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.card.aux.serial.gps();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -1138,12 +1275,19 @@ TEST_CASE("note::api::CardAuxSerial::Configure request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
+    // Cover known-key routing in operator[] (true branch for each routed field).
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
     req["rate"] = int32_t{42};
 #endif
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.card.aux.serial.configure();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -1169,6 +1313,13 @@ TEST_CASE("note::api::CardAuxSerial::Off request builder") {
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.card.aux.serial.off();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -1194,10 +1345,17 @@ TEST_CASE("note::api::CardBinary::Status request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
+    // Cover known-key routing in operator[] (true branch for each routed field).
     req["delete"] = true;
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.card.binary.status();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -1244,14 +1402,17 @@ TEST_CASE("note::api::CardBinary::Status sink field coverage") {
     note::api::CardBinary::Status::Response::Sink sink(rsp, pool);
 
     // Feed response-level fields through the sink (on_number / on_string / on_bool).
-    sink.on_string("cobs", "x-cobs");
-    sink.on_string("connected", "x-connected");
+    sink.on_number("cobs", "42");
+    sink.on_bool("connected", true);
     sink.on_string("err", "x-err");
-    sink.on_string("length", "x-length");
-    sink.on_string("max", "x-max");
+    sink.on_number("length", "42");
+    sink.on_number("max", "42");
     sink.on_string("status", "x-status");
 
     // Exercise on_int / on_float dispatch (separate from on_number).
+    sink.on_int("cobs", 99);
+    sink.on_int("length", 99);
+    sink.on_int("max", 99);
 
     // Unknown field fallthrough — covers FALSE branch of last dispatch.
     sink.on_string("_unknown_", "x");
@@ -1287,6 +1448,13 @@ TEST_CASE("note::api::CardBinary::Clear request builder") {
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.card.binary.clear();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -1333,14 +1501,17 @@ TEST_CASE("note::api::CardBinary::Clear sink field coverage") {
     note::api::CardBinary::Clear::Response::Sink sink(rsp, pool);
 
     // Feed response-level fields through the sink (on_number / on_string / on_bool).
-    sink.on_string("cobs", "x-cobs");
-    sink.on_string("connected", "x-connected");
+    sink.on_number("cobs", "42");
+    sink.on_bool("connected", true);
     sink.on_string("err", "x-err");
-    sink.on_string("length", "x-length");
-    sink.on_string("max", "x-max");
+    sink.on_number("length", "42");
+    sink.on_number("max", "42");
     sink.on_string("status", "x-status");
 
     // Exercise on_int / on_float dispatch (separate from on_number).
+    sink.on_int("cobs", 99);
+    sink.on_int("length", 99);
+    sink.on_int("max", 99);
 
     // Unknown field fallthrough — covers FALSE branch of last dispatch.
     sink.on_string("_unknown_", "x");
@@ -1380,12 +1551,19 @@ TEST_CASE("note::api::CardBinaryGet request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
+    // Cover known-key routing in operator[] (true branch for each routed field).
     req["cobs"] = int32_t{42};
     req["length"] = int32_t{42};
     req["offset"] = int32_t{42};
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.card.binary.get();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -1467,12 +1645,19 @@ TEST_CASE("note::api::CardBinaryPut request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
+    // Cover known-key routing in operator[] (true branch for each routed field).
     req["cobs"] = int32_t{42};
     req["offset"] = int32_t{42};
     req["status"] = note::string_view("x-status");
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.card.binary.put();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -1547,10 +1732,17 @@ TEST_CASE("note::api::CardCarrier request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
+    // Cover known-key routing in operator[] (true branch for each routed field).
     req["mode"] = note::string_view("charging");
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.card.carrier();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -1589,7 +1781,7 @@ TEST_CASE("note::api::CardCarrier sink field coverage") {
     note::api::CardCarrier::Response::Sink sink(rsp, pool);
 
     // Feed response-level fields through the sink (on_number / on_string / on_bool).
-    sink.on_string("charging", "x-charging");
+    sink.on_bool("charging", true);
     sink.on_string("mode", "x-mode");
 
     // Exercise on_int / on_float dispatch (separate from on_number).
@@ -1634,13 +1826,20 @@ TEST_CASE("note::api::CardContact::Get request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
+    // Cover known-key routing in operator[] (true branch for each routed field).
     req["email"] = note::string_view("x-email");
     req["name"] = note::string_view("x-name");
     req["org"] = note::string_view("x-org");
     req["role"] = note::string_view("x-role");
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.card.contact().get();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -1730,13 +1929,20 @@ TEST_CASE("note::api::CardContact::Set request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
+    // Cover known-key routing in operator[] (true branch for each routed field).
     req["email"] = note::string_view("x-email");
     req["name"] = note::string_view("x-name");
     req["org"] = note::string_view("x-org");
     req["role"] = note::string_view("x-role");
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.card.contact().set();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -1832,7 +2038,7 @@ TEST_CASE("note::api::CardDfu request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
+    // Cover known-key routing in operator[] (true branch for each routed field).
     req["mode"] = note::string_view("altdfu");
     req["name"] = note::string_view("esp32");
     req["off"] = true;
@@ -1842,6 +2048,13 @@ TEST_CASE("note::api::CardDfu request builder") {
     req["stop"] = true;
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.card.dfu();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -1916,6 +2129,13 @@ TEST_CASE("note::api::CardIllumination request builder") {
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.card.illumination();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -1952,9 +2172,10 @@ TEST_CASE("note::api::CardIllumination sink field coverage") {
     note::api::CardIllumination::Response::Sink sink(rsp, pool);
 
     // Feed response-level fields through the sink (on_number / on_string / on_bool).
-    sink.on_string("value", "x-value");
+    sink.on_number("value", "3.14");
 
     // Exercise on_int / on_float dispatch (separate from on_number).
+    sink.on_float("value", 9.9);
 
     // Unknown field fallthrough — covers FALSE branch of last dispatch.
     sink.on_string("_unknown_", "x");
@@ -1992,11 +2213,18 @@ TEST_CASE("note::api::CardIo request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
+    // Cover known-key routing in operator[] (true branch for each routed field).
     req["i2c"] = int32_t{42};
     req["mode"] = note::string_view("-1");
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.card.io();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -2026,12 +2254,19 @@ TEST_CASE("note::api::CardLed request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
+    // Cover known-key routing in operator[] (true branch for each routed field).
     req["mode"] = note::string_view("red");
     req["off"] = true;
     req["on"] = true;
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.card.led();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -2057,6 +2292,13 @@ TEST_CASE("note::api::CardLocation request builder") {
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.card.location();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -2107,16 +2349,22 @@ TEST_CASE("note::api::CardLocation sink field coverage") {
     note::api::CardLocation::Response::Sink sink(rsp, pool);
 
     // Feed response-level fields through the sink (on_number / on_string / on_bool).
-    sink.on_string("count", "x-count");
-    sink.on_string("dop", "x-dop");
-    sink.on_string("lat", "x-lat");
-    sink.on_string("lon", "x-lon");
-    sink.on_string("max", "x-max");
+    sink.on_number("count", "42");
+    sink.on_number("dop", "3.14");
+    sink.on_number("lat", "3.14");
+    sink.on_number("lon", "3.14");
+    sink.on_number("max", "42");
     sink.on_string("mode", "x-mode");
     sink.on_string("status", "x-status");
-    sink.on_string("time", "x-time");
+    sink.on_number("time", "42");
 
     // Exercise on_int / on_float dispatch (separate from on_number).
+    sink.on_int("count", 99);
+    sink.on_float("dop", 9.9);
+    sink.on_float("lat", 9.9);
+    sink.on_float("lon", 9.9);
+    sink.on_int("max", 99);
+    sink.on_int("time", 99);
 
     // Unknown field fallthrough — covers FALSE branch of last dispatch.
     sink.on_string("_unknown_", "x");
@@ -2172,7 +2420,7 @@ TEST_CASE("note::api::CardLocationMode::Get request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
+    // Cover known-key routing in operator[] (true branch for each routed field).
     req["delete"] = true;
     req["lat"] = 1.5;
     req["lon"] = 1.5;
@@ -2186,6 +2434,13 @@ TEST_CASE("note::api::CardLocationMode::Get request builder") {
     req["vseconds"] = note::string_view("x-vseconds");
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.card.location.mode.get();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -2240,19 +2495,25 @@ TEST_CASE("note::api::CardLocationMode::Get sink field coverage") {
     note::api::CardLocationMode::Get::Response::Sink sink(rsp, pool);
 
     // Feed response-level fields through the sink (on_number / on_string / on_bool).
-    sink.on_string("lat", "x-lat");
-    sink.on_string("lon", "x-lon");
-    sink.on_string("max", "x-max");
-    sink.on_string("minutes", "x-minutes");
+    sink.on_number("lat", "3.14");
+    sink.on_number("lon", "3.14");
+    sink.on_number("max", "42");
+    sink.on_number("minutes", "42");
     sink.on_string("mode", "x-mode");
-    sink.on_string("seconds", "x-seconds");
+    sink.on_number("seconds", "42");
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-    sink.on_string("threshold", "x-threshold");
+    sink.on_number("threshold", "42");
 #endif
     sink.on_string("vseconds", "x-vseconds");
 
     // Exercise on_int / on_float dispatch (separate from on_number).
+    sink.on_float("lat", 9.9);
+    sink.on_float("lon", 9.9);
+    sink.on_int("max", 99);
+    sink.on_int("minutes", 99);
+    sink.on_int("seconds", 99);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+    sink.on_int("threshold", 99);
 #endif
 
     // Unknown field fallthrough — covers FALSE branch of last dispatch.
@@ -2309,7 +2570,7 @@ TEST_CASE("note::api::CardLocationMode::Set request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
+    // Cover known-key routing in operator[] (true branch for each routed field).
     req["delete"] = true;
     req["lat"] = 1.5;
     req["lon"] = 1.5;
@@ -2323,6 +2584,13 @@ TEST_CASE("note::api::CardLocationMode::Set request builder") {
     req["vseconds"] = note::string_view("x-vseconds");
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.card.location.mode.set();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -2377,19 +2645,25 @@ TEST_CASE("note::api::CardLocationMode::Set sink field coverage") {
     note::api::CardLocationMode::Set::Response::Sink sink(rsp, pool);
 
     // Feed response-level fields through the sink (on_number / on_string / on_bool).
-    sink.on_string("lat", "x-lat");
-    sink.on_string("lon", "x-lon");
-    sink.on_string("max", "x-max");
-    sink.on_string("minutes", "x-minutes");
+    sink.on_number("lat", "3.14");
+    sink.on_number("lon", "3.14");
+    sink.on_number("max", "42");
+    sink.on_number("minutes", "42");
     sink.on_string("mode", "x-mode");
-    sink.on_string("seconds", "x-seconds");
+    sink.on_number("seconds", "42");
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-    sink.on_string("threshold", "x-threshold");
+    sink.on_number("threshold", "42");
 #endif
     sink.on_string("vseconds", "x-vseconds");
 
     // Exercise on_int / on_float dispatch (separate from on_number).
+    sink.on_float("lat", 9.9);
+    sink.on_float("lon", 9.9);
+    sink.on_int("max", 99);
+    sink.on_int("minutes", 99);
+    sink.on_int("seconds", 99);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+    sink.on_int("threshold", 99);
 #endif
 
     // Unknown field fallthrough — covers FALSE branch of last dispatch.
@@ -2432,13 +2706,20 @@ TEST_CASE("note::api::CardLocationMode::Continuous request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
+    // Cover known-key routing in operator[] (true branch for each routed field).
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
     req["threshold"] = int32_t{42};
 #endif
     req["vseconds"] = note::string_view("x-vseconds");
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.card.location.mode.continuous();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -2485,12 +2766,13 @@ TEST_CASE("note::api::CardLocationMode::Continuous sink field coverage") {
     // Feed response-level fields through the sink (on_number / on_string / on_bool).
     sink.on_string("mode", "x-mode");
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-    sink.on_string("threshold", "x-threshold");
+    sink.on_number("threshold", "42");
 #endif
     sink.on_string("vseconds", "x-vseconds");
 
     // Exercise on_int / on_float dispatch (separate from on_number).
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+    sink.on_int("threshold", 99);
 #endif
 
     // Unknown field fallthrough — covers FALSE branch of last dispatch.
@@ -2543,7 +2825,7 @@ TEST_CASE("note::api::CardLocationMode::Periodic request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
+    // Cover known-key routing in operator[] (true branch for each routed field).
     req["lat"] = 1.5;
     req["lon"] = 1.5;
     req["max"] = int32_t{42};
@@ -2555,6 +2837,13 @@ TEST_CASE("note::api::CardLocationMode::Periodic request builder") {
     req["vseconds"] = note::string_view("x-vseconds");
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.card.location.mode.periodic();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -2609,19 +2898,25 @@ TEST_CASE("note::api::CardLocationMode::Periodic sink field coverage") {
     note::api::CardLocationMode::Periodic::Response::Sink sink(rsp, pool);
 
     // Feed response-level fields through the sink (on_number / on_string / on_bool).
-    sink.on_string("lat", "x-lat");
-    sink.on_string("lon", "x-lon");
-    sink.on_string("max", "x-max");
-    sink.on_string("minutes", "x-minutes");
+    sink.on_number("lat", "3.14");
+    sink.on_number("lon", "3.14");
+    sink.on_number("max", "42");
+    sink.on_number("minutes", "42");
     sink.on_string("mode", "x-mode");
-    sink.on_string("seconds", "x-seconds");
+    sink.on_number("seconds", "42");
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-    sink.on_string("threshold", "x-threshold");
+    sink.on_number("threshold", "42");
 #endif
     sink.on_string("vseconds", "x-vseconds");
 
     // Exercise on_int / on_float dispatch (separate from on_number).
+    sink.on_float("lat", 9.9);
+    sink.on_float("lon", 9.9);
+    sink.on_int("max", 99);
+    sink.on_int("minutes", 99);
+    sink.on_int("seconds", 99);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+    sink.on_int("threshold", 99);
 #endif
 
     // Unknown field fallthrough — covers FALSE branch of last dispatch.
@@ -2660,11 +2955,18 @@ TEST_CASE("note::api::CardLocationMode::Fixed request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
+    // Cover known-key routing in operator[] (true branch for each routed field).
     req["lat"] = 1.5;
     req["lon"] = 1.5;
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.card.location.mode.fixed();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -2705,11 +3007,13 @@ TEST_CASE("note::api::CardLocationMode::Fixed sink field coverage") {
     note::api::CardLocationMode::Fixed::Response::Sink sink(rsp, pool);
 
     // Feed response-level fields through the sink (on_number / on_string / on_bool).
-    sink.on_string("lat", "x-lat");
-    sink.on_string("lon", "x-lon");
+    sink.on_number("lat", "3.14");
+    sink.on_number("lon", "3.14");
     sink.on_string("mode", "x-mode");
 
     // Exercise on_int / on_float dispatch (separate from on_number).
+    sink.on_float("lat", 9.9);
+    sink.on_float("lon", 9.9);
 
     // Unknown field fallthrough — covers FALSE branch of last dispatch.
     sink.on_string("_unknown_", "x");
@@ -2763,7 +3067,7 @@ TEST_CASE("note::api::CardLocationMode::Remove request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
+    // Cover known-key routing in operator[] (true branch for each routed field).
     req["lat"] = 1.5;
     req["lon"] = 1.5;
     req["max"] = int32_t{42};
@@ -2776,6 +3080,13 @@ TEST_CASE("note::api::CardLocationMode::Remove request builder") {
     req["vseconds"] = note::string_view("x-vseconds");
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.card.location.mode.remove();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -2830,19 +3141,25 @@ TEST_CASE("note::api::CardLocationMode::Remove sink field coverage") {
     note::api::CardLocationMode::Remove::Response::Sink sink(rsp, pool);
 
     // Feed response-level fields through the sink (on_number / on_string / on_bool).
-    sink.on_string("lat", "x-lat");
-    sink.on_string("lon", "x-lon");
-    sink.on_string("max", "x-max");
-    sink.on_string("minutes", "x-minutes");
+    sink.on_number("lat", "3.14");
+    sink.on_number("lon", "3.14");
+    sink.on_number("max", "42");
+    sink.on_number("minutes", "42");
     sink.on_string("mode", "x-mode");
-    sink.on_string("seconds", "x-seconds");
+    sink.on_number("seconds", "42");
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-    sink.on_string("threshold", "x-threshold");
+    sink.on_number("threshold", "42");
 #endif
     sink.on_string("vseconds", "x-vseconds");
 
     // Exercise on_int / on_float dispatch (separate from on_number).
+    sink.on_float("lat", 9.9);
+    sink.on_float("lon", 9.9);
+    sink.on_int("max", 99);
+    sink.on_int("minutes", 99);
+    sink.on_int("seconds", 99);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+    sink.on_int("threshold", 99);
 #endif
 
     // Unknown field fallthrough — covers FALSE branch of last dispatch.
@@ -2895,7 +3212,7 @@ TEST_CASE("note::api::CardLocationTrack request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
+    // Cover known-key routing in operator[] (true branch for each routed field).
     req["file"] = note::string_view("x-file");
     req["heartbeat"] = true;
     req["hours"] = int32_t{42};
@@ -2907,6 +3224,13 @@ TEST_CASE("note::api::CardLocationTrack request builder") {
     req["sync"] = true;
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.card.location.track();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -2954,13 +3278,15 @@ TEST_CASE("note::api::CardLocationTrack sink field coverage") {
 
     // Feed response-level fields through the sink (on_number / on_string / on_bool).
     sink.on_string("file", "x-file");
-    sink.on_string("heartbeat", "x-heartbeat");
-    sink.on_string("minutes", "x-minutes");
-    sink.on_string("seconds", "x-seconds");
-    sink.on_string("start", "x-start");
-    sink.on_string("stop", "x-stop");
+    sink.on_bool("heartbeat", true);
+    sink.on_number("minutes", "42");
+    sink.on_number("seconds", "42");
+    sink.on_bool("start", true);
+    sink.on_bool("stop", true);
 
     // Exercise on_int / on_float dispatch (separate from on_number).
+    sink.on_int("minutes", 99);
+    sink.on_int("seconds", 99);
 
     // Unknown field fallthrough — covers FALSE branch of last dispatch.
     sink.on_string("_unknown_", "x");
@@ -3000,12 +3326,19 @@ TEST_CASE("note::api::CardMonitor request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
+    // Cover known-key routing in operator[] (true branch for each routed field).
     req["count"] = int32_t{42};
     req["mode"] = note::string_view("green");
     req["usb"] = true;
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.card.monitor();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -3031,10 +3364,17 @@ TEST_CASE("note::api::CardMotion request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
+    // Cover known-key routing in operator[] (true branch for each routed field).
     req["minutes"] = int32_t{42};
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.card.motion();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -3083,15 +3423,18 @@ TEST_CASE("note::api::CardMotion sink field coverage") {
     note::api::CardMotion::Response::Sink sink(rsp, pool);
 
     // Feed response-level fields through the sink (on_number / on_string / on_bool).
-    sink.on_string("alert", "x-alert");
-    sink.on_string("count", "x-count");
+    sink.on_bool("alert", true);
+    sink.on_number("count", "42");
     sink.on_string("mode", "x-mode");
-    sink.on_string("motion", "x-motion");
+    sink.on_number("motion", "42");
     sink.on_string("movements", "x-movements");
-    sink.on_string("seconds", "x-seconds");
+    sink.on_number("seconds", "42");
     sink.on_string("status", "x-status");
 
     // Exercise on_int / on_float dispatch (separate from on_number).
+    sink.on_int("count", 99);
+    sink.on_int("motion", 99);
+    sink.on_int("seconds", 99);
 
     // Unknown field fallthrough — covers FALSE branch of last dispatch.
     sink.on_string("_unknown_", "x");
@@ -3139,7 +3482,7 @@ TEST_CASE("note::api::CardMotionMode request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
+    // Cover known-key routing in operator[] (true branch for each routed field).
     req["motion"] = int32_t{42};
     req["seconds"] = int32_t{42};
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1) || !defined(NOTE_API_STRICT)
@@ -3149,6 +3492,13 @@ TEST_CASE("note::api::CardMotionMode request builder") {
     req["stop"] = true;
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.card.motion.mode();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -3182,7 +3532,7 @@ TEST_CASE("note::api::CardMotionSync request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
+    // Cover known-key routing in operator[] (true branch for each routed field).
     req["count"] = int32_t{42};
     req["minutes"] = int32_t{42};
     req["start"] = true;
@@ -3190,6 +3540,13 @@ TEST_CASE("note::api::CardMotionSync request builder") {
     req["threshold"] = int32_t{42};
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.card.motion.sync();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -3227,7 +3584,7 @@ TEST_CASE("note::api::CardMotionTrack request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
+    // Cover known-key routing in operator[] (true branch for each routed field).
     req["count"] = int32_t{42};
     req["file"] = note::string_view("x-file");
     req["minutes"] = int32_t{42};
@@ -3237,6 +3594,13 @@ TEST_CASE("note::api::CardMotionTrack request builder") {
     req["threshold"] = int32_t{42};
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.card.motion.track();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -3264,11 +3628,18 @@ TEST_CASE("note::api::CardPower::Read request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
+    // Cover known-key routing in operator[] (true branch for each routed field).
     req["minutes"] = int32_t{42};
     req["reset"] = true;
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.card.power().read();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -3309,11 +3680,14 @@ TEST_CASE("note::api::CardPower::Read sink field coverage") {
     note::api::CardPower::Read::Response::Sink sink(rsp, pool);
 
     // Feed response-level fields through the sink (on_number / on_string / on_bool).
-    sink.on_string("milliamp_hours", "x-milliamp_hours");
-    sink.on_string("temperature", "x-temperature");
-    sink.on_string("voltage", "x-voltage");
+    sink.on_number("milliamp_hours", "3.14");
+    sink.on_number("temperature", "3.14");
+    sink.on_number("voltage", "3.14");
 
     // Exercise on_int / on_float dispatch (separate from on_number).
+    sink.on_float("milliamp_hours", 9.9);
+    sink.on_float("temperature", 9.9);
+    sink.on_float("voltage", 9.9);
 
     // Unknown field fallthrough — covers FALSE branch of last dispatch.
     sink.on_string("_unknown_", "x");
@@ -3351,11 +3725,18 @@ TEST_CASE("note::api::CardPower::Configure request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
+    // Cover known-key routing in operator[] (true branch for each routed field).
     req["minutes"] = int32_t{42};
     req["reset"] = true;
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.card.power().configure();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -3396,11 +3777,14 @@ TEST_CASE("note::api::CardPower::Configure sink field coverage") {
     note::api::CardPower::Configure::Response::Sink sink(rsp, pool);
 
     // Feed response-level fields through the sink (on_number / on_string / on_bool).
-    sink.on_string("milliamp_hours", "x-milliamp_hours");
-    sink.on_string("temperature", "x-temperature");
-    sink.on_string("voltage", "x-voltage");
+    sink.on_number("milliamp_hours", "3.14");
+    sink.on_number("temperature", "3.14");
+    sink.on_number("voltage", "3.14");
 
     // Exercise on_int / on_float dispatch (separate from on_number).
+    sink.on_float("milliamp_hours", 9.9);
+    sink.on_float("temperature", 9.9);
+    sink.on_float("voltage", 9.9);
 
     // Unknown field fallthrough — covers FALSE branch of last dispatch.
     sink.on_string("_unknown_", "x");
@@ -3436,10 +3820,17 @@ TEST_CASE("note::api::CardPower::Reset request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
+    // Cover known-key routing in operator[] (true branch for each routed field).
     req["minutes"] = int32_t{42};
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.card.power().reset();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -3480,11 +3871,14 @@ TEST_CASE("note::api::CardPower::Reset sink field coverage") {
     note::api::CardPower::Reset::Response::Sink sink(rsp, pool);
 
     // Feed response-level fields through the sink (on_number / on_string / on_bool).
-    sink.on_string("milliamp_hours", "x-milliamp_hours");
-    sink.on_string("temperature", "x-temperature");
-    sink.on_string("voltage", "x-voltage");
+    sink.on_number("milliamp_hours", "3.14");
+    sink.on_number("temperature", "3.14");
+    sink.on_number("voltage", "3.14");
 
     // Exercise on_int / on_float dispatch (separate from on_number).
+    sink.on_float("milliamp_hours", 9.9);
+    sink.on_float("temperature", 9.9);
+    sink.on_float("voltage", 9.9);
 
     // Unknown field fallthrough — covers FALSE branch of last dispatch.
     sink.on_string("_unknown_", "x");
@@ -3522,11 +3916,18 @@ TEST_CASE("note::api::CardRandom request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
+    // Cover known-key routing in operator[] (true branch for each routed field).
     req["count"] = int32_t{42};
     req["mode"] = note::string_view("x-mode");
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.card.random();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -3565,10 +3966,11 @@ TEST_CASE("note::api::CardRandom sink field coverage") {
     note::api::CardRandom::Response::Sink sink(rsp, pool);
 
     // Feed response-level fields through the sink (on_number / on_string / on_bool).
-    sink.on_string("count", "x-count");
+    sink.on_number("count", "42");
     sink.on_string("payload", "x-payload");
 
     // Exercise on_int / on_float dispatch (separate from on_number).
+    sink.on_int("count", 99);
 
     // Unknown field fallthrough — covers FALSE branch of last dispatch.
     sink.on_string("_unknown_", "x");
@@ -3604,6 +4006,13 @@ TEST_CASE("note::api::CardRestart request builder") {
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.card.restart();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -3631,11 +4040,18 @@ TEST_CASE("note::api::CardRestore request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
+    // Cover known-key routing in operator[] (true branch for each routed field).
     req["connected"] = true;
     req["delete"] = true;
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.card.restore();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -3667,13 +4083,20 @@ TEST_CASE("note::api::CardSleep request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
+    // Cover known-key routing in operator[] (true branch for each routed field).
     req["mode"] = note::string_view("accel");
     req["off"] = true;
     req["on"] = true;
     req["seconds"] = int32_t{42};
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.card.sleep();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -3717,11 +4140,12 @@ TEST_CASE("note::api::CardSleep sink field coverage") {
 
     // Feed response-level fields through the sink (on_number / on_string / on_bool).
     sink.on_string("mode", "x-mode");
-    sink.on_string("off", "x-off");
-    sink.on_string("on", "x-on");
-    sink.on_string("seconds", "x-seconds");
+    sink.on_bool("off", true);
+    sink.on_bool("on", true);
+    sink.on_number("seconds", "42");
 
     // Exercise on_int / on_float dispatch (separate from on_number).
+    sink.on_int("seconds", 99);
 
     // Unknown field fallthrough — covers FALSE branch of last dispatch.
     sink.on_string("_unknown_", "x");
@@ -3757,6 +4181,13 @@ TEST_CASE("note::api::CardStatus request builder") {
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.card.status();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -3821,27 +4252,31 @@ TEST_CASE("note::api::CardStatus sink field coverage") {
     note::api::CardStatus::Response::Sink sink(rsp, pool);
 
     // Feed response-level fields through the sink (on_number / on_string / on_bool).
-    sink.on_string("cell", "x-cell");
-    sink.on_string("connected", "x-connected");
+    sink.on_bool("cell", true);
+    sink.on_bool("connected", true);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1) || !defined(NOTE_API_STRICT)
-    sink.on_string("gps", "x-gps");
+    sink.on_bool("gps", true);
 #endif
-    sink.on_string("inbound", "x-inbound");
-    sink.on_string("outbound", "x-outbound");
+    sink.on_number("inbound", "42");
+    sink.on_number("outbound", "42");
     sink.on_string("status", "x-status");
-    sink.on_string("storage", "x-storage");
+    sink.on_number("storage", "42");
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 5, 1) || !defined(NOTE_API_STRICT)
-    sink.on_string("sync", "x-sync");
+    sink.on_bool("sync", true);
 #endif
-    sink.on_string("time", "x-time");
-    sink.on_string("usb", "x-usb");
-    sink.on_string("wifi", "x-wifi");
+    sink.on_number("time", "42");
+    sink.on_bool("usb", true);
+    sink.on_bool("wifi", true);
 
     // Exercise on_int / on_float dispatch (separate from on_number).
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1) || !defined(NOTE_API_STRICT)
 #endif
+    sink.on_int("inbound", 99);
+    sink.on_int("outbound", 99);
+    sink.on_int("storage", 99);
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 5, 1) || !defined(NOTE_API_STRICT)
 #endif
+    sink.on_int("time", 99);
 
     // Unknown field fallthrough — covers FALSE branch of last dispatch.
     sink.on_string("_unknown_", "x");
@@ -3883,13 +4318,20 @@ TEST_CASE("note::api::CardTemp::Read request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
+    // Cover known-key routing in operator[] (true branch for each routed field).
     req["minutes"] = int32_t{42};
     req["status"] = note::string_view("x-status");
     req["stop"] = true;
     req["sync"] = true;
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.card.temp().read();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -3938,15 +4380,21 @@ TEST_CASE("note::api::CardTemp::Read sink field coverage") {
     note::api::CardTemp::Read::Response::Sink sink(rsp, pool);
 
     // Feed response-level fields through the sink (on_number / on_string / on_bool).
-    sink.on_string("calibration", "x-calibration");
-    sink.on_string("humidity", "x-humidity");
-    sink.on_string("pressure", "x-pressure");
-    sink.on_string("temperature", "x-temperature");
-    sink.on_string("usb", "x-usb");
-    sink.on_string("value", "x-value");
-    sink.on_string("voltage", "x-voltage");
+    sink.on_number("calibration", "3.14");
+    sink.on_number("humidity", "3.14");
+    sink.on_number("pressure", "3.14");
+    sink.on_number("temperature", "3.14");
+    sink.on_bool("usb", true);
+    sink.on_number("value", "3.14");
+    sink.on_number("voltage", "3.14");
 
     // Exercise on_int / on_float dispatch (separate from on_number).
+    sink.on_float("calibration", 9.9);
+    sink.on_float("humidity", 9.9);
+    sink.on_float("pressure", 9.9);
+    sink.on_float("temperature", 9.9);
+    sink.on_float("value", 9.9);
+    sink.on_float("voltage", 9.9);
 
     // Unknown field fallthrough — covers FALSE branch of last dispatch.
     sink.on_string("_unknown_", "x");
@@ -3988,13 +4436,20 @@ TEST_CASE("note::api::CardTemp::Configure request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
+    // Cover known-key routing in operator[] (true branch for each routed field).
     req["minutes"] = int32_t{42};
     req["status"] = note::string_view("x-status");
     req["stop"] = true;
     req["sync"] = true;
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.card.temp().configure();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -4043,15 +4498,21 @@ TEST_CASE("note::api::CardTemp::Configure sink field coverage") {
     note::api::CardTemp::Configure::Response::Sink sink(rsp, pool);
 
     // Feed response-level fields through the sink (on_number / on_string / on_bool).
-    sink.on_string("calibration", "x-calibration");
-    sink.on_string("humidity", "x-humidity");
-    sink.on_string("pressure", "x-pressure");
-    sink.on_string("temperature", "x-temperature");
-    sink.on_string("usb", "x-usb");
-    sink.on_string("value", "x-value");
-    sink.on_string("voltage", "x-voltage");
+    sink.on_number("calibration", "3.14");
+    sink.on_number("humidity", "3.14");
+    sink.on_number("pressure", "3.14");
+    sink.on_number("temperature", "3.14");
+    sink.on_bool("usb", true);
+    sink.on_number("value", "3.14");
+    sink.on_number("voltage", "3.14");
 
     // Exercise on_int / on_float dispatch (separate from on_number).
+    sink.on_float("calibration", 9.9);
+    sink.on_float("humidity", 9.9);
+    sink.on_float("pressure", 9.9);
+    sink.on_float("temperature", 9.9);
+    sink.on_float("value", 9.9);
+    sink.on_float("voltage", 9.9);
 
     // Unknown field fallthrough — covers FALSE branch of last dispatch.
     sink.on_string("_unknown_", "x");
@@ -4091,12 +4552,19 @@ TEST_CASE("note::api::CardTemp::Stop request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
+    // Cover known-key routing in operator[] (true branch for each routed field).
     req["minutes"] = int32_t{42};
     req["status"] = note::string_view("x-status");
     req["sync"] = true;
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.card.temp().stop();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -4145,15 +4613,21 @@ TEST_CASE("note::api::CardTemp::Stop sink field coverage") {
     note::api::CardTemp::Stop::Response::Sink sink(rsp, pool);
 
     // Feed response-level fields through the sink (on_number / on_string / on_bool).
-    sink.on_string("calibration", "x-calibration");
-    sink.on_string("humidity", "x-humidity");
-    sink.on_string("pressure", "x-pressure");
-    sink.on_string("temperature", "x-temperature");
-    sink.on_string("usb", "x-usb");
-    sink.on_string("value", "x-value");
-    sink.on_string("voltage", "x-voltage");
+    sink.on_number("calibration", "3.14");
+    sink.on_number("humidity", "3.14");
+    sink.on_number("pressure", "3.14");
+    sink.on_number("temperature", "3.14");
+    sink.on_bool("usb", true);
+    sink.on_number("value", "3.14");
+    sink.on_number("voltage", "3.14");
 
     // Exercise on_int / on_float dispatch (separate from on_number).
+    sink.on_float("calibration", 9.9);
+    sink.on_float("humidity", 9.9);
+    sink.on_float("pressure", 9.9);
+    sink.on_float("temperature", 9.9);
+    sink.on_float("value", 9.9);
+    sink.on_float("voltage", 9.9);
 
     // Unknown field fallthrough — covers FALSE branch of last dispatch.
     sink.on_string("_unknown_", "x");
@@ -4189,6 +4663,13 @@ TEST_CASE("note::api::CardTime request builder") {
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.card.time();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -4239,13 +4720,17 @@ TEST_CASE("note::api::CardTime sink field coverage") {
     // Feed response-level fields through the sink (on_number / on_string / on_bool).
     sink.on_string("area", "x-area");
     sink.on_string("country", "x-country");
-    sink.on_string("lat", "x-lat");
-    sink.on_string("lon", "x-lon");
-    sink.on_string("minutes", "x-minutes");
-    sink.on_string("time", "x-time");
+    sink.on_number("lat", "3.14");
+    sink.on_number("lon", "3.14");
+    sink.on_number("minutes", "42");
+    sink.on_number("time", "42");
     sink.on_string("zone", "x-zone");
 
     // Exercise on_int / on_float dispatch (separate from on_number).
+    sink.on_float("lat", 9.9);
+    sink.on_float("lon", 9.9);
+    sink.on_int("minutes", 99);
+    sink.on_int("time", 99);
 
     // Unknown field fallthrough — covers FALSE branch of last dispatch.
     sink.on_string("_unknown_", "x");
@@ -4281,10 +4766,17 @@ TEST_CASE("note::api::CardTrace request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
+    // Cover known-key routing in operator[] (true branch for each routed field).
     req["mode"] = note::string_view("on");
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.card.trace();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -4328,7 +4820,7 @@ TEST_CASE("note::api::CardTransport request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
+    // Cover known-key routing in operator[] (true branch for each routed field).
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
     req["allow"] = true;
 #endif
@@ -4341,6 +4833,13 @@ TEST_CASE("note::api::CardTransport request builder") {
 #endif
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.card.transport();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -4427,7 +4926,7 @@ TEST_CASE("note::api::CardTriangulate request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
+    // Cover known-key routing in operator[] (true branch for each routed field).
     req["minutes"] = int32_t{42};
     req["mode"] = note::string_view("cell");
     req["on"] = true;
@@ -4437,6 +4936,13 @@ TEST_CASE("note::api::CardTriangulate request builder") {
     req["usb"] = true;
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.card.triangulate();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -4483,14 +4989,17 @@ TEST_CASE("note::api::CardTriangulate sink field coverage") {
     note::api::CardTriangulate::Response::Sink sink(rsp, pool);
 
     // Feed response-level fields through the sink (on_number / on_string / on_bool).
-    sink.on_string("length", "x-length");
+    sink.on_number("length", "42");
     sink.on_string("mode", "x-mode");
-    sink.on_string("motion", "x-motion");
-    sink.on_string("on", "x-on");
-    sink.on_string("time", "x-time");
-    sink.on_string("usb", "x-usb");
+    sink.on_number("motion", "42");
+    sink.on_bool("on", true);
+    sink.on_number("time", "42");
+    sink.on_bool("usb", true);
 
     // Exercise on_int / on_float dispatch (separate from on_number).
+    sink.on_int("length", 99);
+    sink.on_int("motion", 99);
+    sink.on_int("time", 99);
 
     // Unknown field fallthrough — covers FALSE branch of last dispatch.
     sink.on_string("_unknown_", "x");
@@ -4528,11 +5037,18 @@ TEST_CASE("note::api::CardUsageGet request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
+    // Cover known-key routing in operator[] (true branch for each routed field).
     req["mode"] = note::string_view("total");
     req["offset"] = int32_t{42};
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.card.usageGet();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -4583,16 +5099,24 @@ TEST_CASE("note::api::CardUsageGet sink field coverage") {
     note::api::CardUsageGet::Response::Sink sink(rsp, pool);
 
     // Feed response-level fields through the sink (on_number / on_string / on_bool).
-    sink.on_string("bytes_received", "x-bytes_received");
-    sink.on_string("bytes_sent", "x-bytes_sent");
-    sink.on_string("notes_received", "x-notes_received");
-    sink.on_string("notes_sent", "x-notes_sent");
-    sink.on_string("seconds", "x-seconds");
-    sink.on_string("sessions_secure", "x-sessions_secure");
-    sink.on_string("sessions_standard", "x-sessions_standard");
-    sink.on_string("time", "x-time");
+    sink.on_number("bytes_received", "42");
+    sink.on_number("bytes_sent", "42");
+    sink.on_number("notes_received", "42");
+    sink.on_number("notes_sent", "42");
+    sink.on_number("seconds", "42");
+    sink.on_number("sessions_secure", "42");
+    sink.on_number("sessions_standard", "42");
+    sink.on_number("time", "42");
 
     // Exercise on_int / on_float dispatch (separate from on_number).
+    sink.on_int("bytes_received", 99);
+    sink.on_int("bytes_sent", 99);
+    sink.on_int("notes_received", 99);
+    sink.on_int("notes_sent", 99);
+    sink.on_int("seconds", 99);
+    sink.on_int("sessions_secure", 99);
+    sink.on_int("sessions_standard", 99);
+    sink.on_int("time", 99);
 
     // Unknown field fallthrough — covers FALSE branch of last dispatch.
     sink.on_string("_unknown_", "x");
@@ -4632,12 +5156,19 @@ TEST_CASE("note::api::CardUsageTest request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
+    // Cover known-key routing in operator[] (true branch for each routed field).
     req["days"] = int32_t{42};
     req["hours"] = int32_t{42};
     req["megabytes"] = int32_t{42};
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.card.usageTest();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -4694,19 +5225,30 @@ TEST_CASE("note::api::CardUsageTest sink field coverage") {
     note::api::CardUsageTest::Response::Sink sink(rsp, pool);
 
     // Feed response-level fields through the sink (on_number / on_string / on_bool).
-    sink.on_string("bytes_per_day", "x-bytes_per_day");
-    sink.on_string("bytes_received", "x-bytes_received");
-    sink.on_string("bytes_sent", "x-bytes_sent");
-    sink.on_string("days", "x-days");
-    sink.on_string("max", "x-max");
-    sink.on_string("notes_received", "x-notes_received");
-    sink.on_string("notes_sent", "x-notes_sent");
-    sink.on_string("seconds", "x-seconds");
-    sink.on_string("sessions_secure", "x-sessions_secure");
-    sink.on_string("sessions_standard", "x-sessions_standard");
-    sink.on_string("time", "x-time");
+    sink.on_number("bytes_per_day", "42");
+    sink.on_number("bytes_received", "42");
+    sink.on_number("bytes_sent", "42");
+    sink.on_number("days", "42");
+    sink.on_number("max", "42");
+    sink.on_number("notes_received", "42");
+    sink.on_number("notes_sent", "42");
+    sink.on_number("seconds", "42");
+    sink.on_number("sessions_secure", "42");
+    sink.on_number("sessions_standard", "42");
+    sink.on_number("time", "42");
 
     // Exercise on_int / on_float dispatch (separate from on_number).
+    sink.on_int("bytes_per_day", 99);
+    sink.on_int("bytes_received", 99);
+    sink.on_int("bytes_sent", 99);
+    sink.on_int("days", 99);
+    sink.on_int("max", 99);
+    sink.on_int("notes_received", 99);
+    sink.on_int("notes_sent", 99);
+    sink.on_int("seconds", 99);
+    sink.on_int("sessions_secure", 99);
+    sink.on_int("sessions_standard", 99);
+    sink.on_int("time", 99);
 
     // Unknown field fallthrough — covers FALSE branch of last dispatch.
     sink.on_string("_unknown_", "x");
@@ -4742,6 +5284,13 @@ TEST_CASE("note::api::CardVersion request builder") {
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.card.version();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -4798,14 +5347,14 @@ TEST_CASE("note::api::CardVersion sink body coverage") {
 
     // Feed response-level fields through the sink.
     sink.on_string("board", "x-board");
-    sink.on_string("cell", "x-cell");
+    sink.on_bool("cell", true);
     sink.on_string("device", "x-device");
-    sink.on_string("gps", "x-gps");
+    sink.on_bool("gps", true);
     sink.on_string("name", "x-name");
     sink.on_string("sku", "x-sku");
     sink.on_string("version", "x-version");
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
-    sink.on_string("wifi", "x-wifi");
+    sink.on_bool("wifi", true);
 #endif
 
     // Exercise on_int / on_float dispatch (separate from on_number).
@@ -4837,6 +5386,9 @@ TEST_CASE("note::api::CardVersion sink body coverage") {
     sink.on_array_end("items");
     sink.on_object_end("body");
 
+    // Reset without body handler — covers the !body_handler_ branch.
+    sink.reset();
+
     // Exercise body path WITH a body handler — all method types.
     CoverageTestBody_ tbody{};
     note::StructSink<CoverageTestBody_> body_sink(tbody, pool);
@@ -4849,10 +5401,18 @@ TEST_CASE("note::api::CardVersion sink body coverage") {
     sink.on_int("i", 1);
     sink.on_float("v", 42.0);
     sink.on_null("z");
+    // Nested object inside body with handler — covers body_handler_.send(object_begin/end).
+    sink.on_object_begin("nested");
+    sink.on_string("inner", "x");
+    sink.on_object_end("nested");
+    // Array inside body with handler — covers body_handler_.send(array_begin/end).
+    sink.on_array_begin("items");
+    sink.on_int("items", 1);
+    sink.on_array_end("items");
     sink.on_object_end("body");
     REQUIRE(tbody.v == 42.0f);
 
-    // Reset path.
+    // Reset with body handler — covers the body_handler_ true branch.
     sink.reset();
 }
 
@@ -4911,7 +5471,7 @@ TEST_CASE("note::api::CardVoltage::Read request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
+    // Cover known-key routing in operator[] (true branch for each routed field).
     req["alert"] = true;
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 2) || !defined(NOTE_API_STRICT)
     req["calibration"] = 1.5;
@@ -4931,6 +5491,13 @@ TEST_CASE("note::api::CardVoltage::Read request builder") {
     req["vmin"] = 1.5;
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.card.voltage().read();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -4991,23 +5558,32 @@ TEST_CASE("note::api::CardVoltage::Read sink field coverage") {
     note::api::CardVoltage::Read::Response::Sink sink(rsp, pool);
 
     // Feed response-level fields through the sink (on_number / on_string / on_bool).
-    sink.on_string("daily", "x-daily");
-    sink.on_string("hours", "x-hours");
-    sink.on_string("minutes", "x-minutes");
+    sink.on_number("daily", "3.14");
+    sink.on_number("hours", "42");
+    sink.on_number("minutes", "42");
     sink.on_string("mode", "x-mode");
-    sink.on_string("monthly", "x-monthly");
+    sink.on_number("monthly", "3.14");
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
-    sink.on_string("usb", "x-usb");
+    sink.on_bool("usb", true);
 #endif
-    sink.on_string("value", "x-value");
-    sink.on_string("vavg", "x-vavg");
-    sink.on_string("vmax", "x-vmax");
-    sink.on_string("vmin", "x-vmin");
-    sink.on_string("weekly", "x-weekly");
+    sink.on_number("value", "3.14");
+    sink.on_number("vavg", "3.14");
+    sink.on_number("vmax", "3.14");
+    sink.on_number("vmin", "3.14");
+    sink.on_number("weekly", "3.14");
 
     // Exercise on_int / on_float dispatch (separate from on_number).
+    sink.on_float("daily", 9.9);
+    sink.on_int("hours", 99);
+    sink.on_int("minutes", 99);
+    sink.on_float("monthly", 9.9);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
 #endif
+    sink.on_float("value", 9.9);
+    sink.on_float("vavg", 9.9);
+    sink.on_float("vmax", 9.9);
+    sink.on_float("vmin", 9.9);
+    sink.on_float("weekly", 9.9);
 
     // Unknown field fallthrough — covers FALSE branch of last dispatch.
     sink.on_string("_unknown_", "x");
@@ -5075,7 +5651,7 @@ TEST_CASE("note::api::CardVoltage::Configure request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
+    // Cover known-key routing in operator[] (true branch for each routed field).
     req["alert"] = true;
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 2) || !defined(NOTE_API_STRICT)
     req["calibration"] = 1.5;
@@ -5095,6 +5671,13 @@ TEST_CASE("note::api::CardVoltage::Configure request builder") {
     req["vmin"] = 1.5;
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.card.voltage().configure();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -5155,23 +5738,32 @@ TEST_CASE("note::api::CardVoltage::Configure sink field coverage") {
     note::api::CardVoltage::Configure::Response::Sink sink(rsp, pool);
 
     // Feed response-level fields through the sink (on_number / on_string / on_bool).
-    sink.on_string("daily", "x-daily");
-    sink.on_string("hours", "x-hours");
-    sink.on_string("minutes", "x-minutes");
+    sink.on_number("daily", "3.14");
+    sink.on_number("hours", "42");
+    sink.on_number("minutes", "42");
     sink.on_string("mode", "x-mode");
-    sink.on_string("monthly", "x-monthly");
+    sink.on_number("monthly", "3.14");
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
-    sink.on_string("usb", "x-usb");
+    sink.on_bool("usb", true);
 #endif
-    sink.on_string("value", "x-value");
-    sink.on_string("vavg", "x-vavg");
-    sink.on_string("vmax", "x-vmax");
-    sink.on_string("vmin", "x-vmin");
-    sink.on_string("weekly", "x-weekly");
+    sink.on_number("value", "3.14");
+    sink.on_number("vavg", "3.14");
+    sink.on_number("vmax", "3.14");
+    sink.on_number("vmin", "3.14");
+    sink.on_number("weekly", "3.14");
 
     // Exercise on_int / on_float dispatch (separate from on_number).
+    sink.on_float("daily", 9.9);
+    sink.on_int("hours", 99);
+    sink.on_int("minutes", 99);
+    sink.on_float("monthly", 9.9);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
 #endif
+    sink.on_float("value", 9.9);
+    sink.on_float("vavg", 9.9);
+    sink.on_float("vmax", 9.9);
+    sink.on_float("vmin", 9.9);
+    sink.on_float("weekly", 9.9);
 
     // Unknown field fallthrough — covers FALSE branch of last dispatch.
     sink.on_string("_unknown_", "x");
@@ -5221,7 +5813,7 @@ TEST_CASE("note::api::CardWifi request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
+    // Cover known-key routing in operator[] (true branch for each routed field).
     req["name"] = note::string_view("x-name");
     req["org"] = note::string_view("x-org");
     req["password"] = note::string_view("x-password");
@@ -5232,6 +5824,13 @@ TEST_CASE("note::api::CardWifi request builder") {
 #endif
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.card.wifi();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -5274,7 +5873,7 @@ TEST_CASE("note::api::CardWifi sink field coverage") {
     note::api::CardWifi::Response::Sink sink(rsp, pool);
 
     // Feed response-level fields through the sink (on_number / on_string / on_bool).
-    sink.on_string("secure", "x-secure");
+    sink.on_bool("secure", true);
     sink.on_string("security", "x-security");
     sink.on_string("ssid", "x-ssid");
     sink.on_string("version", "x-version");
@@ -5321,13 +5920,20 @@ TEST_CASE("note::api::CardWireless request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
+    // Cover known-key routing in operator[] (true branch for each routed field).
     req["apn"] = note::string_view("x-apn");
     req["hours"] = int32_t{42};
     req["method"] = note::string_view("-");
     req["mode"] = note::string_view("-");
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.card.wireless();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -5366,10 +5972,11 @@ TEST_CASE("note::api::CardWireless sink field coverage") {
     note::api::CardWireless::Response::Sink sink(rsp, pool);
 
     // Feed response-level fields through the sink (on_number / on_string / on_bool).
-    sink.on_string("count", "x-count");
+    sink.on_number("count", "42");
     sink.on_string("status", "x-status");
 
     // Exercise on_int / on_float dispatch (separate from on_number).
+    sink.on_int("count", 99);
 
     // Unknown field fallthrough — covers FALSE branch of last dispatch.
     sink.on_string("_unknown_", "x");
@@ -5415,7 +6022,7 @@ TEST_CASE("note::api::CardWirelessPenalty::Check request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
+    // Cover known-key routing in operator[] (true branch for each routed field).
     req["add"] = int32_t{42};
     req["max"] = int32_t{42};
     req["min"] = int32_t{42};
@@ -5424,6 +6031,13 @@ TEST_CASE("note::api::CardWirelessPenalty::Check request builder") {
     req["set"] = true;
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.card.wireless.penalty.check();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -5470,15 +6084,18 @@ TEST_CASE("note::api::CardWirelessPenalty::Check sink field coverage") {
     note::api::CardWirelessPenalty::Check::Response::Sink sink(rsp, pool);
 
     // Feed response-level fields through the sink (on_number / on_string / on_bool).
-    sink.on_string("count", "x-count");
-    sink.on_string("minutes", "x-minutes");
+    sink.on_number("count", "42");
+    sink.on_number("minutes", "42");
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-    sink.on_string("seconds", "x-seconds");
+    sink.on_number("seconds", "42");
 #endif
     sink.on_string("status", "x-status");
 
     // Exercise on_int / on_float dispatch (separate from on_number).
+    sink.on_int("count", 99);
+    sink.on_int("minutes", 99);
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
+    sink.on_int("seconds", 99);
 #endif
 
     // Unknown field fallthrough — covers FALSE branch of last dispatch.
@@ -5523,7 +6140,7 @@ TEST_CASE("note::api::CardWirelessPenalty::Set request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
+    // Cover known-key routing in operator[] (true branch for each routed field).
     req["add"] = int32_t{42};
     req["max"] = int32_t{42};
     req["min"] = int32_t{42};
@@ -5531,6 +6148,13 @@ TEST_CASE("note::api::CardWirelessPenalty::Set request builder") {
     req["reset"] = true;
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.card.wireless.penalty.set();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -5577,15 +6201,18 @@ TEST_CASE("note::api::CardWirelessPenalty::Set sink field coverage") {
     note::api::CardWirelessPenalty::Set::Response::Sink sink(rsp, pool);
 
     // Feed response-level fields through the sink (on_number / on_string / on_bool).
-    sink.on_string("count", "x-count");
-    sink.on_string("minutes", "x-minutes");
+    sink.on_number("count", "42");
+    sink.on_number("minutes", "42");
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-    sink.on_string("seconds", "x-seconds");
+    sink.on_number("seconds", "42");
 #endif
     sink.on_string("status", "x-status");
 
     // Exercise on_int / on_float dispatch (separate from on_number).
+    sink.on_int("count", 99);
+    sink.on_int("minutes", 99);
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
+    sink.on_int("seconds", 99);
 #endif
 
     // Unknown field fallthrough — covers FALSE branch of last dispatch.
@@ -5630,7 +6257,7 @@ TEST_CASE("note::api::CardWirelessPenalty::Clear request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
+    // Cover known-key routing in operator[] (true branch for each routed field).
     req["add"] = int32_t{42};
     req["max"] = int32_t{42};
     req["min"] = int32_t{42};
@@ -5638,6 +6265,13 @@ TEST_CASE("note::api::CardWirelessPenalty::Clear request builder") {
     req["set"] = true;
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.card.wireless.penalty.clear();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -5684,15 +6318,18 @@ TEST_CASE("note::api::CardWirelessPenalty::Clear sink field coverage") {
     note::api::CardWirelessPenalty::Clear::Response::Sink sink(rsp, pool);
 
     // Feed response-level fields through the sink (on_number / on_string / on_bool).
-    sink.on_string("count", "x-count");
-    sink.on_string("minutes", "x-minutes");
+    sink.on_number("count", "42");
+    sink.on_number("minutes", "42");
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-    sink.on_string("seconds", "x-seconds");
+    sink.on_number("seconds", "42");
 #endif
     sink.on_string("status", "x-status");
 
     // Exercise on_int / on_float dispatch (separate from on_number).
+    sink.on_int("count", 99);
+    sink.on_int("minutes", 99);
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
+    sink.on_int("seconds", 99);
 #endif
 
     // Unknown field fallthrough — covers FALSE branch of last dispatch.
@@ -5733,12 +6370,19 @@ TEST_CASE("note::api::DfuGet request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
+    // Cover known-key routing in operator[] (true branch for each routed field).
     req["binary"] = true;
     req["length"] = int32_t{42};
     req["offset"] = int32_t{42};
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.dfu.get();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -5781,12 +6425,14 @@ TEST_CASE("note::api::DfuGet sink field coverage") {
     note::api::DfuGet::Response::Sink sink(rsp, pool);
 
     // Feed response-level fields through the sink (on_number / on_string / on_bool).
-    sink.on_string("cobs", "x-cobs");
-    sink.on_string("length", "x-length");
+    sink.on_number("cobs", "42");
+    sink.on_number("length", "42");
     sink.on_string("payload", "x-payload");
     sink.on_string("status", "x-status");
 
     // Exercise on_int / on_float dispatch (separate from on_number).
+    sink.on_int("cobs", 99);
+    sink.on_int("length", 99);
 
     // Unknown field fallthrough — covers FALSE branch of last dispatch.
     sink.on_string("_unknown_", "x");
@@ -5836,7 +6482,7 @@ TEST_CASE("note::api::DfuStatus request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
+    // Cover known-key routing in operator[] (true branch for each routed field).
     req["err"] = note::string_view("x-err");
     req["name"] = note::string_view("user");
     req["off"] = true;
@@ -5847,6 +6493,13 @@ TEST_CASE("note::api::DfuStatus request builder") {
     req["vvalue"] = note::string_view("x-vvalue");
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.dfu.status();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -5893,9 +6546,9 @@ TEST_CASE("note::api::DfuStatus sink body coverage") {
 
     // Feed response-level fields through the sink.
     sink.on_string("mode", "x-mode");
-    sink.on_string("off", "x-off");
-    sink.on_string("on", "x-on");
-    sink.on_string("pending", "x-pending");
+    sink.on_bool("off", true);
+    sink.on_bool("on", true);
+    sink.on_bool("pending", true);
     sink.on_string("status", "x-status");
 
     // Exercise on_int / on_float dispatch (separate from on_number).
@@ -5925,6 +6578,9 @@ TEST_CASE("note::api::DfuStatus sink body coverage") {
     sink.on_array_end("items");
     sink.on_object_end("body");
 
+    // Reset without body handler — covers the !body_handler_ branch.
+    sink.reset();
+
     // Exercise body path WITH a body handler — all method types.
     CoverageTestBody_ tbody{};
     note::StructSink<CoverageTestBody_> body_sink(tbody, pool);
@@ -5937,10 +6593,18 @@ TEST_CASE("note::api::DfuStatus sink body coverage") {
     sink.on_int("i", 1);
     sink.on_float("v", 42.0);
     sink.on_null("z");
+    // Nested object inside body with handler — covers body_handler_.send(object_begin/end).
+    sink.on_object_begin("nested");
+    sink.on_string("inner", "x");
+    sink.on_object_end("nested");
+    // Array inside body with handler — covers body_handler_.send(array_begin/end).
+    sink.on_array_begin("items");
+    sink.on_int("items", 1);
+    sink.on_array_end("items");
     sink.on_object_end("body");
     REQUIRE(tbody.v == 42.0f);
 
-    // Reset path.
+    // Reset with body handler — covers the body_handler_ true branch.
     sink.reset();
 }
 
@@ -5970,11 +6634,19 @@ TEST_CASE("note::api::EnvDefault::Set request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
+    // Cover known-key routing in operator[] (true branch for each routed field).
+    req["name"] = note::string_view("x-name");
     req["sync"] = true;
     req["text"] = note::string_view("x-text");
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.env.defaults().set(note::string_view("x-name"));
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -6001,10 +6673,18 @@ TEST_CASE("note::api::EnvDefault::Remove request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
+    // Cover known-key routing in operator[] (true branch for each routed field).
+    req["name"] = note::string_view("x-name");
     req["sync"] = true;
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.env.defaults().remove(note::string_view("x-name"));
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -6042,15 +6722,20 @@ TEST_CASE("note::api::EnvGet request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
+    // Cover known-key routing in operator[] (true branch for each routed field).
     req["name"] = note::string_view("x-name");
-#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-#endif
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
     req["time"] = int32_t{42};
 #endif
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.env.get();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -6096,11 +6781,12 @@ TEST_CASE("note::api::EnvGet sink body coverage") {
     // Feed response-level fields through the sink.
     sink.on_string("text", "x-text");
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-    sink.on_string("time", "x-time");
+    sink.on_number("time", "42");
 #endif
 
     // Exercise on_int / on_float dispatch (separate from on_number).
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+    sink.on_int("time", 99);
 #endif
 
     // Unknown field fallthrough — covers FALSE branch of last dispatch in each method.
@@ -6128,6 +6814,9 @@ TEST_CASE("note::api::EnvGet sink body coverage") {
     sink.on_array_end("items");
     sink.on_object_end("body");
 
+    // Reset without body handler — covers the !body_handler_ branch.
+    sink.reset();
+
     // Exercise body path WITH a body handler — all method types.
     CoverageTestBody_ tbody{};
     note::StructSink<CoverageTestBody_> body_sink(tbody, pool);
@@ -6140,10 +6829,18 @@ TEST_CASE("note::api::EnvGet sink body coverage") {
     sink.on_int("i", 1);
     sink.on_float("v", 42.0);
     sink.on_null("z");
+    // Nested object inside body with handler — covers body_handler_.send(object_begin/end).
+    sink.on_object_begin("nested");
+    sink.on_string("inner", "x");
+    sink.on_object_end("nested");
+    // Array inside body with handler — covers body_handler_.send(array_begin/end).
+    sink.on_array_begin("items");
+    sink.on_int("items", 1);
+    sink.on_array_end("items");
     sink.on_object_end("body");
     REQUIRE(tbody.v == 42.0f);
 
-    // Reset path.
+    // Reset with body handler — covers the body_handler_ true branch.
     sink.reset();
 }
 
@@ -6174,12 +6871,19 @@ TEST_CASE("note::api::EnvModified request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
+    // Cover known-key routing in operator[] (true branch for each routed field).
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
     req["time"] = int32_t{42};
 #endif
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.env.modified();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -6221,11 +6925,12 @@ TEST_CASE("note::api::EnvModified sink field coverage") {
 
     // Feed response-level fields through the sink (on_number / on_string / on_bool).
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-    sink.on_string("time", "x-time");
+    sink.on_number("time", "42");
 #endif
 
     // Exercise on_int / on_float dispatch (separate from on_number).
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+    sink.on_int("time", 99);
 #endif
 
     // Unknown field fallthrough — covers FALSE branch of last dispatch.
@@ -6263,10 +6968,18 @@ TEST_CASE("note::api::EnvSet request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
+    // Cover known-key routing in operator[] (true branch for each routed field).
+    req["name"] = note::string_view("x-name");
     req["text"] = note::string_view("x-text");
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.env.set(note::string_view("x-name"));
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -6308,11 +7021,12 @@ TEST_CASE("note::api::EnvSet sink field coverage") {
 
     // Feed response-level fields through the sink (on_number / on_string / on_bool).
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-    sink.on_string("time", "x-time");
+    sink.on_number("time", "42");
 #endif
 
     // Exercise on_int / on_float dispatch (separate from on_number).
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+    sink.on_int("time", 99);
 #endif
 
     // Unknown field fallthrough — covers FALSE branch of last dispatch.
@@ -6349,6 +7063,13 @@ TEST_CASE("note::api::EnvTemplate request builder") {
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.env.templates();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -6385,9 +7106,10 @@ TEST_CASE("note::api::EnvTemplate sink field coverage") {
     note::api::EnvTemplate::Response::Sink sink(rsp, pool);
 
     // Feed response-level fields through the sink (on_number / on_string / on_bool).
-    sink.on_string("bytes", "x-bytes");
+    sink.on_number("bytes", "42");
 
     // Exercise on_int / on_float dispatch (separate from on_number).
+    sink.on_int("bytes", 99);
 
     // Unknown field fallthrough — covers FALSE branch of last dispatch.
     sink.on_string("_unknown_", "x");
@@ -6425,10 +7147,17 @@ TEST_CASE("note::api::FileChanges request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
+    // Cover known-key routing in operator[] (true branch for each routed field).
     req["tracker"] = note::string_view("x-tracker");
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.file.changes();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -6469,11 +7198,13 @@ TEST_CASE("note::api::FileChanges sink field coverage") {
     note::api::FileChanges::Response::Sink sink(rsp, pool);
 
     // Feed response-level fields through the sink (on_number / on_string / on_bool).
-    sink.on_string("changes", "x-changes");
-    sink.on_string("pending", "x-pending");
-    sink.on_string("total", "x-total");
+    sink.on_number("changes", "42");
+    sink.on_bool("pending", true);
+    sink.on_number("total", "42");
 
     // Exercise on_int / on_float dispatch (separate from on_number).
+    sink.on_int("changes", 99);
+    sink.on_int("total", 99);
 
     // Unknown field fallthrough — covers FALSE branch of last dispatch.
     sink.on_string("_unknown_", "x");
@@ -6509,6 +7240,13 @@ TEST_CASE("note::api::FileChangesPending request builder") {
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.file.changes.pending();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -6549,11 +7287,13 @@ TEST_CASE("note::api::FileChangesPending sink field coverage") {
     note::api::FileChangesPending::Response::Sink sink(rsp, pool);
 
     // Feed response-level fields through the sink (on_number / on_string / on_bool).
-    sink.on_string("changes", "x-changes");
-    sink.on_string("pending", "x-pending");
-    sink.on_string("total", "x-total");
+    sink.on_number("changes", "42");
+    sink.on_bool("pending", true);
+    sink.on_number("total", "42");
 
     // Exercise on_int / on_float dispatch (separate from on_number).
+    sink.on_int("changes", 99);
+    sink.on_int("total", 99);
 
     // Unknown field fallthrough — covers FALSE branch of last dispatch.
     sink.on_string("_unknown_", "x");
@@ -6589,10 +7329,17 @@ TEST_CASE("note::api::FileClear request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
+    // Cover known-key routing in operator[] (true branch for each routed field).
     req["file"] = note::string_view("x-file");
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.file.clear();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -6618,9 +7365,15 @@ TEST_CASE("note::api::FileDelete request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.file.delete_();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -6646,10 +7399,17 @@ TEST_CASE("note::api::FileStats request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
+    // Cover known-key routing in operator[] (true branch for each routed field).
     req["file"] = note::string_view("x-file");
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.file.stats();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -6690,11 +7450,13 @@ TEST_CASE("note::api::FileStats sink field coverage") {
     note::api::FileStats::Response::Sink sink(rsp, pool);
 
     // Feed response-level fields through the sink (on_number / on_string / on_bool).
-    sink.on_string("changes", "x-changes");
-    sink.on_string("sync", "x-sync");
-    sink.on_string("total", "x-total");
+    sink.on_number("changes", "42");
+    sink.on_bool("sync", true);
+    sink.on_number("total", "42");
 
     // Exercise on_int / on_float dispatch (separate from on_number).
+    sink.on_int("changes", 99);
+    sink.on_int("total", 99);
 
     // Unknown field fallthrough — covers FALSE branch of last dispatch.
     sink.on_string("_unknown_", "x");
@@ -6730,6 +7492,13 @@ TEST_CASE("note::api::HubGet request builder") {
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.hub.get();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -6786,16 +7555,18 @@ TEST_CASE("note::api::HubGet sink field coverage") {
     // Feed response-level fields through the sink (on_number / on_string / on_bool).
     sink.on_string("device", "x-device");
     sink.on_string("host", "x-host");
-    sink.on_string("inbound", "x-inbound");
+    sink.on_number("inbound", "42");
     sink.on_string("mode", "x-mode");
-    sink.on_string("outbound", "x-outbound");
+    sink.on_number("outbound", "42");
     sink.on_string("product", "x-product");
     sink.on_string("sn", "x-sn");
-    sink.on_string("sync", "x-sync");
+    sink.on_bool("sync", true);
     sink.on_string("vinbound", "x-vinbound");
     sink.on_string("voutbound", "x-voutbound");
 
     // Exercise on_int / on_float dispatch (separate from on_number).
+    sink.on_int("inbound", 99);
+    sink.on_int("outbound", 99);
 
     // Unknown field fallthrough — covers FALSE branch of last dispatch.
     sink.on_string("_unknown_", "x");
@@ -6835,12 +7606,19 @@ TEST_CASE("note::api::HubLog request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
+    // Cover known-key routing in operator[] (true branch for each routed field).
     req["alert"] = true;
     req["sync"] = true;
     req["text"] = note::string_view("x-text");
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.hub.log();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -6934,7 +7712,7 @@ TEST_CASE("note::api::HubSet request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
+    // Cover known-key routing in operator[] (true branch for each routed field).
     req["align"] = true;
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
     req["details"] = note::string_view("x-details");
@@ -6972,6 +7750,13 @@ TEST_CASE("note::api::HubSet request builder") {
     req["voutbound"] = note::string_view("x-voutbound");
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.hub.set();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -7001,12 +7786,19 @@ TEST_CASE("note::api::HubSignal request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
+    // Cover known-key routing in operator[] (true branch for each routed field).
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
     req["seconds"] = int32_t{42};
 #endif
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.hub.signal();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -7046,10 +7838,11 @@ TEST_CASE("note::api::HubSignal sink body coverage") {
     note::api::HubSignal::Response::Sink sink(rsp, pool);
 
     // Feed response-level fields through the sink.
-    sink.on_string("connected", "x-connected");
-    sink.on_string("signals", "x-signals");
+    sink.on_bool("connected", true);
+    sink.on_number("signals", "42");
 
     // Exercise on_int / on_float dispatch (separate from on_number).
+    sink.on_int("signals", 99);
 
     // Unknown field fallthrough — covers FALSE branch of last dispatch in each method.
     sink.on_string("_unknown_", "x");
@@ -7076,6 +7869,9 @@ TEST_CASE("note::api::HubSignal sink body coverage") {
     sink.on_array_end("items");
     sink.on_object_end("body");
 
+    // Reset without body handler — covers the !body_handler_ branch.
+    sink.reset();
+
     // Exercise body path WITH a body handler — all method types.
     CoverageTestBody_ tbody{};
     note::StructSink<CoverageTestBody_> body_sink(tbody, pool);
@@ -7088,10 +7884,18 @@ TEST_CASE("note::api::HubSignal sink body coverage") {
     sink.on_int("i", 1);
     sink.on_float("v", 42.0);
     sink.on_null("z");
+    // Nested object inside body with handler — covers body_handler_.send(object_begin/end).
+    sink.on_object_begin("nested");
+    sink.on_string("inner", "x");
+    sink.on_object_end("nested");
+    // Array inside body with handler — covers body_handler_.send(array_begin/end).
+    sink.on_array_begin("items");
+    sink.on_int("items", 1);
+    sink.on_array_end("items");
     sink.on_object_end("body");
     REQUIRE(tbody.v == 42.0f);
 
-    // Reset path.
+    // Reset with body handler — covers the body_handler_ true branch.
     sink.reset();
 }
 
@@ -7118,6 +7922,13 @@ TEST_CASE("note::api::HubStatus request builder") {
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.hub.status();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -7156,7 +7967,7 @@ TEST_CASE("note::api::HubStatus sink field coverage") {
     note::api::HubStatus::Response::Sink sink(rsp, pool);
 
     // Feed response-level fields through the sink (on_number / on_string / on_bool).
-    sink.on_string("connected", "x-connected");
+    sink.on_bool("connected", true);
     sink.on_string("status", "x-status");
 
     // Exercise on_int / on_float dispatch (separate from on_number).
@@ -7203,7 +8014,7 @@ TEST_CASE("note::api::HubSync request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
+    // Cover known-key routing in operator[] (true branch for each routed field).
     req["allow"] = true;
     req["in"] = true;
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
@@ -7211,6 +8022,13 @@ TEST_CASE("note::api::HubSync request builder") {
 #endif
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.hub.sync();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -7236,10 +8054,17 @@ TEST_CASE("note::api::HubSyncStatus request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
+    // Cover known-key routing in operator[] (true branch for each routed field).
     req["sync"] = true;
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.hub.sync.status();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -7300,25 +8125,29 @@ TEST_CASE("note::api::HubSyncStatus sink field coverage") {
     note::api::HubSyncStatus::Response::Sink sink(rsp, pool);
 
     // Feed response-level fields through the sink (on_number / on_string / on_bool).
-    sink.on_string("alert", "x-alert");
-    sink.on_string("completed", "x-completed");
+    sink.on_bool("alert", true);
+    sink.on_number("completed", "42");
     sink.on_string("mode", "x-mode");
-    sink.on_string("requested", "x-requested");
+    sink.on_number("requested", "42");
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 1, 1) || !defined(NOTE_API_STRICT)
-    sink.on_string("scan", "x-scan");
+    sink.on_bool("scan", true);
 #endif
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-    sink.on_string("seconds", "x-seconds");
+    sink.on_number("seconds", "42");
 #endif
     sink.on_string("status", "x-status");
-    sink.on_string("sync", "x-sync");
-    sink.on_string("time", "x-time");
+    sink.on_bool("sync", true);
+    sink.on_number("time", "42");
 
     // Exercise on_int / on_float dispatch (separate from on_number).
+    sink.on_int("completed", 99);
+    sink.on_int("requested", 99);
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 1, 1) || !defined(NOTE_API_STRICT)
 #endif
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
+    sink.on_int("seconds", 99);
 #endif
+    sink.on_int("time", 99);
 
     // Unknown field fallthrough — covers FALSE branch of last dispatch.
     sink.on_string("_unknown_", "x");
@@ -7394,7 +8223,7 @@ TEST_CASE("note::api::NoteAdd request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
+    // Cover known-key routing in operator[] (true branch for each routed field).
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
     req["binary"] = true;
 #endif
@@ -7418,6 +8247,13 @@ TEST_CASE("note::api::NoteAdd request builder") {
     req["verify"] = true;
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.note.add();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -7459,10 +8295,11 @@ TEST_CASE("note::api::NoteAdd sink field coverage") {
 
     // Feed response-level fields through the sink (on_number / on_string / on_bool).
     sink.on_string("note", "x-note");
-    sink.on_string("template", "x-template");
-    sink.on_string("total", "x-total");
+    sink.on_bool("template", true);
+    sink.on_number("total", "42");
 
     // Exercise on_int / on_float dispatch (separate from on_number).
+    sink.on_int("total", 99);
 
     // Unknown field fallthrough — covers FALSE branch of last dispatch.
     sink.on_string("_unknown_", "x");
@@ -7510,7 +8347,7 @@ TEST_CASE("note::api::NoteChanges::Peek request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
+    // Cover known-key routing in operator[] (true branch for each routed field).
     req["deleted"] = true;
     req["file"] = note::string_view("x-file");
     req["max"] = int32_t{42};
@@ -7520,6 +8357,13 @@ TEST_CASE("note::api::NoteChanges::Peek request builder") {
     req["tracker"] = note::string_view("x-tracker");
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.note.changes().peek();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -7558,10 +8402,12 @@ TEST_CASE("note::api::NoteChanges::Peek sink field coverage") {
     note::api::NoteChanges::Peek::Response::Sink sink(rsp, pool);
 
     // Feed response-level fields through the sink (on_number / on_string / on_bool).
-    sink.on_string("changes", "x-changes");
-    sink.on_string("total", "x-total");
+    sink.on_number("changes", "42");
+    sink.on_number("total", "42");
 
     // Exercise on_int / on_float dispatch (separate from on_number).
+    sink.on_int("changes", 99);
+    sink.on_int("total", 99);
 
     // Unknown field fallthrough — covers FALSE branch of last dispatch.
     sink.on_string("_unknown_", "x");
@@ -7608,8 +8454,9 @@ TEST_CASE("note::api::NoteChanges::Pop request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
+    // Cover known-key routing in operator[] (true branch for each routed field).
     req["deleted"] = true;
+    req["file"] = note::string_view("x-file");
     req["max"] = int32_t{42};
     req["reset"] = true;
     req["start"] = true;
@@ -7617,6 +8464,13 @@ TEST_CASE("note::api::NoteChanges::Pop request builder") {
     req["tracker"] = note::string_view("x-tracker");
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.note.changes().pop(note::string_view("x-file"));
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -7655,10 +8509,12 @@ TEST_CASE("note::api::NoteChanges::Pop sink field coverage") {
     note::api::NoteChanges::Pop::Response::Sink sink(rsp, pool);
 
     // Feed response-level fields through the sink (on_number / on_string / on_bool).
-    sink.on_string("changes", "x-changes");
-    sink.on_string("total", "x-total");
+    sink.on_number("changes", "42");
+    sink.on_number("total", "42");
 
     // Exercise on_int / on_float dispatch (separate from on_number).
+    sink.on_int("changes", 99);
+    sink.on_int("total", 99);
 
     // Unknown field fallthrough — covers FALSE branch of last dispatch.
     sink.on_string("_unknown_", "x");
@@ -7696,10 +8552,19 @@ TEST_CASE("note::api::NoteDelete request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
+    // Cover known-key routing in operator[] (true branch for each routed field).
+    req["file"] = note::string_view("x-file");
+    req["note"] = note::string_view("x-note");
     req["verify"] = true;
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.note.delete_(note::string_view("x-file"), note::string_view("x-note"));
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -7731,13 +8596,20 @@ TEST_CASE("note::api::NoteGet::Read request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
+    // Cover known-key routing in operator[] (true branch for each routed field).
     req["decrypt"] = true;
     req["deleted"] = true;
     req["file"] = note::string_view("x-file");
     req["note"] = note::string_view("x-note");
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.note.get().read();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -7778,9 +8650,10 @@ TEST_CASE("note::api::NoteGet::Read sink body coverage") {
 
     // Feed response-level fields through the sink.
     sink.on_string("payload", "x-payload");
-    sink.on_string("time", "x-time");
+    sink.on_number("time", "42");
 
     // Exercise on_int / on_float dispatch (separate from on_number).
+    sink.on_int("time", 99);
 
     // Unknown field fallthrough — covers FALSE branch of last dispatch in each method.
     sink.on_string("_unknown_", "x");
@@ -7807,6 +8680,9 @@ TEST_CASE("note::api::NoteGet::Read sink body coverage") {
     sink.on_array_end("items");
     sink.on_object_end("body");
 
+    // Reset without body handler — covers the !body_handler_ branch.
+    sink.reset();
+
     // Exercise body path WITH a body handler — all method types.
     CoverageTestBody_ tbody{};
     note::StructSink<CoverageTestBody_> body_sink(tbody, pool);
@@ -7819,10 +8695,18 @@ TEST_CASE("note::api::NoteGet::Read sink body coverage") {
     sink.on_int("i", 1);
     sink.on_float("v", 42.0);
     sink.on_null("z");
+    // Nested object inside body with handler — covers body_handler_.send(object_begin/end).
+    sink.on_object_begin("nested");
+    sink.on_string("inner", "x");
+    sink.on_object_end("nested");
+    // Array inside body with handler — covers body_handler_.send(array_begin/end).
+    sink.on_array_begin("items");
+    sink.on_int("items", 1);
+    sink.on_array_end("items");
     sink.on_object_end("body");
     REQUIRE(tbody.v == 42.0f);
 
-    // Reset path.
+    // Reset with body handler — covers the body_handler_ true branch.
     sink.reset();
 }
 
@@ -7855,13 +8739,20 @@ TEST_CASE("note::api::NoteGet::Pop request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
+    // Cover known-key routing in operator[] (true branch for each routed field).
     req["decrypt"] = true;
     req["deleted"] = true;
     req["file"] = note::string_view("x-file");
     req["note"] = note::string_view("x-note");
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.note.get().pop();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -7902,9 +8793,10 @@ TEST_CASE("note::api::NoteGet::Pop sink body coverage") {
 
     // Feed response-level fields through the sink.
     sink.on_string("payload", "x-payload");
-    sink.on_string("time", "x-time");
+    sink.on_number("time", "42");
 
     // Exercise on_int / on_float dispatch (separate from on_number).
+    sink.on_int("time", 99);
 
     // Unknown field fallthrough — covers FALSE branch of last dispatch in each method.
     sink.on_string("_unknown_", "x");
@@ -7931,6 +8823,9 @@ TEST_CASE("note::api::NoteGet::Pop sink body coverage") {
     sink.on_array_end("items");
     sink.on_object_end("body");
 
+    // Reset without body handler — covers the !body_handler_ branch.
+    sink.reset();
+
     // Exercise body path WITH a body handler — all method types.
     CoverageTestBody_ tbody{};
     note::StructSink<CoverageTestBody_> body_sink(tbody, pool);
@@ -7943,10 +8838,18 @@ TEST_CASE("note::api::NoteGet::Pop sink body coverage") {
     sink.on_int("i", 1);
     sink.on_float("v", 42.0);
     sink.on_null("z");
+    // Nested object inside body with handler — covers body_handler_.send(object_begin/end).
+    sink.on_object_begin("nested");
+    sink.on_string("inner", "x");
+    sink.on_object_end("nested");
+    // Array inside body with handler — covers body_handler_.send(array_begin/end).
+    sink.on_array_begin("items");
+    sink.on_int("items", 1);
+    sink.on_array_end("items");
     sink.on_object_end("body");
     REQUIRE(tbody.v == 42.0f);
 
-    // Reset path.
+    // Reset with body handler — covers the body_handler_ true branch.
     sink.reset();
 }
 
@@ -7990,8 +8893,9 @@ TEST_CASE("note::api::NoteTemplate::Define request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
+    // Cover known-key routing in operator[] (true branch for each routed field).
     req["delete"] = true;
+    req["file"] = note::string_view("x-file");
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
     req["format"] = note::string_view("x-format");
 #endif
@@ -8002,6 +8906,13 @@ TEST_CASE("note::api::NoteTemplate::Define request builder") {
 #endif
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.note.templates().define(note::string_view("x-file"));
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -8053,18 +8964,20 @@ TEST_CASE("note::api::NoteTemplate::Define sink body coverage") {
     note::api::NoteTemplate::Define::Response::Sink sink(rsp, pool);
 
     // Feed response-level fields through the sink.
-    sink.on_string("bytes", "x-bytes");
+    sink.on_number("bytes", "42");
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
     sink.on_string("format", "x-format");
 #endif
-    sink.on_string("length", "x-length");
+    sink.on_number("length", "42");
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
-    sink.on_string("template", "x-template");
+    sink.on_bool("template", true);
 #endif
 
     // Exercise on_int / on_float dispatch (separate from on_number).
+    sink.on_int("bytes", 99);
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
 #endif
+    sink.on_int("length", 99);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
 #endif
 
@@ -8093,6 +9006,9 @@ TEST_CASE("note::api::NoteTemplate::Define sink body coverage") {
     sink.on_array_end("items");
     sink.on_object_end("body");
 
+    // Reset without body handler — covers the !body_handler_ branch.
+    sink.reset();
+
     // Exercise body path WITH a body handler — all method types.
     CoverageTestBody_ tbody{};
     note::StructSink<CoverageTestBody_> body_sink(tbody, pool);
@@ -8105,10 +9021,18 @@ TEST_CASE("note::api::NoteTemplate::Define sink body coverage") {
     sink.on_int("i", 1);
     sink.on_float("v", 42.0);
     sink.on_null("z");
+    // Nested object inside body with handler — covers body_handler_.send(object_begin/end).
+    sink.on_object_begin("nested");
+    sink.on_string("inner", "x");
+    sink.on_object_end("nested");
+    // Array inside body with handler — covers body_handler_.send(array_begin/end).
+    sink.on_array_begin("items");
+    sink.on_int("items", 1);
+    sink.on_array_end("items");
     sink.on_object_end("body");
     REQUIRE(tbody.v == 42.0f);
 
-    // Reset path.
+    // Reset with body handler — covers the body_handler_ true branch.
     sink.reset();
 }
 
@@ -8150,7 +9074,8 @@ TEST_CASE("note::api::NoteTemplate::Remove request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
+    // Cover known-key routing in operator[] (true branch for each routed field).
+    req["file"] = note::string_view("x-file");
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
     req["format"] = note::string_view("compact");
 #endif
@@ -8161,6 +9086,13 @@ TEST_CASE("note::api::NoteTemplate::Remove request builder") {
 #endif
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.note.templates().remove(note::string_view("x-file"));
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -8212,18 +9144,20 @@ TEST_CASE("note::api::NoteTemplate::Remove sink body coverage") {
     note::api::NoteTemplate::Remove::Response::Sink sink(rsp, pool);
 
     // Feed response-level fields through the sink.
-    sink.on_string("bytes", "x-bytes");
+    sink.on_number("bytes", "42");
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
     sink.on_string("format", "x-format");
 #endif
-    sink.on_string("length", "x-length");
+    sink.on_number("length", "42");
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
-    sink.on_string("template", "x-template");
+    sink.on_bool("template", true);
 #endif
 
     // Exercise on_int / on_float dispatch (separate from on_number).
+    sink.on_int("bytes", 99);
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
 #endif
+    sink.on_int("length", 99);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
 #endif
 
@@ -8252,6 +9186,9 @@ TEST_CASE("note::api::NoteTemplate::Remove sink body coverage") {
     sink.on_array_end("items");
     sink.on_object_end("body");
 
+    // Reset without body handler — covers the !body_handler_ branch.
+    sink.reset();
+
     // Exercise body path WITH a body handler — all method types.
     CoverageTestBody_ tbody{};
     note::StructSink<CoverageTestBody_> body_sink(tbody, pool);
@@ -8264,10 +9201,18 @@ TEST_CASE("note::api::NoteTemplate::Remove sink body coverage") {
     sink.on_int("i", 1);
     sink.on_float("v", 42.0);
     sink.on_null("z");
+    // Nested object inside body with handler — covers body_handler_.send(object_begin/end).
+    sink.on_object_begin("nested");
+    sink.on_string("inner", "x");
+    sink.on_object_end("nested");
+    // Array inside body with handler — covers body_handler_.send(array_begin/end).
+    sink.on_array_begin("items");
+    sink.on_int("items", 1);
+    sink.on_array_end("items");
     sink.on_object_end("body");
     REQUIRE(tbody.v == 42.0f);
 
-    // Reset path.
+    // Reset with body handler — covers the body_handler_ true branch.
     sink.reset();
 }
 
@@ -8298,11 +9243,20 @@ TEST_CASE("note::api::NoteUpdate request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
+    // Cover known-key routing in operator[] (true branch for each routed field).
+    req["file"] = note::string_view("x-file");
+    req["note"] = note::string_view("x-note");
     req["payload"] = note::string_view("x-payload");
     req["verify"] = true;
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.note.update(note::string_view("x-file"), note::string_view("x-note"));
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -8330,11 +9284,18 @@ TEST_CASE("note::api::NtnGps request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
+    // Cover known-key routing in operator[] (true branch for each routed field).
     req["off"] = true;
     req["on"] = true;
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.ntn.gps();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -8373,8 +9334,8 @@ TEST_CASE("note::api::NtnGps sink field coverage") {
     note::api::NtnGps::Response::Sink sink(rsp, pool);
 
     // Feed response-level fields through the sink (on_number / on_string / on_bool).
-    sink.on_string("off", "x-off");
-    sink.on_string("on", "x-on");
+    sink.on_bool("off", true);
+    sink.on_bool("on", true);
 
     // Exercise on_int / on_float dispatch (separate from on_number).
 
@@ -8412,6 +9373,13 @@ TEST_CASE("note::api::NtnReset request builder") {
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.ntn.reset();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -8437,6 +9405,13 @@ TEST_CASE("note::api::NtnStatus request builder") {
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.ntn.status();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -8516,11 +9491,18 @@ TEST_CASE("note::api::VarDelete request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
+    // Cover known-key routing in operator[] (true branch for each routed field).
     req["file"] = note::string_view("x-file");
     req["name"] = note::string_view("x-name");
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.var.delete_();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -8548,11 +9530,18 @@ TEST_CASE("note::api::VarGet request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
+    // Cover known-key routing in operator[] (true branch for each routed field).
     req["file"] = note::string_view("x-file");
     req["name"] = note::string_view("x-name");
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.var.get();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -8593,11 +9582,12 @@ TEST_CASE("note::api::VarGet sink field coverage") {
     note::api::VarGet::Response::Sink sink(rsp, pool);
 
     // Feed response-level fields through the sink (on_number / on_string / on_bool).
-    sink.on_string("flag", "x-flag");
+    sink.on_bool("flag", true);
     sink.on_string("text", "x-text");
-    sink.on_string("value", "x-value");
+    sink.on_number("value", "3.14");
 
     // Exercise on_int / on_float dispatch (separate from on_number).
+    sink.on_float("value", 9.9);
 
     // Unknown field fallthrough — covers FALSE branch of last dispatch.
     sink.on_string("_unknown_", "x");
@@ -8647,7 +9637,7 @@ TEST_CASE("note::api::VarSet request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
+    // Cover known-key routing in operator[] (true branch for each routed field).
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 3, 1) || !defined(NOTE_API_STRICT)
     req["file"] = note::string_view("x-file");
 #endif
@@ -8658,6 +9648,13 @@ TEST_CASE("note::api::VarSet request builder") {
     req["value"] = 1.5;
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.var.set();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -8689,13 +9686,20 @@ TEST_CASE("note::api::Web request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
+    // Cover known-key routing in operator[] (true branch for each routed field).
     req["content"] = note::string_view("x-content");
     req["method"] = note::string_view("CONNECT");
     req["name"] = note::string_view("x-name");
     req["route"] = note::string_view("x-route");
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.web.request();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -8741,13 +9745,16 @@ TEST_CASE("note::api::Web sink body coverage") {
     note::api::Web::Response::Sink sink(rsp, pool);
 
     // Feed response-level fields through the sink.
-    sink.on_string("cobs", "x-cobs");
-    sink.on_string("length", "x-length");
+    sink.on_number("cobs", "42");
+    sink.on_number("length", "42");
     sink.on_string("payload", "x-payload");
-    sink.on_string("result", "x-result");
+    sink.on_number("result", "42");
     sink.on_string("status", "x-status");
 
     // Exercise on_int / on_float dispatch (separate from on_number).
+    sink.on_int("cobs", 99);
+    sink.on_int("length", 99);
+    sink.on_int("result", 99);
 
     // Unknown field fallthrough — covers FALSE branch of last dispatch in each method.
     sink.on_string("_unknown_", "x");
@@ -8774,6 +9781,9 @@ TEST_CASE("note::api::Web sink body coverage") {
     sink.on_array_end("items");
     sink.on_object_end("body");
 
+    // Reset without body handler — covers the !body_handler_ branch.
+    sink.reset();
+
     // Exercise body path WITH a body handler — all method types.
     CoverageTestBody_ tbody{};
     note::StructSink<CoverageTestBody_> body_sink(tbody, pool);
@@ -8786,10 +9796,18 @@ TEST_CASE("note::api::Web sink body coverage") {
     sink.on_int("i", 1);
     sink.on_float("v", 42.0);
     sink.on_null("z");
+    // Nested object inside body with handler — covers body_handler_.send(object_begin/end).
+    sink.on_object_begin("nested");
+    sink.on_string("inner", "x");
+    sink.on_object_end("nested");
+    // Array inside body with handler — covers body_handler_.send(array_begin/end).
+    sink.on_array_begin("items");
+    sink.on_int("items", 1);
+    sink.on_array_end("items");
     sink.on_object_end("body");
     REQUIRE(tbody.v == 42.0f);
 
-    // Reset path.
+    // Reset with body handler — covers the body_handler_ true branch.
     sink.reset();
 }
 
@@ -8832,7 +9850,7 @@ TEST_CASE("note::api::WebDelete request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
+    // Cover known-key routing in operator[] (true branch for each routed field).
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
     req["async"] = true;
 #endif
@@ -8844,6 +9862,13 @@ TEST_CASE("note::api::WebDelete request builder") {
     req["seconds"] = int32_t{42};
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.web.delete_();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -8890,12 +9915,15 @@ TEST_CASE("note::api::WebDelete sink body coverage") {
 
     // Feed response-level fields through the sink.
     sink.on_string("payload", "x-payload");
-    sink.on_string("result", "x-result");
+    sink.on_number("result", "42");
     sink.on_string("status", "x-status");
-    sink.on_string("cobs", "x-cobs");
-    sink.on_string("length", "x-length");
+    sink.on_number("cobs", "42");
+    sink.on_number("length", "42");
 
     // Exercise on_int / on_float dispatch (separate from on_number).
+    sink.on_int("result", 99);
+    sink.on_int("cobs", 99);
+    sink.on_int("length", 99);
 
     // Unknown field fallthrough — covers FALSE branch of last dispatch in each method.
     sink.on_string("_unknown_", "x");
@@ -8922,6 +9950,9 @@ TEST_CASE("note::api::WebDelete sink body coverage") {
     sink.on_array_end("items");
     sink.on_object_end("body");
 
+    // Reset without body handler — covers the !body_handler_ branch.
+    sink.reset();
+
     // Exercise body path WITH a body handler — all method types.
     CoverageTestBody_ tbody{};
     note::StructSink<CoverageTestBody_> body_sink(tbody, pool);
@@ -8934,10 +9965,18 @@ TEST_CASE("note::api::WebDelete sink body coverage") {
     sink.on_int("i", 1);
     sink.on_float("v", 42.0);
     sink.on_null("z");
+    // Nested object inside body with handler — covers body_handler_.send(object_begin/end).
+    sink.on_object_begin("nested");
+    sink.on_string("inner", "x");
+    sink.on_object_end("nested");
+    // Array inside body with handler — covers body_handler_.send(array_begin/end).
+    sink.on_array_begin("items");
+    sink.on_int("items", 1);
+    sink.on_array_end("items");
     sink.on_object_end("body");
     REQUIRE(tbody.v == 42.0f);
 
-    // Reset path.
+    // Reset with body handler — covers the body_handler_ true branch.
     sink.reset();
 }
 
@@ -8984,7 +10023,7 @@ TEST_CASE("note::api::WebGet request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
+    // Cover known-key routing in operator[] (true branch for each routed field).
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
     req["binary"] = true;
 #endif
@@ -8998,6 +10037,13 @@ TEST_CASE("note::api::WebGet request builder") {
     req["seconds"] = int32_t{42};
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.web.get();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -9041,12 +10087,15 @@ TEST_CASE("note::api::WebGet sink body coverage") {
     note::api::WebGet::Response::Sink sink(rsp, pool);
 
     // Feed response-level fields through the sink.
-    sink.on_string("cobs", "x-cobs");
-    sink.on_string("length", "x-length");
+    sink.on_number("cobs", "42");
+    sink.on_number("length", "42");
     sink.on_string("payload", "x-payload");
-    sink.on_string("result", "x-result");
+    sink.on_number("result", "42");
 
     // Exercise on_int / on_float dispatch (separate from on_number).
+    sink.on_int("cobs", 99);
+    sink.on_int("length", 99);
+    sink.on_int("result", 99);
 
     // Unknown field fallthrough — covers FALSE branch of last dispatch in each method.
     sink.on_string("_unknown_", "x");
@@ -9073,6 +10122,9 @@ TEST_CASE("note::api::WebGet sink body coverage") {
     sink.on_array_end("items");
     sink.on_object_end("body");
 
+    // Reset without body handler — covers the !body_handler_ branch.
+    sink.reset();
+
     // Exercise body path WITH a body handler — all method types.
     CoverageTestBody_ tbody{};
     note::StructSink<CoverageTestBody_> body_sink(tbody, pool);
@@ -9085,10 +10137,18 @@ TEST_CASE("note::api::WebGet sink body coverage") {
     sink.on_int("i", 1);
     sink.on_float("v", 42.0);
     sink.on_null("z");
+    // Nested object inside body with handler — covers body_handler_.send(object_begin/end).
+    sink.on_object_begin("nested");
+    sink.on_string("inner", "x");
+    sink.on_object_end("nested");
+    // Array inside body with handler — covers body_handler_.send(array_begin/end).
+    sink.on_array_begin("items");
+    sink.on_int("items", 1);
+    sink.on_array_end("items");
     sink.on_object_end("body");
     REQUIRE(tbody.v == 42.0f);
 
-    // Reset path.
+    // Reset with body handler — covers the body_handler_ true branch.
     sink.reset();
 }
 
@@ -9153,7 +10213,7 @@ TEST_CASE("note::api::WebPost request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
+    // Cover known-key routing in operator[] (true branch for each routed field).
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
     req["async"] = true;
 #endif
@@ -9176,6 +10236,13 @@ TEST_CASE("note::api::WebPost request builder") {
     req["verify"] = true;
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.web.post();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -9226,16 +10293,19 @@ TEST_CASE("note::api::WebPost sink body coverage") {
 
     // Feed response-level fields through the sink.
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
-    sink.on_string("cobs", "x-cobs");
+    sink.on_number("cobs", "42");
 #endif
-    sink.on_string("length", "x-length");
+    sink.on_number("length", "42");
     sink.on_string("payload", "x-payload");
-    sink.on_string("result", "x-result");
+    sink.on_number("result", "42");
     sink.on_string("status", "x-status");
 
     // Exercise on_int / on_float dispatch (separate from on_number).
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
+    sink.on_int("cobs", 99);
 #endif
+    sink.on_int("length", 99);
+    sink.on_int("result", 99);
 
     // Unknown field fallthrough — covers FALSE branch of last dispatch in each method.
     sink.on_string("_unknown_", "x");
@@ -9262,6 +10332,9 @@ TEST_CASE("note::api::WebPost sink body coverage") {
     sink.on_array_end("items");
     sink.on_object_end("body");
 
+    // Reset without body handler — covers the !body_handler_ branch.
+    sink.reset();
+
     // Exercise body path WITH a body handler — all method types.
     CoverageTestBody_ tbody{};
     note::StructSink<CoverageTestBody_> body_sink(tbody, pool);
@@ -9274,10 +10347,18 @@ TEST_CASE("note::api::WebPost sink body coverage") {
     sink.on_int("i", 1);
     sink.on_float("v", 42.0);
     sink.on_null("z");
+    // Nested object inside body with handler — covers body_handler_.send(object_begin/end).
+    sink.on_object_begin("nested");
+    sink.on_string("inner", "x");
+    sink.on_object_end("nested");
+    // Array inside body with handler — covers body_handler_.send(array_begin/end).
+    sink.on_array_begin("items");
+    sink.on_int("items", 1);
+    sink.on_array_end("items");
     sink.on_object_end("body");
     REQUIRE(tbody.v == 42.0f);
 
-    // Reset path.
+    // Reset with body handler — covers the body_handler_ true branch.
     sink.reset();
 }
 
@@ -9342,7 +10423,7 @@ TEST_CASE("note::api::WebPut request builder") {
     // Cover extras overflow (extras_count_ >= NOTE_EXTRAS_MAX false branches)
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
-    // Cover known-key routing in operator[] (true branch for each settable field)
+    // Cover known-key routing in operator[] (true branch for each routed field).
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
     req["async"] = true;
 #endif
@@ -9365,6 +10446,13 @@ TEST_CASE("note::api::WebPut request builder") {
     req["verify"] = true;
     // Cover command()
     req.command();
+    // Cover streaming transport execute path in Notecard::execute().
+    {
+        StreamingHarness sh;
+        sh.hal.queue_response("{}");
+        auto sreq = sh.api.web.put();
+        sreq.execute();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -9411,12 +10499,15 @@ TEST_CASE("note::api::WebPut sink body coverage") {
 
     // Feed response-level fields through the sink.
     sink.on_string("payload", "x-payload");
-    sink.on_string("result", "x-result");
+    sink.on_number("result", "42");
     sink.on_string("status", "x-status");
-    sink.on_string("cobs", "x-cobs");
-    sink.on_string("length", "x-length");
+    sink.on_number("cobs", "42");
+    sink.on_number("length", "42");
 
     // Exercise on_int / on_float dispatch (separate from on_number).
+    sink.on_int("result", 99);
+    sink.on_int("cobs", 99);
+    sink.on_int("length", 99);
 
     // Unknown field fallthrough — covers FALSE branch of last dispatch in each method.
     sink.on_string("_unknown_", "x");
@@ -9443,6 +10534,9 @@ TEST_CASE("note::api::WebPut sink body coverage") {
     sink.on_array_end("items");
     sink.on_object_end("body");
 
+    // Reset without body handler — covers the !body_handler_ branch.
+    sink.reset();
+
     // Exercise body path WITH a body handler — all method types.
     CoverageTestBody_ tbody{};
     note::StructSink<CoverageTestBody_> body_sink(tbody, pool);
@@ -9455,10 +10549,18 @@ TEST_CASE("note::api::WebPut sink body coverage") {
     sink.on_int("i", 1);
     sink.on_float("v", 42.0);
     sink.on_null("z");
+    // Nested object inside body with handler — covers body_handler_.send(object_begin/end).
+    sink.on_object_begin("nested");
+    sink.on_string("inner", "x");
+    sink.on_object_end("nested");
+    // Array inside body with handler — covers body_handler_.send(array_begin/end).
+    sink.on_array_begin("items");
+    sink.on_int("items", 1);
+    sink.on_array_end("items");
     sink.on_object_end("body");
     REQUIRE(tbody.v == 42.0f);
 
-    // Reset path.
+    // Reset with body handler — covers the body_handler_ true branch.
     sink.reset();
 }
 

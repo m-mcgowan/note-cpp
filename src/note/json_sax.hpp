@@ -285,12 +285,34 @@ private:
     char peek() const { return pos_ < len_ ? json_[pos_] : '\0'; }
     char advance() { return pos_ < len_ ? json_[pos_++] : '\0'; }
 
-    void skip_ws() {
-        while (pos_ < len_) {
-            char c = json_[pos_];
-            if (c != ' ' && c != '\t' && c != '\n' && c != '\r') break;
-            ++pos_;
+    static bool is_ws(unsigned char c) {
+        switch (c) {
+        case ' ': case '\t': case '\n': case '\r': return true;
+        default: return false;
         }
+    }
+
+    static bool is_digit(char c) {
+        return static_cast<unsigned>(c - '0') < 10;
+    }
+
+    static bool is_hex(char c) {
+        return is_digit(c)
+            || (static_cast<unsigned>(c - 'a') < 6)
+            || (static_cast<unsigned>(c - 'A') < 6);
+    }
+
+    /// Returns hex digit value (0-15) or -1 if not hex.
+    static int hex_val(char c) {
+        if (is_digit(c)) return c - '0';
+        if (static_cast<unsigned>(c - 'a') < 6) return c - 'a' + 10;
+        if (static_cast<unsigned>(c - 'A') < 6) return c - 'A' + 10;
+        return -1;
+    }
+
+    void skip_ws() {
+        while (pos_ < len_ && is_ws(static_cast<unsigned char>(json_[pos_])))
+            ++pos_;
     }
 
     // Parse a JSON string. Returns the raw content between quotes.
@@ -323,8 +345,7 @@ private:
                     ++pos_;
                     for (int i = 0; i < 4 && pos_ < len_; ++i, ++pos_) {
                         char h = json_[pos_];
-                        if (!((h >= '0' && h <= '9') || (h >= 'a' && h <= 'f') ||
-                              (h >= 'A' && h <= 'F')))
+                        if (!is_hex(h))
                             return NOTE_ERR("invalid hex in \\u escape");
                     }
                     continue;
@@ -360,11 +381,8 @@ private:
                     ++i;
                     uint16_t cp = 0;
                     for (int j = 0; j < 4 && i < src_len; ++j, ++i) {
-                        cp <<= 4;
-                        char h = src[i];
-                        if (h >= '0' && h <= '9') cp = static_cast<uint16_t>(cp | (h - '0'));
-                        else if (h >= 'a' && h <= 'f') cp = static_cast<uint16_t>(cp | (h - 'a' + 10));
-                        else if (h >= 'A' && h <= 'F') cp = static_cast<uint16_t>(cp | (h - 'A' + 10));
+                        int hv = hex_val(src[i]);
+                        if (hv >= 0) cp = static_cast<uint16_t>((cp << 4) | hv);
                     }
                     if (cp < 0x80) {
                         scratch_[out++] = static_cast<char>(cp);
@@ -481,7 +499,7 @@ private:
         if (c == 'f') return parse_literal("false", 5, key, false);
         if (c == 'n') return parse_null(key);
 
-        if (c == '-' || (c >= '0' && c <= '9'))
+        if (c == '-' || is_digit(c))
             return parse_number(key);
 
         return NOTE_ERR("unexpected character");

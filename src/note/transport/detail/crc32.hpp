@@ -64,16 +64,17 @@ inline void write_hex32(char* out, uint32_t v) {
     out[4] = h[(v >> 12) & 0xF]; out[5] = h[(v >>  8) & 0xF];
     out[6] = h[(v >>  4) & 0xF]; out[7] = h[(v >>  0) & 0xF];
 }
+inline int hex_nibble(char c) {
+    if (static_cast<unsigned>(c - '0') < 10) return c - '0';
+    if (static_cast<unsigned>(c - 'A') < 6)  return c - 'A' + 10;
+    if (static_cast<unsigned>(c - 'a') < 6)  return c - 'a' + 10;
+    return 0;
+}
+
 inline uint32_t read_hex(const char* p, int digits) {
     uint32_t v = 0;
-    for (int i = 0; i < digits; ++i) {
-        char c = p[i];
-        uint32_t nib = (c >= '0' && c <= '9') ? uint32_t(c - '0')
-                     : (c >= 'A' && c <= 'F') ? uint32_t(c - 'A' + 10)
-                     : (c >= 'a' && c <= 'f') ? uint32_t(c - 'a' + 10)
-                     : 0;
-        v = (v << 4) | nib;
-    }
+    for (int i = 0; i < digits; ++i)
+        v = (v << 4) | static_cast<uint32_t>(hex_nibble(p[i]));
     return v;
 }
 

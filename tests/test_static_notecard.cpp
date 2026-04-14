@@ -26,17 +26,21 @@ struct MockTransport {
     int transact_count = 0;
     int send_count = 0;
 
+    // Error injection
+    Error next_error = Error::NoError;
+    int fail_count = 0;
+
+    // Timing
+    uint32_t now_ms = 0;
+    uint32_t total_delay_ms = 0;
+    int reset_count = 0;
+
     void queue_response(const std::string& json) {
         for (char c : json) rx.push_back(static_cast<uint8_t>(c));
         rx.push_back('\n');
     }
 
-    // Non-template transact_dispatch — matches what StaticNotecard calls
-    Result<void> transact_dispatch(BuildFn build_fn, void* ctx, SaxDispatch dispatch,
-                                   uint32_t /*timeout_ms*/, detail::NcErrorCapture& /*nc_err*/) {
-        ++transact_count;
-
-        // Capture the built request JSON
+    void capture_request(BuildFn build_fn, void* ctx) {
         last_request.clear();
         struct Writer : JsonWriter {
             std::string& out;
@@ -49,47 +53,45 @@ struct MockTransport {
         StreamingJsonBuilder builder(writer);
         build_fn(builder, ctx);
         last_request += '}';
+    }
 
-        // Feed queued response through dispatch
-        if (!rx.empty()) {
-            std::string resp;
-            while (!rx.empty() && rx.front() != '\n') {
-                resp += static_cast<char>(rx.front());
-                rx.pop_front();
-            }
-            if (!rx.empty()) rx.pop_front(); // consume \n
-
-            // Parse response via SaxDispatch
-            char storage[384];
-            SaxStreamBuf buf(storage);
-            SaxAdapter adapter(buf, dispatch);
-            DefaultLexer lexer;
-            detail::lex_feed_loop(lexer, reinterpret_cast<const uint8_t*>(resp.data()),
-                                  resp.size(), adapter);
+    void feed_response(SaxDispatch dispatch) {
+        if (rx.empty()) return;
+        std::string resp;
+        while (!rx.empty() && rx.front() != '\n') {
+            resp += static_cast<char>(rx.front());
+            rx.pop_front();
         }
+        if (!rx.empty()) rx.pop_front();
+        char storage[384];
+        SaxStreamBuf buf(storage);
+        SaxAdapter adapter(buf, dispatch);
+        DefaultLexer lexer;
+        detail::lex_feed_loop(lexer, reinterpret_cast<const uint8_t*>(resp.data()),
+                              resp.size(), adapter);
+    }
+
+    Result<void> transact_dispatch(BuildFn build_fn, void* ctx, SaxDispatch dispatch,
+                                   uint32_t /*timeout_ms*/, detail::NcErrorCapture& /*nc_err*/) {
+        ++transact_count;
+        capture_request(build_fn, ctx);
+        if (fail_count > 0) {
+            --fail_count;
+            return make_error(next_error, Cause::HalError, "mock failure");
+        }
+        feed_response(dispatch);
         return {};
     }
 
     Result<void> send(BuildFn build_fn, void* ctx) {
         ++send_count;
-        last_request.clear();
-        struct Writer : JsonWriter {
-            std::string& out;
-            explicit Writer(std::string& o) : out(o) {}
-            bool write(const char* data, size_t len) override {
-                out.append(data, len);
-                return true;
-            }
-        } writer(last_request);
-        StreamingJsonBuilder builder(writer);
-        build_fn(builder, ctx);
-        last_request += '}';
+        capture_request(build_fn, ctx);
         return {};
     }
 
-    bool reset() { return true; }
-    uint32_t millis() { return 0; }
-    void delay(uint32_t) {}
+    bool reset() { ++reset_count; return true; }
+    uint32_t millis() { return now_ms; }
+    void delay(uint32_t ms) { now_ms += ms; total_delay_ms += ms; }
 };
 
 /// Stack that owns the mock transport (matches the pattern of SerialTransportStack).
@@ -170,3 +172,173 @@ TEST_CASE("StaticNotecard via resource group factory") {
     REQUIRE(temp);
     CHECK(temp.value == 22.5);
 }
+
+// ---------------------------------------------------------------------------
+// Error paths
+// ---------------------------------------------------------------------------
+
+#ifndef NOTE_NO_RETRY
+
+TEST_CASE("StaticNotecard: transport error propagates") {
+    alignas(4) char arena_buf[256];
+    MonotonicArena arena(arena_buf);
+
+    StaticNotecard<MockStack> nc(arena_allocator(arena));
+    nc.set_retry_policy(RetryPolicy{0, 0, 0});
+    Api api(nc);
+
+    nc.stack().transport.fail_count = 1;
+    nc.stack().transport.next_error = Error::SendFailed;
+
+    auto result = api.card.temp().read().execute();
+    CHECK(!result);
+    CHECK(result.error().code == Error::SendFailed);
+}
+
+TEST_CASE("StaticNotecard: void response transport error propagates") {
+    alignas(4) char arena_buf[256];
+    MonotonicArena arena(arena_buf);
+
+    StaticNotecard<MockStack> nc(arena_allocator(arena));
+    nc.set_retry_policy(RetryPolicy{0, 0, 0});
+    Api api(nc);
+
+    nc.stack().transport.fail_count = 1;
+    nc.stack().transport.next_error = Error::SendFailed;
+
+    auto result = api.hub.set().product("test").execute();
+    CHECK(!result);
+    CHECK(result.error().code == Error::SendFailed);
+}
+
+// ---------------------------------------------------------------------------
+// Retry logic
+// ---------------------------------------------------------------------------
+
+TEST_CASE("StaticNotecard: retry on SendFailed succeeds on second try") {
+    alignas(4) char arena_buf[256];
+    MonotonicArena arena(arena_buf);
+
+    StaticNotecard<MockStack> nc(arena_allocator(arena));
+    nc.set_retry_policy(RetryPolicy{.max_retries = 2, .retry_delay_ms = 0, .timeout_ms = 0});
+    Api api(nc);
+
+    nc.stack().transport.fail_count = 1;
+    nc.stack().transport.next_error = Error::SendFailed;
+    nc.stack().transport.queue_response("{\"value\":22.5}");
+
+    auto result = api.card.temp().read().execute();
+    CHECK(result);
+    CHECK(nc.stack().transport.transact_count == 2);
+    CHECK(nc.stack().transport.reset_count == 1);
+}
+
+TEST_CASE("StaticNotecard: no retry on non-retryable error") {
+    alignas(4) char arena_buf[256];
+    MonotonicArena arena(arena_buf);
+
+    StaticNotecard<MockStack> nc(arena_allocator(arena));
+    nc.set_retry_policy(RetryPolicy{.max_retries = 5, .retry_delay_ms = 0, .timeout_ms = 0});
+    Api api(nc);
+
+    nc.stack().transport.fail_count = 99;
+    nc.stack().transport.next_error = Error::Json;
+
+    auto result = api.card.temp().read().execute();
+    CHECK(!result);
+    CHECK(nc.stack().transport.transact_count == 1);
+}
+
+// ---------------------------------------------------------------------------
+// Timing enforcement
+// ---------------------------------------------------------------------------
+
+TEST_CASE("StaticNotecard: inter-transaction gap enforced") {
+    alignas(4) char arena_buf[256];
+    MonotonicArena arena(arena_buf);
+
+    StaticNotecard<MockStack> nc(arena_allocator(arena));
+    nc.set_retry_policy(RetryPolicy{0, 0, 0});
+    nc.set_inter_transaction_gap(50);
+    Api api(nc);
+
+    // First transaction — no delay
+    nc.stack().transport.queue_response("{\"value\":1.0}");
+    api.card.temp().read().execute();
+    CHECK(nc.stack().transport.total_delay_ms == 0);
+
+    // Second transaction immediately after — should delay
+    nc.stack().transport.queue_response("{\"value\":2.0}");
+    api.card.temp().read().execute();
+    CHECK(nc.stack().transport.total_delay_ms == 50);
+}
+
+TEST_CASE("StaticNotecard: timing enforced for commands") {
+    alignas(4) char arena_buf[256];
+    MonotonicArena arena(arena_buf);
+
+    StaticNotecard<MockStack> nc(arena_allocator(arena));
+    nc.set_retry_policy(RetryPolicy{0, 0, 0});
+    nc.set_inter_transaction_gap(30);
+    Api api(nc);
+
+    // First command
+    api.hub.set().product("test").command();
+    // Second command immediately — should delay
+    api.hub.set().product("test").command();
+    CHECK(nc.stack().transport.total_delay_ms == 30);
+}
+
+#endif // !NOTE_NO_RETRY
+
+// ---------------------------------------------------------------------------
+// Request IDs
+// ---------------------------------------------------------------------------
+
+#ifndef NOTE_NO_REQUEST_IDS
+
+TEST_CASE("StaticNotecard: request IDs enabled by default") {
+    alignas(4) char arena_buf[256];
+    MonotonicArena arena(arena_buf);
+
+    StaticNotecard<MockStack> nc(arena_allocator(arena));
+    Api api(nc);
+
+    nc.stack().transport.queue_response("{}");
+    api.hub.set().product("test").execute();
+    CHECK(nc.stack().transport.last_request.find("\"id\":") != std::string::npos);
+}
+
+TEST_CASE("StaticNotecard: request IDs disabled") {
+    alignas(4) char arena_buf[256];
+    MonotonicArena arena(arena_buf);
+
+    StaticNotecard<MockStack> nc(arena_allocator(arena));
+    nc.set_request_ids(false);
+    Api api(nc);
+
+    nc.stack().transport.queue_response("{}");
+    api.hub.set().product("test").execute();
+    CHECK(nc.stack().transport.last_request.find("\"id\":") == std::string::npos);
+}
+
+TEST_CASE("StaticNotecard: request IDs increment") {
+    alignas(4) char arena_buf[256];
+    MonotonicArena arena(arena_buf);
+
+    StaticNotecard<MockStack> nc(arena_allocator(arena));
+    Api api(nc);
+
+    nc.stack().transport.queue_response("{}");
+    api.hub.set().product("test").execute();
+    auto req1 = nc.stack().transport.last_request;
+
+    nc.stack().transport.queue_response("{}");
+    api.hub.set().product("test").execute();
+    auto req2 = nc.stack().transport.last_request;
+
+    // IDs should differ between calls
+    CHECK(req1 != req2);
+}
+
+#endif // !NOTE_NO_REQUEST_IDS

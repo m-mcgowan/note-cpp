@@ -21,9 +21,14 @@ TEST_CASE("json_fmt with literal values preserved") {
     REQUIRE(r.view() == R"({"version":"1.0","temp":22.5})");
 }
 
-TEST_CASE("json_fmt string escaping") {
+TEST_CASE("json_fmt string escaping — quotes") {
     auto r = note::json_fmt<R"({"msg":{s}})">(R"(hello "world")");
     REQUIRE(r.view() == R"({"msg":"hello \"world\""})");
+}
+
+TEST_CASE("json_fmt string escaping — backslash") {
+    auto r = note::json_fmt<R"({"path":{s}})">("C:\\Users\\test");
+    REQUIRE(r.view() == R"({"path":"C:\\Users\\test"})");
 }
 
 TEST_CASE("json_fmt bool values") {

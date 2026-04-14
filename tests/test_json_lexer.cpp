@@ -991,3 +991,186 @@ TEST_CASE("CompactLexer: 8-level nesting with BitStack<uint8_t>") {
     }
     REQUIRE(found_int);
 }
+
+// ═══════════════════════════════════════════════════════════════════════
+// Branch coverage — number parsing states
+// ═══════════════════════════════════════════════════════════════════════
+
+TEST_CASE("lexer: number with exponent (1e2)") {
+    auto events = lex(R"({"v":1e2})");
+    bool found = false;
+    for (auto& ev : events)
+        if (ev.tag == LexerEvent::Float) { CHECK(ev.floating == Approx(100.0)); found = true; }
+    CHECK(found);
+}
+
+TEST_CASE("lexer: number with positive exponent (1e+2)") {
+    auto events = lex(R"({"v":1e+2})");
+    bool found = false;
+    for (auto& ev : events)
+        if (ev.tag == LexerEvent::Float) { CHECK(ev.floating == Approx(100.0)); found = true; }
+    CHECK(found);
+}
+
+TEST_CASE("lexer: number with negative exponent (1e-2)") {
+    auto events = lex(R"({"v":1e-2})");
+    bool found = false;
+    for (auto& ev : events)
+        if (ev.tag == LexerEvent::Float) { CHECK(ev.floating == Approx(0.01)); found = true; }
+    CHECK(found);
+}
+
+TEST_CASE("lexer: zero with exponent (0e1)") {
+    CHECK(lex_ok(R"({"v":0e1})"));
+}
+
+TEST_CASE("lexer: zero with fraction (0.5)") {
+    auto events = lex(R"({"v":0.5})");
+    bool found = false;
+    for (auto& ev : events)
+        if (ev.tag == LexerEvent::Float) { CHECK(ev.floating == Approx(0.5)); found = true; }
+    CHECK(found);
+}
+
+TEST_CASE("lexer: fraction then exponent (1.5e2)") {
+    auto events = lex(R"({"v":1.5e2})");
+    bool found = false;
+    for (auto& ev : events)
+        if (ev.tag == LexerEvent::Float) { CHECK(ev.floating == Approx(150.0)); found = true; }
+    CHECK(found);
+}
+
+TEST_CASE("lexer: fraction with negative exponent (1.5e-1)") {
+    auto events = lex(R"({"v":1.5e-1})");
+    bool found = false;
+    for (auto& ev : events)
+        if (ev.tag == LexerEvent::Float) { CHECK(ev.floating == Approx(0.15)); found = true; }
+    CHECK(found);
+}
+
+TEST_CASE("lexer: error — dot without following digit") {
+    CHECK(lex_error(R"({"v":1.})"));
+}
+
+TEST_CASE("lexer: error — exponent without digit") {
+    CHECK(lex_error(R"({"v":1e})"));
+}
+
+TEST_CASE("lexer: error — minus without digit") {
+    CHECK(lex_error(R"({"v":-})"));
+}
+
+TEST_CASE("lexer: error — exponent sign without digit") {
+    CHECK(lex_error(R"({"v":1e+})"));
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// Branch coverage — escape sequences
+// ═══════════════════════════════════════════════════════════════════════
+
+TEST_CASE("lexer: escape tab") {
+    auto events = lex(R"({"v":"a\tb"})");
+    bool found = false;
+    for (auto& ev : events)
+        if (ev.tag == LexerEvent::StringChar && ev.ch == '\t') found = true;
+    CHECK(found);
+}
+
+TEST_CASE("lexer: escape carriage return") {
+    auto events = lex(R"({"v":"a\rb"})");
+    bool found = false;
+    for (auto& ev : events)
+        if (ev.tag == LexerEvent::StringChar && ev.ch == '\r') found = true;
+    CHECK(found);
+}
+
+TEST_CASE("lexer: escape backspace and formfeed") {
+    auto events = lex(R"({"v":"\b\f"})");
+    bool found_b = false, found_f = false;
+    for (auto& ev : events) {
+        if (ev.tag == LexerEvent::StringChar && ev.ch == '\b') found_b = true;
+        if (ev.tag == LexerEvent::StringChar && ev.ch == '\f') found_f = true;
+    }
+    CHECK(found_b);
+    CHECK(found_f);
+}
+
+TEST_CASE("lexer: escape backslash and forward slash") {
+    auto events = lex(R"({"v":"\\\/"})");
+    bool found_back = false, found_fwd = false;
+    for (auto& ev : events) {
+        if (ev.tag == LexerEvent::StringChar && ev.ch == '\\') found_back = true;
+        if (ev.tag == LexerEvent::StringChar && ev.ch == '/') found_fwd = true;
+    }
+    CHECK(found_back);
+    CHECK(found_fwd);
+}
+
+#ifndef NOTE_MINIMAL  // Unicode escapes require Utf8EscapeDecoder (not available under NOTE_MINIMAL)
+TEST_CASE("lexer: unicode escape \\u0041 = A") {
+    auto events = lex(R"({"v":"\u0041"})");
+    bool found = false;
+    for (auto& ev : events)
+        if (ev.tag == LexerEvent::StringChar && ev.ch == 'A') found = true;
+    CHECK(found);
+}
+
+TEST_CASE("lexer: unicode escape in key") {
+    auto events = lex(R"({"\u006B":1})");
+    bool found = false;
+    for (auto& ev : events)
+        if (ev.tag == LexerEvent::KeyChar && ev.ch == 'k') found = true;
+    CHECK(found);
+}
+
+TEST_CASE("lexer: invalid unicode escape") {
+    CHECK(lex_error(R"({"v":"\u00GG"})"));
+}
+#endif
+
+// ═══════════════════════════════════════════════════════════════════════
+// Branch coverage — whitespace variants
+// ═══════════════════════════════════════════════════════════════════════
+
+TEST_CASE("lexer: tab and CR whitespace in object") {
+    CHECK(lex_ok("{\t\"a\"\r:\t1\r}"));
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// Branch coverage — error state and stack overflow
+// ═══════════════════════════════════════════════════════════════════════
+
+TEST_CASE("lexer: bytes after error are ignored") {
+    DefaultLexer lexer;
+    std::vector<LexerEvent> events;
+    // Feed invalid JSON
+    const char* bad = "{@";
+    for (const char* p = bad; *p; ++p)
+        lexer.feed(static_cast<uint8_t>(*p), [&](LexerEvent ev) { events.push_back(ev); });
+    CHECK(lexer.has_error());
+    size_t count_before = events.size();
+    // Feed more bytes — should be ignored
+    lexer.feed('x', [&](LexerEvent ev) { events.push_back(ev); });
+    CHECK(events.size() == count_before);
+}
+
+TEST_CASE("lexer: stack overflow on deep nesting") {
+    // DefaultLexer uses BitStack<uint16_t> = 16 levels. Exceed that.
+    std::string json(17, '{');
+    // This should produce an error when the stack is full
+    auto events = lex(json.c_str());
+    bool has_error = false;
+    for (auto& ev : events)
+        if (ev.tag == LexerEvent::Error) has_error = true;
+    CHECK(has_error);
+}
+
+TEST_CASE("CompactLexer: stack overflow on deep nesting") {
+    // CompactLexer uses BitStack<uint8_t> = 8 levels.
+    std::string json(9, '{');
+    auto events = lex_compact(json.c_str());
+    bool has_error = false;
+    for (auto& ev : events)
+        if (ev.tag == LexerEvent::Error) has_error = true;
+    CHECK(has_error);
+}

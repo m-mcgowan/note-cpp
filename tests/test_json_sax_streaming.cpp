@@ -800,3 +800,586 @@ TEST_CASE("streaming sax: multiple consecutive parses through same infrastructur
         }
     }
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Branch coverage: additional tests targeting uncovered branches
+// ═══════════════════════════════════════════════════════════════════════════
+
+// --- Helper that returns error string for a given JSON ---
+static string_view parse_streaming_error(const char* json, size_t chunk = 256) {
+    ByteFeeder feeder(json, strlen(json), chunk);
+    RecordingSink sink;
+    auto read_fn = [&](uint8_t* buf, size_t max, uint32_t timeout) -> Result<size_t> {
+        return feeder.read(buf, max, timeout);
+    };
+    return sax_parse_streaming(read_fn, 5000, sink);
+}
+
+// --- Helper that returns events, asserting success ---
+static std::vector<Event> parse_streaming_ok(const char* json, size_t chunk = 256) {
+    ByteFeeder feeder(json, strlen(json), chunk);
+    RecordingSink sink;
+    auto read_fn = [&](uint8_t* buf, size_t max, uint32_t timeout) -> Result<size_t> {
+        return feeder.read(buf, max, timeout);
+    };
+    auto err = sax_parse_streaming(read_fn, 5000, sink);
+    REQUIRE(err.empty());
+    return sink.events;
+}
+
+// ── Branches: SaxStreamBuf minimum size (line 52) ───────────────────────
+
+TEST_CASE("streaming sax: SaxStreamBuf with very small buffer triggers minimum sixth") {
+    // Buffer of 30 bytes: sixth=5, which is < 8, so sixth gets clamped to 8
+    char storage[30];
+    SaxStreamBuf sbuf(storage, 30);
+    CHECK(sbuf.rbuf_size == 8);
+    CHECK(sbuf.key_size == 8);
+    CHECK(sbuf.val_size == 14);  // 30 - 2*8
+}
+
+TEST_CASE("streaming sax: SaxStreamBuf with exact 48 bytes (sixth=8 exactly)") {
+    char storage[48];
+    SaxStreamBuf sbuf(storage, 48);
+    CHECK(sbuf.rbuf_size == 8);
+    CHECK(sbuf.key_size == 8);
+    CHECK(sbuf.val_size == 32);
+}
+
+// ── Branches: non-object top level (line 81) ────────────────────────────
+
+TEST_CASE("streaming sax: non-object at top level returns error") {
+    auto err = parse_streaming_error("[1,2,3]");
+    CHECK(!err.empty());
+}
+
+// ── Branches: escape sequences individually (lines 170-177) ────────────
+
+TEST_CASE("streaming sax: escape double-quote") {
+    auto events = parse_streaming_ok(R"({"a":"say\"hi\""})", 1);
+    CHECK(events[1].value == "say\"hi\"");
+}
+
+TEST_CASE("streaming sax: escape backslash individually") {
+    auto events = parse_streaming_ok(R"({"a":"a\\b"})", 1);
+    CHECK(events[1].value == "a\\b");
+}
+
+TEST_CASE("streaming sax: escape forward slash individually") {
+    auto events = parse_streaming_ok(R"({"a":"a\/b"})", 1);
+    CHECK(events[1].value == "a/b");
+}
+
+TEST_CASE("streaming sax: escape backspace") {
+    auto events = parse_streaming_ok(R"({"a":"a\bb"})", 1);
+    CHECK(events[1].value == "a\bb");
+}
+
+TEST_CASE("streaming sax: escape formfeed") {
+    auto events = parse_streaming_ok(R"({"a":"a\fb"})", 1);
+    CHECK(events[1].value == "a\fb");
+}
+
+TEST_CASE("streaming sax: escape carriage return") {
+    auto events = parse_streaming_ok(R"({"a":"a\rb"})", 1);
+    CHECK(events[1].value == "a\rb");
+}
+
+TEST_CASE("streaming sax: escape tab") {
+    auto events = parse_streaming_ok(R"({"a":"a\tb"})", 1);
+    CHECK(events[1].value == "a\tb");
+}
+
+// ── Branches: unicode escape paths (lines 185-200, 209) ────────────────
+
+TEST_CASE("streaming sax: unicode escape uppercase hex") {
+    auto events = parse_streaming_ok(R"({"c":"\u0042"})", 1);
+    CHECK(events[1].value == "B");
+}
+
+TEST_CASE("streaming sax: unicode escape lowercase a-f hex") {
+    auto events = parse_streaming_ok(R"({"c":"\u006f"})", 1);
+    CHECK(events[1].value == "o");
+}
+
+TEST_CASE("streaming sax: unicode 2-byte path detail") {
+    auto events = parse_streaming_ok(R"({"c":"\u00C0"})", 1);
+    CHECK(events[1].value == "\xC3\x80");
+}
+
+TEST_CASE("streaming sax: unicode 3-byte BMP path") {
+    auto events = parse_streaming_ok(R"({"c":"\u1234"})", 1);
+    CHECK(events[1].value.size() == 3);
+    CHECK(events[1].value[0] == '\xE1');
+    CHECK(events[1].value[1] == '\x88');
+    CHECK(events[1].value[2] == '\xB4');
+}
+
+TEST_CASE("streaming sax: unicode surrogate pair D900 replaced with ?") {
+    auto events = parse_streaming_ok(R"({"c":"\uD900"})", 1);
+    CHECK(events[1].value == "?");
+}
+
+TEST_CASE("streaming sax: unicode surrogate DFFF replaced with ?") {
+    auto events = parse_streaming_ok(R"({"c":"\uDFFF"})", 1);
+    CHECK(events[1].value == "?");
+}
+
+TEST_CASE("streaming sax: default escape case (unknown escape outputs literal)") {
+    auto events = parse_streaming_ok(R"({"a":"\q"})", 1);
+    CHECK(events[1].value == "q");
+}
+
+// ── Branches: tab inside string is allowed (line 159) ───────────────────
+
+TEST_CASE("streaming sax: tab character inside string is allowed") {
+    std::string json = R"({"a":"hello)";
+    json += '\t';
+    json += R"(world"})";
+    auto events = parse_streaming_ok(json.c_str(), 1);
+    CHECK(events[1].value == "hello\tworld");
+}
+
+// ── Branches: control character error (line 159-160) ────────────────────
+
+TEST_CASE("streaming sax: control char 0x02 in string") {
+    std::string json = R"({"a":"x)";
+    json += '\x02';
+    json += R"("})";
+    auto err = parse_streaming_error(json.c_str(), 1);
+    CHECK(!err.empty());
+}
+
+// ── Branches: number parsing edge cases ─────────────────────────────────
+
+TEST_CASE("streaming sax: number starting with zero then dot (0.5)") {
+    auto events = parse_streaming_ok(R"({"a":0.5})", 1);
+    CHECK(events[1].value == "0.5");
+}
+
+TEST_CASE("streaming sax: number 0 alone") {
+    auto events = parse_streaming_ok(R"({"a":0})", 1);
+    CHECK(events[1].value == "0");
+}
+
+TEST_CASE("streaming sax: negative float -3.14") {
+    auto events = parse_streaming_ok(R"({"a":-3.14})", 1);
+    CHECK(events[1].value == "-3.14");
+}
+
+TEST_CASE("streaming sax: negative zero -0") {
+    auto events = parse_streaming_ok(R"({"a":-0})", 1);
+    CHECK(events[1].value == "-0");
+}
+
+TEST_CASE("streaming sax: multi-digit integer 12345") {
+    auto events = parse_streaming_ok(R"({"a":12345})", 1);
+    CHECK(events[1].value == "12345");
+}
+
+TEST_CASE("streaming sax: uppercase E exponent") {
+    auto events = parse_streaming_ok(R"({"a":2E3})", 1);
+    CHECK(events[1].value == "2E3");
+}
+
+TEST_CASE("streaming sax: exponent with explicit positive sign") {
+    auto events = parse_streaming_ok(R"({"a":5e+1})", 1);
+    CHECK(events[1].value == "5e+1");
+}
+
+TEST_CASE("streaming sax: decimal then exponent") {
+    auto events = parse_streaming_ok(R"({"a":1.5e2})", 1);
+    CHECK(events[1].value == "1.5e2");
+}
+
+TEST_CASE("streaming sax: decimal then negative exponent") {
+    auto events = parse_streaming_ok(R"({"a":3.0e-1})", 1);
+    CHECK(events[1].value == "3.0e-1");
+}
+
+// ── Branches: number buffer overflow in minus path (line 324-325) ───────
+
+TEST_CASE("streaming sax: negative number with tiny value buffer") {
+    const char* json = R"({"a":-999})";
+    uint8_t rbuf[32];
+    char kbuf[16];
+    char vbuf[2];  // very small: only fits '-' and one digit
+    SaxStreamBuf sbuf(rbuf, sizeof(rbuf), kbuf, sizeof(kbuf), vbuf, sizeof(vbuf));
+
+    ByteFeeder feeder(json, strlen(json), 256);
+    RecordingSink sink;
+    auto read_fn = [&](uint8_t* buf, size_t max, uint32_t timeout) -> Result<size_t> {
+        return feeder.read(buf, max, timeout);
+    };
+    auto err = sax_parse_streaming(read_fn, 5000, sbuf, sink);
+    REQUIRE(err.empty());
+    CHECK(sink.events[1].type == Event::Number);
+    CHECK(sink.events[1].value.size() == 2);
+}
+
+// ── Branches: number with zero start then exponent (line 331-332) ───────
+
+TEST_CASE("streaming sax: number 0e1 (zero with exponent)") {
+    auto events = parse_streaming_ok(R"({"a":0.0e1})", 1);
+    CHECK(events[1].value == "0.0e1");
+}
+
+// ── Branches: invalid number after minus (line 338-339) ─────────────────
+
+TEST_CASE("streaming sax: minus followed by non-digit") {
+    auto err = parse_streaming_error(R"({"a":-a})", 1);
+    CHECK(!err.empty());
+}
+
+// ── Branches: decimal digit error (line 345-346) ────────────────────────
+
+TEST_CASE("streaming sax: dot followed by non-digit") {
+    auto err = parse_streaming_error(R"({"a":1.a})", 1);
+    CHECK(!err.empty());
+}
+
+// ── Branches: exponent error paths (lines 353-362) ──────────────────────
+
+TEST_CASE("streaming sax: exponent with multi-digit value") {
+    auto events = parse_streaming_ok(R"({"a":1e12})", 1);
+    CHECK(events[1].value == "1e12");
+}
+
+TEST_CASE("streaming sax: uppercase E with negative sign") {
+    auto events = parse_streaming_ok(R"({"a":1E-2})", 1);
+    CHECK(events[1].value == "1E-2");
+}
+
+// ── Branches: exponent digit overflow ───────────────────────────────────
+
+TEST_CASE("streaming sax: exponent digits with tiny buffer triggers else-advance") {
+    const char* json = R"({"a":1e999})";
+    uint8_t rbuf[32];
+    char kbuf[16];
+    char vbuf[3];  // only fits "1e" then overflows on exponent digits
+    SaxStreamBuf sbuf(rbuf, sizeof(rbuf), kbuf, sizeof(kbuf), vbuf, sizeof(vbuf));
+
+    ByteFeeder feeder(json, strlen(json), 256);
+    RecordingSink sink;
+    auto read_fn = [&](uint8_t* buf, size_t max, uint32_t timeout) -> Result<size_t> {
+        return feeder.read(buf, max, timeout);
+    };
+    auto err = sax_parse_streaming(read_fn, 5000, sbuf, sink);
+    REQUIRE(err.empty());
+    CHECK(sink.events[1].type == Event::Number);
+    CHECK(sink.events[1].value.size() == 3);
+}
+
+// ── Branches: decimal digit overflow with tiny buffer ───────────────────
+
+TEST_CASE("streaming sax: decimal digits with tiny buffer triggers else-advance") {
+    const char* json = R"({"a":1.99999})";
+    uint8_t rbuf[32];
+    char kbuf[16];
+    char vbuf[3];  // only fits "1." then overflows
+    SaxStreamBuf sbuf(rbuf, sizeof(rbuf), kbuf, sizeof(kbuf), vbuf, sizeof(vbuf));
+
+    ByteFeeder feeder(json, strlen(json), 256);
+    RecordingSink sink;
+    auto read_fn = [&](uint8_t* buf, size_t max, uint32_t timeout) -> Result<size_t> {
+        return feeder.read(buf, max, timeout);
+    };
+    auto err = sax_parse_streaming(read_fn, 5000, sbuf, sink);
+    REQUIRE(err.empty());
+    CHECK(sink.events[1].type == Event::Number);
+    CHECK(sink.events[1].value.size() == 3);
+}
+
+// ── Branches: integer digits with tiny buffer ───────────────────────────
+
+TEST_CASE("streaming sax: integer digits overflow with tiny buffer") {
+    const char* json = R"({"a":12345})";
+    uint8_t rbuf[32];
+    char kbuf[16];
+    char vbuf[2];  // only fits "12" then overflows
+    SaxStreamBuf sbuf(rbuf, sizeof(rbuf), kbuf, sizeof(kbuf), vbuf, sizeof(vbuf));
+
+    ByteFeeder feeder(json, strlen(json), 256);
+    RecordingSink sink;
+    auto read_fn = [&](uint8_t* buf, size_t max, uint32_t timeout) -> Result<size_t> {
+        return feeder.read(buf, max, timeout);
+    };
+    auto err = sax_parse_streaming(read_fn, 5000, sbuf, sink);
+    REQUIRE(err.empty());
+    CHECK(sink.events[1].type == Event::Number);
+    CHECK(sink.events[1].value.size() == 2);
+}
+
+// ── Branches: dot overflow path (line 343-344) ──────────────────────────
+
+TEST_CASE("streaming sax: dot character overflows tiny buffer") {
+    const char* json = R"({"a":1.5})";
+    uint8_t rbuf[32];
+    char kbuf[16];
+    char vbuf[1];  // fits '1', dot overflows
+    SaxStreamBuf sbuf(rbuf, sizeof(rbuf), kbuf, sizeof(kbuf), vbuf, 1);
+
+    ByteFeeder feeder(json, strlen(json), 256);
+    RecordingSink sink;
+    auto read_fn = [&](uint8_t* buf, size_t max, uint32_t timeout) -> Result<size_t> {
+        return feeder.read(buf, max, timeout);
+    };
+    auto err = sax_parse_streaming(read_fn, 5000, sbuf, sink);
+    REQUIRE(err.empty());
+    CHECK(sink.events[1].type == Event::Number);
+    CHECK(sink.events[1].value == "1");
+}
+
+// ── Branches: exponent char overflow path (line 354-355) ────────────────
+
+TEST_CASE("streaming sax: exponent char overflows tiny buffer") {
+    const char* json = R"({"a":1e2})";
+    uint8_t rbuf[32];
+    char kbuf[16];
+    char vbuf[1];  // fits '1', 'e' overflows
+    SaxStreamBuf sbuf(rbuf, sizeof(rbuf), kbuf, sizeof(kbuf), vbuf, 1);
+
+    ByteFeeder feeder(json, strlen(json), 256);
+    RecordingSink sink;
+    auto read_fn = [&](uint8_t* buf, size_t max, uint32_t timeout) -> Result<size_t> {
+        return feeder.read(buf, max, timeout);
+    };
+    auto err = sax_parse_streaming(read_fn, 5000, sbuf, sink);
+    REQUIRE(err.empty());
+    CHECK(sink.events[1].type == Event::Number);
+    CHECK(sink.events[1].value == "1");
+}
+
+// ── Branches: exponent sign overflow (line 356-358) ─────────────────────
+
+TEST_CASE("streaming sax: exponent sign overflows tiny buffer") {
+    const char* json = R"({"a":1e-2})";
+    uint8_t rbuf[32];
+    char kbuf[16];
+    char vbuf[2];  // fits '1' and 'e', sign '-' overflows
+    SaxStreamBuf sbuf(rbuf, sizeof(rbuf), kbuf, sizeof(kbuf), vbuf, 2);
+
+    ByteFeeder feeder(json, strlen(json), 256);
+    RecordingSink sink;
+    auto read_fn = [&](uint8_t* buf, size_t max, uint32_t timeout) -> Result<size_t> {
+        return feeder.read(buf, max, timeout);
+    };
+    auto err = sax_parse_streaming(read_fn, 5000, sbuf, sink);
+    REQUIRE(err.empty());
+    CHECK(sink.events[1].type == Event::Number);
+    CHECK(sink.events[1].value == "1e");
+}
+
+// ── Branches: EOF in number at various points ───────────────────────────
+
+TEST_CASE("streaming sax: EOF after decimal point") {
+    auto err = parse_streaming_error(R"({"a":1.)", 1);
+    CHECK(!err.empty());
+}
+
+TEST_CASE("streaming sax: EOF after exponent sign") {
+    auto err = parse_streaming_error(R"({"a":1e+)", 1);
+    CHECK(!err.empty());
+}
+
+TEST_CASE("streaming sax: EOF after exponent E") {
+    auto err = parse_streaming_error(R"({"a":1e)", 1);
+    CHECK(!err.empty());
+}
+
+// ── Branches: error during null literal (line 313-314) ──────────────────
+
+TEST_CASE("streaming sax: null literal truncated at 2 chars") {
+    auto err = parse_streaming_error(R"({"a":nu)", 1);
+    CHECK(!err.empty());
+}
+
+TEST_CASE("streaming sax: null literal mismatch") {
+    auto err = parse_streaming_error(R"({"a":nxll})", 1);
+    CHECK(!err.empty());
+}
+
+// ── Branches: true literal truncated (line 303) ────────────────────────
+
+TEST_CASE("streaming sax: true literal truncated at 1 char") {
+    auto err = parse_streaming_error(R"({"a":t)", 1);
+    CHECK(!err.empty());
+}
+
+TEST_CASE("streaming sax: true literal mismatch") {
+    auto err = parse_streaming_error(R"({"a":trxe})", 1);
+    CHECK(!err.empty());
+}
+
+// ── Branches: false literal errors ──────────────────────────────────────
+
+TEST_CASE("streaming sax: false literal truncated") {
+    auto err = parse_streaming_error(R"({"a":fal)", 1);
+    CHECK(!err.empty());
+}
+
+TEST_CASE("streaming sax: false literal mismatch") {
+    auto err = parse_streaming_error(R"({"a":faxse})", 1);
+    CHECK(!err.empty());
+}
+
+// ── Branches: array missing comma (line 272) ────────────────────────────
+
+TEST_CASE("streaming sax: array missing comma between elements") {
+    auto err = parse_streaming_error(R"({"a":[1 2]})", 1);
+    CHECK(!err.empty());
+}
+
+// ── Branches: unicode scratch overflow paths ────────────────────────────
+
+TEST_CASE("streaming sax: unicode 2-byte overflows scratch") {
+    const char* json = R"({"a":"\u00E9"})";
+    uint8_t rbuf[32];
+    char kbuf[16];
+    char vbuf[1];  // out+1 < scratch_size check fails for 2-byte char
+    SaxStreamBuf sbuf(rbuf, sizeof(rbuf), kbuf, sizeof(kbuf), vbuf, 1);
+
+    ByteFeeder feeder(json, strlen(json), 256);
+    RecordingSink sink;
+    auto read_fn = [&](uint8_t* buf, size_t max, uint32_t timeout) -> Result<size_t> {
+        return feeder.read(buf, max, timeout);
+    };
+    auto err = sax_parse_streaming(read_fn, 5000, sbuf, sink);
+    REQUIRE(err.empty());
+    CHECK(sink.events[1].value.empty());
+}
+
+TEST_CASE("streaming sax: unicode 3-byte overflows scratch") {
+    const char* json = R"({"a":"\u4E16"})";
+    uint8_t rbuf[32];
+    char kbuf[16];
+    char vbuf[2];  // out+2 < scratch_size check fails for 3-byte
+    SaxStreamBuf sbuf(rbuf, sizeof(rbuf), kbuf, sizeof(kbuf), vbuf, 2);
+
+    ByteFeeder feeder(json, strlen(json), 256);
+    RecordingSink sink;
+    auto read_fn = [&](uint8_t* buf, size_t max, uint32_t timeout) -> Result<size_t> {
+        return feeder.read(buf, max, timeout);
+    };
+    auto err = sax_parse_streaming(read_fn, 5000, sbuf, sink);
+    REQUIRE(err.empty());
+    CHECK(sink.events[1].value.empty());
+}
+
+TEST_CASE("streaming sax: unicode ASCII overflows 1-byte scratch") {
+    const char* json = R"({"a":"x\u0041"})";
+    uint8_t rbuf[32];
+    char kbuf[16];
+    char vbuf[1];  // fits 'x' but then \u0041 overflows
+    SaxStreamBuf sbuf(rbuf, sizeof(rbuf), kbuf, sizeof(kbuf), vbuf, 1);
+
+    ByteFeeder feeder(json, strlen(json), 256);
+    RecordingSink sink;
+    auto read_fn = [&](uint8_t* buf, size_t max, uint32_t timeout) -> Result<size_t> {
+        return feeder.read(buf, max, timeout);
+    };
+    auto err = sax_parse_streaming(read_fn, 5000, sbuf, sink);
+    REQUIRE(err.empty());
+    CHECK(sink.events[1].value == "x");  // only 'x' fits
+}
+
+// ── Branches: string character overflow ─────────────────────────────────
+
+TEST_CASE("streaming sax: string char overflows scratch silently") {
+    const char* json = R"({"a":"hello"})";
+    uint8_t rbuf[32];
+    char kbuf[16];
+    char vbuf[3];  // only fits "hel"
+    SaxStreamBuf sbuf(rbuf, sizeof(rbuf), kbuf, sizeof(kbuf), vbuf, 3);
+
+    ByteFeeder feeder(json, strlen(json), 256);
+    RecordingSink sink;
+    auto read_fn = [&](uint8_t* buf, size_t max, uint32_t timeout) -> Result<size_t> {
+        return feeder.read(buf, max, timeout);
+    };
+    auto err = sax_parse_streaming(read_fn, 5000, sbuf, sink);
+    REQUIRE(err.empty());
+    CHECK(sink.events[1].value == "hel");
+}
+
+// ── Branches: escape character overflow ─────────────────────────────────
+
+TEST_CASE("streaming sax: escape char overflows scratch") {
+    const char* json = R"({"a":"x\n"})";
+    uint8_t rbuf[32];
+    char kbuf[16];
+    char vbuf[1];  // fits 'x' but then \n overflows
+    SaxStreamBuf sbuf(rbuf, sizeof(rbuf), kbuf, sizeof(kbuf), vbuf, 1);
+
+    ByteFeeder feeder(json, strlen(json), 256);
+    RecordingSink sink;
+    auto read_fn = [&](uint8_t* buf, size_t max, uint32_t timeout) -> Result<size_t> {
+        return feeder.read(buf, max, timeout);
+    };
+    auto err = sax_parse_streaming(read_fn, 5000, sbuf, sink);
+    REQUIRE(err.empty());
+    CHECK(sink.events[1].value == "x");
+}
+
+// ── Branches: expected '"' error (line 143) ─────────────────────────────
+
+TEST_CASE("streaming sax: key position gets non-quote character") {
+    auto err = parse_streaming_error(R"({123:1})", 1);
+    CHECK(!err.empty());
+}
+
+// ── Branches: whitespace characters \r and \t in JSON structure ─────────
+
+TEST_CASE("streaming sax: CR and tab as structural whitespace") {
+    std::string json = "{\r\n\t\"a\"\t:\r\n1\r\n}";
+    auto events = parse_streaming_ok(json.c_str(), 1);
+    REQUIRE(events.size() == 3);
+    CHECK(events[1].key == "a");
+    CHECK(events[1].value == "1");
+}
+
+// ── Branches: deeply nested 5+ levels ───────────────────────────────────
+
+TEST_CASE("streaming sax: 6 levels of nesting") {
+    const char* json = R"({"a":{"b":{"c":{"d":{"e":{"f":1}}}}}})";
+    auto events = parse_streaming_ok(json, 1);
+    REQUIRE(events.size() == 13);
+    CHECK(events[6].type == Event::Number);
+    CHECK(events[6].key == "f");
+    CHECK(events[6].value == "1");
+}
+
+// ── Branches: array of mixed types ──────────────────────────────────────
+
+TEST_CASE("streaming sax: array of mixed types") {
+    const char* json = R"({"a":[1,"two",true,null,3.14]})";
+    auto events = parse_streaming_ok(json, 1);
+    CHECK(events[2].type == Event::Number);
+    CHECK(events[2].value == "1");
+    CHECK(events[3].type == Event::String);
+    CHECK(events[3].value == "two");
+    CHECK(events[4].type == Event::Bool);
+    CHECK(events[4].value == "true");
+    CHECK(events[5].type == Event::Null);
+    CHECK(events[6].type == Event::Number);
+    CHECK(events[6].value == "3.14");
+}
+
+// ── Branches: nested array with objects ─────────────────────────────────
+
+TEST_CASE("streaming sax: array of objects") {
+    const char* json = R"({"a":[{"x":1},{"y":2}]})";
+    auto events = parse_streaming_ok(json, 1);
+    CHECK(events[0].type == Event::ObjBegin);
+    CHECK(events[1].type == Event::ArrBegin);
+    CHECK(events[2].type == Event::ObjBegin);
+    CHECK(events[3].type == Event::Number);
+    CHECK(events[3].key == "x");
+    CHECK(events[4].type == Event::ObjEnd);
+    CHECK(events[5].type == Event::ObjBegin);
+    CHECK(events[6].type == Event::Number);
+    CHECK(events[6].key == "y");
+    CHECK(events[7].type == Event::ObjEnd);
+    CHECK(events[8].type == Event::ArrEnd);
+    CHECK(events[9].type == Event::ObjEnd);
+}

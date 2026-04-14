@@ -45,16 +45,21 @@ struct Utf8EscapeDecoder {
         }
     }
 
+    static int hex_val(char c) {
+        if (static_cast<unsigned>(c - '0') < 10) return c - '0';
+        if (static_cast<unsigned>(c - 'a') < 6)  return c - 'a' + 10;
+        if (static_cast<unsigned>(c - 'A') < 6)  return c - 'A' + 10;
+        return -1;
+    }
+
     /// Feed one hex digit for \uXXXX. Calls emit when all 4 digits
     /// are received, encoding the code point as UTF-8.
     /// Returns false on invalid hex digit.
     template<typename EmitFn>
     bool feed_hex(char c, EmitFn&& emit) {
-        uint8_t nib;
-        if (c >= '0' && c <= '9') nib = static_cast<uint8_t>(c - '0');
-        else if (c >= 'a' && c <= 'f') nib = static_cast<uint8_t>(c - 'a' + 10);
-        else if (c >= 'A' && c <= 'F') nib = static_cast<uint8_t>(c - 'A' + 10);
-        else return false;
+        int hv = hex_val(c);
+        if (hv < 0) return false;
+        auto nib = static_cast<uint8_t>(hv);
 
         unicode_acc = static_cast<uint16_t>((unicode_acc << 4) | nib);
         --hex_remaining;

@@ -869,3 +869,148 @@ TEST_CASE("sax_parse: null literal mismatch") {
     auto err = note::sax_parse(R"({"a":noll})", sink);
     REQUIRE(!err.empty());
 }
+
+// ═══════════════════════════════════════════════════════════════════════
+// Branch coverage — string escape sequences in unescape()
+// ═══════════════════════════════════════════════════════════════════════
+
+TEST_CASE("sax_parse: escape tab and carriage return") {
+    RecordingSink sink;
+    auto err = note::sax_parse(R"({"v":"a\tb\rc"})", sink);
+    REQUIRE(err.empty());
+    // events: object_begin, string("v"), object_end
+    auto it = std::find_if(sink.events.begin(), sink.events.end(),
+        [](const Event& e) { return e.type == "string"; });
+    REQUIRE(it != sink.events.end());
+    CHECK(it->value == "a\tb\rc");
+}
+
+TEST_CASE("sax_parse: escape backspace and formfeed") {
+    RecordingSink sink;
+    auto err = note::sax_parse(R"({"v":"\b\f"})", sink);
+    REQUIRE(err.empty());
+    auto it = std::find_if(sink.events.begin(), sink.events.end(),
+        [](const Event& e) { return e.type == "string"; });
+    REQUIRE(it != sink.events.end());
+    CHECK(it->value == "\b\f");
+}
+
+TEST_CASE("sax_parse: escape backslash and forward slash") {
+    RecordingSink sink;
+    auto err = note::sax_parse(R"({"v":"\\\/"})", sink);
+    REQUIRE(err.empty());
+    auto it = std::find_if(sink.events.begin(), sink.events.end(),
+        [](const Event& e) { return e.type == "string"; });
+    REQUIRE(it != sink.events.end());
+    CHECK(it->value == "\\/");
+}
+
+TEST_CASE("sax_parse: unicode escape \\u0041 = A (ASCII)") {
+    RecordingSink sink;
+    auto err = note::sax_parse(R"({"v":"\u0041"})", sink);
+    REQUIRE(err.empty());
+    auto it = std::find_if(sink.events.begin(), sink.events.end(),
+        [](const Event& e) { return e.type == "string"; });
+    REQUIRE(it != sink.events.end());
+    CHECK(it->value == "A");
+}
+
+TEST_CASE("sax_parse: unicode escape \\u00E9 (2-byte UTF-8)") {
+    RecordingSink sink;
+    auto err = note::sax_parse(R"({"v":"\u00e9"})", sink);
+    REQUIRE(err.empty());
+    auto it = std::find_if(sink.events.begin(), sink.events.end(),
+        [](const Event& e) { return e.type == "string"; });
+    REQUIRE(it != sink.events.end());
+    // é = U+00E9 = 0xC3 0xA9 in UTF-8
+    CHECK(it->value.size() == 2);
+    CHECK(static_cast<unsigned char>(it->value[0]) == 0xC3);
+    CHECK(static_cast<unsigned char>(it->value[1]) == 0xA9);
+}
+
+TEST_CASE("sax_parse: unicode escape \\u4E16 (3-byte UTF-8)") {
+    RecordingSink sink;
+    auto err = note::sax_parse(R"({"v":"\u4E16"})", sink);
+    REQUIRE(err.empty());
+    auto it = std::find_if(sink.events.begin(), sink.events.end(),
+        [](const Event& e) { return e.type == "string"; });
+    REQUIRE(it != sink.events.end());
+    // 世 = U+4E16 = 0xE4 0xB8 0x96 in UTF-8
+    CHECK(it->value.size() == 3);
+    CHECK(static_cast<unsigned char>(it->value[0]) == 0xE4);
+}
+
+TEST_CASE("sax_parse: unicode surrogate replaced with ?") {
+    RecordingSink sink;
+    auto err = note::sax_parse(R"({"v":"\uD800"})", sink);
+    REQUIRE(err.empty());
+    auto it = std::find_if(sink.events.begin(), sink.events.end(),
+        [](const Event& e) { return e.type == "string"; });
+    REQUIRE(it != sink.events.end());
+    CHECK(it->value == "?");
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// Branch coverage — number parsing edge cases
+// ═══════════════════════════════════════════════════════════════════════
+
+TEST_CASE("sax_parse: number with exponent") {
+    RecordingSink sink;
+    auto err = note::sax_parse(R"({"v":1.5e2})", sink);
+    REQUIRE(err.empty());
+    auto it = std::find_if(sink.events.begin(), sink.events.end(),
+        [](const Event& e) { return e.type == "number"; });
+    REQUIRE(it != sink.events.end());
+    CHECK(it->value == "1.5e2");
+}
+
+TEST_CASE("sax_parse: number with positive exponent") {
+    RecordingSink sink;
+    auto err = note::sax_parse(R"({"v":1e+3})", sink);
+    REQUIRE(err.empty());
+    auto it = std::find_if(sink.events.begin(), sink.events.end(),
+        [](const Event& e) { return e.type == "number"; });
+    REQUIRE(it != sink.events.end());
+    CHECK(it->value == "1e+3");
+}
+
+TEST_CASE("sax_parse: number with negative exponent") {
+    RecordingSink sink;
+    auto err = note::sax_parse(R"({"v":1e-3})", sink);
+    REQUIRE(err.empty());
+}
+
+TEST_CASE("sax_parse: leading zero with fraction") {
+    RecordingSink sink;
+    auto err = note::sax_parse(R"({"v":0.5})", sink);
+    REQUIRE(err.empty());
+}
+
+TEST_CASE("sax_parse: tab in whitespace positions") {
+    RecordingSink sink;
+    auto err = note::sax_parse("{\t\"a\"\t:\t1\t}", sink);
+    REQUIRE(err.empty());
+}
+
+TEST_CASE("sax_parse: carriage return in whitespace") {
+    RecordingSink sink;
+    auto err = note::sax_parse("{\r\"a\"\r:\r1\r}", sink);
+    REQUIRE(err.empty());
+}
+
+TEST_CASE("sax_parse: truncated JSON at various points") {
+    // Exercises peek()/advance() returning '\0' at end of input.
+    RecordingSink sink;
+    // Truncated after opening brace
+    CHECK(!note::sax_parse("{", 1, sink).empty());
+    // Truncated mid-key
+    CHECK(!note::sax_parse("{\"a", 3, sink).empty());
+    // Truncated after colon
+    CHECK(!note::sax_parse("{\"a\":", 5, sink).empty());
+    // Truncated mid-number
+    CHECK(!note::sax_parse("{\"a\":1", 6, sink).empty());
+    // Truncated mid-string value
+    CHECK(!note::sax_parse("{\"a\":\"b", 7, sink).empty());
+    // Truncated mid-escape
+    CHECK(!note::sax_parse("{\"a\":\"\\", 7, sink).empty());
+}

@@ -39,7 +39,7 @@ namespace note {
 // Forward declarations.
 template<typename T>
 struct StructSinkCore;
-template<typename T>
+template<typename T, std::size_t MaxDepth = 4>
 struct StructSink;
 
 namespace detail {
@@ -474,26 +474,26 @@ private:
 // Inherits all SAX methods from StructSinkCore<T>.
 // ═══════════════════════════════════════════════════════════════════════
 
-// Workspace size: must fit StructSinkCore<AnyChild>. They're all the
-// same size (T only affects the reference, which is pointer-sized).
-// Computed after StructSinkCore is complete.
+// Workspace size: must fit N StructSinkCore instances (one per nesting level).
+// All StructSinkCore<T> are the same size regardless of T (pointer-sized ref).
+// Each nesting level offsets its child past itself in the workspace.
 namespace detail {
-    // All StructSinkCore<T> have the same size regardless of T.
-    // Use a representative type to compute it.
     struct SinkSizeProbe { int x; NOTE_FIELDS(x) };
     inline constexpr std::size_t struct_sink_core_size =
         sizeof(StructSinkCore<SinkSizeProbe>);
 
-    // Round up to max_align_t alignment.
-    inline constexpr std::size_t struct_sink_workspace_size =
+    inline constexpr std::size_t struct_sink_core_aligned =
         (struct_sink_core_size + alignof(std::max_align_t) - 1)
         & ~(alignof(std::max_align_t) - 1);
 }
 
-template<typename T>
+/// @tparam T          The struct type to parse into.
+/// @tparam MaxDepth   Max aggregate nesting depth (e.g. A→B→C = depth 3).
+///                    Defaults to 4. Deeper nesting requires a larger value.
+template<typename T, std::size_t MaxDepth>
 struct StructSink : StructSinkCore<T> {
     alignas(alignof(std::max_align_t))
-    char workspace_buf_[detail::struct_sink_workspace_size];
+    char workspace_buf_[detail::struct_sink_core_aligned * MaxDepth];
 
     StructSink(T& obj_, StringPool& pool_)
         : StructSinkCore<T>(obj_, pool_, workspace_buf_) {}
@@ -543,10 +543,11 @@ const ChildVTable& child_vtable_for() {
 template<typename V>
 void SaxCaptureChildCreator::create_child_thunk(void* field, void* storage,
     const ChildVTable** vt_out, void** ctx_out, StringPool& pool) {
-    // Child uses the same workspace for its own children. Since only
-    // one child is active at a time, the workspace is safely reusable.
+    // Child is placed at the start of storage. Its own workspace is offset
+    // past itself so that grandchildren don't overwrite the child.
     auto* child = ::new (storage) StructSinkCore<V>(
-        *static_cast<V*>(field), pool, static_cast<char*>(storage));
+        *static_cast<V*>(field), pool,
+        static_cast<char*>(storage) + struct_sink_core_size);
     *ctx_out = static_cast<void*>(child);
     *vt_out = &child_vtable_for<V>();
 }
@@ -574,7 +575,7 @@ const ArrayElemVTable& SaxCaptureArray::array_elem_vtable_for() {
             if constexpr (is_sax_aggregate<Elem>::value) {
                 auto* child = ::new (storage) StructSinkCore<Elem>(
                     *static_cast<Elem*>(elem), pool,
-                    static_cast<char*>(storage));
+                    static_cast<char*>(storage) + struct_sink_core_size);
                 *ctx_out = static_cast<void*>(child);
                 *vt_out = &child_vtable_for<Elem>();
             }
@@ -616,6 +617,7 @@ BodyHandler make_body_handler(StructSink<T>& sink) {
             case BodyEvent::ArrayBegin:  s.on_array_begin(ev.key); break;
             case BodyEvent::ArrayEnd:    s.on_array_end(ev.key); break;
             case BodyEvent::Reset:       s.reset(); break;
+            default: NOTE_UNREACHABLE();
             }
         },
     };

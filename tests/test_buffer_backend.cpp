@@ -597,3 +597,223 @@ TEST_CASE("JsmnJsonReader: too few tokens reports error") {
     // jsmn returns negative on insufficient tokens → token_count_ = 0 → has_error
     REQUIRE(r.has_error());
 }
+
+
+// ---------------------------------------------------------------------------
+// Branch coverage: add_element(false) — line 87 false branch
+// ---------------------------------------------------------------------------
+
+TEST_CASE("BufferJsonBuilder: add_element(false) in array") {
+    char buf[128];
+    BufferJsonBuilder b(buf, sizeof(buf));
+    b.begin_array("arr");
+    b.add_element(false);
+    b.add_element(true);
+    b.end_array();
+    REQUIRE(b.to_view() == R"({"arr":[false,true]})");
+}
+
+
+// ---------------------------------------------------------------------------
+// Branch coverage: get_string_array with non-string elements
+// ---------------------------------------------------------------------------
+
+TEST_CASE("JsmnJsonReader: get_string_array skips non-string elements") {
+    const char* json = R"({"items":["hello",42,true,"world"]})";
+    jsmntok_t tokens[16];
+    JsmnJsonReader r(json, strlen(json), tokens, 16);
+
+    string_view out[4];
+    size_t count = r.get_string_array("items", out, 4);
+    REQUIRE(count == 2);
+    REQUIRE(out[0] == "hello");
+    REQUIRE(out[1] == "world");
+}
+
+
+// ---------------------------------------------------------------------------
+// Branch coverage: get_object_array on non-array — line 250
+// ---------------------------------------------------------------------------
+
+TEST_CASE("JsmnJsonReader: get_object_array on non-array returns 0") {
+    const char* json = R"({"items":"not-an-array"})";
+    jsmntok_t tokens[8];
+    JsmnJsonReader r(json, strlen(json), tokens, 8);
+
+    std::unique_ptr<JsonReader> out[4];
+    size_t count = r.get_object_array("items", out, 4);
+    REQUIRE(count == 0);
+}
+
+TEST_CASE("JsmnJsonReader: get_object_array skips non-object elements") {
+    const char* json = R"({"items":[{"a":1},"skip",{"b":2}]})";
+    jsmntok_t tokens[32];
+    JsmnJsonReader r(json, strlen(json), tokens, 32);
+
+    std::unique_ptr<JsonReader> out[4];
+    size_t count = r.get_object_array("items", out, 4);
+    REQUIRE(count == 2);
+    REQUIRE(out[0]->get_int("a", 0) == 1);
+    REQUIRE(out[1]->get_int("b", 0) == 2);
+}
+
+TEST_CASE("JsmnJsonReader: get_object_array limited by max") {
+    const char* json = R"({"items":[{"a":1},{"b":2},{"c":3}]})";
+    jsmntok_t tokens[32];
+    JsmnJsonReader r(json, strlen(json), tokens, 32);
+
+    std::unique_ptr<JsonReader> out[2];
+    size_t count = r.get_object_array("items", out, 2);
+    REQUIRE(count == 2);
+    REQUIRE(out[0]->get_int("a", 0) == 1);
+    REQUIRE(out[1]->get_int("b", 0) == 2);
+}
+
+
+// ---------------------------------------------------------------------------
+// Branch coverage: get_error with non-string err field — line 279
+// ---------------------------------------------------------------------------
+
+TEST_CASE("JsmnJsonReader: get_error with non-string err returns empty") {
+    const char* json = R"({"err":42})";
+    jsmntok_t tokens[8];
+    JsmnJsonReader r(json, strlen(json), tokens, 8);
+    REQUIRE_FALSE(r.has_error());
+    REQUIRE(r.get_error().empty());
+}
+
+
+// ---------------------------------------------------------------------------
+// Branch coverage: sub-reader with invalid root — line 321
+// ---------------------------------------------------------------------------
+
+TEST_CASE("JsmnJsonReader: sub-reader with root beyond token count") {
+    const char* json = R"({"x":1})";
+    jsmntok_t tokens[8];
+    JsmnJsonReader parent(json, strlen(json), tokens, 8);
+
+    JsmnJsonReader sub(json, strlen(json), tokens, 3, /*root=*/10);
+    REQUIRE(sub.has_error());
+    REQUIRE(sub.get_int("x", -1) == -1);
+}
+
+
+// ---------------------------------------------------------------------------
+// Branch coverage: sub-reader on array root — line 323
+// ---------------------------------------------------------------------------
+
+TEST_CASE("JsmnJsonReader: sub-reader on array root returns defaults") {
+    const char* json = R"({"arr":[1,2,3]})";
+    jsmntok_t tokens[16];
+    JsmnJsonReader parent(json, strlen(json), tokens, 16);
+
+    // Array token is at index 2 (0=obj, 1="arr" key, 2=array)
+    JsmnJsonReader sub(json, strlen(json), tokens, 16, /*root=*/2);
+    REQUIRE(sub.has_error());
+    REQUIRE(sub.get_int("x", -1) == -1);
+}
+
+
+// ---------------------------------------------------------------------------
+// Branch coverage: find_value with truncated key-value pair — line 327
+// ---------------------------------------------------------------------------
+
+TEST_CASE("JsmnJsonReader: find_value with truncated tokens") {
+    const char* json = R"({"a":1,"b":2})";
+    jsmntok_t tokens[16];
+    JsmnJsonReader full(json, strlen(json), tokens, 16);
+
+    // Tokens: 0=obj(size=2), 1="a"key, 2=1val, 3="b"key, 4=2val
+    // With token_count=4: looking up "b" hits idx=3, idx+1=4 >= 4, break.
+    JsmnJsonReader sub(json, strlen(json), tokens, 4, /*root=*/0);
+    REQUIRE(sub.get_int("a", 0) == 1);
+    REQUIRE(sub.get_int("b", -1) == -1);
+}
+
+
+// ---------------------------------------------------------------------------
+// Branch coverage: parse_int with empty string — line 339
+// ---------------------------------------------------------------------------
+
+TEST_CASE("JsmnJsonReader: get_int on empty string returns default") {
+    const char* json = R"({"val":""})";
+    jsmntok_t tokens[8];
+    JsmnJsonReader r(json, strlen(json), tokens, 8);
+    REQUIRE(r.get_int("val", -99) == -99);
+}
+
+
+// ---------------------------------------------------------------------------
+// Branch coverage: parse_double with empty string — line 356
+// ---------------------------------------------------------------------------
+
+TEST_CASE("JsmnJsonReader: get_double on empty string returns default") {
+    const char* json = R"({"val":""})";
+    jsmntok_t tokens[8];
+    JsmnJsonReader r(json, strlen(json), tokens, 8);
+    REQUIRE(r.get_double("val", -99.0) == Approx(-99.0));
+}
+
+
+// ---------------------------------------------------------------------------
+// Branch coverage: parse_double integer path — line 362
+// ---------------------------------------------------------------------------
+
+TEST_CASE("JsmnJsonReader: parse_double integer without decimal") {
+    const char* json = R"({"val":42})";
+    jsmntok_t tokens[8];
+    JsmnJsonReader r(json, strlen(json), tokens, 8);
+    REQUIRE(r.get_double("val", 0.0) == Approx(42.0));
+}
+
+TEST_CASE("JsmnJsonReader: parse_double negative with decimal") {
+    const char* json = R"({"val":-3.14})";
+    jsmntok_t tokens[8];
+    JsmnJsonReader r(json, strlen(json), tokens, 8);
+    REQUIRE(r.get_double("val", 0.0) == Approx(-3.14));
+}
+
+
+// ---------------------------------------------------------------------------
+// Branch coverage: parse_double stops at 'e'/'E' — line 367
+// ---------------------------------------------------------------------------
+
+TEST_CASE("JsmnJsonReader: parse_double stops at exponent e") {
+    const char* json = R"({"val":1e5})";
+    jsmntok_t tokens[8];
+    JsmnJsonReader r(json, strlen(json), tokens, 8);
+    REQUIRE(r.get_double("val", 0.0) == Approx(1.0));
+}
+
+TEST_CASE("JsmnJsonReader: parse_double stops at exponent E in decimal part") {
+    const char* json = R"({"val":1.5E3})";
+    jsmntok_t tokens[8];
+    JsmnJsonReader r(json, strlen(json), tokens, 8);
+    REQUIRE(r.get_double("val", 0.0) == Approx(1.5));
+}
+
+
+// ---------------------------------------------------------------------------
+// Branch coverage: tok_span with nested objects
+// ---------------------------------------------------------------------------
+
+TEST_CASE("JsmnJsonReader: find_value skips deeply nested objects") {
+    const char* json = R"({"nested":{"a":{"b":1}},"after":"found"})";
+    jsmntok_t tokens[16];
+    JsmnJsonReader r(json, strlen(json), tokens, 16);
+    REQUIRE(r.get_string("after") == "found");
+}
+
+
+// ---------------------------------------------------------------------------
+// Branch coverage: overflow to_view returns capacity-1 length
+// ---------------------------------------------------------------------------
+
+TEST_CASE("BufferJsonBuilder: overflow to_view returns truncated length") {
+    char buf[8];
+    BufferJsonBuilder b(buf, sizeof(buf));
+    b.add("k", string_view("val"));
+    REQUIRE(b.overflow());
+    auto v = b.to_view();
+    REQUIRE(v.size() == sizeof(buf) - 1);
+}

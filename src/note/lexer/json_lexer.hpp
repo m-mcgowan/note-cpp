@@ -101,6 +101,7 @@ private:
         case State::InNumber:     on_in_number(c, fn, ctx); break;
         case State::InLiteral:    on_in_literal(c, fn, ctx); break;
         case State::Done:         break;
+        default: NOTE_UNREACHABLE();
         }
     }
 
@@ -114,7 +115,14 @@ private:
     }
 
     static bool is_ws(char c) {
-        return c == ' ' || c == '\t' || c == '\r' || c == '\n';
+        switch (static_cast<unsigned char>(c)) {
+        case ' ': case '\t': case '\r': case '\n': return true;
+        default: return false;
+        }
+    }
+
+    static bool is_digit(char c) {
+        return static_cast<unsigned>(c - '0') < 10;
     }
 
     void emit(const LexerEvent& ev, EventFn fn, void* ctx) { fn(ctx, ev); }
@@ -142,7 +150,7 @@ private:
         } else if (c == '"') {
             string_ctx_ = StringContext::Value;
             state_ = State::InString;
-        } else if (c == '-' || (c >= '0' && c <= '9')) {
+        } else if (c == '-' || (is_digit(c))) {
             number_.reset();
             if (c == '-') { number_.set_negative(); number_state_ = NumState::IntStart; }
             else { number_.add_digit(static_cast<uint8_t>(c - '0')); number_state_ = (c == '0') ? NumState::Zero : NumState::Int; }
@@ -319,7 +327,7 @@ private:
     void on_in_number(char c, EventFn fn, void* ctx) {
         switch (number_state_) {
         case NumState::IntStart:
-            if (c >= '0' && c <= '9') {
+            if (is_digit(c)) {
                 number_.add_digit(static_cast<uint8_t>(c - '0'));
                 number_state_ = (c == '0') ? NumState::Zero : NumState::Int;
             } else {
@@ -331,31 +339,32 @@ private:
             if (c == 'e' || c == 'E') { number_.start_exponent(); number_state_ = NumState::ExpSign; return; }
             break;
         case NumState::Int:
-            if (c >= '0' && c <= '9') { number_.add_digit(static_cast<uint8_t>(c - '0')); return; }
+            if (is_digit(c)) { number_.add_digit(static_cast<uint8_t>(c - '0')); return; }
             if (c == '.') { number_.start_fraction(); number_state_ = NumState::FracStart; return; }
             if (c == 'e' || c == 'E') { number_.start_exponent(); number_state_ = NumState::ExpSign; return; }
             break;
         case NumState::FracStart:
-            if (c >= '0' && c <= '9') { number_.add_frac_digit(static_cast<uint8_t>(c - '0')); number_state_ = NumState::Frac; return; }
+            if (is_digit(c)) { number_.add_frac_digit(static_cast<uint8_t>(c - '0')); number_state_ = NumState::Frac; return; }
             emit_error(NOTE_ERR("\1"), fn, ctx);
             return;
         case NumState::Frac:
-            if (c >= '0' && c <= '9') { number_.add_frac_digit(static_cast<uint8_t>(c - '0')); return; }
+            if (is_digit(c)) { number_.add_frac_digit(static_cast<uint8_t>(c - '0')); return; }
             if (c == 'e' || c == 'E') { number_.start_exponent(); number_state_ = NumState::ExpSign; return; }
             break;
         case NumState::ExpSign:
             if (c == '+') { number_state_ = NumState::ExpStart; return; }
             if (c == '-') { number_.set_exp_negative(); number_state_ = NumState::ExpStart; return; }
-            if (c >= '0' && c <= '9') { number_.add_exp_digit(static_cast<uint8_t>(c - '0')); number_state_ = NumState::Exp; return; }
+            if (is_digit(c)) { number_.add_exp_digit(static_cast<uint8_t>(c - '0')); number_state_ = NumState::Exp; return; }
             emit_error(NOTE_ERR("\1"), fn, ctx);
             return;
         case NumState::ExpStart:
-            if (c >= '0' && c <= '9') { number_.add_exp_digit(static_cast<uint8_t>(c - '0')); number_state_ = NumState::Exp; return; }
+            if (is_digit(c)) { number_.add_exp_digit(static_cast<uint8_t>(c - '0')); number_state_ = NumState::Exp; return; }
             emit_error(NOTE_ERR("\1"), fn, ctx);
             return;
         case NumState::Exp:
-            if (c >= '0' && c <= '9') { number_.add_exp_digit(static_cast<uint8_t>(c - '0')); return; }
+            if (is_digit(c)) { number_.add_exp_digit(static_cast<uint8_t>(c - '0')); return; }
             break;
+        default: NOTE_UNREACHABLE();
         }
 
         // Number terminated by this character — emit, then re-process.

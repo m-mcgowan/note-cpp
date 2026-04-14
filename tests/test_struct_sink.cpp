@@ -816,3 +816,299 @@ TEST_CASE("field_type_of maps C++ types correctly") {
     STATIC_REQUIRE(note::field_type_of<double>() == note::FieldType::Double);
     STATIC_REQUIRE(note::field_type_of<note::string_view>() == note::FieldType::String);
 }
+
+// ═══════════════════════════════════════════════════════════════════════
+// child_ctx_ forwarding — all event types through nested struct
+// ═══════════════════════════════════════════════════════════════════════
+
+namespace {
+
+// A nested struct with ALL field types to exercise child_ctx_ forwarding.
+struct ChildAllTypes {
+    bool active;
+    int32_t count;
+    float temp;
+    note::string_view label;
+    std::array<int32_t, 3> values;
+    NOTE_FIELDS(active, count, temp, label, values)
+};
+
+struct ParentWithChild {
+    ChildAllTypes child;
+    int32_t parent_val;
+    NOTE_FIELDS(child, parent_val)
+};
+
+// Doubly nested: parent -> mid -> inner
+struct Inner {
+    float x;
+    note::string_view name;
+    NOTE_FIELDS(x, name)
+};
+
+struct Mid {
+    Inner inner;
+    int32_t y;
+    NOTE_FIELDS(inner, y)
+};
+
+struct DoublyNested {
+    Mid mid;
+    bool top;
+    NOTE_FIELDS(mid, top)
+};
+
+} // namespace
+
+TEST_CASE("StructSink: child_ctx_ forwards on_bool") {
+    ParentWithChild obj{};
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+    note::StructSink<ParentWithChild> sink(obj, pool);
+
+    sink.on_object_begin("child");
+    sink.on_bool("active", true);
+    sink.on_object_end("child");
+
+    REQUIRE(obj.child.active == true);
+}
+
+TEST_CASE("StructSink: child_ctx_ forwards on_int") {
+    ParentWithChild obj{};
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+    note::StructSink<ParentWithChild> sink(obj, pool);
+
+    sink.on_object_begin("child");
+    sink.on_int("count", 42);
+    sink.on_object_end("child");
+
+    REQUIRE(obj.child.count == 42);
+}
+
+TEST_CASE("StructSink: child_ctx_ forwards on_float") {
+    ParentWithChild obj{};
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+    note::StructSink<ParentWithChild> sink(obj, pool);
+
+    sink.on_object_begin("child");
+    sink.on_float("temp", 22.5);
+    sink.on_object_end("child");
+
+    REQUIRE(obj.child.temp == 22.5f);
+}
+
+TEST_CASE("StructSink: child_ctx_ forwards on_string") {
+    ParentWithChild obj{};
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+    note::StructSink<ParentWithChild> sink(obj, pool);
+
+    sink.on_object_begin("child");
+    sink.on_string("label", "sensor-1");
+    sink.on_object_end("child");
+
+    REQUIRE(obj.child.label == "sensor-1");
+}
+
+TEST_CASE("StructSink: child_ctx_ forwards on_number") {
+    ParentWithChild obj{};
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+    note::StructSink<ParentWithChild> sink(obj, pool);
+
+    sink.on_object_begin("child");
+    sink.on_number("count", "99");
+    sink.on_number("temp", "22.5");
+    sink.on_object_end("child");
+
+    REQUIRE(obj.child.count == 99);
+    REQUIRE(obj.child.temp == 22.5f);
+}
+
+TEST_CASE("StructSink: child_ctx_ forwards on_array_begin/end") {
+    ParentWithChild obj{};
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+    note::StructSink<ParentWithChild> sink(obj, pool);
+
+    sink.on_object_begin("child");
+    sink.on_array_begin("values");
+    sink.on_int("", 10);
+    sink.on_int("", 20);
+    sink.on_int("", 30);
+    sink.on_array_end("values");
+    sink.on_object_end("child");
+
+    REQUIRE(obj.child.values[0] == 10);
+    REQUIRE(obj.child.values[1] == 20);
+    REQUIRE(obj.child.values[2] == 30);
+}
+
+TEST_CASE("StructSink: doubly nested struct — child_depth > 1 forwarding") {
+    DoublyNested obj{};
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+    note::StructSink<DoublyNested> sink(obj, pool);
+
+    sink.on_bool("top", true);
+    sink.on_object_begin("mid");     // child_ctx_ set, child_depth_ = 1
+    sink.on_int("y", 42);
+
+    // Nested object inside child — child_depth_ goes to 2
+    sink.on_object_begin("inner");   // child_depth_ = 2
+    sink.on_float("x", 3.14);
+    sink.on_string("name", "deep");
+    sink.on_object_end("inner");     // child_depth_ back to 1, inner cleared
+    sink.on_object_end("mid");       // child_depth_ = 0, child_ctx_ cleared
+
+    REQUIRE(obj.top == true);
+    REQUIRE(obj.mid.y == 42);
+    REQUIRE(obj.mid.inner.x == Approx(3.14f));
+    REQUIRE(obj.mid.inner.name == "deep");
+}
+
+TEST_CASE("StructSink: child_ctx_ on_object_begin increments child_depth") {
+    DoublyNested obj{};
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+    note::StructSink<DoublyNested> sink(obj, pool);
+
+    sink.on_object_begin("mid");
+    sink.on_object_begin("unknown_nested");
+    sink.on_int("something", 999);
+    sink.on_object_end("unknown_nested");
+
+    sink.on_object_begin("inner");
+    sink.on_float("x", 1.0);
+    sink.on_object_end("inner");
+    sink.on_object_end("mid");
+
+    REQUIRE(obj.mid.inner.x == 1.0f);
+    REQUIRE(obj.mid.y == 0);
+}
+
+
+// ═══════════════════════════════════════════════════════════════════════
+// Array overflow for all element types (null elem paths)
+// ═══════════════════════════════════════════════════════════════════════
+
+TEST_CASE("StructSink: bool array overflow is safe") {
+    WithBoolArray wa{};
+    char buf[256];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+    note::StructSink<WithBoolArray> sink(wa, pool);
+
+    sink.on_array_begin("flags");
+    sink.on_bool("", true);
+    sink.on_bool("", false);
+    sink.on_bool("", true);
+    sink.on_bool("", true);  // overflow — capacity is 3
+    sink.on_array_end("flags");
+
+    REQUIRE(wa.flags[2] == true);
+}
+
+TEST_CASE("StructSink: int array overflow is safe") {
+    WithIntArray wa{};
+    char buf[256];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+    note::StructSink<WithIntArray> sink(wa, pool);
+
+    sink.on_array_begin("values");
+    sink.on_int("", 1);
+    sink.on_int("", 2);
+    sink.on_int("", 3);
+    sink.on_int("", 4);
+    sink.on_int("", 5); // overflow — capacity is 4
+    sink.on_array_end("values");
+
+    REQUIRE(wa.values[3] == 4);
+}
+
+TEST_CASE("StructSink: string array overflow is safe") {
+    WithStringArray ws{};
+    char buf[512];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+    note::StructSink<WithStringArray> sink(ws, pool);
+
+    sink.on_array_begin("tags");
+    sink.on_string("", "a");
+    sink.on_string("", "b");
+    sink.on_string("", "c");
+    sink.on_string("", "overflow"); // overflow — capacity is 3
+    sink.on_array_end("tags");
+
+    REQUIRE(ws.tags[2] == "c");
+}
+
+TEST_CASE("StructSink: number in array overflow is safe") {
+    WithIntArray wa{};
+    char buf[256];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+    note::StructSink<WithIntArray> sink(wa, pool);
+
+    sink.on_array_begin("values");
+    sink.on_number("", "10");
+    sink.on_number("", "20");
+    sink.on_number("", "30");
+    sink.on_number("", "40");
+    sink.on_number("", "50"); // overflow — capacity is 4
+    sink.on_array_end("values");
+
+    REQUIRE(wa.values[3] == 40);
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// on_array_end with child_ctx_ forwarding (line 404)
+// ═══════════════════════════════════════════════════════════════════════
+
+namespace {
+
+struct ChildWithArray {
+    std::array<int32_t, 3> nums;
+    NOTE_FIELDS(nums)
+};
+
+struct ParentOfChildWithArray {
+    ChildWithArray sub;
+    int32_t extra;
+    NOTE_FIELDS(sub, extra)
+};
+
+} // namespace
+
+TEST_CASE("StructSink: array inside nested struct — child forwards array events") {
+    ParentOfChildWithArray obj{};
+    char buf[1024];
+    note::MonotonicArena arena(buf);
+    note::StringPool pool(note::arena_allocator(arena));
+    note::StructSink<ParentOfChildWithArray> sink(obj, pool);
+
+    sink.on_int("extra", 7);
+    sink.on_object_begin("sub");
+    sink.on_array_begin("nums");
+    sink.on_int("", 10);
+    sink.on_int("", 20);
+    sink.on_int("", 30);
+    sink.on_array_end("nums");
+    sink.on_object_end("sub");
+
+    REQUIRE(obj.extra == 7);
+    REQUIRE(obj.sub.nums[0] == 10);
+    REQUIRE(obj.sub.nums[1] == 20);
+    REQUIRE(obj.sub.nums[2] == 30);
+}

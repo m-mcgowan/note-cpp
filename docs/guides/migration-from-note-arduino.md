@@ -1490,19 +1490,22 @@ See [Known Issues](../known-issues.md) for details on the Clang limitation.
 ### Printing `string_view` values
 
 `ResponseField<string_view>` implements Arduino `Printable`, so
-`Serial.println(rsp.version)` works directly. But bare `string_view`
-values (e.g. from `ResponseArray` iteration) are not `Printable` — use
-`note::println()` instead:
+`Serial.println(rsp.version)` works directly. Bare `string_view`
+values (e.g. from `ResponseArray` iteration) don't have `Printable` —
+use `note::println()`:
 
 ```cpp
 // ResponseField — Printable, works directly
 Serial.println(rsp.version);
 
-// Bare string_view (e.g. from array iteration) — use note::println
+// Bare string_view (e.g. from array iteration)
 for (auto& f : result.files) {
     note::println(Serial, f);
 }
 ```
+
+For note-cpp types that have `printTo()` but aren't directly `Printable`,
+use the `printable()` wrapper: `Serial.println(printable(result))`.
 
 ### `noteId` vs `note` field name
 

@@ -236,7 +236,43 @@
       ]
     }
   },
+  "web": {
+    "post": {
+      "x-response-properties": {
+        "status": {
+          "description": "MD5 hash of the binary payload, if any.",
+          "type": "string"
+        }
+      }
+    }
+  },
+  "web.put": {
+    "put": {
+      "x-response-properties": {
+        "cobs": {
+          "description": "Size of the COBS-encoded binary payload (in bytes).",
+          "type": "integer"
+        },
+        "length": {
+          "description": "Size of the unencoded binary payload (in bytes).",
+          "type": "integer"
+        }
+      }
+    }
+  },
   "web.delete": {
+    "delete": {
+      "x-response-properties": {
+        "cobs": {
+          "description": "Size of the COBS-encoded binary payload (in bytes).",
+          "type": "integer"
+        },
+        "length": {
+          "description": "Size of the unencoded binary payload (in bytes).",
+          "type": "integer"
+        }
+      }
+    },
     "path": {
       "x-aliases": [
         {"method": "remove", "description": "Alias for delete()."}

@@ -4403,7 +4403,7 @@ TEST_CASE("note::api::VarSet transport equivalence (void)") {
 TEST_CASE("note::api::Web transport equivalence") {
     SECTION("streaming") {
         StreamingHarness sh;
-        sh.hal.queue_response(R"({"cobs":42,"length":42,"payload":"x-payload","result":42})");
+        sh.hal.queue_response(R"({"cobs":42,"length":42,"payload":"x-payload","result":42,"status":"x-status"})");
     auto req = sh.api.web.request();
 
         auto rsp = req.execute();
@@ -4412,6 +4412,7 @@ TEST_CASE("note::api::Web transport equivalence") {
         CHECK(rsp.length == 42);
         CHECK(rsp.payload == "x-payload");
         CHECK(rsp.result == 42);
+        CHECK(rsp.status == "x-status");
     }
     SECTION("streaming error") {
         StreamingHarness sh;  // no response queued — HAL returns error
@@ -4430,7 +4431,7 @@ TEST_CASE("note::api::Web transport equivalence") {
         CHECK(rsp.error().code == note::Error::Notecard);
     }
     SECTION("buffered") {
-        BufferedHarness bh(R"({"cobs":42,"length":42,"payload":"x-payload","result":42})");
+        BufferedHarness bh(R"({"cobs":42,"length":42,"payload":"x-payload","result":42,"status":"x-status"})");
     auto req = bh.api.web.request();
 
         auto rsp = req.execute();
@@ -4439,6 +4440,7 @@ TEST_CASE("note::api::Web transport equivalence") {
         CHECK(rsp.length == 42);
         CHECK(rsp.payload == "x-payload");
         CHECK(rsp.result == 42);
+        CHECK(rsp.status == "x-status");
     }
 }
 
@@ -4447,7 +4449,7 @@ TEST_CASE("note::api::Web transport equivalence") {
 TEST_CASE("note::api::WebDelete transport equivalence") {
     SECTION("streaming") {
         StreamingHarness sh;
-        sh.hal.queue_response(R"({"payload":"x-payload","result":42,"status":"x-status"})");
+        sh.hal.queue_response(R"({"payload":"x-payload","result":42,"status":"x-status","cobs":42,"length":42})");
     auto req = sh.api.web.delete_();
 
         auto rsp = req.execute();
@@ -4455,6 +4457,8 @@ TEST_CASE("note::api::WebDelete transport equivalence") {
         CHECK(rsp.payload == "x-payload");
         CHECK(rsp.result == 42);
         CHECK(rsp.status == "x-status");
+        CHECK(rsp.cobs == 42);
+        CHECK(rsp.length == 42);
     }
     SECTION("streaming error") {
         StreamingHarness sh;  // no response queued — HAL returns error
@@ -4473,7 +4477,7 @@ TEST_CASE("note::api::WebDelete transport equivalence") {
         CHECK(rsp.error().code == note::Error::Notecard);
     }
     SECTION("buffered") {
-        BufferedHarness bh(R"({"payload":"x-payload","result":42,"status":"x-status"})");
+        BufferedHarness bh(R"({"payload":"x-payload","result":42,"status":"x-status","cobs":42,"length":42})");
     auto req = bh.api.web.delete_();
 
         auto rsp = req.execute();
@@ -4481,6 +4485,8 @@ TEST_CASE("note::api::WebDelete transport equivalence") {
         CHECK(rsp.payload == "x-payload");
         CHECK(rsp.result == 42);
         CHECK(rsp.status == "x-status");
+        CHECK(rsp.cobs == 42);
+        CHECK(rsp.length == 42);
     }
 }
 
@@ -4583,7 +4589,7 @@ TEST_CASE("note::api::WebPost transport equivalence") {
 TEST_CASE("note::api::WebPut transport equivalence") {
     SECTION("streaming") {
         StreamingHarness sh;
-        sh.hal.queue_response(R"({"payload":"x-payload","result":42,"status":"x-status"})");
+        sh.hal.queue_response(R"({"payload":"x-payload","result":42,"status":"x-status","cobs":42,"length":42})");
     auto req = sh.api.web.put();
 
         auto rsp = req.execute();
@@ -4591,6 +4597,8 @@ TEST_CASE("note::api::WebPut transport equivalence") {
         CHECK(rsp.payload == "x-payload");
         CHECK(rsp.result == 42);
         CHECK(rsp.status == "x-status");
+        CHECK(rsp.cobs == 42);
+        CHECK(rsp.length == 42);
     }
     SECTION("streaming error") {
         StreamingHarness sh;  // no response queued — HAL returns error
@@ -4609,7 +4617,7 @@ TEST_CASE("note::api::WebPut transport equivalence") {
         CHECK(rsp.error().code == note::Error::Notecard);
     }
     SECTION("buffered") {
-        BufferedHarness bh(R"({"payload":"x-payload","result":42,"status":"x-status"})");
+        BufferedHarness bh(R"({"payload":"x-payload","result":42,"status":"x-status","cobs":42,"length":42})");
     auto req = bh.api.web.put();
 
         auto rsp = req.execute();
@@ -4617,6 +4625,8 @@ TEST_CASE("note::api::WebPut transport equivalence") {
         CHECK(rsp.payload == "x-payload");
         CHECK(rsp.result == 42);
         CHECK(rsp.status == "x-status");
+        CHECK(rsp.cobs == 42);
+        CHECK(rsp.length == 42);
     }
 }
 

@@ -320,8 +320,23 @@ def load_operation_extensions(extensions_path: Path) -> dict:
 
 
 def _apply_operation_extensions(op: dict, method_extensions: dict) -> None:
-    """Merge operation-level extensions into an operation object."""
+    """Merge operation-level extensions into an operation object.
+
+    Special key: x-response-properties adds missing properties to the
+    response schema (for upstream spec gaps).
+    """
+    rsp_props = method_extensions.pop("x-response-properties", None)
     op.update(method_extensions)
+    if rsp_props:
+        for _code, resp in op.get("responses", {}).items():
+            schema = (resp
+                      .get("content", {})
+                      .get("application/json", {})
+                      .get("schema", {}))
+            props = schema.setdefault("properties", {})
+            for name, defn in rsp_props.items():
+                if name not in props:
+                    props[name] = defn
 
 
 def _apply_path_extensions(path_item: dict, path_extensions: dict) -> None:

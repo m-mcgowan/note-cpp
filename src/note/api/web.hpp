@@ -50,6 +50,7 @@ struct Web {
         static constexpr char rsp_length[] NOTE_FLASH_ATTR = "length";
         static constexpr char rsp_payload[] NOTE_FLASH_ATTR = "payload";
         static constexpr char rsp_result[] NOTE_FLASH_ATTR = "result";
+        static constexpr char rsp_status[] NOTE_FLASH_ATTR = "status";
     };
 
     static constexpr string_view notecard_request = "web";
@@ -223,6 +224,7 @@ struct Web {
         /// Compile-time arena budget for this response type.
         static constexpr size_t max_arena_size =
             ::note::detail::arena_cost(256) +
+            ::note::detail::arena_cost(80) +
             ::note::detail::arena_cost(64);  // error reserve
 
         /// The size of the COBS-encoded data (in bytes).
@@ -234,6 +236,8 @@ struct Web {
         note::ResponseField<note::string_view> payload{};
         /// The HTTP Status Code
         note::ResponseField<int32_t> result{};
+        /// MD5 hash of the binary payload, if any.
+        note::ResponseField<note::string_view> status{};
 
 #ifndef NOTE_NO_BUFFERED
         /// Access the body as a JsonReader (buffered parse path only).
@@ -247,6 +251,7 @@ struct Web {
             if (reader_->has("length")) rsp.length = reader_->get_int("length");
             if (reader_->has("payload")) rsp.payload = reader_->get_string("payload");
             if (reader_->has("result")) rsp.result = reader_->get_int("result");
+            if (reader_->has("status")) rsp.status = reader_->get_string("status");
             rsp.body_ = reader_->get_object("body");
             rsp.reader_ = std::move(reader_);
             return rsp;
@@ -261,6 +266,7 @@ struct Web {
             if (reader_.has("length")) rsp.length = reader_.get_int("length");
             if (reader_.has("payload")) rsp.payload = reader_.get_string("payload");
             if (reader_.has("result")) rsp.result = reader_.get_int("result");
+            if (reader_.has("status")) rsp.status = reader_.get_string("status");
             rsp.body_ = reader_.get_object("body");
             return rsp;
         }
@@ -302,6 +308,7 @@ struct Web {
                 if (body_depth_ > 0) { if (body_handler_) body_handler_.send(::note::BodyEvent::make_string(k_, v_)); return; }
                 v_ = pool_.intern(v_);
                 if (note::flash(keys_::rsp_payload) == k_) { rsp.payload = v_; return; }
+                if (note::flash(keys_::rsp_status) == k_) { rsp.status = v_; return; }
             }
             NOTE_SINK_NOINLINE void on_bool(::note::string_view k_, bool v_) {
                 if (body_depth_ > 0 && body_handler_) body_handler_.send(::note::BodyEvent::make_bool(k_, v_));
@@ -330,6 +337,7 @@ struct Web {
 
         void intern_strings(::note::StringPool& pool) {
             if (!payload.empty()) payload = pool.intern(payload);
+            if (!status.empty()) status = pool.intern(status);
         }
 
 #ifdef ARDUINO
@@ -353,6 +361,10 @@ struct Web {
             first_ = false;
             n += p.print("\"result\":");
             n += note::detail::print_json_value(p, result.value());
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"status\":");
+            n += note::detail::print_json_value(p, status.value());
             n += p.print("}");
             return n;
         }
@@ -364,7 +376,7 @@ struct Web {
         std::unique_ptr<JsonReader> body_;
 #endif
     };
-    static constexpr uint8_t field_count = 4;
+    static constexpr uint8_t field_count = 5;
     static const ::note::FieldDesc* field_descs_ptr() {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
@@ -373,6 +385,7 @@ struct Web {
             {keys_::rsp_length, static_cast<uint16_t>(offsetof(Response, length)), ::note::FieldType::Int32},
             {keys_::rsp_payload, static_cast<uint16_t>(offsetof(Response, payload)), ::note::FieldType::String},
             {keys_::rsp_result, static_cast<uint16_t>(offsetof(Response, result)), ::note::FieldType::Int32},
+            {keys_::rsp_status, static_cast<uint16_t>(offsetof(Response, status)), ::note::FieldType::String},
         };
 #pragma GCC diagnostic pop
         return table;

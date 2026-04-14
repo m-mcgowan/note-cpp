@@ -52,6 +52,8 @@ struct WebDelete {
         static constexpr char rsp_payload[] NOTE_FLASH_ATTR = "payload";
         static constexpr char rsp_result[] NOTE_FLASH_ATTR = "result";
         static constexpr char rsp_status[] NOTE_FLASH_ATTR = "status";
+        static constexpr char rsp_cobs[] NOTE_FLASH_ATTR = "cobs";
+        static constexpr char rsp_length[] NOTE_FLASH_ATTR = "length";
     };
 
     static constexpr string_view notecard_request = "web.delete";
@@ -220,6 +222,10 @@ struct WebDelete {
         /// hex-encoded MD5 sum of the payload or payload fragment. Useful for
         /// the host to check for any I2C/UART corruption.
         note::ResponseField<note::string_view> status{};
+        /// Size of the COBS-encoded binary payload (in bytes).
+        note::ResponseField<int32_t> cobs{};
+        /// Size of the unencoded binary payload (in bytes).
+        note::ResponseField<int32_t> length{};
 
 #ifndef NOTE_NO_BUFFERED
         /// Access the body as a JsonReader (buffered parse path only).
@@ -232,6 +238,8 @@ struct WebDelete {
             if (reader_->has("payload")) rsp.payload = reader_->get_string("payload");
             if (reader_->has("result")) rsp.result = reader_->get_int("result");
             if (reader_->has("status")) rsp.status = reader_->get_string("status");
+            if (reader_->has("cobs")) rsp.cobs = reader_->get_int("cobs");
+            if (reader_->has("length")) rsp.length = reader_->get_int("length");
             rsp.body_ = reader_->get_object("body");
             rsp.reader_ = std::move(reader_);
             return rsp;
@@ -245,6 +253,8 @@ struct WebDelete {
             if (reader_.has("payload")) rsp.payload = reader_.get_string("payload");
             if (reader_.has("result")) rsp.result = reader_.get_int("result");
             if (reader_.has("status")) rsp.status = reader_.get_string("status");
+            if (reader_.has("cobs")) rsp.cobs = reader_.get_int("cobs");
+            if (reader_.has("length")) rsp.length = reader_.get_int("length");
             rsp.body_ = reader_.get_object("body");
             return rsp;
         }
@@ -294,10 +304,14 @@ struct WebDelete {
             NOTE_SINK_NOINLINE void on_number(::note::string_view k_, ::note::string_view raw_) {
                 if (body_depth_ > 0) { if (body_handler_) body_handler_.send(::note::BodyEvent::make_number(k_, raw_)); return; }
                 if (note::flash(keys_::rsp_result) == k_) { rsp.result = ::note::parse_int(raw_); return; }
+                if (note::flash(keys_::rsp_cobs) == k_) { rsp.cobs = ::note::parse_int(raw_); return; }
+                if (note::flash(keys_::rsp_length) == k_) { rsp.length = ::note::parse_int(raw_); return; }
             }
             NOTE_SINK_NOINLINE void on_int(::note::string_view k_, int32_t v_) {
                 if (body_depth_ > 0) { if (body_handler_) body_handler_.send(::note::BodyEvent::make_int(k_, v_)); return; }
                 if (note::flash(keys_::rsp_result) == k_) { rsp.result = v_; return; }
+                if (note::flash(keys_::rsp_cobs) == k_) { rsp.cobs = v_; return; }
+                if (note::flash(keys_::rsp_length) == k_) { rsp.length = v_; return; }
             }
             NOTE_SINK_NOINLINE void on_float(::note::string_view k_, double v_) {
                 if (body_depth_ > 0 && body_handler_) body_handler_.send(::note::BodyEvent::make_float(k_, v_));
@@ -331,6 +345,14 @@ struct WebDelete {
             first_ = false;
             n += p.print("\"status\":");
             n += note::detail::print_json_value(p, status.value());
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"cobs\":");
+            n += note::detail::print_json_value(p, cobs.value());
+            if (!first_) n += p.print(",");
+            first_ = false;
+            n += p.print("\"length\":");
+            n += note::detail::print_json_value(p, length.value());
             n += p.print("}");
             return n;
         }
@@ -342,7 +364,7 @@ struct WebDelete {
         std::unique_ptr<JsonReader> body_;
 #endif
     };
-    static constexpr uint8_t field_count = 3;
+    static constexpr uint8_t field_count = 5;
     static const ::note::FieldDesc* field_descs_ptr() {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
@@ -350,6 +372,8 @@ struct WebDelete {
             {keys_::rsp_payload, static_cast<uint16_t>(offsetof(Response, payload)), ::note::FieldType::String},
             {keys_::rsp_result, static_cast<uint16_t>(offsetof(Response, result)), ::note::FieldType::Int32},
             {keys_::rsp_status, static_cast<uint16_t>(offsetof(Response, status)), ::note::FieldType::String},
+            {keys_::rsp_cobs, static_cast<uint16_t>(offsetof(Response, cobs)), ::note::FieldType::Int32},
+            {keys_::rsp_length, static_cast<uint16_t>(offsetof(Response, length)), ::note::FieldType::Int32},
         };
 #pragma GCC diagnostic pop
         return table;

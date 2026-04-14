@@ -38,7 +38,7 @@ def _load_spec_with_overlay(spec_path: Path, overlay_path: Path | None) -> dict:
                 spec_method = spec_path_obj.get(method)
                 if not spec_method:
                     continue
-                # Merge property-level patches
+                # Merge request property-level patches
             props_patches = patches.get("properties", {})
             spec_props = (spec_method
                           .get("requestBody", {})
@@ -49,6 +49,20 @@ def _load_spec_with_overlay(spec_path: Path, overlay_path: Path | None) -> dict:
             for prop_name, prop_patch in props_patches.items():
                 if prop_name in spec_props:
                     spec_props[prop_name].update(prop_patch)
+
+            # Merge response property-level patches (add missing fields)
+            rsp_patches = patches.get("response-properties", {})
+            for code, resp in spec_method.get("responses", {}).items():
+                rsp_props = (resp
+                             .get("content", {})
+                             .get("application/json", {})
+                             .get("schema", {})
+                             .get("properties", {}))
+                for prop_name, prop_def in rsp_patches.items():
+                    if prop_name not in rsp_props:
+                        rsp_props[prop_name] = prop_def
+                    else:
+                        rsp_props[prop_name].update(prop_def)
 
             # Replace or patch operation-level extensions
             for key, value in patches.items():

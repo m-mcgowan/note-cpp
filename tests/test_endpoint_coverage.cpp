@@ -7958,7 +7958,7 @@ TEST_CASE("note::api::NoteTemplate::Define request builder") {
     req.execute();
     req.delete_(true);
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
-    req.format(note::string_view("compact"));
+    req.format(note::string_view("x-format"));
 #endif
     req.length(int32_t{42});
     req.port(int32_t{42});
@@ -7969,7 +7969,7 @@ TEST_CASE("note::api::NoteTemplate::Define request builder") {
     REQUIRE(h.last_req.find("\"file\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"delete\":true") != std::string::npos);
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
-    REQUIRE(h.last_req.find("\"format\":\"compact\"") != std::string::npos);
+    REQUIRE(h.last_req.find("\"format\":\"x-format\"") != std::string::npos);
 #endif
     REQUIRE(h.last_req.find("\"length\":42") != std::string::npos);
     REQUIRE(h.last_req.find("\"port\":42") != std::string::npos);
@@ -7993,7 +7993,7 @@ TEST_CASE("note::api::NoteTemplate::Define request builder") {
     // Cover known-key routing in operator[] (true branch for each settable field)
     req["delete"] = true;
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
-    req["format"] = note::string_view("compact");
+    req["format"] = note::string_view("x-format");
 #endif
     req["length"] = int32_t{42};
     req["port"] = int32_t{42};
@@ -8705,11 +8705,13 @@ TEST_CASE("note::api::Web response parsing") {
     reader->set("length", int32_t{42});
     reader->set("payload", std::string("x-payload"));
     reader->set("result", int32_t{42});
+    reader->set("status", std::string("x-status"));
     auto rsp = note::api::Web::Response::parse(std::move(reader));
     REQUIRE(rsp.cobs == 42);
     REQUIRE(rsp.length == 42);
     REQUIRE(rsp.payload == "x-payload");
     REQUIRE(rsp.result == 42);
+    REQUIRE(rsp.status == "x-status");
     // Cover intern_strings() — copies string_view fields into pool storage.
     {
         note::Allocator alloc;  // default: uses operator new/delete
@@ -8743,6 +8745,7 @@ TEST_CASE("note::api::Web sink body coverage") {
     sink.on_string("length", "x-length");
     sink.on_string("payload", "x-payload");
     sink.on_string("result", "x-result");
+    sink.on_string("status", "x-status");
 
     // Exercise on_int / on_float dispatch (separate from on_number).
 
@@ -8849,10 +8852,14 @@ TEST_CASE("note::api::WebDelete response parsing") {
     reader->set("payload", std::string("x-payload"));
     reader->set("result", int32_t{42});
     reader->set("status", std::string("x-status"));
+    reader->set("cobs", int32_t{42});
+    reader->set("length", int32_t{42});
     auto rsp = note::api::WebDelete::Response::parse(std::move(reader));
     REQUIRE(rsp.payload == "x-payload");
     REQUIRE(rsp.result == 42);
     REQUIRE(rsp.status == "x-status");
+    REQUIRE(rsp.cobs == 42);
+    REQUIRE(rsp.length == 42);
     // Cover intern_strings() — copies string_view fields into pool storage.
     {
         note::Allocator alloc;  // default: uses operator new/delete
@@ -8885,6 +8892,8 @@ TEST_CASE("note::api::WebDelete sink body coverage") {
     sink.on_string("payload", "x-payload");
     sink.on_string("result", "x-result");
     sink.on_string("status", "x-status");
+    sink.on_string("cobs", "x-cobs");
+    sink.on_string("length", "x-length");
 
     // Exercise on_int / on_float dispatch (separate from on_number).
 
@@ -9364,10 +9373,14 @@ TEST_CASE("note::api::WebPut response parsing") {
     reader->set("payload", std::string("x-payload"));
     reader->set("result", int32_t{42});
     reader->set("status", std::string("x-status"));
+    reader->set("cobs", int32_t{42});
+    reader->set("length", int32_t{42});
     auto rsp = note::api::WebPut::Response::parse(std::move(reader));
     REQUIRE(rsp.payload == "x-payload");
     REQUIRE(rsp.result == 42);
     REQUIRE(rsp.status == "x-status");
+    REQUIRE(rsp.cobs == 42);
+    REQUIRE(rsp.length == 42);
     // Cover intern_strings() — copies string_view fields into pool storage.
     {
         note::Allocator alloc;  // default: uses operator new/delete
@@ -9400,6 +9413,8 @@ TEST_CASE("note::api::WebPut sink body coverage") {
     sink.on_string("payload", "x-payload");
     sink.on_string("result", "x-result");
     sink.on_string("status", "x-status");
+    sink.on_string("cobs", "x-cobs");
+    sink.on_string("length", "x-length");
 
     // Exercise on_int / on_float dispatch (separate from on_number).
 

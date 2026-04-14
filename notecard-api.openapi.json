@@ -12214,6 +12214,10 @@
                     "result": {
                       "description": "The HTTP Status Code",
                       "type": "integer"
+                    },
+                    "status": {
+                      "description": "MD5 hash of the binary payload, if any.",
+                      "type": "string"
                     }
                   },
                   "additionalProperties": false
@@ -12328,6 +12332,14 @@
                     "status": {
                       "description": "If a `payload` is returned in the response, this is a 32-character hex-encoded MD5 sum of the payload or payload fragment. Useful for the host to check for any I2C/UART corruption.",
                       "type": "string"
+                    },
+                    "cobs": {
+                      "description": "Size of the COBS-encoded binary payload (in bytes).",
+                      "type": "integer"
+                    },
+                    "length": {
+                      "description": "Size of the unencoded binary payload (in bytes).",
+                      "type": "integer"
                     }
                   },
                   "additionalProperties": false
@@ -12804,6 +12816,14 @@
                     "status": {
                       "description": "If a `payload` is returned in the response, this is a 32-character hex-encoded MD5 sum of the payload or payload fragment. Useful for the host to check for any I2C/UART corruption.",
                       "type": "string"
+                    },
+                    "cobs": {
+                      "description": "Size of the COBS-encoded binary payload (in bytes).",
+                      "type": "integer"
+                    },
+                    "length": {
+                      "description": "Size of the unencoded binary payload (in bytes).",
+                      "type": "integer"
                     }
                   },
                   "additionalProperties": false

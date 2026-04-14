@@ -51,11 +51,24 @@ using string_view = std::string_view;
 /// A string_view that supports Arduino printTo() without adding a vtable.
 /// Used as the element type in ResponseArray<> so that array elements can
 /// be printed with Serial.println(printable(element)) or element.printTo(p).
+/// A string_view that supports Arduino printTo() and C string access.
+/// Used as the element type in ResponseArray<> so that array elements can
+/// be printed with Serial.println(printable(element)) or element.printTo(p).
+/// All response strings are null-terminated, so c_str() and implicit
+/// const char* conversion are safe.
 struct printable_string_view : string_view {
     using string_view::string_view;
     using string_view::operator=;
     printable_string_view() = default;
     printable_string_view(string_view sv) : string_view(sv) {}
+
+    /// Null-terminated C string. Safe because all response strings are
+    /// null-terminated by StringPool::intern().
+    const char* c_str() const { return data(); }
+
+    /// Implicit conversion to const char* for printf, Serial.print, etc.
+    operator const char*() const { return data(); }
+
 #ifdef ARDUINO
     size_t printTo(Print& p) const {
         return p.write(reinterpret_cast<const uint8_t*>(data()), size());

@@ -152,6 +152,10 @@ struct ResponseField
     auto size() const -> decltype(std::declval<const U&>().size()) { return value_.size(); }
     template<typename U = T>
     auto data() const -> decltype(std::declval<const U&>().data()) { return value_.data(); }
+    /// Null-terminated C string access. Response strings are guaranteed
+    /// null-terminated by StringPool::intern().
+    template<typename U = T>
+    auto c_str() const -> decltype(std::declval<const U&>().data()) { return value_.data(); }
     template<typename U = T>
     auto empty() const -> decltype(std::declval<const U&>().empty()) { return value_.empty(); }
     template<typename U = T, typename... Args>
@@ -228,6 +232,10 @@ struct ResponseField
     auto size() const -> decltype(std::declval<const U&>().size()) { return value_.size(); }
     template<typename U = T>
     auto data() const -> decltype(std::declval<const U&>().data()) { return value_.data(); }
+    /// Null-terminated C string access. Response strings are guaranteed
+    /// null-terminated by StringPool::intern().
+    template<typename U = T>
+    auto c_str() const -> decltype(std::declval<const U&>().data()) { return value_.data(); }
     template<typename U = T>
     auto empty() const -> decltype(std::declval<const U&>().empty()) { return value_.empty(); }
     template<typename U = T, typename... Args>

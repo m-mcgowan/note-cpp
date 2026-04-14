@@ -10,6 +10,8 @@
 
 #include <note/api.hpp>
 #include <note/error.hpp>
+#include <cstring>
+using namespace std::string_view_literals;
 
 // ---------------------------------------------------------------------------
 // ErrorInfo Printable
@@ -94,7 +96,7 @@ TEST_CASE("Arduino: printable_string_view has printTo") {
 TEST_CASE("Arduino: printable_string_view converts from string_view") {
     note::string_view plain = "test";
     note::printable_string_view psv = plain;
-    REQUIRE(psv == "test");
+    REQUIRE(psv == "test"sv);
     REQUIRE(psv.size() == 4);
 }
 
@@ -105,5 +107,24 @@ TEST_CASE("Arduino: printable_string_view works with printable() wrapper") {
     w.printTo(p);
     REQUIRE(p.buf == "wrapped");
 }
+
+// ---------------------------------------------------------------------------
+// c_str() — null-terminated C string access
+// ---------------------------------------------------------------------------
+
+TEST_CASE("Arduino: printable_string_view c_str() returns null-terminated") {
+    note::printable_string_view sv("hello");
+    const char* cs = sv.c_str();
+    REQUIRE(cs == sv.data());
+    REQUIRE(std::strcmp(cs, "hello") == 0);
+}
+
+TEST_CASE("Arduino: ResponseField<string_view> c_str()") {
+    note::ResponseField<note::string_view> field;
+    field = note::string_view("world");
+    const char* cs = field.c_str();
+    REQUIRE(std::strcmp(cs, "world") == 0);
+}
+
 
 #endif // ARDUINO

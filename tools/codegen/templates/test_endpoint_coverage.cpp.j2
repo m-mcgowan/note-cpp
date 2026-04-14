@@ -17,6 +17,8 @@
 
 #include <note/api.hpp>
 #include <note/arena.hpp>
+
+using namespace std::string_view_literals;
 #include <note/allocator.hpp>
 #include <note/string_pool.hpp>
 #include <note/struct_sink.hpp>
@@ -215,8 +217,8 @@ TEST_CASE("note::api::{{ type_qual }} response parsing") {
 {% endif %}
 {% if prop.is_array %}
     REQUIRE(rsp.{{ prop.accessor_name }}.size() == 2);
-    REQUIRE(rsp.{{ prop.accessor_name }}[0] == "x-{{ prop.wire_name }}-a");
-    REQUIRE(rsp.{{ prop.accessor_name }}[1] == "x-{{ prop.wire_name }}-b");
+    REQUIRE(rsp.{{ prop.accessor_name }}[0] == "x-{{ prop.wire_name }}-a"sv);
+    REQUIRE(rsp.{{ prop.accessor_name }}[1] == "x-{{ prop.wire_name }}-b"sv);
 {% else %}
     REQUIRE(rsp.{{ prop.accessor_name }} == {{ prop | response_match_value }});
 {% endif %}

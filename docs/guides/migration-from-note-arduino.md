@@ -1534,9 +1534,11 @@ nc.setDebugOutput(Serial, note::DebugWire | note::DebugTiming);
 
 ### Missing response fields
 
-Some Notecard responses include fields that aren't in the typed response
-struct (e.g. `web.put` response may include `length` and `cobs` when
-`binary: true`). Use `operator[]` to access undocumented fields, or
-the raw request escape hatch for full control. Missing fields from the
-upstream spec should be reported as issues.
+Some Notecard responses include fields not yet in the typed response
+struct (e.g. `web.put` response includes `length` and `cobs` when
+`binary: true`). These are upstream spec gaps — the fields exist on the
+wire but aren't in the schema. Workaround: use `card.binary.status()`
+to get size info after a web transaction, or use the raw request escape
+hatch (`nc.request(...)`) for full JSON access. Report missing fields
+as issues so they can be added to the spec.
 

@@ -1485,3 +1485,55 @@ See [Known Issues](../known-issues.md) for details on the Clang limitation.
    - `60` (minutes) → `60_mins` or `1_hours` (duration types)
    - `"arm,connected"` → `.arm().connected()` (named flag methods)
 
+## Common migration pitfalls
+
+### Printing `string_view` values
+
+`ResponseField<string_view>` implements Arduino `Printable`, so
+`Serial.println(rsp.version)` works directly. But bare `string_view`
+values (e.g. from `ResponseArray` iteration) are not `Printable` — use
+`note::println()` instead:
+
+```cpp
+// ResponseField — Printable, works directly
+Serial.println(rsp.version);
+
+// Bare string_view (e.g. from array iteration) — use note::println
+for (auto& f : result.files) {
+    note::println(Serial, f);
+}
+```
+
+### `noteId` vs `note` field name
+
+Several Notecard requests use a JSON field named `"note"` for the note ID.
+In `note-cpp`, the C++ accessor is `noteId` (because `note` is a reserved
+namespace). If you're porting code that uses `JAddStringToObject(req, "note", ...)`,
+use `.noteId(...)` or `req.noteId = ...`.
+
+### `hub.sync()` vs `hub.sync.status()`
+
+`nc.hub.sync()` returns a `HubSync` request. `nc.hub.syncStatus()` returns
+a `HubSyncStatus` request. Don't write `nc.hub.sync().status()` — that
+doesn't compile because `HubSync` has no `.status()` method.
+
+### Debug output
+
+note-c's `setDebugOutputStream(Serial)` has a direct equivalent:
+
+```cpp
+// note-cpp: enable wire tracing (prints all JSON sent/received)
+nc.setDebugOutput(Serial);
+
+// With additional categories (timing, transport events):
+nc.setDebugOutput(Serial, note::DebugWire | note::DebugTiming);
+```
+
+### Missing response fields
+
+Some Notecard responses include fields that aren't in the typed response
+struct (e.g. `web.put` response may include `length` and `cobs` when
+`binary: true`). Use `operator[]` to access undocumented fields, or
+the raw request escape hatch for full control. Missing fields from the
+upstream spec should be reported as issues.
+

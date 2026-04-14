@@ -16,6 +16,7 @@
 
 #include <note/allocator.hpp>
 #include <note/notecard_api.hpp>
+#include <note/units.hpp>
 #include <note/streaming_transport.hpp>
 #include <note/arduino/debug.hpp>
 #include <note/arduino/serial.hpp>

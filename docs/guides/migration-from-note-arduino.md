@@ -1498,9 +1498,10 @@ wrapper:
 // ResponseField — Printable, works directly
 Serial.println(rsp.version);
 
-// Array elements — use printable()
+// Array elements — use printable() or .data()
 for (auto& f : result.files) {
-    Serial.println(printable(f));
+    Serial.println(printable(f));  // via printable() wrapper
+    Serial.println(f.data());      // also works — strings are null-terminated
 }
 
 // Full response — use printable()

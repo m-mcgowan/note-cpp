@@ -35,7 +35,7 @@ note::MonotonicArena arena(buf, sizeof(buf));
 nc.set_allocator(note::Allocator(arena));
 
 auto r = nc.card.version().execute();
-auto ver = r.version;   // interned into arena — survives transport reuse
+auto ver = r.version;   // interned into arena — null-terminated, survives transport reuse
 
 nc.hub.set().execute();  // transport buffer reused
 // ver is still valid — it lives in the arena

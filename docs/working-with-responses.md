@@ -111,6 +111,44 @@ for (auto& file : r.files) {
 
 </details>
 
+## String fields are null-terminated
+
+All response string fields (`string_view`) are backed by null-terminated
+storage. The `string_view::data()` pointer is a valid C string:
+
+```cpp
+auto r = nc.card.version().execute();
+
+// Works with C string functions
+printf("version: %s\n", r.version.data());
+strcmp(r.device.data(), "dev:12345");
+
+// Array elements too
+for (auto& f : r.files) {
+    printf("  file: %s\n", f.data());
+}
+```
+
+This is guaranteed for all strings interned via the `StringPool` (which
+includes every string field in typed responses). The `string_view` length
+does not include the null terminator — `size()` returns the string length,
+and `data()[size()]` is `'\0'`.
+
+<details><summary><strong>Arduino</strong>: printing with data()</summary>
+
+With null-terminated strings, `Serial.print(f.data())` works as an
+alternative to `Serial.println(printable(f))` for array elements and
+other bare `string_view` values:
+
+```cpp
+for (auto& f : r.files) {
+    Serial.print("  file: ");
+    Serial.println(f.data());  // works — null-terminated
+}
+```
+
+</details>
+
 ## Body responses — nested objects
 
 Endpoints like `note.get` return a `body` field containing user data

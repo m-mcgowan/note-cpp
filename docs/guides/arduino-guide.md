@@ -35,6 +35,7 @@ Most `note-cpp` types are Arduino `Printable` — use `Serial.print()` directly:
 |------|---------|:----------:|
 | Response fields | `Serial.println(r.version)` | yes |
 | Errors | `Serial.println(r.error())` | yes |
+| Array elements | `Serial.println(printable(f))` | via `printable()` |
 | Full responses | `Serial.println(printable(r))` | via `printable()` |
 | Request fields | `Serial.println(printable(req.product))` | via `printable()` |
 
@@ -131,7 +132,7 @@ auto q = nc.card.attn().query().execute();
 if (q) {
     for (auto& trigger : q.files) {
         Serial.print("  trigger: ");
-        Serial.println(trigger);
+        Serial.println(printable(trigger));
     }
 }
 

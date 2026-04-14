@@ -1461,6 +1461,72 @@ default 384 bytes on the stack).
 
 See [Known Issues](../known-issues.md) for details on the Clang limitation.
 
+## Gradual migration
+
+You don't have to port everything at once. note-cpp's buffered path
+supports a `request()` method that mirrors note-c's `J*` workflow,
+letting you migrate one request at a time:
+
+1. **Replace the library and setup.** Swap `note-arduino` for `note-cpp`
+   in your dependencies. Replace the `Notecard` constructor and `begin()`
+   call — see the setup section above. This is the only step that must
+   happen all at once (both libraries can't share the same transport).
+
+2. **Keep existing request patterns temporarily.** Use `nc.request()` with
+   lambda builders for requests you haven't ported yet:
+
+   ```cpp
+   // Before (note-c):
+   J *req = NoteNewRequest("hub.set");
+   JAddStringToObject(req, "product", "com.example.app");
+   NoteRequest(req);
+
+   // After (note-cpp, same pattern):
+   nc.request("hub.set", [](note::JsonBuilder& b) {
+       b.add("product", "com.example.app");
+   });
+   ```
+
+3. **Migrate individual requests to the typed API** at your own pace:
+
+   ```cpp
+   // Final form:
+   nc.hub.set().product("com.example.app").execute();
+   ```
+
+Both styles coexist in the same project — typed API and `request()`
+lambdas use the same underlying transport. Migrate the easy requests
+first (hub.set, card.version), then tackle complex ones (binary
+transfers, body structs) when you're comfortable.
+
+### Running note-cpp alongside note-c
+
+For large projects where you can't swap the library all at once, you can
+run note-cpp on top of note-c's existing transport. Create a bridge
+transport that delegates to `NoteRequestResponseJSON()`:
+
+```cpp
+extern "C" char* NoteRequestResponseJSON(const char* reqJSON);
+
+class NoteCTransport : public note::IBufferedTransport {
+    std::string rsp_buf_;
+public:
+    note::Result<note::string_view> transact(note::string_view req, uint32_t) override {
+        std::string req_str(req.data(), req.size());
+        char* rsp = NoteRequestResponseJSON(req_str.c_str());
+        if (!rsp) return note::make_error(note::Error::ResponseLost, "no response");
+        rsp_buf_ = rsp;
+        free(rsp);
+        return note::string_view(rsp_buf_);
+    }
+};
+```
+
+This lets note-c own the serial/I2C bus while note-cpp uses the typed
+API for new code. Both libraries share a single Notecard connection —
+no hardware conflicts. Existing `NoteNewRequest` / `J*` code continues
+to work unchanged.
+
 ## Migration checklist
 
 1. **Replace `Notecard` with `note::arduino::Notecard`.** One include, same `begin()`

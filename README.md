@@ -1,7 +1,7 @@
 # note-cpp
 
 [![CI](https://github.com/m-mcgowan/note-cpp/actions/workflows/ci.yml/badge.svg)](https://github.com/m-mcgowan/note-cpp/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/gh/m-mcgowan/note-cpp/branch/main/graph/badge.svg)](https://codecov.io/gh/m-mcgowan/note-cpp)
+[![codecov](https://codecov.io/gh/m-mcgowan/note-cpp/graph/badge.svg?token=9JJP6N9QAE)](https://codecov.io/gh/m-mcgowan/note-cpp)
 ![C++ Standard](https://img.shields.io/badge/C%2B%2B-17%20%7C%2020%20%7C%2023-blue)
 ![Header Only](https://img.shields.io/badge/header--only-yes-green)
 [![License: MIT](https://img.shields.io/badge/license-MIT-yellow)](LICENSE)

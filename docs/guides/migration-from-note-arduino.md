@@ -701,6 +701,43 @@ nc.execute(req);
 - The base `Request` type accepts all mode values if you need full control —
   string literals are validated at compile time (C++20).
 
+**Querying ATTN state and iterating array fields:**
+
+<table>
+<tr><th>note-c</th><th>note-cpp</th></tr>
+<tr><td>
+
+```c
+J *req = NoteNewRequest("card.attn");
+JAddBoolToObject(req, "verify", true);
+J *rsp = NoteRequestResponse(req);
+J *files = JGetObject(rsp, "files");
+J *file;
+JArrayForEach(file, files) {
+    Serial.printf("  %s\n",
+        file->valuestring);
+}
+NoteDeleteResponse(rsp);
+```
+
+</td><td>
+
+```cpp
+// Array elements are null-terminated
+// string_views — use directly as
+// const char* or string_view.
+auto r = nc.card.attn().query()
+    .execute();
+if (r) {
+    for (auto& f : r.files) {
+        Serial.println(f);
+    }
+}
+```
+
+</td></tr>
+</table>
+
 ## ATTN pin — sleep with state
 
 <table>

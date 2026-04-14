@@ -128,44 +128,12 @@ struct NoteTemplate {
         /// Templates to learn more.
         ///
         /// @since{6.2.3}
-        // format: compact | -
 #if NOTE_API_VERSION < NOTE_VERSION(6, 2, 3)
         [[deprecated("requires firmware >= 6.2.3")]]
 #endif
         struct format_t : Field<note::string_view> {
-#if __cplusplus >= 202002L && !defined(__clang__)
-            constexpr format_t() = default;
-            template<std::size_t N>
-            consteval format_t(const char (&s)[N])
-                : Field<note::string_view>(note::string_view(s, N - 1)) {
-                note::string_view sv(s, N - 1);
-                if (sv != "compact" && sv != "-")
-                    throw "note.template: invalid value for 'format'";
-            }
-            template<typename U>
-                requires std::is_convertible_v<U, note::string_view>
-                      && (!std::is_array_v<std::remove_reference_t<U>>)
-                      && (!std::is_same_v<std::decay_t<U>, format_t>)
-            constexpr format_t(U&& v) : Field<note::string_view>(note::string_view(std::forward<U>(v))) {}
-            template<typename U>
-                requires std::is_convertible_v<U, note::string_view>
-                      && (!std::is_array_v<std::remove_reference_t<U>>)
-                      && (!std::is_same_v<std::decay_t<U>, format_t>)
-            format_t& operator=(U&& v) {
-                Field<note::string_view>::operator=(note::string_view(std::forward<U>(v)));
-                return *this;
-            }
-            format_t& operator=(std::nullopt_t) { Field<note::string_view>::reset(); return *this; }
-            format_t(const format_t&) = default;
-            format_t& operator=(const format_t&) = default;
-            format_t(format_t&&) = default;
-            format_t& operator=(format_t&&) = default;
-#else
             using Field<note::string_view>::Field;
             using Field<note::string_view>::operator=;
-#endif
-            static constexpr note::string_view compact{"compact"};
-            static constexpr note::string_view _{"-"};
             NoteTemplate::Define& operator()(note::string_view v);
         } format{};
 #endif
@@ -207,17 +175,6 @@ struct NoteTemplate {
         } verify{};
 #endif
 
-#if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
-        // consteval: only callable at compile time (C++20)
-#if __cplusplus >= 202002L
-        static consteval note::string_view validatedFormat(const char* v) {
-            note::string_view sv{v};
-            if (sv != "compact" && sv != "-")
-                throw "note.template: invalid value for 'format'";
-            return sv;
-        }
-#endif
-#endif
 
 #if NOTE_EXTRAS
         template<typename T>
@@ -291,8 +248,8 @@ struct NoteTemplate {
         struct Response {
             /// Compile-time arena budget for this response type.
             static constexpr size_t max_arena_size =
-                ::note::detail::arena_cost(32) +
-                ::note::detail::arena_cost(64);  // error reserve
+                ::note::detail::arena_cost(33) +
+                ::note::detail::arena_cost(65);  // error reserve (+1 for null terminator)
 
             /// The number of bytes that will be transmitted to Notehub, per
             /// Note, before compression.
@@ -836,8 +793,8 @@ struct NoteTemplate {
         struct Response {
             /// Compile-time arena budget for this response type.
             static constexpr size_t max_arena_size =
-                ::note::detail::arena_cost(32) +
-                ::note::detail::arena_cost(64);  // error reserve
+                ::note::detail::arena_cost(33) +
+                ::note::detail::arena_cost(65);  // error reserve (+1 for null terminator)
 
             /// The number of bytes that will be transmitted to Notehub, per
             /// Note, before compression.

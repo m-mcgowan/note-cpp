@@ -330,9 +330,9 @@ struct CardAttn {
         struct Response {
             /// Compile-time arena budget for this response type.
             static constexpr size_t max_arena_size =
-                ::note::detail::arena_cost(384) +
-                ::note::detail::arena_cost(256) +
-                ::note::detail::arena_cost(64);  // error reserve
+                ::note::detail::arena_cost(392) +
+                ::note::detail::arena_cost(257) +
+                ::note::detail::arena_cost(65);  // error reserve (+1 for null terminator)
 
             /// A list of files changed since `file` attention mode was set. In
             /// addition, this field will include keywords to signify the
@@ -814,7 +814,7 @@ struct CardAttn {
         struct Response {
             /// Compile-time arena budget for this response type.
             static constexpr size_t max_arena_size =
-                ::note::detail::arena_cost(64);  // error reserve
+                ::note::detail::arena_cost(65);  // error reserve (+1 for null terminator)
 
             /// Reflects the state of the attention pin. The `set` field is
             /// `true` when the attention pin is `HIGH`, otherwise the `set`
@@ -1175,7 +1175,7 @@ struct CardAttn {
         struct Response {
             /// Compile-time arena budget for this response type.
             static constexpr size_t max_arena_size =
-                ::note::detail::arena_cost(64);  // error reserve
+                ::note::detail::arena_cost(65);  // error reserve (+1 for null terminator)
 
             /// Reflects the state of the attention pin. The `set` field is
             /// `true` when the attention pin is `HIGH`, otherwise the `set`
@@ -1664,8 +1664,8 @@ struct CardAttn {
         struct Response {
             /// Compile-time arena budget for this response type.
             static constexpr size_t max_arena_size =
-                ::note::detail::arena_cost(256) +
-                ::note::detail::arena_cost(64);  // error reserve
+                ::note::detail::arena_cost(257) +
+                ::note::detail::arena_cost(65);  // error reserve (+1 for null terminator)
 
             /// When using `sleep` mode with a `payload`, the payload provided
             /// by the host to the Notecard.
@@ -2175,8 +2175,8 @@ struct CardAttn {
         struct Response {
             /// Compile-time arena budget for this response type.
             static constexpr size_t max_arena_size =
-                ::note::detail::arena_cost(384) +
-                ::note::detail::arena_cost(64);  // error reserve
+                ::note::detail::arena_cost(392) +
+                ::note::detail::arena_cost(65);  // error reserve (+1 for null terminator)
 
             /// A list of files changed since `file` attention mode was set. In
             /// addition, this field will include keywords to signify the

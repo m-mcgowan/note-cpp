@@ -112,7 +112,7 @@ struct CardPower {
         struct Response {
             /// Compile-time arena budget for this response type.
             static constexpr size_t max_arena_size =
-                ::note::detail::arena_cost(64);  // error reserve
+                ::note::detail::arena_cost(65);  // error reserve (+1 for null terminator)
 
             /// The cumulative number of milliamp hours (mAh) consumed. You can
             /// reset this number with this request's `reset` argument.
@@ -362,7 +362,7 @@ struct CardPower {
         struct Response {
             /// Compile-time arena budget for this response type.
             static constexpr size_t max_arena_size =
-                ::note::detail::arena_cost(64);  // error reserve
+                ::note::detail::arena_cost(65);  // error reserve (+1 for null terminator)
 
             /// The cumulative number of milliamp hours (mAh) consumed. You can
             /// reset this number with this request's `reset` argument.
@@ -601,7 +601,7 @@ struct CardPower {
         struct Response {
             /// Compile-time arena budget for this response type.
             static constexpr size_t max_arena_size =
-                ::note::detail::arena_cost(64);  // error reserve
+                ::note::detail::arena_cost(65);  // error reserve (+1 for null terminator)
 
             /// The cumulative number of milliamp hours (mAh) consumed. You can
             /// reset this number with this request's `reset` argument.

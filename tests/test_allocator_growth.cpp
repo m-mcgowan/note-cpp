@@ -13,6 +13,7 @@
 #include <note/streaming_transport.hpp>
 #include <note/allocator.hpp>
 #include <note/arena.hpp>
+#include <note/string_pool.hpp>
 #include <cstring>
 #include <vector>
 
@@ -266,6 +267,42 @@ TEST_CASE("transact: works with arena allocator") {
     auto rsp = nc.transact(R"({"req":"card.version"})");
     REQUIRE(rsp);
     CHECK(rsp->size() > 0);
+}
+
+// ---------------------------------------------------------------------------
+// StringPool: interned strings are null-terminated
+// ---------------------------------------------------------------------------
+
+TEST_CASE("StringPool: interned strings are null-terminated") {
+    char pool[256];
+    std::memset(pool, 0xFF, sizeof(pool));  // poison — no accidental zeros
+    note::MonotonicArena arena(pool);
+    note::StringPool sp(note::arena_allocator(arena));
+
+    auto sv = sp.intern("hello");
+    REQUIRE(sv.size() == 5);
+    REQUIRE(sv.data()[sv.size()] == '\0');  // null terminator after content
+    REQUIRE(std::strcmp(sv.data(), "hello") == 0);
+}
+
+TEST_CASE("StringPool: empty string intern returns empty view") {
+    char pool[64];
+    note::MonotonicArena arena(pool);
+    note::StringPool sp(note::arena_allocator(arena));
+
+    auto sv = sp.intern("");
+    REQUIRE(sv.empty());
+}
+
+TEST_CASE("StringPool: interned string usable as C string") {
+    char pool[256];
+    note::MonotonicArena arena(pool);
+    note::StringPool sp(note::arena_allocator(arena));
+
+    auto sv = sp.intern("notecard-11.1.1.17494");
+    // Should work with C string functions
+    REQUIRE(std::strlen(sv.data()) == sv.size());
+    REQUIRE(std::strstr(sv.data(), "11.1.1") != nullptr);
 }
 
 TEST_CASE("transact: arena exhaustion returns clean error") {

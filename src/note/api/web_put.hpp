@@ -315,9 +315,9 @@ struct WebPut {
     struct Response {
         /// Compile-time arena budget for this response type.
         static constexpr size_t max_arena_size =
-            ::note::detail::arena_cost(256) +
-            ::note::detail::arena_cost(80) +
-            ::note::detail::arena_cost(64);  // error reserve
+            ::note::detail::arena_cost(257) +
+            ::note::detail::arena_cost(81) +
+            ::note::detail::arena_cost(65);  // error reserve (+1 for null terminator)
 
         /// A base64-encoded binary payload from the external service, if any.
         /// The maximum response size from the service is 8192 bytes.

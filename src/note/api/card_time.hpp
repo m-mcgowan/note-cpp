@@ -95,10 +95,10 @@ struct CardTime {
     struct Response {
         /// Compile-time arena budget for this response type.
         static constexpr size_t max_arena_size =
-            ::note::detail::arena_cost(16) +
-            ::note::detail::arena_cost(8) +
-            ::note::detail::arena_cost(48) +
-            ::note::detail::arena_cost(64);  // error reserve
+            ::note::detail::arena_cost(17) +
+            ::note::detail::arena_cost(9) +
+            ::note::detail::arena_cost(49) +
+            ::note::detail::arena_cost(65);  // error reserve (+1 for null terminator)
 
         /// The geographic area of the Notecard, if the cell tower is
         /// recognized.

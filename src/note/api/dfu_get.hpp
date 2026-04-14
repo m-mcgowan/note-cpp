@@ -126,9 +126,9 @@ struct DfuGet {
     struct Response {
         /// Compile-time arena budget for this response type.
         static constexpr size_t max_arena_size =
-            ::note::detail::arena_cost(256) +
-            ::note::detail::arena_cost(80) +
-            ::note::detail::arena_cost(64);  // error reserve
+            ::note::detail::arena_cost(257) +
+            ::note::detail::arena_cost(81) +
+            ::note::detail::arena_cost(65);  // error reserve (+1 for null terminator)
 
         /// When `binary` is `true` in the request, this field contains the COBS
         /// encoded length of the firmware data in the binary I/O buffer.

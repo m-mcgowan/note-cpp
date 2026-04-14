@@ -260,8 +260,8 @@ struct CardDfu {
     struct Response {
         /// Compile-time arena budget for this response type.
         static constexpr size_t max_arena_size =
-            ::note::detail::arena_cost(48) +
-            ::note::detail::arena_cost(64);  // error reserve
+            ::note::detail::arena_cost(49) +
+            ::note::detail::arena_cost(65);  // error reserve (+1 for null terminator)
 
         /// The class of MCU that the Notecard is currently configured to
         /// support for Outboard DFU.

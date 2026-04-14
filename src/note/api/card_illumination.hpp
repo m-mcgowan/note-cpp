@@ -87,7 +87,7 @@ struct CardIllumination {
     struct Response {
         /// Compile-time arena budget for this response type.
         static constexpr size_t max_arena_size =
-            ::note::detail::arena_cost(64);  // error reserve
+            ::note::detail::arena_cost(65);  // error reserve (+1 for null terminator)
 
         /// An illumination reading (in lux) from the attached OPT3001 sensor.
         note::ResponseField<double> value{};

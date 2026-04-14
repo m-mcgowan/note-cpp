@@ -129,12 +129,12 @@ struct CardVersion {
     struct Response {
         /// Compile-time arena budget for this response type.
         static constexpr size_t max_arena_size =
-            ::note::detail::arena_cost(32) +
-            ::note::detail::arena_cost(32) +
-            ::note::detail::arena_cost(48) +
-            ::note::detail::arena_cost(24) +
-            ::note::detail::arena_cost(40) +
-            ::note::detail::arena_cost(64);  // error reserve
+            ::note::detail::arena_cost(33) +
+            ::note::detail::arena_cost(33) +
+            ::note::detail::arena_cost(49) +
+            ::note::detail::arena_cost(25) +
+            ::note::detail::arena_cost(41) +
+            ::note::detail::arena_cost(65);  // error reserve (+1 for null terminator)
 
         /// The Notecard board version number.
         note::ResponseField<note::string_view> board{};

@@ -210,8 +210,8 @@ struct CardTransport {
     struct Response {
         /// Compile-time arena budget for this response type.
         static constexpr size_t max_arena_size =
-            ::note::detail::arena_cost(16) +
-            ::note::detail::arena_cost(64);  // error reserve
+            ::note::detail::arena_cost(17) +
+            ::note::detail::arena_cost(65);  // error reserve (+1 for null terminator)
 
         /// The connectivity method currently enabled on the device.
         note::ResponseField<note::string_view> method{};

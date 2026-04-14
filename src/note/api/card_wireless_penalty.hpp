@@ -155,8 +155,8 @@ struct CardWirelessPenalty {
         struct Response {
             /// Compile-time arena budget for this response type.
             static constexpr size_t max_arena_size =
-                ::note::detail::arena_cost(80) +
-                ::note::detail::arena_cost(64);  // error reserve
+                ::note::detail::arena_cost(81) +
+                ::note::detail::arena_cost(65);  // error reserve (+1 for null terminator)
 
             /// The number of consecutive network registration failures.
             note::ResponseField<int32_t> count{};
@@ -504,8 +504,8 @@ struct CardWirelessPenalty {
         struct Response {
             /// Compile-time arena budget for this response type.
             static constexpr size_t max_arena_size =
-                ::note::detail::arena_cost(80) +
-                ::note::detail::arena_cost(64);  // error reserve
+                ::note::detail::arena_cost(81) +
+                ::note::detail::arena_cost(65);  // error reserve (+1 for null terminator)
 
             /// The number of consecutive network registration failures.
             note::ResponseField<int32_t> count{};
@@ -844,8 +844,8 @@ struct CardWirelessPenalty {
         struct Response {
             /// Compile-time arena budget for this response type.
             static constexpr size_t max_arena_size =
-                ::note::detail::arena_cost(80) +
-                ::note::detail::arena_cost(64);  // error reserve
+                ::note::detail::arena_cost(81) +
+                ::note::detail::arena_cost(65);  // error reserve (+1 for null terminator)
 
             /// The number of consecutive network registration failures.
             note::ResponseField<int32_t> count{};

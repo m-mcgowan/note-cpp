@@ -99,7 +99,7 @@ struct EnvSet {
     struct Response {
         /// Compile-time arena budget for this response type.
         static constexpr size_t max_arena_size =
-            ::note::detail::arena_cost(64);  // error reserve
+            ::note::detail::arena_cost(65);  // error reserve (+1 for null terminator)
 
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
         /// The logged time of the variable change.

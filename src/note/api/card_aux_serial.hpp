@@ -250,8 +250,8 @@ struct CardAuxSerial {
         struct Response {
             /// Compile-time arena budget for this response type.
             static constexpr size_t max_arena_size =
-                ::note::detail::arena_cost(32) +
-                ::note::detail::arena_cost(64);  // error reserve
+                ::note::detail::arena_cost(33) +
+                ::note::detail::arena_cost(65);  // error reserve (+1 for null terminator)
 
             /// The current AUX `mode`.
             note::ResponseField<note::string_view> mode{};

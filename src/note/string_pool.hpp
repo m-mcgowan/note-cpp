@@ -24,9 +24,10 @@ public:
     /// Copy sv's data into pool storage, return a view into the copy.
     string_view intern(string_view sv) {
         if (sv.empty()) return {};
-        auto* p = static_cast<char*>(alloc_.allocate(sv.size()));
+        auto* p = static_cast<char*>(alloc_.allocate(sv.size() + 1));
         if (!p) { exhausted_ = true; return {}; }
         std::memcpy(p, sv.data(), sv.size());
+        p[sv.size()] = '\0';
         return {p, sv.size()};
     }
 

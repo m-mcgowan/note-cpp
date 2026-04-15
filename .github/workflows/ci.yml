@@ -61,7 +61,7 @@ jobs:
         env:
           CXX: ${{ matrix.compiler }}
           CXXFLAGS: ${{ matrix.cxxflags }}
-        run: ./ci.sh
+        run: ./ci.sh --full
 
   coverage:
     runs-on: ubuntu-latest

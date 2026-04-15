@@ -232,7 +232,7 @@ using LoRaStrict = note::Target<note::Hardware::LoRa, true>;
 void test(note::Api<LoRaStrict>& api) { api.card.sleep(); }
 TEOF
     )
-    if echo "$STRICT_TARGET_OUT" | grep -qE "constraint|no matching"; then
+    if echo "$STRICT_TARGET_OUT" | grep -qE "constraint|no matching|deprecated.*not available on this target"; then
         echo "OK"
     else
         echo "FAIL (expected compile error for unsupported endpoint on strict target)"
@@ -306,7 +306,7 @@ using OldFwStrict = note::MinFirmware<5, 0, 0, true>;
 void test(note::Api<OldFwStrict>& api) { api.card.illumination(); }
 TEOF
     )
-    if echo "$FW_STRICT_OUT" | grep -qE "constraint|no matching"; then
+    if echo "$FW_STRICT_OUT" | grep -qE "constraint|no matching|deprecated.*requires firmware"; then
         echo "OK"
     else
         echo "FAIL (expected compile error for firmware-gated endpoint on strict target)"

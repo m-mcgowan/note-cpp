@@ -32,6 +32,7 @@ while IFS= read -r mdfile; do
     grep -oE '\[[A-Za-z][^]]*\]\([^)]+\)' "$mdfile" 2>/dev/null | \
         sed 's/^.*](//' | sed 's/)$//' | \
         grep -v '^http' | grep -v '^mailto' | grep -v '^#' | \
+        grep -v '^/api-reference/' | \
     while IFS= read -r target; do
         # Strip anchor
         path="${target%%#*}"

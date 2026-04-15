@@ -13,7 +13,7 @@ JSON.
 
 **Fluent style:**
 
-<!-- snippet:fluent examples/hub-configuration/main.cpp:44-49 -->
+<!-- snippet:fluent examples/stdcpp/hub-configuration/main.cpp:44-49 -->
 ```cpp
 api.hub.set()
     .product("com.example.app")
@@ -25,7 +25,7 @@ api.hub.set()
 
 **Direct assignment:**
 
-<!-- snippet:direct examples/hub-configuration/main.cpp:55-58 -->
+<!-- snippet:direct examples/stdcpp/hub-configuration/main.cpp:55-58 -->
 ```cpp
 auto req = api.hub.set();
 req.product = "com.example.app";
@@ -38,7 +38,7 @@ req.execute();
 Duration fields use typed wrappers (`note::Minutes`, `note::Seconds`) so you
 can't accidentally pass seconds where minutes are expected.
 
-<!-- snippet:units examples/hub-configuration/main.cpp:69-75 -->
+<!-- snippet:units examples/stdcpp/hub-configuration/main.cpp:69-75 -->
 ```cpp
 api.hub.set()
     .product("com.example.app")
@@ -51,7 +51,7 @@ api.hub.set()
 
 Raw integers still work — they implicitly convert to the correct unit type:
 
-<!-- snippet:units-raw examples/hub-configuration/main.cpp:80-83 -->
+<!-- snippet:units-raw examples/stdcpp/hub-configuration/main.cpp:80-83 -->
 ```cpp
 api.hub.set()
     .outbound(60)            // int → Minutes (outbound is in minutes)
@@ -61,7 +61,7 @@ api.hub.set()
 
 Hours and Days convert to smaller units automatically:
 
-<!-- snippet:hours-days examples/hub-configuration/main.cpp:92-107 -->
+<!-- snippet:hours-days examples/stdcpp/hub-configuration/main.cpp:92-107 -->
 ```cpp
 api.hub.set()
     .product("com.example.app")
@@ -95,7 +95,7 @@ constants on the field type. No need to remember magic numbers.
 
 Named constants are also available: `HubSet::mode_t::periodic`, `HubSet::mode_t::continuous`, etc.
 
-<!-- snippet:named-constants examples/hub-configuration/main.cpp:118-125 -->
+<!-- snippet:named-constants examples/stdcpp/hub-configuration/main.cpp:118-125 -->
 ```cpp
 // Reset outbound to default (sends -1 on the wire)
 api.hub.set().outbound(-1).execute();
@@ -110,7 +110,7 @@ api.hub.set().inbound(-1).execute();
 ## 4. Compile-time validation
 
 On C++20, mode string literals are validated at compile time automatically — typos are caught without any special syntax. On C++17, use `validatedMode()` for the same compile-time check:
-<!-- snippet:consteval examples/hub-configuration/main.cpp:136-143 -->
+<!-- snippet:consteval examples/stdcpp/hub-configuration/main.cpp:136-143 -->
 ```cpp
 api.hub.set()
     .product("com.example.app")
@@ -129,7 +129,7 @@ picks the interval matching its current voltage level.
 
 **Raw string:**
 
-<!-- snippet:vvar-raw examples/hub-configuration/main.cpp:154-157 -->
+<!-- snippet:vvar-raw examples/stdcpp/hub-configuration/main.cpp:154-157 -->
 ```cpp
 api.hub.set()
     .mode("periodic")
@@ -139,7 +139,7 @@ api.hub.set()
 
 **Builder** — type-safe, built directly on the field:
 
-<!-- snippet:vvar-builder examples/hub-configuration/main.cpp:164-168 -->
+<!-- snippet:vvar-builder examples/stdcpp/hub-configuration/main.cpp:164-168 -->
 ```cpp
 auto req = api.hub.set();
 req.mode = "periodic";
@@ -159,7 +159,7 @@ mode on battery.
 
 Stay continuous on USB power, fall back to periodic on battery:
 
-<!-- snippet:usb-variable examples/hub-configuration/main.cpp:179-197 -->
+<!-- snippet:usb-variable examples/stdcpp/hub-configuration/main.cpp:179-197 -->
 ```cpp
 // Stay continuous on USB, fall back to periodic on battery
 api.hub.set()

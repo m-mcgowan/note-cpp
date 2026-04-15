@@ -76,7 +76,7 @@ Free tier: 50 min/month simulation time.
 ### 3. Compile the custom chip
 
 ```bash
-cd examples/binary-size-comparison
+cd tools/binary-size-comparison
 ~/.wokwi/bin/wokwi-cli chip compile chips/notecard-mock.c
 # Downloads WASI-SDK automatically on first run
 # Outputs: chips/notecard-mock.wasm
@@ -117,7 +117,7 @@ simulation, and checks for the expected output string.
 
 ### 6. Run from VS Code
 
-Open `examples/binary-size-comparison/` in VS Code with the Wokwi
+Open `tools/binary-size-comparison/` in VS Code with the Wokwi
 extension installed. Build the firmware (`pio run -e wokwi-layer4`),
 then use the Wokwi extension to start the simulation.
 
@@ -142,12 +142,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: pip install platformio
-      - run: cd examples/binary-size-comparison && pio run -e wokwi-layer4
+      - run: cd tools/binary-size-comparison && pio run -e wokwi-layer4
       - uses: wokwi/wokwi-ci-server-action@v1
       - uses: wokwi/wokwi-ci-action@v1
         with:
           token: ${{ secrets.WOKWI_CLI_TOKEN }}
-          path: examples/binary-size-comparison
+          path: tools/binary-size-comparison
           timeout: 15000
 ```
 

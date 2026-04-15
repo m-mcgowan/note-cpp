@@ -66,7 +66,7 @@ arena.reset();  // all interned strings invalidated
 
 ## See also
 
-- `examples/zero_alloc.cpp` — demonstrates arena-backed string interning
+- `examples/stdcpp/zero-alloc.cpp` — demonstrates arena-backed string interning
 - `note::MonotonicArena` — the arena allocator
 - `note::StringPool` — the interning helper used by `execute()`
 - `note::Allocator` — the allocator interface passed to `set_allocator()`

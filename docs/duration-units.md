@@ -99,4 +99,4 @@ struct Minutes {
 
 The `operator int32_t()` means the JSON builder sees a plain integer — no special serialization needed. The voltage-variable builder is in `include/note/voltage_variable.hpp`.
 
-See [examples/hub-configuration/](../examples/hub-configuration/) for working examples.
+See [examples/hub-configuration/](../examples/stdcpp/hub-configuration/) for working examples.

@@ -201,7 +201,7 @@ See [streaming-transport.md](internal/streaming-transport.md) for the full desig
 
 ## See Also
 
-- [examples/zero_alloc.cpp](../examples/zero_alloc.cpp) — working example of all three patterns
+- [examples/zero-alloc.cpp](../examples/stdcpp/zero-alloc.cpp) — working example of all three patterns
 - [docs/transport.md](transport.md) — transport layer architecture (`TransportHal`, `StreamingTransport`)
 - [docs/streaming-transport.md](internal/streaming-transport.md) — streaming execution paths and CRC
 - [docs/json-backend.md](json-backend.md) — backend selection and customization

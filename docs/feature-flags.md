@@ -148,7 +148,7 @@ Api api(nc, Target<Hardware::LoRa, 0, 0, 0, true>{});
 auto strict = target<Hardware::LoRa>().as_strict();
 ```
 
-See [examples/target_filtering.cpp](../examples/target_filtering.cpp) for
+See [examples/target-filtering.cpp](../examples/stdcpp/target-filtering.cpp) for
 complete examples.
 
 ## Overriding `NOTE_MINIMAL` defaults

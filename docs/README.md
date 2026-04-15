@@ -2,9 +2,8 @@
 
 ## Getting started
 
-1. **[Getting started example](../examples/getting_started.cpp)** — from setup to typed body schemas
-2. **[Migration guide](guides/migration-from-note-arduino.md)** — side-by-side comparison with `note-c`, pattern-by-pattern
-
+1. **[Getting started example](../examples/stdcpp/getting-started.cpp)** — from setup to typed body schemas
+2. **[Migration guide](guides/migration-from-note-arduino.md)** — examples showing `note-c` and `note-cpp` side by side - quicker learning path if you're already familiar with `note-c`.
 
 ## Core features
 
@@ -54,8 +53,8 @@ Internal documentation for contributors:
 
 | Example | Description |
 |---------|-------------|
-| [getting_started.cpp](../examples/getting_started.cpp) | Four tiers: ad-hoc, constexpr JSON, typed API, body schemas |
-| [hub-configuration/](../examples/hub-configuration/) | Units, named constants, consteval validation, voltage-variable sync |
-| [sending-notes/](../examples/sending-notes/) | All body patterns: raw, lambda, struct, template, receive, command |
-| [target_filtering.cpp](../examples/target_filtering.cpp) | Hardware and firmware targeting with compile-time warnings/errors |
-| [zero_alloc.cpp](../examples/zero_alloc.cpp) | Zero-allocation patterns: BufferJsonBackend, StringPool, CjsonArena |
+| [getting-started.cpp](../examples/stdcpp/getting-started.cpp) | Four tiers: ad-hoc, constexpr JSON, typed API, body schemas |
+| [hub-configuration/](../examples/stdcpp/hub-configuration/) | Units, named constants, consteval validation, voltage-variable sync |
+| [sending-notes/](../examples/stdcpp/sending-notes/) | All body patterns: raw, lambda, struct, template, receive, command |
+| [target-filtering.cpp](../examples/stdcpp/target-filtering.cpp) | Hardware and firmware targeting with compile-time warnings/errors |
+| [zero-alloc.cpp](../examples/stdcpp/zero-alloc.cpp) | Zero-allocation patterns: BufferJsonBackend, StringPool, CjsonArena |

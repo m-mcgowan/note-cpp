@@ -8,9 +8,9 @@ shows how your existing code maps to `note-cpp`. Each section shows the note-c
 pattern on the left and the `note-cpp` equivalent on the right.
 
 > All `note-cpp` code in this guide is taken from real examples compiled against note-cpp
-> from [examples/arduino-migration/](../../examples/arduino-migration/).
+> from [examples/arduino-migration/](../../examples/arduino/migration/).
 > The note-c examples are compiled from
-> [examples/migration_notec.cpp](../../examples/migration_notec.cpp).
+> [examples/migration_notec.cpp](../../tests/migration_notec.cpp).
 
 Here's a few examples to illustrate the key differences in API style.
 
@@ -181,7 +181,7 @@ void setup() {
 <tr><td>
 
 ```c
-// ../../examples/migration_notec.cpp#L54-L59
+// ../../tests/migration_notec.cpp#L54-L59
 
 J *req = nc.newRequest("hub.set");
 JAddStringToObject(req, "product",
@@ -194,7 +194,7 @@ nc.sendRequest(req);
 </td><td>
 
 ```cpp
-// ../../examples/arduino-migration/src/main.cpp#L37-L42
+// ../../examples/arduino/migration/src/main.cpp#L37-L42
 
     nc.hub.set()
         .product("com.example.app")
@@ -240,7 +240,7 @@ Set fields individually. This is good when fields come from different sources or
 <tr><td>
 
 ```c
-// ../../examples/migration_notec.cpp#L65-L77
+// ../../tests/migration_notec.cpp#L65-L77
 
 J *req = nc.newRequest("hub.set");
 JAddStringToObject(req, "product",
@@ -290,7 +290,7 @@ isn't needed.
 <tr><td>
 
 ```c
-// ../../examples/migration_notec.cpp#L54-L59
+// ../../tests/migration_notec.cpp#L54-L59
 
 J *req = nc.newRequest("hub.set");
 JAddStringToObject(req, "product",
@@ -308,7 +308,7 @@ nc.sendRequest(req);
 </td><td>
 
 ```cpp
-// ../../examples/arduino-migration/src/main.cpp#L48-L58
+// ../../examples/arduino/migration/src/main.cpp#L48-L58
 
 bool use_continuous = false;
 auto req = nc.hub.set();
@@ -342,7 +342,7 @@ or conditional logic. Designated initializers read like data, not procedure
 **note-arduino:**
 
 ```c
-// ../../examples/migration_notec.cpp#L82-L93
+// ../../tests/migration_notec.cpp#L82-L93
 
 struct Readings {
     float temperature;
@@ -361,7 +361,7 @@ nc.sendRequest(req);
 **note-cpp:**
 
 ```cpp
-// ../../examples/arduino-migration/src/main.cpp#L18-L22
+// ../../examples/arduino/migration/src/main.cpp#L18-L22
 
 struct Readings {
     float temperature;
@@ -371,7 +371,7 @@ struct Readings {
 ```
 
 ```cpp
-// ../../examples/arduino-migration/src/main.cpp#L65-L70
+// ../../examples/arduino/migration/src/main.cpp#L65-L70
 
     Readings r{.temperature = 22.5f, .humidity = 60};
     nc.note.add()
@@ -387,7 +387,7 @@ In note-c, you check for a null response, then check the `err` field — an
 unstructured string you have to parse yourself:
 
 ```c
-// ../../examples/migration_notec.cpp#L99-L108
+// ../../tests/migration_notec.cpp#L99-L108
 
 J *rsp = nc.requestAndResponse(req);
 if (rsp == NULL) {
@@ -472,7 +472,7 @@ for all approaches.
 <tr><td>
 
 ```c
-// ../../examples/migration_notec.cpp#L113-L120
+// ../../tests/migration_notec.cpp#L113-L120
 
 // Type constants from note.h — you pick the
 // right one for each field manually.
@@ -487,7 +487,7 @@ nc.sendRequest(req);
 </td><td>
 
 ```cpp
-// ../../examples/arduino-migration/src/main.cpp#L90-L92
+// ../../examples/arduino/migration/src/main.cpp#L90-L92
 
 nc.note.templates().define("sensors.qo")
     .body(note::template_of(Readings()))
@@ -523,7 +523,7 @@ If you prefer, you can also use an explicit template parameter instead of an ins
 <tr><td>
 
 ```c
-// ../../examples/migration_notec.cpp#L125-L141
+// ../../tests/migration_notec.cpp#L125-L141
 
 J *rsp = nc.requestAndResponse(
     nc.newRequest("card.temp"));
@@ -547,7 +547,7 @@ nc.sendRequest(req);
 </td><td>
 
 ```cpp
-// ../../examples/arduino-migration/src/main.cpp#L99-L105
+// ../../examples/arduino/migration/src/main.cpp#L99-L105
 
     auto r = nc.card.temp().read().execute();
     if (r) {
@@ -586,7 +586,7 @@ nc.sendRequest(req);
 <tr><td>
 
 ```c
-// ../../examples/migration_notec.cpp#L141-L148
+// ../../tests/migration_notec.cpp#L141-L148
 
 nc.sendRequest(req);
 }
@@ -634,7 +634,7 @@ if (r) {
 <tr><td>
 
 ```c
-// ../../examples/migration_notec.cpp#L153-L164
+// ../../tests/migration_notec.cpp#L153-L164
 
     nc.deleteResponse(rsp);
 }
@@ -1115,7 +1115,7 @@ maps directly to code.
 <tr><td>
 
 ```c
-// ../../examples/migration_notec.cpp#L212-L223
+// ../../tests/migration_notec.cpp#L212-L223
 
 JAddStringToObject(req2, "text", "60");
 nc.sendRequest(req2);
@@ -1200,7 +1200,7 @@ requests are safe to retry, and currently note-c retries all requests.
 <tr><td>
 
 ```c
-// ../../examples/migration_notec.cpp#L228-L231
+// ../../tests/migration_notec.cpp#L228-L231
 
     nc.deleteResponse(rsp);
 }
@@ -1210,7 +1210,7 @@ requests are safe to retry, and currently note-c retries all requests.
 </td><td>
 
 ```cpp
-// ../../examples/arduino-migration/src/main.cpp#L218-L218
+// ../../examples/arduino/migration/src/main.cpp#L218-L218
 
 nc.hub.sync().command();
 
@@ -1430,7 +1430,7 @@ Moving from C to C++ brings benefits independent of note-cpp:
 ### Binary size
 
 **AVR (ATmega328P, 32 KB flash / 2 KB RAM)** — using `StaticNotecard`
-with streaming transport (see `examples/binary-size-comparison/`):
+with streaming transport (see `tools/binary-size-comparison/`):
 
 | | note-c | note-cpp | Delta |
 |---|---|---|---|
@@ -1480,7 +1480,7 @@ both libraries have similar per-request heap usage.
 
 note-cpp runs on AVR (ATmega328P) with the streaming transport path.
 Uses `StaticNotecard` for zero-vtable dispatch and `avr-libstdcpp` for
-standard library headers. See `examples/binary-size-comparison/` for
+standard library headers. See `tools/binary-size-comparison/` for
 the full PlatformIO configuration. Key build flags:
 
 - `NOTE_NO_STD_STRING` — excludes `std::string`/`std::functional` paths

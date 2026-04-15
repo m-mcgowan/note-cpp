@@ -10,7 +10,13 @@
 //   - README.md (if the same snippet appears there)
 // Run tools/verify-docs.sh to check for mismatches.
 
+// Disable the blanket `using namespace note;` to avoid ambiguity between
+// note::Notecard (bare transport class) and note::arduino::Notecard (the
+// Arduino convenience class). We import what we need explicitly below.
+#define NOTE_USING_NAMESPACE 0
 #include <note.hpp>
+using Notecard = note::arduino::Notecard<>;
+using namespace note::literals;  // 60_mins, 120_s, etc.
 
 
 // ── Body struct (used across note.add, templates, and receive examples) ──

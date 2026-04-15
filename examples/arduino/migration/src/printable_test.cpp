@@ -1,7 +1,10 @@
 // Verify all Printable types compile with Serial.print().
 // Catches ambiguity between Printable and String overloads.
 
+#define NOTE_USING_NAMESPACE 0
 #include <note.hpp>
+using Notecard = note::arduino::Notecard<>;
+using namespace note::literals;
 
 namespace printable_test {
 static Notecard nc;
@@ -24,13 +27,13 @@ void test_error_info() {
 
 void test_printable_wrapper() {
     auto r = nc.card.version().execute();
-    Serial.println(printable(r));      // ApiResult via printable()
+    Serial.println(note::printable(r));      // ApiResult via note::printable()
 }
 
 void test_request_fields() {
     auto req = nc.hub.set();
     req.product = "com.example.app";
-    Serial.println(printable(req.product));  // via printable() — no vtable cost
+    Serial.println(note::printable(req.product));  // via note::printable() — no vtable cost
 }
 
 void test_duration_literals() {

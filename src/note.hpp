@@ -68,11 +68,17 @@ using namespace note::triangulate;
 #endif
 
 #ifdef ARDUINO
-// Concrete alias so unqualified `Notecard nc;` is unambiguous.
-// `using note::arduino::Notecard;` imports the template name, but
-// `using namespace note;` also makes `note::Notecard` (non-template)
-// findable — GCC reports ambiguity. A type alias resolves it.
-using Notecard = note::arduino::Notecard<>;
+// On Arduino, note::arduino::Notecard<> is the user-facing class.
+// A using-declaration or type-alias here would conflict with
+// note::Notecard exposed by `using namespace note;` above (GCC
+// reports ambiguity). Users who want unqualified `Notecard nc;`
+// should set NOTE_USING_NAMESPACE=0 and import selectively:
+//   #define NOTE_USING_NAMESPACE 0
+//   #include <note.hpp>
+//   using Notecard = note::arduino::Notecard<>;
+//   using namespace note::literals;
+// See examples/arduino/migration/ for an example of this pattern.
+using note::arduino::Notecard;
 #endif
 
 #endif // NOTE_USING_NAMESPACE

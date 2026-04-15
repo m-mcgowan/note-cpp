@@ -18,6 +18,11 @@ ROOT="$(cd "$(dirname "$0")" && pwd)"
 # --all-compilers discovers compilers matching the CI matrix (g++-13, clang++-18) plus
 # any GCC/Clang versions installed via Homebrew on macOS.
 
+# ── GitHub Actions sync ────────────────────────────────────────────────────
+# The GitHub Actions workflow (.github/workflows/ci.yml) mirrors the stages
+# in run_ci() as individual steps. If you add, remove, or rename a stage
+# here, update the workflow to match.
+
 LLVM_COV="${LLVM_COV:-$(xcrun --find llvm-cov 2>/dev/null || echo llvm-cov)}"
 LLVM_PROFDATA="${LLVM_PROFDATA:-$(xcrun --find llvm-profdata 2>/dev/null || echo llvm-profdata)}"
 

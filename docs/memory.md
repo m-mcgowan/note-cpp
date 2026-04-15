@@ -1,68 +1,105 @@
 # Memory Management
 
-`note-cpp` can operate with **zero heap allocations** in steady state. This guide explains the memory model, when strings need interning, and how to choose the right configuration.
+`note-cpp` can run with **zero heap allocations** in steady state — important on embedded targets without a heap, or where you just don't want to pay for `malloc` on every request.
 
-## Response String Lifetime
+This guide covers two questions that come up as soon as you go past "hello world":
 
-Response fields like `r.version` and `r.device` are `string_view`s — they point into memory managed by the allocator or (on the buffered path) the transport buffer, not into the `Response` struct itself.
+1. **"How long are response strings valid?"** — fields like `r.version` are views, not copies; they become invalid at some point.
+2. **"What memory knobs do I have if I'm flash/RAM-constrained?"** — backends, arenas, streaming vs. buffered.
 
-**Streaming path (with allocator):** string_views are interned into the `MonotonicArena` during SAX parsing. They are valid until `arena.reset()`. This is the default for `Notecard(IStreamingTransport&, Allocator)`.
+The short version for both: **by default things work**. You only need this guide when the default isn't enough.
 
-**Buffered path (without allocator):** string_views point into the transport buffer and are valid until the next `execute()` call. This is fine when you consume response fields immediately:
+## Do I need to do anything special?
+
+| Scenario | What to do |
+|----------|------------|
+| Read a response, use it immediately, call the next request | **Nothing.** Default works. |
+| Keep response fields around past the next `execute()` | Set an **arena allocator** (below). |
+| Collect data from several requests before processing | Arena allocator. |
+| Fire-and-forget commands (no response) | Nothing. |
+| Using the streaming path | Arena is **required** by the constructor — the library won't compile without one. |
+| Running on a target with no heap / strict flash budget | Use the streaming path, or `BufferJsonBackend`. See [Backend profiles](#backend-memory-profiles). |
+
+If you're in the first row, stop reading. If you're anywhere else, continue.
+
+## Response string lifetimes
+
+Response fields like `r.version`, `r.device`, and most string fields are `std::string_view` — pointers into memory the library owns, not copies. They're cheap, but they have an expiry date.
+
+Three rules:
+
+1. **Default (buffered, no arena):** views are valid **until the next `execute()` call**. This is the common case — read, use, move on.
+2. **With an arena allocator:** views are copied into the arena and are valid **until you call `arena.reset()`**.
+3. **Streaming path (always uses an arena):** same as above — views are valid until the arena is reset.
+
+The arena is the "keep this string around" mechanism. Without it, response memory is recycled on the next request.
+
+### Setting an arena
 
 ```cpp
-auto r = api.card.version().execute();
-std::printf("version: %.*s\n", (int)r.version.size(), r.version.data());
-// r.version is valid here — no second execute() has happened yet
-```
-
-**Buffered path (with allocator):** string_views are copied into a `MonotonicArena` and survive transport buffer reuse. Use this when response data must outlive the next request:
-
-```cpp
-// Store the allocator once — all execute() calls use it automatically
 char arena_buf[1024];
 note::MonotonicArena arena(arena_buf, sizeof(arena_buf));
 nc.set_allocator(note::arena_allocator(arena));
 
 auto r1 = api.card.version().execute();
 auto r2 = api.hub.status().execute();
-// r1.version is still valid — it lives in the arena, not the transport buffer
+// r1.version is still valid — it was copied into the arena,
+// not left in the transport buffer.
 ```
 
-### When Do You Need an Allocator?
+"Arena" is a common term for a bump allocator — you hand it a block of memory, it gives out pieces linearly, and you free everything at once by calling `reset()`. No per-allocation bookkeeping, no fragmentation. When a response has strings to keep alive, `note-cpp` copies them into the arena (this copy is the "intern" step).
 
-On the streaming path, an allocator is always required (passed to the `Notecard` constructor). On the buffered path, it is optional.
+When you're done with a batch of responses, reclaim the memory:
 
-| Scenario | Allocator needed? |
-|----------|-------------------|
-| Streaming path (any usage) | **Yes** (required by constructor) |
-| Buffered: read response, act on it, then next request | No |
-| Buffered: store response fields for later comparison | **Yes** |
-| Buffered: collect data from multiple requests before processing | **Yes** |
-| Fire-and-forget commands (no response) | No |
-| Error messages from `r.error().message` with allocator set | Auto-interned |
+```cpp
+// Finished with r1 and r2
+arena.reset();
+nc.set_allocator(note::arena_allocator(arena));  // re-bind after reset
+```
 
-**Rule of thumb:** on the buffered path, if a response `string_view` must outlive the next `execute()` call, set an allocator. On the streaming path, strings live in the arena until `arena.reset()`.
+After `reset()`, every `string_view` that pointed into the arena is invalid. Don't touch them.
 
-## Backend Memory Profiles
+### Sizing the arena
 
-The streaming path (`Notecard(IStreamingTransport&, Allocator)`) does not use a `JsonBackend` — requests build directly into the transport, responses SAX-parse from the wire. This is the lowest-memory option.
+A `card.version` response uses ~46 bytes of arena. A `hub.status` response with a connected message string might use ~120. For most apps, **512–1024 bytes is plenty**. You can check with `arena.used()` and `arena.capacity()`.
 
-For the buffered path, backend choice determines allocation behavior:
+If you want to know the worst-case arena size at compile time, each generated request has `Request::Response::max_arena_size` (see [arena-sizing.md](arena-sizing.md)).
 
-| Backend | JSON building | JSON parsing | Heap allocs (steady state) |
-|---------|--------------|-------------|---------------------------|
-| *Streaming (no backend)* | *StreamingJsonBuilder* | *SAX parse* | **0** |
-| `BufferJsonBackend<N,T>` | Fixed `char[N]` buffer | Fixed `jsmn_tok[T]` array | **0** |
-| `CjsonArenaBackend` | cJSON (arena-backed) | cJSON (arena-backed) | **0** (arena) |
-| `CjsonBackend` | cJSON (heap) | cJSON (heap) | ~5-10 per request |
-| `NlohmannBackend` | nlohmann (heap) | nlohmann (heap) | Many per request |
+### Per-call arena (no set_allocator)
 
-For zero-allocation operation, use the streaming path or `BufferJsonBackend`.
+If you only need an arena for a specific call:
 
-## Configuration
+```cpp
+note::MonotonicArena arena(buf, sizeof(buf));
+auto r = nc.execute(req, note::arena_allocator(arena));
+```
 
-### Streaming path — zero heap (recommended)
+## Choosing a path: streaming vs. buffered
+
+`note-cpp` has two execution paths. Pick one based on your transport and memory constraints:
+
+- **Streaming path** — builds the request directly into the transport and parses the response with a SAX parser as bytes arrive. No request/response buffers needed. **Always zero heap.** Requires an arena (passed to the constructor).
+- **Buffered path** — builds the full request in a `JsonBackend`, sends it, reads the full response back, then parses. Simpler mental model. Heap allocation depends on the backend.
+
+See [streaming-vs-buffered.md](streaming-vs-buffered.md) for a side-by-side comparison and when to choose each.
+
+## Backend memory profiles
+
+On the buffered path, your backend choice decides whether you allocate heap memory per request:
+
+| Backend | JSON build | JSON parse | Heap allocs per request |
+|---------|------------|------------|-------------------------|
+| *Streaming (no backend)* | direct-to-transport | SAX | **0** |
+| `BufferJsonBackend<N,T>` | fixed `char[N]` | fixed token array | **0** |
+| `CjsonArenaBackend` | cJSON + arena | cJSON + arena | **0** (all from arena) |
+| `CjsonBackend` | cJSON (heap) | cJSON (heap) | ~5–10 |
+| `NlohmannBackend` | nlohmann (heap) | nlohmann (heap) | many |
+
+For zero-alloc: streaming path, or `BufferJsonBackend`, or `CjsonArenaBackend`.
+
+## Configuration recipes
+
+### Streaming path — zero heap (recommended for embedded)
 
 ```cpp
 note::transport::NotecardSerial serial_hal(hal);    // TransportHal
@@ -73,24 +110,26 @@ note::MonotonicArena arena(arena_buf);
 note::Notecard nc(transport, note::arena_allocator(arena));
 note::Api api(nc);
 
-auto r = api.card.version().execute();  // 0 heap allocs, strings in arena
+auto r = api.card.version().execute();   // 0 heap allocs, strings in arena
 // r.version valid until arena.reset()
 ```
 
-No `JsonBackend` needed. No `std::string` linked. No `operator new`.
+No backend needed. No `std::string` linked. No `operator new`.
 
-### Buffered path — with backend
+### Buffered path — with `BufferJsonBackend` (zero heap)
 
 ```cpp
 note::backends::BufferJsonBackend<512, 64> backend;
-note::Notecard nc(backend, transport);  // IBufferedTransport
+note::Notecard nc(backend, transport);   // IBufferedTransport
 note::Api api(nc);
 
-auto r = api.card.version().execute();  // 0 heap allocs (BufferJsonBackend)
-// Use r.version before next execute()
+auto r = api.card.version().execute();   // 0 heap allocs
+// Consume r before the next execute()
 ```
 
-### Buffered path — with StringPool
+The two template parameters are: request/response buffer size, and jsmn token count. Pick values that fit your largest request and largest response.
+
+### Buffered path — with arena
 
 ```cpp
 note::backends::BufferJsonBackend<512, 64> backend;
@@ -101,114 +140,59 @@ note::MonotonicArena arena(arena_buf, sizeof(arena_buf));
 nc.set_allocator(note::arena_allocator(arena));
 
 note::Api api(nc);
-auto r = api.card.version().execute();  // 0 heap allocs, strings in arena
+auto r = api.card.version().execute();   // 0 heap allocs, strings in arena
 // r.version valid until arena.reset()
 ```
 
-### Arena Reset
+## Advanced: binary transfer buffers
 
-The arena grows monotonically — call `reset()` when you're done with all responses from the current batch:
-
-```cpp
-// Process a batch of requests
-auto r1 = api.card.version().execute();
-auto r2 = api.hub.status().execute();
-process(r1, r2);
-
-// Done with r1 and r2 — reclaim arena memory
-arena.reset();
-nc.set_allocator(note::arena_allocator(arena));  // re-bind after reset
-```
-
-After `reset()`, all previous `string_view`s from interned responses are invalid.
-
-### Per-Call Allocator
-
-For one-off use without configuring a stored allocator:
+Binary transfer (`.data()` / `.into()`) follows the same caller-owns-memory model as the rest of the library. COBS encoding streams from the source buffer directly to the transport; decoding writes into the destination buffer in place. No scratch buffer required.
 
 ```cpp
-note::MonotonicArena arena(buf, sizeof(buf));
-auto r = nc.execute(req, note::arena_allocator(arena));
-```
-
-### Arena Sizing
-
-A `card.version` response typically uses ~46 bytes of arena for string interning. For most Notecard responses, 512-1024 bytes is sufficient. The arena reports usage via `arena.used()` and `arena.capacity()`.
-
-## Allocation Profiling
-
-The integration tests in `tests/integration/buffer/` verify allocation counts:
-
-- **`test_alloc_profile`** — proves `BufferJsonBackend` + tree-parse = 0 heap allocs
-- **`test_sax_alloc_profile`** — proves StringPool + arena = 0 heap allocs, strings survive reuse
-
-Both use global `operator new`/`operator delete` overrides to count every C++ heap allocation.
-
-## Binary Transfer Buffers
-
-Binary transfer (`.data()` / `.into()`) follows the same caller-owns-memory
-model as the rest of the library.
-
-**PUT** — the caller supplies the source data buffer. `CobsEncoder` is streaming:
-it reads from the source and flushes encoded blocks directly to the transport
-callback. No scratch buffer needed; the working block buffer defaults to stack
-but can be caller-provided for stack-constrained targets.
-
-**GET** — the caller supplies the destination buffer. COBS decoding writes
-decoded bytes into it in place as they arrive from the transport.
-
-```cpp
-// Stack-allocate the destination buffer; no heap involvement:
 uint8_t buf[1024];
 auto rsp = api.card.binary.get(buf, sizeof(buf)).execute();
-// rsp.buffer → span<const uint8_t> into buf, sized to decoded bytes received
+// rsp.buffer is a span into buf, sized to the decoded payload length.
 ```
 
-On stack-constrained targets, register a static buffer on the `Notecard` once
-at startup. All binary operations then use it automatically:
+For stack-constrained targets, register a COBS working buffer once at startup so every binary call uses it:
 
 ```cpp
 static uint8_t cobs_buf[NOTE_COBS_BLOCK_SIZE];
-nc.set_cobs_buffer(cobs_buf, sizeof(cobs_buf));   // or pass a span
-// execute() calls need no changes
+nc.set_cobs_buffer(cobs_buf, sizeof(cobs_buf));
 ```
 
-Use `note::cobs_encoded_size(n)` to check Notecard capacity upfront:
+Use `note::cobs_encoded_size(n)` to check capacity at compile time:
 
 ```cpp
 constexpr size_t raw_len = 1024;
 static_assert(note::cobs_encoded_size(raw_len) <= MAX_NOTECARD_BINARY);
 ```
 
-## Streaming SAX Parser
+## Advanced: streaming SAX parser internals
 
-The streaming path uses `sax_parse_streaming()` internally — called by
-`StreamingTransport::receive_streaming()` to parse JSON incrementally
-from `TransportHal::read()`. No full-response buffer needed.
+The streaming path parses JSON incrementally via `sax_parse_streaming()`. The parser takes a caller-provided buffer and partitions it into read, key-scratch, and value-scratch regions:
 
 ```cpp
-char buf[384];  // or any size — stack, static, arena
+char buf[384];
 note::SaxStreamBuf sbuf(buf);
 auto err = note::sax_parse_streaming(read_fn, timeout_ms, sbuf, sink);
 ```
 
-The buffer is partitioned into three regions: read buffer (1/6), key scratch
-(1/6), and value scratch (4/6). Default overload uses 384 bytes on the stack.
-Zero heap allocation — all memory is caller-provided or stack.
+Default overloads use 384 bytes on the stack. All memory is caller-provided or stack — no heap. See [streaming-transport.md](internal/streaming-transport.md) for the full design.
 
-See [streaming-transport.md](internal/streaming-transport.md) for the full design and
-`include/note/json_sax_streaming.hpp` for the implementation.
+## Allocation proof
 
-## See Also
+The integration tests override global `operator new`/`operator delete` to count every C++ heap allocation:
 
-- [examples/zero-alloc.cpp](../examples/stdcpp/zero-alloc.cpp) — working example of all three patterns
-- [docs/transport.md](transport.md) — transport layer architecture (`TransportHal`, `StreamingTransport`)
-- [docs/streaming-transport.md](internal/streaming-transport.md) — streaming execution paths and CRC
-- [docs/json-backend.md](json-backend.md) — backend selection and customization
-- `include/note/transport_hal.hpp` — `TransportHal` interface
-- `include/note/streaming_transport.hpp` — `IStreamingTransport`, `StreamingTransport`
-- `include/note/arena.hpp` — `MonotonicArena` implementation
-- `include/note/allocator.hpp` — `Allocator` type and adapters
-- `include/note/string_pool.hpp` — `StringPool` implementation
-- `include/note/transport/cobs.hpp` — `CobsEncoder`, `CobsDecoder`, `cobs_encoded_size()`
-- [docs/binary-transfer.md](binary-transfer.md) — binary transfer memory model
+- `tests/integration/buffer/test_alloc_profile` — proves `BufferJsonBackend` + tree parse = 0 heap allocs.
+- `tests/integration/buffer/test_sax_alloc_profile` — proves streaming + arena = 0 heap allocs and strings survive transport reuse.
+
+## See also
+
+- [examples/zero-alloc.cpp](../examples/stdcpp/zero-alloc.cpp) — working example of the patterns above
+- [response-lifetimes.md](response-lifetimes.md) — in-depth guide to `string_view` validity
+- [arena-sizing.md](arena-sizing.md) — computing arena size at compile time
+- [streaming-vs-buffered.md](streaming-vs-buffered.md) — which path to pick
+- [json-backend.md](json-backend.md) — backend selection and customization
+- [binary-transfer.md](binary-transfer.md) — binary transfer memory model
+- `include/note/arena.hpp`, `include/note/allocator.hpp`, `include/note/string_pool.hpp`, `include/note/transport_hal.hpp`, `include/note/streaming_transport.hpp`, `include/note/transport/cobs.hpp`

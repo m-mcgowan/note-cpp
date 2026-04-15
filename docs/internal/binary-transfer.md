@@ -23,9 +23,6 @@ auto rsp = api.card.binary.put()
     .data(buf, len)
     .verify(false)
     .execute();
-
-// Top-level alias:
-api.binary.put().data(buf, len).execute();
 ```
 
 The `.data()` method attaches a source buffer. Its presence triggers the binary
@@ -40,9 +37,6 @@ auto rsp = api.card.binary.get()
     .into(dst, sizeof(dst))     // attach destination buffer
     .length(int32_t(N))         // bytes to retrieve
     .execute();                 // stream + COBS decode + MD5 verify
-
-// Top-level alias:
-api.binary.get().into(dst, sizeof(dst)).length(N).execute();
 ```
 
 The `.into()` method attaches a destination buffer. `execute()` streams COBS
@@ -52,13 +46,13 @@ the MD5 against the Notecard's response.
 ### Status and clear
 
 ```cpp
-auto status = api.binary.status().execute();
+auto status = api.card.binary.status().execute();
 // status.max — maximum bytes the Notecard can store
 // status.length — bytes currently stored (unencoded)
 // status.cobs — COBS-encoded size of stored data
 // status.status — MD5 of stored data
 
-api.binary.clear().execute();
+api.card.binary.clear().execute();
 ```
 
 ### Post-transmit verification
@@ -71,7 +65,7 @@ on the wire), the MD5 won't match and `execute()` returns an error.
 This costs one extra JSON round-trip. Disable it for latency-sensitive paths:
 
 ```cpp
-api.binary.put().data(buf, len).verify(false).execute();
+api.card.binary.put().data(buf, len).verify(false).execute();
 ```
 
 GET requests verify MD5 locally (no extra round-trip) — the MD5 from the JSON

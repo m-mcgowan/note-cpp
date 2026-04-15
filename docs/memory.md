@@ -160,7 +160,7 @@ decoded bytes into it in place as they arrive from the transport.
 ```cpp
 // Stack-allocate the destination buffer; no heap involvement:
 uint8_t buf[1024];
-auto rsp = api.binary.get(buf, sizeof(buf)).execute();
+auto rsp = api.card.binary.get(buf, sizeof(buf)).execute();
 // rsp.buffer → span<const uint8_t> into buf, sized to decoded bytes received
 ```
 

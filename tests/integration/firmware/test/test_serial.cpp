@@ -105,7 +105,7 @@ void binary_round_trip(Fixture& f, const uint8_t* data, size_t data_len, const c
     }
     REQUIRE(put_rsp);
 
-    auto status_rsp = nc.binary.status().execute();
+    auto status_rsp = nc.card.binary.status().execute();
     REQUIRE(status_rsp);
     REQUIRE(status_rsp.length > 0);
 

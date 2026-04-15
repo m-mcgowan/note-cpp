@@ -68,8 +68,8 @@ namespace detail {
 /// nc.hub.set().product("com.example.app").mode("periodic").execute();
 ///
 /// // Binary transfer:
-/// nc.binary.put().data(buf, len).execute();
-/// nc.binary.get().into(dst, sizeof(dst)).length(N).execute();
+/// nc.card.binary.put().data(buf, len).execute();
+/// nc.card.binary.get().into(dst, sizeof(dst)).length(N).execute();
 /// @endcode
 #if __cplusplus >= 202002L
 template<typename TargetT = Unconstrained>

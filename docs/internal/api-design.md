@@ -179,9 +179,8 @@ api.note.changes().peek()           // → note.changes (read-only via factory)
 api.note.popChanges("data.qi")      // Layer 2: → note.changes + delete:true, file pre-set
 
 // ── Binary ───────────────────────────────────────────────────────────────
-api.binary.status()                 // Layer 2: → card.binary (read-only)
-api.binary.clear()                  // Layer 2: → card.binary + delete:true
-api.card.binary().status()          // same, via card group factory
+api.card.binary.status()             // Layer 2: → card.binary (read-only)
+api.card.binary.clear()              // Layer 2: → card.binary + delete:true
 api.card.binary.get()                // Layer 1: card.binary.get (separate req)
 api.card.binary.put()                // Layer 1: card.binary.put (separate req)
 

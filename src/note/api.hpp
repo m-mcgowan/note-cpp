@@ -120,8 +120,6 @@ public:
         , ntn{&nc_}
         , var{&nc_}
         , web{&nc_}
-        , attn{&nc_}
-        , binary{&nc_}
     {}
 #if __cplusplus >= 202002L && !defined(NOTE_MINIMAL)
     explicit Api(NcT& nc, TargetT) : nc_(nc)
@@ -134,8 +132,6 @@ public:
         , ntn{&nc_}
         , var{&nc_}
         , web{&nc_}
-        , attn{&nc_}
-        , binary{&nc_}
     {}
 #endif
     NcT& notecard() { return nc_; }
@@ -2968,14 +2964,6 @@ public:
     WebGroup<> web;
 #endif
 
-    // =====================================================================
-    // Flat endpoint shortcuts (e.g. nc.binary instead of nc.card.binary())
-    // =====================================================================
-
-    /// Shortcut for card.attn.
-    CardAttnFactory attn;
-    /// Shortcut for card.binary.
-    CardBinaryFactory binary;
 };
 
 #ifndef NOTE_MINIMAL

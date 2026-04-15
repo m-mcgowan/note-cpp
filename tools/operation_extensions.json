@@ -78,9 +78,6 @@
           "supports_cmd": false
         }
       ]
-    },
-    "path": {
-      "x-flat-alias": "attn"
     }
   },
   "card.binary": {
@@ -90,8 +87,7 @@
       "x-aliases": [
         {"method": "binaryStatus", "variant": "Status"},
         {"method": "binaryClear",  "variant": "Clear"}
-      ],
-      "x-flat-alias": "binary"
+      ]
     }
   },
   "card.contact": {

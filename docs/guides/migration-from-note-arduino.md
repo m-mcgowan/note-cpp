@@ -1343,7 +1343,7 @@ nc.sendRequest(req);
 ```cpp
 uint8_t buf[1024];
 
-nc.binary.clear().execute();
+nc.card.binary.clear().execute();
 nc.card.binary.put()
     .data(buf, data_len)
     .execute();

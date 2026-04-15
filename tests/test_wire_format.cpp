@@ -422,10 +422,10 @@ TEST_CASE("DX: intent-revealing aliases produce correct wire format") {
         R"({"req":"note.get","delete":true,"file":"requests.qi"})");
 
     // binary status and clear
-    api.binary.status().execute();
+    api.card.binary.status().execute();
     REQUIRE(h.last_request == R"({"req":"card.binary"})");
 
-    api.binary.clear().execute();
+    api.card.binary.clear().execute();
     REQUIRE(h.last_request == R"({"req":"card.binary","delete":true})");
 }
 

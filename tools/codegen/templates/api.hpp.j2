@@ -66,18 +66,12 @@ public:
 {% for group in resource_groups %}
         , {{ group.name }}{&nc_}
 {% endfor %}
-{% for endpoint in endpoints %}{% if endpoint.flat_alias %}
-        , {{ endpoint.flat_alias }}{&nc_}
-{% endif %}{% endfor %}
     {}
 #if __cplusplus >= 202002L && !defined(NOTE_MINIMAL)
     explicit Api(NcT& nc, TargetT) : nc_(nc)
 {% for group in resource_groups %}
         , {{ group.name }}{&nc_}
 {% endfor %}
-{% for endpoint in endpoints %}{% if endpoint.flat_alias %}
-        , {{ endpoint.flat_alias }}{&nc_}
-{% endif %}{% endfor %}
     {}
 #endif
     NcT& notecard() { return nc_; }
@@ -603,16 +597,6 @@ public:
     {{ group.struct_name }}<> {{ group.name }};
 #endif
 
-{% endfor %}
-    // =====================================================================
-    // Flat endpoint shortcuts (e.g. nc.binary instead of nc.card.binary())
-    // =====================================================================
-
-{% for endpoint in endpoints %}
-{% if endpoint.flat_alias %}
-    /// Shortcut for {{ endpoint.wire_name }}.
-    {{ endpoint.struct_name }}Factory {{ endpoint.flat_alias }};
-{% endif %}
 {% endfor %}
 };
 

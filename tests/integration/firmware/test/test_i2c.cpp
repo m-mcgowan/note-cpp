@@ -81,8 +81,8 @@ void binary_round_trip_hal(I2cFixture& f, const uint8_t* data, size_t data_len, 
     auto& hal = f.hal;
     INFO("payload: ", label, " (", data_len, " bytes)");
 
-    nc.binary.clear().execute();
-    auto status_rsp = nc.binary.status().execute();
+    nc.card.binary.clear().execute();
+    auto status_rsp = nc.card.binary.status().execute();
     REQUIRE(status_rsp);
     REQUIRE(status_rsp.max > 0);
     REQUIRE(static_cast<int32_t>(data_len) <= status_rsp.max);
@@ -109,7 +109,7 @@ void binary_round_trip_hal(I2cFixture& f, const uint8_t* data, size_t data_len, 
     REQUIRE(tx_ok);
     hal.delay(250);
 
-    auto verify_rsp = nc.binary.status().execute();
+    auto verify_rsp = nc.card.binary.status().execute();
     REQUIRE(verify_rsp);
     CHECK(verify_rsp.length == static_cast<int32_t>(data_len));
     CHECK(verify_rsp.cobs == static_cast<int32_t>(actual_cobs_len));
@@ -136,7 +136,7 @@ void binary_round_trip_hal(I2cFixture& f, const uint8_t* data, size_t data_len, 
 
     REQUIRE(decoded.size() == data_len);
     CHECK(memcmp(decoded.data(), data, data_len) == 0);
-    nc.binary.clear().execute();
+    nc.card.binary.clear().execute();
 }
 
 } // namespace

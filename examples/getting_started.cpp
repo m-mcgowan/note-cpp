@@ -19,6 +19,17 @@
 // Build & run:
 //   c++ -std=c++20 -I include examples/getting_started.cpp && ./a.out
 
+// This example shows three levels of the note-cpp API, from highest to lowest:
+//   1. Typed API (recommended) — fluent builders with compile-time safety
+//   2. Ad-hoc requests — lambda-based for custom/new request types
+//   3. Raw JSON — direct string construction for full control
+//
+// Most applications only need level 1. The lower levels exist as escape
+// hatches for advanced use cases. See docs/raw-requests.md for details.
+//
+// On Arduino, the Notecard class exposes the typed API directly —
+// see examples/arduino/ for Arduino-specific examples.
+
 #include <note/notecard.hpp>
 #include <note/json_buf.hpp>
 #include <note/api.hpp>
@@ -27,6 +38,7 @@
 #include "mock_backend.hpp"
 #include <cstdio>
 
+using namespace note;
 
 // ── Your application's sensor data ──────────────────────────────────────
 // Define once — use to send, receive, and register Notecard templates.
@@ -90,6 +102,7 @@ int main() {
         if (result) {
             auto version = (*result)->get_string("version");
             auto device  = (*result)->get_string("device");
+            // todo - print the version, or add some conditional logic.
             (void)version; (void)device;
             std::puts("  (version and device read from response)");
         }
@@ -100,13 +113,12 @@ int main() {
     std::puts("--- hub.sync (command) ---");
     nc.command("hub.sync");
 
-    // Every operation returns a result. Check it to handle errors.
+    // All operations return a response. Check the response to handle errors.
     std::puts("--- error handling ---");
     {
         auto r = nc.request("card.version");
         if (!r) {
-            std::printf("  error: %.*s\n",
-                (int)r.error().message.size(), r.error().message.data());
+            std::printf("  error: %s\n", to_string(r.error()).c_str());
         } else {
             std::puts("  ok");
         }
@@ -155,6 +167,7 @@ int main() {
         b.close();
         return b;
     }();
+    // JsonBuf output is null-terminated; StringPool-interned strings are too.
 
     static_assert(note_add_json);  // verifies the buffer didn't overflow
     std::printf("--- constexpr note.add ---\n  >> %.*s\n",
@@ -170,20 +183,21 @@ int main() {
     // dot, and misspelled field names are compile errors.
     //
     // Responses are also typed: result.version is a string_view, not a
-    // string you look up by key.
+    // JSON string you look up by key.
     // ═════════════════════════════════════════════════════════════════════
 
     std::puts("\n=== 3. Typed API ===\n");
 
     // Api wraps a Notecard and provides typed accessors for every endpoint.
-    note::Api api(nc);
+    // On Arduino, the Notecard class exposes the API directly (nc.hub.set()).
+    Api api(nc);
 
     // Fluent chain — build and execute in one expression.
     std::puts("--- hub.set (fluent) ---");
     api.hub.set()
        .product("com.example.app")
        .mode("periodic")
-       .outbound(60)
+       .outbound(60_mins)
        .execute();
 
     // Direct field assignment — useful when fields come from different
@@ -193,7 +207,7 @@ int main() {
         auto req = api.hub.set();
         req.product = "com.example.app";
         req.mode = "periodic";
-        req.outbound = 60;
+        req.outbound = 60_mins;
         req.execute();
     }
 

@@ -2,10 +2,10 @@
 //
 // The Notecard comes in different hardware variants (WiFi, Cell, CellWifi,
 // LoRa, Skylo) and endpoints may require a minimum firmware version. Target
-// filtering catches mismatches at compile time instead of runtime.
+// filtering catches unavailable at compile time instead of runtime.
 //
-// Constrain your Api to a hardware variant, firmware version, or both.
-// Unsupported endpoints produce compiler warnings (or errors in strict mode).
+// You can constrain the Api to a particular hardware variant, firmware version, or both.
+// Using an unsupported API for that hardware/firmware combo produces a compiler warning (or a compile-time error in strict mode).
 //
 // Requires C++20. On C++17, all endpoints are available (no filtering).
 //

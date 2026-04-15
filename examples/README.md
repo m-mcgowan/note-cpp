@@ -1,7 +1,18 @@
 # Examples
 
-Start with **getting_started.cpp** and work down — each example builds on
-concepts from the previous ones.
+Learn `note-cpp` by example. Start with the Arduino quickstart or the getting-started walkthrough, then explore the feature-specific examples below.
+
+### Arduino
+
+| Example | What you'll learn |
+|---------|-------------------|
+| [arduino/readme_quickstart/](arduino/readme_quickstart/) | Minimal setup — connect, configure hub, send data, read responses |
+| [arduino-migration/](arduino-migration/) | Side-by-side migration from note-arduino / note-c |
+
+### Standard C++
+
+| Example | What you'll learn |
+|---------|-------------------|
 
 | Example | What it covers |
 |---------|----------------|

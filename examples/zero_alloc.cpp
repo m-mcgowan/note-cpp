@@ -1,4 +1,6 @@
 // Zero-allocation patterns for note-cpp.
+
+// See docs/arena-sizing.md for arena sizing details and docs/feature-flags.md for NOTE_MINIMAL.
 //
 // Demonstrates three approaches to eliminating heap allocation in request/response
 // cycles, suitable for hard real-time or memory-constrained embedded systems.

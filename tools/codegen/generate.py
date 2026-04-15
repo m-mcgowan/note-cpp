@@ -601,6 +601,30 @@ def main() -> None:
     streaming_path.write_text(streaming_content)
     print(f"Generated streaming endpoint tests in {streaming_path}")
 
+    # Generate API reference documentation (Markdown)
+    api_ref_template = env.get_template("api_reference.md.j2")
+    api_ref_content = api_ref_template.render(
+        endpoints=endpoints,
+        resource_groups=resource_groups,
+    )
+    docs_dir = test_dir.parent / "docs"
+    docs_dir.mkdir(parents=True, exist_ok=True)
+    api_ref_path = docs_dir / "api-reference.md"
+    api_ref_path.write_text(api_ref_content)
+    print(f"Generated API reference in {api_ref_path}")
+
+    # Generate compile-check for API group accessors and direct types
+    compile_check_dir = test_dir / "compile_check"
+    compile_check_dir.mkdir(parents=True, exist_ok=True)
+    compile_check_template = env.get_template("compile_check_api_groups.cpp.j2")
+    compile_check_content = compile_check_template.render(
+        endpoints=endpoints,
+        resource_groups=resource_groups,
+    )
+    compile_check_path = compile_check_dir / "api_groups.cpp"
+    compile_check_path.write_text(compile_check_content)
+    print(f"Generated API compile-check in {compile_check_path}")
+
     # Generate sizeof report test
     sizeof_template = env.get_template("test_sizeof_report.cpp.j2")
     sizeof_content = sizeof_template.render(endpoints=endpoints)

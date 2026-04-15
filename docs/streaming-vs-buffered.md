@@ -1,33 +1,11 @@
 # Streaming vs Buffered
 
-The default configuration uses streaming — zero heap, maximum efficiency.
-Your typed API code (`execute()`, response fields, body structs) works
-identically on both paths.
+`note-cpp` has two internal paths for building requests and parsing responses:
 
-**When this choice matters:**
-- **Migrating from note-c** with existing cJSON/`J*` code — the buffered
-  path preserves that workflow
-- **Inspecting raw JSON responses** at runtime (debugging, dynamic data)
-- **Constrained platforms** — streaming + JSONB gives the smallest footprint
+- **Streaming** (default) — requests are serialized directly to the wire, responses are SAX-parsed as bytes arrive. No intermediate buffer, no heap allocation.
+- **Buffered** — requests are built into a string buffer, responses are parsed into a JSON tree via a [JSON backend](json-backend.md) (cJSON, nlohmann, or `BufferJsonBackend`). A raw string interface (`transact()`) is also available for passing pre-built JSON.
 
-On constrained platforms (AVR, Cortex-M0), `NOTE_MINIMAL` additionally
-enables [JSONB](jsonb.md) — a compact binary wire format similar to
-[note-c-zero](https://github.com/blues/note-c-zero) — replacing JSON
-text with binary opcodes for smaller flash and faster parsing. This is
-transparent to your application code.
-
----
-
-## The two paths
-
-`note-cpp` has two internal paths for communicating with the Notecard:
-
-- **Streaming** (default) — requests serialized directly to the wire,
-  responses parsed with a SAX parser as bytes arrive. No intermediate
-  buffer, no heap.
-- **Buffered** — requests built into a string buffer, responses parsed
-  into a JSON tree. Requires a JSON backend (cJSON, nlohmann, or
-  `BufferJsonBackend`).
+The typed API (`execute()`, response fields, body structs) works identically on both paths — you don't need to change application code when switching between them.
 
 ## When to use buffered
 

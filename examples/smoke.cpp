@@ -3,6 +3,8 @@
 //
 // Build: clang++ -std=c++20 -fsyntax-only -I include examples/smoke.cpp
 
+// Development utility — not a pedagogical example. See getting_started.cpp for learning.
+
 #include <note/notecard.hpp>
 #include <memory>
 

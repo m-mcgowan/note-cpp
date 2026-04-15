@@ -6,6 +6,8 @@
 //
 // Build: c++ -std=c++17 examples/migration_notec.cpp && ./a.out
 
+// Note: snippet indentation matches the source; the embedder could normalize it in the future.
+
 #include <cstdio>
 #include <cstring>
 #include <cstdlib>

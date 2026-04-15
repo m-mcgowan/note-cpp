@@ -64,7 +64,7 @@ buf.end_object();
 buf.close();
 ```
 
-## API
+## `JsonBuf` API
 
 | Method | Description |
 |--------|-------------|
@@ -75,7 +75,7 @@ buf.close();
 | `end_array()` | Close the current array |
 | `close()` | Close the root object (must call before reading) |
 | `view()` | Get the JSON as `string_view` |
-| `data()` | Raw `const char*` pointer |
+| `data()` | Raw `const char*` pointer (null-terminated) |
 | `size()` | Length of the JSON string |
 | `operator bool()` | `false` if the buffer overflowed |
 
@@ -97,6 +97,6 @@ At compile time, overflow causes a compile error via `static_assert`.
 `JsonBuf` is ideal for:
 - **Static requests** that never change (constexpr hub.set, card.version, etc.)
 - **Low-level transport** where you want zero-allocation JSON
-- **Embedded targets** with no heap
+- **Embedded targets** with no heap, although the out of the box experience makes this unnecessary.
 
 For most application code, use the [typed API](../README.md#generated-api-types) instead — it handles JSON building internally and gives you type safety on top.

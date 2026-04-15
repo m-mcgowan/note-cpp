@@ -1,13 +1,16 @@
 # Feature Flags
 
-`note-cpp` uses compile-time feature flags to control binary size and
-feature availability. All flags are optional — the defaults produce a
-full-featured build suitable for ESP32, STM32, and other 32-bit platforms.
+`note-cpp` uses compile-time feature flags to customize the library for your platform. Flags fall into two categories:
 
-## Quick start: `NOTE_MINIMAL`
+- **Flash/memory optimization** — trade features for smaller binary size on constrained devices (AVR, Cortex-M0)
+- **Developer convenience** — control namespaces, API style, debug output
+
+All flags are optional. The defaults produce a full-featured build suitable for ESP32, STM32, and other 32-bit platforms. The library is already efficient for typical microcontrollers — its streaming architecture means zero heap allocations and low RAM overhead by default. The optimization flags below enable additional flash savings when targeting the most constrained devices.
+
+## Flash Size Reduction with `NOTE_MINIMAL`
 
 For constrained platforms (AVR, Cortex-M0), define `NOTE_MINIMAL` to
-set all size-saving defaults at once:
+set all size-saving defaults at once. This trades some features (CRC, retry, buffered path, ad-hoc fields) for a significantly smaller binary:
 
 ```ini
 # platformio.ini
@@ -28,9 +31,9 @@ build_flags = -DNOTE_MINIMAL -UNDEF_NOTE_NO_CRC
 
 | Flag | Default | Minimal | Effect | Savings |
 |------|---------|---------|--------|---------|
-| `NOTE_JSONB` | `0` | **(M)** `1` | Use [JSONB binary wire format](jsonb.md) instead of JSON text. Requests/responses encoded as COBS-framed binary opcodes. CRC is bypassed (COBS provides framing integrity). Raw JSON string bodies are a compile error — use lambdas or typed structs. Requires Notecard firmware 11.x+. | ~1.9 KB flash (replaces JSON builder/lexer with smaller JSONB builder/parser) |
+| `NOTE_JSONB` | `0` | **(M)** `1` | Use [JSONB binary wire format](jsonb.md) instead of JSON text. Requests/responses encoded as COBS-framed binary opcodes. CRC is bypassed (COBS provides framing but not integrity — CRC handles that separately). Raw JSON string bodies are a compile error — use lambdas or typed structs. Requires Notecard firmware 11.x+. | ~1.9 KB flash (replaces JSON builder/lexer with the smaller JSONB builder/parser) |
 | `NOTE_NO_BUFFERED` | off | **(M)** on | Disable `JsonBackend`/`JsonReader` buffered parse path. Only streaming SAX parse available. | ~2-4 KB flash, ~300 B RAM |
-| `NOTE_NO_CRC` | off | **(M)** on | Disable CRC32 on request/response framing. | ~200 B flash, 64 B .data (LUT) |
+| `NOTE_NO_CRC` | off | **(M)** on | Disable CRC32 on request/response framing. (CRC not supported by JSONB on Notecard)| ~200 B flash, 64 B .data (LUT) |
 | `NOTE_NO_MD5` | off | **(M)** on | Disable MD5 for binary transfer verification. | ~512 B .data (tables) |
 | `NOTE_NO_STD_STRING` | off | **(M)** on | Disable `std::string`-dependent features (debug wire tracing, some transport methods). Required for AVR (no `<string>` header). | Enables AVR builds |
 | `NOTE_NO_RETRY` | off | **(M)** on | Disable safety-gated retry and inter-transaction timing. Single-attempt transactions only. | ~8 B RAM (RetryPolicy + TransactionTiming fields) |

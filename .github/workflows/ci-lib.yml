@@ -1,9 +1,7 @@
-name: CI
+name: Library CI
 
 on:
-  push:
-    branches: [main]
-  pull_request:
+  workflow_call:
 
 permissions:
   contents: read
@@ -38,7 +36,7 @@ jobs:
         id: apt-cache
         with:
           path: ~/apt-cache
-          key: apt-${{ matrix.compiler }}-${{ hashFiles('.github/workflows/ci.yml') }}
+          key: apt-${{ matrix.compiler }}-${{ hashFiles('.github/workflows/ci-lib.yml') }}
 
       - name: Install compiler
         run: |
@@ -101,30 +99,3 @@ jobs:
           artifact-name: coverage-report
           github-token: ${{ secrets.GITHUB_TOKEN }}
           update-comment: true
-
-      - name: Upload to Codecov
-        uses: codecov/codecov-action@v5
-        with:
-          files: coverage/coverage.lcov
-          flags: unittests
-          token: ${{ secrets.CODECOV_TOKEN }}
-          disable_search: true
-          fail_ci_if_error: false
-
-  embedded-compat:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
-
-      - uses: actions/cache@v5
-        with:
-          path: ~/.platformio
-          key: pio-compat-${{ hashFiles('library.json') }}
-          restore-keys: pio-compat-
-
-      - uses: m-mcgowan/embedded-cpp-compat-check/action@main
-        with:
-          platforms: esp32s3-arduino-v3 avr-uno stm32-nucleo-f411re
-
-      - name: Show report
-        run: cat compatibility.md >> $GITHUB_STEP_SUMMARY

@@ -1,38 +1,34 @@
 # Working with Responses
 
-Every `execute()` call returns an `ApiResult<Response>` — a result type
-that either holds a typed response or an error. This guide covers how to
-read response fields, access nested objects and arrays, parse body data,
-and handle the common patterns.
+Each request returns a result that either holds a typed response or an error. This guide covers how to read response fields, check for errors, and handle common patterns.
 
-## Basic response reading
+## Reading response fields
+
+```cpp
+auto r = nc.card.version().execute();
+if (r) {
+    Serial.println(r.version);
+    Serial.println(r.device);
+}
+```
+
+Response fields are `ResponseField<T>` — they implicitly convert to `T` and are `Printable` on Arduino, so `Serial.println()` works directly.
+
+## Error handling
 
 ```cpp
 auto r = nc.card.version().execute();
 if (!r) {
-    // Transport or Notecard error
-    Serial.print("Error: ");
-    Serial.println(r.error().message);
+    Serial.println(r.error());   // prints "send_failed[timeout]: no response"
     return;
 }
-
-// Access typed fields directly
-Serial.print("Version: ");
-Serial.println(r.version);     // ResponseField<string_view> — Printable
-Serial.print("Device: ");
-Serial.println(r.device);
-
-// Print the entire response as JSON (Arduino)
-Serial.println(r);
 ```
 
-Response fields are `ResponseField<T>` which implicitly converts to `T`.
-On Arduino, every field and every response is `Printable` —
-`Serial.print()` works directly.
+For programmatic error handling, `r.error()` returns an `ErrorInfo` with `.code`, `.cause`, and `.message`. See [error handling](error-handling.md) for details.
 
 ## Checking for fields
 
-Response fields track whether they were present in the JSON response.
+Response fields track whether they were present in the Notecard's response.
 Use `has_value()` to distinguish absent fields from zero/empty values:
 
 ```cpp
@@ -49,6 +45,7 @@ if (r) {
     int32_t t = r.time;  // 0 if absent — same as before
 }
 ```
+If you access response fields when the request failed, they return their type's default value (0, false, empty string).
 
 For string fields, `empty()` is often sufficient since the Notecard
 doesn't send empty strings for absent fields:
@@ -60,8 +57,7 @@ if (!r.version.empty()) {
 }
 ```
 
-You can disable presence tracking with `NOTE_RESPONSE_PRESENCE=0` to
-save a byte per field. When disabled, `has_value()` always returns true.
+You can disable presence tracking with `NOTE_RESPONSE_PRESENCE=0` to save a byte per field. When disabled, `has_value()` always returns true. See [feature flags](feature-flags.md) for details.
 
 ## Void responses
 
@@ -74,8 +70,7 @@ if (!r) {
 }
 // No fields to read — r is just a success/fail indicator
 ```
-
-These use `ApiResult<void>` which has `operator bool()` and `.error()`.
+These use `ApiResult<void>` which has `operator bool()` and `.error()` but no response fields. Fire-and-forget commands (`.command()`) also return `Result<void>` with the same pattern.
 
 ## Array response fields
 

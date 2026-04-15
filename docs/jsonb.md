@@ -1,19 +1,19 @@
 # JSONB Wire Format
 
-JSONB is Blues' binary TLV encoding for Notecard communication. It replaces JSON text with compact binary opcodes, reducing overhead for numeric-heavy payloads and eliminating number-to-string conversion at both ends.
+JSONB is Blues' binary TLV encoding for Notecard communication. It replaces JSON text with a compact binary format, reducing overhead and flash memory use on constrained devices.
 
 ## When to use JSONB
 
 JSONB is useful when:
+- You're building on a constrained device where JSON text parsing is expensive
 - Your requests contain many numeric fields (no number formatting overhead)
 - You want slightly smaller responses (no quote characters, no `:` separators)
-- You're building on a constrained device where JSON text parsing is expensive
 
 JSON remains the default. JSONB is opt-in via a compile-time flag.
 
 ## Enabling JSONB
 
-`NOTE_MINIMAL` enables JSONB automatically -- no extra flags needed for constrained targets:
+[`NOTE_MINIMAL`](feature-flags.md) enables JSONB automatically — no extra flags needed for constrained targets:
 
 ```ini
 # platformio.ini — JSONB is on by default with NOTE_MINIMAL

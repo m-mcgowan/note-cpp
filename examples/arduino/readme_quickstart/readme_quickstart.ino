@@ -45,15 +45,16 @@ void setup() {
     // readme:end
 
     // readme:body-send
+    Readings readings{.temperature = 22.5f, .humidity = 60};
     nc.note.add()
        .file("sensors.qo")
-       .body(Readings{.temperature = 22.5f, .humidity = 60})
+       .body(readings)
        .execute();
     // readme:end
 
     // readme:body-receive
-    auto rsp = nc.note.read("data.qi").execute();
-    Readings data = rsp.bodyAs<Readings>();
+    Readings data{};
+    nc.note.pop("sensors.qi").into(data).execute();
     // readme:end
 
     // readme:body-template

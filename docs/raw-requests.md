@@ -1,6 +1,7 @@
-# Raw Requests — Escape Hatch for Unmodeled API Combinations
+# Raw Requests
 
-The typed API covers the most common patterns for each Notecard endpoint.
+The typed API covers all the patterns for each Notecard request covered in the
+official Blues Notecard API, defined by their [API schema](https://github.com/blues/notecard-schema).
 But the Notecard firmware may support mode combinations, field values, or
 new features that the typed API doesn't yet model. Raw requests let you
 bypass the typed layer and send any JSON the Notecard understands.
@@ -18,7 +19,7 @@ nc.card.attn().arm().connected().motion().execute();
 
 // Same request via raw string on the base Request type:
 note::api::CardAttn::Request req;
-req.mode = "arm,connected,motion";
+req.mode = "arm,connected,motion,some_new_mode";
 req.execute();
 ```
 
@@ -31,6 +32,8 @@ This is useful when:
 ### 2. Ad-hoc requests via `Notecard::request()`
 
 For endpoints or field combinations not in the generated types at all:
+
+This works with both the streaming and buffered transports. Use it for entirely new request types or field combinations not yet in the generated API:
 
 ```cpp
 auto result = nc.request("card.attn", [](note::JsonBuilder& b) {

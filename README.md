@@ -6,11 +6,13 @@
 ![Header Only](https://img.shields.io/badge/header--only-yes-green)
 [![License: MIT](https://img.shields.io/badge/license-MIT-yellow)](LICENSE)
 
-Type-safe C++ API for the [Blues Notecard](https://blues.com/notecard). Header-only, zero dependencies beyond the standard library. Works with C++17, C++20, and C++23 — each version unlocks additional features.
+Type-safe C++ API for the [Blues Notecard](https://blues.com/notecard). Header-only, zero dependencies (just the standard library). Works with C++17, C++20, and C++23 — each version unlocks additional features. Compatibility tested on the most popular embedded platforms using PlatformIO.
 
 > **Community project.** Not affiliated with or supported by Blues Inc. Notecard is a trademark of Blues Inc.
 
 ## Quick Start
+
+This section assumes you are familiar with the [Blues Notecard](https://blues.com/blog/getting-started-with-the-notecard/) and its [API](https://dev.blues.io/api-reference/notecard-api/introduction/).
 
 ### Arduino
 
@@ -65,11 +67,11 @@ Or use direct assignment:
 auto req = nc.hub.set();
 req.product = "com.example.app";
 req.mode = "periodic";
-req.outbound = 60;
+req.outbound = 60_mins;
 req.execute();
 ```
 
-Send typed data with body structs — define once, use for send, receive, and template registration:
+Supports sending type-safe notes with body structs — define once, use for send, receive, and template registration:
 
 <!-- snippet:body-struct-def examples/arduino/readme_quickstart/readme_quickstart.ino:10-14 -->
 <!-- snippet:body-send examples/arduino/readme_quickstart/readme_quickstart.ino:48-51 -->
@@ -80,6 +82,7 @@ struct Readings {
     NOTE_FIELDS(temperature, humidity)  // optional on C++20
 };
 
+// inline
 nc.note.add()
    .file("sensors.qo")
    .body(Readings{.temperature = 22.5f, .humidity = 60})
@@ -109,29 +112,29 @@ See the [getting started example](examples/getting_started.cpp) for a complete w
 ## Features
 
 <details>
-<summary><strong>Generated API Types</strong> — typed requests and responses for all 74 Notecard APIs</summary>
+<summary><strong>Strongly-Typed API</strong> — typed requests and responses for all 74 Notecard endpoints</summary>
 
-Request and response types are auto-generated from the [Blues Notecard schema](https://github.com/blues/notecard-schema), converted to an [OpenAPI spec](notecard-api.openapi.json), and rendered as C++ headers by [codegen](tools/codegen/). Each request has typed fields, chainable setters, and an `execute()` method.
+Every Notecard request and response is strongly-typed with named fields, chainable setters, and an `execute()` method:
 
 ```cpp
-// Direct assignment
-auto req = nc.hub.set();
-req.product = "com.example.app";
-req.mode = "periodic";
-req.outbound = 60;
-req.execute();
-
-// Fluent builder (equivalent)
+// Fluent builder
 nc.hub.set()
     .product("com.example.app")
     .mode("periodic")
     .outbound(60)
     .execute();
+
+// Direct assignment (equivalent)
+auto req = nc.hub.set();
+req.product = "com.example.app";
+req.mode = "periodic";
+req.outbound = 60;
+req.execute();
 ```
 
-Requests also support ad-hoc fields via `operator[]` (`req["custom"] = ...`), fire-and-forget commands (`.command()`), and compile-time enum validation on C++20 (`validatedMode("periodic")`). Include everything with `#include <note/api.hpp>`.
+Requests also support ad-hoc fields via `operator[]` (`req["custom"] = value`), fire-and-forget commands (`.command()`), and on C++20 the compiler validates enum fields like `mode` at compile time — no runtime surprises from typos.
 
-See [API patterns](docs/api-patterns.md) for how Notecard request names map to C++ methods.
+See [API reference](docs/api-reference.md) for the full endpoint list, and [API patterns](docs/api-patterns.md) for how Notecard request names map to C++ methods.
 
 </details>
 
@@ -144,16 +147,17 @@ Some Notecard requests behave differently depending on which fields you send. In
 // Read a Note by ID
 auto rsp = nc.note.read("data.db").noteId("my-note").execute();
 
-// Pop from queue
-auto rsp = nc.note.pop("requests.qi").execute();
+// Pop from queue and parse body into a struct
+Readings data{};
+auto rsp = nc.note.pop("sensors.qi").into(data).execute();
 
 // card.location.mode — fixed() accepts lat/lon, get() doesn't
-nc.card.locationMode().fixed()
+nc.card.location.mode.fixed()
     .lat(42.565).lon(-70.783)
     .execute();
 ```
 
-Setting a field that doesn't apply to that operation is a compile error. See [docs/intent-scoped-apis.md](docs/intent-scoped-apis.md) for the full list.
+Setting a field that doesn't apply to that operation is a compile error. See [docs/intent-focused-apis.md](docs/intent-focused-apis.md) for the full list and [API reference](docs/api-reference.md) for all endpoints.
 
 </details>
 
@@ -162,18 +166,28 @@ Setting a field that doesn't apply to that operation is a compile error. See [do
 
 Define a body struct once and use it everywhere. On C++20+, plain aggregates work automatically. On C++17, or for non-aggregate structs (e.g. with constructors), add `NOTE_FIELDS(...)`. See [docs/body-values.md](docs/body-values.md).
 
+<!-- snippet:body-struct-def examples/arduino/readme_quickstart/readme_quickstart.ino:10-14 -->
 <!-- snippet:body-send examples/arduino/readme_quickstart/readme_quickstart.ino:48-51 -->
 <!-- snippet:body-receive examples/arduino/readme_quickstart/readme_quickstart.ino:55-56 -->
 <!-- snippet:body-template examples/arduino/readme_quickstart/readme_quickstart.ino:60-60 -->
 ```cpp
+struct Readings {
+    float temperature;
+    int16_t humidity;
+    NOTE_FIELDS(temperature, humidity)  // optional on C++20
+};
+
+// Send
 nc.note.add()
    .file("sensors.qo")
    .body(Readings{.temperature = 22.5f, .humidity = 60})
    .execute();
 
-auto rsp = nc.note.read("data.qi").execute();
-Readings data = rsp.bodyAs<Readings>();
+// Receive — parse body directly into struct
+Readings data{};
+nc.note.pop("sensors.qi").into(data).execute();
 
+// Register a template
 nc.note.templates().define("sensors.qo").body(template_of(Readings())).execute();
 ```
 
@@ -209,32 +223,36 @@ Also includes voltage-variable sync builders and comma-separated flag fields wit
 <details>
 <summary><strong>Error Handling</strong> — structured errors and retry guidance</summary>
 
-All requests return a response that is truthy on success. On failure, `error()` provides a structured `ErrorInfo` with an error code, cause, and message.
+All requests return a response that is truthy on success. On failure, `error()` provides a structured `ErrorInfo` with an error code, cause, and message:
 
 ```cpp
 auto rsp = nc.card.version().execute();
 if (rsp) {
-    auto version = rsp.version;
+    Serial.println(rsp.version);
 } else {
-    ErrorInfo err = rsp.error();
-    err.code;     // Error::ResponseLost, Error::Notecard, etc.
-    err.cause;    // Cause::Timeout, Cause::HalError, etc.
-    err.message;  // "no response within deadline"
-    printf("error: %s\n", to_string(err).c_str());
-    // or Serial.println(err) with Arduino
+    Serial.println(rsp.error());  // prints "send_failed[timeout]: no response"
 }
 ```
 
-Each request carries a compile-time safety level (`ReadOnly`, `Idempotent`, `NonIdempotent`, `Destructive`) for retry decisions. See [docs/error-handling.md](docs/error-handling.md).
+Error details are available for programmatic handling:
+
+```cpp
+ErrorInfo err = rsp.error();
+err.code;     // Error::ResponseLost, Error::Notecard, etc.
+err.cause;    // Cause::Timeout, Cause::HalError, etc.
+err.message;  // human-readable description
+```
+
+Each request carries a compile-time safety level (`ReadOnly`, `Idempotent`, `NonIdempotent`, `Destructive`) for retry decisions. See [docs/error-handling.md](docs/error-handling.md) for more details.
 
 </details>
 
 <details>
-<summary><strong>Target Filtering</strong> — compile-time API compatibility checks by Notecard hardware and firmware (C++20)</summary>
+<summary><strong>Target Filtering</strong> — compile-time API availability based on Notecard hardware and firmware (C++20)</summary>
 
-By default, all Notecard APIs are available irrespective of the Notecard hardware or firmware being targeted. You can
-constrain by hardware variant, minimum firmware version, or both. Request types and fields not supported
-by the Notecard hardware or firmware produce compiler warnings (or errors in strict mode).
+All Notecard APIs are initially available. You can
+constrain the APIs by Notecard hardware variant (WiFi/Cellular/Skylo), minimum firmware version, or both.
+Request types and fields not supported by the Notecard hardware or firmware produce compiler warnings, or errors in strict mode.
 
 ```cpp
 // Hardware only — warns if endpoint doesn't support WiFi
@@ -244,15 +262,15 @@ Api wifi_api(nc, target<Hardware::WiFi>());
 Api fw_api(nc, min_firmware<9, 1, 1>());
 
 // Both — hardware and firmware checked together
-Api both_api(nc, target<Hardware::WiFi, 9, 1, 1>());
+Api my_api(nc, target<Hardware::WiFi, 9, 1, 1>());
 ```
 
-Hardware targets: `Hardware::WiFi`, `Hardware::Cell`, `Hardware::CellWifi`, `Hardware::LoRa`, `Hardware::Skylo`. Firmware versions are sourced from the Notecard API spec. Strict mode turns warnings into compile errors. See [examples/target_filtering.cpp](examples/target_filtering.cpp) and [docs/feature-flags.md](docs/feature-flags.md#target-filtering-c20).
+Hardware targets: `Hardware::WiFi`, `Hardware::Cell`, `Hardware::CellWifi`, `Hardware::LoRa`, `Hardware::Skylo`. Firmware versions are sourced from the Notecard API spec. [Strict mode](docs/feature-flags.md#strict-mode) turns warnings into compile errors. See [examples/target_filtering.cpp](examples/target_filtering.cpp) and [docs/feature-flags.md](docs/feature-flags.md#target-filtering-c20).
 
 </details>
 
 <details>
-<summary><strong>Streaming Architecture</strong> — zero-heap operation on constrained devices</summary>
+<summary><strong>Streaming Architecture</strong> — zero-heap operation</summary>
 
 Requests are streamed directly to the Notecard — there is no need for a request buffer in memory. Responses are parsed with a SAX (event-driven) parser that populates struct fields as data arrives from Notecard.
 
@@ -285,9 +303,9 @@ An optional JSONB binary wire format (`NOTE_JSONB`) replaces JSON text with comp
 <details>
 <summary><strong>Streaming vs Buffered</strong> — zero-heap streaming by default, buffered path for migration</summary>
 
-The typed API (`execute()`, response fields, body structs) works identically on both paths. Streaming is the default — requests are serialized directly to the wire, responses parsed as bytes arrive. No intermediate buffer, no heap.
+The typed API (`execute()`, response fields, body structs) works identically on both paths. **Streaming** is the default — requests are serialized directly to the wire, responses are SAX-parsed as bytes arrive. No JSON tree in memory.
 
-The buffered path is available for **migrating from note-c** (keeps the cJSON/lambda builder pattern) or when you need `JsonReader` tree access on responses. It requires a JSON backend (cJSON, nlohmann, or `BufferJsonBackend`).
+The **buffered** path builds a JSON tree in memory using a JSON backend (cJSON, nlohmann, or the built-in `BufferJsonBackend`). Use it when migrating from note-c (keeps the cJSON/lambda builder pattern) or when you need `JsonReader` tree access on responses.
 
 See [docs/streaming-vs-buffered.md](docs/streaming-vs-buffered.md) for when to use each, and [docs/json-backend.md](docs/json-backend.md) for backend options.
 
@@ -353,7 +371,7 @@ note-cpp is a single library that includes platform HALs for common targets. The
 | **Host unit tests** | Catch2 tests covering all endpoints, transport, SAX parsing, body structs, error handling | ~1,400 test cases |
 | **Compile-fail tests** | Verify that invalid API usage doesn't compile (wrong types, invalid flags, bad JSON) | 19 |
 | **Arduino build** | Same test suite compiled with `ARDUINO` defined, verifying `Printable` integration | ~1,400 test cases |
-| **Code coverage** | GCC 13 + lcov 2.3 — lines 96%, functions 98%, branches 89% | CI enforced |
+| **Code coverage** | GCC 13 + lcov 2.x — lines 97%, functions 99%, branches 96% | CI enforced |
 | **Multi-compiler CI** | g++ 12/13/14, clang++ 17/18, C++20 and C++23, libstdc++ and libc++ | 5 configurations |
 | **On-device integration** | ESP32-S3 with a real Notecard over serial/I2C — API requests, body parsing, binary transfer, streaming SAX | 36 test cases |
 | **AVR build verification** | ATmega328P (Arduino Uno) binary size checks | PlatformIO |

@@ -1,4 +1,4 @@
-# Hub Configuration
+# Hub Configuration and Sync Settings
 
 Connection setup with type-safe units, named constants, and compile-time
 validation.
@@ -93,6 +93,8 @@ Mixing units is a compile error:
 Special values like "reset to default" and "manual sync only" are named
 constants on the field type. No need to remember magic numbers.
 
+Named constants are also available: `HubSet::mode_t::periodic`, `HubSet::mode_t::continuous`, etc.
+
 <!-- snippet:named-constants examples/hub-configuration/main.cpp:118-125 -->
 ```cpp
 // Reset outbound to default (sends -1 on the wire)
@@ -105,11 +107,9 @@ api.hub.set().outbound(0).execute();
 api.hub.set().inbound(-1).execute();
 ```
 
-## 4. Consteval validation
+## 4. Compile-time validation
 
-Catch mode typos at compile time with `validatedMode()`. Invalid strings
-trigger a compile error.
-
+On C++20, mode string literals are validated at compile time automatically — typos are caught without any special syntax. On C++17, use `validatedMode()` for the same compile-time check:
 <!-- snippet:consteval examples/hub-configuration/main.cpp:136-143 -->
 ```cpp
 api.hub.set()
@@ -155,6 +155,9 @@ Only levels you set are emitted — partial configurations are valid (e.g. just
 
 Automatically switch between `continuous` mode on USB power and a fallback
 mode on battery.
+
+
+Stay continuous on USB power, fall back to periodic on battery:
 
 <!-- snippet:usb-variable examples/hub-configuration/main.cpp:179-197 -->
 ```cpp

@@ -1,0 +1,26 @@
+name: Arduino CI
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  embedded-compat:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/cache@v5
+        with:
+          path: ~/.platformio
+          key: pio-compat-${{ hashFiles('library.json') }}
+          restore-keys: pio-compat-
+
+      - uses: m-mcgowan/embedded-cpp-compat-check/action@main
+        with:
+          platforms: esp32s3-arduino-v3 avr-uno stm32-nucleo-f411re
+
+      - name: Show report
+        run: cat compatibility.md >> $GITHUB_STEP_SUMMARY

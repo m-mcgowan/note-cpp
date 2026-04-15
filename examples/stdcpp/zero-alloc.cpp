@@ -18,7 +18,7 @@
 //   cJSON allocations route through a MonotonicArena with a statically allocated
 //   buffer. No heap fragmentation; memory usage is bounded and visible.
 //
-// Build: c++ -std=c++20 -I include examples/zero_alloc.cpp
+// Build: c++ -std=c++20 -I include examples/stdcpp/zero-alloc.cpp
 
 #include <note/backends/buffer.hpp>
 #include <note/arena.hpp>

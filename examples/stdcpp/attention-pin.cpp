@@ -20,7 +20,7 @@
 //
 // See: https://dev.blues.io/api-reference/notecard-api/card-requests/#card-attn
 //
-// Build: c++ -std=c++20 -I include -fsyntax-only examples/attention_pin.cpp
+// Build: c++ -std=c++20 -I include -fsyntax-only examples/stdcpp/attention-pin.cpp
 
 #include <note/notecard.hpp>
 #include <note/api/card_attn.hpp>

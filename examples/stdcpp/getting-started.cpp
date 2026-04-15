@@ -17,7 +17,7 @@
 //                          receive, and register Notecard templates
 //
 // Build & run:
-//   c++ -std=c++20 -I include examples/getting_started.cpp && ./a.out
+//   c++ -std=c++20 -I include examples/stdcpp/getting-started.cpp && ./a.out
 
 // This example shows three levels of the note-cpp API, from highest to lowest:
 //   1. Typed API (recommended) — fluent builders with compile-time safety

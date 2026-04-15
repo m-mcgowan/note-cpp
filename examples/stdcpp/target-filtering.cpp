@@ -9,7 +9,7 @@
 //
 // Requires C++20. On C++17, all endpoints are available (no filtering).
 //
-// Build: clang++ -std=c++20 -fsyntax-only -I include examples/target_filtering.cpp
+// Build: clang++ -std=c++20 -fsyntax-only -I include examples/stdcpp/target-filtering.cpp
 
 #include <note/api.hpp>
 #include "mock_backend.hpp"

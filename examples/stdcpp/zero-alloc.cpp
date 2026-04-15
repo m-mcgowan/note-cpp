@@ -86,7 +86,7 @@ static void demo_buffer_backend() {
 
     // Multiple requests reuse the same buffers — no growth, no fragmentation.
     transport.response_buf = R"({})";
-    auto r2 = api.hub.set().mode("periodic").outbound(int32_t{60}).execute();
+    auto r2 = api.hub.set().mode("periodic").outbound(60).execute();
     if (r2.has_value()) {
         std::puts("  hub.set: OK");
     }

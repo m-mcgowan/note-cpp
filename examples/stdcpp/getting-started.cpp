@@ -67,13 +67,16 @@ int main() {
     //
     // For this example, we use a mock that prints each request to stdout
     // so you can run it on any machine without Notecard hardware.
-    MockBackend backend;
+    MockBackend backend;  // handles JSON serialization (see mock_backend.hpp)
     note::CallbackTransport transport(
+        // This callback is called for every request. It prints the JSON and
+        // returns an empty response. On real hardware, the transport sends
+        // bytes over serial or I2C instead.
         [](note::string_view request, uint32_t) -> note::Result<note::string_view> {
             std::printf("  >> %.*s\n", (int)request.size(), request.data());
-            return note::string_view("{}");
+            return note::string_view("{}");  // mock: always return empty JSON
         });
-    note::Notecard nc(backend, transport);
+    note::Notecard nc(backend, transport);  // combines backend + transport
 
 
     // ═════════════════════════════════════════════════════════════════════
@@ -139,14 +142,15 @@ int main() {
 
     std::puts("\n=== 2. Compile-time JSON ===\n");
 
-    // Auto-sized: the compiler measures the JSON output and picks the
-    // smallest buffer that fits.
+    // note::json<lambda>() builds JSON entirely at compile time. The lambda
+    // receives a JsonBuf builder — call b.add(key, value) for each field.
+    // The compiler measures the output and picks the smallest buffer that fits.
     constexpr auto hub_set_json = note::json<[](auto& b) {
-        b.add("req", "hub.set");
-        b.add("product", "com.example.app");
-        b.add("mode", "periodic");
-        b.add("outbound", 60);
-        b.close();
+        b.add("req", "hub.set");              // request name
+        b.add("product", "com.example.app");  // your Notehub ProductUID
+        b.add("mode", "periodic");            // sync mode
+        b.add("outbound", 60);               // sync interval in minutes
+        b.close();                            // finalize the JSON object
     }>();
 
     // Proof that this happened at compile time — static_assert runs
@@ -157,15 +161,16 @@ int main() {
     std::printf("--- constexpr hub.set ---\n  >> %.*s\n",
         (int)hub_set_json.size(), hub_set_json.data());
 
-    // You can also specify a fixed buffer size for explicit control:
+    // You can also specify a fixed buffer size for explicit control.
+    // JsonBuf<128> means "use a 128-byte buffer" — you choose the size.
     constexpr note::JsonBuf<128> note_add_json = [] {
         note::JsonBuf<128> b;
-        b.add("req", "note.add");
-        b.add("file", "sensors.qo");
-        b.begin_object("body");
-            b.add("temp", 22.5);
-        b.end_object();
-        b.close();
+        b.add("req", "note.add");         // request name
+        b.add("file", "sensors.qo");      // target Notefile
+        b.begin_object("body");           // open nested "body" object
+            b.add("temp", 22.5);          //   body field
+        b.end_object();                   // close "body"
+        b.close();                        // finalize — must be called last
         return b;
     }();
     // JsonBuf output is null-terminated; StringPool-interned strings are too.
@@ -281,15 +286,18 @@ int main() {
         req.execute();
     }
 
-    // json_fmt — compile-time validated template with runtime values (C++20).
-    // The JSON structure is checked at compile time; values are substituted
-    // at runtime. No .view() needed — implicitly converts to string_view.
+    // json_fmt — compile-time validated JSON template with runtime values.
+    // The structure (key names, nesting) is checked at compile time.
+    // The {} placeholders are filled with your values at runtime.
+    // Good for when you know the shape but values come from sensors.
     std::puts("--- note.add (json_fmt body) ---");
     {
-        float temp = 22.5f;
+        float temp = 22.5f;    // runtime sensor values
         int hum = 60;
         api.note.add()
            .file("sensors.qo")
+           // json_fmt: compile-time structure check, runtime value substitution.
+           // .view() converts the result to a string_view for body().
            .body(note::json_fmt<R"({"temp":{},"humidity":{}})">(temp, hum).view())
            .execute();
     }
@@ -316,19 +324,21 @@ int main() {
     }
 
     // You don't have to use structs. Bodies also accept raw JSON strings
-    // or builder lambdas — useful when the shape varies at runtime.
+    // or builder lambdas — useful when the body shape varies at runtime.
     std::puts("--- note.add (raw JSON body) ---");
     api.note.add()
         .file("sensors.qo")
-        .body(R"({"temp":22.5})")
+        .body(R"({"temp":22.5})")  // raw JSON string — simplest, no type safety
         .execute();
 
     std::puts("--- note.add (builder body) ---");
+    // note::body() wraps a lambda that builds the body field-by-field.
+    // The lambda receives a JsonBuilder — call b.add(key, value) for each field.
     api.note.add()
         .file("sensors.qo")
         .body(note::body([](note::JsonBuilder& b) {
-            b.add("temp", 22.5);
-            b.add("humidity", int32_t{60});
+            b.add("temp", 22.5);       // adds "temp":22.5 to the body
+            b.add("humidity", 60);     // adds "humidity":60 to the body
         }))
         .execute();
 

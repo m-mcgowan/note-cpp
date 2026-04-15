@@ -148,22 +148,28 @@ int main() {
     // 5. Voltage-variable strings — adaptive sync based on power
     // ═════════════════════════════════════════════════════════════════════════
 
-    // Raw string — works but easy to get the format wrong:
+    // Voltage-variable sync adjusts how often the Notecard syncs based on
+    // the current power level (USB, high battery, normal, low, dead).
+    // This saves battery — sync less often when power is low.
+
+    // Raw string — works but the format is easy to get wrong:
     std::puts("\n--- Voltage-variable sync (raw string) ---");
     // readme:vvar-raw
     api.hub.set()
         .mode("periodic")
-        .voutbound("usb:5;high:15;normal:60;low:240;dead:0")
+        .voutbound("usb:5;high:15;normal:60;low:240;dead:0")  // "level:minutes" pairs
         .execute();
     // readme:end
 
-    // Builder — type-safe, built directly on the field:
+    // Builder — type-safe, each power level is a named method:
     std::puts("\n--- Voltage-variable sync (builder) ---");
     {
         // readme:vvar-builder
         auto req = api.hub.set();
         req.mode = "periodic";
+        // Outbound sync interval (minutes) at each power level:
         req.voutbound.usb(5).high(15).normal(60).low(240).dead(0);
+        // Inbound check interval (minutes) at each power level:
         req.vinbound.usb(5).high(30).normal(120).low(1440).dead(0);
         req.execute();
         // readme:end

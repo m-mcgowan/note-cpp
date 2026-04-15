@@ -64,9 +64,11 @@ int main() {
 
     std::puts("\n--- Ad-hoc note.add ---");
     // readme:adhoc
+    // nc.request() sends a raw JSON request — you supply the request name
+    // and a builder lambda that populates the fields.
     nc.request("note.add", [](note::JsonBuilder& b) {
-        b.add("file", "sensors.qo");
-        b.add("body", R"({"temp":22.5,"humidity":60})");
+        b.add("file", "sensors.qo");                     // target Notefile
+        b.add("body", R"({"temp":22.5,"humidity":60})");  // body as raw JSON string
     });
     // readme:end
 
@@ -77,13 +79,15 @@ int main() {
 
     std::puts("\n--- Builder body ---");
     // readme:builder-body
+    // note::body() wraps a lambda that builds the body JSON field-by-field.
+    // The lambda receives a JsonBuilder — call b.add(key, value) for each field.
     api.note.add()
         .file("sensors.qo")
         .body(note::body([](note::JsonBuilder& b) {
-            b.add("temp", 22.5);
-            b.add("humidity", int32_t{60});
+            b.add("temp", 22.5);       // adds "temp":22.5 to the body object
+            b.add("humidity", 60);     // adds "humidity":60 to the body object
         }))
-        .execute();
+        .execute();                          // sends the request to the Notecard
     // readme:end
 
 
@@ -111,6 +115,11 @@ int main() {
 
     std::puts("\n--- Template registration ---");
     // readme:template-register
+    // templates().define() tells the Notecard the shape of your data.
+    // template_of(Readings()) inspects your struct and generates type hints:
+    //   float   → 14.1 (TFLOAT32)
+    //   int16_t → 11   (TINT16)
+    // After this, Notes in "sensors.qo" are stored as compact binary.
     api.note.templates().define("sensors.qo")
         .body(note::template_of(Readings()))
         .execute();
@@ -152,9 +161,12 @@ int main() {
     std::puts("\n--- Receive and parse ---");
     {
         // readme:receive
-        Readings data{};
+        Readings data{};  // same struct used for sending — zero boilerplate
+        // .into(data) tells execute() to parse the Note's body directly into
+        // the struct. Fields are matched by name — no manual JSON parsing.
         auto result = api.note.read("data.qi").into(data).execute();
         if (result) {
+            // data.temperature and data.humidity are now populated
             (void)data.temperature;
             (void)data.humidity;
         }
@@ -169,6 +181,9 @@ int main() {
     std::puts("\n--- Fire-and-forget command ---");
     {
         // readme:command
+        // .command() instead of .execute() — sends the request as a "cmd" rather
+        // than a "req". The Notecard processes it but does NOT send a response,
+        // so there's nothing to wait for. Good for fire-and-forget telemetry.
         Readings r{.temperature = 22.5f, .humidity = 60};
         api.note.add().file("sensors.qo").body(r).command();
         // readme:end
@@ -182,16 +197,21 @@ int main() {
     std::puts("\n--- Compile-time JSON ---");
     {
         // readme:constexpr-json
+        // note::json<lambda>() builds JSON entirely at compile time — the result
+        // is baked into your binary as a string constant. Zero runtime cost.
+        // The compiler auto-sizes the buffer to fit the output.
         constexpr auto json = note::json<[](auto& b) {
-            b.add("req", "note.add");
-            b.add("file", "sensors.qo");
-            b.begin_object("body");
-                b.add("temp", 22.5);
-                b.add("humidity", 60);
-            b.end_object();
-            b.close();
+            b.add("req", "note.add");        // top-level field: request name
+            b.add("file", "sensors.qo");     // top-level field: target Notefile
+            b.begin_object("body");          // open a nested JSON object for "body"
+                b.add("temp", 22.5);         //   body field
+                b.add("humidity", 60);       //   body field
+            b.end_object();                  // close the "body" object
+            b.close();                       // finalize — no more fields allowed after this
         }>();
 
+        // Proof this happened at compile time — static_assert only works on
+        // values known during compilation:
         static_assert(json.view() ==
             R"({"req":"note.add","file":"sensors.qo","body":{"temp":22.5,"humidity":60}})");
         // readme:end

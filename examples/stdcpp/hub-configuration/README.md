@@ -129,21 +129,23 @@ picks the interval matching its current voltage level.
 
 **Raw string:**
 
-<!-- snippet:vvar-raw examples/stdcpp/hub-configuration/main.cpp:154-157 -->
+<!-- snippet:vvar-raw examples/stdcpp/hub-configuration/main.cpp:158-161 -->
 ```cpp
 api.hub.set()
     .mode("periodic")
-    .voutbound("usb:5;high:15;normal:60;low:240;dead:0")
+    .voutbound("usb:5;high:15;normal:60;low:240;dead:0")  // "level:minutes" pairs
     .execute();
 ```
 
 **Builder** — type-safe, built directly on the field:
 
-<!-- snippet:vvar-builder examples/stdcpp/hub-configuration/main.cpp:164-168 -->
+<!-- snippet:vvar-builder examples/stdcpp/hub-configuration/main.cpp:168-174 -->
 ```cpp
 auto req = api.hub.set();
 req.mode = "periodic";
+// Outbound sync interval (minutes) at each power level:
 req.voutbound.usb(5).high(15).normal(60).low(240).dead(0);
+// Inbound check interval (minutes) at each power level:
 req.vinbound.usb(5).high(30).normal(120).low(1440).dead(0);
 req.execute();
 ```
@@ -159,7 +161,7 @@ mode on battery.
 
 Stay continuous on USB power, fall back to periodic on battery:
 
-<!-- snippet:usb-variable examples/stdcpp/hub-configuration/main.cpp:179-197 -->
+<!-- snippet:usb-variable examples/stdcpp/hub-configuration/main.cpp:185-203 -->
 ```cpp
 // Stay continuous on USB, fall back to periodic on battery
 api.hub.set()

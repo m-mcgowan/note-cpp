@@ -135,7 +135,7 @@ jobs:
           cmake -B /tmp/build -S . \
             -DCMAKE_CXX_COMPILER="$CXX" \
             -DCMAKE_CXX_FLAGS="${{ matrix.cxxflags }}"
-          cmake --build /tmp/build --parallel
+          cmake --build /tmp/build --parallel 2
           /tmp/build/tests/note-cpp-tests
           /tmp/build/tests/note-cpp-tests-arduino
 
@@ -144,7 +144,7 @@ jobs:
           cmake -B /tmp/build-minimal -S . \
             -DCMAKE_CXX_COMPILER="$CXX" \
             -DCMAKE_CXX_FLAGS="${{ matrix.cxxflags }} -DNOTE_MINIMAL"
-          cmake --build /tmp/build-minimal --parallel
+          cmake --build /tmp/build-minimal --parallel 2
           /tmp/build-minimal/tests/note-cpp-tests
           /tmp/build-minimal/tests/note-cpp-tests-arduino
 

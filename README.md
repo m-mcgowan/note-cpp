@@ -16,9 +16,9 @@ This section assumes you are familiar with the [Blues Notecard](https://blues.co
 
 ### Arduino
 
-<!-- snippet:arduino-quickstart examples/arduino/readme_quickstart/readme_quickstart.ino:6-6 -->
-<!-- snippet:arduino-declare examples/arduino/readme_quickstart/readme_quickstart.ino:18-18 -->
-<!-- snippet:arduino-setup examples/arduino/readme_quickstart/readme_quickstart.ino:23-28 -->
+<!-- snippet:arduino-quickstart examples/arduino/quickstart/quickstart.ino:6-6 -->
+<!-- snippet:arduino-declare examples/arduino/quickstart/quickstart.ino:18-18 -->
+<!-- snippet:arduino-setup examples/arduino/quickstart/quickstart.ino:23-28 -->
 ```cpp
 #include <note.hpp>
 
@@ -51,7 +51,7 @@ target_link_libraries(my_app PRIVATE note-cpp)
 
 Once set up, the typed API is the same on every platform:
 
-<!-- snippet:fluent-api examples/arduino/readme_quickstart/readme_quickstart.ino:32-36 -->
+<!-- snippet:fluent-api examples/arduino/quickstart/quickstart.ino:32-36 -->
 ```cpp
 nc.hub.set()
    .product("com.example.app")
@@ -62,19 +62,19 @@ nc.hub.set()
 
 Or use direct assignment:
 
-<!-- snippet:direct-assignment examples/arduino/readme_quickstart/readme_quickstart.ino:40-44 -->
+<!-- snippet:direct-assignment examples/arduino/quickstart/quickstart.ino:40-44 -->
 ```cpp
 auto req = nc.hub.set();
 req.product = "com.example.app";
 req.mode = "periodic";
-req.outbound = 60_mins;
+req.outbound = 60;
 req.execute();
 ```
 
 Supports sending type-safe notes with body structs — define once, use for send, receive, and template registration:
 
-<!-- snippet:body-struct-def examples/arduino/readme_quickstart/readme_quickstart.ino:10-14 -->
-<!-- snippet:body-send examples/arduino/readme_quickstart/readme_quickstart.ino:48-51 -->
+<!-- snippet:body-struct-def examples/arduino/quickstart/quickstart.ino:10-14 -->
+<!-- snippet:body-send examples/arduino/quickstart/quickstart.ino:48-52 -->
 ```cpp
 struct Readings {
     float temperature;
@@ -82,16 +82,16 @@ struct Readings {
     NOTE_FIELDS(temperature, humidity)  // optional on C++20
 };
 
-// inline
+Readings readings{.temperature = 22.5f, .humidity = 60};
 nc.note.add()
    .file("sensors.qo")
-   .body(Readings{.temperature = 22.5f, .humidity = 60})
+   .body(readings)
    .execute();
 ```
 
 Read responses with typed fields:
 
-<!-- snippet:read-response examples/arduino/readme_quickstart/readme_quickstart.ino:64-70 -->
+<!-- snippet:read-response examples/arduino/quickstart/quickstart.ino:65-71 -->
 ```cpp
 auto rsp = nc.card.version().execute();
 if (rsp) {
@@ -102,7 +102,7 @@ if (rsp) {
 }
 ```
 
-See the [getting started example](examples/getting_started.cpp) for a complete walkthrough.
+See the [getting started example](examples/stdcpp/getting-started.cpp) for a complete walkthrough.
 
 > **Coming from note-arduino / note-c?** The
 > [migration guide](docs/guides/migration-from-note-arduino.md) has side-by-side
@@ -166,10 +166,10 @@ Setting a field that doesn't apply to that operation is a compile error. See [do
 
 Define a body struct once and use it everywhere. On C++20+, plain aggregates work automatically. On C++17, or for non-aggregate structs (e.g. with constructors), add `NOTE_FIELDS(...)`. See [docs/body-values.md](docs/body-values.md).
 
-<!-- snippet:body-struct-def examples/arduino/readme_quickstart/readme_quickstart.ino:10-14 -->
-<!-- snippet:body-send examples/arduino/readme_quickstart/readme_quickstart.ino:48-51 -->
-<!-- snippet:body-receive examples/arduino/readme_quickstart/readme_quickstart.ino:55-56 -->
-<!-- snippet:body-template examples/arduino/readme_quickstart/readme_quickstart.ino:60-60 -->
+<!-- snippet:body-struct-def examples/arduino/quickstart/quickstart.ino:10-14 -->
+<!-- snippet:body-send examples/arduino/quickstart/quickstart.ino:48-52 -->
+<!-- snippet:body-receive examples/arduino/quickstart/quickstart.ino:56-57 -->
+<!-- snippet:body-template examples/arduino/quickstart/quickstart.ino:61-61 -->
 ```cpp
 struct Readings {
     float temperature;
@@ -177,17 +177,15 @@ struct Readings {
     NOTE_FIELDS(temperature, humidity)  // optional on C++20
 };
 
-// Send
+Readings readings{.temperature = 22.5f, .humidity = 60};
 nc.note.add()
    .file("sensors.qo")
-   .body(Readings{.temperature = 22.5f, .humidity = 60})
+   .body(readings)
    .execute();
 
-// Receive — parse body directly into struct
 Readings data{};
 nc.note.pop("sensors.qi").into(data).execute();
 
-// Register a template
 nc.note.templates().define("sensors.qo").body(template_of(Readings())).execute();
 ```
 
@@ -216,7 +214,7 @@ nc.card.attn()
 // nc.hub.set().outbound(300_s);    // error: Seconds ≠ Minutes
 ```
 
-Also includes voltage-variable sync builders and comma-separated flag fields with named methods. See [docs/duration-units.md](docs/duration-units.md) and [examples/hub-configuration/](examples/hub-configuration/).
+Also includes voltage-variable sync builders and comma-separated flag fields with named methods. See [docs/duration-units.md](docs/duration-units.md) and [examples/stdcpp/hub-configuration/](examples/stdcpp/hub-configuration/).
 
 </details>
 
@@ -265,7 +263,7 @@ Api fw_api(nc, min_firmware<9, 1, 1>());
 Api my_api(nc, target<Hardware::WiFi, 9, 1, 1>());
 ```
 
-Hardware targets: `Hardware::WiFi`, `Hardware::Cell`, `Hardware::CellWifi`, `Hardware::LoRa`, `Hardware::Skylo`. Firmware versions are sourced from the Notecard API spec. [Strict mode](docs/feature-flags.md#strict-mode) turns warnings into compile errors. See [examples/target_filtering.cpp](examples/target_filtering.cpp) and [docs/feature-flags.md](docs/feature-flags.md#target-filtering-c20).
+Hardware targets: `Hardware::WiFi`, `Hardware::Cell`, `Hardware::CellWifi`, `Hardware::LoRa`, `Hardware::Skylo`. Firmware versions are sourced from the Notecard API spec. [Strict mode](docs/feature-flags.md#strict-mode) turns warnings into compile errors. See [examples/stdcpp/target-filtering.cpp](examples/stdcpp/target-filtering.cpp) and [docs/feature-flags.md](docs/feature-flags.md#target-filtering-c20).
 
 </details>
 

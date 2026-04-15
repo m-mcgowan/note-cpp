@@ -333,8 +333,8 @@ TEOF
     # Build all examples
     echo
     ci_stage "Examples"
-    for ex in $(find "$ROOT/examples" -name '*.cpp' -not -path '*/arduino-migration/*' -not -path '*/binary-size-comparison/*' | sort); do
-        name=${ex#$ROOT/examples/}
+    for ex in $(find "$ROOT/examples/stdcpp" -name '*.cpp' | sort); do
+        name=${ex#$ROOT/examples/stdcpp/}
         printf "  %-40s " "$name"
         $CXX $CXXFLAGS $INCLUDE -o /tmp/note-cpp-ex "$ex" && echo "OK" || { echo "FAIL"; exit 1; }
     done

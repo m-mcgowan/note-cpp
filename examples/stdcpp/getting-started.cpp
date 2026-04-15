@@ -32,6 +32,7 @@
 
 #include <note/notecard.hpp>
 #include <note/json_buf.hpp>
+#include <note/json_fmt.hpp>
 #include <note/api.hpp>
 #include <note/body.hpp>
 
@@ -289,7 +290,7 @@ int main() {
         int hum = 60;
         api.note.add()
            .file("sensors.qo")
-           .body(note::json_fmt<R"({"temp":{},"humidity":{}})">(temp, hum))
+           .body(note::json_fmt<R"({"temp":{},"humidity":{}})">(temp, hum).view())
            .execute();
     }
 

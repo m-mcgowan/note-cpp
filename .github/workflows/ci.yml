@@ -4,6 +4,18 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
+    inputs:
+      build-type:
+        description: 'Build type'
+        type: choice
+        default: full
+        options:
+          - full
+          - quick
+          - coverage
+          - pio
+          - compat
 
 permissions:
   contents: read
@@ -12,30 +24,36 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    if: >-
+      github.event_name != 'workflow_dispatch'
+      || inputs.build-type == 'full'
+      || inputs.build-type == 'quick'
     strategy:
       matrix:
         include:
           - compiler: g++-12
             packages: g++-12
-            cxxflags: -std=c++20
+            cxxflags: '-std=c++20'
           - compiler: g++-13
             packages: g++-13
-            cxxflags: -std=c++23
+            cxxflags: '-std=c++23'
           - compiler: g++-14
             packages: g++-14
-            cxxflags: -std=c++23
+            cxxflags: '-std=c++23'
           - compiler: clang++-17
             packages: clang-17 libc++-17-dev libc++abi-17-dev
-            cxxflags: -std=c++20 -stdlib=libc++
+            cxxflags: '-std=c++20 -stdlib=libc++'
           - compiler: clang++-18
             packages: clang-18 libc++-18-dev libc++abi-18-dev libstdc++-13-dev
-            cxxflags: -std=c++23 -stdlib=libc++
+            cxxflags: '-std=c++23 -stdlib=libc++'
+    env:
+      CXX: ${{ matrix.compiler }}
+      CXXFLAGS: '${{ matrix.cxxflags }} -Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wnon-virtual-dtor -Werror'
     steps:
       - uses: actions/checkout@v5
 
       - name: Cache apt packages
         uses: actions/cache@v5
-        id: apt-cache
         with:
           path: ~/apt-cache
           key: apt-${{ matrix.compiler }}-${{ hashFiles('.github/workflows/ci.yml') }}
@@ -50,31 +68,234 @@ jobs:
           mkdir -p ~/apt-cache
           cp /var/cache/apt/archives/*.deb ~/apt-cache/ 2>/dev/null || true
 
-      - uses: actions/setup-node@v5
+      - name: Install Python dependencies
+        run: pip install jinja2
+
+      - name: Verify codegen
+        run: |
+          python3 tools/codegen/generate.py notecard-api.openapi.json \
+            -o include/note/api \
+            --api include/note/api.hpp \
+            --test-dir tests
+          if ! git diff --quiet -- include/note/api/ include/note/api.hpp \
+              tests/test_samples.cpp tests/test_api_context.cpp \
+              tests/test_endpoint_coverage.cpp tests/test_endpoint_streaming.cpp \
+              tests/compile_check/ cmake/note-cpp-generated.cmake \
+              docs/api-reference.md tests/test_sizeof_report.cpp; then
+            echo "::error::Generated files are out of date. Run tools/codegen/generate.py and commit."
+            git diff --stat
+            exit 1
+          fi
+          echo "Generated files are up to date."
+
+      - name: Public API headers (C++20)
+        run: |
+          $CXX $CXXFLAGS -I include -fsyntax-only -x c++ - <<'EOF'
+          #include <note/notecard.hpp>
+          #include <note/notecard_api.hpp>
+          #include <note/api.hpp>
+          #include <note/transport.hpp>
+          #include <note/transport/serial.hpp>
+          #include <note/transport/i2c.hpp>
+          #include <note/body.hpp>
+          #include <note/field.hpp>
+          #include <note/target.hpp>
+          #include <note/units.hpp>
+          #include <note/json_buf.hpp>
+          #include <note/arena.hpp>
+          #include <note/allocator.hpp>
+          #include <note/string_pool.hpp>
+          EOF
+
+      - name: Public API headers (C++17)
+        run: |
+          $CXX -std=c++17 -I include -fsyntax-only -x c++ - <<'EOF'
+          #include <note/notecard.hpp>
+          #include <note/notecard_api.hpp>
+          #include <note/api.hpp>
+          #include <note/transport.hpp>
+          #include <note/transport/serial.hpp>
+          #include <note/transport/i2c.hpp>
+          #include <note/body.hpp>
+          #include <note/field.hpp>
+          #include <note/target.hpp>
+          #include <note/units.hpp>
+          #include <note/json_buf.hpp>
+          #include <note/arena.hpp>
+          #include <note/allocator.hpp>
+          #include <note/string_pool.hpp>
+          EOF
+          $CXX -std=c++17 -I include -fsyntax-only -x c++ - <<'EOF'
+          #include <note/body.hpp>
+          struct TestStruct { float a; int32_t b; NOTE_FIELDS(a, b) };
+          EOF
+
+      - name: Build and run unit tests
+        run: |
+          cmake -B /tmp/build -S . \
+            -DCMAKE_CXX_COMPILER="$CXX" \
+            -DCMAKE_CXX_FLAGS="${{ matrix.cxxflags }}"
+          cmake --build /tmp/build --parallel
+          /tmp/build/tests/note-cpp-tests
+          /tmp/build/tests/note-cpp-tests-arduino
+
+      - name: Build and run unit tests (NOTE_MINIMAL)
+        run: |
+          cmake -B /tmp/build-minimal -S . \
+            -DCMAKE_CXX_COMPILER="$CXX" \
+            -DCMAKE_CXX_FLAGS="${{ matrix.cxxflags }} -DNOTE_MINIMAL"
+          cmake --build /tmp/build-minimal --parallel
+          /tmp/build-minimal/tests/note-cpp-tests
+          /tmp/build-minimal/tests/note-cpp-tests-arduino
+
+      - name: Version gating
+        run: |
+          INCLUDE="-I include"
+          printf "  %-40s " "warn mode"
+          WARN_OUT=$($CXX $CXXFLAGS $INCLUDE -fsyntax-only -x c++ - <<'EOF' 2>&1 || true
+          #define NOTE_API_VERSION NOTE_VERSION(3, 0, 0)
+          #include <note/api/hub_set.hpp>
+          void test() { note::api::HubSet req; req.off = true; }
+          EOF
+          )
+          echo "$WARN_OUT" | grep -q 'deprecated.*requires firmware' && echo "OK" || { echo "FAIL"; echo "$WARN_OUT"; exit 1; }
+
+          printf "  %-40s " "strict mode"
+          STRICT_OUT=$($CXX $CXXFLAGS $INCLUDE -fsyntax-only -x c++ - <<'EOF' 2>&1 || true
+          #define NOTE_API_VERSION NOTE_VERSION(3, 0, 0)
+          #define NOTE_API_STRICT
+          #include <note/api/hub_set.hpp>
+          void test() { note::api::HubSet req; req.off = true; }
+          EOF
+          )
+          echo "$STRICT_OUT" | grep -q "no member named" && echo "OK" || { echo "FAIL"; echo "$STRICT_OUT"; exit 1; }
+
+          printf "  %-40s " "latest (no warnings)"
+          $CXX $CXXFLAGS $INCLUDE -Werror -fsyntax-only -x c++ - <<'EOF' 2>&1 && echo "OK" || { echo "FAIL"; exit 1; }
+          #include <note/api/hub_set.hpp>
+          void test() { note::api::HubSet req; req.off = true; }
+          EOF
+
+      - name: Target filtering
+        run: |
+          INCLUDE="-I include"
+          printf "  %-40s " "strict rejects unsupported"
+          OUT=$($CXX $CXXFLAGS $INCLUDE -fsyntax-only -x c++ - <<'EOF' 2>&1 || true
+          #include <note/api.hpp>
+          using LoRaStrict = note::Target<note::Hardware::LoRa, true>;
+          void test(note::Api<LoRaStrict>& api) { api.card.sleep(); }
+          EOF
+          )
+          echo "$OUT" | grep -qE "constraint|no matching|deprecated.*not available on this target" && echo "OK" || { echo "FAIL"; echo "$OUT"; exit 1; }
+
+          printf "  %-40s " "warn for unsupported"
+          OUT=$($CXX $CXXFLAGS $INCLUDE -fsyntax-only -x c++ - <<'EOF' 2>&1 || true
+          #include <note/api.hpp>
+          using LoRaWarn = note::Target<note::Hardware::LoRa, false>;
+          void test(note::Api<LoRaWarn>& api) { api.card.sleep(); }
+          EOF
+          )
+          echo "$OUT" | grep -q "deprecated.*not available on this target" && echo "OK" || { echo "FAIL"; echo "$OUT"; exit 1; }
+
+          printf "  %-40s " "supported (no warnings)"
+          $CXX $CXXFLAGS $INCLUDE -Werror -fsyntax-only -x c++ - <<'EOF' 2>&1 && echo "OK" || { echo "FAIL"; exit 1; }
+          #include <note/api.hpp>
+          using WifiTarget = note::Target<note::Hardware::WiFi>;
+          void test(note::Api<WifiTarget>& api) { api.card.sleep(); api.hub.set(); }
+          EOF
+
+          printf "  %-40s " "firmware warn"
+          OUT=$($CXX $CXXFLAGS $INCLUDE -fsyntax-only -x c++ - <<'EOF' 2>&1 || true
+          #include <note/api.hpp>
+          using OldFw = note::MinFirmware<5, 0, 0>;
+          void test(note::Api<OldFw>& api) { api.card.illumination(); }
+          EOF
+          )
+          echo "$OUT" | grep -q "deprecated.*not available on this target" && echo "OK" || { echo "FAIL"; echo "$OUT"; exit 1; }
+
+          printf "  %-40s " "firmware supported"
+          $CXX $CXXFLAGS $INCLUDE -Werror -fsyntax-only -x c++ - <<'EOF' 2>&1 && echo "OK" || { echo "FAIL"; exit 1; }
+          #include <note/api.hpp>
+          using NewFw = note::MinFirmware<9, 1, 1>;
+          void test(note::Api<NewFw>& api) { api.card.illumination(); api.card.version(); }
+          EOF
+
+          printf "  %-40s " "firmware strict rejects"
+          OUT=$($CXX $CXXFLAGS $INCLUDE -fsyntax-only -x c++ - <<'EOF' 2>&1 || true
+          #include <note/api.hpp>
+          using OldFwStrict = note::MinFirmware<5, 0, 0, true>;
+          void test(note::Api<OldFwStrict>& api) { api.card.illumination(); }
+          EOF
+          )
+          echo "$OUT" | grep -qE "constraint|no matching|deprecated.*requires firmware" && echo "OK" || { echo "FAIL"; echo "$OUT"; exit 1; }
+
+          printf "  %-40s " "combined hw+fw warn"
+          OUT=$($CXX $CXXFLAGS $INCLUDE -fsyntax-only -x c++ - <<'EOF' 2>&1 || true
+          #include <note/api.hpp>
+          using OldWifi = note::Target<note::Hardware::WiFi, 5, 0, 0>;
+          void test(note::Api<OldWifi>& api) { api.card.illumination(); }
+          EOF
+          )
+          echo "$OUT" | grep -q "deprecated.*not available on this target" && echo "OK" || { echo "FAIL"; echo "$OUT"; exit 1; }
+
+      - name: Build examples
+        run: |
+          for ex in $(find examples/stdcpp -name '*.cpp' | sort); do
+            name=${ex#examples/stdcpp/}
+            printf "  %-40s " "$name"
+            $CXX $CXXFLAGS -I include -o /tmp/note-cpp-ex "$ex" && echo "OK" || { echo "FAIL"; exit 1; }
+          done
+
+  pio-build:
+    runs-on: ubuntu-latest
+    if: >-
+      github.event_name != 'workflow_dispatch'
+      || inputs.build-type == 'full'
+      || inputs.build-type == 'pio'
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Cache PlatformIO
+        uses: actions/cache@v5
         with:
-          node-version: 20
+          path: ~/.platformio
+          key: pio-${{ hashFiles('tests/integration/firmware/platformio.ini', 'examples/arduino/migration/platformio.ini') }}
+          restore-keys: pio-
+
+      - name: Install PlatformIO
+        run: pip install platformio
+
+      - name: Build integration firmware (serial)
+        run: |
+          NOTECARD_SERIAL_RX=38 NOTECARD_SERIAL_TX=39 \
+          pio run -d tests/integration/firmware -e serial
+
+      - name: Build integration firmware (i2c)
+        run: |
+          NOTECARD_I2C_SDA=14 NOTECARD_I2C_SCL=21 \
+          pio run -d tests/integration/firmware -e i2c
+
+      - name: Build Arduino migration example
+        run: pio run -d examples/arduino/migration
 
       - name: Install Python dependencies
         run: pip install jinja2
 
-      - name: Run CI checks
-        env:
-          CXX: ${{ matrix.compiler }}
-          CXXFLAGS: ${{ matrix.cxxflags }}
-        run: ./ci.sh --full
+      - name: Verify docs
+        run: tools/verify-docs.sh
 
   coverage:
     runs-on: ubuntu-latest
+    if: >-
+      github.event_name != 'workflow_dispatch'
+      || inputs.build-type == 'full'
+      || inputs.build-type == 'coverage'
     steps:
       - uses: actions/checkout@v5
 
       - name: Install dependencies
         run: |
           sudo apt-get update
-          # GCC required for accurate consteval coverage (see docs/coverage.md).
-          # lcov 2.2+ required: 2.0 (Ubuntu apt) inflates function counts by
-          # counting each template instantiation separately, and misreports branches.
-          # lcov 2.3 Perl dependencies (see lcov-2.3/README §3)
           sudo apt-get install -y g++-13 \
             libcapture-tiny-perl libdatetime-perl libjson-perl libtimedate-perl
           LCOV_VERSION=2.3
@@ -84,7 +305,7 @@ jobs:
       - name: Install Python dependencies
         run: pip install jinja2
 
-      - name: Run CI (runs codegen, uses default compiler)
+      - name: Run codegen + unit tests
         run: ./ci.sh
 
       - name: Generate coverage report
@@ -113,6 +334,10 @@ jobs:
 
   embedded-compat:
     runs-on: ubuntu-latest
+    if: >-
+      github.event_name != 'workflow_dispatch'
+      || inputs.build-type == 'full'
+      || inputs.build-type == 'compat'
     steps:
       - uses: actions/checkout@v5
 

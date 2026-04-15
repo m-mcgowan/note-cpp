@@ -74,9 +74,9 @@ static void demo_buffer_backend() {
     // Response string_views point into the transport buffer.
     auto r = api.card.version().execute();
     if (r.has_value()) {
-        std::printf("  version: %.*s\n", (int)r.version.size(), r.version.data());
-        std::printf("  device:  %.*s\n", (int)r.device.size(), r.device.data());
-        std::printf("  board:   %.*s\n", (int)r.board.size(), r.board.data());
+        std::printf("  version: %s\n", r.version.c_str());
+        std::printf("  device:  %s\n", r.device.c_str());
+        std::printf("  board:   %s\n", r.board.c_str());
     }
 
     // IMPORTANT: Response string_views are valid until the next execute() call.
@@ -124,12 +124,12 @@ static void demo_string_pool() {
 
     // r1's strings are still valid — they live in the arena, not the transport buffer
     if (r1.has_value()) {
-        std::printf("  r1 version: %.*s\n", (int)r1.version.size(), r1.version.data());
-        std::printf("  r1 device:  %.*s\n", (int)r1.device.size(), r1.device.data());
+        std::printf("  r1 version: %s\n", r1.version.c_str());
+        std::printf("  r1 device:  %s\n", r1.device.c_str());
     }
     if (r2.has_value()) {
-        std::printf("  r2 version: %.*s\n", (int)r2.version.size(), r2.version.data());
-        std::printf("  r2 device:  %.*s\n", (int)r2.device.size(), r2.device.data());
+        std::printf("  r2 version: %s\n", r2.version.c_str());
+        std::printf("  r2 device:  %s\n", r2.device.c_str());
     }
 
     std::printf("  arena: %zu / %zu bytes used\n", arena.used(), arena.capacity());
@@ -166,7 +166,7 @@ static void demo_string_pool() {
 //
 //       auto r = api.card.version().execute();
 //       if (r.has_value()) {
-//           printf("  version: %.*s\n", (int)r.version.size(), r.version.data());
+//           printf("  version: %s\n", r.version.c_str());
 //       }
 //
 //       // Arena stats: see exactly how much memory was used

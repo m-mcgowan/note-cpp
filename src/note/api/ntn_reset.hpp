@@ -2,9 +2,7 @@
 #pragma once
 #include <note/note_config.hpp>
 
-#ifndef NOTE_EXTRAS
-#define NOTE_EXTRAS 1
-#endif
+// NOTE_EXTRAS default is set in note_config.hpp.
 #if NOTE_EXTRAS
 #include <note/dyn_field.hpp>
 #endif

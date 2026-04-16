@@ -177,7 +177,7 @@ TEST_CASE("StaticNotecard via resource group factory") {
 // Error paths
 // ---------------------------------------------------------------------------
 
-#ifndef NOTE_NO_RETRY
+#if !NOTE_NO_RETRY
 
 TEST_CASE("StaticNotecard: transport error propagates") {
     alignas(4) char arena_buf[256];
@@ -295,7 +295,7 @@ TEST_CASE("StaticNotecard: timing enforced for commands") {
 // Request IDs
 // ---------------------------------------------------------------------------
 
-#ifndef NOTE_NO_REQUEST_IDS
+#if !NOTE_NO_REQUEST_IDS
 
 TEST_CASE("StaticNotecard: request IDs enabled by default") {
     alignas(4) char arena_buf[256];

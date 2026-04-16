@@ -8,9 +8,9 @@ shows how your existing code maps to `note-cpp`. Each section shows the note-c
 pattern on the left and the `note-cpp` equivalent on the right.
 
 > All `note-cpp` code in this guide is taken from real examples compiled against note-cpp
-> from [examples/arduino-migration/](../../examples/arduino/migration/).
+> from [examples/arduino-migration/](../../../examples/arduino/migration/).
 > The note-c examples are compiled from
-> [examples/migration_notec.cpp](../../tests/migration_notec.cpp).
+> [examples/migration_notec.cpp](../../../tests/migration_notec.cpp).
 
 Here's a few examples to illustrate the key differences in API style.
 
@@ -171,7 +171,7 @@ void setup() {
 > On Arduino, `note.hpp` imports the API into the global namespace for
 > developer convenience — `Notecard`, duration literals (`15_mins`, `5_s`),
 > and other common names are available without qualification. See
-> [namespace imports](../feature-flags.md#namespace-imports) for how to
+> [namespace imports](../../feature-flags.md#namespace-imports) for how to
 > customize this.
 
 ## Configuring the Hub (hub.set)
@@ -439,7 +439,7 @@ Error details:
   - `"note.add: file not found"`
   - `"note.add: queue full"`
 
-See [Error Handling](../error-handling.md) for the full reference including
+See [Error Handling](../../error-handling.md) for the full reference including
 retry safety levels.
 
 **Key differences:**
@@ -461,7 +461,7 @@ nc.note.add()
 
 The JSON structure is validated at compile time — malformed JSON or wrong
 argument count/types are compile errors. At runtime it's just string
-concatenation, no heap allocation. See [Body Values](../body-values.md)
+concatenation, no heap allocation. See [Body Values](../../body-values.md)
 for all approaches.
 
 
@@ -572,7 +572,7 @@ nc.sendRequest(req);
 </table>
 
 **Key differences:**
-- Avoided manual response lifecycle (`deleteResponse`). The response is cleaned up automatically when it goes out of scope ([RAII](https://en.cppreference.com/w/cpp/language/raii.html)). Numeric and boolean fields are plain values — safe to keep indefinitely. String fields (`string_view`) are valid until the next request unless you use an arena. See [Response Lifetimes](../response-lifetimes.md).
+- Avoided manual response lifecycle (`deleteResponse`). The response is cleaned up automatically when it goes out of scope ([RAII](https://en.cppreference.com/w/cpp/language/raii.html)). Numeric and boolean fields are plain values — safe to keep indefinitely. String fields (`string_view`) are valid until the next request unless you use an arena. See [Response Lifetimes](../../response-lifetimes.md).
 - `JGetNumber(rsp, "value")` returns 0.0 on misspelling with no error.
   `r.value` is a named member — misspelling won't compile.
 - `card.temp` can do several things - it can read the current
@@ -624,7 +624,7 @@ if (r) {
 - Response fields and full responses are Arduino `Printable` —
   `Serial.print(r.version)` just works. Avoid `printf("%.*s")` with
   `string_view` — use `Serial.print()` instead.
-  See the [Arduino Guide](../platforms/arduino/guide.md) for printing patterns, String
+  See the [Arduino Guide](guide.md) for printing patterns, String
   conversion, and AVR setup.
 
 ## ATTN pin — arming for interrupts
@@ -902,7 +902,7 @@ auto r = nc.note.pop("data.qi")
 Both produce `note.get` on the wire. The difference: `read()` can't
 accidentally include `delete:true`, and `pop()` always includes it.
 Each variant only exposes the fields that apply.
-See [Polymorphic APIs](../intent-scoped-apis.md) for the full list.
+See [Polymorphic APIs](../../intent-scoped-apis.md) for the full list.
 
 ### card.temp — read vs configure
 
@@ -1042,7 +1042,7 @@ if (r) {
 </table>
 
 The same `Readings` struct used for sending and template registration
-also works for receiving. See [Body Values](../body-values.md) for details.
+also works for receiving. See [Body Values](../../body-values.md) for details.
 
 ## Type-safe units
 
@@ -1070,7 +1070,7 @@ nc.card.sleep()
 In note-c, `outbound` is a plain integer — you have to know from the
 docs that it's in minutes - sometimes the requests make the unit clear by the name
 (e.g. "seconds") but sometimes not. The duration type system avoids any ambiguity. 
-See [Duration Units](../duration-units.md) for the full type system.
+See [Duration Units](../../duration-units.md) for the full type system.
 
 ## Named constants
 
@@ -1416,7 +1416,7 @@ Moving from C to C++ brings benefits independent of note-cpp:
 - **Automatic cleanup** — no manual `deleteResponse` / `JDelete`.
   Responses clean up when they go out of scope. No leak risk.
   You can have responses outlive the current scope —
-  see [Response Lifetimes](../response-lifetimes.md).
+  see [Response Lifetimes](../../response-lifetimes.md).
 - **Type safety** — field types are checked at compile time. No more
   `JGetNumber` returning 0.0 on a misspelled field name.
 - **Namespaces** — no global symbol pollution. Your code and the
@@ -1496,7 +1496,7 @@ lowest memory path, `sax_parse_streaming()` parses responses
 incrementally with only a small scratch buffer (`SaxStreamBuf`,
 default 384 bytes on the stack).
 
-See [Known Issues](../known-issues.md) for details on the Clang limitation.
+See [Known Issues](../../known-issues.md) for details on the Clang limitation.
 
 ## Gradual migration
 

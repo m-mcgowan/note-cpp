@@ -23,11 +23,11 @@
 
 #include <algorithm>
 #include <cstring>
-#ifndef NOTE_MINIMAL
+#if NOTE_DEBUG_ENABLED
 #include <string>
 #endif
 
-#ifndef NOTE_NO_CRC
+#if !NOTE_NO_CRC
 #include <note/transport/detail/crc_types.hpp>
 #endif
 
@@ -60,7 +60,7 @@ struct NcErrorCapture {
 struct ReceiveContext {
     SaxDispatch inner;
     NcErrorCapture& err;
-#ifndef NOTE_NO_CRC
+#if !NOTE_NO_CRC
     uint16_t crc_seq = 0;
     uint32_t crc_checksum = 0;
     bool crc_found = false;
@@ -84,7 +84,7 @@ struct ReceiveContext {
                         c.inner.dispatch(c.inner.sink, ev);
                         return;
                     }
-#ifndef NOTE_NO_CRC
+#if !NOTE_NO_CRC
                     if (ev.key == "crc") {
                         if (v.size() == 13 && v[4] == ':') {
                             c.crc_seq = static_cast<uint16_t>(
@@ -99,7 +99,7 @@ struct ReceiveContext {
                 }
                 if (ev.tag == SaxEvent::Reset) {
                     c.err = {};
-#ifndef NOTE_NO_CRC
+#if !NOTE_NO_CRC
                     c.crc_seq = 0;
                     c.crc_checksum = 0;
                     c.crc_found = false;
@@ -183,7 +183,7 @@ public:
 
     StreamingTransport(HalT& hal, uint32_t /*max_retries*/, uint32_t /*retry_delay_ms*/ = 500)
         : hal_(hal) {}
-#elif defined(NOTE_MINIMAL)
+#elif NOTE_NO_POLYMORPHIC
 class StreamingTransport {
 public:
     explicit StreamingTransport(TransportHal& hal)
@@ -202,14 +202,14 @@ public:
 #endif
 
 #if NOTE_DEBUG_ENABLED
-#ifdef NOTE_MINIMAL
+#if NOTE_NO_POLYMORPHIC || NOTE_STATIC_HAL
     void set_debug(const DebugListener& d) { debug_ = d; }
 #else
     void set_debug(const DebugListener& d) override { debug_ = d; }
 #endif
 #endif
 
-#ifdef NOTE_MINIMAL
+#if NOTE_NO_POLYMORPHIC || NOTE_STATIC_HAL
     uint32_t millis() { return hal_.millis(); }
     void delay(uint32_t ms) { hal_.delay(ms); }
 #else
@@ -246,7 +246,7 @@ public:
             return make_error(Error::NotReady, NOTE_ERR("not ready"));
         }
 
-#ifndef NOTE_NO_CRC
+#if !NOTE_NO_CRC
         ++crc_seq_;
 #endif
 
@@ -280,7 +280,7 @@ private:
             return make_error(Error::NotReady, NOTE_ERR("not ready"));
         }
 
-#ifndef NOTE_NO_CRC
+#if !NOTE_NO_CRC
         ++crc_seq_;
 #endif
 
@@ -307,14 +307,14 @@ private:
 public:
 
     Result<void> send(BuildFn build_fn, void* ctx)
-#ifndef NOTE_MINIMAL
+#if !NOTE_NO_POLYMORPHIC && !NOTE_STATIC_HAL
         override
 #endif
     {
         if (!ensure_init())
             return make_error(Error::NotReady, NOTE_ERR("not ready"));
 
-#ifndef NOTE_NO_CRC
+#if !NOTE_NO_CRC
         ++crc_seq_;
 #endif
 
@@ -353,7 +353,7 @@ public:
     }
 
     void reset()
-#ifndef NOTE_MINIMAL
+#if !NOTE_NO_POLYMORPHIC && !NOTE_STATIC_HAL
         override
 #endif
     {
@@ -362,13 +362,13 @@ public:
     }
 
     void abort()
-#ifndef NOTE_MINIMAL
+#if !NOTE_NO_POLYMORPHIC && !NOTE_STATIC_HAL
         override
 #endif
     {}
 
     Result<void> write(const uint8_t* data, size_t len)
-#ifndef NOTE_MINIMAL
+#if !NOTE_NO_POLYMORPHIC && !NOTE_STATIC_HAL
         override
 #endif
     {
@@ -378,11 +378,11 @@ public:
     }
 
     Result<size_t> read(uint8_t* buf, size_t max_len, uint32_t timeout_ms)
-#ifndef NOTE_MINIMAL
+#if !NOTE_NO_POLYMORPHIC && !NOTE_STATIC_HAL
         override
 #endif
     {
-#ifndef NOTE_MINIMAL
+#if !NOTE_NO_POLYMORPHIC
         // Return any lookahead bytes saved by frame_read before hitting the HAL.
         if (lookahead_len_ > 0) {
             size_t n = std::min(max_len, lookahead_len_);
@@ -471,7 +471,7 @@ private:
         cobs.flush();
         writer.write(":}", 2);
 #else
-#ifndef NOTE_NO_CRC
+#if !NOTE_NO_CRC
         {
             // Always send CRC — the Notecard echoes CRC back only when the
             // client includes it. Matches note-c's unconditional _crcAdd().
@@ -529,7 +529,7 @@ private:
         bool frame_terminated = false;
         bool any_data_received = false;
 
-#ifndef NOTE_MINIMAL
+#if NOTE_DEBUG_ENABLED
         // Wire debug: accumulate response bytes when a listener is active.
         // Only allocates when debug_.on_wire is set — zero cost otherwise.
         std::string debug_recv;
@@ -563,11 +563,11 @@ private:
             for (size_t i = 0; i < n; ++i) {
                 if (buf[i] == '\n') {
                     frame_terminated = true;
-    #ifndef NOTE_MINIMAL
+    #if NOTE_DEBUG_ENABLED
                 if (debug_.on_wire)
                         debug_recv.append(reinterpret_cast<const char*>(buf), i);
 #endif
-#ifndef NOTE_MINIMAL
+#if !NOTE_NO_POLYMORPHIC
                     // Save bytes after \n for subsequent read() calls
                     // (e.g. binary COBS data that arrived with the JSON response).
                     size_t after = n - i - 1;
@@ -580,7 +580,7 @@ private:
                     return i;  // bytes before \n only
                 }
             }
-#ifndef NOTE_MINIMAL
+#if NOTE_DEBUG_ENABLED
             if (debug_.on_wire)
                 debug_recv.append(reinterpret_cast<const char*>(buf), n);
 #endif
@@ -622,7 +622,7 @@ private:
                 return make_error(Error::ResponseLost, Cause::Unspecified, parse_err);
         }
 #else
-#ifndef NOTE_NO_CRC
+#if !NOTE_NO_CRC
         transport::detail::CrcAccumulator crc;
 
         auto read_fn = [&](uint8_t* buf, size_t max, uint32_t t) -> Result<size_t> {
@@ -658,7 +658,7 @@ private:
             return make_error(Error::ResponseLost, Cause::Unspecified, parse_err);
 #endif
 #endif // NOTE_JSONB
-#ifndef NOTE_MINIMAL
+#if NOTE_DEBUG_ENABLED
         // Emit wire receive debug event with the accumulated response bytes.
         if (debug_.on_wire && !debug_recv.empty())
             debug_wire(debug_, string_view(debug_recv.data(), debug_recv.size()),
@@ -679,7 +679,7 @@ private:
     NoDebug debug_{};
 #endif
 
-#ifndef NOTE_MINIMAL
+#if !NOTE_NO_POLYMORPHIC
     // Lookahead buffer: bytes read from the HAL that arrived after \n
     // in the same chunk. Returned by subsequent read() calls (e.g. binary I/O).
     uint8_t lookahead_[64]{};
@@ -687,7 +687,7 @@ private:
     size_t lookahead_len_ = 0;
 #endif
 
-#ifndef NOTE_NO_CRC
+#if !NOTE_NO_CRC
     bool crc_enabled_ = false;
     uint16_t crc_seq_ = 0;
 #endif

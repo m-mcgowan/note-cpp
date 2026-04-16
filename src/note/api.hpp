@@ -83,7 +83,7 @@ namespace note {
 
 
 
-#ifdef NOTE_MINIMAL
+#if NOTE_NO_POLYMORPHIC
 template<typename NcT>
 #elif __cplusplus >= 202002L
 template<typename TargetT = Unconstrained, typename NcT = Notecard>
@@ -91,7 +91,7 @@ template<typename TargetT = Unconstrained, typename NcT = Notecard>
 template<typename NcT = Notecard>
 #endif
 class Api {
-#ifdef NOTE_NO_API_GROUPS
+#if NOTE_NO_API_GROUPS
     static_assert(!sizeof(NcT*),
         "Api groups are disabled by NOTE_NO_API_GROUPS. "
         "Use direct assignment instead: nc.execute(req). "
@@ -102,7 +102,7 @@ class Api {
     static NcT* nc_ptr() { return nc_ptr_s_; }
 public:
     explicit Api(NcT& nc) { nc_ptr_s_ = &nc; }
-#if __cplusplus >= 202002L && !defined(NOTE_MINIMAL)
+#if __cplusplus >= 202002L && !NOTE_NO_POLYMORPHIC
     explicit Api(NcT& nc, TargetT) { nc_ptr_s_ = &nc; }
 #endif
     NcT& notecard() { return *nc_ptr_s_; }
@@ -121,7 +121,7 @@ public:
         , var{&nc_}
         , web{&nc_}
     {}
-#if __cplusplus >= 202002L && !defined(NOTE_MINIMAL)
+#if __cplusplus >= 202002L && !NOTE_NO_POLYMORPHIC
     explicit Api(NcT& nc, TargetT) : nc_(nc)
         , card{&nc_}
         , dfu{&nc_}
@@ -1828,7 +1828,7 @@ public:
         /// the Notecard from a penalty box, or override penalty box defaults.
         auto resetWirelessPenalty() { return create_<api::CardWirelessPenalty::Clear>(); }
     };
-#if __cplusplus >= 202002L && !defined(NOTE_MINIMAL)
+#if __cplusplus >= 202002L && !NOTE_NO_POLYMORPHIC
     CardGroup<TargetT> card;
 #elif __cplusplus >= 202002L
     CardGroup<void> card;
@@ -1920,7 +1920,7 @@ public:
 #endif
 
     };
-#if __cplusplus >= 202002L && !defined(NOTE_MINIMAL)
+#if __cplusplus >= 202002L && !NOTE_NO_POLYMORPHIC
     DfuGroup<TargetT> dfu;
 #elif __cplusplus >= 202002L
     DfuGroup<void> dfu;
@@ -2092,7 +2092,7 @@ public:
         }
 #endif
     };
-#if __cplusplus >= 202002L && !defined(NOTE_MINIMAL)
+#if __cplusplus >= 202002L && !NOTE_NO_POLYMORPHIC
     EnvGroup<TargetT> env;
 #elif __cplusplus >= 202002L
     EnvGroup<void> env;
@@ -2213,7 +2213,7 @@ public:
         }
 #endif
     };
-#if __cplusplus >= 202002L && !defined(NOTE_MINIMAL)
+#if __cplusplus >= 202002L && !NOTE_NO_POLYMORPHIC
     FileGroup<TargetT> file;
 #elif __cplusplus >= 202002L
     FileGroup<void> file;
@@ -2320,7 +2320,7 @@ public:
         auto status() { return create_<api::HubStatus>(); }
 
     };
-#if __cplusplus >= 202002L && !defined(NOTE_MINIMAL)
+#if __cplusplus >= 202002L && !NOTE_NO_POLYMORPHIC
     HubGroup<TargetT> hub;
 #elif __cplusplus >= 202002L
     HubGroup<void> hub;
@@ -2611,7 +2611,7 @@ public:
         }
 #endif
     };
-#if __cplusplus >= 202002L && !defined(NOTE_MINIMAL)
+#if __cplusplus >= 202002L && !NOTE_NO_POLYMORPHIC
     NoteGroup<TargetT> note;
 #elif __cplusplus >= 202002L
     NoteGroup<void> note;
@@ -2717,7 +2717,7 @@ public:
 #endif
 
     };
-#if __cplusplus >= 202002L && !defined(NOTE_MINIMAL)
+#if __cplusplus >= 202002L && !NOTE_NO_POLYMORPHIC
     NtnGroup<TargetT> ntn;
 #elif __cplusplus >= 202002L
     NtnGroup<void> ntn;
@@ -2817,7 +2817,7 @@ public:
         /// interface to the note.delete API.
         auto remove() { return create_<api::VarDelete>(); }
     };
-#if __cplusplus >= 202002L && !defined(NOTE_MINIMAL)
+#if __cplusplus >= 202002L && !NOTE_NO_POLYMORPHIC
     VarGroup<TargetT> var;
 #elif __cplusplus >= 202002L
     VarGroup<void> var;
@@ -2956,7 +2956,7 @@ public:
         /// endpoint, and returns the response to the Notecard.
         auto remove() { return create_<api::WebDelete>(); }
     };
-#if __cplusplus >= 202002L && !defined(NOTE_MINIMAL)
+#if __cplusplus >= 202002L && !NOTE_NO_POLYMORPHIC
     WebGroup<TargetT> web;
 #elif __cplusplus >= 202002L
     WebGroup<void> web;
@@ -2966,7 +2966,7 @@ public:
 
 };
 
-#ifndef NOTE_MINIMAL
+#if !NOTE_NO_POLYMORPHIC
 #if __cplusplus >= 202002L
 Api(Notecard&) -> Api<Unconstrained, Notecard>;
 template<typename T>
@@ -2978,6 +2978,6 @@ auto make_api(NcT& nc, T = {}) { return Api<T, NcT>(nc); }
 template<typename NcT = Notecard>
 Api<NcT> make_api(NcT& nc) { return Api<NcT>(nc); }
 #endif
-#endif // !NOTE_MINIMAL
+#endif // !NOTE_NO_POLYMORPHIC
 
 } // namespace note

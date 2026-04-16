@@ -644,9 +644,9 @@ inline BodyHandler make_generic_body_handler(GenericBodySink& sink) {
 
 /// Size of the StructSink workspace for body handler storage.
 /// Used by execute paths to allocate stack storage for the body sink.
-/// Under NOTE_MINIMAL, GenericBodySink replaces StructSink — much smaller.
+/// When NOTE_RESPONSE_BODY=0, GenericBodySink replaces StructSink — much smaller.
 inline constexpr std::size_t body_sink_storage_size =
-#if NOTE_MINIMAL
+#if !NOTE_RESPONSE_BODY
     sizeof(GenericBodySink);
 #else
     sizeof(StructSink<detail::SinkSizeProbe>);

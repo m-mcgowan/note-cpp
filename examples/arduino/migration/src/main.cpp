@@ -1,12 +1,12 @@
 // Arduino migration example — compiled with PlatformIO to verify every
-// code snippet in docs/guides/migration-from-note-arduino.md works on
+// code snippet in docs/platforms/arduino/migration-from-note-arduino.md works on
 // real Arduino.
 //
 // This file is the source of truth for the migration guide's note-cpp
 // examples. The doc references line numbers from this file via embedme.
 //
 // IMPORTANT: If you edit this file, update the line number references in:
-//   - docs/guides/migration-from-note-arduino.md
+//   - docs/platforms/arduino/migration-from-note-arduino.md
 //   - README.md (if the same snippet appears there)
 // Run tools/verify-docs.sh to check for mismatches.
 

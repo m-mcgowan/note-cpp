@@ -13,7 +13,7 @@ python3 "$ROOT/tools/inject-snippets.py" --check $SNIPPET_MDS
 echo "  OK"
 
 # Verify migration guide table alignment
-MIGRATION="$ROOT/docs/guides/migration-from-note-arduino.md"
+MIGRATION="$ROOT/docs/platforms/arduino/migration-from-note-arduino.md"
 if [ -f "$MIGRATION" ]; then
     echo "=== Migration table alignment ==="
     python3 "$ROOT/tools/pad_migration_tables.py" --check

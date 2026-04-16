@@ -4,9 +4,7 @@
 
 #include <note/body.hpp>
 #include <note/struct_sink.hpp>
-#ifndef NOTE_EXTRAS
-#define NOTE_EXTRAS 1
-#endif
+// NOTE_EXTRAS default is set in note_config.hpp.
 #if NOTE_EXTRAS
 #include <note/dyn_field.hpp>
 #endif
@@ -118,7 +116,7 @@ struct HubSignal {
     auto& into(BodyT_& out) {
         body_ptr_ = &out;
         body_handler_factory_ = [](void* b, ::note::StringPool& pool, void* storage) -> ::note::BodyHandler {
-#if NOTE_MINIMAL
+#if !NOTE_RESPONSE_BODY
             uint8_t n_;
             auto* descs_ = BodyT_::template _note_field_descs<BodyT_>(n_);
             auto* sink = new (storage) ::note::GenericBodySink{b, descs_, n_, &pool};
@@ -153,12 +151,12 @@ struct HubSignal {
         /// The number of queued signals remaining.
         note::ResponseField<int32_t> signals{};
 
-#ifndef NOTE_NO_BUFFERED
+#if !NOTE_NO_BUFFERED
         /// Access the body as a JsonReader (buffered parse path only).
         const JsonReader* body() const { return body_.get(); }
 #endif
 
-#ifndef NOTE_NO_BUFFERED
+#if !NOTE_NO_BUFFERED
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
             if (reader_->has("connected")) rsp.connected = reader_->get_bool("connected");
@@ -257,7 +255,7 @@ struct HubSignal {
         }
 #endif
 
-#ifndef NOTE_NO_BUFFERED
+#if !NOTE_NO_BUFFERED
     private:
         std::unique_ptr<JsonReader> reader_;
         std::unique_ptr<JsonReader> body_;

@@ -5,7 +5,19 @@
 - **Flash/memory optimization** — trade features for smaller binary size on constrained devices (AVR, Cortex-M0)
 - **Developer convenience** — control namespaces, API style, debug output
 
-All flags are optional. The defaults produce a full-featured build suitable for ESP32, STM32, and other 32-bit platforms. The library is already efficient for typical microcontrollers — its streaming architecture means zero heap allocations and low RAM overhead by default. The optimization flags below enable additional flash savings when targeting the most constrained devices.
+All flags are optional. The defaults produce a full-featured build suitable
+for ESP32, STM32, and other 32-bit platforms. The library is already
+efficient for typical microcontrollers — its streaming architecture means
+zero heap allocations and low RAM overhead by default. The optimization
+flags below enable additional flash savings when targeting the most
+constrained devices.
+
+**All flags should be defined to `1` or `0`, not bare `#define`.** For
+example, use `-DNOTE_MINIMAL=1` or `#define NOTE_MINIMAL 1`, not
+`#define NOTE_MINIMAL` with no value. When using `-D` on the command
+line without a value (e.g. `-DNOTE_MINIMAL`), most compilers default to
+`1`, so command-line usage is fine. The explicit `=1`/`=0` convention
+matters when defining flags in source code.
 
 ## Flash Size Reduction with `NOTE_MINIMAL`
 

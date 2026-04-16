@@ -6,7 +6,7 @@
 
 #pragma once
 
-#ifdef NOTE_ARDUINO_STUBS
+#if NOTE_ARDUINO_STUBS
 
 #include <cstddef>
 #include <cstdint>

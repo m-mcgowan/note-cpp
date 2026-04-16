@@ -105,7 +105,7 @@ if (rsp) {
 See the [getting started example](examples/stdcpp/getting-started.cpp) for a complete walkthrough.
 
 > **Coming from note-arduino / note-c?** The
-> [migration guide](docs/guides/migration-from-note-arduino.md) has side-by-side
+> [migration guide](docs/platforms/arduino/migration-from-note-arduino.md) has side-by-side
 > examples covering setup, hub.set, note.add, templates, error handling,
 > binary transfers, and more to help you migrate to note-cpp.
 
@@ -305,7 +305,7 @@ The typed API (`execute()`, response fields, body structs) works identically on 
 
 The **buffered** path builds a JSON tree in memory using a JSON backend (cJSON, nlohmann, or the built-in `BufferJsonBackend`). Use it when migrating from note-c (keeps the cJSON/lambda builder pattern) or when you need `JsonReader` tree access on responses.
 
-See [docs/streaming-vs-buffered.md](docs/streaming-vs-buffered.md) for when to use each, and [docs/json-backend.md](docs/json-backend.md) for backend options.
+See [docs/transport.md](docs/transport.md) for when to use each, and [docs/json-backend.md](docs/json-backend.md) for backend options.
 
 </details>
 
@@ -379,7 +379,7 @@ Host tests run in ~35 seconds. The full CI matrix (5 compilers + coverage + embe
 
 ## Documentation
 
-- [Migrating from note-arduino](docs/guides/migration-from-note-arduino.md) — side-by-side examples for common patterns
+- [Migrating from note-arduino](docs/platforms/arduino/migration-from-note-arduino.md) — side-by-side examples for common patterns
 - [Feature flags](docs/feature-flags.md) — compile-time options for binary size optimization (AVR, Cortex-M0)
 - [Full documentation index](docs/README.md) — all guides, from getting started to internals
 - API reference (Doxygen) — generate locally with `./ci.sh --docs`

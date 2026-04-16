@@ -2,9 +2,7 @@
 #pragma once
 #include <note/note_config.hpp>
 
-#ifndef NOTE_EXTRAS
-#define NOTE_EXTRAS 1
-#endif
+// NOTE_EXTRAS default is set in note_config.hpp.
 #if NOTE_EXTRAS
 #include <note/dyn_field.hpp>
 #endif
@@ -361,7 +359,7 @@ struct CardAttn {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#ifndef NOTE_NO_BUFFERED
+#if !NOTE_NO_BUFFERED
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
                 { note::string_view arr_[8]; auto n_ = reader_->get_string_array("files", arr_, 8); for (size_t i_ = 0; i_ < n_; ++i_) rsp.files.add(arr_[i_]); }
@@ -483,7 +481,7 @@ struct CardAttn {
             }
 #endif
 
-#ifndef NOTE_NO_BUFFERED
+#if !NOTE_NO_BUFFERED
         private:
             std::unique_ptr<JsonReader> reader_;
 #endif
@@ -821,7 +819,7 @@ struct CardAttn {
             /// field will not be present when the attention pin is `LOW`.
             note::ResponseField<bool> set{};
 
-#ifndef NOTE_NO_BUFFERED
+#if !NOTE_NO_BUFFERED
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
                 if (reader_->has("set")) rsp.set = reader_->get_bool("set");
@@ -870,7 +868,7 @@ struct CardAttn {
             }
 #endif
 
-#ifndef NOTE_NO_BUFFERED
+#if !NOTE_NO_BUFFERED
         private:
             std::unique_ptr<JsonReader> reader_;
 #endif
@@ -1182,7 +1180,7 @@ struct CardAttn {
             /// field will not be present when the attention pin is `LOW`.
             note::ResponseField<bool> set{};
 
-#ifndef NOTE_NO_BUFFERED
+#if !NOTE_NO_BUFFERED
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
                 if (reader_->has("set")) rsp.set = reader_->get_bool("set");
@@ -1231,7 +1229,7 @@ struct CardAttn {
             }
 #endif
 
-#ifndef NOTE_NO_BUFFERED
+#if !NOTE_NO_BUFFERED
         private:
             std::unique_ptr<JsonReader> reader_;
 #endif
@@ -1674,7 +1672,7 @@ struct CardAttn {
             /// time) that the payload was stored by the Notecard.
             note::ResponseField<int32_t> time{};
 
-#ifndef NOTE_NO_BUFFERED
+#if !NOTE_NO_BUFFERED
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
                 if (reader_->has("payload")) rsp.payload = reader_->get_string("payload");
@@ -1738,7 +1736,7 @@ struct CardAttn {
             }
 #endif
 
-#ifndef NOTE_NO_BUFFERED
+#if !NOTE_NO_BUFFERED
         private:
             std::unique_ptr<JsonReader> reader_;
 #endif
@@ -2199,7 +2197,7 @@ struct CardAttn {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#ifndef NOTE_NO_BUFFERED
+#if !NOTE_NO_BUFFERED
             static Response parse(std::unique_ptr<JsonReader> reader_) {
                 Response rsp;
                 { note::string_view arr_[8]; auto n_ = reader_->get_string_array("files", arr_, 8); for (size_t i_ = 0; i_ < n_; ++i_) rsp.files.add(arr_[i_]); }
@@ -2302,7 +2300,7 @@ struct CardAttn {
             }
 #endif
 
-#ifndef NOTE_NO_BUFFERED
+#if !NOTE_NO_BUFFERED
         private:
             std::unique_ptr<JsonReader> reader_;
 #endif

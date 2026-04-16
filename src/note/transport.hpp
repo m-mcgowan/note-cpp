@@ -7,7 +7,7 @@
 #include <note/error.hpp>
 #include <note/types.hpp>
 
-#if !defined(NOTE_NO_STD_STRING) && !defined(NOTE_NO_STD_FUNCTION)
+#if !NOTE_NO_STD_STRING
 #include <functional>
 #endif
 
@@ -58,7 +58,7 @@ struct IBufferedTransport {
 using ITransport = IBufferedTransport;
 
 
-#if !defined(NOTE_NO_STD_STRING) && !defined(NOTE_NO_STD_FUNCTION)
+#if !NOTE_NO_STD_STRING
 // ---------------------------------------------------------------------------
 // CallbackTransport — adapter for test lambdas
 // ---------------------------------------------------------------------------
@@ -126,6 +126,6 @@ private:
     MillisFn millis_;
     DelayFn delay_;
 };
-#endif // !NOTE_NO_STD_STRING && !NOTE_NO_STD_FUNCTION
+#endif // NOTE_NO_STD_STRING
 
 } // namespace note

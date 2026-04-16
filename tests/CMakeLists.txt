@@ -13,9 +13,12 @@ include_directories(${NOTE_CPP_ROOT}/include ${CMAKE_CURRENT_SOURCE_DIR})
 include(${NOTE_CPP_ROOT}/cmake/note-cpp-sources.cmake)
 include(${NOTE_CPP_ROOT}/cmake/note-cpp-generated.cmake)
 
-# Under NOTE_MINIMAL, only compile tests that don't require the polymorphic Notecard class.
-string(FIND "${CMAKE_CXX_FLAGS}" "NOTE_MINIMAL" _note_minimal_pos)
-if(_note_minimal_pos GREATER -1)
+# Detect minimal builds: NOTE_MINIMAL implies NOTE_NO_POLYMORPHIC, which
+# strips the polymorphic Notecard class and the tests that depend on it.
+# Check CMAKE_CXX_FLAGS for either flag (passed via -DCMAKE_CXX_FLAGS="-DNOTE_MINIMAL").
+string(FIND "${CMAKE_CXX_FLAGS}" "NOTE_MINIMAL" _minimal_pos)
+string(FIND "${CMAKE_CXX_FLAGS}" "NOTE_NO_POLYMORPHIC" _no_poly_pos)
+if(_minimal_pos GREATER -1 OR _no_poly_pos GREATER -1)
     set(ALL_TEST_SOURCES ${NOTE_CPP_TEST_SOURCES_COMMON})
 else()
     set(ALL_TEST_SOURCES ${NOTE_CPP_TEST_SOURCES} ${NOTE_CPP_GENERATED_TEST_SOURCES})
@@ -58,6 +61,6 @@ endforeach()
 # Arduino build (same sources, ARDUINO defined globally like a real Arduino toolchain).
 # Force-include the stubs header so Print/Printable are defined before any note-cpp header.
 add_executable(note-cpp-tests-arduino ${ALL_TEST_SOURCES})
-target_compile_definitions(note-cpp-tests-arduino PRIVATE ARDUINO=10812 NOTE_ARDUINO_STUBS)
+target_compile_definitions(note-cpp-tests-arduino PRIVATE ARDUINO=10812 NOTE_ARDUINO_STUBS=1)
 target_compile_options(note-cpp-tests-arduino PRIVATE -include ${CMAKE_CURRENT_SOURCE_DIR}/arduino_stubs.hpp)
 add_test(NAME unit-tests-arduino COMMAND note-cpp-tests-arduino)

@@ -54,13 +54,13 @@ namespace detail {
 template<>
 class ApiResult<void> {
     std::optional<ErrorInfo> err_;
-#ifndef NOTE_NO_BUFFERED
+#if !NOTE_NO_BUFFERED
     std::unique_ptr<JsonReader> reader_;
 #endif
 public:
     ApiResult() = default;
     ApiResult(ErrorInfo e) : err_(std::move(e)) {}
-#ifndef NOTE_NO_BUFFERED
+#if !NOTE_NO_BUFFERED
     ApiResult(ErrorInfo e, std::unique_ptr<JsonReader> reader)
         : err_(std::move(e)), reader_(std::move(reader)) {}
 #endif
@@ -76,7 +76,7 @@ public:
     const ErrorInfo& error() const { return *err_; }
 };
 
-#ifndef NOTE_MINIMAL
+#if !NOTE_NO_POLYMORPHIC
 class Notecard {
 public:
     Notecard() = default;
@@ -172,7 +172,7 @@ public:
         }
 
         // Buffered fallback: requires a JsonBackend + buffered transport.
-#ifndef NOTE_NO_BUFFERED
+#if !NOTE_NO_BUFFERED
         if (backend_) {
             const uint32_t req_id = request_ids_enabled_ ? next_request_id_++ : 0;
             auto attempt = [&]() -> ApiResult<Rsp> {
@@ -223,7 +223,7 @@ public:
         return result;
     }
 
-#if !defined(NOTE_NO_STD_STRING) && !defined(NOTE_NO_STD_FUNCTION)
+#if !NOTE_NO_STD_STRING
     // Ad-hoc request with a builder callback.
     // Requires std::function and a buffered transport + backend.
     Result<std::unique_ptr<JsonReader>> request(
@@ -254,7 +254,7 @@ public:
         Result<void> result;
         if (streaming_transport_)
             result = streaming_transport_->send(build_fn, ctx);
-#ifndef NOTE_NO_BUFFERED
+#if !NOTE_NO_BUFFERED
         else if (transport_) {
             auto& builder = backend_->get_builder();
             build_fn(builder, ctx);
@@ -292,7 +292,7 @@ public:
         return result;
     }
 
-#if !defined(NOTE_NO_STD_STRING) && !defined(NOTE_NO_STD_FUNCTION)
+#if !NOTE_NO_STD_STRING
     // Fire-and-forget command with builder callback.
     // Requires std::function.
     Result<void> command(string_view cmd_type,
@@ -594,7 +594,7 @@ private:
         if (streaming_transport_) {
             return streaming_transact_raw(json, span<char>(binary_ctrl_buf_, sizeof(binary_ctrl_buf_)));
         }
-#ifndef NOTE_NO_BUFFERED
+#if !NOTE_NO_BUFFERED
         if (transport_ && backend_) {
             return transport_->transact(json, default_timeout_ms_);
         }
@@ -727,7 +727,7 @@ private:
     /// Single streaming attempt: transact + error capture.
     /// Pool is used for error message interning only.
     ErrorInfo streaming_attempt(RequestFrame& frame, JsonSink& sink) {
-#ifndef NOTE_NO_STD_STRING
+#if !NOTE_NO_STD_STRING
         if (debug_.on_wire) {
             struct SizingWriter : JsonWriter {
                 using JsonWriter::write;
@@ -821,7 +821,7 @@ private:
                                        const DebugListener& debug = {}) {
         // Emit wire-send event: build the JSON into a temporary buffer for debug.
         // Only when a wire listener is set — zero overhead otherwise.
-#ifndef NOTE_NO_STD_STRING
+#if !NOTE_NO_STD_STRING
         if (debug.on_wire) {
             // Build into a sizing pass to get the JSON for debug output.
             // This duplicates the build but only when debug is active.
@@ -886,13 +886,13 @@ private:
     TransactionTiming timing_{};
     uint32_t next_request_id_ = 1;
     bool request_ids_enabled_ = true;
-#ifndef NOTE_NO_MD5
+#if !NOTE_NO_MD5
     PlatformMd5 platform_md5_{};    // default MD5 implementation
     Md5Provider* md5_ = &platform_md5_;
 #else
     Md5Provider* md5_ = nullptr;
 #endif
 };
-#endif // !NOTE_MINIMAL
+#endif // NOTE_NO_POLYMORPHIC
 
 } // namespace note

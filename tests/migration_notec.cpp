@@ -1,6 +1,6 @@
 // migration_notec.cpp — note-arduino (note-c) examples for the migration guide.
 //
-// Every note-c snippet in docs/migration-from-note-arduino.md comes from
+// Every note-c snippet in docs/platforms/arduino/migration-from-note-arduino.md comes from
 // this file, verified by CI. Each function body is unindented so embedme
 // line references match the guide exactly.
 //

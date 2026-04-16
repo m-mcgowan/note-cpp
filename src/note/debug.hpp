@@ -8,7 +8,7 @@
 /// not global. Follows the Allocator pattern.
 ///
 /// Usage:
-///   nc.set_debug(note::arduino::serial_debug(Serial));  // enable wire tracing
+///   nc.set_debug(note::arduino::debug(Serial));  // enable wire tracing
 ///   nc.clear_debug();                                    // disable
 ///
 /// For guaranteed zero overhead in production:
@@ -161,7 +161,7 @@ struct RuntimeDebug {
 #endif // NOTE_DEBUG_ENABLED
 
 // ── Debug category flags ───────────────────────────────────────────────
-// Used by convenience adapters (e.g. arduino::serial_debug) to select
+// Used by convenience adapters (e.g. arduino::debug) to select
 // which categories are enabled.
 
 inline constexpr uint8_t DebugWire     = 1u << 0;

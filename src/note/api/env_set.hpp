@@ -2,9 +2,7 @@
 #pragma once
 #include <note/note_config.hpp>
 
-#ifndef NOTE_EXTRAS
-#define NOTE_EXTRAS 1
-#endif
+// NOTE_EXTRAS default is set in note_config.hpp.
 #if NOTE_EXTRAS
 #include <note/dyn_field.hpp>
 #endif
@@ -113,7 +111,7 @@ struct EnvSet {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#ifndef NOTE_NO_BUFFERED
+#if !NOTE_NO_BUFFERED
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
@@ -182,7 +180,7 @@ struct EnvSet {
         }
 #endif
 
-#ifndef NOTE_NO_BUFFERED
+#if !NOTE_NO_BUFFERED
     private:
         std::unique_ptr<JsonReader> reader_;
 #endif

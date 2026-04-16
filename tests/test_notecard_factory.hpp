@@ -9,7 +9,7 @@
 
 #include <note/notecard.hpp>
 
-#ifndef NOTE_MINIMAL
+#if !NOTE_NO_POLYMORPHIC
 
 namespace note::test {
 
@@ -32,4 +32,4 @@ inline Notecard make_test_notecard(IStreamingTransport& transport, Allocator all
 
 } // namespace note::test
 
-#endif // !NOTE_MINIMAL
+#endif // NOTE_NO_POLYMORPHIC

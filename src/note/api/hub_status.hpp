@@ -2,9 +2,7 @@
 #pragma once
 #include <note/note_config.hpp>
 
-#ifndef NOTE_EXTRAS
-#define NOTE_EXTRAS 1
-#endif
+// NOTE_EXTRAS default is set in note_config.hpp.
 #if NOTE_EXTRAS
 #include <note/dyn_field.hpp>
 #endif
@@ -97,7 +95,7 @@ struct HubStatus {
         /// Use `connected` to check if the Notecard is connected to Notehub.
         note::ResponseField<note::string_view> status{};
 
-#ifndef NOTE_NO_BUFFERED
+#if !NOTE_NO_BUFFERED
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
             if (reader_->has("connected")) rsp.connected = reader_->get_bool("connected");
@@ -158,7 +156,7 @@ struct HubStatus {
         }
 #endif
 
-#ifndef NOTE_NO_BUFFERED
+#if !NOTE_NO_BUFFERED
     private:
         std::unique_ptr<JsonReader> reader_;
 #endif

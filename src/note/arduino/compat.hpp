@@ -13,7 +13,7 @@
 
 // NOTE_ARDUINO_STUBS: test environments provide their own Print/Printable
 // stubs and define this before including note headers.
-#ifndef NOTE_ARDUINO_STUBS
+#if !NOTE_ARDUINO_STUBS
 #include <Arduino.h>
 #endif
 

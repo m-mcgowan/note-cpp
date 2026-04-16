@@ -35,6 +35,7 @@ Most `note-cpp` types are Arduino `Printable` — use `Serial.print()` directly:
 |------|---------|:----------:|
 | Response fields | `Serial.println(r.version)` | yes |
 | Errors | `Serial.println(r.error())` | yes |
+| Array elements | `Serial.println(printable(f))` | via `printable()` |
 | Full responses | `Serial.println(printable(r))` | via `printable()` |
 | Request fields | `Serial.println(printable(req.product))` | via `printable()` |
 
@@ -73,8 +74,10 @@ if (r) {
 }
 ```
 
-> **Don't use `Serial.printf("%s", ...)` with response fields** —
-> they may not be null-terminated. Use `Serial.print()` instead.
+> Response string fields are null-terminated (via `StringPool::intern()`),
+> so `Serial.printf("%s", r.version.c_str())` is safe. `Serial.print(r.version)`
+> is preferred for typed output; use `printf` for format strings, or
+> `.c_str()` / `.data()` when a `const char*` is needed.
 
 ## Error Handling
 
@@ -131,7 +134,7 @@ auto q = nc.card.attn().query().execute();
 if (q) {
     for (auto& trigger : q.files) {
         Serial.print("  trigger: ");
-        Serial.println(trigger);
+        Serial.println(printable(trigger));
     }
 }
 
@@ -140,7 +143,7 @@ nc.card.attn().off().execute();
 nc.card.attn().on().execute();
 ```
 
-See the [ATTN guide](../../guides/card-attn-guide.md) for interrupt wiring and
+See the [ATTN guide](card-attn-guide.md) for interrupt wiring and
 sleep patterns.
 
 ## AVR (ATmega328P)

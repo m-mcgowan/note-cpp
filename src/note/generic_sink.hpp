@@ -23,7 +23,7 @@ namespace note {
 
 /// Non-template sink — one instantiation for all response types.
 /// Handles response-level fields via field descriptor table, and forwards
-/// body events to a BodyHandler (GenericBodySink on NOTE_MINIMAL).
+/// body events to a BodyHandler (GenericBodySink when NOTE_RESPONSE_BODY=0).
 struct GenericResponseSink {
     void* rsp;
     const FieldDesc* fields;
@@ -150,7 +150,7 @@ private:
 };
 
 /// Non-template body sink — table-driven dispatch for flat body structs.
-/// Used under NOTE_MINIMAL to avoid per-body-type StructSink instantiations.
+/// Used when NOTE_RESPONSE_BODY=0 to avoid per-body-type StructSink instantiations.
 /// Flat structs only: no nested objects or arrays.
 struct GenericBodySink {
     void* obj;

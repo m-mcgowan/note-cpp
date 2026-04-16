@@ -9,6 +9,7 @@ docs/html/
 tests/integration/firmware/boards.sh
 
 ci.log
+TODO*.md
 .release-validation/
 
 # PlatformIO

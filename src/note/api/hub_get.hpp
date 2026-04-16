@@ -2,9 +2,7 @@
 #pragma once
 #include <note/note_config.hpp>
 
-#ifndef NOTE_EXTRAS
-#define NOTE_EXTRAS 1
-#endif
+// NOTE_EXTRAS default is set in note_config.hpp.
 #if NOTE_EXTRAS
 #include <note/dyn_field.hpp>
 #endif
@@ -126,7 +124,7 @@ struct HubGet {
         /// If `outbound` is overridden with a voltage-variable value.
         note::ResponseField<note::string_view> voutbound{};
 
-#ifndef NOTE_NO_BUFFERED
+#if !NOTE_NO_BUFFERED
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
             if (reader_->has("device")) rsp.device = reader_->get_string("device");
@@ -255,7 +253,7 @@ struct HubGet {
         }
 #endif
 
-#ifndef NOTE_NO_BUFFERED
+#if !NOTE_NO_BUFFERED
     private:
         std::unique_ptr<JsonReader> reader_;
 #endif

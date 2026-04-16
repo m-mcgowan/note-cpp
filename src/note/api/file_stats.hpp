@@ -2,9 +2,7 @@
 #pragma once
 #include <note/note_config.hpp>
 
-#ifndef NOTE_EXTRAS
-#define NOTE_EXTRAS 1
-#endif
+// NOTE_EXTRAS default is set in note_config.hpp.
 #if NOTE_EXTRAS
 #include <note/dyn_field.hpp>
 #endif
@@ -105,7 +103,7 @@ struct FileStats {
         /// The total number of Notes across all Notefiles.
         note::ResponseField<int32_t> total{};
 
-#ifndef NOTE_NO_BUFFERED
+#if !NOTE_NO_BUFFERED
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
             if (reader_->has("changes")) rsp.changes = reader_->get_int("changes");
@@ -174,7 +172,7 @@ struct FileStats {
         }
 #endif
 
-#ifndef NOTE_NO_BUFFERED
+#if !NOTE_NO_BUFFERED
     private:
         std::unique_ptr<JsonReader> reader_;
 #endif

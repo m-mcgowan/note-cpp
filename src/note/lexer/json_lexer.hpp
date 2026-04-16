@@ -410,7 +410,7 @@ private:
     uint8_t literal_len_ = 0;
 };
 
-#if defined(NOTE_MINIMAL) && !defined(NOTE_UNICODE_ESCAPES)
+#if !NOTE_UNICODE_ESCAPES
 using DefaultLexer = JsonLexer<BitStack<uint8_t>, CompactNumber, BasicEscapeDecoder>;
 #else
 using DefaultLexer = JsonLexer<>;

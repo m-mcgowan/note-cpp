@@ -24,7 +24,7 @@ If none of those apply, skip to [Configuration](#configuration) and move on.
 | Already using cJSON (ESP-IDF, note-c) | `CjsonBackend` | Yes |
 | Already using nlohmann-json | `NlohmannBackend` | Yes |
 
-There's also a **streaming path** that doesn't use a JSON backend at all — requests build directly into the transport and responses are SAX-parsed as bytes arrive. That's the lowest-memory option for embedded targets. See [streaming-vs-buffered.md](streaming-vs-buffered.md).
+There's also a **streaming path** that doesn't use a JSON backend at all — requests build directly into the transport and responses are SAX-parsed as bytes arrive. That's the lowest-memory option for embedded targets. See [transport.md](transport.md#streaming-vs-buffered).
 
 ## Configuration
 

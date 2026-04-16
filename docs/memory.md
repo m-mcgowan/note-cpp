@@ -81,7 +81,7 @@ auto r = nc.execute(req, note::arena_allocator(arena));
 - **Streaming path** — builds the request directly into the transport and parses the response with a SAX parser as bytes arrive. No request/response buffers needed. **Always zero heap.** Requires an arena (passed to the constructor).
 - **Buffered path** — builds the full request in a `JsonBackend`, sends it, reads the full response back, then parses. Simpler mental model. Heap allocation depends on the backend.
 
-See [streaming-vs-buffered.md](streaming-vs-buffered.md) for a side-by-side comparison and when to choose each.
+See [transport.md](transport.md#streaming-vs-buffered) for a side-by-side comparison and when to choose each.
 
 ## Backend memory profiles
 
@@ -192,7 +192,7 @@ The integration tests override global `operator new`/`operator delete` to count 
 - [examples/zero-alloc.cpp](../examples/stdcpp/zero-alloc.cpp) — working example of the patterns above
 - [response-lifetimes.md](response-lifetimes.md) — in-depth guide to `string_view` validity
 - [arena-sizing.md](arena-sizing.md) — computing arena size at compile time
-- [streaming-vs-buffered.md](streaming-vs-buffered.md) — which path to pick
+- [transport.md](transport.md#streaming-vs-buffered) — which path to pick
 - [json-backend.md](json-backend.md) — backend selection and customization
 - [binary-transfer.md](binary-transfer.md) — binary transfer memory model
 - `include/note/arena.hpp`, `include/note/allocator.hpp`, `include/note/string_pool.hpp`, `include/note/transport_hal.hpp`, `include/note/streaming_transport.hpp`, `include/note/transport/cobs.hpp`

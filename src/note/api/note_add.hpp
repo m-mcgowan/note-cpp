@@ -3,9 +3,7 @@
 #include <note/note_config.hpp>
 
 #include <note/body.hpp>
-#ifndef NOTE_EXTRAS
-#define NOTE_EXTRAS 1
-#endif
+// NOTE_EXTRAS default is set in note_config.hpp.
 #if NOTE_EXTRAS
 #include <note/dyn_field.hpp>
 #endif
@@ -292,7 +290,7 @@ struct NoteAdd {
         /// The total number of Notes in the Notefile.
         note::ResponseField<int32_t> total{};
 
-#ifndef NOTE_NO_BUFFERED
+#if !NOTE_NO_BUFFERED
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
             if (reader_->has("note")) rsp.noteId = reader_->get_string("note");
@@ -365,7 +363,7 @@ struct NoteAdd {
         }
 #endif
 
-#ifndef NOTE_NO_BUFFERED
+#if !NOTE_NO_BUFFERED
     private:
         std::unique_ptr<JsonReader> reader_;
 #endif

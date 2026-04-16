@@ -1106,7 +1106,7 @@ TEST_CASE("lexer: escape backslash and forward slash") {
     CHECK(found_fwd);
 }
 
-#ifndef NOTE_MINIMAL  // Unicode escapes require Utf8EscapeDecoder (not available under NOTE_MINIMAL)
+#if NOTE_UNICODE_ESCAPES  // Unicode escapes require Utf8EscapeDecoder (disabled when NOTE_UNICODE_ESCAPES=0)
 TEST_CASE("lexer: unicode escape \\u0041 = A") {
     auto events = lex(R"({"v":"\u0041"})");
     bool found = false;

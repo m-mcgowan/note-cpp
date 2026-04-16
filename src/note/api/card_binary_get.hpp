@@ -2,9 +2,7 @@
 #pragma once
 #include <note/note_config.hpp>
 
-#ifndef NOTE_EXTRAS
-#define NOTE_EXTRAS 1
-#endif
+// NOTE_EXTRAS default is set in note_config.hpp.
 #if NOTE_EXTRAS
 #include <note/dyn_field.hpp>
 #endif
@@ -135,7 +133,7 @@ struct CardBinaryGet : note::BinaryReceiveMixin {
         /// The MD5 checksum of the data returned, after it has been decoded
         note::ResponseField<note::string_view> status{};
 
-#ifndef NOTE_NO_BUFFERED
+#if !NOTE_NO_BUFFERED
         static Response parse(std::unique_ptr<JsonReader> reader_) {
             Response rsp;
             if (reader_->has("err")) rsp.err = reader_->get_string("err");
@@ -195,7 +193,7 @@ struct CardBinaryGet : note::BinaryReceiveMixin {
         }
 #endif
 
-#ifndef NOTE_NO_BUFFERED
+#if !NOTE_NO_BUFFERED
     private:
         std::unique_ptr<JsonReader> reader_;
 #endif

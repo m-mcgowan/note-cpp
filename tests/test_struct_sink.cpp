@@ -414,7 +414,7 @@ TEST_CASE("const into() returns copy, original unchanged") {
 }
 
 // ═══════════════════════════════════════════════════════════════════════
-// GenericBodySink — table-driven body parsing (NOTE_MINIMAL path)
+// GenericBodySink — table-driven body parsing (NOTE_RESPONSE_BODY=0 path)
 // ═══════════════════════════════════════════════════════════════════════
 
 #include <note/generic_sink.hpp>

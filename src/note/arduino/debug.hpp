@@ -6,7 +6,7 @@
 /// Usage:
 ///   nc.setDebugOutputStream(Serial);  // note-c compatible
 ///   // or
-///   nc.set_debug(note::arduino::serial_debug(Serial));  // explicit
+///   nc.set_debug(note::arduino::debug(Serial));  // explicit
 
 #ifdef ARDUINO
 
@@ -27,7 +27,7 @@ namespace detail {
 ///
 ///   nc.setDebugOutput(Serial);                          // wire only
 ///   nc.setDebugOutput(Serial, note::DebugWire | note::DebugTiming);
-inline DebugListener serial_debug(Print& out, uint8_t flags = DebugWire) {
+inline DebugListener debug(Print& out, uint8_t flags = DebugWire) {
     // Static context — one per call. Safe for single-Notecard usage.
     // For multiple Notecards with different debug streams, use set_debug() directly.
     static detail::DebugCtx ctx;

@@ -972,7 +972,8 @@ struct JsonbMockHal : note::TransportHal {
 
 }  // anonymous namespace
 
-TEST_CASE("jsonb end-to-end: StaticNotecard card.version") {
+#if !NOTE_NO_POLYMORPHIC
+TEST_CASE("jsonb end-to-end: Notecard card.version") {
     // Replicate the exact AVR path: StaticNotecard + Api + card.version
     // with a JSONB mock HAL.
     using CardVersion = note::api::CardVersion;
@@ -1000,4 +1001,5 @@ TEST_CASE("jsonb end-to-end: StaticNotecard card.version") {
     if (rsp.device.has_value())
         CHECK(rsp.device.value() == "dev:mock");
 }
+#endif // NOTE_NO_POLYMORPHIC
 #endif // NOTE_JSONB

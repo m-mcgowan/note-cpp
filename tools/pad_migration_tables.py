@@ -12,7 +12,7 @@ import re
 import sys
 from pathlib import Path
 
-MIGRATION_DOC = Path(__file__).parent.parent / "docs" / "guides" / "migration-from-note-arduino.md"
+MIGRATION_DOC = Path(__file__).parent.parent / "docs" / "platforms" / "arduino" / "migration-from-note-arduino.md"
 
 
 def find_table_pairs(content: str) -> list[tuple[int, int, int, int]]:

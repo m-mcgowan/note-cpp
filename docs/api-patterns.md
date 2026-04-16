@@ -106,7 +106,51 @@ api.note.read("data.qi").noteId("specific-note").execute();
 ```
 
 
-## Array fields
+## Ad-Hoc Fields (`operator[]`)
+
+Every request supports `operator[]` for setting fields by their JSON wire
+name. For known fields, the value is routed to the typed field. For
+unknown fields, the value is stored in an extras buffer and serialized
+alongside the typed fields.
+
+```cpp
+auto req = nc.hub.set();
+
+// Known field — routes to the typed setter (same as req.product = "...")
+req["product"] = "com.example.app";
+
+// Unknown field — stored in extras, sent on the wire as-is
+req["some_new_field"] = "value";
+req["retry_count"] = int32_t(3);
+
+req.execute();
+```
+
+This is useful when new Notecard firmware adds fields that the typed API
+does not model yet, or for one-off experimentation. Supported value types
+are `bool`, `int32_t`, `double`, and `string_view`.
+
+The extras buffer holds up to 4 ad-hoc fields by default. Override
+`NOTE_EXTRAS_MAX` before including any `note/api` headers to change the
+limit. Define `NOTE_EXTRAS=0` to disable extras entirely and save flash.
+See [Feature Flags](feature-flags.md) for details.
+
+> **Note:** `operator[]` is available on requests only, not on responses.
+> Response fields are always accessed via the typed struct members. To
+> read response fields by name, use the
+> [lambda builder](api-layers.md#lambda-request-builder) and parse the
+> response via `JsonReader`:
+>
+> ```cpp
+> auto result = nc.request("card.version");
+> if (result) {
+>     auto& reader = *result.value();
+>     auto version = reader.get_string("version");
+>     auto some_new_field = reader.get_int("some_new_field");
+> }
+> ```
+
+## Array Fields
 
 Some request fields accept multiple values (e.g. `file.delete` takes a list
 of filenames). These support several initialization styles:

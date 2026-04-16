@@ -187,9 +187,33 @@ struct Readings {
 };
 ```
 
-### Raw body access (buffered path)
+### Custom Body Parsing via Lambda Builder
 
-On the buffered parse path, the raw `JsonReader` is still available:
+When the body fields do not map cleanly to a struct — for example, when
+wire names differ from your variable names, or the body shape is dynamic —
+use the lambda builder and parse the response via `JsonReader`:
+
+```cpp
+auto result = nc.request("note.get", [](note::JsonBuilder& b) {
+    b.add("file", "sensors.qi");
+});
+if (result) {
+    auto& rsp = *result.value();
+    auto* body = rsp.get_object("body");
+    if (body) {
+        float temp = body->get_double("temp_c");      // wire name: "temp_c"
+        int32_t rh = body->get_int("relative_humidity"); // wire name: "relative_humidity"
+    }
+}
+```
+
+This works on both the streaming and buffered paths and gives you full
+control over field-name mapping.
+
+### Raw Body Access (Buffered Path)
+
+On the buffered parse path, the raw `JsonReader` is also available
+directly on the typed response:
 
 ```cpp
 auto r = nc.note.read("sensors.qi").execute();

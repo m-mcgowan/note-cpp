@@ -44,11 +44,11 @@ public:
     void set_default_timeout(uint32_t ms) { default_timeout_ms_ = ms; }
     uint32_t default_timeout() const { return default_timeout_ms_; }
 
-#ifndef NOTE_NO_RETRY
+#if !NOTE_NO_RETRY
     void set_retry_policy(RetryPolicy policy) { retry_policy_ = policy; }
     void set_inter_transaction_gap(uint32_t ms) { timing_.min_gap_ms = ms; }
 #endif
-#ifndef NOTE_NO_REQUEST_IDS
+#if !NOTE_NO_REQUEST_IDS
     void set_request_ids(bool enabled) { request_ids_enabled_ = enabled; }
 #endif
 
@@ -56,7 +56,7 @@ public:
     ApiResult<typename RequestT::Response> execute(const RequestT& req) {
         using Rsp = typename RequestT::Response;
         [[maybe_unused]] constexpr Safety safety = RequestT::safety;
-#ifndef NOTE_NO_REQUEST_IDS
+#if !NOTE_NO_REQUEST_IDS
         const uint32_t req_id = request_ids_enabled_ ? next_request_id_++ : 0;
 #else
         constexpr uint32_t req_id = 0;
@@ -151,7 +151,7 @@ public:
 
     template<typename RequestT>
     Result<void> command_typed(const RequestT& req) {
-#ifndef NOTE_NO_RETRY
+#if !NOTE_NO_RETRY
         enforce_timing();
 #endif
         auto build = [&](JsonBuilder& b) {
@@ -162,7 +162,7 @@ public:
             (*static_cast<decltype(build)*>(p))(b);
         };
         auto result = stack_.transport.send(build_fn, &build);
-#ifndef NOTE_NO_RETRY
+#if !NOTE_NO_RETRY
         record_timing();
 #endif
         return result;
@@ -171,11 +171,11 @@ public:
     /// Type-erased send (fire-and-forget). Used by generated command() methods
     /// via send_fn_ — a single shared function pointer for all request types.
     Result<void> send_command(BuildFn build_fn, void* ctx) {
-#ifndef NOTE_NO_RETRY
+#if !NOTE_NO_RETRY
         enforce_timing();
 #endif
         auto result = stack_.transport.send(build_fn, ctx);
-#ifndef NOTE_NO_RETRY
+#if !NOTE_NO_RETRY
         record_timing();
 #endif
         return result;
@@ -247,11 +247,11 @@ public:
                                   SaxDispatch dispatch,
                                   detail::NcErrorCapture& nc_err,
                                   [[maybe_unused]] Safety safety) {
-#ifndef NOTE_NO_RETRY
+#if !NOTE_NO_RETRY
         enforce_timing();
 #endif
         auto rv = stack_.transport.transact_dispatch(build_fn, build_ctx, dispatch, default_timeout_ms_, nc_err);
-#ifndef NOTE_NO_RETRY
+#if !NOTE_NO_RETRY
         if (!rv && retry_policy_.max_retries > 0
             && detail::should_retry(rv.error().code, safety)) {
             struct Ctx {
@@ -304,7 +304,7 @@ public:
     }
 
 private:
-#ifndef NOTE_NO_RETRY
+#if !NOTE_NO_RETRY
     RetryTransportOps transport_ops() {
         return {
             &stack_,
@@ -330,11 +330,11 @@ private:
     Stack stack_;
     Allocator alloc_;
     uint32_t default_timeout_ms_ = 10000;
-#ifndef NOTE_NO_RETRY
+#if !NOTE_NO_RETRY
     RetryPolicy retry_policy_{};
     TransactionTiming timing_{};
 #endif
-#ifndef NOTE_NO_REQUEST_IDS
+#if !NOTE_NO_REQUEST_IDS
     uint32_t next_request_id_ = 1;
     bool request_ids_enabled_ = true;
 #endif

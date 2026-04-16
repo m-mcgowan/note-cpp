@@ -8,9 +8,7 @@
 {% if has_body_response %}
 #include <note/struct_sink.hpp>
 {% endif %}
-#ifndef NOTE_EXTRAS
-#define NOTE_EXTRAS 1
-#endif
+// NOTE_EXTRAS default is set in note_config.hpp.
 #if NOTE_EXTRAS
 #include <note/dyn_field.hpp>
 #endif
@@ -448,7 +446,7 @@ namespace note::api {
 {{ indent }}auto& into(BodyT_& out) {
 {{ indent }}    body_ptr_ = &out;
 {{ indent }}    body_handler_factory_ = [](void* b, ::note::StringPool& pool, void* storage) -> ::note::BodyHandler {
-#if NOTE_MINIMAL
+#if !NOTE_RESPONSE_BODY
 {{ indent }}        uint8_t n_;
 {{ indent }}        auto* descs_ = BodyT_::template _note_field_descs<BodyT_>(n_);
 {{ indent }}        auto* sink = new (storage) ::note::GenericBodySink{b, descs_, n_, &pool};
@@ -508,7 +506,7 @@ namespace note::api {
 {% endfor %}
 {% if op.response.has_body %}
 
-#ifndef NOTE_NO_BUFFERED
+#if !NOTE_NO_BUFFERED
 {{ indent }}    /// Access the body as a JsonReader (buffered parse path only).
 {{ indent }}    const JsonReader* body() const { return body_.get(); }
 #endif
@@ -518,7 +516,7 @@ namespace note::api {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 {% endif %}
-#ifndef NOTE_NO_BUFFERED
+#if !NOTE_NO_BUFFERED
 {{ indent }}    static Response parse(std::unique_ptr<JsonReader> reader_) {
 {{ indent }}        Response rsp;
 {% for prop in op.response.properties %}
@@ -819,7 +817,7 @@ namespace note::api {
 {{ indent }}    }
 #endif
 
-#ifndef NOTE_NO_BUFFERED
+#if !NOTE_NO_BUFFERED
 {{ indent }}private:
 {{ indent }}    std::unique_ptr<JsonReader> reader_;
 {% if op.response.has_body %}

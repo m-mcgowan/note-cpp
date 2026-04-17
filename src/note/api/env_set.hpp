@@ -106,7 +106,7 @@ struct EnvSet {
 #if NOTE_API_VERSION < NOTE_VERSION(3, 4, 1)
         [[deprecated("requires firmware >= 3.4.1")]]
 #endif
-        note::ResponseField<int32_t> time{};
+        note::ResponseField<note::json_int_t> time{};
 #endif
 
 #pragma GCC diagnostic push
@@ -151,7 +151,7 @@ struct EnvSet {
                 if (note::flash(keys_::rsp_time) == k_) { rsp.time = ::note::parse_int(raw_); return; }
 #endif
             }
-            NOTE_SINK_NOINLINE void on_int(::note::string_view k_, int32_t v_) {
+            NOTE_SINK_NOINLINE void on_int(::note::string_view k_, ::note::json_int_t v_) {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
                 if (note::flash(keys_::rsp_time) == k_) { rsp.time = v_; return; }
 #endif

@@ -58,18 +58,18 @@ struct CardMotionSync {
 
 
     /// The number of most recent motion buckets to examine.
-    struct count_t : Field<int32_t> {
-        using Field<int32_t>::Field;
-        using Field<int32_t>::operator=;
-        CardMotionSync& operator()(int32_t v);
+    struct count_t : Field<note::json_int_t> {
+        using Field<note::json_int_t>::Field;
+        using Field<note::json_int_t>::operator=;
+        CardMotionSync& operator()(note::json_int_t v);
     } count{};
     /// The maximum frequency at which sync will be triggered. Even if a
     /// `threshold` is set and exceeded, there will only be a single sync for
     /// this amount of time.
-    struct minutes_t : Field<int32_t> {
-        using Field<int32_t>::Field;
-        using Field<int32_t>::operator=;
-        CardMotionSync& operator()(int32_t v);
+    struct minutes_t : Field<note::json_int_t> {
+        using Field<note::json_int_t>::Field;
+        using Field<note::json_int_t>::operator=;
+        CardMotionSync& operator()(note::json_int_t v);
     } minutes{};
     /// `true` to start motion-triggered syncing.
     struct start_t : Field<bool> {
@@ -86,10 +86,10 @@ struct CardMotionSync {
     /// The number of buckets that must indicate motion in order to trigger a
     /// sync. If set to `0`, the Notecard will only perform a sync when its
     /// orientation changes.
-    struct threshold_t : Field<int32_t> {
-        using Field<int32_t>::Field;
-        using Field<int32_t>::operator=;
-        CardMotionSync& operator()(int32_t v);
+    struct threshold_t : Field<note::json_int_t> {
+        using Field<note::json_int_t>::Field;
+        using Field<note::json_int_t>::operator=;
+        CardMotionSync& operator()(note::json_int_t v);
     } threshold{};
 
 
@@ -162,11 +162,11 @@ struct CardMotionSync {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
         static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
-            {keys_::count, static_cast<uint16_t>(offsetof(CardMotionSync, count)), ::note::ReqFieldType::Int32},
-            {keys_::minutes, static_cast<uint16_t>(offsetof(CardMotionSync, minutes)), ::note::ReqFieldType::Int32},
+            {keys_::count, static_cast<uint16_t>(offsetof(CardMotionSync, count)), ::note::ReqFieldType::Int},
+            {keys_::minutes, static_cast<uint16_t>(offsetof(CardMotionSync, minutes)), ::note::ReqFieldType::Int},
             {keys_::start, static_cast<uint16_t>(offsetof(CardMotionSync, start)), ::note::ReqFieldType::Bool},
             {keys_::stop, static_cast<uint16_t>(offsetof(CardMotionSync, stop)), ::note::ReqFieldType::Bool},
-            {keys_::threshold, static_cast<uint16_t>(offsetof(CardMotionSync, threshold)), ::note::ReqFieldType::Int32},
+            {keys_::threshold, static_cast<uint16_t>(offsetof(CardMotionSync, threshold)), ::note::ReqFieldType::Int},
         };
 #pragma GCC diagnostic pop
         n_out = sizeof(table_) / sizeof(table_[0]);
@@ -218,13 +218,13 @@ struct CardMotionSync {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-inline CardMotionSync& CardMotionSync::count_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardMotionSync& CardMotionSync::count_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardMotionSync*>(
         reinterpret_cast<char*>(this) - offsetof(CardMotionSync, count));
 }
-inline CardMotionSync& CardMotionSync::minutes_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardMotionSync& CardMotionSync::minutes_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardMotionSync*>(
         reinterpret_cast<char*>(this) - offsetof(CardMotionSync, minutes));
 }
@@ -238,8 +238,8 @@ inline CardMotionSync& CardMotionSync::stop_t::operator()(bool v) {
     return *reinterpret_cast<CardMotionSync*>(
         reinterpret_cast<char*>(this) - offsetof(CardMotionSync, stop));
 }
-inline CardMotionSync& CardMotionSync::threshold_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardMotionSync& CardMotionSync::threshold_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardMotionSync*>(
         reinterpret_cast<char*>(this) - offsetof(CardMotionSync, threshold));
 }

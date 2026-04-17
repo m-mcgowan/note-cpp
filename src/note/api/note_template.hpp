@@ -139,10 +139,10 @@ struct NoteTemplate {
         /// Notes for the template Notefile. As of v3.2.1 `length` is not
         /// required, and payloads can be added to any template-based Note
         /// without specifying the payload length.
-        struct length_t : Field<int32_t> {
-            using Field<int32_t>::Field;
-            using Field<int32_t>::operator=;
-            NoteTemplate::Define& operator()(int32_t v);
+        struct length_t : Field<note::json_int_t> {
+            using Field<note::json_int_t>::Field;
+            using Field<note::json_int_t>::operator=;
+            NoteTemplate::Define& operator()(note::json_int_t v);
         } length{};
         /// This argument is required on Notecard LoRa and a Notecard paired
         /// with Starnote, but ignored on all other Notecards.
@@ -154,10 +154,10 @@ struct NoteTemplate {
         ///
         /// The port you provide is also used in the "frame port" field on
         /// LoRaWAN gateways.
-        struct port_t : Field<int32_t> {
-            using Field<int32_t>::Field;
-            using Field<int32_t>::operator=;
-            NoteTemplate::Define& operator()(int32_t v);
+        struct port_t : Field<note::json_int_t> {
+            using Field<note::json_int_t>::Field;
+            using Field<note::json_int_t>::operator=;
+            NoteTemplate::Define& operator()(note::json_int_t v);
         } port{};
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
         /// If `true`, returns the current template set on a given Notefile.
@@ -251,7 +251,7 @@ struct NoteTemplate {
 
             /// The number of bytes that will be transmitted to Notehub, per
             /// Note, before compression.
-            note::ResponseField<int32_t> bytes{};
+            note::ResponseField<note::json_int_t> bytes{};
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
             /// If the `format` argument is provided, this represents the format
             /// applied to the template.
@@ -264,7 +264,7 @@ struct NoteTemplate {
 #endif
             /// If the `verify` argument is provided and the Notefile has an
             /// active template with a payload, the payload length.
-            note::ResponseField<int32_t> length{};
+            note::ResponseField<note::json_int_t> length{};
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
             /// `true` if an active template exists on the Notefile.
             ///
@@ -372,7 +372,7 @@ struct NoteTemplate {
                     if (note::flash(keys_::rsp_bytes) == k_) { rsp.bytes = ::note::parse_int(raw_); return; }
                     if (note::flash(keys_::rsp_length) == k_) { rsp.length = ::note::parse_int(raw_); return; }
                 }
-                NOTE_SINK_NOINLINE void on_int(::note::string_view k_, int32_t v_) {
+                NOTE_SINK_NOINLINE void on_int(::note::string_view k_, ::note::json_int_t v_) {
                     if (body_depth_ > 0) { if (body_handler_) body_handler_.send(::note::BodyEvent::make_int(k_, v_)); return; }
                     if (note::flash(keys_::rsp_bytes) == k_) { rsp.bytes = v_; return; }
                     if (note::flash(keys_::rsp_length) == k_) { rsp.length = v_; return; }
@@ -438,8 +438,8 @@ struct NoteTemplate {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
             static constexpr ::note::FieldDesc table[] NOTE_FLASH_ATTR = {
-                {keys_::rsp_bytes, static_cast<uint16_t>(offsetof(Response, bytes)), ::note::FieldType::Int32},
-                {keys_::rsp_length, static_cast<uint16_t>(offsetof(Response, length)), ::note::FieldType::Int32},
+                {keys_::rsp_bytes, static_cast<uint16_t>(offsetof(Response, bytes)), ::note::FieldType::Int},
+                {keys_::rsp_length, static_cast<uint16_t>(offsetof(Response, length)), ::note::FieldType::Int},
             };
 #pragma GCC diagnostic pop
             return table;
@@ -487,8 +487,8 @@ struct NoteTemplate {
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
                 {keys_::format, static_cast<uint16_t>(offsetof(NoteTemplate::Define, format)), ::note::ReqFieldType::String},
 #endif
-                {keys_::length, static_cast<uint16_t>(offsetof(NoteTemplate::Define, length)), ::note::ReqFieldType::Int32},
-                {keys_::port, static_cast<uint16_t>(offsetof(NoteTemplate::Define, port)), ::note::ReqFieldType::Int32},
+                {keys_::length, static_cast<uint16_t>(offsetof(NoteTemplate::Define, length)), ::note::ReqFieldType::Int},
+                {keys_::port, static_cast<uint16_t>(offsetof(NoteTemplate::Define, port)), ::note::ReqFieldType::Int},
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
                 {keys_::verify, static_cast<uint16_t>(offsetof(NoteTemplate::Define, verify)), ::note::ReqFieldType::Bool},
 #endif
@@ -674,10 +674,10 @@ struct NoteTemplate {
         /// Notes for the template Notefile. As of v3.2.1 `length` is not
         /// required, and payloads can be added to any template-based Note
         /// without specifying the payload length.
-        struct length_t : Field<int32_t> {
-            using Field<int32_t>::Field;
-            using Field<int32_t>::operator=;
-            NoteTemplate::Remove& operator()(int32_t v);
+        struct length_t : Field<note::json_int_t> {
+            using Field<note::json_int_t>::Field;
+            using Field<note::json_int_t>::operator=;
+            NoteTemplate::Remove& operator()(note::json_int_t v);
         } length{};
         /// This argument is required on Notecard LoRa and a Notecard paired
         /// with Starnote, but ignored on all other Notecards.
@@ -689,10 +689,10 @@ struct NoteTemplate {
         ///
         /// The port you provide is also used in the "frame port" field on
         /// LoRaWAN gateways.
-        struct port_t : Field<int32_t> {
-            using Field<int32_t>::Field;
-            using Field<int32_t>::operator=;
-            NoteTemplate::Remove& operator()(int32_t v);
+        struct port_t : Field<note::json_int_t> {
+            using Field<note::json_int_t>::Field;
+            using Field<note::json_int_t>::operator=;
+            NoteTemplate::Remove& operator()(note::json_int_t v);
         } port{};
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
         /// If `true`, returns the current template set on a given Notefile.
@@ -796,7 +796,7 @@ struct NoteTemplate {
 
             /// The number of bytes that will be transmitted to Notehub, per
             /// Note, before compression.
-            note::ResponseField<int32_t> bytes{};
+            note::ResponseField<note::json_int_t> bytes{};
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
             /// If the `format` argument is provided, this represents the format
             /// applied to the template.
@@ -809,7 +809,7 @@ struct NoteTemplate {
 #endif
             /// If the `verify` argument is provided and the Notefile has an
             /// active template with a payload, the payload length.
-            note::ResponseField<int32_t> length{};
+            note::ResponseField<note::json_int_t> length{};
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
             /// `true` if an active template exists on the Notefile.
             ///
@@ -917,7 +917,7 @@ struct NoteTemplate {
                     if (note::flash(keys_::rsp_bytes) == k_) { rsp.bytes = ::note::parse_int(raw_); return; }
                     if (note::flash(keys_::rsp_length) == k_) { rsp.length = ::note::parse_int(raw_); return; }
                 }
-                NOTE_SINK_NOINLINE void on_int(::note::string_view k_, int32_t v_) {
+                NOTE_SINK_NOINLINE void on_int(::note::string_view k_, ::note::json_int_t v_) {
                     if (body_depth_ > 0) { if (body_handler_) body_handler_.send(::note::BodyEvent::make_int(k_, v_)); return; }
                     if (note::flash(keys_::rsp_bytes) == k_) { rsp.bytes = v_; return; }
                     if (note::flash(keys_::rsp_length) == k_) { rsp.length = v_; return; }
@@ -983,8 +983,8 @@ struct NoteTemplate {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
             static constexpr ::note::FieldDesc table[] NOTE_FLASH_ATTR = {
-                {keys_::rsp_bytes, static_cast<uint16_t>(offsetof(Response, bytes)), ::note::FieldType::Int32},
-                {keys_::rsp_length, static_cast<uint16_t>(offsetof(Response, length)), ::note::FieldType::Int32},
+                {keys_::rsp_bytes, static_cast<uint16_t>(offsetof(Response, bytes)), ::note::FieldType::Int},
+                {keys_::rsp_length, static_cast<uint16_t>(offsetof(Response, length)), ::note::FieldType::Int},
             };
 #pragma GCC diagnostic pop
             return table;
@@ -1031,8 +1031,8 @@ struct NoteTemplate {
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
                 {keys_::format, static_cast<uint16_t>(offsetof(NoteTemplate::Remove, format)), ::note::ReqFieldType::String},
 #endif
-                {keys_::length, static_cast<uint16_t>(offsetof(NoteTemplate::Remove, length)), ::note::ReqFieldType::Int32},
-                {keys_::port, static_cast<uint16_t>(offsetof(NoteTemplate::Remove, port)), ::note::ReqFieldType::Int32},
+                {keys_::length, static_cast<uint16_t>(offsetof(NoteTemplate::Remove, length)), ::note::ReqFieldType::Int},
+                {keys_::port, static_cast<uint16_t>(offsetof(NoteTemplate::Remove, port)), ::note::ReqFieldType::Int},
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
                 {keys_::verify, static_cast<uint16_t>(offsetof(NoteTemplate::Remove, verify)), ::note::ReqFieldType::Bool},
 #endif
@@ -1132,13 +1132,13 @@ inline NoteTemplate::Define& NoteTemplate::Define::format_t::operator()(note::st
         reinterpret_cast<char*>(this) - offsetof(NoteTemplate::Define, format));
 }
 #endif
-inline NoteTemplate::Define& NoteTemplate::Define::length_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline NoteTemplate::Define& NoteTemplate::Define::length_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<NoteTemplate::Define*>(
         reinterpret_cast<char*>(this) - offsetof(NoteTemplate::Define, length));
 }
-inline NoteTemplate::Define& NoteTemplate::Define::port_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline NoteTemplate::Define& NoteTemplate::Define::port_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<NoteTemplate::Define*>(
         reinterpret_cast<char*>(this) - offsetof(NoteTemplate::Define, port));
 }
@@ -1182,13 +1182,13 @@ inline NoteTemplate::Remove& NoteTemplate::Remove::format_t::operator()(note::st
         reinterpret_cast<char*>(this) - offsetof(NoteTemplate::Remove, format));
 }
 #endif
-inline NoteTemplate::Remove& NoteTemplate::Remove::length_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline NoteTemplate::Remove& NoteTemplate::Remove::length_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<NoteTemplate::Remove*>(
         reinterpret_cast<char*>(this) - offsetof(NoteTemplate::Remove, length));
 }
-inline NoteTemplate::Remove& NoteTemplate::Remove::port_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline NoteTemplate::Remove& NoteTemplate::Remove::port_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<NoteTemplate::Remove*>(
         reinterpret_cast<char*>(this) - offsetof(NoteTemplate::Remove, port));
 }

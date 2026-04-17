@@ -603,12 +603,12 @@ private:
     }
 
     /// Extract an integer field from a raw JSON response (for binary control).
-    static int32_t binary_response_int(string_view json, string_view key) {
+    static json_int_t binary_response_int(string_view json, string_view key) {
         // Minimal parse: find "key":NUMBER in the JSON
         JsonSink null_sink;
         struct IntCapture : JsonSink {
             string_view target_key;
-            int32_t value = 0;
+            json_int_t value = 0;
             void on_number(string_view k, string_view raw) override {
                 if (k == target_key) value = parse_int(raw);
             }
@@ -663,7 +663,7 @@ private:
             debug_timing(debug_, TimingEvent::BuildBegin, RequestT::notecard_request);
             auto& builder = backend_->get_builder();
             builder.add("req", RequestT::notecard_request);
-            if (req_id) builder.add("id", static_cast<int32_t>(req_id));
+            if (req_id) builder.add("id", static_cast<json_int_t>(req_id));
             req.build(builder);
             auto req_json = builder.to_view();
             debug_timing(debug_, TimingEvent::BuildEnd, RequestT::notecard_request);
@@ -718,7 +718,7 @@ private:
     static void framed_build(JsonBuilder& b, void* p) {
         auto& f = *static_cast<RequestFrame*>(p);
         b.add("req", f.request_name);
-        if (f.req_id) b.add("id", static_cast<int32_t>(f.req_id));
+        if (f.req_id) b.add("id", static_cast<json_int_t>(f.req_id));
         f.inner(b, f.inner_ctx);
     }
 

@@ -98,10 +98,10 @@ struct CardAux {
 #if NOTE_API_VERSION < NOTE_VERSION(3, 5, 1)
     [[deprecated("requires firmware >= 3.5.1")]]
 #endif
-    struct count_t : Field<int32_t> {
-        using Field<int32_t>::Field;
-        using Field<int32_t>::operator=;
-        CardAux& operator()(int32_t v);
+    struct count_t : Field<note::json_int_t> {
+        using Field<note::json_int_t>::Field;
+        using Field<note::json_int_t>::operator=;
+        CardAux& operator()(note::json_int_t v);
     } count{};
 #endif
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1) || !defined(NOTE_API_STRICT)
@@ -145,10 +145,10 @@ struct CardAux {
     /// subsequent counts are added to the final sample. Passing `0` or omitting
     /// this value will provide a single incrementing count of rising edges on
     /// the pin.
-    struct max_t : Field<int32_t> {
-        using Field<int32_t>::Field;
-        using Field<int32_t>::operator=;
-        CardAux& operator()(int32_t v);
+    struct max_t : Field<note::json_int_t> {
+        using Field<note::json_int_t>::Field;
+        using Field<note::json_int_t>::operator=;
+        CardAux& operator()(note::json_int_t v);
     } max{};
     /// The AUX mode. Must be one of the following keywords. Some keywords are
     /// only supported on certain types of Notecards.
@@ -213,19 +213,19 @@ struct CardAux {
 #if NOTE_API_VERSION < NOTE_VERSION(5, 1, 1)
     [[deprecated("requires firmware >= 5.1.1")]]
 #endif
-    struct ms_t : Field<int32_t> {
-        using Field<int32_t>::Field;
-        using Field<int32_t>::operator=;
-        CardAux& operator()(int32_t v);
+    struct ms_t : Field<note::json_int_t> {
+        using Field<note::json_int_t>::Field;
+        using Field<note::json_int_t>::operator=;
+        CardAux& operator()(note::json_int_t v);
     } ms{};
 #endif
     /// When used with `"mode":"neo-monitor"` or `"mode":"track-neo-monitor"`,
     /// this is the 1-based index in a strip of NeoPixels that determines which
     /// single NeoPixel the host can command.
-    struct offset_t : Field<int32_t> {
-        using Field<int32_t>::Field;
-        using Field<int32_t>::operator=;
-        CardAux& operator()(int32_t v);
+    struct offset_t : Field<note::json_int_t> {
+        using Field<note::json_int_t>::Field;
+        using Field<note::json_int_t>::operator=;
+        CardAux& operator()(note::json_int_t v);
     } offset{};
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
     /// The AUX UART baud rate for debug communication over the AUXRX and AUXTX
@@ -236,19 +236,19 @@ struct CardAux {
 #if NOTE_API_VERSION < NOTE_VERSION(3, 2, 1)
     [[deprecated("requires firmware >= 3.2.1")]]
 #endif
-    struct rate_t : Field<int32_t> {
-        using Field<int32_t>::Field;
-        using Field<int32_t>::operator=;
-        CardAux& operator()(int32_t v);
+    struct rate_t : Field<note::json_int_t> {
+        using Field<note::json_int_t>::Field;
+        using Field<note::json_int_t>::operator=;
+        CardAux& operator()(note::json_int_t v);
     } rate{};
 #endif
     /// When in `gpio` mode, if an `AUX` pin is configured as a `count` type,
     /// the count of rising edges can be broken into samples of this duration.
     /// Passing `0` or omitting this field will total into a single sample.
-    struct seconds_t : Field<int32_t> {
-        using Field<int32_t>::Field;
-        using Field<int32_t>::operator=;
-        CardAux& operator()(int32_t v);
+    struct seconds_t : Field<note::json_int_t> {
+        using Field<note::json_int_t>::Field;
+        using Field<note::json_int_t>::operator=;
+        CardAux& operator()(note::json_int_t v);
     } seconds{};
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
     /// When used with `"mode":"neo-monitor"` or `"mode":"track-neo-monitor"`,
@@ -259,10 +259,10 @@ struct CardAux {
 #if NOTE_API_VERSION < NOTE_VERSION(3, 5, 1)
     [[deprecated("requires firmware >= 3.5.1")]]
 #endif
-    struct sensitivity_t : Field<int32_t> {
-        using Field<int32_t>::Field;
-        using Field<int32_t>::operator=;
-        CardAux& operator()(int32_t v);
+    struct sensitivity_t : Field<note::json_int_t> {
+        using Field<note::json_int_t>::Field;
+        using Field<note::json_int_t>::operator=;
+        CardAux& operator()(note::json_int_t v);
     } sensitivity{};
 #endif
     /// When in `gpio` mode, if an `AUX` pin is configured as a `count` type,
@@ -421,10 +421,10 @@ struct CardAux {
 #endif
         /// When in AUX `gpio` mode, and if `count` is enabled on an AUX pin,
         /// the number of seconds per sample.
-        note::ResponseField<int32_t> seconds{};
+        note::ResponseField<note::json_int_t> seconds{};
         /// When in AUX `gpio` mode, and if `count` is enabled on an AUX pin,
         /// the time that counting started.
-        note::ResponseField<int32_t> time{};
+        note::ResponseField<note::json_int_t> time{};
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
@@ -482,7 +482,7 @@ struct CardAux {
                 if (note::flash(keys_::rsp_seconds) == k_) { rsp.seconds = ::note::parse_int(raw_); return; }
                 if (note::flash(keys_::rsp_time) == k_) { rsp.time = ::note::parse_int(raw_); return; }
             }
-            NOTE_SINK_NOINLINE void on_int(::note::string_view k_, int32_t v_) {
+            NOTE_SINK_NOINLINE void on_int(::note::string_view k_, ::note::json_int_t v_) {
                 if (note::flash(keys_::rsp_seconds) == k_) { rsp.seconds = v_; return; }
                 if (note::flash(keys_::rsp_time) == k_) { rsp.time = v_; return; }
             }
@@ -538,8 +538,8 @@ struct CardAux {
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
         static constexpr ::note::FieldDesc table[] NOTE_FLASH_ATTR = {
             {keys_::rsp_mode, static_cast<uint16_t>(offsetof(Response, mode)), ::note::FieldType::String},
-            {keys_::rsp_seconds, static_cast<uint16_t>(offsetof(Response, seconds)), ::note::FieldType::Int32},
-            {keys_::rsp_time, static_cast<uint16_t>(offsetof(Response, time)), ::note::FieldType::Int32},
+            {keys_::rsp_seconds, static_cast<uint16_t>(offsetof(Response, seconds)), ::note::FieldType::Int},
+            {keys_::rsp_time, static_cast<uint16_t>(offsetof(Response, time)), ::note::FieldType::Int},
         };
 #pragma GCC diagnostic pop
         return table;
@@ -587,7 +587,7 @@ struct CardAux {
             {keys_::connected, static_cast<uint16_t>(offsetof(CardAux, connected)), ::note::ReqFieldType::Bool},
 #endif
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
-            {keys_::count, static_cast<uint16_t>(offsetof(CardAux, count)), ::note::ReqFieldType::Int32},
+            {keys_::count, static_cast<uint16_t>(offsetof(CardAux, count)), ::note::ReqFieldType::Int},
 #endif
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1) || !defined(NOTE_API_STRICT)
             {keys_::file, static_cast<uint16_t>(offsetof(CardAux, file)), ::note::ReqFieldType::String},
@@ -596,18 +596,18 @@ struct CardAux {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
             {keys_::limit, static_cast<uint16_t>(offsetof(CardAux, limit)), ::note::ReqFieldType::Bool},
 #endif
-            {keys_::max, static_cast<uint16_t>(offsetof(CardAux, max)), ::note::ReqFieldType::Int32},
+            {keys_::max, static_cast<uint16_t>(offsetof(CardAux, max)), ::note::ReqFieldType::Int},
             {keys_::mode, static_cast<uint16_t>(offsetof(CardAux, mode)), ::note::ReqFieldType::String},
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
-            {keys_::ms, static_cast<uint16_t>(offsetof(CardAux, ms)), ::note::ReqFieldType::Int32},
+            {keys_::ms, static_cast<uint16_t>(offsetof(CardAux, ms)), ::note::ReqFieldType::Int},
 #endif
-            {keys_::offset, static_cast<uint16_t>(offsetof(CardAux, offset)), ::note::ReqFieldType::Int32},
+            {keys_::offset, static_cast<uint16_t>(offsetof(CardAux, offset)), ::note::ReqFieldType::Int},
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
-            {keys_::rate, static_cast<uint16_t>(offsetof(CardAux, rate)), ::note::ReqFieldType::Int32},
+            {keys_::rate, static_cast<uint16_t>(offsetof(CardAux, rate)), ::note::ReqFieldType::Int},
 #endif
-            {keys_::seconds, static_cast<uint16_t>(offsetof(CardAux, seconds)), ::note::ReqFieldType::Int32},
+            {keys_::seconds, static_cast<uint16_t>(offsetof(CardAux, seconds)), ::note::ReqFieldType::Int},
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
-            {keys_::sensitivity, static_cast<uint16_t>(offsetof(CardAux, sensitivity)), ::note::ReqFieldType::Int32},
+            {keys_::sensitivity, static_cast<uint16_t>(offsetof(CardAux, sensitivity)), ::note::ReqFieldType::Int},
 #endif
             {keys_::start, static_cast<uint16_t>(offsetof(CardAux, start)), ::note::ReqFieldType::Bool},
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
@@ -743,8 +743,8 @@ inline CardAux& CardAux::connected_t::operator()(bool v) {
 }
 #endif
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
-inline CardAux& CardAux::count_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardAux& CardAux::count_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardAux*>(
         reinterpret_cast<char*>(this) - offsetof(CardAux, count));
 }
@@ -768,8 +768,8 @@ inline CardAux& CardAux::limit_t::operator()(bool v) {
         reinterpret_cast<char*>(this) - offsetof(CardAux, limit));
 }
 #endif
-inline CardAux& CardAux::max_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardAux& CardAux::max_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardAux*>(
         reinterpret_cast<char*>(this) - offsetof(CardAux, max));
 }
@@ -779,32 +779,32 @@ inline CardAux& CardAux::mode_t::operator()(note::string_view v) {
         reinterpret_cast<char*>(this) - offsetof(CardAux, mode));
 }
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
-inline CardAux& CardAux::ms_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardAux& CardAux::ms_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardAux*>(
         reinterpret_cast<char*>(this) - offsetof(CardAux, ms));
 }
 #endif
-inline CardAux& CardAux::offset_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardAux& CardAux::offset_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardAux*>(
         reinterpret_cast<char*>(this) - offsetof(CardAux, offset));
 }
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
-inline CardAux& CardAux::rate_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardAux& CardAux::rate_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardAux*>(
         reinterpret_cast<char*>(this) - offsetof(CardAux, rate));
 }
 #endif
-inline CardAux& CardAux::seconds_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardAux& CardAux::seconds_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardAux*>(
         reinterpret_cast<char*>(this) - offsetof(CardAux, seconds));
 }
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
-inline CardAux& CardAux::sensitivity_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardAux& CardAux::sensitivity_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardAux*>(
         reinterpret_cast<char*>(this) - offsetof(CardAux, sensitivity));
 }

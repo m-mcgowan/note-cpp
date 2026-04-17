@@ -113,7 +113,7 @@ struct EnvTemplate {
         /// The maximum number of bytes that will be used when environment
         /// variables are communicated or stored, so long as the variables do
         /// not include variable-length strings.
-        note::ResponseField<int32_t> bytes{};
+        note::ResponseField<note::json_int_t> bytes{};
 
 #if !NOTE_NO_BUFFERED
         static Response parse(std::unique_ptr<JsonReader> reader_) {
@@ -143,7 +143,7 @@ struct EnvTemplate {
             NOTE_SINK_NOINLINE void on_number(::note::string_view k_, ::note::string_view raw_) {
                 if (note::flash(keys_::rsp_bytes) == k_) { rsp.bytes = ::note::parse_int(raw_); return; }
             }
-            NOTE_SINK_NOINLINE void on_int(::note::string_view k_, int32_t v_) {
+            NOTE_SINK_NOINLINE void on_int(::note::string_view k_, ::note::json_int_t v_) {
                 if (note::flash(keys_::rsp_bytes) == k_) { rsp.bytes = v_; return; }
             }
             NOTE_SINK_NOINLINE void reset() {
@@ -177,7 +177,7 @@ struct EnvTemplate {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
         static constexpr ::note::FieldDesc table[] NOTE_FLASH_ATTR = {
-            {keys_::rsp_bytes, static_cast<uint16_t>(offsetof(Response, bytes)), ::note::FieldType::Int32},
+            {keys_::rsp_bytes, static_cast<uint16_t>(offsetof(Response, bytes)), ::note::FieldType::Int},
         };
 #pragma GCC diagnostic pop
         return table;

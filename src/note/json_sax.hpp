@@ -22,13 +22,13 @@
 namespace note {
 
 namespace detail {
-    inline size_t format_int(char* buf, int32_t v) {
+    inline size_t format_int(char* buf, json_int_t v) {
         // Simple int-to-string without snprintf dependency
         if (v == 0) { buf[0] = '0'; return 1; }
         size_t pos = 0;
         bool neg = v < 0;
-        uint32_t abs = neg ? static_cast<uint32_t>(-(v + 1)) + 1u : static_cast<uint32_t>(v);
-        char tmp[11];
+        uint64_t abs = neg ? static_cast<uint64_t>(-(v + 1)) + 1u : static_cast<uint64_t>(v);
+        char tmp[20];
         size_t tpos = 0;
         while (abs > 0) { tmp[tpos++] = static_cast<char>('0' + abs % 10); abs /= 10; }
         if (neg) buf[pos++] = '-';
@@ -49,7 +49,7 @@ namespace detail {
 #if __cplusplus >= 202002L
 template<typename T>
 concept SinkLike = requires(T t, string_view k, string_view v, bool b,
-                            int32_t i, double f) {
+                            json_int_t i, double f) {
     t.on_null(k);
     t.on_bool(k, b);
     t.on_int(k, i);
@@ -78,8 +78,8 @@ public:
     virtual void on_null(string_view key) { (void)key; }
     virtual void on_bool(string_view key, bool value) { (void)key; (void)value; }
     virtual void on_number(string_view key, string_view raw) { (void)key; (void)raw; }
-    virtual void on_int(string_view key, int32_t value) {
-        char buf[12];
+    virtual void on_int(string_view key, json_int_t value) {
+        char buf[24];
         auto n = detail::format_int(buf, value);
         on_number(key, string_view(buf, n));
     }
@@ -118,7 +118,7 @@ public:
     void on_null(string_view key) override { inner_.on_null(key); }
     void on_bool(string_view key, bool value) override { inner_.on_bool(key, value); }
     void on_number(string_view key, string_view raw) override { inner_.on_number(key, raw); }
-    void on_int(string_view key, int32_t value) override { inner_.on_int(key, value); }
+    void on_int(string_view key, json_int_t value) override { inner_.on_int(key, value); }
     void on_float(string_view key, double value) override { inner_.on_float(key, value); }
     void on_string(string_view key, string_view value) override { inner_.on_string(key, value); }
     void on_object_begin(string_view key) override { inner_.on_object_begin(key); }
@@ -138,7 +138,7 @@ public:
 struct NullSink {
     void on_null(string_view) {}
     void on_bool(string_view, bool) {}
-    void on_int(string_view, int32_t) {}
+    void on_int(string_view, json_int_t) {}
     void on_float(string_view, double) {}
     void on_number(string_view, string_view) {}
     void on_string(string_view, string_view) {}
@@ -166,7 +166,7 @@ public:
     void on_null(string_view key) { inner_.on_null(key); }
     void on_bool(string_view key, bool value) { inner_.on_bool(key, value); }
     void on_number(string_view key, string_view raw) { inner_.on_number(key, raw); }
-    void on_int(string_view key, int32_t value) { inner_.on_int(key, value); }
+    void on_int(string_view key, json_int_t value) { inner_.on_int(key, value); }
     void on_float(string_view key, double value) { inner_.on_float(key, value); }
     void on_string(string_view key, string_view value) { inner_.on_string(key, value); }
     void on_object_begin(string_view key) { inner_.on_object_begin(key); }
@@ -211,7 +211,7 @@ struct DefaultSink {
     void on_null(string_view) {}
     void on_bool(string_view, bool) {}
     void on_number(string_view, string_view) {}
-    void on_int(string_view, int32_t) {}
+    void on_int(string_view, json_int_t) {}
     void on_float(string_view, double) {}
     void on_string(string_view, string_view) {}
     void on_object_begin(string_view) {}
@@ -232,7 +232,7 @@ public:
     void on_null(string_view key) override { inner_.on_null(key); }
     void on_bool(string_view key, bool value) override { inner_.on_bool(key, value); }
     void on_number(string_view key, string_view raw) override { inner_.on_number(key, raw); }
-    void on_int(string_view key, int32_t value) override { inner_.on_int(key, value); }
+    void on_int(string_view key, json_int_t value) override { inner_.on_int(key, value); }
     void on_float(string_view key, double value) override { inner_.on_float(key, value); }
     void on_string(string_view key, string_view value) override { inner_.on_string(key, value); }
     void on_object_begin(string_view key) override { inner_.on_object_begin(key); }
@@ -570,9 +570,9 @@ private:
 }  // namespace detail
 
 // Helpers for parsing number strings delivered via on_number().
-inline int32_t parse_int(string_view raw, int32_t def = 0) {
+inline json_int_t parse_int(string_view raw, json_int_t def = 0) {
     if (raw.empty()) return def;
-    int32_t result = 0;
+    json_int_t result = 0;
     bool negative = false;
     size_t i = 0;
     if (raw[0] == '-') { negative = true; ++i; }

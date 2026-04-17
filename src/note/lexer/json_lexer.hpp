@@ -369,7 +369,7 @@ private:
 
         // Number terminated by this character — emit, then re-process.
         if (number_.is_integer())
-            emit(LexerEvent::make_int(number_.to_int32()), fn, ctx);
+            emit(LexerEvent::make_int(number_.to_int()), fn, ctx);
         else
             emit(LexerEvent::make_float(number_.to_float()), fn, ctx);
 

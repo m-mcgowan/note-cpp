@@ -1,6 +1,7 @@
 #pragma once
 
 #include <note/note_config.hpp>
+#include <note/types.hpp>
 
 #include <cstddef>
 #include <cstdint>
@@ -8,16 +9,16 @@
 namespace note::detail {
 
 // Write an integer to buf, return number of chars written.
-constexpr size_t itoa(char* buf, size_t cap, int32_t value) {
+constexpr size_t itoa(char* buf, size_t cap, json_int_t value) {
     if (cap == 0) return 0;
 
     size_t pos = 0;
-    uint32_t uv{};
+    uint64_t uv{};
     if (value < 0) {
         buf[pos++] = '-';
-        uv = static_cast<uint32_t>(-(value + 1)) + 1;
+        uv = static_cast<uint64_t>(-(value + 1)) + 1;
     } else {
-        uv = static_cast<uint32_t>(value);
+        uv = static_cast<uint64_t>(value);
     }
 
     // Write digits in reverse, then flip.

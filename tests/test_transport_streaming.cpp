@@ -727,7 +727,7 @@ TEST_CASE("transact_dispatch: basic response via SaxDispatch") {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
     note::FieldDesc fields[] = {
-        {"value", static_cast<uint16_t>(offsetof(DispatchTestRsp, value)), note::FieldType::Int32},
+        {"value", static_cast<uint16_t>(offsetof(DispatchTestRsp, value)), note::FieldType::Int},
         {"name", static_cast<uint16_t>(offsetof(DispatchTestRsp, name)), note::FieldType::String},
     };
 #pragma GCC diagnostic pop
@@ -752,7 +752,7 @@ TEST_CASE("make_sax_dispatch: exercise all events for GenericResponseSink") {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
     note::FieldDesc fields[] = {
-        {"value", static_cast<uint16_t>(offsetof(DispatchTestRsp, value)), note::FieldType::Int32},
+        {"value", static_cast<uint16_t>(offsetof(DispatchTestRsp, value)), note::FieldType::Int},
         {"name", static_cast<uint16_t>(offsetof(DispatchTestRsp, name)), note::FieldType::String},
     };
 #pragma GCC diagnostic pop

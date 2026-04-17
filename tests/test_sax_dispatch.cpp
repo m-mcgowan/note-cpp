@@ -13,7 +13,7 @@ struct SaxRecordingSink {
         Tag tag;
         std::string key;
         bool b = false;
-        int32_t i = 0;
+        note::json_int_t i = 0;
         double f = 0.0;
         std::string s;
     };
@@ -29,7 +29,7 @@ struct SaxRecordingSink {
         Event e{}; e.tag = Event::Bool; e.key = std::string(k.data(), k.size()); e.b = v;
         events.push_back(e);
     }
-    void on_int(note::string_view k, int32_t v) {
+    void on_int(note::string_view k, note::json_int_t v) {
         Event e{}; e.tag = Event::Int; e.key = std::string(k.data(), k.size()); e.i = v;
         events.push_back(e);
     }

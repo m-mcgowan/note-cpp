@@ -78,7 +78,7 @@ static std::vector<T> collect_values(const std::vector<LexerEvent>& events,
     std::vector<T> out;
     for (auto& ev : events) {
         if (ev.tag == tag) {
-            if constexpr (std::is_same_v<T, int32_t>) out.push_back(ev.integer);
+            if constexpr (std::is_same_v<T, int32_t>) out.push_back(static_cast<int32_t>(ev.integer));
             else if constexpr (std::is_same_v<T, double>) out.push_back(ev.floating);
             else if constexpr (std::is_same_v<T, bool>) out.push_back(ev.boolean);
         }
@@ -169,28 +169,28 @@ TEST_CASE("Number: positive integer") {
     IncrementalNumber n;
     n.add_digit(4); n.add_digit(2);
     REQUIRE(n.is_integer());
-    REQUIRE(n.to_int32() == 42);
+    REQUIRE(n.to_int() == 42);
 }
 
 TEST_CASE("Number: negative integer") {
     IncrementalNumber n;
     n.set_negative();
     n.add_digit(7);
-    REQUIRE(n.to_int32() == -7);
+    REQUIRE(n.to_int() == -7);
 }
 
 TEST_CASE("Number: zero") {
     IncrementalNumber n;
     n.add_digit(0);
     REQUIRE(n.is_integer());
-    REQUIRE(n.to_int32() == 0);
+    REQUIRE(n.to_int() == 0);
 }
 
 TEST_CASE("Number: negative zero") {
     IncrementalNumber n;
     n.set_negative();
     n.add_digit(0);
-    REQUIRE(n.to_int32() == 0);
+    REQUIRE(n.to_int() == 0);
 }
 
 TEST_CASE("Number: large integer near int32 max") {
@@ -199,7 +199,7 @@ TEST_CASE("Number: large integer near int32 max") {
     for (char c : std::string("2147483647"))
         n.add_digit(static_cast<uint8_t>(c - '0'));
     REQUIRE(n.is_integer());
-    REQUIRE(n.to_int32() == 2147483647);
+    REQUIRE(n.to_int() == 2147483647);
 }
 
 TEST_CASE("Number: float with fraction") {
@@ -274,7 +274,7 @@ TEST_CASE("Number: reset clears state") {
     n.reset();
     n.add_digit(1);
     REQUIRE(n.is_integer());
-    REQUIRE(n.to_int32() == 1);
+    REQUIRE(n.to_int() == 1);
 }
 
 // ═════════════════════════════════════════════════════════════════════════
@@ -693,7 +693,7 @@ struct SinkEvent {
     Type type;
     std::string key;
     std::string str_val;
-    int32_t int_val = 0;
+    note::json_int_t int_val = 0;
     double float_val = 0.0;
     bool bool_val = false;
 };
@@ -722,7 +722,7 @@ struct RecSink : note::JsonSink {
         }
         events.push_back(ev);
     }
-    void on_int(note::string_view k, int32_t v) override {
+    void on_int(note::string_view k, note::json_int_t v) override {
         events.push_back({SinkEvent::Int, std::string(k), {}, v, 0, false});
     }
     void on_float(note::string_view k, double v) override {
@@ -840,20 +840,20 @@ TEST_CASE("CompactNumber: positive integer") {
     CompactNumber n;
     n.add_digit(1); n.add_digit(2); n.add_digit(3);
     REQUIRE(n.is_integer());
-    REQUIRE(n.to_int32() == 123);
+    REQUIRE(n.to_int() == 123);
 }
 
 TEST_CASE("CompactNumber: negative integer") {
     CompactNumber n;
     n.set_negative();
     n.add_digit(4); n.add_digit(2);
-    REQUIRE(n.to_int32() == -42);
+    REQUIRE(n.to_int() == -42);
 }
 
 TEST_CASE("CompactNumber: zero") {
     CompactNumber n;
     n.add_digit(0);
-    REQUIRE(n.to_int32() == 0);
+    REQUIRE(n.to_int() == 0);
 }
 
 TEST_CASE("CompactNumber: simple float") {
@@ -898,7 +898,7 @@ TEST_CASE("CompactNumber: reset") {
     n.add_digit(9); n.set_negative();
     n.reset();
     n.add_digit(1);
-    REQUIRE(n.to_int32() == 1);
+    REQUIRE(n.to_int() == 1);
 }
 
 TEST_CASE("CompactNumber: large integer within int32 range") {
@@ -906,7 +906,7 @@ TEST_CASE("CompactNumber: large integer within int32 range") {
     // 2,000,000,000
     n.add_digit(2);
     for (int i = 0; i < 9; ++i) n.add_digit(0);
-    REQUIRE(n.to_int32() == 2000000000);
+    REQUIRE(n.to_int() == 2000000000);
 }
 
 TEST_CASE("CompactNumber: fractional precision 6 digits") {

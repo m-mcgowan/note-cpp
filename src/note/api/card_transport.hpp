@@ -128,10 +128,10 @@ struct CardTransport {
 #if NOTE_API_VERSION < NOTE_VERSION(5, 3, 1)
     [[deprecated("requires firmware >= 5.3.1")]]
 #endif
-    struct seconds_t : Field<int32_t> {
-        using Field<int32_t>::Field;
-        using Field<int32_t>::operator=;
-        CardTransport& operator()(int32_t v);
+    struct seconds_t : Field<note::json_int_t> {
+        using Field<note::json_int_t>::Field;
+        using Field<note::json_int_t>::operator=;
+        CardTransport& operator()(note::json_int_t v);
     } seconds{};
 #endif
 #if NOTE_API_VERSION >= NOTE_VERSION(9, 1, 1) || !defined(NOTE_API_STRICT)
@@ -325,7 +325,7 @@ struct CardTransport {
 #endif
             {keys_::method, static_cast<uint16_t>(offsetof(CardTransport, method)), ::note::ReqFieldType::String},
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
-            {keys_::seconds, static_cast<uint16_t>(offsetof(CardTransport, seconds)), ::note::ReqFieldType::Int32},
+            {keys_::seconds, static_cast<uint16_t>(offsetof(CardTransport, seconds)), ::note::ReqFieldType::Int},
 #endif
 #if NOTE_API_VERSION >= NOTE_VERSION(9, 1, 1) || !defined(NOTE_API_STRICT)
             {keys_::umin, static_cast<uint16_t>(offsetof(CardTransport, umin)), ::note::ReqFieldType::Bool},
@@ -404,8 +404,8 @@ inline CardTransport& CardTransport::method_t::operator()(note::string_view v) {
         reinterpret_cast<char*>(this) - offsetof(CardTransport, method));
 }
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
-inline CardTransport& CardTransport::seconds_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardTransport& CardTransport::seconds_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardTransport*>(
         reinterpret_cast<char*>(this) - offsetof(CardTransport, seconds));
 }

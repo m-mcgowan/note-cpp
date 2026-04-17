@@ -80,10 +80,10 @@ struct CardTriangulate {
 
     /// Minimum delay, in minutes, between triangulation attempts. Use `0` for
     /// no time-based suppression.
-    struct minutes_t : Field<int32_t> {
-        using Field<int32_t>::Field;
-        using Field<int32_t>::operator=;
-        CardTriangulate& operator()(int32_t v);
+    struct minutes_t : Field<note::json_int_t> {
+        using Field<note::json_int_t>::Field;
+        using Field<note::json_int_t>::operator=;
+        CardTriangulate& operator()(note::json_int_t v);
     } minutes{};
     /// The triangulation approach to use for determining the Notecard location.
     /// The following keywords can be used separately or together in a comma-
@@ -183,10 +183,10 @@ struct CardTriangulate {
     } text{};
     /// When passed with `text`, records the time that the WiFi access point
     /// scan was performed. If not provided, Notecard time is used.
-    struct time_t : Field<int32_t> {
-        using Field<int32_t>::Field;
-        using Field<int32_t>::operator=;
-        CardTriangulate& operator()(int32_t v);
+    struct time_t : Field<note::json_int_t> {
+        using Field<note::json_int_t>::Field;
+        using Field<note::json_int_t>::operator=;
+        CardTriangulate& operator()(note::json_int_t v);
     } time{};
     /// `true` to use perform triangulation only when the Notecard is connected
     /// to USB power. Only takes effect when `set` is `true`.
@@ -240,16 +240,16 @@ struct CardTriangulate {
 
         /// The length of the `text` buffer provided in the current or a
         /// previous request.
-        note::ResponseField<int32_t> length{};
+        note::ResponseField<note::json_int_t> length{};
         /// A comma-separated list indicating the active triangulation modes.
         note::ResponseField<note::string_view> mode{};
         /// Time of last detected Notecard movement.
-        note::ResponseField<int32_t> motion{};
+        note::ResponseField<note::json_int_t> motion{};
         /// `true` if triangulation scans will be performed even if the device
         /// has not moved.
         note::ResponseField<bool> on{};
         /// Time of last triangulation scan.
-        note::ResponseField<int32_t> time{};
+        note::ResponseField<note::json_int_t> time{};
         /// `true` if triangulation scans will be performed only when the device
         /// is USB-powered.
         note::ResponseField<bool> usb{};
@@ -302,7 +302,7 @@ struct CardTriangulate {
                 if (note::flash(keys_::rsp_motion) == k_) { rsp.motion = ::note::parse_int(raw_); return; }
                 if (note::flash(keys_::rsp_time) == k_) { rsp.time = ::note::parse_int(raw_); return; }
             }
-            NOTE_SINK_NOINLINE void on_int(::note::string_view k_, int32_t v_) {
+            NOTE_SINK_NOINLINE void on_int(::note::string_view k_, ::note::json_int_t v_) {
                 if (note::flash(keys_::rsp_length) == k_) { rsp.length = v_; return; }
                 if (note::flash(keys_::rsp_motion) == k_) { rsp.motion = v_; return; }
                 if (note::flash(keys_::rsp_time) == k_) { rsp.time = v_; return; }
@@ -360,11 +360,11 @@ struct CardTriangulate {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
         static constexpr ::note::FieldDesc table[] NOTE_FLASH_ATTR = {
-            {keys_::rsp_length, static_cast<uint16_t>(offsetof(Response, length)), ::note::FieldType::Int32},
+            {keys_::rsp_length, static_cast<uint16_t>(offsetof(Response, length)), ::note::FieldType::Int},
             {keys_::rsp_mode, static_cast<uint16_t>(offsetof(Response, mode)), ::note::FieldType::String},
-            {keys_::rsp_motion, static_cast<uint16_t>(offsetof(Response, motion)), ::note::FieldType::Int32},
+            {keys_::rsp_motion, static_cast<uint16_t>(offsetof(Response, motion)), ::note::FieldType::Int},
             {keys_::rsp_on, static_cast<uint16_t>(offsetof(Response, on)), ::note::FieldType::Bool},
-            {keys_::rsp_time, static_cast<uint16_t>(offsetof(Response, time)), ::note::FieldType::Int32},
+            {keys_::rsp_time, static_cast<uint16_t>(offsetof(Response, time)), ::note::FieldType::Int},
             {keys_::rsp_usb, static_cast<uint16_t>(offsetof(Response, usb)), ::note::FieldType::Bool},
         };
 #pragma GCC diagnostic pop
@@ -407,12 +407,12 @@ struct CardTriangulate {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
         static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
-            {keys_::minutes, static_cast<uint16_t>(offsetof(CardTriangulate, minutes)), ::note::ReqFieldType::Int32},
+            {keys_::minutes, static_cast<uint16_t>(offsetof(CardTriangulate, minutes)), ::note::ReqFieldType::Int},
             {keys_::mode, static_cast<uint16_t>(offsetof(CardTriangulate, mode)), ::note::ReqFieldType::String},
             {keys_::on, static_cast<uint16_t>(offsetof(CardTriangulate, on)), ::note::ReqFieldType::Bool},
             {keys_::set, static_cast<uint16_t>(offsetof(CardTriangulate, set)), ::note::ReqFieldType::Bool},
             {keys_::text, static_cast<uint16_t>(offsetof(CardTriangulate, text)), ::note::ReqFieldType::String},
-            {keys_::time, static_cast<uint16_t>(offsetof(CardTriangulate, time)), ::note::ReqFieldType::Int32},
+            {keys_::time, static_cast<uint16_t>(offsetof(CardTriangulate, time)), ::note::ReqFieldType::Int},
             {keys_::usb, static_cast<uint16_t>(offsetof(CardTriangulate, usb)), ::note::ReqFieldType::Bool},
         };
 #pragma GCC diagnostic pop
@@ -473,8 +473,8 @@ struct CardTriangulate {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-inline CardTriangulate& CardTriangulate::minutes_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardTriangulate& CardTriangulate::minutes_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardTriangulate*>(
         reinterpret_cast<char*>(this) - offsetof(CardTriangulate, minutes));
 }
@@ -527,8 +527,8 @@ inline CardTriangulate& CardTriangulate::text_t::operator()(note::string_view v)
     return *reinterpret_cast<CardTriangulate*>(
         reinterpret_cast<char*>(this) - offsetof(CardTriangulate, text));
 }
-inline CardTriangulate& CardTriangulate::time_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardTriangulate& CardTriangulate::time_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardTriangulate*>(
         reinterpret_cast<char*>(this) - offsetof(CardTriangulate, time));
 }

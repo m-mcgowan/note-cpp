@@ -435,7 +435,7 @@ TEST_CASE("_note_field_descs generates correct descriptor table") {
 
     REQUIRE(n == 4);
     REQUIRE(descs[0].type == note::FieldType::Float32);   // float → Float32
-    REQUIRE(descs[1].type == note::FieldType::Int32);
+    REQUIRE(descs[1].type == note::FieldType::Int);
     REQUIRE(descs[2].type == note::FieldType::Bool);
     REQUIRE(descs[3].type == note::FieldType::String);
 
@@ -811,7 +811,7 @@ TEST_CASE("field_type_of maps C++ types correctly") {
     STATIC_REQUIRE(note::field_type_of<uint8_t>() == note::FieldType::Int8);
     STATIC_REQUIRE(note::field_type_of<int16_t>() == note::FieldType::Int16);
     STATIC_REQUIRE(note::field_type_of<uint16_t>() == note::FieldType::Int16);
-    STATIC_REQUIRE(note::field_type_of<int32_t>() == note::FieldType::Int32);
+    STATIC_REQUIRE(note::field_type_of<int32_t>() == note::FieldType::Int);
     STATIC_REQUIRE(note::field_type_of<float>() == note::FieldType::Float32);
     STATIC_REQUIRE(note::field_type_of<double>() == note::FieldType::Double);
     STATIC_REQUIRE(note::field_type_of<note::string_view>() == note::FieldType::String);

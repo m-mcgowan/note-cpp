@@ -19,12 +19,15 @@ namespace note::test {
 // ---------------------------------------------------------------------------
 class TestJsonBuilder : public JsonBuilder {
 public:
+    using JsonBuilder::add;
+    using JsonBuilder::add_element;
+
     TestJsonBuilder() { buf_ = "{"; needs_comma_.push_back(false); }
 
     TestJsonBuilder& add(string_view k, bool v) override {
         key(k); buf_ += v ? "true" : "false"; return *this;
     }
-    TestJsonBuilder& add(string_view k, int32_t v) override {
+    TestJsonBuilder& add(string_view k, json_int_t v) override {
         key(k); buf_ += std::to_string(v); return *this;
     }
     TestJsonBuilder& add(string_view k, double v) override {
@@ -65,7 +68,7 @@ public:
     TestJsonBuilder& add_element(bool v) override {
         comma(); buf_ += v ? "true" : "false"; return *this;
     }
-    TestJsonBuilder& add_element(int32_t v) override {
+    TestJsonBuilder& add_element(json_int_t v) override {
         comma(); buf_ += std::to_string(v); return *this;
     }
     TestJsonBuilder& add_element(double v) override {
@@ -116,7 +119,7 @@ class TestJsonReader : public JsonReader {
 public:
     bool has(string_view) const override { return false; }
     bool get_bool(string_view, bool def) const override { return def; }
-    int32_t get_int(string_view, int32_t def) const override { return def; }
+    json_int_t get_int(string_view, json_int_t def) const override { return def; }
     double get_double(string_view, double def) const override { return def; }
     string_view get_string(string_view, string_view def) const override { return def; }
     std::unique_ptr<JsonReader> get_object(string_view) const override { return nullptr; }
@@ -130,10 +133,15 @@ public:
 // ---------------------------------------------------------------------------
 class PopulatedJsonReader : public JsonReader {
 public:
-    using Value = std::variant<bool, int32_t, double, std::string>;
+    using Value = std::variant<bool, note::json_int_t, double, std::string>;
 
     void set(const std::string& key, bool v) { values_[key] = v; }
-    void set(const std::string& key, int32_t v) { values_[key] = v; }
+    void set(const std::string& key, note::json_int_t v) { values_[key] = v; }
+    // Widen narrower integer types to json_int_t (prevents int32_t → bool ambiguity).
+    template<typename T, std::enable_if_t<
+        std::is_integral_v<T> && !std::is_same_v<T, bool> &&
+        !std::is_same_v<T, note::json_int_t>, int> = 0>
+    void set(const std::string& key, T v) { values_[key] = static_cast<note::json_int_t>(v); }
     void set(const std::string& key, double v) { values_[key] = v; }
     void set(const std::string& key, const std::string& v) { values_[key] = v; }
 
@@ -155,10 +163,10 @@ public:
             return std::get<bool>(it->second);
         return def;
     }
-    int32_t get_int(string_view k, int32_t def) const override {
+    json_int_t get_int(string_view k, json_int_t def) const override {
         auto it = values_.find(std::string(k));
-        if (it != values_.end() && std::holds_alternative<int32_t>(it->second))
-            return std::get<int32_t>(it->second);
+        if (it != values_.end() && std::holds_alternative<note::json_int_t>(it->second))
+            return std::get<note::json_int_t>(it->second);
         return def;
     }
     double get_double(string_view k, double def) const override {
@@ -232,7 +240,7 @@ public:
 
     bool has(string_view) const override { return false; }
     bool get_bool(string_view, bool def) const override { return def; }
-    int32_t get_int(string_view, int32_t def) const override { return def; }
+    json_int_t get_int(string_view, json_int_t def) const override { return def; }
     double get_double(string_view, double def) const override { return def; }
     string_view get_string(string_view, string_view def) const override { return def; }
     std::unique_ptr<JsonReader> get_object(string_view) const override { return nullptr; }

@@ -663,7 +663,7 @@ TEST_CASE("FilterSink: forwards all event types") {
         void on_null(note::string_view) { ++null_count; }
         void on_bool(note::string_view, bool) { ++bool_count; }
         void on_number(note::string_view, note::string_view) { ++number_count; }
-        void on_int(note::string_view, int32_t) { ++int_count; }
+        void on_int(note::string_view, note::json_int_t) { ++int_count; }
         void on_float(note::string_view, double) { ++float_count; }
         void on_string(note::string_view, note::string_view) { ++string_count; }
         void on_object_begin(note::string_view) { ++obj_begin_count; }
@@ -711,7 +711,7 @@ TEST_CASE("JsonSinkAdapter: adapts concrete sink to virtual JsonSink") {
         void on_null(note::string_view) { ++calls; }
         void on_bool(note::string_view, bool) { ++calls; }
         void on_number(note::string_view, note::string_view) { ++calls; }
-        void on_int(note::string_view, int32_t) { ++calls; }
+        void on_int(note::string_view, note::json_int_t) { ++calls; }
         void on_float(note::string_view, double) { ++calls; }
         void on_string(note::string_view, note::string_view) { ++calls; }
         void on_object_begin(note::string_view) { ++calls; }

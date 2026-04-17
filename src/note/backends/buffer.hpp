@@ -29,6 +29,9 @@ namespace note::backends {
 // ---------------------------------------------------------------------------
 class BufferJsonBuilder : public JsonBuilder {
 public:
+    using JsonBuilder::add;
+    using JsonBuilder::add_element;
+
     BufferJsonBuilder(char* buf, size_t capacity)
         : buf_(buf), capacity_(capacity) { put('{'); }
 
@@ -37,9 +40,9 @@ public:
         put(value ? "true" : "false");
         return *this;
     }
-    BufferJsonBuilder& add(string_view key, int32_t value) override {
+    BufferJsonBuilder& add(string_view key, json_int_t value) override {
         kv(key);
-        char tmp[12];
+        char tmp[24];
         size_t len = note::detail::itoa(tmp, sizeof(tmp), value);
         for (size_t i = 0; i < len; ++i) put(tmp[i]);
         return *this;
@@ -86,9 +89,9 @@ public:
     BufferJsonBuilder& add_element(bool value) override {
         comma(); put(value ? "true" : "false"); return *this;
     }
-    BufferJsonBuilder& add_element(int32_t value) override {
+    BufferJsonBuilder& add_element(json_int_t value) override {
         comma();
-        char tmp[12];
+        char tmp[24];
         size_t len = note::detail::itoa(tmp, sizeof(tmp), value);
         for (size_t i = 0; i < len; ++i) put(tmp[i]);
         return *this;
@@ -207,7 +210,7 @@ public:
         return def;
     }
 
-    int32_t get_int(string_view key, int32_t def) const override {
+    json_int_t get_int(string_view key, json_int_t def) const override {
         int idx = find_value(key);
         if (idx < 0) return def;
         auto sv = tok_view(idx);
@@ -335,9 +338,9 @@ private:
         return -1;
     }
 
-    static int32_t parse_int(string_view sv, int32_t def) {
+    static json_int_t parse_int(string_view sv, json_int_t def) {
         if (sv.empty()) return def;
-        int32_t result = 0;
+        json_int_t result = 0;
         bool negative = false;
         size_t i = 0;
         if (sv[0] == '-') { negative = true; ++i; }

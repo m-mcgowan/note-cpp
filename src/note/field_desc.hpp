@@ -24,7 +24,7 @@ enum class FieldType : uint8_t {
     Bool,
     Int8,
     Int16,
-    Int32,
+    Int,      // json_int_t (int64_t default, int32_t under NOTE_INT32_MATH)
     Float32,
     Double,
     String,
@@ -52,7 +52,7 @@ constexpr FieldType field_type_of() {
     else if constexpr (std::is_same_v<V, float>)
         return FieldType::Float32;
     else if constexpr (std::is_integral_v<V>)
-        return FieldType::Int32;
+        return FieldType::Int;
     else if constexpr (std::is_floating_point_v<V>)
         return FieldType::Double;
     else

@@ -110,10 +110,10 @@ struct CardUsageGet {
     /// using `offset`, use the `time` value of the response. Likewise, to
     /// calculate the end of the time period, add the `seconds` value to the
     /// `time` value.
-    struct offset_t : Field<int32_t> {
-        using Field<int32_t>::Field;
-        using Field<int32_t>::operator=;
-        CardUsageGet& operator()(int32_t v);
+    struct offset_t : Field<note::json_int_t> {
+        using Field<note::json_int_t>::Field;
+        using Field<note::json_int_t>::operator=;
+        CardUsageGet& operator()(note::json_int_t v);
     } offset{};
 
     // Valid values for 'mode':
@@ -165,22 +165,22 @@ struct CardUsageGet {
             ::note::detail::arena_cost(65);  // error reserve (+1 for null terminator)
 
         /// Number of bytes received by the Notecard from Notehub.
-        note::ResponseField<int32_t> bytesReceived{};
+        note::ResponseField<note::json_int_t> bytesReceived{};
         /// Number of bytes sent by the Notecard to Notehub.
-        note::ResponseField<int32_t> bytesSent{};
+        note::ResponseField<note::json_int_t> bytesSent{};
         /// Approximate number of notes received by the Notecard from Notehub.
-        note::ResponseField<int32_t> notesReceived{};
+        note::ResponseField<note::json_int_t> notesReceived{};
         /// Approximate number of notes sent by the Notecard to Notehub.
-        note::ResponseField<int32_t> notesSent{};
+        note::ResponseField<note::json_int_t> notesSent{};
         /// Number of seconds in the analyzed period.
-        note::ResponseField<int32_t> seconds{};
+        note::ResponseField<note::json_int_t> seconds{};
         /// Number of secure Notehub sessions.
-        note::ResponseField<int32_t> sessionsSecure{};
+        note::ResponseField<note::json_int_t> sessionsSecure{};
         /// Number of standard Notehub sessions.
-        note::ResponseField<int32_t> sessionsStandard{};
+        note::ResponseField<note::json_int_t> sessionsStandard{};
         /// Start time of the analyzed period or, if `mode="total"`, the time of
         /// activation.
-        note::ResponseField<int32_t> time{};
+        note::ResponseField<note::json_int_t> time{};
 
 #if !NOTE_NO_BUFFERED
         static Response parse(std::unique_ptr<JsonReader> reader_) {
@@ -231,7 +231,7 @@ struct CardUsageGet {
                 if (note::flash(keys_::rsp_sessionsStandard) == k_) { rsp.sessionsStandard = ::note::parse_int(raw_); return; }
                 if (note::flash(keys_::rsp_time) == k_) { rsp.time = ::note::parse_int(raw_); return; }
             }
-            NOTE_SINK_NOINLINE void on_int(::note::string_view k_, int32_t v_) {
+            NOTE_SINK_NOINLINE void on_int(::note::string_view k_, ::note::json_int_t v_) {
                 if (note::flash(keys_::rsp_bytesReceived) == k_) { rsp.bytesReceived = v_; return; }
                 if (note::flash(keys_::rsp_bytesSent) == k_) { rsp.bytesSent = v_; return; }
                 if (note::flash(keys_::rsp_notesReceived) == k_) { rsp.notesReceived = v_; return; }
@@ -300,14 +300,14 @@ struct CardUsageGet {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
         static constexpr ::note::FieldDesc table[] NOTE_FLASH_ATTR = {
-            {keys_::rsp_bytesReceived, static_cast<uint16_t>(offsetof(Response, bytesReceived)), ::note::FieldType::Int32},
-            {keys_::rsp_bytesSent, static_cast<uint16_t>(offsetof(Response, bytesSent)), ::note::FieldType::Int32},
-            {keys_::rsp_notesReceived, static_cast<uint16_t>(offsetof(Response, notesReceived)), ::note::FieldType::Int32},
-            {keys_::rsp_notesSent, static_cast<uint16_t>(offsetof(Response, notesSent)), ::note::FieldType::Int32},
-            {keys_::rsp_seconds, static_cast<uint16_t>(offsetof(Response, seconds)), ::note::FieldType::Int32},
-            {keys_::rsp_sessionsSecure, static_cast<uint16_t>(offsetof(Response, sessionsSecure)), ::note::FieldType::Int32},
-            {keys_::rsp_sessionsStandard, static_cast<uint16_t>(offsetof(Response, sessionsStandard)), ::note::FieldType::Int32},
-            {keys_::rsp_time, static_cast<uint16_t>(offsetof(Response, time)), ::note::FieldType::Int32},
+            {keys_::rsp_bytesReceived, static_cast<uint16_t>(offsetof(Response, bytesReceived)), ::note::FieldType::Int},
+            {keys_::rsp_bytesSent, static_cast<uint16_t>(offsetof(Response, bytesSent)), ::note::FieldType::Int},
+            {keys_::rsp_notesReceived, static_cast<uint16_t>(offsetof(Response, notesReceived)), ::note::FieldType::Int},
+            {keys_::rsp_notesSent, static_cast<uint16_t>(offsetof(Response, notesSent)), ::note::FieldType::Int},
+            {keys_::rsp_seconds, static_cast<uint16_t>(offsetof(Response, seconds)), ::note::FieldType::Int},
+            {keys_::rsp_sessionsSecure, static_cast<uint16_t>(offsetof(Response, sessionsSecure)), ::note::FieldType::Int},
+            {keys_::rsp_sessionsStandard, static_cast<uint16_t>(offsetof(Response, sessionsStandard)), ::note::FieldType::Int},
+            {keys_::rsp_time, static_cast<uint16_t>(offsetof(Response, time)), ::note::FieldType::Int},
         };
 #pragma GCC diagnostic pop
         return table;
@@ -350,7 +350,7 @@ struct CardUsageGet {
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
         static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
             {keys_::mode, static_cast<uint16_t>(offsetof(CardUsageGet, mode)), ::note::ReqFieldType::String},
-            {keys_::offset, static_cast<uint16_t>(offsetof(CardUsageGet, offset)), ::note::ReqFieldType::Int32},
+            {keys_::offset, static_cast<uint16_t>(offsetof(CardUsageGet, offset)), ::note::ReqFieldType::Int},
         };
 #pragma GCC diagnostic pop
         n_out = sizeof(table_) / sizeof(table_[0]);
@@ -395,8 +395,8 @@ inline CardUsageGet& CardUsageGet::mode_t::operator()(note::string_view v) {
     return *reinterpret_cast<CardUsageGet*>(
         reinterpret_cast<char*>(this) - offsetof(CardUsageGet, mode));
 }
-inline CardUsageGet& CardUsageGet::offset_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardUsageGet& CardUsageGet::offset_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardUsageGet*>(
         reinterpret_cast<char*>(this) - offsetof(CardUsageGet, offset));
 }

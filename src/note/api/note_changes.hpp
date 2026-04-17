@@ -80,10 +80,10 @@ struct NoteChanges {
             NoteChanges::Peek& operator()(note::string_view v);
         } file{};
         /// The maximum number of Notes to return in the request.
-        struct max_t : Field<int32_t> {
-            using Field<int32_t>::Field;
-            using Field<int32_t>::operator=;
-            NoteChanges::Peek& operator()(int32_t v);
+        struct max_t : Field<note::json_int_t> {
+            using Field<note::json_int_t>::Field;
+            using Field<note::json_int_t>::operator=;
+            NoteChanges::Peek& operator()(note::json_int_t v);
         } max{};
         /// `true` to reset a change tracker.
         struct reset_t : Field<bool> {
@@ -154,9 +154,9 @@ struct NoteChanges {
                 ::note::detail::arena_cost(65);  // error reserve (+1 for null terminator)
 
             /// The number of pending changes in the Notefile.
-            note::ResponseField<int32_t> changes{};
+            note::ResponseField<note::json_int_t> changes{};
             /// The total number of Notes in the Notefile.
-            note::ResponseField<int32_t> total{};
+            note::ResponseField<note::json_int_t> total{};
 
 #if !NOTE_NO_BUFFERED
             static Response parse(std::unique_ptr<JsonReader> reader_) {
@@ -189,7 +189,7 @@ struct NoteChanges {
                     if (note::flash(keys_::rsp_changes) == k_) { rsp.changes = ::note::parse_int(raw_); return; }
                     if (note::flash(keys_::rsp_total) == k_) { rsp.total = ::note::parse_int(raw_); return; }
                 }
-                NOTE_SINK_NOINLINE void on_int(::note::string_view k_, int32_t v_) {
+                NOTE_SINK_NOINLINE void on_int(::note::string_view k_, ::note::json_int_t v_) {
                     if (note::flash(keys_::rsp_changes) == k_) { rsp.changes = v_; return; }
                     if (note::flash(keys_::rsp_total) == k_) { rsp.total = v_; return; }
                 }
@@ -228,8 +228,8 @@ struct NoteChanges {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
             static constexpr ::note::FieldDesc table[] NOTE_FLASH_ATTR = {
-                {keys_::rsp_changes, static_cast<uint16_t>(offsetof(Response, changes)), ::note::FieldType::Int32},
-                {keys_::rsp_total, static_cast<uint16_t>(offsetof(Response, total)), ::note::FieldType::Int32},
+                {keys_::rsp_changes, static_cast<uint16_t>(offsetof(Response, changes)), ::note::FieldType::Int},
+                {keys_::rsp_total, static_cast<uint16_t>(offsetof(Response, total)), ::note::FieldType::Int},
             };
 #pragma GCC diagnostic pop
             return table;
@@ -273,7 +273,7 @@ struct NoteChanges {
             static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
                 {keys_::deleted, static_cast<uint16_t>(offsetof(NoteChanges::Peek, deleted)), ::note::ReqFieldType::Bool},
                 {keys_::file, static_cast<uint16_t>(offsetof(NoteChanges::Peek, file)), ::note::ReqFieldType::String},
-                {keys_::max, static_cast<uint16_t>(offsetof(NoteChanges::Peek, max)), ::note::ReqFieldType::Int32},
+                {keys_::max, static_cast<uint16_t>(offsetof(NoteChanges::Peek, max)), ::note::ReqFieldType::Int},
                 {keys_::reset, static_cast<uint16_t>(offsetof(NoteChanges::Peek, reset)), ::note::ReqFieldType::Bool},
                 {keys_::start, static_cast<uint16_t>(offsetof(NoteChanges::Peek, start)), ::note::ReqFieldType::Bool},
                 {keys_::stop, static_cast<uint16_t>(offsetof(NoteChanges::Peek, stop)), ::note::ReqFieldType::Bool},
@@ -380,10 +380,10 @@ struct NoteChanges {
         /// The Notefile ID.
         note::string_view file{};
         /// The maximum number of Notes to return in the request.
-        struct max_t : Field<int32_t> {
-            using Field<int32_t>::Field;
-            using Field<int32_t>::operator=;
-            NoteChanges::Pop& operator()(int32_t v);
+        struct max_t : Field<note::json_int_t> {
+            using Field<note::json_int_t>::Field;
+            using Field<note::json_int_t>::operator=;
+            NoteChanges::Pop& operator()(note::json_int_t v);
         } max{};
         /// `true` to reset a change tracker.
         struct reset_t : Field<bool> {
@@ -454,9 +454,9 @@ struct NoteChanges {
                 ::note::detail::arena_cost(65);  // error reserve (+1 for null terminator)
 
             /// The number of pending changes in the Notefile.
-            note::ResponseField<int32_t> changes{};
+            note::ResponseField<note::json_int_t> changes{};
             /// The total number of Notes in the Notefile.
-            note::ResponseField<int32_t> total{};
+            note::ResponseField<note::json_int_t> total{};
 
 #if !NOTE_NO_BUFFERED
             static Response parse(std::unique_ptr<JsonReader> reader_) {
@@ -489,7 +489,7 @@ struct NoteChanges {
                     if (note::flash(keys_::rsp_changes) == k_) { rsp.changes = ::note::parse_int(raw_); return; }
                     if (note::flash(keys_::rsp_total) == k_) { rsp.total = ::note::parse_int(raw_); return; }
                 }
-                NOTE_SINK_NOINLINE void on_int(::note::string_view k_, int32_t v_) {
+                NOTE_SINK_NOINLINE void on_int(::note::string_view k_, ::note::json_int_t v_) {
                     if (note::flash(keys_::rsp_changes) == k_) { rsp.changes = v_; return; }
                     if (note::flash(keys_::rsp_total) == k_) { rsp.total = v_; return; }
                 }
@@ -528,8 +528,8 @@ struct NoteChanges {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
             static constexpr ::note::FieldDesc table[] NOTE_FLASH_ATTR = {
-                {keys_::rsp_changes, static_cast<uint16_t>(offsetof(Response, changes)), ::note::FieldType::Int32},
-                {keys_::rsp_total, static_cast<uint16_t>(offsetof(Response, total)), ::note::FieldType::Int32},
+                {keys_::rsp_changes, static_cast<uint16_t>(offsetof(Response, changes)), ::note::FieldType::Int},
+                {keys_::rsp_total, static_cast<uint16_t>(offsetof(Response, total)), ::note::FieldType::Int},
             };
 #pragma GCC diagnostic pop
             return table;
@@ -572,7 +572,7 @@ struct NoteChanges {
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
             static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
                 {keys_::deleted, static_cast<uint16_t>(offsetof(NoteChanges::Pop, deleted)), ::note::ReqFieldType::Bool},
-                {keys_::max, static_cast<uint16_t>(offsetof(NoteChanges::Pop, max)), ::note::ReqFieldType::Int32},
+                {keys_::max, static_cast<uint16_t>(offsetof(NoteChanges::Pop, max)), ::note::ReqFieldType::Int},
                 {keys_::reset, static_cast<uint16_t>(offsetof(NoteChanges::Pop, reset)), ::note::ReqFieldType::Bool},
                 {keys_::start, static_cast<uint16_t>(offsetof(NoteChanges::Pop, start)), ::note::ReqFieldType::Bool},
                 {keys_::stop, static_cast<uint16_t>(offsetof(NoteChanges::Pop, stop)), ::note::ReqFieldType::Bool},
@@ -648,8 +648,8 @@ inline NoteChanges::Peek& NoteChanges::Peek::file_t::operator()(note::string_vie
     return *reinterpret_cast<NoteChanges::Peek*>(
         reinterpret_cast<char*>(this) - offsetof(NoteChanges::Peek, file));
 }
-inline NoteChanges::Peek& NoteChanges::Peek::max_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline NoteChanges::Peek& NoteChanges::Peek::max_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<NoteChanges::Peek*>(
         reinterpret_cast<char*>(this) - offsetof(NoteChanges::Peek, max));
 }
@@ -683,8 +683,8 @@ inline NoteChanges::Pop& NoteChanges::Pop::deleted_t::operator()(bool v) {
     return *reinterpret_cast<NoteChanges::Pop*>(
         reinterpret_cast<char*>(this) - offsetof(NoteChanges::Pop, deleted));
 }
-inline NoteChanges::Pop& NoteChanges::Pop::max_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline NoteChanges::Pop& NoteChanges::Pop::max_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<NoteChanges::Pop*>(
         reinterpret_cast<char*>(this) - offsetof(NoteChanges::Pop, max));
 }

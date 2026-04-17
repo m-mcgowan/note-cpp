@@ -105,13 +105,13 @@ struct HubGet {
         /// The URL of the Notehub host.
         note::ResponseField<note::string_view> host{};
         /// The max wait time, in minutes, to sync inbound data from Notehub.
-        note::ResponseField<int32_t> inbound{};
+        note::ResponseField<note::json_int_t> inbound{};
         /// The current operating `mode` of the Notecard, as defined in
         /// `hub.set`.
         note::ResponseField<note::string_view> mode{};
         /// The max wait time, in minutes, to sync outbound data from the
         /// Notecard.
-        note::ResponseField<int32_t> outbound{};
+        note::ResponseField<note::json_int_t> outbound{};
         /// The ProductUID to which the Notecard is registered.
         note::ResponseField<note::string_view> product{};
         /// The serial number of the device, if set.
@@ -184,7 +184,7 @@ struct HubGet {
                 if (note::flash(keys_::rsp_inbound) == k_) { rsp.inbound = ::note::parse_int(raw_); return; }
                 if (note::flash(keys_::rsp_outbound) == k_) { rsp.outbound = ::note::parse_int(raw_); return; }
             }
-            NOTE_SINK_NOINLINE void on_int(::note::string_view k_, int32_t v_) {
+            NOTE_SINK_NOINLINE void on_int(::note::string_view k_, ::note::json_int_t v_) {
                 if (note::flash(keys_::rsp_inbound) == k_) { rsp.inbound = v_; return; }
                 if (note::flash(keys_::rsp_outbound) == k_) { rsp.outbound = v_; return; }
             }
@@ -265,9 +265,9 @@ struct HubGet {
         static constexpr ::note::FieldDesc table[] NOTE_FLASH_ATTR = {
             {keys_::rsp_device, static_cast<uint16_t>(offsetof(Response, device)), ::note::FieldType::String},
             {keys_::rsp_host, static_cast<uint16_t>(offsetof(Response, host)), ::note::FieldType::String},
-            {keys_::rsp_inbound, static_cast<uint16_t>(offsetof(Response, inbound)), ::note::FieldType::Int32},
+            {keys_::rsp_inbound, static_cast<uint16_t>(offsetof(Response, inbound)), ::note::FieldType::Int},
             {keys_::rsp_mode, static_cast<uint16_t>(offsetof(Response, mode)), ::note::FieldType::String},
-            {keys_::rsp_outbound, static_cast<uint16_t>(offsetof(Response, outbound)), ::note::FieldType::Int32},
+            {keys_::rsp_outbound, static_cast<uint16_t>(offsetof(Response, outbound)), ::note::FieldType::Int},
             {keys_::rsp_product, static_cast<uint16_t>(offsetof(Response, product)), ::note::FieldType::String},
             {keys_::rsp_sn, static_cast<uint16_t>(offsetof(Response, sn)), ::note::FieldType::String},
             {keys_::rsp_sync, static_cast<uint16_t>(offsetof(Response, sync)), ::note::FieldType::Bool},

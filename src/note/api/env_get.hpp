@@ -88,10 +88,10 @@ struct EnvGet {
 #if NOTE_API_VERSION < NOTE_VERSION(3, 4, 1)
     [[deprecated("requires firmware >= 3.4.1")]]
 #endif
-    struct time_t : Field<int32_t> {
-        using Field<int32_t>::Field;
-        using Field<int32_t>::operator=;
-        EnvGet& operator()(int32_t v);
+    struct time_t : Field<note::json_int_t> {
+        using Field<note::json_int_t>::Field;
+        using Field<note::json_int_t>::operator=;
+        EnvGet& operator()(note::json_int_t v);
     } time{};
 #endif
 
@@ -177,7 +177,7 @@ struct EnvGet {
 #if NOTE_API_VERSION < NOTE_VERSION(3, 4, 1)
         [[deprecated("requires firmware >= 3.4.1")]]
 #endif
-        note::ResponseField<int32_t> time{};
+        note::ResponseField<note::json_int_t> time{};
 #endif
 
 #if !NOTE_NO_BUFFERED
@@ -265,7 +265,7 @@ struct EnvGet {
                 if (note::flash(keys_::rsp_time) == k_) { rsp.time = ::note::parse_int(raw_); return; }
 #endif
             }
-            NOTE_SINK_NOINLINE void on_int(::note::string_view k_, int32_t v_) {
+            NOTE_SINK_NOINLINE void on_int(::note::string_view k_, ::note::json_int_t v_) {
                 if (body_depth_ > 0) { if (body_handler_) body_handler_.send(::note::BodyEvent::make_int(k_, v_)); return; }
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
                 if (note::flash(keys_::rsp_time) == k_) { rsp.time = v_; return; }
@@ -366,7 +366,7 @@ struct EnvGet {
         static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
             {keys_::name, static_cast<uint16_t>(offsetof(EnvGet, name)), ::note::ReqFieldType::String},
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-            {keys_::time, static_cast<uint16_t>(offsetof(EnvGet, time)), ::note::ReqFieldType::Int32},
+            {keys_::time, static_cast<uint16_t>(offsetof(EnvGet, time)), ::note::ReqFieldType::Int},
 #endif
         };
 #pragma GCC diagnostic pop
@@ -422,8 +422,8 @@ inline EnvGet& EnvGet::name_t::operator()(note::string_view v) {
         reinterpret_cast<char*>(this) - offsetof(EnvGet, name));
 }
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-inline EnvGet& EnvGet::time_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline EnvGet& EnvGet::time_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<EnvGet*>(
         reinterpret_cast<char*>(this) - offsetof(EnvGet, time));
 }

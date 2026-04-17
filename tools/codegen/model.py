@@ -97,7 +97,7 @@ class PropertyDef:
         """JsonReader getter method suffix: 'bool', 'int', 'double', 'string'."""
         return {
             "bool": "bool",
-            "int32_t": "int",
+            "note::json_int_t": "int",
             "double": "double",
             "note::string_view": "string",
         }.get(self.cpp_type, "string")

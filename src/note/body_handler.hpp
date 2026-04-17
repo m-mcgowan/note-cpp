@@ -22,13 +22,13 @@ struct BodyEvent {
     string_view key;
     union {
         bool b;
-        int32_t i;
+        json_int_t i;
         double f;
         StringRef sv;
     };
 
     static BodyEvent make_bool(string_view k, bool v) { BodyEvent e; e.tag = Bool; e.key = k; e.b = v; return e; }
-    static BodyEvent make_int(string_view k, int32_t v) { BodyEvent e; e.tag = Int; e.key = k; e.i = v; return e; }
+    static BodyEvent make_int(string_view k, json_int_t v) { BodyEvent e; e.tag = Int; e.key = k; e.i = v; return e; }
     static BodyEvent make_float(string_view k, double v) { BodyEvent e; e.tag = Float; e.key = k; e.f = v; return e; }
     static BodyEvent make_string(string_view k, string_view v) { BodyEvent e; e.tag = String; e.key = k; e.sv = {v.data(), v.size()}; return e; }
     static BodyEvent make_number(string_view k, string_view v) { BodyEvent e; e.tag = Number; e.key = k; e.sv = {v.data(), v.size()}; return e; }

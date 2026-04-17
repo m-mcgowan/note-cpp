@@ -69,26 +69,26 @@ struct CardBinaryGet : note::BinaryReceiveMixin {
 
     /// The size of the COBS-encoded data you are expecting to be returned (in
     /// bytes).
-    struct cobs_t : Field<int32_t> {
-        using Field<int32_t>::Field;
-        using Field<int32_t>::operator=;
-        CardBinaryGet& operator()(int32_t v);
+    struct cobs_t : Field<note::json_int_t> {
+        using Field<note::json_int_t>::Field;
+        using Field<note::json_int_t>::operator=;
+        CardBinaryGet& operator()(note::json_int_t v);
     } cobs{};
     /// Used along with `offset`, the number of bytes to retrieve from the
     /// binary storage area of the Notecard.
-    struct length_t : Field<int32_t> {
-        using Field<int32_t>::Field;
-        using Field<int32_t>::operator=;
-        CardBinaryGet& operator()(int32_t v);
+    struct length_t : Field<note::json_int_t> {
+        using Field<note::json_int_t>::Field;
+        using Field<note::json_int_t>::operator=;
+        CardBinaryGet& operator()(note::json_int_t v);
     } length{};
     /// Used along with `length`, the number of bytes to offset the binary
     /// payload from 0 when retrieving binary data from the binary storage area
     /// of the Notecard. Primarily used when retrieving multiple fragments of a
     /// binary payload from the Notecard.
-    struct offset_t : Field<int32_t> {
-        using Field<int32_t>::Field;
-        using Field<int32_t>::operator=;
-        CardBinaryGet& operator()(int32_t v);
+    struct offset_t : Field<note::json_int_t> {
+        using Field<note::json_int_t>::Field;
+        using Field<note::json_int_t>::operator=;
+        CardBinaryGet& operator()(note::json_int_t v);
     } offset{};
 
 
@@ -246,9 +246,9 @@ struct CardBinaryGet : note::BinaryReceiveMixin {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
         static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
-            {keys_::cobs, static_cast<uint16_t>(offsetof(CardBinaryGet, cobs)), ::note::ReqFieldType::Int32},
-            {keys_::length, static_cast<uint16_t>(offsetof(CardBinaryGet, length)), ::note::ReqFieldType::Int32},
-            {keys_::offset, static_cast<uint16_t>(offsetof(CardBinaryGet, offset)), ::note::ReqFieldType::Int32},
+            {keys_::cobs, static_cast<uint16_t>(offsetof(CardBinaryGet, cobs)), ::note::ReqFieldType::Int},
+            {keys_::length, static_cast<uint16_t>(offsetof(CardBinaryGet, length)), ::note::ReqFieldType::Int},
+            {keys_::offset, static_cast<uint16_t>(offsetof(CardBinaryGet, offset)), ::note::ReqFieldType::Int},
         };
 #pragma GCC diagnostic pop
         n_out = sizeof(table_) / sizeof(table_[0]);
@@ -295,18 +295,18 @@ struct CardBinaryGet : note::BinaryReceiveMixin {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-inline CardBinaryGet& CardBinaryGet::cobs_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardBinaryGet& CardBinaryGet::cobs_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardBinaryGet*>(
         reinterpret_cast<char*>(this) - offsetof(CardBinaryGet, cobs));
 }
-inline CardBinaryGet& CardBinaryGet::length_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardBinaryGet& CardBinaryGet::length_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardBinaryGet*>(
         reinterpret_cast<char*>(this) - offsetof(CardBinaryGet, length));
 }
-inline CardBinaryGet& CardBinaryGet::offset_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardBinaryGet& CardBinaryGet::offset_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardBinaryGet*>(
         reinterpret_cast<char*>(this) - offsetof(CardBinaryGet, offset));
 }

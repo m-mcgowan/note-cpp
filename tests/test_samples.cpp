@@ -47,7 +47,7 @@ TEST_CASE("card.aux.serial Enable DFU Notifications") {
     TestHarness h;
     note::api::CardAuxSerial::Notify req;
     req.dfu();
-    req.minutes = int32_t{5};
+    req.minutes = note::json_int_t{5};
     h.nc.execute(req);
     // Check each key-value pair (order-independent — generic_build may reorder fields).
     REQUIRE(h.last_request.find(R"("req":"card.aux.serial")") != std::string::npos);
@@ -69,7 +69,7 @@ TEST_CASE("card.aux.serial Multiple Notifications") {
     TestHarness h;
     note::api::CardAuxSerial::Notify req;
     req.notifications = note::string_view(R"sv(accel,env)sv");
-    req.duration = int32_t{500};
+    req.duration = note::json_int_t{500};
     h.nc.execute(req);
     // Check each key-value pair (order-independent — generic_build may reorder fields).
     REQUIRE(h.last_request.find(R"("req":"card.aux.serial")") != std::string::npos);

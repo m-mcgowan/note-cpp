@@ -43,6 +43,8 @@ namespace note::backends {
 // ---------------------------------------------------------------------------
 class CjsonBuilder : public JsonBuilder {
 public:
+    using JsonBuilder::add;
+    using JsonBuilder::add_element;
     CjsonBuilder() : root_(cJSON_CreateObject()), stack_{root_} {}
     ~CjsonBuilder() override { if (root_) cJSON_Delete(root_); }
 
@@ -67,7 +69,7 @@ public:
         cJSON_AddItemToObject(current(), zkey(key), cJSON_CreateBool(value));
         return *this;
     }
-    CjsonBuilder& add(string_view key, int32_t value) override {
+    CjsonBuilder& add(string_view key, json_int_t value) override {
         cJSON_AddItemToObject(current(), zkey(key), cJSON_CreateNumber(value));
         return *this;
     }
@@ -110,7 +112,7 @@ public:
         cJSON_AddItemToArray(current(), cJSON_CreateBool(value));
         return *this;
     }
-    CjsonBuilder& add_element(int32_t value) override {
+    CjsonBuilder& add_element(json_int_t value) override {
         cJSON_AddItemToArray(current(), cJSON_CreateNumber(value));
         return *this;
     }
@@ -185,10 +187,10 @@ public:
         if (cJSON_IsBool(item)) return cJSON_IsTrue(item);
         return def;
     }
-    int32_t get_int(string_view key, int32_t def) const override {
+    json_int_t get_int(string_view key, json_int_t def) const override {
         auto* item = cJSON_GetObjectItemCaseSensitive(root_, zkey(key));
         if (!item || !cJSON_IsNumber(item)) return def;
-        return static_cast<int32_t>(item->valuedouble);
+        return static_cast<json_int_t>(item->valuedouble);
     }
     double get_double(string_view key, double def) const override {
         auto* item = cJSON_GetObjectItemCaseSensitive(root_, zkey(key));

@@ -70,10 +70,10 @@ struct CardWireless {
     /// When using the `method` argument with `"dual-primary-secondary"` or
     /// `"dual-secondary-primary"`, this is the number of hours after which the
     /// Notecard will attempt to switch back to the preferred SIM.
-    struct hours_t : Field<int32_t> {
-        using Field<int32_t>::Field;
-        using Field<int32_t>::operator=;
-        CardWireless& operator()(int32_t v);
+    struct hours_t : Field<note::json_int_t> {
+        using Field<note::json_int_t>::Field;
+        using Field<note::json_int_t>::operator=;
+        CardWireless& operator()(note::json_int_t v);
     } hours{};
     /// Used when configuring a Notecard to failover to a different SIM.
     // method: - | dual-primary-secondary | dual-secondary-primary | primary | secondary
@@ -226,7 +226,7 @@ struct CardWireless {
             ::note::detail::arena_cost(65);  // error reserve (+1 for null terminator)
 
         /// Number of bars of signal quality.
-        note::ResponseField<int32_t> count{};
+        note::ResponseField<note::json_int_t> count{};
         /// The current status of the wireless connection and modem.
         note::ResponseField<note::string_view> status{};
 
@@ -264,7 +264,7 @@ struct CardWireless {
             NOTE_SINK_NOINLINE void on_number(::note::string_view k_, ::note::string_view raw_) {
                 if (note::flash(keys_::rsp_count) == k_) { rsp.count = ::note::parse_int(raw_); return; }
             }
-            NOTE_SINK_NOINLINE void on_int(::note::string_view k_, int32_t v_) {
+            NOTE_SINK_NOINLINE void on_int(::note::string_view k_, ::note::json_int_t v_) {
                 if (note::flash(keys_::rsp_count) == k_) { rsp.count = v_; return; }
             }
             NOTE_SINK_NOINLINE void reset() {
@@ -304,7 +304,7 @@ struct CardWireless {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
         static constexpr ::note::FieldDesc table[] NOTE_FLASH_ATTR = {
-            {keys_::rsp_count, static_cast<uint16_t>(offsetof(Response, count)), ::note::FieldType::Int32},
+            {keys_::rsp_count, static_cast<uint16_t>(offsetof(Response, count)), ::note::FieldType::Int},
             {keys_::rsp_status, static_cast<uint16_t>(offsetof(Response, status)), ::note::FieldType::String},
         };
 #pragma GCC diagnostic pop
@@ -348,7 +348,7 @@ struct CardWireless {
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
         static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
             {keys_::apn, static_cast<uint16_t>(offsetof(CardWireless, apn)), ::note::ReqFieldType::String},
-            {keys_::hours, static_cast<uint16_t>(offsetof(CardWireless, hours)), ::note::ReqFieldType::Int32},
+            {keys_::hours, static_cast<uint16_t>(offsetof(CardWireless, hours)), ::note::ReqFieldType::Int},
             {keys_::method, static_cast<uint16_t>(offsetof(CardWireless, method)), ::note::ReqFieldType::String},
             {keys_::mode, static_cast<uint16_t>(offsetof(CardWireless, mode)), ::note::ReqFieldType::String},
         };
@@ -403,8 +403,8 @@ inline CardWireless& CardWireless::apn_t::operator()(note::string_view v) {
     return *reinterpret_cast<CardWireless*>(
         reinterpret_cast<char*>(this) - offsetof(CardWireless, apn));
 }
-inline CardWireless& CardWireless::hours_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardWireless& CardWireless::hours_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardWireless*>(
         reinterpret_cast<char*>(this) - offsetof(CardWireless, hours));
 }

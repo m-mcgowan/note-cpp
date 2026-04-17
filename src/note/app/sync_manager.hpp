@@ -8,7 +8,7 @@ namespace note::app {
 
 struct SyncState {
     std::string status;
-    int32_t completed{};
+    json_int_t completed{};
     bool syncing{};
 };
 

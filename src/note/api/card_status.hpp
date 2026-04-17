@@ -112,16 +112,16 @@ struct CardStatus {
         /// The effective inbound synchronization period being used by the
         /// device. See Configuring Synchronization Modes for details on how
         /// Notecard synchronization modes work.
-        note::ResponseField<int32_t> inbound{};
+        note::ResponseField<note::json_int_t> inbound{};
         /// The effective outbound synchronization period being used by the
         /// device. See Configuring Synchronization Modes for details on how
         /// Notecard synchronization modes work.
-        note::ResponseField<int32_t> outbound{};
+        note::ResponseField<note::json_int_t> outbound{};
         /// General status information.
         note::ResponseField<note::string_view> status{};
         /// Indicates the percentage of total Notecard storage in use. Note that
         /// users can utilize approximately 80% of this total capacity.
-        note::ResponseField<int32_t> storage{};
+        note::ResponseField<note::json_int_t> storage{};
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 5, 1) || !defined(NOTE_API_STRICT)
         /// `true` if the Notecard has ever connected to Notehub.
         ///
@@ -133,7 +133,7 @@ struct CardStatus {
 #endif
         /// The UNIX Epoch Time of approximately when the Notecard was first
         /// powered up.
-        note::ResponseField<int32_t> time{};
+        note::ResponseField<note::json_int_t> time{};
         /// `true` if the Notecard is being powered by USB.
         note::ResponseField<bool> usb{};
         /// `true` if the Notecard's WiFi radio is currently powered on.
@@ -222,7 +222,7 @@ struct CardStatus {
                 if (note::flash(keys_::rsp_storage) == k_) { rsp.storage = ::note::parse_int(raw_); return; }
                 if (note::flash(keys_::rsp_time) == k_) { rsp.time = ::note::parse_int(raw_); return; }
             }
-            NOTE_SINK_NOINLINE void on_int(::note::string_view k_, int32_t v_) {
+            NOTE_SINK_NOINLINE void on_int(::note::string_view k_, ::note::json_int_t v_) {
                 if (note::flash(keys_::rsp_inbound) == k_) { rsp.inbound = v_; return; }
                 if (note::flash(keys_::rsp_outbound) == k_) { rsp.outbound = v_; return; }
                 if (note::flash(keys_::rsp_storage) == k_) { rsp.storage = v_; return; }
@@ -311,11 +311,11 @@ struct CardStatus {
         static constexpr ::note::FieldDesc table[] NOTE_FLASH_ATTR = {
             {keys_::rsp_cell, static_cast<uint16_t>(offsetof(Response, cell)), ::note::FieldType::Bool},
             {keys_::rsp_connected, static_cast<uint16_t>(offsetof(Response, connected)), ::note::FieldType::Bool},
-            {keys_::rsp_inbound, static_cast<uint16_t>(offsetof(Response, inbound)), ::note::FieldType::Int32},
-            {keys_::rsp_outbound, static_cast<uint16_t>(offsetof(Response, outbound)), ::note::FieldType::Int32},
+            {keys_::rsp_inbound, static_cast<uint16_t>(offsetof(Response, inbound)), ::note::FieldType::Int},
+            {keys_::rsp_outbound, static_cast<uint16_t>(offsetof(Response, outbound)), ::note::FieldType::Int},
             {keys_::rsp_status, static_cast<uint16_t>(offsetof(Response, status)), ::note::FieldType::String},
-            {keys_::rsp_storage, static_cast<uint16_t>(offsetof(Response, storage)), ::note::FieldType::Int32},
-            {keys_::rsp_time, static_cast<uint16_t>(offsetof(Response, time)), ::note::FieldType::Int32},
+            {keys_::rsp_storage, static_cast<uint16_t>(offsetof(Response, storage)), ::note::FieldType::Int},
+            {keys_::rsp_time, static_cast<uint16_t>(offsetof(Response, time)), ::note::FieldType::Int},
             {keys_::rsp_usb, static_cast<uint16_t>(offsetof(Response, usb)), ::note::FieldType::Bool},
             {keys_::rsp_wifi, static_cast<uint16_t>(offsetof(Response, wifi)), ::note::FieldType::Bool},
         };

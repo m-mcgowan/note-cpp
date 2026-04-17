@@ -64,17 +64,17 @@ struct CardMotionMode {
     /// change.
     ///
     /// Learn how to configure this feature in this guide.
-    struct motion_t : Field<int32_t> {
-        using Field<int32_t>::Field;
-        using Field<int32_t>::operator=;
-        CardMotionMode& operator()(int32_t v);
+    struct motion_t : Field<note::json_int_t> {
+        using Field<note::json_int_t>::Field;
+        using Field<note::json_int_t>::operator=;
+        CardMotionMode& operator()(note::json_int_t v);
     } motion{};
     /// Period for each bucket of movements to be accumulated when `minutes` is
     /// used with `card.motion`.
-    struct seconds_t : Field<int32_t> {
-        using Field<int32_t>::Field;
-        using Field<int32_t>::operator=;
-        CardMotionMode& operator()(int32_t v);
+    struct seconds_t : Field<note::json_int_t> {
+        using Field<note::json_int_t>::Field;
+        using Field<note::json_int_t>::operator=;
+        CardMotionMode& operator()(note::json_int_t v);
     } seconds{};
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1) || !defined(NOTE_API_STRICT)
     /// Used to set the accelerometer sample rate. The default sample rate of
@@ -88,10 +88,10 @@ struct CardMotionMode {
 #if NOTE_API_VERSION < NOTE_VERSION(3, 3, 1)
     [[deprecated("requires firmware >= 3.3.1")]]
 #endif
-    struct sensitivity_t : Field<int32_t> {
-        using Field<int32_t>::Field;
-        using Field<int32_t>::operator=;
-        CardMotionMode& operator()(int32_t v);
+    struct sensitivity_t : Field<note::json_int_t> {
+        using Field<note::json_int_t>::Field;
+        using Field<note::json_int_t>::operator=;
+        CardMotionMode& operator()(note::json_int_t v);
     } sensitivity{};
 #endif
     /// `true` to enable the Notecard accelerometer and start motion tracking.
@@ -199,10 +199,10 @@ struct CardMotionMode {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
         static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
-            {keys_::motion, static_cast<uint16_t>(offsetof(CardMotionMode, motion)), ::note::ReqFieldType::Int32},
-            {keys_::seconds, static_cast<uint16_t>(offsetof(CardMotionMode, seconds)), ::note::ReqFieldType::Int32},
+            {keys_::motion, static_cast<uint16_t>(offsetof(CardMotionMode, motion)), ::note::ReqFieldType::Int},
+            {keys_::seconds, static_cast<uint16_t>(offsetof(CardMotionMode, seconds)), ::note::ReqFieldType::Int},
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1) || !defined(NOTE_API_STRICT)
-            {keys_::sensitivity, static_cast<uint16_t>(offsetof(CardMotionMode, sensitivity)), ::note::ReqFieldType::Int32},
+            {keys_::sensitivity, static_cast<uint16_t>(offsetof(CardMotionMode, sensitivity)), ::note::ReqFieldType::Int},
 #endif
             {keys_::start, static_cast<uint16_t>(offsetof(CardMotionMode, start)), ::note::ReqFieldType::Bool},
             {keys_::stop, static_cast<uint16_t>(offsetof(CardMotionMode, stop)), ::note::ReqFieldType::Bool},
@@ -263,19 +263,19 @@ struct CardMotionMode {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-inline CardMotionMode& CardMotionMode::motion_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardMotionMode& CardMotionMode::motion_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardMotionMode*>(
         reinterpret_cast<char*>(this) - offsetof(CardMotionMode, motion));
 }
-inline CardMotionMode& CardMotionMode::seconds_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardMotionMode& CardMotionMode::seconds_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardMotionMode*>(
         reinterpret_cast<char*>(this) - offsetof(CardMotionMode, seconds));
 }
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1) || !defined(NOTE_API_STRICT)
-inline CardMotionMode& CardMotionMode::sensitivity_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardMotionMode& CardMotionMode::sensitivity_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardMotionMode*>(
         reinterpret_cast<char*>(this) - offsetof(CardMotionMode, sensitivity));
 }

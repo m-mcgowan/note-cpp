@@ -35,14 +35,14 @@ struct SaxEvent {
     string_view key;
     union {
         bool b;
-        int32_t i;
+        json_int_t i;
         double f;
         StringRef sv;
     };
 
     static SaxEvent make_null(string_view k) { SaxEvent e; e.tag = Null; e.key = k; return e; }
     static SaxEvent make_bool(string_view k, bool v) { SaxEvent e; e.tag = Bool; e.key = k; e.b = v; return e; }
-    static SaxEvent make_int(string_view k, int32_t v) { SaxEvent e; e.tag = Int; e.key = k; e.i = v; return e; }
+    static SaxEvent make_int(string_view k, json_int_t v) { SaxEvent e; e.tag = Int; e.key = k; e.i = v; return e; }
     static SaxEvent make_float(string_view k, double v) { SaxEvent e; e.tag = Float; e.key = k; e.f = v; return e; }
     static SaxEvent make_string(string_view k, string_view v) { SaxEvent e; e.tag = String; e.key = k; e.sv = {v.data(), v.size()}; return e; }
     static SaxEvent make_object_begin(string_view k) { SaxEvent e; e.tag = ObjectBegin; e.key = k; return e; }

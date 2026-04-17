@@ -107,11 +107,11 @@ struct HubSyncStatus {
         /// `true` if an error occurred during the most recent sync.
         note::ResponseField<bool> alert{};
         /// Number of seconds since the last sync completion.
-        note::ResponseField<int32_t> completed{};
+        note::ResponseField<note::json_int_t> completed{};
         /// The current state of the wireless connectivity module in use.
         note::ResponseField<note::string_view> mode{};
         /// Number of seconds since the last explicit sync request.
-        note::ResponseField<int32_t> requested{};
+        note::ResponseField<note::json_int_t> requested{};
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 1, 1) || !defined(NOTE_API_STRICT)
         /// Returns `true` if triangulation data was sent to Notehub in the most
         /// recent sync.
@@ -130,7 +130,7 @@ struct HubSyncStatus {
 #if NOTE_API_VERSION < NOTE_VERSION(4, 1, 1)
         [[deprecated("requires firmware >= 4.1.1")]]
 #endif
-        note::ResponseField<int32_t> seconds{};
+        note::ResponseField<note::json_int_t> seconds{};
 #endif
         /// The status of the current or previous sync. Refer to this listing
         /// for the meaning of the various status codes returned (e.g. `{sync-
@@ -141,7 +141,7 @@ struct HubSyncStatus {
         note::ResponseField<bool> sync{};
         /// Time of the last sync completion. Will only populate if the Notecard
         /// has completed a sync to Notehub to obtain the time.
-        note::ResponseField<int32_t> time{};
+        note::ResponseField<note::json_int_t> time{};
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
@@ -220,7 +220,7 @@ struct HubSyncStatus {
 #endif
                 if (note::flash(keys_::rsp_time) == k_) { rsp.time = ::note::parse_int(raw_); return; }
             }
-            NOTE_SINK_NOINLINE void on_int(::note::string_view k_, int32_t v_) {
+            NOTE_SINK_NOINLINE void on_int(::note::string_view k_, ::note::json_int_t v_) {
                 if (note::flash(keys_::rsp_completed) == k_) { rsp.completed = v_; return; }
                 if (note::flash(keys_::rsp_requested) == k_) { rsp.requested = v_; return; }
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
@@ -303,12 +303,12 @@ struct HubSyncStatus {
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
         static constexpr ::note::FieldDesc table[] NOTE_FLASH_ATTR = {
             {keys_::rsp_alert, static_cast<uint16_t>(offsetof(Response, alert)), ::note::FieldType::Bool},
-            {keys_::rsp_completed, static_cast<uint16_t>(offsetof(Response, completed)), ::note::FieldType::Int32},
+            {keys_::rsp_completed, static_cast<uint16_t>(offsetof(Response, completed)), ::note::FieldType::Int},
             {keys_::rsp_mode, static_cast<uint16_t>(offsetof(Response, mode)), ::note::FieldType::String},
-            {keys_::rsp_requested, static_cast<uint16_t>(offsetof(Response, requested)), ::note::FieldType::Int32},
+            {keys_::rsp_requested, static_cast<uint16_t>(offsetof(Response, requested)), ::note::FieldType::Int},
             {keys_::rsp_status, static_cast<uint16_t>(offsetof(Response, status)), ::note::FieldType::String},
             {keys_::rsp_sync, static_cast<uint16_t>(offsetof(Response, sync)), ::note::FieldType::Bool},
-            {keys_::rsp_time, static_cast<uint16_t>(offsetof(Response, time)), ::note::FieldType::Int32},
+            {keys_::rsp_time, static_cast<uint16_t>(offsetof(Response, time)), ::note::FieldType::Int},
         };
 #pragma GCC diagnostic pop
         return table;

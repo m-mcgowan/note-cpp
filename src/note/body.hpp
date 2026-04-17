@@ -147,7 +147,7 @@ void write_field(JsonBuilder& b, string_view name, const V& value) {
     if constexpr (std::is_same_v<V, bool>) {
         b.add(name, value);
     } else if constexpr (std::is_integral_v<V>) {
-        b.add(name, static_cast<int32_t>(value));
+        b.add(name, static_cast<json_int_t>(value));
     } else if constexpr (std::is_floating_point_v<V>) {
         b.add(name, static_cast<double>(value));
     } else if constexpr (std::is_convertible_v<V, string_view>) {
@@ -199,11 +199,11 @@ void write_template_hint(JsonBuilder& b, string_view name, const V& /*unused*/) 
     } else if constexpr (std::is_integral_v<V>) {
         // Use a representative value that hints at the storage size.
         if constexpr (sizeof(V) <= 1)
-            b.add(name, static_cast<int32_t>(1));        // TINT8
+            b.add(name, json_int_t{1});        // TINT8
         else if constexpr (sizeof(V) <= 2)
-            b.add(name, static_cast<int32_t>(11));       // TINT16
+            b.add(name, json_int_t{11});       // TINT16
         else
-            b.add(name, static_cast<int32_t>(12));       // TINT32
+            b.add(name, json_int_t{12});       // TINT32
     } else if constexpr (std::is_convertible_v<V, string_view>) {
         b.add(name, string_view("1"));
     }
@@ -545,7 +545,7 @@ void _note_write_field(JsonBuilder& b, string_view name, const V& value) {
     if constexpr (std::is_same_v<V, bool>) {
         b.add(name, value);
     } else if constexpr (std::is_integral_v<V>) {
-        b.add(name, static_cast<int32_t>(value));
+        b.add(name, static_cast<json_int_t>(value));
     } else if constexpr (std::is_floating_point_v<V>) {
         b.add(name, static_cast<double>(value));
     } else if constexpr (std::is_convertible_v<V, string_view>) {

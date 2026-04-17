@@ -66,10 +66,10 @@ struct CardMotion {
     /// For instance, `5` will sample motion events for the previous five
     /// minutes and return a `movements` string with motion counts in each
     /// bucket.
-    struct minutes_t : Field<int32_t> {
-        using Field<int32_t>::Field;
-        using Field<int32_t>::operator=;
-        CardMotion& operator()(int32_t v);
+    struct minutes_t : Field<note::json_int_t> {
+        using Field<note::json_int_t>::Field;
+        using Field<note::json_int_t>::operator=;
+        CardMotion& operator()(note::json_int_t v);
     } minutes{};
 
 
@@ -112,12 +112,12 @@ struct CardMotion {
         note::ResponseField<bool> alert{};
         /// The number of accelerometer motion events since the `card.motion`
         /// request was last made.
-        note::ResponseField<int32_t> count{};
+        note::ResponseField<note::json_int_t> count{};
         /// Returns the current motion status of the Notecard (e.g. `"stopped"`
         /// or `"moving"`). Learn how to configure this feature in this guide.
         note::ResponseField<note::string_view> mode{};
         /// Time of the last accelerometer motion event.
-        note::ResponseField<int32_t> motion{};
+        note::ResponseField<note::json_int_t> motion{};
         /// If the `minutes` argument is provided, a string of base-36
         /// characters, where each character represents the number of
         /// accelerometer movements in each bucket during the sample duration.
@@ -126,7 +126,7 @@ struct CardMotion {
         note::ResponseField<note::string_view> movements{};
         /// If the `minutes` argument is provided, the duration of each bucket
         /// of sample accelerometer movements.
-        note::ResponseField<int32_t> seconds{};
+        note::ResponseField<note::json_int_t> seconds{};
         /// Comma-separated list of accelerometer orientation events that
         /// ocurred since the last request to `card.motion`. One or more of the
         /// following: `"face-up"`, `"face-down"`, `"portrait-up"`, `"portrait-
@@ -184,7 +184,7 @@ struct CardMotion {
                 if (note::flash(keys_::rsp_motion) == k_) { rsp.motion = ::note::parse_int(raw_); return; }
                 if (note::flash(keys_::rsp_seconds) == k_) { rsp.seconds = ::note::parse_int(raw_); return; }
             }
-            NOTE_SINK_NOINLINE void on_int(::note::string_view k_, int32_t v_) {
+            NOTE_SINK_NOINLINE void on_int(::note::string_view k_, ::note::json_int_t v_) {
                 if (note::flash(keys_::rsp_count) == k_) { rsp.count = v_; return; }
                 if (note::flash(keys_::rsp_motion) == k_) { rsp.motion = v_; return; }
                 if (note::flash(keys_::rsp_seconds) == k_) { rsp.seconds = v_; return; }
@@ -249,11 +249,11 @@ struct CardMotion {
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
         static constexpr ::note::FieldDesc table[] NOTE_FLASH_ATTR = {
             {keys_::rsp_alert, static_cast<uint16_t>(offsetof(Response, alert)), ::note::FieldType::Bool},
-            {keys_::rsp_count, static_cast<uint16_t>(offsetof(Response, count)), ::note::FieldType::Int32},
+            {keys_::rsp_count, static_cast<uint16_t>(offsetof(Response, count)), ::note::FieldType::Int},
             {keys_::rsp_mode, static_cast<uint16_t>(offsetof(Response, mode)), ::note::FieldType::String},
-            {keys_::rsp_motion, static_cast<uint16_t>(offsetof(Response, motion)), ::note::FieldType::Int32},
+            {keys_::rsp_motion, static_cast<uint16_t>(offsetof(Response, motion)), ::note::FieldType::Int},
             {keys_::rsp_movements, static_cast<uint16_t>(offsetof(Response, movements)), ::note::FieldType::String},
-            {keys_::rsp_seconds, static_cast<uint16_t>(offsetof(Response, seconds)), ::note::FieldType::Int32},
+            {keys_::rsp_seconds, static_cast<uint16_t>(offsetof(Response, seconds)), ::note::FieldType::Int},
             {keys_::rsp_status, static_cast<uint16_t>(offsetof(Response, status)), ::note::FieldType::String},
         };
 #pragma GCC diagnostic pop
@@ -296,7 +296,7 @@ struct CardMotion {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
         static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
-            {keys_::minutes, static_cast<uint16_t>(offsetof(CardMotion, minutes)), ::note::ReqFieldType::Int32},
+            {keys_::minutes, static_cast<uint16_t>(offsetof(CardMotion, minutes)), ::note::ReqFieldType::Int},
         };
 #pragma GCC diagnostic pop
         n_out = sizeof(table_) / sizeof(table_[0]);
@@ -332,8 +332,8 @@ struct CardMotion {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-inline CardMotion& CardMotion::minutes_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardMotion& CardMotion::minutes_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardMotion*>(
         reinterpret_cast<char*>(this) - offsetof(CardMotion, minutes));
 }

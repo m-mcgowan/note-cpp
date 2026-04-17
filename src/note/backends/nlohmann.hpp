@@ -25,13 +25,16 @@ namespace note::backends {
 // ---------------------------------------------------------------------------
 class NlohmannBuilder : public JsonBuilder {
 public:
+    using JsonBuilder::add;
+    using JsonBuilder::add_element;
+
     NlohmannBuilder() { stack_.push_back(&root_); }
 
     NlohmannBuilder& add(string_view key, bool value) override {
         (*current())[std::string(key)] = value;
         return *this;
     }
-    NlohmannBuilder& add(string_view key, int32_t value) override {
+    NlohmannBuilder& add(string_view key, json_int_t value) override {
         (*current())[std::string(key)] = value;
         return *this;
     }
@@ -72,7 +75,7 @@ public:
     NlohmannBuilder& add_element(bool value) override {
         current()->push_back(value); return *this;
     }
-    NlohmannBuilder& add_element(int32_t value) override {
+    NlohmannBuilder& add_element(json_int_t value) override {
         current()->push_back(value); return *this;
     }
     NlohmannBuilder& add_element(double value) override {
@@ -114,10 +117,10 @@ public:
         if (it == json_.end() || !it->is_boolean()) return def;
         return it->get<bool>();
     }
-    int32_t get_int(string_view key, int32_t def) const override {
+    json_int_t get_int(string_view key, json_int_t def) const override {
         auto it = json_.find(std::string(key));
         if (it == json_.end() || !it->is_number()) return def;
-        return it->get<int32_t>();
+        return it->get<json_int_t>();
     }
     double get_double(string_view key, double def) const override {
         auto it = json_.find(std::string(key));

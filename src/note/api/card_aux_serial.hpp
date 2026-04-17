@@ -74,10 +74,10 @@ struct CardAuxSerial {
 
         /// If using `"mode": "accel"`, specify a sampling duration for the
         /// Notecard accelerometer.
-        struct duration_t : Field<int32_t> {
-            using Field<int32_t>::Field;
-            using Field<int32_t>::operator=;
-            CardAuxSerial::Request& operator()(int32_t v);
+        struct duration_t : Field<note::json_int_t> {
+            using Field<note::json_int_t>::Field;
+            using Field<note::json_int_t>::operator=;
+            CardAuxSerial::Request& operator()(note::json_int_t v);
         } duration{};
         /// If `true`, along with `"mode":"gps"` the Notecard will disable
         /// concurrent modem use during GPS tracking.
@@ -93,10 +93,10 @@ struct CardAuxSerial {
         /// bytes the host can absorb before the sender must delay due to the
         /// absence of flow control. For example, `note-arduino`` uses a buffer
         /// size of `(SERIALRXBUFFER_SIZE - 1)`.
-        struct max_t : Field<int32_t> {
-            using Field<int32_t>::Field;
-            using Field<int32_t>::operator=;
-            CardAuxSerial::Request& operator()(int32_t v);
+        struct max_t : Field<note::json_int_t> {
+            using Field<note::json_int_t>::Field;
+            using Field<note::json_int_t>::operator=;
+            CardAuxSerial::Request& operator()(note::json_int_t v);
         } max{};
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
         /// When using `"mode": "notify,dfu"`, specify an interval for notifying
@@ -106,10 +106,10 @@ struct CardAuxSerial {
 #if NOTE_API_VERSION < NOTE_VERSION(5, 1, 1)
         [[deprecated("requires firmware >= 5.1.1")]]
 #endif
-        struct minutes_t : Field<int32_t> {
-            using Field<int32_t>::Field;
-            using Field<int32_t>::operator=;
-            CardAuxSerial::Request& operator()(int32_t v);
+        struct minutes_t : Field<note::json_int_t> {
+            using Field<note::json_int_t>::Field;
+            using Field<note::json_int_t>::operator=;
+            CardAuxSerial::Request& operator()(note::json_int_t v);
         } minutes{};
 #endif
         /// The AUX mode. Must be one of the following:
@@ -183,10 +183,10 @@ struct CardAuxSerial {
 #endif
         } mode{};
         /// The delay in milliseconds before sending a buffer of `max` size.
-        struct ms_t : Field<int32_t> {
-            using Field<int32_t>::Field;
-            using Field<int32_t>::operator=;
-            CardAuxSerial::Request& operator()(int32_t v);
+        struct ms_t : Field<note::json_int_t> {
+            using Field<note::json_int_t>::Field;
+            using Field<note::json_int_t>::operator=;
+            CardAuxSerial::Request& operator()(note::json_int_t v);
         } ms{};
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
         /// The baud rate or speed at which information is transmitted over AUX
@@ -197,10 +197,10 @@ struct CardAuxSerial {
 #if NOTE_API_VERSION < NOTE_VERSION(4, 1, 1)
         [[deprecated("requires firmware >= 4.1.1")]]
 #endif
-        struct rate_t : Field<int32_t> {
-            using Field<int32_t>::Field;
-            using Field<int32_t>::operator=;
-            CardAuxSerial::Request& operator()(int32_t v);
+        struct rate_t : Field<note::json_int_t> {
+            using Field<note::json_int_t>::Field;
+            using Field<note::json_int_t>::operator=;
+            CardAuxSerial::Request& operator()(note::json_int_t v);
         } rate{};
 #endif
 
@@ -261,7 +261,7 @@ struct CardAuxSerial {
 #if NOTE_API_VERSION < NOTE_VERSION(4, 1, 1)
             [[deprecated("requires firmware >= 4.1.1")]]
 #endif
-            note::ResponseField<int32_t> rate{};
+            note::ResponseField<note::json_int_t> rate{};
 #endif
 
 #pragma GCC diagnostic push
@@ -312,7 +312,7 @@ struct CardAuxSerial {
                     if (note::flash(keys_::rsp_rate) == k_) { rsp.rate = ::note::parse_int(raw_); return; }
 #endif
                 }
-                NOTE_SINK_NOINLINE void on_int(::note::string_view k_, int32_t v_) {
+                NOTE_SINK_NOINLINE void on_int(::note::string_view k_, ::note::json_int_t v_) {
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
                     if (note::flash(keys_::rsp_rate) == k_) { rsp.rate = v_; return; }
 #endif
@@ -404,16 +404,16 @@ struct CardAuxSerial {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
             static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
-                {keys_::duration, static_cast<uint16_t>(offsetof(CardAuxSerial::Request, duration)), ::note::ReqFieldType::Int32},
+                {keys_::duration, static_cast<uint16_t>(offsetof(CardAuxSerial::Request, duration)), ::note::ReqFieldType::Int},
                 {keys_::limit, static_cast<uint16_t>(offsetof(CardAuxSerial::Request, limit)), ::note::ReqFieldType::Bool},
-                {keys_::max, static_cast<uint16_t>(offsetof(CardAuxSerial::Request, max)), ::note::ReqFieldType::Int32},
+                {keys_::max, static_cast<uint16_t>(offsetof(CardAuxSerial::Request, max)), ::note::ReqFieldType::Int},
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
-                {keys_::minutes, static_cast<uint16_t>(offsetof(CardAuxSerial::Request, minutes)), ::note::ReqFieldType::Int32},
+                {keys_::minutes, static_cast<uint16_t>(offsetof(CardAuxSerial::Request, minutes)), ::note::ReqFieldType::Int},
 #endif
                 {keys_::mode, static_cast<uint16_t>(offsetof(CardAuxSerial::Request, mode)), ::note::ReqFieldType::String},
-                {keys_::ms, static_cast<uint16_t>(offsetof(CardAuxSerial::Request, ms)), ::note::ReqFieldType::Int32},
+                {keys_::ms, static_cast<uint16_t>(offsetof(CardAuxSerial::Request, ms)), ::note::ReqFieldType::Int},
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-                {keys_::rate, static_cast<uint16_t>(offsetof(CardAuxSerial::Request, rate)), ::note::ReqFieldType::Int32},
+                {keys_::rate, static_cast<uint16_t>(offsetof(CardAuxSerial::Request, rate)), ::note::ReqFieldType::Int},
 #endif
             };
 #pragma GCC diagnostic pop
@@ -511,10 +511,10 @@ struct CardAuxSerial {
 
         /// If using `"mode": "accel"`, specify a sampling duration for the
         /// Notecard accelerometer.
-        struct duration_t : Field<int32_t> {
-            using Field<int32_t>::Field;
-            using Field<int32_t>::operator=;
-            CardAuxSerial::Notify& operator()(int32_t v);
+        struct duration_t : Field<note::json_int_t> {
+            using Field<note::json_int_t>::Field;
+            using Field<note::json_int_t>::operator=;
+            CardAuxSerial::Notify& operator()(note::json_int_t v);
         } duration{};
         /// The maximum amount of data, in bytes, that can be sent in a single
         /// transmission before the Notecard pauses to allow the host to process
@@ -523,10 +523,10 @@ struct CardAuxSerial {
         /// bytes the host can absorb before the sender must delay due to the
         /// absence of flow control. For example, `note-arduino`` uses a buffer
         /// size of `(SERIALRXBUFFER_SIZE - 1)`.
-        struct max_t : Field<int32_t> {
-            using Field<int32_t>::Field;
-            using Field<int32_t>::operator=;
-            CardAuxSerial::Notify& operator()(int32_t v);
+        struct max_t : Field<note::json_int_t> {
+            using Field<note::json_int_t>::Field;
+            using Field<note::json_int_t>::operator=;
+            CardAuxSerial::Notify& operator()(note::json_int_t v);
         } max{};
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
         /// When using `"mode": "notify,dfu"`, specify an interval for notifying
@@ -536,10 +536,10 @@ struct CardAuxSerial {
 #if NOTE_API_VERSION < NOTE_VERSION(5, 1, 1)
         [[deprecated("requires firmware >= 5.1.1")]]
 #endif
-        struct minutes_t : Field<int32_t> {
-            using Field<int32_t>::Field;
-            using Field<int32_t>::operator=;
-            CardAuxSerial::Notify& operator()(int32_t v);
+        struct minutes_t : Field<note::json_int_t> {
+            using Field<note::json_int_t>::Field;
+            using Field<note::json_int_t>::operator=;
+            CardAuxSerial::Notify& operator()(note::json_int_t v);
         } minutes{};
 #endif
         /// The AUX mode. Must be one of the following:
@@ -613,10 +613,10 @@ struct CardAuxSerial {
 #endif
         } notifications{};
         /// The delay in milliseconds before sending a buffer of `max` size.
-        struct ms_t : Field<int32_t> {
-            using Field<int32_t>::Field;
-            using Field<int32_t>::operator=;
-            CardAuxSerial::Notify& operator()(int32_t v);
+        struct ms_t : Field<note::json_int_t> {
+            using Field<note::json_int_t>::Field;
+            using Field<note::json_int_t>::operator=;
+            CardAuxSerial::Notify& operator()(note::json_int_t v);
         } ms{};
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
         /// The baud rate or speed at which information is transmitted over AUX
@@ -627,10 +627,10 @@ struct CardAuxSerial {
 #if NOTE_API_VERSION < NOTE_VERSION(4, 1, 1)
         [[deprecated("requires firmware >= 4.1.1")]]
 #endif
-        struct rate_t : Field<int32_t> {
-            using Field<int32_t>::Field;
-            using Field<int32_t>::operator=;
-            CardAuxSerial::Notify& operator()(int32_t v);
+        struct rate_t : Field<note::json_int_t> {
+            using Field<note::json_int_t>::Field;
+            using Field<note::json_int_t>::operator=;
+            CardAuxSerial::Notify& operator()(note::json_int_t v);
         } rate{};
 #endif
 
@@ -710,14 +710,14 @@ struct CardAuxSerial {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
             static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
-                {keys_::duration, static_cast<uint16_t>(offsetof(CardAuxSerial::Notify, duration)), ::note::ReqFieldType::Int32},
-                {keys_::max, static_cast<uint16_t>(offsetof(CardAuxSerial::Notify, max)), ::note::ReqFieldType::Int32},
+                {keys_::duration, static_cast<uint16_t>(offsetof(CardAuxSerial::Notify, duration)), ::note::ReqFieldType::Int},
+                {keys_::max, static_cast<uint16_t>(offsetof(CardAuxSerial::Notify, max)), ::note::ReqFieldType::Int},
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
-                {keys_::minutes, static_cast<uint16_t>(offsetof(CardAuxSerial::Notify, minutes)), ::note::ReqFieldType::Int32},
+                {keys_::minutes, static_cast<uint16_t>(offsetof(CardAuxSerial::Notify, minutes)), ::note::ReqFieldType::Int},
 #endif
-                {keys_::ms, static_cast<uint16_t>(offsetof(CardAuxSerial::Notify, ms)), ::note::ReqFieldType::Int32},
+                {keys_::ms, static_cast<uint16_t>(offsetof(CardAuxSerial::Notify, ms)), ::note::ReqFieldType::Int},
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-                {keys_::rate, static_cast<uint16_t>(offsetof(CardAuxSerial::Notify, rate)), ::note::ReqFieldType::Int32},
+                {keys_::rate, static_cast<uint16_t>(offsetof(CardAuxSerial::Notify, rate)), ::note::ReqFieldType::Int},
 #endif
             };
 #pragma GCC diagnostic pop
@@ -829,10 +829,10 @@ struct CardAuxSerial {
 #if NOTE_API_VERSION < NOTE_VERSION(4, 1, 1)
         [[deprecated("requires firmware >= 4.1.1")]]
 #endif
-        struct rate_t : Field<int32_t> {
-            using Field<int32_t>::Field;
-            using Field<int32_t>::operator=;
-            CardAuxSerial::Gps& operator()(int32_t v);
+        struct rate_t : Field<note::json_int_t> {
+            using Field<note::json_int_t>::Field;
+            using Field<note::json_int_t>::operator=;
+            CardAuxSerial::Gps& operator()(note::json_int_t v);
         } rate{};
 #endif
 
@@ -904,7 +904,7 @@ struct CardAuxSerial {
             static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
                 {keys_::limit, static_cast<uint16_t>(offsetof(CardAuxSerial::Gps, limit)), ::note::ReqFieldType::Bool},
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-                {keys_::rate, static_cast<uint16_t>(offsetof(CardAuxSerial::Gps, rate)), ::note::ReqFieldType::Int32},
+                {keys_::rate, static_cast<uint16_t>(offsetof(CardAuxSerial::Gps, rate)), ::note::ReqFieldType::Int},
 #endif
             };
 #pragma GCC diagnostic pop
@@ -981,10 +981,10 @@ struct CardAuxSerial {
 #if NOTE_API_VERSION < NOTE_VERSION(4, 1, 1)
         [[deprecated("requires firmware >= 4.1.1")]]
 #endif
-        struct rate_t : Field<int32_t> {
-            using Field<int32_t>::Field;
-            using Field<int32_t>::operator=;
-            CardAuxSerial::Configure& operator()(int32_t v);
+        struct rate_t : Field<note::json_int_t> {
+            using Field<note::json_int_t>::Field;
+            using Field<note::json_int_t>::operator=;
+            CardAuxSerial::Configure& operator()(note::json_int_t v);
         } rate{};
 #endif
 
@@ -1054,7 +1054,7 @@ struct CardAuxSerial {
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
             static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-                {keys_::rate, static_cast<uint16_t>(offsetof(CardAuxSerial::Configure, rate)), ::note::ReqFieldType::Int32},
+                {keys_::rate, static_cast<uint16_t>(offsetof(CardAuxSerial::Configure, rate)), ::note::ReqFieldType::Int},
 #endif
             };
 #pragma GCC diagnostic pop
@@ -1200,8 +1200,8 @@ struct CardAuxSerial {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-inline CardAuxSerial::Request& CardAuxSerial::Request::duration_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardAuxSerial::Request& CardAuxSerial::Request::duration_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardAuxSerial::Request*>(
         reinterpret_cast<char*>(this) - offsetof(CardAuxSerial::Request, duration));
 }
@@ -1210,14 +1210,14 @@ inline CardAuxSerial::Request& CardAuxSerial::Request::limit_t::operator()(bool 
     return *reinterpret_cast<CardAuxSerial::Request*>(
         reinterpret_cast<char*>(this) - offsetof(CardAuxSerial::Request, limit));
 }
-inline CardAuxSerial::Request& CardAuxSerial::Request::max_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardAuxSerial::Request& CardAuxSerial::Request::max_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardAuxSerial::Request*>(
         reinterpret_cast<char*>(this) - offsetof(CardAuxSerial::Request, max));
 }
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
-inline CardAuxSerial::Request& CardAuxSerial::Request::minutes_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardAuxSerial::Request& CardAuxSerial::Request::minutes_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardAuxSerial::Request*>(
         reinterpret_cast<char*>(this) - offsetof(CardAuxSerial::Request, minutes));
 }
@@ -1266,14 +1266,14 @@ inline CardAuxSerial::Request::mode_t& CardAuxSerial::Request::mode_t::accel() {
     Field<note::string_view>::operator=(flags_.str());
     return *this;
 }
-inline CardAuxSerial::Request& CardAuxSerial::Request::ms_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardAuxSerial::Request& CardAuxSerial::Request::ms_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardAuxSerial::Request*>(
         reinterpret_cast<char*>(this) - offsetof(CardAuxSerial::Request, ms));
 }
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-inline CardAuxSerial::Request& CardAuxSerial::Request::rate_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardAuxSerial::Request& CardAuxSerial::Request::rate_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardAuxSerial::Request*>(
         reinterpret_cast<char*>(this) - offsetof(CardAuxSerial::Request, rate));
 }
@@ -1284,19 +1284,19 @@ inline CardAuxSerial::Request& CardAuxSerial::Request::rate_t::operator()(int32_
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-inline CardAuxSerial::Notify& CardAuxSerial::Notify::duration_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardAuxSerial::Notify& CardAuxSerial::Notify::duration_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardAuxSerial::Notify*>(
         reinterpret_cast<char*>(this) - offsetof(CardAuxSerial::Notify, duration));
 }
-inline CardAuxSerial::Notify& CardAuxSerial::Notify::max_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardAuxSerial::Notify& CardAuxSerial::Notify::max_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardAuxSerial::Notify*>(
         reinterpret_cast<char*>(this) - offsetof(CardAuxSerial::Notify, max));
 }
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
-inline CardAuxSerial::Notify& CardAuxSerial::Notify::minutes_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardAuxSerial::Notify& CardAuxSerial::Notify::minutes_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardAuxSerial::Notify*>(
         reinterpret_cast<char*>(this) - offsetof(CardAuxSerial::Notify, minutes));
 }
@@ -1345,14 +1345,14 @@ inline CardAuxSerial::Notify::notifications_t& CardAuxSerial::Notify::notificati
     Field<note::string_view>::operator=(flags_.str());
     return *this;
 }
-inline CardAuxSerial::Notify& CardAuxSerial::Notify::ms_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardAuxSerial::Notify& CardAuxSerial::Notify::ms_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardAuxSerial::Notify*>(
         reinterpret_cast<char*>(this) - offsetof(CardAuxSerial::Notify, ms));
 }
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-inline CardAuxSerial::Notify& CardAuxSerial::Notify::rate_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardAuxSerial::Notify& CardAuxSerial::Notify::rate_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardAuxSerial::Notify*>(
         reinterpret_cast<char*>(this) - offsetof(CardAuxSerial::Notify, rate));
 }
@@ -1369,8 +1369,8 @@ inline CardAuxSerial::Gps& CardAuxSerial::Gps::limit_t::operator()(bool v) {
         reinterpret_cast<char*>(this) - offsetof(CardAuxSerial::Gps, limit));
 }
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-inline CardAuxSerial::Gps& CardAuxSerial::Gps::rate_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardAuxSerial::Gps& CardAuxSerial::Gps::rate_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardAuxSerial::Gps*>(
         reinterpret_cast<char*>(this) - offsetof(CardAuxSerial::Gps, rate));
 }
@@ -1382,8 +1382,8 @@ inline CardAuxSerial::Gps& CardAuxSerial::Gps::rate_t::operator()(int32_t v) {
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-inline CardAuxSerial::Configure& CardAuxSerial::Configure::rate_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardAuxSerial::Configure& CardAuxSerial::Configure::rate_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardAuxSerial::Configure*>(
         reinterpret_cast<char*>(this) - offsetof(CardAuxSerial::Configure, rate));
 }

@@ -68,26 +68,26 @@ struct CardWirelessPenalty {
         /// The number of minutes to add to successive retries. Used with the
         /// `set` argument to override the Network Registration Failure Penalty
         /// Box defaults.
-        struct add_t : Field<int32_t> {
-            using Field<int32_t>::Field;
-            using Field<int32_t>::operator=;
-            CardWirelessPenalty::Check& operator()(int32_t v);
+        struct add_t : Field<note::json_int_t> {
+            using Field<note::json_int_t>::Field;
+            using Field<note::json_int_t>::operator=;
+            CardWirelessPenalty::Check& operator()(note::json_int_t v);
         } add{};
         /// The maximum number of minutes that a device can be in a Network
         /// Registration Failure Penalty Box. Used with the `set` argument to
         /// override the Network Registration Failure Penalty Box defaults.
-        struct max_t : Field<int32_t> {
-            using Field<int32_t>::Field;
-            using Field<int32_t>::operator=;
-            CardWirelessPenalty::Check& operator()(int32_t v);
+        struct max_t : Field<note::json_int_t> {
+            using Field<note::json_int_t>::Field;
+            using Field<note::json_int_t>::operator=;
+            CardWirelessPenalty::Check& operator()(note::json_int_t v);
         } max{};
         /// The number of minutes of the first retry interval of a Network
         /// Registration Failure Penalty Box. Used with the `set` argument to
         /// override the Network Registration Failure Penalty Box defaults.
-        struct min_t : Field<int32_t> {
-            using Field<int32_t>::Field;
-            using Field<int32_t>::operator=;
-            CardWirelessPenalty::Check& operator()(int32_t v);
+        struct min_t : Field<note::json_int_t> {
+            using Field<note::json_int_t>::Field;
+            using Field<note::json_int_t>::operator=;
+            CardWirelessPenalty::Check& operator()(note::json_int_t v);
         } min{};
         /// The rate at which the penalty box time multiplier is increased over
         /// successive retries. Used with the `set` argument to override the
@@ -157,9 +157,9 @@ struct CardWirelessPenalty {
                 ::note::detail::arena_cost(65);  // error reserve (+1 for null terminator)
 
             /// The number of consecutive network registration failures.
-            note::ResponseField<int32_t> count{};
+            note::ResponseField<note::json_int_t> count{};
             /// The time since the first network registration failure.
-            note::ResponseField<int32_t> minutes{};
+            note::ResponseField<note::json_int_t> minutes{};
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
             /// If the Notecard is in a Penalty Box, the number of seconds until
             /// the penalty condition ends.
@@ -168,7 +168,7 @@ struct CardWirelessPenalty {
 #if NOTE_API_VERSION < NOTE_VERSION(4, 1, 1)
             [[deprecated("requires firmware >= 4.1.1")]]
 #endif
-            note::ResponseField<int32_t> seconds{};
+            note::ResponseField<note::json_int_t> seconds{};
 #endif
             /// If the Notecard is in a Penalty Box, this field provides the
             /// associated Error and Status Codes.
@@ -228,7 +228,7 @@ struct CardWirelessPenalty {
                     if (note::flash(keys_::rsp_seconds) == k_) { rsp.seconds = ::note::parse_int(raw_); return; }
 #endif
                 }
-                NOTE_SINK_NOINLINE void on_int(::note::string_view k_, int32_t v_) {
+                NOTE_SINK_NOINLINE void on_int(::note::string_view k_, ::note::json_int_t v_) {
                     if (note::flash(keys_::rsp_count) == k_) { rsp.count = v_; return; }
                     if (note::flash(keys_::rsp_minutes) == k_) { rsp.minutes = v_; return; }
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
@@ -286,8 +286,8 @@ struct CardWirelessPenalty {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
             static constexpr ::note::FieldDesc table[] NOTE_FLASH_ATTR = {
-                {keys_::rsp_count, static_cast<uint16_t>(offsetof(Response, count)), ::note::FieldType::Int32},
-                {keys_::rsp_minutes, static_cast<uint16_t>(offsetof(Response, minutes)), ::note::FieldType::Int32},
+                {keys_::rsp_count, static_cast<uint16_t>(offsetof(Response, count)), ::note::FieldType::Int},
+                {keys_::rsp_minutes, static_cast<uint16_t>(offsetof(Response, minutes)), ::note::FieldType::Int},
                 {keys_::rsp_status, static_cast<uint16_t>(offsetof(Response, status)), ::note::FieldType::String},
             };
 #pragma GCC diagnostic pop
@@ -330,9 +330,9 @@ struct CardWirelessPenalty {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
             static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
-                {keys_::add, static_cast<uint16_t>(offsetof(CardWirelessPenalty::Check, add)), ::note::ReqFieldType::Int32},
-                {keys_::max, static_cast<uint16_t>(offsetof(CardWirelessPenalty::Check, max)), ::note::ReqFieldType::Int32},
-                {keys_::min, static_cast<uint16_t>(offsetof(CardWirelessPenalty::Check, min)), ::note::ReqFieldType::Int32},
+                {keys_::add, static_cast<uint16_t>(offsetof(CardWirelessPenalty::Check, add)), ::note::ReqFieldType::Int},
+                {keys_::max, static_cast<uint16_t>(offsetof(CardWirelessPenalty::Check, max)), ::note::ReqFieldType::Int},
+                {keys_::min, static_cast<uint16_t>(offsetof(CardWirelessPenalty::Check, min)), ::note::ReqFieldType::Int},
                 {keys_::rate, static_cast<uint16_t>(offsetof(CardWirelessPenalty::Check, rate)), ::note::ReqFieldType::Double},
                 {keys_::reset, static_cast<uint16_t>(offsetof(CardWirelessPenalty::Check, reset)), ::note::ReqFieldType::Bool},
                 {keys_::set, static_cast<uint16_t>(offsetof(CardWirelessPenalty::Check, set)), ::note::ReqFieldType::Bool},
@@ -425,26 +425,26 @@ struct CardWirelessPenalty {
         /// The number of minutes to add to successive retries. Used with the
         /// `set` argument to override the Network Registration Failure Penalty
         /// Box defaults.
-        struct add_t : Field<int32_t> {
-            using Field<int32_t>::Field;
-            using Field<int32_t>::operator=;
-            CardWirelessPenalty::Set& operator()(int32_t v);
+        struct add_t : Field<note::json_int_t> {
+            using Field<note::json_int_t>::Field;
+            using Field<note::json_int_t>::operator=;
+            CardWirelessPenalty::Set& operator()(note::json_int_t v);
         } add{};
         /// The maximum number of minutes that a device can be in a Network
         /// Registration Failure Penalty Box. Used with the `set` argument to
         /// override the Network Registration Failure Penalty Box defaults.
-        struct max_t : Field<int32_t> {
-            using Field<int32_t>::Field;
-            using Field<int32_t>::operator=;
-            CardWirelessPenalty::Set& operator()(int32_t v);
+        struct max_t : Field<note::json_int_t> {
+            using Field<note::json_int_t>::Field;
+            using Field<note::json_int_t>::operator=;
+            CardWirelessPenalty::Set& operator()(note::json_int_t v);
         } max{};
         /// The number of minutes of the first retry interval of a Network
         /// Registration Failure Penalty Box. Used with the `set` argument to
         /// override the Network Registration Failure Penalty Box defaults.
-        struct min_t : Field<int32_t> {
-            using Field<int32_t>::Field;
-            using Field<int32_t>::operator=;
-            CardWirelessPenalty::Set& operator()(int32_t v);
+        struct min_t : Field<note::json_int_t> {
+            using Field<note::json_int_t>::Field;
+            using Field<note::json_int_t>::operator=;
+            CardWirelessPenalty::Set& operator()(note::json_int_t v);
         } min{};
         /// The rate at which the penalty box time multiplier is increased over
         /// successive retries. Used with the `set` argument to override the
@@ -506,9 +506,9 @@ struct CardWirelessPenalty {
                 ::note::detail::arena_cost(65);  // error reserve (+1 for null terminator)
 
             /// The number of consecutive network registration failures.
-            note::ResponseField<int32_t> count{};
+            note::ResponseField<note::json_int_t> count{};
             /// The time since the first network registration failure.
-            note::ResponseField<int32_t> minutes{};
+            note::ResponseField<note::json_int_t> minutes{};
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
             /// If the Notecard is in a Penalty Box, the number of seconds until
             /// the penalty condition ends.
@@ -517,7 +517,7 @@ struct CardWirelessPenalty {
 #if NOTE_API_VERSION < NOTE_VERSION(4, 1, 1)
             [[deprecated("requires firmware >= 4.1.1")]]
 #endif
-            note::ResponseField<int32_t> seconds{};
+            note::ResponseField<note::json_int_t> seconds{};
 #endif
             /// If the Notecard is in a Penalty Box, this field provides the
             /// associated Error and Status Codes.
@@ -577,7 +577,7 @@ struct CardWirelessPenalty {
                     if (note::flash(keys_::rsp_seconds) == k_) { rsp.seconds = ::note::parse_int(raw_); return; }
 #endif
                 }
-                NOTE_SINK_NOINLINE void on_int(::note::string_view k_, int32_t v_) {
+                NOTE_SINK_NOINLINE void on_int(::note::string_view k_, ::note::json_int_t v_) {
                     if (note::flash(keys_::rsp_count) == k_) { rsp.count = v_; return; }
                     if (note::flash(keys_::rsp_minutes) == k_) { rsp.minutes = v_; return; }
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
@@ -635,8 +635,8 @@ struct CardWirelessPenalty {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
             static constexpr ::note::FieldDesc table[] NOTE_FLASH_ATTR = {
-                {keys_::rsp_count, static_cast<uint16_t>(offsetof(Response, count)), ::note::FieldType::Int32},
-                {keys_::rsp_minutes, static_cast<uint16_t>(offsetof(Response, minutes)), ::note::FieldType::Int32},
+                {keys_::rsp_count, static_cast<uint16_t>(offsetof(Response, count)), ::note::FieldType::Int},
+                {keys_::rsp_minutes, static_cast<uint16_t>(offsetof(Response, minutes)), ::note::FieldType::Int},
                 {keys_::rsp_status, static_cast<uint16_t>(offsetof(Response, status)), ::note::FieldType::String},
             };
 #pragma GCC diagnostic pop
@@ -679,9 +679,9 @@ struct CardWirelessPenalty {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
             static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
-                {keys_::add, static_cast<uint16_t>(offsetof(CardWirelessPenalty::Set, add)), ::note::ReqFieldType::Int32},
-                {keys_::max, static_cast<uint16_t>(offsetof(CardWirelessPenalty::Set, max)), ::note::ReqFieldType::Int32},
-                {keys_::min, static_cast<uint16_t>(offsetof(CardWirelessPenalty::Set, min)), ::note::ReqFieldType::Int32},
+                {keys_::add, static_cast<uint16_t>(offsetof(CardWirelessPenalty::Set, add)), ::note::ReqFieldType::Int},
+                {keys_::max, static_cast<uint16_t>(offsetof(CardWirelessPenalty::Set, max)), ::note::ReqFieldType::Int},
+                {keys_::min, static_cast<uint16_t>(offsetof(CardWirelessPenalty::Set, min)), ::note::ReqFieldType::Int},
                 {keys_::rate, static_cast<uint16_t>(offsetof(CardWirelessPenalty::Set, rate)), ::note::ReqFieldType::Double},
                 {keys_::reset, static_cast<uint16_t>(offsetof(CardWirelessPenalty::Set, reset)), ::note::ReqFieldType::Bool},
             };
@@ -769,26 +769,26 @@ struct CardWirelessPenalty {
         /// The number of minutes to add to successive retries. Used with the
         /// `set` argument to override the Network Registration Failure Penalty
         /// Box defaults.
-        struct add_t : Field<int32_t> {
-            using Field<int32_t>::Field;
-            using Field<int32_t>::operator=;
-            CardWirelessPenalty::Clear& operator()(int32_t v);
+        struct add_t : Field<note::json_int_t> {
+            using Field<note::json_int_t>::Field;
+            using Field<note::json_int_t>::operator=;
+            CardWirelessPenalty::Clear& operator()(note::json_int_t v);
         } add{};
         /// The maximum number of minutes that a device can be in a Network
         /// Registration Failure Penalty Box. Used with the `set` argument to
         /// override the Network Registration Failure Penalty Box defaults.
-        struct max_t : Field<int32_t> {
-            using Field<int32_t>::Field;
-            using Field<int32_t>::operator=;
-            CardWirelessPenalty::Clear& operator()(int32_t v);
+        struct max_t : Field<note::json_int_t> {
+            using Field<note::json_int_t>::Field;
+            using Field<note::json_int_t>::operator=;
+            CardWirelessPenalty::Clear& operator()(note::json_int_t v);
         } max{};
         /// The number of minutes of the first retry interval of a Network
         /// Registration Failure Penalty Box. Used with the `set` argument to
         /// override the Network Registration Failure Penalty Box defaults.
-        struct min_t : Field<int32_t> {
-            using Field<int32_t>::Field;
-            using Field<int32_t>::operator=;
-            CardWirelessPenalty::Clear& operator()(int32_t v);
+        struct min_t : Field<note::json_int_t> {
+            using Field<note::json_int_t>::Field;
+            using Field<note::json_int_t>::operator=;
+            CardWirelessPenalty::Clear& operator()(note::json_int_t v);
         } min{};
         /// The rate at which the penalty box time multiplier is increased over
         /// successive retries. Used with the `set` argument to override the
@@ -846,9 +846,9 @@ struct CardWirelessPenalty {
                 ::note::detail::arena_cost(65);  // error reserve (+1 for null terminator)
 
             /// The number of consecutive network registration failures.
-            note::ResponseField<int32_t> count{};
+            note::ResponseField<note::json_int_t> count{};
             /// The time since the first network registration failure.
-            note::ResponseField<int32_t> minutes{};
+            note::ResponseField<note::json_int_t> minutes{};
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
             /// If the Notecard is in a Penalty Box, the number of seconds until
             /// the penalty condition ends.
@@ -857,7 +857,7 @@ struct CardWirelessPenalty {
 #if NOTE_API_VERSION < NOTE_VERSION(4, 1, 1)
             [[deprecated("requires firmware >= 4.1.1")]]
 #endif
-            note::ResponseField<int32_t> seconds{};
+            note::ResponseField<note::json_int_t> seconds{};
 #endif
             /// If the Notecard is in a Penalty Box, this field provides the
             /// associated Error and Status Codes.
@@ -917,7 +917,7 @@ struct CardWirelessPenalty {
                     if (note::flash(keys_::rsp_seconds) == k_) { rsp.seconds = ::note::parse_int(raw_); return; }
 #endif
                 }
-                NOTE_SINK_NOINLINE void on_int(::note::string_view k_, int32_t v_) {
+                NOTE_SINK_NOINLINE void on_int(::note::string_view k_, ::note::json_int_t v_) {
                     if (note::flash(keys_::rsp_count) == k_) { rsp.count = v_; return; }
                     if (note::flash(keys_::rsp_minutes) == k_) { rsp.minutes = v_; return; }
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
@@ -975,8 +975,8 @@ struct CardWirelessPenalty {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
             static constexpr ::note::FieldDesc table[] NOTE_FLASH_ATTR = {
-                {keys_::rsp_count, static_cast<uint16_t>(offsetof(Response, count)), ::note::FieldType::Int32},
-                {keys_::rsp_minutes, static_cast<uint16_t>(offsetof(Response, minutes)), ::note::FieldType::Int32},
+                {keys_::rsp_count, static_cast<uint16_t>(offsetof(Response, count)), ::note::FieldType::Int},
+                {keys_::rsp_minutes, static_cast<uint16_t>(offsetof(Response, minutes)), ::note::FieldType::Int},
                 {keys_::rsp_status, static_cast<uint16_t>(offsetof(Response, status)), ::note::FieldType::String},
             };
 #pragma GCC diagnostic pop
@@ -1019,9 +1019,9 @@ struct CardWirelessPenalty {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
             static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
-                {keys_::add, static_cast<uint16_t>(offsetof(CardWirelessPenalty::Clear, add)), ::note::ReqFieldType::Int32},
-                {keys_::max, static_cast<uint16_t>(offsetof(CardWirelessPenalty::Clear, max)), ::note::ReqFieldType::Int32},
-                {keys_::min, static_cast<uint16_t>(offsetof(CardWirelessPenalty::Clear, min)), ::note::ReqFieldType::Int32},
+                {keys_::add, static_cast<uint16_t>(offsetof(CardWirelessPenalty::Clear, add)), ::note::ReqFieldType::Int},
+                {keys_::max, static_cast<uint16_t>(offsetof(CardWirelessPenalty::Clear, max)), ::note::ReqFieldType::Int},
+                {keys_::min, static_cast<uint16_t>(offsetof(CardWirelessPenalty::Clear, min)), ::note::ReqFieldType::Int},
                 {keys_::rate, static_cast<uint16_t>(offsetof(CardWirelessPenalty::Clear, rate)), ::note::ReqFieldType::Double},
                 {keys_::set, static_cast<uint16_t>(offsetof(CardWirelessPenalty::Clear, set)), ::note::ReqFieldType::Bool},
             };
@@ -1078,18 +1078,18 @@ struct CardWirelessPenalty {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-inline CardWirelessPenalty::Check& CardWirelessPenalty::Check::add_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardWirelessPenalty::Check& CardWirelessPenalty::Check::add_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardWirelessPenalty::Check*>(
         reinterpret_cast<char*>(this) - offsetof(CardWirelessPenalty::Check, add));
 }
-inline CardWirelessPenalty::Check& CardWirelessPenalty::Check::max_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardWirelessPenalty::Check& CardWirelessPenalty::Check::max_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardWirelessPenalty::Check*>(
         reinterpret_cast<char*>(this) - offsetof(CardWirelessPenalty::Check, max));
 }
-inline CardWirelessPenalty::Check& CardWirelessPenalty::Check::min_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardWirelessPenalty::Check& CardWirelessPenalty::Check::min_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardWirelessPenalty::Check*>(
         reinterpret_cast<char*>(this) - offsetof(CardWirelessPenalty::Check, min));
 }
@@ -1113,18 +1113,18 @@ inline CardWirelessPenalty::Check& CardWirelessPenalty::Check::set_t::operator()
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-inline CardWirelessPenalty::Set& CardWirelessPenalty::Set::add_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardWirelessPenalty::Set& CardWirelessPenalty::Set::add_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardWirelessPenalty::Set*>(
         reinterpret_cast<char*>(this) - offsetof(CardWirelessPenalty::Set, add));
 }
-inline CardWirelessPenalty::Set& CardWirelessPenalty::Set::max_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardWirelessPenalty::Set& CardWirelessPenalty::Set::max_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardWirelessPenalty::Set*>(
         reinterpret_cast<char*>(this) - offsetof(CardWirelessPenalty::Set, max));
 }
-inline CardWirelessPenalty::Set& CardWirelessPenalty::Set::min_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardWirelessPenalty::Set& CardWirelessPenalty::Set::min_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardWirelessPenalty::Set*>(
         reinterpret_cast<char*>(this) - offsetof(CardWirelessPenalty::Set, min));
 }
@@ -1143,18 +1143,18 @@ inline CardWirelessPenalty::Set& CardWirelessPenalty::Set::reset_t::operator()(b
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-inline CardWirelessPenalty::Clear& CardWirelessPenalty::Clear::add_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardWirelessPenalty::Clear& CardWirelessPenalty::Clear::add_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardWirelessPenalty::Clear*>(
         reinterpret_cast<char*>(this) - offsetof(CardWirelessPenalty::Clear, add));
 }
-inline CardWirelessPenalty::Clear& CardWirelessPenalty::Clear::max_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardWirelessPenalty::Clear& CardWirelessPenalty::Clear::max_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardWirelessPenalty::Clear*>(
         reinterpret_cast<char*>(this) - offsetof(CardWirelessPenalty::Clear, max));
 }
-inline CardWirelessPenalty::Clear& CardWirelessPenalty::Clear::min_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardWirelessPenalty::Clear& CardWirelessPenalty::Clear::min_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardWirelessPenalty::Clear*>(
         reinterpret_cast<char*>(this) - offsetof(CardWirelessPenalty::Clear, min));
 }

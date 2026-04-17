@@ -63,10 +63,10 @@ struct EnvModified {
 #if NOTE_API_VERSION < NOTE_VERSION(3, 4, 1)
     [[deprecated("requires firmware >= 3.4.1")]]
 #endif
-    struct time_t : Field<int32_t> {
-        using Field<int32_t>::Field;
-        using Field<int32_t>::operator=;
-        EnvModified& operator()(int32_t v);
+    struct time_t : Field<note::json_int_t> {
+        using Field<note::json_int_t>::Field;
+        using Field<note::json_int_t>::operator=;
+        EnvModified& operator()(note::json_int_t v);
     } time{};
 #endif
 
@@ -113,7 +113,7 @@ struct EnvModified {
 #if NOTE_API_VERSION < NOTE_VERSION(3, 4, 1)
         [[deprecated("requires firmware >= 3.4.1")]]
 #endif
-        note::ResponseField<int32_t> time{};
+        note::ResponseField<note::json_int_t> time{};
 #endif
 
 #pragma GCC diagnostic push
@@ -158,7 +158,7 @@ struct EnvModified {
                 if (note::flash(keys_::rsp_time) == k_) { rsp.time = ::note::parse_int(raw_); return; }
 #endif
             }
-            NOTE_SINK_NOINLINE void on_int(::note::string_view k_, int32_t v_) {
+            NOTE_SINK_NOINLINE void on_int(::note::string_view k_, ::note::json_int_t v_) {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
                 if (note::flash(keys_::rsp_time) == k_) { rsp.time = v_; return; }
 #endif
@@ -221,7 +221,7 @@ struct EnvModified {
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
         static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-            {keys_::time, static_cast<uint16_t>(offsetof(EnvModified, time)), ::note::ReqFieldType::Int32},
+            {keys_::time, static_cast<uint16_t>(offsetof(EnvModified, time)), ::note::ReqFieldType::Int},
 #endif
         };
 #pragma GCC diagnostic pop
@@ -265,8 +265,8 @@ struct EnvModified {
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-inline EnvModified& EnvModified::time_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline EnvModified& EnvModified::time_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<EnvModified*>(
         reinterpret_cast<char*>(this) - offsetof(EnvModified, time));
 }

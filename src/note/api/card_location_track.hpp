@@ -96,10 +96,10 @@ struct CardLocationTrack {
     /// If `heartbeat` is true, add a heartbeat entry at this hourly interval.
     /// Use a negative integer to specify a heartbeat in minutes instead of
     /// hours.
-    struct hours_t : Field<int32_t> {
-        using Field<int32_t>::Field;
-        using Field<int32_t>::operator=;
-        CardLocationTrack& operator()(int32_t v);
+    struct hours_t : Field<note::json_int_t> {
+        using Field<note::json_int_t>::Field;
+        using Field<note::json_int_t>::operator=;
+        CardLocationTrack& operator()(note::json_int_t v);
     } hours{};
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 5, 2) || !defined(NOTE_API_STRICT)
     /// A base64-encoded binary payload to be included in the next `_track.qo`
@@ -187,10 +187,10 @@ struct CardLocationTrack {
         /// `true` if heartbeat is enabled.
         note::ResponseField<bool> heartbeat{};
         /// The `heartbeat` interval in minutes, if provided.
-        note::ResponseField<int32_t> minutes{};
+        note::ResponseField<note::json_int_t> minutes{};
         /// If tracking is enabled and a heartbeat `hours` value is not set, the
         /// tracking interval set in `card.location.mode`.
-        note::ResponseField<int32_t> seconds{};
+        note::ResponseField<note::json_int_t> seconds{};
         /// `true` if tracking is enabled.
         note::ResponseField<bool> start{};
         /// `true` if tracking is disabled.
@@ -244,7 +244,7 @@ struct CardLocationTrack {
                 if (note::flash(keys_::rsp_minutes) == k_) { rsp.minutes = ::note::parse_int(raw_); return; }
                 if (note::flash(keys_::rsp_seconds) == k_) { rsp.seconds = ::note::parse_int(raw_); return; }
             }
-            NOTE_SINK_NOINLINE void on_int(::note::string_view k_, int32_t v_) {
+            NOTE_SINK_NOINLINE void on_int(::note::string_view k_, ::note::json_int_t v_) {
                 if (note::flash(keys_::rsp_minutes) == k_) { rsp.minutes = v_; return; }
                 if (note::flash(keys_::rsp_seconds) == k_) { rsp.seconds = v_; return; }
             }
@@ -303,8 +303,8 @@ struct CardLocationTrack {
         static constexpr ::note::FieldDesc table[] NOTE_FLASH_ATTR = {
             {keys_::rsp_file, static_cast<uint16_t>(offsetof(Response, file)), ::note::FieldType::String},
             {keys_::rsp_heartbeat, static_cast<uint16_t>(offsetof(Response, heartbeat)), ::note::FieldType::Bool},
-            {keys_::rsp_minutes, static_cast<uint16_t>(offsetof(Response, minutes)), ::note::FieldType::Int32},
-            {keys_::rsp_seconds, static_cast<uint16_t>(offsetof(Response, seconds)), ::note::FieldType::Int32},
+            {keys_::rsp_minutes, static_cast<uint16_t>(offsetof(Response, minutes)), ::note::FieldType::Int},
+            {keys_::rsp_seconds, static_cast<uint16_t>(offsetof(Response, seconds)), ::note::FieldType::Int},
             {keys_::rsp_start, static_cast<uint16_t>(offsetof(Response, start)), ::note::FieldType::Bool},
             {keys_::rsp_stop, static_cast<uint16_t>(offsetof(Response, stop)), ::note::FieldType::Bool},
         };
@@ -352,7 +352,7 @@ struct CardLocationTrack {
         static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
             {keys_::file, static_cast<uint16_t>(offsetof(CardLocationTrack, file)), ::note::ReqFieldType::String},
             {keys_::heartbeat, static_cast<uint16_t>(offsetof(CardLocationTrack, heartbeat)), ::note::ReqFieldType::Bool},
-            {keys_::hours, static_cast<uint16_t>(offsetof(CardLocationTrack, hours)), ::note::ReqFieldType::Int32},
+            {keys_::hours, static_cast<uint16_t>(offsetof(CardLocationTrack, hours)), ::note::ReqFieldType::Int},
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 5, 2) || !defined(NOTE_API_STRICT)
             {keys_::payload, static_cast<uint16_t>(offsetof(CardLocationTrack, payload)), ::note::ReqFieldType::String},
 #endif
@@ -434,8 +434,8 @@ inline CardLocationTrack& CardLocationTrack::heartbeat_t::operator()(bool v) {
     return *reinterpret_cast<CardLocationTrack*>(
         reinterpret_cast<char*>(this) - offsetof(CardLocationTrack, heartbeat));
 }
-inline CardLocationTrack& CardLocationTrack::hours_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardLocationTrack& CardLocationTrack::hours_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardLocationTrack*>(
         reinterpret_cast<char*>(this) - offsetof(CardLocationTrack, hours));
 }

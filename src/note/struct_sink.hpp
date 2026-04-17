@@ -83,7 +83,7 @@ struct is_sax_aggregate<T, void> : std::true_type {};
 
 struct ChildVTable {
     void (*on_bool)(void*, string_view, bool);
-    void (*on_int)(void*, string_view, int32_t);
+    void (*on_int)(void*, string_view, json_int_t);
     void (*on_float)(void*, string_view, double);
     void (*on_string)(void*, string_view, string_view);
     void (*on_number)(void*, string_view, string_view);
@@ -95,7 +95,7 @@ struct ChildVTable {
 
 struct ArrayElemVTable {
     void (*assign_bool)(void*, bool);
-    void (*assign_int)(void*, int32_t);
+    void (*assign_int)(void*, json_int_t);
     void (*assign_float)(void*, double);
     void (*assign_string)(void*, string_view);
     void (*assign_number)(void*, string_view);
@@ -131,7 +131,7 @@ struct SaxAssignBool {
 };
 
 struct SaxAssignInt {
-    int32_t value;
+    json_int_t value;
     template<typename F>
     void operator()(F& field) const {
         using V = std::remove_cv_t<F>;
@@ -304,7 +304,7 @@ struct StructSinkCore {
         detail::sax_dispatch(obj, k, detail::SaxAssignBool{v});
     }
 
-    void on_int(string_view k, int32_t v) {
+    void on_int(string_view k, json_int_t v) {
         if (skip_depth_ > 0) return;
         if (child_ctx_) { child_vt_->on_int(child_ctx_, k, v); return; }
         if (in_array_) { array_assign_int(v); return; }
@@ -419,7 +419,7 @@ private:
         }
     }
 
-    void array_assign_int(int32_t v) {
+    void array_assign_int(json_int_t v) {
         auto* elem = array_state_.current();
         if (elem) {
             array_state_.elem_vt->assign_int(elem, v);
@@ -512,7 +512,7 @@ const ChildVTable& child_vtable_for() {
         [](void* ctx, string_view k, bool v) {
             static_cast<StructSinkCore<U>*>(ctx)->on_bool(k, v);
         },
-        [](void* ctx, string_view k, int32_t v) {
+        [](void* ctx, string_view k, json_int_t v) {
             static_cast<StructSinkCore<U>*>(ctx)->on_int(k, v);
         },
         [](void* ctx, string_view k, double v) {
@@ -558,7 +558,7 @@ const ArrayElemVTable& SaxCaptureArray::array_elem_vtable_for() {
         [](void* elem, bool v) {
             SaxAssignBool{v}(*static_cast<Elem*>(elem));
         },
-        [](void* elem, int32_t v) {
+        [](void* elem, json_int_t v) {
             SaxAssignInt{v}(*static_cast<Elem*>(elem));
         },
         [](void* elem, double v) {

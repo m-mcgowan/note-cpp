@@ -62,10 +62,10 @@ struct CardPower {
 
         /// How often, in minutes, Notecard should log power consumption in a
         /// `_log.qo` Note. The default value is `720` (12 hours).
-        struct minutes_t : Field<int32_t> {
-            using Field<int32_t>::Field;
-            using Field<int32_t>::operator=;
-            CardPower::Read& operator()(int32_t v);
+        struct minutes_t : Field<note::json_int_t> {
+            using Field<note::json_int_t>::Field;
+            using Field<note::json_int_t>::operator=;
+            CardPower::Read& operator()(note::json_int_t v);
         } minutes{};
         /// Set to `true` to reset the power consumption counters back to 0.
         struct reset_t : Field<bool> {
@@ -243,7 +243,7 @@ struct CardPower {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
             static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
-                {keys_::minutes, static_cast<uint16_t>(offsetof(CardPower::Read, minutes)), ::note::ReqFieldType::Int32},
+                {keys_::minutes, static_cast<uint16_t>(offsetof(CardPower::Read, minutes)), ::note::ReqFieldType::Int},
                 {keys_::reset, static_cast<uint16_t>(offsetof(CardPower::Read, reset)), ::note::ReqFieldType::Bool},
             };
 #pragma GCC diagnostic pop
@@ -312,10 +312,10 @@ struct CardPower {
 
         /// How often, in minutes, Notecard should log power consumption in a
         /// `_log.qo` Note. The default value is `720` (12 hours).
-        struct minutes_t : Field<int32_t> {
-            using Field<int32_t>::Field;
-            using Field<int32_t>::operator=;
-            CardPower::Configure& operator()(int32_t v);
+        struct minutes_t : Field<note::json_int_t> {
+            using Field<note::json_int_t>::Field;
+            using Field<note::json_int_t>::operator=;
+            CardPower::Configure& operator()(note::json_int_t v);
         } minutes{};
         /// Set to `true` to reset the power consumption counters back to 0.
         struct reset_t : Field<bool> {
@@ -493,7 +493,7 @@ struct CardPower {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
             static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
-                {keys_::minutes, static_cast<uint16_t>(offsetof(CardPower::Configure, minutes)), ::note::ReqFieldType::Int32},
+                {keys_::minutes, static_cast<uint16_t>(offsetof(CardPower::Configure, minutes)), ::note::ReqFieldType::Int},
                 {keys_::reset, static_cast<uint16_t>(offsetof(CardPower::Configure, reset)), ::note::ReqFieldType::Bool},
             };
 #pragma GCC diagnostic pop
@@ -562,10 +562,10 @@ struct CardPower {
 
         /// How often, in minutes, Notecard should log power consumption in a
         /// `_log.qo` Note. The default value is `720` (12 hours).
-        struct minutes_t : Field<int32_t> {
-            using Field<int32_t>::Field;
-            using Field<int32_t>::operator=;
-            CardPower::Reset& operator()(int32_t v);
+        struct minutes_t : Field<note::json_int_t> {
+            using Field<note::json_int_t>::Field;
+            using Field<note::json_int_t>::operator=;
+            CardPower::Reset& operator()(note::json_int_t v);
         } minutes{};
 
 
@@ -732,7 +732,7 @@ struct CardPower {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
             static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
-                {keys_::minutes, static_cast<uint16_t>(offsetof(CardPower::Reset, minutes)), ::note::ReqFieldType::Int32},
+                {keys_::minutes, static_cast<uint16_t>(offsetof(CardPower::Reset, minutes)), ::note::ReqFieldType::Int},
             };
 #pragma GCC diagnostic pop
             n_out = sizeof(table_) / sizeof(table_[0]);
@@ -771,8 +771,8 @@ struct CardPower {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-inline CardPower::Read& CardPower::Read::minutes_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardPower::Read& CardPower::Read::minutes_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardPower::Read*>(
         reinterpret_cast<char*>(this) - offsetof(CardPower::Read, minutes));
 }
@@ -786,8 +786,8 @@ inline CardPower::Read& CardPower::Read::reset_t::operator()(bool v) {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-inline CardPower::Configure& CardPower::Configure::minutes_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardPower::Configure& CardPower::Configure::minutes_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardPower::Configure*>(
         reinterpret_cast<char*>(this) - offsetof(CardPower::Configure, minutes));
 }
@@ -801,8 +801,8 @@ inline CardPower::Configure& CardPower::Configure::reset_t::operator()(bool v) {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-inline CardPower::Reset& CardPower::Reset::minutes_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardPower::Reset& CardPower::Reset::minutes_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardPower::Reset*>(
         reinterpret_cast<char*>(this) - offsetof(CardPower::Reset, minutes));
 }

@@ -108,10 +108,10 @@ struct HubSet {
     /// session (the minimum allowed value is `15`). When this time elapses, the
     /// Notecard gracefully ends the current session and starts a new one in
     /// order to sync session-specific data to Notehub.
-    struct duration_t : Field<int32_t> {
-        using Field<int32_t>::Field;
-        using Field<int32_t>::operator=;
-        HubSet& operator()(int32_t v);
+    struct duration_t : Field<note::json_int_t> {
+        using Field<note::json_int_t>::Field;
+        using Field<note::json_int_t>::operator=;
+        HubSet& operator()(note::json_int_t v);
     } duration{};
     /// The URL of the Notehub service. Use `"-"` to reset to the default value.
     struct host_t : Field<note::string_view> {
@@ -130,10 +130,10 @@ struct HubSet {
     ///
     /// A value of `0` means that the Notecard will never sync inbound data
     /// unless explicitly told to do so (e.g. using `hub.sync`).
-    struct inbound_t : Field<int32_t> {
-        using Field<int32_t>::Field;
-        using Field<int32_t>::operator=;
-        HubSet& operator()(int32_t v);
+    struct inbound_t : Field<note::json_int_t> {
+        using Field<note::json_int_t>::Field;
+        using Field<note::json_int_t>::operator=;
+        HubSet& operator()(note::json_int_t v);
     } inbound{};
     /// The Notecard's synchronization mode.
     ///
@@ -221,10 +221,10 @@ struct HubSet {
     ///
     /// A value of `0` means that the Notecard will never sync outbound data
     /// unless explicitly told to do so (e.g. using `hub.sync`).
-    struct outbound_t : Field<int32_t> {
-        using Field<int32_t>::Field;
-        using Field<int32_t>::operator=;
-        HubSet& operator()(int32_t v);
+    struct outbound_t : Field<note::json_int_t> {
+        using Field<note::json_int_t>::Field;
+        using Field<note::json_int_t>::operator=;
+        HubSet& operator()(note::json_int_t v);
     } outbound{};
     /// A Notehub-managed unique identifier that is used to match Devices with
     /// Projects. This string is used during a device's auto-provisioning to
@@ -245,10 +245,10 @@ struct HubSet {
 #if NOTE_API_VERSION < NOTE_VERSION(3, 4, 1)
     [[deprecated("requires firmware >= 3.4.1")]]
 #endif
-    struct seconds_t : Field<int32_t> {
-        using Field<int32_t>::Field;
-        using Field<int32_t>::operator=;
-        HubSet& operator()(int32_t v);
+    struct seconds_t : Field<note::json_int_t> {
+        using Field<note::json_int_t>::Field;
+        using Field<note::json_int_t>::operator=;
+        HubSet& operator()(note::json_int_t v);
     } seconds{};
 #endif
     /// The end product's serial number.
@@ -493,9 +493,9 @@ struct HubSet {
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
             {keys_::details, static_cast<uint16_t>(offsetof(HubSet, details)), ::note::ReqFieldType::String},
 #endif
-            {keys_::duration, static_cast<uint16_t>(offsetof(HubSet, duration)), ::note::ReqFieldType::Int32},
+            {keys_::duration, static_cast<uint16_t>(offsetof(HubSet, duration)), ::note::ReqFieldType::Int},
             {keys_::host, static_cast<uint16_t>(offsetof(HubSet, host)), ::note::ReqFieldType::String},
-            {keys_::inbound, static_cast<uint16_t>(offsetof(HubSet, inbound)), ::note::ReqFieldType::Int32},
+            {keys_::inbound, static_cast<uint16_t>(offsetof(HubSet, inbound)), ::note::ReqFieldType::Int},
             {keys_::mode, static_cast<uint16_t>(offsetof(HubSet, mode)), ::note::ReqFieldType::String},
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
             {keys_::off, static_cast<uint16_t>(offsetof(HubSet, off)), ::note::ReqFieldType::Bool},
@@ -503,10 +503,10 @@ struct HubSet {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
             {keys_::on, static_cast<uint16_t>(offsetof(HubSet, on)), ::note::ReqFieldType::Bool},
 #endif
-            {keys_::outbound, static_cast<uint16_t>(offsetof(HubSet, outbound)), ::note::ReqFieldType::Int32},
+            {keys_::outbound, static_cast<uint16_t>(offsetof(HubSet, outbound)), ::note::ReqFieldType::Int},
             {keys_::product, static_cast<uint16_t>(offsetof(HubSet, product)), ::note::ReqFieldType::String},
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-            {keys_::seconds, static_cast<uint16_t>(offsetof(HubSet, seconds)), ::note::ReqFieldType::Int32},
+            {keys_::seconds, static_cast<uint16_t>(offsetof(HubSet, seconds)), ::note::ReqFieldType::Int},
 #endif
             {keys_::sn, static_cast<uint16_t>(offsetof(HubSet, sn)), ::note::ReqFieldType::String},
             {keys_::sync, static_cast<uint16_t>(offsetof(HubSet, sync)), ::note::ReqFieldType::Bool},
@@ -677,8 +677,8 @@ inline HubSet& HubSet::details_t::operator()(note::string_view v) {
         reinterpret_cast<char*>(this) - offsetof(HubSet, details));
 }
 #endif
-inline HubSet& HubSet::duration_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline HubSet& HubSet::duration_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<HubSet*>(
         reinterpret_cast<char*>(this) - offsetof(HubSet, duration));
 }
@@ -687,8 +687,8 @@ inline HubSet& HubSet::host_t::operator()(note::string_view v) {
     return *reinterpret_cast<HubSet*>(
         reinterpret_cast<char*>(this) - offsetof(HubSet, host));
 }
-inline HubSet& HubSet::inbound_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline HubSet& HubSet::inbound_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<HubSet*>(
         reinterpret_cast<char*>(this) - offsetof(HubSet, inbound));
 }
@@ -711,8 +711,8 @@ inline HubSet& HubSet::on_t::operator()(bool v) {
         reinterpret_cast<char*>(this) - offsetof(HubSet, on));
 }
 #endif
-inline HubSet& HubSet::outbound_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline HubSet& HubSet::outbound_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<HubSet*>(
         reinterpret_cast<char*>(this) - offsetof(HubSet, outbound));
 }
@@ -722,8 +722,8 @@ inline HubSet& HubSet::product_t::operator()(note::string_view v) {
         reinterpret_cast<char*>(this) - offsetof(HubSet, product));
 }
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-inline HubSet& HubSet::seconds_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline HubSet& HubSet::seconds_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<HubSet*>(
         reinterpret_cast<char*>(this) - offsetof(HubSet, seconds));
 }

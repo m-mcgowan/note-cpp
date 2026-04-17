@@ -6,6 +6,7 @@
 // API_STYLE selects the developer experience vs code size trade-off:
 //   1 = Api groups:   api.hub.set().product(...).execute()
 //   2 = Direct:       nc.execute(req)
+//   3 = Raw JSON:     JsonBuf + transport.transact_raw()
 
 // Guarded by USE_NOTECPP_AVR to prevent accidental compilation
 // if src_filter config changes — defensive + self-documenting.
@@ -18,6 +19,7 @@
 #include <note/api.hpp>
 #include <note/request_set.hpp>
 #include <note/arduino/begin.hpp>
+#include <note/json_buf.hpp>
 
 struct Readings {
     float temperature;
@@ -66,7 +68,7 @@ void setup() {
             b.add("humidity", int32_t{1});
         }))
         .execute();
-#else
+#elif API_STYLE == 2
     {
         note::api::HubSet req;
         req.product = "com.example.size-test";
@@ -83,6 +85,30 @@ void setup() {
         }));
         nc.execute(req);
     }
+#elif API_STYLE == 3
+    // Raw JSON via JsonBuf + transact_raw()
+    {
+        note::JsonBuf<128> req;
+        req.add("req", "hub.set");
+        req.add("product", "com.example.size-test");
+        req.add("mode", "periodic");
+        req.add("outbound", 60);
+        req.close();
+        char rsp[128];
+        nc.stack().transport.transact_raw(req.view(), rsp, sizeof(rsp), 10000);
+    }
+    {
+        note::JsonBuf<128> req;
+        req.add("req", "note.template");
+        req.add("file", "sensors.qo");
+        req.begin_object("body");
+            req.add("temperature", 14.1);
+            req.add("humidity", int32_t{1});
+        req.end_object();
+        req.close();
+        char rsp[128];
+        nc.stack().transport.transact_raw(req.view(), rsp, sizeof(rsp), 10000);
+    }
 #endif
 }
 
@@ -92,10 +118,22 @@ void loop() {
     // Read temperature
 #if API_STYLE == 1
     auto temp = api.card.temp().read().execute();
-#else
+#elif API_STYLE == 2
     auto temp = nc.execute(note::api::CardTemp::Read{});
 #endif
+#if API_STYLE <= 2
     float temperature = temp ? temp.value : 0;
+#else
+    float temperature = 0;
+    {
+        note::JsonBuf<64> req;
+        req.add("req", "card.temp");
+        req.close();
+        char rsp[128];
+        nc.stack().transport.transact_raw(req.view(), rsp, sizeof(rsp), 10000);
+        // In raw mode, response parsing is manual — omitted for size comparison
+    }
+#endif
 
     // Publish sensor data
     Readings out{temperature, 60};
@@ -104,36 +142,71 @@ void loop() {
         .file("sensors.qo")
         .body(out)
         .execute();
-#else
+#elif API_STYLE == 2
     {
         note::api::NoteAdd req;
         req.file = "sensors.qo";
         req.body(out);
         nc.execute(req);
     }
+#else
+    {
+        note::JsonBuf<128> req;
+        req.add("req", "note.add");
+        req.add("file", "sensors.qo");
+        req.begin_object("body");
+            req.add("temperature", out.temperature);
+            req.add("humidity", out.humidity);
+        req.end_object();
+        req.close();
+        char rsp[64];
+        nc.stack().transport.transact_raw(req.view(), rsp, sizeof(rsp), 10000);
+    }
 #endif
 
     // Check connection status
 #if API_STYLE == 1
     auto status = api.card.status().execute();
-#else
+#elif API_STYLE == 2
     auto status = nc.execute(note::api::CardStatus{});
 #endif
+#if API_STYLE <= 2
     bool connected = status && status.connected;
+#else
+    bool connected = false;
+    {
+        note::JsonBuf<64> req;
+        req.add("req", "card.status");
+        req.close();
+        char rsp[128];
+        nc.stack().transport.transact_raw(req.view(), rsp, sizeof(rsp), 10000);
+    }
+#endif
 
     // Read battery voltage
 #if API_STYLE == 1
     auto volt = api.card.voltage().read().execute();
-#else
+#elif API_STYLE == 2
     auto volt = nc.execute(note::api::CardVoltage::Read{});
 #endif
+#if API_STYLE <= 2
     double voltage = volt ? volt.value : 0;
+#else
+    double voltage = 0;
+    {
+        note::JsonBuf<64> req;
+        req.add("req", "card.voltage");
+        req.close();
+        char rsp[128];
+        nc.stack().transport.transact_raw(req.view(), rsp, sizeof(rsp), 10000);
+    }
+#endif
 
     // Read inbound note body
     Readings note_body{};
 #if API_STYLE == 1
     auto note_in = api.note.read("config.qi").into(note_body).execute();
-#else
+#elif API_STYLE == 2
     {
         note::api::NoteGet::Read req;
         req.file = "config.qi";
@@ -141,17 +214,31 @@ void loop() {
         auto note_in = nc.execute(req);
         (void)note_in;
     }
+#else
+    {
+        note::JsonBuf<64> req;
+        req.add("req", "note.get");
+        req.add("file", "config.qi");
+        req.close();
+        char rsp[256];
+        nc.stack().transport.transact_raw(req.view(), rsp, sizeof(rsp), 10000);
+    }
 #endif
 
     // Read environment variable
 #if API_STYLE == 1
     auto env = api.env.get().execute();
-#else
+#elif API_STYLE == 2
     auto env = nc.execute(note::api::EnvGet{});
+#else
+    {
+        note::JsonBuf<64> req;
+        req.add("req", "env.get");
+        req.close();
+        char rsp[256];
+        nc.stack().transport.transact_raw(req.view(), rsp, sizeof(rsp), 10000);
+    }
 #endif
-    // Access an env body field (env vars are in the body)
-    // note-cpp: env body requires into() with a typed struct
-    // For simplicity, just check the non-body fields here
 
     (void)connected;
     (void)voltage;

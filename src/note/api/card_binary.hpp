@@ -108,17 +108,17 @@ struct CardBinary {
 
             /// The size of COBS-encoded data stored in the reserved area
             /// (without the trailing ).
-            note::ResponseField<int32_t> cobs{};
+            note::ResponseField<note::json_int_t> cobs{};
             /// Returns true if the Notecard is connected to the network.
             note::ResponseField<bool> connected{};
             /// If present, a string describing the error that occurred during
             /// transmission.
             note::ResponseField<note::string_view> err{};
             /// The amount of unencoded data currently stored (in bytes).
-            note::ResponseField<int32_t> length{};
+            note::ResponseField<note::json_int_t> length{};
             /// The space available (in bytes) for storing unencoded data on the
             /// Notecard.
-            note::ResponseField<int32_t> max{};
+            note::ResponseField<note::json_int_t> max{};
             /// The MD5 checksum calculated for the entire unencoded buffer.
             note::ResponseField<note::string_view> status{};
 
@@ -170,7 +170,7 @@ struct CardBinary {
                     if (note::flash(keys_::rsp_length) == k_) { rsp.length = ::note::parse_int(raw_); return; }
                     if (note::flash(keys_::rsp_max) == k_) { rsp.max = ::note::parse_int(raw_); return; }
                 }
-                NOTE_SINK_NOINLINE void on_int(::note::string_view k_, int32_t v_) {
+                NOTE_SINK_NOINLINE void on_int(::note::string_view k_, ::note::json_int_t v_) {
                     if (note::flash(keys_::rsp_cobs) == k_) { rsp.cobs = v_; return; }
                     if (note::flash(keys_::rsp_length) == k_) { rsp.length = v_; return; }
                     if (note::flash(keys_::rsp_max) == k_) { rsp.max = v_; return; }
@@ -229,11 +229,11 @@ struct CardBinary {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
             static constexpr ::note::FieldDesc table[] NOTE_FLASH_ATTR = {
-                {keys_::rsp_cobs, static_cast<uint16_t>(offsetof(Response, cobs)), ::note::FieldType::Int32},
+                {keys_::rsp_cobs, static_cast<uint16_t>(offsetof(Response, cobs)), ::note::FieldType::Int},
                 {keys_::rsp_connected, static_cast<uint16_t>(offsetof(Response, connected)), ::note::FieldType::Bool},
                 {keys_::rsp_err, static_cast<uint16_t>(offsetof(Response, err)), ::note::FieldType::String},
-                {keys_::rsp_length, static_cast<uint16_t>(offsetof(Response, length)), ::note::FieldType::Int32},
-                {keys_::rsp_max, static_cast<uint16_t>(offsetof(Response, max)), ::note::FieldType::Int32},
+                {keys_::rsp_length, static_cast<uint16_t>(offsetof(Response, length)), ::note::FieldType::Int},
+                {keys_::rsp_max, static_cast<uint16_t>(offsetof(Response, max)), ::note::FieldType::Int},
                 {keys_::rsp_status, static_cast<uint16_t>(offsetof(Response, status)), ::note::FieldType::String},
             };
 #pragma GCC diagnostic pop
@@ -378,17 +378,17 @@ struct CardBinary {
 
             /// The size of COBS-encoded data stored in the reserved area
             /// (without the trailing ).
-            note::ResponseField<int32_t> cobs{};
+            note::ResponseField<note::json_int_t> cobs{};
             /// Returns true if the Notecard is connected to the network.
             note::ResponseField<bool> connected{};
             /// If present, a string describing the error that occurred during
             /// transmission.
             note::ResponseField<note::string_view> err{};
             /// The amount of unencoded data currently stored (in bytes).
-            note::ResponseField<int32_t> length{};
+            note::ResponseField<note::json_int_t> length{};
             /// The space available (in bytes) for storing unencoded data on the
             /// Notecard.
-            note::ResponseField<int32_t> max{};
+            note::ResponseField<note::json_int_t> max{};
             /// The MD5 checksum calculated for the entire unencoded buffer.
             note::ResponseField<note::string_view> status{};
 
@@ -440,7 +440,7 @@ struct CardBinary {
                     if (note::flash(keys_::rsp_length) == k_) { rsp.length = ::note::parse_int(raw_); return; }
                     if (note::flash(keys_::rsp_max) == k_) { rsp.max = ::note::parse_int(raw_); return; }
                 }
-                NOTE_SINK_NOINLINE void on_int(::note::string_view k_, int32_t v_) {
+                NOTE_SINK_NOINLINE void on_int(::note::string_view k_, ::note::json_int_t v_) {
                     if (note::flash(keys_::rsp_cobs) == k_) { rsp.cobs = v_; return; }
                     if (note::flash(keys_::rsp_length) == k_) { rsp.length = v_; return; }
                     if (note::flash(keys_::rsp_max) == k_) { rsp.max = v_; return; }
@@ -499,11 +499,11 @@ struct CardBinary {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
             static constexpr ::note::FieldDesc table[] NOTE_FLASH_ATTR = {
-                {keys_::rsp_cobs, static_cast<uint16_t>(offsetof(Response, cobs)), ::note::FieldType::Int32},
+                {keys_::rsp_cobs, static_cast<uint16_t>(offsetof(Response, cobs)), ::note::FieldType::Int},
                 {keys_::rsp_connected, static_cast<uint16_t>(offsetof(Response, connected)), ::note::FieldType::Bool},
                 {keys_::rsp_err, static_cast<uint16_t>(offsetof(Response, err)), ::note::FieldType::String},
-                {keys_::rsp_length, static_cast<uint16_t>(offsetof(Response, length)), ::note::FieldType::Int32},
-                {keys_::rsp_max, static_cast<uint16_t>(offsetof(Response, max)), ::note::FieldType::Int32},
+                {keys_::rsp_length, static_cast<uint16_t>(offsetof(Response, length)), ::note::FieldType::Int},
+                {keys_::rsp_max, static_cast<uint16_t>(offsetof(Response, max)), ::note::FieldType::Int},
                 {keys_::rsp_status, static_cast<uint16_t>(offsetof(Response, status)), ::note::FieldType::String},
             };
 #pragma GCC diagnostic pop

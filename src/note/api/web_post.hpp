@@ -144,10 +144,10 @@ struct WebPost {
     } file{};
     /// The maximum size of the response from the remote server, in bytes.
     /// Useful if a memory-constrained host wants to limit the response size.
-    struct max_t : Field<int32_t> {
-        using Field<int32_t>::Field;
-        using Field<int32_t>::operator=;
-        WebPost& operator()(int32_t v);
+    struct max_t : Field<note::json_int_t> {
+        using Field<note::json_int_t>::Field;
+        using Field<note::json_int_t>::operator=;
+        WebPost& operator()(note::json_int_t v);
     } max{};
     /// A web URL endpoint relative to the host configured in the Proxy Route.
     /// URL parameters may be added to this argument as well (e.g.
@@ -169,10 +169,10 @@ struct WebPost {
     /// When sending payload fragments, the number of bytes of the binary
     /// payload to offset from 0 when reassembling on the Notehub once all
     /// fragments have been received.
-    struct offset_t : Field<int32_t> {
-        using Field<int32_t>::Field;
-        using Field<int32_t>::operator=;
-        WebPost& operator()(int32_t v);
+    struct offset_t : Field<note::json_int_t> {
+        using Field<note::json_int_t>::Field;
+        using Field<note::json_int_t>::operator=;
+        WebPost& operator()(note::json_int_t v);
     } offset{};
     /// A base64-encoded binary payload. A `web.post` may have either a `body`
     /// or a `payload`, but may NOT have both. Be aware that Notehub will decode
@@ -191,10 +191,10 @@ struct WebPost {
         WebPost& operator()(note::string_view v);
     } route{};
     /// If specified, overrides the default 90 second timeout.
-    struct seconds_t : Field<int32_t> {
-        using Field<int32_t>::Field;
-        using Field<int32_t>::operator=;
-        WebPost& operator()(int32_t v);
+    struct seconds_t : Field<note::json_int_t> {
+        using Field<note::json_int_t>::Field;
+        using Field<note::json_int_t>::operator=;
+        WebPost& operator()(note::json_int_t v);
     } seconds{};
     /// A 32-character hex-encoded MD5 sum of the payload or payload fragment.
     /// Used by Notehub to perform verification upon receipt.
@@ -213,10 +213,10 @@ struct WebPost {
 #if NOTE_API_VERSION < NOTE_VERSION(3, 2, 1)
     [[deprecated("requires firmware >= 3.2.1")]]
 #endif
-    struct total_t : Field<int32_t> {
-        using Field<int32_t>::Field;
-        using Field<int32_t>::operator=;
-        WebPost& operator()(int32_t v);
+    struct total_t : Field<note::json_int_t> {
+        using Field<note::json_int_t>::Field;
+        using Field<note::json_int_t>::operator=;
+        WebPost& operator()(note::json_int_t v);
     } total{};
 #endif
     /// `true` to request verification from Notehub once the payload or payload
@@ -324,16 +324,16 @@ struct WebPost {
 #if NOTE_API_VERSION < NOTE_VERSION(5, 3, 1)
         [[deprecated("requires firmware >= 5.3.1")]]
 #endif
-        note::ResponseField<int32_t> cobs{};
+        note::ResponseField<note::json_int_t> cobs{};
 #endif
         /// If the web transaction returns a binary payload, `length` is the
         /// size of the unencoded payload (in bytes).
-        note::ResponseField<int32_t> length{};
+        note::ResponseField<note::json_int_t> length{};
         /// A base64-encoded binary payload from the external service, if any.
         /// The maximum response size from the service is 8192 bytes.
         note::ResponseField<note::string_view> payload{};
         /// The HTTP Status Code.
-        note::ResponseField<int32_t> result{};
+        note::ResponseField<note::json_int_t> result{};
         /// If a `payload` is returned in the response, this is a 32-character
         /// hex-encoded MD5 sum of the payload or payload fragment. Useful for
         /// the host to check for any I2C/UART corruption.
@@ -433,7 +433,7 @@ struct WebPost {
                 if (note::flash(keys_::rsp_length) == k_) { rsp.length = ::note::parse_int(raw_); return; }
                 if (note::flash(keys_::rsp_result) == k_) { rsp.result = ::note::parse_int(raw_); return; }
             }
-            NOTE_SINK_NOINLINE void on_int(::note::string_view k_, int32_t v_) {
+            NOTE_SINK_NOINLINE void on_int(::note::string_view k_, ::note::json_int_t v_) {
                 if (body_depth_ > 0) { if (body_handler_) body_handler_.send(::note::BodyEvent::make_int(k_, v_)); return; }
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
                 if (note::flash(keys_::rsp_cobs) == k_) { rsp.cobs = v_; return; }
@@ -503,9 +503,9 @@ struct WebPost {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
         static constexpr ::note::FieldDesc table[] NOTE_FLASH_ATTR = {
-            {keys_::rsp_length, static_cast<uint16_t>(offsetof(Response, length)), ::note::FieldType::Int32},
+            {keys_::rsp_length, static_cast<uint16_t>(offsetof(Response, length)), ::note::FieldType::Int},
             {keys_::rsp_payload, static_cast<uint16_t>(offsetof(Response, payload)), ::note::FieldType::String},
-            {keys_::rsp_result, static_cast<uint16_t>(offsetof(Response, result)), ::note::FieldType::Int32},
+            {keys_::rsp_result, static_cast<uint16_t>(offsetof(Response, result)), ::note::FieldType::Int},
             {keys_::rsp_status, static_cast<uint16_t>(offsetof(Response, status)), ::note::FieldType::String},
         };
 #pragma GCC diagnostic pop
@@ -558,16 +558,16 @@ struct WebPost {
 #endif
             {keys_::content, static_cast<uint16_t>(offsetof(WebPost, content)), ::note::ReqFieldType::String},
             {keys_::file, static_cast<uint16_t>(offsetof(WebPost, file)), ::note::ReqFieldType::String},
-            {keys_::max, static_cast<uint16_t>(offsetof(WebPost, max)), ::note::ReqFieldType::Int32},
+            {keys_::max, static_cast<uint16_t>(offsetof(WebPost, max)), ::note::ReqFieldType::Int},
             {keys_::name, static_cast<uint16_t>(offsetof(WebPost, name)), ::note::ReqFieldType::String},
             {keys_::noteId, static_cast<uint16_t>(offsetof(WebPost, noteId)), ::note::ReqFieldType::String},
-            {keys_::offset, static_cast<uint16_t>(offsetof(WebPost, offset)), ::note::ReqFieldType::Int32},
+            {keys_::offset, static_cast<uint16_t>(offsetof(WebPost, offset)), ::note::ReqFieldType::Int},
             {keys_::payload, static_cast<uint16_t>(offsetof(WebPost, payload)), ::note::ReqFieldType::String},
             {keys_::route, static_cast<uint16_t>(offsetof(WebPost, route)), ::note::ReqFieldType::String},
-            {keys_::seconds, static_cast<uint16_t>(offsetof(WebPost, seconds)), ::note::ReqFieldType::Int32},
+            {keys_::seconds, static_cast<uint16_t>(offsetof(WebPost, seconds)), ::note::ReqFieldType::Int},
             {keys_::status, static_cast<uint16_t>(offsetof(WebPost, status)), ::note::ReqFieldType::String},
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
-            {keys_::total, static_cast<uint16_t>(offsetof(WebPost, total)), ::note::ReqFieldType::Int32},
+            {keys_::total, static_cast<uint16_t>(offsetof(WebPost, total)), ::note::ReqFieldType::Int},
 #endif
             {keys_::verify, static_cast<uint16_t>(offsetof(WebPost, verify)), ::note::ReqFieldType::Bool},
         };
@@ -716,8 +716,8 @@ inline WebPost& WebPost::file_t::operator()(note::string_view v) {
     return *reinterpret_cast<WebPost*>(
         reinterpret_cast<char*>(this) - offsetof(WebPost, file));
 }
-inline WebPost& WebPost::max_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline WebPost& WebPost::max_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<WebPost*>(
         reinterpret_cast<char*>(this) - offsetof(WebPost, max));
 }
@@ -731,8 +731,8 @@ inline WebPost& WebPost::noteId_t::operator()(note::string_view v) {
     return *reinterpret_cast<WebPost*>(
         reinterpret_cast<char*>(this) - offsetof(WebPost, noteId));
 }
-inline WebPost& WebPost::offset_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline WebPost& WebPost::offset_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<WebPost*>(
         reinterpret_cast<char*>(this) - offsetof(WebPost, offset));
 }
@@ -746,8 +746,8 @@ inline WebPost& WebPost::route_t::operator()(note::string_view v) {
     return *reinterpret_cast<WebPost*>(
         reinterpret_cast<char*>(this) - offsetof(WebPost, route));
 }
-inline WebPost& WebPost::seconds_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline WebPost& WebPost::seconds_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<WebPost*>(
         reinterpret_cast<char*>(this) - offsetof(WebPost, seconds));
 }
@@ -757,8 +757,8 @@ inline WebPost& WebPost::status_t::operator()(note::string_view v) {
         reinterpret_cast<char*>(this) - offsetof(WebPost, status));
 }
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
-inline WebPost& WebPost::total_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline WebPost& WebPost::total_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<WebPost*>(
         reinterpret_cast<char*>(this) - offsetof(WebPost, total));
 }

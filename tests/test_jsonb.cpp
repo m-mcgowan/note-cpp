@@ -388,7 +388,7 @@ struct RecordingSink : JsonSink {
         Type type;
         std::string key;
         bool b = false;
-        int32_t i = 0;
+        json_int_t i = 0;
         double f = 0;
         std::string s;
     };
@@ -400,7 +400,7 @@ struct RecordingSink : JsonSink {
     void on_bool(string_view k, bool v) override {
         events.push_back({Bool, s(k), v, 0, 0, {}});
     }
-    void on_int(string_view k, int32_t v) override {
+    void on_int(string_view k, json_int_t v) override {
         events.push_back({Int, s(k), false, v, 0, {}});
     }
     void on_float(string_view k, double v) override {

@@ -58,10 +58,10 @@ struct CardMonitor {
 
     /// The number of pulses to send to the overridden AUX pin LED. Set this
     /// value to `0` to return the LED to its default behavior.
-    struct count_t : Field<int32_t> {
-        using Field<int32_t>::Field;
-        using Field<int32_t>::operator=;
-        CardMonitor& operator()(int32_t v);
+    struct count_t : Field<note::json_int_t> {
+        using Field<note::json_int_t>::Field;
+        using Field<note::json_int_t>::operator=;
+        CardMonitor& operator()(note::json_int_t v);
     } count{};
     /// Can be set to one of `green`, `red` or `yellow` to temporarily override
     /// the behavior of an AUX pin LED.
@@ -189,7 +189,7 @@ struct CardMonitor {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
         static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
-            {keys_::count, static_cast<uint16_t>(offsetof(CardMonitor, count)), ::note::ReqFieldType::Int32},
+            {keys_::count, static_cast<uint16_t>(offsetof(CardMonitor, count)), ::note::ReqFieldType::Int},
             {keys_::mode, static_cast<uint16_t>(offsetof(CardMonitor, mode)), ::note::ReqFieldType::String},
             {keys_::usb, static_cast<uint16_t>(offsetof(CardMonitor, usb)), ::note::ReqFieldType::Bool},
         };
@@ -235,8 +235,8 @@ struct CardMonitor {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-inline CardMonitor& CardMonitor::count_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardMonitor& CardMonitor::count_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardMonitor*>(
         reinterpret_cast<char*>(this) - offsetof(CardMonitor, count));
 }

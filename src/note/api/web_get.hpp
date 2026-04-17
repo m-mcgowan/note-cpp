@@ -123,10 +123,10 @@ struct WebGet {
     /// Used along with `binary:true` and `offset`, sent as a URL parameter to
     /// the remote endpoint. Represents the number of bytes to retrieve from the
     /// binary payload segment.
-    struct max_t : Field<int32_t> {
-        using Field<int32_t>::Field;
-        using Field<int32_t>::operator=;
-        WebGet& operator()(int32_t v);
+    struct max_t : Field<note::json_int_t> {
+        using Field<note::json_int_t>::Field;
+        using Field<note::json_int_t>::operator=;
+        WebGet& operator()(note::json_int_t v);
     } max{};
     /// A web URL endpoint relative to the host configured in the Proxy Route.
     /// URL parameters may be added to this argument as well (e.g.
@@ -148,10 +148,10 @@ struct WebGet {
     /// Used along with `binary:true` and `max`, sent as a URL parameter to the
     /// remote endpoint. Represents the number of bytes to offset the binary
     /// payload from 0 when retrieving binary data from the remote endpoint.
-    struct offset_t : Field<int32_t> {
-        using Field<int32_t>::Field;
-        using Field<int32_t>::operator=;
-        WebGet& operator()(int32_t v);
+    struct offset_t : Field<note::json_int_t> {
+        using Field<note::json_int_t>::Field;
+        using Field<note::json_int_t>::operator=;
+        WebGet& operator()(note::json_int_t v);
     } offset{};
     /// Alias for a Proxy Route in Notehub.
     struct route_t : Field<note::string_view> {
@@ -160,10 +160,10 @@ struct WebGet {
         WebGet& operator()(note::string_view v);
     } route{};
     /// If specified, overrides the default 90 second timeout.
-    struct seconds_t : Field<int32_t> {
-        using Field<int32_t>::Field;
-        using Field<int32_t>::operator=;
-        WebGet& operator()(int32_t v);
+    struct seconds_t : Field<note::json_int_t> {
+        using Field<note::json_int_t>::Field;
+        using Field<note::json_int_t>::operator=;
+        WebGet& operator()(note::json_int_t v);
     } seconds{};
 
 
@@ -245,14 +245,14 @@ struct WebGet {
             ::note::detail::arena_cost(65);  // error reserve (+1 for null terminator)
 
         /// The size of the COBS-encoded data (in bytes).
-        note::ResponseField<int32_t> cobs{};
+        note::ResponseField<note::json_int_t> cobs{};
         /// The length of the returned binary payload (in bytes).
-        note::ResponseField<int32_t> length{};
+        note::ResponseField<note::json_int_t> length{};
         /// A base64-encoded binary payload from the external service, if any.
         /// The maximum response size from the service is 8192 bytes.
         note::ResponseField<note::string_view> payload{};
         /// The HTTP Status Code.
-        note::ResponseField<int32_t> result{};
+        note::ResponseField<note::json_int_t> result{};
 
 #if !NOTE_NO_BUFFERED
         /// Access the body as a JsonReader (buffered parse path only).
@@ -331,7 +331,7 @@ struct WebGet {
                 if (note::flash(keys_::rsp_length) == k_) { rsp.length = ::note::parse_int(raw_); return; }
                 if (note::flash(keys_::rsp_result) == k_) { rsp.result = ::note::parse_int(raw_); return; }
             }
-            NOTE_SINK_NOINLINE void on_int(::note::string_view k_, int32_t v_) {
+            NOTE_SINK_NOINLINE void on_int(::note::string_view k_, ::note::json_int_t v_) {
                 if (body_depth_ > 0) { if (body_handler_) body_handler_.send(::note::BodyEvent::make_int(k_, v_)); return; }
                 if (note::flash(keys_::rsp_cobs) == k_) { rsp.cobs = v_; return; }
                 if (note::flash(keys_::rsp_length) == k_) { rsp.length = v_; return; }
@@ -388,10 +388,10 @@ struct WebGet {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
         static constexpr ::note::FieldDesc table[] NOTE_FLASH_ATTR = {
-            {keys_::rsp_cobs, static_cast<uint16_t>(offsetof(Response, cobs)), ::note::FieldType::Int32},
-            {keys_::rsp_length, static_cast<uint16_t>(offsetof(Response, length)), ::note::FieldType::Int32},
+            {keys_::rsp_cobs, static_cast<uint16_t>(offsetof(Response, cobs)), ::note::FieldType::Int},
+            {keys_::rsp_length, static_cast<uint16_t>(offsetof(Response, length)), ::note::FieldType::Int},
             {keys_::rsp_payload, static_cast<uint16_t>(offsetof(Response, payload)), ::note::FieldType::String},
-            {keys_::rsp_result, static_cast<uint16_t>(offsetof(Response, result)), ::note::FieldType::Int32},
+            {keys_::rsp_result, static_cast<uint16_t>(offsetof(Response, result)), ::note::FieldType::Int},
         };
 #pragma GCC diagnostic pop
         return table;
@@ -440,12 +440,12 @@ struct WebGet {
 #endif
             {keys_::content, static_cast<uint16_t>(offsetof(WebGet, content)), ::note::ReqFieldType::String},
             {keys_::file, static_cast<uint16_t>(offsetof(WebGet, file)), ::note::ReqFieldType::String},
-            {keys_::max, static_cast<uint16_t>(offsetof(WebGet, max)), ::note::ReqFieldType::Int32},
+            {keys_::max, static_cast<uint16_t>(offsetof(WebGet, max)), ::note::ReqFieldType::Int},
             {keys_::name, static_cast<uint16_t>(offsetof(WebGet, name)), ::note::ReqFieldType::String},
             {keys_::noteId, static_cast<uint16_t>(offsetof(WebGet, noteId)), ::note::ReqFieldType::String},
-            {keys_::offset, static_cast<uint16_t>(offsetof(WebGet, offset)), ::note::ReqFieldType::Int32},
+            {keys_::offset, static_cast<uint16_t>(offsetof(WebGet, offset)), ::note::ReqFieldType::Int},
             {keys_::route, static_cast<uint16_t>(offsetof(WebGet, route)), ::note::ReqFieldType::String},
-            {keys_::seconds, static_cast<uint16_t>(offsetof(WebGet, seconds)), ::note::ReqFieldType::Int32},
+            {keys_::seconds, static_cast<uint16_t>(offsetof(WebGet, seconds)), ::note::ReqFieldType::Int},
         };
 #pragma GCC diagnostic pop
         n_out = sizeof(table_) / sizeof(table_[0]);
@@ -557,8 +557,8 @@ inline WebGet& WebGet::file_t::operator()(note::string_view v) {
     return *reinterpret_cast<WebGet*>(
         reinterpret_cast<char*>(this) - offsetof(WebGet, file));
 }
-inline WebGet& WebGet::max_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline WebGet& WebGet::max_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<WebGet*>(
         reinterpret_cast<char*>(this) - offsetof(WebGet, max));
 }
@@ -572,8 +572,8 @@ inline WebGet& WebGet::noteId_t::operator()(note::string_view v) {
     return *reinterpret_cast<WebGet*>(
         reinterpret_cast<char*>(this) - offsetof(WebGet, noteId));
 }
-inline WebGet& WebGet::offset_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline WebGet& WebGet::offset_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<WebGet*>(
         reinterpret_cast<char*>(this) - offsetof(WebGet, offset));
 }
@@ -582,8 +582,8 @@ inline WebGet& WebGet::route_t::operator()(note::string_view v) {
     return *reinterpret_cast<WebGet*>(
         reinterpret_cast<char*>(this) - offsetof(WebGet, route));
 }
-inline WebGet& WebGet::seconds_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline WebGet& WebGet::seconds_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<WebGet*>(
         reinterpret_cast<char*>(this) - offsetof(WebGet, seconds));
 }

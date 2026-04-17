@@ -79,16 +79,16 @@ struct DfuGet {
     /// The number of bytes of firmware data to read and return to the host. Set
     /// to `0` to verify that the Notecard is in DFU mode without attempting to
     /// retrieve data.
-    struct length_t : Field<int32_t> {
-        using Field<int32_t>::Field;
-        using Field<int32_t>::operator=;
-        DfuGet& operator()(int32_t v);
+    struct length_t : Field<note::json_int_t> {
+        using Field<note::json_int_t>::Field;
+        using Field<note::json_int_t>::operator=;
+        DfuGet& operator()(note::json_int_t v);
     } length{};
     /// The offset to use before performing a read of firmware data.
-    struct offset_t : Field<int32_t> {
-        using Field<int32_t>::Field;
-        using Field<int32_t>::operator=;
-        DfuGet& operator()(int32_t v);
+    struct offset_t : Field<note::json_int_t> {
+        using Field<note::json_int_t>::Field;
+        using Field<note::json_int_t>::operator=;
+        DfuGet& operator()(note::json_int_t v);
     } offset{};
 
 
@@ -130,11 +130,11 @@ struct DfuGet {
 
         /// When `binary` is `true` in the request, this field contains the COBS
         /// encoded length of the firmware data in the binary I/O buffer.
-        note::ResponseField<int32_t> cobs{};
+        note::ResponseField<note::json_int_t> cobs{};
         /// When `binary` is `true` in the request, this field contains the
         /// actual length of the firmware data in bytes in the binary I/O
         /// buffer.
-        note::ResponseField<int32_t> length{};
+        note::ResponseField<note::json_int_t> length{};
         /// A base64 string containing firmware data of the provided `length`.
         /// This field is only present when `binary` is not used or is `false`
         /// in the request.
@@ -184,7 +184,7 @@ struct DfuGet {
                 if (note::flash(keys_::rsp_cobs) == k_) { rsp.cobs = ::note::parse_int(raw_); return; }
                 if (note::flash(keys_::rsp_length) == k_) { rsp.length = ::note::parse_int(raw_); return; }
             }
-            NOTE_SINK_NOINLINE void on_int(::note::string_view k_, int32_t v_) {
+            NOTE_SINK_NOINLINE void on_int(::note::string_view k_, ::note::json_int_t v_) {
                 if (note::flash(keys_::rsp_cobs) == k_) { rsp.cobs = v_; return; }
                 if (note::flash(keys_::rsp_length) == k_) { rsp.length = v_; return; }
             }
@@ -234,8 +234,8 @@ struct DfuGet {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
         static constexpr ::note::FieldDesc table[] NOTE_FLASH_ATTR = {
-            {keys_::rsp_cobs, static_cast<uint16_t>(offsetof(Response, cobs)), ::note::FieldType::Int32},
-            {keys_::rsp_length, static_cast<uint16_t>(offsetof(Response, length)), ::note::FieldType::Int32},
+            {keys_::rsp_cobs, static_cast<uint16_t>(offsetof(Response, cobs)), ::note::FieldType::Int},
+            {keys_::rsp_length, static_cast<uint16_t>(offsetof(Response, length)), ::note::FieldType::Int},
             {keys_::rsp_payload, static_cast<uint16_t>(offsetof(Response, payload)), ::note::FieldType::String},
             {keys_::rsp_status, static_cast<uint16_t>(offsetof(Response, status)), ::note::FieldType::String},
         };
@@ -280,8 +280,8 @@ struct DfuGet {
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
         static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
             {keys_::binary, static_cast<uint16_t>(offsetof(DfuGet, binary)), ::note::ReqFieldType::Bool},
-            {keys_::length, static_cast<uint16_t>(offsetof(DfuGet, length)), ::note::ReqFieldType::Int32},
-            {keys_::offset, static_cast<uint16_t>(offsetof(DfuGet, offset)), ::note::ReqFieldType::Int32},
+            {keys_::length, static_cast<uint16_t>(offsetof(DfuGet, length)), ::note::ReqFieldType::Int},
+            {keys_::offset, static_cast<uint16_t>(offsetof(DfuGet, offset)), ::note::ReqFieldType::Int},
         };
 #pragma GCC diagnostic pop
         n_out = sizeof(table_) / sizeof(table_[0]);
@@ -330,13 +330,13 @@ inline DfuGet& DfuGet::binary_t::operator()(bool v) {
     return *reinterpret_cast<DfuGet*>(
         reinterpret_cast<char*>(this) - offsetof(DfuGet, binary));
 }
-inline DfuGet& DfuGet::length_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline DfuGet& DfuGet::length_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<DfuGet*>(
         reinterpret_cast<char*>(this) - offsetof(DfuGet, length));
 }
-inline DfuGet& DfuGet::offset_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline DfuGet& DfuGet::offset_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<DfuGet*>(
         reinterpret_cast<char*>(this) - offsetof(DfuGet, offset));
 }

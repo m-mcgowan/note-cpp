@@ -358,7 +358,7 @@ struct DfuStatus {
             NOTE_SINK_NOINLINE void on_number(::note::string_view k_, ::note::string_view raw_) {
                 if (body_depth_ > 0 && body_handler_) body_handler_.send(::note::BodyEvent::make_number(k_, raw_));
             }
-            NOTE_SINK_NOINLINE void on_int(::note::string_view k_, int32_t v_) {
+            NOTE_SINK_NOINLINE void on_int(::note::string_view k_, ::note::json_int_t v_) {
                 if (body_depth_ > 0 && body_handler_) body_handler_.send(::note::BodyEvent::make_int(k_, v_));
             }
             NOTE_SINK_NOINLINE void on_float(::note::string_view k_, double v_) {

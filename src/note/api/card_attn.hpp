@@ -248,10 +248,10 @@ struct CardAttn {
         /// timeout is serviced by a routine that wakes every 15 seconds. You
         /// can predict when the device will wake, by rounding up to the nearest
         /// 15 second interval.
-        struct seconds_t : Field<int32_t> {
-            using Field<int32_t>::Field;
-            using Field<int32_t>::operator=;
-            CardAttn::Request& operator()(int32_t v);
+        struct seconds_t : Field<note::json_int_t> {
+            using Field<note::json_int_t>::Field;
+            using Field<note::json_int_t>::operator=;
+            CardAttn::Request& operator()(note::json_int_t v);
         } seconds{};
         /// When using `sleep` mode and the host has reawakened, request the
         /// Notecard to return the stored `payload`.
@@ -355,7 +355,7 @@ struct CardAttn {
             note::ResponseField<bool> set{};
             /// When using `sleep` mode with a `payload`, the time (UNIX Epoch
             /// time) that the payload was stored by the Notecard.
-            note::ResponseField<int32_t> time{};
+            note::ResponseField<note::json_int_t> time{};
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
@@ -427,7 +427,7 @@ struct CardAttn {
                 NOTE_SINK_NOINLINE void on_number(::note::string_view k_, ::note::string_view raw_) {
                     if (note::flash(keys_::rsp_time) == k_) { rsp.time = ::note::parse_int(raw_); return; }
                 }
-                NOTE_SINK_NOINLINE void on_int(::note::string_view k_, int32_t v_) {
+                NOTE_SINK_NOINLINE void on_int(::note::string_view k_, ::note::json_int_t v_) {
                     if (note::flash(keys_::rsp_time) == k_) { rsp.time = v_; return; }
                 }
                 NOTE_SINK_NOINLINE void reset() {
@@ -493,7 +493,7 @@ struct CardAttn {
             static constexpr ::note::FieldDesc table[] NOTE_FLASH_ATTR = {
                 {keys_::rsp_payload, static_cast<uint16_t>(offsetof(Response, payload)), ::note::FieldType::String},
                 {keys_::rsp_set, static_cast<uint16_t>(offsetof(Response, set)), ::note::FieldType::Bool},
-                {keys_::rsp_time, static_cast<uint16_t>(offsetof(Response, time)), ::note::FieldType::Int32},
+                {keys_::rsp_time, static_cast<uint16_t>(offsetof(Response, time)), ::note::FieldType::Int},
             };
 #pragma GCC diagnostic pop
             return table;
@@ -543,7 +543,7 @@ struct CardAttn {
 #endif
                 {keys_::on, static_cast<uint16_t>(offsetof(CardAttn::Request, on)), ::note::ReqFieldType::Bool},
                 {keys_::payload, static_cast<uint16_t>(offsetof(CardAttn::Request, payload)), ::note::ReqFieldType::String},
-                {keys_::seconds, static_cast<uint16_t>(offsetof(CardAttn::Request, seconds)), ::note::ReqFieldType::Int32},
+                {keys_::seconds, static_cast<uint16_t>(offsetof(CardAttn::Request, seconds)), ::note::ReqFieldType::Int},
                 {keys_::start, static_cast<uint16_t>(offsetof(CardAttn::Request, start)), ::note::ReqFieldType::Bool},
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
                 {keys_::verify, static_cast<uint16_t>(offsetof(CardAttn::Request, verify)), ::note::ReqFieldType::Bool},
@@ -761,10 +761,10 @@ struct CardAttn {
         /// timeout is serviced by a routine that wakes every 15 seconds. You
         /// can predict when the device will wake, by rounding up to the nearest
         /// 15 second interval.
-        struct seconds_t : Field<int32_t> {
-            using Field<int32_t>::Field;
-            using Field<int32_t>::operator=;
-            CardAttn::Arm& operator()(int32_t v);
+        struct seconds_t : Field<note::json_int_t> {
+            using Field<note::json_int_t>::Field;
+            using Field<note::json_int_t>::operator=;
+            CardAttn::Arm& operator()(note::json_int_t v);
         } seconds{};
 
 
@@ -921,7 +921,7 @@ struct CardAttn {
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
             static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
                 {keys_::on, static_cast<uint16_t>(offsetof(CardAttn::Arm, on)), ::note::ReqFieldType::Bool},
-                {keys_::seconds, static_cast<uint16_t>(offsetof(CardAttn::Arm, seconds)), ::note::ReqFieldType::Int32},
+                {keys_::seconds, static_cast<uint16_t>(offsetof(CardAttn::Arm, seconds)), ::note::ReqFieldType::Int},
             };
 #pragma GCC diagnostic pop
             n_out = sizeof(table_) / sizeof(table_[0]);
@@ -1120,10 +1120,10 @@ struct CardAttn {
         /// timeout is serviced by a routine that wakes every 15 seconds. You
         /// can predict when the device will wake, by rounding up to the nearest
         /// 15 second interval.
-        struct seconds_t : Field<int32_t> {
-            using Field<int32_t>::Field;
-            using Field<int32_t>::operator=;
-            CardAttn::Rearm& operator()(int32_t v);
+        struct seconds_t : Field<note::json_int_t> {
+            using Field<note::json_int_t>::Field;
+            using Field<note::json_int_t>::operator=;
+            CardAttn::Rearm& operator()(note::json_int_t v);
         } seconds{};
 
 
@@ -1282,7 +1282,7 @@ struct CardAttn {
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
             static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
                 {keys_::on, static_cast<uint16_t>(offsetof(CardAttn::Rearm, on)), ::note::ReqFieldType::Bool},
-                {keys_::seconds, static_cast<uint16_t>(offsetof(CardAttn::Rearm, seconds)), ::note::ReqFieldType::Int32},
+                {keys_::seconds, static_cast<uint16_t>(offsetof(CardAttn::Rearm, seconds)), ::note::ReqFieldType::Int},
             };
 #pragma GCC diagnostic pop
             n_out = sizeof(table_) / sizeof(table_[0]);
@@ -1362,10 +1362,10 @@ struct CardAttn {
         /// timeout is serviced by a routine that wakes every 15 seconds. You
         /// can predict when the device will wake, by rounding up to the nearest
         /// 15 second interval.
-        struct seconds_t : Field<int32_t> {
-            using Field<int32_t>::Field;
-            using Field<int32_t>::operator=;
-            CardAttn::Watchdog& operator()(int32_t v);
+        struct seconds_t : Field<note::json_int_t> {
+            using Field<note::json_int_t>::Field;
+            using Field<note::json_int_t>::operator=;
+            CardAttn::Watchdog& operator()(note::json_int_t v);
         } seconds{};
 
 
@@ -1429,7 +1429,7 @@ struct CardAttn {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
             static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
-                {keys_::seconds, static_cast<uint16_t>(offsetof(CardAttn::Watchdog, seconds)), ::note::ReqFieldType::Int32},
+                {keys_::seconds, static_cast<uint16_t>(offsetof(CardAttn::Watchdog, seconds)), ::note::ReqFieldType::Int},
             };
 #pragma GCC diagnostic pop
             n_out = sizeof(table_) / sizeof(table_[0]);
@@ -1501,10 +1501,10 @@ struct CardAttn {
         /// timeout is serviced by a routine that wakes every 15 seconds. You
         /// can predict when the device will wake, by rounding up to the nearest
         /// 15 second interval.
-        struct seconds_t : Field<int32_t> {
-            using Field<int32_t>::Field;
-            using Field<int32_t>::operator=;
-            CardAttn::Sleep& operator()(int32_t v);
+        struct seconds_t : Field<note::json_int_t> {
+            using Field<note::json_int_t>::Field;
+            using Field<note::json_int_t>::operator=;
+            CardAttn::Sleep& operator()(note::json_int_t v);
         } seconds{};
 
 
@@ -1570,7 +1570,7 @@ struct CardAttn {
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
             static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
                 {keys_::payload, static_cast<uint16_t>(offsetof(CardAttn::Sleep, payload)), ::note::ReqFieldType::String},
-                {keys_::seconds, static_cast<uint16_t>(offsetof(CardAttn::Sleep, seconds)), ::note::ReqFieldType::Int32},
+                {keys_::seconds, static_cast<uint16_t>(offsetof(CardAttn::Sleep, seconds)), ::note::ReqFieldType::Int},
             };
 #pragma GCC diagnostic pop
             n_out = sizeof(table_) / sizeof(table_[0]);
@@ -1670,7 +1670,7 @@ struct CardAttn {
             note::ResponseField<note::string_view> payload{};
             /// When using `sleep` mode with a `payload`, the time (UNIX Epoch
             /// time) that the payload was stored by the Notecard.
-            note::ResponseField<int32_t> time{};
+            note::ResponseField<note::json_int_t> time{};
 
 #if !NOTE_NO_BUFFERED
             static Response parse(std::unique_ptr<JsonReader> reader_) {
@@ -1706,7 +1706,7 @@ struct CardAttn {
                 NOTE_SINK_NOINLINE void on_number(::note::string_view k_, ::note::string_view raw_) {
                     if (note::flash(keys_::rsp_time) == k_) { rsp.time = ::note::parse_int(raw_); return; }
                 }
-                NOTE_SINK_NOINLINE void on_int(::note::string_view k_, int32_t v_) {
+                NOTE_SINK_NOINLINE void on_int(::note::string_view k_, ::note::json_int_t v_) {
                     if (note::flash(keys_::rsp_time) == k_) { rsp.time = v_; return; }
                 }
                 NOTE_SINK_NOINLINE void reset() {
@@ -1747,7 +1747,7 @@ struct CardAttn {
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
             static constexpr ::note::FieldDesc table[] NOTE_FLASH_ATTR = {
                 {keys_::rsp_payload, static_cast<uint16_t>(offsetof(Response, payload)), ::note::FieldType::String},
-                {keys_::rsp_time, static_cast<uint16_t>(offsetof(Response, time)), ::note::FieldType::Int32},
+                {keys_::rsp_time, static_cast<uint16_t>(offsetof(Response, time)), ::note::FieldType::Int},
             };
 #pragma GCC diagnostic pop
             return table;
@@ -2478,8 +2478,8 @@ inline CardAttn::Request& CardAttn::Request::payload_t::operator()(note::string_
     return *reinterpret_cast<CardAttn::Request*>(
         reinterpret_cast<char*>(this) - offsetof(CardAttn::Request, payload));
 }
-inline CardAttn::Request& CardAttn::Request::seconds_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardAttn::Request& CardAttn::Request::seconds_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardAttn::Request*>(
         reinterpret_cast<char*>(this) - offsetof(CardAttn::Request, seconds));
 }
@@ -2579,8 +2579,8 @@ inline CardAttn::Arm& CardAttn::Arm::on_t::operator()(bool v) {
     return *reinterpret_cast<CardAttn::Arm*>(
         reinterpret_cast<char*>(this) - offsetof(CardAttn::Arm, on));
 }
-inline CardAttn::Arm& CardAttn::Arm::seconds_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardAttn::Arm& CardAttn::Arm::seconds_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardAttn::Arm*>(
         reinterpret_cast<char*>(this) - offsetof(CardAttn::Arm, seconds));
 }
@@ -2668,8 +2668,8 @@ inline CardAttn::Rearm& CardAttn::Rearm::on_t::operator()(bool v) {
     return *reinterpret_cast<CardAttn::Rearm*>(
         reinterpret_cast<char*>(this) - offsetof(CardAttn::Rearm, on));
 }
-inline CardAttn::Rearm& CardAttn::Rearm::seconds_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardAttn::Rearm& CardAttn::Rearm::seconds_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardAttn::Rearm*>(
         reinterpret_cast<char*>(this) - offsetof(CardAttn::Rearm, seconds));
 }
@@ -2678,8 +2678,8 @@ inline CardAttn::Rearm& CardAttn::Rearm::seconds_t::operator()(int32_t v) {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-inline CardAttn::Watchdog& CardAttn::Watchdog::seconds_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardAttn::Watchdog& CardAttn::Watchdog::seconds_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardAttn::Watchdog*>(
         reinterpret_cast<char*>(this) - offsetof(CardAttn::Watchdog, seconds));
 }
@@ -2693,8 +2693,8 @@ inline CardAttn::Sleep& CardAttn::Sleep::payload_t::operator()(note::string_view
     return *reinterpret_cast<CardAttn::Sleep*>(
         reinterpret_cast<char*>(this) - offsetof(CardAttn::Sleep, payload));
 }
-inline CardAttn::Sleep& CardAttn::Sleep::seconds_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardAttn::Sleep& CardAttn::Sleep::seconds_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardAttn::Sleep*>(
         reinterpret_cast<char*>(this) - offsetof(CardAttn::Sleep, seconds));
 }

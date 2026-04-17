@@ -4,6 +4,8 @@
 #include "json_sax.hpp"
 #include "types.hpp"
 
+#include <type_traits>
+
 namespace note {
 
 // ---------------------------------------------------------------------------
@@ -64,13 +66,23 @@ public:
     virtual ~JsonBuilder() = default;
 
     virtual JsonBuilder& add(string_view key, bool value) = 0;
-    virtual JsonBuilder& add(string_view key, int32_t value) = 0;
+    virtual JsonBuilder& add(string_view key, json_int_t value) = 0;
     virtual JsonBuilder& add(string_view key, double value) = 0;
     virtual JsonBuilder& add(string_view key, string_view value) = 0;
 
     // Prevent const char* from matching the bool overload.
     JsonBuilder& add(string_view key, const char* value) {
         return add(key, string_view(value));
+    }
+
+    // Widen narrower integer types to json_int_t to prevent ambiguity
+    // with the bool overload (int → bool and int → int64_t are both
+    // standard conversions of equal rank without these).
+    template<typename T, std::enable_if_t<
+        std::is_integral_v<T> && !std::is_same_v<T, bool> &&
+        !std::is_same_v<T, json_int_t> && !std::is_same_v<T, char>, int> = 0>
+    JsonBuilder& add(string_view key, T value) {
+        return add(key, static_cast<json_int_t>(value));
     }
 
     virtual JsonBuilder& begin_object(string_view key) = 0;
@@ -82,9 +94,15 @@ public:
     // Add an element to the current array (no key — must be inside begin_array/end_array).
     // Default: no-op. Override in backends that support array serialization.
     virtual JsonBuilder& add_element(bool) { return *this; }
-    virtual JsonBuilder& add_element(int32_t) { return *this; }
+    virtual JsonBuilder& add_element(json_int_t) { return *this; }
     virtual JsonBuilder& add_element(double) { return *this; }
     virtual JsonBuilder& add_element(string_view) { return *this; }
+    template<typename T, std::enable_if_t<
+        std::is_integral_v<T> && !std::is_same_v<T, bool> &&
+        !std::is_same_v<T, json_int_t> && !std::is_same_v<T, char>, int> = 0>
+    JsonBuilder& add_element(T value) {
+        return add_element(static_cast<json_int_t>(value));
+    }
     JsonBuilder& add_element(const char* value) {
         return add_element(string_view(value));
     }
@@ -111,7 +129,7 @@ public:
     virtual bool has(string_view key) const = 0;
 
     virtual bool get_bool(string_view key, bool def = false) const = 0;
-    virtual int32_t get_int(string_view key, int32_t def = 0) const = 0;
+    virtual json_int_t get_int(string_view key, json_int_t def = 0) const = 0;
     virtual double get_double(string_view key, double def = 0.0) const = 0;
     virtual string_view get_string(string_view key, string_view def = {}) const = 0;
 
@@ -189,6 +207,9 @@ private:
 
 class StreamingJsonBuilder : public JsonBuilder {
 public:
+    using JsonBuilder::add;           // inherit integer widening template
+    using JsonBuilder::add_element;   // inherit integer widening template
+
     explicit StreamingJsonBuilder(JsonWriter& w) : writer_(w) {
         writer_.write('{');
     }
@@ -199,9 +220,9 @@ public:
         return *this;
     }
 
-    JsonBuilder& add(string_view key, int32_t value) override {
+    JsonBuilder& add(string_view key, json_int_t value) override {
         kv(key);
-        char tmp[12];
+        char tmp[24];
         size_t len = detail::itoa(tmp, sizeof(tmp), value);
         writer_.write(tmp, len);
         return *this;
@@ -260,9 +281,9 @@ public:
         return *this;
     }
 
-    JsonBuilder& add_element(int32_t value) override {
+    JsonBuilder& add_element(json_int_t value) override {
         comma();
-        char tmp[12];
+        char tmp[24];
         size_t len = detail::itoa(tmp, sizeof(tmp), value);
         writer_.write(tmp, len);
         return *this;

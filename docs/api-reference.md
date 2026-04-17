@@ -192,7 +192,7 @@ This endpoint has multiple intents:
 | `.off` | `bool` | no | When `true`, completely disables ATTN processing and sets the pin OFF. This... |
 | `.on` | `bool` | no | When `true`, enables ATTN processing. This setting is retained across device... |
 | `.payload` | `note::string_view` | no | When using `sleep` mode, a payload of data from the host that the Notecard... |
-| `.seconds` | `int32_t` | no | To set an ATTN timeout when arming, or when using `sleep`.
+| `.seconds` | `note::json_int_t` | no | To set an ATTN timeout when arming, or when using `sleep`.
 
 _**NOTE:** When... |
 | `.start` | `bool` | no | When using `sleep` mode and the host has reawakened, request the Notecard to... |
@@ -206,7 +206,7 @@ _**NOTE:** When... |
 | `.off` | `bool` | This field is present and set to `true` if ATTN processing has been disabled... |
 | `.payload` | `note::string_view` | When using `sleep` mode with a `payload`, the payload provided by the host... |
 | `.set` | `bool` | Reflects the state of the attention pin. The `set` field is `true` when the... |
-| `.time` | `int32_t` | When using `sleep` mode with a `payload`, the time (UNIX Epoch time) that... |
+| `.time` | `note::json_int_t` | When using `sleep` mode with a `payload`, the time (UNIX Epoch time) that... |
 
 #### card.attn — arm()
 
@@ -225,7 +225,7 @@ _**NOTE:** When... |
 | `.files` | `note::string_view` | no | A list of [Notefiles](https://dev.blues.io/api-reference/glossary/#notefile)... |
 | `.triggers` | `note::string_view` | no | A comma-separated list of one or more of the following keywords. Some... |
 | `.on` | `bool` | no | When `true`, enables ATTN processing. This setting is retained across device... |
-| `.seconds` | `int32_t` | no | To set an ATTN timeout when arming, or when using `sleep`.
+| `.seconds` | `note::json_int_t` | no | To set an ATTN timeout when arming, or when using `sleep`.
 
 _**NOTE:** When... |
 
@@ -252,7 +252,7 @@ _**NOTE:** When... |
 | `.files` | `note::string_view` | no | A list of [Notefiles](https://dev.blues.io/api-reference/glossary/#notefile)... |
 | `.triggers` | `note::string_view` | no | A comma-separated list of one or more of the following keywords. Some... |
 | `.on` | `bool` | no | When `true`, enables ATTN processing. This setting is retained across device... |
-| `.seconds` | `int32_t` | no | To set an ATTN timeout when arming, or when using `sleep`.
+| `.seconds` | `note::json_int_t` | no | To set an ATTN timeout when arming, or when using `sleep`.
 
 _**NOTE:** When... |
 
@@ -276,7 +276,7 @@ _**NOTE:** When... |
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `.seconds` | `int32_t` | no | To set an ATTN timeout when arming, or when using `sleep`.
+| `.seconds` | `note::json_int_t` | no | To set an ATTN timeout when arming, or when using `sleep`.
 
 _**NOTE:** When... |
 
@@ -296,7 +296,7 @@ _**NOTE:** When... |
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `.payload` | `note::string_view` | no | When using `sleep` mode, a payload of data from the host that the Notecard... |
-| `.seconds` | `int32_t` | no | To set an ATTN timeout when arming, or when using `sleep`.
+| `.seconds` | `note::json_int_t` | no | To set an ATTN timeout when arming, or when using `sleep`.
 
 _**NOTE:** When... |
 
@@ -317,7 +317,7 @@ _**NOTE:** When... |
 | Field | Type | Description |
 |-------|------|-------------|
 | `.payload` | `note::string_view` | When using `sleep` mode with a `payload`, the payload provided by the host... |
-| `.time` | `int32_t` | When using `sleep` mode with a `payload`, the time (UNIX Epoch time) that... |
+| `.time` | `note::json_int_t` | When using `sleep` mode with a `payload`, the time (UNIX Epoch time) that... |
 
 #### card.attn — disarm()
 
@@ -394,17 +394,17 @@ _**NOTE:** When... |
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `.connected` | `bool` | no | If `true`, defers the sync of the state change Notefile to the next sync as... |
-| `.count` | `int32_t` | no | When used with `"mode":"neo-monitor"` or `"mode":"track-neo-monitor"`, this... |
+| `.count` | `note::json_int_t` | no | When used with `"mode":"neo-monitor"` or `"mode":"track-neo-monitor"`, this... |
 | `.file` | `note::string_view` | no | The name of the Notefile used to report state changes when used in... |
 | `.gps` | `bool` | no | If `true`, along with `"mode":"track"` the Notecard supports the use of an... |
 | `.limit` | `bool` | no | If `true`, along with `"mode":"track"` and `gps:true` the Notecard will... |
-| `.max` | `int32_t` | no | When in `gpio` mode, if an `AUX` pin is configured as a `count` type, the... |
+| `.max` | `note::json_int_t` | no | When in `gpio` mode, if an `AUX` pin is configured as a `count` type, the... |
 | `.mode` | `note::string_view` | no | The AUX mode. Must be one of the following keywords. Some keywords are only... |
-| `.ms` | `int32_t` | no | When in `gpio` mode, this argument configures a debouncing interval. With a... |
-| `.offset` | `int32_t` | no | When used with `"mode":"neo-monitor"` or `"mode":"track-neo-monitor"`, this... |
-| `.rate` | `int32_t` | no | The AUX UART baud rate for debug communication over the AUXRX and AUXTX pins. |
-| `.seconds` | `int32_t` | no | When in `gpio` mode, if an `AUX` pin is configured as a `count` type, the... |
-| `.sensitivity` | `int32_t` | no | When used with `"mode":"neo-monitor"` or `"mode":"track-neo-monitor"`, this... |
+| `.ms` | `note::json_int_t` | no | When in `gpio` mode, this argument configures a debouncing interval. With a... |
+| `.offset` | `note::json_int_t` | no | When used with `"mode":"neo-monitor"` or `"mode":"track-neo-monitor"`, this... |
+| `.rate` | `note::json_int_t` | no | The AUX UART baud rate for debug communication over the AUXRX and AUXTX pins. |
+| `.seconds` | `note::json_int_t` | no | When in `gpio` mode, if an `AUX` pin is configured as a `count` type, the... |
+| `.sensitivity` | `note::json_int_t` | no | When used with `"mode":"neo-monitor"` or `"mode":"track-neo-monitor"`, this... |
 | `.start` | `bool` | no | When in `gpio` mode, if an `AUX` pin is configured as a `count` type, set to... |
 | `.sync` | `bool` | no | If `true`, for pins set as `input` by `usage`, the Notecard will... |
 | `.usage` | `note::string_view` | no | An ordered list of pin modes for each AUX pin when in GPIO mode. |
@@ -415,8 +415,8 @@ _**NOTE:** When... |
 |-------|------|-------------|
 | `.mode` | `note::string_view` | The current AUX `mode`, or `off` if not set. |
 | `.power` | `bool` | If `true`, indicates the Notecard has USB (main) power. This parameter only... |
-| `.seconds` | `int32_t` | When in AUX `gpio` mode, and if `count` is enabled on an AUX pin, the number... |
-| `.time` | `int32_t` | When in AUX `gpio` mode, and if `count` is enabled on an AUX pin, the time... |
+| `.seconds` | `note::json_int_t` | When in AUX `gpio` mode, and if `count` is enabled on an AUX pin, the number... |
+| `.time` | `note::json_int_t` | When in AUX `gpio` mode, and if `count` is enabled on an AUX pin, the time... |
 
 ### card.aux.serial 
 This endpoint has multiple intents:
@@ -435,20 +435,20 @@ This endpoint has multiple intents:
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `.duration` | `int32_t` | no | If using `"mode": "accel"`, specify a sampling duration for the Notecard... |
+| `.duration` | `note::json_int_t` | no | If using `"mode": "accel"`, specify a sampling duration for the Notecard... |
 | `.limit` | `bool` | no | If `true`, along with `"mode":"gps"` the Notecard will disable concurrent... |
-| `.max` | `int32_t` | no | The maximum amount of data, in bytes, that can be sent in a single... |
-| `.minutes` | `int32_t` | no | When using `"mode": "notify,dfu"`, specify an interval for notifying the host. |
+| `.max` | `note::json_int_t` | no | The maximum amount of data, in bytes, that can be sent in a single... |
+| `.minutes` | `note::json_int_t` | no | When using `"mode": "notify,dfu"`, specify an interval for notifying the host. |
 | `.mode` | `note::string_view` | no | The AUX mode. Must be one of the following: |
-| `.ms` | `int32_t` | no | The delay in milliseconds before sending a buffer of `max` size. |
-| `.rate` | `int32_t` | no | The baud rate or speed at which information is transmitted over AUX serial.... |
+| `.ms` | `note::json_int_t` | no | The delay in milliseconds before sending a buffer of `max` size. |
+| `.rate` | `note::json_int_t` | no | The baud rate or speed at which information is transmitted over AUX serial.... |
 
 **Response fields:**
 
 | Field | Type | Description |
 |-------|------|-------------|
 | `.mode` | `note::string_view` | The current AUX `mode`. |
-| `.rate` | `int32_t` | The baud rate or speed at which information is transmitted over AUX serial. |
+| `.rate` | `note::json_int_t` | The baud rate or speed at which information is transmitted over AUX serial. |
 
 #### card.aux.serial — notify()
 
@@ -464,12 +464,12 @@ This endpoint has multiple intents:
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `.duration` | `int32_t` | no | If using `"mode": "accel"`, specify a sampling duration for the Notecard... |
-| `.max` | `int32_t` | no | The maximum amount of data, in bytes, that can be sent in a single... |
-| `.minutes` | `int32_t` | no | When using `"mode": "notify,dfu"`, specify an interval for notifying the host. |
+| `.duration` | `note::json_int_t` | no | If using `"mode": "accel"`, specify a sampling duration for the Notecard... |
+| `.max` | `note::json_int_t` | no | The maximum amount of data, in bytes, that can be sent in a single... |
+| `.minutes` | `note::json_int_t` | no | When using `"mode": "notify,dfu"`, specify an interval for notifying the host. |
 | `.notifications` | `note::string_view` | no | The AUX mode. Must be one of the following: |
-| `.ms` | `int32_t` | no | The delay in milliseconds before sending a buffer of `max` size. |
-| `.rate` | `int32_t` | no | The baud rate or speed at which information is transmitted over AUX serial.... |
+| `.ms` | `note::json_int_t` | no | The delay in milliseconds before sending a buffer of `max` size. |
+| `.rate` | `note::json_int_t` | no | The baud rate or speed at which information is transmitted over AUX serial.... |
 
 
 #### card.aux.serial — gps()
@@ -487,7 +487,7 @@ This endpoint has multiple intents:
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `.limit` | `bool` | no | If `true`, along with `"mode":"gps"` the Notecard will disable concurrent... |
-| `.rate` | `int32_t` | no | The baud rate or speed at which information is transmitted over AUX serial.... |
+| `.rate` | `note::json_int_t` | no | The baud rate or speed at which information is transmitted over AUX serial.... |
 
 
 #### card.aux.serial — configure()
@@ -504,7 +504,7 @@ This endpoint has multiple intents:
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `.rate` | `int32_t` | no | The baud rate or speed at which information is transmitted over AUX serial.... |
+| `.rate` | `note::json_int_t` | no | The baud rate or speed at which information is transmitted over AUX serial.... |
 
 
 #### card.aux.serial — off()
@@ -542,12 +542,12 @@ This endpoint has multiple intents:
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `.cobs` | `int32_t` | The size of COBS-encoded data stored in the reserved area (without the trailing 
+| `.cobs` | `note::json_int_t` | The size of COBS-encoded data stored in the reserved area (without the trailing 
 ). |
 | `.connected` | `bool` | Returns true if the Notecard is connected to the network. |
 | `.err` | `note::string_view` | If present, a string describing the error that occurred during transmission. |
-| `.length` | `int32_t` | The amount of unencoded data currently stored (in bytes). |
-| `.max` | `int32_t` | The space available (in bytes) for storing unencoded data on the Notecard. |
+| `.length` | `note::json_int_t` | The amount of unencoded data currently stored (in bytes). |
+| `.max` | `note::json_int_t` | The space available (in bytes) for storing unencoded data on the Notecard. |
 | `.status` | `note::string_view` | The MD5 checksum calculated for the entire unencoded buffer. |
 
 #### card.binary — clear()
@@ -570,12 +570,12 @@ This endpoint has multiple intents:
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `.cobs` | `int32_t` | The size of COBS-encoded data stored in the reserved area (without the trailing 
+| `.cobs` | `note::json_int_t` | The size of COBS-encoded data stored in the reserved area (without the trailing 
 ). |
 | `.connected` | `bool` | Returns true if the Notecard is connected to the network. |
 | `.err` | `note::string_view` | If present, a string describing the error that occurred during transmission. |
-| `.length` | `int32_t` | The amount of unencoded data currently stored (in bytes). |
-| `.max` | `int32_t` | The space available (in bytes) for storing unencoded data on the Notecard. |
+| `.length` | `note::json_int_t` | The amount of unencoded data currently stored (in bytes). |
+| `.max` | `note::json_int_t` | The space available (in bytes) for storing unencoded data on the Notecard. |
 | `.status` | `note::string_view` | The MD5 checksum calculated for the entire unencoded buffer. |
 
 ### card.binary.get 
@@ -592,9 +592,9 @@ This endpoint has multiple intents:
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `.cobs` | `int32_t` | no | The size of the COBS-encoded data you are expecting to be returned (in bytes). |
-| `.length` | `int32_t` | no | Used along with `offset`, the number of bytes to retrieve from the binary... |
-| `.offset` | `int32_t` | no | Used along with `length`, the number of bytes to offset the binary payload... |
+| `.cobs` | `note::json_int_t` | no | The size of the COBS-encoded data you are expecting to be returned (in bytes). |
+| `.length` | `note::json_int_t` | no | Used along with `offset`, the number of bytes to retrieve from the binary... |
+| `.offset` | `note::json_int_t` | no | Used along with `length`, the number of bytes to offset the binary payload... |
 
 **Response fields:**
 
@@ -617,8 +617,8 @@ This endpoint has multiple intents:
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `.cobs` | `int32_t` | no | The size of the COBS-encoded data (in bytes). |
-| `.offset` | `int32_t` | no | The number of bytes to offset the binary payload from 0 when appending the... |
+| `.cobs` | `note::json_int_t` | no | The size of the COBS-encoded data (in bytes). |
+| `.offset` | `note::json_int_t` | no | The number of bytes to offset the binary payload from 0 when appending the... |
 | `.status` | `note::string_view` | no | The MD5 checksum of the data, before it has been encoded. |
 
 **Response fields:**
@@ -727,7 +727,7 @@ This endpoint has multiple intents:
 | `.name` | `note::string_view` | no | One of the supported classes of host MCU. Supported MCU classes are... |
 | `.off` | `bool` | no | Set to `true` to disable Notecard Outboard Firmware Update from occurring. |
 | `.on` | `bool` | no | Set to `true` to enable Notecard Outboard Firmware Update. |
-| `.seconds` | `int32_t` | no | When used with `"off":true`, disable Notecard Outboard Firmware Update... |
+| `.seconds` | `note::json_int_t` | no | When used with `"off":true`, disable Notecard Outboard Firmware Update... |
 | `.start` | `bool` | no | Set to `true` to enable the host RESET if previously disabled with `"stop":true`. |
 | `.stop` | `bool` | no | Set to `true` to disable the host RESET that is normally performed on the... |
 
@@ -768,7 +768,7 @@ This endpoint has multiple intents:
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `.i2c` | `int32_t` | no | The alternate address to use for I2C communication. |
+| `.i2c` | `note::json_int_t` | no | The alternate address to use for I2C communication. |
 | `.mode` | `note::string_view` | no | Used to control the Notecard's IO behavior, including USB port, LED, I2C... |
 
 
@@ -808,14 +808,14 @@ This endpoint has multiple intents:
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `.count` | `int32_t` | The number of consecutive recorded GPS/GNSS failures. |
+| `.count` | `note::json_int_t` | The number of consecutive recorded GPS/GNSS failures. |
 | `.dop` | `double` | The "Dilution of Precision" value from the latest GPS/GNSS reading. The... |
 | `.lat` | `double` | The latitude in degrees of the last known location. |
 | `.lon` | `double` | The longitude in degrees of the last known location. |
-| `.max` | `int32_t` | If a geofence is enabled by `card.location.mode`, meters from the geofence center. |
+| `.max` | `note::json_int_t` | If a geofence is enabled by `card.location.mode`, meters from the geofence center. |
 | `.mode` | `note::string_view` | The GPS/GNSS connection mode. Will be `continuous`, `periodic`, or `off`. |
 | `.status` | `note::string_view` | The current status of the Notecard GPS/GNSS connection. |
-| `.time` | `int32_t` | The time of the location capture. |
+| `.time` | `note::json_int_t` | The time of the location capture. |
 
 ### card.location.mode 
 This endpoint has multiple intents:
@@ -837,11 +837,11 @@ This endpoint has multiple intents:
 | `.delete_` | `bool` | no | Set to `true` to delete the last known location stored in the Notecard. |
 | `.lat` | `double` | no | When in periodic or continuous mode, providing this value enables... |
 | `.lon` | `double` | no | When in periodic or continuous mode, providing this value enables... |
-| `.max` | `int32_t` | no | Meters from a geofence center. Used to enable geofence location tracking. |
-| `.minutes` | `int32_t` | no | When geofence is enabled, the number of minutes the device should be outside... |
+| `.max` | `note::json_int_t` | no | Meters from a geofence center. Used to enable geofence location tracking. |
+| `.minutes` | `note::json_int_t` | no | When geofence is enabled, the number of minutes the device should be outside... |
 | `.mode` | `note::string_view` | no | Sets the location mode. |
-| `.seconds` | `int32_t` | no | When in `periodic` mode, location will be sampled at this interval, if the... |
-| `.threshold` | `int32_t` | no | When in `periodic` mode, the number of motion events (registered by the... |
+| `.seconds` | `note::json_int_t` | no | When in `periodic` mode, location will be sampled at this interval, if the... |
+| `.threshold` | `note::json_int_t` | no | When in `periodic` mode, the number of motion events (registered by the... |
 | `.vseconds` | `note::string_view` | no | In `periodic` mode, overrides `seconds` with a voltage-variable value. |
 
 **Response fields:**
@@ -850,11 +850,11 @@ This endpoint has multiple intents:
 |-------|------|-------------|
 | `.lat` | `double` | If geofence is enabled, the geofence center latitude in degrees. |
 | `.lon` | `double` | If geofence is enabled, the geofence center longitude in degrees. |
-| `.max` | `int32_t` | If geofence is enabled, the meters from geofence center. |
-| `.minutes` | `int32_t` | If geofence is enabled, the currently configured geofence debounce period. |
+| `.max` | `note::json_int_t` | If geofence is enabled, the meters from geofence center. |
+| `.minutes` | `note::json_int_t` | If geofence is enabled, the currently configured geofence debounce period. |
 | `.mode` | `note::string_view` | The current location mode. |
-| `.seconds` | `int32_t` | If specified, the periodic sample interval. |
-| `.threshold` | `int32_t` | When in periodic mode, the number of motion events (registered by the... |
+| `.seconds` | `note::json_int_t` | If specified, the periodic sample interval. |
+| `.threshold` | `note::json_int_t` | When in periodic mode, the number of motion events (registered by the... |
 | `.vseconds` | `note::string_view` | If specified, the voltage-variable period. |
 
 #### card.location.mode — set()
@@ -874,11 +874,11 @@ This endpoint has multiple intents:
 | `.delete_` | `bool` | no | Set to `true` to delete the last known location stored in the Notecard. |
 | `.lat` | `double` | no | When in periodic or continuous mode, providing this value enables... |
 | `.lon` | `double` | no | When in periodic or continuous mode, providing this value enables... |
-| `.max` | `int32_t` | no | Meters from a geofence center. Used to enable geofence location tracking. |
-| `.minutes` | `int32_t` | no | When geofence is enabled, the number of minutes the device should be outside... |
+| `.max` | `note::json_int_t` | no | Meters from a geofence center. Used to enable geofence location tracking. |
+| `.minutes` | `note::json_int_t` | no | When geofence is enabled, the number of minutes the device should be outside... |
 | `.mode` | `note::string_view` | no | Sets the location mode. |
-| `.seconds` | `int32_t` | no | When in `periodic` mode, location will be sampled at this interval, if the... |
-| `.threshold` | `int32_t` | no | When in `periodic` mode, the number of motion events (registered by the... |
+| `.seconds` | `note::json_int_t` | no | When in `periodic` mode, location will be sampled at this interval, if the... |
+| `.threshold` | `note::json_int_t` | no | When in `periodic` mode, the number of motion events (registered by the... |
 | `.vseconds` | `note::string_view` | no | In `periodic` mode, overrides `seconds` with a voltage-variable value. |
 
 **Response fields:**
@@ -887,11 +887,11 @@ This endpoint has multiple intents:
 |-------|------|-------------|
 | `.lat` | `double` | If geofence is enabled, the geofence center latitude in degrees. |
 | `.lon` | `double` | If geofence is enabled, the geofence center longitude in degrees. |
-| `.max` | `int32_t` | If geofence is enabled, the meters from geofence center. |
-| `.minutes` | `int32_t` | If geofence is enabled, the currently configured geofence debounce period. |
+| `.max` | `note::json_int_t` | If geofence is enabled, the meters from geofence center. |
+| `.minutes` | `note::json_int_t` | If geofence is enabled, the currently configured geofence debounce period. |
 | `.mode` | `note::string_view` | The current location mode. |
-| `.seconds` | `int32_t` | If specified, the periodic sample interval. |
-| `.threshold` | `int32_t` | When in periodic mode, the number of motion events (registered by the... |
+| `.seconds` | `note::json_int_t` | If specified, the periodic sample interval. |
+| `.threshold` | `note::json_int_t` | When in periodic mode, the number of motion events (registered by the... |
 | `.vseconds` | `note::string_view` | If specified, the voltage-variable period. |
 
 #### card.location.mode — continuous()
@@ -908,7 +908,7 @@ This endpoint has multiple intents:
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `.threshold` | `int32_t` | no | When in `periodic` mode, the number of motion events (registered by the... |
+| `.threshold` | `note::json_int_t` | no | When in `periodic` mode, the number of motion events (registered by the... |
 | `.vseconds` | `note::string_view` | no | In `periodic` mode, overrides `seconds` with a voltage-variable value. |
 
 **Response fields:**
@@ -916,7 +916,7 @@ This endpoint has multiple intents:
 | Field | Type | Description |
 |-------|------|-------------|
 | `.mode` | `note::string_view` | The current location mode. |
-| `.threshold` | `int32_t` | When in periodic mode, the number of motion events (registered by the... |
+| `.threshold` | `note::json_int_t` | When in periodic mode, the number of motion events (registered by the... |
 | `.vseconds` | `note::string_view` | If specified, the voltage-variable period. |
 
 #### card.location.mode — periodic()
@@ -935,10 +935,10 @@ This endpoint has multiple intents:
 |-------|------|----------|-------------|
 | `.lat` | `double` | no | When in periodic or continuous mode, providing this value enables... |
 | `.lon` | `double` | no | When in periodic or continuous mode, providing this value enables... |
-| `.max` | `int32_t` | no | Meters from a geofence center. Used to enable geofence location tracking. |
-| `.minutes` | `int32_t` | no | When geofence is enabled, the number of minutes the device should be outside... |
-| `.seconds` | `int32_t` | no | When in `periodic` mode, location will be sampled at this interval, if the... |
-| `.threshold` | `int32_t` | no | When in `periodic` mode, the number of motion events (registered by the... |
+| `.max` | `note::json_int_t` | no | Meters from a geofence center. Used to enable geofence location tracking. |
+| `.minutes` | `note::json_int_t` | no | When geofence is enabled, the number of minutes the device should be outside... |
+| `.seconds` | `note::json_int_t` | no | When in `periodic` mode, location will be sampled at this interval, if the... |
+| `.threshold` | `note::json_int_t` | no | When in `periodic` mode, the number of motion events (registered by the... |
 | `.vseconds` | `note::string_view` | no | In `periodic` mode, overrides `seconds` with a voltage-variable value. |
 
 **Response fields:**
@@ -947,11 +947,11 @@ This endpoint has multiple intents:
 |-------|------|-------------|
 | `.lat` | `double` | If geofence is enabled, the geofence center latitude in degrees. |
 | `.lon` | `double` | If geofence is enabled, the geofence center longitude in degrees. |
-| `.max` | `int32_t` | If geofence is enabled, the meters from geofence center. |
-| `.minutes` | `int32_t` | If geofence is enabled, the currently configured geofence debounce period. |
+| `.max` | `note::json_int_t` | If geofence is enabled, the meters from geofence center. |
+| `.minutes` | `note::json_int_t` | If geofence is enabled, the currently configured geofence debounce period. |
 | `.mode` | `note::string_view` | The current location mode. |
-| `.seconds` | `int32_t` | If specified, the periodic sample interval. |
-| `.threshold` | `int32_t` | When in periodic mode, the number of motion events (registered by the... |
+| `.seconds` | `note::json_int_t` | If specified, the periodic sample interval. |
+| `.threshold` | `note::json_int_t` | When in periodic mode, the number of motion events (registered by the... |
 | `.vseconds` | `note::string_view` | If specified, the voltage-variable period. |
 
 #### card.location.mode — fixed()
@@ -996,11 +996,11 @@ This endpoint has multiple intents:
 | `.delete_` | `bool` | no | Set to `true` to delete the last known location stored in the Notecard. |
 | `.lat` | `double` | no | When in periodic or continuous mode, providing this value enables... |
 | `.lon` | `double` | no | When in periodic or continuous mode, providing this value enables... |
-| `.max` | `int32_t` | no | Meters from a geofence center. Used to enable geofence location tracking. |
-| `.minutes` | `int32_t` | no | When geofence is enabled, the number of minutes the device should be outside... |
+| `.max` | `note::json_int_t` | no | Meters from a geofence center. Used to enable geofence location tracking. |
+| `.minutes` | `note::json_int_t` | no | When geofence is enabled, the number of minutes the device should be outside... |
 | `.mode` | `note::string_view` | no | Sets the location mode. |
-| `.seconds` | `int32_t` | no | When in `periodic` mode, location will be sampled at this interval, if the... |
-| `.threshold` | `int32_t` | no | When in `periodic` mode, the number of motion events (registered by the... |
+| `.seconds` | `note::json_int_t` | no | When in `periodic` mode, location will be sampled at this interval, if the... |
+| `.threshold` | `note::json_int_t` | no | When in `periodic` mode, the number of motion events (registered by the... |
 | `.vseconds` | `note::string_view` | no | In `periodic` mode, overrides `seconds` with a voltage-variable value. |
 
 **Response fields:**
@@ -1009,11 +1009,11 @@ This endpoint has multiple intents:
 |-------|------|-------------|
 | `.lat` | `double` | If geofence is enabled, the geofence center latitude in degrees. |
 | `.lon` | `double` | If geofence is enabled, the geofence center longitude in degrees. |
-| `.max` | `int32_t` | If geofence is enabled, the meters from geofence center. |
-| `.minutes` | `int32_t` | If geofence is enabled, the currently configured geofence debounce period. |
+| `.max` | `note::json_int_t` | If geofence is enabled, the meters from geofence center. |
+| `.minutes` | `note::json_int_t` | If geofence is enabled, the currently configured geofence debounce period. |
 | `.mode` | `note::string_view` | The current location mode. |
-| `.seconds` | `int32_t` | If specified, the periodic sample interval. |
-| `.threshold` | `int32_t` | When in periodic mode, the number of motion events (registered by the... |
+| `.seconds` | `note::json_int_t` | If specified, the periodic sample interval. |
+| `.threshold` | `note::json_int_t` | When in periodic mode, the number of motion events (registered by the... |
 | `.vseconds` | `note::string_view` | If specified, the voltage-variable period. |
 
 ### card.location.track 
@@ -1032,7 +1032,7 @@ This endpoint has multiple intents:
 |-------|------|----------|-------------|
 | `.file` | `note::string_view` | no | The Notefile in which to store tracked location data. See the `_track.qo`... |
 | `.heartbeat` | `bool` | no | When `start` is `true`, set to `true` to enable tracking even when motion is... |
-| `.hours` | `int32_t` | no | If `heartbeat` is true, add a heartbeat entry at this hourly interval. Use a... |
+| `.hours` | `note::json_int_t` | no | If `heartbeat` is true, add a heartbeat entry at this hourly interval. Use a... |
 | `.payload` | `note::string_view` | no | A base64-encoded binary payload to be included in the next `_track.qo` Note.... |
 | `.start` | `bool` | no | Set to `true` to start Notefile tracking. |
 | `.stop` | `bool` | no | Set to `true` to stop Notefile tracking. |
@@ -1044,8 +1044,8 @@ This endpoint has multiple intents:
 |-------|------|-------------|
 | `.file` | `note::string_view` | The tracking Notefile, if provided. |
 | `.heartbeat` | `bool` | `true` if heartbeat is enabled. |
-| `.minutes` | `int32_t` | The `heartbeat` interval in minutes, if provided. |
-| `.seconds` | `int32_t` | If tracking is enabled and a heartbeat `hours` value is not set, the... |
+| `.minutes` | `note::json_int_t` | The `heartbeat` interval in minutes, if provided. |
+| `.seconds` | `note::json_int_t` | If tracking is enabled and a heartbeat `hours` value is not set, the... |
 | `.start` | `bool` | `true` if tracking is enabled. |
 | `.stop` | `bool` | `true` if tracking is disabled. |
 
@@ -1063,7 +1063,7 @@ This endpoint has multiple intents:
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `.count` | `int32_t` | no | The number of pulses to send to the overridden AUX pin LED. Set this value... |
+| `.count` | `note::json_int_t` | no | The number of pulses to send to the overridden AUX pin LED. Set this value... |
 | `.mode` | `note::string_view` | no | Can be set to one of `green`, `red` or `yellow` to temporarily override the... |
 | `.usb` | `bool` | no | Set to `true` to configure LED behavior so that it is only active when the... |
 
@@ -1082,18 +1082,18 @@ This endpoint has multiple intents:
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `.minutes` | `int32_t` | no | Amount of time to sample for buckets of accelerometer-measured movement. For... |
+| `.minutes` | `note::json_int_t` | no | Amount of time to sample for buckets of accelerometer-measured movement. For... |
 
 **Response fields:**
 
 | Field | Type | Description |
 |-------|------|-------------|
 | `.alert` | `bool` | `true` if the Notecard's accelerometer detected a free-fall since the last... |
-| `.count` | `int32_t` | The number of accelerometer motion events since the `card.motion` request... |
+| `.count` | `note::json_int_t` | The number of accelerometer motion events since the `card.motion` request... |
 | `.mode` | `note::string_view` | Returns the current motion status of the Notecard (e.g. `"stopped"` or... |
-| `.motion` | `int32_t` | Time of the last accelerometer motion event. |
+| `.motion` | `note::json_int_t` | Time of the last accelerometer motion event. |
 | `.movements` | `note::string_view` | If the `minutes` argument is provided, a string of base-36 characters, where... |
-| `.seconds` | `int32_t` | If the `minutes` argument is provided, the duration of each bucket of sample... |
+| `.seconds` | `note::json_int_t` | If the `minutes` argument is provided, the duration of each bucket of sample... |
 | `.status` | `note::string_view` | Comma-separated list of accelerometer orientation events that ocurred since... |
 
 ### card.motion.mode 
@@ -1110,9 +1110,9 @@ This endpoint has multiple intents:
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `.motion` | `int32_t` | no | If `motion` is > 0, a... |
-| `.seconds` | `int32_t` | no | Period for each bucket of movements to be accumulated when `minutes` is used... |
-| `.sensitivity` | `int32_t` | no | Used to set the accelerometer sample rate. The default sample rate of 1.6Hz... |
+| `.motion` | `note::json_int_t` | no | If `motion` is > 0, a... |
+| `.seconds` | `note::json_int_t` | no | Period for each bucket of movements to be accumulated when `minutes` is used... |
+| `.sensitivity` | `note::json_int_t` | no | Used to set the accelerometer sample rate. The default sample rate of 1.6Hz... |
 | `.start` | `bool` | no | `true` to enable the Notecard accelerometer and start motion tracking. |
 | `.stop` | `bool` | no | `true` to disable the Notecard accelerometer and stop motion tracking. |
 
@@ -1131,11 +1131,11 @@ This endpoint has multiple intents:
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `.count` | `int32_t` | no | The number of most recent motion buckets to examine. |
-| `.minutes` | `int32_t` | no | The maximum frequency at which sync will be triggered. Even if a `threshold`... |
+| `.count` | `note::json_int_t` | no | The number of most recent motion buckets to examine. |
+| `.minutes` | `note::json_int_t` | no | The maximum frequency at which sync will be triggered. Even if a `threshold`... |
 | `.start` | `bool` | no | `true` to start motion-triggered syncing. |
 | `.stop` | `bool` | no | `true` to stop motion-triggered syncing. |
-| `.threshold` | `int32_t` | no | The number of buckets that must indicate motion in order to trigger a sync.... |
+| `.threshold` | `note::json_int_t` | no | The number of buckets that must indicate motion in order to trigger a sync.... |
 
 
 ### card.motion.track 
@@ -1152,13 +1152,13 @@ This endpoint has multiple intents:
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `.count` | `int32_t` | no | The number of most recent motion buckets to examine. |
+| `.count` | `note::json_int_t` | no | The number of most recent motion buckets to examine. |
 | `.file` | `note::string_view` | no | The Notefile to use for motion capture Notes. See the [`_motion.qo`... |
-| `.minutes` | `int32_t` | no | The maximum period to capture Notes in the Notefile. |
+| `.minutes` | `note::json_int_t` | no | The maximum period to capture Notes in the Notefile. |
 | `.now` | `bool` | no | Set to `true` to trigger the immediate creation of a `_motion.qo` event if... |
 | `.start` | `bool` | no | `true` to start motion capture. |
 | `.stop` | `bool` | no | `true` to stop motion capture. |
-| `.threshold` | `int32_t` | no | The number of buckets that must indicate motion in order to capture. |
+| `.threshold` | `note::json_int_t` | no | The number of buckets that must indicate motion in order to capture. |
 
 
 ### card.power 
@@ -1178,7 +1178,7 @@ This endpoint has multiple intents:
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `.minutes` | `int32_t` | no | How often, in minutes, Notecard should log power consumption in a `_log.qo`... |
+| `.minutes` | `note::json_int_t` | no | How often, in minutes, Notecard should log power consumption in a `_log.qo`... |
 | `.reset` | `bool` | no | Set to `true` to reset the power consumption counters back to 0. |
 
 **Response fields:**
@@ -1203,7 +1203,7 @@ This endpoint has multiple intents:
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `.minutes` | `int32_t` | no | How often, in minutes, Notecard should log power consumption in a `_log.qo`... |
+| `.minutes` | `note::json_int_t` | no | How often, in minutes, Notecard should log power consumption in a `_log.qo`... |
 | `.reset` | `bool` | no | Set to `true` to reset the power consumption counters back to 0. |
 
 **Response fields:**
@@ -1228,7 +1228,7 @@ This endpoint has multiple intents:
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `.minutes` | `int32_t` | no | How often, in minutes, Notecard should log power consumption in a `_log.qo`... |
+| `.minutes` | `note::json_int_t` | no | How often, in minutes, Notecard should log power consumption in a `_log.qo`... |
 | `.reset` | `bool` | no | Set to `true` to reset the power consumption counters back to 0. |
 
 **Response fields:**
@@ -1253,14 +1253,14 @@ This endpoint has multiple intents:
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `.count` | `int32_t` | no | If the `mode` argument is excluded from the request, the Notecard uses this... |
+| `.count` | `note::json_int_t` | no | If the `mode` argument is excluded from the request, the Notecard uses this... |
 | `.mode` | `note::string_view` | no | Accepts a single value `"payload"` and, if specified, uses the `count` value... |
 
 **Response fields:**
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `.count` | `int32_t` | A random number generated by the Notecard's onboard hardware random number generator. |
+| `.count` | `note::json_int_t` | A random number generated by the Notecard's onboard hardware random number generator. |
 | `.payload` | `note::string_view` | If using `"mode":"payload"`, a base64-encoded string with random values, the... |
 
 ### card.restart 
@@ -1310,7 +1310,7 @@ This endpoint has multiple intents:
 | `.mode` | `note::string_view` | no | Set to `"accel"` to wake from deep sleep on any movement detected by the... |
 | `.off` | `bool` | no | Set to `true` to disable the sleep mode on Notecard. |
 | `.on` | `bool` | no | Set to `true` to enable Notecard to sleep once it is idle for >= 30 seconds. |
-| `.seconds` | `int32_t` | no | The number of seconds the Notecard will wait before entering sleep mode... |
+| `.seconds` | `note::json_int_t` | no | The number of seconds the Notecard will wait before entering sleep mode... |
 
 **Response fields:**
 
@@ -1319,7 +1319,7 @@ This endpoint has multiple intents:
 | `.mode` | `note::string_view` | Returns `"accel"` if the Notecard is configured to wake from deep sleep on... |
 | `.off` | `bool` | `true` if sleep mode is disabled. |
 | `.on` | `bool` | `true` if sleep mode is enabled. |
-| `.seconds` | `int32_t` | The number of seconds the Notecard will wait before entering sleep mode... |
+| `.seconds` | `note::json_int_t` | The number of seconds the Notecard will wait before entering sleep mode... |
 
 ### card.status 
 
@@ -1339,12 +1339,12 @@ This endpoint has multiple intents:
 | `.cell` | `bool` | `true` if the modem is currently powered on. |
 | `.connected` | `bool` | `true` if connected to Notehub. |
 | `.gps` | `bool` | `true` if Notecard's GPS module is currently powered on. |
-| `.inbound` | `int32_t` | The effective inbound synchronization period being used by the device. See... |
-| `.outbound` | `int32_t` | The effective outbound synchronization period being used by the device. See... |
+| `.inbound` | `note::json_int_t` | The effective inbound synchronization period being used by the device. See... |
+| `.outbound` | `note::json_int_t` | The effective outbound synchronization period being used by the device. See... |
 | `.status` | `note::string_view` | General status information. |
-| `.storage` | `int32_t` | Indicates the percentage of total Notecard storage in use. Note that users... |
+| `.storage` | `note::json_int_t` | Indicates the percentage of total Notecard storage in use. Note that users... |
 | `.sync` | `bool` | `true` if the Notecard has ever connected to Notehub. |
-| `.time` | `int32_t` | The UNIX Epoch Time of approximately when the Notecard was first powered up. |
+| `.time` | `note::json_int_t` | The UNIX Epoch Time of approximately when the Notecard was first powered up. |
 | `.usb` | `bool` | `true` if the Notecard is being powered by USB. |
 | `.wifi` | `bool` | `true` if the Notecard's WiFi radio is currently powered on. |
 
@@ -1365,7 +1365,7 @@ This endpoint has multiple intents:
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `.minutes` | `int32_t` | no | If specified, creates a templated `_temp.qo` file that gathers Notecard... |
+| `.minutes` | `note::json_int_t` | no | If specified, creates a templated `_temp.qo` file that gathers Notecard... |
 | `.status` | `note::string_view` | no | Overrides `minutes` with a voltage-variable value. For example:... |
 | `.stop` | `bool` | no | If set to `true`, the Notecard will stop logging the temperature value at... |
 | `.sync` | `bool` | no | If set to `true`, the Notecard will immediately sync any pending `_temp.qo`... |
@@ -1396,7 +1396,7 @@ This endpoint has multiple intents:
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `.minutes` | `int32_t` | no | If specified, creates a templated `_temp.qo` file that gathers Notecard... |
+| `.minutes` | `note::json_int_t` | no | If specified, creates a templated `_temp.qo` file that gathers Notecard... |
 | `.status` | `note::string_view` | no | Overrides `minutes` with a voltage-variable value. For example:... |
 | `.stop` | `bool` | no | If set to `true`, the Notecard will stop logging the temperature value at... |
 | `.sync` | `bool` | no | If set to `true`, the Notecard will immediately sync any pending `_temp.qo`... |
@@ -1427,7 +1427,7 @@ This endpoint has multiple intents:
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `.minutes` | `int32_t` | no | If specified, creates a templated `_temp.qo` file that gathers Notecard... |
+| `.minutes` | `note::json_int_t` | no | If specified, creates a templated `_temp.qo` file that gathers Notecard... |
 | `.status` | `note::string_view` | no | Overrides `minutes` with a voltage-variable value. For example:... |
 | `.stop` | `bool` | no | If set to `true`, the Notecard will stop logging the temperature value at... |
 | `.sync` | `bool` | no | If set to `true`, the Notecard will immediately sync any pending `_temp.qo`... |
@@ -1463,8 +1463,8 @@ This endpoint has multiple intents:
 | `.country` | `note::string_view` | The country where the Notecard is located, if the cell tower is recognized. |
 | `.lat` | `double` | Latitude of the Notecard, if the cell tower is recognized. |
 | `.lon` | `double` | Longitude of the Notecard, if the cell tower is recognized. |
-| `.minutes` | `int32_t` | Number of minutes East of GMT, if the cell tower is recognized. |
-| `.time` | `int32_t` | The current time in UTC. Will only populate if the Notecard has completed a... |
+| `.minutes` | `note::json_int_t` | Number of minutes East of GMT, if the cell tower is recognized. |
+| `.time` | `note::json_int_t` | The current time in UTC. Will only populate if the Notecard has completed a... |
 | `.zone` | `note::string_view` | The time zone of the Notecard, if the cell tower is recognized. |
 
 ### card.trace 
@@ -1500,7 +1500,7 @@ This endpoint has multiple intents:
 |-------|------|----------|-------------|
 | `.allow` | `bool` | no | Set to `true` to allow adding Notes to non-compact Notefiles while connected... |
 | `.method` | `note::string_view` | no | The connectivity method to enable on the Notecard. |
-| `.seconds` | `int32_t` | no | The amount of time a Notecard will spend on any fallback transport before... |
+| `.seconds` | `note::json_int_t` | no | The amount of time a Notecard will spend on any fallback transport before... |
 | `.umin` | `bool` | no | Set to `true` to force a longer network transport timeout when using... |
 
 **Response fields:**
@@ -1523,23 +1523,23 @@ This endpoint has multiple intents:
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `.minutes` | `int32_t` | no | Minimum delay, in minutes, between triangulation attempts. Use `0` for no... |
+| `.minutes` | `note::json_int_t` | no | Minimum delay, in minutes, between triangulation attempts. Use `0` for no... |
 | `.mode` | `note::string_view` | no | The triangulation approach to use for determining the Notecard location. The... |
 | `.on` | `bool` | no | `true` to instruct the Notecard to triangulate even if the module has not... |
 | `.set` | `bool` | no | `true` to instruct the module to use the state of the `on` and `usb` arguments. |
 | `.text` | `note::string_view` | no | When using WiFi triangulation, a newline-terminated list of WiFi access... |
-| `.time` | `int32_t` | no | When passed with `text`, records the time that the WiFi access point scan... |
+| `.time` | `note::json_int_t` | no | When passed with `text`, records the time that the WiFi access point scan... |
 | `.usb` | `bool` | no | `true` to use perform triangulation only when the Notecard is connected to... |
 
 **Response fields:**
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `.length` | `int32_t` | The length of the `text` buffer provided in the current or a previous request. |
+| `.length` | `note::json_int_t` | The length of the `text` buffer provided in the current or a previous request. |
 | `.mode` | `note::string_view` | A comma-separated list indicating the active triangulation modes. |
-| `.motion` | `int32_t` | Time of last detected Notecard movement. |
+| `.motion` | `note::json_int_t` | Time of last detected Notecard movement. |
 | `.on` | `bool` | `true` if triangulation scans will be performed even if the device has not moved. |
-| `.time` | `int32_t` | Time of last triangulation scan. |
+| `.time` | `note::json_int_t` | Time of last triangulation scan. |
 | `.usb` | `bool` | `true` if triangulation scans will be performed only when the device is USB-powered. |
 
 ### card.usage.get 
@@ -1557,20 +1557,20 @@ This endpoint has multiple intents:
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `.mode` | `note::string_view` | no | The time period to use for statistics. Must be one of: |
-| `.offset` | `int32_t` | no | The number of time periods to look backwards, based on the specified... |
+| `.offset` | `note::json_int_t` | no | The number of time periods to look backwards, based on the specified... |
 
 **Response fields:**
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `.bytesReceived` | `int32_t` | Number of bytes received by the Notecard from Notehub. |
-| `.bytesSent` | `int32_t` | Number of bytes sent by the Notecard to Notehub. |
-| `.notesReceived` | `int32_t` | Approximate number of notes received by the Notecard from Notehub. |
-| `.notesSent` | `int32_t` | Approximate number of notes sent by the Notecard to Notehub. |
-| `.seconds` | `int32_t` | Number of seconds in the analyzed period. |
-| `.sessionsSecure` | `int32_t` | Number of secure Notehub sessions. |
-| `.sessionsStandard` | `int32_t` | Number of standard Notehub sessions. |
-| `.time` | `int32_t` | Start time of the analyzed period or, if `mode="total"`, the time of activation. |
+| `.bytesReceived` | `note::json_int_t` | Number of bytes received by the Notecard from Notehub. |
+| `.bytesSent` | `note::json_int_t` | Number of bytes sent by the Notecard to Notehub. |
+| `.notesReceived` | `note::json_int_t` | Approximate number of notes received by the Notecard from Notehub. |
+| `.notesSent` | `note::json_int_t` | Approximate number of notes sent by the Notecard to Notehub. |
+| `.seconds` | `note::json_int_t` | Number of seconds in the analyzed period. |
+| `.sessionsSecure` | `note::json_int_t` | Number of secure Notehub sessions. |
+| `.sessionsStandard` | `note::json_int_t` | Number of standard Notehub sessions. |
+| `.time` | `note::json_int_t` | Start time of the analyzed period or, if `mode="total"`, the time of activation. |
 
 ### card.usage.test 
 
@@ -1586,25 +1586,25 @@ This endpoint has multiple intents:
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `.days` | `int32_t` | no | Number of days to use for the test. |
-| `.hours` | `int32_t` | no | If you want to analyze a period shorter than one day, the number of hours to... |
-| `.megabytes` | `int32_t` | no | The Notecard lifetime cellular data quota (in megabytes) to use for the test. |
+| `.days` | `note::json_int_t` | no | Number of days to use for the test. |
+| `.hours` | `note::json_int_t` | no | If you want to analyze a period shorter than one day, the number of hours to... |
+| `.megabytes` | `note::json_int_t` | no | The Notecard lifetime cellular data quota (in megabytes) to use for the test. |
 
 **Response fields:**
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `.bytesPerDay` | `int32_t` | Average bytes per day used during the test period. |
-| `.bytesReceived` | `int32_t` | Number of bytes received by the Notecard from Notehub. |
-| `.bytesSent` | `int32_t` | Number of bytes sent by the Notecard to Notehub. |
-| `.days` | `int32_t` | The number of days used for the test. |
-| `.max` | `int32_t` | The days of projected data available based on test. |
-| `.notesReceived` | `int32_t` | Number of notes received by the Notecard from Notehub. |
-| `.notesSent` | `int32_t` | Number of notes sent by the Notecard to Notehub. |
-| `.seconds` | `int32_t` | Number of seconds in the analyzed period. |
-| `.sessionsSecure` | `int32_t` | Number of secure Notehub sessions. |
-| `.sessionsStandard` | `int32_t` | Number of standard Notehub sessions. |
-| `.time` | `int32_t` | Time of device activation. |
+| `.bytesPerDay` | `note::json_int_t` | Average bytes per day used during the test period. |
+| `.bytesReceived` | `note::json_int_t` | Number of bytes received by the Notecard from Notehub. |
+| `.bytesSent` | `note::json_int_t` | Number of bytes sent by the Notecard to Notehub. |
+| `.days` | `note::json_int_t` | The number of days used for the test. |
+| `.max` | `note::json_int_t` | The days of projected data available based on test. |
+| `.notesReceived` | `note::json_int_t` | Number of notes received by the Notecard from Notehub. |
+| `.notesSent` | `note::json_int_t` | Number of notes sent by the Notecard to Notehub. |
+| `.seconds` | `note::json_int_t` | Number of seconds in the analyzed period. |
+| `.sessionsSecure` | `note::json_int_t` | Number of secure Notehub sessions. |
+| `.sessionsStandard` | `note::json_int_t` | Number of standard Notehub sessions. |
+| `.time` | `note::json_int_t` | Time of device activation. |
 
 ### card.version 
 
@@ -1649,11 +1649,11 @@ This endpoint has multiple intents:
 |-------|------|----------|-------------|
 | `.alert` | `bool` | no | When enabled and the `usb` argument is set to `true`, the Notecard will add... |
 | `.calibration` | `double` | no | The offset, in volts, to account for the forward voltage drop of the diode... |
-| `.hours` | `int32_t` | no | The number of hours to analyze, up to 720 (30 days). |
+| `.hours` | `note::json_int_t` | no | The number of hours to analyze, up to 720 (30 days). |
 | `.mode` | `note::string_view` | no | Used to set voltage thresholds based on how the Notecard will be powered,... |
 | `.name` | `note::string_view` | no | Specifies an environment variable to override application default timing values. |
 | `.off` | `bool` | no | Disable historic voltage trend calculations. |
-| `.offset` | `int32_t` | no | Number of hours to move into the past before starting analysis. |
+| `.offset` | `note::json_int_t` | no | Number of hours to move into the past before starting analysis. |
 | `.on` | `bool` | no | Enable historic voltage trend calculations. |
 | `.set` | `bool` | no | Used along with `calibration`, set to `true` to specify a new calibration value. |
 | `.sync` | `bool` | no | When enabled and the `usb` argument is set to `true`, the Notecard will... |
@@ -1666,8 +1666,8 @@ This endpoint has multiple intents:
 | Field | Type | Description |
 |-------|------|-------------|
 | `.daily` | `double` | Change of moving average in the last 24 hours, if relevant to the time... |
-| `.hours` | `int32_t` | The number of hours used for trend analysis. |
-| `.minutes` | `int32_t` | Represents the Notecard's uptime in minutes. This field is not present when... |
+| `.hours` | `note::json_int_t` | The number of hours used for trend analysis. |
+| `.minutes` | `note::json_int_t` | Represents the Notecard's uptime in minutes. This field is not present when... |
 | `.mode` | `note::string_view` | The current voltage-variable threshold value returned from Notecard.
 
 For... |
@@ -1695,11 +1695,11 @@ For... |
 |-------|------|----------|-------------|
 | `.alert` | `bool` | no | When enabled and the `usb` argument is set to `true`, the Notecard will add... |
 | `.calibration` | `double` | no | The offset, in volts, to account for the forward voltage drop of the diode... |
-| `.hours` | `int32_t` | no | The number of hours to analyze, up to 720 (30 days). |
+| `.hours` | `note::json_int_t` | no | The number of hours to analyze, up to 720 (30 days). |
 | `.mode` | `note::string_view` | no | Used to set voltage thresholds based on how the Notecard will be powered,... |
 | `.name` | `note::string_view` | no | Specifies an environment variable to override application default timing values. |
 | `.off` | `bool` | no | Disable historic voltage trend calculations. |
-| `.offset` | `int32_t` | no | Number of hours to move into the past before starting analysis. |
+| `.offset` | `note::json_int_t` | no | Number of hours to move into the past before starting analysis. |
 | `.on` | `bool` | no | Enable historic voltage trend calculations. |
 | `.set` | `bool` | no | Used along with `calibration`, set to `true` to specify a new calibration value. |
 | `.sync` | `bool` | no | When enabled and the `usb` argument is set to `true`, the Notecard will... |
@@ -1712,8 +1712,8 @@ For... |
 | Field | Type | Description |
 |-------|------|-------------|
 | `.daily` | `double` | Change of moving average in the last 24 hours, if relevant to the time... |
-| `.hours` | `int32_t` | The number of hours used for trend analysis. |
-| `.minutes` | `int32_t` | Represents the Notecard's uptime in minutes. This field is not present when... |
+| `.hours` | `note::json_int_t` | The number of hours used for trend analysis. |
+| `.minutes` | `note::json_int_t` | Represents the Notecard's uptime in minutes. This field is not present when... |
 | `.mode` | `note::string_view` | The current voltage-variable threshold value returned from Notecard.
 
 For... |
@@ -1770,7 +1770,7 @@ For... |
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `.apn` | `note::string_view` | no | Access Point Name (APN) when using an external SIM. Use `"-"` to reset to... |
-| `.hours` | `int32_t` | no | When using the `method` argument with `"dual-primary-secondary"` or... |
+| `.hours` | `note::json_int_t` | no | When using the `method` argument with `"dual-primary-secondary"` or... |
 | `.method` | `note::string_view` | no | Used when configuring a [Notecard to failover to a different... |
 | `.mode` | `note::string_view` | no | Network scan mode. Must be one of: |
 
@@ -1778,7 +1778,7 @@ For... |
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `.count` | `int32_t` | Number of bars of signal quality. |
+| `.count` | `note::json_int_t` | Number of bars of signal quality. |
 | `.status` | `note::string_view` | The current status of the wireless connection and modem. |
 
 ### card.wireless.penalty 
@@ -1798,9 +1798,9 @@ This endpoint has multiple intents:
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `.add` | `int32_t` | no | The number of minutes to add to successive retries. Used with the `set`... |
-| `.max` | `int32_t` | no | The maximum number of minutes that a device can be in a Network Registration... |
-| `.min` | `int32_t` | no | The number of minutes of the first retry interval of a Network Registration... |
+| `.add` | `note::json_int_t` | no | The number of minutes to add to successive retries. Used with the `set`... |
+| `.max` | `note::json_int_t` | no | The maximum number of minutes that a device can be in a Network Registration... |
+| `.min` | `note::json_int_t` | no | The number of minutes of the first retry interval of a Network Registration... |
 | `.rate` | `double` | no | The rate at which the penalty box time multiplier is increased over... |
 | `.reset` | `bool` | no | Set to `true` to remove the Notecard from certain types of penalty boxes. |
 | `.set` | `bool` | no | Set to `true` to override the default settings of the [Network Registration... |
@@ -1809,9 +1809,9 @@ This endpoint has multiple intents:
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `.count` | `int32_t` | The number of consecutive network registration failures. |
-| `.minutes` | `int32_t` | The time since the first network registration failure. |
-| `.seconds` | `int32_t` | If the Notecard is in a [Penalty... |
+| `.count` | `note::json_int_t` | The number of consecutive network registration failures. |
+| `.minutes` | `note::json_int_t` | The time since the first network registration failure. |
+| `.seconds` | `note::json_int_t` | If the Notecard is in a [Penalty... |
 | `.status` | `note::string_view` | If the Notecard is in a [Penalty... |
 
 #### card.wireless.penalty — set()
@@ -1828,9 +1828,9 @@ This endpoint has multiple intents:
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `.add` | `int32_t` | no | The number of minutes to add to successive retries. Used with the `set`... |
-| `.max` | `int32_t` | no | The maximum number of minutes that a device can be in a Network Registration... |
-| `.min` | `int32_t` | no | The number of minutes of the first retry interval of a Network Registration... |
+| `.add` | `note::json_int_t` | no | The number of minutes to add to successive retries. Used with the `set`... |
+| `.max` | `note::json_int_t` | no | The maximum number of minutes that a device can be in a Network Registration... |
+| `.min` | `note::json_int_t` | no | The number of minutes of the first retry interval of a Network Registration... |
 | `.rate` | `double` | no | The rate at which the penalty box time multiplier is increased over... |
 | `.reset` | `bool` | no | Set to `true` to remove the Notecard from certain types of penalty boxes. |
 | `.set` | `bool` | no | Set to `true` to override the default settings of the [Network Registration... |
@@ -1839,9 +1839,9 @@ This endpoint has multiple intents:
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `.count` | `int32_t` | The number of consecutive network registration failures. |
-| `.minutes` | `int32_t` | The time since the first network registration failure. |
-| `.seconds` | `int32_t` | If the Notecard is in a [Penalty... |
+| `.count` | `note::json_int_t` | The number of consecutive network registration failures. |
+| `.minutes` | `note::json_int_t` | The time since the first network registration failure. |
+| `.seconds` | `note::json_int_t` | If the Notecard is in a [Penalty... |
 | `.status` | `note::string_view` | If the Notecard is in a [Penalty... |
 
 #### card.wireless.penalty — clear()
@@ -1858,9 +1858,9 @@ This endpoint has multiple intents:
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `.add` | `int32_t` | no | The number of minutes to add to successive retries. Used with the `set`... |
-| `.max` | `int32_t` | no | The maximum number of minutes that a device can be in a Network Registration... |
-| `.min` | `int32_t` | no | The number of minutes of the first retry interval of a Network Registration... |
+| `.add` | `note::json_int_t` | no | The number of minutes to add to successive retries. Used with the `set`... |
+| `.max` | `note::json_int_t` | no | The maximum number of minutes that a device can be in a Network Registration... |
+| `.min` | `note::json_int_t` | no | The number of minutes of the first retry interval of a Network Registration... |
 | `.rate` | `double` | no | The rate at which the penalty box time multiplier is increased over... |
 | `.reset` | `bool` | no | Set to `true` to remove the Notecard from certain types of penalty boxes. |
 | `.set` | `bool` | no | Set to `true` to override the default settings of the [Network Registration... |
@@ -1869,9 +1869,9 @@ This endpoint has multiple intents:
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `.count` | `int32_t` | The number of consecutive network registration failures. |
-| `.minutes` | `int32_t` | The time since the first network registration failure. |
-| `.seconds` | `int32_t` | If the Notecard is in a [Penalty... |
+| `.count` | `note::json_int_t` | The number of consecutive network registration failures. |
+| `.minutes` | `note::json_int_t` | The time since the first network registration failure. |
+| `.seconds` | `note::json_int_t` | If the Notecard is in a [Penalty... |
 | `.status` | `note::string_view` | If the Notecard is in a [Penalty... |
 
 ### dfu.get 
@@ -1889,15 +1889,15 @@ This endpoint has multiple intents:
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `.binary` | `bool` | no | If `true`, the Notecard will return firmware data in the binary I/O buffer... |
-| `.length` | `int32_t` | no | The number of bytes of firmware data to read and return to the host. Set to... |
-| `.offset` | `int32_t` | no | The offset to use before performing a read of firmware data. |
+| `.length` | `note::json_int_t` | no | The number of bytes of firmware data to read and return to the host. Set to... |
+| `.offset` | `note::json_int_t` | no | The offset to use before performing a read of firmware data. |
 
 **Response fields:**
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `.cobs` | `int32_t` | When `binary` is `true` in the request, this field contains the COBS encoded... |
-| `.length` | `int32_t` | When `binary` is `true` in the request, this field contains the actual... |
+| `.cobs` | `note::json_int_t` | When `binary` is `true` in the request, this field contains the COBS encoded... |
+| `.length` | `note::json_int_t` | When `binary` is `true` in the request, this field contains the actual... |
 | `.payload` | `note::string_view` | A base64 string containing firmware data of the provided `length`. This... |
 | `.status` | `note::string_view` | When `binary` is `true` in the request, this field contains a 32-character... |
 
@@ -1990,14 +1990,14 @@ This endpoint has multiple intents:
 |-------|------|----------|-------------|
 | `.name` | `note::string_view` | no | The name of the environment variable (case-insensitive). Omit to return all... |
 | `.names` | `note::string_view` | no | A list of one or more variables to retrieve, by name (case-insensitive). |
-| `.time` | `int32_t` | no | Request a modified environment variable or variables from the Notecard, but... |
+| `.time` | `note::json_int_t` | no | Request a modified environment variable or variables from the Notecard, but... |
 
 **Response fields:**
 
 | Field | Type | Description |
 |-------|------|-------------|
 | `.text` | `note::string_view` | If a `name` was specified, the value of the environment variable. |
-| `.time` | `int32_t` | The time of the Notecard variable or variables change. |
+| `.time` | `note::json_int_t` | The time of the Notecard variable or variables change. |
 
 ### env.modified 
 
@@ -2013,13 +2013,13 @@ This endpoint has multiple intents:
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `.time` | `int32_t` | no | Request whether the Notecard has detected an environment variable change... |
+| `.time` | `note::json_int_t` | no | Request whether the Notecard has detected an environment variable change... |
 
 **Response fields:**
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `.time` | `int32_t` | Timestamp indicating the last time any environment variable was changed on... |
+| `.time` | `note::json_int_t` | Timestamp indicating the last time any environment variable was changed on... |
 
 ### env.set 
 
@@ -2042,7 +2042,7 @@ This endpoint has multiple intents:
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `.time` | `int32_t` | The logged time of the variable change. |
+| `.time` | `note::json_int_t` | The logged time of the variable change. |
 
 ### env.template 
 
@@ -2064,7 +2064,7 @@ This endpoint has multiple intents:
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `.bytes` | `int32_t` | The maximum number of bytes that will be used when environment variables are... |
+| `.bytes` | `note::json_int_t` | The maximum number of bytes that will be used when environment variables are... |
 
 ### file.changes 
 
@@ -2087,9 +2087,9 @@ This endpoint has multiple intents:
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `.changes` | `int32_t` | If a change tracker is used, the number of changes across all files. |
+| `.changes` | `note::json_int_t` | If a change tracker is used, the number of changes across all files. |
 | `.pending` | `bool` | Set to `true` if this was a pending changes request and there are changes |
-| `.total` | `int32_t` | The total of local Notes across all Notefiles. This includes Inbound Notes... |
+| `.total` | `note::json_int_t` | The total of local Notes across all Notefiles. This includes Inbound Notes... |
 
 ### file.changes.pending 
 
@@ -2106,9 +2106,9 @@ This endpoint has multiple intents:
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `.changes` | `int32_t` | The number of changes across all files. |
+| `.changes` | `note::json_int_t` | The number of changes across all files. |
 | `.pending` | `bool` | `true` if there are pending changes. |
-| `.total` | `int32_t` | The total of unsynced notes across all Notefiles. |
+| `.total` | `note::json_int_t` | The total of unsynced notes across all Notefiles. |
 
 ### file.clear 
 
@@ -2164,9 +2164,9 @@ This endpoint has multiple intents:
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `.changes` | `int32_t` | The number of Notes across all Notefiles pending sync. |
+| `.changes` | `note::json_int_t` | The number of Notes across all Notefiles pending sync. |
 | `.sync` | `bool` | `true` if a sync is recommended based on the number of pending notes. |
-| `.total` | `int32_t` | The total number of Notes across all Notefiles. |
+| `.total` | `note::json_int_t` | The total number of Notes across all Notefiles. |
 
 ### hub.get 
 
@@ -2185,9 +2185,9 @@ This endpoint has multiple intents:
 |-------|------|-------------|
 | `.device` | `note::string_view` | The [DeviceUID](/api-reference/glossary#deviceuid) for the Notecard. |
 | `.host` | `note::string_view` | The URL of the Notehub host. |
-| `.inbound` | `int32_t` | The max wait time, in minutes, to sync inbound data from Notehub. |
+| `.inbound` | `note::json_int_t` | The max wait time, in minutes, to sync inbound data from Notehub. |
 | `.mode` | `note::string_view` | The current operating `mode` of the Notecard, as defined in `hub.set`. |
-| `.outbound` | `int32_t` | The max wait time, in minutes, to sync outbound data from the Notecard. |
+| `.outbound` | `note::json_int_t` | The max wait time, in minutes, to sync outbound data from the Notecard. |
 | `.product` | `note::string_view` | The ProductUID to which the Notecard is registered. |
 | `.sn` | `note::string_view` | The serial number of the device, if set. |
 | `.sync` | `bool` | `true` if the device is in `continuous` mode and set to sync every time a... |
@@ -2229,17 +2229,17 @@ This endpoint has multiple intents:
 |-------|------|----------|-------------|
 | `.align` | `bool` | no | Use `true` to align syncs on a regular time-periodic cycle. |
 | `.details` | `note::string_view` | no | When using Notecard LoRa you can use this argument to provide information... |
-| `.duration` | `int32_t` | no | When in `continuous` mode, the amount of time, in minutes, of each session... |
+| `.duration` | `note::json_int_t` | no | When in `continuous` mode, the amount of time, in minutes, of each session... |
 | `.host` | `note::string_view` | no | The URL of the Notehub service. Use `"-"` to reset to the default value. |
-| `.inbound` | `int32_t` | no | The max wait time, in minutes, to sync inbound data from Notehub. Explicit... |
+| `.inbound` | `note::json_int_t` | no | The max wait time, in minutes, to sync inbound data from Notehub. Explicit... |
 | `.mode` | `note::string_view` | no | The Notecard's synchronization mode.
 
 **NOTE:** The Notecard must be in... |
 | `.off` | `bool` | no | Set to `true` to manually instruct the Notecard to resume periodic mode... |
 | `.on` | `bool` | no | If in `periodic` mode, used to temporarily switch the Notecard to... |
-| `.outbound` | `int32_t` | no | The max wait time, in minutes, to sync outbound data from the Notecard.... |
+| `.outbound` | `note::json_int_t` | no | The max wait time, in minutes, to sync outbound data from the Notecard.... |
 | `.product` | `note::string_view` | no | A Notehub-managed unique identifier that is used to match Devices with... |
-| `.seconds` | `int32_t` | no | If in `periodic` mode and using `on` above, the number of seconds to run in... |
+| `.seconds` | `note::json_int_t` | no | If in `periodic` mode and using `on` above, the number of seconds to run in... |
 | `.sn` | `note::string_view` | no | The end product's serial number. |
 | `.sync` | `bool` | no | If in `continuous` mode, automatically and immediately sync each time an... |
 | `.umin` | `bool` | no | Set to `true` to use USB/line power variable sync behavior, enabling the... |
@@ -2264,14 +2264,14 @@ This endpoint has multiple intents:
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `.seconds` | `int32_t` | no | The number of seconds to wait before timing out the request. |
+| `.seconds` | `note::json_int_t` | no | The number of seconds to wait before timing out the request. |
 
 **Response fields:**
 
 | Field | Type | Description |
 |-------|------|-------------|
 | `.connected` | `bool` | `true` if the Notecard is connected to Notehub. |
-| `.signals` | `int32_t` | The number of queued signals remaining. |
+| `.signals` | `note::json_int_t` | The number of queued signals remaining. |
 
 ### hub.status 
 
@@ -2331,14 +2331,14 @@ This endpoint has multiple intents:
 | Field | Type | Description |
 |-------|------|-------------|
 | `.alert` | `bool` | `true` if an error occurred during the most recent sync. |
-| `.completed` | `int32_t` | Number of seconds since the last sync completion. |
+| `.completed` | `note::json_int_t` | Number of seconds since the last sync completion. |
 | `.mode` | `note::string_view` | The current state of the wireless connectivity module in use. |
-| `.requested` | `int32_t` | Number of seconds since the last explicit sync request. |
+| `.requested` | `note::json_int_t` | Number of seconds since the last explicit sync request. |
 | `.scan` | `bool` | Returns `true` if triangulation data was sent to Notehub in the most recent sync. |
-| `.seconds` | `int32_t` | If the Notecard is in a [Penalty... |
+| `.seconds` | `note::json_int_t` | If the Notecard is in a [Penalty... |
 | `.status` | `note::string_view` | The status of the current or previous sync. Refer to [this... |
 | `.sync` | `bool` | `true` if the notecard has unsynchronized notes, or requires a sync to set... |
-| `.time` | `int32_t` | Time of the last sync completion. Will only populate if the Notecard has... |
+| `.time` | `note::json_int_t` | Time of the last sync completion. Will only populate if the Notecard has... |
 
 ### note.add 
 
@@ -2363,7 +2363,7 @@ On Notecard LoRa this argument is required. On... |
 | `.key` | `note::string_view` | no | The name of an environment variable in your Notehub.io project that contains... |
 | `.limit` | `bool` | no | If set to `true`, the Note will not be created if Notecard is in a [penalty... |
 | `.live` | `bool` | no | If `true`, bypasses saving the Note to flash on the Notecard. Required to be... |
-| `.max` | `int32_t` | no | Defines the maximum number of queued Notes permitted in the specified... |
+| `.max` | `note::json_int_t` | no | Defines the maximum number of queued Notes permitted in the specified... |
 | `.noteId` | `note::string_view` | no | If the Notefile has a `.db/.dbs/.dbx` extension, specifies a unique Note... |
 | `.payload` | `note::string_view` | no | A base64-encoded binary payload. A Note must have either a `body` or a... |
 | `.sync` | `bool` | no | Set to `true` to sync immediately. Only applies to **outgoing** Notecard... |
@@ -2375,7 +2375,7 @@ On Notecard LoRa this argument is required. On... |
 |-------|------|-------------|
 | `.noteId` | `note::string_view` | The generated unique Note ID when `note` parameter was set to "?". |
 | `.template_` | `bool` | `true` when a template is active on the Notefile. |
-| `.total` | `int32_t` | The total number of Notes in the Notefile. |
+| `.total` | `note::json_int_t` | The total number of Notes in the Notefile. |
 
 ### note.changes 
 This endpoint has multiple intents:
@@ -2396,7 +2396,7 @@ This endpoint has multiple intents:
 |-------|------|----------|-------------|
 | `.deleted` | `bool` | no | `true` to return deleted Notes with this request. Deleted Notes are only... |
 | `.file` | `note::string_view` | no | The Notefile ID. |
-| `.max` | `int32_t` | no | The maximum number of Notes to return in the request. |
+| `.max` | `note::json_int_t` | no | The maximum number of Notes to return in the request. |
 | `.reset` | `bool` | no | `true` to reset a change tracker. |
 | `.start` | `bool` | no | `true` to reset the tracker to the beginning. |
 | `.stop` | `bool` | no | `true` to delete the tracker. |
@@ -2406,8 +2406,8 @@ This endpoint has multiple intents:
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `.changes` | `int32_t` | The number of pending changes in the Notefile. |
-| `.total` | `int32_t` | The total number of Notes in the Notefile. |
+| `.changes` | `note::json_int_t` | The number of pending changes in the Notefile. |
+| `.total` | `note::json_int_t` | The total number of Notes in the Notefile. |
 
 #### note.changes — pop()
 
@@ -2426,7 +2426,7 @@ This endpoint has multiple intents:
 | `.delete_` | `bool` | no | `true` to delete the Notes returned by the request. |
 | `.deleted` | `bool` | no | `true` to return deleted Notes with this request. Deleted Notes are only... |
 | `.file` | `note::string_view` | yes | The Notefile ID. |
-| `.max` | `int32_t` | no | The maximum number of Notes to return in the request. |
+| `.max` | `note::json_int_t` | no | The maximum number of Notes to return in the request. |
 | `.reset` | `bool` | no | `true` to reset a change tracker. |
 | `.start` | `bool` | no | `true` to reset the tracker to the beginning. |
 | `.stop` | `bool` | no | `true` to delete the tracker. |
@@ -2436,8 +2436,8 @@ This endpoint has multiple intents:
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `.changes` | `int32_t` | The number of pending changes in the Notefile. |
-| `.total` | `int32_t` | The total number of Notes in the Notefile. |
+| `.changes` | `note::json_int_t` | The number of pending changes in the Notefile. |
+| `.total` | `note::json_int_t` | The total number of Notes in the Notefile. |
 
 ### note.delete 
 
@@ -2485,7 +2485,7 @@ This endpoint has multiple intents:
 | Field | Type | Description |
 |-------|------|-------------|
 | `.payload` | `note::string_view` | The payload, if contained in the Note. |
-| `.time` | `int32_t` | The time the Note was added to the Notecard or Notehub. |
+| `.time` | `note::json_int_t` | The time the Note was added to the Notecard or Notehub. |
 
 #### note.get — pop()
 
@@ -2512,7 +2512,7 @@ This endpoint has multiple intents:
 | Field | Type | Description |
 |-------|------|-------------|
 | `.payload` | `note::string_view` | The payload, if contained in the Note. |
-| `.time` | `int32_t` | The time the Note was added to the Notecard or Notehub. |
+| `.time` | `note::json_int_t` | The time the Note was added to the Notecard or Notehub. |
 
 ### note.template 
 This endpoint has multiple intents:
@@ -2535,17 +2535,17 @@ This endpoint has multiple intents:
 | `.delete_` | `bool` | no | Set to `true` to delete all pending Notes using the template if one of the... |
 | `.file` | `note::string_view` | yes | The name of the Notefile to which the template will be applied. |
 | `.format` | `note::string_view` | no | By default all Note templates automatically include metadata, including a... |
-| `.length` | `int32_t` | no | The maximum length of a `payload` (in bytes) that can be sent in Notes for... |
-| `.port` | `int32_t` | no | This argument is required on Notecard LoRa and a Notecard paired with... |
+| `.length` | `note::json_int_t` | no | The maximum length of a `payload` (in bytes) that can be sent in Notes for... |
+| `.port` | `note::json_int_t` | no | This argument is required on Notecard LoRa and a Notecard paired with... |
 | `.verify` | `bool` | no | If `true`, returns the current template set on a given Notefile. |
 
 **Response fields:**
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `.bytes` | `int32_t` | The number of bytes that will be transmitted to Notehub, per Note, before... |
+| `.bytes` | `note::json_int_t` | The number of bytes that will be transmitted to Notehub, per Note, before... |
 | `.format` | `note::string_view` | If the `format` argument is provided, this represents the format applied to... |
-| `.length` | `int32_t` | If the `verify` argument is provided and the Notefile has an active template... |
+| `.length` | `note::json_int_t` | If the `verify` argument is provided and the Notefile has an active template... |
 | `.template_` | `bool` | `true` if an active template exists on the Notefile. |
 
 #### note.template — remove()
@@ -2566,17 +2566,17 @@ This endpoint has multiple intents:
 | `.delete_` | `bool` | no | Set to `true` to delete all pending Notes using the template if one of the... |
 | `.file` | `note::string_view` | yes | The name of the Notefile to which the template will be applied. |
 | `.format` | `note::string_view` | no | By default all Note templates automatically include metadata, including a... |
-| `.length` | `int32_t` | no | The maximum length of a `payload` (in bytes) that can be sent in Notes for... |
-| `.port` | `int32_t` | no | This argument is required on Notecard LoRa and a Notecard paired with... |
+| `.length` | `note::json_int_t` | no | The maximum length of a `payload` (in bytes) that can be sent in Notes for... |
+| `.port` | `note::json_int_t` | no | This argument is required on Notecard LoRa and a Notecard paired with... |
 | `.verify` | `bool` | no | If `true`, returns the current template set on a given Notefile. |
 
 **Response fields:**
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `.bytes` | `int32_t` | The number of bytes that will be transmitted to Notehub, per Note, before... |
+| `.bytes` | `note::json_int_t` | The number of bytes that will be transmitted to Notehub, per Note, before... |
 | `.format` | `note::string_view` | If the `format` argument is provided, this represents the format applied to... |
-| `.length` | `int32_t` | If the `verify` argument is provided and the Notefile has an active template... |
+| `.length` | `note::json_int_t` | If the `verify` argument is provided and the Notefile has an active template... |
 | `.template_` | `bool` | `true` if an active template exists on the Notefile. |
 
 ### note.update 
@@ -2742,10 +2742,10 @@ This endpoint has multiple intents:
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `.cobs` | `int32_t` | The size of the COBS-encoded data (in bytes). |
-| `.length` | `int32_t` | The length of the returned binary payload (in bytes). |
+| `.cobs` | `note::json_int_t` | The size of the COBS-encoded data (in bytes). |
+| `.length` | `note::json_int_t` | The length of the returned binary payload (in bytes). |
 | `.payload` | `note::string_view` | A base64-encoded binary payload from the external service, if any. The... |
-| `.result` | `int32_t` | The HTTP Status Code |
+| `.result` | `note::json_int_t` | The HTTP Status Code |
 | `.status` | `note::string_view` | MD5 hash of the binary payload, if any. |
 
 ### web.delete 
@@ -2768,17 +2768,17 @@ This endpoint has multiple intents:
 | `.name` | `note::string_view` | no | A web URL endpoint relative to the host configured in the Proxy Route. URL... |
 | `.noteId` | `note::string_view` | no | The unique Note ID within the local-only Database Notefile (.dbx) specified... |
 | `.route` | `note::string_view` | no | Alias for a Proxy Route in Notehub. |
-| `.seconds` | `int32_t` | no | If specified, overrides the default 90 second timeout. |
+| `.seconds` | `note::json_int_t` | no | If specified, overrides the default 90 second timeout. |
 
 **Response fields:**
 
 | Field | Type | Description |
 |-------|------|-------------|
 | `.payload` | `note::string_view` | A base64-encoded binary payload from the external service, if any. The... |
-| `.result` | `int32_t` | The HTTP Status Code |
+| `.result` | `note::json_int_t` | The HTTP Status Code |
 | `.status` | `note::string_view` | If a `payload` is returned in the response, this is a 32-character... |
-| `.cobs` | `int32_t` | Size of the COBS-encoded binary payload (in bytes). |
-| `.length` | `int32_t` | Size of the unencoded binary payload (in bytes). |
+| `.cobs` | `note::json_int_t` | Size of the COBS-encoded binary payload (in bytes). |
+| `.length` | `note::json_int_t` | Size of the unencoded binary payload (in bytes). |
 
 ### web.get 
 
@@ -2798,21 +2798,21 @@ This endpoint has multiple intents:
 | `.body` | `note::string_view` | no | The JSON body to send with the request. |
 | `.content` | `note::string_view` | no | The MIME type of the body or payload of the response. Default is `application/json`. |
 | `.file` | `note::string_view` | no | The name of a local-only Database Notefile (.dbx) where the response will be... |
-| `.max` | `int32_t` | no | Used along with `binary:true` and `offset`, sent as a URL parameter to the... |
+| `.max` | `note::json_int_t` | no | Used along with `binary:true` and `offset`, sent as a URL parameter to the... |
 | `.name` | `note::string_view` | no | A web URL endpoint relative to the host configured in the Proxy Route. URL... |
 | `.noteId` | `note::string_view` | no | The unique Note ID within the local-only Database Notefile (.dbx) specified... |
-| `.offset` | `int32_t` | no | Used along with `binary:true` and `max`, sent as a URL parameter to the... |
+| `.offset` | `note::json_int_t` | no | Used along with `binary:true` and `max`, sent as a URL parameter to the... |
 | `.route` | `note::string_view` | no | Alias for a Proxy Route in Notehub. |
-| `.seconds` | `int32_t` | no | If specified, overrides the default 90 second timeout. |
+| `.seconds` | `note::json_int_t` | no | If specified, overrides the default 90 second timeout. |
 
 **Response fields:**
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `.cobs` | `int32_t` | The size of the COBS-encoded data (in bytes). |
-| `.length` | `int32_t` | The length of the returned binary payload (in bytes). |
+| `.cobs` | `note::json_int_t` | The size of the COBS-encoded data (in bytes). |
+| `.length` | `note::json_int_t` | The length of the returned binary payload (in bytes). |
 | `.payload` | `note::string_view` | A base64-encoded binary payload from the external service, if any. The... |
-| `.result` | `int32_t` | The HTTP Status Code. |
+| `.result` | `note::json_int_t` | The HTTP Status Code. |
 
 ### web.post 
 
@@ -2833,25 +2833,25 @@ This endpoint has multiple intents:
 | `.body` | `note::string_view` | no | The JSON body to send with the request. |
 | `.content` | `note::string_view` | no | The MIME type of the body or payload of the response. Default is `application/json`. |
 | `.file` | `note::string_view` | no | The name of a local-only Database Notefile (.dbx) where the response will be... |
-| `.max` | `int32_t` | no | The maximum size of the response from the remote server, in bytes. Useful if... |
+| `.max` | `note::json_int_t` | no | The maximum size of the response from the remote server, in bytes. Useful if... |
 | `.name` | `note::string_view` | no | A web URL endpoint relative to the host configured in the Proxy Route. URL... |
 | `.noteId` | `note::string_view` | no | The unique Note ID within the local-only Database Notefile (.dbx) specified... |
-| `.offset` | `int32_t` | no | When sending payload fragments, the number of bytes of the binary payload to... |
+| `.offset` | `note::json_int_t` | no | When sending payload fragments, the number of bytes of the binary payload to... |
 | `.payload` | `note::string_view` | no | A base64-encoded binary payload. A `web.post` may have either a `body` or a... |
 | `.route` | `note::string_view` | no | Alias for a Proxy Route in Notehub. |
-| `.seconds` | `int32_t` | no | If specified, overrides the default 90 second timeout. |
+| `.seconds` | `note::json_int_t` | no | If specified, overrides the default 90 second timeout. |
 | `.status` | `note::string_view` | no | A 32-character hex-encoded MD5 sum of the payload or payload fragment. Used... |
-| `.total` | `int32_t` | no | When using the `application/octet-stream` content type, you may send large... |
+| `.total` | `note::json_int_t` | no | When using the `application/octet-stream` content type, you may send large... |
 | `.verify` | `bool` | no | `true` to request verification from Notehub once the payload or payload... |
 
 **Response fields:**
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `.cobs` | `int32_t` | If the web transaction returns a binary payload, `cobs` is the size of the... |
-| `.length` | `int32_t` | If the web transaction returns a binary payload, `length` is the size of the... |
+| `.cobs` | `note::json_int_t` | If the web transaction returns a binary payload, `cobs` is the size of the... |
+| `.length` | `note::json_int_t` | If the web transaction returns a binary payload, `length` is the size of the... |
 | `.payload` | `note::string_view` | A base64-encoded binary payload from the external service, if any. The... |
-| `.result` | `int32_t` | The HTTP Status Code. |
+| `.result` | `note::json_int_t` | The HTTP Status Code. |
 | `.status` | `note::string_view` | If a `payload` is returned in the response, this is a 32-character... |
 
 ### web.put 
@@ -2873,15 +2873,15 @@ This endpoint has multiple intents:
 | `.body` | `note::string_view` | no | The JSON body to send with the request. |
 | `.content` | `note::string_view` | no | The MIME type of the body or payload of the response. Default is `application/json`. |
 | `.file` | `note::string_view` | no | The name of a local-only Database Notefile (.dbx) where the response will be... |
-| `.max` | `int32_t` | no | The maximum size of the response from the remote server, in bytes. Useful if... |
+| `.max` | `note::json_int_t` | no | The maximum size of the response from the remote server, in bytes. Useful if... |
 | `.name` | `note::string_view` | no | A web URL endpoint relative to the host configured in the Proxy Route. URL... |
 | `.noteId` | `note::string_view` | no | The unique Note ID within the local-only Database Notefile (.dbx) specified... |
-| `.offset` | `int32_t` | no | When sending payload fragments, the number of bytes of the binary payload to... |
+| `.offset` | `note::json_int_t` | no | When sending payload fragments, the number of bytes of the binary payload to... |
 | `.payload` | `note::string_view` | no | A base64-encoded binary payload. A `web.put` may have either a `body` or a... |
 | `.route` | `note::string_view` | no | Alias for a Proxy Route in Notehub. |
-| `.seconds` | `int32_t` | no | If specified, overrides the default 90 second timeout. |
+| `.seconds` | `note::json_int_t` | no | If specified, overrides the default 90 second timeout. |
 | `.status` | `note::string_view` | no | A 32-character hex-encoded MD5 sum of the payload or payload fragment. Used... |
-| `.total` | `int32_t` | no | When using the `application/octet-stream` content type, you may send large... |
+| `.total` | `note::json_int_t` | no | When using the `application/octet-stream` content type, you may send large... |
 | `.verify` | `bool` | no | `true` to request verification from Notehub once the payload or payload... |
 
 **Response fields:**
@@ -2889,8 +2889,8 @@ This endpoint has multiple intents:
 | Field | Type | Description |
 |-------|------|-------------|
 | `.payload` | `note::string_view` | A base64-encoded binary payload from the external service, if any. The... |
-| `.result` | `int32_t` | The HTTP Status Code. |
+| `.result` | `note::json_int_t` | The HTTP Status Code. |
 | `.status` | `note::string_view` | If a `payload` is returned in the response, this is a 32-character... |
-| `.cobs` | `int32_t` | Size of the COBS-encoded binary payload (in bytes). |
-| `.length` | `int32_t` | Size of the unencoded binary payload (in bytes). |
+| `.cobs` | `note::json_int_t` | Size of the COBS-encoded binary payload (in bytes). |
+| `.length` | `note::json_int_t` | Size of the unencoded binary payload (in bytes). |
 

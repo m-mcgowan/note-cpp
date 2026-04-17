@@ -226,14 +226,14 @@ struct Web {
             ::note::detail::arena_cost(65);  // error reserve (+1 for null terminator)
 
         /// The size of the COBS-encoded data (in bytes).
-        note::ResponseField<int32_t> cobs{};
+        note::ResponseField<note::json_int_t> cobs{};
         /// The length of the returned binary payload (in bytes).
-        note::ResponseField<int32_t> length{};
+        note::ResponseField<note::json_int_t> length{};
         /// A base64-encoded binary payload from the external service, if any.
         /// The maximum response size from the service is 8192 bytes.
         note::ResponseField<note::string_view> payload{};
         /// The HTTP Status Code
-        note::ResponseField<int32_t> result{};
+        note::ResponseField<note::json_int_t> result{};
         /// MD5 hash of the binary payload, if any.
         note::ResponseField<note::string_view> status{};
 
@@ -317,7 +317,7 @@ struct Web {
                 if (note::flash(keys_::rsp_length) == k_) { rsp.length = ::note::parse_int(raw_); return; }
                 if (note::flash(keys_::rsp_result) == k_) { rsp.result = ::note::parse_int(raw_); return; }
             }
-            NOTE_SINK_NOINLINE void on_int(::note::string_view k_, int32_t v_) {
+            NOTE_SINK_NOINLINE void on_int(::note::string_view k_, ::note::json_int_t v_) {
                 if (body_depth_ > 0) { if (body_handler_) body_handler_.send(::note::BodyEvent::make_int(k_, v_)); return; }
                 if (note::flash(keys_::rsp_cobs) == k_) { rsp.cobs = v_; return; }
                 if (note::flash(keys_::rsp_length) == k_) { rsp.length = v_; return; }
@@ -379,10 +379,10 @@ struct Web {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
         static constexpr ::note::FieldDesc table[] NOTE_FLASH_ATTR = {
-            {keys_::rsp_cobs, static_cast<uint16_t>(offsetof(Response, cobs)), ::note::FieldType::Int32},
-            {keys_::rsp_length, static_cast<uint16_t>(offsetof(Response, length)), ::note::FieldType::Int32},
+            {keys_::rsp_cobs, static_cast<uint16_t>(offsetof(Response, cobs)), ::note::FieldType::Int},
+            {keys_::rsp_length, static_cast<uint16_t>(offsetof(Response, length)), ::note::FieldType::Int},
             {keys_::rsp_payload, static_cast<uint16_t>(offsetof(Response, payload)), ::note::FieldType::String},
-            {keys_::rsp_result, static_cast<uint16_t>(offsetof(Response, result)), ::note::FieldType::Int32},
+            {keys_::rsp_result, static_cast<uint16_t>(offsetof(Response, result)), ::note::FieldType::Int},
             {keys_::rsp_status, static_cast<uint16_t>(offsetof(Response, status)), ::note::FieldType::String},
         };
 #pragma GCC diagnostic pop

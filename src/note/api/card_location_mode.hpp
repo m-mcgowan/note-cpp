@@ -101,17 +101,17 @@ struct CardLocationMode {
         } lon{};
         /// Meters from a geofence center. Used to enable geofence location
         /// tracking.
-        struct max_t : Field<int32_t> {
-            using Field<int32_t>::Field;
-            using Field<int32_t>::operator=;
-            CardLocationMode::Get& operator()(int32_t v);
+        struct max_t : Field<note::json_int_t> {
+            using Field<note::json_int_t>::Field;
+            using Field<note::json_int_t>::operator=;
+            CardLocationMode::Get& operator()(note::json_int_t v);
         } max{};
         /// When geofence is enabled, the number of minutes the device should be
         /// outside the geofence before the Notecard location is tracked.
-        struct minutes_t : Field<int32_t> {
-            using Field<int32_t>::Field;
-            using Field<int32_t>::operator=;
-            CardLocationMode::Get& operator()(int32_t v);
+        struct minutes_t : Field<note::json_int_t> {
+            using Field<note::json_int_t>::Field;
+            using Field<note::json_int_t>::operator=;
+            CardLocationMode::Get& operator()(note::json_int_t v);
         } minutes{};
         /// Sets the location mode.
         // mode:  | off | periodic | continuous | fixed
@@ -157,10 +157,10 @@ struct CardLocationMode {
         /// if the Notecard detects motion. If seconds is < 300, during periods
         /// of sustained movement the Notecard will leave its onboard GPS/GNSS
         /// on continuously to avoid powering the module on and off repeatedly.
-        struct seconds_t : Field<int32_t> {
-            using Field<int32_t>::Field;
-            using Field<int32_t>::operator=;
-            CardLocationMode::Get& operator()(int32_t v);
+        struct seconds_t : Field<note::json_int_t> {
+            using Field<note::json_int_t>::Field;
+            using Field<note::json_int_t>::operator=;
+            CardLocationMode::Get& operator()(note::json_int_t v);
         } seconds{};
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
         /// When in `periodic` mode, the number of motion events (registered by
@@ -170,10 +170,10 @@ struct CardLocationMode {
 #if NOTE_API_VERSION < NOTE_VERSION(3, 4, 1)
         [[deprecated("requires firmware >= 3.4.1")]]
 #endif
-        struct threshold_t : Field<int32_t> {
-            using Field<int32_t>::Field;
-            using Field<int32_t>::operator=;
-            CardLocationMode::Get& operator()(int32_t v);
+        struct threshold_t : Field<note::json_int_t> {
+            using Field<note::json_int_t>::Field;
+            using Field<note::json_int_t>::operator=;
+            CardLocationMode::Get& operator()(note::json_int_t v);
         } threshold{};
 #endif
         /// In `periodic` mode, overrides `seconds` with a voltage-variable
@@ -248,14 +248,14 @@ struct CardLocationMode {
             /// degrees.
             note::ResponseField<double> lon{};
             /// If geofence is enabled, the meters from geofence center.
-            note::ResponseField<int32_t> max{};
+            note::ResponseField<note::json_int_t> max{};
             /// If geofence is enabled, the currently configured geofence
             /// debounce period.
-            note::ResponseField<int32_t> minutes{};
+            note::ResponseField<note::json_int_t> minutes{};
             /// The current location mode.
             note::ResponseField<note::string_view> mode{};
             /// If specified, the periodic sample interval.
-            note::ResponseField<int32_t> seconds{};
+            note::ResponseField<note::json_int_t> seconds{};
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
             /// When in periodic mode, the number of motion events (registered
             /// by the built-in accelerometer) required to trigger GPS to turn
@@ -265,7 +265,7 @@ struct CardLocationMode {
 #if NOTE_API_VERSION < NOTE_VERSION(3, 4, 1)
             [[deprecated("requires firmware >= 3.4.1")]]
 #endif
-            note::ResponseField<int32_t> threshold{};
+            note::ResponseField<note::json_int_t> threshold{};
 #endif
             /// If specified, the voltage-variable period.
             note::ResponseField<note::string_view> vseconds{};
@@ -336,7 +336,7 @@ struct CardLocationMode {
                     if (note::flash(keys_::rsp_lat) == k_) { rsp.lat = ::note::parse_double(raw_); return; }
                     if (note::flash(keys_::rsp_lon) == k_) { rsp.lon = ::note::parse_double(raw_); return; }
                 }
-                NOTE_SINK_NOINLINE void on_int(::note::string_view k_, int32_t v_) {
+                NOTE_SINK_NOINLINE void on_int(::note::string_view k_, ::note::json_int_t v_) {
                     if (note::flash(keys_::rsp_max) == k_) { rsp.max = v_; return; }
                     if (note::flash(keys_::rsp_minutes) == k_) { rsp.minutes = v_; return; }
                     if (note::flash(keys_::rsp_seconds) == k_) { rsp.seconds = v_; return; }
@@ -418,10 +418,10 @@ struct CardLocationMode {
             static constexpr ::note::FieldDesc table[] NOTE_FLASH_ATTR = {
                 {keys_::rsp_lat, static_cast<uint16_t>(offsetof(Response, lat)), ::note::FieldType::Double},
                 {keys_::rsp_lon, static_cast<uint16_t>(offsetof(Response, lon)), ::note::FieldType::Double},
-                {keys_::rsp_max, static_cast<uint16_t>(offsetof(Response, max)), ::note::FieldType::Int32},
-                {keys_::rsp_minutes, static_cast<uint16_t>(offsetof(Response, minutes)), ::note::FieldType::Int32},
+                {keys_::rsp_max, static_cast<uint16_t>(offsetof(Response, max)), ::note::FieldType::Int},
+                {keys_::rsp_minutes, static_cast<uint16_t>(offsetof(Response, minutes)), ::note::FieldType::Int},
                 {keys_::rsp_mode, static_cast<uint16_t>(offsetof(Response, mode)), ::note::FieldType::String},
-                {keys_::rsp_seconds, static_cast<uint16_t>(offsetof(Response, seconds)), ::note::FieldType::Int32},
+                {keys_::rsp_seconds, static_cast<uint16_t>(offsetof(Response, seconds)), ::note::FieldType::Int},
                 {keys_::rsp_vseconds, static_cast<uint16_t>(offsetof(Response, vseconds)), ::note::FieldType::String},
             };
 #pragma GCC diagnostic pop
@@ -469,12 +469,12 @@ struct CardLocationMode {
                 {keys_::delete_, static_cast<uint16_t>(offsetof(CardLocationMode::Get, delete_)), ::note::ReqFieldType::Bool},
                 {keys_::lat, static_cast<uint16_t>(offsetof(CardLocationMode::Get, lat)), ::note::ReqFieldType::Double},
                 {keys_::lon, static_cast<uint16_t>(offsetof(CardLocationMode::Get, lon)), ::note::ReqFieldType::Double},
-                {keys_::max, static_cast<uint16_t>(offsetof(CardLocationMode::Get, max)), ::note::ReqFieldType::Int32},
-                {keys_::minutes, static_cast<uint16_t>(offsetof(CardLocationMode::Get, minutes)), ::note::ReqFieldType::Int32},
+                {keys_::max, static_cast<uint16_t>(offsetof(CardLocationMode::Get, max)), ::note::ReqFieldType::Int},
+                {keys_::minutes, static_cast<uint16_t>(offsetof(CardLocationMode::Get, minutes)), ::note::ReqFieldType::Int},
                 {keys_::mode, static_cast<uint16_t>(offsetof(CardLocationMode::Get, mode)), ::note::ReqFieldType::String},
-                {keys_::seconds, static_cast<uint16_t>(offsetof(CardLocationMode::Get, seconds)), ::note::ReqFieldType::Int32},
+                {keys_::seconds, static_cast<uint16_t>(offsetof(CardLocationMode::Get, seconds)), ::note::ReqFieldType::Int},
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-                {keys_::threshold, static_cast<uint16_t>(offsetof(CardLocationMode::Get, threshold)), ::note::ReqFieldType::Int32},
+                {keys_::threshold, static_cast<uint16_t>(offsetof(CardLocationMode::Get, threshold)), ::note::ReqFieldType::Int},
 #endif
                 {keys_::vseconds, static_cast<uint16_t>(offsetof(CardLocationMode::Get, vseconds)), ::note::ReqFieldType::String},
             };
@@ -615,17 +615,17 @@ struct CardLocationMode {
         } lon{};
         /// Meters from a geofence center. Used to enable geofence location
         /// tracking.
-        struct max_t : Field<int32_t> {
-            using Field<int32_t>::Field;
-            using Field<int32_t>::operator=;
-            CardLocationMode::Set& operator()(int32_t v);
+        struct max_t : Field<note::json_int_t> {
+            using Field<note::json_int_t>::Field;
+            using Field<note::json_int_t>::operator=;
+            CardLocationMode::Set& operator()(note::json_int_t v);
         } max{};
         /// When geofence is enabled, the number of minutes the device should be
         /// outside the geofence before the Notecard location is tracked.
-        struct minutes_t : Field<int32_t> {
-            using Field<int32_t>::Field;
-            using Field<int32_t>::operator=;
-            CardLocationMode::Set& operator()(int32_t v);
+        struct minutes_t : Field<note::json_int_t> {
+            using Field<note::json_int_t>::Field;
+            using Field<note::json_int_t>::operator=;
+            CardLocationMode::Set& operator()(note::json_int_t v);
         } minutes{};
         /// Sets the location mode.
         // mode:  | off | periodic | continuous | fixed
@@ -671,10 +671,10 @@ struct CardLocationMode {
         /// if the Notecard detects motion. If seconds is < 300, during periods
         /// of sustained movement the Notecard will leave its onboard GPS/GNSS
         /// on continuously to avoid powering the module on and off repeatedly.
-        struct seconds_t : Field<int32_t> {
-            using Field<int32_t>::Field;
-            using Field<int32_t>::operator=;
-            CardLocationMode::Set& operator()(int32_t v);
+        struct seconds_t : Field<note::json_int_t> {
+            using Field<note::json_int_t>::Field;
+            using Field<note::json_int_t>::operator=;
+            CardLocationMode::Set& operator()(note::json_int_t v);
         } seconds{};
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
         /// When in `periodic` mode, the number of motion events (registered by
@@ -684,10 +684,10 @@ struct CardLocationMode {
 #if NOTE_API_VERSION < NOTE_VERSION(3, 4, 1)
         [[deprecated("requires firmware >= 3.4.1")]]
 #endif
-        struct threshold_t : Field<int32_t> {
-            using Field<int32_t>::Field;
-            using Field<int32_t>::operator=;
-            CardLocationMode::Set& operator()(int32_t v);
+        struct threshold_t : Field<note::json_int_t> {
+            using Field<note::json_int_t>::Field;
+            using Field<note::json_int_t>::operator=;
+            CardLocationMode::Set& operator()(note::json_int_t v);
         } threshold{};
 #endif
         /// In `periodic` mode, overrides `seconds` with a voltage-variable
@@ -762,14 +762,14 @@ struct CardLocationMode {
             /// degrees.
             note::ResponseField<double> lon{};
             /// If geofence is enabled, the meters from geofence center.
-            note::ResponseField<int32_t> max{};
+            note::ResponseField<note::json_int_t> max{};
             /// If geofence is enabled, the currently configured geofence
             /// debounce period.
-            note::ResponseField<int32_t> minutes{};
+            note::ResponseField<note::json_int_t> minutes{};
             /// The current location mode.
             note::ResponseField<note::string_view> mode{};
             /// If specified, the periodic sample interval.
-            note::ResponseField<int32_t> seconds{};
+            note::ResponseField<note::json_int_t> seconds{};
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
             /// When in periodic mode, the number of motion events (registered
             /// by the built-in accelerometer) required to trigger GPS to turn
@@ -779,7 +779,7 @@ struct CardLocationMode {
 #if NOTE_API_VERSION < NOTE_VERSION(3, 4, 1)
             [[deprecated("requires firmware >= 3.4.1")]]
 #endif
-            note::ResponseField<int32_t> threshold{};
+            note::ResponseField<note::json_int_t> threshold{};
 #endif
             /// If specified, the voltage-variable period.
             note::ResponseField<note::string_view> vseconds{};
@@ -850,7 +850,7 @@ struct CardLocationMode {
                     if (note::flash(keys_::rsp_lat) == k_) { rsp.lat = ::note::parse_double(raw_); return; }
                     if (note::flash(keys_::rsp_lon) == k_) { rsp.lon = ::note::parse_double(raw_); return; }
                 }
-                NOTE_SINK_NOINLINE void on_int(::note::string_view k_, int32_t v_) {
+                NOTE_SINK_NOINLINE void on_int(::note::string_view k_, ::note::json_int_t v_) {
                     if (note::flash(keys_::rsp_max) == k_) { rsp.max = v_; return; }
                     if (note::flash(keys_::rsp_minutes) == k_) { rsp.minutes = v_; return; }
                     if (note::flash(keys_::rsp_seconds) == k_) { rsp.seconds = v_; return; }
@@ -932,10 +932,10 @@ struct CardLocationMode {
             static constexpr ::note::FieldDesc table[] NOTE_FLASH_ATTR = {
                 {keys_::rsp_lat, static_cast<uint16_t>(offsetof(Response, lat)), ::note::FieldType::Double},
                 {keys_::rsp_lon, static_cast<uint16_t>(offsetof(Response, lon)), ::note::FieldType::Double},
-                {keys_::rsp_max, static_cast<uint16_t>(offsetof(Response, max)), ::note::FieldType::Int32},
-                {keys_::rsp_minutes, static_cast<uint16_t>(offsetof(Response, minutes)), ::note::FieldType::Int32},
+                {keys_::rsp_max, static_cast<uint16_t>(offsetof(Response, max)), ::note::FieldType::Int},
+                {keys_::rsp_minutes, static_cast<uint16_t>(offsetof(Response, minutes)), ::note::FieldType::Int},
                 {keys_::rsp_mode, static_cast<uint16_t>(offsetof(Response, mode)), ::note::FieldType::String},
-                {keys_::rsp_seconds, static_cast<uint16_t>(offsetof(Response, seconds)), ::note::FieldType::Int32},
+                {keys_::rsp_seconds, static_cast<uint16_t>(offsetof(Response, seconds)), ::note::FieldType::Int},
                 {keys_::rsp_vseconds, static_cast<uint16_t>(offsetof(Response, vseconds)), ::note::FieldType::String},
             };
 #pragma GCC diagnostic pop
@@ -983,12 +983,12 @@ struct CardLocationMode {
                 {keys_::delete_, static_cast<uint16_t>(offsetof(CardLocationMode::Set, delete_)), ::note::ReqFieldType::Bool},
                 {keys_::lat, static_cast<uint16_t>(offsetof(CardLocationMode::Set, lat)), ::note::ReqFieldType::Double},
                 {keys_::lon, static_cast<uint16_t>(offsetof(CardLocationMode::Set, lon)), ::note::ReqFieldType::Double},
-                {keys_::max, static_cast<uint16_t>(offsetof(CardLocationMode::Set, max)), ::note::ReqFieldType::Int32},
-                {keys_::minutes, static_cast<uint16_t>(offsetof(CardLocationMode::Set, minutes)), ::note::ReqFieldType::Int32},
+                {keys_::max, static_cast<uint16_t>(offsetof(CardLocationMode::Set, max)), ::note::ReqFieldType::Int},
+                {keys_::minutes, static_cast<uint16_t>(offsetof(CardLocationMode::Set, minutes)), ::note::ReqFieldType::Int},
                 {keys_::mode, static_cast<uint16_t>(offsetof(CardLocationMode::Set, mode)), ::note::ReqFieldType::String},
-                {keys_::seconds, static_cast<uint16_t>(offsetof(CardLocationMode::Set, seconds)), ::note::ReqFieldType::Int32},
+                {keys_::seconds, static_cast<uint16_t>(offsetof(CardLocationMode::Set, seconds)), ::note::ReqFieldType::Int},
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-                {keys_::threshold, static_cast<uint16_t>(offsetof(CardLocationMode::Set, threshold)), ::note::ReqFieldType::Int32},
+                {keys_::threshold, static_cast<uint16_t>(offsetof(CardLocationMode::Set, threshold)), ::note::ReqFieldType::Int},
 #endif
                 {keys_::vseconds, static_cast<uint16_t>(offsetof(CardLocationMode::Set, vseconds)), ::note::ReqFieldType::String},
             };
@@ -1096,10 +1096,10 @@ struct CardLocationMode {
 #if NOTE_API_VERSION < NOTE_VERSION(3, 4, 1)
         [[deprecated("requires firmware >= 3.4.1")]]
 #endif
-        struct threshold_t : Field<int32_t> {
-            using Field<int32_t>::Field;
-            using Field<int32_t>::operator=;
-            CardLocationMode::Continuous& operator()(int32_t v);
+        struct threshold_t : Field<note::json_int_t> {
+            using Field<note::json_int_t>::Field;
+            using Field<note::json_int_t>::operator=;
+            CardLocationMode::Continuous& operator()(note::json_int_t v);
         } threshold{};
 #endif
         /// In `periodic` mode, overrides `seconds` with a voltage-variable
@@ -1158,7 +1158,7 @@ struct CardLocationMode {
 #if NOTE_API_VERSION < NOTE_VERSION(3, 4, 1)
             [[deprecated("requires firmware >= 3.4.1")]]
 #endif
-            note::ResponseField<int32_t> threshold{};
+            note::ResponseField<note::json_int_t> threshold{};
 #endif
             /// If specified, the voltage-variable period.
             note::ResponseField<note::string_view> vseconds{};
@@ -1214,7 +1214,7 @@ struct CardLocationMode {
                     if (note::flash(keys_::rsp_threshold) == k_) { rsp.threshold = ::note::parse_int(raw_); return; }
 #endif
                 }
-                NOTE_SINK_NOINLINE void on_int(::note::string_view k_, int32_t v_) {
+                NOTE_SINK_NOINLINE void on_int(::note::string_view k_, ::note::json_int_t v_) {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
                     if (note::flash(keys_::rsp_threshold) == k_) { rsp.threshold = v_; return; }
 #endif
@@ -1313,7 +1313,7 @@ struct CardLocationMode {
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
             static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-                {keys_::threshold, static_cast<uint16_t>(offsetof(CardLocationMode::Continuous, threshold)), ::note::ReqFieldType::Int32},
+                {keys_::threshold, static_cast<uint16_t>(offsetof(CardLocationMode::Continuous, threshold)), ::note::ReqFieldType::Int},
 #endif
                 {keys_::vseconds, static_cast<uint16_t>(offsetof(CardLocationMode::Continuous, vseconds)), ::note::ReqFieldType::String},
             };
@@ -1418,26 +1418,26 @@ struct CardLocationMode {
         } lon{};
         /// Meters from a geofence center. Used to enable geofence location
         /// tracking.
-        struct max_t : Field<int32_t> {
-            using Field<int32_t>::Field;
-            using Field<int32_t>::operator=;
-            CardLocationMode::Periodic& operator()(int32_t v);
+        struct max_t : Field<note::json_int_t> {
+            using Field<note::json_int_t>::Field;
+            using Field<note::json_int_t>::operator=;
+            CardLocationMode::Periodic& operator()(note::json_int_t v);
         } max{};
         /// When geofence is enabled, the number of minutes the device should be
         /// outside the geofence before the Notecard location is tracked.
-        struct minutes_t : Field<int32_t> {
-            using Field<int32_t>::Field;
-            using Field<int32_t>::operator=;
-            CardLocationMode::Periodic& operator()(int32_t v);
+        struct minutes_t : Field<note::json_int_t> {
+            using Field<note::json_int_t>::Field;
+            using Field<note::json_int_t>::operator=;
+            CardLocationMode::Periodic& operator()(note::json_int_t v);
         } minutes{};
         /// When in `periodic` mode, location will be sampled at this interval,
         /// if the Notecard detects motion. If seconds is < 300, during periods
         /// of sustained movement the Notecard will leave its onboard GPS/GNSS
         /// on continuously to avoid powering the module on and off repeatedly.
-        struct seconds_t : Field<int32_t> {
-            using Field<int32_t>::Field;
-            using Field<int32_t>::operator=;
-            CardLocationMode::Periodic& operator()(int32_t v);
+        struct seconds_t : Field<note::json_int_t> {
+            using Field<note::json_int_t>::Field;
+            using Field<note::json_int_t>::operator=;
+            CardLocationMode::Periodic& operator()(note::json_int_t v);
         } seconds{};
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
         /// When in `periodic` mode, the number of motion events (registered by
@@ -1447,10 +1447,10 @@ struct CardLocationMode {
 #if NOTE_API_VERSION < NOTE_VERSION(3, 4, 1)
         [[deprecated("requires firmware >= 3.4.1")]]
 #endif
-        struct threshold_t : Field<int32_t> {
-            using Field<int32_t>::Field;
-            using Field<int32_t>::operator=;
-            CardLocationMode::Periodic& operator()(int32_t v);
+        struct threshold_t : Field<note::json_int_t> {
+            using Field<note::json_int_t>::Field;
+            using Field<note::json_int_t>::operator=;
+            CardLocationMode::Periodic& operator()(note::json_int_t v);
         } threshold{};
 #endif
         /// In `periodic` mode, overrides `seconds` with a voltage-variable
@@ -1509,14 +1509,14 @@ struct CardLocationMode {
             /// degrees.
             note::ResponseField<double> lon{};
             /// If geofence is enabled, the meters from geofence center.
-            note::ResponseField<int32_t> max{};
+            note::ResponseField<note::json_int_t> max{};
             /// If geofence is enabled, the currently configured geofence
             /// debounce period.
-            note::ResponseField<int32_t> minutes{};
+            note::ResponseField<note::json_int_t> minutes{};
             /// The current location mode.
             note::ResponseField<note::string_view> mode{};
             /// If specified, the periodic sample interval.
-            note::ResponseField<int32_t> seconds{};
+            note::ResponseField<note::json_int_t> seconds{};
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
             /// When in periodic mode, the number of motion events (registered
             /// by the built-in accelerometer) required to trigger GPS to turn
@@ -1526,7 +1526,7 @@ struct CardLocationMode {
 #if NOTE_API_VERSION < NOTE_VERSION(3, 4, 1)
             [[deprecated("requires firmware >= 3.4.1")]]
 #endif
-            note::ResponseField<int32_t> threshold{};
+            note::ResponseField<note::json_int_t> threshold{};
 #endif
             /// If specified, the voltage-variable period.
             note::ResponseField<note::string_view> vseconds{};
@@ -1597,7 +1597,7 @@ struct CardLocationMode {
                     if (note::flash(keys_::rsp_lat) == k_) { rsp.lat = ::note::parse_double(raw_); return; }
                     if (note::flash(keys_::rsp_lon) == k_) { rsp.lon = ::note::parse_double(raw_); return; }
                 }
-                NOTE_SINK_NOINLINE void on_int(::note::string_view k_, int32_t v_) {
+                NOTE_SINK_NOINLINE void on_int(::note::string_view k_, ::note::json_int_t v_) {
                     if (note::flash(keys_::rsp_max) == k_) { rsp.max = v_; return; }
                     if (note::flash(keys_::rsp_minutes) == k_) { rsp.minutes = v_; return; }
                     if (note::flash(keys_::rsp_seconds) == k_) { rsp.seconds = v_; return; }
@@ -1679,10 +1679,10 @@ struct CardLocationMode {
             static constexpr ::note::FieldDesc table[] NOTE_FLASH_ATTR = {
                 {keys_::rsp_lat, static_cast<uint16_t>(offsetof(Response, lat)), ::note::FieldType::Double},
                 {keys_::rsp_lon, static_cast<uint16_t>(offsetof(Response, lon)), ::note::FieldType::Double},
-                {keys_::rsp_max, static_cast<uint16_t>(offsetof(Response, max)), ::note::FieldType::Int32},
-                {keys_::rsp_minutes, static_cast<uint16_t>(offsetof(Response, minutes)), ::note::FieldType::Int32},
+                {keys_::rsp_max, static_cast<uint16_t>(offsetof(Response, max)), ::note::FieldType::Int},
+                {keys_::rsp_minutes, static_cast<uint16_t>(offsetof(Response, minutes)), ::note::FieldType::Int},
                 {keys_::rsp_mode, static_cast<uint16_t>(offsetof(Response, mode)), ::note::FieldType::String},
-                {keys_::rsp_seconds, static_cast<uint16_t>(offsetof(Response, seconds)), ::note::FieldType::Int32},
+                {keys_::rsp_seconds, static_cast<uint16_t>(offsetof(Response, seconds)), ::note::FieldType::Int},
                 {keys_::rsp_vseconds, static_cast<uint16_t>(offsetof(Response, vseconds)), ::note::FieldType::String},
             };
 #pragma GCC diagnostic pop
@@ -1729,11 +1729,11 @@ struct CardLocationMode {
             static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
                 {keys_::lat, static_cast<uint16_t>(offsetof(CardLocationMode::Periodic, lat)), ::note::ReqFieldType::Double},
                 {keys_::lon, static_cast<uint16_t>(offsetof(CardLocationMode::Periodic, lon)), ::note::ReqFieldType::Double},
-                {keys_::max, static_cast<uint16_t>(offsetof(CardLocationMode::Periodic, max)), ::note::ReqFieldType::Int32},
-                {keys_::minutes, static_cast<uint16_t>(offsetof(CardLocationMode::Periodic, minutes)), ::note::ReqFieldType::Int32},
-                {keys_::seconds, static_cast<uint16_t>(offsetof(CardLocationMode::Periodic, seconds)), ::note::ReqFieldType::Int32},
+                {keys_::max, static_cast<uint16_t>(offsetof(CardLocationMode::Periodic, max)), ::note::ReqFieldType::Int},
+                {keys_::minutes, static_cast<uint16_t>(offsetof(CardLocationMode::Periodic, minutes)), ::note::ReqFieldType::Int},
+                {keys_::seconds, static_cast<uint16_t>(offsetof(CardLocationMode::Periodic, seconds)), ::note::ReqFieldType::Int},
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-                {keys_::threshold, static_cast<uint16_t>(offsetof(CardLocationMode::Periodic, threshold)), ::note::ReqFieldType::Int32},
+                {keys_::threshold, static_cast<uint16_t>(offsetof(CardLocationMode::Periodic, threshold)), ::note::ReqFieldType::Int},
 #endif
                 {keys_::vseconds, static_cast<uint16_t>(offsetof(CardLocationMode::Periodic, vseconds)), ::note::ReqFieldType::String},
             };
@@ -2116,17 +2116,17 @@ struct CardLocationMode {
         } lon{};
         /// Meters from a geofence center. Used to enable geofence location
         /// tracking.
-        struct max_t : Field<int32_t> {
-            using Field<int32_t>::Field;
-            using Field<int32_t>::operator=;
-            CardLocationMode::Remove& operator()(int32_t v);
+        struct max_t : Field<note::json_int_t> {
+            using Field<note::json_int_t>::Field;
+            using Field<note::json_int_t>::operator=;
+            CardLocationMode::Remove& operator()(note::json_int_t v);
         } max{};
         /// When geofence is enabled, the number of minutes the device should be
         /// outside the geofence before the Notecard location is tracked.
-        struct minutes_t : Field<int32_t> {
-            using Field<int32_t>::Field;
-            using Field<int32_t>::operator=;
-            CardLocationMode::Remove& operator()(int32_t v);
+        struct minutes_t : Field<note::json_int_t> {
+            using Field<note::json_int_t>::Field;
+            using Field<note::json_int_t>::operator=;
+            CardLocationMode::Remove& operator()(note::json_int_t v);
         } minutes{};
         /// Sets the location mode.
         // mode:  | off | periodic | continuous | fixed
@@ -2172,10 +2172,10 @@ struct CardLocationMode {
         /// if the Notecard detects motion. If seconds is < 300, during periods
         /// of sustained movement the Notecard will leave its onboard GPS/GNSS
         /// on continuously to avoid powering the module on and off repeatedly.
-        struct seconds_t : Field<int32_t> {
-            using Field<int32_t>::Field;
-            using Field<int32_t>::operator=;
-            CardLocationMode::Remove& operator()(int32_t v);
+        struct seconds_t : Field<note::json_int_t> {
+            using Field<note::json_int_t>::Field;
+            using Field<note::json_int_t>::operator=;
+            CardLocationMode::Remove& operator()(note::json_int_t v);
         } seconds{};
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
         /// When in `periodic` mode, the number of motion events (registered by
@@ -2185,10 +2185,10 @@ struct CardLocationMode {
 #if NOTE_API_VERSION < NOTE_VERSION(3, 4, 1)
         [[deprecated("requires firmware >= 3.4.1")]]
 #endif
-        struct threshold_t : Field<int32_t> {
-            using Field<int32_t>::Field;
-            using Field<int32_t>::operator=;
-            CardLocationMode::Remove& operator()(int32_t v);
+        struct threshold_t : Field<note::json_int_t> {
+            using Field<note::json_int_t>::Field;
+            using Field<note::json_int_t>::operator=;
+            CardLocationMode::Remove& operator()(note::json_int_t v);
         } threshold{};
 #endif
         /// In `periodic` mode, overrides `seconds` with a voltage-variable
@@ -2262,14 +2262,14 @@ struct CardLocationMode {
             /// degrees.
             note::ResponseField<double> lon{};
             /// If geofence is enabled, the meters from geofence center.
-            note::ResponseField<int32_t> max{};
+            note::ResponseField<note::json_int_t> max{};
             /// If geofence is enabled, the currently configured geofence
             /// debounce period.
-            note::ResponseField<int32_t> minutes{};
+            note::ResponseField<note::json_int_t> minutes{};
             /// The current location mode.
             note::ResponseField<note::string_view> mode{};
             /// If specified, the periodic sample interval.
-            note::ResponseField<int32_t> seconds{};
+            note::ResponseField<note::json_int_t> seconds{};
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
             /// When in periodic mode, the number of motion events (registered
             /// by the built-in accelerometer) required to trigger GPS to turn
@@ -2279,7 +2279,7 @@ struct CardLocationMode {
 #if NOTE_API_VERSION < NOTE_VERSION(3, 4, 1)
             [[deprecated("requires firmware >= 3.4.1")]]
 #endif
-            note::ResponseField<int32_t> threshold{};
+            note::ResponseField<note::json_int_t> threshold{};
 #endif
             /// If specified, the voltage-variable period.
             note::ResponseField<note::string_view> vseconds{};
@@ -2350,7 +2350,7 @@ struct CardLocationMode {
                     if (note::flash(keys_::rsp_lat) == k_) { rsp.lat = ::note::parse_double(raw_); return; }
                     if (note::flash(keys_::rsp_lon) == k_) { rsp.lon = ::note::parse_double(raw_); return; }
                 }
-                NOTE_SINK_NOINLINE void on_int(::note::string_view k_, int32_t v_) {
+                NOTE_SINK_NOINLINE void on_int(::note::string_view k_, ::note::json_int_t v_) {
                     if (note::flash(keys_::rsp_max) == k_) { rsp.max = v_; return; }
                     if (note::flash(keys_::rsp_minutes) == k_) { rsp.minutes = v_; return; }
                     if (note::flash(keys_::rsp_seconds) == k_) { rsp.seconds = v_; return; }
@@ -2432,10 +2432,10 @@ struct CardLocationMode {
             static constexpr ::note::FieldDesc table[] NOTE_FLASH_ATTR = {
                 {keys_::rsp_lat, static_cast<uint16_t>(offsetof(Response, lat)), ::note::FieldType::Double},
                 {keys_::rsp_lon, static_cast<uint16_t>(offsetof(Response, lon)), ::note::FieldType::Double},
-                {keys_::rsp_max, static_cast<uint16_t>(offsetof(Response, max)), ::note::FieldType::Int32},
-                {keys_::rsp_minutes, static_cast<uint16_t>(offsetof(Response, minutes)), ::note::FieldType::Int32},
+                {keys_::rsp_max, static_cast<uint16_t>(offsetof(Response, max)), ::note::FieldType::Int},
+                {keys_::rsp_minutes, static_cast<uint16_t>(offsetof(Response, minutes)), ::note::FieldType::Int},
                 {keys_::rsp_mode, static_cast<uint16_t>(offsetof(Response, mode)), ::note::FieldType::String},
-                {keys_::rsp_seconds, static_cast<uint16_t>(offsetof(Response, seconds)), ::note::FieldType::Int32},
+                {keys_::rsp_seconds, static_cast<uint16_t>(offsetof(Response, seconds)), ::note::FieldType::Int},
                 {keys_::rsp_vseconds, static_cast<uint16_t>(offsetof(Response, vseconds)), ::note::FieldType::String},
             };
 #pragma GCC diagnostic pop
@@ -2482,12 +2482,12 @@ struct CardLocationMode {
             static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
                 {keys_::lat, static_cast<uint16_t>(offsetof(CardLocationMode::Remove, lat)), ::note::ReqFieldType::Double},
                 {keys_::lon, static_cast<uint16_t>(offsetof(CardLocationMode::Remove, lon)), ::note::ReqFieldType::Double},
-                {keys_::max, static_cast<uint16_t>(offsetof(CardLocationMode::Remove, max)), ::note::ReqFieldType::Int32},
-                {keys_::minutes, static_cast<uint16_t>(offsetof(CardLocationMode::Remove, minutes)), ::note::ReqFieldType::Int32},
+                {keys_::max, static_cast<uint16_t>(offsetof(CardLocationMode::Remove, max)), ::note::ReqFieldType::Int},
+                {keys_::minutes, static_cast<uint16_t>(offsetof(CardLocationMode::Remove, minutes)), ::note::ReqFieldType::Int},
                 {keys_::mode, static_cast<uint16_t>(offsetof(CardLocationMode::Remove, mode)), ::note::ReqFieldType::String},
-                {keys_::seconds, static_cast<uint16_t>(offsetof(CardLocationMode::Remove, seconds)), ::note::ReqFieldType::Int32},
+                {keys_::seconds, static_cast<uint16_t>(offsetof(CardLocationMode::Remove, seconds)), ::note::ReqFieldType::Int},
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-                {keys_::threshold, static_cast<uint16_t>(offsetof(CardLocationMode::Remove, threshold)), ::note::ReqFieldType::Int32},
+                {keys_::threshold, static_cast<uint16_t>(offsetof(CardLocationMode::Remove, threshold)), ::note::ReqFieldType::Int},
 #endif
                 {keys_::vseconds, static_cast<uint16_t>(offsetof(CardLocationMode::Remove, vseconds)), ::note::ReqFieldType::String},
             };
@@ -2577,13 +2577,13 @@ inline CardLocationMode::Get& CardLocationMode::Get::lon_t::operator()(double v)
     return *reinterpret_cast<CardLocationMode::Get*>(
         reinterpret_cast<char*>(this) - offsetof(CardLocationMode::Get, lon));
 }
-inline CardLocationMode::Get& CardLocationMode::Get::max_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardLocationMode::Get& CardLocationMode::Get::max_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardLocationMode::Get*>(
         reinterpret_cast<char*>(this) - offsetof(CardLocationMode::Get, max));
 }
-inline CardLocationMode::Get& CardLocationMode::Get::minutes_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardLocationMode::Get& CardLocationMode::Get::minutes_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardLocationMode::Get*>(
         reinterpret_cast<char*>(this) - offsetof(CardLocationMode::Get, minutes));
 }
@@ -2592,14 +2592,14 @@ inline CardLocationMode::Get& CardLocationMode::Get::mode_t::operator()(note::st
     return *reinterpret_cast<CardLocationMode::Get*>(
         reinterpret_cast<char*>(this) - offsetof(CardLocationMode::Get, mode));
 }
-inline CardLocationMode::Get& CardLocationMode::Get::seconds_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardLocationMode::Get& CardLocationMode::Get::seconds_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardLocationMode::Get*>(
         reinterpret_cast<char*>(this) - offsetof(CardLocationMode::Get, seconds));
 }
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-inline CardLocationMode::Get& CardLocationMode::Get::threshold_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardLocationMode::Get& CardLocationMode::Get::threshold_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardLocationMode::Get*>(
         reinterpret_cast<char*>(this) - offsetof(CardLocationMode::Get, threshold));
 }
@@ -2630,13 +2630,13 @@ inline CardLocationMode::Set& CardLocationMode::Set::lon_t::operator()(double v)
     return *reinterpret_cast<CardLocationMode::Set*>(
         reinterpret_cast<char*>(this) - offsetof(CardLocationMode::Set, lon));
 }
-inline CardLocationMode::Set& CardLocationMode::Set::max_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardLocationMode::Set& CardLocationMode::Set::max_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardLocationMode::Set*>(
         reinterpret_cast<char*>(this) - offsetof(CardLocationMode::Set, max));
 }
-inline CardLocationMode::Set& CardLocationMode::Set::minutes_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardLocationMode::Set& CardLocationMode::Set::minutes_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardLocationMode::Set*>(
         reinterpret_cast<char*>(this) - offsetof(CardLocationMode::Set, minutes));
 }
@@ -2645,14 +2645,14 @@ inline CardLocationMode::Set& CardLocationMode::Set::mode_t::operator()(note::st
     return *reinterpret_cast<CardLocationMode::Set*>(
         reinterpret_cast<char*>(this) - offsetof(CardLocationMode::Set, mode));
 }
-inline CardLocationMode::Set& CardLocationMode::Set::seconds_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardLocationMode::Set& CardLocationMode::Set::seconds_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardLocationMode::Set*>(
         reinterpret_cast<char*>(this) - offsetof(CardLocationMode::Set, seconds));
 }
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-inline CardLocationMode::Set& CardLocationMode::Set::threshold_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardLocationMode::Set& CardLocationMode::Set::threshold_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardLocationMode::Set*>(
         reinterpret_cast<char*>(this) - offsetof(CardLocationMode::Set, threshold));
 }
@@ -2669,8 +2669,8 @@ inline CardLocationMode::Set& CardLocationMode::Set::vseconds_t::operator()(note
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-inline CardLocationMode::Continuous& CardLocationMode::Continuous::threshold_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardLocationMode::Continuous& CardLocationMode::Continuous::threshold_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardLocationMode::Continuous*>(
         reinterpret_cast<char*>(this) - offsetof(CardLocationMode::Continuous, threshold));
 }
@@ -2696,24 +2696,24 @@ inline CardLocationMode::Periodic& CardLocationMode::Periodic::lon_t::operator()
     return *reinterpret_cast<CardLocationMode::Periodic*>(
         reinterpret_cast<char*>(this) - offsetof(CardLocationMode::Periodic, lon));
 }
-inline CardLocationMode::Periodic& CardLocationMode::Periodic::max_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardLocationMode::Periodic& CardLocationMode::Periodic::max_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardLocationMode::Periodic*>(
         reinterpret_cast<char*>(this) - offsetof(CardLocationMode::Periodic, max));
 }
-inline CardLocationMode::Periodic& CardLocationMode::Periodic::minutes_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardLocationMode::Periodic& CardLocationMode::Periodic::minutes_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardLocationMode::Periodic*>(
         reinterpret_cast<char*>(this) - offsetof(CardLocationMode::Periodic, minutes));
 }
-inline CardLocationMode::Periodic& CardLocationMode::Periodic::seconds_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardLocationMode::Periodic& CardLocationMode::Periodic::seconds_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardLocationMode::Periodic*>(
         reinterpret_cast<char*>(this) - offsetof(CardLocationMode::Periodic, seconds));
 }
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-inline CardLocationMode::Periodic& CardLocationMode::Periodic::threshold_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardLocationMode::Periodic& CardLocationMode::Periodic::threshold_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardLocationMode::Periodic*>(
         reinterpret_cast<char*>(this) - offsetof(CardLocationMode::Periodic, threshold));
 }
@@ -2754,13 +2754,13 @@ inline CardLocationMode::Remove& CardLocationMode::Remove::lon_t::operator()(dou
     return *reinterpret_cast<CardLocationMode::Remove*>(
         reinterpret_cast<char*>(this) - offsetof(CardLocationMode::Remove, lon));
 }
-inline CardLocationMode::Remove& CardLocationMode::Remove::max_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardLocationMode::Remove& CardLocationMode::Remove::max_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardLocationMode::Remove*>(
         reinterpret_cast<char*>(this) - offsetof(CardLocationMode::Remove, max));
 }
-inline CardLocationMode::Remove& CardLocationMode::Remove::minutes_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardLocationMode::Remove& CardLocationMode::Remove::minutes_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardLocationMode::Remove*>(
         reinterpret_cast<char*>(this) - offsetof(CardLocationMode::Remove, minutes));
 }
@@ -2769,14 +2769,14 @@ inline CardLocationMode::Remove& CardLocationMode::Remove::mode_t::operator()(no
     return *reinterpret_cast<CardLocationMode::Remove*>(
         reinterpret_cast<char*>(this) - offsetof(CardLocationMode::Remove, mode));
 }
-inline CardLocationMode::Remove& CardLocationMode::Remove::seconds_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardLocationMode::Remove& CardLocationMode::Remove::seconds_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardLocationMode::Remove*>(
         reinterpret_cast<char*>(this) - offsetof(CardLocationMode::Remove, seconds));
 }
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-inline CardLocationMode::Remove& CardLocationMode::Remove::threshold_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardLocationMode::Remove& CardLocationMode::Remove::threshold_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardLocationMode::Remove*>(
         reinterpret_cast<char*>(this) - offsetof(CardLocationMode::Remove, threshold));
 }

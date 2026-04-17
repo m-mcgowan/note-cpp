@@ -10,8 +10,10 @@
 
 // Mock backend for compilation testing
 struct MockBuilder : note::JsonBuilder {
+    using JsonBuilder::add;
+    using JsonBuilder::add_element;
     MockBuilder& add(note::string_view, bool) override { return *this; }
-    MockBuilder& add(note::string_view, int32_t) override { return *this; }
+    MockBuilder& add(note::string_view, note::json_int_t) override { return *this; }
     MockBuilder& add(note::string_view, double) override { return *this; }
     MockBuilder& add(note::string_view, note::string_view) override { return *this; }
     MockBuilder& add_raw(note::string_view, note::string_view) override { return *this; }
@@ -25,7 +27,7 @@ struct MockBuilder : note::JsonBuilder {
 struct MockReader : note::JsonReader {
     bool has(note::string_view) const override { return false; }
     bool get_bool(note::string_view, bool def) const override { return def; }
-    int32_t get_int(note::string_view, int32_t def) const override { return def; }
+    note::json_int_t get_int(note::string_view, note::json_int_t def) const override { return def; }
     double get_double(note::string_view, double def) const override { return def; }
     note::string_view get_string(note::string_view, note::string_view def) const override { return def; }
     std::unique_ptr<note::JsonReader> get_object(note::string_view) const override { return nullptr; }

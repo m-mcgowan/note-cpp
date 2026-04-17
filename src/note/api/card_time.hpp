@@ -109,10 +109,10 @@ struct CardTime {
         /// Longitude of the Notecard, if the cell tower is recognized.
         note::ResponseField<double> lon{};
         /// Number of minutes East of GMT, if the cell tower is recognized.
-        note::ResponseField<int32_t> minutes{};
+        note::ResponseField<note::json_int_t> minutes{};
         /// The current time in UTC. Will only populate if the Notecard has
         /// completed a sync to Notehub to obtain the time.
-        note::ResponseField<int32_t> time{};
+        note::ResponseField<note::json_int_t> time{};
         /// The time zone of the Notecard, if the cell tower is recognized.
         note::ResponseField<note::string_view> zone{};
 
@@ -165,7 +165,7 @@ struct CardTime {
                 if (note::flash(keys_::rsp_lat) == k_) { rsp.lat = ::note::parse_double(raw_); return; }
                 if (note::flash(keys_::rsp_lon) == k_) { rsp.lon = ::note::parse_double(raw_); return; }
             }
-            NOTE_SINK_NOINLINE void on_int(::note::string_view k_, int32_t v_) {
+            NOTE_SINK_NOINLINE void on_int(::note::string_view k_, ::note::json_int_t v_) {
                 if (note::flash(keys_::rsp_minutes) == k_) { rsp.minutes = v_; return; }
                 if (note::flash(keys_::rsp_time) == k_) { rsp.time = v_; return; }
             }
@@ -236,8 +236,8 @@ struct CardTime {
             {keys_::rsp_country, static_cast<uint16_t>(offsetof(Response, country)), ::note::FieldType::String},
             {keys_::rsp_lat, static_cast<uint16_t>(offsetof(Response, lat)), ::note::FieldType::Double},
             {keys_::rsp_lon, static_cast<uint16_t>(offsetof(Response, lon)), ::note::FieldType::Double},
-            {keys_::rsp_minutes, static_cast<uint16_t>(offsetof(Response, minutes)), ::note::FieldType::Int32},
-            {keys_::rsp_time, static_cast<uint16_t>(offsetof(Response, time)), ::note::FieldType::Int32},
+            {keys_::rsp_minutes, static_cast<uint16_t>(offsetof(Response, minutes)), ::note::FieldType::Int},
+            {keys_::rsp_time, static_cast<uint16_t>(offsetof(Response, time)), ::note::FieldType::Int},
             {keys_::rsp_zone, static_cast<uint16_t>(offsetof(Response, zone)), ::note::FieldType::String},
         };
 #pragma GCC diagnostic pop

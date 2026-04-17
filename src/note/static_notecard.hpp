@@ -63,7 +63,7 @@ public:
 #endif
 
         auto fields = [&](JsonBuilder& b) {
-            if (req_id) b.add("id", static_cast<int32_t>(req_id));
+            if (req_id) b.add("id", static_cast<json_int_t>(req_id));
             req.build(b);
         };
         BuildFn fields_fn = [](JsonBuilder& b, void* p) {

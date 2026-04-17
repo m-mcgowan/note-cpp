@@ -3,6 +3,8 @@
 /// @file event.hpp
 /// LexerEvent — token emitted by the JSON lexer.
 
+#include <note/types.hpp>
+
 #include <cstdint>
 
 namespace note {
@@ -26,7 +28,7 @@ struct LexerEvent {
 
     union {
         char ch;            // KeyChar, StringChar
-        int32_t integer;    // Integer
+        json_int_t integer;    // Integer
         double floating;    // Float
         bool boolean;       // Bool
         const char* error;  // Error — static string
@@ -40,7 +42,7 @@ struct LexerEvent {
     static LexerEvent key_end()               { return {KeyEnd, {}}; }
     static LexerEvent string_char(char c)     { LexerEvent e{StringChar, {}}; e.ch = c; return e; }
     static LexerEvent string_end()            { return {StringEnd, {}}; }
-    static LexerEvent make_int(int32_t v)     { LexerEvent e{Integer, {}}; e.integer = v; return e; }
+    static LexerEvent make_int(json_int_t v)   { LexerEvent e{Integer, {}}; e.integer = v; return e; }
     static LexerEvent make_float(double v)    { LexerEvent e{Float, {}}; e.floating = v; return e; }
     static LexerEvent make_bool(bool v)       { LexerEvent e{Bool, {}}; e.boolean = v; return e; }
     static LexerEvent null()                  { return {Null, {}}; }

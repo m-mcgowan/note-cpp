@@ -88,11 +88,11 @@ struct FileChangesPending {
             ::note::detail::arena_cost(65);  // error reserve (+1 for null terminator)
 
         /// The number of changes across all files.
-        note::ResponseField<int32_t> changes{};
+        note::ResponseField<note::json_int_t> changes{};
         /// `true` if there are pending changes.
         note::ResponseField<bool> pending{};
         /// The total of unsynced notes across all Notefiles.
-        note::ResponseField<int32_t> total{};
+        note::ResponseField<note::json_int_t> total{};
 
 #if !NOTE_NO_BUFFERED
         static Response parse(std::unique_ptr<JsonReader> reader_) {
@@ -130,7 +130,7 @@ struct FileChangesPending {
                 if (note::flash(keys_::rsp_changes) == k_) { rsp.changes = ::note::parse_int(raw_); return; }
                 if (note::flash(keys_::rsp_total) == k_) { rsp.total = ::note::parse_int(raw_); return; }
             }
-            NOTE_SINK_NOINLINE void on_int(::note::string_view k_, int32_t v_) {
+            NOTE_SINK_NOINLINE void on_int(::note::string_view k_, ::note::json_int_t v_) {
                 if (note::flash(keys_::rsp_changes) == k_) { rsp.changes = v_; return; }
                 if (note::flash(keys_::rsp_total) == k_) { rsp.total = v_; return; }
             }
@@ -173,9 +173,9 @@ struct FileChangesPending {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
         static constexpr ::note::FieldDesc table[] NOTE_FLASH_ATTR = {
-            {keys_::rsp_changes, static_cast<uint16_t>(offsetof(Response, changes)), ::note::FieldType::Int32},
+            {keys_::rsp_changes, static_cast<uint16_t>(offsetof(Response, changes)), ::note::FieldType::Int},
             {keys_::rsp_pending, static_cast<uint16_t>(offsetof(Response, pending)), ::note::FieldType::Bool},
-            {keys_::rsp_total, static_cast<uint16_t>(offsetof(Response, total)), ::note::FieldType::Int32},
+            {keys_::rsp_total, static_cast<uint16_t>(offsetof(Response, total)), ::note::FieldType::Int},
         };
 #pragma GCC diagnostic pop
         return table;

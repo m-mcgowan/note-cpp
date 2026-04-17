@@ -169,7 +169,7 @@ struct NoteGet {
             /// The payload, if contained in the Note.
             note::ResponseField<note::string_view> payload{};
             /// The time the Note was added to the Notecard or Notehub.
-            note::ResponseField<int32_t> time{};
+            note::ResponseField<note::json_int_t> time{};
 
 #if !NOTE_NO_BUFFERED
             /// Access the body as a JsonReader (buffered parse path only).
@@ -242,7 +242,7 @@ struct NoteGet {
                     if (body_depth_ > 0) { if (body_handler_) body_handler_.send(::note::BodyEvent::make_number(k_, raw_)); return; }
                     if (note::flash(keys_::rsp_time) == k_) { rsp.time = ::note::parse_int(raw_); return; }
                 }
-                NOTE_SINK_NOINLINE void on_int(::note::string_view k_, int32_t v_) {
+                NOTE_SINK_NOINLINE void on_int(::note::string_view k_, ::note::json_int_t v_) {
                     if (body_depth_ > 0) { if (body_handler_) body_handler_.send(::note::BodyEvent::make_int(k_, v_)); return; }
                     if (note::flash(keys_::rsp_time) == k_) { rsp.time = v_; return; }
                 }
@@ -290,7 +290,7 @@ struct NoteGet {
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
             static constexpr ::note::FieldDesc table[] NOTE_FLASH_ATTR = {
                 {keys_::rsp_payload, static_cast<uint16_t>(offsetof(Response, payload)), ::note::FieldType::String},
-                {keys_::rsp_time, static_cast<uint16_t>(offsetof(Response, time)), ::note::FieldType::Int32},
+                {keys_::rsp_time, static_cast<uint16_t>(offsetof(Response, time)), ::note::FieldType::Int},
             };
 #pragma GCC diagnostic pop
             return table;
@@ -517,7 +517,7 @@ struct NoteGet {
             /// The payload, if contained in the Note.
             note::ResponseField<note::string_view> payload{};
             /// The time the Note was added to the Notecard or Notehub.
-            note::ResponseField<int32_t> time{};
+            note::ResponseField<note::json_int_t> time{};
 
 #if !NOTE_NO_BUFFERED
             /// Access the body as a JsonReader (buffered parse path only).
@@ -590,7 +590,7 @@ struct NoteGet {
                     if (body_depth_ > 0) { if (body_handler_) body_handler_.send(::note::BodyEvent::make_number(k_, raw_)); return; }
                     if (note::flash(keys_::rsp_time) == k_) { rsp.time = ::note::parse_int(raw_); return; }
                 }
-                NOTE_SINK_NOINLINE void on_int(::note::string_view k_, int32_t v_) {
+                NOTE_SINK_NOINLINE void on_int(::note::string_view k_, ::note::json_int_t v_) {
                     if (body_depth_ > 0) { if (body_handler_) body_handler_.send(::note::BodyEvent::make_int(k_, v_)); return; }
                     if (note::flash(keys_::rsp_time) == k_) { rsp.time = v_; return; }
                 }
@@ -638,7 +638,7 @@ struct NoteGet {
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
             static constexpr ::note::FieldDesc table[] NOTE_FLASH_ATTR = {
                 {keys_::rsp_payload, static_cast<uint16_t>(offsetof(Response, payload)), ::note::FieldType::String},
-                {keys_::rsp_time, static_cast<uint16_t>(offsetof(Response, time)), ::note::FieldType::Int32},
+                {keys_::rsp_time, static_cast<uint16_t>(offsetof(Response, time)), ::note::FieldType::Int},
             };
 #pragma GCC diagnostic pop
             return table;

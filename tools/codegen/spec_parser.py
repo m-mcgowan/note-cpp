@@ -38,7 +38,7 @@ SAFETY_MAP: dict[str, str] = {
 # OpenAPI type -> C++ type
 TYPE_MAP: dict[str, str] = {
     "boolean": "bool",
-    "integer": "int32_t",
+    "integer": "note::json_int_t",
     "number": "double",
     "string": "note::string_view",
 }

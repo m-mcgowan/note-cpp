@@ -70,6 +70,9 @@ constexpr uint8_t kCobsXor     = '\n';
 
 class StreamingJsonbBuilder : public JsonBuilder {
 public:
+    using JsonBuilder::add;           // inherit integer widening template
+    using JsonBuilder::add_element;   // inherit integer widening template
+
     explicit StreamingJsonbBuilder(JsonWriter& w) : writer_(w) {
         emit(jsonb::kBeginObject);
     }
@@ -80,10 +83,10 @@ public:
         return *this;
     }
 
-    JsonBuilder& add(string_view key, int32_t value) override {
+    JsonBuilder& add(string_view key, json_int_t value) override {
         emit_item(key);
         emit(jsonb::kInt32);
-        emit_le32(value);
+        emit_le32(static_cast<int32_t>(value));
         return *this;
     }
 
@@ -137,9 +140,9 @@ public:
         return *this;
     }
 
-    JsonBuilder& add_element(int32_t value) override {
+    JsonBuilder& add_element(json_int_t value) override {
         emit(jsonb::kInt32);
-        emit_le32(value);
+        emit_le32(static_cast<int32_t>(value));
         return *this;
     }
 

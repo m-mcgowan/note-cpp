@@ -38,7 +38,7 @@ struct AllTypesRsp {
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
 static const note::FieldDesc all_types_rsp_fields[] = {
     {"flag",  static_cast<uint16_t>(offsetof(AllTypesRsp, flag)),  note::FieldType::Bool},
-    {"count", static_cast<uint16_t>(offsetof(AllTypesRsp, count)), note::FieldType::Int32},
+    {"count", static_cast<uint16_t>(offsetof(AllTypesRsp, count)), note::FieldType::Int},
     {"value", static_cast<uint16_t>(offsetof(AllTypesRsp, value)), note::FieldType::Double},
     {"name",  static_cast<uint16_t>(offsetof(AllTypesRsp, name)),  note::FieldType::String},
 };
@@ -73,7 +73,7 @@ struct RecordedEvent {
     std::string key;
     // Value storage:
     bool b = false;
-    int32_t i = 0;
+    note::json_int_t i = 0;
     double f = 0.0;
     std::string sv;
 };

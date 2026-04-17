@@ -27,24 +27,24 @@ namespace note {
 /// std::monostate is intentionally excluded: extras slots are only accessed
 /// up to extras_count_, so uninitialized slots are never visited. Excluding
 /// monostate avoids a no-op lambda instantiation per-endpoint in build().
-using DynValue = std::variant<bool, int32_t, double, note::string_view>;
+using DynValue = std::variant<bool, json_int_t, double, note::string_view>;
 
 namespace detail {
 
 /// Setter that writes a DynValue into a typed Field<T>.
 /// Type mismatch silently no-ops — wrong type for a known key.
 /// For unit types (Minutes, Seconds, Milliseconds) that are constructible
-/// from int32_t, extracts the int32_t from the variant and wraps it.
+/// from json_int_t, extracts the json_int_t from the variant and wraps it.
 template<typename T>
 void set_typed_field(void* ptr, DynValue val) {
     auto* f = static_cast<Field<T>*>(ptr);
-    if constexpr (std::is_same_v<T, bool> || std::is_same_v<T, int32_t>
+    if constexpr (std::is_same_v<T, bool> || std::is_same_v<T, json_int_t>
                || std::is_same_v<T, double> || std::is_same_v<T, note::string_view>) {
         if (auto* v = std::get_if<T>(&val))
             *f = *v;
-    } else if constexpr (std::is_constructible_v<T, int32_t>) {
-        if (auto* v = std::get_if<int32_t>(&val))
-            *f = T{*v};
+    } else if constexpr (std::is_constructible_v<T, json_int_t>) {
+        if (auto* v = std::get_if<json_int_t>(&val))
+            *f = T(*v);
     }
 }
 
@@ -77,10 +77,16 @@ struct DynField {
     DynField(void* target, SetterFn setter) : target_(target), setter_(setter) {}
 
     DynField& operator=(bool v)               { apply(DynValue{v}); return *this; }
-    DynField& operator=(int32_t v)            { apply(DynValue{v}); return *this; }
+    DynField& operator=(json_int_t v)         { apply(DynValue{v}); return *this; }
     DynField& operator=(double v)             { apply(DynValue{v}); return *this; }
     DynField& operator=(note::string_view v)  { apply(DynValue{v}); return *this; }
     DynField& operator=(const char* v)        { apply(DynValue{note::string_view{v}}); return *this; }
+
+    // Widen narrower integer types to json_int_t to avoid ambiguity.
+    template<typename T, std::enable_if_t<
+        std::is_integral_v<T> && !std::is_same_v<T, bool> &&
+        !std::is_same_v<T, json_int_t>, int> = 0>
+    DynField& operator=(T v) { return *this = static_cast<json_int_t>(v); }
 
 private:
     void apply(DynValue v) { if (setter_) setter_(target_, std::move(v)); }
@@ -96,18 +102,18 @@ DynField dyn_field_for(Field<T>& f) {
 template<typename T>
 void set_plain_field(void* ptr, DynValue val) {
     auto* f = static_cast<T*>(ptr);
-    if constexpr (std::is_same_v<T, bool> || std::is_same_v<T, int32_t>
+    if constexpr (std::is_same_v<T, bool> || std::is_same_v<T, json_int_t>
                || std::is_same_v<T, double> || std::is_same_v<T, note::string_view>) {
         if (auto* v = std::get_if<T>(&val))
             *f = *v;
-    } else if constexpr (std::is_constructible_v<T, int32_t>) {
-        if (auto* v = std::get_if<int32_t>(&val))
-            *f = T{*v};
+    } else if constexpr (std::is_constructible_v<T, json_int_t>) {
+        if (auto* v = std::get_if<json_int_t>(&val))
+            *f = T(*v);
     }
 }
 
 inline DynField dyn_field_for(bool& f)              { return {&f, set_plain_field<bool>}; }
-inline DynField dyn_field_for(int32_t& f)           { return {&f, set_plain_field<int32_t>}; }
+inline DynField dyn_field_for(json_int_t& f)        { return {&f, set_plain_field<json_int_t>}; }
 inline DynField dyn_field_for(double& f)            { return {&f, set_plain_field<double>}; }
 inline DynField dyn_field_for(note::string_view& f) { return {&f, set_plain_field<note::string_view>}; }
 

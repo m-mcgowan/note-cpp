@@ -7,6 +7,8 @@
 /// Tracks whether the number is integer or float (saw '.' or 'e').
 /// Call to_integer() or to_float() after all digits are fed.
 
+#include <note/types.hpp>
+
 #include <cstdint>
 
 namespace note {
@@ -65,8 +67,8 @@ struct IncrementalNumber {
 
     bool is_integer() const { return !is_float; }
 
-    int32_t to_int32() const {
-        return static_cast<int32_t>(sign * integer_acc);
+    json_int_t to_int() const {
+        return static_cast<json_int_t>(sign * integer_acc);
     }
 
     double to_float() const {
@@ -81,10 +83,10 @@ struct IncrementalNumber {
 };
 
 /// Compact number parser for constrained platforms.
-/// Uses int32_t instead of int64_t (no 64-bit soft math on AVR).
+/// Uses json_int_t (int32_t under NOTE_INT32_MATH, int64_t otherwise).
 /// Notecard responses fit within int32_t range.
 struct CompactNumber {
-    int32_t integer_acc = 0;
+    json_int_t integer_acc = 0;
     int32_t frac_digits = 0;   // fractional digits as integer (e.g. 125 for .125)
     int8_t frac_count = 0;     // number of fractional digits
     int8_t exp_acc = 0;
@@ -131,7 +133,7 @@ struct CompactNumber {
 
     bool is_integer() const { return !is_float; }
 
-    int32_t to_int32() const {
+    json_int_t to_int() const {
         return sign * integer_acc;
     }
 

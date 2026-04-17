@@ -1,6 +1,7 @@
 #pragma once
 
 #include <note/detail/number_format.hpp>
+#include <note/types.hpp>
 
 #include <cstddef>
 #include <cstdint>
@@ -139,20 +140,20 @@ public:
         return add(k, std::string_view(value));
     }
 
-    constexpr JsonBuf& add(std::string_view k, int32_t value) {
+    constexpr JsonBuf& add(std::string_view k, json_int_t value) {
         key(k);
-        char tmp[12]{};
+        char tmp[24]{};
         size_t len = detail::itoa(tmp, sizeof(tmp), value);
         for (size_t i = 0; i < len; ++i) put(tmp[i]);
         return *this;
     }
 
-    // Accept any integer type, widen to int32_t.
+    // Accept any integer type, widen to json_int_t.
     template<typename T, std::enable_if_t<
         std::is_integral_v<T> && !std::is_same_v<T, bool> &&
-        !std::is_same_v<T, int32_t> && !std::is_same_v<T, char>, int> = 0>
+        !std::is_same_v<T, json_int_t> && !std::is_same_v<T, char>, int> = 0>
     constexpr JsonBuf& add(std::string_view k, T value) {
-        return add(k, static_cast<int32_t>(value));
+        return add(k, static_cast<json_int_t>(value));
     }
 
     constexpr JsonBuf& add(std::string_view k, double value) {
@@ -225,12 +226,20 @@ public:
         return add(std::string_view(value));
     }
 
-    constexpr JsonBuf& add(int32_t value) {
+    constexpr JsonBuf& add(json_int_t value) {
         comma();
-        char tmp[12]{};
+        char tmp[24]{};
         size_t len = detail::itoa(tmp, sizeof(tmp), value);
         for (size_t i = 0; i < len; ++i) put(tmp[i]);
         return *this;
+    }
+
+    // Accept narrower integer types for unkeyed adds (array elements).
+    template<typename T, std::enable_if_t<
+        std::is_integral_v<T> && !std::is_same_v<T, bool> &&
+        !std::is_same_v<T, json_int_t> && !std::is_same_v<T, char>, int> = 0>
+    constexpr JsonBuf& add(T value) {
+        return add(static_cast<json_int_t>(value));
     }
 
     constexpr JsonBuf& add(bool value) {

@@ -135,7 +135,7 @@ struct PlainResponse {
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
 constexpr note::FieldDesc plain_fields[] = {
     {"flag", static_cast<uint16_t>(offsetof(PlainResponse, flag)), note::FieldType::Bool},
-    {"count", static_cast<uint16_t>(offsetof(PlainResponse, count)), note::FieldType::Int32},
+    {"count", static_cast<uint16_t>(offsetof(PlainResponse, count)), note::FieldType::Int},
     {"value", static_cast<uint16_t>(offsetof(PlainResponse, value)), note::FieldType::Double},
     {"name", static_cast<uint16_t>(offsetof(PlainResponse, name)), note::FieldType::String},
 };

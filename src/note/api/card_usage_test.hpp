@@ -68,24 +68,24 @@ struct CardUsageTest {
 
 
     /// Number of days to use for the test.
-    struct days_t : Field<int32_t> {
-        using Field<int32_t>::Field;
-        using Field<int32_t>::operator=;
-        CardUsageTest& operator()(int32_t v);
+    struct days_t : Field<note::json_int_t> {
+        using Field<note::json_int_t>::Field;
+        using Field<note::json_int_t>::operator=;
+        CardUsageTest& operator()(note::json_int_t v);
     } days{};
     /// If you want to analyze a period shorter than one day, the number of
     /// hours to use for the test.
-    struct hours_t : Field<int32_t> {
-        using Field<int32_t>::Field;
-        using Field<int32_t>::operator=;
-        CardUsageTest& operator()(int32_t v);
+    struct hours_t : Field<note::json_int_t> {
+        using Field<note::json_int_t>::Field;
+        using Field<note::json_int_t>::operator=;
+        CardUsageTest& operator()(note::json_int_t v);
     } hours{};
     /// The Notecard lifetime cellular data quota (in megabytes) to use for the
     /// test.
-    struct megabytes_t : Field<int32_t> {
-        using Field<int32_t>::Field;
-        using Field<int32_t>::operator=;
-        CardUsageTest& operator()(int32_t v);
+    struct megabytes_t : Field<note::json_int_t> {
+        using Field<note::json_int_t>::Field;
+        using Field<note::json_int_t>::operator=;
+        CardUsageTest& operator()(note::json_int_t v);
     } megabytes{};
 
 
@@ -123,27 +123,27 @@ struct CardUsageTest {
             ::note::detail::arena_cost(65);  // error reserve (+1 for null terminator)
 
         /// Average bytes per day used during the test period.
-        note::ResponseField<int32_t> bytesPerDay{};
+        note::ResponseField<note::json_int_t> bytesPerDay{};
         /// Number of bytes received by the Notecard from Notehub.
-        note::ResponseField<int32_t> bytesReceived{};
+        note::ResponseField<note::json_int_t> bytesReceived{};
         /// Number of bytes sent by the Notecard to Notehub.
-        note::ResponseField<int32_t> bytesSent{};
+        note::ResponseField<note::json_int_t> bytesSent{};
         /// The number of days used for the test.
-        note::ResponseField<int32_t> days{};
+        note::ResponseField<note::json_int_t> days{};
         /// The days of projected data available based on test.
-        note::ResponseField<int32_t> max{};
+        note::ResponseField<note::json_int_t> max{};
         /// Number of notes received by the Notecard from Notehub.
-        note::ResponseField<int32_t> notesReceived{};
+        note::ResponseField<note::json_int_t> notesReceived{};
         /// Number of notes sent by the Notecard to Notehub.
-        note::ResponseField<int32_t> notesSent{};
+        note::ResponseField<note::json_int_t> notesSent{};
         /// Number of seconds in the analyzed period.
-        note::ResponseField<int32_t> seconds{};
+        note::ResponseField<note::json_int_t> seconds{};
         /// Number of secure Notehub sessions.
-        note::ResponseField<int32_t> sessionsSecure{};
+        note::ResponseField<note::json_int_t> sessionsSecure{};
         /// Number of standard Notehub sessions.
-        note::ResponseField<int32_t> sessionsStandard{};
+        note::ResponseField<note::json_int_t> sessionsStandard{};
         /// Time of device activation.
-        note::ResponseField<int32_t> time{};
+        note::ResponseField<note::json_int_t> time{};
 
 #if !NOTE_NO_BUFFERED
         static Response parse(std::unique_ptr<JsonReader> reader_) {
@@ -203,7 +203,7 @@ struct CardUsageTest {
                 if (note::flash(keys_::rsp_sessionsStandard) == k_) { rsp.sessionsStandard = ::note::parse_int(raw_); return; }
                 if (note::flash(keys_::rsp_time) == k_) { rsp.time = ::note::parse_int(raw_); return; }
             }
-            NOTE_SINK_NOINLINE void on_int(::note::string_view k_, int32_t v_) {
+            NOTE_SINK_NOINLINE void on_int(::note::string_view k_, ::note::json_int_t v_) {
                 if (note::flash(keys_::rsp_bytesPerDay) == k_) { rsp.bytesPerDay = v_; return; }
                 if (note::flash(keys_::rsp_bytesReceived) == k_) { rsp.bytesReceived = v_; return; }
                 if (note::flash(keys_::rsp_bytesSent) == k_) { rsp.bytesSent = v_; return; }
@@ -287,17 +287,17 @@ struct CardUsageTest {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
         static constexpr ::note::FieldDesc table[] NOTE_FLASH_ATTR = {
-            {keys_::rsp_bytesPerDay, static_cast<uint16_t>(offsetof(Response, bytesPerDay)), ::note::FieldType::Int32},
-            {keys_::rsp_bytesReceived, static_cast<uint16_t>(offsetof(Response, bytesReceived)), ::note::FieldType::Int32},
-            {keys_::rsp_bytesSent, static_cast<uint16_t>(offsetof(Response, bytesSent)), ::note::FieldType::Int32},
-            {keys_::rsp_days, static_cast<uint16_t>(offsetof(Response, days)), ::note::FieldType::Int32},
-            {keys_::rsp_max, static_cast<uint16_t>(offsetof(Response, max)), ::note::FieldType::Int32},
-            {keys_::rsp_notesReceived, static_cast<uint16_t>(offsetof(Response, notesReceived)), ::note::FieldType::Int32},
-            {keys_::rsp_notesSent, static_cast<uint16_t>(offsetof(Response, notesSent)), ::note::FieldType::Int32},
-            {keys_::rsp_seconds, static_cast<uint16_t>(offsetof(Response, seconds)), ::note::FieldType::Int32},
-            {keys_::rsp_sessionsSecure, static_cast<uint16_t>(offsetof(Response, sessionsSecure)), ::note::FieldType::Int32},
-            {keys_::rsp_sessionsStandard, static_cast<uint16_t>(offsetof(Response, sessionsStandard)), ::note::FieldType::Int32},
-            {keys_::rsp_time, static_cast<uint16_t>(offsetof(Response, time)), ::note::FieldType::Int32},
+            {keys_::rsp_bytesPerDay, static_cast<uint16_t>(offsetof(Response, bytesPerDay)), ::note::FieldType::Int},
+            {keys_::rsp_bytesReceived, static_cast<uint16_t>(offsetof(Response, bytesReceived)), ::note::FieldType::Int},
+            {keys_::rsp_bytesSent, static_cast<uint16_t>(offsetof(Response, bytesSent)), ::note::FieldType::Int},
+            {keys_::rsp_days, static_cast<uint16_t>(offsetof(Response, days)), ::note::FieldType::Int},
+            {keys_::rsp_max, static_cast<uint16_t>(offsetof(Response, max)), ::note::FieldType::Int},
+            {keys_::rsp_notesReceived, static_cast<uint16_t>(offsetof(Response, notesReceived)), ::note::FieldType::Int},
+            {keys_::rsp_notesSent, static_cast<uint16_t>(offsetof(Response, notesSent)), ::note::FieldType::Int},
+            {keys_::rsp_seconds, static_cast<uint16_t>(offsetof(Response, seconds)), ::note::FieldType::Int},
+            {keys_::rsp_sessionsSecure, static_cast<uint16_t>(offsetof(Response, sessionsSecure)), ::note::FieldType::Int},
+            {keys_::rsp_sessionsStandard, static_cast<uint16_t>(offsetof(Response, sessionsStandard)), ::note::FieldType::Int},
+            {keys_::rsp_time, static_cast<uint16_t>(offsetof(Response, time)), ::note::FieldType::Int},
         };
 #pragma GCC diagnostic pop
         return table;
@@ -339,9 +339,9 @@ struct CardUsageTest {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
         static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
-            {keys_::days, static_cast<uint16_t>(offsetof(CardUsageTest, days)), ::note::ReqFieldType::Int32},
-            {keys_::hours, static_cast<uint16_t>(offsetof(CardUsageTest, hours)), ::note::ReqFieldType::Int32},
-            {keys_::megabytes, static_cast<uint16_t>(offsetof(CardUsageTest, megabytes)), ::note::ReqFieldType::Int32},
+            {keys_::days, static_cast<uint16_t>(offsetof(CardUsageTest, days)), ::note::ReqFieldType::Int},
+            {keys_::hours, static_cast<uint16_t>(offsetof(CardUsageTest, hours)), ::note::ReqFieldType::Int},
+            {keys_::megabytes, static_cast<uint16_t>(offsetof(CardUsageTest, megabytes)), ::note::ReqFieldType::Int},
         };
 #pragma GCC diagnostic pop
         n_out = sizeof(table_) / sizeof(table_[0]);
@@ -385,18 +385,18 @@ struct CardUsageTest {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-inline CardUsageTest& CardUsageTest::days_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardUsageTest& CardUsageTest::days_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardUsageTest*>(
         reinterpret_cast<char*>(this) - offsetof(CardUsageTest, days));
 }
-inline CardUsageTest& CardUsageTest::hours_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardUsageTest& CardUsageTest::hours_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardUsageTest*>(
         reinterpret_cast<char*>(this) - offsetof(CardUsageTest, hours));
 }
-inline CardUsageTest& CardUsageTest::megabytes_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardUsageTest& CardUsageTest::megabytes_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardUsageTest*>(
         reinterpret_cast<char*>(this) - offsetof(CardUsageTest, megabytes));
 }

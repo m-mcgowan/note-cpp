@@ -101,7 +101,7 @@ struct CardLocation {
             ::note::detail::arena_cost(65);  // error reserve (+1 for null terminator)
 
         /// The number of consecutive recorded GPS/GNSS failures.
-        note::ResponseField<int32_t> count{};
+        note::ResponseField<note::json_int_t> count{};
         /// The "Dilution of Precision" value from the latest GPS/GNSS reading.
         /// The lower the value, the higher the confidence level of the reading.
         /// Values can be interpreted in this Wikipedia table#Interpretation).
@@ -112,14 +112,14 @@ struct CardLocation {
         note::ResponseField<double> lon{};
         /// If a geofence is enabled by `card.location.mode`, meters from the
         /// geofence center.
-        note::ResponseField<int32_t> max{};
+        note::ResponseField<note::json_int_t> max{};
         /// The GPS/GNSS connection mode. Will be `continuous`, `periodic`, or
         /// `off`.
         note::ResponseField<note::string_view> mode{};
         /// The current status of the Notecard GPS/GNSS connection.
         note::ResponseField<note::string_view> status{};
         /// The time of the location capture.
-        note::ResponseField<int32_t> time{};
+        note::ResponseField<note::json_int_t> time{};
 
 #if !NOTE_NO_BUFFERED
         static Response parse(std::unique_ptr<JsonReader> reader_) {
@@ -173,7 +173,7 @@ struct CardLocation {
                 if (note::flash(keys_::rsp_lat) == k_) { rsp.lat = ::note::parse_double(raw_); return; }
                 if (note::flash(keys_::rsp_lon) == k_) { rsp.lon = ::note::parse_double(raw_); return; }
             }
-            NOTE_SINK_NOINLINE void on_int(::note::string_view k_, int32_t v_) {
+            NOTE_SINK_NOINLINE void on_int(::note::string_view k_, ::note::json_int_t v_) {
                 if (note::flash(keys_::rsp_count) == k_) { rsp.count = v_; return; }
                 if (note::flash(keys_::rsp_max) == k_) { rsp.max = v_; return; }
                 if (note::flash(keys_::rsp_time) == k_) { rsp.time = v_; return; }
@@ -245,14 +245,14 @@ struct CardLocation {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
         static constexpr ::note::FieldDesc table[] NOTE_FLASH_ATTR = {
-            {keys_::rsp_count, static_cast<uint16_t>(offsetof(Response, count)), ::note::FieldType::Int32},
+            {keys_::rsp_count, static_cast<uint16_t>(offsetof(Response, count)), ::note::FieldType::Int},
             {keys_::rsp_dop, static_cast<uint16_t>(offsetof(Response, dop)), ::note::FieldType::Double},
             {keys_::rsp_lat, static_cast<uint16_t>(offsetof(Response, lat)), ::note::FieldType::Double},
             {keys_::rsp_lon, static_cast<uint16_t>(offsetof(Response, lon)), ::note::FieldType::Double},
-            {keys_::rsp_max, static_cast<uint16_t>(offsetof(Response, max)), ::note::FieldType::Int32},
+            {keys_::rsp_max, static_cast<uint16_t>(offsetof(Response, max)), ::note::FieldType::Int},
             {keys_::rsp_mode, static_cast<uint16_t>(offsetof(Response, mode)), ::note::FieldType::String},
             {keys_::rsp_status, static_cast<uint16_t>(offsetof(Response, status)), ::note::FieldType::String},
-            {keys_::rsp_time, static_cast<uint16_t>(offsetof(Response, time)), ::note::FieldType::Int32},
+            {keys_::rsp_time, static_cast<uint16_t>(offsetof(Response, time)), ::note::FieldType::Int},
         };
 #pragma GCC diagnostic pop
         return table;

@@ -49,12 +49,12 @@ struct GenericResponseSink {
         }
     }
 
-    void on_int(string_view k, int32_t v) {
+    void on_int(string_view k, json_int_t v) {
         if (body_depth_ > 0) { if (body_handler_) body_handler_.send(BodyEvent::make_int(k, v)); return; }
         for (uint8_t i = 0; i < n_fields; ++i) {
             auto d = detail::read_field_desc(&fields[i]);
-            if (d.type == FieldType::Int32 && detail::flash_key_eq(k, d.name)) {
-                set_field<int32_t>(d.offset, v);
+            if (d.type == FieldType::Int && detail::flash_key_eq(k, d.name)) {
+                set_field<int32_t>(d.offset, static_cast<int32_t>(v));
                 return;
             }
         }
@@ -120,7 +120,7 @@ struct GenericResponseSink {
             case FieldType::Bool:    reset_field<bool>(d.offset); break;
             case FieldType::Int8:    reset_field<int8_t>(d.offset); break;
             case FieldType::Int16:   reset_field<int16_t>(d.offset); break;
-            case FieldType::Int32:   reset_field<int32_t>(d.offset); break;
+            case FieldType::Int:   reset_field<int32_t>(d.offset); break;
             case FieldType::Float32: reset_field<float>(d.offset); break;
             case FieldType::Double:  reset_field<double>(d.offset); break;
             case FieldType::String:  reset_field<string_view>(d.offset); break;
@@ -168,7 +168,7 @@ struct GenericBodySink {
         }
     }
 
-    void on_int(string_view k, int32_t v) {
+    void on_int(string_view k, json_int_t v) {
         for (uint8_t i = 0; i < n_fields; ++i) {
             auto d = detail::read_field_desc(&fields[i]);
             if (detail::flash_key_eq(k, d.name)) {
@@ -223,7 +223,7 @@ struct GenericBodySink {
             case FieldType::Bool:    *field_ptr<bool>(d.offset) = false; break;
             case FieldType::Int8:    *field_ptr<int8_t>(d.offset) = 0; break;
             case FieldType::Int16:   *field_ptr<int16_t>(d.offset) = 0; break;
-            case FieldType::Int32:   *field_ptr<int32_t>(d.offset) = 0; break;
+            case FieldType::Int:   *field_ptr<int32_t>(d.offset) = 0; break;
             case FieldType::Float32: *field_ptr<float>(d.offset) = 0.0f; break;
             case FieldType::Double:  *field_ptr<double>(d.offset) = 0.0; break;
             case FieldType::String:  *field_ptr<string_view>(d.offset) = {}; break;
@@ -236,7 +236,7 @@ private:
         switch (d.type) {
         case FieldType::Int8:    *field_ptr<int8_t>(d.offset)  = static_cast<int8_t>(v); break;
         case FieldType::Int16:   *field_ptr<int16_t>(d.offset) = static_cast<int16_t>(v); break;
-        case FieldType::Int32:   *field_ptr<int32_t>(d.offset) = static_cast<int32_t>(v); break;
+        case FieldType::Int:   *field_ptr<int32_t>(d.offset) = static_cast<int32_t>(v); break;
         case FieldType::Float32: *field_ptr<float>(d.offset)   = static_cast<float>(v); break;
         case FieldType::Double:  *field_ptr<double>(d.offset)  = v; break;
         default: break;

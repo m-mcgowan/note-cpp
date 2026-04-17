@@ -530,7 +530,7 @@ TEST_CASE("transact_streaming: CRC verification passes") {
     IStreamingTransport& st = transport;
 
     struct Sink : JsonSink {
-        int32_t val = 0;
+        json_int_t val = 0;
         void on_number(string_view k, string_view raw) override {
             if (k == "val") val = parse_int(raw);
         }

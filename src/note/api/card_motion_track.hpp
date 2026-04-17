@@ -60,10 +60,10 @@ struct CardMotionTrack {
 
 
     /// The number of most recent motion buckets to examine.
-    struct count_t : Field<int32_t> {
-        using Field<int32_t>::Field;
-        using Field<int32_t>::operator=;
-        CardMotionTrack& operator()(int32_t v);
+    struct count_t : Field<note::json_int_t> {
+        using Field<note::json_int_t>::Field;
+        using Field<note::json_int_t>::operator=;
+        CardMotionTrack& operator()(note::json_int_t v);
     } count{};
     /// The Notefile to use for motion capture Notes. See the `_motion.qo`
     /// Notefile's documentation for details on the format of the data captured.
@@ -73,10 +73,10 @@ struct CardMotionTrack {
         CardMotionTrack& operator()(note::string_view v);
     } file{};
     /// The maximum period to capture Notes in the Notefile.
-    struct minutes_t : Field<int32_t> {
-        using Field<int32_t>::Field;
-        using Field<int32_t>::operator=;
-        CardMotionTrack& operator()(int32_t v);
+    struct minutes_t : Field<note::json_int_t> {
+        using Field<note::json_int_t>::Field;
+        using Field<note::json_int_t>::operator=;
+        CardMotionTrack& operator()(note::json_int_t v);
     } minutes{};
     /// Set to `true` to trigger the immediate creation of a `_motion.qo` event
     /// if the orientation of the Notecard changes (overriding the `minutes`
@@ -99,10 +99,10 @@ struct CardMotionTrack {
         CardMotionTrack& operator()(bool v);
     } stop{};
     /// The number of buckets that must indicate motion in order to capture.
-    struct threshold_t : Field<int32_t> {
-        using Field<int32_t>::Field;
-        using Field<int32_t>::operator=;
-        CardMotionTrack& operator()(int32_t v);
+    struct threshold_t : Field<note::json_int_t> {
+        using Field<note::json_int_t>::Field;
+        using Field<note::json_int_t>::operator=;
+        CardMotionTrack& operator()(note::json_int_t v);
     } threshold{};
 
 
@@ -177,13 +177,13 @@ struct CardMotionTrack {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
         static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
-            {keys_::count, static_cast<uint16_t>(offsetof(CardMotionTrack, count)), ::note::ReqFieldType::Int32},
+            {keys_::count, static_cast<uint16_t>(offsetof(CardMotionTrack, count)), ::note::ReqFieldType::Int},
             {keys_::file, static_cast<uint16_t>(offsetof(CardMotionTrack, file)), ::note::ReqFieldType::String},
-            {keys_::minutes, static_cast<uint16_t>(offsetof(CardMotionTrack, minutes)), ::note::ReqFieldType::Int32},
+            {keys_::minutes, static_cast<uint16_t>(offsetof(CardMotionTrack, minutes)), ::note::ReqFieldType::Int},
             {keys_::now, static_cast<uint16_t>(offsetof(CardMotionTrack, now)), ::note::ReqFieldType::Bool},
             {keys_::start, static_cast<uint16_t>(offsetof(CardMotionTrack, start)), ::note::ReqFieldType::Bool},
             {keys_::stop, static_cast<uint16_t>(offsetof(CardMotionTrack, stop)), ::note::ReqFieldType::Bool},
-            {keys_::threshold, static_cast<uint16_t>(offsetof(CardMotionTrack, threshold)), ::note::ReqFieldType::Int32},
+            {keys_::threshold, static_cast<uint16_t>(offsetof(CardMotionTrack, threshold)), ::note::ReqFieldType::Int},
         };
 #pragma GCC diagnostic pop
         n_out = sizeof(table_) / sizeof(table_[0]);
@@ -243,8 +243,8 @@ struct CardMotionTrack {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-inline CardMotionTrack& CardMotionTrack::count_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardMotionTrack& CardMotionTrack::count_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardMotionTrack*>(
         reinterpret_cast<char*>(this) - offsetof(CardMotionTrack, count));
 }
@@ -253,8 +253,8 @@ inline CardMotionTrack& CardMotionTrack::file_t::operator()(note::string_view v)
     return *reinterpret_cast<CardMotionTrack*>(
         reinterpret_cast<char*>(this) - offsetof(CardMotionTrack, file));
 }
-inline CardMotionTrack& CardMotionTrack::minutes_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardMotionTrack& CardMotionTrack::minutes_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardMotionTrack*>(
         reinterpret_cast<char*>(this) - offsetof(CardMotionTrack, minutes));
 }
@@ -273,8 +273,8 @@ inline CardMotionTrack& CardMotionTrack::stop_t::operator()(bool v) {
     return *reinterpret_cast<CardMotionTrack*>(
         reinterpret_cast<char*>(this) - offsetof(CardMotionTrack, stop));
 }
-inline CardMotionTrack& CardMotionTrack::threshold_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardMotionTrack& CardMotionTrack::threshold_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardMotionTrack*>(
         reinterpret_cast<char*>(this) - offsetof(CardMotionTrack, threshold));
 }

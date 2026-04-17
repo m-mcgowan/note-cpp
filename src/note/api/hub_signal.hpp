@@ -69,10 +69,10 @@ struct HubSignal {
 #if NOTE_API_VERSION < NOTE_VERSION(5, 1, 1)
     [[deprecated("requires firmware >= 5.1.1")]]
 #endif
-    struct seconds_t : Field<int32_t> {
-        using Field<int32_t>::Field;
-        using Field<int32_t>::operator=;
-        HubSignal& operator()(int32_t v);
+    struct seconds_t : Field<note::json_int_t> {
+        using Field<note::json_int_t>::Field;
+        using Field<note::json_int_t>::operator=;
+        HubSignal& operator()(note::json_int_t v);
     } seconds{};
 #endif
 
@@ -149,7 +149,7 @@ struct HubSignal {
         /// `true` if the Notecard is connected to Notehub.
         note::ResponseField<bool> connected{};
         /// The number of queued signals remaining.
-        note::ResponseField<int32_t> signals{};
+        note::ResponseField<note::json_int_t> signals{};
 
 #if !NOTE_NO_BUFFERED
         /// Access the body as a JsonReader (buffered parse path only).
@@ -221,7 +221,7 @@ struct HubSignal {
                 if (body_depth_ > 0) { if (body_handler_) body_handler_.send(::note::BodyEvent::make_number(k_, raw_)); return; }
                 if (note::flash(keys_::rsp_signals) == k_) { rsp.signals = ::note::parse_int(raw_); return; }
             }
-            NOTE_SINK_NOINLINE void on_int(::note::string_view k_, int32_t v_) {
+            NOTE_SINK_NOINLINE void on_int(::note::string_view k_, ::note::json_int_t v_) {
                 if (body_depth_ > 0) { if (body_handler_) body_handler_.send(::note::BodyEvent::make_int(k_, v_)); return; }
                 if (note::flash(keys_::rsp_signals) == k_) { rsp.signals = v_; return; }
             }
@@ -267,7 +267,7 @@ struct HubSignal {
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
         static constexpr ::note::FieldDesc table[] NOTE_FLASH_ATTR = {
             {keys_::rsp_connected, static_cast<uint16_t>(offsetof(Response, connected)), ::note::FieldType::Bool},
-            {keys_::rsp_signals, static_cast<uint16_t>(offsetof(Response, signals)), ::note::FieldType::Int32},
+            {keys_::rsp_signals, static_cast<uint16_t>(offsetof(Response, signals)), ::note::FieldType::Int},
         };
 #pragma GCC diagnostic pop
         return table;
@@ -312,7 +312,7 @@ struct HubSignal {
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
         static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
-            {keys_::seconds, static_cast<uint16_t>(offsetof(HubSignal, seconds)), ::note::ReqFieldType::Int32},
+            {keys_::seconds, static_cast<uint16_t>(offsetof(HubSignal, seconds)), ::note::ReqFieldType::Int},
 #endif
         };
 #pragma GCC diagnostic pop
@@ -356,8 +356,8 @@ struct HubSignal {
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
-inline HubSignal& HubSignal::seconds_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline HubSignal& HubSignal::seconds_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<HubSignal*>(
         reinterpret_cast<char*>(this) - offsetof(HubSignal, seconds));
 }

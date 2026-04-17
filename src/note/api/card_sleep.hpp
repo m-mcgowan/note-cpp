@@ -120,10 +120,10 @@ struct CardSleep {
     } on{};
     /// The number of seconds the Notecard will wait before entering sleep mode
     /// (minimum value is 30).
-    struct seconds_t : Field<int32_t> {
-        using Field<int32_t>::Field;
-        using Field<int32_t>::operator=;
-        CardSleep& operator()(int32_t v);
+    struct seconds_t : Field<note::json_int_t> {
+        using Field<note::json_int_t>::Field;
+        using Field<note::json_int_t>::operator=;
+        CardSleep& operator()(note::json_int_t v);
     } seconds{};
 
     // Valid values for 'mode':
@@ -189,7 +189,7 @@ struct CardSleep {
         note::ResponseField<bool> on{};
         /// The number of seconds the Notecard will wait before entering sleep
         /// mode (only included if default settings are overridden).
-        note::ResponseField<int32_t> seconds{};
+        note::ResponseField<note::json_int_t> seconds{};
 
 #if !NOTE_NO_BUFFERED
         static Response parse(std::unique_ptr<JsonReader> reader_) {
@@ -233,7 +233,7 @@ struct CardSleep {
             NOTE_SINK_NOINLINE void on_number(::note::string_view k_, ::note::string_view raw_) {
                 if (note::flash(keys_::rsp_seconds) == k_) { rsp.seconds = ::note::parse_int(raw_); return; }
             }
-            NOTE_SINK_NOINLINE void on_int(::note::string_view k_, int32_t v_) {
+            NOTE_SINK_NOINLINE void on_int(::note::string_view k_, ::note::json_int_t v_) {
                 if (note::flash(keys_::rsp_seconds) == k_) { rsp.seconds = v_; return; }
             }
             NOTE_SINK_NOINLINE void reset() {
@@ -284,7 +284,7 @@ struct CardSleep {
             {keys_::rsp_mode, static_cast<uint16_t>(offsetof(Response, mode)), ::note::FieldType::String},
             {keys_::rsp_off, static_cast<uint16_t>(offsetof(Response, off)), ::note::FieldType::Bool},
             {keys_::rsp_on, static_cast<uint16_t>(offsetof(Response, on)), ::note::FieldType::Bool},
-            {keys_::rsp_seconds, static_cast<uint16_t>(offsetof(Response, seconds)), ::note::FieldType::Int32},
+            {keys_::rsp_seconds, static_cast<uint16_t>(offsetof(Response, seconds)), ::note::FieldType::Int},
         };
 #pragma GCC diagnostic pop
         return table;
@@ -329,7 +329,7 @@ struct CardSleep {
             {keys_::mode, static_cast<uint16_t>(offsetof(CardSleep, mode)), ::note::ReqFieldType::String},
             {keys_::off, static_cast<uint16_t>(offsetof(CardSleep, off)), ::note::ReqFieldType::Bool},
             {keys_::on, static_cast<uint16_t>(offsetof(CardSleep, on)), ::note::ReqFieldType::Bool},
-            {keys_::seconds, static_cast<uint16_t>(offsetof(CardSleep, seconds)), ::note::ReqFieldType::Int32},
+            {keys_::seconds, static_cast<uint16_t>(offsetof(CardSleep, seconds)), ::note::ReqFieldType::Int},
         };
 #pragma GCC diagnostic pop
         n_out = sizeof(table_) / sizeof(table_[0]);
@@ -392,8 +392,8 @@ inline CardSleep& CardSleep::on_t::operator()(bool v) {
     return *reinterpret_cast<CardSleep*>(
         reinterpret_cast<char*>(this) - offsetof(CardSleep, on));
 }
-inline CardSleep& CardSleep::seconds_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardSleep& CardSleep::seconds_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardSleep*>(
         reinterpret_cast<char*>(this) - offsetof(CardSleep, seconds));
 }

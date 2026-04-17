@@ -164,10 +164,10 @@ struct CardDfu {
     } on{};
     /// When used with `"off":true`, disable Notecard Outboard Firmware Update
     /// operations for the specified number of `seconds`.
-    struct seconds_t : Field<int32_t> {
-        using Field<int32_t>::Field;
-        using Field<int32_t>::operator=;
-        CardDfu& operator()(int32_t v);
+    struct seconds_t : Field<note::json_int_t> {
+        using Field<note::json_int_t>::Field;
+        using Field<note::json_int_t>::operator=;
+        CardDfu& operator()(note::json_int_t v);
     } seconds{};
     /// Set to `true` to enable the host RESET if previously disabled with
     /// `"stop":true`.
@@ -373,7 +373,7 @@ struct CardDfu {
             {keys_::name, static_cast<uint16_t>(offsetof(CardDfu, name)), ::note::ReqFieldType::String},
             {keys_::off, static_cast<uint16_t>(offsetof(CardDfu, off)), ::note::ReqFieldType::Bool},
             {keys_::on, static_cast<uint16_t>(offsetof(CardDfu, on)), ::note::ReqFieldType::Bool},
-            {keys_::seconds, static_cast<uint16_t>(offsetof(CardDfu, seconds)), ::note::ReqFieldType::Int32},
+            {keys_::seconds, static_cast<uint16_t>(offsetof(CardDfu, seconds)), ::note::ReqFieldType::Int},
             {keys_::start, static_cast<uint16_t>(offsetof(CardDfu, start)), ::note::ReqFieldType::Bool},
             {keys_::stop, static_cast<uint16_t>(offsetof(CardDfu, stop)), ::note::ReqFieldType::Bool},
         };
@@ -455,8 +455,8 @@ inline CardDfu& CardDfu::on_t::operator()(bool v) {
     return *reinterpret_cast<CardDfu*>(
         reinterpret_cast<char*>(this) - offsetof(CardDfu, on));
 }
-inline CardDfu& CardDfu::seconds_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardDfu& CardDfu::seconds_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardDfu*>(
         reinterpret_cast<char*>(this) - offsetof(CardDfu, seconds));
 }

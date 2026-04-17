@@ -108,14 +108,14 @@ struct FileChanges {
             ::note::detail::arena_cost(65);  // error reserve (+1 for null terminator)
 
         /// If a change tracker is used, the number of changes across all files.
-        note::ResponseField<int32_t> changes{};
+        note::ResponseField<note::json_int_t> changes{};
         /// Set to `true` if this was a pending changes request and there are
         /// changes
         note::ResponseField<bool> pending{};
         /// The total of local Notes across all Notefiles. This includes Inbound
         /// Notes that have not been deleted, as well as outbound Notes that
         /// have yet to sync.
-        note::ResponseField<int32_t> total{};
+        note::ResponseField<note::json_int_t> total{};
 
 #if !NOTE_NO_BUFFERED
         static Response parse(std::unique_ptr<JsonReader> reader_) {
@@ -153,7 +153,7 @@ struct FileChanges {
                 if (note::flash(keys_::rsp_changes) == k_) { rsp.changes = ::note::parse_int(raw_); return; }
                 if (note::flash(keys_::rsp_total) == k_) { rsp.total = ::note::parse_int(raw_); return; }
             }
-            NOTE_SINK_NOINLINE void on_int(::note::string_view k_, int32_t v_) {
+            NOTE_SINK_NOINLINE void on_int(::note::string_view k_, ::note::json_int_t v_) {
                 if (note::flash(keys_::rsp_changes) == k_) { rsp.changes = v_; return; }
                 if (note::flash(keys_::rsp_total) == k_) { rsp.total = v_; return; }
             }
@@ -196,9 +196,9 @@ struct FileChanges {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
         static constexpr ::note::FieldDesc table[] NOTE_FLASH_ATTR = {
-            {keys_::rsp_changes, static_cast<uint16_t>(offsetof(Response, changes)), ::note::FieldType::Int32},
+            {keys_::rsp_changes, static_cast<uint16_t>(offsetof(Response, changes)), ::note::FieldType::Int},
             {keys_::rsp_pending, static_cast<uint16_t>(offsetof(Response, pending)), ::note::FieldType::Bool},
-            {keys_::rsp_total, static_cast<uint16_t>(offsetof(Response, total)), ::note::FieldType::Int32},
+            {keys_::rsp_total, static_cast<uint16_t>(offsetof(Response, total)), ::note::FieldType::Int},
         };
 #pragma GCC diagnostic pop
         return table;

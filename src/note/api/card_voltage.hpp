@@ -104,10 +104,10 @@ struct CardVoltage {
         } calibration{};
 #endif
         /// The number of hours to analyze, up to 720 (30 days).
-        struct hours_t : Field<int32_t> {
-            using Field<int32_t>::Field;
-            using Field<int32_t>::operator=;
-            CardVoltage::Read& operator()(int32_t v);
+        struct hours_t : Field<note::json_int_t> {
+            using Field<note::json_int_t>::Field;
+            using Field<note::json_int_t>::operator=;
+            CardVoltage::Read& operator()(note::json_int_t v);
         } hours{};
         /// Used to set voltage thresholds based on how the Notecard will be
         /// powered, and which can be used to configure voltage-variable
@@ -173,10 +173,10 @@ struct CardVoltage {
             CardVoltage::Read& operator()(bool v);
         } off{};
         /// Number of hours to move into the past before starting analysis.
-        struct offset_t : Field<int32_t> {
-            using Field<int32_t>::Field;
-            using Field<int32_t>::operator=;
-            CardVoltage::Read& operator()(int32_t v);
+        struct offset_t : Field<note::json_int_t> {
+            using Field<note::json_int_t>::Field;
+            using Field<note::json_int_t>::operator=;
+            CardVoltage::Read& operator()(note::json_int_t v);
         } offset{};
         /// Enable historic voltage trend calculations.
         struct on_t : Field<bool> {
@@ -303,10 +303,10 @@ struct CardVoltage {
             /// the time period analyzed.
             note::ResponseField<double> daily{};
             /// The number of hours used for trend analysis.
-            note::ResponseField<int32_t> hours{};
+            note::ResponseField<note::json_int_t> hours{};
             /// Represents the Notecard's uptime in minutes. This field is not
             /// present when the device is powered via USB.
-            note::ResponseField<int32_t> minutes{};
+            note::ResponseField<note::json_int_t> minutes{};
             /// The current voltage-variable threshold value returned from
             /// Notecard.
             ///
@@ -416,7 +416,7 @@ struct CardVoltage {
                     if (note::flash(keys_::rsp_vmin) == k_) { rsp.vmin = ::note::parse_double(raw_); return; }
                     if (note::flash(keys_::rsp_weekly) == k_) { rsp.weekly = ::note::parse_double(raw_); return; }
                 }
-                NOTE_SINK_NOINLINE void on_int(::note::string_view k_, int32_t v_) {
+                NOTE_SINK_NOINLINE void on_int(::note::string_view k_, ::note::json_int_t v_) {
                     if (note::flash(keys_::rsp_hours) == k_) { rsp.hours = v_; return; }
                     if (note::flash(keys_::rsp_minutes) == k_) { rsp.minutes = v_; return; }
                 }
@@ -509,8 +509,8 @@ struct CardVoltage {
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
             static constexpr ::note::FieldDesc table[] NOTE_FLASH_ATTR = {
                 {keys_::rsp_daily, static_cast<uint16_t>(offsetof(Response, daily)), ::note::FieldType::Double},
-                {keys_::rsp_hours, static_cast<uint16_t>(offsetof(Response, hours)), ::note::FieldType::Int32},
-                {keys_::rsp_minutes, static_cast<uint16_t>(offsetof(Response, minutes)), ::note::FieldType::Int32},
+                {keys_::rsp_hours, static_cast<uint16_t>(offsetof(Response, hours)), ::note::FieldType::Int},
+                {keys_::rsp_minutes, static_cast<uint16_t>(offsetof(Response, minutes)), ::note::FieldType::Int},
                 {keys_::rsp_mode, static_cast<uint16_t>(offsetof(Response, mode)), ::note::FieldType::String},
                 {keys_::rsp_monthly, static_cast<uint16_t>(offsetof(Response, monthly)), ::note::FieldType::Double},
                 {keys_::rsp_value, static_cast<uint16_t>(offsetof(Response, value)), ::note::FieldType::Double},
@@ -565,11 +565,11 @@ struct CardVoltage {
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 2) || !defined(NOTE_API_STRICT)
                 {keys_::calibration, static_cast<uint16_t>(offsetof(CardVoltage::Read, calibration)), ::note::ReqFieldType::Double},
 #endif
-                {keys_::hours, static_cast<uint16_t>(offsetof(CardVoltage::Read, hours)), ::note::ReqFieldType::Int32},
+                {keys_::hours, static_cast<uint16_t>(offsetof(CardVoltage::Read, hours)), ::note::ReqFieldType::Int},
                 {keys_::mode, static_cast<uint16_t>(offsetof(CardVoltage::Read, mode)), ::note::ReqFieldType::String},
                 {keys_::name, static_cast<uint16_t>(offsetof(CardVoltage::Read, name)), ::note::ReqFieldType::String},
                 {keys_::off, static_cast<uint16_t>(offsetof(CardVoltage::Read, off)), ::note::ReqFieldType::Bool},
-                {keys_::offset, static_cast<uint16_t>(offsetof(CardVoltage::Read, offset)), ::note::ReqFieldType::Int32},
+                {keys_::offset, static_cast<uint16_t>(offsetof(CardVoltage::Read, offset)), ::note::ReqFieldType::Int},
                 {keys_::on, static_cast<uint16_t>(offsetof(CardVoltage::Read, on)), ::note::ReqFieldType::Bool},
                 {keys_::set, static_cast<uint16_t>(offsetof(CardVoltage::Read, set)), ::note::ReqFieldType::Bool},
                 {keys_::sync, static_cast<uint16_t>(offsetof(CardVoltage::Read, sync)), ::note::ReqFieldType::Bool},
@@ -741,10 +741,10 @@ struct CardVoltage {
         } calibration{};
 #endif
         /// The number of hours to analyze, up to 720 (30 days).
-        struct hours_t : Field<int32_t> {
-            using Field<int32_t>::Field;
-            using Field<int32_t>::operator=;
-            CardVoltage::Configure& operator()(int32_t v);
+        struct hours_t : Field<note::json_int_t> {
+            using Field<note::json_int_t>::Field;
+            using Field<note::json_int_t>::operator=;
+            CardVoltage::Configure& operator()(note::json_int_t v);
         } hours{};
         /// Used to set voltage thresholds based on how the Notecard will be
         /// powered, and which can be used to configure voltage-variable
@@ -810,10 +810,10 @@ struct CardVoltage {
             CardVoltage::Configure& operator()(bool v);
         } off{};
         /// Number of hours to move into the past before starting analysis.
-        struct offset_t : Field<int32_t> {
-            using Field<int32_t>::Field;
-            using Field<int32_t>::operator=;
-            CardVoltage::Configure& operator()(int32_t v);
+        struct offset_t : Field<note::json_int_t> {
+            using Field<note::json_int_t>::Field;
+            using Field<note::json_int_t>::operator=;
+            CardVoltage::Configure& operator()(note::json_int_t v);
         } offset{};
         /// Enable historic voltage trend calculations.
         struct on_t : Field<bool> {
@@ -940,10 +940,10 @@ struct CardVoltage {
             /// the time period analyzed.
             note::ResponseField<double> daily{};
             /// The number of hours used for trend analysis.
-            note::ResponseField<int32_t> hours{};
+            note::ResponseField<note::json_int_t> hours{};
             /// Represents the Notecard's uptime in minutes. This field is not
             /// present when the device is powered via USB.
-            note::ResponseField<int32_t> minutes{};
+            note::ResponseField<note::json_int_t> minutes{};
             /// The current voltage-variable threshold value returned from
             /// Notecard.
             ///
@@ -1053,7 +1053,7 @@ struct CardVoltage {
                     if (note::flash(keys_::rsp_vmin) == k_) { rsp.vmin = ::note::parse_double(raw_); return; }
                     if (note::flash(keys_::rsp_weekly) == k_) { rsp.weekly = ::note::parse_double(raw_); return; }
                 }
-                NOTE_SINK_NOINLINE void on_int(::note::string_view k_, int32_t v_) {
+                NOTE_SINK_NOINLINE void on_int(::note::string_view k_, ::note::json_int_t v_) {
                     if (note::flash(keys_::rsp_hours) == k_) { rsp.hours = v_; return; }
                     if (note::flash(keys_::rsp_minutes) == k_) { rsp.minutes = v_; return; }
                 }
@@ -1146,8 +1146,8 @@ struct CardVoltage {
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
             static constexpr ::note::FieldDesc table[] NOTE_FLASH_ATTR = {
                 {keys_::rsp_daily, static_cast<uint16_t>(offsetof(Response, daily)), ::note::FieldType::Double},
-                {keys_::rsp_hours, static_cast<uint16_t>(offsetof(Response, hours)), ::note::FieldType::Int32},
-                {keys_::rsp_minutes, static_cast<uint16_t>(offsetof(Response, minutes)), ::note::FieldType::Int32},
+                {keys_::rsp_hours, static_cast<uint16_t>(offsetof(Response, hours)), ::note::FieldType::Int},
+                {keys_::rsp_minutes, static_cast<uint16_t>(offsetof(Response, minutes)), ::note::FieldType::Int},
                 {keys_::rsp_mode, static_cast<uint16_t>(offsetof(Response, mode)), ::note::FieldType::String},
                 {keys_::rsp_monthly, static_cast<uint16_t>(offsetof(Response, monthly)), ::note::FieldType::Double},
                 {keys_::rsp_value, static_cast<uint16_t>(offsetof(Response, value)), ::note::FieldType::Double},
@@ -1202,11 +1202,11 @@ struct CardVoltage {
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 2) || !defined(NOTE_API_STRICT)
                 {keys_::calibration, static_cast<uint16_t>(offsetof(CardVoltage::Configure, calibration)), ::note::ReqFieldType::Double},
 #endif
-                {keys_::hours, static_cast<uint16_t>(offsetof(CardVoltage::Configure, hours)), ::note::ReqFieldType::Int32},
+                {keys_::hours, static_cast<uint16_t>(offsetof(CardVoltage::Configure, hours)), ::note::ReqFieldType::Int},
                 {keys_::mode, static_cast<uint16_t>(offsetof(CardVoltage::Configure, mode)), ::note::ReqFieldType::String},
                 {keys_::name, static_cast<uint16_t>(offsetof(CardVoltage::Configure, name)), ::note::ReqFieldType::String},
                 {keys_::off, static_cast<uint16_t>(offsetof(CardVoltage::Configure, off)), ::note::ReqFieldType::Bool},
-                {keys_::offset, static_cast<uint16_t>(offsetof(CardVoltage::Configure, offset)), ::note::ReqFieldType::Int32},
+                {keys_::offset, static_cast<uint16_t>(offsetof(CardVoltage::Configure, offset)), ::note::ReqFieldType::Int},
                 {keys_::on, static_cast<uint16_t>(offsetof(CardVoltage::Configure, on)), ::note::ReqFieldType::Bool},
                 {keys_::set, static_cast<uint16_t>(offsetof(CardVoltage::Configure, set)), ::note::ReqFieldType::Bool},
                 {keys_::sync, static_cast<uint16_t>(offsetof(CardVoltage::Configure, sync)), ::note::ReqFieldType::Bool},
@@ -1322,8 +1322,8 @@ inline CardVoltage::Read& CardVoltage::Read::calibration_t::operator()(double v)
         reinterpret_cast<char*>(this) - offsetof(CardVoltage::Read, calibration));
 }
 #endif
-inline CardVoltage::Read& CardVoltage::Read::hours_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardVoltage::Read& CardVoltage::Read::hours_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardVoltage::Read*>(
         reinterpret_cast<char*>(this) - offsetof(CardVoltage::Read, hours));
 }
@@ -1342,8 +1342,8 @@ inline CardVoltage::Read& CardVoltage::Read::off_t::operator()(bool v) {
     return *reinterpret_cast<CardVoltage::Read*>(
         reinterpret_cast<char*>(this) - offsetof(CardVoltage::Read, off));
 }
-inline CardVoltage::Read& CardVoltage::Read::offset_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardVoltage::Read& CardVoltage::Read::offset_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardVoltage::Read*>(
         reinterpret_cast<char*>(this) - offsetof(CardVoltage::Read, offset));
 }
@@ -1397,8 +1397,8 @@ inline CardVoltage::Configure& CardVoltage::Configure::calibration_t::operator()
         reinterpret_cast<char*>(this) - offsetof(CardVoltage::Configure, calibration));
 }
 #endif
-inline CardVoltage::Configure& CardVoltage::Configure::hours_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardVoltage::Configure& CardVoltage::Configure::hours_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardVoltage::Configure*>(
         reinterpret_cast<char*>(this) - offsetof(CardVoltage::Configure, hours));
 }
@@ -1417,8 +1417,8 @@ inline CardVoltage::Configure& CardVoltage::Configure::off_t::operator()(bool v)
     return *reinterpret_cast<CardVoltage::Configure*>(
         reinterpret_cast<char*>(this) - offsetof(CardVoltage::Configure, off));
 }
-inline CardVoltage::Configure& CardVoltage::Configure::offset_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardVoltage::Configure& CardVoltage::Configure::offset_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardVoltage::Configure*>(
         reinterpret_cast<char*>(this) - offsetof(CardVoltage::Configure, offset));
 }

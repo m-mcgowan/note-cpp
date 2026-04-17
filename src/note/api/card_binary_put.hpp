@@ -67,19 +67,19 @@ struct CardBinaryPut : note::BinarySendMixin {
 
 
     /// The size of the COBS-encoded data (in bytes).
-    struct cobs_t : Field<int32_t> {
-        using Field<int32_t>::Field;
-        using Field<int32_t>::operator=;
-        CardBinaryPut& operator()(int32_t v);
+    struct cobs_t : Field<note::json_int_t> {
+        using Field<note::json_int_t>::Field;
+        using Field<note::json_int_t>::operator=;
+        CardBinaryPut& operator()(note::json_int_t v);
     } cobs{};
     /// The number of bytes to offset the binary payload from 0 when appending
     /// the binary data to the binary storage area of the Notecard. Primarily
     /// used when sending multiple fragments of one binary payload to the
     /// Notecard.
-    struct offset_t : Field<int32_t> {
-        using Field<int32_t>::Field;
-        using Field<int32_t>::operator=;
-        CardBinaryPut& operator()(int32_t v);
+    struct offset_t : Field<note::json_int_t> {
+        using Field<note::json_int_t>::Field;
+        using Field<note::json_int_t>::operator=;
+        CardBinaryPut& operator()(note::json_int_t v);
     } offset{};
     /// The MD5 checksum of the data, before it has been encoded.
     struct status_t : Field<note::string_view> {
@@ -231,8 +231,8 @@ struct CardBinaryPut : note::BinarySendMixin {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
         static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
-            {keys_::cobs, static_cast<uint16_t>(offsetof(CardBinaryPut, cobs)), ::note::ReqFieldType::Int32},
-            {keys_::offset, static_cast<uint16_t>(offsetof(CardBinaryPut, offset)), ::note::ReqFieldType::Int32},
+            {keys_::cobs, static_cast<uint16_t>(offsetof(CardBinaryPut, cobs)), ::note::ReqFieldType::Int},
+            {keys_::offset, static_cast<uint16_t>(offsetof(CardBinaryPut, offset)), ::note::ReqFieldType::Int},
             {keys_::status, static_cast<uint16_t>(offsetof(CardBinaryPut, status)), ::note::ReqFieldType::String},
         };
 #pragma GCC diagnostic pop
@@ -282,13 +282,13 @@ struct CardBinaryPut : note::BinarySendMixin {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-inline CardBinaryPut& CardBinaryPut::cobs_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardBinaryPut& CardBinaryPut::cobs_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardBinaryPut*>(
         reinterpret_cast<char*>(this) - offsetof(CardBinaryPut, cobs));
 }
-inline CardBinaryPut& CardBinaryPut::offset_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardBinaryPut& CardBinaryPut::offset_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardBinaryPut*>(
         reinterpret_cast<char*>(this) - offsetof(CardBinaryPut, offset));
 }

@@ -41,6 +41,16 @@
 
 namespace note {
 
+/// The integer type used for JSON integer fields.
+/// Default: int64_t (matches note-c's JINTEGER). Under NOTE_INT32_MATH,
+/// narrowed to int32_t to save ~286 bytes flash on AVR (software 64-bit
+/// math elimination). int32_t overflows UNIX timestamps after 2038-01-19.
+#if NOTE_INT32_MATH
+using json_int_t = int32_t;
+#else
+using json_int_t = int64_t;
+#endif
+
 /// Data flow direction for binary operations.
 enum class Direction { Send, Receive };
 

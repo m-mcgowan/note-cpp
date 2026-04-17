@@ -17,7 +17,7 @@ public:
     explicit ErrorJsonReader(std::string msg) : msg_(std::move(msg)) {}
     bool has(note::string_view) const override { return false; }
     bool get_bool(note::string_view, bool d) const override { return d; }
-    int32_t get_int(note::string_view, int32_t d) const override { return d; }
+    note::json_int_t get_int(note::string_view, note::json_int_t d) const override { return d; }
     double get_double(note::string_view, double d) const override { return d; }
     note::string_view get_string(note::string_view, note::string_view d) const override { return d; }
     std::unique_ptr<note::JsonReader> get_object(note::string_view) const override { return nullptr; }

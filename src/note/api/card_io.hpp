@@ -56,10 +56,10 @@ struct CardIo {
 
 
     /// The alternate address to use for I2C communication.
-    struct i2c_t : Field<int32_t> {
-        using Field<int32_t>::Field;
-        using Field<int32_t>::operator=;
-        CardIo& operator()(int32_t v);
+    struct i2c_t : Field<note::json_int_t> {
+        using Field<note::json_int_t>::Field;
+        using Field<note::json_int_t>::operator=;
+        CardIo& operator()(note::json_int_t v);
     } i2c{};
     /// Used to control the Notecard's IO behavior, including USB port, LED, I2C
     /// master, NTN fallback.
@@ -191,7 +191,7 @@ struct CardIo {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
         static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
-            {keys_::i2c, static_cast<uint16_t>(offsetof(CardIo, i2c)), ::note::ReqFieldType::Int32},
+            {keys_::i2c, static_cast<uint16_t>(offsetof(CardIo, i2c)), ::note::ReqFieldType::Int},
             {keys_::mode, static_cast<uint16_t>(offsetof(CardIo, mode)), ::note::ReqFieldType::String},
         };
 #pragma GCC diagnostic pop
@@ -232,8 +232,8 @@ struct CardIo {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-inline CardIo& CardIo::i2c_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline CardIo& CardIo::i2c_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<CardIo*>(
         reinterpret_cast<char*>(this) - offsetof(CardIo, i2c));
 }

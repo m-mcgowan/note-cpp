@@ -126,10 +126,10 @@ struct WebDelete {
         WebDelete& operator()(note::string_view v);
     } route{};
     /// If specified, overrides the default 90 second timeout.
-    struct seconds_t : Field<int32_t> {
-        using Field<int32_t>::Field;
-        using Field<int32_t>::operator=;
-        WebDelete& operator()(int32_t v);
+    struct seconds_t : Field<note::json_int_t> {
+        using Field<note::json_int_t>::Field;
+        using Field<note::json_int_t>::operator=;
+        WebDelete& operator()(note::json_int_t v);
     } seconds{};
 
 
@@ -215,15 +215,15 @@ struct WebDelete {
         /// The maximum response size from the service is 8192 bytes.
         note::ResponseField<note::string_view> payload{};
         /// The HTTP Status Code
-        note::ResponseField<int32_t> result{};
+        note::ResponseField<note::json_int_t> result{};
         /// If a `payload` is returned in the response, this is a 32-character
         /// hex-encoded MD5 sum of the payload or payload fragment. Useful for
         /// the host to check for any I2C/UART corruption.
         note::ResponseField<note::string_view> status{};
         /// Size of the COBS-encoded binary payload (in bytes).
-        note::ResponseField<int32_t> cobs{};
+        note::ResponseField<note::json_int_t> cobs{};
         /// Size of the unencoded binary payload (in bytes).
-        note::ResponseField<int32_t> length{};
+        note::ResponseField<note::json_int_t> length{};
 
 #if !NOTE_NO_BUFFERED
         /// Access the body as a JsonReader (buffered parse path only).
@@ -305,7 +305,7 @@ struct WebDelete {
                 if (note::flash(keys_::rsp_cobs) == k_) { rsp.cobs = ::note::parse_int(raw_); return; }
                 if (note::flash(keys_::rsp_length) == k_) { rsp.length = ::note::parse_int(raw_); return; }
             }
-            NOTE_SINK_NOINLINE void on_int(::note::string_view k_, int32_t v_) {
+            NOTE_SINK_NOINLINE void on_int(::note::string_view k_, ::note::json_int_t v_) {
                 if (body_depth_ > 0) { if (body_handler_) body_handler_.send(::note::BodyEvent::make_int(k_, v_)); return; }
                 if (note::flash(keys_::rsp_result) == k_) { rsp.result = v_; return; }
                 if (note::flash(keys_::rsp_cobs) == k_) { rsp.cobs = v_; return; }
@@ -368,10 +368,10 @@ struct WebDelete {
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
         static constexpr ::note::FieldDesc table[] NOTE_FLASH_ATTR = {
             {keys_::rsp_payload, static_cast<uint16_t>(offsetof(Response, payload)), ::note::FieldType::String},
-            {keys_::rsp_result, static_cast<uint16_t>(offsetof(Response, result)), ::note::FieldType::Int32},
+            {keys_::rsp_result, static_cast<uint16_t>(offsetof(Response, result)), ::note::FieldType::Int},
             {keys_::rsp_status, static_cast<uint16_t>(offsetof(Response, status)), ::note::FieldType::String},
-            {keys_::rsp_cobs, static_cast<uint16_t>(offsetof(Response, cobs)), ::note::FieldType::Int32},
-            {keys_::rsp_length, static_cast<uint16_t>(offsetof(Response, length)), ::note::FieldType::Int32},
+            {keys_::rsp_cobs, static_cast<uint16_t>(offsetof(Response, cobs)), ::note::FieldType::Int},
+            {keys_::rsp_length, static_cast<uint16_t>(offsetof(Response, length)), ::note::FieldType::Int},
         };
 #pragma GCC diagnostic pop
         return table;
@@ -423,7 +423,7 @@ struct WebDelete {
             {keys_::name, static_cast<uint16_t>(offsetof(WebDelete, name)), ::note::ReqFieldType::String},
             {keys_::noteId, static_cast<uint16_t>(offsetof(WebDelete, noteId)), ::note::ReqFieldType::String},
             {keys_::route, static_cast<uint16_t>(offsetof(WebDelete, route)), ::note::ReqFieldType::String},
-            {keys_::seconds, static_cast<uint16_t>(offsetof(WebDelete, seconds)), ::note::ReqFieldType::Int32},
+            {keys_::seconds, static_cast<uint16_t>(offsetof(WebDelete, seconds)), ::note::ReqFieldType::Int},
         };
 #pragma GCC diagnostic pop
         n_out = sizeof(table_) / sizeof(table_[0]);
@@ -521,8 +521,8 @@ inline WebDelete& WebDelete::route_t::operator()(note::string_view v) {
     return *reinterpret_cast<WebDelete*>(
         reinterpret_cast<char*>(this) - offsetof(WebDelete, route));
 }
-inline WebDelete& WebDelete::seconds_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline WebDelete& WebDelete::seconds_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<WebDelete*>(
         reinterpret_cast<char*>(this) - offsetof(WebDelete, seconds));
 }

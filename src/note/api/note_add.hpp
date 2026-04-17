@@ -187,10 +187,10 @@ struct NoteAdd {
 #if NOTE_API_VERSION < NOTE_VERSION(8, 2, 1)
     [[deprecated("requires firmware >= 8.2.1")]]
 #endif
-    struct max_t : Field<int32_t> {
-        using Field<int32_t>::Field;
-        using Field<int32_t>::operator=;
-        NoteAdd& operator()(int32_t v);
+    struct max_t : Field<note::json_int_t> {
+        using Field<note::json_int_t>::Field;
+        using Field<note::json_int_t>::operator=;
+        NoteAdd& operator()(note::json_int_t v);
     } max{};
 #endif
     /// If the Notefile has a `.db/.dbs/.dbx` extension, specifies a unique Note
@@ -288,7 +288,7 @@ struct NoteAdd {
         /// `true` when a template is active on the Notefile.
         note::ResponseField<bool> template_{};
         /// The total number of Notes in the Notefile.
-        note::ResponseField<int32_t> total{};
+        note::ResponseField<note::json_int_t> total{};
 
 #if !NOTE_NO_BUFFERED
         static Response parse(std::unique_ptr<JsonReader> reader_) {
@@ -329,7 +329,7 @@ struct NoteAdd {
             NOTE_SINK_NOINLINE void on_number(::note::string_view k_, ::note::string_view raw_) {
                 if (note::flash(keys_::rsp_total) == k_) { rsp.total = ::note::parse_int(raw_); return; }
             }
-            NOTE_SINK_NOINLINE void on_int(::note::string_view k_, int32_t v_) {
+            NOTE_SINK_NOINLINE void on_int(::note::string_view k_, ::note::json_int_t v_) {
                 if (note::flash(keys_::rsp_total) == k_) { rsp.total = v_; return; }
             }
             NOTE_SINK_NOINLINE void reset() {
@@ -375,7 +375,7 @@ struct NoteAdd {
         static constexpr ::note::FieldDesc table[] NOTE_FLASH_ATTR = {
             {keys_::rsp_noteId, static_cast<uint16_t>(offsetof(Response, noteId)), ::note::FieldType::String},
             {keys_::rsp_template_, static_cast<uint16_t>(offsetof(Response, template_)), ::note::FieldType::Bool},
-            {keys_::rsp_total, static_cast<uint16_t>(offsetof(Response, total)), ::note::FieldType::Int32},
+            {keys_::rsp_total, static_cast<uint16_t>(offsetof(Response, total)), ::note::FieldType::Int},
         };
 #pragma GCC diagnostic pop
         return table;
@@ -434,7 +434,7 @@ struct NoteAdd {
             {keys_::live, static_cast<uint16_t>(offsetof(NoteAdd, live)), ::note::ReqFieldType::Bool},
 #endif
 #if NOTE_API_VERSION >= NOTE_VERSION(8, 2, 1) || !defined(NOTE_API_STRICT)
-            {keys_::max, static_cast<uint16_t>(offsetof(NoteAdd, max)), ::note::ReqFieldType::Int32},
+            {keys_::max, static_cast<uint16_t>(offsetof(NoteAdd, max)), ::note::ReqFieldType::Int},
 #endif
             {keys_::noteId, static_cast<uint16_t>(offsetof(NoteAdd, noteId)), ::note::ReqFieldType::String},
             {keys_::payload, static_cast<uint16_t>(offsetof(NoteAdd, payload)), ::note::ReqFieldType::String},
@@ -597,8 +597,8 @@ inline NoteAdd& NoteAdd::live_t::operator()(bool v) {
 }
 #endif
 #if NOTE_API_VERSION >= NOTE_VERSION(8, 2, 1) || !defined(NOTE_API_STRICT)
-inline NoteAdd& NoteAdd::max_t::operator()(int32_t v) {
-    Field<int32_t>::operator=(v);
+inline NoteAdd& NoteAdd::max_t::operator()(note::json_int_t v) {
+    Field<note::json_int_t>::operator=(v);
     return *reinterpret_cast<NoteAdd*>(
         reinterpret_cast<char*>(this) - offsetof(NoteAdd, max));
 }

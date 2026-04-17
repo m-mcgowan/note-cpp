@@ -173,4 +173,127 @@ note::Api api(nc);
 api.hub.set().product("com.example").execute();
 ```
 
+### Binary size comparison
+
+A realistic 8-endpoint app (hub.set, note.template, card.temp, note.add,
+card.status, card.voltage, note.get with body parse, env.get) measured
+on ATmega328P (Arduino Uno, 32 KB flash, 2 KB RAM):
+
+| Library / Style | Flash | RAM | Heap |
+|---|---|---|---|
+| **note-c** | 25,076 B (77.7%) | 729 B | ~371 B peak |
+| **note-cpp** typed API groups | 24,730 B (76.7%) | 836 B | 0 |
+| **note-cpp** typed direct (`nc.execute(req)`) | 24,520 B (76.0%) | 804 B | 0 |
+| **note-cpp** raw JSON + SAX sink | 20,528 B (63.6%) | 848 B | 0 |
+| **note-cpp** raw JSON + `JsonView` scan | **11,440 B (35.5%)** | 652 B | 0 |
+
+All note-cpp variants use zero heap. Two "raw JSON" styles are
+available for constrained targets — they represent opposite ends of
+the flash/RAM trade-off:
+
+- **Raw + SAX sink**: streams the response through the full SAX
+  parser into a custom `JsonSink`. No response buffer in RAM, but
+  pulls in the SAX machinery (~8 KB of flash). Pick this when RAM is
+  the bottleneck and the response may not fit in a buffer.
+- **Raw + `JsonView` scan**: buffers the response and extracts known
+  fields via substring search (`note::scan` / `JsonView`). Skips the
+  SAX parser entirely — ~12 KB cheaper in flash. Pick this when
+  flash is the bottleneck and response shapes are known and small.
+
+Build a request either way with `JsonBuf`:
+
+```cpp
+#include <note/static_notecard.hpp>
+#include <note/arduino/begin.hpp>
+#include <note/json_buf.hpp>
+
+note::JsonBuf<128> req;
+req.add("req", "note.add");
+req.add("file", "sensors.qo");
+req.begin_object("body");
+    req.add("temp", 22.5);
+    req.add("humidity", 60);
+req.end_object();
+req.close();
+
+char rsp[64];
+nc.stack().transport.transact_raw(req.view(), rsp, sizeof(rsp), 10000);
+```
+
+#### Parsing responses — SAX sink (low RAM, ~8 KB flash)
+
+Define a `JsonSink` and call `transact_dispatch`. The response
+streams through character-by-character — no buffer needed:
+
+```cpp
+struct BodySink : note::JsonSink {
+    float temp = 0; int32_t humidity = 0;
+    int depth = 0;
+    void on_object_begin(note::string_view k) override {
+        if (k == "body") depth = 1; else if (depth) ++depth;
+    }
+    void on_object_end(note::string_view) override { if (depth) --depth; }
+    void on_number(note::string_view k, note::string_view raw) override {
+        if (depth != 1) return;
+        if (k == "temp") temp = static_cast<float>(note::parse_double(raw));
+        else if (k == "humidity") humidity = static_cast<int32_t>(note::parse_int(raw));
+    }
+};
+
+BodySink sink;
+note::detail::NcErrorCapture err;
+nc.stack().transport.transact_dispatch(
+    [](note::JsonBuilder& b, void*) {
+        b.add("req", "note.get");
+        b.add("file", "config.qi");
+    }, nullptr,
+    note::make_sax_dispatch(sink), 10000, err);
+```
+
+#### Parsing responses — `JsonView` scan (low flash, needs response buffer)
+
+Buffer the response with `transact_raw`, then scan known fields out
+of the buffer with `note::JsonView`. No SAX parser compiled in:
+
+```cpp
+#include <note/json_view.hpp>
+
+char rsp[128];
+auto body = note::JsonView(
+    nc.stack().transport.transact_raw(req.view(), rsp, sizeof(rsp), 10000)
+).object("body");
+
+float temp   = body.get_float("temp");
+int32_t hum  = body.get_int("humidity");
+```
+
+`JsonView` unwraps `Result<string_view>` directly — if the transport
+call errored, `body` is an empty view and the subsequent lookups
+return their defaults, so best-effort extraction doesn't need an
+explicit `if (resp)` check.
+
+For many fields, populate a struct in a single pass via
+`NOTE_FIELDS`:
+
+```cpp
+struct Readings {
+    float temp;
+    int32_t humidity;
+    bool alarm;
+    NOTE_FIELDS(temp, humidity, alarm)
+};
+
+Readings r{};
+note::JsonView(*resp).object("body").into(r);
+```
+
+> **Caveat:** `JsonView` is a substring scanner, not a full JSON
+> parser. It does not decode string escape sequences (`\n`, `\"`,
+> `\uXXXX`) and is not safe against adversarial input. Use SAX when
+> you need robust parsing.
+
+See `tools/binary-size-comparison/` in the repo for the full
+comparison sources (environments `avr-notecpp-raw` for SAX and
+`avr-notecpp-scan` for `JsonView`).
+
 See [feature flags](../../feature-flags.md) for all compile-time options.

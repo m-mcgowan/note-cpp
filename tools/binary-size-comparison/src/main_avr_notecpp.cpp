@@ -6,11 +6,16 @@
 // API_STYLE selects the developer experience vs code size trade-off:
 //   1 = Api groups:   api.hub.set().product(...).execute()
 //   2 = Direct:       nc.execute(req)
-//   3 = Raw JSON:     JsonBuf + transport.transact_raw()
+//   3 = Raw JSON:     JsonBuf + transact_dispatch + custom JsonSink  (SAX — low RAM)
+//   4 = Raw JSON:     JsonBuf + transact_raw + JsonView               (no SAX — low flash)
 
 // Guarded by USE_NOTECPP_AVR to prevent accidental compilation
 // if src_filter config changes — defensive + self-documenting.
 #ifdef USE_NOTECPP_AVR
+
+#ifndef API_STYLE
+#define API_STYLE 1
+#endif
 
 // Targeted includes — note.hpp pulls in arduino.hpp which unconditionally
 // includes Wire.h (I2C). This serial-only app doesn't need Wire, and on AVR
@@ -20,6 +25,11 @@
 #include <note/request_set.hpp>
 #include <note/arduino/begin.hpp>
 #include <note/json_buf.hpp>
+#if API_STYLE == 3
+#include <note/json_sax.hpp>  // JsonSink, parse_int, parse_double
+#elif API_STYLE == 4
+#include <note/json_view.hpp> // JsonView (no SAX parser)
+#endif
 
 struct Readings {
     float temperature;
@@ -44,10 +54,12 @@ alignas(4) static char arena_buf[kArenaSize];
 static note::MonotonicArena arena(arena_buf);
 
 using SerialNotecard = note::StaticNotecard<note::arduino::SerialTransportStack<>>;
+#if defined(ARDUINO_AVR_MEGA2560)
+// Mega has multiple UARTs; use Serial1 for the Notecard to leave Serial
+// available as a console (and to side-step the USB-Serial bridge on pins 0/1).
+static SerialNotecard nc(note::arena_allocator(arena), Serial1, 9600);
+#else
 static SerialNotecard nc(note::arena_allocator(arena), Serial, 9600);
-
-#ifndef API_STYLE
-#define API_STYLE 1
 #endif
 
 #if API_STYLE == 1
@@ -55,6 +67,9 @@ static note::Api<SerialNotecard> api(nc);
 #endif
 
 void setup() {
+#if defined(ARDUINO_AVR_MEGA2560)
+    Serial.begin(115200);  // debug console on Mega (Notecard is on Serial1)
+#endif
 #if API_STYLE == 1
     api.hub.set()
         .product("com.example.size-test")
@@ -85,8 +100,9 @@ void setup() {
         }));
         nc.execute(req);
     }
-#elif API_STYLE == 3
-    // Raw JSON via JsonBuf + transact_raw()
+#elif API_STYLE == 3 || API_STYLE == 4
+    // Raw JSON via JsonBuf + transact_raw() — same request building for
+    // both SAX-sink (3) and JsonView-scan (4) response-parse strategies.
     {
         note::JsonBuf<128> req;
         req.add("req", "hub.set");
@@ -123,15 +139,25 @@ void loop() {
 #endif
 #if API_STYLE <= 2
     float temperature = temp ? temp.value : 0;
-#else
-    float temperature = 0;
+#elif API_STYLE == 3
+    float temperature = 0;  // raw+SAX: response parsing done via BodySink in note.get only
     {
         note::JsonBuf<64> req;
         req.add("req", "card.temp");
         req.close();
         char rsp[128];
         nc.stack().transport.transact_raw(req.view(), rsp, sizeof(rsp), 10000);
-        // In raw mode, response parsing is manual — omitted for size comparison
+    }
+#else   // API_STYLE == 4
+    float temperature = 0;
+    {
+        note::JsonBuf<64> req;
+        req.add("req", "card.temp");
+        req.close();
+        char rsp[64];
+        temperature = note::JsonView(
+            nc.stack().transport.transact_raw(req.view(), rsp, sizeof(rsp), 10000)
+        ).get_float("value");
     }
 #endif
 
@@ -172,7 +198,7 @@ void loop() {
 #endif
 #if API_STYLE <= 2
     bool connected = status && status.connected;
-#else
+#elif API_STYLE == 3
     bool connected = false;
     {
         note::JsonBuf<64> req;
@@ -180,6 +206,17 @@ void loop() {
         req.close();
         char rsp[128];
         nc.stack().transport.transact_raw(req.view(), rsp, sizeof(rsp), 10000);
+    }
+#else   // API_STYLE == 4
+    bool connected = false;
+    {
+        note::JsonBuf<64> req;
+        req.add("req", "card.status");
+        req.close();
+        char rsp[64];
+        connected = note::JsonView(
+            nc.stack().transport.transact_raw(req.view(), rsp, sizeof(rsp), 10000)
+        ).get_bool("connected");
     }
 #endif
 
@@ -191,7 +228,7 @@ void loop() {
 #endif
 #if API_STYLE <= 2
     double voltage = volt ? volt.value : 0;
-#else
+#elif API_STYLE == 3
     double voltage = 0;
     {
         note::JsonBuf<64> req;
@@ -199,6 +236,17 @@ void loop() {
         req.close();
         char rsp[128];
         nc.stack().transport.transact_raw(req.view(), rsp, sizeof(rsp), 10000);
+    }
+#else   // API_STYLE == 4
+    double voltage = 0;
+    {
+        note::JsonBuf<64> req;
+        req.add("req", "card.voltage");
+        req.close();
+        char rsp[64];
+        voltage = note::JsonView(
+            nc.stack().transport.transact_raw(req.view(), rsp, sizeof(rsp), 10000)
+        ).get_double("value");
     }
 #endif
 
@@ -214,14 +262,49 @@ void loop() {
         auto note_in = nc.execute(req);
         (void)note_in;
     }
-#else
+#elif API_STYLE == 3
+    // Raw JSON + custom JsonSink: transact_dispatch streams the response
+    // through the SAX parser. Lowest RAM (no response buffer), but pulls
+    // in the full SAX machinery (~8 KB flash on AVR).
+    {
+        struct BodySink : note::JsonSink {
+            Readings* out;
+            int depth = 0;
+            void on_object_begin(note::string_view k) override {
+                if (k == "body") depth = 1;
+                else if (depth) ++depth;
+            }
+            void on_object_end(note::string_view) override { if (depth) --depth; }
+            void on_number(note::string_view k, note::string_view raw) override {
+                if (depth != 1) return;
+                if (k == "temperature") out->temperature = static_cast<float>(note::parse_double(raw));
+                else if (k == "humidity") out->humidity = static_cast<int32_t>(note::parse_int(raw));
+            }
+        };
+        BodySink sink; sink.out = &note_body;
+        note::detail::NcErrorCapture err;
+        nc.stack().transport.transact_dispatch(
+            [](note::JsonBuilder& b, void*) {
+                b.add("req", "note.get");
+                b.add("file", "config.qi");
+            }, nullptr,
+            note::make_sax_dispatch(sink), 10000, err);
+    }
+#else   // API_STYLE == 4
+    // Raw JSON + JsonView: buffer the response, scan known fields out
+    // of the buffered string. No SAX parser — ~8 KB flash cheaper than
+    // STYLE 3, at the cost of a response buffer in RAM.
     {
         note::JsonBuf<64> req;
         req.add("req", "note.get");
         req.add("file", "config.qi");
         req.close();
-        char rsp[256];
-        nc.stack().transport.transact_raw(req.view(), rsp, sizeof(rsp), 10000);
+        char rsp[128];
+        auto body = note::JsonView(
+            nc.stack().transport.transact_raw(req.view(), rsp, sizeof(rsp), 10000)
+        ).object("body");
+        note_body.temperature = body.get_float("temperature");
+        note_body.humidity    = static_cast<int32_t>(body.get_int("humidity"));
     }
 #endif
 
@@ -243,6 +326,16 @@ void loop() {
     (void)connected;
     (void)voltage;
     (void)note_body;
+
+#if defined(ARDUINO_AVR_MEGA2560)
+    // On Mega, Serial is free (Notecard is on Serial1). Print extracted
+    // values so end-to-end scan/parse correctness can be observed in Wokwi.
+    if (!Serial) Serial.begin(115200);
+    Serial.print(F("temp=")); Serial.print(note_body.temperature);
+    Serial.print(F(" humidity=")); Serial.print(note_body.humidity);
+    Serial.print(F(" voltage=")); Serial.print(voltage);
+    Serial.print(F(" connected=")); Serial.println(connected);
+#endif
 
     delay(60000);
 }

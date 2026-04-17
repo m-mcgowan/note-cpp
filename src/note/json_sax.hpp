@@ -14,6 +14,7 @@
 
 #include "string_pool.hpp"
 #include "types.hpp"
+#include "detail/number_parse.hpp"
 
 #include <cstddef>
 #include <cstdio>
@@ -568,58 +569,6 @@ private:
 };
 
 }  // namespace detail
-
-// Helpers for parsing number strings delivered via on_number().
-inline json_int_t parse_int(string_view raw, json_int_t def = 0) {
-    if (raw.empty()) return def;
-    json_int_t result = 0;
-    bool negative = false;
-    size_t i = 0;
-    if (raw[0] == '-') { negative = true; ++i; }
-    for (; i < raw.size(); ++i) {
-        char c = raw[i];
-        if (c < '0' || c > '9') {
-            if (c == '.') break;  // truncate decimal
-            return def;
-        }
-        result = result * 10 + (c - '0');
-    }
-    return negative ? -result : result;
-}
-
-inline double parse_double(string_view raw, double def = 0.0) {
-    if (raw.empty()) return def;
-    // Simple parse for JSON numbers — handles integer, decimal, exponent.
-    double result = 0.0;
-    bool negative = false;
-    size_t i = 0;
-    if (raw[0] == '-') { negative = true; ++i; }
-    for (; i < raw.size() && raw[i] != '.' && raw[i] != 'e' && raw[i] != 'E'; ++i)
-        result = result * 10.0 + (raw[i] - '0');
-    if (i < raw.size() && raw[i] == '.') {
-        ++i;
-        double frac = 0.1;
-        for (; i < raw.size() && raw[i] != 'e' && raw[i] != 'E'; ++i) {
-            result += (raw[i] - '0') * frac;
-            frac *= 0.1;
-        }
-    }
-    if (i < raw.size() && (raw[i] == 'e' || raw[i] == 'E')) {
-        ++i;
-        bool neg_exp = false;
-        if (i < raw.size() && (raw[i] == '+' || raw[i] == '-')) {
-            neg_exp = (raw[i] == '-');
-            ++i;
-        }
-        int exp = 0;
-        for (; i < raw.size() && raw[i] >= '0' && raw[i] <= '9'; ++i)
-            exp = exp * 10 + (raw[i] - '0');
-        double factor = 1.0;
-        for (int j = 0; j < exp; ++j) factor *= 10.0;
-        result = neg_exp ? result / factor : result * factor;
-    }
-    return negative ? -result : result;
-}
 
 // Parse a JSON object and deliver events to sink.
 // Returns empty string_view on success, error message on failure.

@@ -1,0 +1,8 @@
+[wokwi]
+version = 1
+firmware = '.pio/build/wokwi-notecpp/firmware.hex'
+elf = '.pio/build/wokwi-notecpp/firmware.elf'
+
+[[chip]]
+name = 'notecard-mock'
+binary = 'chips/notecard-mock.wasm'

@@ -73,6 +73,19 @@ public:
     constexpr bool        get_bool  (string_view key, bool def = false)        const { return scan::get_bool  (sv_, key, def); }
     constexpr string_view get_str   (string_view key, string_view def = {})    const { return scan::get_str   (sv_, key, def); }
 
+    // Flash-key overloads (PROGMEM on AVR). See json_scan.hpp and
+    // docs/internal/avr-flash-strings.md for the design rationale.
+    inline string_view field (FlashString key) const { return scan::field (sv_, key); }
+    inline JsonView    object(FlashString key) const { return JsonView{scan::object(sv_, key)}; }
+    inline string_view array (FlashString key) const { return scan::array (sv_, key); }
+    template<class T>
+    inline T           get   (FlashString key, T def) const { return scan::get<T>(sv_, key, def); }
+    inline json_int_t  get_int   (FlashString key, json_int_t def = 0)    const { return scan::get_int   (sv_, key, def); }
+    inline double      get_double(FlashString key, double def = 0.0)      const { return scan::get_double(sv_, key, def); }
+    inline float       get_float (FlashString key, float def = 0.0f)      const { return scan::get_float (sv_, key, def); }
+    inline bool        get_bool  (FlashString key, bool def = false)      const { return scan::get_bool  (sv_, key, def); }
+    inline string_view get_str   (FlashString key, string_view def = {})  const { return scan::get_str   (sv_, key, def); }
+
     /// Single-pass visitor over top-level pairs. See scan::for_each.
     template<class Visitor>
     constexpr void for_each(Visitor&& visitor) const {

@@ -24,6 +24,7 @@
 #include <note/types.hpp>
 #include <note/detail/number_parse.hpp>
 #include <note/field_desc.hpp>
+#include <note/progmem.hpp>
 
 #include <type_traits>
 
@@ -48,6 +49,22 @@ constexpr bool matches_at(string_view haystack, size_t pos, string_view needle) 
     if (pos + needle.size() > haystack.size()) return false;
     for (size_t i = 0; i < needle.size(); ++i) {
         if (haystack[pos + i] != needle[i]) return false;
+    }
+    return true;
+}
+
+// Prefix comparison with a FlashString needle. On AVR the needle bytes
+// live in program memory, so each byte is read via pgm_read_byte; on
+// non-Harvard platforms the macro collapses to a plain load.
+inline bool matches_at(string_view haystack, size_t pos, FlashString needle) {
+    if (pos + needle.size() > haystack.size()) return false;
+    for (size_t i = 0; i < needle.size(); ++i) {
+#if NOTE_PROGMEM
+        char c = static_cast<char>(pgm_read_byte(needle.ptr + i));
+#else
+        char c = needle.ptr[i];
+#endif
+        if (haystack[pos + i] != c) return false;
     }
     return true;
 }
@@ -100,10 +117,16 @@ constexpr size_t value_end(string_view s, size_t pos) {
 // Find the value associated with `key`. Returns the offset of the
 // first non-whitespace character of the value, or string_view::npos.
 //
+// Templated on Key so the same loop serves `string_view` (RAM) keys
+// and `FlashString` (PROGMEM) keys — overload resolution on
+// `matches_at` picks the right byte-comparison path. Both key types
+// expose `.size()`.
+//
 // Scans forward skipping over string values so keys inside string
 // bodies are not false-matched. Does NOT track object/array depth —
 // the first `"key":` at any depth wins.
-constexpr size_t find_value(string_view json, string_view key) {
+template<class Key>
+constexpr size_t find_value(string_view json, Key key) {
     size_t pos = 0;
     while (pos < json.size()) {
         // Find next opening quote.
@@ -322,5 +345,62 @@ constexpr double      get_double(string_view json, string_view key, double def =
 constexpr float       get_float (string_view json, string_view key, float def = 0.0f)          { return get<float>(json, key, def); }
 constexpr bool        get_bool  (string_view json, string_view key, bool def = false)          { return get<bool>(json, key, def); }
 constexpr string_view get_str   (string_view json, string_view key, string_view def = {})      { return get<string_view>(json, key, def); }
+
+// ---------------------------------------------------------------------------
+// Flash-key overloads (AVR-friendly) — keys stored in program memory.
+//
+// Same semantics as the string_view overloads above; the key is read
+// byte-at-a-time from flash via `pgm_read_byte` on AVR. On non-Harvard
+// platforms the read collapses to a plain load (zero overhead). See
+// docs/internal/avr-flash-strings.md for the design rationale and
+// breakeven math.
+// ---------------------------------------------------------------------------
+
+inline string_view field(string_view json, FlashString key) {
+    size_t vs = detail::find_value(json, key);
+    if (vs == string_view::npos) return {};
+    size_t ve = detail::value_end(json, vs);
+    return string_view(json.data() + vs, ve - vs);
+}
+
+inline string_view object(string_view json, FlashString key) {
+    auto v = field(json, key);
+    if (v.empty() || v.front() != '{') return {};
+    return v;
+}
+
+inline string_view array(string_view json, FlashString key) {
+    auto v = field(json, key);
+    if (v.empty() || v.front() != '[') return {};
+    return v;
+}
+
+template<class T>
+inline T get(string_view json, FlashString key, T def) {
+    auto v = field(json, key);
+    if (v.empty()) return def;
+    if constexpr (std::is_same_v<T, bool>) {
+        if (v == "true") return true;
+        if (v == "false") return false;
+        return def;
+    } else if constexpr (std::is_integral_v<T>) {
+        return static_cast<T>(parse_int(v, static_cast<json_int_t>(def)));
+    } else if constexpr (std::is_floating_point_v<T>) {
+        return static_cast<T>(parse_double(v, static_cast<double>(def)));
+    } else if constexpr (std::is_same_v<T, string_view>) {
+        if (v.size() >= 2 && v.front() == '"' && v.back() == '"') {
+            return string_view(v.data() + 1, v.size() - 2);
+        }
+        return def;
+    } else {
+        static_assert(!std::is_same_v<T, T>, "scan::get: unsupported T");
+    }
+}
+
+inline json_int_t  get_int   (string_view json, FlashString key, json_int_t def = 0)        { return get<json_int_t>(json, key, def); }
+inline double      get_double(string_view json, FlashString key, double def = 0.0)          { return get<double>(json, key, def); }
+inline float       get_float (string_view json, FlashString key, float def = 0.0f)          { return get<float>(json, key, def); }
+inline bool        get_bool  (string_view json, FlashString key, bool def = false)          { return get<bool>(json, key, def); }
+inline string_view get_str   (string_view json, FlashString key, string_view def = {})      { return get<string_view>(json, key, def); }
 
 } // namespace note::scan

@@ -28,8 +28,32 @@ namespace note {
 /// A string stored in program memory (flash). On non-Harvard platforms,
 /// this is just a regular string pointer — zero overhead.
 struct FlashString {
-    const char* ptr;
-    size_t len;
+    const char* ptr = nullptr;
+    size_t len = 0;
+
+    constexpr FlashString() = default;
+    constexpr FlashString(const char* p, size_t l) : ptr(p), len(l) {}
+
+#ifdef ARDUINO
+    /// Implicit conversion from an Arduino `F("...")` expression.
+    /// Lets scan/JsonView flash-key overloads accept `F()` directly
+    /// without an explicit `note::flash()` wrapper.
+    ///
+    /// Marked always_inline: without it GCC emits the ctor out-of-line,
+    /// costing ~100 B of flash across a handful of call sites.
+    __attribute__((always_inline)) inline
+    FlashString(const __FlashStringHelper* f)
+        : ptr(reinterpret_cast<const char*>(f)),
+#if NOTE_PROGMEM
+          len(strlen_P(reinterpret_cast<const char*>(f)))
+#else
+          len(strlen(reinterpret_cast<const char*>(f)))
+#endif
+    {}
+#endif
+
+    /// Length in bytes (aliases `len` for string_view-like interface).
+    constexpr size_t size() const { return len; }
 
     /// Compare against a RAM string_view.
     bool operator==(string_view sv) const {
@@ -64,6 +88,20 @@ template<size_t N>
 constexpr FlashString flash(const char (&s)[N]) {
     return {s, N - 1};
 }
+
+#ifdef ARDUINO
+/// Build a FlashString from an Arduino `F("...")` expression. `F()`
+/// always forces the string into PROGMEM, so this path is safe by
+/// construction (no PROGMEM-declaration footgun).
+inline FlashString flash(const __FlashStringHelper* f) {
+    const char* p = reinterpret_cast<const char*>(f);
+#if NOTE_PROGMEM
+    return {p, strlen_P(p)};
+#else
+    return {p, strlen(p)};
+#endif
+}
+#endif
 
 /// Write a flash key + value to a JsonBuilder.
 /// Copies the key to the stack on Harvard architectures.

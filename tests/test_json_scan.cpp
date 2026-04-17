@@ -366,6 +366,48 @@ TEST_CASE("JsonView constructs from std::optional<string_view>", "[json_view]") 
     REQUIRE(note::JsonView(empty).empty());
 }
 
+// ---------------------------------------------------------------------------
+// Flash-string key overloads — keys stored in flash (PROGMEM on AVR),
+// verified here by passing a note::FlashString directly. On host builds
+// this exercises the same code path that Arduino F("...") hits via the
+// __FlashStringHelper* overload.
+// ---------------------------------------------------------------------------
+static constexpr char k_temp[]     = "temperature";
+static constexpr char k_humidity[] = "humidity";
+static constexpr char k_body[]     = "body";
+static constexpr char k_missing[]  = "missing";
+
+TEST_CASE("scan::field accepts FlashString key", "[json_scan][flash]") {
+    auto v = note::scan::field(R"({"temperature":21.5,"humidity":60})",
+                               note::flash(k_temp));
+    REQUIRE(v == "21.5");
+}
+
+TEST_CASE("scan::object accepts FlashString key", "[json_scan][flash]") {
+    auto v = note::scan::object(R"({"body":{"a":1}})", note::flash(k_body));
+    REQUIRE(v == R"({"a":1})");
+}
+
+TEST_CASE("scan::get_float accepts FlashString key", "[json_scan][flash]") {
+    auto v = note::scan::get_float(R"({"temperature":4.2})",
+                                   note::flash(k_temp));
+    REQUIRE(v == Approx(4.2f));
+}
+
+TEST_CASE("scan::get_int accepts FlashString key + default", "[json_scan][flash]") {
+    auto hit  = note::scan::get_int(R"({"humidity":60})",  note::flash(k_humidity));
+    auto miss = note::scan::get_int(R"({"humidity":60})", note::flash(k_missing), 99);
+    REQUIRE(hit  == 60);
+    REQUIRE(miss == 99);
+}
+
+TEST_CASE("JsonView chains with flash keys", "[json_view][flash]") {
+    note::JsonView root(R"({"body":{"temperature":21.5,"humidity":60}})");
+    auto body = root.object(note::flash(k_body));
+    REQUIRE(body.get_float(note::flash(k_temp))    == Approx(21.5f));
+    REQUIRE(body.get_int  (note::flash(k_humidity)) == 60);
+}
+
 TEST_CASE("JsonView::for_each visits pairs", "[json_view]") {
     note::JsonView v(R"({"a":1,"b":2})");
     int n = 0;

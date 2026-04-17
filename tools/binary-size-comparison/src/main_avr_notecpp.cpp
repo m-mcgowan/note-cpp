@@ -29,6 +29,19 @@
 #include <note/json_sax.hpp>  // JsonSink, parse_int, parse_double
 #elif API_STYLE == 4
 #include <note/json_view.hpp> // JsonView (no SAX parser)
+#include <note/progmem.hpp>   // FlashString / note::flash
+#endif
+
+// K(s) — "scan key" helper. With USE_FLASH_KEYS=1, uses F(s) so the
+// key lives in PROGMEM. FlashString has an implicit conversion from
+// `const __FlashStringHelper*`, so the F() result routes straight to
+// the flash-key overloads without an explicit `note::flash()` wrapper.
+// Without USE_FLASH_KEYS, the literal is a plain string_view (in .data —
+// RAM-backed on AVR).
+#if defined(USE_FLASH_KEYS) && USE_FLASH_KEYS
+#define K(s) F(s)
+#else
+#define K(s) s
 #endif
 
 struct Readings {
@@ -157,7 +170,7 @@ void loop() {
         char rsp[64];
         temperature = note::JsonView(
             nc.stack().transport.transact_raw(req.view(), rsp, sizeof(rsp), 10000)
-        ).get_float("value");
+        ).get_float(K("value"));
     }
 #endif
 
@@ -216,7 +229,7 @@ void loop() {
         char rsp[64];
         connected = note::JsonView(
             nc.stack().transport.transact_raw(req.view(), rsp, sizeof(rsp), 10000)
-        ).get_bool("connected");
+        ).get_bool(K("connected"));
     }
 #endif
 
@@ -246,7 +259,7 @@ void loop() {
         char rsp[64];
         voltage = note::JsonView(
             nc.stack().transport.transact_raw(req.view(), rsp, sizeof(rsp), 10000)
-        ).get_double("value");
+        ).get_double(K("value"));
     }
 #endif
 
@@ -302,9 +315,9 @@ void loop() {
         char rsp[128];
         auto body = note::JsonView(
             nc.stack().transport.transact_raw(req.view(), rsp, sizeof(rsp), 10000)
-        ).object("body");
-        note_body.temperature = body.get_float("temperature");
-        note_body.humidity    = static_cast<int32_t>(body.get_int("humidity"));
+        ).object(K("body"));
+        note_body.temperature = body.get_float(K("temperature"));
+        note_body.humidity    = static_cast<int32_t>(body.get_int(K("humidity")));
     }
 #endif
 

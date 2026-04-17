@@ -185,7 +185,8 @@ on ATmega328P (Arduino Uno, 32 KB flash, 2 KB RAM):
 | **note-cpp** typed API groups | 24,730 B (76.7%) | 836 B | 0 |
 | **note-cpp** typed direct (`nc.execute(req)`) | 24,520 B (76.0%) | 804 B | 0 |
 | **note-cpp** raw JSON + SAX sink | 20,528 B (63.6%) | 848 B | 0 |
-| **note-cpp** raw JSON + `JsonView` scan | **11,440 B (35.5%)** | 652 B | 0 |
+| **note-cpp** raw JSON + `JsonView` scan (RAM keys) | 11,440 B (35.5%) | 756 B | 0 |
+| **note-cpp** raw JSON + `JsonView` scan (flash keys) | **11,342 B (35.2%)** | **740 B** | 0 |
 
 All note-cpp variants use zero heap. Two "raw JSON" styles are
 available for constrained targets — they represent opposite ends of
@@ -271,6 +272,75 @@ int32_t hum  = body.get_int("humidity");
 call errored, `body` is an empty view and the subsequent lookups
 return their defaults, so best-effort extraction doesn't need an
 explicit `if (resp)` check.
+
+##### Saving RAM on AVR — flash-resident keys
+
+On Arduino AVR, every string literal you pass as a key (e.g.
+`"temperature"`) lives in both flash **and** RAM — AVR can't
+execute from `.rodata`, so initialized literals occupy a copy in
+each. On a 2 KB Uno, a handful of 12-character keys adds up.
+
+`JsonView` and `note::scan::*` accept keys from program memory,
+letting you keep them out of RAM:
+
+```cpp
+#include <note/json_view.hpp>
+#include <note/progmem.hpp>
+
+// Arduino ergonomic form — F("...") forces the string into PROGMEM
+// and converts implicitly to note::FlashString at the call site:
+float t = body.get_float(F("temperature"), 0.0f);
+int32_t h = body.get_int  (F("humidity"),    0);
+
+// Or declare reusable flash strings portably:
+static const char k_temp[]     NOTE_FLASH_ATTR = "temperature";
+static const char k_humidity[] NOTE_FLASH_ATTR = "humidity";
+
+float t2 = body.get_float(note::flash(k_temp),     0.0f);
+int32_t h2 = body.get_int (note::flash(k_humidity), 0);
+```
+
+You never have to switch — **plain string literals keep working**
+via the RAM overload, and the two styles can be mixed freely:
+
+```cpp
+// Also valid — the literal lives in RAM, compare is a plain byte match:
+float t = body.get_float("temperature", 0.0f);
+
+// Runtime-generated keys go through the RAM path automatically:
+char key[24];
+snprintf(key, sizeof(key), "sensor_%u", idx);
+float v = body.get_float(key, 0.0f);
+```
+
+###### When do I need `note::flash()`?
+
+| How you pass the key | What happens | Wrapper needed? |
+|---|---|---|
+| `"literal"` | `string_view` overload (RAM compare) | — (safe, unoptimized) |
+| `char buf[N]` (runtime) | `string_view` overload (RAM compare) | — |
+| `F("literal")` | Implicit conversion → `FlashString` overload (`pgm_read_byte`) | **No** |
+| `static const char k[] NOTE_FLASH_ATTR = "..."` | Would pick `string_view` overload → reads wrong bytes on AVR | **Yes** — wrap as `note::flash(k)` |
+| `note::flash(F("..."))` | Same as `F()` direct, just more typing | Works, but redundant |
+
+**Summary rule:** wrap `NOTE_FLASH_ATTR`-declared arrays with
+`note::flash(...)` to route them to the flash overload. Everywhere
+else the right overload is picked automatically.
+
+The flash-key overloads exist on both `note::JsonView` and
+`note::scan::*`. On non-AVR Arduino cores (ESP32, SAMD, RP2040,
+etc.) flash keys compile to a plain pointer load — zero runtime
+overhead, no benefit either. Measured on the comparison sketch
+(ATmega328P, 5 scan keys, `F()` form): **−16 B RAM, −98 B flash**
+vs the RAM-key baseline. Scan keys that are also used as JsonBuf
+request keys stay in `.data` regardless — only scan-exclusive
+keys move to flash.
+
+> Footgun: never call `note::flash("bare literal")`. A literal
+> without `F()` or `NOTE_FLASH_ATTR` lives in RAM, but `note::flash()`
+> tells the scanner to read it from flash. On AVR the scanner then
+> reads garbage from flash at the RAM-side address. `F()` and
+> `NOTE_FLASH_ATTR` are safe by construction.
 
 For many fields, populate a struct in a single pass via
 `NOTE_FIELDS`:

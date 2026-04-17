@@ -21,7 +21,8 @@ namespace note {
 /// Field type for request serialization.
 enum class ReqFieldType : uint8_t {
     Bool,
-    Int,   // json_int_t (int64_t default, int32_t under NOTE_INT32_MATH)
+    Int,     // json_int_t (int64_t default, int32_t under NOTE_INT32_MATH)
+    Int32,   // int32_t — unit types (Seconds, Minutes) that always store 32-bit
     Double,
     String,
 };
@@ -81,6 +82,20 @@ inline void generic_build(JsonBuilder& b, const void* req,
 #endif
                 char kbuf[32];
                 b.add(key.to_view(kbuf), *f);
+            }
+            break;
+        }
+        case ReqFieldType::Int32: {
+            const auto& f = *reinterpret_cast<const std::optional<int32_t>*>(base);
+            if (f) {
+                FlashString key{d.name, 0};
+#if NOTE_PROGMEM
+                key.len = strlen_P(d.name);
+#else
+                key.len = __builtin_strlen(d.name);
+#endif
+                char kbuf[32];
+                b.add(key.to_view(kbuf), json_int_t(*f));
             }
             break;
         }

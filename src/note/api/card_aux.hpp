@@ -424,7 +424,7 @@ struct CardAux {
         note::ResponseField<note::json_int_t> seconds{};
         /// When in AUX `gpio` mode, and if `count` is enabled on an AUX pin,
         /// the time that counting started.
-        note::ResponseField<note::json_int_t> time{};
+        note::ResponseField<note::json_time_t> time{};
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
@@ -484,7 +484,7 @@ struct CardAux {
             }
             NOTE_SINK_NOINLINE void on_int(::note::string_view k_, ::note::json_int_t v_) {
                 if (note::flash(keys_::rsp_seconds) == k_) { rsp.seconds = v_; return; }
-                if (note::flash(keys_::rsp_time) == k_) { rsp.time = v_; return; }
+                if (note::flash(keys_::rsp_time) == k_) { rsp.time = static_cast<note::json_time_t>(v_); return; }
             }
             NOTE_SINK_NOINLINE void reset() {
                 rsp = Response{};

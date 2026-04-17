@@ -144,7 +144,7 @@ TEST_CASE("note::api::CardAttn::Request request builder") {
 #endif
     req.on(true);
     req.payload(note::string_view("x-payload"));
-    req.seconds(note::json_int_t{42});
+    req.seconds(note::json_int_t(42));
     req.start(true);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
     req.verify(true);
@@ -183,7 +183,7 @@ TEST_CASE("note::api::CardAttn::Request request builder") {
 #endif
     req["on"] = true;
     req["payload"] = note::string_view("x-payload");
-    req["seconds"] = note::json_int_t{42};
+    req["seconds"] = note::json_int_t(42);
     req["start"] = true;
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
     req["verify"] = true;
@@ -208,7 +208,7 @@ TEST_CASE("note::api::CardAttn::Request response parsing") {
 #endif
     reader->set("payload", std::string("x-payload"));
     reader->set("set", true);
-    reader->set("time", note::json_int_t{42});
+    reader->set("time", note::json_int_t(42));
     auto rsp = note::api::CardAttn::Request::Response::parse(std::move(reader));
     REQUIRE(rsp.files.size() == 2);
     REQUIRE(rsp.files[0] == "x-files-a");
@@ -281,7 +281,7 @@ TEST_CASE("note::api::CardAttn::Arm request builder") {
     req.files.add(note::string_view("x-files-item"));
     req.triggers(note::string_view("auxgpio"));
     req.on(true);
-    req.seconds(note::json_int_t{42});
+    req.seconds(note::json_int_t(42));
     req.execute();
     REQUIRE(h.last_req.find("\"files\":[\"x-files-item\"]") != std::string::npos);
     REQUIRE(h.last_req.find("\"mode\"") != std::string::npos);
@@ -304,7 +304,7 @@ TEST_CASE("note::api::CardAttn::Arm request builder") {
     // Cover known-key routing in operator[] (true branch for each routed field).
     req["mode"] = note::string_view("auxgpio");
     req["on"] = true;
-    req["seconds"] = note::json_int_t{42};
+    req["seconds"] = note::json_int_t(42);
     // Cover command()
     req.command();
     // Cover streaming transport execute path in Notecard::execute().
@@ -374,7 +374,7 @@ TEST_CASE("note::api::CardAttn::Rearm request builder") {
     req.files.add(note::string_view("x-files-item"));
     req.triggers(note::string_view("auxgpio"));
     req.on(true);
-    req.seconds(note::json_int_t{42});
+    req.seconds(note::json_int_t(42));
     req.execute();
     REQUIRE(h.last_req.find("\"files\":[\"x-files-item\"]") != std::string::npos);
     REQUIRE(h.last_req.find("\"mode\"") != std::string::npos);
@@ -397,7 +397,7 @@ TEST_CASE("note::api::CardAttn::Rearm request builder") {
     // Cover known-key routing in operator[] (true branch for each routed field).
     req["mode"] = note::string_view("auxgpio");
     req["on"] = true;
-    req["seconds"] = note::json_int_t{42};
+    req["seconds"] = note::json_int_t(42);
     // Cover command()
     req.command();
     // Cover streaming transport execute path in Notecard::execute().
@@ -464,7 +464,7 @@ TEST_CASE("note::api::CardAttn::Watchdog request builder") {
     auto req = h.api.card.attn().watchdog();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
-    req.seconds(note::json_int_t{42});
+    req.seconds(note::json_int_t(42));
     req.execute();
     REQUIRE(h.last_req.find("\"seconds\":42") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
@@ -482,7 +482,7 @@ TEST_CASE("note::api::CardAttn::Watchdog request builder") {
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover known-key routing in operator[] (true branch for each routed field).
-    req["seconds"] = note::json_int_t{42};
+    req["seconds"] = note::json_int_t(42);
     // Cover command()
     req.command();
     // Cover streaming transport execute path in Notecard::execute().
@@ -501,7 +501,7 @@ TEST_CASE("note::api::CardAttn::Sleep request builder") {
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.payload(note::string_view("x-payload"));
-    req.seconds(note::json_int_t{42});
+    req.seconds(note::json_int_t(42));
     req.execute();
     REQUIRE(h.last_req.find("\"payload\":\"x-payload\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"seconds\":42") != std::string::npos);
@@ -521,7 +521,7 @@ TEST_CASE("note::api::CardAttn::Sleep request builder") {
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover known-key routing in operator[] (true branch for each routed field).
     req["payload"] = note::string_view("x-payload");
-    req["seconds"] = note::json_int_t{42};
+    req["seconds"] = note::json_int_t(42);
     // Cover command()
     req.command();
     // Cover streaming transport execute path in Notecard::execute().
@@ -567,7 +567,7 @@ TEST_CASE("note::api::CardAttn::Retrieve request builder") {
 TEST_CASE("note::api::CardAttn::Retrieve response parsing") {
     auto reader = std::make_unique<note::test::PopulatedJsonReader>();
     reader->set("payload", std::string("x-payload"));
-    reader->set("time", note::json_int_t{42});
+    reader->set("time", note::json_int_t(42));
     auto rsp = note::api::CardAttn::Retrieve::Response::parse(std::move(reader));
     REQUIRE(rsp.payload == "x-payload");
     REQUIRE(rsp.time == 42);
@@ -828,7 +828,7 @@ TEST_CASE("note::api::CardAux request builder") {
     req.connected(true);
 #endif
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
-    req.count(note::json_int_t{42});
+    req.count(note::json_int_t(42));
 #endif
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1) || !defined(NOTE_API_STRICT)
     req.file(note::string_view("x-file"));
@@ -837,18 +837,18 @@ TEST_CASE("note::api::CardAux request builder") {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
     req.limit(true);
 #endif
-    req.max(note::json_int_t{42});
+    req.max(note::json_int_t(42));
     req.mode(note::string_view("dfu"));
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
-    req.ms(note::json_int_t{42});
+    req.ms(note::json_int_t(42));
 #endif
-    req.offset(note::json_int_t{42});
+    req.offset(note::json_int_t(42));
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
-    req.rate(note::json_int_t{42});
+    req.rate(note::json_int_t(42));
 #endif
-    req.seconds(note::json_int_t{42});
+    req.seconds(note::json_int_t(42));
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
-    req.sensitivity(note::json_int_t{42});
+    req.sensitivity(note::json_int_t(42));
 #endif
     req.start(true);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
@@ -906,7 +906,7 @@ TEST_CASE("note::api::CardAux request builder") {
     req["connected"] = true;
 #endif
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
-    req["count"] = note::json_int_t{42};
+    req["count"] = note::json_int_t(42);
 #endif
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1) || !defined(NOTE_API_STRICT)
     req["file"] = note::string_view("x-file");
@@ -915,18 +915,18 @@ TEST_CASE("note::api::CardAux request builder") {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
     req["limit"] = true;
 #endif
-    req["max"] = note::json_int_t{42};
+    req["max"] = note::json_int_t(42);
     req["mode"] = note::string_view("dfu");
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
-    req["ms"] = note::json_int_t{42};
+    req["ms"] = note::json_int_t(42);
 #endif
-    req["offset"] = note::json_int_t{42};
+    req["offset"] = note::json_int_t(42);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
-    req["rate"] = note::json_int_t{42};
+    req["rate"] = note::json_int_t(42);
 #endif
-    req["seconds"] = note::json_int_t{42};
+    req["seconds"] = note::json_int_t(42);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
-    req["sensitivity"] = note::json_int_t{42};
+    req["sensitivity"] = note::json_int_t(42);
 #endif
     req["start"] = true;
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
@@ -950,8 +950,8 @@ TEST_CASE("note::api::CardAux response parsing") {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1) || !defined(NOTE_API_STRICT)
     reader->set("power", true);
 #endif
-    reader->set("seconds", note::json_int_t{42});
-    reader->set("time", note::json_int_t{42});
+    reader->set("seconds", note::json_int_t(42));
+    reader->set("time", note::json_time_t(42));
     auto rsp = note::api::CardAux::Response::parse(std::move(reader));
     REQUIRE(rsp.mode == "x-mode");
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1) || !defined(NOTE_API_STRICT)
@@ -1015,16 +1015,16 @@ TEST_CASE("note::api::CardAuxSerial::Request request builder") {
     auto req = h.api.card.aux.serial.request();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
-    req.duration(note::json_int_t{42});
+    req.duration(note::json_int_t(42));
     req.limit(true);
-    req.max(note::json_int_t{42});
+    req.max(note::json_int_t(42));
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
-    req.minutes(note::json_int_t{42});
+    req.minutes(note::json_int_t(42));
 #endif
     req.mode(note::string_view("env"));
-    req.ms(note::json_int_t{42});
+    req.ms(note::json_int_t(42));
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-    req.rate(note::json_int_t{42});
+    req.rate(note::json_int_t(42));
 #endif
     req.execute();
     REQUIRE(h.last_req.find("\"duration\":42") != std::string::npos);
@@ -1053,16 +1053,16 @@ TEST_CASE("note::api::CardAuxSerial::Request request builder") {
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover known-key routing in operator[] (true branch for each routed field).
-    req["duration"] = note::json_int_t{42};
+    req["duration"] = note::json_int_t(42);
     req["limit"] = true;
-    req["max"] = note::json_int_t{42};
+    req["max"] = note::json_int_t(42);
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
-    req["minutes"] = note::json_int_t{42};
+    req["minutes"] = note::json_int_t(42);
 #endif
     req["mode"] = note::string_view("env");
-    req["ms"] = note::json_int_t{42};
+    req["ms"] = note::json_int_t(42);
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-    req["rate"] = note::json_int_t{42};
+    req["rate"] = note::json_int_t(42);
 #endif
     // Cover command()
     req.command();
@@ -1080,7 +1080,7 @@ TEST_CASE("note::api::CardAuxSerial::Request response parsing") {
     auto reader = std::make_unique<note::test::PopulatedJsonReader>();
     reader->set("mode", std::string("x-mode"));
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-    reader->set("rate", note::json_int_t{42});
+    reader->set("rate", note::json_int_t(42));
 #endif
     auto rsp = note::api::CardAuxSerial::Request::Response::parse(std::move(reader));
     REQUIRE(rsp.mode == "x-mode");
@@ -1141,15 +1141,15 @@ TEST_CASE("note::api::CardAuxSerial::Notify request builder") {
     auto req = h.api.card.aux.serial.notify();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
-    req.duration(note::json_int_t{42});
-    req.max(note::json_int_t{42});
+    req.duration(note::json_int_t(42));
+    req.max(note::json_int_t(42));
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
-    req.minutes(note::json_int_t{42});
+    req.minutes(note::json_int_t(42));
 #endif
     req.notifications(note::string_view("env"));
-    req.ms(note::json_int_t{42});
+    req.ms(note::json_int_t(42));
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-    req.rate(note::json_int_t{42});
+    req.rate(note::json_int_t(42));
 #endif
     req.execute();
     REQUIRE(h.last_req.find("\"duration\":42") != std::string::npos);
@@ -1177,15 +1177,15 @@ TEST_CASE("note::api::CardAuxSerial::Notify request builder") {
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover known-key routing in operator[] (true branch for each routed field).
-    req["duration"] = note::json_int_t{42};
-    req["max"] = note::json_int_t{42};
+    req["duration"] = note::json_int_t(42);
+    req["max"] = note::json_int_t(42);
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
-    req["minutes"] = note::json_int_t{42};
+    req["minutes"] = note::json_int_t(42);
 #endif
     req["mode"] = note::string_view("env");
-    req["ms"] = note::json_int_t{42};
+    req["ms"] = note::json_int_t(42);
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-    req["rate"] = note::json_int_t{42};
+    req["rate"] = note::json_int_t(42);
 #endif
     // Cover command()
     req.command();
@@ -1206,7 +1206,7 @@ TEST_CASE("note::api::CardAuxSerial::Gps request builder") {
     req.execute();
     req.limit(true);
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-    req.rate(note::json_int_t{42});
+    req.rate(note::json_int_t(42));
 #endif
     req.execute();
     REQUIRE(h.last_req.find("\"limit\":true") != std::string::npos);
@@ -1230,7 +1230,7 @@ TEST_CASE("note::api::CardAuxSerial::Gps request builder") {
     // Cover known-key routing in operator[] (true branch for each routed field).
     req["limit"] = true;
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-    req["rate"] = note::json_int_t{42};
+    req["rate"] = note::json_int_t(42);
 #endif
     // Cover command()
     req.command();
@@ -1250,7 +1250,7 @@ TEST_CASE("note::api::CardAuxSerial::Configure request builder") {
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-    req.rate(note::json_int_t{42});
+    req.rate(note::json_int_t(42));
 #endif
     req.execute();
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
@@ -1272,7 +1272,7 @@ TEST_CASE("note::api::CardAuxSerial::Configure request builder") {
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover known-key routing in operator[] (true branch for each routed field).
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-    req["rate"] = note::json_int_t{42};
+    req["rate"] = note::json_int_t(42);
 #endif
     // Cover command()
     req.command();
@@ -1356,11 +1356,11 @@ TEST_CASE("note::api::CardBinary::Status request builder") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardBinary::Status response parsing") {
     auto reader = std::make_unique<note::test::PopulatedJsonReader>();
-    reader->set("cobs", note::json_int_t{42});
+    reader->set("cobs", note::json_int_t(42));
     reader->set("connected", true);
     reader->set("err", std::string("x-err"));
-    reader->set("length", note::json_int_t{42});
-    reader->set("max", note::json_int_t{42});
+    reader->set("length", note::json_int_t(42));
+    reader->set("max", note::json_int_t(42));
     reader->set("status", std::string("x-status"));
     auto rsp = note::api::CardBinary::Status::Response::parse(std::move(reader));
     REQUIRE(rsp.cobs == 42);
@@ -1452,11 +1452,11 @@ TEST_CASE("note::api::CardBinary::Clear request builder") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardBinary::Clear response parsing") {
     auto reader = std::make_unique<note::test::PopulatedJsonReader>();
-    reader->set("cobs", note::json_int_t{42});
+    reader->set("cobs", note::json_int_t(42));
     reader->set("connected", true);
     reader->set("err", std::string("x-err"));
-    reader->set("length", note::json_int_t{42});
-    reader->set("max", note::json_int_t{42});
+    reader->set("length", note::json_int_t(42));
+    reader->set("max", note::json_int_t(42));
     reader->set("status", std::string("x-status"));
     auto rsp = note::api::CardBinary::Clear::Response::parse(std::move(reader));
     REQUIRE(rsp.cobs == 42);
@@ -1519,9 +1519,9 @@ TEST_CASE("note::api::CardBinaryGet request builder") {
     auto req = h.api.card.binary.get();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
-    req.cobs(note::json_int_t{42});
-    req.length(note::json_int_t{42});
-    req.offset(note::json_int_t{42});
+    req.cobs(note::json_int_t(42));
+    req.length(note::json_int_t(42));
+    req.offset(note::json_int_t(42));
     req.execute();
     REQUIRE(h.last_req.find("\"cobs\":42") != std::string::npos);
     REQUIRE(h.last_req.find("\"length\":42") != std::string::npos);
@@ -1541,9 +1541,9 @@ TEST_CASE("note::api::CardBinaryGet request builder") {
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover known-key routing in operator[] (true branch for each routed field).
-    req["cobs"] = note::json_int_t{42};
-    req["length"] = note::json_int_t{42};
-    req["offset"] = note::json_int_t{42};
+    req["cobs"] = note::json_int_t(42);
+    req["length"] = note::json_int_t(42);
+    req["offset"] = note::json_int_t(42);
     // Cover command()
     req.command();
     // Cover streaming transport execute path in Notecard::execute().
@@ -1613,8 +1613,8 @@ TEST_CASE("note::api::CardBinaryPut request builder") {
     auto req = h.api.card.binary.put();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
-    req.cobs(note::json_int_t{42});
-    req.offset(note::json_int_t{42});
+    req.cobs(note::json_int_t(42));
+    req.offset(note::json_int_t(42));
     req.status(note::string_view("x-status"));
     req.execute();
     REQUIRE(h.last_req.find("\"cobs\":42") != std::string::npos);
@@ -1635,8 +1635,8 @@ TEST_CASE("note::api::CardBinaryPut request builder") {
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover known-key routing in operator[] (true branch for each routed field).
-    req["cobs"] = note::json_int_t{42};
-    req["offset"] = note::json_int_t{42};
+    req["cobs"] = note::json_int_t(42);
+    req["offset"] = note::json_int_t(42);
     req["status"] = note::string_view("x-status");
     // Cover command()
     req.command();
@@ -2002,7 +2002,7 @@ TEST_CASE("note::api::CardDfu request builder") {
     req.name(note::string_view("esp32"));
     req.off(true);
     req.on(true);
-    req.seconds(note::json_int_t{42});
+    req.seconds(note::json_int_t(42));
     req.start(true);
     req.stop(true);
     req.execute();
@@ -2032,7 +2032,7 @@ TEST_CASE("note::api::CardDfu request builder") {
     req["name"] = note::string_view("esp32");
     req["off"] = true;
     req["on"] = true;
-    req["seconds"] = note::json_int_t{42};
+    req["seconds"] = note::json_int_t(42);
     req["start"] = true;
     req["stop"] = true;
     // Cover command()
@@ -2183,7 +2183,7 @@ TEST_CASE("note::api::CardIo request builder") {
     auto req = h.api.card.io();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
-    req.i2c(note::json_int_t{42});
+    req.i2c(note::json_int_t(42));
     req.mode(note::string_view("-1"));
     req.execute();
     REQUIRE(h.last_req.find("\"i2c\":42") != std::string::npos);
@@ -2203,7 +2203,7 @@ TEST_CASE("note::api::CardIo request builder") {
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover known-key routing in operator[] (true branch for each routed field).
-    req["i2c"] = note::json_int_t{42};
+    req["i2c"] = note::json_int_t(42);
     req["mode"] = note::string_view("-1");
     // Cover command()
     req.command();
@@ -2293,14 +2293,14 @@ TEST_CASE("note::api::CardLocation request builder") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardLocation response parsing") {
     auto reader = std::make_unique<note::test::PopulatedJsonReader>();
-    reader->set("count", note::json_int_t{42});
+    reader->set("count", note::json_int_t(42));
     reader->set("dop", 1.5);
     reader->set("lat", 1.5);
     reader->set("lon", 1.5);
-    reader->set("max", note::json_int_t{42});
+    reader->set("max", note::json_int_t(42));
     reader->set("mode", std::string("x-mode"));
     reader->set("status", std::string("x-status"));
-    reader->set("time", note::json_int_t{42});
+    reader->set("time", note::json_int_t(42));
     auto rsp = note::api::CardLocation::Response::parse(std::move(reader));
     REQUIRE(rsp.count == 42);
     REQUIRE(rsp.dop == 1.5);
@@ -2372,12 +2372,12 @@ TEST_CASE("note::api::CardLocationMode::Get request builder") {
     req.delete_(true);
     req.lat(1.5);
     req.lon(1.5);
-    req.max(note::json_int_t{42});
-    req.minutes(note::json_int_t{42});
+    req.max(note::json_int_t(42));
+    req.minutes(note::json_int_t(42));
     req.mode(note::string_view(""));
-    req.seconds(note::json_int_t{42});
+    req.seconds(note::json_int_t(42));
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-    req.threshold(note::json_int_t{42});
+    req.threshold(note::json_int_t(42));
 #endif
     req.vseconds(note::string_view("x-vseconds"));
     req.execute();
@@ -2410,12 +2410,12 @@ TEST_CASE("note::api::CardLocationMode::Get request builder") {
     req["delete"] = true;
     req["lat"] = 1.5;
     req["lon"] = 1.5;
-    req["max"] = note::json_int_t{42};
-    req["minutes"] = note::json_int_t{42};
+    req["max"] = note::json_int_t(42);
+    req["minutes"] = note::json_int_t(42);
     req["mode"] = note::string_view("");
-    req["seconds"] = note::json_int_t{42};
+    req["seconds"] = note::json_int_t(42);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-    req["threshold"] = note::json_int_t{42};
+    req["threshold"] = note::json_int_t(42);
 #endif
     req["vseconds"] = note::string_view("x-vseconds");
     // Cover command()
@@ -2434,12 +2434,12 @@ TEST_CASE("note::api::CardLocationMode::Get response parsing") {
     auto reader = std::make_unique<note::test::PopulatedJsonReader>();
     reader->set("lat", 1.5);
     reader->set("lon", 1.5);
-    reader->set("max", note::json_int_t{42});
-    reader->set("minutes", note::json_int_t{42});
+    reader->set("max", note::json_int_t(42));
+    reader->set("minutes", note::json_int_t(42));
     reader->set("mode", std::string("x-mode"));
-    reader->set("seconds", note::json_int_t{42});
+    reader->set("seconds", note::json_int_t(42));
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-    reader->set("threshold", note::json_int_t{42});
+    reader->set("threshold", note::json_int_t(42));
 #endif
     reader->set("vseconds", std::string("x-vseconds"));
     auto rsp = note::api::CardLocationMode::Get::Response::parse(std::move(reader));
@@ -2518,12 +2518,12 @@ TEST_CASE("note::api::CardLocationMode::Set request builder") {
     req.delete_(true);
     req.lat(1.5);
     req.lon(1.5);
-    req.max(note::json_int_t{42});
-    req.minutes(note::json_int_t{42});
+    req.max(note::json_int_t(42));
+    req.minutes(note::json_int_t(42));
     req.mode(note::string_view(""));
-    req.seconds(note::json_int_t{42});
+    req.seconds(note::json_int_t(42));
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-    req.threshold(note::json_int_t{42});
+    req.threshold(note::json_int_t(42));
 #endif
     req.vseconds(note::string_view("x-vseconds"));
     req.execute();
@@ -2556,12 +2556,12 @@ TEST_CASE("note::api::CardLocationMode::Set request builder") {
     req["delete"] = true;
     req["lat"] = 1.5;
     req["lon"] = 1.5;
-    req["max"] = note::json_int_t{42};
-    req["minutes"] = note::json_int_t{42};
+    req["max"] = note::json_int_t(42);
+    req["minutes"] = note::json_int_t(42);
     req["mode"] = note::string_view("");
-    req["seconds"] = note::json_int_t{42};
+    req["seconds"] = note::json_int_t(42);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-    req["threshold"] = note::json_int_t{42};
+    req["threshold"] = note::json_int_t(42);
 #endif
     req["vseconds"] = note::string_view("x-vseconds");
     // Cover command()
@@ -2580,12 +2580,12 @@ TEST_CASE("note::api::CardLocationMode::Set response parsing") {
     auto reader = std::make_unique<note::test::PopulatedJsonReader>();
     reader->set("lat", 1.5);
     reader->set("lon", 1.5);
-    reader->set("max", note::json_int_t{42});
-    reader->set("minutes", note::json_int_t{42});
+    reader->set("max", note::json_int_t(42));
+    reader->set("minutes", note::json_int_t(42));
     reader->set("mode", std::string("x-mode"));
-    reader->set("seconds", note::json_int_t{42});
+    reader->set("seconds", note::json_int_t(42));
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-    reader->set("threshold", note::json_int_t{42});
+    reader->set("threshold", note::json_int_t(42));
 #endif
     reader->set("vseconds", std::string("x-vseconds"));
     auto rsp = note::api::CardLocationMode::Set::Response::parse(std::move(reader));
@@ -2662,7 +2662,7 @@ TEST_CASE("note::api::CardLocationMode::Continuous request builder") {
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-    req.threshold(note::json_int_t{42});
+    req.threshold(note::json_int_t(42));
 #endif
     req.vseconds(note::string_view("x-vseconds"));
     req.execute();
@@ -2686,7 +2686,7 @@ TEST_CASE("note::api::CardLocationMode::Continuous request builder") {
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover known-key routing in operator[] (true branch for each routed field).
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-    req["threshold"] = note::json_int_t{42};
+    req["threshold"] = note::json_int_t(42);
 #endif
     req["vseconds"] = note::string_view("x-vseconds");
     // Cover command()
@@ -2705,7 +2705,7 @@ TEST_CASE("note::api::CardLocationMode::Continuous response parsing") {
     auto reader = std::make_unique<note::test::PopulatedJsonReader>();
     reader->set("mode", std::string("x-mode"));
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-    reader->set("threshold", note::json_int_t{42});
+    reader->set("threshold", note::json_int_t(42));
 #endif
     reader->set("vseconds", std::string("x-vseconds"));
     auto rsp = note::api::CardLocationMode::Continuous::Response::parse(std::move(reader));
@@ -2771,11 +2771,11 @@ TEST_CASE("note::api::CardLocationMode::Periodic request builder") {
     req.execute();
     req.lat(1.5);
     req.lon(1.5);
-    req.max(note::json_int_t{42});
-    req.minutes(note::json_int_t{42});
-    req.seconds(note::json_int_t{42});
+    req.max(note::json_int_t(42));
+    req.minutes(note::json_int_t(42));
+    req.seconds(note::json_int_t(42));
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-    req.threshold(note::json_int_t{42});
+    req.threshold(note::json_int_t(42));
 #endif
     req.vseconds(note::string_view("x-vseconds"));
     req.execute();
@@ -2805,11 +2805,11 @@ TEST_CASE("note::api::CardLocationMode::Periodic request builder") {
     // Cover known-key routing in operator[] (true branch for each routed field).
     req["lat"] = 1.5;
     req["lon"] = 1.5;
-    req["max"] = note::json_int_t{42};
-    req["minutes"] = note::json_int_t{42};
-    req["seconds"] = note::json_int_t{42};
+    req["max"] = note::json_int_t(42);
+    req["minutes"] = note::json_int_t(42);
+    req["seconds"] = note::json_int_t(42);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-    req["threshold"] = note::json_int_t{42};
+    req["threshold"] = note::json_int_t(42);
 #endif
     req["vseconds"] = note::string_view("x-vseconds");
     // Cover command()
@@ -2828,12 +2828,12 @@ TEST_CASE("note::api::CardLocationMode::Periodic response parsing") {
     auto reader = std::make_unique<note::test::PopulatedJsonReader>();
     reader->set("lat", 1.5);
     reader->set("lon", 1.5);
-    reader->set("max", note::json_int_t{42});
-    reader->set("minutes", note::json_int_t{42});
+    reader->set("max", note::json_int_t(42));
+    reader->set("minutes", note::json_int_t(42));
     reader->set("mode", std::string("x-mode"));
-    reader->set("seconds", note::json_int_t{42});
+    reader->set("seconds", note::json_int_t(42));
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-    reader->set("threshold", note::json_int_t{42});
+    reader->set("threshold", note::json_int_t(42));
 #endif
     reader->set("vseconds", std::string("x-vseconds"));
     auto rsp = note::api::CardLocationMode::Periodic::Response::parse(std::move(reader));
@@ -3007,12 +3007,12 @@ TEST_CASE("note::api::CardLocationMode::Remove request builder") {
     req.execute();
     req.lat(1.5);
     req.lon(1.5);
-    req.max(note::json_int_t{42});
-    req.minutes(note::json_int_t{42});
+    req.max(note::json_int_t(42));
+    req.minutes(note::json_int_t(42));
     req.mode(note::string_view(""));
-    req.seconds(note::json_int_t{42});
+    req.seconds(note::json_int_t(42));
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-    req.threshold(note::json_int_t{42});
+    req.threshold(note::json_int_t(42));
 #endif
     req.vseconds(note::string_view("x-vseconds"));
     req.execute();
@@ -3043,12 +3043,12 @@ TEST_CASE("note::api::CardLocationMode::Remove request builder") {
     // Cover known-key routing in operator[] (true branch for each routed field).
     req["lat"] = 1.5;
     req["lon"] = 1.5;
-    req["max"] = note::json_int_t{42};
-    req["minutes"] = note::json_int_t{42};
+    req["max"] = note::json_int_t(42);
+    req["minutes"] = note::json_int_t(42);
     req["mode"] = note::string_view("");
-    req["seconds"] = note::json_int_t{42};
+    req["seconds"] = note::json_int_t(42);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-    req["threshold"] = note::json_int_t{42};
+    req["threshold"] = note::json_int_t(42);
 #endif
     req["vseconds"] = note::string_view("x-vseconds");
     // Cover command()
@@ -3067,12 +3067,12 @@ TEST_CASE("note::api::CardLocationMode::Remove response parsing") {
     auto reader = std::make_unique<note::test::PopulatedJsonReader>();
     reader->set("lat", 1.5);
     reader->set("lon", 1.5);
-    reader->set("max", note::json_int_t{42});
-    reader->set("minutes", note::json_int_t{42});
+    reader->set("max", note::json_int_t(42));
+    reader->set("minutes", note::json_int_t(42));
     reader->set("mode", std::string("x-mode"));
-    reader->set("seconds", note::json_int_t{42});
+    reader->set("seconds", note::json_int_t(42));
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-    reader->set("threshold", note::json_int_t{42});
+    reader->set("threshold", note::json_int_t(42));
 #endif
     reader->set("vseconds", std::string("x-vseconds"));
     auto rsp = note::api::CardLocationMode::Remove::Response::parse(std::move(reader));
@@ -3150,7 +3150,7 @@ TEST_CASE("note::api::CardLocationTrack request builder") {
     req.execute();
     req.file(note::string_view("x-file"));
     req.heartbeat(true);
-    req.hours(note::json_int_t{42});
+    req.hours(note::json_int_t(42));
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 5, 2) || !defined(NOTE_API_STRICT)
     req.payload(note::string_view("x-payload"));
 #endif
@@ -3184,7 +3184,7 @@ TEST_CASE("note::api::CardLocationTrack request builder") {
     // Cover known-key routing in operator[] (true branch for each routed field).
     req["file"] = note::string_view("x-file");
     req["heartbeat"] = true;
-    req["hours"] = note::json_int_t{42};
+    req["hours"] = note::json_int_t(42);
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 5, 2) || !defined(NOTE_API_STRICT)
     req["payload"] = note::string_view("x-payload");
 #endif
@@ -3207,8 +3207,8 @@ TEST_CASE("note::api::CardLocationTrack response parsing") {
     auto reader = std::make_unique<note::test::PopulatedJsonReader>();
     reader->set("file", std::string("x-file"));
     reader->set("heartbeat", true);
-    reader->set("minutes", note::json_int_t{42});
-    reader->set("seconds", note::json_int_t{42});
+    reader->set("minutes", note::json_int_t(42));
+    reader->set("seconds", note::json_int_t(42));
     reader->set("start", true);
     reader->set("stop", true);
     auto rsp = note::api::CardLocationTrack::Response::parse(std::move(reader));
@@ -3272,7 +3272,7 @@ TEST_CASE("note::api::CardMonitor request builder") {
     auto req = h.api.card.monitor();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
-    req.count(note::json_int_t{42});
+    req.count(note::json_int_t(42));
     req.mode(note::string_view("green"));
     req.usb(true);
     req.execute();
@@ -3294,7 +3294,7 @@ TEST_CASE("note::api::CardMonitor request builder") {
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover known-key routing in operator[] (true branch for each routed field).
-    req["count"] = note::json_int_t{42};
+    req["count"] = note::json_int_t(42);
     req["mode"] = note::string_view("green");
     req["usb"] = true;
     // Cover command()
@@ -3314,7 +3314,7 @@ TEST_CASE("note::api::CardMotion request builder") {
     auto req = h.api.card.motion();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
-    req.minutes(note::json_int_t{42});
+    req.minutes(note::json_int_t(42));
     req.execute();
     REQUIRE(h.last_req.find("\"minutes\":42") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
@@ -3332,7 +3332,7 @@ TEST_CASE("note::api::CardMotion request builder") {
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover known-key routing in operator[] (true branch for each routed field).
-    req["minutes"] = note::json_int_t{42};
+    req["minutes"] = note::json_int_t(42);
     // Cover command()
     req.command();
     // Cover streaming transport execute path in Notecard::execute().
@@ -3348,11 +3348,11 @@ TEST_CASE("note::api::CardMotion request builder") {
 TEST_CASE("note::api::CardMotion response parsing") {
     auto reader = std::make_unique<note::test::PopulatedJsonReader>();
     reader->set("alert", true);
-    reader->set("count", note::json_int_t{42});
+    reader->set("count", note::json_int_t(42));
     reader->set("mode", std::string("x-mode"));
-    reader->set("motion", note::json_int_t{42});
+    reader->set("motion", note::json_int_t(42));
     reader->set("movements", std::string("x-movements"));
-    reader->set("seconds", note::json_int_t{42});
+    reader->set("seconds", note::json_int_t(42));
     reader->set("status", std::string("x-status"));
     auto rsp = note::api::CardMotion::Response::parse(std::move(reader));
     REQUIRE(rsp.alert == true);
@@ -3417,10 +3417,10 @@ TEST_CASE("note::api::CardMotionMode request builder") {
     auto req = h.api.card.motion.mode();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
-    req.motion(note::json_int_t{42});
-    req.seconds(note::json_int_t{42});
+    req.motion(note::json_int_t(42));
+    req.seconds(note::json_int_t(42));
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1) || !defined(NOTE_API_STRICT)
-    req.sensitivity(note::json_int_t{42});
+    req.sensitivity(note::json_int_t(42));
 #endif
     req.start(true);
     req.stop(true);
@@ -3447,10 +3447,10 @@ TEST_CASE("note::api::CardMotionMode request builder") {
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover known-key routing in operator[] (true branch for each routed field).
-    req["motion"] = note::json_int_t{42};
-    req["seconds"] = note::json_int_t{42};
+    req["motion"] = note::json_int_t(42);
+    req["seconds"] = note::json_int_t(42);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1) || !defined(NOTE_API_STRICT)
-    req["sensitivity"] = note::json_int_t{42};
+    req["sensitivity"] = note::json_int_t(42);
 #endif
     req["start"] = true;
     req["stop"] = true;
@@ -3471,11 +3471,11 @@ TEST_CASE("note::api::CardMotionSync request builder") {
     auto req = h.api.card.motion.sync();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
-    req.count(note::json_int_t{42});
-    req.minutes(note::json_int_t{42});
+    req.count(note::json_int_t(42));
+    req.minutes(note::json_int_t(42));
     req.start(true);
     req.stop(true);
-    req.threshold(note::json_int_t{42});
+    req.threshold(note::json_int_t(42));
     req.execute();
     REQUIRE(h.last_req.find("\"count\":42") != std::string::npos);
     REQUIRE(h.last_req.find("\"minutes\":42") != std::string::npos);
@@ -3497,11 +3497,11 @@ TEST_CASE("note::api::CardMotionSync request builder") {
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover known-key routing in operator[] (true branch for each routed field).
-    req["count"] = note::json_int_t{42};
-    req["minutes"] = note::json_int_t{42};
+    req["count"] = note::json_int_t(42);
+    req["minutes"] = note::json_int_t(42);
     req["start"] = true;
     req["stop"] = true;
-    req["threshold"] = note::json_int_t{42};
+    req["threshold"] = note::json_int_t(42);
     // Cover command()
     req.command();
     // Cover streaming transport execute path in Notecard::execute().
@@ -3519,13 +3519,13 @@ TEST_CASE("note::api::CardMotionTrack request builder") {
     auto req = h.api.card.motion.track();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
-    req.count(note::json_int_t{42});
+    req.count(note::json_int_t(42));
     req.file(note::string_view("x-file"));
-    req.minutes(note::json_int_t{42});
+    req.minutes(note::json_int_t(42));
     req.now(true);
     req.start(true);
     req.stop(true);
-    req.threshold(note::json_int_t{42});
+    req.threshold(note::json_int_t(42));
     req.execute();
     REQUIRE(h.last_req.find("\"count\":42") != std::string::npos);
     REQUIRE(h.last_req.find("\"file\":\"x-file\"") != std::string::npos);
@@ -3549,13 +3549,13 @@ TEST_CASE("note::api::CardMotionTrack request builder") {
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover known-key routing in operator[] (true branch for each routed field).
-    req["count"] = note::json_int_t{42};
+    req["count"] = note::json_int_t(42);
     req["file"] = note::string_view("x-file");
-    req["minutes"] = note::json_int_t{42};
+    req["minutes"] = note::json_int_t(42);
     req["now"] = true;
     req["start"] = true;
     req["stop"] = true;
-    req["threshold"] = note::json_int_t{42};
+    req["threshold"] = note::json_int_t(42);
     // Cover command()
     req.command();
     // Cover streaming transport execute path in Notecard::execute().
@@ -3573,7 +3573,7 @@ TEST_CASE("note::api::CardPower::Read request builder") {
     auto req = h.api.card.power().read();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
-    req.minutes(note::json_int_t{42});
+    req.minutes(note::json_int_t(42));
     req.reset(true);
     req.execute();
     REQUIRE(h.last_req.find("\"minutes\":42") != std::string::npos);
@@ -3593,7 +3593,7 @@ TEST_CASE("note::api::CardPower::Read request builder") {
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover known-key routing in operator[] (true branch for each routed field).
-    req["minutes"] = note::json_int_t{42};
+    req["minutes"] = note::json_int_t(42);
     req["reset"] = true;
     // Cover command()
     req.command();
@@ -3670,7 +3670,7 @@ TEST_CASE("note::api::CardPower::Configure request builder") {
     auto req = h.api.card.power().configure();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
-    req.minutes(note::json_int_t{42});
+    req.minutes(note::json_int_t(42));
     req.reset(true);
     req.execute();
     REQUIRE(h.last_req.find("\"minutes\":42") != std::string::npos);
@@ -3690,7 +3690,7 @@ TEST_CASE("note::api::CardPower::Configure request builder") {
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover known-key routing in operator[] (true branch for each routed field).
-    req["minutes"] = note::json_int_t{42};
+    req["minutes"] = note::json_int_t(42);
     req["reset"] = true;
     // Cover command()
     req.command();
@@ -3767,7 +3767,7 @@ TEST_CASE("note::api::CardPower::Reset request builder") {
     auto req = h.api.card.power().reset();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
-    req.minutes(note::json_int_t{42});
+    req.minutes(note::json_int_t(42));
     req.execute();
     REQUIRE(h.last_req.find("\"minutes\":42") != std::string::npos);
     // Cover ApiResult error constructor (transport failure path).
@@ -3785,7 +3785,7 @@ TEST_CASE("note::api::CardPower::Reset request builder") {
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover known-key routing in operator[] (true branch for each routed field).
-    req["minutes"] = note::json_int_t{42};
+    req["minutes"] = note::json_int_t(42);
     // Cover command()
     req.command();
     // Cover streaming transport execute path in Notecard::execute().
@@ -3861,7 +3861,7 @@ TEST_CASE("note::api::CardRandom request builder") {
     auto req = h.api.card.random();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
-    req.count(note::json_int_t{42});
+    req.count(note::json_int_t(42));
     req.mode(note::string_view("x-mode"));
     req.execute();
     REQUIRE(h.last_req.find("\"count\":42") != std::string::npos);
@@ -3881,7 +3881,7 @@ TEST_CASE("note::api::CardRandom request builder") {
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover known-key routing in operator[] (true branch for each routed field).
-    req["count"] = note::json_int_t{42};
+    req["count"] = note::json_int_t(42);
     req["mode"] = note::string_view("x-mode");
     // Cover command()
     req.command();
@@ -3897,7 +3897,7 @@ TEST_CASE("note::api::CardRandom request builder") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardRandom response parsing") {
     auto reader = std::make_unique<note::test::PopulatedJsonReader>();
-    reader->set("count", note::json_int_t{42});
+    reader->set("count", note::json_int_t(42));
     reader->set("payload", std::string("x-payload"));
     auto rsp = note::api::CardRandom::Response::parse(std::move(reader));
     REQUIRE(rsp.count == 42);
@@ -4026,7 +4026,7 @@ TEST_CASE("note::api::CardSleep request builder") {
     req.mode(note::string_view("accel"));
     req.off(true);
     req.on(true);
-    req.seconds(note::json_int_t{42});
+    req.seconds(note::json_int_t(42));
     req.execute();
     REQUIRE(h.last_req.find("\"mode\":\"accel\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"off\":true") != std::string::npos);
@@ -4050,7 +4050,7 @@ TEST_CASE("note::api::CardSleep request builder") {
     req["mode"] = note::string_view("accel");
     req["off"] = true;
     req["on"] = true;
-    req["seconds"] = note::json_int_t{42};
+    req["seconds"] = note::json_int_t(42);
     // Cover command()
     req.command();
     // Cover streaming transport execute path in Notecard::execute().
@@ -4068,7 +4068,7 @@ TEST_CASE("note::api::CardSleep response parsing") {
     reader->set("mode", std::string("x-mode"));
     reader->set("off", true);
     reader->set("on", true);
-    reader->set("seconds", note::json_int_t{42});
+    reader->set("seconds", note::json_int_t(42));
     auto rsp = note::api::CardSleep::Response::parse(std::move(reader));
     REQUIRE(rsp.mode == "x-mode");
     REQUIRE(rsp.off == true);
@@ -4160,14 +4160,14 @@ TEST_CASE("note::api::CardStatus response parsing") {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1) || !defined(NOTE_API_STRICT)
     reader->set("gps", true);
 #endif
-    reader->set("inbound", note::json_int_t{42});
-    reader->set("outbound", note::json_int_t{42});
+    reader->set("inbound", note::json_int_t(42));
+    reader->set("outbound", note::json_int_t(42));
     reader->set("status", std::string("x-status"));
-    reader->set("storage", note::json_int_t{42});
+    reader->set("storage", note::json_int_t(42));
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 5, 1) || !defined(NOTE_API_STRICT)
     reader->set("sync", true);
 #endif
-    reader->set("time", note::json_int_t{42});
+    reader->set("time", note::json_int_t(42));
     reader->set("usb", true);
     reader->set("wifi", true);
     auto rsp = note::api::CardStatus::Response::parse(std::move(reader));
@@ -4253,7 +4253,7 @@ TEST_CASE("note::api::CardTemp::Read request builder") {
     auto req = h.api.card.temp().read();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
-    req.minutes(note::json_int_t{42});
+    req.minutes(note::json_int_t(42));
     req.status(note::string_view("x-status"));
     req.stop(true);
     req.sync(true);
@@ -4277,7 +4277,7 @@ TEST_CASE("note::api::CardTemp::Read request builder") {
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover known-key routing in operator[] (true branch for each routed field).
-    req["minutes"] = note::json_int_t{42};
+    req["minutes"] = note::json_int_t(42);
     req["status"] = note::string_view("x-status");
     req["stop"] = true;
     req["sync"] = true;
@@ -4371,7 +4371,7 @@ TEST_CASE("note::api::CardTemp::Configure request builder") {
     auto req = h.api.card.temp().configure();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
-    req.minutes(note::json_int_t{42});
+    req.minutes(note::json_int_t(42));
     req.status(note::string_view("x-status"));
     req.stop(true);
     req.sync(true);
@@ -4395,7 +4395,7 @@ TEST_CASE("note::api::CardTemp::Configure request builder") {
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover known-key routing in operator[] (true branch for each routed field).
-    req["minutes"] = note::json_int_t{42};
+    req["minutes"] = note::json_int_t(42);
     req["status"] = note::string_view("x-status");
     req["stop"] = true;
     req["sync"] = true;
@@ -4489,7 +4489,7 @@ TEST_CASE("note::api::CardTemp::Stop request builder") {
     auto req = h.api.card.temp().stop();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
-    req.minutes(note::json_int_t{42});
+    req.minutes(note::json_int_t(42));
     req.status(note::string_view("x-status"));
     req.sync(true);
     req.execute();
@@ -4511,7 +4511,7 @@ TEST_CASE("note::api::CardTemp::Stop request builder") {
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover known-key routing in operator[] (true branch for each routed field).
-    req["minutes"] = note::json_int_t{42};
+    req["minutes"] = note::json_int_t(42);
     req["status"] = note::string_view("x-status");
     req["sync"] = true;
     // Cover command()
@@ -4637,8 +4637,8 @@ TEST_CASE("note::api::CardTime response parsing") {
     reader->set("country", std::string("x-country"));
     reader->set("lat", 1.5);
     reader->set("lon", 1.5);
-    reader->set("minutes", note::json_int_t{42});
-    reader->set("time", note::json_int_t{42});
+    reader->set("minutes", note::json_int_t(42));
+    reader->set("time", note::json_int_t(42));
     reader->set("zone", std::string("x-zone"));
     auto rsp = note::api::CardTime::Response::parse(std::move(reader));
     REQUIRE(rsp.area == "x-area");
@@ -4746,7 +4746,7 @@ TEST_CASE("note::api::CardTransport request builder") {
 #endif
     req.method(note::string_view("-"));
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
-    req.seconds(note::json_int_t{42});
+    req.seconds(note::json_int_t(42));
 #endif
 #if NOTE_API_VERSION >= NOTE_VERSION(9, 1, 1) || !defined(NOTE_API_STRICT)
     req.umin(true);
@@ -4782,7 +4782,7 @@ TEST_CASE("note::api::CardTransport request builder") {
 #endif
     req["method"] = note::string_view("-");
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
-    req["seconds"] = note::json_int_t{42};
+    req["seconds"] = note::json_int_t(42);
 #endif
 #if NOTE_API_VERSION >= NOTE_VERSION(9, 1, 1) || !defined(NOTE_API_STRICT)
     req["umin"] = true;
@@ -4853,12 +4853,12 @@ TEST_CASE("note::api::CardTriangulate request builder") {
     auto req = h.api.card.triangulate();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
-    req.minutes(note::json_int_t{42});
+    req.minutes(note::json_int_t(42));
     req.mode(note::string_view("cell"));
     req.on(true);
     req.set(true);
     req.text(note::string_view("x-text"));
-    req.time(note::json_int_t{42});
+    req.time(note::json_int_t(42));
     req.usb(true);
     req.execute();
     REQUIRE(h.last_req.find("\"minutes\":42") != std::string::npos);
@@ -4883,12 +4883,12 @@ TEST_CASE("note::api::CardTriangulate request builder") {
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover known-key routing in operator[] (true branch for each routed field).
-    req["minutes"] = note::json_int_t{42};
+    req["minutes"] = note::json_int_t(42);
     req["mode"] = note::string_view("cell");
     req["on"] = true;
     req["set"] = true;
     req["text"] = note::string_view("x-text");
-    req["time"] = note::json_int_t{42};
+    req["time"] = note::json_int_t(42);
     req["usb"] = true;
     // Cover command()
     req.command();
@@ -4904,11 +4904,11 @@ TEST_CASE("note::api::CardTriangulate request builder") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardTriangulate response parsing") {
     auto reader = std::make_unique<note::test::PopulatedJsonReader>();
-    reader->set("length", note::json_int_t{42});
+    reader->set("length", note::json_int_t(42));
     reader->set("mode", std::string("x-mode"));
-    reader->set("motion", note::json_int_t{42});
+    reader->set("motion", note::json_int_t(42));
     reader->set("on", true);
-    reader->set("time", note::json_int_t{42});
+    reader->set("time", note::json_int_t(42));
     reader->set("usb", true);
     auto rsp = note::api::CardTriangulate::Response::parse(std::move(reader));
     REQUIRE(rsp.length == 42);
@@ -4972,7 +4972,7 @@ TEST_CASE("note::api::CardUsageGet request builder") {
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.mode(note::string_view("total"));
-    req.offset(note::json_int_t{42});
+    req.offset(note::json_int_t(42));
     req.execute();
     REQUIRE(h.last_req.find("\"mode\":\"total\"") != std::string::npos);
     REQUIRE(h.last_req.find("\"offset\":42") != std::string::npos);
@@ -4992,7 +4992,7 @@ TEST_CASE("note::api::CardUsageGet request builder") {
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover known-key routing in operator[] (true branch for each routed field).
     req["mode"] = note::string_view("total");
-    req["offset"] = note::json_int_t{42};
+    req["offset"] = note::json_int_t(42);
     // Cover command()
     req.command();
     // Cover streaming transport execute path in Notecard::execute().
@@ -5007,14 +5007,14 @@ TEST_CASE("note::api::CardUsageGet request builder") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardUsageGet response parsing") {
     auto reader = std::make_unique<note::test::PopulatedJsonReader>();
-    reader->set("bytes_received", note::json_int_t{42});
-    reader->set("bytes_sent", note::json_int_t{42});
-    reader->set("notes_received", note::json_int_t{42});
-    reader->set("notes_sent", note::json_int_t{42});
-    reader->set("seconds", note::json_int_t{42});
-    reader->set("sessions_secure", note::json_int_t{42});
-    reader->set("sessions_standard", note::json_int_t{42});
-    reader->set("time", note::json_int_t{42});
+    reader->set("bytes_received", note::json_int_t(42));
+    reader->set("bytes_sent", note::json_int_t(42));
+    reader->set("notes_received", note::json_int_t(42));
+    reader->set("notes_sent", note::json_int_t(42));
+    reader->set("seconds", note::json_int_t(42));
+    reader->set("sessions_secure", note::json_int_t(42));
+    reader->set("sessions_standard", note::json_int_t(42));
+    reader->set("time", note::json_int_t(42));
     auto rsp = note::api::CardUsageGet::Response::parse(std::move(reader));
     REQUIRE(rsp.bytesReceived == 42);
     REQUIRE(rsp.bytesSent == 42);
@@ -5080,9 +5080,9 @@ TEST_CASE("note::api::CardUsageTest request builder") {
     auto req = h.api.card.usageTest();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
-    req.days(note::json_int_t{42});
-    req.hours(note::json_int_t{42});
-    req.megabytes(note::json_int_t{42});
+    req.days(note::json_int_t(42));
+    req.hours(note::json_int_t(42));
+    req.megabytes(note::json_int_t(42));
     req.execute();
     REQUIRE(h.last_req.find("\"days\":42") != std::string::npos);
     REQUIRE(h.last_req.find("\"hours\":42") != std::string::npos);
@@ -5102,9 +5102,9 @@ TEST_CASE("note::api::CardUsageTest request builder") {
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover known-key routing in operator[] (true branch for each routed field).
-    req["days"] = note::json_int_t{42};
-    req["hours"] = note::json_int_t{42};
-    req["megabytes"] = note::json_int_t{42};
+    req["days"] = note::json_int_t(42);
+    req["hours"] = note::json_int_t(42);
+    req["megabytes"] = note::json_int_t(42);
     // Cover command()
     req.command();
     // Cover streaming transport execute path in Notecard::execute().
@@ -5119,17 +5119,17 @@ TEST_CASE("note::api::CardUsageTest request builder") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardUsageTest response parsing") {
     auto reader = std::make_unique<note::test::PopulatedJsonReader>();
-    reader->set("bytes_per_day", note::json_int_t{42});
-    reader->set("bytes_received", note::json_int_t{42});
-    reader->set("bytes_sent", note::json_int_t{42});
-    reader->set("days", note::json_int_t{42});
-    reader->set("max", note::json_int_t{42});
-    reader->set("notes_received", note::json_int_t{42});
-    reader->set("notes_sent", note::json_int_t{42});
-    reader->set("seconds", note::json_int_t{42});
-    reader->set("sessions_secure", note::json_int_t{42});
-    reader->set("sessions_standard", note::json_int_t{42});
-    reader->set("time", note::json_int_t{42});
+    reader->set("bytes_per_day", note::json_int_t(42));
+    reader->set("bytes_received", note::json_int_t(42));
+    reader->set("bytes_sent", note::json_int_t(42));
+    reader->set("days", note::json_int_t(42));
+    reader->set("max", note::json_int_t(42));
+    reader->set("notes_received", note::json_int_t(42));
+    reader->set("notes_sent", note::json_int_t(42));
+    reader->set("seconds", note::json_int_t(42));
+    reader->set("sessions_secure", note::json_int_t(42));
+    reader->set("sessions_standard", note::json_int_t(42));
+    reader->set("time", note::json_int_t(42));
     auto rsp = note::api::CardUsageTest::Response::parse(std::move(reader));
     REQUIRE(rsp.bytesPerDay == 42);
     REQUIRE(rsp.bytesReceived == 42);
@@ -5360,11 +5360,11 @@ TEST_CASE("note::api::CardVoltage::Read request builder") {
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 2) || !defined(NOTE_API_STRICT)
     req.calibration(1.5);
 #endif
-    req.hours(note::json_int_t{42});
+    req.hours(note::json_int_t(42));
     req.mode(note::string_view("default"));
     req.name(note::string_view("x-name"));
     req.off(true);
-    req.offset(note::json_int_t{42});
+    req.offset(note::json_int_t(42));
     req.on(true);
     req.set(true);
     req.sync(true);
@@ -5410,11 +5410,11 @@ TEST_CASE("note::api::CardVoltage::Read request builder") {
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 2) || !defined(NOTE_API_STRICT)
     req["calibration"] = 1.5;
 #endif
-    req["hours"] = note::json_int_t{42};
+    req["hours"] = note::json_int_t(42);
     req["mode"] = note::string_view("default");
     req["name"] = note::string_view("x-name");
     req["off"] = true;
-    req["offset"] = note::json_int_t{42};
+    req["offset"] = note::json_int_t(42);
     req["on"] = true;
     req["set"] = true;
     req["sync"] = true;
@@ -5438,8 +5438,8 @@ TEST_CASE("note::api::CardVoltage::Read request builder") {
 TEST_CASE("note::api::CardVoltage::Read response parsing") {
     auto reader = std::make_unique<note::test::PopulatedJsonReader>();
     reader->set("daily", 1.5);
-    reader->set("hours", note::json_int_t{42});
-    reader->set("minutes", note::json_int_t{42});
+    reader->set("hours", note::json_int_t(42));
+    reader->set("minutes", note::json_int_t(42));
     reader->set("mode", std::string("x-mode"));
     reader->set("monthly", 1.5);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
@@ -5538,11 +5538,11 @@ TEST_CASE("note::api::CardVoltage::Configure request builder") {
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 2) || !defined(NOTE_API_STRICT)
     req.calibration(1.5);
 #endif
-    req.hours(note::json_int_t{42});
+    req.hours(note::json_int_t(42));
     req.mode(note::string_view("default"));
     req.name(note::string_view("x-name"));
     req.off(true);
-    req.offset(note::json_int_t{42});
+    req.offset(note::json_int_t(42));
     req.on(true);
     req.set(true);
     req.sync(true);
@@ -5588,11 +5588,11 @@ TEST_CASE("note::api::CardVoltage::Configure request builder") {
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 2) || !defined(NOTE_API_STRICT)
     req["calibration"] = 1.5;
 #endif
-    req["hours"] = note::json_int_t{42};
+    req["hours"] = note::json_int_t(42);
     req["mode"] = note::string_view("default");
     req["name"] = note::string_view("x-name");
     req["off"] = true;
-    req["offset"] = note::json_int_t{42};
+    req["offset"] = note::json_int_t(42);
     req["on"] = true;
     req["set"] = true;
     req["sync"] = true;
@@ -5616,8 +5616,8 @@ TEST_CASE("note::api::CardVoltage::Configure request builder") {
 TEST_CASE("note::api::CardVoltage::Configure response parsing") {
     auto reader = std::make_unique<note::test::PopulatedJsonReader>();
     reader->set("daily", 1.5);
-    reader->set("hours", note::json_int_t{42});
-    reader->set("minutes", note::json_int_t{42});
+    reader->set("hours", note::json_int_t(42));
+    reader->set("minutes", note::json_int_t(42));
     reader->set("mode", std::string("x-mode"));
     reader->set("monthly", 1.5);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
@@ -5828,7 +5828,7 @@ TEST_CASE("note::api::CardWireless request builder") {
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.apn(note::string_view("x-apn"));
-    req.hours(note::json_int_t{42});
+    req.hours(note::json_int_t(42));
     req.method(note::string_view("-"));
     req.mode(note::string_view("-"));
     req.execute();
@@ -5852,7 +5852,7 @@ TEST_CASE("note::api::CardWireless request builder") {
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover known-key routing in operator[] (true branch for each routed field).
     req["apn"] = note::string_view("x-apn");
-    req["hours"] = note::json_int_t{42};
+    req["hours"] = note::json_int_t(42);
     req["method"] = note::string_view("-");
     req["mode"] = note::string_view("-");
     // Cover command()
@@ -5869,7 +5869,7 @@ TEST_CASE("note::api::CardWireless request builder") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardWireless response parsing") {
     auto reader = std::make_unique<note::test::PopulatedJsonReader>();
-    reader->set("count", note::json_int_t{42});
+    reader->set("count", note::json_int_t(42));
     reader->set("status", std::string("x-status"));
     auto rsp = note::api::CardWireless::Response::parse(std::move(reader));
     REQUIRE(rsp.count == 42);
@@ -5924,9 +5924,9 @@ TEST_CASE("note::api::CardWirelessPenalty::Check request builder") {
     auto req = h.api.card.wireless.penalty.check();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
-    req.add(note::json_int_t{42});
-    req.max(note::json_int_t{42});
-    req.min(note::json_int_t{42});
+    req.add(note::json_int_t(42));
+    req.max(note::json_int_t(42));
+    req.min(note::json_int_t(42));
     req.rate(1.5);
     req.reset(true);
     req.set(true);
@@ -5952,9 +5952,9 @@ TEST_CASE("note::api::CardWirelessPenalty::Check request builder") {
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover known-key routing in operator[] (true branch for each routed field).
-    req["add"] = note::json_int_t{42};
-    req["max"] = note::json_int_t{42};
-    req["min"] = note::json_int_t{42};
+    req["add"] = note::json_int_t(42);
+    req["max"] = note::json_int_t(42);
+    req["min"] = note::json_int_t(42);
     req["rate"] = 1.5;
     req["reset"] = true;
     req["set"] = true;
@@ -5972,10 +5972,10 @@ TEST_CASE("note::api::CardWirelessPenalty::Check request builder") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardWirelessPenalty::Check response parsing") {
     auto reader = std::make_unique<note::test::PopulatedJsonReader>();
-    reader->set("count", note::json_int_t{42});
-    reader->set("minutes", note::json_int_t{42});
+    reader->set("count", note::json_int_t(42));
+    reader->set("minutes", note::json_int_t(42));
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-    reader->set("seconds", note::json_int_t{42});
+    reader->set("seconds", note::json_int_t(42));
 #endif
     reader->set("status", std::string("x-status"));
     auto rsp = note::api::CardWirelessPenalty::Check::Response::parse(std::move(reader));
@@ -6041,9 +6041,9 @@ TEST_CASE("note::api::CardWirelessPenalty::Set request builder") {
     auto req = h.api.card.wireless.penalty.set();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
-    req.add(note::json_int_t{42});
-    req.max(note::json_int_t{42});
-    req.min(note::json_int_t{42});
+    req.add(note::json_int_t(42));
+    req.max(note::json_int_t(42));
+    req.min(note::json_int_t(42));
     req.rate(1.5);
     req.reset(true);
     req.execute();
@@ -6067,9 +6067,9 @@ TEST_CASE("note::api::CardWirelessPenalty::Set request builder") {
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover known-key routing in operator[] (true branch for each routed field).
-    req["add"] = note::json_int_t{42};
-    req["max"] = note::json_int_t{42};
-    req["min"] = note::json_int_t{42};
+    req["add"] = note::json_int_t(42);
+    req["max"] = note::json_int_t(42);
+    req["min"] = note::json_int_t(42);
     req["rate"] = 1.5;
     req["reset"] = true;
     // Cover command()
@@ -6086,10 +6086,10 @@ TEST_CASE("note::api::CardWirelessPenalty::Set request builder") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardWirelessPenalty::Set response parsing") {
     auto reader = std::make_unique<note::test::PopulatedJsonReader>();
-    reader->set("count", note::json_int_t{42});
-    reader->set("minutes", note::json_int_t{42});
+    reader->set("count", note::json_int_t(42));
+    reader->set("minutes", note::json_int_t(42));
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-    reader->set("seconds", note::json_int_t{42});
+    reader->set("seconds", note::json_int_t(42));
 #endif
     reader->set("status", std::string("x-status"));
     auto rsp = note::api::CardWirelessPenalty::Set::Response::parse(std::move(reader));
@@ -6155,9 +6155,9 @@ TEST_CASE("note::api::CardWirelessPenalty::Clear request builder") {
     auto req = h.api.card.wireless.penalty.clear();
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
-    req.add(note::json_int_t{42});
-    req.max(note::json_int_t{42});
-    req.min(note::json_int_t{42});
+    req.add(note::json_int_t(42));
+    req.max(note::json_int_t(42));
+    req.min(note::json_int_t(42));
     req.rate(1.5);
     req.set(true);
     req.execute();
@@ -6181,9 +6181,9 @@ TEST_CASE("note::api::CardWirelessPenalty::Clear request builder") {
     req.extra("_ov1", "ov1");     // overflow: extras_count_ >= NOTE_EXTRAS_MAX in extra()
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover known-key routing in operator[] (true branch for each routed field).
-    req["add"] = note::json_int_t{42};
-    req["max"] = note::json_int_t{42};
-    req["min"] = note::json_int_t{42};
+    req["add"] = note::json_int_t(42);
+    req["max"] = note::json_int_t(42);
+    req["min"] = note::json_int_t(42);
     req["rate"] = 1.5;
     req["set"] = true;
     // Cover command()
@@ -6200,10 +6200,10 @@ TEST_CASE("note::api::CardWirelessPenalty::Clear request builder") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardWirelessPenalty::Clear response parsing") {
     auto reader = std::make_unique<note::test::PopulatedJsonReader>();
-    reader->set("count", note::json_int_t{42});
-    reader->set("minutes", note::json_int_t{42});
+    reader->set("count", note::json_int_t(42));
+    reader->set("minutes", note::json_int_t(42));
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-    reader->set("seconds", note::json_int_t{42});
+    reader->set("seconds", note::json_int_t(42));
 #endif
     reader->set("status", std::string("x-status"));
     auto rsp = note::api::CardWirelessPenalty::Clear::Response::parse(std::move(reader));
@@ -6270,8 +6270,8 @@ TEST_CASE("note::api::DfuGet request builder") {
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.binary(true);
-    req.length(note::json_int_t{42});
-    req.offset(note::json_int_t{42});
+    req.length(note::json_int_t(42));
+    req.offset(note::json_int_t(42));
     req.execute();
     REQUIRE(h.last_req.find("\"binary\":true") != std::string::npos);
     REQUIRE(h.last_req.find("\"length\":42") != std::string::npos);
@@ -6292,8 +6292,8 @@ TEST_CASE("note::api::DfuGet request builder") {
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover known-key routing in operator[] (true branch for each routed field).
     req["binary"] = true;
-    req["length"] = note::json_int_t{42};
-    req["offset"] = note::json_int_t{42};
+    req["length"] = note::json_int_t(42);
+    req["offset"] = note::json_int_t(42);
     // Cover command()
     req.command();
     // Cover streaming transport execute path in Notecard::execute().
@@ -6308,8 +6308,8 @@ TEST_CASE("note::api::DfuGet request builder") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::DfuGet response parsing") {
     auto reader = std::make_unique<note::test::PopulatedJsonReader>();
-    reader->set("cobs", note::json_int_t{42});
-    reader->set("length", note::json_int_t{42});
+    reader->set("cobs", note::json_int_t(42));
+    reader->set("length", note::json_int_t(42));
     reader->set("payload", std::string("x-payload"));
     reader->set("status", std::string("x-status"));
     auto rsp = note::api::DfuGet::Response::parse(std::move(reader));
@@ -6616,7 +6616,7 @@ TEST_CASE("note::api::EnvGet request builder") {
     req.names.add(note::string_view("x-names-item"));
 #endif
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-    req.time(note::json_int_t{42});
+    req.time(note::json_int_t(42));
 #endif
     req.execute();
     REQUIRE(h.last_req.find("\"name\":\"x-name\"") != std::string::npos);
@@ -6643,7 +6643,7 @@ TEST_CASE("note::api::EnvGet request builder") {
     // Cover known-key routing in operator[] (true branch for each routed field).
     req["name"] = note::string_view("x-name");
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-    req["time"] = note::json_int_t{42};
+    req["time"] = note::json_int_t(42);
 #endif
     // Cover command()
     req.command();
@@ -6661,7 +6661,7 @@ TEST_CASE("note::api::EnvGet response parsing") {
     auto reader = std::make_unique<note::test::PopulatedJsonReader>();
     reader->set("text", std::string("x-text"));
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-    reader->set("time", note::json_int_t{42});
+    reader->set("time", note::json_int_t(42));
 #endif
     auto rsp = note::api::EnvGet::Response::parse(std::move(reader));
     REQUIRE(rsp.text == "x-text");
@@ -6768,7 +6768,7 @@ TEST_CASE("note::api::EnvModified request builder") {
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-    req.time(note::json_int_t{42});
+    req.time(note::json_int_t(42));
 #endif
     req.execute();
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
@@ -6790,7 +6790,7 @@ TEST_CASE("note::api::EnvModified request builder") {
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover known-key routing in operator[] (true branch for each routed field).
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-    req["time"] = note::json_int_t{42};
+    req["time"] = note::json_int_t(42);
 #endif
     // Cover command()
     req.command();
@@ -6807,7 +6807,7 @@ TEST_CASE("note::api::EnvModified request builder") {
 TEST_CASE("note::api::EnvModified response parsing") {
     auto reader = std::make_unique<note::test::PopulatedJsonReader>();
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-    reader->set("time", note::json_int_t{42});
+    reader->set("time", note::json_int_t(42));
 #endif
     auto rsp = note::api::EnvModified::Response::parse(std::move(reader));
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
@@ -6902,7 +6902,7 @@ TEST_CASE("note::api::EnvSet request builder") {
 TEST_CASE("note::api::EnvSet response parsing") {
     auto reader = std::make_unique<note::test::PopulatedJsonReader>();
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-    reader->set("time", note::json_int_t{42});
+    reader->set("time", note::json_int_t(42));
 #endif
     auto rsp = note::api::EnvSet::Response::parse(std::move(reader));
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
@@ -6990,7 +6990,7 @@ TEST_CASE("note::api::EnvTemplate request builder") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::EnvTemplate response parsing") {
     auto reader = std::make_unique<note::test::PopulatedJsonReader>();
-    reader->set("bytes", note::json_int_t{42});
+    reader->set("bytes", note::json_int_t(42));
     auto rsp = note::api::EnvTemplate::Response::parse(std::move(reader));
     REQUIRE(rsp.bytes == 42);
     // Cover intern_strings() — copies string_view fields into pool storage.
@@ -7077,9 +7077,9 @@ TEST_CASE("note::api::FileChanges request builder") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::FileChanges response parsing") {
     auto reader = std::make_unique<note::test::PopulatedJsonReader>();
-    reader->set("changes", note::json_int_t{42});
+    reader->set("changes", note::json_int_t(42));
     reader->set("pending", true);
-    reader->set("total", note::json_int_t{42});
+    reader->set("total", note::json_int_t(42));
     auto rsp = note::api::FileChanges::Response::parse(std::move(reader));
     REQUIRE(rsp.changes == 42);
     REQUIRE(rsp.pending == true);
@@ -7164,9 +7164,9 @@ TEST_CASE("note::api::FileChangesPending request builder") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::FileChangesPending response parsing") {
     auto reader = std::make_unique<note::test::PopulatedJsonReader>();
-    reader->set("changes", note::json_int_t{42});
+    reader->set("changes", note::json_int_t(42));
     reader->set("pending", true);
-    reader->set("total", note::json_int_t{42});
+    reader->set("total", note::json_int_t(42));
     auto rsp = note::api::FileChangesPending::Response::parse(std::move(reader));
     REQUIRE(rsp.changes == 42);
     REQUIRE(rsp.pending == true);
@@ -7325,9 +7325,9 @@ TEST_CASE("note::api::FileStats request builder") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::FileStats response parsing") {
     auto reader = std::make_unique<note::test::PopulatedJsonReader>();
-    reader->set("changes", note::json_int_t{42});
+    reader->set("changes", note::json_int_t(42));
     reader->set("sync", true);
-    reader->set("total", note::json_int_t{42});
+    reader->set("total", note::json_int_t(42));
     auto rsp = note::api::FileStats::Response::parse(std::move(reader));
     REQUIRE(rsp.changes == 42);
     REQUIRE(rsp.sync == true);
@@ -7414,9 +7414,9 @@ TEST_CASE("note::api::HubGet response parsing") {
     auto reader = std::make_unique<note::test::PopulatedJsonReader>();
     reader->set("device", std::string("x-device"));
     reader->set("host", std::string("x-host"));
-    reader->set("inbound", note::json_int_t{42});
+    reader->set("inbound", note::json_int_t(42));
     reader->set("mode", std::string("x-mode"));
-    reader->set("outbound", note::json_int_t{42});
+    reader->set("outbound", note::json_int_t(42));
     reader->set("product", std::string("x-product"));
     reader->set("sn", std::string("x-sn"));
     reader->set("sync", true);
@@ -7537,9 +7537,9 @@ TEST_CASE("note::api::HubSet request builder") {
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
     req.details(note::string_view("x-details"));
 #endif
-    req.duration(note::json_int_t{42});
+    req.duration(note::json_int_t(42));
     req.host(note::string_view("x-host"));
-    req.inbound(note::json_int_t{42});
+    req.inbound(note::json_int_t(42));
     req.mode(note::string_view("periodic"));
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
     req.off(true);
@@ -7547,10 +7547,10 @@ TEST_CASE("note::api::HubSet request builder") {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
     req.on(true);
 #endif
-    req.outbound(note::json_int_t{42});
+    req.outbound(note::json_int_t(42));
     req.product(note::string_view("x-product"));
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-    req.seconds(note::json_int_t{42});
+    req.seconds(note::json_int_t(42));
 #endif
     req.sn(note::string_view("x-sn"));
     req.sync(true);
@@ -7623,9 +7623,9 @@ TEST_CASE("note::api::HubSet request builder") {
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
     req["details"] = note::string_view("x-details");
 #endif
-    req["duration"] = note::json_int_t{42};
+    req["duration"] = note::json_int_t(42);
     req["host"] = note::string_view("x-host");
-    req["inbound"] = note::json_int_t{42};
+    req["inbound"] = note::json_int_t(42);
     req["mode"] = note::string_view("periodic");
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
     req["off"] = true;
@@ -7633,10 +7633,10 @@ TEST_CASE("note::api::HubSet request builder") {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
     req["on"] = true;
 #endif
-    req["outbound"] = note::json_int_t{42};
+    req["outbound"] = note::json_int_t(42);
     req["product"] = note::string_view("x-product");
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-    req["seconds"] = note::json_int_t{42};
+    req["seconds"] = note::json_int_t(42);
 #endif
     req["sn"] = note::string_view("x-sn");
     req["sync"] = true;
@@ -7672,7 +7672,7 @@ TEST_CASE("note::api::HubSignal request builder") {
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
-    req.seconds(note::json_int_t{42});
+    req.seconds(note::json_int_t(42));
 #endif
     req.execute();
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
@@ -7694,7 +7694,7 @@ TEST_CASE("note::api::HubSignal request builder") {
     req["_ov2"] = "ov2";          // overflow: extras_count_ >= NOTE_EXTRAS_MAX in operator[]
     // Cover known-key routing in operator[] (true branch for each routed field).
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
-    req["seconds"] = note::json_int_t{42};
+    req["seconds"] = note::json_int_t(42);
 #endif
     // Cover command()
     req.command();
@@ -7711,7 +7711,7 @@ TEST_CASE("note::api::HubSignal request builder") {
 TEST_CASE("note::api::HubSignal response parsing") {
     auto reader = std::make_unique<note::test::PopulatedJsonReader>();
     reader->set("connected", true);
-    reader->set("signals", note::json_int_t{42});
+    reader->set("signals", note::json_int_t(42));
     auto rsp = note::api::HubSignal::Response::parse(std::move(reader));
     REQUIRE(rsp.connected == true);
     REQUIRE(rsp.signals == 42);
@@ -7976,18 +7976,18 @@ TEST_CASE("note::api::HubSyncStatus request builder") {
 TEST_CASE("note::api::HubSyncStatus response parsing") {
     auto reader = std::make_unique<note::test::PopulatedJsonReader>();
     reader->set("alert", true);
-    reader->set("completed", note::json_int_t{42});
+    reader->set("completed", note::json_int_t(42));
     reader->set("mode", std::string("x-mode"));
-    reader->set("requested", note::json_int_t{42});
+    reader->set("requested", note::json_int_t(42));
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 1, 1) || !defined(NOTE_API_STRICT)
     reader->set("scan", true);
 #endif
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-    reader->set("seconds", note::json_int_t{42});
+    reader->set("seconds", note::json_int_t(42));
 #endif
     reader->set("status", std::string("x-status"));
     reader->set("sync", true);
-    reader->set("time", note::json_int_t{42});
+    reader->set("time", note::json_int_t(42));
     auto rsp = note::api::HubSyncStatus::Response::parse(std::move(reader));
     REQUIRE(rsp.alert == true);
     REQUIRE(rsp.completed == 42);
@@ -8082,7 +8082,7 @@ TEST_CASE("note::api::NoteAdd request builder") {
     req.live(true);
 #endif
 #if NOTE_API_VERSION >= NOTE_VERSION(8, 2, 1) || !defined(NOTE_API_STRICT)
-    req.max(note::json_int_t{42});
+    req.max(note::json_int_t(42));
 #endif
     req.noteId(note::string_view("x-note"));
     req.payload(note::string_view("x-payload"));
@@ -8140,7 +8140,7 @@ TEST_CASE("note::api::NoteAdd request builder") {
     req["live"] = true;
 #endif
 #if NOTE_API_VERSION >= NOTE_VERSION(8, 2, 1) || !defined(NOTE_API_STRICT)
-    req["max"] = note::json_int_t{42};
+    req["max"] = note::json_int_t(42);
 #endif
     req["note"] = note::string_view("x-note");
     req["payload"] = note::string_view("x-payload");
@@ -8162,7 +8162,7 @@ TEST_CASE("note::api::NoteAdd response parsing") {
     auto reader = std::make_unique<note::test::PopulatedJsonReader>();
     reader->set("note", std::string("x-note"));
     reader->set("template", true);
-    reader->set("total", note::json_int_t{42});
+    reader->set("total", note::json_int_t(42));
     auto rsp = note::api::NoteAdd::Response::parse(std::move(reader));
     REQUIRE(rsp.noteId == "x-note");
     REQUIRE(rsp.template_ == true);
@@ -8220,7 +8220,7 @@ TEST_CASE("note::api::NoteChanges::Peek request builder") {
     req.execute();
     req.deleted(true);
     req.file(note::string_view("x-file"));
-    req.max(note::json_int_t{42});
+    req.max(note::json_int_t(42));
     req.reset(true);
     req.start(true);
     req.stop(true);
@@ -8250,7 +8250,7 @@ TEST_CASE("note::api::NoteChanges::Peek request builder") {
     // Cover known-key routing in operator[] (true branch for each routed field).
     req["deleted"] = true;
     req["file"] = note::string_view("x-file");
-    req["max"] = note::json_int_t{42};
+    req["max"] = note::json_int_t(42);
     req["reset"] = true;
     req["start"] = true;
     req["stop"] = true;
@@ -8269,8 +8269,8 @@ TEST_CASE("note::api::NoteChanges::Peek request builder") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::NoteChanges::Peek response parsing") {
     auto reader = std::make_unique<note::test::PopulatedJsonReader>();
-    reader->set("changes", note::json_int_t{42});
-    reader->set("total", note::json_int_t{42});
+    reader->set("changes", note::json_int_t(42));
+    reader->set("total", note::json_int_t(42));
     auto rsp = note::api::NoteChanges::Peek::Response::parse(std::move(reader));
     REQUIRE(rsp.changes == 42);
     REQUIRE(rsp.total == 42);
@@ -8325,7 +8325,7 @@ TEST_CASE("note::api::NoteChanges::Pop request builder") {
     // Execute with no optional fields set — covers all !has_value() (false) branches.
     req.execute();
     req.deleted(true);
-    req.max(note::json_int_t{42});
+    req.max(note::json_int_t(42));
     req.reset(true);
     req.start(true);
     req.stop(true);
@@ -8355,7 +8355,7 @@ TEST_CASE("note::api::NoteChanges::Pop request builder") {
     // Cover known-key routing in operator[] (true branch for each routed field).
     req["deleted"] = true;
     req["file"] = note::string_view("x-file");
-    req["max"] = note::json_int_t{42};
+    req["max"] = note::json_int_t(42);
     req["reset"] = true;
     req["start"] = true;
     req["stop"] = true;
@@ -8374,8 +8374,8 @@ TEST_CASE("note::api::NoteChanges::Pop request builder") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::NoteChanges::Pop response parsing") {
     auto reader = std::make_unique<note::test::PopulatedJsonReader>();
-    reader->set("changes", note::json_int_t{42});
-    reader->set("total", note::json_int_t{42});
+    reader->set("changes", note::json_int_t(42));
+    reader->set("total", note::json_int_t(42));
     auto rsp = note::api::NoteChanges::Pop::Response::parse(std::move(reader));
     REQUIRE(rsp.changes == 42);
     REQUIRE(rsp.total == 42);
@@ -8512,7 +8512,7 @@ TEST_CASE("note::api::NoteGet::Read request builder") {
 TEST_CASE("note::api::NoteGet::Read response parsing") {
     auto reader = std::make_unique<note::test::PopulatedJsonReader>();
     reader->set("payload", std::string("x-payload"));
-    reader->set("time", note::json_int_t{42});
+    reader->set("time", note::json_int_t(42));
     auto rsp = note::api::NoteGet::Read::Response::parse(std::move(reader));
     REQUIRE(rsp.payload == "x-payload");
     REQUIRE(rsp.time == 42);
@@ -8654,7 +8654,7 @@ TEST_CASE("note::api::NoteGet::Pop request builder") {
 TEST_CASE("note::api::NoteGet::Pop response parsing") {
     auto reader = std::make_unique<note::test::PopulatedJsonReader>();
     reader->set("payload", std::string("x-payload"));
-    reader->set("time", note::json_int_t{42});
+    reader->set("time", note::json_int_t(42));
     auto rsp = note::api::NoteGet::Pop::Response::parse(std::move(reader));
     REQUIRE(rsp.payload == "x-payload");
     REQUIRE(rsp.time == 42);
@@ -8757,8 +8757,8 @@ TEST_CASE("note::api::NoteTemplate::Define request builder") {
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
     req.format(note::string_view("x-format"));
 #endif
-    req.length(note::json_int_t{42});
-    req.port(note::json_int_t{42});
+    req.length(note::json_int_t(42));
+    req.port(note::json_int_t(42));
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
     req.verify(true);
 #endif
@@ -8793,8 +8793,8 @@ TEST_CASE("note::api::NoteTemplate::Define request builder") {
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
     req["format"] = note::string_view("x-format");
 #endif
-    req["length"] = note::json_int_t{42};
-    req["port"] = note::json_int_t{42};
+    req["length"] = note::json_int_t(42);
+    req["port"] = note::json_int_t(42);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
     req["verify"] = true;
 #endif
@@ -8812,11 +8812,11 @@ TEST_CASE("note::api::NoteTemplate::Define request builder") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::NoteTemplate::Define response parsing") {
     auto reader = std::make_unique<note::test::PopulatedJsonReader>();
-    reader->set("bytes", note::json_int_t{42});
+    reader->set("bytes", note::json_int_t(42));
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
     reader->set("format", std::string("x-format"));
 #endif
-    reader->set("length", note::json_int_t{42});
+    reader->set("length", note::json_int_t(42));
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
     reader->set("template", true);
 #endif
@@ -8937,8 +8937,8 @@ TEST_CASE("note::api::NoteTemplate::Remove request builder") {
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
     req.format(note::string_view("compact"));
 #endif
-    req.length(note::json_int_t{42});
-    req.port(note::json_int_t{42});
+    req.length(note::json_int_t(42));
+    req.port(note::json_int_t(42));
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
     req.verify(true);
 #endif
@@ -8971,8 +8971,8 @@ TEST_CASE("note::api::NoteTemplate::Remove request builder") {
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
     req["format"] = note::string_view("compact");
 #endif
-    req["length"] = note::json_int_t{42};
-    req["port"] = note::json_int_t{42};
+    req["length"] = note::json_int_t(42);
+    req["port"] = note::json_int_t(42);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
     req["verify"] = true;
 #endif
@@ -8990,11 +8990,11 @@ TEST_CASE("note::api::NoteTemplate::Remove request builder") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::NoteTemplate::Remove response parsing") {
     auto reader = std::make_unique<note::test::PopulatedJsonReader>();
-    reader->set("bytes", note::json_int_t{42});
+    reader->set("bytes", note::json_int_t(42));
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
     reader->set("format", std::string("x-format"));
 #endif
-    reader->set("length", note::json_int_t{42});
+    reader->set("length", note::json_int_t(42));
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
     reader->set("template", true);
 #endif
@@ -9595,10 +9595,10 @@ TEST_CASE("note::api::Web request builder") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::Web response parsing") {
     auto reader = std::make_unique<note::test::PopulatedJsonReader>();
-    reader->set("cobs", note::json_int_t{42});
-    reader->set("length", note::json_int_t{42});
+    reader->set("cobs", note::json_int_t(42));
+    reader->set("length", note::json_int_t(42));
     reader->set("payload", std::string("x-payload"));
-    reader->set("result", note::json_int_t{42});
+    reader->set("result", note::json_int_t(42));
     reader->set("status", std::string("x-status"));
     auto rsp = note::api::Web::Response::parse(std::move(reader));
     REQUIRE(rsp.cobs == 42);
@@ -9712,7 +9712,7 @@ TEST_CASE("note::api::WebDelete request builder") {
     req.name(note::string_view("x-name"));
     req.noteId(note::string_view("x-note"));
     req.route(note::string_view("x-route"));
-    req.seconds(note::json_int_t{42});
+    req.seconds(note::json_int_t(42));
     req.execute();
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
     REQUIRE(h.last_req.find("\"async\":true") != std::string::npos);
@@ -9746,7 +9746,7 @@ TEST_CASE("note::api::WebDelete request builder") {
     req["name"] = note::string_view("x-name");
     req["note"] = note::string_view("x-note");
     req["route"] = note::string_view("x-route");
-    req["seconds"] = note::json_int_t{42};
+    req["seconds"] = note::json_int_t(42);
     // Cover command()
     req.command();
     // Cover streaming transport execute path in Notecard::execute().
@@ -9762,10 +9762,10 @@ TEST_CASE("note::api::WebDelete request builder") {
 TEST_CASE("note::api::WebDelete response parsing") {
     auto reader = std::make_unique<note::test::PopulatedJsonReader>();
     reader->set("payload", std::string("x-payload"));
-    reader->set("result", note::json_int_t{42});
+    reader->set("result", note::json_int_t(42));
     reader->set("status", std::string("x-status"));
-    reader->set("cobs", note::json_int_t{42});
-    reader->set("length", note::json_int_t{42});
+    reader->set("cobs", note::json_int_t(42));
+    reader->set("length", note::json_int_t(42));
     auto rsp = note::api::WebDelete::Response::parse(std::move(reader));
     REQUIRE(rsp.payload == "x-payload");
     REQUIRE(rsp.result == 42);
@@ -9875,12 +9875,12 @@ TEST_CASE("note::api::WebGet request builder") {
 #endif
     req.content(note::string_view("x-content"));
     req.file(note::string_view("x-file"));
-    req.max(note::json_int_t{42});
+    req.max(note::json_int_t(42));
     req.name(note::string_view("x-name"));
     req.noteId(note::string_view("x-note"));
-    req.offset(note::json_int_t{42});
+    req.offset(note::json_int_t(42));
     req.route(note::string_view("x-route"));
-    req.seconds(note::json_int_t{42});
+    req.seconds(note::json_int_t(42));
     req.execute();
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
     REQUIRE(h.last_req.find("\"binary\":true") != std::string::npos);
@@ -9913,12 +9913,12 @@ TEST_CASE("note::api::WebGet request builder") {
 #endif
     req["content"] = note::string_view("x-content");
     req["file"] = note::string_view("x-file");
-    req["max"] = note::json_int_t{42};
+    req["max"] = note::json_int_t(42);
     req["name"] = note::string_view("x-name");
     req["note"] = note::string_view("x-note");
-    req["offset"] = note::json_int_t{42};
+    req["offset"] = note::json_int_t(42);
     req["route"] = note::string_view("x-route");
-    req["seconds"] = note::json_int_t{42};
+    req["seconds"] = note::json_int_t(42);
     // Cover command()
     req.command();
     // Cover streaming transport execute path in Notecard::execute().
@@ -9933,10 +9933,10 @@ TEST_CASE("note::api::WebGet request builder") {
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::WebGet response parsing") {
     auto reader = std::make_unique<note::test::PopulatedJsonReader>();
-    reader->set("cobs", note::json_int_t{42});
-    reader->set("length", note::json_int_t{42});
+    reader->set("cobs", note::json_int_t(42));
+    reader->set("length", note::json_int_t(42));
     reader->set("payload", std::string("x-payload"));
-    reader->set("result", note::json_int_t{42});
+    reader->set("result", note::json_int_t(42));
     auto rsp = note::api::WebGet::Response::parse(std::move(reader));
     REQUIRE(rsp.cobs == 42);
     REQUIRE(rsp.length == 42);
@@ -10047,16 +10047,16 @@ TEST_CASE("note::api::WebPost request builder") {
 #endif
     req.content(note::string_view("x-content"));
     req.file(note::string_view("x-file"));
-    req.max(note::json_int_t{42});
+    req.max(note::json_int_t(42));
     req.name(note::string_view("x-name"));
     req.noteId(note::string_view("x-note"));
-    req.offset(note::json_int_t{42});
+    req.offset(note::json_int_t(42));
     req.payload(note::string_view("x-payload"));
     req.route(note::string_view("x-route"));
-    req.seconds(note::json_int_t{42});
+    req.seconds(note::json_int_t(42));
     req.status(note::string_view("x-status"));
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
-    req.total(note::json_int_t{42});
+    req.total(note::json_int_t(42));
 #endif
     req.verify(true);
     req.execute();
@@ -10103,16 +10103,16 @@ TEST_CASE("note::api::WebPost request builder") {
 #endif
     req["content"] = note::string_view("x-content");
     req["file"] = note::string_view("x-file");
-    req["max"] = note::json_int_t{42};
+    req["max"] = note::json_int_t(42);
     req["name"] = note::string_view("x-name");
     req["note"] = note::string_view("x-note");
-    req["offset"] = note::json_int_t{42};
+    req["offset"] = note::json_int_t(42);
     req["payload"] = note::string_view("x-payload");
     req["route"] = note::string_view("x-route");
-    req["seconds"] = note::json_int_t{42};
+    req["seconds"] = note::json_int_t(42);
     req["status"] = note::string_view("x-status");
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
-    req["total"] = note::json_int_t{42};
+    req["total"] = note::json_int_t(42);
 #endif
     req["verify"] = true;
     // Cover command()
@@ -10130,11 +10130,11 @@ TEST_CASE("note::api::WebPost request builder") {
 TEST_CASE("note::api::WebPost response parsing") {
     auto reader = std::make_unique<note::test::PopulatedJsonReader>();
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
-    reader->set("cobs", note::json_int_t{42});
+    reader->set("cobs", note::json_int_t(42));
 #endif
-    reader->set("length", note::json_int_t{42});
+    reader->set("length", note::json_int_t(42));
     reader->set("payload", std::string("x-payload"));
-    reader->set("result", note::json_int_t{42});
+    reader->set("result", note::json_int_t(42));
     reader->set("status", std::string("x-status"));
     auto rsp = note::api::WebPost::Response::parse(std::move(reader));
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
@@ -10254,16 +10254,16 @@ TEST_CASE("note::api::WebPut request builder") {
 #endif
     req.content(note::string_view("x-content"));
     req.file(note::string_view("x-file"));
-    req.max(note::json_int_t{42});
+    req.max(note::json_int_t(42));
     req.name(note::string_view("x-name"));
     req.noteId(note::string_view("x-note"));
-    req.offset(note::json_int_t{42});
+    req.offset(note::json_int_t(42));
     req.payload(note::string_view("x-payload"));
     req.route(note::string_view("x-route"));
-    req.seconds(note::json_int_t{42});
+    req.seconds(note::json_int_t(42));
     req.status(note::string_view("x-status"));
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
-    req.total(note::json_int_t{42});
+    req.total(note::json_int_t(42));
 #endif
     req.verify(true);
     req.execute();
@@ -10310,16 +10310,16 @@ TEST_CASE("note::api::WebPut request builder") {
 #endif
     req["content"] = note::string_view("x-content");
     req["file"] = note::string_view("x-file");
-    req["max"] = note::json_int_t{42};
+    req["max"] = note::json_int_t(42);
     req["name"] = note::string_view("x-name");
     req["note"] = note::string_view("x-note");
-    req["offset"] = note::json_int_t{42};
+    req["offset"] = note::json_int_t(42);
     req["payload"] = note::string_view("x-payload");
     req["route"] = note::string_view("x-route");
-    req["seconds"] = note::json_int_t{42};
+    req["seconds"] = note::json_int_t(42);
     req["status"] = note::string_view("x-status");
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
-    req["total"] = note::json_int_t{42};
+    req["total"] = note::json_int_t(42);
 #endif
     req["verify"] = true;
     // Cover command()
@@ -10337,10 +10337,10 @@ TEST_CASE("note::api::WebPut request builder") {
 TEST_CASE("note::api::WebPut response parsing") {
     auto reader = std::make_unique<note::test::PopulatedJsonReader>();
     reader->set("payload", std::string("x-payload"));
-    reader->set("result", note::json_int_t{42});
+    reader->set("result", note::json_int_t(42));
     reader->set("status", std::string("x-status"));
-    reader->set("cobs", note::json_int_t{42});
-    reader->set("length", note::json_int_t{42});
+    reader->set("cobs", note::json_int_t(42));
+    reader->set("length", note::json_int_t(42));
     auto rsp = note::api::WebPut::Response::parse(std::move(reader));
     REQUIRE(rsp.payload == "x-payload");
     REQUIRE(rsp.result == 42);

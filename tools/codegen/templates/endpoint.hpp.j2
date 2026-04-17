@@ -594,7 +594,7 @@ namespace note::api {
 {% if prop.is_array and prop.cpp_type == "note::string_view" %}{% if array_string_props.append(prop) %}{% endif %}
 {% elif prop.cpp_type == "note::string_view" %}{% if string_props.append(prop) %}{% endif %}
 {% elif prop.cpp_type == "bool" %}{% if bool_props.append(prop) %}{% endif %}
-{% elif prop.cpp_type == "note::json_int_t" %}{% if int_props.append(prop) %}{% endif %}
+{% elif prop.is_integral %}{% if int_props.append(prop) %}{% endif %}
 {% elif prop.cpp_type == "double" %}{% if double_props.append(prop) %}{% endif %}
 {% endif %}
 {% endfor %}
@@ -712,7 +712,11 @@ namespace note::api {
 {% endif %}
 {% for prop in int_props %}
 {{ version_guard_begin(prop.version_guard) -}}
+{% if prop.cpp_type != "note::json_int_t" %}
+{{ indent }}            if (note::flash(keys_::rsp_{{ prop.accessor_name }}) == k_) { rsp.{{ prop.accessor_name }} = static_cast<{{ prop.cpp_type }}>(v_); return; }
+{% else %}
 {{ indent }}            if (note::flash(keys_::rsp_{{ prop.accessor_name }}) == k_) { rsp.{{ prop.accessor_name }} = v_; return; }
+{% endif %}
 {{ version_guard_end(prop.version_guard) -}}
 {% endfor %}
 {{ indent }}        }
@@ -827,7 +831,7 @@ namespace note::api {
 {{ indent }}};
 {% set simple_rsp_props = [] %}
 {% for prop in op.response.properties %}
-{% if not prop.version_guard and not prop.is_array and prop.cpp_type in ["bool", "note::json_int_t", "double", "note::string_view"] %}
+{% if not prop.version_guard and not prop.is_array and (prop.cpp_type == "bool" or prop.is_integral or prop.cpp_type in ["double", "note::string_view"]) %}
 {% if simple_rsp_props.append(prop) %}{% endif %}
 {% endif %}
 {% endfor %}
@@ -840,7 +844,7 @@ namespace note::api {
 {% for prop in simple_rsp_props %}
 {% if prop.cpp_type == "bool" %}
 {{ indent }}        {keys_::rsp_{{ prop.accessor_name }}, static_cast<uint16_t>(offsetof(Response, {{ prop.accessor_name }})), ::note::FieldType::Bool},
-{% elif prop.cpp_type == "note::json_int_t" %}
+{% elif prop.is_integral %}
 {{ indent }}        {keys_::rsp_{{ prop.accessor_name }}, static_cast<uint16_t>(offsetof(Response, {{ prop.accessor_name }})), ::note::FieldType::Int},
 {% elif prop.cpp_type == "double" %}
 {{ indent }}        {keys_::rsp_{{ prop.accessor_name }}, static_cast<uint16_t>(offsetof(Response, {{ prop.accessor_name }})), ::note::FieldType::Double},
@@ -860,7 +864,7 @@ namespace note::api {
 {% set exec_simple_props = [] %}
 {% if op.response and op.response.properties %}
 {% for prop in op.response.properties %}
-{% if not prop.version_guard and not prop.is_array and prop.cpp_type in ["bool", "note::json_int_t", "double", "note::string_view"] %}
+{% if not prop.version_guard and not prop.is_array and (prop.cpp_type == "bool" or prop.is_integral or prop.cpp_type in ["double", "note::string_view"]) %}
 {% if exec_simple_props.append(prop) %}{% endif %}
 {% endif %}
 {% endfor %}
@@ -932,7 +936,7 @@ namespace note::api {
 {# Collect simple optional fields for generic builder #}
 {% set simple_req_props = [] %}
 {% for prop in op.properties %}
-{% if not prop.is_required_by_dispatch and not prop.is_required and not prop.is_array and not prop.is_body and not (op.mode_prefix and prop.wire_name == "mode") and prop.cpp_type in ["bool", "note::json_int_t", "double", "note::string_view"] %}
+{% if not prop.is_required_by_dispatch and not prop.is_required and not prop.is_array and not prop.is_body and not (op.mode_prefix and prop.wire_name == "mode") and ((prop.cpp_type == "bool" or prop.is_integral or prop.cpp_type in ["double", "note::string_view"])) %}
 {% if simple_req_props.append(prop) %}{% endif %}
 {% endif %}
 {% endfor %}
@@ -945,7 +949,9 @@ namespace note::api {
 {{ version_guard_begin(prop.version_guard) -}}
 {% if prop.cpp_type == "bool" %}
 {{ indent }}        {keys_::{{ prop.accessor_name }}, static_cast<uint16_t>(offsetof({{ parent_type }}, {{ prop.accessor_name }})), ::note::ReqFieldType::Bool},
-{% elif prop.cpp_type == "note::json_int_t" %}
+{% elif prop.unit %}
+{{ indent }}        {keys_::{{ prop.accessor_name }}, static_cast<uint16_t>(offsetof({{ parent_type }}, {{ prop.accessor_name }})), ::note::ReqFieldType::Int32},
+{% elif prop.is_integral %}
 {{ indent }}        {keys_::{{ prop.accessor_name }}, static_cast<uint16_t>(offsetof({{ parent_type }}, {{ prop.accessor_name }})), ::note::ReqFieldType::Int},
 {% elif prop.cpp_type == "double" %}
 {{ indent }}        {keys_::{{ prop.accessor_name }}, static_cast<uint16_t>(offsetof({{ parent_type }}, {{ prop.accessor_name }})), ::note::ReqFieldType::Double},

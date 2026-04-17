@@ -126,7 +126,7 @@ TEST_CASE("Arena allocate returns nullptr on exhaustion") {
 namespace {
 struct PlainResponse {
     note::ResponseField<bool> flag;
-    note::ResponseField<int32_t> count;
+    note::ResponseField<note::json_int_t> count;
     note::ResponseField<double> value;
     note::ResponseField<note::string_view> name;
 };

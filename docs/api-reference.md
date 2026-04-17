@@ -416,7 +416,7 @@ _**NOTE:** When... |
 | `.mode` | `note::string_view` | The current AUX `mode`, or `off` if not set. |
 | `.power` | `bool` | If `true`, indicates the Notecard has USB (main) power. This parameter only... |
 | `.seconds` | `note::json_int_t` | When in AUX `gpio` mode, and if `count` is enabled on an AUX pin, the number... |
-| `.time` | `note::json_int_t` | When in AUX `gpio` mode, and if `count` is enabled on an AUX pin, the time... |
+| `.time` | `note::json_time_t` | When in AUX `gpio` mode, and if `count` is enabled on an AUX pin, the time... |
 
 ### card.aux.serial 
 This endpoint has multiple intents:

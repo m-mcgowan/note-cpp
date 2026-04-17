@@ -218,12 +218,22 @@
 #define NOTE_SINGLETON 0
 #endif
 
-// NOTE_INT32_MATH — when 1, uses int32_t instead of int64_t for number
-// formatting (dtoa). Saves ~286 bytes on platforms with software 64-bit math
-// (AVR, Cortex-M0). Values above INT32_MAX will be truncated.
+// NOTE_INT32_MATH — when 1, uses int32_t instead of int64_t for general
+// integer fields. Saves ~286 bytes on platforms with software 64-bit math
+// (AVR, Cortex-M0). Does NOT affect timestamps — those stay int64_t
+// unless NOTE_SHORT_TIMESTAMPS is also set.
 // Default: 0 (full int64_t precision).
 #ifndef NOTE_INT32_MATH
 #define NOTE_INT32_MATH 0
+#endif
+
+// NOTE_SHORT_TIMESTAMPS — when 1 (and NOTE_INT32_MATH=1), narrows
+// timestamp fields from int64_t to int32_t. int32_t UNIX epoch
+// overflows on 2038-01-19. Only set this if you need to eliminate
+// ALL 64-bit math on severely constrained platforms.
+// Default: 0 (timestamps always int64_t, even under NOTE_INT32_MATH).
+#ifndef NOTE_SHORT_TIMESTAMPS
+#define NOTE_SHORT_TIMESTAMPS 0
 #endif
 
 // NOTE_ARDUINO_STUBS — when 1, test environments provide their own

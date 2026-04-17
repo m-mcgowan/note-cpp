@@ -93,14 +93,24 @@ class PropertyDef:
         return f"NOTE_VERSION({parts[0]}, {parts[1]}, {parts[2]})"
 
     @property
+    def is_integral(self) -> bool:
+        """True if this property's C++ type is an integer type."""
+        return self.cpp_type in (
+            "note::json_int_t", "note::json_time_t",
+            "int32_t", "uint32_t",
+            "int16_t", "uint16_t", "int8_t", "uint8_t",
+        )
+
+    @property
     def getter(self) -> str:
         """JsonReader getter method suffix: 'bool', 'int', 'double', 'string'."""
-        return {
-            "bool": "bool",
-            "note::json_int_t": "int",
-            "double": "double",
-            "note::string_view": "string",
-        }.get(self.cpp_type, "string")
+        if self.cpp_type == "bool":
+            return "bool"
+        if self.is_integral:
+            return "int"
+        if self.cpp_type == "double":
+            return "double"
+        return "string"
 
     @property
     def default_arg(self) -> str:

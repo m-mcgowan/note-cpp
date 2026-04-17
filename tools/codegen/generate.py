@@ -174,8 +174,8 @@ def _cpp_request_test_value(prop) -> str:
         return f'note::string_view("{prop.flags[0]}")'
     if prop.cpp_type == "bool":
         return "true"
-    if prop.cpp_type == "note::json_int_t":
-        return "note::json_int_t{42}"
+    if prop.is_integral:
+        return f"{prop.cpp_type}(42)"
     if prop.cpp_type == "double":
         return "1.5"
     # note::string_view — prefer the first enum value when available
@@ -188,8 +188,8 @@ def _reader_test_value(prop) -> str:
     """C++ expression for PopulatedJsonReader::set() in generated response tests."""
     if prop.cpp_type == "bool":
         return "true"
-    if prop.cpp_type == "note::json_int_t":
-        return "note::json_int_t{42}"
+    if prop.is_integral:
+        return f"{prop.cpp_type}(42)"
     if prop.cpp_type == "double":
         return "1.5"
     # note::string_view — reader stores std::string
@@ -202,7 +202,7 @@ def _response_match_value(prop) -> str:
         return f'{prop.field_type}{{42}}'
     if prop.cpp_type == "bool":
         return "true"
-    if prop.cpp_type == "note::json_int_t":
+    if prop.is_integral:
         return "42"
     if prop.cpp_type == "double":
         return "1.5"
@@ -220,7 +220,7 @@ def _json_test_value(prop) -> str:
         return f'["x-{prop.wire_name}-a","x-{prop.wire_name}-b"]'
     if prop.cpp_type == "bool":
         return "true"
-    if prop.cpp_type == "note::json_int_t":
+    if prop.is_integral:
         return "42"
     if prop.cpp_type == "double":
         return "1.5"
@@ -242,7 +242,7 @@ def _wire_value_fragment(prop) -> str:
         return f'"\\"{wire}\\":\\"{prop.flags[0]}\\""'
     if prop.cpp_type == "bool":
         return f'"\\"{wire}\\":true"'
-    if prop.cpp_type == "note::json_int_t":
+    if prop.is_integral:
         return f'"\\"{wire}\\":42"'
     if prop.cpp_type == "double":
         return f'"\\"{wire}\\":1.5"'

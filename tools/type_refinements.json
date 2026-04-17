@@ -1,0 +1,5 @@
+{
+  "$comment": "Per-field type refinements for integer fields. Applied by codegen to narrow json_int_t to platform-appropriate types. Keys are field wire-names applied globally. Fields not listed default to json_int_t.",
+
+  "$design": "JSON numbers are untyped. The schema's 'type: integer' is the first refinement. These annotations narrow further based on value domain. Fields with format: unix-time are automatically mapped to json_time_t by codegen (not listed here). Future: add min/max/validate for runtime range checking."
+}

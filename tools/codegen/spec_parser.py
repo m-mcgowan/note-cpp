@@ -77,13 +77,45 @@ _RSP_STRING_MAX_LENGTHS: dict[str, int] = {
 _DEFAULT_RSP_MAX_LENGTH = 48
 
 
-def _map_type(schema: dict) -> str:
-    """Map an OpenAPI property schema to a C++ type string."""
+def _load_type_refinements() -> dict[str, str]:
+    """Load per-field-name type refinements from type_refinements.json."""
+    path = Path(__file__).parent.parent / "type_refinements.json"
+    if not path.exists():
+        return {}
+    data = json.loads(path.read_text())
+    return {k: v["storage"] for k, v in data.items()
+            if isinstance(v, dict) and "storage" in v}
+
+_TYPE_REFINEMENTS: dict[str, str] = _load_type_refinements()
+
+
+def _map_type(schema: dict, wire_name: str = "", extensions: dict | None = None) -> str:
+    """Map an OpenAPI property schema to a C++ type string.
+
+    For integer fields, the type is refined in order of precedence:
+    1. Per-property x-type.storage in property_extensions.json (highest)
+    2. Per-field-name storage in type_refinements.json
+    3. Default: note::json_int_t
+    """
     t = schema.get("type")
     if isinstance(t, list):
         # Union type like ["string", "object"] — use string_view
         return "note::string_view"
-    return TYPE_MAP.get(t, "note::string_view")
+    cpp_type = TYPE_MAP.get(t, "note::string_view")
+    # Refine integer types
+    if t == "integer":
+        # UNIX timestamps get their own type (int64_t even under NOTE_INT32_MATH)
+        if schema.get("format") == "unix-time":
+            return "note::json_time_t"
+        # Per-property override (from property_extensions.json)
+        if extensions and "x-type" in extensions:
+            storage = extensions["x-type"].get("storage")
+            if storage:
+                return storage
+        # Global per-field-name refinement
+        if wire_name in _TYPE_REFINEMENTS:
+            return _TYPE_REFINEMENTS[wire_name]
+    return cpp_type
 
 
 def _format_default(value, cpp_type: str) -> str | None:
@@ -92,7 +124,8 @@ def _format_default(value, cpp_type: str) -> str | None:
         return None
     if cpp_type == "bool":
         return "true" if value else "false"
-    if cpp_type == "int32_t":
+    if cpp_type in ("note::json_int_t", "note::json_time_t", "int32_t", "uint32_t",
+                     "int16_t", "uint16_t", "int8_t", "uint8_t"):
         try:
             return str(int(value))
         except (ValueError, TypeError):
@@ -112,7 +145,7 @@ def _parse_property(name: str, schema: dict, *,
                     is_required_by_dispatch: bool = False) -> PropertyDef:
     """Parse a single property schema into a PropertyDef."""
     wire_name = schema_key_to_wire_name(name)
-    cpp_type = _map_type(schema)
+    cpp_type = _map_type(schema, wire_name=wire_name)
     default = schema.get("default")
 
     # Detect the "body" property with type:object — use BodyValue instead.

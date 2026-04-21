@@ -114,8 +114,9 @@ Use `F()` on Arduino, or a `NOTE_FLASH_ATTR`-declared array.
   of the program already references through a non-flash API (those
   stay in `.data` regardless).
 - Measured on STYLE=4 (ATmega328P, 5 scan keys, 3 shared with
-  JsonBuf): **−16 B RAM and −98 B flash** vs the RAM-key baseline
-  via `F()` direct form.
+  JsonBuf): **−16 B RAM and −32 B flash** vs the RAM-key baseline
+  via `F()` direct form (post error-message migration — the gap
+  narrowed after `ErrorMessage` and PROGMEM enum tables landed).
 
 ### `always_inline` on the FlashString implicit ctor
 

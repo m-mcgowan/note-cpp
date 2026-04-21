@@ -126,7 +126,7 @@ public:
         } else {
             size_t n = p.print("Error: ");
             auto& e = this->error();
-            n += p.write(reinterpret_cast<const uint8_t*>(e.message.data()), e.message.size());
+            n += e.message.printTo(p);   // handles RAM + flash storage
             return n;
         }
     }
@@ -172,14 +172,13 @@ using PrintableResult = PrintableWrapper<Result<T>>;
 
 using Unexpected = detail::unexpected<ErrorInfo>;
 
-inline Unexpected make_error(Error code, string_view message = {}) {
-    if (message.empty()) message = to_string(code);
-    return Unexpected(ErrorInfo{code, Cause::Unspecified, message});
-}
-
-inline Unexpected make_error(Error code, Cause cause, string_view message = {}) {
+inline Unexpected make_error(Error code, Cause cause, ErrorMessage message = {}) {
     if (message.empty()) message = to_string(code);
     return Unexpected(ErrorInfo{code, cause, message});
+}
+
+inline Unexpected make_error(Error code, ErrorMessage message = {}) {
+    return make_error(code, Cause::Unspecified, message);
 }
 
 // Result type for typed API responses. Inherits from Response so fields

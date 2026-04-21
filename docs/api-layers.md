@@ -207,6 +207,27 @@ if (rsp) {
 auto rsp = nc.transact(R"({"req":"card.version"})");
 ```
 
+To extract fields from a raw response without pulling in the SAX
+parser, pair `transact_raw` with `note::JsonView` — substring
+lookups against the buffered response. This skips ~8 KB of flash
+on AVR compared to `transact_dispatch` + a `JsonSink`:
+
+```cpp
+#include <note/json_view.hpp>
+
+char buf[128];
+auto body = note::JsonView(
+    nc.stack().transport.transact_raw(req.view(), buf, sizeof(buf), 10000)
+).object("body");
+
+float temp   = body.get_float("temp");
+int32_t hum  = body.get_int  ("humidity");
+```
+
+See the [Arduino guide](platforms/arduino/guide.md#binary-size-comparison)
+for the full flash/RAM comparison between the SAX-sink and
+`JsonView` scan approaches.
+
 For requests with runtime values, `JsonBuf` builds the JSON into a
 fixed-size buffer with no heap allocation:
 
@@ -237,13 +258,15 @@ overhead is too much.
 
 ## Choosing a Layer
 
-| Layer | Complexity | Use when | You lose |
-|-------|-----------|----------|----------|
-| **Typed API** (guided) | Methods and fields | Normal development | Nothing — this is the default |
-| **Typed API** (unguided) | Structs and fields | New request fields and values, cross-intent fields | Intent scoping |
-| **Lambda Request Builder** | Lambdas and strings | Unknown endpoints, migration from note-c | Most type safety |
-| **Raw JSON** | Raw strings | Protocol debugging, highly constrained environments | Everything except transport and JSON validation |
+| Layer | Complexity | Use when | You lose | AVR flash (vs typed) |
+|-------|-----------|----------|----------|---------------------|
+| **Typed API** (guided) | Methods and fields | Normal development | Nothing — this is the default | baseline (~24.7 KB) |
+| **Typed API** (unguided) | Structs and fields | New request fields and values, cross-intent fields | Intent scoping | −210 B |
+| **Lambda Request Builder** | Lambdas and strings | Unknown endpoints, migration from note-c | Most type safety | similar to typed |
+| **Raw JSON + SAX sink** | Raw strings + custom `JsonSink` | Need streaming response parse (low response RAM) | Typed response fields | **−4.2 KB** |
+| **Raw JSON + `JsonView` scan** | Raw strings + substring lookup | Known response shapes; flash is the bottleneck | Robust JSON parsing | **−13.8 KB** |
 
 We recommend starting with the typed API and dropping down only when you
 have a reason. Most firmware will never need anything beyond the guided
-typed API.
+typed API. Full flash/RAM comparison table in the
+[Arduino guide](platforms/arduino/guide.md#binary-size-comparison).

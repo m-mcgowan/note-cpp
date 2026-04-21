@@ -8,8 +8,9 @@
 /// access them without macros. On non-Harvard platforms, all functions
 /// are trivial pass-throughs that the compiler optimizes away.
 
-#include <note/types.hpp>
+#include <cstddef>
 #include <cstring>
+#include <string_view>
 
 #ifndef NOTE_PROGMEM
 #  ifdef __AVR__
@@ -52,21 +53,31 @@ struct FlashString {
     {}
 #endif
 
-    /// Length in bytes (aliases `len` for string_view-like interface).
+    /// Length in bytes (aliases `len` for std::string_view-like interface).
     constexpr size_t size() const { return len; }
 
-    /// Compare against a RAM string_view.
-    bool operator==(string_view sv) const {
+    /// Byte access. On AVR with PROGMEM storage, issues an LPM read;
+    /// elsewhere a plain load. No bounds check — caller checks `size()`.
+    char operator[](size_t i) const {
 #if NOTE_PROGMEM
-        return sv.size() == len && memcmp_P(sv.data(), ptr, len) == 0;
+        return static_cast<char>(pgm_read_byte(ptr + i));
 #else
-        return sv == string_view(ptr, len);
+        return ptr[i];
 #endif
     }
 
-    /// Copy to a RAM buffer and return a string_view.
+    /// Compare against a RAM std::string_view.
+    bool operator==(std::string_view sv) const {
+#if NOTE_PROGMEM
+        return sv.size() == len && memcmp_P(sv.data(), ptr, len) == 0;
+#else
+        return sv == std::string_view(ptr, len);
+#endif
+    }
+
+    /// Copy to a RAM buffer and return a std::string_view.
     /// buf must be at least len bytes.
-    string_view to_view(char* buf) const {
+    std::string_view to_view(char* buf) const {
 #if NOTE_PROGMEM
         memcpy_P(buf, ptr, len);
 #else
@@ -75,10 +86,10 @@ struct FlashString {
         return {buf, len};
     }
 
-    /// On non-Harvard, return a string_view directly (no copy needed).
+    /// On non-Harvard, return a std::string_view directly (no copy needed).
     /// On Harvard, this is UB — use to_view() instead.
 #if !NOTE_PROGMEM
-    string_view view() const { return {ptr, len}; }
+    std::string_view view() const { return {ptr, len}; }
 #endif
 };
 
@@ -116,7 +127,7 @@ void add_flash(Builder& b, FlashString key, const T& value) {
 }
 
 template<typename Builder>
-void add_raw_flash(Builder& b, FlashString key, string_view value) {
+void add_raw_flash(Builder& b, FlashString key, std::string_view value) {
 #if NOTE_PROGMEM
     char buf[64];
     b.add_raw(key.to_view(buf), value);

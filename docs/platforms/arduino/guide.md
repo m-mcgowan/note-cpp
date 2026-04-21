@@ -179,27 +179,44 @@ A realistic 8-endpoint app (hub.set, note.template, card.temp, note.add,
 card.status, card.voltage, note.get with body parse, env.get) measured
 on ATmega328P (Arduino Uno, 32 KB flash, 2 KB RAM):
 
-| Library / Style | Flash | RAM | Heap |
-|---|---|---|---|
-| **note-c** | 25,076 B (77.7%) | 729 B | ~371 B peak |
-| **note-cpp** typed API groups | 24,730 B (76.7%) | 836 B | 0 |
-| **note-cpp** typed direct (`nc.execute(req)`) | 24,520 B (76.0%) | 804 B | 0 |
-| **note-cpp** raw JSON + SAX sink | 20,528 B (63.6%) | 848 B | 0 |
-| **note-cpp** raw JSON + `JsonView` scan (RAM keys) | 11,440 B (35.5%) | 756 B | 0 |
-| **note-cpp** raw JSON + `JsonView` scan (flash keys) | **11,342 B (35.2%)** | **740 B** | 0 |
+Each row below peels off one layer of abstraction — showing how
+much flash (and RAM) you get back by dropping to a lower-level API.
+Rows are ordered from "best developer experience" down to "smallest
+possible footprint":
 
-All note-cpp variants use zero heap. Two "raw JSON" styles are
-available for constrained targets — they represent opposite ends of
-the flash/RAM trade-off:
+| # | Style (typical call site) | Flash | Δ flash vs typed | RAM | Δ RAM vs typed |
+|---|---|---|---|---|---|
+| — | **note-c** (`Notecard::requestAndResponse(...)`) | 25,076 B | +346 B | 729 B | −107 B* |
+| 1 | **typed api groups** — `api.hub.set().product(...).execute()` | 24,730 B | baseline | 836 B | baseline |
+| 2 | **typed direct** — `nc.execute(HubSet{...})` | 24,520 B | **−210 B** | 804 B | −32 B |
+| 3 | **raw + SAX sink** — `JsonBuf` + `transact_dispatch` + `JsonSink` | 20,528 B | **−4,202 B** | 848 B | +12 B |
+| 4 | **raw + `JsonView` scan** (RAM keys) | 10,914 B | **−13,816 B** | 696 B | −140 B |
+| 5 | **raw + `JsonView` scan** (`F()` flash keys) | **10,882 B** | **−13,848 B** | **680 B** | **−156 B** |
 
-- **Raw + SAX sink**: streams the response through the full SAX
-  parser into a custom `JsonSink`. No response buffer in RAM, but
-  pulls in the SAX machinery (~8 KB of flash). Pick this when RAM is
-  the bottleneck and the response may not fit in a buffer.
-- **Raw + `JsonView` scan**: buffers the response and extracts known
-  fields via substring search (`note::scan` / `JsonView`). Skips the
-  SAX parser entirely — ~12 KB cheaper in flash. Pick this when
-  flash is the bottleneck and response shapes are known and small.
+*note-c's RAM number excludes its ~371 B heap peak; all note-cpp
+variants use zero heap.
+
+Choosing a style:
+
+1. **Typed api groups** — best DX. Use when ~25 KB flash + 800–900 B
+   RAM fits your target.
+2. **Typed direct** — identical API surface but constructs request
+   objects manually. Tiny win over (1), used when you want explicit
+   control of the request struct.
+3. **Raw + SAX sink** — drops the codegen'd request/response types
+   but keeps the SAX parser for robust decoding. The streaming sink
+   means no response buffer in RAM — pick this when RAM is the
+   bottleneck **and** the response may be too large to buffer.
+4. **Raw + `JsonView` scan** — buffers the response and extracts
+   known fields via substring search. **Biggest single step-down**:
+   skips the SAX machinery entirely (≈8 KB flash). Pick this when
+   flash is the bottleneck and response shapes are known ahead of
+   time.
+5. **Flash keys** — same as (4) but with scan keys in PROGMEM. A
+   small additional RAM win on AVR; essentially free on other cores.
+
+See the "Parsing responses" sections below for the code patterns
+that correspond to rows 3, 4, and 5.
 
 Build a request either way with `JsonBuf`:
 
@@ -331,7 +348,7 @@ The flash-key overloads exist on both `note::JsonView` and
 `note::scan::*`. On non-AVR Arduino cores (ESP32, SAMD, RP2040,
 etc.) flash keys compile to a plain pointer load — zero runtime
 overhead, no benefit either. Measured on the comparison sketch
-(ATmega328P, 5 scan keys, `F()` form): **−16 B RAM, −98 B flash**
+(ATmega328P, 5 scan keys, `F()` form): **−16 B RAM, −32 B flash**
 vs the RAM-key baseline. Scan keys that are also used as JsonBuf
 request keys stay in `.data` regardless — only scan-exclusive
 keys move to flash.

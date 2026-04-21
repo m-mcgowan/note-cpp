@@ -283,6 +283,8 @@ On an Arduino Uno (ATmega328P, 32 KB flash / 2 KB RAM), an application with 8 di
 
 All memory is statically allocated at compile time using `MonotonicArena` and `StaticNotecard`. Enabled by default on AVR. See [docs/feature-flags.md](docs/feature-flags.md) for the compile-time options that enable this on other platforms.
 
+On constrained targets where the typed API's SAX parser is too big, `note-cpp` exposes progressively lower-level response-parsing paths — including a `JsonView` / `note::scan::*` mode that skips the SAX machinery entirely. On the same 8-endpoint Uno benchmark this drops flash to **10,882 bytes (−14 KB vs note-c)** at 680 B RAM. See [docs/platforms/arduino/guide.md](docs/platforms/arduino/guide.md#binary-size-comparison) for the full progression.
+
 </details>
 
 <details>

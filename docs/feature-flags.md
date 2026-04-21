@@ -263,4 +263,11 @@ peak). The JSON text path is 1,408 bytes larger in flash due to the streaming
 SAX infrastructure, but this gap is eliminated by JSONB's simpler binary
 encoding.
 
+Applications that know their response shapes ahead of time can skip the SAX
+machinery entirely by using `note::JsonView` / `note::scan::*` with
+`transact_raw`. This saves another ~8 KB of flash on top of the numbers above,
+landing at **10,882 bytes flash / 680 B RAM** on the same 8-endpoint sketch —
+see the [Arduino guide](platforms/arduino/guide.md#binary-size-comparison)
+for the full progression and the code patterns for each style.
+
 note-c heap measured via `__brkval` watermark on Wokwi (mock Notecard).

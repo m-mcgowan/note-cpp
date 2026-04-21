@@ -94,6 +94,7 @@ set(NOTE_CPP_TEST_SOURCES_COMMON
     test_json_sax.cpp
     test_json_sax_streaming.cpp
     test_json_scan.cpp
+    test_error_message.cpp
     test_json_lexer.cpp
     test_retry.cpp
     test_state_store.cpp

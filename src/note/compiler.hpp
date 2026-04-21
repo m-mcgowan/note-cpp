@@ -29,6 +29,14 @@
 #  define NOTE_ERR(msg) msg
 #endif
 
+// NOTE_ERR is used both for ErrorInfo::message construction AND for
+// internal SAX/JSON parsers that return string_view error codes.
+// Flash-ifying it globally would require migrating every SAX-internal
+// caller. On AVR NOTE_MINIMAL already implies NOTE_SHORT_ERRORS, so
+// the library's internal error literals collapse to "E" there —
+// leaving only user-provided messages (rare) and the enum-name tables
+// (now PROGMEM-backed via to_string(Error/Cause)) as RAM consumers.
+
 // NOTE_SINK_NOINLINE — reserved for future use. Currently a no-op because
 // on AVR with LTO + -Os, outlining sink methods into separate functions
 // adds prologue overhead that exceeds the savings from smaller thunks.

@@ -3,13 +3,13 @@
   "author": "note-cpp",
   "editor": "wokwi",
   "parts": [
-    { "id": "mega", "type": "wokwi-arduino-mega", "top": 160, "left": 20 },
-    { "id": "notecard", "type": "chip-notecard-mock", "top": 0, "left": 400 }
+    { "id": "uno", "type": "wokwi-arduino-uno", "top": 160, "left": 20 },
+    { "id": "notecard", "type": "chip-notecard-mock", "top": 0, "left": 200 }
   ],
   "connections": [
-    ["mega:18", "notecard:RX", "green", []],
-    ["mega:19", "notecard:TX", "yellow", []],
-    ["mega:GND.1", "notecard:GND", "black", []],
-    ["mega:5V", "notecard:VCC", "red", []]
+    ["uno:1", "notecard:RX", "green", []],
+    ["uno:0", "notecard:TX", "yellow", []],
+    ["uno:GND.1", "notecard:GND", "black", []],
+    ["uno:5V", "notecard:VCC", "red", []]
   ]
 }

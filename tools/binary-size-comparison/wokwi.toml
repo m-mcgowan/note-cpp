@@ -1,7 +1,10 @@
 [wokwi]
 version = 1
-firmware = '.pio/build/wokwi-notecpp/firmware.hex'
-elf = '.pio/build/wokwi-notecpp/firmware.elf'
+firmware = '.pio/build/avr-notecpp-scan-flash/firmware.hex'
+elf = '.pio/build/avr-notecpp-scan-flash/firmware.elf'
+# avr-notecpp-scan-flash = STYLE=4 + USE_FLASH_KEYS (smallest Uno build).
+# Switch to wokwi-layer5 for the isolated transact_raw test, or
+# wokwi-notecpp-mega for the Mega variant of the full sketch.
 
 [[chip]]
 name = 'notecard-mock'

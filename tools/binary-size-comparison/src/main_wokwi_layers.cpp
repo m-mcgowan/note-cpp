@@ -67,6 +67,32 @@ void loop() { delay(60000); }
 
 // ── L4: Full API execute with response validation ─────────────────────
 // Sends card.version, parses the JSONB response, checks fields.
+// ── L5: transact_raw round-trip ───────────────────────────────────────
+// Smallest possible test of StreamingTransport::transact_raw on Uno —
+// sends a hand-built card.temp request, reads the response, writes
+// PASS/FAIL to Serial. No typed API, no SAX parser.
+#elif WOKWI_LAYER == 5
+
+#include <note/static_notecard.hpp>
+#include <note/arduino/begin.hpp>
+#include <note/json_buf.hpp>
+
+alignas(4) static char arena_buf[32];
+static note::MonotonicArena arena(arena_buf);
+static note::StaticNotecard<note::arduino::SerialTransportStack<>> nc(
+    note::arena_allocator(arena), Serial, 9600);
+
+void setup() {
+    note::JsonBuf<64> req;
+    req.add("req", "card.temp");
+    req.close();
+    char rsp[64];
+    auto r = nc.stack().transport.transact_raw(req.view(), rsp, sizeof(rsp), 10000);
+    const char* msg = (r && !r->empty()) ? "PASS L5\n" : "FAIL L5\n";
+    Serial.write(msg);
+}
+void loop() { delay(60000); }
+
 #elif WOKWI_LAYER == 4
 
 #include <note/api/card_version.hpp>

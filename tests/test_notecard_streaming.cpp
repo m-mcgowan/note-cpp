@@ -90,14 +90,17 @@ struct StreamHarness {
 };
 
 // Streaming harness without allocator — forces the buffered fallback check.
+// The streaming constructor defaults alloc_ to a default-constructed
+// Allocator, so we clear it explicitly to exercise the NotReady branch.
 struct StreamNoAllocHarness {
     MockStreamHal hal;
     note::StreamingTransport transport{hal};
     note::Notecard nc;
 
     StreamNoAllocHarness()
-        : nc(transport)  // no allocator → alloc_ is nullopt
+        : nc(transport)  // default alloc — clear below
     {
+        nc.clear_allocator();
         nc.set_retry_policy({.max_retries = 0});
     }
 };
@@ -217,26 +220,20 @@ TEST_CASE("Streaming: request IDs increment across calls") {
 // Streaming execute without allocator — falls through to error
 // ===========================================================================
 
-// [!mayfail] tag: see HANDOFF-test-notecard-streaming.md for context.
-// The current code accepts transport + no-allocator + no-backend and runs
-// the streaming path successfully instead of returning NotReady.
-TEST_CASE("Streaming: execute without allocator or backend returns NotReady",
-          "[!mayfail]") {
+TEST_CASE("Streaming: execute without allocator or backend returns NotReady") {
     StreamNoAllocHarness h;
     h.hal.queue_response("{}");
 
     note::api::CardVersion req;
     auto r = h.nc.execute(req);
-    // streaming_transport_ is set but alloc_ is nullopt → skip streaming path
-    // backend_ is nullptr → skip buffered path
-    // → returns NotReady error
+    // streaming_transport_ is set but alloc_ is nullopt (cleared by
+    // harness) → skip streaming path; backend_ is nullptr → skip
+    // buffered path → returns NotReady error.
     REQUIRE_FALSE(r.has_value());
     CHECK(r.error().code == note::Error::NotReady);
 }
 
-// [!mayfail] tag: see HANDOFF-test-notecard-streaming.md.
-TEST_CASE("Streaming: void execute without allocator returns NotReady",
-          "[!mayfail]") {
+TEST_CASE("Streaming: void execute without allocator returns NotReady") {
     StreamNoAllocHarness h;
     h.hal.queue_response("{}");
 
@@ -426,20 +423,21 @@ TEST_CASE("Streaming: request() returns NotReady without backend") {
 // Timing enforcement with streaming transport (lines 855-870)
 // ===========================================================================
 
-// [!mayfail] tag: see HANDOFF-test-notecard-streaming.md.
-// delay_total stays at 0; gap enforcement may have moved off the HAL.
-TEST_CASE("Streaming: enforce_timing delays when gap is insufficient",
-          "[!mayfail]") {
+// Inter-transaction timing is enforced on paths with a Notecard-side
+// response to wait for: execute(), send(), send_command(), and
+// command_typed(). The string_view command(sv) overload is a
+// fire-and-forget escape hatch that intentionally skips timing —
+// use nc.send(raw_json) below to exercise the gap logic.
+
+TEST_CASE("Streaming: enforce_timing delays when gap is insufficient") {
     StreamHarness h;
     h.nc.set_inter_transaction_gap(100);
 
-    // First command: records timing
-    (void)h.nc.command("card.restart");
-    // At this point, record_timing() sets last_transaction_end_ms = hal.millis() (0)
+    // First send records timing at hal.millis() == 0.
+    h.nc.send(R"({"cmd":"card.restart"})");
 
-    // Second command: should enforce gap.
-    // millis() still returns 0, so elapsed = 0, needs 100ms delay.
-    (void)h.nc.command("card.restart");
+    // Second send: millis() still 0, elapsed = 0, needs full 100 ms delay.
+    h.nc.send(R"({"cmd":"card.restart"})");
     CHECK(h.hal.delay_total == 100);
 }
 
@@ -447,29 +445,27 @@ TEST_CASE("Streaming: enforce_timing skips delay when gap is sufficient") {
     StreamHarness h;
     h.nc.set_inter_transaction_gap(100);
 
-    // First command
-    h.nc.command("card.restart");
+    h.nc.send(R"({"cmd":"card.restart"})");
 
-    // Advance time beyond the gap
+    // Advance time beyond the gap.
     h.hal.current_millis = 200;
 
-    // Second command: elapsed = 200, gap = 100 → no delay needed
-    h.nc.command("card.restart");
+    // Second send: elapsed = 200, gap = 100 → no delay needed.
+    h.nc.send(R"({"cmd":"card.restart"})");
     CHECK(h.hal.delay_total == 0);
 }
 
-// [!mayfail] tag: see HANDOFF-test-notecard-streaming.md.
-TEST_CASE("Streaming: record_timing uses streaming millis", "[!mayfail]") {
+TEST_CASE("Streaming: record_timing uses streaming millis") {
     StreamHarness h;
     h.nc.set_inter_transaction_gap(50);
 
-    // First command at time 1000
+    // First send at time 1000.
     h.hal.current_millis = 1000;
-    h.nc.command("card.restart");
+    h.nc.send(R"({"cmd":"card.restart"})");
 
-    // Second command at time 1020: elapsed = 20, needs 30ms delay
+    // Second send at time 1020: elapsed = 20, needs 30 ms delay.
     h.hal.current_millis = 1020;
-    h.nc.command("card.restart");
+    h.nc.send(R"({"cmd":"card.restart"})");
     CHECK(h.hal.delay_total == 30);
 }
 
@@ -651,6 +647,12 @@ TEST_CASE("Streaming: binary PUT write failure triggers binary_io_reset") {
 // The canned four-response sequence (reset / pre-flight status /
 // PUT handshake / post-verify status) no longer matches the streaming
 // binary PUT's actual request pattern — rsp is an error.
+// [!mayfail] tag: see HANDOFF-test-notecard-streaming.md.
+// The buffered-path equivalent (test_binary_execute.cpp:442) passes with
+// the same 4-response sequence; streaming's post-transmit verify query
+// returns Error::ResponseLost instead. Suspected real library bug in
+// the streaming path's binary_control after binary_write + EOP —
+// worth investigating as a separate issue, not a test fix.
 TEST_CASE("Streaming: binary PUT with verify does pre-flight and post-transmit",
           "[!mayfail]") {
     MockStreamHal hal;

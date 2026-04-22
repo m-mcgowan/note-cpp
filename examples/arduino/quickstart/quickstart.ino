@@ -57,9 +57,11 @@ void setup() {
     nc.note.pop("sensors.qi").into(data).execute();
     // readme:end
 
+#if __cplusplus >= 202002L
     // readme:body-template
     nc.note.templates().define("sensors.qo").body(template_of(Readings())).execute();
     // readme:end
+#endif
 
     // readme:read-response
     auto rsp = nc.card.version().execute();

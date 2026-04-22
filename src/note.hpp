@@ -52,7 +52,23 @@
 
 #if NOTE_USING_NAMESPACE
 
+#ifdef ARDUINO
+// On Arduino, `Notecard` resolves to the Arduino subclass.
+// We cannot `using namespace note;` here because it would also pull in
+// `note::Notecard` (the transport-agnostic host class) and make the
+// unqualified name ambiguous. Instead we expose the handful of names
+// Arduino sketches commonly use; qualify the rest (`note::JsonBuf` etc.).
+#if __cplusplus >= 202002L
+using Notecard = note::arduino::Notecard<>;
+using note::template_of;
+#else
+using Notecard = note::arduino::Notecard;
+#endif
+using note::printable;
+using note::body;
+#else
 using namespace note;
+#endif
 
 #if NOTE_USING_LITERALS
 using namespace note::literals;
@@ -65,20 +81,6 @@ using namespace note::serial;
 #endif
 #if NOTE_USING_TRIANGULATE
 using namespace note::triangulate;
-#endif
-
-#ifdef ARDUINO
-// On Arduino, note::arduino::Notecard<> is the user-facing class.
-// A using-declaration or type-alias here would conflict with
-// note::Notecard exposed by `using namespace note;` above (GCC
-// reports ambiguity). Users who want unqualified `Notecard nc;`
-// should set NOTE_USING_NAMESPACE=0 and import selectively:
-//   #define NOTE_USING_NAMESPACE 0
-//   #include <note.hpp>
-//   using Notecard = note::arduino::Notecard<>;
-//   using namespace note::literals;
-// See examples/arduino/migration/ for an example of this pattern.
-using note::arduino::Notecard;
 #endif
 
 #endif // NOTE_USING_NAMESPACE

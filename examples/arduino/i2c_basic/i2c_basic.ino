@@ -5,8 +5,14 @@
 //
 // Dependencies: just note-cpp (header-only, no external JSON library needed).
 
+#ifdef __AVR__
+// AVR's toolchain ships an incomplete C++ standard library. The
+// nonstd-lite-bundle library supplies the missing pieces (optional,
+// string_view, variant, expected, ...). Install via Library Manager
+// (search "nonstd-lite-bundle") — must precede <note.hpp>.
+#include <nonstd-lite.hpp>
+#endif
 #include <note.hpp>
-#include <nonstdlibcpp.hpp> // required only on AVR platforms
 
 
 // ── Sensor data ──────────────────────────────────────────────────────────

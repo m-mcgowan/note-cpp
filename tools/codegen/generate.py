@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -632,11 +633,21 @@ def main() -> None:
     sizeof_path.write_text(sizeof_content)
     print(f"Generated sizeof report in {sizeof_path}")
 
-    # Generate CMake file listing all generated files
+    # Generate CMake file listing all generated files.
+    # Paths are emitted relative to the project root (parent of cmake/)
+    # so the checked-in file is machine-independent regardless of whether
+    # the generator was invoked with absolute or relative output paths.
+    # Uses os.path.relpath (lexical) rather than Path.resolve() to avoid
+    # following include/→src/ style symlinks that would flip the prefix.
     cmake_out.parent.mkdir(parents=True, exist_ok=True)
+    project_root = str(cmake_out.absolute().parent.parent)
+
+    def _rel_to_root(p):
+        return os.path.relpath(str(Path(p).absolute()), project_root)
+
     generated_headers = sorted(
-        [str(output_dir / ep.header_filename) for ep in endpoints]
-        + [str(api_path)]
+        [_rel_to_root(output_dir / ep.header_filename) for ep in endpoints]
+        + [_rel_to_root(api_path)]
     )
     generated_tests = sorted([
         "test_samples.cpp",

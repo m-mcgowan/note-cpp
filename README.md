@@ -404,12 +404,12 @@ for the benchmark harness that produced these numbers.
 │    CRC · retry · segmented TX/RX               │
 ├────────────────────────────────────────────────┤
 │  Platform HAL                 note-cpp         │
-│    Arduino · Zephyr · ESP-IDF · Linux          │
-│    (built-in, selected by build environment)   │
+│    Arduino (built-in)                          │
+│    Any RTOS / bare-metal via callback HAL      │
 └────────────────────────────────────────────────┘
 ```
 
-note-cpp is a single library that includes platform HALs for common targets. The HAL for your platform is selected automatically based on your build environment (Arduino framework, Zephyr, ESP-IDF, or POSIX). Custom HALs are a simple callback interface — see [docs/transport.md](docs/transport.md).
+note-cpp ships a built-in Arduino HAL, selected automatically when `ARDUINO` is defined. For other platforms (Zephyr, ESP-IDF, POSIX, bare-metal), integrate via the callback HAL — a small read/write/delay interface. See [docs/transport.md](docs/transport.md).
 
 ## Testing
 

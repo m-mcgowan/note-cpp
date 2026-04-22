@@ -189,7 +189,7 @@ nc.note.pop("sensors.qi").into(data).execute();
 nc.note.templates().define("sensors.qo").body(template_of(Readings())).execute();
 ```
 
-Request bodies can also be set with `json_fmt` (C++20, compile-time validated), builder lambdas, or raw strings. See [docs/body-values.md](docs/body-values.md).
+Request bodies can also be set with [`json_fmt`](docs/body-values.md) (C++20, compile-time validated), builder lambdas, or raw strings. See [docs/body-values.md](docs/body-values.md).
 
 </details>
 
@@ -281,16 +281,16 @@ On an Arduino Uno (ATmega328P, 32 KB flash / 2 KB RAM), an application with 8 di
 | **Heap (peak)** | 371 (18%) | 0 (0%) | 0 (0%) |
 | **Total RAM** | 1,100 (54%) | 832 (41%) | 832 (41%) |
 
-All memory is statically allocated at compile time using `MonotonicArena` and `StaticNotecard`. Enabled by default on AVR. See [docs/feature-flags.md](docs/feature-flags.md) for the compile-time options that enable this on other platforms.
+All memory is statically allocated at compile time using [`MonotonicArena`](docs/arena-sizing.md) and [`StaticNotecard`](docs/feature-flags.md). Enabled by default on AVR. See [docs/feature-flags.md](docs/feature-flags.md) for the compile-time options that enable this on other platforms.
 
-On constrained targets where the typed API's SAX parser is too big, `note-cpp` exposes progressively lower-level response-parsing paths — including a `JsonView` / `note::scan::*` mode that skips the SAX machinery entirely. On the same 8-endpoint Uno benchmark this drops flash to **10,882 bytes (−14 KB vs note-c)** at 680 B RAM. See [docs/platforms/arduino/guide.md](docs/platforms/arduino/guide.md#binary-size-comparison) for the full progression.
+On constrained targets where the typed API's SAX parser is too big, `note-cpp` exposes progressively lower-level response-parsing paths — including a [`JsonView` / `note::scan::*`](docs/api-layers.md) mode that skips the SAX machinery entirely. On the same 8-endpoint Uno benchmark this drops flash to **10,882 bytes (−14 KB vs note-c)** at 680 B RAM. See [docs/platforms/arduino/guide.md](docs/platforms/arduino/guide.md#binary-size-comparison) for the full progression.
 
 </details>
 
 <details>
 <summary><strong>Wire Protocols</strong> — serial and I2C with CRC, retry, and binary transfer</summary>
 
-Header-only implementations of the Notecard serial and I2C protocols: `NotecardSerial` and `NotecardI2c`. These handle CRC auto-detection, segmented TX/RX, retry logic, and auto-reset.
+Header-only implementations of the Notecard serial and I2C protocols: [`NotecardSerial`](docs/transport-serial.md) and [`NotecardI2c`](docs/transport-i2c.md). These handle CRC auto-detection, segmented TX/RX, retry logic, and auto-reset.
 
 Each protocol implementation uses a thin platform HAL — a lightweight interface for UART or I2C hardware access. See [docs/transport.md](docs/transport.md) for the full HAL interface.
 
@@ -305,7 +305,7 @@ An optional JSONB binary wire format (`NOTE_JSONB`) replaces JSON text with comp
 
 The typed API (`execute()`, response fields, body structs) works identically on both paths. **Streaming** is the default — requests are serialized directly to the wire, responses are SAX-parsed as bytes arrive. No JSON tree in memory.
 
-The **buffered** path builds a JSON tree in memory using a JSON backend (cJSON, nlohmann, or the built-in `BufferJsonBackend`). Use it when migrating from note-c (keeps the cJSON/lambda builder pattern) or when you need `JsonReader` tree access on responses.
+The **buffered** path builds a JSON tree in memory using a [JSON backend](docs/json-backend.md) (cJSON, nlohmann, or the built-in [`BufferJsonBackend`](docs/json-backend.md)). Use it when migrating from note-c (keeps the cJSON/lambda builder pattern) or when you need [`JsonReader`](docs/working-with-responses.md) tree access on responses.
 
 See [docs/transport.md](docs/transport.md) for when to use each, and [docs/json-backend.md](docs/json-backend.md) for backend options.
 
@@ -370,9 +370,9 @@ highest row that fits your target.
 | — | **note-c** baseline (`Notecard::requestAndResponse`) | 25,076 B | +346 B | 729 B\* |
 | 1 | **Typed API groups** (`api.hub.set().product(...).execute()`) | 24,730 B | baseline | 836 B |
 | 2 | **Typed direct** (`nc.execute(HubSet{...})`) | 24,520 B | −210 B | 804 B |
-| 3 | **Raw JSON + SAX sink** (`JsonBuf` + `transact_dispatch` + `JsonSink`) | 20,528 B | −4,202 B | 848 B |
-| 4 | **Raw + `JsonView` scan** (RAM keys) | 10,914 B | **−13,816 B** | 696 B |
-| 5 | **Raw + `JsonView` scan** (`F()` flash keys) | **10,882 B** | **−13,848 B** | **680 B** |
+| 3 | **[Raw JSON + SAX sink](docs/api-layers.md)** ([`JsonBuf`](docs/json-builder.md) + `transact_dispatch` + `JsonSink`) | 20,528 B | −4,202 B | 848 B |
+| 4 | **[Raw + `JsonView` scan](docs/api-layers.md)** (RAM keys) | 10,914 B | **−13,816 B** | 696 B |
+| 5 | **[Raw + `JsonView` scan](docs/api-layers.md)** (`F()` flash keys) | **10,882 B** | **−13,848 B** | **680 B** |
 
 \*note-c's RAM excludes a ~371 B heap peak; every `note-cpp` row uses
 zero heap.

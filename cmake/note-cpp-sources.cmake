@@ -125,6 +125,7 @@ set(NOTE_CPP_TEST_SOURCES_FULL_ONLY
     test_make_api.cpp
     test_migration_support.cpp
     test_notecard.cpp
+    test_notecard_streaming.cpp
     test_property_functor.cpp
     test_setup.cpp
     test_streaming_builder.cpp

@@ -345,7 +345,7 @@ TEST_CASE("JSONB CRC investigation: does Notecard include crc in JSONB responses
                     crc_value.assign(v.data(), v.size());
                 }
             }
-            void on_int(note::string_view k, int32_t) override {
+            void on_int(note::string_view k, note::json_int_t) override {
                 all_fields.emplace_back(k.data(), k.size());
                 if (k == "crc") found_crc = true;
             }
@@ -470,7 +470,7 @@ TEST_CASE("JSONB CRC investigation: does Notecard include crc in JSONB responses
                 all_fields.emplace_back(k.data(), k.size());
                 if (k == "crc") { found_crc = true; crc_value.assign(v.data(), v.size()); }
             }
-            void on_int(note::string_view k, int32_t) override {
+            void on_int(note::string_view k, note::json_int_t) override {
                 all_fields.emplace_back(k.data(), k.size());
                 if (k == "crc") found_crc = true;
             }

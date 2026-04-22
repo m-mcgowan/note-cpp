@@ -14,6 +14,9 @@
 #include <string>
 
 struct MockBuilder : note::JsonBuilder {
+    using JsonBuilder::add;
+    using JsonBuilder::add_element;
+
     std::string buf_ = "{";
     bool first_ = true;
     void sep() { if (!first_) buf_ += ','; first_ = false; }
@@ -21,7 +24,7 @@ struct MockBuilder : note::JsonBuilder {
     MockBuilder& add(note::string_view k, bool v) override {
         sep(); buf_ += '"'; buf_ += k; buf_ += "\":"; buf_ += v ? "true" : "false"; return *this;
     }
-    MockBuilder& add(note::string_view k, int32_t v) override {
+    MockBuilder& add(note::string_view k, note::json_int_t v) override {
         sep(); buf_ += '"'; buf_ += k; buf_ += "\":"; buf_ += std::to_string(v); return *this;
     }
     MockBuilder& add(note::string_view k, double v) override {
@@ -47,7 +50,7 @@ struct MockBuilder : note::JsonBuilder {
 struct MockReader : note::JsonReader {
     bool has(note::string_view) const override { return false; }
     bool get_bool(note::string_view, bool d) const override { return d; }
-    int32_t get_int(note::string_view, int32_t d) const override { return d; }
+    note::json_int_t get_int(note::string_view, note::json_int_t d) const override { return d; }
     double get_double(note::string_view, double d) const override { return d; }
     note::string_view get_string(note::string_view, note::string_view d) const override { return d; }
     std::unique_ptr<note::JsonReader> get_object(note::string_view) const override { return nullptr; }

@@ -78,8 +78,8 @@ _DEFAULT_RSP_MAX_LENGTH = 48
 
 
 def _load_type_refinements() -> dict[str, str]:
-    """Load per-field-name type refinements from type_refinements.json."""
-    path = Path(__file__).parent.parent / "type_refinements.json"
+    """Load per-field-name type refinements from metadata/type_refinements.json."""
+    path = Path(__file__).parent / "metadata" / "type_refinements.json"
     if not path.exists():
         return {}
     data = json.loads(path.read_text())

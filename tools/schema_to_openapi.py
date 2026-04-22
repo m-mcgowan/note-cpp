@@ -2,11 +2,15 @@
 """Convert Notecard JSON Schema files to an OpenAPI 3.1 spec.
 
 Reads all *.req.notecard.api.json and *.rsp.notecard.api.json files from the
-notecard-schema repo, combines them with safety_semantics.json, and emits a
-single notecard-api.openapi.json.
+notecard-schema repo, combines them with the metadata JSON files under
+tools/codegen/metadata/, and emits a single notecard-api.openapi.json.
 
 Usage:
-    python3 schema_to_openapi.py <schema_dir> [--safety safety_semantics.json] [--binary binary_transfer.json] [--extensions property_extensions.json] [-o output.json]
+    python3 schema_to_openapi.py <schema_dir> \\
+        [--safety codegen/metadata/safety_semantics.json] \\
+        [--binary codegen/metadata/binary_transfer.json] \\
+        [--extensions codegen/metadata/property_extensions.json] \\
+        [-o output.json]
 """
 
 import argparse
@@ -557,13 +561,13 @@ def main():
     conv = sub.add_parser("convert", help="Full conversion from Blues schema files")
     conv.add_argument("schema_dir", type=Path, help="Path to notecard-schema repo")
     conv.add_argument("--safety", type=Path,
-                      default=Path(__file__).parent / "safety_semantics.json")
+                      default=Path(__file__).parent / "codegen" / "metadata" / "safety_semantics.json")
     conv.add_argument("--binary", type=Path,
-                      default=Path(__file__).parent / "binary_transfer.json")
+                      default=Path(__file__).parent / "codegen" / "metadata" / "binary_transfer.json")
     conv.add_argument("--extensions", type=Path,
-                      default=Path(__file__).parent / "property_extensions.json")
+                      default=Path(__file__).parent / "codegen" / "metadata" / "property_extensions.json")
     conv.add_argument("--op-extensions", type=Path,
-                      default=Path(__file__).parent / "operation_extensions.json")
+                      default=Path(__file__).parent / "codegen" / "metadata" / "operation_extensions.json")
     conv.add_argument("--schema-tag", type=str, default=None)
     conv.add_argument("--schema-commit", type=str, default=None)
     conv.add_argument("-o", "--output", type=Path, default=None)
@@ -575,9 +579,9 @@ def main():
     )
     upd.add_argument("spec", type=Path, help="Existing notecard-api.openapi.json")
     upd.add_argument("--extensions", type=Path,
-                     default=Path(__file__).parent / "property_extensions.json")
+                     default=Path(__file__).parent / "codegen" / "metadata" / "property_extensions.json")
     upd.add_argument("--op-extensions", type=Path,
-                     default=Path(__file__).parent / "operation_extensions.json")
+                     default=Path(__file__).parent / "codegen" / "metadata" / "operation_extensions.json")
     upd.add_argument("-o", "--output", type=Path, default=None,
                      help="Output path (default: overwrite spec in place)")
 

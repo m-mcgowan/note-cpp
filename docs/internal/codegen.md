@@ -9,10 +9,10 @@ All changes belong in the source files described below.
 
 ```
 notecard-schema repo          Our extension metadata
-  *.req.notecard.api.json  ┐  tools/safety_semantics.json
-  *.rsp.notecard.api.json  ┤  tools/property_extensions.json
-                           ┤  tools/operation_extensions.json
-                           ┘  tools/binary_transfer.json
+  *.req.notecard.api.json  ┐  tools/codegen/metadata/safety_semantics.json
+  *.rsp.notecard.api.json  ┤  tools/codegen/metadata/property_extensions.json
+                           ┤  tools/codegen/metadata/operation_extensions.json
+                           ┘  tools/codegen/metadata/binary_transfer.json
               │
               ▼
    tools/schema_to_openapi.py
@@ -38,7 +38,7 @@ notecard-schema repo          Our extension metadata
 [notecard-schema](https://github.com/blues/notecard-schema) repo define the
 raw request/response property shapes for each Notecard API endpoint.
 
-### `tools/safety_semantics.json`
+### `tools/codegen/metadata/safety_semantics.json`
 
 Maps each endpoint to HTTP method(s) (GET/PUT/POST/DELETE), encoding the
 safety/idempotency class and, for polymorphic endpoints, the field constraints
@@ -47,7 +47,7 @@ safety/idempotency class and, for polymorphic endpoints, the field constraints
 This is also how `x-dispatch` polymorphism is expressed: an endpoint with
 multiple HTTP methods generates multiple C++ operation structs.
 
-### `tools/property_extensions.json`
+### `tools/codegen/metadata/property_extensions.json`
 
 Per-property extension overrides. Keys are endpoint names; values map
 property wire-names to extension objects merged into the property schema.
@@ -57,7 +57,7 @@ Used for:
 - `x-toggle` — paired boolean fields with semantic method names
 - `x-action` — standalone boolean trigger with a semantic method name
 
-### `tools/operation_extensions.json`
+### `tools/codegen/metadata/operation_extensions.json`
 
 Per-operation extension overrides. Keys are endpoint names; values map
 HTTP method (lowercase) to extension objects merged into the operation.
@@ -66,7 +66,7 @@ Used for:
 - `x-intents` — intent definitions (arm/sleep/retrieve etc.) that expand into per-intent C++ structs
 - `x-intent-name` — rename a dispatch operation's factory method and struct (e.g. `get` → `read`)
 
-### `tools/binary_transfer.json`
+### `tools/codegen/metadata/binary_transfer.json`
 
 Annotates endpoints that follow JSON handshake with raw COBS binary data.
 
@@ -78,9 +78,9 @@ into a single `notecard-api.openapi.json`. Two modes:
 **Full regeneration** (when Blues schema files change):
 ```bash
 python3 tools/schema_to_openapi.py <notecard-schema-dir> \
-    --safety tools/safety_semantics.json \
-    --binary tools/binary_transfer.json \
-    --extensions tools/property_extensions.json \
+    --safety tools/codegen/metadata/safety_semantics.json \
+    --binary tools/codegen/metadata/binary_transfer.json \
+    --extensions tools/codegen/metadata/property_extensions.json \
     -o notecard-api.openapi.json
 ```
 
@@ -88,8 +88,8 @@ python3 tools/schema_to_openapi.py <notecard-schema-dir> \
 extension metadata has changed):
 ```bash
 python3 tools/schema_to_openapi.py update-extensions notecard-api.openapi.json \
-    --extensions tools/property_extensions.json \
-    --op-extensions tools/operation_extensions.json
+    --extensions tools/codegen/metadata/property_extensions.json \
+    --op-extensions tools/codegen/metadata/operation_extensions.json
 ```
 
 ### `notecard-api.openapi.json`
@@ -99,7 +99,7 @@ produced by `schema_to_openapi.py`. Any manual edits are overwritten on next
 regeneration. Add metadata to one of the extension files above instead.
 
 Operation-level extensions (`x-intents`, `x-intent-name`) are sourced from
-`tools/operation_extensions.json` and applied during both full regeneration
+`tools/codegen/metadata/operation_extensions.json` and applied during both full regeneration
 and `update-extensions`.
 
 ### `tools/codegen/generate.py`
@@ -134,7 +134,7 @@ Jinja2 templates:
 
 ### New property extension (x-toggle, x-format, etc.)
 
-1. Add to `tools/property_extensions.json` under the endpoint and property name
+1. Add to `tools/codegen/metadata/property_extensions.json` under the endpoint and property name
 2. Extend `tools/codegen/spec_parser.py` to read the new key in `_parse_property()`
 3. Add a field to `tools/codegen/model.py` `PropertyDef` if needed
 4. Update `tools/codegen/templates/endpoint.hpp.j2` to emit the new behavior
@@ -142,12 +142,12 @@ Jinja2 templates:
 
 ### New safety/dispatch rule
 
-1. Add/update `tools/safety_semantics.json`
+1. Add/update `tools/codegen/metadata/safety_semantics.json`
 2. Regenerate the OpenAPI spec via `schema_to_openapi.py`
 3. Regenerate C++ via `generate.py`
 
 ### New operation-level extension (x-intents, x-intent-name)
 
-1. Add to `tools/operation_extensions.json` under the endpoint and HTTP method
+1. Add to `tools/codegen/metadata/operation_extensions.json` under the endpoint and HTTP method
 2. Run `python3 tools/schema_to_openapi.py update-extensions notecard-api.openapi.json`
 3. Run `python3 tools/codegen/generate.py notecard-api.openapi.json` to regenerate C++

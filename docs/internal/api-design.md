@@ -190,9 +190,9 @@ api.card.temp().configure()         // → card.temp (start/configure periodic l
 api.card.temp().stop()              // → card.temp + stop:true
 
 // ── Location ─────────────────────────────────────────────────────────────
-api.card.locationMode().get()       // → card.location.mode (read current mode)
-api.card.locationMode().configure() // → card.location.mode (set mode/seconds)
-api.card.locationMode().remove()    // → card.location.mode + delete:true
+api.card.location.mode().query()    // → card.location.mode (read current mode)
+api.card.location.mode().set()      // → card.location.mode (set mode/seconds)
+api.card.location.mode().remove()   // → card.location.mode + delete:true
 
 // ── Environment variables ────────────────────────────────────────────────
 api.env.defaults().set()            // Layer 1: full env.default builder (set)

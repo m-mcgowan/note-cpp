@@ -8,7 +8,12 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 
 # Verify code snippets in all markdown files with <!-- snippet: --> markers
 echo "=== Snippet verification ==="
-SNIPPET_MDS=$(find "$ROOT" -name 'README.md' -not -path '*/.pio/*' -not -path '*/node_modules/*' 2>/dev/null || true)
+SNIPPET_MDS=$(find "$ROOT" -name '*.md' \
+    -not -path '*/.pio/*' \
+    -not -path '*/.venv/*' \
+    -not -path '*/node_modules/*' \
+    -not -path '*/docs/superpowers/*' \
+    2>/dev/null || true)
 python3 "$ROOT/tools/inject-snippets.py" --check $SNIPPET_MDS
 echo "  OK"
 

@@ -1,103 +1,70 @@
-# Release Checklist — v0.1.0-beta
+# Release Checklist
 
-## Pre-release
+End-to-end sequence for cutting a release. Most gates are automated by
+[`validate-release.sh`](../../validate-release.sh) and
+[`release-validate.yml`](../../.github/workflows/release-validate.yml).
 
-### Documentation review
-- [ ] README reviewed — prominent "BETA" banner, API may change before v1.0
-- [ ] Migration guide reviewed (all examples functionally equivalent)
-- [ ] Arduino guide reviewed (printing, String conversion, debug, AVR)
-- [ ] card-attn-guide.md reviewed (arm/rearm/off/on/query/sleep)
-- [ ] working-with-responses.md reviewed (arrays, body parsing, lifetimes)
-- [ ] body-values.md reviewed (all 6 approaches documented)
-- [ ] error-handling.md reviewed (nc.execute pattern, not req.execute(nc))
-- [ ] known-issues.md reviewed (Clang consteval bug documented)
-- [ ] Doxygen mainpage reviewed
-- [ ] CONTRIBUTING.md reviewed
+## 1. Prepare
 
-### Testing on real hardware
-- [ ] Integration tests pass on ESP32-S3 via serial (MPCB 1.9 or 1.10)
-- [ ] Integration tests pass on ESP32-S3 via I2C
-- [ ] card.attn arm/rearm/disarm/off/on round-trip verified
-- [ ] Raw passthrough (transact/send) verified on device
-- [ ] Debug wire output (setDebugOutput) verified on device
-- [ ] Arduino CLI serial_basic sketch runs and succeeds
-- [ ] Arduino CLI i2c_basic sketch runs and succeeds
-- [ ] PlatformIO arduino-migration example builds and runs
-- [ ] AVR binary-size-comparison builds (pio run -e avr-notecpp)
+- [ ] Bump version in `library.json`, `library.properties`, `CMakeLists.txt`
+- [ ] Rename `## [Unreleased]` in `CHANGELOG.md` to `## [X.Y.Z] - YYYY-MM-DD`
+- [ ] Re-add an empty `## [Unreleased]` section above it
+- [ ] Commit the above on `main` (or a release branch)
 
-### note-c comparison
-- [ ] Binary size comparison documented:
-      AVR: note-cpp 14.6KB (45%) vs note-c 24.6KB (76%) — 41% smaller
-      ESP32: note-cpp ~1% smaller code, ~6% smaller constants
-- [ ] Document advantages: type safety, compile-time validation, zero heap,
-      consteval enum/flag/JSON validation, polymorphic intents, debug hooks,
-      OwnedBuffer passthrough, Printable responses
-- [ ] Document limitations: C++17 minimum, no ESP8266,
-      Clang consteval limitation, passthrough needs buffer on streaming path
-- [ ] Heap usage measured on device (not just inferred from static analysis)
+## 2. Validate locally (host)
 
-### CI
-- [ ] `./ci.sh` (quick) passes
-- [ ] `./ci.sh --full` passes (headers, examples, version gating, coverage)
-- [ ] CMake build passes (both host and Arduino targets)
-- [ ] All compile-fail and compile-check tests pass
-- [ ] Coverage ≥ 90% lines, 90% functions, 85% branches
-- [ ] Arduino CLI compiles both sketches
+Each step is scripted. Run the whole sequence with `./validate-release.sh X.Y.Z --host-only`,
+or call individual steps with `--step <name>`.
 
-### Streaming transport
-- [x] Phase 1: write()/read() on ITransport — binary streaming works
-- [x] Phase 2: caller-provided buffers (set_receive_buffer, transact_into)
-- [x] Phase 3: streaming SAX parser (StreamingSaxParser, SaxStreamBuf)
-- [x] Binary send/receive verified on hardware (serial, 1.9 MPCB)
-- [x] Streaming SAX verified on hardware (6 tests, all pass)
-- [x] Serial over-read fix — binary after JSON preserved via overflow buffer
-- [x] Serial segment pacing matches note-c (250 byte chunks, 250ms delay)
-- [x] Design doc (streaming-transport.md) accurate
+- [ ] `version-check` — `library.json` / `library.properties` match the tag
+- [ ] `changelog-check` — `## [X.Y.Z]` entry exists
+- [ ] `codegen` — generated headers / tests are up to date
+- [ ] `host-tests` — `./ci.sh` (Catch2 suite, both normal + NOTE_MINIMAL)
+- [ ] `full-checks` — `./ci.sh --full` (public headers, examples, version gating, target filtering)
+- [ ] `integrations` — cjson / nlohmann / buffer JSON backend tests
+- [ ] `coverage` — lines ≥ 90 %, functions ≥ 90 %, branches ≥ 95 %
+- [ ] `docs` — Doxygen build, snippet verification, link check
+- [ ] `pio-build` — PlatformIO firmware builds (ESP32-S3 serial + I2C)
+- [ ] `arduino-build` — arduino-cli compiles `quickstart`, `serial_basic`, `i2c_basic` on ESP32-S3 and Blues Swan
 
-### API stability
-- [ ] Public API headers reviewed for consistency
-- [ ] No breaking changes planned before v0.1 tag
-- [ ] Version in library.properties and library.json matches
-- [ ] Note: API may change before v1.0 — v0.1-beta is a preview release
+## 3. Validate on hardware
 
-## Beta release process
+Run on a workstation with a Notecard attached. Each step uploads and asserts
+a success marker over the serial console.
 
-### Tagging
-- [ ] Tag `v0.1.0-beta.1` on main
-- [ ] GitHub Release with "Pre-release" checkbox
-- [ ] Release notes summarize: what works, what's beta, what to test
+- [ ] `hw-esp32-serial` — integration tests, serial wire
+- [ ] `hw-esp32-i2c` — integration tests, I2C wire
+- [ ] `hw-esp32-arduino-serial` — `serial_basic.ino` end-to-end
+- [ ] `hw-esp32-arduino-i2c` — `i2c_basic.ino` end-to-end
+- [ ] `hw-swan-arduino-serial` — `serial_basic.ino` on Blues Swan
 
-### Packaging
-- [ ] Verify `include/` → `src/` symlink works for Arduino Library Manager
-- [ ] Publish to PlatformIO registry (beta tag)
-- [ ] Update README badge with version
-- [ ] Remove codecov badge token from README (private repo token `?token=...` not needed once public)
+## 4. Validate in CI
 
-### Announcement — beta testers
-- [ ] Blues community forum (discuss.blues.io): post with migration guide link,
-      invite 2-3 community members to port their note-c firmware
-- [ ] Blues blog (blues.com/blog): technical deep-dive post —
-      AVR binary size comparison, typed API examples, debug hooks
-- [ ] GitHub Discussions enabled for feedback (lower friction than Issues
-      for "is this the right pattern?" questions)
+- [ ] Trigger `release-validate.yml` workflow with the version input
+- [ ] All steps in the workflow pass
 
-### Broader visibility (after beta feedback)
-- [ ] Hacker News: embedded C++ with real binary size data
-- [ ] r/embedded, r/cpp: "41% smaller than C on AVR" angle
-- [ ] Embedded Artistry newsletter (Phillip Johnston covers modern C++ for embedded)
+## 5. Tag and publish
 
-### Beta feedback loop
-- [ ] Collect migration friction reports (like the ~/e/notecard-tests port)
-- [ ] Track DX scores from testers (target: 9+/10 for common operations)
-- [ ] Address string_view printing confusion (docs, not library)
-- [ ] Address any new API gaps discovered by testers
-- [ ] Plan v0.1.0 (non-beta) based on feedback
+- [ ] `git tag vX.Y.Z` on the release commit
+- [ ] `git push --tags` (only after local + CI validation)
+- [ ] Create a GitHub Release; tick **Pre-release** for 0.x releases
+- [ ] Release notes: paste the `## [X.Y.Z]` CHANGELOG block
 
-## v1.0 criteria (future)
-- Beta feedback incorporated
-- API stable — no breaking changes since last beta
-- ESP8266 support (if feasible with tl::expected)
-- Debug system phases 2-5 complete (timing, memory, transport, StaticNotecard policy)
-- Inter-transaction timeout (note-c's _TransactionStart equivalent)
-- card.aux response `state` array (array of objects)
-- At least 3 community members have successfully ported from note-c
+## 6. Registries
+
+- [ ] Arduino Library Manager picks up new tags automatically — confirm
+      on the next index cycle
+- [ ] Publish to PlatformIO Registry
+
+## 7. Announce
+
+- [ ] Blues community forum thread with migration guide link
+- [ ] GitHub Discussions post for feedback
+
+## Release gates that don't fit the pipeline
+
+These are human-judgement items — not automated:
+
+- [ ] README "BETA" banner matches the 0.x reality
+- [ ] No in-progress experimental code in `src/note/**` that shouldn't ship
+- [ ] Working tree is clean of dev artifacts (`logs/`, `PLAN-*.md`, `HANDOFF-*.md`, etc.)

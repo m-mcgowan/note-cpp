@@ -64,6 +64,15 @@ set(NOTE_CPP_ARDUINO_HEADERS
     include/note/arduino/serial.hpp
 )
 
+# ── POSIX headers (Linux / macOS / BSD; I2C is Linux-only) ────────────────
+
+set(NOTE_CPP_POSIX_HEADERS
+    include/note/posix.hpp
+    include/note/posix/clock.hpp
+    include/note/posix/serial.hpp
+    include/note/posix/i2c.hpp
+)
+
 # ── Backend headers ───────────────────────────────────────────────────────
 
 set(NOTE_CPP_BACKEND_HEADERS

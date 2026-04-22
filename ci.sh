@@ -96,6 +96,7 @@ run_ci() {
 #include <note/arena.hpp>
 #include <note/allocator.hpp>
 #include <note/string_pool.hpp>
+#include <note/posix.hpp>
 HEOF
     echo "  C++20 public headers OK"
 
@@ -116,6 +117,7 @@ HEOF
 #include <note/arena.hpp>
 #include <note/allocator.hpp>
 #include <note/string_pool.hpp>
+#include <note/posix.hpp>
 H17EOF
         echo "  C++17 public headers OK"
 

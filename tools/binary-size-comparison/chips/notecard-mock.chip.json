@@ -1,0 +1,5 @@
+{
+  "name": "Mock Notecard",
+  "author": "note-cpp",
+  "pins": ["VCC", "GND", "TX", "RX"]
+}

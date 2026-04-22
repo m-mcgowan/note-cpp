@@ -342,6 +342,53 @@ The core library works with C++17. Each successive standard unlocks additional f
 | `std::expected` (native, vs `tl::expected` fallback) | — | — | yes |
 | `std::unreachable` (native, vs compiler builtins) | — | — | yes |
 
+## How It Scales
+
+`note-cpp` is built to meet the target where it is — from an
+ATmega328P (32 KB flash / 2 KB RAM) up to ESP32, Cortex-M, and
+desktop-class hosts — without different APIs or separate libraries.
+The same typed API surface compiles everywhere; you dial resource
+use by choosing how much of the stack to pull in.
+
+### Target tiers
+
+| Target | Defaults | Recommended flags | Typical flash / RAM |
+|---|---|---|---|
+| **AVR Uno** (ATmega328P) | streaming, zero heap | `NOTE_MINIMAL`, optionally `NOTE_JSONB`, `JsonView` / `note::scan` for responses | 10.9 – 24.3 KB / 680 – 836 B |
+| **Cortex-M0 / STM32** | streaming, zero heap | `NOTE_MINIMAL` | typed API fits comfortably |
+| **ESP32 / Cortex-M4+** | streaming with arena allocator | defaults | full typed API + body structs |
+| **Linux / macOS host** | buffered path with a JSON backend | `cJSON` or `nlohmann` backend | full surface, heap allowed |
+
+### The full progression (Arduino Uno, 8-endpoint app)
+
+Each row peels off one layer of abstraction — showing how much flash
+(and RAM) you get back by dropping to a lower-level API. Pick the
+highest row that fits your target.
+
+| # | Style | Flash | Δ flash vs typed | RAM |
+|---|---|---|---|---|
+| — | **note-c** baseline (`Notecard::requestAndResponse`) | 25,076 B | +346 B | 729 B\* |
+| 1 | **Typed API groups** (`api.hub.set().product(...).execute()`) | 24,730 B | baseline | 836 B |
+| 2 | **Typed direct** (`nc.execute(HubSet{...})`) | 24,520 B | −210 B | 804 B |
+| 3 | **Raw JSON + SAX sink** (`JsonBuf` + `transact_dispatch` + `JsonSink`) | 20,528 B | −4,202 B | 848 B |
+| 4 | **Raw + `JsonView` scan** (RAM keys) | 10,914 B | **−13,816 B** | 696 B |
+| 5 | **Raw + `JsonView` scan** (`F()` flash keys) | **10,882 B** | **−13,848 B** | **680 B** |
+
+\*note-c's RAM excludes a ~371 B heap peak; every `note-cpp` row uses
+zero heap.
+
+The typed API (rows 1 – 2) comes with the best developer experience and
+comfortably fits targets with ≥ 32 KB flash / ≥ 1 KB RAM. Rows 3 – 5 peel
+off progressively more of the library's defaults, trading DX for
+footprint. All five styles share the same transport, CRC handling, and
+segmented TX/RX — you can mix them in one firmware image, and the
+compiler drops what you don't use.
+
+See [`docs/platforms/arduino/guide.md#binary-size-comparison`](docs/platforms/arduino/guide.md#binary-size-comparison)
+for full code patterns per row, [`docs/feature-flags.md`](docs/feature-flags.md) for the
+complete list of compile-time switches, and [`tools/binary-size-comparison/`](tools/binary-size-comparison/)
+for the benchmark harness that produced these numbers.
+
 ## Architecture
 
 ```

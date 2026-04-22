@@ -81,9 +81,14 @@ public:
     // a fatter sequence on AVR than a plain strlen. always_inline so
     // the tiny body is emitted at each call site rather than called
     // out-of-line.
+    //
+    // NOTE_COVERAGE_OMIT on the mem-init-list: the always_inline ctor
+    // emits a branch record per call site and lcov cannot merge them,
+    // producing thousands of phantom "uncovered" branches for a trivial
+    // null → 0 guard. The runtime behaviour is exercised elsewhere.
     __attribute__((always_inline)) inline
     ErrorMessage(const char* s)
-        : ptr_(s), len_(s ? strlen(s) : 0), in_flash_(false) {}
+        : ptr_(s), len_(s ? strlen(s) : 0), in_flash_(false) {}  // NOTE_COVERAGE_OMIT
 
     /// Construct from a FlashString (PROGMEM on AVR).
     constexpr ErrorMessage(FlashString fs)

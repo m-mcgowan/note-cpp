@@ -180,9 +180,8 @@ void setup() {
 <tr><th>note-arduino</th><th>note-cpp</th></tr>
 <tr><td>
 
+<!-- snippet:tests/migration_notec.cpp:56-61 -->
 ```c
-// ../../tests/migration_notec.cpp#L54-L59
-
 J *req = nc.newRequest("hub.set");
 JAddStringToObject(req, "product",
     "com.example.app");
@@ -193,9 +192,8 @@ nc.sendRequest(req);
 
 </td><td>
 
+<!-- snippet:examples/arduino/migration/src/main.cpp:43-48 -->
 ```cpp
-// ../../examples/arduino/migration/src/main.cpp#L37-L42
-
     nc.hub.set()
         .product("com.example.app")
         .mode("periodic")
@@ -219,7 +217,7 @@ nc.sendRequest(req);
 
 ## API Styles
 
-Note-c offers 3 primary API styles:
+`note-cpp` offers 3 primary API styles:
 
 1. fluent chain
 2. direct assignment
@@ -239,9 +237,8 @@ Set fields individually. This is good when fields come from different sources or
 <tr><th>note-arduino</th><th>note-cpp</th></tr>
 <tr><td>
 
+<!-- snippet:tests/migration_notec.cpp:67-79 -->
 ```c
-// ../../tests/migration_notec.cpp#L65-L77
-
 J *req = nc.newRequest("hub.set");
 JAddStringToObject(req, "product",
     "com.example.app");
@@ -273,8 +270,6 @@ else {
 req.execute();
 
 
-
-
 ```
 
 </td></tr>
@@ -289,9 +284,8 @@ isn't needed.
 <tr><th>note-arduino</th><th>note-cpp</th></tr>
 <tr><td>
 
+<!-- snippet:tests/migration_notec.cpp:56-61 -->
 ```c
-// ../../tests/migration_notec.cpp#L54-L59
-
 J *req = nc.newRequest("hub.set");
 JAddStringToObject(req, "product",
     "com.example.app");
@@ -307,9 +301,8 @@ nc.sendRequest(req);
 
 </td><td>
 
+<!-- snippet:examples/arduino/migration/src/main.cpp:54-64 -->
 ```cpp
-// ../../examples/arduino/migration/src/main.cpp#L48-L58
-
 bool use_continuous = false;
 auto req = nc.hub.set();
 req.product  = "com.example.app";
@@ -341,9 +334,8 @@ or conditional logic. Designated initializers read like data, not procedure
 
 **note-arduino:**
 
+<!-- snippet:tests/migration_notec.cpp:84-95 -->
 ```c
-// ../../tests/migration_notec.cpp#L82-L93
-
 struct Readings {
     float temperature;
     int16_t humidity;
@@ -360,9 +352,8 @@ nc.sendRequest(req);
 
 **note-cpp:**
 
+<!-- snippet:examples/arduino/migration/src/main.cpp:24-28 -->
 ```cpp
-// ../../examples/arduino/migration/src/main.cpp#L18-L22
-
 struct Readings {
     float temperature;
     int16_t humidity;
@@ -370,9 +361,8 @@ struct Readings {
 };
 ```
 
+<!-- snippet:examples/arduino/migration/src/main.cpp:71-76 -->
 ```cpp
-// ../../examples/arduino/migration/src/main.cpp#L65-L70
-
     Readings r{.temperature = 22.5f, .humidity = 60};
     nc.note.add()
         .file("sensors.qo")
@@ -386,9 +376,8 @@ struct Readings {
 In note-c, you check for a null response, then check the `err` field — an
 unstructured string you have to parse yourself:
 
+<!-- snippet:tests/migration_notec.cpp:101-110 -->
 ```c
-// ../../tests/migration_notec.cpp#L99-L108
-
 J *rsp = nc.requestAndResponse(req);
 if (rsp == NULL) {
     Serial.println("no response");
@@ -471,9 +460,8 @@ for all approaches.
 <tr><th>note-arduino</th><th>note-cpp</th></tr>
 <tr><td>
 
+<!-- snippet:tests/migration_notec.cpp:115-122 -->
 ```c
-// ../../tests/migration_notec.cpp#L113-L120
-
 // Type constants from note.h — you pick the
 // right one for each field manually.
 J *req = nc.newRequest("note.template");
@@ -486,9 +474,8 @@ nc.sendRequest(req);
 
 </td><td>
 
+<!-- snippet:examples/arduino/migration/src/main.cpp:96-98 -->
 ```cpp
-// ../../examples/arduino/migration/src/main.cpp#L90-L92
-
 nc.note.templates().define("sensors.qo")
     .body(note::template_of(Readings()))
     .execute();
@@ -522,9 +509,8 @@ If you prefer, you can also use an explicit template parameter instead of an ins
 <tr><th>note-arduino</th><th>note-cpp</th></tr>
 <tr><td>
 
+<!-- snippet:tests/migration_notec.cpp:127-143 -->
 ```c
-// ../../tests/migration_notec.cpp#L125-L141
-
 J *rsp = nc.requestAndResponse(
     nc.newRequest("card.temp"));
 if (rsp == NULL) {
@@ -546,9 +532,8 @@ nc.sendRequest(req);
 
 </td><td>
 
+<!-- snippet:examples/arduino/migration/src/main.cpp:105-111 -->
 ```cpp
-// ../../examples/arduino/migration/src/main.cpp#L99-L105
-
     auto r = nc.card.temp().read().execute();
     if (r) {
         Serial.println(r.value);
@@ -585,9 +570,8 @@ nc.sendRequest(req);
 <tr><th>note-arduino</th><th>note-cpp</th></tr>
 <tr><td>
 
+<!-- snippet:tests/migration_notec.cpp:143-150 -->
 ```c
-// ../../tests/migration_notec.cpp#L141-L148
-
 nc.sendRequest(req);
 }
 
@@ -609,8 +593,6 @@ if (r) {
     // Or print the entire response as JSON
     Serial.println(r);
 }
-
-
 ```
 
 </td></tr>
@@ -633,9 +615,8 @@ if (r) {
 <tr><th>note-arduino</th><th>note-cpp</th></tr>
 <tr><td>
 
+<!-- snippet:tests/migration_notec.cpp:155-166 -->
 ```c
-// ../../tests/migration_notec.cpp#L153-L164
-
     nc.deleteResponse(rsp);
 }
 }
@@ -663,8 +644,6 @@ nc.card.attn().arm()
 
 // Disarm all triggers
 nc.card.attn().disarm().execute();
-
-
 
 
 ```
@@ -1114,9 +1093,8 @@ maps directly to code.
 <tr><th>note-arduino</th><th>note-cpp</th></tr>
 <tr><td>
 
+<!-- snippet:tests/migration_notec.cpp:214-225 -->
 ```c
-// ../../tests/migration_notec.cpp#L212-L223
-
 JAddStringToObject(req2, "text", "60");
 nc.sendRequest(req2);
 }
@@ -1144,8 +1122,6 @@ if (!r) {
 } else {
     // use r.version, r.device, etc.
 }
-
-
 
 
 ```
@@ -1199,21 +1175,17 @@ requests are safe to retry, and currently note-c retries all requests.
 <tr><th>note-arduino</th><th>note-cpp</th></tr>
 <tr><td>
 
+<!-- snippet:tests/migration_notec.cpp:239-240 -->
 ```c
-// ../../tests/migration_notec.cpp#L228-L231
-
-    nc.deleteResponse(rsp);
-}
+nc.sendRequest(req);
 }
 ```
 
 </td><td>
 
+<!-- snippet:examples/arduino/migration/src/main.cpp:224-224 -->
 ```cpp
-// ../../examples/arduino/migration/src/main.cpp#L218-L218
-
 nc.hub.sync().command();
-
 
 ```
 
@@ -1543,12 +1515,12 @@ run note-cpp on top of note-c's existing transport. Implement
 `IBufferedTransport` and delegate each request to
 `NoteRequestResponseJSON()`:
 
-<!-- snippet:bridge-extern examples/stdcpp/note-c-bridge.cpp -->
+<!-- snippet:bridge-extern examples/stdcpp/note-c-bridge.cpp:23-23 -->
 ```cpp
 extern "C" char* NoteRequestResponseJSON(const char* reqJSON);
 ```
 
-<!-- snippet:bridge-transport examples/stdcpp/note-c-bridge.cpp -->
+<!-- snippet:bridge-transport examples/stdcpp/note-c-bridge.cpp:34-58 -->
 ```cpp
 /// Delegates every request to note-c's NoteRequestResponseJSON so note-c
 /// owns the serial/I2C bus and note-cpp sits on top with its typed API.
@@ -1579,7 +1551,7 @@ public:
 
 Wire it into a `Notecard` + `Api`:
 
-<!-- snippet:bridge-wiring examples/stdcpp/note-c-bridge.cpp -->
+<!-- snippet:bridge-wiring examples/stdcpp/note-c-bridge.cpp:62-71 -->
 ```cpp
 int main() {
     MockBackend backend;

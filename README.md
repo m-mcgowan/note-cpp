@@ -319,28 +319,28 @@ The core library works with C++17. Each successive standard unlocks additional f
 |---------|:-----:|:-----:|:-----:|
 | **Core** | | | |
 | Typed API (request builders, responses, fluent setters) | yes | yes | yes |
-| Ad-hoc requests (`nc.request("hub.set", lambda)`) | yes | yes | yes |
+| [Ad-hoc requests](docs/raw-requests.md) (`nc.request("hub.set", lambda)`) | yes | yes | yes |
 | [Error handling](docs/error-handling.md) | yes | yes | yes |
-| [Type-safe duration units](docs/api-patterns.md) (`Seconds`, `Minutes`, `Hours`, `Days`) | yes | yes | yes |
+| [Type-safe duration units](docs/duration-units.md) (`Seconds`, `Minutes`, `Hours`, `Days`) | yes | yes | yes |
 | **JSON** | | | |
-| JSON backends (cJSON, nlohmann, buffer/jsmn) | yes | yes | yes |
-| SAX streaming parser (`JsonSink`) | yes | yes | yes |
-| `JsonBuf` runtime builder (no allocations) | yes | yes | yes |
-| `consteval` JSON (`note::json<>()`) | — | yes | yes |
+| [JSON backends](docs/json-backend.md) (cJSON, nlohmann, buffer/jsmn) | yes | yes | yes |
+| [SAX streaming parser](docs/api-layers.md) (`JsonSink`) | yes | yes | yes |
+| [`JsonBuf` runtime builder](docs/json-builder.md) (no allocations) | yes | yes | yes |
+| [`consteval` JSON](docs/json-builder.md) (`note::json<>()`) | — | yes | yes |
 | **Body structs** | | | |
-| [Body structs](docs/body-values.md) with `NOTE_FIELDS` macro | yes | yes | yes |
-| Body structs without macro (plain aggregates via reflection) | — | yes | yes |
+| [Body structs](docs/body-values.md) with [`NOTE_FIELDS`](docs/body-values.md) macro | yes | yes | yes |
+| [Body structs without macro](docs/body-values.md) (plain aggregates via reflection) | — | yes | yes |
 | **Compile-time checks** | | | |
 | [`consteval` enum validation](docs/api-patterns.md) (`validatedMode()`) | — | yes | yes |
 | [Target filtering](docs/feature-flags.md#target-filtering-c20) (hardware + firmware) | — | yes | yes |
 | [Version gating](docs/feature-flags.md#api-version-gating-and-strict-mode) (per-field firmware availability) | yes | yes | yes |
 | **Memory** | | | |
-| [Arena sizing](docs/arena-sizing.md) — `MonotonicArena` + arena allocator | yes | yes | yes |
-| `StringPool` response string interning | yes | yes | yes |
-| Zero-alloc `BufferJsonBackend` (jsmn) | yes | yes | yes |
+| [Arena sizing](docs/arena-sizing.md) — [`MonotonicArena`](docs/arena-sizing.md) + arena allocator | yes | yes | yes |
+| [`StringPool`](docs/memory.md) response string interning | yes | yes | yes |
+| [Zero-alloc `BufferJsonBackend`](docs/json-backend.md) (jsmn) | yes | yes | yes |
 | **Standard library** | | | |
-| `std::expected` (native, vs `tl::expected` fallback) | — | — | yes |
-| `std::unreachable` (native, vs compiler builtins) | — | — | yes |
+| [`std::expected`](docs/cpp-standard-requirements.md) (native, vs `tl::expected` fallback) | — | — | yes |
+| [`std::unreachable`](docs/cpp-standard-requirements.md) (native, vs compiler builtins) | — | — | yes |
 
 ## How It Scales
 

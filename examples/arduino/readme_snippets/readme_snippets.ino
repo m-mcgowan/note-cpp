@@ -47,7 +47,7 @@ void setup() {
     auto req = nc.hub.set();
     req.product = "com.example.app";
     req.mode = "periodic";
-    req.outbound = 60;
+    req.outbound = 60_mins;
     req.execute();
     // readme:end
 

@@ -8,9 +8,9 @@ shows how your existing code maps to `note-cpp`. Each section shows the note-c
 pattern on the left and the `note-cpp` equivalent on the right.
 
 > All `note-cpp` code in this guide is taken from real examples compiled against note-cpp
-> from [examples/arduino-migration/](../../../examples/arduino/migration/).
+> from [examples/arduino/migration/](../../../examples/arduino/migration/).
 > The note-c examples are compiled from
-> [examples/migration_notec.cpp](../../../tests/migration_notec.cpp).
+> [tests/migration_notec.cpp](../../../tests/migration_notec.cpp).
 
 Here's a few examples to illustrate the key differences in API style.
 

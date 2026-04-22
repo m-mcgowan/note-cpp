@@ -17,6 +17,15 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
+# LCOV SF: records contain absolute paths from the gcov toolchain. Strip the
+# project root (this script lives at <root>/tools/coverage-gaps.py) so the
+# display path stays short regardless of where the repo is checked out.
+_PROJECT_ROOT = str(Path(__file__).resolve().parent.parent)
+_PATH_PREFIXES = (
+    f"{_PROJECT_ROOT}/include/note/",
+    f"{_PROJECT_ROOT}/src/note/",
+)
+
 
 @dataclass
 class FileCoverage:
@@ -45,8 +54,7 @@ class FileCoverage:
 
     @property
     def short_path(self):
-        # Strip common prefix
-        for prefix in ['/Users/mat/e/note-cpp/include/note/', '/Users/mat/e/note-cpp/src/note/']:
+        for prefix in _PATH_PREFIXES:
             if self.path.startswith(prefix):
                 return self.path[len(prefix):]
         return self.path

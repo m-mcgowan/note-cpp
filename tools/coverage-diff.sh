@@ -58,9 +58,17 @@ done
 echo
 echo "=== Per-file changes ==="
 
-# Generate per-file diff using Python
-python3 - "$BEFORE" "$AFTER" <<'PYEOF'
+# Generate per-file diff using Python. Pass the repo root as argv[3] so
+# LCOV SF: entries can be shortened for display without hardcoding a path.
+PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+python3 - "$BEFORE" "$AFTER" "$PROJECT_ROOT" <<'PYEOF'
 import sys
+
+PROJECT_ROOT = sys.argv[3]
+PATH_PREFIXES = (
+    f"{PROJECT_ROOT}/include/note/",
+    f"{PROJECT_ROOT}/src/note/",
+)
 
 def parse_file_coverage(path):
     """Returns {filename: (lines_found, lines_hit)}"""
@@ -78,8 +86,7 @@ def parse_file_coverage(path):
             elif line.startswith('LH:'):
                 lh = int(line[3:])
             elif line == 'end_of_record' and current_file:
-                # Shorten path
-                for prefix in ['/Users/mat/e/note-cpp/include/note/', '/Users/mat/e/note-cpp/src/note/']:
+                for prefix in PATH_PREFIXES:
                     if current_file.startswith(prefix):
                         current_file = current_file[len(prefix):]
                         break

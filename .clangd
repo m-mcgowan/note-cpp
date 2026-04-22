@@ -1,4 +1,4 @@
 CompileFlags:
   Add:
     - -std=c++20
-    - -I/Users/mat/e/note-cpp/include
+    - -Iinclude

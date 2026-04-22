@@ -16,3 +16,10 @@ TODO*.md
 .pio/
 *.gcno
 .work/
+
+# Session / editor artefacts
+.claude-session-id
+.wokwi
+logs/
+Testing/
+.vscode/

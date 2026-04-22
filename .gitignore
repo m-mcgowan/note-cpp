@@ -12,6 +12,10 @@ ci.log
 TODO*.md
 .release-validation/
 
+# Personal commit-message tooling (e.g. reformat-commit-msg wrapper).
+# .githooks/pre-push is tracked intentionally.
+.githooks/commit-msg
+
 # PlatformIO
 .pio/
 *.gcno

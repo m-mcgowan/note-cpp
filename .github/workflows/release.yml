@@ -1,3 +1,12 @@
+# Triggered by pushing a `v*` tag. Verifies the changelog has an entry
+# for the tag's version, extracts that section as release notes, and
+# publishes a GitHub release (marked prerelease for any 0.x tag).
+#
+# This workflow does NOT run tests — that's release-validate.yml's job,
+# which must be run manually before tagging. Tagging without a clean
+# validation pass is a process error, not something this workflow
+# guards against.
+
 name: Release
 
 on:

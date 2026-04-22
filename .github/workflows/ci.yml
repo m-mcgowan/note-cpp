@@ -1,3 +1,20 @@
+# Main CI entrypoint — runs on every push to main and every PR.
+#
+# Each job is a thin wrapper that invokes the corresponding stage in
+# ci.sh (the single source of truth for what "CI" means locally and
+# remotely). Contributors can reproduce any failure with ./ci.sh.
+#
+# workflow_dispatch lets maintainers trigger a subset — defaults to the
+# full matrix; other build-type values skip the jobs they don't gate.
+#
+# Sibling workflows:
+#   - release.yml          publishes a release (manual)
+#   - release-validate.yml  pre-release smoke matrix (manual)
+#
+# If you're tempted to inline a check here, reach for ci.sh first. The
+# inlined surface got out of sync with ci.sh repeatedly before this
+# refactor.
+
 name: CI
 
 on:
@@ -22,6 +39,10 @@ permissions:
   pull-requests: write
 
 jobs:
+  # Host unit tests + compile-check matrix. Delegates to ci.sh, which
+  # runs codegen, public-API-header compile checks, version gating,
+  # target filtering, and example builds — the full set that any
+  # contributor can reproduce locally.
   build:
     runs-on: ubuntu-latest
     if: >-
@@ -48,7 +69,7 @@ jobs:
             cxxflags: '-std=c++23 -stdlib=libc++'
     env:
       CXX: ${{ matrix.compiler }}
-      CXXFLAGS: '${{ matrix.cxxflags }} -Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wnon-virtual-dtor -Werror'
+      CXXFLAGS: '${{ matrix.cxxflags }}'
     steps:
       - uses: actions/checkout@v5
 
@@ -71,181 +92,17 @@ jobs:
       - name: Install Python dependencies
         run: pip install jinja2
 
-      - name: Verify codegen
-        run: |
-          python3 tools/codegen/generate.py notecard-api.openapi.json \
-            -o include/note/api \
-            --api include/note/api.hpp \
-            --test-dir tests
-          if ! git diff --quiet -- include/note/api/ include/note/api.hpp \
-              tests/test_samples.cpp tests/test_api_context.cpp \
-              tests/test_endpoint_coverage.cpp tests/test_endpoint_streaming.cpp \
-              tests/compile_check/ cmake/note-cpp-generated.cmake \
-              docs/api-reference.md tests/test_sizeof_report.cpp; then
-            echo "::error::Generated files are out of date. Run tools/codegen/generate.py and commit."
-            git diff --stat
-            exit 1
-          fi
-          echo "Generated files are up to date."
+      # ci.sh --full runs: codegen-verify, host unit tests (default +
+      # NOTE_MINIMAL), C++20/C++17 public-API-header compile checks,
+      # version gating, target filtering, and stdcpp example builds.
+      # Keep this in sync with run_ci() in ci.sh.
+      - name: Run CI checks
+        run: ./ci.sh --full
 
-      - name: Public API headers (C++20)
-        run: |
-          $CXX $CXXFLAGS -I include -fsyntax-only -x c++ - <<'EOF'
-          #include <note/notecard.hpp>
-          #include <note/notecard_api.hpp>
-          #include <note/api.hpp>
-          #include <note/transport.hpp>
-          #include <note/transport/serial.hpp>
-          #include <note/transport/i2c.hpp>
-          #include <note/body.hpp>
-          #include <note/field.hpp>
-          #include <note/target.hpp>
-          #include <note/units.hpp>
-          #include <note/json_buf.hpp>
-          #include <note/arena.hpp>
-          #include <note/allocator.hpp>
-          #include <note/string_pool.hpp>
-          EOF
-
-      - name: Public API headers (C++17)
-        run: |
-          $CXX -std=c++17 -I include -fsyntax-only -x c++ - <<'EOF'
-          #include <note/notecard.hpp>
-          #include <note/notecard_api.hpp>
-          #include <note/api.hpp>
-          #include <note/transport.hpp>
-          #include <note/transport/serial.hpp>
-          #include <note/transport/i2c.hpp>
-          #include <note/body.hpp>
-          #include <note/field.hpp>
-          #include <note/target.hpp>
-          #include <note/units.hpp>
-          #include <note/json_buf.hpp>
-          #include <note/arena.hpp>
-          #include <note/allocator.hpp>
-          #include <note/string_pool.hpp>
-          EOF
-          $CXX -std=c++17 -I include -fsyntax-only -x c++ - <<'EOF'
-          #include <note/body.hpp>
-          struct TestStruct { float a; int32_t b; NOTE_FIELDS(a, b) };
-          EOF
-
-      - name: Build and run unit tests
-        run: |
-          cmake -B /tmp/build -S . \
-            -DCMAKE_CXX_COMPILER="$CXX" \
-            -DCMAKE_CXX_FLAGS="${{ matrix.cxxflags }}"
-          cmake --build /tmp/build --parallel 2
-          /tmp/build/tests/note-cpp-tests
-          /tmp/build/tests/note-cpp-tests-arduino
-
-      - name: Build and run unit tests (NOTE_MINIMAL)
-        run: |
-          cmake -B /tmp/build-minimal -S . \
-            -DCMAKE_CXX_COMPILER="$CXX" \
-            -DCMAKE_CXX_FLAGS="${{ matrix.cxxflags }} -DNOTE_MINIMAL"
-          cmake --build /tmp/build-minimal --parallel 2
-          /tmp/build-minimal/tests/note-cpp-tests
-          /tmp/build-minimal/tests/note-cpp-tests-arduino
-
-      - name: Version gating
-        run: |
-          INCLUDE="-I include"
-          printf "  %-40s " "warn mode"
-          WARN_OUT=$($CXX $CXXFLAGS $INCLUDE -fsyntax-only -x c++ - <<'EOF' 2>&1 || true
-          #define NOTE_API_VERSION NOTE_VERSION(3, 0, 0)
-          #include <note/api/hub_set.hpp>
-          void test() { note::api::HubSet req; req.off = true; }
-          EOF
-          )
-          echo "$WARN_OUT" | grep -q 'deprecated.*requires firmware' && echo "OK" || { echo "FAIL"; echo "$WARN_OUT"; exit 1; }
-
-          printf "  %-40s " "strict mode"
-          STRICT_OUT=$($CXX $CXXFLAGS $INCLUDE -fsyntax-only -x c++ - <<'EOF' 2>&1 || true
-          #define NOTE_API_VERSION NOTE_VERSION(3, 0, 0)
-          #define NOTE_API_STRICT
-          #include <note/api/hub_set.hpp>
-          void test() { note::api::HubSet req; req.off = true; }
-          EOF
-          )
-          echo "$STRICT_OUT" | grep -q "no member named" && echo "OK" || { echo "FAIL"; echo "$STRICT_OUT"; exit 1; }
-
-          printf "  %-40s " "latest (no warnings)"
-          $CXX $CXXFLAGS $INCLUDE -Werror -fsyntax-only -x c++ - <<'EOF' 2>&1 && echo "OK" || { echo "FAIL"; exit 1; }
-          #include <note/api/hub_set.hpp>
-          void test() { note::api::HubSet req; req.off = true; }
-          EOF
-
-      - name: Target filtering
-        run: |
-          INCLUDE="-I include"
-          printf "  %-40s " "strict rejects unsupported"
-          OUT=$($CXX $CXXFLAGS $INCLUDE -fsyntax-only -x c++ - <<'EOF' 2>&1 || true
-          #include <note/api.hpp>
-          using LoRaStrict = note::Target<note::Hardware::LoRa, true>;
-          void test(note::Api<LoRaStrict>& api) { api.card.sleep(); }
-          EOF
-          )
-          echo "$OUT" | grep -qE "constraint|no matching|deprecated.*not available on this target" && echo "OK" || { echo "FAIL"; echo "$OUT"; exit 1; }
-
-          printf "  %-40s " "warn for unsupported"
-          OUT=$($CXX $CXXFLAGS $INCLUDE -fsyntax-only -x c++ - <<'EOF' 2>&1 || true
-          #include <note/api.hpp>
-          using LoRaWarn = note::Target<note::Hardware::LoRa, false>;
-          void test(note::Api<LoRaWarn>& api) { api.card.sleep(); }
-          EOF
-          )
-          echo "$OUT" | grep -q "deprecated.*not available on this target" && echo "OK" || { echo "FAIL"; echo "$OUT"; exit 1; }
-
-          printf "  %-40s " "supported (no warnings)"
-          $CXX $CXXFLAGS $INCLUDE -Werror -fsyntax-only -x c++ - <<'EOF' 2>&1 && echo "OK" || { echo "FAIL"; exit 1; }
-          #include <note/api.hpp>
-          using WifiTarget = note::Target<note::Hardware::WiFi>;
-          void test(note::Api<WifiTarget>& api) { api.card.sleep(); api.hub.set(); }
-          EOF
-
-          printf "  %-40s " "firmware warn"
-          OUT=$($CXX $CXXFLAGS $INCLUDE -fsyntax-only -x c++ - <<'EOF' 2>&1 || true
-          #include <note/api.hpp>
-          using OldFw = note::MinFirmware<5, 0, 0>;
-          void test(note::Api<OldFw>& api) { api.card.illumination(); }
-          EOF
-          )
-          echo "$OUT" | grep -q "deprecated.*not available on this target" && echo "OK" || { echo "FAIL"; echo "$OUT"; exit 1; }
-
-          printf "  %-40s " "firmware supported"
-          $CXX $CXXFLAGS $INCLUDE -Werror -fsyntax-only -x c++ - <<'EOF' 2>&1 && echo "OK" || { echo "FAIL"; exit 1; }
-          #include <note/api.hpp>
-          using NewFw = note::MinFirmware<9, 1, 1>;
-          void test(note::Api<NewFw>& api) { api.card.illumination(); api.card.version(); }
-          EOF
-
-          printf "  %-40s " "firmware strict rejects"
-          OUT=$($CXX $CXXFLAGS $INCLUDE -fsyntax-only -x c++ - <<'EOF' 2>&1 || true
-          #include <note/api.hpp>
-          using OldFwStrict = note::MinFirmware<5, 0, 0, true>;
-          void test(note::Api<OldFwStrict>& api) { api.card.illumination(); }
-          EOF
-          )
-          echo "$OUT" | grep -qE "constraint|no matching|deprecated.*requires firmware" && echo "OK" || { echo "FAIL"; echo "$OUT"; exit 1; }
-
-          printf "  %-40s " "combined hw+fw warn"
-          OUT=$($CXX $CXXFLAGS $INCLUDE -fsyntax-only -x c++ - <<'EOF' 2>&1 || true
-          #include <note/api.hpp>
-          using OldWifi = note::Target<note::Hardware::WiFi, 5, 0, 0>;
-          void test(note::Api<OldWifi>& api) { api.card.illumination(); }
-          EOF
-          )
-          echo "$OUT" | grep -q "deprecated.*not available on this target" && echo "OK" || { echo "FAIL"; echo "$OUT"; exit 1; }
-
-      - name: Build examples
-        run: |
-          for ex in $(find examples/stdcpp -name '*.cpp' | sort); do
-            name=${ex#examples/stdcpp/}
-            printf "  %-40s " "$name"
-            $CXX $CXXFLAGS -I include -o /tmp/note-cpp-ex "$ex" && echo "OK" || { echo "FAIL"; exit 1; }
-          done
-
+  # PlatformIO builds that ci.sh doesn't exercise locally: the on-device
+  # integration firmware (both transports) and the Arduino migration
+  # example. Also runs tools/verify-docs.sh to flag documentation drift
+  # against generated snippets.
   pio-build:
     runs-on: ubuntu-latest
     if: >-
@@ -284,6 +141,9 @@ jobs:
       - name: Verify docs
         run: tools/verify-docs.sh
 
+  # Coverage: ci.sh --coverage re-runs tests under instrumentation and
+  # produces an LCOV tracefile; reporting is a GitHub-specific overlay
+  # (PR comment + Codecov upload) that stays in the workflow.
   coverage:
     runs-on: ubuntu-latest
     if: >-
@@ -296,6 +156,9 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
+          # lcov 2.2+ is required — 2.0 miscounts functions (each template
+          # instantiation gets its own entry) and misreports branches. See
+          # docs/coverage.md for the full compatibility matrix.
           sudo apt-get install -y g++-13 \
             libcapture-tiny-perl libdatetime-perl libjson-perl libtimedate-perl
           LCOV_VERSION=2.3
@@ -332,6 +195,11 @@ jobs:
           disable_search: true
           fail_ci_if_error: false
 
+  # Multi-platform C++ compatibility via m-mcgowan/embedded-cpp-compat-check.
+  # Verifies the library compiles under the compiler/SDK combinations
+  # listed — meaningful because platform-vendored toolchains lag and
+  # enforcing this here catches regressions that a single-compiler host
+  # build misses.
   embedded-compat:
     runs-on: ubuntu-latest
     if: >-
@@ -354,6 +222,10 @@ jobs:
       - name: Show report
         run: cat compatibility.md >> $GITHUB_STEP_SUMMARY
 
+  # arduino-cli compile for each published Arduino example, against both
+  # ESP32-S3 and Blues Swan (STM32L4+). Exists alongside embedded-compat
+  # because arduino-cli exercises the Arduino IDE's include-path rules,
+  # which differ from raw PlatformIO builds and have surfaced real bugs.
   arduino-cli:
     runs-on: ubuntu-latest
     if: >-

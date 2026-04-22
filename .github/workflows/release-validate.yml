@@ -1,3 +1,18 @@
+# Manual pre-tag smoke matrix for a release candidate. Runs every step
+# of validate-release.sh — the same script contributors can run locally
+# before requesting a release. Each step is a separate `name:` so a
+# failure points at one concrete thing, not a monolithic "CI failed".
+#
+# Normal flow:
+#   1. Bump version in library.json / library.properties / CMakeLists.txt
+#   2. Add CHANGELOG.md entry
+#   3. Run this workflow with inputs.version set to the target
+#   4. Once green, push the `v<version>` tag → release.yml publishes
+#
+# Hardware steps are commented out pending a self-hosted runner with an
+# MPCB connected; keep them documented so the ordering is obvious when
+# that runner is wired up.
+
 name: Release Validation
 
 on:

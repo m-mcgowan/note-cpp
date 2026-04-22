@@ -643,18 +643,7 @@ TEST_CASE("Streaming: binary PUT write failure triggers binary_io_reset") {
 // Binary PUT: post-transmit verification via streaming (lines 510-519)
 // ===========================================================================
 
-// [!mayfail] tag: see HANDOFF-test-notecard-streaming.md.
-// The canned four-response sequence (reset / pre-flight status /
-// PUT handshake / post-verify status) no longer matches the streaming
-// binary PUT's actual request pattern — rsp is an error.
-// [!mayfail] tag: see HANDOFF-test-notecard-streaming.md.
-// The buffered-path equivalent (test_binary_execute.cpp:442) passes with
-// the same 4-response sequence; streaming's post-transmit verify query
-// returns Error::ResponseLost instead. Suspected real library bug in
-// the streaming path's binary_control after binary_write + EOP —
-// worth investigating as a separate issue, not a test fix.
-TEST_CASE("Streaming: binary PUT with verify does pre-flight and post-transmit",
-          "[!mayfail]") {
+TEST_CASE("Streaming: binary PUT with verify does pre-flight and post-transmit") {
     MockStreamHal hal;
     note::StreamingTransport transport(hal);
     auto nc = note::test::make_test_notecard(transport, note::Allocator{});

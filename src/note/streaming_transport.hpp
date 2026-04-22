@@ -382,8 +382,19 @@ public:
         override
 #endif
     {
+        return read_hal(buf, max_len, timeout_ms);
+    }
+
+private:
+    /// Read bytes with lookahead-first semantics. Any bytes stashed in
+    /// lookahead_ by a prior frame_read (e.g. a second JSON frame or binary
+    /// COBS data that arrived together with the JSON response in a single
+    /// HAL chunk) are returned before the HAL is consulted again. This is
+    /// the single choke point for consuming HAL bytes; read(), read_line(),
+    /// drain_frame_boundary(), and frame_read() all go through here so they
+    /// share the same pushback buffer and never drop queued bytes.
+    Result<size_t> read_hal(uint8_t* buf, size_t max_len, uint32_t timeout_ms) {
 #if !NOTE_NO_POLYMORPHIC
-        // Return any lookahead bytes saved by frame_read before hitting the HAL.
         if (lookahead_len_ > 0) {
             size_t n = std::min(max_len, lookahead_len_);
             memcpy(buf, lookahead_ + lookahead_pos_, n);
@@ -395,7 +406,6 @@ public:
         return hal_.read(buf, max_len, timeout_ms);
     }
 
-private:
     /// Read bytes from HAL until newline, filling buf. Returns string_view into buf.
     /// If the response exceeds bufsize, drains the remainder and returns an error.
     Result<string_view> read_line(char* buf, size_t bufsize, uint32_t timeout_ms) {
@@ -403,7 +413,7 @@ private:
         bool overflow = false;
         for (;;) {
             uint8_t byte;
-            auto rv = hal_.read(&byte, 1, timeout_ms);
+            auto rv = read_hal(&byte, 1, timeout_ms);
             if (!rv) return Unexpected(rv.error());
             if (*rv == 0) return make_error(Error::ResponseLost, Cause::Timeout, NOTE_ERR("response timeout"));
             if (byte == '\n') break;
@@ -428,7 +438,7 @@ private:
     void drain_frame_boundary() {
         uint8_t byte;
         for (;;) {
-            auto rv = hal_.read(&byte, 1, kDrainTimeoutMs);
+            auto rv = read_hal(&byte, 1, kDrainTimeoutMs);
             if (!rv || *rv == 0) break;
             if (byte == '\n') break;
         }
@@ -548,7 +558,7 @@ private:
             size_t n = 0;
             uint32_t start = hal_.millis();
             while (n == 0) {
-                auto r = hal_.read(buf, max, t);
+                auto r = read_hal(buf, max, t);
                 if (!r) return r;
                 n = *r;
                 if (n == 0) {

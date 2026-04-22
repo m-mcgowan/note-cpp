@@ -1572,3 +1572,88 @@ TEST_CASE("transact: wire debug accumulates multi-chunk response") {
     REQUIRE_FALSE(captured.empty());
     REQUIRE(captured.find("\"a\":\"b\"") != std::string::npos);
 }
+
+
+// ---------------------------------------------------------------------------
+// Lookahead pushback: bytes stashed after \n in one HAL chunk must be
+// visible to whatever reads next (transact_raw, transact, or binary read).
+//
+// Regression guard for a bug where read_line() and frame_read() called
+// hal_.read() directly, bypassing lookahead_. MockHal returns both queued
+// responses in one read() call when max_len spans the boundary, exercising
+// the stash-and-recover path that real UART drivers can also hit when two
+// frames coalesce into a single buffer.
+// ---------------------------------------------------------------------------
+
+TEST_CASE("lookahead: transact_raw reads response stashed by prior transact") {
+    MockHal hal;
+    // Two frames in one rx deque — the first transact's frame_read pulls
+    // them both in a single hal.read() call (49 bytes fits in the 64-byte
+    // SAX rbuf), stashing the tail of rx in lookahead_.
+    hal.queue_response("{}");
+    hal.queue_response(R"({"status":"ready"})");
+
+    StreamingTransport transport(hal);
+
+    CollectorSink sink;
+    auto r1 = iface(transport).transact(
+        [](JsonBuilder& b) { b.add("req", "card.binary"); }, sink, 5000);
+    REQUIRE(r1.has_value());
+
+    // rx is now empty — the second frame is sitting in lookahead_.
+    REQUIRE(hal.rx.empty());
+
+    // Without the fix, read_line() calls hal.read() directly and times out.
+    char buf[128];
+    auto r2 = transport.transact_raw(R"({"req":"card.binary"})", buf, sizeof(buf), 5000);
+    REQUIRE(r2.has_value());
+    REQUIRE(*r2 == R"({"status":"ready"})");
+}
+
+TEST_CASE("lookahead: next transact reads response stashed by prior transact") {
+    MockHal hal;
+    hal.queue_response("{}");
+    hal.queue_response(R"({"v":42})");
+
+    StreamingTransport transport(hal);
+
+    CollectorSink first;
+    auto r1 = iface(transport).transact(
+        [](JsonBuilder& b) { b.add("req", "card.version"); }, first, 5000);
+    REQUIRE(r1.has_value());
+    REQUIRE(hal.rx.empty());
+
+    // Without the fix, frame_read() on the second transact calls
+    // hal.read() directly and never sees the stashed bytes.
+    CollectorSink second;
+    auto r2 = iface(transport).transact(
+        [](JsonBuilder& b) { b.add("req", "card.version"); }, second, 5000);
+    REQUIRE(r2.has_value());
+    REQUIRE(second.get("v") == "42");
+}
+
+TEST_CASE("lookahead: binary read() consumes bytes stashed by prior transact") {
+    // Already worked before the fix — the virtual read() path was the
+    // original (and only) lookahead consumer. Pinning it here so that any
+    // future refactor of read_hal() that breaks binary I/O gets caught.
+    MockHal hal;
+    hal.queue_response("{}");
+    // Raw binary bytes after the JSON frame — simulates card.binary GET
+    // where JSON handshake and COBS bytes arrive back-to-back.
+    const uint8_t bin_payload[] = {0x01, 0x02, 0x03, 0x04, 0x05};
+    for (auto b : bin_payload) hal.rx.push_back(b);
+
+    StreamingTransport transport(hal);
+
+    CollectorSink sink;
+    auto r1 = iface(transport).transact(
+        [](JsonBuilder& b) { b.add("req", "card.binary.get"); }, sink, 5000);
+    REQUIRE(r1.has_value());
+    REQUIRE(hal.rx.empty());
+
+    uint8_t out[sizeof(bin_payload)]{};
+    auto r2 = transport.read(out, sizeof(out), 5000);
+    REQUIRE(r2.has_value());
+    REQUIRE(*r2 == sizeof(bin_payload));
+    REQUIRE(memcmp(out, bin_payload, sizeof(bin_payload)) == 0);
+}

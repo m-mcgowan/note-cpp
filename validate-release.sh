@@ -102,27 +102,18 @@ step_pio_build() {
 }
 
 step_arduino_build() {
-    # ESP32-S3 sketches
-    echo "--- serial_basic (ESP32-S3) ---"
-    arduino-cli compile \
-        --fqbn esp32:esp32:esp32s3:CDCOnBoot=cdc \
-        "$ROOT/examples/arduino/serial_basic"
+    local esp32_fqbn="esp32:esp32:esp32s3:CDCOnBoot=cdc"
+    local swan_fqbn="STMicroelectronics:stm32:BluesW:pnum=SWAN_R5"
 
-    echo "--- i2c_basic (ESP32-S3) ---"
-    arduino-cli compile \
-        --fqbn esp32:esp32:esp32s3:CDCOnBoot=cdc \
-        "$ROOT/examples/arduino/i2c_basic"
+    for sketch in quickstart serial_basic i2c_basic; do
+        echo "--- $sketch (ESP32-S3) ---"
+        arduino-cli compile --fqbn "$esp32_fqbn" \
+            "$ROOT/examples/arduino/$sketch"
 
-    # Blues Swan sketches
-    echo "--- serial_basic (Blues Swan) ---"
-    arduino-cli compile \
-        --fqbn STMicroelectronics:stm32:BluesW:pnum=SWAN_R5 \
-        "$ROOT/examples/arduino/serial_basic"
-
-    echo "--- i2c_basic (Blues Swan) ---"
-    arduino-cli compile \
-        --fqbn STMicroelectronics:stm32:BluesW:pnum=SWAN_R5 \
-        "$ROOT/examples/arduino/i2c_basic"
+        echo "--- $sketch (Blues Swan) ---"
+        arduino-cli compile --fqbn "$swan_fqbn" \
+            "$ROOT/examples/arduino/$sketch"
+    done
 }
 
 # ── Hardware step functions ─────────────────────────────────────────────────

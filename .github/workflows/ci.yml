@@ -353,3 +353,41 @@ jobs:
 
       - name: Show report
         run: cat compatibility.md >> $GITHUB_STEP_SUMMARY
+
+  arduino-cli:
+    runs-on: ubuntu-latest
+    if: >-
+      github.event_name != 'workflow_dispatch'
+      || inputs.build-type == 'full'
+      || inputs.build-type == 'compat'
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install arduino-cli
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/arduino/arduino-cli/master/install.sh | sh -s -- --dest ~/bin
+          echo "$HOME/bin" >> "$GITHUB_PATH"
+
+      - name: Install Arduino board cores
+        run: |
+          arduino-cli core update-index
+          arduino-cli core install esp32:esp32
+          arduino-cli core install STMicroelectronics:stm32
+
+      - name: Compile Arduino sketches (arduino-cli)
+        run: |
+          for sketch in quickstart serial_basic i2c_basic; do
+            echo "::group::$sketch (ESP32-S3)"
+            arduino-cli compile \
+              --fqbn esp32:esp32:esp32s3:CDCOnBoot=cdc \
+              --library "$PWD" \
+              "examples/arduino/$sketch"
+            echo "::endgroup::"
+
+            echo "::group::$sketch (Blues Swan)"
+            arduino-cli compile \
+              --fqbn STMicroelectronics:stm32:BluesW:pnum=SWAN_R5 \
+              --library "$PWD" \
+              "examples/arduino/$sketch"
+            echo "::endgroup::"
+          done

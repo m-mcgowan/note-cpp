@@ -354,7 +354,7 @@ use by choosing how much of the stack to pull in.
 
 | Target | Defaults | Recommended flags | Typical flash / RAM |
 |---|---|---|---|
-| **AVR Uno** (ATmega328P) | streaming, zero heap | `NOTE_MINIMAL`, optionally `NOTE_JSONB`, `JsonView` / `note::scan` for responses | 10.9 – 24.3 KB / 680 – 836 B |
+| **AVR Uno** (ATmega328P) | streaming, zero heap | `NOTE_MINIMAL` (auto-enables `NOTE_JSONB`), `JsonView` / `note::scan` for responses | 10.9 – 24.3 KB / 680 – 836 B |
 | **Cortex-M0 / STM32** | streaming, zero heap | `NOTE_MINIMAL` | typed API fits comfortably |
 | **ESP32 / Cortex-M4+** | streaming with arena allocator | defaults | full typed API + body structs |
 | **Linux / macOS host** | buffered path with a JSON backend | `cJSON` or `nlohmann` backend | full surface, heap allowed |

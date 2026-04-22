@@ -1539,30 +1539,64 @@ transfers, body structs) when you're comfortable.
 ### Running note-cpp alongside note-c
 
 For large projects where you can't swap the library all at once, you can
-run note-cpp on top of note-c's existing transport. Create a bridge
-transport that delegates to `NoteRequestResponseJSON()`:
+run note-cpp on top of note-c's existing transport. Implement
+`IBufferedTransport` and delegate each request to
+`NoteRequestResponseJSON()`:
 
+<!-- snippet:bridge-extern examples/stdcpp/note-c-bridge.cpp -->
 ```cpp
 extern "C" char* NoteRequestResponseJSON(const char* reqJSON);
+```
 
+<!-- snippet:bridge-transport examples/stdcpp/note-c-bridge.cpp -->
+```cpp
+/// Delegates every request to note-c's NoteRequestResponseJSON so note-c
+/// owns the serial/I2C bus and note-cpp sits on top with its typed API.
 class NoteCTransport : public note::IBufferedTransport {
     std::string rsp_buf_;
 public:
     note::Result<note::string_view> transact(note::string_view req, uint32_t) override {
         std::string req_str(req.data(), req.size());
         char* rsp = NoteRequestResponseJSON(req_str.c_str());
-        if (!rsp) return note::make_error(note::Error::ResponseLost, "no response");
+        if (rsp == nullptr) {
+            return note::make_error(note::Error::ResponseLost, "no response");
+        }
         rsp_buf_ = rsp;
-        free(rsp);
+        std::free(rsp);
         return note::string_view(rsp_buf_);
     }
+    note::Result<void> send(note::string_view req) override {
+        auto r = transact(req, 0);
+        if (!r) return note::Unexpected(r.error());
+        return {};
+    }
+    void reset() override {}
+    void abort() override {}
+    uint32_t millis() override { return 0; }   // timing owned by note-c
+    void delay(uint32_t) override {}
 };
 ```
 
-This lets note-c own the serial/I2C bus while note-cpp uses the typed
-API for new code. Both libraries share a single Notecard connection —
-no hardware conflicts. Existing `NoteNewRequest` / `J*` code continues
-to work unchanged.
+Wire it into a `Notecard` + `Api`:
+
+<!-- snippet:bridge-wiring examples/stdcpp/note-c-bridge.cpp -->
+```cpp
+int main() {
+    MockBackend backend;
+    NoteCTransport transport;
+    note::Notecard nc(backend, transport);
+    note::Api api(nc);
+
+    // Typed API calls route through note-c's existing transport.
+    api.hub.set().product("com.example.app").mode("periodic").execute();
+    return 0;
+}
+```
+
+Both libraries share a single Notecard connection — no hardware
+conflicts. Existing `NoteNewRequest` / `J*` code continues to work
+unchanged. The complete working example is at
+[`examples/stdcpp/note-c-bridge.cpp`](examples/stdcpp/note-c-bridge.cpp).
 
 ## Migration checklist
 

@@ -376,7 +376,7 @@ jobs:
 
       - name: Compile Arduino sketches (arduino-cli)
         run: |
-          for sketch in quickstart serial_basic i2c_basic; do
+          for sketch in quickstart readme_snippets serial_basic i2c_basic; do
             echo "::group::$sketch (ESP32-S3)"
             arduino-cli compile \
               --fqbn esp32:esp32:esp32s3:CDCOnBoot=cdc \

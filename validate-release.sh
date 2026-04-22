@@ -105,7 +105,7 @@ step_arduino_build() {
     local esp32_fqbn="esp32:esp32:esp32s3:CDCOnBoot=cdc"
     local swan_fqbn="STMicroelectronics:stm32:BluesW:pnum=SWAN_R5"
 
-    for sketch in quickstart serial_basic i2c_basic; do
+    for sketch in quickstart readme_snippets serial_basic i2c_basic; do
         echo "--- $sketch (ESP32-S3) ---"
         arduino-cli compile --fqbn "$esp32_fqbn" \
             "$ROOT/examples/arduino/$sketch"

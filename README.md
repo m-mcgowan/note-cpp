@@ -16,9 +16,9 @@ This section assumes you are familiar with the [Blues Notecard](https://blues.co
 
 ### Arduino
 
-<!-- snippet:arduino-quickstart examples/arduino/quickstart/quickstart.ino:6-6 -->
-<!-- snippet:arduino-declare examples/arduino/quickstart/quickstart.ino:18-18 -->
-<!-- snippet:arduino-setup examples/arduino/quickstart/quickstart.ino:23-28 -->
+<!-- snippet:arduino-quickstart examples/arduino/readme_snippets/readme_snippets.ino:6-6 -->
+<!-- snippet:arduino-declare examples/arduino/readme_snippets/readme_snippets.ino:18-18 -->
+<!-- snippet:arduino-setup examples/arduino/readme_snippets/readme_snippets.ino:23-28 -->
 ```cpp
 #include <note.hpp>
 
@@ -51,7 +51,7 @@ target_link_libraries(my_app PRIVATE note-cpp)
 
 Once set up, the typed API is the same on every platform:
 
-<!-- snippet:fluent-api examples/arduino/quickstart/quickstart.ino:32-36 -->
+<!-- snippet:fluent-api examples/arduino/readme_snippets/readme_snippets.ino:32-36 -->
 ```cpp
 nc.hub.set()
    .product("com.example.app")
@@ -62,7 +62,7 @@ nc.hub.set()
 
 Or use direct assignment:
 
-<!-- snippet:direct-assignment examples/arduino/quickstart/quickstart.ino:40-44 -->
+<!-- snippet:direct-assignment examples/arduino/readme_snippets/readme_snippets.ino:40-44 -->
 ```cpp
 auto req = nc.hub.set();
 req.product = "com.example.app";
@@ -73,8 +73,8 @@ req.execute();
 
 Supports sending type-safe notes with body structs — define once, use for send, receive, and template registration:
 
-<!-- snippet:body-struct-def examples/arduino/quickstart/quickstart.ino:10-14 -->
-<!-- snippet:body-send examples/arduino/quickstart/quickstart.ino:48-52 -->
+<!-- snippet:body-struct-def examples/arduino/readme_snippets/readme_snippets.ino:10-14 -->
+<!-- snippet:body-send examples/arduino/readme_snippets/readme_snippets.ino:48-52 -->
 ```cpp
 struct Readings {
     float temperature;
@@ -91,7 +91,7 @@ nc.note.add()
 
 Read responses with typed fields:
 
-<!-- snippet:read-response examples/arduino/quickstart/quickstart.ino:65-71 -->
+<!-- snippet:read-response examples/arduino/readme_snippets/readme_snippets.ino:65-71 -->
 ```cpp
 auto rsp = nc.card.version().execute();
 if (rsp) {
@@ -166,10 +166,10 @@ Setting a field that doesn't apply to that operation is a compile error. See [do
 
 Define a body struct once and use it everywhere. On C++20+, plain aggregates work automatically. On C++17, or for non-aggregate structs (e.g. with constructors), add `NOTE_FIELDS(...)`. See [docs/body-values.md](docs/body-values.md).
 
-<!-- snippet:body-struct-def examples/arduino/quickstart/quickstart.ino:10-14 -->
-<!-- snippet:body-send examples/arduino/quickstart/quickstart.ino:48-52 -->
-<!-- snippet:body-receive examples/arduino/quickstart/quickstart.ino:56-57 -->
-<!-- snippet:body-template examples/arduino/quickstart/quickstart.ino:61-61 -->
+<!-- snippet:body-struct-def examples/arduino/readme_snippets/readme_snippets.ino:10-14 -->
+<!-- snippet:body-send examples/arduino/readme_snippets/readme_snippets.ino:48-52 -->
+<!-- snippet:body-receive examples/arduino/readme_snippets/readme_snippets.ino:56-57 -->
+<!-- snippet:body-template examples/arduino/readme_snippets/readme_snippets.ino:61-61 -->
 ```cpp
 struct Readings {
     float temperature;

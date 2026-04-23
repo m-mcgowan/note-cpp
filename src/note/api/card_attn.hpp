@@ -932,7 +932,7 @@ struct CardAttn {
             if (triggers) {
                 char mp_[96];
                 std::snprintf(mp_, sizeof(mp_), "arm,%.*s",
-                             (int)(*triggers).size(), (*triggers).data());
+                             static_cast<int>((*triggers).size()), (*triggers).data());
                 note::add_flash(b, note::flash(keys_::triggers), note::string_view{mp_});
             } else {
                 note::add_flash(b, note::flash(keys_::triggers), "arm");
@@ -1293,7 +1293,7 @@ struct CardAttn {
             if (triggers) {
                 char mp_[96];
                 std::snprintf(mp_, sizeof(mp_), "rearm,%.*s",
-                             (int)(*triggers).size(), (*triggers).data());
+                             static_cast<int>((*triggers).size()), (*triggers).data());
                 note::add_flash(b, note::flash(keys_::triggers), note::string_view{mp_});
             } else {
                 note::add_flash(b, note::flash(keys_::triggers), "rearm");

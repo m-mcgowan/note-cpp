@@ -118,7 +118,7 @@ inline size_t crc_add(char* buf, size_t len, size_t capacity, uint16_t seq) {
 /// Returns true on CRC error, false on success.
 inline bool crc_check_and_strip(char* buf, size_t& len, uint16_t expected_seq,
                                 bool& crc_enabled) {
-    while (len > 0 && (unsigned char)buf[len - 1] <= ' ')
+    while (len > 0 && static_cast<unsigned char>(buf[len - 1]) <= ' ')
         --len;
 
     if (len == 0 || buf[0] != '{' || buf[len - 1] != '}')

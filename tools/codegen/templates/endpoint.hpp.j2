@@ -991,7 +991,7 @@ namespace note::api {
 {{ indent }}    if ({{ prop.accessor_name }}) {
 {{ indent }}        char mp_[96];
 {{ indent }}        std::snprintf(mp_, sizeof(mp_), "{{ op.mode_prefix }},%.*s",
-{{ indent }}                     (int)(*{{ prop.accessor_name }}).size(), (*{{ prop.accessor_name }}).data());
+{{ indent }}                     static_cast<int>((*{{ prop.accessor_name }}).size()), (*{{ prop.accessor_name }}).data());
 {{ indent }}        note::add_flash(b, note::flash(keys_::{{ prop.accessor_name }}), note::string_view{mp_});
 {{ indent }}    } else {
 {{ indent }}        note::add_flash(b, note::flash(keys_::{{ prop.accessor_name }}), "{{ op.mode_prefix }}");

@@ -730,7 +730,7 @@ struct CardAuxSerial {
             if (notifications) {
                 char mp_[96];
                 std::snprintf(mp_, sizeof(mp_), "notify,%.*s",
-                             (int)(*notifications).size(), (*notifications).data());
+                             static_cast<int>((*notifications).size()), (*notifications).data());
                 note::add_flash(b, note::flash(keys_::notifications), note::string_view{mp_});
             } else {
                 note::add_flash(b, note::flash(keys_::notifications), "notify");

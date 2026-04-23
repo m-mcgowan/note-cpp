@@ -105,8 +105,10 @@ inline Md5Hex md5_hex(const uint8_t* msg, size_t len) {
 
         uint32_t M[16];
         for (int i = 0; i < 16; ++i) {
-            M[i] = (uint32_t)block[i*4]       | ((uint32_t)block[i*4+1] << 8)
-                 | ((uint32_t)block[i*4+2] << 16) | ((uint32_t)block[i*4+3] << 24);
+            M[i] = static_cast<uint32_t>(block[i*4])
+                 | (static_cast<uint32_t>(block[i*4+1]) << 8)
+                 | (static_cast<uint32_t>(block[i*4+2]) << 16)
+                 | (static_cast<uint32_t>(block[i*4+3]) << 24);
         }
 
         uint32_t A = a0, B = b0, C = c0, D = d0;

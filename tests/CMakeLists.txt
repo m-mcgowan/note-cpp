@@ -4,7 +4,13 @@ project(note-cpp-tests CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-add_compile_options(-Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wnon-virtual-dtor -Werror)
+add_compile_options(
+    -Wall -Wextra -Wpedantic
+    -Wshadow -Wconversion -Wnon-virtual-dtor
+    -Wold-style-cast -Wextra-semi -Wsuggest-override
+    -Wzero-as-null-pointer-constant -Wimplicit-fallthrough
+    -Werror
+)
 
 set(NOTE_CPP_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/..")
 include_directories(${NOTE_CPP_ROOT}/include ${CMAKE_CURRENT_SOURCE_DIR})

@@ -1631,9 +1631,26 @@ Serial.println(printable(result));
 ### `noteId` vs `note` field name
 
 Several Notecard requests use a JSON field named `"note"` for the note ID.
-In `note-cpp`, the C++ accessor is `noteId` (because `note` is a reserved
-namespace). If you're porting code that uses `JAddStringToObject(req, "note", ...)`,
-use `.noteId(...)` or `req.noteId = ...`.
+In `note-cpp`, the C++ accessor is `noteId` (because `note` is the library's
+namespace). Three ways to set it:
+
+```cpp
+// Member form (typed):
+auto req = nc.note.get();
+req.noteId = "my-id";
+
+// Factory form (typed):
+nc.note.get().noteId("my-id").execute();
+
+// Wire-name form (subscript, matches the JSON you'd write):
+auto req = nc.note.get();
+req["note"] = "my-id";   // maps to noteId internally
+```
+
+The subscript form is convenient when you're porting code that already uses
+the wire name (`JAddStringToObject(req, "note", ...)`) — less mental
+rewriting. It's gated on `NOTE_EXTRAS` (default on; stripped by
+`NOTE_MINIMAL`, where you must use `.noteId` directly).
 
 ### `hub.sync()` vs `hub.sync.status()`
 

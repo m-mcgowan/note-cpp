@@ -262,7 +262,7 @@ jobs:
 
             echo "::group::$sketch (Blues Swan)"
             arduino-cli compile \
-              --fqbn STMicroelectronics:stm32:BluesW:pnum=SWAN_R5 \
+              --fqbn STMicroelectronics:stm32:Blues:pnum=SWAN_R5 \
               --library "$PWD" \
               "examples/arduino/$sketch"
             echo "::endgroup::"

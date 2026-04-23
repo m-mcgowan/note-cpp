@@ -91,6 +91,11 @@ public:
     virtual JsonBuilder& begin_array(string_view key) = 0;
     virtual JsonBuilder& end_array() = 0;
 
+    // Start an object as an element of the current array (no key — must be
+    // inside begin_array/end_array). Match with end_object().
+    // Default: no-op. Override in backends that support array serialization.
+    virtual JsonBuilder& begin_element_object() { return *this; }
+
     // Add an element to the current array (no key — must be inside begin_array/end_array).
     // Default: no-op. Override in backends that support array serialization.
     virtual JsonBuilder& add_element(bool) { return *this; }
@@ -272,6 +277,13 @@ public:
     JsonBuilder& end_array() override {
         writer_.write(']');
         need_comma_ = true;
+        return *this;
+    }
+
+    JsonBuilder& begin_element_object() override {
+        comma();
+        writer_.write('{');
+        need_comma_ = false;
         return *this;
     }
 

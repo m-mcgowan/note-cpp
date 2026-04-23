@@ -65,6 +65,9 @@ public:
     TestJsonBuilder& end_array() override {
         needs_comma_.pop_back(); buf_ += ']'; return *this;
     }
+    TestJsonBuilder& begin_element_object() override {
+        comma(); buf_ += '{'; needs_comma_.push_back(false); return *this;
+    }
     TestJsonBuilder& add_element(bool v) override {
         comma(); buf_ += v ? "true" : "false"; return *this;
     }

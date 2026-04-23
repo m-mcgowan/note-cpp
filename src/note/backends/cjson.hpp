@@ -108,6 +108,12 @@ public:
         if (stack_.size() > 1) stack_.pop_back();
         return *this;
     }
+    CjsonBuilder& begin_element_object() override {
+        auto* obj = cJSON_CreateObject();
+        cJSON_AddItemToArray(current(), obj);
+        stack_.push_back(obj);
+        return *this;
+    }
     CjsonBuilder& add_element(bool value) override {
         cJSON_AddItemToArray(current(), cJSON_CreateBool(value));
         return *this;

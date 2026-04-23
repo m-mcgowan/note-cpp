@@ -86,6 +86,12 @@ public:
         need_comma_ = true;
         return *this;
     }
+    BufferJsonBuilder& begin_element_object() override {
+        comma();
+        put('{');
+        need_comma_ = false;
+        return *this;
+    }
     BufferJsonBuilder& add_element(bool value) override {
         comma(); put(value ? "true" : "false"); return *this;
     }

@@ -266,15 +266,37 @@ void write_array_element(JsonBuilder& b, const V& value) {
         b.add_element(string_view(value.c_str()));
     } else if constexpr (std::is_convertible_v<V, const char*>) {
         b.add_element(string_view(static_cast<const char*>(value)));
+    } else if constexpr (is_schema_struct_v<V>) {
+        // Nested schema struct as an array element — begin_element_object()
+        // emits `{` directly (no key prefix), matching the array context.
+        b.begin_element_object();
+        if constexpr (has_note_fields_trait<V>::value) {
+            V::_note_fields_write(value, b);
+        }
+#if __cplusplus >= 202002L
+        else if constexpr (ReflectableAggregate<V>) {
+            write_aggregate(value, b);
+        }
+#endif
+        b.end_object();
+    } else if constexpr (is_std_array_v<V>) {
+        // Nested array as an array element is not currently supported —
+        // JsonBuilder has no begin_element_array() primitive.
+#if NOTE_STRICT_BODY_FIELDS
+        static_assert(sizeof(V) == 0,
+            "note-cpp: std::array<std::array<...>, N> is not currently "
+            "supported in serialisation. Define NOTE_STRICT_BODY_FIELDS=0 "
+            "to silently skip.");
+#else
+#pragma message("note-cpp: NOTE_STRICT_BODY_FIELDS=0 — nested std::array dropped silently.")
+#endif
     } else {
 #if NOTE_STRICT_BODY_FIELDS
         static_assert(sizeof(V) == 0,
             "note-cpp: std::array element type is not supported for "
-            "serialisation. Arrays of nested schema structs or arrays "
-            "of arrays are not currently supported on the ser path. "
-            "Supported element types: bool, integral, floating-point, "
-            "char[N], std::string-like, Arduino String. Use a lambda "
-            "body for more complex shapes, or define "
+            "serialisation. Supported element types: bool, integral, "
+            "floating-point, char[N], std::string-like, Arduino String, "
+            "nested NOTE_FIELDS/aggregate structs. Define "
             "NOTE_STRICT_BODY_FIELDS=0 to silently skip.");
 #else
 #pragma message("note-cpp: NOTE_STRICT_BODY_FIELDS=0 — array element type dropped silently.")
@@ -378,6 +400,18 @@ struct is_body_schema : has_note_fields_trait<T> {};
 //   bool          → true  (TBOOL)
 //   string-like   → "1"   (TSTRING — value is max length as string)
 
+// Pending-verification flag: does the Notecard accept templates that
+// themselves contain nested objects (nested schema-struct fields or
+// objects inside array templates)?
+//
+// Set to false until an integration test against a real Notecard
+// confirms acceptance — tests/integration/shared/test_notecard_api.cpp
+// has the two probe cases. When the Notecard accepts both shapes, flip
+// this to true to re-enable template emission for nested/array-of-struct
+// fields. The ser path (make_schema_body / write_array_element) is
+// independent — actual note bodies with nested shapes work today.
+inline constexpr bool notecard_supports_nested_templates_v = false;
+
 // Per-V char-array template-hint string: N characters of 'x', one instance
 // per N. Gives the Notecard a TSTRING(N) registration so runtime values
 // up to N chars aren't truncated. Prior behaviour emitted "1" for every
@@ -433,53 +467,91 @@ void write_template_hint_for(JsonBuilder& b, string_view name) {
         // registration should switch to char[N].
         b.add(name, string_view("1"));
     } else if constexpr (is_schema_struct_v<V>) {
-        b.begin_object(name);
-        if constexpr (has_note_fields_trait<V>::value) {
-            V::template _note_fields_write_hints<V>(b);
-        }
-#if __cplusplus >= 202002L
-        else if constexpr (ReflectableAggregate<V>) {
-            write_template_hints<V>(b);
-        }
-#endif
-        b.end_object();
-    } else if constexpr (is_std_array_v<V>) {
-        using Elem = typename array_traits<V>::element_type;
-        if constexpr (std::is_same_v<Elem, bool>
-                   || std::is_floating_point_v<Elem>
-                   || (std::is_integral_v<Elem> && !std::is_same_v<Elem, bool>)
-                   || is_char_array_v<Elem>
-                   || std::is_convertible_v<Elem, string_view>
-                   || has_c_str_v<Elem>
-                   || std::is_convertible_v<Elem, const char*>) {
-            // Notecard array template: single-element hint array
-            // describes the per-element type.
-            b.begin_array(name);
-            if constexpr (std::is_same_v<Elem, bool>) {
-                b.add_element(true);
-            } else if constexpr (std::is_floating_point_v<Elem>) {
-                b.add_element(14.1);
-            } else if constexpr (std::is_integral_v<Elem>) {
-                if constexpr (sizeof(Elem) <= 1) b.add_element(json_int_t{1});
-                else if constexpr (sizeof(Elem) <= 2) b.add_element(json_int_t{11});
-                else b.add_element(json_int_t{12});
-            } else if constexpr (is_char_array_v<Elem>) {
-                b.add_element(char_array_template_filler<sizeof(Elem)>());
-            } else {
-                b.add_element(string_view("1"));
+        // Nested schema struct hint — emit only when the Notecard is
+        // known to accept nested templates. Otherwise fall through to
+        // the terminal-else, which produces the static_assert / pragma.
+        if constexpr (notecard_supports_nested_templates_v) {
+            b.begin_object(name);
+            if constexpr (has_note_fields_trait<V>::value) {
+                V::template _note_fields_write_hints<V>(b);
             }
-            b.end_array();
+#if __cplusplus >= 202002L
+            else if constexpr (ReflectableAggregate<V>) {
+                write_template_hints<V>(b);
+            }
+#endif
+            b.end_object();
         } else {
 #if NOTE_STRICT_BODY_FIELDS
             static_assert(sizeof(V) == 0,
-                "note-cpp: std::array of nested schema struct is not "
-                "currently supported in template_of<T>. Define "
-                "NOTE_STRICT_BODY_FIELDS=0 to silently skip this field "
-                "in the template.");
+                "note-cpp: nested schema-struct fields are disabled in "
+                "template_of<T> pending integration-test confirmation "
+                "that the Notecard accepts nested templates. Flip "
+                "detail::notecard_supports_nested_templates_v to true "
+                "once verified.");
+#else
+#pragma message("note-cpp: NOTE_STRICT_BODY_FIELDS=0 — nested struct dropped silently from template.")
+#endif
+        }
+    } else if constexpr (is_std_array_v<V>) {
+        using Elem = typename array_traits<V>::element_type;
+        // Notecard array template: single-element hint array describes
+        // the per-element type.
+        b.begin_array(name);
+        if constexpr (std::is_same_v<Elem, bool>) {
+            b.add_element(true);
+        } else if constexpr (std::is_floating_point_v<Elem>) {
+            b.add_element(14.1);
+        } else if constexpr (std::is_integral_v<Elem> && !std::is_same_v<Elem, bool>) {
+            if constexpr (sizeof(Elem) <= 1) b.add_element(json_int_t{1});
+            else if constexpr (sizeof(Elem) <= 2) b.add_element(json_int_t{11});
+            else b.add_element(json_int_t{12});
+        } else if constexpr (is_char_array_v<Elem>) {
+            b.add_element(char_array_template_filler<sizeof(Elem)>());
+        } else if constexpr (std::is_convertible_v<Elem, string_view>
+                          || has_c_str_v<Elem>
+                          || std::is_convertible_v<Elem, const char*>) {
+            b.add_element(string_view("1"));
+        } else if constexpr (is_schema_struct_v<Elem>) {
+            // Nested struct element — emit a single object with per-field
+            // hints. Gated on notecard_supports_nested_templates_v until
+            // integration tests confirm the Notecard accepts this shape.
+            if constexpr (notecard_supports_nested_templates_v) {
+                b.begin_element_object();
+                if constexpr (has_note_fields_trait<Elem>::value) {
+                    Elem::template _note_fields_write_hints<Elem>(b);
+                }
+#if __cplusplus >= 202002L
+                else if constexpr (ReflectableAggregate<Elem>) {
+                    write_template_hints<Elem>(b);
+                }
+#endif
+                b.end_object();
+            } else {
+#if NOTE_STRICT_BODY_FIELDS
+                static_assert(sizeof(V) == 0,
+                    "note-cpp: std::array of nested schema struct is "
+                    "disabled in template_of<T> pending integration-test "
+                    "confirmation that the Notecard accepts nested "
+                    "templates. Flip detail::notecard_supports_nested_"
+                    "templates_v to true once verified.");
 #else
 #pragma message("note-cpp: NOTE_STRICT_BODY_FIELDS=0 — std::array-of-struct dropped silently from template.")
 #endif
+            }
+        } else {
+#if NOTE_STRICT_BODY_FIELDS
+            static_assert(sizeof(V) == 0,
+                "note-cpp: std::array element type is not supported for "
+                "template registration. Supported: bool, integral, "
+                "floating-point, char[N], string_view, std::string-like "
+                "types, Arduino String, nested NOTE_FIELDS/aggregate structs. "
+                "Define NOTE_STRICT_BODY_FIELDS=0 to silently skip.");
+#else
+#pragma message("note-cpp: NOTE_STRICT_BODY_FIELDS=0 — unsupported std::array element dropped silently from template.")
+#endif
         }
+        b.end_array();
     } else {
 #if NOTE_STRICT_BODY_FIELDS
         static_assert(sizeof(V) == 0,

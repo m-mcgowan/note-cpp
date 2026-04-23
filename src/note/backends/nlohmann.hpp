@@ -72,6 +72,11 @@ public:
         if (stack_.size() > 1) stack_.pop_back();
         return *this;
     }
+    NlohmannBuilder& begin_element_object() override {
+        current()->push_back(nlohmann::json::object());
+        stack_.push_back(&current()->back());
+        return *this;
+    }
     NlohmannBuilder& add_element(bool value) override {
         current()->push_back(value); return *this;
     }

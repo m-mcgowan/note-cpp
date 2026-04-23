@@ -214,6 +214,24 @@ struct IntArrayField {
     bool operator==(const IntArrayField& o) const { return ints == o.ints; }
 };
 
+// std::array of NOTE_FIELDS structs — exercises begin_element_object path.
+struct StructArrayField {
+    std::array<NestedFields, 2> items;
+    NOTE_FIELDS(items)
+    bool operator==(const StructArrayField& o) const { return items == o.items; }
+};
+
+// std::array of char[N] — fixed-length string elements.
+struct CharArrayArrayField {
+    std::array<char[4], 2> tags;
+    NOTE_FIELDS(tags)
+    bool operator==(const CharArrayArrayField& o) const {
+        for (std::size_t i = 0; i < 2; ++i)
+            if (std::strncmp(tags[i], o.tags[i], 4) != 0) return false;
+        return true;
+    }
+};
+
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
 // Adapter that forwards SAX events into a StructSink after skipping the
@@ -383,8 +401,10 @@ TEST_CASE("symmetry: nested NOTE_FIELDS struct", "[symmetry][nested]") {
     WithNestedFields s{{1.5f, 42}};
     REQUIRE(h.ser_body(s) ==
         R"("body":{"nested":{"x":1.5,"y":42}})");
-    REQUIRE(h.template_body<WithNestedFields>() ==
-        R"("body":{"nested":{"x":14.1,"y":11}})");
+    if constexpr (note::detail::notecard_supports_nested_templates_v) {
+        REQUIRE(h.template_body<WithNestedFields>() ==
+            R"("body":{"nested":{"x":14.1,"y":11}})");
+    }
     REQUIRE(roundtrip(h, s) == s);
 }
 
@@ -397,5 +417,29 @@ TEST_CASE("symmetry: std::array<int32_t,3> field", "[symmetry][array]") {
     // Template: Notecard convention is a single-element hint array
     // describing the per-element type.
     REQUIRE(h.template_body<IntArrayField>() == R"("body":{"ints":[12]})");
+    REQUIRE(roundtrip(h, s) == s);
+}
+
+TEST_CASE("symmetry: std::array<NestedFields,2> field", "[symmetry][array][nested]") {
+    Harness h;
+    StructArrayField s{{{{1.0f, 10}, {2.0f, 20}}}};
+    REQUIRE(h.ser_body(s) ==
+        R"("body":{"items":[{"x":1,"y":10},{"x":2,"y":20}]})");
+    if constexpr (note::detail::notecard_supports_nested_templates_v) {
+        REQUIRE(h.template_body<StructArrayField>() ==
+            R"("body":{"items":[{"x":14.1,"y":11}]})");
+    }
+    REQUIRE(roundtrip(h, s) == s);
+}
+
+TEST_CASE("symmetry: std::array<char[4],2> field", "[symmetry][array][strings]") {
+    Harness h;
+    CharArrayArrayField s{};
+    std::memcpy(s.tags[0], "abc", 4);
+    std::memcpy(s.tags[1], "xyz", 4);
+    REQUIRE(h.ser_body(s) == R"("body":{"tags":["abc","xyz"]})");
+    // Template: one hint element of length N=4 (TSTRING(4)).
+    REQUIRE(h.template_body<CharArrayArrayField>() ==
+        R"("body":{"tags":["xxxx"]})");
     REQUIRE(roundtrip(h, s) == s);
 }

@@ -154,14 +154,48 @@ path that can't handle the shape:
 | Element type         | Stream deser | Rand-access deser | Ser | Template |
 |----------------------|:-:|:-:|:-:|:-:|
 | Primitive            | ✓ | ✗ (string only)   | ✓   | ✓        |
-| Nested schema struct | ✓ | ✗                 | ✗   | ✗        |
+| Nested schema struct | ✓ | ✗                 | ✓   | gated    |
 | `std::array<…>`      | ✗ | ✗                 | ✗   | ✗        |
 
-The ser / template gaps around `std::array<SchemaStruct, N>` need a
-`JsonBuilder::begin_object()` primitive (no key) that the current backends
-don't expose. That's a separate change; until it lands, users with
-array-of-struct bodies should fall back to a lambda body (`note::body([&]
-(auto& b) { ... })`).
+Array-of-struct ser uses `JsonBuilder::begin_element_object()` — a
+keyless-object primitive added alongside this feature. Every concrete
+backend (buffer, streaming, nlohmann, cJSON, jsonb, test-only) overrides
+it.
+
+### Nested templates gated pending Notecard confirmation
+
+`detail::notecard_supports_nested_templates_v` is a `constexpr bool`
+in `body.hpp`, currently `false`. When `false`, `template_of<T>()`
+`static_assert`s on any field whose **template** shape would be nested —
+that is, a schema-struct field whose hint would emit `{...}`, or an
+array-of-struct field whose hint would emit `[{...}]`.
+
+Ser is independent and always works: `make_schema_body<T>()` emits the
+full nested body regardless of this flag.
+
+The gate exists because Blues's public docs describe Notecard templates
+as flat schemas. Until an integration test (see
+`tests/integration/shared/test_notecard_api.cpp`: "does the Notecard
+accept NESTED templates?" and the array-of-struct counterpart) confirms
+acceptance, template emission for these shapes is kept off so users
+don't silently register a template the Notecard will reject.
+
+Flip procedure:
+1. Run the probe tests against a real Notecard.
+2. If both pass, set `notecard_supports_nested_templates_v = true`.
+3. Re-enable the `template_body<WithNestedFields>()` /
+   `template_body<StructArrayField>()` assertions in
+   `tests/test_struct_field_symmetry.cpp`.
+
+### Other gaps
+
+Nested arrays (`std::array<std::array<…>, N>`) still aren't supported —
+that would need a `begin_element_array()` primitive on top.
+
+Random-access deser of any `std::array` (except `std::array<string_view,
+N>`) is still flagged. `JsonReader` only exposes `get_string_array`
+today; extending it is out of scope. Users needing array fields should
+stick to streaming deser via `.into(struct)` on a request builder.
 
 ## Macro gate behaviour
 

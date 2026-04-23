@@ -134,6 +134,12 @@ public:
         return *this;
     }
 
+    // Element-level begin_object — no kItem prefix (array context).
+    JsonBuilder& begin_element_object() override {
+        emit(jsonb::kBeginObject);
+        return *this;
+    }
+
     // Array elements — no kItem prefix.
     JsonBuilder& add_element(bool value) override {
         emit(value ? jsonb::kTrue : jsonb::kFalse);

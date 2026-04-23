@@ -31,7 +31,45 @@
 #include <note/transport/detail/crc_types.hpp>
 #endif
 
+#if NOTE_TXN_GATE
+#include <note/txn_hal.hpp>
+#endif
+
 namespace note {
+
+#if NOTE_TXN_GATE
+namespace detail {
+
+/// RAII bracket for an optional TxnHal. Calls start() on construct and
+/// stop() on destruct. If no TxnHal is registered (null pointer) the
+/// bracket is a no-op and ok() is true. If start() returns false, ok() is
+/// false and stop() is NOT called on destruct (nothing to release).
+class TxnBracket {
+public:
+    TxnBracket(TxnHal* t, uint32_t timeout_ms) : txn_(t) {
+        if (txn_) started_ = txn_->start(timeout_ms);
+    }
+    ~TxnBracket() { if (txn_ && started_) txn_->stop(); }
+    TxnBracket(const TxnBracket&) = delete;
+    TxnBracket(TxnBracket&&) = delete;
+    TxnBracket& operator=(const TxnBracket&) = delete;
+    TxnBracket& operator=(TxnBracket&&) = delete;
+
+    /// True if no gate is needed (null txn_) or start() succeeded.
+    bool ok() const noexcept { return !txn_ || started_; }
+
+private:
+    TxnHal* txn_;
+    bool started_ = false;
+};
+
+/// Default timeout for transaction-gate start() when the caller doesn't
+/// supply one (e.g. fire-and-forget send()). Deliberately generous — the
+/// gate is waiting on a physical wake-handshake with the Notecard.
+inline constexpr uint32_t kTxnGateDefaultTimeoutMs = 1000;
+
+} // namespace detail
+#endif // NOTE_TXN_GATE
 
 // ---------------------------------------------------------------------------
 // NcErrorCapture — captures the Notecard "err" JSON field during parsing.
@@ -209,6 +247,16 @@ public:
 #endif
 #endif
 
+#if NOTE_TXN_GATE
+    /// Register a transaction-gate HAL to bracket every request with an
+    /// RTX/CTX handshake. See note/txn_hal.hpp. Pass a TxnHal registered
+    /// on the SKU's transaction pins; the transport brackets each
+    /// transact/send/transact_raw call with start()/stop().
+    void set_txn(TxnHal& txn) { txn_ = &txn; }
+    /// Remove the transaction gate (e.g. for testing).
+    void clear_txn() { txn_ = nullptr; }
+#endif
+
 #if NOTE_NO_POLYMORPHIC || NOTE_STATIC_HAL
     uint32_t millis() { return hal_.millis(); }
     void delay(uint32_t ms) { hal_.delay(ms); }
@@ -241,6 +289,11 @@ public:
     Result<void> transact_dispatch(BuildFn build_fn, void* ctx,
                                    SaxDispatch dispatch, uint32_t timeout_ms,
                                    detail::NcErrorCapture& nc_err) {
+#if NOTE_TXN_GATE
+        detail::TxnBracket txn_bracket{txn_, timeout_ms};
+        if (!txn_bracket.ok())
+            return make_error(Error::NotReady, Cause::Timeout, NOTE_ERR("txn gate timeout"));
+#endif
         if (!ensure_init()) {
             debug_transport(debug_, TransportEvent::ResetFailed, 0);
             return make_error(Error::NotReady, NOTE_ERR("not ready"));
@@ -275,6 +328,11 @@ private:
     template<typename SinkT>
     Result<void> transact_impl(BuildFn build_fn, void* ctx,
                                 SinkT& sink, uint32_t timeout_ms) {
+#if NOTE_TXN_GATE
+        detail::TxnBracket txn_bracket{txn_, timeout_ms};
+        if (!txn_bracket.ok())
+            return make_error(Error::NotReady, Cause::Timeout, NOTE_ERR("txn gate timeout"));
+#endif
         if (!ensure_init()) {
             debug_transport(debug_, TransportEvent::ResetFailed, 0);
             return make_error(Error::NotReady, NOTE_ERR("not ready"));
@@ -311,6 +369,11 @@ public:
         override
 #endif
     {
+#if NOTE_TXN_GATE
+        detail::TxnBracket txn_bracket{txn_, detail::kTxnGateDefaultTimeoutMs};
+        if (!txn_bracket.ok())
+            return make_error(Error::NotReady, Cause::Timeout, NOTE_ERR("txn gate timeout"));
+#endif
         if (!ensure_init())
             return make_error(Error::NotReady, NOTE_ERR("not ready"));
 
@@ -327,6 +390,11 @@ public:
     /// read response line into caller's buffer. No SAX parsing — raw bytes.
     Result<string_view> transact_raw(string_view json, char* buf, size_t bufsize,
                                       uint32_t timeout_ms) {
+#if NOTE_TXN_GATE
+        detail::TxnBracket txn_bracket{txn_, timeout_ms};
+        if (!txn_bracket.ok())
+            return make_error(Error::NotReady, Cause::Timeout, NOTE_ERR("txn gate timeout"));
+#endif
         if (!ensure_init())
             return make_error(Error::NotReady, NOTE_ERR("not ready"));
 
@@ -342,6 +410,11 @@ public:
 
     /// Raw passthrough: transmit pre-formatted JSON + line terminator, no response.
     Result<void> send_raw(string_view json) {
+#if NOTE_TXN_GATE
+        detail::TxnBracket txn_bracket{txn_, detail::kTxnGateDefaultTimeoutMs};
+        if (!txn_bracket.ok())
+            return make_error(Error::NotReady, Cause::Timeout, NOTE_ERR("txn gate timeout"));
+#endif
         if (!ensure_init())
             return make_error(Error::NotReady, NOTE_ERR("not ready"));
 
@@ -700,6 +773,10 @@ private:
 #if !NOTE_NO_CRC
     bool crc_enabled_ = false;
     uint16_t crc_seq_ = 0;
+#endif
+
+#if NOTE_TXN_GATE
+    TxnHal* txn_ = nullptr;
 #endif
 };
 

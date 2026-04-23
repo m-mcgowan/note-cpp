@@ -62,6 +62,7 @@ set(NOTE_CPP_ARDUINO_HEADERS
     include/note/arduino/compat.hpp
     include/note/arduino/i2c.hpp
     include/note/arduino/serial.hpp
+    include/note/arduino/txn.hpp
 )
 
 # ── POSIX headers (Linux / macOS / BSD; I2C is Linux-only) ────────────────
@@ -146,6 +147,7 @@ set(NOTE_CPP_TEST_SOURCES_FULL_ONLY
     test_transport_serial.cpp
     test_transport_streaming.cpp
     test_transport_timing.cpp
+    test_txn_gate.cpp
     test_wire_format.cpp
 )
 

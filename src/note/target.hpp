@@ -91,6 +91,101 @@ struct HardwareSupport {
 using Product [[deprecated("Use Hardware instead")]] = Hardware;
 using Skus [[deprecated("Use HardwareSupport instead")]] = HardwareSupport;
 
+// Forward-looking alias: current `Hardware` enum represents radio
+// capability (Cell / WiFi / LoRa / …), not the internal MCU. `Radio` is
+// the eventual preferred name; `Hardware` remains as a synonym.
+using Radio = Hardware;
+
+// ---------------------------------------------------------------------------
+// Mcu — internal Notecard microcontroller
+//
+// Per Blues: Notecard revision 1.x uses STM32L4; 2.x uses STM32U5xxx
+// unless otherwise identified. Explicit exceptions are NOTE-ESP (ESP32-S3)
+// and the NOTE-LORA family (STM32WL / STM32WLE5).
+//
+// Mcu is useful as a coarse compile-time filter (e.g. STM32L4 is known to
+// lack CTX/RTX pins entirely), but the authoritative per-SKU story lives
+// in `NotecardSku` / `SkuInfo` below.
+// ---------------------------------------------------------------------------
+
+enum class Mcu : uint8_t {
+    Unknown = 0,
+    Stm32L4,
+    Stm32U5,
+    Stm32Wl,
+    Stm32Wle5,
+    Esp32S3,
+};
+
+// ---------------------------------------------------------------------------
+// TxnPinSupport — does this SKU expose the CTX/RTX transaction-gate pins?
+//
+// Some SKUs require the host to drive RTX high and wait for CTX high before
+// each transaction (and release RTX afterwards so the Notecard can sleep).
+// See note-arduino's `NoteTxn_Arduino` and note-c's `NoteSetFnTransaction`.
+// ---------------------------------------------------------------------------
+
+enum class TxnPinSupport : uint8_t {
+    Unknown = 0,   ///< Not confirmed — treat as possibly-required.
+    None,          ///< No CTX/RTX pins on this SKU. Gate compiles out.
+    Muxed,         ///< Available via AUX2/AUX3 after card.aux configuration.
+    Dedicated,     ///< Dedicated, always-available pins.
+};
+
+// ---------------------------------------------------------------------------
+// SkuInfo — per-SKU capability record
+//
+// The `NotecardSku` enum and `info_for()` lookup are generated from
+// `tools/codegen/metadata/skus.json` into `note/sku_info.hpp`.
+// ---------------------------------------------------------------------------
+
+struct SkuInfo {
+    Radio          radio;
+    Mcu            mcu;
+    TxnPinSupport  txn;
+};
+
+// ---------------------------------------------------------------------------
+// RadioType / McuType — single-dimension compile-time target wrappers
+//
+// These wrap an enum value as a distinct type so CTAD on Notecard can
+// deduce the correct template parameter from a call-site factory variable.
+// The factory variables below (`radio<>` / `mcu<>`) are the idiomatic way
+// to pass these at construction sites.
+//
+// Each type exposes the capability traits it can derive from the value it
+// wraps. `McuType::has_txn_pins` is the coarse MCU-level filter (STM32L4
+// is known to never have the CTX/RTX pins); use `SkuType` (in sku_info.hpp)
+// for authoritative per-SKU answers.
+// ---------------------------------------------------------------------------
+
+template<Radio R>
+struct RadioType {
+    static constexpr Radio value = R;
+};
+
+template<Mcu M>
+struct McuType {
+    static constexpr Mcu value = M;
+
+    /// Coarse MCU-level CTX/RTX availability. STM32L4 is known to never have
+    /// the pins; STM32U5 is variable by SKU (defaults to "possibly"); the
+    /// dedicated-pin MCUs (ESP32, STM32WL/STM32WLE5) always have them.
+    static constexpr bool has_txn_pins = (M != Mcu::Stm32L4 && M != Mcu::Unknown);
+};
+
+// ---------------------------------------------------------------------------
+// Factory variables
+//
+//   radio<Radio::Cell>           → RadioType<Radio::Cell>
+//   mcu<Mcu::Stm32U5>            → McuType<Mcu::Stm32U5>
+//
+// SKU factory `sku<NotecardSku::X>` is declared in note/sku_info.hpp.
+// ---------------------------------------------------------------------------
+
+template<Radio R> inline constexpr RadioType<R> radio{};
+template<Mcu M>   inline constexpr McuType<M>   mcu{};
+
 // ---------------------------------------------------------------------------
 // Firmware — version triple for compile-time firmware gating
 // ---------------------------------------------------------------------------

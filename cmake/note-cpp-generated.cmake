@@ -79,6 +79,7 @@ set(NOTE_CPP_GENERATED_HEADERS
     include/note/api/web_get.hpp
     include/note/api/web_post.hpp
     include/note/api/web_put.hpp
+    include/note/sku_info.hpp
 )
 
 set(NOTE_CPP_GENERATED_TEST_SOURCES

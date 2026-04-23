@@ -633,6 +633,17 @@ def main() -> None:
     sizeof_path.write_text(sizeof_content)
     print(f"Generated sizeof report in {sizeof_path}")
 
+    # Generate sku_info.hpp from the SKU metadata table.
+    sku_metadata_path = Path(__file__).parent / "metadata" / "skus.json"
+    with open(sku_metadata_path) as f:
+        sku_metadata = json.load(f)
+    sku_entries = sku_metadata.get("skus", [])
+    sku_template = env.get_template("sku_info.hpp.j2")
+    sku_content = sku_template.render(skus=sku_entries)
+    sku_out_path = output_dir.parent / "sku_info.hpp"  # include/note/sku_info.hpp
+    sku_out_path.write_text(sku_content)
+    print(f"Generated {len(sku_entries)} SKU entries in {sku_out_path}")
+
     # Generate CMake file listing all generated files.
     # Paths are emitted relative to the project root (parent of cmake/)
     # so the checked-in file is machine-independent regardless of whether
@@ -647,7 +658,7 @@ def main() -> None:
 
     generated_headers = sorted(
         [_rel_to_root(output_dir / ep.header_filename) for ep in endpoints]
-        + [_rel_to_root(api_path)]
+        + [_rel_to_root(api_path), _rel_to_root(sku_out_path)]
     )
     generated_tests = sorted([
         "test_samples.cpp",

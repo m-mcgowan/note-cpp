@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema",
+  "description": "Notecard SKU table. Source of truth for the SkuType<>/SkuInfo constexpr lookup generated into include/note/target.hpp (or its companion). One entry per SKU. Fields that can't be confirmed from Blues' public docs are marked \"Unknown\" so the type system degrades safely.",
+
+  "radio_values": ["Cell", "WiFi", "CellWifi", "LoRa", "Skylo"],
+  "mcu_values":   ["Unknown", "Stm32L4", "Stm32U5", "Stm32Wl", "Stm32Wle5", "Esp32S3"],
+  "txn_values":   ["None", "Muxed", "Dedicated"],
+
+  "notes": [
+    "MCU rule supplied by Blues: revision 1.x → STM32L4; revision 2.x → STM32U5xxx unless otherwise identified. Exceptions are NOTE-ESP (ESP32-S3) and NOTE-LORA (STM32WL / STM32WLE5).",
+    "TxnPinSupport.None  — no CTX/RTX pins exposed. Compile-out candidate.",
+    "TxnPinSupport.Muxed — available via AUX2/AUX3 after card.aux configuration.",
+    "TxnPinSupport.Dedicated — always-available dedicated pins.",
+    "Unverified SKUs default to txn='Unknown' until a datasheet spot-check confirms them."
+  ],
+
+  "skus": [
+    { "sku": "Esp",     "part": "NOTE-ESP",     "radio": "WiFi",     "mcu": "Esp32S3",  "txn": "Dedicated", "revision": "2.1" },
+    { "sku": "Wifi",    "part": "NOTE-WIFI",    "radio": "WiFi",     "mcu": "Stm32L4",  "txn": "None",      "revision": "1.2" },
+
+    { "sku": "LwEu_v1_4", "part": "NOTE-LWEU", "radio": "LoRa",     "mcu": "Stm32Wl",   "txn": "Dedicated", "revision": "1.4" },
+    { "sku": "LwUs_v1_4", "part": "NOTE-LWUS", "radio": "LoRa",     "mcu": "Stm32Wl",   "txn": "Dedicated", "revision": "1.4" },
+    { "sku": "LwEu",      "part": "NOTE-LWEU", "radio": "LoRa",     "mcu": "Stm32Wle5", "txn": "Dedicated", "revision": "2.1" },
+    { "sku": "LwUs",      "part": "NOTE-LWUS", "radio": "LoRa",     "mcu": "Stm32Wle5", "txn": "Dedicated", "revision": "2.1" },
+
+    { "sku": "MbGlN", "part": "NOTE-MBGLN", "radio": "Cell",     "mcu": "Stm32U5", "txn": "Muxed",   "revision": "3.2" },
+    { "sku": "MbNaN", "part": "NOTE-MBNAN", "radio": "Cell",     "mcu": "Stm32U5", "txn": "Unknown", "revision": "3.2" },
+    { "sku": "NbGlN", "part": "NOTE-NBGLN", "radio": "Cell",     "mcu": "Stm32U5", "txn": "Muxed",   "revision": "3.2" },
+    { "sku": "NbNaN", "part": "NOTE-NBNAN", "radio": "Cell",     "mcu": "Stm32U5", "txn": "Unknown", "revision": "3.2" },
+    { "sku": "WbExN", "part": "NOTE-WBEXN", "radio": "Cell",     "mcu": "Stm32U5", "txn": "Muxed",   "revision": "3.2" },
+    { "sku": "WbNaN", "part": "NOTE-WBNAN", "radio": "Cell",     "mcu": "Stm32U5", "txn": "Muxed",   "revision": "3.2" },
+
+    { "sku": "MbGlW", "part": "NOTE-MBGLW", "radio": "CellWifi", "mcu": "Stm32U5", "txn": "Unknown", "revision": "2.1" },
+    { "sku": "MbNaW", "part": "NOTE-MBNAW", "radio": "CellWifi", "mcu": "Stm32U5", "txn": "Unknown", "revision": "2.1" },
+    { "sku": "NbGlW", "part": "NOTE-NBGLW", "radio": "CellWifi", "mcu": "Stm32U5", "txn": "Unknown", "revision": "2.1" },
+    { "sku": "NbNaW", "part": "NOTE-NBNAW", "radio": "CellWifi", "mcu": "Stm32U5", "txn": "None",    "revision": "2.1" },
+    { "sku": "WbExW", "part": "NOTE-WBEXW", "radio": "CellWifi", "mcu": "Stm32U5", "txn": "Unknown", "revision": "2.1" },
+    { "sku": "WbGlW", "part": "NOTE-WBGLW", "radio": "CellWifi", "mcu": "Stm32U5", "txn": "Unknown", "revision": "2.1" },
+    { "sku": "WbNaW", "part": "NOTE-WBNAW", "radio": "CellWifi", "mcu": "Stm32U5", "txn": "Unknown", "revision": "2.1" },
+
+    { "sku": "WbGlWT", "part": "NOTE-WBGLWT", "radio": "CellWifi", "mcu": "Stm32L4", "txn": "None", "revision": "1.x",
+      "comment": "Legacy Telit modem variant; 1.x hardware generation." },
+
+    { "sku": "NbGlWX", "part": "NOTE-NBGLWX", "radio": "Skylo", "mcu": "Stm32U5", "txn": "Dedicated", "revision": "2.x",
+      "comment": "Cell+WiFi+NTN satellite multi-mode." },
+
+    { "sku": "NbGl", "part": "NOTE-NBGL", "radio": "Cell", "mcu": "Stm32L4", "txn": "None", "revision": "1.5",
+      "comment": "Legacy cellular." },
+    { "sku": "NbNa", "part": "NOTE-NBNA", "radio": "Cell", "mcu": "Stm32L4", "txn": "None", "revision": "1.5",
+      "comment": "Legacy cellular." },
+    { "sku": "WbEx", "part": "NOTE-WBEX", "radio": "Cell", "mcu": "Stm32L4", "txn": "None", "revision": "1.5",
+      "comment": "Legacy cellular." },
+    { "sku": "WbNa", "part": "NOTE-WBNA", "radio": "Cell", "mcu": "Stm32L4", "txn": "None", "revision": "1.5",
+      "comment": "Legacy cellular." }
+  ]
+}

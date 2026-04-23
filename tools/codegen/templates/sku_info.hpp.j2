@@ -1,0 +1,88 @@
+// AUTO-GENERATED from tools/codegen/metadata/skus.json by tools/codegen/generate.py
+// DO NOT EDIT directly — edit the JSON table and regenerate.
+//
+// Declares `note::NotecardSku` (enum of known Notecard product codes) and
+// `note::info_for(NotecardSku)` (consteval lookup returning SkuInfo).
+// Relies on Radio / Mcu / TxnPinSupport / SkuInfo defined in note/target.hpp.
+
+#pragma once
+
+#include <note/target.hpp>
+
+namespace note {
+
+// ---------------------------------------------------------------------------
+// NotecardSku — specific Notecard product codes
+//
+// Enum values are C++-friendly renderings of the part numbers (e.g.
+// NOTE-MBGLN → MbGlN). Revision differences within the same part number
+// are disambiguated with a _v{major}_{minor} suffix (e.g. LwEu_v1_4).
+// The human-readable part number is available via `part_number_of()`.
+// ---------------------------------------------------------------------------
+
+enum class NotecardSku : uint16_t {
+    Unknown = 0,
+{% for entry in skus %}
+    {{ entry.sku }},{% if entry.comment %}  // {{ entry.part }} ({{ entry.revision }}) — {{ entry.comment }}{% else %}  // {{ entry.part }} ({{ entry.revision }}){% endif %}
+
+{% endfor %}
+};
+
+// ---------------------------------------------------------------------------
+// info_for — per-SKU capability lookup
+// ---------------------------------------------------------------------------
+
+constexpr SkuInfo info_for(NotecardSku s) {
+    switch (s) {
+{% for entry in skus %}
+    case NotecardSku::{{ entry.sku }}: return {Radio::{{ entry.radio }}, Mcu::{{ entry.mcu }}, TxnPinSupport::{{ entry.txn }}};
+{% endfor %}
+    case NotecardSku::Unknown:
+    default:
+        return {Radio{}, Mcu::Unknown, TxnPinSupport::Unknown};
+    }
+}
+
+// ---------------------------------------------------------------------------
+// part_number_of — human-readable part number for a SKU value
+// ---------------------------------------------------------------------------
+
+constexpr const char* part_number_of(NotecardSku s) {
+    switch (s) {
+{% for entry in skus %}
+    case NotecardSku::{{ entry.sku }}: return "{{ entry.part }}";
+{% endfor %}
+    case NotecardSku::Unknown:
+    default:
+        return "unknown";
+    }
+}
+
+// ---------------------------------------------------------------------------
+// SkuType<S> — compile-time SKU wrapper
+//
+// Exposes the SkuInfo fields as static constexpr members so they're usable
+// in `if constexpr` and template deduction contexts (e.g. CTAD on Notecard).
+// ---------------------------------------------------------------------------
+
+template<NotecardSku S>
+struct SkuType {
+    static constexpr NotecardSku  value = S;
+    static constexpr SkuInfo      info  = info_for(S);
+    static constexpr Radio        radio = info.radio;
+    static constexpr Mcu          mcu   = info.mcu;
+    static constexpr TxnPinSupport txn  = info.txn;
+
+    /// True iff the SKU is known to expose CTX/RTX pins (dedicated or muxed).
+    /// Unknown SKUs default to false (conservative — caller can still register
+    /// a TxnHal manually if they know better).
+    static constexpr bool has_txn_pins =
+        (info.txn == TxnPinSupport::Dedicated) ||
+        (info.txn == TxnPinSupport::Muxed);
+};
+
+/// SKU factory variable: `sku<NotecardSku::Esp>` → `SkuType<NotecardSku::Esp>`.
+template<NotecardSku S>
+inline constexpr SkuType<S> sku{};
+
+} // namespace note

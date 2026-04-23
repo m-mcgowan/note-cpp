@@ -1,13 +1,13 @@
 /// @file arduino/txn.hpp
-/// Reference TxnHal implementation for Arduino platforms that drives
-/// CTX/RTX GPIO lines during each Notecard transaction. Mirrors the
-/// behaviour of note-arduino's `NoteTxn_Arduino.cpp`.
+/// Reference TxnHandshake implementation for Arduino platforms that
+/// drives CTX/RTX GPIO lines during each Notecard transaction. Mirrors
+/// the behaviour of note-arduino's `NoteTxn_Arduino.cpp`.
 ///
 /// Typical usage:
 /// @code
-///     note::arduino::GpioTxnHal txn(CTX_PIN, RTX_PIN);
+///     note::arduino::GpioTxnHandshake handshake(CTX_PIN, RTX_PIN);
 ///     nc.begin(Serial1, 9600);
-///     nc.set_txn(txn);   // brackets every transaction
+///     nc.set_handshake(handshake);   // brackets every transaction
 /// @endcode
 ///
 /// Protocol:
@@ -22,9 +22,9 @@
 
 #include <note/note_config.hpp>
 
-#if NOTE_TXN_GATE
+#if NOTE_TXN_HANDSHAKE
 
-#include <note/txn_hal.hpp>
+#include <note/txn_handshake.hpp>
 
 #ifdef ARDUINO
 #include <Arduino.h>
@@ -37,9 +37,9 @@
 
 namespace note::arduino {
 
-class GpioTxnHal final : public ::note::TxnHal {
+class GpioTxnHandshake final : public ::note::TxnHandshake {
 public:
-    GpioTxnHal(uint8_t ctx_pin, uint8_t rtx_pin)
+    GpioTxnHandshake(uint8_t ctx_pin, uint8_t rtx_pin)
         : ctx_pin_(ctx_pin), rtx_pin_(rtx_pin)
     {
 #ifdef ARDUINO
@@ -103,4 +103,4 @@ private:
 
 } // namespace note::arduino
 
-#endif // NOTE_TXN_GATE
+#endif // NOTE_TXN_HANDSHAKE

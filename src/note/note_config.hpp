@@ -97,8 +97,8 @@
 #    define NOTE_MUTABLE_POLICY 0
 #  endif
 
-#  ifndef NOTE_TXN_GATE
-#    define NOTE_TXN_GATE 0
+#  ifndef NOTE_TXN_HANDSHAKE
+#    define NOTE_TXN_HANDSHAKE 0
 #  endif
 
 #endif // NOTE_MINIMAL
@@ -138,16 +138,16 @@
 #define NOTE_EXTRAS 1
 #endif
 
-// NOTE_TXN_GATE — when 1, enable the optional transaction-gate (CTX/RTX)
-// hook on StreamingTransport. Each transaction is bracketed by
-// TxnHal::start()/stop() when a TxnHal is registered via set_txn().
-// When 0, the hook code is fully compiled out.
+// NOTE_TXN_HANDSHAKE — when 1, enable the optional transaction-handshake
+// (CTX/RTX) hook on StreamingTransport. Each transaction is bracketed by
+// TxnHandshake::start()/stop() when a TxnHandshake is registered via
+// set_handshake(). When 0, the hook code is fully compiled out.
 //
 // Only meaningful for Notecard SKUs that expose CTX/RTX pins (ESP32-based,
 // STM32WL LoRa, STM32U5 cellular where AUX2/AUX3 are configured as
 // CTX/RTX). See include/note/sku_info.hpp for per-SKU capability.
-#ifndef NOTE_TXN_GATE
-#define NOTE_TXN_GATE 1
+#ifndef NOTE_TXN_HANDSHAKE
+#define NOTE_TXN_HANDSHAKE 1
 #endif
 
 #ifndef NOTE_PRINTABLE

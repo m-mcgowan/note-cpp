@@ -1,4 +1,4 @@
-/// Transaction gate HAL for Notecard SKUs with RTX/CTX edge-connector pins.
+/// Transaction handshake HAL for Notecard SKUs with RTX/CTX edge-connector pins.
 ///
 /// On some Notecard SKUs, the host must signal intent to transact on an
 /// RTX pin and wait for a CTX "ready" signal before sending a request.
@@ -11,8 +11,8 @@
 /// A reference Arduino implementation lives in note-arduino's
 /// `NoteTxn_Arduino.cpp`.
 ///
-/// Optional: if no TxnHal is attached, every transaction proceeds
-/// without gating. Users on SKUs without these pins pay nothing.
+/// Optional: if no TxnHandshake is attached, every transaction proceeds
+/// without the handshake. Users on SKUs without these pins pay nothing.
 #pragma once
 
 #include <note/note_config.hpp>
@@ -21,11 +21,12 @@
 
 namespace note {
 
-/// Optional transaction gate. Bracket every Notecard transaction with
-/// start() / stop() when registered. See note/txn_hal.hpp for details.
-class TxnHal {
+/// Optional transaction handshake. Bracket every Notecard transaction
+/// with start() / stop() when registered. See note/txn_handshake.hpp for
+/// details.
+class TxnHandshake {
 public:
-    virtual ~TxnHal() = default;
+    virtual ~TxnHandshake() = default;
 
     /// Blocking. Called before each transaction (request/command).
     /// Implementations should assert the transaction-request signal (e.g.

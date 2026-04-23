@@ -140,7 +140,7 @@ struct SkuType {
 
     /// True iff the SKU is known to expose CTX/RTX pins (dedicated or muxed).
     /// Unknown SKUs default to false (conservative — caller can still register
-    /// a TxnHal manually if they know better).
+    /// a TxnHandshake manually if they know better).
     static constexpr bool has_txn_pins =
         (info.txn == TxnPinSupport::Dedicated) ||
         (info.txn == TxnPinSupport::Muxed);

@@ -147,7 +147,7 @@ set(NOTE_CPP_TEST_SOURCES_FULL_ONLY
     test_transport_serial.cpp
     test_transport_streaming.cpp
     test_transport_timing.cpp
-    test_txn_gate.cpp
+    test_txn_handshake.cpp
     test_wire_format.cpp
 )
 

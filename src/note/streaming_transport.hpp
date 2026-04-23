@@ -31,45 +31,45 @@
 #include <note/transport/detail/crc_types.hpp>
 #endif
 
-#if NOTE_TXN_GATE
-#include <note/txn_hal.hpp>
+#if NOTE_TXN_HANDSHAKE
+#include <note/txn_handshake.hpp>
 #endif
 
 namespace note {
 
-#if NOTE_TXN_GATE
+#if NOTE_TXN_HANDSHAKE
 namespace detail {
 
-/// RAII bracket for an optional TxnHal. Calls start() on construct and
-/// stop() on destruct. If no TxnHal is registered (null pointer) the
-/// bracket is a no-op and ok() is true. If start() returns false, ok() is
+/// RAII scope for an optional TxnHandshake. Calls start() on construct and
+/// stop() on destruct. If no TxnHandshake is registered (null pointer) the
+/// scope is a no-op and ok() is true. If start() returns false, ok() is
 /// false and stop() is NOT called on destruct (nothing to release).
-class TxnBracket {
+class TxnHandshakeScope {
 public:
-    TxnBracket(TxnHal* t, uint32_t timeout_ms) : txn_(t) {
-        if (txn_) started_ = txn_->start(timeout_ms);
+    TxnHandshakeScope(TxnHandshake* h, uint32_t timeout_ms) : handshake_(h) {
+        if (handshake_) started_ = handshake_->start(timeout_ms);
     }
-    ~TxnBracket() { if (txn_ && started_) txn_->stop(); }
-    TxnBracket(const TxnBracket&) = delete;
-    TxnBracket(TxnBracket&&) = delete;
-    TxnBracket& operator=(const TxnBracket&) = delete;
-    TxnBracket& operator=(TxnBracket&&) = delete;
+    ~TxnHandshakeScope() { if (handshake_ && started_) handshake_->stop(); }
+    TxnHandshakeScope(const TxnHandshakeScope&) = delete;
+    TxnHandshakeScope(TxnHandshakeScope&&) = delete;
+    TxnHandshakeScope& operator=(const TxnHandshakeScope&) = delete;
+    TxnHandshakeScope& operator=(TxnHandshakeScope&&) = delete;
 
-    /// True if no gate is needed (null txn_) or start() succeeded.
-    bool ok() const noexcept { return !txn_ || started_; }
+    /// True if no handshake is needed (null handshake_) or start() succeeded.
+    bool ok() const noexcept { return !handshake_ || started_; }
 
 private:
-    TxnHal* txn_;
+    TxnHandshake* handshake_;
     bool started_ = false;
 };
 
-/// Default timeout for transaction-gate start() when the caller doesn't
-/// supply one (e.g. fire-and-forget send()). Deliberately generous — the
-/// gate is waiting on a physical wake-handshake with the Notecard.
-inline constexpr uint32_t kTxnGateDefaultTimeoutMs = 1000;
+/// Default timeout for transaction-handshake start() when the caller
+/// doesn't supply one (e.g. fire-and-forget send()). Deliberately generous
+/// — the handshake is waiting on a physical wake signal from the Notecard.
+inline constexpr uint32_t kTxnHandshakeDefaultTimeoutMs = 1000;
 
 } // namespace detail
-#endif // NOTE_TXN_GATE
+#endif // NOTE_TXN_HANDSHAKE
 
 // ---------------------------------------------------------------------------
 // NcErrorCapture — captures the Notecard "err" JSON field during parsing.
@@ -247,14 +247,14 @@ public:
 #endif
 #endif
 
-#if NOTE_TXN_GATE
-    /// Register a transaction-gate HAL to bracket every request with an
-    /// RTX/CTX handshake. See note/txn_hal.hpp. Pass a TxnHal registered
-    /// on the SKU's transaction pins; the transport brackets each
-    /// transact/send/transact_raw call with start()/stop().
-    void set_txn(TxnHal& txn) { txn_ = &txn; }
-    /// Remove the transaction gate (e.g. for testing).
-    void clear_txn() { txn_ = nullptr; }
+#if NOTE_TXN_HANDSHAKE
+    /// Register a transaction-handshake HAL to bracket every request with
+    /// the SKU's RTX/CTX wake signal. See note/txn_handshake.hpp. Pass a
+    /// TxnHandshake bound to the SKU's transaction pins; the transport
+    /// brackets each transact/send/transact_raw call with start()/stop().
+    void set_handshake(TxnHandshake& h) { handshake_ = &h; }
+    /// Remove the transaction handshake (e.g. for testing).
+    void clear_handshake() { handshake_ = nullptr; }
 #endif
 
 #if NOTE_NO_POLYMORPHIC || NOTE_STATIC_HAL
@@ -289,10 +289,10 @@ public:
     Result<void> transact_dispatch(BuildFn build_fn, void* ctx,
                                    SaxDispatch dispatch, uint32_t timeout_ms,
                                    detail::NcErrorCapture& nc_err) {
-#if NOTE_TXN_GATE
-        detail::TxnBracket txn_bracket{txn_, timeout_ms};
-        if (!txn_bracket.ok())
-            return make_error(Error::NotReady, Cause::Timeout, NOTE_ERR("txn gate timeout"));
+#if NOTE_TXN_HANDSHAKE
+        detail::TxnHandshakeScope handshake_scope{handshake_, timeout_ms};
+        if (!handshake_scope.ok())
+            return make_error(Error::NotReady, Cause::Timeout, NOTE_ERR("txn handshake timeout"));
 #endif
         if (!ensure_init()) {
             debug_transport(debug_, TransportEvent::ResetFailed, 0);
@@ -328,10 +328,10 @@ private:
     template<typename SinkT>
     Result<void> transact_impl(BuildFn build_fn, void* ctx,
                                 SinkT& sink, uint32_t timeout_ms) {
-#if NOTE_TXN_GATE
-        detail::TxnBracket txn_bracket{txn_, timeout_ms};
-        if (!txn_bracket.ok())
-            return make_error(Error::NotReady, Cause::Timeout, NOTE_ERR("txn gate timeout"));
+#if NOTE_TXN_HANDSHAKE
+        detail::TxnHandshakeScope handshake_scope{handshake_, timeout_ms};
+        if (!handshake_scope.ok())
+            return make_error(Error::NotReady, Cause::Timeout, NOTE_ERR("txn handshake timeout"));
 #endif
         if (!ensure_init()) {
             debug_transport(debug_, TransportEvent::ResetFailed, 0);
@@ -369,10 +369,10 @@ public:
         override
 #endif
     {
-#if NOTE_TXN_GATE
-        detail::TxnBracket txn_bracket{txn_, detail::kTxnGateDefaultTimeoutMs};
-        if (!txn_bracket.ok())
-            return make_error(Error::NotReady, Cause::Timeout, NOTE_ERR("txn gate timeout"));
+#if NOTE_TXN_HANDSHAKE
+        detail::TxnHandshakeScope handshake_scope{handshake_, detail::kTxnHandshakeDefaultTimeoutMs};
+        if (!handshake_scope.ok())
+            return make_error(Error::NotReady, Cause::Timeout, NOTE_ERR("txn handshake timeout"));
 #endif
         if (!ensure_init())
             return make_error(Error::NotReady, NOTE_ERR("not ready"));
@@ -390,10 +390,10 @@ public:
     /// read response line into caller's buffer. No SAX parsing — raw bytes.
     Result<string_view> transact_raw(string_view json, char* buf, size_t bufsize,
                                       uint32_t timeout_ms) {
-#if NOTE_TXN_GATE
-        detail::TxnBracket txn_bracket{txn_, timeout_ms};
-        if (!txn_bracket.ok())
-            return make_error(Error::NotReady, Cause::Timeout, NOTE_ERR("txn gate timeout"));
+#if NOTE_TXN_HANDSHAKE
+        detail::TxnHandshakeScope handshake_scope{handshake_, timeout_ms};
+        if (!handshake_scope.ok())
+            return make_error(Error::NotReady, Cause::Timeout, NOTE_ERR("txn handshake timeout"));
 #endif
         if (!ensure_init())
             return make_error(Error::NotReady, NOTE_ERR("not ready"));
@@ -410,10 +410,10 @@ public:
 
     /// Raw passthrough: transmit pre-formatted JSON + line terminator, no response.
     Result<void> send_raw(string_view json) {
-#if NOTE_TXN_GATE
-        detail::TxnBracket txn_bracket{txn_, detail::kTxnGateDefaultTimeoutMs};
-        if (!txn_bracket.ok())
-            return make_error(Error::NotReady, Cause::Timeout, NOTE_ERR("txn gate timeout"));
+#if NOTE_TXN_HANDSHAKE
+        detail::TxnHandshakeScope handshake_scope{handshake_, detail::kTxnHandshakeDefaultTimeoutMs};
+        if (!handshake_scope.ok())
+            return make_error(Error::NotReady, Cause::Timeout, NOTE_ERR("txn handshake timeout"));
 #endif
         if (!ensure_init())
             return make_error(Error::NotReady, NOTE_ERR("not ready"));
@@ -775,8 +775,8 @@ private:
     uint16_t crc_seq_ = 0;
 #endif
 
-#if NOTE_TXN_GATE
-    TxnHal* txn_ = nullptr;
+#if NOTE_TXN_HANDSHAKE
+    TxnHandshake* handshake_ = nullptr;
 #endif
 };
 

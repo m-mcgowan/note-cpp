@@ -158,12 +158,36 @@ struct SaxAssignFloat {
 
 struct SaxAssignString {
     string_view value;
+
+    // char[N] field — memcpy with null terminator. Arrays can't be
+    // constructed/assigned whole, so they need a dedicated overload.
+    template<size_t N>
+    void operator()(char (&field)[N]) const {
+        const size_t copy_len = value.size() < N ? value.size() : (N - 1);
+        for (size_t i = 0; i < copy_len; ++i) field[i] = value[i];
+        field[copy_len] = '\0';
+    }
+
     template<typename F>
     void operator()(F& field) const {
         using V = std::remove_cv_t<F>;
-        if constexpr (std::is_same_v<V, string_view> || std::is_convertible_v<string_view, V>) {
+        if constexpr (std::is_same_v<V, string_view>) {
+            field = value;
+        } else if constexpr (std::is_constructible_v<V, string_view>) {
+            // Catches std::string (whose string_view ctor is explicit, so
+            // is_convertible_v returns false but is_constructible_v does
+            // not). The field owns its own copy after this.
             field = V(value);
+        } else if constexpr (std::is_constructible_v<V, const char*, size_t>) {
+            // Types that take (ptr, len) but not string_view directly —
+            // e.g. Arduino String on cores that expose that ctor.
+            field = V(value.data(), value.size());
         }
+        // Unrecognised types are silently skipped. Making this a
+        // static_assert is appealing but interacts with wire-type
+        // coercion (e.g. {"n":"42"} into an int field) that today's
+        // SAX pipeline tolerates. Revisit as a separate design pass —
+        // likely gated behind NOTE_STRICT_BODY_FIELDS.
     }
 };
 

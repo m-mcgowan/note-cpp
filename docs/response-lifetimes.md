@@ -61,6 +61,26 @@ The same mechanism is called **interning** in the source code: the library "inte
 - **Non-string fields** — `bool`, `int32_t`, `double`, enums. These are always safe.
 - **Typed-body parsing with `.into(T&)`** — copies field values directly into your struct. The struct owns its data.
 
+## `.into(T&)` and string field types
+
+When streaming a response body into a user struct via `.into(cfg)`, the
+field type decides ownership:
+
+| Field type            | Behaviour                                                          | Lifetime                               |
+|-----------------------|--------------------------------------------------------------------|----------------------------------------|
+| `note::string_view`   | View over the transport / arena buffer (same as response fields).  | Until next `execute()` or arena reset. |
+| `std::string`         | Copied into a self-owned heap buffer.                              | As long as the struct is alive.        |
+| `char[N]`             | `memcpy` with explicit null terminator; truncates to `N-1` bytes.  | As long as the struct is alive.        |
+| Arduino `String`      | Copied if the core exposes `String(const char*, size_t)`. Stock AVR Arduino does; others vary. | As long as the struct is alive. |
+| `const char*`         | **Not supported** — silently skipped.                              | N/A                                    |
+
+The `const char*` case can't work safely because there's no buffer the
+library owns to point at — the input string_view is transient. Use one
+of the owning types above instead.
+
+Unsupported field types are silently skipped today; a `static_assert`
+gate behind a macro is tracked as a follow-up design question.
+
 ## See also
 
 - [memory.md](memory.md) — full memory model, backend profiles, streaming vs. buffered

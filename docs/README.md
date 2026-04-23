@@ -18,7 +18,8 @@
 11. **[Body values and Note templates](body-values.md)** — raw JSON, builder lambda, typed struct, `template_of<T>()`
 12. **[Custom field transforms](custom-field-transforms.md)** — `VoltageVariable`, comma-separated flags
 13. **[JSON buffer builder](json-builder.md)** — zero-allocation `constexpr` JSON building
-14. **[Raw requests](raw-requests.md)** — escape hatch for requests not covered by the typed API
+14. **[Environment variables](environment-variables.md)** — `env.get`/`env.set` patterns, body-into-struct parsing
+15. **[Raw requests](raw-requests.md)** — escape hatch for requests not covered by the typed API
 
 ## Infrastructure
 
@@ -63,3 +64,4 @@ Internal documentation for contributors:
 | [sending-notes/](../examples/stdcpp/sending-notes/) | All body patterns: raw, lambda, struct, template, receive, command |
 | [target-filtering.cpp](../examples/stdcpp/target-filtering.cpp) | Hardware and firmware targeting with compile-time warnings/errors |
 | [zero-alloc.cpp](../examples/stdcpp/zero-alloc.cpp) | Zero-allocation patterns: BufferJsonBackend, StringPool, CjsonArena |
+| [env-vars.cpp](../examples/stdcpp/env-vars.cpp) | All four env.get modes: single, multi-into-struct, all, change-polling |

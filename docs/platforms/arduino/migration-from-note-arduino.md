@@ -783,6 +783,17 @@ if (r && r.time != 0) {
 
 ## Environment variables (env.get)
 
+`env.get` has four modes — single variable, multiple named, all,
+change-polling — and note-cpp supports all four with typed responses.
+The example below covers the single-variable case. For the full story
+(multi-variable reads, streaming directly into a user struct, and
+`env.modified` change detection) see
+[**`docs/environment-variables.md`**](../../environment-variables.md)
+and the runnable example
+[`examples/stdcpp/env-vars.cpp`](../../../examples/stdcpp/env-vars.cpp).
+For conceptual background (hierarchy, reserved system variables) see
+Blues' [Understanding Environment Variables](https://dev.blues.io/guides-and-tutorials/notecard-guides/understanding-environment-variables/).
+
 <table>
 <tr><th>note-arduino</th><th>note-cpp</th></tr>
 <tr><td>

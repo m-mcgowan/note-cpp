@@ -5,91 +5,61 @@
 // or Notehub (synced from the project). env.get is how the firmware
 // reads them. Four modes:
 //
-//   1. One variable  → response.text is the value.
+//   1. One variable   → response.text is the value.
 //   2. Many variables → response body is an object; stream into a struct.
 //   3. All variables  → same as (2) but without a names list.
-//   4. Conditional   → .time(t) returns results only if changed since t.
+//   4. Conditional    → .time(t) returns results only if changed since t.
 //
-// This example uses a streaming transport so `.into(cfg)` actually
-// populates the struct — that path is SAX-based and lives in the
-// streaming transport, not the buffered backend. See docs on how to
-// switch between streaming and buffered in production.
+// String lifetime: DeviceConfig.region / .locale are declared as
+// note::string_view, so they point into the transport buffer and stay
+// valid only until the next execute() call. For longer-lived values
+// declare them as std::string, which copies into the struct — see
+// docs/response-lifetimes.md for the full story.
 //
-// Build & run:
+// Build & run (mock, no hardware):
 //   c++ -std=c++20 -I include examples/stdcpp/env-vars.cpp && ./a.out
+//
+// Build & run (real Notecard over USB serial):
+//   c++ -std=c++20 -I include examples/stdcpp/env-vars.cpp -o env-vars
+//   ./env-vars /dev/cu.usbmodemNOTE1        # macOS
+//   ./env-vars /dev/ttyUSB0                 # Linux
+//
+// With no device-path arg, the example uses a streaming mock with
+// canned responses so CI can build + run it without hardware.
 
-#include <note/allocator.hpp>
-#include <note/api.hpp>
-#include <note/body.hpp>
-#include <note/json_buf.hpp>
-#include <note/notecard.hpp>
-#include <note/streaming_transport.hpp>
-#include <note/transport_hal.hpp>
+#include <note/note.hpp>       // umbrella: typed API + compile-time JSON helpers
+
+#include "streaming_mock.hpp"
+
+#if defined(__unix__) || defined(__APPLE__)
+#include <note/posix.hpp>
+#endif
 
 #include <cstdio>
-#include <deque>
+#include <cstring>
 #include <string>
-#include <string_view>
 
 using namespace note;
 
 // Fields map one-to-one to env-var names on the Notecard. StructSink
-// matches body-object keys to struct fields by name. Fields without a
-// matching env var are left default-constructed.
+// matches body-object keys to struct fields by name. Any integer or
+// float type works — StructSink narrows from the wire integer to
+// whatever your field is.
+//
+// string_view fields are cheap but tied to the transport buffer;
+// std::string fields copy into self-owned storage and survive the next
+// execute() call. Pick per field.
 struct DeviceConfig {
     note::string_view region;
     note::string_view locale;
-    note::json_int_t  interval;
+    int               interval;
     NOTE_FIELDS(region, locale, interval)
 };
 
-// Streaming mock HAL. Serves one canned JSON response per request; the
-// response is selected by inspecting the transmitted bytes so each of
-// the four env.get modes gets the right answer.
-class CannedHal : public note::TransportHal {
-public:
-    std::string                tx_buf;
-    std::deque<uint8_t>        rx;
-
-    void prime(const std::string& response) {
-        rx.clear();
-        for (char c : response) rx.push_back(static_cast<uint8_t>(c));
-        rx.push_back('\n');
-    }
-
-    bool transmit(const uint8_t* data, size_t len) override {
-        tx_buf.append(reinterpret_cast<const char*>(data), len);
-        return true;
-    }
-
-    // StreamingTransport calls this after the JSON body to finish the
-    // line. We treat it as the request-complete signal: print the captured
-    // request and prime the canned response.
-    bool write_line_terminator() override {
-        if (!tx_buf.empty()) {
-            std::printf("  >> %s\n", tx_buf.c_str());
-            if (tx_buf.find("\"req\":") != std::string::npos)
-                choose_response(tx_buf);
-            tx_buf.clear();
-        }
-        return true;
-    }
-
-    note::Result<size_t> read(uint8_t* buf, size_t max_len, uint32_t) override {
-        if (rx.empty())
-            return note::make_error(note::Error::ResponseLost, note::Cause::Timeout, "no data");
-        size_t n = std::min(max_len, rx.size());
-        for (size_t i = 0; i < n; ++i) { buf[i] = rx.front(); rx.pop_front(); }
-        return n;
-    }
-
-    bool reset() override { return true; }
-    void delay(uint32_t) override {}
-    uint32_t millis() override { return 0; }
-
-private:
-    // Pick the canned response based on the request line just transmitted.
-    void choose_response(const std::string& req) {
+// ─── Streaming mock for the no-hardware path ─────────────────────────────
+class EnvVarsMockHal : public StreamingMockHal {
+protected:
+    void choose_response(const std::string& req) override {
         if (req.find(R"("name":"region")") != std::string::npos)
             prime(R"({"text":"us-east-1","time":1700000000})");
         else if (req.find(R"("names":)") != std::string::npos)
@@ -103,15 +73,18 @@ private:
     }
 };
 
-int main() {
-    CannedHal hal;
-    note::StreamingTransport transport{hal};
-    note::Notecard nc(transport);
+// Demo that works against any Notecard API wrapper — mock or real.
+template<typename NotecardT>
+void demo(NotecardT& nc) {
+    // Api<> exposes the typed request factories. For note::Notecard directly.
+    // For note::posix::Notecard it's already mixed in via NotecardApi.
     Api api(nc);
+    run_demo_on(api);
+}
 
-    // ── 1. Single variable ─────────────────────────────────────────────
-    // response.text holds the value; response.time is the store's
-    // last-modified timestamp.
+template<typename ApiT>
+void run_demo_on(ApiT& api) {
+    // ── 1. Single variable ────────────────────────────────────────────────
     std::puts("\n--- single: env.get(\"region\") ---");
     {
         auto r = api.env.get().name("region").execute();
@@ -119,10 +92,13 @@ int main() {
             std::printf("  region = %.*s (time=%lld)\n",
                         (int)r.text.value().size(), r.text.value().data(),
                         static_cast<long long>(r.time));
+        } else {
+            std::fprintf(stderr, "  error: %s\n",
+                         note::to_string(r.error()).c_str());
         }
     }
 
-    // ── 2. Multiple variables → struct ─────────────────────────────────
+    // ── 2. Multiple variables → struct ────────────────────────────────────
     // `.names({...})` returns the ArrayField (not the request), so set
     // names on the request object directly, then chain .into/.execute.
     std::puts("\n--- multi: env.get + names, .into(cfg) ---");
@@ -132,29 +108,27 @@ int main() {
         req.names = {"region", "locale", "interval"};
         auto r = req.into(cfg).execute();
         if (r) {
-            std::printf("  region=%.*s locale=%.*s interval=%lld\n",
+            std::printf("  region=%.*s locale=%.*s interval=%d\n",
                         (int)cfg.region.size(), cfg.region.data(),
                         (int)cfg.locale.size(), cfg.locale.data(),
-                        static_cast<long long>(cfg.interval));
+                        cfg.interval);
         }
     }
 
-    // ── 3. All variables → struct ──────────────────────────────────────
-    // No names list — the Notecard returns every env var it knows about.
-    // Struct fields with matching names get filled; extras are ignored.
+    // ── 3. All variables → struct ─────────────────────────────────────────
     std::puts("\n--- all: env.get().into(cfg) ---");
     {
         DeviceConfig cfg{};
         auto r = api.env.get().into(cfg).execute();
         if (r) {
-            std::printf("  region=%.*s locale=%.*s interval=%lld\n",
+            std::printf("  region=%.*s locale=%.*s interval=%d\n",
                         (int)cfg.region.size(), cfg.region.data(),
                         (int)cfg.locale.size(), cfg.locale.data(),
-                        static_cast<long long>(cfg.interval));
+                        cfg.interval);
         }
     }
 
-    // ── 4. Conditional: only if changed since last poll ────────────────
+    // ── 4. Conditional: only if changed since last poll ───────────────────
     std::puts("\n--- conditional: .time(last_seen) + into(cfg) ---");
     {
         DeviceConfig cfg{};
@@ -165,19 +139,16 @@ int main() {
         auto r = req.into(cfg).execute();
         if (r) {
             if (static_cast<long long>(r.time) > last_seen) {
-                std::printf("  changed — region=%.*s interval=%lld\n",
+                std::printf("  changed — region=%.*s interval=%d\n",
                             (int)cfg.region.size(), cfg.region.data(),
-                            static_cast<long long>(cfg.interval));
+                            cfg.interval);
             } else {
                 std::puts("  no change since last poll");
             }
         }
     }
 
-    // ── Related: setting variables and cheap change detection ──────────
-    //   env.default  — host-side fallback (used only if unset elsewhere)
-    //   env.set      — host-side authoritative value (overrides Notehub)
-    //   env.modified — just the last-changed timestamp (no body parse)
+    // ── Related: setting variables and cheap change detection ─────────────
     std::puts("\n--- env.default / env.set / env.modified ---");
     api.env.setDefault("interval", "300").execute();
     api.env.set("debug").text("true").execute();
@@ -186,12 +157,7 @@ int main() {
                     static_cast<long long>(r.time));
     }
 
-    // ── Compile-time env.default (zero runtime cost) ───────────────────
-    // When the default value is a hardcoded firmware constant, build the
-    // JSON at compile time. The entire string is baked into flash — no
-    // builder, no allocator, no runtime formatting. Swap `constexpr` for
-    // `auto` if you want a runtime variable in there instead; the same
-    // API works.
+    // ── Compile-time env.default (zero runtime cost) ──────────────────────
     std::puts("\n--- env.default (compile-time JSON) ---");
     constexpr auto default_interval_json = note::json<[](auto& b) {
         b.add("req", "env.default");
@@ -199,11 +165,34 @@ int main() {
         b.add("text", "300");
         b.close();
     }>();
-    // Verified by the compiler, not at runtime:
     static_assert(default_interval_json.view() ==
         R"({"req":"env.default","name":"interval","text":"300"})");
     std::printf("  %.*s\n", (int)default_interval_json.size(),
                 default_interval_json.data());
+}
+
+int main(int argc, char** argv) {
+    if (argc > 1) {
+#if defined(__unix__) || defined(__APPLE__)
+        // Real Notecard over USB serial. Matches examples/stdcpp/posix-hardware.cpp.
+        const char* path = argv[1];
+        note::posix::Notecard nc;
+        nc.begin(path);
+        std::printf("=== real Notecard at %s ===\n", path);
+        run_demo_on(static_cast<note::Api<>&>(nc));
+#else
+        std::fprintf(stderr, "real-hardware mode requires a POSIX host\n");
+        return 1;
+#endif
+    } else {
+        // Mock path — CI builds and runs this, no hardware needed.
+        EnvVarsMockHal hal;
+        note::StreamingTransport transport{hal};
+        note::Notecard nc(transport);
+        Api api(nc);
+        std::puts("=== mock (streaming canned responses) ===");
+        run_demo_on(api);
+    }
 
     std::puts("\nAll env.get patterns demonstrated.");
     return 0;

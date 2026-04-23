@@ -145,6 +145,26 @@ from Notehub or via `env.default` for new code. See
 [env Requests](https://dev.blues.io/api-reference/notecard-api/env-requests/)
 for details.
 
+### Hardcoded defaults at compile time
+
+When the default value is known at build time (e.g. a firmware-wide
+fallback), bake the JSON into flash via `note::json<lambda>()`:
+
+```cpp
+constexpr auto default_interval = note::json<[](auto& b) {
+    b.add("req", "env.default");
+    b.add("name", "interval");
+    b.add("text", "300");
+    b.close();
+}>();
+static_assert(default_interval.view() ==
+    R"({"req":"env.default","name":"interval","text":"300"})");
+```
+
+Zero runtime cost — the string is measured and emitted at compile time.
+See [json-builder.md](json-builder.md) for the full `JsonBuf` /
+`json<>` API including the runtime-values variant.
+
 ## Streaming transport is required for `.into()`
 
 The `.into(T&)` SAX body-parse path runs inside the streaming

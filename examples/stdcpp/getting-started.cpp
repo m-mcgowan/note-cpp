@@ -179,6 +179,25 @@ int main() {
     std::printf("--- constexpr note.add ---\n  >> %.*s\n",
         (int)note_add_json.size(), note_add_json.data());
 
+    // Wire-name escape hatch. The typed API renames wire keys that clash
+    // with C++ reserved words or the `note::` namespace — e.g. `"note"`
+    // becomes `.noteId` on note.add / note.get. The compile-time JSON
+    // builder takes the keys verbatim, so if you want to spell the wire
+    // key you can:
+    constexpr auto note_add_with_id = note::json<[](auto& b) {
+        b.add("req", "note.add");
+        b.add("file", "data.db");
+        b.add("note", "custom-note-id");     // wire key, not .noteId
+        b.begin_object("body");
+            b.add("temp", 22.5);
+        b.end_object();
+        b.close();
+    }>();
+    static_assert(note_add_with_id.view() ==
+        R"({"req":"note.add","file":"data.db","note":"custom-note-id","body":{"temp":22.5}})");
+    std::printf("--- constexpr note.add (wire \"note\" key) ---\n  >> %.*s\n",
+        (int)note_add_with_id.size(), note_add_with_id.data());
+
 
     // ═════════════════════════════════════════════════════════════════════
     // 3. TYPED API — REQUESTS AND RESPONSES

@@ -41,6 +41,57 @@ constexpr note::JsonBuf<128> body = [] {
 static_assert(body);  // overflow check — fails at compile time if buffer too small
 ```
 
+## Compile-time `env.default`
+
+The same pattern suits any request with hardcoded values. Fallback
+defaults that the firmware registers at startup are a common case:
+
+```cpp
+constexpr auto default_interval = note::json<[](auto& b) {
+    b.add("req", "env.default");
+    b.add("name", "interval");
+    b.add("text", "300");
+    b.close();
+}>();
+
+// Send it via streaming_send_raw or any buffered transport that accepts
+// a pre-built JSON string. No builder, no allocator, no runtime
+// formatting — the entire string lives in flash.
+```
+
+See [environment-variables.md](environment-variables.md) for the full
+env var API and
+[`examples/stdcpp/env-vars.cpp`](../examples/stdcpp/env-vars.cpp) for
+this pattern running alongside the typed API.
+
+## Wire-name escape hatch
+
+The typed API renames wire keys that collide with C++ reserved words or
+the `note::` namespace (see the [rename table in
+environment-variables.md](environment-variables.md#wire-names-vs-c-names)
+— `note` → `.noteId`, `delete` → `.delete_`, etc.). The JsonBuf builder
+takes the wire key verbatim, so if you want to spell it literally — or
+you're building a request the typed API doesn't yet cover — this is the
+way:
+
+```cpp
+// The typed API would call this field .noteId; the wire key is "note".
+constexpr auto note_add = note::json<[](auto& b) {
+    b.add("req", "note.add");
+    b.add("file", "data.db");
+    b.add("note", "custom-note-id");   // wire key, unrenamed
+    b.begin_object("body");
+        b.add("temp", 22.5);
+    b.end_object();
+    b.close();
+}>();
+```
+
+Same applies to `"delete"`, `"class"`, `"template"`, or any other key
+that the codegen had to rename for C++ safety. The JsonBuf path isn't
+type-checked against the OpenAPI spec — you're responsible for the
+field names — but it lets you emit any JSON the Notecard will accept.
+
 ## Runtime usage
 
 The same API works at runtime. Just remove `constexpr`:

@@ -21,6 +21,7 @@
 #include <note/allocator.hpp>
 #include <note/api.hpp>
 #include <note/body.hpp>
+#include <note/json_buf.hpp>
 #include <note/notecard.hpp>
 #include <note/streaming_transport.hpp>
 #include <note/transport_hal.hpp>
@@ -184,6 +185,25 @@ int main() {
         std::printf("  env store last modified: %lld\n",
                     static_cast<long long>(r.time));
     }
+
+    // ── Compile-time env.default (zero runtime cost) ───────────────────
+    // When the default value is a hardcoded firmware constant, build the
+    // JSON at compile time. The entire string is baked into flash — no
+    // builder, no allocator, no runtime formatting. Swap `constexpr` for
+    // `auto` if you want a runtime variable in there instead; the same
+    // API works.
+    std::puts("\n--- env.default (compile-time JSON) ---");
+    constexpr auto default_interval_json = note::json<[](auto& b) {
+        b.add("req", "env.default");
+        b.add("name", "interval");
+        b.add("text", "300");
+        b.close();
+    }>();
+    // Verified by the compiler, not at runtime:
+    static_assert(default_interval_json.view() ==
+        R"({"req":"env.default","name":"interval","text":"300"})");
+    std::printf("  %.*s\n", (int)default_interval_json.size(),
+                default_interval_json.data());
 
     std::puts("\nAll env.get patterns demonstrated.");
     return 0;

@@ -406,10 +406,12 @@ struct is_body_schema : has_note_fields_trait<T> {};
 //
 // Set to false until an integration test against a real Notecard
 // confirms acceptance — tests/integration/shared/test_notecard_api.cpp
-// has the two probe cases. When the Notecard accepts both shapes, flip
-// this to true to re-enable template emission for nested/array-of-struct
-// fields. The ser path (make_schema_body / write_array_element) is
-// independent — actual note bodies with nested shapes work today.
+// has probe cases that send handwritten nested template bodies via a
+// lambda, so they can run regardless of this flag's setting. When the
+// Notecard accepts both shapes, flip this to true to re-enable
+// template_of<T>() emission for nested/array-of-struct fields. The
+// ser path (make_schema_body / write_array_element) is independent —
+// actual note bodies with nested shapes work today.
 inline constexpr bool notecard_supports_nested_templates_v = false;
 
 // Per-V char-array template-hint string: N characters of 'x', one instance

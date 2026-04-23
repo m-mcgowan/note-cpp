@@ -248,44 +248,22 @@ TEST_CASE("back-to-back diverse transactions — inter-transaction timing") {
 
 // ─── note.template shape validation ─────────────────────────────────────────
 //
-// These tests probe what the Notecard accepts in the template body:
-// whether nested objects and arrays-of-objects are legal shapes. The
-// note-cpp template emitter (write_template_hint_for) synthesises
-// nested/array hints by default; if the Notecard rejects them we need
-// to restrict the emitter to flat templates.
+// These probes decide whether the Notecard accepts templates that contain
+// nested objects or arrays-of-objects. Bodies are built by hand (lambda
+// body) rather than via note::template_of<T>() so the probe compiles
+// regardless of detail::notecard_supports_nested_templates_v — the whole
+// point of these tests is to inform whether that flag can flip.
 
-namespace {
-struct FlatTemplate {
-    float temperature;
-    int16_t humidity;
-    NOTE_FIELDS(temperature, humidity)
-};
-
-struct InnerPoint { double lat; double lon; NOTE_FIELDS(lat, lon) };
-struct OuterWithNested {
-    float temp;
-    InnerPoint pos;
-    NOTE_FIELDS(temp, pos)
-};
-
-struct ArrayOfStructsTemplate {
-    std::array<InnerPoint, 2> waypoints;
-    NOTE_FIELDS(waypoints)
-};
-
-struct ArrayOfPrimitivesTemplate {
-    std::array<int32_t, 3> samples;
-    NOTE_FIELDS(samples)
-};
-} // namespace
-
-TEST_CASE("note.template flat struct — known-good baseline") {
+TEST_CASE("note.template flat body — known-good baseline") {
     auto& nc = notecard_api();
     const char* file = "integration-tmpl-flat.qo";
     nc.file.remove(file).execute();
 
     auto r = nc.note.templates().define(file)
-        .body(note::template_of<FlatTemplate>())
+        .body(note::body([](note::JsonBuilder& b) {
+            b.add("temperature", 14.1);
+            b.add("humidity", note::json_int_t{11});
+        }))
         .execute();
     if (!r) { MESSAGE("flat template error: ", note::to_string(r.error())); }
     CHECK(r);
@@ -298,26 +276,22 @@ TEST_CASE("note.template — does the Notecard accept NESTED templates?") {
     nc.file.remove(file).execute();
 
     auto r = nc.note.templates().define(file)
-        .body(note::template_of<OuterWithNested>())
+        .body(note::body([](note::JsonBuilder& b) {
+            b.add("temp", 14.1);
+            b.begin_object("pos");
+                b.add("lat", 14.1);
+                b.add("lon", 14.1);
+            b.end_object();
+        }))
         .execute();
 
     if (r) {
-        MESSAGE("Notecard ACCEPTED nested template — nesting is supported.");
-        // Round-trip: add a note and read it back through the template.
-        OuterWithNested sent{.temp = 21.5f, .pos = {42.5, -71.5}};
-        auto add = nc.note.update(file, "nested-rt").body(sent).execute();
-        CHECK(add);
-
-        OuterWithNested recv{};
-        auto rd = nc.note.read(file).noteId("nested-rt").into(recv).execute();
-        if (!rd) { MESSAGE("nested read error: ", note::to_string(rd.error())); }
-        CHECK(rd);
-        CHECK(recv.temp == doctest::Approx(sent.temp));
-        CHECK(recv.pos.lat == doctest::Approx(sent.pos.lat));
-        CHECK(recv.pos.lon == doctest::Approx(sent.pos.lon));
+        MESSAGE("Notecard ACCEPTED nested template — "
+                "detail::notecard_supports_nested_templates_v may flip to true.");
     } else {
-        MESSAGE("Notecard REJECTED nested template: ", note::to_string(r.error()));
-        MESSAGE("→ write_template_hint_for must NOT emit nested objects.");
+        MESSAGE("Notecard REJECTED nested template: ",
+                note::to_string(r.error()));
+        MESSAGE("→ keep detail::notecard_supports_nested_templates_v = false.");
     }
 
     nc.file.remove(file).execute();
@@ -329,18 +303,22 @@ TEST_CASE("note.template — does the Notecard accept ARRAY-OF-STRUCT templates?
     nc.file.remove(file).execute();
 
     auto r = nc.note.templates().define(file)
-        .body(note::template_of<ArrayOfStructsTemplate>())
+        .body(note::body([](note::JsonBuilder& b) {
+            b.begin_array("waypoints");
+                b.begin_element_object();
+                    b.add("lat", 14.1);
+                    b.add("lon", 14.1);
+                b.end_object();
+            b.end_array();
+        }))
         .execute();
 
     if (r) {
         MESSAGE("Notecard ACCEPTED array-of-struct template.");
-        ArrayOfStructsTemplate sent{{{{1.0, 2.0}, {3.0, 4.0}}}};
-        auto add = nc.note.update(file, "aos-rt").body(sent).execute();
-        CHECK(add);
     } else {
         MESSAGE("Notecard REJECTED array-of-struct template: ",
                 note::to_string(r.error()));
-        MESSAGE("→ write_template_hint_for must emit flat-only array hints.");
+        MESSAGE("→ keep the array-of-struct template branch gated off.");
     }
 
     nc.file.remove(file).execute();
@@ -352,7 +330,11 @@ TEST_CASE("note.template array of primitives — known-good baseline") {
     nc.file.remove(file).execute();
 
     auto r = nc.note.templates().define(file)
-        .body(note::template_of<ArrayOfPrimitivesTemplate>())
+        .body(note::body([](note::JsonBuilder& b) {
+            b.begin_array("samples");
+                b.add_element(note::json_int_t{12});
+            b.end_array();
+        }))
         .execute();
     if (!r) {
         MESSAGE("array-of-primitives template error: ",

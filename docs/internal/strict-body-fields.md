@@ -166,25 +166,26 @@ it.
 
 `detail::notecard_supports_nested_templates_v` is a `constexpr bool`
 in `body.hpp`, currently `false`. When `false`, `template_of<T>()`
-`static_assert`s on any field whose **template** shape would be nested —
+`static_assert`s on any field whose template shape would be nested —
 that is, a schema-struct field whose hint would emit `{...}`, or an
 array-of-struct field whose hint would emit `[{...}]`.
 
-Ser is independent and always works: `make_schema_body<T>()` emits the
-full nested body regardless of this flag.
+Ser is independent of this flag: `make_schema_body<T>()` emits the
+full nested body regardless.
 
-The gate exists because Blues's public docs describe Notecard templates
-as flat schemas. Until an integration test (see
-`tests/integration/shared/test_notecard_api.cpp`: "does the Notecard
-accept NESTED templates?" and the array-of-struct counterpart) confirms
-acceptance, template emission for these shapes is kept off so users
-don't silently register a template the Notecard will reject.
+The probe cases in `tests/integration/shared/test_notecard_api.cpp`
+build the nested template body by hand via a lambda body (`note::body`
++ direct `JsonBuilder` calls) so they compile regardless of the flag's
+setting — the whole point of the probe is to tell us what the flag
+should be. Each case logs whether the Notecard accepted or rejected
+the template.
 
 Flip procedure:
-1. Run the probe tests against a real Notecard.
-2. If both pass, set `notecard_supports_nested_templates_v = true`.
-3. Re-enable the `template_body<WithNestedFields>()` /
-   `template_body<StructArrayField>()` assertions in
+1. Run the four `note.template` probe cases against a real Notecard.
+2. If the nested and array-of-struct cases log "ACCEPTED", set
+   `notecard_supports_nested_templates_v = true`.
+3. Remove the `if constexpr (note::detail::notecard_supports_nested_
+   templates_v)` guards around the `template_body<…>()` assertions in
    `tests/test_struct_field_symmetry.cpp`.
 
 ### Other gaps

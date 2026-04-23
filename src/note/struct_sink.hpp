@@ -164,9 +164,14 @@ struct SaxAssignString {
     static constexpr bool handles_v =
            std::is_same_v<T, string_view>
         || is_char_array_v<T>
-        || std::is_constructible_v<T, string_view>
-        || std::is_constructible_v<T, const char*, size_t>
-        || std::is_constructible_v<T, const char*>;
+        // Exclude aggregates: C++20 parenthesized aggregate init makes
+        // is_constructible_v<Aggregate, ...> true even when the semantics
+        // are narrowing/nonsense (e.g. a struct whose first field is bool
+        // gets "constructed" from a const char*). Aggregate child structs
+        // are handled by the nested-sink path, not here.
+        || (!std::is_aggregate_v<T> && std::is_constructible_v<T, string_view>)
+        || (!std::is_aggregate_v<T> && std::is_constructible_v<T, const char*, size_t>)
+        || (!std::is_aggregate_v<T> && std::is_constructible_v<T, const char*>);
 
     string_view value;
 

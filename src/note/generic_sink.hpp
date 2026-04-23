@@ -174,7 +174,7 @@ struct GenericBodySink {
         for (uint8_t i = 0; i < n_fields; ++i) {
             auto d = detail::read_field_desc(&fields[i]);
             if (detail::flash_key_eq(k, d.name)) {
-                assign_numeric(d, v);
+                assign_numeric(d, static_cast<double>(v));
                 return;
             }
         }

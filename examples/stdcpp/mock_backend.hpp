@@ -44,6 +44,22 @@ struct MockBuilder : note::JsonBuilder {
         sep(); buf_ += '"'; buf_ += k; buf_ += "\":["; first_ = true; return *this;
     }
     MockBuilder& end_array() override { buf_ += ']'; first_ = false; return *this; }
+
+    // Array element serialization — the JsonBuilder defaults are no-ops, so
+    // without these overrides every ArrayField serializes as `[]`.
+    MockBuilder& add_element(bool v) override {
+        sep(); buf_ += v ? "true" : "false"; return *this;
+    }
+    MockBuilder& add_element(note::json_int_t v) override {
+        sep(); buf_ += std::to_string(v); return *this;
+    }
+    MockBuilder& add_element(double v) override {
+        sep(); buf_ += std::to_string(v); return *this;
+    }
+    MockBuilder& add_element(note::string_view v) override {
+        sep(); buf_ += '"'; buf_ += v; buf_ += '"'; return *this;
+    }
+
     note::string_view to_view() override { buf_ += '}'; return buf_; }
 };
 

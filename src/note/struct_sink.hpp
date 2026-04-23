@@ -44,22 +44,8 @@ struct StructSink;
 
 namespace detail {
 
-// ── Array traits ──────────────────────────────────────────────────────
-
-template<typename T>
-struct is_std_array : std::false_type {};
-
-template<typename T, std::size_t N>
-struct is_std_array<std::array<T, N>> : std::true_type {};
-
-template<typename T>
-struct array_traits;
-
-template<typename T, std::size_t N>
-struct array_traits<std::array<T, N>> {
-    using element_type = T;
-    static constexpr std::size_t size = N;
-};
+// Array + aggregate traits live in body.hpp (shared with ser/template
+// paths). Keep struct_sink.hpp focused on SAX dispatch.
 
 // ── Aggregate detection trait ─────────────────────────────────────────
 // Detects types usable as nested struct fields: NOTE_FIELDS-annotated
@@ -78,6 +64,9 @@ template<typename T>
               && !is_std_array<T>::value)
 struct is_sax_aggregate<T, void> : std::true_type {};
 #endif
+
+template<typename T>
+constexpr bool is_sax_aggregate_v = is_sax_aggregate<T>::value;
 
 // ── Type-erased vtables ──────────────────────────────────────────────
 
@@ -119,44 +108,66 @@ struct ArrayState {
 };
 
 // ── SAX assignment helpers ────────────────────────────────────────────
+//
+// Each handler exposes a `handles_v<T>` trait declaring the field types
+// it can assign into. sax_dispatch uses this at compile time to instantiate
+// each handler only for compatible fields — incompatible field types are
+// filtered out, so handler bodies never need silent-drop fallbacks.
 
 struct SaxAssignBool {
+    template<typename T>
+    static constexpr bool handles_v = std::is_same_v<T, bool>;
+
     bool value;
     template<typename F>
     void operator()(F& field) const {
-        if constexpr (std::is_same_v<std::remove_cv_t<F>, bool>) {
-            field = value;
-        }
+        static_assert(handles_v<std::remove_cv_t<F>>,
+            "SaxAssignBool invoked on a non-bool field — dispatch filtering bug.");
+        field = value;
     }
 };
 
 struct SaxAssignInt {
+    template<typename T>
+    static constexpr bool handles_v =
+           (std::is_integral_v<T> && !std::is_same_v<T, bool>)
+        || std::is_floating_point_v<T>;
+
     json_int_t value;
     template<typename F>
     void operator()(F& field) const {
         using V = std::remove_cv_t<F>;
-        if constexpr (std::is_integral_v<V> && !std::is_same_v<V, bool>) {
-            field = static_cast<V>(value);
-        } else if constexpr (std::is_floating_point_v<V>) {
-            field = static_cast<V>(value);
-        }
+        static_assert(handles_v<V>,
+            "SaxAssignInt invoked on an unsupported field type — dispatch filtering bug.");
+        field = static_cast<V>(value);
     }
 };
 
 struct SaxAssignFloat {
+    template<typename T>
+    static constexpr bool handles_v =
+           std::is_floating_point_v<T>
+        || (std::is_integral_v<T> && !std::is_same_v<T, bool>);
+
     double value;
     template<typename F>
     void operator()(F& field) const {
         using V = std::remove_cv_t<F>;
-        if constexpr (std::is_floating_point_v<V>) {
-            field = static_cast<V>(value);
-        } else if constexpr (std::is_integral_v<V> && !std::is_same_v<V, bool>) {
-            field = static_cast<V>(value);
-        }
+        static_assert(handles_v<V>,
+            "SaxAssignFloat invoked on an unsupported field type — dispatch filtering bug.");
+        field = static_cast<V>(value);
     }
 };
 
 struct SaxAssignString {
+    template<typename T>
+    static constexpr bool handles_v =
+           std::is_same_v<T, string_view>
+        || is_char_array_v<T>
+        || std::is_constructible_v<T, string_view>
+        || std::is_constructible_v<T, const char*, size_t>
+        || std::is_constructible_v<T, const char*>;
+
     string_view value;
 
     // char[N] field — memcpy with null terminator. Arrays can't be
@@ -171,6 +182,8 @@ struct SaxAssignString {
     template<typename F>
     void operator()(F& field) const {
         using V = std::remove_cv_t<F>;
+        static_assert(handles_v<V>,
+            "SaxAssignString invoked on an unsupported field type — dispatch filtering bug.");
         if constexpr (std::is_same_v<V, string_view>) {
             field = value;
         } else if constexpr (std::is_constructible_v<V, string_view>) {
@@ -182,55 +195,47 @@ struct SaxAssignString {
             // Types that take (ptr, len) but not string_view directly —
             // e.g. Arduino String on cores that expose that ctor.
             field = V(value.data(), value.size());
+        } else if constexpr (std::is_constructible_v<V, const char*>) {
+            // StringPool::intern null-terminates; data() is safe to pass
+            // to a single-arg (const char*) constructor — except when the
+            // value is empty (intern returns {nullptr, 0}).
+            if (!value.empty()) {
+                field = V(value.data());
+            } else {
+                field = V{};
+            }
         }
-        // Unrecognised types are silently skipped. Making this a
-        // static_assert is appealing but interacts with wire-type
-        // coercion (e.g. {"n":"42"} into an int field) that today's
-        // SAX pipeline tolerates. Revisit as a separate design pass —
-        // likely gated behind NOTE_STRICT_BODY_FIELDS.
     }
 };
 
 struct SaxAssignNumber {
+    template<typename T>
+    static constexpr bool handles_v = SaxAssignInt::handles_v<T>;
+
     string_view raw;
     template<typename F>
     void operator()(F& field) const {
         using V = std::remove_cv_t<F>;
+        static_assert(handles_v<V>,
+            "SaxAssignNumber invoked on an unsupported field type — dispatch filtering bug.");
         if constexpr (std::is_floating_point_v<V>) {
             field = static_cast<V>(parse_double(raw));
-        } else if constexpr (std::is_integral_v<V> && !std::is_same_v<V, bool>) {
+        } else {
             field = static_cast<V>(parse_int(raw));
         }
     }
 };
-
-// ── Dispatch: route SAX event to the right field ──────────────────────
-
-template<typename T, typename Handler,
-    std::enable_if_t<has_note_fields_trait<T>::value, int> = 0>
-bool sax_dispatch(T& obj, string_view key, Handler&& handler) {
-    return T::_note_fields_dispatch(obj, key, std::forward<Handler>(handler));
-}
-
-#if __cplusplus >= 202002L
-template<typename T, typename Handler>
-    requires (ReflectableAggregate<T> && !has_note_fields_trait<T>::value)
-bool sax_dispatch(T& obj, string_view key, Handler&& handler) {
-    using R = std::remove_cvref_t<T>;
-    bool matched = false;
-    [&]<std::size_t... Ns>(std::index_sequence<Ns...>) {
-        ((key == reflect::member_name<Ns, R>() &&
-          (handler(reflect::get<Ns>(obj)), matched = true, true)), ...);
-    }(std::make_index_sequence<reflect::size<R>()>{});
-    return matched;
-}
-#endif
 
 // ── Field classification ──────────────────────────────────────────────
 
 struct SaxDetectFieldKind {
     enum Kind { none, aggregate, array };
     Kind* result;
+
+    // Detector claims every field — it classifies them rather than
+    // assigning a value.
+    template<typename T>
+    static constexpr bool handles_v = true;
 
     template<typename F>
     void operator()(F& /*field*/) const {
@@ -252,16 +257,19 @@ using CreateChildFn = void(*)(void* field, void* storage,
     const ChildVTable** vt_out, void** ctx_out, StringPool& pool);
 
 struct SaxCaptureChildCreator {
+    template<typename T>
+    static constexpr bool handles_v = is_sax_aggregate<T>::value;
+
     void** field_ptr;
     CreateChildFn* fn_out;
 
     template<typename F>
     void operator()(F& field) const {
         using V = std::remove_cv_t<F>;
-        if constexpr (is_sax_aggregate<V>::value) {
-            *field_ptr = static_cast<void*>(&field);
-            *fn_out = &create_child_thunk<V>;
-        }
+        static_assert(handles_v<V>,
+            "SaxCaptureChildCreator invoked on non-aggregate — dispatch filtering bug.");
+        *field_ptr = static_cast<void*>(&field);
+        *fn_out = &create_child_thunk<V>;
     }
 
     template<typename V>
@@ -270,27 +278,71 @@ struct SaxCaptureChildCreator {
 };
 
 struct SaxCaptureArray {
+    template<typename T>
+    static constexpr bool handles_v = is_std_array<T>::value;
+
     ArrayState* state;
     bool* matched;
 
     template<typename F>
     void operator()(F& field) const {
         using V = std::remove_cv_t<F>;
-        if constexpr (is_std_array<V>::value) {
-            using Elem = typename array_traits<V>::element_type;
-            state->data = field.data();
-            state->elem_size = sizeof(Elem);
-            state->capacity = array_traits<V>::size;
-            state->index = 0;
-            state->is_struct = is_sax_aggregate<Elem>::value;
-            state->elem_vt = &array_elem_vtable_for<Elem>();
-            *matched = true;
-        }
+        static_assert(handles_v<V>,
+            "SaxCaptureArray invoked on non-array — dispatch filtering bug.");
+        using Elem = typename array_traits<V>::element_type;
+        state->data = field.data();
+        state->elem_size = sizeof(Elem);
+        state->capacity = array_traits<V>::size;
+        state->index = 0;
+        state->is_struct = is_sax_aggregate<Elem>::value;
+        state->elem_vt = &array_elem_vtable_for<Elem>();
+        *matched = true;
     }
 
     template<typename Elem>
     static const ArrayElemVTable& array_elem_vtable_for();
 };
+
+// ── Dispatch: route SAX event to the right field ──────────────────────
+//
+// Filters at compile time on Handler::handles_v<F> so each handler only
+// instantiates for compatible field types. Fields whose types the handler
+// doesn't claim are never passed to it — the instantiation is a no-op in
+// the fold expression.
+
+template<typename T, typename Handler,
+    std::enable_if_t<has_note_fields_trait<T>::value, int> = 0>
+bool sax_dispatch(T& obj, string_view key, Handler&& handler) {
+    return T::_note_fields_dispatch(obj, key, std::forward<Handler>(handler));
+}
+
+#if __cplusplus >= 202002L
+
+template<typename Handler, std::size_t N, typename R, typename T>
+inline bool sax_try_field(T& obj, string_view key, Handler& handler) {
+    using F = std::remove_cv_t<reflect::member_type<N, R>>;
+    if constexpr (handler_accepts_v<std::remove_cvref_t<Handler>, F>) {
+        if (key == reflect::member_name<N, R>()) {
+            handler(reflect::get<N>(obj));
+            return true;
+        }
+    }
+    return false;
+}
+
+template<typename T, typename Handler>
+    requires (ReflectableAggregate<T> && !has_note_fields_trait<T>::value)
+bool sax_dispatch(T& obj, string_view key, Handler&& handler) {
+    using R = std::remove_cvref_t<T>;
+    bool matched = false;
+    [&]<std::size_t... Ns>(std::index_sequence<Ns...>) {
+        ((matched = matched
+            || sax_try_field<std::remove_cvref_t<Handler>, Ns, R>(
+                obj, key, handler)), ...);
+    }(std::make_index_sequence<reflect::size<R>()>{});
+    return matched;
+}
+#endif
 
 } // namespace detail
 
@@ -578,21 +630,40 @@ void SaxCaptureChildCreator::create_child_thunk(void* field, void* storage,
 
 template<typename Elem>
 const ArrayElemVTable& SaxCaptureArray::array_elem_vtable_for() {
+    // Each vtable entry routes runtime array-element assignments through
+    // the corresponding SaxAssign* handler. Handlers filter per Elem via
+    // handles_v at compile time; incompatible combinations collapse to
+    // a no-op so the vtable still has a slot for every wire event.
     static const ArrayElemVTable vt = {
         [](void* elem, bool v) {
-            SaxAssignBool{v}(*static_cast<Elem*>(elem));
+            if constexpr (SaxAssignBool::handles_v<Elem>) {
+                SaxAssignBool{v}(*static_cast<Elem*>(elem));
+            }
+            (void)elem; (void)v;
         },
         [](void* elem, json_int_t v) {
-            SaxAssignInt{v}(*static_cast<Elem*>(elem));
+            if constexpr (SaxAssignInt::handles_v<Elem>) {
+                SaxAssignInt{v}(*static_cast<Elem*>(elem));
+            }
+            (void)elem; (void)v;
         },
         [](void* elem, double v) {
-            SaxAssignFloat{v}(*static_cast<Elem*>(elem));
+            if constexpr (SaxAssignFloat::handles_v<Elem>) {
+                SaxAssignFloat{v}(*static_cast<Elem*>(elem));
+            }
+            (void)elem; (void)v;
         },
         [](void* elem, string_view v) {
-            SaxAssignString{v}(*static_cast<Elem*>(elem));
+            if constexpr (SaxAssignString::handles_v<Elem>) {
+                SaxAssignString{v}(*static_cast<Elem*>(elem));
+            }
+            (void)elem; (void)v;
         },
         [](void* elem, string_view v) {
-            SaxAssignNumber{v}(*static_cast<Elem*>(elem));
+            if constexpr (SaxAssignNumber::handles_v<Elem>) {
+                SaxAssignNumber{v}(*static_cast<Elem*>(elem));
+            }
+            (void)elem; (void)v;
         },
         [](void* elem, void* storage, const ChildVTable** vt_out,
            void** ctx_out, StringPool& pool) {

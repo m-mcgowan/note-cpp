@@ -139,6 +139,7 @@ set(NOTE_CPP_TEST_SOURCES_FULL_ONLY
     test_setup.cpp
     test_streaming_builder.cpp
     test_streaming_errors.cpp
+    test_struct_field_symmetry.cpp
     test_sync.cpp
     test_templates.cpp
     test_transport_i2c.cpp

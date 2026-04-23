@@ -6,9 +6,19 @@
 #include "types.hpp"
 #include "wire_format.hpp"
 
+#include <array>
 #include <cstddef>
 #include <type_traits>
 #include <utility>
+
+// ── NOTE_STRICT_BODY_FIELDS ────────────────────────────────────────────────
+// When 1 (default), unsupported struct field types in ser/deser/template
+// paths trigger a compile-time static_assert rather than being silently
+// dropped. When 0, the assertion is replaced by a #pragma message and
+// the silent-drop behaviour from before this feature is preserved.
+#ifndef NOTE_STRICT_BODY_FIELDS
+#define NOTE_STRICT_BODY_FIELDS 1
+#endif
 
 // ── C++20 aggregate reflection ──────────────────────────────────────────────
 // When C++20 is available, plain aggregate structs can be used as body values
@@ -128,6 +138,65 @@ struct has_note_fields_trait<T, std::void_t<decltype(T::_note_fields_write(
     std::declval<const T&>(), std::declval<JsonBuilder&>()))>>
     : std::true_type {};
 
+// ── Field-support traits (shared by ser, deser, template paths) ─────────────
+
+// True for char[N] (distinguished from char pointers / std::array<char,N>).
+template<typename T>
+struct is_char_array : std::false_type {};
+
+template<std::size_t N>
+struct is_char_array<char[N]> : std::true_type {};
+
+template<typename T>
+constexpr bool is_char_array_v = is_char_array<T>::value;
+
+// True for std::array<T, N>. Used to route fields into array ser/deser.
+template<typename T>
+struct is_std_array : std::false_type {};
+
+template<typename T, std::size_t N>
+struct is_std_array<std::array<T, N>> : std::true_type {};
+
+template<typename T>
+constexpr bool is_std_array_v = is_std_array<T>::value;
+
+template<typename T>
+struct array_traits;
+
+template<typename T, std::size_t N>
+struct array_traits<std::array<T, N>> {
+    using element_type = T;
+    static constexpr std::size_t size = N;
+};
+
+// True if T has a `.c_str()` method returning something pointer-like —
+// detects Arduino String and similar buffer-owning string types for the
+// ser path.
+template<typename T, typename = void>
+struct has_c_str : std::false_type {};
+
+template<typename T>
+struct has_c_str<T, std::void_t<decltype(std::declval<const T&>().c_str())>>
+    : std::true_type {};
+
+template<typename T>
+constexpr bool has_c_str_v = has_c_str<T>::value;
+
+// handler_accepts_v<H, F>: true if handler H claims field type F via its
+// `handles_v<F>` trait, or true unconditionally when H doesn't expose
+// that trait (e.g. generic lambda callers of _note_fields_dispatch).
+// Lets filtered dispatch coexist with generic-lambda consumers.
+template<typename Handler, typename F, typename = void>
+struct handler_accepts : std::true_type {};
+
+template<typename Handler, typename F>
+struct handler_accepts<Handler, F,
+    std::void_t<decltype(Handler::template handles_v<F>)>>
+    : std::bool_constant<Handler::template handles_v<F>> {};
+
+template<typename Handler, typename F>
+constexpr bool handler_accepts_v = handler_accepts<Handler, F>::value;
+
 #if __cplusplus >= 202002L
 
 // C++20: detect aggregate types that can be reflected.
@@ -137,28 +206,149 @@ concept ReflectableAggregate = std::is_aggregate_v<std::remove_cvref_t<T>>
     && !std::is_empty_v<std::remove_cvref_t<T>>
     && (reflect::size<std::remove_cvref_t<T>>() > 0);
 
-// Forward declaration (write_field and write_aggregate are mutually recursive).
+#endif // C++20
+
+// ── is_schema_struct ────────────────────────────────────────────────────────
+// Unifies "struct with NOTE_FIELDS" and "C++20 reflectable aggregate".
+// Used by write_field_value / write_template_hint to route nested-aggregate
+// branches through a single trait.
+
+template<typename T, typename = void>
+struct is_schema_struct : has_note_fields_trait<T> {};
+
+#if __cplusplus >= 202002L
+template<typename T>
+    requires (ReflectableAggregate<T> && !has_note_fields_trait<T>::value
+              && !is_std_array_v<T> && !is_char_array_v<T>)
+struct is_schema_struct<T, void> : std::true_type {};
+#endif
+
+template<typename T>
+constexpr bool is_schema_struct_v = is_schema_struct<T>::value;
+
+// ── write_field_value<V> ────────────────────────────────────────────────────
+// Shared by write_field (C++20 reflected path) and _note_write_field
+// (C++17 NOTE_FIELDS macro helper). One implementation of "write a struct
+// field to a JsonBuilder under the given key".
+//
+// Supported types (symmetric with read_field_value and SaxAssign*):
+//   bool, integral, floating-point, char[N], any type convertible to
+//   string_view (std::string, const char*), any type with .c_str(),
+//   any type convertible to const char*, nested schema struct,
+//   std::array<Primitive, N> where Primitive is one of the above
+//   primitive types.
+//
+// std::array<SchemaStruct, N>, std::array<std::array<...>, N>, and other
+// nested-array / array-of-struct shapes are currently unsupported because
+// JsonBuilder doesn't expose array-of-object primitives. static_assert
+// catches these at compile time when NOTE_STRICT_BODY_FIELDS is enabled.
+
+template<typename V>
+void write_field_value(JsonBuilder& b, string_view name, const V& value);
+
+// Write an array element (no key).
+template<typename V>
+void write_array_element(JsonBuilder& b, const V& value) {
+    if constexpr (std::is_same_v<V, bool>) {
+        b.add_element(value);
+    } else if constexpr (std::is_integral_v<V> && !std::is_same_v<V, bool>) {
+        b.add_element(static_cast<json_int_t>(value));
+    } else if constexpr (std::is_floating_point_v<V>) {
+        b.add_element(static_cast<double>(value));
+    } else if constexpr (is_char_array_v<V>) {
+        const char* p = value;
+        size_t n = 0;
+        while (n < sizeof(V) && p[n] != '\0') ++n;
+        b.add_element(string_view(p, n));
+    } else if constexpr (std::is_convertible_v<V, string_view>) {
+        b.add_element(string_view(value));
+    } else if constexpr (has_c_str_v<V>) {
+        b.add_element(string_view(value.c_str()));
+    } else if constexpr (std::is_convertible_v<V, const char*>) {
+        b.add_element(string_view(static_cast<const char*>(value)));
+    } else {
+#if NOTE_STRICT_BODY_FIELDS
+        static_assert(sizeof(V) == 0,
+            "note-cpp: std::array element type is not supported for "
+            "serialisation. Arrays of nested schema structs or arrays "
+            "of arrays are not currently supported on the ser path. "
+            "Supported element types: bool, integral, floating-point, "
+            "char[N], std::string-like, Arduino String. Use a lambda "
+            "body for more complex shapes, or define "
+            "NOTE_STRICT_BODY_FIELDS=0 to silently skip.");
+#else
+#pragma message("note-cpp: NOTE_STRICT_BODY_FIELDS=0 — array element type dropped silently.")
+#endif
+    }
+}
+
+// Forward decls for the generic path.
+#if __cplusplus >= 202002L
 template<typename T>
 void write_aggregate(const T& obj, JsonBuilder& b);
+#endif
 
-// Write a single field value to the builder.
 template<typename V>
-void write_field(JsonBuilder& b, string_view name, const V& value) {
+void write_field_value(JsonBuilder& b, string_view name, const V& value) {
     if constexpr (std::is_same_v<V, bool>) {
         b.add(name, value);
-    } else if constexpr (std::is_integral_v<V>) {
+    } else if constexpr (std::is_integral_v<V> && !std::is_same_v<V, bool>) {
         b.add(name, static_cast<json_int_t>(value));
     } else if constexpr (std::is_floating_point_v<V>) {
         b.add(name, static_cast<double>(value));
+    } else if constexpr (is_char_array_v<V>) {
+        // Emit as string with length truncated at first NUL.
+        const char* p = value;
+        size_t n = 0;
+        while (n < sizeof(V) && p[n] != '\0') ++n;
+        b.add(name, string_view(p, n));
     } else if constexpr (std::is_convertible_v<V, string_view>) {
         b.add(name, string_view(value));
-    } else if constexpr (ReflectableAggregate<V>) {
-        // Nested aggregate: recurse.
+    } else if constexpr (has_c_str_v<V>) {
+        b.add(name, string_view(value.c_str()));
+    } else if constexpr (std::is_convertible_v<V, const char*>) {
+        b.add(name, string_view(static_cast<const char*>(value)));
+    } else if constexpr (is_schema_struct_v<V>) {
+        // Nested schema struct — recurse via NOTE_FIELDS or reflection.
         b.begin_object(name);
-        write_aggregate(value, b);
+        if constexpr (has_note_fields_trait<V>::value) {
+            V::_note_fields_write(value, b);
+        }
+#if __cplusplus >= 202002L
+        else if constexpr (ReflectableAggregate<V>) {
+            write_aggregate(value, b);
+        }
+#endif
         b.end_object();
+    } else if constexpr (is_std_array_v<V>) {
+        using Elem = typename array_traits<V>::element_type;
+        b.begin_array(name);
+        for (std::size_t i = 0; i < array_traits<V>::size; ++i) {
+            write_array_element<Elem>(b, value[i]);
+        }
+        b.end_array();
+    } else {
+#if NOTE_STRICT_BODY_FIELDS
+        static_assert(sizeof(V) == 0,
+            "note-cpp: struct field type is not supported for "
+            "serialisation. Supported: bool, integral, floating-point, "
+            "char[N], string_view, std::string-like types, Arduino "
+            "String (.c_str()), nested NOTE_FIELDS/aggregate structs, "
+            "std::array<Primitive, N>. Define NOTE_STRICT_BODY_FIELDS=0 "
+            "to silently skip unsupported fields.");
+#else
+#pragma message("note-cpp: NOTE_STRICT_BODY_FIELDS=0 — unsupported struct field type dropped silently.")
+#endif
     }
-    // Unsupported types are silently skipped.
+}
+
+#if __cplusplus >= 202002L
+
+// Keep `write_field` as a thin alias for backwards compatibility with
+// any external callers.
+template<typename V>
+void write_field(JsonBuilder& b, string_view name, const V& value) {
+    write_field_value(b, name, value);
 }
 
 // Write all fields of an aggregate to the builder.
@@ -166,7 +356,7 @@ template<typename T>
 void write_aggregate(const T& obj, JsonBuilder& b) {
     using R = std::remove_cvref_t<T>;
     [&]<std::size_t... Ns>(std::index_sequence<Ns...>) {
-        (write_field(b, reflect::member_name<Ns, R>(), reflect::get<Ns>(obj)), ...);
+        (write_field_value(b, reflect::member_name<Ns, R>(), reflect::get<Ns>(obj)), ...);
     }(std::make_index_sequence<reflect::size<R>()>{});
 }
 
@@ -188,15 +378,42 @@ struct is_body_schema : has_note_fields_trait<T> {};
 //   bool          → true  (TBOOL)
 //   string-like   → "1"   (TSTRING — value is max length as string)
 
+// Per-V char-array template-hint string: N characters of 'x', one instance
+// per N. Gives the Notecard a TSTRING(N) registration so runtime values
+// up to N chars aren't truncated. Prior behaviour emitted "1" for every
+// char array (forcing TSTRING(1)).
+template<std::size_t N>
+inline string_view char_array_template_filler() {
+    static constexpr auto buf = []() {
+        std::array<char, N> a{};
+        for (std::size_t i = 0; i < N; ++i) a[i] = 'x';
+        return a;
+    }();
+    return string_view(buf.data(), N);
+}
+
 #if __cplusplus >= 202002L
+// Forward decl for C++20 reflective-aggregate hint iteration.
+template<typename T>
+void write_template_hints(JsonBuilder& b);
+#endif
 
 template<typename V>
+void write_template_hint_for(JsonBuilder& b, string_view name);
+
+// Backward-compat shim: the value is unused, only V's type matters.
+template<typename V>
 void write_template_hint(JsonBuilder& b, string_view name, const V& /*unused*/) {
+    write_template_hint_for<V>(b, name);
+}
+
+template<typename V>
+void write_template_hint_for(JsonBuilder& b, string_view name) {
     if constexpr (std::is_same_v<V, bool>) {
         b.add(name, true);
     } else if constexpr (std::is_floating_point_v<V>) {
         b.add(name, 14.1);
-    } else if constexpr (std::is_integral_v<V>) {
+    } else if constexpr (std::is_integral_v<V> && !std::is_same_v<V, bool>) {
         // Use a representative value that hints at the storage size.
         if constexpr (sizeof(V) <= 1)
             b.add(name, json_int_t{1});        // TINT8
@@ -204,11 +421,81 @@ void write_template_hint(JsonBuilder& b, string_view name, const V& /*unused*/) 
             b.add(name, json_int_t{11});       // TINT16
         else
             b.add(name, json_int_t{12});       // TINT32
-    } else if constexpr (std::is_convertible_v<V, string_view>) {
+    } else if constexpr (is_char_array_v<V>) {
+        // TSTRING(N): emit an N-char string so the Notecard registers
+        // the correct maximum length for the field.
+        b.add(name, char_array_template_filler<sizeof(V)>());
+    } else if constexpr (std::is_convertible_v<V, string_view>
+                      || has_c_str_v<V>
+                      || std::is_convertible_v<V, const char*>) {
+        // Unbounded string-like types. No max length available at the
+        // type level; default to TSTRING(1). Users needing a larger
+        // registration should switch to char[N].
         b.add(name, string_view("1"));
+    } else if constexpr (is_schema_struct_v<V>) {
+        b.begin_object(name);
+        if constexpr (has_note_fields_trait<V>::value) {
+            V::template _note_fields_write_hints<V>(b);
+        }
+#if __cplusplus >= 202002L
+        else if constexpr (ReflectableAggregate<V>) {
+            write_template_hints<V>(b);
+        }
+#endif
+        b.end_object();
+    } else if constexpr (is_std_array_v<V>) {
+        using Elem = typename array_traits<V>::element_type;
+        if constexpr (std::is_same_v<Elem, bool>
+                   || std::is_floating_point_v<Elem>
+                   || (std::is_integral_v<Elem> && !std::is_same_v<Elem, bool>)
+                   || is_char_array_v<Elem>
+                   || std::is_convertible_v<Elem, string_view>
+                   || has_c_str_v<Elem>
+                   || std::is_convertible_v<Elem, const char*>) {
+            // Notecard array template: single-element hint array
+            // describes the per-element type.
+            b.begin_array(name);
+            if constexpr (std::is_same_v<Elem, bool>) {
+                b.add_element(true);
+            } else if constexpr (std::is_floating_point_v<Elem>) {
+                b.add_element(14.1);
+            } else if constexpr (std::is_integral_v<Elem>) {
+                if constexpr (sizeof(Elem) <= 1) b.add_element(json_int_t{1});
+                else if constexpr (sizeof(Elem) <= 2) b.add_element(json_int_t{11});
+                else b.add_element(json_int_t{12});
+            } else if constexpr (is_char_array_v<Elem>) {
+                b.add_element(char_array_template_filler<sizeof(Elem)>());
+            } else {
+                b.add_element(string_view("1"));
+            }
+            b.end_array();
+        } else {
+#if NOTE_STRICT_BODY_FIELDS
+            static_assert(sizeof(V) == 0,
+                "note-cpp: std::array of nested schema struct is not "
+                "currently supported in template_of<T>. Define "
+                "NOTE_STRICT_BODY_FIELDS=0 to silently skip this field "
+                "in the template.");
+#else
+#pragma message("note-cpp: NOTE_STRICT_BODY_FIELDS=0 — std::array-of-struct dropped silently from template.")
+#endif
+        }
+    } else {
+#if NOTE_STRICT_BODY_FIELDS
+        static_assert(sizeof(V) == 0,
+            "note-cpp: struct field type is not supported for template "
+            "registration. Supported: bool, integral, floating-point, "
+            "char[N], string_view, std::string-like types, Arduino "
+            "String (.c_str()), nested NOTE_FIELDS/aggregate structs, "
+            "std::array of primitives. Define NOTE_STRICT_BODY_FIELDS=0 "
+            "to silently skip unsupported fields.");
+#else
+#pragma message("note-cpp: NOTE_STRICT_BODY_FIELDS=0 — unsupported field type dropped silently from template.")
+#endif
     }
 }
 
+#if __cplusplus >= 202002L
 template<typename T>
 void write_template_hints(JsonBuilder& b) {
     using R = std::remove_cvref_t<T>;
@@ -218,7 +505,6 @@ void write_template_hints(JsonBuilder& b) {
             reflect::get<Ns>(reflect::detail::ext<R>)), ...);
     }(std::make_index_sequence<reflect::size<R>()>{});
 }
-
 #endif // C++20
 
 } // namespace detail
@@ -285,13 +571,17 @@ BodyValue make_schema_body(const T& obj) {
 #if __cplusplus >= 202002L
 
 template<typename T>
-    requires detail::ReflectableAggregate<T>
+    requires (detail::ReflectableAggregate<T> || detail::has_note_fields_trait<T>::value)
 BodyValue template_of() {
     return BodyValue(
         nullptr,
         static_cast<BodyValue::WriteFn>([](const void*, string_view, JsonBuilder& b) {
             b.begin_object("body");
-            detail::write_template_hints<T>(b);
+            if constexpr (detail::has_note_fields_trait<T>::value) {
+                T::template _note_fields_write_hints<T>(b);
+            } else {
+                detail::write_template_hints<T>(b);
+            }
             b.end_object();
         })
     );
@@ -303,7 +593,7 @@ BodyValue template_of() {
 ///       .body(note::template_of(schema))
 ///       .execute();
 template<typename T>
-    requires detail::ReflectableAggregate<T>
+    requires (detail::ReflectableAggregate<T> || detail::has_note_fields_trait<T>::value)
 BodyValue template_of(const T&) {
     return template_of<T>();
 }
@@ -331,8 +621,20 @@ BodyValue template_of(const T&) {
 #define _NOTE_FIELDS_READ_FIELD(obj, r, field) \
     ::note::detail::_note_read_field(r, #field, (obj).field);
 
-#define _NOTE_FIELDS_DISPATCH_FIELD(obj, k, handler, field) \
-    if ((k) == #field) { (handler)((obj).field); return true; }
+// Template-hint emitter: uses only the field's TYPE, not a value.
+#define _NOTE_FIELDS_HINT_FIELD(b, field) \
+    ::note::detail::write_template_hint_for< \
+        ::std::remove_cv_t<decltype(Self_::field)>>(b, #field);
+
+// Dispatch filters on Handler::handles_v<F> at compile time (via
+// handler_accepts_v which defaults to true for handlers without the
+// trait — preserves lambda-based callers of _note_fields_dispatch).
+#define _NOTE_FIELDS_DISPATCH_FIELD(obj, k, handler, field)                  \
+    if constexpr (::note::detail::handler_accepts_v<                         \
+            ::std::remove_cv_t<::std::remove_reference_t<decltype(handler)>>,\
+            ::std::remove_cv_t<decltype((obj).field)>>) {                    \
+        if ((k) == #field) { (handler)((obj).field); return true; }          \
+    }
 
 #define _NOTE_FIELDS_DESC_FIELD(field) \
     {#field, static_cast<uint16_t>(offsetof(Self_, field)), \
@@ -351,6 +653,10 @@ BodyValue template_of(const T&) {
     static bool _note_fields_dispatch(Self_& _self, ::note::string_view _k, Handler_&& _handler) { \
         _NOTE_FIELDS_EXPAND(_NOTE_FIELDS_DISPATCH_EACH(_self, _k, _handler, __VA_ARGS__)) \
         return false; \
+    } \
+    template<typename Self_> \
+    static void _note_fields_write_hints(::note::JsonBuilder& _b) { \
+        _NOTE_FIELDS_EXPAND(_NOTE_FIELDS_HINT_EACH(_b, __VA_ARGS__)) \
     } \
     template<typename Self_> \
     static const ::note::FieldDesc* _note_field_descs(uint8_t& _n) { \
@@ -494,6 +800,48 @@ BodyValue template_of(const T&) {
 #define _NOTE_FIELDS_DISPATCH_MAP_16(obj, k, handler, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, f15, f16, ...) \
     _NOTE_FIELDS_DISPATCH_MAP_15(obj, k, handler, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, f15) _NOTE_FIELDS_DISPATCH_FIELD(obj, k, handler, f16)
 
+// Macro helpers for field iteration (template-hint path).
+#define _NOTE_FIELDS_HINT_EACH(b, ...) _NOTE_FIELDS_HINT_MAP(b, __VA_ARGS__)
+#define _NOTE_FIELDS_HINT_MAP(b, ...) \
+    _NOTE_FIELDS_HINT_MAP_N(b, __VA_ARGS__, \
+        16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1)
+#define _NOTE_FIELDS_HINT_MAP_N(b, \
+    f1,f2,f3,f4,f5,f6,f7,f8,f9,f10,f11,f12,f13,f14,f15,f16, N, ...) \
+    _NOTE_FIELDS_HINT_MAP_##N(b, \
+        f1,f2,f3,f4,f5,f6,f7,f8,f9,f10,f11,f12,f13,f14,f15,f16)
+#define _NOTE_FIELDS_HINT_MAP_1(b, f1, ...) \
+    _NOTE_FIELDS_HINT_FIELD(b, f1)
+#define _NOTE_FIELDS_HINT_MAP_2(b, f1, f2, ...) \
+    _NOTE_FIELDS_HINT_FIELD(b, f1) _NOTE_FIELDS_HINT_FIELD(b, f2)
+#define _NOTE_FIELDS_HINT_MAP_3(b, f1, f2, f3, ...) \
+    _NOTE_FIELDS_HINT_MAP_2(b, f1, f2) _NOTE_FIELDS_HINT_FIELD(b, f3)
+#define _NOTE_FIELDS_HINT_MAP_4(b, f1, f2, f3, f4, ...) \
+    _NOTE_FIELDS_HINT_MAP_3(b, f1, f2, f3) _NOTE_FIELDS_HINT_FIELD(b, f4)
+#define _NOTE_FIELDS_HINT_MAP_5(b, f1, f2, f3, f4, f5, ...) \
+    _NOTE_FIELDS_HINT_MAP_4(b, f1, f2, f3, f4) _NOTE_FIELDS_HINT_FIELD(b, f5)
+#define _NOTE_FIELDS_HINT_MAP_6(b, f1, f2, f3, f4, f5, f6, ...) \
+    _NOTE_FIELDS_HINT_MAP_5(b, f1, f2, f3, f4, f5) _NOTE_FIELDS_HINT_FIELD(b, f6)
+#define _NOTE_FIELDS_HINT_MAP_7(b, f1, f2, f3, f4, f5, f6, f7, ...) \
+    _NOTE_FIELDS_HINT_MAP_6(b, f1, f2, f3, f4, f5, f6) _NOTE_FIELDS_HINT_FIELD(b, f7)
+#define _NOTE_FIELDS_HINT_MAP_8(b, f1, f2, f3, f4, f5, f6, f7, f8, ...) \
+    _NOTE_FIELDS_HINT_MAP_7(b, f1, f2, f3, f4, f5, f6, f7) _NOTE_FIELDS_HINT_FIELD(b, f8)
+#define _NOTE_FIELDS_HINT_MAP_9(b, f1, f2, f3, f4, f5, f6, f7, f8, f9, ...) \
+    _NOTE_FIELDS_HINT_MAP_8(b, f1, f2, f3, f4, f5, f6, f7, f8) _NOTE_FIELDS_HINT_FIELD(b, f9)
+#define _NOTE_FIELDS_HINT_MAP_10(b, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, ...) \
+    _NOTE_FIELDS_HINT_MAP_9(b, f1, f2, f3, f4, f5, f6, f7, f8, f9) _NOTE_FIELDS_HINT_FIELD(b, f10)
+#define _NOTE_FIELDS_HINT_MAP_11(b, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, ...) \
+    _NOTE_FIELDS_HINT_MAP_10(b, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10) _NOTE_FIELDS_HINT_FIELD(b, f11)
+#define _NOTE_FIELDS_HINT_MAP_12(b, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, ...) \
+    _NOTE_FIELDS_HINT_MAP_11(b, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11) _NOTE_FIELDS_HINT_FIELD(b, f12)
+#define _NOTE_FIELDS_HINT_MAP_13(b, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, ...) \
+    _NOTE_FIELDS_HINT_MAP_12(b, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12) _NOTE_FIELDS_HINT_FIELD(b, f13)
+#define _NOTE_FIELDS_HINT_MAP_14(b, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, ...) \
+    _NOTE_FIELDS_HINT_MAP_13(b, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13) _NOTE_FIELDS_HINT_FIELD(b, f14)
+#define _NOTE_FIELDS_HINT_MAP_15(b, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, f15, ...) \
+    _NOTE_FIELDS_HINT_MAP_14(b, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14) _NOTE_FIELDS_HINT_FIELD(b, f15)
+#define _NOTE_FIELDS_HINT_MAP_16(b, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, f15, f16, ...) \
+    _NOTE_FIELDS_HINT_MAP_15(b, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, f15) _NOTE_FIELDS_HINT_FIELD(b, f16)
+
 // Macro helpers for field iteration (descriptor table path).
 #define _NOTE_FIELDS_DESC_EACH(...) \
     _NOTE_FIELDS_DESC_MAP(__VA_ARGS__)
@@ -539,32 +887,110 @@ BodyValue template_of(const T&) {
 
 namespace detail {
 
-// Helper used by NOTE_FIELDS macro — dispatches to the correct JsonBuilder::add overload.
+// Helper used by NOTE_FIELDS macro — delegates to write_field_value, which
+// is shared with the C++20 reflected path. Keeps ser behaviour identical
+// across both dialects.
 template<typename V>
 void _note_write_field(JsonBuilder& b, string_view name, const V& value) {
-    if constexpr (std::is_same_v<V, bool>) {
-        b.add(name, value);
-    } else if constexpr (std::is_integral_v<V>) {
-        b.add(name, static_cast<json_int_t>(value));
-    } else if constexpr (std::is_floating_point_v<V>) {
-        b.add(name, static_cast<double>(value));
-    } else if constexpr (std::is_convertible_v<V, string_view>) {
-        b.add(name, string_view(value));
-    }
+    write_field_value(b, name, value);
 }
 
-// Helper used by NOTE_FIELDS macro — reads a field from JsonReader into the target.
+// ── read_field_value<V> ──────────────────────────────────────────────────
+// Shared by _note_read_field (C++17 NOTE_FIELDS macro helper) and
+// read_field (C++20 reflected path). Same supported-type coverage as
+// write_field_value, so a schema struct round-trips symmetrically.
+//
+// Note: JsonReader only exposes get_string_array for arrays today; numeric
+// and struct arrays are not currently supported on the random-access deser
+// path. Users needing array fields should prefer streaming deser via
+// .into(struct) on a request builder (StructSink) which handles all
+// array shapes supported by the sink.
+
 template<typename V>
-void _note_read_field(const JsonReader& r, string_view name, V& out) {
+void read_field_value(const JsonReader& r, string_view name, V& out);
+
+// Forward decl — parse<T> is defined below but referenced recursively for
+// nested-schema fields.
+} // namespace detail
+
+template<typename T,
+    typename = std::enable_if_t<detail::has_note_fields_trait<T>::value>>
+T parse(const JsonReader& r);
+
+#if __cplusplus >= 202002L
+template<typename T>
+    requires (detail::ReflectableAggregate<T> && !detail::has_note_fields_trait<T>::value)
+T parse(const JsonReader& r);
+#endif
+
+namespace detail {
+
+template<typename V>
+void read_field_value(const JsonReader& r, string_view name, V& out) {
     if constexpr (std::is_same_v<V, bool>) {
         out = r.get_bool(name);
-    } else if constexpr (std::is_integral_v<V>) {
+    } else if constexpr (std::is_integral_v<V> && !std::is_same_v<V, bool>) {
         out = static_cast<V>(r.get_int(name));
     } else if constexpr (std::is_floating_point_v<V>) {
         out = static_cast<V>(r.get_double(name));
-    } else if constexpr (std::is_convertible_v<V, string_view>) {
+    } else if constexpr (is_char_array_v<V>) {
+        // char[N]: copy string into the array with null terminator.
+        string_view sv = r.get_string(name);
+        constexpr std::size_t N = sizeof(V);
+        std::size_t copy_len = sv.size() < N ? sv.size() : (N - 1);
+        for (std::size_t i = 0; i < copy_len; ++i) out[i] = sv[i];
+        out[copy_len] = '\0';
+    } else if constexpr (std::is_same_v<V, string_view>) {
+        out = r.get_string(name);
+    } else if constexpr (std::is_constructible_v<V, string_view>) {
         out = V(r.get_string(name));
+    } else if constexpr (std::is_constructible_v<V, const char*, size_t>) {
+        string_view sv = r.get_string(name);
+        out = V(sv.data(), sv.size());
+    } else if constexpr (std::is_constructible_v<V, const char*>) {
+        string_view sv = r.get_string(name);
+        if (!sv.empty()) out = V(sv.data()); else out = V{};
+    } else if constexpr (is_schema_struct_v<V>) {
+        auto child = r.get_object(name);
+        if (child) {
+            out = ::note::parse<V>(*child);
+        }
+    } else if constexpr (is_std_array_v<V>) {
+        using Elem = typename array_traits<V>::element_type;
+        if constexpr (std::is_same_v<Elem, string_view>) {
+            r.get_string_array(name, out.data(), out.size());
+        } else {
+#if NOTE_STRICT_BODY_FIELDS
+            static_assert(sizeof(V) == 0,
+                "note-cpp: std::array element type is not supported by "
+                "random-access deser (parse<T>). JsonReader only exposes "
+                "get_string_array today. Prefer streaming deser via "
+                ".into(struct) on a request builder — it handles all "
+                "array shapes. Define NOTE_STRICT_BODY_FIELDS=0 to "
+                "silently skip.");
+#else
+#pragma message("note-cpp: NOTE_STRICT_BODY_FIELDS=0 — std::array field dropped silently from random-access deser.")
+#endif
+        }
+    } else {
+#if NOTE_STRICT_BODY_FIELDS
+        static_assert(sizeof(V) == 0,
+            "note-cpp: struct field type is not supported for "
+            "random-access deser (parse<T>). Supported: bool, integral, "
+            "floating-point, char[N], string_view, std::string-like types, "
+            "Arduino String, nested NOTE_FIELDS/aggregate structs, "
+            "std::array<string_view, N>. Define NOTE_STRICT_BODY_FIELDS=0 "
+            "to silently skip unsupported fields.");
+#else
+#pragma message("note-cpp: NOTE_STRICT_BODY_FIELDS=0 — unsupported field type dropped silently from random-access deser.")
+#endif
     }
+}
+
+// Helper used by NOTE_FIELDS macro — delegates to read_field_value.
+template<typename V>
+void _note_read_field(const JsonReader& r, string_view name, V& out) {
+    read_field_value(r, name, out);
 }
 
 } // namespace detail
@@ -578,8 +1004,7 @@ void _note_read_field(const JsonReader& r, string_view name, V& out) {
 //   auto readings = note::parse<Readings>(*reader);
 
 // C++17: parse types registered with NOTE_FIELDS macro.
-template<typename T,
-    typename = std::enable_if_t<detail::has_note_fields_trait<T>::value>>
+template<typename T, typename>
 T parse(const JsonReader& r) {
     T obj{};
     T::_note_fields_read(obj, r);
@@ -592,17 +1017,9 @@ namespace detail {
 
 template<typename V>
 V read_field(const JsonReader& r, string_view name) {
-    if constexpr (std::is_same_v<V, bool>) {
-        return r.get_bool(name);
-    } else if constexpr (std::is_integral_v<V>) {
-        return static_cast<V>(r.get_int(name));
-    } else if constexpr (std::is_floating_point_v<V>) {
-        return static_cast<V>(r.get_double(name));
-    } else if constexpr (std::is_convertible_v<V, string_view>) {
-        return V(r.get_string(name));
-    } else {
-        return V{};  // unsupported type returns default
-    }
+    V out{};
+    read_field_value(r, name, out);
+    return out;
 }
 
 } // namespace detail

@@ -24,6 +24,15 @@
 
 namespace {
 
+// RAII alarm — kills the process with SIGALRM if a test takes longer than
+// its budget. Cheap safety net so a regression in a HAL call that blocks
+// forever (e.g. tcdrain on a quiescent pty) can't wedge CI for minutes.
+class TestTimeout {
+public:
+    explicit TestTimeout(unsigned seconds = 5) { ::alarm(seconds); }
+    ~TestTimeout() { ::alarm(0); }
+};
+
 // RAII wrapper around a pty master/slave pair.
 class PtyPair {
 public:
@@ -77,12 +86,14 @@ private:
 }  // namespace
 
 TEST_CASE("PosixSerialHal: open fails for non-existent device", "[posix][serial]") {
+    TestTimeout t;
     note::posix::PosixSerialHal hal("/dev/note-cpp-nonexistent", 9600);
     REQUIRE_FALSE(hal.is_open());
     REQUIRE_FALSE(static_cast<bool>(hal));
 }
 
 TEST_CASE("PosixSerialHal: opens a valid pty slave", "[posix][serial]") {
+    TestTimeout t;
     PtyPair pty;
     REQUIRE(pty.ok());
 
@@ -92,6 +103,7 @@ TEST_CASE("PosixSerialHal: opens a valid pty slave", "[posix][serial]") {
 }
 
 TEST_CASE("PosixSerialHal: transmit writes bytes visible on the peer", "[posix][serial]") {
+    TestTimeout t;
     PtyPair pty;
     REQUIRE(pty.ok());
     note::posix::PosixSerialHal hal(pty.slave_path().c_str(), 9600);
@@ -107,6 +119,7 @@ TEST_CASE("PosixSerialHal: transmit writes bytes visible on the peer", "[posix][
 }
 
 TEST_CASE("PosixSerialHal: receive reads bytes written by the peer", "[posix][serial]") {
+    TestTimeout t;
     PtyPair pty;
     REQUIRE(pty.ok());
     note::posix::PosixSerialHal hal(pty.slave_path().c_str(), 9600);
@@ -128,6 +141,7 @@ TEST_CASE("PosixSerialHal: receive reads bytes written by the peer", "[posix][se
 }
 
 TEST_CASE("PosixSerialHal: receive returns 0 when no data is pending", "[posix][serial]") {
+    TestTimeout t;
     PtyPair pty;
     REQUIRE(pty.ok());
     note::posix::PosixSerialHal hal(pty.slave_path().c_str(), 9600);
@@ -138,6 +152,7 @@ TEST_CASE("PosixSerialHal: receive returns 0 when no data is pending", "[posix][
 }
 
 TEST_CASE("PosixSerialHal: millis advances monotonically", "[posix][serial]") {
+    TestTimeout t;
     PtyPair pty;
     REQUIRE(pty.ok());
     note::posix::PosixSerialHal hal(pty.slave_path().c_str(), 9600);

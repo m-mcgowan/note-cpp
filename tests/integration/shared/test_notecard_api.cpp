@@ -248,11 +248,36 @@ TEST_CASE("back-to-back diverse transactions — inter-transaction timing") {
 
 // ─── note.template shape validation ─────────────────────────────────────────
 //
-// These probes decide whether the Notecard accepts templates that contain
-// nested objects or arrays-of-objects. Bodies are built by hand (lambda
-// body) rather than via note::template_of<T>() so the probe compiles
-// regardless of detail::notecard_supports_nested_templates_v — the whole
-// point of these tests is to inform whether that flag can flip.
+// Probe whether the Notecard stores nested / array-of-struct templates in
+// their stated shape or silently flattens them. Validation approach:
+//
+//   1. Register a template using a lambda body (independent of
+//      note::template_of, so these tests compile regardless of
+//      detail::notecard_supports_nested_templates_v).
+//   2. Add a note whose body exercises the nested values.
+//   3. Read the note back and check every nested field round-trips.
+//
+// If the Notecard flattens the template or prunes unknown fields, the
+// round-trip fields come back zero and the CHECKs fail. That's the
+// signal that detail::notecard_supports_nested_templates_v must stay
+// false. If round-trip succeeds, flipping the flag is safe.
+
+namespace {
+struct TmplInnerPoint {
+    double lat;
+    double lon;
+    NOTE_FIELDS(lat, lon)
+};
+struct TmplOuterWithNested {
+    float temp;
+    TmplInnerPoint pos;
+    NOTE_FIELDS(temp, pos)
+};
+struct TmplArrayOfStructs {
+    std::array<TmplInnerPoint, 2> waypoints;
+    NOTE_FIELDS(waypoints)
+};
+} // namespace
 
 TEST_CASE("note.template flat body — known-good baseline") {
     auto& nc = notecard_api();
@@ -273,9 +298,11 @@ TEST_CASE("note.template flat body — known-good baseline") {
 TEST_CASE("note.template — does the Notecard accept NESTED templates?") {
     auto& nc = notecard_api();
     const char* file = "integration-tmpl-nested.qo";
+    const char* noteId = "nested-rt";
     nc.file.remove(file).execute();
 
-    auto r = nc.note.templates().define(file)
+    // Step 1: register nested template via lambda.
+    auto reg = nc.note.templates().define(file)
         .body(note::body([](note::JsonBuilder& b) {
             b.add("temp", 14.1);
             b.begin_object("pos");
@@ -284,14 +311,39 @@ TEST_CASE("note.template — does the Notecard accept NESTED templates?") {
             b.end_object();
         }))
         .execute();
-
-    if (r) {
-        MESSAGE("Notecard ACCEPTED nested template — "
-                "detail::notecard_supports_nested_templates_v may flip to true.");
-    } else {
-        MESSAGE("Notecard REJECTED nested template: ",
-                note::to_string(r.error()));
+    if (!reg) {
+        MESSAGE("Notecard REJECTED nested template at registration: ",
+                note::to_string(reg.error()));
         MESSAGE("→ keep detail::notecard_supports_nested_templates_v = false.");
+        REQUIRE_FALSE(reg);   // fails loud if later someone expects success
+        nc.file.remove(file).execute();
+        return;
+    }
+    MESSAGE("Nested template accepted at registration — probing round-trip.");
+
+    // Step 2: add a note with nested values.
+    TmplOuterWithNested sent{.temp = 22.5f, .pos = {42.125, -71.375}};
+    auto add = nc.note.update(file, noteId).body(sent).execute();
+    if (!add) { MESSAGE("nested note.update error: ",
+                         note::to_string(add.error())); }
+    REQUIRE(add);
+
+    // Step 3: read it back and verify every nested field survived.
+    TmplOuterWithNested recv{};
+    auto rd = nc.note.read(file).noteId(noteId).into(recv).execute();
+    if (!rd) { MESSAGE("nested note.read error: ",
+                       note::to_string(rd.error())); }
+    REQUIRE(rd);
+
+    CHECK(recv.temp == doctest::Approx(sent.temp));
+    CHECK(recv.pos.lat == doctest::Approx(sent.pos.lat));
+    CHECK(recv.pos.lon == doctest::Approx(sent.pos.lon));
+    if (recv.pos.lat == 0.0 && recv.pos.lon == 0.0) {
+        MESSAGE("Nested 'pos' fields came back zero — Notecard likely "
+                "flattened the template and pruned unknown fields.");
+    } else {
+        MESSAGE("Nested fields round-tripped — "
+                "detail::notecard_supports_nested_templates_v can flip to true.");
     }
 
     nc.file.remove(file).execute();
@@ -300,9 +352,10 @@ TEST_CASE("note.template — does the Notecard accept NESTED templates?") {
 TEST_CASE("note.template — does the Notecard accept ARRAY-OF-STRUCT templates?") {
     auto& nc = notecard_api();
     const char* file = "integration-tmpl-aostruct.qo";
+    const char* noteId = "aos-rt";
     nc.file.remove(file).execute();
 
-    auto r = nc.note.templates().define(file)
+    auto reg = nc.note.templates().define(file)
         .body(note::body([](note::JsonBuilder& b) {
             b.begin_array("waypoints");
                 b.begin_element_object();
@@ -312,14 +365,33 @@ TEST_CASE("note.template — does the Notecard accept ARRAY-OF-STRUCT templates?
             b.end_array();
         }))
         .execute();
-
-    if (r) {
-        MESSAGE("Notecard ACCEPTED array-of-struct template.");
-    } else {
-        MESSAGE("Notecard REJECTED array-of-struct template: ",
-                note::to_string(r.error()));
+    if (!reg) {
+        MESSAGE("Notecard REJECTED array-of-struct template at registration: ",
+                note::to_string(reg.error()));
         MESSAGE("→ keep the array-of-struct template branch gated off.");
+        REQUIRE_FALSE(reg);
+        nc.file.remove(file).execute();
+        return;
     }
+    MESSAGE("Array-of-struct template accepted at registration — "
+            "probing round-trip.");
+
+    TmplArrayOfStructs sent{{{{1.0, 2.0}, {3.0, 4.0}}}};
+    auto add = nc.note.update(file, noteId).body(sent).execute();
+    if (!add) { MESSAGE("aos note.update error: ",
+                         note::to_string(add.error())); }
+    REQUIRE(add);
+
+    TmplArrayOfStructs recv{};
+    auto rd = nc.note.read(file).noteId(noteId).into(recv).execute();
+    if (!rd) { MESSAGE("aos note.read error: ",
+                       note::to_string(rd.error())); }
+    REQUIRE(rd);
+
+    CHECK(recv.waypoints[0].lat == doctest::Approx(1.0));
+    CHECK(recv.waypoints[0].lon == doctest::Approx(2.0));
+    CHECK(recv.waypoints[1].lat == doctest::Approx(3.0));
+    CHECK(recv.waypoints[1].lon == doctest::Approx(4.0));
 
     nc.file.remove(file).execute();
 }

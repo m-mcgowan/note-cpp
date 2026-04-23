@@ -58,7 +58,16 @@ BIN=/tmp/note-cpp-posix-hw
 "${CXX:-c++}" -std=c++20 -I "$ROOT/include" \
     "$ROOT/examples/stdcpp/posix-hardware.cpp" -o "$BIN"
 
-OUTPUT=$("$BIN" "$DEVICE_PATH" 2>&1)
+# 4 KB binary round-trip by default — exercises multi-segment transmit,
+# COBS encode/decode, MD5 compute+verify: the real stress for the HAL.
+# Override with BINARY_SIZE=0 to run only card.version, or any other size.
+BINARY_SIZE="${BINARY_SIZE:-4096}"
+BINARY_ARGS=()
+if [ "$BINARY_SIZE" -gt 0 ]; then
+    BINARY_ARGS=(--binary "$BINARY_SIZE")
+fi
+
+OUTPUT=$("$BIN" "${BINARY_ARGS[@]}" "$DEVICE_PATH" 2>&1)
 echo "$OUTPUT"
 
 # Assert card.version produced plausible output.
@@ -69,6 +78,14 @@ fi
 if ! echo "$OUTPUT" | grep -qE "^device: .+"; then
     echo "FAIL: 'device: <value>' not found in output" >&2
     exit 1
+fi
+
+# Assert binary round-trip succeeded (unless explicitly skipped).
+if [ "$BINARY_SIZE" -gt 0 ]; then
+    if ! echo "$OUTPUT" | grep -qE "^binary: round-trip .* OK$"; then
+        echo "FAIL: binary round-trip did not complete" >&2
+        exit 1
+    fi
 fi
 
 echo "posix integration: PASS"

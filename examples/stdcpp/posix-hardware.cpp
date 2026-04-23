@@ -11,26 +11,97 @@
 //   ./notecard /dev/ttyUSB0                 # serial
 //   ./notecard /dev/cu.usbmodem1101         # macOS serial
 //   ./notecard --i2c /dev/i2c-1             # Linux I2C
+//   ./notecard --binary 4096 /dev/...       # plus a 4KB binary round-trip
 //
 // All three ways to open are shown below; pick the one you prefer.
 
 #include <note/posix.hpp>
+#include <note/api/card_binary.hpp>
+#include <note/api/card_binary_put.hpp>
+#include <note/api/card_binary_get.hpp>
 
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
+#include <vector>
 
-int main(int argc, char** argv) {
-    if (argc < 2) {
-        std::fprintf(stderr,
-            "usage: %s [--i2c] <device-path>\n"
-            "  %s /dev/ttyUSB0\n"
-            "  %s --i2c /dev/i2c-1\n",
-            argv[0], argv[0], argv[0]);
+namespace {
+
+// Deterministic fill so the put/get verification is reproducible. Not a
+// CSPRNG — just a cheap byte-permuter (31 is coprime with 256, so it walks
+// the whole byte range across each ~256-byte window).
+void fill_pattern(uint8_t* buf, size_t len) {
+    for (size_t i = 0; i < len; ++i) {
+        buf[i] = static_cast<uint8_t>(i * 31u + 7u);
+    }
+}
+
+// Put-then-get-then-compare. Exercises multi-segment transmit, COBS
+// encode/decode, MD5 compute/verify — the real work in the HAL's long
+// transmit() and receive() paths.
+int binary_round_trip(note::posix::Notecard<>& nc, size_t size) {
+    std::vector<uint8_t> src(size);
+    std::vector<uint8_t> dst(size, 0);
+    fill_pattern(src.data(), size);
+
+    std::printf("binary: clearing store...\n");
+    if (auto r = nc.card.binary.clear().execute(); !r) {
+        std::fprintf(stderr, "  card.binary.clear failed: %s\n",
+                     note::to_string(r.error()).c_str());
         return 1;
     }
 
-    const bool  use_i2c = (std::strcmp(argv[1], "--i2c") == 0);
-    const char* path    = use_i2c ? argv[2] : argv[1];
+    std::printf("binary: putting %zu bytes...\n", size);
+    if (auto r = nc.card.binary.put().data(src.data(), size).execute(); !r) {
+        std::fprintf(stderr, "  card.binary.put failed: %s\n",
+                     note::to_string(r.error()).c_str());
+        return 1;
+    }
+
+    std::printf("binary: getting %zu bytes...\n", size);
+    auto r = nc.card.binary.get().into(dst.data(), dst.size()).length(static_cast<int32_t>(size)).execute();
+    if (!r) {
+        std::fprintf(stderr, "  card.binary.get failed: %s\n",
+                     note::to_string(r.error()).c_str());
+        return 1;
+    }
+
+    if (std::memcmp(src.data(), dst.data(), size) != 0) {
+        std::fprintf(stderr, "  mismatch: put/get bytes differ\n");
+        return 1;
+    }
+
+    std::printf("binary: round-trip %zu bytes OK\n", size);
+    (void)nc.card.binary.clear().execute();  // leave the store clean
+    return 0;
+}
+
+}  // namespace
+
+int main(int argc, char** argv) {
+    bool        use_i2c     = false;
+    size_t      binary_size = 0;
+    const char* path        = nullptr;
+
+    for (int i = 1; i < argc; ++i) {
+        if (std::strcmp(argv[i], "--i2c") == 0) {
+            use_i2c = true;
+        } else if (std::strcmp(argv[i], "--binary") == 0 && i + 1 < argc) {
+            binary_size = static_cast<size_t>(std::atoi(argv[++i]));
+        } else {
+            path = argv[i];
+        }
+    }
+
+    if (!path) {
+        std::fprintf(stderr,
+            "usage: %s [--i2c] [--binary N] <device-path>\n"
+            "  %s /dev/ttyUSB0\n"
+            "  %s --i2c /dev/i2c-1\n"
+            "  %s --binary 4096 /dev/cu.usbmodemNOTE1\n",
+            argv[0], argv[0], argv[0], argv[0]);
+        return 1;
+    }
 
     note::posix::Notecard nc;
 
@@ -65,5 +136,9 @@ int main(int argc, char** argv) {
                 static_cast<int>(result.version.size()), result.version.data());
     std::printf("device:  %.*s\n",
                 static_cast<int>(result.device.size()),  result.device.data());
+
+    if (binary_size > 0) {
+        return binary_round_trip(nc, binary_size);
+    }
     return 0;
 }

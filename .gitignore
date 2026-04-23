@@ -12,8 +12,6 @@ ci.log
 TODO*.md
 .release-validation/
 
-# Personal commit-message tooling (e.g. reformat-commit-msg wrapper).
-# .githooks/pre-push is tracked intentionally.
 .githooks/commit-msg
 
 # PlatformIO
@@ -27,3 +25,5 @@ TODO*.md
 logs/
 Testing/
 .vscode/
+# VS Code workspace files are per-developer layout, not part of the repo.
+*.code-workspace

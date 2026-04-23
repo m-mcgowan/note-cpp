@@ -20,6 +20,7 @@
 #include <note/transport/serial.hpp>
 #include <note/posix/clock.hpp>
 
+#include <errno.h>
 #include <fcntl.h>
 #include <termios.h>
 #include <sys/select.h>
@@ -55,6 +56,12 @@ public:
         tty.c_cc[VTIME] = 0;
 
         if (::tcsetattr(fd_, TCSANOW, &tty) != 0) { close(); return; }
+
+        // Drain any bytes the kernel buffered during USB enumeration. Without
+        // this, the first reset handshake sometimes sees stale garbage on the
+        // input stream and reports "not_ready" on the first request after
+        // open, even though the Notecard itself is responding correctly.
+        ::tcflush(fd_, TCIFLUSH);
     }
 
     ~PosixSerialHal() override { close(); }
@@ -70,8 +77,15 @@ public:
         size_t total = 0;
         while (total < len) {
             const ssize_t n = ::write(fd_, data + total, len - total);
-            if (n < 0) return false;
-            total += static_cast<size_t>(n);
+            if (n > 0) {
+                total += static_cast<size_t>(n);
+            } else if (n < 0 && (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)) {
+                // Kernel output buffer full (typical for bulk transfers at
+                // 9600 baud) or interrupted — wait briefly, then retry.
+                clock::sleep_ms(1);
+            } else {
+                return false;  // hard error
+            }
         }
         return true;
     }

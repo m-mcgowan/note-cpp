@@ -887,11 +887,21 @@ private:
     uint32_t next_request_id_ = 1;
     bool request_ids_enabled_ = true;
 #if !NOTE_NO_MD5
-    PlatformMd5 platform_md5_{};    // default MD5 implementation
-    Md5Provider* md5_ = &platform_md5_;
+    // Static, shared across all Notecards: avoids a self-reference inside
+    // Notecard (pointer to own member), which broke every move-assignment
+    // done by e.g. NotecardApi::begin(transport). Both stock providers
+    // (SoftwareMd5, MbedTlsMd5) are stateless, so sharing is safe.
+    static inline PlatformMd5 default_md5_{};
+    Md5Provider* md5_ = &default_md5_;
 #else
     Md5Provider* md5_ = nullptr;
 #endif
+
+public:
+    /// Access the current MD5 provider. Returns the default provider if
+    /// none was explicitly installed via set_md5_provider. Exposed for
+    /// introspection / tests; most callers never need this.
+    Md5Provider* md5_provider() const { return md5_; }
 };
 #endif // NOTE_NO_POLYMORPHIC
 

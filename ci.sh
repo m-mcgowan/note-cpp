@@ -167,7 +167,8 @@ NFEOF
         "$ROOT/tests/test_streaming_builder.cpp" \
         "$ROOT/tests/test_endpoint_streaming.cpp" \
         "$ROOT/tests/test_streaming_errors.cpp" \
-        "$ROOT/tests/test_posix_serial.cpp"
+        "$ROOT/tests/test_posix_serial.cpp" \
+        "$ROOT/tests/test_notecard_move_semantics.cpp"
     /tmp/note-cpp-tests
     echo "  tests: OK"
 

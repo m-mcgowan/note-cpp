@@ -105,6 +105,21 @@ struct SkuInfo {
 };
 
 // ---------------------------------------------------------------------------
+// Axis category tags — classify a type as one of the four composition axes
+//
+// Each axis type (RadiosType / McuType / FwConstraint / SkuType) carries a
+// `using axis_category = ...;` typedef. ComposedTarget queries the tag to
+// extract the right dimensions without needing per-axis template
+// specializations. SkuType lives in sku_info.hpp (codegenned) and picks up
+// its tag there.
+// ---------------------------------------------------------------------------
+
+struct radios_axis {};
+struct mcu_axis {};
+struct fw_axis {};
+struct sku_axis {};
+
+// ---------------------------------------------------------------------------
 // RadiosType / McuType — single-dimension compile-time target wrappers
 //
 // These wrap an enum value as a distinct type so CTAD on Notecard can
@@ -119,11 +134,13 @@ struct SkuInfo {
 
 template<Radios R>
 struct RadiosType {
+    using axis_category = radios_axis;
     static constexpr Radios value = R;
 };
 
 template<Mcu M>
 struct McuType {
+    using axis_category = mcu_axis;
     static constexpr Mcu value = M;
 
     /// Coarse MCU-level CTX/RTX availability. STM32L4 is known to never have
@@ -208,6 +225,7 @@ struct Firmware {
 
 template<unsigned Major, unsigned Minor = 0, unsigned Patch = 0>
 struct FwConstraint {
+    using axis_category = fw_axis;
     static constexpr Firmware version{
         static_cast<uint8_t>(Major),
         static_cast<uint8_t>(Minor),
@@ -329,6 +347,187 @@ consteval bool target_supports() {
     if constexpr (IsUnconstrained<T>) return true;
     else return T::supports(E::radios) && T::firmware_ok(E::min_firmware);
 }
+
+// ---------------------------------------------------------------------------
+// ComposedTarget — variadic axis composition
+//
+// Users pass a pack of axis values at Notecard construction (CTAD in Task 6).
+// Each axis type (RadiosType / McuType / FwConstraint / SkuType) contributes
+// one or more dimensions that are folded into a single Target-contract type:
+//
+//   Notecard nc(sku::NOTE_ESP, fw::v7_5_1);
+//   Notecard nc(sku::NOTE_ESP, sku::NOTE_NBGLWX);   // multi-SKU intersection
+//   Notecard nc(radios::NOTE_WIFI);
+//
+// Fold rules
+//   firmware      max of every FwConstraint's version
+//   has_txn_pins  AND of every SKU/MCU axis's has_txn_pins
+//   supports(s)   every radios-contributing axis must be in s
+//
+// Cross-axis conflict: an explicit RadiosType disagreeing with a SKU's
+// implied radios is a static_assert. Multi-SKU with differing radios is
+// legal (the supports() AND-fold over-constrains naturally). Redundancy
+// (consistent) compiles fine.
+//
+// `ComposedTarget<>` (empty pack) behaves universally (supports everything,
+// no firmware constraint) without being the same type as `Unconstrained`.
+// ---------------------------------------------------------------------------
+
+namespace detail {
+
+template<typename T>
+concept HasAxisCategory = requires { typename T::axis_category; };
+
+template<typename T>
+concept IsRadiosAxis = HasAxisCategory<T>
+    && std::same_as<typename T::axis_category, radios_axis>;
+
+template<typename T>
+concept IsMcuAxis = HasAxisCategory<T>
+    && std::same_as<typename T::axis_category, mcu_axis>;
+
+template<typename T>
+concept IsFwAxis = HasAxisCategory<T>
+    && std::same_as<typename T::axis_category, fw_axis>;
+
+template<typename T>
+concept IsSkuAxis = HasAxisCategory<T>
+    && std::same_as<typename T::axis_category, sku_axis>;
+
+/// Axis contributes a Radios value (either explicit RadiosType or SKU's implied).
+template<typename Ax>
+constexpr bool axis_has_radios = IsRadiosAxis<Ax> || IsSkuAxis<Ax>;
+
+/// Extract the Radios value contributed by an axis; callers should gate
+/// via `axis_has_radios<Ax>` first.
+template<typename Ax>
+consteval Radios radios_of() {
+    if constexpr (IsRadiosAxis<Ax>) return Ax::value;
+    else if constexpr (IsSkuAxis<Ax>) return Ax::radios;
+    else return Radios{};
+}
+
+/// Axis contributes a has_txn_pins bit (SKU or MCU).
+template<typename Ax>
+constexpr bool axis_has_txn_pins = IsSkuAxis<Ax> || IsMcuAxis<Ax>;
+
+template<typename Ax>
+consteval bool txn_pins_of() {
+    if constexpr (IsSkuAxis<Ax>) return Ax::has_txn_pins;
+    else if constexpr (IsMcuAxis<Ax>) return Ax::has_txn_pins;
+    else return true;
+}
+
+}  // namespace detail
+
+/// Variadic composition target. Users should use the `ComposedTarget<Axes...>`
+/// alias; the implementation takes an explicit Strict flag so `.as_strict()`
+/// can flip it without producing a new template.
+template<bool Strict, typename... Axes>
+struct ComposedTargetImpl {
+    static_assert(
+        (detail::HasAxisCategory<Axes> && ...),
+        "ComposedTarget axes must be recognized axis types "
+        "(SkuType, RadiosType, McuType, or FwConstraint).");
+
+    // --- Folded dimensions ---------------------------------------------
+
+    static consteval Radios _compute_radios() {
+        Radios r{};
+        ([&] {
+            if constexpr (detail::axis_has_radios<Axes>) {
+                if (static_cast<uint8_t>(r) == 0) r = detail::radios_of<Axes>();
+            }
+        }(), ...);
+        return r;
+    }
+
+    static consteval Firmware _compute_firmware() {
+        Firmware fw{};
+        ([&] {
+            if constexpr (detail::IsFwAxis<Axes>) {
+                if (Axes::version.as_int() > fw.as_int()) fw = Axes::version;
+            }
+        }(), ...);
+        return fw;
+    }
+
+    static consteval bool _compute_txn_pins() {
+        bool result = true;
+        ([&] {
+            if constexpr (detail::axis_has_txn_pins<Axes>) {
+                if (!detail::txn_pins_of<Axes>()) result = false;
+            }
+        }(), ...);
+        return result;
+    }
+
+    // Representative Radios value (first radios-contributing axis's value,
+    // else Radios{} — meaning "no radios constraint declared").
+    static constexpr Radios radios = _compute_radios();
+    static constexpr Firmware firmware_version = _compute_firmware();
+    static constexpr bool has_txn_pins = _compute_txn_pins();
+    static constexpr bool strict = Strict;
+
+    // --- Cross-axis conflict check -------------------------------------
+    // Explicit RadiosType value (0 if none provided).
+    static consteval Radios _explicit_radios() {
+        Radios r{};
+        ([&] {
+            if constexpr (detail::IsRadiosAxis<Axes>) {
+                if (static_cast<uint8_t>(r) == 0) r = Axes::value;
+            }
+        }(), ...);
+        return r;
+    }
+
+    static consteval bool _radios_consistent() {
+        constexpr Radios explicit_r = _explicit_radios();
+        if (static_cast<uint8_t>(explicit_r) == 0) return true;
+        bool ok = true;
+        ([&] {
+            if constexpr (detail::IsSkuAxis<Axes>) {
+                if (Axes::radios != explicit_r) ok = false;
+            } else if constexpr (detail::IsRadiosAxis<Axes>) {
+                if (Axes::value != explicit_r) ok = false;
+            }
+        }(), ...);
+        return ok;
+    }
+
+    static_assert(_radios_consistent(),
+        "ComposedTarget: an explicit RadiosType axis disagrees with another "
+        "radios-contributing axis (e.g. sku::NOTE_ESP + radios::NOTE_CELL). "
+        "Remove the conflicting axis.");
+
+    // --- Target contract -----------------------------------------------
+    /// Endpoint supported iff every radios-contributing axis is in `s`.
+    /// Empty pack → true (universal, matches Unconstrained semantically).
+    static constexpr bool supports(RadiosSupport s) {
+        bool ok = true;
+        ([&] {
+            if constexpr (detail::axis_has_radios<Axes>) {
+                if (!s.supports(detail::radios_of<Axes>())) ok = false;
+            }
+        }(), ...);
+        return ok;
+    }
+
+    /// Firmware check: pass if we declared no constraint, or if our
+    /// derived max meets the endpoint's minimum.
+    static constexpr bool firmware_ok(Firmware min) {
+        if (min.as_int() == 0) return true;
+        if (firmware_version.as_int() == 0) return true;  // no fw constraint
+        return firmware_version >= min;
+    }
+
+    static constexpr auto as_strict() {
+        return ComposedTargetImpl<true, Axes...>{};
+    }
+};
+
+template<typename... Axes>
+using ComposedTarget = ComposedTargetImpl<false, Axes...>;
 
 #endif // C++20
 

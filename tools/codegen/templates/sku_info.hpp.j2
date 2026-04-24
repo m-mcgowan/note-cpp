@@ -68,6 +68,7 @@ constexpr const char* part_number_of(NotecardSku s) {
 
 template<NotecardSku S>
 struct SkuType {
+    using axis_category = sku_axis;
     static constexpr NotecardSku  value  = S;
     static constexpr SkuInfo      info   = info_for(S);
     static constexpr Radios       radios = info.radios;

@@ -133,6 +133,36 @@ struct McuType {
 };
 
 // ---------------------------------------------------------------------------
+// Axis factory namespaces
+//
+// Users construct Notecard wrappers by passing axis values at the call site.
+// Each axis namespace carries one constant per enum value, no angle brackets.
+//
+//   note::arduino::Notecard nc(note::radios::WIFI);
+//   note::arduino::Notecard nc(note::mcu::STM32L4);
+//   note::arduino::Notecard nc(note::sku::NOTE_ESP);  // in sku_info.hpp
+//
+// Names follow Blues' own conventions (`radios` are the product-family
+// labels from the API docs; `mcu` matches common MCU part names).
+// ---------------------------------------------------------------------------
+
+namespace radios {
+inline constexpr auto CELL      = RadiosType<Radios::Cell>{};
+inline constexpr auto WIFI      = RadiosType<Radios::WiFi>{};
+inline constexpr auto CELL_WIFI = RadiosType<Radios::CellWifi>{};
+inline constexpr auto LORA      = RadiosType<Radios::LoRa>{};
+inline constexpr auto SKYLO     = RadiosType<Radios::Skylo>{};
+} // namespace radios
+
+namespace mcu {
+inline constexpr auto STM32L4   = McuType<Mcu::Stm32L4>{};
+inline constexpr auto STM32U5   = McuType<Mcu::Stm32U5>{};
+inline constexpr auto STM32WL   = McuType<Mcu::Stm32Wl>{};
+inline constexpr auto STM32WLE5 = McuType<Mcu::Stm32Wle5>{};
+inline constexpr auto ESP32S3   = McuType<Mcu::Esp32S3>{};
+} // namespace mcu
+
+// ---------------------------------------------------------------------------
 // Firmware — version triple for compile-time firmware gating
 // ---------------------------------------------------------------------------
 

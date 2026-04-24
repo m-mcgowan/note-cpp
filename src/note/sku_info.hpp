@@ -147,8 +147,39 @@ struct SkuType {
         (info.txn == TxnPinSupport::Muxed);
 };
 
-/// SKU factory variable: `sku<NotecardSku::Esp>` → `SkuType<NotecardSku::Esp>`.
-template<NotecardSku S>
-inline constexpr SkuType<S> sku{};
+// ---------------------------------------------------------------------------
+// note::sku — factory namespace (one constant per SKU, Blues part-number named)
+//
+// Use at construction sites:
+//   note::arduino::Notecard nc(note::sku::NOTE_ESP);
+// ---------------------------------------------------------------------------
+
+namespace sku {
+inline constexpr auto NOTE_ESP = SkuType<NotecardSku::NOTE_ESP>{};
+inline constexpr auto NOTE_WIFI = SkuType<NotecardSku::NOTE_WIFI>{};
+inline constexpr auto NOTE_LWEU_V1_4 = SkuType<NotecardSku::NOTE_LWEU_V1_4>{};
+inline constexpr auto NOTE_LWUS_V1_4 = SkuType<NotecardSku::NOTE_LWUS_V1_4>{};
+inline constexpr auto NOTE_LWEU = SkuType<NotecardSku::NOTE_LWEU>{};
+inline constexpr auto NOTE_LWUS = SkuType<NotecardSku::NOTE_LWUS>{};
+inline constexpr auto NOTE_MBGLN = SkuType<NotecardSku::NOTE_MBGLN>{};
+inline constexpr auto NOTE_MBNAN = SkuType<NotecardSku::NOTE_MBNAN>{};
+inline constexpr auto NOTE_NBGLN = SkuType<NotecardSku::NOTE_NBGLN>{};
+inline constexpr auto NOTE_NBNAN = SkuType<NotecardSku::NOTE_NBNAN>{};
+inline constexpr auto NOTE_WBEXN = SkuType<NotecardSku::NOTE_WBEXN>{};
+inline constexpr auto NOTE_WBNAN = SkuType<NotecardSku::NOTE_WBNAN>{};
+inline constexpr auto NOTE_MBGLW = SkuType<NotecardSku::NOTE_MBGLW>{};
+inline constexpr auto NOTE_MBNAW = SkuType<NotecardSku::NOTE_MBNAW>{};
+inline constexpr auto NOTE_NBGLW = SkuType<NotecardSku::NOTE_NBGLW>{};
+inline constexpr auto NOTE_NBNAW = SkuType<NotecardSku::NOTE_NBNAW>{};
+inline constexpr auto NOTE_WBEXW = SkuType<NotecardSku::NOTE_WBEXW>{};
+inline constexpr auto NOTE_WBGLW = SkuType<NotecardSku::NOTE_WBGLW>{};
+inline constexpr auto NOTE_WBNAW = SkuType<NotecardSku::NOTE_WBNAW>{};
+inline constexpr auto NOTE_WBGLWT = SkuType<NotecardSku::NOTE_WBGLWT>{};
+inline constexpr auto NOTE_NBGLWX = SkuType<NotecardSku::NOTE_NBGLWX>{};
+inline constexpr auto NOTE_NBGL = SkuType<NotecardSku::NOTE_NBGL>{};
+inline constexpr auto NOTE_NBNA = SkuType<NotecardSku::NOTE_NBNA>{};
+inline constexpr auto NOTE_WBEX = SkuType<NotecardSku::NOTE_WBEX>{};
+inline constexpr auto NOTE_WBNA = SkuType<NotecardSku::NOTE_WBNA>{};
+} // namespace sku
 
 } // namespace note

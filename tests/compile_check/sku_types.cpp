@@ -55,4 +55,22 @@ static_assert(SkuType<NotecardSku::NOTE_NBGL>::has_txn_pins == false);
 constexpr auto esp_part = part_number_of(NotecardSku::NOTE_ESP);
 static_assert(esp_part[0] == 'N' && esp_part[1] == 'O' && esp_part[2] == 'T' && esp_part[3] == 'E');
 
+// ── Axis factory namespaces ────────────────────────────────────────────
+// Each axis constant is a SkuType / RadiosType / McuType instance.
+
+static_assert(std::is_same_v<decltype(sku::NOTE_ESP),
+                             const SkuType<NotecardSku::NOTE_ESP>>);
+static_assert(sku::NOTE_ESP.radios == Radios::WiFi);
+static_assert(sku::NOTE_NBGLWX.radios == Radios::Skylo);
+
+static_assert(std::is_same_v<decltype(radios::WIFI),
+                             const RadiosType<Radios::WiFi>>);
+static_assert(radios::WIFI.value == Radios::WiFi);
+static_assert(radios::CELL_WIFI.value == Radios::CellWifi);
+
+static_assert(std::is_same_v<decltype(mcu::STM32L4),
+                             const McuType<Mcu::Stm32L4>>);
+static_assert(mcu::STM32L4.has_txn_pins == false);
+static_assert(mcu::ESP32S3.has_txn_pins == true);
+
 int main() { return 0; }

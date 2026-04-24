@@ -238,7 +238,7 @@ VEOF
     printf "  %-40s " "strict rejects unsupported"
     STRICT_TARGET_OUT=$($CXX $CXXFLAGS $INCLUDE -fsyntax-only -x c++ - <<'TEOF' 2>&1 || true
 #include <note/api.hpp>
-using LoRaStrict = note::Target<note::Hardware::LoRa, true>;
+using LoRaStrict = note::Target<note::Radios::LoRa, true>;
 void test(note::Api<LoRaStrict>& api) { api.card.sleep(); }
 TEOF
     )
@@ -254,7 +254,7 @@ TEOF
     printf "  %-40s " "warn for unsupported"
     WARN_TARGET_OUT=$($CXX $CXXFLAGS $INCLUDE -fsyntax-only -x c++ - <<'TEOF' 2>&1 || true
 #include <note/api.hpp>
-using LoRaWarn = note::Target<note::Hardware::LoRa, false>;
+using LoRaWarn = note::Target<note::Radios::LoRa, false>;
 void test(note::Api<LoRaWarn>& api) { api.card.sleep(); }
 TEOF
     )
@@ -270,7 +270,7 @@ TEOF
     printf "  %-40s " "supported (no warnings)"
     if $CXX $CXXFLAGS $INCLUDE -Werror -fsyntax-only -x c++ - <<'TEOF' 2>&1; then
 #include <note/api.hpp>
-using WifiTarget = note::Target<note::Hardware::WiFi>;
+using WifiTarget = note::Target<note::Radios::WiFi>;
 void test(note::Api<WifiTarget>& api) { api.card.sleep(); api.hub.set(); }
 TEOF
         echo "OK"
@@ -328,7 +328,7 @@ TEOF
     printf "  %-40s " "combined hw+fw warn"
     COMBINED_WARN_OUT=$($CXX $CXXFLAGS $INCLUDE -fsyntax-only -x c++ - <<'TEOF' 2>&1 || true
 #include <note/api.hpp>
-using OldWifi = note::Target<note::Hardware::WiFi, 5, 0, 0>;
+using OldWifi = note::Target<note::Radios::WiFi, 5, 0, 0>;
 void test(note::Api<OldWifi>& api) { api.card.illumination(); }
 TEOF
     )

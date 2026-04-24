@@ -130,9 +130,18 @@ static void configure_context(doctest::Context& ctx) {
 
 #include <etst/doctest/runner.h>
 
+#ifdef GCOV_ENABLED
+extern "C" {
+#include "gcov_serial.h"
+}
+#endif
+
 void setup() {
     etst::config.board_init = board_init;
     etst::doctest::config.configure = configure_context;
+#ifdef GCOV_ENABLED
+    etst::config.after_cycle = gcov_serial_dump;
+#endif
     DOCTEST_SETUP();
 }
 void loop()  { DOCTEST_LOOP(); }

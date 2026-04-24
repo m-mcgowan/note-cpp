@@ -91,3 +91,32 @@ add_executable(note-cpp-tests-arduino ${ALL_TEST_SOURCES})
 target_compile_definitions(note-cpp-tests-arduino PRIVATE ARDUINO=10812 NOTE_ARDUINO_STUBS=1)
 target_compile_options(note-cpp-tests-arduino PRIVATE -include ${CMAKE_CURRENT_SOURCE_DIR}/arduino_stubs.hpp)
 add_test(NAME unit-tests-arduino COMMAND note-cpp-tests-arduino)
+
+# ---------------------------------------------------------------------------
+# Backend parity integration tests (doctest).
+# Compiled on host here; compiled on device via
+# tests/integration/firmware/platformio.ini's test_src_filter.
+# Flag values match the existing tests/integration/*/CMakeLists.txt.
+# ---------------------------------------------------------------------------
+
+include(FetchContent)
+FetchContent_Declare(
+    cJSON
+    GIT_REPOSITORY https://github.com/DaveGamble/cJSON.git
+    GIT_TAG v1.7.18
+)
+set(ENABLE_CJSON_TEST OFF CACHE BOOL "" FORCE)
+set(BUILD_SHARED_AND_STATIC_LIBS OFF CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(cJSON)
+
+add_executable(note-cpp-integration-backends
+    ${NOTE_CPP_ROOT}/tests/doctest_main.cpp
+    ${NOTE_CPP_ROOT}/tests/integration/cjson/test_cjson_backend.cpp
+)
+target_include_directories(note-cpp-integration-backends PRIVATE
+    ${NOTE_CPP_ROOT}/include
+    ${NOTE_CPP_ROOT}/tests
+    ${cjson_SOURCE_DIR}
+)
+target_link_libraries(note-cpp-integration-backends PRIVATE cjson)
+add_test(NAME integration-backends COMMAND note-cpp-integration-backends)

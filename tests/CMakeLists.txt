@@ -109,14 +109,23 @@ set(ENABLE_CJSON_TEST OFF CACHE BOOL "" FORCE)
 set(BUILD_SHARED_AND_STATIC_LIBS OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(cJSON)
 
+FetchContent_Declare(
+    nlohmann_json
+    GIT_REPOSITORY https://github.com/nlohmann/json.git
+    GIT_TAG v3.11.3
+)
+set(JSON_BuildTests OFF CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(nlohmann_json)
+
 add_executable(note-cpp-integration-backends
     ${NOTE_CPP_ROOT}/tests/doctest_main.cpp
     ${NOTE_CPP_ROOT}/tests/integration/cjson/test_cjson_backend.cpp
+    ${NOTE_CPP_ROOT}/tests/integration/nlohmann/test_nlohmann_backend.cpp
 )
 target_include_directories(note-cpp-integration-backends PRIVATE
     ${NOTE_CPP_ROOT}/include
     ${NOTE_CPP_ROOT}/tests
     ${cjson_SOURCE_DIR}
 )
-target_link_libraries(note-cpp-integration-backends PRIVATE cjson)
+target_link_libraries(note-cpp-integration-backends PRIVATE cjson nlohmann_json::nlohmann_json)
 add_test(NAME integration-backends COMMAND note-cpp-integration-backends)

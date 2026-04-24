@@ -51,7 +51,7 @@ struct EnvGet {
     static constexpr string_view notecard_request = "env.get";
     static constexpr bool supports_cmd = true;
     static constexpr Safety safety = Safety::ReadOnly;
-    static constexpr HardwareSupport hardware{};
+    static constexpr RadiosSupport radios{};
     static constexpr Firmware min_firmware{};
 
 #if NOTE_SINGLETON

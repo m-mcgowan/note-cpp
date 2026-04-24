@@ -4,87 +4,56 @@
 using namespace note;
 
 // ---------------------------------------------------------------------------
-// Rat bitfield operations
+// Radios values
 // ---------------------------------------------------------------------------
 
-TEST_CASE("Rat bitfield OR") {
-    constexpr auto r = Rat::Cell | Rat::WiFi;
-    REQUIRE(static_cast<uint8_t>(r) == 3);
-}
-
-TEST_CASE("Rat bitfield AND") {
-    constexpr auto r = (Rat::Cell | Rat::WiFi) & Rat::Cell;
-    REQUIRE(static_cast<uint8_t>(r) == 1);
-}
-
-TEST_CASE("has_rat") {
-    constexpr auto set = Rat::Cell | Rat::WiFi;
-    REQUIRE(has_rat(set, Rat::Cell));
-    REQUIRE(has_rat(set, Rat::WiFi));
-    REQUIRE_FALSE(has_rat(set, Rat::Ntn));
-    REQUIRE_FALSE(has_rat(set, Rat::LoRa));
+TEST_CASE("Radios enum values are unique power-of-two bits") {
+    REQUIRE(static_cast<uint8_t>(Radios::Cell) == 1);
+    REQUIRE(static_cast<uint8_t>(Radios::WiFi) == 2);
+    REQUIRE(static_cast<uint8_t>(Radios::CellWifi) == 4);
+    REQUIRE(static_cast<uint8_t>(Radios::LoRa) == 8);
+    REQUIRE(static_cast<uint8_t>(Radios::Skylo) == 16);
 }
 
 // ---------------------------------------------------------------------------
-// Hardware values
+// RadiosSupport::supports — variant-based matching
 // ---------------------------------------------------------------------------
 
-TEST_CASE("Hardware enum values are unique power-of-two bits") {
-    REQUIRE(static_cast<uint8_t>(Hardware::Cell) == 1);
-    REQUIRE(static_cast<uint8_t>(Hardware::WiFi) == 2);
-    REQUIRE(static_cast<uint8_t>(Hardware::CellWifi) == 4);
-    REQUIRE(static_cast<uint8_t>(Hardware::LoRa) == 8);
-    REQUIRE(static_cast<uint8_t>(Hardware::Skylo) == 16);
+TEST_CASE("RadiosSupport: empty is universal") {
+    constexpr RadiosSupport s{};
+    REQUIRE(s.supports(Radios::Cell));
+    REQUIRE(s.supports(Radios::WiFi));
+    REQUIRE(s.supports(Radios::CellWifi));
+    REQUIRE(s.supports(Radios::LoRa));
+    REQUIRE(s.supports(Radios::Skylo));
 }
 
-TEST_CASE("rats_of extracts RAT bitmask from Hardware") {
-    using U = uint8_t;
-    REQUIRE(static_cast<U>(rats_of(Hardware::Cell)) == static_cast<U>(Rat::Cell));
-    REQUIRE(static_cast<U>(rats_of(Hardware::WiFi)) == static_cast<U>(Rat::WiFi));
-    REQUIRE(static_cast<U>(rats_of(Hardware::CellWifi)) == static_cast<U>(Rat::Cell | Rat::WiFi));
-    REQUIRE(static_cast<U>(rats_of(Hardware::LoRa)) == static_cast<U>(Rat::LoRa));
-    REQUIRE(static_cast<U>(rats_of(Hardware::Skylo)) == static_cast<U>(Rat::Cell | Rat::WiFi | Rat::Ntn));
+TEST_CASE("RadiosSupport: WiFi-only (card.sleep)") {
+    constexpr auto s = RadiosSupport::from(Radios::WiFi);
+    REQUIRE(s.supports(Radios::WiFi));
+    REQUIRE_FALSE(s.supports(Radios::CellWifi));  // has WiFi radio but different family
+    REQUIRE_FALSE(s.supports(Radios::Cell));
+    REQUIRE_FALSE(s.supports(Radios::LoRa));
+    REQUIRE_FALSE(s.supports(Radios::Skylo));
 }
 
-// ---------------------------------------------------------------------------
-// HardwareSupport::supports — variant-based matching
-// ---------------------------------------------------------------------------
-
-TEST_CASE("HardwareSupport: empty is universal") {
-    constexpr HardwareSupport s{};
-    REQUIRE(s.supports(Hardware::Cell));
-    REQUIRE(s.supports(Hardware::WiFi));
-    REQUIRE(s.supports(Hardware::CellWifi));
-    REQUIRE(s.supports(Hardware::LoRa));
-    REQUIRE(s.supports(Hardware::Skylo));
-}
-
-TEST_CASE("HardwareSupport: WiFi-only (card.sleep)") {
-    constexpr auto s = HardwareSupport::from(Hardware::WiFi);
-    REQUIRE(s.supports(Hardware::WiFi));
-    REQUIRE_FALSE(s.supports(Hardware::CellWifi));  // has WiFi RAT, but different variant
-    REQUIRE_FALSE(s.supports(Hardware::Cell));
-    REQUIRE_FALSE(s.supports(Hardware::LoRa));
-    REQUIRE_FALSE(s.supports(Hardware::Skylo));
-}
-
-TEST_CASE("HardwareSupport: multiple variants (card.wifi)") {
+TEST_CASE("RadiosSupport: multiple variants (card.wifi)") {
     // card.wifi supports WiFi, CellWifi, and Skylo
-    constexpr auto s = HardwareSupport::from(Hardware::WiFi, Hardware::CellWifi, Hardware::Skylo);
-    REQUIRE(s.supports(Hardware::WiFi));
-    REQUIRE(s.supports(Hardware::CellWifi));
-    REQUIRE(s.supports(Hardware::Skylo));
-    REQUIRE_FALSE(s.supports(Hardware::Cell));
-    REQUIRE_FALSE(s.supports(Hardware::LoRa));
+    constexpr auto s = RadiosSupport::from(Radios::WiFi, Radios::CellWifi, Radios::Skylo);
+    REQUIRE(s.supports(Radios::WiFi));
+    REQUIRE(s.supports(Radios::CellWifi));
+    REQUIRE(s.supports(Radios::Skylo));
+    REQUIRE_FALSE(s.supports(Radios::Cell));
+    REQUIRE_FALSE(s.supports(Radios::LoRa));
 }
 
-TEST_CASE("HardwareSupport: most endpoints (all except LoRa)") {
-    constexpr auto s = HardwareSupport::from(Hardware::Cell, Hardware::CellWifi, Hardware::Skylo, Hardware::WiFi);
-    REQUIRE(s.supports(Hardware::Cell));
-    REQUIRE(s.supports(Hardware::CellWifi));
-    REQUIRE(s.supports(Hardware::Skylo));
-    REQUIRE(s.supports(Hardware::WiFi));
-    REQUIRE_FALSE(s.supports(Hardware::LoRa));
+TEST_CASE("RadiosSupport: most endpoints (all except LoRa)") {
+    constexpr auto s = RadiosSupport::from(Radios::Cell, Radios::CellWifi, Radios::Skylo, Radios::WiFi);
+    REQUIRE(s.supports(Radios::Cell));
+    REQUIRE(s.supports(Radios::CellWifi));
+    REQUIRE(s.supports(Radios::Skylo));
+    REQUIRE(s.supports(Radios::WiFi));
+    REQUIRE_FALSE(s.supports(Radios::LoRa));
 }
 
 // ---------------------------------------------------------------------------
@@ -119,11 +88,11 @@ TEST_CASE("Firmware comparison operators") {
 
 #if __cplusplus >= 202002L
 
-TEST_CASE("Target::supports delegates to HardwareSupport with hardware identity") {
-    using WiFiTarget = Target<Hardware::WiFi>;
-    constexpr auto wifi_only = HardwareSupport::from(Hardware::WiFi);
-    constexpr auto multi = HardwareSupport::from(Hardware::Cell, Hardware::WiFi);
-    constexpr HardwareSupport universal{};
+TEST_CASE("Target::supports delegates to RadiosSupport with radios identity") {
+    using WiFiTarget = Target<Radios::WiFi>;
+    constexpr auto wifi_only = RadiosSupport::from(Radios::WiFi);
+    constexpr auto multi = RadiosSupport::from(Radios::Cell, Radios::WiFi);
+    constexpr RadiosSupport universal{};
 
     REQUIRE(WiFiTarget::supports(wifi_only));
     REQUIRE(WiFiTarget::supports(multi));
@@ -131,25 +100,22 @@ TEST_CASE("Target::supports delegates to HardwareSupport with hardware identity"
 }
 
 TEST_CASE("Target: CellWifi does NOT match WiFi-only endpoints") {
-    using CellWifiTarget = Target<Hardware::CellWifi>;
-    constexpr auto wifi_only = HardwareSupport::from(Hardware::WiFi);
+    using CellWifiTarget = Target<Radios::CellWifi>;
+    constexpr auto wifi_only = RadiosSupport::from(Radios::WiFi);
 
     REQUIRE_FALSE(CellWifiTarget::supports(wifi_only));
 }
 
 TEST_CASE("Target::as_strict") {
-    using T = Target<Hardware::Cell>;
+    using T = Target<Radios::Cell>;
     using S = decltype(T::as_strict());
     REQUIRE(S::strict);
-    REQUIRE(S::hardware == Hardware::Cell);
+    REQUIRE(S::radios == Radios::Cell);
 }
 
-TEST_CASE("target<Hardware>() factory") {
-    auto t = target<Hardware::Skylo>();
-    REQUIRE(decltype(t)::hardware == Hardware::Skylo);
-    // Skylo RATs: Cell|WiFi|Ntn = 1|2|4 = 7
-    REQUIRE(static_cast<uint8_t>(decltype(t)::rats) ==
-            static_cast<uint8_t>(Rat::Cell | Rat::WiFi | Rat::Ntn));
+TEST_CASE("target<Radios>() factory") {
+    auto t = target<Radios::Skylo>();
+    REQUIRE(decltype(t)::radios == Radios::Skylo);
 }
 
 // ---------------------------------------------------------------------------
@@ -157,26 +123,26 @@ TEST_CASE("target<Hardware>() factory") {
 // ---------------------------------------------------------------------------
 
 // WiFi target supports WiFi-only endpoints
-static_assert(Target<Hardware::WiFi>::supports(HardwareSupport::from(Hardware::WiFi)));
+static_assert(Target<Radios::WiFi>::supports(RadiosSupport::from(Radios::WiFi)));
 // CellWifi does NOT match WiFi-only (different variant)
-static_assert(!Target<Hardware::CellWifi>::supports(HardwareSupport::from(Hardware::WiFi)));
+static_assert(!Target<Radios::CellWifi>::supports(RadiosSupport::from(Radios::WiFi)));
 // CellWifi matches endpoints that list CellWifi
-static_assert(Target<Hardware::CellWifi>::supports(HardwareSupport::from(Hardware::WiFi, Hardware::CellWifi)));
+static_assert(Target<Radios::CellWifi>::supports(RadiosSupport::from(Radios::WiFi, Radios::CellWifi)));
 // Universal always matches
-static_assert(Target<Hardware::Cell>::supports(HardwareSupport{}));
-static_assert(Target<Hardware::LoRa>::supports(HardwareSupport{}));
+static_assert(Target<Radios::Cell>::supports(RadiosSupport{}));
+static_assert(Target<Radios::LoRa>::supports(RadiosSupport{}));
 
 // Concepts
-static_assert(IsTarget<Target<Hardware::Cell>>);
+static_assert(IsTarget<Target<Radios::Cell>>);
 static_assert(IsTarget<MinFirmware<7, 5, 1>>);
 static_assert(!IsTarget<Unconstrained>);
 static_assert(IsUnconstrained<Unconstrained>);
-static_assert(!IsUnconstrained<Target<Hardware::Cell>>);
+static_assert(!IsUnconstrained<Target<Radios::Cell>>);
 static_assert(!IsUnconstrained<MinFirmware<7, 5, 1>>);
 
 // HasFirmwareCheck
 static_assert(HasFirmwareCheck<MinFirmware<7, 5, 1>>);
-static_assert(HasFirmwareCheck<Target<Hardware::WiFi>>);
+static_assert(HasFirmwareCheck<Target<Radios::WiFi>>);
 static_assert(!HasFirmwareCheck<Unconstrained>);
 
 // ---------------------------------------------------------------------------
@@ -193,11 +159,11 @@ TEST_CASE("MinFirmware: firmware_ok accepts endpoints at or below target version
     REQUIRE_FALSE(Fw751::firmware_ok(Firmware{8, 0, 0}));  // much newer
 }
 
-TEST_CASE("MinFirmware: hardware is unconstrained") {
+TEST_CASE("MinFirmware: radios is unconstrained") {
     using Fw = MinFirmware<9, 1, 1>;
-    REQUIRE(Fw::supports(HardwareSupport::from(Hardware::WiFi)));
-    REQUIRE(Fw::supports(HardwareSupport::from(Hardware::Cell)));
-    REQUIRE(Fw::supports(HardwareSupport{}));
+    REQUIRE(Fw::supports(RadiosSupport::from(Radios::WiFi)));
+    REQUIRE(Fw::supports(RadiosSupport::from(Radios::Cell)));
+    REQUIRE(Fw::supports(RadiosSupport{}));
 }
 
 TEST_CASE("min_firmware<>() factory") {
@@ -211,11 +177,11 @@ TEST_CASE("min_firmware<>() factory") {
 // Target with firmware constraint
 // ---------------------------------------------------------------------------
 
-TEST_CASE("Target with firmware: combined hardware + firmware check") {
-    using WiFiFw = Target<Hardware::WiFi, 7, 5, 1>;
-    // Hardware check
-    REQUIRE(WiFiFw::supports(HardwareSupport::from(Hardware::WiFi)));
-    REQUIRE_FALSE(WiFiFw::supports(HardwareSupport::from(Hardware::Cell)));
+TEST_CASE("Target with firmware: combined radios + firmware check") {
+    using WiFiFw = Target<Radios::WiFi, 7, 5, 1>;
+    // Radios check
+    REQUIRE(WiFiFw::supports(RadiosSupport::from(Radios::WiFi)));
+    REQUIRE_FALSE(WiFiFw::supports(RadiosSupport::from(Radios::Cell)));
     // Firmware check
     REQUIRE(WiFiFw::firmware_ok(Firmware{7, 5, 1}));
     REQUIRE(WiFiFw::firmware_ok(Firmware{5, 0, 0}));
@@ -224,37 +190,37 @@ TEST_CASE("Target with firmware: combined hardware + firmware check") {
 }
 
 TEST_CASE("Target without firmware: firmware_ok always true") {
-    using WiFi = Target<Hardware::WiFi>;
+    using WiFi = Target<Radios::WiFi>;
     REQUIRE(WiFi::firmware_ok(Firmware{99, 99, 99}));
     REQUIRE(WiFi::firmware_ok(Firmware{}));
 }
 
-TEST_CASE("target<Hardware, Major, Minor, Patch>() factory") {
-    auto t = target<Hardware::Cell, 5, 3, 1>();
-    REQUIRE(decltype(t)::hardware == Hardware::Cell);
+TEST_CASE("target<Radios, Major, Minor, Patch>() factory") {
+    auto t = target<Radios::Cell, 5, 3, 1>();
+    REQUIRE(decltype(t)::radios == Radios::Cell);
     REQUIRE(decltype(t)::firmware_version.as_int() == 50301u);
 }
 
 // ---------------------------------------------------------------------------
-// target_supports — combined hardware + firmware check
+// target_supports — combined radios + firmware check
 // ---------------------------------------------------------------------------
 
 namespace {
     // Mock endpoint types for target_supports tests
     struct UniversalEndpoint {
-        static constexpr HardwareSupport hardware{};
+        static constexpr RadiosSupport radios{};
         static constexpr Firmware min_firmware{};
     };
     struct WiFiOnlyEndpoint {
-        static constexpr HardwareSupport hardware = HardwareSupport::from(Hardware::WiFi);
+        static constexpr RadiosSupport radios = RadiosSupport::from(Radios::WiFi);
         static constexpr Firmware min_firmware{};
     };
     struct FirmwareGatedEndpoint {
-        static constexpr HardwareSupport hardware{};
+        static constexpr RadiosSupport radios{};
         static constexpr Firmware min_firmware{9, 1, 1};
     };
     struct WiFiFirmwareEndpoint {
-        static constexpr HardwareSupport hardware = HardwareSupport::from(Hardware::WiFi);
+        static constexpr RadiosSupport radios = RadiosSupport::from(Radios::WiFi);
         static constexpr Firmware min_firmware{7, 5, 1};
     };
 }
@@ -264,21 +230,21 @@ static_assert(target_supports<Unconstrained, UniversalEndpoint>());
 static_assert(target_supports<Unconstrained, WiFiOnlyEndpoint>());
 static_assert(target_supports<Unconstrained, FirmwareGatedEndpoint>());
 
-// Hardware-only target: checks hardware, ignores firmware
-static_assert(target_supports<Target<Hardware::WiFi>, UniversalEndpoint>());
-static_assert(target_supports<Target<Hardware::WiFi>, WiFiOnlyEndpoint>());
-static_assert(target_supports<Target<Hardware::WiFi>, FirmwareGatedEndpoint>());
-static_assert(!target_supports<Target<Hardware::Cell>, WiFiOnlyEndpoint>());
+// Radios-only target: checks radios, ignores firmware
+static_assert(target_supports<Target<Radios::WiFi>, UniversalEndpoint>());
+static_assert(target_supports<Target<Radios::WiFi>, WiFiOnlyEndpoint>());
+static_assert(target_supports<Target<Radios::WiFi>, FirmwareGatedEndpoint>());
+static_assert(!target_supports<Target<Radios::Cell>, WiFiOnlyEndpoint>());
 
-// Firmware-only target: checks firmware, ignores hardware
+// Firmware-only target: checks firmware, ignores radios
 static_assert(target_supports<MinFirmware<9, 1, 1>, UniversalEndpoint>());
 static_assert(target_supports<MinFirmware<9, 1, 1>, FirmwareGatedEndpoint>());
 static_assert(target_supports<MinFirmware<9, 1, 1>, WiFiOnlyEndpoint>());
 static_assert(!target_supports<MinFirmware<5, 0, 0>, FirmwareGatedEndpoint>());
 
 // Combined target: both must pass
-static_assert(target_supports<Target<Hardware::WiFi, 9, 1, 1>, WiFiFirmwareEndpoint>());
-static_assert(!target_supports<Target<Hardware::Cell, 9, 1, 1>, WiFiFirmwareEndpoint>());
-static_assert(!target_supports<Target<Hardware::WiFi, 5, 0, 0>, WiFiFirmwareEndpoint>());
+static_assert(target_supports<Target<Radios::WiFi, 9, 1, 1>, WiFiFirmwareEndpoint>());
+static_assert(!target_supports<Target<Radios::Cell, 9, 1, 1>, WiFiFirmwareEndpoint>());
+static_assert(!target_supports<Target<Radios::WiFi, 5, 0, 0>, WiFiFirmwareEndpoint>());
 
 #endif // C++20

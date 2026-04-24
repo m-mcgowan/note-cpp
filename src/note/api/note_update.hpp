@@ -49,7 +49,7 @@ struct NoteUpdate {
     static constexpr string_view notecard_request = "note.update";
     static constexpr bool supports_cmd = true;
     static constexpr Safety safety = Safety::Idempotent;
-    static constexpr HardwareSupport hardware{};
+    static constexpr RadiosSupport radios{};
     static constexpr Firmware min_firmware{};
 
 #if NOTE_SINGLETON

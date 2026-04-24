@@ -3,7 +3,7 @@
 //
 // Declares `note::NotecardSku` (enum of known Notecard product codes) and
 // `note::info_for(NotecardSku)` (consteval lookup returning SkuInfo).
-// Relies on Radio / Mcu / TxnPinSupport / SkuInfo defined in note/target.hpp.
+// Relies on Radios / Mcu / TxnPinSupport / SkuInfo defined in note/target.hpp.
 
 #pragma once
 
@@ -35,11 +35,11 @@ enum class NotecardSku : uint16_t {
 constexpr SkuInfo info_for(NotecardSku s) {
     switch (s) {
 {% for entry in skus %}
-    case NotecardSku::{{ entry.sku }}: return {Radio::{{ entry.radio }}, Mcu::{{ entry.mcu }}, TxnPinSupport::{{ entry.txn }}};
+    case NotecardSku::{{ entry.sku }}: return {Radios::{{ entry.radio }}, Mcu::{{ entry.mcu }}, TxnPinSupport::{{ entry.txn }}};
 {% endfor %}
     case NotecardSku::Unknown:
     default:
-        return {Radio{}, Mcu::Unknown, TxnPinSupport::Unknown};
+        return {Radios{}, Mcu::Unknown, TxnPinSupport::Unknown};
     }
 }
 
@@ -67,11 +67,11 @@ constexpr const char* part_number_of(NotecardSku s) {
 
 template<NotecardSku S>
 struct SkuType {
-    static constexpr NotecardSku  value = S;
-    static constexpr SkuInfo      info  = info_for(S);
-    static constexpr Radio        radio = info.radio;
-    static constexpr Mcu          mcu   = info.mcu;
-    static constexpr TxnPinSupport txn  = info.txn;
+    static constexpr NotecardSku  value  = S;
+    static constexpr SkuInfo      info   = info_for(S);
+    static constexpr Radios       radios = info.radios;
+    static constexpr Mcu          mcu    = info.mcu;
+    static constexpr TxnPinSupport txn   = info.txn;
 
     /// True iff the SKU is known to expose CTX/RTX pins (dedicated or muxed).
     /// Unknown SKUs default to false (conservative — caller can still register

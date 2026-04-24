@@ -3,7 +3,7 @@
 //
 // Declares `note::NotecardSku` (enum of known Notecard product codes) and
 // `note::info_for(NotecardSku)` (consteval lookup returning SkuInfo).
-// Relies on Radio / Mcu / TxnPinSupport / SkuInfo defined in note/target.hpp.
+// Relies on Radios / Mcu / TxnPinSupport / SkuInfo defined in note/target.hpp.
 
 #pragma once
 
@@ -55,34 +55,34 @@ enum class NotecardSku : uint16_t {
 
 constexpr SkuInfo info_for(NotecardSku s) {
     switch (s) {
-    case NotecardSku::Esp: return {Radio::WiFi, Mcu::Esp32S3, TxnPinSupport::Dedicated};
-    case NotecardSku::Wifi: return {Radio::WiFi, Mcu::Stm32L4, TxnPinSupport::None};
-    case NotecardSku::LwEu_v1_4: return {Radio::LoRa, Mcu::Stm32Wl, TxnPinSupport::Dedicated};
-    case NotecardSku::LwUs_v1_4: return {Radio::LoRa, Mcu::Stm32Wl, TxnPinSupport::Dedicated};
-    case NotecardSku::LwEu: return {Radio::LoRa, Mcu::Stm32Wle5, TxnPinSupport::Dedicated};
-    case NotecardSku::LwUs: return {Radio::LoRa, Mcu::Stm32Wle5, TxnPinSupport::Dedicated};
-    case NotecardSku::MbGlN: return {Radio::Cell, Mcu::Stm32U5, TxnPinSupport::Muxed};
-    case NotecardSku::MbNaN: return {Radio::Cell, Mcu::Stm32U5, TxnPinSupport::Unknown};
-    case NotecardSku::NbGlN: return {Radio::Cell, Mcu::Stm32U5, TxnPinSupport::Muxed};
-    case NotecardSku::NbNaN: return {Radio::Cell, Mcu::Stm32U5, TxnPinSupport::Unknown};
-    case NotecardSku::WbExN: return {Radio::Cell, Mcu::Stm32U5, TxnPinSupport::Muxed};
-    case NotecardSku::WbNaN: return {Radio::Cell, Mcu::Stm32U5, TxnPinSupport::Muxed};
-    case NotecardSku::MbGlW: return {Radio::CellWifi, Mcu::Stm32U5, TxnPinSupport::Unknown};
-    case NotecardSku::MbNaW: return {Radio::CellWifi, Mcu::Stm32U5, TxnPinSupport::Unknown};
-    case NotecardSku::NbGlW: return {Radio::CellWifi, Mcu::Stm32U5, TxnPinSupport::Unknown};
-    case NotecardSku::NbNaW: return {Radio::CellWifi, Mcu::Stm32U5, TxnPinSupport::None};
-    case NotecardSku::WbExW: return {Radio::CellWifi, Mcu::Stm32U5, TxnPinSupport::Unknown};
-    case NotecardSku::WbGlW: return {Radio::CellWifi, Mcu::Stm32U5, TxnPinSupport::Unknown};
-    case NotecardSku::WbNaW: return {Radio::CellWifi, Mcu::Stm32U5, TxnPinSupport::Unknown};
-    case NotecardSku::WbGlWT: return {Radio::CellWifi, Mcu::Stm32L4, TxnPinSupport::None};
-    case NotecardSku::NbGlWX: return {Radio::Skylo, Mcu::Stm32U5, TxnPinSupport::Dedicated};
-    case NotecardSku::NbGl: return {Radio::Cell, Mcu::Stm32L4, TxnPinSupport::None};
-    case NotecardSku::NbNa: return {Radio::Cell, Mcu::Stm32L4, TxnPinSupport::None};
-    case NotecardSku::WbEx: return {Radio::Cell, Mcu::Stm32L4, TxnPinSupport::None};
-    case NotecardSku::WbNa: return {Radio::Cell, Mcu::Stm32L4, TxnPinSupport::None};
+    case NotecardSku::Esp: return {Radios::WiFi, Mcu::Esp32S3, TxnPinSupport::Dedicated};
+    case NotecardSku::Wifi: return {Radios::WiFi, Mcu::Stm32L4, TxnPinSupport::None};
+    case NotecardSku::LwEu_v1_4: return {Radios::LoRa, Mcu::Stm32Wl, TxnPinSupport::Dedicated};
+    case NotecardSku::LwUs_v1_4: return {Radios::LoRa, Mcu::Stm32Wl, TxnPinSupport::Dedicated};
+    case NotecardSku::LwEu: return {Radios::LoRa, Mcu::Stm32Wle5, TxnPinSupport::Dedicated};
+    case NotecardSku::LwUs: return {Radios::LoRa, Mcu::Stm32Wle5, TxnPinSupport::Dedicated};
+    case NotecardSku::MbGlN: return {Radios::Cell, Mcu::Stm32U5, TxnPinSupport::Muxed};
+    case NotecardSku::MbNaN: return {Radios::Cell, Mcu::Stm32U5, TxnPinSupport::Unknown};
+    case NotecardSku::NbGlN: return {Radios::Cell, Mcu::Stm32U5, TxnPinSupport::Muxed};
+    case NotecardSku::NbNaN: return {Radios::Cell, Mcu::Stm32U5, TxnPinSupport::Unknown};
+    case NotecardSku::WbExN: return {Radios::Cell, Mcu::Stm32U5, TxnPinSupport::Muxed};
+    case NotecardSku::WbNaN: return {Radios::Cell, Mcu::Stm32U5, TxnPinSupport::Muxed};
+    case NotecardSku::MbGlW: return {Radios::CellWifi, Mcu::Stm32U5, TxnPinSupport::Unknown};
+    case NotecardSku::MbNaW: return {Radios::CellWifi, Mcu::Stm32U5, TxnPinSupport::Unknown};
+    case NotecardSku::NbGlW: return {Radios::CellWifi, Mcu::Stm32U5, TxnPinSupport::Unknown};
+    case NotecardSku::NbNaW: return {Radios::CellWifi, Mcu::Stm32U5, TxnPinSupport::None};
+    case NotecardSku::WbExW: return {Radios::CellWifi, Mcu::Stm32U5, TxnPinSupport::Unknown};
+    case NotecardSku::WbGlW: return {Radios::CellWifi, Mcu::Stm32U5, TxnPinSupport::Unknown};
+    case NotecardSku::WbNaW: return {Radios::CellWifi, Mcu::Stm32U5, TxnPinSupport::Unknown};
+    case NotecardSku::WbGlWT: return {Radios::CellWifi, Mcu::Stm32L4, TxnPinSupport::None};
+    case NotecardSku::NbGlWX: return {Radios::Skylo, Mcu::Stm32U5, TxnPinSupport::Dedicated};
+    case NotecardSku::NbGl: return {Radios::Cell, Mcu::Stm32L4, TxnPinSupport::None};
+    case NotecardSku::NbNa: return {Radios::Cell, Mcu::Stm32L4, TxnPinSupport::None};
+    case NotecardSku::WbEx: return {Radios::Cell, Mcu::Stm32L4, TxnPinSupport::None};
+    case NotecardSku::WbNa: return {Radios::Cell, Mcu::Stm32L4, TxnPinSupport::None};
     case NotecardSku::Unknown:
     default:
-        return {Radio{}, Mcu::Unknown, TxnPinSupport::Unknown};
+        return {Radios{}, Mcu::Unknown, TxnPinSupport::Unknown};
     }
 }
 
@@ -132,11 +132,11 @@ constexpr const char* part_number_of(NotecardSku s) {
 
 template<NotecardSku S>
 struct SkuType {
-    static constexpr NotecardSku  value = S;
-    static constexpr SkuInfo      info  = info_for(S);
-    static constexpr Radio        radio = info.radio;
-    static constexpr Mcu          mcu   = info.mcu;
-    static constexpr TxnPinSupport txn  = info.txn;
+    static constexpr NotecardSku  value  = S;
+    static constexpr SkuInfo      info   = info_for(S);
+    static constexpr Radios       radios = info.radios;
+    static constexpr Mcu          mcu    = info.mcu;
+    static constexpr TxnPinSupport txn   = info.txn;
 
     /// True iff the SKU is known to expose CTX/RTX pins (dedicated or muxed).
     /// Unknown SKUs default to false (conservative — caller can still register

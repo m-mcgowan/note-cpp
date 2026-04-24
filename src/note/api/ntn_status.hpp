@@ -44,7 +44,7 @@ struct NtnStatus {
     static constexpr string_view notecard_request = "ntn.status";
     static constexpr bool supports_cmd = true;
     static constexpr Safety safety = Safety::ReadOnly;
-    static constexpr HardwareSupport hardware = HardwareSupport::from(Hardware::Cell, Hardware::CellWifi, Hardware::WiFi);
+    static constexpr RadiosSupport radios = RadiosSupport::from(Radios::Cell, Radios::CellWifi, Radios::WiFi);
     static constexpr Firmware min_firmware = Firmware{6, 2, 3};
 
 #if NOTE_SINGLETON

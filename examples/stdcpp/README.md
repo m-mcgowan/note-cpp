@@ -36,7 +36,7 @@ here:
   with payload, wake-and-resume).
 - `location-tracking.cpp` — GPS patterns (periodic, continuous,
   fixed location, geofence).
-- `target-filtering.cpp` — `note::Target<Hardware::WiFi, MinFirmware<...>>`
+- `target-filtering.cpp` — `note::Target<Radios::WiFi, MinFirmware<...>>`
   compile-time hardware/firmware filtering (C++20).
 
 ### Multi-file sub-examples

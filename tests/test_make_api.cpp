@@ -62,7 +62,7 @@ TEST_CASE("make_api with constrained target — supported endpoints work") {
             return {};
         });
     auto nc = make_nc(backend, transport);
-    auto api = note::make_api(nc, note::target<note::Hardware::WiFi>());
+    auto api = note::make_api(nc, note::target<note::Radios::WiFi>());
 
     // card.sleep is WiFi-only — should work on WiFi target
     api.execute(api.card.sleep());
@@ -90,7 +90,7 @@ TEST_CASE("make_api with Product::Cell target — universal endpoints work") {
             return {};
         });
     auto nc = make_nc(backend, transport);
-    auto api = note::make_api(nc, note::target<note::Hardware::Cell>());
+    auto api = note::make_api(nc, note::target<note::Radios::Cell>());
 
     api.execute(api.hub.set());
     REQUIRE(last_req.find("hub.set") != std::string::npos);
@@ -112,7 +112,7 @@ TEST_CASE("Strict mode — supported endpoints work at runtime") {
             return {};
         });
     auto nc = make_nc(backend, transport);
-    auto api = note::make_api(nc, note::Target<note::Hardware::WiFi, true>{});
+    auto api = note::make_api(nc, note::Target<note::Radios::WiFi, true>{});
 
     // card.sleep is WiFi-only — available on WiFi strict target
     api.execute(api.card.sleep());
@@ -140,7 +140,7 @@ TEST_CASE("Api(nc, target) — constrained via constructor") {
             return {};
         });
     auto nc = make_nc(backend, transport);
-    note::Api api(nc, note::target<note::Hardware::WiFi>());
+    note::Api api(nc, note::target<note::Radios::WiFi>());
 
     // card.wifi needs WiFi — available
     api.execute(api.card.wifi());
@@ -164,7 +164,7 @@ TEST_CASE("Api(nc, target) — strict mode via constructor") {
             return {};
         });
     auto nc = make_nc(backend, transport);
-    note::Api api(nc, note::Target<note::Hardware::WiFi, true>{});
+    note::Api api(nc, note::Target<note::Radios::WiFi, true>{});
 
     api.execute(api.card.sleep());
     REQUIRE(last_req.find("card.sleep") != std::string::npos);
@@ -221,7 +221,7 @@ TEST_CASE("Api with combined Hardware + Firmware target") {
         });
     auto nc = make_nc(backend, transport);
     // WiFi hardware + firmware 9.1.1
-    note::Api api(nc, note::target<note::Hardware::WiFi, 9, 1, 1>());
+    note::Api api(nc, note::target<note::Radios::WiFi, 9, 1, 1>());
 
     // card.illumination: requires 9.1.1, universal hardware — should work
     api.execute(api.card.illumination());

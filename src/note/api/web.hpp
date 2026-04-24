@@ -54,7 +54,7 @@ struct Web {
     static constexpr string_view notecard_request = "web";
     static constexpr bool supports_cmd = true;
     static constexpr Safety safety = Safety::NonIdempotent;
-    static constexpr HardwareSupport hardware = HardwareSupport::from(Hardware::Cell, Hardware::CellWifi, Hardware::Skylo, Hardware::WiFi);
+    static constexpr RadiosSupport radios = RadiosSupport::from(Radios::Cell, Radios::CellWifi, Radios::Skylo, Radios::WiFi);
     static constexpr Firmware min_firmware{};
 
 #if NOTE_SINGLETON

@@ -246,12 +246,12 @@ _ACTION_VERBS: dict[str, str] = {
 }
 
 
-_SKU_HARDWARE_MAP: dict[str, str] = {
-    "CELL": "Hardware::Cell",
-    "WIFI": "Hardware::WiFi",
-    "LORA": "Hardware::LoRa",
-    "CELL+WIFI": "Hardware::CellWifi",
-    "SKYLO": "Hardware::Skylo",
+_SKU_RADIOS_MAP: dict[str, str] = {
+    "CELL": "Radios::Cell",
+    "WIFI": "Radios::WiFi",
+    "LORA": "Radios::LoRa",
+    "CELL+WIFI": "Radios::CellWifi",
+    "SKYLO": "Radios::Skylo",
 }
 
 
@@ -325,7 +325,7 @@ class OperationDef:
 
     @property
     def skus_rats_expr(self) -> str:
-        """C++ expression for HardwareSupport::from(Hardware::...).
+        """C++ expression for RadiosSupport::from(Radios::...).
 
         Returns empty string if universal (no SKUs, or all variants covered).
         """
@@ -333,15 +333,15 @@ class OperationDef:
             return ""
         variants: list[str] = []
         for sku in self.skus:
-            expr = _SKU_HARDWARE_MAP.get(sku)
+            expr = _SKU_RADIOS_MAP.get(sku)
             if expr:
                 variants.append(expr)
         if not variants:
             return ""
         # If all variants are covered, treat as universal
-        if len(variants) == len(_SKU_HARDWARE_MAP):
+        if len(variants) == len(_SKU_RADIOS_MAP):
             return ""
-        return "HardwareSupport::from(" + ", ".join(variants) + ")"
+        return "RadiosSupport::from(" + ", ".join(variants) + ")"
 
     @property
     def min_firmware_expr(self) -> str:

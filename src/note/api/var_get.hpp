@@ -48,7 +48,7 @@ struct VarGet {
     static constexpr string_view notecard_request = "var.get";
     static constexpr bool supports_cmd = true;
     static constexpr Safety safety = Safety::ReadOnly;
-    static constexpr HardwareSupport hardware{};
+    static constexpr RadiosSupport radios{};
     static constexpr Firmware min_firmware = Firmware{7, 3, 1};
 
 #if NOTE_SINGLETON

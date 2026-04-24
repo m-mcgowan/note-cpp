@@ -1,6 +1,6 @@
-// Compile check: verify the SKU / Radio / Mcu compile-time type wrappers
-// and their factory variables (radio<>, mcu<>, sku<>) expose the expected
-// traits. Drives the metadata → codegen → type-system pipeline.
+// Compile check: verify the SKU / Radios / Mcu compile-time type wrappers
+// expose the expected traits. Drives the metadata → codegen → type-system
+// pipeline.
 
 #include <note/sku_info.hpp>
 #include <note/target.hpp>
@@ -8,10 +8,9 @@
 
 using namespace note;
 
-// ── Radio wrapper ──────────────────────────────────────────────────────
+// ── Radios wrapper ─────────────────────────────────────────────────────
 
-static_assert(RadioType<Radio::Cell>::value == Radio::Cell);
-static_assert(std::is_same_v<decltype(radio<Radio::WiFi>), const RadioType<Radio::WiFi>>);
+static_assert(RadiosType<Radios::Cell>::value == Radios::Cell);
 
 // ── Mcu wrapper: coarse has_txn_pins filter ────────────────────────────
 // STM32L4 is the only MCU known to never have CTX/RTX pins; everything
@@ -26,30 +25,30 @@ static_assert(McuType<Mcu::Stm32Wle5>::has_txn_pins == true);
 
 // ── Sku wrapper: per-SKU authoritative data ────────────────────────────
 
-// NOTE-ESP: WiFi radio, ESP32-S3 MCU, dedicated CTX/RTX.
-static_assert(sku<NotecardSku::Esp>.radio == Radio::WiFi);
-static_assert(sku<NotecardSku::Esp>.mcu   == Mcu::Esp32S3);
-static_assert(sku<NotecardSku::Esp>.txn   == TxnPinSupport::Dedicated);
-static_assert(sku<NotecardSku::Esp>.has_txn_pins == true);
+// NOTE-ESP: WiFi radios, ESP32-S3 MCU, dedicated CTX/RTX.
+static_assert(SkuType<NotecardSku::Esp>::radios == Radios::WiFi);
+static_assert(SkuType<NotecardSku::Esp>::mcu    == Mcu::Esp32S3);
+static_assert(SkuType<NotecardSku::Esp>::txn    == TxnPinSupport::Dedicated);
+static_assert(SkuType<NotecardSku::Esp>::has_txn_pins == true);
 
-// NOTE-WIFI: WiFi radio, STM32L4, no CTX/RTX pins.
-static_assert(sku<NotecardSku::Wifi>.radio == Radio::WiFi);
-static_assert(sku<NotecardSku::Wifi>.mcu   == Mcu::Stm32L4);
-static_assert(sku<NotecardSku::Wifi>.txn   == TxnPinSupport::None);
-static_assert(sku<NotecardSku::Wifi>.has_txn_pins == false);
+// NOTE-WIFI: WiFi radios, STM32L4, no CTX/RTX pins.
+static_assert(SkuType<NotecardSku::Wifi>::radios == Radios::WiFi);
+static_assert(SkuType<NotecardSku::Wifi>::mcu    == Mcu::Stm32L4);
+static_assert(SkuType<NotecardSku::Wifi>::txn    == TxnPinSupport::None);
+static_assert(SkuType<NotecardSku::Wifi>::has_txn_pins == false);
 
 // NOTE-NBGLN: cellular, STM32U5, muxed CTX/RTX via AUX2/AUX3.
-static_assert(sku<NotecardSku::NbGlN>.radio == Radio::Cell);
-static_assert(sku<NotecardSku::NbGlN>.txn   == TxnPinSupport::Muxed);
-static_assert(sku<NotecardSku::NbGlN>.has_txn_pins == true);
+static_assert(SkuType<NotecardSku::NbGlN>::radios == Radios::Cell);
+static_assert(SkuType<NotecardSku::NbGlN>::txn    == TxnPinSupport::Muxed);
+static_assert(SkuType<NotecardSku::NbGlN>::has_txn_pins == true);
 
 // NOTE-NBGLWX: satellite multi-mode, dedicated pins.
-static_assert(sku<NotecardSku::NbGlWX>.radio == Radio::Skylo);
-static_assert(sku<NotecardSku::NbGlWX>.has_txn_pins == true);
+static_assert(SkuType<NotecardSku::NbGlWX>::radios == Radios::Skylo);
+static_assert(SkuType<NotecardSku::NbGlWX>::has_txn_pins == true);
 
 // Legacy NOTE-NBGL: STM32L4, no pins.
-static_assert(sku<NotecardSku::NbGl>.mcu == Mcu::Stm32L4);
-static_assert(sku<NotecardSku::NbGl>.has_txn_pins == false);
+static_assert(SkuType<NotecardSku::NbGl>::mcu == Mcu::Stm32L4);
+static_assert(SkuType<NotecardSku::NbGl>::has_txn_pins == false);
 
 // ── part_number_of round-trip ──────────────────────────────────────────
 

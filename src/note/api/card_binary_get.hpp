@@ -52,7 +52,7 @@ struct CardBinaryGet : note::BinaryReceiveMixin {
     static constexpr string_view notecard_request = "card.binary.get";
     static constexpr bool supports_cmd = true;
     static constexpr Safety safety = Safety::NonIdempotent;
-    static constexpr HardwareSupport hardware = HardwareSupport::from(Hardware::Cell, Hardware::CellWifi, Hardware::Skylo, Hardware::WiFi);
+    static constexpr RadiosSupport radios = RadiosSupport::from(Radios::Cell, Radios::CellWifi, Radios::Skylo, Radios::WiFi);
     static constexpr Firmware min_firmware = Firmware{5, 3, 1};
 
     struct BinaryTransfer {

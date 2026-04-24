@@ -31,12 +31,12 @@ int main() {
     api.execute(api.hub.set());       // OK: universal endpoint
 
 #if __cplusplus >= 202002L
-    // ─── 2. Hardware filtering ──────────────────────────────────────────
-    // Constrain to a specific Notecard variant. Endpoints that don't
-    // support this hardware produce deprecation warnings (or compile errors
+    // ─── 2. Radios filtering ────────────────────────────────────────────
+    // Constrain to a specific Notecard product family. Endpoints that don't
+    // support this family produce deprecation warnings (or compile errors
     // in strict mode).
 
-    Api wifi_api(nc, target<Hardware::WiFi>());
+    Api wifi_api(nc, target<Radios::WiFi>());
     wifi_api.execute(wifi_api.card.sleep());   // OK: WiFi supports card.sleep
     wifi_api.execute(wifi_api.card.wifi());    // OK: WiFi-specific endpoint
     wifi_api.execute(wifi_api.hub.set());      // OK: universal
@@ -56,7 +56,7 @@ int main() {
     // ─── 4. Combined hardware + firmware ────────────────────────────────
     // Both constraints checked simultaneously.
 
-    Api both_api(nc, target<Hardware::WiFi, 9, 1, 1>());
+    Api both_api(nc, target<Radios::WiFi, 9, 1, 1>());
     both_api.execute(both_api.card.illumination()); // OK: fw >= 9.1.1
     both_api.execute(both_api.card.wifi());          // OK: WiFi hardware
     both_api.execute(both_api.hub.set());            // OK: universal
@@ -64,9 +64,9 @@ int main() {
     // ─── 5. Compile-time introspection ──────────────────────────────────
     // Every request type carries static `hardware` and `min_firmware` fields.
 
-    static_assert(api::CardSleep::hardware.supports(Hardware::WiFi));
-    static_assert(!api::CardSleep::hardware.supports(Hardware::CellWifi));
-    static_assert(api::HubSet::hardware.supports(Hardware::LoRa)); // universal
+    static_assert(api::CardSleep::radios.supports(Radios::WiFi));
+    static_assert(!api::CardSleep::radios.supports(Radios::CellWifi));
+    static_assert(api::HubSet::radios.supports(Radios::LoRa)); // universal
 
     static_assert(api::CardIllumination::min_firmware >= Firmware{9, 1, 1});
     static_assert(api::CardVersion::min_firmware == Firmware{}); // universal

@@ -120,9 +120,9 @@ namespace note::api {
 {{ indent }}static constexpr bool supports_cmd = {{ "true" if op.supports_cmd else "false" }};
 {{ indent }}static constexpr Safety safety = Safety::{{ op.safety }};
 {% if op.skus_rats_expr %}
-{{ indent }}static constexpr HardwareSupport hardware = {{ op.skus_rats_expr }};
+{{ indent }}static constexpr RadiosSupport radios = {{ op.skus_rats_expr }};
 {% else %}
-{{ indent }}static constexpr HardwareSupport hardware{};
+{{ indent }}static constexpr RadiosSupport radios{};
 {% endif %}
 {% if op.min_firmware_expr %}
 {{ indent }}static constexpr Firmware min_firmware = {{ op.min_firmware_expr }};

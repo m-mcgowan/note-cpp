@@ -500,6 +500,36 @@ struct ComposedTargetImpl {
         "radios-contributing axis (e.g. sku::NOTE_ESP + radios::NOTE_CELL). "
         "Remove the conflicting axis.");
 
+    // Explicit McuType value (Mcu::Unknown if none provided).
+    static consteval Mcu _explicit_mcu() {
+        Mcu m{};
+        ([&] {
+            if constexpr (detail::IsMcuAxis<Axes>) {
+                if (m == Mcu{}) m = Axes::value;
+            }
+        }(), ...);
+        return m;
+    }
+
+    static consteval bool _mcu_consistent() {
+        constexpr Mcu explicit_m = _explicit_mcu();
+        if (explicit_m == Mcu{}) return true;
+        bool ok = true;
+        ([&] {
+            if constexpr (detail::IsSkuAxis<Axes>) {
+                if (Axes::mcu != explicit_m) ok = false;
+            } else if constexpr (detail::IsMcuAxis<Axes>) {
+                if (Axes::value != explicit_m) ok = false;
+            }
+        }(), ...);
+        return ok;
+    }
+
+    static_assert(_mcu_consistent(),
+        "ComposedTarget: an explicit McuType axis disagrees with another "
+        "MCU-contributing axis (e.g. sku::NOTE_ESP + mcu::NOTE_STM32L4 — "
+        "NOTE_ESP uses ESP32-S3, not STM32L4). Remove the conflicting axis.");
+
     // --- Target contract -----------------------------------------------
     /// Endpoint supported iff every radios-contributing axis is in `s`.
     /// Empty pack → true (universal, matches Unconstrained semantically).

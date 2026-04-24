@@ -133,6 +133,29 @@ public:
     template<typename RequestT>
     Result<void> command(const RequestT& req) { return nc_ptr()->command_typed(req); }
 
+#if __cplusplus >= 202002L && !NOTE_NO_POLYMORPHIC
+    /// Scoped target-widening escape hatch. Returns an Api proxy whose
+    /// filtering reflects the asserted axes, not the target this Api was
+    /// declared with. Use it for per-call overrides inside a runtime-
+    /// conditional per-SKU branch:
+    ///
+    ///   note::arduino::Notecard nc(note::radios::NOTE_CELL);
+    ///   if (runtime_detected_esp) {
+    ///       nc.assume(note::sku::NOTE_ESP).card.sleep().execute();
+    ///   }
+    ///
+    /// The asserted axes *replace* the declared target for the returned
+    /// proxy; they do not intersect with it. Filtering still applies to
+    /// the asserted target (e.g. `assume(sku::NOTE_LWEU).card.wifi()`
+    /// still warns — LoRa SKUs don't carry WiFi).
+    template<typename... Axes>
+        requires (sizeof...(Axes) > 0
+                  && (detail::HasAxisCategory<Axes> && ...))
+    auto assume(Axes...) {
+        return Api<ComposedTarget<Axes...>, NcT>(*nc_ptr());
+    }
+#endif
+
     // =====================================================================
     // Polymorphic factory structs (used by resource group methods)
     // =====================================================================

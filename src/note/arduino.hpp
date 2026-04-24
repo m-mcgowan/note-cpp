@@ -50,7 +50,7 @@ public:
 #if __cplusplus >= 202002L
     template<typename... Axes>
         requires (sizeof...(Axes) > 0
-                  && (detail::HasAxisCategory<Axes> && ...))
+                  && (note::detail::HasAxisCategory<Axes> && ...))
     Notecard(Axes...) {}
 #endif
 

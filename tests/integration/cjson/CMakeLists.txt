@@ -17,12 +17,11 @@ set(ENABLE_CJSON_TEST OFF CACHE BOOL "" FORCE)
 set(BUILD_SHARED_AND_STATIC_LIBS OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(cJSON)
 
-add_executable(test_cjson_backend test_cjson_backend.cpp)
-target_include_directories(test_cjson_backend PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../../include
-    ${cjson_SOURCE_DIR}
-)
-target_link_libraries(test_cjson_backend PRIVATE cjson)
+# test_cjson_backend moved to top-level tests/CMakeLists.txt under
+# note-cpp-integration-backends. This file retains only the standalone
+# alloc-profile target, which uses file-local operator new/delete
+# overrides that cannot coexist with the unified doctest binary until
+# Phase 2's shared alloc-counter TU lands.
 
 add_executable(test_alloc_profile test_alloc_profile.cpp)
 target_include_directories(test_alloc_profile PRIVATE
@@ -32,5 +31,4 @@ target_include_directories(test_alloc_profile PRIVATE
 target_link_libraries(test_alloc_profile PRIVATE cjson)
 
 enable_testing()
-add_test(NAME cjson_backend COMMAND test_cjson_backend)
 add_test(NAME alloc_profile COMMAND test_alloc_profile)

@@ -18,10 +18,22 @@ ROOT="$(cd "$(dirname "$0")" && pwd)"
 # --all-compilers discovers compilers matching the CI matrix (g++-13, clang++-18) plus
 # any GCC/Clang versions installed via Homebrew on macOS.
 
-# ── GitHub Actions sync ────────────────────────────────────────────────────
-# The GitHub Actions workflow (.github/workflows/ci.yml) mirrors the stages
-# in run_ci() as individual steps. If you add, remove, or rename a stage
-# here, update the workflow to match.
+# ── ci.sh is the source of truth ───────────────────────────────────────────
+# Every check that runs in GitHub Actions must also be reachable via a
+# single invocation of this script. The workflow (.github/workflows/ci.yml)
+# should be a thin orchestrator: each job installs its prerequisites
+# (compiler, arduino-cli cores, lcov, …) and then calls ci.sh — never
+# duplicates the test/build logic in yaml.
+#
+# Run tiers:
+#   --quick   fastest feedback (~60-120s) — codegen + unit tests
+#   (default) regular   — adds examples, version gating, snippet verify
+#   --full    everything GitHub runs   — compile-* fixtures, coverage,
+#             Arduino sketches, PIO integration builds
+#
+# When you add a new GitHub CI step, add the corresponding stage in
+# run_ci() (or run_quick()) first, then wire the workflow step to call
+# it. A gap between local --full and remote CI is a bug.
 
 LLVM_COV="${LLVM_COV:-$(xcrun --find llvm-cov 2>/dev/null || echo llvm-cov)}"
 LLVM_PROFDATA="${LLVM_PROFDATA:-$(xcrun --find llvm-profdata 2>/dev/null || echo llvm-profdata)}"
@@ -250,6 +262,58 @@ VEOF
         echo
         "$ROOT/tools/verify-docs.sh"
         export EMBEDME_DONE=1
+    fi
+
+    # Arduino-cli sketch compiles (first compiler only) — mirrors the
+    # `arduino-cli` GitHub job so "local --full green" implies "remote green"
+    # for that workflow. Skips with a clear note if arduino-cli or the
+    # required cores aren't installed (not a hard failure for devs on non-
+    # Arduino workstations).
+    if [ "${ARDUINO_CLI_DONE:-}" != "1" ]; then
+        if command -v arduino-cli >/dev/null 2>&1; then
+            local missing=""
+            arduino-cli core list 2>/dev/null | grep -q "^esp32:esp32 " \
+                || missing+=" esp32:esp32"
+            arduino-cli core list 2>/dev/null | grep -q "^STMicroelectronics:stm32 " \
+                || missing+=" STMicroelectronics:stm32"
+            if [ -z "$missing" ]; then
+                echo
+                ci_stage "Arduino sketches (arduino-cli)"
+                for sketch in quickstart readme_snippets serial_basic i2c_basic; do
+                    for spec in "esp32:esp32:esp32s3:CDCOnBoot=cdc;ESP32-S3" \
+                                "STMicroelectronics:stm32:Blues:pnum=SWAN_R5;Swan"; do
+                        fqbn="${spec%;*}"
+                        label="${spec##*;}"
+                        printf "  %-40s " "$sketch ($label)"
+                        if arduino-cli compile \
+                            --fqbn "$fqbn" \
+                            --library "$ROOT" \
+                            "$ROOT/examples/arduino/$sketch" \
+                            >/tmp/arduino-cli.log 2>&1; then
+                            echo "OK"
+                        else
+                            echo "FAIL"
+                            cat /tmp/arduino-cli.log
+                            exit 1
+                        fi
+                    done
+                done
+                export ARDUINO_CLI_DONE=1
+            else
+                echo
+                echo "  Skipping Arduino sketches stage (missing cores:$missing)"
+                echo "  Install with:"
+                if [[ "$missing" == *"STMicroelectronics:stm32"* ]]; then
+                    echo "    arduino-cli config add board_manager.additional_urls \\"
+                    echo "      https://github.com/stm32duino/BoardManagerFiles/raw/main/package_stmicroelectronics_index.json"
+                    echo "    arduino-cli core update-index"
+                fi
+                echo "    arduino-cli core install$missing"
+            fi
+        else
+            echo
+            echo "  Skipping Arduino sketches stage (arduino-cli not in PATH)"
+        fi
     fi
 
     # Run coverage check (first compiler only) to catch regressions locally.

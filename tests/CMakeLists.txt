@@ -121,6 +121,7 @@ add_executable(note-cpp-integration-backends
     ${NOTE_CPP_ROOT}/tests/doctest_main.cpp
     ${NOTE_CPP_ROOT}/tests/integration/cjson/test_cjson_backend.cpp
     ${NOTE_CPP_ROOT}/tests/integration/nlohmann/test_nlohmann_backend.cpp
+    ${NOTE_CPP_ROOT}/tests/integration/buffer/test_buffer_backend.cpp
 )
 target_include_directories(note-cpp-integration-backends PRIVATE
     ${NOTE_CPP_ROOT}/include

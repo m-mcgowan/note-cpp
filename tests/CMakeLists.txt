@@ -49,8 +49,28 @@ foreach(src ${COMPILE_FAIL_SOURCES})
     set_tests_properties("compile-fail/${test_name}" PROPERTIES WILL_FAIL TRUE)
 endforeach()
 
+# Compile-warn tests: verify that API misuse triggers a [[deprecated]] warning.
+# Each .cpp file compiles clean without -Werror but fails with
+# -Werror=deprecated-declarations (i.e. a [[deprecated]] attribute fired).
+# The test passes if compilation fails.
+file(GLOB COMPILE_WARN_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/compile_warn/*.cpp")
+foreach(src ${COMPILE_WARN_SOURCES})
+    get_filename_component(test_name ${src} NAME_WE)
+    add_test(
+        NAME "compile-warn/${test_name}"
+        COMMAND ${CMAKE_CXX_COMPILER}
+            -std=c++20 -fsyntax-only
+            -Werror=deprecated-declarations
+            -I${NOTE_CPP_ROOT}/include
+            ${src}
+    )
+    set_tests_properties("compile-warn/${test_name}" PROPERTIES WILL_FAIL TRUE)
+endforeach()
+
 # Compile-check tests: verify that expected includes/features work.
 # Each .cpp file should compile successfully. The test passes if compilation succeeds.
+# `-Werror=deprecated-declarations` catches regressions where a supported
+# target/firmware is wrongly flagged as deprecated.
 file(GLOB COMPILE_CHECK_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/compile_check/*.cpp")
 foreach(src ${COMPILE_CHECK_SOURCES})
     get_filename_component(test_name ${src} NAME_WE)
@@ -58,6 +78,7 @@ foreach(src ${COMPILE_CHECK_SOURCES})
         NAME "compile-check/${test_name}"
         COMMAND ${CMAKE_CXX_COMPILER}
             -std=c++20 -fsyntax-only
+            -Werror=deprecated-declarations
             -I${NOTE_CPP_ROOT}/include
             ${src}
     )

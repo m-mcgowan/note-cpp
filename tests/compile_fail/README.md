@@ -7,9 +7,10 @@ test passes iff `-fsyntax-only` returns non-zero.
 The intent is to lock in error messages for typos and API misuse that
 the type system is supposed to catch.
 
-See [`../compile_fail_pending/`](../compile_fail_pending/) for
-aspirational versions of the same tests that can't be enforced yet
-due to compiler limitations.
+For calls that are valid-but-discouraged (i.e. emit `[[deprecated]]`
+rather than fail outright), see [`../compile_warn/`](../compile_warn/).
+For aspirational compile-fail tests blocked on compiler bugs see
+[`../compile_fail_pending/`](../compile_fail_pending/).
 
 ## What's covered
 
@@ -40,6 +41,15 @@ compile error, not a runtime surprise:
 `hub.set().mode(...)` takes a validated enum string:
 
 - `hubset_mode_typo.cpp`
+
+### Target filtering — strict rejection
+
+Strict targets (`Target<..., Strict=true>` / `MinFirmware<..., true>`)
+remove unsupported endpoints entirely via `requires`, so calling them
+is a hard compile error (no overload resolves):
+
+- `target_strict_lora_rejects_sleep.cpp`
+- `fw_strict_old_rejects_illumination.cpp`
 
 ### Backend constraints
 

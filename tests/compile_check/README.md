@@ -3,10 +3,13 @@
 Compile-only fixtures that verify the library compiles in configurations
 where runtime testing is awkward (different feature flags, reduced
 API surface, etc.). Each `.cpp` is registered as a ctest that invokes
-`-fsyntax-only` and passes iff compilation succeeds.
+`-fsyntax-only -Werror=deprecated-declarations` and passes iff
+compilation succeeds — so an unexpected `[[deprecated]]` hit on a
+supported target is a regression.
 
-Complement to [`compile_fail/`](../compile_fail/) — same mechanism,
-opposite expectation.
+Complement to [`compile_fail/`](../compile_fail/) (calls that must not
+compile under any settings) and [`compile_warn/`](../compile_warn/)
+(calls that must emit a `[[deprecated]]` warning).
 
 ## Contents
 
@@ -43,6 +46,11 @@ Each file is self-contained and compiled exactly once:
 - `units_via_api_hpp.cpp` — confirms that including `<note/api.hpp>`
   alone is enough to use `60_mins`, `2_hours`, etc. (users shouldn't
   have to also pull in `<note/units.hpp>`).
+- `target_wifi_supports_sleep.cpp` — non-strict WiFi target calling a
+  WiFi-supported endpoint compiles warning-free under
+  `-Werror=deprecated-declarations`.
+- `fw_new_supports_illumination.cpp` — non-strict 9.1.1 target
+  calling a firmware-gated endpoint compiles warning-free.
 
 ## Registration
 

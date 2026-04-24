@@ -14,10 +14,11 @@ namespace note {
 // ---------------------------------------------------------------------------
 // NotecardSku — specific Notecard product codes
 //
-// Enum values are C++-friendly renderings of the part numbers (e.g.
-// NOTE-MBGLN → MbGlN). Revision differences within the same part number
-// are disambiguated with a _v{major}_{minor} suffix (e.g. LwEu_v1_4).
-// The human-readable part number is available via `part_number_of()`.
+// Enum values match the Blues part numbers with '-' replaced by '_'
+// (C++ identifier rules). Example: NOTE-MBGLN → NOTE_MBGLN. Revision
+// differences within the same part number are disambiguated with a
+// _V{major}_{minor} suffix (e.g. NOTE_LWEU_V1_4). The human-readable
+// part number is available via `part_number_of()`.
 // ---------------------------------------------------------------------------
 
 enum class NotecardSku : uint16_t {
@@ -35,7 +36,7 @@ enum class NotecardSku : uint16_t {
 constexpr SkuInfo info_for(NotecardSku s) {
     switch (s) {
 {% for entry in skus %}
-    case NotecardSku::{{ entry.sku }}: return {Radios::{{ entry.radio }}, Mcu::{{ entry.mcu }}, TxnPinSupport::{{ entry.txn }}};
+    case NotecardSku::{{ entry.sku }}: return {Radios::{{ entry.radios }}, Mcu::{{ entry.mcu }}, TxnPinSupport::{{ entry.txn }}};
 {% endfor %}
     case NotecardSku::Unknown:
     default:

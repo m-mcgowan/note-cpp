@@ -14,39 +14,40 @@ namespace note {
 // ---------------------------------------------------------------------------
 // NotecardSku — specific Notecard product codes
 //
-// Enum values are C++-friendly renderings of the part numbers (e.g.
-// NOTE-MBGLN → MbGlN). Revision differences within the same part number
-// are disambiguated with a _v{major}_{minor} suffix (e.g. LwEu_v1_4).
-// The human-readable part number is available via `part_number_of()`.
+// Enum values match the Blues part numbers with '-' replaced by '_'
+// (C++ identifier rules). Example: NOTE-MBGLN → NOTE_MBGLN. Revision
+// differences within the same part number are disambiguated with a
+// _V{major}_{minor} suffix (e.g. NOTE_LWEU_V1_4). The human-readable
+// part number is available via `part_number_of()`.
 // ---------------------------------------------------------------------------
 
 enum class NotecardSku : uint16_t {
     Unknown = 0,
-    Esp,  // NOTE-ESP (2.1)
-    Wifi,  // NOTE-WIFI (1.2)
-    LwEu_v1_4,  // NOTE-LWEU (1.4)
-    LwUs_v1_4,  // NOTE-LWUS (1.4)
-    LwEu,  // NOTE-LWEU (2.1)
-    LwUs,  // NOTE-LWUS (2.1)
-    MbGlN,  // NOTE-MBGLN (3.2)
-    MbNaN,  // NOTE-MBNAN (3.2)
-    NbGlN,  // NOTE-NBGLN (3.2)
-    NbNaN,  // NOTE-NBNAN (3.2)
-    WbExN,  // NOTE-WBEXN (3.2)
-    WbNaN,  // NOTE-WBNAN (3.2)
-    MbGlW,  // NOTE-MBGLW (2.1)
-    MbNaW,  // NOTE-MBNAW (2.1)
-    NbGlW,  // NOTE-NBGLW (2.1)
-    NbNaW,  // NOTE-NBNAW (2.1)
-    WbExW,  // NOTE-WBEXW (2.1)
-    WbGlW,  // NOTE-WBGLW (2.1)
-    WbNaW,  // NOTE-WBNAW (2.1)
-    WbGlWT,  // NOTE-WBGLWT (1.x) — Legacy Telit modem variant; 1.x hardware generation.
-    NbGlWX,  // NOTE-NBGLWX (2.x) — Cell+WiFi+NTN satellite multi-mode.
-    NbGl,  // NOTE-NBGL (1.5) — Legacy cellular.
-    NbNa,  // NOTE-NBNA (1.5) — Legacy cellular.
-    WbEx,  // NOTE-WBEX (1.5) — Legacy cellular.
-    WbNa,  // NOTE-WBNA (1.5) — Legacy cellular.
+    NOTE_ESP,  // NOTE-ESP (2.1)
+    NOTE_WIFI,  // NOTE-WIFI (1.2)
+    NOTE_LWEU_V1_4,  // NOTE-LWEU (1.4)
+    NOTE_LWUS_V1_4,  // NOTE-LWUS (1.4)
+    NOTE_LWEU,  // NOTE-LWEU (2.1)
+    NOTE_LWUS,  // NOTE-LWUS (2.1)
+    NOTE_MBGLN,  // NOTE-MBGLN (3.2)
+    NOTE_MBNAN,  // NOTE-MBNAN (3.2)
+    NOTE_NBGLN,  // NOTE-NBGLN (3.2)
+    NOTE_NBNAN,  // NOTE-NBNAN (3.2)
+    NOTE_WBEXN,  // NOTE-WBEXN (3.2)
+    NOTE_WBNAN,  // NOTE-WBNAN (3.2)
+    NOTE_MBGLW,  // NOTE-MBGLW (2.1)
+    NOTE_MBNAW,  // NOTE-MBNAW (2.1)
+    NOTE_NBGLW,  // NOTE-NBGLW (2.1)
+    NOTE_NBNAW,  // NOTE-NBNAW (2.1)
+    NOTE_WBEXW,  // NOTE-WBEXW (2.1)
+    NOTE_WBGLW,  // NOTE-WBGLW (2.1)
+    NOTE_WBNAW,  // NOTE-WBNAW (2.1)
+    NOTE_WBGLWT,  // NOTE-WBGLWT (1.x) — Legacy Telit modem variant; 1.x hardware generation.
+    NOTE_NBGLWX,  // NOTE-NBGLWX (2.x) — Cell+WiFi+NTN satellite multi-mode.
+    NOTE_NBGL,  // NOTE-NBGL (1.5) — Legacy cellular.
+    NOTE_NBNA,  // NOTE-NBNA (1.5) — Legacy cellular.
+    NOTE_WBEX,  // NOTE-WBEX (1.5) — Legacy cellular.
+    NOTE_WBNA,  // NOTE-WBNA (1.5) — Legacy cellular.
 };
 
 // ---------------------------------------------------------------------------
@@ -55,31 +56,31 @@ enum class NotecardSku : uint16_t {
 
 constexpr SkuInfo info_for(NotecardSku s) {
     switch (s) {
-    case NotecardSku::Esp: return {Radios::WiFi, Mcu::Esp32S3, TxnPinSupport::Dedicated};
-    case NotecardSku::Wifi: return {Radios::WiFi, Mcu::Stm32L4, TxnPinSupport::None};
-    case NotecardSku::LwEu_v1_4: return {Radios::LoRa, Mcu::Stm32Wl, TxnPinSupport::Dedicated};
-    case NotecardSku::LwUs_v1_4: return {Radios::LoRa, Mcu::Stm32Wl, TxnPinSupport::Dedicated};
-    case NotecardSku::LwEu: return {Radios::LoRa, Mcu::Stm32Wle5, TxnPinSupport::Dedicated};
-    case NotecardSku::LwUs: return {Radios::LoRa, Mcu::Stm32Wle5, TxnPinSupport::Dedicated};
-    case NotecardSku::MbGlN: return {Radios::Cell, Mcu::Stm32U5, TxnPinSupport::Muxed};
-    case NotecardSku::MbNaN: return {Radios::Cell, Mcu::Stm32U5, TxnPinSupport::Unknown};
-    case NotecardSku::NbGlN: return {Radios::Cell, Mcu::Stm32U5, TxnPinSupport::Muxed};
-    case NotecardSku::NbNaN: return {Radios::Cell, Mcu::Stm32U5, TxnPinSupport::Unknown};
-    case NotecardSku::WbExN: return {Radios::Cell, Mcu::Stm32U5, TxnPinSupport::Muxed};
-    case NotecardSku::WbNaN: return {Radios::Cell, Mcu::Stm32U5, TxnPinSupport::Muxed};
-    case NotecardSku::MbGlW: return {Radios::CellWifi, Mcu::Stm32U5, TxnPinSupport::Unknown};
-    case NotecardSku::MbNaW: return {Radios::CellWifi, Mcu::Stm32U5, TxnPinSupport::Unknown};
-    case NotecardSku::NbGlW: return {Radios::CellWifi, Mcu::Stm32U5, TxnPinSupport::Unknown};
-    case NotecardSku::NbNaW: return {Radios::CellWifi, Mcu::Stm32U5, TxnPinSupport::None};
-    case NotecardSku::WbExW: return {Radios::CellWifi, Mcu::Stm32U5, TxnPinSupport::Unknown};
-    case NotecardSku::WbGlW: return {Radios::CellWifi, Mcu::Stm32U5, TxnPinSupport::Unknown};
-    case NotecardSku::WbNaW: return {Radios::CellWifi, Mcu::Stm32U5, TxnPinSupport::Unknown};
-    case NotecardSku::WbGlWT: return {Radios::CellWifi, Mcu::Stm32L4, TxnPinSupport::None};
-    case NotecardSku::NbGlWX: return {Radios::Skylo, Mcu::Stm32U5, TxnPinSupport::Dedicated};
-    case NotecardSku::NbGl: return {Radios::Cell, Mcu::Stm32L4, TxnPinSupport::None};
-    case NotecardSku::NbNa: return {Radios::Cell, Mcu::Stm32L4, TxnPinSupport::None};
-    case NotecardSku::WbEx: return {Radios::Cell, Mcu::Stm32L4, TxnPinSupport::None};
-    case NotecardSku::WbNa: return {Radios::Cell, Mcu::Stm32L4, TxnPinSupport::None};
+    case NotecardSku::NOTE_ESP: return {Radios::WiFi, Mcu::Esp32S3, TxnPinSupport::Dedicated};
+    case NotecardSku::NOTE_WIFI: return {Radios::WiFi, Mcu::Stm32L4, TxnPinSupport::None};
+    case NotecardSku::NOTE_LWEU_V1_4: return {Radios::LoRa, Mcu::Stm32Wl, TxnPinSupport::Dedicated};
+    case NotecardSku::NOTE_LWUS_V1_4: return {Radios::LoRa, Mcu::Stm32Wl, TxnPinSupport::Dedicated};
+    case NotecardSku::NOTE_LWEU: return {Radios::LoRa, Mcu::Stm32Wle5, TxnPinSupport::Dedicated};
+    case NotecardSku::NOTE_LWUS: return {Radios::LoRa, Mcu::Stm32Wle5, TxnPinSupport::Dedicated};
+    case NotecardSku::NOTE_MBGLN: return {Radios::Cell, Mcu::Stm32U5, TxnPinSupport::Muxed};
+    case NotecardSku::NOTE_MBNAN: return {Radios::Cell, Mcu::Stm32U5, TxnPinSupport::Unknown};
+    case NotecardSku::NOTE_NBGLN: return {Radios::Cell, Mcu::Stm32U5, TxnPinSupport::Muxed};
+    case NotecardSku::NOTE_NBNAN: return {Radios::Cell, Mcu::Stm32U5, TxnPinSupport::Unknown};
+    case NotecardSku::NOTE_WBEXN: return {Radios::Cell, Mcu::Stm32U5, TxnPinSupport::Muxed};
+    case NotecardSku::NOTE_WBNAN: return {Radios::Cell, Mcu::Stm32U5, TxnPinSupport::Muxed};
+    case NotecardSku::NOTE_MBGLW: return {Radios::CellWifi, Mcu::Stm32U5, TxnPinSupport::Unknown};
+    case NotecardSku::NOTE_MBNAW: return {Radios::CellWifi, Mcu::Stm32U5, TxnPinSupport::Unknown};
+    case NotecardSku::NOTE_NBGLW: return {Radios::CellWifi, Mcu::Stm32U5, TxnPinSupport::Unknown};
+    case NotecardSku::NOTE_NBNAW: return {Radios::CellWifi, Mcu::Stm32U5, TxnPinSupport::None};
+    case NotecardSku::NOTE_WBEXW: return {Radios::CellWifi, Mcu::Stm32U5, TxnPinSupport::Unknown};
+    case NotecardSku::NOTE_WBGLW: return {Radios::CellWifi, Mcu::Stm32U5, TxnPinSupport::Unknown};
+    case NotecardSku::NOTE_WBNAW: return {Radios::CellWifi, Mcu::Stm32U5, TxnPinSupport::Unknown};
+    case NotecardSku::NOTE_WBGLWT: return {Radios::CellWifi, Mcu::Stm32L4, TxnPinSupport::None};
+    case NotecardSku::NOTE_NBGLWX: return {Radios::Skylo, Mcu::Stm32U5, TxnPinSupport::Dedicated};
+    case NotecardSku::NOTE_NBGL: return {Radios::Cell, Mcu::Stm32L4, TxnPinSupport::None};
+    case NotecardSku::NOTE_NBNA: return {Radios::Cell, Mcu::Stm32L4, TxnPinSupport::None};
+    case NotecardSku::NOTE_WBEX: return {Radios::Cell, Mcu::Stm32L4, TxnPinSupport::None};
+    case NotecardSku::NOTE_WBNA: return {Radios::Cell, Mcu::Stm32L4, TxnPinSupport::None};
     case NotecardSku::Unknown:
     default:
         return {Radios{}, Mcu::Unknown, TxnPinSupport::Unknown};
@@ -92,31 +93,31 @@ constexpr SkuInfo info_for(NotecardSku s) {
 
 constexpr const char* part_number_of(NotecardSku s) {
     switch (s) {
-    case NotecardSku::Esp: return "NOTE-ESP";
-    case NotecardSku::Wifi: return "NOTE-WIFI";
-    case NotecardSku::LwEu_v1_4: return "NOTE-LWEU";
-    case NotecardSku::LwUs_v1_4: return "NOTE-LWUS";
-    case NotecardSku::LwEu: return "NOTE-LWEU";
-    case NotecardSku::LwUs: return "NOTE-LWUS";
-    case NotecardSku::MbGlN: return "NOTE-MBGLN";
-    case NotecardSku::MbNaN: return "NOTE-MBNAN";
-    case NotecardSku::NbGlN: return "NOTE-NBGLN";
-    case NotecardSku::NbNaN: return "NOTE-NBNAN";
-    case NotecardSku::WbExN: return "NOTE-WBEXN";
-    case NotecardSku::WbNaN: return "NOTE-WBNAN";
-    case NotecardSku::MbGlW: return "NOTE-MBGLW";
-    case NotecardSku::MbNaW: return "NOTE-MBNAW";
-    case NotecardSku::NbGlW: return "NOTE-NBGLW";
-    case NotecardSku::NbNaW: return "NOTE-NBNAW";
-    case NotecardSku::WbExW: return "NOTE-WBEXW";
-    case NotecardSku::WbGlW: return "NOTE-WBGLW";
-    case NotecardSku::WbNaW: return "NOTE-WBNAW";
-    case NotecardSku::WbGlWT: return "NOTE-WBGLWT";
-    case NotecardSku::NbGlWX: return "NOTE-NBGLWX";
-    case NotecardSku::NbGl: return "NOTE-NBGL";
-    case NotecardSku::NbNa: return "NOTE-NBNA";
-    case NotecardSku::WbEx: return "NOTE-WBEX";
-    case NotecardSku::WbNa: return "NOTE-WBNA";
+    case NotecardSku::NOTE_ESP: return "NOTE-ESP";
+    case NotecardSku::NOTE_WIFI: return "NOTE-WIFI";
+    case NotecardSku::NOTE_LWEU_V1_4: return "NOTE-LWEU";
+    case NotecardSku::NOTE_LWUS_V1_4: return "NOTE-LWUS";
+    case NotecardSku::NOTE_LWEU: return "NOTE-LWEU";
+    case NotecardSku::NOTE_LWUS: return "NOTE-LWUS";
+    case NotecardSku::NOTE_MBGLN: return "NOTE-MBGLN";
+    case NotecardSku::NOTE_MBNAN: return "NOTE-MBNAN";
+    case NotecardSku::NOTE_NBGLN: return "NOTE-NBGLN";
+    case NotecardSku::NOTE_NBNAN: return "NOTE-NBNAN";
+    case NotecardSku::NOTE_WBEXN: return "NOTE-WBEXN";
+    case NotecardSku::NOTE_WBNAN: return "NOTE-WBNAN";
+    case NotecardSku::NOTE_MBGLW: return "NOTE-MBGLW";
+    case NotecardSku::NOTE_MBNAW: return "NOTE-MBNAW";
+    case NotecardSku::NOTE_NBGLW: return "NOTE-NBGLW";
+    case NotecardSku::NOTE_NBNAW: return "NOTE-NBNAW";
+    case NotecardSku::NOTE_WBEXW: return "NOTE-WBEXW";
+    case NotecardSku::NOTE_WBGLW: return "NOTE-WBGLW";
+    case NotecardSku::NOTE_WBNAW: return "NOTE-WBNAW";
+    case NotecardSku::NOTE_WBGLWT: return "NOTE-WBGLWT";
+    case NotecardSku::NOTE_NBGLWX: return "NOTE-NBGLWX";
+    case NotecardSku::NOTE_NBGL: return "NOTE-NBGL";
+    case NotecardSku::NOTE_NBNA: return "NOTE-NBNA";
+    case NotecardSku::NOTE_WBEX: return "NOTE-WBEX";
+    case NotecardSku::NOTE_WBNA: return "NOTE-WBNA";
     case NotecardSku::Unknown:
     default:
         return "unknown";

@@ -1,0 +1,28 @@
+// AUTO-GENERATED from tools/codegen/generate.py — DO NOT EDIT
+//
+// One `inline constexpr` per unique minimum firmware version observed in
+// the Notecard API spec (operation, property, and enum-value thresholds
+// alike). Use at Notecard construction sites to declare the minimum
+// firmware the device is guaranteed to be running:
+//
+//   note::arduino::Notecard nc(note::sku::NOTE_ESP, note::fw::v7_5_1);
+//
+// Note: enum-value-level thresholds (e.g. new `card.aux` modes added in
+// 9.3.1) are emitted here so the constant is nameable, but codegen does
+// not yet filter specific enum values against a declared constraint.
+// That filtering is a separate codegen task; the constant is correct
+// regardless.
+//
+// Naming: `v{major}_{minor}` when patch is zero, else `v{major}_{minor}_{patch}`.
+
+#pragma once
+
+#include <note/target.hpp>
+
+namespace note::fw {
+
+{% for v in versions %}
+inline constexpr auto {{ v.name }} = FwConstraint<{{ v.major }}, {{ v.minor }}, {{ v.patch }}>{};
+{% endfor %}
+
+} // namespace note::fw

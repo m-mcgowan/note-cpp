@@ -2,6 +2,7 @@
 // expose the expected traits. Drives the metadata → codegen → type-system
 // pipeline.
 
+#include <note/fw_versions.hpp>
 #include <note/sku_info.hpp>
 #include <note/target.hpp>
 #include <type_traits>
@@ -72,5 +73,27 @@ static_assert(std::is_same_v<decltype(mcu::STM32L4),
                              const McuType<Mcu::Stm32L4>>);
 static_assert(mcu::STM32L4.has_txn_pins == false);
 static_assert(mcu::ESP32S3.has_txn_pins == true);
+
+// ── Firmware axis (FwConstraint + codegenned fw::v* constants) ─────────
+// Defaulted template arguments: FwConstraint<7> == 7.0.0.
+
+static_assert(FwConstraint<7>::version.as_int()        == 70000u);
+static_assert(FwConstraint<7, 5>::version.as_int()     == 70500u);
+static_assert(FwConstraint<7, 5, 1>::version.as_int()  == 70501u);
+
+// The generated fw::v* constants are FwConstraint instances with the
+// appropriate template arguments — check the ones that back well-known
+// feature thresholds in the spec.
+
+static_assert(std::is_same_v<decltype(fw::v7_5_1),
+                             const FwConstraint<7, 5, 1>>);
+static_assert(fw::v7_5_1.version.as_int() == 70501u);
+static_assert(fw::v3_2_1.version.as_int() ==  30201u);
+static_assert(fw::v9_1_1.version.as_int() ==  90101u);
+
+// v9_3_1 is enum-value-level (card.aux's rgb / rgb-monitor / track-rgb-monitor
+// modes). The constant must still be nameable so users can declare intent
+// today, even though codegen doesn't yet filter enum values against it.
+static_assert(fw::v9_3_1.version.as_int() == 90301u);
 
 int main() { return 0; }

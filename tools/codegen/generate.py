@@ -267,6 +267,64 @@ def _cpp_literal(value) -> str:
     return f'"{value}"'
 
 
+def _collect_fw_versions(spec_dict: dict) -> list[dict]:
+    """Collect every unique `x-min-api-version` value in the spec.
+
+    Walks the entire raw spec dict so we pick up every gated threshold —
+    operation-level, request-/response-property-level, and value-level
+    (e.g. individual enum values gated via `x-sub-descriptions` entries).
+    Enum-value-level gating isn't yet enforced by codegen, but emitting
+    the constant lets users declare the threshold at construction today
+    and lets a future codegen pass close the gap without renaming.
+
+    Parses "M.m.p" into a tuple; unparseable values are skipped. Returns
+    a sorted deduplicated list of dicts ready for the template:
+
+        [{"name": "v7_5_1", "major": 7, "minor": 5, "patch": 1}, ...]
+
+    Naming: `v{M}_{m}` when patch is zero, else `v{M}_{m}_{p}`.
+    """
+    versions: set[tuple[int, int, int]] = set()
+
+    def _add(raw) -> None:
+        if not isinstance(raw, str):
+            return
+        parts = raw.split(".")
+        if len(parts) < 2:
+            return
+        try:
+            major = int(parts[0])
+            minor = int(parts[1])
+            patch = int(parts[2]) if len(parts) > 2 else 0
+        except ValueError:
+            return
+        versions.add((major, minor, patch))
+
+    def _walk(node) -> None:
+        if isinstance(node, dict):
+            for k, v in node.items():
+                if k == "x-min-api-version":
+                    _add(v)
+                else:
+                    _walk(v)
+        elif isinstance(node, list):
+            for item in node:
+                _walk(item)
+
+    _walk(spec_dict)
+
+    result = []
+    for major, minor, patch in sorted(versions):
+        name = f"v{major}_{minor}" if patch == 0 else f"v{major}_{minor}_{patch}"
+        result.append({
+            "name": name,
+            "major": major,
+            "minor": minor,
+            "patch": patch,
+        })
+    return result
+
+
 def _build_accessor_map(endpoints) -> dict[tuple, str]:
     """Map (notecard_request, struct_name, wire_name) -> accessor_name.
 
@@ -644,6 +702,14 @@ def main() -> None:
     sku_out_path.write_text(sku_content)
     print(f"Generated {len(sku_entries)} SKU entries in {sku_out_path}")
 
+    # Generate fw_versions.hpp from unique min-firmware values in the spec.
+    fw_versions = _collect_fw_versions(spec_dict)
+    fw_template = env.get_template("fw_versions.hpp.j2")
+    fw_content = fw_template.render(versions=fw_versions)
+    fw_out_path = output_dir.parent / "fw_versions.hpp"  # include/note/fw_versions.hpp
+    fw_out_path.write_text(fw_content)
+    print(f"Generated {len(fw_versions)} firmware version constants in {fw_out_path}")
+
     # Generate CMake file listing all generated files.
     # Paths are emitted relative to the project root (parent of cmake/)
     # so the checked-in file is machine-independent regardless of whether
@@ -658,7 +724,7 @@ def main() -> None:
 
     generated_headers = sorted(
         [_rel_to_root(output_dir / ep.header_filename) for ep in endpoints]
-        + [_rel_to_root(api_path), _rel_to_root(sku_out_path)]
+        + [_rel_to_root(api_path), _rel_to_root(sku_out_path), _rel_to_root(fw_out_path)]
     )
     generated_tests = sorted([
         "test_samples.cpp",

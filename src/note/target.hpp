@@ -187,6 +187,28 @@ struct Firmware {
 };
 
 // ---------------------------------------------------------------------------
+// FwConstraint<Major, Minor, Patch> — firmware axis tag
+//
+// Wraps a Firmware version as a distinct type so the variadic Notecard CTAD
+// can deduce the firmware dimension from a call-site constant. Codegen emits
+// one `inline constexpr` per unique min-firmware value in the spec into
+// `note/fw_versions.hpp` under `namespace note::fw`:
+//
+//   note::arduino::Notecard nc(note::fw::v7_5_1);
+//
+// Unlike `MinFirmware`, this is only a tag — ComposedTarget extracts
+// `version` and provides the Target contract.
+// ---------------------------------------------------------------------------
+
+template<unsigned Major, unsigned Minor = 0, unsigned Patch = 0>
+struct FwConstraint {
+    static constexpr Firmware version{
+        static_cast<uint8_t>(Major),
+        static_cast<uint8_t>(Minor),
+        static_cast<uint8_t>(Patch)};
+};
+
+// ---------------------------------------------------------------------------
 // Target types
 // ---------------------------------------------------------------------------
 

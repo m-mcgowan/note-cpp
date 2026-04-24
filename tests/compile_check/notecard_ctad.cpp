@@ -64,4 +64,15 @@ void test_multi_sku() {
     static_assert(std::is_same_v<decltype(nc), Expected>);
 }
 
+// ── Non-axis argument (ITransport): axis guide is removed via requires, ──
+// falls back to the implicit guide from `NotecardApi(ITransport&)`.
+// Locks in that the constrained CTAD guide doesn't shadow existing ctors.
+
+extern n::ITransport& fake_transport();
+
+void test_transport_still_unconstrained() {
+    n::NotecardApi nc(fake_transport());
+    static_assert(std::is_same_v<decltype(nc), n::NotecardApi<n::Unconstrained>>);
+}
+
 int main() { return 0; }

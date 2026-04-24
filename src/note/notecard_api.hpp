@@ -80,6 +80,18 @@ public:
         : detail::NcOwner()
         , Api<TargetT>(nc_) {}
 
+    /// Variadic axis pack — constrains TargetT via CTAD (see deduction guide
+    /// below). Axes are compile-time tags only; runtime state matches the
+    /// default constructor.
+    ///
+    ///   note::NotecardApi nc(note::sku::NOTE_ESP, note::fw::v7_5_1);
+    template<typename... Axes>
+        requires (sizeof...(Axes) > 0
+                  && (detail::HasAxisCategory<Axes> && ...))
+    NotecardApi(Axes...)
+        : detail::NcOwner()
+        , Api<TargetT>(nc_) {}
+
     /// Construct with transport (uses default backend).
     explicit NotecardApi(ITransport& transport)
         : detail::NcOwner(transport)
@@ -107,6 +119,16 @@ public:
 
     Notecard& notecard() { return nc_; }
 };
+
+/// CTAD guide: map a pack of axis values at the call site to
+/// `NotecardApi<ComposedTarget<Axes...>>`. The requires clause keeps
+/// non-axis arguments (e.g. `ITransport&`) from matching this guide so
+/// their constructors deduce the default `TargetT=Unconstrained`.
+template<typename... Axes>
+    requires (sizeof...(Axes) > 0
+              && (detail::HasAxisCategory<Axes> && ...))
+NotecardApi(Axes...) -> NotecardApi<ComposedTarget<Axes...>>;
+
 #else
 class NotecardApi : private detail::NcOwner, public Api<Notecard> {
     // Resolve ambiguous nc_ (NcOwner::nc_ vs Api::nc_).

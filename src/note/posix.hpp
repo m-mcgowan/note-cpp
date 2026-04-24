@@ -75,6 +75,18 @@ class Notecard : public NotecardApi {
 public:
     Notecard() = default;
 
+    /// Variadic axis pack — constrains TargetT via CTAD (see deduction guide
+    /// below). Axes are compile-time tags only; runtime state matches the
+    /// default constructor.
+    ///
+    ///   note::posix::Notecard nc(note::sku::NOTE_ESP, note::fw::v7_5_1);
+#if __cplusplus >= 202002L
+    template<typename... Axes>
+        requires (sizeof...(Axes) > 0
+                  && (detail::HasAxisCategory<Axes> && ...))
+    Notecard(Axes...) {}
+#endif
+
     // ── Method A: explicit method names ────────────────────────────────────
 
     /// Open a serial link to the Notecard.
@@ -141,5 +153,13 @@ private:
     std::unique_ptr<StreamingTransport>          i2c_streaming_;
 #endif
 };
+
+#if __cplusplus >= 202002L
+/// CTAD: map axis values at the call site to `Notecard<ComposedTarget<Axes...>>`.
+template<typename... Axes>
+    requires (sizeof...(Axes) > 0
+              && (note::detail::HasAxisCategory<Axes> && ...))
+Notecard(Axes...) -> Notecard<note::ComposedTarget<Axes...>>;
+#endif
 
 }  // namespace note::posix

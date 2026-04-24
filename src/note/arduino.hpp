@@ -42,6 +42,18 @@ class Notecard : public NotecardApi {
 public:
     Notecard() = default;
 
+    /// Variadic axis pack — constrains TargetT via CTAD (see deduction guide
+    /// below). Axes are compile-time tags only; runtime state matches the
+    /// default constructor.
+    ///
+    ///   note::arduino::Notecard nc(note::sku::NOTE_ESP, note::fw::v7_5_1);
+#if __cplusplus >= 202002L
+    template<typename... Axes>
+        requires (sizeof...(Axes) > 0
+                  && (detail::HasAxisCategory<Axes> && ...))
+    Notecard(Axes...) {}
+#endif
+
     /// Begin with serial transport.
     ///   nc.begin(Serial1, 9600);
     template<typename SerialT>
@@ -112,5 +124,13 @@ private:
     std::unique_ptr<transport::NotecardI2c<>> i2c_hal_transport_;
     std::unique_ptr<StreamingTransport> i2c_streaming_;
 };
+
+#if __cplusplus >= 202002L
+/// CTAD: map axis values at the call site to `Notecard<ComposedTarget<Axes...>>`.
+template<typename... Axes>
+    requires (sizeof...(Axes) > 0
+              && (note::detail::HasAxisCategory<Axes> && ...))
+Notecard(Axes...) -> Notecard<note::ComposedTarget<Axes...>>;
+#endif
 
 } // namespace note::arduino

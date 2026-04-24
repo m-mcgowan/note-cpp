@@ -13,7 +13,6 @@
 
 #include <note/notecard.hpp>
 #include <note/api.hpp>
-#include <note/backends/cjson.hpp>
 #ifdef NOTECARD_TEST_SERIAL
 #include <note/transport/serial.hpp>
 #endif
@@ -25,9 +24,6 @@
 note::Api<>* g_api = nullptr;
 int g_fw_version = 0;
 static std::string g_fw_excludes;
-
-// Persistent transport objects — must outlive all tests.
-static note::backends::CjsonBackend g_backend;
 
 #ifdef NOTECARD_TEST_SERIAL
 static SerialHal& serial_hal() {

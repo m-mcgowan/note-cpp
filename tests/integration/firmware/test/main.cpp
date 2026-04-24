@@ -132,7 +132,11 @@ static void configure_context(doctest::Context& ctx) {
 
 #ifdef GCOV_ENABLED
 extern "C" {
-#include "gcov_serial.h"
+#  if defined(PIO_GCOV_TRACE_PC_BITMAP_BYTES)
+#    include "pio_gcov_trace_pc.h"
+#  else
+#    include "gcov_serial.h"
+#  endif
 }
 #endif
 
@@ -140,7 +144,11 @@ void setup() {
     etst::config.board_init = board_init;
     etst::doctest::config.configure = configure_context;
 #ifdef GCOV_ENABLED
+#  if defined(PIO_GCOV_TRACE_PC_BITMAP_BYTES)
+    etst::config.after_cycle = pio_gcov_trace_pc_dump;
+#  else
     etst::config.after_cycle = gcov_serial_dump;
+#  endif
 #endif
     DOCTEST_SETUP();
 }

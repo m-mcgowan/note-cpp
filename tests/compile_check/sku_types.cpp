@@ -64,15 +64,15 @@ static_assert(std::is_same_v<decltype(sku::NOTE_ESP),
 static_assert(sku::NOTE_ESP.radios == Radios::WiFi);
 static_assert(sku::NOTE_NBGLWX.radios == Radios::Skylo);
 
-static_assert(std::is_same_v<decltype(radios::WIFI),
+static_assert(std::is_same_v<decltype(radios::NOTE_WIFI),
                              const RadiosType<Radios::WiFi>>);
-static_assert(radios::WIFI.value == Radios::WiFi);
-static_assert(radios::CELL_WIFI.value == Radios::CellWifi);
+static_assert(radios::NOTE_WIFI.value == Radios::WiFi);
+static_assert(radios::NOTE_CELL_WIFI.value == Radios::CellWifi);
 
-static_assert(std::is_same_v<decltype(mcu::STM32L4),
+static_assert(std::is_same_v<decltype(mcu::NOTE_STM32L4),
                              const McuType<Mcu::Stm32L4>>);
-static_assert(mcu::STM32L4.has_txn_pins == false);
-static_assert(mcu::ESP32S3.has_txn_pins == true);
+static_assert(mcu::NOTE_STM32L4.has_txn_pins == false);
+static_assert(mcu::NOTE_ESP32S3.has_txn_pins == true);
 
 // ── Firmware axis (FwConstraint + codegenned fw::v* constants) ─────────
 // Defaulted template arguments: FwConstraint<7> == 7.0.0.

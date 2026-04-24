@@ -138,28 +138,34 @@ struct McuType {
 // Users construct Notecard wrappers by passing axis values at the call site.
 // Each axis namespace carries one constant per enum value, no angle brackets.
 //
-//   note::arduino::Notecard nc(note::radios::WIFI);
-//   note::arduino::Notecard nc(note::mcu::STM32L4);
+//   note::arduino::Notecard nc(note::radios::NOTE_WIFI);
+//   note::arduino::Notecard nc(note::mcu::NOTE_STM32L4);
 //   note::arduino::Notecard nc(note::sku::NOTE_ESP);  // in sku_info.hpp
 //
-// Names follow Blues' own conventions (`radios` are the product-family
-// labels from the API docs; `mcu` matches common MCU part names).
+// The `NOTE_` prefix mirrors the sku namespace and is mandatory, not
+// stylistic: Arduino cores for STM32 / ESP32 boards define bare names
+// like `STM32L4`, `ESP32S3`, `WIFI` as preprocessor macros for HAL
+// conditional compilation. Those macros replace tokens before namespace
+// resolution, so even a fully qualified `note::mcu::STM32L4` would
+// substitute to `note::mcu::(1)` and fail to compile. Prefixing with
+// `NOTE_` keeps the identifier collision-free while preserving Blues'
+// all-caps axis-constant convention.
 // ---------------------------------------------------------------------------
 
 namespace radios {
-inline constexpr auto CELL      = RadiosType<Radios::Cell>{};
-inline constexpr auto WIFI      = RadiosType<Radios::WiFi>{};
-inline constexpr auto CELL_WIFI = RadiosType<Radios::CellWifi>{};
-inline constexpr auto LORA      = RadiosType<Radios::LoRa>{};
-inline constexpr auto SKYLO     = RadiosType<Radios::Skylo>{};
+inline constexpr auto NOTE_CELL      = RadiosType<Radios::Cell>{};
+inline constexpr auto NOTE_WIFI      = RadiosType<Radios::WiFi>{};
+inline constexpr auto NOTE_CELL_WIFI = RadiosType<Radios::CellWifi>{};
+inline constexpr auto NOTE_LORA      = RadiosType<Radios::LoRa>{};
+inline constexpr auto NOTE_SKYLO     = RadiosType<Radios::Skylo>{};
 } // namespace radios
 
 namespace mcu {
-inline constexpr auto STM32L4   = McuType<Mcu::Stm32L4>{};
-inline constexpr auto STM32U5   = McuType<Mcu::Stm32U5>{};
-inline constexpr auto STM32WL   = McuType<Mcu::Stm32Wl>{};
-inline constexpr auto STM32WLE5 = McuType<Mcu::Stm32Wle5>{};
-inline constexpr auto ESP32S3   = McuType<Mcu::Esp32S3>{};
+inline constexpr auto NOTE_STM32L4   = McuType<Mcu::Stm32L4>{};
+inline constexpr auto NOTE_STM32U5   = McuType<Mcu::Stm32U5>{};
+inline constexpr auto NOTE_STM32WL   = McuType<Mcu::Stm32Wl>{};
+inline constexpr auto NOTE_STM32WLE5 = McuType<Mcu::Stm32Wle5>{};
+inline constexpr auto NOTE_ESP32S3   = McuType<Mcu::Esp32S3>{};
 } // namespace mcu
 
 // ---------------------------------------------------------------------------

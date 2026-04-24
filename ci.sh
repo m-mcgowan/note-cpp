@@ -657,6 +657,21 @@ run_coverage() {
     nice "$GCC" --coverage -fprofile-arcs -o "$BINARY_MIN" "$BUILD_MIN"/*.o
     "$BINARY_MIN"
 
+    # Backend-parity host run (doctest). Produces coverage for
+    # include/note/backends/*.hpp — the backends aren't otherwise
+    # exercised by the unit tests.
+    local BB_BUILD="/tmp/note-cpp-integration-backends-cov"
+    echo
+    echo "=== Backend-parity coverage build ==="
+    cmake -B "$BB_BUILD" "$ROOT/tests" \
+        -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
+        -DCMAKE_CXX_STANDARD=20 \
+        -DCMAKE_CXX_COMPILER="$GCC" \
+        -DCMAKE_CXX_FLAGS="--coverage -fprofile-arcs -ftest-coverage" \
+        -DCMAKE_EXE_LINKER_FLAGS="--coverage" 2>&1 | tail -3
+    nice cmake --build "$BB_BUILD" --target note-cpp-integration-backends 2>&1 | tail -3
+    "$BB_BUILD/note-cpp-integration-backends"
+
     mkdir -p "$OUT_DIR"
     echo
     echo "=== Collecting coverage data ==="
@@ -678,9 +693,19 @@ run_coverage() {
         $LCOV_OPTS \
         --output-file "$OUT_DIR/coverage-raw-minimal.lcov" \
         --quiet
-    # Merge both runs.
+    # Capture backend-parity run. The NOTE_COVERAGE_OMIT pattern in LCOV_OPTS
+    # is never present in backend test sources — add "unused" to the ignore
+    # list so lcov doesn't error out.
+    lcov --capture \
+        --directory "$BB_BUILD" \
+        --gcov-tool "$GCOV" \
+        $LCOV_OPTS --ignore-errors unused \
+        --output-file "$OUT_DIR/coverage-raw-backends.lcov" \
+        --quiet
+    # Merge all three runs.
     lcov --add-tracefile "$OUT_DIR/coverage-raw.lcov" \
         --add-tracefile "$OUT_DIR/coverage-raw-minimal.lcov" \
+        --add-tracefile "$OUT_DIR/coverage-raw-backends.lcov" \
         $LCOV_OPTS \
         --output-file "$OUT_DIR/coverage-merged.lcov" \
         --quiet

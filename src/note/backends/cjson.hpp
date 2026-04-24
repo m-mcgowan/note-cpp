@@ -70,7 +70,7 @@ public:
         return *this;
     }
     CjsonBuilder& add(string_view key, json_int_t value) override {
-        cJSON_AddItemToObject(current(), zkey(key), cJSON_CreateNumber(value));
+        cJSON_AddItemToObject(current(), zkey(key), cJSON_CreateNumber(static_cast<double>(value)));
         return *this;
     }
     CjsonBuilder& add(string_view key, double value) override {
@@ -119,7 +119,7 @@ public:
         return *this;
     }
     CjsonBuilder& add_element(json_int_t value) override {
-        cJSON_AddItemToArray(current(), cJSON_CreateNumber(value));
+        cJSON_AddItemToArray(current(), cJSON_CreateNumber(static_cast<double>(value)));
         return *this;
     }
     CjsonBuilder& add_element(double value) override {

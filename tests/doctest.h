@@ -2933,7 +2933,7 @@ namespace detail {
 // == SHORT VERSIONS OF THE MACROS
 #ifndef DOCTEST_CONFIG_NO_SHORT_MACRO_NAMES
 
-#define TEST_CASE(name, ...) DOCTEST_TEST_CASE(name)
+#define TEST_CASE(name) DOCTEST_TEST_CASE(name)
 #define TEST_CASE_CLASS(name) DOCTEST_TEST_CASE_CLASS(name)
 #define TEST_CASE_FIXTURE(x, name) DOCTEST_TEST_CASE_FIXTURE(x, name)
 #define TYPE_TO_STRING_AS(str, ...) DOCTEST_TYPE_TO_STRING_AS(str, __VA_ARGS__)
@@ -4555,7 +4555,7 @@ namespace detail {
         mib[3] = getpid();
         // Call sysctl.
         size = sizeof(info);
-        if(sysctl(mib, DOCTEST_COUNTOF(mib), &info, &size, nullptr, 0) != 0) {
+        if(sysctl(mib, DOCTEST_COUNTOF(mib), &info, &size, 0, 0) != 0) {
             std::cerr << "\nCall to sysctl failed - unable to determine if debugger is active **\n";
             return false;
         }

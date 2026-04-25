@@ -65,7 +65,7 @@ public:
 
 }  // namespace
 
-TEST_CASE("Notecard default md5 provider survives move-assign", "[notecard][regression]") {
+TEST_CASE("Notecard default md5 provider survives move-assign") {
     // Reproduce the NotecardApi::begin pattern. Pre-fix, md5_ was a
     // per-instance pointer to a per-instance member; the default move
     // copied the pointer literally, leaving it dangling at the destroyed
@@ -87,7 +87,7 @@ TEST_CASE("Notecard default md5 provider survives move-assign", "[notecard][regr
     REQUIRE(nc.md5_provider() == reference.md5_provider());
 }
 
-TEST_CASE("Notecard default md5 provider survives move-construct", "[notecard][regression]") {
+TEST_CASE("Notecard default md5 provider survives move-construct") {
     MockHal hal;
     note::StreamingTransport transport{hal};
 
@@ -98,7 +98,7 @@ TEST_CASE("Notecard default md5 provider survives move-construct", "[notecard][r
     REQUIRE(nc.md5_provider() == reference.md5_provider());
 }
 
-TEST_CASE("Notecard custom md5 provider survives move-assign", "[notecard][regression]") {
+TEST_CASE("Notecard custom md5 provider survives move-assign") {
     // Spy provider to verify that a caller-installed provider is retained
     // (not replaced by the default) across move-assignment.
     struct SpyMd5 : note::Md5Provider {

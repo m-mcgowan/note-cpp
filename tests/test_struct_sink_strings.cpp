@@ -46,7 +46,7 @@ struct SmallCharArrayBody {
 
 }  // namespace
 
-TEST_CASE("StructSink: string_view field populates directly", "[struct_sink][strings]") {
+TEST_CASE("StructSink: string_view field populates directly") {
     char buf[512];
     note::MonotonicArena arena(buf);
     note::StringPool pool(note::arena_allocator(arena));
@@ -61,7 +61,7 @@ TEST_CASE("StructSink: string_view field populates directly", "[struct_sink][str
     REQUIRE(obj.int_field == 42);
 }
 
-TEST_CASE("StructSink: std::string field populates (regression)", "[struct_sink][strings]") {
+TEST_CASE("StructSink: std::string field populates (regression)") {
     char buf[512];
     note::MonotonicArena arena(buf);
     note::StringPool pool(note::arena_allocator(arena));
@@ -76,7 +76,7 @@ TEST_CASE("StructSink: std::string field populates (regression)", "[struct_sink]
     REQUIRE(obj.string_field == "world");
 }
 
-TEST_CASE("StructSink: char[N] field receives null-terminated copy", "[struct_sink][strings]") {
+TEST_CASE("StructSink: char[N] field receives null-terminated copy") {
     char buf[512];
     note::MonotonicArena arena(buf);
     note::StringPool pool(note::arena_allocator(arena));

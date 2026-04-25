@@ -85,14 +85,14 @@ private:
 
 }  // namespace
 
-TEST_CASE("PosixSerialHal: open fails for non-existent device", "[posix][serial]") {
+TEST_CASE("PosixSerialHal: open fails for non-existent device") {
     TestTimeout t;
     note::posix::PosixSerialHal hal("/dev/note-cpp-nonexistent", 9600);
     REQUIRE_FALSE(hal.is_open());
     REQUIRE_FALSE(static_cast<bool>(hal));
 }
 
-TEST_CASE("PosixSerialHal: opens a valid pty slave", "[posix][serial]") {
+TEST_CASE("PosixSerialHal: opens a valid pty slave") {
     TestTimeout t;
     PtyPair pty;
     REQUIRE(pty.ok());
@@ -102,7 +102,7 @@ TEST_CASE("PosixSerialHal: opens a valid pty slave", "[posix][serial]") {
     REQUIRE(static_cast<bool>(hal));
 }
 
-TEST_CASE("PosixSerialHal: transmit writes bytes visible on the peer", "[posix][serial]") {
+TEST_CASE("PosixSerialHal: transmit writes bytes visible on the peer") {
     TestTimeout t;
     PtyPair pty;
     REQUIRE(pty.ok());
@@ -118,7 +118,7 @@ TEST_CASE("PosixSerialHal: transmit writes bytes visible on the peer", "[posix][
     REQUIRE(std::memcmp(got, msg, sizeof(msg)) == 0);
 }
 
-TEST_CASE("PosixSerialHal: receive reads bytes written by the peer", "[posix][serial]") {
+TEST_CASE("PosixSerialHal: receive reads bytes written by the peer") {
     TestTimeout t;
     PtyPair pty;
     REQUIRE(pty.ok());
@@ -140,7 +140,7 @@ TEST_CASE("PosixSerialHal: receive reads bytes written by the peer", "[posix][se
     REQUIRE(std::memcmp(buf, payload, total) == 0);
 }
 
-TEST_CASE("PosixSerialHal: receive returns 0 when no data is pending", "[posix][serial]") {
+TEST_CASE("PosixSerialHal: receive returns 0 when no data is pending") {
     TestTimeout t;
     PtyPair pty;
     REQUIRE(pty.ok());
@@ -151,7 +151,7 @@ TEST_CASE("PosixSerialHal: receive returns 0 when no data is pending", "[posix][
     REQUIRE(hal.receive(buf, sizeof(buf)) == 0);
 }
 
-TEST_CASE("PosixSerialHal: millis advances monotonically", "[posix][serial]") {
+TEST_CASE("PosixSerialHal: millis advances monotonically") {
     TestTimeout t;
     PtyPair pty;
     REQUIRE(pty.ok());
@@ -168,7 +168,7 @@ TEST_CASE("PosixSerialHal: millis advances monotonically", "[posix][serial]") {
 
 #else
 
-TEST_CASE("PosixSerialHal: skipped on non-POSIX host", "[posix][serial]") {
+TEST_CASE("PosixSerialHal: skipped on non-POSIX host") {
     SUCCEED("Not a POSIX host");
 }
 

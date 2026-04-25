@@ -300,7 +300,7 @@ T roundtrip(Harness& h, const T& original) {
 
 // ── Primitive field types ───────────────────────────────────────────────────
 
-TEST_CASE("symmetry: bool field", "[symmetry]") {
+TEST_CASE("symmetry: bool field") {
     Harness h;
     BoolOnly s{true};
     REQUIRE(h.ser_body(s) == R"("body":{"flag":true})");
@@ -308,7 +308,7 @@ TEST_CASE("symmetry: bool field", "[symmetry]") {
     REQUIRE(roundtrip(h, s) == s);
 }
 
-TEST_CASE("symmetry: int8_t field", "[symmetry]") {
+TEST_CASE("symmetry: int8_t field") {
     Harness h;
     Int8Only s{-42};
     REQUIRE(h.ser_body(s) == R"("body":{"value":-42})");
@@ -316,7 +316,7 @@ TEST_CASE("symmetry: int8_t field", "[symmetry]") {
     REQUIRE(roundtrip(h, s) == s);
 }
 
-TEST_CASE("symmetry: int16_t field", "[symmetry]") {
+TEST_CASE("symmetry: int16_t field") {
     Harness h;
     Int16Only s{-1000};
     REQUIRE(h.ser_body(s) == R"("body":{"value":-1000})");
@@ -324,7 +324,7 @@ TEST_CASE("symmetry: int16_t field", "[symmetry]") {
     REQUIRE(roundtrip(h, s) == s);
 }
 
-TEST_CASE("symmetry: int32_t field", "[symmetry]") {
+TEST_CASE("symmetry: int32_t field") {
     Harness h;
     Int32Only s{100000};
     REQUIRE(h.ser_body(s) == R"("body":{"value":100000})");
@@ -332,7 +332,7 @@ TEST_CASE("symmetry: int32_t field", "[symmetry]") {
     REQUIRE(roundtrip(h, s) == s);
 }
 
-TEST_CASE("symmetry: int64_t field", "[symmetry]") {
+TEST_CASE("symmetry: int64_t field") {
     Harness h;
     Int64Only s{1LL << 33};
     REQUIRE(h.ser_body(s) == R"("body":{"value":8589934592})");
@@ -340,7 +340,7 @@ TEST_CASE("symmetry: int64_t field", "[symmetry]") {
     REQUIRE(roundtrip(h, s) == s);
 }
 
-TEST_CASE("symmetry: float field", "[symmetry]") {
+TEST_CASE("symmetry: float field") {
     Harness h;
     FloatOnly s{3.25f};
     REQUIRE(h.ser_body(s) == R"("body":{"value":3.25})");
@@ -348,7 +348,7 @@ TEST_CASE("symmetry: float field", "[symmetry]") {
     REQUIRE(roundtrip(h, s) == s);
 }
 
-TEST_CASE("symmetry: double field", "[symmetry]") {
+TEST_CASE("symmetry: double field") {
     Harness h;
     DoubleOnly s{2.5};
     REQUIRE(h.ser_body(s) == R"("body":{"value":2.5})");
@@ -358,7 +358,7 @@ TEST_CASE("symmetry: double field", "[symmetry]") {
 
 // ── String-like field types ─────────────────────────────────────────────────
 
-TEST_CASE("symmetry: char[N] field emits TSTRING(N) template hint", "[symmetry][strings]") {
+TEST_CASE("symmetry: char[N] field emits TSTRING(N) template hint") {
     Harness h;
     CharArray8 s{};
     std::memcpy(s.tag, "hello", 6);
@@ -369,7 +369,7 @@ TEST_CASE("symmetry: char[N] field emits TSTRING(N) template hint", "[symmetry][
     REQUIRE(roundtrip(h, s) == s);
 }
 
-TEST_CASE("symmetry: string_view field", "[symmetry][strings]") {
+TEST_CASE("symmetry: string_view field") {
     Harness h;
     StringViewOnly s{"view"};
     REQUIRE(h.ser_body(s) == R"("body":{"sv":"view"})");
@@ -377,7 +377,7 @@ TEST_CASE("symmetry: string_view field", "[symmetry][strings]") {
     REQUIRE(roundtrip(h, s) == s);
 }
 
-TEST_CASE("symmetry: std::string field", "[symmetry][strings]") {
+TEST_CASE("symmetry: std::string field") {
     Harness h;
     StdStringOnly s{"std-value"};
     REQUIRE(h.ser_body(s) == R"("body":{"text":"std-value"})");
@@ -385,7 +385,7 @@ TEST_CASE("symmetry: std::string field", "[symmetry][strings]") {
     REQUIRE(roundtrip(h, s) == s);
 }
 
-TEST_CASE("symmetry: Arduino-String-like field (c_str ser, ptr-len deser)", "[symmetry][strings]") {
+TEST_CASE("symmetry: Arduino-String-like field (c_str ser, ptr-len deser)") {
     Harness h;
     ArduinoStringLike s{};
     s.name = FakeArduinoString("arduino");
@@ -396,7 +396,7 @@ TEST_CASE("symmetry: Arduino-String-like field (c_str ser, ptr-len deser)", "[sy
 
 // ── Nested aggregate ────────────────────────────────────────────────────────
 
-TEST_CASE("symmetry: nested NOTE_FIELDS struct", "[symmetry][nested]") {
+TEST_CASE("symmetry: nested NOTE_FIELDS struct") {
     Harness h;
     WithNestedFields s{{1.5f, 42}};
     REQUIRE(h.ser_body(s) ==
@@ -410,7 +410,7 @@ TEST_CASE("symmetry: nested NOTE_FIELDS struct", "[symmetry][nested]") {
 
 // ── Array of primitives ─────────────────────────────────────────────────────
 
-TEST_CASE("symmetry: std::array<int32_t,3> field", "[symmetry][array]") {
+TEST_CASE("symmetry: std::array<int32_t,3> field") {
     Harness h;
     IntArrayField s{{1, 2, 3}};
     REQUIRE(h.ser_body(s) == R"("body":{"ints":[1,2,3]})");
@@ -420,7 +420,7 @@ TEST_CASE("symmetry: std::array<int32_t,3> field", "[symmetry][array]") {
     REQUIRE(roundtrip(h, s) == s);
 }
 
-TEST_CASE("symmetry: std::array<NestedFields,2> field", "[symmetry][array][nested]") {
+TEST_CASE("symmetry: std::array<NestedFields,2> field") {
     Harness h;
     StructArrayField s{{{{1.0f, 10}, {2.0f, 20}}}};
     REQUIRE(h.ser_body(s) ==
@@ -432,7 +432,7 @@ TEST_CASE("symmetry: std::array<NestedFields,2> field", "[symmetry][array][neste
     REQUIRE(roundtrip(h, s) == s);
 }
 
-TEST_CASE("symmetry: std::array<char[4],2> field", "[symmetry][array][strings]") {
+TEST_CASE("symmetry: std::array<char[4],2> field") {
     Harness h;
     CharArrayArrayField s{};
     std::memcpy(s.tags[0], "abc", 4);

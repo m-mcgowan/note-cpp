@@ -103,16 +103,8 @@ struct TrackingScope {
 // Scripted transport — returns string_view into member buffer
 // ═══════════════════════════════════════════════════════════════════════════
 
-struct ScriptedTransport : note::ITransport {
-    const char* response = "{}";
-
-    note::Result<note::string_view> transact(note::string_view, uint32_t) override {
-        return note::string_view(response);
-    }
-    note::Result<void> send(note::string_view) override { return {}; }
-    void reset() override {}
-    void abort() override {}
-};
+#include "../../common/scripted_transport.hpp"
+using note::test::ScriptedTransport;
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Tests

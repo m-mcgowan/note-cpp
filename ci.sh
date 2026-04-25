@@ -905,19 +905,25 @@ run_integrations() {
     nice cmake --build "$build" --target note-cpp-integration-backends 2>&1 | tail -5
     "$build/note-cpp-integration-backends"
 
-    # Standalone tests that don't fit the consolidated binary.
-    # test_sax_parser builds cleanly and is included.
-    # The alloc-profile tests (cjson/test_alloc_profile, buffer/test_alloc_profile,
-    # buffer/test_sax_alloc_profile) have pre-existing API drift — they call
-    # APIs that no longer exist (transport.transact, ScriptedTransport
-    # abstract). Tracked as a follow-up alongside the Phase 2 alloc-counter
-    # fold-in; fixing them now is out of scope for the backend-parity pilot.
+    # Standalone alloc-profile + sax-parser tests still need separate binaries
+    # because they use file-local operator new/delete overrides that can't
+    # coexist with each other (or with doctest's own new/delete) in one binary.
+    # Phase 2's shared alloc-counter TU folds them into the unified binary.
     echo
-    echo "--- buffer sax-parser (standalone) ---"
+    echo "--- cjson alloc-profile (standalone) ---"
+    local cjb="/tmp/note-cpp-integration-cjson"
+    cmake -B "$cjb" "$ROOT/tests/integration/cjson" $CMAKE_POLICY -DCMAKE_CXX_STANDARD=20 2>&1 | tail -3
+    cmake --build "$cjb" --target test_alloc_profile 2>&1 | tail -3
+    ctest --test-dir "$cjb" --output-on-failure -R alloc_profile
+
+    echo
+    echo "--- buffer alloc-profile + sax-parser (standalone) ---"
     local tb="/tmp/note-cpp-integration-buffer"
     cmake -B "$tb" "$ROOT/tests/integration/buffer" $CMAKE_POLICY -DCMAKE_CXX_STANDARD=20 2>&1 | tail -3
-    cmake --build "$tb" --target test_sax_parser 2>&1 | tail -3
-    ctest --test-dir "$tb" --output-on-failure -R sax_parser
+    for t in test_alloc_profile test_sax_alloc_profile test_sax_parser; do
+        cmake --build "$tb" --target "$t" 2>&1 | tail -3
+    done
+    ctest --test-dir "$tb" --output-on-failure
 
     echo
     echo "All integration tests passed."

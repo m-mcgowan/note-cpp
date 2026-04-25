@@ -33,6 +33,7 @@ endif()
 # Non-Arduino build (default host environment)
 add_executable(note-cpp-tests
     ${NOTE_CPP_ROOT}/tests/doctest_main.cpp
+    ${NOTE_CPP_ROOT}/tests/common/alloc_counter.cpp
     ${ALL_TEST_SOURCES}
 )
 add_test(NAME unit-tests COMMAND note-cpp-tests)
@@ -92,6 +93,7 @@ endforeach()
 # Force-include the stubs header so Print/Printable are defined before any note-cpp header.
 add_executable(note-cpp-tests-arduino
     ${NOTE_CPP_ROOT}/tests/doctest_main.cpp
+    ${NOTE_CPP_ROOT}/tests/common/alloc_counter.cpp
     ${ALL_TEST_SOURCES}
 )
 target_compile_definitions(note-cpp-tests-arduino PRIVATE ARDUINO=10812 NOTE_ARDUINO_STUBS=1)

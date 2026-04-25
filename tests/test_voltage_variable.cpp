@@ -1,5 +1,5 @@
 // Tests for VoltageVariable: builder, string output, conversions.
-#include "catch.hpp"
+#include <doctest.h>
 #include <note/voltage_variable.hpp>
 #include <string_view>
 

@@ -1,4 +1,4 @@
-#include "catch.hpp"
+#include <doctest.h>
 #include <note/body.hpp>
 #include <note/types.hpp>
 #include <type_traits>
@@ -187,8 +187,8 @@ TEST_CASE("StructSink parses nested struct") {
 
     REQUIRE(tp.speed == 65.5f);
     REQUIRE(tp.label == "start");
-    REQUIRE(tp.location.lat == Approx(42.3601));
-    REQUIRE(tp.location.lon == Approx(-71.0589));
+    REQUIRE(tp.location.lat == doctest::Approx(42.3601));
+    REQUIRE(tp.location.lon == doctest::Approx(-71.0589));
 }
 
 TEST_CASE("StructSink skips unknown nested objects") {
@@ -265,10 +265,10 @@ TEST_CASE("StructSink parses array of structs") {
     sink.on_array_end("waypoints");
 
     REQUIRE(wsa.count == 2);
-    REQUIRE(wsa.waypoints[0].lat == Approx(42.36));
-    REQUIRE(wsa.waypoints[0].lon == Approx(-71.06));
-    REQUIRE(wsa.waypoints[1].lat == Approx(43.00));
-    REQUIRE(wsa.waypoints[1].lon == Approx(-72.00));
+    REQUIRE(wsa.waypoints[0].lat == doctest::Approx(42.36));
+    REQUIRE(wsa.waypoints[0].lon == doctest::Approx(-71.06));
+    REQUIRE(wsa.waypoints[1].lat == doctest::Approx(43.00));
+    REQUIRE(wsa.waypoints[1].lon == doctest::Approx(-72.00));
     REQUIRE(wsa.waypoints[2].lat == 0.0);
 }
 
@@ -700,7 +700,7 @@ TEST_CASE("StructSink: struct array at capacity receives object → skip") {
     sink.on_object_end("");
     sink.on_array_end("waypoints");
 
-    REQUIRE(wsa.waypoints[2].lat == Approx(12.0));
+    REQUIRE(wsa.waypoints[2].lat == doctest::Approx(12.0));
 }
 
 TEST_CASE("StructSink: array in skip context increments skip_depth") {
@@ -806,17 +806,17 @@ TEST_CASE("make_generic_body_handler: ignored event types") {
 }
 
 TEST_CASE("field_type_of maps C++ types correctly") {
-    STATIC_REQUIRE(note::field_type_of<bool>() == note::FieldType::Bool);
-    STATIC_REQUIRE(note::field_type_of<int8_t>() == note::FieldType::Int8);
-    STATIC_REQUIRE(note::field_type_of<uint8_t>() == note::FieldType::Int8);
-    STATIC_REQUIRE(note::field_type_of<int16_t>() == note::FieldType::Int16);
-    STATIC_REQUIRE(note::field_type_of<uint16_t>() == note::FieldType::Int16);
-    STATIC_REQUIRE(note::field_type_of<int32_t>() == note::FieldType::Int32);
-    STATIC_REQUIRE(note::field_type_of<uint32_t>() == note::FieldType::Int32);
-    STATIC_REQUIRE(note::field_type_of<int64_t>() == note::FieldType::Int);
-    STATIC_REQUIRE(note::field_type_of<float>() == note::FieldType::Float32);
-    STATIC_REQUIRE(note::field_type_of<double>() == note::FieldType::Double);
-    STATIC_REQUIRE(note::field_type_of<note::string_view>() == note::FieldType::String);
+    static_assert(note::field_type_of<bool>() == note::FieldType::Bool);
+    static_assert(note::field_type_of<int8_t>() == note::FieldType::Int8);
+    static_assert(note::field_type_of<uint8_t>() == note::FieldType::Int8);
+    static_assert(note::field_type_of<int16_t>() == note::FieldType::Int16);
+    static_assert(note::field_type_of<uint16_t>() == note::FieldType::Int16);
+    static_assert(note::field_type_of<int32_t>() == note::FieldType::Int32);
+    static_assert(note::field_type_of<uint32_t>() == note::FieldType::Int32);
+    static_assert(note::field_type_of<int64_t>() == note::FieldType::Int);
+    static_assert(note::field_type_of<float>() == note::FieldType::Float32);
+    static_assert(note::field_type_of<double>() == note::FieldType::Double);
+    static_assert(note::field_type_of<note::string_view>() == note::FieldType::String);
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -974,7 +974,7 @@ TEST_CASE("StructSink: doubly nested struct — child_depth > 1 forwarding") {
 
     REQUIRE(obj.top == true);
     REQUIRE(obj.mid.y == 42);
-    REQUIRE(obj.mid.inner.x == Approx(3.14f));
+    REQUIRE(obj.mid.inner.x == doctest::Approx(3.14f));
     REQUIRE(obj.mid.inner.name == "deep");
 }
 

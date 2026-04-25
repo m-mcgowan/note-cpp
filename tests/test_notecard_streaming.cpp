@@ -2,7 +2,7 @@
 // Covers: streaming execute (void + typed), streaming commands,
 // streaming transact/send, binary I/O with streaming, timing enforcement.
 
-#include "catch.hpp"
+#include <doctest.h>
 #include "test_notecard_factory.hpp"
 
 #include <note/notecard.hpp>

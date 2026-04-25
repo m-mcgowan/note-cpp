@@ -6,7 +6,7 @@
 // Compiled with the same flags as the target (NOTE_EXTRAS, NOTE_PRINTABLE, etc.)
 // so sizes match the actual firmware.
 
-#include "catch.hpp"
+#include <doctest.h>
 #include <note/api.hpp>
 #include <cstdio>
 

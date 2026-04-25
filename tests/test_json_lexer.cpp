@@ -3,7 +3,7 @@
 // Test cases mirror the existing sax_parse and streaming sax tests to ensure
 // the lexer accepts the same valid JSON and rejects the same invalid JSON.
 
-#include "catch.hpp"
+#include <doctest.h>
 
 #include <note/lexer/json_lexer.hpp>
 #include <note/lexer/parse.hpp>
@@ -208,7 +208,7 @@ TEST_CASE("Number: float with fraction") {
     n.start_fraction();
     n.add_frac_digit(1); n.add_frac_digit(4);
     REQUIRE_FALSE(n.is_integer());
-    REQUIRE(n.to_float() == Approx(3.14));
+    REQUIRE(n.to_float() == doctest::Approx(3.14));
 }
 
 TEST_CASE("Number: negative float") {
@@ -217,7 +217,7 @@ TEST_CASE("Number: negative float") {
     n.add_digit(2);
     n.start_fraction();
     n.add_frac_digit(5);
-    REQUIRE(n.to_float() == Approx(-2.5));
+    REQUIRE(n.to_float() == doctest::Approx(-2.5));
 }
 
 TEST_CASE("Number: zero point five") {
@@ -225,7 +225,7 @@ TEST_CASE("Number: zero point five") {
     n.add_digit(0);
     n.start_fraction();
     n.add_frac_digit(5);
-    REQUIRE(n.to_float() == Approx(0.5));
+    REQUIRE(n.to_float() == doctest::Approx(0.5));
 }
 
 TEST_CASE("Number: many fractional digits") {
@@ -234,7 +234,7 @@ TEST_CASE("Number: many fractional digits") {
     n.start_fraction();
     // 0.123456789
     for (int d = 1; d <= 9; ++d) n.add_frac_digit(static_cast<uint8_t>(d));
-    REQUIRE(n.to_float() == Approx(1.123456789));
+    REQUIRE(n.to_float() == doctest::Approx(1.123456789));
 }
 
 TEST_CASE("Number: positive exponent") {
@@ -244,7 +244,7 @@ TEST_CASE("Number: positive exponent") {
     n.add_frac_digit(5);
     n.start_exponent();
     n.add_exp_digit(3);
-    REQUIRE(n.to_float() == Approx(1500.0));
+    REQUIRE(n.to_float() == doctest::Approx(1500.0));
 }
 
 TEST_CASE("Number: negative exponent") {
@@ -253,7 +253,7 @@ TEST_CASE("Number: negative exponent") {
     n.start_exponent();
     n.set_exp_negative();
     n.add_exp_digit(2);
-    REQUIRE(n.to_float() == Approx(0.05));
+    REQUIRE(n.to_float() == doctest::Approx(0.05));
 }
 
 TEST_CASE("Number: integer with exponent becomes float") {
@@ -262,7 +262,7 @@ TEST_CASE("Number: integer with exponent becomes float") {
     n.start_exponent();
     n.add_exp_digit(2);
     REQUIRE_FALSE(n.is_integer());
-    REQUIRE(n.to_float() == Approx(100.0));
+    REQUIRE(n.to_float() == doctest::Approx(100.0));
 }
 
 TEST_CASE("Number: reset clears state") {
@@ -402,8 +402,8 @@ TEST_CASE("Lexer: number values") {
     CHECK(ints[0] == 0);
     CHECK(ints[1] == -1);
     REQUIRE(floats.size() == 2);
-    CHECK(floats[0] == Approx(3.14));
-    CHECK(floats[1] == Approx(2.5e10));
+    CHECK(floats[0] == doctest::Approx(3.14));
+    CHECK(floats[1] == doctest::Approx(2.5e10));
 }
 
 TEST_CASE("Lexer: booleans and null") {
@@ -461,7 +461,7 @@ TEST_CASE("Lexer: number with exponent sign") {
     auto events = lex(R"({"a":1e+2})");
     auto floats = collect_values<double>(events, LexerEvent::Float);
     REQUIRE(floats.size() == 1);
-    CHECK(floats[0] == Approx(100.0));
+    CHECK(floats[0] == doctest::Approx(100.0));
 }
 
 TEST_CASE("Lexer: leading zero number") {
@@ -473,7 +473,7 @@ TEST_CASE("Lexer: leading zero number") {
     CHECK(ints.size() == 1);
     CHECK(ints[0] == 0);
     CHECK(floats.size() == 1);
-    CHECK(floats[0] == Approx(0.5));
+    CHECK(floats[0] == doctest::Approx(0.5));
 }
 
 TEST_CASE("Lexer: deeply nested (4 levels)") {
@@ -615,7 +615,7 @@ TEST_CASE("Lexer: negative float") {
     auto events = lex(R"({"a":-3.14})");
     auto floats = collect_values<double>(events, LexerEvent::Float);
     REQUIRE(floats.size() == 1);
-    CHECK(floats[0] == Approx(-3.14));
+    CHECK(floats[0] == doctest::Approx(-3.14));
 }
 
 TEST_CASE("Lexer: number in array") {
@@ -625,7 +625,7 @@ TEST_CASE("Lexer: number in array") {
     CHECK(ints.size() == 2);
     CHECK(ints[0] == 1); CHECK(ints[1] == -2);
     CHECK(floats.size() == 1);
-    CHECK(floats[0] == Approx(3.5));
+    CHECK(floats[0] == doctest::Approx(3.5));
 }
 
 TEST_CASE("Lexer: number at end of object (terminates on })") {
@@ -644,31 +644,31 @@ TEST_CASE("Lexer: negative zero point five") {
     auto events = lex(R"({"a":-0.5})");
     auto floats = collect_values<double>(events, LexerEvent::Float);
     REQUIRE(floats.size() == 1);
-    CHECK(floats[0] == Approx(-0.5));
+    CHECK(floats[0] == doctest::Approx(-0.5));
 }
 
 TEST_CASE("Lexer: exponent with positive sign") {
     auto events = lex(R"({"a":1e+2})");
     auto floats = collect_values<double>(events, LexerEvent::Float);
-    CHECK(floats[0] == Approx(100.0));
+    CHECK(floats[0] == doctest::Approx(100.0));
 }
 
 TEST_CASE("Lexer: exponent with negative sign") {
     auto events = lex(R"({"a":1e-2})");
     auto floats = collect_values<double>(events, LexerEvent::Float);
-    CHECK(floats[0] == Approx(0.01));
+    CHECK(floats[0] == doctest::Approx(0.01));
 }
 
 TEST_CASE("Lexer: uppercase E in exponent") {
     auto events = lex(R"({"a":1E3})");
     auto floats = collect_values<double>(events, LexerEvent::Float);
-    CHECK(floats[0] == Approx(1000.0));
+    CHECK(floats[0] == doctest::Approx(1000.0));
 }
 
 TEST_CASE("Lexer: fraction and exponent combined") {
     auto events = lex(R"({"a":1.5e2})");
     auto floats = collect_values<double>(events, LexerEvent::Float);
-    CHECK(floats[0] == Approx(150.0));
+    CHECK(floats[0] == doctest::Approx(150.0));
 }
 
 TEST_CASE("Lexer: large integer 1711500000 (unix timestamp)") {
@@ -773,7 +773,7 @@ void check_equivalence(const char* json) {
             if (n.type == SinkEvent::Int) {
                 CHECK(o.int_val == n.int_val);
             } else if (n.type == SinkEvent::Float) {
-                CHECK(o.float_val == Approx(n.float_val));
+                CHECK(o.float_val == doctest::Approx(n.float_val));
             } else {
                 FAIL("old parser emitted NumRaw but new didn't emit Int or Float");
             }
@@ -862,7 +862,7 @@ TEST_CASE("CompactNumber: simple float") {
     n.start_fraction();
     n.add_frac_digit(1); n.add_frac_digit(4);
     REQUIRE_FALSE(n.is_integer());
-    REQUIRE(n.to_float() == Approx(3.14).epsilon(0.01));
+    REQUIRE(n.to_float() == doctest::Approx(3.14).epsilon(0.01));
 }
 
 TEST_CASE("CompactNumber: negative float") {
@@ -871,7 +871,7 @@ TEST_CASE("CompactNumber: negative float") {
     n.add_digit(2);
     n.start_fraction();
     n.add_frac_digit(5);
-    REQUIRE(n.to_float() == Approx(-2.5).epsilon(0.01));
+    REQUIRE(n.to_float() == doctest::Approx(-2.5).epsilon(0.01));
 }
 
 TEST_CASE("CompactNumber: float with exponent") {
@@ -881,7 +881,7 @@ TEST_CASE("CompactNumber: float with exponent") {
     n.add_frac_digit(5);
     n.start_exponent();
     n.add_exp_digit(2);
-    REQUIRE(n.to_float() == Approx(150.0).epsilon(1.0));
+    REQUIRE(n.to_float() == doctest::Approx(150.0).epsilon(1.0));
 }
 
 TEST_CASE("CompactNumber: float with negative exponent") {
@@ -890,7 +890,7 @@ TEST_CASE("CompactNumber: float with negative exponent") {
     n.start_exponent();
     n.set_exp_negative();
     n.add_exp_digit(1);
-    REQUIRE(n.to_float() == Approx(0.5).epsilon(0.01));
+    REQUIRE(n.to_float() == doctest::Approx(0.5).epsilon(0.01));
 }
 
 TEST_CASE("CompactNumber: reset") {
@@ -915,7 +915,7 @@ TEST_CASE("CompactNumber: fractional precision 6 digits") {
     n.start_fraction();
     n.add_frac_digit(1); n.add_frac_digit(2); n.add_frac_digit(3);
     n.add_frac_digit(4); n.add_frac_digit(5); n.add_frac_digit(6);
-    REQUIRE(n.to_float() == Approx(0.123456).epsilon(0.0001));
+    REQUIRE(n.to_float() == doctest::Approx(0.123456).epsilon(0.0001));
 }
 
 // ── CompactNumber through lexer (integration) ──────────────────────────────
@@ -961,7 +961,7 @@ TEST_CASE("CompactLexer: float value") {
     auto events = lex_compact(R"({"temp":22.5})");
     for (auto& ev : events) {
         if (ev.tag == LexerEvent::Float) {
-            REQUIRE(ev.floating == Approx(22.5).epsilon(0.01));
+            REQUIRE(ev.floating == doctest::Approx(22.5).epsilon(0.01));
             return;
         }
     }
@@ -972,7 +972,7 @@ TEST_CASE("CompactLexer: scientific notation") {
     auto events = lex_compact(R"({"big":1.5e3})");
     for (auto& ev : events) {
         if (ev.tag == LexerEvent::Float) {
-            REQUIRE(ev.floating == Approx(1500.0).epsilon(1.0));
+            REQUIRE(ev.floating == doctest::Approx(1500.0).epsilon(1.0));
             return;
         }
     }
@@ -1000,7 +1000,7 @@ TEST_CASE("lexer: number with exponent (1e2)") {
     auto events = lex(R"({"v":1e2})");
     bool found = false;
     for (auto& ev : events)
-        if (ev.tag == LexerEvent::Float) { CHECK(ev.floating == Approx(100.0)); found = true; }
+        if (ev.tag == LexerEvent::Float) { CHECK(ev.floating == doctest::Approx(100.0)); found = true; }
     CHECK(found);
 }
 
@@ -1008,7 +1008,7 @@ TEST_CASE("lexer: number with positive exponent (1e+2)") {
     auto events = lex(R"({"v":1e+2})");
     bool found = false;
     for (auto& ev : events)
-        if (ev.tag == LexerEvent::Float) { CHECK(ev.floating == Approx(100.0)); found = true; }
+        if (ev.tag == LexerEvent::Float) { CHECK(ev.floating == doctest::Approx(100.0)); found = true; }
     CHECK(found);
 }
 
@@ -1016,7 +1016,7 @@ TEST_CASE("lexer: number with negative exponent (1e-2)") {
     auto events = lex(R"({"v":1e-2})");
     bool found = false;
     for (auto& ev : events)
-        if (ev.tag == LexerEvent::Float) { CHECK(ev.floating == Approx(0.01)); found = true; }
+        if (ev.tag == LexerEvent::Float) { CHECK(ev.floating == doctest::Approx(0.01)); found = true; }
     CHECK(found);
 }
 
@@ -1028,7 +1028,7 @@ TEST_CASE("lexer: zero with fraction (0.5)") {
     auto events = lex(R"({"v":0.5})");
     bool found = false;
     for (auto& ev : events)
-        if (ev.tag == LexerEvent::Float) { CHECK(ev.floating == Approx(0.5)); found = true; }
+        if (ev.tag == LexerEvent::Float) { CHECK(ev.floating == doctest::Approx(0.5)); found = true; }
     CHECK(found);
 }
 
@@ -1036,7 +1036,7 @@ TEST_CASE("lexer: fraction then exponent (1.5e2)") {
     auto events = lex(R"({"v":1.5e2})");
     bool found = false;
     for (auto& ev : events)
-        if (ev.tag == LexerEvent::Float) { CHECK(ev.floating == Approx(150.0)); found = true; }
+        if (ev.tag == LexerEvent::Float) { CHECK(ev.floating == doctest::Approx(150.0)); found = true; }
     CHECK(found);
 }
 
@@ -1044,7 +1044,7 @@ TEST_CASE("lexer: fraction with negative exponent (1.5e-1)") {
     auto events = lex(R"({"v":1.5e-1})");
     bool found = false;
     for (auto& ev : events)
-        if (ev.tag == LexerEvent::Float) { CHECK(ev.floating == Approx(0.15)); found = true; }
+        if (ev.tag == LexerEvent::Float) { CHECK(ev.floating == doctest::Approx(0.15)); found = true; }
     CHECK(found);
 }
 

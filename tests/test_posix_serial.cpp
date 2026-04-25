@@ -6,7 +6,7 @@
 // setup, open, read, write, millis, delay) and drive the other end from
 // the test to assert correct behaviour — no hardware required.
 
-#include "catch.hpp"
+#include <doctest.h>
 
 #include <note/posix/serial.hpp>
 

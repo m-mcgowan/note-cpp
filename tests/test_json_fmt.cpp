@@ -1,6 +1,6 @@
 // Tests for json_fmt — compile-time validated JSON templates.
 
-#include "catch.hpp"
+#include <doctest.h>
 
 #if __cplusplus >= 202002L
 #include <note/json_fmt.hpp>

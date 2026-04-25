@@ -2,7 +2,7 @@
 // used by ErrorInfo. Host path only exercises the non-Harvard code
 // (where PROGMEM reads collapse to plain loads); actual LPM semantics
 // need on-device verification.
-#include "catch.hpp"
+#include <doctest.h>
 #include <note/error.hpp>
 #include <note/progmem.hpp>
 #include <note/types.hpp>

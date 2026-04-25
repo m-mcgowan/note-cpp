@@ -1,7 +1,7 @@
 // Tests for StaticStateStore and NullStateStore — get/set/invalidate/on_change,
 // type isolation, observer behaviour.
 
-#include "catch.hpp"
+#include <doctest.h>
 
 #include <note/app/state_store.hpp>
 

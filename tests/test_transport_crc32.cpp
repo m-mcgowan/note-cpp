@@ -12,7 +12,7 @@
 //   note-c _crcError()   → note-cpp crc_check_and_strip() (also strips field)
 //   notecardFirmwareSupportsCrc → the bool& crc_enabled parameter
 
-#include "catch.hpp"
+#include <doctest.h>
 
 #include <note/transport/detail/crc32.hpp>
 

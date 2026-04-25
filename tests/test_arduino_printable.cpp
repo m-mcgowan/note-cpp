@@ -4,7 +4,7 @@
 // generated printTo() methods compile and produce correct output.
 // When compiled without ARDUINO, this file is empty.
 
-#include "catch.hpp"
+#include <doctest.h>
 
 #ifdef ARDUINO
 

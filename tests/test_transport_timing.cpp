@@ -2,7 +2,7 @@
 // Verifies that segment pacing, intra-transaction timeouts, and other
 // timing parameters match note-c defaults and are actually applied.
 
-#include "catch.hpp"
+#include <doctest.h>
 #include <note/transport/protocol_policy.hpp>
 #include <note/transport/serial.hpp>
 #include <note/transport/i2c.hpp>

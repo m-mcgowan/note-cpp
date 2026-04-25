@@ -1,7 +1,7 @@
 // Tests for Notecard: request(), command(), command_typed(), set_default_timeout(),
 // backend(), execute() error paths, and transport send.
 
-#include "catch.hpp"
+#include <doctest.h>
 #include "test_json_backend.hpp"
 #include "test_notecard_factory.hpp"
 
@@ -777,13 +777,13 @@ TEST_CASE("Notecard::transact() rejects malformed JSON") {
         [](note::string_view, uint32_t) -> note::Result<note::string_view> { return "{}"; });
     auto nc = note::test::make_test_notecard(backend, transport);
 
-    SECTION("not JSON at all") {
+    SUBCASE("not JSON at all") {
         auto r = nc.transact("not json");
         REQUIRE_FALSE(r.has_value());
         REQUIRE(r.error().code == note::Error::Json);
     }
 
-    SECTION("empty string") {
+    SUBCASE("empty string") {
         auto r = nc.transact("");
         REQUIRE_FALSE(r.has_value());
         REQUIRE(r.error().code == note::Error::Json);

@@ -1,7 +1,7 @@
 // Tests for StreamingJsonBuilder, JsonBufferWriter, CrcWriter,
 // CrcFieldSink, and streaming transport integration.
 
-#include "catch.hpp"
+#include <doctest.h>
 
 #include <note/backends/buffer.hpp>
 #include <note/json.hpp>
@@ -518,7 +518,7 @@ TEST_CASE("transact_streaming: basic SAX parse") {
     }, sink, 1000);
     REQUIRE(rv.has_value());
     REQUIRE(sink.status == "ok");
-    REQUIRE(sink.temp == Approx(22.5));
+    REQUIRE(sink.temp == doctest::Approx(22.5));
 }
 
 TEST_CASE("transact_streaming: CRC verification passes") {

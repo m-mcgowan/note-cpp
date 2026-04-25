@@ -2,7 +2,7 @@
 // Written as expected developer experience: construct with a transport,
 // send/transact raw JSON strings.
 
-#include "catch.hpp"
+#include <doctest.h>
 #include <note/bare_notecard.hpp>
 #include <cstring>
 

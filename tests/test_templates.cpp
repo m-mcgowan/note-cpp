@@ -1,7 +1,7 @@
 // Tests for Templates — declare, register_all, NTN validation,
 // idempotent re-register, error propagation.
 
-#include "catch.hpp"
+#include <doctest.h>
 #include "test_json_backend.hpp"
 #include "test_notecard_factory.hpp"
 

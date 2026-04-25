@@ -1,7 +1,7 @@
 /// @file test_retry.cpp
 /// Unit tests for retry_transaction() — safety-gated retry and inter-transaction timing.
 
-#include "catch.hpp"
+#include <doctest.h>
 
 #include <note/retry.hpp>
 #include <note/error.hpp>

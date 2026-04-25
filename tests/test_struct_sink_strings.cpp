@@ -8,7 +8,7 @@
 // though the wire had the right value. The fix switches to
 // is_constructible_v so the explicit ctor participates.
 
-#include "catch.hpp"
+#include <doctest.h>
 
 #include <note/allocator.hpp>
 #include <note/arena.hpp>

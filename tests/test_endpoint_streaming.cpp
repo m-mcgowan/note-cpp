@@ -8,7 +8,7 @@
 //
 // Void-response endpoints verify both paths succeed without error.
 
-#include "catch.hpp"
+#include <doctest.h>
 #include "test_notecard_factory.hpp"
 
 #include <note/api.hpp>
@@ -99,7 +99,7 @@ struct BufferedHarness {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardAttn::Request transport equivalence") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"files":["x-files-a","x-files-b"],"off":true,"payload":"x-payload","set":true,"time":42})");
     auto req = sh.api.card.attn().request();
@@ -114,14 +114,14 @@ TEST_CASE("note::api::CardAttn::Request transport equivalence") {
         CHECK(rsp.set == true);
         CHECK(rsp.time == 42);
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;  // no response queued — HAL returns error
     auto req = sh.api.card.attn().request();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.card.attn().request();
@@ -130,7 +130,7 @@ TEST_CASE("note::api::CardAttn::Request transport equivalence") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({"files":["x-files-a","x-files-b"],"off":true,"payload":"x-payload","set":true,"time":42})");
     auto req = bh.api.card.attn().request();
 
@@ -149,7 +149,7 @@ TEST_CASE("note::api::CardAttn::Request transport equivalence") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardAttn::Arm transport equivalence") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"set":true})");
     auto req = sh.api.card.attn().arm();
@@ -158,14 +158,14 @@ TEST_CASE("note::api::CardAttn::Arm transport equivalence") {
         REQUIRE(rsp.has_value());
         CHECK(rsp.set == true);
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;  // no response queued — HAL returns error
     auto req = sh.api.card.attn().arm();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.card.attn().arm();
@@ -174,7 +174,7 @@ TEST_CASE("note::api::CardAttn::Arm transport equivalence") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({"set":true})");
     auto req = bh.api.card.attn().arm();
 
@@ -187,7 +187,7 @@ TEST_CASE("note::api::CardAttn::Arm transport equivalence") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardAttn::Rearm transport equivalence") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"set":true})");
     auto req = sh.api.card.attn().rearm();
@@ -196,14 +196,14 @@ TEST_CASE("note::api::CardAttn::Rearm transport equivalence") {
         REQUIRE(rsp.has_value());
         CHECK(rsp.set == true);
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;  // no response queued — HAL returns error
     auto req = sh.api.card.attn().rearm();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.card.attn().rearm();
@@ -212,7 +212,7 @@ TEST_CASE("note::api::CardAttn::Rearm transport equivalence") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({"set":true})");
     auto req = bh.api.card.attn().rearm();
 
@@ -225,7 +225,7 @@ TEST_CASE("note::api::CardAttn::Rearm transport equivalence") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardAttn::Watchdog transport equivalence (void)") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({})");
     auto req = sh.api.card.attn().watchdog();
@@ -233,14 +233,14 @@ TEST_CASE("note::api::CardAttn::Watchdog transport equivalence (void)") {
         auto rsp = req.execute();
         REQUIRE(rsp.has_value());
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;
     auto req = sh.api.card.attn().watchdog();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.card.attn().watchdog();
@@ -249,7 +249,7 @@ TEST_CASE("note::api::CardAttn::Watchdog transport equivalence (void)") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({})");
     auto req = bh.api.card.attn().watchdog();
 
@@ -261,7 +261,7 @@ TEST_CASE("note::api::CardAttn::Watchdog transport equivalence (void)") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardAttn::Sleep transport equivalence (void)") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({})");
     auto req = sh.api.card.attn().sleep();
@@ -269,14 +269,14 @@ TEST_CASE("note::api::CardAttn::Sleep transport equivalence (void)") {
         auto rsp = req.execute();
         REQUIRE(rsp.has_value());
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;
     auto req = sh.api.card.attn().sleep();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.card.attn().sleep();
@@ -285,7 +285,7 @@ TEST_CASE("note::api::CardAttn::Sleep transport equivalence (void)") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({})");
     auto req = bh.api.card.attn().sleep();
 
@@ -297,7 +297,7 @@ TEST_CASE("note::api::CardAttn::Sleep transport equivalence (void)") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardAttn::Retrieve transport equivalence") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"payload":"x-payload","time":42})");
     auto req = sh.api.card.attn().retrieve();
@@ -307,14 +307,14 @@ TEST_CASE("note::api::CardAttn::Retrieve transport equivalence") {
         CHECK(rsp.payload == "x-payload");
         CHECK(rsp.time == 42);
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;  // no response queued — HAL returns error
     auto req = sh.api.card.attn().retrieve();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.card.attn().retrieve();
@@ -323,7 +323,7 @@ TEST_CASE("note::api::CardAttn::Retrieve transport equivalence") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({"payload":"x-payload","time":42})");
     auto req = bh.api.card.attn().retrieve();
 
@@ -337,7 +337,7 @@ TEST_CASE("note::api::CardAttn::Retrieve transport equivalence") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardAttn::Disarm transport equivalence (void)") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({})");
     auto req = sh.api.card.attn().disarm();
@@ -345,14 +345,14 @@ TEST_CASE("note::api::CardAttn::Disarm transport equivalence (void)") {
         auto rsp = req.execute();
         REQUIRE(rsp.has_value());
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;
     auto req = sh.api.card.attn().disarm();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.card.attn().disarm();
@@ -361,7 +361,7 @@ TEST_CASE("note::api::CardAttn::Disarm transport equivalence (void)") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({})");
     auto req = bh.api.card.attn().disarm();
 
@@ -373,7 +373,7 @@ TEST_CASE("note::api::CardAttn::Disarm transport equivalence (void)") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardAttn::Off transport equivalence (void)") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({})");
     auto req = sh.api.card.attn().off();
@@ -381,14 +381,14 @@ TEST_CASE("note::api::CardAttn::Off transport equivalence (void)") {
         auto rsp = req.execute();
         REQUIRE(rsp.has_value());
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;
     auto req = sh.api.card.attn().off();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.card.attn().off();
@@ -397,7 +397,7 @@ TEST_CASE("note::api::CardAttn::Off transport equivalence (void)") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({})");
     auto req = bh.api.card.attn().off();
 
@@ -409,7 +409,7 @@ TEST_CASE("note::api::CardAttn::Off transport equivalence (void)") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardAttn::On transport equivalence (void)") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({})");
     auto req = sh.api.card.attn().on();
@@ -417,14 +417,14 @@ TEST_CASE("note::api::CardAttn::On transport equivalence (void)") {
         auto rsp = req.execute();
         REQUIRE(rsp.has_value());
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;
     auto req = sh.api.card.attn().on();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.card.attn().on();
@@ -433,7 +433,7 @@ TEST_CASE("note::api::CardAttn::On transport equivalence (void)") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({})");
     auto req = bh.api.card.attn().on();
 
@@ -445,7 +445,7 @@ TEST_CASE("note::api::CardAttn::On transport equivalence (void)") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardAttn::Query transport equivalence") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"files":["x-files-a","x-files-b"],"off":true,"set":true})");
     auto req = sh.api.card.attn().query();
@@ -458,14 +458,14 @@ TEST_CASE("note::api::CardAttn::Query transport equivalence") {
 #endif
         CHECK(rsp.set == true);
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;  // no response queued — HAL returns error
     auto req = sh.api.card.attn().query();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.card.attn().query();
@@ -474,7 +474,7 @@ TEST_CASE("note::api::CardAttn::Query transport equivalence") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({"files":["x-files-a","x-files-b"],"off":true,"set":true})");
     auto req = bh.api.card.attn().query();
 
@@ -491,7 +491,7 @@ TEST_CASE("note::api::CardAttn::Query transport equivalence") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardAux transport equivalence") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"mode":"x-mode","power":true,"seconds":42,"time":42})");
     auto req = sh.api.card.aux();
@@ -505,14 +505,14 @@ TEST_CASE("note::api::CardAux transport equivalence") {
         CHECK(rsp.seconds == 42);
         CHECK(rsp.time == 42);
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;  // no response queued — HAL returns error
     auto req = sh.api.card.aux();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.card.aux();
@@ -521,7 +521,7 @@ TEST_CASE("note::api::CardAux transport equivalence") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({"mode":"x-mode","power":true,"seconds":42,"time":42})");
     auto req = bh.api.card.aux();
 
@@ -539,7 +539,7 @@ TEST_CASE("note::api::CardAux transport equivalence") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardAuxSerial::Request transport equivalence") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"mode":"x-mode","rate":42})");
     auto req = sh.api.card.aux.serial.request();
@@ -551,14 +551,14 @@ TEST_CASE("note::api::CardAuxSerial::Request transport equivalence") {
         CHECK(rsp.rate == 42);
 #endif
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;  // no response queued — HAL returns error
     auto req = sh.api.card.aux.serial.request();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.card.aux.serial.request();
@@ -567,7 +567,7 @@ TEST_CASE("note::api::CardAuxSerial::Request transport equivalence") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({"mode":"x-mode","rate":42})");
     auto req = bh.api.card.aux.serial.request();
 
@@ -583,7 +583,7 @@ TEST_CASE("note::api::CardAuxSerial::Request transport equivalence") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardAuxSerial::Notify transport equivalence (void)") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({})");
     auto req = sh.api.card.aux.serial.notify();
@@ -591,14 +591,14 @@ TEST_CASE("note::api::CardAuxSerial::Notify transport equivalence (void)") {
         auto rsp = req.execute();
         REQUIRE(rsp.has_value());
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;
     auto req = sh.api.card.aux.serial.notify();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.card.aux.serial.notify();
@@ -607,7 +607,7 @@ TEST_CASE("note::api::CardAuxSerial::Notify transport equivalence (void)") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({})");
     auto req = bh.api.card.aux.serial.notify();
 
@@ -619,7 +619,7 @@ TEST_CASE("note::api::CardAuxSerial::Notify transport equivalence (void)") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardAuxSerial::Gps transport equivalence (void)") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({})");
     auto req = sh.api.card.aux.serial.gps();
@@ -627,14 +627,14 @@ TEST_CASE("note::api::CardAuxSerial::Gps transport equivalence (void)") {
         auto rsp = req.execute();
         REQUIRE(rsp.has_value());
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;
     auto req = sh.api.card.aux.serial.gps();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.card.aux.serial.gps();
@@ -643,7 +643,7 @@ TEST_CASE("note::api::CardAuxSerial::Gps transport equivalence (void)") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({})");
     auto req = bh.api.card.aux.serial.gps();
 
@@ -655,7 +655,7 @@ TEST_CASE("note::api::CardAuxSerial::Gps transport equivalence (void)") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardAuxSerial::Configure transport equivalence (void)") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({})");
     auto req = sh.api.card.aux.serial.configure();
@@ -663,14 +663,14 @@ TEST_CASE("note::api::CardAuxSerial::Configure transport equivalence (void)") {
         auto rsp = req.execute();
         REQUIRE(rsp.has_value());
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;
     auto req = sh.api.card.aux.serial.configure();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.card.aux.serial.configure();
@@ -679,7 +679,7 @@ TEST_CASE("note::api::CardAuxSerial::Configure transport equivalence (void)") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({})");
     auto req = bh.api.card.aux.serial.configure();
 
@@ -691,7 +691,7 @@ TEST_CASE("note::api::CardAuxSerial::Configure transport equivalence (void)") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardAuxSerial::Off transport equivalence (void)") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({})");
     auto req = sh.api.card.aux.serial.off();
@@ -699,14 +699,14 @@ TEST_CASE("note::api::CardAuxSerial::Off transport equivalence (void)") {
         auto rsp = req.execute();
         REQUIRE(rsp.has_value());
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;
     auto req = sh.api.card.aux.serial.off();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.card.aux.serial.off();
@@ -715,7 +715,7 @@ TEST_CASE("note::api::CardAuxSerial::Off transport equivalence (void)") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({})");
     auto req = bh.api.card.aux.serial.off();
 
@@ -727,7 +727,7 @@ TEST_CASE("note::api::CardAuxSerial::Off transport equivalence (void)") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardBinary::Status transport equivalence") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"cobs":42,"connected":true,"length":42,"max":42,"status":"x-status"})");
     auto req = sh.api.card.binary.status();
@@ -740,14 +740,14 @@ TEST_CASE("note::api::CardBinary::Status transport equivalence") {
         CHECK(rsp.max == 42);
         CHECK(rsp.status == "x-status");
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;  // no response queued — HAL returns error
     auto req = sh.api.card.binary.status();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.card.binary.status();
@@ -756,7 +756,7 @@ TEST_CASE("note::api::CardBinary::Status transport equivalence") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({"cobs":42,"connected":true,"length":42,"max":42,"status":"x-status"})");
     auto req = bh.api.card.binary.status();
 
@@ -773,7 +773,7 @@ TEST_CASE("note::api::CardBinary::Status transport equivalence") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardBinary::Clear transport equivalence") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"cobs":42,"connected":true,"length":42,"max":42,"status":"x-status"})");
     auto req = sh.api.card.binary.clear();
@@ -786,14 +786,14 @@ TEST_CASE("note::api::CardBinary::Clear transport equivalence") {
         CHECK(rsp.max == 42);
         CHECK(rsp.status == "x-status");
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;  // no response queued — HAL returns error
     auto req = sh.api.card.binary.clear();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.card.binary.clear();
@@ -802,7 +802,7 @@ TEST_CASE("note::api::CardBinary::Clear transport equivalence") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({"cobs":42,"connected":true,"length":42,"max":42,"status":"x-status"})");
     auto req = bh.api.card.binary.clear();
 
@@ -819,7 +819,7 @@ TEST_CASE("note::api::CardBinary::Clear transport equivalence") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardBinaryGet transport equivalence") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"status":"x-status"})");
     auto req = sh.api.card.binary.get();
@@ -828,14 +828,14 @@ TEST_CASE("note::api::CardBinaryGet transport equivalence") {
         REQUIRE(rsp.has_value());
         CHECK(rsp.status == "x-status");
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;  // no response queued — HAL returns error
     auto req = sh.api.card.binary.get();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.card.binary.get();
@@ -844,7 +844,7 @@ TEST_CASE("note::api::CardBinaryGet transport equivalence") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({"status":"x-status"})");
     auto req = bh.api.card.binary.get();
 
@@ -857,7 +857,7 @@ TEST_CASE("note::api::CardBinaryGet transport equivalence") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardBinaryPut transport equivalence") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({})");
     auto req = sh.api.card.binary.put();
@@ -865,14 +865,14 @@ TEST_CASE("note::api::CardBinaryPut transport equivalence") {
         auto rsp = req.execute();
         REQUIRE(rsp.has_value());
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;  // no response queued — HAL returns error
     auto req = sh.api.card.binary.put();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.card.binary.put();
@@ -881,7 +881,7 @@ TEST_CASE("note::api::CardBinaryPut transport equivalence") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({})");
     auto req = bh.api.card.binary.put();
 
@@ -893,7 +893,7 @@ TEST_CASE("note::api::CardBinaryPut transport equivalence") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardCarrier transport equivalence") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"charging":true,"mode":"x-mode"})");
     auto req = sh.api.card.carrier();
@@ -903,14 +903,14 @@ TEST_CASE("note::api::CardCarrier transport equivalence") {
         CHECK(rsp.charging == true);
         CHECK(rsp.mode == "x-mode");
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;  // no response queued — HAL returns error
     auto req = sh.api.card.carrier();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.card.carrier();
@@ -919,7 +919,7 @@ TEST_CASE("note::api::CardCarrier transport equivalence") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({"charging":true,"mode":"x-mode"})");
     auto req = bh.api.card.carrier();
 
@@ -933,7 +933,7 @@ TEST_CASE("note::api::CardCarrier transport equivalence") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardContact::Get transport equivalence") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"email":"x-email","name":"x-name","org":"x-org","role":"x-role"})");
     auto req = sh.api.card.contact().get();
@@ -945,14 +945,14 @@ TEST_CASE("note::api::CardContact::Get transport equivalence") {
         CHECK(rsp.org == "x-org");
         CHECK(rsp.role == "x-role");
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;  // no response queued — HAL returns error
     auto req = sh.api.card.contact().get();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.card.contact().get();
@@ -961,7 +961,7 @@ TEST_CASE("note::api::CardContact::Get transport equivalence") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({"email":"x-email","name":"x-name","org":"x-org","role":"x-role"})");
     auto req = bh.api.card.contact().get();
 
@@ -977,7 +977,7 @@ TEST_CASE("note::api::CardContact::Get transport equivalence") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardContact::Set transport equivalence") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"email":"x-email","name":"x-name","org":"x-org","role":"x-role"})");
     auto req = sh.api.card.contact().set();
@@ -989,14 +989,14 @@ TEST_CASE("note::api::CardContact::Set transport equivalence") {
         CHECK(rsp.org == "x-org");
         CHECK(rsp.role == "x-role");
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;  // no response queued — HAL returns error
     auto req = sh.api.card.contact().set();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.card.contact().set();
@@ -1005,7 +1005,7 @@ TEST_CASE("note::api::CardContact::Set transport equivalence") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({"email":"x-email","name":"x-name","org":"x-org","role":"x-role"})");
     auto req = bh.api.card.contact().set();
 
@@ -1021,7 +1021,7 @@ TEST_CASE("note::api::CardContact::Set transport equivalence") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardDfu transport equivalence") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"name":"x-name"})");
     auto req = sh.api.card.dfu();
@@ -1030,14 +1030,14 @@ TEST_CASE("note::api::CardDfu transport equivalence") {
         REQUIRE(rsp.has_value());
         CHECK(rsp.name == "x-name");
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;  // no response queued — HAL returns error
     auto req = sh.api.card.dfu();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.card.dfu();
@@ -1046,7 +1046,7 @@ TEST_CASE("note::api::CardDfu transport equivalence") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({"name":"x-name"})");
     auto req = bh.api.card.dfu();
 
@@ -1059,7 +1059,7 @@ TEST_CASE("note::api::CardDfu transport equivalence") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardIllumination transport equivalence") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"value":1.5})");
     auto req = sh.api.card.illumination();
@@ -1068,14 +1068,14 @@ TEST_CASE("note::api::CardIllumination transport equivalence") {
         REQUIRE(rsp.has_value());
         CHECK(rsp.value == 1.5);
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;  // no response queued — HAL returns error
     auto req = sh.api.card.illumination();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.card.illumination();
@@ -1084,7 +1084,7 @@ TEST_CASE("note::api::CardIllumination transport equivalence") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({"value":1.5})");
     auto req = bh.api.card.illumination();
 
@@ -1097,7 +1097,7 @@ TEST_CASE("note::api::CardIllumination transport equivalence") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardIo transport equivalence (void)") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({})");
     auto req = sh.api.card.io();
@@ -1105,14 +1105,14 @@ TEST_CASE("note::api::CardIo transport equivalence (void)") {
         auto rsp = req.execute();
         REQUIRE(rsp.has_value());
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;
     auto req = sh.api.card.io();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.card.io();
@@ -1121,7 +1121,7 @@ TEST_CASE("note::api::CardIo transport equivalence (void)") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({})");
     auto req = bh.api.card.io();
 
@@ -1133,7 +1133,7 @@ TEST_CASE("note::api::CardIo transport equivalence (void)") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardLed transport equivalence (void)") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({})");
     auto req = sh.api.card.led();
@@ -1141,14 +1141,14 @@ TEST_CASE("note::api::CardLed transport equivalence (void)") {
         auto rsp = req.execute();
         REQUIRE(rsp.has_value());
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;
     auto req = sh.api.card.led();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.card.led();
@@ -1157,7 +1157,7 @@ TEST_CASE("note::api::CardLed transport equivalence (void)") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({})");
     auto req = bh.api.card.led();
 
@@ -1169,7 +1169,7 @@ TEST_CASE("note::api::CardLed transport equivalence (void)") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardLocation transport equivalence") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"count":42,"dop":1.5,"lat":1.5,"lon":1.5,"max":42,"mode":"x-mode","status":"x-status","time":42})");
     auto req = sh.api.card.location();
@@ -1185,14 +1185,14 @@ TEST_CASE("note::api::CardLocation transport equivalence") {
         CHECK(rsp.status == "x-status");
         CHECK(rsp.time == 42);
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;  // no response queued — HAL returns error
     auto req = sh.api.card.location();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.card.location();
@@ -1201,7 +1201,7 @@ TEST_CASE("note::api::CardLocation transport equivalence") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({"count":42,"dop":1.5,"lat":1.5,"lon":1.5,"max":42,"mode":"x-mode","status":"x-status","time":42})");
     auto req = bh.api.card.location();
 
@@ -1221,7 +1221,7 @@ TEST_CASE("note::api::CardLocation transport equivalence") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardLocationMode::Get transport equivalence") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"lat":1.5,"lon":1.5,"max":42,"minutes":42,"mode":"x-mode","seconds":42,"threshold":42,"vseconds":"x-vseconds"})");
     auto req = sh.api.card.location.mode.get();
@@ -1239,14 +1239,14 @@ TEST_CASE("note::api::CardLocationMode::Get transport equivalence") {
 #endif
         CHECK(rsp.vseconds == "x-vseconds");
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;  // no response queued — HAL returns error
     auto req = sh.api.card.location.mode.get();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.card.location.mode.get();
@@ -1255,7 +1255,7 @@ TEST_CASE("note::api::CardLocationMode::Get transport equivalence") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({"lat":1.5,"lon":1.5,"max":42,"minutes":42,"mode":"x-mode","seconds":42,"threshold":42,"vseconds":"x-vseconds"})");
     auto req = bh.api.card.location.mode.get();
 
@@ -1277,7 +1277,7 @@ TEST_CASE("note::api::CardLocationMode::Get transport equivalence") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardLocationMode::Set transport equivalence") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"lat":1.5,"lon":1.5,"max":42,"minutes":42,"mode":"x-mode","seconds":42,"threshold":42,"vseconds":"x-vseconds"})");
     auto req = sh.api.card.location.mode.set();
@@ -1295,14 +1295,14 @@ TEST_CASE("note::api::CardLocationMode::Set transport equivalence") {
 #endif
         CHECK(rsp.vseconds == "x-vseconds");
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;  // no response queued — HAL returns error
     auto req = sh.api.card.location.mode.set();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.card.location.mode.set();
@@ -1311,7 +1311,7 @@ TEST_CASE("note::api::CardLocationMode::Set transport equivalence") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({"lat":1.5,"lon":1.5,"max":42,"minutes":42,"mode":"x-mode","seconds":42,"threshold":42,"vseconds":"x-vseconds"})");
     auto req = bh.api.card.location.mode.set();
 
@@ -1333,7 +1333,7 @@ TEST_CASE("note::api::CardLocationMode::Set transport equivalence") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardLocationMode::Continuous transport equivalence") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"mode":"x-mode","threshold":42,"vseconds":"x-vseconds"})");
     auto req = sh.api.card.location.mode.continuous();
@@ -1346,14 +1346,14 @@ TEST_CASE("note::api::CardLocationMode::Continuous transport equivalence") {
 #endif
         CHECK(rsp.vseconds == "x-vseconds");
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;  // no response queued — HAL returns error
     auto req = sh.api.card.location.mode.continuous();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.card.location.mode.continuous();
@@ -1362,7 +1362,7 @@ TEST_CASE("note::api::CardLocationMode::Continuous transport equivalence") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({"mode":"x-mode","threshold":42,"vseconds":"x-vseconds"})");
     auto req = bh.api.card.location.mode.continuous();
 
@@ -1379,7 +1379,7 @@ TEST_CASE("note::api::CardLocationMode::Continuous transport equivalence") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardLocationMode::Periodic transport equivalence") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"lat":1.5,"lon":1.5,"max":42,"minutes":42,"mode":"x-mode","seconds":42,"threshold":42,"vseconds":"x-vseconds"})");
     auto req = sh.api.card.location.mode.periodic();
@@ -1397,14 +1397,14 @@ TEST_CASE("note::api::CardLocationMode::Periodic transport equivalence") {
 #endif
         CHECK(rsp.vseconds == "x-vseconds");
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;  // no response queued — HAL returns error
     auto req = sh.api.card.location.mode.periodic();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.card.location.mode.periodic();
@@ -1413,7 +1413,7 @@ TEST_CASE("note::api::CardLocationMode::Periodic transport equivalence") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({"lat":1.5,"lon":1.5,"max":42,"minutes":42,"mode":"x-mode","seconds":42,"threshold":42,"vseconds":"x-vseconds"})");
     auto req = bh.api.card.location.mode.periodic();
 
@@ -1435,7 +1435,7 @@ TEST_CASE("note::api::CardLocationMode::Periodic transport equivalence") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardLocationMode::Fixed transport equivalence") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"lat":1.5,"lon":1.5,"mode":"x-mode"})");
     auto req = sh.api.card.location.mode.fixed();
@@ -1446,14 +1446,14 @@ TEST_CASE("note::api::CardLocationMode::Fixed transport equivalence") {
         CHECK(rsp.lon == 1.5);
         CHECK(rsp.mode == "x-mode");
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;  // no response queued — HAL returns error
     auto req = sh.api.card.location.mode.fixed();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.card.location.mode.fixed();
@@ -1462,7 +1462,7 @@ TEST_CASE("note::api::CardLocationMode::Fixed transport equivalence") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({"lat":1.5,"lon":1.5,"mode":"x-mode"})");
     auto req = bh.api.card.location.mode.fixed();
 
@@ -1477,7 +1477,7 @@ TEST_CASE("note::api::CardLocationMode::Fixed transport equivalence") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardLocationMode::Remove transport equivalence") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"lat":1.5,"lon":1.5,"max":42,"minutes":42,"mode":"x-mode","seconds":42,"threshold":42,"vseconds":"x-vseconds"})");
     auto req = sh.api.card.location.mode.remove();
@@ -1495,14 +1495,14 @@ TEST_CASE("note::api::CardLocationMode::Remove transport equivalence") {
 #endif
         CHECK(rsp.vseconds == "x-vseconds");
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;  // no response queued — HAL returns error
     auto req = sh.api.card.location.mode.remove();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.card.location.mode.remove();
@@ -1511,7 +1511,7 @@ TEST_CASE("note::api::CardLocationMode::Remove transport equivalence") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({"lat":1.5,"lon":1.5,"max":42,"minutes":42,"mode":"x-mode","seconds":42,"threshold":42,"vseconds":"x-vseconds"})");
     auto req = bh.api.card.location.mode.remove();
 
@@ -1533,7 +1533,7 @@ TEST_CASE("note::api::CardLocationMode::Remove transport equivalence") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardLocationTrack transport equivalence") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"file":"x-file","heartbeat":true,"minutes":42,"seconds":42,"start":true,"stop":true})");
     auto req = sh.api.card.location.track();
@@ -1547,14 +1547,14 @@ TEST_CASE("note::api::CardLocationTrack transport equivalence") {
         CHECK(rsp.start == true);
         CHECK(rsp.stop == true);
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;  // no response queued — HAL returns error
     auto req = sh.api.card.location.track();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.card.location.track();
@@ -1563,7 +1563,7 @@ TEST_CASE("note::api::CardLocationTrack transport equivalence") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({"file":"x-file","heartbeat":true,"minutes":42,"seconds":42,"start":true,"stop":true})");
     auto req = bh.api.card.location.track();
 
@@ -1581,7 +1581,7 @@ TEST_CASE("note::api::CardLocationTrack transport equivalence") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardMonitor transport equivalence (void)") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({})");
     auto req = sh.api.card.monitor();
@@ -1589,14 +1589,14 @@ TEST_CASE("note::api::CardMonitor transport equivalence (void)") {
         auto rsp = req.execute();
         REQUIRE(rsp.has_value());
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;
     auto req = sh.api.card.monitor();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.card.monitor();
@@ -1605,7 +1605,7 @@ TEST_CASE("note::api::CardMonitor transport equivalence (void)") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({})");
     auto req = bh.api.card.monitor();
 
@@ -1617,7 +1617,7 @@ TEST_CASE("note::api::CardMonitor transport equivalence (void)") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardMotion transport equivalence") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"alert":true,"count":42,"mode":"x-mode","motion":42,"movements":"x-movements","seconds":42,"status":"x-status"})");
     auto req = sh.api.card.motion();
@@ -1632,14 +1632,14 @@ TEST_CASE("note::api::CardMotion transport equivalence") {
         CHECK(rsp.seconds == 42);
         CHECK(rsp.status == "x-status");
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;  // no response queued — HAL returns error
     auto req = sh.api.card.motion();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.card.motion();
@@ -1648,7 +1648,7 @@ TEST_CASE("note::api::CardMotion transport equivalence") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({"alert":true,"count":42,"mode":"x-mode","motion":42,"movements":"x-movements","seconds":42,"status":"x-status"})");
     auto req = bh.api.card.motion();
 
@@ -1667,7 +1667,7 @@ TEST_CASE("note::api::CardMotion transport equivalence") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardMotionMode transport equivalence (void)") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({})");
     auto req = sh.api.card.motion.mode();
@@ -1675,14 +1675,14 @@ TEST_CASE("note::api::CardMotionMode transport equivalence (void)") {
         auto rsp = req.execute();
         REQUIRE(rsp.has_value());
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;
     auto req = sh.api.card.motion.mode();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.card.motion.mode();
@@ -1691,7 +1691,7 @@ TEST_CASE("note::api::CardMotionMode transport equivalence (void)") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({})");
     auto req = bh.api.card.motion.mode();
 
@@ -1703,7 +1703,7 @@ TEST_CASE("note::api::CardMotionMode transport equivalence (void)") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardMotionSync transport equivalence (void)") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({})");
     auto req = sh.api.card.motion.sync();
@@ -1711,14 +1711,14 @@ TEST_CASE("note::api::CardMotionSync transport equivalence (void)") {
         auto rsp = req.execute();
         REQUIRE(rsp.has_value());
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;
     auto req = sh.api.card.motion.sync();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.card.motion.sync();
@@ -1727,7 +1727,7 @@ TEST_CASE("note::api::CardMotionSync transport equivalence (void)") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({})");
     auto req = bh.api.card.motion.sync();
 
@@ -1739,7 +1739,7 @@ TEST_CASE("note::api::CardMotionSync transport equivalence (void)") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardMotionTrack transport equivalence (void)") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({})");
     auto req = sh.api.card.motion.track();
@@ -1747,14 +1747,14 @@ TEST_CASE("note::api::CardMotionTrack transport equivalence (void)") {
         auto rsp = req.execute();
         REQUIRE(rsp.has_value());
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;
     auto req = sh.api.card.motion.track();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.card.motion.track();
@@ -1763,7 +1763,7 @@ TEST_CASE("note::api::CardMotionTrack transport equivalence (void)") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({})");
     auto req = bh.api.card.motion.track();
 
@@ -1775,7 +1775,7 @@ TEST_CASE("note::api::CardMotionTrack transport equivalence (void)") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardPower::Read transport equivalence") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"milliamp_hours":1.5,"temperature":1.5,"voltage":1.5})");
     auto req = sh.api.card.power().read();
@@ -1786,14 +1786,14 @@ TEST_CASE("note::api::CardPower::Read transport equivalence") {
         CHECK(rsp.temperature == 1.5);
         CHECK(rsp.voltage == 1.5);
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;  // no response queued — HAL returns error
     auto req = sh.api.card.power().read();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.card.power().read();
@@ -1802,7 +1802,7 @@ TEST_CASE("note::api::CardPower::Read transport equivalence") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({"milliamp_hours":1.5,"temperature":1.5,"voltage":1.5})");
     auto req = bh.api.card.power().read();
 
@@ -1817,7 +1817,7 @@ TEST_CASE("note::api::CardPower::Read transport equivalence") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardPower::Configure transport equivalence") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"milliamp_hours":1.5,"temperature":1.5,"voltage":1.5})");
     auto req = sh.api.card.power().configure();
@@ -1828,14 +1828,14 @@ TEST_CASE("note::api::CardPower::Configure transport equivalence") {
         CHECK(rsp.temperature == 1.5);
         CHECK(rsp.voltage == 1.5);
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;  // no response queued — HAL returns error
     auto req = sh.api.card.power().configure();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.card.power().configure();
@@ -1844,7 +1844,7 @@ TEST_CASE("note::api::CardPower::Configure transport equivalence") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({"milliamp_hours":1.5,"temperature":1.5,"voltage":1.5})");
     auto req = bh.api.card.power().configure();
 
@@ -1859,7 +1859,7 @@ TEST_CASE("note::api::CardPower::Configure transport equivalence") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardPower::Reset transport equivalence") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"milliamp_hours":1.5,"temperature":1.5,"voltage":1.5})");
     auto req = sh.api.card.power().reset();
@@ -1870,14 +1870,14 @@ TEST_CASE("note::api::CardPower::Reset transport equivalence") {
         CHECK(rsp.temperature == 1.5);
         CHECK(rsp.voltage == 1.5);
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;  // no response queued — HAL returns error
     auto req = sh.api.card.power().reset();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.card.power().reset();
@@ -1886,7 +1886,7 @@ TEST_CASE("note::api::CardPower::Reset transport equivalence") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({"milliamp_hours":1.5,"temperature":1.5,"voltage":1.5})");
     auto req = bh.api.card.power().reset();
 
@@ -1901,7 +1901,7 @@ TEST_CASE("note::api::CardPower::Reset transport equivalence") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardRandom transport equivalence") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"count":42,"payload":"x-payload"})");
     auto req = sh.api.card.random();
@@ -1911,14 +1911,14 @@ TEST_CASE("note::api::CardRandom transport equivalence") {
         CHECK(rsp.count == 42);
         CHECK(rsp.payload == "x-payload");
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;  // no response queued — HAL returns error
     auto req = sh.api.card.random();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.card.random();
@@ -1927,7 +1927,7 @@ TEST_CASE("note::api::CardRandom transport equivalence") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({"count":42,"payload":"x-payload"})");
     auto req = bh.api.card.random();
 
@@ -1941,7 +1941,7 @@ TEST_CASE("note::api::CardRandom transport equivalence") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardRestart transport equivalence (void)") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({})");
     auto req = sh.api.card.restart();
@@ -1949,14 +1949,14 @@ TEST_CASE("note::api::CardRestart transport equivalence (void)") {
         auto rsp = req.execute();
         REQUIRE(rsp.has_value());
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;
     auto req = sh.api.card.restart();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.card.restart();
@@ -1965,7 +1965,7 @@ TEST_CASE("note::api::CardRestart transport equivalence (void)") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({})");
     auto req = bh.api.card.restart();
 
@@ -1977,7 +1977,7 @@ TEST_CASE("note::api::CardRestart transport equivalence (void)") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardRestore transport equivalence (void)") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({})");
     auto req = sh.api.card.restore();
@@ -1985,14 +1985,14 @@ TEST_CASE("note::api::CardRestore transport equivalence (void)") {
         auto rsp = req.execute();
         REQUIRE(rsp.has_value());
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;
     auto req = sh.api.card.restore();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.card.restore();
@@ -2001,7 +2001,7 @@ TEST_CASE("note::api::CardRestore transport equivalence (void)") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({})");
     auto req = bh.api.card.restore();
 
@@ -2013,7 +2013,7 @@ TEST_CASE("note::api::CardRestore transport equivalence (void)") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardSleep transport equivalence") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"mode":"x-mode","off":true,"on":true,"seconds":42})");
     auto req = sh.api.card.sleep();
@@ -2025,14 +2025,14 @@ TEST_CASE("note::api::CardSleep transport equivalence") {
         CHECK(rsp.on == true);
         CHECK(rsp.seconds == 42);
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;  // no response queued — HAL returns error
     auto req = sh.api.card.sleep();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.card.sleep();
@@ -2041,7 +2041,7 @@ TEST_CASE("note::api::CardSleep transport equivalence") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({"mode":"x-mode","off":true,"on":true,"seconds":42})");
     auto req = bh.api.card.sleep();
 
@@ -2057,7 +2057,7 @@ TEST_CASE("note::api::CardSleep transport equivalence") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardStatus transport equivalence") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"cell":true,"connected":true,"gps":true,"inbound":42,"outbound":42,"status":"x-status","storage":42,"sync":true,"time":42,"usb":true,"wifi":true})");
     auto req = sh.api.card.status();
@@ -2080,14 +2080,14 @@ TEST_CASE("note::api::CardStatus transport equivalence") {
         CHECK(rsp.usb == true);
         CHECK(rsp.wifi == true);
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;  // no response queued — HAL returns error
     auto req = sh.api.card.status();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.card.status();
@@ -2096,7 +2096,7 @@ TEST_CASE("note::api::CardStatus transport equivalence") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({"cell":true,"connected":true,"gps":true,"inbound":42,"outbound":42,"status":"x-status","storage":42,"sync":true,"time":42,"usb":true,"wifi":true})");
     auto req = bh.api.card.status();
 
@@ -2123,7 +2123,7 @@ TEST_CASE("note::api::CardStatus transport equivalence") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardTemp::Read transport equivalence") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"calibration":1.5,"humidity":1.5,"pressure":1.5,"temperature":1.5,"usb":true,"value":1.5,"voltage":1.5})");
     auto req = sh.api.card.temp().read();
@@ -2138,14 +2138,14 @@ TEST_CASE("note::api::CardTemp::Read transport equivalence") {
         CHECK(rsp.value == 1.5);
         CHECK(rsp.voltage == 1.5);
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;  // no response queued — HAL returns error
     auto req = sh.api.card.temp().read();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.card.temp().read();
@@ -2154,7 +2154,7 @@ TEST_CASE("note::api::CardTemp::Read transport equivalence") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({"calibration":1.5,"humidity":1.5,"pressure":1.5,"temperature":1.5,"usb":true,"value":1.5,"voltage":1.5})");
     auto req = bh.api.card.temp().read();
 
@@ -2173,7 +2173,7 @@ TEST_CASE("note::api::CardTemp::Read transport equivalence") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardTemp::Configure transport equivalence") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"calibration":1.5,"humidity":1.5,"pressure":1.5,"temperature":1.5,"usb":true,"value":1.5,"voltage":1.5})");
     auto req = sh.api.card.temp().configure();
@@ -2188,14 +2188,14 @@ TEST_CASE("note::api::CardTemp::Configure transport equivalence") {
         CHECK(rsp.value == 1.5);
         CHECK(rsp.voltage == 1.5);
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;  // no response queued — HAL returns error
     auto req = sh.api.card.temp().configure();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.card.temp().configure();
@@ -2204,7 +2204,7 @@ TEST_CASE("note::api::CardTemp::Configure transport equivalence") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({"calibration":1.5,"humidity":1.5,"pressure":1.5,"temperature":1.5,"usb":true,"value":1.5,"voltage":1.5})");
     auto req = bh.api.card.temp().configure();
 
@@ -2223,7 +2223,7 @@ TEST_CASE("note::api::CardTemp::Configure transport equivalence") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardTemp::Stop transport equivalence") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"calibration":1.5,"humidity":1.5,"pressure":1.5,"temperature":1.5,"usb":true,"value":1.5,"voltage":1.5})");
     auto req = sh.api.card.temp().stop();
@@ -2238,14 +2238,14 @@ TEST_CASE("note::api::CardTemp::Stop transport equivalence") {
         CHECK(rsp.value == 1.5);
         CHECK(rsp.voltage == 1.5);
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;  // no response queued — HAL returns error
     auto req = sh.api.card.temp().stop();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.card.temp().stop();
@@ -2254,7 +2254,7 @@ TEST_CASE("note::api::CardTemp::Stop transport equivalence") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({"calibration":1.5,"humidity":1.5,"pressure":1.5,"temperature":1.5,"usb":true,"value":1.5,"voltage":1.5})");
     auto req = bh.api.card.temp().stop();
 
@@ -2273,7 +2273,7 @@ TEST_CASE("note::api::CardTemp::Stop transport equivalence") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardTime transport equivalence") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"area":"x-area","country":"x-country","lat":1.5,"lon":1.5,"minutes":42,"time":42,"zone":"x-zone"})");
     auto req = sh.api.card.time();
@@ -2288,14 +2288,14 @@ TEST_CASE("note::api::CardTime transport equivalence") {
         CHECK(rsp.time == 42);
         CHECK(rsp.zone == "x-zone");
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;  // no response queued — HAL returns error
     auto req = sh.api.card.time();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.card.time();
@@ -2304,7 +2304,7 @@ TEST_CASE("note::api::CardTime transport equivalence") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({"area":"x-area","country":"x-country","lat":1.5,"lon":1.5,"minutes":42,"time":42,"zone":"x-zone"})");
     auto req = bh.api.card.time();
 
@@ -2323,7 +2323,7 @@ TEST_CASE("note::api::CardTime transport equivalence") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardTrace transport equivalence (void)") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({})");
     auto req = sh.api.card.trace();
@@ -2331,14 +2331,14 @@ TEST_CASE("note::api::CardTrace transport equivalence (void)") {
         auto rsp = req.execute();
         REQUIRE(rsp.has_value());
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;
     auto req = sh.api.card.trace();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.card.trace();
@@ -2347,7 +2347,7 @@ TEST_CASE("note::api::CardTrace transport equivalence (void)") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({})");
     auto req = bh.api.card.trace();
 
@@ -2359,7 +2359,7 @@ TEST_CASE("note::api::CardTrace transport equivalence (void)") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardTransport transport equivalence") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"method":"x-method"})");
     auto req = sh.api.card.transport();
@@ -2368,14 +2368,14 @@ TEST_CASE("note::api::CardTransport transport equivalence") {
         REQUIRE(rsp.has_value());
         CHECK(rsp.method == "x-method");
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;  // no response queued — HAL returns error
     auto req = sh.api.card.transport();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.card.transport();
@@ -2384,7 +2384,7 @@ TEST_CASE("note::api::CardTransport transport equivalence") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({"method":"x-method"})");
     auto req = bh.api.card.transport();
 
@@ -2397,7 +2397,7 @@ TEST_CASE("note::api::CardTransport transport equivalence") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardTriangulate transport equivalence") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"length":42,"mode":"x-mode","motion":42,"on":true,"time":42,"usb":true})");
     auto req = sh.api.card.triangulate();
@@ -2411,14 +2411,14 @@ TEST_CASE("note::api::CardTriangulate transport equivalence") {
         CHECK(rsp.time == 42);
         CHECK(rsp.usb == true);
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;  // no response queued — HAL returns error
     auto req = sh.api.card.triangulate();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.card.triangulate();
@@ -2427,7 +2427,7 @@ TEST_CASE("note::api::CardTriangulate transport equivalence") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({"length":42,"mode":"x-mode","motion":42,"on":true,"time":42,"usb":true})");
     auto req = bh.api.card.triangulate();
 
@@ -2445,7 +2445,7 @@ TEST_CASE("note::api::CardTriangulate transport equivalence") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardUsageGet transport equivalence") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"bytes_received":42,"bytes_sent":42,"notes_received":42,"notes_sent":42,"seconds":42,"sessions_secure":42,"sessions_standard":42,"time":42})");
     auto req = sh.api.card.usageGet();
@@ -2461,14 +2461,14 @@ TEST_CASE("note::api::CardUsageGet transport equivalence") {
         CHECK(rsp.sessionsStandard == 42);
         CHECK(rsp.time == 42);
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;  // no response queued — HAL returns error
     auto req = sh.api.card.usageGet();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.card.usageGet();
@@ -2477,7 +2477,7 @@ TEST_CASE("note::api::CardUsageGet transport equivalence") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({"bytes_received":42,"bytes_sent":42,"notes_received":42,"notes_sent":42,"seconds":42,"sessions_secure":42,"sessions_standard":42,"time":42})");
     auto req = bh.api.card.usageGet();
 
@@ -2497,7 +2497,7 @@ TEST_CASE("note::api::CardUsageGet transport equivalence") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardUsageTest transport equivalence") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"bytes_per_day":42,"bytes_received":42,"bytes_sent":42,"days":42,"max":42,"notes_received":42,"notes_sent":42,"seconds":42,"sessions_secure":42,"sessions_standard":42,"time":42})");
     auto req = sh.api.card.usageTest();
@@ -2516,14 +2516,14 @@ TEST_CASE("note::api::CardUsageTest transport equivalence") {
         CHECK(rsp.sessionsStandard == 42);
         CHECK(rsp.time == 42);
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;  // no response queued — HAL returns error
     auto req = sh.api.card.usageTest();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.card.usageTest();
@@ -2532,7 +2532,7 @@ TEST_CASE("note::api::CardUsageTest transport equivalence") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({"bytes_per_day":42,"bytes_received":42,"bytes_sent":42,"days":42,"max":42,"notes_received":42,"notes_sent":42,"seconds":42,"sessions_secure":42,"sessions_standard":42,"time":42})");
     auto req = bh.api.card.usageTest();
 
@@ -2555,7 +2555,7 @@ TEST_CASE("note::api::CardUsageTest transport equivalence") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardVersion transport equivalence") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"board":"x-board","cell":true,"device":"x-device","gps":true,"name":"x-name","sku":"x-sku","version":"x-version","wifi":true})");
     auto req = sh.api.card.version();
@@ -2573,14 +2573,14 @@ TEST_CASE("note::api::CardVersion transport equivalence") {
         CHECK(rsp.wifi == true);
 #endif
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;  // no response queued — HAL returns error
     auto req = sh.api.card.version();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.card.version();
@@ -2589,7 +2589,7 @@ TEST_CASE("note::api::CardVersion transport equivalence") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({"board":"x-board","cell":true,"device":"x-device","gps":true,"name":"x-name","sku":"x-sku","version":"x-version","wifi":true})");
     auto req = bh.api.card.version();
 
@@ -2611,7 +2611,7 @@ TEST_CASE("note::api::CardVersion transport equivalence") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardVoltage::Read transport equivalence") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"daily":1.5,"hours":42,"minutes":42,"mode":"x-mode","monthly":1.5,"usb":true,"value":1.5,"vavg":1.5,"vmax":1.5,"vmin":1.5,"weekly":1.5})");
     auto req = sh.api.card.voltage().read();
@@ -2632,14 +2632,14 @@ TEST_CASE("note::api::CardVoltage::Read transport equivalence") {
         CHECK(rsp.vmin == 1.5);
         CHECK(rsp.weekly == 1.5);
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;  // no response queued — HAL returns error
     auto req = sh.api.card.voltage().read();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.card.voltage().read();
@@ -2648,7 +2648,7 @@ TEST_CASE("note::api::CardVoltage::Read transport equivalence") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({"daily":1.5,"hours":42,"minutes":42,"mode":"x-mode","monthly":1.5,"usb":true,"value":1.5,"vavg":1.5,"vmax":1.5,"vmin":1.5,"weekly":1.5})");
     auto req = bh.api.card.voltage().read();
 
@@ -2673,7 +2673,7 @@ TEST_CASE("note::api::CardVoltage::Read transport equivalence") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardVoltage::Configure transport equivalence") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"daily":1.5,"hours":42,"minutes":42,"mode":"x-mode","monthly":1.5,"usb":true,"value":1.5,"vavg":1.5,"vmax":1.5,"vmin":1.5,"weekly":1.5})");
     auto req = sh.api.card.voltage().configure();
@@ -2694,14 +2694,14 @@ TEST_CASE("note::api::CardVoltage::Configure transport equivalence") {
         CHECK(rsp.vmin == 1.5);
         CHECK(rsp.weekly == 1.5);
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;  // no response queued — HAL returns error
     auto req = sh.api.card.voltage().configure();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.card.voltage().configure();
@@ -2710,7 +2710,7 @@ TEST_CASE("note::api::CardVoltage::Configure transport equivalence") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({"daily":1.5,"hours":42,"minutes":42,"mode":"x-mode","monthly":1.5,"usb":true,"value":1.5,"vavg":1.5,"vmax":1.5,"vmin":1.5,"weekly":1.5})");
     auto req = bh.api.card.voltage().configure();
 
@@ -2735,7 +2735,7 @@ TEST_CASE("note::api::CardVoltage::Configure transport equivalence") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardWifi transport equivalence") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"secure":true,"security":"x-security","ssid":"x-ssid","version":"x-version"})");
     auto req = sh.api.card.wifi();
@@ -2747,14 +2747,14 @@ TEST_CASE("note::api::CardWifi transport equivalence") {
         CHECK(rsp.ssid == "x-ssid");
         CHECK(rsp.version == "x-version");
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;  // no response queued — HAL returns error
     auto req = sh.api.card.wifi();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.card.wifi();
@@ -2763,7 +2763,7 @@ TEST_CASE("note::api::CardWifi transport equivalence") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({"secure":true,"security":"x-security","ssid":"x-ssid","version":"x-version"})");
     auto req = bh.api.card.wifi();
 
@@ -2779,7 +2779,7 @@ TEST_CASE("note::api::CardWifi transport equivalence") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardWireless transport equivalence") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"count":42,"status":"x-status"})");
     auto req = sh.api.card.wireless();
@@ -2789,14 +2789,14 @@ TEST_CASE("note::api::CardWireless transport equivalence") {
         CHECK(rsp.count == 42);
         CHECK(rsp.status == "x-status");
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;  // no response queued — HAL returns error
     auto req = sh.api.card.wireless();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.card.wireless();
@@ -2805,7 +2805,7 @@ TEST_CASE("note::api::CardWireless transport equivalence") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({"count":42,"status":"x-status"})");
     auto req = bh.api.card.wireless();
 
@@ -2819,7 +2819,7 @@ TEST_CASE("note::api::CardWireless transport equivalence") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardWirelessPenalty::Check transport equivalence") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"count":42,"minutes":42,"seconds":42,"status":"x-status"})");
     auto req = sh.api.card.wireless.penalty.check();
@@ -2833,14 +2833,14 @@ TEST_CASE("note::api::CardWirelessPenalty::Check transport equivalence") {
 #endif
         CHECK(rsp.status == "x-status");
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;  // no response queued — HAL returns error
     auto req = sh.api.card.wireless.penalty.check();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.card.wireless.penalty.check();
@@ -2849,7 +2849,7 @@ TEST_CASE("note::api::CardWirelessPenalty::Check transport equivalence") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({"count":42,"minutes":42,"seconds":42,"status":"x-status"})");
     auto req = bh.api.card.wireless.penalty.check();
 
@@ -2867,7 +2867,7 @@ TEST_CASE("note::api::CardWirelessPenalty::Check transport equivalence") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardWirelessPenalty::Set transport equivalence") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"count":42,"minutes":42,"seconds":42,"status":"x-status"})");
     auto req = sh.api.card.wireless.penalty.set();
@@ -2881,14 +2881,14 @@ TEST_CASE("note::api::CardWirelessPenalty::Set transport equivalence") {
 #endif
         CHECK(rsp.status == "x-status");
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;  // no response queued — HAL returns error
     auto req = sh.api.card.wireless.penalty.set();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.card.wireless.penalty.set();
@@ -2897,7 +2897,7 @@ TEST_CASE("note::api::CardWirelessPenalty::Set transport equivalence") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({"count":42,"minutes":42,"seconds":42,"status":"x-status"})");
     auto req = bh.api.card.wireless.penalty.set();
 
@@ -2915,7 +2915,7 @@ TEST_CASE("note::api::CardWirelessPenalty::Set transport equivalence") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::CardWirelessPenalty::Clear transport equivalence") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"count":42,"minutes":42,"seconds":42,"status":"x-status"})");
     auto req = sh.api.card.wireless.penalty.clear();
@@ -2929,14 +2929,14 @@ TEST_CASE("note::api::CardWirelessPenalty::Clear transport equivalence") {
 #endif
         CHECK(rsp.status == "x-status");
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;  // no response queued — HAL returns error
     auto req = sh.api.card.wireless.penalty.clear();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.card.wireless.penalty.clear();
@@ -2945,7 +2945,7 @@ TEST_CASE("note::api::CardWirelessPenalty::Clear transport equivalence") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({"count":42,"minutes":42,"seconds":42,"status":"x-status"})");
     auto req = bh.api.card.wireless.penalty.clear();
 
@@ -2963,7 +2963,7 @@ TEST_CASE("note::api::CardWirelessPenalty::Clear transport equivalence") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::DfuGet transport equivalence") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"cobs":42,"length":42,"payload":"x-payload","status":"x-status"})");
     auto req = sh.api.dfu.get();
@@ -2975,14 +2975,14 @@ TEST_CASE("note::api::DfuGet transport equivalence") {
         CHECK(rsp.payload == "x-payload");
         CHECK(rsp.status == "x-status");
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;  // no response queued — HAL returns error
     auto req = sh.api.dfu.get();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.dfu.get();
@@ -2991,7 +2991,7 @@ TEST_CASE("note::api::DfuGet transport equivalence") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({"cobs":42,"length":42,"payload":"x-payload","status":"x-status"})");
     auto req = bh.api.dfu.get();
 
@@ -3007,7 +3007,7 @@ TEST_CASE("note::api::DfuGet transport equivalence") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::DfuStatus transport equivalence") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"mode":"x-mode","off":true,"on":true,"pending":true,"status":"x-status"})");
     auto req = sh.api.dfu.status();
@@ -3020,14 +3020,14 @@ TEST_CASE("note::api::DfuStatus transport equivalence") {
         CHECK(rsp.pending == true);
         CHECK(rsp.status == "x-status");
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;  // no response queued — HAL returns error
     auto req = sh.api.dfu.status();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.dfu.status();
@@ -3036,7 +3036,7 @@ TEST_CASE("note::api::DfuStatus transport equivalence") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({"mode":"x-mode","off":true,"on":true,"pending":true,"status":"x-status"})");
     auto req = bh.api.dfu.status();
 
@@ -3053,7 +3053,7 @@ TEST_CASE("note::api::DfuStatus transport equivalence") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::EnvDefault::Set transport equivalence (void)") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({})");
     auto req = sh.api.env.defaults().set(note::string_view("x-name"));
@@ -3061,14 +3061,14 @@ TEST_CASE("note::api::EnvDefault::Set transport equivalence (void)") {
         auto rsp = req.execute();
         REQUIRE(rsp.has_value());
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;
     auto req = sh.api.env.defaults().set(note::string_view("x-name"));
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.env.defaults().set(note::string_view("x-name"));
@@ -3077,7 +3077,7 @@ TEST_CASE("note::api::EnvDefault::Set transport equivalence (void)") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({})");
     auto req = bh.api.env.defaults().set(note::string_view("x-name"));
 
@@ -3089,7 +3089,7 @@ TEST_CASE("note::api::EnvDefault::Set transport equivalence (void)") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::EnvDefault::Remove transport equivalence (void)") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({})");
     auto req = sh.api.env.defaults().remove(note::string_view("x-name"));
@@ -3097,14 +3097,14 @@ TEST_CASE("note::api::EnvDefault::Remove transport equivalence (void)") {
         auto rsp = req.execute();
         REQUIRE(rsp.has_value());
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;
     auto req = sh.api.env.defaults().remove(note::string_view("x-name"));
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.env.defaults().remove(note::string_view("x-name"));
@@ -3113,7 +3113,7 @@ TEST_CASE("note::api::EnvDefault::Remove transport equivalence (void)") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({})");
     auto req = bh.api.env.defaults().remove(note::string_view("x-name"));
 
@@ -3125,7 +3125,7 @@ TEST_CASE("note::api::EnvDefault::Remove transport equivalence (void)") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::EnvGet transport equivalence") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"text":"x-text","time":42})");
     auto req = sh.api.env.get();
@@ -3137,14 +3137,14 @@ TEST_CASE("note::api::EnvGet transport equivalence") {
         CHECK(rsp.time == 42);
 #endif
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;  // no response queued — HAL returns error
     auto req = sh.api.env.get();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.env.get();
@@ -3153,7 +3153,7 @@ TEST_CASE("note::api::EnvGet transport equivalence") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({"text":"x-text","time":42})");
     auto req = bh.api.env.get();
 
@@ -3169,7 +3169,7 @@ TEST_CASE("note::api::EnvGet transport equivalence") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::EnvModified transport equivalence") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"time":42})");
     auto req = sh.api.env.modified();
@@ -3180,14 +3180,14 @@ TEST_CASE("note::api::EnvModified transport equivalence") {
         CHECK(rsp.time == 42);
 #endif
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;  // no response queued — HAL returns error
     auto req = sh.api.env.modified();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.env.modified();
@@ -3196,7 +3196,7 @@ TEST_CASE("note::api::EnvModified transport equivalence") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({"time":42})");
     auto req = bh.api.env.modified();
 
@@ -3211,7 +3211,7 @@ TEST_CASE("note::api::EnvModified transport equivalence") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::EnvSet transport equivalence") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"time":42})");
     auto req = sh.api.env.set(note::string_view("x-name"));
@@ -3222,14 +3222,14 @@ TEST_CASE("note::api::EnvSet transport equivalence") {
         CHECK(rsp.time == 42);
 #endif
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;  // no response queued — HAL returns error
     auto req = sh.api.env.set(note::string_view("x-name"));
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.env.set(note::string_view("x-name"));
@@ -3238,7 +3238,7 @@ TEST_CASE("note::api::EnvSet transport equivalence") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({"time":42})");
     auto req = bh.api.env.set(note::string_view("x-name"));
 
@@ -3253,7 +3253,7 @@ TEST_CASE("note::api::EnvSet transport equivalence") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::EnvTemplate transport equivalence") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"bytes":42})");
     auto req = sh.api.env.templates();
@@ -3262,14 +3262,14 @@ TEST_CASE("note::api::EnvTemplate transport equivalence") {
         REQUIRE(rsp.has_value());
         CHECK(rsp.bytes == 42);
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;  // no response queued — HAL returns error
     auto req = sh.api.env.templates();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.env.templates();
@@ -3278,7 +3278,7 @@ TEST_CASE("note::api::EnvTemplate transport equivalence") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({"bytes":42})");
     auto req = bh.api.env.templates();
 
@@ -3291,7 +3291,7 @@ TEST_CASE("note::api::EnvTemplate transport equivalence") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::FileChanges transport equivalence") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"changes":42,"pending":true,"total":42})");
     auto req = sh.api.file.changes();
@@ -3302,14 +3302,14 @@ TEST_CASE("note::api::FileChanges transport equivalence") {
         CHECK(rsp.pending == true);
         CHECK(rsp.total == 42);
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;  // no response queued — HAL returns error
     auto req = sh.api.file.changes();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.file.changes();
@@ -3318,7 +3318,7 @@ TEST_CASE("note::api::FileChanges transport equivalence") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({"changes":42,"pending":true,"total":42})");
     auto req = bh.api.file.changes();
 
@@ -3333,7 +3333,7 @@ TEST_CASE("note::api::FileChanges transport equivalence") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::FileChangesPending transport equivalence") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"changes":42,"pending":true,"total":42})");
     auto req = sh.api.file.changes.pending();
@@ -3344,14 +3344,14 @@ TEST_CASE("note::api::FileChangesPending transport equivalence") {
         CHECK(rsp.pending == true);
         CHECK(rsp.total == 42);
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;  // no response queued — HAL returns error
     auto req = sh.api.file.changes.pending();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.file.changes.pending();
@@ -3360,7 +3360,7 @@ TEST_CASE("note::api::FileChangesPending transport equivalence") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({"changes":42,"pending":true,"total":42})");
     auto req = bh.api.file.changes.pending();
 
@@ -3375,7 +3375,7 @@ TEST_CASE("note::api::FileChangesPending transport equivalence") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::FileClear transport equivalence (void)") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({})");
     auto req = sh.api.file.clear();
@@ -3383,14 +3383,14 @@ TEST_CASE("note::api::FileClear transport equivalence (void)") {
         auto rsp = req.execute();
         REQUIRE(rsp.has_value());
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;
     auto req = sh.api.file.clear();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.file.clear();
@@ -3399,7 +3399,7 @@ TEST_CASE("note::api::FileClear transport equivalence (void)") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({})");
     auto req = bh.api.file.clear();
 
@@ -3411,7 +3411,7 @@ TEST_CASE("note::api::FileClear transport equivalence (void)") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::FileDelete transport equivalence (void)") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({})");
     auto req = sh.api.file.delete_();
@@ -3419,14 +3419,14 @@ TEST_CASE("note::api::FileDelete transport equivalence (void)") {
         auto rsp = req.execute();
         REQUIRE(rsp.has_value());
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;
     auto req = sh.api.file.delete_();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.file.delete_();
@@ -3435,7 +3435,7 @@ TEST_CASE("note::api::FileDelete transport equivalence (void)") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({})");
     auto req = bh.api.file.delete_();
 
@@ -3447,7 +3447,7 @@ TEST_CASE("note::api::FileDelete transport equivalence (void)") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::FileStats transport equivalence") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"changes":42,"sync":true,"total":42})");
     auto req = sh.api.file.stats();
@@ -3458,14 +3458,14 @@ TEST_CASE("note::api::FileStats transport equivalence") {
         CHECK(rsp.sync == true);
         CHECK(rsp.total == 42);
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;  // no response queued — HAL returns error
     auto req = sh.api.file.stats();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.file.stats();
@@ -3474,7 +3474,7 @@ TEST_CASE("note::api::FileStats transport equivalence") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({"changes":42,"sync":true,"total":42})");
     auto req = bh.api.file.stats();
 
@@ -3489,7 +3489,7 @@ TEST_CASE("note::api::FileStats transport equivalence") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::HubGet transport equivalence") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"device":"x-device","host":"x-host","inbound":42,"mode":"x-mode","outbound":42,"product":"x-product","sn":"x-sn","sync":true,"vinbound":"x-vinbound","voutbound":"x-voutbound"})");
     auto req = sh.api.hub.get();
@@ -3507,14 +3507,14 @@ TEST_CASE("note::api::HubGet transport equivalence") {
         CHECK(rsp.vinbound == "x-vinbound");
         CHECK(rsp.voutbound == "x-voutbound");
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;  // no response queued — HAL returns error
     auto req = sh.api.hub.get();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.hub.get();
@@ -3523,7 +3523,7 @@ TEST_CASE("note::api::HubGet transport equivalence") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({"device":"x-device","host":"x-host","inbound":42,"mode":"x-mode","outbound":42,"product":"x-product","sn":"x-sn","sync":true,"vinbound":"x-vinbound","voutbound":"x-voutbound"})");
     auto req = bh.api.hub.get();
 
@@ -3545,7 +3545,7 @@ TEST_CASE("note::api::HubGet transport equivalence") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::HubLog transport equivalence (void)") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({})");
     auto req = sh.api.hub.log();
@@ -3553,14 +3553,14 @@ TEST_CASE("note::api::HubLog transport equivalence (void)") {
         auto rsp = req.execute();
         REQUIRE(rsp.has_value());
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;
     auto req = sh.api.hub.log();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.hub.log();
@@ -3569,7 +3569,7 @@ TEST_CASE("note::api::HubLog transport equivalence (void)") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({})");
     auto req = bh.api.hub.log();
 
@@ -3581,7 +3581,7 @@ TEST_CASE("note::api::HubLog transport equivalence (void)") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::HubSet transport equivalence (void)") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({})");
     auto req = sh.api.hub.set();
@@ -3589,14 +3589,14 @@ TEST_CASE("note::api::HubSet transport equivalence (void)") {
         auto rsp = req.execute();
         REQUIRE(rsp.has_value());
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;
     auto req = sh.api.hub.set();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.hub.set();
@@ -3605,7 +3605,7 @@ TEST_CASE("note::api::HubSet transport equivalence (void)") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({})");
     auto req = bh.api.hub.set();
 
@@ -3617,7 +3617,7 @@ TEST_CASE("note::api::HubSet transport equivalence (void)") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::HubSignal transport equivalence") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"connected":true,"signals":42})");
     auto req = sh.api.hub.signal();
@@ -3627,14 +3627,14 @@ TEST_CASE("note::api::HubSignal transport equivalence") {
         CHECK(rsp.connected == true);
         CHECK(rsp.signals == 42);
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;  // no response queued — HAL returns error
     auto req = sh.api.hub.signal();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.hub.signal();
@@ -3643,7 +3643,7 @@ TEST_CASE("note::api::HubSignal transport equivalence") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({"connected":true,"signals":42})");
     auto req = bh.api.hub.signal();
 
@@ -3657,7 +3657,7 @@ TEST_CASE("note::api::HubSignal transport equivalence") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::HubStatus transport equivalence") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"connected":true,"status":"x-status"})");
     auto req = sh.api.hub.status();
@@ -3667,14 +3667,14 @@ TEST_CASE("note::api::HubStatus transport equivalence") {
         CHECK(rsp.connected == true);
         CHECK(rsp.status == "x-status");
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;  // no response queued — HAL returns error
     auto req = sh.api.hub.status();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.hub.status();
@@ -3683,7 +3683,7 @@ TEST_CASE("note::api::HubStatus transport equivalence") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({"connected":true,"status":"x-status"})");
     auto req = bh.api.hub.status();
 
@@ -3697,7 +3697,7 @@ TEST_CASE("note::api::HubStatus transport equivalence") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::HubSync transport equivalence (void)") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({})");
     auto req = sh.api.hub.sync();
@@ -3705,14 +3705,14 @@ TEST_CASE("note::api::HubSync transport equivalence (void)") {
         auto rsp = req.execute();
         REQUIRE(rsp.has_value());
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;
     auto req = sh.api.hub.sync();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.hub.sync();
@@ -3721,7 +3721,7 @@ TEST_CASE("note::api::HubSync transport equivalence (void)") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({})");
     auto req = bh.api.hub.sync();
 
@@ -3733,7 +3733,7 @@ TEST_CASE("note::api::HubSync transport equivalence (void)") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::HubSyncStatus transport equivalence") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"alert":true,"completed":42,"mode":"x-mode","requested":42,"scan":true,"seconds":42,"status":"x-status","sync":true,"time":42})");
     auto req = sh.api.hub.sync.status();
@@ -3754,14 +3754,14 @@ TEST_CASE("note::api::HubSyncStatus transport equivalence") {
         CHECK(rsp.sync == true);
         CHECK(rsp.time == 42);
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;  // no response queued — HAL returns error
     auto req = sh.api.hub.sync.status();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.hub.sync.status();
@@ -3770,7 +3770,7 @@ TEST_CASE("note::api::HubSyncStatus transport equivalence") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({"alert":true,"completed":42,"mode":"x-mode","requested":42,"scan":true,"seconds":42,"status":"x-status","sync":true,"time":42})");
     auto req = bh.api.hub.sync.status();
 
@@ -3795,7 +3795,7 @@ TEST_CASE("note::api::HubSyncStatus transport equivalence") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::NoteAdd transport equivalence") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"note":"x-note","template":true,"total":42})");
     auto req = sh.api.note.add();
@@ -3806,14 +3806,14 @@ TEST_CASE("note::api::NoteAdd transport equivalence") {
         CHECK(rsp.template_ == true);
         CHECK(rsp.total == 42);
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;  // no response queued — HAL returns error
     auto req = sh.api.note.add();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.note.add();
@@ -3822,7 +3822,7 @@ TEST_CASE("note::api::NoteAdd transport equivalence") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({"note":"x-note","template":true,"total":42})");
     auto req = bh.api.note.add();
 
@@ -3837,7 +3837,7 @@ TEST_CASE("note::api::NoteAdd transport equivalence") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::NoteChanges::Peek transport equivalence") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"changes":42,"total":42})");
     auto req = sh.api.note.changes().peek();
@@ -3847,14 +3847,14 @@ TEST_CASE("note::api::NoteChanges::Peek transport equivalence") {
         CHECK(rsp.changes == 42);
         CHECK(rsp.total == 42);
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;  // no response queued — HAL returns error
     auto req = sh.api.note.changes().peek();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.note.changes().peek();
@@ -3863,7 +3863,7 @@ TEST_CASE("note::api::NoteChanges::Peek transport equivalence") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({"changes":42,"total":42})");
     auto req = bh.api.note.changes().peek();
 
@@ -3877,7 +3877,7 @@ TEST_CASE("note::api::NoteChanges::Peek transport equivalence") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::NoteChanges::Pop transport equivalence") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"changes":42,"total":42})");
     auto req = sh.api.note.changes().pop(note::string_view("x-file"));
@@ -3887,14 +3887,14 @@ TEST_CASE("note::api::NoteChanges::Pop transport equivalence") {
         CHECK(rsp.changes == 42);
         CHECK(rsp.total == 42);
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;  // no response queued — HAL returns error
     auto req = sh.api.note.changes().pop(note::string_view("x-file"));
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.note.changes().pop(note::string_view("x-file"));
@@ -3903,7 +3903,7 @@ TEST_CASE("note::api::NoteChanges::Pop transport equivalence") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({"changes":42,"total":42})");
     auto req = bh.api.note.changes().pop(note::string_view("x-file"));
 
@@ -3917,7 +3917,7 @@ TEST_CASE("note::api::NoteChanges::Pop transport equivalence") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::NoteDelete transport equivalence (void)") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({})");
     auto req = sh.api.note.delete_(note::string_view("x-file"), note::string_view("x-note"));
@@ -3925,14 +3925,14 @@ TEST_CASE("note::api::NoteDelete transport equivalence (void)") {
         auto rsp = req.execute();
         REQUIRE(rsp.has_value());
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;
     auto req = sh.api.note.delete_(note::string_view("x-file"), note::string_view("x-note"));
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.note.delete_(note::string_view("x-file"), note::string_view("x-note"));
@@ -3941,7 +3941,7 @@ TEST_CASE("note::api::NoteDelete transport equivalence (void)") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({})");
     auto req = bh.api.note.delete_(note::string_view("x-file"), note::string_view("x-note"));
 
@@ -3953,7 +3953,7 @@ TEST_CASE("note::api::NoteDelete transport equivalence (void)") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::NoteGet::Read transport equivalence") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"payload":"x-payload","time":42})");
     auto req = sh.api.note.get().read();
@@ -3963,14 +3963,14 @@ TEST_CASE("note::api::NoteGet::Read transport equivalence") {
         CHECK(rsp.payload == "x-payload");
         CHECK(rsp.time == 42);
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;  // no response queued — HAL returns error
     auto req = sh.api.note.get().read();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.note.get().read();
@@ -3979,7 +3979,7 @@ TEST_CASE("note::api::NoteGet::Read transport equivalence") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({"payload":"x-payload","time":42})");
     auto req = bh.api.note.get().read();
 
@@ -3993,7 +3993,7 @@ TEST_CASE("note::api::NoteGet::Read transport equivalence") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::NoteGet::Pop transport equivalence") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"payload":"x-payload","time":42})");
     auto req = sh.api.note.get().pop();
@@ -4003,14 +4003,14 @@ TEST_CASE("note::api::NoteGet::Pop transport equivalence") {
         CHECK(rsp.payload == "x-payload");
         CHECK(rsp.time == 42);
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;  // no response queued — HAL returns error
     auto req = sh.api.note.get().pop();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.note.get().pop();
@@ -4019,7 +4019,7 @@ TEST_CASE("note::api::NoteGet::Pop transport equivalence") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({"payload":"x-payload","time":42})");
     auto req = bh.api.note.get().pop();
 
@@ -4033,7 +4033,7 @@ TEST_CASE("note::api::NoteGet::Pop transport equivalence") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::NoteTemplate::Define transport equivalence") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"bytes":42,"format":"x-format","length":42,"template":true})");
     auto req = sh.api.note.templates().define(note::string_view("x-file"));
@@ -4049,14 +4049,14 @@ TEST_CASE("note::api::NoteTemplate::Define transport equivalence") {
         CHECK(rsp.template_ == true);
 #endif
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;  // no response queued — HAL returns error
     auto req = sh.api.note.templates().define(note::string_view("x-file"));
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.note.templates().define(note::string_view("x-file"));
@@ -4065,7 +4065,7 @@ TEST_CASE("note::api::NoteTemplate::Define transport equivalence") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({"bytes":42,"format":"x-format","length":42,"template":true})");
     auto req = bh.api.note.templates().define(note::string_view("x-file"));
 
@@ -4085,7 +4085,7 @@ TEST_CASE("note::api::NoteTemplate::Define transport equivalence") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::NoteTemplate::Remove transport equivalence") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"bytes":42,"format":"x-format","length":42,"template":true})");
     auto req = sh.api.note.templates().remove(note::string_view("x-file"));
@@ -4101,14 +4101,14 @@ TEST_CASE("note::api::NoteTemplate::Remove transport equivalence") {
         CHECK(rsp.template_ == true);
 #endif
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;  // no response queued — HAL returns error
     auto req = sh.api.note.templates().remove(note::string_view("x-file"));
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.note.templates().remove(note::string_view("x-file"));
@@ -4117,7 +4117,7 @@ TEST_CASE("note::api::NoteTemplate::Remove transport equivalence") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({"bytes":42,"format":"x-format","length":42,"template":true})");
     auto req = bh.api.note.templates().remove(note::string_view("x-file"));
 
@@ -4137,7 +4137,7 @@ TEST_CASE("note::api::NoteTemplate::Remove transport equivalence") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::NoteUpdate transport equivalence (void)") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({})");
     auto req = sh.api.note.update(note::string_view("x-file"), note::string_view("x-note"));
@@ -4145,14 +4145,14 @@ TEST_CASE("note::api::NoteUpdate transport equivalence (void)") {
         auto rsp = req.execute();
         REQUIRE(rsp.has_value());
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;
     auto req = sh.api.note.update(note::string_view("x-file"), note::string_view("x-note"));
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.note.update(note::string_view("x-file"), note::string_view("x-note"));
@@ -4161,7 +4161,7 @@ TEST_CASE("note::api::NoteUpdate transport equivalence (void)") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({})");
     auto req = bh.api.note.update(note::string_view("x-file"), note::string_view("x-note"));
 
@@ -4173,7 +4173,7 @@ TEST_CASE("note::api::NoteUpdate transport equivalence (void)") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::NtnGps transport equivalence") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"off":true,"on":true})");
     auto req = sh.api.ntn.gps();
@@ -4183,14 +4183,14 @@ TEST_CASE("note::api::NtnGps transport equivalence") {
         CHECK(rsp.off == true);
         CHECK(rsp.on == true);
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;  // no response queued — HAL returns error
     auto req = sh.api.ntn.gps();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.ntn.gps();
@@ -4199,7 +4199,7 @@ TEST_CASE("note::api::NtnGps transport equivalence") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({"off":true,"on":true})");
     auto req = bh.api.ntn.gps();
 
@@ -4213,7 +4213,7 @@ TEST_CASE("note::api::NtnGps transport equivalence") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::NtnReset transport equivalence (void)") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({})");
     auto req = sh.api.ntn.reset();
@@ -4221,14 +4221,14 @@ TEST_CASE("note::api::NtnReset transport equivalence (void)") {
         auto rsp = req.execute();
         REQUIRE(rsp.has_value());
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;
     auto req = sh.api.ntn.reset();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.ntn.reset();
@@ -4237,7 +4237,7 @@ TEST_CASE("note::api::NtnReset transport equivalence (void)") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({})");
     auto req = bh.api.ntn.reset();
 
@@ -4249,7 +4249,7 @@ TEST_CASE("note::api::NtnReset transport equivalence (void)") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::NtnStatus transport equivalence") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"status":"x-status"})");
     auto req = sh.api.ntn.status();
@@ -4258,14 +4258,14 @@ TEST_CASE("note::api::NtnStatus transport equivalence") {
         REQUIRE(rsp.has_value());
         CHECK(rsp.status == "x-status");
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;  // no response queued — HAL returns error
     auto req = sh.api.ntn.status();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.ntn.status();
@@ -4274,7 +4274,7 @@ TEST_CASE("note::api::NtnStatus transport equivalence") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({"status":"x-status"})");
     auto req = bh.api.ntn.status();
 
@@ -4287,7 +4287,7 @@ TEST_CASE("note::api::NtnStatus transport equivalence") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::VarDelete transport equivalence (void)") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({})");
     auto req = sh.api.var.delete_();
@@ -4295,14 +4295,14 @@ TEST_CASE("note::api::VarDelete transport equivalence (void)") {
         auto rsp = req.execute();
         REQUIRE(rsp.has_value());
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;
     auto req = sh.api.var.delete_();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.var.delete_();
@@ -4311,7 +4311,7 @@ TEST_CASE("note::api::VarDelete transport equivalence (void)") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({})");
     auto req = bh.api.var.delete_();
 
@@ -4323,7 +4323,7 @@ TEST_CASE("note::api::VarDelete transport equivalence (void)") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::VarGet transport equivalence") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"flag":true,"text":"x-text","value":1.5})");
     auto req = sh.api.var.get();
@@ -4334,14 +4334,14 @@ TEST_CASE("note::api::VarGet transport equivalence") {
         CHECK(rsp.text == "x-text");
         CHECK(rsp.value == 1.5);
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;  // no response queued — HAL returns error
     auto req = sh.api.var.get();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.var.get();
@@ -4350,7 +4350,7 @@ TEST_CASE("note::api::VarGet transport equivalence") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({"flag":true,"text":"x-text","value":1.5})");
     auto req = bh.api.var.get();
 
@@ -4365,7 +4365,7 @@ TEST_CASE("note::api::VarGet transport equivalence") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::VarSet transport equivalence (void)") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({})");
     auto req = sh.api.var.set();
@@ -4373,14 +4373,14 @@ TEST_CASE("note::api::VarSet transport equivalence (void)") {
         auto rsp = req.execute();
         REQUIRE(rsp.has_value());
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;
     auto req = sh.api.var.set();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.var.set();
@@ -4389,7 +4389,7 @@ TEST_CASE("note::api::VarSet transport equivalence (void)") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({})");
     auto req = bh.api.var.set();
 
@@ -4401,7 +4401,7 @@ TEST_CASE("note::api::VarSet transport equivalence (void)") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::Web transport equivalence") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"cobs":42,"length":42,"payload":"x-payload","result":42,"status":"x-status"})");
     auto req = sh.api.web.request();
@@ -4414,14 +4414,14 @@ TEST_CASE("note::api::Web transport equivalence") {
         CHECK(rsp.result == 42);
         CHECK(rsp.status == "x-status");
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;  // no response queued — HAL returns error
     auto req = sh.api.web.request();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.web.request();
@@ -4430,7 +4430,7 @@ TEST_CASE("note::api::Web transport equivalence") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({"cobs":42,"length":42,"payload":"x-payload","result":42,"status":"x-status"})");
     auto req = bh.api.web.request();
 
@@ -4447,7 +4447,7 @@ TEST_CASE("note::api::Web transport equivalence") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::WebDelete transport equivalence") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"payload":"x-payload","result":42,"status":"x-status","cobs":42,"length":42})");
     auto req = sh.api.web.delete_();
@@ -4460,14 +4460,14 @@ TEST_CASE("note::api::WebDelete transport equivalence") {
         CHECK(rsp.cobs == 42);
         CHECK(rsp.length == 42);
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;  // no response queued — HAL returns error
     auto req = sh.api.web.delete_();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.web.delete_();
@@ -4476,7 +4476,7 @@ TEST_CASE("note::api::WebDelete transport equivalence") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({"payload":"x-payload","result":42,"status":"x-status","cobs":42,"length":42})");
     auto req = bh.api.web.delete_();
 
@@ -4493,7 +4493,7 @@ TEST_CASE("note::api::WebDelete transport equivalence") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::WebGet transport equivalence") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"cobs":42,"length":42,"payload":"x-payload","result":42})");
     auto req = sh.api.web.get();
@@ -4505,14 +4505,14 @@ TEST_CASE("note::api::WebGet transport equivalence") {
         CHECK(rsp.payload == "x-payload");
         CHECK(rsp.result == 42);
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;  // no response queued — HAL returns error
     auto req = sh.api.web.get();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.web.get();
@@ -4521,7 +4521,7 @@ TEST_CASE("note::api::WebGet transport equivalence") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({"cobs":42,"length":42,"payload":"x-payload","result":42})");
     auto req = bh.api.web.get();
 
@@ -4537,7 +4537,7 @@ TEST_CASE("note::api::WebGet transport equivalence") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::WebPost transport equivalence") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"cobs":42,"length":42,"payload":"x-payload","result":42,"status":"x-status"})");
     auto req = sh.api.web.post();
@@ -4552,14 +4552,14 @@ TEST_CASE("note::api::WebPost transport equivalence") {
         CHECK(rsp.result == 42);
         CHECK(rsp.status == "x-status");
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;  // no response queued — HAL returns error
     auto req = sh.api.web.post();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.web.post();
@@ -4568,7 +4568,7 @@ TEST_CASE("note::api::WebPost transport equivalence") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({"cobs":42,"length":42,"payload":"x-payload","result":42,"status":"x-status"})");
     auto req = bh.api.web.post();
 
@@ -4587,7 +4587,7 @@ TEST_CASE("note::api::WebPost transport equivalence") {
 
 // ---------------------------------------------------------------------------
 TEST_CASE("note::api::WebPut transport equivalence") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"payload":"x-payload","result":42,"status":"x-status","cobs":42,"length":42})");
     auto req = sh.api.web.put();
@@ -4600,14 +4600,14 @@ TEST_CASE("note::api::WebPut transport equivalence") {
         CHECK(rsp.cobs == 42);
         CHECK(rsp.length == 42);
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;  // no response queued — HAL returns error
     auto req = sh.api.web.put();
 
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
     auto req = sh.api.web.put();
@@ -4616,7 +4616,7 @@ TEST_CASE("note::api::WebPut transport equivalence") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({"payload":"x-payload","result":42,"status":"x-status","cobs":42,"length":42})");
     auto req = bh.api.web.put();
 

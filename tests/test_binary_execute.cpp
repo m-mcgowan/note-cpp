@@ -1,7 +1,7 @@
 // Tests for binary transfer pipeline: do_binary_send, do_binary_receive,
 // COBS encode/decode via transport write/read, MD5 verification.
 
-#include "catch.hpp"
+#include <doctest.h>
 #include "test_json_backend.hpp"
 #include "test_notecard_factory.hpp"
 
@@ -165,7 +165,7 @@ TEST_CASE("SoftwareMd5 computes correct hex digest") {
 TEST_CASE("cobs_encoded_length matches actual encoder output") {
     note::CobsEncoder encoder;
 
-    SECTION("no zeros — matches max estimate") {
+    SUBCASE("no zeros — matches max estimate") {
         uint8_t data[100];
         for (size_t i = 0; i < 100; i++) data[i] = static_cast<uint8_t>(i + 1);
         size_t predicted = note::cobs_encoded_length(data, 100);
@@ -175,7 +175,7 @@ TEST_CASE("cobs_encoded_length matches actual encoder output") {
         REQUIRE(predicted == note::cobs_encoded_size(100));
     }
 
-    SECTION("all zeros — exact matches max (zeros become code bytes)") {
+    SUBCASE("all zeros — exact matches max (zeros become code bytes)") {
         uint8_t data[100];
         memset(data, 0, 100);
         size_t predicted = note::cobs_encoded_length(data, 100);
@@ -185,7 +185,7 @@ TEST_CASE("cobs_encoded_length matches actual encoder output") {
         REQUIRE(predicted == note::cobs_encoded_size(100));
     }
 
-    SECTION("254-byte block boundary") {
+    SUBCASE("254-byte block boundary") {
         uint8_t data[254];
         for (size_t i = 0; i < 254; i++) data[i] = static_cast<uint8_t>(i + 1);
         size_t predicted = note::cobs_encoded_length(data, 254);
@@ -194,7 +194,7 @@ TEST_CASE("cobs_encoded_length matches actual encoder output") {
         REQUIRE(predicted == actual);
     }
 
-    SECTION("512 bytes with scattered zeros") {
+    SUBCASE("512 bytes with scattered zeros") {
         uint8_t data[512];
         for (size_t i = 0; i < 512; i++) data[i] = static_cast<uint8_t>((i * 7) & 0xFF);
         size_t predicted = note::cobs_encoded_length(data, 512);
@@ -203,7 +203,7 @@ TEST_CASE("cobs_encoded_length matches actual encoder output") {
         REQUIRE(predicted == actual);
     }
 
-    SECTION("empty") {
+    SUBCASE("empty") {
         REQUIRE(note::cobs_encoded_length(nullptr, 0) == 1);
     }
 }

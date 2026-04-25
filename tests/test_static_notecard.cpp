@@ -10,7 +10,7 @@
 #include <note/arena.hpp>
 #include <note/lexer/parse.hpp>
 
-#include "catch.hpp"
+#include <doctest.h>
 #include <deque>
 #include <string>
 

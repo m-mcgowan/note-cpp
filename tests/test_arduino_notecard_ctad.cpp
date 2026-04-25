@@ -10,7 +10,7 @@
 // entirely; the file still must be in ALL_TEST_SOURCES to be picked up
 // by the Arduino-stubs target.
 
-#include "catch.hpp"
+#include <doctest.h>
 
 #if defined(ARDUINO) || defined(NOTE_ARDUINO_STUBS)
 

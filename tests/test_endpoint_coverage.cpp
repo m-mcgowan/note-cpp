@@ -11,7 +11,7 @@
 //   2. "response parsing" — pre-populates a reader with every response field,
 //      calls Response::parse(), verifies each field was read correctly.
 
-#include "catch.hpp"
+#include <doctest.h>
 #include "test_json_backend.hpp"
 #include "test_notecard_factory.hpp"
 

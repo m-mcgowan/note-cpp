@@ -1,5 +1,5 @@
 // Wire format tests: verify that generated request types produce correct JSON.
-#include "catch.hpp"
+#include <doctest.h>
 #include "test_json_backend.hpp"
 #include "test_notecard_factory.hpp"
 
@@ -121,22 +121,22 @@ TEST_CASE("NoteGet::Get with note_id uses wire name 'note'") {
 // ---------------------------------------------------------------------------
 
 TEST_CASE("Safety levels are correct") {
-    STATIC_REQUIRE(note::api::CardVersion::safety == note::Safety::ReadOnly);
-    STATIC_REQUIRE(note::api::HubSet::safety == note::Safety::Idempotent);
-    STATIC_REQUIRE(note::api::NoteGet::Get::safety == note::Safety::ReadOnly);
-    STATIC_REQUIRE(note::api::NoteGet::Delete::safety == note::Safety::Destructive);
-    STATIC_REQUIRE(note::api::CardBinaryGet::safety == note::Safety::NonIdempotent);
+    static_assert(note::api::CardVersion::safety == note::Safety::ReadOnly);
+    static_assert(note::api::HubSet::safety == note::Safety::Idempotent);
+    static_assert(note::api::NoteGet::Get::safety == note::Safety::ReadOnly);
+    static_assert(note::api::NoteGet::Delete::safety == note::Safety::Destructive);
+    static_assert(note::api::CardBinaryGet::safety == note::Safety::NonIdempotent);
 }
 
 TEST_CASE("supports_cmd is correct") {
-    STATIC_REQUIRE(note::api::CardVersion::supports_cmd == true);
-    STATIC_REQUIRE(note::api::HubSet::supports_cmd == true);
+    static_assert(note::api::CardVersion::supports_cmd == true);
+    static_assert(note::api::HubSet::supports_cmd == true);
 }
 
 TEST_CASE("notecard_request wire names are correct") {
-    STATIC_REQUIRE(note::api::CardVersion::notecard_request == "card.version");
-    STATIC_REQUIRE(note::api::NoteGet::Get::notecard_request == "note.get");
-    STATIC_REQUIRE(note::api::NoteGet::Delete::notecard_request == "note.get");
+    static_assert(note::api::CardVersion::notecard_request == "card.version");
+    static_assert(note::api::NoteGet::Get::notecard_request == "note.get");
+    static_assert(note::api::NoteGet::Delete::notecard_request == "note.get");
 }
 
 // ---------------------------------------------------------------------------
@@ -144,8 +144,8 @@ TEST_CASE("notecard_request wire names are correct") {
 // ---------------------------------------------------------------------------
 
 TEST_CASE("CardBinaryGet has binary transfer annotation") {
-    STATIC_REQUIRE(note::api::CardBinaryGet::BinaryTransfer::direction == note::Direction::Receive);
-    STATIC_REQUIRE(note::api::CardBinaryGet::BinaryTransfer::encoding == "cobs");
+    static_assert(note::api::CardBinaryGet::BinaryTransfer::direction == note::Direction::Receive);
+    static_assert(note::api::CardBinaryGet::BinaryTransfer::encoding == "cobs");
 }
 
 // ---------------------------------------------------------------------------
@@ -177,9 +177,9 @@ TEST_CASE("Command uses cmd key") {
 // ---------------------------------------------------------------------------
 
 TEST_CASE("Version macro computes correctly") {
-    STATIC_REQUIRE(NOTE_VERSION(9, 1, 1) == 90101);
-    STATIC_REQUIRE(NOTE_VERSION(3, 2, 1) == 30201);
-    STATIC_REQUIRE(NOTE_VERSION(5, 3, 1) > NOTE_VERSION(3, 4, 1));
+    static_assert(NOTE_VERSION(9, 1, 1) == 90101);
+    static_assert(NOTE_VERSION(3, 2, 1) == 30201);
+    static_assert(NOTE_VERSION(5, 3, 1) > NOTE_VERSION(3, 4, 1));
 }
 
 // ---------------------------------------------------------------------------
@@ -288,9 +288,9 @@ TEST_CASE("Api.command sends cmd") {
 
 TEST_CASE("consteval validated_mode accepts valid values") {
     constexpr auto m = note::api::HubSet::validatedMode("periodic");
-    STATIC_REQUIRE(m == "periodic");
+    static_assert(m == "periodic");
     constexpr auto m2 = note::api::HubSet::validatedMode("continuous");
-    STATIC_REQUIRE(m2 == "continuous");
+    static_assert(m2 == "continuous");
 }
 
 // Note: invalid values produce compile errors — tested by attempting to build

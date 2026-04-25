@@ -8,7 +8,7 @@
 // Tests exercise transact() (build request via BuildFn, SAX-parse response into
 // a JsonSink) and send() (fire-and-forget).
 
-#include "catch.hpp"
+#include <doctest.h>
 #include "test_sax_exerciser.hpp"
 
 #include <note/streaming_transport.hpp>
@@ -636,7 +636,7 @@ TEST_CASE("into<T>() parses body from streaming SAX path") {
     REQUIRE(rsp.has_value());
     CHECK(rsp.time == 1234);
 
-    CHECK(reading.temperature == Approx(23.5f));
+    CHECK(reading.temperature == doctest::Approx(23.5f));
     CHECK(reading.humidity == 65);
 }
 

@@ -1,4 +1,4 @@
-#include "catch.hpp"
+#include <doctest.h>
 #include "test_sax_exerciser.hpp"
 #include <note/lexer/sax_adapter.hpp>
 #include <note/json_sax.hpp>  // NullSink
@@ -64,7 +64,7 @@ TEST_CASE("SaxEvent: construction and field access") {
 
     auto e3 = E::make_float("value", 3.14);
     REQUIRE(e3.tag == E::Float);
-    REQUIRE(e3.f == Approx(3.14));
+    REQUIRE(e3.f == doctest::Approx(3.14));
 
     auto e4 = E::make_string("name", "hello");
     REQUIRE(e4.tag == E::String);
@@ -134,7 +134,7 @@ TEST_CASE("make_sax_dispatch: single dispatch routes all event types") {
     REQUIRE(sink.events[2].tag == SaxRecordingSink::Event::Int);
     REQUIRE(sink.events[2].i == 42);
     REQUIRE(sink.events[3].tag == SaxRecordingSink::Event::Float);
-    REQUIRE(sink.events[3].f == Approx(1.5));
+    REQUIRE(sink.events[3].f == doctest::Approx(1.5));
     REQUIRE(sink.events[4].tag == SaxRecordingSink::Event::String);
     REQUIRE(sink.events[4].s == "val");
     REQUIRE(sink.events[5].tag == SaxRecordingSink::Event::ObjBegin);
@@ -462,7 +462,7 @@ TEST_CASE("SaxAdapter: float events") {
 
     REQUIRE(sink.events.size() == 1);
     CHECK(sink.events[0].tag == SaxRecordingSink::Event::Float);
-    CHECK(sink.events[0].f == Approx(3.14));
+    CHECK(sink.events[0].f == doctest::Approx(3.14));
 }
 
 TEST_CASE("SaxAdapter: pop_key underflow does not crash") {

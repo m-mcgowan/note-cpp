@@ -10,7 +10,7 @@
 //   nested NOTE_FIELDS struct, nested reflectable aggregate,
 //   std::array of primitives.
 
-#include "catch.hpp"
+#include <doctest.h>
 #include "test_json_backend.hpp"
 #include "test_notecard_factory.hpp"
 

@@ -1,7 +1,7 @@
 // Tests for JSONB opcode constants, StreamingJsonbBuilder, parser,
 // and COBS stream writer.
 
-#include "catch.hpp"
+#include <doctest.h>
 
 #include <note/jsonb.hpp>
 #include <note/json_sax_streaming.hpp>
@@ -504,7 +504,7 @@ TEST_CASE("jsonb parser: double field") {
     REQUIRE(events.size() == 3);
     CHECK(events[1].type == RecordingSink::Float);
     CHECK(events[1].key == "temp");
-    CHECK(events[1].f == Approx(22.5));
+    CHECK(events[1].f == doctest::Approx(22.5));
 }
 
 TEST_CASE("jsonb parser: bool fields") {

@@ -1,7 +1,7 @@
 // Tests for Connection — configure(), status(), is_connected(),
 // error propagation, and StateStore integration.
 
-#include "catch.hpp"
+#include <doctest.h>
 #include "test_json_backend.hpp"
 #include "test_notecard_factory.hpp"
 

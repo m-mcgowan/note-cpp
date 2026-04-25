@@ -22,7 +22,7 @@
 // self-reference entirely. These tests verify that move-assigning a
 // Notecard still yields a working md5 provider.
 
-#include "catch.hpp"
+#include <doctest.h>
 
 #include <note/api/card_binary_put.hpp>
 #include <note/notecard.hpp>

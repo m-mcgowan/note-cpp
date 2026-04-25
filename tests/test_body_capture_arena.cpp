@@ -4,7 +4,7 @@
 // - body events are forwarded to StructSink via BodyHandler
 // - body events are silently skipped when no handler is set
 // - reset() clears body depth tracking
-#include "catch.hpp"
+#include <doctest.h>
 #include <note/arena.hpp>
 #include <note/allocator.hpp>
 #include <note/string_pool.hpp>

@@ -3,7 +3,7 @@
 // three access patterns work: functor call, direct assignment, and
 // designated initializers.
 
-#include "catch.hpp"
+#include <doctest.h>
 #include "test_json_backend.hpp"
 #include "test_notecard_factory.hpp"
 
@@ -20,27 +20,27 @@
 
 TEST_CASE("functor operator() returns parent reference") {
     note::api::HubSet req;
-    SECTION("mode") {
+    SUBCASE("mode") {
         auto& ret = req.mode("periodic");
         REQUIRE(&ret == &req);
         REQUIRE(*req.mode == "periodic");
     }
-    SECTION("outbound") {
+    SUBCASE("outbound") {
         auto& ret = req.outbound(60);
         REQUIRE(&ret == &req);
         REQUIRE(*req.outbound == 60);
     }
-    SECTION("product") {
+    SUBCASE("product") {
         auto& ret = req.product("com.example");
         REQUIRE(&ret == &req);
         REQUIRE(*req.product == "com.example");
     }
-    SECTION("align (bool)") {
+    SUBCASE("align (bool)") {
         auto& ret = req.align(true);
         REQUIRE(&ret == &req);
         REQUIRE(*req.align == true);
     }
-    SECTION("inbound (int32_t)") {
+    SUBCASE("inbound (int32_t)") {
         auto& ret = req.inbound(30);
         REQUIRE(&ret == &req);
         REQUIRE(*req.inbound == 30);

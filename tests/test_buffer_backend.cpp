@@ -1,7 +1,7 @@
 // Tests for BufferJsonBackend, BufferJsonBuilder, and JsmnJsonReader.
 // Exercises the zero-allocation JSON backend used on embedded targets.
 
-#include "catch.hpp"
+#include <doctest.h>
 
 #include <note/backends/buffer.hpp>
 
@@ -132,7 +132,7 @@ TEST_CASE("JsmnJsonReader: read all types") {
     REQUIRE_FALSE(r.has_error());
     REQUIRE(r.get_bool("flag", false) == true);
     REQUIRE(r.get_int("count", 0) == 42);
-    REQUIRE(r.get_double("temp", 0.0) == Approx(22.5));
+    REQUIRE(r.get_double("temp", 0.0) == doctest::Approx(22.5));
     REQUIRE(r.get_string("name") == "hello");
 }
 
@@ -143,7 +143,7 @@ TEST_CASE("JsmnJsonReader: missing keys return defaults") {
 
     REQUIRE(r.get_bool("missing", true) == true);
     REQUIRE(r.get_int("missing", -1) == -1);
-    REQUIRE(r.get_double("missing", 9.9) == Approx(9.9));
+    REQUIRE(r.get_double("missing", 9.9) == doctest::Approx(9.9));
     REQUIRE(r.get_string("missing", "def") == "def");
 }
 
@@ -184,7 +184,7 @@ TEST_CASE("JsmnJsonReader: nested object") {
 
     auto body = r.get_object("body");
     REQUIRE(body);
-    REQUIRE(body->get_double("temp", 0.0) == Approx(22.5));
+    REQUIRE(body->get_double("temp", 0.0) == doctest::Approx(22.5));
     REQUIRE(body->get_string("label") == "room");
 }
 
@@ -210,7 +210,7 @@ TEST_CASE("JsmnJsonReader: get_string returns default for non-string") {
 }
 
 TEST_CASE("JsmnJsonReader: error detection") {
-    SECTION("invalid JSON") {
+    SUBCASE("invalid JSON") {
         const char* json = "not json at all";
         jsmntok_t tokens[8];
         JsmnJsonReader r(json, strlen(json), tokens, 8);
@@ -218,13 +218,13 @@ TEST_CASE("JsmnJsonReader: error detection") {
         REQUIRE(r.get_error() == "JSON parse error");
     }
 
-    SECTION("empty input") {
+    SUBCASE("empty input") {
         jsmntok_t tokens[8];
         JsmnJsonReader r("", 0, tokens, 8);
         REQUIRE(r.has_error());
     }
 
-    SECTION("notecard error field") {
+    SUBCASE("notecard error field") {
         const char* json = R"({"err":"something went wrong"})";
         jsmntok_t tokens[8];
         JsmnJsonReader r(json, strlen(json), tokens, 8);
@@ -232,7 +232,7 @@ TEST_CASE("JsmnJsonReader: error detection") {
         REQUIRE(r.get_error() == "something went wrong");
     }
 
-    SECTION("no error field returns empty") {
+    SUBCASE("no error field returns empty") {
         const char* json = R"({"ok":true})";
         jsmntok_t tokens[8];
         JsmnJsonReader r(json, strlen(json), tokens, 8);
@@ -481,7 +481,7 @@ TEST_CASE("JsmnJsonReader: get_double negative value") {
     jsmntok_t tokens[8];
     JsmnJsonReader r(json, strlen(json), tokens, 8);
 
-    REQUIRE(r.get_double("temp", 0.0) == Approx(-12.5));
+    REQUIRE(r.get_double("temp", 0.0) == doctest::Approx(-12.5));
 }
 
 
@@ -751,7 +751,7 @@ TEST_CASE("JsmnJsonReader: get_double on empty string returns default") {
     const char* json = R"({"val":""})";
     jsmntok_t tokens[8];
     JsmnJsonReader r(json, strlen(json), tokens, 8);
-    REQUIRE(r.get_double("val", -99.0) == Approx(-99.0));
+    REQUIRE(r.get_double("val", -99.0) == doctest::Approx(-99.0));
 }
 
 
@@ -763,14 +763,14 @@ TEST_CASE("JsmnJsonReader: parse_double integer without decimal") {
     const char* json = R"({"val":42})";
     jsmntok_t tokens[8];
     JsmnJsonReader r(json, strlen(json), tokens, 8);
-    REQUIRE(r.get_double("val", 0.0) == Approx(42.0));
+    REQUIRE(r.get_double("val", 0.0) == doctest::Approx(42.0));
 }
 
 TEST_CASE("JsmnJsonReader: parse_double negative with decimal") {
     const char* json = R"({"val":-3.14})";
     jsmntok_t tokens[8];
     JsmnJsonReader r(json, strlen(json), tokens, 8);
-    REQUIRE(r.get_double("val", 0.0) == Approx(-3.14));
+    REQUIRE(r.get_double("val", 0.0) == doctest::Approx(-3.14));
 }
 
 
@@ -782,14 +782,14 @@ TEST_CASE("JsmnJsonReader: parse_double stops at exponent e") {
     const char* json = R"({"val":1e5})";
     jsmntok_t tokens[8];
     JsmnJsonReader r(json, strlen(json), tokens, 8);
-    REQUIRE(r.get_double("val", 0.0) == Approx(1.0));
+    REQUIRE(r.get_double("val", 0.0) == doctest::Approx(1.0));
 }
 
 TEST_CASE("JsmnJsonReader: parse_double stops at exponent E in decimal part") {
     const char* json = R"({"val":1.5E3})";
     jsmntok_t tokens[8];
     JsmnJsonReader r(json, strlen(json), tokens, 8);
-    REQUIRE(r.get_double("val", 0.0) == Approx(1.5));
+    REQUIRE(r.get_double("val", 0.0) == doctest::Approx(1.5));
 }
 
 

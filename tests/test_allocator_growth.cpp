@@ -7,7 +7,7 @@
 // 4. Not leak memory on any error path
 // 5. Work with constrained allocators (arena with limited space)
 
-#include "catch.hpp"
+#include <doctest.h>
 #include "test_notecard_factory.hpp"
 #include <note/notecard.hpp>
 #include <note/streaming_transport.hpp>

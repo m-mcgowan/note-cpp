@@ -7,7 +7,7 @@
 //   - When the underlying transport fails after a successful start(), stop()
 //     is still called (RAII release on early return).
 
-#include "catch.hpp"
+#include <doctest.h>
 
 #include <note/streaming_transport.hpp>
 #include <note/transport/serial.hpp>

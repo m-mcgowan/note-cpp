@@ -16,7 +16,7 @@
 //
 // When note-c's I2C tests change, review the diffs and update accordingly.
 
-#include "catch.hpp"
+#include <doctest.h>
 
 #include <note/transport/i2c.hpp>
 #include <note/transport/detail/crc32.hpp>

@@ -1,7 +1,7 @@
 // Tests for Setup — full sequence, NTN mode, fixed location,
 // error propagation at each step, sub-manager access.
 
-#include "catch.hpp"
+#include <doctest.h>
 #include "test_json_backend.hpp"
 #include "test_notecard_factory.hpp"
 

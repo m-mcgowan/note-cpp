@@ -1,4 +1,4 @@
-#include "catch.hpp"
+#include <doctest.h>
 #include <note/json_sax.hpp>
 
 #include <string>
@@ -290,19 +290,19 @@ TEST_CASE("parse_double: integer") {
 }
 
 TEST_CASE("parse_double: fractional") {
-    REQUIRE(note::parse_double("3.14") == Approx(3.14));
+    REQUIRE(note::parse_double("3.14") == doctest::Approx(3.14));
 }
 
 TEST_CASE("parse_double: negative") {
-    REQUIRE(note::parse_double("-2.5") == Approx(-2.5));
+    REQUIRE(note::parse_double("-2.5") == doctest::Approx(-2.5));
 }
 
 TEST_CASE("parse_double: exponent") {
-    REQUIRE(note::parse_double("1.5e2") == Approx(150.0));
+    REQUIRE(note::parse_double("1.5e2") == doctest::Approx(150.0));
 }
 
 TEST_CASE("parse_double: negative exponent") {
-    REQUIRE(note::parse_double("1.5e-1") == Approx(0.15));
+    REQUIRE(note::parse_double("1.5e-1") == doctest::Approx(0.15));
 }
 
 TEST_CASE("parse_double: empty returns default") {
@@ -555,19 +555,19 @@ TEST_CASE("JsonSink on_float default forwards to on_number") {
 // ---------------------------------------------------------------------------
 
 TEST_CASE("parse_double: uppercase E exponent") {
-    REQUIRE(note::parse_double("1.5E2") == Approx(150.0));
+    REQUIRE(note::parse_double("1.5E2") == doctest::Approx(150.0));
 }
 
 TEST_CASE("parse_double: positive exponent with plus sign") {
-    REQUIRE(note::parse_double("1e+2") == Approx(100.0));
+    REQUIRE(note::parse_double("1e+2") == doctest::Approx(100.0));
 }
 
 TEST_CASE("parse_double: integer only (no decimal, no exponent)") {
-    REQUIRE(note::parse_double("999") == Approx(999.0));
+    REQUIRE(note::parse_double("999") == doctest::Approx(999.0));
 }
 
 TEST_CASE("parse_double: exponent without decimal part") {
-    REQUIRE(note::parse_double("5e3") == Approx(5000.0));
+    REQUIRE(note::parse_double("5e3") == doctest::Approx(5000.0));
 }
 
 // ---------------------------------------------------------------------------

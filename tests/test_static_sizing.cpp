@@ -1,4 +1,4 @@
-#include "catch.hpp"
+#include <doctest.h>
 #include <note/request_set.hpp>
 #include <note/api/card_status.hpp>
 #include <note/api/card_version.hpp>
@@ -20,8 +20,8 @@ TEST_CASE("RequestSet::max_arena_size is max of component responses") {
     constexpr size_t sz = R::max_arena_size;
 
     // Must be at least as large as each component
-    STATIC_REQUIRE(sz >= note::api::CardStatus::Response::max_arena_size);
-    STATIC_REQUIRE(sz >= note::api::CardVersion::Response::max_arena_size);
+    static_assert(sz >= note::api::CardStatus::Response::max_arena_size);
+    static_assert(sz >= note::api::CardVersion::Response::max_arena_size);
     // HubSet has void Response — contributes 0
 }
 
@@ -29,25 +29,25 @@ TEST_CASE("RequestSet with void-response types") {
     // HubSet and CardIo both have using Response = void — contribute 0
     using R = note::RequestSet<note::api::HubSet, note::api::CardIo>;
     constexpr size_t sz = R::max_arena_size;
-    STATIC_REQUIRE(sz == 0);
+    static_assert(sz == 0);
 }
 
 TEST_CASE("Single-request RequestSet") {
     using R = note::RequestSet<note::api::CardStatus>;
     constexpr size_t sz = R::max_arena_size;
-    STATIC_REQUIRE(sz == note::api::CardStatus::Response::max_arena_size);
+    static_assert(sz == note::api::CardStatus::Response::max_arena_size);
 }
 
 TEST_CASE("max_arena_size values are reasonable") {
     // CardStatus: 1 string field (status: 80) + err (64)
     constexpr size_t cs = note::api::CardStatus::Response::max_arena_size;
-    STATIC_REQUIRE(cs >= 128);
-    STATIC_REQUIRE(cs < 1024);
+    static_assert(cs >= 128);
+    static_assert(cs < 1024);
 
     // CardVersion: multiple string fields + body
     constexpr size_t cv = note::api::CardVersion::Response::max_arena_size;
-    STATIC_REQUIRE(cv > cs);  // more fields = larger
-    STATIC_REQUIRE(cv < 4096);
+    static_assert(cv > cs);  // more fields = larger
+    static_assert(cv < 4096);
 }
 
 TEST_CASE("Arena usage fits max_arena_size for CardStatus") {
@@ -158,7 +158,7 @@ TEST_CASE("GenericResponseSink dispatches to correct fields") {
     REQUIRE(rsp.count == 42);
 
     gsink.on_float("value", 3.14);
-    REQUIRE(rsp.value.value() == Approx(3.14));
+    REQUIRE(rsp.value.value() == doctest::Approx(3.14));
 
     gsink.on_string("name", "hello");
     REQUIRE(rsp.name == "hello");

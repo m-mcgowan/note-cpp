@@ -18,7 +18,7 @@
 //
 // When note-c's serial tests change, review the diffs and update accordingly.
 
-#include "catch.hpp"
+#include <doctest.h>
 
 #include <note/transport/serial.hpp>
 #include <note/streaming_transport.hpp>

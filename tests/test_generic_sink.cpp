@@ -6,7 +6,7 @@
 // GenericBodySink: all field type paths (Int8, Int16, Float32, Double),
 // on_number dispatch, assign_numeric branches, reset all types.
 
-#include "catch.hpp"
+#include <doctest.h>
 #include <note/generic_sink.hpp>
 #include <note/struct_sink.hpp>
 #include <note/arena.hpp>
@@ -125,7 +125,7 @@ TEST_CASE("GenericResponseSink: basic field assignment") {
 
     REQUIRE(rsp.flag.value() == true);
     REQUIRE(rsp.count.value() == 42);
-    REQUIRE(rsp.value.value() == Approx(3.14));
+    REQUIRE(rsp.value.value() == doctest::Approx(3.14));
     REQUIRE(rsp.name.value() == "hello");
 }
 
@@ -185,7 +185,7 @@ TEST_CASE("GenericResponseSink: body_depth forwarding for on_float") {
 
     REQUIRE(g_recorded_events.size() == 1);
     REQUIRE(g_recorded_events[0].tag == note::BodyEvent::Float);
-    REQUIRE(g_recorded_events[0].f == Approx(22.5));
+    REQUIRE(g_recorded_events[0].f == doctest::Approx(22.5));
 }
 
 TEST_CASE("GenericResponseSink: body_depth forwarding for on_string") {
@@ -487,7 +487,7 @@ TEST_CASE("GenericBodySink: on_float assigns to all numeric types") {
     REQUIRE(data.medium == 500);
     REQUIRE(data.large == 99999);
     REQUIRE(data.precise == 22.5f);
-    REQUIRE(data.extra_precise == Approx(3.14159));
+    REQUIRE(data.extra_precise == doctest::Approx(3.14159));
 }
 
 TEST_CASE("GenericBodySink: on_string assigns string field only") {
@@ -522,7 +522,7 @@ TEST_CASE("GenericBodySink: on_number Float32/Double uses parse_double") {
     sink.on_number("extra_precise", "3.14");
 
     REQUIRE(data.precise == 22.5f);
-    REQUIRE(data.extra_precise == Approx(3.14));
+    REQUIRE(data.extra_precise == doctest::Approx(3.14));
 }
 
 TEST_CASE("GenericBodySink: on_number Int8/Int16/Int32 uses parse_int") {

@@ -5,7 +5,7 @@
 // note::backends::detail instead of note::detail).
 namespace note::backends::detail { struct NamespacePollutionGuard {}; }
 
-#include "catch.hpp"
+#include <doctest.h>
 
 #include <note/json_buf.hpp>
 #include <note/backends/buffer.hpp>

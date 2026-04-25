@@ -1,7 +1,7 @@
 // Tests for migration issues reported during note-c → note-cpp conversion.
 // Each test documents a specific usability issue.
 
-#include "catch.hpp"
+#include <doctest.h>
 #include "test_json_backend.hpp"
 #include "test_notecard_factory.hpp"
 #include <note/api.hpp>

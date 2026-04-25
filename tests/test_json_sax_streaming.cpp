@@ -3,7 +3,7 @@
 // Uses a ByteFeeder that delivers bytes in configurable chunk sizes,
 // from a single byte at a time up to the full response.
 
-#include "catch.hpp"
+#include <doctest.h>
 
 #include <note/json_sax_streaming.hpp>
 

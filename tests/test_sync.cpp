@@ -1,7 +1,7 @@
 // Tests for Sync — sync(), sync_outbound(), sync_inbound(),
 // NTN directional split, status(), wait_for_sync(), error propagation.
 
-#include "catch.hpp"
+#include <doctest.h>
 #include "test_json_backend.hpp"
 #include "test_notecard_factory.hpp"
 

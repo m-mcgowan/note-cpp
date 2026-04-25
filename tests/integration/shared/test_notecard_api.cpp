@@ -297,7 +297,10 @@ TEST_CASE("note.template flat body — known-good baseline") {
 
 TEST_CASE("note.template — does the Notecard accept NESTED templates?") {
     auto& nc = notecard_api();
-    const char* file = "integration-tmpl-nested.qo";
+    // Must be a .db (database) notefile — note.update doesn't work on .qo
+    // (queue) files. The Notecard returns "note.update is not allowed in
+    // queue notefiles" if you try.
+    const char* file = "integration-tmpl-nested.db";
     const char* noteId = "nested-rt";
     nc.file.remove(file).execute();
 
@@ -606,11 +609,20 @@ TEST_CASE("debug wire output captures request and response") {
 TEST_SUITE("fw>=9.1.1") {
 TEST_CASE("note.add limit field (9.1.1+)") {
     auto& nc = notecard_api();
-    // Clear any leftover notes from previous runs
+    // The `limit` field on note.add is a boolean (per OpenAPI spec): when
+    // true, the Notecard refuses to create the Note if it's in a penalty
+    // box. We're testing that the *field* is accepted by 9.1.1+ firmware,
+    // not the penalty-box behavior — so set mode:off first to take Notehub
+    // sync state out of the equation, then restore.
+    auto saved_mode = nc.hub.get().execute();
+    nc.hub.set().mode("off").execute();
     nc.file.remove("test-fw-gate.qo").execute();
-    auto rsp = nc.note.add().file("test-fw-gate.qo").limit(100).execute();
+    auto rsp = nc.note.add().file("test-fw-gate.qo").limit(true).execute();
     if (!rsp) { MESSAGE("note.add limit: ", note::to_string(rsp.error())); }
     CHECK(rsp);
     nc.file.remove("test-fw-gate.qo").execute();
+    if (saved_mode) {
+        nc.hub.set().mode(std::string(saved_mode.mode)).execute();
+    }
 }
 } // fw>=9.1.1

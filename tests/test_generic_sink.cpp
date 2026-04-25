@@ -7,6 +7,7 @@
 // on_number dispatch, assign_numeric branches, reset all types.
 
 #include <doctest.h>
+#include <string>
 #include <note/generic_sink.hpp>
 #include <note/struct_sink.hpp>
 #include <note/arena.hpp>

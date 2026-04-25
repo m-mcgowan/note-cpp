@@ -8,7 +8,7 @@
 //
 // Void-response endpoints verify both paths succeed without error.
 
-#include "catch.hpp"
+#include <doctest.h>
 #include "test_notecard_factory.hpp"
 
 #include <note/api.hpp>
@@ -131,7 +131,7 @@ struct BufferedHarness {
 {% if rsp_props %}
 {% set json_response %}{% raw %}{{% endraw %}{% for prop in stream_props %}"{{ prop.wire_name }}":{{ prop | json_test_value }}{{ "," if not loop.last }}{% endfor %}{% raw %}}{% endraw %}{% endset %}
 TEST_CASE("note::api::{{ type_qual }} transport equivalence") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({{ json_response }})");
 {{ make_request("req", "sh.api") }}
@@ -151,13 +151,13 @@ TEST_CASE("note::api::{{ type_qual }} transport equivalence") {
 {% endif %}
 {% endfor %}
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;  // no response queued — HAL returns error
 {{ make_request("req", "sh.api") }}
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
 {{ make_request("req", "sh.api") }}
@@ -165,7 +165,7 @@ TEST_CASE("note::api::{{ type_qual }} transport equivalence") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({{ json_response }})");
 {{ make_request("req", "bh.api") }}
         auto rsp = req.execute();
@@ -188,20 +188,20 @@ TEST_CASE("note::api::{{ type_qual }} transport equivalence") {
 
 {% else %}
 TEST_CASE("note::api::{{ type_qual }} transport equivalence (void)") {
-    SECTION("streaming") {
+    SUBCASE("streaming") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({})");
 {{ make_request("req", "sh.api") }}
         auto rsp = req.execute();
         REQUIRE(rsp.has_value());
     }
-    SECTION("streaming error") {
+    SUBCASE("streaming error") {
         StreamingHarness sh;
 {{ make_request("req", "sh.api") }}
         auto rsp = req.execute();
         REQUIRE_FALSE(rsp.has_value());
     }
-    SECTION("streaming notecard error") {
+    SUBCASE("streaming notecard error") {
         StreamingHarness sh;
         sh.hal.queue_response(R"({"err":"test"})");
 {{ make_request("req", "sh.api") }}
@@ -209,7 +209,7 @@ TEST_CASE("note::api::{{ type_qual }} transport equivalence (void)") {
         REQUIRE_FALSE(rsp.has_value());
         CHECK(rsp.error().code == note::Error::Notecard);
     }
-    SECTION("buffered") {
+    SUBCASE("buffered") {
         BufferedHarness bh(R"({})");
 {{ make_request("req", "bh.api") }}
         auto rsp = req.execute();

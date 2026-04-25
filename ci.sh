@@ -147,7 +147,7 @@ NFEOF
     echo
     ci_stage "Unit tests"
     $CXX $CXXFLAGS $INCLUDE -I "$ROOT/tests" -o /tmp/note-cpp-tests \
-        "$ROOT/tests/test_main.cpp" \
+        "$ROOT/tests/doctest_main.cpp" \
         "$ROOT/tests/test_wire_format.cpp" \
         "$ROOT/tests/test_samples.cpp" \
         "$ROOT/tests/test_body.cpp" \
@@ -189,7 +189,7 @@ NFEOF
     # Subset of tests that don't depend on unicode escapes or buffered transport.
     ci_stage "Unit tests (NOTE_MINIMAL)"
     $CXX $CXXFLAGS -DNOTE_MINIMAL $INCLUDE -I "$ROOT/tests" -o /tmp/note-cpp-tests-minimal \
-        "$ROOT/tests/test_main.cpp" \
+        "$ROOT/tests/doctest_main.cpp" \
         "$ROOT/tests/test_static_notecard.cpp" \
         "$ROOT/tests/test_static_sizing.cpp"
     /tmp/note-cpp-tests-minimal
@@ -467,7 +467,7 @@ run_coverage_clang() {
     LLVM_PROFILE_FILE="$PROFRAW" \
         $CXX $CXXFLAGS -fprofile-instr-generate -fcoverage-mapping \
         $INCLUDE -I "$ROOT/tests" -o "$BINARY" \
-        "$ROOT/tests/test_main.cpp" \
+        "$ROOT/tests/doctest_main.cpp" \
         "$ROOT/tests/test_wire_format.cpp" \
         "$ROOT/tests/test_samples.cpp" \
         "$ROOT/tests/test_body.cpp" \
@@ -596,7 +596,7 @@ run_coverage() {
 
     # Full test set (requires polymorphic Notecard).
     local SRCS_FULL=(
-        test_main test_wire_format test_samples test_body
+        doctest_main test_wire_format test_samples test_body
         test_binary_execute test_buffer_backend
         test_json_buf test_json_fmt test_json_lexer test_property_functor
         test_transport_crc32 test_transport_serial test_transport_i2c
@@ -635,7 +635,7 @@ run_coverage() {
     ci_stage "Coverage build (NOTE_MINIMAL)"
     rm -rf "$BUILD_MIN" && mkdir -p "$BUILD_MIN"
     local SRCS_MIN=(
-        test_main test_buffer_backend test_cobs test_flag_set
+        doctest_main test_buffer_backend test_cobs test_flag_set
         test_json_buf test_json_fmt test_json_sax test_json_sax_streaming
         test_json_lexer test_retry test_state_store test_target
         test_transport_crc32 test_body_capture_arena test_sax_dispatch

@@ -13,6 +13,7 @@
 //   notecardFirmwareSupportsCrc → the bool& crc_enabled parameter
 
 #include <doctest.h>
+#include <string>
 
 #include <note/transport/detail/crc32.hpp>
 

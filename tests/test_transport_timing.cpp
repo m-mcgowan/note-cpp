@@ -3,6 +3,7 @@
 // timing parameters match note-c defaults and are actually applied.
 
 #include <doctest.h>
+#include <string>
 #include <note/transport/protocol_policy.hpp>
 #include <note/transport/serial.hpp>
 #include <note/transport/i2c.hpp>

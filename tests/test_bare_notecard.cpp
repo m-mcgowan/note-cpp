@@ -3,6 +3,7 @@
 // send/transact raw JSON strings.
 
 #include <doctest.h>
+#include <string>
 #include <note/bare_notecard.hpp>
 #include <cstring>
 

@@ -2,6 +2,7 @@
 /// Unit tests for retry_transaction() — safety-gated retry and inter-transaction timing.
 
 #include <doctest.h>
+#include <string>
 
 #include <note/retry.hpp>
 #include <note/error.hpp>

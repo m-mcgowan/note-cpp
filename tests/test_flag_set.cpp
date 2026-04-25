@@ -1,5 +1,6 @@
 // Tests for FlagSet: add, operator|=, set, clear, serialization.
 #include <doctest.h>
+#include <string>
 #include <note/flag_set.hpp>
 #include <note/api/card_attn.hpp>
 #include <note/api/card_triangulate.hpp>

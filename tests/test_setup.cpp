@@ -2,6 +2,7 @@
 // error propagation at each step, sub-manager access.
 
 #include <doctest.h>
+#include <string>
 #include "test_json_backend.hpp"
 #include "test_notecard_factory.hpp"
 

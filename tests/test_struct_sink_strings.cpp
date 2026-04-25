@@ -89,8 +89,7 @@ TEST_CASE("StructSink: char[N] field receives null-terminated copy") {
     REQUIRE(obj.tag[5] == '\0');   // explicit null terminator
 }
 
-TEST_CASE("StructSink: char[N] truncates oversize values and null-terminates",
-          "[struct_sink][strings]") {
+TEST_CASE("StructSink: char[N] truncates oversize values and null-terminates") {
     char buf[512];
     note::MonotonicArena arena(buf);
     note::StringPool pool(note::arena_allocator(arena));
@@ -105,8 +104,7 @@ TEST_CASE("StructSink: char[N] truncates oversize values and null-terminates",
     REQUIRE(obj.tag[3] == '\0');       // truncated + null
 }
 
-TEST_CASE("StructSink: std::string survives past transport buffer reuse",
-          "[struct_sink][strings]") {
+TEST_CASE("StructSink: std::string survives past transport buffer reuse") {
     char buf[512];
     note::MonotonicArena arena(buf);
     note::StringPool pool(note::arena_allocator(arena));

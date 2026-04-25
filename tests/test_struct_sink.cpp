@@ -1,4 +1,5 @@
 #include <doctest.h>
+#include <string>
 #include <note/body.hpp>
 #include <note/types.hpp>
 #include <type_traits>

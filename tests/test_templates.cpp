@@ -2,6 +2,7 @@
 // idempotent re-register, error propagation.
 
 #include <doctest.h>
+#include <string>
 #include "test_json_backend.hpp"
 #include "test_notecard_factory.hpp"
 

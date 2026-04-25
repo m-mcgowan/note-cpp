@@ -5,6 +5,7 @@
 // When compiled without ARDUINO, this file is empty.
 
 #include <doctest.h>
+#include <string>
 
 #ifdef ARDUINO
 

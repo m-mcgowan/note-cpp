@@ -6,6 +6,7 @@
 namespace note::backends::detail { struct NamespacePollutionGuard {}; }
 
 #include <doctest.h>
+#include <string>
 
 #include <note/json_buf.hpp>
 #include <note/backends/buffer.hpp>

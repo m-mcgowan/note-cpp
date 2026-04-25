@@ -5,6 +5,7 @@
 // produces the expected JSON on the wire.
 
 #include <doctest.h>
+#include <string>
 #include "test_json_backend.hpp"
 #include "test_notecard_factory.hpp"
 

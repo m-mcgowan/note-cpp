@@ -8,6 +8,7 @@
 // 5. Work with constrained allocators (arena with limited space)
 
 #include <doctest.h>
+#include <string>
 #include "test_notecard_factory.hpp"
 #include <note/notecard.hpp>
 #include <note/streaming_transport.hpp>

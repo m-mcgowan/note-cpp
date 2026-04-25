@@ -134,6 +134,7 @@ add_executable(note-cpp-integration-backends
     ${NOTE_CPP_ROOT}/tests/integration/buffer/test_alloc_profile.cpp
     ${NOTE_CPP_ROOT}/tests/integration/buffer/test_sax_alloc_profile.cpp
     ${NOTE_CPP_ROOT}/tests/integration/buffer/test_sax_parser.cpp
+    ${NOTE_CPP_ROOT}/tests/integration/cjson/test_alloc_profile.cpp
 )
 target_include_directories(note-cpp-integration-backends PRIVATE
     ${NOTE_CPP_ROOT}/include

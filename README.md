@@ -413,14 +413,17 @@ note-cpp ships a built-in Arduino HAL, selected automatically when `ARDUINO` is 
 
 ## Testing
 
+The portable test suite is one set of `.cpp` files compiled into two binaries: a host doctest binary that runs in CI under five compilers, and an ESP32-S3 firmware that flashes onto a real Notecard. The same TEST_CASE — same assertions, same fixtures — runs on both. Backend-specific paths (cJSON, nlohmann/json, the buffer/SAX backend) are exercised on both targets so behaviour stays in lock-step.
+
 | Level | What | Count |
 |-------|------|-------|
-| **Host unit tests** | Catch2 tests covering all endpoints, transport, SAX parsing, body structs, error handling | ~1,400 test cases |
+| **Host unit tests** | doctest tests covering all endpoints, transport, SAX parsing, body structs, error handling | ~1,815 test cases |
+| **Arduino host build** | Same sources compiled with `ARDUINO` + stubs, verifying `Printable` integration | ~1,826 test cases |
+| **Backend parity** | cJSON / nlohmann / buffer JSON backends run on host and device from one source | 89 test cases |
+| **On-device firmware** | ESP32-S3 with a real Notecard over serial/I2C — runs the portable suite plus fixture tests for live API requests, binary transfer, streaming SAX | runs portable + device-only fixture tests |
 | **Compile-fail tests** | Verify that invalid API usage doesn't compile (wrong types, invalid flags, bad JSON) | 19 |
-| **Arduino build** | Same test suite compiled with `ARDUINO` defined, verifying `Printable` integration | ~1,400 test cases |
 | **Code coverage** | GCC 13 + lcov 2.x — lines 97%, functions 99%, branches 96% | CI enforced |
 | **Multi-compiler CI** | g++ 12/13/14, clang++ 17/18, C++20 and C++23, libstdc++ and libc++ | 5 configurations |
-| **On-device integration** | ESP32-S3 with a real Notecard over serial/I2C — API requests, body parsing, binary transfer, streaming SAX | 36 test cases |
 | **AVR build verification** | ATmega328P (Arduino Uno) binary size checks | PlatformIO |
 | **Embedded compatibility** | Library examples compiled across ESP32, AVR, STM32 via [compat-check](https://github.com/m-mcgowan/embedded-cpp-compat-check) | CI |
 

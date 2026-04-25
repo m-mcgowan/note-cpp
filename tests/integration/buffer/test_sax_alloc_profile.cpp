@@ -20,7 +20,7 @@
 #include <cstring>
 #include <string>
 
-#include "../../common/scripted_transport.hpp"
+#include "common/scripted_transport.hpp"
 using note::test::ScriptedTransport;
 
 // ═══════════════════════════════════════════════════════════════════════════

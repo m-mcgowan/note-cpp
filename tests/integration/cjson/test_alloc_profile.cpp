@@ -29,7 +29,7 @@
 #include <note/api/note_add.hpp>
 #include <note/api.hpp>
 
-#include "../../common/scripted_transport.hpp"
+#include "common/scripted_transport.hpp"
 
 #include <cstdio>
 #include <cstdlib>

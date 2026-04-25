@@ -24,6 +24,13 @@
 #include <avr/pgmspace.h>
 #endif
 
+#ifdef ARDUINO
+// Forward declaration: Arduino.h/WString.h declares __FlashStringHelper as
+// an incomplete type. We forward-declare here so progmem.hpp is self-contained
+// and compiles correctly before Arduino.h has been included.
+class __FlashStringHelper;
+#endif
+
 namespace note {
 
 /// A string stored in program memory (flash). On non-Harvard platforms,

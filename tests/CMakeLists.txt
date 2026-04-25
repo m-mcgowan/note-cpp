@@ -127,9 +127,13 @@ FetchContent_MakeAvailable(nlohmann_json)
 
 add_executable(note-cpp-integration-backends
     ${NOTE_CPP_ROOT}/tests/doctest_main.cpp
+    ${NOTE_CPP_ROOT}/tests/common/alloc_counter.cpp
     ${NOTE_CPP_ROOT}/tests/integration/cjson/test_cjson_backend.cpp
     ${NOTE_CPP_ROOT}/tests/integration/nlohmann/test_nlohmann_backend.cpp
     ${NOTE_CPP_ROOT}/tests/integration/buffer/test_buffer_backend.cpp
+    ${NOTE_CPP_ROOT}/tests/integration/buffer/test_alloc_profile.cpp
+    ${NOTE_CPP_ROOT}/tests/integration/buffer/test_sax_alloc_profile.cpp
+    ${NOTE_CPP_ROOT}/tests/integration/buffer/test_sax_parser.cpp
 )
 target_include_directories(note-cpp-integration-backends PRIVATE
     ${NOTE_CPP_ROOT}/include

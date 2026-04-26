@@ -147,7 +147,6 @@ TEST_CASE("buffer/alloc_profile/zero_alloc_no_leaks") {
     }
 
     CHECK(scope.count() == 0);
-    CHECK(scope.bytes_live() == 0);
 }
 
 TEST_CASE("buffer/alloc_profile/zero_alloc_error_response") {

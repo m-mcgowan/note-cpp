@@ -6,13 +6,14 @@
 // arduino-cli job — which has no local equivalent — while local
 // compile-check and host-side tests would pass.
 //
-// Guarded on ARDUINO / NOTE_ARDUINO_STUBS so the host build skips it
-// entirely; the file still must be in ALL_TEST_SOURCES to be picked up
-// by the Arduino-stubs target.
+// Guarded on NOTE_ARDUINO_STUBS so it only runs in the host Arduino-stubs
+// build. Skip on real Arduino targets — the test stack-allocates three
+// fully-instantiated note::arduino::Notecard objects, which blows the
+// 8 KB loopTask stack on ESP32.
 
 #include <doctest.h>
 
-#if defined(ARDUINO) || defined(NOTE_ARDUINO_STUBS)
+#if defined(NOTE_ARDUINO_STUBS)
 
 #include <note/arduino.hpp>
 #include <note/fw_versions.hpp>

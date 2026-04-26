@@ -18,10 +18,12 @@
 //         }
 //     }
 //
-// The counter is disabled by default; overhead in non-measurement paths is
-// a single relaxed atomic load per allocation. Measurement is not nested —
-// a new ScopedAllocCounter resets counts on entry and restores the previous
-// enabled state on exit (nested scopes are not supported; don't nest them).
+// Counters are zero outside an active ScopedAllocCounter; ctor resets them and
+// flips `enabled` true, dtor flips it back. Nesting is not supported. Overhead
+// outside a scope is one relaxed atomic load per allocation. The counter
+// tracks call counts and a running total of bytes requested; it does NOT track
+// per-allocation `bytes_live` (would require a malloc header which is unsafe
+// during early static-init OOM on ESP32).
 
 #include <atomic>
 #include <cstddef>
@@ -31,22 +33,30 @@ namespace note_tests {
 struct AllocCounter {
     std::atomic<std::size_t> count{0};
     std::atomic<std::size_t> frees{0};
-    std::atomic<std::size_t> bytes_live{0};
-    std::atomic<std::size_t> bytes_peak{0};
     std::atomic<std::size_t> bytes_total{0};
     std::atomic<bool> enabled{false};
 };
 
 extern AllocCounter g_alloc;
 
+// Always-on diagnostic counters covering everything from program start until
+// `init_phase_freeze()` is called. Use to size up doctest-registration
+// overhead and similar static-init heap usage.
+struct InitCounter {
+    std::atomic<std::size_t> count{0};
+    std::atomic<std::size_t> bytes{0};
+    std::atomic<bool> frozen{false};
+};
+
+extern InitCounter g_init;
+
+inline void init_phase_freeze() { g_init.frozen.store(true, std::memory_order_release); }
+
 class ScopedAllocCounter {
 public:
     ScopedAllocCounter() {
-        // Reset counts; record that the scope is active.
         g_alloc.count.store(0, std::memory_order_relaxed);
         g_alloc.frees.store(0, std::memory_order_relaxed);
-        g_alloc.bytes_live.store(0, std::memory_order_relaxed);
-        g_alloc.bytes_peak.store(0, std::memory_order_relaxed);
         g_alloc.bytes_total.store(0, std::memory_order_relaxed);
         g_alloc.enabled.store(true, std::memory_order_release);
     }
@@ -59,8 +69,6 @@ public:
 
     std::size_t count()       const { return g_alloc.count.load(std::memory_order_relaxed); }
     std::size_t frees()       const { return g_alloc.frees.load(std::memory_order_relaxed); }
-    std::size_t bytes_live()  const { return g_alloc.bytes_live.load(std::memory_order_relaxed); }
-    std::size_t bytes_peak()  const { return g_alloc.bytes_peak.load(std::memory_order_relaxed); }
     std::size_t bytes_total() const { return g_alloc.bytes_total.load(std::memory_order_relaxed); }
 };
 

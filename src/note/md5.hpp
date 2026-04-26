@@ -88,9 +88,12 @@ inline Md5Hex md5_hex(const uint8_t* msg, size_t len) {
     uint32_t c0 = 0x98badcfeu;
     uint32_t d0 = 0x10325476u;
 
-    // Pre-process: pad message to multiple of 512 bits
-    size_t orig_len = len;
-    size_t padded   = ((len + 8) / 64 + 1) * 64;
+    // Pre-process: pad message to multiple of 512 bits. The 8-byte trailer
+    // encodes the original message length in BITS as a 64-bit little-endian
+    // value, so use uint64_t explicitly: on 32-bit targets size_t * 8 is a
+    // 32-bit expression and shifting >= 32 bits is UB.
+    uint64_t bit_len = static_cast<uint64_t>(len) * 8u;
+    size_t   padded  = ((len + 8) / 64 + 1) * 64;
 
     // Process 64-byte chunks — use a local block to handle padding
     for (size_t chunk = 0; chunk < padded; chunk += 64) {
@@ -100,7 +103,7 @@ inline Md5Hex md5_hex(const uint8_t* msg, size_t len) {
             if      (pos < len)          block[i] = msg[pos];
             else if (pos == len)         block[i] = 0x80;
             else if (pos >= padded - 8)  block[i] = static_cast<uint8_t>(
-                                             (orig_len * 8) >> (8 * (pos - (padded - 8))));
+                                             bit_len >> (8 * (pos - (padded - 8))));
         }
 
         uint32_t M[16];

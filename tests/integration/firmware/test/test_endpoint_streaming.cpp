@@ -1,1 +1,0 @@
-../../../test_endpoint_streaming.cpp

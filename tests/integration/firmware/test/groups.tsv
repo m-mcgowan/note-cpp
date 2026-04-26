@@ -1,0 +1,74 @@
+; Mapping of portable test files to PIO test groups.
+;
+; Each `pio test -e serial` invocation builds one binary per subdirectory
+; under test/ (the PIO grouping convention requires `test_` prefix). The
+; ESP32-S3 has ~250 KB of DRAM heap, and doctest's TEST_CASE registration
+; consumes ~278 bytes per case during static-init — so a single binary
+; cannot hold the full ~1800-case portable suite. This manifest splits
+; portable tests across multiple unit groups; sync_groups.sh re-creates
+; the symlinks in test/test_units_*/ from this file.
+;
+; Format: <group>\t<test_file_basename>
+; Group "fixtures" maps to test/test_fixtures/ (hardware-touching tests).
+; Groups "units_a", "units_b", ... map to test/test_units_<x>/ (portable
+; tests). Order within a group doesn't matter; doctest sorts at runtime.
+;
+; To rebalance, edit this file and re-run sync_groups.sh. Adding a new
+; group is just a matter of using the new name (e.g. "units_d") and
+; re-running.
+units_a	test_allocator_growth.cpp
+units_a	test_api_context.cpp
+units_a	test_arduino_notecard_ctad.cpp
+units_a	test_attention.cpp
+units_a	test_bare_notecard.cpp
+units_a	test_binary_execute.cpp
+units_a	test_body.cpp
+units_a	test_body_capture_arena.cpp
+units_a	test_channel.cpp
+units_a	test_cobs.cpp
+units_a	test_connection.cpp
+units_a	test_debug.cpp
+units_a	test_endpoint_coverage.cpp
+units_a	test_endpoint_streaming.cpp
+units_a	test_error_message.cpp
+units_a	test_flag_set.cpp
+units_a	test_generic_sink.cpp
+units_a	test_intent_flags.cpp
+units_a	test_json_buf.cpp
+units_a	test_json_fmt.cpp
+units_b	test_json_lexer.cpp
+units_b	test_json_sax.cpp
+units_b	test_json_sax_streaming.cpp
+units_b	test_json_scan.cpp
+units_b	test_jsonb.cpp
+units_b	test_make_api.cpp
+units_b	test_migration_support.cpp
+units_b	test_notecard.cpp
+units_b	test_notecard_move_semantics.cpp
+units_b	test_notecard_streaming.cpp
+units_b	test_property_functor.cpp
+units_b	test_retry.cpp
+units_b	test_samples.cpp
+units_b	test_sax_dispatch.cpp
+units_b	test_setup.cpp
+units_b	test_sizeof_report.cpp
+units_b	test_state_store.cpp
+units_b	test_static_notecard.cpp
+units_c	test_static_sizing.cpp
+units_c	test_streaming_builder.cpp
+units_c	test_streaming_errors.cpp
+units_c	test_struct_field_symmetry.cpp
+units_c	test_struct_sink.cpp
+units_c	test_struct_sink_strings.cpp
+units_c	test_sync.cpp
+units_c	test_target.cpp
+units_c	test_templates.cpp
+units_c	test_transport_crc32.cpp
+units_c	test_transport_i2c.cpp
+units_c	test_transport_serial.cpp
+units_c	test_transport_streaming.cpp
+units_c	test_transport_timing.cpp
+units_c	test_txn_handshake.cpp
+units_c	test_units.cpp
+units_c	test_voltage_variable.cpp
+units_c	test_wire_format.cpp

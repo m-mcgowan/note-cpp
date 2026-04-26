@@ -1,1 +1,0 @@
-../../../test_state_store.cpp

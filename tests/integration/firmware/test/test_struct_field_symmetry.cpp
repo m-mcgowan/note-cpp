@@ -1,1 +1,0 @@
-../../../test_struct_field_symmetry.cpp

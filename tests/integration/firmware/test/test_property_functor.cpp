@@ -1,1 +1,0 @@
-../../../test_property_functor.cpp

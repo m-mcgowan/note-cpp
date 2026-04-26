@@ -1,1 +1,0 @@
-../../../test_wire_format.cpp

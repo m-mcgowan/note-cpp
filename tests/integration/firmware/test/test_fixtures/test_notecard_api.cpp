@@ -1,1 +1,1 @@
-../../shared/test_notecard_api.cpp
+../../../shared/test_notecard_api.cpp

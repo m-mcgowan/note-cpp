@@ -125,21 +125,25 @@ FetchContent_Declare(
 set(JSON_BuildTests OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(nlohmann_json)
 
-add_executable(note-cpp-integration-backends
-    ${NOTE_CPP_ROOT}/tests/doctest_main.cpp
-    ${NOTE_CPP_ROOT}/tests/common/alloc_counter.cpp
-    ${NOTE_CPP_ROOT}/tests/integration/cjson/test_cjson_backend.cpp
-    ${NOTE_CPP_ROOT}/tests/integration/nlohmann/test_nlohmann_backend.cpp
-    ${NOTE_CPP_ROOT}/tests/integration/buffer/test_buffer_backend.cpp
-    ${NOTE_CPP_ROOT}/tests/integration/buffer/test_alloc_profile.cpp
-    ${NOTE_CPP_ROOT}/tests/integration/buffer/test_sax_alloc_profile.cpp
-    ${NOTE_CPP_ROOT}/tests/integration/buffer/test_sax_parser.cpp
-    ${NOTE_CPP_ROOT}/tests/integration/cjson/test_alloc_profile.cpp
-)
-target_include_directories(note-cpp-integration-backends PRIVATE
-    ${NOTE_CPP_ROOT}/include
-    ${NOTE_CPP_ROOT}/tests
-    ${cjson_SOURCE_DIR}
-)
-target_link_libraries(note-cpp-integration-backends PRIVATE cjson nlohmann_json::nlohmann_json)
-add_test(NAME integration-backends COMMAND note-cpp-integration-backends)
+# Backend-parity tests need the polymorphic note::Notecard class, which
+# NOTE_MINIMAL strips. Skip the target on minimal builds.
+if(_minimal_pos EQUAL -1 AND _no_poly_pos EQUAL -1)
+    add_executable(note-cpp-integration-backends
+        ${NOTE_CPP_ROOT}/tests/doctest_main.cpp
+        ${NOTE_CPP_ROOT}/tests/common/alloc_counter.cpp
+        ${NOTE_CPP_ROOT}/tests/integration/cjson/test_cjson_backend.cpp
+        ${NOTE_CPP_ROOT}/tests/integration/nlohmann/test_nlohmann_backend.cpp
+        ${NOTE_CPP_ROOT}/tests/integration/buffer/test_buffer_backend.cpp
+        ${NOTE_CPP_ROOT}/tests/integration/buffer/test_alloc_profile.cpp
+        ${NOTE_CPP_ROOT}/tests/integration/buffer/test_sax_alloc_profile.cpp
+        ${NOTE_CPP_ROOT}/tests/integration/buffer/test_sax_parser.cpp
+        ${NOTE_CPP_ROOT}/tests/integration/cjson/test_alloc_profile.cpp
+    )
+    target_include_directories(note-cpp-integration-backends PRIVATE
+        ${NOTE_CPP_ROOT}/include
+        ${NOTE_CPP_ROOT}/tests
+        ${cjson_SOURCE_DIR}
+    )
+    target_link_libraries(note-cpp-integration-backends PRIVATE cjson nlohmann_json::nlohmann_json)
+    add_test(NAME integration-backends COMMAND note-cpp-integration-backends)
+endif()

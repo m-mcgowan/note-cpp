@@ -41,14 +41,16 @@ extern AllocCounter g_alloc;
 
 // Always-on diagnostic counters covering everything from program start until
 // `init_phase_freeze()` is called. Use to size up doctest-registration
-// overhead and similar static-init heap usage.
+// overhead and similar static-init heap usage. Header-only so the counter
+// works in builds (e.g. ci.sh's quick subset) that don't compile
+// alloc_counter.cpp.
 struct InitCounter {
     std::atomic<std::size_t> count{0};
     std::atomic<std::size_t> bytes{0};
     std::atomic<bool> frozen{false};
 };
 
-extern InitCounter g_init;
+inline InitCounter g_init;
 
 inline void init_phase_freeze() { g_init.frozen.store(true, std::memory_order_release); }
 

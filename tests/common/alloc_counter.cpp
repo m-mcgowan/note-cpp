@@ -14,7 +14,7 @@
 
 namespace note_tests {
 AllocCounter g_alloc;
-InitCounter  g_init;
+// g_init is an inline variable defined in alloc_counter.hpp.
 }  // namespace note_tests
 
 namespace {

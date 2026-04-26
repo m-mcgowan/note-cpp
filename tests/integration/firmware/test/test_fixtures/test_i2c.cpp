@@ -35,7 +35,7 @@ struct I2cFixture {
     Esp32I2CHal hal{notecardWire()};
     note::transport::NotecardI2c<> transport{hal};
     note::backends::CjsonBackend backend;
-    note::Notecard notecard{backend, transport};
+    note::Notecard<> notecard{backend, transport};
     Api nc{notecard};
 };
 
@@ -88,7 +88,7 @@ void binary_round_trip_hal(I2cFixture& f, const uint8_t* data, size_t data_len, 
     REQUIRE(static_cast<int32_t>(data_len) <= status_rsp.max);
 
     size_t cobs_max = note::cobs_encoded_size(data_len);
-    std::string md5 = md5_hex(data, data_len);
+    auto md5 = md5_hex(data, data_len);
 
     std::vector<uint8_t> encoded(cobs_max + 1);
     size_t actual_cobs_len = 0;

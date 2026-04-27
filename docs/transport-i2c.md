@@ -48,11 +48,35 @@ note::Notecard nc(backend, transport);  // buffered path (IBufferedTransport)
 On Arduino, `begin()` handles the full stack:
 
 ```cpp
-nc.begin(Wire);             // default address 0x17
-nc.begin(Wire, 0x17);       // explicit address
+nc.begin(Wire);                       // default pins, default address 0x17
+nc.begin(Wire, 0x17);                 // explicit address
+nc.begin(Wire, /*sda=*/14, /*scl=*/21);          // custom pins
+nc.begin(Wire, /*sda=*/14, /*scl=*/21, 0x17);    // custom pins + address
+nc.begin(Wire, note::arduino::external_bus);     // app owns Wire
 ```
 
 This creates an Arduino `I2CHal` adapter internally.
+
+### Bus management
+
+By default, `note::arduino::I2CHal` "owns" the Wire bus — its constructor
+calls `Wire.begin()` and a transient I2C error triggers `Wire.end()` /
+`Wire.begin()` inside `reset()`. This is fine on devkits where Wire's
+default pins are correct and nothing else shares the bus.
+
+For non-devkit boards or shared buses, pick the right form:
+
+| Form | What the HAL does |
+|---|---|
+| `nc.begin(Wire)` | calls `Wire.begin()` (no pin args); `reset()` cycles `Wire.end()`/`Wire.begin()` |
+| `nc.begin(Wire, sda, scl)` | calls `Wire.begin(sda, scl)`; `reset()` cycles `Wire.end()`/`Wire.begin(sda, scl)` |
+| `nc.begin(Wire, note::arduino::external_bus)` | never touches the bus — app calls `Wire.begin(...)` and decides what `reset()` should do |
+
+Use `external_bus` when the bus is shared with other drivers/tasks, or
+when the app needs to set non-default Wire properties (e.g.
+`setBufferSize()` on ESP32) before `begin()`. In that mode the HAL's
+`reset()` is a no-op; the app is responsible for any bus-level recovery
+it wants on transient I2C errors.
 
 ## Callback variant
 

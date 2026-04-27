@@ -18,10 +18,23 @@
 //   receive:  write [0x00, N] then read [available, good_bytes, data[0..good_bytes-1]]
 //             (priming query: write [0x00, 0x00] then read [available, 0x00])
 //
+// Bus management:
+//   By default the HAL "owns" the Wire bus — it calls Wire.begin() in its
+//   constructor and Wire.end()/Wire.begin() inside reset(). This works on
+//   devkit boards where Wire's default pins are correct and nothing else
+//   shares the bus.
+//
+//   For non-devkit boards or shared buses, use one of:
+//
+//     I2CHal(Wire, sda, scl)             // HAL calls Wire.begin(sda, scl).
+//     I2CHal(Wire, external_bus)         // App owns Wire; HAL never calls
+//                                        // begin()/end().
+//
 // Usage:
 //
-//   note::arduino::I2CHal hal(Wire);           // default address 0x17
-//   note::arduino::I2CHal hal(Wire, 0x17, 30); // explicit address + MTU
+//   note::arduino::I2CHal hal(Wire);                 // default address 0x17
+//   note::arduino::I2CHal hal(Wire, 14, 21);         // custom pins
+//   note::arduino::I2CHal hal(Wire, note::arduino::external_bus);  // shared bus
 //   note::transport::NotecardI2c transport(hal);
 //   note::Notecard nc(backend,
 //       [&transport](note::string_view req, uint32_t t) {
@@ -30,11 +43,18 @@
 
 namespace note::arduino {
 
+/// Tag type selecting external bus management — see I2CHal docs.
+struct ExternalBus {};
+inline constexpr ExternalBus external_bus{};
+
 class I2CHal : public note::transport::I2CHal {
 public:
     // SoI2C response header size: [available, good_bytes]
     static constexpr uint8_t kResponseHeaderSize = 2;
 
+    /// Default: HAL calls Wire.begin() (no pin args) in the constructor and
+    /// Wire.end()/Wire.begin() on reset. Use this on devkits where Wire's
+    /// default pins are correct and nothing else shares the bus.
     explicit I2CHal(TwoWire& wire,
                     uint8_t  address     = note::transport::kI2cDefaultAddress,
                     size_t   max_xfer    = note::transport::kI2cDefaultMtu)
@@ -42,12 +62,43 @@ public:
         wire_.begin();
     }
 
-    // Hardware reset: cycle the Wire bus.
+    /// Pin-aware: HAL calls Wire.begin(sda, scl) in the constructor and
+    /// Wire.end()/Wire.begin(sda, scl) on reset. Use this on boards where
+    /// the Notecard sits on non-default I2C pins.
+    I2CHal(TwoWire& wire, int sda, int scl,
+           uint8_t  address     = note::transport::kI2cDefaultAddress,
+           size_t   max_xfer    = note::transport::kI2cDefaultMtu)
+        : wire_(wire), address_(address), max_xfer_(max_xfer),
+          sda_(sda), scl_(scl) {
+        wire_.begin(sda_, scl_);
+    }
+
+    /// External-bus: app owns Wire. The HAL never calls Wire.begin(),
+    /// Wire.end(), or any other bus-init function. Use this when the bus
+    /// is shared with other drivers/tasks, or when the app needs to retain
+    /// full control over bus lifetime and pin configuration.
+    I2CHal(TwoWire& wire, ExternalBus,
+           uint8_t  address     = note::transport::kI2cDefaultAddress,
+           size_t   max_xfer    = note::transport::kI2cDefaultMtu)
+        : wire_(wire), address_(address), max_xfer_(max_xfer),
+          manage_bus_(false) {}
+
+    // Hardware reset: cycle the Wire bus, unless the app owns it.
     bool reset() override {
+        if (!manage_bus_) {
+            // App-managed bus: no-op. The app is responsible for any
+            // recovery action it wants to take in response to a transient
+            // I2C failure.
+            return true;
+        }
 #if WIRE_HAS_END
         wire_.end();
 #endif
-        wire_.begin();
+        if (sda_ >= 0 && scl_ >= 0) {
+            wire_.begin(sda_, scl_);
+        } else {
+            wire_.begin();
+        }
         return true;
     }
 
@@ -109,6 +160,9 @@ protected:
 private:
     uint8_t  address_;
     size_t   max_xfer_;
+    int      sda_         = -1;
+    int      scl_         = -1;
+    bool     manage_bus_  = true;
 };
 
 }  // namespace note::arduino

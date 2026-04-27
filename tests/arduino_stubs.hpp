@@ -50,4 +50,53 @@ public:
     virtual size_t printTo(Print& p) const = 0;
 };
 
+// ─── Wire stub (TwoWire) ─────────────────────────────────────────────────
+// Minimal mock of Arduino's Wire library, just enough to compile and
+// instrument note::arduino::I2CHal in host-side tests.
+//
+// Records every begin()/end() call so tests can assert who managed the
+// bus. transmit/receive helpers are stubbed to make the SoI2C protocol
+// path compile (they don't simulate real I2C).
+
+#include <vector>
+
+class TwoWire {
+public:
+    struct BeginCall { int sda; int scl; };
+
+    std::vector<BeginCall> begin_calls;
+    int end_count = 0;
+    int set_buffer_size_arg = 0;
+
+    // begin() with no args.
+    void begin() { begin_calls.push_back({-1, -1}); }
+    // begin(sda, scl).
+    void begin(int sda, int scl) { begin_calls.push_back({sda, scl}); }
+    void end() { ++end_count; }
+
+    void setBufferSize(int n) { set_buffer_size_arg = n; }
+
+    // SoI2C protocol surface — these no-ops let I2CHal::transmit /
+    // I2CHal::receive compile in host stub builds.
+    void beginTransmission(uint8_t /*addr*/) {}
+    int  endTransmission() { return 0; }
+    size_t write(uint8_t /*b*/) { return 1; }
+    size_t write(const uint8_t* /*data*/, size_t len) { return len; }
+    int  requestFrom(int /*addr*/, int qty) { return qty; }
+    int  read() { return 0; }
+    int  available() { return 0; }
+};
+
+// Stock Arduino doesn't auto-create a global Wire here; tests that
+// need one can declare their own instance.
+
+// Wire library has end() on most modern cores.
+#ifndef WIRE_HAS_END
+#define WIRE_HAS_END 1
+#endif
+
+// Arduino timing — global functions used by note::arduino::I2CHal etc.
+inline uint32_t millis() { return 0; }
+inline void delay(uint32_t /*ms*/) {}
+
 #endif // NOTE_ARDUINO_STUBS

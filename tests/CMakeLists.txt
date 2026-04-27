@@ -98,6 +98,8 @@ add_executable(note-cpp-tests-arduino
 )
 target_compile_definitions(note-cpp-tests-arduino PRIVATE ARDUINO=10812 NOTE_ARDUINO_STUBS=1)
 target_compile_options(note-cpp-tests-arduino PRIVATE -include ${CMAKE_CURRENT_SOURCE_DIR}/arduino_stubs.hpp)
+# Stubs path provides Wire.h shim so note/arduino/i2c.hpp compiles host-side.
+target_include_directories(note-cpp-tests-arduino PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/stubs)
 add_test(NAME unit-tests-arduino COMMAND note-cpp-tests-arduino)
 
 # ---------------------------------------------------------------------------

@@ -75,7 +75,9 @@ public:
         Base::begin(*serial_streaming_, alloc);
     }
 
-    /// Begin with I2C transport (default address).
+    /// Begin with I2C transport (default address). HAL calls Wire.begin()
+    /// with no pin args. Use this on devkits where Wire's default pins
+    /// are already correct.
     ///   nc.begin(Wire);
     void begin(TwoWire& wire) {
         begin_i2c(wire, transport::kI2cDefaultAddress);
@@ -87,6 +89,34 @@ public:
         begin_i2c(wire, address);
     }
 
+    /// Begin with I2C transport on custom pins. HAL calls Wire.begin(sda,
+    /// scl); on reset it cycles Wire.end() / Wire.begin(sda, scl).
+    /// Use this for non-devkit boards where the Notecard sits on
+    /// non-default I2C pins.
+    ///   nc.begin(Wire, /*sda=*/14, /*scl=*/21);
+    void begin(TwoWire& wire, int sda, int scl) {
+        begin_i2c_pins(wire, sda, scl, transport::kI2cDefaultAddress);
+    }
+
+    /// Begin with I2C transport on custom pins and explicit address.
+    void begin(TwoWire& wire, int sda, int scl, uint8_t address) {
+        begin_i2c_pins(wire, sda, scl, address);
+    }
+
+    /// Begin on a Wire bus the app already initialised. The HAL never
+    /// calls Wire.begin() / Wire.end(). Use this on shared buses where
+    /// other drivers / tasks would be disrupted by an internal reset.
+    ///   Wire.begin(14, 21);
+    ///   nc.begin(Wire, note::arduino::external_bus);
+    void begin(TwoWire& wire, ExternalBus tag) {
+        begin_i2c_external(wire, tag, transport::kI2cDefaultAddress);
+    }
+
+    /// External-bus begin with explicit address.
+    void begin(TwoWire& wire, ExternalBus tag, uint8_t address) {
+        begin_i2c_external(wire, tag, address);
+    }
+
     /// Begin with I2C transport and explicit allocator.
     void begin(TwoWire& wire, Allocator alloc) {
         begin_i2c(wire, transport::kI2cDefaultAddress, alloc);
@@ -95,6 +125,26 @@ public:
     /// Begin with I2C transport, address, and explicit allocator.
     void begin(TwoWire& wire, uint8_t address, Allocator alloc) {
         begin_i2c(wire, address, alloc);
+    }
+
+    /// Begin with I2C transport on custom pins and explicit allocator.
+    void begin(TwoWire& wire, int sda, int scl, Allocator alloc) {
+        begin_i2c_pins(wire, sda, scl, transport::kI2cDefaultAddress, alloc);
+    }
+
+    /// Begin with I2C transport on custom pins, explicit address and allocator.
+    void begin(TwoWire& wire, int sda, int scl, uint8_t address, Allocator alloc) {
+        begin_i2c_pins(wire, sda, scl, address, alloc);
+    }
+
+    /// External-bus begin with explicit allocator.
+    void begin(TwoWire& wire, ExternalBus tag, Allocator alloc) {
+        begin_i2c_external(wire, tag, transport::kI2cDefaultAddress, alloc);
+    }
+
+    /// External-bus begin with explicit address and allocator.
+    void begin(TwoWire& wire, ExternalBus tag, uint8_t address, Allocator alloc) {
+        begin_i2c_external(wire, tag, address, alloc);
     }
 
     /// Enable debug output to an Arduino Print (e.g. Serial).
@@ -112,6 +162,22 @@ public:
 private:
     void begin_i2c(TwoWire& wire, uint8_t address, Allocator alloc = {}) {
         i2c_hal_ = std::make_unique<I2CHal>(wire, address);
+        begin_i2c_finish(alloc);
+    }
+
+    void begin_i2c_pins(TwoWire& wire, int sda, int scl,
+                        uint8_t address, Allocator alloc = {}) {
+        i2c_hal_ = std::make_unique<I2CHal>(wire, sda, scl, address);
+        begin_i2c_finish(alloc);
+    }
+
+    void begin_i2c_external(TwoWire& wire, ExternalBus tag,
+                            uint8_t address, Allocator alloc = {}) {
+        i2c_hal_ = std::make_unique<I2CHal>(wire, tag, address);
+        begin_i2c_finish(alloc);
+    }
+
+    void begin_i2c_finish(Allocator alloc) {
         i2c_hal_transport_ = std::make_unique<transport::NotecardI2c<>>(*i2c_hal_);
         i2c_streaming_ = std::make_unique<StreamingTransport>(*i2c_hal_transport_);
         Base::begin(*i2c_streaming_, alloc);

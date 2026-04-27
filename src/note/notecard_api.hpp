@@ -117,6 +117,22 @@ public:
         nc_ = Notecard(default_backend_, transport);
     }
 
+    /// Validated JSON passthrough — caller-supplied buffer. Sends the
+    /// pre-formatted request, copies the response into `buf`, and
+    /// returns a `string_view` into `buf`. Works on both streaming and
+    /// buffered transports. Use this when you need the raw response
+    /// (e.g. to walk it with `note::scan`) instead of going through the
+    /// typed builders.
+    Result<string_view> transact(string_view json, span<char> buf) {
+        return nc_.transact(json, buf);
+    }
+
+    /// Validated JSON fire-and-forget — pre-formatted request, no
+    /// response. Forwarded to Notecard::send.
+    Result<void> send(string_view json) {
+        return nc_.send(json);
+    }
+
     Notecard& notecard() { return nc_; }
 };
 
@@ -157,6 +173,16 @@ public:
 
     void begin(IBufferedTransport& transport) {
         detail::NcOwner::nc_ = Notecard(default_backend_, transport);
+    }
+
+    /// Validated JSON passthrough — see C++20 overload above.
+    Result<string_view> transact(string_view json, span<char> buf) {
+        return nc().transact(json, buf);
+    }
+
+    /// Validated JSON fire-and-forget — see C++20 overload above.
+    Result<void> send(string_view json) {
+        return nc().send(json);
     }
 
     Notecard& notecard() { return nc(); }

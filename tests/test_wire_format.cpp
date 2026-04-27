@@ -13,6 +13,7 @@
 #include <note/api/note_add.hpp>
 #include <note/api/env_set.hpp>
 #include <note/api/card_binary_get.hpp>
+#include <note/json_scan.hpp>
 #include <note/api/card_binary.hpp>
 
 namespace {
@@ -686,4 +687,60 @@ TEST_CASE("NotecardApi: notecard() accessor") {
     // Can access underlying Notecard for transport-level operations
     auto& notecard = nc.notecard();
     (void)notecard;
+}
+
+TEST_CASE("NotecardApi: transact(json, buf) round-trips raw JSON") {
+    std::string captured;
+    note::CallbackTransport transport(
+        [&](note::string_view req, uint32_t) -> note::Result<note::string_view> {
+            captured = std::string(req);
+            return note::string_view("{\"text\":\"hello\",\"time\":42}");
+        });
+    note::NotecardApi nc(transport);
+    nc.notecard().set_request_ids(false);
+    nc.notecard().set_retry_policy({.max_retries = 0});
+
+    char buf[256];
+    auto r = nc.transact("{\"req\":\"env.get\",\"name\":\"interval\"}",
+                         note::span<char>(buf, sizeof(buf)));
+    REQUIRE(r);
+    CHECK(*r == "{\"text\":\"hello\",\"time\":42}");
+    CHECK(captured == "{\"req\":\"env.get\",\"name\":\"interval\"}");
+}
+
+TEST_CASE("NotecardApi: send(json) is fire-and-forget") {
+    std::string captured;
+    note::CallbackTransport transport(
+        [&](note::string_view req, uint32_t) -> note::Result<note::string_view> {
+            captured = std::string(req);
+            return note::string_view("{}");
+        });
+    note::NotecardApi nc(transport);
+    nc.notecard().set_request_ids(false);
+    nc.notecard().set_retry_policy({.max_retries = 0});
+
+    auto r = nc.send("{\"cmd\":\"hub.sync\"}");
+    REQUIRE(r);
+    CHECK(captured == "{\"cmd\":\"hub.sync\"}");
+}
+
+TEST_CASE("NotecardApi: transact response usable with note::scan") {
+    note::CallbackTransport transport(
+        [](note::string_view, uint32_t) -> note::Result<note::string_view> {
+            return note::string_view(
+                "{\"body\":{\"interval\":300,\"name\":\"sensor1\"}}");
+        });
+    note::NotecardApi nc(transport);
+    nc.notecard().set_request_ids(false);
+    nc.notecard().set_retry_policy({.max_retries = 0});
+
+    char buf[256];
+    auto r = nc.transact("{\"req\":\"note.get\",\"file\":\"data.qi\"}",
+                         note::span<char>(buf, sizeof(buf)));
+    REQUIRE(r);
+
+    auto body = note::scan::object(*r, "body");
+    REQUIRE_FALSE(body.empty());
+    CHECK(note::scan::get_int(body, "interval") == 300);
+    CHECK(note::scan::get_str(body, "name") == "sensor1");
 }

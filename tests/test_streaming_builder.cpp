@@ -448,9 +448,9 @@ TEST_CASE("CrcFieldSink: reset clears state") {
 
 namespace {
 
-/// Minimal TransportHal for testing streaming receive.
+/// Minimal Hal for testing streaming receive.
 /// Stores a canned response and serves it via read().
-struct TestHal : TransportHal {
+struct TestHal : Hal {
     std::string response;
     size_t read_pos = 0;
     size_t chunk_size = 64;

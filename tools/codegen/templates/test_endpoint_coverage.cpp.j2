@@ -96,7 +96,7 @@ struct NcErrorHarness {
 };
 
 // Streaming transport harness — exercises the streaming execute path in Notecard.
-class CoverageMockHal : public note::TransportHal {
+class CoverageMockHal : public note::Hal {
 public:
     std::deque<uint8_t> rx;
     void queue_response(const std::string& s) {

@@ -110,7 +110,7 @@ TEST_CASE("Debug: on_wire shows correct direction") {
 
 TEST_CASE("Debug: on_wire fires on streaming execute") {
     // Streaming harness with a mock HAL
-    struct MockHal : note::TransportHal {
+    struct MockHal : note::Hal {
         uint8_t rx[256];
         size_t rx_len = 0;
         size_t rx_pos = 0;
@@ -134,7 +134,7 @@ TEST_CASE("Debug: on_wire fires on streaming execute") {
 
     MockHal hal;
     hal.queue(R"({"version":"notecard-test"})");
-    note::StreamingTransport transport(static_cast<note::TransportHal&>(hal));
+    note::StreamingTransport transport(static_cast<note::Hal&>(hal));
     auto nc = note::test::make_test_notecard(transport);
 
     bool saw_send = false;

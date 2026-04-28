@@ -1,4 +1,4 @@
-// Tests for note::transport::NotecardI2c (TransportHal) and
+// Tests for note::transport::NotecardI2c (Hal) and
 // note::StreamingTransport protocol logic over I2C.
 //
 // Ported from note-c test/src/_i2cNoteReset_test.cpp,
@@ -10,9 +10,9 @@
 //   note-c _i2cChunkedReceive()  → NotecardI2c::read() (priming query)
 //   note-c _I2CReceive(addr, buf, 0, &avail) → I2CHal::receive(buf, 0, avail)
 //
-// NotecardI2c is a TransportHal (raw byte ops: transmit, read, reset,
+// NotecardI2c is a Hal (raw byte ops: transmit, read, reset,
 // write_line_terminator, delay). Protocol logic (transact, send, retry, CRC)
-// lives in StreamingTransport, which wraps a TransportHal.
+// lives in StreamingTransport, which wraps a Hal.
 //
 // When note-c's I2C tests change, review the diffs and update accordingly.
 

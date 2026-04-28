@@ -21,7 +21,7 @@
 namespace {
 
 // Mock HAL that returns a configurable response.
-struct MockHal : note::TransportHal {
+struct MockHal : note::Hal {
     std::string response;
     size_t rsp_pos = 0;
 

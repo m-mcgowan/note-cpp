@@ -18,7 +18,7 @@
 
 // note::transport::NotecardSerial
 //
-// Implements the Notecard serial wire protocol as a TransportHal.
+// Implements the Notecard serial wire protocol as a Hal.
 // with serial-specific byte I/O (segmented TX, greedy RX, \r\n framing).
 //
 // The PolicyType template parameter controls retry counts, segment pacing,
@@ -83,18 +83,18 @@ private:
 // NotecardSerial — Notecard serial protocol implementation
 // ---------------------------------------------------------------------------
 
-/// NotecardSerial — TransportHal implementation for serial (UART).
+/// NotecardSerial — Hal implementation for serial (UART).
 /// Wraps a platform SerialHal (non-blocking receive) into the blocking
-/// TransportHal interface used by StreamingTransport.
+/// Hal interface used by StreamingTransport.
 #if NOTE_STATIC_HAL
 template <typename HalT, typename PolicyType = SerialPolicy>
 class NotecardSerial {
 #elif __cplusplus >= 202002L
 template <typename PolicyType = StaticSerialPolicy<SerialPolicy{}>>
-class NotecardSerial : public note::TransportHal {
+class NotecardSerial : public note::Hal {
 #else
 template <typename PolicyType = SerialPolicy>
-class NotecardSerial : public note::TransportHal {
+class NotecardSerial : public note::Hal {
 #endif
 public:
     [[no_unique_address]] PolicyType policy;

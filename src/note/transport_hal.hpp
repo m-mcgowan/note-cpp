@@ -1,7 +1,7 @@
 #pragma once
 
 /// @file transport_hal.hpp
-/// TransportHal — hardware abstraction for Notecard byte transport.
+/// Hal — hardware abstraction for Notecard byte transport.
 ///
 /// Subclasses implement the four primitives: transmit, read, reset,
 /// write_line_terminator. Protocol logic (retry, CRC, JSON framing)
@@ -15,8 +15,8 @@
 
 namespace note {
 
-struct TransportHal {
-    virtual ~TransportHal() = default;
+struct Hal {
+    virtual ~Hal() = default;
 
     /// Send raw bytes. Returns false on hardware error.
     virtual bool transmit(const uint8_t* data, size_t len) = 0;
@@ -40,5 +40,8 @@ struct TransportHal {
     /// long Notecard transactions (reset sequences can take several seconds).
     virtual void delay(uint32_t ms) = 0;
 };
+
+/// @deprecated Renamed to `Hal` in v0.3.0. The alias will be removed in v0.4.0.
+using TransportHal [[deprecated("renamed to note::Hal")]] = Hal;
 
 } // namespace note

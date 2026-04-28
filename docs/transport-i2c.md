@@ -6,7 +6,7 @@
 ## Implement `I2CHal`
 
 `NotecardI2c` currently extends `AbstractTransport` (the buffered path),
-so it is used with the buffered `Notecard` constructor. A `TransportHal`
+so it is used with the buffered `Notecard` constructor. A `Hal`
 migration is planned.
 
 ```cpp

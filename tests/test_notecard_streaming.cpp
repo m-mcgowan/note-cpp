@@ -26,10 +26,10 @@
 namespace {
 
 // =========================================================================
-// Mock TransportHal for streaming tests
+// Mock Hal for streaming tests
 // =========================================================================
 
-class MockStreamHal : public note::TransportHal {
+class MockStreamHal : public note::Hal {
 public:
     std::deque<uint8_t> rx;
     std::vector<uint8_t> tx;
@@ -583,7 +583,7 @@ TEST_CASE("Streaming: binary_io_reset resets streaming transport") {
 namespace {
 
 // A HAL that fails transmit after N calls.
-class FailAfterNHal : public note::TransportHal {
+class FailAfterNHal : public note::Hal {
 public:
     std::deque<uint8_t> rx;
     int transmit_count = 0;

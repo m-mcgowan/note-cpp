@@ -44,7 +44,7 @@ The streaming path is layered:
 ```
 SerialHal / I2CHal        Your hardware (4-5 methods)
   ↓
-NotecardSerial            Implements TransportHal (adapts SerialHal)
+NotecardSerial            Implements Hal (adapts SerialHal)
   ↓
 StreamingTransport        Protocol logic: retry, CRC, JSON framing
   ↓
@@ -53,7 +53,7 @@ IStreamingTransport       Interface consumed by Notecard
 Notecard                  Constructed with (IStreamingTransport&, Allocator)
 ```
 
-`TransportHal` is the boundary between hardware and protocol. It has five
+`Hal` is the boundary between hardware and protocol. It has five
 pure virtual methods: `transmit()`, `read()`, `reset()`,
 `write_line_terminator()`, `delay()`. `StreamingTransport` owns all
 protocol logic — retry loops, CRC (append on send, verify on receive), and
@@ -113,7 +113,7 @@ nc.begin(Wire, arena_allocator(arena));
 
 ### Non-Arduino — streaming path (recommended)
 
-Wire up the three layers directly: `SerialHal` -> `NotecardSerial` (`TransportHal`) -> `StreamingTransport` (`IStreamingTransport`) -> `Notecard`:
+Wire up the three layers directly: `SerialHal` -> `NotecardSerial` (`Hal`) -> `StreamingTransport` (`IStreamingTransport`) -> `Notecard`:
 
 ```cpp
 #include <note/streaming_transport.hpp>
@@ -121,7 +121,7 @@ Wire up the three layers directly: `SerialHal` -> `NotecardSerial` (`TransportHa
 #include <note/arena.hpp>
 
 MySerialHal hal;                                    // your SerialHal impl
-note::transport::NotecardSerial serial_hal(hal);    // TransportHal
+note::transport::NotecardSerial serial_hal(hal);    // Hal
 note::StreamingTransport transport(serial_hal);     // IStreamingTransport
 
 char pool[256];
@@ -166,8 +166,8 @@ The buffered constructor exists for test harnesses (where `CallbackTransport`
 | `IBufferedTransport` | Optional | **Fully buffered** — `transact()` with string buffer |
 
 The full streaming path:
-1. `StreamingJsonBuilder` writes request bytes directly to `TransportHal::transmit()`
-2. `sax_parse_streaming()` reads response bytes from `TransportHal::read()`
+1. `StreamingJsonBuilder` writes request bytes directly to `Hal::transmit()`
+2. `sax_parse_streaming()` reads response bytes from `Hal::read()`
 3. `CrcAccumulator` verifies CRC via a 23-byte delayed ring buffer
 4. `Response::Sink` stores fields as SAX callbacks fire
 5. `StringPool` interns string values immediately during callbacks
@@ -178,8 +178,8 @@ The full streaming path:
 
 Active when `NOTE_JSONB=0` (the default for non-MINIMAL builds).
 
-- **Send:** `StreamingJsonBuilder` → `CrcWriter` → `TransportHal::transmit()`
-- **Receive:** `TransportHal::read()` → `CrcAccumulator` → `sax_lex_streaming()` → sink chain
+- **Send:** `StreamingJsonBuilder` → `CrcWriter` → `Hal::transmit()`
+- **Receive:** `Hal::read()` → `CrcAccumulator` → `sax_lex_streaming()` → sink chain
 - **Sink chain:** `ReceiveContext` (err/crc interception) → `Response::Sink(pool)`
 - **CRC:** accumulated incrementally on both send and receive, verified by `StreamingTransport`
 - **Wire format:** `{"req":"card.version",...}\r\n`
@@ -191,8 +191,8 @@ Active when `NOTE_JSONB=0` (the default for non-MINIMAL builds).
 
 Active when `NOTE_JSONB=1` (auto-enabled by `NOTE_MINIMAL`). See [docs/jsonb.md](../jsonb.md).
 
-- **Send:** `StreamingJsonbBuilder` → `CobsStreamWriter` → `TransportHal::transmit()`. Transport writes `{:` header, builder emits JSONB opcodes through COBS encoder, transport writes `:}` trailer + line terminator.
-- **Receive:** `TransportHal::read()` → `frame_read` (stops at `\n`) → strip `{:` header → `CobsDecodingReader` (COBS decode) → `jsonb_parse_streaming()` → `JsonbParser` → sink chain
+- **Send:** `StreamingJsonbBuilder` → `CobsStreamWriter` → `Hal::transmit()`. Transport writes `{:` header, builder emits JSONB opcodes through COBS encoder, transport writes `:}` trailer + line terminator.
+- **Receive:** `Hal::read()` → `frame_read` (stops at `\n`) → strip `{:` header → `CobsDecodingReader` (COBS decode) → `jsonb_parse_streaming()` → `JsonbParser` → sink chain
 - **Sink chain:** Same as JSON path — `ReceiveContext` (err interception) → `Response::Sink(pool)`
 - **CRC:** disabled — COBS framing provides integrity
 - **Wire format:** `{:<COBS-encoded JSONB opcodes>:}\r\n`
@@ -224,8 +224,8 @@ Active when `Notecard` was constructed with `(IBufferedTransport&, JsonBackend&)
 api.card.binary.put().data(buf, len).execute();
 ```
 
-- `do_binary_send`: COBS encode → stream via `IStreamingTransport::write()` → `TransportHal::transmit()`, MD5 verify
-- `do_binary_receive`: stream via `IStreamingTransport::read()` → `TransportHal::read()` → `CobsDecoder.feed()`, MD5 verify
+- `do_binary_send`: COBS encode → stream via `IStreamingTransport::write()` → `Hal::transmit()`, MD5 verify
+- `do_binary_receive`: stream via `IStreamingTransport::read()` → `Hal::read()` → `CobsDecoder.feed()`, MD5 verify
 - 64-byte stack chunk — no intermediate buffer for the COBS stream
 
 ## CRC Handling
@@ -235,8 +235,8 @@ the entire CRC mechanism is bypassed — COBS framing provides its own integrity
 
 In the JSON streaming path, CRC is handled entirely by `StreamingTransport`:
 
-- **Send:** a `CrcWriter` wraps the `JsonWriter` that writes to `TransportHal::transmit()`. It accumulates the CRC incrementally as JSON bytes are written, then appends the `,"crc":"SSSS:CCCCCCCC"}` suffix.
-- **Receive:** a `CrcAccumulator` feeds on bytes as they arrive from `TransportHal::read()`. The `ReceiveContext` wrapping dispatch extracts the CRC field value during parsing. After parsing, `StreamingTransport` compares the accumulated checksum against the extracted field.
+- **Send:** a `CrcWriter` wraps the `JsonWriter` that writes to `Hal::transmit()`. It accumulates the CRC incrementally as JSON bytes are written, then appends the `,"crc":"SSSS:CCCCCCCC"}` suffix.
+- **Receive:** a `CrcAccumulator` feeds on bytes as they arrive from `Hal::read()`. The `ReceiveContext` wrapping dispatch extracts the CRC field value during parsing. After parsing, `StreamingTransport` compares the accumulated checksum against the extracted field.
 
 Auto-detection: `crc_enabled` flips to `true` when the first valid CRC
 field is found in a response. All subsequent responses must have CRC.
@@ -246,7 +246,7 @@ In the buffered path, CRC uses the in-place buffer functions (`crc_add`,
 
 ## `NOTE_NO_STD_STRING` Guard
 
-The streaming path (`TransportHal` + `StreamingTransport` + `IStreamingTransport`)
+The streaming path (`Hal` + `StreamingTransport` + `IStreamingTransport`)
 has no dependency on `<string>` or `<functional>`. It compiles cleanly with
 `NOTE_NO_STD_STRING` defined.
 
@@ -267,10 +267,10 @@ and use the streaming path exclusively. The AVR binary fits in 32 KB:
 
 ## Remaining Work
 
-### I2C migration to TransportHal
+### I2C migration to Hal
 
 `NotecardI2c` still extends `AbstractTransport` (the buffered path). Migrating
-it to implement `TransportHal` would allow I2C to use the streaming path and
+it to implement `Hal` would allow I2C to use the streaming path and
 benefit from zero-buffer operation.
 
 ### Implicit Arena -> Allocator conversion

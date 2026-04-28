@@ -6,7 +6,7 @@
 //  - forwards reset/abort/millis/delay
 //  - forwards binary write/read
 //
-// Uses a TransportHal mock (same shape as test_transport_streaming.cpp) to
+// Uses a Hal mock (same shape as test_transport_streaming.cpp) to
 // drive a real StreamingTransport, so we exercise the actual buffered →
 // streaming bridge end to end.
 
@@ -23,7 +23,7 @@ using namespace note;
 
 namespace {
 
-class MockHal : public TransportHal {
+class MockHal : public Hal {
 public:
     std::deque<uint8_t> rx;
     std::string last_transmitted;

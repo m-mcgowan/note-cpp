@@ -32,8 +32,8 @@ using UnconstrainedApi = note::Api;
 
 namespace {
 
-/// Mock TransportHal with fine-grained error injection.
-class ErrorInjectHal : public note::TransportHal {
+/// Mock Hal with fine-grained error injection.
+class ErrorInjectHal : public note::Hal {
 public:
     struct ReadChunk {
         std::vector<uint8_t> data;

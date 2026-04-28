@@ -295,7 +295,7 @@ overlays any non-sentinel override values.
   get timing enforcement but no retry.
 - **Request IDs**: auto-incrementing `"id"` field injected into JSON requests
   for log correlation. Configurable via `set_request_ids(bool)`.
-- **`millis()` on TransportHal**: required for timing. All HALs implement it.
+- **`millis()` on Hal**: required for timing. All HALs implement it.
 - **StaticNotecard and BareNotecard**: same retry/timing as Notecard.
   BareNotecard has explicit `Safety` overload for callers who know their
   passthrough request is safe.

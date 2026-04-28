@@ -217,7 +217,7 @@
 #endif
 
 // NOTE_STATIC_HAL — when 1, transport types are templated on concrete HAL types
-// instead of using virtual base references. Eliminates SerialHal and TransportHal
+// instead of using virtual base references. Eliminates SerialHal and Hal
 // vtables (~600 bytes on AVR). The DX is unchanged — SerialTransportStack
 // handles the type plumbing internally.
 // Independent of NOTE_NO_POLYMORPHIC — you can use static HAL with the

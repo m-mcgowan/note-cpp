@@ -1,4 +1,4 @@
-// Tests for note::transport::NotecardSerial (TransportHal) and
+// Tests for note::transport::NotecardSerial (Hal) and
 // note::StreamingTransport protocol logic over serial.
 //
 // Ported from note-c test/src/_serialNoteReset_test.cpp,
@@ -12,9 +12,9 @@
 //     bytes; '\r\n' terminator → injects the next queued JSON response.
 //     This prevents pre-loaded responses from being consumed during reset.
 //
-// NotecardSerial is now a TransportHal (raw byte ops: transmit, read, reset,
+// NotecardSerial is now a Hal (raw byte ops: transmit, read, reset,
 // write_line_terminator, delay). Protocol logic (transact, send, retry, CRC)
-// lives in StreamingTransport, which wraps a TransportHal.
+// lives in StreamingTransport, which wraps a Hal.
 //
 // When note-c's serial tests change, review the diffs and update accordingly.
 
@@ -300,7 +300,7 @@ TEST_CASE("reset fails if all attempts see non-control chars") {
 // Transmit framing — write_line_terminator appends CRLF
 //
 // Note: The old NotecardSerial did segmented TX with pacing delays. The new
-// NotecardSerial is a raw TransportHal — no segmenting. StreamingTransport
+// NotecardSerial is a raw Hal — no segmenting. StreamingTransport
 // writes the JSON body field-by-field, then calls write_line_terminator().
 // Segmented transmit tests are no longer applicable.
 // ---------------------------------------------------------------------------
@@ -701,7 +701,7 @@ TEST_CASE("serial: transact retries on transmit failure then succeeds") {
 }
 
 // ---------------------------------------------------------------------------
-// HAL-level tests — test NotecardSerial directly as TransportHal
+// HAL-level tests — test NotecardSerial directly as Hal
 // ---------------------------------------------------------------------------
 
 TEST_CASE("NotecardSerial::reset() succeeds on clean drain") {

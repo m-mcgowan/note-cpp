@@ -102,7 +102,7 @@ For zero-alloc: streaming path, or `BufferJsonBackend`, or `CjsonArenaBackend`.
 ### Streaming path — zero heap (recommended for embedded)
 
 ```cpp
-note::transport::NotecardSerial serial_hal(hal);    // TransportHal
+note::transport::NotecardSerial serial_hal(hal);    // Hal
 note::StreamingTransport transport(serial_hal);     // IStreamingTransport
 
 char arena_buf[256];

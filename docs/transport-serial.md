@@ -31,12 +31,12 @@ Wire it up:
 
 ```cpp
 MySerial hal;
-note::transport::NotecardSerial serial_hal(hal);  // implements TransportHal
+note::transport::NotecardSerial serial_hal(hal);  // implements Hal
 note::StreamingTransport transport(serial_hal);    // protocol logic
 note::Notecard nc(transport, allocator);           // streaming path
 ```
 
-`NotecardSerial` adapts the four `SerialHal` primitives into `TransportHal`'s
+`NotecardSerial` adapts the four `SerialHal` primitives into `Hal`'s
 five methods — `transmit()`, `read()` (blocking with timeout), `reset()`,
 `write_line_terminator()` (`\r\n`), and `delay()`. Protocol logic (CRC,
 JSON framing, retry) is handled by `StreamingTransport` and `Notecard`.
@@ -95,7 +95,7 @@ All in `namespace note::transport`:
 ## Binary streaming
 
 `IStreamingTransport::write()`/`read()` pass through to
-`TransportHal::transmit()`/`read()` for raw binary (COBS) data, bypassing
+`Hal::transmit()`/`read()` for raw binary (COBS) data, bypassing
 JSON framing and CRC. On serial, `\n` is the frame delimiter for both JSON
 responses and COBS streams.
 

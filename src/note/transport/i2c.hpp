@@ -9,9 +9,9 @@
 
 // note::transport::NotecardI2c
 //
-// TransportHal implementation for I2C (Notecard SoI2C wire protocol).
+// Hal implementation for I2C (Notecard SoI2C wire protocol).
 // Wraps a platform I2CHal (chunked TX/RX, priming query) into the
-// blocking TransportHal interface used by StreamingTransport.
+// blocking Hal interface used by StreamingTransport.
 //
 // The PolicyType template parameter controls segment pacing and timeouts
 // for the I2C-specific chunked transmit and priming-query receive.
@@ -108,18 +108,18 @@ private:
 };
 
 // ---------------------------------------------------------------------------
-// NotecardI2c — Notecard I2C protocol implementation (TransportHal)
+// NotecardI2c — Notecard I2C protocol implementation (Hal)
 // ---------------------------------------------------------------------------
 
-/// NotecardI2c — TransportHal implementation for I2C.
+/// NotecardI2c — Hal implementation for I2C.
 /// Wraps a platform I2CHal (chunked TX/RX, priming query) into the blocking
-/// TransportHal interface used by StreamingTransport.
+/// Hal interface used by StreamingTransport.
 #if __cplusplus >= 202002L
 template <typename PolicyType = StaticI2cPolicy<I2cPolicy{}>>
 #else
 template <typename PolicyType = I2cPolicy>
 #endif
-class NotecardI2c : public note::TransportHal {
+class NotecardI2c : public note::Hal {
 public:
     // policy is public so callers can read or mutate it between requests.
     // For StaticI2cPolicy (the default), [[no_unique_address]] gives it

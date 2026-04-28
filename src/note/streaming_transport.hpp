@@ -2,7 +2,7 @@
 
 /// @file streaming_transport.hpp
 /// IStreamingTransport — interface for streaming Notecard communication.
-/// StreamingTransport — protocol logic over a TransportHal.
+/// StreamingTransport — protocol logic over a Hal.
 ///
 /// Zero transport-internal buffers: requests are streamed via
 /// StreamingJsonBuilder, responses SAX-parsed directly from the wire.
@@ -209,7 +209,7 @@ struct IStreamingTransport {
 
 
 // ---------------------------------------------------------------------------
-// StreamingTransport — protocol logic over a TransportHal
+// StreamingTransport — protocol logic over a Hal
 // ---------------------------------------------------------------------------
 
 #if NOTE_STATIC_HAL
@@ -224,18 +224,18 @@ public:
 #elif NOTE_NO_POLYMORPHIC
 class StreamingTransport {
 public:
-    explicit StreamingTransport(TransportHal& hal)
+    explicit StreamingTransport(Hal& hal)
         : hal_(hal) {}
 
-    StreamingTransport(TransportHal& hal, uint32_t /*max_retries*/, uint32_t /*retry_delay_ms*/ = 500)
+    StreamingTransport(Hal& hal, uint32_t /*max_retries*/, uint32_t /*retry_delay_ms*/ = 500)
         : hal_(hal) {}
 #else
 class StreamingTransport : public IStreamingTransport {
 public:
-    explicit StreamingTransport(TransportHal& hal)
+    explicit StreamingTransport(Hal& hal)
         : hal_(hal) {}
 
-    StreamingTransport(TransportHal& hal, uint32_t /*max_retries*/, uint32_t /*retry_delay_ms*/ = 500)
+    StreamingTransport(Hal& hal, uint32_t /*max_retries*/, uint32_t /*retry_delay_ms*/ = 500)
         : hal_(hal) {}
 #endif
 
@@ -532,9 +532,9 @@ private:
             bool ok = true;
             explicit Writer(HalT& h) : hal(h) {}
 #else
-            TransportHal& hal;
+            Hal& hal;
             bool ok = true;
-            explicit Writer(TransportHal& h) : hal(h) {}
+            explicit Writer(Hal& h) : hal(h) {}
 #endif
             bool write(const char* data, size_t len) override {
                 if (!ok) return false;
@@ -753,7 +753,7 @@ private:
 #if NOTE_STATIC_HAL
     HalT& hal_;
 #else
-    TransportHal& hal_;
+    Hal& hal_;
 #endif
     bool initialized_ = false;
 #if NOTE_DEBUG_ENABLED

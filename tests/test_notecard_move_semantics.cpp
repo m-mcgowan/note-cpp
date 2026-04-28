@@ -34,8 +34,8 @@
 
 namespace {
 
-// Minimal TransportHal that returns canned JSON responses.
-class MockHal : public note::TransportHal {
+// Minimal Hal that returns canned JSON responses.
+class MockHal : public note::Hal {
 public:
     std::deque<uint8_t> rx;
 

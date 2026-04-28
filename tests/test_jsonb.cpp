@@ -914,9 +914,9 @@ TEST_CASE("jsonb parser: empty stream is not an error") {
 
 namespace {
 
-// Mock TransportHal that speaks JSONB: accepts a request, responds with
+// Mock Hal that speaks JSONB: accepts a request, responds with
 // a canned JSONB card.version response.
-struct JsonbMockHal : note::TransportHal {
+struct JsonbMockHal : note::Hal {
     // Canned JSONB response built at construction.
     std::vector<uint8_t> response;
     size_t read_pos = 0;

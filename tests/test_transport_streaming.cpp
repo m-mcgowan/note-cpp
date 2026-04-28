@@ -1,7 +1,7 @@
 // Tests for StreamingTransport over a MockHal.
 //
 // The new transport architecture splits:
-//   - TransportHal — pure hardware abstraction (transmit, read, reset, etc.)
+//   - Hal — pure hardware abstraction (transmit, read, reset, etc.)
 //   - StreamingTransport — protocol logic (retry, CRC, JSON framing) over a HAL
 //   - IStreamingTransport — type-erased interface
 //
@@ -75,12 +75,12 @@ struct CollectorSink : JsonSink {
 };
 
 // ---------------------------------------------------------------------------
-// MockHal — minimal TransportHal for testing StreamingTransport.
+// MockHal — minimal Hal for testing StreamingTransport.
 //
 // Uses a byte deque for read(). Transmit captures bytes. Reset always succeeds.
 // ---------------------------------------------------------------------------
 
-class MockHal : public TransportHal {
+class MockHal : public Hal {
 public:
     std::deque<uint8_t> rx;              // bytes returned by read()
     std::string last_transmitted;        // last transmit payload

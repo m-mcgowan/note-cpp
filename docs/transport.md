@@ -6,40 +6,35 @@ transports — same timing, same CRC, no global state, no cJSON dependency.
 
 ## Architecture
 
+The streaming/buffered axis (response presentation) is independent of the
+serial/I2C axis (bus). Either transport drives either bus through the
+shared `Hal` interface.
+
+```mermaid
+flowchart TD
+    NC["<b>Notecard</b><br/>execute, transact, send<br/>retry + dispatch"]
+
+    NC --> ST["<b>StreamingTransport</b><br/>IStreamingTransport<br/>CRC, framing, SAX into sink<br/>zero heap"]
+    NC --> BST["<b>BufferedStreamingTransport</b><br/>IBufferedTransport<br/>string in / string out<br/>needs JsonBackend"]
+
+    BST -->|wraps| ST
+
+    ST --> Hal["<b>Hal</b><br/>byte primitives + line framing<br/>5 methods"]
+
+    Hal --> NCSer["<b>transport::NotecardSerial</b><br/>line framing over UART"]
+    Hal --> NCI2C["<b>transport::NotecardI2c</b><br/>line framing over I2C"]
+
+    NCSer --> SerialHal["<b>SerialHal</b><br/>your UART driver"]
+    NCI2C --> I2CHal["<b>I2CHal</b><br/>your I2C driver"]
+
+    classDef user fill:#ffe9b3,stroke:#c08400,color:#000
+    class SerialHal,I2CHal user
 ```
-                       ┌─────────────────────────┐
-                       │       Notecard           │  execute(), request(), transact()
-                       │   (retry + dispatch)     │
-                       └──────┬──────────┬────────┘
-                              │          │
-               ┌──────────────┘          └──────────────┐
-               ▼                                        ▼
-┌──────────────────────────┐          ┌──────────────────────────┐
-│   StreamingTransport     │          │  IBufferedTransport      │
-│   (IStreamingTransport)  │          │  (AbstractTransport)     │
-│   CRC, JSON framing,     │          │  String-based transact() │
-│   SAX parse, zero heap   │          │  Needs JsonBackend       │
-└──────────┬───────────────┘          └──────────┬───────────────┘
-           │                                     │
-           ▼                                     ▼
-┌──────────────────────────┐          ┌──────────────────────────┐
-│     TransportHal         │          │   NotecardI2c            │
-│   (5 primitives)         │          │   (extends Abstract-     │
-│                          │          │    Transport)             │
-└──────────┬───────────────┘          └──────────┬───────────────┘
-           │                                     │
-           ▼                                     ▼
-┌──────────────────────────┐          ┌──────────────────────────┐
-│   NotecardSerial         │          │       I2CHal             │
-│   (adapts SerialHal)     │          │   (your hardware)        │
-└──────────┬───────────────┘          └──────────────────────────┘
-           │
-           ▼
-┌──────────────────────────┐
-│       SerialHal          │
-│   (your hardware)        │
-└──────────────────────────┘
-```
+
+The shaded boxes are what you implement (one of `SerialHal` or `I2CHal`,
+typically by extending the Arduino-flavored variant). Everything above
+`Hal` is library code; the axes are orthogonal so any
+streaming/buffered × serial/I2C combination is valid.
 
 **You implement**: `SerialHal` (4 methods) or `I2CHal` (5 methods) — pure
 hardware I/O, no protocol logic.
@@ -51,7 +46,7 @@ COBS binary transfer — all built on your HAL.
 
 ```
 include/note/
-    transport_hal.hpp          TransportHal (pure HAL interface)
+    transport_hal.hpp          Hal (pure HAL interface)
     streaming_transport.hpp    IStreamingTransport, StreamingTransport
     transport.hpp              IBufferedTransport, AbstractTransport
 

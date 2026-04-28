@@ -10,7 +10,7 @@
 namespace {
 
 // Mock HAL that captures transmitted bytes and returns a canned response.
-struct MockHal : note::TransportHal {
+struct MockHal : note::Hal {
     std::string last_sent;
     std::string canned_response;
     size_t rsp_pos = 0;

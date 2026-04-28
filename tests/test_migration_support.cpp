@@ -183,12 +183,12 @@ TEST_CASE("card.aux state: get_object_array reads pin states") {
 // before reaching NotecardApi::begin(IStreamingTransport&).
 // ---------------------------------------------------------------------------
 
-TEST_CASE("Issue 1b: transport::NotecardSerial is a TransportHal, not IStreamingTransport") {
+TEST_CASE("Issue 1b: transport::NotecardSerial is a Hal, not IStreamingTransport") {
     // Verify that the transport types are what we expect
     static_assert(!std::is_base_of_v<note::IStreamingTransport, note::transport::NotecardSerial<>>,
         "NotecardSerial should NOT implement IStreamingTransport directly");
-    static_assert(std::is_base_of_v<note::TransportHal, note::transport::NotecardSerial<>>,
-        "NotecardSerial should be a TransportHal");
+    static_assert(std::is_base_of_v<note::Hal, note::transport::NotecardSerial<>>,
+        "NotecardSerial should be a Hal");
     static_assert(std::is_base_of_v<note::IStreamingTransport, note::StreamingTransport>,
         "StreamingTransport should implement IStreamingTransport");
     REQUIRE(true);
@@ -226,7 +226,7 @@ TEST_CASE("Issue 6: send fire-and-forget") {
 
 TEST_CASE("Issue 6: transact returns overflow error for large response") {
     // Streaming transport with a response larger than the buffer
-    struct MockHal : note::TransportHal {
+    struct MockHal : note::Hal {
         std::string canned_rsp;
         size_t rsp_pos = 0;
 
@@ -299,7 +299,7 @@ TEST_CASE("Issue 6b: buffered passthrough preserves nested objects") {
 TEST_CASE("Issue 6b: streaming passthrough preserves nested objects") {
     // Mock HAL that returns a canned response with nested JSON.
     // The raw passthrough reads bytes directly — no SAX reconstruction.
-    struct MockHal : note::TransportHal {
+    struct MockHal : note::Hal {
         std::string last_sent;
         std::string canned_rsp = "{\"version\":\"7.2.1\",\"body\":{\"org\":\"blues\",\"product\":\"feather\"}}\r\n";
         size_t rsp_pos = 0;
@@ -339,7 +339,7 @@ TEST_CASE("Issue 6b: streaming passthrough preserves nested objects") {
 }
 
 TEST_CASE("Issue 6b: streaming passthrough preserves arrays") {
-    struct MockHal : note::TransportHal {
+    struct MockHal : note::Hal {
         std::string canned_rsp = "{\"files\":[\"data.qi\",\"config.db\"],\"total\":2}\r\n";
         size_t rsp_pos = 0;
 

@@ -40,7 +40,7 @@ The naming rule: first segment becomes the module, remaining segments become a c
 ```cpp
 // Your hardware
 MySerialHal hal;
-note::transport::NotecardSerial serial_hal(hal);    // TransportHal
+note::transport::NotecardSerial serial_hal(hal);    // Hal
 note::StreamingTransport transport(serial_hal);     // IStreamingTransport
 
 // Zero heap — arena allocator for string interning

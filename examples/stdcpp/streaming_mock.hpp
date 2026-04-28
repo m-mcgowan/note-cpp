@@ -1,7 +1,7 @@
 // Streaming-transport mock for stdcpp examples.
 //
 // Mirrors tests/test_endpoint_streaming.cpp's MockHal. Provides a
-// TransportHal subclass that buffers transmitted bytes until the
+// Hal subclass that buffers transmitted bytes until the
 // streaming transport's write_line_terminator() fires, then prints the
 // captured JSON request and lets the example pick a canned response.
 //
@@ -24,7 +24,7 @@
 
 /// Base streaming-transport mock. Subclass and override
 /// `choose_response(req)` to seed the canned reply for each request.
-class StreamingMockHal : public note::TransportHal {
+class StreamingMockHal : public note::Hal {
 public:
     std::string          tx_buf;
     std::deque<uint8_t>  rx;

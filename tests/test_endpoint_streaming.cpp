@@ -30,8 +30,8 @@ using UnconstrainedApi = note::Api;
 
 namespace {
 
-/// Mock TransportHal that returns canned JSON via read().
-class MockHal : public note::TransportHal {
+/// Mock Hal that returns canned JSON via read().
+class MockHal : public note::Hal {
 public:
     std::deque<uint8_t> rx;
 

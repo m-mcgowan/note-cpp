@@ -11,6 +11,10 @@
 Notecard nc;
 
 // ── Heap watermark ──────────────────────────────────────────────────────
+// __brkval / __heap_start are avr-libc internals; not available on
+// ESP32 / other Arduino cores. The watermark is only meaningful on AVR
+// where heap fragmentation matters; elsewhere this is a no-op.
+#if defined(__AVR__)
 extern char *__brkval;
 extern char __heap_start;
 
@@ -22,6 +26,9 @@ static void heap_sample() {
         if (used > heap_peak) heap_peak = used;
     }
 }
+#else
+static void heap_sample() {}
+#endif
 
 void setup() {
 #ifdef ARDUINO_AVR_UNO
@@ -130,9 +137,11 @@ void loop() {
     (void)note_temp;
     (void)note_humidity;
 
-    // Report peak heap
+    // Report peak heap (AVR only — see heap_sample() above).
+#if defined(__AVR__)
     Serial.print("HEAP_PEAK:");
     Serial.println(heap_peak);
+#endif
 
     delay(60000);
 }

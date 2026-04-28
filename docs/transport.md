@@ -1,40 +1,47 @@
 # Transport
 
 `note-cpp` ships a complete, header-only implementation of both Notecard
-wire protocols. These are a direct alternative to note-c's serial and I2C
-transports — same timing, same CRC, no global state, no cJSON dependency.
+wire protocols (serial and I2C). Same timing, same CRC, same framing as
+note-c — no global state, no cJSON dependency, header-only.
 
 ## Architecture
 
-The streaming/buffered axis (response presentation) is independent of the
-serial/I2C axis (bus). Either transport drives either bus through the
-shared `Hal` interface.
+The library is layered: each layer has one job, and the layer above sees
+only its predecessor's interface. Reading from the bottom up:
 
 ```mermaid
 flowchart TD
-    NC["<b>Notecard</b><br/>execute, transact, send<br/>retry + dispatch"]
+    Hal["<b>Hal</b><br/>byte conduit:<br/>transmit, read, reset, millis, delay"]
+    NCSer["<b>transport::NotecardSerial</b><br/>Notecard wire framing over UART"]
+    NCI2C["<b>transport::NotecardI2c</b><br/>Notecard wire framing over I2C"]
+    Proto["<b>StreamingTransport</b><br/>protocol: CRC, retry, init handshake,<br/>line termination, sequence numbers"]
+    ITrans["<b>ITransport</b><br/>session: transact + send<br/>(unified, no buffered/streaming split at this layer)"]
+    JsonLayer["<b>JSON layer</b><br/>turns response bytes into typed values<br/>tree-mode (JsonBackend) or sink-mode (Rsp::Sink)"]
+    NC["<b>Notecard / NotecardApi</b><br/>execute, transact, send<br/>retry + dispatch"]
+    Typed["<b>Typed API</b> — <code>api.note.read().into(struct).execute()</code>"]
+    Raw["<b>Raw JSON API</b> — <code>nc.transact(json, buf)</code>, <code>nc.send(json)</code>"]
 
-    NC --> ST["<b>StreamingTransport</b><br/>IStreamingTransport<br/>CRC, framing, SAX into sink<br/>zero heap"]
-    NC --> BST["<b>BufferedStreamingTransport</b><br/>IBufferedTransport<br/>string in / string out<br/>needs JsonBackend"]
+    SerialDriver["<b>SerialHal</b><br/>your UART driver"]
+    I2CDriver["<b>I2CHal</b><br/>your I2C driver"]
 
-    BST -->|wraps| ST
-
-    ST --> Hal["<b>Hal</b><br/>byte primitives + line framing<br/>5 methods"]
-
-    Hal --> NCSer["<b>transport::NotecardSerial</b><br/>line framing over UART"]
-    Hal --> NCI2C["<b>transport::NotecardI2c</b><br/>line framing over I2C"]
-
-    NCSer --> SerialHal["<b>SerialHal</b><br/>your UART driver"]
-    NCI2C --> I2CHal["<b>I2CHal</b><br/>your I2C driver"]
+    SerialDriver --> Hal
+    I2CDriver --> Hal
+    Hal --> NCSer & NCI2C
+    NCSer --> Proto
+    NCI2C --> Proto
+    Proto --> ITrans
+    ITrans --> JsonLayer
+    JsonLayer --> NC
+    NC --> Typed
+    NC --> Raw
 
     classDef user fill:#ffe9b3,stroke:#c08400,color:#000
-    class SerialHal,I2CHal user
+    class SerialDriver,I2CDriver user
 ```
 
 The shaded boxes are what you implement (one of `SerialHal` or `I2CHal`,
 typically by extending the Arduino-flavored variant). Everything above
-`Hal` is library code; the axes are orthogonal so any
-streaming/buffered × serial/I2C combination is valid.
+`Hal` is library code.
 
 **You implement**: `SerialHal` (4 methods) or `I2CHal` (5 methods) — pure
 hardware I/O, no protocol logic.
@@ -47,8 +54,8 @@ COBS binary transfer — all built on your HAL.
 ```
 include/note/
     transport_hal.hpp          Hal (pure HAL interface)
-    streaming_transport.hpp    IStreamingTransport, StreamingTransport
-    transport.hpp              IBufferedTransport, AbstractTransport
+    transport.hpp              ITransport (unified session interface)
+    streaming_transport.hpp    StreamingTransport (protocol driver)
 
 include/note/transport/
     serial.hpp          SerialHal, SerialCallbackHal, NotecardSerial
@@ -56,72 +63,104 @@ include/note/transport/
     detail/crc32.hpp    CRC32, crc_add, crc_check_and_strip
 ```
 
-## Streaming vs buffered
+> **Naming note.** `IBufferedTransport` and `IStreamingTransport` are
+> deprecated aliases retained for one release. `IBufferedTransport`
+> survives as a bridge class that adapts the old
+> `transact(req, timeout) -> Result<string_view>` shape to the unified
+> `ITransport`; existing custom transports keep compiling. New code
+> should derive from `ITransport` directly.
 
-Two internal paths for building requests and parsing responses. The typed
-API works identically on both — you don't change application code when
-switching.
+## Transport-agnostic API
 
-### Streaming (default, recommended)
+Both layers above `Notecard` are transport-agnostic. The same call
+yields equivalent results regardless of which transport the Notecard
+was constructed against:
 
-Requests serialize directly to the wire. Responses are SAX-parsed as bytes
-arrive. No intermediate buffer, no heap allocation.
+- **Typed API** (`api.note.read().into(struct).execute()`,
+  `api.note.update(file, id).body(struct).execute()`).
+- **Raw JSON API** (`nc.transact(json, buf)`, `nc.send(json)`).
+
+This is pinned in CI by `tests/test_transport_agnostic_api.cpp`, which
+pairs four call-site categories against both Notecard ctors:
+
+| § | Surface | Streaming | Buffered |
+|---|---|:---:|:---:|
+| 1 | `api.note.read().into(struct).execute()` | ✓ | ✓ |
+| 2 | `api.note.update(file, id).body(struct).execute()` | ✓ | ✓ |
+| 3 | `nc.transact(json, buf)` | ✓ | ✓ |
+| 4 | `nc.send(json)` | ✓ | ✓ |
+
+If the high-level surface ever drifts apart between transports, one of
+those four pairs goes red.
+
+## JSON layer — the actual buffered/streaming choice
+
+What people often call "buffered transport" vs "streaming transport"
+isn't really about *transport* — those terms describe the **JSON
+layer**: the strategy `Notecard` runs internally to turn response
+bytes into typed values.
+
+| Mode | How it parses | Enables | Memory profile |
+|------|---|---|---|
+| **Tree mode** | `JsonReader` walks a parsed tree | `response.body()` returns `JsonReader*` for ad-hoc walking | Builds a tree (jsmn tokens or cJSON nodes) sized to the response |
+| **Sink mode** | SAX events fire into `Rsp::Sink` | `.into(T&)` populates user struct directly | Zero intermediate tree |
+
+Both modes populate the typed `Response` struct identically. The
+mode is selected by *which `Notecard` ctor* you use:
 
 ```cpp
-// Your hardware
-MySerial hal;
-note::transport::NotecardSerial serial_hal(hal);
-note::StreamingTransport transport(serial_hal);
-
-// Zero heap — arena allocator for string interning
-char pool[256];
-note::MonotonicArena arena(pool);
-note::Notecard nc(transport, note::arena_allocator(arena));
-```
-
-### Buffered
-
-Requests are built into a string buffer. Responses are parsed into a JSON
-tree via a [JSON backend](json-backend.md). A raw string interface
-(`transact()`) is also available.
-
-```cpp
+// Tree mode — JsonBackend supplied → response.body() works.
 note::backends::BufferJsonBackend<512, 64> backend;
-MyI2cTransport transport;  // IBufferedTransport
 note::Notecard nc(backend, transport);
+
+// Sink mode — no JsonBackend → smaller flash, .into(struct) for body.
+note::Notecard nc(transport, note::Allocator{});
 ```
 
-Use the buffered path when:
-- **Migrating from note-c** — the `request()` lambda builder matches the
-  familiar "build JSON, send, parse" pattern
-- **Manual JSON tree inspection** — `JsonReader` gives tree-style access
-  to unknown/dynamic response structures
-- **Debugging** — the intermediate JSON string is visible in debuggers
+`.into(T&)` works in both modes (transport-agnostic, see § 1 above).
+`response.body()` is tree-mode only — sink-mode has no tree to walk.
+
+### Mode selection guide
+
+Pick **tree mode** when:
+- You're migrating from note-c — the `request()` lambda builder matches
+  the familiar "build JSON, send, parse" pattern.
+- You need ad-hoc JSON walking via `JsonReader`.
+- You're debugging wire traffic and want a tree to inspect.
+
+Pick **sink mode** when:
+- You're on a memory-constrained target — no tree, no JsonBackend
+  pulled in, smaller flash.
+- All your body shapes are known statically (use `.into(T&)`).
+- You don't need `response.body()` for any endpoint.
 
 ### Comparison
 
-| Feature | Streaming | Buffered |
-|---------|:---------:|:--------:|
+| Feature | Tree mode | Sink mode |
+|---------|:---------:|:---------:|
 | Typed `execute()` on requests | yes | yes |
 | Typed response fields | yes | yes |
-| Body structs (`.body()`, `.into()`) | yes | yes |
+| `.into(T&)` body parse into struct | yes | yes |
+| `.body(T&)` send struct as body | yes | yes |
+| `nc.transact(json, buf)` raw JSON | yes | yes |
 | Binary transfers (COBS) | yes | yes |
 | Error handling (`ApiResult`) | yes | yes |
-| `request()` lambda builder | — | yes |
-| `JsonReader` tree access | — | yes |
-| Requires `JsonBackend` | no | yes |
-| Zero-heap capable | yes | no |
+| `request()` lambda builder | yes | — |
+| `response.body() -> JsonReader*` | yes | — |
+| Requires `JsonBackend` | yes | no |
+| Zero-heap capable | depends on backend | yes |
 
-Define `NOTE_NO_BUFFERED` to remove the buffered path entirely (~2–4 KB
-flash savings). Set automatically by `NOTE_MINIMAL`.
+Define `NOTE_NO_BUFFERED` to remove tree mode entirely (~2-4 KB flash
+savings). Set automatically by `NOTE_MINIMAL`.
 
-### JSON backend selection (buffered only)
+### JSON backend selection (tree mode only)
 
 | Backend | Heap | Best for |
 |---------|:----:|----------|
 | `CjsonBackend` | yes | Migration from note-c |
 | `NlohmannBackend` | yes | Projects already using nlohmann/json |
 | `BufferJsonBackend<N, M>` | no | Fixed-size buffer, no heap |
+| `CjsonArenaBackend` | no (arena) | Tree debuggability + bounded memory |
 
 See [JSON backend](json-backend.md) for configuration details.
 
@@ -137,31 +176,43 @@ See [JSON backend](json-backend.md) for configuration details.
 
 ## Arduino shorthand
 
-On Arduino, `note::arduino::Notecard` wraps the full stack behind `begin()`:
+On Arduino, `note::arduino::Notecard` wraps the full stack behind
+`begin()`. Sink mode by default; pass a `JsonBackend&` to opt into
+tree mode:
 
 ```cpp
 #include <note.hpp>
 
-Notecard nc;
+note::arduino::Notecard nc;
 
 void setup() {
-    nc.begin(Serial1, 9600);    // serial — streaming path
-    // or: nc.begin(Wire);      // I2C — buffered path (default address 0x17)
-    // or: nc.begin(Wire, 0x17, allocator);  // explicit
+    nc.begin(Serial1, 9600);                // sink mode, serial
+    // or: nc.begin(Wire);                   // sink mode, I2C
+    // or: nc.begin(Wire, 0x17);             // sink mode, I2C with custom address
+    // or: nc.begin(Serial1, 9600, backend); // tree mode (response.body() works)
+    // or: nc.begin(Wire, backend);          // tree mode, I2C
 }
 ```
 
-See the [Arduino guide](platforms/arduino/guide.md) for full setup details.
+The buffered begin overloads no longer take a separate `rsp_buf`
+argument — the Notecard owns a default response staging buffer
+(`NOTE_RSP_BUF_SIZE`, default 1024 bytes). Call
+`nc.set_response_buffer(span)` after `begin()` if you need a
+non-default size.
+
+See the [Arduino guide](platforms/arduino/guide.md) for full setup
+details.
 
 ## Retry
 
-Retry is handled by the `Notecard` layer, not the transport. Each request
-carries a `Safety` level (`ReadOnly`, `Idempotent`, `NonIdempotent`,
-`Destructive`) that gates retry behavior:
+Retry is handled by the `Notecard` layer, not the transport. Each
+request carries a `Safety` level (`ReadOnly`, `Idempotent`,
+`NonIdempotent`, `Destructive`) that gates retry behaviour:
 
-- `SendFailed` — always retried (request never reached the Notecard)
-- `ResponseLost` — retried only for `ReadOnly` and `Idempotent` requests
-- Notecard errors — never retried
+- `SendFailed` — always retried (request never reached the Notecard).
+- `ResponseLost` — retried only for `ReadOnly` and `Idempotent`
+  requests.
+- Notecard errors — never retried.
 
-See [retry design](internal/retry-design.md) for the full safety matrix
-and importance levels.
+See [retry design](internal/retry-design.md) for the full safety
+matrix and importance levels.

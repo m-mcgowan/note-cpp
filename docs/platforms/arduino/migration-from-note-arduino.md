@@ -1229,7 +1229,7 @@ JDelete(rsp);
 
 ```cpp
 // BareNotecard — standalone raw JSON transport
-note::StreamingTransport transport(hal);
+note::Protocol transport(hal);
 note::BareNotecard bare(transport);
 
 char buf[512];

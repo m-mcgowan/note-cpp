@@ -41,7 +41,4 @@ struct Hal {
     virtual void delay(uint32_t ms) = 0;
 };
 
-/// @deprecated Renamed to `Hal` in v0.3.0. The alias will be removed in v0.4.0.
-using TransportHal [[deprecated("renamed to note::Hal")]] = Hal;
-
 } // namespace note

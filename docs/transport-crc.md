@@ -27,11 +27,11 @@ note-c behavior.
 
 CRC is handled at two levels, depending on the transport path:
 
-**Streaming path** (`StreamingTransport`): CRC is accumulated
+**Streaming path** (`Protocol`): CRC is accumulated
 incrementally. On send, a `CrcWriter` wraps the `JsonWriter` and appends
 the CRC suffix after the closing brace. On receive, a `CrcAccumulator`
 feeds on bytes as they arrive, and a `CrcFieldSink` in the SAX sink chain
-extracts the CRC field. `StreamingTransport` compares accumulated vs
+extracts the CRC field. `Protocol` compares accumulated vs
 extracted values.
 
 **Buffered path** (`AbstractTransport`): CRC uses the in-place buffer

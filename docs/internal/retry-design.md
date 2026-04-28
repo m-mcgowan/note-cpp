@@ -280,7 +280,7 @@ overlays any non-sentinel override values.
 
 ### Done
 
-- **Transport simplification**: `StreamingTransport` is now single-attempt.
+- **Transport simplification**: `Protocol` is now single-attempt.
   Retry moved to the Notecard layer. Constructor's `max_retries`/`retry_delay_ms`
   params are deprecated (accepted but ignored).
 - **`RetryPolicy`** (`include/note/retry_policy.hpp`): `max_retries` (default 5),

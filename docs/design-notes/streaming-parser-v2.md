@@ -256,7 +256,7 @@ No `std::string` dependency.
 1. Implement strategies: `BitStack`, `IncrementalNumber`, `Utf8EscapeDecoder`
 2. Implement `JsonLexer` — templated on strategies, unit tested
 3. Implement `SaxParser` adapter — drives `JsonSink` from `LexerEvent`
-4. Wire into `StreamingTransport::receive_streaming()` as alternative
+4. Wire into `Protocol::receive_streaming()` as alternative
 5. Codegen compatible with both old and new parser
 6. Current `StreamingSaxParser` remains for backward compatibility
 7. Future: codegen low-level trie sinks for zero-buffer endpoints

@@ -5,7 +5,7 @@
 /// transport-rename arc; see docs/superpowers/plans/2026-04-27-transport-renames.md).
 /// IBufferedTransport — deprecated bridge that adapts the old
 /// `transact(req, timeout) -> Result<string_view>` shape to ITransport.
-/// CallbackTransport — adapter for test lambdas (kept in note::test::).
+/// note::test::CallbackTransport — adapter for test lambdas.
 ///
 /// `ITransport` exposes three transaction operations:
 ///   - `transact(req, span<char> buf, timeout)` — response copied into the
@@ -226,11 +226,6 @@ private:
 
 } // namespace test
 
-/// @deprecated Use `note::test::CallbackHal` instead.
-using CallbackHal = test::CallbackHal;
-
-/// @deprecated Use `note::test::CallbackTransport` instead.
-using CallbackTransport = test::CallbackTransport;
 #endif // NOTE_NO_STD_STRING
 
 } // namespace note

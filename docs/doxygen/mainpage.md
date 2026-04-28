@@ -21,7 +21,7 @@ API specification.
 - note::AbstractTransport — base class with shared retry/CRC logic; subclasses implement raw byte I/O
 - note::transport::NotecardSerial — serial wire protocol implementation
 - note::transport::NotecardI2c — I2C wire protocol implementation
-- note::CallbackTransport — adapter for wrapping lambdas as ITransport (testing)
+- note::test::CallbackTransport — adapter for wrapping lambdas as ITransport (testing)
 
 ## Duration and unit types
 

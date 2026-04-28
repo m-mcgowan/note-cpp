@@ -174,7 +174,7 @@ An implementer needs to understand these files and concepts:
   `SaxAdapter` uses a `SaxStreamBuf` for key/value accumulation —
   this buffer is also part of the static memory budget but is
   stack-allocated (not arena).
-- **`include/note/streaming_transport.hpp`** — `receive_streaming()`
+- **`include/note/protocol.hpp`** — `receive_streaming()`
   drives the lexer. The `frame_read` and lookahead buffer are
   transport-level, not per-response.
 

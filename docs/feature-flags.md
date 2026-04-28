@@ -247,7 +247,7 @@ example to see the difference.
 - **`include/note/error.hpp`** — `NOTE_PRINTABLE` default
 - **`include/note/lexer/json_lexer.hpp`** — `NOTE_UNICODE_ESCAPES` → `BasicEscapeDecoder`
 - **`include/note/static_notecard.hpp`** — `NOTE_NO_RETRY`, `NOTE_NO_REQUEST_IDS`
-- **`include/note/streaming_transport.hpp`** — `NOTE_NO_CRC`, `NOTE_MINIMAL` (lookahead), `NOTE_DEBUG_ENABLED`
+- **`include/note/protocol.hpp`** — `NOTE_NO_CRC`, `NOTE_MINIMAL` (lookahead), `NOTE_DEBUG_ENABLED`
 
 ## Size impact summary (AVR ATmega328P, 8-endpoint app with body parsing)
 

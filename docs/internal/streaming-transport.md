@@ -46,7 +46,7 @@ SerialHal / I2CHal        Your hardware (4-5 methods)
   ↓
 NotecardSerial            Implements Hal (adapts SerialHal)
   ↓
-StreamingTransport        Protocol logic: retry, CRC, JSON framing
+Protocol        Protocol logic: retry, CRC, JSON framing
   ↓
 IStreamingTransport       Interface consumed by Notecard
   ↓
@@ -55,7 +55,7 @@ Notecard                  Constructed with (IStreamingTransport&, Allocator)
 
 `Hal` is the boundary between hardware and protocol. It has five
 pure virtual methods: `transmit()`, `read()`, `reset()`,
-`write_line_terminator()`, `delay()`. `StreamingTransport` owns all
+`write_line_terminator()`, `delay()`. `Protocol` owns all
 protocol logic — retry loops, CRC (append on send, verify on receive), and
 JSON request/response framing. Zero internal buffers.
 
@@ -113,16 +113,16 @@ nc.begin(Wire, arena_allocator(arena));
 
 ### Non-Arduino — streaming path (recommended)
 
-Wire up the three layers directly: `SerialHal` -> `NotecardSerial` (`Hal`) -> `StreamingTransport` (`IStreamingTransport`) -> `Notecard`:
+Wire up the three layers directly: `SerialHal` -> `NotecardSerial` (`Hal`) -> `Protocol` (`IStreamingTransport`) -> `Notecard`:
 
 ```cpp
-#include <note/streaming_transport.hpp>
+#include <note/protocol.hpp>
 #include <note/transport/serial.hpp>
 #include <note/arena.hpp>
 
 MySerialHal hal;                                    // your SerialHal impl
 note::transport::NotecardSerial serial_hal(hal);    // Hal
-note::StreamingTransport transport(serial_hal);     // IStreamingTransport
+note::Protocol transport(serial_hal);     // IStreamingTransport
 
 char pool[256];
 note::MonotonicArena arena(pool);
@@ -181,7 +181,7 @@ Active when `NOTE_JSONB=0` (the default for non-MINIMAL builds).
 - **Send:** `StreamingJsonBuilder` → `CrcWriter` → `Hal::transmit()`
 - **Receive:** `Hal::read()` → `CrcAccumulator` → `sax_lex_streaming()` → sink chain
 - **Sink chain:** `ReceiveContext` (err/crc interception) → `Response::Sink(pool)`
-- **CRC:** accumulated incrementally on both send and receive, verified by `StreamingTransport`
+- **CRC:** accumulated incrementally on both send and receive, verified by `Protocol`
 - **Wire format:** `{"req":"card.version",...}\r\n`
 - **Strings:** interned into `StringPool` during SAX callbacks
 - **Retries:** `sink.reset()` + rebuild request from the (still-alive) request object
@@ -233,10 +233,10 @@ api.card.binary.put().data(buf, len).execute();
 CRC applies to the **JSON path only** (`NOTE_JSONB=0`). When `NOTE_JSONB=1`,
 the entire CRC mechanism is bypassed — COBS framing provides its own integrity.
 
-In the JSON streaming path, CRC is handled entirely by `StreamingTransport`:
+In the JSON streaming path, CRC is handled entirely by `Protocol`:
 
 - **Send:** a `CrcWriter` wraps the `JsonWriter` that writes to `Hal::transmit()`. It accumulates the CRC incrementally as JSON bytes are written, then appends the `,"crc":"SSSS:CCCCCCCC"}` suffix.
-- **Receive:** a `CrcAccumulator` feeds on bytes as they arrive from `Hal::read()`. The `ReceiveContext` wrapping dispatch extracts the CRC field value during parsing. After parsing, `StreamingTransport` compares the accumulated checksum against the extracted field.
+- **Receive:** a `CrcAccumulator` feeds on bytes as they arrive from `Hal::read()`. The `ReceiveContext` wrapping dispatch extracts the CRC field value during parsing. After parsing, `Protocol` compares the accumulated checksum against the extracted field.
 
 Auto-detection: `crc_enabled` flips to `true` when the first valid CRC
 field is found in a response. All subsequent responses must have CRC.
@@ -246,7 +246,7 @@ In the buffered path, CRC uses the in-place buffer functions (`crc_add`,
 
 ## `NOTE_NO_STD_STRING` Guard
 
-The streaming path (`Hal` + `StreamingTransport` + `IStreamingTransport`)
+The streaming path (`Hal` + `Protocol` + `IStreamingTransport`)
 has no dependency on `<string>` or `<functional>`. It compiles cleanly with
 `NOTE_NO_STD_STRING` defined.
 

@@ -106,7 +106,7 @@ SAX-parse into `Rsp::Sink` and (when set) `.into(struct)`.
 
 ```cpp
 note::transport::NotecardSerial serial_hal(hal);    // Hal
-note::StreamingTransport transport(serial_hal);     // ITransport (protocol)
+note::Protocol transport(serial_hal);               // ITransport (protocol)
 
 char arena_buf[256];
 note::MonotonicArena arena(arena_buf);
@@ -126,7 +126,7 @@ A `JsonBackend` enables `response.body()` to return a walkable
 
 ```cpp
 note::backends::BufferJsonBackend<512, 64> backend;
-note::Notecard nc(backend, transport);   // ITransport (same StreamingTransport)
+note::Notecard nc(backend, transport);   // ITransport (same Protocol)
 note::Api api(nc);
 
 auto r = api.card.version().execute();   // 0 heap allocs
@@ -201,4 +201,4 @@ The integration tests override global `operator new`/`operator delete` to count 
 - [transport.md](transport.md#streaming-vs-buffered) — which path to pick
 - [json-backend.md](json-backend.md) — backend selection and customization
 - [binary-transfer.md](binary-transfer.md) — binary transfer memory model
-- `include/note/arena.hpp`, `include/note/allocator.hpp`, `include/note/string_pool.hpp`, `include/note/transport_hal.hpp`, `include/note/streaming_transport.hpp`, `include/note/transport/cobs.hpp`
+- `include/note/arena.hpp`, `include/note/allocator.hpp`, `include/note/string_pool.hpp`, `include/note/transport_hal.hpp`, `include/note/protocol.hpp`, `include/note/transport/cobs.hpp`

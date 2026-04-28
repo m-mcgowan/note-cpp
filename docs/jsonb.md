@@ -32,7 +32,7 @@ To opt out of JSONB on a MINIMAL build:
 build_flags = -DNOTE_MINIMAL -DNOTE_JSONB=0
 ```
 
-When `NOTE_JSONB=1`, `StreamingTransport` automatically encodes requests in JSONB and decodes JSONB responses. The typed API (`nc.card.version()`, `nc.hub.set()`, etc.) works identically -- the wire format is transparent to application code.
+When `NOTE_JSONB=1`, `Protocol` automatically encodes requests in JSONB and decodes JSONB responses. The typed API (`nc.card.version()`, `nc.hub.set()`, etc.) works identically -- the wire format is transparent to application code.
 
 ## Wire framing
 
@@ -79,4 +79,4 @@ The JSONB implementation adds three components to `note-cpp`:
 | `jsonb_parse_streaming()` | `note/jsonb.hpp` | SAX parser for JSONB opcode streams |
 | `CobsStreamWriter` | `note/jsonb.hpp` | Streaming COBS encoder as a `JsonWriter` |
 
-These slot into the existing `StreamingTransport` pipeline without changing the transport, notecard, or generated API code. The `JsonBuilder` and `JsonSink` interfaces are the abstraction boundaries.
+These slot into the existing `Protocol` pipeline without changing the transport, notecard, or generated API code. The `JsonBuilder` and `JsonSink` interfaces are the abstraction boundaries.

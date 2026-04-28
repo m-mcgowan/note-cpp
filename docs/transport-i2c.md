@@ -8,7 +8,7 @@
 `I2CHal` is the byte-conduit interface — pure hardware I/O for the
 I2C bus. The library wraps your HAL in `transport::NotecardI2c<>`
 (which adds Notecard-specific I2C framing) and then in
-`StreamingTransport` (which adds protocol-level CRC, retry, and
+`Protocol` (which adds protocol-level CRC, retry, and
 session semantics). Either Notecard ctor — sink mode
 (`Notecard(transport, alloc)`) or tree mode
 (`Notecard(backend, transport)`) — works on the resulting stack;
@@ -45,7 +45,7 @@ Wire it up:
 ```cpp
 MyI2c hal;
 note::transport::NotecardI2c i2c{hal};
-note::StreamingTransport transport{i2c};
+note::Protocol transport{i2c};
 
 // Tree mode (response.body() works) — pass a JsonBackend.
 note::backends::CjsonBackend backend;

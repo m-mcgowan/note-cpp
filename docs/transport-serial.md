@@ -32,14 +32,14 @@ Wire it up:
 ```cpp
 MySerial hal;
 note::transport::NotecardSerial serial_hal(hal);  // implements Hal
-note::StreamingTransport transport(serial_hal);    // protocol logic
+note::Protocol transport(serial_hal);              // protocol logic
 note::Notecard nc(transport, allocator);           // streaming path
 ```
 
 `NotecardSerial` adapts the four `SerialHal` primitives into `Hal`'s
 five methods — `transmit()`, `read()` (blocking with timeout), `reset()`,
 `write_line_terminator()` (`\r\n`), and `delay()`. Protocol logic (CRC,
-JSON framing, retry) is handled by `StreamingTransport` and `Notecard`.
+JSON framing, retry) is handled by `Protocol` and `Notecard`.
 
 ## Arduino
 
@@ -63,7 +63,7 @@ note::transport::SerialCallbackHal hal{
     [](uint32_t ms)                         { delay(ms); },
 };
 note::transport::NotecardSerial serial_hal(hal);
-note::StreamingTransport transport(serial_hal);
+note::Protocol transport(serial_hal);
 ```
 
 ## Protocol constants

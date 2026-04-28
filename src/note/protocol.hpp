@@ -13,10 +13,6 @@
 ///
 /// Zero transport-internal buffers: requests are streamed via
 /// StreamingJsonBuilder, responses SAX-parsed directly from the wire.
-///
-/// Renamed from `StreamingTransport` in Phase 4 of the transport
-/// refactor; `using StreamingTransport = Protocol` is kept for one
-/// release as a deprecated alias.
 
 #include <note/debug.hpp>
 #include <note/error.hpp>
@@ -824,15 +820,5 @@ private:
     TxnHandshake* handshake_ = nullptr;
 #endif
 };
-
-// Deprecated alias — `Protocol` was renamed from `StreamingTransport`
-// in Phase 4 of the transport refactor. The old name is retained for
-// one release; migrate at your convenience.
-#if NOTE_STATIC_HAL
-template<typename HalT>
-using StreamingTransport = Protocol<HalT>;
-#else
-using StreamingTransport = Protocol;
-#endif
 
 } // namespace note

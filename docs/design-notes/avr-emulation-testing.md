@@ -97,7 +97,7 @@ Or any of the layered test environments:
 |-------------|---------------|
 | `wokwi-layer1` | SerialHal transmit + receive |
 | `wokwi-layer2` | NotecardSerial reset handshake |
-| `wokwi-layer3` | StreamingTransport transact |
+| `wokwi-layer3` | Protocol transact |
 | `wokwi-layer4` | Full Api.execute with typed response parsing |
 
 ### 5. Run the simulation

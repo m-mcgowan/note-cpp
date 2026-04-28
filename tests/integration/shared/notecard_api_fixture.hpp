@@ -7,10 +7,18 @@
 
 #include <note/api.hpp>
 #include <note/error.hpp>
+#include <note/streaming_transport.hpp>
 #include <doctest.h>
 
 // Global Api instance — set by each environment's board init.
 extern note::Api<>* g_api;
+
+/// Streaming transport over the active interface (serial or I2C). Set by
+/// each environment's board init alongside g_api. Tests that want to
+/// exercise the same physical transport with a *buffered* Notecard wrap
+/// this in a `note::BufferedStreamingTransport` and feed it to a separate
+/// `note::Notecard(JsonBackend&, IBufferedTransport&)` ctor.
+extern note::StreamingTransport* g_streaming_transport;
 
 /// Get the global Api reference. Asserts that it was initialized.
 inline note::Api<>& notecard_api() { return *g_api; }

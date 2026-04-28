@@ -15,6 +15,8 @@
 #include <note/error.hpp>
 #include <note/api.hpp>
 #include <note/body.hpp>
+#include <note/buffered_transport.hpp>
+#include <note/backends/buffer.hpp>
 #include <note/debug.hpp>
 #include <note/units.hpp>
 
@@ -97,6 +99,37 @@ TEST_CASE("note.update + note.get body round-trip") {
         .execute();
     if (!get_rsp) { MESSAGE("get error: ", note::to_string(get_rsp.error())); }
     REQUIRE(get_rsp);
+
+    CHECK(received.temperature == doctest::Approx(sent.temperature));
+    CHECK(received.humidity == sent.humidity);
+}
+
+// `.into(T&)` is part of the high-level API contract, not a streaming-only
+// feature. This test pairs the streaming round-trip above with a buffered
+// equivalent that hits the same physical transport (Notecard hardware). If
+// the body dispatch ever regresses on the buffered execute path, this case
+// fails on real hardware before any user does.
+TEST_CASE(".into() populates body via buffered Notecard on real hardware") {
+    REQUIRE(g_streaming_transport != nullptr);
+
+    static char rsp_buf[1024];
+    note::BufferedStreamingTransport buffered(*g_streaming_transport, rsp_buf, sizeof(rsp_buf));
+    note::backends::BufferJsonBackend<1024, 64> backend;
+    note::Notecard nc(backend, buffered);
+    note::Api<> api(nc);
+
+    const char* file = "integration-into-buffered.db";
+    const char* noteId = "test-into";
+
+    SensorData sent{.temperature = 24.75f, .humidity = 55};
+    auto upd = api.note.update(file, noteId).body(sent).execute();
+    if (!upd) { MESSAGE("update error: ", note::to_string(upd.error())); }
+    REQUIRE(upd);
+
+    SensorData received{};
+    auto rd = api.note.read(file).noteId(noteId).into(received).execute();
+    if (!rd) { MESSAGE("read error: ", note::to_string(rd.error())); }
+    REQUIRE(rd);
 
     CHECK(received.temperature == doctest::Approx(sent.temperature));
     CHECK(received.humidity == sent.humidity);

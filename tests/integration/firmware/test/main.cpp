@@ -22,6 +22,7 @@
 
 // Globals — shared test fixture + firmware version gating.
 note::Api<>* g_api = nullptr;
+note::StreamingTransport* g_streaming_transport = nullptr;
 int g_fw_version = 0;
 static std::string g_fw_excludes;
 
@@ -93,6 +94,11 @@ static bool board_init(Print& log) {
 
     // Initialize global Api for shared tests.
     g_api = &get_api();
+#ifdef NOTECARD_TEST_SERIAL
+    g_streaming_transport = &serial_streaming();
+#elif defined(NOTECARD_TEST_I2C)
+    g_streaming_transport = &i2c_streaming();
+#endif
 
     // Enable wire debug — prints request/response JSON to serial log.
     note::DebugListener d{};

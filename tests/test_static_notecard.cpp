@@ -40,7 +40,7 @@ struct MockTransport {
         rx.push_back('\n');
     }
 
-    void capture_request(BuildFn build_fn, void* ctx) {
+    void capture_request(RequestSource src) {
         last_request.clear();
         struct Writer : JsonWriter {
             std::string& out;
@@ -50,8 +50,7 @@ struct MockTransport {
                 return true;
             }
         } writer(last_request);
-        StreamingJsonBuilder builder(writer);
-        build_fn(builder, ctx);
+        src.emit(writer);
         last_request += '}';
     }
 
@@ -71,10 +70,10 @@ struct MockTransport {
                               resp.size(), adapter);
     }
 
-    Result<void> transact_dispatch(BuildFn build_fn, void* ctx, SaxDispatch dispatch,
+    Result<void> transact_dispatch(RequestSource src, SaxDispatch dispatch,
                                    uint32_t /*timeout_ms*/, detail::NcErrorCapture& /*nc_err*/) {
         ++transact_count;
-        capture_request(build_fn, ctx);
+        capture_request(src);
         if (fail_count > 0) {
             --fail_count;
             return make_error(next_error, Cause::HalError, "mock failure");
@@ -83,9 +82,9 @@ struct MockTransport {
         return {};
     }
 
-    Result<void> send(BuildFn build_fn, void* ctx) {
+    Result<void> send(RequestSource src) {
         ++send_count;
-        capture_request(build_fn, ctx);
+        capture_request(src);
         return {};
     }
 
@@ -121,8 +120,12 @@ TEST_CASE("StaticNotecard execute sends request and parses response") {
     REQUIRE(result);
     CHECK(result.value == 22.5);
     CHECK(nc.stack().transport.transact_count == 1);
+#if !NOTE_JSONB
+    // Under NOTE_JSONB the mock captures JSONB opcodes, not JSON text —
+    // substring assertions on the captured bytes don't apply there.
     CHECK(nc.stack().transport.last_request.find("\"req\":\"card.temp\"")
           != std::string::npos);
+#endif
 }
 
 TEST_CASE("StaticNotecard execute with void response") {
@@ -140,10 +143,12 @@ TEST_CASE("StaticNotecard execute with void response") {
         .execute();
     REQUIRE(result);
     CHECK(nc.stack().transport.transact_count == 1);
+#if !NOTE_JSONB
     CHECK(nc.stack().transport.last_request.find("\"req\":\"hub.set\"")
           != std::string::npos);
     CHECK(nc.stack().transport.last_request.find("\"product\":\"com.example.test\"")
           != std::string::npos);
+#endif
 }
 
 TEST_CASE("StaticNotecard command sends fire-and-forget") {
@@ -158,8 +163,10 @@ TEST_CASE("StaticNotecard command sends fire-and-forget") {
         .command();
     REQUIRE(result);
     CHECK(nc.stack().transport.send_count == 1);
+#if !NOTE_JSONB
     CHECK(nc.stack().transport.last_request.find("\"cmd\":\"hub.set\"")
           != std::string::npos);
+#endif
 }
 
 TEST_CASE("StaticNotecard via resource group factory") {

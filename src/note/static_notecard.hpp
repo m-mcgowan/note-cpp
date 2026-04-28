@@ -161,7 +161,8 @@ public:
         BuildFn build_fn = [](JsonBuilder& b, void* p) {
             (*static_cast<decltype(build)*>(p))(b);
         };
-        auto result = stack_.transport.send(build_fn, &build);
+        BuildFnRequestSource src(build_fn, &build);
+        auto result = stack_.transport.send(src.as_source());
 #if !NOTE_NO_RETRY
         record_timing();
 #endif
@@ -174,7 +175,8 @@ public:
 #if !NOTE_NO_RETRY
         enforce_timing();
 #endif
-        auto result = stack_.transport.send(build_fn, ctx);
+        BuildFnRequestSource src(build_fn, ctx);
+        auto result = stack_.transport.send(src.as_source());
 #if !NOTE_NO_RETRY
         record_timing();
 #endif
@@ -199,7 +201,8 @@ public:
         StringPool pool(alloc_);
         GenericResponseSink gsink{rsp_storage, fields, n_fields, &pool};
         auto dispatch = make_sax_dispatch(gsink);
-        auto rv = stack_.transport.transact_dispatch(wrapped, &ctx, dispatch, default_timeout_ms_, nc_err);
+        BuildFnRequestSource src(wrapped, &ctx);
+        auto rv = stack_.transport.transact_dispatch(src.as_source(), dispatch, default_timeout_ms_, nc_err);
         arena_exhausted = pool.exhausted();
         return rv;
     }
@@ -250,7 +253,8 @@ public:
 #if !NOTE_NO_RETRY
         enforce_timing();
 #endif
-        auto rv = stack_.transport.transact_dispatch(build_fn, build_ctx, dispatch, default_timeout_ms_, nc_err);
+        BuildFnRequestSource src(build_fn, build_ctx);
+        auto rv = stack_.transport.transact_dispatch(src.as_source(), dispatch, default_timeout_ms_, nc_err);
 #if !NOTE_NO_RETRY
         if (!rv && retry_policy_.max_retries > 0
             && detail::should_retry(rv.error().code, safety)) {
@@ -267,8 +271,9 @@ public:
                 [](void* c, Error* out) -> bool {
                     auto& x = *static_cast<Ctx*>(c);
                     x.nc_err->len = 0;
+                    BuildFnRequestSource retry_src(x.fn, x.build_ctx);
                     *x.rv = x.self->stack_.transport.transact_dispatch(
-                        x.fn, x.build_ctx, x.dispatch, x.self->default_timeout_ms_, *x.nc_err);
+                        retry_src.as_source(), x.dispatch, x.self->default_timeout_ms_, *x.nc_err);
                     if (*x.rv) return true;
                     *out = x.rv->error().code;
                     return false;

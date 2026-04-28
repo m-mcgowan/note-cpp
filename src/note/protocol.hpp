@@ -439,6 +439,48 @@ public:
         return {};
     }
 
+    /// RequestSource counterpart of `transact_dispatch(BuildFn, …)`. Same
+    /// semantics — error capture and CRC handling at the dispatch level —
+    /// just routes the request side through `stream_request_source` so
+    /// callers (notably `StaticNotecard`) don't need to construct a
+    /// JsonBuilder before calling. Phase 5a step 5.
+    Result<void> transact_dispatch(RequestSource src,
+                                   SaxDispatch dispatch, uint32_t timeout_ms,
+                                   detail::NcErrorCapture& nc_err) {
+#if NOTE_TXN_HANDSHAKE
+        detail::TxnHandshakeScope handshake_scope{handshake_, timeout_ms};
+        if (!handshake_scope.ok())
+            return make_error(Error::NotReady, Cause::Timeout, NOTE_ERR("txn handshake timeout"));
+#endif
+        if (!ensure_init()) {
+            debug_transport(debug_, TransportEvent::ResetFailed, 0);
+            return make_error(Error::NotReady, NOTE_ERR("not ready"));
+        }
+
+#if !NOTE_NO_CRC
+        ++crc_seq_;
+#endif
+
+        debug_timing(debug_, TimingEvent::TransmitBegin);
+        if (!stream_request_source(src)) {
+            debug_transport(debug_, TransportEvent::SendFailed, 0);
+            return make_error(Error::SendFailed, Cause::HalError, NOTE_ERR("transmit failed"));
+        }
+        debug_timing(debug_, TimingEvent::TransmitEnd);
+
+        debug_timing(debug_, TimingEvent::ReceiveBegin);
+        auto rv = receive_dispatch(dispatch, timeout_ms, nc_err);
+        debug_timing(debug_, TimingEvent::ReceiveEnd);
+        if (!rv) {
+            if (rv.error().cause == Cause::Timeout)
+                debug_transport(debug_, TransportEvent::Timeout, 0);
+            else if (rv.error().cause == Cause::CrcMismatch)
+                debug_transport(debug_, TransportEvent::CrcMismatch, 0);
+            return Unexpected(rv.error());
+        }
+        return {};
+    }
+
 private:
     /// Single-attempt transact. Retry is orchestrated by the Notecard layer.
     template<typename SinkT>

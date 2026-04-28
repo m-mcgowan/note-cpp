@@ -58,6 +58,8 @@ using ITransport = IBufferedTransport;
 
 
 #if !NOTE_NO_STD_STRING
+namespace test {
+
 // ---------------------------------------------------------------------------
 // CallbackHal — no-op test Hal paired with CallbackTransport
 // ---------------------------------------------------------------------------
@@ -83,7 +85,7 @@ public:
 /// Wraps function objects as an IBufferedTransport for testing and examples.
 ///
 /// @code
-///     CallbackTransport transport(
+///     note::test::CallbackTransport transport(
 ///         [](string_view req, uint32_t) -> Result<string_view> { return "{}"; });
 ///     Notecard nc(backend, transport);
 /// @endcode
@@ -136,6 +138,14 @@ private:
     ReadFn read_;
     CallbackHal hal_;
 };
+
+} // namespace test
+
+/// @deprecated Use `note::test::CallbackHal` instead.
+using CallbackHal = test::CallbackHal;
+
+/// @deprecated Use `note::test::CallbackTransport` instead.
+using CallbackTransport = test::CallbackTransport;
 #endif // NOTE_NO_STD_STRING
 
 } // namespace note

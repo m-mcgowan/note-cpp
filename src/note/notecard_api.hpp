@@ -117,6 +117,11 @@ public:
         nc_ = Notecard(default_backend_, transport);
     }
 
+    /// Set the buffered transport with an explicit JsonBackend.
+    void begin(JsonBackend& backend, IBufferedTransport& transport) {
+        nc_ = Notecard(backend, transport);
+    }
+
     /// Validated JSON passthrough — caller-supplied buffer. Sends the
     /// pre-formatted request, copies the response into `buf`, and
     /// returns a `string_view` into `buf`. Works on both streaming and
@@ -173,6 +178,10 @@ public:
 
     void begin(IBufferedTransport& transport) {
         detail::NcOwner::nc_ = Notecard(default_backend_, transport);
+    }
+
+    void begin(JsonBackend& backend, IBufferedTransport& transport) {
+        detail::NcOwner::nc_ = Notecard(backend, transport);
     }
 
     /// Validated JSON passthrough — see C++20 overload above.

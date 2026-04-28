@@ -14,7 +14,11 @@
 ///       nc.hub.set().product("com.example.app").execute();
 ///   }
 
+#include <note/note_config.hpp>
 #include <note/allocator.hpp>
+#if !NOTE_NO_BUFFERED
+#include <note/buffered_transport.hpp>
+#endif
 #include <note/notecard_api.hpp>
 #include <note/units.hpp>
 #include <note/streaming_transport.hpp>
@@ -147,6 +151,51 @@ public:
         begin_i2c_external(wire, tag, address, alloc);
     }
 
+#if !NOTE_NO_BUFFERED
+    // ── Buffered begin() — `Response::body()` returns a JsonReader* ───────
+    //
+    // Constructs the streaming HAL stack and wraps it in a
+    // BufferedStreamingTransport that exposes IBufferedTransport. The
+    // buffered Notecard ctor (Notecard(JsonBackend&, IBufferedTransport&))
+    // then drives `body()` population. Caller supplies both a JsonBackend
+    // (e.g. note::backends::CjsonBackend) and a response buffer big
+    // enough for the largest expected response.
+    //
+    // Compiled out under NOTE_MINIMAL / NOTE_NO_BUFFERED — AVR-class
+    // builds use the streaming-only path and `.into(T&)` for body data.
+
+    /// Begin with serial transport and buffered body access.
+    template<typename SerialT>
+    void begin(SerialT& uart, unsigned long baud,
+               JsonBackend& backend, span<char> rsp_buf) {
+        serial_hal_ = std::make_unique<SerialHal<SerialT>>(uart, baud);
+        serial_hal_transport_ = std::make_unique<transport::NotecardSerial<>>(*serial_hal_);
+        serial_streaming_ = std::make_unique<StreamingTransport>(*serial_hal_transport_);
+        buffered_ = std::make_unique<BufferedStreamingTransport>(*serial_streaming_, rsp_buf);
+        Base::begin(backend, *buffered_);
+    }
+
+    /// Begin with I2C transport and buffered body access (default pins).
+    void begin(TwoWire& wire, JsonBackend& backend, span<char> rsp_buf) {
+        i2c_hal_ = std::make_unique<I2CHal>(wire);
+        begin_buffered_finish(backend, rsp_buf);
+    }
+
+    /// Begin with I2C transport on custom pins and buffered body access.
+    void begin(TwoWire& wire, int sda, int scl,
+               JsonBackend& backend, span<char> rsp_buf) {
+        i2c_hal_ = std::make_unique<I2CHal>(wire, sda, scl);
+        begin_buffered_finish(backend, rsp_buf);
+    }
+
+    /// Begin with I2C transport on app-managed bus and buffered body access.
+    void begin(TwoWire& wire, ExternalBus tag,
+               JsonBackend& backend, span<char> rsp_buf) {
+        i2c_hal_ = std::make_unique<I2CHal>(wire, tag);
+        begin_buffered_finish(backend, rsp_buf);
+    }
+#endif // !NOTE_NO_BUFFERED
+
     /// Enable debug output to an Arduino Print (e.g. Serial).
     /// Default: wire data only. Pass flags for more categories:
     ///   nc.setDebugOutput(Serial, note::DebugWire | note::DebugTiming);
@@ -183,12 +232,24 @@ private:
         Base::begin(*i2c_streaming_, alloc);
     }
 
+#if !NOTE_NO_BUFFERED
+    void begin_buffered_finish(JsonBackend& backend, span<char> rsp_buf) {
+        i2c_hal_transport_ = std::make_unique<transport::NotecardI2c<>>(*i2c_hal_);
+        i2c_streaming_ = std::make_unique<StreamingTransport>(*i2c_hal_transport_);
+        buffered_ = std::make_unique<BufferedStreamingTransport>(*i2c_streaming_, rsp_buf);
+        Base::begin(backend, *buffered_);
+    }
+#endif
+
     std::unique_ptr<transport::SerialHal> serial_hal_;
     std::unique_ptr<transport::NotecardSerial<>> serial_hal_transport_;
     std::unique_ptr<StreamingTransport> serial_streaming_;
     std::unique_ptr<I2CHal> i2c_hal_;
     std::unique_ptr<transport::NotecardI2c<>> i2c_hal_transport_;
     std::unique_ptr<StreamingTransport> i2c_streaming_;
+#if !NOTE_NO_BUFFERED
+    std::unique_ptr<BufferedStreamingTransport> buffered_;
+#endif
 };
 
 #if __cplusplus >= 202002L

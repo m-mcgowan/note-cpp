@@ -176,6 +176,44 @@ streaming transport for this reason. On real hardware, both POSIX
 (`note::posix::Notecard`) and Arduino (`note::arduino::Notecard`) wire
 up streaming by default in their `begin()` methods.
 
+The reverse also holds: on a streaming transport, `response.body()`
+**always returns `nullptr`**. The streaming SAX sink has no
+`JsonReader` to hand back — body fields are dispatched as events at
+parse time and only retained if you supplied a destination via
+`.into(T&)`. If you need access to the body on hardware, use
+`.into(T&)` with a struct describing the fields you care about.
+
+For dynamic body shapes (keys not known at compile time) — or any
+case where you just want the raw response bytes — `nc.transact(json,
+buf)` works today on both streaming and buffered transports. Pair it
+with `note::scan::*` from
+[json_scan.hpp](../include/note/json_scan.hpp) to walk the response
+without pulling in a `JsonBackend`:
+
+```cpp
+char buf[256];
+auto rsp = nc.transact("{\"req\":\"env.get\"}", note::span<char>(buf));
+if (rsp) {
+    auto body = note::scan::object(*rsp, "body");
+    note::scan::for_each(body, [](note::string_view k, note::string_view v) {
+        // each top-level body field — keys here don't have to be known
+        // at compile time
+    });
+}
+```
+
+A typed `body()` returning a `JsonReader*` is a separate facility —
+it's populated only by the buffered `Notecard(JsonBackend&,
+IBufferedTransport&)` ctor, which needs a `JsonBackend` (cJSON,
+nlohmann/json) and an `IBufferedTransport` over the wire. The
+buffered path is gated by `NOTE_NO_BUFFERED`, which `NOTE_MINIMAL=1`
+enables by default — so on AVR-class builds it is compiled out
+entirely and `.into(T&)` (or the `transact` + `scan` pattern above)
+is the only option. On larger targets it's available, but you have
+to wire the backend and supply the `IBufferedTransport` yourself;
+note-cpp doesn't ship one for Arduino I2C/serial today (only
+`CallbackTransport`, used by host tests).
+
 ## C++ level
 
 - **C++17** — everything above works, with `NOTE_FIELDS(...)` as the

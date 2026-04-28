@@ -19,6 +19,7 @@
 #include <note/json.hpp>
 #include <note/json_sax_streaming.hpp>
 #include <note/lexer/parse.hpp>
+#include <note/request_source.hpp>
 #include <note/transport.hpp>
 #include <note/transport_hal.hpp>
 #include <note/wire_format.hpp>
@@ -309,6 +310,79 @@ public:
     /// Fire-and-forget: ITransport `send(req)`.
     Result<void> send(string_view request) override {
         return send_raw(request);
+    }
+
+    // ─── RequestSource overloads (Phase 5a step 3) ─────────────────────
+    //
+    // Native overrides for the ITransport RequestSource virtuals. The
+    // request side runs through `stream_request_source`, which wraps the
+    // wire writer with the same CRC/COBS framing as the legacy BuildFn
+    // path. The receive side reuses the existing dispatch (sink overload)
+    // or `read_line` (buffered overload). No consumer drives this path
+    // yet — Phase 5a steps 4-7 migrate Notecard, BareNotecard, and the
+    // test fakes onto it.
+
+    using ITransport::transact;  // bring RequestSource overloads into scope alongside string_view ones
+    using ITransport::send;
+
+    Result<string_view> transact(RequestSource src, span<char> buf,
+                                 uint32_t timeout_ms) override {
+#if NOTE_TXN_HANDSHAKE
+        detail::TxnHandshakeScope handshake_scope{handshake_, timeout_ms};
+        if (!handshake_scope.ok())
+            return make_error(Error::NotReady, Cause::Timeout, NOTE_ERR("txn handshake timeout"));
+#endif
+        if (!ensure_init())
+            return make_error(Error::NotReady, NOTE_ERR("not ready"));
+
+#if !NOTE_NO_CRC
+        ++crc_seq_;
+#endif
+
+        if (!stream_request_source(src))
+            return make_error(Error::SendFailed, Cause::HalError, NOTE_ERR("transmit failed"));
+
+        return read_line(buf.data(), buf.size(), timeout_ms);
+    }
+
+    Result<void> transact(RequestSource src, JsonSink& sink,
+                          uint32_t timeout_ms) override {
+#if NOTE_TXN_HANDSHAKE
+        detail::TxnHandshakeScope handshake_scope{handshake_, timeout_ms};
+        if (!handshake_scope.ok())
+            return make_error(Error::NotReady, Cause::Timeout, NOTE_ERR("txn handshake timeout"));
+#endif
+        if (!ensure_init())
+            return make_error(Error::NotReady, NOTE_ERR("not ready"));
+
+#if !NOTE_NO_CRC
+        ++crc_seq_;
+#endif
+
+        if (!stream_request_source(src))
+            return make_error(Error::SendFailed, Cause::HalError, NOTE_ERR("transmit failed"));
+
+        auto dispatch = make_sax_dispatch(sink);
+        detail::NcErrorCapture nc_err;
+        return receive_dispatch(dispatch, timeout_ms, nc_err);
+    }
+
+    Result<void> send(RequestSource src) override {
+#if NOTE_TXN_HANDSHAKE
+        detail::TxnHandshakeScope handshake_scope{handshake_, detail::kTxnHandshakeDefaultTimeoutMs};
+        if (!handshake_scope.ok())
+            return make_error(Error::NotReady, Cause::Timeout, NOTE_ERR("txn handshake timeout"));
+#endif
+        if (!ensure_init())
+            return make_error(Error::NotReady, NOTE_ERR("not ready"));
+
+#if !NOTE_NO_CRC
+        ++crc_seq_;
+#endif
+
+        if (!stream_request_source(src))
+            return make_error(Error::SendFailed, Cause::HalError, NOTE_ERR("transmit failed"));
+        return {};
     }
 #endif
 
@@ -622,6 +696,71 @@ private:
         {
             StreamingJsonBuilder builder(writer);
             build_fn(builder, ctx);
+            writer.write("}", 1);
+        }
+#endif
+#endif // NOTE_JSONB
+
+        if (!writer.ok) return false;
+        return hal_.write_line_terminator();
+    }
+
+    /// RequestSource counterpart of `stream_request`. Same framing — JSON
+    /// path wraps the writer in `CrcWriter` and `finalize_with_brace`s
+    /// after `src.emit()`; JSONB path wraps in `CobsStreamWriter` and
+    /// emits the end-object opcode. The source itself instantiates the
+    /// JSON builder (`BuilderRequestSource` does this, see
+    /// `note/request_source.hpp`).
+    bool stream_request_source(RequestSource src) {
+        struct Writer : JsonWriter {
+            using JsonWriter::write;
+#if NOTE_STATIC_HAL
+            HalT& hal;
+            bool ok = true;
+            explicit Writer(HalT& h) : hal(h) {}
+#else
+            Hal& hal;
+            bool ok = true;
+            explicit Writer(Hal& h) : hal(h) {}
+#endif
+            bool write(const char* data, size_t len) override {
+                if (!ok) return false;
+                ok = hal.transmit(reinterpret_cast<const uint8_t*>(data), len);
+                return ok;
+            }
+        } writer(hal_);
+
+#if NOTE_JSONB
+        writer.write("{:", 2);
+        CobsStreamWriter cobs(writer, jsonb::kCobsXor);
+        src.emit(cobs);
+        cobs.write(reinterpret_cast<const char*>(&jsonb::kEndObject), 1);
+        cobs.flush();
+        writer.write(":}", 2);
+#else
+#if !NOTE_NO_CRC
+        {
+            CrcWriter crc(writer);
+            src.emit(crc);
+
+            uint32_t checksum = crc.finalize_with_brace();
+
+            char suffix[transport::detail::kCrcFieldLen + 1];
+            size_t pos = 0;
+            suffix[pos++] = ',';
+            suffix[pos++] = '"'; suffix[pos++] = 'c'; suffix[pos++] = 'r';
+            suffix[pos++] = 'c'; suffix[pos++] = '"'; suffix[pos++] = ':';
+            suffix[pos++] = '"';
+            transport::detail::write_hex16(suffix + pos, crc_seq_); pos += 4;
+            suffix[pos++] = ':';
+            transport::detail::write_hex32(suffix + pos, checksum); pos += 8;
+            suffix[pos++] = '"';
+            suffix[pos++] = '}';
+            writer.write(suffix, pos);
+        }
+#else
+        {
+            src.emit(writer);
             writer.write("}", 1);
         }
 #endif

@@ -33,6 +33,37 @@
 
 namespace note {
 
+class JsonWriter;  // defined in note/json.hpp
+
+// ---------------------------------------------------------------------------
+// RequestSource — type-erased emitter for JSON request bytes
+// ---------------------------------------------------------------------------
+
+/// Type-erased request source: a function pointer + context that paints
+/// request bytes through a `JsonWriter`. Two-word POD; no vtable, no
+/// allocation.
+///
+/// `note/request_source.hpp` ships the builder-shape adapter
+/// (`BuilderRequestSource<F>`) — runs a user callable against a
+/// `StreamingJsonBuilder` layered over the writer. A verbatim string-shape
+/// adapter is deferred until Phase 5b's field router lands; until then,
+/// pre-built JSON keeps going through the legacy `transact(string_view, …)`
+/// overloads on `ITransport`.
+///
+/// `RequestSource` is the unified shape that step 8 of Phase 5a collapses
+/// `ITransport` to. Today (step 3) it lives alongside the legacy
+/// `string_view` / `BuildFn` shapes; concrete drivers (`Protocol`) override
+/// it natively, and most consumers continue to use the legacy shapes until
+/// later steps in the arc migrate them.
+struct RequestSource {
+    using EmitFn = void(*)(JsonWriter& w, void* ctx);
+
+    EmitFn emit_fn;
+    void*  ctx;
+
+    void emit(JsonWriter& w) const { emit_fn(w, ctx); }
+};
+
 // ---------------------------------------------------------------------------
 // ITransport — unified session interface
 // ---------------------------------------------------------------------------
@@ -94,6 +125,36 @@ struct ITransport {
         return make_error(Error::NotReady, "binary transfer not supported");
     }
 
+    // ─── RequestSource overloads (Phase 5a step 3 — alongside string_view) ───
+    //
+    // These are the unified shape that step 8 collapses to. Default impls
+    // here return "not implemented"; `Protocol` overrides natively, and
+    // step 4+ migrates consumers (Notecard, BareNotecard, test fakes) onto
+    // them. Existing subclasses that only implement the string_view/BuildFn
+    // shapes inherit the not-implemented defaults and keep compiling.
+
+    /// Send a request from a `RequestSource` and copy the response into
+    /// the caller's buffer.
+    virtual Result<string_view> transact(RequestSource, span<char>,
+                                         uint32_t /*timeout_ms*/) {
+        return make_error(Error::NotReady,
+                          "RequestSource transact not implemented");
+    }
+
+    /// Send a request from a `RequestSource` and SAX-parse the response
+    /// into `sink`.
+    virtual Result<void> transact(RequestSource, JsonSink&,
+                                  uint32_t /*timeout_ms*/) {
+        return make_error(Error::NotReady,
+                          "RequestSource transact not implemented");
+    }
+
+    /// Fire-and-forget: emit a `RequestSource`-built request, no response.
+    virtual Result<void> send(RequestSource) {
+        return make_error(Error::NotReady,
+                          "RequestSource send not implemented");
+    }
+
 protected:
     /// Stack buffer size for the default `transact(req, sink)` bridge impl.
     /// Sized for typical Notecard responses; bumps if a derived class needs more.
@@ -112,6 +173,11 @@ protected:
 /// `note::test::CallbackTransport`) continue to compile without a
 /// per-class rewrite.
 struct IBufferedTransport : public ITransport {
+    /// Bring the inherited ITransport overloads (string_view + RequestSource
+    /// shapes) into scope so the buffered shape declared below doesn't
+    /// hide them under -Woverloaded-virtual.
+    using ITransport::transact;
+
     /// Old buffered transact: response is placed in transport-owned storage
     /// and returned by view. The view is valid until the next `transact()`
     /// call. Subclasses override THIS method; the new `ITransport` overloads

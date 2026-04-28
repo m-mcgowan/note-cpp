@@ -41,10 +41,10 @@ namespace detail {
         NcOwner()
             : nc_() {}
 
-        explicit NcOwner(IBufferedTransport& transport)
+        explicit NcOwner(ITransport& transport)
             : nc_(default_backend_, transport) {}
 
-        NcOwner(JsonBackend& backend, IBufferedTransport& transport)
+        NcOwner(JsonBackend& backend, ITransport& transport)
             : nc_(backend, transport) {}
     };
 
@@ -93,12 +93,12 @@ public:
         , Api<TargetT>(nc_) {}
 
     /// Construct with transport (uses default backend).
-    explicit NotecardApi(IBufferedTransport& transport)
+    explicit NotecardApi(ITransport& transport)
         : detail::NcOwner(transport)
         , Api<TargetT>(nc_) {}
 
     /// Construct with explicit backend + transport.
-    NotecardApi(JsonBackend& backend, IBufferedTransport& transport)
+    NotecardApi(JsonBackend& backend, ITransport& transport)
         : detail::NcOwner(backend, transport)
         , Api<TargetT>(nc_) {}
 
@@ -112,13 +112,14 @@ public:
         nc_ = Notecard(transport, Allocator{});
     }
 
-    /// Set the buffered transport after construction.
-    void begin(IBufferedTransport& transport) {
+    /// Set the transport after construction (uses default backend, lights
+    /// up tree-mode `body()` walking).
+    void begin(ITransport& transport) {
         nc_ = Notecard(default_backend_, transport);
     }
 
-    /// Set the buffered transport with an explicit JsonBackend.
-    void begin(JsonBackend& backend, IBufferedTransport& transport) {
+    /// Set the transport with an explicit JsonBackend.
+    void begin(JsonBackend& backend, ITransport& transport) {
         nc_ = Notecard(backend, transport);
     }
 
@@ -143,9 +144,8 @@ public:
 
 /// CTAD guide: map a pack of axis values at the call site to
 /// `NotecardApi<ComposedTarget<Axes...>>`. The requires clause keeps
-/// non-axis arguments (e.g. `IBufferedTransport&`) from matching this
-/// guide so their constructors deduce the default
-/// `TargetT=Unconstrained`.
+/// non-axis arguments (e.g. `ITransport&`) from matching this guide so
+/// their constructors deduce the default `TargetT=Unconstrained`.
 template<typename... Axes>
     requires (sizeof...(Axes) > 0
               && (detail::HasAxisCategory<Axes> && ...))
@@ -161,11 +161,11 @@ public:
         : detail::NcOwner()
         , Api<Notecard>(detail::NcOwner::nc_) {}
 
-    explicit NotecardApi(IBufferedTransport& transport)
+    explicit NotecardApi(ITransport& transport)
         : detail::NcOwner(transport)
         , Api<Notecard>(detail::NcOwner::nc_) {}
 
-    NotecardApi(JsonBackend& backend, IBufferedTransport& transport)
+    NotecardApi(JsonBackend& backend, ITransport& transport)
         : detail::NcOwner(backend, transport)
         , Api<Notecard>(detail::NcOwner::nc_) {}
 
@@ -177,11 +177,11 @@ public:
         detail::NcOwner::nc_ = Notecard(transport, Allocator{});
     }
 
-    void begin(IBufferedTransport& transport) {
+    void begin(ITransport& transport) {
         detail::NcOwner::nc_ = Notecard(default_backend_, transport);
     }
 
-    void begin(JsonBackend& backend, IBufferedTransport& transport) {
+    void begin(JsonBackend& backend, ITransport& transport) {
         detail::NcOwner::nc_ = Notecard(backend, transport);
     }
 

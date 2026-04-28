@@ -53,8 +53,20 @@ public:
     }
     void reset() override {}
     void abort() override {}
-    uint32_t millis() override { return 0; }   // timing owned by note-c
-    void delay(uint32_t) override {}
+
+    // Minimal Hal stub — note-c owns the actual hardware, so the bridge's
+    // Hal is purely a placeholder so the inherited Notecard timing path
+    // has something valid to call. Returning 0/no-op is safe because all
+    // wire bytes go through NoteRequestResponseJSON above.
+    struct NoopHal : note::Hal {
+        bool transmit(const uint8_t*, size_t) override { return true; }
+        note::Result<size_t> read(uint8_t*, size_t, uint32_t) override { return note::Result<size_t>{size_t{0}}; }
+        bool reset() override { return true; }
+        bool write_line_terminator() override { return true; }
+        uint32_t millis() override { return 0; }
+        void delay(uint32_t) override {}
+    } hal_;
+    note::Hal& hal() override { return hal_; }
 };
 // readme:end
 

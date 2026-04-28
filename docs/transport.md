@@ -21,10 +21,12 @@ only its predecessor's interface. Reading from the bottom up, the layers are:
 3. **`Protocol`** — full Notecard wire protocol over a framing `Hal`: CRC validation,
    init handshake, line termination, sequence numbers. The only concrete protocol
    driver. No retry — retry lives at the session layer.
-4. **`ITransport`** — unified session interface. `transact(req, span)` →
-   `string_view`, `transact(req, sink)` → SAX events, and `send(req)` (fire-and-forget).
-   Buffered vs streaming are *response presentations* (overloads), not sibling
-   transports. `Protocol` implements `ITransport` natively.
+4. **`ITransport`** — unified Notecard transaction interface. Three operations:
+   `transact(req, span)` → `string_view`, `transact(req, sink)` → SAX events,
+   and `send(req)` (fire-and-forget). Buffered vs streaming are *response
+   presentations* (overloads), not sibling transports. `Protocol` implements
+   `ITransport` natively. This is the contract a session class holds; the
+   session itself is layer 6.
 5. **JSON layer** — turns response bytes into typed values. Tree mode (`JsonBackend`
    walks a parsed tree) or sink mode (SAX events fire into `Rsp::Sink`). See
    "JSON layer — the actual buffered/streaming choice" below.
@@ -47,7 +49,7 @@ flowchart TD
     NCSer["<b>transport::NotecardSerial</b><br/>Notecard wire framing over UART"]
     NCI2C["<b>transport::NotecardI2c</b><br/>Notecard wire framing over I2C"]
     Proto["<b>Protocol</b><br/>wire protocol: CRC, init handshake,<br/>line termination, sequence numbers"]
-    ITrans["<b>ITransport</b><br/>unified session interface:<br/>transact (span | sink), send"]
+    ITrans["<b>ITransport</b><br/>unified transaction interface:<br/>transact (span | sink), send"]
     JsonLayer["<b>JSON layer</b><br/>response bytes → typed values<br/>tree-mode (JsonBackend) or sink-mode (Rsp::Sink)"]
     Session["<b>Session — Notecard</b><br/>peers: BareNotecard, StaticNotecard<br/>holds transport + backend + RetryPolicy<br/>execute / transact / send (retry happens here)"]
     Api["<b>Api&lt;Session&gt;</b> (generated typed surface)<br/><code>api.note.read().into(struct).execute()</code>"]

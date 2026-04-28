@@ -12,6 +12,7 @@
 #include <note/json.hpp>
 #include <note/json_sax_streaming.hpp>
 #include <note/lexer/parse.hpp>
+#include <note/transport.hpp>
 #include <note/transport_hal.hpp>
 #include <note/wire_format.hpp>
 #include <note/compiler.hpp>
@@ -159,9 +160,18 @@ struct ReceiveContext {
 using BuildFn = void(*)(JsonBuilder&, void*);
 
 /// Streaming transport interface for Notecard communication.
-struct IStreamingTransport {
-    virtual ~IStreamingTransport() = default;
-
+///
+/// Derives from `ITransport` so streaming-protocol drivers participate in
+/// the unified session interface. Adds two BuildFn-based virtuals
+/// (`transact(BuildFn, …)` / `send(BuildFn, …)`) for the streaming
+/// request-build path that emits JSON directly to the wire — useful when
+/// you want to skip materialising the request as a string. The new
+/// ITransport string-based methods (`transact(req, span)`,
+/// `transact(req, sink)`, `send(req)`) get "not implemented" defaults
+/// here so test stubs that only override the BuildFn methods continue to
+/// compile; concrete protocol drivers (`StreamingTransport`) override
+/// them natively.
+struct IStreamingTransport : public ITransport {
     /// Send a JSON request and SAX-parse the response into sink.
     virtual Result<void> transact(BuildFn build_fn, void* ctx,
                                   JsonSink& sink, uint32_t timeout_ms) = 0;
@@ -169,22 +179,23 @@ struct IStreamingTransport {
     /// Send a JSON command (fire-and-forget).
     virtual Result<void> send(BuildFn build_fn, void* ctx) = 0;
 
-    virtual void reset() = 0;
-    virtual void abort() = 0;
+    /// Bring the inherited string-based ITransport overloads into scope so
+    /// `transact(req, sink, …)` and `send(req)` aren't shadowed by the
+    /// BuildFn overloads above.
+    using ITransport::transact;
+    using ITransport::send;
 
-    /// Access the underlying byte HAL — for timing primitives, bus reset,
-    /// and any low-level operations that don't go through the protocol.
-    virtual Hal& hal() = 0;
-
-    /// Set debug listener. Default: no-op.
-    virtual void set_debug(const DebugListener&) {}
-
-    /// Raw binary I/O (for COBS streaming). Default: not supported.
-    virtual Result<void> write(const uint8_t*, size_t) {
-        return make_error(Error::NotReady, NOTE_ERR("binary transfer not supported"));
+    /// Default ITransport bridges — IStreamingTransport stubs that only
+    /// implement the BuildFn shape get "not implemented" responses on the
+    /// string-based path. `StreamingTransport` overrides these natively.
+    Result<string_view> transact(string_view, span<char>, uint32_t) override {
+        return make_error(Error::NotReady, NOTE_ERR("string transact not implemented"));
     }
-    virtual Result<size_t> read(uint8_t*, size_t, uint32_t) {
-        return make_error(Error::NotReady, NOTE_ERR("binary transfer not supported"));
+    Result<void> transact(string_view, JsonSink&, uint32_t) override {
+        return make_error(Error::NotReady, NOTE_ERR("string transact not implemented"));
+    }
+    Result<void> send(string_view) override {
+        return make_error(Error::NotReady, NOTE_ERR("string send not implemented"));
     }
 
     /// Convenience: type-erase a callable.
@@ -266,6 +277,40 @@ public:
     Result<void> transact(BuildFn build_fn, void* ctx,
                           JsonSink& sink, uint32_t timeout_ms) override {
         return transact_impl(build_fn, ctx, sink, timeout_ms);
+    }
+
+    // ── ITransport string-based overrides ──────────────────────────────
+    //
+    // The unified `ITransport` shape takes a pre-built request as
+    // string_view. `StreamingTransport` is the concrete protocol driver,
+    // so it overrides all three natively rather than inheriting the
+    // "not implemented" defaults from `IStreamingTransport`.
+
+    using IStreamingTransport::transact;  // bring BuildFn overloads back into scope
+    using IStreamingTransport::send;
+
+    /// Buffered-style overload: ITransport `transact(req, span, timeout)`.
+    Result<string_view> transact(string_view request, span<char> buf,
+                                 uint32_t timeout_ms) override {
+        return transact_raw(request, buf.data(), buf.size(), timeout_ms);
+    }
+
+    /// Streaming-style overload: ITransport `transact(req, sink, timeout)`.
+    /// Transmits the pre-built request, then SAX-parses the response into
+    /// `sink`. Same protocol path as the BuildFn variant on the receive
+    /// side, just with the request bytes already materialised.
+    Result<void> transact(string_view request, JsonSink& sink,
+                          uint32_t timeout_ms) override {
+        auto sv = send_raw(request);
+        if (!sv) return Unexpected(sv.error());
+        auto dispatch = make_sax_dispatch(sink);
+        detail::NcErrorCapture nc_err;
+        return receive_dispatch(dispatch, timeout_ms, nc_err);
+    }
+
+    /// Fire-and-forget: ITransport `send(req)`.
+    Result<void> send(string_view request) override {
+        return send_raw(request);
     }
 #endif
 

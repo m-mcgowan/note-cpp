@@ -127,7 +127,7 @@ class Notecard {
 public:
     Notecard() = default;
 
-    Notecard(JsonBackend& backend, IBufferedTransport& transport)
+    Notecard(JsonBackend& backend, ITransport& transport)
         : backend_(&backend)
         , transport_(&transport)
     {}
@@ -281,7 +281,9 @@ public:
         auto& builder = backend_->get_builder();
         builder.add("req", req_type);
         if (build_fn) build_fn(builder);
-        auto rsp = transport_->transact(builder.to_view(), default_timeout_ms_);
+        auto rsp = transport_->transact(builder.to_view(),
+                                        span<char>(rsp_buf_, sizeof(rsp_buf_)),
+                                        default_timeout_ms_);
         if (!rsp) return Unexpected(rsp.error());
 
         auto reader = backend_->parse_response(*rsp);
@@ -368,7 +370,9 @@ public:
         // Buffered path with retry.
         if (transport_) {
             auto attempt = [&]() -> Result<OwnedBuffer> {
-                auto rv = transport_->transact(json, default_timeout_ms_);
+                auto rv = transport_->transact(json,
+                                               span<char>(rsp_buf_, sizeof(rsp_buf_)),
+                                               default_timeout_ms_);
                 if (!rv) return Unexpected(rv.error());
                 auto buf = OwnedBuffer::create(alloc_value(), rv->size() + 1);
                 if (!buf) return make_error(Error::Overflow, NOTE_ERR("alloc failed"));
@@ -422,14 +426,13 @@ public:
             return make_error(Error::Json, NOTE_ERR("malformed JSON"));
         if (transport_) {
             auto attempt = [&]() -> Result<string_view> {
-                auto rv = transport_->transact(json, default_timeout_ms_);
+                // Caller's buffer goes straight to the transport; ITransport
+                // copies the response into `buf` and returns a view of it.
+                auto rv = transport_->transact(json, buf, default_timeout_ms_);
                 if (!rv) return rv;
-                auto rsp = *rv;
-                if (rsp.size() >= buf.size())
-                    return make_error(Error::Overflow, NOTE_ERR("response exceeds buffer"));
-                std::memcpy(buf.data(), rsp.data(), rsp.size());
-                buf[rsp.size()] = '\0';
-                return string_view(buf.data(), rsp.size());
+                if (rv->size() < buf.size())
+                    buf[rv->size()] = '\0';
+                return rv;
             };
             auto reset = [&]() { transport_->reset(); };
             return retry_transaction<Result<string_view>>(
@@ -493,7 +496,7 @@ public:
     const DebugListener& debug() const { return debug_; }
 
     /// Access the underlying transport.
-    IBufferedTransport& transport() { return *transport_; }
+    ITransport& transport() { return *transport_; }
 
     /// Access the underlying byte HAL — for low-level timing, bus reset,
     /// and other operations that don't go through the wire protocol. Works
@@ -651,7 +654,9 @@ private:
         }
 #if !NOTE_NO_BUFFERED
         if (transport_ && backend_) {
-            return transport_->transact(json, default_timeout_ms_);
+            return transport_->transact(json,
+                                        span<char>(binary_ctrl_buf_, sizeof(binary_ctrl_buf_)),
+                                        default_timeout_ms_);
         }
 #endif
         return make_error(Error::NotReady, NOTE_ERR("no transport for binary control"));
@@ -723,7 +728,9 @@ private:
             auto req_json = builder.to_view();
             debug_timing(debug_, TimingEvent::BuildEnd, RequestT::notecard_request);
             debug_wire(debug_, req_json, WireDirection::Send);
-            rsp = transport_->transact(req_json, default_timeout_ms_);
+            rsp = transport_->transact(req_json,
+                                       span<char>(rsp_buf_, sizeof(rsp_buf_)),
+                                       default_timeout_ms_);
         }
         if (!rsp) return Unexpected(rsp.error());
         debug_wire(debug_, *rsp, WireDirection::Receive);
@@ -941,13 +948,22 @@ private:
     Allocator alloc_value() const { return alloc_.value_or(Allocator{}); }
 
     JsonBackend* backend_ = nullptr;
-    IBufferedTransport* transport_ = nullptr;
+    ITransport* transport_ = nullptr;
     IStreamingTransport* streaming_transport_ = nullptr;
     uint32_t default_timeout_ms_ = 10000;
     std::optional<Allocator> alloc_;
     DebugListener debug_{};
     byte_span cobs_buf_{};          // optional external COBS working buffer
     char binary_ctrl_buf_[256]{};   // buffer for binary control command responses
+#ifndef NOTE_RSP_BUF_SIZE
+#define NOTE_RSP_BUF_SIZE 1024
+#endif
+    /// Working buffer the polymorphic Notecard hands to
+    /// `transport_->transact(req, span, …)` when the caller didn't supply
+    /// one of their own (i.e. inside `request()` and `execute_buffered`).
+    /// Lives until the next transact() call — same lifetime contract the
+    /// old transport-owned buffer offered.
+    char rsp_buf_[NOTE_RSP_BUF_SIZE]{};
     RetryPolicy retry_policy_{};
     TransactionTiming timing_{};
     uint32_t next_request_id_ = 1;

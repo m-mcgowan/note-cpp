@@ -165,23 +165,23 @@ Zero runtime cost — the string is measured and emitted at compile time.
 See [json-builder.md](json-builder.md) for the full `JsonBuf` /
 `json<>` API including the runtime-values variant.
 
-## Streaming transport is required for `.into()`
+## `.into()` works on every transport
 
-The `.into(T&)` SAX body-parse path runs inside the streaming
-transport. With a buffered transport + `JsonBackend`, `.into()` is a
-no-op — the struct is left unpopulated, and you need to walk
-`response.body()` manually instead. The example
-[`examples/stdcpp/env-vars.cpp`](../examples/stdcpp/env-vars.cpp) uses a
-streaming transport for this reason. On real hardware, both POSIX
-(`note::posix::Notecard`) and Arduino (`note::arduino::Notecard`) wire
-up streaming by default in their `begin()` methods.
+`.into(T&)` is part of the high-level API contract — pass a struct
+describing the body fields you care about, and the response populates
+it. The mechanism doesn't depend on which transport `nc` was built
+against; both streaming and buffered paths run the same body-event
+dispatch. The example
+[`examples/stdcpp/env-vars.cpp`](../examples/stdcpp/env-vars.cpp)
+deliberately uses one of each to demonstrate parity, and the
+`tests/test_into_transport_agnostic.cpp` unit test pins the contract
+in CI.
 
-The reverse also holds: on a streaming transport, `response.body()`
-**always returns `nullptr`**. The streaming SAX sink has no
-`JsonReader` to hand back — body fields are dispatched as events at
-parse time and only retained if you supplied a destination via
-`.into(T&)`. If you need access to the body on hardware, use
-`.into(T&)` with a struct describing the fields you care about.
+`response.body()` (returning a `JsonReader*` to walk dynamic shapes)
+remains a buffered-only facility because it requires a `JsonBackend`
+to materialise a tree. On a streaming-only Notecard, `body()` returns
+`nullptr` — body fields are dispatched as events at parse time, so
+`.into(T&)` is the way to capture them.
 
 For dynamic body shapes (keys not known at compile time) — or any
 case where you just want the raw response bytes — `nc.transact(json,

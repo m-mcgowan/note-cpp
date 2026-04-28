@@ -46,6 +46,52 @@ namespace detail {
     struct has_field_descs : std::false_type {};
     template<typename T>
     struct has_field_descs<T, std::void_t<decltype(T::field_descs_ptr())>> : std::true_type {};
+
+    /// JsonSink that watches for the top-level `"body"` object and forwards
+    /// every nested SAX event to a BodyHandler. Used by the buffered execute
+    /// path so `.into(T&)` populates the user's struct independently of
+    /// transport — same contract the streaming Rsp::Sink provides inline.
+    struct BodyDispatchSink : JsonSink {
+        BodyHandler handler;
+        int body_depth = 0;
+
+        explicit BodyDispatchSink(BodyHandler h) : handler(h) {}
+
+        void on_object_begin(string_view k) override {
+            if (body_depth > 0) {
+                ++body_depth;
+                if (handler) handler.send(BodyEvent::make_object_begin(k));
+                return;
+            }
+            if (k == "body") body_depth = 1;
+        }
+        void on_object_end(string_view k) override {
+            if (body_depth > 0) {
+                --body_depth;
+                if (body_depth > 0 && handler) handler.send(BodyEvent::make_object_end(k));
+            }
+        }
+        void on_array_begin(string_view k) override {
+            if (body_depth > 0 && handler) handler.send(BodyEvent::make_array_begin(k));
+        }
+        void on_array_end(string_view k) override {
+            if (body_depth > 0 && handler) handler.send(BodyEvent::make_array_end(k));
+        }
+        void on_string(string_view k, string_view v) override {
+            if (body_depth > 0 && handler) handler.send(BodyEvent::make_string(k, v));
+        }
+        void on_number(string_view k, string_view raw) override {
+            if (body_depth > 0 && handler) handler.send(BodyEvent::make_number(k, raw));
+        }
+        void on_bool(string_view k, bool v) override {
+            if (body_depth > 0 && handler) handler.send(BodyEvent::make_bool(k, v));
+        }
+        void on_null(string_view k) override { (void)k; }
+        void reset() override {
+            body_depth = 0;
+            if (handler) handler.send(BodyEvent::make_reset());
+        }
+    };
 }
 
 
@@ -705,6 +751,23 @@ private:
                 if (alloc_.has_value()) {
                     StringPool pool(*alloc_);
                     result.intern_strings(pool);
+                }
+            }
+
+            // Transport-agnostic .into(): if the request has a body handler
+            // factory attached, SAX-walk the response to dispatch body events
+            // into the user's struct. Streaming does this inline via Rsp::Sink;
+            // here we run a separate body-only SAX pass over the same buffer
+            // so the high-level API behaves identically on both transports.
+            if constexpr (detail::has_body_factory<RequestT>::value) {
+                if (req.body_handler_factory_) {
+                    StringPool pool(alloc_value());
+                    alignas(body_sink_storage_align) char body_storage[body_sink_storage_size];
+                    auto bh = req.body_handler_factory_(req.body_ptr_, pool, body_storage);
+                    if (bh) {
+                        detail::BodyDispatchSink body_sink{bh};
+                        sax_parse(*rsp, body_sink);
+                    }
                 }
             }
             return result;

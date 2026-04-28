@@ -164,8 +164,9 @@ struct ReceiveContext {
 // IStreamingTransport
 // ---------------------------------------------------------------------------
 
-/// Type-erased build function for streaming request construction.
-using BuildFn = void(*)(JsonBuilder&, void*);
+// `BuildFn` is defined in `note/request_source.hpp` (included above) so
+// that both the legacy IStreamingTransport BuildFn virtuals here and the
+// `BuildFnRequestSource` adapter share one typedef.
 
 /// Streaming transport interface for Notecard communication.
 ///

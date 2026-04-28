@@ -127,16 +127,38 @@ class Notecard {
 public:
     Notecard() = default;
 
+    /// Tree-mode ctor: buffered transact via the supplied JsonBackend.
     Notecard(JsonBackend& backend, ITransport& transport)
         : backend_(&backend)
         , transport_(&transport)
     {}
 
-    /// Streaming-only: no JsonBackend, no ITransport vtable overhead.
+    /// Streaming-only ctor: no JsonBackend, no ITransport vtable overhead.
     /// Requests streamed via StreamingJsonBuilder, responses SAX-parsed via Sink.
     /// Allocator defaults to heap (operator new/delete).
     Notecard(IStreamingTransport& transport, Allocator alloc = {})
         : streaming_transport_(&transport)
+        , alloc_(alloc)
+    {}
+
+    /// Unified ctor (Phase 5a step 4) — buffered transport. `backend` may be
+    /// nullptr (unusual: would only apply to passthrough-only callers).
+    /// Allocator drives response string interning if set.
+    Notecard(JsonBackend* backend, ITransport& transport, Allocator alloc = {})
+        : backend_(backend)
+        , transport_(&transport)
+        , alloc_(alloc)
+    {}
+
+    /// Unified ctor — streaming-capable transport. Populates both
+    /// `transport_` (for the buffered fallback) and `streaming_transport_`
+    /// so the streaming path is selectable when `alloc` is set. Pass
+    /// `backend = nullptr` for streaming-only mode; pass a backend to
+    /// enable the buffered fallback for paths that need tree access.
+    Notecard(JsonBackend* backend, IStreamingTransport& transport, Allocator alloc = {})
+        : backend_(backend)
+        , transport_(&transport)
+        , streaming_transport_(&transport)
         , alloc_(alloc)
     {}
 
@@ -312,8 +334,10 @@ public:
     Result<void> send_command(BuildFn build_fn, void* ctx) {
         enforce_timing();
         Result<void> result;
-        if (streaming_transport_)
-            result = streaming_transport_->send(build_fn, ctx);
+        if (streaming_transport_) {
+            BuildFnRequestSource src(build_fn, ctx);
+            result = streaming_transport_->send(src.as_source());
+        }
 #if !NOTE_NO_BUFFERED
         else if (transport_) {
             auto& builder = backend_->get_builder();
@@ -339,7 +363,8 @@ public:
             BuildFn fn = [](JsonBuilder& b, void* p) {
                 (*static_cast<decltype(build)*>(p))(b);
             };
-            result = streaming_transport_->send(fn, &build);
+            BuildFnRequestSource src(fn, &build);
+            result = streaming_transport_->send(src.as_source());
         } else if (transport_) {
             auto& builder = backend_->get_builder();
             builder.add("cmd", RequestT::notecard_request);
@@ -358,10 +383,12 @@ public:
     Result<void> command(string_view cmd_type,
                          std::function<void(JsonBuilder&)> build_fn = {}) {
         if (streaming_transport_) {
-            return streaming_transport_->send([&](JsonBuilder& b) {
+            auto build = [&](JsonBuilder& b) {
                 b.add("cmd", cmd_type);
                 if (build_fn) build_fn(b);
-            });
+            };
+            BuilderRequestSource src(build);
+            return streaming_transport_->send(src.as_source());
         }
         if (!transport_) return make_error(Error::NotReady, NOTE_ERR("no transport configured"));
 
@@ -836,8 +863,9 @@ private:
 #endif // NOTE_NO_STD_STRING
 
         ErrorCaptureSink err_sink(sink);
+        BuildFnRequestSource src(framed_build, &frame);
         auto rv = streaming_transport_->transact(
-            framed_build, &frame, err_sink, default_timeout_ms_);
+            src.as_source(), err_sink, default_timeout_ms_);
         if (!rv) return rv.error();
         auto err = err_sink.captured_error();
         if (!err.empty()) {

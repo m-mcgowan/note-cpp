@@ -108,9 +108,9 @@ protected:
 /// Bridges the old `transact(req, timeout) -> Result<string_view>` shape
 /// (response in transport-owned storage) to the unified `ITransport`. New
 /// transports should derive from `ITransport` directly; this class remains
-/// for one release so existing buffered subclasses
-/// (`note::test::CallbackTransport`, `note::BufferedStreamingTransport`)
-/// continue to compile without a per-class rewrite.
+/// for one release so existing buffered subclasses (notably
+/// `note::test::CallbackTransport`) continue to compile without a
+/// per-class rewrite.
 struct IBufferedTransport : public ITransport {
     /// Old buffered transact: response is placed in transport-owned storage
     /// and returned by view. The view is valid until the next `transact()`

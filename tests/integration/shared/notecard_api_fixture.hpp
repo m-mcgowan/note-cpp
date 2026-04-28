@@ -15,9 +15,11 @@ extern note::Api<>* g_api;
 
 /// Streaming transport over the active interface (serial or I2C). Set by
 /// each environment's board init alongside g_api. Tests that want to
-/// exercise the same physical transport with a *buffered* Notecard wrap
-/// this in a `note::BufferedStreamingTransport` and feed it to a separate
-/// `note::Notecard(JsonBackend&, IBufferedTransport&)` ctor.
+/// exercise the same physical transport with a *buffered* (tree-mode)
+/// Notecard pass this directly to
+/// `note::Notecard(JsonBackend&, ITransport&)` — `StreamingTransport`
+/// satisfies `ITransport` natively, so the ctor lights up the buffered
+/// execute path that supports `body()` walking.
 extern note::StreamingTransport* g_streaming_transport;
 
 /// Get the global Api reference. Asserts that it was initialized.

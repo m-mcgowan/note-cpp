@@ -15,7 +15,6 @@
 #include <note/error.hpp>
 #include <note/api.hpp>
 #include <note/body.hpp>
-#include <note/buffered_transport.hpp>
 #include <note/backends/buffer.hpp>
 #include <note/debug.hpp>
 #include <note/units.hpp>
@@ -112,10 +111,12 @@ TEST_CASE("note.update + note.get body round-trip") {
 TEST_CASE(".into() populates body via buffered Notecard on real hardware") {
     REQUIRE(g_streaming_transport != nullptr);
 
-    static char rsp_buf[1024];
-    note::BufferedStreamingTransport buffered(*g_streaming_transport, rsp_buf, sizeof(rsp_buf));
+    // StreamingTransport directly satisfies ITransport now — passing it
+    // to the buffered Notecard ctor lights up tree-mode body() and
+    // sink-mode .into() over the same physical Notecard the streaming
+    // g_api is talking to.
     note::backends::BufferJsonBackend<1024, 64> backend;
-    note::Notecard nc(backend, buffered);
+    note::Notecard nc(backend, *g_streaming_transport);
     note::Api<> api(nc);
 
     const char* file = "integration-into-buffered.db";

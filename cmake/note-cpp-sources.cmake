@@ -123,7 +123,6 @@ set(NOTE_CPP_TEST_SOURCES_COMMON
 set(NOTE_CPP_TEST_SOURCES_FULL_ONLY
     test_arduino_i2c_hal.cpp
     test_arduino_printable.cpp
-    test_buffered_streaming_transport.cpp
     test_transport_agnostic_api.cpp
     test_allocator_growth.cpp
     test_attention.cpp

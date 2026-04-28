@@ -161,6 +161,18 @@ public:
     // Pass a custom implementation to use hardware-accelerated MD5.
     void set_md5_provider(Md5Provider& provider) { md5_ = &provider; }
 
+    // Override the response staging buffer used by buffered execute paths
+    // (`request()`, `execute_buffered()`, `transact(json) -> OwnedBuffer`).
+    // By default Notecard uses an internal NOTE_RSP_BUF_SIZE-byte buffer
+    // (1024 bytes); supply a larger / smaller span for a particular
+    // Notecard instance if the default doesn't fit your largest expected
+    // response. The caller owns the buffer and must keep it alive for the
+    // lifetime of any in-flight transaction.
+    void set_response_buffer(span<char> buf) { rsp_buf_override_ = buf; }
+    void set_response_buffer(char* buf, size_t len) { rsp_buf_override_ = {buf, len}; }
+    template<size_t N>
+    void set_response_buffer(char (&buf)[N]) { rsp_buf_override_ = {buf, N}; }
+
     // Execute a typed, generated request.
     // RequestT must provide:
     //   static constexpr string_view notecard_request;
@@ -282,7 +294,7 @@ public:
         builder.add("req", req_type);
         if (build_fn) build_fn(builder);
         auto rsp = transport_->transact(builder.to_view(),
-                                        span<char>(rsp_buf_, sizeof(rsp_buf_)),
+                                        rsp_buf(),
                                         default_timeout_ms_);
         if (!rsp) return Unexpected(rsp.error());
 
@@ -371,7 +383,7 @@ public:
         if (transport_) {
             auto attempt = [&]() -> Result<OwnedBuffer> {
                 auto rv = transport_->transact(json,
-                                               span<char>(rsp_buf_, sizeof(rsp_buf_)),
+                                               rsp_buf(),
                                                default_timeout_ms_);
                 if (!rv) return Unexpected(rv.error());
                 auto buf = OwnedBuffer::create(alloc_value(), rv->size() + 1);
@@ -729,7 +741,7 @@ private:
             debug_timing(debug_, TimingEvent::BuildEnd, RequestT::notecard_request);
             debug_wire(debug_, req_json, WireDirection::Send);
             rsp = transport_->transact(req_json,
-                                       span<char>(rsp_buf_, sizeof(rsp_buf_)),
+                                       rsp_buf(),
                                        default_timeout_ms_);
         }
         if (!rsp) return Unexpected(rsp.error());
@@ -958,12 +970,23 @@ private:
 #ifndef NOTE_RSP_BUF_SIZE
 #define NOTE_RSP_BUF_SIZE 1024
 #endif
-    /// Working buffer the polymorphic Notecard hands to
-    /// `transport_->transact(req, span, …)` when the caller didn't supply
-    /// one of their own (i.e. inside `request()` and `execute_buffered`).
-    /// Lives until the next transact() call — same lifetime contract the
-    /// old transport-owned buffer offered.
-    char rsp_buf_[NOTE_RSP_BUF_SIZE]{};
+    /// Default response staging buffer. Used by `request()` /
+    /// `execute_buffered()` / `transact(json) -> OwnedBuffer` to copy the
+    /// transport's response in before the JsonReader (or OwnedBuffer)
+    /// walks it. Caller-supplied buffer (set via
+    /// `set_response_buffer(span<char>)`) overrides this default.
+    char rsp_buf_default_[NOTE_RSP_BUF_SIZE]{};
+    span<char> rsp_buf_override_{};
+
+    /// Return the active response staging buffer — caller-supplied
+    /// override if `set_response_buffer()` was called, else the inline
+    /// `rsp_buf_default_`. Computing the view on demand avoids storing a
+    /// stale pointer through move-assignment of the Notecard
+    /// (NotecardApi::begin moves a Notecard into nc_).
+    span<char> rsp_buf() {
+        if (!rsp_buf_override_.empty()) return rsp_buf_override_;
+        return span<char>(rsp_buf_default_, NOTE_RSP_BUF_SIZE);
+    }
     RetryPolicy retry_policy_{};
     TransactionTiming timing_{};
     uint32_t next_request_id_ = 1;

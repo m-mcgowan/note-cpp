@@ -16,9 +16,6 @@
 
 #include <note/note_config.hpp>
 #include <note/allocator.hpp>
-#if !NOTE_NO_BUFFERED
-#include <note/buffered_transport.hpp>
-#endif
 #include <note/notecard_api.hpp>
 #include <note/units.hpp>
 #include <note/streaming_transport.hpp>
@@ -154,45 +151,42 @@ public:
 #if !NOTE_NO_BUFFERED
     // ── Buffered begin() — `Response::body()` returns a JsonReader* ───────
     //
-    // Constructs the streaming HAL stack and wraps it in a
-    // BufferedStreamingTransport that exposes IBufferedTransport. The
-    // buffered Notecard ctor (Notecard(JsonBackend&, IBufferedTransport&))
-    // then drives `body()` population. Caller supplies both a JsonBackend
-    // (e.g. note::backends::CjsonBackend) and a response buffer big
-    // enough for the largest expected response.
+    // Same StreamingTransport stack as the streaming begin() above; the
+    // only thing that distinguishes a "buffered Notecard" is whether you
+    // hand it a JsonBackend at construction. The Notecard owns its own
+    // response staging buffer (NOTE_RSP_BUF_SIZE bytes, default 1024); use
+    // `nc.set_response_buffer(span)` if your largest expected response
+    // doesn't fit. Both transport-agnostic `.into(T&)` and tree-mode
+    // `body()` work after a buffered begin.
     //
     // Compiled out under NOTE_MINIMAL / NOTE_NO_BUFFERED — AVR-class
     // builds use the streaming-only path and `.into(T&)` for body data.
 
-    /// Begin with serial transport and buffered body access.
+    /// Begin with serial transport + JsonBackend (enables `body()`).
     template<typename SerialT>
-    void begin(SerialT& uart, unsigned long baud,
-               JsonBackend& backend, span<char> rsp_buf) {
+    void begin(SerialT& uart, unsigned long baud, JsonBackend& backend) {
         serial_hal_ = std::make_unique<SerialHal<SerialT>>(uart, baud);
         serial_hal_transport_ = std::make_unique<transport::NotecardSerial<>>(*serial_hal_);
         serial_streaming_ = std::make_unique<StreamingTransport>(*serial_hal_transport_);
-        buffered_ = std::make_unique<BufferedStreamingTransport>(*serial_streaming_, rsp_buf);
-        Base::begin(backend, *buffered_);
+        Base::begin(backend, *serial_streaming_);
     }
 
-    /// Begin with I2C transport and buffered body access (default pins).
-    void begin(TwoWire& wire, JsonBackend& backend, span<char> rsp_buf) {
+    /// Begin with I2C transport + JsonBackend (default pins).
+    void begin(TwoWire& wire, JsonBackend& backend) {
         i2c_hal_ = std::make_unique<I2CHal>(wire);
-        begin_buffered_finish(backend, rsp_buf);
+        begin_buffered_finish(backend);
     }
 
-    /// Begin with I2C transport on custom pins and buffered body access.
-    void begin(TwoWire& wire, int sda, int scl,
-               JsonBackend& backend, span<char> rsp_buf) {
+    /// Begin with I2C transport on custom pins + JsonBackend.
+    void begin(TwoWire& wire, int sda, int scl, JsonBackend& backend) {
         i2c_hal_ = std::make_unique<I2CHal>(wire, sda, scl);
-        begin_buffered_finish(backend, rsp_buf);
+        begin_buffered_finish(backend);
     }
 
-    /// Begin with I2C transport on app-managed bus and buffered body access.
-    void begin(TwoWire& wire, ExternalBus tag,
-               JsonBackend& backend, span<char> rsp_buf) {
+    /// Begin with I2C transport on app-managed bus + JsonBackend.
+    void begin(TwoWire& wire, ExternalBus tag, JsonBackend& backend) {
         i2c_hal_ = std::make_unique<I2CHal>(wire, tag);
-        begin_buffered_finish(backend, rsp_buf);
+        begin_buffered_finish(backend);
     }
 #endif // !NOTE_NO_BUFFERED
 
@@ -233,11 +227,10 @@ private:
     }
 
 #if !NOTE_NO_BUFFERED
-    void begin_buffered_finish(JsonBackend& backend, span<char> rsp_buf) {
+    void begin_buffered_finish(JsonBackend& backend) {
         i2c_hal_transport_ = std::make_unique<transport::NotecardI2c<>>(*i2c_hal_);
         i2c_streaming_ = std::make_unique<StreamingTransport>(*i2c_hal_transport_);
-        buffered_ = std::make_unique<BufferedStreamingTransport>(*i2c_streaming_, rsp_buf);
-        Base::begin(backend, *buffered_);
+        Base::begin(backend, *i2c_streaming_);
     }
 #endif
 
@@ -247,9 +240,6 @@ private:
     std::unique_ptr<I2CHal> i2c_hal_;
     std::unique_ptr<transport::NotecardI2c<>> i2c_hal_transport_;
     std::unique_ptr<StreamingTransport> i2c_streaming_;
-#if !NOTE_NO_BUFFERED
-    std::unique_ptr<BufferedStreamingTransport> buffered_;
-#endif
 };
 
 #if __cplusplus >= 202002L

@@ -113,9 +113,9 @@ TEST_CASE("BufferedStreamingTransport: reset / abort / millis / delay forwarded"
     char buf[8];
     BufferedStreamingTransport buffered(streaming, buf, sizeof(buf));
 
-    CHECK(buffered.millis() == 9999);
+    CHECK(buffered.hal().millis() == 9999);
 
-    buffered.delay(50);
+    buffered.hal().delay(50);
     CHECK(hal.last_delay_ms == 50);
 
     buffered.reset();

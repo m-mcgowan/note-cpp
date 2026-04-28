@@ -39,13 +39,21 @@ struct Harness {
 
 TEST_CASE("Issue 1: NotecardApi::begin(IStreamingTransport&) without allocator") {
     // Streaming begin() should work without an explicit allocator (uses heap default).
+    struct FakeHal : note::Hal {
+        bool transmit(const uint8_t*, size_t) override { return true; }
+        note::Result<size_t> read(uint8_t*, size_t, uint32_t) override { return note::Result<size_t>{size_t{0}}; }
+        bool reset() override { return true; }
+        bool write_line_terminator() override { return true; }
+        uint32_t millis() override { return 0; }
+        void delay(uint32_t) override {}
+    };
     struct FakeStreamingTransport : note::IStreamingTransport {
+        FakeHal fake_hal;
         note::Result<void> transact(note::BuildFn, void*, note::JsonSink&, uint32_t) override { return {}; }
         note::Result<void> send(note::BuildFn, void*) override { return {}; }
         void reset() override {}
         void abort() override {}
-        uint32_t millis() override { return 0; }
-        void delay(uint32_t) override {}
+        note::Hal& hal() override { return fake_hal; }
     } transport;
 
     note::NotecardApi nc;

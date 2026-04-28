@@ -172,11 +172,9 @@ struct IStreamingTransport {
     virtual void reset() = 0;
     virtual void abort() = 0;
 
-    /// Monotonic millisecond counter for inter-transaction timing.
-    virtual uint32_t millis() = 0;
-
-    /// Platform delay.
-    virtual void delay(uint32_t ms) = 0;
+    /// Access the underlying byte HAL — for timing primitives, bus reset,
+    /// and any low-level operations that don't go through the protocol.
+    virtual Hal& hal() = 0;
 
     /// Set debug listener. Default: no-op.
     virtual void set_debug(const DebugListener&) {}
@@ -257,12 +255,12 @@ public:
     void clear_handshake() { handshake_ = nullptr; }
 #endif
 
-#if NOTE_NO_POLYMORPHIC || NOTE_STATIC_HAL
-    uint32_t millis() { return hal_.millis(); }
-    void delay(uint32_t ms) { hal_.delay(ms); }
+#if NOTE_STATIC_HAL
+    HalT& hal() { return hal_; }
+#elif NOTE_NO_POLYMORPHIC
+    Hal& hal() { return hal_; }
 #else
-    uint32_t millis() override { return hal_.millis(); }
-    void delay(uint32_t ms) override { hal_.delay(ms); }
+    Hal& hal() override { return hal_; }
 
     /// Virtual override for IStreamingTransport (used by Notecard).
     Result<void> transact(BuildFn build_fn, void* ctx,

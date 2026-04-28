@@ -5,6 +5,7 @@
 /// CallbackTransport — adapter for test lambdas.
 
 #include <note/error.hpp>
+#include <note/transport_hal.hpp>
 #include <note/types.hpp>
 
 #if !NOTE_NO_STD_STRING
@@ -37,11 +38,9 @@ struct IBufferedTransport {
     /// Request abort of an in-progress transaction.
     virtual void abort() = 0;
 
-    /// Monotonic millisecond counter for inter-transaction timing.
-    virtual uint32_t millis() = 0;
-
-    /// Platform delay.
-    virtual void delay(uint32_t ms) = 0;
+    /// Access the underlying byte HAL — for timing primitives, bus reset,
+    /// and any low-level operations that don't go through the protocol.
+    virtual Hal& hal() = 0;
 
     /// Write raw bytes (for binary COBS streaming). Default: not supported.
     virtual Result<void> write(const uint8_t*, size_t) {
@@ -59,6 +58,24 @@ using ITransport = IBufferedTransport;
 
 
 #if !NOTE_NO_STD_STRING
+// ---------------------------------------------------------------------------
+// CallbackHal — no-op test Hal paired with CallbackTransport
+// ---------------------------------------------------------------------------
+
+/// Minimum-viable test `Hal`. Not wired to real hardware — every method is
+/// a no-op return-default. Used internally by `CallbackTransport` so that
+/// `Notecard::hal()` returns a valid reference when a callback transport
+/// is installed; tests that don't exercise the HAL never need to touch it.
+class CallbackHal : public Hal {
+public:
+    bool transmit(const uint8_t*, size_t) override { return true; }
+    Result<size_t> read(uint8_t*, size_t, uint32_t) override { return Result<size_t>{size_t{0}}; }
+    bool reset() override { return true; }
+    bool write_line_terminator() override { return true; }
+    uint32_t millis() override { return 0; }
+    void delay(uint32_t) override {}
+};
+
 // ---------------------------------------------------------------------------
 // CallbackTransport — adapter for test lambdas
 // ---------------------------------------------------------------------------
@@ -110,21 +127,14 @@ public:
     void reset() override {}
     void abort() override {}
 
-    uint32_t millis() override { return millis_ ? millis_() : 0; }
-    void delay(uint32_t ms) override { if (delay_) delay_(ms); }
-
-    using MillisFn = std::function<uint32_t()>;
-    using DelayFn = std::function<void(uint32_t)>;
-    void set_millis(MillisFn fn) { millis_ = std::move(fn); }
-    void set_delay(DelayFn fn) { delay_ = std::move(fn); }
+    Hal& hal() override { return hal_; }
 
 private:
     TransactFn transact_;
     SendFn send_;
     WriteFn write_;
     ReadFn read_;
-    MillisFn millis_;
-    DelayFn delay_;
+    CallbackHal hal_;
 };
 #endif // NOTE_NO_STD_STRING
 

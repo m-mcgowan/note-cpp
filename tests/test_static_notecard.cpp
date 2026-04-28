@@ -92,6 +92,10 @@ struct MockTransport {
     bool reset() { ++reset_count; return true; }
     uint32_t millis() { return now_ms; }
     void delay(uint32_t ms) { now_ms += ms; total_delay_ms += ms; }
+
+    /// MockTransport doubles as its own Hal — millis/delay/reset already
+    /// satisfy the duck-typed StaticNotecard hal() contract.
+    MockTransport& hal() { return *this; }
 };
 
 /// Stack that owns the mock transport (matches the pattern of SerialTransportStack).

@@ -181,7 +181,7 @@ public:
             auto reset = [&]() { transport_->reset(); };
 
             auto result = retry_transaction<ApiResult<Rsp>>(
-                *transport_, timing_, RequestT::safety, retry_policy_,
+                hal(), timing_, RequestT::safety, retry_policy_,
                 attempt, reset);
             debug_timing(debug_, TimingEvent::TransactionEnd, RequestT::notecard_request);
             return result;
@@ -332,7 +332,7 @@ public:
             };
             auto reset = [&]() { transport_->reset(); };
             return retry_transaction<Result<OwnedBuffer>>(
-                *transport_, timing_, Safety::NonIdempotent, retry_policy_,
+                hal(), timing_, Safety::NonIdempotent, retry_policy_,
                 attempt, reset);
         }
 
@@ -361,7 +361,7 @@ public:
             };
             auto reset = [&]() { streaming_transport_->reset(); };
             return retry_transaction<Result<OwnedBuffer>>(
-                *streaming_transport_, timing_, Safety::NonIdempotent, retry_policy_,
+                hal(), timing_, Safety::NonIdempotent, retry_policy_,
                 attempt, reset);
         }
 
@@ -387,7 +387,7 @@ public:
             };
             auto reset = [&]() { transport_->reset(); };
             return retry_transaction<Result<string_view>>(
-                *transport_, timing_, Safety::NonIdempotent, retry_policy_,
+                hal(), timing_, Safety::NonIdempotent, retry_policy_,
                 attempt, reset);
         }
         if (streaming_transport_) {
@@ -396,7 +396,7 @@ public:
             };
             auto reset = [&]() { streaming_transport_->reset(); };
             return retry_transaction<Result<string_view>>(
-                *streaming_transport_, timing_, Safety::NonIdempotent, retry_policy_,
+                hal(), timing_, Safety::NonIdempotent, retry_policy_,
                 attempt, reset);
         }
         return make_error(Error::NotReady, NOTE_ERR("no transport configured"));
@@ -448,6 +448,15 @@ public:
 
     /// Access the underlying transport.
     IBufferedTransport& transport() { return *transport_; }
+
+    /// Access the underlying byte HAL — for low-level timing, bus reset,
+    /// and other operations that don't go through the wire protocol. Works
+    /// for both buffered and streaming-only Notecards. Asserts in debug
+    /// builds if no transport has been configured.
+    Hal& hal() {
+        if (streaming_transport_) return streaming_transport_->hal();
+        return transport_->hal();
+    }
 
     JsonBackend& backend() { return *backend_; }
 
@@ -775,7 +784,7 @@ private:
             if (reset_fn) reset_fn(reset_ctx);
         };
         auto result = retry_transaction<Result<void>>(
-            *streaming_transport_, timing_, safety, retry_policy_,
+            hal(), timing_, safety, retry_policy_,
             attempt, reset);
         if (!result) return result.error();
         return {};
@@ -849,26 +858,20 @@ private:
         return {};
     }
 
-    /// Enforce inter-transaction gap using whichever transport is active.
+    /// Enforce inter-transaction gap via the byte HAL.
     void enforce_timing() {
         if (!timing_.has_previous) return;
-        if (streaming_transport_) {
-            uint32_t elapsed = streaming_transport_->millis() - timing_.last_transaction_end_ms;
-            if (elapsed < timing_.min_gap_ms)
-                streaming_transport_->delay(timing_.min_gap_ms - elapsed);
-        } else if (transport_) {
-            uint32_t elapsed = transport_->millis() - timing_.last_transaction_end_ms;
-            if (elapsed < timing_.min_gap_ms)
-                transport_->delay(timing_.min_gap_ms - elapsed);
-        }
+        if (!streaming_transport_ && !transport_) return;
+        Hal& h = hal();
+        uint32_t elapsed = h.millis() - timing_.last_transaction_end_ms;
+        if (elapsed < timing_.min_gap_ms)
+            h.delay(timing_.min_gap_ms - elapsed);
     }
 
     /// Record that a transaction just completed.
     void record_timing() {
-        if (streaming_transport_)
-            timing_.last_transaction_end_ms = streaming_transport_->millis();
-        else if (transport_)
-            timing_.last_transaction_end_ms = transport_->millis();
+        if (!streaming_transport_ && !transport_) return;
+        timing_.last_transaction_end_ms = hal().millis();
         timing_.has_previous = true;
     }
 

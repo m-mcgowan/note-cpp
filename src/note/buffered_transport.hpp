@@ -74,8 +74,7 @@ public:
 
     void reset() override { streaming_.reset(); }
     void abort() override { streaming_.abort(); }
-    uint32_t millis() override { return streaming_.millis(); }
-    void delay(uint32_t ms) override { streaming_.delay(ms); }
+    Hal& hal() override { return streaming_.hal(); }
 
     Result<void> write(const uint8_t* data, size_t len) override {
         return streaming_.write(data, len);

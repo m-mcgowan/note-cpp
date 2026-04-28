@@ -308,21 +308,21 @@ private:
     RetryTransportOps transport_ops() {
         return {
             &stack_,
-            [](void* c) -> uint32_t { return static_cast<Stack*>(c)->transport.millis(); },
-            [](void* c, uint32_t ms) { static_cast<Stack*>(c)->transport.delay(ms); },
+            [](void* c) -> uint32_t { return static_cast<Stack*>(c)->transport.hal().millis(); },
+            [](void* c, uint32_t ms) { static_cast<Stack*>(c)->transport.hal().delay(ms); },
             [](void* c) { static_cast<Stack*>(c)->transport.reset(); },
         };
     }
 
     void enforce_timing() {
         if (!timing_.has_previous) return;
-        uint32_t elapsed = stack_.transport.millis() - timing_.last_transaction_end_ms;
+        uint32_t elapsed = stack_.transport.hal().millis() - timing_.last_transaction_end_ms;
         if (elapsed < timing_.min_gap_ms)
-            stack_.transport.delay(timing_.min_gap_ms - elapsed);
+            stack_.transport.hal().delay(timing_.min_gap_ms - elapsed);
     }
 
     void record_timing() {
-        timing_.last_transaction_end_ms = stack_.transport.millis();
+        timing_.last_transaction_end_ms = stack_.transport.hal().millis();
         timing_.has_previous = true;
     }
 #endif

@@ -53,7 +53,7 @@ public:
         auto reset = [&]() { transport_.reset(); };
 
         return retry_transaction<Result<string_view>>(
-            transport_, timing_, Safety::NonIdempotent, retry_policy_,
+            transport_.hal(), timing_, Safety::NonIdempotent, retry_policy_,
             attempt, reset);
     }
 
@@ -69,7 +69,7 @@ public:
         auto reset = [&]() { transport_.reset(); };
 
         return retry_transaction<Result<string_view>>(
-            transport_, timing_, safety, retry_policy_,
+            transport_.hal(), timing_, safety, retry_policy_,
             attempt, reset);
     }
 
@@ -98,13 +98,13 @@ private:
 
     void enforce_timing() {
         if (!timing_.has_previous) return;
-        uint32_t elapsed = transport_.millis() - timing_.last_transaction_end_ms;
+        uint32_t elapsed = transport_.hal().millis() - timing_.last_transaction_end_ms;
         if (elapsed < timing_.min_gap_ms)
-            transport_.delay(timing_.min_gap_ms - elapsed);
+            transport_.hal().delay(timing_.min_gap_ms - elapsed);
     }
 
     void record_timing() {
-        timing_.last_transaction_end_ms = transport_.millis();
+        timing_.last_transaction_end_ms = transport_.hal().millis();
         timing_.has_previous = true;
     }
 

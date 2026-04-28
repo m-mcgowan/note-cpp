@@ -10,7 +10,7 @@
 #include "retry_policy.hpp"
 #include "safety.hpp"
 #include "span.hpp"
-#include "streaming_transport.hpp"
+#include "protocol.hpp"
 #include "string_pool.hpp"
 #include "struct_sink.hpp"
 #include "transport.hpp"
@@ -401,7 +401,7 @@ public:
         // Streaming path with retry.
         if (streaming_transport_) {
             auto attempt = [&]() -> Result<OwnedBuffer> {
-                auto* st = static_cast<StreamingTransport*>(streaming_transport_);
+                auto* st = static_cast<Protocol*>(streaming_transport_);
                 auto send_rv = st->send_raw(json);
                 if (!send_rv) return Unexpected(send_rv.error());
 
@@ -714,13 +714,13 @@ private:
 
     /// Raw passthrough on the streaming transport — transmit bytes, read response.
     Result<string_view> streaming_transact_raw(string_view json, span<char> buf) {
-        auto* st = static_cast<StreamingTransport*>(streaming_transport_);
+        auto* st = static_cast<Protocol*>(streaming_transport_);
         return st->transact_raw(json, buf.data(), buf.size(), default_timeout_ms_);
     }
 
     /// Raw fire-and-forget on the streaming transport.
     Result<void> streaming_send_raw(string_view json) {
-        auto* st = static_cast<StreamingTransport*>(streaming_transport_);
+        auto* st = static_cast<Protocol*>(streaming_transport_);
         return st->send_raw(json);
     }
 

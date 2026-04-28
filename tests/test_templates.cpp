@@ -18,7 +18,7 @@ namespace {
 struct TestFixture {
     note::test::TestJsonBackend backend;
     std::vector<std::string> captured;
-    note::CallbackTransport transport;
+    note::test::CallbackTransport transport;
     note::Notecard nc;
     note::app::DirectChannel ch;
 
@@ -186,7 +186,7 @@ TEST_CASE("Templates includes port when set") {
 
 TEST_CASE("Templates::register_all() propagates transport errors") {
     note::test::TestJsonBackend backend;
-    note::CallbackTransport transport(
+    note::test::CallbackTransport transport(
         [](note::string_view, uint32_t) -> note::Result<note::string_view> {
             return note::make_error(note::Error::SendFailed, "write failed");
         });

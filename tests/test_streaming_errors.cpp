@@ -16,7 +16,7 @@
 
 #include <note/api.hpp>
 #include <note/allocator.hpp>
-#include <note/streaming_transport.hpp>
+#include <note/protocol.hpp>
 #include <note/string_pool.hpp>
 
 #include <cstring>
@@ -105,7 +105,7 @@ public:
 
 struct ErrorHarness {
     ErrorInjectHal hal;
-    note::StreamingTransport transport;
+    note::Protocol transport;
     note::Notecard nc;
     UnconstrainedApi api;
 
@@ -278,7 +278,7 @@ TEST_CASE("streaming: empty JSON object") {
 
 TEST_CASE("streaming: initial reset failure returns error") {
     ErrorInjectHal hal;
-    note::StreamingTransport transport(hal, /*max_retries=*/0);
+    note::Protocol transport(hal, /*max_retries=*/0);
     auto nc = note::test::make_test_notecard(transport, note::Allocator{});
 
     // This test verifies the init path is reached.

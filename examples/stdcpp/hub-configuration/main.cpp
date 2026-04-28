@@ -24,7 +24,7 @@
 
 int main() {
     MockBackend backend;
-    note::CallbackTransport transport(
+    note::test::CallbackTransport transport(
         [](note::string_view request, uint32_t) -> note::Result<note::string_view> {
             std::printf("  >> %.*s\n", (int)request.size(), request.data());
             return note::string_view("{}");

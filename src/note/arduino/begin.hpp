@@ -11,21 +11,21 @@
 ///   nc.begin(serial.transport, note::arena_allocator(arena));
 
 #include <note/arduino/serial.hpp>
-#include <note/streaming_transport.hpp>
+#include <note/protocol.hpp>
 #include <note/transport/serial.hpp>
 
 namespace note::arduino {
 
-/// Owns the full serial transport stack: SerialHal → NotecardSerial → StreamingTransport.
+/// Owns the full serial transport stack: SerialHal → NotecardSerial → Protocol.
 template<typename SerialT = HardwareSerial>
 struct SerialTransportStack {
     using Hal = SerialHal<SerialT>;
 #if NOTE_STATIC_HAL
     using NcSerial = transport::NotecardSerial<Hal>;
-    using Transport = StreamingTransport<NcSerial>;
+    using Transport = Protocol<NcSerial>;
 #else
     using NcSerial = transport::NotecardSerial<>;
-    using Transport = StreamingTransport;
+    using Transport = Protocol;
 #endif
 
     Hal hal;

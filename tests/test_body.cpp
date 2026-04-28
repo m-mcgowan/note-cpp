@@ -36,7 +36,7 @@ struct TestHarness {
     note::test::TestJsonBackend backend;
     std::string last_request;
     std::string last_response{"{}"}; // persists for string_view return
-    note::CallbackTransport transport;
+    note::test::CallbackTransport transport;
     note::Notecard nc;
 
     TestHarness()

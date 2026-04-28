@@ -43,7 +43,7 @@ struct DebugTracker {
 struct Harness {
     note::test::TestJsonBackend backend;
     std::string last_req;
-    note::CallbackTransport transport;
+    note::test::CallbackTransport transport;
     note::Notecard nc;
 
     Harness()
@@ -134,7 +134,7 @@ TEST_CASE("Debug: on_wire fires on streaming execute") {
 
     MockHal hal;
     hal.queue(R"({"version":"notecard-test"})");
-    note::StreamingTransport transport(static_cast<note::Hal&>(hal));
+    note::Protocol transport(static_cast<note::Hal&>(hal));
     auto nc = note::test::make_test_notecard(transport);
 
     bool saw_send = false;

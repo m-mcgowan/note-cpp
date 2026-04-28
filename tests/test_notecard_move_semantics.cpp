@@ -26,7 +26,7 @@
 
 #include <note/api/card_binary_put.hpp>
 #include <note/notecard.hpp>
-#include <note/streaming_transport.hpp>
+#include <note/protocol.hpp>
 #include <note/transport_hal.hpp>
 
 #include <deque>
@@ -77,7 +77,7 @@ TEST_CASE("Notecard default md5 provider survives move-assign") {
     // lives inside the object itself — different addresses per instance
     // and broken after move-assign.
     MockHal hal;
-    note::StreamingTransport transport{hal};
+    note::Protocol transport{hal};
 
     note::Notecard reference;   // the invariant we expect to hold
     note::Notecard nc;
@@ -89,7 +89,7 @@ TEST_CASE("Notecard default md5 provider survives move-assign") {
 
 TEST_CASE("Notecard default md5 provider survives move-construct") {
     MockHal hal;
-    note::StreamingTransport transport{hal};
+    note::Protocol transport{hal};
 
     note::Notecard reference;
     note::Notecard nc{note::Notecard(transport, note::Allocator{})};
@@ -112,7 +112,7 @@ TEST_CASE("Notecard custom md5 provider survives move-assign") {
     };
 
     MockHal hal;
-    note::StreamingTransport transport{hal};
+    note::Protocol transport{hal};
     SpyMd5 spy;
 
     note::Notecard nc;

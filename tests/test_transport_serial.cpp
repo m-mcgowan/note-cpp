@@ -1,5 +1,5 @@
 // Tests for note::transport::NotecardSerial (Hal) and
-// note::StreamingTransport protocol logic over serial.
+// note::Protocol protocol logic over serial.
 //
 // Ported from note-c test/src/_serialNoteReset_test.cpp,
 //                        _serialChunkedTransmit_test.cpp,
@@ -14,14 +14,14 @@
 //
 // NotecardSerial is now a Hal (raw byte ops: transmit, read, reset,
 // write_line_terminator, delay). Protocol logic (transact, send, retry, CRC)
-// lives in StreamingTransport, which wraps a Hal.
+// lives in Protocol, which wraps a Hal.
 //
 // When note-c's serial tests change, review the diffs and update accordingly.
 
 #include <doctest.h>
 
 #include <note/transport/serial.hpp>
-#include <note/streaming_transport.hpp>
+#include <note/protocol.hpp>
 
 #include <deque>
 #include <functional>
@@ -80,7 +80,7 @@ struct CaptureSink : note::JsonSink {
 };
 
 // Helper: string-returning wrapper for char-buffer crc_add (test convenience).
-// Used to build CRC-bearing responses that StreamingTransport validates.
+// Used to build CRC-bearing responses that Protocol validates.
 inline std::string str_crc_add(const std::string& json, uint16_t seq) {
     char buf[512];
     size_t len = json.size();
@@ -174,16 +174,16 @@ struct ScriptedHal : public SerialHal {
 };
 
 // ---------------------------------------------------------------------------
-// Helper: create a StreamingTransport over NotecardSerial over ScriptedHal.
+// Helper: create a Protocol over NotecardSerial over ScriptedHal.
 //
-// Returns by value — NotecardSerial and StreamingTransport hold references
+// Returns by value — NotecardSerial and Protocol hold references
 // to each other and to the hal, so callers must keep the Harness alive.
 // ---------------------------------------------------------------------------
 
 struct SerialTestHarness {
     ScriptedHal hal;
     NotecardSerial<SerialPolicy> notecard_serial;
-    note::StreamingTransport transport;
+    note::Protocol transport;
 
     SerialTestHarness()
         : notecard_serial(hal)
@@ -278,7 +278,7 @@ TEST_CASE("reset retries on non-control characters in drain") {
 
     retry_hal.json_responses.push_back("{}\r\n");
     NotecardSerial<SerialPolicy> notecard_serial(retry_hal);
-    note::StreamingTransport transport(notecard_serial, /*max_retries=*/5);
+    note::Protocol transport(notecard_serial, /*max_retries=*/5);
     note::IStreamingTransport& t = transport;
     note::JsonSink null_sink;
     auto build = [](note::JsonBuilder& b) { b.add("req", "hub.set"); };
@@ -300,7 +300,7 @@ TEST_CASE("reset fails if all attempts see non-control chars") {
 // Transmit framing — write_line_terminator appends CRLF
 //
 // Note: The old NotecardSerial did segmented TX with pacing delays. The new
-// NotecardSerial is a raw Hal — no segmenting. StreamingTransport
+// NotecardSerial is a raw Hal — no segmenting. Protocol
 // writes the JSON body field-by-field, then calls write_line_terminator().
 // Segmented transmit tests are no longer applicable.
 // ---------------------------------------------------------------------------
@@ -378,7 +378,7 @@ TEST_CASE("response timeout before first byte returns error") {
     } hal;
 
     NotecardSerial<SerialPolicy> notecard_serial(hal);
-    note::StreamingTransport transport(notecard_serial);
+    note::Protocol transport(notecard_serial);
     note::IStreamingTransport& t = transport;
     note::JsonSink null_sink;
     auto build = [](note::JsonBuilder& b) { b.add("req", "hub.set"); };
@@ -415,7 +415,7 @@ TEST_CASE("response timeout after partial data") {
     } hal;
 
     NotecardSerial<SerialPolicy> notecard_serial(hal);
-    note::StreamingTransport transport(notecard_serial);
+    note::Protocol transport(notecard_serial);
     note::IStreamingTransport& t = transport;
     note::JsonSink null_sink;
     auto build = [](note::JsonBuilder& b) { b.add("req", "hub.set"); };
@@ -459,9 +459,9 @@ TEST_CASE("second call reuses existing connection without reset") {
 }
 
 // ---------------------------------------------------------------------------
-// CRC auto-detection and validation — via StreamingTransport
+// CRC auto-detection and validation — via Protocol
 //
-// StreamingTransport handles CRC internally via CrcFieldSink + CrcAccumulator.
+// Protocol handles CRC internally via CrcFieldSink + CrcAccumulator.
 // These tests verify the full CRC path through the streaming transport.
 // ---------------------------------------------------------------------------
 
@@ -565,7 +565,7 @@ TEST_CASE("SerialCallbackHal delegates to callbacks") {
     };
 
     NotecardSerial<SerialPolicy> notecard_serial(cb);
-    note::StreamingTransport transport(notecard_serial, /*max_retries=*/5);
+    note::Protocol transport(notecard_serial, /*max_retries=*/5);
     note::IStreamingTransport& t = transport;
     note::JsonSink null_sink;
     auto build = [](note::JsonBuilder& b) { b.add("req", "hub.status"); };
@@ -574,7 +574,7 @@ TEST_CASE("SerialCallbackHal delegates to callbacks") {
 }
 
 // ---------------------------------------------------------------------------
-// Binary write/read — raw byte streaming via StreamingTransport
+// Binary write/read — raw byte streaming via Protocol
 // ---------------------------------------------------------------------------
 
 TEST_CASE("serial: write() sends raw bytes without framing") {
@@ -625,7 +625,7 @@ TEST_CASE("serial: read() times out when no data") {
 }
 
 // ---------------------------------------------------------------------------
-// send() — fire-and-forget via StreamingTransport
+// send() — fire-and-forget via Protocol
 // ---------------------------------------------------------------------------
 
 TEST_CASE("serial: send() transmits without waiting for response") {

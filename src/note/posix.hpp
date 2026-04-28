@@ -16,7 +16,7 @@
 
 #include <note/allocator.hpp>
 #include <note/notecard_api.hpp>
-#include <note/streaming_transport.hpp>
+#include <note/protocol.hpp>
 #include <note/units.hpp>
 
 #include <note/posix/serial.hpp>
@@ -93,14 +93,14 @@ public:
     void begin_serial(const char* port, int baud = 9600) {
         serial_hal_ = std::make_unique<PosixSerialHal>(port, baud);
         serial_transport_ = std::make_unique<transport::NotecardSerial<>>(*serial_hal_);
-        serial_streaming_ = std::make_unique<StreamingTransport>(*serial_transport_);
+        serial_streaming_ = std::make_unique<Protocol>(*serial_transport_);
         Base::begin(*serial_streaming_);
     }
 
     void begin_serial(const char* port, int baud, Allocator alloc) {
         serial_hal_ = std::make_unique<PosixSerialHal>(port, baud);
         serial_transport_ = std::make_unique<transport::NotecardSerial<>>(*serial_hal_);
-        serial_streaming_ = std::make_unique<StreamingTransport>(*serial_transport_);
+        serial_streaming_ = std::make_unique<Protocol>(*serial_transport_);
         Base::begin(*serial_streaming_, alloc);
     }
 
@@ -110,14 +110,14 @@ public:
                    uint8_t address = transport::kI2cDefaultAddress) {
         i2c_hal_ = std::make_unique<LinuxI2cHal>(device, address);
         i2c_transport_ = std::make_unique<transport::NotecardI2c<>>(*i2c_hal_);
-        i2c_streaming_ = std::make_unique<StreamingTransport>(*i2c_transport_);
+        i2c_streaming_ = std::make_unique<Protocol>(*i2c_transport_);
         Base::begin(*i2c_streaming_);
     }
 
     void begin_i2c(const char* device, uint8_t address, Allocator alloc) {
         i2c_hal_ = std::make_unique<LinuxI2cHal>(device, address);
         i2c_transport_ = std::make_unique<transport::NotecardI2c<>>(*i2c_hal_);
-        i2c_streaming_ = std::make_unique<StreamingTransport>(*i2c_transport_);
+        i2c_streaming_ = std::make_unique<Protocol>(*i2c_transport_);
         Base::begin(*i2c_streaming_, alloc);
     }
 #endif
@@ -146,11 +146,11 @@ public:
 private:
     std::unique_ptr<PosixSerialHal>              serial_hal_;
     std::unique_ptr<transport::NotecardSerial<>> serial_transport_;
-    std::unique_ptr<StreamingTransport>          serial_streaming_;
+    std::unique_ptr<Protocol>          serial_streaming_;
 #ifdef __linux__
     std::unique_ptr<LinuxI2cHal>                 i2c_hal_;
     std::unique_ptr<transport::NotecardI2c<>>    i2c_transport_;
-    std::unique_ptr<StreamingTransport>          i2c_streaming_;
+    std::unique_ptr<Protocol>          i2c_streaming_;
 #endif
 };
 

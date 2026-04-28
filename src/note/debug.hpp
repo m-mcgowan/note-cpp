@@ -119,7 +119,7 @@ inline void debug_alloc(const DebugListener&, void*, size_t) {}
 inline void debug_free(const DebugListener&, void*, size_t) {}
 inline void debug_realloc(const DebugListener&, void*, void*, size_t, size_t) {}
 
-// Also accept NoDebug (used by StreamingTransport when NOTE_DEBUG_ENABLED=0).
+// Also accept NoDebug (used by Protocol when NOTE_DEBUG_ENABLED=0).
 struct NoDebug;
 inline void debug_wire(const NoDebug&, string_view, WireDirection) {}
 inline void debug_timing(const NoDebug&, TimingEvent, string_view = {}) {}

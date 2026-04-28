@@ -18,7 +18,7 @@
 #include <note/allocator.hpp>
 #include <note/notecard_api.hpp>
 #include <note/units.hpp>
-#include <note/streaming_transport.hpp>
+#include <note/protocol.hpp>
 #include <note/arduino/debug.hpp>
 #include <note/arduino/serial.hpp>
 #include <note/arduino/i2c.hpp>
@@ -61,7 +61,7 @@ public:
     void begin(SerialT& uart, unsigned long baud = 9600) {
         serial_hal_ = std::make_unique<SerialHal<SerialT>>(uart, baud);
         serial_hal_transport_ = std::make_unique<transport::NotecardSerial<>>(*serial_hal_);
-        serial_streaming_ = std::make_unique<StreamingTransport>(*serial_hal_transport_);
+        serial_streaming_ = std::make_unique<Protocol>(*serial_hal_transport_);
         Base::begin(*serial_streaming_);
     }
 
@@ -72,7 +72,7 @@ public:
     void begin(SerialT& uart, unsigned long baud, Allocator alloc) {
         serial_hal_ = std::make_unique<SerialHal<SerialT>>(uart, baud);
         serial_hal_transport_ = std::make_unique<transport::NotecardSerial<>>(*serial_hal_);
-        serial_streaming_ = std::make_unique<StreamingTransport>(*serial_hal_transport_);
+        serial_streaming_ = std::make_unique<Protocol>(*serial_hal_transport_);
         Base::begin(*serial_streaming_, alloc);
     }
 
@@ -151,7 +151,7 @@ public:
 #if !NOTE_NO_BUFFERED
     // ── Buffered begin() — `Response::body()` returns a JsonReader* ───────
     //
-    // Same StreamingTransport stack as the streaming begin() above; the
+    // Same Protocol stack as the streaming begin() above; the
     // only thing that distinguishes a "buffered Notecard" is whether you
     // hand it a JsonBackend at construction. The Notecard owns its own
     // response staging buffer (NOTE_RSP_BUF_SIZE bytes, default 1024); use
@@ -167,7 +167,7 @@ public:
     void begin(SerialT& uart, unsigned long baud, JsonBackend& backend) {
         serial_hal_ = std::make_unique<SerialHal<SerialT>>(uart, baud);
         serial_hal_transport_ = std::make_unique<transport::NotecardSerial<>>(*serial_hal_);
-        serial_streaming_ = std::make_unique<StreamingTransport>(*serial_hal_transport_);
+        serial_streaming_ = std::make_unique<Protocol>(*serial_hal_transport_);
         Base::begin(backend, *serial_streaming_);
     }
 
@@ -222,24 +222,24 @@ private:
 
     void begin_i2c_finish(Allocator alloc) {
         i2c_hal_transport_ = std::make_unique<transport::NotecardI2c<>>(*i2c_hal_);
-        i2c_streaming_ = std::make_unique<StreamingTransport>(*i2c_hal_transport_);
+        i2c_streaming_ = std::make_unique<Protocol>(*i2c_hal_transport_);
         Base::begin(*i2c_streaming_, alloc);
     }
 
 #if !NOTE_NO_BUFFERED
     void begin_buffered_finish(JsonBackend& backend) {
         i2c_hal_transport_ = std::make_unique<transport::NotecardI2c<>>(*i2c_hal_);
-        i2c_streaming_ = std::make_unique<StreamingTransport>(*i2c_hal_transport_);
+        i2c_streaming_ = std::make_unique<Protocol>(*i2c_hal_transport_);
         Base::begin(backend, *i2c_streaming_);
     }
 #endif
 
     std::unique_ptr<transport::SerialHal> serial_hal_;
     std::unique_ptr<transport::NotecardSerial<>> serial_hal_transport_;
-    std::unique_ptr<StreamingTransport> serial_streaming_;
+    std::unique_ptr<Protocol> serial_streaming_;
     std::unique_ptr<I2CHal> i2c_hal_;
     std::unique_ptr<transport::NotecardI2c<>> i2c_hal_transport_;
-    std::unique_ptr<StreamingTransport> i2c_streaming_;
+    std::unique_ptr<Protocol> i2c_streaming_;
 };
 
 #if __cplusplus >= 202002L

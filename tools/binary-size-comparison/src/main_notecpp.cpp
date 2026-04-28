@@ -15,14 +15,14 @@
 #include <note/notecard.hpp>
 #include <note/api.hpp>
 #include <note/arduino/serial.hpp>
-#include <note/streaming_transport.hpp>
+#include <note/protocol.hpp>
 #include <note/transport/serial.hpp>
 
 static note::backends::CjsonBackend backend;
 static note::arduino::SerialHal<HardwareSerial> hal(Serial1, 9600);
 static note::transport::NotecardSerial<> serial_transport(hal);
-static note::StreamingTransport streaming(serial_transport);
-// StreamingTransport directly satisfies ITransport — the buffered
+static note::Protocol streaming(serial_transport);
+// Protocol directly satisfies ITransport — the buffered
 // Notecard ctor pulls bytes via the new transact(req, span, …) overload.
 // Notecard owns the response staging buffer (NOTE_RSP_BUF_SIZE).
 static note::Notecard notecard(backend, streaming);

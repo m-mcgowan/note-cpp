@@ -28,7 +28,7 @@ using Api = note::Api<>;
 struct Fixture {
     SerialHal hal{notecardUart()};
     SerialTransport transport{hal};
-    note::StreamingTransport streaming{transport};
+    note::Protocol streaming{transport};
     note::Notecard notecard{streaming};
     Api nc{notecard};
 };
@@ -180,7 +180,7 @@ struct ErrorSink : public note::JsonSink {
 };
 
 template<typename Sink>
-note::string_view streaming_request(note::StreamingTransport& transport, const char* req_json,
+note::string_view streaming_request(note::Protocol& transport, const char* req_json,
                                      Sink& sink, uint32_t timeout_ms = 10000) {
     auto send_result = transport.send_raw(note::string_view(req_json));
     if (!send_result) return "send failed";
@@ -191,7 +191,7 @@ note::string_view streaming_request(note::StreamingTransport& transport, const c
 }
 
 template<typename Sink>
-note::string_view streaming_request(note::StreamingTransport& transport, const char* req_json,
+note::string_view streaming_request(note::Protocol& transport, const char* req_json,
                                      note::SaxStreamBuf& sbuf, Sink& sink,
                                      uint32_t timeout_ms = 10000) {
     auto send_result = transport.send_raw(note::string_view(req_json));

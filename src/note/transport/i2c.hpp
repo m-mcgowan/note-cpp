@@ -11,7 +11,7 @@
 //
 // Hal implementation for I2C (Notecard SoI2C wire protocol).
 // Wraps a platform I2CHal (chunked TX/RX, priming query) into the
-// blocking Hal interface used by StreamingTransport.
+// blocking Hal interface used by Protocol.
 //
 // The PolicyType template parameter controls segment pacing and timeouts
 // for the I2C-specific chunked transmit and priming-query receive.
@@ -113,7 +113,7 @@ private:
 
 /// NotecardI2c — Hal implementation for I2C.
 /// Wraps a platform I2CHal (chunked TX/RX, priming query) into the blocking
-/// Hal interface used by StreamingTransport.
+/// Hal interface used by Protocol.
 #if __cplusplus >= 202002L
 template <typename PolicyType = StaticI2cPolicy<I2cPolicy{}>>
 #else

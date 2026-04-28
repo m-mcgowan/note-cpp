@@ -22,7 +22,7 @@ namespace {
 struct TestHarness {
     note::test::TestJsonBackend backend;
     std::string last_request;
-    note::CallbackTransport transport;
+    note::test::CallbackTransport transport;
     note::Notecard nc;
 
     TestHarness()
@@ -646,7 +646,7 @@ TEST_CASE("NotecardApi: default constructor + begin()") {
 
     // After begin(), requests work
     std::string last_request;
-    note::CallbackTransport transport(
+    note::test::CallbackTransport transport(
         [&](note::string_view req, uint32_t) -> note::Result<note::string_view> {
             last_request = std::string(req);
             return note::string_view("{}");
@@ -658,7 +658,7 @@ TEST_CASE("NotecardApi: default constructor + begin()") {
 
 TEST_CASE("NotecardApi: construct with transport") {
     std::string last_request;
-    note::CallbackTransport transport(
+    note::test::CallbackTransport transport(
         [&](note::string_view req, uint32_t) -> note::Result<note::string_view> {
             last_request = std::string(req);
             return note::string_view("{}");
@@ -678,7 +678,7 @@ TEST_CASE("NotecardApi: construct with transport") {
 
 TEST_CASE("NotecardApi: notecard() accessor") {
     note::test::TestJsonBackend backend;
-    note::CallbackTransport transport(
+    note::test::CallbackTransport transport(
         [](note::string_view, uint32_t) -> note::Result<note::string_view> {
             return note::string_view("{}");
         });
@@ -691,7 +691,7 @@ TEST_CASE("NotecardApi: notecard() accessor") {
 
 TEST_CASE("NotecardApi: transact(json, buf) round-trips raw JSON") {
     std::string captured;
-    note::CallbackTransport transport(
+    note::test::CallbackTransport transport(
         [&](note::string_view req, uint32_t) -> note::Result<note::string_view> {
             captured = std::string(req);
             return note::string_view("{\"text\":\"hello\",\"time\":42}");
@@ -710,7 +710,7 @@ TEST_CASE("NotecardApi: transact(json, buf) round-trips raw JSON") {
 
 TEST_CASE("NotecardApi: send(json) is fire-and-forget") {
     std::string captured;
-    note::CallbackTransport transport(
+    note::test::CallbackTransport transport(
         [&](note::string_view req, uint32_t) -> note::Result<note::string_view> {
             captured = std::string(req);
             return note::string_view("{}");
@@ -725,7 +725,7 @@ TEST_CASE("NotecardApi: send(json) is fire-and-forget") {
 }
 
 TEST_CASE("NotecardApi: transact response usable with note::scan") {
-    note::CallbackTransport transport(
+    note::test::CallbackTransport transport(
         [](note::string_view, uint32_t) -> note::Result<note::string_view> {
             return note::string_view(
                 "{\"body\":{\"interval\":300,\"name\":\"sensor1\"}}");

@@ -5,7 +5,7 @@
 
 #include <note/backends/buffer.hpp>
 #include <note/json.hpp>
-#include <note/streaming_transport.hpp>
+#include <note/protocol.hpp>
 #include <note/transport/detail/crc32.hpp>
 #include <note/transport/detail/crc_types.hpp>
 #include <note/transport_hal.hpp>
@@ -443,7 +443,7 @@ TEST_CASE("CrcFieldSink: reset clears state") {
 }
 
 // ---------------------------------------------------------------------------
-// Streaming receive integration (transport-level via StreamingTransport)
+// Streaming receive integration (transport-level via Protocol)
 // ---------------------------------------------------------------------------
 
 namespace {
@@ -479,7 +479,7 @@ struct TestHal : Hal {
     }
 
     /// Build response with CRC. The wire seq is the value that
-    /// StreamingTransport will expect in the response.
+    /// Protocol will expect in the response.
     void set_response_with_crc(const char* json, uint16_t wire_seq) {
         char buf[512];
         size_t len = strlen(json);
@@ -499,7 +499,7 @@ struct TestHal : Hal {
 TEST_CASE("transact_streaming: basic SAX parse") {
     TestHal hal;
     hal.set_response(R"({"status":"ok","temp":22.5})");
-    StreamingTransport transport(hal, 0 /*max_retries*/);
+    Protocol transport(hal, 0 /*max_retries*/);
     IStreamingTransport& st = transport;
 
     struct Sink : JsonSink {
@@ -526,7 +526,7 @@ TEST_CASE("transact_streaming: CRC verification passes") {
     // before send, so first request uses seq=1.
     TestHal hal;
     hal.set_response_with_crc(R"({"val":42})", 1);
-    StreamingTransport transport(hal, 0 /*max_retries*/);
+    Protocol transport(hal, 0 /*max_retries*/);
     IStreamingTransport& st = transport;
 
     struct Sink : JsonSink {
@@ -548,7 +548,7 @@ TEST_CASE("transact_streaming: CRC mismatch detected") {
     // Second transaction has correct seq (2) but wrong checksum.
     TestHal hal;
     hal.set_response_with_crc(R"({"ok":true})", 1);
-    StreamingTransport transport(hal, 0 /*max_retries*/);
+    Protocol transport(hal, 0 /*max_retries*/);
     IStreamingTransport& st = transport;
 
     JsonSink null_sink;
@@ -574,7 +574,7 @@ TEST_CASE("transact_streaming: CRC mismatch detected") {
 TEST_CASE("transact_streaming: send + receive round trip") {
     TestHal hal;
     hal.set_response(R"({"result":"done"})");
-    StreamingTransport transport(hal, 0 /*max_retries*/);
+    Protocol transport(hal, 0 /*max_retries*/);
     IStreamingTransport& st = transport;
 
     struct Sink : JsonSink {
@@ -618,7 +618,7 @@ TEST_CASE("CRC: first request includes CRC field even before CRC is auto-detecte
     // was never enabled. note-c always sends CRC unconditionally.
     CapturingHal hal;
     hal.set_response(R"({"ok":true})");  // no CRC in response
-    StreamingTransport transport(hal, 0);
+    Protocol transport(hal, 0);
     IStreamingTransport& st = transport;
 
     JsonSink sink;
@@ -636,7 +636,7 @@ TEST_CASE("CRC: sequence number increments with each request") {
     // crc_seq_ starts at 0, incremented before each send.
     // First transaction: seq=1, second: seq=2.
     hal.set_response_with_crc(R"({"ok":true})", 1);
-    StreamingTransport transport(hal, 0);
+    Protocol transport(hal, 0);
     IStreamingTransport& st = transport;
 
     JsonSink sink;

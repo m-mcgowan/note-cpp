@@ -1,8 +1,8 @@
-// Tests for StreamingTransport over a MockHal.
+// Tests for Protocol over a MockHal.
 //
 // The new transport architecture splits:
 //   - Hal — pure hardware abstraction (transmit, read, reset, etc.)
-//   - StreamingTransport — protocol logic (retry, CRC, JSON framing) over a HAL
+//   - Protocol — protocol logic (retry, CRC, JSON framing) over a HAL
 //   - IStreamingTransport — type-erased interface
 //
 // Tests exercise transact() (build request via BuildFn, SAX-parse response into
@@ -11,7 +11,7 @@
 #include <doctest.h>
 #include "test_sax_exerciser.hpp"
 
-#include <note/streaming_transport.hpp>
+#include <note/protocol.hpp>
 #include <note/transport_hal.hpp>
 #include <note/api.hpp>
 #include <note/allocator.hpp>
@@ -75,7 +75,7 @@ struct CollectorSink : JsonSink {
 };
 
 // ---------------------------------------------------------------------------
-// MockHal — minimal Hal for testing StreamingTransport.
+// MockHal — minimal Hal for testing Protocol.
 //
 // Uses a byte deque for read(). Transmit captures bytes. Reset always succeeds.
 // ---------------------------------------------------------------------------
@@ -123,9 +123,9 @@ public:
     uint32_t millis() override { return 0; }
 };
 
-// Helper: get IStreamingTransport& from StreamingTransport to access
+// Helper: get IStreamingTransport& from Protocol to access
 // the convenience template overloads (transact(F&&, ...), send(F&&)).
-static IStreamingTransport& iface(StreamingTransport& t) { return t; }
+static IStreamingTransport& iface(Protocol& t) { return t; }
 
 
 // ---------------------------------------------------------------------------
@@ -136,7 +136,7 @@ TEST_CASE("transact: basic response parsed via SAX into sink") {
     MockHal hal;
     hal.queue_response("{\"ok\":true}");
 
-    StreamingTransport transport(hal, /*max_retries=*/1, /*retry_delay_ms=*/0);
+    Protocol transport(hal, /*max_retries=*/1, /*retry_delay_ms=*/0);
     CollectorSink sink;
 
     auto r = iface(transport).transact(
@@ -150,7 +150,7 @@ TEST_CASE("transact: response with multiple fields") {
     MockHal hal;
     hal.queue_response("{\"status\":\"connected\",\"count\":42}");
 
-    StreamingTransport transport(hal, 1, 0);
+    Protocol transport(hal, 1, 0);
     CollectorSink sink;
 
     auto r = iface(transport).transact(
@@ -164,7 +164,7 @@ TEST_CASE("transact: empty object response") {
     MockHal hal;
     hal.queue_response("{}");
 
-    StreamingTransport transport(hal, 1, 0);
+    Protocol transport(hal, 1, 0);
     CollectorSink sink;
 
     auto r = iface(transport).transact(
@@ -190,7 +190,7 @@ TEST_CASE("transact: empty object response") {
 TEST_CASE("transact: read error triggers retry and returns failure") {
     MockHal hal;
     // No data queued -> read fails -> retry -> still no data -> fail
-    StreamingTransport transport(hal, /*max_retries=*/1, /*retry_delay_ms=*/0);
+    Protocol transport(hal, /*max_retries=*/1, /*retry_delay_ms=*/0);
     CollectorSink sink;
 
     auto r = iface(transport).transact(
@@ -208,7 +208,7 @@ TEST_CASE("transact: transmit failure retries and returns SendFailed") {
     hal.transmit_fails = true;
     hal.queue_response("{\"ok\":true}");
 
-    StreamingTransport transport(hal, /*max_retries=*/1, /*retry_delay_ms=*/0);
+    Protocol transport(hal, /*max_retries=*/1, /*retry_delay_ms=*/0);
     CollectorSink sink;
 
     auto r = iface(transport).transact(
@@ -228,7 +228,7 @@ TEST_CASE("transact: chunked read works correctly") {
     MockHal hal;
     hal.queue_response("{\"v\":1}");
 
-    StreamingTransport transport(hal, 1, 0);
+    Protocol transport(hal, 1, 0);
     CollectorSink sink;
 
     auto r = iface(transport).transact(
@@ -246,7 +246,7 @@ TEST_CASE("transact: reset on first use succeeds") {
     MockHal hal;
     hal.queue_response("{\"first\":true}");
 
-    StreamingTransport transport(hal, 1, 0);
+    Protocol transport(hal, 1, 0);
     CollectorSink sink;
 
     auto r = iface(transport).transact(
@@ -278,7 +278,7 @@ TEST_CASE("transact: reset failure returns NotReady") {
     FailResetHal hal;
     hal.queue_response("{\"ok\":true}");
 
-    StreamingTransport transport(hal, 1, 0);
+    Protocol transport(hal, 1, 0);
     CollectorSink sink;
 
     auto r = iface(transport).transact(
@@ -295,7 +295,7 @@ TEST_CASE("transact: reset failure returns NotReady") {
 TEST_CASE("transact: single attempt returns error without retry") {
     MockHal hal;
     // No data queued — single attempt fails immediately.
-    StreamingTransport transport(hal);
+    Protocol transport(hal);
     CollectorSink sink;
 
     auto r = iface(transport).transact(
@@ -311,7 +311,7 @@ TEST_CASE("transact: single attempt returns error without retry") {
 
 TEST_CASE("send: fire-and-forget succeeds") {
     MockHal hal;
-    StreamingTransport transport(hal, 1, 0);
+    Protocol transport(hal, 1, 0);
 
     auto r = iface(transport).send(
         [](JsonBuilder& b) { b.add("req", "card.led"); b.add("mode", 1); });
@@ -324,7 +324,7 @@ TEST_CASE("send: transmit failure returns SendFailed") {
     MockHal hal;
     hal.transmit_fails = true;
 
-    StreamingTransport transport(hal, 1, 0);
+    Protocol transport(hal, 1, 0);
 
     auto r = iface(transport).send(
         [](JsonBuilder& b) { b.add("req", "card.led"); });
@@ -341,7 +341,7 @@ TEST_CASE("transact: request is streamed as JSON to HAL") {
     MockHal hal;
     hal.queue_response("{\"ok\":true}");
 
-    StreamingTransport transport(hal, 1, 0);
+    Protocol transport(hal, 1, 0);
     CollectorSink sink;
 
     auto r = iface(transport).transact(
@@ -368,7 +368,7 @@ TEST_CASE("transact: response with string value") {
     MockHal hal;
     hal.queue_response("{\"device\":\"dev:123456\"}");
 
-    StreamingTransport transport(hal, 1, 0);
+    Protocol transport(hal, 1, 0);
     CollectorSink sink;
 
     auto r = iface(transport).transact(
@@ -384,7 +384,7 @@ TEST_CASE("transact: response with string value") {
 
 TEST_CASE("write: raw binary passthrough to HAL") {
     MockHal hal;
-    StreamingTransport transport(hal, 1, 0);
+    Protocol transport(hal, 1, 0);
     // Force init so transport is ready
     hal.queue_response("{}");
     CollectorSink sink;
@@ -400,7 +400,7 @@ TEST_CASE("write: raw binary passthrough to HAL") {
 
 TEST_CASE("read: raw binary passthrough from HAL") {
     MockHal hal;
-    StreamingTransport transport(hal, 1, 0);
+    Protocol transport(hal, 1, 0);
     // Force init
     hal.queue_response("{}");
     CollectorSink sink;
@@ -448,7 +448,7 @@ TEST_CASE("transact: frame-aware read at various chunk sizes") {
         ChunkedMockHal hal(chunk);
         hal.queue_response(R"({"status":"ok","count":42})");
 
-        StreamingTransport transport(hal);
+        Protocol transport(hal);
         CollectorSink sink;
 
         auto r = iface(transport).transact(
@@ -469,7 +469,7 @@ TEST_CASE("transact: consecutive transactions at various chunk sizes") {
     for (size_t chunk : {size_t(1), size_t(3), size_t(7), size_t(64)}) {
         CAPTURE(chunk);
         ChunkedMockHal hal(chunk);
-        StreamingTransport transport(hal);
+        Protocol transport(hal);
 
         hal.queue_response(R"({"a":1})");
         CollectorSink sink1;
@@ -501,7 +501,7 @@ TEST_CASE("transact: parse error drains frame boundary") {
     for (char c : std::string("invalid\r\n"))
         hal.rx.push_back(static_cast<uint8_t>(c));
 
-    StreamingTransport transport(hal);
+    Protocol transport(hal);
 
     CollectorSink sink1;
     auto r1 = iface(transport).transact(
@@ -532,7 +532,7 @@ TEST_CASE("transact: frame boundary split across reads") {
         ChunkedMockHal hal(chunk);
         hal.queue_response(R"({"v":1})");
 
-        StreamingTransport transport(hal);
+        Protocol transport(hal);
         CollectorSink sink;
 
         auto r = iface(transport).transact(
@@ -557,7 +557,7 @@ TEST_CASE("transact: \\r\\n framing at various chunk sizes") {
         resp += "\r\n";
         for (char c : resp) hal.rx.push_back(static_cast<uint8_t>(c));
 
-        StreamingTransport transport(hal);
+        Protocol transport(hal);
         CollectorSink sink;
 
         auto r = iface(transport).transact(
@@ -598,7 +598,7 @@ TEST_CASE("transact: frame_read retries when HAL returns 0") {
     ZeroThenDataHal hal(3);  // 3 zero-returns before data arrives
     hal.queue_response(R"({"v":"ok"})");
 
-    StreamingTransport transport(hal);
+    Protocol transport(hal);
     CollectorSink sink;
 
     auto r = iface(transport).transact(
@@ -623,7 +623,7 @@ TEST_CASE("into<T>() parses body from streaming SAX path") {
     // Simulate note.get response with a body object
     hal.queue_response(R"({"payload":"dGVzdA==","time":1234,"body":{"temperature":23.5,"humidity":65}})");
 
-    StreamingTransport transport(hal);
+    Protocol transport(hal);
     auto nc = note::test::make_test_notecard(transport, note::Allocator{});
 #if __cplusplus >= 202002L
     note::Api<> api(nc);
@@ -649,7 +649,7 @@ TEST_CASE("transact: wire debug captures response JSON") {
     MockHal hal;
     hal.queue_response(R"({"status":"ok","count":7})");
 
-    StreamingTransport transport(hal);
+    Protocol transport(hal);
 
     std::string captured_recv;
     DebugListener debug{};
@@ -687,7 +687,7 @@ TEST_CASE("reset: forces re-initialization on next transact") {
     CountingHal hal;
     hal.queue_response("{\"ok\":true}");
 
-    StreamingTransport transport(hal, 1, 0);
+    Protocol transport(hal, 1, 0);
     CollectorSink sink;
 
     auto r = iface(transport).transact(
@@ -717,7 +717,7 @@ struct DispatchTestRsp {
 
 TEST_CASE("transact_dispatch: basic response via SaxDispatch") {
     MockHal hal;
-    StreamingTransport transport(hal);
+    Protocol transport(hal);
     hal.queue_response(R"({"value":42,"name":"test"})");
 
     DispatchTestRsp rsp;
@@ -766,7 +766,7 @@ TEST_CASE("make_sax_dispatch: exercise all events for GenericResponseSink") {
 
 TEST_CASE("transact_dispatch: captures err field") {
     MockHal hal;
-    StreamingTransport transport(hal);
+    Protocol transport(hal);
     hal.queue_response(R"({"err":"something went wrong"})");
 
     note::NullSink null_sink;
@@ -783,7 +783,7 @@ TEST_CASE("transact_dispatch: captures err field") {
 TEST_CASE("transact_dispatch: transmit failure") {
     MockHal hal;
     hal.transmit_fails = true;
-    StreamingTransport transport(hal);
+    Protocol transport(hal);
 
     note::NullSink null_sink;
     auto dispatch = note::make_sax_dispatch(null_sink);
@@ -804,7 +804,7 @@ TEST_CASE("send_raw: transmit failure returns SendFailed") {
     MockHal hal;
     // First transact to initialize transport
     hal.queue_response("{}");
-    StreamingTransport transport(hal, 1, 0);
+    Protocol transport(hal, 1, 0);
     CollectorSink sink;
     (void)iface(transport).transact(
         [](JsonBuilder& b) { b.add("req", "init"); }, sink, 5000);
@@ -828,7 +828,7 @@ TEST_CASE("send_raw: line terminator failure returns SendFailed") {
 
     FailTermHal hal;
     hal.queue_response("{}");
-    StreamingTransport transport(hal, 1, 0);
+    Protocol transport(hal, 1, 0);
     CollectorSink sink;
     (void)iface(transport).transact(
         [](JsonBuilder& b) { b.add("req", "init"); }, sink, 5000);
@@ -846,7 +846,7 @@ TEST_CASE("send_raw: line terminator failure returns SendFailed") {
 TEST_CASE("send_raw: success transmits JSON with line terminator") {
     MockHal hal;
     hal.queue_response("{}");
-    StreamingTransport transport(hal, 1, 0);
+    Protocol transport(hal, 1, 0);
     CollectorSink sink;
     (void)iface(transport).transact(
         [](JsonBuilder& b) { b.add("req", "init"); }, sink, 5000);
@@ -870,7 +870,7 @@ TEST_CASE("send_raw: not initialized returns NotReady") {
     };
 
     FailResetHal hal;
-    StreamingTransport transport(hal, 1, 0);
+    Protocol transport(hal, 1, 0);
 
     auto r = transport.send_raw(string_view("{\"req\":\"test\"}"));
     REQUIRE_FALSE(r.has_value());
@@ -885,7 +885,7 @@ TEST_CASE("send_raw: not initialized returns NotReady") {
 TEST_CASE("transact_raw: success reads response") {
     MockHal hal;
     hal.queue_response("{}");
-    StreamingTransport transport(hal, 1, 0);
+    Protocol transport(hal, 1, 0);
     CollectorSink sink;
     (void)iface(transport).transact(
         [](JsonBuilder& b) { b.add("req", "init"); }, sink, 5000);
@@ -908,7 +908,7 @@ TEST_CASE("transact_raw: success reads response") {
 TEST_CASE("transact_raw: transmit failure returns SendFailed") {
     MockHal hal;
     hal.queue_response("{}");
-    StreamingTransport transport(hal, 1, 0);
+    Protocol transport(hal, 1, 0);
     CollectorSink sink;
     (void)iface(transport).transact(
         [](JsonBuilder& b) { b.add("req", "init"); }, sink, 5000);
@@ -937,7 +937,7 @@ TEST_CASE("transact_raw: line terminator failure returns SendFailed") {
 
     FailTermHal hal;
     hal.queue_response("{}");
-    StreamingTransport transport(hal, 1, 0);
+    Protocol transport(hal, 1, 0);
     CollectorSink sink;
     (void)iface(transport).transact(
         [](JsonBuilder& b) { b.add("req", "init"); }, sink, 5000);
@@ -960,7 +960,7 @@ TEST_CASE("transact_raw: not initialized returns NotReady") {
     };
 
     FailResetHal hal;
-    StreamingTransport transport(hal, 1, 0);
+    Protocol transport(hal, 1, 0);
 
     char buf[128];
     auto r = transport.transact_raw(string_view("{\"req\":\"test\"}"), buf, sizeof(buf), 5000);
@@ -976,7 +976,7 @@ TEST_CASE("transact_raw: not initialized returns NotReady") {
 TEST_CASE("transact_raw: response overflow returns Overflow") {
     MockHal hal;
     hal.queue_response("{}");
-    StreamingTransport transport(hal, 1, 0);
+    Protocol transport(hal, 1, 0);
     CollectorSink sink;
     (void)iface(transport).transact(
         [](JsonBuilder& b) { b.add("req", "init"); }, sink, 5000);
@@ -998,7 +998,7 @@ TEST_CASE("transact_raw: response overflow returns Overflow") {
 TEST_CASE("transact_raw: \\r in response is skipped") {
     MockHal hal;
     hal.queue_response("{}");
-    StreamingTransport transport(hal, 1, 0);
+    Protocol transport(hal, 1, 0);
     CollectorSink sink;
     (void)iface(transport).transact(
         [](JsonBuilder& b) { b.add("req", "init"); }, sink, 5000);
@@ -1030,7 +1030,7 @@ TEST_CASE("transact_raw: read returns 0 triggers timeout") {
     ZeroReadHal hal;
     hal.queue_response("{}");
     // Use base MockHal for init, then swap behavior
-    StreamingTransport transport(hal, 1, 0);
+    Protocol transport(hal, 1, 0);
     // Force init by doing a normal transact with the mock's default read
     // Actually, our ZeroReadHal overrides read, so init will fail.
     // Instead, set initialized by calling a regular transact via a different approach.
@@ -1046,7 +1046,7 @@ TEST_CASE("transact_raw: read returns 0 triggers timeout") {
 
     LazyZeroHal hal2;
     hal2.queue_response("{}");
-    StreamingTransport transport2(hal2, 1, 0);
+    Protocol transport2(hal2, 1, 0);
     CollectorSink sink;
     (void)iface(transport2).transact(
         [](JsonBuilder& b) { b.add("req", "init"); }, sink, 5000);
@@ -1069,7 +1069,7 @@ TEST_CASE("send: not initialized returns NotReady") {
     };
 
     FailResetHal hal;
-    StreamingTransport transport(hal, 1, 0);
+    Protocol transport(hal, 1, 0);
 
     auto r = iface(transport).send(
         [](JsonBuilder& b) { b.add("req", "card.led"); });
@@ -1084,7 +1084,7 @@ TEST_CASE("send: not initialized returns NotReady") {
 
 TEST_CASE("read: lookahead bytes from frame_read returned first") {
     MockHal hal;
-    StreamingTransport transport(hal, 1, 0);
+    Protocol transport(hal, 1, 0);
 
     // Queue a response that includes extra bytes AFTER \n in the same chunk.
     // Simulate: {"ok":true}\nEXTRA
@@ -1117,7 +1117,7 @@ TEST_CASE("transact_dispatch: reset failure returns NotReady") {
     };
 
     FailResetHal hal;
-    StreamingTransport transport(hal, 1, 0);
+    Protocol transport(hal, 1, 0);
 
     note::NullSink null_sink;
     auto dispatch = note::make_sax_dispatch(null_sink);
@@ -1137,7 +1137,7 @@ TEST_CASE("transact_dispatch: reset failure returns NotReady") {
 TEST_CASE("transact_dispatch: response timeout returns ResponseLost") {
     MockHal hal;
     // No data queued → timeout
-    StreamingTransport transport(hal, 1, 0);
+    Protocol transport(hal, 1, 0);
 
     note::NullSink null_sink;
     auto dispatch = note::make_sax_dispatch(null_sink);
@@ -1192,7 +1192,7 @@ std::string make_crc_response(const std::string& body_without_brace, uint16_t se
 
 TEST_CASE("transact_dispatch: valid CRC response succeeds") {
     MockHal hal;
-    StreamingTransport transport(hal);
+    Protocol transport(hal);
 
     // First transact increments crc_seq_ to 1.
     // Build a response with valid CRC for seq=1.
@@ -1216,7 +1216,7 @@ TEST_CASE("transact_dispatch: valid CRC response succeeds") {
 
 TEST_CASE("transact_dispatch: CRC mismatch returns error") {
     MockHal hal;
-    StreamingTransport transport(hal);
+    Protocol transport(hal);
 
     // Build a response with wrong CRC (use wrong checksum)
     std::string resp = R"({"ok":true,"crc":"0001:DEADBEEF"})";
@@ -1240,7 +1240,7 @@ TEST_CASE("transact_dispatch: CRC mismatch returns error") {
 
 TEST_CASE("transact_dispatch: CRC seq mismatch returns error") {
     MockHal hal;
-    StreamingTransport transport(hal);
+    Protocol transport(hal);
 
     // Valid checksum but wrong seq (use seq=99 instead of 1)
     auto resp = make_crc_response(R"({"ok":true)", 99);
@@ -1264,7 +1264,7 @@ TEST_CASE("transact_dispatch: CRC seq mismatch returns error") {
 
 TEST_CASE("transact_dispatch: expected CRC missing returns error") {
     MockHal hal;
-    StreamingTransport transport(hal);
+    Protocol transport(hal);
 
     // First transaction WITH valid CRC enables crc_enabled_
     {
@@ -1301,7 +1301,7 @@ TEST_CASE("transact_dispatch: expected CRC missing returns error") {
 
 TEST_CASE("transact: CRC mismatch via template path returns error") {
     MockHal hal;
-    StreamingTransport transport(hal);
+    Protocol transport(hal);
 
     // Build a response with wrong CRC
     std::string resp = R"({"ok":true,"crc":"0001:DEADBEEF"})";
@@ -1322,7 +1322,7 @@ TEST_CASE("transact: CRC mismatch via template path returns error") {
 
 TEST_CASE("transact_dispatch: long err field is truncated in NcErrorCapture") {
     MockHal hal;
-    StreamingTransport transport(hal);
+    Protocol transport(hal);
 
     // Create an error message > 64 chars to exercise truncation
     std::string long_err(80, 'x');
@@ -1439,7 +1439,7 @@ TEST_CASE("transact: frame_read timeout when HAL always returns 0") {
     };
 
     AlwaysZeroHal hal;
-    StreamingTransport transport(hal);
+    Protocol transport(hal);
     CollectorSink sink;
 
     auto r = iface(transport).transact(
@@ -1465,7 +1465,7 @@ TEST_CASE("transact_dispatch: timeout returns ResponseLost via dispatch") {
     };
 
     AlwaysZeroHal hal;
-    StreamingTransport transport(hal);
+    Protocol transport(hal);
 
     note::NullSink null_sink;
     auto dispatch = note::make_sax_dispatch(null_sink);
@@ -1484,7 +1484,7 @@ TEST_CASE("transact_dispatch: timeout returns ResponseLost via dispatch") {
 
 TEST_CASE("transact_dispatch: CRC mismatch with debug listener") {
     MockHal hal;
-    StreamingTransport transport(hal);
+    Protocol transport(hal);
 
     bool saw_crc_mismatch = false;
     DebugListener debug{};
@@ -1529,7 +1529,7 @@ TEST_CASE("transact: lookahead buffer saves bytes after frame delimiter") {
     std::string payload = "{\"ok\":true}\nBINARY";
     for (char c : payload) hal.rx.push_back(static_cast<uint8_t>(c));
 
-    StreamingTransport transport(hal);
+    Protocol transport(hal);
     CollectorSink sink;
 
     auto r = iface(transport).transact(
@@ -1554,7 +1554,7 @@ TEST_CASE("transact: wire debug accumulates multi-chunk response") {
     ChunkedMockHal hal(1);
     hal.queue_response(R"({"a":"b"})");
 
-    StreamingTransport transport(hal);
+    Protocol transport(hal);
 
     std::string captured;
     DebugListener debug{};
@@ -1593,7 +1593,7 @@ TEST_CASE("lookahead: transact_raw reads response stashed by prior transact") {
     hal.queue_response("{}");
     hal.queue_response(R"({"status":"ready"})");
 
-    StreamingTransport transport(hal);
+    Protocol transport(hal);
 
     CollectorSink sink;
     auto r1 = iface(transport).transact(
@@ -1615,7 +1615,7 @@ TEST_CASE("lookahead: next transact reads response stashed by prior transact") {
     hal.queue_response("{}");
     hal.queue_response(R"({"v":42})");
 
-    StreamingTransport transport(hal);
+    Protocol transport(hal);
 
     CollectorSink first;
     auto r1 = iface(transport).transact(
@@ -1643,7 +1643,7 @@ TEST_CASE("lookahead: binary read() consumes bytes stashed by prior transact") {
     const uint8_t bin_payload[] = {0x01, 0x02, 0x03, 0x04, 0x05};
     for (auto b : bin_payload) hal.rx.push_back(b);
 
-    StreamingTransport transport(hal);
+    Protocol transport(hal);
 
     CollectorSink sink;
     auto r1 = iface(transport).transact(

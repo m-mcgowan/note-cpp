@@ -909,7 +909,7 @@ TEST_CASE("jsonb parser: empty stream is not an error") {
 #include <note/static_notecard.hpp>
 #include <note/api.hpp>
 #include <note/api/card_version.hpp>
-#include <note/streaming_transport.hpp>
+#include <note/protocol.hpp>
 #include <note/transport_hal.hpp>
 
 namespace {
@@ -982,7 +982,7 @@ TEST_CASE("jsonb end-to-end: Notecard card.version") {
     note::MonotonicArena arena(arena_buf);
 
     JsonbMockHal hal;
-    note::StreamingTransport transport(hal, 0);
+    note::Protocol transport(hal, 0);
     // Use Notecard directly since StaticNotecard is template-heavy
     note::Notecard nc(transport, note::arena_allocator(arena));
     note::Api<> api(nc);

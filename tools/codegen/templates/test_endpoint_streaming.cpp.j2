@@ -3,7 +3,7 @@
 // Endpoint transport equivalence tests.
 // Each endpoint runs against BOTH transport paths with the same response
 // JSON, proving streaming and buffered produce identical results:
-//   - Streaming: StreamingTransport(MockHal) → IStreamingTransport → SAX Sink
+//   - Streaming: Protocol(MockHal) → IStreamingTransport → SAX Sink
 //   - Buffered:  CallbackTransport → IBufferedTransport → JsonReader parse
 //
 // Void-response endpoints verify both paths succeed without error.
@@ -14,7 +14,7 @@
 #include <note/api.hpp>
 #include <note/allocator.hpp>
 #include <note/backends/buffer.hpp>
-#include <note/streaming_transport.hpp>
+#include <note/protocol.hpp>
 #include <note/transport.hpp>
 #include <note/string_pool.hpp>
 
@@ -59,10 +59,10 @@ public:
     uint32_t millis() override { return 0; }
 };
 
-/// Streaming harness: StreamingTransport over MockHal.
+/// Streaming harness: Protocol over MockHal.
 struct StreamingHarness {
     MockHal hal;
-    note::StreamingTransport transport{hal};
+    note::Protocol transport{hal};
     note::Notecard nc;
     UnconstrainedApi api;
 
@@ -76,7 +76,7 @@ struct StreamingHarness {
 struct BufferedHarness {
     note::backends::BufferJsonBackend<1024, 64> backend;
     std::string canned_response;
-    note::CallbackTransport transport;
+    note::test::CallbackTransport transport;
     note::Notecard nc;
     UnconstrainedApi api;
 

@@ -85,7 +85,7 @@ private:
 
 /// NotecardSerial — Hal implementation for serial (UART).
 /// Wraps a platform SerialHal (non-blocking receive) into the blocking
-/// Hal interface used by StreamingTransport.
+/// Hal interface used by Protocol.
 #if NOTE_STATIC_HAL
 template <typename HalT, typename PolicyType = SerialPolicy>
 class NotecardSerial {

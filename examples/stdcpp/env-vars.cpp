@@ -187,7 +187,7 @@ int main(int argc, char** argv) {
     } else {
         // Mock path — CI builds and runs this, no hardware needed.
         EnvVarsMockHal hal;
-        note::StreamingTransport transport{hal};
+        note::Protocol transport{hal};
         note::Notecard nc(transport);
         Api api(nc);
         std::puts("=== mock (streaming canned responses) ===");

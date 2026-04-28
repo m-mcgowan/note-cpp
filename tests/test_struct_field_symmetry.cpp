@@ -52,7 +52,7 @@ struct Harness {
     note::test::TestJsonBackend backend;
     std::string last_request;
     std::string last_response{"{}"};
-    note::CallbackTransport transport;
+    note::test::CallbackTransport transport;
     note::Notecard nc;
 
     Harness()

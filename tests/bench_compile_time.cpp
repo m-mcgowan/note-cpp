@@ -22,8 +22,8 @@
 // Force template instantiation of commonly used types.
 namespace {
 
-note::CallbackTransport make_transport() {
-    return note::CallbackTransport(
+note::test::CallbackTransport make_transport() {
+    return note::test::CallbackTransport(
         [](note::string_view, uint32_t) -> note::Result<note::string_view> { return "{}"; });
 }
 

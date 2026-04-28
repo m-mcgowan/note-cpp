@@ -14,7 +14,7 @@
 ///     a sink without an intermediate buffer.
 ///   - `send(req)` — fire-and-forget command.
 ///
-/// Concrete protocol drivers (notably `StreamingTransport`) override all
+/// Concrete protocol drivers (notably `Protocol`) override all
 /// three natively for efficiency. Custom transports that only implement
 /// the buffered overload get the sink overload for free via the default
 /// impl, which reads into a local buffer then SAX-parses it.

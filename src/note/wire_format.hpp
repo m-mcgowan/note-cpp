@@ -1,6 +1,6 @@
 #pragma once
 /// @file wire_format.hpp
-/// Wire format policy tags for StreamingTransport.
+/// Wire format policy tags for Protocol.
 ///
 /// The wire format determines how requests are encoded and responses decoded:
 /// - JsonWireFormat:  JSON text + optional CRC (default)

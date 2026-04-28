@@ -23,7 +23,7 @@ using UnconstrainedApi = note::Api;
 struct Harness {
     note::test::TestJsonBackend backend;
     std::string last_req;
-    note::CallbackTransport transport;
+    note::test::CallbackTransport transport;
     note::Notecard nc;
     UnconstrainedApi api;
 

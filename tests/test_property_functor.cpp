@@ -60,7 +60,7 @@ TEST_CASE("functor chaining terminates with execute() on bound request") {
     struct TestHarness {
         note::test::TestJsonBackend backend;
         std::string last_request;
-        note::CallbackTransport transport;
+        note::test::CallbackTransport transport;
         note::Notecard nc;
         TestHarness()
             : transport(
@@ -142,7 +142,7 @@ TEST_CASE("extra() adds undocumented bool property to wire format") {
     struct TestHarness {
         note::test::TestJsonBackend backend;
         std::string last_request;
-        note::CallbackTransport transport;
+        note::test::CallbackTransport transport;
         note::Notecard nc;
         TestHarness()
             : transport(

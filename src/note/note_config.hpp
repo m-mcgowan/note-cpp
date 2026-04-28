@@ -139,7 +139,7 @@
 #endif
 
 // NOTE_TXN_HANDSHAKE — when 1, enable the optional transaction-handshake
-// (CTX/RTX) hook on StreamingTransport. Each transaction is bracketed by
+// (CTX/RTX) hook on Protocol. Each transaction is bracketed by
 // TxnHandshake::start()/stop() when a TxnHandshake is registered via
 // set_handshake(). When 0, the hook code is fully compiled out.
 //

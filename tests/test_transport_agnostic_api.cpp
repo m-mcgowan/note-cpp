@@ -31,7 +31,7 @@
 #include <note/api.hpp>
 #include <note/allocator.hpp>
 #include <note/backends/buffer.hpp>
-#include <note/streaming_transport.hpp>
+#include <note/protocol.hpp>
 #include <note/transport.hpp>
 #include <note/transport_hal.hpp>
 
@@ -55,7 +55,7 @@ constexpr const char* kCannedResponse =
     R"({"payload":"dGVzdA==","time":1234,"body":{"temperature":23.5,"humidity":65}})";
 
 // MockHal mirrors the one in test_transport_streaming.cpp — just enough to
-// drive a StreamingTransport with a single canned response and capture the
+// drive a Protocol with a single canned response and capture the
 // bytes the protocol transmits.
 class MockHal : public note::Hal {
 public:
@@ -124,7 +124,7 @@ TEST_CASE("§1 typed API: .into() populates struct on streaming transport") {
     MockHal hal;
     hal.queue_response(kCannedResponse);
 
-    note::StreamingTransport transport(hal);
+    note::Protocol transport(hal);
     auto nc = note::test::make_test_notecard(transport, note::Allocator{});
 #if __cplusplus >= 202002L
     note::Api<> api(nc);
@@ -177,7 +177,7 @@ TEST_CASE("§2 typed API: .body() — streaming and buffered emit identical body
 
     MockHal stream_hal;
     stream_hal.queue_response("{}");
-    note::StreamingTransport stream_transport(stream_hal);
+    note::Protocol stream_transport(stream_hal);
     {
         auto nc = note::test::make_test_notecard(stream_transport, note::Allocator{});
 #if __cplusplus >= 202002L
@@ -232,7 +232,7 @@ TEST_CASE("§3 raw transact(json, buf) — same wire bytes, same response on bot
     // ── Streaming side: hits transact_raw via the new ITransport overload.
     MockHal stream_hal;
     stream_hal.queue_response(kRawResponse);
-    note::StreamingTransport stream_transport(stream_hal);
+    note::Protocol stream_transport(stream_hal);
     note::Notecard stream_nc(stream_transport, note::Allocator{});
     char stream_buf[256];
     auto stream_rv = stream_nc.transact(kRawRequest, note::span<char>(stream_buf, sizeof(stream_buf)));
@@ -276,7 +276,7 @@ TEST_CASE("§4 raw send(json) — same wire bytes on both transports") {
     // ── Streaming side.
     MockHal stream_hal;
     stream_hal.queue_response("{}");
-    note::StreamingTransport stream_transport(stream_hal);
+    note::Protocol stream_transport(stream_hal);
     note::Notecard stream_nc(stream_transport, note::Allocator{});
     auto stream_send = stream_nc.send(kCommand);
     REQUIRE(stream_send.has_value());

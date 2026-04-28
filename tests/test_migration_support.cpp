@@ -8,7 +8,7 @@
 #include <note/api.hpp>
 #include <note/backends/buffer.hpp>
 #include <note/notecard_api.hpp>
-#include <note/streaming_transport.hpp>
+#include <note/protocol.hpp>
 #include <note/transport/serial.hpp>
 #include <note/units.hpp>
 
@@ -17,7 +17,7 @@ namespace {
 struct Harness {
     note::test::TestJsonBackend backend;
     std::string last_req;
-    note::CallbackTransport transport;
+    note::test::CallbackTransport transport;
     note::Notecard nc;
 
     Harness()
@@ -158,7 +158,7 @@ TEST_CASE("card.aux state: get_object_array reads pin states") {
     // Simulate a card.aux response with state array
     std::string canned = R"({"mode":"gpio","state":[{"high":true},{"low":true,"input":true},{}]})";
     note::backends::BufferJsonBackend<1024, 64> backend;
-    note::CallbackTransport transport(
+    note::test::CallbackTransport transport(
         [&](note::string_view, uint32_t) -> note::Result<note::string_view> {
             return note::string_view(canned);
         });
@@ -187,7 +187,7 @@ TEST_CASE("card.aux state: get_object_array reads pin states") {
 
 // ---------------------------------------------------------------------------
 // Issue 1b: arduino::Notecard::begin() wiring
-// The HAL (transport::NotecardSerial<>) must go through StreamingTransport
+// The HAL (transport::NotecardSerial<>) must go through Protocol
 // before reaching NotecardApi::begin(IStreamingTransport&).
 // ---------------------------------------------------------------------------
 
@@ -197,8 +197,8 @@ TEST_CASE("Issue 1b: transport::NotecardSerial is a Hal, not IStreamingTransport
         "NotecardSerial should NOT implement IStreamingTransport directly");
     static_assert(std::is_base_of_v<note::Hal, note::transport::NotecardSerial<>>,
         "NotecardSerial should be a Hal");
-    static_assert(std::is_base_of_v<note::IStreamingTransport, note::StreamingTransport>,
-        "StreamingTransport should implement IStreamingTransport");
+    static_assert(std::is_base_of_v<note::IStreamingTransport, note::Protocol>,
+        "Protocol should implement IStreamingTransport");
     REQUIRE(true);
 }
 
@@ -256,7 +256,7 @@ TEST_CASE("Issue 6: transact returns overflow error for large response") {
     };
 
     MockHal hal(200);  // response > 64 bytes
-    note::StreamingTransport transport(hal);
+    note::Protocol transport(hal);
     auto nc = note::test::make_test_notecard(transport);
 
     char buf[64];  // intentionally small
@@ -289,7 +289,7 @@ TEST_CASE("Issue 6b: buffered passthrough preserves nested objects") {
     note::test::TestJsonBackend backend;
     std::string last_req;
     std::string canned_rsp = R"({"version":"7.2.1","body":{"org":"blues","product":"feather"}})";
-    note::CallbackTransport transport(
+    note::test::CallbackTransport transport(
         [&](note::string_view r, uint32_t) -> note::Result<note::string_view> {
             last_req = std::string(r);
             return note::string_view(canned_rsp);
@@ -334,7 +334,7 @@ TEST_CASE("Issue 6b: streaming passthrough preserves nested objects") {
     };
 
     MockHal hal;
-    note::StreamingTransport transport(hal);
+    note::Protocol transport(hal);
     auto nc = note::test::make_test_notecard(transport, note::Allocator{});
 
     char buf[512];
@@ -366,7 +366,7 @@ TEST_CASE("Issue 6b: streaming passthrough preserves arrays") {
     };
 
     MockHal hal;
-    note::StreamingTransport transport(hal);
+    note::Protocol transport(hal);
     auto nc = note::test::make_test_notecard(transport, note::Allocator{});
 
     char buf[512];

@@ -35,7 +35,7 @@ struct BinaryTestHarness {
     // JSON response to return for the handshake
     std::string json_response = "{}";
 
-    note::CallbackTransport transport;
+    note::test::CallbackTransport transport;
     note::Notecard nc;
 
     BinaryTestHarness()
@@ -91,7 +91,7 @@ struct BinaryGetHarness {
     size_t read_offset = 0;
     std::string json_response = "{}";
 
-    note::CallbackTransport transport;
+    note::test::CallbackTransport transport;
     note::Notecard nc;
 
     BinaryGetHarness()
@@ -360,7 +360,7 @@ TEST_CASE("Binary GET without into() falls through to JSON") {
 // ---------------------------------------------------------------------------
 
 TEST_CASE("CallbackTransport write/read return errors without callbacks") {
-    note::CallbackTransport transport(
+    note::test::CallbackTransport transport(
         [](note::string_view, uint32_t) -> note::Result<note::string_view> { return "{}"; });
 
     uint8_t buf[4] = {1, 2, 3, 4};
@@ -418,7 +418,7 @@ struct VerifyTestHarness {
     int transact_count = 0;
     std::vector<std::string> responses;  // queued JSON responses
 
-    note::CallbackTransport transport;
+    note::test::CallbackTransport transport;
     note::Notecard nc;
 
     VerifyTestHarness(std::initializer_list<std::string> resps)

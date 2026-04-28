@@ -15,7 +15,7 @@
 ///            to conserve Notecard power.
 ///   - start: drive RTX high (request to transact); wait for CTX high
 ///            (clear to transact) with INPUT_PULLUP on CTX. Timeout →
-///            return false; StreamingTransport surfaces Error::NotReady.
+///            return false; Protocol surfaces Error::NotReady.
 ///   - stop:  float RTX (release) so the Notecard is free to sleep.
 
 #pragma once

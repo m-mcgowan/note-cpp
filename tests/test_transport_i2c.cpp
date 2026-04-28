@@ -1,5 +1,5 @@
 // Tests for note::transport::NotecardI2c (Hal) and
-// note::StreamingTransport protocol logic over I2C.
+// note::Protocol protocol logic over I2C.
 //
 // Ported from note-c test/src/_i2cNoteReset_test.cpp,
 // _i2cChunkedTransmit_test.cpp, and _i2cChunkedReceive_test.cpp.
@@ -12,7 +12,7 @@
 //
 // NotecardI2c is a Hal (raw byte ops: transmit, read, reset,
 // write_line_terminator, delay). Protocol logic (transact, send, retry, CRC)
-// lives in StreamingTransport, which wraps a Hal.
+// lives in Protocol, which wraps a Hal.
 //
 // When note-c's I2C tests change, review the diffs and update accordingly.
 
@@ -20,7 +20,7 @@
 
 #include <note/transport/i2c.hpp>
 #include <note/transport/detail/crc32.hpp>
-#include <note/streaming_transport.hpp>
+#include <note/protocol.hpp>
 
 #include <cstring>
 #include <deque>
@@ -189,16 +189,16 @@ struct ScriptedI2CHal : public I2CHal {
 };
 
 // ---------------------------------------------------------------------------
-// I2cTestHarness — StreamingTransport over NotecardI2c over ScriptedI2CHal
+// I2cTestHarness — Protocol over NotecardI2c over ScriptedI2CHal
 //
-// Returns by value — NotecardI2c and StreamingTransport hold references
+// Returns by value — NotecardI2c and Protocol hold references
 // to each other and to the hal, so callers must keep the Harness alive.
 // ---------------------------------------------------------------------------
 
 struct I2cTestHarness {
     ScriptedI2CHal hal;
     NotecardI2c<I2cPolicy> notecard_i2c;
-    note::StreamingTransport transport;
+    note::Protocol transport;
 
     I2cTestHarness()
         : notecard_i2c(hal)
@@ -454,7 +454,7 @@ TEST_CASE("i2c delay: forwards to HAL") {
 }
 
 // ---------------------------------------------------------------------------
-// Protocol tests — through StreamingTransport
+// Protocol tests — through Protocol
 // ---------------------------------------------------------------------------
 
 TEST_CASE("i2c round-trip: simple request and response") {
@@ -588,7 +588,7 @@ TEST_CASE("i2c round-trip: reset failure returns Error::NotReady") {
 }
 
 // ---------------------------------------------------------------------------
-// send() — fire-and-forget via StreamingTransport
+// send() — fire-and-forget via Protocol
 // ---------------------------------------------------------------------------
 
 TEST_CASE("i2c send: transmits without waiting for response") {
@@ -620,7 +620,7 @@ TEST_CASE("i2c send: fails when transmit fails") {
 }
 
 // ---------------------------------------------------------------------------
-// Binary write/read — raw byte streaming via StreamingTransport
+// Binary write/read — raw byte streaming via Protocol
 // ---------------------------------------------------------------------------
 
 TEST_CASE("i2c: write() sends raw bytes") {
@@ -638,7 +638,7 @@ TEST_CASE("i2c: write() sends raw bytes") {
     CHECK(h.hal.transmit_call_count >= 1);
 }
 
-TEST_CASE("i2c: read() returns available bytes via StreamingTransport") {
+TEST_CASE("i2c: read() returns available bytes via Protocol") {
     I2cTestHarness h;
     h.hal.responses.push_back("{}\n");
     h.transact("init");
@@ -653,7 +653,7 @@ TEST_CASE("i2c: read() returns available bytes via StreamingTransport") {
     CHECK(buf[0] == 0xAA);
 }
 
-TEST_CASE("i2c: read() times out when no data via StreamingTransport") {
+TEST_CASE("i2c: read() times out when no data via Protocol") {
     I2cTestHarness h;
     h.hal.responses.push_back("{}\n");
     h.transact("init");
@@ -677,7 +677,7 @@ TEST_CASE("i2c: write() fails when HAL transmit fails") {
 }
 
 // ---------------------------------------------------------------------------
-// explicit reset() via StreamingTransport
+// explicit reset() via Protocol
 // ---------------------------------------------------------------------------
 
 TEST_CASE("i2c: explicit reset()") {
@@ -710,7 +710,7 @@ TEST_CASE("I2cCallbackHal delegates to callbacks") {
     };
 
     NotecardI2c<I2cPolicy> notecard_i2c(cb);
-    note::StreamingTransport transport(notecard_i2c, /*max_retries=*/5);
+    note::Protocol transport(notecard_i2c, /*max_retries=*/5);
     note::IStreamingTransport& t = transport;
     note::JsonSink null_sink;
     auto build = [](note::JsonBuilder& b) { b.add("req", "hub.status"); };
@@ -719,7 +719,7 @@ TEST_CASE("I2cCallbackHal delegates to callbacks") {
 }
 
 // ---------------------------------------------------------------------------
-// Multi-chunk send via StreamingTransport with small MTU
+// Multi-chunk send via Protocol with small MTU
 // ---------------------------------------------------------------------------
 
 TEST_CASE("i2c send: multi-chunk request with small MTU") {

@@ -5,7 +5,7 @@
 // std::function, no allocations on the hot path.
 //
 // Tests that need allocation-counted exactness (test_alloc_profile,
-// test_sax_alloc_profile) can't use note::CallbackTransport because that wraps
+// test_sax_alloc_profile) can't use note::test::CallbackTransport because that wraps
 // std::function, which may allocate depending on stdlib SBO behavior.
 //
 // Usage:

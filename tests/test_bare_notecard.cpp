@@ -48,7 +48,7 @@ struct MockHal : note::Hal {
 
 TEST_CASE("BareNotecard transact sends JSON and returns response") {
     MockHal hal(R"({"version":"notecard-7.2.1"})");
-    note::StreamingTransport transport(hal);
+    note::Protocol transport(hal);
     note::BareNotecard bare(transport);
 
     char buf[256];
@@ -60,7 +60,7 @@ TEST_CASE("BareNotecard transact sends JSON and returns response") {
 
 TEST_CASE("BareNotecard send fires and forgets") {
     MockHal hal;
-    note::StreamingTransport transport(hal);
+    note::Protocol transport(hal);
     note::BareNotecard bare(transport);
 
     auto result = bare.send(R"({"cmd":"hub.set","product":"com.example"})");
@@ -74,7 +74,7 @@ TEST_CASE("BareNotecard send fires and forgets") {
 
 TEST_CASE("BareNotecard rejects malformed JSON on transact") {
     MockHal hal;
-    note::StreamingTransport transport(hal);
+    note::Protocol transport(hal);
     note::BareNotecard bare(transport);
 
     char buf[256];
@@ -85,7 +85,7 @@ TEST_CASE("BareNotecard rejects malformed JSON on transact") {
 
 TEST_CASE("BareNotecard rejects malformed JSON on send") {
     MockHal hal;
-    note::StreamingTransport transport(hal);
+    note::Protocol transport(hal);
     note::BareNotecard bare(transport);
 
     REQUIRE(!bare.send("not json"));
@@ -98,7 +98,7 @@ TEST_CASE("BareNotecard rejects malformed JSON on send") {
 
 TEST_CASE("BareNotecard preserves nested objects in response") {
     MockHal hal(R"({"version":"7.2.1","body":{"org":"blues","product":"feather"}})");
-    note::StreamingTransport transport(hal);
+    note::Protocol transport(hal);
     note::BareNotecard bare(transport);
 
     char buf[512];
@@ -111,7 +111,7 @@ TEST_CASE("BareNotecard preserves nested objects in response") {
 
 TEST_CASE("BareNotecard preserves arrays in response") {
     MockHal hal(R"({"files":["data.qi","config.db"],"total":2})");
-    note::StreamingTransport transport(hal);
+    note::Protocol transport(hal);
     note::BareNotecard bare(transport);
 
     char buf[512];
@@ -128,7 +128,7 @@ TEST_CASE("BareNotecard preserves arrays in response") {
 
 TEST_CASE("BareNotecard passes through Notecard error responses") {
     MockHal hal(R"({"err":"not a valid request"})");
-    note::StreamingTransport transport(hal);
+    note::Protocol transport(hal);
     note::BareNotecard bare(transport);
 
     char buf[256];

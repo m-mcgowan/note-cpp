@@ -17,7 +17,7 @@ namespace {
 struct TestHarness {
     note::test::TestJsonBackend backend;
     std::string last_request;
-    note::CallbackTransport transport;
+    note::test::CallbackTransport transport;
     note::Notecard nc;
 
     TestHarness()

@@ -12,7 +12,7 @@
 #include <note/transport/serial.hpp>
 #endif
 #if WOKWI_LAYER >= 3
-#include <note/streaming_transport.hpp>
+#include <note/protocol.hpp>
 #include <note/arduino/begin.hpp>
 #endif
 #if WOKWI_LAYER >= 4
@@ -51,7 +51,7 @@ void setup() {
 }
 void loop() { delay(60000); }
 
-// ── L3: StreamingTransport ────────────────────────────────────────────
+// ── L3: Protocol ────────────────────────────────────────────
 #elif WOKWI_LAYER == 3
 void setup() {
     note::arduino::SerialTransportStack<> stack(Serial, 9600);
@@ -68,7 +68,7 @@ void loop() { delay(60000); }
 // ── L4: Full API execute with response validation ─────────────────────
 // Sends card.version, parses the JSONB response, checks fields.
 // ── L5: transact_raw round-trip ───────────────────────────────────────
-// Smallest possible test of StreamingTransport::transact_raw on Uno —
+// Smallest possible test of Protocol::transact_raw on Uno —
 // sends a hand-built card.temp request, reads the response, writes
 // PASS/FAIL to Serial. No typed API, no SAX parser.
 #elif WOKWI_LAYER == 5

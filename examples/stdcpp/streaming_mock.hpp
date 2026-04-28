@@ -5,7 +5,7 @@
 // streaming transport's write_line_terminator() fires, then prints the
 // captured JSON request and lets the example pick a canned response.
 //
-// Use with note::StreamingTransport + note::Notecard. The example
+// Use with note::Protocol + note::Notecard. The example
 // overrides choose_response(const std::string& req) to pick the right
 // canned payload based on what the library sent.
 //
@@ -41,7 +41,7 @@ public:
         return true;
     }
 
-    // StreamingTransport calls this after the JSON body to finish the
+    // Protocol calls this after the JSON body to finish the
     // line. We treat it as the request-complete signal.
     bool write_line_terminator() override {
         if (!tx_buf.empty()) {

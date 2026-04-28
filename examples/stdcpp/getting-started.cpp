@@ -68,7 +68,7 @@ int main() {
     // For this example, we use a mock that prints each request to stdout
     // so you can run it on any machine without Notecard hardware.
     MockBackend backend;  // handles JSON serialization (see mock_backend.hpp)
-    note::CallbackTransport transport(
+    note::test::CallbackTransport transport(
         // This callback is called for every request. It prints the JSON and
         // returns an empty response. On real hardware, the transport sends
         // bytes over serial or I2C instead.

@@ -22,7 +22,7 @@
 #include "retry.hpp"
 #include "retry_policy.hpp"
 #include "string_pool.hpp"
-#include "streaming_transport.hpp"
+#include "protocol.hpp"
 
 #include <optional>
 #include <type_traits>

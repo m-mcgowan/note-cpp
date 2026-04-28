@@ -1,5 +1,5 @@
 // Tests for the optional transaction-handshake (CTX/RTX) hook on
-// StreamingTransport. Verifies that:
+// Protocol. Verifies that:
 //   - With no TxnHandshake registered, transactions proceed without bracket calls.
 //   - With a TxnHandshake registered, start()/stop() bracket each transact/send.
 //   - When start() returns false, transact returns NotReady and stop() is
@@ -9,7 +9,7 @@
 
 #include <doctest.h>
 
-#include <note/streaming_transport.hpp>
+#include <note/protocol.hpp>
 #include <note/transport/serial.hpp>
 #include <note/txn_handshake.hpp>
 
@@ -68,7 +68,7 @@ struct CountingHandshake : public note::TxnHandshake {
 struct Harness {
     ScriptedSerialHal hal;
     note::transport::NotecardSerial<note::transport::SerialPolicy> ns{hal};
-    note::StreamingTransport transport{ns};
+    note::Protocol transport{ns};
 
     // Fire a trivial transact; returns the Result.
     note::Result<void> transact(uint32_t timeout_ms = 5000) {

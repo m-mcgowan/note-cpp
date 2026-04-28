@@ -11,7 +11,7 @@
 #include <string>
 #include "test_notecard_factory.hpp"
 #include <note/notecard.hpp>
-#include <note/streaming_transport.hpp>
+#include <note/protocol.hpp>
 #include <note/allocator.hpp>
 #include <note/arena.hpp>
 #include <note/string_pool.hpp>
@@ -119,7 +119,7 @@ struct TrackingAllocator {
 
 TEST_CASE("transact: small response fits without growth") {
     MockHal hal(100);  // 100-byte response
-    note::StreamingTransport transport(hal);
+    note::Protocol transport(hal);
     TrackingAllocator tracker;
     {
         auto nc = note::test::make_test_notecard(transport, tracker.to_allocator());
@@ -139,7 +139,7 @@ TEST_CASE("transact: small response fits without growth") {
 
 TEST_CASE("transact: large response triggers realloc growth") {
     MockHal hal(3000);  // 3KB response — exceeds 1KB initial
-    note::StreamingTransport transport(hal);
+    note::Protocol transport(hal);
     TrackingAllocator tracker;
     auto nc = note::test::make_test_notecard(transport, tracker.to_allocator());
 
@@ -155,7 +155,7 @@ TEST_CASE("transact: large response triggers realloc growth") {
 
 TEST_CASE("transact: realloc failure returns clean error") {
     MockHal hal(3000);  // needs >1KB but allocator capped at 1.5KB
-    note::StreamingTransport transport(hal);
+    note::Protocol transport(hal);
     TrackingAllocator tracker;
     tracker.max_total = 1536;  // allow initial 1KB, deny growth to 2KB
     auto nc = note::test::make_test_notecard(transport, tracker.to_allocator());
@@ -167,7 +167,7 @@ TEST_CASE("transact: realloc failure returns clean error") {
 
 TEST_CASE("transact: no leak on realloc failure") {
     MockHal hal(3000);
-    note::StreamingTransport transport(hal);
+    note::Protocol transport(hal);
     TrackingAllocator tracker;
     tracker.max_total = 1536;
     auto nc = note::test::make_test_notecard(transport, tracker.to_allocator());
@@ -181,7 +181,7 @@ TEST_CASE("transact: no leak on realloc failure") {
 
 TEST_CASE("transact: initial alloc failure returns clean error") {
     MockHal hal(100);
-    note::StreamingTransport transport(hal);
+    note::Protocol transport(hal);
     TrackingAllocator tracker;
     tracker.max_total = 0;  // can't allocate anything
     auto nc = note::test::make_test_notecard(transport, tracker.to_allocator());
@@ -197,7 +197,7 @@ TEST_CASE("transact: initial alloc failure returns clean error") {
 
 TEST_CASE("transact: caller owns each buffer independently") {
     MockHal hal(100);
-    note::StreamingTransport transport(hal);
+    note::Protocol transport(hal);
     TrackingAllocator tracker;
     auto nc = note::test::make_test_notecard(transport, tracker.to_allocator());
 
@@ -217,7 +217,7 @@ TEST_CASE("transact: caller owns each buffer independently") {
 
 TEST_CASE("transact: OwnedBuffer freed on scope exit") {
     MockHal hal(100);
-    note::StreamingTransport transport(hal);
+    note::Protocol transport(hal);
     TrackingAllocator tracker;
     auto nc = note::test::make_test_notecard(transport, tracker.to_allocator());
 
@@ -236,7 +236,7 @@ TEST_CASE("transact: OwnedBuffer freed on scope exit") {
 
 TEST_CASE("transact(buf): overflow returns error and drains response") {
     MockHal hal(500);
-    note::StreamingTransport transport(hal);
+    note::Protocol transport(hal);
     auto nc = note::test::make_test_notecard(transport);
 
     char buf[64];  // way too small
@@ -246,7 +246,7 @@ TEST_CASE("transact(buf): overflow returns error and drains response") {
 
     // Second call should work — the HAL was drained, not left with stale data
     MockHal hal2(30);
-    note::StreamingTransport transport2(hal2);
+    note::Protocol transport2(hal2);
     auto nc2 = note::test::make_test_notecard(transport2);
     char buf2[256];
     auto rsp2 = nc2.transact(R"({"req":"card.version"})", buf2);
@@ -259,7 +259,7 @@ TEST_CASE("transact(buf): overflow returns error and drains response") {
 
 TEST_CASE("transact: works with arena allocator") {
     MockHal hal(100);
-    note::StreamingTransport transport(hal);
+    note::Protocol transport(hal);
 
     char pool[4096];
     note::MonotonicArena arena(pool);
@@ -308,7 +308,7 @@ TEST_CASE("StringPool: interned string usable as C string") {
 
 TEST_CASE("transact: arena exhaustion returns clean error") {
     MockHal hal(3000);  // needs >1KB
-    note::StreamingTransport transport(hal);
+    note::Protocol transport(hal);
 
     char pool[512];  // tiny arena — can't hold the response
     note::MonotonicArena arena(pool);

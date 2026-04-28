@@ -5,7 +5,7 @@
 ///
 /// Subclasses implement the four primitives: transmit, read, reset,
 /// write_line_terminator. Protocol logic (retry, CRC, JSON framing)
-/// lives in StreamingTransport / BufferedTransport, not here.
+/// lives in Protocol / BufferedTransport, not here.
 
 #include <note/error.hpp>
 #include <note/types.hpp>

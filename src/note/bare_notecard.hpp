@@ -1,6 +1,6 @@
 #pragma once
 
-// BareNotecard uses non-template StreamingTransport which requires
+// BareNotecard uses non-template Protocol which requires
 // IStreamingTransport — not available under NOTE_NO_POLYMORPHIC.
 #if !NOTE_NO_POLYMORPHIC
 
@@ -17,7 +17,7 @@
 /// Assumes NonIdempotent safety — only retries on SendFailed.
 ///
 /// Usage:
-///   note::StreamingTransport transport(hal);
+///   note::Protocol transport(hal);
 ///   note::BareNotecard bare(transport);
 ///
 ///   char buf[512];
@@ -31,14 +31,14 @@
 #include "retry_policy.hpp"
 #include "safety.hpp"
 #include "span.hpp"
-#include "streaming_transport.hpp"
+#include "protocol.hpp"
 #include "types.hpp"
 
 namespace note {
 
 class BareNotecard {
 public:
-    explicit BareNotecard(StreamingTransport& transport)
+    explicit BareNotecard(Protocol& transport)
         : transport_(transport) {}
 
     /// Send pre-formatted JSON request, read response into caller's buffer.
@@ -108,7 +108,7 @@ private:
         timing_.has_previous = true;
     }
 
-    StreamingTransport& transport_;
+    Protocol& transport_;
     uint32_t timeout_ms_ = 10000;
     RetryPolicy retry_policy_{};
     TransactionTiming timing_{};

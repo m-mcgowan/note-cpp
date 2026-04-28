@@ -22,7 +22,7 @@
 
 // Globals — shared test fixture + firmware version gating.
 note::Api<>* g_api = nullptr;
-note::StreamingTransport* g_streaming_transport = nullptr;
+note::Protocol* g_streaming_transport = nullptr;
 int g_fw_version = 0;
 static std::string g_fw_excludes;
 
@@ -35,8 +35,8 @@ static note::transport::NotecardSerial<>& serial_transport() {
     static note::transport::NotecardSerial<> t{serial_hal()};
     return t;
 }
-static note::StreamingTransport& serial_streaming() {
-    static note::StreamingTransport st{serial_transport()};
+static note::Protocol& serial_streaming() {
+    static note::Protocol st{serial_transport()};
     return st;
 }
 #endif
@@ -54,8 +54,8 @@ static note::transport::NotecardI2c<>& i2c_transport() {
     static note::transport::NotecardI2c<> t{i2c_hal()};
     return t;
 }
-static note::StreamingTransport& i2c_streaming() {
-    static note::StreamingTransport st{i2c_transport()};
+static note::Protocol& i2c_streaming() {
+    static note::Protocol st{i2c_transport()};
     return st;
 }
 #endif

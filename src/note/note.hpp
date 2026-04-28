@@ -6,7 +6,7 @@
 ///
 /// Pulls in:
 ///   - the typed API (api.hpp transitively brings Notecard, transport,
-///     NOTE_FIELDS, StreamingTransport, Allocator, duration units, etc.)
+///     NOTE_FIELDS, Protocol, Allocator, duration units, etc.)
 ///   - compile-time JSON helpers (note::json<lambda>, JsonBuf, json_fmt)
 ///
 /// Platform HALs stay in their own umbrellas — see:

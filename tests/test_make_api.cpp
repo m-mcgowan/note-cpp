@@ -8,7 +8,7 @@
 namespace {
 
 note::Notecard make_nc(note::test::TestJsonBackend& backend,
-                       note::CallbackTransport& transport) {
+                       note::test::CallbackTransport& transport) {
     return note::test::make_test_notecard(backend, transport);
 }
 
@@ -21,7 +21,7 @@ note::Notecard make_nc(note::test::TestJsonBackend& backend,
 TEST_CASE("make_api(nc) returns unconstrained Api") {
     note::test::TestJsonBackend backend;
     std::string last_req;
-    note::CallbackTransport transport(
+    note::test::CallbackTransport transport(
         [&last_req](note::string_view r, uint32_t) -> note::Result<note::string_view> {
             last_req = std::string(r);
             return "{}";
@@ -53,7 +53,7 @@ TEST_CASE("make_api(nc) returns unconstrained Api") {
 TEST_CASE("make_api with constrained target — supported endpoints work") {
     note::test::TestJsonBackend backend;
     std::string last_req;
-    note::CallbackTransport transport(
+    note::test::CallbackTransport transport(
         [&last_req](note::string_view r, uint32_t) -> note::Result<note::string_view> {
             last_req = std::string(r);
             return "{}";
@@ -81,7 +81,7 @@ TEST_CASE("make_api with constrained target — supported endpoints work") {
 TEST_CASE("make_api with Product::Cell target — universal endpoints work") {
     note::test::TestJsonBackend backend;
     std::string last_req;
-    note::CallbackTransport transport(
+    note::test::CallbackTransport transport(
         [&last_req](note::string_view r, uint32_t) -> note::Result<note::string_view> {
             last_req = std::string(r);
             return "{}";
@@ -103,7 +103,7 @@ TEST_CASE("make_api with Product::Cell target — universal endpoints work") {
 TEST_CASE("Strict mode — supported endpoints work at runtime") {
     note::test::TestJsonBackend backend;
     std::string last_req;
-    note::CallbackTransport transport(
+    note::test::CallbackTransport transport(
         [&last_req](note::string_view r, uint32_t) -> note::Result<note::string_view> {
             last_req = std::string(r);
             return "{}";
@@ -131,7 +131,7 @@ TEST_CASE("Strict mode — supported endpoints work at runtime") {
 TEST_CASE("Api(nc, target) — constrained via constructor") {
     note::test::TestJsonBackend backend;
     std::string last_req;
-    note::CallbackTransport transport(
+    note::test::CallbackTransport transport(
         [&last_req](note::string_view r, uint32_t) -> note::Result<note::string_view> {
             last_req = std::string(r);
             return "{}";
@@ -155,7 +155,7 @@ TEST_CASE("Api(nc, target) — constrained via constructor") {
 TEST_CASE("Api(nc, target) — strict mode via constructor") {
     note::test::TestJsonBackend backend;
     std::string last_req;
-    note::CallbackTransport transport(
+    note::test::CallbackTransport transport(
         [&last_req](note::string_view r, uint32_t) -> note::Result<note::string_view> {
             last_req = std::string(r);
             return "{}";
@@ -187,7 +187,7 @@ TEST_CASE("Api(nc, target) — strict mode via constructor") {
 TEST_CASE("Api with MinFirmware — firmware-gated endpoints work when version is sufficient") {
     note::test::TestJsonBackend backend;
     std::string last_req;
-    note::CallbackTransport transport(
+    note::test::CallbackTransport transport(
         [&last_req](note::string_view r, uint32_t) -> note::Result<note::string_view> {
             last_req = std::string(r);
             return "{}";
@@ -211,7 +211,7 @@ TEST_CASE("Api with MinFirmware — firmware-gated endpoints work when version i
 TEST_CASE("Api with combined Hardware + Firmware target") {
     note::test::TestJsonBackend backend;
     std::string last_req;
-    note::CallbackTransport transport(
+    note::test::CallbackTransport transport(
         [&last_req](note::string_view r, uint32_t) -> note::Result<note::string_view> {
             last_req = std::string(r);
             return "{}";

@@ -19,7 +19,7 @@
 #include <note/api.hpp>
 #include <note/arena.hpp>
 #include <note/allocator.hpp>
-#include <note/streaming_transport.hpp>
+#include <note/protocol.hpp>
 #include <note/string_pool.hpp>
 #include <note/struct_sink.hpp>
 
@@ -36,7 +36,7 @@ namespace {
 struct Harness {
     note::test::TestJsonBackend backend;
     std::string last_req;
-    note::CallbackTransport transport;
+    note::test::CallbackTransport transport;
     note::Notecard nc;
     UnconstrainedApi api;
 
@@ -58,7 +58,7 @@ struct Harness {
 // Transport that always fails — used to exercise ApiResult error constructors.
 struct FailHarness {
     note::test::TestJsonBackend backend;
-    note::CallbackTransport transport;
+    note::test::CallbackTransport transport;
     note::Notecard nc;
     UnconstrainedApi api;
 
@@ -78,7 +78,7 @@ struct FailHarness {
 // Backend that returns a Notecard error — exercises ApiResult(ErrorInfo) constructors.
 struct NcErrorHarness {
     note::test::ErrorJsonBackend backend;
-    note::CallbackTransport transport;
+    note::test::CallbackTransport transport;
     note::Notecard nc;
     UnconstrainedApi api;
 
@@ -118,7 +118,7 @@ public:
 
 struct StreamingHarness {
     CoverageMockHal hal;
-    note::StreamingTransport transport{hal};
+    note::Protocol transport{hal};
     note::Notecard nc;
     UnconstrainedApi api;
     StreamingHarness()

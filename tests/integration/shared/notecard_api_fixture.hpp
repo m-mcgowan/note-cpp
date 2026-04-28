@@ -7,7 +7,7 @@
 
 #include <note/api.hpp>
 #include <note/error.hpp>
-#include <note/streaming_transport.hpp>
+#include <note/protocol.hpp>
 #include <doctest.h>
 
 // Global Api instance — set by each environment's board init.
@@ -17,10 +17,10 @@ extern note::Api<>* g_api;
 /// each environment's board init alongside g_api. Tests that want to
 /// exercise the same physical transport with a *buffered* (tree-mode)
 /// Notecard pass this directly to
-/// `note::Notecard(JsonBackend&, ITransport&)` — `StreamingTransport`
+/// `note::Notecard(JsonBackend&, ITransport&)` — `Protocol`
 /// satisfies `ITransport` natively, so the ctor lights up the buffered
 /// execute path that supports `body()` walking.
-extern note::StreamingTransport* g_streaming_transport;
+extern note::Protocol* g_streaming_transport;
 
 /// Get the global Api reference. Asserts that it was initialized.
 inline note::Api<>& notecard_api() { return *g_api; }

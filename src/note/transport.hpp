@@ -1,13 +1,32 @@
 #pragma once
 
 /// @file transport.hpp
-/// IBufferedTransport — buffered transport interface.
-/// CallbackTransport — adapter for test lambdas.
+/// ITransport — unified Notecard session interface (Phase 3 of the
+/// transport-rename arc; see docs/superpowers/plans/2026-04-27-transport-renames.md).
+/// IBufferedTransport — deprecated bridge that adapts the old
+/// `transact(req, timeout) -> Result<string_view>` shape to ITransport.
+/// CallbackTransport — adapter for test lambdas (kept in note::test::).
+///
+/// `ITransport` exposes three transaction operations:
+///   - `transact(req, span<char> buf, timeout)` — response copied into the
+///     caller's buffer; returned `string_view` aliases that buffer.
+///   - `transact(req, JsonSink& sink, timeout)` — response SAX-parsed into
+///     a sink without an intermediate buffer.
+///   - `send(req)` — fire-and-forget command.
+///
+/// Concrete protocol drivers (notably `StreamingTransport`) override all
+/// three natively for efficiency. Custom transports that only implement
+/// the buffered overload get the sink overload for free via the default
+/// impl, which reads into a local buffer then SAX-parses it.
 
+#include <note/debug.hpp>
 #include <note/error.hpp>
+#include <note/json_sax.hpp>
+#include <note/span.hpp>
 #include <note/transport_hal.hpp>
 #include <note/types.hpp>
 
+#include <cstring>
 #if !NOTE_NO_STD_STRING
 #include <functional>
 #endif
@@ -15,24 +34,44 @@
 namespace note {
 
 // ---------------------------------------------------------------------------
-// IBufferedTransport — buffered transport contract
+// ITransport — unified session interface
 // ---------------------------------------------------------------------------
 
-/// Buffered transport interface for Notecard communication.
+/// Unified Notecard session interface. Concrete transports must provide
+/// the three transact/send overloads, plus reset/abort/hal. Binary I/O and
+/// debug listener installation are optional (defaults: not supported / no-op).
 ///
-/// Implementations handle the wire protocol and buffer management.
-/// The string_view returned from transact() points into the transport's
-/// internal buffer and is valid until the next transact() call.
-struct IBufferedTransport {
-    virtual ~IBufferedTransport() = default;
+/// The two `transact()` overloads correspond to two response presentations:
+///   - `span<char>` — caller-owned buffer; response copied in, returned as a
+///     `string_view` aliasing the leading bytes.
+///   - `JsonSink&`  — SAX-parsed straight into the sink; no buffer needed.
+struct ITransport {
+    virtual ~ITransport() = default;
 
-    /// Send a JSON request and receive the response.
-    virtual Result<string_view> transact(string_view request, uint32_t timeout_ms) = 0;
+    /// Send a JSON request and copy the response into the caller's buffer.
+    virtual Result<string_view> transact(string_view request, span<char> buf,
+                                         uint32_t timeout_ms) = 0;
+
+    /// Send a JSON request and SAX-parse the response into `sink`.
+    ///
+    /// Default impl: allocate a stack buffer, delegate to the buffered
+    /// overload, then `sax_parse` the buffer into `sink`. Override for a
+    /// streaming-native implementation that avoids the intermediate buffer.
+    virtual Result<void> transact(string_view request, JsonSink& sink,
+                                  uint32_t timeout_ms) {
+        char buf[kDefaultBridgeBufferBytes];
+        auto rv = transact(request, span<char>(buf, sizeof(buf)), timeout_ms);
+        if (!rv) return Unexpected(rv.error());
+        auto err = sax_parse(*rv, sink);
+        if (!err.empty())
+            return make_error(Error::ResponseLost, Cause::Unspecified, err);
+        return {};
+    }
 
     /// Send a JSON command (fire-and-forget, no response expected).
     virtual Result<void> send(string_view request) = 0;
 
-    /// Reset the transport to a known state.
+    /// Reset the transport to a known state (e.g. re-init handshake).
     virtual void reset() = 0;
 
     /// Request abort of an in-progress transaction.
@@ -41,6 +80,9 @@ struct IBufferedTransport {
     /// Access the underlying byte HAL — for timing primitives, bus reset,
     /// and any low-level operations that don't go through the protocol.
     virtual Hal& hal() = 0;
+
+    /// Install a debug listener for wire/timing/memory events. Default: no-op.
+    virtual void set_debug(const DebugListener&) {}
 
     /// Write raw bytes (for binary COBS streaming). Default: not supported.
     virtual Result<void> write(const uint8_t*, size_t) {
@@ -51,10 +93,53 @@ struct IBufferedTransport {
     virtual Result<size_t> read(uint8_t*, size_t, uint32_t) {
         return make_error(Error::NotReady, "binary transfer not supported");
     }
+
+protected:
+    /// Stack buffer size for the default `transact(req, sink)` bridge impl.
+    /// Sized for typical Notecard responses; bumps if a derived class needs more.
+    static constexpr size_t kDefaultBridgeBufferBytes = 1024;
 };
 
-/// @deprecated Use IBufferedTransport directly.
-using ITransport = IBufferedTransport;
+
+// ---------------------------------------------------------------------------
+// IBufferedTransport — DEPRECATED bridge
+// ---------------------------------------------------------------------------
+
+/// Bridges the old `transact(req, timeout) -> Result<string_view>` shape
+/// (response in transport-owned storage) to the unified `ITransport`. New
+/// transports should derive from `ITransport` directly; this class remains
+/// for one release so existing buffered subclasses
+/// (`note::test::CallbackTransport`, `note::BufferedStreamingTransport`)
+/// continue to compile without a per-class rewrite.
+struct IBufferedTransport : public ITransport {
+    /// Old buffered transact: response is placed in transport-owned storage
+    /// and returned by view. The view is valid until the next `transact()`
+    /// call. Subclasses override THIS method; the new `ITransport` overloads
+    /// below bridge to it automatically.
+    virtual Result<string_view> transact(string_view request, uint32_t timeout_ms) = 0;
+
+    /// Bridge: copies the transport-owned response into the caller's buffer.
+    Result<string_view> transact(string_view request, span<char> buf,
+                                 uint32_t timeout_ms) override {
+        auto rv = transact(request, timeout_ms);
+        if (!rv) return Unexpected(rv.error());
+        if (rv->size() >= buf.size())
+            return make_error(Error::Overflow, "response exceeds buffer");
+        std::memcpy(buf.data(), rv->data(), rv->size());
+        return string_view(buf.data(), rv->size());
+    }
+
+    /// Bridge: SAX-parses the transport-owned response into the sink.
+    Result<void> transact(string_view request, JsonSink& sink,
+                          uint32_t timeout_ms) override {
+        auto rv = transact(request, timeout_ms);
+        if (!rv) return Unexpected(rv.error());
+        auto err = sax_parse(*rv, sink);
+        if (!err.empty())
+            return make_error(Error::ResponseLost, Cause::Unspecified, err);
+        return {};
+    }
+};
 
 
 #if !NOTE_NO_STD_STRING
@@ -82,7 +167,7 @@ public:
 // CallbackTransport — adapter for test lambdas
 // ---------------------------------------------------------------------------
 
-/// Wraps function objects as an IBufferedTransport for testing and examples.
+/// Wraps function objects as a buffered transport for testing and examples.
 ///
 /// @code
 ///     note::test::CallbackTransport transport(

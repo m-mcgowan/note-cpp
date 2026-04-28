@@ -34,7 +34,7 @@
 
 // ── Mock transport (returns string_view into member buffer) ─────────────────
 
-struct MockTransport : note::ITransport {
+struct MockTransport : note::IBufferedTransport {
     std::string response_buf;
 
     note::Result<note::string_view> transact(note::string_view request, uint32_t) override {
@@ -47,8 +47,16 @@ struct MockTransport : note::ITransport {
     note::Result<void> send(note::string_view) override { return {}; }
     void reset() override {}
     void abort() override {}
-    uint32_t millis() override { return 0; }
-    void delay(uint32_t) override {}
+
+    struct NoopHal : note::Hal {
+        bool transmit(const uint8_t*, size_t) override { return true; }
+        note::Result<size_t> read(uint8_t*, size_t, uint32_t) override { return note::Result<size_t>{size_t{0}}; }
+        bool reset() override { return true; }
+        bool write_line_terminator() override { return true; }
+        uint32_t millis() override { return 0; }
+        void delay(uint32_t) override {}
+    } hal_;
+    note::Hal& hal() override { return hal_; }
 };
 
 // ── Pattern 1: BufferJsonBackend — zero heap allocation ─────────────────────

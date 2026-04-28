@@ -41,10 +41,10 @@ namespace detail {
         NcOwner()
             : nc_() {}
 
-        explicit NcOwner(ITransport& transport)
+        explicit NcOwner(IBufferedTransport& transport)
             : nc_(default_backend_, transport) {}
 
-        NcOwner(JsonBackend& backend, ITransport& transport)
+        NcOwner(JsonBackend& backend, IBufferedTransport& transport)
             : nc_(backend, transport) {}
     };
 
@@ -93,12 +93,12 @@ public:
         , Api<TargetT>(nc_) {}
 
     /// Construct with transport (uses default backend).
-    explicit NotecardApi(ITransport& transport)
+    explicit NotecardApi(IBufferedTransport& transport)
         : detail::NcOwner(transport)
         , Api<TargetT>(nc_) {}
 
     /// Construct with explicit backend + transport.
-    NotecardApi(JsonBackend& backend, ITransport& transport)
+    NotecardApi(JsonBackend& backend, IBufferedTransport& transport)
         : detail::NcOwner(backend, transport)
         , Api<TargetT>(nc_) {}
 
@@ -143,8 +143,9 @@ public:
 
 /// CTAD guide: map a pack of axis values at the call site to
 /// `NotecardApi<ComposedTarget<Axes...>>`. The requires clause keeps
-/// non-axis arguments (e.g. `ITransport&`) from matching this guide so
-/// their constructors deduce the default `TargetT=Unconstrained`.
+/// non-axis arguments (e.g. `IBufferedTransport&`) from matching this
+/// guide so their constructors deduce the default
+/// `TargetT=Unconstrained`.
 template<typename... Axes>
     requires (sizeof...(Axes) > 0
               && (detail::HasAxisCategory<Axes> && ...))
@@ -160,11 +161,11 @@ public:
         : detail::NcOwner()
         , Api<Notecard>(detail::NcOwner::nc_) {}
 
-    explicit NotecardApi(ITransport& transport)
+    explicit NotecardApi(IBufferedTransport& transport)
         : detail::NcOwner(transport)
         , Api<Notecard>(detail::NcOwner::nc_) {}
 
-    NotecardApi(JsonBackend& backend, ITransport& transport)
+    NotecardApi(JsonBackend& backend, IBufferedTransport& transport)
         : detail::NcOwner(backend, transport)
         , Api<Notecard>(detail::NcOwner::nc_) {}
 

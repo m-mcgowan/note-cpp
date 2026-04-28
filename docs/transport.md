@@ -43,6 +43,23 @@ only its predecessor's interface. Reading from the bottom up, the layers are:
 8. **`NotecardApi` (convenience bundle)** — single object bundling a default
    `Notecard` + `Api<>` so callers don't have to construct both. The 99% case.
 
+### Approximate OSI mapping
+
+The library's layer structure maps roughly onto the OSI 7-layer model. Useful as a mental model for readers familiar with networking; not a strict claim.
+
+| OSI layer | Concept | note-cpp type |
+|---|---|---|
+| 1+2 (physical / link) | byte conduit | `note::Hal` (and platform impls: `arduino::SerialHal`, `arduino::I2CHal`, `posix::*Hal`) |
+| 2 (data link) | Notecard wire framing — segment pacing, MTU, drain windows | `note::transport::NotecardSerial<>`, `note::transport::NotecardI2c<>` |
+| 2 (link config) | wire pacing policy | `note::transport::ProtocolPolicy` (+ `SerialPolicy` / `I2cPolicy`) |
+| 4-ish (link reliability) | CRC, retry, init handshake, line termination, sequence numbers | `note::Protocol` |
+| 5 (session contract) | unified transact/send interface | `note::ITransport` |
+| 5+ (session implementation) | session class | `note::Notecard` (+ peers `BareNotecard`, `StaticNotecard`) |
+| 6 (presentation) | bytes ↔ typed values | `JsonBackend`, `JsonReader`, `JsonBuilder`, `JsonSink` |
+| 7 (application) | typed builders / convenience bundle | `Api<>`, `NotecardApi` |
+
+Layer 4 is "ish" because Notecard is single-link with no routing — `Protocol` is really upper-link reliability rather than true OSI-Transport. The mapping is approximate, but the *discipline* of "one concept per layer, layers don't overlap" is the design principle the codebase aims for.
+
 ```mermaid
 flowchart TD
     Hal["<b>Hal</b><br/>byte conduit:<br/>transmit, read, reset, millis, delay"]

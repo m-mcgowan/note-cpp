@@ -16,8 +16,8 @@ hierarchy, reserved `_`-prefix system variables — read Blues' docs:
 
 This page focuses on the **C++ patterns** for using env vars from
 `note-cpp`: the four modes of `env.get`, streaming body parse into a
-struct, streaming-vs-buffered transport constraints, and the
-compile-time behaviour of the typed API.
+struct, the JSON-layer trade-offs between sink mode and tree mode,
+and the compile-time behaviour of the typed API.
 
 Full runnable example: [`examples/stdcpp/env-vars.cpp`](../examples/stdcpp/env-vars.cpp).
 
@@ -165,28 +165,26 @@ Zero runtime cost — the string is measured and emitted at compile time.
 See [json-builder.md](json-builder.md) for the full `JsonBuf` /
 `json<>` API including the runtime-values variant.
 
-## `.into()` works on every transport
+## `.into()` works in every JSON-layer mode
 
 `.into(T&)` is part of the high-level API contract — pass a struct
 describing the body fields you care about, and the response populates
-it. The mechanism doesn't depend on which transport `nc` was built
-against; both streaming and buffered paths run the same body-event
-dispatch. The example
+it. The mechanism doesn't depend on the JSON layer; both tree mode
+(JsonBackend supplied) and sink mode (no backend) run the same
+body-event dispatch. The example
 [`examples/stdcpp/env-vars.cpp`](../examples/stdcpp/env-vars.cpp)
-deliberately uses one of each to demonstrate parity, and the
-`tests/test_into_transport_agnostic.cpp` unit test pins the contract
-in CI.
+uses one of each to demonstrate parity, and
+`tests/test_transport_agnostic_api.cpp` pins the contract in CI.
 
 `response.body()` (returning a `JsonReader*` to walk dynamic shapes)
-remains a buffered-only facility because it requires a `JsonBackend`
-to materialise a tree. On a streaming-only Notecard, `body()` returns
-`nullptr` — body fields are dispatched as events at parse time, so
-`.into(T&)` is the way to capture them.
+remains a tree-mode-only facility because it needs a `JsonBackend` to
+materialise a tree. In sink mode, `body()` returns `nullptr` — body
+fields are dispatched as events at parse time, so `.into(T&)` is the
+way to capture them.
 
 For dynamic body shapes (keys not known at compile time) — or any
 case where you just want the raw response bytes — `nc.transact(json,
-buf)` works today on both streaming and buffered transports. Pair it
-with `note::scan::*` from
+buf)` works in both modes. Pair it with `note::scan::*` from
 [json_scan.hpp](../include/note/json_scan.hpp) to walk the response
 without pulling in a `JsonBackend`:
 
@@ -203,16 +201,12 @@ if (rsp) {
 ```
 
 A typed `body()` returning a `JsonReader*` is a separate facility —
-it's populated only by the buffered `Notecard(JsonBackend&,
-IBufferedTransport&)` ctor, which needs a `JsonBackend` (cJSON,
-nlohmann/json) and an `IBufferedTransport` over the wire. The
-buffered path is gated by `NOTE_NO_BUFFERED`, which `NOTE_MINIMAL=1`
-enables by default — so on AVR-class builds it is compiled out
-entirely and `.into(T&)` (or the `transact` + `scan` pattern above)
-is the only option. On larger targets it's available, but you have
-to wire the backend and supply the `IBufferedTransport` yourself;
-note-cpp doesn't ship one for Arduino I2C/serial today (only
-`CallbackTransport`, used by host tests).
+it's populated only by the tree-mode `Notecard(JsonBackend&,
+ITransport&)` ctor, which needs a `JsonBackend` (cJSON, nlohmann/json,
+or `BufferJsonBackend` for zero-heap). Tree mode is gated by
+`NOTE_NO_BUFFERED`, which `NOTE_MINIMAL=1` enables by default — so on
+AVR-class builds it is compiled out entirely and `.into(T&)` (or the
+`transact` + `scan` pattern above) is the only option.
 
 ## C++ level
 

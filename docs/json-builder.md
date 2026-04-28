@@ -54,9 +54,10 @@ constexpr auto default_interval = note::json<[](auto& b) {
     b.close();
 }>();
 
-// Send it via streaming_send_raw or any buffered transport that accepts
-// a pre-built JSON string. No builder, no allocator, no runtime
-// formatting — the entire string lives in flash.
+// Send it via nc.send(json) or nc.transact(json, buf) — the unified
+// raw-JSON API works in either JSON-layer mode (tree or sink). No
+// builder, no allocator, no runtime formatting — the entire string
+// lives in flash.
 ```
 
 See [environment-variables.md](environment-variables.md) for the full

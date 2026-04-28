@@ -5,9 +5,14 @@
 
 ## Implement `I2CHal`
 
-`NotecardI2c` currently extends `AbstractTransport` (the buffered path),
-so it is used with the buffered `Notecard` constructor. A `Hal`
-migration is planned.
+`I2CHal` is the byte-conduit interface — pure hardware I/O for the
+I2C bus. The library wraps your HAL in `transport::NotecardI2c<>`
+(which adds Notecard-specific I2C framing) and then in
+`StreamingTransport` (which adds protocol-level CRC, retry, and
+session semantics). Either Notecard ctor — sink mode
+(`Notecard(transport, alloc)`) or tree mode
+(`Notecard(backend, transport)`) — works on the resulting stack;
+both go through the unified `ITransport` interface.
 
 ```cpp
 #include <note/transport/i2c.hpp>
@@ -39,8 +44,15 @@ Wire it up:
 
 ```cpp
 MyI2c hal;
-note::transport::NotecardI2c transport(hal);
-note::Notecard nc(backend, transport);  // buffered path (IBufferedTransport)
+note::transport::NotecardI2c i2c{hal};
+note::StreamingTransport transport{i2c};
+
+// Tree mode (response.body() works) — pass a JsonBackend.
+note::backends::CjsonBackend backend;
+note::Notecard nc(backend, transport);
+
+// Or sink mode (.into(struct), no JsonBackend needed):
+// note::Notecard nc(transport, note::Allocator{});
 ```
 
 ## Arduino

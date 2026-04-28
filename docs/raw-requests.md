@@ -33,7 +33,10 @@ This is useful when:
 
 For endpoints or field combinations not in the generated types at all:
 
-This works with both the streaming and buffered transports. Use it for entirely new request types or field combinations not yet in the generated API:
+Requires tree mode (Notecard constructed with a `JsonBackend`) — the
+returned `JsonReader*` is the tree the backend parsed the response
+into. Use it for entirely new request types or field combinations not
+yet in the generated API:
 
 ```cpp
 auto result = nc.request("card.attn", [](note::JsonBuilder& b) {

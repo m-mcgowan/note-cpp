@@ -99,11 +99,14 @@ For zero-alloc: streaming path, or `BufferJsonBackend`, or `CjsonArenaBackend`.
 
 ## Configuration recipes
 
-### Streaming path — zero heap (recommended for embedded)
+### Sink mode — zero heap (recommended for embedded)
+
+No `JsonBackend`: requests build directly to the wire, responses
+SAX-parse into `Rsp::Sink` and (when set) `.into(struct)`.
 
 ```cpp
 note::transport::NotecardSerial serial_hal(hal);    // Hal
-note::StreamingTransport transport(serial_hal);     // IStreamingTransport
+note::StreamingTransport transport(serial_hal);     // ITransport (protocol)
 
 char arena_buf[256];
 note::MonotonicArena arena(arena_buf);
@@ -116,11 +119,14 @@ auto r = api.card.version().execute();   // 0 heap allocs, strings in arena
 
 No backend needed. No `std::string` linked. No `operator new`.
 
-### Buffered path — with `BufferJsonBackend` (zero heap)
+### Tree mode — with `BufferJsonBackend` (zero heap)
+
+A `JsonBackend` enables `response.body()` to return a walkable
+`JsonReader` tree.
 
 ```cpp
 note::backends::BufferJsonBackend<512, 64> backend;
-note::Notecard nc(backend, transport);   // IBufferedTransport
+note::Notecard nc(backend, transport);   // ITransport (same StreamingTransport)
 note::Api api(nc);
 
 auto r = api.card.version().execute();   // 0 heap allocs

@@ -124,7 +124,7 @@ set(NOTE_CPP_TEST_SOURCES_FULL_ONLY
     test_arduino_i2c_hal.cpp
     test_arduino_printable.cpp
     test_buffered_streaming_transport.cpp
-    test_into_transport_agnostic.cpp
+    test_transport_agnostic_api.cpp
     test_allocator_growth.cpp
     test_attention.cpp
     test_bare_notecard.cpp

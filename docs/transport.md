@@ -1,28 +1,61 @@
 # Transport
 
 `note-cpp` ships a complete, header-only implementation of both Notecard
-wire protocols (serial and I2C). Same timing, same CRC, same framing as
-note-c — no global state, no cJSON dependency, header-only.
+Serial and I2C wire protocols, with the timing, CRC and framing that Notecard expects (equivalent to
+note-c) using no global state and no cJSON dependency.
 
 ## Architecture
 
-The library is layered: each layer has one job, and the layer above sees
-only its predecessor's interface. Reading from the bottom up:
+The library uses a layered architecture — each layer has one job, and the layer above sees
+only its predecessor's interface. Reading from the bottom up, the layers are:
+
+1. **`Hal`** — platform byte conduit. `transmit`, `read`, `reset`, `millis`, `delay`,
+   `write_line_terminator`. No protocol logic; just moves bytes. You implement this
+   for your platform (or extend `arduino::SerialHal` / `arduino::I2CHal`).
+2. **`transport::NotecardSerial<Policy>` / `transport::NotecardI2c<Policy>`** — Notecard
+   wire framing over a byte `Hal`. Handles segment pacing, chunking, drain/reset windows,
+   and I2C MTU negotiation. Owns the `ProtocolPolicy` — wire-level timing fields
+   (`segment_*`, `intra_timeout_ms`, `reset_*`); runtime-mutable or compile-time
+   `[[no_unique_address]]`. These are themselves `Hal`s — the layer above sees a
+   framing-aware byte conduit.
+3. **`Protocol`** — full Notecard wire protocol over a framing `Hal`: CRC validation,
+   init handshake, line termination, sequence numbers. The only concrete protocol
+   driver. No retry — retry lives at the session layer.
+4. **`ITransport`** — unified session interface. `transact(req, span)` →
+   `string_view`, `transact(req, sink)` → SAX events, and `send(req)` (fire-and-forget).
+   Buffered vs streaming are *response presentations* (overloads), not sibling
+   transports. `Protocol` implements `ITransport` natively.
+5. **JSON layer** — turns response bytes into typed values. Tree mode (`JsonBackend`
+   walks a parsed tree) or sink mode (SAX events fire into `Rsp::Sink`). See
+   "JSON layer — the actual buffered/streaming choice" below.
+6. **Session — `Notecard` (or peer: `BareNotecard`, `StaticNotecard`)** — runtime
+   object holding an `ITransport&`, an optional `JsonBackend&`, a `RetryPolicy`,
+   and inter-transaction timing. Exposes `transact(json, buf)`, `send(json)`,
+   `execute(req)`. Retry happens here, gated by per-request `Safety`. The three
+   session classes are *peers* (alternative entry points), not stacked — pick one;
+   each carries its own retry, so there's no retry-of-retry by construction.
+7. **`Api<Session>`** — generated typed surface
+   (`api.note.read().into(struct).execute()`, `api.card.attn.arm().execute()`).
+   Each builder's `.execute()` dispatches to the bound session's `execute(req)` —
+   so typed and raw paths share one retry/transport pipeline.
+8. **`NotecardApi` (convenience bundle)** — single object bundling a default
+   `Notecard` + `Api<>` so callers don't have to construct both. The 99% case.
 
 ```mermaid
 flowchart TD
     Hal["<b>Hal</b><br/>byte conduit:<br/>transmit, read, reset, millis, delay"]
     NCSer["<b>transport::NotecardSerial</b><br/>Notecard wire framing over UART"]
     NCI2C["<b>transport::NotecardI2c</b><br/>Notecard wire framing over I2C"]
-    Proto["<b>StreamingTransport</b><br/>protocol: CRC, retry, init handshake,<br/>line termination, sequence numbers"]
-    ITrans["<b>ITransport</b><br/>session: transact + send<br/>(unified, no buffered/streaming split at this layer)"]
-    JsonLayer["<b>JSON layer</b><br/>turns response bytes into typed values<br/>tree-mode (JsonBackend) or sink-mode (Rsp::Sink)"]
-    NC["<b>Notecard / NotecardApi</b><br/>execute, transact, send<br/>retry + dispatch"]
-    Typed["<b>Typed API</b> — <code>api.note.read().into(struct).execute()</code>"]
-    Raw["<b>Raw JSON API</b> — <code>nc.transact(json, buf)</code>, <code>nc.send(json)</code>"]
+    Proto["<b>Protocol</b><br/>wire protocol: CRC, init handshake,<br/>line termination, sequence numbers"]
+    ITrans["<b>ITransport</b><br/>unified session interface:<br/>transact (span | sink), send"]
+    JsonLayer["<b>JSON layer</b><br/>response bytes → typed values<br/>tree-mode (JsonBackend) or sink-mode (Rsp::Sink)"]
+    Session["<b>Session — Notecard</b><br/>peers: BareNotecard, StaticNotecard<br/>holds transport + backend + RetryPolicy<br/>execute / transact / send (retry happens here)"]
+    Api["<b>Api&lt;Session&gt;</b> (generated typed surface)<br/><code>api.note.read().into(struct).execute()</code>"]
+    Raw["<b>Raw JSON</b> on the session<br/><code>nc.transact(json, buf)</code>, <code>nc.send(json)</code>"]
+    Bundle["<b>NotecardApi</b> (convenience)<br/>Notecard + Api&lt;&gt; bundled"]
 
-    SerialDriver["<b>SerialHal</b><br/>your UART driver"]
-    I2CDriver["<b>I2CHal</b><br/>your I2C driver"]
+    SerialDriver["<b>SerialHal</b><br/>Platform UART driver"]
+    I2CDriver["<b>I2CHal</b><br/>Platform I2C driver"]
 
     SerialDriver --> Hal
     I2CDriver --> Hal
@@ -30,10 +63,12 @@ flowchart TD
     NCSer --> Proto
     NCI2C --> Proto
     Proto --> ITrans
-    ITrans --> JsonLayer
-    JsonLayer --> NC
-    NC --> Typed
-    NC --> Raw
+    ITrans --> Session
+    JsonLayer -.-> Session
+    Session --> Raw
+    Session --> Api
+    Api -.-> Bundle
+    Session -.-> Bundle
 
     classDef user fill:#ffe9b3,stroke:#c08400,color:#000
     class SerialDriver,I2CDriver user
@@ -55,12 +90,13 @@ COBS binary transfer — all built on your HAL.
 include/note/
     transport_hal.hpp          Hal (pure HAL interface)
     transport.hpp              ITransport (unified session interface)
-    streaming_transport.hpp    StreamingTransport (protocol driver)
+    protocol.hpp               Protocol (concrete wire-protocol driver)
 
 include/note/transport/
-    serial.hpp          SerialHal, SerialCallbackHal, NotecardSerial
-    i2c.hpp             I2CHal,    I2cCallbackHal,    NotecardI2c
-    detail/crc32.hpp    CRC32, crc_add, crc_check_and_strip
+    serial.hpp             SerialHal, SerialCallbackHal, NotecardSerial
+    i2c.hpp                I2CHal,    I2cCallbackHal,    NotecardI2c
+    protocol_policy.hpp    ProtocolPolicy, SerialPolicy, I2cPolicy (+ Static* variants)
+    detail/crc32.hpp       CRC32, crc_add, crc_check_and_strip
 ```
 
 > **Naming note.** `IBufferedTransport` and `IStreamingTransport` are

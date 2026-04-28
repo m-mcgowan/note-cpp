@@ -116,8 +116,7 @@ was constructed against:
   `api.note.update(file, id).body(struct).execute()`).
 - **Raw JSON API** (`nc.transact(json, buf)`, `nc.send(json)`).
 
-This is pinned in CI by `tests/test_transport_agnostic_api.cpp`, which
-pairs four call-site categories against both Notecard ctors:
+> Contributor Note: This is pinned in CI by `tests/test_transport_agnostic_api.cpp`, which pairs four call-site categories against both Notecard ctors:
 
 | § | Surface | Streaming | Buffered |
 |---|---|:---:|:---:|
@@ -134,7 +133,7 @@ those four pairs goes red.
 What people often call "buffered transport" vs "streaming transport"
 isn't really about *transport* — those terms describe the **JSON
 layer**: the strategy `Notecard` runs internally to turn response
-bytes into typed values.
+bytes into typed values (when using the typed API), or for generating or parsing the JSON data directly in the application.
 
 | Mode | How it parses | Enables | Memory profile |
 |------|---|---|---|

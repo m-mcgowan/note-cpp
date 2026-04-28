@@ -276,7 +276,5 @@ inline constexpr uint32_t kI2cResetDrainMs     = I2cPolicy{}.reset_drain_ms;
 inline constexpr uint32_t kI2cResetSyncRetries = I2cPolicy{}.reset_sync_retries;
 inline constexpr uint32_t kI2cResponsePollMs   = I2cPolicy{}.response_poll_ms;
 inline constexpr uint32_t kI2cIntraTimeoutMs   = I2cPolicy{}.intra_timeout_ms;
-inline constexpr uint32_t kI2cMaxRetries       = I2cPolicy{}.max_retries;
-inline constexpr uint32_t kI2cRetryDelayMs     = I2cPolicy{}.retry_delay_ms;
 
 }  // namespace note::transport

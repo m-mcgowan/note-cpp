@@ -122,8 +122,6 @@ All in `namespace note::transport`:
 | `kI2cResetSyncRetries` | 10 | `CARD_RESET_SYNC_RETRIES` |
 | `kI2cResponsePollMs` | 50 ms | poll interval in `_i2cNoteQueryLength` |
 | `kI2cIntraTimeoutMs` | 1000 ms | `CARD_INTRA_TRANSACTION_TIMEOUT_SEC * 1000` |
-| `kI2cMaxRetries` | 5 | — |
-| `kI2cRetryDelayMs` | 500 ms | — |
 
 ## Protocol notes
 

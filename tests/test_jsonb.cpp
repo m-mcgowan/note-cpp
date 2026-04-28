@@ -982,7 +982,7 @@ TEST_CASE("jsonb end-to-end: Notecard card.version") {
     note::MonotonicArena arena(arena_buf);
 
     JsonbMockHal hal;
-    note::Protocol transport(hal, 0);
+    note::Protocol transport(hal);
     // Use Notecard directly since StaticNotecard is template-heavy
     note::Notecard nc(transport, note::arena_allocator(arena));
     note::Api<> api(nc);

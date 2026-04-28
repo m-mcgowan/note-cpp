@@ -202,7 +202,7 @@ struct I2cTestHarness {
 
     I2cTestHarness()
         : notecard_i2c(hal)
-        , transport(notecard_i2c, /*max_retries=*/5, /*retry_delay_ms=*/500)
+        , transport(notecard_i2c)
     {}
 
     // Convenience: transact with a simple build function and capture sink.
@@ -710,7 +710,7 @@ TEST_CASE("I2cCallbackHal delegates to callbacks") {
     };
 
     NotecardI2c<I2cPolicy> notecard_i2c(cb);
-    note::Protocol transport(notecard_i2c, /*max_retries=*/5);
+    note::Protocol transport(notecard_i2c);
     note::IStreamingTransport& t = transport;
     note::JsonSink null_sink;
     auto build = [](note::JsonBuilder& b) { b.add("req", "hub.status"); };

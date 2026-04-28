@@ -77,8 +77,6 @@ All in `namespace note::transport`:
 | `kIntraTransactionTimeoutMs` | 1000 ms | `CARD_INTRA_TRANSACTION_TIMEOUT_SEC * 1000` |
 | `kResetDrainMs` | 500 ms | `CARD_RESET_DRAIN_MS` |
 | `kResetSyncRetries` | 10 | `CARD_RESET_SYNC_RETRIES` |
-| `kMaxRetries` | 5 | — |
-| `kRetryDelayMs` | 500 ms | — |
 
 ## Protocol notes
 

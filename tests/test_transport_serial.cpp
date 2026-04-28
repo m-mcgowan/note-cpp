@@ -187,7 +187,7 @@ struct SerialTestHarness {
 
     SerialTestHarness()
         : notecard_serial(hal)
-        , transport(notecard_serial, /*max_retries=*/5, /*retry_delay_ms=*/500)
+        , transport(notecard_serial)
     {}
 
     // Convenience: transact with a simple build function and capture sink.
@@ -278,7 +278,7 @@ TEST_CASE("reset retries on non-control characters in drain") {
 
     retry_hal.json_responses.push_back("{}\r\n");
     NotecardSerial<SerialPolicy> notecard_serial(retry_hal);
-    note::Protocol transport(notecard_serial, /*max_retries=*/5);
+    note::Protocol transport(notecard_serial);
     note::IStreamingTransport& t = transport;
     note::JsonSink null_sink;
     auto build = [](note::JsonBuilder& b) { b.add("req", "hub.set"); };
@@ -565,7 +565,7 @@ TEST_CASE("SerialCallbackHal delegates to callbacks") {
     };
 
     NotecardSerial<SerialPolicy> notecard_serial(cb);
-    note::Protocol transport(notecard_serial, /*max_retries=*/5);
+    note::Protocol transport(notecard_serial);
     note::IStreamingTransport& t = transport;
     note::JsonSink null_sink;
     auto build = [](note::JsonBuilder& b) { b.add("req", "hub.status"); };

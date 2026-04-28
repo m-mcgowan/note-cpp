@@ -32,10 +32,10 @@
 //
 //   NotecardSerial<StaticSerialPolicy<SerialPolicy::fast()>> transport(hal);
 //
-// Usage — runtime mutable policy (28 bytes overhead):
+// Usage — runtime mutable policy:
 //
 //   NotecardSerial<SerialPolicy> transport(hal);
-//   transport.policy.max_retries = 1;  // adjust before a destructive request
+//   transport.policy.segment_delay_ms = 0;  // adjust pacing on a fast bus
 
 namespace note::transport {
 
@@ -197,7 +197,5 @@ inline constexpr uint32_t kSerialSegmentDelayMs      = SerialPolicy{}.segment_de
 inline constexpr uint32_t kIntraTransactionTimeoutMs = SerialPolicy{}.intra_timeout_ms;
 inline constexpr uint32_t kResetDrainMs              = SerialPolicy{}.reset_drain_ms;
 inline constexpr uint32_t kResetSyncRetries          = SerialPolicy{}.reset_sync_retries;
-inline constexpr uint32_t kMaxRetries                = SerialPolicy{}.max_retries;
-inline constexpr uint32_t kRetryDelayMs              = SerialPolicy{}.retry_delay_ms;
 
 }  // namespace note::transport

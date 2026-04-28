@@ -238,24 +238,15 @@ class Protocol {
 public:
     explicit Protocol(HalT& hal)
         : hal_(hal) {}
-
-    Protocol(HalT& hal, uint32_t /*max_retries*/, uint32_t /*retry_delay_ms*/ = 500)
-        : hal_(hal) {}
 #elif NOTE_NO_POLYMORPHIC
 class Protocol {
 public:
     explicit Protocol(Hal& hal)
         : hal_(hal) {}
-
-    Protocol(Hal& hal, uint32_t /*max_retries*/, uint32_t /*retry_delay_ms*/ = 500)
-        : hal_(hal) {}
 #else
 class Protocol : public IStreamingTransport {
 public:
     explicit Protocol(Hal& hal)
-        : hal_(hal) {}
-
-    Protocol(Hal& hal, uint32_t /*max_retries*/, uint32_t /*retry_delay_ms*/ = 500)
         : hal_(hal) {}
 #endif
 

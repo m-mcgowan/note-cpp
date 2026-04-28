@@ -22,7 +22,6 @@ TEST_CASE("Serial default policy matches note-c") {
     CHECK(p.segment_max_len  == 250);   // CARD_REQUEST_SERIAL_SEGMENT_MAX_LEN
     CHECK(p.segment_delay_ms == 250);   // CARD_REQUEST_SERIAL_SEGMENT_DELAY_MS
     CHECK(p.intra_timeout_ms == 1000);  // CARD_INTRA_TRANSACTION_TIMEOUT_SEC * 1000
-    CHECK(p.max_retries      == 5);
 }
 
 TEST_CASE("I2C default policy matches note-c") {

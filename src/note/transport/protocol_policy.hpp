@@ -44,6 +44,10 @@ namespace note::transport {
 // ProtocolPolicy — fields common to all Notecard wire transports
 // ---------------------------------------------------------------------------
 
+// Wire-level pacing only. Transaction retry lives at the session layer
+// (`note::Notecard` / `BareNotecard` / `StaticNotecard`) via `note::RetryPolicy`
+// and `retry.hpp` — not here. `reset_sync_retries` below is wire-level (drain
+// attempts on bus reset), not transaction-level.
 #if NOTE_MUTABLE_POLICY
 struct ProtocolPolicy {
     uint32_t segment_max_len    = 250;   // max bytes per TX segment before a pacing delay
@@ -51,8 +55,6 @@ struct ProtocolPolicy {
     uint32_t intra_timeout_ms   = 1000;  // timeout after first response byte (ms)
     uint32_t reset_drain_ms     = 500;   // drain window per reset attempt (ms)
     uint32_t reset_sync_retries = 10;    // max reset attempts before giving up
-    uint32_t max_retries        = 5;     // max transaction retries on failure
-    uint32_t retry_delay_ms     = 500;   // delay between retries (ms)
 };
 #else
 /// Constant protocol policy — all values are constexpr, zero storage.
@@ -63,8 +65,6 @@ struct ProtocolPolicy {
     static constexpr uint16_t intra_timeout_ms   = 1000;
     static constexpr uint16_t reset_drain_ms     = 500;
     static constexpr uint16_t reset_sync_retries = 10;
-    static constexpr uint16_t max_retries        = 5;
-    static constexpr uint16_t retry_delay_ms     = 500;
 };
 #endif
 
@@ -84,8 +84,6 @@ struct SerialPolicy : ProtocolPolicy {
         p.intra_timeout_ms   = 500;
         p.reset_drain_ms     = 250;
         p.reset_sync_retries = 5;
-        p.max_retries        = 3;
-        p.retry_delay_ms     = 100;
         return p;
     }
 #endif
@@ -112,8 +110,6 @@ struct I2cPolicy : ProtocolPolicy {
         p.intra_timeout_ms   = 500;
         p.reset_drain_ms     = 250;
         p.reset_sync_retries = 5;
-        p.max_retries        = 3;
-        p.retry_delay_ms     = 100;
         return p;
     }
 #else
@@ -141,8 +137,6 @@ struct StaticSerialPolicy {
     static constexpr uint32_t intra_timeout_ms   = Policy.intra_timeout_ms;
     static constexpr uint32_t reset_drain_ms     = Policy.reset_drain_ms;
     static constexpr uint32_t reset_sync_retries = Policy.reset_sync_retries;
-    static constexpr uint32_t max_retries        = Policy.max_retries;
-    static constexpr uint32_t retry_delay_ms     = Policy.retry_delay_ms;
 };
 
 template <I2cPolicy Policy>
@@ -152,8 +146,6 @@ struct StaticI2cPolicy {
     static constexpr uint32_t intra_timeout_ms   = Policy.intra_timeout_ms;
     static constexpr uint32_t reset_drain_ms     = Policy.reset_drain_ms;
     static constexpr uint32_t reset_sync_retries = Policy.reset_sync_retries;
-    static constexpr uint32_t max_retries        = Policy.max_retries;
-    static constexpr uint32_t retry_delay_ms     = Policy.retry_delay_ms;
     static constexpr uint32_t io_delay_ms        = Policy.io_delay_ms;
     static constexpr uint32_t chunk_delay_ms     = Policy.chunk_delay_ms;
     static constexpr uint32_t nack_wait_ms       = Policy.nack_wait_ms;

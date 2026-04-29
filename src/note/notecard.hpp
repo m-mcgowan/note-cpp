@@ -63,7 +63,7 @@ namespace detail {
                 if (handler) handler.send(BodyEvent::make_object_begin(k));
                 return;
             }
-            if (k == "body") body_depth = 1;
+            if (detail::flash_key_eq(k, detail::common_keys::body)) body_depth = 1;
         }
         void on_object_end(string_view k) override {
             if (body_depth > 0) {
@@ -313,7 +313,7 @@ public:
             return make_error(Error::NotReady, NOTE_ERR("no buffered transport configured"));
 
         auto& builder = backend_->get_builder();
-        builder.add("req", req_type);
+        add_flash(builder, flash(detail::common_keys::req), req_type);
         if (build_fn) build_fn(builder);
         auto rsp = transport_->transact(builder.to_view(),
                                         rsp_buf(),
@@ -367,7 +367,7 @@ public:
         Result<void> result;
         if (alloc_.has_value()) {
             auto build = [&](JsonBuilder& b) {
-                b.add("cmd", RequestT::notecard_request);
+                add_flash(b, flash(detail::common_keys::cmd), RequestT::notecard_request);
                 req.build(b);
             };
             BuildFn fn = [](JsonBuilder& b, void* p) {
@@ -377,7 +377,7 @@ public:
             result = transport_->send(src.as_source());
         } else if (backend_) {
             auto& builder = backend_->get_builder();
-            builder.add("cmd", RequestT::notecard_request);
+            add_flash(builder, flash(detail::common_keys::cmd), RequestT::notecard_request);
             req.build(builder);
             result = transport_->send(builder.to_view());
         } else {
@@ -396,7 +396,7 @@ public:
             return make_error(Error::NotReady, NOTE_ERR("no transport configured"));
         if (alloc_.has_value()) {
             auto build = [&](JsonBuilder& b) {
-                b.add("cmd", cmd_type);
+                add_flash(b, flash(detail::common_keys::cmd), cmd_type);
                 if (build_fn) build_fn(b);
             };
             BuilderRequestSource src(build);
@@ -406,7 +406,7 @@ public:
             return make_error(Error::NotReady, NOTE_ERR("no allocator or backend configured"));
 
         auto& builder = backend_->get_builder();
-        builder.add("cmd", cmd_type);
+        add_flash(builder, flash(detail::common_keys::cmd), cmd_type);
         if (build_fn) build_fn(builder);
         return transport_->send(builder.to_view());
     }
@@ -738,8 +738,9 @@ private:
         {
             debug_timing(debug_, TimingEvent::BuildBegin, RequestT::notecard_request);
             auto& builder = backend_->get_builder();
-            builder.add("req", RequestT::notecard_request);
-            if (req_id) builder.add("id", static_cast<json_int_t>(req_id));
+            add_flash(builder, flash(detail::common_keys::req), RequestT::notecard_request);
+            if (req_id) add_flash(builder, flash(detail::common_keys::id),
+                                  static_cast<json_int_t>(req_id));
             req.build(builder);
             auto req_json = builder.to_view();
             debug_timing(debug_, TimingEvent::BuildEnd, RequestT::notecard_request);
@@ -812,8 +813,9 @@ private:
     /// before delegating to the per-endpoint builder.
     static void framed_build(JsonBuilder& b, void* p) {
         auto& f = *static_cast<RequestFrame*>(p);
-        b.add("req", f.request_name);
-        if (f.req_id) b.add("id", static_cast<json_int_t>(f.req_id));
+        add_flash(b, flash(detail::common_keys::req), f.request_name);
+        if (f.req_id) add_flash(b, flash(detail::common_keys::id),
+                                static_cast<json_int_t>(f.req_id));
         f.inner(b, f.inner_ctx);
     }
 

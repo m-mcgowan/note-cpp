@@ -116,21 +116,25 @@ struct ReceiveContext {
 
     /// Build a SaxDispatch that intercepts "err" and "crc" on_string events,
     /// forwarding everything else to the inner dispatch.
+    /// Manual byte-level key comparisons (instead of string_view operator==)
+    /// shave a string_view ctor + operator== call per check on AVR — both
+    /// "err" and "crc" are exactly 3 bytes with distinct first characters.
     SaxDispatch wrapping_dispatch() {
         return SaxDispatch{
             this,
             [](void* p, const SaxEvent& ev) {
                 auto& c = *static_cast<ReceiveContext*>(p);
-                if (ev.tag == SaxEvent::String) {
+                if (ev.tag == SaxEvent::String && ev.key.size() == 3) {
+                    const char* k = ev.key.data();
                     auto v = string_view(ev.sv.data, ev.sv.len);
-                    if (ev.key == "err") {
+                    if (k[0] == 'e' && k[1] == 'r' && k[2] == 'r') {
                         c.err.capture(v);
                         // Also forward — virtual path's ErrorCaptureSink may need it.
                         c.inner.dispatch(c.inner.sink, ev);
                         return;
                     }
 #if !NOTE_NO_CRC
-                    if (ev.key == "crc") {
+                    if (k[0] == 'c' && k[1] == 'r' && k[2] == 'c') {
                         if (v.size() == 13 && v[4] == ':') {
                             c.crc_seq = static_cast<uint16_t>(
                                 transport::detail::read_hex(v.data(), 4));

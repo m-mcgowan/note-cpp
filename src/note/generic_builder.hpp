@@ -60,95 +60,52 @@ inline ReqFieldDesc read_req_field(const ReqFieldDesc* p) {
 
 /// Serialize request fields from a descriptor table into a JsonBuilder.
 /// Checks each optional field — only set fields are serialized.
+///
+/// FlashString construction + key buffer are hoisted out of the per-case
+/// switch arms so they're shared across all field types — saves ~100 B
+/// per call site on AVR over emitting the same prologue in every case.
 inline void generic_build(JsonBuilder& b, const void* req,
                           const ReqFieldDesc* fields, uint8_t n) {
+    char kbuf[32];
     for (uint8_t i = 0; i < n; ++i) {
         auto d = detail::read_req_field(&fields[i]);
         const auto* base = static_cast<const char*>(req) + d.offset;
+        FlashString key{d.name, 0};
+#if NOTE_PROGMEM
+        key.len = strlen_P(d.name);
+#else
+        key.len = __builtin_strlen(d.name);
+#endif
 
         switch (d.type) {
         case ReqFieldType::Bool: {
             const auto& f = *reinterpret_cast<const std::optional<bool>*>(base);
-            if (f) {
-                FlashString key{d.name, 0};
-#if NOTE_PROGMEM
-                key.len = strlen_P(d.name);
-#else
-                key.len = __builtin_strlen(d.name);
-#endif
-                char kbuf[32];
-                b.add(key.to_view(kbuf), *f);
-            }
+            if (f) b.add(key.to_view(kbuf), *f);
             break;
         }
         case ReqFieldType::Int: {
             const auto& f = *reinterpret_cast<const std::optional<json_int_t>*>(base);
-            if (f) {
-                FlashString key{d.name, 0};
-#if NOTE_PROGMEM
-                key.len = strlen_P(d.name);
-#else
-                key.len = __builtin_strlen(d.name);
-#endif
-                char kbuf[32];
-                b.add(key.to_view(kbuf), *f);
-            }
+            if (f) b.add(key.to_view(kbuf), *f);
             break;
         }
         case ReqFieldType::Int32: {
             const auto& f = *reinterpret_cast<const std::optional<int32_t>*>(base);
-            if (f) {
-                FlashString key{d.name, 0};
-#if NOTE_PROGMEM
-                key.len = strlen_P(d.name);
-#else
-                key.len = __builtin_strlen(d.name);
-#endif
-                char kbuf[32];
-                b.add(key.to_view(kbuf), json_int_t(*f));
-            }
+            if (f) b.add(key.to_view(kbuf), json_int_t(*f));
             break;
         }
         case ReqFieldType::Double: {
             const auto& f = *reinterpret_cast<const std::optional<double>*>(base);
-            if (f) {
-                FlashString key{d.name, 0};
-#if NOTE_PROGMEM
-                key.len = strlen_P(d.name);
-#else
-                key.len = __builtin_strlen(d.name);
-#endif
-                char kbuf[32];
-                b.add(key.to_view(kbuf), *f);
-            }
+            if (f) b.add(key.to_view(kbuf), *f);
             break;
         }
         case ReqFieldType::String: {
             const auto& f = *reinterpret_cast<const std::optional<string_view>*>(base);
-            if (f) {
-                FlashString key{d.name, 0};
-#if NOTE_PROGMEM
-                key.len = strlen_P(d.name);
-#else
-                key.len = __builtin_strlen(d.name);
-#endif
-                char kbuf[32];
-                b.add(key.to_view(kbuf), *f);
-            }
+            if (f) b.add(key.to_view(kbuf), *f);
             break;
         }
         case ReqFieldType::Array: {
             const auto& arr = *reinterpret_cast<const ArrayField<string_view, 8>*>(base);
-            if (arr) {
-                FlashString key{d.name, 0};
-#if NOTE_PROGMEM
-                key.len = strlen_P(d.name);
-#else
-                key.len = __builtin_strlen(d.name);
-#endif
-                char kbuf[32];
-                arr.write_to(b, key.to_view(kbuf));
-            }
+            if (arr) arr.write_to(b, key.to_view(kbuf));
             break;
         }
         case ReqFieldType::Body: {

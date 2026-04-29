@@ -49,8 +49,21 @@ TEST_CASE("Issue 1: NotecardApi::begin(IStreamingTransport&) without allocator")
     };
     struct FakeStreamingTransport : note::IStreamingTransport {
         FakeHal fake_hal;
+        // Bring inherited string_view + RequestSource overloads into scope so
+        // the BuildFn override below doesn't hide them under -Woverloaded-virtual.
+        using note::IStreamingTransport::transact;
+        using note::IStreamingTransport::send;
+        // Legacy BuildFn-shaped virtuals (still abstract on IStreamingTransport
+        // until Phase 5a step 8 collapses everything onto RequestSource).
         note::Result<void> transact(note::BuildFn, void*, note::JsonSink&, uint32_t) override { return {}; }
         note::Result<void> send(note::BuildFn, void*) override { return {}; }
+        // RequestSource-shaped virtuals (Phase 5a step 7) — no-op for this fake.
+        // Step 8 will drop the BuildFn ones above; these become the only entry points.
+        note::Result<note::string_view> transact(note::RequestSource, note::span<char>, uint32_t) override {
+            return note::string_view{};
+        }
+        note::Result<void> transact(note::RequestSource, note::JsonSink&, uint32_t) override { return {}; }
+        note::Result<void> send(note::RequestSource) override { return {}; }
         void reset() override {}
         void abort() override {}
         note::Hal& hal() override { return fake_hal; }

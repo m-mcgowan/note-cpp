@@ -9,6 +9,9 @@
 //
 // This example stubs NoteRequestResponseJSON so it compiles without note-c
 // installed. In a real project, link against note-c and delete the stub.
+//
+// For the same pattern inside an Arduino sketch (using note-arduino),
+// see examples/arduino/note-arduino-bridge/.
 
 #include "mock_backend.hpp"
 #include <note/api.hpp>

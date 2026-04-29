@@ -136,6 +136,7 @@ set(NOTE_CPP_TEST_SOURCES_FULL_ONLY
     test_intent_flags.cpp
     test_make_api.cpp
     test_migration_support.cpp
+    test_note_c_bridge.cpp
     test_notecard.cpp
     test_notecard_streaming.cpp
     test_property_functor.cpp

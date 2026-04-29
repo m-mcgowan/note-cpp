@@ -116,7 +116,7 @@ jobs:
         uses: actions/cache@v5
         with:
           path: ~/.platformio
-          key: pio-${{ hashFiles('tests/integration/firmware/platformio.ini', 'examples/arduino/migration/platformio.ini', 'tools/binary-size-comparison/platformio.ini') }}
+          key: pio-${{ hashFiles('tests/integration/firmware/platformio.ini', 'examples/arduino/migration/platformio.ini', 'examples/arduino/note-arduino-bridge/platformio.ini', 'tools/binary-size-comparison/platformio.ini') }}
           restore-keys: pio-
 
       - name: Install PlatformIO
@@ -134,6 +134,9 @@ jobs:
 
       - name: Build Arduino migration example
         run: pio run -d examples/arduino/migration
+
+      - name: Build Arduino note-arduino + note-cpp coexistence example
+        run: pio run -d examples/arduino/note-arduino-bridge
 
       # Catches AVR-only breakage (PROGMEM regressions, missing pgmspace
       # guards, etc.) that the host build can't see. The same env is built

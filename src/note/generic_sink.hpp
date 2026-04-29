@@ -13,9 +13,11 @@
 /// rather than RAM. Reads go through pgm_read helpers on Harvard platforms.
 
 #include <note/body_handler.hpp>
+#include <note/compiler.hpp>
 #include <note/field.hpp>
 #include <note/field_desc.hpp>
 #include <note/json_sax.hpp>
+#include <note/lexer/sax_adapter.hpp>
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
 
@@ -150,6 +152,39 @@ private:
         *rf = ResponseField<T>{};
     }
 };
+
+// Outlined dispatch helper for GenericResponseSink. Replaces the per-SinkT
+// 10-way switch that make_sax_dispatch<T> would otherwise inline at the
+// call site (~1.3 KB on AVR). The lambda installed by the make_sax_dispatch
+// overload below is a thin forwarder; the switch body lives once here.
+inline NOTE_SINK_NOINLINE void dispatch_sax_event(GenericResponseSink& s, const SaxEvent& ev) {
+    switch (ev.tag) {
+    case SaxEvent::Null:        s.on_null(ev.key); break;
+    case SaxEvent::Bool:        s.on_bool(ev.key, ev.b); break;
+    case SaxEvent::Int:         s.on_int(ev.key, ev.i); break;
+    case SaxEvent::Float:       s.on_float(ev.key, ev.f); break;
+    case SaxEvent::String:      s.on_string(ev.key, {ev.sv.data, ev.sv.len}); break;
+    case SaxEvent::ObjectBegin: s.on_object_begin(ev.key); break;
+    case SaxEvent::ObjectEnd:   s.on_object_end(ev.key); break;
+    case SaxEvent::ArrayBegin:  s.on_array_begin(ev.key); break;
+    case SaxEvent::ArrayEnd:    s.on_array_end(ev.key); break;
+    case SaxEvent::Reset:       s.reset(); break;
+    default: NOTE_UNREACHABLE();
+    }
+}
+
+/// Specialised make_sax_dispatch for GenericResponseSink: routes through
+/// the outlined dispatch_sax_event helper instead of inlining the switch
+/// per-SinkT instantiation. Selected by overload resolution over the
+/// templated make_sax_dispatch<T>.
+inline SaxDispatch make_sax_dispatch(GenericResponseSink& s) {
+    return SaxDispatch{
+        &s,
+        [](void* p, const SaxEvent& ev) {
+            dispatch_sax_event(*static_cast<GenericResponseSink*>(p), ev);
+        }
+    };
+}
 
 /// Non-template body sink — table-driven dispatch for flat body structs.
 /// Used when NOTE_RESPONSE_BODY=0 to avoid per-body-type StructSink instantiations.

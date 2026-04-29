@@ -723,21 +723,27 @@ BodyHandler make_body_handler(StructSink<T>& sink) {
     };
 }
 
+/// Outlined dispatch helper for GenericBodySink. The lambda installed by
+/// make_generic_body_handler is a thin forwarder; the switch body lives
+/// once here. Mirrors dispatch_sax_event in generic_sink.hpp.
+inline NOTE_SINK_NOINLINE void dispatch_body_event(GenericBodySink& s, const BodyEvent& ev) {
+    switch (ev.tag) {
+    case BodyEvent::Bool:   s.on_bool(ev.key, ev.b); break;
+    case BodyEvent::Int:    s.on_int(ev.key, ev.i); break;
+    case BodyEvent::Float:  s.on_float(ev.key, ev.f); break;
+    case BodyEvent::String: s.on_string(ev.key, {ev.sv.data, ev.sv.len}); break;
+    case BodyEvent::Number: s.on_number(ev.key, {ev.sv.data, ev.sv.len}); break;
+    default: break;
+    }
+}
+
 /// Create a BodyHandler that forwards events to a GenericBodySink.
 /// Non-template: ONE instantiation for all body types.
 inline BodyHandler make_generic_body_handler(GenericBodySink& sink) {
     return {
         &sink,
         [](void* c, const BodyEvent& ev) {
-            auto& s = *static_cast<GenericBodySink*>(c);
-            switch (ev.tag) {
-            case BodyEvent::Bool:   s.on_bool(ev.key, ev.b); break;
-            case BodyEvent::Int:    s.on_int(ev.key, ev.i); break;
-            case BodyEvent::Float:  s.on_float(ev.key, ev.f); break;
-            case BodyEvent::String: s.on_string(ev.key, {ev.sv.data, ev.sv.len}); break;
-            case BodyEvent::Number: s.on_number(ev.key, {ev.sv.data, ev.sv.len}); break;
-            default: break;
-            }
+            dispatch_body_event(*static_cast<GenericBodySink*>(c), ev);
         },
     };
 }

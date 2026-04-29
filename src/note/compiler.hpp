@@ -37,10 +37,20 @@
 // leaving only user-provided messages (rare) and the enum-name tables
 // (now PROGMEM-backed via to_string(Error/Cause)) as RAM consumers.
 
-// NOTE_SINK_NOINLINE — reserved for future use. Currently a no-op because
-// on AVR with LTO + -Os, outlining sink methods into separate functions
-// adds prologue overhead that exceeds the savings from smaller thunks.
-#define NOTE_SINK_NOINLINE
+// NOTE_SINK_NOINLINE — opt-in noinline marker for sink dispatch helpers.
+// The make_sax_dispatch<SinkT> lambda is a 10-way switch that inlines each
+// case body. For sinks that convert SaxEvent → BodyEvent and forward to a
+// BodyHandler (notably GenericResponseSink), the inlined per-case BodyEvent
+// construction dominates the lambda body — the dispatch lambda for one
+// sink is ~1.3 KB on AVR. Outlining the switch via NOTE_SINK_NOINLINE
+// shrinks the lambda to a forwarder; the body lives once in the helper.
+// On single-sink builds the win is modest; on multi-sink builds each
+// extra SinkT shrinks from ~1.3 KB to ~30 B.
+#if defined(__GNUC__) || defined(__clang__)
+#  define NOTE_SINK_NOINLINE __attribute__((noinline))
+#else
+#  define NOTE_SINK_NOINLINE
+#endif
 
 #if defined(__cpp_lib_unreachable)
 #  include <utility>

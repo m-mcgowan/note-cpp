@@ -226,7 +226,7 @@ TEST_CASE("Streaming: execute without allocator or backend returns NotReady") {
 
     note::api::CardVersion req;
     auto r = h.nc.execute(req);
-    // streaming_transport_ is set but alloc_ is nullopt (cleared by
+    // alloc_ is nullopt (cleared by
     // harness) → skip streaming path; backend_ is nullptr → skip
     // buffered path → returns NotReady error.
     REQUIRE_FALSE(r.has_value());
@@ -315,7 +315,7 @@ TEST_CASE("Streaming: command() with build_fn sends fields") {
 }
 
 TEST_CASE("Streaming: command() returns not-ready without any transport") {
-    // Verify the no-transport path is hit when streaming_transport_ is set
+    // Verify the no-transport path is hit when transport_ is set
     // but send fails.
     StreamHarness h;
     h.hal.transmit_ok = false;
@@ -572,7 +572,7 @@ TEST_CASE("Streaming: binary_io_reset resets streaming transport") {
 
     auto rsp = h.nc.execute(req);
     REQUIRE_FALSE(rsp.has_value());
-    // binary_io_reset should have been called, which calls streaming_transport_->reset()
+    // binary_io_reset should have been called, which calls transport_->reset()
     CHECK(h.hal.reset_called);
 }
 
@@ -1019,7 +1019,7 @@ TEST_CASE("Streaming: send rejects malformed JSON") {
 
 // ===========================================================================
 // Streaming: default-constructed Notecard (no transport at all)
-// with streaming-specific commands that check streaming_transport_
+// with streaming-specific commands that route through transport_ via RequestSource
 // ===========================================================================
 
 TEST_CASE("Default Notecard: command() without streaming returns NotReady") {

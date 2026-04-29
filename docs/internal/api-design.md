@@ -41,7 +41,7 @@ The naming rule: first segment becomes the module, remaining segments become a c
 // Your hardware
 MySerialHal hal;
 note::transport::NotecardSerial serial_hal(hal);    // Hal
-note::Protocol transport(serial_hal);               // IStreamingTransport
+note::Protocol transport(serial_hal);               // ITransport
 
 // Zero heap — arena allocator for string interning
 char pool[256];

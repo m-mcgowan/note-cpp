@@ -194,7 +194,7 @@ struct SerialTestHarness {
     // Returns Result<void>; captured fields are in the sink.
     note::Result<void> transact(const char* req_name, CaptureSink& sink,
                                 uint32_t timeout_ms = 5000) {
-        note::IStreamingTransport& t = transport;
+        note::Protocol& t = transport;
         auto build = [&](note::JsonBuilder& b) { b.add("req", req_name); };
         return t.transact(build, sink, timeout_ms);
     }
@@ -202,7 +202,7 @@ struct SerialTestHarness {
     // Transact with a NullSink (just check success/failure).
     note::Result<void> transact(const char* req_name,
                                 uint32_t timeout_ms = 5000) {
-        note::IStreamingTransport& t = transport;
+        note::Protocol& t = transport;
         note::JsonSink null_sink;
         auto build = [&](note::JsonBuilder& b) { b.add("req", req_name); };
         return t.transact(build, null_sink, timeout_ms);
@@ -210,7 +210,7 @@ struct SerialTestHarness {
 
     // Send (fire-and-forget).
     note::Result<void> send(const char* cmd_name) {
-        note::IStreamingTransport& t = transport;
+        note::Protocol& t = transport;
         auto build = [&](note::JsonBuilder& b) { b.add("cmd", cmd_name); };
         return t.send(build);
     }
@@ -279,7 +279,7 @@ TEST_CASE("reset retries on non-control characters in drain") {
     retry_hal.json_responses.push_back("{}\r\n");
     NotecardSerial<SerialPolicy> notecard_serial(retry_hal);
     note::Protocol transport(notecard_serial);
-    note::IStreamingTransport& t = transport;
+    note::Protocol& t = transport;
     note::JsonSink null_sink;
     auto build = [](note::JsonBuilder& b) { b.add("req", "hub.set"); };
     auto r = t.transact(build, null_sink, 5000);
@@ -379,7 +379,7 @@ TEST_CASE("response timeout before first byte returns error") {
 
     NotecardSerial<SerialPolicy> notecard_serial(hal);
     note::Protocol transport(notecard_serial);
-    note::IStreamingTransport& t = transport;
+    note::Protocol& t = transport;
     note::JsonSink null_sink;
     auto build = [](note::JsonBuilder& b) { b.add("req", "hub.set"); };
     auto r = t.transact(build, null_sink, 500);
@@ -416,7 +416,7 @@ TEST_CASE("response timeout after partial data") {
 
     NotecardSerial<SerialPolicy> notecard_serial(hal);
     note::Protocol transport(notecard_serial);
-    note::IStreamingTransport& t = transport;
+    note::Protocol& t = transport;
     note::JsonSink null_sink;
     auto build = [](note::JsonBuilder& b) { b.add("req", "hub.set"); };
     auto r = t.transact(build, null_sink, 10000);
@@ -566,7 +566,7 @@ TEST_CASE("SerialCallbackHal delegates to callbacks") {
 
     NotecardSerial<SerialPolicy> notecard_serial(cb);
     note::Protocol transport(notecard_serial);
-    note::IStreamingTransport& t = transport;
+    note::Protocol& t = transport;
     note::JsonSink null_sink;
     auto build = [](note::JsonBuilder& b) { b.add("req", "hub.status"); };
     auto r = t.transact(build, null_sink, 5000);

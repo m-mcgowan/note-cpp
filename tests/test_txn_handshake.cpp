@@ -72,7 +72,7 @@ struct Harness {
 
     // Fire a trivial transact; returns the Result.
     note::Result<void> transact(uint32_t timeout_ms = 5000) {
-        note::IStreamingTransport& t = transport;
+        note::Protocol& t = transport;
         note::JsonSink null_sink;
         auto build = [&](note::JsonBuilder& b) { b.add("req", "card.status"); };
         return t.transact(build, null_sink, timeout_ms);
@@ -80,7 +80,7 @@ struct Harness {
 
     // Fire a send (fire-and-forget); returns the Result.
     note::Result<void> send() {
-        note::IStreamingTransport& t = transport;
+        note::Protocol& t = transport;
         auto build = [&](note::JsonBuilder& b) { b.add("cmd", "card.restart"); };
         return t.send(build);
     }

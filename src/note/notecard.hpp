@@ -145,25 +145,21 @@ public:
         , alloc_(alloc)
     {}
 
-    /// Forwarders for the legacy IStreamingTransport-typed ctors. Until
-    /// step 8b drops `IStreamingTransport`, these stay as-is — they
-    /// up-cast to `ITransport&` and chain to the unified ctor, and also
-    /// publish the Protocol* downcast so `transact(string_view) ->
-    /// OwnedBuffer` can take its growable byte-by-byte path. Today every
-    /// `IStreamingTransport` in the wild is a `Protocol` (the only
-    /// concrete impl); fakes that don't override `read()` will hit
-    /// NotReady on read and surface an error rather than silently
-    /// losing data.
-    Notecard(IStreamingTransport& transport, Allocator alloc = {})
+    /// Protocol-typed ctors. `Protocol` exposes the send/read split that
+    /// `transact(string_view) -> OwnedBuffer` uses for the growable
+    /// byte-by-byte response path; the unified ITransport ctors above
+    /// only get the bounded `transact(req, span<char>, t)` path. Pass a
+    /// `Protocol&` here to opt into the growable response.
+    Notecard(Protocol& transport, Allocator alloc = {})
         : Notecard(nullptr, static_cast<ITransport&>(transport), alloc)
     {
-        streaming_protocol_ = static_cast<Protocol*>(&transport);
+        streaming_protocol_ = &transport;
     }
 
-    Notecard(JsonBackend* backend, IStreamingTransport& transport, Allocator alloc = {})
+    Notecard(JsonBackend* backend, Protocol& transport, Allocator alloc = {})
         : Notecard(backend, static_cast<ITransport&>(transport), alloc)
     {
-        streaming_protocol_ = static_cast<Protocol*>(&transport);
+        streaming_protocol_ = &transport;
     }
 
     // Configure an allocator for response string interning.
@@ -970,13 +966,10 @@ private:
 
     JsonBackend* backend_ = nullptr;
     ITransport* transport_ = nullptr;
-    /// Downcast cache of `transport_` when constructed via the legacy
-    /// IStreamingTransport-typed ctors. Used solely to drive the byte-by-byte
-    /// growable response path in `transact(string_view) -> OwnedBuffer`,
-    /// which needs the send/read split that only `Protocol` implements.
-    /// Step 8b will replace the IStreamingTransport ctors with a
-    /// `Notecard(JsonBackend*, Protocol&, Allocator)` ctor that sets
-    /// this field directly.
+    /// Set when the Notecard was constructed via a `Protocol&`-typed ctor.
+    /// Used solely to drive the byte-by-byte growable response path in
+    /// `transact(string_view) -> OwnedBuffer`, which needs the send/read
+    /// split that only `Protocol` implements.
     Protocol* streaming_protocol_ = nullptr;
     uint32_t default_timeout_ms_ = 10000;
     std::optional<Allocator> alloc_;

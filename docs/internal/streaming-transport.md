@@ -1,41 +1,62 @@
 # Streaming Transport
 
-The transport layer has two interfaces — `IStreamingTransport` (streaming,
-zero-buffer) and `IBufferedTransport` (buffered, for tests/compat). The
-streaming path is the primary design; the buffered path exists for backward
-compatibility and test harnesses.
+The transport layer exposes a single session interface — `ITransport`,
+implemented natively by `Protocol` (streaming, zero-buffer) and via the
+transitional `IBufferedTransport` bridge for buffered/test transports.
+The streaming path is the primary design; the buffered path exists for
+test harnesses and for transports that don't naturally split send/read.
 
 ## Transport Interfaces
 
-### IStreamingTransport (primary)
+### Protocol (primary)
+
+`Protocol : public ITransport` exposes:
 
 ```
-IStreamingTransport
-  transact(build_fn, sink, timeout) → Result<void>  // stream request, SAX-parse response
-  send(build_fn) → Result<void>                     // fire-and-forget
-  write(data, len) → Result<void>                   // raw byte write (binary/COBS)
-  read(buf, max_len, timeout) → Result<size_t>      // raw byte read (binary/COBS)
-  reset()                                           // drain + resync
+ITransport
+  transact(req, span<char>, timeout) → Result<string_view>  // string request, copy response into buf
+  transact(req, JsonSink&, timeout)  → Result<void>         // string request, SAX-parse response
+  send(req)                          → Result<void>         // fire-and-forget string
+
+  transact(RequestSource, span<char>, timeout) → Result<string_view>
+  transact(RequestSource, JsonSink&, timeout)  → Result<void>
+  send(RequestSource)                          → Result<void>
+
+  write(data, len)             → Result<void>     // raw byte write (binary/COBS)
+  read(buf, max_len, timeout)  → Result<size_t>   // raw byte read (binary/COBS)
+  reset()                                         // drain + resync
   abort()
 ```
 
-Requests are streamed via a build function (`BuildFn`) that writes JSON
-fields into a `JsonBuilder&`. Responses are SAX-parsed directly from the
-wire into a `JsonSink&`. No intermediate buffers.
+Plus BuildFn-shaped non-virtual entry points (`transact(BuildFn, ctx, sink, timeout)`,
+`send(BuildFn, ctx)`, with templated `F&&` convenience wrappers) on `Protocol`
+itself, for callers like `StaticNotecard` and tests that want zero-vtable
+direct dispatch.
 
-### IBufferedTransport (backward compat)
+Requests are streamed via a `RequestSource` (or BuildFn callable) that paints
+JSON bytes through a `StreamingJsonBuilder` over the wire. Responses are
+SAX-parsed directly from the wire into a `JsonSink&`. No intermediate buffers.
+
+### IBufferedTransport (transitional bridge)
 
 ```
-IBufferedTransport (was ITransport)
-  transact(request, timeout) → Result<string_view>  // send string, receive string
-  send(request) → Result<void>                      // fire-and-forget
-  write(data, len) → Result<void>                   // raw byte write
-  read(buf, max_len, timeout) → Result<size_t>      // raw byte read
-  reset()
-  abort()
+IBufferedTransport : public ITransport
+  transact(request, timeout) → Result<string_view>  // legacy buffered virtual
+  send(request)              → Result<void>         // fire-and-forget string
 ```
 
-`ITransport` is a type alias for `IBufferedTransport` (kept for source compat).
+`IBufferedTransport` is a bridge class: it adapts the old
+`transact(req, timeout) -> Result<string_view>` shape (where the response
+sits in transport-owned storage) to the unified `ITransport` overloads.
+The other `ITransport` overloads (`transact(req, span, t)`, `transact(req, sink, t)`,
+plus the `RequestSource` shapes) get default impls that materialise into
+a stack scratch buffer and forward to the buffered virtual.
+
+Test transports (`note::test::CallbackTransport`, `MockTransport`,
+`ScriptedTransport`) and the note-c bridge all derive from
+`IBufferedTransport`. `IBufferedTransport` itself is scheduled to dissolve
+into a free helper in step 8c — at which point those subclasses implement
+`ITransport` directly.
 
 ## Architecture
 
@@ -46,11 +67,12 @@ SerialHal / I2CHal        Your hardware (4-5 methods)
   ↓
 NotecardSerial            Implements Hal (adapts SerialHal)
   ↓
-Protocol        Protocol logic: retry, CRC, JSON framing
+Protocol                  Protocol logic: retry, CRC, JSON framing — IS-A ITransport
   ↓
-IStreamingTransport       Interface consumed by Notecard
+ITransport                Session interface consumed by Notecard
   ↓
-Notecard                  Constructed with (IStreamingTransport&, Allocator)
+Notecard                  Constructed with (Protocol&, Allocator) for streaming-only,
+                          or (JsonBackend*, ITransport&, Allocator) for the unified path
 ```
 
 `Hal` is the boundary between hardware and protocol. It has five
@@ -113,7 +135,7 @@ nc.begin(Wire, arena_allocator(arena));
 
 ### Non-Arduino — streaming path (recommended)
 
-Wire up the three layers directly: `SerialHal` -> `NotecardSerial` (`Hal`) -> `Protocol` (`IStreamingTransport`) -> `Notecard`:
+Wire up the three layers directly: `SerialHal` -> `NotecardSerial` (`Hal`) -> `Protocol` (`ITransport`) -> `Notecard`:
 
 ```cpp
 #include <note/protocol.hpp>
@@ -122,7 +144,7 @@ Wire up the three layers directly: `SerialHal` -> `NotecardSerial` (`Hal`) -> `P
 
 MySerialHal hal;                                    // your SerialHal impl
 note::transport::NotecardSerial serial_hal(hal);    // Hal
-note::Protocol transport(serial_hal);     // IStreamingTransport
+note::Protocol transport(serial_hal);     // ITransport
 
 char pool[256];
 note::MonotonicArena arena(pool);
@@ -144,8 +166,9 @@ nc.set_allocator(note::Allocator{});                // optional: arena or heap
 
 | Constructor | Transport | Backend | Heap |
 |---|---|---|---|
-| `Notecard(IStreamingTransport&, Allocator)` | Streaming | None needed | Zero (arena) |
-| `Notecard(IBufferedTransport&, JsonBackend&)` | Buffered | Required | Depends on backend |
+| `Notecard(Protocol&, Allocator)` | Streaming | None needed | Zero (arena) |
+| `Notecard(JsonBackend&, ITransport&)` | Buffered | Required | Depends on backend |
+| `Notecard(JsonBackend*, ITransport&, Allocator)` | Unified | Optional | Depends on backend / arena |
 
 The streaming-only constructor is the recommended path for production.
 It requires no `JsonBackend` — requests build directly into the transport,
@@ -162,7 +185,7 @@ The buffered constructor exists for test harnesses (where `CallbackTransport`
 
 | Constructor used | Allocator set | Path |
 |---|---|---|
-| `IStreamingTransport` | Yes (required) | **Full streaming** — SAX parse from transport, zero buffer |
+| `ITransport` | Yes (required) | **Full streaming** — SAX parse from transport, zero buffer |
 | `IBufferedTransport` | Optional | **Fully buffered** — `transact()` with string buffer |
 
 The full streaming path:
@@ -174,7 +197,7 @@ The full streaming path:
 
 ## Execution Paths (Internal)
 
-### Path 1a: JSON streaming (default, via `IStreamingTransport`)
+### Path 1a: JSON streaming (default, via `ITransport`)
 
 Active when `NOTE_JSONB=0` (the default for non-MINIMAL builds).
 
@@ -187,7 +210,7 @@ Active when `NOTE_JSONB=0` (the default for non-MINIMAL builds).
 - **Retries:** `sink.reset()` + rebuild request from the (still-alive) request object
 - **Buffers:** zero — all data flows through the HAL in small chunks
 
-### Path 1b: JSONB streaming (via `IStreamingTransport`, `NOTE_JSONB=1`)
+### Path 1b: JSONB streaming (via `ITransport`, `NOTE_JSONB=1`)
 
 Active when `NOTE_JSONB=1` (auto-enabled by `NOTE_MINIMAL`). See [docs/jsonb.md](../jsonb.md).
 
@@ -224,8 +247,8 @@ Active when `Notecard` was constructed with `(IBufferedTransport&, JsonBackend&)
 api.card.binary.put().data(buf, len).execute();
 ```
 
-- `do_binary_send`: COBS encode → stream via `IStreamingTransport::write()` → `Hal::transmit()`, MD5 verify
-- `do_binary_receive`: stream via `IStreamingTransport::read()` → `Hal::read()` → `CobsDecoder.feed()`, MD5 verify
+- `do_binary_send`: COBS encode → stream via `ITransport::write()` → `Hal::transmit()`, MD5 verify
+- `do_binary_receive`: stream via `ITransport::read()` → `Hal::read()` → `CobsDecoder.feed()`, MD5 verify
 - 64-byte stack chunk — no intermediate buffer for the COBS stream
 
 ## CRC Handling
@@ -246,7 +269,7 @@ In the buffered path, CRC uses the in-place buffer functions (`crc_add`,
 
 ## `NOTE_NO_STD_STRING` Guard
 
-The streaming path (`Hal` + `Protocol` + `IStreamingTransport`)
+The streaming path (`Hal` + `Protocol` + `ITransport`)
 has no dependency on `<string>` or `<functional>`. It compiles cleanly with
 `NOTE_NO_STD_STRING` defined.
 

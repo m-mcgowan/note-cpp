@@ -118,9 +118,8 @@ include/note/transport/
     detail/crc32.hpp       CRC32, crc_add, crc_check_and_strip
 ```
 
-> **Naming note.** `IBufferedTransport` and `IStreamingTransport` are
-> deprecated aliases retained for one release. `IBufferedTransport`
-> survives as a bridge class that adapts the old
+> **Naming note.** `IBufferedTransport` survives as a transitional
+> bridge class that adapts the old
 > `transact(req, timeout) -> Result<string_view>` shape to the unified
 > `ITransport`; existing custom transports keep compiling. New code
 > should derive from `ITransport` directly.

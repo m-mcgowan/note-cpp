@@ -39,8 +39,8 @@ namespace note {
 
 /// Type-erased build function for streaming request construction. Called
 /// with a `JsonBuilder&` (the streaming builder over the wire) plus a
-/// caller-supplied context pointer. Defined here so both the legacy
-/// `IStreamingTransport` BuildFn virtuals (`protocol.hpp`) and the
+/// caller-supplied context pointer. Defined here so both the BuildFn-shaped
+/// entry points on `Protocol` (`protocol.hpp`) and the
 /// `BuildFnRequestSource` adapter below can share one typedef.
 using BuildFn = void(*)(JsonBuilder&, void*);
 
@@ -80,12 +80,11 @@ private:
     F& fn_;
 };
 
-/// BuildFn-shape source: non-template adapter for the legacy
-/// `BuildFn = void(*)(JsonBuilder&, void*)` signature used by
-/// `IStreamingTransport`'s BuildFn-shaped virtuals. Same emit semantics
-/// as `BuilderRequestSource` but takes a function pointer + context
-/// instead of a callable reference, so each call site shares one
-/// instantiation.
+/// BuildFn-shape source: non-template adapter for the
+/// `BuildFn = void(*)(JsonBuilder&, void*)` signature used by Protocol's
+/// BuildFn-shaped entry points. Same emit semantics as
+/// `BuilderRequestSource` but takes a function pointer + context instead
+/// of a callable reference, so each call site shares one instantiation.
 class BuildFnRequestSource {
 public:
     BuildFnRequestSource(BuildFn fn, void* ctx) : fn_(fn), ctx_(ctx) {}

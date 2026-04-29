@@ -37,7 +37,7 @@ struct Harness {
 // Currently only the buffered overload exists without an allocator.
 // ---------------------------------------------------------------------------
 
-TEST_CASE("Issue 1: NotecardApi::begin(IStreamingTransport&) without allocator") {
+TEST_CASE("Issue 1: NotecardApi::begin(ITransport&) without allocator") {
     // Streaming begin() should work without an explicit allocator (uses heap default).
     struct FakeHal : note::Hal {
         bool transmit(const uint8_t*, size_t) override { return true; }
@@ -47,18 +47,15 @@ TEST_CASE("Issue 1: NotecardApi::begin(IStreamingTransport&) without allocator")
         uint32_t millis() override { return 0; }
         void delay(uint32_t) override {}
     };
-    struct FakeStreamingTransport : note::IStreamingTransport {
+    // Minimal `ITransport` fake: implements only what `nc.begin()` exercises.
+    // Step 8b: BuildFn-shaped virtuals are gone; the only transport-side entry
+    // points are the string_view + RequestSource overloads on `ITransport`.
+    struct FakeTransport : note::ITransport {
         FakeHal fake_hal;
-        // Bring inherited string_view + RequestSource overloads into scope so
-        // the BuildFn override below doesn't hide them under -Woverloaded-virtual.
-        using note::IStreamingTransport::transact;
-        using note::IStreamingTransport::send;
-        // Legacy BuildFn-shaped virtuals (still abstract on IStreamingTransport
-        // until Phase 5a step 8 collapses everything onto RequestSource).
-        note::Result<void> transact(note::BuildFn, void*, note::JsonSink&, uint32_t) override { return {}; }
-        note::Result<void> send(note::BuildFn, void*) override { return {}; }
-        // RequestSource-shaped virtuals (Phase 5a step 7) — no-op for this fake.
-        // Step 8 will drop the BuildFn ones above; these become the only entry points.
+        note::Result<note::string_view> transact(note::string_view, note::span<char>, uint32_t) override {
+            return note::string_view{};
+        }
+        note::Result<void> send(note::string_view) override { return {}; }
         note::Result<note::string_view> transact(note::RequestSource, note::span<char>, uint32_t) override {
             return note::string_view{};
         }
@@ -201,17 +198,17 @@ TEST_CASE("card.aux state: get_object_array reads pin states") {
 // ---------------------------------------------------------------------------
 // Issue 1b: arduino::Notecard::begin() wiring
 // The HAL (transport::NotecardSerial<>) must go through Protocol
-// before reaching NotecardApi::begin(IStreamingTransport&).
+// before reaching NotecardApi::begin(ITransport&).
 // ---------------------------------------------------------------------------
 
-TEST_CASE("Issue 1b: transport::NotecardSerial is a Hal, not IStreamingTransport") {
+TEST_CASE("Issue 1b: transport::NotecardSerial is a Hal, not ITransport") {
     // Verify that the transport types are what we expect
-    static_assert(!std::is_base_of_v<note::IStreamingTransport, note::transport::NotecardSerial<>>,
-        "NotecardSerial should NOT implement IStreamingTransport directly");
+    static_assert(!std::is_base_of_v<note::ITransport, note::transport::NotecardSerial<>>,
+        "NotecardSerial should NOT implement ITransport directly");
     static_assert(std::is_base_of_v<note::Hal, note::transport::NotecardSerial<>>,
         "NotecardSerial should be a Hal");
-    static_assert(std::is_base_of_v<note::IStreamingTransport, note::Protocol>,
-        "Protocol should implement IStreamingTransport");
+    static_assert(std::is_base_of_v<note::ITransport, note::Protocol>,
+        "Protocol should implement ITransport");
     REQUIRE(true);
 }
 

@@ -6,7 +6,7 @@
 /// Owns the transport stack by value. All calls go through concrete types —
 /// no virtual dispatch, no vtable entries in .data. Uses the same
 /// execute_streaming() core as Notecard, just with a concrete transport ref
-/// instead of an IStreamingTransport*.
+/// instead of an ITransport*.
 ///
 /// Usage:
 ///   using SerialNotecard = note::StaticNotecard<note::arduino::SerialTransportStack<>>;

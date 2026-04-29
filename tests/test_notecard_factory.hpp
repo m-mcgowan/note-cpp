@@ -23,7 +23,7 @@ inline Notecard make_test_notecard(JsonBackend& backend, IBufferedTransport& tra
 }
 
 /// Streaming variant.
-inline Notecard make_test_notecard(IStreamingTransport& transport, Allocator alloc = {}) {
+inline Notecard make_test_notecard(Protocol& transport, Allocator alloc = {}) {
     Notecard nc(transport, alloc);
     nc.set_request_ids(false);
     nc.set_retry_policy({.max_retries = 0});

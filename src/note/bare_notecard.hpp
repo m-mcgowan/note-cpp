@@ -1,7 +1,7 @@
 #pragma once
 
-// BareNotecard uses non-template Protocol which requires
-// IStreamingTransport — not available under NOTE_NO_POLYMORPHIC.
+// BareNotecard uses non-template Protocol which requires the
+// polymorphic ITransport base — not available under NOTE_NO_POLYMORPHIC.
 #if !NOTE_NO_POLYMORPHIC
 
 /// @file bare_notecard.hpp

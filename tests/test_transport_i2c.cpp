@@ -208,7 +208,7 @@ struct I2cTestHarness {
     // Convenience: transact with a simple build function and capture sink.
     note::Result<void> transact(const char* req_name, CaptureSink& sink,
                                 uint32_t timeout_ms = 5000) {
-        note::IStreamingTransport& t = transport;
+        note::Protocol& t = transport;
         auto build = [&](note::JsonBuilder& b) { b.add("req", req_name); };
         return t.transact(build, sink, timeout_ms);
     }
@@ -216,7 +216,7 @@ struct I2cTestHarness {
     // Transact with a NullSink (just check success/failure).
     note::Result<void> transact(const char* req_name,
                                 uint32_t timeout_ms = 5000) {
-        note::IStreamingTransport& t = transport;
+        note::Protocol& t = transport;
         note::JsonSink null_sink;
         auto build = [&](note::JsonBuilder& b) { b.add("req", req_name); };
         return t.transact(build, null_sink, timeout_ms);
@@ -224,7 +224,7 @@ struct I2cTestHarness {
 
     // Send (fire-and-forget).
     note::Result<void> send(const char* cmd_name) {
-        note::IStreamingTransport& t = transport;
+        note::Protocol& t = transport;
         auto build = [&](note::JsonBuilder& b) { b.add("cmd", cmd_name); };
         return t.send(build);
     }
@@ -711,7 +711,7 @@ TEST_CASE("I2cCallbackHal delegates to callbacks") {
 
     NotecardI2c<I2cPolicy> notecard_i2c(cb);
     note::Protocol transport(notecard_i2c);
-    note::IStreamingTransport& t = transport;
+    note::Protocol& t = transport;
     note::JsonSink null_sink;
     auto build = [](note::JsonBuilder& b) { b.add("req", "hub.status"); };
     auto r = t.transact(build, null_sink, 5000);

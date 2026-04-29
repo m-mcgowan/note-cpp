@@ -102,13 +102,14 @@ public:
         : detail::NcOwner(backend, transport)
         , Api<TargetT>(nc_) {}
 
-    /// Set the streaming transport after construction with explicit allocator.
-    void begin(IStreamingTransport& transport, Allocator alloc) {
+    /// Set a Protocol-typed transport with explicit allocator (streaming-only,
+    /// growable OwnedBuffer responses; no JsonBackend needed).
+    void begin(Protocol& transport, Allocator alloc) {
         nc_ = Notecard(transport, alloc);
     }
 
-    /// Set the streaming transport after construction (default heap allocator).
-    void begin(IStreamingTransport& transport) {
+    /// Set a Protocol-typed transport with the default heap allocator.
+    void begin(Protocol& transport) {
         nc_ = Notecard(transport, Allocator{});
     }
 
@@ -169,11 +170,11 @@ public:
         : detail::NcOwner(backend, transport)
         , Api<Notecard>(detail::NcOwner::nc_) {}
 
-    void begin(IStreamingTransport& transport, Allocator alloc) {
+    void begin(Protocol& transport, Allocator alloc) {
         detail::NcOwner::nc_ = Notecard(transport, alloc);
     }
 
-    void begin(IStreamingTransport& transport) {
+    void begin(Protocol& transport) {
         detail::NcOwner::nc_ = Notecard(transport, Allocator{});
     }
 

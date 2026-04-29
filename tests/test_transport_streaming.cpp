@@ -3,7 +3,7 @@
 // The new transport architecture splits:
 //   - Hal — pure hardware abstraction (transmit, read, reset, etc.)
 //   - Protocol — protocol logic (retry, CRC, JSON framing) over a HAL
-//   - IStreamingTransport — type-erased interface
+//   - ITransport — type-erased session interface
 //
 // Tests exercise transact() (build request via BuildFn, SAX-parse response into
 // a JsonSink) and send() (fire-and-forget).
@@ -123,9 +123,9 @@ public:
     uint32_t millis() override { return 0; }
 };
 
-// Helper: get IStreamingTransport& from Protocol to access
-// the convenience template overloads (transact(F&&, ...), send(F&&)).
-static IStreamingTransport& iface(Protocol& t) { return t; }
+// Helper: pass-through reference to Protocol — kept for source compat
+// while iface() callsites still spell the protocol layer this way.
+static Protocol& iface(Protocol& t) { return t; }
 
 
 // ---------------------------------------------------------------------------

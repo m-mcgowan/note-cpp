@@ -2,14 +2,12 @@
 
 /// @file protocol.hpp
 /// Protocol — Notecard wire-protocol driver over a `Hal`. Implements
-/// the unified `ITransport` interface natively (both transact overloads
-/// and `send`), and additionally exposes BuildFn-based virtuals via
-/// `IStreamingTransport` for callers that want to stream the request
-/// build directly to the wire (e.g. `StaticNotecard`).
-///
-/// IStreamingTransport — deprecated bridge: derives from ITransport,
-/// adds the BuildFn virtuals. Existing test stubs that only override
-/// the BuildFn shape continue to compile.
+/// the unified `ITransport` interface natively (string_view +
+/// RequestSource transact overloads, `send` for both shapes), and
+/// additionally exposes BuildFn-based non-virtual entry points
+/// (`transact(BuildFn, ctx, sink, …)` / `send(BuildFn, ctx)`, plus
+/// templated convenience wrappers for callable F) used by the bare /
+/// static notecards and zero-vtable test paths.
 ///
 /// Zero transport-internal buffers: requests are streamed via
 /// StreamingJsonBuilder, responses SAX-parsed directly from the wire.
@@ -160,71 +158,9 @@ struct ReceiveContext {
 
 } // namespace detail
 
-// ---------------------------------------------------------------------------
-// IStreamingTransport
-// ---------------------------------------------------------------------------
-
 // `BuildFn` is defined in `note/request_source.hpp` (included above) so
-// that both the legacy IStreamingTransport BuildFn virtuals here and the
+// that both the legacy BuildFn-shaped Protocol entry points here and the
 // `BuildFnRequestSource` adapter share one typedef.
-
-/// Streaming transport interface for Notecard communication.
-///
-/// Derives from `ITransport` so streaming-protocol drivers participate in
-/// the unified session interface. Adds two BuildFn-based virtuals
-/// (`transact(BuildFn, …)` / `send(BuildFn, …)`) for the streaming
-/// request-build path that emits JSON directly to the wire — useful when
-/// you want to skip materialising the request as a string. The new
-/// ITransport string-based methods (`transact(req, span)`,
-/// `transact(req, sink)`, `send(req)`) get "not implemented" defaults
-/// here so test stubs that only override the BuildFn methods continue to
-/// compile; concrete protocol drivers (`Protocol`) override
-/// them natively.
-struct IStreamingTransport : public ITransport {
-    /// Send a JSON request and SAX-parse the response into sink.
-    virtual Result<void> transact(BuildFn build_fn, void* ctx,
-                                  JsonSink& sink, uint32_t timeout_ms) = 0;
-
-    /// Send a JSON command (fire-and-forget).
-    virtual Result<void> send(BuildFn build_fn, void* ctx) = 0;
-
-    /// Bring the inherited string-based ITransport overloads into scope so
-    /// `transact(req, sink, …)` and `send(req)` aren't shadowed by the
-    /// BuildFn overloads above.
-    using ITransport::transact;
-    using ITransport::send;
-
-    /// Default ITransport bridges — IStreamingTransport stubs that only
-    /// implement the BuildFn shape get "not implemented" responses on the
-    /// string-based path. `Protocol` overrides these natively.
-    Result<string_view> transact(string_view, span<char>, uint32_t) override {
-        return make_error(Error::NotReady, NOTE_ERR("string transact not implemented"));
-    }
-    Result<void> transact(string_view, JsonSink&, uint32_t) override {
-        return make_error(Error::NotReady, NOTE_ERR("string transact not implemented"));
-    }
-    Result<void> send(string_view) override {
-        return make_error(Error::NotReady, NOTE_ERR("string send not implemented"));
-    }
-
-    /// Convenience: type-erase a callable.
-    template<typename F>
-    Result<void> transact(F&& f, JsonSink& sink, uint32_t timeout_ms) {
-        BuildFn fn = [](JsonBuilder& b, void* p) {
-            (*static_cast<std::remove_reference_t<F>*>(p))(b);
-        };
-        return transact(fn, &f, sink, timeout_ms);
-    }
-
-    template<typename F>
-    Result<void> send(F&& f) {
-        BuildFn fn = [](JsonBuilder& b, void* p) {
-            (*static_cast<std::remove_reference_t<F>*>(p))(b);
-        };
-        return send(fn, &f);
-    }
-};
-
 
 // ---------------------------------------------------------------------------
 // Protocol — protocol logic over a Hal
@@ -242,7 +178,7 @@ public:
     explicit Protocol(Hal& hal)
         : hal_(hal) {}
 #else
-class Protocol : public IStreamingTransport {
+class Protocol : public ITransport {
 public:
     explicit Protocol(Hal& hal)
         : hal_(hal) {}
@@ -273,21 +209,35 @@ public:
 #else
     Hal& hal() override { return hal_; }
 
-    /// Virtual override for IStreamingTransport (used by Notecard).
+    /// BuildFn-shaped transact (non-virtual). Takes a function pointer
+    /// + context that paint JSON fields through a streaming builder, and
+    /// SAX-parses the response into `sink`. Used directly by tests and
+    /// the bare-notecard / static-notecard sample paths.
     Result<void> transact(BuildFn build_fn, void* ctx,
-                          JsonSink& sink, uint32_t timeout_ms) override {
+                          JsonSink& sink, uint32_t timeout_ms) {
         return transact_impl(build_fn, ctx, sink, timeout_ms);
     }
 
-    // ── ITransport string-based overrides ──────────────────────────────
-    //
-    // The unified `ITransport` shape takes a pre-built request as
-    // string_view. `Protocol` is the concrete protocol driver,
-    // so it overrides all three natively rather than inheriting the
-    // "not implemented" defaults from `IStreamingTransport`.
+    /// Convenience: type-erase a callable into a BuildFn and route to
+    /// the BuildFn-shaped entry. Lets callers write
+    /// `transport.transact([](JsonBuilder& b){ b.add(...); }, sink, t)`
+    /// without manually constructing the `BuildFn` thunk.
+    template<typename F>
+    Result<void> transact(F&& f, JsonSink& sink, uint32_t timeout_ms) {
+        BuildFn fn = [](JsonBuilder& b, void* p) {
+            (*static_cast<std::remove_reference_t<F>*>(p))(b);
+        };
+        return transact(fn, &f, sink, timeout_ms);
+    }
 
-    using IStreamingTransport::transact;  // bring BuildFn overloads back into scope
-    using IStreamingTransport::send;
+    /// Convenience send: type-erase a callable, route to BuildFn `send`.
+    template<typename F>
+    Result<void> send(F&& f) {
+        BuildFn fn = [](JsonBuilder& b, void* p) {
+            (*static_cast<std::remove_reference_t<F>*>(p))(b);
+        };
+        return send(fn, &f);
+    }
 
     /// Buffered-style overload: ITransport `transact(req, span, timeout)`.
     Result<string_view> transact(string_view request, span<char> buf,
@@ -522,11 +472,8 @@ private:
 
 public:
 
-    Result<void> send(BuildFn build_fn, void* ctx)
-#if !NOTE_NO_POLYMORPHIC && !NOTE_STATIC_HAL
-        override
-#endif
-    {
+    /// BuildFn-shaped fire-and-forget send (non-virtual on Protocol).
+    Result<void> send(BuildFn build_fn, void* ctx) {
 #if NOTE_TXN_HANDSHAKE
         detail::TxnHandshakeScope handshake_scope{handshake_, detail::kTxnHandshakeDefaultTimeoutMs};
         if (!handshake_scope.ok())

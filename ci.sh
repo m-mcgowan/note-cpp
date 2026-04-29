@@ -389,14 +389,15 @@ discover_compilers() {
 # multiple flag combinations would restore coverage to previous levels.
 MIN_LINE_COV=90
 MIN_FUNC_COV=90
-# Branch coverage floor. 93% accommodates: (a) template-instantiation branch
+# Branch coverage floor. 94% accommodates: (a) template-instantiation branch
 # records for body-factory dispatch in notecard.hpp and endpoint headers,
 # where each RequestT instantiation adds its own copy of the
-# `if (req.body_handler_factory_)` check; (b) under-exercised JSON-scan / JSONB /
-# struct-sink edge paths in tests pulled into the coverage build (test_jsonb,
-# test_json_scan, test_struct_field_symmetry). Raising further requires
-# targeted tests for those paths.
-MIN_BRANCH_COV=93
+# `if (req.body_handler_factory_)` check; (b) under-exercised JSONB /
+# struct-sink edge paths in tests pulled into the coverage build
+# (test_jsonb, test_struct_field_symmetry). Raising further requires
+# targeted tests for those paths — start with the highest-miss files in
+# coverage/html/index.html.
+MIN_BRANCH_COV=94
 
 check_coverage_thresholds() {
     local lcov_file="$1"

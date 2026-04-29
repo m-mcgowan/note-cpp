@@ -414,3 +414,167 @@ TEST_CASE("JsonView::for_each visits pairs") {
     v.for_each([&](note::string_view, note::string_view) { ++n; });
     REQUIRE(n == 2);
 }
+
+// ---------------------------------------------------------------------------
+// Coverage gap closers — explicit cases for branches that the broader
+// "happy-path" tests above don't exercise.
+// ---------------------------------------------------------------------------
+
+// is_ws / skip_ws: cover tab, newline, carriage-return whitespace
+// (the rest of the file uses only space).
+TEST_CASE("scan handles tab/newline/CR whitespace") {
+    REQUIRE(note::scan::field("{\"x\":\t1}", "x") == "1");
+    REQUIRE(note::scan::field("{\"x\":\n1}", "x") == "1");
+    REQUIRE(note::scan::field("{\"x\":\r1}", "x") == "1");
+    REQUIRE(note::scan::field("{ \t\n\r\"x\"\t:\n1\r}", "x") == "1");
+}
+
+// matches_at early-out on size mismatch (key longer than remaining haystack).
+TEST_CASE("scan::field key longer than remaining returns empty") {
+    REQUIRE(note::scan::field(R"({"a":1})", "verylongkey").empty());
+}
+
+// value_end: string with backslash-escaped quote/backslash inside.
+TEST_CASE("scan::field handles escaped quote inside string value") {
+    auto v = note::scan::field(R"({"s":"a\"b","x":1})", "s");
+    REQUIRE(v == R"("a\"b")");
+}
+
+TEST_CASE("scan::field handles escaped backslash inside string value") {
+    auto v = note::scan::field(R"({"s":"a\\b","x":1})", "s");
+    REQUIRE(v == R"("a\\b")");
+}
+
+// value_end: nested object that contains a string containing braces+quotes
+// — exercises the nested-string sub-loop's escape handling.
+TEST_CASE("scan::object handles strings with escaped quotes inside") {
+    auto v = note::scan::object(R"({"o":{"k":"v\"x"}})", "o");
+    REQUIRE(v == R"({"k":"v\"x"})");
+}
+
+// value_end primitive scan that runs to end of input (no trailing brace).
+TEST_CASE("scan::field handles primitive value at end of input without delimiter") {
+    // Malformed (no closing brace) but value_end should still bound it.
+    auto v = note::scan::field("{\"n\":42", "n");
+    REQUIRE(v == "42");
+}
+
+// find_value: a string-typed value that contains a substring matching the
+// key — must NOT be reported (the scan skips over the inner string body).
+TEST_CASE("scan::field does not match key inside string value") {
+    auto v = note::scan::field(R"({"a":"x:1","b":2})", "x");
+    REQUIRE(v.empty());
+}
+
+// object/array: key exists but value is wrong shape.
+TEST_CASE("scan::object returns empty when value is array") {
+    REQUIRE(note::scan::object(R"({"x":[1,2]})", "x").empty());
+}
+
+TEST_CASE("scan::array returns empty when value is object") {
+    REQUIRE(note::scan::array(R"({"x":{"a":1}})", "x").empty());
+}
+
+// get<bool>: non-true/non-false value falls through to default.
+TEST_CASE("scan::get<bool> returns default for non-boolean value") {
+    REQUIRE(note::scan::get(R"({"on":1})", "on", false) == false);
+    REQUIRE(note::scan::get(R"({"on":"yes"})", "on", true) == true);
+}
+
+// get<string_view>: present but non-string value falls through to default.
+TEST_CASE("scan::get<string_view> returns default for non-string value") {
+    REQUIRE(note::scan::get(R"({"name":42})", "name", string_view{"?"}) == "?");
+}
+
+// for_each: malformed-input early bails.
+TEST_CASE("scan::for_each bails on input not starting with '{'") {
+    int n = 0;
+    note::scan::for_each(R"([1,2,3])",
+        [&](note::string_view, note::string_view) { ++n; });
+    REQUIRE(n == 0);
+}
+
+TEST_CASE("scan::for_each bails on empty input") {
+    int n = 0;
+    note::scan::for_each("",
+        [&](note::string_view, note::string_view) { ++n; });
+    REQUIRE(n == 0);
+}
+
+TEST_CASE("scan::for_each bails when key not quoted") {
+    int n = 0;
+    note::scan::for_each(R"({a:1})",
+        [&](note::string_view, note::string_view) { ++n; });
+    REQUIRE(n == 0);
+}
+
+TEST_CASE("scan::for_each bails on unterminated key") {
+    int n = 0;
+    note::scan::for_each(R"({"a)",
+        [&](note::string_view, note::string_view) { ++n; });
+    REQUIRE(n == 0);
+}
+
+TEST_CASE("scan::for_each bails when colon missing after key") {
+    int n = 0;
+    note::scan::for_each(R"({"a" 1})",
+        [&](note::string_view, note::string_view) { ++n; });
+    REQUIRE(n == 0);
+}
+
+TEST_CASE("scan::for_each tolerates trailing whitespace before close") {
+    int n = 0;
+    note::scan::for_each(R"({"a":1   })",
+        [&](note::string_view, note::string_view) { ++n; });
+    REQUIRE(n == 1);
+}
+
+// into walk_t: explicit false-branch on a bool field.
+TEST_CASE("scan::into walk_t handles bool=false") {
+    Readings r{0.0f, 0, true};
+    note::scan::into(R"({"alarm":false})", r);
+    REQUIRE(r.alarm == false);
+}
+
+// into pick_t: leaves missing fields untouched (mirrors the walk_t case
+// at line 312 above; closes the corresponding branch in the pick loop).
+TEST_CASE("scan::into pick_t leaves missing fields untouched") {
+    Readings r{9.9f, 99, true};
+    note::scan::into(R"({"temp":1.0})", r, note::scan::pick);
+    REQUIRE(r.temp == doctest::Approx(1.0f));
+    REQUIRE(r.humidity == 99);
+    REQUIRE(r.alarm == true);
+}
+
+// into pick_t: cover the FieldType arms not exercised by Readings
+// (Int8, Int16, Int (json_int_t), Double, String).
+namespace {
+struct AllTypes {
+    int8_t   i8;
+    int16_t  i16;
+    note::json_int_t i;
+    double   d;
+    note::string_view s;
+    NOTE_FIELDS(i8, i16, i, d, s)
+};
+} // namespace
+
+TEST_CASE("scan::into pick_t handles Int8/Int16/Int/Double/String fields") {
+    AllTypes a{0, 0, 0, 0.0, {}};
+    note::scan::into(R"({"i8":-12,"i16":-1234,"i":99999,"d":2.5,"s":"hi"})",
+                     a, note::scan::pick);
+    REQUIRE(a.i8 == -12);
+    REQUIRE(a.i16 == -1234);
+    REQUIRE(a.i == 99999);
+    REQUIRE(a.d == doctest::Approx(2.5));
+    REQUIRE(a.s == "hi");
+}
+
+TEST_CASE("scan::into pick_t leaves String field alone for non-quoted value") {
+    AllTypes a{0, 0, 0, 0.0, note::string_view{"keep"}};
+    // numeric value for a string-typed field — the pick path takes
+    // the String case but skips the assignment because the value
+    // isn't surrounded by quotes.
+    note::scan::into(R"({"s":42})", a, note::scan::pick);
+    REQUIRE(a.s == "keep");
+}

@@ -366,6 +366,9 @@ struct EnvGet {
         static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
             {keys_::name, static_cast<uint16_t>(offsetof(EnvGet, name)), ::note::ReqFieldType::String},
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+            {keys_::names, static_cast<uint16_t>(offsetof(EnvGet, names)), ::note::ReqFieldType::Array},
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
             {keys_::time, static_cast<uint16_t>(offsetof(EnvGet, time)), ::note::ReqFieldType::Int},
 #endif
         };
@@ -374,9 +377,6 @@ struct EnvGet {
         return table_;
     }
     void build(JsonBuilder& b) const {
-#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-        if (names) names.write_to(b, "names");
-#endif
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
 #endif
         uint8_t n_; auto* descs_ = req_field_descs_ptr_(n_);

@@ -613,6 +613,7 @@ struct CardAux {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
             {keys_::sync, static_cast<uint16_t>(offsetof(CardAux, sync)), ::note::ReqFieldType::Bool},
 #endif
+            {keys_::usage, static_cast<uint16_t>(offsetof(CardAux, usage)), ::note::ReqFieldType::Array},
         };
 #pragma GCC diagnostic pop
         n_out = sizeof(table_) / sizeof(table_[0]);
@@ -635,7 +636,6 @@ struct CardAux {
 #endif
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
 #endif
-        if (usage) usage.write_to(b, "usage");
         uint8_t n_; auto* descs_ = req_field_descs_ptr_(n_);
         ::note::generic_build(b, this, descs_, n_);
 #if NOTE_EXTRAS

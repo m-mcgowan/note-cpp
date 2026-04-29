@@ -240,6 +240,7 @@ struct FileChanges {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
         static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
+            {keys_::files, static_cast<uint16_t>(offsetof(FileChanges, files)), ::note::ReqFieldType::Array},
             {keys_::tracker, static_cast<uint16_t>(offsetof(FileChanges, tracker)), ::note::ReqFieldType::String},
         };
 #pragma GCC diagnostic pop
@@ -247,7 +248,6 @@ struct FileChanges {
         return table_;
     }
     void build(JsonBuilder& b) const {
-        if (files) files.write_to(b, "files");
         uint8_t n_; auto* descs_ = req_field_descs_ptr_(n_);
         ::note::generic_build(b, this, descs_, n_);
 #if NOTE_EXTRAS

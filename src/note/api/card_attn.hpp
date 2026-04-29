@@ -537,6 +537,7 @@ struct CardAttn {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
             static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
+                {keys_::files, static_cast<uint16_t>(offsetof(CardAttn::Request, files)), ::note::ReqFieldType::Array},
                 {keys_::mode, static_cast<uint16_t>(offsetof(CardAttn::Request, mode)), ::note::ReqFieldType::String},
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
                 {keys_::off, static_cast<uint16_t>(offsetof(CardAttn::Request, off)), ::note::ReqFieldType::Bool},
@@ -554,7 +555,6 @@ struct CardAttn {
             return table_;
         }
         void build(JsonBuilder& b) const {
-            if (files) files.write_to(b, "files");
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
 #endif
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
@@ -920,6 +920,7 @@ struct CardAttn {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
             static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
+                {keys_::files, static_cast<uint16_t>(offsetof(CardAttn::Arm, files)), ::note::ReqFieldType::Array},
                 {keys_::on, static_cast<uint16_t>(offsetof(CardAttn::Arm, on)), ::note::ReqFieldType::Bool},
                 {keys_::seconds, static_cast<uint16_t>(offsetof(CardAttn::Arm, seconds)), ::note::ReqFieldType::Int},
             };
@@ -928,7 +929,6 @@ struct CardAttn {
             return table_;
         }
         void build(JsonBuilder& b) const {
-            if (files) files.write_to(b, "files");
             if (triggers) {
                 char mp_[96];
                 std::snprintf(mp_, sizeof(mp_), "arm,%.*s",
@@ -1281,6 +1281,7 @@ struct CardAttn {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
             static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
+                {keys_::files, static_cast<uint16_t>(offsetof(CardAttn::Rearm, files)), ::note::ReqFieldType::Array},
                 {keys_::on, static_cast<uint16_t>(offsetof(CardAttn::Rearm, on)), ::note::ReqFieldType::Bool},
                 {keys_::seconds, static_cast<uint16_t>(offsetof(CardAttn::Rearm, seconds)), ::note::ReqFieldType::Int},
             };
@@ -1289,7 +1290,6 @@ struct CardAttn {
             return table_;
         }
         void build(JsonBuilder& b) const {
-            if (files) files.write_to(b, "files");
             if (triggers) {
                 char mp_[96];
                 std::snprintf(mp_, sizeof(mp_), "rearm,%.*s",

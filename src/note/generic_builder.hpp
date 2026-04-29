@@ -9,6 +9,7 @@
 ///
 /// Field descriptors use PROGMEM on AVR for zero RAM cost.
 
+#include <note/array_field.hpp>
 #include <note/json.hpp>
 #include <note/progmem.hpp>
 #include <note/types.hpp>
@@ -25,6 +26,12 @@ enum class ReqFieldType : uint8_t {
     Int32,   // int32_t — unit types (Seconds, Minutes) that always store 32-bit
     Double,
     String,
+    /// ArrayField<string_view, 8> — emits the array under `name` if non-empty.
+    /// Single concrete shape used across all endpoints in this codebase.
+    /// BodyValue is NOT in this enum: existing wire format emits `body`
+    /// before required fields (e.g. `note.template`: body, file, verify);
+    /// it is still emitted manually at the top of build().
+    Array,
 };
 
 /// Describes one request field: key name, byte offset, and type.
@@ -124,6 +131,20 @@ inline void generic_build(JsonBuilder& b, const void* req,
 #endif
                 char kbuf[32];
                 b.add(key.to_view(kbuf), *f);
+            }
+            break;
+        }
+        case ReqFieldType::Array: {
+            const auto& arr = *reinterpret_cast<const ArrayField<string_view, 8>*>(base);
+            if (arr) {
+                FlashString key{d.name, 0};
+#if NOTE_PROGMEM
+                key.len = strlen_P(d.name);
+#else
+                key.len = __builtin_strlen(d.name);
+#endif
+                char kbuf[32];
+                arr.write_to(b, key.to_view(kbuf));
             }
             break;
         }

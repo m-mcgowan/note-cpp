@@ -383,7 +383,7 @@ TEST_CASE("Notecard::command_typed() sends typed request as cmd") {
 // transport() accessor
 // ---------------------------------------------------------------------------
 
-TEST_CASE("Notecard::transport() returns the ITransport reference") {
+TEST_CASE("Notecard::transport() returns the ITransact reference") {
     note::test::TestJsonBackend backend;
     note::test::CallbackTransport transport(
         [](note::string_view, uint32_t) -> note::Result<note::string_view> { return "{}"; });

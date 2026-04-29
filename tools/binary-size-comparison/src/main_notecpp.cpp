@@ -22,7 +22,7 @@ static note::backends::CjsonBackend backend;
 static note::arduino::SerialHal<HardwareSerial> hal(Serial1, 9600);
 static note::transport::NotecardSerial<> serial_transport(hal);
 static note::Protocol streaming(serial_transport);
-// Protocol directly satisfies ITransport — the buffered
+// Protocol directly satisfies ITransact — the buffered
 // Notecard ctor pulls bytes via the new transact(req, span, …) overload.
 // Notecard owns the response staging buffer (NOTE_RSP_BUF_SIZE).
 static note::Notecard notecard(backend, streaming);

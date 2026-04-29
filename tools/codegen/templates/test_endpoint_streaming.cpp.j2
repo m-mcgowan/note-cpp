@@ -3,8 +3,8 @@
 // Endpoint transport equivalence tests.
 // Each endpoint runs against BOTH transport paths with the same response
 // JSON, proving streaming and buffered produce identical results:
-//   - Streaming: Protocol(MockHal) → ITransport → SAX Sink
-//   - Buffered:  CallbackTransport → ITransport → JsonReader parse
+//   - Streaming: Protocol(MockHal) → ITransact → SAX Sink
+//   - Buffered:  CallbackTransport → ITransact → JsonReader parse
 //
 // Void-response endpoints verify both paths succeed without error.
 
@@ -15,7 +15,7 @@
 #include <note/allocator.hpp>
 #include <note/backends/buffer.hpp>
 #include <note/protocol.hpp>
-#include <note/transport.hpp>
+#include <note/transact.hpp>
 #include <note/string_pool.hpp>
 
 #include <cstring>

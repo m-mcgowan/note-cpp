@@ -13,7 +13,7 @@
 //   │   • tree-mode  (JsonReader via JsonBackend; supports `body()`)     │
 //   │   • sink-mode  (SAX events into Rsp::Sink; supports `.into()`)     │
 //   ├────────────────────────────────────────────────────────────────────┤
-//   │ ITransport / Protocol / Hal — wire frames, retries, byte conduit   │
+//   │ ITransact / Protocol / Hal — wire frames, retries, byte conduit   │
 //   └────────────────────────────────────────────────────────────────────┘
 //
 // Both the high-level and low-level API surfaces are transport-agnostic:
@@ -32,7 +32,7 @@
 #include <note/allocator.hpp>
 #include <note/backends/buffer.hpp>
 #include <note/protocol.hpp>
-#include <note/transport.hpp>
+#include <note/transact.hpp>
 #include <note/transport_hal.hpp>
 
 #include "test_notecard_factory.hpp"
@@ -229,7 +229,7 @@ TEST_CASE("§3 raw transact(json, buf) — same wire bytes, same response on bot
     constexpr const char* kRawRequest  = R"({"req":"card.version"})";
     constexpr const char* kRawResponse = R"({"version":"notecard-7.5.2","device":"dev:0"})";
 
-    // ── Streaming side: hits transact_raw via the new ITransport overload.
+    // ── Streaming side: hits transact_raw via the new ITransact overload.
     MockHal stream_hal;
     stream_hal.queue_response(kRawResponse);
     note::Protocol stream_transport(stream_hal);

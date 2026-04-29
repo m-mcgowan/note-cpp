@@ -13,7 +13,7 @@
 #include "protocol.hpp"
 #include "string_pool.hpp"
 #include "struct_sink.hpp"
-#include "transport.hpp"
+#include "transact.hpp"
 #include "transport/cobs.hpp"
 
 #include <optional>
@@ -128,7 +128,7 @@ public:
     Notecard() = default;
 
     /// Tree-mode ctor: buffered transact via the supplied JsonBackend.
-    Notecard(JsonBackend& backend, ITransport& transport)
+    Notecard(JsonBackend& backend, ITransact& transport)
         : backend_(&backend)
         , transport_(&transport)
     {}
@@ -139,7 +139,7 @@ public:
     /// selects the response-strategy: when set, execute() drives the
     /// streaming SAX path; when unset and a backend is present, the
     /// buffered tree-parse path runs.
-    Notecard(JsonBackend* backend, ITransport& transport, Allocator alloc = {})
+    Notecard(JsonBackend* backend, ITransact& transport, Allocator alloc = {})
         : backend_(backend)
         , transport_(&transport)
         , alloc_(alloc)
@@ -147,17 +147,17 @@ public:
 
     /// Protocol-typed ctors. `Protocol` exposes the send/read split that
     /// `transact(string_view) -> OwnedBuffer` uses for the growable
-    /// byte-by-byte response path; the unified ITransport ctors above
+    /// byte-by-byte response path; the unified ITransact ctors above
     /// only get the bounded `transact(req, span<char>, t)` path. Pass a
     /// `Protocol&` here to opt into the growable response.
     Notecard(Protocol& transport, Allocator alloc = {})
-        : Notecard(nullptr, static_cast<ITransport&>(transport), alloc)
+        : Notecard(nullptr, static_cast<ITransact&>(transport), alloc)
     {
         streaming_protocol_ = &transport;
     }
 
     Notecard(JsonBackend* backend, Protocol& transport, Allocator alloc = {})
-        : Notecard(backend, static_cast<ITransport&>(transport), alloc)
+        : Notecard(backend, static_cast<ITransact&>(transport), alloc)
     {
         streaming_protocol_ = &transport;
     }
@@ -481,7 +481,7 @@ public:
             return make_error(Error::NotReady, NOTE_ERR("no transport configured"));
 
         auto attempt = [&]() -> Result<string_view> {
-            // Caller's buffer goes straight to the transport; ITransport
+            // Caller's buffer goes straight to the transport; ITransact
             // copies the response into `buf` and returns a view of it.
             auto rv = transport_->transact(json, buf, default_timeout_ms_);
             if (!rv) return rv;
@@ -536,7 +536,7 @@ public:
     const DebugListener& debug() const { return debug_; }
 
     /// Access the underlying transport.
-    ITransport& transport() { return *transport_; }
+    ITransact& transport() { return *transport_; }
 
     /// Access the underlying byte HAL — for low-level timing, bus reset,
     /// and other operations that don't go through the wire protocol.
@@ -907,7 +907,7 @@ private:
     }
 
     /// Streaming execute core — template on transport to support both
-    /// virtual (ITransport*) and concrete (StaticNotecard) dispatch.
+    /// virtual (ITransact*) and concrete (StaticNotecard) dispatch.
     /// When called with a pointer, the compiler generates one shared copy.
     /// When called with a concrete ref, it devirtualizes on modern GCC.
     template<typename Transport>
@@ -965,7 +965,7 @@ private:
     Allocator alloc_value() const { return alloc_.value_or(Allocator{}); }
 
     JsonBackend* backend_ = nullptr;
-    ITransport* transport_ = nullptr;
+    ITransact* transport_ = nullptr;
     /// Set when the Notecard was constructed via a `Protocol&`-typed ctor.
     /// Used solely to drive the byte-by-byte growable response path in
     /// `transact(string_view) -> OwnedBuffer`, which needs the send/read

@@ -41,10 +41,10 @@ namespace detail {
         NcOwner()
             : nc_() {}
 
-        explicit NcOwner(ITransport& transport)
+        explicit NcOwner(ITransact& transport)
             : nc_(default_backend_, transport) {}
 
-        NcOwner(JsonBackend& backend, ITransport& transport)
+        NcOwner(JsonBackend& backend, ITransact& transport)
             : nc_(backend, transport) {}
     };
 
@@ -93,12 +93,12 @@ public:
         , Api<TargetT>(nc_) {}
 
     /// Construct with transport (uses default backend).
-    explicit NotecardApi(ITransport& transport)
+    explicit NotecardApi(ITransact& transport)
         : detail::NcOwner(transport)
         , Api<TargetT>(nc_) {}
 
     /// Construct with explicit backend + transport.
-    NotecardApi(JsonBackend& backend, ITransport& transport)
+    NotecardApi(JsonBackend& backend, ITransact& transport)
         : detail::NcOwner(backend, transport)
         , Api<TargetT>(nc_) {}
 
@@ -115,12 +115,12 @@ public:
 
     /// Set the transport after construction (uses default backend, lights
     /// up tree-mode `body()` walking).
-    void begin(ITransport& transport) {
+    void begin(ITransact& transport) {
         nc_ = Notecard(default_backend_, transport);
     }
 
     /// Set the transport with an explicit JsonBackend.
-    void begin(JsonBackend& backend, ITransport& transport) {
+    void begin(JsonBackend& backend, ITransact& transport) {
         nc_ = Notecard(backend, transport);
     }
 
@@ -145,7 +145,7 @@ public:
 
 /// CTAD guide: map a pack of axis values at the call site to
 /// `NotecardApi<ComposedTarget<Axes...>>`. The requires clause keeps
-/// non-axis arguments (e.g. `ITransport&`) from matching this guide so
+/// non-axis arguments (e.g. `ITransact&`) from matching this guide so
 /// their constructors deduce the default `TargetT=Unconstrained`.
 template<typename... Axes>
     requires (sizeof...(Axes) > 0
@@ -162,11 +162,11 @@ public:
         : detail::NcOwner()
         , Api<Notecard>(detail::NcOwner::nc_) {}
 
-    explicit NotecardApi(ITransport& transport)
+    explicit NotecardApi(ITransact& transport)
         : detail::NcOwner(transport)
         , Api<Notecard>(detail::NcOwner::nc_) {}
 
-    NotecardApi(JsonBackend& backend, ITransport& transport)
+    NotecardApi(JsonBackend& backend, ITransact& transport)
         : detail::NcOwner(backend, transport)
         , Api<Notecard>(detail::NcOwner::nc_) {}
 
@@ -178,11 +178,11 @@ public:
         detail::NcOwner::nc_ = Notecard(transport, Allocator{});
     }
 
-    void begin(ITransport& transport) {
+    void begin(ITransact& transport) {
         detail::NcOwner::nc_ = Notecard(default_backend_, transport);
     }
 
-    void begin(JsonBackend& backend, ITransport& transport) {
+    void begin(JsonBackend& backend, ITransact& transport) {
         detail::NcOwner::nc_ = Notecard(backend, transport);
     }
 

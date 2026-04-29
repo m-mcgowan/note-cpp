@@ -186,8 +186,8 @@ The current function-based transport (`RequestFn`/`SendFn`) needs to become
 a proper object to support reset and abort:
 
 ```cpp
-struct ITransport {
-    virtual ~ITransport() = default;
+struct ITransact {
+    virtual ~ITransact() = default;
 
     /// Send a request and receive the response.
     /// Returns string_view into transport's internal buffer.
@@ -209,8 +209,8 @@ struct ITransport {
 ```
 
 `NotecardSerial` and `NotecardI2c` already implement most of this as
-duck-typed callables. The refactor formalizes them as `ITransport`
-implementations. `Notecard` takes `ITransport&` instead of `RequestFn`/`SendFn`.
+duck-typed callables. The refactor formalizes them as `ITransact`
+implementations. `Notecard` takes `ITransact&` instead of `RequestFn`/`SendFn`.
 
 The retry loop calls `reset()` after each failed attempt (matching note-c)
 and can call `abort()` to interrupt a transport that's blocked mid-receive

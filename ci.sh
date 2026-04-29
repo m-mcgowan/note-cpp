@@ -97,7 +97,7 @@ run_ci() {
 #include <note/notecard.hpp>
 #include <note/notecard_api.hpp>
 #include <note/api.hpp>
-#include <note/transport.hpp>
+#include <note/transact.hpp>
 #include <note/transport/serial.hpp>
 #include <note/transport/i2c.hpp>
 #include <note/body.hpp>
@@ -118,7 +118,7 @@ HEOF
 #include <note/notecard.hpp>
 #include <note/notecard_api.hpp>
 #include <note/api.hpp>
-#include <note/transport.hpp>
+#include <note/transact.hpp>
 #include <note/transport/serial.hpp>
 #include <note/transport/i2c.hpp>
 #include <note/body.hpp>

@@ -1,11 +1,11 @@
 #pragma once
 
-/// @file transport.hpp
-/// ITransport — unified Notecard session interface (Phase 3 of the
+/// @file transact.hpp
+/// ITransact — unified Notecard session interface (Phase 3 of the
 /// transport-rename arc; see docs/superpowers/plans/2026-04-27-transport-renames.md).
 /// note::test::CallbackTransport — adapter for test lambdas.
 ///
-/// `ITransport` exposes six transaction operations across two request
+/// `ITransact` exposes six transaction operations across two request
 /// shapes:
 ///
 ///   string_view shape (pre-built JSON):
@@ -54,10 +54,10 @@ namespace note {
 /// `StreamingJsonBuilder` layered over the writer. A verbatim string-shape
 /// adapter is deferred until Phase 5b's field router lands; until then,
 /// pre-built JSON keeps going through the legacy `transact(string_view, …)`
-/// overloads on `ITransport`.
+/// overloads on `ITransact`.
 ///
 /// `RequestSource` is the unified shape that step 8 of Phase 5a collapses
-/// `ITransport` to. Today (step 3) it lives alongside the legacy
+/// `ITransact` to. Today (step 3) it lives alongside the legacy
 /// `string_view` / `BuildFn` shapes; concrete drivers (`Protocol`) override
 /// it natively, and most consumers continue to use the legacy shapes until
 /// later steps in the arc migrate them.
@@ -71,7 +71,7 @@ struct RequestSource {
 };
 
 // ---------------------------------------------------------------------------
-// ITransport — unified session interface
+// ITransact — unified session interface
 // ---------------------------------------------------------------------------
 
 /// Unified Notecard session interface. Concrete transports must provide
@@ -82,8 +82,8 @@ struct RequestSource {
 ///   - `span<char>` — caller-owned buffer; response copied in, returned as a
 ///     `string_view` aliasing the leading bytes.
 ///   - `JsonSink&`  — SAX-parsed straight into the sink; no buffer needed.
-struct ITransport {
-    virtual ~ITransport() = default;
+struct ITransact {
+    virtual ~ITransact() = default;
 
     /// Send a JSON request and copy the response into the caller's buffer.
     virtual Result<string_view> transact(string_view request, span<char> buf,
@@ -213,7 +213,7 @@ public:
 /// The TransactFn returns a `string_view` aliasing transport-owned storage
 /// (e.g. a static string the lambda captures); the `transact(req, span, t)`
 /// override copies into the caller's buffer. The `transact(req, sink, t)`
-/// and RequestSource overloads inherit ITransport's defaults — buffered
+/// and RequestSource overloads inherit ITransact's defaults — buffered
 /// transact + SAX-parse / materialise + forward.
 ///
 /// @code
@@ -221,7 +221,7 @@ public:
 ///         [](string_view req, uint32_t) -> Result<string_view> { return "{}"; });
 ///     Notecard nc(backend, transport);
 /// @endcode
-class CallbackTransport : public ITransport {
+class CallbackTransport : public ITransact {
 public:
     using TransactFn = std::function<Result<string_view>(string_view, uint32_t)>;
     using SendFn = std::function<Result<void>(string_view)>;
@@ -234,8 +234,8 @@ public:
     CallbackTransport(TransactFn transact_fn, SendFn send_fn)
         : transact_(std::move(transact_fn)), send_(std::move(send_fn)) {}
 
-    using ITransport::transact;
-    using ITransport::send;
+    using ITransact::transact;
+    using ITransact::send;
 
     Result<string_view> transact(string_view request, span<char> buf,
                                  uint32_t timeout_ms) override {

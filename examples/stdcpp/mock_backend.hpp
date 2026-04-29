@@ -84,12 +84,12 @@ struct MockBackend : note::JsonBackend {
 };
 
 /// Mock transport for examples — returns empty JSON responses.
-struct MockTransport : note::ITransport {
+struct MockTransport : note::ITransact {
     std::string last_request;
     std::string response = "{}";
 
-    using note::ITransport::transact;
-    using note::ITransport::send;
+    using note::ITransact::transact;
+    using note::ITransact::send;
 
     note::Result<note::string_view> transact(note::string_view request,
                                              note::span<char> buf, uint32_t) override {

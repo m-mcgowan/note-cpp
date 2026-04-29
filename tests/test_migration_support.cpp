@@ -37,7 +37,7 @@ struct Harness {
 // Currently only the buffered overload exists without an allocator.
 // ---------------------------------------------------------------------------
 
-TEST_CASE("Issue 1: NotecardApi::begin(ITransport&) without allocator") {
+TEST_CASE("Issue 1: NotecardApi::begin(ITransact&) without allocator") {
     // Streaming begin() should work without an explicit allocator (uses heap default).
     struct FakeHal : note::Hal {
         bool transmit(const uint8_t*, size_t) override { return true; }
@@ -47,10 +47,10 @@ TEST_CASE("Issue 1: NotecardApi::begin(ITransport&) without allocator") {
         uint32_t millis() override { return 0; }
         void delay(uint32_t) override {}
     };
-    // Minimal `ITransport` fake: implements only what `nc.begin()` exercises.
+    // Minimal `ITransact` fake: implements only what `nc.begin()` exercises.
     // Step 8b: BuildFn-shaped virtuals are gone; the only transport-side entry
-    // points are the string_view + RequestSource overloads on `ITransport`.
-    struct FakeTransport : note::ITransport {
+    // points are the string_view + RequestSource overloads on `ITransact`.
+    struct FakeTransport : note::ITransact {
         FakeHal fake_hal;
         note::Result<note::string_view> transact(note::string_view, note::span<char>, uint32_t) override {
             return note::string_view{};
@@ -198,17 +198,17 @@ TEST_CASE("card.aux state: get_object_array reads pin states") {
 // ---------------------------------------------------------------------------
 // Issue 1b: arduino::Notecard::begin() wiring
 // The HAL (transport::NotecardSerial<>) must go through Protocol
-// before reaching NotecardApi::begin(ITransport&).
+// before reaching NotecardApi::begin(ITransact&).
 // ---------------------------------------------------------------------------
 
-TEST_CASE("Issue 1b: transport::NotecardSerial is a Hal, not ITransport") {
+TEST_CASE("Issue 1b: transport::NotecardSerial is a Hal, not ITransact") {
     // Verify that the transport types are what we expect
-    static_assert(!std::is_base_of_v<note::ITransport, note::transport::NotecardSerial<>>,
-        "NotecardSerial should NOT implement ITransport directly");
+    static_assert(!std::is_base_of_v<note::ITransact, note::transport::NotecardSerial<>>,
+        "NotecardSerial should NOT implement ITransact directly");
     static_assert(std::is_base_of_v<note::Hal, note::transport::NotecardSerial<>>,
         "NotecardSerial should be a Hal");
-    static_assert(std::is_base_of_v<note::ITransport, note::Protocol>,
-        "Protocol should implement ITransport");
+    static_assert(std::is_base_of_v<note::ITransact, note::Protocol>,
+        "Protocol should implement ITransact");
     REQUIRE(true);
 }
 

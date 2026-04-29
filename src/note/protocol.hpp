@@ -2,7 +2,7 @@
 
 /// @file protocol.hpp
 /// Protocol — Notecard wire-protocol driver over a `Hal`. Implements
-/// the unified `ITransport` interface natively (string_view +
+/// the unified `ITransact` interface natively (string_view +
 /// RequestSource transact overloads, `send` for both shapes), and
 /// additionally exposes BuildFn-based non-virtual entry points
 /// (`transact(BuildFn, ctx, sink, …)` / `send(BuildFn, ctx)`, plus
@@ -18,7 +18,7 @@
 #include <note/json_sax_streaming.hpp>
 #include <note/lexer/parse.hpp>
 #include <note/request_source.hpp>
-#include <note/transport.hpp>
+#include <note/transact.hpp>
 #include <note/transport_hal.hpp>
 #include <note/wire_format.hpp>
 #include <note/compiler.hpp>
@@ -178,7 +178,7 @@ public:
     explicit Protocol(Hal& hal)
         : hal_(hal) {}
 #else
-class Protocol : public ITransport {
+class Protocol : public ITransact {
 public:
     explicit Protocol(Hal& hal)
         : hal_(hal) {}
@@ -239,13 +239,13 @@ public:
         return send(fn, &f);
     }
 
-    /// Buffered-style overload: ITransport `transact(req, span, timeout)`.
+    /// Buffered-style overload: ITransact `transact(req, span, timeout)`.
     Result<string_view> transact(string_view request, span<char> buf,
                                  uint32_t timeout_ms) override {
         return transact_raw(request, buf.data(), buf.size(), timeout_ms);
     }
 
-    /// Streaming-style overload: ITransport `transact(req, sink, timeout)`.
+    /// Streaming-style overload: ITransact `transact(req, sink, timeout)`.
     /// Transmits the pre-built request, then SAX-parses the response into
     /// `sink`. Same protocol path as the BuildFn variant on the receive
     /// side, just with the request bytes already materialised.
@@ -258,14 +258,14 @@ public:
         return receive_dispatch(dispatch, timeout_ms, nc_err);
     }
 
-    /// Fire-and-forget: ITransport `send(req)`.
+    /// Fire-and-forget: ITransact `send(req)`.
     Result<void> send(string_view request) override {
         return send_raw(request);
     }
 
     // ─── RequestSource overloads (Phase 5a step 3) ─────────────────────
     //
-    // Native overrides for the ITransport RequestSource virtuals. The
+    // Native overrides for the ITransact RequestSource virtuals. The
     // request side runs through `stream_request_source`, which wraps the
     // wire writer with the same CRC/COBS framing as the legacy BuildFn
     // path. The receive side reuses the existing dispatch (sink overload)
@@ -273,8 +273,8 @@ public:
     // yet — Phase 5a steps 4-7 migrate Notecard, BareNotecard, and the
     // test fakes onto it.
 
-    using ITransport::transact;  // bring RequestSource overloads into scope alongside string_view ones
-    using ITransport::send;
+    using ITransact::transact;  // bring RequestSource overloads into scope alongside string_view ones
+    using ITransact::send;
 
     Result<string_view> transact(RequestSource src, span<char> buf,
                                  uint32_t timeout_ms) override {

@@ -21,17 +21,17 @@ only its predecessor's interface. Reading from the bottom up, the layers are:
 3. **`Protocol`** — full Notecard wire protocol over a framing `Hal`: CRC validation,
    init handshake, line termination, sequence numbers. The only concrete protocol
    driver. No retry — retry lives at the session layer.
-4. **`ITransport`** — unified Notecard transaction interface. Three operations:
+4. **`ITransact`** — unified Notecard transaction interface. Three operations:
    `transact(req, span)` → `string_view`, `transact(req, sink)` → SAX events,
    and `send(req)` (fire-and-forget). Buffered vs streaming are *response
    presentations* (overloads), not sibling transports. `Protocol` implements
-   `ITransport` natively. This is the contract a session class holds; the
+   `ITransact` natively. This is the contract a session class holds; the
    session itself is layer 6.
 5. **JSON layer** — turns response bytes into typed values. Tree mode (`JsonBackend`
    walks a parsed tree) or sink mode (SAX events fire into `Rsp::Sink`). See
    "JSON layer — the actual buffered/streaming choice" below.
 6. **Session — `Notecard` (or peer: `BareNotecard`, `StaticNotecard`)** — runtime
-   object holding an `ITransport&`, an optional `JsonBackend&`, a `RetryPolicy`,
+   object holding an `ITransact&`, an optional `JsonBackend&`, a `RetryPolicy`,
    and inter-transaction timing. Exposes `transact(json, buf)`, `send(json)`,
    `execute(req)`. Retry happens here, gated by per-request `Safety`. The three
    session classes are *peers* (alternative entry points), not stacked — pick one;
@@ -53,7 +53,7 @@ The library's layer structure maps roughly onto the OSI 7-layer model. Useful as
 | 2 (data link) | Notecard wire framing — segment pacing, MTU, drain windows | `note::transport::NotecardSerial<>`, `note::transport::NotecardI2c<>` |
 | 2 (link config) | wire pacing policy | `note::transport::ProtocolPolicy` (+ `SerialPolicy` / `I2cPolicy`) |
 | 4-ish (link reliability) | CRC, retry, init handshake, line termination, sequence numbers | `note::Protocol` |
-| 5 (session contract) | unified transact/send interface | `note::ITransport` |
+| 5 (session contract) | unified transact/send interface | `note::ITransact` |
 | 5+ (session implementation) | session class | `note::Notecard` (+ peers `BareNotecard`, `StaticNotecard`) |
 | 6 (presentation) | bytes ↔ typed values | `JsonBackend`, `JsonReader`, `JsonBuilder`, `JsonSink` |
 | 7 (application) | typed builders / convenience bundle | `Api<>`, `NotecardApi` |
@@ -66,7 +66,7 @@ flowchart TD
     NCSer["<b>transport::NotecardSerial</b><br/>Notecard wire framing over UART"]
     NCI2C["<b>transport::NotecardI2c</b><br/>Notecard wire framing over I2C"]
     Proto["<b>Protocol</b><br/>wire protocol: CRC, init handshake,<br/>line termination, sequence numbers"]
-    ITrans["<b>ITransport</b><br/>unified transaction interface:<br/>transact (span | sink), send"]
+    ITrans["<b>ITransact</b><br/>unified transaction interface:<br/>transact (span | sink), send"]
     JsonLayer["<b>JSON layer</b><br/>response bytes → typed values<br/>tree-mode (JsonBackend) or sink-mode (Rsp::Sink)"]
     Session["<b>Session — Notecard</b><br/>peers: BareNotecard, StaticNotecard<br/>holds transport + backend + RetryPolicy<br/>execute / transact / send (retry happens here)"]
     Api["<b>Api&lt;Session&gt;</b> (generated typed surface)<br/><code>api.note.read().into(struct).execute()</code>"]
@@ -108,7 +108,7 @@ COBS binary transfer — all built on your HAL.
 ```
 include/note/
     transport_hal.hpp          Hal (pure HAL interface)
-    transport.hpp              ITransport (unified session interface)
+    transport.hpp              ITransact (unified session interface)
     protocol.hpp               Protocol (concrete wire-protocol driver)
 
 include/note/transport/
@@ -119,11 +119,11 @@ include/note/transport/
 ```
 
 > **Naming note.** `IBufferedTransport` (the transitional bridge class)
-> has been dropped. `ITransport` carries default impls for the
+> has been dropped. `ITransact` carries default impls for the
 > `RequestSource` overloads that materialise into a stack scratch buffer
 > and forward to the buffered `transact(req, span, t)` virtual, so
 > transports that only support pre-built strings inherit the bridges
-> automatically — derive from `ITransport` directly and override the
+> automatically — derive from `ITransact` directly and override the
 > string_view-shaped virtuals.
 
 ## Transport-agnostic API

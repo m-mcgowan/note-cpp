@@ -17,8 +17,8 @@ extern note::Api<>* g_api;
 /// each environment's board init alongside g_api. Tests that want to
 /// exercise the same physical transport with a *buffered* (tree-mode)
 /// Notecard pass this directly to
-/// `note::Notecard(JsonBackend&, ITransport&)` — `Protocol`
-/// satisfies `ITransport` natively, so the ctor lights up the buffered
+/// `note::Notecard(JsonBackend&, ITransact&)` — `Protocol`
+/// satisfies `ITransact` natively, so the ctor lights up the buffered
 /// execute path that supports `body()` walking.
 extern note::Protocol* g_streaming_transport;
 

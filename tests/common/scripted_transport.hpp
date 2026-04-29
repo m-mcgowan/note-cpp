@@ -1,6 +1,6 @@
 #pragma once
 
-// Scripted ITransport for tests — returns a fixed string_view response
+// Scripted ITransact for tests — returns a fixed string_view response
 // from a const-char-pointer buffer the test owns. No std::string, no
 // std::function, no allocations on the hot path.
 //
@@ -13,17 +13,17 @@
 //     t.response = R"({"version":"notecard-7.2.1"})";
 //     note::Notecard nc(backend, t);
 
-#include <note/transport.hpp>
+#include <note/transact.hpp>
 
 #include <cstdint>
 
 namespace note::test {
 
-struct ScriptedTransport : note::ITransport {
+struct ScriptedTransport : note::ITransact {
     const char* response = "{}";
 
-    using note::ITransport::transact;
-    using note::ITransport::send;
+    using note::ITransact::transact;
+    using note::ITransact::send;
 
     Result<string_view> transact(string_view, span<char> buf, uint32_t) override {
         string_view rsp(response);

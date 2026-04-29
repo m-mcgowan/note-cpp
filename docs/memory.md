@@ -106,7 +106,7 @@ SAX-parse into `Rsp::Sink` and (when set) `.into(struct)`.
 
 ```cpp
 note::transport::NotecardSerial serial_hal(hal);    // Hal
-note::Protocol transport(serial_hal);               // ITransport (protocol)
+note::Protocol transport(serial_hal);               // ITransact (protocol)
 
 char arena_buf[256];
 note::MonotonicArena arena(arena_buf);
@@ -126,7 +126,7 @@ A `JsonBackend` enables `response.body()` to return a walkable
 
 ```cpp
 note::backends::BufferJsonBackend<512, 64> backend;
-note::Notecard nc(backend, transport);   // ITransport (same Protocol)
+note::Notecard nc(backend, transport);   // ITransact (same Protocol)
 note::Api api(nc);
 
 auto r = api.card.version().execute();   // 0 heap allocs

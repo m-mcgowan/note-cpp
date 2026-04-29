@@ -17,11 +17,11 @@ API specification.
 
 ## Transport
 
-- note::ITransport — pure virtual transport interface (transact, send, reset, abort)
+- note::ITransact — pure virtual transport interface (transact, send, reset, abort)
 - note::AbstractTransport — base class with shared retry/CRC logic; subclasses implement raw byte I/O
 - note::transport::NotecardSerial — serial wire protocol implementation
 - note::transport::NotecardI2c — I2C wire protocol implementation
-- note::test::CallbackTransport — adapter for wrapping lambdas as ITransport (testing)
+- note::test::CallbackTransport — adapter for wrapping lambdas as ITransact (testing)
 
 ## Duration and unit types
 

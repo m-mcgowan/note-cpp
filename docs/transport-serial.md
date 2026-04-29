@@ -92,7 +92,7 @@ All in `namespace note::transport`:
 
 ## Binary streaming
 
-`ITransport::write()`/`read()` pass through to
+`ITransact::write()`/`read()` pass through to
 `Hal::transmit()`/`read()` for raw binary (COBS) data, bypassing
 JSON framing and CRC. On serial, `\n` is the frame delimiter for both JSON
 responses and COBS streams.

@@ -12,7 +12,7 @@ I2C bus. The library wraps your HAL in `transport::NotecardI2c<>`
 session semantics). Either Notecard ctor — sink mode
 (`Notecard(transport, alloc)`) or tree mode
 (`Notecard(backend, transport)`) — works on the resulting stack;
-both go through the unified `ITransport` interface.
+both go through the unified `ITransact` interface.
 
 ```cpp
 #include <note/transport/i2c.hpp>

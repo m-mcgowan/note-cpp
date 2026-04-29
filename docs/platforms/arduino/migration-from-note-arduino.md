@@ -292,11 +292,6 @@ JAddStringToObject(req, "product",
 JAddStringToObject(req, "mode", "periodic");
 JAddNumberToObject(req, "outbound", 60);
 nc.sendRequest(req);
-
-
-
-
-
 ```
 
 </td><td>
@@ -479,11 +474,6 @@ nc.sendRequest(req);
 nc.note.templates().define("sensors.qo")
     .body(note::template_of(Readings()))
     .execute();
-
-
-
-
-
 ```
 
 </td></tr>
@@ -541,16 +531,6 @@ nc.sendRequest(req);
         Serial.println(r.error());
     }
 }
-
-
-
-
-
-
-
-
-
-
 ```
 
 </td></tr>
@@ -1197,7 +1177,6 @@ nc.sendRequest(req);
 <!-- snippet:examples/arduino/migration/src/main.cpp:224-224 -->
 ```cpp
 nc.hub.sync().command();
-
 ```
 
 </td></tr>
@@ -1523,7 +1502,7 @@ transfers, body structs) when you're comfortable.
 
 For large projects where you can't swap the library all at once, you can
 run note-cpp on top of note-c's existing transport. Implement
-`ITransport` and delegate each request to
+`ITransact` and delegate each request to
 `NoteRequestResponseJSON()`:
 
 <!-- snippet:bridge-extern examples/stdcpp/note-c-bridge.cpp:23-23 -->
@@ -1531,14 +1510,18 @@ run note-cpp on top of note-c's existing transport. Implement
 extern "C" char* NoteRequestResponseJSON(const char* reqJSON);
 ```
 
-<!-- snippet:bridge-transport examples/stdcpp/note-c-bridge.cpp:34-70 -->
+<!-- snippet:bridge-transport examples/stdcpp/note-c-bridge.cpp:34-78 -->
 ```cpp
 /// Delegates every request to note-c's NoteRequestResponseJSON so note-c
 /// owns the serial/I2C bus and note-cpp sits on top with its typed API.
-class NoteCTransport : public note::ITransport {
+class NoteCTransport : public note::ITransact {
     std::string rsp_buf_;
 public:
-    note::Result<note::string_view> transact(note::string_view req, uint32_t) override {
+    using note::ITransact::transact;
+    using note::ITransact::send;
+
+    note::Result<note::string_view> transact(note::string_view req,
+                                             note::span<char> buf, uint32_t) override {
         std::string req_str(req.data(), req.size());
         char* rsp = NoteRequestResponseJSON(req_str.c_str());
         if (rsp == nullptr) {
@@ -1546,11 +1529,15 @@ public:
         }
         rsp_buf_ = rsp;
         std::free(rsp);
-        return note::string_view(rsp_buf_);
+        if (rsp_buf_.size() >= buf.size())
+            return note::make_error(note::Error::Overflow, NOTE_ERR("response exceeds buffer"));
+        std::memcpy(buf.data(), rsp_buf_.data(), rsp_buf_.size());
+        return note::string_view(buf.data(), rsp_buf_.size());
     }
     note::Result<void> send(note::string_view req) override {
-        auto r = transact(req, 0);
-        if (!r) return note::Unexpected(r.error());
+        std::string req_str(req.data(), req.size());
+        char* rsp = NoteRequestResponseJSON(req_str.c_str());
+        if (rsp != nullptr) std::free(rsp);
         return {};
     }
     void reset() override {}
@@ -1574,7 +1561,7 @@ public:
 
 Wire it into a `Notecard` + `Api`:
 
-<!-- snippet:bridge-wiring examples/stdcpp/note-c-bridge.cpp:74-83 -->
+<!-- snippet:bridge-wiring examples/stdcpp/note-c-bridge.cpp:82-91 -->
 ```cpp
 int main() {
     MockBackend backend;

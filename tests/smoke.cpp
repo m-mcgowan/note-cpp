@@ -44,9 +44,9 @@ struct MockBackend : note::JsonBackend {
     }
 };
 
-struct MockTransport : note::ITransport {
-    using note::ITransport::transact;
-    using note::ITransport::send;
+struct MockTransport : note::ITransact {
+    using note::ITransact::transact;
+    using note::ITransact::send;
     note::Result<note::string_view> transact(note::string_view, note::span<char> buf, uint32_t) override {
         constexpr note::string_view rsp = "{}";
         if (rsp.size() >= buf.size())

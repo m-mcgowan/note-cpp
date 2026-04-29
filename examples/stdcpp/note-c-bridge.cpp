@@ -2,7 +2,7 @@
 //
 // Projects that already use note-c (or note-arduino) can adopt note-cpp's
 // typed API without replacing the transport layer. The bridge implements
-// ITransport by delegating each request to note-c's
+// ITransact by delegating each request to note-c's
 // NoteRequestResponseJSON(). Both libraries share the single underlying
 // Notecard connection — no hardware conflicts, and existing J* code keeps
 // working alongside new typed-API code.
@@ -13,7 +13,7 @@
 #include "mock_backend.hpp"
 #include <note/api.hpp>
 #include <note/notecard.hpp>
-#include <note/transport.hpp>
+#include <note/transact.hpp>
 
 #include <cstdlib>
 #include <cstring>
@@ -33,11 +33,11 @@ extern "C" char* NoteRequestResponseJSON(const char*) {
 // readme:bridge-transport
 /// Delegates every request to note-c's NoteRequestResponseJSON so note-c
 /// owns the serial/I2C bus and note-cpp sits on top with its typed API.
-class NoteCTransport : public note::ITransport {
+class NoteCTransport : public note::ITransact {
     std::string rsp_buf_;
 public:
-    using note::ITransport::transact;
-    using note::ITransport::send;
+    using note::ITransact::transact;
+    using note::ITransact::send;
 
     note::Result<note::string_view> transact(note::string_view req,
                                              note::span<char> buf, uint32_t) override {

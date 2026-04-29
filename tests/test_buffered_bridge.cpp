@@ -1,8 +1,8 @@
-// Tests for ITransport's RequestSource → string_view materialise-and-forward
+// Tests for ITransact's RequestSource → string_view materialise-and-forward
 // bridges (Phase 5a step 8c — moved off the dropped IBufferedTransport class
-// onto ITransport's defaults).
+// onto ITransact's defaults).
 //
-// `ITransport` exposes both string_view-shaped and RequestSource-shaped
+// `ITransact` exposes both string_view-shaped and RequestSource-shaped
 // transact/send virtuals. The RequestSource virtuals have default impls
 // that materialise the source into a stack scratch buffer, append the
 // closing `}`, and forward to the matching string_view virtual. These
@@ -12,7 +12,7 @@
 #include <doctest.h>
 
 #include <note/request_source.hpp>
-#include <note/transport.hpp>
+#include <note/transact.hpp>
 
 #include <cstring>
 #include <string>
@@ -21,17 +21,17 @@ using namespace note;
 
 namespace {
 
-// ITransport that records the string_view the bridge forwards in,
+// ITransact that records the string_view the bridge forwards in,
 // and lets the test inject a canned response.
-struct RecordingTransport : ITransport {
+struct RecordingTransport : ITransact {
     std::string recorded_request;
     std::string recorded_send;
     std::string canned_response = R"({"ok":true})";
     int transact_count = 0;
     int send_count = 0;
 
-    using ITransport::transact;
-    using ITransport::send;
+    using ITransact::transact;
+    using ITransact::send;
 
     Result<string_view> transact(string_view request, span<char> buf, uint32_t) override {
         ++transact_count;
@@ -70,7 +70,7 @@ struct CaptureSink : JsonSink {
 
 } // namespace
 
-TEST_CASE("ITransport bridge: transact(RequestSource, span<char>) materialises and forwards") {
+TEST_CASE("ITransact bridge: transact(RequestSource, span<char>) materialises and forwards") {
     RecordingTransport transport;
     transport.canned_response = R"({"foo":"bar"})";
 
@@ -96,7 +96,7 @@ TEST_CASE("ITransport bridge: transact(RequestSource, span<char>) materialises a
     CHECK(std::string(rv->data(), rv->size()) == R"({"foo":"bar"})");
 }
 
-TEST_CASE("ITransport bridge: transact(RequestSource, JsonSink&) SAX-parses response") {
+TEST_CASE("ITransact bridge: transact(RequestSource, JsonSink&) SAX-parses response") {
     RecordingTransport transport;
     transport.canned_response = R"({"status":"ok","value":7})";
 
@@ -110,7 +110,7 @@ TEST_CASE("ITransport bridge: transact(RequestSource, JsonSink&) SAX-parses resp
     CHECK(sink.captured_status == "ok");
 }
 
-TEST_CASE("ITransport bridge: send(RequestSource) materialises and forwards") {
+TEST_CASE("ITransact bridge: send(RequestSource) materialises and forwards") {
     RecordingTransport transport;
 
     auto build = [](JsonBuilder& b) {
@@ -129,7 +129,7 @@ TEST_CASE("ITransport bridge: send(RequestSource) materialises and forwards") {
     CHECK(transport.recorded_send.find(R"("mode":"rearm")") != std::string::npos);
 }
 
-TEST_CASE("ITransport bridge: oversize request returns Overflow") {
+TEST_CASE("ITransact bridge: oversize request returns Overflow") {
     RecordingTransport transport;
 
     // Build a request larger than the bridge's 1024-byte scratch buffer.

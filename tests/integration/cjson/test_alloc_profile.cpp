@@ -10,7 +10,7 @@
 //
 // History: this file previously included transport+HAL-layer tests that
 // exercised the legacy buffered transport API. The streaming refactor moved
-// transport behind ITransport (and previously IBufferedTransport) adapters, and the old
+// transport behind ITransact (and previously IBufferedTransport) adapters, and the old
 // buffered transact() on NotecardSerial no longer exists. Those tests have
 // been dropped — they were testing infrastructure that no longer has the
 // shape they assumed. The remaining tests use the shared

@@ -41,7 +41,7 @@ The naming rule: first segment becomes the module, remaining segments become a c
 // Your hardware
 MySerialHal hal;
 note::transport::NotecardSerial serial_hal(hal);    // Hal
-note::Protocol transport(serial_hal);               // ITransport
+note::Protocol transport(serial_hal);               // ITransact
 
 // Zero heap — arena allocator for string interning
 char pool[256];
@@ -58,7 +58,7 @@ On AVR, this path produces a 28,760-byte binary (89% of 32 KB flash) with zero h
 
 ```cpp
 note::backends::BufferJsonBackend<512, 64> backend;
-MockTransport transport;                            // ITransport (buffered)
+MockTransport transport;                            // ITransact (buffered)
 note::Notecard nc(backend, transport);
 note::Api api(nc);
 ```

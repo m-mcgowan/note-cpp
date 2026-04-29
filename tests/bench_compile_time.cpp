@@ -12,7 +12,7 @@
 #include <note/api.hpp>
 #include <note/body.hpp>
 #include <note/json_buf.hpp>
-#include <note/transport.hpp>
+#include <note/transact.hpp>
 #include <note/transport/serial.hpp>
 #include <note/transport/i2c.hpp>
 #include <note/target.hpp>

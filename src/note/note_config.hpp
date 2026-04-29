@@ -194,7 +194,7 @@
 #endif
 
 // NOTE_NO_POLYMORPHIC — when 1, the polymorphic Notecard class (with runtime
-// transport pointers and virtual ITransport base) is stripped.
+// transport pointers and virtual ITransact base) is stripped.
 // Use StaticNotecard<StackT> instead — fully compile-time resolved, no vtables.
 //
 // What you lose:

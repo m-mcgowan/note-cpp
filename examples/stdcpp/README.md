@@ -21,7 +21,7 @@ Linux (no Notecard hardware needed — they use the shared
   end to end.
 - `zero-alloc.cpp` — zero-allocation patterns for memory-constrained
   systems: `BufferJsonBackend`, `StringPool`, `MonotonicArena`.
-- `note-c-bridge.cpp` — implementing `ITransport` on top of
+- `note-c-bridge.cpp` — implementing `ITransact` on top of
   `note-c`'s `NoteRequestResponseJSON()`. The migration-bridge
   pattern for projects that already have `note-c` wiring they don't
   want to rip out.
@@ -51,7 +51,7 @@ Examples big enough to deserve their own directory:
 
 ### Shared support
 
-- `mock_backend.hpp` — include-only `ITransport` mock that
+- `mock_backend.hpp` — include-only `ITransact` mock that
   every stdcpp example uses. Builds valid JSON for requests and
   returns empty (or canned) responses so the examples run without a
   real Notecard connected.

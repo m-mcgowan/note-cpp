@@ -3,7 +3,7 @@
 // The new transport architecture splits:
 //   - Hal — pure hardware abstraction (transmit, read, reset, etc.)
 //   - Protocol — protocol logic (retry, CRC, JSON framing) over a HAL
-//   - ITransport — type-erased session interface
+//   - ITransact — type-erased session interface
 //
 // Tests exercise transact() (build request via BuildFn, SAX-parse response into
 // a JsonSink) and send() (fire-and-forget).

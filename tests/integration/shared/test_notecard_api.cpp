@@ -111,7 +111,7 @@ TEST_CASE("note.update + note.get body round-trip") {
 TEST_CASE(".into() populates body via buffered Notecard on real hardware") {
     REQUIRE(g_streaming_transport != nullptr);
 
-    // Protocol directly satisfies ITransport now — passing it
+    // Protocol directly satisfies ITransact now — passing it
     // to the buffered Notecard ctor lights up tree-mode body() and
     // sink-mode .into() over the same physical Notecard the streaming
     // g_api is talking to.

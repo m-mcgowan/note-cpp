@@ -1,11 +1,11 @@
 #pragma once
 
 /// @file request_source.hpp
-/// Concrete `RequestSource` adapters for `ITransport`'s RequestSource
+/// Concrete `RequestSource` adapters for `ITransact`'s RequestSource
 /// overloads. Each adapter exposes:
 ///   - `emit(JsonWriter&)` — duck-typed entry for templated dispatch.
 ///   - `as_source()`       — returns a `RequestSource` POD for the
-///                           type-erased `ITransport` virtuals.
+///                           type-erased `ITransact` virtuals.
 ///
 /// Builder-shape adapters:
 ///   - `BuilderRequestSource<F>` — templated on a callable `f(JsonBuilder&)`.
@@ -25,10 +25,10 @@
 /// without it, the protocol would CRC-wrap and re-close a string that
 /// already includes its own `}`. Until then, callers with pre-built
 /// strings keep using the legacy `transact(string_view, …)` overloads on
-/// `ITransport`, which preserve the existing no-CRC verbatim semantics.
+/// `ITransact`, which preserve the existing no-CRC verbatim semantics.
 
 #include <note/json.hpp>
-#include <note/transport.hpp>
+#include <note/transact.hpp>
 #include <note/types.hpp>
 
 #if NOTE_JSONB

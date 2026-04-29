@@ -202,7 +202,7 @@ if (rsp) {
 
 A typed `body()` returning a `JsonReader*` is a separate facility —
 it's populated only by the tree-mode `Notecard(JsonBackend&,
-ITransport&)` ctor, which needs a `JsonBackend` (cJSON, nlohmann/json,
+ITransact&)` ctor, which needs a `JsonBackend` (cJSON, nlohmann/json,
 or `BufferJsonBackend` for zero-heap). Tree mode is gated by
 `NOTE_NO_BUFFERED`, which `NOTE_MINIMAL=1` enables by default — so on
 AVR-class builds it is compiled out entirely and `.into(T&)` (or the

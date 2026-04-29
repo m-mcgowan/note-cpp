@@ -349,44 +349,18 @@ public:
     /// sink types. Error capture ("err") and CRC handling are done at the
     /// dispatch level, so the caller doesn't need ErrorCaptureSinkT/CrcFieldSinkT.
     ///
+    /// BuildFn-shape thin wrapper: constructs a `BuildFnRequestSource` and
+    /// delegates to the RequestSource counterpart so the framing scaffold
+    /// (handshake, init, CRC, debug, receive) lives in one body.
+    ///
     /// @param dispatch  Type-erased sink dispatch table (from make_sax_dispatch).
     /// @param nc_err    Receives the Notecard "err" field content, if any.
     ///                  Valid as long as nc_err is in scope.
     Result<void> transact_dispatch(BuildFn build_fn, void* ctx,
                                    SaxDispatch dispatch, uint32_t timeout_ms,
                                    detail::NcErrorCapture& nc_err) {
-#if NOTE_TXN_HANDSHAKE
-        detail::TxnHandshakeScope handshake_scope{handshake_, timeout_ms};
-        if (!handshake_scope.ok())
-            return make_error(Error::NotReady, Cause::Timeout, NOTE_ERR("txn handshake timeout"));
-#endif
-        if (!ensure_init()) {
-            debug_transport(debug_, TransportEvent::ResetFailed, 0);
-            return make_error(Error::NotReady, NOTE_ERR("not ready"));
-        }
-
-#if !NOTE_NO_CRC
-        ++crc_seq_;
-#endif
-
-        debug_timing(debug_, TimingEvent::TransmitBegin);
-        if (!stream_request(build_fn, ctx)) {
-            debug_transport(debug_, TransportEvent::SendFailed, 0);
-            return make_error(Error::SendFailed, Cause::HalError, NOTE_ERR("transmit failed"));
-        }
-        debug_timing(debug_, TimingEvent::TransmitEnd);
-
-        debug_timing(debug_, TimingEvent::ReceiveBegin);
-        auto rv = receive_dispatch(dispatch, timeout_ms, nc_err);
-        debug_timing(debug_, TimingEvent::ReceiveEnd);
-        if (!rv) {
-            if (rv.error().cause == Cause::Timeout)
-                debug_transport(debug_, TransportEvent::Timeout, 0);
-            else if (rv.error().cause == Cause::CrcMismatch)
-                debug_transport(debug_, TransportEvent::CrcMismatch, 0);
-            return Unexpected(rv.error());
-        }
-        return {};
+        BuildFnRequestSource src(build_fn, ctx);
+        return transact_dispatch(src.as_source(), dispatch, timeout_ms, nc_err);
     }
 
     /// RequestSource counterpart of `transact_dispatch(BuildFn, …)`. Same
@@ -433,62 +407,26 @@ public:
 
 private:
     /// Single-attempt transact. Retry is orchestrated by the Notecard layer.
+    /// Templated on SinkT so each call site builds its SaxDispatch from the
+    /// concrete sink type; the framing scaffold itself is shared with the
+    /// RequestSource path via `transact_dispatch`.
     template<typename SinkT>
     Result<void> transact_impl(BuildFn build_fn, void* ctx,
                                 SinkT& sink, uint32_t timeout_ms) {
-#if NOTE_TXN_HANDSHAKE
-        detail::TxnHandshakeScope handshake_scope{handshake_, timeout_ms};
-        if (!handshake_scope.ok())
-            return make_error(Error::NotReady, Cause::Timeout, NOTE_ERR("txn handshake timeout"));
-#endif
-        if (!ensure_init()) {
-            debug_transport(debug_, TransportEvent::ResetFailed, 0);
-            return make_error(Error::NotReady, NOTE_ERR("not ready"));
-        }
-
-#if !NOTE_NO_CRC
-        ++crc_seq_;
-#endif
-
-        debug_timing(debug_, TimingEvent::TransmitBegin);
-        if (!stream_request(build_fn, ctx)) {
-            debug_transport(debug_, TransportEvent::SendFailed, 0);
-            return make_error(Error::SendFailed, Cause::HalError, NOTE_ERR("transmit failed"));
-        }
-        debug_timing(debug_, TimingEvent::TransmitEnd);
-
-        debug_timing(debug_, TimingEvent::ReceiveBegin);
-        auto rv = receive_streaming(sink, timeout_ms);
-        debug_timing(debug_, TimingEvent::ReceiveEnd);
-        if (!rv) {
-            if (rv.error().cause == Cause::Timeout)
-                debug_transport(debug_, TransportEvent::Timeout, 0);
-            else if (rv.error().cause == Cause::CrcMismatch)
-                debug_transport(debug_, TransportEvent::CrcMismatch, 0);
-            return Unexpected(rv.error());
-        }
-        return {};
+        BuildFnRequestSource src(build_fn, ctx);
+        auto dispatch = make_sax_dispatch(sink);
+        detail::NcErrorCapture nc_err;
+        return transact_dispatch(src.as_source(), dispatch, timeout_ms, nc_err);
     }
 
 public:
 
     /// BuildFn-shaped fire-and-forget send (non-virtual on Protocol).
+    /// Thin wrapper: constructs a `BuildFnRequestSource` and delegates to
+    /// `send(RequestSource)` so the framing scaffold lives in one body.
     Result<void> send(BuildFn build_fn, void* ctx) {
-#if NOTE_TXN_HANDSHAKE
-        detail::TxnHandshakeScope handshake_scope{handshake_, detail::kTxnHandshakeDefaultTimeoutMs};
-        if (!handshake_scope.ok())
-            return make_error(Error::NotReady, Cause::Timeout, NOTE_ERR("txn handshake timeout"));
-#endif
-        if (!ensure_init())
-            return make_error(Error::NotReady, NOTE_ERR("not ready"));
-
-#if !NOTE_NO_CRC
-        ++crc_seq_;
-#endif
-
-        if (!stream_request(build_fn, ctx))
-            return make_error(Error::SendFailed, Cause::HalError, NOTE_ERR("transmit failed"));
-        return {};
+        BuildFnRequestSource src(build_fn, ctx);
+        return send(src.as_source());
     }
 
 #if NOTE_NO_POLYMORPHIC || NOTE_STATIC_HAL
@@ -653,78 +591,12 @@ private:
         return true;
     }
 
-    bool stream_request(BuildFn build_fn, void* ctx) {
-        struct Writer : JsonWriter {
-            using JsonWriter::write;
-#if NOTE_STATIC_HAL
-            HalT& hal;
-            bool ok = true;
-            explicit Writer(HalT& h) : hal(h) {}
-#else
-            Hal& hal;
-            bool ok = true;
-            explicit Writer(Hal& h) : hal(h) {}
-#endif
-            bool write(const char* data, size_t len) override {
-                if (!ok) return false;
-                ok = hal.transmit(reinterpret_cast<const uint8_t*>(data), len);
-                return ok;
-            }
-        } writer(hal_);
-
-#if NOTE_JSONB
-        // JSONB wire format: {: <COBS-encoded opcodes> :}\n
-        // No CRC — COBS framing provides integrity.
-        writer.write("{:", 2);
-        CobsStreamWriter cobs(writer, jsonb::kCobsXor);
-        StreamingJsonbBuilder builder(cobs);
-        build_fn(builder, ctx);
-        cobs.write(reinterpret_cast<const char*>(&jsonb::kEndObject), 1);
-        cobs.flush();
-        writer.write(":}", 2);
-#else
-#if !NOTE_NO_CRC
-        {
-            // Always send CRC — the Notecard echoes CRC back only when the
-            // client includes it. Matches note-c's unconditional _crcAdd().
-            CrcWriter crc(writer);
-            StreamingJsonBuilder builder(crc);
-            build_fn(builder, ctx);
-
-            uint32_t checksum = crc.finalize_with_brace();
-
-            char suffix[transport::detail::kCrcFieldLen + 1];
-            size_t pos = 0;
-            suffix[pos++] = ',';
-            suffix[pos++] = '"'; suffix[pos++] = 'c'; suffix[pos++] = 'r';
-            suffix[pos++] = 'c'; suffix[pos++] = '"'; suffix[pos++] = ':';
-            suffix[pos++] = '"';
-            transport::detail::write_hex16(suffix + pos, crc_seq_); pos += 4;
-            suffix[pos++] = ':';
-            transport::detail::write_hex32(suffix + pos, checksum); pos += 8;
-            suffix[pos++] = '"';
-            suffix[pos++] = '}';
-            writer.write(suffix, pos);
-        }
-#else
-        {
-            StreamingJsonBuilder builder(writer);
-            build_fn(builder, ctx);
-            writer.write("}", 1);
-        }
-#endif
-#endif // NOTE_JSONB
-
-        if (!writer.ok) return false;
-        return hal_.write_line_terminator();
-    }
-
-    /// RequestSource counterpart of `stream_request`. Same framing — JSON
-    /// path wraps the writer in `CrcWriter` and `finalize_with_brace`s
-    /// after `src.emit()`; JSONB path wraps in `CobsStreamWriter` and
-    /// emits the end-object opcode. The source itself instantiates the
-    /// JSON builder (`BuilderRequestSource` does this, see
-    /// `note/request_source.hpp`).
+    /// Request-side framing. JSON path wraps the writer in `CrcWriter`
+    /// and appends the closing brace + `crc` field after `src.emit()`;
+    /// JSONB path wraps in `CobsStreamWriter` and emits the end-object
+    /// opcode. The source itself instantiates the JSON builder
+    /// (`BuilderRequestSource` does this, see `note/request_source.hpp`).
+    /// All BuildFn-shaped callers route here via `BuildFnRequestSource`.
     bool stream_request_source(RequestSource src) {
         struct Writer : JsonWriter {
             using JsonWriter::write;

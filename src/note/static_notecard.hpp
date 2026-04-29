@@ -29,6 +29,26 @@
 
 namespace note {
 
+namespace detail {
+
+/// Shared "req"-prefixed BuildFn wrapper. Both `execute_void` and
+/// `execute_generic_retried` need a BuildFn that emits `"req":"..."`
+/// then delegates to the per-endpoint field builder. Extracting them to
+/// a single non-template helper avoids a ~130 B duplication per
+/// StaticNotecard instantiation per call site.
+struct ReqWrapCtx {
+    string_view req;
+    BuildFn fn;
+    void* inner;
+};
+inline void req_wrap_build(JsonBuilder& b, void* p) {
+    auto& c = *static_cast<ReqWrapCtx*>(p);
+    b.add("req", c.req);
+    if (c.fn) c.fn(b, c.inner);
+}
+
+} // namespace detail
+
 /// Notecard implementation with zero virtual dispatch overhead.
 /// Stack must provide a `transport` member with `transact(BuildFn, void*, JsonSink&, uint32_t)`.
 template<typename Stack>
@@ -183,44 +203,14 @@ public:
         return result;
     }
 
-    /// Non-template execute for GenericResponseSink endpoints.
-    /// Shared by all endpoints that use table-driven field dispatch.
-    /// req_type is the "req" field value (e.g. "card.temp").
-    /// fields_fn serializes only the request-specific fields (not "req").
-    Result<void> execute_generic(string_view req_type, BuildFn fields_fn, void* fields_ctx,
-                                 void* rsp_storage, const FieldDesc* fields,
-                                 uint8_t n_fields, detail::NcErrorCapture& nc_err,
-                                 bool& arena_exhausted) {
-        struct Ctx { string_view req; BuildFn fn; void* inner; };
-        Ctx ctx{req_type, fields_fn, fields_ctx};
-        BuildFn wrapped = [](JsonBuilder& b, void* p) {
-            auto& c = *static_cast<Ctx*>(p);
-            b.add("req", c.req);
-            if (c.fn) c.fn(b, c.inner);
-        };
-        StringPool pool(alloc_);
-        GenericResponseSink gsink{rsp_storage, fields, n_fields, &pool};
-        auto dispatch = make_sax_dispatch(gsink);
-        BuildFnRequestSource src(wrapped, &ctx);
-        auto rv = stack_.transport.transact_dispatch(src.as_source(), dispatch, default_timeout_ms_, nc_err);
-        arena_exhausted = pool.exhausted();
-        return rv;
-    }
-
     /// Non-template execute for void-response endpoints.
     Result<void> execute_void(string_view req_type, BuildFn fields_fn, void* fields_ctx,
                               detail::NcErrorCapture& nc_err,
                               [[maybe_unused]] Safety safety = Safety::NonIdempotent) {
-        struct Ctx { string_view req; BuildFn fn; void* inner; };
-        Ctx ctx{req_type, fields_fn, fields_ctx};
-        BuildFn wrapped = [](JsonBuilder& b, void* p) {
-            auto& c = *static_cast<Ctx*>(p);
-            b.add("req", c.req);
-            if (c.fn) c.fn(b, c.inner);
-        };
+        detail::ReqWrapCtx ctx{req_type, fields_fn, fields_ctx};
         NullSink null_sink;
         auto dispatch = make_sax_dispatch(null_sink);
-        return transact_retried(wrapped, &ctx, dispatch, nc_err, safety);
+        return transact_retried(&detail::req_wrap_build, &ctx, dispatch, nc_err, safety);
     }
 
     /// Non-template execute_generic with body handler factory.
@@ -292,18 +282,12 @@ public:
                                          bool& arena_exhausted,
                                          [[maybe_unused]] Safety safety,
                                          BodyHandler body_handler = {}) {
-        struct Ctx { string_view req; BuildFn fn; void* inner; };
-        Ctx ctx{req_type, fields_fn, fields_ctx};
-        BuildFn wrapped = [](JsonBuilder& b, void* p) {
-            auto& c = *static_cast<Ctx*>(p);
-            b.add("req", c.req);
-            if (c.fn) c.fn(b, c.inner);
-        };
+        detail::ReqWrapCtx ctx{req_type, fields_fn, fields_ctx};
         StringPool pool(alloc_);
         GenericResponseSink gsink{rsp_storage, rsp_fields, n_fields, &pool};
         if (body_handler) gsink.set_body_handler(body_handler);
         auto dispatch = make_sax_dispatch(gsink);
-        auto rv = transact_retried(wrapped, &ctx, dispatch, nc_err, safety);
+        auto rv = transact_retried(&detail::req_wrap_build, &ctx, dispatch, nc_err, safety);
         arena_exhausted = pool.exhausted();
         return rv;
     }

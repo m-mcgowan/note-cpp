@@ -133,34 +133,38 @@ public:
         , transport_(&transport)
     {}
 
-    /// Streaming-only ctor: no JsonBackend, no ITransport vtable overhead.
-    /// Requests streamed via StreamingJsonBuilder, responses SAX-parsed via Sink.
-    /// Allocator defaults to heap (operator new/delete).
-    Notecard(IStreamingTransport& transport, Allocator alloc = {})
-        : streaming_transport_(&transport)
-        , alloc_(alloc)
-    {}
-
-    /// Unified ctor (Phase 5a step 4) — buffered transport. `backend` may be
-    /// nullptr (unusual: would only apply to passthrough-only callers).
-    /// Allocator drives response string interning if set.
+    /// Unified ctor (Phase 5a step 8a). `backend` may be nullptr — pass
+    /// nullptr + a non-null allocator for streaming-only mode; pass a
+    /// backend to enable the buffered tree-parse path. The allocator
+    /// selects the response-strategy: when set, execute() drives the
+    /// streaming SAX path; when unset and a backend is present, the
+    /// buffered tree-parse path runs.
     Notecard(JsonBackend* backend, ITransport& transport, Allocator alloc = {})
         : backend_(backend)
         , transport_(&transport)
         , alloc_(alloc)
     {}
 
-    /// Unified ctor — streaming-capable transport. Populates both
-    /// `transport_` (for the buffered fallback) and `streaming_transport_`
-    /// so the streaming path is selectable when `alloc` is set. Pass
-    /// `backend = nullptr` for streaming-only mode; pass a backend to
-    /// enable the buffered fallback for paths that need tree access.
+    /// Forwarders for the legacy IStreamingTransport-typed ctors. Until
+    /// step 8b drops `IStreamingTransport`, these stay as-is — they
+    /// up-cast to `ITransport&` and chain to the unified ctor, and also
+    /// publish the Protocol* downcast so `transact(string_view) ->
+    /// OwnedBuffer` can take its growable byte-by-byte path. Today every
+    /// `IStreamingTransport` in the wild is a `Protocol` (the only
+    /// concrete impl); fakes that don't override `read()` will hit
+    /// NotReady on read and surface an error rather than silently
+    /// losing data.
+    Notecard(IStreamingTransport& transport, Allocator alloc = {})
+        : Notecard(nullptr, static_cast<ITransport&>(transport), alloc)
+    {
+        streaming_protocol_ = static_cast<Protocol*>(&transport);
+    }
+
     Notecard(JsonBackend* backend, IStreamingTransport& transport, Allocator alloc = {})
-        : backend_(backend)
-        , transport_(&transport)
-        , streaming_transport_(&transport)
-        , alloc_(alloc)
-    {}
+        : Notecard(backend, static_cast<ITransport&>(transport), alloc)
+    {
+        streaming_protocol_ = static_cast<Protocol*>(&transport);
+    }
 
     // Configure an allocator for response string interning.
     // When set, execute() copies response string_view fields into the
@@ -208,14 +212,14 @@ public:
 
         debug_timing(debug_, TimingEvent::TransactionBegin, RequestT::notecard_request);
 
-        if (!transport_ && !streaming_transport_) {
+        if (!transport_) {
             debug_timing(debug_, TimingEvent::TransactionEnd, RequestT::notecard_request);
             return Unexpected(make_error(Error::NotReady, NOTE_ERR("no transport configured")));
         }
 
         // Full streaming path: SAX-parse response directly from transport.
         if constexpr (std::is_void_v<Rsp> || detail::has_sink<Rsp>::value) {
-            if (streaming_transport_ && alloc_.has_value()) {
+            if (alloc_.has_value()) {
                 auto build = [&](JsonBuilder& b) { req.build(b); };
                 BuildFn build_fn = [](JsonBuilder& b, void* p) {
                     (*static_cast<decltype(build)*>(p))(b);
@@ -331,31 +335,41 @@ public:
 
     /// Type-erased send (fire-and-forget). Used by generated command() methods
     /// via send_fn_ — a single shared function pointer for all request types.
+    ///
+    /// When an allocator is configured, builds the request through
+    /// `BuildFnRequestSource` (streams directly to the wire). Otherwise
+    /// falls back to backend-builder + string_view send so the buffered
+    /// path's exact wire encoding (used by tests' `last_req` capture) is
+    /// preserved.
     Result<void> send_command(BuildFn build_fn, void* ctx) {
+        if (!transport_)
+            return make_error(Error::NotReady, NOTE_ERR("no transport configured"));
         enforce_timing();
         Result<void> result;
-        if (streaming_transport_) {
+        if (alloc_.has_value()) {
             BuildFnRequestSource src(build_fn, ctx);
-            result = streaming_transport_->send(src.as_source());
+            result = transport_->send(src.as_source());
         }
 #if !NOTE_NO_BUFFERED
-        else if (transport_) {
+        else if (backend_) {
             auto& builder = backend_->get_builder();
             build_fn(builder, ctx);
             result = transport_->send(builder.to_view());
         }
 #endif
         else
-            return make_error(Error::NotReady, NOTE_ERR("no transport configured"));
+            return make_error(Error::NotReady, NOTE_ERR("no allocator or backend configured"));
         record_timing();
         return result;
     }
 
     template<typename RequestT>
     Result<void> command_typed(const RequestT& req) {
+        if (!transport_)
+            return make_error(Error::NotReady, NOTE_ERR("no transport configured"));
         enforce_timing();
         Result<void> result;
-        if (streaming_transport_) {
+        if (alloc_.has_value()) {
             auto build = [&](JsonBuilder& b) {
                 b.add("cmd", RequestT::notecard_request);
                 req.build(b);
@@ -364,14 +378,14 @@ public:
                 (*static_cast<decltype(build)*>(p))(b);
             };
             BuildFnRequestSource src(fn, &build);
-            result = streaming_transport_->send(src.as_source());
-        } else if (transport_) {
+            result = transport_->send(src.as_source());
+        } else if (backend_) {
             auto& builder = backend_->get_builder();
             builder.add("cmd", RequestT::notecard_request);
             req.build(builder);
             result = transport_->send(builder.to_view());
         } else {
-            return make_error(Error::NotReady, NOTE_ERR("no transport configured"));
+            return make_error(Error::NotReady, NOTE_ERR("no allocator or backend configured"));
         }
         record_timing();
         return result;
@@ -382,15 +396,18 @@ public:
     // Requires std::function.
     Result<void> command(string_view cmd_type,
                          std::function<void(JsonBuilder&)> build_fn = {}) {
-        if (streaming_transport_) {
+        if (!transport_)
+            return make_error(Error::NotReady, NOTE_ERR("no transport configured"));
+        if (alloc_.has_value()) {
             auto build = [&](JsonBuilder& b) {
                 b.add("cmd", cmd_type);
                 if (build_fn) build_fn(b);
             };
             BuilderRequestSource src(build);
-            return streaming_transport_->send(src.as_source());
+            return transport_->send(src.as_source());
         }
-        if (!transport_) return make_error(Error::NotReady, NOTE_ERR("no transport configured"));
+        if (!backend_)
+            return make_error(Error::NotReady, NOTE_ERR("no allocator or backend configured"));
 
         auto& builder = backend_->get_builder();
         builder.add("cmd", cmd_type);
@@ -402,34 +419,21 @@ public:
     /// Validated JSON passthrough — returns an OwnedBuffer that the caller owns.
     /// The buffer is freed when it goes out of scope. No dangling views.
     /// Assumes NonIdempotent safety (only retries on SendFailed).
+    ///
+    /// When the underlying transport is a `Protocol` and an allocator is
+    /// configured, reads response bytes one at a time into a growable
+    /// OwnedBuffer (no a-priori size cap). For other transports falls back
+    /// to the bounded buffered path — bounded by `rsp_buf()` (default
+    /// NOTE_RSP_BUF_SIZE), enlarge via `set_response_buffer(span)`.
     Result<OwnedBuffer> transact(string_view json) {
         if (!validate_json_envelope(json))
             return make_error(Error::Json, NOTE_ERR("malformed JSON"));
+        if (!transport_)
+            return make_error(Error::NotReady, NOTE_ERR("no transport configured"));
 
-        // Buffered path with retry.
-        if (transport_) {
+        if (streaming_protocol_ && alloc_.has_value()) {
             auto attempt = [&]() -> Result<OwnedBuffer> {
-                auto rv = transport_->transact(json,
-                                               rsp_buf(),
-                                               default_timeout_ms_);
-                if (!rv) return Unexpected(rv.error());
-                auto buf = OwnedBuffer::create(alloc_value(), rv->size() + 1);
-                if (!buf) return make_error(Error::Overflow, NOTE_ERR("alloc failed"));
-                buf.append(rv->data(), rv->size());
-                buf.null_terminate();
-                return buf;
-            };
-            auto reset = [&]() { transport_->reset(); };
-            return retry_transaction<Result<OwnedBuffer>>(
-                hal(), timing_, Safety::NonIdempotent, retry_policy_,
-                attempt, reset);
-        }
-
-        // Streaming path with retry.
-        if (streaming_transport_) {
-            auto attempt = [&]() -> Result<OwnedBuffer> {
-                auto* st = static_cast<Protocol*>(streaming_transport_);
-                auto send_rv = st->send_raw(json);
+                auto send_rv = streaming_protocol_->send_raw(json);
                 if (!send_rv) return Unexpected(send_rv.error());
 
                 auto buf = OwnedBuffer::create(alloc_value(), 1024);
@@ -437,7 +441,7 @@ public:
 
                 for (;;) {
                     uint8_t byte;
-                    auto rv = st->read(&byte, 1, default_timeout_ms_);
+                    auto rv = streaming_protocol_->read(&byte, 1, default_timeout_ms_);
                     if (!rv) return Unexpected(rv.error());
                     if (*rv == 0) return make_error(Error::ResponseLost, Cause::Timeout, NOTE_ERR("response timeout"));
                     if (byte == '\n') break;
@@ -448,13 +452,27 @@ public:
                 buf.null_terminate();
                 return buf;
             };
-            auto reset = [&]() { streaming_transport_->reset(); };
+            auto reset = [&]() { transport_->reset(); };
             return retry_transaction<Result<OwnedBuffer>>(
                 hal(), timing_, Safety::NonIdempotent, retry_policy_,
                 attempt, reset);
         }
 
-        return make_error(Error::NotReady, NOTE_ERR("no transport configured"));
+        auto attempt = [&]() -> Result<OwnedBuffer> {
+            auto rv = transport_->transact(json,
+                                           rsp_buf(),
+                                           default_timeout_ms_);
+            if (!rv) return Unexpected(rv.error());
+            auto buf = OwnedBuffer::create(alloc_value(), rv->size() + 1);
+            if (!buf) return make_error(Error::Overflow, NOTE_ERR("alloc failed"));
+            buf.append(rv->data(), rv->size());
+            buf.null_terminate();
+            return buf;
+        };
+        auto reset = [&]() { transport_->reset(); };
+        return retry_transaction<Result<OwnedBuffer>>(
+            hal(), timing_, Safety::NonIdempotent, retry_policy_,
+            attempt, reset);
     }
 
     /// Validated JSON passthrough — caller-provided buffer variant.
@@ -463,31 +481,22 @@ public:
     Result<string_view> transact(string_view json, span<char> buf) {
         if (!validate_json_envelope(json))
             return make_error(Error::Json, NOTE_ERR("malformed JSON"));
-        if (transport_) {
-            auto attempt = [&]() -> Result<string_view> {
-                // Caller's buffer goes straight to the transport; ITransport
-                // copies the response into `buf` and returns a view of it.
-                auto rv = transport_->transact(json, buf, default_timeout_ms_);
-                if (!rv) return rv;
-                if (rv->size() < buf.size())
-                    buf[rv->size()] = '\0';
-                return rv;
-            };
-            auto reset = [&]() { transport_->reset(); };
-            return retry_transaction<Result<string_view>>(
-                hal(), timing_, Safety::NonIdempotent, retry_policy_,
-                attempt, reset);
-        }
-        if (streaming_transport_) {
-            auto attempt = [&]() -> Result<string_view> {
-                return streaming_transact_raw(json, buf);
-            };
-            auto reset = [&]() { streaming_transport_->reset(); };
-            return retry_transaction<Result<string_view>>(
-                hal(), timing_, Safety::NonIdempotent, retry_policy_,
-                attempt, reset);
-        }
-        return make_error(Error::NotReady, NOTE_ERR("no transport configured"));
+        if (!transport_)
+            return make_error(Error::NotReady, NOTE_ERR("no transport configured"));
+
+        auto attempt = [&]() -> Result<string_view> {
+            // Caller's buffer goes straight to the transport; ITransport
+            // copies the response into `buf` and returns a view of it.
+            auto rv = transport_->transact(json, buf, default_timeout_ms_);
+            if (!rv) return rv;
+            if (rv->size() < buf.size())
+                buf[rv->size()] = '\0';
+            return rv;
+        };
+        auto reset = [&]() { transport_->reset(); };
+        return retry_transaction<Result<string_view>>(
+            hal(), timing_, Safety::NonIdempotent, retry_policy_,
+            attempt, reset);
     }
 
     /// Validated JSON fire-and-forget — send pre-formatted JSON, no response.
@@ -495,14 +504,10 @@ public:
     Result<void> send(string_view json) {
         if (!validate_json_envelope(json))
             return make_error(Error::Json, NOTE_ERR("malformed JSON"));
-        enforce_timing();
-        Result<void> result;
-        if (transport_)
-            result = transport_->send(json);
-        else if (streaming_transport_)
-            result = streaming_send_raw(json);
-        else
+        if (!transport_)
             return make_error(Error::NotReady, NOTE_ERR("no transport configured"));
+        enforce_timing();
+        auto result = transport_->send(json);
         record_timing();
         return result;
     }
@@ -524,8 +529,8 @@ public:
     /// Pass a default-constructed DebugListener or call clear_debug() to disable.
     void set_debug(DebugListener d) {
         debug_ = d;
-        if (streaming_transport_)
-            streaming_transport_->set_debug(d);
+        if (transport_)
+            transport_->set_debug(d);
     }
 
     /// Disable all debug callbacks.
@@ -538,11 +543,9 @@ public:
     ITransport& transport() { return *transport_; }
 
     /// Access the underlying byte HAL — for low-level timing, bus reset,
-    /// and other operations that don't go through the wire protocol. Works
-    /// for both buffered and streaming-only Notecards. Asserts in debug
-    /// builds if no transport has been configured.
+    /// and other operations that don't go through the wire protocol.
+    /// Asserts in debug builds if no transport has been configured.
     Hal& hal() {
-        if (streaming_transport_) return streaming_transport_->hal();
         return transport_->hal();
     }
 
@@ -667,38 +670,28 @@ private:
 
     // ── Binary transfer helpers ────────────────────────────────────────
 
-    /// Binary I/O: write bytes to whichever transport is available.
+    /// Binary I/O: write bytes via the configured transport.
     Result<void> binary_write(const uint8_t* data, size_t len) {
-        if (streaming_transport_) return streaming_transport_->write(data, len);
-        if (transport_) return transport_->write(data, len);
-        return make_error(Error::NotReady, NOTE_ERR("no transport for binary I/O"));
+        if (!transport_) return make_error(Error::NotReady, NOTE_ERR("no transport for binary I/O"));
+        return transport_->write(data, len);
     }
-    /// Binary I/O: read bytes from whichever transport is available.
+    /// Binary I/O: read bytes via the configured transport.
     Result<size_t> binary_read(uint8_t* buf, size_t max_len, uint32_t timeout_ms) {
-        if (streaming_transport_) return streaming_transport_->read(buf, max_len, timeout_ms);
-        if (transport_) return transport_->read(buf, max_len, timeout_ms);
-        return make_error(Error::NotReady, NOTE_ERR("no transport for binary I/O"));
+        if (!transport_) return make_error(Error::NotReady, NOTE_ERR("no transport for binary I/O"));
+        return transport_->read(buf, max_len, timeout_ms);
     }
     void binary_io_reset() {
-        if (streaming_transport_) streaming_transport_->reset();
-        else if (transport_) transport_->reset();
+        if (transport_) transport_->reset();
     }
 
     /// Send a raw JSON control command for binary transfer and return
-    /// the response as a string_view. Uses streaming transact_raw when
-    /// available, falls back to buffered transport.
+    /// the response as a string_view (into binary_ctrl_buf_).
     Result<string_view> binary_control(string_view json) {
-        if (streaming_transport_) {
-            return streaming_transact_raw(json, span<char>(binary_ctrl_buf_, sizeof(binary_ctrl_buf_)));
-        }
-#if !NOTE_NO_BUFFERED
-        if (transport_ && backend_) {
-            return transport_->transact(json,
-                                        span<char>(binary_ctrl_buf_, sizeof(binary_ctrl_buf_)),
-                                        default_timeout_ms_);
-        }
-#endif
-        return make_error(Error::NotReady, NOTE_ERR("no transport for binary control"));
+        if (!transport_)
+            return make_error(Error::NotReady, NOTE_ERR("no transport for binary control"));
+        return transport_->transact(json,
+                                    span<char>(binary_ctrl_buf_, sizeof(binary_ctrl_buf_)),
+                                    default_timeout_ms_);
     }
 
     /// Extract an integer field from a raw JSON response (for binary control).
@@ -737,18 +730,6 @@ private:
         JsonSink null_sink;
         auto err = sax_parse(json, null_sink);
         return err.empty();
-    }
-
-    /// Raw passthrough on the streaming transport — transmit bytes, read response.
-    Result<string_view> streaming_transact_raw(string_view json, span<char> buf) {
-        auto* st = static_cast<Protocol*>(streaming_transport_);
-        return st->transact_raw(json, buf.data(), buf.size(), default_timeout_ms_);
-    }
-
-    /// Raw fire-and-forget on the streaming transport.
-    Result<void> streaming_send_raw(string_view json) {
-        auto* st = static_cast<Protocol*>(streaming_transport_);
-        return st->send_raw(json);
     }
 
     /// Buffered execute: build JSON via backend, transact, parse response.
@@ -864,7 +845,7 @@ private:
 
         ErrorCaptureSink err_sink(sink);
         BuildFnRequestSource src(framed_build, &frame);
-        auto rv = streaming_transport_->transact(
+        auto rv = transport_->transact(
             src.as_source(), err_sink, default_timeout_ms_);
         if (!rv) return rv.error();
         auto err = err_sink.captured_error();
@@ -889,7 +870,7 @@ private:
             return {};
         };
         auto reset = [&]() {
-            streaming_transport_->reset();
+            transport_->reset();
             sink.reset();
             if (reset_fn) reset_fn(reset_ctx);
         };
@@ -930,7 +911,7 @@ private:
     }
 
     /// Streaming execute core — template on transport to support both
-    /// virtual (IStreamingTransport*) and concrete (StaticNotecard) dispatch.
+    /// virtual (ITransport*) and concrete (StaticNotecard) dispatch.
     /// When called with a pointer, the compiler generates one shared copy.
     /// When called with a concrete ref, it devirtualizes on modern GCC.
     template<typename Transport>
@@ -971,7 +952,7 @@ private:
     /// Enforce inter-transaction gap via the byte HAL.
     void enforce_timing() {
         if (!timing_.has_previous) return;
-        if (!streaming_transport_ && !transport_) return;
+        if (!transport_) return;
         Hal& h = hal();
         uint32_t elapsed = h.millis() - timing_.last_transaction_end_ms;
         if (elapsed < timing_.min_gap_ms)
@@ -980,7 +961,7 @@ private:
 
     /// Record that a transaction just completed.
     void record_timing() {
-        if (!streaming_transport_ && !transport_) return;
+        if (!transport_) return;
         timing_.last_transaction_end_ms = hal().millis();
         timing_.has_previous = true;
     }
@@ -989,7 +970,14 @@ private:
 
     JsonBackend* backend_ = nullptr;
     ITransport* transport_ = nullptr;
-    IStreamingTransport* streaming_transport_ = nullptr;
+    /// Downcast cache of `transport_` when constructed via the legacy
+    /// IStreamingTransport-typed ctors. Used solely to drive the byte-by-byte
+    /// growable response path in `transact(string_view) -> OwnedBuffer`,
+    /// which needs the send/read split that only `Protocol` implements.
+    /// Step 8b will replace the IStreamingTransport ctors with a
+    /// `Notecard(JsonBackend*, Protocol&, Allocator)` ctor that sets
+    /// this field directly.
+    Protocol* streaming_protocol_ = nullptr;
     uint32_t default_timeout_ms_ = 10000;
     std::optional<Allocator> alloc_;
     DebugListener debug_{};

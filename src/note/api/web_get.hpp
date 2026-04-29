@@ -438,6 +438,7 @@ struct WebGet {
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
             {keys_::binary, static_cast<uint16_t>(offsetof(WebGet, binary)), ::note::ReqFieldType::Bool},
 #endif
+            {keys_::body, static_cast<uint16_t>(offsetof(WebGet, body)), ::note::ReqFieldType::Body},
             {keys_::content, static_cast<uint16_t>(offsetof(WebGet, content)), ::note::ReqFieldType::String},
             {keys_::file, static_cast<uint16_t>(offsetof(WebGet, file)), ::note::ReqFieldType::String},
             {keys_::max, static_cast<uint16_t>(offsetof(WebGet, max)), ::note::ReqFieldType::Int},
@@ -454,7 +455,6 @@ struct WebGet {
     void build(JsonBuilder& b) const {
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
 #endif
-        body.write_to(b);
         uint8_t n_; auto* descs_ = req_field_descs_ptr_(n_);
         ::note::generic_build(b, this, descs_, n_);
 #if NOTE_EXTRAS

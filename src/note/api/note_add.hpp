@@ -422,6 +422,7 @@ struct NoteAdd {
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
             {keys_::binary, static_cast<uint16_t>(offsetof(NoteAdd, binary)), ::note::ReqFieldType::Bool},
 #endif
+            {keys_::body, static_cast<uint16_t>(offsetof(NoteAdd, body)), ::note::ReqFieldType::Body},
             {keys_::file, static_cast<uint16_t>(offsetof(NoteAdd, file)), ::note::ReqFieldType::String},
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
             {keys_::full, static_cast<uint16_t>(offsetof(NoteAdd, full)), ::note::ReqFieldType::Bool},
@@ -448,7 +449,6 @@ struct NoteAdd {
     void build(JsonBuilder& b) const {
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
 #endif
-        body.write_to(b);
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
 #endif
 #if NOTE_API_VERSION >= NOTE_VERSION(9, 1, 1) || !defined(NOTE_API_STRICT)

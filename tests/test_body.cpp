@@ -320,8 +320,11 @@ TEST_CASE("note.template verify:true includes verify field in request") {
         .body(note::template_of<Readings>())
         .verify(true)
         .execute();
+    // Wire order: required fields (file) emitted before the optional-field
+    // table; body sits in the table alongside other optionals so it follows
+    // file. JSON key order is not semantically significant.
     REQUIRE(h.last_request ==
-        R"({"req":"note.template","body":{"temperature":14.1,"humidity":11},"file":"sensors.qo","verify":true})");
+        R"({"req":"note.template","file":"sensors.qo","body":{"temperature":14.1,"humidity":11},"verify":true})");
 }
 
 #endif // C++20
@@ -372,7 +375,7 @@ TEST_CASE("note.template with template_of") {
         .body(note::template_of<Readings>())
         .execute();
     REQUIRE(h.last_request ==
-        R"({"req":"note.template","body":{"temperature":14.1,"humidity":11},"file":"sensors.qo"})");
+        R"({"req":"note.template","file":"sensors.qo","body":{"temperature":14.1,"humidity":11}})");
 }
 
 TEST_CASE("note.add with builder body") {

@@ -556,6 +556,7 @@ struct WebPost {
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
             {keys_::binary, static_cast<uint16_t>(offsetof(WebPost, binary)), ::note::ReqFieldType::Bool},
 #endif
+            {keys_::body, static_cast<uint16_t>(offsetof(WebPost, body)), ::note::ReqFieldType::Body},
             {keys_::content, static_cast<uint16_t>(offsetof(WebPost, content)), ::note::ReqFieldType::String},
             {keys_::file, static_cast<uint16_t>(offsetof(WebPost, file)), ::note::ReqFieldType::String},
             {keys_::max, static_cast<uint16_t>(offsetof(WebPost, max)), ::note::ReqFieldType::Int},
@@ -580,7 +581,6 @@ struct WebPost {
 #endif
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
 #endif
-        body.write_to(b);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
 #endif
         uint8_t n_; auto* descs_ = req_field_descs_ptr_(n_);

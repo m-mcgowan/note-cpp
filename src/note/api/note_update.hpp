@@ -156,6 +156,7 @@ struct NoteUpdate {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
         static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
+            {keys_::body, static_cast<uint16_t>(offsetof(NoteUpdate, body)), ::note::ReqFieldType::Body},
             {keys_::payload, static_cast<uint16_t>(offsetof(NoteUpdate, payload)), ::note::ReqFieldType::String},
             {keys_::verify, static_cast<uint16_t>(offsetof(NoteUpdate, verify)), ::note::ReqFieldType::Bool},
         };
@@ -164,7 +165,6 @@ struct NoteUpdate {
         return table_;
     }
     void build(JsonBuilder& b) const {
-        body.write_to(b);
         note::add_flash(b, note::flash(keys_::file), file);
         note::add_flash(b, note::flash(keys_::noteId), noteId);
         uint8_t n_; auto* descs_ = req_field_descs_ptr_(n_);

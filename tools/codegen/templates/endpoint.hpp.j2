@@ -934,17 +934,13 @@ namespace note::api {
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 {% endif %}
 {# Collect simple optional fields for generic builder. Includes scalar
-   types (bool/int/double/string_view) plus ArrayField — the latter
-   routes through ReqFieldType::Array so the per-endpoint `build()` no
-   longer emits manual `if (x) x.write_to(b, "k")` calls.
-
-   BodyValue is intentionally NOT in the table: existing wire format
-   emits `body` before required fields (e.g. note.template: body, file,
-   verify), and downstream consumers may depend on that ordering.
-   `body.write_to(b)` is still emitted manually at the top of build(). #}
+   types (bool/int/double/string_view) plus ArrayField and BodyValue —
+   they all route through generic_build via the field descriptor table.
+   Wire-emit position follows table order (alphabetical-ish from the
+   spec); JSON key order is not semantically significant. #}
 {% set simple_req_props = [] %}
 {% for prop in op.properties %}
-{% if not prop.is_required_by_dispatch and not prop.is_required and not prop.is_body and not (op.mode_prefix and prop.wire_name == "mode") and (prop.is_array or prop.cpp_type == "bool" or prop.is_integral or prop.cpp_type in ["double", "note::string_view"]) %}
+{% if not prop.is_required_by_dispatch and not prop.is_required and not (op.mode_prefix and prop.wire_name == "mode") and (prop.is_array or prop.is_body or prop.cpp_type == "bool" or prop.is_integral or prop.cpp_type in ["double", "note::string_view"]) %}
 {% if simple_req_props.append(prop) %}{% endif %}
 {% endif %}
 {% endfor %}
@@ -957,6 +953,8 @@ namespace note::api {
 {{ version_guard_begin(prop.version_guard) -}}
 {% if prop.is_array %}
 {{ indent }}        {keys_::{{ prop.accessor_name }}, static_cast<uint16_t>(offsetof({{ parent_type }}, {{ prop.accessor_name }})), ::note::ReqFieldType::Array},
+{% elif prop.is_body %}
+{{ indent }}        {keys_::{{ prop.accessor_name }}, static_cast<uint16_t>(offsetof({{ parent_type }}, {{ prop.accessor_name }})), ::note::ReqFieldType::Body},
 {% elif prop.cpp_type == "bool" %}
 {{ indent }}        {keys_::{{ prop.accessor_name }}, static_cast<uint16_t>(offsetof({{ parent_type }}, {{ prop.accessor_name }})), ::note::ReqFieldType::Bool},
 {% elif prop.unit %}
@@ -987,12 +985,8 @@ namespace note::api {
 {{ version_guard_begin(prop.version_guard) -}}
 {{ indent }}    note::add_flash(b, note::flash(keys_::{{ prop.accessor_name }}), {{ prop.accessor_name }});
 {{ version_guard_end(prop.version_guard) -}}
-{% elif prop.is_array %}
-{# Routed through ReqFieldType::Array in generic_build below #}
-{% elif prop.is_body %}
-{{ version_guard_begin(prop.version_guard) -}}
-{{ indent }}    {{ prop.accessor_name }}.write_to(b);
-{{ version_guard_end(prop.version_guard) -}}
+{% elif prop.is_array or prop.is_body %}
+{# Routed through ReqFieldType::Array / ::Body in generic_build below #}
 {% else %}
 {{ version_guard_begin(prop.version_guard) -}}
 {% if op.mode_prefix and prop.wire_name == "mode" %}

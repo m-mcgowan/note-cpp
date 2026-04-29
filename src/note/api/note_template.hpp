@@ -483,6 +483,7 @@ struct NoteTemplate {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
             static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
+                {keys_::body, static_cast<uint16_t>(offsetof(NoteTemplate::Define, body)), ::note::ReqFieldType::Body},
                 {keys_::delete_, static_cast<uint16_t>(offsetof(NoteTemplate::Define, delete_)), ::note::ReqFieldType::Bool},
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
                 {keys_::format, static_cast<uint16_t>(offsetof(NoteTemplate::Define, format)), ::note::ReqFieldType::String},
@@ -498,7 +499,6 @@ struct NoteTemplate {
             return table_;
         }
         void build(JsonBuilder& b) const {
-            body.write_to(b);
             note::add_flash(b, note::flash(keys_::file), file);
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
 #endif
@@ -1028,6 +1028,7 @@ struct NoteTemplate {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
             static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
+                {keys_::body, static_cast<uint16_t>(offsetof(NoteTemplate::Remove, body)), ::note::ReqFieldType::Body},
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
                 {keys_::format, static_cast<uint16_t>(offsetof(NoteTemplate::Remove, format)), ::note::ReqFieldType::String},
 #endif
@@ -1042,7 +1043,6 @@ struct NoteTemplate {
             return table_;
         }
         void build(JsonBuilder& b) const {
-            body.write_to(b);
             note::add_flash(b, note::flash(keys_::delete_), true);
             note::add_flash(b, note::flash(keys_::file), file);
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)

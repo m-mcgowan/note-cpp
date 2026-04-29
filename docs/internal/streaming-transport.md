@@ -1,10 +1,12 @@
 # Streaming Transport
 
-The transport layer exposes a single session interface — `ITransport`,
-implemented natively by `Protocol` (streaming, zero-buffer) and via the
-transitional `IBufferedTransport` bridge for buffered/test transports.
-The streaming path is the primary design; the buffered path exists for
-test harnesses and for transports that don't naturally split send/read.
+The transport layer exposes a single session interface — `ITransport` —
+implemented natively by `Protocol` (streaming, zero-buffer) and by buffered
+transports (test fakes, the note-c bridge) that override only the
+string_view-shaped virtuals and inherit `ITransport`'s materialise-and-forward
+defaults for the `RequestSource` shape. The streaming path is the primary
+design; the buffered path exists for test harnesses and for transports that
+don't naturally split send/read.
 
 ## Transport Interfaces
 
@@ -37,26 +39,17 @@ Requests are streamed via a `RequestSource` (or BuildFn callable) that paints
 JSON bytes through a `StreamingJsonBuilder` over the wire. Responses are
 SAX-parsed directly from the wire into a `JsonSink&`. No intermediate buffers.
 
-### IBufferedTransport (transitional bridge)
-
-```
-IBufferedTransport : public ITransport
-  transact(request, timeout) → Result<string_view>  // legacy buffered virtual
-  send(request)              → Result<void>         // fire-and-forget string
-```
-
-`IBufferedTransport` is a bridge class: it adapts the old
-`transact(req, timeout) -> Result<string_view>` shape (where the response
-sits in transport-owned storage) to the unified `ITransport` overloads.
-The other `ITransport` overloads (`transact(req, span, t)`, `transact(req, sink, t)`,
-plus the `RequestSource` shapes) get default impls that materialise into
-a stack scratch buffer and forward to the buffered virtual.
+### Buffered transports
 
 Test transports (`note::test::CallbackTransport`, `MockTransport`,
-`ScriptedTransport`) and the note-c bridge all derive from
-`IBufferedTransport`. `IBufferedTransport` itself is scheduled to dissolve
-into a free helper in step 8c — at which point those subclasses implement
-`ITransport` directly.
+`ScriptedTransport`) and the note-c bridge derive from `ITransport`
+directly and override only the string_view-shaped virtuals. The
+`RequestSource` virtuals on `ITransport` carry default impls that
+materialise the source into a stack scratch buffer, append the closing
+`}`, and forward to the matching string_view virtual — so buffered
+transports satisfy the full `ITransport` API without per-class
+boilerplate beyond their own `transact(string_view, span<char>, t)`
+and `send(string_view)` overrides.
 
 ## Architecture
 
@@ -157,7 +150,7 @@ No `JsonBackend` required. No `std::string` linked. No `operator new`.
 
 ```cpp
 note::backends::BufferJsonBackend<512, 64> backend;
-note::transport::NotecardI2c transport(hal);        // IBufferedTransport
+note::transport::NotecardI2c transport(hal);        // ITransport
 note::Notecard nc(backend, transport);
 nc.set_allocator(note::Allocator{});                // optional: arena or heap
 ```
@@ -185,8 +178,8 @@ The buffered constructor exists for test harnesses (where `CallbackTransport`
 
 | Constructor used | Allocator set | Path |
 |---|---|---|
-| `ITransport` | Yes (required) | **Full streaming** — SAX parse from transport, zero buffer |
-| `IBufferedTransport` | Optional | **Fully buffered** — `transact()` with string buffer |
+| `ITransport` (Protocol-typed) | Yes (required) | **Full streaming** — SAX parse from transport, zero buffer |
+| `ITransport` (buffered subclass) | Optional | **Fully buffered** — `transact()` with caller-supplied buffer |
 
 The full streaming path:
 1. `StreamingJsonBuilder` writes request bytes directly to `Hal::transmit()`
@@ -232,9 +225,9 @@ Active when `NOTE_JSONB=1` (auto-enabled by `NOTE_MINIMAL`). See [docs/jsonb.md]
 | `JsonbParser` | Reads opcodes, dispatches `SaxEvent`s through `SaxDispatch` |
 | `CobsDecodingReader` | `ReadFn` adapter — COBS-decodes wire bytes, strips `:}` trailer |
 
-### Path 2: Fully buffered (via `IBufferedTransport`)
+### Path 2: Fully buffered (via buffered ITransport subclass)
 
-Active when `Notecard` was constructed with `(IBufferedTransport&, JsonBackend&)`.
+Active when `Notecard` was constructed with `(JsonBackend&, ITransport&)`.
 
 - **Send:** `BufferJsonBuilder` → `prepare_wire()` → `do_transmit()`
 - **Receive:** `do_receive()` into `response_buf_`

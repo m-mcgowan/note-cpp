@@ -118,11 +118,13 @@ include/note/transport/
     detail/crc32.hpp       CRC32, crc_add, crc_check_and_strip
 ```
 
-> **Naming note.** `IBufferedTransport` survives as a transitional
-> bridge class that adapts the old
-> `transact(req, timeout) -> Result<string_view>` shape to the unified
-> `ITransport`; existing custom transports keep compiling. New code
-> should derive from `ITransport` directly.
+> **Naming note.** `IBufferedTransport` (the transitional bridge class)
+> has been dropped. `ITransport` carries default impls for the
+> `RequestSource` overloads that materialise into a stack scratch buffer
+> and forward to the buffered `transact(req, span, t)` virtual, so
+> transports that only support pre-built strings inherit the bridges
+> automatically — derive from `ITransport` directly and override the
+> string_view-shaped virtuals.
 
 ## Transport-agnostic API
 

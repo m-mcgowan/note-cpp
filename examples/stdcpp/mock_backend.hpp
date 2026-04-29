@@ -84,13 +84,20 @@ struct MockBackend : note::JsonBackend {
 };
 
 /// Mock transport for examples — returns empty JSON responses.
-struct MockTransport : note::IBufferedTransport {
+struct MockTransport : note::ITransport {
     std::string last_request;
     std::string response = "{}";
 
-    note::Result<note::string_view> transact(note::string_view request, uint32_t) override {
+    using note::ITransport::transact;
+    using note::ITransport::send;
+
+    note::Result<note::string_view> transact(note::string_view request,
+                                             note::span<char> buf, uint32_t) override {
         last_request.assign(request.data(), request.size());
-        return note::string_view(response);
+        if (response.size() >= buf.size())
+            return note::make_error(note::Error::Overflow, NOTE_ERR("response exceeds buffer"));
+        std::memcpy(buf.data(), response.data(), response.size());
+        return note::string_view(buf.data(), response.size());
     }
     note::Result<void> send(note::string_view request) override {
         last_request.assign(request.data(), request.size());

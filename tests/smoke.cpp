@@ -44,8 +44,16 @@ struct MockBackend : note::JsonBackend {
     }
 };
 
-struct MockTransport : note::IBufferedTransport {
-    note::Result<note::string_view> transact(note::string_view, uint32_t) override { return "{}"; }
+struct MockTransport : note::ITransport {
+    using note::ITransport::transact;
+    using note::ITransport::send;
+    note::Result<note::string_view> transact(note::string_view, note::span<char> buf, uint32_t) override {
+        constexpr note::string_view rsp = "{}";
+        if (rsp.size() >= buf.size())
+            return note::make_error(note::Error::Overflow, NOTE_ERR("response exceeds buffer"));
+        std::memcpy(buf.data(), rsp.data(), rsp.size());
+        return note::string_view(buf.data(), rsp.size());
+    }
     note::Result<void> send(note::string_view) override { return {}; }
     void reset() override {}
     void abort() override {}

@@ -2,7 +2,7 @@
 //
 // Projects that already use note-c (or note-arduino) can adopt note-cpp's
 // typed API without replacing the transport layer. The bridge implements
-// IBufferedTransport by delegating each request to note-c's
+// ITransport by delegating each request to note-c's
 // NoteRequestResponseJSON(). Both libraries share the single underlying
 // Notecard connection — no hardware conflicts, and existing J* code keeps
 // working alongside new typed-API code.
@@ -33,10 +33,14 @@ extern "C" char* NoteRequestResponseJSON(const char*) {
 // readme:bridge-transport
 /// Delegates every request to note-c's NoteRequestResponseJSON so note-c
 /// owns the serial/I2C bus and note-cpp sits on top with its typed API.
-class NoteCTransport : public note::IBufferedTransport {
+class NoteCTransport : public note::ITransport {
     std::string rsp_buf_;
 public:
-    note::Result<note::string_view> transact(note::string_view req, uint32_t) override {
+    using note::ITransport::transact;
+    using note::ITransport::send;
+
+    note::Result<note::string_view> transact(note::string_view req,
+                                             note::span<char> buf, uint32_t) override {
         std::string req_str(req.data(), req.size());
         char* rsp = NoteRequestResponseJSON(req_str.c_str());
         if (rsp == nullptr) {
@@ -44,11 +48,15 @@ public:
         }
         rsp_buf_ = rsp;
         std::free(rsp);
-        return note::string_view(rsp_buf_);
+        if (rsp_buf_.size() >= buf.size())
+            return note::make_error(note::Error::Overflow, NOTE_ERR("response exceeds buffer"));
+        std::memcpy(buf.data(), rsp_buf_.data(), rsp_buf_.size());
+        return note::string_view(buf.data(), rsp_buf_.size());
     }
     note::Result<void> send(note::string_view req) override {
-        auto r = transact(req, 0);
-        if (!r) return note::Unexpected(r.error());
+        std::string req_str(req.data(), req.size());
+        char* rsp = NoteRequestResponseJSON(req_str.c_str());
+        if (rsp != nullptr) std::free(rsp);
         return {};
     }
     void reset() override {}

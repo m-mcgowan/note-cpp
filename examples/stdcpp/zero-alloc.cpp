@@ -34,15 +34,21 @@
 
 // ── Mock transport (returns string_view into member buffer) ─────────────────
 
-struct MockTransport : note::IBufferedTransport {
+struct MockTransport : note::ITransport {
     std::string response_buf;
 
-    note::Result<note::string_view> transact(note::string_view request, uint32_t) override {
+    using note::ITransport::transact;
+    using note::ITransport::send;
+
+    note::Result<note::string_view> transact(note::string_view request,
+                                             note::span<char> buf, uint32_t) override {
         // In a real system, this would send `request` over serial/I2C and
-        // receive the response into response_buf. The string_view is valid
-        // until the next call.
+        // receive the response into the caller's buffer.
         (void)request;
-        return note::string_view(response_buf);
+        if (response_buf.size() >= buf.size())
+            return note::make_error(note::Error::Overflow, NOTE_ERR("response exceeds buffer"));
+        std::memcpy(buf.data(), response_buf.data(), response_buf.size());
+        return note::string_view(buf.data(), response_buf.size());
     }
     note::Result<void> send(note::string_view) override { return {}; }
     void reset() override {}

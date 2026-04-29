@@ -1523,7 +1523,7 @@ transfers, body structs) when you're comfortable.
 
 For large projects where you can't swap the library all at once, you can
 run note-cpp on top of note-c's existing transport. Implement
-`IBufferedTransport` and delegate each request to
+`ITransport` and delegate each request to
 `NoteRequestResponseJSON()`:
 
 <!-- snippet:bridge-extern examples/stdcpp/note-c-bridge.cpp:23-23 -->
@@ -1535,7 +1535,7 @@ extern "C" char* NoteRequestResponseJSON(const char* reqJSON);
 ```cpp
 /// Delegates every request to note-c's NoteRequestResponseJSON so note-c
 /// owns the serial/I2C bus and note-cpp sits on top with its typed API.
-class NoteCTransport : public note::IBufferedTransport {
+class NoteCTransport : public note::ITransport {
     std::string rsp_buf_;
 public:
     note::Result<note::string_view> transact(note::string_view req, uint32_t) override {

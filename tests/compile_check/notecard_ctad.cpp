@@ -64,12 +64,12 @@ void test_multi_sku() {
     static_assert(std::is_same_v<decltype(nc), Expected>);
 }
 
-// ── Non-axis argument (IBufferedTransport): axis guide is removed via ────
+// ── Non-axis argument (ITransport): axis guide is removed via ────
 // requires, falls back to the implicit guide from
-// `NotecardApi(IBufferedTransport&)`. Locks in that the constrained CTAD
+// `NotecardApi(ITransport&)`. Locks in that the constrained CTAD
 // guide doesn't shadow existing ctors.
 
-extern n::IBufferedTransport& fake_transport();
+extern n::ITransport& fake_transport();
 
 void test_transport_still_unconstrained() {
     n::NotecardApi nc(fake_transport());

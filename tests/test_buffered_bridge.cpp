@@ -1,41 +1,45 @@
-// Tests for IBufferedTransport's RequestSource bridges (Phase 5a step 6).
+// Tests for ITransport's RequestSource → string_view materialise-and-forward
+// bridges (Phase 5a step 8c — moved off the dropped IBufferedTransport class
+// onto ITransport's defaults).
 //
-// IBufferedTransport historically only exposed string_view-shaped transact/send
-// virtuals. Phase 5a step 6 added bridges that materialise a RequestSource into
-// a stack scratch buffer, append the closing `}`, and forward to the buffered
-// virtual. These tests verify each bridge feeds the buffered virtual the
-// expected JSON string and propagates the response.
+// `ITransport` exposes both string_view-shaped and RequestSource-shaped
+// transact/send virtuals. The RequestSource virtuals have default impls
+// that materialise the source into a stack scratch buffer, append the
+// closing `}`, and forward to the matching string_view virtual. These
+// tests verify each bridge feeds the string_view virtual the expected
+// JSON and propagates the response.
 
 #include <doctest.h>
 
 #include <note/request_source.hpp>
 #include <note/transport.hpp>
 
+#include <cstring>
 #include <string>
 
 using namespace note;
 
 namespace {
 
-// IBufferedTransport that records the string_view the bridge forwards in,
+// ITransport that records the string_view the bridge forwards in,
 // and lets the test inject a canned response.
-struct RecordingBufferedTransport : IBufferedTransport {
+struct RecordingTransport : ITransport {
     std::string recorded_request;
     std::string recorded_send;
     std::string canned_response = R"({"ok":true})";
     int transact_count = 0;
     int send_count = 0;
 
-    // Bring inherited overloads (string_view + RequestSource shapes) into
-    // scope so the test can call all transact()/send() variants directly on
-    // the derived type.
-    using IBufferedTransport::transact;
-    using IBufferedTransport::send;
+    using ITransport::transact;
+    using ITransport::send;
 
-    Result<string_view> transact(string_view request, uint32_t) override {
+    Result<string_view> transact(string_view request, span<char> buf, uint32_t) override {
         ++transact_count;
         recorded_request.assign(request.data(), request.size());
-        return string_view(canned_response);
+        if (canned_response.size() >= buf.size())
+            return make_error(Error::Overflow, NOTE_ERR("response exceeds buffer"));
+        std::memcpy(buf.data(), canned_response.data(), canned_response.size());
+        return string_view(buf.data(), canned_response.size());
     }
     Result<void> send(string_view request) override {
         ++send_count;
@@ -66,8 +70,8 @@ struct CaptureSink : JsonSink {
 
 } // namespace
 
-TEST_CASE("IBufferedTransport bridge: transact(RequestSource, span<char>) materialises and forwards") {
-    RecordingBufferedTransport transport;
+TEST_CASE("ITransport bridge: transact(RequestSource, span<char>) materialises and forwards") {
+    RecordingTransport transport;
     transport.canned_response = R"({"foo":"bar"})";
 
     auto build = [](JsonBuilder& b) {
@@ -92,8 +96,8 @@ TEST_CASE("IBufferedTransport bridge: transact(RequestSource, span<char>) materi
     CHECK(std::string(rv->data(), rv->size()) == R"({"foo":"bar"})");
 }
 
-TEST_CASE("IBufferedTransport bridge: transact(RequestSource, JsonSink&) SAX-parses response") {
-    RecordingBufferedTransport transport;
+TEST_CASE("ITransport bridge: transact(RequestSource, JsonSink&) SAX-parses response") {
+    RecordingTransport transport;
     transport.canned_response = R"({"status":"ok","value":7})";
 
     auto build = [](JsonBuilder& b) { b.add("req", "test.run"); };
@@ -106,8 +110,8 @@ TEST_CASE("IBufferedTransport bridge: transact(RequestSource, JsonSink&) SAX-par
     CHECK(sink.captured_status == "ok");
 }
 
-TEST_CASE("IBufferedTransport bridge: send(RequestSource) materialises and forwards") {
-    RecordingBufferedTransport transport;
+TEST_CASE("ITransport bridge: send(RequestSource) materialises and forwards") {
+    RecordingTransport transport;
 
     auto build = [](JsonBuilder& b) {
         b.add("cmd", "card.attn");
@@ -125,8 +129,8 @@ TEST_CASE("IBufferedTransport bridge: send(RequestSource) materialises and forwa
     CHECK(transport.recorded_send.find(R"("mode":"rearm")") != std::string::npos);
 }
 
-TEST_CASE("IBufferedTransport bridge: oversize request returns Overflow") {
-    RecordingBufferedTransport transport;
+TEST_CASE("ITransport bridge: oversize request returns Overflow") {
+    RecordingTransport transport;
 
     // Build a request larger than the bridge's 1024-byte scratch buffer.
     std::string big(2048, 'x');
@@ -137,6 +141,6 @@ TEST_CASE("IBufferedTransport bridge: oversize request returns Overflow") {
     auto rv = transport.transact(src.as_source(), span<char>(rsp_buf, sizeof(rsp_buf)), 1000);
     REQUIRE_FALSE(rv.has_value());
     CHECK(rv.error().code == Error::Overflow);
-    // Bridge must short-circuit before invoking the buffered virtual.
+    // Bridge must short-circuit before invoking the string_view virtual.
     CHECK(transport.transact_count == 0);
 }

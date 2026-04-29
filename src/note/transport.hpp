@@ -3,21 +3,28 @@
 /// @file transport.hpp
 /// ITransport — unified Notecard session interface (Phase 3 of the
 /// transport-rename arc; see docs/superpowers/plans/2026-04-27-transport-renames.md).
-/// IBufferedTransport — deprecated bridge that adapts the old
-/// `transact(req, timeout) -> Result<string_view>` shape to ITransport.
 /// note::test::CallbackTransport — adapter for test lambdas.
 ///
-/// `ITransport` exposes three transaction operations:
-///   - `transact(req, span<char> buf, timeout)` — response copied into the
-///     caller's buffer; returned `string_view` aliases that buffer.
-///   - `transact(req, JsonSink& sink, timeout)` — response SAX-parsed into
-///     a sink without an intermediate buffer.
-///   - `send(req)` — fire-and-forget command.
+/// `ITransport` exposes six transaction operations across two request
+/// shapes:
 ///
-/// Concrete protocol drivers (notably `Protocol`) override all
-/// three natively for efficiency. Custom transports that only implement
-/// the buffered overload get the sink overload for free via the default
-/// impl, which reads into a local buffer then SAX-parses it.
+///   string_view shape (pre-built JSON):
+///     - `transact(req, span<char> buf, timeout)` — response copied into the
+///       caller's buffer; returned `string_view` aliases that buffer.
+///     - `transact(req, JsonSink& sink, timeout)` — response SAX-parsed into
+///       a sink without an intermediate buffer.
+///     - `send(req)` — fire-and-forget command.
+///
+///   RequestSource shape (streaming-built JSON):
+///     - `transact(RequestSource, span<char>, timeout)`
+///     - `transact(RequestSource, JsonSink&, timeout)`
+///     - `send(RequestSource)`
+///
+/// Concrete protocol drivers (notably `Protocol`) override all six natively
+/// for efficiency. Custom transports typically override only the
+/// `transact(req, span, t)` and `send(req)` virtuals; the other overloads
+/// (sink, RequestSource) get default impls that materialise into a stack
+/// scratch buffer and forward to the buffered overload.
 
 #include <note/debug.hpp>
 #include <note/error.hpp>
@@ -124,109 +131,19 @@ struct ITransport {
         return make_error(Error::NotReady, "binary transfer not supported");
     }
 
-    // ─── RequestSource overloads (Phase 5a step 3 — alongside string_view) ───
+    // ─── RequestSource overloads — materialise-and-forward defaults ───
     //
-    // These are the unified shape that step 8 collapses to. Default impls
-    // here return "not implemented"; `Protocol` overrides natively, and
-    // step 4+ migrates consumers (Notecard, BareNotecard, test fakes) onto
-    // them. Existing subclasses that only implement the string_view/BuildFn
-    // shapes inherit the not-implemented defaults and keep compiling.
+    // The default impls materialise the source into a stack scratch buffer,
+    // append the closing `}` (the source emits fields only; the protocol
+    // layer normally adds the brace), and forward to the corresponding
+    // string_view virtual. `Protocol` overrides these natively for
+    // zero-buffer streaming; transports that only support pre-built strings
+    // (notably the test CallbackTransport, mock transports, the note-c
+    // bridge) inherit the bridges automatically.
 
-    /// Send a request from a `RequestSource` and copy the response into
-    /// the caller's buffer.
-    virtual Result<string_view> transact(RequestSource, span<char>,
-                                         uint32_t /*timeout_ms*/) {
-        return make_error(Error::NotReady,
-                          "RequestSource transact not implemented");
-    }
-
-    /// Send a request from a `RequestSource` and SAX-parse the response
-    /// into `sink`.
-    virtual Result<void> transact(RequestSource, JsonSink&,
-                                  uint32_t /*timeout_ms*/) {
-        return make_error(Error::NotReady,
-                          "RequestSource transact not implemented");
-    }
-
-    /// Fire-and-forget: emit a `RequestSource`-built request, no response.
-    virtual Result<void> send(RequestSource) {
-        return make_error(Error::NotReady,
-                          "RequestSource send not implemented");
-    }
-
-protected:
-    /// Stack buffer size for the default `transact(req, sink)` bridge impl.
-    /// Sized for typical Notecard responses; bumps if a derived class needs more.
-    static constexpr size_t kDefaultBridgeBufferBytes = 1024;
-};
-
-
-// ---------------------------------------------------------------------------
-// IBufferedTransport — DEPRECATED bridge
-// ---------------------------------------------------------------------------
-
-/// Bridges the old `transact(req, timeout) -> Result<string_view>` shape
-/// (response in transport-owned storage) to the unified `ITransport`. New
-/// transports should derive from `ITransport` directly; this class remains
-/// for one release so existing buffered subclasses (notably
-/// `note::test::CallbackTransport`) continue to compile without a
-/// per-class rewrite.
-struct IBufferedTransport : public ITransport {
-    /// Bring the inherited ITransport overloads (string_view + RequestSource
-    /// shapes) into scope so the buffered shapes declared below don't hide
-    /// them under -Woverloaded-virtual.
-    using ITransport::transact;
-
-    /// Old buffered transact: response is placed in transport-owned storage
-    /// and returned by view. The view is valid until the next `transact()`
-    /// call. Subclasses override THIS method; the new `ITransport` overloads
-    /// below bridge to it automatically.
-    virtual Result<string_view> transact(string_view request, uint32_t timeout_ms) = 0;
-
-    /// Re-declare `send(string_view)` as abstract on `IBufferedTransport` so
-    /// subclasses override it as a direct member of this class. Without
-    /// this, the subclass override resolves to `ITransport::send(string_view)`
-    /// transitively, which lights up `-Woverloaded-virtual` in combination
-    /// with the `send(RequestSource)` bridge below (the override hides the
-    /// bridge in subclass scope). Declaring it here makes subclass overrides
-    /// direct and silences the warning without per-class `using` boilerplate.
-    Result<void> send(string_view request) override = 0;
-
-    /// Bridge: copies the transport-owned response into the caller's buffer.
-    Result<string_view> transact(string_view request, span<char> buf,
-                                 uint32_t timeout_ms) override {
-        auto rv = transact(request, timeout_ms);
-        if (!rv) return Unexpected(rv.error());
-        if (rv->size() >= buf.size())
-            return make_error(Error::Overflow, "response exceeds buffer");
-        std::memcpy(buf.data(), rv->data(), rv->size());
-        return string_view(buf.data(), rv->size());
-    }
-
-    /// Bridge: SAX-parses the transport-owned response into the sink.
-    Result<void> transact(string_view request, JsonSink& sink,
-                          uint32_t timeout_ms) override {
-        auto rv = transact(request, timeout_ms);
-        if (!rv) return Unexpected(rv.error());
-        auto err = sax_parse(*rv, sink);
-        if (!err.empty())
-            return make_error(Error::ResponseLost, Cause::Unspecified, err);
-        return {};
-    }
-
-    // ── RequestSource bridges (Phase 5a step 6) ───────────────────────────
-    //
-    // Materialise the source into a stack scratch buffer, append the
-    // closing `}` (RequestSource's `emit()` paints fields only; the protocol
-    // layer normally adds the brace), and forward to the buffered virtual.
-    // This means every IBufferedTransport subclass satisfies the full
-    // RequestSource API contract without per-class boilerplate. Step 8 will
-    // extract this pattern into a reusable helper when IBufferedTransport
-    // itself goes away.
-
-    /// RequestSource bridge: materialise → forward to buffered transact.
-    Result<string_view> transact(RequestSource src, span<char> buf,
-                                 uint32_t timeout_ms) override {
+    /// RequestSource bridge: materialise → forward to `transact(string_view, span, t)`.
+    virtual Result<string_view> transact(RequestSource src, span<char> buf,
+                                         uint32_t timeout_ms) {
         char scratch[kDefaultBridgeBufferBytes];
         JsonBufferWriter writer(scratch, sizeof(scratch));
         src.emit(writer);
@@ -236,9 +153,9 @@ struct IBufferedTransport : public ITransport {
         return transact(writer.view(), buf, timeout_ms);
     }
 
-    /// RequestSource bridge: materialise → forward to buffered transact, SAX-parse response.
-    Result<void> transact(RequestSource src, JsonSink& sink,
-                          uint32_t timeout_ms) override {
+    /// RequestSource bridge: materialise → forward to `transact(string_view, sink, t)`.
+    virtual Result<void> transact(RequestSource src, JsonSink& sink,
+                                  uint32_t timeout_ms) {
         char scratch[kDefaultBridgeBufferBytes];
         JsonBufferWriter writer(scratch, sizeof(scratch));
         src.emit(writer);
@@ -248,8 +165,8 @@ struct IBufferedTransport : public ITransport {
         return transact(writer.view(), sink, timeout_ms);
     }
 
-    /// RequestSource bridge: materialise → forward to buffered send.
-    Result<void> send(RequestSource src) override {
+    /// RequestSource bridge: materialise → forward to `send(string_view)`.
+    virtual Result<void> send(RequestSource src) {
         char scratch[kDefaultBridgeBufferBytes];
         JsonBufferWriter writer(scratch, sizeof(scratch));
         src.emit(writer);
@@ -258,6 +175,11 @@ struct IBufferedTransport : public ITransport {
             return make_error(Error::Overflow, NOTE_ERR("request exceeds bridge scratch buffer"));
         return send(writer.view());
     }
+
+protected:
+    /// Stack buffer size for the default `transact(req, sink)` bridge impl.
+    /// Sized for typical Notecard responses; bumps if a derived class needs more.
+    static constexpr size_t kDefaultBridgeBufferBytes = 1024;
 };
 
 
@@ -286,14 +208,20 @@ public:
 // CallbackTransport — adapter for test lambdas
 // ---------------------------------------------------------------------------
 
-/// Wraps function objects as a buffered transport for testing and examples.
+/// Wraps function objects as a transport for testing and examples.
+///
+/// The TransactFn returns a `string_view` aliasing transport-owned storage
+/// (e.g. a static string the lambda captures); the `transact(req, span, t)`
+/// override copies into the caller's buffer. The `transact(req, sink, t)`
+/// and RequestSource overloads inherit ITransport's defaults — buffered
+/// transact + SAX-parse / materialise + forward.
 ///
 /// @code
 ///     note::test::CallbackTransport transport(
 ///         [](string_view req, uint32_t) -> Result<string_view> { return "{}"; });
 ///     Notecard nc(backend, transport);
 /// @endcode
-class CallbackTransport : public IBufferedTransport {
+class CallbackTransport : public ITransport {
 public:
     using TransactFn = std::function<Result<string_view>(string_view, uint32_t)>;
     using SendFn = std::function<Result<void>(string_view)>;
@@ -306,8 +234,17 @@ public:
     CallbackTransport(TransactFn transact_fn, SendFn send_fn)
         : transact_(std::move(transact_fn)), send_(std::move(send_fn)) {}
 
-    Result<string_view> transact(string_view request, uint32_t timeout_ms) override {
-        return transact_(request, timeout_ms);
+    using ITransport::transact;
+    using ITransport::send;
+
+    Result<string_view> transact(string_view request, span<char> buf,
+                                 uint32_t timeout_ms) override {
+        auto rv = transact_(request, timeout_ms);
+        if (!rv) return Unexpected(rv.error());
+        if (rv->size() >= buf.size())
+            return make_error(Error::Overflow, NOTE_ERR("response exceeds buffer"));
+        std::memcpy(buf.data(), rv->data(), rv->size());
+        return string_view(buf.data(), rv->size());
     }
 
     Result<void> send(string_view request) override {

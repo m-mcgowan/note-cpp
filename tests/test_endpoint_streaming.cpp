@@ -4,7 +4,7 @@
 // Each endpoint runs against BOTH transport paths with the same response
 // JSON, proving streaming and buffered produce identical results:
 //   - Streaming: Protocol(MockHal) → IStreamingTransport → SAX Sink
-//   - Buffered:  CallbackTransport → IBufferedTransport → JsonReader parse
+//   - Buffered:  CallbackTransport → ITransport → JsonReader parse
 //
 // Void-response endpoints verify both paths succeed without error.
 

@@ -58,7 +58,7 @@ On AVR, this path produces a 28,760-byte binary (89% of 32 KB flash) with zero h
 
 ```cpp
 note::backends::BufferJsonBackend<512, 64> backend;
-MockTransport transport;                            // IBufferedTransport
+MockTransport transport;                            // ITransport (buffered)
 note::Notecard nc(backend, transport);
 note::Api api(nc);
 ```

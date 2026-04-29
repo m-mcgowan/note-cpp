@@ -15,7 +15,7 @@ namespace note::test {
 
 /// Create a Notecard configured for testing: request IDs disabled,
 /// retry policy with zero retries (single-attempt, deterministic).
-inline Notecard make_test_notecard(JsonBackend& backend, IBufferedTransport& transport) {
+inline Notecard make_test_notecard(JsonBackend& backend, ITransport& transport) {
     Notecard nc(backend, transport);
     nc.set_request_ids(false);
     nc.set_retry_policy({.max_retries = 0});

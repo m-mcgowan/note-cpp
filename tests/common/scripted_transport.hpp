@@ -1,6 +1,6 @@
 #pragma once
 
-// Scripted IBufferedTransport for tests — returns a fixed string_view response
+// Scripted ITransport for tests — returns a fixed string_view response
 // from a const-char-pointer buffer the test owns. No std::string, no
 // std::function, no allocations on the hot path.
 //
@@ -19,11 +19,18 @@
 
 namespace note::test {
 
-struct ScriptedTransport : note::IBufferedTransport {
+struct ScriptedTransport : note::ITransport {
     const char* response = "{}";
 
-    Result<string_view> transact(string_view, uint32_t) override {
-        return string_view(response);
+    using note::ITransport::transact;
+    using note::ITransport::send;
+
+    Result<string_view> transact(string_view, span<char> buf, uint32_t) override {
+        string_view rsp(response);
+        if (rsp.size() >= buf.size())
+            return make_error(Error::Overflow, NOTE_ERR("response exceeds buffer"));
+        std::memcpy(buf.data(), rsp.data(), rsp.size());
+        return string_view(buf.data(), rsp.size());
     }
     Result<void> send(string_view) override { return {}; }
     void reset() override {}

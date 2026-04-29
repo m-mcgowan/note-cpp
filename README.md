@@ -367,12 +367,12 @@ highest row that fits your target.
 
 | # | Style | Flash | Δ flash vs typed | RAM |
 |---|---|---|---|---|
-| — | **note-c** baseline (`Notecard::requestAndResponse`) | 25,076 B | +346 B | 729 B\* |
-| 1 | **Typed API groups** (`api.hub.set().product(...).execute()`) | 24,730 B | baseline | 836 B |
-| 2 | **Typed direct** (`nc.execute(HubSet{...})`) | 24,520 B | −210 B | 804 B |
-| 3 | **[Raw JSON + SAX sink](docs/api-layers.md)** ([`JsonBuf`](docs/json-builder.md) + `transact_dispatch` + `JsonSink`) | 20,528 B | −4,202 B | 848 B |
-| 4 | **[Raw + `JsonView` scan](docs/api-layers.md)** (RAM keys) | 10,914 B | **−13,816 B** | 696 B |
-| 5 | **[Raw + `JsonView` scan](docs/api-layers.md)** (`F()` flash keys) | **10,882 B** | **−13,848 B** | **680 B** |
+| — | **note-c** baseline (`Notecard::requestAndResponse`) | 25,076 B | +2 B | 729 B\* |
+| 1 | **Typed API groups** (`api.hub.set().product(...).execute()`) | 25,470 B | +396 B | 804 B |
+| 2 | **Typed direct** (`nc.execute(HubSet{...})`) | 25,074 B | baseline | 768 B |
+| 3 | **[Raw JSON + SAX sink](docs/api-layers.md)** ([`JsonBuf`](docs/json-builder.md) + `transact_dispatch` + `JsonSink`) | 21,192 B | −3,882 B | 792 B |
+| 4 | **[Raw + `JsonView` scan](docs/api-layers.md)** (RAM keys) | 11,110 B | **−13,964 B** | 696 B |
+| 5 | **[Raw + `JsonView` scan](docs/api-layers.md)** (`F()` flash keys) | **11,078 B** | **−13,996 B** | **680 B** |
 
 \*note-c's RAM excludes a ~371 B heap peak; every `note-cpp` row uses
 zero heap.

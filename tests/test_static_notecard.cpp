@@ -10,11 +10,93 @@
 #include <note/arena.hpp>
 #include <note/lexer/parse.hpp>
 
+#if NOTE_JSONB
+#include <note/jsonb.hpp>
+#include <note/json_sax_streaming.hpp>
+#include <note/lexer/sax_adapter.hpp>
+#include <cstring>
+#include <vector>
+#endif
+
 #include <doctest.h>
 #include <deque>
 #include <string>
 
 using namespace note;
+
+#if NOTE_JSONB
+namespace {
+
+/// Decode a captured JSONB opcode stream back to JSON text for substring
+/// assertions. The mock under NOTE_JSONB captures whatever
+/// RequestSource::emit() paints — that's raw JSONB opcodes (the protocol
+/// layer's CobsStreamWriter is not in the path). This helper feeds those
+/// opcodes through JsonbParser → a JSON-emitting SAX sink to produce the
+/// equivalent compact JSON text. Same substring assertions then work
+/// unchanged across NOTE_MINIMAL (JSONB) and the default (JSON) builds.
+inline std::string jsonb_to_json(const std::string& bytes) {
+    struct MemReader {
+        const uint8_t* data;
+        size_t pos;
+        size_t end;
+        Result<size_t> operator()(uint8_t* buf, size_t max, uint32_t) {
+            const size_t avail = end - pos;
+            if (avail == 0) return size_t{0};
+            const size_t n = max < avail ? max : avail;
+            std::memcpy(buf, data + pos, n);
+            pos += n;
+            return n;
+        }
+    } reader{
+        reinterpret_cast<const uint8_t*>(bytes.data()), 0, bytes.size()
+    };
+
+    struct JsonEmitter {
+        std::string out;
+        std::vector<bool> first_stack;
+
+        void sep_and_key(string_view k) {
+            if (!first_stack.empty()) {
+                if (first_stack.back()) first_stack.back() = false;
+                else out += ',';
+            }
+            if (!k.empty()) {
+                out += '"';
+                out.append(k.data(), k.size());
+                out += "\":";
+            }
+        }
+        void on_object_begin(string_view k) { sep_and_key(k); out += '{'; first_stack.push_back(true); }
+        void on_object_end  (string_view)   { out += '}'; if (!first_stack.empty()) first_stack.pop_back(); }
+        void on_array_begin (string_view k) { sep_and_key(k); out += '['; first_stack.push_back(true); }
+        void on_array_end   (string_view)   { out += ']'; if (!first_stack.empty()) first_stack.pop_back(); }
+        void on_bool        (string_view k, bool v) { sep_and_key(k); out += v ? "true" : "false"; }
+        void on_int         (string_view k, json_int_t v) { sep_and_key(k); out += std::to_string(v); }
+        void on_float       (string_view k, double v) {
+            sep_and_key(k);
+            char b[32];
+            std::snprintf(b, sizeof b, "%.6g", v);
+            out += b;
+        }
+        void on_string      (string_view k, string_view v) {
+            sep_and_key(k);
+            out += '"';
+            out.append(v.data(), v.size());
+            out += '"';
+        }
+        void on_null        (string_view k) { sep_and_key(k); out += "null"; }
+        void reset          ()              { out.clear(); first_stack.clear(); }
+    } emitter;
+
+    char scratch[256];
+    SaxStreamBuf buf(scratch);
+    auto dispatch = make_sax_dispatch(emitter);
+    jsonb_parse_streaming(reader, 1000, buf, dispatch);
+    return emitter.out;
+}
+
+} // namespace
+#endif
 
 // ---------------------------------------------------------------------------
 // Minimal mock transport stack for StaticNotecard<Stack>
@@ -51,7 +133,28 @@ struct MockTransport {
             }
         } writer(last_request);
         src.emit(writer);
+        // RequestSource emits the opening container only — Protocol
+        // appends the closer on the wire. The mock substitutes for
+        // Protocol here; closer matches the active wire format so
+        // last_request is a self-contained, parseable representation
+        // in either mode.
+#if NOTE_JSONB
+        last_request += static_cast<char>(jsonb::kEndObject);
+#else
         last_request += '}';
+#endif
+    }
+
+    /// Captured request as JSON text, regardless of wire format. Under
+    /// NOTE_JSONB the captured opcode stream is decoded back to JSON via
+    /// the JSONB parser; in the default build last_request already is
+    /// JSON. Lets substring assertions be wire-format-agnostic.
+    std::string last_request_as_json() const {
+#if NOTE_JSONB
+        return jsonb_to_json(last_request);
+#else
+        return last_request;
+#endif
     }
 
     void feed_response(SaxDispatch dispatch) {
@@ -120,12 +223,8 @@ TEST_CASE("StaticNotecard execute sends request and parses response") {
     REQUIRE(result);
     CHECK(result.value == 22.5);
     CHECK(nc.stack().transport.transact_count == 1);
-#if !NOTE_JSONB
-    // Under NOTE_JSONB the mock captures JSONB opcodes, not JSON text —
-    // substring assertions on the captured bytes don't apply there.
-    CHECK(nc.stack().transport.last_request.find("\"req\":\"card.temp\"")
+    CHECK(nc.stack().transport.last_request_as_json().find("\"req\":\"card.temp\"")
           != std::string::npos);
-#endif
 }
 
 TEST_CASE("StaticNotecard execute with void response") {
@@ -143,12 +242,9 @@ TEST_CASE("StaticNotecard execute with void response") {
         .execute();
     REQUIRE(result);
     CHECK(nc.stack().transport.transact_count == 1);
-#if !NOTE_JSONB
-    CHECK(nc.stack().transport.last_request.find("\"req\":\"hub.set\"")
-          != std::string::npos);
-    CHECK(nc.stack().transport.last_request.find("\"product\":\"com.example.test\"")
-          != std::string::npos);
-#endif
+    auto req = nc.stack().transport.last_request_as_json();
+    CHECK(req.find("\"req\":\"hub.set\"") != std::string::npos);
+    CHECK(req.find("\"product\":\"com.example.test\"") != std::string::npos);
 }
 
 TEST_CASE("StaticNotecard command sends fire-and-forget") {
@@ -163,10 +259,8 @@ TEST_CASE("StaticNotecard command sends fire-and-forget") {
         .command();
     REQUIRE(result);
     CHECK(nc.stack().transport.send_count == 1);
-#if !NOTE_JSONB
-    CHECK(nc.stack().transport.last_request.find("\"cmd\":\"hub.set\"")
+    CHECK(nc.stack().transport.last_request_as_json().find("\"cmd\":\"hub.set\"")
           != std::string::npos);
-#endif
 }
 
 TEST_CASE("StaticNotecard via resource group factory") {

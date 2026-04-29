@@ -53,26 +53,23 @@ and `send(string_view)` overrides.
 
 ## Architecture
 
-The streaming path is layered:
+The streaming path is layered. Each layer has one job; bytes flow up
+on send and down on receive.
 
-```
-SerialHal / I2CHal        Your hardware (4-5 methods)
-  ↓
-NotecardSerial            Implements Hal (adapts SerialHal)
-  ↓
-Protocol                  Protocol logic: retry, CRC, JSON framing — IS-A ITransact
-  ↓
-ITransact                Session interface consumed by Notecard
-  ↓
-Notecard                  Constructed with (Protocol&, Allocator) for streaming-only,
-                          or (JsonBackend*, ITransact&, Allocator) for the unified path
+```mermaid
+flowchart TD
+    hw["SerialHal / I2CHal<br/><i>your hardware (5 methods)</i>"]
+    framer["NotecardSerial / NotecardI2c<br/><i>implements <tt>Hal</tt>; adapts the byte HAL</i>"]
+    protocol["Protocol<br/><i>retry, CRC, JSON/JSONB framing — IS-A <tt>ITransact</tt></i>"]
+    iface["ITransact<br/><i>session contract consumed by Notecard</i>"]
+    notecard["Notecard<br/><i><tt>(Protocol&, Allocator)</tt> streaming-only, or <tt>(JsonBackend*, ITransact&, Allocator)</tt> unified</i>"]
+    hw --> framer --> protocol --> iface --> notecard
 ```
 
-`Hal` is the boundary between hardware and protocol. It has five
-pure virtual methods: `transmit()`, `read()`, `reset()`,
-`write_line_terminator()`, `delay()`. `Protocol` owns all
-protocol logic — retry loops, CRC (append on send, verify on receive), and
-JSON request/response framing. Zero internal buffers.
+`Hal` is the boundary between hardware and protocol. Five pure virtuals:
+`transmit()`, `read()`, `reset()`, `write_line_terminator()`, `delay()`.
+`Protocol` owns all protocol logic — retry loops, CRC (append on send,
+verify on receive), and JSON/JSONB framing. Zero internal buffers.
 
 ## Usage
 
@@ -225,14 +222,24 @@ Active when `NOTE_JSONB=1` (auto-enabled by `NOTE_MINIMAL`). See [docs/jsonb.md]
 | `JsonbParser` | Reads opcodes, dispatches `SaxEvent`s through `SaxDispatch` |
 | `CobsDecodingReader` | `ReadFn` adapter — COBS-decodes wire bytes, strips `:}` trailer |
 
-### Path 2: Fully buffered (via buffered ITransact subclass)
+### Path 2: Fully buffered (via buffered `ITransact` subclass)
 
-Active when `Notecard` was constructed with `(JsonBackend&, ITransact&)`.
+Active when `Notecard` was constructed with `(JsonBackend&, ITransact&)` —
+the buffered-only convenience ctor — and the transport overrides only
+the string_view-shaped virtuals (e.g. `note::test::CallbackTransport`,
+the note-c bridge, integration test fakes).
 
-- **Send:** `BufferJsonBuilder` → `prepare_wire()` → `do_transmit()`
-- **Receive:** `do_receive()` into `response_buf_`
-- **Parse:** `backend_->get_reader()` → `Rsp::parse(reader)`
-- Used by `CallbackTransport` for testing and `NotecardI2c` for I2C
+- **Send:** the configured `JsonBackend`'s builder paints a complete
+  request into a caller-supplied `span<char>`; the transport's
+  `transact(string_view, span<char>, t)` override sends those bytes
+  and returns the response in the same buffer.
+- **Receive:** the response `string_view` is fed to
+  `backend_->parse_response(...)`, which returns a `JsonReader`; the
+  generated `Rsp::parse(reader)` walks fields out of the tree.
+- The `RequestSource` virtuals on `ITransact` carry default impls that
+  materialise the source into a stack scratch buffer and forward to
+  the matching string_view virtual, so buffered transports satisfy
+  the full `ITransact` API without per-class boilerplate.
 
 ### Binary path (`write` / `read` + COBS)
 
@@ -262,32 +269,19 @@ In the buffered path, CRC uses the in-place buffer functions (`crc_add`,
 
 ## `NOTE_NO_STD_STRING` Guard
 
-The streaming path (`Hal` + `Protocol` + `ITransact`)
-has no dependency on `<string>` or `<functional>`. It compiles cleanly with
+The streaming path (`Hal` + `Protocol` + `ITransact`) has no dependency
+on `<string>` or `<functional>`. It compiles cleanly with
 `NOTE_NO_STD_STRING` defined.
 
-The buffered path's `AbstractTransport` uses `std::string` for wire and
-response buffers, guarded behind `#ifndef NOTE_NO_STD_STRING`:
-
-```cpp
-#ifndef NOTE_NO_STD_STRING
-    std::string wire_;
-    std::string response_buf_;
-    virtual Result<void> do_receive(std::string& buf, uint32_t timeout_ms) = 0;
-#endif
-```
-
-On AVR and other platforms without `<string>`, define `NOTE_NO_STD_STRING`
-and use the streaming path exclusively. The AVR binary fits in 32 KB:
-28,760 bytes (89%) flash with zero heap — no `operator new` linked.
+The buffered path runs over caller-supplied `span<char>` buffers — no
+`std::string` in the core. Only specific JSON backends bring in
+`<string>` (cJSON's wrapper, nlohmann's, etc.) and only when those
+backends are linked. AVR builds (which exercise the full streaming
+path under `NOTE_MINIMAL`) skip every `<string>`-bearing translation
+unit. The current AVR baseline lives in `tools/binary-size-comparison/
+avr_baselines.json` (currently ~25 KB / 78% with zero heap).
 
 ## Remaining Work
-
-### I2C migration to Hal
-
-`NotecardI2c` still extends `AbstractTransport` (the buffered path). Migrating
-it to implement `Hal` would allow I2C to use the streaming path and
-benefit from zero-buffer operation.
 
 ### Implicit Arena -> Allocator conversion
 

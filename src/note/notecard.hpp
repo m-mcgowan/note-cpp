@@ -906,45 +906,6 @@ private:
         return streaming_execute(frame, virtual_sink, safety, reset_fn, reset_ctx);
     }
 
-    /// Streaming execute core — template on transport to support both
-    /// virtual (ITransact*) and concrete (StaticNotecard) dispatch.
-    /// When called with a pointer, the compiler generates one shared copy.
-    /// When called with a concrete ref, it devirtualizes on modern GCC.
-    template<typename Transport>
-    static ErrorInfo execute_streaming(Transport& t, uint32_t timeout_ms,
-                                       BuildFn build_fn, void* ctx,
-                                       JsonSink& inner_sink, StringPool& pool,
-                                       const DebugListener& debug = {}) {
-        // Emit wire-send event: build the JSON into a temporary buffer for debug.
-        // Only when a wire listener is set — zero overhead otherwise.
-#if !NOTE_NO_STD_STRING
-        if (debug.on_wire) {
-            // Build into a sizing pass to get the JSON for debug output.
-            // This duplicates the build but only when debug is active.
-            struct SizingWriter : JsonWriter {
-                using JsonWriter::write;
-                std::string buf;
-                bool write(const char* data, size_t len) override {
-                    buf.append(data, len);
-                    return true;
-                }
-            } sizer;
-            StreamingJsonBuilder sizing_builder(sizer);
-            build_fn(sizing_builder, ctx);
-            sizer.buf += '}';
-            debug_wire(debug, string_view(sizer.buf.data(), sizer.buf.size()), WireDirection::Send);
-        }
-#endif // NOTE_NO_STD_STRING
-
-        ErrorCaptureSink err_sink(inner_sink);
-        auto rv = t.transact(build_fn, ctx, err_sink, timeout_ms);
-        if (!rv) return rv.error();
-        auto err = err_sink.captured_error();
-        if (!err.empty())
-            return ErrorInfo{Error::Notecard, Cause::Unspecified, pool.intern(err)};
-        return {};
-    }
-
     /// Enforce inter-transaction gap via the byte HAL.
     void enforce_timing() {
         if (!timing_.has_previous) return;

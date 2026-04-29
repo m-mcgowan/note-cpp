@@ -43,7 +43,7 @@ struct ReqWrapCtx {
 };
 inline void req_wrap_build(JsonBuilder& b, void* p) {
     auto& c = *static_cast<ReqWrapCtx*>(p);
-    b.add("req", c.req);
+    add_flash(b, flash(common_keys::req), c.req);
     if (c.fn) c.fn(b, c.inner);
 }
 
@@ -83,7 +83,8 @@ public:
 #endif
 
         auto fields = [&](JsonBuilder& b) {
-            if (req_id) b.add("id", static_cast<json_int_t>(req_id));
+            if (req_id) add_flash(b, flash(detail::common_keys::id),
+                                  static_cast<json_int_t>(req_id));
             req.build(b);
         };
         BuildFn fields_fn = [](JsonBuilder& b, void* p) {
@@ -149,7 +150,7 @@ public:
                 }
             }
             auto full_build = [&](JsonBuilder& b) {
-                b.add("req", RequestT::notecard_request);
+                add_flash(b, flash(detail::common_keys::req), RequestT::notecard_request);
                 fields_fn(b, &fields);
             };
             BuildFn full_fn = [](JsonBuilder& b, void* p) {
@@ -175,7 +176,7 @@ public:
         enforce_timing();
 #endif
         auto build = [&](JsonBuilder& b) {
-            b.add("cmd", RequestT::notecard_request);
+            add_flash(b, flash(detail::common_keys::cmd), RequestT::notecard_request);
             req.build(b);
         };
         BuildFn build_fn = [](JsonBuilder& b, void* p) {

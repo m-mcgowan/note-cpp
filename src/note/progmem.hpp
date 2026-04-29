@@ -143,8 +143,6 @@ void add_raw_flash(Builder& b, FlashString key, std::string_view value) {
 #endif
 }
 
-} // namespace note
-
 /// Attribute for declaring a string in program memory.
 /// Usage: static const char name[] NOTE_FLASH_ATTR = "value";
 #if NOTE_PROGMEM
@@ -152,3 +150,21 @@ void add_raw_flash(Builder& b, FlashString key, std::string_view value) {
 #else
 #  define NOTE_FLASH_ATTR
 #endif
+
+namespace detail {
+
+/// Common PROGMEM-resident wire keys used outside generated endpoint
+/// headers — the request/command framing layer (`req`/`cmd`/`id`) and
+/// the GenericResponseSink body-depth gate (`body`). Centralising them
+/// here keeps these short literals in flash on AVR (Harvard arch
+/// otherwise copies every literal to RAM at boot).
+namespace common_keys {
+inline constexpr char req[]  NOTE_FLASH_ATTR = "req";
+inline constexpr char cmd[]  NOTE_FLASH_ATTR = "cmd";
+inline constexpr char id[]   NOTE_FLASH_ATTR = "id";
+inline constexpr char body[] NOTE_FLASH_ATTR = "body";
+} // namespace common_keys
+
+} // namespace detail
+
+} // namespace note

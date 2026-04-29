@@ -95,7 +95,7 @@ struct GenericResponseSink {
             if (body_handler_) body_handler_.send(BodyEvent::make_object_begin(k));
             return;
         }
-        if (k == "body") { body_depth_ = 1; return; }
+        if (detail::flash_key_eq(k, detail::common_keys::body)) { body_depth_ = 1; return; }
     }
 
     void on_object_end(string_view k) {

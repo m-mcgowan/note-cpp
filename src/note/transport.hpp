@@ -21,6 +21,7 @@
 
 #include <note/debug.hpp>
 #include <note/error.hpp>
+#include <note/json.hpp>
 #include <note/json_sax.hpp>
 #include <note/span.hpp>
 #include <note/transport_hal.hpp>
@@ -32,8 +33,6 @@
 #endif
 
 namespace note {
-
-class JsonWriter;  // defined in note/json.hpp
 
 // ---------------------------------------------------------------------------
 // RequestSource — type-erased emitter for JSON request bytes
@@ -174,8 +173,8 @@ protected:
 /// per-class rewrite.
 struct IBufferedTransport : public ITransport {
     /// Bring the inherited ITransport overloads (string_view + RequestSource
-    /// shapes) into scope so the buffered shape declared below doesn't
-    /// hide them under -Woverloaded-virtual.
+    /// shapes) into scope so the buffered shapes declared below don't hide
+    /// them under -Woverloaded-virtual.
     using ITransport::transact;
 
     /// Old buffered transact: response is placed in transport-owned storage
@@ -183,6 +182,15 @@ struct IBufferedTransport : public ITransport {
     /// call. Subclasses override THIS method; the new `ITransport` overloads
     /// below bridge to it automatically.
     virtual Result<string_view> transact(string_view request, uint32_t timeout_ms) = 0;
+
+    /// Re-declare `send(string_view)` as abstract on `IBufferedTransport` so
+    /// subclasses override it as a direct member of this class. Without
+    /// this, the subclass override resolves to `ITransport::send(string_view)`
+    /// transitively, which lights up `-Woverloaded-virtual` in combination
+    /// with the `send(RequestSource)` bridge below (the override hides the
+    /// bridge in subclass scope). Declaring it here makes subclass overrides
+    /// direct and silences the warning without per-class `using` boilerplate.
+    Result<void> send(string_view request) override = 0;
 
     /// Bridge: copies the transport-owned response into the caller's buffer.
     Result<string_view> transact(string_view request, span<char> buf,
@@ -204,6 +212,51 @@ struct IBufferedTransport : public ITransport {
         if (!err.empty())
             return make_error(Error::ResponseLost, Cause::Unspecified, err);
         return {};
+    }
+
+    // ── RequestSource bridges (Phase 5a step 6) ───────────────────────────
+    //
+    // Materialise the source into a stack scratch buffer, append the
+    // closing `}` (RequestSource's `emit()` paints fields only; the protocol
+    // layer normally adds the brace), and forward to the buffered virtual.
+    // This means every IBufferedTransport subclass satisfies the full
+    // RequestSource API contract without per-class boilerplate. Step 8 will
+    // extract this pattern into a reusable helper when IBufferedTransport
+    // itself goes away.
+
+    /// RequestSource bridge: materialise → forward to buffered transact.
+    Result<string_view> transact(RequestSource src, span<char> buf,
+                                 uint32_t timeout_ms) override {
+        char scratch[kDefaultBridgeBufferBytes];
+        JsonBufferWriter writer(scratch, sizeof(scratch));
+        src.emit(writer);
+        writer.write('}');
+        if (writer.overflow())
+            return make_error(Error::Overflow, NOTE_ERR("request exceeds bridge scratch buffer"));
+        return transact(writer.view(), buf, timeout_ms);
+    }
+
+    /// RequestSource bridge: materialise → forward to buffered transact, SAX-parse response.
+    Result<void> transact(RequestSource src, JsonSink& sink,
+                          uint32_t timeout_ms) override {
+        char scratch[kDefaultBridgeBufferBytes];
+        JsonBufferWriter writer(scratch, sizeof(scratch));
+        src.emit(writer);
+        writer.write('}');
+        if (writer.overflow())
+            return make_error(Error::Overflow, NOTE_ERR("request exceeds bridge scratch buffer"));
+        return transact(writer.view(), sink, timeout_ms);
+    }
+
+    /// RequestSource bridge: materialise → forward to buffered send.
+    Result<void> send(RequestSource src) override {
+        char scratch[kDefaultBridgeBufferBytes];
+        JsonBufferWriter writer(scratch, sizeof(scratch));
+        src.emit(writer);
+        writer.write('}');
+        if (writer.overflow())
+            return make_error(Error::Overflow, NOTE_ERR("request exceeds bridge scratch buffer"));
+        return send(writer.view());
     }
 };
 

@@ -128,6 +128,7 @@ set(NOTE_CPP_TEST_SOURCES_FULL_ONLY
     test_attention.cpp
     test_bare_notecard.cpp
     test_binary_execute.cpp
+    test_buffered_bridge.cpp
     test_body.cpp
     test_channel.cpp
     test_connection.cpp

@@ -893,24 +893,17 @@ run_quick() {
             echo "  $env: OK"
         done
 
-        # AVR build catches Harvard-architecture / 8-bit-only breaks (e.g. PROGMEM
-        # regressions, missing AVR <pgmspace.h> guards) that the host build can't.
-        # Builds the typed StaticNotecard sample in tools/binary-size-comparison.
-        # Skipped if the atmelavr toolchain isn't installed: PlatformIO would
-        # auto-install (~minutes), which is unwanted overhead in CI's coverage
-        # job. Local dev already has it; CI's pio-build job builds AVR explicitly.
+        # AVR build + size regression gate. Catches Harvard-architecture
+        # / 8-bit-only breaks (PROGMEM regressions, missing pgmspace.h
+        # guards) AND unintended size growth — flash/RAM are tight on AVR
+        # (32 KB / 2 KB on ATmega328P) so any creep is a bug worth flagging.
+        # Skipped if the atmelavr toolchain isn't installed: PlatformIO
+        # would auto-install (~minutes), unwanted overhead in CI's coverage
+        # job. Local dev already has it; CI's pio-build job runs the same
+        # check explicitly.
         if ls ~/.platformio/packages/toolchain-atmelavr* >/dev/null 2>&1; then
-            ci_stage "AVR build (avr-notecpp)"
-            local AVR_DIR="$ROOT/tools/binary-size-comparison"
-            local avr_log=/tmp/note-cpp-avr-build.log
-            if pio run -d "$AVR_DIR" -e avr-notecpp > "$avr_log" 2>&1; then
-                grep -E '^(RAM|Flash):' "$avr_log" | sed 's/^/  /'
-                echo "  avr-notecpp: OK"
-            else
-                echo "  avr-notecpp: FAIL"
-                tail -40 "$avr_log"
-                exit 1
-            fi
+            ci_stage "AVR size check (avr-notecpp / direct / raw)"
+            "$ROOT/tools/binary-size-comparison/avr_size_check.py"
         fi
     fi
 

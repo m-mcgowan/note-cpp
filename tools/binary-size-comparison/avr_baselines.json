@@ -1,0 +1,23 @@
+{
+  "envs": {
+    "avr-notecpp": {
+      "flash": 25112,
+      "ram": 792,
+      "comment": "Style 1: typed API groups via Api<UnstructuredCtx, StaticNotecard<SerialStack>>. The most common StaticNotecard usage."
+    },
+    "avr-notecpp-direct": {
+      "flash": 24716,
+      "ram": 756,
+      "comment": "Style 2: nc.execute(req) bypassing the Api groups. Drops a layer of group thunks."
+    },
+    "avr-notecpp-raw": {
+      "flash": 21182,
+      "ram": 784,
+      "comment": "Style 3: transact_dispatch(BuildFn, ...) raw entry — bypasses StaticNotecard entirely."
+    }
+  },
+  "limits": {
+    "flash_total": 32256,
+    "ram_total": 2048
+  }
+}

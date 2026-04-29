@@ -139,10 +139,11 @@ jobs:
         run: pio run -d examples/arduino/note-arduino-bridge
 
       # Catches AVR-only breakage (PROGMEM regressions, missing pgmspace
-      # guards, etc.) that the host build can't see. The same env is built
-      # locally by ci.sh --quick when the atmelavr toolchain is present.
-      - name: Build avr-notecpp (size sample)
-        run: pio run -d tools/binary-size-comparison -e avr-notecpp
+      # guards, etc.) AND any flash/RAM regression vs. the checked-in
+      # baseline in tools/binary-size-comparison/avr_baselines.json.
+      # Same check ci.sh --quick runs locally when atmelavr is installed.
+      - name: AVR size check (avr-notecpp / direct / raw)
+        run: tools/binary-size-comparison/avr_size_check.py
 
       - name: Install Python dependencies
         run: pip install jinja2

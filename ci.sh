@@ -891,6 +891,26 @@ run_quick() {
             pio run -d "$PIO_DIR" -e "$env" > /dev/null 2>&1
             echo "  $env: OK"
         done
+
+        # AVR build catches Harvard-architecture / 8-bit-only breaks (e.g. PROGMEM
+        # regressions, missing AVR <pgmspace.h> guards) that the host build can't.
+        # Builds the typed StaticNotecard sample in tools/binary-size-comparison.
+        # Skipped if the atmelavr toolchain isn't installed: PlatformIO would
+        # auto-install (~minutes), which is unwanted overhead in CI's coverage
+        # job. Local dev already has it; CI's pio-build job builds AVR explicitly.
+        if ls ~/.platformio/packages/toolchain-atmelavr* >/dev/null 2>&1; then
+            ci_stage "AVR build (avr-notecpp)"
+            local AVR_DIR="$ROOT/tools/binary-size-comparison"
+            local avr_log=/tmp/note-cpp-avr-build.log
+            if pio run -d "$AVR_DIR" -e avr-notecpp > "$avr_log" 2>&1; then
+                grep -E '^(RAM|Flash):' "$avr_log" | sed 's/^/  /'
+                echo "  avr-notecpp: OK"
+            else
+                echo "  avr-notecpp: FAIL"
+                tail -40 "$avr_log"
+                exit 1
+            fi
+        fi
     fi
 
     # JSON backend integration tests — build + run the consolidated

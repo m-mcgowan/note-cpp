@@ -292,6 +292,11 @@ JAddStringToObject(req, "product",
 JAddStringToObject(req, "mode", "periodic");
 JAddNumberToObject(req, "outbound", 60);
 nc.sendRequest(req);
+
+
+
+
+
 ```
 
 </td><td>
@@ -474,6 +479,11 @@ nc.sendRequest(req);
 nc.note.templates().define("sensors.qo")
     .body(note::template_of(Readings()))
     .execute();
+
+
+
+
+
 ```
 
 </td></tr>
@@ -531,6 +541,16 @@ nc.sendRequest(req);
         Serial.println(r.error());
     }
 }
+
+
+
+
+
+
+
+
+
+
 ```
 
 </td></tr>
@@ -1177,6 +1197,7 @@ nc.sendRequest(req);
 <!-- snippet:examples/arduino/migration/src/main.cpp:224-224 -->
 ```cpp
 nc.hub.sync().command();
+
 ```
 
 </td></tr>

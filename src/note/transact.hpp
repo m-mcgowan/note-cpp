@@ -101,7 +101,11 @@ struct ITransact {
         if (!rv) return Unexpected(rv.error());
         auto err = sax_parse(*rv, sink);
         if (!err.empty())
-            return make_error(Error::ResponseLost, Cause::Unspecified, err);
+            // SAX parse over a fully-buffered response — a parse failure
+            // here is a JSON-level error, distinct from the mid-stream
+            // ResponseLost the Protocol path reports for transport
+            // corruption (partial reads, CRC mismatch, etc.).
+            return make_error(Error::Json, Cause::Unspecified, err);
         return {};
     }
 

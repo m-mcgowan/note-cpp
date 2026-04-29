@@ -544,6 +544,30 @@ public:
         return {};
     }
 
+#if NOTE_NO_POLYMORPHIC || NOTE_STATIC_HAL
+    /// RequestSource send for non-polymorphic builds. The polymorphic build
+    /// has an `override` version inside the `#if !NOTE_STATIC_HAL && !NOTE_NO_POLYMORPHIC`
+    /// block above; this is the duplicate body without the virtual dispatch
+    /// for AVR / static-HAL targets, which `StaticNotecard` calls directly.
+    Result<void> send(RequestSource src) {
+#if NOTE_TXN_HANDSHAKE
+        detail::TxnHandshakeScope handshake_scope{handshake_, detail::kTxnHandshakeDefaultTimeoutMs};
+        if (!handshake_scope.ok())
+            return make_error(Error::NotReady, Cause::Timeout, NOTE_ERR("txn handshake timeout"));
+#endif
+        if (!ensure_init())
+            return make_error(Error::NotReady, NOTE_ERR("not ready"));
+
+#if !NOTE_NO_CRC
+        ++crc_seq_;
+#endif
+
+        if (!stream_request_source(src))
+            return make_error(Error::SendFailed, Cause::HalError, NOTE_ERR("transmit failed"));
+        return {};
+    }
+#endif
+
     /// Raw passthrough: transmit pre-formatted JSON + line terminator,
     /// read response line into caller's buffer. No SAX parsing — raw bytes.
     Result<string_view> transact_raw(string_view json, char* buf, size_t bufsize,

@@ -32,11 +32,10 @@ struct SerialTransportStack {
     NcSerial notecard_hal;
     Transport transport;
 
-    SerialTransportStack(SerialT& uart, unsigned long baud,
-                         uint32_t max_retries = 5, uint32_t retry_delay = 500)
+    SerialTransportStack(SerialT& uart, unsigned long baud)
         : hal(uart, baud)
         , notecard_hal(hal)
-        , transport(notecard_hal, max_retries, retry_delay) {}
+        , transport(notecard_hal) {}
 };
 
 } // namespace note::arduino

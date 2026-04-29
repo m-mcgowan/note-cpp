@@ -117,6 +117,11 @@ FetchContent_Declare(
 )
 set(ENABLE_CJSON_TEST OFF CACHE BOOL "" FORCE)
 set(BUILD_SHARED_AND_STATIC_LIBS OFF CACHE BOOL "" FORCE)
+# cJSON v1.7.18 declares cmake_minimum_required(VERSION 3.0). CMake 4.x
+# dropped pre-3.5 compat; this variable (CMake 3.30+) lets the dep configure
+# without forcing every caller to pass -DCMAKE_POLICY_VERSION_MINIMUM=3.5.
+# No-op on older CMake where the legacy version is still accepted.
+set(CMAKE_POLICY_VERSION_MINIMUM "3.5")
 FetchContent_MakeAvailable(cJSON)
 
 FetchContent_Declare(

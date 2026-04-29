@@ -671,7 +671,6 @@ run_coverage() {
     echo
     echo "=== Backend-parity coverage build ==="
     cmake -B "$BB_BUILD" "$ROOT/tests" \
-        -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
         -DCMAKE_CXX_STANDARD=20 \
         -DCMAKE_CXX_COMPILER="$GCC" \
         -DCMAKE_CXX_FLAGS="--coverage -fprofile-arcs -ftest-coverage" \
@@ -907,7 +906,7 @@ run_quick() {
 run_integrations() {
     echo "=== JSON backend integration tests (consolidated doctest binary) ==="
     local build="/tmp/note-cpp-integration-backends"
-    cmake -B "$build" "$ROOT/tests" -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
+    cmake -B "$build" "$ROOT/tests" \
         -DCMAKE_CXX_STANDARD=20 2>&1 | tail -3
     nice cmake --build "$build" --target note-cpp-integration-backends 2>&1 | tail -5
     "$build/note-cpp-integration-backends"

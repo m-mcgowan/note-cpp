@@ -31,6 +31,7 @@
 #include <note/api.hpp>
 #include <note/allocator.hpp>
 #include <note/backends/buffer.hpp>
+#include <note/body_bytes.hpp>
 #include <note/protocol.hpp>
 #include <note/transact.hpp>
 #include <note/transport_hal.hpp>
@@ -229,6 +230,83 @@ TEST_CASE("§1b typed API: .into(JsonSink&) on buffered transport") {
     REQUIRE(rsp.has_value());
     CHECK(sink.events.find("temperature=") != std::string::npos);
     CHECK(sink.events.find("humidity=") != std::string::npos);
+}
+
+
+// ────────────────────────────────────────────────────────────────────────────
+// § 1c — High-level typed API: `.into(BodyBytes)` captures body as JSON text.
+//
+// BodyBytes is a JsonSink that re-serializes events back to JSON. Used via
+// the same `.into(JsonSink&)` overload — the wrapping `{...}` and key/value
+// separators are emitted by BodyBytes itself. Same canned response, same
+// captured text on both transports.
+// ────────────────────────────────────────────────────────────────────────────
+
+TEST_CASE("§1c typed API: .into(BodyBytes) captures body JSON on streaming transport") {
+    MockHal hal;
+    hal.queue_response(kCannedResponse);
+    note::Protocol transport(hal);
+    auto nc = note::test::make_test_notecard(transport, note::Allocator{});
+#if __cplusplus >= 202002L
+    note::Api<> api(nc);
+#else
+    note::Api api(nc);
+#endif
+
+    char buf[128];
+    note::BodyBytes body(note::span<char>(buf, sizeof(buf)));
+    auto rsp = api.note.read("test.db").noteId("x").into(body).execute();
+    REQUIRE(rsp.has_value());
+    auto json = body.view();
+    CHECK_FALSE(body.truncated());
+    CHECK(json.find("\"temperature\":") != note::string_view::npos);
+    CHECK(json.find("\"humidity\":65") != note::string_view::npos);
+    CHECK(json.front() == '{');
+    CHECK(json.back() == '}');
+}
+
+TEST_CASE("§1c typed API: .into(BodyBytes) captures body JSON on buffered transport") {
+    note::backends::BufferJsonBackend<1024, 64> backend;
+    note::test::CallbackTransport transport(
+        [&](note::string_view, uint32_t) -> note::Result<note::string_view> {
+            return note::string_view(kCannedResponse);
+        });
+    auto nc = note::test::make_test_notecard(backend, transport);
+#if __cplusplus >= 202002L
+    note::Api<> api(nc);
+#else
+    note::Api api(nc);
+#endif
+
+    char buf[128];
+    note::BodyBytes body(note::span<char>(buf, sizeof(buf)));
+    auto rsp = api.note.read("test.db").noteId("x").into(body).execute();
+    REQUIRE(rsp.has_value());
+    auto json = body.view();
+    CHECK_FALSE(body.truncated());
+    CHECK(json.find("\"temperature\":") != note::string_view::npos);
+    CHECK(json.find("\"humidity\":65") != note::string_view::npos);
+    CHECK(json.front() == '{');
+    CHECK(json.back() == '}');
+}
+
+TEST_CASE("§1c BodyBytes truncated when buffer too small") {
+    MockHal hal;
+    hal.queue_response(kCannedResponse);
+    note::Protocol transport(hal);
+    auto nc = note::test::make_test_notecard(transport, note::Allocator{});
+#if __cplusplus >= 202002L
+    note::Api<> api(nc);
+#else
+    note::Api api(nc);
+#endif
+
+    char buf[8];  // way too small
+    note::BodyBytes body(note::span<char>(buf, sizeof(buf)));
+    auto rsp = api.note.read("test.db").noteId("x").into(body).execute();
+    REQUIRE(rsp.has_value());
+    (void)body.view();
+    CHECK(body.truncated());
 }
 
 

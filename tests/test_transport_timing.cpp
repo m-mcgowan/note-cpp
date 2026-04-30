@@ -4,14 +4,14 @@
 
 #include <doctest.h>
 #include <string>
-#include <note/transport/protocol_policy.hpp>
-#include <note/transport/serial.hpp>
-#include <note/transport/i2c.hpp>
+#include <note/link/policy.hpp>
+#include <note/link/serial.hpp>
+#include <note/link/i2c.hpp>
 #include <vector>
 #include <cstring>
 
 using namespace note;
-using namespace note::transport;
+using namespace note::link;
 
 // ---------------------------------------------------------------------------
 // Default policy values match note-c
@@ -71,7 +71,7 @@ struct MockSerialHal : SerialHal {
     }
 };
 
-struct MockI2cHal : I2CHal {
+struct MockI2cHal : I2cHal {
     std::vector<DelayRecord> delays;
     std::vector<size_t> transmit_sizes;
     uint32_t time_ms = 0;
@@ -114,7 +114,7 @@ TEST_CASE("I2C transmit applies segment delay after segment_max_len bytes") {
     hal.mtu = 32;  // 32 bytes per I2C transfer
 
     // Use default policy (segment_max_len=250, segment_delay_ms=250)
-    NotecardI2c<I2cPolicy> transport(hal);
+    I2cFramer<I2cPolicy> transport(hal);
 
     // Send 300 bytes — should trigger segment delay after 250 bytes
     std::vector<uint8_t> data(300, 0x42);
@@ -132,7 +132,7 @@ TEST_CASE("I2C transmit applies io_delay before each chunk") {
     MockI2cHal hal;
     hal.mtu = 32;
 
-    NotecardI2c<I2cPolicy> transport(hal);
+    I2cFramer<I2cPolicy> transport(hal);
 
     // Send 64 bytes = 2 chunks of 32
     std::vector<uint8_t> data(64, 0x42);
@@ -150,7 +150,7 @@ TEST_CASE("I2C transmit applies chunk_delay between chunks") {
     MockI2cHal hal;
     hal.mtu = 32;
 
-    NotecardI2c<I2cPolicy> transport(hal);
+    I2cFramer<I2cPolicy> transport(hal);
 
     // Send 64 bytes = 2 chunks
     std::vector<uint8_t> data(64, 0x42);
@@ -168,7 +168,7 @@ TEST_CASE("I2C fast policy eliminates io_delay") {
     MockI2cHal hal;
     hal.mtu = 32;
 
-    NotecardI2c<I2cPolicy> transport(hal, I2cPolicy::fast());
+    I2cFramer<I2cPolicy> transport(hal, I2cPolicy::fast());
 
     std::vector<uint8_t> data(64, 0x42);
     REQUIRE(transport.transmit(data.data(), data.size()));
@@ -189,7 +189,7 @@ TEST_CASE("Serial transmit chunks at segment_max_len with pacing delay") {
     // note-cpp must match this to avoid overflowing the Notecard's UART buffer.
     MockSerialHal hal;
 
-    NotecardSerial<SerialPolicy> transport(hal);
+    SerialFramer<SerialPolicy> transport(hal);
 
     // Send 600 bytes — should be 3 segments (250+250+100) with delays between
     std::vector<uint8_t> data(600, 0x42);
@@ -221,7 +221,7 @@ TEST_CASE("Serial read times out after intra_timeout_ms with no data") {
     MockSerialHal hal;
     // No rx_data — simulates Notecard not responding
 
-    NotecardSerial<SerialPolicy> transport(hal);
+    SerialFramer<SerialPolicy> transport(hal);
 
     uint8_t buf[64];
     auto result = transport.read(buf, sizeof(buf), 1000);
@@ -233,7 +233,7 @@ TEST_CASE("I2C read times out with response_poll_ms polling") {
     MockI2cHal hal;
     hal.available_bytes = 0;  // no data available
 
-    NotecardI2c<I2cPolicy> transport(hal);
+    I2cFramer<I2cPolicy> transport(hal);
 
     uint8_t buf[64];
     auto result = transport.read(buf, sizeof(buf), 1000);
@@ -255,7 +255,7 @@ TEST_CASE("Serial reset applies initial segment_delay") {
     MockSerialHal hal;
     hal.rx_data = "\r\n";  // clean drain
 
-    NotecardSerial<SerialPolicy> transport(hal);
+    SerialFramer<SerialPolicy> transport(hal);
     REQUIRE(transport.reset());
 
     // First delay should be segment_delay_ms (250)

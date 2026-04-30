@@ -1,6 +1,6 @@
 // Tests for streaming COBS encoder/decoder.
 #include <doctest.h>
-#include <note/transport/cobs.hpp>
+#include <note/link/cobs.hpp>
 #include <vector>
 #include <cstring>
 

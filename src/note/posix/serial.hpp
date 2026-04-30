@@ -3,21 +3,21 @@
 // POSIX serial HAL for the Notecard.
 //
 // Portable across Linux, macOS, and BSDs. Opens a TTY via termios in raw
-// 8N1 mode with non-blocking I/O, then exposes it as a note::transport::SerialHal
-// for use with note::transport::NotecardSerial.
+// 8N1 mode with non-blocking I/O, then exposes it as a note::link::SerialHal
+// for use with note::link::SerialFramer.
 //
 // Usage (low-level):
 //
 //   note::posix::PosixSerialHal hal("/dev/ttyUSB0", 9600);
 //   if (!hal) { /* open failed */ }
-//   note::transport::NotecardSerial transport(hal);
+//   note::link::SerialFramer transport(hal);
 //
 // Most users should prefer note::posix::Notecard from <note/posix.hpp>,
 // which wraps this HAL behind a begin() convenience API.
 
 #if defined(__unix__) || defined(__APPLE__)
 
-#include <note/transport/serial.hpp>
+#include <note/link/serial.hpp>
 #include <note/posix/clock.hpp>
 
 #include <errno.h>
@@ -30,7 +30,7 @@
 
 namespace note::posix {
 
-class PosixSerialHal : public transport::SerialHal {
+class PosixSerialHal : public link::SerialHal {
 public:
     PosixSerialHal(const char* port, int baud = 9600) {
         fd_ = ::open(port, O_RDWR | O_NOCTTY | O_NONBLOCK);

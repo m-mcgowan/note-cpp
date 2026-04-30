@@ -14,7 +14,7 @@
 #include "string_pool.hpp"
 #include "struct_sink.hpp"
 #include "transact.hpp"
-#include "transport/cobs.hpp"
+#include "link/cobs.hpp"
 
 #include <optional>
 #include <type_traits>

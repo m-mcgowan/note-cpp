@@ -1,6 +1,6 @@
 #pragma once
 /// @file hal_i2c.hpp
-/// ESP32 I2CHal subclass for the integration test rig.
+/// ESP32 I2cHal subclass for the integration test rig.
 ///
 /// On ESP32 boards, the Notecard sits on non-default I2C pins
 /// (NOTECARD_I2C_SDA / NOTECARD_I2C_SCL — supplied via build flags) and
@@ -21,15 +21,15 @@
 
 #include <note/arduino/i2c.hpp>
 
-class Esp32I2CHal : public note::arduino::I2CHal {
+class Esp32I2cHal : public note::arduino::I2cHal {
     int sda_;
     int scl_;
 public:
-    explicit Esp32I2CHal(TwoWire& wire,
+    explicit Esp32I2cHal(TwoWire& wire,
                          int sda = NOTECARD_I2C_SDA,
                          int scl = NOTECARD_I2C_SCL,
-                         uint8_t addr = note::transport::kI2cDefaultAddress)
-        : note::arduino::I2CHal(wire, note::arduino::external_bus, addr, 253)
+                         uint8_t addr = note::link::kI2cDefaultAddress)
+        : note::arduino::I2cHal(wire, note::arduino::external_bus, addr, 253)
         , sda_(sda), scl_(scl)
     {
         wire_.setBufferSize(256);

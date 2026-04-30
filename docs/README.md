@@ -28,7 +28,7 @@
 17. **[JSON backend](json-backend.md)** — how JSON is handled internally, available backends
 18. **[Transport layer](transport.md)** — architecture, streaming vs buffered, Arduino setup
 19. **[Serial transport](transport-serial.md)** — `SerialHal`, protocol constants, binary streaming
-20. **[I2C transport](transport-i2c.md)** — `I2CHal`, MTU negotiation, priming query
+20. **[I2C transport](transport-i2c.md)** — `I2cHal`, MTU negotiation, priming query
 21. **[CRC](transport-crc.md)** — auto-detection, wire format, implementation
 22. **[Binary transfer](binary-transfer.md)** — `card.binary` put/get with COBS framing
 23. **[JSONB wire format](jsonb.md)** — binary encoding alternative to JSON text

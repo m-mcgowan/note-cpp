@@ -9,7 +9,7 @@
 #include <note/arduino/serial.hpp>
 #endif
 #if WOKWI_LAYER >= 2
-#include <note/transport/serial.hpp>
+#include <note/link/serial.hpp>
 #endif
 #if WOKWI_LAYER >= 3
 #include <note/protocol.hpp>
@@ -44,7 +44,7 @@ void loop() { delay(60000); }
 #elif WOKWI_LAYER == 2
 void setup() {
     note::arduino::SerialHal<HardwareSerial> hal(Serial, 9600);
-    note::transport::NotecardSerial<> nc(hal);
+    note::link::SerialFramer<> nc(hal);
     bool ok = nc.reset();
     const char* msg = ok ? "PASS L2\n" : "FAIL L2\n";
     hal.transmit(reinterpret_cast<const uint8_t*>(msg), 8);

@@ -1,4 +1,4 @@
-// Tests for note::arduino::I2CHal constructor variants.
+// Tests for note::arduino::I2cHal constructor variants.
 //
 // Verifies:
 //  - Default ctor calls Wire.begin() with no args (managed bus, default pins).
@@ -16,9 +16,9 @@
 
 namespace {
 
-TEST_CASE("I2CHal default ctor calls Wire.begin() with no pin args") {
+TEST_CASE("I2cHal default ctor calls Wire.begin() with no pin args") {
     TwoWire wire;
-    note::arduino::I2CHal hal(wire);
+    note::arduino::I2cHal hal(wire);
 
     REQUIRE(wire.begin_calls.size() == 1);
     CHECK(wire.begin_calls[0].sda == -1);
@@ -26,9 +26,9 @@ TEST_CASE("I2CHal default ctor calls Wire.begin() with no pin args") {
     CHECK(wire.end_count == 0);
 }
 
-TEST_CASE("I2CHal default reset() cycles end()/begin() with no pin args") {
+TEST_CASE("I2cHal default reset() cycles end()/begin() with no pin args") {
     TwoWire wire;
-    note::arduino::I2CHal hal(wire);
+    note::arduino::I2cHal hal(wire);
     wire.begin_calls.clear();
 
     REQUIRE(hal.reset());
@@ -39,18 +39,18 @@ TEST_CASE("I2CHal default reset() cycles end()/begin() with no pin args") {
     CHECK(wire.begin_calls[0].scl == -1);
 }
 
-TEST_CASE("I2CHal pin-aware ctor calls Wire.begin(sda, scl)") {
+TEST_CASE("I2cHal pin-aware ctor calls Wire.begin(sda, scl)") {
     TwoWire wire;
-    note::arduino::I2CHal hal(wire, /*sda=*/14, /*scl=*/21);
+    note::arduino::I2cHal hal(wire, /*sda=*/14, /*scl=*/21);
 
     REQUIRE(wire.begin_calls.size() == 1);
     CHECK(wire.begin_calls[0].sda == 14);
     CHECK(wire.begin_calls[0].scl == 21);
 }
 
-TEST_CASE("I2CHal pin-aware reset() replays Wire.begin(sda, scl)") {
+TEST_CASE("I2cHal pin-aware reset() replays Wire.begin(sda, scl)") {
     TwoWire wire;
-    note::arduino::I2CHal hal(wire, 39, 38);
+    note::arduino::I2cHal hal(wire, 39, 38);
     wire.begin_calls.clear();
 
     REQUIRE(hal.reset());
@@ -61,9 +61,9 @@ TEST_CASE("I2CHal pin-aware reset() replays Wire.begin(sda, scl)") {
     CHECK(wire.begin_calls[0].scl == 38);
 }
 
-TEST_CASE("I2CHal external_bus ctor never touches the bus") {
+TEST_CASE("I2cHal external_bus ctor never touches the bus") {
     TwoWire wire;
-    note::arduino::I2CHal hal(wire, note::arduino::external_bus);
+    note::arduino::I2cHal hal(wire, note::arduino::external_bus);
 
     CHECK(wire.begin_calls.empty());
     CHECK(wire.end_count == 0);
@@ -74,9 +74,9 @@ TEST_CASE("I2CHal external_bus ctor never touches the bus") {
     CHECK(wire.end_count == 0);
 }
 
-TEST_CASE("I2CHal external_bus ctor accepts custom address and MTU") {
+TEST_CASE("I2cHal external_bus ctor accepts custom address and MTU") {
     TwoWire wire;
-    note::arduino::I2CHal hal(wire, note::arduino::external_bus, 0x42, 200);
+    note::arduino::I2cHal hal(wire, note::arduino::external_bus, 0x42, 200);
 
     CHECK(wire.begin_calls.empty());
     CHECK(hal.max_transfer() == 200);

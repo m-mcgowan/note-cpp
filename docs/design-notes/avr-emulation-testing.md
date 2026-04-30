@@ -96,7 +96,7 @@ Or any of the layered test environments:
 | Environment | What it tests |
 |-------------|---------------|
 | `wokwi-layer1` | SerialHal transmit + receive |
-| `wokwi-layer2` | NotecardSerial reset handshake |
+| `wokwi-layer2` | SerialFramer reset handshake |
 | `wokwi-layer3` | Protocol transact |
 | `wokwi-layer4` | Full Api.execute with typed response parsing |
 

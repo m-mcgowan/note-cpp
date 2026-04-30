@@ -1,4 +1,4 @@
-// Tests for note::transport::NotecardSerial (Hal) and
+// Tests for note::link::SerialFramer (Hal) and
 // note::Protocol protocol logic over serial.
 //
 // Ported from note-c test/src/_serialNoteReset_test.cpp,
@@ -12,7 +12,7 @@
 //     bytes; '\r\n' terminator → injects the next queued JSON response.
 //     This prevents pre-loaded responses from being consumed during reset.
 //
-// NotecardSerial is now a Hal (raw byte ops: transmit, read, reset,
+// SerialFramer is now a Hal (raw byte ops: transmit, read, reset,
 // write_line_terminator, delay). Protocol logic (transact, send, retry, CRC)
 // lives in Protocol, which wraps a Hal.
 //
@@ -20,7 +20,7 @@
 
 #include <doctest.h>
 
-#include <note/transport/serial.hpp>
+#include <note/link/serial.hpp>
 #include <note/protocol.hpp>
 
 #include <deque>
@@ -85,14 +85,14 @@ inline std::string str_crc_add(const std::string& json, uint16_t seq) {
     char buf[512];
     size_t len = json.size();
     memcpy(buf, json.data(), len);
-    size_t new_len = note::transport::detail::crc_add(buf, len, sizeof(buf), seq);
+    size_t new_len = note::link::detail::crc_add(buf, len, sizeof(buf), seq);
     return std::string(buf, new_len);
 }
 
 } // namespace
 
 
-using namespace note::transport;
+using namespace note::link;
 
 // ---------------------------------------------------------------------------
 // ScriptedHal — reactive test HAL
@@ -174,15 +174,15 @@ struct ScriptedHal : public SerialHal {
 };
 
 // ---------------------------------------------------------------------------
-// Helper: create a Protocol over NotecardSerial over ScriptedHal.
+// Helper: create a Protocol over SerialFramer over ScriptedHal.
 //
-// Returns by value — NotecardSerial and Protocol hold references
+// Returns by value — SerialFramer and Protocol hold references
 // to each other and to the hal, so callers must keep the Harness alive.
 // ---------------------------------------------------------------------------
 
 struct SerialTestHarness {
     ScriptedHal hal;
-    NotecardSerial<SerialPolicy> notecard_serial;
+    SerialFramer<SerialPolicy> notecard_serial;
     note::Protocol transport;
 
     SerialTestHarness()
@@ -277,7 +277,7 @@ TEST_CASE("reset retries on non-control characters in drain") {
     } retry_hal;
 
     retry_hal.json_responses.push_back("{}\r\n");
-    NotecardSerial<SerialPolicy> notecard_serial(retry_hal);
+    SerialFramer<SerialPolicy> notecard_serial(retry_hal);
     note::Protocol transport(notecard_serial);
     note::Protocol& t = transport;
     note::JsonSink null_sink;
@@ -299,8 +299,8 @@ TEST_CASE("reset fails if all attempts see non-control chars") {
 // ---------------------------------------------------------------------------
 // Transmit framing — write_line_terminator appends CRLF
 //
-// Note: The old NotecardSerial did segmented TX with pacing delays. The new
-// NotecardSerial is a raw Hal — no segmenting. Protocol
+// Note: The old SerialFramer did segmented TX with pacing delays. The new
+// SerialFramer is a raw Hal — no segmenting. Protocol
 // writes the JSON body field-by-field, then calls write_line_terminator().
 // Segmented transmit tests are no longer applicable.
 // ---------------------------------------------------------------------------
@@ -377,7 +377,7 @@ TEST_CASE("response timeout before first byte returns error") {
         void delay(uint32_t ms) override { now_ms += ms + 100; }
     } hal;
 
-    NotecardSerial<SerialPolicy> notecard_serial(hal);
+    SerialFramer<SerialPolicy> notecard_serial(hal);
     note::Protocol transport(notecard_serial);
     note::Protocol& t = transport;
     note::JsonSink null_sink;
@@ -414,7 +414,7 @@ TEST_CASE("response timeout after partial data") {
         void delay(uint32_t ms) override { now_ms += ms + 200; }
     } hal;
 
-    NotecardSerial<SerialPolicy> notecard_serial(hal);
+    SerialFramer<SerialPolicy> notecard_serial(hal);
     note::Protocol transport(notecard_serial);
     note::Protocol& t = transport;
     note::JsonSink null_sink;
@@ -564,7 +564,7 @@ TEST_CASE("SerialCallbackHal delegates to callbacks") {
         [&](uint32_t ms)                             { real.delay(ms); }
     };
 
-    NotecardSerial<SerialPolicy> notecard_serial(cb);
+    SerialFramer<SerialPolicy> notecard_serial(cb);
     note::Protocol transport(notecard_serial);
     note::Protocol& t = transport;
     note::JsonSink null_sink;
@@ -701,25 +701,25 @@ TEST_CASE("serial: transact retries on transmit failure then succeeds") {
 }
 
 // ---------------------------------------------------------------------------
-// HAL-level tests — test NotecardSerial directly as Hal
+// HAL-level tests — test SerialFramer directly as Hal
 // ---------------------------------------------------------------------------
 
-TEST_CASE("NotecardSerial::reset() succeeds on clean drain") {
+TEST_CASE("SerialFramer::reset() succeeds on clean drain") {
     ScriptedHal hal;
-    NotecardSerial<SerialPolicy> serial(hal);
+    SerialFramer<SerialPolicy> serial(hal);
     REQUIRE(serial.reset() == true);
 }
 
-TEST_CASE("NotecardSerial::reset() fails when drain has non-control chars") {
+TEST_CASE("SerialFramer::reset() fails when drain has non-control chars") {
     ScriptedHal hal;
     hal.reset_drain_response = "GARBAGE\r\n";
-    NotecardSerial<SerialPolicy> serial(hal);
+    SerialFramer<SerialPolicy> serial(hal);
     REQUIRE(serial.reset() == false);
 }
 
-TEST_CASE("NotecardSerial::transmit() forwards to SerialHal") {
+TEST_CASE("SerialFramer::transmit() forwards to SerialHal") {
     ScriptedHal hal;
-    NotecardSerial<SerialPolicy> serial(hal);
+    SerialFramer<SerialPolicy> serial(hal);
     uint8_t data[] = {0x41, 0x42, 0x43};
     REQUIRE(serial.transmit(data, 3) == true);
     REQUIRE(hal.tx.size() == 3);
@@ -728,28 +728,28 @@ TEST_CASE("NotecardSerial::transmit() forwards to SerialHal") {
     CHECK(hal.tx[2] == 0x43);
 }
 
-TEST_CASE("NotecardSerial::transmit() returns false on HAL failure") {
+TEST_CASE("SerialFramer::transmit() returns false on HAL failure") {
     ScriptedHal hal;
     hal.transmit_ok_fn = [](int) { return false; };
-    NotecardSerial<SerialPolicy> serial(hal);
+    SerialFramer<SerialPolicy> serial(hal);
     uint8_t data[] = {0x41};
     REQUIRE(serial.transmit(data, 1) == false);
 }
 
-TEST_CASE("NotecardSerial::write_line_terminator() sends CRLF") {
+TEST_CASE("SerialFramer::write_line_terminator() sends CRLF") {
     ScriptedHal hal;
-    NotecardSerial<SerialPolicy> serial(hal);
+    SerialFramer<SerialPolicy> serial(hal);
     REQUIRE(serial.write_line_terminator() == true);
     REQUIRE(hal.tx.size() == 2);
     CHECK(hal.tx[0] == '\r');
     CHECK(hal.tx[1] == '\n');
 }
 
-TEST_CASE("NotecardSerial::read() returns data from SerialHal") {
+TEST_CASE("SerialFramer::read() returns data from SerialHal") {
     ScriptedHal hal;
     hal.rx.push_back(0xAA);
     hal.rx.push_back(0xBB);
-    NotecardSerial<SerialPolicy> serial(hal);
+    SerialFramer<SerialPolicy> serial(hal);
     uint8_t buf[8];
     auto r = serial.read(buf, sizeof(buf), 5000);
     REQUIRE(r.has_value());
@@ -758,18 +758,18 @@ TEST_CASE("NotecardSerial::read() returns data from SerialHal") {
     CHECK(buf[1] == 0xBB);
 }
 
-TEST_CASE("NotecardSerial::read() times out when no data available") {
+TEST_CASE("SerialFramer::read() times out when no data available") {
     ScriptedHal hal;
-    NotecardSerial<SerialPolicy> serial(hal);
+    SerialFramer<SerialPolicy> serial(hal);
     uint8_t buf[8];
     auto r = serial.read(buf, sizeof(buf), 10);
     REQUIRE_FALSE(r.has_value());
     CHECK(r.error().code == note::Error::ResponseLost);
 }
 
-TEST_CASE("NotecardSerial::delay() forwards to SerialHal") {
+TEST_CASE("SerialFramer::delay() forwards to SerialHal") {
     ScriptedHal hal;
-    NotecardSerial<SerialPolicy> serial(hal);
+    SerialFramer<SerialPolicy> serial(hal);
     serial.delay(42);
     CHECK(hal.now_ms == 42);
 }

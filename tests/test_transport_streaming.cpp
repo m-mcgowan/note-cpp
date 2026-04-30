@@ -1164,7 +1164,7 @@ namespace {
 std::string make_crc_response(const std::string& body_without_brace, uint16_t seq) {
     // The CRC is computed over the original JSON including closing brace.
     std::string original = body_without_brace + "}";
-    uint32_t checksum = note::transport::detail::crc32(original.data(), original.size());
+    uint32_t checksum = note::link::detail::crc32(original.data(), original.size());
 
     // Format: ,"crc":"SSSS:CCCCCCCC"}
     char suffix[24];
@@ -1173,9 +1173,9 @@ std::string make_crc_response(const std::string& body_without_brace, uint16_t se
     suffix[pos++] = '"'; suffix[pos++] = 'c'; suffix[pos++] = 'r';
     suffix[pos++] = 'c'; suffix[pos++] = '"'; suffix[pos++] = ':';
     suffix[pos++] = '"';
-    note::transport::detail::write_hex16(suffix + pos, seq); pos += 4;
+    note::link::detail::write_hex16(suffix + pos, seq); pos += 4;
     suffix[pos++] = ':';
-    note::transport::detail::write_hex32(suffix + pos, checksum); pos += 8;
+    note::link::detail::write_hex32(suffix + pos, checksum); pos += 8;
     suffix[pos++] = '"';
     suffix[pos++] = '}';
     suffix[pos] = '\0';

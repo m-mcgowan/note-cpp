@@ -1,16 +1,16 @@
 # Serial Transport
 
-**Header:** `note/transport/serial.hpp`
+**Header:** `note/link/serial.hpp`
 **Ported from:** note-c `n_serial.c` + `n_request.c`
 
 ## Implement `SerialHal`
 
-Subclass `note::transport::SerialHal` with your platform's UART driver:
+Subclass `note::link::SerialHal` with your platform's UART driver:
 
 ```cpp
-#include <note/transport/serial.hpp>
+#include <note/link/serial.hpp>
 
-class MySerial : public note::transport::SerialHal {
+class MySerial : public note::link::SerialHal {
 public:
     // Send all len bytes. Returns false on hardware error.
     bool     transmit(const uint8_t* data, size_t len) override;
@@ -31,12 +31,12 @@ Wire it up:
 
 ```cpp
 MySerial hal;
-note::transport::NotecardSerial serial_hal(hal);  // implements Hal
+note::link::SerialFramer serial_hal(hal);  // implements Hal
 note::Protocol transport(serial_hal);              // protocol logic
 note::Notecard nc(transport, allocator);           // streaming path
 ```
 
-`NotecardSerial` adapts the four `SerialHal` primitives into `Hal`'s
+`SerialFramer` adapts the four `SerialHal` primitives into `Hal`'s
 five methods — `transmit()`, `read()` (blocking with timeout), `reset()`,
 `write_line_terminator()` (`\r\n`), and `delay()`. Protocol logic (CRC,
 JSON framing, retry) is handled by `Protocol` and `Notecard`.
@@ -56,19 +56,19 @@ This creates an Arduino `SerialHal` adapter internally.
 For tests or host-side tooling where subclassing is unnecessary:
 
 ```cpp
-note::transport::SerialCallbackHal hal{
+note::link::SerialCallbackHal hal{
     [](const uint8_t* d, size_t n) -> bool  { /* transmit */ return true; },
     [](uint8_t* buf, size_t max) -> size_t  { /* receive  */ return 0;    },
     []() -> uint32_t                        { return millis(); },
     [](uint32_t ms)                         { delay(ms); },
 };
-note::transport::NotecardSerial serial_hal(hal);
+note::link::SerialFramer serial_hal(hal);
 note::Protocol transport(serial_hal);
 ```
 
 ## Protocol constants
 
-All in `namespace note::transport`:
+All in `namespace note::link`:
 
 | Constant | Value | note-c equivalent |
 |---|---|---|

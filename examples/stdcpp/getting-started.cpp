@@ -60,9 +60,9 @@ int main() {
     // and a transport (serial or I2C). For example, with Arduino:
     //
     //   #include <note/backends/cjson.hpp>
-    //   #include <note/transport/serial.hpp>
+    //   #include <note/link/serial.hpp>
     //   note::backends::CjsonBackend backend;
-    //   auto transport = note::NotecardSerial(note::arduino::serial_hal(Serial1));
+    //   auto transport = note::SerialFramer(note::arduino::serial_hal(Serial1));
     //   note::Notecard nc(backend, transport);
     //
     // For this example, we use a mock that prints each request to stdout

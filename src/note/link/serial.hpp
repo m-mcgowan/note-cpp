@@ -2,7 +2,7 @@
 
 #include <note/note_config.hpp>
 #include <note/transport_hal.hpp>
-#include <note/transport/protocol_policy.hpp>
+#include <note/link/policy.hpp>
 
 #include <algorithm>
 #include <cstddef>
@@ -16,7 +16,7 @@
 #define NOTE_HAL_OVERRIDE override
 #endif
 
-// note::transport::NotecardSerial
+// note::link::SerialFramer
 //
 // Implements the Notecard serial wire protocol as a Hal.
 // with serial-specific byte I/O (segmented TX, greedy RX, \r\n framing).
@@ -26,18 +26,18 @@
 //
 // Usage — compile-time default policy (zero overhead, most common):
 //
-//   NotecardSerial transport(hal);
+//   SerialFramer transport(hal);
 //
 // Usage — compile-time custom policy (zero overhead):
 //
-//   NotecardSerial<StaticSerialPolicy<SerialPolicy::fast()>> transport(hal);
+//   SerialFramer<StaticSerialPolicy<SerialPolicy::fast()>> transport(hal);
 //
 // Usage — runtime mutable policy:
 //
-//   NotecardSerial<SerialPolicy> transport(hal);
+//   SerialFramer<SerialPolicy> transport(hal);
 //   transport.policy.segment_delay_ms = 0;  // adjust pacing on a fast bus
 
-namespace note::transport {
+namespace note::link {
 
 // ---------------------------------------------------------------------------
 // SerialHal — pure virtual platform interface
@@ -80,30 +80,30 @@ private:
 };
 
 // ---------------------------------------------------------------------------
-// NotecardSerial — Notecard serial protocol implementation
+// SerialFramer — Notecard serial protocol implementation
 // ---------------------------------------------------------------------------
 
-/// NotecardSerial — Hal implementation for serial (UART).
+/// SerialFramer — Hal implementation for serial (UART).
 /// Wraps a platform SerialHal (non-blocking receive) into the blocking
 /// Hal interface used by Protocol.
 #if NOTE_STATIC_HAL
 template <typename HalT, typename PolicyType = SerialPolicy>
-class NotecardSerial {
+class SerialFramer {
 #elif __cplusplus >= 202002L
 template <typename PolicyType = StaticSerialPolicy<SerialPolicy{}>>
-class NotecardSerial : public note::Hal {
+class SerialFramer : public note::Hal {
 #else
 template <typename PolicyType = SerialPolicy>
-class NotecardSerial : public note::Hal {
+class SerialFramer : public note::Hal {
 #endif
 public:
     [[no_unique_address]] PolicyType policy;
 
 #if NOTE_STATIC_HAL
-    explicit NotecardSerial(HalT& hal, PolicyType pol = {})
+    explicit SerialFramer(HalT& hal, PolicyType pol = {})
         : policy(pol), hal_(hal) {}
 #else
-    explicit NotecardSerial(SerialHal& hal, PolicyType pol = {})
+    explicit SerialFramer(SerialHal& hal, PolicyType pol = {})
         : policy(pol), hal_(hal) {}
 #endif
 
@@ -178,15 +178,15 @@ private:
 
 // Deduction guides — allow construction without explicit template arguments.
 #if __cplusplus >= 202002L
-//   NotecardSerial transport(hal)  → StaticSerialPolicy (zero overhead)
-NotecardSerial(SerialHal&) -> NotecardSerial<StaticSerialPolicy<SerialPolicy{}>>;
+//   SerialFramer transport(hal)  → StaticSerialPolicy (zero overhead)
+SerialFramer(SerialHal&) -> SerialFramer<StaticSerialPolicy<SerialPolicy{}>>;
 template <SerialPolicy P>
-NotecardSerial(SerialHal&, StaticSerialPolicy<P>) -> NotecardSerial<StaticSerialPolicy<P>>;
+SerialFramer(SerialHal&, StaticSerialPolicy<P>) -> SerialFramer<StaticSerialPolicy<P>>;
 #else
-//   NotecardSerial transport(hal)  → SerialPolicy (runtime, 28 bytes)
-NotecardSerial(SerialHal&) -> NotecardSerial<SerialPolicy>;
+//   SerialFramer transport(hal)  → SerialPolicy (runtime, 28 bytes)
+SerialFramer(SerialHal&) -> SerialFramer<SerialPolicy>;
 #endif
-NotecardSerial(SerialHal&, SerialPolicy) -> NotecardSerial<SerialPolicy>;
+SerialFramer(SerialHal&, SerialPolicy) -> SerialFramer<SerialPolicy>;
 
 // ---------------------------------------------------------------------------
 // Backward-compatible constants (derived from default policy values).
@@ -198,4 +198,4 @@ inline constexpr uint32_t kIntraTransactionTimeoutMs = SerialPolicy{}.intra_time
 inline constexpr uint32_t kResetDrainMs              = SerialPolicy{}.reset_drain_ms;
 inline constexpr uint32_t kResetSyncRetries          = SerialPolicy{}.reset_sync_retries;
 
-}  // namespace note::transport
+}  // namespace note::link

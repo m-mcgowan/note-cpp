@@ -1,12 +1,12 @@
 # I2C Transport
 
-**Header:** `note/transport/i2c.hpp`
+**Header:** `note/link/i2c.hpp`
 **Ported from:** note-c `n_i2c.c`
 
-## Implement `I2CHal`
+## Implement `I2cHal`
 
-`I2CHal` is the byte-conduit interface — pure hardware I/O for the
-I2C bus. The library wraps your HAL in `transport::NotecardI2c<>`
+`I2cHal` is the byte-conduit interface — pure hardware I/O for the
+I2C bus. The library wraps your HAL in `link::I2cFramer<>`
 (which adds Notecard-specific I2C framing) and then in
 `Protocol` (which adds protocol-level CRC, retry, and
 session semantics). Either Notecard ctor — sink mode
@@ -15,9 +15,9 @@ session semantics). Either Notecard ctor — sink mode
 both go through the unified `ITransact` interface.
 
 ```cpp
-#include <note/transport/i2c.hpp>
+#include <note/link/i2c.hpp>
 
-class MyI2c : public note::transport::I2CHal {
+class MyI2c : public note::link::I2cHal {
 public:
     // Hardware-level I2C reset. Returns false on failure.
     bool     reset()                                          override;
@@ -44,7 +44,7 @@ Wire it up:
 
 ```cpp
 MyI2c hal;
-note::transport::NotecardI2c i2c{hal};
+note::link::I2cFramer i2c{hal};
 note::Protocol transport{i2c};
 
 // Tree mode (response.body() works) — pass a JsonBackend.
@@ -67,11 +67,11 @@ nc.begin(Wire, /*sda=*/14, /*scl=*/21, 0x17);    // custom pins + address
 nc.begin(Wire, note::arduino::external_bus);     // app owns Wire
 ```
 
-This creates an Arduino `I2CHal` adapter internally.
+This creates an Arduino `I2cHal` adapter internally.
 
 ### Bus management
 
-By default, `note::arduino::I2CHal` "owns" the Wire bus — its constructor
+By default, `note::arduino::I2cHal` "owns" the Wire bus — its constructor
 calls `Wire.begin()` and a transient I2C error triggers `Wire.end()` /
 `Wire.begin()` inside `reset()`. This is fine on devkits where Wire's
 default pins are correct and nothing else shares the bus.
@@ -93,7 +93,7 @@ it wants on transient I2C errors.
 ## Callback variant
 
 ```cpp
-note::transport::I2cCallbackHal hal{
+note::link::I2cCallbackHal hal{
     []() -> bool                                     { /* reset */    return true; },
     [](const uint8_t* d, size_t n) -> bool           { /* transmit */ return true; },
     [](uint8_t* b, size_t n, uint32_t& av) -> bool   { /* receive */  av = 0; return true; },
@@ -101,12 +101,12 @@ note::transport::I2cCallbackHal hal{
     [](uint32_t ms)                                  { delay(ms); },
     // optional 6th arg: max_transfer override (default 30)
 };
-note::transport::NotecardI2c transport(hal);
+note::link::I2cFramer transport(hal);
 ```
 
 ## Protocol constants
 
-All in `namespace note::transport`:
+All in `namespace note::link`:
 
 | Constant | Value | note-c equivalent |
 |---|---|---|
@@ -147,5 +147,5 @@ All in `namespace note::transport`:
 The default `max_transfer()` is 30 bytes — the limit imposed by the Arduino
 Wire library's static 32-byte buffer minus the 2-byte Notecard header.
 Platforms with a dynamically-allocated I2C buffer (STM32Duino, most ESP32
-boards) can safely use 253. Override `max_transfer()` in your `I2CHal`
+boards) can safely use 253. Override `max_transfer()` in your `I2cHal`
 subclass or pass the size as the 6th argument to `I2cCallbackHal`.

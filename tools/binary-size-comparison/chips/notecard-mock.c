@@ -1,7 +1,7 @@
 // Mock Notecard — Wokwi custom chip for AVR integration testing.
 //
 // Receives JSON or JSONB requests over UART, responds in the same format.
-// Handles the NotecardSerial reset handshake (bare \n → echo \r\n).
+// Handles the SerialFramer reset handshake (bare \n → echo \r\n).
 
 #include "wokwi-api.h"
 #include <stdlib.h>

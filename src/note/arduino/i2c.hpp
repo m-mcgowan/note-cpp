@@ -1,16 +1,16 @@
 #pragma once
 
-#include <note/transport/i2c.hpp>
+#include <note/link/i2c.hpp>
 
 #include <note/arduino/compat.hpp>
 #include <Wire.h>
 
-// note::arduino::I2CHal
+// note::arduino::I2cHal
 //
-// Implements note::transport::I2CHal for Arduino TwoWire (Wire library).
+// Implements note::link::I2cHal for Arduino TwoWire (Wire library).
 //
 // The Notecard uses a Serial-over-I2C (SoI2C) framing protocol on top of
-// raw I2C. This HAL implements that framing; note::transport::NotecardI2c
+// raw I2C. This HAL implements that framing; note::link::I2cFramer
 // handles the higher-level Notecard JSON protocol (CRC, retry, reset sync).
 //
 // SoI2C wire format:
@@ -26,16 +26,16 @@
 //
 //   For non-devkit boards or shared buses, use one of:
 //
-//     I2CHal(Wire, sda, scl)             // HAL calls Wire.begin(sda, scl).
-//     I2CHal(Wire, external_bus)         // App owns Wire; HAL never calls
+//     I2cHal(Wire, sda, scl)             // HAL calls Wire.begin(sda, scl).
+//     I2cHal(Wire, external_bus)         // App owns Wire; HAL never calls
 //                                        // begin()/end().
 //
 // Usage:
 //
-//   note::arduino::I2CHal hal(Wire);                 // default address 0x17
-//   note::arduino::I2CHal hal(Wire, 14, 21);         // custom pins
-//   note::arduino::I2CHal hal(Wire, note::arduino::external_bus);  // shared bus
-//   note::transport::NotecardI2c transport(hal);
+//   note::arduino::I2cHal hal(Wire);                 // default address 0x17
+//   note::arduino::I2cHal hal(Wire, 14, 21);         // custom pins
+//   note::arduino::I2cHal hal(Wire, note::arduino::external_bus);  // shared bus
+//   note::link::I2cFramer transport(hal);
 //   note::Notecard nc(backend,
 //       [&transport](note::string_view req, uint32_t t) {
 //           return transport(req, t);
@@ -43,11 +43,11 @@
 
 namespace note::arduino {
 
-/// Tag type selecting external bus management — see I2CHal docs.
+/// Tag type selecting external bus management — see I2cHal docs.
 struct ExternalBus {};
 inline constexpr ExternalBus external_bus{};
 
-class I2CHal : public note::transport::I2CHal {
+class I2cHal : public note::link::I2cHal {
 public:
     // SoI2C response header size: [available, good_bytes]
     static constexpr uint8_t kResponseHeaderSize = 2;
@@ -55,9 +55,9 @@ public:
     /// Default: HAL calls Wire.begin() (no pin args) in the constructor and
     /// Wire.end()/Wire.begin() on reset. Use this on devkits where Wire's
     /// default pins are correct and nothing else shares the bus.
-    explicit I2CHal(TwoWire& wire,
-                    uint8_t  address     = note::transport::kI2cDefaultAddress,
-                    size_t   max_xfer    = note::transport::kI2cDefaultMtu)
+    explicit I2cHal(TwoWire& wire,
+                    uint8_t  address     = note::link::kI2cDefaultAddress,
+                    size_t   max_xfer    = note::link::kI2cDefaultMtu)
         : wire_(wire), address_(address), max_xfer_(max_xfer) {
         wire_.begin();
     }
@@ -65,9 +65,9 @@ public:
     /// Pin-aware: HAL calls Wire.begin(sda, scl) in the constructor and
     /// Wire.end()/Wire.begin(sda, scl) on reset. Use this on boards where
     /// the Notecard sits on non-default I2C pins.
-    I2CHal(TwoWire& wire, int sda, int scl,
-           uint8_t  address     = note::transport::kI2cDefaultAddress,
-           size_t   max_xfer    = note::transport::kI2cDefaultMtu)
+    I2cHal(TwoWire& wire, int sda, int scl,
+           uint8_t  address     = note::link::kI2cDefaultAddress,
+           size_t   max_xfer    = note::link::kI2cDefaultMtu)
         : wire_(wire), address_(address), max_xfer_(max_xfer),
           sda_(sda), scl_(scl) {
         wire_.begin(sda_, scl_);
@@ -77,9 +77,9 @@ public:
     /// Wire.end(), or any other bus-init function. Use this when the bus
     /// is shared with other drivers/tasks, or when the app needs to retain
     /// full control over bus lifetime and pin configuration.
-    I2CHal(TwoWire& wire, ExternalBus,
-           uint8_t  address     = note::transport::kI2cDefaultAddress,
-           size_t   max_xfer    = note::transport::kI2cDefaultMtu)
+    I2cHal(TwoWire& wire, ExternalBus,
+           uint8_t  address     = note::link::kI2cDefaultAddress,
+           size_t   max_xfer    = note::link::kI2cDefaultMtu)
         : wire_(wire), address_(address), max_xfer_(max_xfer),
           manage_bus_(false) {}
 

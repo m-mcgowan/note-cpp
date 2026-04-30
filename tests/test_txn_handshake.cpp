@@ -10,7 +10,7 @@
 #include <doctest.h>
 
 #include <note/protocol.hpp>
-#include <note/transport/serial.hpp>
+#include <note/link/serial.hpp>
 #include <note/txn_handshake.hpp>
 
 #include <deque>
@@ -21,7 +21,7 @@ namespace {
 // ScriptedSerialHal — mirrors the pattern in test_transport_serial.cpp.
 // Reacts to reset probes (bare '\n') and request terminators ('\r\n') by
 // injecting the next queued JSON response.
-struct ScriptedSerialHal : public note::transport::SerialHal {
+struct ScriptedSerialHal : public note::link::SerialHal {
     std::string rx;
     std::deque<std::string> queued_responses;
     std::string reset_drain = "\r\n";
@@ -67,7 +67,7 @@ struct CountingHandshake : public note::TxnHandshake {
 
 struct Harness {
     ScriptedSerialHal hal;
-    note::transport::NotecardSerial<note::transport::SerialPolicy> ns{hal};
+    note::link::SerialFramer<note::link::SerialPolicy> ns{hal};
     note::Protocol transport{ns};
 
     // Fire a trivial transact; returns the Result.

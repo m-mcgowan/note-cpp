@@ -60,7 +60,7 @@ public:
     template<typename SerialT>
     void begin(SerialT& uart, unsigned long baud = 9600) {
         serial_hal_ = std::make_unique<SerialHal<SerialT>>(uart, baud);
-        serial_hal_transport_ = std::make_unique<transport::NotecardSerial<>>(*serial_hal_);
+        serial_hal_transport_ = std::make_unique<link::SerialFramer<>>(*serial_hal_);
         serial_streaming_ = std::make_unique<Protocol>(*serial_hal_transport_);
         Base::begin(*serial_streaming_);
     }
@@ -71,7 +71,7 @@ public:
     template<typename SerialT>
     void begin(SerialT& uart, unsigned long baud, Allocator alloc) {
         serial_hal_ = std::make_unique<SerialHal<SerialT>>(uart, baud);
-        serial_hal_transport_ = std::make_unique<transport::NotecardSerial<>>(*serial_hal_);
+        serial_hal_transport_ = std::make_unique<link::SerialFramer<>>(*serial_hal_);
         serial_streaming_ = std::make_unique<Protocol>(*serial_hal_transport_);
         Base::begin(*serial_streaming_, alloc);
     }
@@ -81,7 +81,7 @@ public:
     /// are already correct.
     ///   nc.begin(Wire);
     void begin(TwoWire& wire) {
-        begin_i2c(wire, transport::kI2cDefaultAddress);
+        begin_i2c(wire, link::kI2cDefaultAddress);
     }
 
     /// Begin with I2C transport and explicit address.
@@ -96,7 +96,7 @@ public:
     /// non-default I2C pins.
     ///   nc.begin(Wire, /*sda=*/14, /*scl=*/21);
     void begin(TwoWire& wire, int sda, int scl) {
-        begin_i2c_pins(wire, sda, scl, transport::kI2cDefaultAddress);
+        begin_i2c_pins(wire, sda, scl, link::kI2cDefaultAddress);
     }
 
     /// Begin with I2C transport on custom pins and explicit address.
@@ -110,7 +110,7 @@ public:
     ///   Wire.begin(14, 21);
     ///   nc.begin(Wire, note::arduino::external_bus);
     void begin(TwoWire& wire, ExternalBus tag) {
-        begin_i2c_external(wire, tag, transport::kI2cDefaultAddress);
+        begin_i2c_external(wire, tag, link::kI2cDefaultAddress);
     }
 
     /// External-bus begin with explicit address.
@@ -120,7 +120,7 @@ public:
 
     /// Begin with I2C transport and explicit allocator.
     void begin(TwoWire& wire, Allocator alloc) {
-        begin_i2c(wire, transport::kI2cDefaultAddress, alloc);
+        begin_i2c(wire, link::kI2cDefaultAddress, alloc);
     }
 
     /// Begin with I2C transport, address, and explicit allocator.
@@ -130,7 +130,7 @@ public:
 
     /// Begin with I2C transport on custom pins and explicit allocator.
     void begin(TwoWire& wire, int sda, int scl, Allocator alloc) {
-        begin_i2c_pins(wire, sda, scl, transport::kI2cDefaultAddress, alloc);
+        begin_i2c_pins(wire, sda, scl, link::kI2cDefaultAddress, alloc);
     }
 
     /// Begin with I2C transport on custom pins, explicit address and allocator.
@@ -140,7 +140,7 @@ public:
 
     /// External-bus begin with explicit allocator.
     void begin(TwoWire& wire, ExternalBus tag, Allocator alloc) {
-        begin_i2c_external(wire, tag, transport::kI2cDefaultAddress, alloc);
+        begin_i2c_external(wire, tag, link::kI2cDefaultAddress, alloc);
     }
 
     /// External-bus begin with explicit address and allocator.
@@ -166,26 +166,26 @@ public:
     template<typename SerialT>
     void begin(SerialT& uart, unsigned long baud, JsonBackend& backend) {
         serial_hal_ = std::make_unique<SerialHal<SerialT>>(uart, baud);
-        serial_hal_transport_ = std::make_unique<transport::NotecardSerial<>>(*serial_hal_);
+        serial_hal_transport_ = std::make_unique<link::SerialFramer<>>(*serial_hal_);
         serial_streaming_ = std::make_unique<Protocol>(*serial_hal_transport_);
         Base::begin(backend, *serial_streaming_);
     }
 
     /// Begin with I2C transport + JsonBackend (default pins).
     void begin(TwoWire& wire, JsonBackend& backend) {
-        i2c_hal_ = std::make_unique<I2CHal>(wire);
+        i2c_hal_ = std::make_unique<I2cHal>(wire);
         begin_buffered_finish(backend);
     }
 
     /// Begin with I2C transport on custom pins + JsonBackend.
     void begin(TwoWire& wire, int sda, int scl, JsonBackend& backend) {
-        i2c_hal_ = std::make_unique<I2CHal>(wire, sda, scl);
+        i2c_hal_ = std::make_unique<I2cHal>(wire, sda, scl);
         begin_buffered_finish(backend);
     }
 
     /// Begin with I2C transport on app-managed bus + JsonBackend.
     void begin(TwoWire& wire, ExternalBus tag, JsonBackend& backend) {
-        i2c_hal_ = std::make_unique<I2CHal>(wire, tag);
+        i2c_hal_ = std::make_unique<I2cHal>(wire, tag);
         begin_buffered_finish(backend);
     }
 #endif // !NOTE_NO_BUFFERED
@@ -204,41 +204,41 @@ public:
 
 private:
     void begin_i2c(TwoWire& wire, uint8_t address, Allocator alloc = {}) {
-        i2c_hal_ = std::make_unique<I2CHal>(wire, address);
+        i2c_hal_ = std::make_unique<I2cHal>(wire, address);
         begin_i2c_finish(alloc);
     }
 
     void begin_i2c_pins(TwoWire& wire, int sda, int scl,
                         uint8_t address, Allocator alloc = {}) {
-        i2c_hal_ = std::make_unique<I2CHal>(wire, sda, scl, address);
+        i2c_hal_ = std::make_unique<I2cHal>(wire, sda, scl, address);
         begin_i2c_finish(alloc);
     }
 
     void begin_i2c_external(TwoWire& wire, ExternalBus tag,
                             uint8_t address, Allocator alloc = {}) {
-        i2c_hal_ = std::make_unique<I2CHal>(wire, tag, address);
+        i2c_hal_ = std::make_unique<I2cHal>(wire, tag, address);
         begin_i2c_finish(alloc);
     }
 
     void begin_i2c_finish(Allocator alloc) {
-        i2c_hal_transport_ = std::make_unique<transport::NotecardI2c<>>(*i2c_hal_);
+        i2c_hal_transport_ = std::make_unique<link::I2cFramer<>>(*i2c_hal_);
         i2c_streaming_ = std::make_unique<Protocol>(*i2c_hal_transport_);
         Base::begin(*i2c_streaming_, alloc);
     }
 
 #if !NOTE_NO_BUFFERED
     void begin_buffered_finish(JsonBackend& backend) {
-        i2c_hal_transport_ = std::make_unique<transport::NotecardI2c<>>(*i2c_hal_);
+        i2c_hal_transport_ = std::make_unique<link::I2cFramer<>>(*i2c_hal_);
         i2c_streaming_ = std::make_unique<Protocol>(*i2c_hal_transport_);
         Base::begin(backend, *i2c_streaming_);
     }
 #endif
 
-    std::unique_ptr<transport::SerialHal> serial_hal_;
-    std::unique_ptr<transport::NotecardSerial<>> serial_hal_transport_;
+    std::unique_ptr<link::SerialHal> serial_hal_;
+    std::unique_ptr<link::SerialFramer<>> serial_hal_transport_;
     std::unique_ptr<Protocol> serial_streaming_;
-    std::unique_ptr<I2CHal> i2c_hal_;
-    std::unique_ptr<transport::NotecardI2c<>> i2c_hal_transport_;
+    std::unique_ptr<I2cHal> i2c_hal_;
+    std::unique_ptr<link::I2cFramer<>> i2c_hal_transport_;
     std::unique_ptr<Protocol> i2c_streaming_;
 };
 

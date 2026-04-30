@@ -40,7 +40,7 @@ The naming rule: first segment becomes the module, remaining segments become a c
 ```cpp
 // Your hardware
 MySerialHal hal;
-note::transport::NotecardSerial serial_hal(hal);    // Hal
+note::link::SerialFramer serial_hal(hal);    // Hal
 note::Protocol transport(serial_hal);               // ITransact
 
 // Zero heap — arena allocator for string interning
@@ -63,7 +63,7 @@ note::Notecard nc(backend, transport);
 note::Api api(nc);
 ```
 
-Requires a `JsonBackend` for request building and response parsing. Used by `CallbackTransport` in test harnesses and by `NotecardI2c` (which still extends `AbstractTransport`).
+Requires a `JsonBackend` for request building and response parsing. Used by `CallbackTransport` in test harnesses and by `I2cFramer` (which still extends `AbstractTransport`).
 
 Both paths expose the same `Notecard` / `Api` interface — the API layer is agnostic to the transport underneath.
 

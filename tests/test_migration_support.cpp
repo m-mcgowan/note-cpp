@@ -9,7 +9,7 @@
 #include <note/backends/buffer.hpp>
 #include <note/notecard_api.hpp>
 #include <note/protocol.hpp>
-#include <note/transport/serial.hpp>
+#include <note/link/serial.hpp>
 #include <note/units.hpp>
 
 namespace {
@@ -197,16 +197,16 @@ TEST_CASE("card.aux state: get_object_array reads pin states") {
 
 // ---------------------------------------------------------------------------
 // Issue 1b: arduino::Notecard::begin() wiring
-// The HAL (transport::NotecardSerial<>) must go through Protocol
+// The HAL (link::SerialFramer<>) must go through Protocol
 // before reaching NotecardApi::begin(ITransact&).
 // ---------------------------------------------------------------------------
 
-TEST_CASE("Issue 1b: transport::NotecardSerial is a Hal, not ITransact") {
+TEST_CASE("Issue 1b: link::SerialFramer is a Hal, not ITransact") {
     // Verify that the transport types are what we expect
-    static_assert(!std::is_base_of_v<note::ITransact, note::transport::NotecardSerial<>>,
-        "NotecardSerial should NOT implement ITransact directly");
-    static_assert(std::is_base_of_v<note::Hal, note::transport::NotecardSerial<>>,
-        "NotecardSerial should be a Hal");
+    static_assert(!std::is_base_of_v<note::ITransact, note::link::SerialFramer<>>,
+        "SerialFramer should NOT implement ITransact directly");
+    static_assert(std::is_base_of_v<note::Hal, note::link::SerialFramer<>>,
+        "SerialFramer should be a Hal");
     static_assert(std::is_base_of_v<note::ITransact, note::Protocol>,
         "Protocol should implement ITransact");
     REQUIRE(true);

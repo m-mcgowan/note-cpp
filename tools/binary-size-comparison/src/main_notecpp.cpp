@@ -16,11 +16,11 @@
 #include <note/api.hpp>
 #include <note/arduino/serial.hpp>
 #include <note/protocol.hpp>
-#include <note/transport/serial.hpp>
+#include <note/link/serial.hpp>
 
 static note::backends::CjsonBackend backend;
 static note::arduino::SerialHal<HardwareSerial> hal(Serial1, 9600);
-static note::transport::NotecardSerial<> serial_transport(hal);
+static note::link::SerialFramer<> serial_transport(hal);
 static note::Protocol streaming(serial_transport);
 // Protocol directly satisfies ITransact — the buffered
 // Notecard ctor pulls bytes via the new transact(req, span, …) overload.

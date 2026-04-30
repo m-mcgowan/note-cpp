@@ -3,7 +3,7 @@
 #include <note/note_config.hpp>
 #include <cstdint>
 
-// note::transport protocol policy types.
+// note::link pacing policy types.
 //
 // A policy governs how the Notecard request/response protocol behaves —
 // retry counts, segment pacing, drain windows, and timeouts. It is separate
@@ -26,22 +26,22 @@
 //
 // Usage — compile-time default (zero overhead, most common):
 //
-//   NotecardSerial transport(hal);   // deduces StaticSerialPolicy<SerialPolicy{}>
+//   SerialFramer transport(hal);   // deduces StaticSerialPolicy<SerialPolicy{}>
 //
 // Usage — compile-time custom policy (zero overhead):
 //
-//   NotecardSerial<StaticSerialPolicy<SerialPolicy::fast()>> transport(hal);
+//   SerialFramer<StaticSerialPolicy<SerialPolicy::fast()>> transport(hal);
 //
 // Usage — runtime policy (mutable, 28 bytes overhead):
 //
-//   NotecardSerial<SerialPolicy> transport(hal);
+//   SerialFramer<SerialPolicy> transport(hal);
 //   transport.policy.max_retries = 1;   // adjust before a destructive request
 //   transport.policy.max_retries = 5;   // restore
 
-namespace note::transport {
+namespace note::link {
 
 // ---------------------------------------------------------------------------
-// ProtocolPolicy — fields common to all Notecard wire transports
+// PacingPolicy — fields common to all Notecard wire transports
 // ---------------------------------------------------------------------------
 
 // Wire-level pacing only. Transaction retry lives at the session layer
@@ -49,7 +49,7 @@ namespace note::transport {
 // and `retry.hpp` — not here. `reset_sync_retries` below is wire-level (drain
 // attempts on bus reset), not transaction-level.
 #if NOTE_MUTABLE_POLICY
-struct ProtocolPolicy {
+struct PacingPolicy {
     uint32_t segment_max_len    = 250;   // max bytes per TX segment before a pacing delay
     uint32_t segment_delay_ms   = 250;   // inter-segment delay (ms)
     uint32_t intra_timeout_ms   = 1000;  // timeout after first response byte (ms)
@@ -59,7 +59,7 @@ struct ProtocolPolicy {
 #else
 /// Constant protocol policy — all values are constexpr, zero storage.
 /// With [[no_unique_address]], the policy member occupies 0 bytes.
-struct ProtocolPolicy {
+struct PacingPolicy {
     static constexpr uint16_t segment_max_len    = 250;
     static constexpr uint16_t segment_delay_ms   = 250;
     static constexpr uint16_t intra_timeout_ms   = 1000;
@@ -71,12 +71,12 @@ struct ProtocolPolicy {
 // ---------------------------------------------------------------------------
 // SerialPolicy — protocol policy for serial (UART) transport
 //
-// Extends ProtocolPolicy with no additional fields: the serial protocol is
+// Extends PacingPolicy with no additional fields: the serial protocol is
 // fully described by the common layer. Named separately for clarity and to
 // allow future serial-specific fields without breaking I2C users.
 // ---------------------------------------------------------------------------
 
-struct SerialPolicy : ProtocolPolicy {
+struct SerialPolicy : PacingPolicy {
 #if NOTE_MUTABLE_POLICY
     static constexpr SerialPolicy fast() {
         SerialPolicy p;
@@ -92,10 +92,10 @@ struct SerialPolicy : ProtocolPolicy {
 // ---------------------------------------------------------------------------
 // I2cPolicy — protocol policy for I2C transport
 //
-// Extends ProtocolPolicy with I2C-specific timing fields.
+// Extends PacingPolicy with I2C-specific timing fields.
 // ---------------------------------------------------------------------------
 
-struct I2cPolicy : ProtocolPolicy {
+struct I2cPolicy : PacingPolicy {
 #if NOTE_MUTABLE_POLICY
     uint32_t io_delay_ms      = 6;
     uint32_t chunk_delay_ms   = 20;
@@ -154,4 +154,4 @@ struct StaticI2cPolicy {
 
 #endif // C++20
 
-}  // namespace note::transport
+}  // namespace note::link

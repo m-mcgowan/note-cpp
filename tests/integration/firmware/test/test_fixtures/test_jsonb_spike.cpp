@@ -12,8 +12,8 @@
 #include <cstdio>
 
 #include <note/jsonb.hpp>
-#include <note/transport/cobs.hpp>
-#include <note/transport/i2c.hpp>
+#include <note/link/cobs.hpp>
+#include <note/link/i2c.hpp>
 #include <note/json_sax.hpp>
 #include <note/json_sax_streaming.hpp>
 #include <note/lexer/sax_adapter.hpp>

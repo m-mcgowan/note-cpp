@@ -6,7 +6,7 @@
 
 // Internal header — use note/transport/serial.hpp (or i2c.hpp) from user code.
 
-namespace note::transport::detail {
+namespace note::link::detail {
 
 // Nibble lookup table for CRC32 (shared by all CRC functions).
 inline constexpr uint32_t kCrc32Lut[16] = {
@@ -207,4 +207,4 @@ struct CrcAccumulator {
     }
 };
 
-}  // namespace note::transport::detail
+}  // namespace note::link::detail

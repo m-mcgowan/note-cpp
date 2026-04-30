@@ -52,7 +52,7 @@ public:
 
 // ─── Wire stub (TwoWire) ─────────────────────────────────────────────────
 // Minimal mock of Arduino's Wire library, just enough to compile and
-// instrument note::arduino::I2CHal in host-side tests.
+// instrument note::arduino::I2cHal in host-side tests.
 //
 // Records every begin()/end() call so tests can assert who managed the
 // bus. transmit/receive helpers are stubbed to make the SoI2C protocol
@@ -76,8 +76,8 @@ public:
 
     void setBufferSize(int n) { set_buffer_size_arg = n; }
 
-    // SoI2C protocol surface — these no-ops let I2CHal::transmit /
-    // I2CHal::receive compile in host stub builds.
+    // SoI2C protocol surface — these no-ops let I2cHal::transmit /
+    // I2cHal::receive compile in host stub builds.
     void beginTransmission(uint8_t /*addr*/) {}
     int  endTransmission() { return 0; }
     size_t write(uint8_t /*b*/) { return 1; }
@@ -95,7 +95,7 @@ public:
 #define WIRE_HAS_END 1
 #endif
 
-// Arduino timing — global functions used by note::arduino::I2CHal etc.
+// Arduino timing — global functions used by note::arduino::I2cHal etc.
 inline uint32_t millis() { return 0; }
 inline void delay(uint32_t /*ms*/) {}
 

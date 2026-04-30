@@ -208,7 +208,7 @@ struct ITransact {
 };
 ```
 
-`NotecardSerial` and `NotecardI2c` already implement most of this as
+`SerialFramer` and `I2cFramer` already implement most of this as
 duck-typed callables. The refactor formalizes them as `ITransact`
 implementations. `Notecard` takes `ITransact&` instead of `RequestFn`/`SendFn`.
 

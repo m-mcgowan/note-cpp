@@ -12,19 +12,19 @@
 
 #include <note/arduino/serial.hpp>
 #include <note/protocol.hpp>
-#include <note/transport/serial.hpp>
+#include <note/link/serial.hpp>
 
 namespace note::arduino {
 
-/// Owns the full serial transport stack: SerialHal → NotecardSerial → Protocol.
+/// Owns the full serial transport stack: SerialHal → SerialFramer → Protocol.
 template<typename SerialT = HardwareSerial>
 struct SerialTransportStack {
     using Hal = SerialHal<SerialT>;
 #if NOTE_STATIC_HAL
-    using NcSerial = transport::NotecardSerial<Hal>;
+    using NcSerial = link::SerialFramer<Hal>;
     using Transport = Protocol<NcSerial>;
 #else
-    using NcSerial = transport::NotecardSerial<>;
+    using NcSerial = link::SerialFramer<>;
     using Transport = Protocol;
 #endif
 

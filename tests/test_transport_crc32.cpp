@@ -1,4 +1,4 @@
-// Tests for note::transport::detail CRC32 implementation.
+// Tests for note::link::detail CRC32 implementation.
 //
 // Ported from note-c test/src/_crcAdd_test.cpp and _crcError_test.cpp.
 // Reference commits:
@@ -15,9 +15,9 @@
 #include <doctest.h>
 #include <string>
 
-#include <note/transport/detail/crc32.hpp>
+#include <note/link/detail/crc32.hpp>
 
-using namespace note::transport::detail;
+using namespace note::link::detail;
 
 // Helpers for char-buffer CRC API
 namespace {

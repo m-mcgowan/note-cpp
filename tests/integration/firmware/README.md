@@ -114,7 +114,7 @@ Each variant follows the same lifecycle:
 
 The I2C tests use dedicated `i2c_binary_transmit()` / `i2c_binary_receive()` helpers
 that chunk data into `max_transfer()`-sized I2C transactions with IO pacing delays —
-matching the chunking that `NotecardI2c` uses for JSON.
+matching the chunking that `I2cFramer` uses for JSON.
 
 ## Stack
 
@@ -125,8 +125,8 @@ doctest runner
   └─ note::Api (typed requests)
        └─ note::Notecard (JSON backend + transport)
             ├─ CjsonBackend (cJSON, bundled with ESP-IDF)
-            └─ NotecardSerial / NotecardI2c (wire protocol)
-                 └─ Esp32SerialHal / Esp32I2CHal (Arduino HAL)
+            └─ SerialFramer / I2cFramer (wire protocol)
+                 └─ Esp32SerialHal / Esp32I2cHal (Arduino HAL)
 ```
 
 ## How conditional compilation works

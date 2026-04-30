@@ -15,7 +15,7 @@
 #include <note/api/card_binary_put.hpp>
 #include <note/api/card_binary_get.hpp>
 #include <note/backends/buffer.hpp>
-#include <note/transport/cobs.hpp>
+#include <note/link/cobs.hpp>
 #include <note/md5.hpp>
 
 #include <cstring>

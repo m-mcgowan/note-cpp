@@ -13,15 +13,15 @@
 #include <note/api.hpp>
 #include <note/body.hpp>
 #include <note/backends/cjson.hpp>
-#include <note/transport/serial.hpp>
-#include <note/transport/cobs.hpp>
+#include <note/link/serial.hpp>
+#include <note/link/cobs.hpp>
 #include <note/json_sax_streaming.hpp>
 #include <note/units.hpp>
 #include "../include/md5.hpp"
 
 namespace {
 
-using SerialTransport = note::transport::NotecardSerial<>;
+using SerialTransport = note::link::SerialFramer<>;
 using Api = note::Api<>;
 
 /// Streaming-only fixture for ATTN, SAX, and API tests.

@@ -4,7 +4,7 @@
 /// CRC-related types shared by streaming and buffered transport paths.
 
 #include <note/json.hpp>
-#include <note/transport/detail/crc32.hpp>
+#include <note/link/detail/crc32.hpp>
 
 namespace note {
 
@@ -15,17 +15,17 @@ struct CrcWriter : JsonWriter {
     uint32_t state;
 
     explicit CrcWriter(JsonWriter& w)
-        : inner(w), state(transport::detail::crc32_begin()) {}
+        : inner(w), state(link::detail::crc32_begin()) {}
 
     bool write(const char* data, size_t len) override {
-        state = transport::detail::crc32_update(state, data, len);
+        state = link::detail::crc32_update(state, data, len);
         return inner.write(data, len);
     }
 
     /// Feed '}' to CRC without writing it, return finalized checksum.
     uint32_t finalize_with_brace() {
-        state = transport::detail::crc32_update(state, "}", 1);
-        return transport::detail::crc32_finalize(state);
+        state = link::detail::crc32_update(state, "}", 1);
+        return link::detail::crc32_finalize(state);
     }
 };
 
@@ -46,9 +46,9 @@ struct CrcFieldSink : FilterJsonSink {
         if (key == "crc") {
             if (value.size() == 13 && value[4] == ':') {
                 seq_ = static_cast<uint16_t>(
-                    transport::detail::read_hex(value.data(), 4));
+                    link::detail::read_hex(value.data(), 4));
                 checksum_ = static_cast<uint32_t>(
-                    transport::detail::read_hex(value.data() + 5, 8));
+                    link::detail::read_hex(value.data() + 5, 8));
                 found_ = true;
             }
             return;
@@ -81,9 +81,9 @@ struct CrcFieldSinkT : FilterSink<InnerT> {
         if (key == "crc") {
             if (value.size() == 13 && value[4] == ':') {
                 seq_ = static_cast<uint16_t>(
-                    transport::detail::read_hex(value.data(), 4));
+                    link::detail::read_hex(value.data(), 4));
                 checksum_ = static_cast<uint32_t>(
-                    transport::detail::read_hex(value.data() + 5, 8));
+                    link::detail::read_hex(value.data() + 5, 8));
                 found_ = true;
             }
             return;

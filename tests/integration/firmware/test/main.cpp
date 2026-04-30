@@ -14,10 +14,10 @@
 #include <note/notecard.hpp>
 #include <note/api.hpp>
 #ifdef NOTECARD_TEST_SERIAL
-#include <note/transport/serial.hpp>
+#include <note/link/serial.hpp>
 #endif
 #ifdef NOTECARD_TEST_I2C
-#include <note/transport/i2c.hpp>
+#include <note/link/i2c.hpp>
 #endif
 
 // Globals — shared test fixture + firmware version gating.
@@ -31,8 +31,8 @@ static SerialHal& serial_hal() {
     static SerialHal hal{notecardUart()};
     return hal;
 }
-static note::transport::NotecardSerial<>& serial_transport() {
-    static note::transport::NotecardSerial<> t{serial_hal()};
+static note::link::SerialFramer<>& serial_transport() {
+    static note::link::SerialFramer<> t{serial_hal()};
     return t;
 }
 static note::Protocol& serial_streaming() {
@@ -46,12 +46,12 @@ TwoWire& notecardWire() {
     static TwoWire wire(0);
     return wire;
 }
-static Esp32I2CHal& i2c_hal() {
-    static Esp32I2CHal hal{notecardWire()};
+static Esp32I2cHal& i2c_hal() {
+    static Esp32I2cHal hal{notecardWire()};
     return hal;
 }
-static note::transport::NotecardI2c<>& i2c_transport() {
-    static note::transport::NotecardI2c<> t{i2c_hal()};
+static note::link::I2cFramer<>& i2c_transport() {
+    static note::link::I2cFramer<> t{i2c_hal()};
     return t;
 }
 static note::Protocol& i2c_streaming() {

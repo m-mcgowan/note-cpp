@@ -45,7 +45,7 @@ struct i2c {
     const char* device;
     uint8_t     address;
     constexpr i2c(const char* d,
-                  uint8_t a = transport::kI2cDefaultAddress)
+                  uint8_t a = link::kI2cDefaultAddress)
         : device(d), address(a) {}
 };
 #endif
@@ -92,14 +92,14 @@ public:
     /// Open a serial link to the Notecard.
     void begin_serial(const char* port, int baud = 9600) {
         serial_hal_ = std::make_unique<PosixSerialHal>(port, baud);
-        serial_transport_ = std::make_unique<transport::NotecardSerial<>>(*serial_hal_);
+        serial_transport_ = std::make_unique<link::SerialFramer<>>(*serial_hal_);
         serial_streaming_ = std::make_unique<Protocol>(*serial_transport_);
         Base::begin(*serial_streaming_);
     }
 
     void begin_serial(const char* port, int baud, Allocator alloc) {
         serial_hal_ = std::make_unique<PosixSerialHal>(port, baud);
-        serial_transport_ = std::make_unique<transport::NotecardSerial<>>(*serial_hal_);
+        serial_transport_ = std::make_unique<link::SerialFramer<>>(*serial_hal_);
         serial_streaming_ = std::make_unique<Protocol>(*serial_transport_);
         Base::begin(*serial_streaming_, alloc);
     }
@@ -107,16 +107,16 @@ public:
 #ifdef __linux__
     /// Open an I2C link to the Notecard (Linux /dev/i2c-N).
     void begin_i2c(const char* device,
-                   uint8_t address = transport::kI2cDefaultAddress) {
+                   uint8_t address = link::kI2cDefaultAddress) {
         i2c_hal_ = std::make_unique<LinuxI2cHal>(device, address);
-        i2c_transport_ = std::make_unique<transport::NotecardI2c<>>(*i2c_hal_);
+        i2c_transport_ = std::make_unique<link::I2cFramer<>>(*i2c_hal_);
         i2c_streaming_ = std::make_unique<Protocol>(*i2c_transport_);
         Base::begin(*i2c_streaming_);
     }
 
     void begin_i2c(const char* device, uint8_t address, Allocator alloc) {
         i2c_hal_ = std::make_unique<LinuxI2cHal>(device, address);
-        i2c_transport_ = std::make_unique<transport::NotecardI2c<>>(*i2c_hal_);
+        i2c_transport_ = std::make_unique<link::I2cFramer<>>(*i2c_hal_);
         i2c_streaming_ = std::make_unique<Protocol>(*i2c_transport_);
         Base::begin(*i2c_streaming_, alloc);
     }
@@ -145,11 +145,11 @@ public:
 
 private:
     std::unique_ptr<PosixSerialHal>              serial_hal_;
-    std::unique_ptr<transport::NotecardSerial<>> serial_transport_;
+    std::unique_ptr<link::SerialFramer<>> serial_transport_;
     std::unique_ptr<Protocol>          serial_streaming_;
 #ifdef __linux__
     std::unique_ptr<LinuxI2cHal>                 i2c_hal_;
-    std::unique_ptr<transport::NotecardI2c<>>    i2c_transport_;
+    std::unique_ptr<link::I2cFramer<>>    i2c_transport_;
     std::unique_ptr<Protocol>          i2c_streaming_;
 #endif
 };

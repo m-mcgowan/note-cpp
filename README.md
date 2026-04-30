@@ -290,7 +290,7 @@ On constrained targets where the typed API's SAX parser is too big, `note-cpp` e
 <details>
 <summary><strong>Wire Protocols</strong> — serial and I2C with CRC, retry, and binary transfer</summary>
 
-Header-only implementations of the Notecard serial and I2C protocols: [`NotecardSerial`](docs/transport-serial.md) and [`NotecardI2c`](docs/transport-i2c.md). These handle CRC auto-detection, segmented TX/RX, retry logic, and auto-reset.
+Header-only implementations of the Notecard serial and I2C protocols: [`SerialFramer`](docs/transport-serial.md) and [`I2cFramer`](docs/transport-i2c.md). These handle CRC auto-detection, segmented TX/RX, retry logic, and auto-reset.
 
 Each protocol implementation uses a thin platform HAL — a lightweight interface for UART or I2C hardware access. See [docs/transport.md](docs/transport.md) for the full HAL interface.
 

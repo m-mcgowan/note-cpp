@@ -1,16 +1,16 @@
-// Tests for note::transport::NotecardI2c (Hal) and
+// Tests for note::link::I2cFramer (Hal) and
 // note::Protocol protocol logic over I2C.
 //
 // Ported from note-c test/src/_i2cNoteReset_test.cpp,
 // _i2cChunkedTransmit_test.cpp, and _i2cChunkedReceive_test.cpp.
 //
 // Key mapping:
-//   note-c _i2cNoteReset()       → NotecardI2c::reset()
-//   note-c _i2cChunkedTransmit() → NotecardI2c::transmit() (chunked)
-//   note-c _i2cChunkedReceive()  → NotecardI2c::read() (priming query)
-//   note-c _I2CReceive(addr, buf, 0, &avail) → I2CHal::receive(buf, 0, avail)
+//   note-c _i2cNoteReset()       → I2cFramer::reset()
+//   note-c _i2cChunkedTransmit() → I2cFramer::transmit() (chunked)
+//   note-c _i2cChunkedReceive()  → I2cFramer::read() (priming query)
+//   note-c _I2CReceive(addr, buf, 0, &avail) → I2cHal::receive(buf, 0, avail)
 //
-// NotecardI2c is a Hal (raw byte ops: transmit, read, reset,
+// I2cFramer is a Hal (raw byte ops: transmit, read, reset,
 // write_line_terminator, delay). Protocol logic (transact, send, retry, CRC)
 // lives in Protocol, which wraps a Hal.
 //
@@ -18,8 +18,8 @@
 
 #include <doctest.h>
 
-#include <note/transport/i2c.hpp>
-#include <note/transport/detail/crc32.hpp>
+#include <note/link/i2c.hpp>
+#include <note/link/detail/crc32.hpp>
 #include <note/protocol.hpp>
 
 #include <cstring>
@@ -82,18 +82,18 @@ inline std::string str_crc_add(const std::string& json, uint16_t seq) {
     char buf[512];
     size_t len = json.size();
     memcpy(buf, json.data(), len);
-    size_t new_len = note::transport::detail::crc_add(buf, len, sizeof(buf), seq);
+    size_t new_len = note::link::detail::crc_add(buf, len, sizeof(buf), seq);
     return std::string(buf, new_len);
 }
 
 } // namespace
 
 
-using namespace note::transport;
+using namespace note::link;
 using note::Error;
 
 // ---------------------------------------------------------------------------
-// ScriptedI2CHal — in-memory I2C HAL for testing
+// ScriptedI2cHal — in-memory I2C HAL for testing
 //
 // receive(buf, 0, available) — priming query: returns pending byte count,
 //                               does not consume bytes.
@@ -107,7 +107,7 @@ using note::Error;
 // responses for intra-timeout testing).
 // ---------------------------------------------------------------------------
 
-struct ScriptedI2CHal : public I2CHal {
+struct ScriptedI2cHal : public I2cHal {
     // Configuration
     bool               reset_ok      = true;
     bool               transmit_ok   = true;
@@ -189,15 +189,15 @@ struct ScriptedI2CHal : public I2CHal {
 };
 
 // ---------------------------------------------------------------------------
-// I2cTestHarness — Protocol over NotecardI2c over ScriptedI2CHal
+// I2cTestHarness — Protocol over I2cFramer over ScriptedI2cHal
 //
-// Returns by value — NotecardI2c and Protocol hold references
+// Returns by value — I2cFramer and Protocol hold references
 // to each other and to the hal, so callers must keep the Harness alive.
 // ---------------------------------------------------------------------------
 
 struct I2cTestHarness {
-    ScriptedI2CHal hal;
-    NotecardI2c<I2cPolicy> notecard_i2c;
+    ScriptedI2cHal hal;
+    I2cFramer<I2cPolicy> notecard_i2c;
     note::Protocol transport;
 
     I2cTestHarness()
@@ -235,8 +235,8 @@ struct I2cTestHarness {
 // ---------------------------------------------------------------------------
 
 TEST_CASE("i2c reset: pre-delay of kI2cSegmentDelayMs (250 ms)") {
-    ScriptedI2CHal hal;
-    NotecardI2c<I2cPolicy> i2c(hal);
+    ScriptedI2cHal hal;
+    I2cFramer<I2cPolicy> i2c(hal);
     // reset() should start with a segment delay.
     i2c.reset();
     CHECK(hal.total_delay_ms >= kI2cSegmentDelayMs);
@@ -250,8 +250,8 @@ TEST_CASE("i2c reset: calls hal.reset() once on first use") {
 }
 
 TEST_CASE("i2c reset: io delay (6 ms) after reset()") {
-    ScriptedI2CHal hal;
-    NotecardI2c<I2cPolicy> i2c(hal);
+    ScriptedI2cHal hal;
+    I2cFramer<I2cPolicy> i2c(hal);
     i2c.reset();
     CHECK(hal.total_delay_ms >= kI2cSegmentDelayMs + kI2cIoDelayMs);
 }
@@ -272,9 +272,9 @@ TEST_CASE("i2c reset: clean drain succeeds") {
 }
 
 TEST_CASE("i2c reset: transmit \\n fails (NACK) all retries -> NotReady error") {
-    ScriptedI2CHal hal;
+    ScriptedI2cHal hal;
     hal.transmit_ok = false;
-    NotecardI2c<I2cPolicy> i2c(hal);
+    I2cFramer<I2cPolicy> i2c(hal);
     bool ok = i2c.reset();
     REQUIRE_FALSE(ok);
     // Should have retried kI2cResetSyncRetries times.
@@ -282,25 +282,25 @@ TEST_CASE("i2c reset: transmit \\n fails (NACK) all retries -> NotReady error") 
 }
 
 TEST_CASE("i2c reset: NACK delays kI2cNackWaitMs (1000 ms) per attempt") {
-    ScriptedI2CHal hal;
+    ScriptedI2cHal hal;
     hal.transmit_ok = false;
-    NotecardI2c<I2cPolicy> i2c(hal);
+    I2cFramer<I2cPolicy> i2c(hal);
     i2c.reset();
     // Each NACK incurs kI2cNackWaitMs (1000 ms).
     CHECK(hal.total_delay_ms >= kI2cNackWaitMs * kI2cResetSyncRetries);
 }
 
 TEST_CASE("i2c reset: drain receives non-control chars -> all retries fail") {
-    ScriptedI2CHal hal;
+    ScriptedI2cHal hal;
     hal.reset_response = "{}";  // non-control chars — garbage on the bus
-    NotecardI2c<I2cPolicy> i2c(hal);
+    I2cFramer<I2cPolicy> i2c(hal);
     bool ok = i2c.reset();
     REQUIRE_FALSE(ok);
 }
 
 TEST_CASE("i2c reset: drain delay is kI2cSegmentDelayMs after transmit") {
-    ScriptedI2CHal hal;
-    NotecardI2c<I2cPolicy> i2c(hal);
+    ScriptedI2cHal hal;
+    I2cFramer<I2cPolicy> i2c(hal);
     i2c.reset();
     CHECK(hal.total_delay_ms >= kI2cSegmentDelayMs + kI2cIoDelayMs + kI2cSegmentDelayMs);
 }
@@ -317,9 +317,9 @@ TEST_CASE("i2c reset: priming query (len=0) is first receive in drain") {
 // ---------------------------------------------------------------------------
 
 TEST_CASE("i2c transmit: small payload sent in one chunk") {
-    ScriptedI2CHal hal;
+    ScriptedI2cHal hal;
     hal.mtu = 30;
-    NotecardI2c<I2cPolicy> i2c(hal);
+    I2cFramer<I2cPolicy> i2c(hal);
     uint8_t data[] = "short";
     REQUIRE(i2c.transmit(data, 5));
     // One chunk for 5 bytes (< 30 MTU).
@@ -327,9 +327,9 @@ TEST_CASE("i2c transmit: small payload sent in one chunk") {
 }
 
 TEST_CASE("i2c transmit: multi-chunk when payload exceeds MTU") {
-    ScriptedI2CHal hal;
+    ScriptedI2cHal hal;
     hal.mtu = 10;
-    NotecardI2c<I2cPolicy> i2c(hal);
+    I2cFramer<I2cPolicy> i2c(hal);
     uint8_t data[50];
     memset(data, 'a', sizeof(data));
     REQUIRE(i2c.transmit(data, sizeof(data)));
@@ -338,9 +338,9 @@ TEST_CASE("i2c transmit: multi-chunk when payload exceeds MTU") {
 }
 
 TEST_CASE("i2c transmit: io delay (6 ms) before each chunk") {
-    ScriptedI2CHal hal;
+    ScriptedI2cHal hal;
     hal.mtu = 10;
-    NotecardI2c<I2cPolicy> i2c(hal);
+    I2cFramer<I2cPolicy> i2c(hal);
     uint8_t data[30];
     memset(data, 'a', sizeof(data));
     i2c.transmit(data, sizeof(data));
@@ -350,9 +350,9 @@ TEST_CASE("i2c transmit: io delay (6 ms) before each chunk") {
 }
 
 TEST_CASE("i2c transmit: chunk delay (20 ms) after each chunk") {
-    ScriptedI2CHal hal;
+    ScriptedI2cHal hal;
     hal.mtu = 10;
-    NotecardI2c<I2cPolicy> i2c(hal);
+    I2cFramer<I2cPolicy> i2c(hal);
     uint8_t data[20];
     memset(data, 'a', sizeof(data));
     i2c.transmit(data, sizeof(data));
@@ -361,9 +361,9 @@ TEST_CASE("i2c transmit: chunk delay (20 ms) after each chunk") {
 }
 
 TEST_CASE("i2c transmit: segment delay (250 ms) after > 250 bytes in segment") {
-    ScriptedI2CHal hal;
+    ScriptedI2cHal hal;
     hal.mtu = 30;
-    NotecardI2c<I2cPolicy> i2c(hal);
+    I2cFramer<I2cPolicy> i2c(hal);
     uint8_t data[259];
     memset(data, 'x', sizeof(data));
     i2c.transmit(data, sizeof(data));
@@ -371,9 +371,9 @@ TEST_CASE("i2c transmit: segment delay (250 ms) after > 250 bytes in segment") {
 }
 
 TEST_CASE("i2c transmit: failure calls reset() and returns false") {
-    ScriptedI2CHal hal;
+    ScriptedI2cHal hal;
     hal.transmit_ok = false;
-    NotecardI2c<I2cPolicy> i2c(hal);
+    I2cFramer<I2cPolicy> i2c(hal);
     uint8_t data[] = "test";
     bool ok = i2c.transmit(data, 4);
     REQUIRE_FALSE(ok);
@@ -385,8 +385,8 @@ TEST_CASE("i2c transmit: failure calls reset() and returns false") {
 // ---------------------------------------------------------------------------
 
 TEST_CASE("i2c read: returns available bytes") {
-    ScriptedI2CHal hal;
-    NotecardI2c<I2cPolicy> i2c(hal);
+    ScriptedI2cHal hal;
+    I2cFramer<I2cPolicy> i2c(hal);
     hal.rx_buf = std::string("\xAA\xBB\x0A", 3);
     uint8_t buf[16];
     auto r = i2c.read(buf, sizeof(buf), 5000);
@@ -396,8 +396,8 @@ TEST_CASE("i2c read: returns available bytes") {
 }
 
 TEST_CASE("i2c read: times out when no data") {
-    ScriptedI2CHal hal;
-    NotecardI2c<I2cPolicy> i2c(hal);
+    ScriptedI2cHal hal;
+    I2cFramer<I2cPolicy> i2c(hal);
     uint8_t buf[16];
     auto r = i2c.read(buf, sizeof(buf), 10);
     REQUIRE_FALSE(r.has_value());
@@ -422,7 +422,7 @@ TEST_CASE("i2c read: HAL receive failure returns error") {
         [&]() -> uint32_t { return now; },
         [&](uint32_t ms) { now += ms; }
     };
-    NotecardI2c<I2cPolicy> i2c(cb);
+    I2cFramer<I2cPolicy> i2c(cb);
     uint8_t buf[16];
     auto r = i2c.read(buf, sizeof(buf), 5000);
     REQUIRE_FALSE(r.has_value());
@@ -434,8 +434,8 @@ TEST_CASE("i2c read: HAL receive failure returns error") {
 // ---------------------------------------------------------------------------
 
 TEST_CASE("i2c write_line_terminator: sends bare LF") {
-    ScriptedI2CHal hal;
-    NotecardI2c<I2cPolicy> i2c(hal);
+    ScriptedI2cHal hal;
+    I2cFramer<I2cPolicy> i2c(hal);
     REQUIRE(i2c.write_line_terminator());
     REQUIRE(hal.tx_accum.size() == 0);  // tx_accum was consumed (bare \n triggers reset path)
     // Verify via response injection: bare \n triggers reset_response
@@ -447,8 +447,8 @@ TEST_CASE("i2c write_line_terminator: sends bare LF") {
 // ---------------------------------------------------------------------------
 
 TEST_CASE("i2c delay: forwards to HAL") {
-    ScriptedI2CHal hal;
-    NotecardI2c<I2cPolicy> i2c(hal);
+    ScriptedI2cHal hal;
+    I2cFramer<I2cPolicy> i2c(hal);
     i2c.delay(42);
     CHECK(hal.now_ms == 42);
 }
@@ -567,7 +567,7 @@ TEST_CASE("i2c round-trip: CRC mismatch returns ResponseLost") {
 
 TEST_CASE("i2c round-trip: I/O error on transmit returns SendFailed") {
     I2cTestHarness h;
-    // transmit_ok_fn applies to the I2CHal-level transmit calls.
+    // transmit_ok_fn applies to the I2cHal-level transmit calls.
     // Call 1: reset probe '\n' (during initial reset -> succeeds)
     // Call 2: first data byte '{' of request -> fails
     // Transport returns SendFailed immediately (no retry).
@@ -634,7 +634,7 @@ TEST_CASE("i2c: write() sends raw bytes") {
     auto r = h.transport.write(data, sizeof(data));
     REQUIRE(r.has_value());
 
-    // Data should have been transmitted (possibly chunked by NotecardI2c)
+    // Data should have been transmitted (possibly chunked by I2cFramer)
     CHECK(h.hal.transmit_call_count >= 1);
 }
 
@@ -696,9 +696,9 @@ TEST_CASE("i2c: explicit reset()") {
 // ---------------------------------------------------------------------------
 
 TEST_CASE("I2cCallbackHal delegates to callbacks") {
-    // Wire an I2cCallbackHal to a ScriptedI2CHal via lambdas.
+    // Wire an I2cCallbackHal to a ScriptedI2cHal via lambdas.
     // A successful round-trip exercises reset, transmit, receive, millis, delay.
-    ScriptedI2CHal real;
+    ScriptedI2cHal real;
     real.responses.push_back("{}\n");
 
     I2cCallbackHal cb{
@@ -709,7 +709,7 @@ TEST_CASE("I2cCallbackHal delegates to callbacks") {
         [&](uint32_t ms)                                       { real.delay(ms); }
     };
 
-    NotecardI2c<I2cPolicy> notecard_i2c(cb);
+    I2cFramer<I2cPolicy> notecard_i2c(cb);
     note::Protocol transport(notecard_i2c);
     note::Protocol& t = transport;
     note::JsonSink null_sink;

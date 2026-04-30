@@ -15,13 +15,13 @@
 //
 //   note::posix::LinuxI2cHal hal("/dev/i2c-1");          // default addr 0x17
 //   if (!hal) { /* open or ioctl failed */ }
-//   note::transport::NotecardI2c transport(hal);
+//   note::link::I2cFramer transport(hal);
 //
 // Prefer note::posix::Notecard from <note/posix.hpp> for the convenience API.
 
 #ifdef __linux__
 
-#include <note/transport/i2c.hpp>
+#include <note/link/i2c.hpp>
 #include <note/posix/clock.hpp>
 
 #include <fcntl.h>
@@ -36,14 +36,14 @@
 
 namespace note::posix {
 
-class LinuxI2cHal : public transport::I2CHal {
+class LinuxI2cHal : public link::I2cHal {
 public:
     // SoI2C response header: [available, good_bytes]
     static constexpr uint8_t kResponseHeaderSize = 2;
 
     explicit LinuxI2cHal(const char* device,
-                         uint8_t address   = transport::kI2cDefaultAddress,
-                         size_t  max_xfer  = transport::kI2cDefaultMtu)
+                         uint8_t address   = link::kI2cDefaultAddress,
+                         size_t  max_xfer  = link::kI2cDefaultMtu)
         : address_(address), max_xfer_(max_xfer) {
         fd_ = ::open(device, O_RDWR);
         if (fd_ < 0) return;
@@ -72,7 +72,7 @@ public:
         if (fd_ < 0) return false;
         if (len > max_xfer_) return false;
 
-        uint8_t buf[transport::kI2cMaxMtu + 1];
+        uint8_t buf[link::kI2cMaxMtu + 1];
         buf[0] = static_cast<uint8_t>(len);
         if (len > 0) std::memcpy(buf + 1, data, len);
 
@@ -98,7 +98,7 @@ public:
         ::nanosleep(&ts, nullptr);
 
         // Read 2-byte response header + payload bytes.
-        uint8_t rx[transport::kI2cMaxMtu + kResponseHeaderSize];
+        uint8_t rx[link::kI2cMaxMtu + kResponseHeaderSize];
         const ssize_t want = static_cast<ssize_t>(len + kResponseHeaderSize);
         const ssize_t got = ::read(fd_, rx, static_cast<size_t>(want));
         if (got < static_cast<ssize_t>(kResponseHeaderSize)) return false;

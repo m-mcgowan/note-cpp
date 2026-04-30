@@ -1,19 +1,19 @@
 #pragma once
 
-#include <note/transport/serial.hpp>
+#include <note/link/serial.hpp>
 
 #include <note/arduino/compat.hpp>
 #include <algorithm>
 
 // note::arduino::SerialHal
 //
-// Implements note::transport::SerialHal for any Arduino HardwareSerial
+// Implements note::link::SerialHal for any Arduino HardwareSerial
 // (or compatible Stream subclass with write/readBytes/available).
 //
 // Usage:
 //
 //   note::arduino::SerialHal hal(Serial1, 9600);
-//   note::transport::NotecardSerial transport(hal);
+//   note::link::SerialFramer transport(hal);
 //   note::Notecard nc(backend,
 //       [&transport](note::string_view req, uint32_t t) {
 //           return transport(req, t);
@@ -25,7 +25,7 @@ template <typename SerialT = HardwareSerial>
 #if NOTE_STATIC_HAL
 class SerialHal {
 #else
-class SerialHal : public note::transport::SerialHal {
+class SerialHal : public note::link::SerialHal {
 #endif
 public:
     // Lazy Serial.begin: deferred to first transmit/receive. This

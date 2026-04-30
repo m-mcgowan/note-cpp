@@ -35,7 +35,7 @@
 #endif
 
 #if !NOTE_NO_CRC
-#include <note/transport/detail/crc_types.hpp>
+#include <note/link/detail/crc_types.hpp>
 #endif
 
 #if NOTE_TXN_HANDSHAKE
@@ -137,9 +137,9 @@ struct ReceiveContext {
                     if (k[0] == 'c' && k[1] == 'r' && k[2] == 'c') {
                         if (v.size() == 13 && v[4] == ':') {
                             c.crc_seq = static_cast<uint16_t>(
-                                transport::detail::read_hex(v.data(), 4));
+                                link::detail::read_hex(v.data(), 4));
                             c.crc_checksum = static_cast<uint32_t>(
-                                transport::detail::read_hex(v.data() + 5, 8));
+                                link::detail::read_hex(v.data() + 5, 8));
                             c.crc_found = true;
                         }
                         return;  // CRC is transport-only, don't forward
@@ -635,15 +635,15 @@ private:
 
             uint32_t checksum = crc.finalize_with_brace();
 
-            char suffix[transport::detail::kCrcFieldLen + 1];
+            char suffix[link::detail::kCrcFieldLen + 1];
             size_t pos = 0;
             suffix[pos++] = ',';
             suffix[pos++] = '"'; suffix[pos++] = 'c'; suffix[pos++] = 'r';
             suffix[pos++] = 'c'; suffix[pos++] = '"'; suffix[pos++] = ':';
             suffix[pos++] = '"';
-            transport::detail::write_hex16(suffix + pos, crc_seq_); pos += 4;
+            link::detail::write_hex16(suffix + pos, crc_seq_); pos += 4;
             suffix[pos++] = ':';
-            transport::detail::write_hex32(suffix + pos, checksum); pos += 8;
+            link::detail::write_hex32(suffix + pos, checksum); pos += 8;
             suffix[pos++] = '"';
             suffix[pos++] = '}';
             writer.write(suffix, pos);
@@ -776,7 +776,7 @@ private:
         }
 #else
 #if !NOTE_NO_CRC
-        transport::detail::CrcAccumulator crc;
+        link::detail::CrcAccumulator crc;
 
         auto read_fn = [&](uint8_t* buf, size_t max, uint32_t t) -> Result<size_t> {
             auto r = frame_read(buf, max, t);

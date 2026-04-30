@@ -6,7 +6,7 @@
 #include <note/jsonb.hpp>
 #include <note/json_sax_streaming.hpp>
 #include <note/lexer/sax_adapter.hpp>
-#include <note/transport/cobs.hpp>
+#include <note/link/cobs.hpp>
 
 #include <cstring>
 #include <string>

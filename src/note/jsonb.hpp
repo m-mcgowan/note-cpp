@@ -13,7 +13,7 @@
 #include "json.hpp"
 #include "json_sax_streaming.hpp"
 #include "lexer/sax_adapter.hpp"
-#include "transport/cobs.hpp"
+#include "link/cobs.hpp"
 
 #include <cstdint>
 #include <cstring>

@@ -6,8 +6,8 @@
 #include <note/backends/buffer.hpp>
 #include <note/json.hpp>
 #include <note/protocol.hpp>
-#include <note/transport/detail/crc32.hpp>
-#include <note/transport/detail/crc_types.hpp>
+#include <note/link/detail/crc32.hpp>
+#include <note/link/detail/crc_types.hpp>
 #include <note/transport_hal.hpp>
 
 #include <cstring>
@@ -15,7 +15,7 @@
 #include <vector>
 
 using namespace note;
-using namespace note::transport::detail;
+using namespace note::link::detail;
 
 // ---------------------------------------------------------------------------
 // Incremental CRC32
@@ -484,7 +484,7 @@ struct TestHal : Hal {
         char buf[512];
         size_t len = strlen(json);
         memcpy(buf, json, len);
-        len = transport::detail::crc_add(buf, len, sizeof(buf), wire_seq);
+        len = link::detail::crc_add(buf, len, sizeof(buf), wire_seq);
         response.assign(buf, len);
         response += '\n';
         read_pos = 0;

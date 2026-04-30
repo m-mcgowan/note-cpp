@@ -58,8 +58,8 @@ on send and down on receive.
 
 ```mermaid
 flowchart TD
-    hw["SerialHal / I2CHal<br/><i>your hardware (5 methods)</i>"]
-    framer["NotecardSerial / NotecardI2c<br/><i>implements <tt>Hal</tt>; adapts the byte HAL</i>"]
+    hw["SerialHal / I2cHal<br/><i>your hardware (5 methods)</i>"]
+    framer["SerialFramer / I2cFramer<br/><i>implements <tt>Hal</tt>; adapts the byte HAL</i>"]
     protocol["Protocol<br/><i>retry, CRC, JSON/JSONB framing — IS-A <tt>ITransact</tt></i>"]
     iface["ITransact<br/><i>session contract consumed by Notecard</i>"]
     notecard["Notecard<br/><i><tt>(Protocol&, Allocator)</tt> streaming-only, or <tt>(JsonBackend*, ITransact&, Allocator)</tt> unified</i>"]
@@ -125,15 +125,15 @@ nc.begin(Wire, arena_allocator(arena));
 
 ### Non-Arduino — streaming path (recommended)
 
-Wire up the three layers directly: `SerialHal` -> `NotecardSerial` (`Hal`) -> `Protocol` (`ITransact`) -> `Notecard`:
+Wire up the three layers directly: `SerialHal` -> `SerialFramer` (`Hal`) -> `Protocol` (`ITransact`) -> `Notecard`:
 
 ```cpp
 #include <note/protocol.hpp>
-#include <note/transport/serial.hpp>
+#include <note/link/serial.hpp>
 #include <note/arena.hpp>
 
 MySerialHal hal;                                    // your SerialHal impl
-note::transport::NotecardSerial serial_hal(hal);    // Hal
+note::link::SerialFramer serial_hal(hal);    // Hal
 note::Protocol transport(serial_hal);     // ITransact
 
 char pool[256];
@@ -147,7 +147,7 @@ No `JsonBackend` required. No `std::string` linked. No `operator new`.
 
 ```cpp
 note::backends::BufferJsonBackend<512, 64> backend;
-note::transport::NotecardI2c transport(hal);        // ITransact
+note::link::I2cFramer transport(hal);        // ITransact
 note::Notecard nc(backend, transport);
 nc.set_allocator(note::Allocator{});                // optional: arena or heap
 ```
@@ -166,7 +166,7 @@ responses SAX-parse directly from the wire. The allocator provides backing
 storage for string interning (typically a `MonotonicArena`).
 
 The buffered constructor exists for test harnesses (where `CallbackTransport`
-+ `MockBackend` is convenient) and for I2C (where `NotecardI2c` still extends
++ `MockBackend` is convenient) and for I2C (where `I2cFramer` still extends
 `AbstractTransport`).
 
 ## How execute() Selects the Path

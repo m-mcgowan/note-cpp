@@ -11,10 +11,10 @@ only its predecessor's interface. Reading from the bottom up, the layers are:
 
 1. **`Hal`** — platform byte conduit. `transmit`, `read`, `reset`, `millis`, `delay`,
    `write_line_terminator`. No protocol logic; just moves bytes. You implement this
-   for your platform (or extend `arduino::SerialHal` / `arduino::I2CHal`).
-2. **`transport::NotecardSerial<Policy>` / `transport::NotecardI2c<Policy>`** — Notecard
+   for your platform (or extend `arduino::SerialHal` / `arduino::I2cHal`).
+2. **`link::SerialFramer<Policy>` / `link::I2cFramer<Policy>`** — Notecard
    wire framing over a byte `Hal`. Handles segment pacing, chunking, drain/reset windows,
-   and I2C MTU negotiation. Owns the `ProtocolPolicy` — wire-level timing fields
+   and I2C MTU negotiation. Owns the `PacingPolicy` — wire-level timing fields
    (`segment_*`, `intra_timeout_ms`, `reset_*`); runtime-mutable or compile-time
    `[[no_unique_address]]`. These are themselves `Hal`s — the layer above sees a
    framing-aware byte conduit.
@@ -49,9 +49,9 @@ The library's layer structure maps roughly onto the OSI 7-layer model. Useful as
 
 | OSI layer | Concept | note-cpp type |
 |---|---|---|
-| 1+2 (physical / link) | byte conduit | `note::Hal` (and platform impls: `arduino::SerialHal`, `arduino::I2CHal`, `posix::*Hal`) |
-| 2 (data link) | Notecard wire framing — segment pacing, MTU, drain windows | `note::transport::NotecardSerial<>`, `note::transport::NotecardI2c<>` |
-| 2 (link config) | wire pacing policy | `note::transport::ProtocolPolicy` (+ `SerialPolicy` / `I2cPolicy`) |
+| 1+2 (physical / link) | byte conduit | `note::Hal` (and platform impls: `arduino::SerialHal`, `arduino::I2cHal`, `posix::*Hal`) |
+| 2 (data link) | Notecard wire framing — segment pacing, MTU, drain windows | `note::link::SerialFramer<>`, `note::link::I2cFramer<>` |
+| 2 (link config) | wire pacing policy | `note::link::PacingPolicy` (+ `SerialPolicy` / `I2cPolicy`) |
 | 4-ish (link reliability) | CRC, retry, init handshake, line termination, sequence numbers | `note::Protocol` |
 | 5 (session contract) | unified transact/send interface | `note::ITransact` |
 | 5+ (session implementation) | session class | `note::Notecard` (+ peers `BareNotecard`, `StaticNotecard`) |
@@ -63,8 +63,8 @@ Layer 4 is "ish" because Notecard is single-link with no routing — `Protocol` 
 ```mermaid
 flowchart TD
     Hal["<b>Hal</b><br/>byte conduit:<br/>transmit, read, reset, millis, delay"]
-    NCSer["<b>transport::NotecardSerial</b><br/>Notecard wire framing over UART"]
-    NCI2C["<b>transport::NotecardI2c</b><br/>Notecard wire framing over I2C"]
+    NCSer["<b>link::SerialFramer</b><br/>Notecard wire framing over UART"]
+    NCI2C["<b>link::I2cFramer</b><br/>Notecard wire framing over I2C"]
     Proto["<b>Protocol</b><br/>wire protocol: CRC, init handshake,<br/>line termination, sequence numbers"]
     ITrans["<b>ITransact</b><br/>unified transaction interface:<br/>transact (span | sink), send"]
     JsonLayer["<b>JSON layer</b><br/>response bytes → typed values<br/>tree-mode (JsonBackend) or sink-mode (Rsp::Sink)"]
@@ -74,7 +74,7 @@ flowchart TD
     Bundle["<b>NotecardApi</b> (convenience)<br/>Notecard + Api&lt;&gt; bundled"]
 
     SerialDriver["<b>SerialHal</b><br/>Platform UART driver"]
-    I2CDriver["<b>I2CHal</b><br/>Platform I2C driver"]
+    I2CDriver["<b>I2cHal</b><br/>Platform I2C driver"]
 
     SerialDriver --> Hal
     I2CDriver --> Hal
@@ -93,11 +93,11 @@ flowchart TD
     class SerialDriver,I2CDriver user
 ```
 
-The shaded boxes are what you implement (one of `SerialHal` or `I2CHal`,
+The shaded boxes are what you implement (one of `SerialHal` or `I2cHal`,
 typically by extending the Arduino-flavored variant). Everything above
 `Hal` is library code.
 
-**You implement**: `SerialHal` (4 methods) or `I2CHal` (5 methods) — pure
+**You implement**: `SerialHal` (4 methods) or `I2cHal` (5 methods) — pure
 hardware I/O, no protocol logic.
 
 **The library provides**: protocol framing, CRC, retry, JSON streaming,
@@ -108,13 +108,13 @@ COBS binary transfer — all built on your HAL.
 ```
 include/note/
     transport_hal.hpp          Hal (pure HAL interface)
-    transport.hpp              ITransact (unified session interface)
+    transact.hpp               ITransact (unified session interface)
     protocol.hpp               Protocol (concrete wire-protocol driver)
 
-include/note/transport/
-    serial.hpp             SerialHal, SerialCallbackHal, NotecardSerial
-    i2c.hpp                I2CHal,    I2cCallbackHal,    NotecardI2c
-    protocol_policy.hpp    ProtocolPolicy, SerialPolicy, I2cPolicy (+ Static* variants)
+include/note/link/
+    serial.hpp             SerialHal, SerialCallbackHal, SerialFramer
+    i2c.hpp                I2cHal,    I2cCallbackHal,    I2cFramer
+    policy.hpp             PacingPolicy, SerialPolicy, I2cPolicy (+ Static* variants)
     detail/crc32.hpp       CRC32, crc_add, crc_check_and_strip
 ```
 
@@ -224,7 +224,7 @@ See [JSON backend](json-backend.md) for configuration details.
 | Guide | Covers |
 |-------|--------|
 | [Serial transport](transport-serial.md) | `SerialHal`, Arduino setup, protocol constants, binary streaming |
-| [I2C transport](transport-i2c.md) | `I2CHal`, MTU negotiation, priming query, Arduino setup |
+| [I2C transport](transport-i2c.md) | `I2cHal`, MTU negotiation, priming query, Arduino setup |
 | [CRC](transport-crc.md) | Auto-detection, wire format, streaming vs buffered implementation |
 | [Binary transfer](binary-transfer.md) | `card.binary` put/get, COBS, MD5 verification |
 | [JSONB wire format](jsonb.md) | Compact binary encoding (alternative to JSON text) |

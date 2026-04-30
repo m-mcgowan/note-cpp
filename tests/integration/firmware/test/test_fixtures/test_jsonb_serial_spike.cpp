@@ -8,8 +8,8 @@
 #include <cstdio>
 
 #include <note/jsonb.hpp>
-#include <note/transport/cobs.hpp>
-#include <note/transport/detail/crc32.hpp>
+#include <note/link/cobs.hpp>
+#include <note/link/detail/crc32.hpp>
 #include <note/json_sax.hpp>
 #include <note/json_sax_streaming.hpp>
 #include <note/lexer/sax_adapter.hpp>
@@ -214,7 +214,7 @@ TEST_CASE("JSONB CRC investigation: does Notecard include crc in JSONB responses
     // back if it supports CRC.
     bool notecard_supports_crc = false;
     {
-        using namespace note::transport::detail;
+        using namespace note::link::detail;
         char buf[256];
         snprintf(buf, sizeof(buf), "{\"req\":\"card.version\"}");
         size_t len = strlen(buf);

@@ -45,14 +45,14 @@ set(NOTE_CPP_PUBLIC_HEADERS
     include/note/voltage_variable.hpp
 )
 
-# ── Transport headers ─────────────────────────────────────────────────────
+# ── Link-layer headers ────────────────────────────────────────────────────
 
-set(NOTE_CPP_TRANSPORT_HEADERS
-    include/note/transport/cobs.hpp
-    include/note/transport/detail/crc32.hpp
-    include/note/transport/i2c.hpp
-    include/note/transport/protocol_policy.hpp
-    include/note/transport/serial.hpp
+set(NOTE_CPP_LINK_HEADERS
+    include/note/link/cobs.hpp
+    include/note/link/detail/crc32.hpp
+    include/note/link/i2c.hpp
+    include/note/link/policy.hpp
+    include/note/link/serial.hpp
 )
 
 # ── Arduino headers (require Arduino SDK) ─────────────────────────────────

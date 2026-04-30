@@ -7,7 +7,7 @@
 #include <note/notecard.hpp>
 #include <note/api.hpp>
 #include <note/backends/cjson.hpp>
-#include <note/transport/serial.hpp>
+#include <note/link/serial.hpp>
 
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
@@ -42,7 +42,7 @@ static bool connect_wifi(Print& log) {
 
 static note::Notecard& get_notecard() {
     static noteemu::SoftcardSerialHal hal(*g_emu, millis, delay);
-    static note::transport::NotecardSerial<> transport(hal);
+    static note::link::SerialFramer<> transport(hal);
     static note::backends::CjsonBackend backend;
     static note::Notecard nc(backend, transport);
     return nc;

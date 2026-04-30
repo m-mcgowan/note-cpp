@@ -11,7 +11,7 @@
 // History: this file previously included transport+HAL-layer tests that
 // exercised the legacy buffered transport API. The streaming refactor moved
 // transport behind ITransact (and previously IBufferedTransport) adapters, and the old
-// buffered transact() on NotecardSerial no longer exists. Those tests have
+// buffered transact() on SerialFramer no longer exists. Those tests have
 // been dropped — they were testing infrastructure that no longer has the
 // shape they assumed. The remaining tests use the shared
 // ScriptedTransport (tests/common/scripted_transport.hpp) so the focus is

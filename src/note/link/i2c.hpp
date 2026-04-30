@@ -1,16 +1,16 @@
 #pragma once
 
 #include <note/transport_hal.hpp>
-#include <note/transport/protocol_policy.hpp>
+#include <note/link/policy.hpp>
 
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
 
-// note::transport::NotecardI2c
+// note::link::I2cFramer
 //
 // Hal implementation for I2C (Notecard SoI2C wire protocol).
-// Wraps a platform I2CHal (chunked TX/RX, priming query) into the
+// Wraps a platform I2cHal (chunked TX/RX, priming query) into the
 // blocking Hal interface used by Protocol.
 //
 // The PolicyType template parameter controls segment pacing and timeouts
@@ -19,18 +19,18 @@
 //
 // Usage — compile-time default policy (zero overhead, most common):
 //
-//   NotecardI2c transport(hal);
+//   I2cFramer transport(hal);
 //
 // Usage — compile-time custom policy (zero overhead):
 //
-//   NotecardI2c<StaticI2cPolicy<I2cPolicy::fast()>> transport(hal);
+//   I2cFramer<StaticI2cPolicy<I2cPolicy::fast()>> transport(hal);
 //
 // Usage — runtime mutable policy:
 //
-//   NotecardI2c<I2cPolicy> transport(hal);
+//   I2cFramer<I2cPolicy> transport(hal);
 //   transport.policy.segment_delay_ms = 100;  // adjust before a heavy request
 
-namespace note::transport {
+namespace note::link {
 
 // Notecard default I2C address (NOTE_I2C_ADDR_DEFAULT).
 inline constexpr uint16_t kI2cDefaultAddress = 0x17;
@@ -40,12 +40,12 @@ inline constexpr size_t kI2cDefaultMtu = 30;   // safe for all Arduino Wire impl
 inline constexpr size_t kI2cMaxMtu     = 253;  // UCHAR_MAX - 2 byte header
 
 // ---------------------------------------------------------------------------
-// I2CHal — pure virtual platform interface
+// I2cHal — pure virtual platform interface
 // ---------------------------------------------------------------------------
 
-class I2CHal {
+class I2cHal {
 public:
-    virtual ~I2CHal() = default;
+    virtual ~I2cHal() = default;
 
     // Hardware-level I2C reset. Returns false on failure.
     virtual bool     reset() = 0;
@@ -74,10 +74,10 @@ public:
 };
 
 // ---------------------------------------------------------------------------
-// I2cCallbackHal — wraps lambdas/function pointers as an I2CHal
+// I2cCallbackHal — wraps lambdas/function pointers as an I2cHal
 // ---------------------------------------------------------------------------
 
-class I2cCallbackHal : public I2CHal {
+class I2cCallbackHal : public I2cHal {
 public:
     using ResetFn    = std::function<bool()>;
     using TransmitFn = std::function<bool(const uint8_t*, size_t)>;
@@ -108,25 +108,25 @@ private:
 };
 
 // ---------------------------------------------------------------------------
-// NotecardI2c — Notecard I2C protocol implementation (Hal)
+// I2cFramer — Notecard I2C protocol implementation (Hal)
 // ---------------------------------------------------------------------------
 
-/// NotecardI2c — Hal implementation for I2C.
-/// Wraps a platform I2CHal (chunked TX/RX, priming query) into the blocking
+/// I2cFramer — Hal implementation for I2C.
+/// Wraps a platform I2cHal (chunked TX/RX, priming query) into the blocking
 /// Hal interface used by Protocol.
 #if __cplusplus >= 202002L
 template <typename PolicyType = StaticI2cPolicy<I2cPolicy{}>>
 #else
 template <typename PolicyType = I2cPolicy>
 #endif
-class NotecardI2c : public note::Hal {
+class I2cFramer : public note::Hal {
 public:
     // policy is public so callers can read or mutate it between requests.
     // For StaticI2cPolicy (the default), [[no_unique_address]] gives it
     // zero bytes — all fields are static constexpr, folded by the compiler.
     [[no_unique_address]] PolicyType policy;
 
-    explicit NotecardI2c(I2CHal& hal, PolicyType pol = {})
+    explicit I2cFramer(I2cHal& hal, PolicyType pol = {})
         : policy(pol), hal_(hal) {}
 
     // Chunked transmit with IO delay before each chunk.
@@ -246,7 +246,7 @@ public:
     void delay(uint32_t ms) override { hal_.delay(ms); }
 
 private:
-    I2CHal& hal_;
+    I2cHal& hal_;
 
     void delay_io() {
         if (policy.io_delay_ms > 0) hal_.delay(policy.io_delay_ms);
@@ -255,13 +255,13 @@ private:
 
 // Deduction guides — allow construction without explicit template arguments.
 #if __cplusplus >= 202002L
-NotecardI2c(I2CHal&) -> NotecardI2c<StaticI2cPolicy<I2cPolicy{}>>;
+I2cFramer(I2cHal&) -> I2cFramer<StaticI2cPolicy<I2cPolicy{}>>;
 template <I2cPolicy P>
-NotecardI2c(I2CHal&, StaticI2cPolicy<P>) -> NotecardI2c<StaticI2cPolicy<P>>;
+I2cFramer(I2cHal&, StaticI2cPolicy<P>) -> I2cFramer<StaticI2cPolicy<P>>;
 #else
-NotecardI2c(I2CHal&) -> NotecardI2c<I2cPolicy>;
+I2cFramer(I2cHal&) -> I2cFramer<I2cPolicy>;
 #endif
-NotecardI2c(I2CHal&, I2cPolicy) -> NotecardI2c<I2cPolicy>;
+I2cFramer(I2cHal&, I2cPolicy) -> I2cFramer<I2cPolicy>;
 
 // ---------------------------------------------------------------------------
 // Backward-compatible constants (derived from default policy values).
@@ -277,4 +277,4 @@ inline constexpr uint32_t kI2cResetSyncRetries = I2cPolicy{}.reset_sync_retries;
 inline constexpr uint32_t kI2cResponsePollMs   = I2cPolicy{}.response_poll_ms;
 inline constexpr uint32_t kI2cIntraTimeoutMs   = I2cPolicy{}.intra_timeout_ms;
 
-}  // namespace note::transport
+}  // namespace note::link

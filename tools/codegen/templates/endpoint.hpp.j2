@@ -442,7 +442,10 @@ namespace note::api {
 
 {{ indent }}/// Wire body parsing to the given struct.
 {{ indent }}/// The struct must use NOTE_FIELDS() or be a C++20 aggregate.
-{{ indent }}template<typename BodyT_>
+{{ indent }}/// SFINAE excludes JsonSink-derived types so the JsonSink& overload
+{{ indent }}/// below wins for those.
+{{ indent }}template<typename BodyT_,
+{{ indent }}         typename = ::std::enable_if_t<!::std::is_base_of_v<::note::JsonSink, BodyT_>>>
 {{ indent }}auto& into(BodyT_& out) {
 {{ indent }}    body_ptr_ = &out;
 {{ indent }}    body_handler_factory_ = [](void* b, ::note::StringPool& pool, void* storage) -> ::note::BodyHandler {
@@ -459,18 +462,42 @@ namespace note::api {
 {{ indent }}    return *this;
 {{ indent }}}
 {{ indent }}/// Return a copy with body parsing wired to the given struct (const overload).
-{{ indent }}template<typename BodyT_>
+{{ indent }}template<typename BodyT_,
+{{ indent }}         typename = ::std::enable_if_t<!::std::is_base_of_v<::note::JsonSink, BodyT_>>>
 {{ indent }}auto into(BodyT_& out) const {
 {{ indent }}    auto copy = *this;
 {{ indent }}    copy.into(out);
 {{ indent }}    return copy;
 {{ indent }}}
+
+{{ indent }}/// Forward body SAX events to the given JsonSink.
+{{ indent }}/// The sink must outlive execute(). Works in both streaming and
+{{ indent }}/// buffered transport modes.
+{{ indent }}auto& into(::note::JsonSink& sink_) {
+{{ indent }}    body_ptr_ = &sink_;
+{{ indent }}    body_handler_factory_ = &::note::jsonsink_body_factory;
+{{ indent }}    return *this;
+{{ indent }}}
+{{ indent }}/// Return a copy with body events wired to the given JsonSink (const overload).
+{{ indent }}auto into(::note::JsonSink& sink_) const {
+{{ indent }}    auto copy = *this;
+{{ indent }}    copy.into(sink_);
+{{ indent }}    return copy;
+{{ indent }}}
 {% if not has_body_prop %}
-{{ indent }}template<typename BodyT_> auto& body(BodyT_& out) { return into(out); }
-{{ indent }}template<typename BodyT_> auto body(BodyT_& out) const { return into(out); }
+{{ indent }}template<typename BodyT_,
+{{ indent }}         typename = ::std::enable_if_t<!::std::is_base_of_v<::note::JsonSink, BodyT_>>>
+{{ indent }}auto& body(BodyT_& out) { return into(out); }
+{{ indent }}template<typename BodyT_,
+{{ indent }}         typename = ::std::enable_if_t<!::std::is_base_of_v<::note::JsonSink, BodyT_>>>
+{{ indent }}auto body(BodyT_& out) const { return into(out); }
 {% endif %}
-{{ indent }}template<typename BodyT_> auto& from(BodyT_& out) { return into(out); }
-{{ indent }}template<typename BodyT_> auto from(BodyT_& out) const { return into(out); }
+{{ indent }}template<typename BodyT_,
+{{ indent }}         typename = ::std::enable_if_t<!::std::is_base_of_v<::note::JsonSink, BodyT_>>>
+{{ indent }}auto& from(BodyT_& out) { return into(out); }
+{{ indent }}template<typename BodyT_,
+{{ indent }}         typename = ::std::enable_if_t<!::std::is_base_of_v<::note::JsonSink, BodyT_>>>
+{{ indent }}auto from(BodyT_& out) const { return into(out); }
 {% endif %}
 
 {% if op.response.properties or op.response.has_body %}

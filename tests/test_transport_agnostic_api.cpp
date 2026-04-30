@@ -164,6 +164,75 @@ TEST_CASE("§1 typed API: .into() populates struct on buffered transport") {
 
 
 // ────────────────────────────────────────────────────────────────────────────
+// § 1b — High-level typed API: `.into(JsonSink&)` forwards body events.
+//
+// Same canned response over both transports — the JsonSink receives the
+// same key/value events on both paths. Verifies the type-erased JsonSink
+// adapter (jsonsink_body_factory) is wired through both execute paths.
+// ────────────────────────────────────────────────────────────────────────────
+
+namespace {
+struct RecordingBodySink : note::JsonSink {
+    std::string events;  // one line per event, "tag key=value"
+    void on_string(note::string_view k, note::string_view v) override {
+        events += "string ";
+        events.append(k.data(), k.size()); events += "=";
+        events.append(v.data(), v.size()); events += "\n";
+    }
+    void on_number(note::string_view k, note::string_view raw) override {
+        events += "number ";
+        events.append(k.data(), k.size()); events += "=";
+        events.append(raw.data(), raw.size()); events += "\n";
+    }
+    void on_int(note::string_view k, note::json_int_t v) override {
+        events += "int "; events.append(k.data(), k.size());
+        events += "="; events += std::to_string(v); events += "\n";
+    }
+};
+}  // namespace
+
+TEST_CASE("§1b typed API: .into(JsonSink&) on streaming transport") {
+    MockHal hal;
+    hal.queue_response(kCannedResponse);
+
+    note::Protocol transport(hal);
+    auto nc = note::test::make_test_notecard(transport, note::Allocator{});
+#if __cplusplus >= 202002L
+    note::Api<> api(nc);
+#else
+    note::Api api(nc);
+#endif
+
+    RecordingBodySink sink;
+    auto rsp = api.note.read("test.db").noteId("x").into(sink).execute();
+    REQUIRE(rsp.has_value());
+    CHECK(sink.events.find("temperature=") != std::string::npos);
+    CHECK(sink.events.find("humidity=") != std::string::npos);
+}
+
+TEST_CASE("§1b typed API: .into(JsonSink&) on buffered transport") {
+    note::backends::BufferJsonBackend<1024, 64> backend;
+    note::test::CallbackTransport transport(
+        [&](note::string_view, uint32_t) -> note::Result<note::string_view> {
+            return note::string_view(kCannedResponse);
+        });
+
+    auto nc = note::test::make_test_notecard(backend, transport);
+#if __cplusplus >= 202002L
+    note::Api<> api(nc);
+#else
+    note::Api api(nc);
+#endif
+
+    RecordingBodySink sink;
+    auto rsp = api.note.read("test.db").noteId("x").into(sink).execute();
+    REQUIRE(rsp.has_value());
+    CHECK(sink.events.find("temperature=") != std::string::npos);
+    CHECK(sink.events.find("humidity=") != std::string::npos);
+}
+
+
+// ────────────────────────────────────────────────────────────────────────────
 // § 2 — High-level typed API: `.body(T&)` emits the same wire JSON.
 //
 // Writer-side analog of `.into()`. Both transports must serialise the

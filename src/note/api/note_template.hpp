@@ -216,7 +216,10 @@ struct NoteTemplate {
 
         /// Wire body parsing to the given struct.
         /// The struct must use NOTE_FIELDS() or be a C++20 aggregate.
-        template<typename BodyT_>
+        /// SFINAE excludes JsonSink-derived types so the JsonSink& overload
+        /// below wins for those.
+        template<typename BodyT_,
+                 typename = ::std::enable_if_t<!::std::is_base_of_v<::note::JsonSink, BodyT_>>>
         auto& into(BodyT_& out) {
             body_ptr_ = &out;
             body_handler_factory_ = [](void* b, ::note::StringPool& pool, void* storage) -> ::note::BodyHandler {
@@ -233,14 +236,34 @@ struct NoteTemplate {
             return *this;
         }
         /// Return a copy with body parsing wired to the given struct (const overload).
-        template<typename BodyT_>
+        template<typename BodyT_,
+                 typename = ::std::enable_if_t<!::std::is_base_of_v<::note::JsonSink, BodyT_>>>
         auto into(BodyT_& out) const {
             auto copy = *this;
             copy.into(out);
             return copy;
         }
-        template<typename BodyT_> auto& from(BodyT_& out) { return into(out); }
-        template<typename BodyT_> auto from(BodyT_& out) const { return into(out); }
+
+        /// Forward body SAX events to the given JsonSink.
+        /// The sink must outlive execute(). Works in both streaming and
+        /// buffered transport modes.
+        auto& into(::note::JsonSink& sink_) {
+            body_ptr_ = &sink_;
+            body_handler_factory_ = &::note::jsonsink_body_factory;
+            return *this;
+        }
+        /// Return a copy with body events wired to the given JsonSink (const overload).
+        auto into(::note::JsonSink& sink_) const {
+            auto copy = *this;
+            copy.into(sink_);
+            return copy;
+        }
+        template<typename BodyT_,
+                 typename = ::std::enable_if_t<!::std::is_base_of_v<::note::JsonSink, BodyT_>>>
+        auto& from(BodyT_& out) { return into(out); }
+        template<typename BodyT_,
+                 typename = ::std::enable_if_t<!::std::is_base_of_v<::note::JsonSink, BodyT_>>>
+        auto from(BodyT_& out) const { return into(out); }
 
         /// Successful response
         struct Response {
@@ -761,7 +784,10 @@ struct NoteTemplate {
 
         /// Wire body parsing to the given struct.
         /// The struct must use NOTE_FIELDS() or be a C++20 aggregate.
-        template<typename BodyT_>
+        /// SFINAE excludes JsonSink-derived types so the JsonSink& overload
+        /// below wins for those.
+        template<typename BodyT_,
+                 typename = ::std::enable_if_t<!::std::is_base_of_v<::note::JsonSink, BodyT_>>>
         auto& into(BodyT_& out) {
             body_ptr_ = &out;
             body_handler_factory_ = [](void* b, ::note::StringPool& pool, void* storage) -> ::note::BodyHandler {
@@ -778,14 +804,34 @@ struct NoteTemplate {
             return *this;
         }
         /// Return a copy with body parsing wired to the given struct (const overload).
-        template<typename BodyT_>
+        template<typename BodyT_,
+                 typename = ::std::enable_if_t<!::std::is_base_of_v<::note::JsonSink, BodyT_>>>
         auto into(BodyT_& out) const {
             auto copy = *this;
             copy.into(out);
             return copy;
         }
-        template<typename BodyT_> auto& from(BodyT_& out) { return into(out); }
-        template<typename BodyT_> auto from(BodyT_& out) const { return into(out); }
+
+        /// Forward body SAX events to the given JsonSink.
+        /// The sink must outlive execute(). Works in both streaming and
+        /// buffered transport modes.
+        auto& into(::note::JsonSink& sink_) {
+            body_ptr_ = &sink_;
+            body_handler_factory_ = &::note::jsonsink_body_factory;
+            return *this;
+        }
+        /// Return a copy with body events wired to the given JsonSink (const overload).
+        auto into(::note::JsonSink& sink_) const {
+            auto copy = *this;
+            copy.into(sink_);
+            return copy;
+        }
+        template<typename BodyT_,
+                 typename = ::std::enable_if_t<!::std::is_base_of_v<::note::JsonSink, BodyT_>>>
+        auto& from(BodyT_& out) { return into(out); }
+        template<typename BodyT_,
+                 typename = ::std::enable_if_t<!::std::is_base_of_v<::note::JsonSink, BodyT_>>>
+        auto from(BodyT_& out) const { return into(out); }
 
         /// Successful response
         struct Response {

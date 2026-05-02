@@ -79,6 +79,16 @@ static void wire_debug(const note::WireEvent& ev, void*) {
     Serial.printf("  [wire %s] %.*s\n", dir, (int)ev.json.size(), ev.json.data());
 }
 
+#include <etst/doctest/runner.h>
+
+#ifdef COV_ENABLED
+#  include "pio_cov_dump.h"
+static void dump_coverage() {
+    pio_cov_dump();
+    Serial.flush();
+}
+#endif
+
 static bool board_init(Print& log) {
     log.println("=== note-cpp integration tests ===");
 #ifdef NOTECARD_TEST_SERIAL
@@ -130,28 +140,14 @@ static void configure_context(doctest::Context& ctx) {
     }
 }
 
-#include <etst/doctest/runner.h>
-
-#ifdef GCOV_ENABLED
-extern "C" {
-#  if defined(PIO_GCOV_TRACE_PC_BITMAP_BYTES)
-#    include "pio_gcov_trace_pc.h"
-#  else
-#    include "gcov_serial.h"
-#  endif
-}
-#endif
-
 void setup() {
     etst::config.board_init = board_init;
     etst::doctest::config.configure = configure_context;
-#ifdef GCOV_ENABLED
-#  if defined(PIO_GCOV_TRACE_PC_BITMAP_BYTES)
-    etst::config.after_cycle = pio_gcov_trace_pc_dump;
-#  else
-    etst::config.after_cycle = gcov_serial_dump;
-#  endif
+#ifdef COV_ENABLED
+    etst::config.after_cycle = dump_coverage;
 #endif
     DOCTEST_SETUP();
 }
-void loop()  { DOCTEST_LOOP(); }
+void loop()  {
+    DOCTEST_LOOP();
+}

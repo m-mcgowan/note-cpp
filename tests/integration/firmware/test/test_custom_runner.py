@@ -18,7 +18,7 @@ from importlib import metadata
 
 # Pinned commit on https://github.com/m-mcgowan/embedded-test-runner.
 # Bump intentionally; CI and fresh checkouts auto-reinstall on mismatch.
-_RUNNER_PINNED_SHA = "6efcb02"
+_RUNNER_PINNED_SHA = "0a40178"
 
 _RUNNER_DIST = "embedded-test-runner"
 _RUNNER_REPO = "https://github.com/m-mcgowan/embedded-test-runner.git"
@@ -120,4 +120,19 @@ from etst.runner import EmbeddedTestRunner  # noqa: E402
 
 
 class CustomTestRunner(EmbeddedTestRunner):
+    """note-cpp test runner.
+
+    The class exists primarily so PIO's ``custom_test_runner`` setting
+    has a target whose import triggers the auto-install bootstrap above
+    (etst + embedded-bridge at the pinned SHA). It carries no
+    behavioural overrides today.
+
+    COV: line capture used to live here as a hand-rolled router
+    receiver; pio-gcov v0.1+ now ships ``CovReceiver`` as an
+    ``embedded_test_runner.receivers`` entry-point plugin, so the
+    capture auto-attaches whenever pio-gcov is pip-installed in PIO's
+    penv. ``.cov`` files land at ``.pio/build/<env>/<partition>.cov``;
+    decode with ``python3 -m pio_gcov lcov --log <cov> --output <info>``.
+    """
+
     pass

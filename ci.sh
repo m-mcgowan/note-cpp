@@ -882,18 +882,13 @@ run_quick() {
     echo "  arduino minimal tests: OK"
 
     # NOTE_SINGLETON-only host build — exercises the singleton-thunk
-    # adapters on the *polymorphic* Notecard (NOTE_MINIMAL covers singleton
-    # + StaticNotecard via NOTE_STATIC_HAL). The build itself is the gap
-    # closure: it forces instantiation of Api::void_thunk_ /
-    # generic_thunk_ against `note::Notecard`, which used to fail to
-    # compile because execute_void / execute_generic_with_body only
-    # existed on StaticNotecard. The test binaries are not run here —
-    # singleton mode currently has unrelated runtime limitations
-    # (GenericResponseSink can't dispatch array fields; the generated
-    # `nc_err.view()` returns a stack-pointer that dangles past
-    # execute(); the thunk path doesn't inject request IDs). Those are
-    # pre-existing and surface only because this combination now
-    # compiles. Fixing them is separate work.
+    # adapters on the *polymorphic* Notecard (NOTE_MINIMAL covers
+    # singleton + StaticNotecard via NOTE_STATIC_HAL). Runs the full
+    # test suite to catch regressions in the singleton runtime path:
+    # err-message lifetime through the thunk's allocator-backed stash,
+    # request-ID injection via id_wrap_build, Safety propagation into
+    # retry_loop, and StringArray / version-guarded field dispatch
+    # through GenericResponseSink.
     ci_stage "Build tests (NOTE_SINGLETON only)"
     local BUILD_SINGLETON="/tmp/note-cpp-build-singleton"
     cmake -G "$GENERATOR" -B "$BUILD_SINGLETON" -S "$ROOT" \
@@ -902,7 +897,12 @@ run_quick() {
         -DCMAKE_CXX_FLAGS="-DNOTE_SINGLETON=1" \
         > /dev/null 2>&1
     nice cmake --build "$BUILD_SINGLETON" --parallel
-    echo "  singleton-only host + arduino test binaries link: OK"
+
+    ci_stage "Run tests (NOTE_SINGLETON only)"
+    "$BUILD_SINGLETON/tests/note-cpp-tests"
+    echo "  host singleton tests: OK"
+    "$BUILD_SINGLETON/tests/note-cpp-tests-arduino"
+    echo "  arduino singleton tests: OK"
 
     # PlatformIO integration test build (compile only, no hardware)
     if command -v pio >/dev/null 2>&1; then

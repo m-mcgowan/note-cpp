@@ -53,9 +53,13 @@ public:
 #if NOTE_JSONB
     // Raw JSON string bodies are not supported with JSONB wire format.
     // Use body() with a lambda or typed struct instead.
-#elif __cplusplus >= 202002L && !defined(__clang__) && !(defined(__GNUC__) && __GNUC__ < 14)
+#elif __cplusplus >= 202002L && !defined(__clang__)
     // String literal: validated at compile time as well-formed JSON object.
-    // Excluded from GCC < 14: inherited consteval constructors are broken (PR 102933).
+    // Verified on GCC 13.4+ and 14+: PR 102933 only affects *inherited* consteval
+    // constructors (`using Base::Base;` propagation), not regular consteval ctor
+    // templates like this one. An empirical test (rejecting `"[1,2,3]"` and
+    // accepting `"{"x":1}"`) passes on GCC 13.4 — earlier versions are not
+    // supported by the project's CI matrix.
     template<std::size_t N>
     consteval BodyValue(const char (&s)[N])
         : str_(string_view(s, N - 1)), write_fn_(&write_string) {
@@ -70,7 +74,7 @@ public:
     constexpr BodyValue(U&& v)
         : str_(string_view(std::forward<U>(v))), write_fn_(&write_string) {}
 #else
-    // Tier 1: raw JSON string (no compile-time validation on Clang/C++17/GCC<14).
+    // Tier 1: raw JSON string (no compile-time validation on Clang/C++17).
     // constexpr so callers can write `constexpr BodyValue v = "...";` on
     // toolchains where the validating consteval branch above isn't enabled.
     constexpr BodyValue(string_view json)

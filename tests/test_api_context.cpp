@@ -74,291 +74,365 @@ TEST_CASE("Api::command() overload") {
 
 TEST_CASE("Api::card resource group") {
     Harness h;
-    // card.attn (polymorphic)
-    h.api.execute(h.api.card.attn().request());
-    h.api.execute(h.api.card.attn().arm());
-    h.api.execute(h.api.card.attn().rearm());
-    h.api.execute(h.api.card.attn().watchdog());
-    h.api.execute(h.api.card.attn().sleep());
-    h.api.execute(h.api.card.attn().retrieve());
-    h.api.execute(h.api.card.attn().disarm());
-    h.api.execute(h.api.card.attn().off());
-    h.api.execute(h.api.card.attn().on());
-    h.api.execute(h.api.card.attn().query());
-    REQUIRE(h.last_req.find("card.attn") != std::string::npos);
-    // card.aux (factory member — callable)
-    h.api.execute(h.api.card.aux());
-    REQUIRE(h.last_req.find("card.aux") != std::string::npos);
-    // card.aux.serial (polymorphic)
-    h.api.execute(h.api.card.aux.serial.request());
-    h.api.execute(h.api.card.aux.serial.notify());
-    h.api.execute(h.api.card.aux.serial.gps());
-    h.api.execute(h.api.card.aux.serial.configure());
-    h.api.execute(h.api.card.aux.serial.off());
-    REQUIRE(h.last_req.find("card.aux.serial") != std::string::npos);
-    // card.binary (polymorphic)
-    h.api.execute(h.api.card.binary.status());
-    h.api.execute(h.api.card.binary.clear());
-    REQUIRE(h.last_req.find("card.binary") != std::string::npos);
-    // card.binary.get
-    h.api.execute(h.api.card.binary.get());
-    REQUIRE(h.last_req.find("card.binary.get") != std::string::npos);
-    // card.binary.put
-    h.api.execute(h.api.card.binary.put());
-    REQUIRE(h.last_req.find("card.binary.put") != std::string::npos);
-    // card.carrier
-    h.api.execute(h.api.card.carrier());
-    REQUIRE(h.last_req.find("card.carrier") != std::string::npos);
-    // card.contact (polymorphic)
-    h.api.execute(h.api.card.contact().get());
-    h.api.execute(h.api.card.contact().set());
-    REQUIRE(h.last_req.find("card.contact") != std::string::npos);
-    // card.dfu
-    h.api.execute(h.api.card.dfu());
-    REQUIRE(h.last_req.find("card.dfu") != std::string::npos);
-    // card.illumination
-    h.api.execute(h.api.card.illumination());
-    REQUIRE(h.last_req.find("card.illumination") != std::string::npos);
-    // card.io
-    h.api.execute(h.api.card.io());
-    REQUIRE(h.last_req.find("card.io") != std::string::npos);
-    // card.led
-    h.api.execute(h.api.card.led());
-    REQUIRE(h.last_req.find("card.led") != std::string::npos);
-    // card.location (factory member — callable)
-    h.api.execute(h.api.card.location());
-    REQUIRE(h.last_req.find("card.location") != std::string::npos);
-    // card.location.mode (polymorphic)
-    h.api.execute(h.api.card.location.mode.get());
-    h.api.execute(h.api.card.location.mode.set());
-    h.api.execute(h.api.card.location.mode.continuous());
-    h.api.execute(h.api.card.location.mode.periodic());
-    h.api.execute(h.api.card.location.mode.fixed());
-    h.api.execute(h.api.card.location.mode.remove());
-    REQUIRE(h.last_req.find("card.location.mode") != std::string::npos);
-    // card.location.track
-    h.api.execute(h.api.card.location.track());
-    REQUIRE(h.last_req.find("card.location.track") != std::string::npos);
-    // card.monitor
-    h.api.execute(h.api.card.monitor());
-    REQUIRE(h.last_req.find("card.monitor") != std::string::npos);
-    // card.motion (factory member — callable)
-    h.api.execute(h.api.card.motion());
-    REQUIRE(h.last_req.find("card.motion") != std::string::npos);
-    // card.motion.mode
-    h.api.execute(h.api.card.motion.mode());
-    REQUIRE(h.last_req.find("card.motion.mode") != std::string::npos);
-    // card.motion.sync
-    h.api.execute(h.api.card.motion.sync());
-    REQUIRE(h.last_req.find("card.motion.sync") != std::string::npos);
-    // card.motion.track
-    h.api.execute(h.api.card.motion.track());
-    REQUIRE(h.last_req.find("card.motion.track") != std::string::npos);
-    // card.power (polymorphic)
-    h.api.execute(h.api.card.power().read());
-    h.api.execute(h.api.card.power().configure());
-    h.api.execute(h.api.card.power().reset());
-    REQUIRE(h.last_req.find("card.power") != std::string::npos);
-    // card.random
-    h.api.execute(h.api.card.random());
-    REQUIRE(h.last_req.find("card.random") != std::string::npos);
-    // card.restart
-    h.api.execute(h.api.card.restart());
-    REQUIRE(h.last_req.find("card.restart") != std::string::npos);
-    // card.restore
-    h.api.execute(h.api.card.restore());
-    REQUIRE(h.last_req.find("card.restore") != std::string::npos);
-    // card.sleep
-    h.api.execute(h.api.card.sleep());
-    REQUIRE(h.last_req.find("card.sleep") != std::string::npos);
-    // card.status
-    h.api.execute(h.api.card.status());
-    REQUIRE(h.last_req.find("card.status") != std::string::npos);
-    // card.temp (polymorphic)
-    h.api.execute(h.api.card.temp().read());
-    h.api.execute(h.api.card.temp().configure());
-    h.api.execute(h.api.card.temp().stop());
-    REQUIRE(h.last_req.find("card.temp") != std::string::npos);
-    // card.time
-    h.api.execute(h.api.card.time());
-    REQUIRE(h.last_req.find("card.time") != std::string::npos);
-    // card.trace
-    h.api.execute(h.api.card.trace());
-    REQUIRE(h.last_req.find("card.trace") != std::string::npos);
-    // card.transport
-    h.api.execute(h.api.card.transport());
-    REQUIRE(h.last_req.find("card.transport") != std::string::npos);
-    // card.triangulate
-    h.api.execute(h.api.card.triangulate());
-    REQUIRE(h.last_req.find("card.triangulate") != std::string::npos);
-    // card.usage.get
-    h.api.execute(h.api.card.usageGet());
-    REQUIRE(h.last_req.find("card.usage.get") != std::string::npos);
-    // card.usage.test
-    h.api.execute(h.api.card.usageTest());
-    REQUIRE(h.last_req.find("card.usage.test") != std::string::npos);
-    // card.version
-    h.api.execute(h.api.card.version());
-    REQUIRE(h.last_req.find("card.version") != std::string::npos);
-    // card.voltage (polymorphic)
-    h.api.execute(h.api.card.voltage().read());
-    h.api.execute(h.api.card.voltage().configure());
-    REQUIRE(h.last_req.find("card.voltage") != std::string::npos);
-    // card.wifi
-    h.api.execute(h.api.card.wifi());
-    REQUIRE(h.last_req.find("card.wifi") != std::string::npos);
-    // card.wireless (factory member — callable)
-    h.api.execute(h.api.card.wireless());
-    REQUIRE(h.last_req.find("card.wireless") != std::string::npos);
-    // card.wireless.penalty (polymorphic)
-    h.api.execute(h.api.card.wireless.penalty.check());
-    h.api.execute(h.api.card.wireless.penalty.set());
-    h.api.execute(h.api.card.wireless.penalty.clear());
-    REQUIRE(h.last_req.find("card.wireless.penalty") != std::string::npos);
+    SUBCASE("card.attn") {
+        h.api.execute(h.api.card.attn().request());
+        h.api.execute(h.api.card.attn().arm());
+        h.api.execute(h.api.card.attn().rearm());
+        h.api.execute(h.api.card.attn().watchdog());
+        h.api.execute(h.api.card.attn().sleep());
+        h.api.execute(h.api.card.attn().retrieve());
+        h.api.execute(h.api.card.attn().disarm());
+        h.api.execute(h.api.card.attn().off());
+        h.api.execute(h.api.card.attn().on());
+        h.api.execute(h.api.card.attn().query());
+        REQUIRE(h.last_req.find("card.attn") != std::string::npos);
+    }
+    SUBCASE("card.aux") {
+        h.api.execute(h.api.card.aux());
+        REQUIRE(h.last_req.find("card.aux") != std::string::npos);
+    }
+    SUBCASE("card.aux.serial") {
+        h.api.execute(h.api.card.aux.serial.request());
+        h.api.execute(h.api.card.aux.serial.notify());
+        h.api.execute(h.api.card.aux.serial.gps());
+        h.api.execute(h.api.card.aux.serial.configure());
+        h.api.execute(h.api.card.aux.serial.off());
+        REQUIRE(h.last_req.find("card.aux.serial") != std::string::npos);
+    }
+    SUBCASE("card.binary") {
+        h.api.execute(h.api.card.binary.status());
+        h.api.execute(h.api.card.binary.clear());
+        REQUIRE(h.last_req.find("card.binary") != std::string::npos);
+    }
+    SUBCASE("card.binary.get") {
+        h.api.execute(h.api.card.binary.get());
+        REQUIRE(h.last_req.find("card.binary.get") != std::string::npos);
+    }
+    SUBCASE("card.binary.put") {
+        h.api.execute(h.api.card.binary.put());
+        REQUIRE(h.last_req.find("card.binary.put") != std::string::npos);
+    }
+    SUBCASE("card.carrier") {
+        h.api.execute(h.api.card.carrier());
+        REQUIRE(h.last_req.find("card.carrier") != std::string::npos);
+    }
+    SUBCASE("card.contact") {
+        h.api.execute(h.api.card.contact().get());
+        h.api.execute(h.api.card.contact().set());
+        REQUIRE(h.last_req.find("card.contact") != std::string::npos);
+    }
+    SUBCASE("card.dfu") {
+        h.api.execute(h.api.card.dfu());
+        REQUIRE(h.last_req.find("card.dfu") != std::string::npos);
+    }
+    SUBCASE("card.illumination") {
+        h.api.execute(h.api.card.illumination());
+        REQUIRE(h.last_req.find("card.illumination") != std::string::npos);
+    }
+    SUBCASE("card.io") {
+        h.api.execute(h.api.card.io());
+        REQUIRE(h.last_req.find("card.io") != std::string::npos);
+    }
+    SUBCASE("card.led") {
+        h.api.execute(h.api.card.led());
+        REQUIRE(h.last_req.find("card.led") != std::string::npos);
+    }
+    SUBCASE("card.location") {
+        h.api.execute(h.api.card.location());
+        REQUIRE(h.last_req.find("card.location") != std::string::npos);
+    }
+    SUBCASE("card.location.mode") {
+        h.api.execute(h.api.card.location.mode.get());
+        h.api.execute(h.api.card.location.mode.set());
+        h.api.execute(h.api.card.location.mode.continuous());
+        h.api.execute(h.api.card.location.mode.periodic());
+        h.api.execute(h.api.card.location.mode.fixed());
+        h.api.execute(h.api.card.location.mode.remove());
+        REQUIRE(h.last_req.find("card.location.mode") != std::string::npos);
+    }
+    SUBCASE("card.location.track") {
+        h.api.execute(h.api.card.location.track());
+        REQUIRE(h.last_req.find("card.location.track") != std::string::npos);
+    }
+    SUBCASE("card.monitor") {
+        h.api.execute(h.api.card.monitor());
+        REQUIRE(h.last_req.find("card.monitor") != std::string::npos);
+    }
+    SUBCASE("card.motion") {
+        h.api.execute(h.api.card.motion());
+        REQUIRE(h.last_req.find("card.motion") != std::string::npos);
+    }
+    SUBCASE("card.motion.mode") {
+        h.api.execute(h.api.card.motion.mode());
+        REQUIRE(h.last_req.find("card.motion.mode") != std::string::npos);
+    }
+    SUBCASE("card.motion.sync") {
+        h.api.execute(h.api.card.motion.sync());
+        REQUIRE(h.last_req.find("card.motion.sync") != std::string::npos);
+    }
+    SUBCASE("card.motion.track") {
+        h.api.execute(h.api.card.motion.track());
+        REQUIRE(h.last_req.find("card.motion.track") != std::string::npos);
+    }
+    SUBCASE("card.power") {
+        h.api.execute(h.api.card.power().read());
+        h.api.execute(h.api.card.power().configure());
+        h.api.execute(h.api.card.power().reset());
+        REQUIRE(h.last_req.find("card.power") != std::string::npos);
+    }
+    SUBCASE("card.random") {
+        h.api.execute(h.api.card.random());
+        REQUIRE(h.last_req.find("card.random") != std::string::npos);
+    }
+    SUBCASE("card.restart") {
+        h.api.execute(h.api.card.restart());
+        REQUIRE(h.last_req.find("card.restart") != std::string::npos);
+    }
+    SUBCASE("card.restore") {
+        h.api.execute(h.api.card.restore());
+        REQUIRE(h.last_req.find("card.restore") != std::string::npos);
+    }
+    SUBCASE("card.sleep") {
+        h.api.execute(h.api.card.sleep());
+        REQUIRE(h.last_req.find("card.sleep") != std::string::npos);
+    }
+    SUBCASE("card.status") {
+        h.api.execute(h.api.card.status());
+        REQUIRE(h.last_req.find("card.status") != std::string::npos);
+    }
+    SUBCASE("card.temp") {
+        h.api.execute(h.api.card.temp().read());
+        h.api.execute(h.api.card.temp().configure());
+        h.api.execute(h.api.card.temp().stop());
+        REQUIRE(h.last_req.find("card.temp") != std::string::npos);
+    }
+    SUBCASE("card.time") {
+        h.api.execute(h.api.card.time());
+        REQUIRE(h.last_req.find("card.time") != std::string::npos);
+    }
+    SUBCASE("card.trace") {
+        h.api.execute(h.api.card.trace());
+        REQUIRE(h.last_req.find("card.trace") != std::string::npos);
+    }
+    SUBCASE("card.transport") {
+        h.api.execute(h.api.card.transport());
+        REQUIRE(h.last_req.find("card.transport") != std::string::npos);
+    }
+    SUBCASE("card.triangulate") {
+        h.api.execute(h.api.card.triangulate());
+        REQUIRE(h.last_req.find("card.triangulate") != std::string::npos);
+    }
+    SUBCASE("card.usage.get") {
+        h.api.execute(h.api.card.usageGet());
+        REQUIRE(h.last_req.find("card.usage.get") != std::string::npos);
+    }
+    SUBCASE("card.usage.test") {
+        h.api.execute(h.api.card.usageTest());
+        REQUIRE(h.last_req.find("card.usage.test") != std::string::npos);
+    }
+    SUBCASE("card.version") {
+        h.api.execute(h.api.card.version());
+        REQUIRE(h.last_req.find("card.version") != std::string::npos);
+    }
+    SUBCASE("card.voltage") {
+        h.api.execute(h.api.card.voltage().read());
+        h.api.execute(h.api.card.voltage().configure());
+        REQUIRE(h.last_req.find("card.voltage") != std::string::npos);
+    }
+    SUBCASE("card.wifi") {
+        h.api.execute(h.api.card.wifi());
+        REQUIRE(h.last_req.find("card.wifi") != std::string::npos);
+    }
+    SUBCASE("card.wireless") {
+        h.api.execute(h.api.card.wireless());
+        REQUIRE(h.last_req.find("card.wireless") != std::string::npos);
+    }
+    SUBCASE("card.wireless.penalty") {
+        h.api.execute(h.api.card.wireless.penalty.check());
+        h.api.execute(h.api.card.wireless.penalty.set());
+        h.api.execute(h.api.card.wireless.penalty.clear());
+        REQUIRE(h.last_req.find("card.wireless.penalty") != std::string::npos);
+    }
 }
 
 TEST_CASE("Api::dfu resource group") {
     Harness h;
-    // dfu.get
-    h.api.execute(h.api.dfu.get());
-    REQUIRE(h.last_req.find("dfu.get") != std::string::npos);
-    // dfu.status
-    h.api.execute(h.api.dfu.status());
-    REQUIRE(h.last_req.find("dfu.status") != std::string::npos);
+    SUBCASE("dfu.get") {
+        h.api.execute(h.api.dfu.get());
+        REQUIRE(h.last_req.find("dfu.get") != std::string::npos);
+    }
+    SUBCASE("dfu.status") {
+        h.api.execute(h.api.dfu.status());
+        REQUIRE(h.last_req.find("dfu.status") != std::string::npos);
+    }
 }
 
 TEST_CASE("Api::env resource group") {
     Harness h;
-    // env.default (polymorphic)
-    h.api.execute(h.api.env.defaults().set(note::string_view("x-name")));
-    h.api.execute(h.api.env.defaults().remove(note::string_view("x-name")));
-    REQUIRE(h.last_req.find("env.default") != std::string::npos);
-    // env.get
-    h.api.execute(h.api.env.get());
-    REQUIRE(h.last_req.find("env.get") != std::string::npos);
-    // env.modified
-    h.api.execute(h.api.env.modified());
-    REQUIRE(h.last_req.find("env.modified") != std::string::npos);
-    // env.set
-    h.api.execute(h.api.env.set(note::string_view("x-name")));
-    REQUIRE(h.last_req.find("env.set") != std::string::npos);
-    // env.template
-    h.api.execute(h.api.env.templates());
-    REQUIRE(h.last_req.find("env.template") != std::string::npos);
+    SUBCASE("env.default") {
+        h.api.execute(h.api.env.defaults().set(note::string_view("x-name")));
+        h.api.execute(h.api.env.defaults().remove(note::string_view("x-name")));
+        REQUIRE(h.last_req.find("env.default") != std::string::npos);
+    }
+    SUBCASE("env.get") {
+        h.api.execute(h.api.env.get());
+        REQUIRE(h.last_req.find("env.get") != std::string::npos);
+    }
+    SUBCASE("env.modified") {
+        h.api.execute(h.api.env.modified());
+        REQUIRE(h.last_req.find("env.modified") != std::string::npos);
+    }
+    SUBCASE("env.set") {
+        h.api.execute(h.api.env.set(note::string_view("x-name")));
+        REQUIRE(h.last_req.find("env.set") != std::string::npos);
+    }
+    SUBCASE("env.template") {
+        h.api.execute(h.api.env.templates());
+        REQUIRE(h.last_req.find("env.template") != std::string::npos);
+    }
 }
 
 TEST_CASE("Api::file resource group") {
     Harness h;
-    // file.changes (factory member — callable)
-    h.api.execute(h.api.file.changes());
-    REQUIRE(h.last_req.find("file.changes") != std::string::npos);
-    // file.changes.pending
-    h.api.execute(h.api.file.changes.pending());
-    REQUIRE(h.last_req.find("file.changes.pending") != std::string::npos);
-    // file.clear
-    h.api.execute(h.api.file.clear());
-    REQUIRE(h.last_req.find("file.clear") != std::string::npos);
-    // file.delete
-    h.api.execute(h.api.file.delete_());
-    REQUIRE(h.last_req.find("file.delete") != std::string::npos);
-    // file.stats
-    h.api.execute(h.api.file.stats());
-    REQUIRE(h.last_req.find("file.stats") != std::string::npos);
+    SUBCASE("file.changes") {
+        h.api.execute(h.api.file.changes());
+        REQUIRE(h.last_req.find("file.changes") != std::string::npos);
+    }
+    SUBCASE("file.changes.pending") {
+        h.api.execute(h.api.file.changes.pending());
+        REQUIRE(h.last_req.find("file.changes.pending") != std::string::npos);
+    }
+    SUBCASE("file.clear") {
+        h.api.execute(h.api.file.clear());
+        REQUIRE(h.last_req.find("file.clear") != std::string::npos);
+    }
+    SUBCASE("file.delete") {
+        h.api.execute(h.api.file.delete_());
+        REQUIRE(h.last_req.find("file.delete") != std::string::npos);
+    }
+    SUBCASE("file.stats") {
+        h.api.execute(h.api.file.stats());
+        REQUIRE(h.last_req.find("file.stats") != std::string::npos);
+    }
 }
 
 TEST_CASE("Api::hub resource group") {
     Harness h;
-    // hub.get
-    h.api.execute(h.api.hub.get());
-    REQUIRE(h.last_req.find("hub.get") != std::string::npos);
-    // hub.log
-    h.api.execute(h.api.hub.log());
-    REQUIRE(h.last_req.find("hub.log") != std::string::npos);
-    // hub.set
-    h.api.execute(h.api.hub.set());
-    REQUIRE(h.last_req.find("hub.set") != std::string::npos);
-    // hub.signal
-    h.api.execute(h.api.hub.signal());
-    REQUIRE(h.last_req.find("hub.signal") != std::string::npos);
-    // hub.status
-    h.api.execute(h.api.hub.status());
-    REQUIRE(h.last_req.find("hub.status") != std::string::npos);
-    // hub.sync (factory member — callable)
-    h.api.execute(h.api.hub.sync());
-    REQUIRE(h.last_req.find("hub.sync") != std::string::npos);
-    // hub.sync.status
-    h.api.execute(h.api.hub.sync.status());
-    REQUIRE(h.last_req.find("hub.sync.status") != std::string::npos);
+    SUBCASE("hub.get") {
+        h.api.execute(h.api.hub.get());
+        REQUIRE(h.last_req.find("hub.get") != std::string::npos);
+    }
+    SUBCASE("hub.log") {
+        h.api.execute(h.api.hub.log());
+        REQUIRE(h.last_req.find("hub.log") != std::string::npos);
+    }
+    SUBCASE("hub.set") {
+        h.api.execute(h.api.hub.set());
+        REQUIRE(h.last_req.find("hub.set") != std::string::npos);
+    }
+    SUBCASE("hub.signal") {
+        h.api.execute(h.api.hub.signal());
+        REQUIRE(h.last_req.find("hub.signal") != std::string::npos);
+    }
+    SUBCASE("hub.status") {
+        h.api.execute(h.api.hub.status());
+        REQUIRE(h.last_req.find("hub.status") != std::string::npos);
+    }
+    SUBCASE("hub.sync") {
+        h.api.execute(h.api.hub.sync());
+        REQUIRE(h.last_req.find("hub.sync") != std::string::npos);
+    }
+    SUBCASE("hub.sync.status") {
+        h.api.execute(h.api.hub.sync.status());
+        REQUIRE(h.last_req.find("hub.sync.status") != std::string::npos);
+    }
 }
 
 TEST_CASE("Api::note resource group") {
     Harness h;
-    // note.add
-    h.api.execute(h.api.note.add());
-    REQUIRE(h.last_req.find("note.add") != std::string::npos);
-    // note.changes (polymorphic)
-    h.api.execute(h.api.note.changes().peek());
-    h.api.execute(h.api.note.changes().pop(note::string_view("x-file")));
-    REQUIRE(h.last_req.find("note.changes") != std::string::npos);
-    // note.delete
-    h.api.execute(h.api.note.delete_(note::string_view("x-file"), note::string_view("x-note")));
-    REQUIRE(h.last_req.find("note.delete") != std::string::npos);
-    // note.get (polymorphic)
-    h.api.execute(h.api.note.get().read());
-    h.api.execute(h.api.note.get().pop());
-    REQUIRE(h.last_req.find("note.get") != std::string::npos);
-    // note.template (polymorphic)
-    h.api.execute(h.api.note.templates().define(note::string_view("x-file")));
-    h.api.execute(h.api.note.templates().remove(note::string_view("x-file")));
-    REQUIRE(h.last_req.find("note.template") != std::string::npos);
-    // note.update
-    h.api.execute(h.api.note.update(note::string_view("x-file"), note::string_view("x-note")));
-    REQUIRE(h.last_req.find("note.update") != std::string::npos);
+    SUBCASE("note.add") {
+        h.api.execute(h.api.note.add());
+        REQUIRE(h.last_req.find("note.add") != std::string::npos);
+    }
+    SUBCASE("note.changes") {
+        h.api.execute(h.api.note.changes().peek());
+        h.api.execute(h.api.note.changes().pop(note::string_view("x-file")));
+        REQUIRE(h.last_req.find("note.changes") != std::string::npos);
+    }
+    SUBCASE("note.delete") {
+        h.api.execute(h.api.note.delete_(note::string_view("x-file"), note::string_view("x-note")));
+        REQUIRE(h.last_req.find("note.delete") != std::string::npos);
+    }
+    SUBCASE("note.get") {
+        h.api.execute(h.api.note.get().read());
+        h.api.execute(h.api.note.get().pop());
+        REQUIRE(h.last_req.find("note.get") != std::string::npos);
+    }
+    SUBCASE("note.template") {
+        h.api.execute(h.api.note.templates().define(note::string_view("x-file")));
+        h.api.execute(h.api.note.templates().remove(note::string_view("x-file")));
+        REQUIRE(h.last_req.find("note.template") != std::string::npos);
+    }
+    SUBCASE("note.update") {
+        h.api.execute(h.api.note.update(note::string_view("x-file"), note::string_view("x-note")));
+        REQUIRE(h.last_req.find("note.update") != std::string::npos);
+    }
 }
 
 TEST_CASE("Api::ntn resource group") {
     Harness h;
-    // ntn.gps
-    h.api.execute(h.api.ntn.gps());
-    REQUIRE(h.last_req.find("ntn.gps") != std::string::npos);
-    // ntn.reset
-    h.api.execute(h.api.ntn.reset());
-    REQUIRE(h.last_req.find("ntn.reset") != std::string::npos);
-    // ntn.status
-    h.api.execute(h.api.ntn.status());
-    REQUIRE(h.last_req.find("ntn.status") != std::string::npos);
+    SUBCASE("ntn.gps") {
+        h.api.execute(h.api.ntn.gps());
+        REQUIRE(h.last_req.find("ntn.gps") != std::string::npos);
+    }
+    SUBCASE("ntn.reset") {
+        h.api.execute(h.api.ntn.reset());
+        REQUIRE(h.last_req.find("ntn.reset") != std::string::npos);
+    }
+    SUBCASE("ntn.status") {
+        h.api.execute(h.api.ntn.status());
+        REQUIRE(h.last_req.find("ntn.status") != std::string::npos);
+    }
 }
 
 TEST_CASE("Api::var resource group") {
     Harness h;
-    // var.delete
-    h.api.execute(h.api.var.delete_());
-    REQUIRE(h.last_req.find("var.delete") != std::string::npos);
-    // var.get
-    h.api.execute(h.api.var.get());
-    REQUIRE(h.last_req.find("var.get") != std::string::npos);
-    // var.set
-    h.api.execute(h.api.var.set());
-    REQUIRE(h.last_req.find("var.set") != std::string::npos);
+    SUBCASE("var.delete") {
+        h.api.execute(h.api.var.delete_());
+        REQUIRE(h.last_req.find("var.delete") != std::string::npos);
+    }
+    SUBCASE("var.get") {
+        h.api.execute(h.api.var.get());
+        REQUIRE(h.last_req.find("var.get") != std::string::npos);
+    }
+    SUBCASE("var.set") {
+        h.api.execute(h.api.var.set());
+        REQUIRE(h.last_req.find("var.set") != std::string::npos);
+    }
 }
 
 TEST_CASE("Api::web resource group") {
     Harness h;
-    // web
-    h.api.execute(h.api.web.request());
-    REQUIRE(h.last_req.find("web") != std::string::npos);
-    // web.delete
-    h.api.execute(h.api.web.delete_());
-    REQUIRE(h.last_req.find("web.delete") != std::string::npos);
-    // web.get
-    h.api.execute(h.api.web.get());
-    REQUIRE(h.last_req.find("web.get") != std::string::npos);
-    // web.post
-    h.api.execute(h.api.web.post());
-    REQUIRE(h.last_req.find("web.post") != std::string::npos);
-    // web.put
-    h.api.execute(h.api.web.put());
-    REQUIRE(h.last_req.find("web.put") != std::string::npos);
+    SUBCASE("web") {
+        h.api.execute(h.api.web.request());
+        REQUIRE(h.last_req.find("web") != std::string::npos);
+    }
+    SUBCASE("web.delete") {
+        h.api.execute(h.api.web.delete_());
+        REQUIRE(h.last_req.find("web.delete") != std::string::npos);
+    }
+    SUBCASE("web.get") {
+        h.api.execute(h.api.web.get());
+        REQUIRE(h.last_req.find("web.get") != std::string::npos);
+    }
+    SUBCASE("web.post") {
+        h.api.execute(h.api.web.post());
+        REQUIRE(h.last_req.find("web.post") != std::string::npos);
+    }
+    SUBCASE("web.put") {
+        h.api.execute(h.api.web.put());
+        REQUIRE(h.last_req.find("web.put") != std::string::npos);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -367,71 +441,117 @@ TEST_CASE("Api::web resource group") {
 
 TEST_CASE("Api::card Layer 2 aliases") {
     Harness h;
-    h.api.execute(h.api.card.binaryStatus());
-    REQUIRE(h.last_req.find("card.binary") != std::string::npos);
-    h.api.execute(h.api.card.binaryClear());
-    REQUIRE(h.last_req.find("card.binary") != std::string::npos);
-    h.api.execute(h.api.card.readContact());
-    REQUIRE(h.last_req.find("card.contact") != std::string::npos);
-    h.api.execute(h.api.card.readLocationMode());
-    REQUIRE(h.last_req.find("card.location.mode") != std::string::npos);
-    h.api.execute(h.api.card.resetLocationMode());
-    REQUIRE(h.last_req.find("card.location.mode") != std::string::npos);
-    h.api.execute(h.api.card.readPower());
-    REQUIRE(h.last_req.find("card.power") != std::string::npos);
-    h.api.execute(h.api.card.resetPower());
-    REQUIRE(h.last_req.find("card.power") != std::string::npos);
-    h.api.execute(h.api.card.readTemp());
-    REQUIRE(h.last_req.find("card.temp") != std::string::npos);
-    h.api.execute(h.api.card.stopTemp());
-    REQUIRE(h.last_req.find("card.temp") != std::string::npos);
-    h.api.execute(h.api.card.readVoltage());
-    REQUIRE(h.last_req.find("card.voltage") != std::string::npos);
-    h.api.execute(h.api.card.readWirelessPenalty());
-    REQUIRE(h.last_req.find("card.wireless.penalty") != std::string::npos);
-    h.api.execute(h.api.card.resetWirelessPenalty());
-    REQUIRE(h.last_req.find("card.wireless.penalty") != std::string::npos);
+    SUBCASE("binaryStatus") {
+        h.api.execute(h.api.card.binaryStatus());
+        REQUIRE(h.last_req.find("card.binary") != std::string::npos);
+    }
+    SUBCASE("binaryClear") {
+        h.api.execute(h.api.card.binaryClear());
+        REQUIRE(h.last_req.find("card.binary") != std::string::npos);
+    }
+    SUBCASE("readContact") {
+        h.api.execute(h.api.card.readContact());
+        REQUIRE(h.last_req.find("card.contact") != std::string::npos);
+    }
+    SUBCASE("readLocationMode") {
+        h.api.execute(h.api.card.readLocationMode());
+        REQUIRE(h.last_req.find("card.location.mode") != std::string::npos);
+    }
+    SUBCASE("resetLocationMode") {
+        h.api.execute(h.api.card.resetLocationMode());
+        REQUIRE(h.last_req.find("card.location.mode") != std::string::npos);
+    }
+    SUBCASE("readPower") {
+        h.api.execute(h.api.card.readPower());
+        REQUIRE(h.last_req.find("card.power") != std::string::npos);
+    }
+    SUBCASE("resetPower") {
+        h.api.execute(h.api.card.resetPower());
+        REQUIRE(h.last_req.find("card.power") != std::string::npos);
+    }
+    SUBCASE("readTemp") {
+        h.api.execute(h.api.card.readTemp());
+        REQUIRE(h.last_req.find("card.temp") != std::string::npos);
+    }
+    SUBCASE("stopTemp") {
+        h.api.execute(h.api.card.stopTemp());
+        REQUIRE(h.last_req.find("card.temp") != std::string::npos);
+    }
+    SUBCASE("readVoltage") {
+        h.api.execute(h.api.card.readVoltage());
+        REQUIRE(h.last_req.find("card.voltage") != std::string::npos);
+    }
+    SUBCASE("readWirelessPenalty") {
+        h.api.execute(h.api.card.readWirelessPenalty());
+        REQUIRE(h.last_req.find("card.wireless.penalty") != std::string::npos);
+    }
+    SUBCASE("resetWirelessPenalty") {
+        h.api.execute(h.api.card.resetWirelessPenalty());
+        REQUIRE(h.last_req.find("card.wireless.penalty") != std::string::npos);
+    }
 }
 
 TEST_CASE("Api::env Layer 2 aliases") {
     Harness h;
-    h.api.execute(h.api.env.setDefault(note::string_view("x-name"), note::string_view("x-text")));
-    REQUIRE(h.last_req.find("env.default") != std::string::npos);
-    h.api.execute(h.api.env.clearDefault(note::string_view("x-name")));
-    REQUIRE(h.last_req.find("env.default") != std::string::npos);
+    SUBCASE("setDefault") {
+        h.api.execute(h.api.env.setDefault(note::string_view("x-name"), note::string_view("x-text")));
+        REQUIRE(h.last_req.find("env.default") != std::string::npos);
+    }
+    SUBCASE("clearDefault") {
+        h.api.execute(h.api.env.clearDefault(note::string_view("x-name")));
+        REQUIRE(h.last_req.find("env.default") != std::string::npos);
+    }
 }
 
 TEST_CASE("Api::file Layer 2 aliases") {
     Harness h;
-    h.api.execute(h.api.file.remove());
-    REQUIRE(h.last_req.find("file.delete") != std::string::npos);
-    h.api.execute(h.api.file.remove(note::string_view("x-files-item")));
-    REQUIRE(h.last_req.find("file.delete") != std::string::npos);
+    SUBCASE("remove") {
+        h.api.execute(h.api.file.remove());
+        REQUIRE(h.last_req.find("file.delete") != std::string::npos);
+    }
+    SUBCASE("remove") {
+        h.api.execute(h.api.file.remove(note::string_view("x-files-item")));
+        REQUIRE(h.last_req.find("file.delete") != std::string::npos);
+    }
 }
 
 TEST_CASE("Api::note Layer 2 aliases") {
     Harness h;
-    h.api.execute(h.api.note.popChanges(note::string_view("x-file")));
-    REQUIRE(h.last_req.find("note.changes") != std::string::npos);
-    h.api.execute(h.api.note.remove(note::string_view("x-file"), note::string_view("x-note")));
-    REQUIRE(h.last_req.find("note.delete") != std::string::npos);
-    h.api.execute(h.api.note.read(note::string_view("x-file")));
-    REQUIRE(h.last_req.find("note.get") != std::string::npos);
-    h.api.execute(h.api.note.pop(note::string_view("x-file")));
-    REQUIRE(h.last_req.find("note.get") != std::string::npos);
-    h.api.execute(h.api.note.clearTemplate(note::string_view("x-file")));
-    REQUIRE(h.last_req.find("note.template") != std::string::npos);
+    SUBCASE("popChanges") {
+        h.api.execute(h.api.note.popChanges(note::string_view("x-file")));
+        REQUIRE(h.last_req.find("note.changes") != std::string::npos);
+    }
+    SUBCASE("remove") {
+        h.api.execute(h.api.note.remove(note::string_view("x-file"), note::string_view("x-note")));
+        REQUIRE(h.last_req.find("note.delete") != std::string::npos);
+    }
+    SUBCASE("read") {
+        h.api.execute(h.api.note.read(note::string_view("x-file")));
+        REQUIRE(h.last_req.find("note.get") != std::string::npos);
+    }
+    SUBCASE("pop") {
+        h.api.execute(h.api.note.pop(note::string_view("x-file")));
+        REQUIRE(h.last_req.find("note.get") != std::string::npos);
+    }
+    SUBCASE("clearTemplate") {
+        h.api.execute(h.api.note.clearTemplate(note::string_view("x-file")));
+        REQUIRE(h.last_req.find("note.template") != std::string::npos);
+    }
 }
 
 TEST_CASE("Api::var Layer 2 aliases") {
     Harness h;
-    h.api.execute(h.api.var.remove());
-    REQUIRE(h.last_req.find("var.delete") != std::string::npos);
+    SUBCASE("remove") {
+        h.api.execute(h.api.var.remove());
+        REQUIRE(h.last_req.find("var.delete") != std::string::npos);
+    }
 }
 
 TEST_CASE("Api::web Layer 2 aliases") {
     Harness h;
-    h.api.execute(h.api.web.remove());
-    REQUIRE(h.last_req.find("web.delete") != std::string::npos);
+    SUBCASE("remove") {
+        h.api.execute(h.api.web.remove());
+        REQUIRE(h.last_req.find("web.delete") != std::string::npos);
+    }
 }
 

@@ -72,32 +72,36 @@ TEST_CASE("Api::command() overload") {
 // Resource group methods (api.card, api.hub, api.note, etc.)
 // ---------------------------------------------------------------------------
 
+{# Each endpoint goes into its own SUBCASE so doctest re-enters the test
+   function fresh per leaf — keeps the live frame small enough to fit the
+   default Arduino loopTask stack (~8 KB) on heavily-instrumented coverage
+   builds. Without this, "Api::card resource group" alone reserves ~20 KB
+   because GCC doesn't slot-merge ~130 sequential temporaries of distinct
+   request types. See pio-cov/docs/issues/2026-05-01-tracepc-dump-crash-esp32s3.md. #}
 {% for group in resource_groups %}
 TEST_CASE("Api::{{ group.name }} resource group") {
     Harness h;
 {% for endpoint in group.endpoints %}
 {% set op = endpoint.operations[0] %}
 {% set accessor = endpoint.api_accessor %}
+    SUBCASE("{{ endpoint.wire_name }}") {
 {% if endpoint.is_polymorphic %}
-    // {{ endpoint.wire_name }} (polymorphic)
 {% for op in endpoint.operations %}
 {% if op.required_properties %}
-    h.api.execute(h.api.{{ group.name }}.{{ accessor }}{% if not endpoint.is_factory_member %}(){% endif %}.{{ op.factory_method }}({% for p in op.required_properties %}{{ p | request_test_value }}{{ ", " if not loop.last }}{% endfor %}));
+        h.api.execute(h.api.{{ group.name }}.{{ accessor }}{% if not endpoint.is_factory_member %}(){% endif %}.{{ op.factory_method }}({% for p in op.required_properties %}{{ p | request_test_value }}{{ ", " if not loop.last }}{% endfor %}));
 {% else %}
-    h.api.execute(h.api.{{ group.name }}.{{ accessor }}{% if not endpoint.is_factory_member %}(){% endif %}.{{ op.factory_method }}());
+        h.api.execute(h.api.{{ group.name }}.{{ accessor }}{% if not endpoint.is_factory_member %}(){% endif %}.{{ op.factory_method }}());
 {% endif %}
 {% endfor %}
 {% elif endpoint.is_factory_member %}
-    // {{ endpoint.wire_name }} (factory member — callable)
-    h.api.execute(h.api.{{ group.name }}.{{ accessor }}());
+        h.api.execute(h.api.{{ group.name }}.{{ accessor }}());
 {% elif op.required_properties %}
-    // {{ endpoint.wire_name }}
-    h.api.execute(h.api.{{ group.name }}.{{ accessor }}({% for p in op.required_properties %}{{ p | request_test_value }}{{ ", " if not loop.last }}{% endfor %}));
+        h.api.execute(h.api.{{ group.name }}.{{ accessor }}({% for p in op.required_properties %}{{ p | request_test_value }}{{ ", " if not loop.last }}{% endfor %}));
 {% else %}
-    // {{ endpoint.wire_name }}
-    h.api.execute(h.api.{{ group.name }}.{{ accessor }}());
+        h.api.execute(h.api.{{ group.name }}.{{ accessor }}());
 {% endif %}
-    REQUIRE(h.last_req.find("{{ endpoint.wire_name }}") != std::string::npos);
+        REQUIRE(h.last_req.find("{{ endpoint.wire_name }}") != std::string::npos);
+    }
 {% endfor %}
 }
 
@@ -117,12 +121,14 @@ TEST_CASE("Api::{{ group.name }} Layer 2 aliases") {
 {% for endpoint in group.endpoints %}
 {% for alias in endpoint.aliases %}
 {% set resolved = alias.resolve_params(endpoint) %}
+    SUBCASE("{{ alias.method_name }}") {
 {% if resolved %}
-    h.api.execute(h.api.{{ group.name }}.{{ alias.method_name }}({% for p in resolved %}{{ p | request_test_value }}{{ ", " if not loop.last }}{% endfor %}));
+        h.api.execute(h.api.{{ group.name }}.{{ alias.method_name }}({% for p in resolved %}{{ p | request_test_value }}{{ ", " if not loop.last }}{% endfor %}));
 {% else %}
-    h.api.execute(h.api.{{ group.name }}.{{ alias.method_name }}());
+        h.api.execute(h.api.{{ group.name }}.{{ alias.method_name }}());
 {% endif %}
-    REQUIRE(h.last_req.find("{{ endpoint.wire_name }}") != std::string::npos);
+        REQUIRE(h.last_req.find("{{ endpoint.wire_name }}") != std::string::npos);
+    }
 {% endfor %}
 {% endfor %}
 }

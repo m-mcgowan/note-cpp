@@ -399,7 +399,7 @@ _**NOTE:** When... |
 | `.gps` | `bool` | no | If `true`, along with `"mode":"track"` the Notecard supports the use of an... |
 | `.limit` | `bool` | no | If `true`, along with `"mode":"track"` and `gps:true` the Notecard will... |
 | `.max` | `note::json_int_t` | no | When in `gpio` mode, if an `AUX` pin is configured as a `count` type, the... |
-| `.mode` | `note::string_view` | no | The AUX mode. Must be one of the following keywords. Some keywords are only... |
+| `.mode` | `note::string_view` | no | The AUX mode. If specified, must be one of the following keywords. Some... |
 | `.ms` | `note::json_int_t` | no | When in `gpio` mode, this argument configures a debouncing interval. With a... |
 | `.offset` | `note::json_int_t` | no | When used with `"mode":"neo-monitor"` or `"mode":"track-neo-monitor"`, this... |
 | `.rate` | `note::json_int_t` | no | The AUX UART baud rate for debug communication over the AUXRX and AUXTX pins. |

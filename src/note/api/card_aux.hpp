@@ -141,17 +141,17 @@ struct CardAux {
     } limit{};
 #endif
     /// When in `gpio` mode, if an `AUX` pin is configured as a `count` type,
-    /// the maximum number of samples of duration `seconds`, after which all
-    /// subsequent counts are added to the final sample. Passing `0` or omitting
-    /// this value will provide a single incrementing count of rising edges on
-    /// the pin.
+    /// the maximum number of `seconds`-long sample buckets to collect. Once
+    /// `max` buckets have been filled, additional counts roll into the final
+    /// bucket. Passing `0` or omitting this value will provide a single
+    /// incrementing count of rising edges on the pin.
     struct max_t : Field<note::json_int_t> {
         using Field<note::json_int_t>::Field;
         using Field<note::json_int_t>::operator=;
         CardAux& operator()(note::json_int_t v);
     } max{};
-    /// The AUX mode. Must be one of the following keywords. Some keywords are
-    /// only supported on certain types of Notecards.
+    /// The AUX mode. If specified, must be one of the following keywords. Some
+    /// keywords are only supported on certain types of Notecards.
     // mode: dfu | gpio | led | monitor | motion | neo | neo-monitor | off | rgb | rgb-monitor | track | track-monitor | track-neo-monitor | track-rgb-monitor | -
     struct mode_t : Field<note::string_view> {
 #if __cplusplus >= 202002L && !defined(__clang__)
@@ -275,9 +275,9 @@ struct CardAux {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
     /// If `true`, for pins set as `input` by `usage`, the Notecard will
     /// autonomously report any state changes as new notes in `file`. For pins
-    /// used as `counter`, the Notecard will use an interrupt to count pulses
-    /// and will report the total in a new note in `file` unless it has been
-    /// noted in the previous second.
+    /// used as `count`, the Notecard will use an interrupt to count pulses and
+    /// will report the total in a new note in `file` unless it has been noted
+    /// in the previous second.
     ///
     /// @since{3.4.1}
 #if NOTE_API_VERSION < NOTE_VERSION(3, 4, 1)
@@ -305,7 +305,7 @@ struct CardAux {
 #endif
 #endif
     // Valid values for 'mode':
-    //   "dfu" — Enable the Notecard's `AUX1` pin for [Outboard Firmware Updates](/not...
+    //   "dfu" — Enable the Notecard's `AUX1` pin as a "DFU in progress" signal for us...
     //   "gpio" — Configure the Notecard for GPIO mode with `AUX1` OFF, `AUX2` as an ou...
     //   "led" — When wiring LEDs to the Notecard's AUX pins (as is done when using mo...
     //   "monitor" — If you plan to place your Notecard in an enclosure, monitor mode can ...

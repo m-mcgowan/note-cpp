@@ -114,7 +114,7 @@ struct CardLocationMode {
             CardLocationMode::Get& operator()(note::json_int_t v);
         } minutes{};
         /// Sets the location mode.
-        // mode:  | off | periodic | continuous | fixed
+        // mode:  | off | periodic | continuous | fixed | -
         struct mode_t : Field<note::string_view> {
 #if __cplusplus >= 202002L && !defined(__clang__)
             constexpr mode_t() = default;
@@ -122,7 +122,7 @@ struct CardLocationMode {
             consteval mode_t(const char (&s)[N])
                 : Field<note::string_view>(note::string_view(s, N - 1)) {
                 note::string_view sv(s, N - 1);
-                if (sv != "" && sv != "off" && sv != "periodic" && sv != "continuous" && sv != "fixed")
+                if (sv != "" && sv != "off" && sv != "periodic" && sv != "continuous" && sv != "fixed" && sv != "-")
                     throw "card.location.mode: invalid value for 'mode'";
             }
             template<typename U>
@@ -151,6 +151,7 @@ struct CardLocationMode {
             static constexpr note::string_view periodic{"periodic"};
             static constexpr note::string_view continuous{"continuous"};
             static constexpr note::string_view fixed{"fixed"};
+            static constexpr note::string_view _{"-"};
             CardLocationMode::Get& operator()(note::string_view v);
         } mode{};
         /// When in `periodic` mode, location will be sampled at this interval,
@@ -189,11 +190,12 @@ struct CardLocationMode {
         //   "periodic" — Samples location at a specified interval, if the device has moved.
         //   "continuous" — Enables the Notecard's onboard GPS/GNSS module for continuous samplin...
         //   "fixed" — Reports the location as a fixed location using the specified `lat` an...
+        //   "-" — Resets the mode to the default value (`off`).
         // consteval: only callable at compile time (C++20)
 #if __cplusplus >= 202002L
         static consteval note::string_view validatedMode(const char* v) {
             note::string_view sv{v};
-            if (sv != "" && sv != "off" && sv != "periodic" && sv != "continuous" && sv != "fixed")
+            if (sv != "" && sv != "off" && sv != "periodic" && sv != "continuous" && sv != "fixed" && sv != "-")
                 throw "card.location.mode: invalid value for 'mode'";
             return sv;
         }
@@ -628,7 +630,7 @@ struct CardLocationMode {
             CardLocationMode::Set& operator()(note::json_int_t v);
         } minutes{};
         /// Sets the location mode.
-        // mode:  | off | periodic | continuous | fixed
+        // mode:  | off | periodic | continuous | fixed | -
         struct mode_t : Field<note::string_view> {
 #if __cplusplus >= 202002L && !defined(__clang__)
             constexpr mode_t() = default;
@@ -636,7 +638,7 @@ struct CardLocationMode {
             consteval mode_t(const char (&s)[N])
                 : Field<note::string_view>(note::string_view(s, N - 1)) {
                 note::string_view sv(s, N - 1);
-                if (sv != "" && sv != "off" && sv != "periodic" && sv != "continuous" && sv != "fixed")
+                if (sv != "" && sv != "off" && sv != "periodic" && sv != "continuous" && sv != "fixed" && sv != "-")
                     throw "card.location.mode: invalid value for 'mode'";
             }
             template<typename U>
@@ -665,6 +667,7 @@ struct CardLocationMode {
             static constexpr note::string_view periodic{"periodic"};
             static constexpr note::string_view continuous{"continuous"};
             static constexpr note::string_view fixed{"fixed"};
+            static constexpr note::string_view _{"-"};
             CardLocationMode::Set& operator()(note::string_view v);
         } mode{};
         /// When in `periodic` mode, location will be sampled at this interval,
@@ -703,11 +706,12 @@ struct CardLocationMode {
         //   "periodic" — Samples location at a specified interval, if the device has moved.
         //   "continuous" — Enables the Notecard's onboard GPS/GNSS module for continuous samplin...
         //   "fixed" — Reports the location as a fixed location using the specified `lat` an...
+        //   "-" — Resets the mode to the default value (`off`).
         // consteval: only callable at compile time (C++20)
 #if __cplusplus >= 202002L
         static consteval note::string_view validatedMode(const char* v) {
             note::string_view sv{v};
-            if (sv != "" && sv != "off" && sv != "periodic" && sv != "continuous" && sv != "fixed")
+            if (sv != "" && sv != "off" && sv != "periodic" && sv != "continuous" && sv != "fixed" && sv != "-")
                 throw "card.location.mode: invalid value for 'mode'";
             return sv;
         }
@@ -2129,7 +2133,7 @@ struct CardLocationMode {
             CardLocationMode::Remove& operator()(note::json_int_t v);
         } minutes{};
         /// Sets the location mode.
-        // mode:  | off | periodic | continuous | fixed
+        // mode:  | off | periodic | continuous | fixed | -
         struct mode_t : Field<note::string_view> {
 #if __cplusplus >= 202002L && !defined(__clang__)
             constexpr mode_t() = default;
@@ -2137,7 +2141,7 @@ struct CardLocationMode {
             consteval mode_t(const char (&s)[N])
                 : Field<note::string_view>(note::string_view(s, N - 1)) {
                 note::string_view sv(s, N - 1);
-                if (sv != "" && sv != "off" && sv != "periodic" && sv != "continuous" && sv != "fixed")
+                if (sv != "" && sv != "off" && sv != "periodic" && sv != "continuous" && sv != "fixed" && sv != "-")
                     throw "card.location.mode: invalid value for 'mode'";
             }
             template<typename U>
@@ -2166,6 +2170,7 @@ struct CardLocationMode {
             static constexpr note::string_view periodic{"periodic"};
             static constexpr note::string_view continuous{"continuous"};
             static constexpr note::string_view fixed{"fixed"};
+            static constexpr note::string_view _{"-"};
             CardLocationMode::Remove& operator()(note::string_view v);
         } mode{};
         /// When in `periodic` mode, location will be sampled at this interval,
@@ -2204,11 +2209,12 @@ struct CardLocationMode {
         //   "periodic" — Samples location at a specified interval, if the device has moved.
         //   "continuous" — Enables the Notecard's onboard GPS/GNSS module for continuous samplin...
         //   "fixed" — Reports the location as a fixed location using the specified `lat` an...
+        //   "-" — Resets the mode to the default value (`off`).
         // consteval: only callable at compile time (C++20)
 #if __cplusplus >= 202002L
         static consteval note::string_view validatedMode(const char* v) {
             note::string_view sv{v};
-            if (sv != "" && sv != "off" && sv != "periodic" && sv != "continuous" && sv != "fixed")
+            if (sv != "" && sv != "off" && sv != "periodic" && sv != "continuous" && sv != "fixed" && sv != "-")
                 throw "card.location.mode: invalid value for 'mode'";
             return sv;
         }

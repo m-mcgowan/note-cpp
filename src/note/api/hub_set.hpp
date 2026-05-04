@@ -139,7 +139,7 @@ struct HubSet {
     ///
     /// NOTE: The Notecard must be in `periodic` or `continuous` mode to use the
     /// onboard GPS module.
-    // mode: periodic | continuous | minimum | off | dfu
+    // mode: periodic | continuous | minimum | off | dfu | -
     struct mode_t : Field<note::string_view> {
 #if __cplusplus >= 202002L && !defined(__clang__)
         constexpr mode_t() = default;
@@ -147,7 +147,7 @@ struct HubSet {
         consteval mode_t(const char (&s)[N])
             : Field<note::string_view>(note::string_view(s, N - 1)) {
             note::string_view sv(s, N - 1);
-            if (sv != "periodic" && sv != "continuous" && sv != "minimum" && sv != "off" && sv != "dfu")
+            if (sv != "periodic" && sv != "continuous" && sv != "minimum" && sv != "off" && sv != "dfu" && sv != "-")
                 throw "hub.set: invalid value for 'mode'";
         }
         template<typename U>
@@ -177,6 +177,7 @@ struct HubSet {
         static constexpr note::string_view minimum{"minimum"};
         static constexpr note::string_view off{"off"};
         static constexpr note::string_view dfu{"dfu"};
+        static constexpr note::string_view _{"-"};
         HubSet& operator()(note::string_view v);
     } mode{};
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
@@ -378,11 +379,12 @@ struct HubSet {
     //   "minimum" — Disables periodic connection. The Notecard will not sync until it rec...
     //   "off" — Disables automatic and manual syncs. `hub.sync` requests will be igno...
     //   "dfu" — Puts the Notecard in DFU mode for IAP host MCU firmware updates. This...
+    //   "-" — Resets the mode to the default value (`periodic`).
     // consteval: only callable at compile time (C++20)
 #if __cplusplus >= 202002L
     static consteval note::string_view validatedMode(const char* v) {
         note::string_view sv{v};
-        if (sv != "periodic" && sv != "continuous" && sv != "minimum" && sv != "off" && sv != "dfu")
+        if (sv != "periodic" && sv != "continuous" && sv != "minimum" && sv != "off" && sv != "dfu" && sv != "-")
             throw "hub.set: invalid value for 'mode'";
         return sv;
     }

@@ -13,7 +13,7 @@
       "url": "https://www.apache.org/licenses/LICENSE-2.0"
     },
     "x-schema-source": {
-      "commit": "e1a466c"
+      "commit": "8345898"
     }
   },
   "paths": {
@@ -696,8 +696,7 @@
             "supports_cmd": false
           }
         ]
-      },
-      "x-flat-alias": "attn"
+      }
     },
     "/card/aux": {
       "put": {
@@ -772,12 +771,12 @@
                     "x-min-api-version": "3.4.1"
                   },
                   "max": {
-                    "description": "When in `gpio` mode, if an `AUX` pin is configured as a `count` type, the maximum number of samples of duration `seconds`, after which all subsequent counts are added to the final sample. Passing `0` or omitting this value will provide a single incrementing count of rising edges on the pin.",
+                    "description": "When in `gpio` mode, if an `AUX` pin is configured as a `count` type, the maximum number of `seconds`-long sample buckets to collect. Once `max` buckets have been filled, additional counts roll into the final bucket. Passing `0` or omitting this value will provide a single incrementing count of rising edges on the pin.",
                     "type": "integer",
                     "minimum": -1
                   },
                   "mode": {
-                    "description": "The AUX mode. Must be one of the following keywords. Some keywords are only supported on certain types of Notecards.",
+                    "description": "The AUX mode. If specified, must be one of the following keywords. Some keywords are only supported on certain types of Notecards.",
                     "type": "string",
                     "enum": [
                       "dfu",
@@ -799,7 +798,7 @@
                     "x-sub-descriptions": [
                       {
                         "const": "dfu",
-                        "description": "Enable the Notecard's `AUX1` pin for [Outboard Firmware Updates](/notehub/host-firmware-updates/notecard-outboard-firmware-update). When enabled, `AUX1` is active `LOW` when a DFU is in progress, and `HIGH` otherwise. See [Using DFU Mode](/notecard/notecard-walkthrough/working-with-the-notecard-aux-pins#using-dfu-mode) for more information.",
+                        "description": "Enable the Notecard's `AUX1` pin as a \"DFU in progress\" signal for use with [Outboard Firmware Updates](/notehub/host-firmware-updates/notecard-outboard-firmware-update). When enabled, `AUX1` is active `LOW` while a DFU is running and `HIGH` otherwise. See [Using DFU Mode](/notecard/notecard-walkthrough/working-with-the-notecard-aux-pins#using-dfu-mode) for more information.",
                         "x-skus": [
                           "CELL",
                           "CELL+WIFI",
@@ -1037,7 +1036,7 @@
                     "x-action": "resetCounters"
                   },
                   "sync": {
-                    "description": "If `true`, for pins set as `input` by `usage`, the Notecard will autonomously report any state changes as new notes in `file`. For pins used as `counter`, the Notecard will use an interrupt to count pulses and will report the total in a new note in `file` unless it has been noted in the previous second.",
+                    "description": "If `true`, for pins set as `input` by `usage`, the Notecard will autonomously report any state changes as new notes in `file`. For pins used as `count`, the Notecard will use an interrupt to count pulses and will report the total in a new note in `file` unless it has been noted in the previous second.",
                     "type": "boolean",
                     "x-skus": [
                       "CELL",
@@ -1186,7 +1185,7 @@
         "x-samples": [
           {
             "title": "DFU Mode",
-            "description": "Enable the Notecard's `AUX1` pin for [Outboard Firmware Updates](/notehub/host-firmware-updates/notecard-outboard-firmware-update). When enabled, `AUX1` is active `LOW` when a DFU is in progress, and `HIGH` otherwise.",
+            "description": "Enable the Notecard's `AUX1` pin as a \"DFU in progress\" signal for use with [Outboard Firmware Updates](/notehub/host-firmware-updates/notecard-outboard-firmware-update). When enabled, `AUX1` is active `LOW` while a DFU is running and `HIGH` otherwise.",
             "json": "{\"req\": \"card.aux\", \"mode\": \"dfu\"}"
           },
           {
@@ -1269,7 +1268,7 @@
                       "type": "integer"
                     },
                     "state": {
-                      "description": "When in AUX `gpio` mode, the state of each AUX pin.",
+                      "description": "When in AUX `gpio` mode, the array element for each pin reflects its current configuration. The label below each example object identifies the corresponding `usage` value the pin was configured with.",
                       "type": "array",
                       "items": {
                         "type": "object",
@@ -1300,6 +1299,7 @@
                             "CELL",
                             "CELL+WIFI",
                             "LORA",
+                            "SKYLO",
                             "WIFI"
                           ]
                         },
@@ -1310,6 +1310,7 @@
                             "CELL",
                             "CELL+WIFI",
                             "LORA",
+                            "SKYLO",
                             "WIFI"
                           ]
                         },
@@ -1320,6 +1321,7 @@
                             "CELL",
                             "CELL+WIFI",
                             "LORA",
+                            "SKYLO",
                             "WIFI"
                           ]
                         },
@@ -1330,6 +1332,7 @@
                             "CELL",
                             "CELL+WIFI",
                             "LORA",
+                            "SKYLO",
                             "WIFI"
                           ]
                         },
@@ -1339,6 +1342,7 @@
                           "x-skus": [
                             "CELL",
                             "CELL+WIFI",
+                            "SKYLO",
                             "WIFI"
                           ]
                         }
@@ -1750,8 +1754,7 @@
           "method": "binaryClear",
           "variant": "Clear"
         }
-      ],
-      "x-flat-alias": "binary"
+      ]
     },
     "/card/binary/get": {
       "post": {
@@ -2940,7 +2943,8 @@
                 "off",
                 "periodic",
                 "continuous",
-                "fixed"
+                "fixed",
+                "-"
               ],
               "x-sub-descriptions": [
                 {
@@ -2962,6 +2966,10 @@
                 {
                   "const": "fixed",
                   "description": "Reports the location as a fixed location using the specified `lat` and `lon` coordinates. This is the only supported mode on Notecard LoRa."
+                },
+                {
+                  "const": "-",
+                  "description": "Resets the mode to the default value (`off`)."
                 }
               ]
             },
@@ -3174,7 +3182,8 @@
                       "off",
                       "periodic",
                       "continuous",
-                      "fixed"
+                      "fixed",
+                      "-"
                     ],
                     "x-sub-descriptions": [
                       {
@@ -3196,6 +3205,10 @@
                       {
                         "const": "fixed",
                         "description": "Reports the location as a fixed location using the specified `lat` and `lon` coordinates. This is the only supported mode on Notecard LoRa."
+                      },
+                      {
+                        "const": "-",
+                        "description": "Resets the mode to the default value (`off`)."
                       }
                     ]
                   },
@@ -3456,7 +3469,8 @@
                       "off",
                       "periodic",
                       "continuous",
-                      "fixed"
+                      "fixed",
+                      "-"
                     ],
                     "x-sub-descriptions": [
                       {
@@ -3478,6 +3492,10 @@
                       {
                         "const": "fixed",
                         "description": "Reports the location as a fixed location using the specified `lat` and `lon` coordinates. This is the only supported mode on Notecard LoRa."
+                      },
+                      {
+                        "const": "-",
+                        "description": "Resets the mode to the default value (`off`)."
                       }
                     ]
                   },
@@ -4800,7 +4818,7 @@
     "/card/sleep": {
       "put": {
         "operationId": "card_sleep",
-        "summary": "Allows the ESP32-based Notecard WiFi v2 to fall back to a low current draw when idle (this behavior differs from the STM32-based Notecards that have a `STOP` mode where UART and I2C may still operate). Note that this power state is not available if the Notecard is plugged in via USB.\n\nRead more in the guide on using [Deep Sleep Mode on Notecard WiFi v2](/notecard/notecard-walkthrough/low-power-design#deep-sleep-mode-on-notecard-wifi-v2).",
+        "summary": "Allows the ESP32-based Notecard WiFi v2 to fall back to a low current draw when idle (this behavior differs from the STM32-based Notecards that have a `STOP` mode where UART and I2C may still operate). Note that this power state is not available if the Notecard is plugged in via USB.\n\nRead more in the guide on using [Deep Sleep Mode on Notecard WiFi v2](/notecard/notecard-walkthrough/low-power-firmware-design#deep-sleep-mode-on-notecard-wifi-v2).",
         "x-safety": "idempotent",
         "x-notecard-request": "card.sleep",
         "x-supports-cmd": true,
@@ -5076,7 +5094,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Overrides `minutes` with a voltage-variable value. For example: `\"usb:15;high:30;normal:60;720\"`. See [Voltage-Variable Sync Behavior](/notecard/notecard-walkthrough/low-power-design#voltage-variable-sync-behavior) for more information on configuring these values."
+            "description": "Overrides `minutes` with a voltage-variable value. For example: `\"usb:15;high:30;normal:60;720\"`. See [Voltage-Variable Sync Behavior](/notecard/notecard-walkthrough/low-power-firmware-design#voltage-variable-sync-behavior) for more information on configuring these values."
           },
           {
             "name": "stop",
@@ -5218,7 +5236,7 @@
                     "type": "integer"
                   },
                   "status": {
-                    "description": "Overrides `minutes` with a voltage-variable value. For example: `\"usb:15;high:30;normal:60;720\"`. See [Voltage-Variable Sync Behavior](/notecard/notecard-walkthrough/low-power-design#voltage-variable-sync-behavior) for more information on configuring these values.",
+                    "description": "Overrides `minutes` with a voltage-variable value. For example: `\"usb:15;high:30;normal:60;720\"`. See [Voltage-Variable Sync Behavior](/notecard/notecard-walkthrough/low-power-firmware-design#voltage-variable-sync-behavior) for more information on configuring these values.",
                     "type": "string"
                   },
                   "stop": {
@@ -5356,7 +5374,7 @@
                     "type": "integer"
                   },
                   "status": {
-                    "description": "Overrides `minutes` with a voltage-variable value. For example: `\"usb:15;high:30;normal:60;720\"`. See [Voltage-Variable Sync Behavior](/notecard/notecard-walkthrough/low-power-design#voltage-variable-sync-behavior) for more information on configuring these values.",
+                    "description": "Overrides `minutes` with a voltage-variable value. For example: `\"usb:15;high:30;normal:60;720\"`. See [Voltage-Variable Sync Behavior](/notecard/notecard-walkthrough/low-power-firmware-design#voltage-variable-sync-behavior) for more information on configuring these values.",
                     "type": "string"
                   },
                   "stop": {
@@ -6637,7 +6655,7 @@
                 }
               ]
             },
-            "description": "Used to set voltage thresholds based on how the Notecard will be powered, and which can be used to [configure voltage-variable Notecard behavior](/notecard/notecard-walkthrough/low-power-design). Each value is shorthand that assigns a battery voltage reading to a given device state like `high`, `normal`, `low`, and `dead`.\n\n**NOTE:** Setting voltage thresholds is not supported on the Notecard XP."
+            "description": "Used to set voltage thresholds based on how the Notecard will be powered, and which can be used to [configure voltage-variable Notecard behavior](/notecard/notecard-walkthrough/low-power-firmware-design). Each value is shorthand that assigns a battery voltage reading to a given device state like `high`, `normal`, `low`, and `dead`.\n\n**NOTE:** Setting voltage thresholds is not supported on the Notecard XP."
           },
           {
             "name": "name",
@@ -6891,7 +6909,7 @@
                     "maximum": 720
                   },
                   "mode": {
-                    "description": "Used to set voltage thresholds based on how the Notecard will be powered, and which can be used to [configure voltage-variable Notecard behavior](/notecard/notecard-walkthrough/low-power-design). Each value is shorthand that assigns a battery voltage reading to a given device state like `high`, `normal`, `low`, and `dead`.\n\n**NOTE:** Setting voltage thresholds is not supported on the Notecard XP.",
+                    "description": "Used to set voltage thresholds based on how the Notecard will be powered, and which can be used to [configure voltage-variable Notecard behavior](/notecard/notecard-walkthrough/low-power-firmware-design). Each value is shorthand that assigns a battery voltage reading to a given device state like `high`, `normal`, `low`, and `dead`.\n\n**NOTE:** Setting voltage thresholds is not supported on the Notecard XP.",
                     "type": "string",
                     "enum": [
                       "default",
@@ -8205,6 +8223,7 @@
                         "error",
                         "downloading",
                         "ready",
+                        "outboard-ready",
                         "completed"
                       ],
                       "x-sub-descriptions": [
@@ -8223,6 +8242,10 @@
                         {
                           "const": "ready",
                           "description": "The firmware data is fully downloaded."
+                        },
+                        {
+                          "const": "outboard-ready",
+                          "description": "The firmware data is fully downloaded and ready for an outboard DFU operation, where the Notecard will flash the firmware to the host MCU via the AUX or ALT_DFU pins."
                         },
                         {
                           "const": "completed",
@@ -8276,6 +8299,11 @@
                 "title": "DFU Error Status",
                 "description": "Example response showing download error.",
                 "json": "{\"mode\": \"error\", \"status\": \"download failed: checksum mismatch\", \"on\": true}"
+              },
+              {
+                "title": "DFU Outboard Ready Status",
+                "description": "Example response showing firmware is ready for an outboard DFU operation.",
+                "json": "{\"mode\": \"outboard-ready\", \"status\": \"successfully downloaded\", \"on\": true}"
               }
             ],
             "x-skus": [
@@ -9634,7 +9662,8 @@
                       "continuous",
                       "minimum",
                       "off",
-                      "dfu"
+                      "dfu",
+                      "-"
                     ],
                     "x-sub-descriptions": [
                       {
@@ -9656,6 +9685,10 @@
                       {
                         "const": "dfu",
                         "description": "Puts the Notecard in DFU mode for IAP host MCU firmware updates. This mode is effectively the same as `off` in terms of the Notecard's network and Notehub connections."
+                      },
+                      {
+                        "const": "-",
+                        "description": "Resets the mode to the default value (`periodic`)."
                       }
                     ]
                   },

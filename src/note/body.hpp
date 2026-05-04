@@ -70,11 +70,13 @@ public:
     constexpr BodyValue(U&& v)
         : str_(string_view(std::forward<U>(v))), write_fn_(&write_string) {}
 #else
-    // Tier 1: raw JSON string (no compile-time validation on Clang/C++17).
-    BodyValue(string_view json)
+    // Tier 1: raw JSON string (no compile-time validation on Clang/C++17/GCC<14).
+    // constexpr so callers can write `constexpr BodyValue v = "...";` on
+    // toolchains where the validating consteval branch above isn't enabled.
+    constexpr BodyValue(string_view json)
         : str_(json), write_fn_(&write_string) {}
 
-    BodyValue(const char* json)
+    constexpr BodyValue(const char* json)
         : str_(json), write_fn_(&write_string) {}
 #endif
 
@@ -82,7 +84,7 @@ public:
     BodyValue(const void* ctx, WriteFn fn)
         : ctx_(ctx), write_fn_(fn) {}
 
-    explicit operator bool() const { return write_fn_ != nullptr; }
+    constexpr explicit operator bool() const { return write_fn_ != nullptr; }
 
     // Write the body into the parent JSON builder.
     void write_to(JsonBuilder& b) const {

@@ -913,6 +913,51 @@ run_quick() {
     ci_stage "JSON backend integration tests"
     run_integrations
 
+    # GCC + -std=c++23 gate. The system compiler on macOS is Apple Clang
+    # which is forgiving where g++-13 (the GitHub CI gate) is not — most
+    # famously the consteval/constexpr divergence around BodyValue. Run
+    # a syntax check + build a tight set of TUs that exercise the
+    # affected paths so local --quick stays in sync with remote CI.
+    if [ "${GCC_CPP23_DONE:-}" != "1" ]; then
+        local g23=""
+        for g in g++-13 g++-14 g++-15; do
+            for p in /usr/local/bin /opt/homebrew/bin /usr/bin ""; do
+                local cand="${p:+$p/}$g"
+                if command -v "$cand" >/dev/null 2>&1; then
+                    g23="$cand"; break 2
+                fi
+            done
+        done
+        if [ -n "$g23" ]; then
+            ci_stage "GCC c++23 syntax + BodyValue gate ($g23)"
+            local FLAGS="-std=c++23 -Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wnon-virtual-dtor -Werror"
+            $g23 $FLAGS $INCLUDE -fsyntax-only -x c++ - <<'GCCEOF'
+#include <note/notecard.hpp>
+#include <note/notecard_api.hpp>
+#include <note/api.hpp>
+#include <note/body.hpp>
+#include <note/transact.hpp>
+#include <note/link/serial.hpp>
+#include <note/link/i2c.hpp>
+#include <note/json_buf.hpp>
+GCCEOF
+            echo "  c++23 public headers OK"
+
+            # Constexpr BodyValue: the canonical g++-13 c++23 trip-wire.
+            $g23 $FLAGS $INCLUDE -fsyntax-only -x c++ - <<'BVEOF'
+#include <note/body.hpp>
+constexpr note::BodyValue v = "{\"x\":1}";
+static_assert(static_cast<bool>(v));
+BVEOF
+            echo "  constexpr BodyValue OK"
+        else
+            echo
+            echo "  Skipping GCC c++23 gate (no g++-13/14/15 in PATH)."
+            echo "  Install: 'brew install gcc' or 'apt-get install g++-13'."
+        fi
+        export GCC_CPP23_DONE=1
+    fi
+
     ci_stage "Done"
     printf "\nQuick check passed in %ds.\n\n" $(( $(date +%s) - _ci_run_start ))
 }

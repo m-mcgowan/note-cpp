@@ -29,6 +29,12 @@ enum class FieldType : uint8_t {
     Float32,
     Double,
     String,
+    /// `note::ResponseArray<note::printable_string_view, 8>` — fixed-shape
+    /// string array used for response fields like card.attn's `files`.
+    /// Dispatched by GenericResponseSink: on_array_begin(key) latches the
+    /// current array, on_string appends, on_array_end clears the latch.
+    /// Only the 8-element shape is supported (the only one codegen emits).
+    StringArray,
 };
 
 /// Describes one struct field: its JSON key, byte offset in the struct,

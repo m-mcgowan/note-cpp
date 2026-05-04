@@ -486,29 +486,31 @@ struct CardAttn {
             std::unique_ptr<JsonReader> reader_;
 #endif
         };
-        static constexpr uint8_t field_count = 3;
-        static const ::note::FieldDesc* field_descs_ptr() {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-            static constexpr ::note::FieldDesc table[] NOTE_FLASH_ATTR = {
-                {keys_::rsp_payload, static_cast<uint16_t>(offsetof(Response, payload)), ::note::FieldType::String},
-                {keys_::rsp_set, static_cast<uint16_t>(offsetof(Response, set)), ::note::FieldType::Bool},
-                {keys_::rsp_time, static_cast<uint16_t>(offsetof(Response, time)), ::note::FieldType::Int},
-            };
+        static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
+            {keys_::rsp_files, static_cast<uint16_t>(offsetof(Response, files)), ::note::FieldType::StringArray},
+#if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
+            {keys_::rsp_off, static_cast<uint16_t>(offsetof(Response, off)), ::note::FieldType::Bool},
+#endif
+            {keys_::rsp_payload, static_cast<uint16_t>(offsetof(Response, payload)), ::note::FieldType::String},
+            {keys_::rsp_set, static_cast<uint16_t>(offsetof(Response, set)), ::note::FieldType::Bool},
+            {keys_::rsp_time, static_cast<uint16_t>(offsetof(Response, time)), ::note::FieldType::Int},
+        };
 #pragma GCC diagnostic pop
-            return table;
-        }
+        static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);
+        static const ::note::FieldDesc* field_descs_ptr() { return field_descs_table_; }
 
 #if NOTE_SINGLETON
         /// Singleton generic execute — shared thunk with body factory params.
-        static inline Result<void>(*execute_generic_fn_)(void*, ::note::string_view, BuildFn, void*, void*, const ::note::FieldDesc*, uint8_t, ::note::detail::NcErrorCapture&, bool&, void*, ::note::BodyHandlerFactory);
+        static inline Result<void>(*execute_generic_fn_)(void*, ::note::string_view, BuildFn, void*, void*, const ::note::FieldDesc*, uint8_t, ::note::detail::NcErrorCapture&, bool&, void*, ::note::BodyHandlerFactory, ::note::Safety);
         ApiResult<Response> execute() const {
             auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
             BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
             Response rsp_{};
             ::note::detail::NcErrorCapture nc_err_;
             bool exhausted_ = false;
-            auto rv_ = execute_generic_fn_(nc_, notecard_request, fn_, &build_, &rsp_, field_descs_ptr(), field_count, nc_err_, exhausted_, nullptr, nullptr);
+            auto rv_ = execute_generic_fn_(nc_, notecard_request, fn_, &build_, &rsp_, field_descs_ptr(), field_count, nc_err_, exhausted_, nullptr, nullptr, safety);
             if (!rv_) return ::note::Unexpected(rv_.error());
             if (!nc_err_.empty()) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
             if (exhausted_) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Overflow, ::note::Cause::Unspecified, NOTE_ERR("arena exhausted")});
@@ -873,27 +875,25 @@ struct CardAttn {
             std::unique_ptr<JsonReader> reader_;
 #endif
         };
-        static constexpr uint8_t field_count = 1;
-        static const ::note::FieldDesc* field_descs_ptr() {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-            static constexpr ::note::FieldDesc table[] NOTE_FLASH_ATTR = {
-                {keys_::rsp_set, static_cast<uint16_t>(offsetof(Response, set)), ::note::FieldType::Bool},
-            };
+        static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
+            {keys_::rsp_set, static_cast<uint16_t>(offsetof(Response, set)), ::note::FieldType::Bool},
+        };
 #pragma GCC diagnostic pop
-            return table;
-        }
+        static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);
+        static const ::note::FieldDesc* field_descs_ptr() { return field_descs_table_; }
 
 #if NOTE_SINGLETON
         /// Singleton generic execute — shared thunk with body factory params.
-        static inline Result<void>(*execute_generic_fn_)(void*, ::note::string_view, BuildFn, void*, void*, const ::note::FieldDesc*, uint8_t, ::note::detail::NcErrorCapture&, bool&, void*, ::note::BodyHandlerFactory);
+        static inline Result<void>(*execute_generic_fn_)(void*, ::note::string_view, BuildFn, void*, void*, const ::note::FieldDesc*, uint8_t, ::note::detail::NcErrorCapture&, bool&, void*, ::note::BodyHandlerFactory, ::note::Safety);
         ApiResult<Response> execute() const {
             auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
             BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
             Response rsp_{};
             ::note::detail::NcErrorCapture nc_err_;
             bool exhausted_ = false;
-            auto rv_ = execute_generic_fn_(nc_, notecard_request, fn_, &build_, &rsp_, field_descs_ptr(), field_count, nc_err_, exhausted_, nullptr, nullptr);
+            auto rv_ = execute_generic_fn_(nc_, notecard_request, fn_, &build_, &rsp_, field_descs_ptr(), field_count, nc_err_, exhausted_, nullptr, nullptr, safety);
             if (!rv_) return ::note::Unexpected(rv_.error());
             if (!nc_err_.empty()) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
             if (exhausted_) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Overflow, ::note::Cause::Unspecified, NOTE_ERR("arena exhausted")});
@@ -1234,27 +1234,25 @@ struct CardAttn {
             std::unique_ptr<JsonReader> reader_;
 #endif
         };
-        static constexpr uint8_t field_count = 1;
-        static const ::note::FieldDesc* field_descs_ptr() {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-            static constexpr ::note::FieldDesc table[] NOTE_FLASH_ATTR = {
-                {keys_::rsp_set, static_cast<uint16_t>(offsetof(Response, set)), ::note::FieldType::Bool},
-            };
+        static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
+            {keys_::rsp_set, static_cast<uint16_t>(offsetof(Response, set)), ::note::FieldType::Bool},
+        };
 #pragma GCC diagnostic pop
-            return table;
-        }
+        static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);
+        static const ::note::FieldDesc* field_descs_ptr() { return field_descs_table_; }
 
 #if NOTE_SINGLETON
         /// Singleton generic execute — shared thunk with body factory params.
-        static inline Result<void>(*execute_generic_fn_)(void*, ::note::string_view, BuildFn, void*, void*, const ::note::FieldDesc*, uint8_t, ::note::detail::NcErrorCapture&, bool&, void*, ::note::BodyHandlerFactory);
+        static inline Result<void>(*execute_generic_fn_)(void*, ::note::string_view, BuildFn, void*, void*, const ::note::FieldDesc*, uint8_t, ::note::detail::NcErrorCapture&, bool&, void*, ::note::BodyHandlerFactory, ::note::Safety);
         ApiResult<Response> execute() const {
             auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
             BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
             Response rsp_{};
             ::note::detail::NcErrorCapture nc_err_;
             bool exhausted_ = false;
-            auto rv_ = execute_generic_fn_(nc_, notecard_request, fn_, &build_, &rsp_, field_descs_ptr(), field_count, nc_err_, exhausted_, nullptr, nullptr);
+            auto rv_ = execute_generic_fn_(nc_, notecard_request, fn_, &build_, &rsp_, field_descs_ptr(), field_count, nc_err_, exhausted_, nullptr, nullptr, safety);
             if (!rv_) return ::note::Unexpected(rv_.error());
             if (!nc_err_.empty()) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
             if (exhausted_) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Overflow, ::note::Cause::Unspecified, NOTE_ERR("arena exhausted")});
@@ -1398,12 +1396,12 @@ struct CardAttn {
 
 #if NOTE_SINGLETON
         /// Singleton void execute — shared thunk, no per-type instantiation.
-        static inline Result<void>(*execute_void_fn_)(void*, ::note::string_view, BuildFn, void*, ::note::detail::NcErrorCapture&);
+        static inline Result<void>(*execute_void_fn_)(void*, ::note::string_view, BuildFn, void*, ::note::detail::NcErrorCapture&, ::note::Safety);
         ApiResult<void> execute() const {
             auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
             BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
             ::note::detail::NcErrorCapture nc_err_;
-            auto rv_ = execute_void_fn_(nc_, notecard_request, fn_, &build_, nc_err_);
+            auto rv_ = execute_void_fn_(nc_, notecard_request, fn_, &build_, nc_err_, safety);
             if (!rv_) return ::note::Unexpected(rv_.error());
             if (!nc_err_.empty()) return ApiResult<void>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
             return ApiResult<void>{};
@@ -1538,12 +1536,12 @@ struct CardAttn {
 
 #if NOTE_SINGLETON
         /// Singleton void execute — shared thunk, no per-type instantiation.
-        static inline Result<void>(*execute_void_fn_)(void*, ::note::string_view, BuildFn, void*, ::note::detail::NcErrorCapture&);
+        static inline Result<void>(*execute_void_fn_)(void*, ::note::string_view, BuildFn, void*, ::note::detail::NcErrorCapture&, ::note::Safety);
         ApiResult<void> execute() const {
             auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
             BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
             ::note::detail::NcErrorCapture nc_err_;
-            auto rv_ = execute_void_fn_(nc_, notecard_request, fn_, &build_, nc_err_);
+            auto rv_ = execute_void_fn_(nc_, notecard_request, fn_, &build_, nc_err_, safety);
             if (!rv_) return ::note::Unexpected(rv_.error());
             if (!nc_err_.empty()) return ApiResult<void>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
             return ApiResult<void>{};
@@ -1741,28 +1739,26 @@ struct CardAttn {
             std::unique_ptr<JsonReader> reader_;
 #endif
         };
-        static constexpr uint8_t field_count = 2;
-        static const ::note::FieldDesc* field_descs_ptr() {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-            static constexpr ::note::FieldDesc table[] NOTE_FLASH_ATTR = {
-                {keys_::rsp_payload, static_cast<uint16_t>(offsetof(Response, payload)), ::note::FieldType::String},
-                {keys_::rsp_time, static_cast<uint16_t>(offsetof(Response, time)), ::note::FieldType::Int},
-            };
+        static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
+            {keys_::rsp_payload, static_cast<uint16_t>(offsetof(Response, payload)), ::note::FieldType::String},
+            {keys_::rsp_time, static_cast<uint16_t>(offsetof(Response, time)), ::note::FieldType::Int},
+        };
 #pragma GCC diagnostic pop
-            return table;
-        }
+        static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);
+        static const ::note::FieldDesc* field_descs_ptr() { return field_descs_table_; }
 
 #if NOTE_SINGLETON
         /// Singleton generic execute — shared thunk with body factory params.
-        static inline Result<void>(*execute_generic_fn_)(void*, ::note::string_view, BuildFn, void*, void*, const ::note::FieldDesc*, uint8_t, ::note::detail::NcErrorCapture&, bool&, void*, ::note::BodyHandlerFactory);
+        static inline Result<void>(*execute_generic_fn_)(void*, ::note::string_view, BuildFn, void*, void*, const ::note::FieldDesc*, uint8_t, ::note::detail::NcErrorCapture&, bool&, void*, ::note::BodyHandlerFactory, ::note::Safety);
         ApiResult<Response> execute() const {
             auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
             BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
             Response rsp_{};
             ::note::detail::NcErrorCapture nc_err_;
             bool exhausted_ = false;
-            auto rv_ = execute_generic_fn_(nc_, notecard_request, fn_, &build_, &rsp_, field_descs_ptr(), field_count, nc_err_, exhausted_, nullptr, nullptr);
+            auto rv_ = execute_generic_fn_(nc_, notecard_request, fn_, &build_, &rsp_, field_descs_ptr(), field_count, nc_err_, exhausted_, nullptr, nullptr, safety);
             if (!rv_) return ::note::Unexpected(rv_.error());
             if (!nc_err_.empty()) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
             if (exhausted_) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Overflow, ::note::Cause::Unspecified, NOTE_ERR("arena exhausted")});
@@ -1847,12 +1843,12 @@ struct CardAttn {
 
 #if NOTE_SINGLETON
         /// Singleton void execute — shared thunk, no per-type instantiation.
-        static inline Result<void>(*execute_void_fn_)(void*, ::note::string_view, BuildFn, void*, ::note::detail::NcErrorCapture&);
+        static inline Result<void>(*execute_void_fn_)(void*, ::note::string_view, BuildFn, void*, ::note::detail::NcErrorCapture&, ::note::Safety);
         ApiResult<void> execute() const {
             auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
             BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
             ::note::detail::NcErrorCapture nc_err_;
-            auto rv_ = execute_void_fn_(nc_, notecard_request, fn_, &build_, nc_err_);
+            auto rv_ = execute_void_fn_(nc_, notecard_request, fn_, &build_, nc_err_, safety);
             if (!rv_) return ::note::Unexpected(rv_.error());
             if (!nc_err_.empty()) return ApiResult<void>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
             return ApiResult<void>{};
@@ -1949,12 +1945,12 @@ struct CardAttn {
 
 #if NOTE_SINGLETON
         /// Singleton void execute — shared thunk, no per-type instantiation.
-        static inline Result<void>(*execute_void_fn_)(void*, ::note::string_view, BuildFn, void*, ::note::detail::NcErrorCapture&);
+        static inline Result<void>(*execute_void_fn_)(void*, ::note::string_view, BuildFn, void*, ::note::detail::NcErrorCapture&, ::note::Safety);
         ApiResult<void> execute() const {
             auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
             BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
             ::note::detail::NcErrorCapture nc_err_;
-            auto rv_ = execute_void_fn_(nc_, notecard_request, fn_, &build_, nc_err_);
+            auto rv_ = execute_void_fn_(nc_, notecard_request, fn_, &build_, nc_err_, safety);
             if (!rv_) return ::note::Unexpected(rv_.error());
             if (!nc_err_.empty()) return ApiResult<void>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
             return ApiResult<void>{};
@@ -2051,12 +2047,12 @@ struct CardAttn {
 
 #if NOTE_SINGLETON
         /// Singleton void execute — shared thunk, no per-type instantiation.
-        static inline Result<void>(*execute_void_fn_)(void*, ::note::string_view, BuildFn, void*, ::note::detail::NcErrorCapture&);
+        static inline Result<void>(*execute_void_fn_)(void*, ::note::string_view, BuildFn, void*, ::note::detail::NcErrorCapture&, ::note::Safety);
         ApiResult<void> execute() const {
             auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
             BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
             ::note::detail::NcErrorCapture nc_err_;
-            auto rv_ = execute_void_fn_(nc_, notecard_request, fn_, &build_, nc_err_);
+            auto rv_ = execute_void_fn_(nc_, notecard_request, fn_, &build_, nc_err_, safety);
             if (!rv_) return ::note::Unexpected(rv_.error());
             if (!nc_err_.empty()) return ApiResult<void>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
             return ApiResult<void>{};
@@ -2305,27 +2301,29 @@ struct CardAttn {
             std::unique_ptr<JsonReader> reader_;
 #endif
         };
-        static constexpr uint8_t field_count = 1;
-        static const ::note::FieldDesc* field_descs_ptr() {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-            static constexpr ::note::FieldDesc table[] NOTE_FLASH_ATTR = {
-                {keys_::rsp_set, static_cast<uint16_t>(offsetof(Response, set)), ::note::FieldType::Bool},
-            };
+        static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
+            {keys_::rsp_files, static_cast<uint16_t>(offsetof(Response, files)), ::note::FieldType::StringArray},
+#if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 1) || !defined(NOTE_API_STRICT)
+            {keys_::rsp_off, static_cast<uint16_t>(offsetof(Response, off)), ::note::FieldType::Bool},
+#endif
+            {keys_::rsp_set, static_cast<uint16_t>(offsetof(Response, set)), ::note::FieldType::Bool},
+        };
 #pragma GCC diagnostic pop
-            return table;
-        }
+        static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);
+        static const ::note::FieldDesc* field_descs_ptr() { return field_descs_table_; }
 
 #if NOTE_SINGLETON
         /// Singleton generic execute — shared thunk with body factory params.
-        static inline Result<void>(*execute_generic_fn_)(void*, ::note::string_view, BuildFn, void*, void*, const ::note::FieldDesc*, uint8_t, ::note::detail::NcErrorCapture&, bool&, void*, ::note::BodyHandlerFactory);
+        static inline Result<void>(*execute_generic_fn_)(void*, ::note::string_view, BuildFn, void*, void*, const ::note::FieldDesc*, uint8_t, ::note::detail::NcErrorCapture&, bool&, void*, ::note::BodyHandlerFactory, ::note::Safety);
         ApiResult<Response> execute() const {
             auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
             BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
             Response rsp_{};
             ::note::detail::NcErrorCapture nc_err_;
             bool exhausted_ = false;
-            auto rv_ = execute_generic_fn_(nc_, notecard_request, fn_, &build_, &rsp_, field_descs_ptr(), field_count, nc_err_, exhausted_, nullptr, nullptr);
+            auto rv_ = execute_generic_fn_(nc_, notecard_request, fn_, &build_, &rsp_, field_descs_ptr(), field_count, nc_err_, exhausted_, nullptr, nullptr, safety);
             if (!rv_) return ::note::Unexpected(rv_.error());
             if (!nc_err_.empty()) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
             if (exhausted_) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Overflow, ::note::Cause::Unspecified, NOTE_ERR("arena exhausted")});

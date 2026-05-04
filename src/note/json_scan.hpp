@@ -334,6 +334,11 @@ inline void into(string_view json, T& obj, pick_t) {
                         string_view(v.data() + 1, v.size() - 2);
                 }
                 break;
+            case FieldType::StringArray:
+                // json_scan's flat key/value extractor doesn't traverse
+                // arrays. StringArray fields are populated via the SAX
+                // pipeline (GenericResponseSink).
+                break;
         }
     }
 }

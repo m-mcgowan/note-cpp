@@ -14,6 +14,7 @@
 #include "string_pool.hpp"
 #include "struct_sink.hpp"
 #include "transact.hpp"
+#include "lexer/parse.hpp"
 #include "link/cobs.hpp"
 
 #include <optional>
@@ -434,7 +435,8 @@ public:
             string_view req_type, BuildFn fields_fn, void* fields_ctx,
             void* rsp_storage, const FieldDesc* rsp_fields, uint8_t n_fields,
             detail::NcErrorCapture& nc_err, bool& arena_exhausted,
-            void* body_ptr, BodyHandlerFactory body_factory) {
+            void* body_ptr, BodyHandlerFactory body_factory,
+            Safety safety = Safety::NonIdempotent) {
         if (!transport_)
             return make_error(Error::NotReady, NOTE_ERR("no transport configured"));
 
@@ -449,7 +451,7 @@ public:
             JsonSinkAdapter<GenericResponseSink> sink_adapter(gsink);
 
             RequestFrame frame{fields_fn, fields_ctx, req_type, 0};
-            auto ei = streaming_execute(frame, sink_adapter, Safety::NonIdempotent,
+            auto ei = streaming_execute(frame, sink_adapter, safety,
                                         nullptr, nullptr);
             arena_exhausted = pool.exhausted();
             if (ei.code == Error::Notecard) {
@@ -493,8 +495,14 @@ public:
                 auto bh = body_factory(body_ptr, pool, body_storage);
                 if (bh) gsink.set_body_handler(bh);
             }
+            // Use the lexer-based `sax_lex` (not `sax_parse`): it emits
+            // typed `on_int` / `on_float` / `on_bool` events that
+            // `GenericResponseSink` dispatches into the field table.
+            // The buffer-based `sax_parse` only emits `on_number` (raw
+            // string), which `GenericResponseSink` only forwards to
+            // body handlers — top-level scalar fields silently drop.
             JsonSinkAdapter<GenericResponseSink> sink_adapter(gsink);
-            sax_parse(*rsp, sink_adapter);
+            sax_lex(*rsp, sink_adapter);
             arena_exhausted = pool.exhausted();
             return {};
         }
@@ -689,6 +697,14 @@ public:
     }
 
     JsonBackend& backend() { return *backend_; }
+
+    /// Returns the next request ID if request IDs are enabled, else 0.
+    /// Singleton-thunk path uses this to inject IDs without changing
+    /// `execute_void`'s signature: the thunk wraps the caller's BuildFn
+    /// with `id_wrap_build` and passes the id alongside.
+    uint32_t next_request_id_or_zero() {
+        return request_ids_enabled_ ? next_request_id_++ : 0;
+    }
 
     /// Allocator-backed durable copy of a Notecard error message — used
     /// by the Api singleton thunk path to give `NcErrorCapture::view()`

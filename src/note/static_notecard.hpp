@@ -221,7 +221,8 @@ public:
             string_view req_type, BuildFn fields_fn, void* fields_ctx,
             void* rsp_storage, const FieldDesc* rsp_fields, uint8_t n_fields,
             detail::NcErrorCapture& nc_err, bool& arena_exhausted,
-            void* body_ptr, BodyHandlerFactory body_factory) {
+            void* body_ptr, BodyHandlerFactory body_factory,
+            Safety safety = Safety::NonIdempotent) {
         alignas(body_sink_storage_align) char body_storage[body_sink_storage_size];
         BodyHandler body_handler{};
         if (body_factory) {
@@ -230,11 +231,22 @@ public:
         }
         return execute_generic_retried(req_type, fields_fn, fields_ctx,
                                         rsp_storage, rsp_fields, n_fields,
-                                        nc_err, arena_exhausted, Safety::NonIdempotent, body_handler);
+                                        nc_err, arena_exhausted, safety, body_handler);
     }
 
     /// Access the transport stack (e.g. for binary I/O).
     Stack& stack() { return stack_; }
+
+    /// Returns the next request ID if enabled, else 0. Mirror of
+    /// `Notecard::next_request_id_or_zero` for the Api singleton-thunk
+    /// path.
+    uint32_t next_request_id_or_zero() {
+#if !NOTE_NO_REQUEST_IDS
+        return request_ids_enabled_ ? next_request_id_++ : 0;
+#else
+        return 0;
+#endif
+    }
 
 #if !NOTE_MINIMAL
     /// Mirror of `Notecard::stash_nc_err` for the Api singleton-thunk

@@ -1,22 +1,22 @@
 {
   "envs": {
     "avr-notecpp": {
-      "flash": 25112,
+      "flash": 25190,
       "ram": 792,
       "comment": "Style 1: typed API groups via Api<UnstructuredCtx, StaticNotecard<SerialStack>>. The most common StaticNotecard usage."
     },
     "avr-notecpp-direct": {
-      "flash": 24716,
+      "flash": 24780,
       "ram": 756,
       "comment": "Style 2: nc.execute(req) bypassing the Api groups. Drops a layer of group thunks."
     },
     "avr-notecpp-raw": {
       "flash": 21182,
       "ram": 784,
-      "comment": "Style 3: transact_dispatch(BuildFn, ...) raw entry — bypasses StaticNotecard entirely."
+      "comment": "Style 3: transact_dispatch(BuildFn, ...) raw entry \u2014 bypasses StaticNotecard entirely."
     },
     "avr-notecpp-multistack": {
-      "flash": 30548,
+      "flash": 30482,
       "ram": 1164,
       "comment": "Two distinct StaticNotecard<...> types in one TU (HardwareSerial stack + mock stack). Validates that thunk/closure dedup compounds: doubling the Notecard count adds ~5.4 KB / ~370 B, not 2x single-stack. Gate floor catches lost sharing."
     }

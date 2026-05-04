@@ -18,6 +18,7 @@
 #include <note/field_desc.hpp>
 #include <note/json_sax.hpp>
 #include <note/lexer/sax_adapter.hpp>
+#include <note/response_array.hpp>
 #include <note/string_pool.hpp>
 #include <note/types.hpp>
 
@@ -33,6 +34,15 @@ struct GenericResponseSink {
     StringPool* pool;
     BodyHandler body_handler_{};
     int body_depth_ = 0;
+#if !NOTE_MINIMAL
+    /// When inside a top-level `StringArray` field, points to the matching
+    /// `ResponseArray<printable_string_view, 8>` so on_string can append.
+    /// nullptr otherwise (top-level scalar context or inside `body`).
+    /// Gated out under NOTE_MINIMAL: no AVR-class endpoint in scope uses
+    /// array response fields, so the field + dispatch code would be
+    /// dead weight (~30 B flash + 2 B stack per instantiation).
+    void* active_string_array_ = nullptr;
+#endif
 
     void set_body_handler(BodyHandler bh) { body_handler_ = bh; }
 
@@ -76,6 +86,17 @@ struct GenericResponseSink {
 
     void on_string(string_view k, string_view v) {
         if (body_depth_ > 0) { if (body_handler_) body_handler_.send(BodyEvent::make_string(k, v)); return; }
+#if !NOTE_MINIMAL
+        if (active_string_array_) {
+            // Inside a StringArray field — append the (interned) value.
+            // ResponseArray<printable_string_view, 8> has fixed shape; the
+            // first 8 slots are string_view (printable_string_view derives
+            // from string_view with no extra members), then a size_t count.
+            using Arr = ResponseArray<string_view, 8>;
+            static_cast<Arr*>(active_string_array_)->add(pool->intern(v));
+            return;
+        }
+#endif
         for (uint8_t i = 0; i < n_fields; ++i) {
             auto d = detail::read_field_desc(&fields[i]);
             if (d.type == FieldType::String && detail::flash_key_eq(k, d.name)) {
@@ -107,15 +128,42 @@ struct GenericResponseSink {
     }
 
     void on_array_begin(string_view k) {
-        if (body_depth_ > 0 && body_handler_) body_handler_.send(BodyEvent::make_array_begin(k));
+        if (body_depth_ > 0) {
+            if (body_handler_) body_handler_.send(BodyEvent::make_array_begin(k));
+            return;
+        }
+#if !NOTE_MINIMAL
+        // Top-level array: latch `active_string_array_` if there's a
+        // matching StringArray field so on_string can append into it.
+        for (uint8_t i = 0; i < n_fields; ++i) {
+            auto d = detail::read_field_desc(&fields[i]);
+            if (d.type == FieldType::StringArray && detail::flash_key_eq(k, d.name)) {
+                active_string_array_ = static_cast<char*>(rsp) + d.offset;
+                return;
+            }
+        }
+#else
+        (void)k;
+#endif
     }
 
     void on_array_end(string_view k) {
-        if (body_depth_ > 0 && body_handler_) body_handler_.send(BodyEvent::make_array_end(k));
+        if (body_depth_ > 0) {
+            if (body_handler_) body_handler_.send(BodyEvent::make_array_end(k));
+            return;
+        }
+#if !NOTE_MINIMAL
+        active_string_array_ = nullptr;
+#else
+        (void)k;
+#endif
     }
 
     void reset() {
         body_depth_ = 0;
+#if !NOTE_MINIMAL
+        active_string_array_ = nullptr;
+#endif
         if (body_handler_) body_handler_.send(BodyEvent::make_reset());
         for (uint8_t i = 0; i < n_fields; ++i) {
             auto d = detail::read_field_desc(&fields[i]);
@@ -128,6 +176,12 @@ struct GenericResponseSink {
             case FieldType::Float32: reset_field<float>(d.offset); break;
             case FieldType::Double:  reset_field<double>(d.offset); break;
             case FieldType::String:  reset_field<string_view>(d.offset); break;
+            case FieldType::StringArray:
+#if !NOTE_MINIMAL
+                static_cast<ResponseArray<string_view, 8>*>(
+                    static_cast<void*>(static_cast<char*>(rsp) + d.offset))->clear();
+#endif
+                break;
             }
         }
     }
@@ -265,6 +319,7 @@ struct GenericBodySink {
             case FieldType::Float32: *field_ptr<float>(d.offset) = 0.0f; break;
             case FieldType::Double:  *field_ptr<double>(d.offset) = 0.0; break;
             case FieldType::String:  *field_ptr<string_view>(d.offset) = {}; break;
+            case FieldType::StringArray: break;  // body sinks don't carry array fields
             }
         }
     }

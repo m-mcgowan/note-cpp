@@ -85,6 +85,26 @@ inline constexpr uint32_t kTxnHandshakeDefaultTimeoutMs = 1000;
 
 namespace detail {
 
+/// Wrapper that injects an `"id":N` field before delegating to the
+/// caller's BuildFn. Used by the Api singleton-thunk path to plumb
+/// request IDs through `execute_void` / `execute_generic_with_body`
+/// without changing those methods' contracts: the thunk constructs an
+/// `IdWrapCtx{caller_fn, caller_ctx, id}`, hands `&id_wrap_build` and
+/// `&ctx` to `execute_void`, and the underlying request-framing layer
+/// (RequestFrame on the polymorphic side, ReqWrapCtx on the static
+/// side) prepends `"req":"..."` and lets this wrapper insert the id
+/// before the per-endpoint fields.
+struct IdWrapCtx {
+    BuildFn inner;
+    void* inner_ctx;
+    uint32_t req_id;
+};
+inline void id_wrap_build(JsonBuilder& b, void* p) {
+    auto& c = *static_cast<IdWrapCtx*>(p);
+    if (c.req_id) add_flash(b, flash(common_keys::id), static_cast<json_int_t>(c.req_id));
+    if (c.inner) c.inner(b, c.inner_ctx);
+}
+
 struct NcErrorCapture {
     static constexpr size_t kMaxLen = 64;
     char buf[kMaxLen]{};

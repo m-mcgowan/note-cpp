@@ -156,24 +156,39 @@ public:
     // `result.error().code` and ignore the string), so the +250 bytes
     // of flash for the durable-copy logic isn't worth it. The dangling
     // `view()` quirk persists there, gated to that minimal build only.
-    static Result<void> void_thunk_(void* p, string_view req, BuildFn fn, void* ctx, detail::NcErrorCapture& err) {
-#if NOTE_MINIMAL
-        return static_cast<NcT*>(p)->execute_void(req, fn, ctx, err);
-#else
+    // The thunks plumb `Safety` (so retry_loop can decide whether
+    // ResponseLost-style errors are retryable per-request) and inject
+    // request IDs (`"id":N`) by wrapping the caller's fields BuildFn
+    // with `id_wrap_build`. Both are needed for the singleton thunk
+    // path to match the per-template `Notecard::execute()` semantics.
+    //
+    // Under NOTE_MINIMAL, NOTE_NO_RETRY and NOTE_NO_REQUEST_IDS are
+    // forced on, so safety and request IDs have no observable effect —
+    // skip the wrapping and `stash_nc_err` to keep AVR flash flat.
+    // The function pointer signature stays uniform across builds so
+    // the generated `execute()` doesn't need NOTE_MINIMAL branches.
+    static Result<void> void_thunk_(void* p, string_view req, BuildFn fn, void* ctx, detail::NcErrorCapture& err, Safety safety) {
         auto* nc = static_cast<NcT*>(p);
-        auto rv = nc->execute_void(req, fn, ctx, err);
+#if NOTE_MINIMAL
+        (void)safety;
+        return nc->execute_void(req, fn, ctx, err);
+#else
+        detail::IdWrapCtx id_wrap{fn, ctx, nc->next_request_id_or_zero()};
+        auto rv = nc->execute_void(req, &detail::id_wrap_build, &id_wrap, err, safety);
         err.set_durable(nc->stash_nc_err(err.view()));
         return rv;
 #endif
     }
     static Result<void> generic_thunk_(void* p, string_view req, BuildFn fn, void* ctx,
             void* rsp, const FieldDesc* f, uint8_t n, detail::NcErrorCapture& err, bool& ex,
-            void* body_ptr, BodyHandlerFactory body_factory) {
-#if NOTE_MINIMAL
-        return static_cast<NcT*>(p)->execute_generic_with_body(req, fn, ctx, rsp, f, n, err, ex, body_ptr, body_factory);
-#else
+            void* body_ptr, BodyHandlerFactory body_factory, Safety safety) {
         auto* nc = static_cast<NcT*>(p);
-        auto rv = nc->execute_generic_with_body(req, fn, ctx, rsp, f, n, err, ex, body_ptr, body_factory);
+#if NOTE_MINIMAL
+        (void)safety;
+        return nc->execute_generic_with_body(req, fn, ctx, rsp, f, n, err, ex, body_ptr, body_factory);
+#else
+        detail::IdWrapCtx id_wrap{fn, ctx, nc->next_request_id_or_zero()};
+        auto rv = nc->execute_generic_with_body(req, &detail::id_wrap_build, &id_wrap, rsp, f, n, err, ex, body_ptr, body_factory, safety);
         err.set_durable(nc->stash_nc_err(err.view()));
         return rv;
 #endif

@@ -107,12 +107,12 @@ struct EnvDefault {
 
 #if NOTE_SINGLETON
         /// Singleton void execute — shared thunk, no per-type instantiation.
-        static inline Result<void>(*execute_void_fn_)(void*, ::note::string_view, BuildFn, void*, ::note::detail::NcErrorCapture&);
+        static inline Result<void>(*execute_void_fn_)(void*, ::note::string_view, BuildFn, void*, ::note::detail::NcErrorCapture&, ::note::Safety);
         ApiResult<void> execute() const {
             auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
             BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
             ::note::detail::NcErrorCapture nc_err_;
-            auto rv_ = execute_void_fn_(nc_, notecard_request, fn_, &build_, nc_err_);
+            auto rv_ = execute_void_fn_(nc_, notecard_request, fn_, &build_, nc_err_, safety);
             if (!rv_) return ::note::Unexpected(rv_.error());
             if (!nc_err_.empty()) return ApiResult<void>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
             return ApiResult<void>{};
@@ -245,12 +245,12 @@ struct EnvDefault {
 
 #if NOTE_SINGLETON
         /// Singleton void execute — shared thunk, no per-type instantiation.
-        static inline Result<void>(*execute_void_fn_)(void*, ::note::string_view, BuildFn, void*, ::note::detail::NcErrorCapture&);
+        static inline Result<void>(*execute_void_fn_)(void*, ::note::string_view, BuildFn, void*, ::note::detail::NcErrorCapture&, ::note::Safety);
         ApiResult<void> execute() const {
             auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
             BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
             ::note::detail::NcErrorCapture nc_err_;
-            auto rv_ = execute_void_fn_(nc_, notecard_request, fn_, &build_, nc_err_);
+            auto rv_ = execute_void_fn_(nc_, notecard_request, fn_, &build_, nc_err_, safety);
             if (!rv_) return ::note::Unexpected(rv_.error());
             if (!nc_err_.empty()) return ApiResult<void>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
             return ApiResult<void>{};

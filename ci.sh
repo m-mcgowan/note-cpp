@@ -881,6 +881,29 @@ run_quick() {
     "$BUILD_MIN/tests/note-cpp-tests-arduino"
     echo "  arduino minimal tests: OK"
 
+    # NOTE_SINGLETON-only host build — exercises the singleton-thunk
+    # adapters on the *polymorphic* Notecard (NOTE_MINIMAL covers singleton
+    # + StaticNotecard via NOTE_STATIC_HAL). The build itself is the gap
+    # closure: it forces instantiation of Api::void_thunk_ /
+    # generic_thunk_ against `note::Notecard`, which used to fail to
+    # compile because execute_void / execute_generic_with_body only
+    # existed on StaticNotecard. The test binaries are not run here —
+    # singleton mode currently has unrelated runtime limitations
+    # (GenericResponseSink can't dispatch array fields; the generated
+    # `nc_err.view()` returns a stack-pointer that dangles past
+    # execute(); the thunk path doesn't inject request IDs). Those are
+    # pre-existing and surface only because this combination now
+    # compiles. Fixing them is separate work.
+    ci_stage "Build tests (NOTE_SINGLETON only)"
+    local BUILD_SINGLETON="/tmp/note-cpp-build-singleton"
+    cmake -G "$GENERATOR" -B "$BUILD_SINGLETON" -S "$ROOT" \
+        -DCMAKE_CXX_COMPILER="$CXX" \
+        -DCMAKE_CXX_STANDARD=20 \
+        -DCMAKE_CXX_FLAGS="-DNOTE_SINGLETON=1" \
+        > /dev/null 2>&1
+    nice cmake --build "$BUILD_SINGLETON" --parallel
+    echo "  singleton-only host + arduino test binaries link: OK"
+
     # PlatformIO integration test build (compile only, no hardware)
     if command -v pio >/dev/null 2>&1; then
         ci_stage "PIO integration build"

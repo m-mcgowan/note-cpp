@@ -359,6 +359,149 @@ public:
         return result;
     }
 
+    // ── Singleton-thunk adapters ───────────────────────────────────────
+    //
+    // The Api singleton-thunk machinery (`Api::void_thunk_` / `generic_thunk_`
+    // in note/api.hpp) calls these on whatever `NcT` it was instantiated
+    // with. StaticNotecard exposes them natively; here we adapt them onto
+    // the polymorphic Notecard so `-DNOTE_SINGLETON=1` (without
+    // `NOTE_STATIC_HAL=1`) compiles and runs against the dynamic-HAL
+    // Notecard.
+    //
+    // Two paths, mirroring the regular `execute()` template:
+    //   (1) streaming — when an allocator is configured, frame the request
+    //       through `RequestFrame` + `streaming_execute` and SAX-parse the
+    //       response sink-side.
+    //   (2) buffered  — when only a JsonBackend is configured, build into
+    //       the backend's builder, `transact(string_view, buf, …)`, then
+    //       SAX-parse the response buffer for fields.
+    //
+    // Error model translation: both paths produce a `Notecard "err"`
+    // string. We funnel it into the caller's `NcErrorCapture` so the
+    // contract matches StaticNotecard's. Other errors propagate as
+    // Unexpected.
+    //
+    // No request-id injection — StaticNotecard's singleton path doesn't
+    // emit one either; the singleton machinery is currently id-less by
+    // design.
+    Result<void> execute_void(string_view req_type, BuildFn fields_fn, void* fields_ctx,
+                              detail::NcErrorCapture& nc_err,
+                              [[maybe_unused]] Safety safety = Safety::NonIdempotent) {
+        if (!transport_)
+            return make_error(Error::NotReady, NOTE_ERR("no transport configured"));
+
+        if (alloc_.has_value()) {
+            RequestFrame frame{fields_fn, fields_ctx, req_type, 0};
+            JsonSink null_sink;
+            auto ei = streaming_execute(frame, null_sink, safety, nullptr, nullptr);
+            if (ei.code == Error::Notecard) {
+                nc_err.capture(string_view{ei.message.data(), ei.message.size()});
+                return {};
+            }
+            if (ei.code != Error{}) return Unexpected(ei);
+            return {};
+        }
+
+#if !NOTE_NO_BUFFERED
+        if (backend_) {
+            debug_timing(debug_, TimingEvent::TransactionBegin, req_type);
+            enforce_timing();
+            debug_timing(debug_, TimingEvent::BuildBegin, req_type);
+            auto& builder = backend_->get_builder();
+            add_flash(builder, flash(detail::common_keys::req), req_type);
+            fields_fn(builder, fields_ctx);
+            auto req_json = builder.to_view();
+            debug_timing(debug_, TimingEvent::BuildEnd, req_type);
+            debug_wire(debug_, req_json, WireDirection::Send);
+            auto rsp = transport_->transact(req_json, rsp_buf(),
+                                            default_timeout_ms_);
+            record_timing();
+            debug_timing(debug_, TimingEvent::TransactionEnd, req_type);
+            if (!rsp) return Unexpected(rsp.error());
+            debug_wire(debug_, *rsp, WireDirection::Receive);
+            auto& reader = backend_->get_reader(*rsp);
+            if (reader.has_error())
+                return make_error(Error::Json, NOTE_ERR("JSON parse error"));
+            auto err = reader.get_error();
+            if (!err.empty()) nc_err.capture(err);
+            return {};
+        }
+#endif
+        return make_error(Error::NotReady, NOTE_ERR("no allocator or backend configured"));
+    }
+
+    Result<void> execute_generic_with_body(
+            string_view req_type, BuildFn fields_fn, void* fields_ctx,
+            void* rsp_storage, const FieldDesc* rsp_fields, uint8_t n_fields,
+            detail::NcErrorCapture& nc_err, bool& arena_exhausted,
+            void* body_ptr, BodyHandlerFactory body_factory) {
+        if (!transport_)
+            return make_error(Error::NotReady, NOTE_ERR("no transport configured"));
+
+        if (alloc_.has_value()) {
+            StringPool pool(*alloc_);
+            GenericResponseSink gsink{rsp_storage, rsp_fields, n_fields, &pool};
+            alignas(body_sink_storage_align) char body_storage[body_sink_storage_size];
+            if (body_factory) {
+                auto bh = body_factory(body_ptr, pool, body_storage);
+                if (bh) gsink.set_body_handler(bh);
+            }
+            JsonSinkAdapter<GenericResponseSink> sink_adapter(gsink);
+
+            RequestFrame frame{fields_fn, fields_ctx, req_type, 0};
+            auto ei = streaming_execute(frame, sink_adapter, Safety::NonIdempotent,
+                                        nullptr, nullptr);
+            arena_exhausted = pool.exhausted();
+            if (ei.code == Error::Notecard) {
+                nc_err.capture(string_view{ei.message.data(), ei.message.size()});
+                return {};
+            }
+            if (ei.code != Error{}) return Unexpected(ei);
+            return {};
+        }
+
+#if !NOTE_NO_BUFFERED
+        if (backend_) {
+            debug_timing(debug_, TimingEvent::TransactionBegin, req_type);
+            enforce_timing();
+            debug_timing(debug_, TimingEvent::BuildBegin, req_type);
+            auto& builder = backend_->get_builder();
+            add_flash(builder, flash(detail::common_keys::req), req_type);
+            fields_fn(builder, fields_ctx);
+            auto req_json = builder.to_view();
+            debug_timing(debug_, TimingEvent::BuildEnd, req_type);
+            debug_wire(debug_, req_json, WireDirection::Send);
+            auto rsp = transport_->transact(req_json, rsp_buf(),
+                                            default_timeout_ms_);
+            record_timing();
+            debug_timing(debug_, TimingEvent::TransactionEnd, req_type);
+            if (!rsp) return Unexpected(rsp.error());
+            debug_wire(debug_, *rsp, WireDirection::Receive);
+            auto& reader = backend_->get_reader(*rsp);
+            if (reader.has_error())
+                return make_error(Error::Json, NOTE_ERR("JSON parse error"));
+            auto err = reader.get_error();
+            if (!err.empty()) {
+                nc_err.capture(err);
+                return {};
+            }
+
+            StringPool pool(alloc_value());
+            GenericResponseSink gsink{rsp_storage, rsp_fields, n_fields, &pool};
+            alignas(body_sink_storage_align) char body_storage[body_sink_storage_size];
+            if (body_factory) {
+                auto bh = body_factory(body_ptr, pool, body_storage);
+                if (bh) gsink.set_body_handler(bh);
+            }
+            JsonSinkAdapter<GenericResponseSink> sink_adapter(gsink);
+            sax_parse(*rsp, sink_adapter);
+            arena_exhausted = pool.exhausted();
+            return {};
+        }
+#endif
+        return make_error(Error::NotReady, NOTE_ERR("no allocator or backend configured"));
+    }
+
     template<typename RequestT>
     Result<void> command_typed(const RequestT& req) {
         if (!transport_)

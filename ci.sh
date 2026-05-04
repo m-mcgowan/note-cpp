@@ -973,6 +973,21 @@ constexpr note::BodyValue v = "{\"x\":1}";
 static_assert(static_cast<bool>(v));
 BVEOF
             echo "  constexpr BodyValue OK"
+
+            # Inherited BodyValue ctor (PR 102933 trip-wire). Endpoint requests
+            # carry a `body_t : BodyValue` that pulls the consteval template in
+            # via `using BodyValue::BodyValue;`. This *inherited* form breaks on
+            # GCC 13.x even when the direct ctor above compiles cleanly. The
+            # check has to use a derived struct — naked BodyValue won't catch
+            # the regression.
+            $g23 $FLAGS $INCLUDE -fsyntax-only -x c++ - <<'IBVEOF'
+#include <note/api/note_add.hpp>
+void f() {
+    note::api::NoteAdd req;
+    req.body = "{\"temp\":22.5}";
+}
+IBVEOF
+            echo "  inherited BodyValue ctor OK"
         else
             echo
             echo "  Skipping GCC c++23 gate (no g++-13/14/15 in PATH)."

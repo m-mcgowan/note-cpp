@@ -53,13 +53,15 @@ public:
 #if NOTE_JSONB
     // Raw JSON string bodies are not supported with JSONB wire format.
     // Use body() with a lambda or typed struct instead.
-#elif __cplusplus >= 202002L && !defined(__clang__)
+#elif __cplusplus >= 202002L && !defined(__clang__) && __GNUC__ >= 14
     // String literal: validated at compile time as well-formed JSON object.
-    // Verified on GCC 13.4+ and 14+: PR 102933 only affects *inherited* consteval
-    // constructors (`using Base::Base;` propagation), not regular consteval ctor
-    // templates like this one. An empirical test (rejecting `"[1,2,3]"` and
-    // accepting `"{"x":1}"`) passes on GCC 13.4 — earlier versions are not
-    // supported by the project's CI matrix.
+    //
+    // GCC PR 102933 affects *inherited* consteval ctors: `body_t : BodyValue`
+    // pulls this template in via `using BodyValue::BodyValue;` and the
+    // synthesized inherited form is rejected with "'this' is not a constant
+    // expression" on GCC 13.x — including 13.4, even though the direct call
+    // form (`constexpr BodyValue v = "..."`) compiles cleanly. Stay on the
+    // GCC 14+ gate until the inherited-ctor case works empirically.
     template<std::size_t N>
     consteval BodyValue(const char (&s)[N])
         : str_(string_view(s, N - 1)), write_fn_(&write_string) {

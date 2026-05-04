@@ -80,13 +80,43 @@ public:
 #if NOTE_SINGLETON
     // Static thunks — one copy each, shared by all endpoints via create_().
     // Eliminates per-type lambda instantiation in the factory methods.
+    //
+    // After execute(), if a Notecard "err" was captured, route the bytes
+    // through `stash_nc_err()` so they live in allocator-backed storage
+    // beyond the caller's stack. Generated `execute()` later builds an
+    // `ApiResult<...>(ErrorInfo{..., err.view()})` whose pointer would
+    // otherwise dangle the moment execute() returns. `stash_nc_err()`
+    // returns nullptr when no allocator is configured; the fallback to
+    // `NcErrorCapture::buf` is still dangling in that case, but no
+    // worse than before — and no fixed-size buffer is added for the
+    // common case.
+    //
+    // The stash call is skipped under NOTE_MINIMAL: AVR-class targets
+    // typically don't surface the textual error message (they branch on
+    // `result.error().code` and ignore the string), so the +250 bytes
+    // of flash for the durable-copy logic isn't worth it. The dangling
+    // `view()` quirk persists there, gated to that minimal build only.
     static Result<void> void_thunk_(void* p, string_view req, BuildFn fn, void* ctx, detail::NcErrorCapture& err) {
+#if NOTE_MINIMAL
         return static_cast<NcT*>(p)->execute_void(req, fn, ctx, err);
+#else
+        auto* nc = static_cast<NcT*>(p);
+        auto rv = nc->execute_void(req, fn, ctx, err);
+        err.set_durable(nc->stash_nc_err(err.view()));
+        return rv;
+#endif
     }
     static Result<void> generic_thunk_(void* p, string_view req, BuildFn fn, void* ctx,
             void* rsp, const FieldDesc* f, uint8_t n, detail::NcErrorCapture& err, bool& ex,
             void* body_ptr, BodyHandlerFactory body_factory) {
+#if NOTE_MINIMAL
         return static_cast<NcT*>(p)->execute_generic_with_body(req, fn, ctx, rsp, f, n, err, ex, body_ptr, body_factory);
+#else
+        auto* nc = static_cast<NcT*>(p);
+        auto rv = nc->execute_generic_with_body(req, fn, ctx, rsp, f, n, err, ex, body_ptr, body_factory);
+        err.set_durable(nc->stash_nc_err(err.view()));
+        return rv;
+#endif
     }
     static Result<void> send_thunk_(void* p, BuildFn fn, void* ctx) {
         return static_cast<NcT*>(p)->send_command(fn, ctx);

@@ -690,6 +690,29 @@ public:
 
     JsonBackend& backend() { return *backend_; }
 
+    /// Allocator-backed durable copy of a Notecard error message — used
+    /// by the Api singleton thunk path to give `NcErrorCapture::view()`
+    /// a pointer that outlives the caller-stack-allocated NcErrorCapture
+    /// frame. Without this, generated `execute()` returns an
+    /// `ApiResult<...>` whose `ErrorMessage` points into dead stack
+    /// memory by the time `result.error().message` is read.
+    ///
+    /// Allocates `sv.size()` bytes from the configured `alloc_` (one
+    /// allocation per Notecard error; never freed — same heap-leaked
+    /// pattern as `streaming_attempt`'s `pool.intern(err)` on the
+    /// non-singleton path). Returns `nullptr` if no allocator is
+    /// configured or the allocation fails — caller falls back to
+    /// `NcErrorCapture::buf` (still dangling past execute(), but at
+    /// least no fixed buffer is consumed for the rare no-allocator
+    /// build).
+    const char* stash_nc_err(string_view sv) {
+        if (sv.empty() || !alloc_.has_value()) return nullptr;
+        auto* p = static_cast<char*>(alloc_->allocate(sv.size()));
+        if (!p) return nullptr;
+        for (size_t i = 0; i < sv.size(); ++i) p[i] = sv[i];
+        return p;
+    }
+
 private:
     template<typename RequestT>
     ApiResult<typename RequestT::Response> do_binary_send(RequestT& req) {
@@ -1081,7 +1104,22 @@ private:
     std::optional<Allocator> alloc_;
     DebugListener debug_{};
     byte_span cobs_buf_{};          // optional external COBS working buffer
-    char binary_ctrl_buf_[256]{};   // buffer for binary control command responses
+    /// Synchronous-response buffer for binary-transfer control commands
+    /// (`{"req":"card.binary"}` status / `delete:true` reset). Fixed
+    /// 256 bytes because:
+    ///   - `do_binary_send`/`do_binary_receive` issue these queries
+    ///     synchronously and need somewhere to land the response before
+    ///     extracting `max`, `length`, `status` (MD5).
+    ///   - Sized to fit the largest realistic card.binary status reply
+    ///     (offset/length/cobs/max integers + a 32-byte MD5 + scaffolding).
+    ///     Smaller responses leave headroom; the builder doesn't grow.
+    ///   - Lives on the Notecard (not the request) so the binary-transfer
+    ///     orchestration helpers can stay non-template and avoid pulling
+    ///     in the full request type just for a status query.
+    /// Trade-off: 256 bytes per Notecard even for builds that never use
+    /// binary transfer. Acceptable on hosts/MCUs (Notecards are rarely
+    /// instantiated more than once); not used on AVR-class targets.
+    char binary_ctrl_buf_[256]{};
 #ifndef NOTE_RSP_BUF_SIZE
 #define NOTE_RSP_BUF_SIZE 1024
 #endif

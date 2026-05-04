@@ -89,14 +89,41 @@ struct NcErrorCapture {
     static constexpr size_t kMaxLen = 64;
     char buf[kMaxLen]{};
     size_t len = 0;
+#if !NOTE_MINIMAL
+    /// Optional pointer to a durable copy of the captured bytes — set by
+    /// the singleton thunk path via `Notecard::stash_nc_err(...)` so that
+    /// `view()` returns a string_view that outlives the local
+    /// NcErrorCapture frame. When nullptr, view() falls back to `buf`
+    /// (caller-stack lifetime, used by the StaticNotecard transact path
+    /// which captures bytes directly into `buf` during SAX dispatch).
+    /// Gated out under NOTE_MINIMAL: AVR-class targets accept the
+    /// dangling-view quirk in exchange for ~90 B less flash.
+    const char* durable_ptr = nullptr;
+#endif
 
     void capture(string_view v) {
         len = v.size() < kMaxLen ? v.size() : kMaxLen;
         for (size_t i = 0; i < len; ++i) buf[i] = v[i];
+#if !NOTE_MINIMAL
+        durable_ptr = nullptr;
+#endif
     }
 
+#if !NOTE_MINIMAL
+    /// Override view()'s pointer with allocator-backed bytes that outlive
+    /// this NcErrorCapture. `len` stays as the captured length. Caller is
+    /// responsible for keeping `data` alive — typically done by routing
+    /// through the Notecard's allocator via `stash_nc_err(...)`.
+    void set_durable(const char* data) { durable_ptr = data; }
+#endif
+
     bool empty() const { return len == 0; }
-    string_view view() const { return {buf, len}; }
+    string_view view() const {
+#if !NOTE_MINIMAL
+        if (durable_ptr) return {durable_ptr, len};
+#endif
+        return {buf, len};
+    }
 };
 
 /// ReceiveContext — wraps a SaxDispatch to intercept "err" and "crc" fields.

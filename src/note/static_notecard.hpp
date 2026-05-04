@@ -236,6 +236,27 @@ public:
     /// Access the transport stack (e.g. for binary I/O).
     Stack& stack() { return stack_; }
 
+#if !NOTE_MINIMAL
+    /// Mirror of `Notecard::stash_nc_err` for the Api singleton-thunk
+    /// path. Allocates the bytes from the Notecard's configured
+    /// allocator (heap-leaked — same pattern as StringPool::intern; the
+    /// allocator's lifetime carries the bytes). No fixed buffer: arena
+    /// builds pay only for the messages they actually receive, and
+    /// zero-allocator builds get nullptr (caller falls back to the
+    /// caller-stack `NcErrorCapture::buf`, dangling past execute() —
+    /// the same lifetime quirk that existed before this fix).
+    /// Gated out under NOTE_MINIMAL: the singleton thunk on AVR-class
+    /// targets doesn't call this, so the function would otherwise sit
+    /// unused; gating ensures the linker doesn't accidentally retain it.
+    const char* stash_nc_err(string_view sv) {
+        if (sv.empty()) return nullptr;
+        auto* p = static_cast<char*>(alloc_.allocate(sv.size()));
+        if (!p) return nullptr;
+        for (size_t i = 0; i < sv.size(); ++i) p[i] = sv[i];
+        return p;
+    }
+#endif
+
     /// Non-template transact with retry. Wraps transact_dispatch in retry_loop.
     Result<void> transact_retried(BuildFn build_fn, void* build_ctx,
                                   SaxDispatch dispatch,

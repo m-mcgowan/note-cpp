@@ -21,12 +21,17 @@
 # combined device-coverage report under ./coverage/. Partitions:
 #
 #   test_fixtures  — gcov backend (small enough to fit DRAM)
+#   test_units_a   — trace-pc backend (gcov backend DRAM-overflows)
 #   test_units_b   — trace-pc backend (gcov backend DRAM-overflows)
 #   test_units_c   — trace-pc backend (gcov backend DRAM-overflows)
 #
-# test_units_a is skipped: it doesn't compile under coverage envs
-# (Wire.h resolution issue, pre-existing). Host coverage already
-# exercises those tests.
+# All four partitions use the trace-pc envs' loopTask stack of 24 KB —
+# the codegen-emitted "Api::<group> resource group" tests pin ~150 B of
+# stack per distinct request type, and the "card" group's 130-call
+# block pushes the live frame to ~19.5 KB at any optimisation level
+# (sequential temporaries of distinct types don't get slot-merged by
+# GCC). Default Arduino-ESP32 8 KB and the previous 16 KB both blew the
+# canary; 24 KB has comfortable headroom.
 #
 # Decoding requires the `pio_cov` Python module. Preferred:
 # `pip install pio-cov` in PIO's penv. Otherwise the script falls back
@@ -200,9 +205,9 @@ decode_and_merge_coverage() {
 if [ "$COVERAGE_MODE" = "1" ]; then
     COV_RUNS=()
     run_coverage_partition gcov    test_fixtures
+    run_coverage_partition tracepc test_units_a
     run_coverage_partition tracepc test_units_b
     run_coverage_partition tracepc test_units_c
-    # test_units_a skipped — Wire.h compile failure under coverage envs.
 
     decode_and_merge_coverage
 else

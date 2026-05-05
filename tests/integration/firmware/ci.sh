@@ -35,8 +35,7 @@
 #
 # Decoding requires the `pio_cov` Python module. Preferred:
 # `pip install pio-cov` in PIO's penv. Otherwise the script falls back
-# to PYTHONPATH against `${PIO_COV_ROOT:-$HOME/e/pio-cov}` (note: the
-# checkout dir is currently still pio-gcov/ on disk during the rename).
+# to PYTHONPATH against `${PIO_COV_ROOT:-$HOME/e/pio-cov}`.
 #
 # Any extra arguments after --test or --coverage are forwarded to
 # `pio test` (e.g. `--upload-port`, `--test-port`, `-v`).

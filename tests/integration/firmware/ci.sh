@@ -35,7 +35,7 @@
 #
 # Decoding requires the `pio_cov` Python module. Preferred:
 # `pip install pio-cov` in PIO's penv. Otherwise the script falls back
-# to PYTHONPATH against `${PIO_COV_ROOT:-$HOME/e/pio-gcov}` (note: the
+# to PYTHONPATH against `${PIO_COV_ROOT:-$HOME/e/pio-cov}` (note: the
 # checkout dir is currently still pio-gcov/ on disk during the rename).
 #
 # Any extra arguments after --test or --coverage are forwarded to
@@ -141,7 +141,7 @@ decode_and_merge_coverage() {
     # iterating on pio-cov itself before it's pip-installed.
     local pio_cov_python=("python3")
     if ! python3 -c 'import pio_cov' 2>/dev/null; then
-        local pio_cov_root="${PIO_COV_ROOT:-$HOME/e/pio-gcov}"
+        local pio_cov_root="${PIO_COV_ROOT:-$HOME/e/pio-cov}"
         if [ ! -d "$pio_cov_root" ]; then
             echo "WARN: pio_cov not importable and PIO_COV_ROOT=$pio_cov_root not found; skipping decode"
             echo "       Install with: pip install pio-cov"

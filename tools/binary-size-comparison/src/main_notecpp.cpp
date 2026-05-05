@@ -44,7 +44,7 @@ void setup() {
         b.add("file", note::string_view("sensors.qo"));
         b.begin_object("body");
         b.add("temperature", 14.1);
-        b.add("humidity", int32_t{1});
+        b.add("humidity", 1);
         b.end_object();
     });
 }
@@ -62,7 +62,7 @@ void loop() {
         b.add("file", note::string_view("sensors.qo"));
         b.begin_object("body");
         b.add("temperature", static_cast<double>(temperature));
-        b.add("humidity", int32_t{60});
+        b.add("humidity", 60);
         b.end_object();
     });
 

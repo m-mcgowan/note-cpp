@@ -155,7 +155,7 @@ TEST_CASE("BodyValue from JsonBuf — compile-time verified") {
 TEST_CASE("JsonBuf auto-close on view() — no explicit close needed") {
     note::JsonBuf<64> body;
     body.add("temp", 22.5);
-    body.add("humidity", int32_t{60});
+    body.add("humidity", 60);
     // No close() — view() auto-closes
     REQUIRE(body.view() == R"({"temp":22.5,"humidity":60})");
 }
@@ -184,7 +184,7 @@ TEST_CASE("JsonBuf as body — runtime values, auto-close") {
     TestRequest req;
     note::JsonBuf<64> body;
     body.add("temp", 22.5);
-    body.add("humidity", int32_t{60});
+    body.add("humidity", 60);
     req.body = body.view();
     h.nc.execute(req);
     REQUIRE(h.last_request ==
@@ -221,7 +221,7 @@ TEST_CASE("BodyValue from builder lambda") {
     TestRequest req;
     req.body = note::body([](note::JsonBuilder& b) {
         b.add("temp", 22.5);
-        b.add("humidity", int32_t{60});
+        b.add("humidity", 60);
     });
     h.nc.execute(req);
     REQUIRE(h.last_request ==
@@ -385,7 +385,7 @@ TEST_CASE("note.add with builder body") {
         .file("sensors.qo")
         .body(note::body([](note::JsonBuilder& b) {
             b.add("temp", 22.5);
-            b.add("count", int32_t{42});
+            b.add("count", 42);
         }))
         .execute();
     REQUIRE(h.last_request ==

@@ -2,15 +2,15 @@
 
 #include <note/api/hub_set.hpp>
 #include <note/api/card_location_mode.hpp>
-#include <note/app/connection_manager.hpp>
-#include <note/app/sync_manager.hpp>
-#include <note/app/template_manager.hpp>
+#include <note/detail/app/connection_manager.hpp>
+#include <note/detail/app/sync_manager.hpp>
+#include <note/detail/app/template_manager.hpp>
 #include <note/units.hpp>
 
 #include <optional>
 #include <utility>
 
-namespace note::app {
+namespace note::detail::app {
 
 template<typename Channel, typename Store = NullStateStore>
 class Setup {
@@ -111,4 +111,4 @@ private:
     std::optional<std::pair<double, double>> fixed_loc_;
 };
 
-} // namespace note::app
+} // namespace note::detail::app

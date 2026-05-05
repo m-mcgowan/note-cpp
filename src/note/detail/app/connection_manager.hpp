@@ -2,9 +2,9 @@
 
 #include <note/api/hub_set.hpp>
 #include <note/api/hub_status.hpp>
-#include <note/app/state_store.hpp>
+#include <note/detail/app/state_store.hpp>
 
-namespace note::app {
+namespace note::detail::app {
 
 struct ConnectionState {
     bool connected{};
@@ -51,4 +51,4 @@ private:
     Store& store_;
 };
 
-} // namespace note::app
+} // namespace note::detail::app

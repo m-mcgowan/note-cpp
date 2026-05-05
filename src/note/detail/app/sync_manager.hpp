@@ -2,9 +2,9 @@
 
 #include <note/api/hub_sync.hpp>
 #include <note/api/hub_sync_status.hpp>
-#include <note/app/state_store.hpp>
+#include <note/detail/app/state_store.hpp>
 
-namespace note::app {
+namespace note::detail::app {
 
 struct SyncState {
     std::string status;
@@ -95,4 +95,4 @@ private:
     bool ntn_ = false;
 };
 
-} // namespace note::app
+} // namespace note::detail::app

@@ -7,11 +7,11 @@
 #include "test_notecard_factory.hpp"
 
 #include <note/api.hpp>
-#include <note/app/channel.hpp>
-#include <note/app/attention_manager.hpp>
-#include <note/app/state_store.hpp>
+#include <note/detail/app/channel.hpp>
+#include <note/detail/app/attention_manager.hpp>
+#include <note/detail/app/state_store.hpp>
 
-using Store = note::app::StaticStateStore<note::app::AttentionState>;
+using Store = note::detail::app::StaticStateStore<note::detail::app::AttentionState>;
 
 namespace {
 
@@ -20,7 +20,7 @@ struct TestFixture {
     std::vector<std::string> captured;
     note::test::CallbackTransport transport;
     note::Notecard nc;
-    note::app::DirectChannel ch;
+    note::detail::app::DirectChannel ch;
     Store store;
 
     TestFixture()
@@ -41,7 +41,7 @@ struct TestFixture {
 
 TEST_CASE("Attention::enable() adds keyword") {
     TestFixture f;
-    note::app::Attention<note::app::DirectChannel, Store> attn(f.ch, f.store);
+    note::detail::app::Attention<note::detail::app::DirectChannel, Store> attn(f.ch, f.store);
 
     attn.enable("files");
     REQUIRE(attn.mode() == "files");
@@ -52,7 +52,7 @@ TEST_CASE("Attention::enable() adds keyword") {
 
 TEST_CASE("Attention::enable() is idempotent") {
     TestFixture f;
-    note::app::Attention<note::app::DirectChannel, Store> attn(f.ch, f.store);
+    note::detail::app::Attention<note::detail::app::DirectChannel, Store> attn(f.ch, f.store);
 
     attn.enable("files");
     attn.enable("files");
@@ -61,7 +61,7 @@ TEST_CASE("Attention::enable() is idempotent") {
 
 TEST_CASE("Attention::disable() removes keyword") {
     TestFixture f;
-    note::app::Attention<note::app::DirectChannel, Store> attn(f.ch, f.store);
+    note::detail::app::Attention<note::detail::app::DirectChannel, Store> attn(f.ch, f.store);
 
     attn.enable("files");
     attn.enable("sleep");
@@ -72,7 +72,7 @@ TEST_CASE("Attention::disable() removes keyword") {
 
 TEST_CASE("Attention::disable() handles single keyword") {
     TestFixture f;
-    note::app::Attention<note::app::DirectChannel, Store> attn(f.ch, f.store);
+    note::detail::app::Attention<note::detail::app::DirectChannel, Store> attn(f.ch, f.store);
 
     attn.enable("files");
     attn.disable("files");
@@ -81,7 +81,7 @@ TEST_CASE("Attention::disable() handles single keyword") {
 
 TEST_CASE("Attention::disable() no-op for absent keyword") {
     TestFixture f;
-    note::app::Attention<note::app::DirectChannel, Store> attn(f.ch, f.store);
+    note::detail::app::Attention<note::detail::app::DirectChannel, Store> attn(f.ch, f.store);
 
     attn.enable("files");
     attn.disable("motion");
@@ -94,7 +94,7 @@ TEST_CASE("Attention::disable() no-op for absent keyword") {
 
 TEST_CASE("Attention::arm() sends card.attn with mode") {
     TestFixture f;
-    note::app::Attention<note::app::DirectChannel, Store> attn(f.ch, f.store);
+    note::detail::app::Attention<note::detail::app::DirectChannel, Store> attn(f.ch, f.store);
 
     attn.enable("files");
     auto r = attn.arm();
@@ -106,7 +106,7 @@ TEST_CASE("Attention::arm() sends card.attn with mode") {
 
 TEST_CASE("Attention::arm() with no triggers sends mode=arm") {
     TestFixture f;
-    note::app::Attention<note::app::DirectChannel, Store> attn(f.ch, f.store);
+    note::detail::app::Attention<note::detail::app::DirectChannel, Store> attn(f.ch, f.store);
 
     auto r = attn.arm();
     REQUIRE(r.has_value());
@@ -115,7 +115,7 @@ TEST_CASE("Attention::arm() with no triggers sends mode=arm") {
 
 TEST_CASE("Attention::arm() with multiple triggers") {
     TestFixture f;
-    note::app::Attention<note::app::DirectChannel, Store> attn(f.ch, f.store);
+    note::detail::app::Attention<note::detail::app::DirectChannel, Store> attn(f.ch, f.store);
 
     attn.enable("files");
     attn.enable("env");
@@ -126,7 +126,7 @@ TEST_CASE("Attention::arm() with multiple triggers") {
 
 TEST_CASE("Attention::arm() sends card.attn with timeout") {
     TestFixture f;
-    note::app::Attention<note::app::DirectChannel, Store> attn(f.ch, f.store);
+    note::detail::app::Attention<note::detail::app::DirectChannel, Store> attn(f.ch, f.store);
 
     attn.enable("sleep");
     auto r = attn.arm(note::Seconds{300});
@@ -137,11 +137,11 @@ TEST_CASE("Attention::arm() sends card.attn with timeout") {
 
 TEST_CASE("Attention::arm() updates store") {
     TestFixture f;
-    note::app::Attention<note::app::DirectChannel, Store> attn(f.ch, f.store);
+    note::detail::app::Attention<note::detail::app::DirectChannel, Store> attn(f.ch, f.store);
 
     attn.enable("files");
     attn.arm();
-    auto s = f.store.get<note::app::AttentionState>();
+    auto s = f.store.get<note::detail::app::AttentionState>();
     REQUIRE(s.has_value());
     REQUIRE(s->mode == "files");
 }
@@ -152,7 +152,7 @@ TEST_CASE("Attention::arm() updates store") {
 
 TEST_CASE("Attention::triggered() sends card.attn") {
     TestFixture f;
-    note::app::Attention<note::app::DirectChannel, Store> attn(f.ch, f.store);
+    note::detail::app::Attention<note::detail::app::DirectChannel, Store> attn(f.ch, f.store);
 
     auto r = attn.triggered();
     REQUIRE(r.has_value());
@@ -167,7 +167,7 @@ TEST_CASE("Attention::triggered() sends card.attn") {
 
 TEST_CASE("Attention::query() sends card.attn with verify") {
     TestFixture f;
-    note::app::Attention<note::app::DirectChannel, Store> attn(f.ch, f.store);
+    note::detail::app::Attention<note::detail::app::DirectChannel, Store> attn(f.ch, f.store);
 
     auto r = attn.query();
     REQUIRE(r);
@@ -185,9 +185,9 @@ TEST_CASE("Attention::arm() propagates transport errors") {
             return note::make_error(note::Error::SendFailed, "write failed");
         });
     auto nc = note::test::make_test_notecard(backend, transport);
-    note::app::DirectChannel ch(nc);
+    note::detail::app::DirectChannel ch(nc);
     Store store;
-    note::app::Attention<note::app::DirectChannel, Store> attn(ch, store);
+    note::detail::app::Attention<note::detail::app::DirectChannel, Store> attn(ch, store);
 
     auto r = attn.arm();
     REQUIRE(!r.has_value());

@@ -6,7 +6,7 @@
 #include "test_json_backend.hpp"
 #include "test_notecard_factory.hpp"
 
-#include <note/app/channel.hpp>
+#include <note/detail/app/channel.hpp>
 #include <note/api/card_version.hpp>
 #include <note/api/hub_set.hpp>
 
@@ -57,7 +57,7 @@ TEST_CASE("DirectChannel::execute() forwards to Notecard::execute()") {
         });
     auto nc = note::test::make_test_notecard(backend, transport);
 
-    note::app::DirectChannel ch(nc);
+    note::detail::app::DirectChannel ch(nc);
     auto r = ch.execute(note::api::CardVersion{});
     REQUIRE(r);
     REQUIRE(captured.find("card.version") != std::string::npos);
@@ -75,7 +75,7 @@ TEST_CASE("DirectChannel::execute() propagates transport errors") {
         });
     auto nc = note::test::make_test_notecard(backend, transport);
 
-    note::app::DirectChannel ch(nc);
+    note::detail::app::DirectChannel ch(nc);
     auto r = ch.execute(note::api::CardVersion{});
     REQUIRE(!r);
     REQUIRE(r.error().code == note::Error::ResponseLost);
@@ -93,7 +93,7 @@ TEST_CASE("DirectChannel::execute() propagates protocol errors") {
         });
     auto nc = note::test::make_test_notecard(backend, transport);
 
-    note::app::DirectChannel ch(nc);
+    note::detail::app::DirectChannel ch(nc);
     auto r = ch.execute(note::api::CardVersion{});
     REQUIRE(!r);
     REQUIRE(r.error().code == note::Error::Json);
@@ -113,7 +113,7 @@ TEST_CASE("DirectChannel::command() forwards to Notecard::command_typed()") {
         });
     auto nc = note::test::make_test_notecard(backend, transport);
 
-    note::app::DirectChannel ch(nc);
+    note::detail::app::DirectChannel ch(nc);
     auto r = ch.command(note::api::HubSet{});
     REQUIRE(r.has_value());
     REQUIRE(captured.find("\"cmd\"") != std::string::npos);
@@ -131,7 +131,7 @@ TEST_CASE("DirectChannel::tick() is a no-op") {
         });
     auto nc = note::test::make_test_notecard(backend, transport);
 
-    note::app::DirectChannel ch(nc);
+    note::detail::app::DirectChannel ch(nc);
     ch.tick();  // should compile and not crash
 }
 
@@ -147,6 +147,6 @@ TEST_CASE("DirectChannel::notecard() returns the wrapped Notecard") {
         });
     auto nc = note::test::make_test_notecard(backend, transport);
 
-    note::app::DirectChannel ch(nc);
+    note::detail::app::DirectChannel ch(nc);
     REQUIRE(&ch.notecard() == &nc);
 }

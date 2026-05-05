@@ -5,7 +5,7 @@
 #include <tuple>
 #include <utility>
 
-namespace note::app {
+namespace note::detail::app {
 
 // StaticStateStore<Types...> — type-indexed observable state store.
 //
@@ -74,4 +74,4 @@ struct NullStateStore {
     void on_change(std::function<void(const T&)>) {}
 };
 
-} // namespace note::app
+} // namespace note::detail::app

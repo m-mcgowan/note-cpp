@@ -6,11 +6,11 @@
 #include "test_json_backend.hpp"
 #include "test_notecard_factory.hpp"
 
-#include <note/app/channel.hpp>
-#include <note/app/setup.hpp>
-#include <note/app/state_store.hpp>
+#include <note/detail/app/channel.hpp>
+#include <note/detail/app/setup.hpp>
+#include <note/detail/app/state_store.hpp>
 
-using Store = note::app::NullStateStore;
+using Store = note::detail::app::NullStateStore;
 
 namespace {
 
@@ -19,7 +19,7 @@ struct TestFixture {
     std::vector<std::string> captured;
     note::test::CallbackTransport transport;
     note::Notecard nc;
-    note::app::DirectChannel ch;
+    note::detail::app::DirectChannel ch;
     Store store;
 
     TestFixture()
@@ -40,7 +40,7 @@ struct TestFixture {
 
 TEST_CASE("Setup::run() sends hub.set then hub.sync") {
     TestFixture f;
-    note::app::Setup<note::app::DirectChannel, Store> setup(f.ch, f.store);
+    note::detail::app::Setup<note::detail::app::DirectChannel, Store> setup(f.ch, f.store);
 
     setup.product("com.example.app").mode("periodic");
     auto r = setup.run();
@@ -58,7 +58,7 @@ TEST_CASE("Setup::run() sends hub.set then hub.sync") {
 
 TEST_CASE("Setup::run() registers templates") {
     TestFixture f;
-    note::app::Setup<note::app::DirectChannel, Store> setup(f.ch, f.store);
+    note::detail::app::Setup<note::detail::app::DirectChannel, Store> setup(f.ch, f.store);
 
     setup.product("com.example.app")
          .mode("periodic")
@@ -78,7 +78,7 @@ TEST_CASE("Setup::run() registers templates") {
 
 TEST_CASE("Setup::run() sends card.location.mode for fixed location") {
     TestFixture f;
-    note::app::Setup<note::app::DirectChannel, Store> setup(f.ch, f.store);
+    note::detail::app::Setup<note::detail::app::DirectChannel, Store> setup(f.ch, f.store);
 
     setup.product("com.example.app")
          .fixed_location(42.565, -70.783);
@@ -97,7 +97,7 @@ TEST_CASE("Setup::run() sends card.location.mode for fixed location") {
 
 TEST_CASE("Setup::run() includes outbound and inbound") {
     TestFixture f;
-    note::app::Setup<note::app::DirectChannel, Store> setup(f.ch, f.store);
+    note::detail::app::Setup<note::detail::app::DirectChannel, Store> setup(f.ch, f.store);
 
     using namespace note::literals;
     setup.outbound(15_mins).inbound(120_minutes);
@@ -114,7 +114,7 @@ TEST_CASE("Setup::run() includes outbound and inbound") {
 
 TEST_CASE("Setup NTN mode uses directional sync") {
     TestFixture f;
-    note::app::Setup<note::app::DirectChannel, Store> setup(f.ch, f.store);
+    note::detail::app::Setup<note::detail::app::DirectChannel, Store> setup(f.ch, f.store);
 
     setup.product("com.example.app").ntn();
 
@@ -132,7 +132,7 @@ TEST_CASE("Setup NTN mode uses directional sync") {
 
 TEST_CASE("Setup NTN mode auto-sets compact on templates") {
     TestFixture f;
-    note::app::Setup<note::app::DirectChannel, Store> setup(f.ch, f.store);
+    note::detail::app::Setup<note::detail::app::DirectChannel, Store> setup(f.ch, f.store);
 
     setup.product("com.example.app")
          .ntn()
@@ -166,9 +166,9 @@ TEST_CASE("Setup::run() fails at hub.set step") {
             return note::string_view("{}");
         });
     auto nc = note::test::make_test_notecard(backend, transport);
-    note::app::DirectChannel ch(nc);
+    note::detail::app::DirectChannel ch(nc);
     Store store;
-    note::app::Setup<note::app::DirectChannel, Store> setup(ch, store);
+    note::detail::app::Setup<note::detail::app::DirectChannel, Store> setup(ch, store);
 
     setup.product("com.example.app");
     auto r = setup.run();
@@ -190,9 +190,9 @@ TEST_CASE("Setup::run() fails at template step") {
             return note::string_view("{}");
         });
     auto nc = note::test::make_test_notecard(backend, transport);
-    note::app::DirectChannel ch(nc);
+    note::detail::app::DirectChannel ch(nc);
     Store store;
-    note::app::Setup<note::app::DirectChannel, Store> setup(ch, store);
+    note::detail::app::Setup<note::detail::app::DirectChannel, Store> setup(ch, store);
 
     setup.product("com.example.app")
          .template_("readings.qo", note::BodyValue{});
@@ -207,7 +207,7 @@ TEST_CASE("Setup::run() fails at template step") {
 
 TEST_CASE("Setup provides access to sub-managers") {
     TestFixture f;
-    note::app::Setup<note::app::DirectChannel, Store> setup(f.ch, f.store);
+    note::detail::app::Setup<note::detail::app::DirectChannel, Store> setup(f.ch, f.store);
 
     // Just verify these compile and return references
     auto& conn = setup.connection();

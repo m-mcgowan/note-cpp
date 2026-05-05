@@ -1,12 +1,12 @@
 #pragma once
 
 #include <note/api/note_template.hpp>
-#include <note/app/state_store.hpp>
+#include <note/detail/app/state_store.hpp>
 
 #include <string>
 #include <vector>
 
-namespace note::app {
+namespace note::detail::app {
 
 // Describes one Notefile template to be registered.
 struct TemplateEntry {
@@ -92,4 +92,4 @@ private:
     bool ntn_ = false;
 };
 
-} // namespace note::app
+} // namespace note::detail::app

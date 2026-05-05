@@ -6,12 +6,12 @@
 #include "test_json_backend.hpp"
 #include "test_notecard_factory.hpp"
 
-#include <note/app/channel.hpp>
-#include <note/app/template_manager.hpp>
-#include <note/app/state_store.hpp>
+#include <note/detail/app/channel.hpp>
+#include <note/detail/app/template_manager.hpp>
+#include <note/detail/app/state_store.hpp>
 #include <note/body.hpp>
 
-using Store = note::app::NullStateStore;
+using Store = note::detail::app::NullStateStore;
 
 namespace {
 
@@ -20,7 +20,7 @@ struct TestFixture {
     std::vector<std::string> captured;
     note::test::CallbackTransport transport;
     note::Notecard nc;
-    note::app::DirectChannel ch;
+    note::detail::app::DirectChannel ch;
 
     TestFixture()
         : transport(
@@ -41,7 +41,7 @@ struct TestFixture {
 TEST_CASE("Templates::register_all() sends note.template for each entry") {
     TestFixture f;
     Store store;
-    note::app::Templates<note::app::DirectChannel, Store> tmpl(f.ch, store);
+    note::detail::app::Templates<note::detail::app::DirectChannel, Store> tmpl(f.ch, store);
 
     tmpl.declare("readings.qo", note::BodyValue{});
     tmpl.declare("config.db", note::BodyValue{});
@@ -61,7 +61,7 @@ TEST_CASE("Templates::register_all() sends note.template for each entry") {
 TEST_CASE("Templates::register_all() skips already registered") {
     TestFixture f;
     Store store;
-    note::app::Templates<note::app::DirectChannel, Store> tmpl(f.ch, store);
+    note::detail::app::Templates<note::detail::app::DirectChannel, Store> tmpl(f.ch, store);
 
     tmpl.declare("readings.qo", note::BodyValue{});
 
@@ -80,7 +80,7 @@ TEST_CASE("Templates::register_all() skips already registered") {
 TEST_CASE("Templates::is_registered() tracks state") {
     TestFixture f;
     Store store;
-    note::app::Templates<note::app::DirectChannel, Store> tmpl(f.ch, store);
+    note::detail::app::Templates<note::detail::app::DirectChannel, Store> tmpl(f.ch, store);
 
     tmpl.declare("readings.qo", note::BodyValue{});
     REQUIRE(!tmpl.is_registered("readings.qo"));
@@ -97,7 +97,7 @@ TEST_CASE("Templates::is_registered() tracks state") {
 TEST_CASE("Templates::reset() clears registration") {
     TestFixture f;
     Store store;
-    note::app::Templates<note::app::DirectChannel, Store> tmpl(f.ch, store);
+    note::detail::app::Templates<note::detail::app::DirectChannel, Store> tmpl(f.ch, store);
 
     tmpl.declare("readings.qo", note::BodyValue{});
     tmpl.register_all();
@@ -118,7 +118,7 @@ TEST_CASE("Templates::reset() clears registration") {
 TEST_CASE("Templates NTN mode rejects missing port") {
     TestFixture f;
     Store store;
-    note::app::Templates<note::app::DirectChannel, Store> tmpl(f.ch, store);
+    note::detail::app::Templates<note::detail::app::DirectChannel, Store> tmpl(f.ch, store);
     tmpl.set_ntn(true);
 
     tmpl.declare("readings.qo", note::BodyValue{}, 0, true);  // port=0, compact=true
@@ -135,7 +135,7 @@ TEST_CASE("Templates NTN mode rejects missing port") {
 TEST_CASE("Templates NTN mode rejects non-compact") {
     TestFixture f;
     Store store;
-    note::app::Templates<note::app::DirectChannel, Store> tmpl(f.ch, store);
+    note::detail::app::Templates<note::detail::app::DirectChannel, Store> tmpl(f.ch, store);
     tmpl.set_ntn(true);
 
     tmpl.declare("readings.qo", note::BodyValue{}, 55, false);  // port=55, compact=false
@@ -152,7 +152,7 @@ TEST_CASE("Templates NTN mode rejects non-compact") {
 TEST_CASE("Templates NTN mode accepts valid template") {
     TestFixture f;
     Store store;
-    note::app::Templates<note::app::DirectChannel, Store> tmpl(f.ch, store);
+    note::detail::app::Templates<note::detail::app::DirectChannel, Store> tmpl(f.ch, store);
     tmpl.set_ntn(true);
 
     tmpl.declare("readings.qo", note::BodyValue{}, 55, true);
@@ -171,7 +171,7 @@ TEST_CASE("Templates NTN mode accepts valid template") {
 TEST_CASE("Templates includes port when set") {
     TestFixture f;
     Store store;
-    note::app::Templates<note::app::DirectChannel, Store> tmpl(f.ch, store);
+    note::detail::app::Templates<note::detail::app::DirectChannel, Store> tmpl(f.ch, store);
 
     tmpl.declare("readings.qo", note::BodyValue{}, 42);
 
@@ -191,9 +191,9 @@ TEST_CASE("Templates::register_all() propagates transport errors") {
             return note::make_error(note::Error::SendFailed, "write failed");
         });
     auto nc = note::test::make_test_notecard(backend, transport);
-    note::app::DirectChannel ch(nc);
+    note::detail::app::DirectChannel ch(nc);
     Store store;
-    note::app::Templates<note::app::DirectChannel, Store> tmpl(ch, store);
+    note::detail::app::Templates<note::detail::app::DirectChannel, Store> tmpl(ch, store);
 
     tmpl.declare("readings.qo", note::BodyValue{});
     auto r = tmpl.register_all();

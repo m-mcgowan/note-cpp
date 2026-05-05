@@ -1,13 +1,13 @@
 #pragma once
 
 #include <note/api/card_attn.hpp>
-#include <note/app/state_store.hpp>
+#include <note/detail/app/state_store.hpp>
 #include <note/units.hpp>
 
 #include <algorithm>
 #include <string>
 
-namespace note::app {
+namespace note::detail::app {
 
 struct AttentionState {
     bool set{};
@@ -106,4 +106,4 @@ private:
     }
 };
 
-} // namespace note::app
+} // namespace note::detail::app

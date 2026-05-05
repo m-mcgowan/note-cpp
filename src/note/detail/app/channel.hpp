@@ -4,14 +4,14 @@
 
 #if !NOTE_NO_POLYMORPHIC
 
-namespace note::app {
+namespace note::detail::app {
 
 // DirectChannel — executes requests immediately against a Notecard instance.
 // No queue, no thread safety, trivially re-entrant.
 //
 // Usage:
 //   note::Notecard nc(backend, transport);
-//   note::app::DirectChannel ch(nc);
+//   note::detail::app::DirectChannel ch(nc);
 //   auto r = ch.execute(api.cardVersion());
 
 class DirectChannel {
@@ -36,6 +36,6 @@ private:
     Notecard& nc_;
 };
 
-} // namespace note::app
+} // namespace note::detail::app
 
 #endif // NOTE_NO_POLYMORPHIC

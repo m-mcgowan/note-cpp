@@ -6,11 +6,11 @@
 #include "test_json_backend.hpp"
 #include "test_notecard_factory.hpp"
 
-#include <note/app/channel.hpp>
-#include <note/app/connection_manager.hpp>
-#include <note/app/state_store.hpp>
+#include <note/detail/app/channel.hpp>
+#include <note/detail/app/connection_manager.hpp>
+#include <note/detail/app/state_store.hpp>
 
-using Store = note::app::StaticStateStore<note::app::ConnectionState>;
+using Store = note::detail::app::StaticStateStore<note::detail::app::ConnectionState>;
 
 namespace {
 
@@ -20,7 +20,7 @@ struct TestFixture {
     std::vector<std::string> captured;
     note::test::CallbackTransport transport;
     note::Notecard nc;
-    note::app::DirectChannel ch;
+    note::detail::app::DirectChannel ch;
     Store store;
 
     TestFixture()
@@ -41,7 +41,7 @@ struct TestFixture {
 
 TEST_CASE("Connection::configure() sends hub.set") {
     TestFixture f;
-    note::app::Connection<note::app::DirectChannel, Store> conn(f.ch, f.store);
+    note::detail::app::Connection<note::detail::app::DirectChannel, Store> conn(f.ch, f.store);
 
     note::api::HubSet config;
     config.product("com.example.app");
@@ -64,9 +64,9 @@ TEST_CASE("Connection::configure() propagates transport errors") {
             return note::make_error(note::Error::SendFailed, "write failed");
         });
     auto nc = note::test::make_test_notecard(backend, transport);
-    note::app::DirectChannel ch(nc);
+    note::detail::app::DirectChannel ch(nc);
     Store store;
-    note::app::Connection<note::app::DirectChannel, Store> conn(ch, store);
+    note::detail::app::Connection<note::detail::app::DirectChannel, Store> conn(ch, store);
 
     auto r = conn.configure(note::api::HubSet{});
     REQUIRE(!r.has_value());
@@ -86,15 +86,15 @@ TEST_CASE("Connection::status() queries hub.status") {
             return note::string_view("{}");
         });
     auto nc = note::test::make_test_notecard(backend, transport);
-    note::app::DirectChannel ch(nc);
+    note::detail::app::DirectChannel ch(nc);
     Store store;
-    note::app::Connection<note::app::DirectChannel, Store> conn(ch, store);
+    note::detail::app::Connection<note::detail::app::DirectChannel, Store> conn(ch, store);
 
     auto r = conn.status();
     REQUIRE(r);
     REQUIRE(captured.find("hub.status") != std::string::npos);
 
-    auto s = store.get<note::app::ConnectionState>();
+    auto s = store.get<note::detail::app::ConnectionState>();
     REQUIRE(s.has_value());
 }
 
@@ -104,10 +104,10 @@ TEST_CASE("Connection::status() queries hub.status") {
 
 TEST_CASE("Connection::is_connected() reads from store") {
     TestFixture f;
-    note::app::Connection<note::app::DirectChannel, Store> conn(f.ch, f.store);
+    note::detail::app::Connection<note::detail::app::DirectChannel, Store> conn(f.ch, f.store);
 
     // Pre-populate store
-    f.store.set(note::app::ConnectionState{.connected = true, .status = "connected"});
+    f.store.set(note::detail::app::ConnectionState{.connected = true, .status = "connected"});
 
     auto r = conn.is_connected();
     REQUIRE(r.has_value());
@@ -122,7 +122,7 @@ TEST_CASE("Connection::is_connected() reads from store") {
 
 TEST_CASE("Connection::is_connected() queries when store is empty") {
     TestFixture f;
-    note::app::Connection<note::app::DirectChannel, Store> conn(f.ch, f.store);
+    note::detail::app::Connection<note::detail::app::DirectChannel, Store> conn(f.ch, f.store);
 
     auto r = conn.is_connected();
     REQUIRE(r.has_value());

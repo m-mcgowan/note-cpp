@@ -6,11 +6,11 @@
 #include "test_json_backend.hpp"
 #include "test_notecard_factory.hpp"
 
-#include <note/app/channel.hpp>
-#include <note/app/sync_manager.hpp>
-#include <note/app/state_store.hpp>
+#include <note/detail/app/channel.hpp>
+#include <note/detail/app/sync_manager.hpp>
+#include <note/detail/app/state_store.hpp>
 
-using Store = note::app::StaticStateStore<note::app::SyncState>;
+using Store = note::detail::app::StaticStateStore<note::detail::app::SyncState>;
 
 namespace {
 
@@ -19,7 +19,7 @@ struct TestFixture {
     std::vector<std::string> captured;
     note::test::CallbackTransport transport;
     note::Notecard nc;
-    note::app::DirectChannel ch;
+    note::detail::app::DirectChannel ch;
     Store store;
 
     TestFixture()
@@ -40,7 +40,7 @@ struct TestFixture {
 
 TEST_CASE("Sync::sync() sends hub.sync in normal mode") {
     TestFixture f;
-    note::app::Sync<note::app::DirectChannel, Store> sync(f.ch, f.store);
+    note::detail::app::Sync<note::detail::app::DirectChannel, Store> sync(f.ch, f.store);
 
     auto r = sync.sync();
     REQUIRE(r.has_value());
@@ -54,7 +54,7 @@ TEST_CASE("Sync::sync() sends hub.sync in normal mode") {
 
 TEST_CASE("Sync::sync() sends two requests in NTN mode") {
     TestFixture f;
-    note::app::Sync<note::app::DirectChannel, Store> sync(f.ch, f.store);
+    note::detail::app::Sync<note::detail::app::DirectChannel, Store> sync(f.ch, f.store);
     sync.set_ntn(true);
 
     auto r = sync.sync();
@@ -70,7 +70,7 @@ TEST_CASE("Sync::sync() sends two requests in NTN mode") {
 
 TEST_CASE("Sync::sync_outbound() sends out:true in NTN mode") {
     TestFixture f;
-    note::app::Sync<note::app::DirectChannel, Store> sync(f.ch, f.store);
+    note::detail::app::Sync<note::detail::app::DirectChannel, Store> sync(f.ch, f.store);
     sync.set_ntn(true);
 
     auto r = sync.sync_outbound();
@@ -85,7 +85,7 @@ TEST_CASE("Sync::sync_outbound() sends out:true in NTN mode") {
 
 TEST_CASE("Sync::sync_outbound() sends plain hub.sync in normal mode") {
     TestFixture f;
-    note::app::Sync<note::app::DirectChannel, Store> sync(f.ch, f.store);
+    note::detail::app::Sync<note::detail::app::DirectChannel, Store> sync(f.ch, f.store);
 
     auto r = sync.sync_outbound();
     REQUIRE(r.has_value());
@@ -100,7 +100,7 @@ TEST_CASE("Sync::sync_outbound() sends plain hub.sync in normal mode") {
 
 TEST_CASE("Sync::sync_inbound() sends in:true in NTN mode") {
     TestFixture f;
-    note::app::Sync<note::app::DirectChannel, Store> sync(f.ch, f.store);
+    note::detail::app::Sync<note::detail::app::DirectChannel, Store> sync(f.ch, f.store);
     sync.set_ntn(true);
 
     auto r = sync.sync_inbound();
@@ -115,14 +115,14 @@ TEST_CASE("Sync::sync_inbound() sends in:true in NTN mode") {
 
 TEST_CASE("Sync::status() queries hub.sync.status") {
     TestFixture f;
-    note::app::Sync<note::app::DirectChannel, Store> sync(f.ch, f.store);
+    note::detail::app::Sync<note::detail::app::DirectChannel, Store> sync(f.ch, f.store);
 
     auto r = sync.status();
     REQUIRE(r);
     REQUIRE(f.captured.size() == 1);
     REQUIRE(f.captured[0].find("hub.sync.status") != std::string::npos);
 
-    auto s = f.store.get<note::app::SyncState>();
+    auto s = f.store.get<note::detail::app::SyncState>();
     REQUIRE(s.has_value());
 }
 
@@ -161,9 +161,9 @@ TEST_CASE("Sync::wait_for_sync() returns immediately when already complete") {
             return note::string_view("{}");
         });
     auto nc = note::test::make_test_notecard(status_backend, status_transport);
-    note::app::DirectChannel ch(nc);
+    note::detail::app::DirectChannel ch(nc);
     Store store;
-    note::app::Sync<note::app::DirectChannel, Store> sync(ch, store);
+    note::detail::app::Sync<note::detail::app::DirectChannel, Store> sync(ch, store);
 
     int polls = 0;
     auto r = sync.wait_for_sync(10, [&]{ ++polls; });
@@ -177,7 +177,7 @@ TEST_CASE("Sync::wait_for_sync() returns immediately when already complete") {
 
 TEST_CASE("Sync::wait_for_sync() times out after max_polls") {
     TestFixture f;
-    note::app::Sync<note::app::DirectChannel, Store> sync(f.ch, f.store);
+    note::detail::app::Sync<note::detail::app::DirectChannel, Store> sync(f.ch, f.store);
 
     int polls = 0;
     auto r = sync.wait_for_sync(3, [&]{ ++polls; });
@@ -198,9 +198,9 @@ TEST_CASE("Sync::sync() propagates transport errors") {
             return note::make_error(note::Error::SendFailed, "write failed");
         });
     auto nc = note::test::make_test_notecard(backend, transport);
-    note::app::DirectChannel ch(nc);
+    note::detail::app::DirectChannel ch(nc);
     Store store;
-    note::app::Sync<note::app::DirectChannel, Store> sync(ch, store);
+    note::detail::app::Sync<note::detail::app::DirectChannel, Store> sync(ch, store);
 
     auto r = sync.sync();
     REQUIRE(!r.has_value());

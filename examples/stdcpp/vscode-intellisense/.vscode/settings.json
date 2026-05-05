@@ -1,0 +1,10 @@
+{
+  // The Microsoft C/C++ extension reads the cmake-generated
+  // compile_commands.json (path set in c_cpp_properties.json) so
+  // include paths, defines, and the -std flag are picked up
+  // automatically. Run `cmake -B build` once to generate it.
+  "files.associations": {
+    "*.hpp": "cpp",
+    "*.j2": "jinja-cpp"
+  }
+}

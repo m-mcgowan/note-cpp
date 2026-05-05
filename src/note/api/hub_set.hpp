@@ -77,6 +77,7 @@ struct HubSet {
     struct align_t : Field<bool> {
         using Field<bool>::Field;
         using Field<bool>::operator=;
+        /// Use `true` to align syncs on a regular time-periodic cycle.
         HubSet& operator()(bool v);
     } align{};
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
@@ -101,6 +102,21 @@ struct HubSet {
     struct details_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
+        /// When using Notecard LoRa you can use this argument to provide
+        /// information about an alternative LoRaWAN server or service you would
+        /// like the Notecard to use. The argument you provide must be a JSON
+        /// object with three keys, "deveui", "appeui", and "appkey", all of
+        /// which are hexadecimal strings with no leading 0x. For example:
+        ///
+        /// `{"deveui":"0080E11500088B37","appeui":"6E6F746563617264","appkey":"
+        /// 00088B37"}`
+        ///
+        /// The LoRaWAN details you send to a Notecard become part of its
+        /// permanent configuration, and survive factory resets. You can reset a
+        /// Notecard's LoRaWAN details to its default values by providing a
+        /// `"-"` for the details argument.
+        ///
+        /// @since{6.2.3}
         HubSet& operator()(note::string_view v);
     } details{};
 #endif
@@ -111,12 +127,18 @@ struct HubSet {
     struct duration_t : Field<note::json_int_t> {
         using Field<note::json_int_t>::Field;
         using Field<note::json_int_t>::operator=;
+        /// When in `continuous` mode, the amount of time, in minutes, of each
+        /// session (the minimum allowed value is `15`). When this time elapses,
+        /// the Notecard gracefully ends the current session and starts a new
+        /// one in order to sync session-specific data to Notehub.
         HubSet& operator()(note::json_int_t v);
     } duration{};
     /// The URL of the Notehub service. Use `"-"` to reset to the default value.
     struct host_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
+        /// The URL of the Notehub service. Use `"-"` to reset to the default
+        /// value.
         HubSet& operator()(note::string_view v);
     } host{};
     /// The max wait time, in minutes, to sync inbound data from Notehub.
@@ -133,6 +155,17 @@ struct HubSet {
     struct inbound_t : Field<note::json_int_t> {
         using Field<note::json_int_t>::Field;
         using Field<note::json_int_t>::operator=;
+        /// The max wait time, in minutes, to sync inbound data from Notehub.
+        /// Explicit syncs (e.g. using `hub.sync`) do not affect this cadence.
+        ///
+        /// When in `periodic` or `continuous` mode this argument is required,
+        /// otherwise the Notecard will function as if it is in `minimum` mode
+        /// as it pertains to syncing behavior.
+        ///
+        /// Use `-1` to reset the value back to its default of `0`.
+        ///
+        /// A value of `0` means that the Notecard will never sync inbound data
+        /// unless explicitly told to do so (e.g. using `hub.sync`).
         HubSet& operator()(note::json_int_t v);
     } inbound{};
     /// The Notecard's synchronization mode.
@@ -178,6 +211,10 @@ struct HubSet {
         static constexpr note::string_view off{"off"};
         static constexpr note::string_view dfu{"dfu"};
         static constexpr note::string_view _{"-"};
+        /// The Notecard's synchronization mode.
+        ///
+        /// NOTE: The Notecard must be in `periodic` or `continuous` mode to use
+        /// the onboard GPS module.
         HubSet& operator()(note::string_view v);
     } mode{};
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
@@ -191,6 +228,10 @@ struct HubSet {
     struct off_t : Field<bool> {
         using Field<bool>::Field;
         using Field<bool>::operator=;
+        /// Set to `true` to manually instruct the Notecard to resume periodic
+        /// mode after a web transaction has completed.
+        ///
+        /// @since{3.4.1}
         HubSet& operator()(bool v);
     } off{};
 #endif
@@ -208,6 +249,13 @@ struct HubSet {
     struct on_t : Field<bool> {
         using Field<bool>::Field;
         using Field<bool>::operator=;
+        /// If in `periodic` mode, used to temporarily switch the Notecard to
+        /// `continuous` mode to perform a web transaction.
+        ///
+        /// Ignored if the Notecard is already in `continuous` mode or if the
+        /// Notecard is NOT performing a web transaction.
+        ///
+        /// @since{3.4.1}
         HubSet& operator()(bool v);
     } on{};
 #endif
@@ -225,6 +273,18 @@ struct HubSet {
     struct outbound_t : Field<note::json_int_t> {
         using Field<note::json_int_t>::Field;
         using Field<note::json_int_t>::operator=;
+        /// The max wait time, in minutes, to sync outbound data from the
+        /// Notecard. Explicit syncs (e.g. using `hub.sync`) do not affect this
+        /// cadence.
+        ///
+        /// When in `periodic` or `continuous` mode this argument is required,
+        /// otherwise the Notecard will function as if it is in `minimum` mode
+        /// as it pertains to syncing behavior.
+        ///
+        /// Use `-1` to reset the value back to its default of `0`.
+        ///
+        /// A value of `0` means that the Notecard will never sync outbound data
+        /// unless explicitly told to do so (e.g. using `hub.sync`).
         HubSet& operator()(note::json_int_t v);
     } outbound{};
     /// A Notehub-managed unique identifier that is used to match Devices with
@@ -234,6 +294,10 @@ struct HubSet {
     struct product_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
+        /// A Notehub-managed unique identifier that is used to match Devices
+        /// with Projects. This string is used during a device's auto-
+        /// provisioning to find the Notehub Project that, once provisioned,
+        /// will securely manage the device and its data.
         HubSet& operator()(note::string_view v);
     } product{};
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
@@ -249,6 +313,12 @@ struct HubSet {
     struct seconds_t : Field<note::json_int_t> {
         using Field<note::json_int_t>::Field;
         using Field<note::json_int_t>::operator=;
+        /// If in `periodic` mode and using `on` above, the number of seconds to
+        /// run in continuous mode before switching back to periodic mode. If
+        /// not set, a default of 300 seconds is used. Ignored if the Notecard
+        /// is already in continuous mode.
+        ///
+        /// @since{3.4.1}
         HubSet& operator()(note::json_int_t v);
     } seconds{};
 #endif
@@ -256,6 +326,7 @@ struct HubSet {
     struct sn_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
+        /// The end product's serial number.
         HubSet& operator()(note::string_view v);
     } sn{};
     /// If in `continuous` mode, automatically and immediately sync each time an
@@ -266,6 +337,11 @@ struct HubSet {
     struct sync_t : Field<bool> {
         using Field<bool>::Field;
         using Field<bool>::operator=;
+        /// If in `continuous` mode, automatically and immediately sync each
+        /// time an inbound Notefile change is detected on Notehub.
+        ///
+        /// NOTE: The `sync` argument is not supported when a Notecard is in NTN
+        /// mode.
         HubSet& operator()(bool v);
     } sync{};
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
@@ -280,6 +356,11 @@ struct HubSet {
     struct umin_t : Field<bool> {
         using Field<bool>::Field;
         using Field<bool>::operator=;
+        /// Set to `true` to use USB/line power variable sync behavior, enabling
+        /// the Notecard to stay in `continuous` mode when connected to USB/line
+        /// power and fallback to `minimum` mode when disconnected.
+        ///
+        /// @since{4.1.1}
         HubSet& operator()(bool v);
     } umin{};
 #endif
@@ -295,6 +376,11 @@ struct HubSet {
     struct uoff_t : Field<bool> {
         using Field<bool>::Field;
         using Field<bool>::operator=;
+        /// Set to `true` to use USB/line power variable sync behavior, enabling
+        /// the Notecard to stay in `continuous` mode when connected to USB/line
+        /// power and fallback to `off` mode when disconnected.
+        ///
+        /// @since{4.1.1}
         HubSet& operator()(bool v);
     } uoff{};
 #endif
@@ -310,6 +396,11 @@ struct HubSet {
     struct uperiodic_t : Field<bool> {
         using Field<bool>::Field;
         using Field<bool>::operator=;
+        /// Set to `true` to use USB/line power variable sync behavior, enabling
+        /// the Notecard to stay in `continuous` mode when connected to USB/line
+        /// power and fallback to `periodic` mode when disconnected.
+        ///
+        /// @since{4.1.1}
         HubSet& operator()(bool v);
     } uperiodic{};
 #endif
@@ -337,6 +428,23 @@ struct HubSet {
     struct version_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
+        /// The version of your host firmware. The value provided will appear on
+        /// your device in Notehub under the "Host Firmware" tab.
+        ///
+        /// You may pass a simple version number string (e.g. "1.0.0.0"), or an
+        /// object with detailed information about the firmware image. If you
+        /// provide an object it must take the following form.
+        ///
+        /// `{"org":"my-organization","product":"My Product","description":"A
+        /// description of the image","version":"1.2.4","built":"Jan 01 2025
+        /// 01:02:03","vermajor":1,"verminor":2,"verpatch":4,"verbuild":
+        /// 5,"builder":"The Builder"}`
+        ///
+        /// If your project uses Notecard Outboard Firmware Update, you can
+        /// alternatively use the `dfu.status` request to set your host firmware
+        /// version.
+        ///
+        /// @since{7.3.1}
         HubSet& operator()(note::string_view v);
     } version{};
 #endif
@@ -347,7 +455,17 @@ struct HubSet {
     struct vinbound_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
+        /// Overrides `inbound` with a voltage-variable value. Use `"-"` to
+        /// clear this value.
+        ///
+        /// NOTE: Setting voltage-variable values is not supported on Notecard
+        /// XP.
         HubSet& operator()(note::string_view v);
+        /// Overrides `inbound` with a voltage-variable value. Use `"-"` to
+        /// clear this value.
+        ///
+        /// NOTE: Setting voltage-variable values is not supported on Notecard
+        /// XP.
         HubSet& operator()(const note::VoltageVariable& v);
         vinbound_t& usb(int32_t minutes);
         vinbound_t& high(int32_t minutes);
@@ -363,7 +481,17 @@ struct HubSet {
     struct voutbound_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
+        /// Overrides `outbound` with a voltage-variable value. Use `"-"` to
+        /// clear this value.
+        ///
+        /// NOTE: Setting voltage-variable values is not supported on Notecard
+        /// XP.
         HubSet& operator()(note::string_view v);
+        /// Overrides `outbound` with a voltage-variable value. Use `"-"` to
+        /// clear this value.
+        ///
+        /// NOTE: Setting voltage-variable values is not supported on Notecard
+        /// XP.
         HubSet& operator()(const note::VoltageVariable& v);
         voutbound_t& usb(int32_t minutes);
         voutbound_t& high(int32_t minutes);
@@ -396,16 +524,23 @@ struct HubSet {
     auto& resumePeriodic() { off = true; return *this; }
     auto& allowContinuous(bool v_) { if (v_) on = true; else off = true; return *this; }
 #if NOTE_EXTRAS
+    /// Add an arbitrary key/value pair to the request, beyond the typed fields
+    /// declared above. Useful for fields the schema doesn't yet model.
+    /// Capacity is bounded by NOTE_EXTRAS_MAX; excess pairs are silently dropped.
     template<typename T>
     auto& extra(note::string_view k_, T v_) {
         if (extras_count_ < NOTE_EXTRAS_MAX)
             extras_[extras_count_++] = {k_, note::DynValue{v_}};
         return *this;
     }
+    /// String-literal overload of extra().
     auto& extra(note::string_view k_, const char* v_) {
         return extra(k_, note::string_view{v_});
     }
 
+    /// Index-style access to fields by wire name. Returns a DynField proxy
+    /// usable for assignment; unknown keys are added as extras (subject to
+    /// NOTE_EXTRAS_MAX). Prefer the typed setters above when possible.
     note::DynField operator[](note::string_view k_) {
         if (k_ == "align") return note::dyn_field_for(align);
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
@@ -457,8 +592,13 @@ struct HubSet {
     using Response = void;
 
 #if NOTE_SINGLETON
+    private:
     /// Singleton void execute — shared thunk, no per-type instantiation.
     static inline Result<void>(*execute_void_fn_)(void*, ::note::string_view, BuildFn, void*, ::note::detail::NcErrorCapture&, ::note::Safety);
+    public:
+    /// Send this request to the Notecard and wait for a response.
+    /// Returns an ApiResult<void> — boolean-convertible to true on success;
+    /// call .error() to inspect the ErrorInfo on failure.
     ApiResult<void> execute() const {
         auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
         BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
@@ -468,12 +608,18 @@ struct HubSet {
         if (!nc_err_.empty()) return ApiResult<void>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
         return ApiResult<void>{};
     }
+    private:
     static inline Result<void>(*send_fn_)(void*, BuildFn, void*);
+    public:
 #else
     ApiResult<Response>(*execute_fn_)(void*, const HubSet&) = nullptr;
     Result<void>(*send_fn_)(void*, BuildFn, void*) = nullptr;
+    /// Send this request to the Notecard and wait for a response.
     auto execute() const { return execute_fn_(nc_, *this); }
 #endif
+    /// Send this request as a fire-and-forget command (cmd) — the Notecard
+    /// processes it without sending a response. Lower power and bandwidth
+    /// than execute() when you don't need the result.
     Result<void> command() const {
         auto build_ = [&](JsonBuilder& b_) {
             b_.add("cmd", notecard_request);
@@ -531,6 +677,7 @@ struct HubSet {
         n_out = sizeof(table_) / sizeof(table_[0]);
         return table_;
     }
+    private:
     void build(JsonBuilder& b) const {
 #if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
 #endif
@@ -557,6 +704,7 @@ struct HubSet {
 #endif
     }
 #pragma GCC diagnostic pop
+    public:
 
 
 #ifdef ARDUINO
@@ -661,6 +809,17 @@ struct HubSet {
         return n;
     }
 #endif
+
+    private:
+    friend class ::note::Notecard;
+    template<typename> friend class ::note::StaticNotecard;
+    template<typename, typename> friend struct ::note::detail::has_field_descs;
+#if NOTE_NO_POLYMORPHIC || __cplusplus < 202002L
+    template<typename> friend class ::note::Api;
+#else
+    template<typename, typename> friend class ::note::Api;
+#endif
+    public:
 
 };
 

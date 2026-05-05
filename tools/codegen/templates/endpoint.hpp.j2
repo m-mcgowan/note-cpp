@@ -167,11 +167,14 @@ namespace note::api {
 {% elif prop.is_body %}
 {{ indent }}struct {{ prop.nested_type_name }} : BodyValue {
 {{ indent }}    using BodyValue::BodyValue;
+{{ doc_for_prop(prop, indent + "    ") -}}
 {{ indent }}    {{ parent_type }}& operator()(BodyValue v);
 #if __cplusplus >= 202002L
+{{ doc_for_prop(prop, indent + "    ") -}}
 {{ indent }}    template<typename T> requires detail::BodySchema<T>
 {{ indent }}    {{ parent_type }}& operator()(const T& v);
 #else
+{{ doc_for_prop(prop, indent + "    ") -}}
 {{ indent }}    template<typename T, typename = std::enable_if_t<detail::is_body_schema<T>::value>>
 {{ indent }}    {{ parent_type }}& operator()(const T& v);
 #endif
@@ -279,8 +282,10 @@ namespace note::api {
 {% endif %}
 {% endfor %}
 {% endif %}
+{{ doc_for_prop(prop, indent + "    ") -}}
 {{ indent }}    {{ parent_type }}& operator()({{ prop.field_type }} v);
 {% if prop.has_format %}
+{{ doc_for_prop(prop, indent + "    ") -}}
 {{ indent }}    {{ parent_type }}& operator()(const note::VoltageVariable& v);
 {{ indent }}    {{ prop.nested_type_name }}& usb(int32_t minutes);
 {{ indent }}    {{ prop.nested_type_name }}& high(int32_t minutes);
@@ -291,7 +296,9 @@ namespace note::api {
 {% endif %}
 {% if prop.has_flags %}
 {% set fns = (op.notecard_request) | flag_namespace %}
+{{ doc_for_prop(prop, indent + "    ") -}}
 {{ indent }}    {{ parent_type }}& operator=(uint32_t flags);
+{{ doc_for_prop(prop, indent + "    ") -}}
 {{ indent }}    {{ parent_type }}& operator()(uint32_t flags);
 {{ indent }}    {{ prop.nested_type_name }}& add(uint32_t flag);
 {{ indent }}    {{ prop.nested_type_name }}& operator|=(uint32_t flag);
@@ -402,16 +409,23 @@ namespace note::api {
 {% endif %}
 {% endfor %}
 #if NOTE_EXTRAS
+{{ indent }}/// Add an arbitrary key/value pair to the request, beyond the typed fields
+{{ indent }}/// declared above. Useful for fields the schema doesn't yet model.
+{{ indent }}/// Capacity is bounded by NOTE_EXTRAS_MAX; excess pairs are silently dropped.
 {{ indent }}template<typename T>
 {{ indent }}auto& extra(note::string_view k_, T v_) {
 {{ indent }}    if (extras_count_ < NOTE_EXTRAS_MAX)
 {{ indent }}        extras_[extras_count_++] = {k_, note::DynValue{v_}};
 {{ indent }}    return *this;
 {{ indent }}}
+{{ indent }}/// String-literal overload of extra().
 {{ indent }}auto& extra(note::string_view k_, const char* v_) {
 {{ indent }}    return extra(k_, note::string_view{v_});
 {{ indent }}}
 
+{{ indent }}/// Index-style access to fields by wire name. Returns a DynField proxy
+{{ indent }}/// usable for assignment; unknown keys are added as extras (subject to
+{{ indent }}/// NOTE_EXTRAS_MAX). Prefer the typed setters above when possible.
 {{ indent }}note::DynField operator[](note::string_view k_) {
 {% for prop in op.properties %}
 {% if not prop.is_required_by_dispatch and not prop.is_body and not prop.is_array %}
@@ -485,16 +499,20 @@ namespace note::api {
 {{ indent }}    return copy;
 {{ indent }}}
 {% if not has_body_prop %}
+{{ indent }}/// Alias for into(): wire body parsing to the given struct.
 {{ indent }}template<typename BodyT_,
 {{ indent }}         typename = ::std::enable_if_t<!::std::is_base_of_v<::note::JsonSink, BodyT_>>>
 {{ indent }}auto& body(BodyT_& out) { return into(out); }
+{{ indent }}/// Const alias for into() — returns a copy with body parsing wired up.
 {{ indent }}template<typename BodyT_,
 {{ indent }}         typename = ::std::enable_if_t<!::std::is_base_of_v<::note::JsonSink, BodyT_>>>
 {{ indent }}auto body(BodyT_& out) const { return into(out); }
 {% endif %}
+{{ indent }}/// Alias for into(): wire body parsing to the given struct.
 {{ indent }}template<typename BodyT_,
 {{ indent }}         typename = ::std::enable_if_t<!::std::is_base_of_v<::note::JsonSink, BodyT_>>>
 {{ indent }}auto& from(BodyT_& out) { return into(out); }
+{{ indent }}/// Const alias for into() — returns a copy with body parsing wired up.
 {{ indent }}template<typename BodyT_,
 {{ indent }}         typename = ::std::enable_if_t<!::std::is_base_of_v<::note::JsonSink, BodyT_>>>
 {{ indent }}auto from(BodyT_& out) const { return into(out); }
@@ -868,6 +886,7 @@ namespace note::api {
  # path) silently drops gated fields like CardAttn::off and CardAux::power. The table
  # lives at class scope so `sizeof(table)/sizeof(table[0])` gives the post-preprocessor
  # count for `field_count`, which is what the runtime dispatch iterates over. #}
+{{ indent }}private:
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
 {{ indent }}static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
@@ -894,6 +913,7 @@ namespace note::api {
 #pragma GCC diagnostic pop
 {{ indent }}static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);
 {{ indent }}static const ::note::FieldDesc* field_descs_ptr() { return field_descs_table_; }
+{{ indent }}public:
 {% endif %}
 {% else %}
 {{ indent }}using Response = void;
@@ -909,8 +929,13 @@ namespace note::api {
 {% endif %}
 #if NOTE_SINGLETON
 {% if not op.response.properties %}
+{{ indent }}private:
 {{ indent }}/// Singleton void execute — shared thunk, no per-type instantiation.
 {{ indent }}static inline Result<void>(*execute_void_fn_)(void*, ::note::string_view, BuildFn, void*, ::note::detail::NcErrorCapture&, ::note::Safety);
+{{ indent }}public:
+{{ indent }}/// Send this request to the Notecard and wait for a response.
+{{ indent }}/// Returns an ApiResult<void> — boolean-convertible to true on success;
+{{ indent }}/// call .error() to inspect the ErrorInfo on failure.
 {{ indent }}ApiResult<void> execute() const {
 {{ indent }}    auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
 {{ indent }}    BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
@@ -921,8 +946,14 @@ namespace note::api {
 {{ indent }}    return ApiResult<void>{};
 {{ indent }}}
 {% elif exec_simple_props %}
+{{ indent }}private:
 {{ indent }}/// Singleton generic execute — shared thunk with body factory params.
 {{ indent }}static inline Result<void>(*execute_generic_fn_)(void*, ::note::string_view, BuildFn, void*, void*, const ::note::FieldDesc*, uint8_t, ::note::detail::NcErrorCapture&, bool&, void*, ::note::BodyHandlerFactory, ::note::Safety);
+{{ indent }}public:
+{{ indent }}/// Send this request to the Notecard and wait for a response.
+{{ indent }}/// Returns an ApiResult<Response> — boolean-convertible to true on success;
+{{ indent }}/// dereference (or use member-of-pointer ->) to read response fields,
+{{ indent }}/// or call .error() to inspect the ErrorInfo on failure.
 {{ indent }}ApiResult<Response> execute() const {
 {{ indent }}    auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
 {{ indent }}    BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
@@ -940,21 +971,30 @@ namespace note::api {
 {{ indent }}    return ApiResult<Response>(std::move(rsp_));
 {{ indent }}}
 {% else %}
+{{ indent }}private:
 {{ indent }}/// Singleton per-type execute (non-standard response).
 {{ indent }}static inline ApiResult<Response>(*execute_fn_)(void*, const {{ parent_type }}&);
+{{ indent }}public:
+{{ indent }}/// Send this request to the Notecard and wait for a response.
 {{ indent }}auto execute() const { return execute_fn_(nc_, *this); }
 {% endif %}
 {% if op.supports_cmd %}
+{{ indent }}private:
 {{ indent }}static inline Result<void>(*send_fn_)(void*, BuildFn, void*);
+{{ indent }}public:
 {% endif %}
 #else
 {{ indent }}ApiResult<Response>(*execute_fn_)(void*, const {{ parent_type }}&) = nullptr;
 {% if op.supports_cmd %}
 {{ indent }}Result<void>(*send_fn_)(void*, BuildFn, void*) = nullptr;
 {% endif %}
+{{ indent }}/// Send this request to the Notecard and wait for a response.
 {{ indent }}auto execute() const { return execute_fn_(nc_, *this); }
 #endif
 {% if op.supports_cmd %}
+{{ indent }}/// Send this request as a fire-and-forget command (cmd) — the Notecard
+{{ indent }}/// processes it without sending a response. Lower power and bandwidth
+{{ indent }}/// than execute() when you don't need the result.
 {{ indent }}Result<void> command() const {
 {{ indent }}    auto build_ = [&](JsonBuilder& b_) {
 {{ indent }}        b_.add("cmd", notecard_request);
@@ -1012,6 +1052,7 @@ namespace note::api {
 {{ indent }}    return table_;
 {{ indent }}}
 {% endif %}
+{{ indent }}private:
 {{ indent }}void build(JsonBuilder& b) const {
 {% for imp in op.implicit_fields %}
 {{ indent }}    note::add_flash(b, note::flash(keys_::{{ imp.wire_name | replace(".", "_") }}), {{ imp.cpp_literal }});
@@ -1060,6 +1101,7 @@ namespace note::api {
 {% if op.has_version_gated_props %}
 #pragma GCC diagnostic pop
 {% endif %}
+{{ indent }}public:
 
 
 #ifdef ARDUINO
@@ -1087,6 +1129,17 @@ namespace note::api {
 {{ indent }}    return n;
 {{ indent }}}
 #endif
+
+{{ indent }}private:
+{{ indent }}friend class ::note::Notecard;
+{{ indent }}template<typename> friend class ::note::StaticNotecard;
+{{ indent }}template<typename, typename> friend struct ::note::detail::has_field_descs;
+#if NOTE_NO_POLYMORPHIC || __cplusplus < 202002L
+{{ indent }}template<typename> friend class ::note::Api;
+#else
+{{ indent }}template<typename, typename> friend class ::note::Api;
+#endif
+{{ indent }}public:
 {% endmacro %}
 
 {# ===== prop_impls: out-of-line operator() definitions =================== #}

@@ -22,6 +22,16 @@
 
 namespace note {
 
+// Forward declarations so generated request structs can grant friendship
+// to dispatch infrastructure that lives in other headers.
+template<typename Stack> class StaticNotecard;
+class Notecard;
+#if NOTE_NO_POLYMORPHIC || __cplusplus < 202002L
+template<typename NcT> class Api;
+#else
+template<typename TargetT, typename NcT> class Api;
+#endif
+
 namespace detail {
     template<typename T, typename = void>
     struct has_intern_strings : std::false_type {};

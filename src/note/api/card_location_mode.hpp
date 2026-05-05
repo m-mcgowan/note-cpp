@@ -77,6 +77,8 @@ struct CardLocationMode {
         struct delete_t : Field<bool> {
             using Field<bool>::Field;
             using Field<bool>::operator=;
+            /// Set to `true` to delete the last known location stored in the
+            /// Notecard.
             CardLocationMode::Get& operator()(bool v);
         } delete_{};
         /// When in periodic or continuous mode, providing this value enables
@@ -87,6 +89,12 @@ struct CardLocationMode {
         struct lat_t : Field<double> {
             using Field<double>::Field;
             using Field<double>::operator=;
+            /// When in periodic or continuous mode, providing this value
+            /// enables geofencing. The value you provide for this argument
+            /// should be the latitude of the center of the geofence, in
+            /// degrees. When in fixed mode, the value you provide for this
+            /// argument should be the latitude location of the device itself,
+            /// in degrees.
             CardLocationMode::Get& operator()(double v);
         } lat{};
         /// When in periodic or continuous mode, providing this value enables
@@ -97,6 +105,12 @@ struct CardLocationMode {
         struct lon_t : Field<double> {
             using Field<double>::Field;
             using Field<double>::operator=;
+            /// When in periodic or continuous mode, providing this value
+            /// enables geofencing. The value you provide for this argument
+            /// should be the longitude of the center of the geofence, in
+            /// degrees. When in fixed mode, the value you provide for this
+            /// argument should be the longitude location of the device itself,
+            /// in degrees.
             CardLocationMode::Get& operator()(double v);
         } lon{};
         /// Meters from a geofence center. Used to enable geofence location
@@ -104,6 +118,8 @@ struct CardLocationMode {
         struct max_t : Field<note::json_int_t> {
             using Field<note::json_int_t>::Field;
             using Field<note::json_int_t>::operator=;
+            /// Meters from a geofence center. Used to enable geofence location
+            /// tracking.
             CardLocationMode::Get& operator()(note::json_int_t v);
         } max{};
         /// When geofence is enabled, the number of minutes the device should be
@@ -111,6 +127,9 @@ struct CardLocationMode {
         struct minutes_t : Field<note::json_int_t> {
             using Field<note::json_int_t>::Field;
             using Field<note::json_int_t>::operator=;
+            /// When geofence is enabled, the number of minutes the device
+            /// should be outside the geofence before the Notecard location is
+            /// tracked.
             CardLocationMode::Get& operator()(note::json_int_t v);
         } minutes{};
         /// Sets the location mode.
@@ -152,6 +171,7 @@ struct CardLocationMode {
             static constexpr note::string_view continuous{"continuous"};
             static constexpr note::string_view fixed{"fixed"};
             static constexpr note::string_view _{"-"};
+            /// Sets the location mode.
             CardLocationMode::Get& operator()(note::string_view v);
         } mode{};
         /// When in `periodic` mode, location will be sampled at this interval,
@@ -161,6 +181,11 @@ struct CardLocationMode {
         struct seconds_t : Field<note::json_int_t> {
             using Field<note::json_int_t>::Field;
             using Field<note::json_int_t>::operator=;
+            /// When in `periodic` mode, location will be sampled at this
+            /// interval, if the Notecard detects motion. If seconds is < 300,
+            /// during periods of sustained movement the Notecard will leave its
+            /// onboard GPS/GNSS on continuously to avoid powering the module on
+            /// and off repeatedly.
             CardLocationMode::Get& operator()(note::json_int_t v);
         } seconds{};
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
@@ -174,6 +199,11 @@ struct CardLocationMode {
         struct threshold_t : Field<note::json_int_t> {
             using Field<note::json_int_t>::Field;
             using Field<note::json_int_t>::operator=;
+            /// When in `periodic` mode, the number of motion events (registered
+            /// by the built-in accelerometer) required to trigger GPS to turn
+            /// on.
+            ///
+            /// @since{3.4.1}
             CardLocationMode::Get& operator()(note::json_int_t v);
         } threshold{};
 #endif
@@ -182,6 +212,8 @@ struct CardLocationMode {
         struct vseconds_t : Field<note::string_view> {
             using Field<note::string_view>::Field;
             using Field<note::string_view>::operator=;
+            /// In `periodic` mode, overrides `seconds` with a voltage-variable
+            /// value.
             CardLocationMode::Get& operator()(note::string_view v);
         } vseconds{};
 
@@ -202,16 +234,23 @@ struct CardLocationMode {
 #endif
 
 #if NOTE_EXTRAS
+        /// Add an arbitrary key/value pair to the request, beyond the typed fields
+        /// declared above. Useful for fields the schema doesn't yet model.
+        /// Capacity is bounded by NOTE_EXTRAS_MAX; excess pairs are silently dropped.
         template<typename T>
         auto& extra(note::string_view k_, T v_) {
             if (extras_count_ < NOTE_EXTRAS_MAX)
                 extras_[extras_count_++] = {k_, note::DynValue{v_}};
             return *this;
         }
+        /// String-literal overload of extra().
         auto& extra(note::string_view k_, const char* v_) {
             return extra(k_, note::string_view{v_});
         }
 
+        /// Index-style access to fields by wire name. Returns a DynField proxy
+        /// usable for assignment; unknown keys are added as extras (subject to
+        /// NOTE_EXTRAS_MAX). Prefer the typed setters above when possible.
         note::DynField operator[](note::string_view k_) {
             if (k_ == "delete") return note::dyn_field_for(delete_);
             if (k_ == "lat") return note::dyn_field_for(lat);
@@ -413,6 +452,7 @@ struct CardLocationMode {
             std::unique_ptr<JsonReader> reader_;
 #endif
         };
+        private:
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
         static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
@@ -430,10 +470,17 @@ struct CardLocationMode {
 #pragma GCC diagnostic pop
         static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);
         static const ::note::FieldDesc* field_descs_ptr() { return field_descs_table_; }
+        public:
 
 #if NOTE_SINGLETON
+        private:
         /// Singleton generic execute — shared thunk with body factory params.
         static inline Result<void>(*execute_generic_fn_)(void*, ::note::string_view, BuildFn, void*, void*, const ::note::FieldDesc*, uint8_t, ::note::detail::NcErrorCapture&, bool&, void*, ::note::BodyHandlerFactory, ::note::Safety);
+        public:
+        /// Send this request to the Notecard and wait for a response.
+        /// Returns an ApiResult<Response> — boolean-convertible to true on success;
+        /// dereference (or use member-of-pointer ->) to read response fields,
+        /// or call .error() to inspect the ErrorInfo on failure.
         ApiResult<Response> execute() const {
             auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
             BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
@@ -446,12 +493,18 @@ struct CardLocationMode {
             if (exhausted_) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Overflow, ::note::Cause::Unspecified, NOTE_ERR("arena exhausted")});
             return ApiResult<Response>(std::move(rsp_));
         }
+        private:
         static inline Result<void>(*send_fn_)(void*, BuildFn, void*);
+        public:
 #else
         ApiResult<Response>(*execute_fn_)(void*, const CardLocationMode::Get&) = nullptr;
         Result<void>(*send_fn_)(void*, BuildFn, void*) = nullptr;
+        /// Send this request to the Notecard and wait for a response.
         auto execute() const { return execute_fn_(nc_, *this); }
 #endif
+        /// Send this request as a fire-and-forget command (cmd) — the Notecard
+        /// processes it without sending a response. Lower power and bandwidth
+        /// than execute() when you don't need the result.
         Result<void> command() const {
             auto build_ = [&](JsonBuilder& b_) {
                 b_.add("cmd", notecard_request);
@@ -485,6 +538,7 @@ struct CardLocationMode {
             n_out = sizeof(table_) / sizeof(table_[0]);
             return table_;
         }
+        private:
         void build(JsonBuilder& b) const {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
 #endif
@@ -497,6 +551,7 @@ struct CardLocationMode {
 #endif
         }
 #pragma GCC diagnostic pop
+        public:
 
 
 #ifdef ARDUINO
@@ -547,6 +602,17 @@ struct CardLocationMode {
             return n;
         }
 #endif
+
+        private:
+        friend class ::note::Notecard;
+        template<typename> friend class ::note::StaticNotecard;
+        template<typename, typename> friend struct ::note::detail::has_field_descs;
+#if NOTE_NO_POLYMORPHIC || __cplusplus < 202002L
+        template<typename> friend class ::note::Api;
+#else
+        template<typename, typename> friend class ::note::Api;
+#endif
+        public:
 
     };
 
@@ -594,6 +660,8 @@ struct CardLocationMode {
         struct delete_t : Field<bool> {
             using Field<bool>::Field;
             using Field<bool>::operator=;
+            /// Set to `true` to delete the last known location stored in the
+            /// Notecard.
             CardLocationMode::Set& operator()(bool v);
         } delete_{};
         /// When in periodic or continuous mode, providing this value enables
@@ -604,6 +672,12 @@ struct CardLocationMode {
         struct lat_t : Field<double> {
             using Field<double>::Field;
             using Field<double>::operator=;
+            /// When in periodic or continuous mode, providing this value
+            /// enables geofencing. The value you provide for this argument
+            /// should be the latitude of the center of the geofence, in
+            /// degrees. When in fixed mode, the value you provide for this
+            /// argument should be the latitude location of the device itself,
+            /// in degrees.
             CardLocationMode::Set& operator()(double v);
         } lat{};
         /// When in periodic or continuous mode, providing this value enables
@@ -614,6 +688,12 @@ struct CardLocationMode {
         struct lon_t : Field<double> {
             using Field<double>::Field;
             using Field<double>::operator=;
+            /// When in periodic or continuous mode, providing this value
+            /// enables geofencing. The value you provide for this argument
+            /// should be the longitude of the center of the geofence, in
+            /// degrees. When in fixed mode, the value you provide for this
+            /// argument should be the longitude location of the device itself,
+            /// in degrees.
             CardLocationMode::Set& operator()(double v);
         } lon{};
         /// Meters from a geofence center. Used to enable geofence location
@@ -621,6 +701,8 @@ struct CardLocationMode {
         struct max_t : Field<note::json_int_t> {
             using Field<note::json_int_t>::Field;
             using Field<note::json_int_t>::operator=;
+            /// Meters from a geofence center. Used to enable geofence location
+            /// tracking.
             CardLocationMode::Set& operator()(note::json_int_t v);
         } max{};
         /// When geofence is enabled, the number of minutes the device should be
@@ -628,6 +710,9 @@ struct CardLocationMode {
         struct minutes_t : Field<note::json_int_t> {
             using Field<note::json_int_t>::Field;
             using Field<note::json_int_t>::operator=;
+            /// When geofence is enabled, the number of minutes the device
+            /// should be outside the geofence before the Notecard location is
+            /// tracked.
             CardLocationMode::Set& operator()(note::json_int_t v);
         } minutes{};
         /// Sets the location mode.
@@ -669,6 +754,7 @@ struct CardLocationMode {
             static constexpr note::string_view continuous{"continuous"};
             static constexpr note::string_view fixed{"fixed"};
             static constexpr note::string_view _{"-"};
+            /// Sets the location mode.
             CardLocationMode::Set& operator()(note::string_view v);
         } mode{};
         /// When in `periodic` mode, location will be sampled at this interval,
@@ -678,6 +764,11 @@ struct CardLocationMode {
         struct seconds_t : Field<note::json_int_t> {
             using Field<note::json_int_t>::Field;
             using Field<note::json_int_t>::operator=;
+            /// When in `periodic` mode, location will be sampled at this
+            /// interval, if the Notecard detects motion. If seconds is < 300,
+            /// during periods of sustained movement the Notecard will leave its
+            /// onboard GPS/GNSS on continuously to avoid powering the module on
+            /// and off repeatedly.
             CardLocationMode::Set& operator()(note::json_int_t v);
         } seconds{};
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
@@ -691,6 +782,11 @@ struct CardLocationMode {
         struct threshold_t : Field<note::json_int_t> {
             using Field<note::json_int_t>::Field;
             using Field<note::json_int_t>::operator=;
+            /// When in `periodic` mode, the number of motion events (registered
+            /// by the built-in accelerometer) required to trigger GPS to turn
+            /// on.
+            ///
+            /// @since{3.4.1}
             CardLocationMode::Set& operator()(note::json_int_t v);
         } threshold{};
 #endif
@@ -699,6 +795,8 @@ struct CardLocationMode {
         struct vseconds_t : Field<note::string_view> {
             using Field<note::string_view>::Field;
             using Field<note::string_view>::operator=;
+            /// In `periodic` mode, overrides `seconds` with a voltage-variable
+            /// value.
             CardLocationMode::Set& operator()(note::string_view v);
         } vseconds{};
 
@@ -719,16 +817,23 @@ struct CardLocationMode {
 #endif
 
 #if NOTE_EXTRAS
+        /// Add an arbitrary key/value pair to the request, beyond the typed fields
+        /// declared above. Useful for fields the schema doesn't yet model.
+        /// Capacity is bounded by NOTE_EXTRAS_MAX; excess pairs are silently dropped.
         template<typename T>
         auto& extra(note::string_view k_, T v_) {
             if (extras_count_ < NOTE_EXTRAS_MAX)
                 extras_[extras_count_++] = {k_, note::DynValue{v_}};
             return *this;
         }
+        /// String-literal overload of extra().
         auto& extra(note::string_view k_, const char* v_) {
             return extra(k_, note::string_view{v_});
         }
 
+        /// Index-style access to fields by wire name. Returns a DynField proxy
+        /// usable for assignment; unknown keys are added as extras (subject to
+        /// NOTE_EXTRAS_MAX). Prefer the typed setters above when possible.
         note::DynField operator[](note::string_view k_) {
             if (k_ == "delete") return note::dyn_field_for(delete_);
             if (k_ == "lat") return note::dyn_field_for(lat);
@@ -930,6 +1035,7 @@ struct CardLocationMode {
             std::unique_ptr<JsonReader> reader_;
 #endif
         };
+        private:
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
         static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
@@ -947,10 +1053,17 @@ struct CardLocationMode {
 #pragma GCC diagnostic pop
         static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);
         static const ::note::FieldDesc* field_descs_ptr() { return field_descs_table_; }
+        public:
 
 #if NOTE_SINGLETON
+        private:
         /// Singleton generic execute — shared thunk with body factory params.
         static inline Result<void>(*execute_generic_fn_)(void*, ::note::string_view, BuildFn, void*, void*, const ::note::FieldDesc*, uint8_t, ::note::detail::NcErrorCapture&, bool&, void*, ::note::BodyHandlerFactory, ::note::Safety);
+        public:
+        /// Send this request to the Notecard and wait for a response.
+        /// Returns an ApiResult<Response> — boolean-convertible to true on success;
+        /// dereference (or use member-of-pointer ->) to read response fields,
+        /// or call .error() to inspect the ErrorInfo on failure.
         ApiResult<Response> execute() const {
             auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
             BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
@@ -963,12 +1076,18 @@ struct CardLocationMode {
             if (exhausted_) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Overflow, ::note::Cause::Unspecified, NOTE_ERR("arena exhausted")});
             return ApiResult<Response>(std::move(rsp_));
         }
+        private:
         static inline Result<void>(*send_fn_)(void*, BuildFn, void*);
+        public:
 #else
         ApiResult<Response>(*execute_fn_)(void*, const CardLocationMode::Set&) = nullptr;
         Result<void>(*send_fn_)(void*, BuildFn, void*) = nullptr;
+        /// Send this request to the Notecard and wait for a response.
         auto execute() const { return execute_fn_(nc_, *this); }
 #endif
+        /// Send this request as a fire-and-forget command (cmd) — the Notecard
+        /// processes it without sending a response. Lower power and bandwidth
+        /// than execute() when you don't need the result.
         Result<void> command() const {
             auto build_ = [&](JsonBuilder& b_) {
                 b_.add("cmd", notecard_request);
@@ -1002,6 +1121,7 @@ struct CardLocationMode {
             n_out = sizeof(table_) / sizeof(table_[0]);
             return table_;
         }
+        private:
         void build(JsonBuilder& b) const {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
 #endif
@@ -1014,6 +1134,7 @@ struct CardLocationMode {
 #endif
         }
 #pragma GCC diagnostic pop
+        public:
 
 
 #ifdef ARDUINO
@@ -1065,6 +1186,17 @@ struct CardLocationMode {
         }
 #endif
 
+        private:
+        friend class ::note::Notecard;
+        template<typename> friend class ::note::StaticNotecard;
+        template<typename, typename> friend struct ::note::detail::has_field_descs;
+#if NOTE_NO_POLYMORPHIC || __cplusplus < 202002L
+        template<typename> friend class ::note::Api;
+#else
+        template<typename, typename> friend class ::note::Api;
+#endif
+        public:
+
     };
 
     /// Enable continuous GPS/GNSS sampling.
@@ -1105,6 +1237,11 @@ struct CardLocationMode {
         struct threshold_t : Field<note::json_int_t> {
             using Field<note::json_int_t>::Field;
             using Field<note::json_int_t>::operator=;
+            /// When in `periodic` mode, the number of motion events (registered
+            /// by the built-in accelerometer) required to trigger GPS to turn
+            /// on.
+            ///
+            /// @since{3.4.1}
             CardLocationMode::Continuous& operator()(note::json_int_t v);
         } threshold{};
 #endif
@@ -1113,21 +1250,30 @@ struct CardLocationMode {
         struct vseconds_t : Field<note::string_view> {
             using Field<note::string_view>::Field;
             using Field<note::string_view>::operator=;
+            /// In `periodic` mode, overrides `seconds` with a voltage-variable
+            /// value.
             CardLocationMode::Continuous& operator()(note::string_view v);
         } vseconds{};
 
 
 #if NOTE_EXTRAS
+        /// Add an arbitrary key/value pair to the request, beyond the typed fields
+        /// declared above. Useful for fields the schema doesn't yet model.
+        /// Capacity is bounded by NOTE_EXTRAS_MAX; excess pairs are silently dropped.
         template<typename T>
         auto& extra(note::string_view k_, T v_) {
             if (extras_count_ < NOTE_EXTRAS_MAX)
                 extras_[extras_count_++] = {k_, note::DynValue{v_}};
             return *this;
         }
+        /// String-literal overload of extra().
         auto& extra(note::string_view k_, const char* v_) {
             return extra(k_, note::string_view{v_});
         }
 
+        /// Index-style access to fields by wire name. Returns a DynField proxy
+        /// usable for assignment; unknown keys are added as extras (subject to
+        /// NOTE_EXTRAS_MAX). Prefer the typed setters above when possible.
         note::DynField operator[](note::string_view k_) {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
             if (k_ == "threshold") return note::dyn_field_for(threshold);
@@ -1268,6 +1414,7 @@ struct CardLocationMode {
             std::unique_ptr<JsonReader> reader_;
 #endif
         };
+        private:
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
         static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
@@ -1280,10 +1427,17 @@ struct CardLocationMode {
 #pragma GCC diagnostic pop
         static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);
         static const ::note::FieldDesc* field_descs_ptr() { return field_descs_table_; }
+        public:
 
 #if NOTE_SINGLETON
+        private:
         /// Singleton generic execute — shared thunk with body factory params.
         static inline Result<void>(*execute_generic_fn_)(void*, ::note::string_view, BuildFn, void*, void*, const ::note::FieldDesc*, uint8_t, ::note::detail::NcErrorCapture&, bool&, void*, ::note::BodyHandlerFactory, ::note::Safety);
+        public:
+        /// Send this request to the Notecard and wait for a response.
+        /// Returns an ApiResult<Response> — boolean-convertible to true on success;
+        /// dereference (or use member-of-pointer ->) to read response fields,
+        /// or call .error() to inspect the ErrorInfo on failure.
         ApiResult<Response> execute() const {
             auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
             BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
@@ -1296,12 +1450,18 @@ struct CardLocationMode {
             if (exhausted_) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Overflow, ::note::Cause::Unspecified, NOTE_ERR("arena exhausted")});
             return ApiResult<Response>(std::move(rsp_));
         }
+        private:
         static inline Result<void>(*send_fn_)(void*, BuildFn, void*);
+        public:
 #else
         ApiResult<Response>(*execute_fn_)(void*, const CardLocationMode::Continuous&) = nullptr;
         Result<void>(*send_fn_)(void*, BuildFn, void*) = nullptr;
+        /// Send this request to the Notecard and wait for a response.
         auto execute() const { return execute_fn_(nc_, *this); }
 #endif
+        /// Send this request as a fire-and-forget command (cmd) — the Notecard
+        /// processes it without sending a response. Lower power and bandwidth
+        /// than execute() when you don't need the result.
         Result<void> command() const {
             auto build_ = [&](JsonBuilder& b_) {
                 b_.add("cmd", notecard_request);
@@ -1328,6 +1488,7 @@ struct CardLocationMode {
             n_out = sizeof(table_) / sizeof(table_[0]);
             return table_;
         }
+        private:
         void build(JsonBuilder& b) const {
             note::add_flash(b, note::flash(keys_::mode), "continuous");
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
@@ -1341,6 +1502,7 @@ struct CardLocationMode {
 #endif
         }
 #pragma GCC diagnostic pop
+        public:
 
 
 #ifdef ARDUINO
@@ -1363,6 +1525,17 @@ struct CardLocationMode {
             return n;
         }
 #endif
+
+        private:
+        friend class ::note::Notecard;
+        template<typename> friend class ::note::StaticNotecard;
+        template<typename, typename> friend struct ::note::detail::has_field_descs;
+#if NOTE_NO_POLYMORPHIC || __cplusplus < 202002L
+        template<typename> friend class ::note::Api;
+#else
+        template<typename, typename> friend class ::note::Api;
+#endif
+        public:
 
     };
 
@@ -1411,6 +1584,12 @@ struct CardLocationMode {
         struct lat_t : Field<double> {
             using Field<double>::Field;
             using Field<double>::operator=;
+            /// When in periodic or continuous mode, providing this value
+            /// enables geofencing. The value you provide for this argument
+            /// should be the latitude of the center of the geofence, in
+            /// degrees. When in fixed mode, the value you provide for this
+            /// argument should be the latitude location of the device itself,
+            /// in degrees.
             CardLocationMode::Periodic& operator()(double v);
         } lat{};
         /// When in periodic or continuous mode, providing this value enables
@@ -1421,6 +1600,12 @@ struct CardLocationMode {
         struct lon_t : Field<double> {
             using Field<double>::Field;
             using Field<double>::operator=;
+            /// When in periodic or continuous mode, providing this value
+            /// enables geofencing. The value you provide for this argument
+            /// should be the longitude of the center of the geofence, in
+            /// degrees. When in fixed mode, the value you provide for this
+            /// argument should be the longitude location of the device itself,
+            /// in degrees.
             CardLocationMode::Periodic& operator()(double v);
         } lon{};
         /// Meters from a geofence center. Used to enable geofence location
@@ -1428,6 +1613,8 @@ struct CardLocationMode {
         struct max_t : Field<note::json_int_t> {
             using Field<note::json_int_t>::Field;
             using Field<note::json_int_t>::operator=;
+            /// Meters from a geofence center. Used to enable geofence location
+            /// tracking.
             CardLocationMode::Periodic& operator()(note::json_int_t v);
         } max{};
         /// When geofence is enabled, the number of minutes the device should be
@@ -1435,6 +1622,9 @@ struct CardLocationMode {
         struct minutes_t : Field<note::json_int_t> {
             using Field<note::json_int_t>::Field;
             using Field<note::json_int_t>::operator=;
+            /// When geofence is enabled, the number of minutes the device
+            /// should be outside the geofence before the Notecard location is
+            /// tracked.
             CardLocationMode::Periodic& operator()(note::json_int_t v);
         } minutes{};
         /// When in `periodic` mode, location will be sampled at this interval,
@@ -1444,6 +1634,11 @@ struct CardLocationMode {
         struct seconds_t : Field<note::json_int_t> {
             using Field<note::json_int_t>::Field;
             using Field<note::json_int_t>::operator=;
+            /// When in `periodic` mode, location will be sampled at this
+            /// interval, if the Notecard detects motion. If seconds is < 300,
+            /// during periods of sustained movement the Notecard will leave its
+            /// onboard GPS/GNSS on continuously to avoid powering the module on
+            /// and off repeatedly.
             CardLocationMode::Periodic& operator()(note::json_int_t v);
         } seconds{};
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
@@ -1457,6 +1652,11 @@ struct CardLocationMode {
         struct threshold_t : Field<note::json_int_t> {
             using Field<note::json_int_t>::Field;
             using Field<note::json_int_t>::operator=;
+            /// When in `periodic` mode, the number of motion events (registered
+            /// by the built-in accelerometer) required to trigger GPS to turn
+            /// on.
+            ///
+            /// @since{3.4.1}
             CardLocationMode::Periodic& operator()(note::json_int_t v);
         } threshold{};
 #endif
@@ -1465,21 +1665,30 @@ struct CardLocationMode {
         struct vseconds_t : Field<note::string_view> {
             using Field<note::string_view>::Field;
             using Field<note::string_view>::operator=;
+            /// In `periodic` mode, overrides `seconds` with a voltage-variable
+            /// value.
             CardLocationMode::Periodic& operator()(note::string_view v);
         } vseconds{};
 
 
 #if NOTE_EXTRAS
+        /// Add an arbitrary key/value pair to the request, beyond the typed fields
+        /// declared above. Useful for fields the schema doesn't yet model.
+        /// Capacity is bounded by NOTE_EXTRAS_MAX; excess pairs are silently dropped.
         template<typename T>
         auto& extra(note::string_view k_, T v_) {
             if (extras_count_ < NOTE_EXTRAS_MAX)
                 extras_[extras_count_++] = {k_, note::DynValue{v_}};
             return *this;
         }
+        /// String-literal overload of extra().
         auto& extra(note::string_view k_, const char* v_) {
             return extra(k_, note::string_view{v_});
         }
 
+        /// Index-style access to fields by wire name. Returns a DynField proxy
+        /// usable for assignment; unknown keys are added as extras (subject to
+        /// NOTE_EXTRAS_MAX). Prefer the typed setters above when possible.
         note::DynField operator[](note::string_view k_) {
             if (k_ == "lat") return note::dyn_field_for(lat);
             if (k_ == "lon") return note::dyn_field_for(lon);
@@ -1679,6 +1888,7 @@ struct CardLocationMode {
             std::unique_ptr<JsonReader> reader_;
 #endif
         };
+        private:
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
         static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
@@ -1696,10 +1906,17 @@ struct CardLocationMode {
 #pragma GCC diagnostic pop
         static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);
         static const ::note::FieldDesc* field_descs_ptr() { return field_descs_table_; }
+        public:
 
 #if NOTE_SINGLETON
+        private:
         /// Singleton generic execute — shared thunk with body factory params.
         static inline Result<void>(*execute_generic_fn_)(void*, ::note::string_view, BuildFn, void*, void*, const ::note::FieldDesc*, uint8_t, ::note::detail::NcErrorCapture&, bool&, void*, ::note::BodyHandlerFactory, ::note::Safety);
+        public:
+        /// Send this request to the Notecard and wait for a response.
+        /// Returns an ApiResult<Response> — boolean-convertible to true on success;
+        /// dereference (or use member-of-pointer ->) to read response fields,
+        /// or call .error() to inspect the ErrorInfo on failure.
         ApiResult<Response> execute() const {
             auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
             BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
@@ -1712,12 +1929,18 @@ struct CardLocationMode {
             if (exhausted_) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Overflow, ::note::Cause::Unspecified, NOTE_ERR("arena exhausted")});
             return ApiResult<Response>(std::move(rsp_));
         }
+        private:
         static inline Result<void>(*send_fn_)(void*, BuildFn, void*);
+        public:
 #else
         ApiResult<Response>(*execute_fn_)(void*, const CardLocationMode::Periodic&) = nullptr;
         Result<void>(*send_fn_)(void*, BuildFn, void*) = nullptr;
+        /// Send this request to the Notecard and wait for a response.
         auto execute() const { return execute_fn_(nc_, *this); }
 #endif
+        /// Send this request as a fire-and-forget command (cmd) — the Notecard
+        /// processes it without sending a response. Lower power and bandwidth
+        /// than execute() when you don't need the result.
         Result<void> command() const {
             auto build_ = [&](JsonBuilder& b_) {
                 b_.add("cmd", notecard_request);
@@ -1749,6 +1972,7 @@ struct CardLocationMode {
             n_out = sizeof(table_) / sizeof(table_[0]);
             return table_;
         }
+        private:
         void build(JsonBuilder& b) const {
             note::add_flash(b, note::flash(keys_::mode), "periodic");
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
@@ -1762,6 +1986,7 @@ struct CardLocationMode {
 #endif
         }
 #pragma GCC diagnostic pop
+        public:
 
 
 #ifdef ARDUINO
@@ -1805,6 +2030,17 @@ struct CardLocationMode {
         }
 #endif
 
+        private:
+        friend class ::note::Notecard;
+        template<typename> friend class ::note::StaticNotecard;
+        template<typename, typename> friend struct ::note::detail::has_field_descs;
+#if NOTE_NO_POLYMORPHIC || __cplusplus < 202002L
+        template<typename> friend class ::note::Api;
+#else
+        template<typename, typename> friend class ::note::Api;
+#endif
+        public:
+
     };
 
     /// Set a fixed location for the device.
@@ -1842,6 +2078,12 @@ struct CardLocationMode {
         struct lat_t : Field<double> {
             using Field<double>::Field;
             using Field<double>::operator=;
+            /// When in periodic or continuous mode, providing this value
+            /// enables geofencing. The value you provide for this argument
+            /// should be the latitude of the center of the geofence, in
+            /// degrees. When in fixed mode, the value you provide for this
+            /// argument should be the latitude location of the device itself,
+            /// in degrees.
             CardLocationMode::Fixed& operator()(double v);
         } lat{};
         /// When in periodic or continuous mode, providing this value enables
@@ -1852,21 +2094,34 @@ struct CardLocationMode {
         struct lon_t : Field<double> {
             using Field<double>::Field;
             using Field<double>::operator=;
+            /// When in periodic or continuous mode, providing this value
+            /// enables geofencing. The value you provide for this argument
+            /// should be the longitude of the center of the geofence, in
+            /// degrees. When in fixed mode, the value you provide for this
+            /// argument should be the longitude location of the device itself,
+            /// in degrees.
             CardLocationMode::Fixed& operator()(double v);
         } lon{};
 
 
 #if NOTE_EXTRAS
+        /// Add an arbitrary key/value pair to the request, beyond the typed fields
+        /// declared above. Useful for fields the schema doesn't yet model.
+        /// Capacity is bounded by NOTE_EXTRAS_MAX; excess pairs are silently dropped.
         template<typename T>
         auto& extra(note::string_view k_, T v_) {
             if (extras_count_ < NOTE_EXTRAS_MAX)
                 extras_[extras_count_++] = {k_, note::DynValue{v_}};
             return *this;
         }
+        /// String-literal overload of extra().
         auto& extra(note::string_view k_, const char* v_) {
             return extra(k_, note::string_view{v_});
         }
 
+        /// Index-style access to fields by wire name. Returns a DynField proxy
+        /// usable for assignment; unknown keys are added as extras (subject to
+        /// NOTE_EXTRAS_MAX). Prefer the typed setters above when possible.
         note::DynField operator[](note::string_view k_) {
             if (k_ == "lat") return note::dyn_field_for(lat);
             if (k_ == "lon") return note::dyn_field_for(lon);
@@ -1974,6 +2229,7 @@ struct CardLocationMode {
             std::unique_ptr<JsonReader> reader_;
 #endif
         };
+        private:
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
         static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
@@ -1984,10 +2240,17 @@ struct CardLocationMode {
 #pragma GCC diagnostic pop
         static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);
         static const ::note::FieldDesc* field_descs_ptr() { return field_descs_table_; }
+        public:
 
 #if NOTE_SINGLETON
+        private:
         /// Singleton generic execute — shared thunk with body factory params.
         static inline Result<void>(*execute_generic_fn_)(void*, ::note::string_view, BuildFn, void*, void*, const ::note::FieldDesc*, uint8_t, ::note::detail::NcErrorCapture&, bool&, void*, ::note::BodyHandlerFactory, ::note::Safety);
+        public:
+        /// Send this request to the Notecard and wait for a response.
+        /// Returns an ApiResult<Response> — boolean-convertible to true on success;
+        /// dereference (or use member-of-pointer ->) to read response fields,
+        /// or call .error() to inspect the ErrorInfo on failure.
         ApiResult<Response> execute() const {
             auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
             BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
@@ -2000,12 +2263,18 @@ struct CardLocationMode {
             if (exhausted_) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Overflow, ::note::Cause::Unspecified, NOTE_ERR("arena exhausted")});
             return ApiResult<Response>(std::move(rsp_));
         }
+        private:
         static inline Result<void>(*send_fn_)(void*, BuildFn, void*);
+        public:
 #else
         ApiResult<Response>(*execute_fn_)(void*, const CardLocationMode::Fixed&) = nullptr;
         Result<void>(*send_fn_)(void*, BuildFn, void*) = nullptr;
+        /// Send this request to the Notecard and wait for a response.
         auto execute() const { return execute_fn_(nc_, *this); }
 #endif
+        /// Send this request as a fire-and-forget command (cmd) — the Notecard
+        /// processes it without sending a response. Lower power and bandwidth
+        /// than execute() when you don't need the result.
         Result<void> command() const {
             auto build_ = [&](JsonBuilder& b_) {
                 b_.add("cmd", notecard_request);
@@ -2028,6 +2297,7 @@ struct CardLocationMode {
             n_out = sizeof(table_) / sizeof(table_[0]);
             return table_;
         }
+        private:
         void build(JsonBuilder& b) const {
             note::add_flash(b, note::flash(keys_::mode), "fixed");
             uint8_t n_; auto* descs_ = req_field_descs_ptr_(n_);
@@ -2038,6 +2308,7 @@ struct CardLocationMode {
                            extras_[i_].value);
 #endif
         }
+        public:
 
 
 #ifdef ARDUINO
@@ -2058,6 +2329,17 @@ struct CardLocationMode {
             return n;
         }
 #endif
+
+        private:
+        friend class ::note::Notecard;
+        template<typename> friend class ::note::StaticNotecard;
+        template<typename, typename> friend struct ::note::detail::has_field_descs;
+#if NOTE_NO_POLYMORPHIC || __cplusplus < 202002L
+        template<typename> friend class ::note::Api;
+#else
+        template<typename, typename> friend class ::note::Api;
+#endif
+        public:
 
     };
 
@@ -2108,6 +2390,12 @@ struct CardLocationMode {
         struct lat_t : Field<double> {
             using Field<double>::Field;
             using Field<double>::operator=;
+            /// When in periodic or continuous mode, providing this value
+            /// enables geofencing. The value you provide for this argument
+            /// should be the latitude of the center of the geofence, in
+            /// degrees. When in fixed mode, the value you provide for this
+            /// argument should be the latitude location of the device itself,
+            /// in degrees.
             CardLocationMode::Remove& operator()(double v);
         } lat{};
         /// When in periodic or continuous mode, providing this value enables
@@ -2118,6 +2406,12 @@ struct CardLocationMode {
         struct lon_t : Field<double> {
             using Field<double>::Field;
             using Field<double>::operator=;
+            /// When in periodic or continuous mode, providing this value
+            /// enables geofencing. The value you provide for this argument
+            /// should be the longitude of the center of the geofence, in
+            /// degrees. When in fixed mode, the value you provide for this
+            /// argument should be the longitude location of the device itself,
+            /// in degrees.
             CardLocationMode::Remove& operator()(double v);
         } lon{};
         /// Meters from a geofence center. Used to enable geofence location
@@ -2125,6 +2419,8 @@ struct CardLocationMode {
         struct max_t : Field<note::json_int_t> {
             using Field<note::json_int_t>::Field;
             using Field<note::json_int_t>::operator=;
+            /// Meters from a geofence center. Used to enable geofence location
+            /// tracking.
             CardLocationMode::Remove& operator()(note::json_int_t v);
         } max{};
         /// When geofence is enabled, the number of minutes the device should be
@@ -2132,6 +2428,9 @@ struct CardLocationMode {
         struct minutes_t : Field<note::json_int_t> {
             using Field<note::json_int_t>::Field;
             using Field<note::json_int_t>::operator=;
+            /// When geofence is enabled, the number of minutes the device
+            /// should be outside the geofence before the Notecard location is
+            /// tracked.
             CardLocationMode::Remove& operator()(note::json_int_t v);
         } minutes{};
         /// Sets the location mode.
@@ -2173,6 +2472,7 @@ struct CardLocationMode {
             static constexpr note::string_view continuous{"continuous"};
             static constexpr note::string_view fixed{"fixed"};
             static constexpr note::string_view _{"-"};
+            /// Sets the location mode.
             CardLocationMode::Remove& operator()(note::string_view v);
         } mode{};
         /// When in `periodic` mode, location will be sampled at this interval,
@@ -2182,6 +2482,11 @@ struct CardLocationMode {
         struct seconds_t : Field<note::json_int_t> {
             using Field<note::json_int_t>::Field;
             using Field<note::json_int_t>::operator=;
+            /// When in `periodic` mode, location will be sampled at this
+            /// interval, if the Notecard detects motion. If seconds is < 300,
+            /// during periods of sustained movement the Notecard will leave its
+            /// onboard GPS/GNSS on continuously to avoid powering the module on
+            /// and off repeatedly.
             CardLocationMode::Remove& operator()(note::json_int_t v);
         } seconds{};
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
@@ -2195,6 +2500,11 @@ struct CardLocationMode {
         struct threshold_t : Field<note::json_int_t> {
             using Field<note::json_int_t>::Field;
             using Field<note::json_int_t>::operator=;
+            /// When in `periodic` mode, the number of motion events (registered
+            /// by the built-in accelerometer) required to trigger GPS to turn
+            /// on.
+            ///
+            /// @since{3.4.1}
             CardLocationMode::Remove& operator()(note::json_int_t v);
         } threshold{};
 #endif
@@ -2203,6 +2513,8 @@ struct CardLocationMode {
         struct vseconds_t : Field<note::string_view> {
             using Field<note::string_view>::Field;
             using Field<note::string_view>::operator=;
+            /// In `periodic` mode, overrides `seconds` with a voltage-variable
+            /// value.
             CardLocationMode::Remove& operator()(note::string_view v);
         } vseconds{};
 
@@ -2223,16 +2535,23 @@ struct CardLocationMode {
 #endif
 
 #if NOTE_EXTRAS
+        /// Add an arbitrary key/value pair to the request, beyond the typed fields
+        /// declared above. Useful for fields the schema doesn't yet model.
+        /// Capacity is bounded by NOTE_EXTRAS_MAX; excess pairs are silently dropped.
         template<typename T>
         auto& extra(note::string_view k_, T v_) {
             if (extras_count_ < NOTE_EXTRAS_MAX)
                 extras_[extras_count_++] = {k_, note::DynValue{v_}};
             return *this;
         }
+        /// String-literal overload of extra().
         auto& extra(note::string_view k_, const char* v_) {
             return extra(k_, note::string_view{v_});
         }
 
+        /// Index-style access to fields by wire name. Returns a DynField proxy
+        /// usable for assignment; unknown keys are added as extras (subject to
+        /// NOTE_EXTRAS_MAX). Prefer the typed setters above when possible.
         note::DynField operator[](note::string_view k_) {
             if (k_ == "lat") return note::dyn_field_for(lat);
             if (k_ == "lon") return note::dyn_field_for(lon);
@@ -2433,6 +2752,7 @@ struct CardLocationMode {
             std::unique_ptr<JsonReader> reader_;
 #endif
         };
+        private:
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
         static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
@@ -2450,10 +2770,17 @@ struct CardLocationMode {
 #pragma GCC diagnostic pop
         static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);
         static const ::note::FieldDesc* field_descs_ptr() { return field_descs_table_; }
+        public:
 
 #if NOTE_SINGLETON
+        private:
         /// Singleton generic execute — shared thunk with body factory params.
         static inline Result<void>(*execute_generic_fn_)(void*, ::note::string_view, BuildFn, void*, void*, const ::note::FieldDesc*, uint8_t, ::note::detail::NcErrorCapture&, bool&, void*, ::note::BodyHandlerFactory, ::note::Safety);
+        public:
+        /// Send this request to the Notecard and wait for a response.
+        /// Returns an ApiResult<Response> — boolean-convertible to true on success;
+        /// dereference (or use member-of-pointer ->) to read response fields,
+        /// or call .error() to inspect the ErrorInfo on failure.
         ApiResult<Response> execute() const {
             auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
             BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
@@ -2466,12 +2793,18 @@ struct CardLocationMode {
             if (exhausted_) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Overflow, ::note::Cause::Unspecified, NOTE_ERR("arena exhausted")});
             return ApiResult<Response>(std::move(rsp_));
         }
+        private:
         static inline Result<void>(*send_fn_)(void*, BuildFn, void*);
+        public:
 #else
         ApiResult<Response>(*execute_fn_)(void*, const CardLocationMode::Remove&) = nullptr;
         Result<void>(*send_fn_)(void*, BuildFn, void*) = nullptr;
+        /// Send this request to the Notecard and wait for a response.
         auto execute() const { return execute_fn_(nc_, *this); }
 #endif
+        /// Send this request as a fire-and-forget command (cmd) — the Notecard
+        /// processes it without sending a response. Lower power and bandwidth
+        /// than execute() when you don't need the result.
         Result<void> command() const {
             auto build_ = [&](JsonBuilder& b_) {
                 b_.add("cmd", notecard_request);
@@ -2504,6 +2837,7 @@ struct CardLocationMode {
             n_out = sizeof(table_) / sizeof(table_[0]);
             return table_;
         }
+        private:
         void build(JsonBuilder& b) const {
             note::add_flash(b, note::flash(keys_::delete_), true);
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
@@ -2517,6 +2851,7 @@ struct CardLocationMode {
 #endif
         }
 #pragma GCC diagnostic pop
+        public:
 
 
 #ifdef ARDUINO
@@ -2563,6 +2898,17 @@ struct CardLocationMode {
             return n;
         }
 #endif
+
+        private:
+        friend class ::note::Notecard;
+        template<typename> friend class ::note::StaticNotecard;
+        template<typename, typename> friend struct ::note::detail::has_field_descs;
+#if NOTE_NO_POLYMORPHIC || __cplusplus < 202002L
+        template<typename> friend class ::note::Api;
+#else
+        template<typename, typename> friend class ::note::Api;
+#endif
+        public:
 
     };
     using Delete = Remove;  // legacy alias

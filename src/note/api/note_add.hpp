@@ -85,6 +85,13 @@ struct NoteAdd {
     struct binary_t : Field<bool> {
         using Field<bool>::Field;
         using Field<bool>::operator=;
+        /// If `true`, the Notecard will send all the data in the binary buffer
+        /// to Notehub.
+        ///
+        /// Learn more in this guide on Sending and Receiving Large Binary
+        /// Objects.
+        ///
+        /// @since{5.3.1}
         NoteAdd& operator()(bool v);
     } binary{};
 #endif
@@ -92,11 +99,17 @@ struct NoteAdd {
     /// `payload`, and can have both.
     struct body_t : BodyValue {
         using BodyValue::BodyValue;
+        /// A JSON object to be enqueued. A Note must have either a `body` or a
+        /// `payload`, and can have both.
         NoteAdd& operator()(BodyValue v);
 #if __cplusplus >= 202002L
+        /// A JSON object to be enqueued. A Note must have either a `body` or a
+        /// `payload`, and can have both.
         template<typename T> requires detail::BodySchema<T>
         NoteAdd& operator()(const T& v);
 #else
+        /// A JSON object to be enqueued. A Note must have either a `body` or a
+        /// `payload`, and can have both.
         template<typename T, typename = std::enable_if_t<detail::is_body_schema<T>::value>>
         NoteAdd& operator()(const T& v);
 #endif
@@ -124,6 +137,26 @@ struct NoteAdd {
     struct file_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
+        /// The name of the Notefile.
+        ///
+        /// On Notecard LoRa this argument is required. On all other Notecards
+        /// this field is optional and defaults to `data.qo` if not provided.
+        ///
+        /// When using this request on the Notecard the Notefile name must end
+        /// in one of:
+        ///
+        /// `.qo` for a queue outgoing (Notecard to Notehub) with plaintext
+        /// transport
+        ///
+        /// `.qos` for a queue outgoing with encrypted transport
+        ///
+        /// `.db` for a bidirectionally synchronized database with plaintext
+        /// transport
+        ///
+        /// `.dbs` for a bidirectionally synchronized database with encrypted
+        /// transport
+        ///
+        /// `.dbx` for a local-only database
         NoteAdd& operator()(note::string_view v);
     } file{};
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
@@ -138,6 +171,11 @@ struct NoteAdd {
     struct full_t : Field<bool> {
         using Field<bool>::Field;
         using Field<bool>::operator=;
+        /// If set to `true`, and the Note is using a Notefile Template, the
+        /// Note will bypass usage of omitempty and retain `null`, `0`, `false`,
+        /// and empty string `""` values.
+        ///
+        /// @since{5.1.1}
         NoteAdd& operator()(bool v);
     } full{};
 #endif
@@ -147,6 +185,9 @@ struct NoteAdd {
     struct key_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
+        /// The name of an environment variable in your Notehub.io project that
+        /// contains the contents of a public key. Used when encrypting the Note
+        /// body for transport.
         NoteAdd& operator()(note::string_view v);
     } key{};
 #if NOTE_API_VERSION >= NOTE_VERSION(9, 1, 1) || !defined(NOTE_API_STRICT)
@@ -160,6 +201,10 @@ struct NoteAdd {
     struct limit_t : Field<bool> {
         using Field<bool>::Field;
         using Field<bool>::operator=;
+        /// If set to `true`, the Note will not be created if Notecard is in a
+        /// penalty box.
+        ///
+        /// @since{9.1.1}
         NoteAdd& operator()(bool v);
     } limit{};
 #endif
@@ -174,6 +219,10 @@ struct NoteAdd {
     struct live_t : Field<bool> {
         using Field<bool>::Field;
         using Field<bool>::operator=;
+        /// If `true`, bypasses saving the Note to flash on the Notecard.
+        /// Required to be set to `true` if also using `"binary":true`.
+        ///
+        /// @since{5.3.1}
         NoteAdd& operator()(bool v);
     } live{};
 #endif
@@ -190,6 +239,12 @@ struct NoteAdd {
     struct max_t : Field<note::json_int_t> {
         using Field<note::json_int_t>::Field;
         using Field<note::json_int_t>::operator=;
+        /// Defines the maximum number of queued Notes permitted in the
+        /// specified Notefile (`"file"`). Any Notes added after this value will
+        /// be rejected. When used with `"sync":true`, a sync will be triggered
+        /// when the number of pending Notes matches the `max` value.
+        ///
+        /// @since{8.2.1}
         NoteAdd& operator()(note::json_int_t v);
     } max{};
 #endif
@@ -203,6 +258,14 @@ struct NoteAdd {
     struct noteId_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
+        /// If the Notefile has a `.db/.dbs/.dbx` extension, specifies a unique
+        /// Note ID.
+        ///
+        /// If `note` string is `"?"`, then a random unique Note ID is generated
+        /// and returned as `{"note":"xxx"}`.
+        ///
+        /// If this argument is provided for a `.qo` Notefile, an error is
+        /// returned.
         NoteAdd& operator()(note::string_view v);
     } noteId{};
     /// A base64-encoded binary payload. A Note must have either a `body` or a
@@ -210,6 +273,8 @@ struct NoteAdd {
     struct payload_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
+        /// A base64-encoded binary payload. A Note must have either a `body` or
+        /// a `payload`, and can have both. Payloads are limited to 256 bytes.
         NoteAdd& operator()(note::string_view v);
     } payload{};
     /// Set to `true` to sync immediately. Only applies to outgoing Notecard
@@ -219,6 +284,10 @@ struct NoteAdd {
     struct sync_t : Field<bool> {
         using Field<bool>::Field;
         using Field<bool>::operator=;
+        /// Set to `true` to sync immediately. Only applies to outgoing Notecard
+        /// requests, and only guarantees syncing the specified Notefile. Auto-
+        /// syncing incoming Notes from Notehub is set on the Notecard with
+        /// `{"req": "hub.set", "mode":"continuous", "sync": true}`.
         NoteAdd& operator()(bool v);
     } sync{};
     /// If set to `true` and using a templated Notefile, the Notefile will be
@@ -227,21 +296,31 @@ struct NoteAdd {
     struct verify_t : Field<bool> {
         using Field<bool>::Field;
         using Field<bool>::operator=;
+        /// If set to `true` and using a templated Notefile, the Notefile will
+        /// be written to flash immediately, rather than being cached in RAM and
+        /// written to flash later.
         NoteAdd& operator()(bool v);
     } verify{};
 
 
 #if NOTE_EXTRAS
+    /// Add an arbitrary key/value pair to the request, beyond the typed fields
+    /// declared above. Useful for fields the schema doesn't yet model.
+    /// Capacity is bounded by NOTE_EXTRAS_MAX; excess pairs are silently dropped.
     template<typename T>
     auto& extra(note::string_view k_, T v_) {
         if (extras_count_ < NOTE_EXTRAS_MAX)
             extras_[extras_count_++] = {k_, note::DynValue{v_}};
         return *this;
     }
+    /// String-literal overload of extra().
     auto& extra(note::string_view k_, const char* v_) {
         return extra(k_, note::string_view{v_});
     }
 
+    /// Index-style access to fields by wire name. Returns a DynField proxy
+    /// usable for assignment; unknown keys are added as extras (subject to
+    /// NOTE_EXTRAS_MAX). Prefer the typed setters above when possible.
     note::DynField operator[](note::string_view k_) {
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
         if (k_ == "binary") return note::dyn_field_for(binary);
@@ -368,6 +447,7 @@ struct NoteAdd {
         std::unique_ptr<JsonReader> reader_;
 #endif
     };
+    private:
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
     static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
@@ -378,10 +458,17 @@ struct NoteAdd {
 #pragma GCC diagnostic pop
     static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);
     static const ::note::FieldDesc* field_descs_ptr() { return field_descs_table_; }
+    public:
 
 #if NOTE_SINGLETON
+    private:
     /// Singleton generic execute — shared thunk with body factory params.
     static inline Result<void>(*execute_generic_fn_)(void*, ::note::string_view, BuildFn, void*, void*, const ::note::FieldDesc*, uint8_t, ::note::detail::NcErrorCapture&, bool&, void*, ::note::BodyHandlerFactory, ::note::Safety);
+    public:
+    /// Send this request to the Notecard and wait for a response.
+    /// Returns an ApiResult<Response> — boolean-convertible to true on success;
+    /// dereference (or use member-of-pointer ->) to read response fields,
+    /// or call .error() to inspect the ErrorInfo on failure.
     ApiResult<Response> execute() const {
         auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
         BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
@@ -394,12 +481,18 @@ struct NoteAdd {
         if (exhausted_) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Overflow, ::note::Cause::Unspecified, NOTE_ERR("arena exhausted")});
         return ApiResult<Response>(std::move(rsp_));
     }
+    private:
     static inline Result<void>(*send_fn_)(void*, BuildFn, void*);
+    public:
 #else
     ApiResult<Response>(*execute_fn_)(void*, const NoteAdd&) = nullptr;
     Result<void>(*send_fn_)(void*, BuildFn, void*) = nullptr;
+    /// Send this request to the Notecard and wait for a response.
     auto execute() const { return execute_fn_(nc_, *this); }
 #endif
+    /// Send this request as a fire-and-forget command (cmd) — the Notecard
+    /// processes it without sending a response. Lower power and bandwidth
+    /// than execute() when you don't need the result.
     Result<void> command() const {
         auto build_ = [&](JsonBuilder& b_) {
             b_.add("cmd", notecard_request);
@@ -444,6 +537,7 @@ struct NoteAdd {
         n_out = sizeof(table_) / sizeof(table_[0]);
         return table_;
     }
+    private:
     void build(JsonBuilder& b) const {
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
 #endif
@@ -464,6 +558,7 @@ struct NoteAdd {
 #endif
     }
 #pragma GCC diagnostic pop
+    public:
 
 
 #ifdef ARDUINO
@@ -530,6 +625,17 @@ struct NoteAdd {
         return n;
     }
 #endif
+
+    private:
+    friend class ::note::Notecard;
+    template<typename> friend class ::note::StaticNotecard;
+    template<typename, typename> friend struct ::note::detail::has_field_descs;
+#if NOTE_NO_POLYMORPHIC || __cplusplus < 202002L
+    template<typename> friend class ::note::Api;
+#else
+    template<typename, typename> friend class ::note::Api;
+#endif
+    public:
 
 };
 

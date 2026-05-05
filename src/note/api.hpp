@@ -1088,8 +1088,12 @@ public:
 #endif
             return r;
         }
-        /// card.aux
+        /// Configure various uses of the general-purpose I/O (GPIO) pins
+        /// `AUX1`-`AUX4` on the Notecard edge connector for tracking
+        /// applications and simple GPIO sensing and counting tasks.
         auto operator()() { return create_<api::CardAux>(); }
+        /// Configure various uses of the AUXTX and AUXRX pins on the Notecard's
+        /// edge connector.
 #if NOTE_SINGLETON
         CardAuxSerialFactory serial;
 #else
@@ -1154,9 +1158,19 @@ public:
         /// the guide on Sending and Receiving Large Binary Objects for best
         /// practices when using `card.binary`.
         auto clear() { return create_<api::CardBinary::Clear>(); }
-        /// card.binary.get
+        /// Returns binary data stored in the binary storage area of the
+        /// Notecard. The response to this API command first returns the JSON-
+        /// formatted response object, then the binary data.
+        ///
+        /// See the guide on Sending and Receiving Large Binary Objects for best
+        /// practices when using `card.binary`.
         auto get() { return create_<api::CardBinaryGet>(); }
-        /// card.binary.put
+        /// Adds binary data to the binary storage area of the Notecard. The
+        /// Notecard expects to receive binary data immediately following the
+        /// usage of this API command.
+        ///
+        /// See the guide on Sending and Receiving Large Binary Objects for best
+        /// practices when using `card.binary`.
         auto put() { return create_<api::CardBinaryPut>(); }
     };
 
@@ -1207,14 +1221,38 @@ public:
 #endif
             return r;
         }
-        /// card.location
+        /// Retrieves the last known location of the Notecard and the time at
+        /// which it was acquired. Use card.location.mode to configure location
+        /// settings.
+        ///
+        /// This request will return the cell tower location or triangulated
+        /// location of the most recent session if a GPS/GNSS location is not
+        /// available.
+        ///
+        /// On Notecard LoRa this request can only return a location set through
+        /// the card.location.mode request's `"fixed"` mode.
         auto operator()() { return create_<api::CardLocation>(); }
+        /// Sets location-related configuration settings. Retrieves the current
+        /// location mode when passed with no argument.
 #if NOTE_SINGLETON
         CardLocationModeFactory mode;
 #else
         CardLocationModeFactory mode{nc_};
 #endif
-        /// card.location.track
+        /// Store location data in a Notefile at the `periodic` interval, or
+        /// using a specified `heartbeat`.
+        ///
+        /// This request is only available when the `card.location.mode` request
+        /// has been set to `periodic`—e.g.
+        /// `{"req":"card.location.mode","mode":"periodic","seconds":300}`. If
+        /// you want to track and transmit data simultaneously consider using an
+        /// external GPS/GNSS module with the Notecard.
+        ///
+        /// If you connect a BME280 sensor on the I2C bus, Notecard will include
+        /// a temperature, humidity, and pressure reading with each captured
+        /// Note. If you connect an ENS210 sensor on the I2C bus, Notecard will
+        /// include a temperature and pressure reading with each captured Note.
+        /// Learn more in _track.qo.
         auto track() { return create_<api::CardLocationTrack>(); }
     };
 
@@ -1265,13 +1303,17 @@ public:
 #endif
             return r;
         }
-        /// card.motion
+        /// Returns information about the Notecard accelerometer's motion and
+        /// orientation. Motion tracking must be enabled first with
+        /// `card.motion.mode`. Otherwise, this request will return `{}`.
         auto operator()() { return create_<api::CardMotion>(); }
-        /// card.motion.mode
+        /// Configures accelerometer motion monitoring parameters used when
+        /// providing results to `card.motion`.
         auto mode() { return create_<api::CardMotionMode>(); }
-        /// card.motion.sync
+        /// Configures automatic sync triggered by Notecard movement.
         auto sync() { return create_<api::CardMotionSync>(); }
-        /// card.motion.track
+        /// Configures automatic capture of Notecard accelerometer motion in a
+        /// Notefile.
         auto track() { return create_<api::CardMotionTrack>(); }
     };
 
@@ -1322,8 +1364,12 @@ public:
 #endif
             return r;
         }
-        /// card.wireless
+        /// View the last known network state, or customize the behavior of the
+        /// modem. Note: Be careful when using this mode with hardware not on
+        /// hand as a mistake may cause loss of network and Notehub access.
         auto operator()() { return create_<api::CardWireless>(); }
+        /// View the current state of a Notecard Penalty Box, manually remove
+        /// the Notecard from a penalty box, or override penalty box defaults.
 #if NOTE_SINGLETON
         CardWirelessPenaltyFactory penalty;
 #else
@@ -1378,9 +1424,15 @@ public:
 #endif
             return r;
         }
-        /// file.changes
+        /// Used to perform queries on a single or multiple files to determine
+        /// if new Notes are available to read, or if there are unsynced Notes
+        /// in local Notefiles.
+        ///
+        /// *Note: This request is a Notefile API request, only. `.qo` Notes in
+        /// Notehub are automatically ingested and stored, or sent to applicable
+        /// Routes.*
         auto operator()() { return create_<api::FileChanges>(); }
-        /// file.changes.pending
+        /// Returns info about file changes that are pending upload to Notehub.
         auto pending() { return create_<api::FileChangesPending>(); }
     };
 
@@ -1431,9 +1483,9 @@ public:
 #endif
             return r;
         }
-        /// hub.sync
+        /// Manually initiates a sync with Notehub.
         auto operator()() { return create_<api::HubSync>(); }
-        /// hub.sync.status
+        /// Check on the status of a recently triggered or previous sync.
         auto status() { return create_<api::HubSyncStatus>(); }
     };
 
@@ -1499,56 +1551,80 @@ public:
         }
 
 
-        /// card.aux (and nested: card.aux.serial)
+        /// Configure various uses of the general-purpose I/O (GPIO) pins
+        /// `AUX1`-`AUX4` on the Notecard edge connector for tracking
+        /// applications and simple GPIO sensing and counting tasks.
 #if NOTE_SINGLETON
         CardAuxFactory aux;
 #else
         CardAuxFactory aux{nc_};
 #endif
-        /// card.aux.serial (and nested: )
+        /// Configure various uses of the AUXTX and AUXRX pins on the Notecard's
+        /// edge connector.
 #if NOTE_SINGLETON
         CardAuxSerialFactory auxSerial;
 #else
         CardAuxSerialFactory auxSerial{nc_};
 #endif
-        /// card.binary (and nested: card.binary.get, card.binary.put)
+        /// View the status of the binary storage area of the Notecard and
+        /// optionally clear any data and related `card.binary` variables. See
+        /// the guide on Sending and Receiving Large Binary Objects for best
+        /// practices when using `card.binary`.
 #if NOTE_SINGLETON
         CardBinaryFactory binary;
 #else
         CardBinaryFactory binary{nc_};
 #endif
-        /// card.location (and nested: card.location.mode, card.location.track)
+        /// Retrieves the last known location of the Notecard and the time at
+        /// which it was acquired. Use card.location.mode to configure location
+        /// settings.
+        ///
+        /// This request will return the cell tower location or triangulated
+        /// location of the most recent session if a GPS/GNSS location is not
+        /// available.
+        ///
+        /// On Notecard LoRa this request can only return a location set through
+        /// the card.location.mode request's `"fixed"` mode.
 #if NOTE_SINGLETON
         CardLocationFactory location;
 #else
         CardLocationFactory location{nc_};
 #endif
-        /// card.location.mode (and nested: )
+        /// Sets location-related configuration settings. Retrieves the current
+        /// location mode when passed with no argument.
 #if NOTE_SINGLETON
         CardLocationModeFactory locationMode;
 #else
         CardLocationModeFactory locationMode{nc_};
 #endif
-        /// card.motion (and nested: card.motion.mode, card.motion.sync, card.motion.track)
+        /// Returns information about the Notecard accelerometer's motion and
+        /// orientation. Motion tracking must be enabled first with
+        /// `card.motion.mode`. Otherwise, this request will return `{}`.
 #if NOTE_SINGLETON
         CardMotionFactory motion;
 #else
         CardMotionFactory motion{nc_};
 #endif
-        /// card.wireless (and nested: card.wireless.penalty)
+        /// View the last known network state, or customize the behavior of the
+        /// modem. Note: Be careful when using this mode with hardware not on
+        /// hand as a mistake may cause loss of network and Notehub access.
 #if NOTE_SINGLETON
         CardWirelessFactory wireless;
 #else
         CardWirelessFactory wireless{nc_};
 #endif
-        /// card.wireless.penalty (and nested: )
+        /// View the current state of a Notecard Penalty Box, manually remove
+        /// the Notecard from a penalty box, or override penalty box defaults.
 #if NOTE_SINGLETON
         CardWirelessPenaltyFactory wirelessPenalty;
 #else
         CardWirelessPenaltyFactory wirelessPenalty{nc_};
 #endif
 
-        /// card.attn
+        /// Configure hardware notifications from a Notecard to a host MCU.
+        ///
+        /// NOTE: Requires a connection between the Notecard ATTN pin and a GPIO
+        /// pin on the host MCU.
         CardAttnFactory attn() { return
 #if NOTE_SINGLETON
             {}
@@ -1557,22 +1633,40 @@ public:
 #endif
         ; }
 
-        /// card.carrier
 #if __cplusplus >= 202002L
+        /// Uses the `AUX_CHARGING` pin on the Notecard edge connector to notify
+        /// the Notecard that the pin is connected to a Notecarrier that
+        /// supports charging, using open-drain.
+        ///
+        /// Once set, `{"charging":true}` will appear in a response if the
+        /// Notecarrier is currently indicating that charging is in progress.
         template<typename T_ = TargetT_>
         requires (target_supports<T_, api::CardCarrier>())
         auto carrier() { return create_<api::CardCarrier>(); }
 
+        /// Uses the `AUX_CHARGING` pin on the Notecard edge connector to notify
+        /// the Notecard that the pin is connected to a Notecarrier that
+        /// supports charging, using open-drain.
+        ///
+        /// Once set, `{"charging":true}` will appear in a response if the
+        /// Notecarrier is currently indicating that charging is in progress.
         template<typename T_ = TargetT_>
         requires (!target_supports<T_, api::CardCarrier>() && !T_::strict)
         [[deprecated("card.carrier is not available on this target")]]
         auto carrier() { return create_<api::CardCarrier>(); }
 #else
+        /// Uses the `AUX_CHARGING` pin on the Notecard edge connector to notify
+        /// the Notecard that the pin is connected to a Notecarrier that
+        /// supports charging, using open-drain.
+        ///
+        /// Once set, `{"charging":true}` will appear in a response if the
+        /// Notecarrier is currently indicating that charging is in progress.
         auto carrier() { return create_<api::CardCarrier>(); }
 #endif
 
-        /// card.contact
 #if __cplusplus >= 202002L
+        /// Used to set or retrieve information about the Notecard maintainer.
+        /// Once set, this information is synced to Notehub.
         template<typename T_ = TargetT_>
         requires (target_supports<T_, api::CardContact::Get>())
         CardContactFactory contact() { return
@@ -1583,6 +1677,8 @@ public:
 #endif
         ; }
 
+        /// Used to set or retrieve information about the Notecard maintainer.
+        /// Once set, this information is synced to Notehub.
         template<typename T_ = TargetT_>
         requires (!target_supports<T_, api::CardContact::Get>() && !T_::strict)
         [[deprecated("card.contact is not available on this target")]]
@@ -1594,6 +1690,8 @@ public:
 #endif
         ; }
 #else
+        /// Used to set or retrieve information about the Notecard maintainer.
+        /// Once set, this information is synced to Notehub.
         CardContactFactory contact() { return
 #if NOTE_SINGLETON
             {}
@@ -1603,78 +1701,146 @@ public:
         ; }
 #endif
 
-        /// card.dfu
 #if __cplusplus >= 202002L
+        /// Used to configure a Notecard for Notecard Outboard Firmware Update.
         template<typename T_ = TargetT_>
         requires (target_supports<T_, api::CardDfu>())
         auto dfu() { return create_<api::CardDfu>(); }
 
+        /// Used to configure a Notecard for Notecard Outboard Firmware Update.
         template<typename T_ = TargetT_>
         requires (!target_supports<T_, api::CardDfu>() && !T_::strict)
         [[deprecated("card.dfu is not available on this target")]]
         auto dfu() { return create_<api::CardDfu>(); }
 #else
+        /// Used to configure a Notecard for Notecard Outboard Firmware Update.
         auto dfu() { return create_<api::CardDfu>(); }
 #endif
 
-        /// card.illumination
 #if __cplusplus >= 202002L
+        /// This request returns an illumination reading (in lux) from an
+        /// OPT3001 ambient light sensor connected to Notecard's I2C bus. If no
+        /// OPT3001 sensor is detected, this request returns an “illumination
+        /// sensor is not available” error.
         template<typename T_ = TargetT_>
         requires (target_supports<T_, api::CardIllumination>())
         auto illumination() { return create_<api::CardIllumination>(); }
 
+        /// This request returns an illumination reading (in lux) from an
+        /// OPT3001 ambient light sensor connected to Notecard's I2C bus. If no
+        /// OPT3001 sensor is detected, this request returns an “illumination
+        /// sensor is not available” error.
         template<typename T_ = TargetT_>
         requires (!target_supports<T_, api::CardIllumination>() && !T_::strict)
         [[deprecated("card.illumination is not available on this target")]]
         auto illumination() { return create_<api::CardIllumination>(); }
 #else
+        /// This request returns an illumination reading (in lux) from an
+        /// OPT3001 ambient light sensor connected to Notecard's I2C bus. If no
+        /// OPT3001 sensor is detected, this request returns an “illumination
+        /// sensor is not available” error.
         auto illumination() { return create_<api::CardIllumination>(); }
 #endif
 
-        /// card.io
 #if __cplusplus >= 202002L
+        /// Can be used to override the Notecard's I2C address from its default
+        /// of `0x17` and change behaviors of the onboard LED and USB port.
         template<typename T_ = TargetT_>
         requires (target_supports<T_, api::CardIo>())
         auto io() { return create_<api::CardIo>(); }
 
+        /// Can be used to override the Notecard's I2C address from its default
+        /// of `0x17` and change behaviors of the onboard LED and USB port.
         template<typename T_ = TargetT_>
         requires (!target_supports<T_, api::CardIo>() && !T_::strict)
         [[deprecated("card.io is not available on this target")]]
         auto io() { return create_<api::CardIo>(); }
 #else
+        /// Can be used to override the Notecard's I2C address from its default
+        /// of `0x17` and change behaviors of the onboard LED and USB port.
         auto io() { return create_<api::CardIo>(); }
 #endif
 
-        /// card.led
 #if __cplusplus >= 202002L
+        /// Used along with the card.aux API to turn connected LEDs on/off, to
+        /// enable a specific color on an RGB LED, or to manage a single
+        /// connected NeoPixel.
+        ///
+        /// Monochromatic LEDs must be wired according to the instructions
+        /// provided in the guide on Using Monitor Mode. Please note that the
+        /// use of monochromatic LEDs is not supported by Notecard for LoRa.
+        ///
+        /// RGB LEDs must be wired according to the instructions provided in the
+        /// guide on Using RGB-Monitor Mode. Please note that the use of RGB
+        /// LEDs is not supported by Notecard for LoRa.
+        ///
+        /// NeoPixels must be wired according to the instructions provided in
+        /// the guide on Using Neo-Monitor Mode.
         template<typename T_ = TargetT_>
         requires (target_supports<T_, api::CardLed>())
         auto led() { return create_<api::CardLed>(); }
 
+        /// Used along with the card.aux API to turn connected LEDs on/off, to
+        /// enable a specific color on an RGB LED, or to manage a single
+        /// connected NeoPixel.
+        ///
+        /// Monochromatic LEDs must be wired according to the instructions
+        /// provided in the guide on Using Monitor Mode. Please note that the
+        /// use of monochromatic LEDs is not supported by Notecard for LoRa.
+        ///
+        /// RGB LEDs must be wired according to the instructions provided in the
+        /// guide on Using RGB-Monitor Mode. Please note that the use of RGB
+        /// LEDs is not supported by Notecard for LoRa.
+        ///
+        /// NeoPixels must be wired according to the instructions provided in
+        /// the guide on Using Neo-Monitor Mode.
         template<typename T_ = TargetT_>
         requires (!target_supports<T_, api::CardLed>() && !T_::strict)
         [[deprecated("card.led is not available on this target")]]
         auto led() { return create_<api::CardLed>(); }
 #else
+        /// Used along with the card.aux API to turn connected LEDs on/off, to
+        /// enable a specific color on an RGB LED, or to manage a single
+        /// connected NeoPixel.
+        ///
+        /// Monochromatic LEDs must be wired according to the instructions
+        /// provided in the guide on Using Monitor Mode. Please note that the
+        /// use of monochromatic LEDs is not supported by Notecard for LoRa.
+        ///
+        /// RGB LEDs must be wired according to the instructions provided in the
+        /// guide on Using RGB-Monitor Mode. Please note that the use of RGB
+        /// LEDs is not supported by Notecard for LoRa.
+        ///
+        /// NeoPixels must be wired according to the instructions provided in
+        /// the guide on Using Neo-Monitor Mode.
         auto led() { return create_<api::CardLed>(); }
 #endif
 
-        /// card.monitor
 #if __cplusplus >= 202002L
+        /// When a Notecard is in monitor mode, this API is used to configure
+        /// the general-purpose `AUX1`-`AUX4` pins to test and monitor Notecard
+        /// activity.
         template<typename T_ = TargetT_>
         requires (target_supports<T_, api::CardMonitor>())
         auto monitor() { return create_<api::CardMonitor>(); }
 
+        /// When a Notecard is in monitor mode, this API is used to configure
+        /// the general-purpose `AUX1`-`AUX4` pins to test and monitor Notecard
+        /// activity.
         template<typename T_ = TargetT_>
         requires (!target_supports<T_, api::CardMonitor>() && !T_::strict)
         [[deprecated("card.monitor is not available on this target")]]
         auto monitor() { return create_<api::CardMonitor>(); }
 #else
+        /// When a Notecard is in monitor mode, this API is used to configure
+        /// the general-purpose `AUX1`-`AUX4` pins to test and monitor Notecard
+        /// activity.
         auto monitor() { return create_<api::CardMonitor>(); }
 #endif
 
-        /// card.power
 #if __cplusplus >= 202002L
+        /// The `card.power` API is used to configure a connected Mojo device or
+        /// to manually request power consumption readings in firmware.
         template<typename T_ = TargetT_>
         requires (target_supports<T_, api::CardPower::Read>())
         CardPowerFactory power() { return
@@ -1685,6 +1851,8 @@ public:
 #endif
         ; }
 
+        /// The `card.power` API is used to configure a connected Mojo device or
+        /// to manually request power consumption readings in firmware.
         template<typename T_ = TargetT_>
         requires (!target_supports<T_, api::CardPower::Read>() && !T_::strict)
         [[deprecated("card.power is not available on this target")]]
@@ -1696,6 +1864,8 @@ public:
 #endif
         ; }
 #else
+        /// The `card.power` API is used to configure a connected Mojo device or
+        /// to manually request power consumption readings in firmware.
         CardPowerFactory power() { return
 #if NOTE_SINGLETON
             {}
@@ -1705,44 +1875,87 @@ public:
         ; }
 #endif
 
-        /// card.random
 #if __cplusplus >= 202002L
+        /// Obtain a single random 32 bit unsigned integer modulo or `count`
+        /// number of bytes of random data from the Notecard hardware random
+        /// number generator.
         template<typename T_ = TargetT_>
         requires (target_supports<T_, api::CardRandom>())
         auto random() { return create_<api::CardRandom>(); }
 
+        /// Obtain a single random 32 bit unsigned integer modulo or `count`
+        /// number of bytes of random data from the Notecard hardware random
+        /// number generator.
         template<typename T_ = TargetT_>
         requires (!target_supports<T_, api::CardRandom>() && !T_::strict)
         [[deprecated("card.random is not available on this target")]]
         auto random() { return create_<api::CardRandom>(); }
 #else
+        /// Obtain a single random 32 bit unsigned integer modulo or `count`
+        /// number of bytes of random data from the Notecard hardware random
+        /// number generator.
         auto random() { return create_<api::CardRandom>(); }
 #endif
 
-        /// card.restart
+        /// Performs a firmware restart of the Notecard.
         auto restart() { return create_<api::CardRestart>(); }
 
-        /// card.restore
+        /// Performs a factory reset on the Notecard and restarts.
+        ///
+        /// *Sending this request without either of the optional arguments below
+        /// will only reset the Notecard's file system, thus forcing a re-sync
+        /// of all Notefiles from Notehub.*
+        ///
+        /// On Notecard LoRa there is no option to retain configuration
+        /// settings, and providing `"delete": true` is required. The Notecard
+        /// LoRa retains LoRaWAN configuration after factory resets.
         auto restore() { return create_<api::CardRestore>(); }
 
-        /// card.sleep
 #if __cplusplus >= 202002L
+        /// Allows the ESP32-based Notecard WiFi v2 to fall back to a low
+        /// current draw when idle (this behavior differs from the STM32-based
+        /// Notecards that have a `STOP` mode where UART and I2C may still
+        /// operate). Note that this power state is not available if the
+        /// Notecard is plugged in via USB.
+        ///
+        /// Read more in the guide on using Deep Sleep Mode on Notecard WiFi v2.
         template<typename T_ = TargetT_>
         requires (target_supports<T_, api::CardSleep>())
         auto sleep() { return create_<api::CardSleep>(); }
 
+        /// Allows the ESP32-based Notecard WiFi v2 to fall back to a low
+        /// current draw when idle (this behavior differs from the STM32-based
+        /// Notecards that have a `STOP` mode where UART and I2C may still
+        /// operate). Note that this power state is not available if the
+        /// Notecard is plugged in via USB.
+        ///
+        /// Read more in the guide on using Deep Sleep Mode on Notecard WiFi v2.
         template<typename T_ = TargetT_>
         requires (!target_supports<T_, api::CardSleep>() && !T_::strict)
         [[deprecated("card.sleep is not available on this target")]]
         auto sleep() { return create_<api::CardSleep>(); }
 #else
+        /// Allows the ESP32-based Notecard WiFi v2 to fall back to a low
+        /// current draw when idle (this behavior differs from the STM32-based
+        /// Notecards that have a `STOP` mode where UART and I2C may still
+        /// operate). Note that this power state is not available if the
+        /// Notecard is plugged in via USB.
+        ///
+        /// Read more in the guide on using Deep Sleep Mode on Notecard WiFi v2.
         auto sleep() { return create_<api::CardSleep>(); }
 #endif
 
-        /// card.status
+        /// Returns general information about the Notecard's operating status.
         auto status() { return create_<api::CardStatus>(); }
 
-        /// card.temp
+        /// Get the current temperature from the Notecard's onboard calibrated
+        /// temperature sensor.
+        ///
+        /// When using a Notecard Cellular or Notecard Cell+WiFi, if you connect
+        /// a BME280 sensor on the I2C bus the Notecard will add `temperature`,
+        /// `pressure`, and `humidity` fields to the response. If you connect an
+        /// ENS210 sensor on the I2C bus the Notecard will add `temperature` and
+        /// `pressure` fields to the response.
         CardTempFactory temp() { return
 #if NOTE_SINGLETON
             {}
@@ -1751,72 +1964,105 @@ public:
 #endif
         ; }
 
-        /// card.time
+        /// Retrieves current date and time information in UTC. Upon power-up,
+        /// the Notecard must complete a sync to Notehub in order to obtain time
+        /// and location data. Before the time is obtained, this request will
+        /// return `{"zone":"UTC,Unknown"}`. The Notecard's stored timezone is
+        /// only updated when a new Notehub session begins.
         auto time() { return create_<api::CardTime>(); }
 
-        /// card.trace
+        /// Enable and disable trace mode on a Notecard for debugging.
         auto trace() { return create_<api::CardTrace>(); }
 
-        /// card.transport
 #if __cplusplus >= 202002L
+        /// Specifies the connectivity protocol to prioritize on the Notecard
+        /// Cell+WiFi, or when using NTN mode with Starnote and a compatible
+        /// Notecard.
         template<typename T_ = TargetT_>
         requires (target_supports<T_, api::CardTransport>())
         auto transport() { return create_<api::CardTransport>(); }
 
+        /// Specifies the connectivity protocol to prioritize on the Notecard
+        /// Cell+WiFi, or when using NTN mode with Starnote and a compatible
+        /// Notecard.
         template<typename T_ = TargetT_>
         requires (!target_supports<T_, api::CardTransport>() && !T_::strict)
         [[deprecated("card.transport is not available on this target")]]
         auto transport() { return create_<api::CardTransport>(); }
 #else
+        /// Specifies the connectivity protocol to prioritize on the Notecard
+        /// Cell+WiFi, or when using NTN mode with Starnote and a compatible
+        /// Notecard.
         auto transport() { return create_<api::CardTransport>(); }
 #endif
 
-        /// card.triangulate
 #if __cplusplus >= 202002L
+        /// Enables or disables a behavior by which the Notecard gathers
+        /// information about surrounding cell towers and/or WiFi access points
+        /// with each new Notehub session.
         template<typename T_ = TargetT_>
         requires (target_supports<T_, api::CardTriangulate>())
         auto triangulate() { return create_<api::CardTriangulate>(); }
 
+        /// Enables or disables a behavior by which the Notecard gathers
+        /// information about surrounding cell towers and/or WiFi access points
+        /// with each new Notehub session.
         template<typename T_ = TargetT_>
         requires (!target_supports<T_, api::CardTriangulate>() && !T_::strict)
         [[deprecated("card.triangulate is not available on this target")]]
         auto triangulate() { return create_<api::CardTriangulate>(); }
 #else
+        /// Enables or disables a behavior by which the Notecard gathers
+        /// information about surrounding cell towers and/or WiFi access points
+        /// with each new Notehub session.
         auto triangulate() { return create_<api::CardTriangulate>(); }
 #endif
 
-        /// card.usage.get
 #if __cplusplus >= 202002L
+        /// Returns the Notecard's network usage statistics for cellular and
+        /// WiFi transmissions.
         template<typename T_ = TargetT_>
         requires (target_supports<T_, api::CardUsageGet>())
         auto usageGet() { return create_<api::CardUsageGet>(); }
 
+        /// Returns the Notecard's network usage statistics for cellular and
+        /// WiFi transmissions.
         template<typename T_ = TargetT_>
         requires (!target_supports<T_, api::CardUsageGet>() && !T_::strict)
         [[deprecated("card.usage.get is not available on this target")]]
         auto usageGet() { return create_<api::CardUsageGet>(); }
 #else
+        /// Returns the Notecard's network usage statistics for cellular and
+        /// WiFi transmissions.
         auto usageGet() { return create_<api::CardUsageGet>(); }
 #endif
 
-        /// card.usage.test
 #if __cplusplus >= 202002L
+        /// Calculates a projection of how long the available cellular data
+        /// quota will last based on the observed usage patterns.
         template<typename T_ = TargetT_>
         requires (target_supports<T_, api::CardUsageTest>())
         auto usageTest() { return create_<api::CardUsageTest>(); }
 
+        /// Calculates a projection of how long the available cellular data
+        /// quota will last based on the observed usage patterns.
         template<typename T_ = TargetT_>
         requires (!target_supports<T_, api::CardUsageTest>() && !T_::strict)
         [[deprecated("card.usage.test is not available on this target")]]
         auto usageTest() { return create_<api::CardUsageTest>(); }
 #else
+        /// Calculates a projection of how long the available cellular data
+        /// quota will last based on the observed usage patterns.
         auto usageTest() { return create_<api::CardUsageTest>(); }
 #endif
 
-        /// card.version
+        /// Returns firmware version information for the Notecard.
         auto version() { return create_<api::CardVersion>(); }
 
-        /// card.voltage
+        /// Provides the current VMODEM_P voltage level on the Notecard, and
+        /// provides information about historical voltage trends. When used with
+        /// the mode argument, configures voltage thresholds based on how the
+        /// device is powered.
         CardVoltageFactory voltage() { return
 #if NOTE_SINGLETON
             {}
@@ -1825,17 +2071,19 @@ public:
 #endif
         ; }
 
-        /// card.wifi
 #if __cplusplus >= 202002L
+        /// Sets up a Notecard WiFi to connect to a WiFi access point.
         template<typename T_ = TargetT_>
         requires (target_supports<T_, api::CardWifi>())
         auto wifi() { return create_<api::CardWifi>(); }
 
+        /// Sets up a Notecard WiFi to connect to a WiFi access point.
         template<typename T_ = TargetT_>
         requires (!target_supports<T_, api::CardWifi>() && !T_::strict)
         [[deprecated("card.wifi is not available on this target")]]
         auto wifi() { return create_<api::CardWifi>(); }
 #else
+        /// Sets up a Notecard WiFi to connect to a WiFi access point.
         auto wifi() { return create_<api::CardWifi>(); }
 #endif
 
@@ -1959,31 +2207,41 @@ public:
 
 
 
-        /// dfu.get
 #if __cplusplus >= 202002L
+        /// Retrieves downloaded firmware data from the Notecard for use with
+        /// IAP host MCU firmware updates.
         template<typename T_ = TargetT_>
         requires (target_supports<T_, api::DfuGet>())
         auto get() { return create_<api::DfuGet>(); }
 
+        /// Retrieves downloaded firmware data from the Notecard for use with
+        /// IAP host MCU firmware updates.
         template<typename T_ = TargetT_>
         requires (!target_supports<T_, api::DfuGet>() && !T_::strict)
         [[deprecated("dfu.get is not available on this target")]]
         auto get() { return create_<api::DfuGet>(); }
 #else
+        /// Retrieves downloaded firmware data from the Notecard for use with
+        /// IAP host MCU firmware updates.
         auto get() { return create_<api::DfuGet>(); }
 #endif
 
-        /// dfu.status
 #if __cplusplus >= 202002L
+        /// Gets and sets the background download status of MCU host or Notecard
+        /// firmware updates.
         template<typename T_ = TargetT_>
         requires (target_supports<T_, api::DfuStatus>())
         auto status() { return create_<api::DfuStatus>(); }
 
+        /// Gets and sets the background download status of MCU host or Notecard
+        /// firmware updates.
         template<typename T_ = TargetT_>
         requires (!target_supports<T_, api::DfuStatus>() && !T_::strict)
         [[deprecated("dfu.status is not available on this target")]]
         auto status() { return create_<api::DfuStatus>(); }
 #else
+        /// Gets and sets the background download status of MCU host or Notecard
+        /// firmware updates.
         auto status() { return create_<api::DfuStatus>(); }
 #endif
 
@@ -2051,7 +2309,9 @@ public:
 
 
 
-        /// env.default
+        /// Used by the Notecard host to specify a default value for an
+        /// environment variable until that variable is overridden by a device,
+        /// project or fleet-wide setting at Notehub.
         EnvDefaultFactory defaults() { return
 #if NOTE_SINGLETON
             {}
@@ -2060,14 +2320,17 @@ public:
 #endif
         ; }
 
-        /// env.get
+        /// Returns a single environment variable, or all variables according to
+        /// precedence rules.
         auto get() { return create_<api::EnvGet>(); }
 
-        /// env.modified
+        /// Get the time of the update to any environment variable managed by
+        /// the Notecard.
         auto modified() { return create_<api::EnvModified>(); }
 
-        /// env.set
 #if __cplusplus >= 202002L
+        /// Sets a local environment variable on the Notecard. Local environment
+        /// variables cannot be overridden by a Notehub variable of any scope.
         template<typename T_ = TargetT_>
         requires (target_supports<T_, api::EnvSet>())
         auto set(note::string_view name_arg) {
@@ -2076,6 +2339,8 @@ public:
             return r;
         }
 
+        /// Sets a local environment variable on the Notecard. Local environment
+        /// variables cannot be overridden by a Notehub variable of any scope.
         template<typename T_ = TargetT_>
         requires (!target_supports<T_, api::EnvSet>() && !T_::strict)
         [[deprecated("env.set is not available on this target")]]
@@ -2085,6 +2350,8 @@ public:
             return r;
         }
 #else
+        /// Sets a local environment variable on the Notecard. Local environment
+        /// variables cannot be overridden by a Notehub variable of any scope.
         auto set(note::string_view name_arg) {
             auto r = create_<api::EnvSet>();
             r.name = name_arg;
@@ -2092,7 +2359,15 @@ public:
         }
 #endif
 
-        /// env.template
+        /// The `env.template` request allows developers to provide a schema for
+        /// the environment variables the Notecard uses. The provided template
+        /// allows the Notecard to store environment variables as fixed-length
+        /// binary records rather than as flexible JSON objects that require
+        /// much more memory.
+        ///
+        /// Using templated environment variables also allows the Notecard to
+        /// optimize the network traffic related to sending and receiving
+        /// environment variable updates.
         auto templates() { return create_<api::EnvTemplate>(); }
 
 
@@ -2222,31 +2497,42 @@ public:
         }
 
 
-        /// file.changes (and nested: file.changes.pending)
+        /// Used to perform queries on a single or multiple files to determine
+        /// if new Notes are available to read, or if there are unsynced Notes
+        /// in local Notefiles.
+        ///
+        /// *Note: This request is a Notefile API request, only. `.qo` Notes in
+        /// Notehub are automatically ingested and stored, or sent to applicable
+        /// Routes.*
 #if NOTE_SINGLETON
         FileChangesFactory changes;
 #else
         FileChangesFactory changes{nc_};
 #endif
 
-        /// file.clear
 #if __cplusplus >= 202002L
+        /// Used to clear the contents of a specified outbound (`.qo`/`.qos`)
+        /// Notefile, deleting all pending Notes.
         template<typename T_ = TargetT_>
         requires (target_supports<T_, api::FileClear>())
         auto clear() { return create_<api::FileClear>(); }
 
+        /// Used to clear the contents of a specified outbound (`.qo`/`.qos`)
+        /// Notefile, deleting all pending Notes.
         template<typename T_ = TargetT_>
         requires (!target_supports<T_, api::FileClear>() && !T_::strict)
         [[deprecated("file.clear is not available on this target")]]
         auto clear() { return create_<api::FileClear>(); }
 #else
+        /// Used to clear the contents of a specified outbound (`.qo`/`.qos`)
+        /// Notefile, deleting all pending Notes.
         auto clear() { return create_<api::FileClear>(); }
 #endif
 
-        /// file.delete
+        /// Deletes Notefiles and the Notes they contain.
         auto delete_() { return create_<api::FileDelete>(); }
 
-        /// file.stats
+        /// Gets resource statistics about local Notefiles.
         auto stats() { return create_<api::FileStats>(); }
 
 
@@ -2343,48 +2629,71 @@ public:
         }
 
 
-        /// hub.sync (and nested: hub.sync.status)
+        /// Manually initiates a sync with Notehub.
 #if NOTE_SINGLETON
         HubSyncFactory sync;
 #else
         HubSyncFactory sync{nc_};
 #endif
 
-        /// hub.get
+        /// Retrieves the current Notehub configuration for the Notecard.
         auto get() { return create_<api::HubGet>(); }
 
-        /// hub.log
 #if __cplusplus >= 202002L
+        /// Add a "device health" log message to send to Notehub on the next
+        /// sync via the healthhost.qo Notefile.
         template<typename T_ = TargetT_>
         requires (target_supports<T_, api::HubLog>())
         auto log() { return create_<api::HubLog>(); }
 
+        /// Add a "device health" log message to send to Notehub on the next
+        /// sync via the healthhost.qo Notefile.
         template<typename T_ = TargetT_>
         requires (!target_supports<T_, api::HubLog>() && !T_::strict)
         [[deprecated("hub.log is not available on this target")]]
         auto log() { return create_<api::HubLog>(); }
 #else
+        /// Add a "device health" log message to send to Notehub on the next
+        /// sync via the healthhost.qo Notefile.
         auto log() { return create_<api::HubLog>(); }
 #endif
 
-        /// hub.set
+        /// The hub.set request is the primary method for controlling the
+        /// Notecard's Notehub connection and sync behavior.
         auto set() { return create_<api::HubSet>(); }
 
-        /// hub.signal
 #if __cplusplus >= 202002L
+        /// Receive a Signal (a near-real-time Note) from Notehub.
+        ///
+        /// This request checks for an inbound signal from Notehub. If it finds
+        /// a signal, this request returns the signal's body and deletes the
+        /// signal. If there are multiple signals to receive, this request reads
+        /// and deletes signals in FIFO (first in first out) order.
         template<typename T_ = TargetT_>
         requires (target_supports<T_, api::HubSignal>())
         auto signal() { return create_<api::HubSignal>(); }
 
+        /// Receive a Signal (a near-real-time Note) from Notehub.
+        ///
+        /// This request checks for an inbound signal from Notehub. If it finds
+        /// a signal, this request returns the signal's body and deletes the
+        /// signal. If there are multiple signals to receive, this request reads
+        /// and deletes signals in FIFO (first in first out) order.
         template<typename T_ = TargetT_>
         requires (!target_supports<T_, api::HubSignal>() && !T_::strict)
         [[deprecated("hub.signal is not available on this target")]]
         auto signal() { return create_<api::HubSignal>(); }
 #else
+        /// Receive a Signal (a near-real-time Note) from Notehub.
+        ///
+        /// This request checks for an inbound signal from Notehub. If it finds
+        /// a signal, this request returns the signal's body and deletes the
+        /// signal. If there are multiple signals to receive, this request reads
+        /// and deletes signals in FIFO (first in first out) order.
         auto signal() { return create_<api::HubSignal>(); }
 #endif
 
-        /// hub.status
+        /// Displays the current status of the Notecard's connection to Notehub.
         auto status() { return create_<api::HubStatus>(); }
 
     };
@@ -2451,11 +2760,12 @@ public:
 
 
 
-        /// note.add
+        /// Adds a Note to a Notefile, creating the Notefile if it doesn't yet
+        /// exist.
         auto add() { return create_<api::NoteAdd>(); }
 
-        /// note.changes
 #if __cplusplus >= 202002L
+        /// Used to incrementally retrieve changes within a specific Notefile.
         template<typename T_ = TargetT_>
         requires (target_supports<T_, api::NoteChanges::Peek>())
         NoteChangesFactory changes() { return
@@ -2466,6 +2776,7 @@ public:
 #endif
         ; }
 
+        /// Used to incrementally retrieve changes within a specific Notefile.
         template<typename T_ = TargetT_>
         requires (!target_supports<T_, api::NoteChanges::Peek>() && !T_::strict)
         [[deprecated("note.changes is not available on this target")]]
@@ -2477,6 +2788,7 @@ public:
 #endif
         ; }
 #else
+        /// Used to incrementally retrieve changes within a specific Notefile.
         NoteChangesFactory changes() { return
 #if NOTE_SINGLETON
             {}
@@ -2486,7 +2798,9 @@ public:
         ; }
 #endif
 
-        /// note.delete
+        /// Deletes a Note from a DB Notefile by its Note ID. To delete Notes
+        /// from a `.qi` Notefile, use `note.get` or `note.changes` with
+        /// `delete:true`.
         auto delete_(note::string_view file_arg, note::string_view noteId_arg) {
             auto r = create_<api::NoteDelete>();
             r.file = file_arg;
@@ -2494,7 +2808,11 @@ public:
             return r;
         }
 
-        /// note.get
+        /// Retrieves a Note from a Notefile. The file must either be a DB
+        /// Notefile or inbound queue file (see `file` argument below).
+        ///
+        /// `.qo`/`.qos` Notes must be read from the Notehub event table using
+        /// the Notehub Event API.
         NoteGetFactory get() { return
 #if NOTE_SINGLETON
             {}
@@ -2503,7 +2821,16 @@ public:
 #endif
         ; }
 
-        /// note.template
+        /// By using the `note.template` request with any `.qo`/`.qos` Notefile,
+        /// developers can provide the Notecard with a schema of sorts to apply
+        /// to future Notes added to the Notefile. This template acts as a hint
+        /// to the Notecard that allows it to internally store data as fixed-
+        /// length binary records rather than as flexible JSON objects which
+        /// require much more memory. Using templated Notes in place of regular
+        /// Notes increases the storage and sync capability of the Notecard by
+        /// an order of magnitude.
+        ///
+        /// Read about Working with Note Templates for additional information.
         NoteTemplateFactory templates() { return
 #if NOTE_SINGLETON
             {}
@@ -2512,7 +2839,8 @@ public:
 #endif
         ; }
 
-        /// note.update
+        /// Updates a Note in a DB Notefile by its ID, replacing the existing
+        /// `body` and/or `payload`.
         auto update(note::string_view file_arg, note::string_view noteId_arg) {
             auto r = create_<api::NoteUpdate>();
             r.file = file_arg;
@@ -2742,45 +3070,75 @@ public:
 
 
 
-        /// ntn.gps
 #if __cplusplus >= 202002L
+        /// Determines whether a Notecard should override a paired Starnote's
+        /// GPS/GNSS location with its own GPS/GNSS location. The paired
+        /// Starnote uses its own GPS/GNSS location by default.
         template<typename T_ = TargetT_>
         requires (target_supports<T_, api::NtnGps>())
         auto gps() { return create_<api::NtnGps>(); }
 
+        /// Determines whether a Notecard should override a paired Starnote's
+        /// GPS/GNSS location with its own GPS/GNSS location. The paired
+        /// Starnote uses its own GPS/GNSS location by default.
         template<typename T_ = TargetT_>
         requires (!target_supports<T_, api::NtnGps>() && !T_::strict)
         [[deprecated("ntn.gps is not available on this target")]]
         auto gps() { return create_<api::NtnGps>(); }
 #else
+        /// Determines whether a Notecard should override a paired Starnote's
+        /// GPS/GNSS location with its own GPS/GNSS location. The paired
+        /// Starnote uses its own GPS/GNSS location by default.
         auto gps() { return create_<api::NtnGps>(); }
 #endif
 
-        /// ntn.reset
 #if __cplusplus >= 202002L
+        /// Once a Notecard is connected to a Starnote device, the presence of a
+        /// physical Starnote is stored in a permanent configuration that is not
+        /// affected by a `card.restore` request. This request clears the
+        /// existing NTN configuration, allowing you to return to testing NTN
+        /// mode over cellular or WiFi, and enables the Starnote to be paired
+        /// with a different Notecard device.
         template<typename T_ = TargetT_>
         requires (target_supports<T_, api::NtnReset>())
         auto reset() { return create_<api::NtnReset>(); }
 
+        /// Once a Notecard is connected to a Starnote device, the presence of a
+        /// physical Starnote is stored in a permanent configuration that is not
+        /// affected by a `card.restore` request. This request clears the
+        /// existing NTN configuration, allowing you to return to testing NTN
+        /// mode over cellular or WiFi, and enables the Starnote to be paired
+        /// with a different Notecard device.
         template<typename T_ = TargetT_>
         requires (!target_supports<T_, api::NtnReset>() && !T_::strict)
         [[deprecated("ntn.reset is not available on this target")]]
         auto reset() { return create_<api::NtnReset>(); }
 #else
+        /// Once a Notecard is connected to a Starnote device, the presence of a
+        /// physical Starnote is stored in a permanent configuration that is not
+        /// affected by a `card.restore` request. This request clears the
+        /// existing NTN configuration, allowing you to return to testing NTN
+        /// mode over cellular or WiFi, and enables the Starnote to be paired
+        /// with a different Notecard device.
         auto reset() { return create_<api::NtnReset>(); }
 #endif
 
-        /// ntn.status
 #if __cplusplus >= 202002L
+        /// Displays the current status of a Notecard's connection to a paired
+        /// Starnote.
         template<typename T_ = TargetT_>
         requires (target_supports<T_, api::NtnStatus>())
         auto status() { return create_<api::NtnStatus>(); }
 
+        /// Displays the current status of a Notecard's connection to a paired
+        /// Starnote.
         template<typename T_ = TargetT_>
         requires (!target_supports<T_, api::NtnStatus>() && !T_::strict)
         [[deprecated("ntn.status is not available on this target")]]
         auto status() { return create_<api::NtnStatus>(); }
 #else
+        /// Displays the current status of a Notecard's connection to a paired
+        /// Starnote.
         auto status() { return create_<api::NtnStatus>(); }
 #endif
 
@@ -2848,35 +3206,47 @@ public:
 
 
 
-        /// var.delete
 #if __cplusplus >= 202002L
+        /// Delete a Note from a DB Notefile by its `name`. Provides a simpler
+        /// interface to the note.delete API.
         template<typename T_ = TargetT_>
         requires (target_supports<T_, api::VarDelete>())
         auto delete_() { return create_<api::VarDelete>(); }
 
+        /// Delete a Note from a DB Notefile by its `name`. Provides a simpler
+        /// interface to the note.delete API.
         template<typename T_ = TargetT_>
         requires (!target_supports<T_, api::VarDelete>() && !T_::strict)
         [[deprecated("var.delete is not available on this target")]]
         auto delete_() { return create_<api::VarDelete>(); }
 #else
+        /// Delete a Note from a DB Notefile by its `name`. Provides a simpler
+        /// interface to the note.delete API.
         auto delete_() { return create_<api::VarDelete>(); }
 #endif
 
-        /// var.get
 #if __cplusplus >= 202002L
+        /// Retrieves a Note from a DB Notefile. Provides a simpler interface to
+        /// the note.get API.
         template<typename T_ = TargetT_>
         requires (target_supports<T_, api::VarGet>())
         auto get() { return create_<api::VarGet>(); }
 
+        /// Retrieves a Note from a DB Notefile. Provides a simpler interface to
+        /// the note.get API.
         template<typename T_ = TargetT_>
         requires (!target_supports<T_, api::VarGet>() && !T_::strict)
         [[deprecated("var.get is not available on this target")]]
         auto get() { return create_<api::VarGet>(); }
 #else
+        /// Retrieves a Note from a DB Notefile. Provides a simpler interface to
+        /// the note.get API.
         auto get() { return create_<api::VarGet>(); }
 #endif
 
-        /// var.set
+        /// Adds or updates a Note in a DB Notefile, replacing the existing body
+        /// with the specified key-value pair where text, value, or flag is the
+        /// key. Provides a simpler interface to the note.update API.
         auto set() { return create_<api::VarSet>(); }
 
 
@@ -2948,73 +3318,98 @@ public:
 
 
 
-        /// web
 #if __cplusplus >= 202002L
+        /// Performs an HTTP or HTTPS request against an external endpoint, with
+        /// the ability to specify any valid HTTP method.
         template<typename T_ = TargetT_>
         requires (target_supports<T_, api::Web>())
         auto request() { return create_<api::Web>(); }
 
+        /// Performs an HTTP or HTTPS request against an external endpoint, with
+        /// the ability to specify any valid HTTP method.
         template<typename T_ = TargetT_>
         requires (!target_supports<T_, api::Web>() && !T_::strict)
         [[deprecated("web is not available on this target")]]
         auto request() { return create_<api::Web>(); }
 #else
+        /// Performs an HTTP or HTTPS request against an external endpoint, with
+        /// the ability to specify any valid HTTP method.
         auto request() { return create_<api::Web>(); }
 #endif
 
-        /// web.delete
 #if __cplusplus >= 202002L
+        /// Performs a simple HTTP or HTTPS `DELETE` request against an external
+        /// endpoint, and returns the response to the Notecard.
         template<typename T_ = TargetT_>
         requires (target_supports<T_, api::WebDelete>())
         auto delete_() { return create_<api::WebDelete>(); }
 
+        /// Performs a simple HTTP or HTTPS `DELETE` request against an external
+        /// endpoint, and returns the response to the Notecard.
         template<typename T_ = TargetT_>
         requires (!target_supports<T_, api::WebDelete>() && !T_::strict)
         [[deprecated("web.delete is not available on this target")]]
         auto delete_() { return create_<api::WebDelete>(); }
 #else
+        /// Performs a simple HTTP or HTTPS `DELETE` request against an external
+        /// endpoint, and returns the response to the Notecard.
         auto delete_() { return create_<api::WebDelete>(); }
 #endif
 
-        /// web.get
 #if __cplusplus >= 202002L
+        /// Performs a simple HTTP or HTTPS `GET` request against an external
+        /// endpoint, and returns the response to the Notecard.
         template<typename T_ = TargetT_>
         requires (target_supports<T_, api::WebGet>())
         auto get() { return create_<api::WebGet>(); }
 
+        /// Performs a simple HTTP or HTTPS `GET` request against an external
+        /// endpoint, and returns the response to the Notecard.
         template<typename T_ = TargetT_>
         requires (!target_supports<T_, api::WebGet>() && !T_::strict)
         [[deprecated("web.get is not available on this target")]]
         auto get() { return create_<api::WebGet>(); }
 #else
+        /// Performs a simple HTTP or HTTPS `GET` request against an external
+        /// endpoint, and returns the response to the Notecard.
         auto get() { return create_<api::WebGet>(); }
 #endif
 
-        /// web.post
 #if __cplusplus >= 202002L
+        /// Performs a simple HTTP or HTTPS `POST` request against an external
+        /// endpoint, and returns the response to the Notecard.
         template<typename T_ = TargetT_>
         requires (target_supports<T_, api::WebPost>())
         auto post() { return create_<api::WebPost>(); }
 
+        /// Performs a simple HTTP or HTTPS `POST` request against an external
+        /// endpoint, and returns the response to the Notecard.
         template<typename T_ = TargetT_>
         requires (!target_supports<T_, api::WebPost>() && !T_::strict)
         [[deprecated("web.post is not available on this target")]]
         auto post() { return create_<api::WebPost>(); }
 #else
+        /// Performs a simple HTTP or HTTPS `POST` request against an external
+        /// endpoint, and returns the response to the Notecard.
         auto post() { return create_<api::WebPost>(); }
 #endif
 
-        /// web.put
 #if __cplusplus >= 202002L
+        /// Performs a simple HTTP or HTTPS `PUT` request against an external
+        /// endpoint, and returns the response to the Notecard.
         template<typename T_ = TargetT_>
         requires (target_supports<T_, api::WebPut>())
         auto put() { return create_<api::WebPut>(); }
 
+        /// Performs a simple HTTP or HTTPS `PUT` request against an external
+        /// endpoint, and returns the response to the Notecard.
         template<typename T_ = TargetT_>
         requires (!target_supports<T_, api::WebPut>() && !T_::strict)
         [[deprecated("web.put is not available on this target")]]
         auto put() { return create_<api::WebPut>(); }
 #else
+        /// Performs a simple HTTP or HTTPS `PUT` request against an external
+        /// endpoint, and returns the response to the Notecard.
         auto put() { return create_<api::WebPut>(); }
 #endif
 

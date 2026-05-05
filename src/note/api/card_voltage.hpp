@@ -86,6 +86,9 @@ struct CardVoltage {
         struct alert_t : Field<bool> {
             using Field<bool>::Field;
             using Field<bool>::operator=;
+            /// When enabled and the `usb` argument is set to `true`, the
+            /// Notecard will add an entry to the `health.qo` Notefile when USB
+            /// power is connected or disconnected.
             CardVoltage::Read& operator()(bool v);
         } alert{};
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 2) || !defined(NOTE_API_STRICT)
@@ -100,6 +103,11 @@ struct CardVoltage {
         struct calibration_t : Field<double> {
             using Field<double>::Field;
             using Field<double>::operator=;
+            /// The offset, in volts, to account for the forward voltage drop of
+            /// the diode used between the battery and Notecard in either Blues-
+            /// or customer-designed Notecarriers.
+            ///
+            /// @since{7.2.2}
             CardVoltage::Read& operator()(double v);
         } calibration{};
 #endif
@@ -107,6 +115,7 @@ struct CardVoltage {
         struct hours_t : Field<note::json_int_t> {
             using Field<note::json_int_t>::Field;
             using Field<note::json_int_t>::operator=;
+            /// The number of hours to analyze, up to 720 (30 days).
             CardVoltage::Read& operator()(note::json_int_t v);
         } hours{};
         /// Used to set voltage thresholds based on how the Notecard will be
@@ -157,6 +166,14 @@ struct CardVoltage {
             static constexpr note::string_view tad{"tad"};
             static constexpr note::string_view lic{"lic"};
             static constexpr note::string_view unknown{"?"};
+            /// Used to set voltage thresholds based on how the Notecard will be
+            /// powered, and which can be used to configure voltage-variable
+            /// Notecard behavior. Each value is shorthand that assigns a
+            /// battery voltage reading to a given device state like `high`,
+            /// `normal`, `low`, and `dead`.
+            ///
+            /// NOTE: Setting voltage thresholds is not supported on the
+            /// Notecard XP.
             CardVoltage::Read& operator()(note::string_view v);
         } mode{};
         /// Specifies an environment variable to override application default
@@ -164,24 +181,29 @@ struct CardVoltage {
         struct name_t : Field<note::string_view> {
             using Field<note::string_view>::Field;
             using Field<note::string_view>::operator=;
+            /// Specifies an environment variable to override application
+            /// default timing values.
             CardVoltage::Read& operator()(note::string_view v);
         } name{};
         /// Disable historic voltage trend calculations.
         struct off_t : Field<bool> {
             using Field<bool>::Field;
             using Field<bool>::operator=;
+            /// Disable historic voltage trend calculations.
             CardVoltage::Read& operator()(bool v);
         } off{};
         /// Number of hours to move into the past before starting analysis.
         struct offset_t : Field<note::json_int_t> {
             using Field<note::json_int_t>::Field;
             using Field<note::json_int_t>::operator=;
+            /// Number of hours to move into the past before starting analysis.
             CardVoltage::Read& operator()(note::json_int_t v);
         } offset{};
         /// Enable historic voltage trend calculations.
         struct on_t : Field<bool> {
             using Field<bool>::Field;
             using Field<bool>::operator=;
+            /// Enable historic voltage trend calculations.
             CardVoltage::Read& operator()(bool v);
         } on{};
         /// Used along with `calibration`, set to `true` to specify a new
@@ -189,6 +211,8 @@ struct CardVoltage {
         struct set_t : Field<bool> {
             using Field<bool>::Field;
             using Field<bool>::operator=;
+            /// Used along with `calibration`, set to `true` to specify a new
+            /// calibration value.
             CardVoltage::Read& operator()(bool v);
         } set{};
         /// When enabled and the `usb` argument is set to `true`, the Notecard
@@ -196,6 +220,9 @@ struct CardVoltage {
         struct sync_t : Field<bool> {
             using Field<bool>::Field;
             using Field<bool>::operator=;
+            /// When enabled and the `usb` argument is set to `true`, the
+            /// Notecard will perform a sync when USB power is connected or
+            /// disconnected.
             CardVoltage::Read& operator()(bool v);
         } sync{};
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
@@ -209,6 +236,10 @@ struct CardVoltage {
         struct usb_t : Field<bool> {
             using Field<bool>::Field;
             using Field<bool>::operator=;
+            /// When enabled, the Notecard will monitor for changes to USB power
+            /// state.
+            ///
+            /// @since{3.5.1}
             CardVoltage::Read& operator()(bool v);
         } usb{};
 #endif
@@ -217,6 +248,8 @@ struct CardVoltage {
         struct vmax_t : Field<double> {
             using Field<double>::Field;
             using Field<double>::operator=;
+            /// Ignore voltage readings above this level when performing
+            /// calculations.
             CardVoltage::Read& operator()(double v);
         } vmax{};
         /// Ignore voltage readings below this level when performing
@@ -224,6 +257,8 @@ struct CardVoltage {
         struct vmin_t : Field<double> {
             using Field<double>::Field;
             using Field<double>::operator=;
+            /// Ignore voltage readings below this level when performing
+            /// calculations.
             CardVoltage::Read& operator()(double v);
         } vmin{};
 
@@ -251,16 +286,23 @@ struct CardVoltage {
         auto& disableTrend() { off = true; return *this; }
         auto& enableTrend(bool v_) { if (v_) on = true; else off = true; return *this; }
 #if NOTE_EXTRAS
+        /// Add an arbitrary key/value pair to the request, beyond the typed fields
+        /// declared above. Useful for fields the schema doesn't yet model.
+        /// Capacity is bounded by NOTE_EXTRAS_MAX; excess pairs are silently dropped.
         template<typename T>
         auto& extra(note::string_view k_, T v_) {
             if (extras_count_ < NOTE_EXTRAS_MAX)
                 extras_[extras_count_++] = {k_, note::DynValue{v_}};
             return *this;
         }
+        /// String-literal overload of extra().
         auto& extra(note::string_view k_, const char* v_) {
             return extra(k_, note::string_view{v_});
         }
 
+        /// Index-style access to fields by wire name. Returns a DynField proxy
+        /// usable for assignment; unknown keys are added as extras (subject to
+        /// NOTE_EXTRAS_MAX). Prefer the typed setters above when possible.
         note::DynField operator[](note::string_view k_) {
             if (k_ == "alert") return note::dyn_field_for(alert);
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 2) || !defined(NOTE_API_STRICT)
@@ -503,6 +545,7 @@ struct CardVoltage {
             std::unique_ptr<JsonReader> reader_;
 #endif
         };
+        private:
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
         static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
@@ -523,10 +566,17 @@ struct CardVoltage {
 #pragma GCC diagnostic pop
         static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);
         static const ::note::FieldDesc* field_descs_ptr() { return field_descs_table_; }
+        public:
 
 #if NOTE_SINGLETON
+        private:
         /// Singleton generic execute — shared thunk with body factory params.
         static inline Result<void>(*execute_generic_fn_)(void*, ::note::string_view, BuildFn, void*, void*, const ::note::FieldDesc*, uint8_t, ::note::detail::NcErrorCapture&, bool&, void*, ::note::BodyHandlerFactory, ::note::Safety);
+        public:
+        /// Send this request to the Notecard and wait for a response.
+        /// Returns an ApiResult<Response> — boolean-convertible to true on success;
+        /// dereference (or use member-of-pointer ->) to read response fields,
+        /// or call .error() to inspect the ErrorInfo on failure.
         ApiResult<Response> execute() const {
             auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
             BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
@@ -539,12 +589,18 @@ struct CardVoltage {
             if (exhausted_) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Overflow, ::note::Cause::Unspecified, NOTE_ERR("arena exhausted")});
             return ApiResult<Response>(std::move(rsp_));
         }
+        private:
         static inline Result<void>(*send_fn_)(void*, BuildFn, void*);
+        public:
 #else
         ApiResult<Response>(*execute_fn_)(void*, const CardVoltage::Read&) = nullptr;
         Result<void>(*send_fn_)(void*, BuildFn, void*) = nullptr;
+        /// Send this request to the Notecard and wait for a response.
         auto execute() const { return execute_fn_(nc_, *this); }
 #endif
+        /// Send this request as a fire-and-forget command (cmd) — the Notecard
+        /// processes it without sending a response. Lower power and bandwidth
+        /// than execute() when you don't need the result.
         Result<void> command() const {
             auto build_ = [&](JsonBuilder& b_) {
                 b_.add("cmd", notecard_request);
@@ -584,6 +640,7 @@ struct CardVoltage {
             n_out = sizeof(table_) / sizeof(table_[0]);
             return table_;
         }
+        private:
         void build(JsonBuilder& b) const {
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 2) || !defined(NOTE_API_STRICT)
 #endif
@@ -598,6 +655,7 @@ struct CardVoltage {
 #endif
         }
 #pragma GCC diagnostic pop
+        public:
 
 
 #ifdef ARDUINO
@@ -666,6 +724,17 @@ struct CardVoltage {
             return n;
         }
 #endif
+
+        private:
+        friend class ::note::Notecard;
+        template<typename> friend class ::note::StaticNotecard;
+        template<typename, typename> friend struct ::note::detail::has_field_descs;
+#if NOTE_NO_POLYMORPHIC || __cplusplus < 202002L
+        template<typename> friend class ::note::Api;
+#else
+        template<typename, typename> friend class ::note::Api;
+#endif
+        public:
 
     };
     using Get = Read;  // legacy alias
@@ -724,6 +793,9 @@ struct CardVoltage {
         struct alert_t : Field<bool> {
             using Field<bool>::Field;
             using Field<bool>::operator=;
+            /// When enabled and the `usb` argument is set to `true`, the
+            /// Notecard will add an entry to the `health.qo` Notefile when USB
+            /// power is connected or disconnected.
             CardVoltage::Configure& operator()(bool v);
         } alert{};
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 2) || !defined(NOTE_API_STRICT)
@@ -738,6 +810,11 @@ struct CardVoltage {
         struct calibration_t : Field<double> {
             using Field<double>::Field;
             using Field<double>::operator=;
+            /// The offset, in volts, to account for the forward voltage drop of
+            /// the diode used between the battery and Notecard in either Blues-
+            /// or customer-designed Notecarriers.
+            ///
+            /// @since{7.2.2}
             CardVoltage::Configure& operator()(double v);
         } calibration{};
 #endif
@@ -745,6 +822,7 @@ struct CardVoltage {
         struct hours_t : Field<note::json_int_t> {
             using Field<note::json_int_t>::Field;
             using Field<note::json_int_t>::operator=;
+            /// The number of hours to analyze, up to 720 (30 days).
             CardVoltage::Configure& operator()(note::json_int_t v);
         } hours{};
         /// Used to set voltage thresholds based on how the Notecard will be
@@ -795,6 +873,14 @@ struct CardVoltage {
             static constexpr note::string_view tad{"tad"};
             static constexpr note::string_view lic{"lic"};
             static constexpr note::string_view unknown{"?"};
+            /// Used to set voltage thresholds based on how the Notecard will be
+            /// powered, and which can be used to configure voltage-variable
+            /// Notecard behavior. Each value is shorthand that assigns a
+            /// battery voltage reading to a given device state like `high`,
+            /// `normal`, `low`, and `dead`.
+            ///
+            /// NOTE: Setting voltage thresholds is not supported on the
+            /// Notecard XP.
             CardVoltage::Configure& operator()(note::string_view v);
         } mode{};
         /// Specifies an environment variable to override application default
@@ -802,24 +888,29 @@ struct CardVoltage {
         struct name_t : Field<note::string_view> {
             using Field<note::string_view>::Field;
             using Field<note::string_view>::operator=;
+            /// Specifies an environment variable to override application
+            /// default timing values.
             CardVoltage::Configure& operator()(note::string_view v);
         } name{};
         /// Disable historic voltage trend calculations.
         struct off_t : Field<bool> {
             using Field<bool>::Field;
             using Field<bool>::operator=;
+            /// Disable historic voltage trend calculations.
             CardVoltage::Configure& operator()(bool v);
         } off{};
         /// Number of hours to move into the past before starting analysis.
         struct offset_t : Field<note::json_int_t> {
             using Field<note::json_int_t>::Field;
             using Field<note::json_int_t>::operator=;
+            /// Number of hours to move into the past before starting analysis.
             CardVoltage::Configure& operator()(note::json_int_t v);
         } offset{};
         /// Enable historic voltage trend calculations.
         struct on_t : Field<bool> {
             using Field<bool>::Field;
             using Field<bool>::operator=;
+            /// Enable historic voltage trend calculations.
             CardVoltage::Configure& operator()(bool v);
         } on{};
         /// Used along with `calibration`, set to `true` to specify a new
@@ -827,6 +918,8 @@ struct CardVoltage {
         struct set_t : Field<bool> {
             using Field<bool>::Field;
             using Field<bool>::operator=;
+            /// Used along with `calibration`, set to `true` to specify a new
+            /// calibration value.
             CardVoltage::Configure& operator()(bool v);
         } set{};
         /// When enabled and the `usb` argument is set to `true`, the Notecard
@@ -834,6 +927,9 @@ struct CardVoltage {
         struct sync_t : Field<bool> {
             using Field<bool>::Field;
             using Field<bool>::operator=;
+            /// When enabled and the `usb` argument is set to `true`, the
+            /// Notecard will perform a sync when USB power is connected or
+            /// disconnected.
             CardVoltage::Configure& operator()(bool v);
         } sync{};
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
@@ -847,6 +943,10 @@ struct CardVoltage {
         struct usb_t : Field<bool> {
             using Field<bool>::Field;
             using Field<bool>::operator=;
+            /// When enabled, the Notecard will monitor for changes to USB power
+            /// state.
+            ///
+            /// @since{3.5.1}
             CardVoltage::Configure& operator()(bool v);
         } usb{};
 #endif
@@ -855,6 +955,8 @@ struct CardVoltage {
         struct vmax_t : Field<double> {
             using Field<double>::Field;
             using Field<double>::operator=;
+            /// Ignore voltage readings above this level when performing
+            /// calculations.
             CardVoltage::Configure& operator()(double v);
         } vmax{};
         /// Ignore voltage readings below this level when performing
@@ -862,6 +964,8 @@ struct CardVoltage {
         struct vmin_t : Field<double> {
             using Field<double>::Field;
             using Field<double>::operator=;
+            /// Ignore voltage readings below this level when performing
+            /// calculations.
             CardVoltage::Configure& operator()(double v);
         } vmin{};
 
@@ -889,16 +993,23 @@ struct CardVoltage {
         auto& disableTrend() { off = true; return *this; }
         auto& enableTrend(bool v_) { if (v_) on = true; else off = true; return *this; }
 #if NOTE_EXTRAS
+        /// Add an arbitrary key/value pair to the request, beyond the typed fields
+        /// declared above. Useful for fields the schema doesn't yet model.
+        /// Capacity is bounded by NOTE_EXTRAS_MAX; excess pairs are silently dropped.
         template<typename T>
         auto& extra(note::string_view k_, T v_) {
             if (extras_count_ < NOTE_EXTRAS_MAX)
                 extras_[extras_count_++] = {k_, note::DynValue{v_}};
             return *this;
         }
+        /// String-literal overload of extra().
         auto& extra(note::string_view k_, const char* v_) {
             return extra(k_, note::string_view{v_});
         }
 
+        /// Index-style access to fields by wire name. Returns a DynField proxy
+        /// usable for assignment; unknown keys are added as extras (subject to
+        /// NOTE_EXTRAS_MAX). Prefer the typed setters above when possible.
         note::DynField operator[](note::string_view k_) {
             if (k_ == "alert") return note::dyn_field_for(alert);
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 2) || !defined(NOTE_API_STRICT)
@@ -1141,6 +1252,7 @@ struct CardVoltage {
             std::unique_ptr<JsonReader> reader_;
 #endif
         };
+        private:
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
         static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
@@ -1161,10 +1273,17 @@ struct CardVoltage {
 #pragma GCC diagnostic pop
         static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);
         static const ::note::FieldDesc* field_descs_ptr() { return field_descs_table_; }
+        public:
 
 #if NOTE_SINGLETON
+        private:
         /// Singleton generic execute — shared thunk with body factory params.
         static inline Result<void>(*execute_generic_fn_)(void*, ::note::string_view, BuildFn, void*, void*, const ::note::FieldDesc*, uint8_t, ::note::detail::NcErrorCapture&, bool&, void*, ::note::BodyHandlerFactory, ::note::Safety);
+        public:
+        /// Send this request to the Notecard and wait for a response.
+        /// Returns an ApiResult<Response> — boolean-convertible to true on success;
+        /// dereference (or use member-of-pointer ->) to read response fields,
+        /// or call .error() to inspect the ErrorInfo on failure.
         ApiResult<Response> execute() const {
             auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
             BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
@@ -1177,12 +1296,18 @@ struct CardVoltage {
             if (exhausted_) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Overflow, ::note::Cause::Unspecified, NOTE_ERR("arena exhausted")});
             return ApiResult<Response>(std::move(rsp_));
         }
+        private:
         static inline Result<void>(*send_fn_)(void*, BuildFn, void*);
+        public:
 #else
         ApiResult<Response>(*execute_fn_)(void*, const CardVoltage::Configure&) = nullptr;
         Result<void>(*send_fn_)(void*, BuildFn, void*) = nullptr;
+        /// Send this request to the Notecard and wait for a response.
         auto execute() const { return execute_fn_(nc_, *this); }
 #endif
+        /// Send this request as a fire-and-forget command (cmd) — the Notecard
+        /// processes it without sending a response. Lower power and bandwidth
+        /// than execute() when you don't need the result.
         Result<void> command() const {
             auto build_ = [&](JsonBuilder& b_) {
                 b_.add("cmd", notecard_request);
@@ -1222,6 +1347,7 @@ struct CardVoltage {
             n_out = sizeof(table_) / sizeof(table_[0]);
             return table_;
         }
+        private:
         void build(JsonBuilder& b) const {
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 2) || !defined(NOTE_API_STRICT)
 #endif
@@ -1236,6 +1362,7 @@ struct CardVoltage {
 #endif
         }
 #pragma GCC diagnostic pop
+        public:
 
 
 #ifdef ARDUINO
@@ -1304,6 +1431,17 @@ struct CardVoltage {
             return n;
         }
 #endif
+
+        private:
+        friend class ::note::Notecard;
+        template<typename> friend class ::note::StaticNotecard;
+        template<typename, typename> friend struct ::note::detail::has_field_descs;
+#if NOTE_NO_POLYMORPHIC || __cplusplus < 202002L
+        template<typename> friend class ::note::Api;
+#else
+        template<typename, typename> friend class ::note::Api;
+#endif
+        public:
 
     };
     using Set = Configure;  // legacy alias

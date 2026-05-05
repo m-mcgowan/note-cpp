@@ -85,6 +85,10 @@ struct CardAux {
     struct connected_t : Field<bool> {
         using Field<bool>::Field;
         using Field<bool>::operator=;
+        /// If `true`, defers the sync of the state change Notefile to the next
+        /// sync as configured by the `hub.set` request.
+        ///
+        /// @since{3.3.1}
         CardAux& operator()(bool v);
     } connected{};
 #endif
@@ -101,6 +105,11 @@ struct CardAux {
     struct count_t : Field<note::json_int_t> {
         using Field<note::json_int_t>::Field;
         using Field<note::json_int_t>::operator=;
+        /// When used with `"mode":"neo-monitor"` or `"mode":"track-neo-
+        /// monitor"`, this controls the number of NeoPixels to use in a strip.
+        /// Possible values are `1`, `2`, or `5`.
+        ///
+        /// @since{3.5.1}
         CardAux& operator()(note::json_int_t v);
     } count{};
 #endif
@@ -115,6 +124,11 @@ struct CardAux {
     struct file_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
+        /// The name of the Notefile used to report state changes when used in
+        /// conjunction with `"sync": true`. Default Notefile name is
+        /// `_button.qo`.
+        ///
+        /// @since{3.3.1}
         CardAux& operator()(note::string_view v);
     } file{};
 #endif
@@ -124,6 +138,9 @@ struct CardAux {
     struct gps_t : Field<bool> {
         using Field<bool>::Field;
         using Field<bool>::operator=;
+        /// If `true`, along with `"mode":"track"` the Notecard supports the use
+        /// of an external GPS module. This argument is deprecated. Use the
+        /// `card.aux.serial` request with a `mode` of `"gps"` instead.
         CardAux& operator()(bool v);
     } gps{};
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
@@ -137,6 +154,10 @@ struct CardAux {
     struct limit_t : Field<bool> {
         using Field<bool>::Field;
         using Field<bool>::operator=;
+        /// If `true`, along with `"mode":"track"` and `gps:true` the Notecard
+        /// will disable concurrent modem use during GPS tracking.
+        ///
+        /// @since{3.4.1}
         CardAux& operator()(bool v);
     } limit{};
 #endif
@@ -148,6 +169,11 @@ struct CardAux {
     struct max_t : Field<note::json_int_t> {
         using Field<note::json_int_t>::Field;
         using Field<note::json_int_t>::operator=;
+        /// When in `gpio` mode, if an `AUX` pin is configured as a `count`
+        /// type, the maximum number of `seconds`-long sample buckets to
+        /// collect. Once `max` buckets have been filled, additional counts roll
+        /// into the final bucket. Passing `0` or omitting this value will
+        /// provide a single incrementing count of rising edges on the pin.
         CardAux& operator()(note::json_int_t v);
     } max{};
     /// The AUX mode. If specified, must be one of the following keywords. Some
@@ -200,6 +226,8 @@ struct CardAux {
         static constexpr note::string_view track_neo_monitor{"track-neo-monitor"};
         static constexpr note::string_view track_rgb_monitor{"track-rgb-monitor"};
         static constexpr note::string_view _{"-"};
+        /// The AUX mode. If specified, must be one of the following keywords.
+        /// Some keywords are only supported on certain types of Notecards.
         CardAux& operator()(note::string_view v);
     } mode{};
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
@@ -216,6 +244,13 @@ struct CardAux {
     struct ms_t : Field<note::json_int_t> {
         using Field<note::json_int_t>::Field;
         using Field<note::json_int_t>::operator=;
+        /// When in `gpio` mode, this argument configures a debouncing interval.
+        /// With a debouncing interval in place, the Notecard excludes all
+        /// transitions with a shorter duration than the provided debounce time,
+        /// in milliseconds. This interval only applies to GPIOs configured with
+        /// a `usage` of `count`, `count-pulldown`, or `count-pullup`.
+        ///
+        /// @since{5.1.1}
         CardAux& operator()(note::json_int_t v);
     } ms{};
 #endif
@@ -225,6 +260,9 @@ struct CardAux {
     struct offset_t : Field<note::json_int_t> {
         using Field<note::json_int_t>::Field;
         using Field<note::json_int_t>::operator=;
+        /// When used with `"mode":"neo-monitor"` or `"mode":"track-neo-
+        /// monitor"`, this is the 1-based index in a strip of NeoPixels that
+        /// determines which single NeoPixel the host can command.
         CardAux& operator()(note::json_int_t v);
     } offset{};
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
@@ -239,6 +277,10 @@ struct CardAux {
     struct rate_t : Field<note::json_int_t> {
         using Field<note::json_int_t>::Field;
         using Field<note::json_int_t>::operator=;
+        /// The AUX UART baud rate for debug communication over the AUXRX and
+        /// AUXTX pins.
+        ///
+        /// @since{3.2.1}
         CardAux& operator()(note::json_int_t v);
     } rate{};
 #endif
@@ -248,6 +290,10 @@ struct CardAux {
     struct seconds_t : Field<note::json_int_t> {
         using Field<note::json_int_t>::Field;
         using Field<note::json_int_t>::operator=;
+        /// When in `gpio` mode, if an `AUX` pin is configured as a `count`
+        /// type, the count of rising edges can be broken into samples of this
+        /// duration. Passing `0` or omitting this field will total into a
+        /// single sample.
         CardAux& operator()(note::json_int_t v);
     } seconds{};
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
@@ -262,6 +308,11 @@ struct CardAux {
     struct sensitivity_t : Field<note::json_int_t> {
         using Field<note::json_int_t>::Field;
         using Field<note::json_int_t>::operator=;
+        /// When used with `"mode":"neo-monitor"` or `"mode":"track-neo-
+        /// monitor"`, this controls the brightness of NeoPixel lights, where
+        /// `100` is the maximum brightness and `1` is the minimum.
+        ///
+        /// @since{3.5.1}
         CardAux& operator()(note::json_int_t v);
     } sensitivity{};
 #endif
@@ -270,6 +321,8 @@ struct CardAux {
     struct start_t : Field<bool> {
         using Field<bool>::Field;
         using Field<bool>::operator=;
+        /// When in `gpio` mode, if an `AUX` pin is configured as a `count`
+        /// type, set to `true` to reset counters and start incrementing.
         CardAux& operator()(bool v);
     } start{};
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
@@ -286,6 +339,13 @@ struct CardAux {
     struct sync_t : Field<bool> {
         using Field<bool>::Field;
         using Field<bool>::operator=;
+        /// If `true`, for pins set as `input` by `usage`, the Notecard will
+        /// autonomously report any state changes as new notes in `file`. For
+        /// pins used as `count`, the Notecard will use an interrupt to count
+        /// pulses and will report the total in a new note in `file` unless it
+        /// has been noted in the previous second.
+        ///
+        /// @since{3.4.1}
         CardAux& operator()(bool v);
     } sync{};
 #endif
@@ -346,16 +406,23 @@ struct CardAux {
     auto& resetCounters() { start = true; return *this; }
     auto& resetCounters(bool v_) { start = v_; return *this; }
 #if NOTE_EXTRAS
+    /// Add an arbitrary key/value pair to the request, beyond the typed fields
+    /// declared above. Useful for fields the schema doesn't yet model.
+    /// Capacity is bounded by NOTE_EXTRAS_MAX; excess pairs are silently dropped.
     template<typename T>
     auto& extra(note::string_view k_, T v_) {
         if (extras_count_ < NOTE_EXTRAS_MAX)
             extras_[extras_count_++] = {k_, note::DynValue{v_}};
         return *this;
     }
+    /// String-literal overload of extra().
     auto& extra(note::string_view k_, const char* v_) {
         return extra(k_, note::string_view{v_});
     }
 
+    /// Index-style access to fields by wire name. Returns a DynField proxy
+    /// usable for assignment; unknown keys are added as extras (subject to
+    /// NOTE_EXTRAS_MAX). Prefer the typed setters above when possible.
     note::DynField operator[](note::string_view k_) {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1) || !defined(NOTE_API_STRICT)
         if (k_ == "connected") return note::dyn_field_for(connected);
@@ -532,6 +599,7 @@ struct CardAux {
         std::unique_ptr<JsonReader> reader_;
 #endif
     };
+    private:
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
     static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
@@ -545,10 +613,17 @@ struct CardAux {
 #pragma GCC diagnostic pop
     static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);
     static const ::note::FieldDesc* field_descs_ptr() { return field_descs_table_; }
+    public:
 
 #if NOTE_SINGLETON
+    private:
     /// Singleton generic execute — shared thunk with body factory params.
     static inline Result<void>(*execute_generic_fn_)(void*, ::note::string_view, BuildFn, void*, void*, const ::note::FieldDesc*, uint8_t, ::note::detail::NcErrorCapture&, bool&, void*, ::note::BodyHandlerFactory, ::note::Safety);
+    public:
+    /// Send this request to the Notecard and wait for a response.
+    /// Returns an ApiResult<Response> — boolean-convertible to true on success;
+    /// dereference (or use member-of-pointer ->) to read response fields,
+    /// or call .error() to inspect the ErrorInfo on failure.
     ApiResult<Response> execute() const {
         auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
         BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
@@ -561,12 +636,18 @@ struct CardAux {
         if (exhausted_) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Overflow, ::note::Cause::Unspecified, NOTE_ERR("arena exhausted")});
         return ApiResult<Response>(std::move(rsp_));
     }
+    private:
     static inline Result<void>(*send_fn_)(void*, BuildFn, void*);
+    public:
 #else
     ApiResult<Response>(*execute_fn_)(void*, const CardAux&) = nullptr;
     Result<void>(*send_fn_)(void*, BuildFn, void*) = nullptr;
+    /// Send this request to the Notecard and wait for a response.
     auto execute() const { return execute_fn_(nc_, *this); }
 #endif
+    /// Send this request as a fire-and-forget command (cmd) — the Notecard
+    /// processes it without sending a response. Lower power and bandwidth
+    /// than execute() when you don't need the result.
     Result<void> command() const {
         auto build_ = [&](JsonBuilder& b_) {
             b_.add("cmd", notecard_request);
@@ -620,6 +701,7 @@ struct CardAux {
         n_out = sizeof(table_) / sizeof(table_[0]);
         return table_;
     }
+    private:
     void build(JsonBuilder& b) const {
 #if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1) || !defined(NOTE_API_STRICT)
 #endif
@@ -646,6 +728,7 @@ struct CardAux {
 #endif
     }
 #pragma GCC diagnostic pop
+    public:
 
 
 #ifdef ARDUINO
@@ -730,6 +813,17 @@ struct CardAux {
         return n;
     }
 #endif
+
+    private:
+    friend class ::note::Notecard;
+    template<typename> friend class ::note::StaticNotecard;
+    template<typename, typename> friend struct ::note::detail::has_field_descs;
+#if NOTE_NO_POLYMORPHIC || __cplusplus < 202002L
+    template<typename> friend class ::note::Api;
+#else
+    template<typename, typename> friend class ::note::Api;
+#endif
+    public:
 
 };
 

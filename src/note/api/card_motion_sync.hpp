@@ -61,6 +61,7 @@ struct CardMotionSync {
     struct count_t : Field<note::json_int_t> {
         using Field<note::json_int_t>::Field;
         using Field<note::json_int_t>::operator=;
+        /// The number of most recent motion buckets to examine.
         CardMotionSync& operator()(note::json_int_t v);
     } count{};
     /// The maximum frequency at which sync will be triggered. Even if a
@@ -69,18 +70,23 @@ struct CardMotionSync {
     struct minutes_t : Field<note::json_int_t> {
         using Field<note::json_int_t>::Field;
         using Field<note::json_int_t>::operator=;
+        /// The maximum frequency at which sync will be triggered. Even if a
+        /// `threshold` is set and exceeded, there will only be a single sync
+        /// for this amount of time.
         CardMotionSync& operator()(note::json_int_t v);
     } minutes{};
     /// `true` to start motion-triggered syncing.
     struct start_t : Field<bool> {
         using Field<bool>::Field;
         using Field<bool>::operator=;
+        /// `true` to start motion-triggered syncing.
         CardMotionSync& operator()(bool v);
     } start{};
     /// `true` to stop motion-triggered syncing.
     struct stop_t : Field<bool> {
         using Field<bool>::Field;
         using Field<bool>::operator=;
+        /// `true` to stop motion-triggered syncing.
         CardMotionSync& operator()(bool v);
     } stop{};
     /// The number of buckets that must indicate motion in order to trigger a
@@ -89,6 +95,9 @@ struct CardMotionSync {
     struct threshold_t : Field<note::json_int_t> {
         using Field<note::json_int_t>::Field;
         using Field<note::json_int_t>::operator=;
+        /// The number of buckets that must indicate motion in order to trigger
+        /// a sync. If set to `0`, the Notecard will only perform a sync when
+        /// its orientation changes.
         CardMotionSync& operator()(note::json_int_t v);
     } threshold{};
 
@@ -99,16 +108,23 @@ struct CardMotionSync {
     auto& disable() { stop = true; return *this; }
     auto& enable(bool v_) { if (v_) start = true; else stop = true; return *this; }
 #if NOTE_EXTRAS
+    /// Add an arbitrary key/value pair to the request, beyond the typed fields
+    /// declared above. Useful for fields the schema doesn't yet model.
+    /// Capacity is bounded by NOTE_EXTRAS_MAX; excess pairs are silently dropped.
     template<typename T>
     auto& extra(note::string_view k_, T v_) {
         if (extras_count_ < NOTE_EXTRAS_MAX)
             extras_[extras_count_++] = {k_, note::DynValue{v_}};
         return *this;
     }
+    /// String-literal overload of extra().
     auto& extra(note::string_view k_, const char* v_) {
         return extra(k_, note::string_view{v_});
     }
 
+    /// Index-style access to fields by wire name. Returns a DynField proxy
+    /// usable for assignment; unknown keys are added as extras (subject to
+    /// NOTE_EXTRAS_MAX). Prefer the typed setters above when possible.
     note::DynField operator[](note::string_view k_) {
         if (k_ == "count") return note::dyn_field_for(count);
         if (k_ == "minutes") return note::dyn_field_for(minutes);
@@ -130,8 +146,13 @@ struct CardMotionSync {
     using Response = void;
 
 #if NOTE_SINGLETON
+    private:
     /// Singleton void execute — shared thunk, no per-type instantiation.
     static inline Result<void>(*execute_void_fn_)(void*, ::note::string_view, BuildFn, void*, ::note::detail::NcErrorCapture&, ::note::Safety);
+    public:
+    /// Send this request to the Notecard and wait for a response.
+    /// Returns an ApiResult<void> — boolean-convertible to true on success;
+    /// call .error() to inspect the ErrorInfo on failure.
     ApiResult<void> execute() const {
         auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
         BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
@@ -141,12 +162,18 @@ struct CardMotionSync {
         if (!nc_err_.empty()) return ApiResult<void>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
         return ApiResult<void>{};
     }
+    private:
     static inline Result<void>(*send_fn_)(void*, BuildFn, void*);
+    public:
 #else
     ApiResult<Response>(*execute_fn_)(void*, const CardMotionSync&) = nullptr;
     Result<void>(*send_fn_)(void*, BuildFn, void*) = nullptr;
+    /// Send this request to the Notecard and wait for a response.
     auto execute() const { return execute_fn_(nc_, *this); }
 #endif
+    /// Send this request as a fire-and-forget command (cmd) — the Notecard
+    /// processes it without sending a response. Lower power and bandwidth
+    /// than execute() when you don't need the result.
     Result<void> command() const {
         auto build_ = [&](JsonBuilder& b_) {
             b_.add("cmd", notecard_request);
@@ -172,6 +199,7 @@ struct CardMotionSync {
         n_out = sizeof(table_) / sizeof(table_[0]);
         return table_;
     }
+    private:
     void build(JsonBuilder& b) const {
         uint8_t n_; auto* descs_ = req_field_descs_ptr_(n_);
         ::note::generic_build(b, this, descs_, n_);
@@ -181,6 +209,7 @@ struct CardMotionSync {
                        extras_[i_].value);
 #endif
     }
+    public:
 
 
 #ifdef ARDUINO
@@ -213,6 +242,17 @@ struct CardMotionSync {
         return n;
     }
 #endif
+
+    private:
+    friend class ::note::Notecard;
+    template<typename> friend class ::note::StaticNotecard;
+    template<typename, typename> friend struct ::note::detail::has_field_descs;
+#if NOTE_NO_POLYMORPHIC || __cplusplus < 202002L
+    template<typename> friend class ::note::Api;
+#else
+    template<typename, typename> friend class ::note::Api;
+#endif
+    public:
 
 };
 

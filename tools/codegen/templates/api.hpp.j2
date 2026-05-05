@@ -12,6 +12,15 @@ namespace note {
 
 {% macro required_params(op) %}{% for p in op.required_properties %}{{ p.field_type }} {{ p.accessor_name }}_arg{{ ", " if not loop.last }}{% endfor %}{% endmacro %}
 
+{# Doc comment for resource-group accessor methods/members. Uses the OpenAPI #}
+{# operation summary when available; falls back to the wire name otherwise. #}
+{% macro accessor_doc(ep, indent="        ") %}
+{% if ep.operations and ep.operations[0].description %}
+{{ ep.operations[0].description | doc_comment(indent) -}}
+{% else %}
+{{ indent }}/// {{ ep.wire_name -}}
+{% endif %}
+{% endmacro %}
 {# ===================================================================== #}
 {# bind: Set nc_, execute_fn_, and (if supports_cmd) command_fn_ on a   #}
 {# request, wiring it to the NcT this Api was constructed with.          #}
@@ -279,19 +288,20 @@ public:
 {% endfor %}
 {% elif not endpoint.is_polymorphic %}
 {# Non-polymorphic parent: callable to create its own request type #}
-        /// {{ endpoint.wire_name }}
+{{ accessor_doc(endpoint) }}
         auto operator()() { return create_<api::{{ endpoint.struct_name }}>(); }
 {% endif %}
 {% for child in endpoint.children %}
 {% if child.is_polymorphic %}
 {# Child is polymorphic: nested sub-factory as member #}
+{{ accessor_doc(child) }}
 #if NOTE_SINGLETON
         {{ child.struct_name }}Factory {{ child.child_method }};
 #else
         {{ child.struct_name }}Factory {{ child.child_method }}{nc_};
 #endif
 {% else %}
-        /// {{ child.wire_name }}
+{{ accessor_doc(child) }}
         auto {{ child.child_method }}() { return create_<api::{{ child.struct_name }}>(); }
 {% endif %}
 {% endfor %}
@@ -374,19 +384,20 @@ public:
 {% endfor %}
 {% elif not endpoint.is_polymorphic %}
 {# Non-polymorphic parent: callable to create its own request type #}
-        /// {{ endpoint.wire_name }}
+{{ accessor_doc(endpoint) }}
         auto operator()() { return create_<api::{{ endpoint.struct_name }}>(); }
 {% endif %}
 {% for child in endpoint.children %}
 {% if child.is_polymorphic %}
 {# Child is polymorphic: nested sub-factory as member #}
+{{ accessor_doc(child) }}
 #if NOTE_SINGLETON
         {{ child.struct_name }}Factory {{ child.child_method }};
 #else
         {{ child.struct_name }}Factory {{ child.child_method }}{nc_};
 #endif
 {% else %}
-        /// {{ child.wire_name }}
+{{ accessor_doc(child) }}
         auto {{ child.child_method }}() { return create_<api::{{ child.struct_name }}>(); }
 {% endif %}
 {% endfor %}
@@ -408,6 +419,7 @@ public:
 {% if endpoint.is_polymorphic %}
 {% if has_constraints %}
 #if __cplusplus >= 202002L
+{{ accessor_doc(endpoint) }}
         template<typename T_ = TargetT_>
         requires (target_supports<T_, {{ ep_type }}>())
         {{ endpoint.struct_name }}Factory {{ endpoint.group_method }}() { return
@@ -418,6 +430,7 @@ public:
 #endif
         ; }
 
+{{ accessor_doc(endpoint) }}
         template<typename T_ = TargetT_>
         requires (!target_supports<T_, {{ ep_type }}>() && !T_::strict)
         [[deprecated("{{ endpoint.wire_name }} is not available on this target")]]
@@ -429,6 +442,7 @@ public:
 #endif
         ; }
 #else
+{{ accessor_doc(endpoint) }}
         {{ endpoint.struct_name }}Factory {{ endpoint.group_method }}() { return
 #if NOTE_SINGLETON
             {}
@@ -438,6 +452,7 @@ public:
         ; }
 #endif
 {% else %}
+{{ accessor_doc(endpoint) }}
         {{ endpoint.struct_name }}Factory {{ endpoint.group_method }}() { return
 #if NOTE_SINGLETON
             {}
@@ -449,6 +464,7 @@ public:
 {% elif op.required_properties %}
 {% if has_constraints %}
 #if __cplusplus >= 202002L
+{{ accessor_doc(endpoint) }}
         template<typename T_ = TargetT_>
         requires (target_supports<T_, {{ ep_type }}>())
         auto {{ endpoint.group_method }}({{ required_params(op) }}) {
@@ -459,6 +475,7 @@ public:
             return r;
         }
 
+{{ accessor_doc(endpoint) }}
         template<typename T_ = TargetT_>
         requires (!target_supports<T_, {{ ep_type }}>() && !T_::strict)
         [[deprecated("{{ endpoint.wire_name }} is not available on this target")]]
@@ -470,6 +487,7 @@ public:
             return r;
         }
 #else
+{{ accessor_doc(endpoint) }}
         auto {{ endpoint.group_method }}({{ required_params(op) }}) {
             auto r = create_<api::{{ endpoint.struct_name }}>();
 {% for prop in op.required_properties %}
@@ -479,6 +497,7 @@ public:
         }
 #endif
 {% else %}
+{{ accessor_doc(endpoint) }}
         auto {{ endpoint.group_method }}({{ required_params(op) }}) {
             auto r = create_<api::{{ endpoint.struct_name }}>();
 {% for prop in op.required_properties %}
@@ -490,18 +509,22 @@ public:
 {% else %}
 {% if has_constraints %}
 #if __cplusplus >= 202002L
+{{ accessor_doc(endpoint) }}
         template<typename T_ = TargetT_>
         requires (target_supports<T_, {{ ep_type }}>())
         auto {{ endpoint.group_method }}() { return create_<api::{{ endpoint.struct_name }}>(); }
 
+{{ accessor_doc(endpoint) }}
         template<typename T_ = TargetT_>
         requires (!target_supports<T_, {{ ep_type }}>() && !T_::strict)
         [[deprecated("{{ endpoint.wire_name }} is not available on this target")]]
         auto {{ endpoint.group_method }}() { return create_<api::{{ endpoint.struct_name }}>(); }
 #else
+{{ accessor_doc(endpoint) }}
         auto {{ endpoint.group_method }}() { return create_<api::{{ endpoint.struct_name }}>(); }
 #endif
 {% else %}
+{{ accessor_doc(endpoint) }}
         auto {{ endpoint.group_method }}() { return create_<api::{{ endpoint.struct_name }}>(); }
 {% endif %}
 {% endif %}
@@ -570,7 +593,7 @@ public:
 {# Parent endpoints with factories: emit as members #}
 {% for endpoint in group.endpoints %}
 {% if endpoint.is_factory_member %}
-        /// {{ endpoint.wire_name }} (and nested: {% for c in endpoint.children %}{{ c.wire_name }}{{ ", " if not loop.last }}{% endfor %})
+{{ accessor_doc(endpoint) }}
 #if NOTE_SINGLETON
         {{ endpoint.struct_name }}Factory {{ endpoint.group_method }};
 #else
@@ -589,7 +612,6 @@ public:
 {# Skip factory members — already emitted above #}
 {% if not endpoint.is_factory_member %}
 {% set op = endpoint.operations[0] %}
-        /// {{ endpoint.wire_name }}
 {{ group_method(endpoint, op) }}
 {% endif %}
 {% endif %}

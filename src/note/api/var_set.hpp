@@ -71,6 +71,10 @@ struct VarSet {
     struct file_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
+        /// The name of the DB Notefile that contains the Note to add or update.
+        /// Default value is `vars.db`.
+        ///
+        /// @since{7.3.1}
         VarSet& operator()(note::string_view v);
     } file{};
 #endif
@@ -78,45 +82,57 @@ struct VarSet {
     struct flag_t : Field<bool> {
         using Field<bool>::Field;
         using Field<bool>::operator=;
+        /// The boolean value to be stored in the DB Notefile.
         VarSet& operator()(bool v);
     } flag{};
     /// The unique Note ID.
     struct name_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
+        /// The unique Note ID.
         VarSet& operator()(note::string_view v);
     } name{};
     /// Set to `true` to immediately sync any changes.
     struct sync_t : Field<bool> {
         using Field<bool>::Field;
         using Field<bool>::operator=;
+        /// Set to `true` to immediately sync any changes.
         VarSet& operator()(bool v);
     } sync{};
     /// The string-based value to be stored in the DB Notefile.
     struct text_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
+        /// The string-based value to be stored in the DB Notefile.
         VarSet& operator()(note::string_view v);
     } text{};
     /// The numeric value to be stored in the DB Notefile.
     struct value_t : Field<double> {
         using Field<double>::Field;
         using Field<double>::operator=;
+        /// The numeric value to be stored in the DB Notefile.
         VarSet& operator()(double v);
     } value{};
 
 
 #if NOTE_EXTRAS
+    /// Add an arbitrary key/value pair to the request, beyond the typed fields
+    /// declared above. Useful for fields the schema doesn't yet model.
+    /// Capacity is bounded by NOTE_EXTRAS_MAX; excess pairs are silently dropped.
     template<typename T>
     auto& extra(note::string_view k_, T v_) {
         if (extras_count_ < NOTE_EXTRAS_MAX)
             extras_[extras_count_++] = {k_, note::DynValue{v_}};
         return *this;
     }
+    /// String-literal overload of extra().
     auto& extra(note::string_view k_, const char* v_) {
         return extra(k_, note::string_view{v_});
     }
 
+    /// Index-style access to fields by wire name. Returns a DynField proxy
+    /// usable for assignment; unknown keys are added as extras (subject to
+    /// NOTE_EXTRAS_MAX). Prefer the typed setters above when possible.
     note::DynField operator[](note::string_view k_) {
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 3, 1) || !defined(NOTE_API_STRICT)
         if (k_ == "file") return note::dyn_field_for(file);
@@ -141,8 +157,13 @@ struct VarSet {
     using Response = void;
 
 #if NOTE_SINGLETON
+    private:
     /// Singleton void execute — shared thunk, no per-type instantiation.
     static inline Result<void>(*execute_void_fn_)(void*, ::note::string_view, BuildFn, void*, ::note::detail::NcErrorCapture&, ::note::Safety);
+    public:
+    /// Send this request to the Notecard and wait for a response.
+    /// Returns an ApiResult<void> — boolean-convertible to true on success;
+    /// call .error() to inspect the ErrorInfo on failure.
     ApiResult<void> execute() const {
         auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
         BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
@@ -152,12 +173,18 @@ struct VarSet {
         if (!nc_err_.empty()) return ApiResult<void>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
         return ApiResult<void>{};
     }
+    private:
     static inline Result<void>(*send_fn_)(void*, BuildFn, void*);
+    public:
 #else
     ApiResult<Response>(*execute_fn_)(void*, const VarSet&) = nullptr;
     Result<void>(*send_fn_)(void*, BuildFn, void*) = nullptr;
+    /// Send this request to the Notecard and wait for a response.
     auto execute() const { return execute_fn_(nc_, *this); }
 #endif
+    /// Send this request as a fire-and-forget command (cmd) — the Notecard
+    /// processes it without sending a response. Lower power and bandwidth
+    /// than execute() when you don't need the result.
     Result<void> command() const {
         auto build_ = [&](JsonBuilder& b_) {
             b_.add("cmd", notecard_request);
@@ -188,6 +215,7 @@ struct VarSet {
         n_out = sizeof(table_) / sizeof(table_[0]);
         return table_;
     }
+    private:
     void build(JsonBuilder& b) const {
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 3, 1) || !defined(NOTE_API_STRICT)
 #endif
@@ -200,6 +228,7 @@ struct VarSet {
 #endif
     }
 #pragma GCC diagnostic pop
+    public:
 
 
 #ifdef ARDUINO
@@ -238,6 +267,17 @@ struct VarSet {
         return n;
     }
 #endif
+
+    private:
+    friend class ::note::Notecard;
+    template<typename> friend class ::note::StaticNotecard;
+    template<typename, typename> friend struct ::note::detail::has_field_descs;
+#if NOTE_NO_POLYMORPHIC || __cplusplus < 202002L
+    template<typename> friend class ::note::Api;
+#else
+    template<typename, typename> friend class ::note::Api;
+#endif
+    public:
 
 };
 

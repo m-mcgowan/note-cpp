@@ -73,6 +73,14 @@ struct CardWifi {
     struct name_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
+        /// By default, the Notecard creates a SoftAP (software enabled access
+        /// point) under the name "Notecard". You can use the `name` argument to
+        /// change the name of the SoftAP to a custom name.
+        ///
+        /// If you include a `-` at the end of the `name` (for example `"name":
+        /// "acme-"`), the Notecard will append the last four digits of the
+        /// network's MAC address (for example `acme-025c`). This allows you to
+        /// distinguish between multiple Notecards in SoftAP mode.
         CardWifi& operator()(note::string_view v);
     } name{};
     /// If specified, replaces the Blues logo on the SoftAP page with the
@@ -80,6 +88,8 @@ struct CardWifi {
     struct org_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
+        /// If specified, replaces the Blues logo on the SoftAP page with the
+        /// provided name.
         CardWifi& operator()(note::string_view v);
     } org{};
     /// The network password of the WiFi access point. Alternatively, use `-` to
@@ -87,6 +97,9 @@ struct CardWifi {
     struct password_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
+        /// The network password of the WiFi access point. Alternatively, use
+        /// `-` to clear an already set password or to connect to an open access
+        /// point.
         CardWifi& operator()(note::string_view v);
     } password{};
     /// The SSID of the WiFi access point. Alternatively, use `-` to clear an
@@ -94,12 +107,16 @@ struct CardWifi {
     struct ssid_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
+        /// The SSID of the WiFi access point. Alternatively, use `-` to clear
+        /// an already set SSID.
         CardWifi& operator()(note::string_view v);
     } ssid{};
     /// Specify `true` to activate SoftAP mode on the Notecard programmatically.
     struct start_t : Field<bool> {
         using Field<bool>::Field;
         using Field<bool>::operator=;
+        /// Specify `true` to activate SoftAP mode on the Notecard
+        /// programmatically.
         CardWifi& operator()(bool v);
     } start{};
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 5, 1) || !defined(NOTE_API_STRICT)
@@ -122,6 +139,19 @@ struct CardWifi {
     struct text_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
+        /// A string containing an array of access points the Notecard should
+        /// attempt to use. The access points should be provided in the
+        /// following format:
+        ///
+        /// `["FIRST-SSID","FIRST-PASSWORD"],["SECOND-SSID","SECOND-PASSWORD"]`.
+        ///
+        /// You may need to escape any quotes used in this argument before
+        /// passing it to the Notecard. For example, the following is a valid
+        /// request to pass to a Notecard through the In-Browser Terminal.
+        ///
+        /// `{"req":"card.wifi", "text":"[\"FIRST-SSID\",\"FIRST-PASSWORD\"]"}`
+        ///
+        /// @since{7.5.1}
         CardWifi& operator()(note::string_view v);
     } text{};
 #endif
@@ -132,16 +162,23 @@ struct CardWifi {
     auto& activateSoftAP() { start = true; return *this; }
     auto& activateSoftAP(bool v_) { start = v_; return *this; }
 #if NOTE_EXTRAS
+    /// Add an arbitrary key/value pair to the request, beyond the typed fields
+    /// declared above. Useful for fields the schema doesn't yet model.
+    /// Capacity is bounded by NOTE_EXTRAS_MAX; excess pairs are silently dropped.
     template<typename T>
     auto& extra(note::string_view k_, T v_) {
         if (extras_count_ < NOTE_EXTRAS_MAX)
             extras_[extras_count_++] = {k_, note::DynValue{v_}};
         return *this;
     }
+    /// String-literal overload of extra().
     auto& extra(note::string_view k_, const char* v_) {
         return extra(k_, note::string_view{v_});
     }
 
+    /// Index-style access to fields by wire name. Returns a DynField proxy
+    /// usable for assignment; unknown keys are added as extras (subject to
+    /// NOTE_EXTRAS_MAX). Prefer the typed setters above when possible.
     note::DynField operator[](note::string_view k_) {
         if (k_ == "name") return note::dyn_field_for(name);
         if (k_ == "org") return note::dyn_field_for(org);
@@ -265,6 +302,7 @@ struct CardWifi {
         std::unique_ptr<JsonReader> reader_;
 #endif
     };
+    private:
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
     static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
@@ -276,10 +314,17 @@ struct CardWifi {
 #pragma GCC diagnostic pop
     static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);
     static const ::note::FieldDesc* field_descs_ptr() { return field_descs_table_; }
+    public:
 
 #if NOTE_SINGLETON
+    private:
     /// Singleton generic execute — shared thunk with body factory params.
     static inline Result<void>(*execute_generic_fn_)(void*, ::note::string_view, BuildFn, void*, void*, const ::note::FieldDesc*, uint8_t, ::note::detail::NcErrorCapture&, bool&, void*, ::note::BodyHandlerFactory, ::note::Safety);
+    public:
+    /// Send this request to the Notecard and wait for a response.
+    /// Returns an ApiResult<Response> — boolean-convertible to true on success;
+    /// dereference (or use member-of-pointer ->) to read response fields,
+    /// or call .error() to inspect the ErrorInfo on failure.
     ApiResult<Response> execute() const {
         auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
         BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
@@ -292,12 +337,18 @@ struct CardWifi {
         if (exhausted_) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Overflow, ::note::Cause::Unspecified, NOTE_ERR("arena exhausted")});
         return ApiResult<Response>(std::move(rsp_));
     }
+    private:
     static inline Result<void>(*send_fn_)(void*, BuildFn, void*);
+    public:
 #else
     ApiResult<Response>(*execute_fn_)(void*, const CardWifi&) = nullptr;
     Result<void>(*send_fn_)(void*, BuildFn, void*) = nullptr;
+    /// Send this request to the Notecard and wait for a response.
     auto execute() const { return execute_fn_(nc_, *this); }
 #endif
+    /// Send this request as a fire-and-forget command (cmd) — the Notecard
+    /// processes it without sending a response. Lower power and bandwidth
+    /// than execute() when you don't need the result.
     Result<void> command() const {
         auto build_ = [&](JsonBuilder& b_) {
             b_.add("cmd", notecard_request);
@@ -328,6 +379,7 @@ struct CardWifi {
         n_out = sizeof(table_) / sizeof(table_[0]);
         return table_;
     }
+    private:
     void build(JsonBuilder& b) const {
 #if NOTE_API_VERSION >= NOTE_VERSION(7, 5, 1) || !defined(NOTE_API_STRICT)
 #endif
@@ -340,6 +392,7 @@ struct CardWifi {
 #endif
     }
 #pragma GCC diagnostic pop
+    public:
 
 
 #ifdef ARDUINO
@@ -378,6 +431,17 @@ struct CardWifi {
         return n;
     }
 #endif
+
+    private:
+    friend class ::note::Notecard;
+    template<typename> friend class ::note::StaticNotecard;
+    template<typename, typename> friend struct ::note::detail::has_field_descs;
+#if NOTE_NO_POLYMORPHIC || __cplusplus < 202002L
+    template<typename> friend class ::note::Api;
+#else
+    template<typename, typename> friend class ::note::Api;
+#endif
+    public:
 
 };
 

@@ -83,6 +83,8 @@ struct CardTriangulate {
     struct minutes_t : Field<note::json_int_t> {
         using Field<note::json_int_t>::Field;
         using Field<note::json_int_t>::operator=;
+        /// Minimum delay, in minutes, between triangulation attempts. Use `0`
+        /// for no time-based suppression.
         CardTriangulate& operator()(note::json_int_t v);
     } minutes{};
     /// The triangulation approach to use for determining the Notecard location.
@@ -123,8 +125,20 @@ struct CardTriangulate {
         mode_t(mode_t&& o) : Field<note::string_view>(), flags_(o.flags_) { fixup_(o); }
         mode_t& operator=(mode_t&& o) { flags_ = o.flags_; fixup_(o); return *this; }
 #endif
+        /// The triangulation approach to use for determining the Notecard
+        /// location. The following keywords can be used separately or together
+        /// in a comma-delimited list, in any order. See Using Cell Tower & WiFi
+        /// Triangulation for more information.
         CardTriangulate& operator()(note::string_view v);
+        /// The triangulation approach to use for determining the Notecard
+        /// location. The following keywords can be used separately or together
+        /// in a comma-delimited list, in any order. See Using Cell Tower & WiFi
+        /// Triangulation for more information.
         CardTriangulate& operator=(uint32_t flags);
+        /// The triangulation approach to use for determining the Notecard
+        /// location. The following keywords can be used separately or together
+        /// in a comma-delimited list, in any order. See Using Cell Tower & WiFi
+        /// Triangulation for more information.
         CardTriangulate& operator()(uint32_t flags);
         mode_t& add(uint32_t flag);
         mode_t& operator|=(uint32_t flag);
@@ -164,6 +178,8 @@ struct CardTriangulate {
     struct on_t : Field<bool> {
         using Field<bool>::Field;
         using Field<bool>::operator=;
+        /// `true` to instruct the Notecard to triangulate even if the module
+        /// has not moved. Only takes effect when `set` is `true`.
         CardTriangulate& operator()(bool v);
     } on{};
     /// `true` to instruct the module to use the state of the `on` and `usb`
@@ -171,6 +187,8 @@ struct CardTriangulate {
     struct set_t : Field<bool> {
         using Field<bool>::Field;
         using Field<bool>::operator=;
+        /// `true` to instruct the module to use the state of the `on` and `usb`
+        /// arguments.
         CardTriangulate& operator()(bool v);
     } set{};
     /// When using WiFi triangulation, a newline-terminated list of WiFi access
@@ -179,6 +197,9 @@ struct CardTriangulate {
     struct text_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
+        /// When using WiFi triangulation, a newline-terminated list of WiFi
+        /// access points obtained by the external module. Format should follow
+        /// the ESP32's AT+CWLAP command output.
         CardTriangulate& operator()(note::string_view v);
     } text{};
     /// When passed with `text`, records the time that the WiFi access point
@@ -186,6 +207,8 @@ struct CardTriangulate {
     struct time_t : Field<note::json_int_t> {
         using Field<note::json_int_t>::Field;
         using Field<note::json_int_t>::operator=;
+        /// When passed with `text`, records the time that the WiFi access point
+        /// scan was performed. If not provided, Notecard time is used.
         CardTriangulate& operator()(note::json_int_t v);
     } time{};
     /// `true` to use perform triangulation only when the Notecard is connected
@@ -193,6 +216,8 @@ struct CardTriangulate {
     struct usb_t : Field<bool> {
         using Field<bool>::Field;
         using Field<bool>::operator=;
+        /// `true` to use perform triangulation only when the Notecard is
+        /// connected to USB power. Only takes effect when `set` is `true`.
         CardTriangulate& operator()(bool v);
     } usb{};
 
@@ -200,16 +225,23 @@ struct CardTriangulate {
     auto& cell() { mode.cell(); return *this; }
     auto& wifi() { mode.wifi(); return *this; }
 #if NOTE_EXTRAS
+    /// Add an arbitrary key/value pair to the request, beyond the typed fields
+    /// declared above. Useful for fields the schema doesn't yet model.
+    /// Capacity is bounded by NOTE_EXTRAS_MAX; excess pairs are silently dropped.
     template<typename T>
     auto& extra(note::string_view k_, T v_) {
         if (extras_count_ < NOTE_EXTRAS_MAX)
             extras_[extras_count_++] = {k_, note::DynValue{v_}};
         return *this;
     }
+    /// String-literal overload of extra().
     auto& extra(note::string_view k_, const char* v_) {
         return extra(k_, note::string_view{v_});
     }
 
+    /// Index-style access to fields by wire name. Returns a DynField proxy
+    /// usable for assignment; unknown keys are added as extras (subject to
+    /// NOTE_EXTRAS_MAX). Prefer the typed setters above when possible.
     note::DynField operator[](note::string_view k_) {
         if (k_ == "minutes") return note::dyn_field_for(minutes);
         if (k_ == "mode") return note::dyn_field_for(mode);
@@ -355,6 +387,7 @@ struct CardTriangulate {
         std::unique_ptr<JsonReader> reader_;
 #endif
     };
+    private:
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
     static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
@@ -368,10 +401,17 @@ struct CardTriangulate {
 #pragma GCC diagnostic pop
     static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);
     static const ::note::FieldDesc* field_descs_ptr() { return field_descs_table_; }
+    public:
 
 #if NOTE_SINGLETON
+    private:
     /// Singleton generic execute — shared thunk with body factory params.
     static inline Result<void>(*execute_generic_fn_)(void*, ::note::string_view, BuildFn, void*, void*, const ::note::FieldDesc*, uint8_t, ::note::detail::NcErrorCapture&, bool&, void*, ::note::BodyHandlerFactory, ::note::Safety);
+    public:
+    /// Send this request to the Notecard and wait for a response.
+    /// Returns an ApiResult<Response> — boolean-convertible to true on success;
+    /// dereference (or use member-of-pointer ->) to read response fields,
+    /// or call .error() to inspect the ErrorInfo on failure.
     ApiResult<Response> execute() const {
         auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
         BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
@@ -384,12 +424,18 @@ struct CardTriangulate {
         if (exhausted_) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Overflow, ::note::Cause::Unspecified, NOTE_ERR("arena exhausted")});
         return ApiResult<Response>(std::move(rsp_));
     }
+    private:
     static inline Result<void>(*send_fn_)(void*, BuildFn, void*);
+    public:
 #else
     ApiResult<Response>(*execute_fn_)(void*, const CardTriangulate&) = nullptr;
     Result<void>(*send_fn_)(void*, BuildFn, void*) = nullptr;
+    /// Send this request to the Notecard and wait for a response.
     auto execute() const { return execute_fn_(nc_, *this); }
 #endif
+    /// Send this request as a fire-and-forget command (cmd) — the Notecard
+    /// processes it without sending a response. Lower power and bandwidth
+    /// than execute() when you don't need the result.
     Result<void> command() const {
         auto build_ = [&](JsonBuilder& b_) {
             b_.add("cmd", notecard_request);
@@ -417,6 +463,7 @@ struct CardTriangulate {
         n_out = sizeof(table_) / sizeof(table_[0]);
         return table_;
     }
+    private:
     void build(JsonBuilder& b) const {
         uint8_t n_; auto* descs_ = req_field_descs_ptr_(n_);
         ::note::generic_build(b, this, descs_, n_);
@@ -426,6 +473,7 @@ struct CardTriangulate {
                        extras_[i_].value);
 #endif
     }
+    public:
 
 
 #ifdef ARDUINO
@@ -466,6 +514,17 @@ struct CardTriangulate {
         return n;
     }
 #endif
+
+    private:
+    friend class ::note::Notecard;
+    template<typename> friend class ::note::StaticNotecard;
+    template<typename, typename> friend struct ::note::detail::has_field_descs;
+#if NOTE_NO_POLYMORPHIC || __cplusplus < 202002L
+    template<typename> friend class ::note::Api;
+#else
+    template<typename, typename> friend class ::note::Api;
+#endif
+    public:
 
 };
 

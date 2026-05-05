@@ -86,17 +86,27 @@ struct WebGet {
     struct binary_t : Field<bool> {
         using Field<bool>::Field;
         using Field<bool>::operator=;
+        /// If `true`, the Notecard will return the response stored in its
+        /// binary buffer.
+        ///
+        /// Learn more in this guide on Sending and Receiving Large Binary
+        /// Objects.
+        ///
+        /// @since{5.3.1}
         WebGet& operator()(bool v);
     } binary{};
 #endif
     /// The JSON body to send with the request.
     struct body_t : BodyValue {
         using BodyValue::BodyValue;
+        /// The JSON body to send with the request.
         WebGet& operator()(BodyValue v);
 #if __cplusplus >= 202002L
+        /// The JSON body to send with the request.
         template<typename T> requires detail::BodySchema<T>
         WebGet& operator()(const T& v);
 #else
+        /// The JSON body to send with the request.
         template<typename T, typename = std::enable_if_t<detail::is_body_schema<T>::value>>
         WebGet& operator()(const T& v);
 #endif
@@ -106,6 +116,8 @@ struct WebGet {
     struct content_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
+        /// The MIME type of the body or payload of the response. Default is
+        /// `application/json`.
         WebGet& operator()(note::string_view v);
     } content{};
     /// The name of a local-only Database Notefile (.dbx) where the response
@@ -118,6 +130,13 @@ struct WebGet {
     struct file_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
+        /// The name of a local-only Database Notefile (.dbx) where the response
+        /// will be stored when the web request is executed as a queued web
+        /// transaction (e.g. if the request is made when Notecard is not in
+        /// continuous mode and not online). If `file` is not specified, queued
+        /// web transaction responses are discarded. This argument is not used
+        /// when the Notecard is in `continuous` mode and online, as responses
+        /// in that case are returned directly to the host.
         WebGet& operator()(note::string_view v);
     } file{};
     /// Used along with `binary:true` and `offset`, sent as a URL parameter to
@@ -126,6 +145,9 @@ struct WebGet {
     struct max_t : Field<note::json_int_t> {
         using Field<note::json_int_t>::Field;
         using Field<note::json_int_t>::operator=;
+        /// Used along with `binary:true` and `offset`, sent as a URL parameter
+        /// to the remote endpoint. Represents the number of bytes to retrieve
+        /// from the binary payload segment.
         WebGet& operator()(note::json_int_t v);
     } max{};
     /// A web URL endpoint relative to the host configured in the Proxy Route.
@@ -134,6 +156,9 @@ struct WebGet {
     struct name_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
+        /// A web URL endpoint relative to the host configured in the Proxy
+        /// Route. URL parameters may be added to this argument as well (e.g.
+        /// `/getLatest?id=1`).
         WebGet& operator()(note::string_view v);
     } name{};
     /// The unique Note ID within the local-only Database Notefile (.dbx)
@@ -143,6 +168,10 @@ struct WebGet {
     struct noteId_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
+        /// The unique Note ID within the local-only Database Notefile (.dbx)
+        /// specified by the `file` argument (see above). Used with queued web
+        /// transactions to identify a specific Note where the response will be
+        /// stored.
         WebGet& operator()(note::string_view v);
     } noteId{};
     /// Used along with `binary:true` and `max`, sent as a URL parameter to the
@@ -151,33 +180,46 @@ struct WebGet {
     struct offset_t : Field<note::json_int_t> {
         using Field<note::json_int_t>::Field;
         using Field<note::json_int_t>::operator=;
+        /// Used along with `binary:true` and `max`, sent as a URL parameter to
+        /// the remote endpoint. Represents the number of bytes to offset the
+        /// binary payload from 0 when retrieving binary data from the remote
+        /// endpoint.
         WebGet& operator()(note::json_int_t v);
     } offset{};
     /// Alias for a Proxy Route in Notehub.
     struct route_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
+        /// Alias for a Proxy Route in Notehub.
         WebGet& operator()(note::string_view v);
     } route{};
     /// If specified, overrides the default 90 second timeout.
     struct seconds_t : Field<note::json_int_t> {
         using Field<note::json_int_t>::Field;
         using Field<note::json_int_t>::operator=;
+        /// If specified, overrides the default 90 second timeout.
         WebGet& operator()(note::json_int_t v);
     } seconds{};
 
 
 #if NOTE_EXTRAS
+    /// Add an arbitrary key/value pair to the request, beyond the typed fields
+    /// declared above. Useful for fields the schema doesn't yet model.
+    /// Capacity is bounded by NOTE_EXTRAS_MAX; excess pairs are silently dropped.
     template<typename T>
     auto& extra(note::string_view k_, T v_) {
         if (extras_count_ < NOTE_EXTRAS_MAX)
             extras_[extras_count_++] = {k_, note::DynValue{v_}};
         return *this;
     }
+    /// String-literal overload of extra().
     auto& extra(note::string_view k_, const char* v_) {
         return extra(k_, note::string_view{v_});
     }
 
+    /// Index-style access to fields by wire name. Returns a DynField proxy
+    /// usable for assignment; unknown keys are added as extras (subject to
+    /// NOTE_EXTRAS_MAX). Prefer the typed setters above when possible.
     note::DynField operator[](note::string_view k_) {
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
         if (k_ == "binary") return note::dyn_field_for(binary);
@@ -252,9 +294,11 @@ struct WebGet {
         copy.into(sink_);
         return copy;
     }
+    /// Alias for into(): wire body parsing to the given struct.
     template<typename BodyT_,
              typename = ::std::enable_if_t<!::std::is_base_of_v<::note::JsonSink, BodyT_>>>
     auto& from(BodyT_& out) { return into(out); }
+    /// Const alias for into() — returns a copy with body parsing wired up.
     template<typename BodyT_,
              typename = ::std::enable_if_t<!::std::is_base_of_v<::note::JsonSink, BodyT_>>>
     auto from(BodyT_& out) const { return into(out); }
@@ -406,6 +450,7 @@ struct WebGet {
         std::unique_ptr<JsonReader> body_;
 #endif
     };
+    private:
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
     static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
@@ -417,10 +462,17 @@ struct WebGet {
 #pragma GCC diagnostic pop
     static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);
     static const ::note::FieldDesc* field_descs_ptr() { return field_descs_table_; }
+    public:
 
 #if NOTE_SINGLETON
+    private:
     /// Singleton generic execute — shared thunk with body factory params.
     static inline Result<void>(*execute_generic_fn_)(void*, ::note::string_view, BuildFn, void*, void*, const ::note::FieldDesc*, uint8_t, ::note::detail::NcErrorCapture&, bool&, void*, ::note::BodyHandlerFactory, ::note::Safety);
+    public:
+    /// Send this request to the Notecard and wait for a response.
+    /// Returns an ApiResult<Response> — boolean-convertible to true on success;
+    /// dereference (or use member-of-pointer ->) to read response fields,
+    /// or call .error() to inspect the ErrorInfo on failure.
     ApiResult<Response> execute() const {
         auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
         BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
@@ -433,12 +485,18 @@ struct WebGet {
         if (exhausted_) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Overflow, ::note::Cause::Unspecified, NOTE_ERR("arena exhausted")});
         return ApiResult<Response>(std::move(rsp_));
     }
+    private:
     static inline Result<void>(*send_fn_)(void*, BuildFn, void*);
+    public:
 #else
     ApiResult<Response>(*execute_fn_)(void*, const WebGet&) = nullptr;
     Result<void>(*send_fn_)(void*, BuildFn, void*) = nullptr;
+    /// Send this request to the Notecard and wait for a response.
     auto execute() const { return execute_fn_(nc_, *this); }
 #endif
+    /// Send this request as a fire-and-forget command (cmd) — the Notecard
+    /// processes it without sending a response. Lower power and bandwidth
+    /// than execute() when you don't need the result.
     Result<void> command() const {
         auto build_ = [&](JsonBuilder& b_) {
             b_.add("cmd", notecard_request);
@@ -473,6 +531,7 @@ struct WebGet {
         n_out = sizeof(table_) / sizeof(table_[0]);
         return table_;
     }
+    private:
     void build(JsonBuilder& b) const {
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
 #endif
@@ -485,6 +544,7 @@ struct WebGet {
 #endif
     }
 #pragma GCC diagnostic pop
+    public:
 
 
 #ifdef ARDUINO
@@ -535,6 +595,17 @@ struct WebGet {
         return n;
     }
 #endif
+
+    private:
+    friend class ::note::Notecard;
+    template<typename> friend class ::note::StaticNotecard;
+    template<typename, typename> friend struct ::note::detail::has_field_descs;
+#if NOTE_NO_POLYMORPHIC || __cplusplus < 202002L
+    template<typename> friend class ::note::Api;
+#else
+    template<typename, typename> friend class ::note::Api;
+#endif
+    public:
 
 };
 

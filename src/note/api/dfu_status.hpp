@@ -73,6 +73,8 @@ struct DfuStatus {
     struct err_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
+        /// If `err` text is provided along with `"stop":true`, this sets the
+        /// host DFU to an error state with the specified string.
         DfuStatus& operator()(note::string_view v);
     } err{};
     /// Determines which type of firmware update status to view. The value can
@@ -114,18 +116,24 @@ struct DfuStatus {
 #endif
         static constexpr note::string_view user{"user"};
         static constexpr note::string_view card{"card"};
+        /// Determines which type of firmware update status to view. The value
+        /// can be `"user"` (default), which gets the status of MCU host
+        /// firmware updates, or `"card"`, which gets the status of Notecard
+        /// firmware updates.
         DfuStatus& operator()(note::string_view v);
     } name{};
     /// `true` to disable firmware downloads from Notehub.
     struct off_t : Field<bool> {
         using Field<bool>::Field;
         using Field<bool>::operator=;
+        /// `true` to disable firmware downloads from Notehub.
         DfuStatus& operator()(bool v);
     } off{};
     /// `true` to allow firmware downloads from Notehub.
     struct on_t : Field<bool> {
         using Field<bool>::Field;
         using Field<bool>::operator=;
+        /// `true` to allow firmware downloads from Notehub.
         DfuStatus& operator()(bool v);
     } on{};
     /// When setting `stop` to `true`, an optional string synchronized to
@@ -133,6 +141,8 @@ struct DfuStatus {
     struct status_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
+        /// When setting `stop` to `true`, an optional string synchronized to
+        /// Notehub, which can be used for informational or diagnostic purposes.
         DfuStatus& operator()(note::string_view v);
     } status{};
     /// `true` to clear DFU state and delete the local firmware image from the
@@ -140,6 +150,8 @@ struct DfuStatus {
     struct stop_t : Field<bool> {
         using Field<bool>::Field;
         using Field<bool>::operator=;
+        /// `true` to clear DFU state and delete the local firmware image from
+        /// the Notecard.
         DfuStatus& operator()(bool v);
     } stop{};
     /// Version information on the host firmware to pass to Notehub. You may
@@ -158,6 +170,19 @@ struct DfuStatus {
     struct version_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
+        /// Version information on the host firmware to pass to Notehub. You may
+        /// pass a simple version number string (e.g. `"1.0.0.0"`), or an object
+        /// with detailed information about the firmware image (recommended).
+        ///
+        /// If you provide an object it must take the following form.
+        ///
+        /// `{"org":"my-organization","product":"My Product","description":"A
+        /// description of the image","version":"1.2.4","built":"Jan 01 2025
+        /// 01:02:03","vermajor":1,"verminor":2,"verpatch":4,"verbuild":
+        /// 5,"builder":"The Builder"}`
+        ///
+        /// Code to help you generate a version with the correct formatting is
+        /// available in Enabling Notecard Outboard Firmware Update.
         DfuStatus& operator()(note::string_view v);
     } version{};
     /// A voltage-variable string that controls, by Notecard voltage, whether or
@@ -167,6 +192,10 @@ struct DfuStatus {
     struct vvalue_t : Field<note::string_view> {
         using Field<note::string_view>::Field;
         using Field<note::string_view>::operator=;
+        /// A voltage-variable string that controls, by Notecard voltage,
+        /// whether or not DFU is enabled. Use a boolean `1` (on) or `0` (off)
+        /// for each source/voltage level:
+        /// `usb:<1/0>;high:<1/0>;normal:<1/0>;low:<1/0>;dead:0`.
         DfuStatus& operator()(note::string_view v);
     } vvalue{};
 
@@ -191,16 +220,23 @@ struct DfuStatus {
     auto& clearDfu() { stop = true; return *this; }
     auto& clearDfu(bool v_) { stop = v_; return *this; }
 #if NOTE_EXTRAS
+    /// Add an arbitrary key/value pair to the request, beyond the typed fields
+    /// declared above. Useful for fields the schema doesn't yet model.
+    /// Capacity is bounded by NOTE_EXTRAS_MAX; excess pairs are silently dropped.
     template<typename T>
     auto& extra(note::string_view k_, T v_) {
         if (extras_count_ < NOTE_EXTRAS_MAX)
             extras_[extras_count_++] = {k_, note::DynValue{v_}};
         return *this;
     }
+    /// String-literal overload of extra().
     auto& extra(note::string_view k_, const char* v_) {
         return extra(k_, note::string_view{v_});
     }
 
+    /// Index-style access to fields by wire name. Returns a DynField proxy
+    /// usable for assignment; unknown keys are added as extras (subject to
+    /// NOTE_EXTRAS_MAX). Prefer the typed setters above when possible.
     note::DynField operator[](note::string_view k_) {
         if (k_ == "err") return note::dyn_field_for(err);
         if (k_ == "name") return note::dyn_field_for(name);
@@ -272,15 +308,19 @@ struct DfuStatus {
         copy.into(sink_);
         return copy;
     }
+    /// Alias for into(): wire body parsing to the given struct.
     template<typename BodyT_,
              typename = ::std::enable_if_t<!::std::is_base_of_v<::note::JsonSink, BodyT_>>>
     auto& body(BodyT_& out) { return into(out); }
+    /// Const alias for into() — returns a copy with body parsing wired up.
     template<typename BodyT_,
              typename = ::std::enable_if_t<!::std::is_base_of_v<::note::JsonSink, BodyT_>>>
     auto body(BodyT_& out) const { return into(out); }
+    /// Alias for into(): wire body parsing to the given struct.
     template<typename BodyT_,
              typename = ::std::enable_if_t<!::std::is_base_of_v<::note::JsonSink, BodyT_>>>
     auto& from(BodyT_& out) { return into(out); }
+    /// Const alias for into() — returns a copy with body parsing wired up.
     template<typename BodyT_,
              typename = ::std::enable_if_t<!::std::is_base_of_v<::note::JsonSink, BodyT_>>>
     auto from(BodyT_& out) const { return into(out); }
@@ -439,6 +479,7 @@ struct DfuStatus {
         std::unique_ptr<JsonReader> body_;
 #endif
     };
+    private:
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
     static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
@@ -451,10 +492,17 @@ struct DfuStatus {
 #pragma GCC diagnostic pop
     static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);
     static const ::note::FieldDesc* field_descs_ptr() { return field_descs_table_; }
+    public:
 
 #if NOTE_SINGLETON
+    private:
     /// Singleton generic execute — shared thunk with body factory params.
     static inline Result<void>(*execute_generic_fn_)(void*, ::note::string_view, BuildFn, void*, void*, const ::note::FieldDesc*, uint8_t, ::note::detail::NcErrorCapture&, bool&, void*, ::note::BodyHandlerFactory, ::note::Safety);
+    public:
+    /// Send this request to the Notecard and wait for a response.
+    /// Returns an ApiResult<Response> — boolean-convertible to true on success;
+    /// dereference (or use member-of-pointer ->) to read response fields,
+    /// or call .error() to inspect the ErrorInfo on failure.
     ApiResult<Response> execute() const {
         auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
         BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
@@ -467,12 +515,18 @@ struct DfuStatus {
         if (exhausted_) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Overflow, ::note::Cause::Unspecified, NOTE_ERR("arena exhausted")});
         return ApiResult<Response>(std::move(rsp_));
     }
+    private:
     static inline Result<void>(*send_fn_)(void*, BuildFn, void*);
+    public:
 #else
     ApiResult<Response>(*execute_fn_)(void*, const DfuStatus&) = nullptr;
     Result<void>(*send_fn_)(void*, BuildFn, void*) = nullptr;
+    /// Send this request to the Notecard and wait for a response.
     auto execute() const { return execute_fn_(nc_, *this); }
 #endif
+    /// Send this request as a fire-and-forget command (cmd) — the Notecard
+    /// processes it without sending a response. Lower power and bandwidth
+    /// than execute() when you don't need the result.
     Result<void> command() const {
         auto build_ = [&](JsonBuilder& b_) {
             b_.add("cmd", notecard_request);
@@ -501,6 +555,7 @@ struct DfuStatus {
         n_out = sizeof(table_) / sizeof(table_[0]);
         return table_;
     }
+    private:
     void build(JsonBuilder& b) const {
         uint8_t n_; auto* descs_ = req_field_descs_ptr_(n_);
         ::note::generic_build(b, this, descs_, n_);
@@ -510,6 +565,7 @@ struct DfuStatus {
                        extras_[i_].value);
 #endif
     }
+    public:
 
 
 #ifdef ARDUINO
@@ -554,6 +610,17 @@ struct DfuStatus {
         return n;
     }
 #endif
+
+    private:
+    friend class ::note::Notecard;
+    template<typename> friend class ::note::StaticNotecard;
+    template<typename, typename> friend struct ::note::detail::has_field_descs;
+#if NOTE_NO_POLYMORPHIC || __cplusplus < 202002L
+    template<typename> friend class ::note::Api;
+#else
+    template<typename, typename> friend class ::note::Api;
+#endif
+    public:
 
 };
 

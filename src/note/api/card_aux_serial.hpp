@@ -77,6 +77,8 @@ struct CardAuxSerial {
         struct duration_t : Field<note::json_int_t> {
             using Field<note::json_int_t>::Field;
             using Field<note::json_int_t>::operator=;
+            /// If using `"mode": "accel"`, specify a sampling duration for the
+            /// Notecard accelerometer.
             CardAuxSerial::Request& operator()(note::json_int_t v);
         } duration{};
         /// If `true`, along with `"mode":"gps"` the Notecard will disable
@@ -84,6 +86,8 @@ struct CardAuxSerial {
         struct limit_t : Field<bool> {
             using Field<bool>::Field;
             using Field<bool>::operator=;
+            /// If `true`, along with `"mode":"gps"` the Notecard will disable
+            /// concurrent modem use during GPS tracking.
             CardAuxSerial::Request& operator()(bool v);
         } limit{};
         /// The maximum amount of data, in bytes, that can be sent in a single
@@ -96,6 +100,13 @@ struct CardAuxSerial {
         struct max_t : Field<note::json_int_t> {
             using Field<note::json_int_t>::Field;
             using Field<note::json_int_t>::operator=;
+            /// The maximum amount of data, in bytes, that can be sent in a
+            /// single transmission before the Notecard pauses to allow the host
+            /// to process incoming data. This value should be set to the size
+            /// of the host's serial receive buffer minus `1`, which represents
+            /// the number of bytes the host can absorb before the sender must
+            /// delay due to the absence of flow control. For example, `note-
+            /// arduino`` uses a buffer size of `(SERIALRXBUFFER_SIZE - 1)`.
             CardAuxSerial::Request& operator()(note::json_int_t v);
         } max{};
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
@@ -109,6 +120,10 @@ struct CardAuxSerial {
         struct minutes_t : Field<note::json_int_t> {
             using Field<note::json_int_t>::Field;
             using Field<note::json_int_t>::operator=;
+            /// When using `"mode": "notify,dfu"`, specify an interval for
+            /// notifying the host.
+            ///
+            /// @since{5.1.1}
             CardAuxSerial::Request& operator()(note::json_int_t v);
         } minutes{};
 #endif
@@ -147,8 +162,11 @@ struct CardAuxSerial {
             mode_t(mode_t&& o) : Field<note::string_view>(), flags_(o.flags_) { fixup_(o); }
             mode_t& operator=(mode_t&& o) { flags_ = o.flags_; fixup_(o); return *this; }
 #endif
+            /// The AUX mode. Must be one of the following:
             CardAuxSerial::Request& operator()(note::string_view v);
+            /// The AUX mode. Must be one of the following:
             CardAuxSerial::Request& operator=(uint32_t flags);
+            /// The AUX mode. Must be one of the following:
             CardAuxSerial::Request& operator()(uint32_t flags);
             mode_t& add(uint32_t flag);
             mode_t& operator|=(uint32_t flag);
@@ -186,6 +204,7 @@ struct CardAuxSerial {
         struct ms_t : Field<note::json_int_t> {
             using Field<note::json_int_t>::Field;
             using Field<note::json_int_t>::operator=;
+            /// The delay in milliseconds before sending a buffer of `max` size.
             CardAuxSerial::Request& operator()(note::json_int_t v);
         } ms{};
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
@@ -200,6 +219,11 @@ struct CardAuxSerial {
         struct rate_t : Field<note::json_int_t> {
             using Field<note::json_int_t>::Field;
             using Field<note::json_int_t>::operator=;
+            /// The baud rate or speed at which information is transmitted over
+            /// AUX serial. The default is `115200` unless using GPS, in which
+            /// case the default is `9600`.
+            ///
+            /// @since{4.1.1}
             CardAuxSerial::Request& operator()(note::json_int_t v);
         } rate{};
 #endif
@@ -210,16 +234,23 @@ struct CardAuxSerial {
         auto& signals() { mode.signals(); return *this; }
         auto& accel() { mode.accel(); return *this; }
 #if NOTE_EXTRAS
+        /// Add an arbitrary key/value pair to the request, beyond the typed fields
+        /// declared above. Useful for fields the schema doesn't yet model.
+        /// Capacity is bounded by NOTE_EXTRAS_MAX; excess pairs are silently dropped.
         template<typename T>
         auto& extra(note::string_view k_, T v_) {
             if (extras_count_ < NOTE_EXTRAS_MAX)
                 extras_[extras_count_++] = {k_, note::DynValue{v_}};
             return *this;
         }
+        /// String-literal overload of extra().
         auto& extra(note::string_view k_, const char* v_) {
             return extra(k_, note::string_view{v_});
         }
 
+        /// Index-style access to fields by wire name. Returns a DynField proxy
+        /// usable for assignment; unknown keys are added as extras (subject to
+        /// NOTE_EXTRAS_MAX). Prefer the typed setters above when possible.
         note::DynField operator[](note::string_view k_) {
             if (k_ == "duration") return note::dyn_field_for(duration);
             if (k_ == "limit") return note::dyn_field_for(limit);
@@ -355,6 +386,7 @@ struct CardAuxSerial {
             std::unique_ptr<JsonReader> reader_;
 #endif
         };
+        private:
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
         static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
@@ -366,10 +398,17 @@ struct CardAuxSerial {
 #pragma GCC diagnostic pop
         static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);
         static const ::note::FieldDesc* field_descs_ptr() { return field_descs_table_; }
+        public:
 
 #if NOTE_SINGLETON
+        private:
         /// Singleton generic execute — shared thunk with body factory params.
         static inline Result<void>(*execute_generic_fn_)(void*, ::note::string_view, BuildFn, void*, void*, const ::note::FieldDesc*, uint8_t, ::note::detail::NcErrorCapture&, bool&, void*, ::note::BodyHandlerFactory, ::note::Safety);
+        public:
+        /// Send this request to the Notecard and wait for a response.
+        /// Returns an ApiResult<Response> — boolean-convertible to true on success;
+        /// dereference (or use member-of-pointer ->) to read response fields,
+        /// or call .error() to inspect the ErrorInfo on failure.
         ApiResult<Response> execute() const {
             auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
             BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
@@ -382,12 +421,18 @@ struct CardAuxSerial {
             if (exhausted_) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Overflow, ::note::Cause::Unspecified, NOTE_ERR("arena exhausted")});
             return ApiResult<Response>(std::move(rsp_));
         }
+        private:
         static inline Result<void>(*send_fn_)(void*, BuildFn, void*);
+        public:
 #else
         ApiResult<Response>(*execute_fn_)(void*, const CardAuxSerial::Request&) = nullptr;
         Result<void>(*send_fn_)(void*, BuildFn, void*) = nullptr;
+        /// Send this request to the Notecard and wait for a response.
         auto execute() const { return execute_fn_(nc_, *this); }
 #endif
+        /// Send this request as a fire-and-forget command (cmd) — the Notecard
+        /// processes it without sending a response. Lower power and bandwidth
+        /// than execute() when you don't need the result.
         Result<void> command() const {
             auto build_ = [&](JsonBuilder& b_) {
                 b_.add("cmd", notecard_request);
@@ -421,6 +466,7 @@ struct CardAuxSerial {
             n_out = sizeof(table_) / sizeof(table_[0]);
             return table_;
         }
+        private:
         void build(JsonBuilder& b) const {
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
 #endif
@@ -435,6 +481,7 @@ struct CardAuxSerial {
 #endif
         }
 #pragma GCC diagnostic pop
+        public:
 
 
 #ifdef ARDUINO
@@ -480,6 +527,17 @@ struct CardAuxSerial {
         }
 #endif
 
+        private:
+        friend class ::note::Notecard;
+        template<typename> friend class ::note::StaticNotecard;
+        template<typename, typename> friend struct ::note::detail::has_field_descs;
+#if NOTE_NO_POLYMORPHIC || __cplusplus < 202002L
+        template<typename> friend class ::note::Api;
+#else
+        template<typename, typename> friend class ::note::Api;
+#endif
+        public:
+
     };
 
     /// Enable AUX serial notifications. Combine flags to select which
@@ -515,6 +573,8 @@ struct CardAuxSerial {
         struct duration_t : Field<note::json_int_t> {
             using Field<note::json_int_t>::Field;
             using Field<note::json_int_t>::operator=;
+            /// If using `"mode": "accel"`, specify a sampling duration for the
+            /// Notecard accelerometer.
             CardAuxSerial::Notify& operator()(note::json_int_t v);
         } duration{};
         /// The maximum amount of data, in bytes, that can be sent in a single
@@ -527,6 +587,13 @@ struct CardAuxSerial {
         struct max_t : Field<note::json_int_t> {
             using Field<note::json_int_t>::Field;
             using Field<note::json_int_t>::operator=;
+            /// The maximum amount of data, in bytes, that can be sent in a
+            /// single transmission before the Notecard pauses to allow the host
+            /// to process incoming data. This value should be set to the size
+            /// of the host's serial receive buffer minus `1`, which represents
+            /// the number of bytes the host can absorb before the sender must
+            /// delay due to the absence of flow control. For example, `note-
+            /// arduino`` uses a buffer size of `(SERIALRXBUFFER_SIZE - 1)`.
             CardAuxSerial::Notify& operator()(note::json_int_t v);
         } max{};
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
@@ -540,6 +607,10 @@ struct CardAuxSerial {
         struct minutes_t : Field<note::json_int_t> {
             using Field<note::json_int_t>::Field;
             using Field<note::json_int_t>::operator=;
+            /// When using `"mode": "notify,dfu"`, specify an interval for
+            /// notifying the host.
+            ///
+            /// @since{5.1.1}
             CardAuxSerial::Notify& operator()(note::json_int_t v);
         } minutes{};
 #endif
@@ -578,8 +649,11 @@ struct CardAuxSerial {
             notifications_t(notifications_t&& o) : Field<note::string_view>(), flags_(o.flags_) { fixup_(o); }
             notifications_t& operator=(notifications_t&& o) { flags_ = o.flags_; fixup_(o); return *this; }
 #endif
+            /// The AUX mode. Must be one of the following:
             CardAuxSerial::Notify& operator()(note::string_view v);
+            /// The AUX mode. Must be one of the following:
             CardAuxSerial::Notify& operator=(uint32_t flags);
+            /// The AUX mode. Must be one of the following:
             CardAuxSerial::Notify& operator()(uint32_t flags);
             notifications_t& add(uint32_t flag);
             notifications_t& operator|=(uint32_t flag);
@@ -617,6 +691,7 @@ struct CardAuxSerial {
         struct ms_t : Field<note::json_int_t> {
             using Field<note::json_int_t>::Field;
             using Field<note::json_int_t>::operator=;
+            /// The delay in milliseconds before sending a buffer of `max` size.
             CardAuxSerial::Notify& operator()(note::json_int_t v);
         } ms{};
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
@@ -631,6 +706,11 @@ struct CardAuxSerial {
         struct rate_t : Field<note::json_int_t> {
             using Field<note::json_int_t>::Field;
             using Field<note::json_int_t>::operator=;
+            /// The baud rate or speed at which information is transmitted over
+            /// AUX serial. The default is `115200` unless using GPS, in which
+            /// case the default is `9600`.
+            ///
+            /// @since{4.1.1}
             CardAuxSerial::Notify& operator()(note::json_int_t v);
         } rate{};
 #endif
@@ -641,16 +721,23 @@ struct CardAuxSerial {
         auto& signals() { notifications.signals(); return *this; }
         auto& accel() { notifications.accel(); return *this; }
 #if NOTE_EXTRAS
+        /// Add an arbitrary key/value pair to the request, beyond the typed fields
+        /// declared above. Useful for fields the schema doesn't yet model.
+        /// Capacity is bounded by NOTE_EXTRAS_MAX; excess pairs are silently dropped.
         template<typename T>
         auto& extra(note::string_view k_, T v_) {
             if (extras_count_ < NOTE_EXTRAS_MAX)
                 extras_[extras_count_++] = {k_, note::DynValue{v_}};
             return *this;
         }
+        /// String-literal overload of extra().
         auto& extra(note::string_view k_, const char* v_) {
             return extra(k_, note::string_view{v_});
         }
 
+        /// Index-style access to fields by wire name. Returns a DynField proxy
+        /// usable for assignment; unknown keys are added as extras (subject to
+        /// NOTE_EXTRAS_MAX). Prefer the typed setters above when possible.
         note::DynField operator[](note::string_view k_) {
             if (k_ == "duration") return note::dyn_field_for(duration);
             if (k_ == "max") return note::dyn_field_for(max);
@@ -677,8 +764,13 @@ struct CardAuxSerial {
         using Response = void;
 
 #if NOTE_SINGLETON
+        private:
         /// Singleton void execute — shared thunk, no per-type instantiation.
         static inline Result<void>(*execute_void_fn_)(void*, ::note::string_view, BuildFn, void*, ::note::detail::NcErrorCapture&, ::note::Safety);
+        public:
+        /// Send this request to the Notecard and wait for a response.
+        /// Returns an ApiResult<void> — boolean-convertible to true on success;
+        /// call .error() to inspect the ErrorInfo on failure.
         ApiResult<void> execute() const {
             auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
             BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
@@ -688,12 +780,18 @@ struct CardAuxSerial {
             if (!nc_err_.empty()) return ApiResult<void>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
             return ApiResult<void>{};
         }
+        private:
         static inline Result<void>(*send_fn_)(void*, BuildFn, void*);
+        public:
 #else
         ApiResult<Response>(*execute_fn_)(void*, const CardAuxSerial::Notify&) = nullptr;
         Result<void>(*send_fn_)(void*, BuildFn, void*) = nullptr;
+        /// Send this request to the Notecard and wait for a response.
         auto execute() const { return execute_fn_(nc_, *this); }
 #endif
+        /// Send this request as a fire-and-forget command (cmd) — the Notecard
+        /// processes it without sending a response. Lower power and bandwidth
+        /// than execute() when you don't need the result.
         Result<void> command() const {
             auto build_ = [&](JsonBuilder& b_) {
                 b_.add("cmd", notecard_request);
@@ -725,6 +823,7 @@ struct CardAuxSerial {
             n_out = sizeof(table_) / sizeof(table_[0]);
             return table_;
         }
+        private:
         void build(JsonBuilder& b) const {
 #if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
 #endif
@@ -747,6 +846,7 @@ struct CardAuxSerial {
 #endif
         }
 #pragma GCC diagnostic pop
+        public:
 
 
 #ifdef ARDUINO
@@ -788,6 +888,17 @@ struct CardAuxSerial {
         }
 #endif
 
+        private:
+        friend class ::note::Notecard;
+        template<typename> friend class ::note::StaticNotecard;
+        template<typename, typename> friend struct ::note::detail::has_field_descs;
+#if NOTE_NO_POLYMORPHIC || __cplusplus < 202002L
+        template<typename> friend class ::note::Api;
+#else
+        template<typename, typename> friend class ::note::Api;
+#endif
+        public:
+
     };
 
     /// Configure AUX serial for external GPS/GNSS module.
@@ -819,6 +930,8 @@ struct CardAuxSerial {
         struct limit_t : Field<bool> {
             using Field<bool>::Field;
             using Field<bool>::operator=;
+            /// If `true`, along with `"mode":"gps"` the Notecard will disable
+            /// concurrent modem use during GPS tracking.
             CardAuxSerial::Gps& operator()(bool v);
         } limit{};
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
@@ -833,22 +946,34 @@ struct CardAuxSerial {
         struct rate_t : Field<note::json_int_t> {
             using Field<note::json_int_t>::Field;
             using Field<note::json_int_t>::operator=;
+            /// The baud rate or speed at which information is transmitted over
+            /// AUX serial. The default is `115200` unless using GPS, in which
+            /// case the default is `9600`.
+            ///
+            /// @since{4.1.1}
             CardAuxSerial::Gps& operator()(note::json_int_t v);
         } rate{};
 #endif
 
 
 #if NOTE_EXTRAS
+        /// Add an arbitrary key/value pair to the request, beyond the typed fields
+        /// declared above. Useful for fields the schema doesn't yet model.
+        /// Capacity is bounded by NOTE_EXTRAS_MAX; excess pairs are silently dropped.
         template<typename T>
         auto& extra(note::string_view k_, T v_) {
             if (extras_count_ < NOTE_EXTRAS_MAX)
                 extras_[extras_count_++] = {k_, note::DynValue{v_}};
             return *this;
         }
+        /// String-literal overload of extra().
         auto& extra(note::string_view k_, const char* v_) {
             return extra(k_, note::string_view{v_});
         }
 
+        /// Index-style access to fields by wire name. Returns a DynField proxy
+        /// usable for assignment; unknown keys are added as extras (subject to
+        /// NOTE_EXTRAS_MAX). Prefer the typed setters above when possible.
         note::DynField operator[](note::string_view k_) {
             if (k_ == "limit") return note::dyn_field_for(limit);
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
@@ -869,8 +994,13 @@ struct CardAuxSerial {
         using Response = void;
 
 #if NOTE_SINGLETON
+        private:
         /// Singleton void execute — shared thunk, no per-type instantiation.
         static inline Result<void>(*execute_void_fn_)(void*, ::note::string_view, BuildFn, void*, ::note::detail::NcErrorCapture&, ::note::Safety);
+        public:
+        /// Send this request to the Notecard and wait for a response.
+        /// Returns an ApiResult<void> — boolean-convertible to true on success;
+        /// call .error() to inspect the ErrorInfo on failure.
         ApiResult<void> execute() const {
             auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
             BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
@@ -880,12 +1010,18 @@ struct CardAuxSerial {
             if (!nc_err_.empty()) return ApiResult<void>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
             return ApiResult<void>{};
         }
+        private:
         static inline Result<void>(*send_fn_)(void*, BuildFn, void*);
+        public:
 #else
         ApiResult<Response>(*execute_fn_)(void*, const CardAuxSerial::Gps&) = nullptr;
         Result<void>(*send_fn_)(void*, BuildFn, void*) = nullptr;
+        /// Send this request to the Notecard and wait for a response.
         auto execute() const { return execute_fn_(nc_, *this); }
 #endif
+        /// Send this request as a fire-and-forget command (cmd) — the Notecard
+        /// processes it without sending a response. Lower power and bandwidth
+        /// than execute() when you don't need the result.
         Result<void> command() const {
             auto build_ = [&](JsonBuilder& b_) {
                 b_.add("cmd", notecard_request);
@@ -912,6 +1048,7 @@ struct CardAuxSerial {
             n_out = sizeof(table_) / sizeof(table_[0]);
             return table_;
         }
+        private:
         void build(JsonBuilder& b) const {
             note::add_flash(b, note::flash(keys_::mode), "gps");
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
@@ -925,6 +1062,7 @@ struct CardAuxSerial {
 #endif
         }
 #pragma GCC diagnostic pop
+        public:
 
 
 #ifdef ARDUINO
@@ -947,6 +1085,17 @@ struct CardAuxSerial {
             return n;
         }
 #endif
+
+        private:
+        friend class ::note::Notecard;
+        template<typename> friend class ::note::StaticNotecard;
+        template<typename, typename> friend struct ::note::detail::has_field_descs;
+#if NOTE_NO_POLYMORPHIC || __cplusplus < 202002L
+        template<typename> friend class ::note::Api;
+#else
+        template<typename, typename> friend class ::note::Api;
+#endif
+        public:
 
     };
 
@@ -985,22 +1134,34 @@ struct CardAuxSerial {
         struct rate_t : Field<note::json_int_t> {
             using Field<note::json_int_t>::Field;
             using Field<note::json_int_t>::operator=;
+            /// The baud rate or speed at which information is transmitted over
+            /// AUX serial. The default is `115200` unless using GPS, in which
+            /// case the default is `9600`.
+            ///
+            /// @since{4.1.1}
             CardAuxSerial::Configure& operator()(note::json_int_t v);
         } rate{};
 #endif
 
 
 #if NOTE_EXTRAS
+        /// Add an arbitrary key/value pair to the request, beyond the typed fields
+        /// declared above. Useful for fields the schema doesn't yet model.
+        /// Capacity is bounded by NOTE_EXTRAS_MAX; excess pairs are silently dropped.
         template<typename T>
         auto& extra(note::string_view k_, T v_) {
             if (extras_count_ < NOTE_EXTRAS_MAX)
                 extras_[extras_count_++] = {k_, note::DynValue{v_}};
             return *this;
         }
+        /// String-literal overload of extra().
         auto& extra(note::string_view k_, const char* v_) {
             return extra(k_, note::string_view{v_});
         }
 
+        /// Index-style access to fields by wire name. Returns a DynField proxy
+        /// usable for assignment; unknown keys are added as extras (subject to
+        /// NOTE_EXTRAS_MAX). Prefer the typed setters above when possible.
         note::DynField operator[](note::string_view k_) {
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
             if (k_ == "rate") return note::dyn_field_for(rate);
@@ -1020,8 +1181,13 @@ struct CardAuxSerial {
         using Response = void;
 
 #if NOTE_SINGLETON
+        private:
         /// Singleton void execute — shared thunk, no per-type instantiation.
         static inline Result<void>(*execute_void_fn_)(void*, ::note::string_view, BuildFn, void*, ::note::detail::NcErrorCapture&, ::note::Safety);
+        public:
+        /// Send this request to the Notecard and wait for a response.
+        /// Returns an ApiResult<void> — boolean-convertible to true on success;
+        /// call .error() to inspect the ErrorInfo on failure.
         ApiResult<void> execute() const {
             auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
             BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
@@ -1031,12 +1197,18 @@ struct CardAuxSerial {
             if (!nc_err_.empty()) return ApiResult<void>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
             return ApiResult<void>{};
         }
+        private:
         static inline Result<void>(*send_fn_)(void*, BuildFn, void*);
+        public:
 #else
         ApiResult<Response>(*execute_fn_)(void*, const CardAuxSerial::Configure&) = nullptr;
         Result<void>(*send_fn_)(void*, BuildFn, void*) = nullptr;
+        /// Send this request to the Notecard and wait for a response.
         auto execute() const { return execute_fn_(nc_, *this); }
 #endif
+        /// Send this request as a fire-and-forget command (cmd) — the Notecard
+        /// processes it without sending a response. Lower power and bandwidth
+        /// than execute() when you don't need the result.
         Result<void> command() const {
             auto build_ = [&](JsonBuilder& b_) {
                 b_.add("cmd", notecard_request);
@@ -1062,6 +1234,7 @@ struct CardAuxSerial {
             n_out = sizeof(table_) / sizeof(table_[0]);
             return table_;
         }
+        private:
         void build(JsonBuilder& b) const {
             note::add_flash(b, note::flash(keys_::mode), "req");
 #if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
@@ -1075,6 +1248,7 @@ struct CardAuxSerial {
 #endif
         }
 #pragma GCC diagnostic pop
+        public:
 
 
 #ifdef ARDUINO
@@ -1093,6 +1267,17 @@ struct CardAuxSerial {
             return n;
         }
 #endif
+
+        private:
+        friend class ::note::Notecard;
+        template<typename> friend class ::note::StaticNotecard;
+        template<typename, typename> friend struct ::note::detail::has_field_descs;
+#if NOTE_NO_POLYMORPHIC || __cplusplus < 202002L
+        template<typename> friend class ::note::Api;
+#else
+        template<typename, typename> friend class ::note::Api;
+#endif
+        public:
 
     };
 
@@ -1120,16 +1305,23 @@ struct CardAuxSerial {
 
 
 #if NOTE_EXTRAS
+        /// Add an arbitrary key/value pair to the request, beyond the typed fields
+        /// declared above. Useful for fields the schema doesn't yet model.
+        /// Capacity is bounded by NOTE_EXTRAS_MAX; excess pairs are silently dropped.
         template<typename T>
         auto& extra(note::string_view k_, T v_) {
             if (extras_count_ < NOTE_EXTRAS_MAX)
                 extras_[extras_count_++] = {k_, note::DynValue{v_}};
             return *this;
         }
+        /// String-literal overload of extra().
         auto& extra(note::string_view k_, const char* v_) {
             return extra(k_, note::string_view{v_});
         }
 
+        /// Index-style access to fields by wire name. Returns a DynField proxy
+        /// usable for assignment; unknown keys are added as extras (subject to
+        /// NOTE_EXTRAS_MAX). Prefer the typed setters above when possible.
         note::DynField operator[](note::string_view k_) {
             if (extras_count_ < NOTE_EXTRAS_MAX) {
                 auto& slot = extras_[extras_count_++];
@@ -1146,8 +1338,13 @@ struct CardAuxSerial {
         using Response = void;
 
 #if NOTE_SINGLETON
+        private:
         /// Singleton void execute — shared thunk, no per-type instantiation.
         static inline Result<void>(*execute_void_fn_)(void*, ::note::string_view, BuildFn, void*, ::note::detail::NcErrorCapture&, ::note::Safety);
+        public:
+        /// Send this request to the Notecard and wait for a response.
+        /// Returns an ApiResult<void> — boolean-convertible to true on success;
+        /// call .error() to inspect the ErrorInfo on failure.
         ApiResult<void> execute() const {
             auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
             BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
@@ -1157,12 +1354,18 @@ struct CardAuxSerial {
             if (!nc_err_.empty()) return ApiResult<void>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
             return ApiResult<void>{};
         }
+        private:
         static inline Result<void>(*send_fn_)(void*, BuildFn, void*);
+        public:
 #else
         ApiResult<Response>(*execute_fn_)(void*, const CardAuxSerial::Off&) = nullptr;
         Result<void>(*send_fn_)(void*, BuildFn, void*) = nullptr;
+        /// Send this request to the Notecard and wait for a response.
         auto execute() const { return execute_fn_(nc_, *this); }
 #endif
+        /// Send this request as a fire-and-forget command (cmd) — the Notecard
+        /// processes it without sending a response. Lower power and bandwidth
+        /// than execute() when you don't need the result.
         Result<void> command() const {
             auto build_ = [&](JsonBuilder& b_) {
                 b_.add("cmd", notecard_request);
@@ -1174,6 +1377,7 @@ struct CardAuxSerial {
             return send_fn_(nc_, fn_, &build_);
         }
 
+        private:
         void build(JsonBuilder& b) const {
             note::add_flash(b, note::flash(keys_::mode), "-");
 #if NOTE_EXTRAS
@@ -1182,6 +1386,7 @@ struct CardAuxSerial {
                            extras_[i_].value);
 #endif
         }
+        public:
 
 
 #ifdef ARDUINO
@@ -1194,6 +1399,17 @@ struct CardAuxSerial {
             return n;
         }
 #endif
+
+        private:
+        friend class ::note::Notecard;
+        template<typename> friend class ::note::StaticNotecard;
+        template<typename, typename> friend struct ::note::detail::has_field_descs;
+#if NOTE_NO_POLYMORPHIC || __cplusplus < 202002L
+        template<typename> friend class ::note::Api;
+#else
+        template<typename, typename> friend class ::note::Api;
+#endif
+        public:
 
     };
 };

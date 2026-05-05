@@ -13,6 +13,15 @@
 ///
 ///       nc.hub.set().product("com.example.app").execute();
 ///   }
+///
+/// I2C HAL is auto-included when the toolchain provides <Wire.h>. Define
+/// NOTE_ARDUINO_NO_WIRE before this header to suppress, useful when:
+///   - The Wire global is owned by another library and you want to
+///     guarantee note-cpp never references it.
+///   - You're auditing flash-byte usage on AVR and want a source-level
+///     assertion that no Wire-related code can be linked.
+/// Most users shouldn't need to define it — link-time GC drops unused
+/// I2C overloads automatically.
 
 #include <note/note_config.hpp>
 #include <note/allocator.hpp>
@@ -21,7 +30,11 @@
 #include <note/protocol.hpp>
 #include <note/arduino/debug.hpp>
 #include <note/arduino/serial.hpp>
+
+#if __has_include(<Wire.h>) && !defined(NOTE_ARDUINO_NO_WIRE)
 #include <note/arduino/i2c.hpp>
+#define NOTE_ARDUINO_HAS_WIRE 1
+#endif
 
 #include <memory>
 
@@ -76,6 +89,7 @@ public:
         Base::begin(*serial_streaming_, alloc);
     }
 
+#if NOTE_ARDUINO_HAS_WIRE
     /// Begin with I2C transport (default address). HAL calls Wire.begin()
     /// with no pin args. Use this on devkits where Wire's default pins
     /// are already correct.
@@ -147,6 +161,7 @@ public:
     void begin(TwoWire& wire, ExternalBus tag, uint8_t address, Allocator alloc) {
         begin_i2c_external(wire, tag, address, alloc);
     }
+#endif // NOTE_ARDUINO_HAS_WIRE
 
 #if !NOTE_NO_BUFFERED
     // ── Buffered begin() — `Response::body()` returns a JsonReader* ───────
@@ -171,6 +186,7 @@ public:
         Base::begin(backend, *serial_streaming_);
     }
 
+#if NOTE_ARDUINO_HAS_WIRE
     /// Begin with I2C transport + JsonBackend (default pins).
     void begin(TwoWire& wire, JsonBackend& backend) {
         i2c_hal_ = std::make_unique<I2cHal>(wire);
@@ -188,6 +204,7 @@ public:
         i2c_hal_ = std::make_unique<I2cHal>(wire, tag);
         begin_buffered_finish(backend);
     }
+#endif // NOTE_ARDUINO_HAS_WIRE
 #endif // !NOTE_NO_BUFFERED
 
     /// Enable debug output to an Arduino Print (e.g. Serial).
@@ -203,6 +220,7 @@ public:
     }
 
 private:
+#if NOTE_ARDUINO_HAS_WIRE
     void begin_i2c(TwoWire& wire, uint8_t address, Allocator alloc = {}) {
         i2c_hal_ = std::make_unique<I2cHal>(wire, address);
         begin_i2c_finish(alloc);
@@ -233,13 +251,16 @@ private:
         Base::begin(backend, *i2c_streaming_);
     }
 #endif
+#endif // NOTE_ARDUINO_HAS_WIRE
 
     std::unique_ptr<link::SerialHal> serial_hal_;
     std::unique_ptr<link::SerialFramer<>> serial_hal_transport_;
     std::unique_ptr<Protocol> serial_streaming_;
+#if NOTE_ARDUINO_HAS_WIRE
     std::unique_ptr<I2cHal> i2c_hal_;
     std::unique_ptr<link::I2cFramer<>> i2c_hal_transport_;
     std::unique_ptr<Protocol> i2c_streaming_;
+#endif
 };
 
 #if __cplusplus >= 202002L

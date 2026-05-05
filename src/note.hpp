@@ -13,12 +13,28 @@
 
 #include "note/notecard.hpp"
 #include "note/notecard_api.hpp"
+#include "note/static_notecard.hpp"
 #include "note/api.hpp"
 #include "note/body.hpp"
+#include "note/json_buf.hpp"
+#include "note/progmem.hpp"
+#include "note/request_set.hpp"
 #include "note/units.hpp"
 
 #ifdef ARDUINO
+// Always pull in the Arduino serial HAL + transport-stack helpers —
+// these are the lightweight pieces that NOTE_MINIMAL builds (AVR-class)
+// consume directly via `StaticNotecard<arduino::SerialTransportStack<>>`.
+// On non-MINIMAL builds, `<note/arduino.hpp>` re-includes them and
+// adds the `note::arduino::Notecard` wrapper class with
+// `begin(Serial, ...)` helpers; that wrapper depends on
+// `unique_ptr<JsonBackend>`, polymorphic transport, etc., most of which
+// NOTE_MINIMAL strips, so we skip the wrapper there.
+#include "note/arduino/serial.hpp"
+#include "note/arduino/begin.hpp"
+#if !NOTE_MINIMAL
 #include "note/arduino.hpp"
+#endif
 #endif
 
 // ── Default namespace imports ────────────────────────────────────────────────
@@ -58,12 +74,19 @@
 // `note::Notecard` (the transport-agnostic host class) and make the
 // unqualified name ambiguous. Instead we expose the handful of names
 // Arduino sketches commonly use; qualify the rest (`note::JsonBuf` etc.).
+//
+// `note::arduino::Notecard` is gated out of NOTE_MINIMAL builds (see
+// the include block above), so the alias is similarly conditional.
+// Such builds construct a `StaticNotecard<...>` directly and don't
+// need the alias.
+#if !NOTE_MINIMAL
 #if __cplusplus >= 202002L
 using Notecard = note::arduino::Notecard<>;
 using note::template_of;
 #else
 using Notecard = note::arduino::Notecard;
 #endif
+#endif // !NOTE_MINIMAL
 using note::printable;
 using note::body;
 #else

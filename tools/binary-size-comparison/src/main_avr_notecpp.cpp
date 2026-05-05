@@ -17,19 +17,16 @@
 #define API_STYLE 1
 #endif
 
-// Targeted includes — note.hpp pulls in arduino.hpp which unconditionally
-// includes Wire.h (I2C). This serial-only app doesn't need Wire, and on AVR
-// it adds unwanted flash/RAM. Fix: split arduino.hpp so I2C is opt-in.
-#include <note/static_notecard.hpp>
-#include <note/api.hpp>
-#include <note/request_set.hpp>
-#include <note/arduino/begin.hpp>
-#include <note/json_buf.hpp>
+// Serial-only AVR app — opt out of Wire.h to keep flash budget tight.
+// Without this, <note/arduino.hpp> auto-includes <Wire.h> via __has_include.
+// Link-time GC drops unused I2C overloads anyway, but the source-level
+// suppression gives a hard guarantee for byte-budget tracking.
+#define NOTE_ARDUINO_NO_WIRE
+#include <note.hpp>
 #if API_STYLE == 3
 #include <note/json_sax.hpp>  // JsonSink, parse_int, parse_double
 #elif API_STYLE == 4
 #include <note/json_view.hpp> // JsonView (no SAX parser)
-#include <note/progmem.hpp>   // FlashString / note::flash
 #endif
 
 // K(s) — "scan key" helper. With USE_FLASH_KEYS=1, uses F(s) so the
@@ -83,6 +80,7 @@ void setup() {
 #if defined(ARDUINO_AVR_MEGA2560)
     Serial.begin(115200);  // debug console on Mega (Notecard is on Serial1)
 #endif
+
 #if API_STYLE == 1
     api.hub.set()
         .product("com.example.size-test")
@@ -93,7 +91,7 @@ void setup() {
     api.note.templates().define("sensors.qo")
         .body(note::body([](note::JsonBuilder& b) {
             b.add("temperature", 14.1);
-            b.add("humidity", int32_t{1});
+            b.add("humidity", 1);
         }))
         .execute();
 #elif API_STYLE == 2
@@ -109,7 +107,7 @@ void setup() {
         req.file = "sensors.qo";
         req.body(note::body([](note::JsonBuilder& b) {
             b.add("temperature", 14.1);
-            b.add("humidity", int32_t{1});
+            b.add("humidity", 1);
         }));
         nc.execute(req);
     }
@@ -132,7 +130,7 @@ void setup() {
         req.add("file", "sensors.qo");
         req.begin_object("body");
             req.add("temperature", 14.1);
-            req.add("humidity", int32_t{1});
+            req.add("humidity", 1);
         req.end_object();
         req.close();
         char rsp[128];

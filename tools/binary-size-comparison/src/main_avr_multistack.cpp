@@ -23,11 +23,9 @@
 
 #ifdef USE_NOTECPP_MULTISTACK
 
-#include <note/static_notecard.hpp>
-#include <note/api.hpp>
-#include <note/request_set.hpp>
-#include <note/arduino/begin.hpp>
-#include <note/json_buf.hpp>
+// Serial-only AVR app — see main_avr_notecpp.cpp for the rationale.
+#define NOTE_ARDUINO_NO_WIRE
+#include <note.hpp>
 
 struct Readings {
     float temperature;
@@ -85,7 +83,7 @@ static void workload_a() {
     api_a.note.templates().define("sensors.qo")
         .body(note::body([](note::JsonBuilder& b) {
             b.add("temperature", 14.1);
-            b.add("humidity", int32_t{1});
+            b.add("humidity", 1);
         }))
         .execute();
     auto t = api_a.card.temp().read().execute();
@@ -102,7 +100,7 @@ static void workload_b() {
     api_b.note.templates().define("sensors.qo")
         .body(note::body([](note::JsonBuilder& b) {
             b.add("temperature", 14.1);
-            b.add("humidity", int32_t{1});
+            b.add("humidity", 1);
         }))
         .execute();
     auto t = api_b.card.temp().read().execute();

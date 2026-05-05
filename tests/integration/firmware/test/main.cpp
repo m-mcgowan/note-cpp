@@ -46,8 +46,8 @@ TwoWire& notecardWire() {
     static TwoWire wire(0);
     return wire;
 }
-static Esp32I2cHal& i2c_hal() {
-    static Esp32I2cHal hal{notecardWire()};
+static NotecardI2cHal& i2c_hal() {
+    static NotecardI2cHal hal{notecardWire(), NOTECARD_I2C_SDA, NOTECARD_I2C_SCL};
     return hal;
 }
 static note::link::I2cFramer<>& i2c_transport() {

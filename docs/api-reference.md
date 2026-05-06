@@ -265,9 +265,7 @@ This endpoint has multiple intents:
 | `.off` | `bool` | no | When `true`, completely disables ATTN processing and sets the pin OFF. This... |
 | `.on` | `bool` | no | When `true`, enables ATTN processing. This setting is retained across device... |
 | `.payload` | `note::string_view` | no | When using `sleep` mode, a payload of data from the host that the Notecard... |
-| `.seconds` | `note::json_int_t` | no | To set an ATTN timeout when arming, or when using `sleep`.
-
-_**NOTE:** When... |
+| `.seconds` | `note::json_int_t` | no | To set an ATTN timeout when arming, or when using `sleep`.  NOTE: When the... |
 | `.start` | `bool` | no | When using `sleep` mode and the host has reawakened, request the Notecard to... |
 | `.verify` | `bool` | no | When `true`, returns the current attention mode configuration, if any. |
 
@@ -299,9 +297,7 @@ _**NOTE:** When... |
 | `.files` | `note::string_view` | no | A list of [Notefiles](https://dev.blues.io/api-reference/glossary/#notefile)... |
 | `.triggers` | `note::string_view` | no | A comma-separated list of one or more of the following keywords. Some... |
 | `.on` | `bool` | no | When `true`, enables ATTN processing. This setting is retained across device... |
-| `.seconds` | `note::json_int_t` | no | To set an ATTN timeout when arming, or when using `sleep`.
-
-_**NOTE:** When... |
+| `.seconds` | `note::json_int_t` | no | To set an ATTN timeout when arming, or when using `sleep`.  NOTE: When the... |
 
 **Response fields:**
 
@@ -327,9 +323,7 @@ _**NOTE:** When... |
 | `.files` | `note::string_view` | no | A list of [Notefiles](https://dev.blues.io/api-reference/glossary/#notefile)... |
 | `.triggers` | `note::string_view` | no | A comma-separated list of one or more of the following keywords. Some... |
 | `.on` | `bool` | no | When `true`, enables ATTN processing. This setting is retained across device... |
-| `.seconds` | `note::json_int_t` | no | To set an ATTN timeout when arming, or when using `sleep`.
-
-_**NOTE:** When... |
+| `.seconds` | `note::json_int_t` | no | To set an ATTN timeout when arming, or when using `sleep`.  NOTE: When the... |
 
 **Response fields:**
 
@@ -352,9 +346,7 @@ _**NOTE:** When... |
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `.seconds` | `note::json_int_t` | no | To set an ATTN timeout when arming, or when using `sleep`.
-
-_**NOTE:** When... |
+| `.seconds` | `note::json_int_t` | no | To set an ATTN timeout when arming, or when using `sleep`.  NOTE: When the... |
 
 
 
@@ -373,9 +365,7 @@ _**NOTE:** When... |
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `.payload` | `note::string_view` | no | When using `sleep` mode, a payload of data from the host that the Notecard... |
-| `.seconds` | `note::json_int_t` | no | To set an ATTN timeout when arming, or when using `sleep`.
-
-_**NOTE:** When... |
+| `.seconds` | `note::json_int_t` | no | To set an ATTN timeout when arming, or when using `sleep`.  NOTE: When the... |
 
 
 
@@ -631,8 +621,7 @@ This endpoint has multiple intents:
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `.cobs` | `note::json_int_t` | The size of COBS-encoded data stored in the reserved area (without the trailing 
-). |
+| `.cobs` | `note::json_int_t` | The size of COBS-encoded data stored in the reserved area (without the trailing  ). |
 | `.connected` | `bool` | Returns true if the Notecard is connected to the network. |
 | `.err` | `note::string_view` | If present, a string describing the error that occurred during transmission. |
 | `.length` | `note::json_int_t` | The amount of unencoded data currently stored (in bytes). |
@@ -660,8 +649,7 @@ This endpoint has multiple intents:
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `.cobs` | `note::json_int_t` | The size of COBS-encoded data stored in the reserved area (without the trailing 
-). |
+| `.cobs` | `note::json_int_t` | The size of COBS-encoded data stored in the reserved area (without the trailing  ). |
 | `.connected` | `bool` | Returns true if the Notecard is connected to the network. |
 | `.err` | `note::string_view` | If present, a string describing the error that occurred during transmission. |
 | `.length` | `note::json_int_t` | The amount of unencoded data currently stored (in bytes). |
@@ -734,14 +722,14 @@ This endpoint has multiple intents:
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `.mode` | `note::string_view` | no | The `AUX_CHARGING` mode. |
+| `.mode` | `note::string_view` | no | The `AUXCHARGING` mode. |
 
 **Response fields:**
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `.charging` | `bool` | Will display `true` when in `AUX_CHARGING` `"charging"` mode. |
-| `.mode` | `note::string_view` | The current `AUX_CHARGING` `mode`, or `off` if not set. |
+| `.charging` | `bool` | Will display `true` when in `AUXCHARGING` `"charging"` mode. |
+| `.mode` | `note::string_view` | The current `AUXCHARGING` `mode`, or `off` if not set. |
 
 
 ### card.contact 
@@ -885,9 +873,7 @@ This endpoint has multiple intents:
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `.mode` | `note::string_view` | no | Used to specify the color of the LED to turn on or off.
-
-**Note:** Notecard... |
+| `.mode` | `note::string_view` | no | Used to specify the color of the LED to turn on or off.  Note: Notecard LoRa... |
 | `.off` | `bool` | no | Set to `true` to turn the specified LED or NeoPixel off. |
 | `.on` | `bool` | no | Set to `true` to turn the specified LED or NeoPixel on. |
 
@@ -1137,10 +1123,10 @@ This endpoint has multiple intents:
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `.file` | `note::string_view` | no | The Notefile in which to store tracked location data. See the `_track.qo`... |
+| `.file` | `note::string_view` | no | The Notefile in which to store tracked location data. See the `track.qo`... |
 | `.heartbeat` | `bool` | no | When `start` is `true`, set to `true` to enable tracking even when motion is... |
 | `.hours` | `note::json_int_t` | no | If `heartbeat` is true, add a heartbeat entry at this hourly interval. Use a... |
-| `.payload` | `note::string_view` | no | A base64-encoded binary payload to be included in the next `_track.qo` Note.... |
+| `.payload` | `note::string_view` | no | A base64-encoded binary payload to be included in the next `track.qo` Note.... |
 | `.start` | `bool` | no | Set to `true` to start Notefile tracking. |
 | `.stop` | `bool` | no | Set to `true` to stop Notefile tracking. |
 | `.sync` | `bool` | no | Set to `true` to perform an immediate sync to the Notehub each time a new... |
@@ -1265,9 +1251,9 @@ This endpoint has multiple intents:
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `.count` | `note::json_int_t` | no | The number of most recent motion buckets to examine. |
-| `.file` | `note::string_view` | no | The Notefile to use for motion capture Notes. See the [`_motion.qo`... |
+| `.file` | `note::string_view` | no | The Notefile to use for motion capture Notes. See the [`motion.qo`... |
 | `.minutes` | `note::json_int_t` | no | The maximum period to capture Notes in the Notefile. |
-| `.now` | `bool` | no | Set to `true` to trigger the immediate creation of a `_motion.qo` event if... |
+| `.now` | `bool` | no | Set to `true` to trigger the immediate creation of a `motion.qo` event if... |
 | `.start` | `bool` | no | `true` to start motion capture. |
 | `.stop` | `bool` | no | `true` to stop motion capture. |
 | `.threshold` | `note::json_int_t` | no | The number of buckets that must indicate motion in order to capture. |
@@ -1291,7 +1277,7 @@ This endpoint has multiple intents:
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `.minutes` | `note::json_int_t` | no | How often, in minutes, Notecard should log power consumption in a `_log.qo`... |
+| `.minutes` | `note::json_int_t` | no | How often, in minutes, Notecard should log power consumption in a `log.qo`... |
 | `.reset` | `bool` | no | Set to `true` to reset the power consumption counters back to 0. |
 
 **Response fields:**
@@ -1317,7 +1303,7 @@ This endpoint has multiple intents:
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `.minutes` | `note::json_int_t` | no | How often, in minutes, Notecard should log power consumption in a `_log.qo`... |
+| `.minutes` | `note::json_int_t` | no | How often, in minutes, Notecard should log power consumption in a `log.qo`... |
 | `.reset` | `bool` | no | Set to `true` to reset the power consumption counters back to 0. |
 
 **Response fields:**
@@ -1343,7 +1329,7 @@ This endpoint has multiple intents:
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `.minutes` | `note::json_int_t` | no | How often, in minutes, Notecard should log power consumption in a `_log.qo`... |
+| `.minutes` | `note::json_int_t` | no | How often, in minutes, Notecard should log power consumption in a `log.qo`... |
 | `.reset` | `bool` | no | Set to `true` to reset the power consumption counters back to 0. |
 
 **Response fields:**
@@ -1486,10 +1472,10 @@ This endpoint has multiple intents:
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `.minutes` | `note::json_int_t` | no | If specified, creates a templated `_temp.qo` file that gathers Notecard... |
+| `.minutes` | `note::json_int_t` | no | If specified, creates a templated `temp.qo` file that gathers Notecard... |
 | `.status` | `note::string_view` | no | Overrides `minutes` with a voltage-variable value. For example:... |
 | `.stop` | `bool` | no | If set to `true`, the Notecard will stop logging the temperature value at... |
-| `.sync` | `bool` | no | If set to `true`, the Notecard will immediately sync any pending `_temp.qo`... |
+| `.sync` | `bool` | no | If set to `true`, the Notecard will immediately sync any pending `temp.qo`... |
 
 **Response fields:**
 
@@ -1518,10 +1504,10 @@ This endpoint has multiple intents:
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `.minutes` | `note::json_int_t` | no | If specified, creates a templated `_temp.qo` file that gathers Notecard... |
+| `.minutes` | `note::json_int_t` | no | If specified, creates a templated `temp.qo` file that gathers Notecard... |
 | `.status` | `note::string_view` | no | Overrides `minutes` with a voltage-variable value. For example:... |
 | `.stop` | `bool` | no | If set to `true`, the Notecard will stop logging the temperature value at... |
-| `.sync` | `bool` | no | If set to `true`, the Notecard will immediately sync any pending `_temp.qo`... |
+| `.sync` | `bool` | no | If set to `true`, the Notecard will immediately sync any pending `temp.qo`... |
 
 **Response fields:**
 
@@ -1550,10 +1536,10 @@ This endpoint has multiple intents:
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `.minutes` | `note::json_int_t` | no | If specified, creates a templated `_temp.qo` file that gathers Notecard... |
+| `.minutes` | `note::json_int_t` | no | If specified, creates a templated `temp.qo` file that gathers Notecard... |
 | `.status` | `note::string_view` | no | Overrides `minutes` with a voltage-variable value. For example:... |
 | `.stop` | `bool` | no | If set to `true`, the Notecard will stop logging the temperature value at... |
-| `.sync` | `bool` | no | If set to `true`, the Notecard will immediately sync any pending `_temp.qo`... |
+| `.sync` | `bool` | no | If set to `true`, the Notecard will immediately sync any pending `temp.qo`... |
 
 **Response fields:**
 
@@ -1685,7 +1671,7 @@ This endpoint has multiple intents:
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `.mode` | `note::string_view` | no | The time period to use for statistics. Must be one of: |
-| `.offset` | `note::json_int_t` | no | The number of time periods to look backwards, based on the specified... |
+| `.offset` | `note::json_int_t` | no | The number of time periods to look backwards, based on the specified `mode`.... |
 
 **Response fields:**
 
@@ -1799,9 +1785,7 @@ This endpoint has multiple intents:
 | `.daily` | `double` | Change of moving average in the last 24 hours, if relevant to the time... |
 | `.hours` | `note::json_int_t` | The number of hours used for trend analysis. |
 | `.minutes` | `note::json_int_t` | Represents the Notecard's uptime in minutes. This field is not present when... |
-| `.mode` | `note::string_view` | The current voltage-variable threshold value returned from Notecard.
-
-For... |
+| `.mode` | `note::string_view` | The current voltage-variable threshold value returned from Notecard.  For... |
 | `.monthly` | `double` | Change of moving average in the last 30 days, if relevant to the time period... |
 | `.usb` | `bool` | `true` if the Notecard is connected to USB power. |
 | `.value` | `double` | The current voltage. |
@@ -1846,9 +1830,7 @@ For... |
 | `.daily` | `double` | Change of moving average in the last 24 hours, if relevant to the time... |
 | `.hours` | `note::json_int_t` | The number of hours used for trend analysis. |
 | `.minutes` | `note::json_int_t` | Represents the Notecard's uptime in minutes. This field is not present when... |
-| `.mode` | `note::string_view` | The current voltage-variable threshold value returned from Notecard.
-
-For... |
+| `.mode` | `note::string_view` | The current voltage-variable threshold value returned from Notecard.  For... |
 | `.monthly` | `double` | Change of moving average in the last 30 days, if relevant to the time period... |
 | `.usb` | `bool` | `true` if the Notecard is connected to USB power. |
 | `.value` | `double` | The current voltage. |
@@ -2395,9 +2377,7 @@ This endpoint has multiple intents:
 | `.duration` | `note::json_int_t` | no | When in `continuous` mode, the amount of time, in minutes, of each session... |
 | `.host` | `note::string_view` | no | The URL of the Notehub service. Use `"-"` to reset to the default value. |
 | `.inbound` | `note::json_int_t` | no | The max wait time, in minutes, to sync inbound data from Notehub. Explicit... |
-| `.mode` | `note::string_view` | no | The Notecard's synchronization mode.
-
-**NOTE:** The Notecard must be in... |
+| `.mode` | `note::string_view` | no | The Notecard's synchronization mode.  NOTE: The Notecard must be in... |
 | `.off` | `bool` | no | Set to `true` to manually instruct the Notecard to resume periodic mode... |
 | `.on` | `bool` | no | If in `periodic` mode, used to temporarily switch the Notecard to... |
 | `.outbound` | `note::json_int_t` | no | The max wait time, in minutes, to sync outbound data from the Notecard.... |
@@ -2472,7 +2452,7 @@ This endpoint has multiple intents:
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `.allow` | `bool` | no | Set to `true` to remove the Notecard from certain types of [penalty... |
-| `.in` | `bool` | no | Set to `true` to only sync pending inbound Notefiles. **Required** when... |
+| `.in` | `bool` | no | Set to `true` to only sync pending inbound Notefiles. Required when using... |
 | `.out` | `bool` | no | Set to `true` to only sync pending outbound Notefiles. |
 
 
@@ -2524,17 +2504,15 @@ This endpoint has multiple intents:
 |-------|------|----------|-------------|
 | `.binary` | `bool` | no | If `true`, the Notecard will send all the data in the binary buffer to... |
 | `.body` | `note::string_view` | no | A JSON object to be enqueued. A Note must have either a `body` or a... |
-| `.file` | `note::string_view` | no | The name of the Notefile.
-
-On Notecard LoRa this argument is required. On... |
+| `.file` | `note::string_view` | no | The name of the Notefile.  On Notecard LoRa this argument is required. On... |
 | `.full` | `bool` | no | If set to `true`, and the Note is using a [Notefile... |
 | `.key` | `note::string_view` | no | The name of an environment variable in your Notehub.io project that contains... |
 | `.limit` | `bool` | no | If set to `true`, the Note will not be created if Notecard is in a [penalty... |
 | `.live` | `bool` | no | If `true`, bypasses saving the Note to flash on the Notecard. Required to be... |
 | `.max` | `note::json_int_t` | no | Defines the maximum number of queued Notes permitted in the specified... |
-| `.noteId` | `note::string_view` | no | If the Notefile has a `.db/.dbs/.dbx` extension, specifies a unique Note... |
+| `.noteId` | `note::string_view` | no | If the Notefile has a `.db/.dbs/.dbx` extension, specifies a unique Note ID.... |
 | `.payload` | `note::string_view` | no | A base64-encoded binary payload. A Note must have either a `body` or a... |
-| `.sync` | `bool` | no | Set to `true` to sync immediately. Only applies to **outgoing** Notecard... |
+| `.sync` | `bool` | no | Set to `true` to sync immediately. Only applies to outgoing Notecard... |
 | `.verify` | `bool` | no | If set to `true` and using a templated Notefile, the Notefile will be... |
 
 **Response fields:**

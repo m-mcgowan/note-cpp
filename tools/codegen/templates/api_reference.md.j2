@@ -122,7 +122,7 @@ This endpoint has multiple intents:
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 {% for p in op.properties %}
-| `.{{ p.accessor_name }}` | `{{ p.cpp_type }}` | {% if p.is_required %}yes{% else %}no{% endif %} | {{ p.description | truncate(80) }} |
+| `.{{ p.accessor_name }}` | `{{ p.cpp_type }}` | {% if p.is_required %}yes{% else %}no{% endif %} | {{ p.description | replace("\n", " ") | replace("|", "\\|") | replace("**", "") | replace("_", "") | truncate(80) }} |
 {% endfor %}
 {% endif %}
 
@@ -132,7 +132,7 @@ This endpoint has multiple intents:
 | Field | Type | Description |
 |-------|------|-------------|
 {% for p in op.response.properties %}
-| `.{{ p.accessor_name }}` | `{{ p.cpp_type }}` | {{ p.description | truncate(80) }} |
+| `.{{ p.accessor_name }}` | `{{ p.cpp_type }}` | {{ p.description | replace("\n", " ") | replace("|", "\\|") | replace("**", "") | replace("_", "") | truncate(80) }} |
 {% endfor %}
 {% endif %}
 
@@ -170,7 +170,7 @@ This endpoint has multiple intents:
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 {% for p in op.properties %}
-| `.{{ p.accessor_name }}` | `{{ p.cpp_type }}` | {% if p.is_required %}yes{% else %}no{% endif %} | {{ p.description | truncate(80) }} |
+| `.{{ p.accessor_name }}` | `{{ p.cpp_type }}` | {% if p.is_required %}yes{% else %}no{% endif %} | {{ p.description | replace("\n", " ") | replace("|", "\\|") | replace("**", "") | replace("_", "") | truncate(80) }} |
 {% endfor %}
 {% endif %}
 
@@ -180,7 +180,7 @@ This endpoint has multiple intents:
 | Field | Type | Description |
 |-------|------|-------------|
 {% for p in op.response.properties %}
-| `.{{ p.accessor_name }}` | `{{ p.cpp_type }}` | {{ p.description | truncate(80) }} |
+| `.{{ p.accessor_name }}` | `{{ p.cpp_type }}` | {{ p.description | replace("\n", " ") | replace("|", "\\|") | replace("**", "") | replace("_", "") | truncate(80) }} |
 {% endfor %}
 {% endif %}
 

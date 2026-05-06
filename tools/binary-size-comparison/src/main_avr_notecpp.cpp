@@ -57,11 +57,7 @@ using UsedRequests = note::RequestSet<
     note::api::NoteGet::Read,
     note::api::EnvGet
 >;
-static constexpr size_t kArenaSize = UsedRequests::max_arena_size;
-static_assert(kArenaSize > 0, "arena size must be non-zero");
-
-alignas(4) static char arena_buf[kArenaSize];
-static note::MonotonicArena arena(arena_buf);
+static note::StaticArena<UsedRequests> arena;
 
 using SerialNotecard = note::StaticNotecard<note::arduino::SerialTransportStack<>>;
 #if defined(ARDUINO_AVR_MEGA2560)
@@ -122,7 +118,7 @@ void setup() {
         req.add("outbound", 60);
         req.close();
         char rsp[128];
-        nc.stack().transport.transact_raw(req.view(), rsp, sizeof(rsp), 10000);
+        nc.transact_raw(req, rsp);
     }
     {
         note::JsonBuf<128> req;
@@ -134,14 +130,13 @@ void setup() {
         req.end_object();
         req.close();
         char rsp[128];
-        nc.stack().transport.transact_raw(req.view(), rsp, sizeof(rsp), 10000);
+        nc.transact_raw(req, rsp);
     }
 #endif
 }
 
 void loop() {
     arena.reset();
-
     // Read temperature
 #if API_STYLE == 1
     auto temp = api.card.temp().read().execute();
@@ -157,7 +152,7 @@ void loop() {
         req.add("req", "card.temp");
         req.close();
         char rsp[128];
-        nc.stack().transport.transact_raw(req.view(), rsp, sizeof(rsp), 10000);
+        nc.transact_raw(req, rsp);
     }
 #else   // API_STYLE == 4
     float temperature = 0;
@@ -167,7 +162,7 @@ void loop() {
         req.close();
         char rsp[64];
         temperature = note::JsonView(
-            nc.stack().transport.transact_raw(req.view(), rsp, sizeof(rsp), 10000)
+            nc.transact_raw(req, rsp)
         ).get_float(K("value"));
     }
 #endif
@@ -197,7 +192,7 @@ void loop() {
         req.end_object();
         req.close();
         char rsp[64];
-        nc.stack().transport.transact_raw(req.view(), rsp, sizeof(rsp), 10000);
+        nc.transact_raw(req, rsp);
     }
 #endif
 
@@ -216,7 +211,7 @@ void loop() {
         req.add("req", "card.status");
         req.close();
         char rsp[128];
-        nc.stack().transport.transact_raw(req.view(), rsp, sizeof(rsp), 10000);
+        nc.transact_raw(req, rsp);
     }
 #else   // API_STYLE == 4
     bool connected = false;
@@ -226,7 +221,7 @@ void loop() {
         req.close();
         char rsp[64];
         connected = note::JsonView(
-            nc.stack().transport.transact_raw(req.view(), rsp, sizeof(rsp), 10000)
+            nc.transact_raw(req, rsp)
         ).get_bool(K("connected"));
     }
 #endif
@@ -246,7 +241,7 @@ void loop() {
         req.add("req", "card.voltage");
         req.close();
         char rsp[128];
-        nc.stack().transport.transact_raw(req.view(), rsp, sizeof(rsp), 10000);
+        nc.transact_raw(req, rsp);
     }
 #else   // API_STYLE == 4
     double voltage = 0;
@@ -256,7 +251,7 @@ void loop() {
         req.close();
         char rsp[64];
         voltage = note::JsonView(
-            nc.stack().transport.transact_raw(req.view(), rsp, sizeof(rsp), 10000)
+            nc.transact_raw(req, rsp)
         ).get_double(K("value"));
     }
 #endif
@@ -312,7 +307,7 @@ void loop() {
         req.close();
         char rsp[128];
         auto body = note::JsonView(
-            nc.stack().transport.transact_raw(req.view(), rsp, sizeof(rsp), 10000)
+            nc.transact_raw(req, rsp)
         ).object(K("body"));
         note_body.temperature = body.get_float(K("temperature"));
         note_body.humidity    = static_cast<int32_t>(body.get_int(K("humidity")));
@@ -330,7 +325,7 @@ void loop() {
         req.add("req", "env.get");
         req.close();
         char rsp[256];
-        nc.stack().transport.transact_raw(req.view(), rsp, sizeof(rsp), 10000);
+        nc.transact_raw(req, rsp);
     }
 #endif
 

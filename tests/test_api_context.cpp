@@ -439,58 +439,6 @@ TEST_CASE("Api::web resource group") {
 // Layer 2 convenience aliases
 // ---------------------------------------------------------------------------
 
-TEST_CASE("Api::card Layer 2 aliases") {
-    Harness h;
-    SUBCASE("binaryStatus") {
-        h.api.execute(h.api.card.binaryStatus());
-        REQUIRE(h.last_req.find("card.binary") != std::string::npos);
-    }
-    SUBCASE("binaryClear") {
-        h.api.execute(h.api.card.binaryClear());
-        REQUIRE(h.last_req.find("card.binary") != std::string::npos);
-    }
-    SUBCASE("readContact") {
-        h.api.execute(h.api.card.readContact());
-        REQUIRE(h.last_req.find("card.contact") != std::string::npos);
-    }
-    SUBCASE("readLocationMode") {
-        h.api.execute(h.api.card.readLocationMode());
-        REQUIRE(h.last_req.find("card.location.mode") != std::string::npos);
-    }
-    SUBCASE("resetLocationMode") {
-        h.api.execute(h.api.card.resetLocationMode());
-        REQUIRE(h.last_req.find("card.location.mode") != std::string::npos);
-    }
-    SUBCASE("readPower") {
-        h.api.execute(h.api.card.readPower());
-        REQUIRE(h.last_req.find("card.power") != std::string::npos);
-    }
-    SUBCASE("resetPower") {
-        h.api.execute(h.api.card.resetPower());
-        REQUIRE(h.last_req.find("card.power") != std::string::npos);
-    }
-    SUBCASE("readTemp") {
-        h.api.execute(h.api.card.readTemp());
-        REQUIRE(h.last_req.find("card.temp") != std::string::npos);
-    }
-    SUBCASE("stopTemp") {
-        h.api.execute(h.api.card.stopTemp());
-        REQUIRE(h.last_req.find("card.temp") != std::string::npos);
-    }
-    SUBCASE("readVoltage") {
-        h.api.execute(h.api.card.readVoltage());
-        REQUIRE(h.last_req.find("card.voltage") != std::string::npos);
-    }
-    SUBCASE("readWirelessPenalty") {
-        h.api.execute(h.api.card.readWirelessPenalty());
-        REQUIRE(h.last_req.find("card.wireless.penalty") != std::string::npos);
-    }
-    SUBCASE("resetWirelessPenalty") {
-        h.api.execute(h.api.card.resetWirelessPenalty());
-        REQUIRE(h.last_req.find("card.wireless.penalty") != std::string::npos);
-    }
-}
-
 TEST_CASE("Api::env Layer 2 aliases") {
     Harness h;
     SUBCASE("setDefault") {

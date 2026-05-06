@@ -2129,62 +2129,6 @@ public:
         auto wifi() { return create_<api::CardWifi>(); }
 #endif
 
-
-        // Layer 2 convenience aliases
-        /// View the status of the binary storage area of the Notecard and
-        /// optionally clear any data and related `card.binary` variables. See
-        /// the guide on Sending and Receiving Large Binary Objects for best
-        /// practices when using `card.binary`.
-        auto binaryStatus() { return create_<api::CardBinary::Status>(); }
-        /// View the status of the binary storage area of the Notecard and
-        /// optionally clear any data and related `card.binary` variables. See
-        /// the guide on Sending and Receiving Large Binary Objects for best
-        /// practices when using `card.binary`.
-        auto binaryClear() { return create_<api::CardBinary::Clear>(); }
-        /// Used to set or retrieve information about the Notecard maintainer.
-        /// Once set, this information is synced to Notehub.
-        auto readContact() { return create_<api::CardContact::Get>(); }
-        /// Sets location-related configuration settings. Retrieves the current
-        /// location mode when passed with no argument.
-        auto readLocationMode() { return create_<api::CardLocationMode::Get>(); }
-        /// Sets location-related configuration settings. Retrieves the current
-        /// location mode when passed with no argument.
-        auto resetLocationMode() { return create_<api::CardLocationMode::Remove>(); }
-        /// The `card.power` API is used to configure a connected Mojo device or
-        /// to manually request power consumption readings in firmware.
-        auto readPower() { return create_<api::CardPower::Read>(); }
-        /// The `card.power` API is used to configure a connected Mojo device or
-        /// to manually request power consumption readings in firmware.
-        auto resetPower() { return create_<api::CardPower::Reset>(); }
-        /// Get the current temperature from the Notecard's onboard calibrated
-        /// temperature sensor.
-        ///
-        /// When using a Notecard Cellular or Notecard Cell+WiFi, if you connect
-        /// a BME280 sensor on the I2C bus the Notecard will add `temperature`,
-        /// `pressure`, and `humidity` fields to the response. If you connect an
-        /// ENS210 sensor on the I2C bus the Notecard will add `temperature` and
-        /// `pressure` fields to the response.
-        auto readTemp() { return create_<api::CardTemp::Read>(); }
-        /// Get the current temperature from the Notecard's onboard calibrated
-        /// temperature sensor.
-        ///
-        /// When using a Notecard Cellular or Notecard Cell+WiFi, if you connect
-        /// a BME280 sensor on the I2C bus the Notecard will add `temperature`,
-        /// `pressure`, and `humidity` fields to the response. If you connect an
-        /// ENS210 sensor on the I2C bus the Notecard will add `temperature` and
-        /// `pressure` fields to the response.
-        auto stopTemp() { return create_<api::CardTemp::Stop>(); }
-        /// Provides the current VMODEM_P voltage level on the Notecard, and
-        /// provides information about historical voltage trends. When used with
-        /// the mode argument, configures voltage thresholds based on how the
-        /// device is powered.
-        auto readVoltage() { return create_<api::CardVoltage::Read>(); }
-        /// View the current state of a Notecard Penalty Box, manually remove
-        /// the Notecard from a penalty box, or override penalty box defaults.
-        auto readWirelessPenalty() { return create_<api::CardWirelessPenalty::Check>(); }
-        /// View the current state of a Notecard Penalty Box, manually remove
-        /// the Notecard from a penalty box, or override penalty box defaults.
-        auto resetWirelessPenalty() { return create_<api::CardWirelessPenalty::Clear>(); }
     };
 #if __cplusplus >= 202002L && !NOTE_NO_POLYMORPHIC
     CardGroup<TargetT> card;

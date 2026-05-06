@@ -633,15 +633,29 @@ public:
 {% endif %}
 {% endif %}
 {% endfor %}
+{# Layer 2 convenience aliases — flat shortcuts for variants of polymorphic   #}
+{# endpoints (e.g. readLocationMode → CardLocationMode::Get).                #}
+{#                                                                            #}
+{# Skip *no-param* aliases whose target endpoint has its own factory: those  #}
+{# are pure renames of api.group.target.variant() and add only autocomplete  #}
+{# noise. Keep parameterized aliases (api.note.read("file") for note.get.   #}
+{# Read) — those are useful inline shorthand. Also keep all aliases for      #}
+{# endpoints without a factory (single-op renames like web.remove for       #}
+{# web.delete_), which can't be reached through a nested path anyway.       #}
 {% set ns = namespace(has_aliases=false) %}
 {% for endpoint in group.endpoints %}
-{% if endpoint.aliases %}{% set ns.has_aliases = true %}{% endif %}
+{% for alias in endpoint.aliases %}
+{% set resolved_check = alias.resolve_params(endpoint) %}
+{% if not endpoint.needs_factory or resolved_check %}{% set ns.has_aliases = true %}{% endif %}
+{% endfor %}
 {% endfor %}
 {% if ns.has_aliases %}
 
         // Layer 2 convenience aliases
 {% for endpoint in group.endpoints %}
 {% for alias in endpoint.aliases %}
+{% set resolved_check2 = alias.resolve_params(endpoint) %}
+{% if not endpoint.needs_factory or resolved_check2 %}
 {% set resolved = alias.resolve_params(endpoint) %}
 {% set alias_doc = alias.description if alias.description and alias.description != "Alias for delete()." else endpoint.operations[0].description %}
 {% if resolved %}
@@ -691,6 +705,7 @@ public:
 {{ alias_doc | doc_comment("        ") }}
 {% endif %}
         auto {{ alias.method_name }}() { return create_<{{ alias.qualified_type }}>(); }
+{% endif %}
 {% endif %}
 {% endfor %}
 {% endfor %}

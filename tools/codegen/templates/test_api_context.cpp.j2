@@ -112,8 +112,14 @@ TEST_CASE("Api::{{ group.name }} resource group") {
 
 {% for group in resource_groups %}
 {% set ns = namespace(has_aliases=false) %}
+{# Match the filter in api.hpp.j2: skip no-param aliases for endpoints that  #}
+{# already have their own factory (those are pure renames of the nested      #}
+{# path and aren't emitted on the group). Parameterized aliases stay.        #}
 {% for endpoint in group.endpoints %}
-{% if endpoint.aliases %}{% set ns.has_aliases = true %}{% endif %}
+{% for alias in endpoint.aliases %}
+{% set resolved_check = alias.resolve_params(endpoint) %}
+{% if not endpoint.needs_factory or resolved_check %}{% set ns.has_aliases = true %}{% endif %}
+{% endfor %}
 {% endfor %}
 {% if ns.has_aliases %}
 TEST_CASE("Api::{{ group.name }} Layer 2 aliases") {
@@ -121,6 +127,7 @@ TEST_CASE("Api::{{ group.name }} Layer 2 aliases") {
 {% for endpoint in group.endpoints %}
 {% for alias in endpoint.aliases %}
 {% set resolved = alias.resolve_params(endpoint) %}
+{% if not endpoint.needs_factory or resolved %}
     SUBCASE("{{ alias.method_name }}") {
 {% if resolved %}
         h.api.execute(h.api.{{ group.name }}.{{ alias.method_name }}({% for p in resolved %}{{ p | request_test_value }}{{ ", " if not loop.last }}{% endfor %}));
@@ -129,6 +136,7 @@ TEST_CASE("Api::{{ group.name }} Layer 2 aliases") {
 {% endif %}
         REQUIRE(h.last_req.find("{{ endpoint.wire_name }}") != std::string::npos);
     }
+{% endif %}
 {% endfor %}
 {% endfor %}
 }

@@ -54,15 +54,15 @@ Each variant exposes only the fields the Notecard expects for that operation. Fi
 
 ```cpp
 // Set — lat and lon are available
-api.card.locationMode().set()
+api.card.location.mode.set()
     .mode("fixed").lat(42.565).lon(-70.783)
     .execute();
 
 // Get — no lat/lon fields; this won't compile:
-// api.card.locationMode().get().lat(42.565);  // error: no member named 'lat'
+// api.card.location.mode.get().lat(42.565);  // error: no member named 'lat'
 
 // Delete — same, just resets the mode
-api.card.locationMode().delete_().execute();
+api.card.location.mode.delete_().execute();
 ```
 
 In `note-c`, all three operations go through the same function. Nothing stops you from setting `lat` on a query — it's just ignored, making bugs hard to spot.
@@ -90,15 +90,15 @@ Some endpoints have three behaviors. `card.location.mode`:
 
 ```cpp
 // Query current GPS mode (ReadOnly)
-auto r = api.card.locationMode().get().execute();
+auto r = api.card.location.mode.get().execute();
 
 // Set fixed location — has lat, lon, mode fields (Idempotent)
-api.card.locationMode().set()
+api.card.location.mode.set()
     .mode("fixed")
     .lat(42.565)
     .lon(-70.783)
     .execute();
 
 // Reset to default mode (Destructive)
-api.card.locationMode().delete_().execute();
+api.card.location.mode.delete_().execute();
 ```

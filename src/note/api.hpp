@@ -1622,13 +1622,6 @@ public:
 #else
         CardAuxFactory aux{nc_};
 #endif
-        /// Configure various uses of the AUXTX and AUXRX pins on the Notecard's
-        /// edge connector.
-#if NOTE_SINGLETON
-        CardAuxSerialFactory auxSerial;
-#else
-        CardAuxSerialFactory auxSerial{nc_};
-#endif
         /// View the status of the binary storage area of the Notecard and
         /// optionally clear any data and related `card.binary` variables. See
         /// the guide on Sending and Receiving Large Binary Objects for best
@@ -1653,13 +1646,6 @@ public:
 #else
         CardLocationFactory location{nc_};
 #endif
-        /// Sets location-related configuration settings. Retrieves the current
-        /// location mode when passed with no argument.
-#if NOTE_SINGLETON
-        CardLocationModeFactory locationMode;
-#else
-        CardLocationModeFactory locationMode{nc_};
-#endif
         /// Returns information about the Notecard accelerometer's motion and
         /// orientation. Motion tracking must be enabled first with
         /// `card.motion.mode`. Otherwise, this request will return `{}`.
@@ -1675,13 +1661,6 @@ public:
         CardWirelessFactory wireless;
 #else
         CardWirelessFactory wireless{nc_};
-#endif
-        /// View the current state of a Notecard Penalty Box, manually remove
-        /// the Notecard from a penalty box, or override penalty box defaults.
-#if NOTE_SINGLETON
-        CardWirelessPenaltyFactory wirelessPenalty;
-#else
-        CardWirelessPenaltyFactory wirelessPenalty{nc_};
 #endif
 
         /// Configure hardware notifications from a Notecard to a host MCU.

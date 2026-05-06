@@ -602,9 +602,14 @@ public:
 {% if endpoint.needs_factory and endpoint.has_children %}{% if parent_wires.append(endpoint.wire_name) %}{% endif %}{% endif %}
 {% endfor %}
 
-{# Parent endpoints with factories: emit as members #}
+{# Parent endpoints with factories: emit as members on the group.            #}
+{# Skip endpoints whose parent has its own factory — those are already       #}
+{# reachable as `group.parent.child` (e.g. `api.card.location.mode`), and    #}
+{# emitting them flat too (as `api.card.locationMode`) is a redundancy that  #}
+{# only adds autocomplete noise. is_factory_member itself is too permissive  #}
+{# here because it also covers polymorphic children of parent factories.     #}
 {% for endpoint in group.endpoints %}
-{% if endpoint.is_factory_member %}
+{% if endpoint.is_factory_member and not (endpoint.parent and endpoint.parent.needs_factory) %}
 {{ accessor_doc(endpoint) }}
 #if NOTE_SINGLETON
         {{ endpoint.struct_name }}Factory {{ endpoint.group_method }};

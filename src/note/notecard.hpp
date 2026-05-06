@@ -22,6 +22,19 @@
 
 namespace note {
 
+#if NOTE_SINGLETON
+namespace detail {
+/// Shared NcT* (type-erased to void*) for all `request_traits<T>` under
+/// NOTE_SINGLETON=1. Set by `Api<NcT>::create_<T>()` before each request
+/// dispatch; read by the generated `execute()` / `command()` thunks.
+///
+/// Replaces a per-T `request_traits<T>::nc_` slot — saved (N − 1) ×
+/// sizeof(void*) bytes of BSS in firmware that uses N distinct request
+/// types through the Api groups.
+inline void* api_nc_singleton_ = nullptr;
+} // namespace detail
+#endif
+
 // Forward declarations so generated request structs can grant friendship
 // to dispatch infrastructure that lives in other headers.
 template<typename Stack> class StaticNotecard;

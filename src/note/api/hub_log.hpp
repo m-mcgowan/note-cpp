@@ -224,7 +224,6 @@ struct request_traits<::note::api::HubLog> {
         return table_;
     }
 #if NOTE_SINGLETON
-    static inline void* nc_ = nullptr;
     static inline ::note::Result<void>(*execute_void_fn_)(void*, ::note::string_view, ::note::BuildFn, void*, ::note::detail::NcErrorCapture&, ::note::Safety) = nullptr;
     static inline ::note::Result<void>(*send_fn_)(void*, ::note::BuildFn, void*) = nullptr;
 #endif
@@ -249,7 +248,7 @@ inline ApiResult<void> HubLog::execute() const {
     BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
     ::note::detail::NcErrorCapture nc_err_;
     using meta_ = ::note::detail::request_traits<HubLog>;
-    auto rv_ = meta_::execute_void_fn_(meta_::nc_, notecard_request, fn_, &build_, nc_err_, safety);
+    auto rv_ = meta_::execute_void_fn_(::note::detail::api_nc_singleton_, notecard_request, fn_, &build_, nc_err_, safety);
     if (!rv_) return ::note::Unexpected(rv_.error());
     if (!nc_err_.empty()) return ApiResult<void>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
     return ApiResult<void>{};
@@ -263,7 +262,7 @@ inline Result<void> HubLog::command() const {
         (*static_cast<decltype(build_)*>(p_))(b_);
     };
     using meta_ = ::note::detail::request_traits<HubLog>;
-    return meta_::send_fn_(meta_::nc_, fn_, &build_);
+    return meta_::send_fn_(::note::detail::api_nc_singleton_, fn_, &build_);
 }
 #endif
 

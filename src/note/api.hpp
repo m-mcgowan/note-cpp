@@ -205,7 +205,7 @@ public:
         RequestT r;
 #if NOTE_SINGLETON
         using meta_ = ::note::detail::request_traits<RequestT>;
-        meta_::nc_ = nc_ptr();
+        ::note::detail::api_nc_singleton_ = nc_ptr();
         meta_::execute_fn_ = [](void* p_, const RequestT& req_) {
 #else
         r.nc_ = nc_ptr();
@@ -277,7 +277,7 @@ public:
             T r;
 #if NOTE_SINGLETON
             using meta_ = ::note::detail::request_traits<T>;
-            meta_::nc_ = nc_ptr();
+            ::note::detail::api_nc_singleton_ = nc_ptr();
             if constexpr (std::is_void_v<typename T::Response>) {
                 meta_::execute_void_fn_ = &Api::void_thunk_;
             } else if constexpr (detail::has_field_descs<T>::value) {
@@ -360,7 +360,7 @@ public:
             T r;
 #if NOTE_SINGLETON
             using meta_ = ::note::detail::request_traits<T>;
-            meta_::nc_ = nc_ptr();
+            ::note::detail::api_nc_singleton_ = nc_ptr();
             if constexpr (std::is_void_v<typename T::Response>) {
                 meta_::execute_void_fn_ = &Api::void_thunk_;
             } else if constexpr (detail::has_field_descs<T>::value) {
@@ -426,7 +426,7 @@ public:
             T r;
 #if NOTE_SINGLETON
             using meta_ = ::note::detail::request_traits<T>;
-            meta_::nc_ = nc_ptr();
+            ::note::detail::api_nc_singleton_ = nc_ptr();
             if constexpr (std::is_void_v<typename T::Response>) {
                 meta_::execute_void_fn_ = &Api::void_thunk_;
             } else if constexpr (detail::has_field_descs<T>::value) {
@@ -484,7 +484,7 @@ public:
             T r;
 #if NOTE_SINGLETON
             using meta_ = ::note::detail::request_traits<T>;
-            meta_::nc_ = nc_ptr();
+            ::note::detail::api_nc_singleton_ = nc_ptr();
             if constexpr (std::is_void_v<typename T::Response>) {
                 meta_::execute_void_fn_ = &Api::void_thunk_;
             } else if constexpr (detail::has_field_descs<T>::value) {
@@ -551,7 +551,7 @@ public:
             T r;
 #if NOTE_SINGLETON
             using meta_ = ::note::detail::request_traits<T>;
-            meta_::nc_ = nc_ptr();
+            ::note::detail::api_nc_singleton_ = nc_ptr();
             if constexpr (std::is_void_v<typename T::Response>) {
                 meta_::execute_void_fn_ = &Api::void_thunk_;
             } else if constexpr (detail::has_field_descs<T>::value) {
@@ -612,7 +612,7 @@ public:
             T r;
 #if NOTE_SINGLETON
             using meta_ = ::note::detail::request_traits<T>;
-            meta_::nc_ = nc_ptr();
+            ::note::detail::api_nc_singleton_ = nc_ptr();
             if constexpr (std::is_void_v<typename T::Response>) {
                 meta_::execute_void_fn_ = &Api::void_thunk_;
             } else if constexpr (detail::has_field_descs<T>::value) {
@@ -691,7 +691,7 @@ public:
             T r;
 #if NOTE_SINGLETON
             using meta_ = ::note::detail::request_traits<T>;
-            meta_::nc_ = nc_ptr();
+            ::note::detail::api_nc_singleton_ = nc_ptr();
             if constexpr (std::is_void_v<typename T::Response>) {
                 meta_::execute_void_fn_ = &Api::void_thunk_;
             } else if constexpr (detail::has_field_descs<T>::value) {
@@ -753,7 +753,7 @@ public:
             T r;
 #if NOTE_SINGLETON
             using meta_ = ::note::detail::request_traits<T>;
-            meta_::nc_ = nc_ptr();
+            ::note::detail::api_nc_singleton_ = nc_ptr();
             if constexpr (std::is_void_v<typename T::Response>) {
                 meta_::execute_void_fn_ = &Api::void_thunk_;
             } else if constexpr (detail::has_field_descs<T>::value) {
@@ -814,7 +814,7 @@ public:
             T r;
 #if NOTE_SINGLETON
             using meta_ = ::note::detail::request_traits<T>;
-            meta_::nc_ = nc_ptr();
+            ::note::detail::api_nc_singleton_ = nc_ptr();
             if constexpr (std::is_void_v<typename T::Response>) {
                 meta_::execute_void_fn_ = &Api::void_thunk_;
             } else if constexpr (detail::has_field_descs<T>::value) {
@@ -882,7 +882,7 @@ public:
             T r;
 #if NOTE_SINGLETON
             using meta_ = ::note::detail::request_traits<T>;
-            meta_::nc_ = nc_ptr();
+            ::note::detail::api_nc_singleton_ = nc_ptr();
             if constexpr (std::is_void_v<typename T::Response>) {
                 meta_::execute_void_fn_ = &Api::void_thunk_;
             } else if constexpr (detail::has_field_descs<T>::value) {
@@ -942,7 +942,7 @@ public:
             T r;
 #if NOTE_SINGLETON
             using meta_ = ::note::detail::request_traits<T>;
-            meta_::nc_ = nc_ptr();
+            ::note::detail::api_nc_singleton_ = nc_ptr();
             if constexpr (std::is_void_v<typename T::Response>) {
                 meta_::execute_void_fn_ = &Api::void_thunk_;
             } else if constexpr (detail::has_field_descs<T>::value) {
@@ -1006,7 +1006,7 @@ public:
             T r;
 #if NOTE_SINGLETON
             using meta_ = ::note::detail::request_traits<T>;
-            meta_::nc_ = nc_ptr();
+            ::note::detail::api_nc_singleton_ = nc_ptr();
             if constexpr (std::is_void_v<typename T::Response>) {
                 meta_::execute_void_fn_ = &Api::void_thunk_;
             } else if constexpr (detail::has_field_descs<T>::value) {
@@ -1089,7 +1089,7 @@ public:
             T r;
 #if NOTE_SINGLETON
             using meta_ = ::note::detail::request_traits<T>;
-            meta_::nc_ = nc_ptr();
+            ::note::detail::api_nc_singleton_ = nc_ptr();
             if constexpr (std::is_void_v<typename T::Response>) {
                 meta_::execute_void_fn_ = &Api::void_thunk_;
             } else if constexpr (detail::has_field_descs<T>::value) {
@@ -1152,7 +1152,7 @@ public:
             T r;
 #if NOTE_SINGLETON
             using meta_ = ::note::detail::request_traits<T>;
-            meta_::nc_ = nc_ptr();
+            ::note::detail::api_nc_singleton_ = nc_ptr();
             if constexpr (std::is_void_v<typename T::Response>) {
                 meta_::execute_void_fn_ = &Api::void_thunk_;
             } else if constexpr (detail::has_field_descs<T>::value) {
@@ -1228,7 +1228,7 @@ public:
             T r;
 #if NOTE_SINGLETON
             using meta_ = ::note::detail::request_traits<T>;
-            meta_::nc_ = nc_ptr();
+            ::note::detail::api_nc_singleton_ = nc_ptr();
             if constexpr (std::is_void_v<typename T::Response>) {
                 meta_::execute_void_fn_ = &Api::void_thunk_;
             } else if constexpr (detail::has_field_descs<T>::value) {
@@ -1313,7 +1313,7 @@ public:
             T r;
 #if NOTE_SINGLETON
             using meta_ = ::note::detail::request_traits<T>;
-            meta_::nc_ = nc_ptr();
+            ::note::detail::api_nc_singleton_ = nc_ptr();
             if constexpr (std::is_void_v<typename T::Response>) {
                 meta_::execute_void_fn_ = &Api::void_thunk_;
             } else if constexpr (detail::has_field_descs<T>::value) {
@@ -1377,7 +1377,7 @@ public:
             T r;
 #if NOTE_SINGLETON
             using meta_ = ::note::detail::request_traits<T>;
-            meta_::nc_ = nc_ptr();
+            ::note::detail::api_nc_singleton_ = nc_ptr();
             if constexpr (std::is_void_v<typename T::Response>) {
                 meta_::execute_void_fn_ = &Api::void_thunk_;
             } else if constexpr (detail::has_field_descs<T>::value) {
@@ -1440,7 +1440,7 @@ public:
             T r;
 #if NOTE_SINGLETON
             using meta_ = ::note::detail::request_traits<T>;
-            meta_::nc_ = nc_ptr();
+            ::note::detail::api_nc_singleton_ = nc_ptr();
             if constexpr (std::is_void_v<typename T::Response>) {
                 meta_::execute_void_fn_ = &Api::void_thunk_;
             } else if constexpr (detail::has_field_descs<T>::value) {
@@ -1502,7 +1502,7 @@ public:
             T r;
 #if NOTE_SINGLETON
             using meta_ = ::note::detail::request_traits<T>;
-            meta_::nc_ = nc_ptr();
+            ::note::detail::api_nc_singleton_ = nc_ptr();
             if constexpr (std::is_void_v<typename T::Response>) {
                 meta_::execute_void_fn_ = &Api::void_thunk_;
             } else if constexpr (detail::has_field_descs<T>::value) {
@@ -1558,7 +1558,7 @@ public:
             T r;
 #if NOTE_SINGLETON
             using meta_ = ::note::detail::request_traits<T>;
-            meta_::nc_ = nc_ptr();
+            ::note::detail::api_nc_singleton_ = nc_ptr();
             if constexpr (std::is_void_v<typename T::Response>) {
                 meta_::execute_void_fn_ = &Api::void_thunk_;
             } else if constexpr (detail::has_field_descs<T>::value) {
@@ -1629,7 +1629,7 @@ public:
             T r;
 #if NOTE_SINGLETON
             using meta_ = ::note::detail::request_traits<T>;
-            meta_::nc_ = nc_ptr();
+            ::note::detail::api_nc_singleton_ = nc_ptr();
             if constexpr (std::is_void_v<typename T::Response>) {
                 meta_::execute_void_fn_ = &Api::void_thunk_;
             } else if constexpr (detail::has_field_descs<T>::value) {
@@ -2178,7 +2178,7 @@ public:
             T r;
 #if NOTE_SINGLETON
             using meta_ = ::note::detail::request_traits<T>;
-            meta_::nc_ = nc_ptr();
+            ::note::detail::api_nc_singleton_ = nc_ptr();
             if constexpr (std::is_void_v<typename T::Response>) {
                 meta_::execute_void_fn_ = &Api::void_thunk_;
             } else if constexpr (detail::has_field_descs<T>::value) {
@@ -2283,7 +2283,7 @@ public:
             T r;
 #if NOTE_SINGLETON
             using meta_ = ::note::detail::request_traits<T>;
-            meta_::nc_ = nc_ptr();
+            ::note::detail::api_nc_singleton_ = nc_ptr();
             if constexpr (std::is_void_v<typename T::Response>) {
                 meta_::execute_void_fn_ = &Api::void_thunk_;
             } else if constexpr (detail::has_field_descs<T>::value) {
@@ -2475,7 +2475,7 @@ public:
             T r;
 #if NOTE_SINGLETON
             using meta_ = ::note::detail::request_traits<T>;
-            meta_::nc_ = nc_ptr();
+            ::note::detail::api_nc_singleton_ = nc_ptr();
             if constexpr (std::is_void_v<typename T::Response>) {
                 meta_::execute_void_fn_ = &Api::void_thunk_;
             } else if constexpr (detail::has_field_descs<T>::value) {
@@ -2610,7 +2610,7 @@ public:
             T r;
 #if NOTE_SINGLETON
             using meta_ = ::note::detail::request_traits<T>;
-            meta_::nc_ = nc_ptr();
+            ::note::detail::api_nc_singleton_ = nc_ptr();
             if constexpr (std::is_void_v<typename T::Response>) {
                 meta_::execute_void_fn_ = &Api::void_thunk_;
             } else if constexpr (detail::has_field_descs<T>::value) {
@@ -2743,7 +2743,7 @@ public:
             T r;
 #if NOTE_SINGLETON
             using meta_ = ::note::detail::request_traits<T>;
-            meta_::nc_ = nc_ptr();
+            ::note::detail::api_nc_singleton_ = nc_ptr();
             if constexpr (std::is_void_v<typename T::Response>) {
                 meta_::execute_void_fn_ = &Api::void_thunk_;
             } else if constexpr (detail::has_field_descs<T>::value) {
@@ -3056,7 +3056,7 @@ public:
             T r;
 #if NOTE_SINGLETON
             using meta_ = ::note::detail::request_traits<T>;
-            meta_::nc_ = nc_ptr();
+            ::note::detail::api_nc_singleton_ = nc_ptr();
             if constexpr (std::is_void_v<typename T::Response>) {
                 meta_::execute_void_fn_ = &Api::void_thunk_;
             } else if constexpr (detail::has_field_descs<T>::value) {
@@ -3195,7 +3195,7 @@ public:
             T r;
 #if NOTE_SINGLETON
             using meta_ = ::note::detail::request_traits<T>;
-            meta_::nc_ = nc_ptr();
+            ::note::detail::api_nc_singleton_ = nc_ptr();
             if constexpr (std::is_void_v<typename T::Response>) {
                 meta_::execute_void_fn_ = &Api::void_thunk_;
             } else if constexpr (detail::has_field_descs<T>::value) {
@@ -3310,7 +3310,7 @@ public:
             T r;
 #if NOTE_SINGLETON
             using meta_ = ::note::detail::request_traits<T>;
-            meta_::nc_ = nc_ptr();
+            ::note::detail::api_nc_singleton_ = nc_ptr();
             if constexpr (std::is_void_v<typename T::Response>) {
                 meta_::execute_void_fn_ = &Api::void_thunk_;
             } else if constexpr (detail::has_field_descs<T>::value) {

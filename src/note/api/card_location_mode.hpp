@@ -2626,7 +2626,6 @@ struct request_traits<::note::api::CardLocationMode::Get> {
         return table_;
     }
 #if NOTE_SINGLETON
-    static inline void* nc_ = nullptr;
     static inline ::note::Result<void>(*execute_generic_fn_)(void*, ::note::string_view, ::note::BuildFn, void*, void*, const ::note::FieldDesc*, uint8_t, ::note::detail::NcErrorCapture&, bool&, void*, ::note::BodyHandlerFactory, ::note::Safety) = nullptr;
     static inline ::note::Result<void>(*send_fn_)(void*, ::note::BuildFn, void*) = nullptr;
 #endif
@@ -2658,7 +2657,7 @@ inline ApiResult<typename CardLocationMode::Get::Response> CardLocationMode::Get
     ::note::detail::NcErrorCapture nc_err_;
     bool exhausted_ = false;
     using meta_ = ::note::detail::request_traits<CardLocationMode::Get>;
-    auto rv_ = meta_::execute_generic_fn_(meta_::nc_, notecard_request, fn_, &build_, &rsp_, meta_::field_descs_ptr(), meta_::field_count, nc_err_, exhausted_, nullptr, nullptr, safety);
+    auto rv_ = meta_::execute_generic_fn_(::note::detail::api_nc_singleton_, notecard_request, fn_, &build_, &rsp_, meta_::field_descs_ptr(), meta_::field_count, nc_err_, exhausted_, nullptr, nullptr, safety);
     if (!rv_) return ::note::Unexpected(rv_.error());
     if (!nc_err_.empty()) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
     if (exhausted_) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Overflow, ::note::Cause::Unspecified, NOTE_ERR("arena exhausted")});
@@ -2673,7 +2672,7 @@ inline Result<void> CardLocationMode::Get::command() const {
         (*static_cast<decltype(build_)*>(p_))(b_);
     };
     using meta_ = ::note::detail::request_traits<CardLocationMode::Get>;
-    return meta_::send_fn_(meta_::nc_, fn_, &build_);
+    return meta_::send_fn_(::note::detail::api_nc_singleton_, fn_, &build_);
 }
 #endif
 
@@ -2771,7 +2770,6 @@ struct request_traits<::note::api::CardLocationMode::Set> {
         return table_;
     }
 #if NOTE_SINGLETON
-    static inline void* nc_ = nullptr;
     static inline ::note::Result<void>(*execute_generic_fn_)(void*, ::note::string_view, ::note::BuildFn, void*, void*, const ::note::FieldDesc*, uint8_t, ::note::detail::NcErrorCapture&, bool&, void*, ::note::BodyHandlerFactory, ::note::Safety) = nullptr;
     static inline ::note::Result<void>(*send_fn_)(void*, ::note::BuildFn, void*) = nullptr;
 #endif
@@ -2803,7 +2801,7 @@ inline ApiResult<typename CardLocationMode::Set::Response> CardLocationMode::Set
     ::note::detail::NcErrorCapture nc_err_;
     bool exhausted_ = false;
     using meta_ = ::note::detail::request_traits<CardLocationMode::Set>;
-    auto rv_ = meta_::execute_generic_fn_(meta_::nc_, notecard_request, fn_, &build_, &rsp_, meta_::field_descs_ptr(), meta_::field_count, nc_err_, exhausted_, nullptr, nullptr, safety);
+    auto rv_ = meta_::execute_generic_fn_(::note::detail::api_nc_singleton_, notecard_request, fn_, &build_, &rsp_, meta_::field_descs_ptr(), meta_::field_count, nc_err_, exhausted_, nullptr, nullptr, safety);
     if (!rv_) return ::note::Unexpected(rv_.error());
     if (!nc_err_.empty()) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
     if (exhausted_) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Overflow, ::note::Cause::Unspecified, NOTE_ERR("arena exhausted")});
@@ -2818,7 +2816,7 @@ inline Result<void> CardLocationMode::Set::command() const {
         (*static_cast<decltype(build_)*>(p_))(b_);
     };
     using meta_ = ::note::detail::request_traits<CardLocationMode::Set>;
-    return meta_::send_fn_(meta_::nc_, fn_, &build_);
+    return meta_::send_fn_(::note::detail::api_nc_singleton_, fn_, &build_);
 }
 #endif
 
@@ -2869,7 +2867,6 @@ struct request_traits<::note::api::CardLocationMode::Continuous> {
         return table_;
     }
 #if NOTE_SINGLETON
-    static inline void* nc_ = nullptr;
     static inline ::note::Result<void>(*execute_generic_fn_)(void*, ::note::string_view, ::note::BuildFn, void*, void*, const ::note::FieldDesc*, uint8_t, ::note::detail::NcErrorCapture&, bool&, void*, ::note::BodyHandlerFactory, ::note::Safety) = nullptr;
     static inline ::note::Result<void>(*send_fn_)(void*, ::note::BuildFn, void*) = nullptr;
 #endif
@@ -2902,7 +2899,7 @@ inline ApiResult<typename CardLocationMode::Continuous::Response> CardLocationMo
     ::note::detail::NcErrorCapture nc_err_;
     bool exhausted_ = false;
     using meta_ = ::note::detail::request_traits<CardLocationMode::Continuous>;
-    auto rv_ = meta_::execute_generic_fn_(meta_::nc_, notecard_request, fn_, &build_, &rsp_, meta_::field_descs_ptr(), meta_::field_count, nc_err_, exhausted_, nullptr, nullptr, safety);
+    auto rv_ = meta_::execute_generic_fn_(::note::detail::api_nc_singleton_, notecard_request, fn_, &build_, &rsp_, meta_::field_descs_ptr(), meta_::field_count, nc_err_, exhausted_, nullptr, nullptr, safety);
     if (!rv_) return ::note::Unexpected(rv_.error());
     if (!nc_err_.empty()) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
     if (exhausted_) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Overflow, ::note::Cause::Unspecified, NOTE_ERR("arena exhausted")});
@@ -2917,7 +2914,7 @@ inline Result<void> CardLocationMode::Continuous::command() const {
         (*static_cast<decltype(build_)*>(p_))(b_);
     };
     using meta_ = ::note::detail::request_traits<CardLocationMode::Continuous>;
-    return meta_::send_fn_(meta_::nc_, fn_, &build_);
+    return meta_::send_fn_(::note::detail::api_nc_singleton_, fn_, &build_);
 }
 #endif
 
@@ -3003,7 +3000,6 @@ struct request_traits<::note::api::CardLocationMode::Periodic> {
         return table_;
     }
 #if NOTE_SINGLETON
-    static inline void* nc_ = nullptr;
     static inline ::note::Result<void>(*execute_generic_fn_)(void*, ::note::string_view, ::note::BuildFn, void*, void*, const ::note::FieldDesc*, uint8_t, ::note::detail::NcErrorCapture&, bool&, void*, ::note::BodyHandlerFactory, ::note::Safety) = nullptr;
     static inline ::note::Result<void>(*send_fn_)(void*, ::note::BuildFn, void*) = nullptr;
 #endif
@@ -3036,7 +3032,7 @@ inline ApiResult<typename CardLocationMode::Periodic::Response> CardLocationMode
     ::note::detail::NcErrorCapture nc_err_;
     bool exhausted_ = false;
     using meta_ = ::note::detail::request_traits<CardLocationMode::Periodic>;
-    auto rv_ = meta_::execute_generic_fn_(meta_::nc_, notecard_request, fn_, &build_, &rsp_, meta_::field_descs_ptr(), meta_::field_count, nc_err_, exhausted_, nullptr, nullptr, safety);
+    auto rv_ = meta_::execute_generic_fn_(::note::detail::api_nc_singleton_, notecard_request, fn_, &build_, &rsp_, meta_::field_descs_ptr(), meta_::field_count, nc_err_, exhausted_, nullptr, nullptr, safety);
     if (!rv_) return ::note::Unexpected(rv_.error());
     if (!nc_err_.empty()) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
     if (exhausted_) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Overflow, ::note::Cause::Unspecified, NOTE_ERR("arena exhausted")});
@@ -3051,7 +3047,7 @@ inline Result<void> CardLocationMode::Periodic::command() const {
         (*static_cast<decltype(build_)*>(p_))(b_);
     };
     using meta_ = ::note::detail::request_traits<CardLocationMode::Periodic>;
-    return meta_::send_fn_(meta_::nc_, fn_, &build_);
+    return meta_::send_fn_(::note::detail::api_nc_singleton_, fn_, &build_);
 }
 #endif
 
@@ -3095,7 +3091,6 @@ struct request_traits<::note::api::CardLocationMode::Fixed> {
         return table_;
     }
 #if NOTE_SINGLETON
-    static inline void* nc_ = nullptr;
     static inline ::note::Result<void>(*execute_generic_fn_)(void*, ::note::string_view, ::note::BuildFn, void*, void*, const ::note::FieldDesc*, uint8_t, ::note::detail::NcErrorCapture&, bool&, void*, ::note::BodyHandlerFactory, ::note::Safety) = nullptr;
     static inline ::note::Result<void>(*send_fn_)(void*, ::note::BuildFn, void*) = nullptr;
 #endif
@@ -3123,7 +3118,7 @@ inline ApiResult<typename CardLocationMode::Fixed::Response> CardLocationMode::F
     ::note::detail::NcErrorCapture nc_err_;
     bool exhausted_ = false;
     using meta_ = ::note::detail::request_traits<CardLocationMode::Fixed>;
-    auto rv_ = meta_::execute_generic_fn_(meta_::nc_, notecard_request, fn_, &build_, &rsp_, meta_::field_descs_ptr(), meta_::field_count, nc_err_, exhausted_, nullptr, nullptr, safety);
+    auto rv_ = meta_::execute_generic_fn_(::note::detail::api_nc_singleton_, notecard_request, fn_, &build_, &rsp_, meta_::field_descs_ptr(), meta_::field_count, nc_err_, exhausted_, nullptr, nullptr, safety);
     if (!rv_) return ::note::Unexpected(rv_.error());
     if (!nc_err_.empty()) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
     if (exhausted_) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Overflow, ::note::Cause::Unspecified, NOTE_ERR("arena exhausted")});
@@ -3138,7 +3133,7 @@ inline Result<void> CardLocationMode::Fixed::command() const {
         (*static_cast<decltype(build_)*>(p_))(b_);
     };
     using meta_ = ::note::detail::request_traits<CardLocationMode::Fixed>;
-    return meta_::send_fn_(meta_::nc_, fn_, &build_);
+    return meta_::send_fn_(::note::detail::api_nc_singleton_, fn_, &build_);
 }
 #endif
 
@@ -3230,7 +3225,6 @@ struct request_traits<::note::api::CardLocationMode::Remove> {
         return table_;
     }
 #if NOTE_SINGLETON
-    static inline void* nc_ = nullptr;
     static inline ::note::Result<void>(*execute_generic_fn_)(void*, ::note::string_view, ::note::BuildFn, void*, void*, const ::note::FieldDesc*, uint8_t, ::note::detail::NcErrorCapture&, bool&, void*, ::note::BodyHandlerFactory, ::note::Safety) = nullptr;
     static inline ::note::Result<void>(*send_fn_)(void*, ::note::BuildFn, void*) = nullptr;
 #endif
@@ -3263,7 +3257,7 @@ inline ApiResult<typename CardLocationMode::Remove::Response> CardLocationMode::
     ::note::detail::NcErrorCapture nc_err_;
     bool exhausted_ = false;
     using meta_ = ::note::detail::request_traits<CardLocationMode::Remove>;
-    auto rv_ = meta_::execute_generic_fn_(meta_::nc_, notecard_request, fn_, &build_, &rsp_, meta_::field_descs_ptr(), meta_::field_count, nc_err_, exhausted_, nullptr, nullptr, safety);
+    auto rv_ = meta_::execute_generic_fn_(::note::detail::api_nc_singleton_, notecard_request, fn_, &build_, &rsp_, meta_::field_descs_ptr(), meta_::field_count, nc_err_, exhausted_, nullptr, nullptr, safety);
     if (!rv_) return ::note::Unexpected(rv_.error());
     if (!nc_err_.empty()) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
     if (exhausted_) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Overflow, ::note::Cause::Unspecified, NOTE_ERR("arena exhausted")});
@@ -3278,7 +3272,7 @@ inline Result<void> CardLocationMode::Remove::command() const {
         (*static_cast<decltype(build_)*>(p_))(b_);
     };
     using meta_ = ::note::detail::request_traits<CardLocationMode::Remove>;
-    return meta_::send_fn_(meta_::nc_, fn_, &build_);
+    return meta_::send_fn_(::note::detail::api_nc_singleton_, fn_, &build_);
 }
 #endif
 

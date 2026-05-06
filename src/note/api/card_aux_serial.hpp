@@ -1311,7 +1311,6 @@ struct request_traits<::note::api::CardAuxSerial::Request> {
         return table_;
     }
 #if NOTE_SINGLETON
-    static inline void* nc_ = nullptr;
     static inline ::note::Result<void>(*execute_generic_fn_)(void*, ::note::string_view, ::note::BuildFn, void*, void*, const ::note::FieldDesc*, uint8_t, ::note::detail::NcErrorCapture&, bool&, void*, ::note::BodyHandlerFactory, ::note::Safety) = nullptr;
     static inline ::note::Result<void>(*send_fn_)(void*, ::note::BuildFn, void*) = nullptr;
 #endif
@@ -1345,7 +1344,7 @@ inline ApiResult<typename CardAuxSerial::Request::Response> CardAuxSerial::Reque
     ::note::detail::NcErrorCapture nc_err_;
     bool exhausted_ = false;
     using meta_ = ::note::detail::request_traits<CardAuxSerial::Request>;
-    auto rv_ = meta_::execute_generic_fn_(meta_::nc_, notecard_request, fn_, &build_, &rsp_, meta_::field_descs_ptr(), meta_::field_count, nc_err_, exhausted_, nullptr, nullptr, safety);
+    auto rv_ = meta_::execute_generic_fn_(::note::detail::api_nc_singleton_, notecard_request, fn_, &build_, &rsp_, meta_::field_descs_ptr(), meta_::field_count, nc_err_, exhausted_, nullptr, nullptr, safety);
     if (!rv_) return ::note::Unexpected(rv_.error());
     if (!nc_err_.empty()) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
     if (exhausted_) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Overflow, ::note::Cause::Unspecified, NOTE_ERR("arena exhausted")});
@@ -1360,7 +1359,7 @@ inline Result<void> CardAuxSerial::Request::command() const {
         (*static_cast<decltype(build_)*>(p_))(b_);
     };
     using meta_ = ::note::detail::request_traits<CardAuxSerial::Request>;
-    return meta_::send_fn_(meta_::nc_, fn_, &build_);
+    return meta_::send_fn_(::note::detail::api_nc_singleton_, fn_, &build_);
 }
 #endif
 
@@ -1465,7 +1464,6 @@ struct request_traits<::note::api::CardAuxSerial::Notify> {
         return table_;
     }
 #if NOTE_SINGLETON
-    static inline void* nc_ = nullptr;
     static inline ::note::Result<void>(*execute_void_fn_)(void*, ::note::string_view, ::note::BuildFn, void*, ::note::detail::NcErrorCapture&, ::note::Safety) = nullptr;
     static inline ::note::Result<void>(*send_fn_)(void*, ::note::BuildFn, void*) = nullptr;
 #endif
@@ -1505,7 +1503,7 @@ inline ApiResult<void> CardAuxSerial::Notify::execute() const {
     BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
     ::note::detail::NcErrorCapture nc_err_;
     using meta_ = ::note::detail::request_traits<CardAuxSerial::Notify>;
-    auto rv_ = meta_::execute_void_fn_(meta_::nc_, notecard_request, fn_, &build_, nc_err_, safety);
+    auto rv_ = meta_::execute_void_fn_(::note::detail::api_nc_singleton_, notecard_request, fn_, &build_, nc_err_, safety);
     if (!rv_) return ::note::Unexpected(rv_.error());
     if (!nc_err_.empty()) return ApiResult<void>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
     return ApiResult<void>{};
@@ -1519,7 +1517,7 @@ inline Result<void> CardAuxSerial::Notify::command() const {
         (*static_cast<decltype(build_)*>(p_))(b_);
     };
     using meta_ = ::note::detail::request_traits<CardAuxSerial::Notify>;
-    return meta_::send_fn_(meta_::nc_, fn_, &build_);
+    return meta_::send_fn_(::note::detail::api_nc_singleton_, fn_, &build_);
 }
 #endif
 
@@ -1558,7 +1556,6 @@ struct request_traits<::note::api::CardAuxSerial::Gps> {
         return table_;
     }
 #if NOTE_SINGLETON
-    static inline void* nc_ = nullptr;
     static inline ::note::Result<void>(*execute_void_fn_)(void*, ::note::string_view, ::note::BuildFn, void*, ::note::detail::NcErrorCapture&, ::note::Safety) = nullptr;
     static inline ::note::Result<void>(*send_fn_)(void*, ::note::BuildFn, void*) = nullptr;
 #endif
@@ -1589,7 +1586,7 @@ inline ApiResult<void> CardAuxSerial::Gps::execute() const {
     BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
     ::note::detail::NcErrorCapture nc_err_;
     using meta_ = ::note::detail::request_traits<CardAuxSerial::Gps>;
-    auto rv_ = meta_::execute_void_fn_(meta_::nc_, notecard_request, fn_, &build_, nc_err_, safety);
+    auto rv_ = meta_::execute_void_fn_(::note::detail::api_nc_singleton_, notecard_request, fn_, &build_, nc_err_, safety);
     if (!rv_) return ::note::Unexpected(rv_.error());
     if (!nc_err_.empty()) return ApiResult<void>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
     return ApiResult<void>{};
@@ -1603,7 +1600,7 @@ inline Result<void> CardAuxSerial::Gps::command() const {
         (*static_cast<decltype(build_)*>(p_))(b_);
     };
     using meta_ = ::note::detail::request_traits<CardAuxSerial::Gps>;
-    return meta_::send_fn_(meta_::nc_, fn_, &build_);
+    return meta_::send_fn_(::note::detail::api_nc_singleton_, fn_, &build_);
 }
 #endif
 
@@ -1636,7 +1633,6 @@ struct request_traits<::note::api::CardAuxSerial::Configure> {
         return table_;
     }
 #if NOTE_SINGLETON
-    static inline void* nc_ = nullptr;
     static inline ::note::Result<void>(*execute_void_fn_)(void*, ::note::string_view, ::note::BuildFn, void*, ::note::detail::NcErrorCapture&, ::note::Safety) = nullptr;
     static inline ::note::Result<void>(*send_fn_)(void*, ::note::BuildFn, void*) = nullptr;
 #endif
@@ -1667,7 +1663,7 @@ inline ApiResult<void> CardAuxSerial::Configure::execute() const {
     BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
     ::note::detail::NcErrorCapture nc_err_;
     using meta_ = ::note::detail::request_traits<CardAuxSerial::Configure>;
-    auto rv_ = meta_::execute_void_fn_(meta_::nc_, notecard_request, fn_, &build_, nc_err_, safety);
+    auto rv_ = meta_::execute_void_fn_(::note::detail::api_nc_singleton_, notecard_request, fn_, &build_, nc_err_, safety);
     if (!rv_) return ::note::Unexpected(rv_.error());
     if (!nc_err_.empty()) return ApiResult<void>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
     return ApiResult<void>{};
@@ -1681,7 +1677,7 @@ inline Result<void> CardAuxSerial::Configure::command() const {
         (*static_cast<decltype(build_)*>(p_))(b_);
     };
     using meta_ = ::note::detail::request_traits<CardAuxSerial::Configure>;
-    return meta_::send_fn_(meta_::nc_, fn_, &build_);
+    return meta_::send_fn_(::note::detail::api_nc_singleton_, fn_, &build_);
 }
 #endif
 
@@ -1691,7 +1687,6 @@ namespace note::detail {
 template<>
 struct request_traits<::note::api::CardAuxSerial::Off> {
 #if NOTE_SINGLETON
-    static inline void* nc_ = nullptr;
     static inline ::note::Result<void>(*execute_void_fn_)(void*, ::note::string_view, ::note::BuildFn, void*, ::note::detail::NcErrorCapture&, ::note::Safety) = nullptr;
     static inline ::note::Result<void>(*send_fn_)(void*, ::note::BuildFn, void*) = nullptr;
 #endif
@@ -1714,7 +1709,7 @@ inline ApiResult<void> CardAuxSerial::Off::execute() const {
     BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
     ::note::detail::NcErrorCapture nc_err_;
     using meta_ = ::note::detail::request_traits<CardAuxSerial::Off>;
-    auto rv_ = meta_::execute_void_fn_(meta_::nc_, notecard_request, fn_, &build_, nc_err_, safety);
+    auto rv_ = meta_::execute_void_fn_(::note::detail::api_nc_singleton_, notecard_request, fn_, &build_, nc_err_, safety);
     if (!rv_) return ::note::Unexpected(rv_.error());
     if (!nc_err_.empty()) return ApiResult<void>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
     return ApiResult<void>{};
@@ -1728,7 +1723,7 @@ inline Result<void> CardAuxSerial::Off::command() const {
         (*static_cast<decltype(build_)*>(p_))(b_);
     };
     using meta_ = ::note::detail::request_traits<CardAuxSerial::Off>;
-    return meta_::send_fn_(meta_::nc_, fn_, &build_);
+    return meta_::send_fn_(::note::detail::api_nc_singleton_, fn_, &build_);
 }
 #endif
 

@@ -2520,7 +2520,6 @@ struct request_traits<::note::api::CardAttn::Request> {
         return table_;
     }
 #if NOTE_SINGLETON
-    static inline void* nc_ = nullptr;
     static inline ::note::Result<void>(*execute_generic_fn_)(void*, ::note::string_view, ::note::BuildFn, void*, void*, const ::note::FieldDesc*, uint8_t, ::note::detail::NcErrorCapture&, bool&, void*, ::note::BodyHandlerFactory, ::note::Safety) = nullptr;
     static inline ::note::Result<void>(*send_fn_)(void*, ::note::BuildFn, void*) = nullptr;
 #endif
@@ -2554,7 +2553,7 @@ inline ApiResult<typename CardAttn::Request::Response> CardAttn::Request::execut
     ::note::detail::NcErrorCapture nc_err_;
     bool exhausted_ = false;
     using meta_ = ::note::detail::request_traits<CardAttn::Request>;
-    auto rv_ = meta_::execute_generic_fn_(meta_::nc_, notecard_request, fn_, &build_, &rsp_, meta_::field_descs_ptr(), meta_::field_count, nc_err_, exhausted_, nullptr, nullptr, safety);
+    auto rv_ = meta_::execute_generic_fn_(::note::detail::api_nc_singleton_, notecard_request, fn_, &build_, &rsp_, meta_::field_descs_ptr(), meta_::field_count, nc_err_, exhausted_, nullptr, nullptr, safety);
     if (!rv_) return ::note::Unexpected(rv_.error());
     if (!nc_err_.empty()) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
     if (exhausted_) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Overflow, ::note::Cause::Unspecified, NOTE_ERR("arena exhausted")});
@@ -2569,7 +2568,7 @@ inline Result<void> CardAttn::Request::command() const {
         (*static_cast<decltype(build_)*>(p_))(b_);
     };
     using meta_ = ::note::detail::request_traits<CardAttn::Request>;
-    return meta_::send_fn_(meta_::nc_, fn_, &build_);
+    return meta_::send_fn_(::note::detail::api_nc_singleton_, fn_, &build_);
 }
 #endif
 
@@ -2686,7 +2685,6 @@ struct request_traits<::note::api::CardAttn::Arm> {
         return table_;
     }
 #if NOTE_SINGLETON
-    static inline void* nc_ = nullptr;
     static inline ::note::Result<void>(*execute_generic_fn_)(void*, ::note::string_view, ::note::BuildFn, void*, void*, const ::note::FieldDesc*, uint8_t, ::note::detail::NcErrorCapture&, bool&, void*, ::note::BodyHandlerFactory, ::note::Safety) = nullptr;
     static inline ::note::Result<void>(*send_fn_)(void*, ::note::BuildFn, void*) = nullptr;
 #endif
@@ -2721,7 +2719,7 @@ inline ApiResult<typename CardAttn::Arm::Response> CardAttn::Arm::execute() cons
     ::note::detail::NcErrorCapture nc_err_;
     bool exhausted_ = false;
     using meta_ = ::note::detail::request_traits<CardAttn::Arm>;
-    auto rv_ = meta_::execute_generic_fn_(meta_::nc_, notecard_request, fn_, &build_, &rsp_, meta_::field_descs_ptr(), meta_::field_count, nc_err_, exhausted_, nullptr, nullptr, safety);
+    auto rv_ = meta_::execute_generic_fn_(::note::detail::api_nc_singleton_, notecard_request, fn_, &build_, &rsp_, meta_::field_descs_ptr(), meta_::field_count, nc_err_, exhausted_, nullptr, nullptr, safety);
     if (!rv_) return ::note::Unexpected(rv_.error());
     if (!nc_err_.empty()) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
     if (exhausted_) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Overflow, ::note::Cause::Unspecified, NOTE_ERR("arena exhausted")});
@@ -2736,7 +2734,7 @@ inline Result<void> CardAttn::Arm::command() const {
         (*static_cast<decltype(build_)*>(p_))(b_);
     };
     using meta_ = ::note::detail::request_traits<CardAttn::Arm>;
-    return meta_::send_fn_(meta_::nc_, fn_, &build_);
+    return meta_::send_fn_(::note::detail::api_nc_singleton_, fn_, &build_);
 }
 #endif
 
@@ -2853,7 +2851,6 @@ struct request_traits<::note::api::CardAttn::Rearm> {
         return table_;
     }
 #if NOTE_SINGLETON
-    static inline void* nc_ = nullptr;
     static inline ::note::Result<void>(*execute_generic_fn_)(void*, ::note::string_view, ::note::BuildFn, void*, void*, const ::note::FieldDesc*, uint8_t, ::note::detail::NcErrorCapture&, bool&, void*, ::note::BodyHandlerFactory, ::note::Safety) = nullptr;
     static inline ::note::Result<void>(*send_fn_)(void*, ::note::BuildFn, void*) = nullptr;
 #endif
@@ -2888,7 +2885,7 @@ inline ApiResult<typename CardAttn::Rearm::Response> CardAttn::Rearm::execute() 
     ::note::detail::NcErrorCapture nc_err_;
     bool exhausted_ = false;
     using meta_ = ::note::detail::request_traits<CardAttn::Rearm>;
-    auto rv_ = meta_::execute_generic_fn_(meta_::nc_, notecard_request, fn_, &build_, &rsp_, meta_::field_descs_ptr(), meta_::field_count, nc_err_, exhausted_, nullptr, nullptr, safety);
+    auto rv_ = meta_::execute_generic_fn_(::note::detail::api_nc_singleton_, notecard_request, fn_, &build_, &rsp_, meta_::field_descs_ptr(), meta_::field_count, nc_err_, exhausted_, nullptr, nullptr, safety);
     if (!rv_) return ::note::Unexpected(rv_.error());
     if (!nc_err_.empty()) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
     if (exhausted_) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Overflow, ::note::Cause::Unspecified, NOTE_ERR("arena exhausted")});
@@ -2903,7 +2900,7 @@ inline Result<void> CardAttn::Rearm::command() const {
         (*static_cast<decltype(build_)*>(p_))(b_);
     };
     using meta_ = ::note::detail::request_traits<CardAttn::Rearm>;
-    return meta_::send_fn_(meta_::nc_, fn_, &build_);
+    return meta_::send_fn_(::note::detail::api_nc_singleton_, fn_, &build_);
 }
 #endif
 
@@ -2931,7 +2928,6 @@ struct request_traits<::note::api::CardAttn::Watchdog> {
         return table_;
     }
 #if NOTE_SINGLETON
-    static inline void* nc_ = nullptr;
     static inline ::note::Result<void>(*execute_void_fn_)(void*, ::note::string_view, ::note::BuildFn, void*, ::note::detail::NcErrorCapture&, ::note::Safety) = nullptr;
     static inline ::note::Result<void>(*send_fn_)(void*, ::note::BuildFn, void*) = nullptr;
 #endif
@@ -2957,7 +2953,7 @@ inline ApiResult<void> CardAttn::Watchdog::execute() const {
     BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
     ::note::detail::NcErrorCapture nc_err_;
     using meta_ = ::note::detail::request_traits<CardAttn::Watchdog>;
-    auto rv_ = meta_::execute_void_fn_(meta_::nc_, notecard_request, fn_, &build_, nc_err_, safety);
+    auto rv_ = meta_::execute_void_fn_(::note::detail::api_nc_singleton_, notecard_request, fn_, &build_, nc_err_, safety);
     if (!rv_) return ::note::Unexpected(rv_.error());
     if (!nc_err_.empty()) return ApiResult<void>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
     return ApiResult<void>{};
@@ -2971,7 +2967,7 @@ inline Result<void> CardAttn::Watchdog::command() const {
         (*static_cast<decltype(build_)*>(p_))(b_);
     };
     using meta_ = ::note::detail::request_traits<CardAttn::Watchdog>;
-    return meta_::send_fn_(meta_::nc_, fn_, &build_);
+    return meta_::send_fn_(::note::detail::api_nc_singleton_, fn_, &build_);
 }
 #endif
 
@@ -3005,7 +3001,6 @@ struct request_traits<::note::api::CardAttn::Sleep> {
         return table_;
     }
 #if NOTE_SINGLETON
-    static inline void* nc_ = nullptr;
     static inline ::note::Result<void>(*execute_void_fn_)(void*, ::note::string_view, ::note::BuildFn, void*, ::note::detail::NcErrorCapture&, ::note::Safety) = nullptr;
     static inline ::note::Result<void>(*send_fn_)(void*, ::note::BuildFn, void*) = nullptr;
 #endif
@@ -3031,7 +3026,7 @@ inline ApiResult<void> CardAttn::Sleep::execute() const {
     BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
     ::note::detail::NcErrorCapture nc_err_;
     using meta_ = ::note::detail::request_traits<CardAttn::Sleep>;
-    auto rv_ = meta_::execute_void_fn_(meta_::nc_, notecard_request, fn_, &build_, nc_err_, safety);
+    auto rv_ = meta_::execute_void_fn_(::note::detail::api_nc_singleton_, notecard_request, fn_, &build_, nc_err_, safety);
     if (!rv_) return ::note::Unexpected(rv_.error());
     if (!nc_err_.empty()) return ApiResult<void>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
     return ApiResult<void>{};
@@ -3045,7 +3040,7 @@ inline Result<void> CardAttn::Sleep::command() const {
         (*static_cast<decltype(build_)*>(p_))(b_);
     };
     using meta_ = ::note::detail::request_traits<CardAttn::Sleep>;
-    return meta_::send_fn_(meta_::nc_, fn_, &build_);
+    return meta_::send_fn_(::note::detail::api_nc_singleton_, fn_, &build_);
 }
 #endif
 
@@ -3064,7 +3059,6 @@ struct request_traits<::note::api::CardAttn::Retrieve> {
     static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);
     static const ::note::FieldDesc* field_descs_ptr() { return field_descs_table_; }
 #if NOTE_SINGLETON
-    static inline void* nc_ = nullptr;
     static inline ::note::Result<void>(*execute_generic_fn_)(void*, ::note::string_view, ::note::BuildFn, void*, void*, const ::note::FieldDesc*, uint8_t, ::note::detail::NcErrorCapture&, bool&, void*, ::note::BodyHandlerFactory, ::note::Safety) = nullptr;
 #endif
 };
@@ -3088,7 +3082,7 @@ inline ApiResult<typename CardAttn::Retrieve::Response> CardAttn::Retrieve::exec
     ::note::detail::NcErrorCapture nc_err_;
     bool exhausted_ = false;
     using meta_ = ::note::detail::request_traits<CardAttn::Retrieve>;
-    auto rv_ = meta_::execute_generic_fn_(meta_::nc_, notecard_request, fn_, &build_, &rsp_, meta_::field_descs_ptr(), meta_::field_count, nc_err_, exhausted_, nullptr, nullptr, safety);
+    auto rv_ = meta_::execute_generic_fn_(::note::detail::api_nc_singleton_, notecard_request, fn_, &build_, &rsp_, meta_::field_descs_ptr(), meta_::field_count, nc_err_, exhausted_, nullptr, nullptr, safety);
     if (!rv_) return ::note::Unexpected(rv_.error());
     if (!nc_err_.empty()) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
     if (exhausted_) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Overflow, ::note::Cause::Unspecified, NOTE_ERR("arena exhausted")});
@@ -3102,7 +3096,6 @@ namespace note::detail {
 template<>
 struct request_traits<::note::api::CardAttn::Disarm> {
 #if NOTE_SINGLETON
-    static inline void* nc_ = nullptr;
     static inline ::note::Result<void>(*execute_void_fn_)(void*, ::note::string_view, ::note::BuildFn, void*, ::note::detail::NcErrorCapture&, ::note::Safety) = nullptr;
     static inline ::note::Result<void>(*send_fn_)(void*, ::note::BuildFn, void*) = nullptr;
 #endif
@@ -3125,7 +3118,7 @@ inline ApiResult<void> CardAttn::Disarm::execute() const {
     BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
     ::note::detail::NcErrorCapture nc_err_;
     using meta_ = ::note::detail::request_traits<CardAttn::Disarm>;
-    auto rv_ = meta_::execute_void_fn_(meta_::nc_, notecard_request, fn_, &build_, nc_err_, safety);
+    auto rv_ = meta_::execute_void_fn_(::note::detail::api_nc_singleton_, notecard_request, fn_, &build_, nc_err_, safety);
     if (!rv_) return ::note::Unexpected(rv_.error());
     if (!nc_err_.empty()) return ApiResult<void>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
     return ApiResult<void>{};
@@ -3139,7 +3132,7 @@ inline Result<void> CardAttn::Disarm::command() const {
         (*static_cast<decltype(build_)*>(p_))(b_);
     };
     using meta_ = ::note::detail::request_traits<CardAttn::Disarm>;
-    return meta_::send_fn_(meta_::nc_, fn_, &build_);
+    return meta_::send_fn_(::note::detail::api_nc_singleton_, fn_, &build_);
 }
 #endif
 
@@ -3149,7 +3142,6 @@ namespace note::detail {
 template<>
 struct request_traits<::note::api::CardAttn::Off> {
 #if NOTE_SINGLETON
-    static inline void* nc_ = nullptr;
     static inline ::note::Result<void>(*execute_void_fn_)(void*, ::note::string_view, ::note::BuildFn, void*, ::note::detail::NcErrorCapture&, ::note::Safety) = nullptr;
     static inline ::note::Result<void>(*send_fn_)(void*, ::note::BuildFn, void*) = nullptr;
 #endif
@@ -3172,7 +3164,7 @@ inline ApiResult<void> CardAttn::Off::execute() const {
     BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
     ::note::detail::NcErrorCapture nc_err_;
     using meta_ = ::note::detail::request_traits<CardAttn::Off>;
-    auto rv_ = meta_::execute_void_fn_(meta_::nc_, notecard_request, fn_, &build_, nc_err_, safety);
+    auto rv_ = meta_::execute_void_fn_(::note::detail::api_nc_singleton_, notecard_request, fn_, &build_, nc_err_, safety);
     if (!rv_) return ::note::Unexpected(rv_.error());
     if (!nc_err_.empty()) return ApiResult<void>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
     return ApiResult<void>{};
@@ -3186,7 +3178,7 @@ inline Result<void> CardAttn::Off::command() const {
         (*static_cast<decltype(build_)*>(p_))(b_);
     };
     using meta_ = ::note::detail::request_traits<CardAttn::Off>;
-    return meta_::send_fn_(meta_::nc_, fn_, &build_);
+    return meta_::send_fn_(::note::detail::api_nc_singleton_, fn_, &build_);
 }
 #endif
 
@@ -3196,7 +3188,6 @@ namespace note::detail {
 template<>
 struct request_traits<::note::api::CardAttn::On> {
 #if NOTE_SINGLETON
-    static inline void* nc_ = nullptr;
     static inline ::note::Result<void>(*execute_void_fn_)(void*, ::note::string_view, ::note::BuildFn, void*, ::note::detail::NcErrorCapture&, ::note::Safety) = nullptr;
     static inline ::note::Result<void>(*send_fn_)(void*, ::note::BuildFn, void*) = nullptr;
 #endif
@@ -3219,7 +3210,7 @@ inline ApiResult<void> CardAttn::On::execute() const {
     BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
     ::note::detail::NcErrorCapture nc_err_;
     using meta_ = ::note::detail::request_traits<CardAttn::On>;
-    auto rv_ = meta_::execute_void_fn_(meta_::nc_, notecard_request, fn_, &build_, nc_err_, safety);
+    auto rv_ = meta_::execute_void_fn_(::note::detail::api_nc_singleton_, notecard_request, fn_, &build_, nc_err_, safety);
     if (!rv_) return ::note::Unexpected(rv_.error());
     if (!nc_err_.empty()) return ApiResult<void>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
     return ApiResult<void>{};
@@ -3233,7 +3224,7 @@ inline Result<void> CardAttn::On::command() const {
         (*static_cast<decltype(build_)*>(p_))(b_);
     };
     using meta_ = ::note::detail::request_traits<CardAttn::On>;
-    return meta_::send_fn_(meta_::nc_, fn_, &build_);
+    return meta_::send_fn_(::note::detail::api_nc_singleton_, fn_, &build_);
 }
 #endif
 
@@ -3278,7 +3269,6 @@ struct request_traits<::note::api::CardAttn::Query> {
         return table_;
     }
 #if NOTE_SINGLETON
-    static inline void* nc_ = nullptr;
     static inline ::note::Result<void>(*execute_generic_fn_)(void*, ::note::string_view, ::note::BuildFn, void*, void*, const ::note::FieldDesc*, uint8_t, ::note::detail::NcErrorCapture&, bool&, void*, ::note::BodyHandlerFactory, ::note::Safety) = nullptr;
 #endif
 };
@@ -3309,7 +3299,7 @@ inline ApiResult<typename CardAttn::Query::Response> CardAttn::Query::execute() 
     ::note::detail::NcErrorCapture nc_err_;
     bool exhausted_ = false;
     using meta_ = ::note::detail::request_traits<CardAttn::Query>;
-    auto rv_ = meta_::execute_generic_fn_(meta_::nc_, notecard_request, fn_, &build_, &rsp_, meta_::field_descs_ptr(), meta_::field_count, nc_err_, exhausted_, nullptr, nullptr, safety);
+    auto rv_ = meta_::execute_generic_fn_(::note::detail::api_nc_singleton_, notecard_request, fn_, &build_, &rsp_, meta_::field_descs_ptr(), meta_::field_count, nc_err_, exhausted_, nullptr, nullptr, safety);
     if (!rv_) return ::note::Unexpected(rv_.error());
     if (!nc_err_.empty()) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
     if (exhausted_) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Overflow, ::note::Cause::Unspecified, NOTE_ERR("arena exhausted")});

@@ -225,7 +225,6 @@ struct request_traits<::note::api::CardIllumination> {
     static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);
     static const ::note::FieldDesc* field_descs_ptr() { return field_descs_table_; }
 #if NOTE_SINGLETON
-    static inline void* nc_ = nullptr;
     static inline ::note::Result<void>(*execute_generic_fn_)(void*, ::note::string_view, ::note::BuildFn, void*, void*, const ::note::FieldDesc*, uint8_t, ::note::detail::NcErrorCapture&, bool&, void*, ::note::BodyHandlerFactory, ::note::Safety) = nullptr;
     static inline ::note::Result<void>(*send_fn_)(void*, ::note::BuildFn, void*) = nullptr;
 #endif
@@ -250,7 +249,7 @@ inline ApiResult<typename CardIllumination::Response> CardIllumination::execute(
     ::note::detail::NcErrorCapture nc_err_;
     bool exhausted_ = false;
     using meta_ = ::note::detail::request_traits<CardIllumination>;
-    auto rv_ = meta_::execute_generic_fn_(meta_::nc_, notecard_request, fn_, &build_, &rsp_, meta_::field_descs_ptr(), meta_::field_count, nc_err_, exhausted_, nullptr, nullptr, safety);
+    auto rv_ = meta_::execute_generic_fn_(::note::detail::api_nc_singleton_, notecard_request, fn_, &build_, &rsp_, meta_::field_descs_ptr(), meta_::field_count, nc_err_, exhausted_, nullptr, nullptr, safety);
     if (!rv_) return ::note::Unexpected(rv_.error());
     if (!nc_err_.empty()) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
     if (exhausted_) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Overflow, ::note::Cause::Unspecified, NOTE_ERR("arena exhausted")});
@@ -265,7 +264,7 @@ inline Result<void> CardIllumination::command() const {
         (*static_cast<decltype(build_)*>(p_))(b_);
     };
     using meta_ = ::note::detail::request_traits<CardIllumination>;
-    return meta_::send_fn_(meta_::nc_, fn_, &build_);
+    return meta_::send_fn_(::note::detail::api_nc_singleton_, fn_, &build_);
 }
 #endif
 

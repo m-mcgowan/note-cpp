@@ -824,7 +824,6 @@ struct request_traits<::note::api::NoteGet::Read> {
         return table_;
     }
 #if NOTE_SINGLETON
-    static inline void* nc_ = nullptr;
     static inline ::note::Result<void>(*execute_generic_fn_)(void*, ::note::string_view, ::note::BuildFn, void*, void*, const ::note::FieldDesc*, uint8_t, ::note::detail::NcErrorCapture&, bool&, void*, ::note::BodyHandlerFactory, ::note::Safety) = nullptr;
     static inline ::note::Result<void>(*send_fn_)(void*, ::note::BuildFn, void*) = nullptr;
 #endif
@@ -851,7 +850,7 @@ inline ApiResult<typename NoteGet::Read::Response> NoteGet::Read::execute() cons
     ::note::detail::NcErrorCapture nc_err_;
     bool exhausted_ = false;
     using meta_ = ::note::detail::request_traits<NoteGet::Read>;
-    auto rv_ = meta_::execute_generic_fn_(meta_::nc_, notecard_request, fn_, &build_, &rsp_, meta_::field_descs_ptr(), meta_::field_count, nc_err_, exhausted_, body_ptr_, body_handler_factory_, safety);
+    auto rv_ = meta_::execute_generic_fn_(::note::detail::api_nc_singleton_, notecard_request, fn_, &build_, &rsp_, meta_::field_descs_ptr(), meta_::field_count, nc_err_, exhausted_, body_ptr_, body_handler_factory_, safety);
     if (!rv_) return ::note::Unexpected(rv_.error());
     if (!nc_err_.empty()) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
     if (exhausted_) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Overflow, ::note::Cause::Unspecified, NOTE_ERR("arena exhausted")});
@@ -866,7 +865,7 @@ inline Result<void> NoteGet::Read::command() const {
         (*static_cast<decltype(build_)*>(p_))(b_);
     };
     using meta_ = ::note::detail::request_traits<NoteGet::Read>;
-    return meta_::send_fn_(meta_::nc_, fn_, &build_);
+    return meta_::send_fn_(::note::detail::api_nc_singleton_, fn_, &build_);
 }
 #endif
 
@@ -921,7 +920,6 @@ struct request_traits<::note::api::NoteGet::Pop> {
         return table_;
     }
 #if NOTE_SINGLETON
-    static inline void* nc_ = nullptr;
     static inline ::note::Result<void>(*execute_generic_fn_)(void*, ::note::string_view, ::note::BuildFn, void*, void*, const ::note::FieldDesc*, uint8_t, ::note::detail::NcErrorCapture&, bool&, void*, ::note::BodyHandlerFactory, ::note::Safety) = nullptr;
     static inline ::note::Result<void>(*send_fn_)(void*, ::note::BuildFn, void*) = nullptr;
 #endif
@@ -949,7 +947,7 @@ inline ApiResult<typename NoteGet::Pop::Response> NoteGet::Pop::execute() const 
     ::note::detail::NcErrorCapture nc_err_;
     bool exhausted_ = false;
     using meta_ = ::note::detail::request_traits<NoteGet::Pop>;
-    auto rv_ = meta_::execute_generic_fn_(meta_::nc_, notecard_request, fn_, &build_, &rsp_, meta_::field_descs_ptr(), meta_::field_count, nc_err_, exhausted_, body_ptr_, body_handler_factory_, safety);
+    auto rv_ = meta_::execute_generic_fn_(::note::detail::api_nc_singleton_, notecard_request, fn_, &build_, &rsp_, meta_::field_descs_ptr(), meta_::field_count, nc_err_, exhausted_, body_ptr_, body_handler_factory_, safety);
     if (!rv_) return ::note::Unexpected(rv_.error());
     if (!nc_err_.empty()) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
     if (exhausted_) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Overflow, ::note::Cause::Unspecified, NOTE_ERR("arena exhausted")});
@@ -964,7 +962,7 @@ inline Result<void> NoteGet::Pop::command() const {
         (*static_cast<decltype(build_)*>(p_))(b_);
     };
     using meta_ = ::note::detail::request_traits<NoteGet::Pop>;
-    return meta_::send_fn_(meta_::nc_, fn_, &build_);
+    return meta_::send_fn_(::note::detail::api_nc_singleton_, fn_, &build_);
 }
 #endif
 

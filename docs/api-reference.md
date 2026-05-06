@@ -15,9 +15,30 @@ auto rsp = nc.execute(note::api::CardTemp::Read{});
 
 Both forms produce identical requests. The group syntax is more readable; the direct form is useful for generic code or when API groups are disabled (`NOTE_NO_API_GROUPS`).
 
-## Overview
+## Contents
+
+The reference is organized by **resource group** — a logical collection of related endpoints. Each group below has an Overview table listing every endpoint with its group-syntax accessor, direct type, and response fields, followed by an Aliases table when the group exposes semantic shortcuts (e.g., `api.note.read("file.qi")` for `note.get`).
+
+After the per-group overviews, the [Endpoint details](#endpoint-details) section has a deep dive for every endpoint — request fields, response fields, safety classification, command support.
+
+
+| Group | Description |
+|-------|-------------|
+| [`card`](#card) | Notecard hardware: ATTN pin, sensors (temperature, voltage, accelerometer), location, time, power, transport, peripherals. |
+| [`dfu`](#dfu) | Device firmware update: download status, in-progress operations. |
+| [`env`](#env) | Environment variables: device-, fleet-, and project-scoped configuration shared with Notehub. |
+| [`file`](#file) | Notefile management: clear, delete, change tracking, statistics. |
+| [`hub`](#hub) | Notehub connection: sync, session state, signal, log forwarding. |
+| [`note`](#note) | Note operations: add to outbound queues, read or pop from inbound queues, templates. |
+| [`ntn`](#ntn) | Non-Terrestrial Network (Starnote / Skylo satellite SKU): GPS, status, reset. |
+| [`var`](#var) | Quick scalar accessors: shorthand for setting individual numeric or string values shared with Notehub. |
+| [`web`](#web) | Outbound HTTP requests proxied through Notehub: GET/PUT/POST/DELETE. |
+
+## Endpoint groups
 
 ### card
+
+Notecard hardware: ATTN pin, sensors (temperature, voltage, accelerometer), location, time, power, transport, peripherals.
 
 | Wire Name | Group Syntax | Direct Type | Response Fields |
 |-----------|-------------|-------------|-----------------|
@@ -89,12 +110,16 @@ Both forms produce identical requests. The group syntax is more readable; the di
 
 ### dfu
 
+Device firmware update: download status, in-progress operations.
+
 | Wire Name | Group Syntax | Direct Type | Response Fields |
 |-----------|-------------|-------------|-----------------|
 | `dfu.get` | `dfu.get()` | [`DfuGet`](#dfuget) | `.cobs`, `.length`, `.payload`, `.status` |
 | `dfu.status` | `dfu.status()` | [`DfuStatus`](#dfustatus) | `.mode`, `.off`, `.on`, `.pending`, `.status` |
 
 ### env
+
+Environment variables: device-, fleet-, and project-scoped configuration shared with Notehub.
 
 | Wire Name | Group Syntax | Direct Type | Response Fields |
 |-----------|-------------|-------------|-----------------|
@@ -105,7 +130,7 @@ Both forms produce identical requests. The group syntax is more readable; the di
 | `env.set` | `env.(...)` | [`EnvSet`](#envset) | `.time` |
 | `env.template` | `env.templates()` | [`EnvTemplate`](#envtemplate) | `.bytes` |
 
-**Layer 2 aliases** — semantic shortcuts on `api.env`:
+**Aliases** — semantic shortcuts on `api.env`:
 
 | Alias | Wire Name | Direct Type |
 |-------|-----------|-------------|
@@ -113,6 +138,8 @@ Both forms produce identical requests. The group syntax is more readable; the di
 | `env.clearDefault(note::string_view name)` | `env.default` | [`EnvDefault::Remove`](#envdefault) |
 
 ### file
+
+Notefile management: clear, delete, change tracking, statistics.
 
 | Wire Name | Group Syntax | Direct Type | Response Fields |
 |-----------|-------------|-------------|-----------------|
@@ -122,7 +149,7 @@ Both forms produce identical requests. The group syntax is more readable; the di
 | `file.delete` | `file.delete_()` | [`FileDelete`](#filedelete) | void |
 | `file.stats` | `file.stats()` | [`FileStats`](#filestats) | `.changes`, `.sync`, `.total` |
 
-**Layer 2 aliases** — semantic shortcuts on `api.file`:
+**Aliases** — semantic shortcuts on `api.file`:
 
 | Alias | Wire Name | Direct Type |
 |-------|-----------|-------------|
@@ -130,6 +157,8 @@ Both forms produce identical requests. The group syntax is more readable; the di
 | `file.remove(note::string_view files)` | `file.delete` | [`FileDelete`](#filedelete) |
 
 ### hub
+
+Notehub connection: sync, session state, signal, log forwarding.
 
 | Wire Name | Group Syntax | Direct Type | Response Fields |
 |-----------|-------------|-------------|-----------------|
@@ -143,6 +172,8 @@ Both forms produce identical requests. The group syntax is more readable; the di
 
 ### note
 
+Note operations: add to outbound queues, read or pop from inbound queues, templates.
+
 | Wire Name | Group Syntax | Direct Type | Response Fields |
 |-----------|-------------|-------------|-----------------|
 | `note.add` | `note.add()` | [`NoteAdd`](#noteadd) | `.noteId`, `.template_`, `.total` |
@@ -155,7 +186,7 @@ Both forms produce identical requests. The group syntax is more readable; the di
 | `note.template` | `note.templates().remove(...)` | [`NoteTemplate::Remove`](#notetemplate) | `.bytes`, `.format`, `.length`, `.template_` |
 | `note.update` | `note.(...)` | [`NoteUpdate`](#noteupdate) | void |
 
-**Layer 2 aliases** — semantic shortcuts on `api.note`:
+**Aliases** — semantic shortcuts on `api.note`:
 
 | Alias | Wire Name | Direct Type |
 |-------|-----------|-------------|
@@ -167,6 +198,8 @@ Both forms produce identical requests. The group syntax is more readable; the di
 
 ### ntn
 
+Non-Terrestrial Network (Starnote / Skylo satellite SKU): GPS, status, reset.
+
 | Wire Name | Group Syntax | Direct Type | Response Fields |
 |-----------|-------------|-------------|-----------------|
 | `ntn.gps` | `ntn.gps()` | [`NtnGps`](#ntngps) | `.off`, `.on` |
@@ -175,19 +208,23 @@ Both forms produce identical requests. The group syntax is more readable; the di
 
 ### var
 
+Quick scalar accessors: shorthand for setting individual numeric or string values shared with Notehub.
+
 | Wire Name | Group Syntax | Direct Type | Response Fields |
 |-----------|-------------|-------------|-----------------|
 | `var.delete` | `var.delete_()` | [`VarDelete`](#vardelete) | void |
 | `var.get` | `var.get()` | [`VarGet`](#varget) | `.flag`, `.text`, `.value` |
 | `var.set` | `var.set()` | [`VarSet`](#varset) | void |
 
-**Layer 2 aliases** — semantic shortcuts on `api.var`:
+**Aliases** — semantic shortcuts on `api.var`:
 
 | Alias | Wire Name | Direct Type |
 |-------|-----------|-------------|
 | `var.remove()` | `var.delete` | [`VarDelete`](#vardelete) |
 
 ### web
+
+Outbound HTTP requests proxied through Notehub: GET/PUT/POST/DELETE.
 
 | Wire Name | Group Syntax | Direct Type | Response Fields |
 |-----------|-------------|-------------|-----------------|
@@ -197,14 +234,14 @@ Both forms produce identical requests. The group syntax is more readable; the di
 | `web.post` | `web.post()` | [`WebPost`](#webpost) | `.cobs`, `.length`, `.payload`, `.result`, `.status` |
 | `web.put` | `web.put()` | [`WebPut`](#webput) | `.payload`, `.result`, `.status`, `.cobs`, `.length` |
 
-**Layer 2 aliases** — semantic shortcuts on `api.web`:
+**Aliases** — semantic shortcuts on `api.web`:
 
 | Alias | Wire Name | Direct Type |
 |-------|-----------|-------------|
 | `web.remove()` | `web.delete` | [`WebDelete`](#webdelete) |
 
 
-## Endpoint Details
+## Endpoint details
 
 ### card.attn 
 This endpoint has multiple intents:

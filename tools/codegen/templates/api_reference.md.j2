@@ -15,10 +15,36 @@ auto rsp = nc.execute(note::api::CardTemp::Read{});
 
 Both forms produce identical requests. The group syntax is more readable; the direct form is useful for generic code or when API groups are disabled (`NOTE_NO_API_GROUPS`).
 
-## Overview
+## Contents
+
+The reference is organized by **resource group** — a logical collection of related endpoints. Each group below has an Overview table listing every endpoint with its group-syntax accessor, direct type, and response fields, followed by an Aliases table when the group exposes semantic shortcuts (e.g., `api.note.read("file.qi")` for `note.get`).
+
+After the per-group overviews, the [Endpoint details](#endpoint-details) section has a deep dive for every endpoint — request fields, response fields, safety classification, command support.
+
+{% set group_descriptions = {
+    "card": "Notecard hardware: ATTN pin, sensors (temperature, voltage, accelerometer), location, time, power, transport, peripherals.",
+    "hub": "Notehub connection: sync, session state, signal, log forwarding.",
+    "note": "Note operations: add to outbound queues, read or pop from inbound queues, templates.",
+    "env": "Environment variables: device-, fleet-, and project-scoped configuration shared with Notehub.",
+    "file": "Notefile management: clear, delete, change tracking, statistics.",
+    "ntn": "Non-Terrestrial Network (Starnote / Skylo satellite SKU): GPS, status, reset.",
+    "dfu": "Device firmware update: download status, in-progress operations.",
+    "var": "Quick scalar accessors: shorthand for setting individual numeric or string values shared with Notehub.",
+    "web": "Outbound HTTP requests proxied through Notehub: GET/PUT/POST/DELETE."
+} %}
+
+| Group | Description |
+|-------|-------------|
+{% for group in resource_groups %}
+| [`{{ group.name }}`](#{{ group.name }}) | {{ group_descriptions[group.name] | default("(no description)") }} |
+{% endfor %}
+
+## Endpoint groups
 
 {% for group in resource_groups %}
 ### {{ group.name }}
+
+{{ group_descriptions[group.name] | default("") }}
 
 | Wire Name | Group Syntax | Direct Type | Response Fields |
 |-----------|-------------|-------------|-----------------|
@@ -45,8 +71,8 @@ Both forms produce identical requests. The group syntax is more readable; the di
 {% endif %}
 {% endfor %}
 
-{# Layer 2 aliases — flat shortcuts on the group object. Filter mirrors      #}
-{# api.hpp.j2: skip no-param aliases for endpoints with their own factory.  #}
+{# Aliases — flat shortcuts on the group object. Filter mirrors api.hpp.j2:  #}
+{# skip no-param aliases for endpoints with their own factory.               #}
 {% set ns_aliases = namespace(any=false) %}
 {% for endpoint in group.endpoints %}
 {% for alias in endpoint.aliases %}
@@ -55,7 +81,7 @@ Both forms produce identical requests. The group syntax is more readable; the di
 {% endfor %}
 {% endfor %}
 {% if ns_aliases.any %}
-**Layer 2 aliases** — semantic shortcuts on `api.{{ group.name }}`:
+**Aliases** — semantic shortcuts on `api.{{ group.name }}`:
 
 | Alias | Wire Name | Direct Type |
 |-------|-----------|-------------|
@@ -71,7 +97,7 @@ Both forms produce identical requests. The group syntax is more readable; the di
 {% endif %}
 {% endfor %}
 
-## Endpoint Details
+## Endpoint details
 
 {% for endpoint in endpoints %}
 {% set anchor = endpoint.wire_name | replace(".", "") %}

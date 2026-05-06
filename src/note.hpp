@@ -19,6 +19,7 @@
 #include "note/json_buf.hpp"
 #include "note/progmem.hpp"
 #include "note/request_set.hpp"
+#include "note/static_arena.hpp"
 #include "note/units.hpp"
 
 #ifdef ARDUINO

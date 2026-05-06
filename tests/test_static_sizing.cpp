@@ -8,6 +8,7 @@
 #include <note/arena.hpp>
 #include <note/allocator.hpp>
 #include <note/generic_sink.hpp>
+#include <note/static_arena.hpp>
 #include <note/string_pool.hpp>
 
 TEST_CASE("RequestSet::max_arena_size is max of component responses") {
@@ -235,4 +236,35 @@ TEST_CASE("GenericResponseSink handles arena exhaustion gracefully") {
 
     gsink.on_int("count", 42);
     REQUIRE(rsp.count == 42);
+}
+
+// ---------------------------------------------------------------------------
+// StaticArena<RequestSetT> — bundles size derivation + buffer + arena.
+
+TEST_CASE("StaticArena sizes its buffer from the RequestSet") {
+    using R = note::RequestSet<note::api::CardStatus, note::api::CardVersion>;
+    note::StaticArena<R> arena;
+    REQUIRE(arena.capacity() == R::max_arena_size);
+    REQUIRE(arena.used() == 0);
+    REQUIRE(arena.available() == arena.capacity());
+}
+
+TEST_CASE("StaticArena reset() zeroes used()") {
+    using R = note::RequestSet<note::api::CardStatus>;
+    note::StaticArena<R> arena;
+    note::StringPool pool(note::arena_allocator(arena));  // implicit conversion
+    pool.intern("hello");
+    REQUIRE(arena.used() > 0);
+    arena.reset();
+    REQUIRE(arena.used() == 0);
+}
+
+TEST_CASE("StaticArena converts implicitly to MonotonicArena&") {
+    using R = note::RequestSet<note::api::CardStatus>;
+    note::StaticArena<R> arena;
+    // Must be usable wherever a MonotonicArena& is expected — both via the
+    // implicit conversion and the explicit base() escape hatch.
+    note::MonotonicArena& base = arena;
+    REQUIRE(base.capacity() == R::max_arena_size);
+    REQUIRE(&arena.base() == &base);
 }

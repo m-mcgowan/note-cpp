@@ -57,7 +57,7 @@ details belong in git commit messages and design docs, not here.
 - [Type-safe duration units](docs/duration-units.md): `Seconds`, `Minutes`, `Hours`
 - [`VoltageVariable`](docs/custom-field-transforms.md) builder for structured voltage thresholds
 - [`JsonBuf`](docs/body-values.md) constexpr JSON builder; [`json_fmt`](docs/body-values.md) compile-time validated templates (C++20)
-- [Target constraints](docs/intent-scoped-apis.md) via `make_api()` with `target<Product>()` / `target<Rat>()`
+- [Target constraints](examples/stdcpp/target-filtering.cpp) via `make_api()` with `target<Product>()` / `target<Rat>()`
 - [`body()`](docs/body-values.md) helper and `NOTE_FIELDS` macro for typed request/response bodies
 - Arduino `Printable` support for response fields and errors
 - [Raw JSON escape hatch](docs/raw-requests.md): `transact(json, buf)` and `send(json)`

@@ -12,14 +12,13 @@
 5. **[API reference](api-reference.md)** — complete reference for all Notecard endpoints
 6. **[Working with responses](working-with-responses.md)** — field access, `has_value()`, body parsing, lifetimes
 7. **[Error handling](error-handling.md)** — `Result<T>`, `ErrorInfo`, safety levels
-8. **[Intent-focused APIs](intent-focused-apis.md)** — named intents for multi-purpose endpoints
-9. **[Intent-scoped APIs](intent-scoped-apis.md)** — polymorphic dispatch types and safety levels
-10. **[Duration units](duration-units.md)** — `Minutes`, `Seconds`, `Hours`, `Days` with compile-time safety
-11. **[Body values and Note templates](body-values.md)** — raw JSON, builder lambda, typed struct, `template_of<T>()`
-12. **[Custom field transforms](custom-field-transforms.md)** — `VoltageVariable`, comma-separated flags
-13. **[JSON buffer builder](json-builder.md)** — zero-allocation `constexpr` JSON building
-14. **[Environment variables](environment-variables.md)** — `env.get`/`env.set` patterns, body-into-struct parsing
-15. **[Raw requests](raw-requests.md)** — escape hatch for requests not covered by the typed API
+8. **[Intent-focused APIs](intent-focused-apis.md)** — named intents for multi-purpose endpoints, with safety levels and field-shape constraints
+9. **[Duration units](duration-units.md)** — `Minutes`, `Seconds`, `Hours`, `Days` with compile-time safety
+10. **[Body values and Note templates](body-values.md)** — raw JSON, builder lambda, typed struct, `template_of<T>()`
+11. **[Custom field transforms](custom-field-transforms.md)** — `VoltageVariable`, comma-separated flags
+12. **[JSON buffer builder](json-builder.md)** — zero-allocation `constexpr` JSON building
+13. **[Environment variables](environment-variables.md)** — `env.get`/`env.set` patterns, body-into-struct parsing
+14. **[Raw requests](raw-requests.md)** — escape hatch for requests not covered by the typed API
 
 ## Infrastructure
 

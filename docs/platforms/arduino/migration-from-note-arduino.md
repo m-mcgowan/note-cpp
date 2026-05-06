@@ -892,7 +892,7 @@ auto r = nc.note.pop("data.qi")
 Both produce `note.get` on the wire. The difference: `read()` can't
 accidentally include `delete:true`, and `pop()` always includes it.
 Each variant only exposes the fields that apply.
-See [Polymorphic APIs](../../intent-scoped-apis.md) for the full list.
+See [Intent-focused APIs](../../intent-focused-apis.md) for the full list.
 
 ### card.temp — read vs configure
 

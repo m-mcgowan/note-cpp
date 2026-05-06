@@ -294,26 +294,6 @@ struct CardUsageTest {
         std::unique_ptr<JsonReader> reader_;
 #endif
     };
-    private:
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Winvalid-offsetof"
-    static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
-        {keys_::rsp_bytesPerDay, static_cast<uint16_t>(offsetof(Response, bytesPerDay)), ::note::FieldType::Int},
-        {keys_::rsp_bytesReceived, static_cast<uint16_t>(offsetof(Response, bytesReceived)), ::note::FieldType::Int},
-        {keys_::rsp_bytesSent, static_cast<uint16_t>(offsetof(Response, bytesSent)), ::note::FieldType::Int},
-        {keys_::rsp_days, static_cast<uint16_t>(offsetof(Response, days)), ::note::FieldType::Int},
-        {keys_::rsp_max, static_cast<uint16_t>(offsetof(Response, max)), ::note::FieldType::Int},
-        {keys_::rsp_notesReceived, static_cast<uint16_t>(offsetof(Response, notesReceived)), ::note::FieldType::Int},
-        {keys_::rsp_notesSent, static_cast<uint16_t>(offsetof(Response, notesSent)), ::note::FieldType::Int},
-        {keys_::rsp_seconds, static_cast<uint16_t>(offsetof(Response, seconds)), ::note::FieldType::Int},
-        {keys_::rsp_sessionsSecure, static_cast<uint16_t>(offsetof(Response, sessionsSecure)), ::note::FieldType::Int},
-        {keys_::rsp_sessionsStandard, static_cast<uint16_t>(offsetof(Response, sessionsStandard)), ::note::FieldType::Int},
-        {keys_::rsp_time, static_cast<uint16_t>(offsetof(Response, time)), ::note::FieldType::Int},
-    };
-#pragma GCC diagnostic pop
-    static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);
-    static const ::note::FieldDesc* field_descs_ptr() { return field_descs_table_; }
-    public:
 
 #if NOTE_SINGLETON
     private:
@@ -324,18 +304,8 @@ struct CardUsageTest {
     /// Returns an ApiResult<Response> — boolean-convertible to true on success;
     /// dereference (or use member-of-pointer ->) to read response fields,
     /// or call .error() to inspect the ErrorInfo on failure.
-    ApiResult<Response> execute() const {
-        auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
-        BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
-        Response rsp_{};
-        ::note::detail::NcErrorCapture nc_err_;
-        bool exhausted_ = false;
-        auto rv_ = execute_generic_fn_(nc_, notecard_request, fn_, &build_, &rsp_, field_descs_ptr(), field_count, nc_err_, exhausted_, nullptr, nullptr, safety);
-        if (!rv_) return ::note::Unexpected(rv_.error());
-        if (!nc_err_.empty()) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
-        if (exhausted_) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Overflow, ::note::Cause::Unspecified, NOTE_ERR("arena exhausted")});
-        return ApiResult<Response>(std::move(rsp_));
-    }
+    /// Defined out-of-line below request_traits<T> so the field-descs table is in scope.
+    ApiResult<Response> execute() const;
     private:
     static inline Result<void>(*send_fn_)(void*, BuildFn, void*);
     public:
@@ -410,7 +380,6 @@ struct CardUsageTest {
     private:
     friend class ::note::Notecard;
     template<typename> friend class ::note::StaticNotecard;
-    template<typename, typename> friend struct ::note::detail::has_field_descs;
 #if NOTE_NO_POLYMORPHIC || __cplusplus < 202002L
     template<typename> friend class ::note::Api;
 #else
@@ -439,6 +408,47 @@ inline CardUsageTest& CardUsageTest::megabytes_t::operator()(note::json_int_t v)
 }
 #pragma GCC diagnostic pop
 
+} // namespace note::api
+namespace note::detail {
+template<>
+struct request_traits<::note::api::CardUsageTest> {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+    static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
+        {::note::api::CardUsageTest::keys_::rsp_bytesPerDay, static_cast<uint16_t>(offsetof(::note::api::CardUsageTest::Response, bytesPerDay)), ::note::FieldType::Int},
+        {::note::api::CardUsageTest::keys_::rsp_bytesReceived, static_cast<uint16_t>(offsetof(::note::api::CardUsageTest::Response, bytesReceived)), ::note::FieldType::Int},
+        {::note::api::CardUsageTest::keys_::rsp_bytesSent, static_cast<uint16_t>(offsetof(::note::api::CardUsageTest::Response, bytesSent)), ::note::FieldType::Int},
+        {::note::api::CardUsageTest::keys_::rsp_days, static_cast<uint16_t>(offsetof(::note::api::CardUsageTest::Response, days)), ::note::FieldType::Int},
+        {::note::api::CardUsageTest::keys_::rsp_max, static_cast<uint16_t>(offsetof(::note::api::CardUsageTest::Response, max)), ::note::FieldType::Int},
+        {::note::api::CardUsageTest::keys_::rsp_notesReceived, static_cast<uint16_t>(offsetof(::note::api::CardUsageTest::Response, notesReceived)), ::note::FieldType::Int},
+        {::note::api::CardUsageTest::keys_::rsp_notesSent, static_cast<uint16_t>(offsetof(::note::api::CardUsageTest::Response, notesSent)), ::note::FieldType::Int},
+        {::note::api::CardUsageTest::keys_::rsp_seconds, static_cast<uint16_t>(offsetof(::note::api::CardUsageTest::Response, seconds)), ::note::FieldType::Int},
+        {::note::api::CardUsageTest::keys_::rsp_sessionsSecure, static_cast<uint16_t>(offsetof(::note::api::CardUsageTest::Response, sessionsSecure)), ::note::FieldType::Int},
+        {::note::api::CardUsageTest::keys_::rsp_sessionsStandard, static_cast<uint16_t>(offsetof(::note::api::CardUsageTest::Response, sessionsStandard)), ::note::FieldType::Int},
+        {::note::api::CardUsageTest::keys_::rsp_time, static_cast<uint16_t>(offsetof(::note::api::CardUsageTest::Response, time)), ::note::FieldType::Int},
+    };
+#pragma GCC diagnostic pop
+    static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);
+    static const ::note::FieldDesc* field_descs_ptr() { return field_descs_table_; }
+};
+} // namespace note::detail
+namespace note::api {
+
+#if NOTE_SINGLETON
+inline ApiResult<typename CardUsageTest::Response> CardUsageTest::execute() const {
+    auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
+    BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
+    Response rsp_{};
+    ::note::detail::NcErrorCapture nc_err_;
+    bool exhausted_ = false;
+    using meta_ = ::note::detail::request_traits<CardUsageTest>;
+    auto rv_ = execute_generic_fn_(nc_, notecard_request, fn_, &build_, &rsp_, meta_::field_descs_ptr(), meta_::field_count, nc_err_, exhausted_, nullptr, nullptr, safety);
+    if (!rv_) return ::note::Unexpected(rv_.error());
+    if (!nc_err_.empty()) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
+    if (exhausted_) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Overflow, ::note::Cause::Unspecified, NOTE_ERR("arena exhausted")});
+    return ApiResult<Response>(std::move(rsp_));
+}
+#endif
 
 
 } // namespace note::api

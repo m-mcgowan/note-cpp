@@ -204,18 +204,6 @@ struct CardPower {
             std::unique_ptr<JsonReader> reader_;
 #endif
         };
-        private:
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Winvalid-offsetof"
-        static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
-            {keys_::rsp_milliampHours, static_cast<uint16_t>(offsetof(Response, milliampHours)), ::note::FieldType::Double},
-            {keys_::rsp_temperature, static_cast<uint16_t>(offsetof(Response, temperature)), ::note::FieldType::Double},
-            {keys_::rsp_voltage, static_cast<uint16_t>(offsetof(Response, voltage)), ::note::FieldType::Double},
-        };
-#pragma GCC diagnostic pop
-        static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);
-        static const ::note::FieldDesc* field_descs_ptr() { return field_descs_table_; }
-        public:
 
 #if NOTE_SINGLETON
         private:
@@ -226,18 +214,8 @@ struct CardPower {
         /// Returns an ApiResult<Response> — boolean-convertible to true on success;
         /// dereference (or use member-of-pointer ->) to read response fields,
         /// or call .error() to inspect the ErrorInfo on failure.
-        ApiResult<Response> execute() const {
-            auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
-            BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
-            Response rsp_{};
-            ::note::detail::NcErrorCapture nc_err_;
-            bool exhausted_ = false;
-            auto rv_ = execute_generic_fn_(nc_, notecard_request, fn_, &build_, &rsp_, field_descs_ptr(), field_count, nc_err_, exhausted_, nullptr, nullptr, safety);
-            if (!rv_) return ::note::Unexpected(rv_.error());
-            if (!nc_err_.empty()) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
-            if (exhausted_) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Overflow, ::note::Cause::Unspecified, NOTE_ERR("arena exhausted")});
-            return ApiResult<Response>(std::move(rsp_));
-        }
+        /// Defined out-of-line below request_traits<T> so the field-descs table is in scope.
+        ApiResult<Response> execute() const;
         private:
         static inline Result<void>(*send_fn_)(void*, BuildFn, void*);
         public:
@@ -307,7 +285,6 @@ struct CardPower {
         private:
         friend class ::note::Notecard;
         template<typename> friend class ::note::StaticNotecard;
-        template<typename, typename> friend struct ::note::detail::has_field_descs;
 #if NOTE_NO_POLYMORPHIC || __cplusplus < 202002L
         template<typename> friend class ::note::Api;
 #else
@@ -489,18 +466,6 @@ struct CardPower {
             std::unique_ptr<JsonReader> reader_;
 #endif
         };
-        private:
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Winvalid-offsetof"
-        static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
-            {keys_::rsp_milliampHours, static_cast<uint16_t>(offsetof(Response, milliampHours)), ::note::FieldType::Double},
-            {keys_::rsp_temperature, static_cast<uint16_t>(offsetof(Response, temperature)), ::note::FieldType::Double},
-            {keys_::rsp_voltage, static_cast<uint16_t>(offsetof(Response, voltage)), ::note::FieldType::Double},
-        };
-#pragma GCC diagnostic pop
-        static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);
-        static const ::note::FieldDesc* field_descs_ptr() { return field_descs_table_; }
-        public:
 
 #if NOTE_SINGLETON
         private:
@@ -511,18 +476,8 @@ struct CardPower {
         /// Returns an ApiResult<Response> — boolean-convertible to true on success;
         /// dereference (or use member-of-pointer ->) to read response fields,
         /// or call .error() to inspect the ErrorInfo on failure.
-        ApiResult<Response> execute() const {
-            auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
-            BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
-            Response rsp_{};
-            ::note::detail::NcErrorCapture nc_err_;
-            bool exhausted_ = false;
-            auto rv_ = execute_generic_fn_(nc_, notecard_request, fn_, &build_, &rsp_, field_descs_ptr(), field_count, nc_err_, exhausted_, nullptr, nullptr, safety);
-            if (!rv_) return ::note::Unexpected(rv_.error());
-            if (!nc_err_.empty()) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
-            if (exhausted_) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Overflow, ::note::Cause::Unspecified, NOTE_ERR("arena exhausted")});
-            return ApiResult<Response>(std::move(rsp_));
-        }
+        /// Defined out-of-line below request_traits<T> so the field-descs table is in scope.
+        ApiResult<Response> execute() const;
         private:
         static inline Result<void>(*send_fn_)(void*, BuildFn, void*);
         public:
@@ -592,7 +547,6 @@ struct CardPower {
         private:
         friend class ::note::Notecard;
         template<typename> friend class ::note::StaticNotecard;
-        template<typename, typename> friend struct ::note::detail::has_field_descs;
 #if NOTE_NO_POLYMORPHIC || __cplusplus < 202002L
         template<typename> friend class ::note::Api;
 #else
@@ -762,18 +716,6 @@ struct CardPower {
             std::unique_ptr<JsonReader> reader_;
 #endif
         };
-        private:
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Winvalid-offsetof"
-        static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
-            {keys_::rsp_milliampHours, static_cast<uint16_t>(offsetof(Response, milliampHours)), ::note::FieldType::Double},
-            {keys_::rsp_temperature, static_cast<uint16_t>(offsetof(Response, temperature)), ::note::FieldType::Double},
-            {keys_::rsp_voltage, static_cast<uint16_t>(offsetof(Response, voltage)), ::note::FieldType::Double},
-        };
-#pragma GCC diagnostic pop
-        static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);
-        static const ::note::FieldDesc* field_descs_ptr() { return field_descs_table_; }
-        public:
 
 #if NOTE_SINGLETON
         private:
@@ -784,18 +726,8 @@ struct CardPower {
         /// Returns an ApiResult<Response> — boolean-convertible to true on success;
         /// dereference (or use member-of-pointer ->) to read response fields,
         /// or call .error() to inspect the ErrorInfo on failure.
-        ApiResult<Response> execute() const {
-            auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
-            BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
-            Response rsp_{};
-            ::note::detail::NcErrorCapture nc_err_;
-            bool exhausted_ = false;
-            auto rv_ = execute_generic_fn_(nc_, notecard_request, fn_, &build_, &rsp_, field_descs_ptr(), field_count, nc_err_, exhausted_, nullptr, nullptr, safety);
-            if (!rv_) return ::note::Unexpected(rv_.error());
-            if (!nc_err_.empty()) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
-            if (exhausted_) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Overflow, ::note::Cause::Unspecified, NOTE_ERR("arena exhausted")});
-            return ApiResult<Response>(std::move(rsp_));
-        }
+        /// Defined out-of-line below request_traits<T> so the field-descs table is in scope.
+        ApiResult<Response> execute() const;
         private:
         static inline Result<void>(*send_fn_)(void*, BuildFn, void*);
         public:
@@ -861,7 +793,6 @@ struct CardPower {
         private:
         friend class ::note::Notecard;
         template<typename> friend class ::note::StaticNotecard;
-        template<typename, typename> friend struct ::note::detail::has_field_descs;
 #if NOTE_NO_POLYMORPHIC || __cplusplus < 202002L
         template<typename> friend class ::note::Api;
 #else
@@ -887,6 +818,39 @@ inline CardPower::Read& CardPower::Read::reset_t::operator()(bool v) {
 }
 #pragma GCC diagnostic pop
 
+} // namespace note::api
+namespace note::detail {
+template<>
+struct request_traits<::note::api::CardPower::Read> {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+    static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
+        {::note::api::CardPower::Read::keys_::rsp_milliampHours, static_cast<uint16_t>(offsetof(::note::api::CardPower::Read::Response, milliampHours)), ::note::FieldType::Double},
+        {::note::api::CardPower::Read::keys_::rsp_temperature, static_cast<uint16_t>(offsetof(::note::api::CardPower::Read::Response, temperature)), ::note::FieldType::Double},
+        {::note::api::CardPower::Read::keys_::rsp_voltage, static_cast<uint16_t>(offsetof(::note::api::CardPower::Read::Response, voltage)), ::note::FieldType::Double},
+    };
+#pragma GCC diagnostic pop
+    static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);
+    static const ::note::FieldDesc* field_descs_ptr() { return field_descs_table_; }
+};
+} // namespace note::detail
+namespace note::api {
+
+#if NOTE_SINGLETON
+inline ApiResult<typename CardPower::Read::Response> CardPower::Read::execute() const {
+    auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
+    BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
+    Response rsp_{};
+    ::note::detail::NcErrorCapture nc_err_;
+    bool exhausted_ = false;
+    using meta_ = ::note::detail::request_traits<CardPower::Read>;
+    auto rv_ = execute_generic_fn_(nc_, notecard_request, fn_, &build_, &rsp_, meta_::field_descs_ptr(), meta_::field_count, nc_err_, exhausted_, nullptr, nullptr, safety);
+    if (!rv_) return ::note::Unexpected(rv_.error());
+    if (!nc_err_.empty()) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
+    if (exhausted_) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Overflow, ::note::Cause::Unspecified, NOTE_ERR("arena exhausted")});
+    return ApiResult<Response>(std::move(rsp_));
+}
+#endif
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
@@ -902,6 +866,39 @@ inline CardPower::Configure& CardPower::Configure::reset_t::operator()(bool v) {
 }
 #pragma GCC diagnostic pop
 
+} // namespace note::api
+namespace note::detail {
+template<>
+struct request_traits<::note::api::CardPower::Configure> {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+    static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
+        {::note::api::CardPower::Configure::keys_::rsp_milliampHours, static_cast<uint16_t>(offsetof(::note::api::CardPower::Configure::Response, milliampHours)), ::note::FieldType::Double},
+        {::note::api::CardPower::Configure::keys_::rsp_temperature, static_cast<uint16_t>(offsetof(::note::api::CardPower::Configure::Response, temperature)), ::note::FieldType::Double},
+        {::note::api::CardPower::Configure::keys_::rsp_voltage, static_cast<uint16_t>(offsetof(::note::api::CardPower::Configure::Response, voltage)), ::note::FieldType::Double},
+    };
+#pragma GCC diagnostic pop
+    static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);
+    static const ::note::FieldDesc* field_descs_ptr() { return field_descs_table_; }
+};
+} // namespace note::detail
+namespace note::api {
+
+#if NOTE_SINGLETON
+inline ApiResult<typename CardPower::Configure::Response> CardPower::Configure::execute() const {
+    auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
+    BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
+    Response rsp_{};
+    ::note::detail::NcErrorCapture nc_err_;
+    bool exhausted_ = false;
+    using meta_ = ::note::detail::request_traits<CardPower::Configure>;
+    auto rv_ = execute_generic_fn_(nc_, notecard_request, fn_, &build_, &rsp_, meta_::field_descs_ptr(), meta_::field_count, nc_err_, exhausted_, nullptr, nullptr, safety);
+    if (!rv_) return ::note::Unexpected(rv_.error());
+    if (!nc_err_.empty()) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
+    if (exhausted_) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Overflow, ::note::Cause::Unspecified, NOTE_ERR("arena exhausted")});
+    return ApiResult<Response>(std::move(rsp_));
+}
+#endif
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
@@ -912,6 +909,39 @@ inline CardPower::Reset& CardPower::Reset::minutes_t::operator()(note::json_int_
 }
 #pragma GCC diagnostic pop
 
+} // namespace note::api
+namespace note::detail {
+template<>
+struct request_traits<::note::api::CardPower::Reset> {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+    static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
+        {::note::api::CardPower::Reset::keys_::rsp_milliampHours, static_cast<uint16_t>(offsetof(::note::api::CardPower::Reset::Response, milliampHours)), ::note::FieldType::Double},
+        {::note::api::CardPower::Reset::keys_::rsp_temperature, static_cast<uint16_t>(offsetof(::note::api::CardPower::Reset::Response, temperature)), ::note::FieldType::Double},
+        {::note::api::CardPower::Reset::keys_::rsp_voltage, static_cast<uint16_t>(offsetof(::note::api::CardPower::Reset::Response, voltage)), ::note::FieldType::Double},
+    };
+#pragma GCC diagnostic pop
+    static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);
+    static const ::note::FieldDesc* field_descs_ptr() { return field_descs_table_; }
+};
+} // namespace note::detail
+namespace note::api {
+
+#if NOTE_SINGLETON
+inline ApiResult<typename CardPower::Reset::Response> CardPower::Reset::execute() const {
+    auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
+    BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
+    Response rsp_{};
+    ::note::detail::NcErrorCapture nc_err_;
+    bool exhausted_ = false;
+    using meta_ = ::note::detail::request_traits<CardPower::Reset>;
+    auto rv_ = execute_generic_fn_(nc_, notecard_request, fn_, &build_, &rsp_, meta_::field_descs_ptr(), meta_::field_count, nc_err_, exhausted_, nullptr, nullptr, safety);
+    if (!rv_) return ::note::Unexpected(rv_.error());
+    if (!nc_err_.empty()) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
+    if (exhausted_) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Overflow, ::note::Cause::Unspecified, NOTE_ERR("arena exhausted")});
+    return ApiResult<Response>(std::move(rsp_));
+}
+#endif
 
 
 } // namespace note::api

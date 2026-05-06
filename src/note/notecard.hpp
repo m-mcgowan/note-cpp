@@ -53,10 +53,18 @@ namespace detail {
     template<typename T>
     struct has_set_body_handler<T, std::void_t<decltype(std::declval<T>().set_body_handler(std::declval<BodyHandler>()))>> : std::true_type {};
 
+    /// Per-request-type metadata for runtime dispatch. Specialized by codegen
+    /// only for endpoints whose Response has simple (scalar / string / string-array)
+    /// fields — for those we ship a FieldDesc table + count and the generic
+    /// thunk path uses it. Lives outside the request struct so IntelliSense
+    /// completion on `req.<TAB>` doesn't surface dispatch plumbing.
+    template<typename T>
+    struct request_traits;
+
     template<typename T, typename = void>
     struct has_field_descs : std::false_type {};
     template<typename T>
-    struct has_field_descs<T, std::void_t<decltype(T::field_descs_ptr())>> : std::true_type {};
+    struct has_field_descs<T, std::void_t<decltype(request_traits<T>::field_descs_ptr())>> : std::true_type {};
 
     /// JsonSink that watches for the top-level `"body"` object and forwards
     /// every nested SAX event to a BodyHandler. Used by the buffered execute

@@ -874,47 +874,10 @@ namespace note::api {
 {% endif %}
 #endif
 {{ indent }}};
-{% set simple_rsp_props = [] %}
-{% for prop in op.response.properties %}
-{% if (not prop.is_array and (prop.cpp_type == "bool" or prop.is_integral or prop.cpp_type in ["double", "note::string_view"])) or (prop.is_array and prop.cpp_type == "note::string_view") %}
-{% if simple_rsp_props.append(prop) %}{% endif %}
-{% endif %}
-{% endfor %}
-{% if simple_rsp_props %}
-{# Version-guarded entries get their own #if so the table matches the Response struct's
- # gated fields exactly. Without this, GenericResponseSink (used by the singleton thunk
- # path) silently drops gated fields like CardAttn::off and CardAux::power. The table
- # lives at class scope so `sizeof(table)/sizeof(table[0])` gives the post-preprocessor
- # count for `field_count`, which is what the runtime dispatch iterates over. #}
-{{ indent }}private:
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Winvalid-offsetof"
-{{ indent }}static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
-{% for prop in simple_rsp_props %}
-{% if prop.version_guard %}
-#if NOTE_API_VERSION >= {{ prop.version_guard }} || !defined(NOTE_API_STRICT)
-{% endif %}
-{% if prop.is_array and prop.cpp_type == "note::string_view" %}
-{{ indent }}    {keys_::rsp_{{ prop.accessor_name }}, static_cast<uint16_t>(offsetof(Response, {{ prop.accessor_name }})), ::note::FieldType::StringArray},
-{% elif prop.cpp_type == "bool" %}
-{{ indent }}    {keys_::rsp_{{ prop.accessor_name }}, static_cast<uint16_t>(offsetof(Response, {{ prop.accessor_name }})), ::note::FieldType::Bool},
-{% elif prop.is_integral %}
-{{ indent }}    {keys_::rsp_{{ prop.accessor_name }}, static_cast<uint16_t>(offsetof(Response, {{ prop.accessor_name }})), ::note::FieldType::Int},
-{% elif prop.cpp_type == "double" %}
-{{ indent }}    {keys_::rsp_{{ prop.accessor_name }}, static_cast<uint16_t>(offsetof(Response, {{ prop.accessor_name }})), ::note::FieldType::Double},
-{% elif prop.cpp_type == "note::string_view" %}
-{{ indent }}    {keys_::rsp_{{ prop.accessor_name }}, static_cast<uint16_t>(offsetof(Response, {{ prop.accessor_name }})), ::note::FieldType::String},
-{% endif %}
-{% if prop.version_guard %}
-#endif
-{% endif %}
-{% endfor %}
-{{ indent }}};
-#pragma GCC diagnostic pop
-{{ indent }}static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);
-{{ indent }}static const ::note::FieldDesc* field_descs_ptr() { return field_descs_table_; }
-{{ indent }}public:
-{% endif %}
+{# Field-descs table for runtime dispatch lives in note::detail::request_traits<T>
+ # (emitted by field_table() at namespace scope, after this struct is complete).
+ # Keeping it off the struct keeps autocomplete clean — IntelliSense surfaces every
+ # in-struct member regardless of access specifier. #}
 {% else %}
 {{ indent }}using Response = void;
 {% endif %}
@@ -954,22 +917,8 @@ namespace note::api {
 {{ indent }}/// Returns an ApiResult<Response> — boolean-convertible to true on success;
 {{ indent }}/// dereference (or use member-of-pointer ->) to read response fields,
 {{ indent }}/// or call .error() to inspect the ErrorInfo on failure.
-{{ indent }}ApiResult<Response> execute() const {
-{{ indent }}    auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
-{{ indent }}    BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
-{{ indent }}    Response rsp_{};
-{{ indent }}    ::note::detail::NcErrorCapture nc_err_;
-{{ indent }}    bool exhausted_ = false;
-{% if op.response.has_body %}
-{{ indent }}    auto rv_ = execute_generic_fn_(nc_, notecard_request, fn_, &build_, &rsp_, field_descs_ptr(), field_count, nc_err_, exhausted_, body_ptr_, body_handler_factory_, safety);
-{% else %}
-{{ indent }}    auto rv_ = execute_generic_fn_(nc_, notecard_request, fn_, &build_, &rsp_, field_descs_ptr(), field_count, nc_err_, exhausted_, nullptr, nullptr, safety);
-{% endif %}
-{{ indent }}    if (!rv_) return ::note::Unexpected(rv_.error());
-{{ indent }}    if (!nc_err_.empty()) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
-{{ indent }}    if (exhausted_) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Overflow, ::note::Cause::Unspecified, NOTE_ERR("arena exhausted")});
-{{ indent }}    return ApiResult<Response>(std::move(rsp_));
-{{ indent }}}
+{{ indent }}/// Defined out-of-line below request_traits<T> so the field-descs table is in scope.
+{{ indent }}ApiResult<Response> execute() const;
 {% else %}
 {{ indent }}private:
 {{ indent }}/// Singleton per-type execute (non-standard response).
@@ -1133,7 +1082,6 @@ namespace note::api {
 {{ indent }}private:
 {{ indent }}friend class ::note::Notecard;
 {{ indent }}template<typename> friend class ::note::StaticNotecard;
-{{ indent }}template<typename, typename> friend struct ::note::detail::has_field_descs;
 #if NOTE_NO_POLYMORPHIC || __cplusplus < 202002L
 {{ indent }}template<typename> friend class ::note::Api;
 #else
@@ -1237,7 +1185,79 @@ inline {{ parent_qual }}::{{ prop.nested_type_name }}& {{ parent_qual }}::{{ pro
 {% endif %}
 {% endmacro %}
 
+{# field_table: emits ::note::detail::request_traits<T> specialization at      #}
+{# namespace scope. Holds the runtime-dispatch FieldDesc table for the op.    #}
+{# Only emitted when op has simple_rsp_props (the dispatch path's prerequisite). #}
+{# Version-guarded entries get their own #if so the table matches the Response #}
+{# struct's gated fields exactly post-preprocessor.                            #}
 {% macro field_table(op, parent_qual) %}
+{% set simple_rsp_props = [] %}
+{% if op.response and op.response.properties %}
+{% for prop in op.response.properties %}
+{% if (not prop.is_array and (prop.cpp_type == "bool" or prop.is_integral or prop.cpp_type in ["double", "note::string_view"])) or (prop.is_array and prop.cpp_type == "note::string_view") %}
+{% if simple_rsp_props.append(prop) %}{% endif %}
+{% endif %}
+{% endfor %}
+{% endif %}
+{% if simple_rsp_props %}
+} // namespace note::api
+namespace note::detail {
+template<>
+struct request_traits<::note::api::{{ parent_qual }}> {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+    static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
+{% for prop in simple_rsp_props %}
+{% if prop.version_guard %}
+#if NOTE_API_VERSION >= {{ prop.version_guard }} || !defined(NOTE_API_STRICT)
+{% endif %}
+{% if prop.is_array and prop.cpp_type == "note::string_view" %}
+        {::note::api::{{ parent_qual }}::keys_::rsp_{{ prop.accessor_name }}, static_cast<uint16_t>(offsetof(::note::api::{{ parent_qual }}::Response, {{ prop.accessor_name }})), ::note::FieldType::StringArray},
+{% elif prop.cpp_type == "bool" %}
+        {::note::api::{{ parent_qual }}::keys_::rsp_{{ prop.accessor_name }}, static_cast<uint16_t>(offsetof(::note::api::{{ parent_qual }}::Response, {{ prop.accessor_name }})), ::note::FieldType::Bool},
+{% elif prop.is_integral %}
+        {::note::api::{{ parent_qual }}::keys_::rsp_{{ prop.accessor_name }}, static_cast<uint16_t>(offsetof(::note::api::{{ parent_qual }}::Response, {{ prop.accessor_name }})), ::note::FieldType::Int},
+{% elif prop.cpp_type == "double" %}
+        {::note::api::{{ parent_qual }}::keys_::rsp_{{ prop.accessor_name }}, static_cast<uint16_t>(offsetof(::note::api::{{ parent_qual }}::Response, {{ prop.accessor_name }})), ::note::FieldType::Double},
+{% elif prop.cpp_type == "note::string_view" %}
+        {::note::api::{{ parent_qual }}::keys_::rsp_{{ prop.accessor_name }}, static_cast<uint16_t>(offsetof(::note::api::{{ parent_qual }}::Response, {{ prop.accessor_name }})), ::note::FieldType::String},
+{% endif %}
+{% if prop.version_guard %}
+#endif
+{% endif %}
+{% endfor %}
+    };
+#pragma GCC diagnostic pop
+    static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);
+    static const ::note::FieldDesc* field_descs_ptr() { return field_descs_table_; }
+};
+} // namespace note::detail
+namespace note::api {
+
+{# Out-of-line definition of execute() for the singleton-generic path. Emitted #}
+{# here so request_traits<T> is complete at the point of use — required        #}
+{# because non-template inline member functions are analyzed at class scope    #}
+{# close, before the trait specialization above would be visible.              #}
+#if NOTE_SINGLETON
+inline ApiResult<typename {{ parent_qual }}::Response> {{ parent_qual }}::execute() const {
+    auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
+    BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
+    Response rsp_{};
+    ::note::detail::NcErrorCapture nc_err_;
+    bool exhausted_ = false;
+    using meta_ = ::note::detail::request_traits<{{ parent_qual }}>;
+{% if op.response.has_body %}
+    auto rv_ = execute_generic_fn_(nc_, notecard_request, fn_, &build_, &rsp_, meta_::field_descs_ptr(), meta_::field_count, nc_err_, exhausted_, body_ptr_, body_handler_factory_, safety);
+{% else %}
+    auto rv_ = execute_generic_fn_(nc_, notecard_request, fn_, &build_, &rsp_, meta_::field_descs_ptr(), meta_::field_count, nc_err_, exhausted_, nullptr, nullptr, safety);
+{% endif %}
+    if (!rv_) return ::note::Unexpected(rv_.error());
+    if (!nc_err_.empty()) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
+    if (exhausted_) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Overflow, ::note::Cause::Unspecified, NOTE_ERR("arena exhausted")});
+    return ApiResult<Response>(std::move(rsp_));
+}
+#endif
+{% endif %}
 {% endmacro %}
 
 {# Build doc string for an operation struct, appending @skus if restricted #}

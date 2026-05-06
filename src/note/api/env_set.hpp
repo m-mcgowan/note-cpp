@@ -194,18 +194,6 @@ struct EnvSet {
         std::unique_ptr<JsonReader> reader_;
 #endif
     };
-    private:
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Winvalid-offsetof"
-    static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
-#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-        {keys_::rsp_time, static_cast<uint16_t>(offsetof(Response, time)), ::note::FieldType::Int},
-#endif
-    };
-#pragma GCC diagnostic pop
-    static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);
-    static const ::note::FieldDesc* field_descs_ptr() { return field_descs_table_; }
-    public:
 
 #if NOTE_SINGLETON
     private:
@@ -216,18 +204,8 @@ struct EnvSet {
     /// Returns an ApiResult<Response> — boolean-convertible to true on success;
     /// dereference (or use member-of-pointer ->) to read response fields,
     /// or call .error() to inspect the ErrorInfo on failure.
-    ApiResult<Response> execute() const {
-        auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
-        BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
-        Response rsp_{};
-        ::note::detail::NcErrorCapture nc_err_;
-        bool exhausted_ = false;
-        auto rv_ = execute_generic_fn_(nc_, notecard_request, fn_, &build_, &rsp_, field_descs_ptr(), field_count, nc_err_, exhausted_, nullptr, nullptr, safety);
-        if (!rv_) return ::note::Unexpected(rv_.error());
-        if (!nc_err_.empty()) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
-        if (exhausted_) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Overflow, ::note::Cause::Unspecified, NOTE_ERR("arena exhausted")});
-        return ApiResult<Response>(std::move(rsp_));
-    }
+    /// Defined out-of-line below request_traits<T> so the field-descs table is in scope.
+    ApiResult<Response> execute() const;
     private:
     static inline Result<void>(*send_fn_)(void*, BuildFn, void*);
     public:
@@ -295,7 +273,6 @@ struct EnvSet {
     private:
     friend class ::note::Notecard;
     template<typename> friend class ::note::StaticNotecard;
-    template<typename, typename> friend struct ::note::detail::has_field_descs;
 #if NOTE_NO_POLYMORPHIC || __cplusplus < 202002L
     template<typename> friend class ::note::Api;
 #else
@@ -314,6 +291,39 @@ inline EnvSet& EnvSet::text_t::operator()(note::string_view v) {
 }
 #pragma GCC diagnostic pop
 
+} // namespace note::api
+namespace note::detail {
+template<>
+struct request_traits<::note::api::EnvSet> {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+    static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+        {::note::api::EnvSet::keys_::rsp_time, static_cast<uint16_t>(offsetof(::note::api::EnvSet::Response, time)), ::note::FieldType::Int},
+#endif
+    };
+#pragma GCC diagnostic pop
+    static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);
+    static const ::note::FieldDesc* field_descs_ptr() { return field_descs_table_; }
+};
+} // namespace note::detail
+namespace note::api {
+
+#if NOTE_SINGLETON
+inline ApiResult<typename EnvSet::Response> EnvSet::execute() const {
+    auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
+    BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
+    Response rsp_{};
+    ::note::detail::NcErrorCapture nc_err_;
+    bool exhausted_ = false;
+    using meta_ = ::note::detail::request_traits<EnvSet>;
+    auto rv_ = execute_generic_fn_(nc_, notecard_request, fn_, &build_, &rsp_, meta_::field_descs_ptr(), meta_::field_count, nc_err_, exhausted_, nullptr, nullptr, safety);
+    if (!rv_) return ::note::Unexpected(rv_.error());
+    if (!nc_err_.empty()) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
+    if (exhausted_) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Overflow, ::note::Cause::Unspecified, NOTE_ERR("arena exhausted")});
+    return ApiResult<Response>(std::move(rsp_));
+}
+#endif
 
 
 } // namespace note::api

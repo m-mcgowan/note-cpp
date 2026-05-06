@@ -233,21 +233,6 @@ struct CardBinary {
             std::unique_ptr<JsonReader> reader_;
 #endif
         };
-        private:
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Winvalid-offsetof"
-        static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
-            {keys_::rsp_cobs, static_cast<uint16_t>(offsetof(Response, cobs)), ::note::FieldType::Int},
-            {keys_::rsp_connected, static_cast<uint16_t>(offsetof(Response, connected)), ::note::FieldType::Bool},
-            {keys_::rsp_err, static_cast<uint16_t>(offsetof(Response, err)), ::note::FieldType::String},
-            {keys_::rsp_length, static_cast<uint16_t>(offsetof(Response, length)), ::note::FieldType::Int},
-            {keys_::rsp_max, static_cast<uint16_t>(offsetof(Response, max)), ::note::FieldType::Int},
-            {keys_::rsp_status, static_cast<uint16_t>(offsetof(Response, status)), ::note::FieldType::String},
-        };
-#pragma GCC diagnostic pop
-        static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);
-        static const ::note::FieldDesc* field_descs_ptr() { return field_descs_table_; }
-        public:
 
 #if NOTE_SINGLETON
         private:
@@ -258,18 +243,8 @@ struct CardBinary {
         /// Returns an ApiResult<Response> — boolean-convertible to true on success;
         /// dereference (or use member-of-pointer ->) to read response fields,
         /// or call .error() to inspect the ErrorInfo on failure.
-        ApiResult<Response> execute() const {
-            auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
-            BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
-            Response rsp_{};
-            ::note::detail::NcErrorCapture nc_err_;
-            bool exhausted_ = false;
-            auto rv_ = execute_generic_fn_(nc_, notecard_request, fn_, &build_, &rsp_, field_descs_ptr(), field_count, nc_err_, exhausted_, nullptr, nullptr, safety);
-            if (!rv_) return ::note::Unexpected(rv_.error());
-            if (!nc_err_.empty()) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
-            if (exhausted_) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Overflow, ::note::Cause::Unspecified, NOTE_ERR("arena exhausted")});
-            return ApiResult<Response>(std::move(rsp_));
-        }
+        /// Defined out-of-line below request_traits<T> so the field-descs table is in scope.
+        ApiResult<Response> execute() const;
         private:
         static inline Result<void>(*send_fn_)(void*, BuildFn, void*);
         public:
@@ -334,7 +309,6 @@ struct CardBinary {
         private:
         friend class ::note::Notecard;
         template<typename> friend class ::note::StaticNotecard;
-        template<typename, typename> friend struct ::note::detail::has_field_descs;
 #if NOTE_NO_POLYMORPHIC || __cplusplus < 202002L
         template<typename> friend class ::note::Api;
 #else
@@ -535,21 +509,6 @@ struct CardBinary {
             std::unique_ptr<JsonReader> reader_;
 #endif
         };
-        private:
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Winvalid-offsetof"
-        static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
-            {keys_::rsp_cobs, static_cast<uint16_t>(offsetof(Response, cobs)), ::note::FieldType::Int},
-            {keys_::rsp_connected, static_cast<uint16_t>(offsetof(Response, connected)), ::note::FieldType::Bool},
-            {keys_::rsp_err, static_cast<uint16_t>(offsetof(Response, err)), ::note::FieldType::String},
-            {keys_::rsp_length, static_cast<uint16_t>(offsetof(Response, length)), ::note::FieldType::Int},
-            {keys_::rsp_max, static_cast<uint16_t>(offsetof(Response, max)), ::note::FieldType::Int},
-            {keys_::rsp_status, static_cast<uint16_t>(offsetof(Response, status)), ::note::FieldType::String},
-        };
-#pragma GCC diagnostic pop
-        static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);
-        static const ::note::FieldDesc* field_descs_ptr() { return field_descs_table_; }
-        public:
 
 #if NOTE_SINGLETON
         private:
@@ -560,18 +519,8 @@ struct CardBinary {
         /// Returns an ApiResult<Response> — boolean-convertible to true on success;
         /// dereference (or use member-of-pointer ->) to read response fields,
         /// or call .error() to inspect the ErrorInfo on failure.
-        ApiResult<Response> execute() const {
-            auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
-            BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
-            Response rsp_{};
-            ::note::detail::NcErrorCapture nc_err_;
-            bool exhausted_ = false;
-            auto rv_ = execute_generic_fn_(nc_, notecard_request, fn_, &build_, &rsp_, field_descs_ptr(), field_count, nc_err_, exhausted_, nullptr, nullptr, safety);
-            if (!rv_) return ::note::Unexpected(rv_.error());
-            if (!nc_err_.empty()) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
-            if (exhausted_) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Overflow, ::note::Cause::Unspecified, NOTE_ERR("arena exhausted")});
-            return ApiResult<Response>(std::move(rsp_));
-        }
+        /// Defined out-of-line below request_traits<T> so the field-descs table is in scope.
+        ApiResult<Response> execute() const;
         private:
         static inline Result<void>(*send_fn_)(void*, BuildFn, void*);
         public:
@@ -621,7 +570,6 @@ struct CardBinary {
         private:
         friend class ::note::Notecard;
         template<typename> friend class ::note::StaticNotecard;
-        template<typename, typename> friend struct ::note::detail::has_field_descs;
 #if NOTE_NO_POLYMORPHIC || __cplusplus < 202002L
         template<typename> friend class ::note::Api;
 #else
@@ -642,8 +590,80 @@ inline CardBinary::Status& CardBinary::Status::delete_t::operator()(bool v) {
 }
 #pragma GCC diagnostic pop
 
+} // namespace note::api
+namespace note::detail {
+template<>
+struct request_traits<::note::api::CardBinary::Status> {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+    static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
+        {::note::api::CardBinary::Status::keys_::rsp_cobs, static_cast<uint16_t>(offsetof(::note::api::CardBinary::Status::Response, cobs)), ::note::FieldType::Int},
+        {::note::api::CardBinary::Status::keys_::rsp_connected, static_cast<uint16_t>(offsetof(::note::api::CardBinary::Status::Response, connected)), ::note::FieldType::Bool},
+        {::note::api::CardBinary::Status::keys_::rsp_err, static_cast<uint16_t>(offsetof(::note::api::CardBinary::Status::Response, err)), ::note::FieldType::String},
+        {::note::api::CardBinary::Status::keys_::rsp_length, static_cast<uint16_t>(offsetof(::note::api::CardBinary::Status::Response, length)), ::note::FieldType::Int},
+        {::note::api::CardBinary::Status::keys_::rsp_max, static_cast<uint16_t>(offsetof(::note::api::CardBinary::Status::Response, max)), ::note::FieldType::Int},
+        {::note::api::CardBinary::Status::keys_::rsp_status, static_cast<uint16_t>(offsetof(::note::api::CardBinary::Status::Response, status)), ::note::FieldType::String},
+    };
+#pragma GCC diagnostic pop
+    static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);
+    static const ::note::FieldDesc* field_descs_ptr() { return field_descs_table_; }
+};
+} // namespace note::detail
+namespace note::api {
+
+#if NOTE_SINGLETON
+inline ApiResult<typename CardBinary::Status::Response> CardBinary::Status::execute() const {
+    auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
+    BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
+    Response rsp_{};
+    ::note::detail::NcErrorCapture nc_err_;
+    bool exhausted_ = false;
+    using meta_ = ::note::detail::request_traits<CardBinary::Status>;
+    auto rv_ = execute_generic_fn_(nc_, notecard_request, fn_, &build_, &rsp_, meta_::field_descs_ptr(), meta_::field_count, nc_err_, exhausted_, nullptr, nullptr, safety);
+    if (!rv_) return ::note::Unexpected(rv_.error());
+    if (!nc_err_.empty()) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
+    if (exhausted_) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Overflow, ::note::Cause::Unspecified, NOTE_ERR("arena exhausted")});
+    return ApiResult<Response>(std::move(rsp_));
+}
+#endif
 
 
+} // namespace note::api
+namespace note::detail {
+template<>
+struct request_traits<::note::api::CardBinary::Clear> {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+    static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
+        {::note::api::CardBinary::Clear::keys_::rsp_cobs, static_cast<uint16_t>(offsetof(::note::api::CardBinary::Clear::Response, cobs)), ::note::FieldType::Int},
+        {::note::api::CardBinary::Clear::keys_::rsp_connected, static_cast<uint16_t>(offsetof(::note::api::CardBinary::Clear::Response, connected)), ::note::FieldType::Bool},
+        {::note::api::CardBinary::Clear::keys_::rsp_err, static_cast<uint16_t>(offsetof(::note::api::CardBinary::Clear::Response, err)), ::note::FieldType::String},
+        {::note::api::CardBinary::Clear::keys_::rsp_length, static_cast<uint16_t>(offsetof(::note::api::CardBinary::Clear::Response, length)), ::note::FieldType::Int},
+        {::note::api::CardBinary::Clear::keys_::rsp_max, static_cast<uint16_t>(offsetof(::note::api::CardBinary::Clear::Response, max)), ::note::FieldType::Int},
+        {::note::api::CardBinary::Clear::keys_::rsp_status, static_cast<uint16_t>(offsetof(::note::api::CardBinary::Clear::Response, status)), ::note::FieldType::String},
+    };
+#pragma GCC diagnostic pop
+    static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);
+    static const ::note::FieldDesc* field_descs_ptr() { return field_descs_table_; }
+};
+} // namespace note::detail
+namespace note::api {
+
+#if NOTE_SINGLETON
+inline ApiResult<typename CardBinary::Clear::Response> CardBinary::Clear::execute() const {
+    auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
+    BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
+    Response rsp_{};
+    ::note::detail::NcErrorCapture nc_err_;
+    bool exhausted_ = false;
+    using meta_ = ::note::detail::request_traits<CardBinary::Clear>;
+    auto rv_ = execute_generic_fn_(nc_, notecard_request, fn_, &build_, &rsp_, meta_::field_descs_ptr(), meta_::field_count, nc_err_, exhausted_, nullptr, nullptr, safety);
+    if (!rv_) return ::note::Unexpected(rv_.error());
+    if (!nc_err_.empty()) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
+    if (exhausted_) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Overflow, ::note::Cause::Unspecified, NOTE_ERR("arena exhausted")});
+    return ApiResult<Response>(std::move(rsp_));
+}
+#endif
 
 
 } // namespace note::api

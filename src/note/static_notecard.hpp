@@ -123,8 +123,9 @@ public:
             Rsp rsp_val{};
             bool arena_exhausted = false;
             detail::NcErrorCapture nc_err;
+            using meta_ = ::note::detail::request_traits<RequestT>;
             auto rv = execute_generic_retried(RequestT::notecard_request, fields_fn, &fields,
-                                              &rsp_val, RequestT::field_descs_ptr(), RequestT::field_count,
+                                              &rsp_val, meta_::field_descs_ptr(), meta_::field_count,
                                               nc_err, arena_exhausted, safety, body_handler);
             if (!rv) return Unexpected(rv.error());
             if (!nc_err.empty()) {

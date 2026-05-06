@@ -452,25 +452,6 @@ struct CardLocationMode {
             std::unique_ptr<JsonReader> reader_;
 #endif
         };
-        private:
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Winvalid-offsetof"
-        static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
-            {keys_::rsp_lat, static_cast<uint16_t>(offsetof(Response, lat)), ::note::FieldType::Double},
-            {keys_::rsp_lon, static_cast<uint16_t>(offsetof(Response, lon)), ::note::FieldType::Double},
-            {keys_::rsp_max, static_cast<uint16_t>(offsetof(Response, max)), ::note::FieldType::Int},
-            {keys_::rsp_minutes, static_cast<uint16_t>(offsetof(Response, minutes)), ::note::FieldType::Int},
-            {keys_::rsp_mode, static_cast<uint16_t>(offsetof(Response, mode)), ::note::FieldType::String},
-            {keys_::rsp_seconds, static_cast<uint16_t>(offsetof(Response, seconds)), ::note::FieldType::Int},
-#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-            {keys_::rsp_threshold, static_cast<uint16_t>(offsetof(Response, threshold)), ::note::FieldType::Int},
-#endif
-            {keys_::rsp_vseconds, static_cast<uint16_t>(offsetof(Response, vseconds)), ::note::FieldType::String},
-        };
-#pragma GCC diagnostic pop
-        static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);
-        static const ::note::FieldDesc* field_descs_ptr() { return field_descs_table_; }
-        public:
 
 #if NOTE_SINGLETON
         private:
@@ -481,18 +462,8 @@ struct CardLocationMode {
         /// Returns an ApiResult<Response> — boolean-convertible to true on success;
         /// dereference (or use member-of-pointer ->) to read response fields,
         /// or call .error() to inspect the ErrorInfo on failure.
-        ApiResult<Response> execute() const {
-            auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
-            BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
-            Response rsp_{};
-            ::note::detail::NcErrorCapture nc_err_;
-            bool exhausted_ = false;
-            auto rv_ = execute_generic_fn_(nc_, notecard_request, fn_, &build_, &rsp_, field_descs_ptr(), field_count, nc_err_, exhausted_, nullptr, nullptr, safety);
-            if (!rv_) return ::note::Unexpected(rv_.error());
-            if (!nc_err_.empty()) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
-            if (exhausted_) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Overflow, ::note::Cause::Unspecified, NOTE_ERR("arena exhausted")});
-            return ApiResult<Response>(std::move(rsp_));
-        }
+        /// Defined out-of-line below request_traits<T> so the field-descs table is in scope.
+        ApiResult<Response> execute() const;
         private:
         static inline Result<void>(*send_fn_)(void*, BuildFn, void*);
         public:
@@ -606,7 +577,6 @@ struct CardLocationMode {
         private:
         friend class ::note::Notecard;
         template<typename> friend class ::note::StaticNotecard;
-        template<typename, typename> friend struct ::note::detail::has_field_descs;
 #if NOTE_NO_POLYMORPHIC || __cplusplus < 202002L
         template<typename> friend class ::note::Api;
 #else
@@ -1035,25 +1005,6 @@ struct CardLocationMode {
             std::unique_ptr<JsonReader> reader_;
 #endif
         };
-        private:
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Winvalid-offsetof"
-        static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
-            {keys_::rsp_lat, static_cast<uint16_t>(offsetof(Response, lat)), ::note::FieldType::Double},
-            {keys_::rsp_lon, static_cast<uint16_t>(offsetof(Response, lon)), ::note::FieldType::Double},
-            {keys_::rsp_max, static_cast<uint16_t>(offsetof(Response, max)), ::note::FieldType::Int},
-            {keys_::rsp_minutes, static_cast<uint16_t>(offsetof(Response, minutes)), ::note::FieldType::Int},
-            {keys_::rsp_mode, static_cast<uint16_t>(offsetof(Response, mode)), ::note::FieldType::String},
-            {keys_::rsp_seconds, static_cast<uint16_t>(offsetof(Response, seconds)), ::note::FieldType::Int},
-#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-            {keys_::rsp_threshold, static_cast<uint16_t>(offsetof(Response, threshold)), ::note::FieldType::Int},
-#endif
-            {keys_::rsp_vseconds, static_cast<uint16_t>(offsetof(Response, vseconds)), ::note::FieldType::String},
-        };
-#pragma GCC diagnostic pop
-        static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);
-        static const ::note::FieldDesc* field_descs_ptr() { return field_descs_table_; }
-        public:
 
 #if NOTE_SINGLETON
         private:
@@ -1064,18 +1015,8 @@ struct CardLocationMode {
         /// Returns an ApiResult<Response> — boolean-convertible to true on success;
         /// dereference (or use member-of-pointer ->) to read response fields,
         /// or call .error() to inspect the ErrorInfo on failure.
-        ApiResult<Response> execute() const {
-            auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
-            BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
-            Response rsp_{};
-            ::note::detail::NcErrorCapture nc_err_;
-            bool exhausted_ = false;
-            auto rv_ = execute_generic_fn_(nc_, notecard_request, fn_, &build_, &rsp_, field_descs_ptr(), field_count, nc_err_, exhausted_, nullptr, nullptr, safety);
-            if (!rv_) return ::note::Unexpected(rv_.error());
-            if (!nc_err_.empty()) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
-            if (exhausted_) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Overflow, ::note::Cause::Unspecified, NOTE_ERR("arena exhausted")});
-            return ApiResult<Response>(std::move(rsp_));
-        }
+        /// Defined out-of-line below request_traits<T> so the field-descs table is in scope.
+        ApiResult<Response> execute() const;
         private:
         static inline Result<void>(*send_fn_)(void*, BuildFn, void*);
         public:
@@ -1189,7 +1130,6 @@ struct CardLocationMode {
         private:
         friend class ::note::Notecard;
         template<typename> friend class ::note::StaticNotecard;
-        template<typename, typename> friend struct ::note::detail::has_field_descs;
 #if NOTE_NO_POLYMORPHIC || __cplusplus < 202002L
         template<typename> friend class ::note::Api;
 #else
@@ -1414,20 +1354,6 @@ struct CardLocationMode {
             std::unique_ptr<JsonReader> reader_;
 #endif
         };
-        private:
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Winvalid-offsetof"
-        static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
-            {keys_::rsp_mode, static_cast<uint16_t>(offsetof(Response, mode)), ::note::FieldType::String},
-#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-            {keys_::rsp_threshold, static_cast<uint16_t>(offsetof(Response, threshold)), ::note::FieldType::Int},
-#endif
-            {keys_::rsp_vseconds, static_cast<uint16_t>(offsetof(Response, vseconds)), ::note::FieldType::String},
-        };
-#pragma GCC diagnostic pop
-        static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);
-        static const ::note::FieldDesc* field_descs_ptr() { return field_descs_table_; }
-        public:
 
 #if NOTE_SINGLETON
         private:
@@ -1438,18 +1364,8 @@ struct CardLocationMode {
         /// Returns an ApiResult<Response> — boolean-convertible to true on success;
         /// dereference (or use member-of-pointer ->) to read response fields,
         /// or call .error() to inspect the ErrorInfo on failure.
-        ApiResult<Response> execute() const {
-            auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
-            BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
-            Response rsp_{};
-            ::note::detail::NcErrorCapture nc_err_;
-            bool exhausted_ = false;
-            auto rv_ = execute_generic_fn_(nc_, notecard_request, fn_, &build_, &rsp_, field_descs_ptr(), field_count, nc_err_, exhausted_, nullptr, nullptr, safety);
-            if (!rv_) return ::note::Unexpected(rv_.error());
-            if (!nc_err_.empty()) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
-            if (exhausted_) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Overflow, ::note::Cause::Unspecified, NOTE_ERR("arena exhausted")});
-            return ApiResult<Response>(std::move(rsp_));
-        }
+        /// Defined out-of-line below request_traits<T> so the field-descs table is in scope.
+        ApiResult<Response> execute() const;
         private:
         static inline Result<void>(*send_fn_)(void*, BuildFn, void*);
         public:
@@ -1529,7 +1445,6 @@ struct CardLocationMode {
         private:
         friend class ::note::Notecard;
         template<typename> friend class ::note::StaticNotecard;
-        template<typename, typename> friend struct ::note::detail::has_field_descs;
 #if NOTE_NO_POLYMORPHIC || __cplusplus < 202002L
         template<typename> friend class ::note::Api;
 #else
@@ -1888,25 +1803,6 @@ struct CardLocationMode {
             std::unique_ptr<JsonReader> reader_;
 #endif
         };
-        private:
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Winvalid-offsetof"
-        static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
-            {keys_::rsp_lat, static_cast<uint16_t>(offsetof(Response, lat)), ::note::FieldType::Double},
-            {keys_::rsp_lon, static_cast<uint16_t>(offsetof(Response, lon)), ::note::FieldType::Double},
-            {keys_::rsp_max, static_cast<uint16_t>(offsetof(Response, max)), ::note::FieldType::Int},
-            {keys_::rsp_minutes, static_cast<uint16_t>(offsetof(Response, minutes)), ::note::FieldType::Int},
-            {keys_::rsp_mode, static_cast<uint16_t>(offsetof(Response, mode)), ::note::FieldType::String},
-            {keys_::rsp_seconds, static_cast<uint16_t>(offsetof(Response, seconds)), ::note::FieldType::Int},
-#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-            {keys_::rsp_threshold, static_cast<uint16_t>(offsetof(Response, threshold)), ::note::FieldType::Int},
-#endif
-            {keys_::rsp_vseconds, static_cast<uint16_t>(offsetof(Response, vseconds)), ::note::FieldType::String},
-        };
-#pragma GCC diagnostic pop
-        static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);
-        static const ::note::FieldDesc* field_descs_ptr() { return field_descs_table_; }
-        public:
 
 #if NOTE_SINGLETON
         private:
@@ -1917,18 +1813,8 @@ struct CardLocationMode {
         /// Returns an ApiResult<Response> — boolean-convertible to true on success;
         /// dereference (or use member-of-pointer ->) to read response fields,
         /// or call .error() to inspect the ErrorInfo on failure.
-        ApiResult<Response> execute() const {
-            auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
-            BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
-            Response rsp_{};
-            ::note::detail::NcErrorCapture nc_err_;
-            bool exhausted_ = false;
-            auto rv_ = execute_generic_fn_(nc_, notecard_request, fn_, &build_, &rsp_, field_descs_ptr(), field_count, nc_err_, exhausted_, nullptr, nullptr, safety);
-            if (!rv_) return ::note::Unexpected(rv_.error());
-            if (!nc_err_.empty()) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
-            if (exhausted_) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Overflow, ::note::Cause::Unspecified, NOTE_ERR("arena exhausted")});
-            return ApiResult<Response>(std::move(rsp_));
-        }
+        /// Defined out-of-line below request_traits<T> so the field-descs table is in scope.
+        ApiResult<Response> execute() const;
         private:
         static inline Result<void>(*send_fn_)(void*, BuildFn, void*);
         public:
@@ -2033,7 +1919,6 @@ struct CardLocationMode {
         private:
         friend class ::note::Notecard;
         template<typename> friend class ::note::StaticNotecard;
-        template<typename, typename> friend struct ::note::detail::has_field_descs;
 #if NOTE_NO_POLYMORPHIC || __cplusplus < 202002L
         template<typename> friend class ::note::Api;
 #else
@@ -2229,18 +2114,6 @@ struct CardLocationMode {
             std::unique_ptr<JsonReader> reader_;
 #endif
         };
-        private:
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Winvalid-offsetof"
-        static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
-            {keys_::rsp_lat, static_cast<uint16_t>(offsetof(Response, lat)), ::note::FieldType::Double},
-            {keys_::rsp_lon, static_cast<uint16_t>(offsetof(Response, lon)), ::note::FieldType::Double},
-            {keys_::rsp_mode, static_cast<uint16_t>(offsetof(Response, mode)), ::note::FieldType::String},
-        };
-#pragma GCC diagnostic pop
-        static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);
-        static const ::note::FieldDesc* field_descs_ptr() { return field_descs_table_; }
-        public:
 
 #if NOTE_SINGLETON
         private:
@@ -2251,18 +2124,8 @@ struct CardLocationMode {
         /// Returns an ApiResult<Response> — boolean-convertible to true on success;
         /// dereference (or use member-of-pointer ->) to read response fields,
         /// or call .error() to inspect the ErrorInfo on failure.
-        ApiResult<Response> execute() const {
-            auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
-            BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
-            Response rsp_{};
-            ::note::detail::NcErrorCapture nc_err_;
-            bool exhausted_ = false;
-            auto rv_ = execute_generic_fn_(nc_, notecard_request, fn_, &build_, &rsp_, field_descs_ptr(), field_count, nc_err_, exhausted_, nullptr, nullptr, safety);
-            if (!rv_) return ::note::Unexpected(rv_.error());
-            if (!nc_err_.empty()) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
-            if (exhausted_) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Overflow, ::note::Cause::Unspecified, NOTE_ERR("arena exhausted")});
-            return ApiResult<Response>(std::move(rsp_));
-        }
+        /// Defined out-of-line below request_traits<T> so the field-descs table is in scope.
+        ApiResult<Response> execute() const;
         private:
         static inline Result<void>(*send_fn_)(void*, BuildFn, void*);
         public:
@@ -2333,7 +2196,6 @@ struct CardLocationMode {
         private:
         friend class ::note::Notecard;
         template<typename> friend class ::note::StaticNotecard;
-        template<typename, typename> friend struct ::note::detail::has_field_descs;
 #if NOTE_NO_POLYMORPHIC || __cplusplus < 202002L
         template<typename> friend class ::note::Api;
 #else
@@ -2752,25 +2614,6 @@ struct CardLocationMode {
             std::unique_ptr<JsonReader> reader_;
 #endif
         };
-        private:
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Winvalid-offsetof"
-        static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
-            {keys_::rsp_lat, static_cast<uint16_t>(offsetof(Response, lat)), ::note::FieldType::Double},
-            {keys_::rsp_lon, static_cast<uint16_t>(offsetof(Response, lon)), ::note::FieldType::Double},
-            {keys_::rsp_max, static_cast<uint16_t>(offsetof(Response, max)), ::note::FieldType::Int},
-            {keys_::rsp_minutes, static_cast<uint16_t>(offsetof(Response, minutes)), ::note::FieldType::Int},
-            {keys_::rsp_mode, static_cast<uint16_t>(offsetof(Response, mode)), ::note::FieldType::String},
-            {keys_::rsp_seconds, static_cast<uint16_t>(offsetof(Response, seconds)), ::note::FieldType::Int},
-#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-            {keys_::rsp_threshold, static_cast<uint16_t>(offsetof(Response, threshold)), ::note::FieldType::Int},
-#endif
-            {keys_::rsp_vseconds, static_cast<uint16_t>(offsetof(Response, vseconds)), ::note::FieldType::String},
-        };
-#pragma GCC diagnostic pop
-        static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);
-        static const ::note::FieldDesc* field_descs_ptr() { return field_descs_table_; }
-        public:
 
 #if NOTE_SINGLETON
         private:
@@ -2781,18 +2624,8 @@ struct CardLocationMode {
         /// Returns an ApiResult<Response> — boolean-convertible to true on success;
         /// dereference (or use member-of-pointer ->) to read response fields,
         /// or call .error() to inspect the ErrorInfo on failure.
-        ApiResult<Response> execute() const {
-            auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
-            BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
-            Response rsp_{};
-            ::note::detail::NcErrorCapture nc_err_;
-            bool exhausted_ = false;
-            auto rv_ = execute_generic_fn_(nc_, notecard_request, fn_, &build_, &rsp_, field_descs_ptr(), field_count, nc_err_, exhausted_, nullptr, nullptr, safety);
-            if (!rv_) return ::note::Unexpected(rv_.error());
-            if (!nc_err_.empty()) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
-            if (exhausted_) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Overflow, ::note::Cause::Unspecified, NOTE_ERR("arena exhausted")});
-            return ApiResult<Response>(std::move(rsp_));
-        }
+        /// Defined out-of-line below request_traits<T> so the field-descs table is in scope.
+        ApiResult<Response> execute() const;
         private:
         static inline Result<void>(*send_fn_)(void*, BuildFn, void*);
         public:
@@ -2902,7 +2735,6 @@ struct CardLocationMode {
         private:
         friend class ::note::Notecard;
         template<typename> friend class ::note::StaticNotecard;
-        template<typename, typename> friend struct ::note::detail::has_field_descs;
 #if NOTE_NO_POLYMORPHIC || __cplusplus < 202002L
         template<typename> friend class ::note::Api;
 #else
@@ -2966,6 +2798,46 @@ inline CardLocationMode::Get& CardLocationMode::Get::vseconds_t::operator()(note
 }
 #pragma GCC diagnostic pop
 
+} // namespace note::api
+namespace note::detail {
+template<>
+struct request_traits<::note::api::CardLocationMode::Get> {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+    static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
+        {::note::api::CardLocationMode::Get::keys_::rsp_lat, static_cast<uint16_t>(offsetof(::note::api::CardLocationMode::Get::Response, lat)), ::note::FieldType::Double},
+        {::note::api::CardLocationMode::Get::keys_::rsp_lon, static_cast<uint16_t>(offsetof(::note::api::CardLocationMode::Get::Response, lon)), ::note::FieldType::Double},
+        {::note::api::CardLocationMode::Get::keys_::rsp_max, static_cast<uint16_t>(offsetof(::note::api::CardLocationMode::Get::Response, max)), ::note::FieldType::Int},
+        {::note::api::CardLocationMode::Get::keys_::rsp_minutes, static_cast<uint16_t>(offsetof(::note::api::CardLocationMode::Get::Response, minutes)), ::note::FieldType::Int},
+        {::note::api::CardLocationMode::Get::keys_::rsp_mode, static_cast<uint16_t>(offsetof(::note::api::CardLocationMode::Get::Response, mode)), ::note::FieldType::String},
+        {::note::api::CardLocationMode::Get::keys_::rsp_seconds, static_cast<uint16_t>(offsetof(::note::api::CardLocationMode::Get::Response, seconds)), ::note::FieldType::Int},
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+        {::note::api::CardLocationMode::Get::keys_::rsp_threshold, static_cast<uint16_t>(offsetof(::note::api::CardLocationMode::Get::Response, threshold)), ::note::FieldType::Int},
+#endif
+        {::note::api::CardLocationMode::Get::keys_::rsp_vseconds, static_cast<uint16_t>(offsetof(::note::api::CardLocationMode::Get::Response, vseconds)), ::note::FieldType::String},
+    };
+#pragma GCC diagnostic pop
+    static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);
+    static const ::note::FieldDesc* field_descs_ptr() { return field_descs_table_; }
+};
+} // namespace note::detail
+namespace note::api {
+
+#if NOTE_SINGLETON
+inline ApiResult<typename CardLocationMode::Get::Response> CardLocationMode::Get::execute() const {
+    auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
+    BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
+    Response rsp_{};
+    ::note::detail::NcErrorCapture nc_err_;
+    bool exhausted_ = false;
+    using meta_ = ::note::detail::request_traits<CardLocationMode::Get>;
+    auto rv_ = execute_generic_fn_(nc_, notecard_request, fn_, &build_, &rsp_, meta_::field_descs_ptr(), meta_::field_count, nc_err_, exhausted_, nullptr, nullptr, safety);
+    if (!rv_) return ::note::Unexpected(rv_.error());
+    if (!nc_err_.empty()) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
+    if (exhausted_) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Overflow, ::note::Cause::Unspecified, NOTE_ERR("arena exhausted")});
+    return ApiResult<Response>(std::move(rsp_));
+}
+#endif
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
@@ -3019,6 +2891,46 @@ inline CardLocationMode::Set& CardLocationMode::Set::vseconds_t::operator()(note
 }
 #pragma GCC diagnostic pop
 
+} // namespace note::api
+namespace note::detail {
+template<>
+struct request_traits<::note::api::CardLocationMode::Set> {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+    static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
+        {::note::api::CardLocationMode::Set::keys_::rsp_lat, static_cast<uint16_t>(offsetof(::note::api::CardLocationMode::Set::Response, lat)), ::note::FieldType::Double},
+        {::note::api::CardLocationMode::Set::keys_::rsp_lon, static_cast<uint16_t>(offsetof(::note::api::CardLocationMode::Set::Response, lon)), ::note::FieldType::Double},
+        {::note::api::CardLocationMode::Set::keys_::rsp_max, static_cast<uint16_t>(offsetof(::note::api::CardLocationMode::Set::Response, max)), ::note::FieldType::Int},
+        {::note::api::CardLocationMode::Set::keys_::rsp_minutes, static_cast<uint16_t>(offsetof(::note::api::CardLocationMode::Set::Response, minutes)), ::note::FieldType::Int},
+        {::note::api::CardLocationMode::Set::keys_::rsp_mode, static_cast<uint16_t>(offsetof(::note::api::CardLocationMode::Set::Response, mode)), ::note::FieldType::String},
+        {::note::api::CardLocationMode::Set::keys_::rsp_seconds, static_cast<uint16_t>(offsetof(::note::api::CardLocationMode::Set::Response, seconds)), ::note::FieldType::Int},
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+        {::note::api::CardLocationMode::Set::keys_::rsp_threshold, static_cast<uint16_t>(offsetof(::note::api::CardLocationMode::Set::Response, threshold)), ::note::FieldType::Int},
+#endif
+        {::note::api::CardLocationMode::Set::keys_::rsp_vseconds, static_cast<uint16_t>(offsetof(::note::api::CardLocationMode::Set::Response, vseconds)), ::note::FieldType::String},
+    };
+#pragma GCC diagnostic pop
+    static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);
+    static const ::note::FieldDesc* field_descs_ptr() { return field_descs_table_; }
+};
+} // namespace note::detail
+namespace note::api {
+
+#if NOTE_SINGLETON
+inline ApiResult<typename CardLocationMode::Set::Response> CardLocationMode::Set::execute() const {
+    auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
+    BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
+    Response rsp_{};
+    ::note::detail::NcErrorCapture nc_err_;
+    bool exhausted_ = false;
+    using meta_ = ::note::detail::request_traits<CardLocationMode::Set>;
+    auto rv_ = execute_generic_fn_(nc_, notecard_request, fn_, &build_, &rsp_, meta_::field_descs_ptr(), meta_::field_count, nc_err_, exhausted_, nullptr, nullptr, safety);
+    if (!rv_) return ::note::Unexpected(rv_.error());
+    if (!nc_err_.empty()) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
+    if (exhausted_) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Overflow, ::note::Cause::Unspecified, NOTE_ERR("arena exhausted")});
+    return ApiResult<Response>(std::move(rsp_));
+}
+#endif
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
@@ -3037,6 +2949,41 @@ inline CardLocationMode::Continuous& CardLocationMode::Continuous::vseconds_t::o
 }
 #pragma GCC diagnostic pop
 
+} // namespace note::api
+namespace note::detail {
+template<>
+struct request_traits<::note::api::CardLocationMode::Continuous> {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+    static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
+        {::note::api::CardLocationMode::Continuous::keys_::rsp_mode, static_cast<uint16_t>(offsetof(::note::api::CardLocationMode::Continuous::Response, mode)), ::note::FieldType::String},
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+        {::note::api::CardLocationMode::Continuous::keys_::rsp_threshold, static_cast<uint16_t>(offsetof(::note::api::CardLocationMode::Continuous::Response, threshold)), ::note::FieldType::Int},
+#endif
+        {::note::api::CardLocationMode::Continuous::keys_::rsp_vseconds, static_cast<uint16_t>(offsetof(::note::api::CardLocationMode::Continuous::Response, vseconds)), ::note::FieldType::String},
+    };
+#pragma GCC diagnostic pop
+    static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);
+    static const ::note::FieldDesc* field_descs_ptr() { return field_descs_table_; }
+};
+} // namespace note::detail
+namespace note::api {
+
+#if NOTE_SINGLETON
+inline ApiResult<typename CardLocationMode::Continuous::Response> CardLocationMode::Continuous::execute() const {
+    auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
+    BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
+    Response rsp_{};
+    ::note::detail::NcErrorCapture nc_err_;
+    bool exhausted_ = false;
+    using meta_ = ::note::detail::request_traits<CardLocationMode::Continuous>;
+    auto rv_ = execute_generic_fn_(nc_, notecard_request, fn_, &build_, &rsp_, meta_::field_descs_ptr(), meta_::field_count, nc_err_, exhausted_, nullptr, nullptr, safety);
+    if (!rv_) return ::note::Unexpected(rv_.error());
+    if (!nc_err_.empty()) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
+    if (exhausted_) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Overflow, ::note::Cause::Unspecified, NOTE_ERR("arena exhausted")});
+    return ApiResult<Response>(std::move(rsp_));
+}
+#endif
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
@@ -3080,6 +3027,46 @@ inline CardLocationMode::Periodic& CardLocationMode::Periodic::vseconds_t::opera
 }
 #pragma GCC diagnostic pop
 
+} // namespace note::api
+namespace note::detail {
+template<>
+struct request_traits<::note::api::CardLocationMode::Periodic> {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+    static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
+        {::note::api::CardLocationMode::Periodic::keys_::rsp_lat, static_cast<uint16_t>(offsetof(::note::api::CardLocationMode::Periodic::Response, lat)), ::note::FieldType::Double},
+        {::note::api::CardLocationMode::Periodic::keys_::rsp_lon, static_cast<uint16_t>(offsetof(::note::api::CardLocationMode::Periodic::Response, lon)), ::note::FieldType::Double},
+        {::note::api::CardLocationMode::Periodic::keys_::rsp_max, static_cast<uint16_t>(offsetof(::note::api::CardLocationMode::Periodic::Response, max)), ::note::FieldType::Int},
+        {::note::api::CardLocationMode::Periodic::keys_::rsp_minutes, static_cast<uint16_t>(offsetof(::note::api::CardLocationMode::Periodic::Response, minutes)), ::note::FieldType::Int},
+        {::note::api::CardLocationMode::Periodic::keys_::rsp_mode, static_cast<uint16_t>(offsetof(::note::api::CardLocationMode::Periodic::Response, mode)), ::note::FieldType::String},
+        {::note::api::CardLocationMode::Periodic::keys_::rsp_seconds, static_cast<uint16_t>(offsetof(::note::api::CardLocationMode::Periodic::Response, seconds)), ::note::FieldType::Int},
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+        {::note::api::CardLocationMode::Periodic::keys_::rsp_threshold, static_cast<uint16_t>(offsetof(::note::api::CardLocationMode::Periodic::Response, threshold)), ::note::FieldType::Int},
+#endif
+        {::note::api::CardLocationMode::Periodic::keys_::rsp_vseconds, static_cast<uint16_t>(offsetof(::note::api::CardLocationMode::Periodic::Response, vseconds)), ::note::FieldType::String},
+    };
+#pragma GCC diagnostic pop
+    static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);
+    static const ::note::FieldDesc* field_descs_ptr() { return field_descs_table_; }
+};
+} // namespace note::detail
+namespace note::api {
+
+#if NOTE_SINGLETON
+inline ApiResult<typename CardLocationMode::Periodic::Response> CardLocationMode::Periodic::execute() const {
+    auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
+    BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
+    Response rsp_{};
+    ::note::detail::NcErrorCapture nc_err_;
+    bool exhausted_ = false;
+    using meta_ = ::note::detail::request_traits<CardLocationMode::Periodic>;
+    auto rv_ = execute_generic_fn_(nc_, notecard_request, fn_, &build_, &rsp_, meta_::field_descs_ptr(), meta_::field_count, nc_err_, exhausted_, nullptr, nullptr, safety);
+    if (!rv_) return ::note::Unexpected(rv_.error());
+    if (!nc_err_.empty()) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
+    if (exhausted_) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Overflow, ::note::Cause::Unspecified, NOTE_ERR("arena exhausted")});
+    return ApiResult<Response>(std::move(rsp_));
+}
+#endif
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
@@ -3095,6 +3082,39 @@ inline CardLocationMode::Fixed& CardLocationMode::Fixed::lon_t::operator()(doubl
 }
 #pragma GCC diagnostic pop
 
+} // namespace note::api
+namespace note::detail {
+template<>
+struct request_traits<::note::api::CardLocationMode::Fixed> {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+    static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
+        {::note::api::CardLocationMode::Fixed::keys_::rsp_lat, static_cast<uint16_t>(offsetof(::note::api::CardLocationMode::Fixed::Response, lat)), ::note::FieldType::Double},
+        {::note::api::CardLocationMode::Fixed::keys_::rsp_lon, static_cast<uint16_t>(offsetof(::note::api::CardLocationMode::Fixed::Response, lon)), ::note::FieldType::Double},
+        {::note::api::CardLocationMode::Fixed::keys_::rsp_mode, static_cast<uint16_t>(offsetof(::note::api::CardLocationMode::Fixed::Response, mode)), ::note::FieldType::String},
+    };
+#pragma GCC diagnostic pop
+    static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);
+    static const ::note::FieldDesc* field_descs_ptr() { return field_descs_table_; }
+};
+} // namespace note::detail
+namespace note::api {
+
+#if NOTE_SINGLETON
+inline ApiResult<typename CardLocationMode::Fixed::Response> CardLocationMode::Fixed::execute() const {
+    auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
+    BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
+    Response rsp_{};
+    ::note::detail::NcErrorCapture nc_err_;
+    bool exhausted_ = false;
+    using meta_ = ::note::detail::request_traits<CardLocationMode::Fixed>;
+    auto rv_ = execute_generic_fn_(nc_, notecard_request, fn_, &build_, &rsp_, meta_::field_descs_ptr(), meta_::field_count, nc_err_, exhausted_, nullptr, nullptr, safety);
+    if (!rv_) return ::note::Unexpected(rv_.error());
+    if (!nc_err_.empty()) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
+    if (exhausted_) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Overflow, ::note::Cause::Unspecified, NOTE_ERR("arena exhausted")});
+    return ApiResult<Response>(std::move(rsp_));
+}
+#endif
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
@@ -3143,6 +3163,46 @@ inline CardLocationMode::Remove& CardLocationMode::Remove::vseconds_t::operator(
 }
 #pragma GCC diagnostic pop
 
+} // namespace note::api
+namespace note::detail {
+template<>
+struct request_traits<::note::api::CardLocationMode::Remove> {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+    static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
+        {::note::api::CardLocationMode::Remove::keys_::rsp_lat, static_cast<uint16_t>(offsetof(::note::api::CardLocationMode::Remove::Response, lat)), ::note::FieldType::Double},
+        {::note::api::CardLocationMode::Remove::keys_::rsp_lon, static_cast<uint16_t>(offsetof(::note::api::CardLocationMode::Remove::Response, lon)), ::note::FieldType::Double},
+        {::note::api::CardLocationMode::Remove::keys_::rsp_max, static_cast<uint16_t>(offsetof(::note::api::CardLocationMode::Remove::Response, max)), ::note::FieldType::Int},
+        {::note::api::CardLocationMode::Remove::keys_::rsp_minutes, static_cast<uint16_t>(offsetof(::note::api::CardLocationMode::Remove::Response, minutes)), ::note::FieldType::Int},
+        {::note::api::CardLocationMode::Remove::keys_::rsp_mode, static_cast<uint16_t>(offsetof(::note::api::CardLocationMode::Remove::Response, mode)), ::note::FieldType::String},
+        {::note::api::CardLocationMode::Remove::keys_::rsp_seconds, static_cast<uint16_t>(offsetof(::note::api::CardLocationMode::Remove::Response, seconds)), ::note::FieldType::Int},
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+        {::note::api::CardLocationMode::Remove::keys_::rsp_threshold, static_cast<uint16_t>(offsetof(::note::api::CardLocationMode::Remove::Response, threshold)), ::note::FieldType::Int},
+#endif
+        {::note::api::CardLocationMode::Remove::keys_::rsp_vseconds, static_cast<uint16_t>(offsetof(::note::api::CardLocationMode::Remove::Response, vseconds)), ::note::FieldType::String},
+    };
+#pragma GCC diagnostic pop
+    static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);
+    static const ::note::FieldDesc* field_descs_ptr() { return field_descs_table_; }
+};
+} // namespace note::detail
+namespace note::api {
+
+#if NOTE_SINGLETON
+inline ApiResult<typename CardLocationMode::Remove::Response> CardLocationMode::Remove::execute() const {
+    auto build_ = [&](JsonBuilder& b_) { this->build(b_); };
+    BuildFn fn_ = [](JsonBuilder& b_, void* p_) { (*static_cast<decltype(build_)*>(p_))(b_); };
+    Response rsp_{};
+    ::note::detail::NcErrorCapture nc_err_;
+    bool exhausted_ = false;
+    using meta_ = ::note::detail::request_traits<CardLocationMode::Remove>;
+    auto rv_ = execute_generic_fn_(nc_, notecard_request, fn_, &build_, &rsp_, meta_::field_descs_ptr(), meta_::field_count, nc_err_, exhausted_, nullptr, nullptr, safety);
+    if (!rv_) return ::note::Unexpected(rv_.error());
+    if (!nc_err_.empty()) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Notecard, ::note::Cause::Unspecified, nc_err_.view()});
+    if (exhausted_) return ApiResult<Response>(::note::ErrorInfo{::note::Error::Overflow, ::note::Cause::Unspecified, NOTE_ERR("arena exhausted")});
+    return ApiResult<Response>(std::move(rsp_));
+}
+#endif
 
 
 } // namespace note::api

@@ -45,6 +45,30 @@ Both forms produce identical requests. The group syntax is more readable; the di
 {% endif %}
 {% endfor %}
 
+{# Layer 2 aliases — flat shortcuts on the group object. Filter mirrors      #}
+{# api.hpp.j2: skip no-param aliases for endpoints with their own factory.  #}
+{% set ns_aliases = namespace(any=false) %}
+{% for endpoint in group.endpoints %}
+{% for alias in endpoint.aliases %}
+{% set resolved_check = alias.resolve_params(endpoint) %}
+{% if not endpoint.needs_factory or resolved_check %}{% set ns_aliases.any = true %}{% endif %}
+{% endfor %}
+{% endfor %}
+{% if ns_aliases.any %}
+**Layer 2 aliases** — semantic shortcuts on `api.{{ group.name }}`:
+
+| Alias | Wire Name | Direct Type |
+|-------|-----------|-------------|
+{% for endpoint in group.endpoints %}
+{% for alias in endpoint.aliases %}
+{% set resolved = alias.resolve_params(endpoint) %}
+{% if not endpoint.needs_factory or resolved %}
+| `{{ group.name }}.{{ alias.method_name }}({% for p in resolved %}{{ p.cpp_type }} {{ p.accessor_name }}{% if not loop.last %}, {% endif %}{% endfor %})` | `{{ endpoint.wire_name }}` | [`{{ alias.qualified_type | replace("api::", "") }}`](#{{ endpoint.wire_name | replace(".", "") }}) |
+{% endif %}
+{% endfor %}
+{% endfor %}
+
+{% endif %}
 {% endfor %}
 
 ## Endpoint Details
@@ -86,6 +110,22 @@ This endpoint has multiple intents:
 {% endfor %}
 {% endif %}
 
+{% set ns_op_aliases = namespace(any=false) %}
+{% for alias in endpoint.aliases %}
+{% set rsv = alias.resolve_params(endpoint) %}
+{% if alias.variant == op.struct_name and (not endpoint.needs_factory or rsv) %}{% set ns_op_aliases.any = true %}{% endif %}
+{% endfor %}
+{% if ns_op_aliases.any %}
+**Aliases on `api.{{ endpoint.group_name }}`:**
+
+{% for alias in endpoint.aliases %}
+{% set rsv2 = alias.resolve_params(endpoint) %}
+{% if alias.variant == op.struct_name and (not endpoint.needs_factory or rsv2) %}
+- `{{ endpoint.group_name }}.{{ alias.method_name }}({% for p in rsv2 %}{{ p.cpp_type }} {{ p.accessor_name }}{% if not loop.last %}, {% endif %}{% endfor %})`
+{% endif %}
+{% endfor %}
+{% endif %}
+
 {% endfor %}
 {% else %}
 {% set op = endpoint.operations[0] %}
@@ -115,6 +155,22 @@ This endpoint has multiple intents:
 |-------|------|-------------|
 {% for p in op.response.properties %}
 | `.{{ p.accessor_name }}` | `{{ p.cpp_type }}` | {{ p.description | truncate(80) }} |
+{% endfor %}
+{% endif %}
+
+{% set ns_ep_aliases = namespace(any=false) %}
+{% for alias in endpoint.aliases %}
+{% set rsv = alias.resolve_params(endpoint) %}
+{% if not endpoint.needs_factory or rsv %}{% set ns_ep_aliases.any = true %}{% endif %}
+{% endfor %}
+{% if ns_ep_aliases.any %}
+**Aliases on `api.{{ endpoint.group_name }}`:**
+
+{% for alias in endpoint.aliases %}
+{% set rsv2 = alias.resolve_params(endpoint) %}
+{% if not endpoint.needs_factory or rsv2 %}
+- `{{ endpoint.group_name }}.{{ alias.method_name }}({% for p in rsv2 %}{{ p.cpp_type }} {{ p.accessor_name }}{% if not loop.last %}, {% endif %}{% endfor %})`
+{% endif %}
 {% endfor %}
 {% endif %}
 

@@ -105,6 +105,13 @@ Both forms produce identical requests. The group syntax is more readable; the di
 | `env.set` | `env.(...)` | [`EnvSet`](#envset) | `.time` |
 | `env.template` | `env.templates()` | [`EnvTemplate`](#envtemplate) | `.bytes` |
 
+**Layer 2 aliases** — semantic shortcuts on `api.env`:
+
+| Alias | Wire Name | Direct Type |
+|-------|-----------|-------------|
+| `env.setDefault(note::string_view name, note::string_view text)` | `env.default` | [`EnvDefault::Set`](#envdefault) |
+| `env.clearDefault(note::string_view name)` | `env.default` | [`EnvDefault::Remove`](#envdefault) |
+
 ### file
 
 | Wire Name | Group Syntax | Direct Type | Response Fields |
@@ -114,6 +121,13 @@ Both forms produce identical requests. The group syntax is more readable; the di
 | `file.clear` | `file.clear()` | [`FileClear`](#fileclear) | void |
 | `file.delete` | `file.delete_()` | [`FileDelete`](#filedelete) | void |
 | `file.stats` | `file.stats()` | [`FileStats`](#filestats) | `.changes`, `.sync`, `.total` |
+
+**Layer 2 aliases** — semantic shortcuts on `api.file`:
+
+| Alias | Wire Name | Direct Type |
+|-------|-----------|-------------|
+| `file.remove()` | `file.delete` | [`FileDelete`](#filedelete) |
+| `file.remove(note::string_view files)` | `file.delete` | [`FileDelete`](#filedelete) |
 
 ### hub
 
@@ -141,6 +155,16 @@ Both forms produce identical requests. The group syntax is more readable; the di
 | `note.template` | `note.templates().remove(...)` | [`NoteTemplate::Remove`](#notetemplate) | `.bytes`, `.format`, `.length`, `.template_` |
 | `note.update` | `note.(...)` | [`NoteUpdate`](#noteupdate) | void |
 
+**Layer 2 aliases** — semantic shortcuts on `api.note`:
+
+| Alias | Wire Name | Direct Type |
+|-------|-----------|-------------|
+| `note.popChanges(note::string_view file)` | `note.changes` | [`NoteChanges::Pop`](#notechanges) |
+| `note.remove(note::string_view file, note::string_view noteId)` | `note.delete` | [`NoteDelete`](#notedelete) |
+| `note.read(note::string_view file)` | `note.get` | [`NoteGet::Read`](#noteget) |
+| `note.pop(note::string_view file)` | `note.get` | [`NoteGet::Pop`](#noteget) |
+| `note.clearTemplate(note::string_view file)` | `note.template` | [`NoteTemplate::Remove`](#notetemplate) |
+
 ### ntn
 
 | Wire Name | Group Syntax | Direct Type | Response Fields |
@@ -157,6 +181,12 @@ Both forms produce identical requests. The group syntax is more readable; the di
 | `var.get` | `var.get()` | [`VarGet`](#varget) | `.flag`, `.text`, `.value` |
 | `var.set` | `var.set()` | [`VarSet`](#varset) | void |
 
+**Layer 2 aliases** — semantic shortcuts on `api.var`:
+
+| Alias | Wire Name | Direct Type |
+|-------|-----------|-------------|
+| `var.remove()` | `var.delete` | [`VarDelete`](#vardelete) |
+
 ### web
 
 | Wire Name | Group Syntax | Direct Type | Response Fields |
@@ -166,6 +196,12 @@ Both forms produce identical requests. The group syntax is more readable; the di
 | `web.get` | `web.get()` | [`WebGet`](#webget) | `.cobs`, `.length`, `.payload`, `.result` |
 | `web.post` | `web.post()` | [`WebPost`](#webpost) | `.cobs`, `.length`, `.payload`, `.result`, `.status` |
 | `web.put` | `web.put()` | [`WebPut`](#webput) | `.payload`, `.result`, `.status`, `.cobs`, `.length` |
+
+**Layer 2 aliases** — semantic shortcuts on `api.web`:
+
+| Alias | Wire Name | Direct Type |
+|-------|-----------|-------------|
+| `web.remove()` | `web.delete` | [`WebDelete`](#webdelete) |
 
 
 ## Endpoint Details
@@ -208,6 +244,7 @@ _**NOTE:** When... |
 | `.set` | `bool` | Reflects the state of the attention pin. The `set` field is `true` when the... |
 | `.time` | `note::json_int_t` | When using `sleep` mode with a `payload`, the time (UNIX Epoch time) that... |
 
+
 #### card.attn — arm()
 
 | | Type |
@@ -234,6 +271,7 @@ _**NOTE:** When... |
 | Field | Type | Description |
 |-------|------|-------------|
 | `.set` | `bool` | Reflects the state of the attention pin. The `set` field is `true` when the... |
+
 
 #### card.attn — rearm()
 
@@ -262,6 +300,7 @@ _**NOTE:** When... |
 |-------|------|-------------|
 | `.set` | `bool` | Reflects the state of the attention pin. The `set` field is `true` when the... |
 
+
 #### card.attn — watchdog()
 
 | | Type |
@@ -279,6 +318,7 @@ _**NOTE:** When... |
 | `.seconds` | `note::json_int_t` | no | To set an ATTN timeout when arming, or when using `sleep`.
 
 _**NOTE:** When... |
+
 
 
 #### card.attn — sleep()
@@ -301,6 +341,7 @@ _**NOTE:** When... |
 _**NOTE:** When... |
 
 
+
 #### card.attn — retrieve()
 
 | | Type |
@@ -319,6 +360,7 @@ _**NOTE:** When... |
 | `.payload` | `note::string_view` | When using `sleep` mode with a `payload`, the payload provided by the host... |
 | `.time` | `note::json_int_t` | When using `sleep` mode with a `payload`, the time (UNIX Epoch time) that... |
 
+
 #### card.attn — disarm()
 
 | | Type |
@@ -328,6 +370,7 @@ _**NOTE:** When... |
 | **Response** | `ApiResult<CardAttn::Disarm::Response>` |
 | **Safety** | `Idempotent` |
 | **Command** | yes |
+
 
 
 
@@ -343,6 +386,7 @@ _**NOTE:** When... |
 
 
 
+
 #### card.attn — on()
 
 | | Type |
@@ -352,6 +396,7 @@ _**NOTE:** When... |
 | **Response** | `ApiResult<CardAttn::On::Response>` |
 | **Safety** | `Idempotent` |
 | **Command** | yes |
+
 
 
 
@@ -378,6 +423,7 @@ _**NOTE:** When... |
 | `.files` | `note::string_view` | A list of files changed since `file` attention mode was set. In addition,... |
 | `.off` | `bool` | This field is present and set to `true` if ATTN processing has been disabled... |
 | `.set` | `bool` | Reflects the state of the attention pin. The `set` field is `true` when the... |
+
 
 ### card.aux 
 
@@ -418,6 +464,7 @@ _**NOTE:** When... |
 | `.seconds` | `note::json_int_t` | When in AUX `gpio` mode, and if `count` is enabled on an AUX pin, the number... |
 | `.time` | `note::json_time_t` | When in AUX `gpio` mode, and if `count` is enabled on an AUX pin, the time... |
 
+
 ### card.aux.serial 
 This endpoint has multiple intents:
 
@@ -450,6 +497,7 @@ This endpoint has multiple intents:
 | `.mode` | `note::string_view` | The current AUX `mode`. |
 | `.rate` | `note::json_int_t` | The baud rate or speed at which information is transmitted over AUX serial. |
 
+
 #### card.aux.serial — notify()
 
 | | Type |
@@ -472,6 +520,7 @@ This endpoint has multiple intents:
 | `.rate` | `note::json_int_t` | no | The baud rate or speed at which information is transmitted over AUX serial.... |
 
 
+
 #### card.aux.serial — gps()
 
 | | Type |
@@ -488,6 +537,7 @@ This endpoint has multiple intents:
 |-------|------|----------|-------------|
 | `.limit` | `bool` | no | If `true`, along with `"mode":"gps"` the Notecard will disable concurrent... |
 | `.rate` | `note::json_int_t` | no | The baud rate or speed at which information is transmitted over AUX serial.... |
+
 
 
 #### card.aux.serial — configure()
@@ -507,6 +557,7 @@ This endpoint has multiple intents:
 | `.rate` | `note::json_int_t` | no | The baud rate or speed at which information is transmitted over AUX serial.... |
 
 
+
 #### card.aux.serial — off()
 
 | | Type |
@@ -516,6 +567,7 @@ This endpoint has multiple intents:
 | **Response** | `ApiResult<CardAuxSerial::Off::Response>` |
 | **Safety** | `Idempotent` |
 | **Command** | yes |
+
 
 
 
@@ -550,6 +602,7 @@ This endpoint has multiple intents:
 | `.max` | `note::json_int_t` | The space available (in bytes) for storing unencoded data on the Notecard. |
 | `.status` | `note::string_view` | The MD5 checksum calculated for the entire unencoded buffer. |
 
+
 #### card.binary — clear()
 
 | | Type |
@@ -578,6 +631,7 @@ This endpoint has multiple intents:
 | `.max` | `note::json_int_t` | The space available (in bytes) for storing unencoded data on the Notecard. |
 | `.status` | `note::string_view` | The MD5 checksum calculated for the entire unencoded buffer. |
 
+
 ### card.binary.get 
 
 | | Type |
@@ -603,6 +657,7 @@ This endpoint has multiple intents:
 | `.err` | `note::string_view` | If present, a string describing the error that occurred during transmission |
 | `.status` | `note::string_view` | The MD5 checksum of the data returned, after it has been decoded |
 
+
 ### card.binary.put 
 
 | | Type |
@@ -627,6 +682,7 @@ This endpoint has multiple intents:
 |-------|------|-------------|
 | `.err` | `note::string_view` | If present, a string describing the error that occurred during transmission |
 
+
 ### card.carrier 
 
 | | Type |
@@ -649,6 +705,7 @@ This endpoint has multiple intents:
 |-------|------|-------------|
 | `.charging` | `bool` | Will display `true` when in `AUX_CHARGING` `"charging"` mode. |
 | `.mode` | `note::string_view` | The current `AUX_CHARGING` `mode`, or `off` if not set. |
+
 
 ### card.contact 
 This endpoint has multiple intents:
@@ -681,6 +738,7 @@ This endpoint has multiple intents:
 | `.org` | `note::string_view` | Organization name of the Notecard maintainer. |
 | `.role` | `note::string_view` | Role of the Notecard maintainer. |
 
+
 #### card.contact — set()
 
 | | Type |
@@ -708,6 +766,7 @@ This endpoint has multiple intents:
 | `.name` | `note::string_view` | Name of the Notecard maintainer. |
 | `.org` | `note::string_view` | Organization name of the Notecard maintainer. |
 | `.role` | `note::string_view` | Role of the Notecard maintainer. |
+
 
 ### card.dfu 
 
@@ -737,6 +796,7 @@ This endpoint has multiple intents:
 |-------|------|-------------|
 | `.name` | `note::string_view` | The class of MCU that the Notecard is currently configured to support for... |
 
+
 ### card.illumination 
 
 | | Type |
@@ -754,6 +814,7 @@ This endpoint has multiple intents:
 |-------|------|-------------|
 | `.value` | `double` | An illumination reading (in lux) from the attached OPT3001 sensor. |
 
+
 ### card.io 
 
 | | Type |
@@ -770,6 +831,7 @@ This endpoint has multiple intents:
 |-------|------|----------|-------------|
 | `.i2c` | `note::json_int_t` | no | The alternate address to use for I2C communication. |
 | `.mode` | `note::string_view` | no | Used to control the Notecard's IO behavior, including USB port, LED, I2C... |
+
 
 
 ### card.led 
@@ -791,6 +853,7 @@ This endpoint has multiple intents:
 **Note:** Notecard... |
 | `.off` | `bool` | no | Set to `true` to turn the specified LED or NeoPixel off. |
 | `.on` | `bool` | no | Set to `true` to turn the specified LED or NeoPixel on. |
+
 
 
 ### card.location 
@@ -816,6 +879,7 @@ This endpoint has multiple intents:
 | `.mode` | `note::string_view` | The GPS/GNSS connection mode. Will be `continuous`, `periodic`, or `off`. |
 | `.status` | `note::string_view` | The current status of the Notecard GPS/GNSS connection. |
 | `.time` | `note::json_int_t` | The time of the location capture. |
+
 
 ### card.location.mode 
 This endpoint has multiple intents:
@@ -857,6 +921,7 @@ This endpoint has multiple intents:
 | `.threshold` | `note::json_int_t` | When in periodic mode, the number of motion events (registered by the... |
 | `.vseconds` | `note::string_view` | If specified, the voltage-variable period. |
 
+
 #### card.location.mode — set()
 
 | | Type |
@@ -894,6 +959,7 @@ This endpoint has multiple intents:
 | `.threshold` | `note::json_int_t` | When in periodic mode, the number of motion events (registered by the... |
 | `.vseconds` | `note::string_view` | If specified, the voltage-variable period. |
 
+
 #### card.location.mode — continuous()
 
 | | Type |
@@ -918,6 +984,7 @@ This endpoint has multiple intents:
 | `.mode` | `note::string_view` | The current location mode. |
 | `.threshold` | `note::json_int_t` | When in periodic mode, the number of motion events (registered by the... |
 | `.vseconds` | `note::string_view` | If specified, the voltage-variable period. |
+
 
 #### card.location.mode — periodic()
 
@@ -954,6 +1021,7 @@ This endpoint has multiple intents:
 | `.threshold` | `note::json_int_t` | When in periodic mode, the number of motion events (registered by the... |
 | `.vseconds` | `note::string_view` | If specified, the voltage-variable period. |
 
+
 #### card.location.mode — fixed()
 
 | | Type |
@@ -978,6 +1046,7 @@ This endpoint has multiple intents:
 | `.lat` | `double` | If geofence is enabled, the geofence center latitude in degrees. |
 | `.lon` | `double` | If geofence is enabled, the geofence center longitude in degrees. |
 | `.mode` | `note::string_view` | The current location mode. |
+
 
 #### card.location.mode — remove()
 
@@ -1016,6 +1085,7 @@ This endpoint has multiple intents:
 | `.threshold` | `note::json_int_t` | When in periodic mode, the number of motion events (registered by the... |
 | `.vseconds` | `note::string_view` | If specified, the voltage-variable period. |
 
+
 ### card.location.track 
 
 | | Type |
@@ -1049,6 +1119,7 @@ This endpoint has multiple intents:
 | `.start` | `bool` | `true` if tracking is enabled. |
 | `.stop` | `bool` | `true` if tracking is disabled. |
 
+
 ### card.monitor 
 
 | | Type |
@@ -1066,6 +1137,7 @@ This endpoint has multiple intents:
 | `.count` | `note::json_int_t` | no | The number of pulses to send to the overridden AUX pin LED. Set this value... |
 | `.mode` | `note::string_view` | no | Can be set to one of `green`, `red` or `yellow` to temporarily override the... |
 | `.usb` | `bool` | no | Set to `true` to configure LED behavior so that it is only active when the... |
+
 
 
 ### card.motion 
@@ -1096,6 +1168,7 @@ This endpoint has multiple intents:
 | `.seconds` | `note::json_int_t` | If the `minutes` argument is provided, the duration of each bucket of sample... |
 | `.status` | `note::string_view` | Comma-separated list of accelerometer orientation events that ocurred since... |
 
+
 ### card.motion.mode 
 
 | | Type |
@@ -1115,6 +1188,7 @@ This endpoint has multiple intents:
 | `.sensitivity` | `note::json_int_t` | no | Used to set the accelerometer sample rate. The default sample rate of 1.6Hz... |
 | `.start` | `bool` | no | `true` to enable the Notecard accelerometer and start motion tracking. |
 | `.stop` | `bool` | no | `true` to disable the Notecard accelerometer and stop motion tracking. |
+
 
 
 ### card.motion.sync 
@@ -1138,6 +1212,7 @@ This endpoint has multiple intents:
 | `.threshold` | `note::json_int_t` | no | The number of buckets that must indicate motion in order to trigger a sync.... |
 
 
+
 ### card.motion.track 
 
 | | Type |
@@ -1159,6 +1234,7 @@ This endpoint has multiple intents:
 | `.start` | `bool` | no | `true` to start motion capture. |
 | `.stop` | `bool` | no | `true` to stop motion capture. |
 | `.threshold` | `note::json_int_t` | no | The number of buckets that must indicate motion in order to capture. |
+
 
 
 ### card.power 
@@ -1189,6 +1265,7 @@ This endpoint has multiple intents:
 | `.temperature` | `double` | The temperature from Notecard's onboard sensor in degrees centigrade,... |
 | `.voltage` | `double` | The current voltage. |
 
+
 #### card.power — configure()
 
 | | Type |
@@ -1213,6 +1290,7 @@ This endpoint has multiple intents:
 | `.milliampHours` | `double` | The cumulative number of milliamp hours (mAh) consumed. You can reset this... |
 | `.temperature` | `double` | The temperature from Notecard's onboard sensor in degrees centigrade,... |
 | `.voltage` | `double` | The current voltage. |
+
 
 #### card.power — reset()
 
@@ -1239,6 +1317,7 @@ This endpoint has multiple intents:
 | `.temperature` | `double` | The temperature from Notecard's onboard sensor in degrees centigrade,... |
 | `.voltage` | `double` | The current voltage. |
 
+
 ### card.random 
 
 | | Type |
@@ -1263,6 +1342,7 @@ This endpoint has multiple intents:
 | `.count` | `note::json_int_t` | A random number generated by the Notecard's onboard hardware random number generator. |
 | `.payload` | `note::string_view` | If using `"mode":"payload"`, a base64-encoded string with random values, the... |
 
+
 ### card.restart 
 
 | | Type |
@@ -1272,6 +1352,7 @@ This endpoint has multiple intents:
 | **Response** | `ApiResult<void>` |
 | **Safety** | `NonIdempotent` |
 | **Command** | yes |
+
 
 
 
@@ -1291,6 +1372,7 @@ This endpoint has multiple intents:
 |-------|------|----------|-------------|
 | `.connected` | `bool` | no | Set to `true` to reset the Notecard on Notehub. This will delete and... |
 | `.delete_` | `bool` | no | Set to `true` to reset most Notecard configuration settings. Note that this... |
+
 
 
 ### card.sleep 
@@ -1321,6 +1403,7 @@ This endpoint has multiple intents:
 | `.on` | `bool` | `true` if sleep mode is enabled. |
 | `.seconds` | `note::json_int_t` | The number of seconds the Notecard will wait before entering sleep mode... |
 
+
 ### card.status 
 
 | | Type |
@@ -1347,6 +1430,7 @@ This endpoint has multiple intents:
 | `.time` | `note::json_int_t` | The UNIX Epoch Time of approximately when the Notecard was first powered up. |
 | `.usb` | `bool` | `true` if the Notecard is being powered by USB. |
 | `.wifi` | `bool` | `true` if the Notecard's WiFi radio is currently powered on. |
+
 
 ### card.temp 
 This endpoint has multiple intents:
@@ -1382,6 +1466,7 @@ This endpoint has multiple intents:
 | `.value` | `double` | The current temperature from the Notecard's onboard sensor in degrees... |
 | `.voltage` | `double` | The current voltage. |
 
+
 #### card.temp — configure()
 
 | | Type |
@@ -1412,6 +1497,7 @@ This endpoint has multiple intents:
 | `.usb` | `bool` | `true` if the Notecard is connected to USB power. |
 | `.value` | `double` | The current temperature from the Notecard's onboard sensor in degrees... |
 | `.voltage` | `double` | The current voltage. |
+
 
 #### card.temp — stop()
 
@@ -1444,6 +1530,7 @@ This endpoint has multiple intents:
 | `.value` | `double` | The current temperature from the Notecard's onboard sensor in degrees... |
 | `.voltage` | `double` | The current voltage. |
 
+
 ### card.time 
 
 | | Type |
@@ -1467,6 +1554,7 @@ This endpoint has multiple intents:
 | `.time` | `note::json_int_t` | The current time in UTC. Will only populate if the Notecard has completed a... |
 | `.zone` | `note::string_view` | The time zone of the Notecard, if the cell tower is recognized. |
 
+
 ### card.trace 
 
 | | Type |
@@ -1482,6 +1570,7 @@ This endpoint has multiple intents:
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `.mode` | `note::string_view` | no |  |
+
 
 
 ### card.transport 
@@ -1508,6 +1597,7 @@ This endpoint has multiple intents:
 | Field | Type | Description |
 |-------|------|-------------|
 | `.method` | `note::string_view` | The connectivity method currently enabled on the device. |
+
 
 ### card.triangulate 
 
@@ -1542,6 +1632,7 @@ This endpoint has multiple intents:
 | `.time` | `note::json_int_t` | Time of last triangulation scan. |
 | `.usb` | `bool` | `true` if triangulation scans will be performed only when the device is USB-powered. |
 
+
 ### card.usage.get 
 
 | | Type |
@@ -1571,6 +1662,7 @@ This endpoint has multiple intents:
 | `.sessionsSecure` | `note::json_int_t` | Number of secure Notehub sessions. |
 | `.sessionsStandard` | `note::json_int_t` | Number of standard Notehub sessions. |
 | `.time` | `note::json_int_t` | Start time of the analyzed period or, if `mode="total"`, the time of activation. |
+
 
 ### card.usage.test 
 
@@ -1606,6 +1698,7 @@ This endpoint has multiple intents:
 | `.sessionsStandard` | `note::json_int_t` | Number of standard Notehub sessions. |
 | `.time` | `note::json_int_t` | Time of device activation. |
 
+
 ### card.version 
 
 | | Type |
@@ -1629,6 +1722,7 @@ This endpoint has multiple intents:
 | `.sku` | `note::string_view` | The Notecard SKU. |
 | `.version` | `note::string_view` | The full version number of the Notecard firmware. |
 | `.wifi` | `bool` | If `true`, indicates the Notecard supports WiFi connectivity. |
+
 
 ### card.voltage 
 This endpoint has multiple intents:
@@ -1679,6 +1773,7 @@ For... |
 | `.vmin` | `double` | The lowest voltage value captured during the measurement period. |
 | `.weekly` | `double` | Change of moving average in the last 7 days, if relevant to the time period analyzed. |
 
+
 #### card.voltage — configure()
 
 | | Type |
@@ -1725,6 +1820,7 @@ For... |
 | `.vmin` | `double` | The lowest voltage value captured during the measurement period. |
 | `.weekly` | `double` | Change of moving average in the last 7 days, if relevant to the time period analyzed. |
 
+
 ### card.wifi 
 
 | | Type |
@@ -1755,6 +1851,7 @@ For... |
 | `.ssid` | `note::string_view` | The SSID of the WiFi access point. |
 | `.version` | `note::string_view` | The Silicon Labs WF200 WiFi Transceiver binary version. |
 
+
 ### card.wireless 
 
 | | Type |
@@ -1780,6 +1877,7 @@ For... |
 |-------|------|-------------|
 | `.count` | `note::json_int_t` | Number of bars of signal quality. |
 | `.status` | `note::string_view` | The current status of the wireless connection and modem. |
+
 
 ### card.wireless.penalty 
 This endpoint has multiple intents:
@@ -1814,6 +1912,7 @@ This endpoint has multiple intents:
 | `.seconds` | `note::json_int_t` | If the Notecard is in a [Penalty... |
 | `.status` | `note::string_view` | If the Notecard is in a [Penalty... |
 
+
 #### card.wireless.penalty — set()
 
 | | Type |
@@ -1843,6 +1942,7 @@ This endpoint has multiple intents:
 | `.minutes` | `note::json_int_t` | The time since the first network registration failure. |
 | `.seconds` | `note::json_int_t` | If the Notecard is in a [Penalty... |
 | `.status` | `note::string_view` | If the Notecard is in a [Penalty... |
+
 
 #### card.wireless.penalty — clear()
 
@@ -1874,6 +1974,7 @@ This endpoint has multiple intents:
 | `.seconds` | `note::json_int_t` | If the Notecard is in a [Penalty... |
 | `.status` | `note::string_view` | If the Notecard is in a [Penalty... |
 
+
 ### dfu.get 
 
 | | Type |
@@ -1900,6 +2001,7 @@ This endpoint has multiple intents:
 | `.length` | `note::json_int_t` | When `binary` is `true` in the request, this field contains the actual... |
 | `.payload` | `note::string_view` | A base64 string containing firmware data of the provided `length`. This... |
 | `.status` | `note::string_view` | When `binary` is `true` in the request, this field contains a 32-character... |
+
 
 ### dfu.status 
 
@@ -1934,6 +2036,7 @@ This endpoint has multiple intents:
 | `.pending` | `bool` | `true` when Notecard DFU is currently in-progress. |
 | `.status` | `note::string_view` | The current status of the firmware download. |
 
+
 ### env.default 
 This endpoint has multiple intents:
 
@@ -1956,6 +2059,10 @@ This endpoint has multiple intents:
 | `.text` | `note::string_view` | no | The value of the variable. Pass `""` or omit from the request to delete it. |
 
 
+**Aliases on `api.env`:**
+
+- `env.setDefault(note::string_view name, note::string_view text)`
+
 #### env.default — remove()
 
 | | Type |
@@ -1973,6 +2080,10 @@ This endpoint has multiple intents:
 | `.name` | `note::string_view` | yes | The name of the environment variable (case-insensitive). |
 | `.sync` | `bool` | no | Set to `true` to trigger an immediate sync. |
 
+
+**Aliases on `api.env`:**
+
+- `env.clearDefault(note::string_view name)`
 
 ### env.get 
 
@@ -1999,6 +2110,7 @@ This endpoint has multiple intents:
 | `.text` | `note::string_view` | If a `name` was specified, the value of the environment variable. |
 | `.time` | `note::json_int_t` | The time of the Notecard variable or variables change. |
 
+
 ### env.modified 
 
 | | Type |
@@ -2020,6 +2132,7 @@ This endpoint has multiple intents:
 | Field | Type | Description |
 |-------|------|-------------|
 | `.time` | `note::json_int_t` | Timestamp indicating the last time any environment variable was changed on... |
+
 
 ### env.set 
 
@@ -2044,6 +2157,7 @@ This endpoint has multiple intents:
 |-------|------|-------------|
 | `.time` | `note::json_int_t` | The logged time of the variable change. |
 
+
 ### env.template 
 
 | | Type |
@@ -2065,6 +2179,7 @@ This endpoint has multiple intents:
 | Field | Type | Description |
 |-------|------|-------------|
 | `.bytes` | `note::json_int_t` | The maximum number of bytes that will be used when environment variables are... |
+
 
 ### file.changes 
 
@@ -2091,6 +2206,7 @@ This endpoint has multiple intents:
 | `.pending` | `bool` | Set to `true` if this was a pending changes request and there are changes |
 | `.total` | `note::json_int_t` | The total of local Notes across all Notefiles. This includes Inbound Notes... |
 
+
 ### file.changes.pending 
 
 | | Type |
@@ -2110,6 +2226,7 @@ This endpoint has multiple intents:
 | `.pending` | `bool` | `true` if there are pending changes. |
 | `.total` | `note::json_int_t` | The total of unsynced notes across all Notefiles. |
 
+
 ### file.clear 
 
 | | Type |
@@ -2125,6 +2242,7 @@ This endpoint has multiple intents:
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `.file` | `note::string_view` | no | The name of the Notefile whose Notes you wish to delete. |
+
 
 
 ### file.delete 
@@ -2143,6 +2261,11 @@ This endpoint has multiple intents:
 |-------|------|----------|-------------|
 | `.files` | `note::string_view` | no | One or more files to delete. |
 
+
+**Aliases on `api.file`:**
+
+- `file.remove()`
+- `file.remove(note::string_view files)`
 
 ### file.stats 
 
@@ -2167,6 +2290,7 @@ This endpoint has multiple intents:
 | `.changes` | `note::json_int_t` | The number of Notes across all Notefiles pending sync. |
 | `.sync` | `bool` | `true` if a sync is recommended based on the number of pending notes. |
 | `.total` | `note::json_int_t` | The total number of Notes across all Notefiles. |
+
 
 ### hub.get 
 
@@ -2194,6 +2318,7 @@ This endpoint has multiple intents:
 | `.vinbound` | `note::string_view` | If `inbound` has been overridden with a voltage-variable value. |
 | `.voutbound` | `note::string_view` | If `outbound` is overridden with a voltage-variable value. |
 
+
 ### hub.log 
 
 | | Type |
@@ -2211,6 +2336,7 @@ This endpoint has multiple intents:
 | `.alert` | `bool` | no | `true` if the message is urgent. This doesn't change any functionality, but... |
 | `.sync` | `bool` | no | `true` if a sync should be initiated immediately. Setting `true` will also... |
 | `.text` | `note::string_view` | no | Text to log. |
+
 
 
 ### hub.set 
@@ -2250,6 +2376,7 @@ This endpoint has multiple intents:
 | `.voutbound` | `note::string_view` | no | Overrides `outbound` with a voltage-variable value. Use `"-"` to clear this... |
 
 
+
 ### hub.signal 
 
 | | Type |
@@ -2273,6 +2400,7 @@ This endpoint has multiple intents:
 | `.connected` | `bool` | `true` if the Notecard is connected to Notehub. |
 | `.signals` | `note::json_int_t` | The number of queued signals remaining. |
 
+
 ### hub.status 
 
 | | Type |
@@ -2291,6 +2419,7 @@ This endpoint has multiple intents:
 | `.connected` | `bool` | `true` if the Notecard is connected to Notehub. |
 | `.status` | `note::string_view` | Details about the Notecard's transport (e.g. cellular, WiFi, LoRa)... |
 
+
 ### hub.sync 
 
 | | Type |
@@ -2308,6 +2437,7 @@ This endpoint has multiple intents:
 | `.allow` | `bool` | no | Set to `true` to remove the Notecard from certain types of [penalty... |
 | `.in` | `bool` | no | Set to `true` to only sync pending inbound Notefiles. **Required** when... |
 | `.out` | `bool` | no | Set to `true` to only sync pending outbound Notefiles. |
+
 
 
 ### hub.sync.status 
@@ -2339,6 +2469,7 @@ This endpoint has multiple intents:
 | `.status` | `note::string_view` | The status of the current or previous sync. Refer to [this... |
 | `.sync` | `bool` | `true` if the notecard has unsynchronized notes, or requires a sync to set... |
 | `.time` | `note::json_int_t` | Time of the last sync completion. Will only populate if the Notecard has... |
+
 
 ### note.add 
 
@@ -2377,6 +2508,7 @@ On Notecard LoRa this argument is required. On... |
 | `.template_` | `bool` | `true` when a template is active on the Notefile. |
 | `.total` | `note::json_int_t` | The total number of Notes in the Notefile. |
 
+
 ### note.changes 
 This endpoint has multiple intents:
 
@@ -2409,6 +2541,7 @@ This endpoint has multiple intents:
 | `.changes` | `note::json_int_t` | The number of pending changes in the Notefile. |
 | `.total` | `note::json_int_t` | The total number of Notes in the Notefile. |
 
+
 #### note.changes — pop()
 
 | | Type |
@@ -2439,6 +2572,10 @@ This endpoint has multiple intents:
 | `.changes` | `note::json_int_t` | The number of pending changes in the Notefile. |
 | `.total` | `note::json_int_t` | The total number of Notes in the Notefile. |
 
+**Aliases on `api.note`:**
+
+- `note.popChanges(note::string_view file)`
+
 ### note.delete 
 
 | | Type |
@@ -2457,6 +2594,10 @@ This endpoint has multiple intents:
 | `.noteId` | `note::string_view` | yes | The Note ID of the Note to delete. |
 | `.verify` | `bool` | no | If set to `true` and using a templated Notefile, the Notefile will be... |
 
+
+**Aliases on `api.note`:**
+
+- `note.remove(note::string_view file, note::string_view noteId)`
 
 ### note.get 
 This endpoint has multiple intents:
@@ -2487,6 +2628,10 @@ This endpoint has multiple intents:
 | `.payload` | `note::string_view` | The payload, if contained in the Note. |
 | `.time` | `note::json_int_t` | The time the Note was added to the Notecard or Notehub. |
 
+**Aliases on `api.note`:**
+
+- `note.read(note::string_view file)`
+
 #### note.get — pop()
 
 | | Type |
@@ -2513,6 +2658,10 @@ This endpoint has multiple intents:
 |-------|------|-------------|
 | `.payload` | `note::string_view` | The payload, if contained in the Note. |
 | `.time` | `note::json_int_t` | The time the Note was added to the Notecard or Notehub. |
+
+**Aliases on `api.note`:**
+
+- `note.pop(note::string_view file)`
 
 ### note.template 
 This endpoint has multiple intents:
@@ -2548,6 +2697,7 @@ This endpoint has multiple intents:
 | `.length` | `note::json_int_t` | If the `verify` argument is provided and the Notefile has an active template... |
 | `.template_` | `bool` | `true` if an active template exists on the Notefile. |
 
+
 #### note.template — remove()
 
 | | Type |
@@ -2579,6 +2729,10 @@ This endpoint has multiple intents:
 | `.length` | `note::json_int_t` | If the `verify` argument is provided and the Notefile has an active template... |
 | `.template_` | `bool` | `true` if an active template exists on the Notefile. |
 
+**Aliases on `api.note`:**
+
+- `note.clearTemplate(note::string_view file)`
+
 ### note.update 
 
 | | Type |
@@ -2598,6 +2752,7 @@ This endpoint has multiple intents:
 | `.noteId` | `note::string_view` | yes | The unique Note ID. |
 | `.payload` | `note::string_view` | no | A base64-encoded binary payload. A Note must have either a `body` or... |
 | `.verify` | `bool` | no | If set to `true` and using a templated Notefile, the Notefile will be... |
+
 
 
 ### ntn.gps 
@@ -2624,6 +2779,7 @@ This endpoint has multiple intents:
 | `.off` | `bool` | Returned and `true` if a paired Starnote will use its own GPS/GNSS location. |
 | `.on` | `bool` | Returned and `true` if a Starnote will use the GPS/GNSS location from its... |
 
+
 ### ntn.reset 
 
 | | Type |
@@ -2633,6 +2789,7 @@ This endpoint has multiple intents:
 | **Response** | `ApiResult<void>` |
 | **Safety** | `Destructive` |
 | **Command** | yes |
+
 
 
 
@@ -2654,6 +2811,7 @@ This endpoint has multiple intents:
 | `.err` | `note::string_view` | This member is present if any errors have occurred while connecting to a... |
 | `.status` | `note::string_view` | Details about a Notecard's connection to a paired Starnote, for example:... |
 
+
 ### var.delete 
 
 | | Type |
@@ -2671,6 +2829,10 @@ This endpoint has multiple intents:
 | `.file` | `note::string_view` | no | The name of the DB Notefile that contains the Note to delete. Default value... |
 | `.name` | `note::string_view` | no | The unique Note ID. |
 
+
+**Aliases on `api.var`:**
+
+- `var.remove()`
 
 ### var.get 
 
@@ -2697,6 +2859,7 @@ This endpoint has multiple intents:
 | `.text` | `note::string_view` | The string-based value stored in the DB Notefile. |
 | `.value` | `double` | The numeric value stored in the DB Notefile. |
 
+
 ### var.set 
 
 | | Type |
@@ -2717,6 +2880,7 @@ This endpoint has multiple intents:
 | `.sync` | `bool` | no | Set to `true` to immediately sync any changes. |
 | `.text` | `note::string_view` | no | The string-based value to be stored in the DB Notefile. |
 | `.value` | `double` | no | The numeric value to be stored in the DB Notefile. |
+
 
 
 ### web 
@@ -2747,6 +2911,7 @@ This endpoint has multiple intents:
 | `.payload` | `note::string_view` | A base64-encoded binary payload from the external service, if any. The... |
 | `.result` | `note::json_int_t` | The HTTP Status Code |
 | `.status` | `note::string_view` | MD5 hash of the binary payload, if any. |
+
 
 ### web.delete 
 
@@ -2779,6 +2944,10 @@ This endpoint has multiple intents:
 | `.status` | `note::string_view` | If a `payload` is returned in the response, this is a 32-character... |
 | `.cobs` | `note::json_int_t` | Size of the COBS-encoded binary payload (in bytes). |
 | `.length` | `note::json_int_t` | Size of the unencoded binary payload (in bytes). |
+
+**Aliases on `api.web`:**
+
+- `web.remove()`
 
 ### web.get 
 
@@ -2813,6 +2982,7 @@ This endpoint has multiple intents:
 | `.length` | `note::json_int_t` | The length of the returned binary payload (in bytes). |
 | `.payload` | `note::string_view` | A base64-encoded binary payload from the external service, if any. The... |
 | `.result` | `note::json_int_t` | The HTTP Status Code. |
+
 
 ### web.post 
 
@@ -2854,6 +3024,7 @@ This endpoint has multiple intents:
 | `.result` | `note::json_int_t` | The HTTP Status Code. |
 | `.status` | `note::string_view` | If a `payload` is returned in the response, this is a 32-character... |
 
+
 ### web.put 
 
 | | Type |
@@ -2893,4 +3064,5 @@ This endpoint has multiple intents:
 | `.status` | `note::string_view` | If a `payload` is returned in the response, this is a 32-character... |
 | `.cobs` | `note::json_int_t` | Size of the COBS-encoded binary payload (in bytes). |
 | `.length` | `note::json_int_t` | Size of the unencoded binary payload (in bytes). |
+
 

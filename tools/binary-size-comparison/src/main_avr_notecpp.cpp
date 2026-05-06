@@ -107,9 +107,10 @@ void setup() {
         }));
         nc.execute(req);
     }
-#elif API_STYLE == 3 || API_STYLE == 4
-    // Raw JSON via JsonBuf + transact_raw() — same request building for
-    // both SAX-sink (3) and JsonView-scan (4) response-parse strategies.
+#elif API_STYLE == 3
+    // Raw JSON via JsonBuf + transact_raw() for the SAX-sink path. Style 4
+    // uses transact_raw_inplace below; the SAX path keeps the separate-buffer
+    // shape because transact_dispatch (used for note.get) drives its own sink.
     {
         note::JsonBuf<128> req;
         req.add("req", "hub.set");
@@ -131,6 +132,29 @@ void setup() {
         req.close();
         char rsp[128];
         nc.transact_raw(req, rsp);
+    }
+#elif API_STYLE == 4
+    // Raw JSON + JsonView, single-buffer in-place: render the request into
+    // `buf` via the lambda, then receive the response into the same `buf`.
+    {
+        char buf[128];
+        nc.transact_raw_inplace(buf, [](auto& w) {
+            w.add("req", "hub.set");
+            w.add("product", "com.example.size-test");
+            w.add("mode", "periodic");
+            w.add("outbound", 60);
+        });
+    }
+    {
+        char buf[128];
+        nc.transact_raw_inplace(buf, [](auto& w) {
+            w.add("req", "note.template");
+            w.add("file", "sensors.qo");
+            w.begin_object("body");
+                w.add("temperature", 14.1);
+                w.add("humidity", 1);
+            w.end_object();
+        });
     }
 #endif
 }
@@ -157,12 +181,11 @@ void loop() {
 #else   // API_STYLE == 4
     float temperature = 0;
     {
-        note::JsonBuf<64> req;
-        req.add("req", "card.temp");
-        req.close();
-        char rsp[64];
+        char buf[64];
         temperature = note::JsonView(
-            nc.transact_raw(req, rsp)
+            nc.transact_raw_inplace(buf, [](auto& w) {
+                w.add("req", "card.temp");
+            })
         ).get_float(K("value"));
     }
 #endif
@@ -181,7 +204,7 @@ void loop() {
         req.body(out);
         nc.execute(req);
     }
-#else
+#elif API_STYLE == 3
     {
         note::JsonBuf<128> req;
         req.add("req", "note.add");
@@ -193,6 +216,18 @@ void loop() {
         req.close();
         char rsp[64];
         nc.transact_raw(req, rsp);
+    }
+#else   // API_STYLE == 4
+    {
+        char buf[128];
+        nc.transact_raw_inplace(buf, [&](auto& w) {
+            w.add("req", "note.add");
+            w.add("file", "sensors.qo");
+            w.begin_object("body");
+                w.add("temperature", out.temperature);
+                w.add("humidity", out.humidity);
+            w.end_object();
+        });
     }
 #endif
 
@@ -216,12 +251,11 @@ void loop() {
 #else   // API_STYLE == 4
     bool connected = false;
     {
-        note::JsonBuf<64> req;
-        req.add("req", "card.status");
-        req.close();
-        char rsp[64];
+        char buf[64];
         connected = note::JsonView(
-            nc.transact_raw(req, rsp)
+            nc.transact_raw_inplace(buf, [](auto& w) {
+                w.add("req", "card.status");
+            })
         ).get_bool(K("connected"));
     }
 #endif
@@ -246,12 +280,11 @@ void loop() {
 #else   // API_STYLE == 4
     double voltage = 0;
     {
-        note::JsonBuf<64> req;
-        req.add("req", "card.voltage");
-        req.close();
-        char rsp[64];
+        char buf[64];
         voltage = note::JsonView(
-            nc.transact_raw(req, rsp)
+            nc.transact_raw_inplace(buf, [](auto& w) {
+                w.add("req", "card.voltage");
+            })
         ).get_double(K("value"));
     }
 #endif
@@ -297,17 +330,16 @@ void loop() {
             note::make_sax_dispatch(sink), 10000, err);
     }
 #else   // API_STYLE == 4
-    // Raw JSON + JsonView: buffer the response, scan known fields out
-    // of the buffered string. No SAX parser — ~8 KB flash cheaper than
-    // STYLE 3, at the cost of a response buffer in RAM.
+    // Raw JSON + JsonView: response is scanned in place from the same
+    // buffer used to render the request. No SAX parser — ~8 KB flash
+    // cheaper than STYLE 3, and a single buffer instead of req+rsp.
     {
-        note::JsonBuf<64> req;
-        req.add("req", "note.get");
-        req.add("file", "config.qi");
-        req.close();
-        char rsp[128];
+        char buf[128];
         auto body = note::JsonView(
-            nc.transact_raw(req, rsp)
+            nc.transact_raw_inplace(buf, [](auto& w) {
+                w.add("req", "note.get");
+                w.add("file", "config.qi");
+            })
         ).object(K("body"));
         note_body.temperature = body.get_float(K("temperature"));
         note_body.humidity    = static_cast<int32_t>(body.get_int(K("humidity")));
@@ -319,13 +351,20 @@ void loop() {
     auto env = api.env.get().execute();
 #elif API_STYLE == 2
     auto env = nc.execute(note::api::EnvGet{});
-#else
+#elif API_STYLE == 3
     {
         note::JsonBuf<64> req;
         req.add("req", "env.get");
         req.close();
         char rsp[256];
         nc.transact_raw(req, rsp);
+    }
+#else   // API_STYLE == 4
+    {
+        char buf[256];
+        nc.transact_raw_inplace(buf, [](auto& w) {
+            w.add("req", "env.get");
+        });
     }
 #endif
 

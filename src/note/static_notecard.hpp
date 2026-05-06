@@ -238,6 +238,42 @@ public:
     /// Access the transport stack (e.g. for binary I/O).
     Stack& stack() { return stack_; }
 
+    /// Send a pre-built JSON request and read raw response bytes back into
+    /// `rsp`. The escape hatch under `note::Api` and the typed-execute path
+    /// — use it when your firmware needs to skip the parser entirely (e.g.
+    /// AVR-class targets). The response stays in `rsp`; wrap it in
+    /// `note::JsonView(...)` to scan known fields, including the
+    /// `Result<string_view>`-unwrapping ctor:
+    ///
+    ///     auto v = note::JsonView(nc.transact_raw(req, rsp));
+    ///     float t = v.get_float("value");
+    ///
+    /// This is the non-template overload — pre-rendered `string_view` in,
+    /// `Result<string_view>` of the response back. The two templates below
+    /// forward to it for `JsonBuf`/`json<...>()` (anything with `.view()`)
+    /// and for response buffers declared as `char rsp[N]` (deduces N).
+    Result<string_view> transact_raw(string_view req, char* rsp, size_t n,
+                                     uint32_t timeout_ms = 10000) {
+        return stack_.transport.transact_raw(req, rsp, n, timeout_ms);
+    }
+
+    /// Forwarder: any request type with `.view()` (e.g. `note::JsonBuf<N>`,
+    /// `note::json<...>()` result). Calls the non-template overload above.
+    template<typename T, typename = decltype(std::declval<const T&>().view())>
+    Result<string_view> transact_raw(const T& req, char* rsp, size_t n,
+                                     uint32_t timeout_ms = 10000) {
+        return transact_raw(req.view(), rsp, n, timeout_ms);
+    }
+
+    /// Forwarder: response buffer declared as `char rsp[N]` — deduces `N`,
+    /// no `sizeof(rsp)` needed. Forwards to whichever overload above
+    /// matches `req`.
+    template<typename T, size_t N>
+    Result<string_view> transact_raw(const T& req, char (&rsp)[N],
+                                     uint32_t timeout_ms = 10000) {
+        return transact_raw(req, rsp, N, timeout_ms);
+    }
+
     /// Returns the next request ID if enabled, else 0. Mirror of
     /// `Notecard::next_request_id_or_zero` for the Api singleton-thunk
     /// path.

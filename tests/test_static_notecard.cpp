@@ -8,6 +8,8 @@
 #include <note/static_notecard.hpp>
 #include <note/api.hpp>
 #include <note/arena.hpp>
+#include <note/json_buf.hpp>
+#include <note/json_view.hpp>
 #include <note/lexer/parse.hpp>
 
 #if NOTE_JSONB
@@ -19,6 +21,7 @@
 #endif
 
 #include <doctest.h>
+#include <cstring>
 #include <deque>
 #include <string>
 
@@ -183,6 +186,28 @@ struct MockTransport {
         }
         feed_response(dispatch);
         return {};
+    }
+
+    // Raw passthrough used by StaticNotecard::transact_raw() forwarders.
+    // Captures the request as plain text and replays the queued response
+    // line into the caller's buffer (same semantics as Protocol::transact_raw).
+    int transact_raw_count = 0;
+    Result<string_view> transact_raw(string_view request, char* buf, size_t bufsize,
+                                     uint32_t /*timeout_ms*/) {
+        ++transact_raw_count;
+        last_request = std::string(request);
+        if (rx.empty())
+            return make_error(Error::ResponseLost, Cause::HalError, "no queued response");
+        std::string resp;
+        while (!rx.empty() && rx.front() != '\n') {
+            resp += static_cast<char>(rx.front());
+            rx.pop_front();
+        }
+        if (!rx.empty()) rx.pop_front();
+        if (resp.size() > bufsize)
+            return make_error(Error::Overflow, Cause::HalError, "response too large");
+        std::memcpy(buf, resp.data(), resp.size());
+        return string_view(buf, resp.size());
     }
 
     Result<void> send(RequestSource src) {
@@ -447,3 +472,63 @@ TEST_CASE("StaticNotecard: request IDs increment") {
 }
 
 #endif // !NOTE_NO_REQUEST_IDS
+
+// ---------------------------------------------------------------------------
+// transact_raw forwarders — collapse the AVR-style raw call site.
+
+TEST_CASE("StaticNotecard::transact_raw(string_view, char*, size_t)") {
+    alignas(4) char arena_buf[64];
+    MonotonicArena arena(arena_buf);
+    StaticNotecard<MockStack> nc(arena_allocator(arena));
+
+    nc.stack().transport.queue_response(R"({"value":42.0})");
+    char rsp[64];
+    auto r = nc.transact_raw(string_view(R"({"req":"card.temp"})"), rsp, sizeof(rsp));
+    REQUIRE(r.has_value());
+    REQUIRE(*r == R"({"value":42.0})");
+    CHECK(nc.stack().transport.transact_raw_count == 1);
+    CHECK(nc.stack().transport.last_request == R"({"req":"card.temp"})");
+}
+
+TEST_CASE("StaticNotecard::transact_raw forwards .view() (JsonBuf, json<...>)") {
+    alignas(4) char arena_buf[64];
+    MonotonicArena arena(arena_buf);
+    StaticNotecard<MockStack> nc(arena_allocator(arena));
+
+    nc.stack().transport.queue_response(R"({"value":99.5})");
+    JsonBuf<64> req;
+    req.add("req", "card.temp");
+
+    char rsp[64];
+    auto r = nc.transact_raw(req, rsp);  // .view() forwarder + char[N] deduction
+    REQUIRE(r.has_value());
+    REQUIRE(*r == R"({"value":99.5})");
+}
+
+TEST_CASE("StaticNotecard::transact_raw composes with note::JsonView unwrap") {
+    alignas(4) char arena_buf[64];
+    MonotonicArena arena(arena_buf);
+    StaticNotecard<MockStack> nc(arena_allocator(arena));
+
+    nc.stack().transport.queue_response(R"({"value":3.14})");
+    JsonBuf<64> req;
+    req.add("req", "card.temp");
+
+    char rsp[64];
+    // The Result<string_view>-unwrapping JsonView ctor lets the user skip
+    // the explicit r.has_value()/*r dance for best-effort field reads.
+    JsonView v(nc.transact_raw(req, rsp));
+    CHECK(v.get_float("value", 0.0f) == doctest::Approx(3.14f));
+}
+
+TEST_CASE("StaticNotecard::transact_raw default timeout") {
+    alignas(4) char arena_buf[64];
+    MonotonicArena arena(arena_buf);
+    StaticNotecard<MockStack> nc(arena_allocator(arena));
+
+    nc.stack().transport.queue_response("{}");
+    char rsp[16];
+    // No timeout argument — defaults to 10000 ms.
+    auto r = nc.transact_raw(string_view(R"({"req":"card.status"})"), rsp);
+    REQUIRE(r.has_value());
+}

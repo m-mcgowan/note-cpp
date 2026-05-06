@@ -329,28 +329,8 @@ struct CardUsageTest {
         return send_fn_(nc_, fn_, &build_);
     }
 
-    static const ::note::ReqFieldDesc* req_field_descs_ptr_(uint8_t& n_out) {
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Winvalid-offsetof"
-        static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
-            {keys_::days, static_cast<uint16_t>(offsetof(CardUsageTest, days)), ::note::ReqFieldType::Int},
-            {keys_::hours, static_cast<uint16_t>(offsetof(CardUsageTest, hours)), ::note::ReqFieldType::Int},
-            {keys_::megabytes, static_cast<uint16_t>(offsetof(CardUsageTest, megabytes)), ::note::ReqFieldType::Int},
-        };
-#pragma GCC diagnostic pop
-        n_out = sizeof(table_) / sizeof(table_[0]);
-        return table_;
-    }
     private:
-    void build(JsonBuilder& b) const {
-        uint8_t n_; auto* descs_ = req_field_descs_ptr_(n_);
-        ::note::generic_build(b, this, descs_, n_);
-#if NOTE_EXTRAS
-        for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
-            std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
-                       extras_[i_].value);
-#endif
-    }
+    void build(JsonBuilder& b) const;
     public:
 
 
@@ -430,9 +410,32 @@ struct request_traits<::note::api::CardUsageTest> {
 #pragma GCC diagnostic pop
     static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);
     static const ::note::FieldDesc* field_descs_ptr() { return field_descs_table_; }
+    static const ::note::ReqFieldDesc* req_field_descs_ptr_(uint8_t& n_out) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+        static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
+            {::note::api::CardUsageTest::keys_::days, static_cast<uint16_t>(offsetof(::note::api::CardUsageTest, days)), ::note::ReqFieldType::Int},
+            {::note::api::CardUsageTest::keys_::hours, static_cast<uint16_t>(offsetof(::note::api::CardUsageTest, hours)), ::note::ReqFieldType::Int},
+            {::note::api::CardUsageTest::keys_::megabytes, static_cast<uint16_t>(offsetof(::note::api::CardUsageTest, megabytes)), ::note::ReqFieldType::Int},
+        };
+#pragma GCC diagnostic pop
+        n_out = sizeof(table_) / sizeof(table_[0]);
+        return table_;
+    }
 };
 } // namespace note::detail
 namespace note::api {
+
+inline void CardUsageTest::build(JsonBuilder& b) const {
+    using meta_ = ::note::detail::request_traits<CardUsageTest>;
+    uint8_t n_; auto* descs_ = meta_::req_field_descs_ptr_(n_);
+    ::note::generic_build(b, this, descs_, n_);
+#if NOTE_EXTRAS
+    for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
+        std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
+                   extras_[i_].value);
+#endif
+}
 
 #if NOTE_SINGLETON
 inline ApiResult<typename CardUsageTest::Response> CardUsageTest::execute() const {

@@ -421,43 +421,8 @@ struct CardAuxSerial {
             return send_fn_(nc_, fn_, &build_);
         }
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-        static const ::note::ReqFieldDesc* req_field_descs_ptr_(uint8_t& n_out) {
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Winvalid-offsetof"
-            static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
-                {keys_::duration, static_cast<uint16_t>(offsetof(CardAuxSerial::Request, duration)), ::note::ReqFieldType::Int},
-                {keys_::limit, static_cast<uint16_t>(offsetof(CardAuxSerial::Request, limit)), ::note::ReqFieldType::Bool},
-                {keys_::max, static_cast<uint16_t>(offsetof(CardAuxSerial::Request, max)), ::note::ReqFieldType::Int},
-#if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
-                {keys_::minutes, static_cast<uint16_t>(offsetof(CardAuxSerial::Request, minutes)), ::note::ReqFieldType::Int},
-#endif
-                {keys_::mode, static_cast<uint16_t>(offsetof(CardAuxSerial::Request, mode)), ::note::ReqFieldType::String},
-                {keys_::ms, static_cast<uint16_t>(offsetof(CardAuxSerial::Request, ms)), ::note::ReqFieldType::Int},
-#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-                {keys_::rate, static_cast<uint16_t>(offsetof(CardAuxSerial::Request, rate)), ::note::ReqFieldType::Int},
-#endif
-            };
-#pragma GCC diagnostic pop
-            n_out = sizeof(table_) / sizeof(table_[0]);
-            return table_;
-        }
         private:
-        void build(JsonBuilder& b) const {
-#if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
-#endif
-#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-#endif
-            uint8_t n_; auto* descs_ = req_field_descs_ptr_(n_);
-            ::note::generic_build(b, this, descs_, n_);
-#if NOTE_EXTRAS
-            for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
-                std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
-                           extras_[i_].value);
-#endif
-        }
-#pragma GCC diagnostic pop
+        void build(JsonBuilder& b) const;
         public:
 
 
@@ -779,49 +744,8 @@ struct CardAuxSerial {
             return send_fn_(nc_, fn_, &build_);
         }
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-        static const ::note::ReqFieldDesc* req_field_descs_ptr_(uint8_t& n_out) {
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Winvalid-offsetof"
-            static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
-                {keys_::duration, static_cast<uint16_t>(offsetof(CardAuxSerial::Notify, duration)), ::note::ReqFieldType::Int},
-                {keys_::max, static_cast<uint16_t>(offsetof(CardAuxSerial::Notify, max)), ::note::ReqFieldType::Int},
-#if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
-                {keys_::minutes, static_cast<uint16_t>(offsetof(CardAuxSerial::Notify, minutes)), ::note::ReqFieldType::Int},
-#endif
-                {keys_::ms, static_cast<uint16_t>(offsetof(CardAuxSerial::Notify, ms)), ::note::ReqFieldType::Int},
-#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-                {keys_::rate, static_cast<uint16_t>(offsetof(CardAuxSerial::Notify, rate)), ::note::ReqFieldType::Int},
-#endif
-            };
-#pragma GCC diagnostic pop
-            n_out = sizeof(table_) / sizeof(table_[0]);
-            return table_;
-        }
         private:
-        void build(JsonBuilder& b) const {
-#if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
-#endif
-            if (notifications) {
-                char mp_[96];
-                std::snprintf(mp_, sizeof(mp_), "notify,%.*s",
-                             static_cast<int>((*notifications).size()), (*notifications).data());
-                note::add_flash(b, note::flash(keys_::notifications), note::string_view{mp_});
-            } else {
-                note::add_flash(b, note::flash(keys_::notifications), "notify");
-            }
-#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-#endif
-            uint8_t n_; auto* descs_ = req_field_descs_ptr_(n_);
-            ::note::generic_build(b, this, descs_, n_);
-#if NOTE_EXTRAS
-            for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
-                std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
-                           extras_[i_].value);
-#endif
-        }
-#pragma GCC diagnostic pop
+        void build(JsonBuilder& b) const;
         public:
 
 
@@ -1008,35 +932,8 @@ struct CardAuxSerial {
             return send_fn_(nc_, fn_, &build_);
         }
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-        static const ::note::ReqFieldDesc* req_field_descs_ptr_(uint8_t& n_out) {
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Winvalid-offsetof"
-            static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
-                {keys_::limit, static_cast<uint16_t>(offsetof(CardAuxSerial::Gps, limit)), ::note::ReqFieldType::Bool},
-#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-                {keys_::rate, static_cast<uint16_t>(offsetof(CardAuxSerial::Gps, rate)), ::note::ReqFieldType::Int},
-#endif
-            };
-#pragma GCC diagnostic pop
-            n_out = sizeof(table_) / sizeof(table_[0]);
-            return table_;
-        }
         private:
-        void build(JsonBuilder& b) const {
-            note::add_flash(b, note::flash(keys_::mode), "gps");
-#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-#endif
-            uint8_t n_; auto* descs_ = req_field_descs_ptr_(n_);
-            ::note::generic_build(b, this, descs_, n_);
-#if NOTE_EXTRAS
-            for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
-                std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
-                           extras_[i_].value);
-#endif
-        }
-#pragma GCC diagnostic pop
+        void build(JsonBuilder& b) const;
         public:
 
 
@@ -1194,34 +1091,8 @@ struct CardAuxSerial {
             return send_fn_(nc_, fn_, &build_);
         }
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-        static const ::note::ReqFieldDesc* req_field_descs_ptr_(uint8_t& n_out) {
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Winvalid-offsetof"
-            static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
-#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-                {keys_::rate, static_cast<uint16_t>(offsetof(CardAuxSerial::Configure, rate)), ::note::ReqFieldType::Int},
-#endif
-            };
-#pragma GCC diagnostic pop
-            n_out = sizeof(table_) / sizeof(table_[0]);
-            return table_;
-        }
         private:
-        void build(JsonBuilder& b) const {
-            note::add_flash(b, note::flash(keys_::mode), "req");
-#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-#endif
-            uint8_t n_; auto* descs_ = req_field_descs_ptr_(n_);
-            ::note::generic_build(b, this, descs_, n_);
-#if NOTE_EXTRAS
-            for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
-                std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
-                           extras_[i_].value);
-#endif
-        }
-#pragma GCC diagnostic pop
+        void build(JsonBuilder& b) const;
         public:
 
 
@@ -1351,14 +1222,7 @@ struct CardAuxSerial {
         }
 
         private:
-        void build(JsonBuilder& b) const {
-            note::add_flash(b, note::flash(keys_::mode), "-");
-#if NOTE_EXTRAS
-            for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
-                std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
-                           extras_[i_].value);
-#endif
-        }
+        void build(JsonBuilder& b) const;
         public:
 
 
@@ -1484,9 +1348,47 @@ struct request_traits<::note::api::CardAuxSerial::Request> {
 #pragma GCC diagnostic pop
     static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);
     static const ::note::FieldDesc* field_descs_ptr() { return field_descs_table_; }
+    static const ::note::ReqFieldDesc* req_field_descs_ptr_(uint8_t& n_out) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+        static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
+            {::note::api::CardAuxSerial::Request::keys_::duration, static_cast<uint16_t>(offsetof(::note::api::CardAuxSerial::Request, duration)), ::note::ReqFieldType::Int},
+            {::note::api::CardAuxSerial::Request::keys_::limit, static_cast<uint16_t>(offsetof(::note::api::CardAuxSerial::Request, limit)), ::note::ReqFieldType::Bool},
+            {::note::api::CardAuxSerial::Request::keys_::max, static_cast<uint16_t>(offsetof(::note::api::CardAuxSerial::Request, max)), ::note::ReqFieldType::Int},
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
+            {::note::api::CardAuxSerial::Request::keys_::minutes, static_cast<uint16_t>(offsetof(::note::api::CardAuxSerial::Request, minutes)), ::note::ReqFieldType::Int},
+#endif
+            {::note::api::CardAuxSerial::Request::keys_::mode, static_cast<uint16_t>(offsetof(::note::api::CardAuxSerial::Request, mode)), ::note::ReqFieldType::String},
+            {::note::api::CardAuxSerial::Request::keys_::ms, static_cast<uint16_t>(offsetof(::note::api::CardAuxSerial::Request, ms)), ::note::ReqFieldType::Int},
+#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
+            {::note::api::CardAuxSerial::Request::keys_::rate, static_cast<uint16_t>(offsetof(::note::api::CardAuxSerial::Request, rate)), ::note::ReqFieldType::Int},
+#endif
+        };
+#pragma GCC diagnostic pop
+        n_out = sizeof(table_) / sizeof(table_[0]);
+        return table_;
+    }
 };
 } // namespace note::detail
 namespace note::api {
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+inline void CardAuxSerial::Request::build(JsonBuilder& b) const {
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
+#endif
+    using meta_ = ::note::detail::request_traits<CardAuxSerial::Request>;
+    uint8_t n_; auto* descs_ = meta_::req_field_descs_ptr_(n_);
+    ::note::generic_build(b, this, descs_, n_);
+#if NOTE_EXTRAS
+    for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
+        std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
+                   extras_[i_].value);
+#endif
+}
+#pragma GCC diagnostic pop
 
 #if NOTE_SINGLETON
 inline ApiResult<typename CardAuxSerial::Request::Response> CardAuxSerial::Request::execute() const {
@@ -1582,6 +1484,58 @@ inline CardAuxSerial::Notify& CardAuxSerial::Notify::rate_t::operator()(note::js
 #endif
 #pragma GCC diagnostic pop
 
+} // namespace note::api
+namespace note::detail {
+template<>
+struct request_traits<::note::api::CardAuxSerial::Notify> {
+    static const ::note::ReqFieldDesc* req_field_descs_ptr_(uint8_t& n_out) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+        static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
+            {::note::api::CardAuxSerial::Notify::keys_::duration, static_cast<uint16_t>(offsetof(::note::api::CardAuxSerial::Notify, duration)), ::note::ReqFieldType::Int},
+            {::note::api::CardAuxSerial::Notify::keys_::max, static_cast<uint16_t>(offsetof(::note::api::CardAuxSerial::Notify, max)), ::note::ReqFieldType::Int},
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
+            {::note::api::CardAuxSerial::Notify::keys_::minutes, static_cast<uint16_t>(offsetof(::note::api::CardAuxSerial::Notify, minutes)), ::note::ReqFieldType::Int},
+#endif
+            {::note::api::CardAuxSerial::Notify::keys_::ms, static_cast<uint16_t>(offsetof(::note::api::CardAuxSerial::Notify, ms)), ::note::ReqFieldType::Int},
+#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
+            {::note::api::CardAuxSerial::Notify::keys_::rate, static_cast<uint16_t>(offsetof(::note::api::CardAuxSerial::Notify, rate)), ::note::ReqFieldType::Int},
+#endif
+        };
+#pragma GCC diagnostic pop
+        n_out = sizeof(table_) / sizeof(table_[0]);
+        return table_;
+    }
+};
+} // namespace note::detail
+namespace note::api {
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+inline void CardAuxSerial::Notify::build(JsonBuilder& b) const {
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
+#endif
+    if (notifications) {
+        char mp_[96];
+        std::snprintf(mp_, sizeof(mp_), "notify,%.*s",
+                     static_cast<int>((*notifications).size()), (*notifications).data());
+        note::add_flash(b, note::flash(keys_::notifications), note::string_view{mp_});
+    } else {
+        note::add_flash(b, note::flash(keys_::notifications), "notify");
+    }
+#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
+#endif
+    using meta_ = ::note::detail::request_traits<CardAuxSerial::Notify>;
+    uint8_t n_; auto* descs_ = meta_::req_field_descs_ptr_(n_);
+    ::note::generic_build(b, this, descs_, n_);
+#if NOTE_EXTRAS
+    for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
+        std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
+                   extras_[i_].value);
+#endif
+}
+#pragma GCC diagnostic pop
+
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
@@ -1600,6 +1554,44 @@ inline CardAuxSerial::Gps& CardAuxSerial::Gps::rate_t::operator()(note::json_int
 #endif
 #pragma GCC diagnostic pop
 
+} // namespace note::api
+namespace note::detail {
+template<>
+struct request_traits<::note::api::CardAuxSerial::Gps> {
+    static const ::note::ReqFieldDesc* req_field_descs_ptr_(uint8_t& n_out) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+        static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
+            {::note::api::CardAuxSerial::Gps::keys_::limit, static_cast<uint16_t>(offsetof(::note::api::CardAuxSerial::Gps, limit)), ::note::ReqFieldType::Bool},
+#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
+            {::note::api::CardAuxSerial::Gps::keys_::rate, static_cast<uint16_t>(offsetof(::note::api::CardAuxSerial::Gps, rate)), ::note::ReqFieldType::Int},
+#endif
+        };
+#pragma GCC diagnostic pop
+        n_out = sizeof(table_) / sizeof(table_[0]);
+        return table_;
+    }
+};
+} // namespace note::detail
+namespace note::api {
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+inline void CardAuxSerial::Gps::build(JsonBuilder& b) const {
+    note::add_flash(b, note::flash(keys_::mode), "gps");
+#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
+#endif
+    using meta_ = ::note::detail::request_traits<CardAuxSerial::Gps>;
+    uint8_t n_; auto* descs_ = meta_::req_field_descs_ptr_(n_);
+    ::note::generic_build(b, this, descs_, n_);
+#if NOTE_EXTRAS
+    for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
+        std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
+                   extras_[i_].value);
+#endif
+}
+#pragma GCC diagnostic pop
+
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
@@ -1613,7 +1605,54 @@ inline CardAuxSerial::Configure& CardAuxSerial::Configure::rate_t::operator()(no
 #endif
 #pragma GCC diagnostic pop
 
+} // namespace note::api
+namespace note::detail {
+template<>
+struct request_traits<::note::api::CardAuxSerial::Configure> {
+    static const ::note::ReqFieldDesc* req_field_descs_ptr_(uint8_t& n_out) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+        static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
+#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
+            {::note::api::CardAuxSerial::Configure::keys_::rate, static_cast<uint16_t>(offsetof(::note::api::CardAuxSerial::Configure, rate)), ::note::ReqFieldType::Int},
+#endif
+        };
+#pragma GCC diagnostic pop
+        n_out = sizeof(table_) / sizeof(table_[0]);
+        return table_;
+    }
+};
+} // namespace note::detail
+namespace note::api {
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+inline void CardAuxSerial::Configure::build(JsonBuilder& b) const {
+    note::add_flash(b, note::flash(keys_::mode), "req");
+#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
+#endif
+    using meta_ = ::note::detail::request_traits<CardAuxSerial::Configure>;
+    uint8_t n_; auto* descs_ = meta_::req_field_descs_ptr_(n_);
+    ::note::generic_build(b, this, descs_, n_);
+#if NOTE_EXTRAS
+    for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
+        std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
+                   extras_[i_].value);
+#endif
+}
+#pragma GCC diagnostic pop
+
+
+
+
+inline void CardAuxSerial::Off::build(JsonBuilder& b) const {
+    note::add_flash(b, note::flash(keys_::mode), "-");
+#if NOTE_EXTRAS
+    for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
+        std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
+                   extras_[i_].value);
+#endif
+}
 
 
 

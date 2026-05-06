@@ -239,27 +239,8 @@ struct CardPower {
             return send_fn_(nc_, fn_, &build_);
         }
 
-        static const ::note::ReqFieldDesc* req_field_descs_ptr_(uint8_t& n_out) {
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Winvalid-offsetof"
-            static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
-                {keys_::minutes, static_cast<uint16_t>(offsetof(CardPower::Read, minutes)), ::note::ReqFieldType::Int},
-                {keys_::reset, static_cast<uint16_t>(offsetof(CardPower::Read, reset)), ::note::ReqFieldType::Bool},
-            };
-#pragma GCC diagnostic pop
-            n_out = sizeof(table_) / sizeof(table_[0]);
-            return table_;
-        }
         private:
-        void build(JsonBuilder& b) const {
-            uint8_t n_; auto* descs_ = req_field_descs_ptr_(n_);
-            ::note::generic_build(b, this, descs_, n_);
-#if NOTE_EXTRAS
-            for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
-                std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
-                           extras_[i_].value);
-#endif
-        }
+        void build(JsonBuilder& b) const;
         public:
 
 
@@ -501,27 +482,8 @@ struct CardPower {
             return send_fn_(nc_, fn_, &build_);
         }
 
-        static const ::note::ReqFieldDesc* req_field_descs_ptr_(uint8_t& n_out) {
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Winvalid-offsetof"
-            static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
-                {keys_::minutes, static_cast<uint16_t>(offsetof(CardPower::Configure, minutes)), ::note::ReqFieldType::Int},
-                {keys_::reset, static_cast<uint16_t>(offsetof(CardPower::Configure, reset)), ::note::ReqFieldType::Bool},
-            };
-#pragma GCC diagnostic pop
-            n_out = sizeof(table_) / sizeof(table_[0]);
-            return table_;
-        }
         private:
-        void build(JsonBuilder& b) const {
-            uint8_t n_; auto* descs_ = req_field_descs_ptr_(n_);
-            ::note::generic_build(b, this, descs_, n_);
-#if NOTE_EXTRAS
-            for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
-                std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
-                           extras_[i_].value);
-#endif
-        }
+        void build(JsonBuilder& b) const;
         public:
 
 
@@ -751,27 +713,8 @@ struct CardPower {
             return send_fn_(nc_, fn_, &build_);
         }
 
-        static const ::note::ReqFieldDesc* req_field_descs_ptr_(uint8_t& n_out) {
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Winvalid-offsetof"
-            static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
-                {keys_::minutes, static_cast<uint16_t>(offsetof(CardPower::Reset, minutes)), ::note::ReqFieldType::Int},
-            };
-#pragma GCC diagnostic pop
-            n_out = sizeof(table_) / sizeof(table_[0]);
-            return table_;
-        }
         private:
-        void build(JsonBuilder& b) const {
-            note::add_flash(b, note::flash(keys_::reset), true);
-            uint8_t n_; auto* descs_ = req_field_descs_ptr_(n_);
-            ::note::generic_build(b, this, descs_, n_);
-#if NOTE_EXTRAS
-            for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
-                std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
-                           extras_[i_].value);
-#endif
-        }
+        void build(JsonBuilder& b) const;
         public:
 
 
@@ -832,9 +775,31 @@ struct request_traits<::note::api::CardPower::Read> {
 #pragma GCC diagnostic pop
     static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);
     static const ::note::FieldDesc* field_descs_ptr() { return field_descs_table_; }
+    static const ::note::ReqFieldDesc* req_field_descs_ptr_(uint8_t& n_out) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+        static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
+            {::note::api::CardPower::Read::keys_::minutes, static_cast<uint16_t>(offsetof(::note::api::CardPower::Read, minutes)), ::note::ReqFieldType::Int},
+            {::note::api::CardPower::Read::keys_::reset, static_cast<uint16_t>(offsetof(::note::api::CardPower::Read, reset)), ::note::ReqFieldType::Bool},
+        };
+#pragma GCC diagnostic pop
+        n_out = sizeof(table_) / sizeof(table_[0]);
+        return table_;
+    }
 };
 } // namespace note::detail
 namespace note::api {
+
+inline void CardPower::Read::build(JsonBuilder& b) const {
+    using meta_ = ::note::detail::request_traits<CardPower::Read>;
+    uint8_t n_; auto* descs_ = meta_::req_field_descs_ptr_(n_);
+    ::note::generic_build(b, this, descs_, n_);
+#if NOTE_EXTRAS
+    for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
+        std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
+                   extras_[i_].value);
+#endif
+}
 
 #if NOTE_SINGLETON
 inline ApiResult<typename CardPower::Read::Response> CardPower::Read::execute() const {
@@ -880,9 +845,31 @@ struct request_traits<::note::api::CardPower::Configure> {
 #pragma GCC diagnostic pop
     static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);
     static const ::note::FieldDesc* field_descs_ptr() { return field_descs_table_; }
+    static const ::note::ReqFieldDesc* req_field_descs_ptr_(uint8_t& n_out) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+        static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
+            {::note::api::CardPower::Configure::keys_::minutes, static_cast<uint16_t>(offsetof(::note::api::CardPower::Configure, minutes)), ::note::ReqFieldType::Int},
+            {::note::api::CardPower::Configure::keys_::reset, static_cast<uint16_t>(offsetof(::note::api::CardPower::Configure, reset)), ::note::ReqFieldType::Bool},
+        };
+#pragma GCC diagnostic pop
+        n_out = sizeof(table_) / sizeof(table_[0]);
+        return table_;
+    }
 };
 } // namespace note::detail
 namespace note::api {
+
+inline void CardPower::Configure::build(JsonBuilder& b) const {
+    using meta_ = ::note::detail::request_traits<CardPower::Configure>;
+    uint8_t n_; auto* descs_ = meta_::req_field_descs_ptr_(n_);
+    ::note::generic_build(b, this, descs_, n_);
+#if NOTE_EXTRAS
+    for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
+        std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
+                   extras_[i_].value);
+#endif
+}
 
 #if NOTE_SINGLETON
 inline ApiResult<typename CardPower::Configure::Response> CardPower::Configure::execute() const {
@@ -923,9 +910,31 @@ struct request_traits<::note::api::CardPower::Reset> {
 #pragma GCC diagnostic pop
     static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);
     static const ::note::FieldDesc* field_descs_ptr() { return field_descs_table_; }
+    static const ::note::ReqFieldDesc* req_field_descs_ptr_(uint8_t& n_out) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+        static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
+            {::note::api::CardPower::Reset::keys_::minutes, static_cast<uint16_t>(offsetof(::note::api::CardPower::Reset, minutes)), ::note::ReqFieldType::Int},
+        };
+#pragma GCC diagnostic pop
+        n_out = sizeof(table_) / sizeof(table_[0]);
+        return table_;
+    }
 };
 } // namespace note::detail
 namespace note::api {
+
+inline void CardPower::Reset::build(JsonBuilder& b) const {
+    note::add_flash(b, note::flash(keys_::reset), true);
+    using meta_ = ::note::detail::request_traits<CardPower::Reset>;
+    uint8_t n_; auto* descs_ = meta_::req_field_descs_ptr_(n_);
+    ::note::generic_build(b, this, descs_, n_);
+#if NOTE_EXTRAS
+    for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
+        std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
+                   extras_[i_].value);
+#endif
+}
 
 #if NOTE_SINGLETON
 inline ApiResult<typename CardPower::Reset::Response> CardPower::Reset::execute() const {

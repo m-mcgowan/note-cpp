@@ -185,30 +185,8 @@ struct CardMotionSync {
         return send_fn_(nc_, fn_, &build_);
     }
 
-    static const ::note::ReqFieldDesc* req_field_descs_ptr_(uint8_t& n_out) {
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Winvalid-offsetof"
-        static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
-            {keys_::count, static_cast<uint16_t>(offsetof(CardMotionSync, count)), ::note::ReqFieldType::Int},
-            {keys_::minutes, static_cast<uint16_t>(offsetof(CardMotionSync, minutes)), ::note::ReqFieldType::Int},
-            {keys_::start, static_cast<uint16_t>(offsetof(CardMotionSync, start)), ::note::ReqFieldType::Bool},
-            {keys_::stop, static_cast<uint16_t>(offsetof(CardMotionSync, stop)), ::note::ReqFieldType::Bool},
-            {keys_::threshold, static_cast<uint16_t>(offsetof(CardMotionSync, threshold)), ::note::ReqFieldType::Int},
-        };
-#pragma GCC diagnostic pop
-        n_out = sizeof(table_) / sizeof(table_[0]);
-        return table_;
-    }
     private:
-    void build(JsonBuilder& b) const {
-        uint8_t n_; auto* descs_ = req_field_descs_ptr_(n_);
-        ::note::generic_build(b, this, descs_, n_);
-#if NOTE_EXTRAS
-        for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
-            std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
-                       extras_[i_].value);
-#endif
-    }
+    void build(JsonBuilder& b) const;
     public:
 
 
@@ -283,6 +261,39 @@ inline CardMotionSync& CardMotionSync::threshold_t::operator()(note::json_int_t 
         reinterpret_cast<char*>(this) - offsetof(CardMotionSync, threshold));
 }
 #pragma GCC diagnostic pop
+
+} // namespace note::api
+namespace note::detail {
+template<>
+struct request_traits<::note::api::CardMotionSync> {
+    static const ::note::ReqFieldDesc* req_field_descs_ptr_(uint8_t& n_out) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+        static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
+            {::note::api::CardMotionSync::keys_::count, static_cast<uint16_t>(offsetof(::note::api::CardMotionSync, count)), ::note::ReqFieldType::Int},
+            {::note::api::CardMotionSync::keys_::minutes, static_cast<uint16_t>(offsetof(::note::api::CardMotionSync, minutes)), ::note::ReqFieldType::Int},
+            {::note::api::CardMotionSync::keys_::start, static_cast<uint16_t>(offsetof(::note::api::CardMotionSync, start)), ::note::ReqFieldType::Bool},
+            {::note::api::CardMotionSync::keys_::stop, static_cast<uint16_t>(offsetof(::note::api::CardMotionSync, stop)), ::note::ReqFieldType::Bool},
+            {::note::api::CardMotionSync::keys_::threshold, static_cast<uint16_t>(offsetof(::note::api::CardMotionSync, threshold)), ::note::ReqFieldType::Int},
+        };
+#pragma GCC diagnostic pop
+        n_out = sizeof(table_) / sizeof(table_[0]);
+        return table_;
+    }
+};
+} // namespace note::detail
+namespace note::api {
+
+inline void CardMotionSync::build(JsonBuilder& b) const {
+    using meta_ = ::note::detail::request_traits<CardMotionSync>;
+    uint8_t n_; auto* descs_ = meta_::req_field_descs_ptr_(n_);
+    ::note::generic_build(b, this, descs_, n_);
+#if NOTE_EXTRAS
+    for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
+        std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
+                   extras_[i_].value);
+#endif
+}
 
 
 

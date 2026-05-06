@@ -341,31 +341,8 @@ struct CardWirelessPenalty {
             return send_fn_(nc_, fn_, &build_);
         }
 
-        static const ::note::ReqFieldDesc* req_field_descs_ptr_(uint8_t& n_out) {
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Winvalid-offsetof"
-            static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
-                {keys_::add, static_cast<uint16_t>(offsetof(CardWirelessPenalty::Check, add)), ::note::ReqFieldType::Int},
-                {keys_::max, static_cast<uint16_t>(offsetof(CardWirelessPenalty::Check, max)), ::note::ReqFieldType::Int},
-                {keys_::min, static_cast<uint16_t>(offsetof(CardWirelessPenalty::Check, min)), ::note::ReqFieldType::Int},
-                {keys_::rate, static_cast<uint16_t>(offsetof(CardWirelessPenalty::Check, rate)), ::note::ReqFieldType::Double},
-                {keys_::reset, static_cast<uint16_t>(offsetof(CardWirelessPenalty::Check, reset)), ::note::ReqFieldType::Bool},
-                {keys_::set, static_cast<uint16_t>(offsetof(CardWirelessPenalty::Check, set)), ::note::ReqFieldType::Bool},
-            };
-#pragma GCC diagnostic pop
-            n_out = sizeof(table_) / sizeof(table_[0]);
-            return table_;
-        }
         private:
-        void build(JsonBuilder& b) const {
-            uint8_t n_; auto* descs_ = req_field_descs_ptr_(n_);
-            ::note::generic_build(b, this, descs_, n_);
-#if NOTE_EXTRAS
-            for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
-                std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
-                           extras_[i_].value);
-#endif
-        }
+        void build(JsonBuilder& b) const;
         public:
 
 
@@ -715,31 +692,8 @@ struct CardWirelessPenalty {
             return send_fn_(nc_, fn_, &build_);
         }
 
-        static const ::note::ReqFieldDesc* req_field_descs_ptr_(uint8_t& n_out) {
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Winvalid-offsetof"
-            static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
-                {keys_::add, static_cast<uint16_t>(offsetof(CardWirelessPenalty::Set, add)), ::note::ReqFieldType::Int},
-                {keys_::max, static_cast<uint16_t>(offsetof(CardWirelessPenalty::Set, max)), ::note::ReqFieldType::Int},
-                {keys_::min, static_cast<uint16_t>(offsetof(CardWirelessPenalty::Set, min)), ::note::ReqFieldType::Int},
-                {keys_::rate, static_cast<uint16_t>(offsetof(CardWirelessPenalty::Set, rate)), ::note::ReqFieldType::Double},
-                {keys_::reset, static_cast<uint16_t>(offsetof(CardWirelessPenalty::Set, reset)), ::note::ReqFieldType::Bool},
-            };
-#pragma GCC diagnostic pop
-            n_out = sizeof(table_) / sizeof(table_[0]);
-            return table_;
-        }
         private:
-        void build(JsonBuilder& b) const {
-            note::add_flash(b, note::flash(keys_::set), true);
-            uint8_t n_; auto* descs_ = req_field_descs_ptr_(n_);
-            ::note::generic_build(b, this, descs_, n_);
-#if NOTE_EXTRAS
-            for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
-                std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
-                           extras_[i_].value);
-#endif
-        }
+        void build(JsonBuilder& b) const;
         public:
 
 
@@ -1080,31 +1034,8 @@ struct CardWirelessPenalty {
             return send_fn_(nc_, fn_, &build_);
         }
 
-        static const ::note::ReqFieldDesc* req_field_descs_ptr_(uint8_t& n_out) {
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Winvalid-offsetof"
-            static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
-                {keys_::add, static_cast<uint16_t>(offsetof(CardWirelessPenalty::Clear, add)), ::note::ReqFieldType::Int},
-                {keys_::max, static_cast<uint16_t>(offsetof(CardWirelessPenalty::Clear, max)), ::note::ReqFieldType::Int},
-                {keys_::min, static_cast<uint16_t>(offsetof(CardWirelessPenalty::Clear, min)), ::note::ReqFieldType::Int},
-                {keys_::rate, static_cast<uint16_t>(offsetof(CardWirelessPenalty::Clear, rate)), ::note::ReqFieldType::Double},
-                {keys_::set, static_cast<uint16_t>(offsetof(CardWirelessPenalty::Clear, set)), ::note::ReqFieldType::Bool},
-            };
-#pragma GCC diagnostic pop
-            n_out = sizeof(table_) / sizeof(table_[0]);
-            return table_;
-        }
         private:
-        void build(JsonBuilder& b) const {
-            note::add_flash(b, note::flash(keys_::reset), true);
-            uint8_t n_; auto* descs_ = req_field_descs_ptr_(n_);
-            ::note::generic_build(b, this, descs_, n_);
-#if NOTE_EXTRAS
-            for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
-                std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
-                           extras_[i_].value);
-#endif
-        }
+        void build(JsonBuilder& b) const;
         public:
 
 
@@ -1204,9 +1135,35 @@ struct request_traits<::note::api::CardWirelessPenalty::Check> {
 #pragma GCC diagnostic pop
     static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);
     static const ::note::FieldDesc* field_descs_ptr() { return field_descs_table_; }
+    static const ::note::ReqFieldDesc* req_field_descs_ptr_(uint8_t& n_out) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+        static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
+            {::note::api::CardWirelessPenalty::Check::keys_::add, static_cast<uint16_t>(offsetof(::note::api::CardWirelessPenalty::Check, add)), ::note::ReqFieldType::Int},
+            {::note::api::CardWirelessPenalty::Check::keys_::max, static_cast<uint16_t>(offsetof(::note::api::CardWirelessPenalty::Check, max)), ::note::ReqFieldType::Int},
+            {::note::api::CardWirelessPenalty::Check::keys_::min, static_cast<uint16_t>(offsetof(::note::api::CardWirelessPenalty::Check, min)), ::note::ReqFieldType::Int},
+            {::note::api::CardWirelessPenalty::Check::keys_::rate, static_cast<uint16_t>(offsetof(::note::api::CardWirelessPenalty::Check, rate)), ::note::ReqFieldType::Double},
+            {::note::api::CardWirelessPenalty::Check::keys_::reset, static_cast<uint16_t>(offsetof(::note::api::CardWirelessPenalty::Check, reset)), ::note::ReqFieldType::Bool},
+            {::note::api::CardWirelessPenalty::Check::keys_::set, static_cast<uint16_t>(offsetof(::note::api::CardWirelessPenalty::Check, set)), ::note::ReqFieldType::Bool},
+        };
+#pragma GCC diagnostic pop
+        n_out = sizeof(table_) / sizeof(table_[0]);
+        return table_;
+    }
 };
 } // namespace note::detail
 namespace note::api {
+
+inline void CardWirelessPenalty::Check::build(JsonBuilder& b) const {
+    using meta_ = ::note::detail::request_traits<CardWirelessPenalty::Check>;
+    uint8_t n_; auto* descs_ = meta_::req_field_descs_ptr_(n_);
+    ::note::generic_build(b, this, descs_, n_);
+#if NOTE_EXTRAS
+    for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
+        std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
+                   extras_[i_].value);
+#endif
+}
 
 #if NOTE_SINGLETON
 inline ApiResult<typename CardWirelessPenalty::Check::Response> CardWirelessPenalty::Check::execute() const {
@@ -1270,9 +1227,35 @@ struct request_traits<::note::api::CardWirelessPenalty::Set> {
 #pragma GCC diagnostic pop
     static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);
     static const ::note::FieldDesc* field_descs_ptr() { return field_descs_table_; }
+    static const ::note::ReqFieldDesc* req_field_descs_ptr_(uint8_t& n_out) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+        static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
+            {::note::api::CardWirelessPenalty::Set::keys_::add, static_cast<uint16_t>(offsetof(::note::api::CardWirelessPenalty::Set, add)), ::note::ReqFieldType::Int},
+            {::note::api::CardWirelessPenalty::Set::keys_::max, static_cast<uint16_t>(offsetof(::note::api::CardWirelessPenalty::Set, max)), ::note::ReqFieldType::Int},
+            {::note::api::CardWirelessPenalty::Set::keys_::min, static_cast<uint16_t>(offsetof(::note::api::CardWirelessPenalty::Set, min)), ::note::ReqFieldType::Int},
+            {::note::api::CardWirelessPenalty::Set::keys_::rate, static_cast<uint16_t>(offsetof(::note::api::CardWirelessPenalty::Set, rate)), ::note::ReqFieldType::Double},
+            {::note::api::CardWirelessPenalty::Set::keys_::reset, static_cast<uint16_t>(offsetof(::note::api::CardWirelessPenalty::Set, reset)), ::note::ReqFieldType::Bool},
+        };
+#pragma GCC diagnostic pop
+        n_out = sizeof(table_) / sizeof(table_[0]);
+        return table_;
+    }
 };
 } // namespace note::detail
 namespace note::api {
+
+inline void CardWirelessPenalty::Set::build(JsonBuilder& b) const {
+    note::add_flash(b, note::flash(keys_::set), true);
+    using meta_ = ::note::detail::request_traits<CardWirelessPenalty::Set>;
+    uint8_t n_; auto* descs_ = meta_::req_field_descs_ptr_(n_);
+    ::note::generic_build(b, this, descs_, n_);
+#if NOTE_EXTRAS
+    for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
+        std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
+                   extras_[i_].value);
+#endif
+}
 
 #if NOTE_SINGLETON
 inline ApiResult<typename CardWirelessPenalty::Set::Response> CardWirelessPenalty::Set::execute() const {
@@ -1336,9 +1319,35 @@ struct request_traits<::note::api::CardWirelessPenalty::Clear> {
 #pragma GCC diagnostic pop
     static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);
     static const ::note::FieldDesc* field_descs_ptr() { return field_descs_table_; }
+    static const ::note::ReqFieldDesc* req_field_descs_ptr_(uint8_t& n_out) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+        static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
+            {::note::api::CardWirelessPenalty::Clear::keys_::add, static_cast<uint16_t>(offsetof(::note::api::CardWirelessPenalty::Clear, add)), ::note::ReqFieldType::Int},
+            {::note::api::CardWirelessPenalty::Clear::keys_::max, static_cast<uint16_t>(offsetof(::note::api::CardWirelessPenalty::Clear, max)), ::note::ReqFieldType::Int},
+            {::note::api::CardWirelessPenalty::Clear::keys_::min, static_cast<uint16_t>(offsetof(::note::api::CardWirelessPenalty::Clear, min)), ::note::ReqFieldType::Int},
+            {::note::api::CardWirelessPenalty::Clear::keys_::rate, static_cast<uint16_t>(offsetof(::note::api::CardWirelessPenalty::Clear, rate)), ::note::ReqFieldType::Double},
+            {::note::api::CardWirelessPenalty::Clear::keys_::set, static_cast<uint16_t>(offsetof(::note::api::CardWirelessPenalty::Clear, set)), ::note::ReqFieldType::Bool},
+        };
+#pragma GCC diagnostic pop
+        n_out = sizeof(table_) / sizeof(table_[0]);
+        return table_;
+    }
 };
 } // namespace note::detail
 namespace note::api {
+
+inline void CardWirelessPenalty::Clear::build(JsonBuilder& b) const {
+    note::add_flash(b, note::flash(keys_::reset), true);
+    using meta_ = ::note::detail::request_traits<CardWirelessPenalty::Clear>;
+    uint8_t n_; auto* descs_ = meta_::req_field_descs_ptr_(n_);
+    ::note::generic_build(b, this, descs_, n_);
+#if NOTE_EXTRAS
+    for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
+        std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
+                   extras_[i_].value);
+#endif
+}
 
 #if NOTE_SINGLETON
 inline ApiResult<typename CardWirelessPenalty::Clear::Response> CardWirelessPenalty::Clear::execute() const {

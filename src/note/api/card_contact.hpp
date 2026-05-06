@@ -263,29 +263,8 @@ struct CardContact {
             return send_fn_(nc_, fn_, &build_);
         }
 
-        static const ::note::ReqFieldDesc* req_field_descs_ptr_(uint8_t& n_out) {
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Winvalid-offsetof"
-            static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
-                {keys_::email, static_cast<uint16_t>(offsetof(CardContact::Get, email)), ::note::ReqFieldType::String},
-                {keys_::name, static_cast<uint16_t>(offsetof(CardContact::Get, name)), ::note::ReqFieldType::String},
-                {keys_::org, static_cast<uint16_t>(offsetof(CardContact::Get, org)), ::note::ReqFieldType::String},
-                {keys_::role, static_cast<uint16_t>(offsetof(CardContact::Get, role)), ::note::ReqFieldType::String},
-            };
-#pragma GCC diagnostic pop
-            n_out = sizeof(table_) / sizeof(table_[0]);
-            return table_;
-        }
         private:
-        void build(JsonBuilder& b) const {
-            uint8_t n_; auto* descs_ = req_field_descs_ptr_(n_);
-            ::note::generic_build(b, this, descs_, n_);
-#if NOTE_EXTRAS
-            for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
-                std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
-                           extras_[i_].value);
-#endif
-        }
+        void build(JsonBuilder& b) const;
         public:
 
 
@@ -558,29 +537,8 @@ struct CardContact {
             return send_fn_(nc_, fn_, &build_);
         }
 
-        static const ::note::ReqFieldDesc* req_field_descs_ptr_(uint8_t& n_out) {
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Winvalid-offsetof"
-            static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
-                {keys_::email, static_cast<uint16_t>(offsetof(CardContact::Set, email)), ::note::ReqFieldType::String},
-                {keys_::name, static_cast<uint16_t>(offsetof(CardContact::Set, name)), ::note::ReqFieldType::String},
-                {keys_::org, static_cast<uint16_t>(offsetof(CardContact::Set, org)), ::note::ReqFieldType::String},
-                {keys_::role, static_cast<uint16_t>(offsetof(CardContact::Set, role)), ::note::ReqFieldType::String},
-            };
-#pragma GCC diagnostic pop
-            n_out = sizeof(table_) / sizeof(table_[0]);
-            return table_;
-        }
         private:
-        void build(JsonBuilder& b) const {
-            uint8_t n_; auto* descs_ = req_field_descs_ptr_(n_);
-            ::note::generic_build(b, this, descs_, n_);
-#if NOTE_EXTRAS
-            for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
-                std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
-                           extras_[i_].value);
-#endif
-        }
+        void build(JsonBuilder& b) const;
         public:
 
 
@@ -663,9 +621,33 @@ struct request_traits<::note::api::CardContact::Get> {
 #pragma GCC diagnostic pop
     static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);
     static const ::note::FieldDesc* field_descs_ptr() { return field_descs_table_; }
+    static const ::note::ReqFieldDesc* req_field_descs_ptr_(uint8_t& n_out) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+        static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
+            {::note::api::CardContact::Get::keys_::email, static_cast<uint16_t>(offsetof(::note::api::CardContact::Get, email)), ::note::ReqFieldType::String},
+            {::note::api::CardContact::Get::keys_::name, static_cast<uint16_t>(offsetof(::note::api::CardContact::Get, name)), ::note::ReqFieldType::String},
+            {::note::api::CardContact::Get::keys_::org, static_cast<uint16_t>(offsetof(::note::api::CardContact::Get, org)), ::note::ReqFieldType::String},
+            {::note::api::CardContact::Get::keys_::role, static_cast<uint16_t>(offsetof(::note::api::CardContact::Get, role)), ::note::ReqFieldType::String},
+        };
+#pragma GCC diagnostic pop
+        n_out = sizeof(table_) / sizeof(table_[0]);
+        return table_;
+    }
 };
 } // namespace note::detail
 namespace note::api {
+
+inline void CardContact::Get::build(JsonBuilder& b) const {
+    using meta_ = ::note::detail::request_traits<CardContact::Get>;
+    uint8_t n_; auto* descs_ = meta_::req_field_descs_ptr_(n_);
+    ::note::generic_build(b, this, descs_, n_);
+#if NOTE_EXTRAS
+    for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
+        std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
+                   extras_[i_].value);
+#endif
+}
 
 #if NOTE_SINGLETON
 inline ApiResult<typename CardContact::Get::Response> CardContact::Get::execute() const {
@@ -722,9 +704,33 @@ struct request_traits<::note::api::CardContact::Set> {
 #pragma GCC diagnostic pop
     static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);
     static const ::note::FieldDesc* field_descs_ptr() { return field_descs_table_; }
+    static const ::note::ReqFieldDesc* req_field_descs_ptr_(uint8_t& n_out) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+        static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
+            {::note::api::CardContact::Set::keys_::email, static_cast<uint16_t>(offsetof(::note::api::CardContact::Set, email)), ::note::ReqFieldType::String},
+            {::note::api::CardContact::Set::keys_::name, static_cast<uint16_t>(offsetof(::note::api::CardContact::Set, name)), ::note::ReqFieldType::String},
+            {::note::api::CardContact::Set::keys_::org, static_cast<uint16_t>(offsetof(::note::api::CardContact::Set, org)), ::note::ReqFieldType::String},
+            {::note::api::CardContact::Set::keys_::role, static_cast<uint16_t>(offsetof(::note::api::CardContact::Set, role)), ::note::ReqFieldType::String},
+        };
+#pragma GCC diagnostic pop
+        n_out = sizeof(table_) / sizeof(table_[0]);
+        return table_;
+    }
 };
 } // namespace note::detail
 namespace note::api {
+
+inline void CardContact::Set::build(JsonBuilder& b) const {
+    using meta_ = ::note::detail::request_traits<CardContact::Set>;
+    uint8_t n_; auto* descs_ = meta_::req_field_descs_ptr_(n_);
+    ::note::generic_build(b, this, descs_, n_);
+#if NOTE_EXTRAS
+    for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
+        std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
+                   extras_[i_].value);
+#endif
+}
 
 #if NOTE_SINGLETON
 inline ApiResult<typename CardContact::Set::Response> CardContact::Set::execute() const {

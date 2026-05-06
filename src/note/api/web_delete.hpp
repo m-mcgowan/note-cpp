@@ -459,39 +459,8 @@ struct WebDelete {
         return send_fn_(nc_, fn_, &build_);
     }
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-    static const ::note::ReqFieldDesc* req_field_descs_ptr_(uint8_t& n_out) {
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Winvalid-offsetof"
-        static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
-#if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
-            {keys_::async, static_cast<uint16_t>(offsetof(WebDelete, async)), ::note::ReqFieldType::Bool},
-#endif
-            {keys_::content, static_cast<uint16_t>(offsetof(WebDelete, content)), ::note::ReqFieldType::String},
-            {keys_::file, static_cast<uint16_t>(offsetof(WebDelete, file)), ::note::ReqFieldType::String},
-            {keys_::name, static_cast<uint16_t>(offsetof(WebDelete, name)), ::note::ReqFieldType::String},
-            {keys_::noteId, static_cast<uint16_t>(offsetof(WebDelete, noteId)), ::note::ReqFieldType::String},
-            {keys_::route, static_cast<uint16_t>(offsetof(WebDelete, route)), ::note::ReqFieldType::String},
-            {keys_::seconds, static_cast<uint16_t>(offsetof(WebDelete, seconds)), ::note::ReqFieldType::Int},
-        };
-#pragma GCC diagnostic pop
-        n_out = sizeof(table_) / sizeof(table_[0]);
-        return table_;
-    }
     private:
-    void build(JsonBuilder& b) const {
-#if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
-#endif
-        uint8_t n_; auto* descs_ = req_field_descs_ptr_(n_);
-        ::note::generic_build(b, this, descs_, n_);
-#if NOTE_EXTRAS
-        for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
-            std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
-                       extras_[i_].value);
-#endif
-    }
-#pragma GCC diagnostic pop
+    void build(JsonBuilder& b) const;
     public:
 
 
@@ -606,9 +575,43 @@ struct request_traits<::note::api::WebDelete> {
 #pragma GCC diagnostic pop
     static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);
     static const ::note::FieldDesc* field_descs_ptr() { return field_descs_table_; }
+    static const ::note::ReqFieldDesc* req_field_descs_ptr_(uint8_t& n_out) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+        static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
+            {::note::api::WebDelete::keys_::async, static_cast<uint16_t>(offsetof(::note::api::WebDelete, async)), ::note::ReqFieldType::Bool},
+#endif
+            {::note::api::WebDelete::keys_::content, static_cast<uint16_t>(offsetof(::note::api::WebDelete, content)), ::note::ReqFieldType::String},
+            {::note::api::WebDelete::keys_::file, static_cast<uint16_t>(offsetof(::note::api::WebDelete, file)), ::note::ReqFieldType::String},
+            {::note::api::WebDelete::keys_::name, static_cast<uint16_t>(offsetof(::note::api::WebDelete, name)), ::note::ReqFieldType::String},
+            {::note::api::WebDelete::keys_::noteId, static_cast<uint16_t>(offsetof(::note::api::WebDelete, noteId)), ::note::ReqFieldType::String},
+            {::note::api::WebDelete::keys_::route, static_cast<uint16_t>(offsetof(::note::api::WebDelete, route)), ::note::ReqFieldType::String},
+            {::note::api::WebDelete::keys_::seconds, static_cast<uint16_t>(offsetof(::note::api::WebDelete, seconds)), ::note::ReqFieldType::Int},
+        };
+#pragma GCC diagnostic pop
+        n_out = sizeof(table_) / sizeof(table_[0]);
+        return table_;
+    }
 };
 } // namespace note::detail
 namespace note::api {
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+inline void WebDelete::build(JsonBuilder& b) const {
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
+#endif
+    using meta_ = ::note::detail::request_traits<WebDelete>;
+    uint8_t n_; auto* descs_ = meta_::req_field_descs_ptr_(n_);
+    ::note::generic_build(b, this, descs_, n_);
+#if NOTE_EXTRAS
+    for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
+        std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
+                   extras_[i_].value);
+#endif
+}
+#pragma GCC diagnostic pop
 
 #if NOTE_SINGLETON
 inline ApiResult<typename WebDelete::Response> WebDelete::execute() const {

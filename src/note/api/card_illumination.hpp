@@ -190,14 +190,7 @@ struct CardIllumination {
     }
 
     private:
-    void build(JsonBuilder& b) const {
-#if NOTE_EXTRAS
-        for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
-            std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
-                       extras_[i_].value);
-#endif
-        (void)b;
-    }
+    void build(JsonBuilder& b) const;
     public:
 
 
@@ -240,6 +233,15 @@ struct request_traits<::note::api::CardIllumination> {
 };
 } // namespace note::detail
 namespace note::api {
+
+inline void CardIllumination::build(JsonBuilder& b) const {
+#if NOTE_EXTRAS
+    for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
+        std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
+                   extras_[i_].value);
+#endif
+    (void)b;
+}
 
 #if NOTE_SINGLETON
 inline ApiResult<typename CardIllumination::Response> CardIllumination::execute() const {

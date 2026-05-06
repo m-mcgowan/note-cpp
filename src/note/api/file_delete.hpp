@@ -132,26 +132,8 @@ struct FileDelete {
         return send_fn_(nc_, fn_, &build_);
     }
 
-    static const ::note::ReqFieldDesc* req_field_descs_ptr_(uint8_t& n_out) {
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Winvalid-offsetof"
-        static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
-            {keys_::files, static_cast<uint16_t>(offsetof(FileDelete, files)), ::note::ReqFieldType::Array},
-        };
-#pragma GCC diagnostic pop
-        n_out = sizeof(table_) / sizeof(table_[0]);
-        return table_;
-    }
     private:
-    void build(JsonBuilder& b) const {
-        uint8_t n_; auto* descs_ = req_field_descs_ptr_(n_);
-        ::note::generic_build(b, this, descs_, n_);
-#if NOTE_EXTRAS
-        for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
-            std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
-                       extras_[i_].value);
-#endif
-    }
+    void build(JsonBuilder& b) const;
     public:
 
 
@@ -178,6 +160,35 @@ struct FileDelete {
 
 };
 
+
+} // namespace note::api
+namespace note::detail {
+template<>
+struct request_traits<::note::api::FileDelete> {
+    static const ::note::ReqFieldDesc* req_field_descs_ptr_(uint8_t& n_out) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+        static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
+            {::note::api::FileDelete::keys_::files, static_cast<uint16_t>(offsetof(::note::api::FileDelete, files)), ::note::ReqFieldType::Array},
+        };
+#pragma GCC diagnostic pop
+        n_out = sizeof(table_) / sizeof(table_[0]);
+        return table_;
+    }
+};
+} // namespace note::detail
+namespace note::api {
+
+inline void FileDelete::build(JsonBuilder& b) const {
+    using meta_ = ::note::detail::request_traits<FileDelete>;
+    uint8_t n_; auto* descs_ = meta_::req_field_descs_ptr_(n_);
+    ::note::generic_build(b, this, descs_, n_);
+#if NOTE_EXTRAS
+    for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
+        std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
+                   extras_[i_].value);
+#endif
+}
 
 
 

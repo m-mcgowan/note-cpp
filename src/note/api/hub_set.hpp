@@ -631,79 +631,8 @@ struct HubSet {
         return send_fn_(nc_, fn_, &build_);
     }
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-    static const ::note::ReqFieldDesc* req_field_descs_ptr_(uint8_t& n_out) {
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Winvalid-offsetof"
-        static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
-            {keys_::align, static_cast<uint16_t>(offsetof(HubSet, align)), ::note::ReqFieldType::Bool},
-#if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
-            {keys_::details, static_cast<uint16_t>(offsetof(HubSet, details)), ::note::ReqFieldType::String},
-#endif
-            {keys_::duration, static_cast<uint16_t>(offsetof(HubSet, duration)), ::note::ReqFieldType::Int},
-            {keys_::host, static_cast<uint16_t>(offsetof(HubSet, host)), ::note::ReqFieldType::String},
-            {keys_::inbound, static_cast<uint16_t>(offsetof(HubSet, inbound)), ::note::ReqFieldType::Int},
-            {keys_::mode, static_cast<uint16_t>(offsetof(HubSet, mode)), ::note::ReqFieldType::String},
-#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-            {keys_::off, static_cast<uint16_t>(offsetof(HubSet, off)), ::note::ReqFieldType::Bool},
-#endif
-#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-            {keys_::on, static_cast<uint16_t>(offsetof(HubSet, on)), ::note::ReqFieldType::Bool},
-#endif
-            {keys_::outbound, static_cast<uint16_t>(offsetof(HubSet, outbound)), ::note::ReqFieldType::Int},
-            {keys_::product, static_cast<uint16_t>(offsetof(HubSet, product)), ::note::ReqFieldType::String},
-#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-            {keys_::seconds, static_cast<uint16_t>(offsetof(HubSet, seconds)), ::note::ReqFieldType::Int},
-#endif
-            {keys_::sn, static_cast<uint16_t>(offsetof(HubSet, sn)), ::note::ReqFieldType::String},
-            {keys_::sync, static_cast<uint16_t>(offsetof(HubSet, sync)), ::note::ReqFieldType::Bool},
-#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-            {keys_::umin, static_cast<uint16_t>(offsetof(HubSet, umin)), ::note::ReqFieldType::Bool},
-#endif
-#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-            {keys_::uoff, static_cast<uint16_t>(offsetof(HubSet, uoff)), ::note::ReqFieldType::Bool},
-#endif
-#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-            {keys_::uperiodic, static_cast<uint16_t>(offsetof(HubSet, uperiodic)), ::note::ReqFieldType::Bool},
-#endif
-#if NOTE_API_VERSION >= NOTE_VERSION(7, 3, 1) || !defined(NOTE_API_STRICT)
-            {keys_::version, static_cast<uint16_t>(offsetof(HubSet, version)), ::note::ReqFieldType::String},
-#endif
-            {keys_::vinbound, static_cast<uint16_t>(offsetof(HubSet, vinbound)), ::note::ReqFieldType::String},
-            {keys_::voutbound, static_cast<uint16_t>(offsetof(HubSet, voutbound)), ::note::ReqFieldType::String},
-        };
-#pragma GCC diagnostic pop
-        n_out = sizeof(table_) / sizeof(table_[0]);
-        return table_;
-    }
     private:
-    void build(JsonBuilder& b) const {
-#if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
-#endif
-#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-#endif
-#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-#endif
-#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-#endif
-#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-#endif
-#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-#endif
-#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
-#endif
-#if NOTE_API_VERSION >= NOTE_VERSION(7, 3, 1) || !defined(NOTE_API_STRICT)
-#endif
-        uint8_t n_; auto* descs_ = req_field_descs_ptr_(n_);
-        ::note::generic_build(b, this, descs_, n_);
-#if NOTE_EXTRAS
-        for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
-            std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
-                       extras_[i_].value);
-#endif
-    }
-#pragma GCC diagnostic pop
+    void build(JsonBuilder& b) const;
     public:
 
 
@@ -997,6 +926,88 @@ inline HubSet::voutbound_t& HubSet::voutbound_t::dead(int32_t minutes) {
     vv_.dead(minutes);
     Field<note::string_view>::operator=(vv_.str());
     return *this;
+}
+#pragma GCC diagnostic pop
+
+} // namespace note::api
+namespace note::detail {
+template<>
+struct request_traits<::note::api::HubSet> {
+    static const ::note::ReqFieldDesc* req_field_descs_ptr_(uint8_t& n_out) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+        static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
+            {::note::api::HubSet::keys_::align, static_cast<uint16_t>(offsetof(::note::api::HubSet, align)), ::note::ReqFieldType::Bool},
+#if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
+            {::note::api::HubSet::keys_::details, static_cast<uint16_t>(offsetof(::note::api::HubSet, details)), ::note::ReqFieldType::String},
+#endif
+            {::note::api::HubSet::keys_::duration, static_cast<uint16_t>(offsetof(::note::api::HubSet, duration)), ::note::ReqFieldType::Int},
+            {::note::api::HubSet::keys_::host, static_cast<uint16_t>(offsetof(::note::api::HubSet, host)), ::note::ReqFieldType::String},
+            {::note::api::HubSet::keys_::inbound, static_cast<uint16_t>(offsetof(::note::api::HubSet, inbound)), ::note::ReqFieldType::Int},
+            {::note::api::HubSet::keys_::mode, static_cast<uint16_t>(offsetof(::note::api::HubSet, mode)), ::note::ReqFieldType::String},
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+            {::note::api::HubSet::keys_::off, static_cast<uint16_t>(offsetof(::note::api::HubSet, off)), ::note::ReqFieldType::Bool},
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+            {::note::api::HubSet::keys_::on, static_cast<uint16_t>(offsetof(::note::api::HubSet, on)), ::note::ReqFieldType::Bool},
+#endif
+            {::note::api::HubSet::keys_::outbound, static_cast<uint16_t>(offsetof(::note::api::HubSet, outbound)), ::note::ReqFieldType::Int},
+            {::note::api::HubSet::keys_::product, static_cast<uint16_t>(offsetof(::note::api::HubSet, product)), ::note::ReqFieldType::String},
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+            {::note::api::HubSet::keys_::seconds, static_cast<uint16_t>(offsetof(::note::api::HubSet, seconds)), ::note::ReqFieldType::Int},
+#endif
+            {::note::api::HubSet::keys_::sn, static_cast<uint16_t>(offsetof(::note::api::HubSet, sn)), ::note::ReqFieldType::String},
+            {::note::api::HubSet::keys_::sync, static_cast<uint16_t>(offsetof(::note::api::HubSet, sync)), ::note::ReqFieldType::Bool},
+#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
+            {::note::api::HubSet::keys_::umin, static_cast<uint16_t>(offsetof(::note::api::HubSet, umin)), ::note::ReqFieldType::Bool},
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
+            {::note::api::HubSet::keys_::uoff, static_cast<uint16_t>(offsetof(::note::api::HubSet, uoff)), ::note::ReqFieldType::Bool},
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
+            {::note::api::HubSet::keys_::uperiodic, static_cast<uint16_t>(offsetof(::note::api::HubSet, uperiodic)), ::note::ReqFieldType::Bool},
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(7, 3, 1) || !defined(NOTE_API_STRICT)
+            {::note::api::HubSet::keys_::version, static_cast<uint16_t>(offsetof(::note::api::HubSet, version)), ::note::ReqFieldType::String},
+#endif
+            {::note::api::HubSet::keys_::vinbound, static_cast<uint16_t>(offsetof(::note::api::HubSet, vinbound)), ::note::ReqFieldType::String},
+            {::note::api::HubSet::keys_::voutbound, static_cast<uint16_t>(offsetof(::note::api::HubSet, voutbound)), ::note::ReqFieldType::String},
+        };
+#pragma GCC diagnostic pop
+        n_out = sizeof(table_) / sizeof(table_[0]);
+        return table_;
+    }
+};
+} // namespace note::detail
+namespace note::api {
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+inline void HubSet::build(JsonBuilder& b) const {
+#if NOTE_API_VERSION >= NOTE_VERSION(6, 2, 3) || !defined(NOTE_API_STRICT)
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(4, 1, 1) || !defined(NOTE_API_STRICT)
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(7, 3, 1) || !defined(NOTE_API_STRICT)
+#endif
+    using meta_ = ::note::detail::request_traits<HubSet>;
+    uint8_t n_; auto* descs_ = meta_::req_field_descs_ptr_(n_);
+    ::note::generic_build(b, this, descs_, n_);
+#if NOTE_EXTRAS
+    for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
+        std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
+                   extras_[i_].value);
+#endif
 }
 #pragma GCC diagnostic pop
 

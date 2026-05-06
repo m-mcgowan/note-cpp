@@ -196,38 +196,8 @@ struct VarSet {
         return send_fn_(nc_, fn_, &build_);
     }
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-    static const ::note::ReqFieldDesc* req_field_descs_ptr_(uint8_t& n_out) {
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Winvalid-offsetof"
-        static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
-#if NOTE_API_VERSION >= NOTE_VERSION(7, 3, 1) || !defined(NOTE_API_STRICT)
-            {keys_::file, static_cast<uint16_t>(offsetof(VarSet, file)), ::note::ReqFieldType::String},
-#endif
-            {keys_::flag, static_cast<uint16_t>(offsetof(VarSet, flag)), ::note::ReqFieldType::Bool},
-            {keys_::name, static_cast<uint16_t>(offsetof(VarSet, name)), ::note::ReqFieldType::String},
-            {keys_::sync, static_cast<uint16_t>(offsetof(VarSet, sync)), ::note::ReqFieldType::Bool},
-            {keys_::text, static_cast<uint16_t>(offsetof(VarSet, text)), ::note::ReqFieldType::String},
-            {keys_::value, static_cast<uint16_t>(offsetof(VarSet, value)), ::note::ReqFieldType::Double},
-        };
-#pragma GCC diagnostic pop
-        n_out = sizeof(table_) / sizeof(table_[0]);
-        return table_;
-    }
     private:
-    void build(JsonBuilder& b) const {
-#if NOTE_API_VERSION >= NOTE_VERSION(7, 3, 1) || !defined(NOTE_API_STRICT)
-#endif
-        uint8_t n_; auto* descs_ = req_field_descs_ptr_(n_);
-        ::note::generic_build(b, this, descs_, n_);
-#if NOTE_EXTRAS
-        for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
-            std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
-                       extras_[i_].value);
-#endif
-    }
-#pragma GCC diagnostic pop
+    void build(JsonBuilder& b) const;
     public:
 
 
@@ -314,6 +284,47 @@ inline VarSet& VarSet::value_t::operator()(double v) {
     Field<double>::operator=(v);
     return *reinterpret_cast<VarSet*>(
         reinterpret_cast<char*>(this) - offsetof(VarSet, value));
+}
+#pragma GCC diagnostic pop
+
+} // namespace note::api
+namespace note::detail {
+template<>
+struct request_traits<::note::api::VarSet> {
+    static const ::note::ReqFieldDesc* req_field_descs_ptr_(uint8_t& n_out) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+        static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
+#if NOTE_API_VERSION >= NOTE_VERSION(7, 3, 1) || !defined(NOTE_API_STRICT)
+            {::note::api::VarSet::keys_::file, static_cast<uint16_t>(offsetof(::note::api::VarSet, file)), ::note::ReqFieldType::String},
+#endif
+            {::note::api::VarSet::keys_::flag, static_cast<uint16_t>(offsetof(::note::api::VarSet, flag)), ::note::ReqFieldType::Bool},
+            {::note::api::VarSet::keys_::name, static_cast<uint16_t>(offsetof(::note::api::VarSet, name)), ::note::ReqFieldType::String},
+            {::note::api::VarSet::keys_::sync, static_cast<uint16_t>(offsetof(::note::api::VarSet, sync)), ::note::ReqFieldType::Bool},
+            {::note::api::VarSet::keys_::text, static_cast<uint16_t>(offsetof(::note::api::VarSet, text)), ::note::ReqFieldType::String},
+            {::note::api::VarSet::keys_::value, static_cast<uint16_t>(offsetof(::note::api::VarSet, value)), ::note::ReqFieldType::Double},
+        };
+#pragma GCC diagnostic pop
+        n_out = sizeof(table_) / sizeof(table_[0]);
+        return table_;
+    }
+};
+} // namespace note::detail
+namespace note::api {
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+inline void VarSet::build(JsonBuilder& b) const {
+#if NOTE_API_VERSION >= NOTE_VERSION(7, 3, 1) || !defined(NOTE_API_STRICT)
+#endif
+    using meta_ = ::note::detail::request_traits<VarSet>;
+    uint8_t n_; auto* descs_ = meta_::req_field_descs_ptr_(n_);
+    ::note::generic_build(b, this, descs_, n_);
+#if NOTE_EXTRAS
+    for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
+        std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
+                   extras_[i_].value);
+#endif
 }
 #pragma GCC diagnostic pop
 

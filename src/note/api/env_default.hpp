@@ -155,28 +155,8 @@ struct EnvDefault {
             return send_fn_(nc_, fn_, &build_);
         }
 
-        static const ::note::ReqFieldDesc* req_field_descs_ptr_(uint8_t& n_out) {
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Winvalid-offsetof"
-            static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
-                {keys_::sync, static_cast<uint16_t>(offsetof(EnvDefault::Set, sync)), ::note::ReqFieldType::Bool},
-                {keys_::text, static_cast<uint16_t>(offsetof(EnvDefault::Set, text)), ::note::ReqFieldType::String},
-            };
-#pragma GCC diagnostic pop
-            n_out = sizeof(table_) / sizeof(table_[0]);
-            return table_;
-        }
         private:
-        void build(JsonBuilder& b) const {
-            note::add_flash(b, note::flash(keys_::name), name);
-            uint8_t n_; auto* descs_ = req_field_descs_ptr_(n_);
-            ::note::generic_build(b, this, descs_, n_);
-#if NOTE_EXTRAS
-            for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
-                std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
-                           extras_[i_].value);
-#endif
-        }
+        void build(JsonBuilder& b) const;
         public:
 
 
@@ -324,27 +304,8 @@ struct EnvDefault {
             return send_fn_(nc_, fn_, &build_);
         }
 
-        static const ::note::ReqFieldDesc* req_field_descs_ptr_(uint8_t& n_out) {
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Winvalid-offsetof"
-            static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
-                {keys_::sync, static_cast<uint16_t>(offsetof(EnvDefault::Remove, sync)), ::note::ReqFieldType::Bool},
-            };
-#pragma GCC diagnostic pop
-            n_out = sizeof(table_) / sizeof(table_[0]);
-            return table_;
-        }
         private:
-        void build(JsonBuilder& b) const {
-            note::add_flash(b, note::flash(keys_::name), name);
-            uint8_t n_; auto* descs_ = req_field_descs_ptr_(n_);
-            ::note::generic_build(b, this, descs_, n_);
-#if NOTE_EXTRAS
-            for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
-                std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
-                           extras_[i_].value);
-#endif
-        }
+        void build(JsonBuilder& b) const;
         public:
 
 
@@ -393,6 +354,37 @@ inline EnvDefault::Set& EnvDefault::Set::text_t::operator()(note::string_view v)
 }
 #pragma GCC diagnostic pop
 
+} // namespace note::api
+namespace note::detail {
+template<>
+struct request_traits<::note::api::EnvDefault::Set> {
+    static const ::note::ReqFieldDesc* req_field_descs_ptr_(uint8_t& n_out) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+        static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
+            {::note::api::EnvDefault::Set::keys_::sync, static_cast<uint16_t>(offsetof(::note::api::EnvDefault::Set, sync)), ::note::ReqFieldType::Bool},
+            {::note::api::EnvDefault::Set::keys_::text, static_cast<uint16_t>(offsetof(::note::api::EnvDefault::Set, text)), ::note::ReqFieldType::String},
+        };
+#pragma GCC diagnostic pop
+        n_out = sizeof(table_) / sizeof(table_[0]);
+        return table_;
+    }
+};
+} // namespace note::detail
+namespace note::api {
+
+inline void EnvDefault::Set::build(JsonBuilder& b) const {
+note::add_flash(b, note::flash(keys_::name), name);
+    using meta_ = ::note::detail::request_traits<EnvDefault::Set>;
+    uint8_t n_; auto* descs_ = meta_::req_field_descs_ptr_(n_);
+    ::note::generic_build(b, this, descs_, n_);
+#if NOTE_EXTRAS
+    for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
+        std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
+                   extras_[i_].value);
+#endif
+}
+
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
@@ -402,6 +394,36 @@ inline EnvDefault::Remove& EnvDefault::Remove::sync_t::operator()(bool v) {
         reinterpret_cast<char*>(this) - offsetof(EnvDefault::Remove, sync));
 }
 #pragma GCC diagnostic pop
+
+} // namespace note::api
+namespace note::detail {
+template<>
+struct request_traits<::note::api::EnvDefault::Remove> {
+    static const ::note::ReqFieldDesc* req_field_descs_ptr_(uint8_t& n_out) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+        static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
+            {::note::api::EnvDefault::Remove::keys_::sync, static_cast<uint16_t>(offsetof(::note::api::EnvDefault::Remove, sync)), ::note::ReqFieldType::Bool},
+        };
+#pragma GCC diagnostic pop
+        n_out = sizeof(table_) / sizeof(table_[0]);
+        return table_;
+    }
+};
+} // namespace note::detail
+namespace note::api {
+
+inline void EnvDefault::Remove::build(JsonBuilder& b) const {
+note::add_flash(b, note::flash(keys_::name), name);
+    using meta_ = ::note::detail::request_traits<EnvDefault::Remove>;
+    uint8_t n_; auto* descs_ = meta_::req_field_descs_ptr_(n_);
+    ::note::generic_build(b, this, descs_, n_);
+#if NOTE_EXTRAS
+    for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
+        std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
+                   extras_[i_].value);
+#endif
+}
 
 
 

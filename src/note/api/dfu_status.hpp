@@ -514,33 +514,8 @@ struct DfuStatus {
         return send_fn_(nc_, fn_, &build_);
     }
 
-    static const ::note::ReqFieldDesc* req_field_descs_ptr_(uint8_t& n_out) {
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Winvalid-offsetof"
-        static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
-            {keys_::err, static_cast<uint16_t>(offsetof(DfuStatus, err)), ::note::ReqFieldType::String},
-            {keys_::name, static_cast<uint16_t>(offsetof(DfuStatus, name)), ::note::ReqFieldType::String},
-            {keys_::off, static_cast<uint16_t>(offsetof(DfuStatus, off)), ::note::ReqFieldType::Bool},
-            {keys_::on, static_cast<uint16_t>(offsetof(DfuStatus, on)), ::note::ReqFieldType::Bool},
-            {keys_::status, static_cast<uint16_t>(offsetof(DfuStatus, status)), ::note::ReqFieldType::String},
-            {keys_::stop, static_cast<uint16_t>(offsetof(DfuStatus, stop)), ::note::ReqFieldType::Bool},
-            {keys_::version, static_cast<uint16_t>(offsetof(DfuStatus, version)), ::note::ReqFieldType::String},
-            {keys_::vvalue, static_cast<uint16_t>(offsetof(DfuStatus, vvalue)), ::note::ReqFieldType::String},
-        };
-#pragma GCC diagnostic pop
-        n_out = sizeof(table_) / sizeof(table_[0]);
-        return table_;
-    }
     private:
-    void build(JsonBuilder& b) const {
-        uint8_t n_; auto* descs_ = req_field_descs_ptr_(n_);
-        ::note::generic_build(b, this, descs_, n_);
-#if NOTE_EXTRAS
-        for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
-            std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
-                       extras_[i_].value);
-#endif
-    }
+    void build(JsonBuilder& b) const;
     public:
 
 
@@ -659,9 +634,37 @@ struct request_traits<::note::api::DfuStatus> {
 #pragma GCC diagnostic pop
     static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);
     static const ::note::FieldDesc* field_descs_ptr() { return field_descs_table_; }
+    static const ::note::ReqFieldDesc* req_field_descs_ptr_(uint8_t& n_out) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+        static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
+            {::note::api::DfuStatus::keys_::err, static_cast<uint16_t>(offsetof(::note::api::DfuStatus, err)), ::note::ReqFieldType::String},
+            {::note::api::DfuStatus::keys_::name, static_cast<uint16_t>(offsetof(::note::api::DfuStatus, name)), ::note::ReqFieldType::String},
+            {::note::api::DfuStatus::keys_::off, static_cast<uint16_t>(offsetof(::note::api::DfuStatus, off)), ::note::ReqFieldType::Bool},
+            {::note::api::DfuStatus::keys_::on, static_cast<uint16_t>(offsetof(::note::api::DfuStatus, on)), ::note::ReqFieldType::Bool},
+            {::note::api::DfuStatus::keys_::status, static_cast<uint16_t>(offsetof(::note::api::DfuStatus, status)), ::note::ReqFieldType::String},
+            {::note::api::DfuStatus::keys_::stop, static_cast<uint16_t>(offsetof(::note::api::DfuStatus, stop)), ::note::ReqFieldType::Bool},
+            {::note::api::DfuStatus::keys_::version, static_cast<uint16_t>(offsetof(::note::api::DfuStatus, version)), ::note::ReqFieldType::String},
+            {::note::api::DfuStatus::keys_::vvalue, static_cast<uint16_t>(offsetof(::note::api::DfuStatus, vvalue)), ::note::ReqFieldType::String},
+        };
+#pragma GCC diagnostic pop
+        n_out = sizeof(table_) / sizeof(table_[0]);
+        return table_;
+    }
 };
 } // namespace note::detail
 namespace note::api {
+
+inline void DfuStatus::build(JsonBuilder& b) const {
+    using meta_ = ::note::detail::request_traits<DfuStatus>;
+    uint8_t n_; auto* descs_ = meta_::req_field_descs_ptr_(n_);
+    ::note::generic_build(b, this, descs_, n_);
+#if NOTE_EXTRAS
+    for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
+        std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
+                   extras_[i_].value);
+#endif
+}
 
 #if NOTE_SINGLETON
 inline ApiResult<typename DfuStatus::Response> DfuStatus::execute() const {

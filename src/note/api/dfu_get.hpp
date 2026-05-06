@@ -283,28 +283,8 @@ struct DfuGet {
         return send_fn_(nc_, fn_, &build_);
     }
 
-    static const ::note::ReqFieldDesc* req_field_descs_ptr_(uint8_t& n_out) {
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Winvalid-offsetof"
-        static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
-            {keys_::binary, static_cast<uint16_t>(offsetof(DfuGet, binary)), ::note::ReqFieldType::Bool},
-            {keys_::length, static_cast<uint16_t>(offsetof(DfuGet, length)), ::note::ReqFieldType::Int},
-            {keys_::offset, static_cast<uint16_t>(offsetof(DfuGet, offset)), ::note::ReqFieldType::Int},
-        };
-#pragma GCC diagnostic pop
-        n_out = sizeof(table_) / sizeof(table_[0]);
-        return table_;
-    }
     private:
-    void build(JsonBuilder& b) const {
-        uint8_t n_; auto* descs_ = req_field_descs_ptr_(n_);
-        ::note::generic_build(b, this, descs_, n_);
-#if NOTE_EXTRAS
-        for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
-            std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
-                       extras_[i_].value);
-#endif
-    }
+    void build(JsonBuilder& b) const;
     public:
 
 
@@ -377,9 +357,32 @@ struct request_traits<::note::api::DfuGet> {
 #pragma GCC diagnostic pop
     static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);
     static const ::note::FieldDesc* field_descs_ptr() { return field_descs_table_; }
+    static const ::note::ReqFieldDesc* req_field_descs_ptr_(uint8_t& n_out) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+        static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
+            {::note::api::DfuGet::keys_::binary, static_cast<uint16_t>(offsetof(::note::api::DfuGet, binary)), ::note::ReqFieldType::Bool},
+            {::note::api::DfuGet::keys_::length, static_cast<uint16_t>(offsetof(::note::api::DfuGet, length)), ::note::ReqFieldType::Int},
+            {::note::api::DfuGet::keys_::offset, static_cast<uint16_t>(offsetof(::note::api::DfuGet, offset)), ::note::ReqFieldType::Int},
+        };
+#pragma GCC diagnostic pop
+        n_out = sizeof(table_) / sizeof(table_[0]);
+        return table_;
+    }
 };
 } // namespace note::detail
 namespace note::api {
+
+inline void DfuGet::build(JsonBuilder& b) const {
+    using meta_ = ::note::detail::request_traits<DfuGet>;
+    uint8_t n_; auto* descs_ = meta_::req_field_descs_ptr_(n_);
+    ::note::generic_build(b, this, descs_, n_);
+#if NOTE_EXTRAS
+    for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
+        std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
+                   extras_[i_].value);
+#endif
+}
 
 #if NOTE_SINGLETON
 inline ApiResult<typename DfuGet::Response> DfuGet::execute() const {

@@ -455,29 +455,8 @@ struct Web {
         return send_fn_(nc_, fn_, &build_);
     }
 
-    static const ::note::ReqFieldDesc* req_field_descs_ptr_(uint8_t& n_out) {
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Winvalid-offsetof"
-        static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
-            {keys_::content, static_cast<uint16_t>(offsetof(Web, content)), ::note::ReqFieldType::String},
-            {keys_::method, static_cast<uint16_t>(offsetof(Web, method)), ::note::ReqFieldType::String},
-            {keys_::name, static_cast<uint16_t>(offsetof(Web, name)), ::note::ReqFieldType::String},
-            {keys_::route, static_cast<uint16_t>(offsetof(Web, route)), ::note::ReqFieldType::String},
-        };
-#pragma GCC diagnostic pop
-        n_out = sizeof(table_) / sizeof(table_[0]);
-        return table_;
-    }
     private:
-    void build(JsonBuilder& b) const {
-        uint8_t n_; auto* descs_ = req_field_descs_ptr_(n_);
-        ::note::generic_build(b, this, descs_, n_);
-#if NOTE_EXTRAS
-        for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
-            std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
-                       extras_[i_].value);
-#endif
-    }
+    void build(JsonBuilder& b) const;
     public:
 
 
@@ -560,9 +539,33 @@ struct request_traits<::note::api::Web> {
 #pragma GCC diagnostic pop
     static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);
     static const ::note::FieldDesc* field_descs_ptr() { return field_descs_table_; }
+    static const ::note::ReqFieldDesc* req_field_descs_ptr_(uint8_t& n_out) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+        static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
+            {::note::api::Web::keys_::content, static_cast<uint16_t>(offsetof(::note::api::Web, content)), ::note::ReqFieldType::String},
+            {::note::api::Web::keys_::method, static_cast<uint16_t>(offsetof(::note::api::Web, method)), ::note::ReqFieldType::String},
+            {::note::api::Web::keys_::name, static_cast<uint16_t>(offsetof(::note::api::Web, name)), ::note::ReqFieldType::String},
+            {::note::api::Web::keys_::route, static_cast<uint16_t>(offsetof(::note::api::Web, route)), ::note::ReqFieldType::String},
+        };
+#pragma GCC diagnostic pop
+        n_out = sizeof(table_) / sizeof(table_[0]);
+        return table_;
+    }
 };
 } // namespace note::detail
 namespace note::api {
+
+inline void Web::build(JsonBuilder& b) const {
+    using meta_ = ::note::detail::request_traits<Web>;
+    uint8_t n_; auto* descs_ = meta_::req_field_descs_ptr_(n_);
+    ::note::generic_build(b, this, descs_, n_);
+#if NOTE_EXTRAS
+    for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
+        std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
+                   extras_[i_].value);
+#endif
+}
 
 #if NOTE_SINGLETON
 inline ApiResult<typename Web::Response> Web::execute() const {

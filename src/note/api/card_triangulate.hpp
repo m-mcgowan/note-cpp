@@ -422,32 +422,8 @@ struct CardTriangulate {
         return send_fn_(nc_, fn_, &build_);
     }
 
-    static const ::note::ReqFieldDesc* req_field_descs_ptr_(uint8_t& n_out) {
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Winvalid-offsetof"
-        static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
-            {keys_::minutes, static_cast<uint16_t>(offsetof(CardTriangulate, minutes)), ::note::ReqFieldType::Int},
-            {keys_::mode, static_cast<uint16_t>(offsetof(CardTriangulate, mode)), ::note::ReqFieldType::String},
-            {keys_::on, static_cast<uint16_t>(offsetof(CardTriangulate, on)), ::note::ReqFieldType::Bool},
-            {keys_::set, static_cast<uint16_t>(offsetof(CardTriangulate, set)), ::note::ReqFieldType::Bool},
-            {keys_::text, static_cast<uint16_t>(offsetof(CardTriangulate, text)), ::note::ReqFieldType::String},
-            {keys_::time, static_cast<uint16_t>(offsetof(CardTriangulate, time)), ::note::ReqFieldType::Int},
-            {keys_::usb, static_cast<uint16_t>(offsetof(CardTriangulate, usb)), ::note::ReqFieldType::Bool},
-        };
-#pragma GCC diagnostic pop
-        n_out = sizeof(table_) / sizeof(table_[0]);
-        return table_;
-    }
     private:
-    void build(JsonBuilder& b) const {
-        uint8_t n_; auto* descs_ = req_field_descs_ptr_(n_);
-        ::note::generic_build(b, this, descs_, n_);
-#if NOTE_EXTRAS
-        for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
-            std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
-                       extras_[i_].value);
-#endif
-    }
+    void build(JsonBuilder& b) const;
     public:
 
 
@@ -587,9 +563,36 @@ struct request_traits<::note::api::CardTriangulate> {
 #pragma GCC diagnostic pop
     static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);
     static const ::note::FieldDesc* field_descs_ptr() { return field_descs_table_; }
+    static const ::note::ReqFieldDesc* req_field_descs_ptr_(uint8_t& n_out) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+        static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
+            {::note::api::CardTriangulate::keys_::minutes, static_cast<uint16_t>(offsetof(::note::api::CardTriangulate, minutes)), ::note::ReqFieldType::Int},
+            {::note::api::CardTriangulate::keys_::mode, static_cast<uint16_t>(offsetof(::note::api::CardTriangulate, mode)), ::note::ReqFieldType::String},
+            {::note::api::CardTriangulate::keys_::on, static_cast<uint16_t>(offsetof(::note::api::CardTriangulate, on)), ::note::ReqFieldType::Bool},
+            {::note::api::CardTriangulate::keys_::set, static_cast<uint16_t>(offsetof(::note::api::CardTriangulate, set)), ::note::ReqFieldType::Bool},
+            {::note::api::CardTriangulate::keys_::text, static_cast<uint16_t>(offsetof(::note::api::CardTriangulate, text)), ::note::ReqFieldType::String},
+            {::note::api::CardTriangulate::keys_::time, static_cast<uint16_t>(offsetof(::note::api::CardTriangulate, time)), ::note::ReqFieldType::Int},
+            {::note::api::CardTriangulate::keys_::usb, static_cast<uint16_t>(offsetof(::note::api::CardTriangulate, usb)), ::note::ReqFieldType::Bool},
+        };
+#pragma GCC diagnostic pop
+        n_out = sizeof(table_) / sizeof(table_[0]);
+        return table_;
+    }
 };
 } // namespace note::detail
 namespace note::api {
+
+inline void CardTriangulate::build(JsonBuilder& b) const {
+    using meta_ = ::note::detail::request_traits<CardTriangulate>;
+    uint8_t n_; auto* descs_ = meta_::req_field_descs_ptr_(n_);
+    ::note::generic_build(b, this, descs_, n_);
+#if NOTE_EXTRAS
+    for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
+        std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
+                   extras_[i_].value);
+#endif
+}
 
 #if NOTE_SINGLETON
 inline ApiResult<typename CardTriangulate::Response> CardTriangulate::execute() const {

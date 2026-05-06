@@ -211,28 +211,8 @@ struct CardMonitor {
         return send_fn_(nc_, fn_, &build_);
     }
 
-    static const ::note::ReqFieldDesc* req_field_descs_ptr_(uint8_t& n_out) {
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Winvalid-offsetof"
-        static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
-            {keys_::count, static_cast<uint16_t>(offsetof(CardMonitor, count)), ::note::ReqFieldType::Int},
-            {keys_::mode, static_cast<uint16_t>(offsetof(CardMonitor, mode)), ::note::ReqFieldType::String},
-            {keys_::usb, static_cast<uint16_t>(offsetof(CardMonitor, usb)), ::note::ReqFieldType::Bool},
-        };
-#pragma GCC diagnostic pop
-        n_out = sizeof(table_) / sizeof(table_[0]);
-        return table_;
-    }
     private:
-    void build(JsonBuilder& b) const {
-        uint8_t n_; auto* descs_ = req_field_descs_ptr_(n_);
-        ::note::generic_build(b, this, descs_, n_);
-#if NOTE_EXTRAS
-        for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
-            std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
-                       extras_[i_].value);
-#endif
-    }
+    void build(JsonBuilder& b) const;
     public:
 
 
@@ -289,6 +269,37 @@ inline CardMonitor& CardMonitor::usb_t::operator()(bool v) {
         reinterpret_cast<char*>(this) - offsetof(CardMonitor, usb));
 }
 #pragma GCC diagnostic pop
+
+} // namespace note::api
+namespace note::detail {
+template<>
+struct request_traits<::note::api::CardMonitor> {
+    static const ::note::ReqFieldDesc* req_field_descs_ptr_(uint8_t& n_out) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+        static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
+            {::note::api::CardMonitor::keys_::count, static_cast<uint16_t>(offsetof(::note::api::CardMonitor, count)), ::note::ReqFieldType::Int},
+            {::note::api::CardMonitor::keys_::mode, static_cast<uint16_t>(offsetof(::note::api::CardMonitor, mode)), ::note::ReqFieldType::String},
+            {::note::api::CardMonitor::keys_::usb, static_cast<uint16_t>(offsetof(::note::api::CardMonitor, usb)), ::note::ReqFieldType::Bool},
+        };
+#pragma GCC diagnostic pop
+        n_out = sizeof(table_) / sizeof(table_[0]);
+        return table_;
+    }
+};
+} // namespace note::detail
+namespace note::api {
+
+inline void CardMonitor::build(JsonBuilder& b) const {
+    using meta_ = ::note::detail::request_traits<CardMonitor>;
+    uint8_t n_; auto* descs_ = meta_::req_field_descs_ptr_(n_);
+    ::note::generic_build(b, this, descs_, n_);
+#if NOTE_EXTRAS
+    for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
+        std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
+                   extras_[i_].value);
+#endif
+}
 
 
 

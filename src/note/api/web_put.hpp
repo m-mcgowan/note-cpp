@@ -592,55 +592,8 @@ struct WebPut {
         return send_fn_(nc_, fn_, &build_);
     }
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-    static const ::note::ReqFieldDesc* req_field_descs_ptr_(uint8_t& n_out) {
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Winvalid-offsetof"
-        static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
-#if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
-            {keys_::async, static_cast<uint16_t>(offsetof(WebPut, async)), ::note::ReqFieldType::Bool},
-#endif
-#if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
-            {keys_::binary, static_cast<uint16_t>(offsetof(WebPut, binary)), ::note::ReqFieldType::Bool},
-#endif
-            {keys_::body, static_cast<uint16_t>(offsetof(WebPut, body)), ::note::ReqFieldType::Body},
-            {keys_::content, static_cast<uint16_t>(offsetof(WebPut, content)), ::note::ReqFieldType::String},
-            {keys_::file, static_cast<uint16_t>(offsetof(WebPut, file)), ::note::ReqFieldType::String},
-            {keys_::max, static_cast<uint16_t>(offsetof(WebPut, max)), ::note::ReqFieldType::Int},
-            {keys_::name, static_cast<uint16_t>(offsetof(WebPut, name)), ::note::ReqFieldType::String},
-            {keys_::noteId, static_cast<uint16_t>(offsetof(WebPut, noteId)), ::note::ReqFieldType::String},
-            {keys_::offset, static_cast<uint16_t>(offsetof(WebPut, offset)), ::note::ReqFieldType::Int},
-            {keys_::payload, static_cast<uint16_t>(offsetof(WebPut, payload)), ::note::ReqFieldType::String},
-            {keys_::route, static_cast<uint16_t>(offsetof(WebPut, route)), ::note::ReqFieldType::String},
-            {keys_::seconds, static_cast<uint16_t>(offsetof(WebPut, seconds)), ::note::ReqFieldType::Int},
-            {keys_::status, static_cast<uint16_t>(offsetof(WebPut, status)), ::note::ReqFieldType::String},
-#if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
-            {keys_::total, static_cast<uint16_t>(offsetof(WebPut, total)), ::note::ReqFieldType::Int},
-#endif
-            {keys_::verify, static_cast<uint16_t>(offsetof(WebPut, verify)), ::note::ReqFieldType::Bool},
-        };
-#pragma GCC diagnostic pop
-        n_out = sizeof(table_) / sizeof(table_[0]);
-        return table_;
-    }
     private:
-    void build(JsonBuilder& b) const {
-#if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
-#endif
-#if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
-#endif
-#if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
-#endif
-        uint8_t n_; auto* descs_ = req_field_descs_ptr_(n_);
-        ::note::generic_build(b, this, descs_, n_);
-#if NOTE_EXTRAS
-        for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
-            std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
-                       extras_[i_].value);
-#endif
-    }
-#pragma GCC diagnostic pop
+    void build(JsonBuilder& b) const;
     public:
 
 
@@ -846,9 +799,59 @@ struct request_traits<::note::api::WebPut> {
 #pragma GCC diagnostic pop
     static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);
     static const ::note::FieldDesc* field_descs_ptr() { return field_descs_table_; }
+    static const ::note::ReqFieldDesc* req_field_descs_ptr_(uint8_t& n_out) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+        static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
+            {::note::api::WebPut::keys_::async, static_cast<uint16_t>(offsetof(::note::api::WebPut, async)), ::note::ReqFieldType::Bool},
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
+            {::note::api::WebPut::keys_::binary, static_cast<uint16_t>(offsetof(::note::api::WebPut, binary)), ::note::ReqFieldType::Bool},
+#endif
+            {::note::api::WebPut::keys_::body, static_cast<uint16_t>(offsetof(::note::api::WebPut, body)), ::note::ReqFieldType::Body},
+            {::note::api::WebPut::keys_::content, static_cast<uint16_t>(offsetof(::note::api::WebPut, content)), ::note::ReqFieldType::String},
+            {::note::api::WebPut::keys_::file, static_cast<uint16_t>(offsetof(::note::api::WebPut, file)), ::note::ReqFieldType::String},
+            {::note::api::WebPut::keys_::max, static_cast<uint16_t>(offsetof(::note::api::WebPut, max)), ::note::ReqFieldType::Int},
+            {::note::api::WebPut::keys_::name, static_cast<uint16_t>(offsetof(::note::api::WebPut, name)), ::note::ReqFieldType::String},
+            {::note::api::WebPut::keys_::noteId, static_cast<uint16_t>(offsetof(::note::api::WebPut, noteId)), ::note::ReqFieldType::String},
+            {::note::api::WebPut::keys_::offset, static_cast<uint16_t>(offsetof(::note::api::WebPut, offset)), ::note::ReqFieldType::Int},
+            {::note::api::WebPut::keys_::payload, static_cast<uint16_t>(offsetof(::note::api::WebPut, payload)), ::note::ReqFieldType::String},
+            {::note::api::WebPut::keys_::route, static_cast<uint16_t>(offsetof(::note::api::WebPut, route)), ::note::ReqFieldType::String},
+            {::note::api::WebPut::keys_::seconds, static_cast<uint16_t>(offsetof(::note::api::WebPut, seconds)), ::note::ReqFieldType::Int},
+            {::note::api::WebPut::keys_::status, static_cast<uint16_t>(offsetof(::note::api::WebPut, status)), ::note::ReqFieldType::String},
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
+            {::note::api::WebPut::keys_::total, static_cast<uint16_t>(offsetof(::note::api::WebPut, total)), ::note::ReqFieldType::Int},
+#endif
+            {::note::api::WebPut::keys_::verify, static_cast<uint16_t>(offsetof(::note::api::WebPut, verify)), ::note::ReqFieldType::Bool},
+        };
+#pragma GCC diagnostic pop
+        n_out = sizeof(table_) / sizeof(table_[0]);
+        return table_;
+    }
 };
 } // namespace note::detail
 namespace note::api {
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+inline void WebPut::build(JsonBuilder& b) const {
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
+#endif
+    using meta_ = ::note::detail::request_traits<WebPut>;
+    uint8_t n_; auto* descs_ = meta_::req_field_descs_ptr_(n_);
+    ::note::generic_build(b, this, descs_, n_);
+#if NOTE_EXTRAS
+    for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
+        std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
+                   extras_[i_].value);
+#endif
+}
+#pragma GCC diagnostic pop
 
 #if NOTE_SINGLETON
 inline ApiResult<typename WebPut::Response> WebPut::execute() const {

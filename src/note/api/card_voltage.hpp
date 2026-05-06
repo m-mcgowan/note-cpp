@@ -580,49 +580,8 @@ struct CardVoltage {
             return send_fn_(nc_, fn_, &build_);
         }
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-        static const ::note::ReqFieldDesc* req_field_descs_ptr_(uint8_t& n_out) {
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Winvalid-offsetof"
-            static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
-                {keys_::alert, static_cast<uint16_t>(offsetof(CardVoltage::Read, alert)), ::note::ReqFieldType::Bool},
-#if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 2) || !defined(NOTE_API_STRICT)
-                {keys_::calibration, static_cast<uint16_t>(offsetof(CardVoltage::Read, calibration)), ::note::ReqFieldType::Double},
-#endif
-                {keys_::hours, static_cast<uint16_t>(offsetof(CardVoltage::Read, hours)), ::note::ReqFieldType::Int},
-                {keys_::mode, static_cast<uint16_t>(offsetof(CardVoltage::Read, mode)), ::note::ReqFieldType::String},
-                {keys_::name, static_cast<uint16_t>(offsetof(CardVoltage::Read, name)), ::note::ReqFieldType::String},
-                {keys_::off, static_cast<uint16_t>(offsetof(CardVoltage::Read, off)), ::note::ReqFieldType::Bool},
-                {keys_::offset, static_cast<uint16_t>(offsetof(CardVoltage::Read, offset)), ::note::ReqFieldType::Int},
-                {keys_::on, static_cast<uint16_t>(offsetof(CardVoltage::Read, on)), ::note::ReqFieldType::Bool},
-                {keys_::set, static_cast<uint16_t>(offsetof(CardVoltage::Read, set)), ::note::ReqFieldType::Bool},
-                {keys_::sync, static_cast<uint16_t>(offsetof(CardVoltage::Read, sync)), ::note::ReqFieldType::Bool},
-#if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
-                {keys_::usb, static_cast<uint16_t>(offsetof(CardVoltage::Read, usb)), ::note::ReqFieldType::Bool},
-#endif
-                {keys_::vmax, static_cast<uint16_t>(offsetof(CardVoltage::Read, vmax)), ::note::ReqFieldType::Double},
-                {keys_::vmin, static_cast<uint16_t>(offsetof(CardVoltage::Read, vmin)), ::note::ReqFieldType::Double},
-            };
-#pragma GCC diagnostic pop
-            n_out = sizeof(table_) / sizeof(table_[0]);
-            return table_;
-        }
         private:
-        void build(JsonBuilder& b) const {
-#if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 2) || !defined(NOTE_API_STRICT)
-#endif
-#if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
-#endif
-            uint8_t n_; auto* descs_ = req_field_descs_ptr_(n_);
-            ::note::generic_build(b, this, descs_, n_);
-#if NOTE_EXTRAS
-            for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
-                std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
-                           extras_[i_].value);
-#endif
-        }
-#pragma GCC diagnostic pop
+        void build(JsonBuilder& b) const;
         public:
 
 
@@ -1254,49 +1213,8 @@ struct CardVoltage {
             return send_fn_(nc_, fn_, &build_);
         }
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-        static const ::note::ReqFieldDesc* req_field_descs_ptr_(uint8_t& n_out) {
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Winvalid-offsetof"
-            static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
-                {keys_::alert, static_cast<uint16_t>(offsetof(CardVoltage::Configure, alert)), ::note::ReqFieldType::Bool},
-#if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 2) || !defined(NOTE_API_STRICT)
-                {keys_::calibration, static_cast<uint16_t>(offsetof(CardVoltage::Configure, calibration)), ::note::ReqFieldType::Double},
-#endif
-                {keys_::hours, static_cast<uint16_t>(offsetof(CardVoltage::Configure, hours)), ::note::ReqFieldType::Int},
-                {keys_::mode, static_cast<uint16_t>(offsetof(CardVoltage::Configure, mode)), ::note::ReqFieldType::String},
-                {keys_::name, static_cast<uint16_t>(offsetof(CardVoltage::Configure, name)), ::note::ReqFieldType::String},
-                {keys_::off, static_cast<uint16_t>(offsetof(CardVoltage::Configure, off)), ::note::ReqFieldType::Bool},
-                {keys_::offset, static_cast<uint16_t>(offsetof(CardVoltage::Configure, offset)), ::note::ReqFieldType::Int},
-                {keys_::on, static_cast<uint16_t>(offsetof(CardVoltage::Configure, on)), ::note::ReqFieldType::Bool},
-                {keys_::set, static_cast<uint16_t>(offsetof(CardVoltage::Configure, set)), ::note::ReqFieldType::Bool},
-                {keys_::sync, static_cast<uint16_t>(offsetof(CardVoltage::Configure, sync)), ::note::ReqFieldType::Bool},
-#if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
-                {keys_::usb, static_cast<uint16_t>(offsetof(CardVoltage::Configure, usb)), ::note::ReqFieldType::Bool},
-#endif
-                {keys_::vmax, static_cast<uint16_t>(offsetof(CardVoltage::Configure, vmax)), ::note::ReqFieldType::Double},
-                {keys_::vmin, static_cast<uint16_t>(offsetof(CardVoltage::Configure, vmin)), ::note::ReqFieldType::Double},
-            };
-#pragma GCC diagnostic pop
-            n_out = sizeof(table_) / sizeof(table_[0]);
-            return table_;
-        }
         private:
-        void build(JsonBuilder& b) const {
-#if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 2) || !defined(NOTE_API_STRICT)
-#endif
-#if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
-#endif
-            uint8_t n_; auto* descs_ = req_field_descs_ptr_(n_);
-            ::note::generic_build(b, this, descs_, n_);
-#if NOTE_EXTRAS
-            for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
-                std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
-                           extras_[i_].value);
-#endif
-        }
-#pragma GCC diagnostic pop
+        void build(JsonBuilder& b) const;
         public:
 
 
@@ -1479,9 +1397,53 @@ struct request_traits<::note::api::CardVoltage::Read> {
 #pragma GCC diagnostic pop
     static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);
     static const ::note::FieldDesc* field_descs_ptr() { return field_descs_table_; }
+    static const ::note::ReqFieldDesc* req_field_descs_ptr_(uint8_t& n_out) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+        static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
+            {::note::api::CardVoltage::Read::keys_::alert, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Read, alert)), ::note::ReqFieldType::Bool},
+#if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 2) || !defined(NOTE_API_STRICT)
+            {::note::api::CardVoltage::Read::keys_::calibration, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Read, calibration)), ::note::ReqFieldType::Double},
+#endif
+            {::note::api::CardVoltage::Read::keys_::hours, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Read, hours)), ::note::ReqFieldType::Int},
+            {::note::api::CardVoltage::Read::keys_::mode, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Read, mode)), ::note::ReqFieldType::String},
+            {::note::api::CardVoltage::Read::keys_::name, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Read, name)), ::note::ReqFieldType::String},
+            {::note::api::CardVoltage::Read::keys_::off, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Read, off)), ::note::ReqFieldType::Bool},
+            {::note::api::CardVoltage::Read::keys_::offset, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Read, offset)), ::note::ReqFieldType::Int},
+            {::note::api::CardVoltage::Read::keys_::on, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Read, on)), ::note::ReqFieldType::Bool},
+            {::note::api::CardVoltage::Read::keys_::set, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Read, set)), ::note::ReqFieldType::Bool},
+            {::note::api::CardVoltage::Read::keys_::sync, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Read, sync)), ::note::ReqFieldType::Bool},
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
+            {::note::api::CardVoltage::Read::keys_::usb, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Read, usb)), ::note::ReqFieldType::Bool},
+#endif
+            {::note::api::CardVoltage::Read::keys_::vmax, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Read, vmax)), ::note::ReqFieldType::Double},
+            {::note::api::CardVoltage::Read::keys_::vmin, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Read, vmin)), ::note::ReqFieldType::Double},
+        };
+#pragma GCC diagnostic pop
+        n_out = sizeof(table_) / sizeof(table_[0]);
+        return table_;
+    }
 };
 } // namespace note::detail
 namespace note::api {
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+inline void CardVoltage::Read::build(JsonBuilder& b) const {
+#if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 2) || !defined(NOTE_API_STRICT)
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
+#endif
+    using meta_ = ::note::detail::request_traits<CardVoltage::Read>;
+    uint8_t n_; auto* descs_ = meta_::req_field_descs_ptr_(n_);
+    ::note::generic_build(b, this, descs_, n_);
+#if NOTE_EXTRAS
+    for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
+        std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
+                   extras_[i_].value);
+#endif
+}
+#pragma GCC diagnostic pop
 
 #if NOTE_SINGLETON
 inline ApiResult<typename CardVoltage::Read::Response> CardVoltage::Read::execute() const {
@@ -1597,9 +1559,53 @@ struct request_traits<::note::api::CardVoltage::Configure> {
 #pragma GCC diagnostic pop
     static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);
     static const ::note::FieldDesc* field_descs_ptr() { return field_descs_table_; }
+    static const ::note::ReqFieldDesc* req_field_descs_ptr_(uint8_t& n_out) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+        static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
+            {::note::api::CardVoltage::Configure::keys_::alert, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Configure, alert)), ::note::ReqFieldType::Bool},
+#if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 2) || !defined(NOTE_API_STRICT)
+            {::note::api::CardVoltage::Configure::keys_::calibration, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Configure, calibration)), ::note::ReqFieldType::Double},
+#endif
+            {::note::api::CardVoltage::Configure::keys_::hours, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Configure, hours)), ::note::ReqFieldType::Int},
+            {::note::api::CardVoltage::Configure::keys_::mode, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Configure, mode)), ::note::ReqFieldType::String},
+            {::note::api::CardVoltage::Configure::keys_::name, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Configure, name)), ::note::ReqFieldType::String},
+            {::note::api::CardVoltage::Configure::keys_::off, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Configure, off)), ::note::ReqFieldType::Bool},
+            {::note::api::CardVoltage::Configure::keys_::offset, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Configure, offset)), ::note::ReqFieldType::Int},
+            {::note::api::CardVoltage::Configure::keys_::on, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Configure, on)), ::note::ReqFieldType::Bool},
+            {::note::api::CardVoltage::Configure::keys_::set, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Configure, set)), ::note::ReqFieldType::Bool},
+            {::note::api::CardVoltage::Configure::keys_::sync, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Configure, sync)), ::note::ReqFieldType::Bool},
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
+            {::note::api::CardVoltage::Configure::keys_::usb, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Configure, usb)), ::note::ReqFieldType::Bool},
+#endif
+            {::note::api::CardVoltage::Configure::keys_::vmax, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Configure, vmax)), ::note::ReqFieldType::Double},
+            {::note::api::CardVoltage::Configure::keys_::vmin, static_cast<uint16_t>(offsetof(::note::api::CardVoltage::Configure, vmin)), ::note::ReqFieldType::Double},
+        };
+#pragma GCC diagnostic pop
+        n_out = sizeof(table_) / sizeof(table_[0]);
+        return table_;
+    }
 };
 } // namespace note::detail
 namespace note::api {
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+inline void CardVoltage::Configure::build(JsonBuilder& b) const {
+#if NOTE_API_VERSION >= NOTE_VERSION(7, 2, 2) || !defined(NOTE_API_STRICT)
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
+#endif
+    using meta_ = ::note::detail::request_traits<CardVoltage::Configure>;
+    uint8_t n_; auto* descs_ = meta_::req_field_descs_ptr_(n_);
+    ::note::generic_build(b, this, descs_, n_);
+#if NOTE_EXTRAS
+    for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
+        std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
+                   extras_[i_].value);
+#endif
+}
+#pragma GCC diagnostic pop
 
 #if NOTE_SINGLETON
 inline ApiResult<typename CardVoltage::Configure::Response> CardVoltage::Configure::execute() const {

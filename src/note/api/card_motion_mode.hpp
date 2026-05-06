@@ -231,37 +231,8 @@ struct CardMotionMode {
         return send_fn_(nc_, fn_, &build_);
     }
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-    static const ::note::ReqFieldDesc* req_field_descs_ptr_(uint8_t& n_out) {
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Winvalid-offsetof"
-        static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
-            {keys_::motion, static_cast<uint16_t>(offsetof(CardMotionMode, motion)), ::note::ReqFieldType::Int},
-            {keys_::seconds, static_cast<uint16_t>(offsetof(CardMotionMode, seconds)), ::note::ReqFieldType::Int},
-#if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1) || !defined(NOTE_API_STRICT)
-            {keys_::sensitivity, static_cast<uint16_t>(offsetof(CardMotionMode, sensitivity)), ::note::ReqFieldType::Int},
-#endif
-            {keys_::start, static_cast<uint16_t>(offsetof(CardMotionMode, start)), ::note::ReqFieldType::Bool},
-            {keys_::stop, static_cast<uint16_t>(offsetof(CardMotionMode, stop)), ::note::ReqFieldType::Bool},
-        };
-#pragma GCC diagnostic pop
-        n_out = sizeof(table_) / sizeof(table_[0]);
-        return table_;
-    }
     private:
-    void build(JsonBuilder& b) const {
-#if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1) || !defined(NOTE_API_STRICT)
-#endif
-        uint8_t n_; auto* descs_ = req_field_descs_ptr_(n_);
-        ::note::generic_build(b, this, descs_, n_);
-#if NOTE_EXTRAS
-        for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
-            std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
-                       extras_[i_].value);
-#endif
-    }
-#pragma GCC diagnostic pop
+    void build(JsonBuilder& b) const;
     public:
 
 
@@ -339,6 +310,46 @@ inline CardMotionMode& CardMotionMode::stop_t::operator()(bool v) {
     Field<bool>::operator=(v);
     return *reinterpret_cast<CardMotionMode*>(
         reinterpret_cast<char*>(this) - offsetof(CardMotionMode, stop));
+}
+#pragma GCC diagnostic pop
+
+} // namespace note::api
+namespace note::detail {
+template<>
+struct request_traits<::note::api::CardMotionMode> {
+    static const ::note::ReqFieldDesc* req_field_descs_ptr_(uint8_t& n_out) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+        static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
+            {::note::api::CardMotionMode::keys_::motion, static_cast<uint16_t>(offsetof(::note::api::CardMotionMode, motion)), ::note::ReqFieldType::Int},
+            {::note::api::CardMotionMode::keys_::seconds, static_cast<uint16_t>(offsetof(::note::api::CardMotionMode, seconds)), ::note::ReqFieldType::Int},
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1) || !defined(NOTE_API_STRICT)
+            {::note::api::CardMotionMode::keys_::sensitivity, static_cast<uint16_t>(offsetof(::note::api::CardMotionMode, sensitivity)), ::note::ReqFieldType::Int},
+#endif
+            {::note::api::CardMotionMode::keys_::start, static_cast<uint16_t>(offsetof(::note::api::CardMotionMode, start)), ::note::ReqFieldType::Bool},
+            {::note::api::CardMotionMode::keys_::stop, static_cast<uint16_t>(offsetof(::note::api::CardMotionMode, stop)), ::note::ReqFieldType::Bool},
+        };
+#pragma GCC diagnostic pop
+        n_out = sizeof(table_) / sizeof(table_[0]);
+        return table_;
+    }
+};
+} // namespace note::detail
+namespace note::api {
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+inline void CardMotionMode::build(JsonBuilder& b) const {
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1) || !defined(NOTE_API_STRICT)
+#endif
+    using meta_ = ::note::detail::request_traits<CardMotionMode>;
+    uint8_t n_; auto* descs_ = meta_::req_field_descs_ptr_(n_);
+    ::note::generic_build(b, this, descs_, n_);
+#if NOTE_EXTRAS
+    for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
+        std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
+                   extras_[i_].value);
+#endif
 }
 #pragma GCC diagnostic pop
 

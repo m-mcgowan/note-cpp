@@ -634,75 +634,8 @@ struct CardAux {
         return send_fn_(nc_, fn_, &build_);
     }
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-    static const ::note::ReqFieldDesc* req_field_descs_ptr_(uint8_t& n_out) {
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Winvalid-offsetof"
-        static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
-#if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1) || !defined(NOTE_API_STRICT)
-            {keys_::connected, static_cast<uint16_t>(offsetof(CardAux, connected)), ::note::ReqFieldType::Bool},
-#endif
-#if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
-            {keys_::count, static_cast<uint16_t>(offsetof(CardAux, count)), ::note::ReqFieldType::Int},
-#endif
-#if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1) || !defined(NOTE_API_STRICT)
-            {keys_::file, static_cast<uint16_t>(offsetof(CardAux, file)), ::note::ReqFieldType::String},
-#endif
-            {keys_::gps, static_cast<uint16_t>(offsetof(CardAux, gps)), ::note::ReqFieldType::Bool},
-#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-            {keys_::limit, static_cast<uint16_t>(offsetof(CardAux, limit)), ::note::ReqFieldType::Bool},
-#endif
-            {keys_::max, static_cast<uint16_t>(offsetof(CardAux, max)), ::note::ReqFieldType::Int},
-            {keys_::mode, static_cast<uint16_t>(offsetof(CardAux, mode)), ::note::ReqFieldType::String},
-#if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
-            {keys_::ms, static_cast<uint16_t>(offsetof(CardAux, ms)), ::note::ReqFieldType::Int},
-#endif
-            {keys_::offset, static_cast<uint16_t>(offsetof(CardAux, offset)), ::note::ReqFieldType::Int},
-#if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
-            {keys_::rate, static_cast<uint16_t>(offsetof(CardAux, rate)), ::note::ReqFieldType::Int},
-#endif
-            {keys_::seconds, static_cast<uint16_t>(offsetof(CardAux, seconds)), ::note::ReqFieldType::Int},
-#if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
-            {keys_::sensitivity, static_cast<uint16_t>(offsetof(CardAux, sensitivity)), ::note::ReqFieldType::Int},
-#endif
-            {keys_::start, static_cast<uint16_t>(offsetof(CardAux, start)), ::note::ReqFieldType::Bool},
-#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-            {keys_::sync, static_cast<uint16_t>(offsetof(CardAux, sync)), ::note::ReqFieldType::Bool},
-#endif
-            {keys_::usage, static_cast<uint16_t>(offsetof(CardAux, usage)), ::note::ReqFieldType::Array},
-        };
-#pragma GCC diagnostic pop
-        n_out = sizeof(table_) / sizeof(table_[0]);
-        return table_;
-    }
     private:
-    void build(JsonBuilder& b) const {
-#if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1) || !defined(NOTE_API_STRICT)
-#endif
-#if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
-#endif
-#if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1) || !defined(NOTE_API_STRICT)
-#endif
-#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-#endif
-#if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
-#endif
-#if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
-#endif
-#if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
-#endif
-#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
-#endif
-        uint8_t n_; auto* descs_ = req_field_descs_ptr_(n_);
-        ::note::generic_build(b, this, descs_, n_);
-#if NOTE_EXTRAS
-        for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
-            std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
-                       extras_[i_].value);
-#endif
-    }
-#pragma GCC diagnostic pop
+    void build(JsonBuilder& b) const;
     public:
 
 
@@ -909,9 +842,79 @@ struct request_traits<::note::api::CardAux> {
 #pragma GCC diagnostic pop
     static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);
     static const ::note::FieldDesc* field_descs_ptr() { return field_descs_table_; }
+    static const ::note::ReqFieldDesc* req_field_descs_ptr_(uint8_t& n_out) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+        static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1) || !defined(NOTE_API_STRICT)
+            {::note::api::CardAux::keys_::connected, static_cast<uint16_t>(offsetof(::note::api::CardAux, connected)), ::note::ReqFieldType::Bool},
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
+            {::note::api::CardAux::keys_::count, static_cast<uint16_t>(offsetof(::note::api::CardAux, count)), ::note::ReqFieldType::Int},
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1) || !defined(NOTE_API_STRICT)
+            {::note::api::CardAux::keys_::file, static_cast<uint16_t>(offsetof(::note::api::CardAux, file)), ::note::ReqFieldType::String},
+#endif
+            {::note::api::CardAux::keys_::gps, static_cast<uint16_t>(offsetof(::note::api::CardAux, gps)), ::note::ReqFieldType::Bool},
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+            {::note::api::CardAux::keys_::limit, static_cast<uint16_t>(offsetof(::note::api::CardAux, limit)), ::note::ReqFieldType::Bool},
+#endif
+            {::note::api::CardAux::keys_::max, static_cast<uint16_t>(offsetof(::note::api::CardAux, max)), ::note::ReqFieldType::Int},
+            {::note::api::CardAux::keys_::mode, static_cast<uint16_t>(offsetof(::note::api::CardAux, mode)), ::note::ReqFieldType::String},
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
+            {::note::api::CardAux::keys_::ms, static_cast<uint16_t>(offsetof(::note::api::CardAux, ms)), ::note::ReqFieldType::Int},
+#endif
+            {::note::api::CardAux::keys_::offset, static_cast<uint16_t>(offsetof(::note::api::CardAux, offset)), ::note::ReqFieldType::Int},
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
+            {::note::api::CardAux::keys_::rate, static_cast<uint16_t>(offsetof(::note::api::CardAux, rate)), ::note::ReqFieldType::Int},
+#endif
+            {::note::api::CardAux::keys_::seconds, static_cast<uint16_t>(offsetof(::note::api::CardAux, seconds)), ::note::ReqFieldType::Int},
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
+            {::note::api::CardAux::keys_::sensitivity, static_cast<uint16_t>(offsetof(::note::api::CardAux, sensitivity)), ::note::ReqFieldType::Int},
+#endif
+            {::note::api::CardAux::keys_::start, static_cast<uint16_t>(offsetof(::note::api::CardAux, start)), ::note::ReqFieldType::Bool},
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+            {::note::api::CardAux::keys_::sync, static_cast<uint16_t>(offsetof(::note::api::CardAux, sync)), ::note::ReqFieldType::Bool},
+#endif
+            {::note::api::CardAux::keys_::usage, static_cast<uint16_t>(offsetof(::note::api::CardAux, usage)), ::note::ReqFieldType::Array},
+        };
+#pragma GCC diagnostic pop
+        n_out = sizeof(table_) / sizeof(table_[0]);
+        return table_;
+    }
 };
 } // namespace note::detail
 namespace note::api {
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+inline void CardAux::build(JsonBuilder& b) const {
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1) || !defined(NOTE_API_STRICT)
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 3, 1) || !defined(NOTE_API_STRICT)
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 2, 1) || !defined(NOTE_API_STRICT)
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 5, 1) || !defined(NOTE_API_STRICT)
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(3, 4, 1) || !defined(NOTE_API_STRICT)
+#endif
+    using meta_ = ::note::detail::request_traits<CardAux>;
+    uint8_t n_; auto* descs_ = meta_::req_field_descs_ptr_(n_);
+    ::note::generic_build(b, this, descs_, n_);
+#if NOTE_EXTRAS
+    for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
+        std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
+                   extras_[i_].value);
+#endif
+}
+#pragma GCC diagnostic pop
 
 #if NOTE_SINGLETON
 inline ApiResult<typename CardAux::Response> CardAux::execute() const {

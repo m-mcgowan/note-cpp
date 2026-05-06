@@ -956,100 +956,11 @@ namespace note::api {
 {{ indent }}}
 {% endif %}
 
-{% if op.has_version_gated_props %}
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-{% endif %}
-{# Collect simple optional fields for generic builder. Includes scalar
-   types (bool/int/double/string_view) plus ArrayField and BodyValue —
-   they all route through generic_build via the field descriptor table.
-   Wire-emit position follows table order (alphabetical-ish from the
-   spec); JSON key order is not semantically significant. #}
-{% set simple_req_props = [] %}
-{% for prop in op.properties %}
-{% if not prop.is_required_by_dispatch and not prop.is_required and not (op.mode_prefix and prop.wire_name == "mode") and (prop.is_array or prop.is_body or prop.cpp_type == "bool" or prop.is_integral or prop.cpp_type in ["double", "note::string_view"]) %}
-{% if simple_req_props.append(prop) %}{% endif %}
-{% endif %}
-{% endfor %}
-{% if simple_req_props %}
-{{ indent }}static const ::note::ReqFieldDesc* req_field_descs_ptr_(uint8_t& n_out) {
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Winvalid-offsetof"
-{{ indent }}    static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
-{% for prop in simple_req_props %}
-{{ version_guard_begin(prop.version_guard) -}}
-{% if prop.is_array %}
-{{ indent }}        {keys_::{{ prop.accessor_name }}, static_cast<uint16_t>(offsetof({{ parent_type }}, {{ prop.accessor_name }})), ::note::ReqFieldType::Array},
-{% elif prop.is_body %}
-{{ indent }}        {keys_::{{ prop.accessor_name }}, static_cast<uint16_t>(offsetof({{ parent_type }}, {{ prop.accessor_name }})), ::note::ReqFieldType::Body},
-{% elif prop.cpp_type == "bool" %}
-{{ indent }}        {keys_::{{ prop.accessor_name }}, static_cast<uint16_t>(offsetof({{ parent_type }}, {{ prop.accessor_name }})), ::note::ReqFieldType::Bool},
-{% elif prop.unit %}
-{{ indent }}        {keys_::{{ prop.accessor_name }}, static_cast<uint16_t>(offsetof({{ parent_type }}, {{ prop.accessor_name }})), ::note::ReqFieldType::Int32},
-{% elif prop.is_integral %}
-{{ indent }}        {keys_::{{ prop.accessor_name }}, static_cast<uint16_t>(offsetof({{ parent_type }}, {{ prop.accessor_name }})), ::note::ReqFieldType::Int},
-{% elif prop.cpp_type == "double" %}
-{{ indent }}        {keys_::{{ prop.accessor_name }}, static_cast<uint16_t>(offsetof({{ parent_type }}, {{ prop.accessor_name }})), ::note::ReqFieldType::Double},
-{% elif prop.cpp_type == "note::string_view" %}
-{{ indent }}        {keys_::{{ prop.accessor_name }}, static_cast<uint16_t>(offsetof({{ parent_type }}, {{ prop.accessor_name }})), ::note::ReqFieldType::String},
-{% endif %}
-{{ version_guard_end(prop.version_guard) -}}
-{% endfor %}
-{{ indent }}    };
-#pragma GCC diagnostic pop
-{{ indent }}    n_out = sizeof(table_) / sizeof(table_[0]);
-{{ indent }}    return table_;
-{{ indent }}}
-{% endif %}
+{# build() is forward-declared here; the definition is emitted out-of-line
+ # below by field_table() so it can reference request_traits<T> (which holds
+ # the request-side ReqFieldDesc table when the op has simple_req_props). #}
 {{ indent }}private:
-{{ indent }}void build(JsonBuilder& b) const {
-{% for imp in op.implicit_fields %}
-{{ indent }}    note::add_flash(b, note::flash(keys_::{{ imp.wire_name | replace(".", "_") }}), {{ imp.cpp_literal }});
-{% endfor %}
-{% for prop in op.properties %}
-{% if prop.is_required_by_dispatch %}
-{{ indent }}    note::add_flash(b, note::flash(keys_::{{ prop.accessor_name }}), true);
-{% elif prop.is_required %}
-{{ version_guard_begin(prop.version_guard) -}}
-{{ indent }}    note::add_flash(b, note::flash(keys_::{{ prop.accessor_name }}), {{ prop.accessor_name }});
-{{ version_guard_end(prop.version_guard) -}}
-{% elif prop.is_array or prop.is_body %}
-{# Routed through ReqFieldType::Array / ::Body in generic_build below #}
-{% else %}
-{{ version_guard_begin(prop.version_guard) -}}
-{% if op.mode_prefix and prop.wire_name == "mode" %}
-{{ indent }}    if ({{ prop.accessor_name }}) {
-{{ indent }}        char mp_[96];
-{{ indent }}        std::snprintf(mp_, sizeof(mp_), "{{ op.mode_prefix }},%.*s",
-{{ indent }}                     static_cast<int>((*{{ prop.accessor_name }}).size()), (*{{ prop.accessor_name }}).data());
-{{ indent }}        note::add_flash(b, note::flash(keys_::{{ prop.accessor_name }}), note::string_view{mp_});
-{{ indent }}    } else {
-{{ indent }}        note::add_flash(b, note::flash(keys_::{{ prop.accessor_name }}), "{{ op.mode_prefix }}");
-{{ indent }}    }
-{% elif prop in simple_req_props %}
-{# Handled by generic_build below #}
-{% else %}
-{{ indent }}    if ({{ prop.accessor_name }}) note::add_flash(b, note::flash(keys_::{{ prop.accessor_name }}), *{{ prop.accessor_name }});
-{% endif %}
-{{ version_guard_end(prop.version_guard) -}}
-{% endif %}
-{% endfor %}
-{% if simple_req_props %}
-{{ indent }}    uint8_t n_; auto* descs_ = req_field_descs_ptr_(n_);
-{{ indent }}    ::note::generic_build(b, this, descs_, n_);
-{% endif %}
-#if NOTE_EXTRAS
-{{ indent }}    for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
-{{ indent }}        std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
-{{ indent }}                   extras_[i_].value);
-#endif
-{% if not op.properties and not op.implicit_fields %}
-{{ indent }}    (void)b;
-{% endif %}
-{{ indent }}}
-{% if op.has_version_gated_props %}
-#pragma GCC diagnostic pop
-{% endif %}
+{{ indent }}void build(JsonBuilder& b) const;
 {{ indent }}public:
 
 
@@ -1185,11 +1096,18 @@ inline {{ parent_qual }}::{{ prop.nested_type_name }}& {{ parent_qual }}::{{ pro
 {% endif %}
 {% endmacro %}
 
-{# field_table: emits ::note::detail::request_traits<T> specialization at      #}
-{# namespace scope. Holds the runtime-dispatch FieldDesc table for the op.    #}
-{# Only emitted when op has simple_rsp_props (the dispatch path's prerequisite). #}
-{# Version-guarded entries get their own #if so the table matches the Response #}
-{# struct's gated fields exactly post-preprocessor.                            #}
+{# field_table: emits the request_traits<T> specialization (when needed) plus  #}
+{# every out-of-line member-fn body that references it — namely build() and,  #}
+{# under NOTE_SINGLETON, execute() for the simple-response path.              #}
+{#                                                                            #}
+{# Why out-of-line? request_traits<T> is defined at namespace scope after the #}
+{# struct is complete (it has to: the trait references nested types and       #}
+{# offsetof'd response/request members). Non-template inline member functions #}
+{# are analyzed at class scope close, which is before the trait spec is       #}
+{# visible — so any reference to request_traits<T>::X inside an inline body  #}
+{# would implicit-instantiate the still-undefined primary template and fail.  #}
+{# Defining these member fns out-of-line, after the trait spec, sidesteps     #}
+{# that lookup ordering.                                                      #}
 {% macro field_table(op, parent_qual) %}
 {% set simple_rsp_props = [] %}
 {% if op.response and op.response.properties %}
@@ -1199,11 +1117,18 @@ inline {{ parent_qual }}::{{ prop.nested_type_name }}& {{ parent_qual }}::{{ pro
 {% endif %}
 {% endfor %}
 {% endif %}
-{% if simple_rsp_props %}
+{% set simple_req_props = [] %}
+{% for prop in op.properties %}
+{% if not prop.is_required_by_dispatch and not prop.is_required and not (op.mode_prefix and prop.wire_name == "mode") and (prop.is_array or prop.is_body or prop.cpp_type == "bool" or prop.is_integral or prop.cpp_type in ["double", "note::string_view"]) %}
+{% if simple_req_props.append(prop) %}{% endif %}
+{% endif %}
+{% endfor %}
+{% if simple_req_props or simple_rsp_props %}
 } // namespace note::api
 namespace note::detail {
 template<>
 struct request_traits<::note::api::{{ parent_qual }}> {
+{% if simple_rsp_props %}
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
     static constexpr ::note::FieldDesc field_descs_table_[] NOTE_FLASH_ATTR = {
@@ -1230,14 +1155,99 @@ struct request_traits<::note::api::{{ parent_qual }}> {
 #pragma GCC diagnostic pop
     static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);
     static const ::note::FieldDesc* field_descs_ptr() { return field_descs_table_; }
+{% endif %}
+{% if simple_req_props %}
+    static const ::note::ReqFieldDesc* req_field_descs_ptr_(uint8_t& n_out) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+        static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
+{% for prop in simple_req_props %}
+{{ version_guard_begin(prop.version_guard) -}}
+{% if prop.is_array %}
+            {::note::api::{{ parent_qual }}::keys_::{{ prop.accessor_name }}, static_cast<uint16_t>(offsetof(::note::api::{{ parent_qual }}, {{ prop.accessor_name }})), ::note::ReqFieldType::Array},
+{% elif prop.is_body %}
+            {::note::api::{{ parent_qual }}::keys_::{{ prop.accessor_name }}, static_cast<uint16_t>(offsetof(::note::api::{{ parent_qual }}, {{ prop.accessor_name }})), ::note::ReqFieldType::Body},
+{% elif prop.cpp_type == "bool" %}
+            {::note::api::{{ parent_qual }}::keys_::{{ prop.accessor_name }}, static_cast<uint16_t>(offsetof(::note::api::{{ parent_qual }}, {{ prop.accessor_name }})), ::note::ReqFieldType::Bool},
+{% elif prop.unit %}
+            {::note::api::{{ parent_qual }}::keys_::{{ prop.accessor_name }}, static_cast<uint16_t>(offsetof(::note::api::{{ parent_qual }}, {{ prop.accessor_name }})), ::note::ReqFieldType::Int32},
+{% elif prop.is_integral %}
+            {::note::api::{{ parent_qual }}::keys_::{{ prop.accessor_name }}, static_cast<uint16_t>(offsetof(::note::api::{{ parent_qual }}, {{ prop.accessor_name }})), ::note::ReqFieldType::Int},
+{% elif prop.cpp_type == "double" %}
+            {::note::api::{{ parent_qual }}::keys_::{{ prop.accessor_name }}, static_cast<uint16_t>(offsetof(::note::api::{{ parent_qual }}, {{ prop.accessor_name }})), ::note::ReqFieldType::Double},
+{% elif prop.cpp_type == "note::string_view" %}
+            {::note::api::{{ parent_qual }}::keys_::{{ prop.accessor_name }}, static_cast<uint16_t>(offsetof(::note::api::{{ parent_qual }}, {{ prop.accessor_name }})), ::note::ReqFieldType::String},
+{% endif %}
+{{ version_guard_end(prop.version_guard) -}}
+{% endfor %}
+        };
+#pragma GCC diagnostic pop
+        n_out = sizeof(table_) / sizeof(table_[0]);
+        return table_;
+    }
+{% endif %}
 };
 } // namespace note::detail
 namespace note::api {
+{% endif %}
 
-{# Out-of-line definition of execute() for the singleton-generic path. Emitted #}
-{# here so request_traits<T> is complete at the point of use — required        #}
-{# because non-template inline member functions are analyzed at class scope    #}
-{# close, before the trait specialization above would be visible.              #}
+{# ----- Out-of-line build() ---------------------------------------------- #}
+{% if op.has_version_gated_props %}
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+{% endif %}
+inline void {{ parent_qual }}::build(JsonBuilder& b) const {
+{% for imp in op.implicit_fields %}
+    note::add_flash(b, note::flash(keys_::{{ imp.wire_name | replace(".", "_") }}), {{ imp.cpp_literal }});
+{% endfor %}
+{% for prop in op.properties %}
+{% if prop.is_required_by_dispatch %}
+    note::add_flash(b, note::flash(keys_::{{ prop.accessor_name }}), true);
+{% elif prop.is_required %}
+{{ version_guard_begin(prop.version_guard) -}}
+    note::add_flash(b, note::flash(keys_::{{ prop.accessor_name }}), {{ prop.accessor_name }});
+{{ version_guard_end(prop.version_guard) -}}
+{% elif prop.is_array or prop.is_body %}
+{# Routed through ReqFieldType::Array / ::Body in generic_build below #}
+{% else %}
+{{ version_guard_begin(prop.version_guard) -}}
+{% if op.mode_prefix and prop.wire_name == "mode" %}
+    if ({{ prop.accessor_name }}) {
+        char mp_[96];
+        std::snprintf(mp_, sizeof(mp_), "{{ op.mode_prefix }},%.*s",
+                     static_cast<int>((*{{ prop.accessor_name }}).size()), (*{{ prop.accessor_name }}).data());
+        note::add_flash(b, note::flash(keys_::{{ prop.accessor_name }}), note::string_view{mp_});
+    } else {
+        note::add_flash(b, note::flash(keys_::{{ prop.accessor_name }}), "{{ op.mode_prefix }}");
+    }
+{% elif prop in simple_req_props %}
+{# Handled by generic_build below #}
+{% else %}
+    if ({{ prop.accessor_name }}) note::add_flash(b, note::flash(keys_::{{ prop.accessor_name }}), *{{ prop.accessor_name }});
+{% endif %}
+{{ version_guard_end(prop.version_guard) -}}
+{% endif %}
+{% endfor %}
+{% if simple_req_props %}
+    using meta_ = ::note::detail::request_traits<{{ parent_qual }}>;
+    uint8_t n_; auto* descs_ = meta_::req_field_descs_ptr_(n_);
+    ::note::generic_build(b, this, descs_, n_);
+{% endif %}
+#if NOTE_EXTRAS
+    for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
+        std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
+                   extras_[i_].value);
+#endif
+{% if not op.properties and not op.implicit_fields %}
+    (void)b;
+{% endif %}
+}
+{% if op.has_version_gated_props %}
+#pragma GCC diagnostic pop
+{% endif %}
+
+{% if simple_rsp_props %}
+{# ----- Out-of-line execute() (singleton-generic path) -------------------- #}
 #if NOTE_SINGLETON
 inline ApiResult<typename {{ parent_qual }}::Response> {{ parent_qual }}::execute() const {
     auto build_ = [&](JsonBuilder& b_) { this->build(b_); };

@@ -482,60 +482,8 @@ struct NoteAdd {
         return send_fn_(nc_, fn_, &build_);
     }
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-    static const ::note::ReqFieldDesc* req_field_descs_ptr_(uint8_t& n_out) {
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Winvalid-offsetof"
-        static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
-#if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
-            {keys_::binary, static_cast<uint16_t>(offsetof(NoteAdd, binary)), ::note::ReqFieldType::Bool},
-#endif
-            {keys_::body, static_cast<uint16_t>(offsetof(NoteAdd, body)), ::note::ReqFieldType::Body},
-            {keys_::file, static_cast<uint16_t>(offsetof(NoteAdd, file)), ::note::ReqFieldType::String},
-#if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
-            {keys_::full, static_cast<uint16_t>(offsetof(NoteAdd, full)), ::note::ReqFieldType::Bool},
-#endif
-            {keys_::key, static_cast<uint16_t>(offsetof(NoteAdd, key)), ::note::ReqFieldType::String},
-#if NOTE_API_VERSION >= NOTE_VERSION(9, 1, 1) || !defined(NOTE_API_STRICT)
-            {keys_::limit, static_cast<uint16_t>(offsetof(NoteAdd, limit)), ::note::ReqFieldType::Bool},
-#endif
-#if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
-            {keys_::live, static_cast<uint16_t>(offsetof(NoteAdd, live)), ::note::ReqFieldType::Bool},
-#endif
-#if NOTE_API_VERSION >= NOTE_VERSION(8, 2, 1) || !defined(NOTE_API_STRICT)
-            {keys_::max, static_cast<uint16_t>(offsetof(NoteAdd, max)), ::note::ReqFieldType::Int},
-#endif
-            {keys_::noteId, static_cast<uint16_t>(offsetof(NoteAdd, noteId)), ::note::ReqFieldType::String},
-            {keys_::payload, static_cast<uint16_t>(offsetof(NoteAdd, payload)), ::note::ReqFieldType::String},
-            {keys_::sync, static_cast<uint16_t>(offsetof(NoteAdd, sync)), ::note::ReqFieldType::Bool},
-            {keys_::verify, static_cast<uint16_t>(offsetof(NoteAdd, verify)), ::note::ReqFieldType::Bool},
-        };
-#pragma GCC diagnostic pop
-        n_out = sizeof(table_) / sizeof(table_[0]);
-        return table_;
-    }
     private:
-    void build(JsonBuilder& b) const {
-#if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
-#endif
-#if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
-#endif
-#if NOTE_API_VERSION >= NOTE_VERSION(9, 1, 1) || !defined(NOTE_API_STRICT)
-#endif
-#if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
-#endif
-#if NOTE_API_VERSION >= NOTE_VERSION(8, 2, 1) || !defined(NOTE_API_STRICT)
-#endif
-        uint8_t n_; auto* descs_ = req_field_descs_ptr_(n_);
-        ::note::generic_build(b, this, descs_, n_);
-#if NOTE_EXTRAS
-        for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
-            std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
-                       extras_[i_].value);
-#endif
-    }
-#pragma GCC diagnostic pop
+    void build(JsonBuilder& b) const;
     public:
 
 
@@ -720,9 +668,64 @@ struct request_traits<::note::api::NoteAdd> {
 #pragma GCC diagnostic pop
     static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);
     static const ::note::FieldDesc* field_descs_ptr() { return field_descs_table_; }
+    static const ::note::ReqFieldDesc* req_field_descs_ptr_(uint8_t& n_out) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+        static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
+            {::note::api::NoteAdd::keys_::binary, static_cast<uint16_t>(offsetof(::note::api::NoteAdd, binary)), ::note::ReqFieldType::Bool},
+#endif
+            {::note::api::NoteAdd::keys_::body, static_cast<uint16_t>(offsetof(::note::api::NoteAdd, body)), ::note::ReqFieldType::Body},
+            {::note::api::NoteAdd::keys_::file, static_cast<uint16_t>(offsetof(::note::api::NoteAdd, file)), ::note::ReqFieldType::String},
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
+            {::note::api::NoteAdd::keys_::full, static_cast<uint16_t>(offsetof(::note::api::NoteAdd, full)), ::note::ReqFieldType::Bool},
+#endif
+            {::note::api::NoteAdd::keys_::key, static_cast<uint16_t>(offsetof(::note::api::NoteAdd, key)), ::note::ReqFieldType::String},
+#if NOTE_API_VERSION >= NOTE_VERSION(9, 1, 1) || !defined(NOTE_API_STRICT)
+            {::note::api::NoteAdd::keys_::limit, static_cast<uint16_t>(offsetof(::note::api::NoteAdd, limit)), ::note::ReqFieldType::Bool},
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
+            {::note::api::NoteAdd::keys_::live, static_cast<uint16_t>(offsetof(::note::api::NoteAdd, live)), ::note::ReqFieldType::Bool},
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(8, 2, 1) || !defined(NOTE_API_STRICT)
+            {::note::api::NoteAdd::keys_::max, static_cast<uint16_t>(offsetof(::note::api::NoteAdd, max)), ::note::ReqFieldType::Int},
+#endif
+            {::note::api::NoteAdd::keys_::noteId, static_cast<uint16_t>(offsetof(::note::api::NoteAdd, noteId)), ::note::ReqFieldType::String},
+            {::note::api::NoteAdd::keys_::payload, static_cast<uint16_t>(offsetof(::note::api::NoteAdd, payload)), ::note::ReqFieldType::String},
+            {::note::api::NoteAdd::keys_::sync, static_cast<uint16_t>(offsetof(::note::api::NoteAdd, sync)), ::note::ReqFieldType::Bool},
+            {::note::api::NoteAdd::keys_::verify, static_cast<uint16_t>(offsetof(::note::api::NoteAdd, verify)), ::note::ReqFieldType::Bool},
+        };
+#pragma GCC diagnostic pop
+        n_out = sizeof(table_) / sizeof(table_[0]);
+        return table_;
+    }
 };
 } // namespace note::detail
 namespace note::api {
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+inline void NoteAdd::build(JsonBuilder& b) const {
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 1, 1) || !defined(NOTE_API_STRICT)
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(9, 1, 1) || !defined(NOTE_API_STRICT)
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
+#endif
+#if NOTE_API_VERSION >= NOTE_VERSION(8, 2, 1) || !defined(NOTE_API_STRICT)
+#endif
+    using meta_ = ::note::detail::request_traits<NoteAdd>;
+    uint8_t n_; auto* descs_ = meta_::req_field_descs_ptr_(n_);
+    ::note::generic_build(b, this, descs_, n_);
+#if NOTE_EXTRAS
+    for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
+        std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
+                   extras_[i_].value);
+#endif
+}
+#pragma GCC diagnostic pop
 
 #if NOTE_SINGLETON
 inline ApiResult<typename NoteAdd::Response> NoteAdd::execute() const {

@@ -278,32 +278,8 @@ struct NoteChanges {
             return send_fn_(nc_, fn_, &build_);
         }
 
-        static const ::note::ReqFieldDesc* req_field_descs_ptr_(uint8_t& n_out) {
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Winvalid-offsetof"
-            static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
-                {keys_::deleted, static_cast<uint16_t>(offsetof(NoteChanges::Peek, deleted)), ::note::ReqFieldType::Bool},
-                {keys_::file, static_cast<uint16_t>(offsetof(NoteChanges::Peek, file)), ::note::ReqFieldType::String},
-                {keys_::max, static_cast<uint16_t>(offsetof(NoteChanges::Peek, max)), ::note::ReqFieldType::Int},
-                {keys_::reset, static_cast<uint16_t>(offsetof(NoteChanges::Peek, reset)), ::note::ReqFieldType::Bool},
-                {keys_::start, static_cast<uint16_t>(offsetof(NoteChanges::Peek, start)), ::note::ReqFieldType::Bool},
-                {keys_::stop, static_cast<uint16_t>(offsetof(NoteChanges::Peek, stop)), ::note::ReqFieldType::Bool},
-                {keys_::tracker, static_cast<uint16_t>(offsetof(NoteChanges::Peek, tracker)), ::note::ReqFieldType::String},
-            };
-#pragma GCC diagnostic pop
-            n_out = sizeof(table_) / sizeof(table_[0]);
-            return table_;
-        }
         private:
-        void build(JsonBuilder& b) const {
-            uint8_t n_; auto* descs_ = req_field_descs_ptr_(n_);
-            ::note::generic_build(b, this, descs_, n_);
-#if NOTE_EXTRAS
-            for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
-                std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
-                           extras_[i_].value);
-#endif
-        }
+        void build(JsonBuilder& b) const;
         public:
 
 
@@ -600,33 +576,8 @@ struct NoteChanges {
             return send_fn_(nc_, fn_, &build_);
         }
 
-        static const ::note::ReqFieldDesc* req_field_descs_ptr_(uint8_t& n_out) {
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Winvalid-offsetof"
-            static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
-                {keys_::deleted, static_cast<uint16_t>(offsetof(NoteChanges::Pop, deleted)), ::note::ReqFieldType::Bool},
-                {keys_::max, static_cast<uint16_t>(offsetof(NoteChanges::Pop, max)), ::note::ReqFieldType::Int},
-                {keys_::reset, static_cast<uint16_t>(offsetof(NoteChanges::Pop, reset)), ::note::ReqFieldType::Bool},
-                {keys_::start, static_cast<uint16_t>(offsetof(NoteChanges::Pop, start)), ::note::ReqFieldType::Bool},
-                {keys_::stop, static_cast<uint16_t>(offsetof(NoteChanges::Pop, stop)), ::note::ReqFieldType::Bool},
-                {keys_::tracker, static_cast<uint16_t>(offsetof(NoteChanges::Pop, tracker)), ::note::ReqFieldType::String},
-            };
-#pragma GCC diagnostic pop
-            n_out = sizeof(table_) / sizeof(table_[0]);
-            return table_;
-        }
         private:
-        void build(JsonBuilder& b) const {
-            note::add_flash(b, note::flash(keys_::delete_), true);
-            note::add_flash(b, note::flash(keys_::file), file);
-            uint8_t n_; auto* descs_ = req_field_descs_ptr_(n_);
-            ::note::generic_build(b, this, descs_, n_);
-#if NOTE_EXTRAS
-            for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
-                std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
-                           extras_[i_].value);
-#endif
-        }
+        void build(JsonBuilder& b) const;
         public:
 
 
@@ -733,9 +684,36 @@ struct request_traits<::note::api::NoteChanges::Peek> {
 #pragma GCC diagnostic pop
     static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);
     static const ::note::FieldDesc* field_descs_ptr() { return field_descs_table_; }
+    static const ::note::ReqFieldDesc* req_field_descs_ptr_(uint8_t& n_out) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+        static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
+            {::note::api::NoteChanges::Peek::keys_::deleted, static_cast<uint16_t>(offsetof(::note::api::NoteChanges::Peek, deleted)), ::note::ReqFieldType::Bool},
+            {::note::api::NoteChanges::Peek::keys_::file, static_cast<uint16_t>(offsetof(::note::api::NoteChanges::Peek, file)), ::note::ReqFieldType::String},
+            {::note::api::NoteChanges::Peek::keys_::max, static_cast<uint16_t>(offsetof(::note::api::NoteChanges::Peek, max)), ::note::ReqFieldType::Int},
+            {::note::api::NoteChanges::Peek::keys_::reset, static_cast<uint16_t>(offsetof(::note::api::NoteChanges::Peek, reset)), ::note::ReqFieldType::Bool},
+            {::note::api::NoteChanges::Peek::keys_::start, static_cast<uint16_t>(offsetof(::note::api::NoteChanges::Peek, start)), ::note::ReqFieldType::Bool},
+            {::note::api::NoteChanges::Peek::keys_::stop, static_cast<uint16_t>(offsetof(::note::api::NoteChanges::Peek, stop)), ::note::ReqFieldType::Bool},
+            {::note::api::NoteChanges::Peek::keys_::tracker, static_cast<uint16_t>(offsetof(::note::api::NoteChanges::Peek, tracker)), ::note::ReqFieldType::String},
+        };
+#pragma GCC diagnostic pop
+        n_out = sizeof(table_) / sizeof(table_[0]);
+        return table_;
+    }
 };
 } // namespace note::detail
 namespace note::api {
+
+inline void NoteChanges::Peek::build(JsonBuilder& b) const {
+    using meta_ = ::note::detail::request_traits<NoteChanges::Peek>;
+    uint8_t n_; auto* descs_ = meta_::req_field_descs_ptr_(n_);
+    ::note::generic_build(b, this, descs_, n_);
+#if NOTE_EXTRAS
+    for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
+        std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
+                   extras_[i_].value);
+#endif
+}
 
 #if NOTE_SINGLETON
 inline ApiResult<typename NoteChanges::Peek::Response> NoteChanges::Peek::execute() const {
@@ -800,9 +778,37 @@ struct request_traits<::note::api::NoteChanges::Pop> {
 #pragma GCC diagnostic pop
     static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);
     static const ::note::FieldDesc* field_descs_ptr() { return field_descs_table_; }
+    static const ::note::ReqFieldDesc* req_field_descs_ptr_(uint8_t& n_out) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+        static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
+            {::note::api::NoteChanges::Pop::keys_::deleted, static_cast<uint16_t>(offsetof(::note::api::NoteChanges::Pop, deleted)), ::note::ReqFieldType::Bool},
+            {::note::api::NoteChanges::Pop::keys_::max, static_cast<uint16_t>(offsetof(::note::api::NoteChanges::Pop, max)), ::note::ReqFieldType::Int},
+            {::note::api::NoteChanges::Pop::keys_::reset, static_cast<uint16_t>(offsetof(::note::api::NoteChanges::Pop, reset)), ::note::ReqFieldType::Bool},
+            {::note::api::NoteChanges::Pop::keys_::start, static_cast<uint16_t>(offsetof(::note::api::NoteChanges::Pop, start)), ::note::ReqFieldType::Bool},
+            {::note::api::NoteChanges::Pop::keys_::stop, static_cast<uint16_t>(offsetof(::note::api::NoteChanges::Pop, stop)), ::note::ReqFieldType::Bool},
+            {::note::api::NoteChanges::Pop::keys_::tracker, static_cast<uint16_t>(offsetof(::note::api::NoteChanges::Pop, tracker)), ::note::ReqFieldType::String},
+        };
+#pragma GCC diagnostic pop
+        n_out = sizeof(table_) / sizeof(table_[0]);
+        return table_;
+    }
 };
 } // namespace note::detail
 namespace note::api {
+
+inline void NoteChanges::Pop::build(JsonBuilder& b) const {
+    note::add_flash(b, note::flash(keys_::delete_), true);
+note::add_flash(b, note::flash(keys_::file), file);
+    using meta_ = ::note::detail::request_traits<NoteChanges::Pop>;
+    uint8_t n_; auto* descs_ = meta_::req_field_descs_ptr_(n_);
+    ::note::generic_build(b, this, descs_, n_);
+#if NOTE_EXTRAS
+    for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
+        std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
+                   extras_[i_].value);
+#endif
+}
 
 #if NOTE_SINGLETON
 inline ApiResult<typename NoteChanges::Pop::Response> NoteChanges::Pop::execute() const {

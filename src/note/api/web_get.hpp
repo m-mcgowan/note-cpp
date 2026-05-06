@@ -485,42 +485,8 @@ struct WebGet {
         return send_fn_(nc_, fn_, &build_);
     }
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-    static const ::note::ReqFieldDesc* req_field_descs_ptr_(uint8_t& n_out) {
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Winvalid-offsetof"
-        static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
-#if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
-            {keys_::binary, static_cast<uint16_t>(offsetof(WebGet, binary)), ::note::ReqFieldType::Bool},
-#endif
-            {keys_::body, static_cast<uint16_t>(offsetof(WebGet, body)), ::note::ReqFieldType::Body},
-            {keys_::content, static_cast<uint16_t>(offsetof(WebGet, content)), ::note::ReqFieldType::String},
-            {keys_::file, static_cast<uint16_t>(offsetof(WebGet, file)), ::note::ReqFieldType::String},
-            {keys_::max, static_cast<uint16_t>(offsetof(WebGet, max)), ::note::ReqFieldType::Int},
-            {keys_::name, static_cast<uint16_t>(offsetof(WebGet, name)), ::note::ReqFieldType::String},
-            {keys_::noteId, static_cast<uint16_t>(offsetof(WebGet, noteId)), ::note::ReqFieldType::String},
-            {keys_::offset, static_cast<uint16_t>(offsetof(WebGet, offset)), ::note::ReqFieldType::Int},
-            {keys_::route, static_cast<uint16_t>(offsetof(WebGet, route)), ::note::ReqFieldType::String},
-            {keys_::seconds, static_cast<uint16_t>(offsetof(WebGet, seconds)), ::note::ReqFieldType::Int},
-        };
-#pragma GCC diagnostic pop
-        n_out = sizeof(table_) / sizeof(table_[0]);
-        return table_;
-    }
     private:
-    void build(JsonBuilder& b) const {
-#if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
-#endif
-        uint8_t n_; auto* descs_ = req_field_descs_ptr_(n_);
-        ::note::generic_build(b, this, descs_, n_);
-#if NOTE_EXTRAS
-        for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
-            std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
-                       extras_[i_].value);
-#endif
-    }
-#pragma GCC diagnostic pop
+    void build(JsonBuilder& b) const;
     public:
 
 
@@ -672,9 +638,46 @@ struct request_traits<::note::api::WebGet> {
 #pragma GCC diagnostic pop
     static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);
     static const ::note::FieldDesc* field_descs_ptr() { return field_descs_table_; }
+    static const ::note::ReqFieldDesc* req_field_descs_ptr_(uint8_t& n_out) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+        static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
+            {::note::api::WebGet::keys_::binary, static_cast<uint16_t>(offsetof(::note::api::WebGet, binary)), ::note::ReqFieldType::Bool},
+#endif
+            {::note::api::WebGet::keys_::body, static_cast<uint16_t>(offsetof(::note::api::WebGet, body)), ::note::ReqFieldType::Body},
+            {::note::api::WebGet::keys_::content, static_cast<uint16_t>(offsetof(::note::api::WebGet, content)), ::note::ReqFieldType::String},
+            {::note::api::WebGet::keys_::file, static_cast<uint16_t>(offsetof(::note::api::WebGet, file)), ::note::ReqFieldType::String},
+            {::note::api::WebGet::keys_::max, static_cast<uint16_t>(offsetof(::note::api::WebGet, max)), ::note::ReqFieldType::Int},
+            {::note::api::WebGet::keys_::name, static_cast<uint16_t>(offsetof(::note::api::WebGet, name)), ::note::ReqFieldType::String},
+            {::note::api::WebGet::keys_::noteId, static_cast<uint16_t>(offsetof(::note::api::WebGet, noteId)), ::note::ReqFieldType::String},
+            {::note::api::WebGet::keys_::offset, static_cast<uint16_t>(offsetof(::note::api::WebGet, offset)), ::note::ReqFieldType::Int},
+            {::note::api::WebGet::keys_::route, static_cast<uint16_t>(offsetof(::note::api::WebGet, route)), ::note::ReqFieldType::String},
+            {::note::api::WebGet::keys_::seconds, static_cast<uint16_t>(offsetof(::note::api::WebGet, seconds)), ::note::ReqFieldType::Int},
+        };
+#pragma GCC diagnostic pop
+        n_out = sizeof(table_) / sizeof(table_[0]);
+        return table_;
+    }
 };
 } // namespace note::detail
 namespace note::api {
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+inline void WebGet::build(JsonBuilder& b) const {
+#if NOTE_API_VERSION >= NOTE_VERSION(5, 3, 1) || !defined(NOTE_API_STRICT)
+#endif
+    using meta_ = ::note::detail::request_traits<WebGet>;
+    uint8_t n_; auto* descs_ = meta_::req_field_descs_ptr_(n_);
+    ::note::generic_build(b, this, descs_, n_);
+#if NOTE_EXTRAS
+    for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
+        std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
+                   extras_[i_].value);
+#endif
+}
+#pragma GCC diagnostic pop
 
 #if NOTE_SINGLETON
 inline ApiResult<typename WebGet::Response> WebGet::execute() const {

@@ -356,39 +356,8 @@ struct CardLocationTrack {
         return send_fn_(nc_, fn_, &build_);
     }
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-    static const ::note::ReqFieldDesc* req_field_descs_ptr_(uint8_t& n_out) {
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Winvalid-offsetof"
-        static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
-            {keys_::file, static_cast<uint16_t>(offsetof(CardLocationTrack, file)), ::note::ReqFieldType::String},
-            {keys_::heartbeat, static_cast<uint16_t>(offsetof(CardLocationTrack, heartbeat)), ::note::ReqFieldType::Bool},
-            {keys_::hours, static_cast<uint16_t>(offsetof(CardLocationTrack, hours)), ::note::ReqFieldType::Int},
-#if NOTE_API_VERSION >= NOTE_VERSION(7, 5, 2) || !defined(NOTE_API_STRICT)
-            {keys_::payload, static_cast<uint16_t>(offsetof(CardLocationTrack, payload)), ::note::ReqFieldType::String},
-#endif
-            {keys_::start, static_cast<uint16_t>(offsetof(CardLocationTrack, start)), ::note::ReqFieldType::Bool},
-            {keys_::stop, static_cast<uint16_t>(offsetof(CardLocationTrack, stop)), ::note::ReqFieldType::Bool},
-            {keys_::sync, static_cast<uint16_t>(offsetof(CardLocationTrack, sync)), ::note::ReqFieldType::Bool},
-        };
-#pragma GCC diagnostic pop
-        n_out = sizeof(table_) / sizeof(table_[0]);
-        return table_;
-    }
     private:
-    void build(JsonBuilder& b) const {
-#if NOTE_API_VERSION >= NOTE_VERSION(7, 5, 2) || !defined(NOTE_API_STRICT)
-#endif
-        uint8_t n_; auto* descs_ = req_field_descs_ptr_(n_);
-        ::note::generic_build(b, this, descs_, n_);
-#if NOTE_EXTRAS
-        for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
-            std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
-                       extras_[i_].value);
-#endif
-    }
-#pragma GCC diagnostic pop
+    void build(JsonBuilder& b) const;
     public:
 
 
@@ -504,9 +473,43 @@ struct request_traits<::note::api::CardLocationTrack> {
 #pragma GCC diagnostic pop
     static constexpr uint8_t field_count = sizeof(field_descs_table_) / sizeof(field_descs_table_[0]);
     static const ::note::FieldDesc* field_descs_ptr() { return field_descs_table_; }
+    static const ::note::ReqFieldDesc* req_field_descs_ptr_(uint8_t& n_out) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+        static constexpr ::note::ReqFieldDesc table_[] NOTE_FLASH_ATTR = {
+            {::note::api::CardLocationTrack::keys_::file, static_cast<uint16_t>(offsetof(::note::api::CardLocationTrack, file)), ::note::ReqFieldType::String},
+            {::note::api::CardLocationTrack::keys_::heartbeat, static_cast<uint16_t>(offsetof(::note::api::CardLocationTrack, heartbeat)), ::note::ReqFieldType::Bool},
+            {::note::api::CardLocationTrack::keys_::hours, static_cast<uint16_t>(offsetof(::note::api::CardLocationTrack, hours)), ::note::ReqFieldType::Int},
+#if NOTE_API_VERSION >= NOTE_VERSION(7, 5, 2) || !defined(NOTE_API_STRICT)
+            {::note::api::CardLocationTrack::keys_::payload, static_cast<uint16_t>(offsetof(::note::api::CardLocationTrack, payload)), ::note::ReqFieldType::String},
+#endif
+            {::note::api::CardLocationTrack::keys_::start, static_cast<uint16_t>(offsetof(::note::api::CardLocationTrack, start)), ::note::ReqFieldType::Bool},
+            {::note::api::CardLocationTrack::keys_::stop, static_cast<uint16_t>(offsetof(::note::api::CardLocationTrack, stop)), ::note::ReqFieldType::Bool},
+            {::note::api::CardLocationTrack::keys_::sync, static_cast<uint16_t>(offsetof(::note::api::CardLocationTrack, sync)), ::note::ReqFieldType::Bool},
+        };
+#pragma GCC diagnostic pop
+        n_out = sizeof(table_) / sizeof(table_[0]);
+        return table_;
+    }
 };
 } // namespace note::detail
 namespace note::api {
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+inline void CardLocationTrack::build(JsonBuilder& b) const {
+#if NOTE_API_VERSION >= NOTE_VERSION(7, 5, 2) || !defined(NOTE_API_STRICT)
+#endif
+    using meta_ = ::note::detail::request_traits<CardLocationTrack>;
+    uint8_t n_; auto* descs_ = meta_::req_field_descs_ptr_(n_);
+    ::note::generic_build(b, this, descs_, n_);
+#if NOTE_EXTRAS
+    for (uint8_t i_ = 0; i_ < extras_count_; ++i_)
+        std::visit([&](auto&& v_) { b.add(extras_[i_].key, v_); },
+                   extras_[i_].value);
+#endif
+}
+#pragma GCC diagnostic pop
 
 #if NOTE_SINGLETON
 inline ApiResult<typename CardLocationTrack::Response> CardLocationTrack::execute() const {

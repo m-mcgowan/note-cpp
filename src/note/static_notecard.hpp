@@ -18,6 +18,7 @@
 #include "compiler.hpp"
 #include "generic_sink.hpp"
 #include "json.hpp"
+#include "json_render.hpp"
 #include "notecard.hpp"
 #include "retry.hpp"
 #include "retry_policy.hpp"
@@ -273,6 +274,62 @@ public:
                                      uint32_t timeout_ms = 10000) {
         return transact_raw(req, rsp, N, timeout_ms);
     }
+
+    /// In-place variant: `buf` is used both to render the request *and* to
+    /// receive the response (saving N bytes of RAM versus the separate
+    /// request/response buffer pattern). The lambda receives a writer
+    /// (`auto& w`) with the same `add()`/`begin_object()`/`close()` shape
+    /// as `JsonBuf`. After it returns, the rendered bytes are sent over
+    /// the transport, then the response overwrites `buf`. The returned
+    /// `string_view` points into `buf`.
+    ///
+    ///     char buf[64];
+    ///     auto v = note::JsonView(nc.transact_raw_inplace(buf, [&](auto& w) {
+    ///         w.add("req", "card.temp");
+    ///     }));
+    ///     float t = v.get_float(K("value"));
+    ///
+    /// The shared buffer is safe because the underlying `transport.transact_raw`
+    /// fully drains the request bytes before reading the response (the HAL
+    /// `transmit()` returns only after flushing).
+    template<size_t N, typename Fn>
+    Result<string_view> transact_raw_inplace(char (&buf)[N], Fn&& build,
+                                             uint32_t timeout_ms = 10000) {
+        // Type-erase the lambda via a stateless trampoline so the bulk of
+        // the work (`transact_raw_inplace_impl_`) is one out-of-line copy
+        // shared by every call site. The trampoline is per-Fn but tiny
+        // (cast + call); the impl absorbs JsonRender ctor, close(),
+        // overflow check, and the transport hop.
+        InplaceBuilder trampoline = [](JsonRender& w, const void* ctx) {
+            (*static_cast<const std::remove_reference_t<Fn>*>(ctx))(w);
+        };
+        return transact_raw_inplace_impl_(buf, N, trampoline,
+                                          static_cast<const void*>(&build),
+                                          timeout_ms);
+    }
+
+private:
+    using InplaceBuilder = void(*)(JsonRender& w, const void* ctx);
+
+    /// Out-of-line workhorse for `transact_raw_inplace`. Non-template so
+    /// it lives once per `StaticNotecard<Stack>` instantiation regardless
+    /// of how many distinct lambdas the user passes.
+    Result<string_view> transact_raw_inplace_impl_(char* buf, size_t cap,
+                                                    InplaceBuilder fn,
+                                                    const void* ctx,
+                                                    uint32_t timeout_ms) {
+        JsonRender w(buf, cap);
+        fn(w, ctx);
+        w.close();
+        if (w.overflow())
+            return make_error(Error::Overflow, Cause::Unspecified,
+                              NOTE_ERR("transact_raw_inplace: buffer overflow"));
+        const size_t req_size = w.size();
+        return stack_.transport.transact_raw(string_view(buf, req_size),
+                                             buf, cap, timeout_ms);
+    }
+
+public:
 
     /// Returns the next request ID if enabled, else 0. Mirror of
     /// `Notecard::next_request_id_or_zero` for the Api singleton-thunk

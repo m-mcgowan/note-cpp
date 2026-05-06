@@ -532,3 +532,71 @@ TEST_CASE("StaticNotecard::transact_raw default timeout") {
     auto r = nc.transact_raw(string_view(R"({"req":"card.status"})"), rsp);
     REQUIRE(r.has_value());
 }
+
+// ---------------------------------------------------------------------------
+// transact_raw_inplace — single buffer for both request render and response.
+
+TEST_CASE("StaticNotecard::transact_raw_inplace single-buffer round-trip") {
+    alignas(4) char arena_buf[64];
+    MonotonicArena arena(arena_buf);
+    StaticNotecard<MockStack> nc(arena_allocator(arena));
+
+    nc.stack().transport.queue_response(R"({"value":42.0})");
+    char buf[64];
+    auto r = nc.transact_raw_inplace(buf, [](auto& w) {
+        w.add("req", "card.temp");
+    });
+    REQUIRE(r.has_value());
+    REQUIRE(*r == R"({"value":42.0})");
+    // Mock recorded the request — confirms the lambda's bytes reached the wire.
+    CHECK(nc.stack().transport.transact_raw_count == 1);
+    CHECK(nc.stack().transport.last_request == R"({"req":"card.temp"})");
+}
+
+TEST_CASE("transact_raw_inplace composes with JsonView") {
+    alignas(4) char arena_buf[64];
+    MonotonicArena arena(arena_buf);
+    StaticNotecard<MockStack> nc(arena_allocator(arena));
+
+    nc.stack().transport.queue_response(R"({"value":3.14})");
+    char buf[64];
+    JsonView v(nc.transact_raw_inplace(buf, [](auto& w) {
+        w.add("req", "card.temp");
+    }));
+    CHECK(v.get_float("value", 0.0f) == doctest::Approx(3.14f));
+}
+
+TEST_CASE("transact_raw_inplace nested object renders correctly") {
+    alignas(4) char arena_buf[64];
+    MonotonicArena arena(arena_buf);
+    StaticNotecard<MockStack> nc(arena_allocator(arena));
+
+    nc.stack().transport.queue_response("{}");
+    char buf[128];
+    auto r = nc.transact_raw_inplace(buf, [](auto& w) {
+        w.add("req", "note.add");
+        w.add("file", "sensors.qo");
+        w.begin_object("body");
+            w.add("temperature", 22.5);
+            w.add("humidity", 60);
+        w.end_object();
+    });
+    REQUIRE(r.has_value());
+    CHECK(nc.stack().transport.last_request ==
+          R"({"req":"note.add","file":"sensors.qo","body":{"temperature":22.5,"humidity":60}})");
+}
+
+TEST_CASE("transact_raw_inplace overflow returns Error::Overflow") {
+    alignas(4) char arena_buf[64];
+    MonotonicArena arena(arena_buf);
+    StaticNotecard<MockStack> nc(arena_allocator(arena));
+
+    char buf[8];  // way too small for the rendered JSON
+    auto r = nc.transact_raw_inplace(buf, [](auto& w) {
+        w.add("req", "card.temp");  // ~20 bytes — won't fit
+    });
+    REQUIRE_FALSE(r.has_value());
+    CHECK(r.error().code == Error::Overflow);
+    // No transport call was made (overflow short-circuits).
+    CHECK(nc.stack().transport.transact_raw_count == 0);
+}
